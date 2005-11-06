@@ -1,0 +1,123 @@
+.\" BitlBee is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; see the file COPYING.  If not, write to
+.\" the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH bitlbee 8 "07 March 2004"
+.SH NAME
+BitlBee \- IRC gateway to IM chat networks
+.SH SYNOPSIS
+.PP
+.B bitlbee
+[-I]
+[-c \fIconfiguration file\fP]
+[-d \fIconfiguration directory\fP]
+.PP
+.B bitlbee
+-D
+[-i \fIaddress\fP]
+[-p \fIport number\fP]
+[-n]
+[-v]
+[-c \fIconfiguration file\fP]
+[-d \fIconfiguration directory\fP]
+.PP
+.B bitlbee
+-h
+.RI
+.SH DESCRIPTION
+BitlBee is an IRC daemon that can talk to instant messaging 
+networks and acts as a gateway. Users can connect to the server
+with any normal IRC client and see their 'buddy list' in
+#bitlbee. BitlBee's protocol support is based on the gaim 
+protocol plugins. BitlBee currently supports Oscar (aim and icq), 
+MSN, Jabber and Yahoo.
+
+\fBbitlbee\fP should be called by
+.BR inetd (8).
+(Or \fBbitlbeed\fP,
+if you can't run and/or configure \fBinetd\fP.) There is an experimental
+daemon mode too, in which BitlBee will serve all clients in one process
+(and does not require inetd), but this mode is still experimental.
+There are still some bugs left in BitlBee, and if they cause a crash,
+that would terminate the BitlBee connection for all clients.
+.PP
+.SH OPTIONS
+.PP
+.IP "-I"
+Run in 
+.BR inetd (8)
+mode. This is the default setting, you usually don't have to specify this
+option.
+.IP "-D"
+Run in daemon mode. In this mode, BitlBee forks to the background and
+waits for new connections. All clients will be served from one process.
+This is still experimental. See the note above for more information.
+.IP "-i \fIaddress\fP"
+Only useful when running in daemon mode, to specify the network interface
+(identified by IP address) to which the daemon should attach. Use this if
+you don't want BitlBee to listen on every interface (which is the default
+behaviour).
+.IP "-p \fIport number\fP"
+Only useful when running in daemon mode, to specify the port number on
+which BitlBee should listen for connections. 6667 is the default value.
+.IP "-n"
+Only useful when running in daemon mode. This option prevents BitlBee from
+forking into the background.
+.IP "-v"
+Be more verbose. This only works together with the \fB-n\fP flag.
+.IP "-c \fIpath to other configuration file\fP"
+Use a different configuration file.
+.IP "-d \fIpath to user settings directory\fP"
+BitlBee normally saves every user's settings in \fB/var/lib/bitlbee/\fP. If
+you want the settings to be stored somewhere else (for example, if you don't
+have write permissions in the default location), use this option.
+.IP "-h"
+Show help information.
+.SH COMMANDS
+To get a complete list of commands, please use the \fBhelp commands\fP
+command in the #bitlbee channel.
+.SH "SEE ALSO"
+.BR ircd (8), 
+.BR inetd (8), 
+.BR inetd.conf (5), 
+.BR gaim (1).
+
+.BR http://www.bitlbee.org/
+
+For more information on using BitlBee, once connected, you should use
+the on-line help system.
+.SH BUGS
+Of course there are bugs. If you find some, please report them by e-mail
+to \fBwilmer@gaast.net\fP, or join \fB#bitlbee\fP on the OFTC network.
+(\fBirc.bitlbee.org\fP)
+.SH LICENSE
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+.PP
+This program is distributed in the hope that it will be useful, but
+\fBWITHOUT ANY WARRANTY\fR; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU 
+General Public License for more details.
+.PP
+You should have received a copy of the GNU General Public License 
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple PLace, Suite 330, Boston, MA  02111-1307  USA
+.SH AUTHORS
+.PP
+ Wilmer van der Gaast <lintux@lintux.cx>
+.BR
+ Jelmer Vernooij <jelmer@vernstok.nl>
+.BR
+ Maurits Dijkstra <mauritsd@xs4all.nl>

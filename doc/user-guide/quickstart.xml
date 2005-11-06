@@ -1,0 +1,163 @@
+<chapter id="quickstart">
+<title>Quickstart</title>
+
+<para>
+Welcome to BitlBee, your IRC gateway to ICQ, MSN, AOL, Jabber and Yahoo Instant Messaging Systems.
+</para>
+
+<para>
+The center of BitlBee is the control channel, <emphasis>#bitlbee</emphasis>. Two users will always be there, <emphasis>you</emphasis> (where "you" is the nickname you are using) and the system user, <emphasis>root</emphasis>.
+</para>
+
+<para>
+You need register so that all your IM settings (passwords, contacts, etc) can be saved on the BitlBee server. It's important that you pick a good password so no one else can access your account. Register with this password using the <emphasis>register</emphasis> command: <emphasis>register &lt;password&gt;</emphasis> (without the brackets!).
+</para>
+
+<para>
+Be sure to remember your password. The next time you connect to the BitlBee server you will need to <emphasis>identify &lt;password&gt;</emphasis> so that you will be recognised and logged in to all the IM services automatically.
+</para>
+
+<para>
+When finished, type <emphasis>help quickstart2</emphasis> to continue.
+</para>
+
+<sect1 id="quickstart2">
+<title>Add and Connect To your IM Account(s)</title>
+<!-- quickstart2 -->
+<para>
+<emphasis>Step Two: Add and Connect To your IM Account(s).</emphasis>
+</para>
+
+<para>
+To add an account to the account list you will need to use the <emphasis>account add</emphasis> command: <emphasis>account add &lt;protocol&gt; &lt;username&gt; &lt;password&gt; [&lt;server&gt;]</emphasis>.
+</para>
+
+<para>
+For instance, suppose you have an ICQ account with UIN <emphasis>72696705</emphasis> with password <emphasis>QuickStart</emphasis>, you would:
+</para>
+
+<ircexample>
+	<ircline nick="you">account add oscar 72696705 QuickStart login.icq.com</ircline>
+	<ircline nick="root">Account successfully added</ircline>
+</ircexample>
+
+<para>
+Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth argument (for msn and yahoo there is no fourth argument). For AOL Instant Messenger, the server name is <emphasis>login.oscar.aol.com</emphasis>. For ICQ, the server name is <emphasis>login.icq.com</emphasis>.
+</para>
+
+<para>
+When you are finished adding your account(s) use the <emphasis>account on</emphasis> command to enable all your accounts, type <emphasis>help quickstart3</emphasis> to continue.
+</para>
+
+</sect1>
+
+<sect1 id="quickstart3">
+<title>Managing Contact Lists: Rename</title>
+
+<!--quickstart3-->
+<para>
+<emphasis>Step Three: Managing Contact Lists: Rename</emphasis>
+</para>
+
+<para>
+For most protocols (currently MSN, Jabber, Yahoo and AOL) BitlBee can download the contact list automatically from the IM server and all the on-line users should appear in the control channel when you log in.
+</para>
+
+<para>
+BitlBee will convert names into irc-friendly form (for instance: tux@example.com will be given the nickname tux). If you have more than one person who would have the same name by this logic (for instance: tux@example.com and tux@bitlbee.org) the second one to log on will be tux_. The same is true if you have a tux log on to AOL and a tux log on from Yahoo.
+</para>
+
+<para>
+It would be easy to get these two mixed up, so BitlBee has a <emphasis>rename</emphasis> command to change the nickname into something more suitable: <emphasis>rename &lt;oldnick&gt; &lt;newnick&gt;</emphasis>
+</para>
+
+<ircexample>
+	<ircline nick="you">rename tux_ bitlbeetux</ircline>
+	<ircaction nick="tux_">is now known as <emphasis>bitlbeetux</emphasis></ircaction>
+	<ircline nick="root">Nick successfully changed</ircline>
+</ircexample>
+
+<para>
+When finished, type <emphasis>help quickstart4</emphasis> to continue.
+</para>
+
+</sect1>
+
+<sect1 id="quickstart4">
+<title>Step Four: Managing Contact Lists: Add and Remove.</title>
+
+<para>
+<emphasis>Step Four: Managing Contact Lists: Add and Remove.</emphasis>
+</para>
+
+<para>
+Now you might want to add some contacts, to do this we will use the <emphasis>add</emphasis> command. It needs two arguments: a connection ID (which can be a number (try <emphasis>account list</emphasis>), protocol name or (part of) the screenname) and the user's handle. It is used in the following way: <emphasis>add &lt;connection&gt; &lt;handle&gt;</emphasis>
+</para>
+
+<ircexample>
+	<ircline nick="you">add 0 r2d2@example.com</ircline>
+	<ircaction nick="r2d2"> has joined <emphasis>#bitlbee</emphasis></ircaction>
+</ircexample>
+
+<para>
+In this case r2d2 is online, since he/she joins the channel immediately. If the user is not online you will not see them join until they log on.
+</para>
+
+<para>
+Lets say you accidentally added r2d3@example.com rather than r2d2@example.com, or maybe you just want to remove a user from your list because you never talk to them. To remove a name you will want to use the <emphasis>remove</emphasis> command: <emphasis>remove &lt;nick&gt;</emphasis>
+</para>
+
+<para>
+When finished, type <emphasis>help quickstart5</emphasis> to continue.
+</para>
+
+</sect1>
+
+<sect1 id="quickstart5">
+<title>Chatting</title>
+
+<para>
+<emphasis>Step Five: Chatting.</emphasis>
+</para>
+
+<para>
+First of all, a person must be on your contact list for you to chat with them (unless it's a group chat, <emphasis>help groupchats</emphasis> for more). If someone not on your contact list sends you a message, simply add them to the proper account with the <emphasis>add</emphasis> command. Once they are on your list and online, you can chat with them in #bitlbee:
+</para>
+
+<ircexample>
+	<ircline nick="you">tux: hey, how's the weather down there?</ircline>
+	<ircline nick="tux"> you: a bit chilly!</ircline>
+</ircexample>
+
+<para>
+If you'd rather chat with them in a separate window use the <emphasis>/msg</emphasis> or <emphasis>/query</emphasis> command, just like you would for a private message in IRC.  If you want to have messages automatically come up in private messages rather than in the #bitlbee channel, use the <emphasis>set private</emphasis> command: <emphasis>set private true</emphasis> (<emphasis>set private false</emphasis> to change back).
+</para>
+
+<para>
+You know the basics. If you want to get to know more about BitlBee, please type <emphasis>help quickstart6</emphasis>.
+</para>
+
+</sect1>
+
+<sect1 id="quickstart6">
+<title>Further Resources</title>
+
+<para>
+<emphasis>So you want more than just chatting? Or maybe you're just looking for a feature?</emphasis>
+</para>
+
+<para>
+You can type <emphasis>help set</emphasis> to learn more about the possible BitlBee user settings. Among these user settings you will find options for common issues, such as changing the charset, HTML stripping and automatic connecting (simply type <emphasis>set</emphasis> to see current user settings).
+</para>
+
+<para>
+For more subjects (like groupchats and away states), please type <emphasis>help index</emphasis>.
+</para>
+
+<para>
+If you're still looking for something, please visit us in #bitlbee on the OFTC network (you can connect via irc.bitlbee.org), or mail us your problem/suggestion. Good luck and enjoy the Bee!
+</para>
+
+</sect1>
+
+</chapter>

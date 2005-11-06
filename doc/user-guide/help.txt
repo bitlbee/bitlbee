@@ -1,0 +1,554 @@
+?
+These are the available help subjects:
+
+ quickstart - A short introduction into BitlBee
+ commands - All available commands and settings
+ away - About setting away states
+ smileys - A summary of some non-standard smileys you might find and fail to understand
+ groupchats - How to work with groupchats on BitlBee
+
+You can read more about them with help <subject>
+
+BitlBee is written by Wilmer van der Gaast together with Jelmer Vernooij, Maurits Dijkstra and others. Bug reports and other kinds of feedback can be sent by e-mail to wilmer@gaast.net. (There is no BitlBee mailing list)
+
+Or just join #BitlBee on OFTC (irc.oftc.net) (OFTC, *not* FreeNode! Some people accidentally joined #BitlBee on FreeNode already, which is just an empty channel) and flame us right in the face. :-)
+%
+?index
+These are the available help subjects:
+
+ quickstart - A short introduction into BitlBee
+ commands - All available commands and settings
+ away - About setting away states
+ smileys - A summary of some non-standard smileys you might find and fail to understand
+ groupchats - How to work with groupchats on BitlBee
+
+You can read more about them with help <subject>
+%
+?quickstart
+Welcome to BitlBee, your IRC gateway to ICQ, MSN, AOL, Jabber and Yahoo Instant Messaging Systems.
+
+The center of BitlBee is the control channel, #bitlbee. Two users will always be there, you (where "you" is the nickname you are using) and the system user, root.
+
+You need register so that all your IM settings (passwords, contacts, etc) can be saved on the BitlBee server. It's important that you pick a good password so no one else can access your account. Register with this password using the register command: register <password> (without the brackets!).
+
+Be sure to remember your password. The next time you connect to the BitlBee server you will need to identify <password> so that you will be recognised and logged in to all the IM services automatically.
+
+When finished, type help quickstart2 to continue.
+%
+?quickstart2
+Step Two: Add and Connect To your IM Account(s).
+
+To add an account to the account list you will need to use the account add command: account add <protocol> <username> <password> [<server>].
+
+For instance, suppose you have an ICQ account with UIN 72696705 with password QuickStart, you would:
+
+<you> account add oscar 72696705 QuickStart login.icq.com
+<root> Account successfully added
+
+Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth argument (for msn and yahoo there is no fourth argument). For AOL Instant Messenger, the server name is login.oscar.aol.com. For ICQ, the server name is login.icq.com.
+
+When you are finished adding your account(s) use the account on command to enable all your accounts, type help quickstart3 to continue.
+%
+?quickstart3
+Step Three: Managing Contact Lists: Rename
+
+For most protocols (currently MSN, Jabber, Yahoo and AOL) BitlBee can download the contact list automatically from the IM server and all the on-line users should appear in the control channel when you log in.
+
+BitlBee will convert names into irc-friendly form (for instance: tux@example.com will be given the nickname tux). If you have more than one person who would have the same name by this logic (for instance: tux@example.com and tux@bitlbee.org) the second one to log on will be tux_. The same is true if you have a tux log on to AOL and a tux log on from Yahoo.
+
+It would be easy to get these two mixed up, so BitlBee has a rename command to change the nickname into something more suitable: rename <oldnick> <newnick>
+
+<you> rename tux_ bitlbeetux
+* tux_ is now known as bitlbeetux
+<root> Nick successfully changed
+
+When finished, type help quickstart4 to continue.
+%
+?quickstart4
+Step Four: Managing Contact Lists: Add and Remove.
+
+Now you might want to add some contacts, to do this we will use the add command. It needs two arguments: a connection ID (which can be a number (try account list), protocol name or (part of) the screenname) and the user's handle. It is used in the following way: add <connection> <handle>
+
+<you> add 0 r2d2@example.com
+* r2d2  has joined #bitlbee
+
+In this case r2d2 is online, since he/she joins the channel immediately. If the user is not online you will not see them join until they log on.
+
+Lets say you accidentally added r2d3@example.com rather than r2d2@example.com, or maybe you just want to remove a user from your list because you never talk to them. To remove a name you will want to use the remove command: remove <nick>
+
+When finished, type help quickstart5 to continue.
+%
+?quickstart5
+Step Five: Chatting.
+
+First of all, a person must be on your contact list for you to chat with them (unless it's a group chat, help groupchats for more). If someone not on your contact list sends you a message, simply add them to the proper account with the add command. Once they are on your list and online, you can chat with them in #bitlbee:
+
+<you> tux: hey, how's the weather down there?
+<tux>  you: a bit chilly!
+
+If you'd rather chat with them in a separate window use the /msg or /query command, just like you would for a private message in IRC. If you want to have messages automatically come up in private messages rather than in the #bitlbee channel, use the set private command: set private true (set private false to change back).
+
+You know the basics. If you want to get to know more about BitlBee, please type help quickstart6.
+%
+?quickstart6
+So you want more than just chatting? Or maybe you're just looking for a feature?
+
+You can type help set to learn more about the possible BitlBee user settings. Among these user settings you will find options for common issues, such as changing the charset, HTML stripping and automatic connecting (simply type set to see current user settings).
+
+For more subjects (like groupchats and away states), please type help index.
+
+If you're still looking for something, please visit us in #bitlbee on the OFTC network (you can connect via irc.bitlbee.org), or mail us your problem/suggestion. Good luck and enjoy the Bee!
+%
+?commands
+ * account - IM-account list maintenance
+ * add - Add a buddy to your contact list
+ * info - Request user information
+ * remove - Remove a buddy from your contact list
+ * block - Block someone
+ * allow - Unblock someone
+ * set - Miscellaneous settings
+ * help - BitlBee help system
+ * save - Save your account data
+ * rename - Rename (renick) a buddy
+ * yes - Accept a request
+ * no - Deny a request
+ * qlist - List all the unanswered questions root asked
+ * register - Register yourself
+ * identify - Identify yourself with your password
+ * drop - Drop your account
+ * blist - List all the buddies in your contact list
+ * nick - Change friendly name, nick
+ * import_buddies - Copy local buddy list to server (normally only needed when upgrading)
+%
+?account
+Syntax: account <action> [<arguments>]
+
+Available actions: add, del, list, on, off. See help account <action> for more information.
+%
+?account add
+Syntax: account add <protocol> <username> <password> [<server>]
+
+Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ) and Yahoo. For more information about adding an account, see help account add <protocol>.
+%
+?account add jabber
+Syntax: account add jabber <handle> <password> [<servertag>]
+
+Note that the servertag argument is optional. You only have to use it if the part after the @ in your handle isn't the hostname of your Jabber server, or if you want to use SSL/connect to a non-standard port number. The format is simple: [<servername>[:<portnumber>][:ssl]]. For example, this is how you can connect to Google Talk:
+
+Note that Google talk is SSL-only, but officially reachable over both port 5222 and 5223. However, for some people only port 5222 works, for some people only 5223. This is something you'll have to try out.
+
+Example:
+<wilmer> account add jabber example@gmail.com hobbelmeeuw talk.google.com:5223:ssl
+<root> Account successfully added
+%
+?account add msn
+Syntax: account add msn <handle> <password>
+
+For MSN connections there are no special arguments.
+%
+?account add oscar
+Syntax: account add oscar <handle> <password> [<servername>]
+
+Specifying a server is required for OSCAR, since OSCAR can be used for both ICQ- and AIM-connections. Although these days it's supposed to be possible to connect to ICQ via AIM-servers and vice versa, we like to stick with this separation for now. For ICQ connections, the servername is login.icq.com, for AIM connections it's login.oscar.aol.com.
+
+Example:
+<wilmer> account add oscar 72696705 hobbelmeeuw login.icq.com
+<root> Account successfully added
+%
+?account add yahoo
+Syntax: account add yahoo <handle> <password>
+
+For Yahoo! connections there are no special arguments.
+%
+?account del
+Syntax: account del <account id>
+
+This commands deletes an account from your account list. You should signoff the account before deleting it.
+
+The account ID can be a number (see account list), the protocol name or (part of) the screenname, as long as it matches only one connection.
+%
+?account on
+Syntax: account on [<account id>]
+
+This command will try to log into the specified account. If no account is specified, BitlBee will log into all the accounts. (Including accounts awaiting a reconnection)
+
+The account ID can be a number (see account list), the protocol name or (part of) the screenname, as long as it matches only one connection.
+%
+?account off
+Syntax: account off [<account id>]
+
+This command disconnects the connection for the specified account. If no account is specified, BitlBee will deactivate all active accounts. (Including accounts awaiting a reconnection)
+
+The account ID can be a number (see account list), the protocol name or (part of) the screenname, as long as it matches only one connection.
+%
+?account list
+Syntax: account list
+
+This command gives you a list of all the accounts known by BitlBee, including the numbers you'll need for most account commands.
+%
+?add
+Syntax: add <connection> <handle> [<nick>]
+
+Adds the given buddy at the specified connection to your buddy list. The account ID can be a number (see account list), the protocol name or (part of) the screenname, as long as it matches only one connection.
+
+If you want, you can also tell BitlBee what nick to give the new contact. Of course you can also use the rename command for that, but sometimes this might be more convenient.
+
+Example:
+<ctrlsoft> add 3 gryp@jabber.org grijp
+* grijp has joined #bitlbee
+%
+?info
+Syntax: info <connection> <handle>
+Syntax: info <nick>
+
+Requests IM-network-specific information about the specified user. The amount of information you'll get differs per protocol. For some protocols (ATM Yahoo! and MSN) it'll give you an URL which you can visit with a normal web browser to get the information.
+
+Example:
+<ctrlsoft> info 0 72696705
+<root> User info - UIN: 72696705   Nick: Lintux   First/Last name: Wilmer van der Gaast   E-mail: lintux@lintux.cx
+%
+?remove
+Syntax: remove <nick>
+
+Removes the specified nick from your buddy list.
+
+Example:
+<ctrlsoft> remove gryp
+* gryp has quit [Leaving...]
+%
+?block
+Syntax: block <nick>
+Syntax: block <connection> <handle>
+
+Puts the specified user on your ignore list. Either specify the user's nick when you have him/her in your contact list or a connection number and a user handle.
+%
+?allow
+Syntax: allow <nick>
+Syntax: allow <connection> <handle>
+
+Reverse of block. Unignores the specified user or user handle on specified connection.
+%
+?set
+Syntax: set [<variable> [<value>]]
+
+Without any arguments, this command lists all the set variables. You can also specify a single argument, a variable name, to get that variable's value. To change this value, specify the new value as the second argument.
+
+To get more help information about a setting, try:
+
+Example:
+<ctrlsoft> help set private
+%
+?help
+Syntax: help [subject]
+
+This command gives you the help information you're reading right now. If you don't give any arguments, it'll give a short help index.
+%
+?save
+Syntax: save
+
+This command saves all your nicks and accounts immediately. Handy if you have the autosave functionality disabled, or if you don't trust the program's stability... ;-)
+%
+?rename
+Syntax: rename <oldnick> <newnick>
+
+Renick a user in your buddy list. Very useful, in fact just very important, if you got a lot of people with stupid account names (or hard ICQ numbers).
+
+Example:
+<itsme> rename itsme_ you
+* itsme_ is now known as you
+%
+?yes
+Syntax: yes [<number>]
+
+Sometimes an IM-module might want to ask you a question. (Accept this user as your buddy or not?) To accept a question, use the yes command.
+
+By default, this answers the first unanswered question. You can also specify a different question as an argument. You can use the qlist command for a list of questions.
+%
+?no
+Syntax: no [<number>]
+
+Sometimes an IM-module might want to ask you a question. (Accept this user as your buddy or not?) To reject a question, use the no command.
+
+By default, this answers the first unanswered question. You can also specify a different question as an argument. You can use the qlist command for a list of questions.
+%
+?qlist
+Syntax: qlist
+
+This gives you a list of all the unanswered questions from root.
+%
+?register
+Syntax: register <password>
+
+BitlBee can save your settings so you won't have to enter all your IM passwords every time you log in. If you want the Bee to save your settings, use the register command.
+
+Please do pick a secure password, don't just use your nick as your password. Please note that IRC is not an encrypted protocol, so the passwords still go over the network in plaintext. Evil people with evil sniffers will read it all. (So don't use your root password.. ;-)
+
+To identify yourself in later sessions, you can use the identify command.
+%
+?identify
+Syntax: identify <password>
+
+BitlBee saves all your settings (contacts, accounts, passwords) on-server. To prevent other users from just logging in as you and getting this information, you'll have to identify yourself with your password. You can register this password using the register command.
+
+Once you're registered, you can change your password using set password <password>.
+%
+?drop
+Syntax: drop <password>
+
+Drop your BitlBee registration. Your account files will be removed and your password will be forgotten. For obvious security reasons, you have to specify your NickServ password to make this command work.
+%
+?blist
+Syntax: blist [all|online|offline|away]
+
+You can get a better readable buddy list using the blist command. If you want a complete list (including the offline users) you can use the all argument.
+%
+?nick
+Syntax: nick <connection> [<new nick>]
+Syntax: nick
+
+This command allows to set the friendly name of an im account. If no new name is specified the command will report the current name. When the name contains spaces, don't forget to quote the whole nick in double quotes. Currently this command is only supported by the MSN protocol.
+
+Example:
+<wouter> nick 1 "Wouter Paesen"
+<root> Setting your name on connection 1 to `Wouter Paesen'
+%
+?import_buddies
+Syntax: import_buddies <connection> [clear]
+
+This command copies the locally stored buddy list to the server. This command exists for upgrading purposes. Previous versions of BitlBee didn't support server-side buddy lists for ICQ, so the list was stored locally.
+
+Since version 0.91 however, server-side contact lists are supported for all protocols, so the local list is now ignored. When upgrading from an older BitlBee to version 0.91, you might need this command to get your buddy list back.
+
+The only argument this command needs is your ICQ account identification. If your serverside buddy list contains some old buddies you don't want anymore, you can pass clear as a second argument.
+
+After giving this command, you have to wait for a while before all the adds are handled, because of ICQ's rate limiting. If your buddy list is very large and the ICQ server starts complaining, you might have to reconnect and enter this command again.
+%
+?set charset
+Type: string
+Default: iso8859-1
+Possible Values: you can get a list of all possible values by doing 'iconv -l' in a shell
+
+The charset setting enables you to use different character sets in BitlBee. These get converted to UTF-8 before sending and from UTF-8 when receiving.
+
+If you don't know what's the best value for this, at least iso8859-1 is the best choice for most Western countries. You can try to find what works best for you on http://czyborra.com/charsets/iso8859.html
+%
+?set private
+Type: boolean
+Default: True
+
+If value is true, messages from users will appear in separate query windows. If false, messages from users will appear in the control channel.
+
+This setting is remembered (during one session) per-user, this setting only changes the default state. This option takes effect as soon as you reconnect.
+%
+?set save_on_quit
+Type: boolean
+Default: True
+
+If enabled causes BitlBee to save all current settings and account details when user disconnects. This is enabled by default, and these days there's not really a reason to have it disabled anymore.
+%
+?set html
+Type: string
+Default: nostrip
+Possible Values: strip, nostrip
+
+Determines what BitlBee should do with HTML in messages. If set to nostrip, HTML in messages will not be touched. If set to strip, all HTML will be stripped from messages. Unfortunately this sometimes strips too much.
+%
+?set debug
+Type: boolean
+Default: False
+
+Some debugging messages can be sent to the control channel if you wish. They're probably not really useful for you, unless you're doing some development on BitlBee.
+%
+?set to_char
+Type: string
+Default: ": "
+
+It's customary that messages meant for one specific person on an IRC channel are prepended by his/her alias followed by a colon ':'. BitlBee does this by default. If you prefer a different character, you can set it using set to_char.
+
+Please note that this setting is only used for incoming messages. For outgoing messages you can use ':' (colon) or ',' to separate the destination nick from the message, and this is not configurable.
+%
+?set typing_notice
+Type: boolean
+Default: False
+
+Sends you a /notice when a user starts typing a message (if the protocol supports it, MSN for example). This is a bug, not a feature. (But please don't report it.. ;-) You don't want to use it. Really. In fact the typing-notification is just one of the least useful 'innovations' ever. It's just there because some guy will probably ask me about it anyway. ;-)
+%
+?set ops
+Type: string
+Default: both
+Possible Values: both, root, user, none
+
+Some people prefer themself and root to have operator status in #bitlbee, other people don't. You can change these states using this setting.
+
+The value "both" means both user and root get ops. "root" means, well, just root. "user" means just the user. "none" means nobody will get operator status.
+%
+?set away_devoice
+Type: boolean
+Default: True
+
+With this option enabled, the root user devoices people when they go away (just away, not offline) and gives the voice back when they come back. You might dislike the voice-floods you'll get if your contact list is huge, so this option can be disabled.
+%
+?set handle_unknown
+Type: string
+Default: root
+Possible Values: root, add, add_private, add_channel, ignore
+
+Messages from unknown users are echoed like this by default:
+
+<root> Unknown message from handle 3137137:
+<root> j0000! 1 4m l33t h4x0r! kill me!
+
+If you want this lame user to be added automatically, you can set this setting to "add". If you prefer to ignore messages from people you don't know, you can set this one to "ignore". "add_private" and "add_channel" are like add, but you can use them to make messages from unknown buddies appear in the channel instead of a query window.
+
+Auto-added users aren't added to your real contact list. This is because you don't want the user to get authorization requests. So when you restart BitlBee, the auto-added user will be gone. If you want to keep the person in your buddy-list, you have to fixate the add using the add command.
+%
+?set auto_connect
+Type: boolean
+Default: True
+
+With this option enabled, when you identify BitlBee will automatically connect to your accounts, with this disabled it will not do this.
+%
+?set auto_reconnect
+Type: boolean
+Default: False
+
+If an IM-connections breaks, you're supposed to bring it back up yourself. Having BitlBee do this automatically might not always be a good idea, for several reasons. If you want the connections to be restored automatically, you can enable this setting.
+
+See also the auto_reconnect_delay setting.
+%
+?set auto_reconnect_delay
+Type: integer
+Default: 300
+
+Tell BitlBee after how many seconds it should attempt to bring an IM-connection back up after a crash. It's not a good idea to set this value very low, it will cause too much useless traffic when an IM-server is down for a few hours.
+
+See also the auto_reconnect setting.
+%
+?set buddy_sendbuffer
+Type: boolean
+Default: False
+
+By default, when you send a message to someone, BitlBee forwards this message to the user immediately. When you paste a large number of lines, the lines will be sent in separate messages, which might not be very nice to read. If you enable this setting, BitlBee will buffer your messages and wait for more data.
+
+Using the buddy_sendbuffer_delay setting you can specify the number of seconds BitlBee should wait for more data before the complete message is sent.
+
+Please note that if you remove a buddy from your list (or if the connection to that user drops) and there's still data in the buffer, this data will be lost. BitlBee will not try to send the message to the user in those cases.
+%
+?set buddy_sendbuffer_delay
+Type: integer
+Default: 
+
+Tell BitlBee after how many seconds a buffered message should be sent.
+
+See also the buddy_sendbuffer setting.
+%
+?set default_target
+Type: string
+Default: root
+Possible Values: root, last
+
+With this value set to root, lines written in the control channel without any nickname in front of them will be interpreted as commands. If you want BitlBee to send those lines to the last person you addressed in the control channel, set this to last.
+%
+?set display_namechanges
+Type: boolean
+Default: False
+%
+?set password
+Type: string
+Default: 
+
+Use this setting to change your "NickServ" password.
+%
+?set query_order
+Type: string
+Default: lifo
+Possible Values: lifo, fifo
+
+This changes the order in which the questions from root (usually authorization requests from buddies) should be answered. When set to lifo, BitlBee immediately displays all new questions and they should be answered in reverse order. When this is set to fifo, BitlBee displays the first question which comes in and caches all the others until you answer the first one.
+
+Although the fifo setting might sound more logical (and used to be the default behaviour in older BitlBee versions), it turned out not to be very convenient for many users when they missed the first question (and never received the next ones).
+%
+?set lcnicks
+Type: boolean
+Default: True
+
+Hereby you can change whether you want all lower case nick names or leave the case as it intended by your peer.
+%
+?misc
+%
+?smileys
+All MSN smileys (except one) are case insensitive and work without the nose too.
+
+ (Y) - Thumbs up
+ (N) - Thumbs down
+ (B) - Beer mug
+ (D) - Martini glass
+ (X) - Girl
+ (Z) - Boy
+ (6) - Devil smiley
+ :-[ - Vampire bat
+ (}) - Right hug
+ ({) - Left hug
+ (M) - MSN Messenger or Windows Messenger icon (think a BitlBee logo here ;)
+ :-S - Crooked smiley (Confused smiley)
+ :-$ - Embarrassed smiley
+ (H) - Smiley with sunglasses
+ :-@ - Angry smiley
+ (A) - Angel smiley
+ (L) - Red heart (Love)
+ (U) - Broken heart
+ (K) - Red lips (Kiss)
+ (G) - Gift with bow
+ (F) - Red rose
+ (W) - Wilted rose
+ (P) - Camera
+ (~) - Film strip
+ (T) - Telephone receiver
+ (@) - Cat face
+ (&) - Dog's head
+ (C) - Coffee cup
+ (I) - Light bulb
+ (S) - Half-moon (Case sensitive!)
+ (*) - Star
+ (8) - Musical eighth note
+ (E) - Envelope
+ (^) - Birthday cake
+ (O) - Clock
+
+This list was extracted from http://help.msn.com/!data/en_us/data/messengerv50.its51/$content$/EMOTICONS.HTM?H_APP=.
+%
+?groupchats
+Since version 0.8x, BitlBee supports groupchats on the MSN and Yahoo! networks. This text will try to explain you how they work.
+
+As soon as someone invites you into a groupchat, you will be force-joined or invited (depending on the protocol) into a new virtual channel with all the people in there. You can leave the channel at any time, just like you would close the window in regular IM clients. Please note that root-commands don't work in groupchat channels, they only work in the control channel (or to root directly).
+
+Of course you can also create your own groupchats. Type help groupchats2 to see how.
+%
+?groupchats2
+If you want to start a groupchat with the person jim_msn in it, just join the channel #jim_msn. BitlBee will refuse to join you to the channel with that name, but it will create a new virtual channel with root, you and jim_msn in it.
+
+Of course a channel with only two people isn't really exciting yet. So the next step is to invite some other people to the channel. For this, you can use the /invite command of your IRC client. Please do keep in mind that all the people have to be on the same network and contact list! You can't invite Yahoo! buddies into an MSN groupchat.
+
+This is all you'll probably need to know. If you have any problems, please read help groupchats3.
+%
+?groupchats3
+Obviously the (numbered) channel names don't make a lot of sense. Problem is that groupchats usually don't have names at all in the IM-world, while IRC insists on a name. So BitlBee just generates something random, just don't pay attention to it. :-)
+
+Please also note that BitlBee doesn't support groupchats for all protocols yet. BitlBee will tell you so. Support for other protocols will hopefully come later.
+%
+?away
+As you might've expected, you can just use the /away command in your IRC client to set an away-state. BitlBee supports most away-states supported by the protocols.
+
+Not all away states are supported by all protocols, and some protocols have different names for them. BitlBee will try to pick the best available alias from this list for every connection:
+
+ - Away from computer, Away, Extended away
+ - NA, N/A, Not available
+ - Busy, Do not disturb, DND, Occupied
+ - Be right back, BRB
+ - On the phone, Phone, On phone
+ - Out to lunch, Lunch, Food
+
+So /away Food will set your state to "Out to lunch" on your MSN connection, and for most other connections the default, "Away" or "Away from computer" will be chosen.
+
+You can also add more information to your away message. Setting it to "Busy - Fixing BitlBee bugs" will set your IM-away-states to Busy, but your away message will be more descriptive for people on IRC. Protocols like Yahoo! and Jabber will also show this complete away message to your buddies.
+%

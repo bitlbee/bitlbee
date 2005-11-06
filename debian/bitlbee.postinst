@@ -1,0 +1,22 @@
+#!/bin/sh -e
+
+. /usr/share/debconf/confmodule
+
+db_get bitlbee/serveport
+PORT="$RET"
+
+TCPD='/usr/sbin/tcpd'
+CONFDIR=/var/lib/bitlbee/
+
+update-inetd --remove '/usr/sbin/bitlbee.*$'
+if [ -n "$PORT" ]; then
+	update-inetd --group OTHER --add "$PORT"'\tstream\ttcp\tnowait\tbitlbee\t'"$TCPD"'\t/usr/sbin/bitlbee'
+fi
+
+if [ -d $CONFDIR ] && chown bitlbee $CONFDIR; then
+	echo 'BitlBee (probably) already installed, skipping user/configdir installation'
+	exit 0;
+fi
+
+adduser --system --home /var/lib/bitlbee/ --disabled-login --disabled-password bitlbee
+chmod 700 /var/lib/bitlbee/

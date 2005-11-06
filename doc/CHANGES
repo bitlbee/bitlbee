@@ -1,0 +1,514 @@
+Version 0.99:
+- Fixed memory initialization bug in OSCAR module that caused crashes on
+  closing the connection.
+- Most likely fixed the bug that caused BitlBee to use 100% CPU time in
+  some situations.
+- Outgoing MSN typing notifications are now understood correctly by the
+  orignal MS Mac/Windows clients (again).
+- Added "account add $protocol" to the documentation, got rid of a lot
+  of over-markup (i.e. overuse of bold-tags), reviewed some other parts.
+- Small changes to help.xsl to fix small flaws in the help.txt formatting.
+- Messaging yourself now doesn't make irssi or mIRC crash anymore.
+
+Finished 3 Nov 2005
+
+Version 0.93:
+- &quot; is now correctly converted to " instead of '.
+- Code cleanup in OSCAR module.
+- Some changes for better RFC-compliancy.
+- It's now possible to specify an alternate Jabber server.
+- bitlbee_save() now also checks the return value of fclose(), which might
+  solve more problems with lost account data.
+- Fixed a file descriptor leak in bitlbee.c.
+- Signedness fixes (mainly to keep GCC4 happy).
+- Away messages are now sent correctly to most ICQ clients.
+- BitlBee knows now which connection sends HTML, so it will strip HTML
+  automatically, "set html strip" is no longer necessary. Also, outgoing HTML
+  is escaped correctly.
+- info-command works for AIM-connections too now.
+- /notices to users will be sent as auto-away replies.
+- Messages about a connection now also mention a handle, for people who have
+  multiple accounts in use of the same protocol.
+- Examples are back in help.txt.
+
+Finished 31 Oct 2005
+
+Version 0.92:
+- Fixed some formatting issues with the help.txt XSL-sheet.
+- Moved the polling of the IRC connections to glib instead of a separate
+  select().
+- Added ctags generation to the Makefiles.
+- Sending a CTCP TYPING message to a user in your buddy list now sends a
+  typing notification to that person, if the protocol supports it. You
+  probably want to write/use a script for your IRC client to do this.
+- A dash is no longer considered a lowercase underscore in nicknames.
+- CTCP's to buddies no longer alter their private/non-private state.
+- Clean shutdown (with saving settings) on SIGTERM.
+- Fixed a crash on connecting to unreachable Jabber/SSL servers.
+- On ICQ, offline messages are now requested after receiving the buddy
+  list. This should get rid of the "Message from unknown OSCAR handle"
+  messages on login.
+- The linked list of buddies/nicks is now always sorted, which makes the
+  blist output a bit more useful.
+- Fixed a crash on renaming NickServ. (There's no reason to do this, but
+  still crashing isn't really how BitlBee should tell you that. ;-)
+- Now the message about the "new" ICQ server-side buddy lists is only
+  displayed when the server-side list is still empty.
+- The Yahoo! markup language stripper is now less likely to strip things
+  that shouldn't be stripped.
+- Working around a shortcoming in the Yahoo! cleanup code that didn't
+  cause any serious problems in previous versions, but got pretty nasty
+  (100% CPU time usage) now with everything in the glib main loop.
+- Fixed a bug in http_encode that might have caused buffer overflows
+  (although not likely to be exploitable) when trying to encode strings
+  with non-ASCII characters.
+- Fixed AIM screenname handling on ICQ connections.
+- When blocking someone, the MSN module now closes the conversation you're
+  having with him/her (if any) so he/she can't continue talking to you
+  (for as long as the conversation lasts).
+- Away messages are only sent when messaging someone outside the control
+  channel. (And now also when the user is offline instead of just away.)
+- Moved charset conversion in serv_buddy_rename() to the right place so
+  bogus changes are always detected now.
+- iso8859-1 is now the default charset because -15 caused some problems
+  and because -1 is enough for most people anyway.
+- Fixed crashes on attempting to add a buddy (or do other things) on
+  connections that are still initializing.
+- Added support for server-side notifies using the WATCH command.
+- IRC_MAX_ARGS is dead, at least for IRC commands.
+- Fixed a bug that made BitlBee crash on failing fresh MSN switchboard
+  connections.
+- Fixed an invisibility bug in the MSN code that handled transfers to
+  other servers in the middle of a session.
+- Newline stripping added to prevent newline-in-friendlyname attacks.
+  (Which allowed remote people to make BitlBee send raw custom IRC lines.)
+
+Finished 23 Feb 2005
+
+Version 0.91:
+- Full support for ICQ server-side contact lists!
+  NOTE: BitlBee now ignores your client-side contact list. If you want to
+        import your ICQ contact list, use the import_buddies command.
+- Added the import_buddies command for upgrading purposes.
+- Added support for OpenSSL.
+- Fixed one major problem with the daemon mode by getting rid of the global
+  IRC structure.
+- Documentation fixes. help.txt is now generated from XML. Also updated the
+  installation manual.
+- Made the quickstart up-to-date. (By Elizabeth Krumbach)
+- Some bitlbeed additions. (By Marcus Dennis)
+- info-command support for Jabber, MSN, Yahoo! and a more verbose info-reply
+  for ICQ. (By Frank Thieme)
+- Support for Jabber over SSL.
+- nick_get() appends a _ on duplicates instead of chopping off the last
+  character.
+- Got rid of an unused piece of code that caused crashes.
+  (oscar.c:gaim_parse_clientauto)
+- When splitting long messages into 450-char chunks, BitlBee now tries not
+  to cut off in the middle of a line.
+- Added a warning when the user specifies an unknown OSCAR server.
+- Removed GLib 2.x dependency, BitlBee will work with GLib 1.x again.
+- Improved strip_html(), now less likely to strip non-HTML things.
+- An invalid account-command will now display an error message.
+- Fixed a bug that caused crashes when /CTCP'ing a groupchat channel.
+- Hopefully better Unicode/non-ASCII support for ICQ.
+- Fixed MSN connection crash on non-ASCII characters in screenname.
+- Added some missing charset conversion calls. (serv_got_crap,
+  serv_buddy_rename)
+- "account off" without extra arguments now logs off all connections.
+- Fixed a crash-bug on disconnecting Yahoo! connections before they're fully
+  connected.
+- Fixed a bug in helpfile handling which sometimes caused crashes in daemon
+  mode.
+- block and allow commands work with just a nick as an argument again.
+- Working around a crash on some probably invalid Yahoo! packets.
+- Fixed a possible double free() on shutdown in irc_free().
+- Talking to ICQ people on AIM and vice versa and talking to people with
+  @mac.com accounts now possible.
+- Low ASCII chars are now stripped from away-messages so the Jabber module
+  won't barf on BitchX and lame-script away messages anymore.
+
+Finished 25 Sep 2004
+
+Version 0.90a:
+- Fixed the Yahoo! authentication code.
+
+Finished 28 Jun 2004
+
+Version 0.90:
+- A complete rewrite of the MSN module. This gives BitlBee the following
+  new features/improvements:
+  * You can now start groupchats with MSN people without having to send them
+    a bogus message first.
+  * People who are in your MSN block/allow list, but not in your contact
+    list, shouldn't show up in your BitlBee buddy lists anymore.
+  * Passport authentication shouldn't lock up the whole program for a couple
+    of seconds anymore. Additionally, it should also work behind proxies now.
+  * Better recognition of incoming file transfers; they're now recognized
+    when coming from non-English MS Messenger clients too.
+  * Fixed a problem with MSN passwords with non-alphanumeric characters.
+  * Mail notification support (also for Yahoo!)...
+  * Parsing of maintenance messages (ie "Server is going down in x minutes").
+  * Hopefully more stability.
+- Changes in the OSCAR module:
+  * Better reading of ICQ-away-states.
+  * Lots of cleanups.
+- Yahoo! module:
+  * Fixed authentication on 64-bit machines. (Patch from Matt Rogers)
+  * Better stripping of markup tags.
+- Lots of cleanup in all IM-modules.
+- Added support for using libnss instead of libgnutls.
+- Reverse hostname lookups work on IPv6 sockets too now. (And don't crash
+  the program anymore.)
+- Fixed a little problem with identifying right after registering a nick.
+- Restored complete proxy support and added a proxy setting to the conffile.
+- BitlBee can now tell you when people in your buddy list change their
+  "friendly name".
+- Instead of an account number, you can also specify the protocol name or
+  (part of) the username as an account identification with commands like
+  "account on", "add", etc.
+- BitlBee remembers what connection a question (i.e. authorization request)
+  belongs to and cleans it up when the connection goes down; this fixes
+  (one of) the last known crash bugs.
+- Plus some other changes in question management. (The query_order setting
+  is one of them. The default behaviour changed a bit, for more information
+  please read "help set query_order".)
+- Also fixed a memory management bug in the question code which caused some
+  crashes.
+- Optimized some nick handling functions and added a hash of all the users
+  to speed up user_find() a bit (especially good for people with large
+  buddy and notify lists).
+- Lots of changes for the Win32 port (see http://jelmer.vernstok.nl/).
+- Added the drop-command.
+- Fixed small problem with versions of sed which don't support the +
+  "operator" (the BSD version, for example, even though the operator is
+  documented properly in the re_format manpage...).
+- Added the default_target setting.
+- Added a CenterICQ2BitlBee conversion script.
+- Put back the evaluator for "set charset" (which got lost somewhere between
+  0.84 and 0.85), so an incorrect charset will be rejected again.
+- ISON now (A) gives one single reply and (B) also replies when none of the
+  persons asked for are on-line.
+- Using GConv instead of iconv now.
+- Incoming messages larger than 450 characters are now split into parts
+  before sending them to the user.
+- Fixed a bug in irc_exec() which could crash the program when some commands
+  were called with too little arguments.
+- Fixed a dumb NULL pointer dereference in the JOIN command.
+- Added rate limiting to bitlbeed. (Against server hammering)
+- Added handling of CTCP PINGs (yet another self-ping used by some IRC
+  clients...)
+- Added bitlbee_tab_completion.pl.
+- Removed the vCard handling code from Jabber because it's (A) not used and
+  (B) had a possible format string vulnerability.
+- Got rid of strcpy() in account.c. (Thanks to NETRIC for reporting these two
+  problems.)
+- ISO8859-15 is now the default charset.
+
+Finished 21 May 2004
+
+Version 0.85a:
+- Fixed an authentication problem with logging into some MSN accounts.
+- Removed a non-critical warning message from the ICQ servers when logging
+  in with an empty contact list.
+- Fixed reading the [defaults] section of bitlbee.conf.
+- The last newline in outgoing messages when using the buddy_sendbuffer is
+  now removed correctly.
+- Yahoo! colour/font tag stripping now actually works.
+- Fixed compilation on *BSD and some Linux architectures.
+
+Finished 24 Mar 2004
+
+Version 0.85:
+- Users can specify alternate configuration files/directories at runtime
+  now.
+- Rename now doesn't choke on name changes with only case changes anymore.
+- Imported the daemon patch into the main source tree. The daemon mode is
+  still experimental, this just eases maintenance. This daemon patch brings
+  a lot of features, including (as the name says) a real daemon mode and
+  also buffering of the data sent to the user, and flood protection.
+- Strips font and colour codes from Yahoo! messages.
+- Support for groupchats on Yahoo!
+- Fixed removing Yahoo! buddies from a different group than "Buddies".
+- Jabber presence packets with error messages are interpreted correctly now.
+  (They used to be parsed as a signin.)
+- bitlbee_save() checks return values from fprintf() and writes to tempfiles
+  first to make sure no old files get lost when there's a write error.
+- ICQ buddies are added all at once instead of once at a time. This should
+  solve problems with huge buddy lists.
+- Made the client pinging timings configurable. (Without requiring
+  recompilation)
+- MSN and Yahoo flag the connection as "wants_to_die" when they're logged
+  off because of a concurrent login. This means reconnection will be disabled
+  on concurrent logins.
+- BitlBee can now buffer the messages sent to someone before they're actually
+  sent, and wait for a specified number of seconds for more lines to be added
+  to the buffer before the message will really be sent.
+- Renamed the reconnect_delay setting to auto_reconnect_delay.
+- Unknown settings aren't saved anymore.
+
+Finished 13 Mar 2004
+
+Version 0.84:
+- Removed the libsoup dependency.
+- Fixed AuthMode=Registered: It will now restore your accounts when
+  identifying.
+- Fixed Yahoo! support.
+- Fixed a little memory leak in user.c.
+- Fixed a security bug in unused code in proxy.c, only people who use
+  the HTTP proxy support and an untrusted proxy might need this. We
+  haven't done an emergency release for this fix because proxy support
+  is disabled by default.
+- Fixed some memory leaks in IM-code.
+
+Finished 13 Feb 2004
+
+Version 0.83:
+- Fixed a crash bug on connecting to unsupported accounts.
+- Fixed a problem with connecting to MSN accounts with empty buddy
+  lists.
+- Fixed another inifite-loop bug in nick_get() and added a piece
+  of code which detects the infinite loop and asks the user to send
+  a bug report.
+- Fixed iconv-Solaris linking issues.
+- Fixed all the problems with spaces in AIM screennames now, we hope.
+- Fixed a buffer overflow in the nick handling code. Buffers are
+  overflowed with static data (nulls), so we don't think it's exploitable.
+- Added server-client pinging, useful for remote servers.
+- Added the hostname setting.
+- Some bitlbeed changes.
+- Added a little part to the on-line quickstart about the settings and
+  other help topics, this hopefully answers a lot of FAQ's.
+- Fixed the signal handler to re-raise the signal after the handler quits.
+  This makes sure the default handler is called after our handler sends
+  the user a bye-message, so core dumps are created and the parent will
+  get more useful information back from wait().
+- Added support for ICQ URL messages.
+- Fixed strip_html() behaviour on unknown &entities;.
+- Fixed a possible problem with Yahoo!
+- Fixed a problem with logging into more than one MSN account at once.
+
+Finished 31 Dec 2003
+
+Version 0.82:
+- Fixed a little bug in nick.c which could cause a complete hang for
+  some tricky buddylists. (Thanks to Geert Hauwaerts for helping with
+  fixing this bug)
+- Fixed MSN support. (Lots of thanks to Wouter Paesen!)
+- Removed the old login/logout commands.
+- Added the qlist command.
+- Fixed a buffer overflow in the nick checking code. (Thanks to Jon
+  Åslund for pointing us at this problem)
+- Adds the add_private and add_channel options for set handle_unknown.
+- Some documentation updates.
+- Added two small utilities to encode/decode BitlCrypted files.
+
+Finished 31 Oct 2003
+
+Version 0.81a:
+- This version just fixes some small things we should've fixed before
+  releasing 0.81:
+- Fixed a small bug in the auto-reconnect cleanup code.
+- Fixed the Makefile: Now it doesn't just overwrite your etc files when
+  installing.
+- Fixed the Makefile: $prefix/etc/bitlbee/ is the default etcdir now.
+- Disabling MSN by default, now that it doesn't work. It'll be back on
+  as soon as we get the module working again.
+
+Finished 16 Oct 2003
+
+Version 0.81:
+- Added a configuration file.
+- Added support for the PASS command to restrict access to the daemon to
+  only the people who know this password.
+- Only allowing registered people to use the daemon is possible too.
+- In case you, at some time, need to check the currently running BitlBee
+  version, just CTCP-VERSION someone in the channel.
+- Added the auto_connect setting for people who don't want the program
+  to connect to IM-networks automatically.
+- Extended the blist command.
+- Applied the auto-reconnect patch from G-Lite.
+- Applied the iconv patch from Yuri Pimenov.
+- Imported the MSN-friendlyname patch from Wouter Paesen.
+- Away-message aliasing code now just parses the beginning of the string,
+  not the whole string. This allows you to have a more descriptive away
+  message like "Busy - Fixing bugs in BitlBee" and all the IM connections
+  will have a busy-like away-state.
+- Added some information about away states to the help system.
+- MSN file transfers aren't silently ignored anymore.
+- Integrated the Yahoo protocol fix from Cerulean Studios (Trillian).
+  (Thanks to Tony Perrie!)
+- Made all protocol plugins optional. (Patch from Andrej Kacian/Ticho)
+
+Finished 15 Oct 2003
+
+Version 0.80:
+- Fixed a very stupid bug in the MSN away-state reading.
+- nick_cmp() now actually works, RFC-compliant.
+- Fixed and cleaned up the away-state handling, there were some very
+  weird things in the original Gaim code base which broke this completely
+  all the time.
+- The daemon prevents you from using root/NickServ as your nick now,
+  previous versions crashed on that.
+- At last ... GROUP CHAT SUPPORT! :-D
+- People who are *not* away get mode +v in #bitlbee now, so you can see
+  in /names who's away and who's not.
+- Crashing BitlBee by using the NICKSERV command without any arguments
+  is impossible now.
+- Added some notes about Darwin/OSX portability.
+- Separated connections from accounts. This means restoring a lost
+  connection can be done using a simple "account on <number>" command.
+  See "help account" for more information.
+  *** For now this won't cause problems when upgrading because the login
+  command still exists (as an alias for "account add"). This alias will
+  not stay forever, though.
+- irc_process() now makes sure it reads the whole available buffer before
+  executing the commands. Previous versions were very bad at handling
+  long floods from non-floodprotected clients. The code is still not
+  perfect, but good enough for local links.
+- Allow/Deny questions from msn.c now also mention your own screenname.
+  This is useful for people who run two (or even more) MSN accounts in
+  one BitlBee.
+- Fixed a little bug in the helpfile-changed-check code.
+- A little trick in "make install" makes sure the help function in running
+  sessions doesn't break while upgrading.
+- Added a nifty (and editable) MOTD.
+- Added IRIX to the compatibility list.
+- Added support for Cygwin.
+- Better HTML-stripping, it also handles &entities; correctly now.
+- Fixed some problems to make it compile on Solaris.
+- Added support for messages from Miranda/Mac ICQ. (Code port from Gaim 0.59)
+- Fixed the crash problem when removing yahoo buddies.
+- Added the handle_unknown setting.
+- Did some editing on a few docs.
+- Added a FAQ.
+- Added the daemon-patch by Maurits Dijkstra which adds stand-alone daemon
+  support to BitlBee.
+- Jabber now doesn't barf on high ASCII characters in away messages anymore.
+  (Thanks to Christian Häggström <chm@c00.info>)
+
+Finished 24 Jun 2003
+
+Version 0.74a:
+- The music-festivals-are-bad-for-your-mind release.
+- This one actually contains the fix for the bug 0.74 claimed to have.
+
+Finished 11 Jun 2003
+
+Version 0.74:
+- Fixed a security leak, where using a / in the nickname causes the saved
+  settings and account information to be stored in undesirable places.
+
+Finished 10 Jun 2003
+
+Version 0.73:
+- Fixed the unable-to-remove-icq-users (actually users from any *local*
+  contact list) bug.
+- Fixed away bug in aim protocol.
+- Fixed the 'statistics' under the blist command output.
+- Removed the commands from the XML documentation because they're 'on-line'
+  already.
+- Added some signal handling; ignoring SIGPIPE should als get rid of some
+  crashes (for some weird reason this has to be done). Also, crashes because
+  of things like segfaults are a bit more verbose now. ;-)
+- Changed the select() timeout in main(), this might improve some latencies.
+  (At leasts it speeds up signing on (especially for ICQ) a lot!)
+- Made the own-QUIT messages more compliant, probably.
+- Fixed some memory-bugs, thanks to valgrind.
+- irc_write() now checks the write() return value, and tries to send the rest
+  of the string, if it could not write it completely the first time.
+- Hostname lookups also work on NetBSD now.
+  (Thanks to David.Edmondson*sun*com (hi spambot))
+- At last, a new protocol. Welcome to ... YAHOO!
+- Documentation and code cleanup. Somehow the helpfile documented register
+  and identify twice, now that's what I call over-documenting.. :-/
+- Added the rename command to the helpfile, somehow I forgot that one.
+- Been a bit pedantic about compiler warnings. They're all dead now.
+- Fixed a small Makefile problem which gave an error when a clean tree was
+  "made distclean"
+- Fixed a (possible) memory leak in nogaim.c:proto_away()
+- Fixed the way proto_away() calls proto_away_alias_find(), now it gives
+  the *whole* list of away states
+- proto_away() doesn't give a NULL message anymore because AIM didn't like
+  that
+- Got rid of the last goto in my code (without ruining the code)
+- Created a more samba-like compiling process (without the complete command
+  lines, just a simple echo)
+- "help set ops" works now too, without quoting the "set ops"
+- Trying to log in with a protocol without a prpl (ICQ and TOC, for example)
+  made previous versions crash
+
+Finished 13 Apr 2003
+
+Version 0.72:
+- Updated the documentation.
+- Improved the MSN friendlyname code. (Although it doesn't seem to be perfect
+  yet..)
+- info-command added to get more information about ICQ users.
+- blist-command added to get a complete buddy list.
+- Fixed a bug which broke the AIM code when adding a screenname with a space
+  in it.
+- Added the NS alias for the NICKSERV command (Tony Vroon).
+- Fixed the USERHOST command implementation (Tony Vroon).
+- /me from IM-networks is now converted to a CTCP ACTION correctly.
+- Added an utils/ directory with some misc toys and handy things.
+- Added a /notice to the on_typing event. Don't use it though, the /notice
+  flood will just be a big annoyance. ;-)
+- Some people like root and themself to be ops, some don't. Now it's
+  configurable. (set ops)
+- Now the umode stuff actually works. Next step: Use those modes... (How?)
+
+Finished 19 Dec 2002
+
+Version 0.71:
+- Fixed the help command output layout (alignment)
+- Added a sample xinetd file
+- Cleaned up, 0.70 released with a build-stamp and DEADJOE file (oops)..
+- Messages can be sent like '<user>, <message>' in the control channel now,
+  instead of just '<user>: <message>'
+- Added a debug setting boolean: Set it to true for some debugging crap
+  which used to be on by default..
+- Changed the /whois reply: In the server section you now see the
+  connection this user belongs to.
+- Added some root/permission checks.
+- configure script works correctly when the terminating / is forgotten for
+  a directory.
+- Fixed format string bug in protocols/oscar/meta.c (Hmm, what's the use of
+  that file?)
+- Added '#include "crypting.h"' to commands.c to get rid of stupid warnings
+- Fixed crash-bug (SIGSEGV when adding an @-less contact to MSN/Jabber)
+- Added to_char setting
+- Fixed bug in set.c: It ignored the new value returned by the evaluator
+  :-(
+- Removed protocol tag from 'hostname' in user hostmask because this info
+  is in /whois' server section now
+- Added the GPL. Somehow 0.7 released without a COPYING file.. :-/
+- Enhanced the root_command() parser, you can 'quote' "arguments" now so
+  arguments can be strings with spaces
+- Debugging versions have True as the default value for set debug
+- NICKSERV is now an alternative for PRIVMSG root. This does not affect
+  functionality of current NICKSERV commands, but does allow people to just
+  do identify <pass> in channel.
+- NICKSERV REGISTER now doesn't try to log you in (to check if the user
+  exists) but checks for the existence of the user-configuration files.
+- NICKSERV SET password now works (as does set password in channel). This
+  makes changing your password possible.
+- NICKSERV password now stored in irc_t.
+- ./configure now only bugs you about possible problems with strip if it's
+  actually going to strip (wooohoooo! _sexy_ :)
+- Fixed a load of warnings in oscar.c, irc.c, nick.c and set.c
+- Split up root_command() into a version which eats raw strings and one
+  which eats split strings
+- New help system: Help available for most (all?) commands, all read from
+  an external help-file.
+- Changed the maximum message length in irc_usermsg() from IRC_MAX_LINE to
+  1024 (for loooong help messages..).
+- Only allow user to set supported umodes.
+- Fixed a memory leak in crypting.c (Thanks to Erik Hensema.)
+- Added a send_handler callback to user_t. Needed for the following entry:
+- Added the NickServ user as a root-clone.
+- Disabled tcpd by default because it's just a PITA for a lot of systems
+  and because you can use /usr/sbin/tcpd as well.
+- The root user can be renamed now.
+
+Finished 16 Sep 2002

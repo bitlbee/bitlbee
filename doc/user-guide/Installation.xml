@@ -1,0 +1,114 @@
+<chapter id="Installation">
+
+<title>Installation</title>
+
+<sect1>
+<title>Downloading the package</title>
+
+<para>
+The latest BitlBee release is always available from <ulink
+url="http://www.bitlbee.org/">http://www.bitlbee.org/</ulink>.
+Download the package with your favorite program and unpack it: <command>tar
+xvfz bitlbee-&lt;version&gt;.tar.gz</command> where &lt;version&gt; is to be
+replaced by the version number of the BitlBee you downloaded (e.g. 0.91).
+</para>
+
+</sect1>
+
+<sect1>
+<title>Compiling</title>
+<para>
+BitlBee's build system has to be configured before compiling. The
+<filename>configure</filename> script will do this for you. Just run
+it, it'll set up with nice and hopefully well-working defaults. If you
+want to change some settings, just try
+<command>./configure --help</command> and see what you can do.
+</para>
+
+<para>Some variables that might be of interest to the normal user:</para>
+
+<itemizedlist>
+<listitem><para>prefix, bindir, etcdir, mandir, datadir - The place where
+all the BitlBee program files will be put. There's usually no reason to
+specify them all separately, just specifying prefix (or keeping the default
+<filename>/usr/local/</filename>) should be okay.</para></listitem>
+<listitem><para>config - The place where BitlBee will save all the per-user
+settings and buddy information. <filename>/var/lib/bitlbee/</filename>
+is the default value.</para></listitem>
+<listitem><para>msn, jabber, oscar, yahoo - By default, support for all
+these IM-protocols (OSCAR is the protocol used by both ICQ and AIM) will
+be compiled in. To make the binary a bit smaller, you can use these options
+to leave out support for protocols you're not planning to use.</para></listitem>
+<listitem><para>debug - Generate an unoptimized binary with debugging symbols,
+mainly useful if you want to do some debugging or help us to track down a
+problem.</para></listitem>
+<listitem><para>strip - By default, unnecessary parts of the generated binary
+will be stripped out to make it as small as possible. If you don't want this
+(because it might cause problems on some platforms), set this to 0.
+</para></listitem>
+<listitem><para>flood - To secure your BitlBee server against flooding attacks,
+you can use this option. It's not compiled in by default because it needs
+more testing first.</para></listitem>
+<listitem><para>ssl - The MSN and Jabber modules require an SSL library for
+some of their tasks. BitlBee can use three different SSL libraries: GnuTLS,
+mozilla-nss and OpenSSL. (OpenSSL is, however, a bit troublesome because of
+licensing issues, so don't forget to read the information configure will
+give you when you try to use OpenSSL!) By default, configure will try to
+detect GnuTLS or mozilla-nss. If none of them can be found, it'll give up.
+If you want BitlBee to use OpenSSL, you have to explicitly specify that.
+</para></listitem>
+</itemizedlist>
+
+<para>
+After running <filename>configure</filename>, you should run
+<command>make</command>. After that, run <command>make install</command> as 
+root.
+</para>
+
+</sect1>
+
+<sect1>
+<title>Configuration</title>
+
+<para>
+By default, BitlBee runs as the user nobody. You might want 
+to run it as a seperate user (some computers run named or apache as nobody). 
+</para>
+
+<para>
+Since BitlBee uses inetd, you should add the following line to <filename>/etc/inetd.conf</filename>:
+</para>
+
+<para>
+<programlisting>
+6667    stream  tcp     nowait nobody /usr/local/sbin/bitlbee bitlbee
+</programlisting>
+</para>
+
+<para>
+Inetd has to be restarted after changing the configuration. Either
+<command>killall -HUP inetd</command> or 
+<command>/etc/init.d/inetd restart</command> should do the job on most systems.
+</para>
+
+<para>
+You might be one of the.. ehr, lucky people running an xinetd-powered distro.
+<command>xinetd</command> is quite different and they seem to be proud of that.. ;-)
+Anyway, if you want BitlBee to work with <command>xinetd</command>, just copy the
+bitlbee.xinetd file to your /etc/xinetd.d/ directory (and probably edit it to suit
+your needs).
+</para>
+
+<para>
+You should create a directory where BitlBee can store it's data files. This 
+should be the directory named after the value 'CONFIG' in Makefile.settings. 
+The default is <filename>/var/lib/bitlbee</filename>, which can be created 
+with the command <command>mkdir -p /var/lib/bitlbee</command>. This 
+directory has to be owned by the user that runs bitlbee. To make 
+'nobody' owner of this directory, run <command>chown nobody /var/lib/bitlbee</command>.
+Because things like passwords are saved in this directory, it's probably
+a good idea to make this directory owner-read-/writable only.
+</para>
+</sect1>
+
+</chapter>

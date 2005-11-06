@@ -1,0 +1,40 @@
+TODO for BitlBee:
+
+We're trying to keep a better TODO list now. The priorities here are somewhat
+random, maybe. Or at least they change from time to time. The "After 1.0"
+changes are very low-priority, the "Before 1.0" are "highest" priority, the
+others are changes we'll do when we feel like doing them. They're usually not
+as critical as the "Before 1.0" changes, but still a bit more important than
+"After 1.0".
+
+KNOWN BUGS TO FIX BEFORE 1.0:
+- 100% cpu usage bugs.
+  -> They're still there... :-(
+- Check if the IRC send flood protection is reliable now.
+  -> Probably not, at least it still causes troubles on logging in for some
+     people. Maybe the thresholds aren't okay yet. Logins are just floody,
+     nothing we can do about that.
+
+Some time: (mainly features)
+- Rewrite Jabber module - the current one sucks.
+- Test Yahoo! groupchats a bit better, because they still seem to be a bit
+  flakey.
+  -> There are bug reports from time to time, but we can't do much about
+     them, possibly it's more a libyahoo2 problem.
+- Groupchats
+  -> Make them work on other nets than MSN/Yahoo as well.
+- Make usernames case-insensitive. (On case-insensitive filesystems this
+  change isn't necessary. This one is going to suck with backward-compati-
+  bilty...)
+  -> We'll probably combine this with the introduction of a better file
+     format for userdata.
+- Remind the user of unanswered questions after some time.
+- Maybe a way to send global messages. (for server shutdowns, for example)
+- Away-auto-replies.
+- Allow nick changes.
+
+After 1.0: (mainly toys)
+- File transfers -> DCC
+- SSL support? Persistent connections? Things you can do with a bouncer/proxy.
+- Support for buddy groups.
+- What else?

@@ -1,0 +1,61 @@
+The authors thank the following people:
+
+- The Gaim team, for letting us steal their code.
+- Sander van Schouwenburg, for his testing.
+- Marten Klencke, for his testing.
+- Lennart Kats, for putting up with Sjoerd, who bothered him many times to
+  test things.
+- Ralph Slooten, for creating the RPM packages and testing the program.
+- Erik Hensema, for creating SuSE RPM packages and some patching.
+- Tony Vroon, for being a happy user and patch-submitter.
+- Lots of Twente University students (and of course all the other users,
+  it's just that BitlBee seems to be some sort of hype over there ;-),
+  for spreading the word of the Bee.
+- Han Boetes, for testing on and porting to OpenBSD.
+- Paul Foote for some hints on running BitlBee on FreeBSD.
+- Floris Kruisselbrink, for submitting the "help set ..." patch.
+- Jan-Willem Lenting, for putting up with Wilmer, who wanted to test the
+  MSN away messages in the middle of the night.
+- Jan Sabbe, for the hints about running BitlBee on Mac OS X.
+- Kenny Gryp, for thoroughly testing the groupchat code and submitting
+  bug reports.
+- Bryan Williams, for the help in getting BitlBee to run on Cygwin.
+- Peter van Dijk for discovering a security leak in BitlBee.
+- Christian Häggeström, for the fix for the Jabber barf on high ASCII
+  characters in away messages.
+- James Ray, for some testing, development and patching.
+- Yuri Pimenov, for writing the charset/iconv code, requested by a
+  lot of people.
+- Wouter Paesen, for the MSN friendlyname code and the MSNP8 fix.
+- Tony Perrie, for the RPM's and the Yahoo! patch.
+- Andrej Kacian/Ticho for some patches.
+- Jochem Kossen, for giving an account on his OpenBSD box to do some
+  portability testing.
+- Geert Hauwaerts, for maintaining quite a big public BitlBee server
+  (msn.irssi.org, down for now) and reporting some very nice bugs.
+- Robert C Lorentz and other AIM users, for all the reports on bugs (and
+  providing test accounts) about the stupid AIM spaces-in-screenname
+  handling.
+- Scott Cruzen, for patching up strip_html() and more.
+- Samuel Tardieu, for random patches.
+- Tibor Csoegoer, for adding support for receiving URL messages to the
+  ICQ module.
+- Jonathan/rise, for reporting and fixing a problem with the Yahoo! servers
+  and supporting BitlBee in other ways.
+- Philip S Tellis, for libyahoo2.
+- Simon Schubert, for providing code to read the names of ICQ contacts.
+- NETRIC (www.netric.org) for auditting the BitlBee code security (and
+  finding some small problems).
+- Elizabeth Krumbach, for her help on the docs.
+- Frank Thieme, for the info-command enhancements and other patches.
+- Marcus Dennis, for some bitlbeed enhancements.
+- 1nfamus, for security auditing BitlBee code.
+- Tijmen Ruizendaal, for some useful BitlBee-related irssi scripts.
+- Ed Schouten, for reporting bugs.
+
+- And all other users who help us by sending useful bug reports, positive
+  feedback, nice patches and cool addons. Mentioning you all would make
+  this list fill up the whole source tree, so please don't be offended
+  by not seeing your name here.
+
+- All the people who run public BitlBee servers.

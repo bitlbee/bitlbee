@@ -1,0 +1,58 @@
+This directory contains tiny additional programs which you might just like
+or need to run BitlBee:
+
+
+* bitlbeed.c
+
+If you want to run BitlBee on a machine you don't have root access to, this
+utility will help you. Compiling it is easy: 'gcc bitlbeed.c -o bitlbeed',
+you don't need any special flags. Use 'bitlbeed -h' to get more help.
+
+For example, 'bitlbeed -p6669 -n1 /home/wilmer/bin/bitlbee' will start
+listening on TCP port 6669 (on any interface, you might not want that!)
+and connect the specified BitlBee program to this socket as soon as
+someone connects. The -n1 makes sure only one person can be connected
+at once.
+
+Of course this program can be used for other programs too, not just BitlBee.
+
+
+* create_nicksfile.pl (Christian Friedl <christian.friedl@chello.at>)
+
+This program reads your ~/.licq/ configuration data and convert it to a
+correct .nicks file. This program can be extended to read other contact
+list file formats as well.
+
+
+* centericq2bitlbee.sh (geno <geno@xenyon.com>)
+
+Converter script for CenterICQ ICQ contact lists. See the documentation
+for more information.
+
+
+* convert_gnomeicu.txt
+
+Not a program, but this one contains a regex which should correctly
+convert GnomeICU configuration files into the BitlBee format.
+
+
+* Dynamic MOTD for BitlBee (Geert Hauwaerts <geert@hauwaerts.be>)
+
+Originally, I wanted to put this program here, but Geert put it online
+on his own server, with docs and stuff, so I guess it's better to put
+a link here. dmotd is a little script which generates a motd with some
+nice statistics, especially nice for servers with many people on it.
+
+See http://dmotd.hauwaerts.be/ for more information.
+
+
+* BitlBee-specific Irssi scripts for: tab completion, typing notifica-
+tions, auto-away and more, by Tijmen Ruizendaal <tijmen@fokdat.nl>.
+
+There are too many scripts to include them all with BitlBee (and keep
+them up-to-date), so you should get them from Tijmen's site:
+
+http://fokdat.nl/~tijmen/software/irssi-bitlbee.html
+
+
+Please do send your sources if you write anything useful for the Bee!

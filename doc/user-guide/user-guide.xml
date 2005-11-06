@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+
+<book id="BitlBee-User-Guide" xmlns:xi="http://www.w3.org/2003/XInclude">
+<bookinfo>
+	<title>BitlBee User Guide</title>
+	<author>
+		<firstname>Jelmer</firstname><surname>Vernooij</surname>
+		<address><email>jelmer@samba.org</email></address>
+	</author>
+
+	<author>
+		<firstname>Wilmer</firstname><surname>van der Gaast</surname>
+		<address><email>wilmer@gaast.net</email></address>
+	</author>
+
+	<author>
+		<firstname>Sjoerd</firstname><surname>Hemminga</surname>
+		<address><email>sjoerd@huiswerkservice.nl</email></address>
+	</author>
+
+	<legalnotice id="legalnotice">
+     <para>
+         Permission is granted to copy, distribute and/or modify this 
+         document under the terms of the <ulink type="help"
+         url="gnome-help:fdl"><citetitle>GNU Free Documentation 
+         License</citetitle></ulink>, Version 1.1 or any later version 
+         published by the Free Software Foundation with no Invariant 
+         Sections, no Front-Cover Texts, and no Back-Cover Texts. You 
+         may obtain a copy of the <citetitle>GNU Free Documentation 
+         License</citetitle> from the Free Software Foundation by 
+         visiting <ulink type="http" url="http://www.fsf.org">their 
+         Web site</ulink> or by writing to: Free Software Foundation, 
+         Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, 
+         USA.
+       </para>
+    </legalnotice>
+
+   <releaseinfo>
+   		This is the initial release of the BitlBee User Guide.
+   </releaseinfo>
+
+  </bookinfo>
+
+  <xi:include href="Installation.xml"/>
+  <xi:include href="Usage.xml"/>
+  <xi:include href="Support.xml"/>
+  <xi:include href="quickstart.xml"/>
+  <xi:include href="commands.xml"/>
+  <xi:include href="misc.xml"/>
+
+</book>

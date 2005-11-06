@@ -1,0 +1,12 @@
+## xinetd file for BitlBee. Please check this file before using it, the
+## user, port and/or binary location might be wrong.
+
+service 6667
+{
+	socket_type     = stream
+	protocol        = tcp
+	wait            = no
+	user            = nobody
+	server          = /usr/local/sbin/bitlbee
+	port		= 6667
+}

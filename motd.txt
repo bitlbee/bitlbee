@@ -1,0 +1,18 @@
+Welcome to the BitlBee server at %h.
+
+This server is running BitlBee version %v.
+The newest version can be found on http://www.bitlbee.org/
+
+You are getting this message because the server administrator has not
+yet had the time (or need) to change it.
+
+For those who don't know it yet, this is not quite a regular Internet
+Relay Chat server. Please see the site mentioned above for more
+information.
+
+
+The developers of the Bee hope you have a buzzing time.
+
+* BitlBee development team: wilmer, ctrlsoft, Maurits
+ 
+... Buzzing, haha, get it?

@@ -1,0 +1,131 @@
+<chapter id="misc">
+<title>Misc Stuff</title>
+
+<sect1 id="smileys">
+<title>Smileys</title>
+
+<para>
+All MSN smileys (except one) are case insensitive and work without the nose too.
+</para>
+
+<variablelist>
+	<varlistentry><term>(Y)</term><listitem><para>Thumbs up</para></listitem></varlistentry>
+	<varlistentry><term>(N)</term><listitem><para>Thumbs down</para></listitem></varlistentry>
+	<varlistentry><term>(B)</term><listitem><para>Beer mug</para></listitem></varlistentry>
+	<varlistentry><term>(D)</term><listitem><para>Martini glass</para></listitem></varlistentry>
+	<varlistentry><term>(X)</term><listitem><para>Girl</para></listitem></varlistentry>
+	<varlistentry><term>(Z)</term><listitem><para>Boy</para></listitem></varlistentry>
+	<varlistentry><term>(6)</term><listitem><para>Devil smiley</para></listitem></varlistentry>
+	<varlistentry><term>:-[</term><listitem><para>Vampire bat</para></listitem></varlistentry>
+	<varlistentry><term>(})</term><listitem><para>Right hug</para></listitem></varlistentry>
+	<varlistentry><term>({)</term><listitem><para>Left hug</para></listitem></varlistentry>
+	<varlistentry><term>(M)</term><listitem><para>MSN Messenger or Windows Messenger icon (think a BitlBee logo here ;)</para></listitem></varlistentry>
+	<varlistentry><term>:-S</term><listitem><para>Crooked smiley (Confused smiley)</para></listitem></varlistentry>
+	<varlistentry><term>:-$</term><listitem><para>Embarrassed smiley</para></listitem></varlistentry>
+	<varlistentry><term>(H)</term><listitem><para>Smiley with sunglasses</para></listitem></varlistentry>
+	<varlistentry><term>:-@</term><listitem><para>Angry smiley</para></listitem></varlistentry>
+	<varlistentry><term>(A)</term><listitem><para>Angel smiley</para></listitem></varlistentry>
+	<varlistentry><term>(L)</term><listitem><para>Red heart (Love)</para></listitem></varlistentry>
+	<varlistentry><term>(U)</term><listitem><para>Broken heart</para></listitem></varlistentry>
+	<varlistentry><term>(K)</term><listitem><para>Red lips (Kiss)</para></listitem></varlistentry>
+	<varlistentry><term>(G)</term><listitem><para>Gift with bow</para></listitem></varlistentry>
+	<varlistentry><term>(F)</term><listitem><para>Red rose</para></listitem></varlistentry>
+	<varlistentry><term>(W)</term><listitem><para>Wilted rose</para></listitem></varlistentry>
+	<varlistentry><term>(P)</term><listitem><para>Camera</para></listitem></varlistentry>
+	<varlistentry><term>(~)</term><listitem><para>Film strip</para></listitem></varlistentry>
+	<varlistentry><term>(T)</term><listitem><para>Telephone receiver</para></listitem></varlistentry>
+	<varlistentry><term>(@)</term><listitem><para>Cat face</para></listitem></varlistentry>
+	<varlistentry><term>(&amp;)</term><listitem><para>Dog's head</para></listitem></varlistentry>
+	<varlistentry><term>(C)</term><listitem><para>Coffee cup</para></listitem></varlistentry>
+	<varlistentry><term>(I)</term><listitem><para>Light bulb</para></listitem></varlistentry>
+	<varlistentry><term>(S)</term><listitem><para>Half-moon (Case sensitive!)</para></listitem></varlistentry>
+	<varlistentry><term>(*)</term><listitem><para>Star</para></listitem></varlistentry>
+	<varlistentry><term>(8)</term><listitem><para>Musical eighth note</para></listitem></varlistentry>
+	<varlistentry><term>(E)</term><listitem><para>Envelope</para></listitem></varlistentry>
+	<varlistentry><term>(^)</term><listitem><para>Birthday cake</para></listitem></varlistentry>
+	<varlistentry><term>(O)</term><listitem><para>Clock</para></listitem></varlistentry>
+</variablelist>
+
+<para>
+This list was extracted from <ulink url="http://help.msn.com/!data/en_us/data/messengerv50.its51/$content$/EMOTICONS.HTM?H_APP=">http://help.msn.com/!data/en_us/data/messengerv50.its51/$content$/EMOTICONS.HTM?H_APP=</ulink>.
+</para>
+
+</sect1>
+
+<sect1 id="groupchats">
+<title>Groupchats</title>
+<para>
+Since version 0.8x, BitlBee supports groupchats on the MSN and Yahoo! networks. This text will try to explain you how they work.
+</para>
+
+<para>
+As soon as someone invites you into a groupchat, you will be force-joined or invited (depending on the protocol) into a new virtual channel with all the people in there. You can leave the channel at any time, just like you would close the window in regular IM clients. Please note that root-commands don't work in groupchat channels, they only work in the control channel (or to root directly).
+</para>
+
+<para>
+Of course you can also create your own groupchats. Type <emphasis>help groupchats2</emphasis> to see how.
+</para>
+
+</sect1>
+
+<sect1 id="groupchats2">
+<title>Creating groupchats</title>
+
+<para>
+If you want to start a groupchat with the person <emphasis>jim_msn</emphasis> in it, just join the channel <emphasis>#jim_msn</emphasis>. BitlBee will refuse to join you to the channel with that name, but it will create a new virtual channel with root, you and jim_msn in it.
+</para>
+
+<para>
+Of course a channel with only two people isn't really exciting yet. So the next step is to invite some other people to the channel. For this, you can use the <emphasis>/invite</emphasis> command of your IRC client. Please do keep in mind that all the people have to be on the same network and contact list! You can't invite Yahoo! buddies into an MSN groupchat.
+</para>
+
+<para>
+This is all you'll probably need to know. If you have any problems, please read <emphasis>help groupchats3</emphasis>.
+</para>
+
+</sect1>
+
+<sect1 id="groupchats3">
+<title>Groupchat channel names</title>
+
+<para>
+Obviously the (numbered) channel names don't make a lot of sense. Problem is that groupchats usually don't have names at all in the IM-world, while IRC insists on a name. So BitlBee just generates something random, just don't pay attention to it. :-)
+</para>
+
+<para>
+Please also note that BitlBee doesn't support groupchats for all protocols yet. BitlBee will tell you so. Support for other protocols will hopefully come later.
+</para>
+
+</sect1>
+
+<sect1 id="away">
+<title>Away states</title>
+
+<para>
+As you might've expected, you can just use the <emphasis>/away</emphasis> command in your IRC client to set an away-state. BitlBee supports most away-states supported by the protocols.
+</para>
+
+<para>
+Not all away states are supported by all protocols, and some protocols have different names for them. BitlBee will try to pick the best available alias from this list for every connection:
+</para>
+
+<simplelist>
+	<member>Away from computer, Away, Extended away</member>
+	<member>NA, N/A, Not available</member>
+	<member>Busy, Do not disturb, DND, Occupied</member>
+	<member>Be right back, BRB</member>
+	<member>On the phone, Phone, On phone</member>
+	<member>Out to lunch, Lunch, Food</member>
+</simplelist>
+
+<para>
+So <emphasis>/away Food</emphasis> will set your state to "Out to lunch" on your MSN connection, and for most other connections the default, "Away" or "Away from computer" will be chosen.
+</para>
+
+<para>
+You can also add more information to your away message. Setting it to "Busy - Fixing BitlBee bugs" will set your IM-away-states to Busy, but your away message will be more descriptive for people on IRC. Protocols like Yahoo! and Jabber will also show this complete away message to your buddies.
+</para>
+
+</sect1>
+
+</chapter>

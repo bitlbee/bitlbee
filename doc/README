@@ -1,0 +1,172 @@
+INSTALLATION
+============
+
+If you installed BitlBee from a .deb or .rpm you probably don't have to do
+anything anymore for installation. Just skip this section.
+
+If you want to compile BitlBee yourself, that's fine. Just run ./configure
+to set up the build system. If configure succeeds, run make to build BitlBee.
+make install will move all the files to the right places.
+
+After installation you have to set up inetd (you got that one running,
+right? If not, just take a look at utils/bitlbeed.c) to start BitlBee. You
+need to add BitlBee to inetd.conf, like this:
+
+6667 stream tcp nowait nobody /usr/sbin/tcpd /usr/local/sbin/bitlbee
+
+Creating a special BitlBee user and running BitlBee with that UID (instead
+of just 'nobody') might be a good idea.
+
+Also, don't forget to create the configuration directory (/var/lib/bitlbee/
+by default) and chown it to the UID BitlBee is running as. Make sure this
+directory is read-/writable by this user only.
+
+(For xinetd users a xinetd configuration file is included: doc/bitlbee.xinetd)
+
+
+DEPENDENCIES
+============
+
+BitlBee's only real dependency is GLib. This is available on virtually every
+platform. Any recent version of GLib (including 1.x versions) will work.
+
+These days, MSN Messenger clients have to connect to the MS Passport servers
+through HTTPS. BitlBee can use serveral SSL libraries for this: GnuTLS, NSS
+(which comes with Mozilla) and OpenSSL. OpenSSL is not GPL-compatible in some
+situations, so using GnuTLS or NSS is preferred. However, especially on *BSD,
+OpenSSL can be considered part of the operating system, which eliminates the
+GPL incompatibility.
+
+The incompatibility is also the reason why the SSL library detection code
+doesn't attempt to use OpenSSL. If you want to use OpenSSL, you have to
+force configure to use it using the --ssl=openssl parameter. For more
+information about this problem, see the URL's configure will write to stdout
+when you attempt to use OpenSSL.
+
+
+PORTABILITY ISSUES
+==================
+
+FreeBSD NOTE: It looks like FreeBSD does allow port numbers instead of service
+names in inetd.conf, as long as the service for this port exists in
+/etc/services. Linux isn't this strict. If you got problems in FreeBSD, just
+add a line for your chosen port number to /etc/services.
+
+Darwin/Mac OS X is even more strict; you should add a bitlbee service to
+/etc/services and use that name in inetd.conf. Not really a problem, since
+that's the cleanest way of doing this on any operating system anyway.
+
+Cygwin NOTE: You'll need a glib installation to run BitlBee. However, Cygwin
+doesn't provide a glib package. You can download a binary tar.gz from:
+<http://my.dreamwiz.com/jbdoll/>. When you installed it, BitlBee should work
+fine. You'll probably like bitlbeed or xinetd to get it running on the
+network.
+
+On some non-Linux systems the program still suffers from some random bugs.
+Please do report them, we might be able to fix them if they're not too
+mysterious.
+
+
+RUNNING ON SERVERS WITH MANY USERS
+==================================
+
+BitlBee is not yet bug-free. Sometimes a bug causes the program to get into
+an infinite loop. Something you really don't want on a public server,
+especially when that machine is also used for other (mission-critical) things.
+For now we can't do much about it. We haven't seen that happen for a long
+time already on our own machines, but some people still manage to get
+themselves in nasty situations we haven't seen before.
+
+For now the best we can offer against this problem is bitlbeed, which allows
+you to setrlimit() the child processes to use no more than a specified
+number of CPU seconds. Not the best solution (not really a solution anyway),
+but certainly trashing one busy daemon process is better than trashing your
+whole machine.
+
+We don't believe adding a limit for bitlbee to /etc/security/limits.conf will
+work, because that file is only read by PAM (ie just for real login users,
+not daemons).
+
+See utils/bitlbeed.c for more information about the program.
+
+Just a little note: We run our public server im.bitlbee.org for a couple of
+months now, and so far we haven't experienced this problem yet. The only
+BitlBee processes killed because of CPU-time overuse were running for a long
+time already, they were usually killed during the MSN login process (which
+is quite CPU-time consuming).
+
+
+USAGE
+=====
+
+Not much to say here, it's all documented elsewhere already. Just connect to
+the new BitlBee IRC server and the bot (root) will tell you what to do.
+
+
+BACKGROUNDS
+===========
+
+We are both console lovers. But it is annoying to have a few tty's open with
+chat things in them. IRC, ICQ, MSN, AIM, Jabber... For X there is Gaim, which
+supports many chatprotocols. Why wasn't there such a thing for the console?
+
+The idea to port Gaim was easily thought of, of course. But we liked our IRC
+clients. And we used it the most, so we used it best. Importing it into the
+IRC client was a nice idea. But what if someone liked a different client.
+Then (s)he had to duplicate our work.
+
+That's a shame, we thought. Doing work twice is pointless. So when Wilmer
+got the ingenious thought in his mind while farming, to create an IRC to
+other chatnetworks gateway, we were both so excited, that we started working
+on it almost immediately. And the result is BitlBee.
+
+
+WEBSITE
+=======
+
+You can find new releases of BitlBee at:
+http://www.bitlbee.org/
+
+
+A NOTE ON ENCRYPTION
+====================
+
+BitlBee stores the accounts and settings (not your contact list though) in
+some sort of encrypted/obfuscated format.
+
+*** THIS IS NOT A SAFE FORMAT! ***
+
+You should still make sure the rights to the configuration directory and
+files are set so that only root and the BitlBee user can read/write them.
+
+This format is not to prevent malicicous users from running with your
+passwords, but to prevent accidental glimpses of the administrators to cause
+any harm. You have no choice but to trust root though.
+
+
+LEGAL
+=====
+
+BitlBee is distributed under the GPL (GNU General Public License). See the
+file COPYING for this license.
+
+Unfortunately some parts of the Gaim Jabber plugin (most notably the XML
+code) were licensed under the MPL (Mozilla Public License) version 1.1. We
+could not relicense this code under the GPL. As such it is still licensed
+under the MPL. The parts of the code to which this applies are marked as
+such.
+
+The MPL is provided in the file MPL-1.1.txt. This license is not GPL
+compatible. It is however a free software license.
+
+Another part (the md5 algorithm) is licensed under the Aladdin license.
+This license can be found in the files, to which this applies.
+
+The Yahoo! library used by BitlBee is libyahoo2 <http://libyahoo2.sf.net/>,
+also licensed under the GPL.
+
+
+	BitlBee - An IRC to other chat networks gateway 
+	          <http://www.bitlbee.org/>
+	Copyright (C) 2002-2004  Wilmer van der Gaast <wilmer@gaast.net>
+	                         and others

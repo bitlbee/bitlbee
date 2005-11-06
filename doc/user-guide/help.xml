@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+
+<book id="BitlBee-Help" xmlns:xi="http://www.w3.org/2003/XInclude">
+
+<preface id="">
+<title>BitlBee help system</title>
+
+<para>
+These are the available help subjects:
+</para>
+
+<variablelist>
+  <varlistentry><term>quickstart</term><listitem><para>A short introduction into BitlBee</para></listitem></varlistentry>
+  <varlistentry><term>commands</term><listitem><para>All available commands and settings</para></listitem></varlistentry>
+  <varlistentry><term>away</term><listitem><para>About setting away states</para></listitem></varlistentry>
+  <varlistentry><term>smileys</term><listitem><para>A summary of some non-standard smileys you might find and fail to understand</para></listitem></varlistentry>
+  <varlistentry><term>groupchats</term><listitem><para>How to work with groupchats on BitlBee</para></listitem></varlistentry>
+</variablelist>
+
+<para>
+You can read more about them with <emphasis>help &lt;subject&gt;</emphasis>
+</para>
+
+<para>
+BitlBee is written by Wilmer van der Gaast together with Jelmer Vernooij, Maurits Dijkstra and others. Bug reports and other kinds of feedback can be sent by e-mail to <emphasis>wilmer@gaast.net</emphasis>. (There is no BitlBee mailing list)
+</para>
+
+<para>
+Or just join <emphasis>#BitlBee</emphasis> on OFTC (<emphasis>irc.oftc.net</emphasis>) (OFTC, *not* FreeNode! Some people accidentally joined #BitlBee on FreeNode already, which is just an empty channel) and flame us right in the face. :-)
+</para>
+
+</preface>
+
+<chapter id="index">
+<title>Index</title>
+
+<para>
+These are the available help subjects:
+</para>
+
+<variablelist>
+  <varlistentry><term>quickstart</term><listitem><para>A short introduction into BitlBee</para></listitem></varlistentry>
+  <varlistentry><term>commands</term><listitem><para>All available commands and settings</para></listitem></varlistentry>
+  <varlistentry><term>away</term><listitem><para>About setting away states</para></listitem></varlistentry>
+  <varlistentry><term>smileys</term><listitem><para>A summary of some non-standard smileys you might find and fail to understand</para></listitem></varlistentry>
+  <varlistentry><term>groupchats</term><listitem><para>How to work with groupchats on BitlBee</para></listitem></varlistentry>
+</variablelist>
+
+<para>
+You can read more about them with <emphasis>help &lt;subject&gt;</emphasis>
+</para>
+
+</chapter>
+
+<xi:include href="quickstart.xml"/>
+<xi:include href="commands.xml"/>
+<xi:include href="misc.xml"/>
+
+</book>

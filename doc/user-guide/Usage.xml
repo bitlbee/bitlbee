@@ -1,0 +1,47 @@
+<chapter id="Usage">
+
+<title>Usage</title>
+
+<sect1>
+<title>Connecting to the server</title>
+<para>
+Since BitlBee acts just like any other irc daemon, you can connect to 
+it with your favorite irc client. Launch it and connect to localhost port 6667
+(or whatever host/port you are running bitlbee on).
+</para>
+
+</sect1>
+
+<sect1>
+<title>The #bitlbee control channel</title>
+
+<para>
+Once you are connected to the BitlBee server, you are automatically joined
+to #bitlbee on that server. This channel acts like the 'buddy list' you have
+on the various other chat networks.
+</para>
+
+<para>
+The user 'root' always hangs around in #bitlbee and acts as your interface 
+to bitlbee. All commands you give on #bitlbee are 'answered' by root.
+</para>
+
+</sect1>
+
+<sect1>
+<title>Talking to people</title>
+
+<para>
+You can talk to by starting a query with them. In most irc clients, 
+this can be done with either <command>/msg &lt;nick&gt; &lt;text&gt;</command>
+or <command>/query &lt;nick&gt;</command>.
+</para>
+
+<para>
+To keep the number of open query windows limited, you can also talk to people
+in the control channel, like <command>&lt;nick&gt;: &lt;text&gt;</command>.
+</para>
+
+</sect1>
+
+</chapter>

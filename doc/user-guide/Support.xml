@@ -1,0 +1,48 @@
+<chapter id="Support">
+
+<title>Support</title>
+
+<sect1>
+<title>BitlBee is beta software</title>
+
+<para>
+Although BitlBee has quite some functionality it is still beta. That means it 
+can crash at any time, corrupt your data or whatever. Don't use it in 
+any production environment and don't rely on it.
+</para>
+
+</sect1>
+
+<sect1>
+<title>Support channels</title>
+
+<sect2>
+<title>The World Wide Web</title>
+
+<para>
+<ulink url="http://www.bitlbee.org/">http://www.bitlbee.org/</ulink> 
+is the homepage of bitlbee and contains the most recent news on bitlbee and 
+the latest releases.
+</para>
+
+</sect2>
+
+<sect2>
+<title>IRC</title>
+<para>
+BitlBee is discussed on #bitlbee on the OFTC IRC network (server: irc.oftc.net).
+</para>
+
+</sect2>
+
+<sect2>
+<title>Mailinglists</title>
+<para>
+BitlBee doesn't have any mailinglists.
+</para>
+
+</sect2>
+
+</sect1>
+
+</chapter>
