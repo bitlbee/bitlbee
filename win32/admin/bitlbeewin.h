@@ -13,12 +13,6 @@
 #include <windows.h>
 #include "resource.h"		// main symbols
 
-class CTrayNot;
-extern "C" {
-#define BITLBEE_CORE
-#include "bitlbee.h"
-}
-
 /////////////////////////////////////////////////////////////////////////////
 // CBitlbeeApp:
 // See bitlbee.cpp for the implementation of this class
@@ -27,7 +21,7 @@ extern "C" {
 class CBitlbeeApp : public CWinApp
 {
 public:
-	CBitlbeeApp();
+	CBitlbeeApp() {}
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -40,14 +34,10 @@ public:
 // Implementation
 
 	//{{AFX_MSG(CBitlbeeApp)
-	afx_msg void OnExit();
-	afx_msg void OnShow();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 	protected:
-		CTrayNot *not;
 		CPropertySheet *dlg;
-		GIOChannel *listen;
 };
 
 /////////////////////////////////////////////////////////////////////////////

@@ -51,20 +51,9 @@ static void WINAPI service_ctrl (DWORD dwControl)
     }
 }
 
-void service_main (DWORD argc, LPTSTR *argv)
+static void bitlbee_init(int argc, char **argv)
 {
 	int i = -1;
-	SERVICE_STATUS_HANDLE handle;
-	SERVICE_STATUS status;
-
-    handle = RegisterServiceCtrlHandler("bitlbee", service_ctrl);
-
-    if (!handle)
-		return;
-
-    status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-    status.dwServiceSpecificExitCode = 0;
-
 	memset( &global, 0, sizeof( global_t ) );
 	
 	global.loop = g_main_new( FALSE );
@@ -98,24 +87,67 @@ void service_main (DWORD argc, LPTSTR *argv)
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", global.conf->configdir );
 	if( help_init( &(global.help) ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", global.helpfile );
+}
+
+void service_main (DWORD argc, LPTSTR *argv)
+{
+	SERVICE_STATUS_HANDLE handle;
+	SERVICE_STATUS status;
+
+    handle = RegisterServiceCtrlHandler("bitlbee", service_ctrl);
+
+    if (!handle)
+		return;
+
+    status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+    status.dwServiceSpecificExitCode = 0;
+
+	bitlbee_init(argc, argv);
 
 	SetServiceStatus(handle, &status);
 	
 	g_main_run( global.loop );
 }
 
-int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+SERVICE_TABLE_ENTRY dispatch_table[] =
 {
-    SERVICE_TABLE_ENTRY dispatch_table[] =
-    {
-        { TEXT("bitlbee"), (LPSERVICE_MAIN_FUNCTION)service_main },
-        { NULL, NULL }
-    };
+   { TEXT("bitlbee"), (LPSERVICE_MAIN_FUNCTION)service_main },
+   { NULL, NULL }
+};
+
+static int debug = 0;
+
+static void usage()
+{
+	printf("Options:\n");
+	printf("-h   Show this help message\n");
+	printf("-d   Debug mode (simple console program)\n");
+}
+
+int main( int argc, char **argv)
+{    
+	int i;
+	WSADATA WSAData;
 
 	nogaim_init( );
 
-    if (!StartServiceCtrlDispatcher(dispatch_table))
-		log_message( LOGLVL_ERROR, "StartServiceCtrlDispatcher failed.");
+	for (i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "-d")) debug = 1;
+		if (!strcmp(argv[i], "-h")) {
+			usage();
+			return 0;
+		}
+	}
+
+    WSAStartup(MAKEWORD(1,1), &WSAData);
+
+	if (!debug) {
+		if (!StartServiceCtrlDispatcher(dispatch_table))
+			log_message( LOGLVL_ERROR, "StartServiceCtrlDispatcher failed.");
+	} else {
+			bitlbee_init(argc, argv);
+ 			g_main_run( global.loop );
+	}
 	
 	return 0;
 }
@@ -164,7 +196,6 @@ conf_t *conf_load( int argc, char *argv[] )
 	
 	memset( &global, 0, sizeof( global_t ) );
 	global.loop = g_main_new(FALSE);
-	nogaim_init();
 
 	conf = g_new0( conf_t,1 );
 	global.conf = conf;
@@ -177,8 +208,8 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf_get_string(key_main, "configdir", NULL, &global.conf->configdir);
 	conf_get_string(key_main, "motdfile", NULL, &global.conf->motdfile);
 	conf_get_string(key_main, "helpfile", NULL, &global.helpfile);
-	global.conf->runmode = RUNMODE_INETD;
-	conf_get_int(key_main, "AuthMode", AUTHMODE_CLOSED, &global.conf->authmode);
+	global.conf->runmode = RUNMODE_DAEMON;
+	conf_get_int(key_main, "AuthMode", AUTHMODE_OPEN, &global.conf->authmode);
 	conf_get_string(key_proxy, "host", "", &tmp); strcpy(proxyhost, tmp);
 	conf_get_string(key_proxy, "user", "", &tmp); strcpy(proxyuser, tmp);
 	conf_get_string(key_proxy, "password", "", &tmp); strcpy(proxypass, tmp);
@@ -243,6 +274,13 @@ void log_message(int level, char *message, ...)
     va_list ap;
 
     va_start(ap, message);
+
+	if (debug) {
+		vprintf(message, ap);
+		putchar('\n');
+		va_end(ap);
+		return;
+	}
 
     hEventSource = RegisterEventSource(NULL, TEXT("bitlbee"));
 

@@ -1,8 +1,6 @@
 // PropAccess.cpp : implementation file
 //
 
-#define BITLBEE_CORE
-#include "bitlbeewin.h"
 #include "PropAccess.h"
 
 #ifdef _DEBUG
@@ -52,24 +50,17 @@ END_MESSAGE_MAP()
 void CPropAccess::OnOK() 
 {
 	CString iface; m_interface.GetWindowText(iface);
+	WriteProfileString("interface", iface);
+
 	CString port; m_port.GetWindowText(port);
+	WriteProfileInt("port", port);
 
 	CString password; m_password.GetWindowText(password);
-	g_free((void *)global.conf->password);
-	global.conf->password = g_strdup(password);
-
-	if(m_auth_closed.GetCheck() == 1) global.conf->authmode = AUTHMODE_CLOSED;
-	if(m_auth_open.GetCheck() == 1) global.conf->authmode = AUTHMODE_OPEN;
-	if(m_auth_registered.GetCheck() == 1) global.conf->authmode = AUTHMODE_REGISTERED;
-
-	if(strcmp(iface, global.conf->iface) || atol(port) != global.conf->port) {
-		global.conf->port = atoi(port);
-		g_free((void *)global.conf->iface);
-		global.conf->iface = g_strdup(iface);
-		closesocket(global.listen_socket);
-		bitlbee_daemon_init();
-	}
-
+	WriteProfileString("password", password);
+	
+	if(m_auth_closed.GetCheck() == 1) WriteProfileInt("auth_mode", 1);
+	if(m_auth_open.GetCheck() == 1) WriteProfileInt("auth_mode", 0);
+	if(m_auth_registered.GetCheck() == 1) WriteProfileInt("auth_mode", 2);
 	
 	CPropertyPage::OnOK();
 }
@@ -104,19 +95,19 @@ BOOL CPropAccess::OnInitDialog()
 {
 	CPropertyPage::OnInitDialog();
 
-	m_interface.SetWindowText(global.conf->iface);
-	m_password.SetWindowText(global.conf->password);
-	char tmp[20];
-	g_snprintf(tmp, sizeof(tmp), "%d", global.conf->port);
-	m_port.SetWindowText(tmp);
-	m_auth_open.SetCheck(0);
-	m_auth_closed.SetCheck(0);
-	m_auth_registered.SetCheck(0);
+	HKEY key;
+	RegOpenKey(HKEY_LOCAL_MACHINE, BITLBEE_KEY, &key);
 
-	switch(global.conf->authmode) {
-	case AUTHMODE_OPEN: m_auth_open.SetCheck(1); m_password.EnableWindow(FALSE);break;
-	case AUTHMODE_CLOSED: m_auth_closed.SetCheck(1); m_password.EnableWindow(TRUE);break;
-	case AUTHMODE_REGISTERED: m_auth_registered.SetCheck(1);m_password.EnableWindow(FALSE);break;
+	m_interface.SetWindowText(GetProfileString("interface", "0.0.0.0"));
+	m_password.SetWindowText(GetProfileString("password", ""));
+	char tmp[20];
+	sprintf(tmp, "%d", GetProfileInt("port", 6667));
+	m_port.SetWindowText(tmp);
+
+	switch(GetProfileInt("auth_mode", 1)) {
+	case 0: OnAuthOpen();break;
+	case 1: OnAuthClosed();break;
+	case 2: OnAuthRegistered();break;
 	}
 	
 	return TRUE;

@@ -6,6 +6,8 @@
 #endif // _MSC_VER >= 1000
 // PropPaths.h : header file
 //
+#include <afxdlgs.h>
+#include "Resource.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CPropPaths dialog

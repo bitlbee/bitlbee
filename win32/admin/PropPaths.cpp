@@ -1,8 +1,6 @@
 // PropPaths.cpp : implementation file
 //
 
-#define BITLBEE_CORE
-#include "bitlbeewin.h"
 #include "PropPaths.h"
 #include "shlobj.h"
 
@@ -52,22 +50,20 @@ END_MESSAGE_MAP()
 void CPropPaths::OnOK() 
 {
 	CString tmp;
-	g_free((void *)global.conf->configdir);
-	m_configdir.GetWindowText(tmp);
+	m_configdir.GetWindowText(tmp);	
 
 	if (tmp.GetLength() > 0
 		&& tmp.GetAt(tmp.GetLength() - 1) != '/' 
 		&& tmp.GetAt(tmp.GetLength() - 1) != '\\')
 	{
-		global.conf->configdir = g_strdup_printf("%s\\", tmp);
-	} else {
-		global.conf->configdir = g_strdup(tmp);
+		tmp = tmp + "\\";
 	}
 
-	g_free((void *)global.conf->motdfile);
+	WriteProfileString("configdir", tmp);
+
 	m_motdfile.GetWindowText(tmp);
-	global.conf->motdfile = g_strdup(tmp);
-	
+	WriteProfileString("motdfile", tmp);
+
 	CPropertyPage::OnOK();
 }
 
@@ -111,9 +107,9 @@ void CPropPaths::OnEditMotd()
 BOOL CPropPaths::OnInitDialog() 
 {
 	CPropertyPage::OnInitDialog();
-	
-	m_configdir.SetWindowText(global.conf->configdir);
-	m_motdfile.SetWindowText(global.conf->motdfile);
+
+	m_configdir.SetWindowText(GetProfileString("configdir", ""));
+	m_motdfile.SetWindowText(GetProfileString("motdfile", ""));
 	
 	return TRUE;  
 }

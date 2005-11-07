@@ -1,3 +1,12 @@
 Makefile.settings
 config.h
 bitlbee
+Debug
+Debugx
+deps
+admin/Debug
+admin/admin.plg
+bitlbee.plg
+*.plg
+*.aps
+*.clw

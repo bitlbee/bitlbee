@@ -94,23 +94,6 @@ BEGIN
                     IDC_STATIC,13,113,184,11
 END
 
-IDD_PROPPAGE_USERS DIALOG DISCARDABLE  0, 0, 210, 154
-STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
-CAPTION "Users"
-FONT 8, "MS Sans Serif"
-BEGIN
-    GROUPBOX        "Known users",IDC_STATIC,7,7,196,68
-    GROUPBOX        "Current users",IDC_STATIC,7,79,196,68
-    LISTBOX         IDC_KNOWN_USERS,13,17,114,52,LBS_SORT | 
-                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
-    PUSHBUTTON      "&Remove",IDC_DEL_KNOWN_USERS,133,17,32,14,WS_DISABLED
-    LISTBOX         IDC_CURRENT_USERS,13,89,115,52,LBS_SORT | 
-                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
-    PUSHBUTTON      "&Kick",IDC_KICK,135,89,19,14,WS_DISABLED
-    PUSHBUTTON      "&Refresh",IDC_REFRESH_KNOWN_USERS,133,38,30,14
-    PUSHBUTTON      "&Refresh",IDC_REFRESH_CURRENT_USERS,135,110,30,14
-END
-
 IDD_PROPPAGE_PATHS DIALOG DISCARDABLE  0, 0, 210, 154
 STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
 CAPTION "Paths"
@@ -123,13 +106,6 @@ BEGIN
     PUSHBUTTON      "&Browse...",IDC_BROWSE_MOTD,153,51,43,13
     EDITTEXT        IDC_MOTDFILE,13,51,122,13,ES_AUTOHSCROLL
     PUSHBUTTON      "&Edit...",IDC_EDIT_MOTD,153,66,43,13
-END
-
-IDD_PHONY DIALOG DISCARDABLE  0, 0, 9, 9
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Dialog"
-FONT 8, "MS Sans Serif"
-BEGIN
 END
 
 IDD_PROPPAGE_ABOUT DIALOG DISCARDABLE  0, 0, 284, 156
@@ -149,15 +125,6 @@ BEGIN
                     IDC_STATIC,16,69,171,11
     LTEXT           "The Bitlbee homepage is located at http://www.bitlbee.org/\n\nFor Bitlbee support, go to #bitlbee on irc.oftc.net",
                     IDC_STATIC,17,100,248,39
-END
-
-IDD_PROPPAGE_LOG DIALOG DISCARDABLE  0, 0, 210, 154
-STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
-CAPTION "Logs"
-FONT 8, "MS Sans Serif"
-BEGIN
-    LISTBOX         IDC_LOG,7,7,196,140,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
-                    WS_VSCROLL | WS_TABSTOP
 END
 
 IDD_PROPPAGE_CONNECTION DIALOG DISCARDABLE  0, 0, 210, 154
@@ -181,6 +148,21 @@ BEGIN
                     LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
     LTEXT           "&Proxy Port",IDC_STATIC,14,47,80,9
     EDITTEXT        IDC_PROXYPORT,109,47,86,12,ES_AUTOHSCROLL | ES_NUMBER
+END
+
+IDD_PROPPAGE_MAIN DIALOG DISCARDABLE  0, 0, 210, 101
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Main"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Current Status:",IDC_STATIC,13,16,66,9
+    LTEXT           "Static",IDC_STATIC,92,16,80,12
+    PUSHBUTTON      "&Start",IDC_STARTSERVICE,13,28,40,11
+    PUSHBUTTON      "&Stop",IDC_STOPSERVICE,65,29,46,11
+    CONTROL         "&Verbose",IDC_VERBOSE,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,15,43,84,12
+    EDITTEXT        IDC_PING_INTERVAL,93,62,47,12,ES_AUTOHSCROLL
+    LTEXT           "Ping Interval:",IDC_STATIC,13,62,60,10
 END
 
 
@@ -211,8 +193,8 @@ BEGIN
             VALUE "FileDescription", "BitlBee for Windows\0"
             VALUE "FileVersion", "1, 0, 0, 1\0"
             VALUE "InternalName", "bitlbee\0"
-            VALUE "LegalCopyright", "Copyright (C) 2002-2004\0"
-            VALUE "OriginalFilename", "bitlbee.exe\0"
+            VALUE "LegalCopyright", "Copyright (C) 2002-2005\0"
+            VALUE "OriginalFilename", "bitlbeeadm.exe\0"
             VALUE "ProductName", "Bitlbee Application\0"
             VALUE "ProductVersion", "1, 0, 0, 1\0"
         END
@@ -242,28 +224,12 @@ BEGIN
         BOTTOMMARGIN, 147
     END
 
-    IDD_PROPPAGE_USERS, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 203
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 147
-    END
-
     IDD_PROPPAGE_PATHS, DIALOG
     BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 203
         TOPMARGIN, 7
         BOTTOMMARGIN, 147
-    END
-
-    IDD_PHONY, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 2
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 2
     END
 
     IDD_PROPPAGE_ABOUT, DIALOG
@@ -274,14 +240,6 @@ BEGIN
         BOTTOMMARGIN, 149
     END
 
-    IDD_PROPPAGE_LOG, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 203
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 147
-    END
-
     IDD_PROPPAGE_CONNECTION, DIALOG
     BEGIN
         LEFTMARGIN, 7
@@ -289,24 +247,16 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 147
     END
-END
-#endif    // APSTUDIO_INVOKED
 
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Menu
-//
-
-IDR_POPUP MENU DISCARDABLE 
-BEGIN
-    POPUP "tray"
+    IDD_PROPPAGE_MAIN, DIALOG
     BEGIN
-        MENUITEM "&Show",                       IDM_SHOW
-        MENUITEM SEPARATOR
-        MENUITEM "&Exit",                       IDM_EXIT
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 94
     END
 END
+#endif    // APSTUDIO_INVOKED
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -324,7 +274,6 @@ IDB_BEE_SMALL           BITMAP  DISCARDABLE     "res\\bmp00002.bmp"
 STRINGTABLE DISCARDABLE 
 BEGIN
     IDS_ABOUTBOX            "&About bitlbee..."
-    IDP_SOCKETS_INIT_FAILED "Windows sockets initialization failed."
 END
 
 #endif    // English (U.S.) resources

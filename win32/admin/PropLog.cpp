@@ -1,8 +1,6 @@
 // PropLog.cpp : implementation file
 //
 
-#define BITLBEE_CORE
-#include "bitlbeewin.h"
 #include "PropLog.h"
 
 #ifdef _DEBUG

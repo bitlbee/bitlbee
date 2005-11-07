@@ -1,12 +1,8 @@
 // MainDlg.cpp : implementation file
 //
 
-#define BITLBEE_CORE
-#include "bitlbeewin.h"
-#include "PropUsers.h"
 #include "PropPaths.h"
 #include "PropAccess.h"
-#include "PropLog.h"
 #include "PropConn.h"
 #include "MainDlg.h"
 
@@ -25,8 +21,6 @@ CMainDlg::CMainDlg() : CPropertySheet("Bitlbee for Windows")
 {
 	AddPage(new CPropPaths());
 	AddPage(new CPropAccess());
-	AddPage(new CPropUsers());
-	AddPage(new CPropLog());
 	AddPage(new CPropertyPage(IDD_PROPPAGE_ABOUT));
 	AddPage(new CPropConn());
 	Create();
@@ -75,4 +69,3 @@ void CMainDlg::OnClose()
 {
 	ShowWindow(SW_HIDE);
 }
-

@@ -20,6 +20,7 @@
 #define IDB_BEE_SMALL                   135
 #define IDD_PROPPAGE_CONNECTION         137
 #define IDI_ICON1                       138
+#define IDD_PROPPAGE_MAIN               138
 #define IDC_AUTH_OPEN                   1001
 #define IDC_AUTH_CLOSED                 1002
 #define IDC_AUTH_REGISTERED             1003
@@ -45,6 +46,10 @@
 #define IDC_PROXY_AUTH_ENABLED          1022
 #define IDC_PROXYPORT                   1023
 #define IDC_PROXYTYPE                   1024
+#define IDC_STARTSERVICE                1025
+#define IDC_STOPSERVICE                 1026
+#define IDC_VERBOSE                     1027
+#define IDC_PING_INTERVAL               1028
 #define IDM_SHOW                        32771
 #define IDM_EXIT                        32773
 
@@ -54,7 +59,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        139
 #define _APS_NEXT_COMMAND_VALUE         32774
-#define _APS_NEXT_CONTROL_VALUE         1025
+#define _APS_NEXT_CONTROL_VALUE         1029
 #define _APS_NEXT_SYMED_VALUE           102
 #endif
 #endif

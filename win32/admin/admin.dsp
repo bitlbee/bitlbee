@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="bitlbee" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="admin" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 5.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Application" 0x0101
 
-CFG=bitlbee - Win32 Debug
+CFG=admin - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "bitlbee.mak".
+!MESSAGE NMAKE /f "admin.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "bitlbee.mak" CFG="bitlbee - Win32 Debug"
+!MESSAGE NMAKE /f "admin.mak" CFG="admin - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "bitlbee - Win32 Release" (based on "Win32 (x86) Application")
-!MESSAGE "bitlbee - Win32 Debug" (based on "Win32 (x86) Application")
+!MESSAGE "admin - Win32 Release" (based on "Win32 (x86) Application")
+!MESSAGE "admin - Win32 Debug" (based on "Win32 (x86) Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CPP=cl.exe
 MTL=midl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "bitlbee - Win32 Release"
+!IF  "$(CFG)" == "admin - Win32 Release"
 
 # PROP BASE Use_MFC 6
 # PROP BASE Use_Debug_Libraries 0
@@ -42,8 +42,8 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "." /I "..\protocols" /I ".." /I "deps\include" /I "deps\include\glib-2.0" /I "deps\lib\glib-2.0\include" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /FD /c
-# SUBTRACT CPP /YX
+# ADD CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /FD /c
+# SUBTRACT CPP /YX /Yc /Yu
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o NUL /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o NUL /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
@@ -53,10 +53,9 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib iconv.lib glib-2.0.lib gmodule-2.0.lib wsock32.lib advapi32.lib /nologo /machine:I386 /libpath:"release" /libpath:"deps\lib"
-# SUBTRACT LINK32 /pdb:none
+# ADD LINK32 /nologo /subsystem:windows /machine:I386 /out:"Release/bitlbeeadm.exe"
 
-!ELSEIF  "$(CFG)" == "bitlbee - Win32 Debug"
+!ELSEIF  "$(CFG)" == "admin - Win32 Debug"
 
 # PROP BASE Use_MFC 6
 # PROP BASE Use_Debug_Libraries 1
@@ -70,8 +69,8 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /Zi /Od /I "." /I "..\protocols" /I ".." /I "deps\include" /I "deps\include\glib-2.0" /I "deps\lib\glib-2.0\include" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /FR /FD /c
-# SUBTRACT CPP /YX
+# ADD CPP /nologo /MDd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /FD /c
+# SUBTRACT CPP /YX /Yc /Yu
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o NUL /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o NUL /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
@@ -81,94 +80,40 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 iconv.lib glib-2.0.lib gmodule-2.0.lib wsock32.lib kernel32.lib user32.lib advapi32.lib /nologo /debug /machine:I386 /pdbtype:sept /libpath:"debug" /libpath:"deps\lib"
-# SUBTRACT LINK32 /pdb:none
+# ADD LINK32 /nologo /subsystem:windows /debug /machine:I386 /out:"Debug/bitlbeeadm.exe" /pdbtype:sept
 
 !ENDIF 
 
 # Begin Target
 
-# Name "bitlbee - Win32 Release"
-# Name "bitlbee - Win32 Debug"
+# Name "admin - Win32 Release"
+# Name "admin - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\account.c
+SOURCE=.\bitlbeewin.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\bitlbee.c
+SOURCE=.\MainDlg.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\commands.c
+SOURCE=.\PropAccess.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\crypting.c
+SOURCE=.\PropConn.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\debug.c
+SOURCE=.\PropMain.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\help.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\irc.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\protocols\md5.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\nick.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\protocols\nogaim.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\protocols\proxy.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\query.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\set.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\protocols\sha.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\user.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\protocols\util.c
-
-!IF  "$(CFG)" == "bitlbee - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "bitlbee - Win32 Debug"
-
-# PROP Intermediate_Dir "Debugx"
-
-!ENDIF 
-
-# End Source File
-# Begin Source File
-
-SOURCE=..\win32.c
+SOURCE=.\PropPaths.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -176,71 +121,54 @@ SOURCE=..\win32.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=..\account.h
+SOURCE=.\bitlbeewin.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\bitlbee.h
+SOURCE=.\MainDlg.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\commands.h
+SOURCE=.\PropAccess.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\conf.h
+SOURCE=.\PropConn.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\config.h
+SOURCE=.\PropMain.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\crypting.h
+SOURCE=.\PropPaths.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\help.h
+SOURCE=.\Resource.h
+# End Source File
+# End Group
+# Begin Group "Resource Files"
+
+# PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;cnt;rtf;gif;jpg;jpeg;jpe"
+# Begin Source File
+
+SOURCE=.\bitlbee.rc
+
+!IF  "$(CFG)" == "admin - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "admin - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
-SOURCE=..\ini.h
+SOURCE=.\res\bmp00002.bmp
 # End Source File
 # Begin Source File
 
-SOURCE=..\irc.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\log.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\protocols\md5.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\nick.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\protocols\nogaim.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\set.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\protocols\sha.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\sock.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\user.h
+SOURCE=.\res\icon2.ico
 # End Source File
 # End Group
 # End Target
