@@ -157,11 +157,6 @@ struct jabber_chat {
 #define JCS_CLOSED  3	/* closed */
 
 
-static char *jabber_name()
-{
-	return "Jabber";
-}
-
 #define STATE_EVT(arg) if(gjc->on_state) { (gjc->on_state)(gjc, (arg) ); }
 
 static void jabber_remove_buddy(struct gaim_connection *gc, char *name, char *group);
@@ -2412,13 +2407,13 @@ static GList *jabber_actions()
 	return m;
 }
 
-static struct prpl *my_protocol = NULL;
 
-void jabber_init(struct prpl *ret)
+void jabber_init()
 {
+	struct prpl *ret = g_new0(struct prpl, 1);
+
 	/* the NULL's aren't required but they're nice to have */
-	ret->protocol = PROTO_JABBER;
-	ret->name = jabber_name;
+	ret->name = "jabber";
 	ret->away_states = jabber_away_states;
 	ret->actions = jabber_actions;
 	ret->login = jabber_login;
@@ -2441,5 +2436,5 @@ void jabber_init(struct prpl *ret)
 	ret->alias_buddy = jabber_roster_update;
 	ret->group_buddy = jabber_group_change;
 
-	my_protocol = ret;
+	register_protocol (ret);
 }

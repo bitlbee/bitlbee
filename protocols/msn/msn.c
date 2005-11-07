@@ -26,8 +26,6 @@
 #include "nogaim.h"
 #include "msn.h"
 
-static struct prpl *my_protocol = NULL;
-
 static void msn_login( struct aim_user *acct )
 {
 	struct gaim_connection *gc = new_gaim_conn( acct );
@@ -374,9 +372,10 @@ static int msn_send_typing( struct gaim_connection *gc, char *who, int typing )
 		return( 1 );
 }
 
-void msn_init(struct prpl *ret)
+void msn_init()
 {
-	ret->protocol = PROTO_MSN;
+	struct prpl *ret = g_new0(struct prpl, 1);
+	ret->name = "msn";
 	ret->login = msn_login;
 	ret->close = msn_close;
 	ret->send_im = msn_send_im;
@@ -398,5 +397,5 @@ void msn_init(struct prpl *ret)
 	ret->rem_deny = msn_rem_deny;
 	ret->send_typing = msn_send_typing;
 
-	my_protocol = ret;
+	register_protocol(ret);
 }

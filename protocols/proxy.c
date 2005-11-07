@@ -49,16 +49,6 @@
 #define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 #define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-/*FIXME*		
-	#ifndef _WIN32
-		if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-			closesocket(fd);
-			g_free(phb);
-			return -1;
-		}
-		fcntl(fd, F_SETFL, 0);
-#endif*/
-
 char proxyhost[128] = "";
 int proxyport = 0;
 int proxytype = PROXY_NONE;

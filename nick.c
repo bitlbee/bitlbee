@@ -26,7 +26,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
-void nick_set( irc_t *irc, char *handle, int proto, char *nick )
+void nick_set( irc_t *irc, char *handle, struct prpl *proto, char *nick )
 {
 	nick_t *m = NULL, *n = irc->nicks;
 	
@@ -55,7 +55,7 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 	nick_strip( n->nick );
 }
 
-char *nick_get( irc_t *irc, char *handle, int proto, const char *realname )
+char *nick_get( irc_t *irc, char *handle, struct prpl *proto, const char *realname )
 {
 	static char nick[MAX_NICK_LENGTH+1];
 	nick_t *n = irc->nicks;

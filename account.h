@@ -28,7 +28,7 @@
 
 typedef struct account
 {
-	int protocol;
+	struct prpl *prpl;
 	char *user;
 	char *pass;
 	char *server;
@@ -40,7 +40,7 @@ typedef struct account
 	struct account *next;
 } account_t;
 
-account_t *account_add( irc_t *irc, int protocol, char *user, char *pass );
+account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass );
 account_t *account_get( irc_t *irc, char *id );
 void account_del( irc_t *irc, account_t *acc );
 void account_on( irc_t *irc, account_t *a );

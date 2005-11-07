@@ -71,7 +71,6 @@
 struct gaim_connection {
 	/* we need to do either oscar or TOC */
 	/* we make this as an int in case if we want to add more protocols later */
-	int protocol;
 	struct prpl *prpl;
 	guint32 flags;
 	
@@ -151,7 +150,7 @@ struct aim_user {
 	char password[32];
 	char user_info[2048];
 	int options;
-	int protocol;
+	struct prpl *prpl;
 	/* prpls can use this to save information about the user,
 	 * like which server to connect to, etc */
 	char proto_opt[7][256];
@@ -160,10 +159,28 @@ struct aim_user {
 	irc_t *irc;
 };
 
+struct ft 
+{
+	const char *filename;
+	
+	/* Total number of bytes in file */
+	size_t total_bytes;
+	
+	/* Current number of bytes received */
+	size_t cur_bytes;
+};
+
+struct ft_request 
+{
+	const char *filename;
+	struct gaim_connection *gc;
+};
+
+typedef void (*ft_recv_handler) (struct ft *, void *data, size_t len);
+
 struct prpl {
-	int protocol;
 	int options;
-	char *(* name)();
+	const char *name;
 
 	/* for ICQ and Yahoo, who have off/on per-conversation options */
 	/* char *checkbox; this should be per-connection */
@@ -216,26 +233,15 @@ struct prpl {
 	/* change a buddy's group on a server list/roster */
 	void (* group_buddy)	(struct gaim_connection *, char *who, char *old_group, char *new_group);
 
+	/* file transfers */
+	struct ft_send_req *(* req_send_file) (struct gaim_connection *, const char *file);
+	void (* send_file_part) (struct gaim_connection *, struct ft*, void *data, size_t length);
+	void (* accept_recv_file) (struct gaim_connection *, struct ft*, ft_recv_handler);
+
 	void (* buddy_free)	(struct buddy *);
 
 	char *(* get_status_string) (struct gaim_connection *gc, int stat);
 };
-
-#define PROTO_TOC	0
-#define PROTO_OSCAR	1
-#define PROTO_YAHOO	2
-#define PROTO_ICQ	3
-#define PROTO_MSN	4
-#define PROTO_IRC	5
-#define PROTO_FTP	6
-#define PROTO_VGATE	7
-#define PROTO_JABBER	8
-#define PROTO_NAPSTER	9
-#define PROTO_ZEPHYR	10
-#define PROTO_GADUGADU	11
-#define PROTO_MAX	16
-
-extern char proto_name[PROTO_MAX][8];
 
 #define UC_UNAVAILABLE  1
 
@@ -246,7 +252,8 @@ extern char proto_name[PROTO_MAX][8];
 #define UC_DND  (0x10 | UC_UNAVAILABLE)
 
 G_MODULE_EXPORT GSList *get_connections();
-extern struct prpl *proto_prpl[16];
+G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
+G_MODULE_EXPORT void register_protocol(struct prpl *);
 
 /* nogaim.c */
 int serv_send_im(irc_t *irc, user_t *u, char *msg, int flags);
@@ -258,7 +265,7 @@ char *set_eval_charset( irc_t *irc, set_t *set, char *value );
 void nogaim_init();
 int proto_away( struct gaim_connection *gc, char *away );
 char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
-int handle_cmp( char *a, char *b, int protocol );
+int handle_cmp( char *a, char *b, struct prpl *protocol );
 
 gboolean auto_reconnect( gpointer data );
 void cancel_auto_reconnect( struct account *a );
@@ -317,25 +324,11 @@ G_MODULE_EXPORT void strip_html( char *msg );
 G_MODULE_EXPORT char * escape_html(const char *html);
 G_MODULE_EXPORT void info_string_append(GString *str, char *newline, char *name, char *value);
 
-#ifdef WITH_MSN
-/* msn.c */
-G_MODULE_EXPORT void msn_init( struct prpl *ret );
-#endif
-
-#ifdef WITH_OSCAR
-/* oscar.c */
-G_MODULE_EXPORT void oscar_init( struct prpl *ret );
-#endif
-
-#ifdef WITH_JABBER
-/* jabber.c */
-G_MODULE_EXPORT void jabber_init( struct prpl *ret );
-#endif
-
-#ifdef WITH_YAHOO
-/* yahoo.c */
-G_MODULE_EXPORT void byahoo_init( struct prpl *ret );
-#endif
+/* file transfers */
+G_MODULE_EXPORT void ft_progress( struct ft *, int);
+G_MODULE_EXPORT void ft_incoming( struct ft_request * );
+G_MODULE_EXPORT void ft_accepted( struct ft_request *, struct ft *);
+G_MODULE_EXPORT void ft_denied( struct ft_request *, const char *reason);
 
 /* prefs.c */
 G_MODULE_EXPORT void build_block_list();

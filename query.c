@@ -148,7 +148,7 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 static void query_display( irc_t *irc, query_t *q )
 {
 	if( q->gc )
-		irc_usermsg( irc, "Question on %s connection (handle %s):", proto_name[q->gc->protocol], q->gc->username );
+		irc_usermsg( irc, "Question on %s connection (handle %s):", q->gc->prpl->name, q->gc->username );
 	else
 		irc_usermsg( irc, "Question:" );
 	

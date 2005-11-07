@@ -145,7 +145,7 @@ user_t *user_findhandle( struct gaim_connection *gc, char *handle )
 	
 	while( u )
 	{
-		if( u->gc == gc && u->handle && handle_cmp( u->handle, handle, gc->protocol ) == 0 )
+		if( u->gc == gc && u->handle && handle_cmp( u->handle, handle, gc->prpl) == 0 )
 			break;
 		u = u->next;
 	}

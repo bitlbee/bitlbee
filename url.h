@@ -25,7 +25,8 @@
 
 #include "bitlbee.h"
 
-#define PROTO_HTTP	2
+#define PROTO_FTP		1
+#define PROTO_HTTP		2
 #define PROTO_SOCKS4	3
 #define PROTO_SOCKS5	4
 #define PROTO_DEFAULT	PROTO_HTTP
