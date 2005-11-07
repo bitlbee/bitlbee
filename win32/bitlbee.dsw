@@ -1,0 +1,107 @@
+Microsoft Developer Studio Workspace File, Format Version 5.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "bitlbee"=".\bitlbee.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "bitlbee_ssl"=".\bitlbee_ssl\bitlbee_ssl.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "jabber"=".\jabber.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name bitlbee
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name bitlbee_ssl
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "msn"=".\msn.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name bitlbee
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name bitlbee_ssl
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "oscar"=".\oscar.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name bitlbee
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "yahoo"=".\yahoo.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name bitlbee
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+

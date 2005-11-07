@@ -9,8 +9,14 @@
 -include Makefile.settings
 
 # Program variables
-objects = account.o bitlbee.o commands.o conf.o crypting.o help.o ini.o irc.o log.o nick.o query.o set.o unix.o url.o user.o debug.o
+objects = account.o bitlbee.o commands.o crypting.o help.o ini.o irc.o nick.o query.o set.o url.o user.o debug.o log.o
 subdirs = protocols
+
+ifeq ($(ARCH),Windows)
+objects += win32.o
+else
+objects += unix.o conf.o
+endif
 
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)

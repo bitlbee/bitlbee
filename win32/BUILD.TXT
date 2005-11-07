@@ -1,0 +1,22 @@
+Instructions for building the Bitlbee Win32 port
+================================================
+
+1. Download the latest version using bzr (http://www.bazaar-ng.org/):
+   bzr branch http://jelmer.vernstok.nl/oss/bitlbee/bzr/win32 bitlbee-win32
+2. Download and install the required development files: 
+    from http://www.ethereal.com/distribution/win32/development/:
+    - libiconv
+    - glib
+    - glib-dev
+    from http://ftp.mozilla.org/pub/mozilla.org/
+    - nss
+    - nspr
+
+I've put them inside c:\dev, so you might have the most with that location.
+
+3. Open bitlbee.dsw in VC++ and build :-)
+
+4. Now you're done. When running, make sure all the required DLL's are accessible. If they can't be found, place them inside c:\winnt\system32 or the Debug or Release directories inside bitlbee-...\win32\.
+
+5. To build setup files, compile the bitlbee.iss file using the Inno Setup 
+   program (available from www.jrsoftware.org).

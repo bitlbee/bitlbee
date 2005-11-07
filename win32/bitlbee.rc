@@ -1,0 +1,354 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_BEE                 ICON    DISCARDABLE     "res\\icon2.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PROPPAGE_ACCESS DIALOG DISCARDABLE  0, 0, 210, 154
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Access"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Authentication Mode",IDC_STATIC,7,7,196,47
+    CONTROL         "&Open",IDC_AUTH_OPEN,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,14,15,181,13
+    CONTROL         "&Closed",IDC_AUTH_CLOSED,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,14,27,160,11
+    CONTROL         "&Registered",IDC_AUTH_REGISTERED,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP,14,39,182,11
+    GROUPBOX        "Bind",IDC_STATIC,7,55,196,46
+    LTEXT           "IP to bind to:",IDC_STATIC,15,67,49,9
+    LTEXT           "Port:",IDC_STATIC,15,82,52,10
+    EDITTEXT        IDC_INTERFACE,86,67,108,11,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PORT,86,82,108,11,ES_AUTOHSCROLL
+    GROUPBOX        "Password",IDC_STATIC,7,104,196,43
+    EDITTEXT        IDC_PASSWORD,14,129,115,11,ES_AUTOHSCROLL
+    LTEXT           "Only used when authentication mode is set to closed.",
+                    IDC_STATIC,13,113,184,11
+END
+
+IDD_PROPPAGE_USERS DIALOG DISCARDABLE  0, 0, 210, 154
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Users"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Known users",IDC_STATIC,7,7,196,68
+    GROUPBOX        "Current users",IDC_STATIC,7,79,196,68
+    LISTBOX         IDC_KNOWN_USERS,13,17,114,52,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Remove",IDC_DEL_KNOWN_USERS,133,17,32,14,WS_DISABLED
+    LISTBOX         IDC_CURRENT_USERS,13,89,115,52,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "&Kick",IDC_KICK,135,89,19,14,WS_DISABLED
+    PUSHBUTTON      "&Refresh",IDC_REFRESH_KNOWN_USERS,133,38,30,14
+    PUSHBUTTON      "&Refresh",IDC_REFRESH_CURRENT_USERS,135,110,30,14
+END
+
+IDD_PROPPAGE_PATHS DIALOG DISCARDABLE  0, 0, 210, 154
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Paths"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Config path",IDC_STATIC,7,7,196,30
+    PUSHBUTTON      "&Browse...",IDC_BROWSE_CONFIG,151,16,46,13
+    EDITTEXT        IDC_CONFIGDIR,13,17,122,13,ES_AUTOHSCROLL
+    GROUPBOX        "Message of the day file",IDC_STATIC,7,42,196,40
+    PUSHBUTTON      "&Browse...",IDC_BROWSE_MOTD,153,51,43,13
+    EDITTEXT        IDC_MOTDFILE,13,51,122,13,ES_AUTOHSCROLL
+    PUSHBUTTON      "&Edit...",IDC_EDIT_MOTD,153,66,43,13
+END
+
+IDD_PHONY DIALOG DISCARDABLE  0, 0, 9, 9
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+IDD_PROPPAGE_ABOUT DIALOG DISCARDABLE  0, 0, 284, 156
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "About"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Authors",IDC_STATIC,7,7,270,79
+    LTEXT           "Bitlbee is written by : \n  Wilmer van der Gaast <wilmer@gaast.net>\n  Maurits Dijkstra <mauritsd@xs4all.nl>\n  Jelmer Vernooij <jelmer@samba.org>",
+                    IDC_STATIC,13,16,180,35
+    LTEXT           "Windows port by Jelmer Vernooij <jelmer@samba.org>",
+                    IDC_STATIC,13,55,180,12
+    CONTROL         135,IDC_STATIC,"Static",SS_BITMAP | SS_SUNKEN,193,14,73,
+                    64
+    GROUPBOX        "More information",IDC_STATIC,7,88,270,61
+    LTEXT           "See the file CREDITS for a list of contributors.",
+                    IDC_STATIC,16,69,171,11
+    LTEXT           "The Bitlbee homepage is located at http://www.bitlbee.org/\n\nFor Bitlbee support, go to #bitlbee on irc.oftc.net",
+                    IDC_STATIC,17,100,248,39
+END
+
+IDD_PROPPAGE_LOG DIALOG DISCARDABLE  0, 0, 210, 154
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Logs"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LISTBOX         IDC_LOG,7,7,196,140,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_PROPPAGE_CONNECTION DIALOG DISCARDABLE  0, 0, 210, 154
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Connection"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Proxy",IDC_STATIC,7,23,196,124
+    EDITTEXT        IDC_PROXYHOST,110,33,86,12,ES_AUTOHSCROLL
+    CONTROL         "&Use Proxy",IDC_PROXY_ENABLED,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,7,196,14
+    LTEXT           "Proxy &Host",IDC_STATIC,13,33,82,12
+    EDITTEXT        IDC_PROXYUSER,110,105,86,12,ES_AUTOHSCROLL
+    LTEXT           "Proxy &User",IDC_STATIC,13,105,82,12
+    EDITTEXT        IDC_PROXYPASS,110,122,86,12,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Proxy &Password",IDC_STATIC,13,123,82,12
+    CONTROL         "&Authenticate to proxy",IDC_PROXY_AUTH_ENABLED,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,14,85,86,14
+    LTEXT           "Proxy &Type",IDC_STATIC,13,63,77,8
+    LISTBOX         IDC_PROXYTYPE,110,62,86,31,LBS_SORT | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&Proxy Port",IDC_STATIC,14,47,80,9
+    EDITTEXT        IDC_PROXYPORT,109,47,86,12,ES_AUTOHSCROLL | ES_NUMBER
+END
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "The Bitlbee Team\0"
+            VALUE "FileDescription", "BitlBee for Windows\0"
+            VALUE "FileVersion", "1, 0, 0, 1\0"
+            VALUE "InternalName", "bitlbee\0"
+            VALUE "LegalCopyright", "Copyright (C) 2002-2004\0"
+            VALUE "OriginalFilename", "bitlbee.exe\0"
+            VALUE "ProductName", "Bitlbee Application\0"
+            VALUE "ProductVersion", "1, 0, 0, 1\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_PROPPAGE_ACCESS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
+    END
+
+    IDD_PROPPAGE_USERS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
+    END
+
+    IDD_PROPPAGE_PATHS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
+    END
+
+    IDD_PHONY, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 2
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 2
+    END
+
+    IDD_PROPPAGE_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 277
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 149
+    END
+
+    IDD_PROPPAGE_LOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
+    END
+
+    IDD_PROPPAGE_CONNECTION, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 147
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_POPUP MENU DISCARDABLE 
+BEGIN
+    POPUP "tray"
+    BEGIN
+        MENUITEM "&Show",                       IDM_SHOW
+        MENUITEM SEPARATOR
+        MENUITEM "&Exit",                       IDM_EXIT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_BEE_SMALL           BITMAP  DISCARDABLE     "res\\bmp00002.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_ABOUTBOX            "&About bitlbee..."
+    IDP_SOCKETS_INIT_FAILED "Windows sockets initialization failed."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "afxres.rc"         // Standard components
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
