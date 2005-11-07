@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "." /I "..\protocols" /I ".." /I "deps\include" /I "deps\include\glib-2.0" /I "deps\lib\glib-2.0\include" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "GLIB2" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "." /I "..\protocols" /I ".." /I "deps\include" /I "deps\include\glib-2.0" /I "deps\lib\glib-2.0\include" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o NUL /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o NUL /win32
@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib iconv.lib glib-2.0.lib gmodule-2.0.lib /nologo /subsystem:windows /machine:I386 /libpath:"release" /libpath:"deps\lib"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib iconv.lib glib-2.0.lib gmodule-2.0.lib wsock32.lib advapi32.lib /nologo /subsystem:windows /machine:I386 /libpath:"release" /libpath:"deps\lib"
 # SUBTRACT LINK32 /incremental:yes /nodefaultlib
 
 !ELSEIF  "$(CFG)" == "bitlbee - Win32 Debug"
@@ -70,7 +70,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /Zi /Od /I "." /I "..\protocols" /I ".." /I "deps\include" /I "deps\include\glib-2.0" /I "deps\lib\glib-2.0\include" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "GLIB2" /FR /FD /c
+# ADD CPP /nologo /Gd /MDd /Ze /W3 /Gm /GX /Zi /Od /I "." /I "..\protocols" /I ".." /I "deps\include" /I "deps\include\glib-2.0" /I "deps\lib\glib-2.0\include" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o NUL /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o NUL /win32
@@ -81,7 +81,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 iconv.lib glib-2.0.lib gmodule-2.0.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept /libpath:"debug" /libpath:"deps\lib"
+# ADD LINK32 iconv.lib glib-2.0.lib gmodule-2.0.lib wsock32.lib kernel32.lib user32.lib advapi32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept /libpath:"debug" /libpath:"deps\lib"
 
 !ENDIF 
 
@@ -103,10 +103,13 @@ SOURCE=..\bitlbee.c
 # Begin Source File
 
 SOURCE=.\bitlbee.rc
-# End Source File
-# Begin Source File
 
-SOURCE=.\bitlbeewin.cpp
+!IF  "$(CFG)" == "bitlbee - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "bitlbee - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -130,10 +133,6 @@ SOURCE=..\irc.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\MainDlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\protocols\md5.c
 # End Source File
 # Begin Source File
@@ -143,26 +142,6 @@ SOURCE=..\nick.c
 # Begin Source File
 
 SOURCE=..\protocols\nogaim.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\PropAccess.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\PropConn.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\PropLog.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\PropPaths.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\PropUsers.cpp
 # End Source File
 # Begin Source File
 
@@ -182,10 +161,6 @@ SOURCE=..\protocols\sha.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\TrayNot.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\user.c
 # End Source File
 # Begin Source File
@@ -201,6 +176,10 @@ SOURCE=..\protocols\util.c
 !ENDIF 
 
 # End Source File
+# Begin Source File
+
+SOURCE=..\win32.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -212,10 +191,6 @@ SOURCE=..\account.h
 # Begin Source File
 
 SOURCE=..\bitlbee.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\bitlbeewin.h
 # End Source File
 # Begin Source File
 
@@ -251,10 +226,6 @@ SOURCE=..\log.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\MainDlg.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\protocols\md5.h
 # End Source File
 # Begin Source File
@@ -267,30 +238,6 @@ SOURCE=..\protocols\nogaim.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\PropAccess.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\PropConn.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\PropLog.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\PropPaths.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\PropUsers.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\Resource.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\set.h
 # End Source File
 # Begin Source File
@@ -300,10 +247,6 @@ SOURCE=..\protocols\sha.h
 # Begin Source File
 
 SOURCE=..\sock.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\TrayNot.h
 # End Source File
 # Begin Source File
 

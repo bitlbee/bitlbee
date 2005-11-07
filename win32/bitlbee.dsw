@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 5.00
 
 ###############################################################################
 
-Project: "bitlbee"=".\bitlbee.dsp" - Package Owner=<4>
+Project: "admin"=.\admin1\admin.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -15,7 +15,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "bitlbee_ssl"=".\bitlbee_ssl\bitlbee_ssl.dsp" - Package Owner=<4>
+Project: "bitlbee"=.\bitlbee.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -27,7 +27,19 @@ Package=<4>
 
 ###############################################################################
 
-Project: "jabber"=".\jabber.dsp" - Package Owner=<4>
+Project: "bitlbee_ssl"=.\bitlbee_ssl.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "jabber"=.\jabber.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -45,7 +57,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "msn"=".\msn.dsp" - Package Owner=<4>
+Project: "msn"=.\msn.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -63,7 +75,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "oscar"=".\oscar.dsp" - Package Owner=<4>
+Project: "oscar"=.\oscar.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -78,7 +90,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "yahoo"=".\yahoo.dsp" - Package Owner=<4>
+Project: "yahoo"=.\yahoo.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

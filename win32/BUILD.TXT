@@ -4,10 +4,11 @@ Instructions for building the Bitlbee Win32 port
 1. Download the latest version using bzr (http://www.bazaar-ng.org/):
    bzr branch http://jelmer.vernstok.nl/oss/bitlbee/bzr/win32 bitlbee-win32
 2. Download and install the required development files: 
-    from http://www.ethereal.com/distribution/win32/development/:
-    - libiconv
+    from ftp://ftp.gtk.org/pub/gtk/v2.8/win32/
     - glib
     - glib-dev
+	- libiconv
+	- gettext
     from http://ftp.mozilla.org/pub/mozilla.org/
     - nss
     - nspr

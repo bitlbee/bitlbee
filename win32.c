@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* Main file (Unix specific part)                                       */
+/* Main file (Windows specific part)                                   */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,32 +23,55 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#define BITLBEE_CORE
 #include "bitlbee.h"
 #include "commands.h"
 #include "crypting.h"
 #include "protocols/nogaim.h"
 #include "help.h"
 #include <signal.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <winreg.h>
-#include <winbase.h>
+#include <windows.h>
 
 global_t global;	/* Against global namespace pollution */
 
-int main( int argc, char *argv[] )
+static void WINAPI service_ctrl (DWORD dwControl)
+{
+	switch (dwControl)
+	{
+        case SERVICE_CONTROL_STOP:
+			/* FIXME */
+            break;
+
+        case SERVICE_CONTROL_INTERROGATE:
+            break;
+
+        default:
+            break;
+
+    }
+}
+
+void service_main (DWORD argc, LPTSTR *argv)
 {
 	int i = -1;
+	SERVICE_STATUS_HANDLE handle;
+	SERVICE_STATUS status;
+
+    handle = RegisterServiceCtrlHandler("bitlbee", service_ctrl);
+
+    if (!handle)
+		return;
+
+    status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+    status.dwServiceSpecificExitCode = 0;
+
 	memset( &global, 0, sizeof( global_t ) );
 	
 	global.loop = g_main_new( FALSE );
 	
-	log_init( );
-	nogaim_init( );
-	
 	global.conf = conf_load( argc, argv );
 	if( global.conf == NULL )
-		return( 1 );
+		return;
 	
 	if( global.conf->runmode == RUNMODE_INETD )
 	{
@@ -67,18 +90,34 @@ int main( int argc, char *argv[] )
 	}
 	
 	if( i != 0 )
-		return( i );
+		return;
  	
 	if( access( global.conf->configdir, F_OK ) != 0 )
 		log_message( LOGLVL_WARNING, "The configuration directory %s does not exist. Configuration won't be saved.", global.conf->configdir );
-	else if( access( global.conf->configdir, R_OK ) != 0 || access( global.conf->configdir, W_OK ) != 0 )
+	else if( access( global.conf->configdir, 06 ) != 0 )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", global.conf->configdir );
 	if( help_init( &(global.help) ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", global.helpfile );
+
+	SetServiceStatus(handle, &status);
 	
 	g_main_run( global.loop );
+}
+
+int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+    SERVICE_TABLE_ENTRY dispatch_table[] =
+    {
+        { TEXT("bitlbee"), (LPSERVICE_MAIN_FUNCTION)service_main },
+        { NULL, NULL }
+    };
+
+	nogaim_init( );
+
+    if (!StartServiceCtrlDispatcher(dispatch_table))
+		log_message( LOGLVL_ERROR, "StartServiceCtrlDispatcher failed.");
 	
-	return( 0 );
+	return 0;
 }
 
 double gettime()
@@ -118,9 +157,10 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf_t *conf;
 	HKEY key, key_main, key_proxy;
 	char *tmp;
-	RegOpenKey(HKEY_LOCAL_MACHINE, "SOFTWARE\\Bitlbee", &key);
-	RegOpenKey(HKEY_LOCAL_MACHINE, "SOFTWARE\\Bitlbee\\main", &key_main);
-	RegOpenKey(HKEY_LOCAL_MACHINE, "SOFTWARE\\Bitlbee\\proxy", &key_proxy);
+
+	RegOpenKey(HKEY_CURRENT_USER, "SOFTWARE\\Bitlbee", &key);
+	RegOpenKey(key, "main", &key_main);
+	RegOpenKey(key, "proxy", &key_proxy);
 	
 	memset( &global, 0, sizeof( global_t ) );
 	global.loop = g_main_new(FALSE);
@@ -188,4 +228,50 @@ inet_aton(const char *cp, struct in_addr *addr)
 {
   addr->s_addr = inet_addr(cp);
   return (addr->s_addr == INADDR_NONE) ? 0 : 1;
+}
+
+void log_error(char *msg)
+{
+	log_message(LOGLVL_ERROR, "%s", msg);
+}
+
+void log_message(int level, char *message, ...)
+{
+    HANDLE  hEventSource;
+    LPTSTR  lpszStrings[2];
+	WORD elevel;
+    va_list ap;
+
+    va_start(ap, message);
+
+    hEventSource = RegisterEventSource(NULL, TEXT("bitlbee"));
+
+    lpszStrings[0] = TEXT("bitlbee");
+    lpszStrings[1] = g_strdup_vprintf(message, ap);
+    va_end(ap);
+
+	switch (level) {
+	case LOGLVL_ERROR: elevel = EVENTLOG_ERROR_TYPE; break;
+	case LOGLVL_WARNING: elevel = EVENTLOG_WARNING_TYPE; break;
+	case LOGLVL_INFO: elevel = EVENTLOG_INFORMATION_TYPE; break;
+#ifdef DEBUG
+	case LOGLVL_DEBUG: elevel = EVENTLOG_AUDIT_SUCCESS; break;
+#endif
+	}
+
+    if (hEventSource != NULL) {
+        ReportEvent(hEventSource, 
+        elevel,
+        0,                    
+        0,                    
+        NULL,                 
+        2,                    
+        0,                    
+        lpszStrings,          
+        NULL);                
+
+        DeregisterEventSource(hEventSource);
+    }
+
+	g_free(lpszStrings[1]);
 }

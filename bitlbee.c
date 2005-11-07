@@ -56,9 +56,6 @@ int bitlbee_daemon_init()
 	int i;
 	GIOChannel *ch;
 	
-	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
-	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
-	
 	global.listen_socket = socket( AF_INET, SOCK_STREAM, 0 );
 	if( global.listen_socket == -1 )
 	{
@@ -111,9 +108,6 @@ int bitlbee_inetd_init()
 {
 	if( !irc_new( 0 ) )
 		return( 1 );
-	
-	log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
-	log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
 	
 	return( 0 );
 }
