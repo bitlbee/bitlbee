@@ -51,7 +51,6 @@ command_t commands[] = {
 	{ "nick",           1, cmd_nick },
 	{ "import_buddies", 1, cmd_import_buddies },
 	{ "qlist",          0, cmd_qlist },
-	{ "dump",	    0, cmd_dump },
 	{ NULL }
 };
 
@@ -792,13 +791,6 @@ int cmd_import_buddies( irc_t *irc, char **cmd )
 	}
 	
 	irc_usermsg( irc, "Sent all add requests. Please wait for a while, the server needs some time to handle all the adds." );
-	
-	return( 0 );
-}
-
-int cmd_dump( irc_t *irc, char **cmd ) {
-	write_io_activity();
-	irc_usermsg(irc, "Wrote GIO activity log to disk.");	
 	
 	return( 0 );
 }

@@ -40,8 +40,6 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, 
 		                     &size );
 	
-	count_io_event(source, "main");
-	
 	log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
 	irc_new( new_socket );
 
@@ -124,8 +122,6 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	char line[513];
 	int st;
 	
-	count_io_event(source, "main");
-
 	if( condition & G_IO_ERR || condition & G_IO_HUP )
 	{
 		irc_free( irc );
@@ -180,8 +176,6 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 #ifdef FLOOD_SEND
 	time_t newtime;
 #endif
-
-	count_io_event(source, "main");
 
 #ifdef FLOOD_SEND	
 	newtime = time( NULL );

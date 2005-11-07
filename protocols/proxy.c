@@ -163,8 +163,6 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 	}
 #endif
 	
-	count_io_event(source, "proxy");
-	
 	if (condition & GAIM_READ_COND)
 		gaim_cond |= GAIM_INPUT_READ;
 	if (condition & GAIM_WRITE_COND)
