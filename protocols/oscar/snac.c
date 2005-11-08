@@ -14,6 +14,8 @@
 
 #include <aim.h>
 
+static aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac);
+
 /*
  * Called from aim_session_init() to initialize the hash.
  */
@@ -50,7 +52,7 @@ aim_snacid_t aim_cachesnac(aim_session_t *sess, const guint16 family, const guin
  * Clones the passed snac structure and caches it in the
  * list/hash.
  */
-aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac)
+static aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac)
 {
 	aim_snac_t *snac;
 	int index;

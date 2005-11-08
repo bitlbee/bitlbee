@@ -161,7 +161,7 @@ void irc_free(irc_t * irc)
 	g_source_remove( irc->r_watch_source_id );
 	if( irc->w_watch_source_id > 0 )
 		g_source_remove( irc->w_watch_source_id );
-	g_io_channel_close( irc->io_channel );
+	
 	g_io_channel_unref( irc->io_channel );
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
@@ -462,6 +462,12 @@ int irc_exec( irc_t *irc, char **cmd )
 		}
 		return( 1 );
 	}
+	else if( g_strcasecmp( cmd[0], "QUIT" ) == 0 )
+	{
+		irc_write( irc, "ERROR :%s%s", cmd[1]?"Quit: ":"", cmd[1]?cmd[1]:"Client Quit" );
+		g_io_channel_close( irc->io_channel );
+		return( 0 );
+	}
 	
 	if( !irc->user || !irc->nick )
 	{
@@ -635,12 +641,6 @@ int irc_exec( irc_t *irc, char **cmd )
 			}
 			irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? IM_FLAG_AWAY : 0 );
 		}
-	}
-	else if( g_strcasecmp( cmd[0], "QUIT" ) == 0 )
-	{
-		irc_write( irc, "ERROR :%s%s", cmd[1]?"Quit: ":"", cmd[1]?cmd[1]:"Client Quit" );
-		g_io_channel_close( irc->io_channel );
-		return( 0 );
 	}
 	else if( g_strcasecmp( cmd[0], "WHO" ) == 0 )
 	{
