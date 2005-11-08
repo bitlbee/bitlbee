@@ -1,3 +1,8 @@
+Version 1.0:
+- Removed some crashy debugging code.
+
+Finished ...
+
 Version 0.99:
 - Fixed memory initialization bug in OSCAR module that caused crashes on
   closing the connection.
