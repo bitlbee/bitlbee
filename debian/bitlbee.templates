@@ -6,49 +6,51 @@ Description: On what TCP port should BitlBee listen for connections?
  a very good idea when you're running a real IRC daemon as well. 6668 might
  be a good alternative. Leaving this value blank means that BitlBee will not
  be run automatically.
-Description-cs: Na kterém TCP portu má BitlBee naslouchat pøíchozím spojením?
- BitlBee normálnì naslouchá na bì¾ném IRC portu 6667. Pokud máte spu¹tìnı i
- reálnı IRC daemon, tak to nemusí bıt nejlep¹í nápad. Vhodná alternativa
- mù¾e bıt 6668. Ponecháte-li pole prázdné, znamená to, ¾e se BitlBee nebude
- spou¹tìt automaticky.
-Description-de: An welchem TCP-Port soll BitlBee auf Verbindungen warten?
- BitlBee lauscht normalerweise an dem üblichen IRC-Port 6667. Dies ist aber
- keine gute Idee, wenn Sie außerdem noch einen richtigen IRC-Dienst
+Description-cs.UTF-8: Na kterÃ©m TCP portu mÃ¡ BitlBee naslouchat pÅ™Ã­chozÃ­m spojenÃ­m?
+ BitlBee normÃ¡lnÄ› naslouchÃ¡ na bÄ›Å¾nÃ©m IRC portu 6667. Pokud mÃ¡te
+ spuÅ¡tÄ›nÃ½ i reÃ¡lnÃ½ IRC daemon, tak to nemusÃ­ bÃ½t nejlepÅ¡Ã­ nÃ¡pad.
+ VhodnÃ¡ alternativa mÅ¯Å¾e bÃ½t 6668. PonechÃ¡te-li pole prÃ¡zdnÃ©,
+ znamenÃ¡ to, Å¾e se BitlBee nebude spouÅ¡tÄ›t automaticky.
+Description-de.UTF-8: An welchem TCP-Port soll BitlBee auf Verbindungen warten?
+ BitlBee lauscht normalerweise an dem Ã¼blichen IRC-Port 6667. Dies ist
+ aber keine gute Idee, wenn Sie auÃŸerdem noch einen richtigen IRC-Dienst
  betreiben. Das Port 6668 ist eine gute Alternative. Wenn Sie keinen Wert
  eingeben, wird BitlBee nicht automatisch starten.
-Description-es: ¿En qué puerto TCP quiere que BitlBee escuche conexiones?
- BitlBee normalmente escucha en el puerto 6667, que se usa también para
- IRC. Por esta razón no es muy buena idea poner a BitlBee a escuchar en ese
- puerto si también se está ejecutando un demonio real de IRC, en este caso
- el puerto 6668 puede ser una buena alternativa. Si deja este valor en
- blanco BitlBee no se ejecutará automáticamente.
-Description-fr: Sur quel port TCP BitlBee doit-il être à l'écoute ?
- BitlBee est usuellement à l'écoute sur le port IRC standard : 6667. Cela
- n'est pas forcément un choix adapté si vous utilisez en même temps un vrai
- démon IRC. Dans ce cas, choisir 6668 est conseillé. Si vous ne souhaitez
- pas lancer BitlBee automatiquement, veuillez laissez ce champs vide.
-Description-ja: BitlBee ¤Ï¡¢ÀÜÂ³¤Î¤¿¤á¤Ë¤É¤Î TCP ¥İ¡¼¥È¤ò listen ¤·¤Ş¤¹¤«?
- BitlBee ¤ÏÄÌ¾ï¤Î¾ì¹ç¡¢É¸½à¤Î IRC ¥İ¡¼¥ÈÈÖ¹æ¤Ç¤¢¤ë 6667 ¤ò listen
- ¤·¤Ş¤¹¡£Æ±ÍÍ¤Ë¤·¤Æ¼Âºİ¤Î IRC
- ¥Ç¡¼¥â¥ó¤òÆ°ºî¤µ¤»¤Æ¤¤¤ë¾ì¹ç¡¢¤³¤ì¤Ï¤¢¤Ş¤êÎÉ¤¤¹Í¤¨¤Ç¤ÏÌµ¤¤¤«¤â¤·¤ì¤Ş¤»¤ó¡£Âå¤ï¤ê¤Ë
- 6668 ¤ò»È¤¦¤Î¤¬ÎÉ¤¤¤«¤âÃÎ¤ì¤Ş¤»¤ó¡£¤³¤ì¤ò¶õ¤Î¤Ş¤Ş¤Ë¤·¤Æ¤ª¤±¤Ğ¡¢BitlBee
- ¤Ï¼«Æ°Åª¤Ë¤Ïµ¯Æ°¤Ê¤¯¤Ê¤ê¤Ş¤¹¡£
-Description-nl: Op welke TCP poort moet BitlBee draaien?
+Description-es.UTF-8: Â¿En quÃ© puerto TCP quiere que BitlBee escuche conexiones?
+ BitlBee normalmente escucha en el puerto 6667, que se usa tambiÃ©n para
+ IRC. Por esta razÃ³n no es muy buena idea poner a BitlBee a escuchar en
+ ese puerto si tambiÃ©n se estÃ¡ ejecutando un demonio real de IRC, en este
+ caso el puerto 6668 puede ser una buena alternativa. Si deja este valor en
+ blanco BitlBee no se ejecutarÃ¡ automÃ¡ticamente.
+Description-fr.UTF-8: Sur quel port TCP BitlBee doit-il Ãªtre Ã  l'Ã©couteÂ ?
+ BitlBee est usuellement Ã  l'Ã©coute sur le port IRC standardÂ : 6667.
+ Cela n'est pas forcÃ©ment un choix adaptÃ© si vous utilisez en mÃªme temps
+ un vrai dÃ©mon IRC. Dans ce cas, choisir 6668 est conseillÃ©. Si vous ne
+ souhaitez pas lancer BitlBee automatiquement, veuillez laissez ce champs
+ vide.
+Description-ja.UTF-8: BitlBee ã¯ã€æ¥ç¶šã®ãŸã‚ã«ã©ã® TCP ãƒãƒ¼ãƒˆã‚’ listen ã—ã¾ã™ã‹?
+ BitlBee ã¯é€šå¸¸ã®å ´åˆã€æ¨™æº–ã® IRC ãƒãƒ¼ãƒˆç•ªå·ã§ã‚ã‚‹ 6667
+ ã‚’ listen ã—ã¾ã™ã€‚åŒæ§˜ã«ã—ã¦å®Ÿéš›ã® IRC
+ ãƒ‡ãƒ¼ãƒ¢ãƒ³ã‚’å‹•ä½œã•ã›ã¦ã„ã‚‹å ´åˆã€ã“ã‚Œã¯ã‚ã¾ã‚Šè‰¯ã„è€ƒãˆã§ã¯ç„¡ã„ã‹ã‚‚ã—ã‚Œã¾ã›ã‚“ã€‚ä»£ã‚ã‚Šã«
+ 6668
+ ã‚’ä½¿ã†ã®ãŒè‰¯ã„ã‹ã‚‚çŸ¥ã‚Œã¾ã›ã‚“ã€‚ã“ã‚Œã‚’ç©ºã®ã¾ã¾ã«ã—ã¦ãŠã‘ã°ã€BitlBee
+ ã¯è‡ªå‹•çš„ã«ã¯èµ·å‹•ãªããªã‚Šã¾ã™ã€‚
+Description-nl.UTF-8: Op welke TCP poort moet BitlBee draaien?
  Normaal 'luistert' BitlBee op de gebruikelijke IRC poort, 6667. Als je al
  een andere IRC daemon draait is dat onmogelijk. Kies dan bijvoorbeeld voor
  poort 6668. Als je niet wil dat BitlBee automatisch gestart wordt, vul
  hier dan niets in.
-Description-pt_BR: Em qual porta TCP o BitlBee deverá ouvir por conexões ?
- O BitlBee normalmente ouve na porta de IRC padrão, 6667. Porém, esta pode
- não ser uma boa idéia quando você está rodando um daemon IRC real também.
- 6689 pode ser uma boa alternativa. Deixar esse valor em branco significa
- que o BitlBee não será executado automaticamente.
-Description-sv: På vilken TCP-port ska BitlBee lyssna på efter anslutningar?
- BitlBee lyssnar normalt på den standardporten för IRC, 6667. Detta kanske
- inte är en bra ide om du kör en riktig IRC-daemon på samma system. 6668
- kan vara ett bra alternativ då. Lämnar du detta värde blankt betyder det
- att BitlBee inte kommer att startas automatiskt.
-Description-vi: TrÃ¬nh BitlBee nÃªn láº¯ng nghe sá»± káº¿t ná»‘i trÃªn cá»•ng TCP nÃ o?
+Description-pt_BR.UTF-8: Em qual porta TCP o BitlBee deverÃ¡ ouvir por conexÃµes ?
+ O BitlBee normalmente ouve na porta de IRC padrÃ£o, 6667. PorÃ©m, esta
+ pode nÃ£o ser uma boa idÃ©ia quando vocÃª estÃ¡ rodando um daemon IRC real
+ tambÃ©m. 6689 pode ser uma boa alternativa. Deixar esse valor em branco
+ significa que o BitlBee nÃ£o serÃ¡ executado automaticamente.
+Description-sv.UTF-8: PÃ¥ vilken TCP-port ska BitlBee lyssna pÃ¥ efter anslutningar?
+ BitlBee lyssnar normalt pÃ¥ den standardporten fÃ¶r IRC, 6667. Detta
+ kanske inte Ã¤r en bra ide om du kÃ¶r en riktig IRC-daemon pÃ¥ samma
+ system. 6668 kan vara ett bra alternativ dÃ¥. LÃ¤mnar du detta vÃ¤rde
+ blankt betyder det att BitlBee inte kommer att startas automatiskt.
+Description-vi.UTF-8: TrÃ¬nh BitlBee nÃªn láº¯ng nghe sá»± káº¿t ná»‘i trÃªn cá»•ng TCP nÃ o?
  TrÃ¬nh BitlBee thÆ°á»ng láº¯ng nghe trÃªn cá»•ng IRC bÃ¬nh thÆ°á»ng,
  6667. CÃ³ láº½ nÃ³ khÃ´ng pháº£i lÃ  má»™t Ã½ kiáº¿n tá»‘t náº¿u báº¡n
  cÅ©ng cÃ³ cháº¡y má»™t trÃ¬nh ná»n (dÃ¦mon) IRC tháº­t. NhÆ° tháº¿ thÃ¬,
