@@ -406,7 +406,7 @@ void signoff( struct gaim_connection *gc )
 
 void do_error_dialog( struct gaim_connection *gc, char *msg, char *title )
 {
-	irc_usermsg( gc->irc, "%s(%s) - Error: %s", gc->username, title, msg );
+	irc_usermsg( gc->irc, "%s(%s) - Error: %s", proto_name[gc->protocol], gc->username, msg );
 }
 
 void do_ask_dialog( struct gaim_connection *gc, char *msg, void *data, void *doit, void *dont )
