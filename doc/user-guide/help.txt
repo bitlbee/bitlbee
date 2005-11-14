@@ -9,9 +9,9 @@ These are the available help subjects:
 
 You can read more about them with help <subject>
 
-BitlBee is written by Wilmer van der Gaast together with Jelmer Vernooij, Maurits Dijkstra and others. Bug reports and other kinds of feedback can be sent by e-mail to wilmer@gaast.net. (There is no BitlBee mailing list)
+BitlBee is written by Wilmer van der Gaast together with Jelmer Vernooij, Maurits Dijkstra and others. Bugs can be reported at http://bugs.bitlbee.org/.
 
-Or just join #BitlBee on OFTC (irc.oftc.net) (OFTC, *not* FreeNode! Some people accidentally joined #BitlBee on FreeNode already, which is just an empty channel) and flame us right in the face. :-)
+For other things than bug reports, you can join #BitlBee on OFTC (irc.oftc.net) (OFTC, *not* FreeNode!) and flame us right in the face. :-)
 %
 ?index
 These are the available help subjects:
