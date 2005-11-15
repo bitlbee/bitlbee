@@ -336,7 +336,7 @@ int cmd_account( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		irc_usermsg( irc, "Unknown command: account %s. Please use help commands to get a list of available commands.", cmd[1] );
+		irc_usermsg( irc, "Unknown command: account %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[1] );
 	}
 	
 	return( 1 );
@@ -737,7 +737,10 @@ int cmd_qlist( irc_t *irc, char **cmd )
 	irc_usermsg( irc, "Pending queries:" );
 	
 	for( num = 0; q; q = q->next, num ++ )
-		irc_usermsg( irc, "%d, %s", num, q->question );
+		if( q->gc ) /* Not necessary yet, but it might come later */
+			irc_usermsg( irc, "%d, %s(%s): %s", num, proto_name[q->gc->protocol], q->gc->username, q->question );
+		else
+			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
 	
 	return( 0 );
 }

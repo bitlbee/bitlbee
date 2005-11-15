@@ -126,16 +126,16 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		q = query_default( irc );
 		disp = 1;
 	}
-	
+	//Using irc_usermsg instead of serv_got_crap because \x02A is a char too, so a SPACE is needed.	
 	if( ans )
 	{
 		q->yes( NULL, q->data );
-		irc_usermsg( irc, "Accepted: %s", q->question );
+		serv_got_crap( q->gc, "\2Accepted\2: %s", q->question );
 	}
 	else
 	{
 		q->no( NULL, q->data );
-		irc_usermsg( irc, "Rejected: %s", q->question );
+		serv_got_crap( q->gc, "\2Rejected\2: %s", q->question );
 	}
 	q->data = NULL;
 	
@@ -148,11 +148,15 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 static void query_display( irc_t *irc, query_t *q )
 {
 	if( q->gc )
-		irc_usermsg( irc, "Question on %s connection (handle %s):", proto_name[q->gc->protocol], q->gc->username );
+	{
+		serv_got_crap( q->gc, "New request:" );
+		serv_got_crap( q->gc, "%s\nYou can use the yes/no commands to accept/reject this request.", q->question );
+	}
 	else
-		irc_usermsg( irc, "Question:" );
-	
-	irc_usermsg( irc, "%s\nYou can use the yes/no commands to answer this question.", q->question );
+	{
+		irc_usermsg( irc, "New request:" );
+		irc_usermsg( irc, "%s\nYou can use the yes/no commands to accept/reject this request.", q->question );
+	}
 }
 
 static query_t *query_default( irc_t *irc )

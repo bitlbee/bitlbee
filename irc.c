@@ -1068,7 +1068,7 @@ void irc_login( irc_t *irc )
 //	u->send_handler = msg_echo;
 	irc_spawn( irc, u );
 	
-	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the help command. Lots of FAQ's are answered there." );
+	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the \x02help\x02 command. Lots of FAQ's are answered there." );
 	
 	irc->status = USTATUS_LOGGED_IN;
 }

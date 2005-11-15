@@ -121,7 +121,7 @@ int proto_away( struct gaim_connection *gc, char *away )
 		{
 			gc->prpl->set_away( gc, s, away );
 			if( set_getint( gc->irc, "debug" ) )
-				irc_usermsg( gc->irc, "Setting away state for %s to %s", proto_name[gc->protocol], s );
+				serv_got_crap( gc, "Setting away state to %s", s );
 		}
 		else
 			gc->prpl->set_away( gc, GAIM_AWAY_CUSTOM, away );
@@ -215,19 +215,19 @@ void destroy_gaim_conn( struct gaim_connection *gc )
 
 void set_login_progress( struct gaim_connection *gc, int step, char *msg )
 {
-	irc_usermsg( gc->irc, "%s(%s) - Logging in: %s", proto_name[gc->protocol], gc->username, msg );
+	serv_got_crap( gc, "Logging in: %s", msg );
 }
 
 /* Errors *while* logging in */
 void hide_login_progress( struct gaim_connection *gc, char *msg )
 {
-	irc_usermsg( gc->irc, "%s(%s) - Login error: %s", proto_name[gc->protocol], gc->username, msg );
+	serv_got_crap( gc, "Login error: %s", msg );
 }
 
 /* Errors *after* logging in */
 void hide_login_progress_error( struct gaim_connection *gc, char *msg )
 {
-	irc_usermsg( gc->irc, "%s(%s) - Logged out: %s", proto_name[gc->protocol], gc->username, msg );
+	serv_got_crap( gc, "Logged out: %s", msg );
 }
 
 void serv_got_crap( struct gaim_connection *gc, char *format, ... )
@@ -275,7 +275,7 @@ void account_online( struct gaim_connection *gc )
 	
 	u = user_find( gc->irc, gc->irc->nick );
 	
-	irc_usermsg( gc->irc, "%s(%s) - Logged in", proto_name[gc->protocol], gc->username );
+	serv_got_crap( gc, "Logged in" );
 	
 	gc->keepalive = g_timeout_add( 60000, send_keepalive, gc );
 	gc->flags |= OPT_LOGGED_IN;
@@ -289,7 +289,7 @@ void account_online( struct gaim_connection *gc )
 				break;
 		
 		if( u == NULL )
-			irc_usermsg( gc->irc, "\x02""***\x02"" BitlBee now supports ICQ server-side contact lists. "
+			serv_got_crap( gc, "\x02""***\x02"" BitlBee now supports ICQ server-side contact lists. "
 			                      "See \x02""help import_buddies\x02"" for more information." );
 	}
 }
@@ -322,7 +322,7 @@ void signoff( struct gaim_connection *gc )
 	user_t *t, *u = irc->users;
 	account_t *a;
 	
-	irc_usermsg( gc->irc, "%s(%s) - Signing off..", proto_name[gc->protocol], gc->username );
+	serv_got_crap( gc, "Signing off.." );
 
 	gaim_input_remove( gc->keepalive );
 	gc->keepalive = 0;
@@ -354,7 +354,7 @@ void signoff( struct gaim_connection *gc )
 	else if( !gc->wants_to_die && set_getint( irc, "auto_reconnect" ) )
 	{
 		int delay = set_getint( irc, "auto_reconnect_delay" );
-		irc_usermsg( gc->irc, "%s(%s) - Reconnecting in %d seconds..", proto_name[gc->protocol], gc->username, delay);
+		serv_got_crap( gc, "Reconnecting in %d seconds..", delay );
 		
 		a->reconnect = 1;
 		g_timeout_add( delay * 1000, auto_reconnect, a );
@@ -368,7 +368,7 @@ void signoff( struct gaim_connection *gc )
 
 void do_error_dialog( struct gaim_connection *gc, char *msg, char *title )
 {
-	irc_usermsg( gc->irc, "%s(%s) - Error: %s", proto_name[gc->protocol], gc->username, msg );
+	serv_got_crap( gc, "Error: %s", msg );
 }
 
 void do_ask_dialog( struct gaim_connection *gc, char *msg, void *data, void *doit, void *dont )
@@ -397,12 +397,12 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	irc_t *irc = gc->irc;
 	
 	if( set_getint( irc, "debug" ) && 0 ) /* This message is too useless */
-		irc_usermsg( irc, "Receiving user add from protocol: %s", handle );
+		serv_got_crap( gc, "Receiving user add from handle: %s", handle );
 	
 	if( user_findhandle( gc, handle ) )
 	{
 		if( set_getint( irc, "debug" ) )
-			irc_usermsg( irc, "User already exists, ignoring add request: %s", handle );
+			serv_got_crap( gc, "User already exists, ignoring add request: %s", handle );
 		
 		return;
 		
@@ -495,7 +495,7 @@ void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname
 		u->realname = g_strdup( name );
 		
 		if( ( gc->flags & OPT_LOGGED_IN ) && set_getint( gc->irc, "display_namechanges" ) )
-			irc_usermsg( gc->irc, "User `%s' changed name to `%s'", u->nick, u->realname );
+			serv_got_crap( gc, "User `%s' changed name to `%s'", u->nick, u->realname );
 	}
 }
 
@@ -528,8 +528,8 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 		{
 			if( set_getint( gc->irc, "debug" ) || g_strcasecmp( set_getstr( gc->irc, "handle_unknown" ), "ignore" ) != 0 )
 			{
-				irc_usermsg( gc->irc, "serv_got_update() for handle %s on connection %s(%s):", handle, proto_name[gc->protocol], gc->username );
-				irc_usermsg( gc->irc, "loggedin = %d, type = %d", loggedin, type );
+				serv_got_crap( gc, "serv_got_update() for handle %s:", handle );
+				serv_got_crap( gc, "loggedin = %d, type = %d", loggedin, type );
 			}
 			
 			return;
@@ -609,7 +609,7 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 		if( g_strcasecmp( h, "ignore" ) == 0 )
 		{
 			if( set_getint( irc, "debug" ) )
-				irc_usermsg( irc, "Ignoring message from unknown handle %s on connection %s(%s)", handle, proto_name[gc->protocol], gc->username );
+				serv_got_crap( gc, "Ignoring message from unknown handle %s", handle );
 			
 			return;
 		}
@@ -631,7 +631,7 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 		}
 		else
 		{
-			irc_usermsg( irc, "Message from unknown handle %s on connection %s(%s):", handle, proto_name[gc->protocol], gc->username );
+			serv_got_crap( gc, "Message from unknown handle %s:", handle );
 			u = user_find( irc, irc->mynick );
 		}
 	}
@@ -691,7 +691,7 @@ void serv_got_chat_left( struct gaim_connection *gc, int id )
 	GList *ir;
 	
 	if( set_getint( gc->irc, "debug" ) )
-		irc_usermsg( gc->irc, "You were removed from conversation %d", (int) id );
+		serv_got_crap( gc, "You were removed from conversation %d", (int) id );
 	
 	for( c = gc->conversations; c && c->id != id; c = (l=c)->next );
 	
@@ -747,7 +747,7 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	if( c && u )
 		irc_privmsg( gc->irc, u, "PRIVMSG", c->channel, "", msg );
 	else
-		irc_usermsg( gc->irc, "Message from/to conversation %s@%d (unknown conv/user): %s", who, id, msg );
+		serv_got_crap( gc, "Message from/to conversation %s@%d (unknown conv/user): %s", who, id, msg );
 }
 
 struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, char *handle )
@@ -775,7 +775,7 @@ struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, c
 	g_free( s );
 	
 	if( set_getint( gc->irc, "debug" ) )
-		irc_usermsg( gc->irc, "Creating new conversation: (id=%d,handle=%s)", id, handle );
+		serv_got_crap( gc, "Creating new conversation: (id=%d,handle=%s)", id, handle );
 	
 	return( c );
 }
@@ -794,7 +794,7 @@ void add_chat_buddy( struct conversation *b, char *handle )
 	int me = 0;
 	
 	if( set_getint( b->gc->irc, "debug" ) )
-		irc_usermsg( b->gc->irc, "User %s added to conversation %d", handle, b->id );
+		serv_got_crap( b->gc, "User %s added to conversation %d", handle, b->id );
 	
 	/* It might be yourself! */
 	if( b->gc->prpl->cmp_buddynames( handle, b->gc->user->username ) == 0 )
@@ -828,7 +828,7 @@ void remove_chat_buddy( struct conversation *b, char *handle, char *reason )
 	int me = 0;
 	
 	if( set_getint( b->gc->irc, "debug" ) )
-		irc_usermsg( b->gc->irc, "User %s removed from conversation %d (%s)", handle, b->id, reason ? reason : "" );
+		serv_got_crap( b->gc, "User %s removed from conversation %d (%s)", handle, b->id, reason ? reason : "" );
 	
 	/* It might be yourself! */
 	if( g_strcasecmp( handle, b->gc->user->username ) == 0 )
