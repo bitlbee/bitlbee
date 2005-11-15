@@ -1207,11 +1207,7 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 
 	return 1;
 }
-/*
-int handle_cmp_aim(const char * a, const char * b) {
-	return handle_cmp(a, b, PROTO_TOC);
-}
-*/
+
 static int gaim_parse_incoming_im(aim_session_t *sess, aim_frame_t *fr, ...) {
 	int channel, ret = 0;
 	aim_userinfo_t *userinfo;
@@ -2483,6 +2479,7 @@ void oscar_init()
 	ret->rem_deny = oscar_rem_deny;
 	ret->set_permit_deny = oscar_set_permit_deny;
 	ret->keepalive = oscar_keepalive;
+	ret->cmp_buddynames = aim_sncmp;
 	ret->get_status_string = oscar_get_status_string;
 
 	register_protocol(ret);

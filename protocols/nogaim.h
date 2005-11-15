@@ -241,6 +241,8 @@ struct prpl {
 	void (* buddy_free)	(struct buddy *);
 
 	char *(* get_status_string) (struct gaim_connection *gc, int stat);
+
+	int (* cmp_buddynames) (const char *who1, const char *who2);
 };
 
 #define UC_UNAVAILABLE  1
@@ -265,7 +267,6 @@ char *set_eval_charset( irc_t *irc, set_t *set, char *value );
 void nogaim_init();
 int proto_away( struct gaim_connection *gc, char *away );
 char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
-int handle_cmp( char *a, char *b, struct prpl *protocol );
 
 gboolean auto_reconnect( gpointer data );
 void cancel_auto_reconnect( struct account *a );

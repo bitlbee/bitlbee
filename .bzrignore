@@ -2,3 +2,4 @@ Makefile.settings
 config.h
 bitlbee
 debian
+tags

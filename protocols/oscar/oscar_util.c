@@ -1,9 +1,3 @@
-/*
- *
- *
- *
- */
-
 #include <aim.h>
 #include <ctype.h>
 

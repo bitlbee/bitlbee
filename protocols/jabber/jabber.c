@@ -2435,6 +2435,7 @@ void jabber_init()
 	ret->buddy_free = jabber_buddy_free;
 	ret->alias_buddy = jabber_roster_update;
 	ret->group_buddy = jabber_group_change;
+	ret->cmp_buddynames = g_strcasecmp;
 
 	register_protocol (ret);
 }

@@ -410,6 +410,7 @@ void byahoo_init( )
 	ret->chat_invite = byahoo_chat_invite;
 	ret->chat_leave = byahoo_chat_leave;
 	ret->chat_open = byahoo_chat_open;
+	ret->cmp_buddynames = g_strcasecmp;
 	
 	register_protocol(ret);
 }
