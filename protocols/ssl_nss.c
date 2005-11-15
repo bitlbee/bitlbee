@@ -1,12 +1,12 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2005 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* SSL module - NSS version                                             */
 
-/* Copyright 2004 Jelmer Vernooij                                       */
+/* Copyright 2005 Jelmer Vernooij                                       */
 
 /*
   This program is free software; you can redistribute it and/or modify

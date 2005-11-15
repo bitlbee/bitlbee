@@ -96,65 +96,11 @@ static void gaim_io_destroy(gpointer data)
 	g_free(data);
 }
 
-#ifdef PROXYPROFILER
-struct proxyprofiler
-{
-	GaimInputFunction function;
-	gpointer data;
-	
-	int count;
-	
-	struct proxyprofiler *next;
-} *pp = NULL;
-
-void proxyprofiler_dump()
-{
-	struct proxyprofiler *l;
-	char s[128];
-	FILE *fp;
-	
-	sprintf( s, "proxyprofiler.%d", (int) getpid() );
-	fp = fopen( s, "w" );
-	
-	fprintf( fp, "%-18s  %-18s  %10s\n", "Function", "Data", "Count" );
-	for( l = pp; l; l = l->next )
-		fprintf( fp, "0x%-16x  0x%-16x  %10d\n", (int) l->function, (int) l->data, l->count );
-	
-	fclose( fp );
-}
-#endif
-
 static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
 {
 	GaimIOClosure *closure = data;
 	GaimInputCondition gaim_cond = 0;
 
-#ifdef PROXYPROFILER
-	struct proxyprofiler *l;
-	
-	for( l = pp; l; l = l->next )
-	{
-		if( closure->function == l->function && closure->data == l->data )
-			break;
-	}
-	if( l )
-	{
-		l->count ++;
-	}
-	else
-	{
-		l = g_new0( struct proxyprofiler, 1 );
-		l->function = closure->function;
-		l->data = closure->data;
-		l->count = 1;
-		
-		l->next = pp;
-		pp = l;
-	}
-#endif
-	
-	count_io_event(source, "proxy");
-	
 	if (condition & GAIM_READ_COND)
 		gaim_cond |= GAIM_INPUT_READ;
 	if (condition & GAIM_WRITE_COND)

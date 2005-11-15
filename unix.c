@@ -35,7 +35,6 @@
 global_t global;	/* Against global namespace pollution */
 
 static void sighandler( int signal );
-gboolean bitlbee_dirty_workaround( gpointer data );
 
 int main( int argc, char *argv[] )
 {
@@ -101,23 +100,10 @@ int main( int argc, char *argv[] )
 	if( help_init( &(global.help) ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
-	/* Workaround against runaway problems. Bah, this is really dirty,
-	   but in the end not really different from the <=0.91 situation,
-	   which makes it an acceptable temporary "solution". */
-	// g_timeout_add( 0, bitlbee_dirty_workaround, NULL );
-	
 	g_main_run( global.loop );
 	
 	return( 0 );
 }
-
-gboolean bitlbee_dirty_workaround( gpointer data )
-{
-	usleep( 50000 );
-	return( TRUE );
-}
-
-void proxyprofiler_dump();
 
 static void sighandler( int signal )
 {
@@ -147,15 +133,6 @@ static void sighandler( int signal )
 			raise( signal );
 		}
 	}
-#ifdef PROXYPROFILER
-	else if( signal == SIGXCPU )
-	{
-		write_io_activity();
-		proxyprofiler_dump();
-		log_message( LOGLVL_ERROR, "Received SIGXCPU, dumping some debugging info." );
-		exit( 1 );
-	}
-#endif
 	else if( signal != SIGPIPE )
 	{
 		log_message( LOGLVL_ERROR, "Fatal signal received: %d. That's probably a bug.", signal );

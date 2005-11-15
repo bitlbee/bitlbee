@@ -1,8 +1,0 @@
-Template: bitlbee/serveport
-Type: string
-Default: stillhavetoask
-_Description: On what TCP port should BitlBee listen for connections?
- BitlBee normally listens on the regular IRC port, 6667. This might not be
- a very good idea when you're running a real IRC daemon as well. 6668 might
- be a good alternative. Leaving this value blank means that BitlBee will not
- be run automatically.

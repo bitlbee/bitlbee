@@ -107,7 +107,7 @@ Table of Contents
     Groupchat channel names
     Away states
 
-Chapter 1. Installation
+Chapter 1. Installation
 
 Table of Contents
 
@@ -191,7 +191,7 @@ To make 'nobody' owner of this directory, run chown nobody /var/lib/bitlbee.
 Because things like passwords are saved in this directory, it's probably a good
 idea to make this directory owner-read-/writable only.
 
-Chapter 2. Usage
+Chapter 2. Usage
 
 Table of Contents
 
@@ -222,7 +222,7 @@ done with either /msg <nick> <text> or /query <nick>.
 To keep the number of open query windows limited, you can also talk to people
 in the control channel, like <nick>: <text>.
 
-Chapter 3. Support
+Chapter 3. Support
 
 Table of Contents
 
@@ -255,7 +255,7 @@ Mailinglists
 
 BitlBee doesn't have any mailinglists.
 
-Chapter 4. Quickstart
+Chapter 4. Quickstart
 
 Table of Contents
 
@@ -388,7 +388,7 @@ If you're still looking for something, please visit us in #bitlbee on the OFTC
 network (you can connect via irc.bitlbee.org), or mail us your problem/
 suggestion. Good luck and enjoy the Bee!
 
-Chapter 5. Bitlbee commands
+Chapter 5. Bitlbee commands
 
 Table of Contents
 
@@ -442,7 +442,7 @@ import_buddies - Copy local buddy list to server (normally only needed when
 
 account - IM-account list maintenance
 
-Syntax: 
+Syntax: 
 
 account <action> [<arguments>]
 
@@ -451,7 +451,7 @@ information.
 
 account add
 
-Syntax: 
+Syntax: 
 
 account add <protocol> <username> <password> [<server>]
 
@@ -462,7 +462,7 @@ help account add <protocol>.
 
 account add jabber
 
-Syntax: 
+Syntax: 
 
 account add jabber <handle> <password> [<servertag>]
 
@@ -481,7 +481,7 @@ and 5223. However, for some people only port 5222 works, for some people only
 
 account add msn
 
-Syntax: 
+Syntax: 
 
 account add msn <handle> <password>
 
@@ -489,7 +489,7 @@ For MSN connections there are no special arguments.
 
 account add oscar
 
-Syntax: 
+Syntax: 
 
 account add oscar <handle> <password> [<servername>]
 
@@ -504,7 +504,7 @@ AIM connections it's login.oscar.aol.com.
 
 account add yahoo
 
-Syntax: 
+Syntax: 
 
 account add yahoo <handle> <password>
 
@@ -512,7 +512,7 @@ For Yahoo! connections there are no special arguments.
 
 account del
 
-Syntax: 
+Syntax: 
 
 account del <account id>
 
@@ -524,7 +524,7 @@ of) the screenname, as long as it matches only one connection.
 
 account on
 
-Syntax: 
+Syntax: 
 
 account on [<account id>]
 
@@ -537,7 +537,7 @@ of) the screenname, as long as it matches only one connection.
 
 account off
 
-Syntax: 
+Syntax: 
 
 account off [<account id>]
 
@@ -550,7 +550,7 @@ of) the screenname, as long as it matches only one connection.
 
 account list
 
-Syntax: 
+Syntax: 
 
 account list
 
@@ -559,7 +559,7 @@ the numbers you'll need for most account commands.
 
 add - Add a buddy to your contact list
 
-Syntax: 
+Syntax: 
 
 add <connection> <handle> [<nick>]
 
@@ -576,7 +576,7 @@ be more convenient.
 
 info - Request user information
 
-Syntax: 
+Syntax: 
 
 info <connection> <handle>
 info <nick>
@@ -591,7 +591,7 @@ get the information.
 
 remove - Remove a buddy from your contact list
 
-Syntax: 
+Syntax: 
 
 remove <nick>
 
@@ -602,7 +602,7 @@ Removes the specified nick from your buddy list.
 
 block - Block someone
 
-Syntax: 
+Syntax: 
 
 block <nick>
 block <connection> <handle>
@@ -613,7 +613,7 @@ handle.
 
 allow - Unblock someone
 
-Syntax: 
+Syntax: 
 
 allow <nick>
 allow <connection> <handle>
@@ -623,7 +623,7 @@ connection.
 
 set - Miscellaneous settings
 
-Syntax: 
+Syntax: 
 
 set [<variable> [<value>]]
 
@@ -637,7 +637,7 @@ To get more help information about a setting, try:
 
 help - BitlBee help system
 
-Syntax: 
+Syntax: 
 
 help [subject]
 
@@ -646,7 +646,7 @@ don't give any arguments, it'll give a short help index.
 
 save - Save your account data
 
-Syntax: 
+Syntax: 
 
 save
 
@@ -847,7 +847,7 @@ case as it intended by your peer.
 
 rename - Rename (renick) a buddy
 
-Syntax: 
+Syntax: 
 
 rename <oldnick> <newnick>
 
@@ -859,7 +859,7 @@ you got a lot of people with stupid account names (or hard ICQ numbers).
 
 yes - Accept a request
 
-Syntax: 
+Syntax: 
 
 yes [<number>]
 
@@ -872,7 +872,7 @@ questions.
 
 no - Deny a request
 
-Syntax: 
+Syntax: 
 
 no [<number>]
 
@@ -885,7 +885,7 @@ questions.
 
 qlist - List all the unanswered questions root asked
 
-Syntax: 
+Syntax: 
 
 qlist
 
@@ -893,7 +893,7 @@ This gives you a list of all the unanswered questions from root.
 
 register - Register yourself
 
-Syntax: 
+Syntax: 
 
 register <password>
 
@@ -910,7 +910,7 @@ To identify yourself in later sessions, you can use the identify command.
 
 identify - Identify yourself with your password
 
-Syntax: 
+Syntax: 
 
 identify <password>
 
@@ -924,7 +924,7 @@ Once you're registered, you can change your password using set password
 
 drop - Drop your account
 
-Syntax: 
+Syntax: 
 
 drop <password>
 
@@ -934,7 +934,7 @@ your NickServ password to make this command work.
 
 blist - List all the buddies in your contact list
 
-Syntax: 
+Syntax: 
 
 blist [all|online|offline|away]
 
@@ -943,7 +943,7 @@ complete list (including the offline users) you can use the all argument.
 
 nick - Change friendly name, nick
 
-Syntax: 
+Syntax: 
 
 nick <connection> [<new nick>]
 nick
@@ -959,7 +959,7 @@ command is only supported by the MSN protocol.
 import_buddies - Copy local buddy list to server (normally only needed when
 upgrading)
 
-Syntax: 
+Syntax: 
 
 import_buddies <connection> [clear]
 
@@ -981,7 +981,7 @@ handled, because of ICQ's rate limiting. If your buddy list is very large and
 the ICQ server starts complaining, you might have to reconnect and enter this
 command again.
 
-Chapter 6. Misc Stuff
+Chapter 6. Misc Stuff
 
 Table of Contents
 

@@ -106,7 +106,6 @@ typedef struct aim_snac_s {
 } aim_snac_t;
 
 void aim_initsnachash(aim_session_t *sess);
-aim_snacid_t aim_newsnac(aim_session_t *, aim_snac_t *newsnac);
 aim_snacid_t aim_cachesnac(aim_session_t *sess, const guint16 family, const guint16 type, const guint16 flags, const void *data, const int datalen);
 aim_snac_t *aim_remsnac(aim_session_t *, aim_snacid_t id);
 void aim_cleansnacs(aim_session_t *, int maxage);
