@@ -23,11 +23,11 @@ You can read more about them with <emphasis>help &lt;subject&gt;</emphasis>
 </para>
 
 <para>
-BitlBee is written by Wilmer van der Gaast together with Jelmer Vernooij, Maurits Dijkstra and others. Bug reports and other kinds of feedback can be sent by e-mail to <emphasis>wilmer@gaast.net</emphasis>. (There is no BitlBee mailing list)
+BitlBee is written by Wilmer van der Gaast together with Jelmer Vernooij, Maurits Dijkstra and others. Bugs can be reported at <ulink link="http://bugs.bitlbee.org/">http://bugs.bitlbee.org/</ulink>.
 </para>
 
 <para>
-Or just join <emphasis>#BitlBee</emphasis> on OFTC (<emphasis>irc.oftc.net</emphasis>) (OFTC, *not* FreeNode! Some people accidentally joined #BitlBee on FreeNode already, which is just an empty channel) and flame us right in the face. :-)
+For other things than bug reports, you can join <emphasis>#BitlBee</emphasis> on OFTC (<emphasis>irc.oftc.net</emphasis>) (OFTC, *not* FreeNode!) and flame us right in the face. :-)
 </para>
 
 </preface>

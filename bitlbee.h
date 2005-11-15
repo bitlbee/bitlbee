@@ -106,7 +106,6 @@ extern char *CONF_FILE;
 #include "ini.h"
 #include "help.h"
 #include "query.h"
-#include "debug.h"
 #include "sock.h"
 
 typedef struct global_t {
