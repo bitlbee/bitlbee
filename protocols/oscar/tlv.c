@@ -1,21 +1,13 @@
 #include <aim.h>
 
-static aim_tlv_t *createtlv(void)
-{
-	return g_new0(aim_tlv_t, 1);
-}
-
 static void freetlv(aim_tlv_t **oldtlv)
 {
-
 	if (!oldtlv || !*oldtlv)
 		return;
 	
 	g_free((*oldtlv)->value);
 	g_free(*oldtlv);
 	*oldtlv = NULL;
-
-	return;
 }
 
 /**
@@ -45,33 +37,15 @@ aim_tlvlist_t *aim_readtlvchain(aim_bstream_t *bs)
 		type = aimbs_get16(bs);
 		length = aimbs_get16(bs);
 
-#if 0 /* temporarily disabled until I know if they're still doing it or not */
-		/*
-		 * Okay, so now AOL has decided that any TLV of
-		 * type 0x0013 can only be two bytes, despite
-		 * what the actual given length is.  So here 
-		 * we dump any invalid TLVs of that sort.  Hopefully
-		 * theres no special cases to this special case.
-		 *   - mid (30jun2000)
-		 */
-		if ((type == 0x0013) && (length != 0x0002))
-			length = 0x0002;
-#else
-		if (0)
-			;
-#endif
-		else {
+		cur = g_new0(aim_tlvlist_t, 1);
 
-			cur = g_new0(aim_tlvlist_t, 1);
+		cur->tlv = g_new0(aim_tlv_t, 1);
+		cur->tlv->type = type;
+		if ((cur->tlv->length = length))
+			cur->tlv->value = aimbs_getraw(bs, length);	
 
-			cur->tlv = createtlv();	
-			cur->tlv->type = type;
-			if ((cur->tlv->length = length))
-			       cur->tlv->value = aimbs_getraw(bs, length);	
-
-			cur->next = list;
-			list = cur;
-		}
+		cur->next = list;
+		list = cur;
 	}
 
 	return list;
@@ -172,7 +146,7 @@ int aim_addtlvtochain_raw(aim_tlvlist_t **list, const guint16 t, const guint16 l
 	if (!(newtlv = g_new0(aim_tlvlist_t, 1)))
 		return 0;
 
-	if (!(newtlv->tlv = createtlv())) {
+	if (!(newtlv->tlv = g_new0(aim_tlv_t, 1))) {
 		g_free(newtlv);
 		return 0;
 	}

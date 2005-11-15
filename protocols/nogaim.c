@@ -224,44 +224,6 @@ static char *proto_away_alias_find( GList *gcm, char *away )
 	return( NULL );
 }
 
-/* Compare two handles for a specific protocol. For most protocols,
-   g_strcasecmp is okay, but for AIM, for example, it's not. This really
-   should be a compare function inside the PRPL module, but I do it this
-   way for now because I don't want to touch the Gaim code too much since
-   it's not going to be here for too long anymore. */
-int handle_cmp( char *a, char *b, struct prpl *protocol )
-{
-	if( !strcmp(protocol->name, "oscar") )
-	{
-		/* AIM, being teh evil, thinks it's cool that users can put
-		   random spaces in screennames. But "A B" and "AB" are
-		   equal. Hrmm, okay. */
-		while( 1 )
-		{
-			while( *a == ' ' ) a ++;
-			while( *b == ' ' ) b ++;
-			
-			if( *a && *b )
-			{
-				if( tolower( *a ) != tolower( *b ) )
-					return( 1 );
-			}
-			else if( *a || *b )
-				return( 1 );
-			else
-				return( 0 );
-			
-			a ++;
-			b ++;
-		}
-	}
-	else
-	{
-		return( g_strcasecmp( a, b ) );
-	}
-}
-
-
 /* multi.c */
 
 struct gaim_connection *new_gaim_conn( struct aim_user *user )
@@ -896,7 +858,7 @@ void add_chat_buddy( struct conversation *b, char *handle )
 		irc_usermsg( b->gc->irc, "User %s added to conversation %d", handle, b->id );
 	
 	/* It might be yourself! */
-	if( handle_cmp ( handle, b->gc->user->username, b->gc->prpl ) == 0 )
+	if( b->gc->prpl->cmp_buddynames( handle, b->gc->user->username ) == 0 )
 	{
 		u = user_find( b->gc->irc, b->gc->irc->nick );
 		if( !b->joined )
