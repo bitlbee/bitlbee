@@ -1,6 +1,7 @@
 Version 1.0:
 - Removed some crashy debugging code.
 - QUIT command now works before logging in. (Mainly an RFC-compliancy fix.)
+- Hopefully slightly clearer handling of buddy add requests.
 
 Finished ...
 
