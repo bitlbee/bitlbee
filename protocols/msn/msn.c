@@ -397,6 +397,7 @@ void msn_init(struct prpl *ret)
 	ret->add_deny = msn_add_deny;
 	ret->rem_deny = msn_rem_deny;
 	ret->send_typing = msn_send_typing;
+	ret->cmp_buddynames = g_strcasecmp;
 
 	my_protocol = ret;
 }
