@@ -130,12 +130,12 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 	if( ans )
 	{
 		q->yes( NULL, q->data );
-		serv_got_crap( q->gc, "\2Accepted\2: %s", q->question );
+		serv_got_crap( q->gc, "Accepted: %s", q->question );
 	}
 	else
 	{
 		q->no( NULL, q->data );
-		serv_got_crap( q->gc, "\2Rejected\2: %s", q->question );
+		serv_got_crap( q->gc, "Rejected: %s", q->question );
 	}
 	q->data = NULL;
 	
@@ -149,13 +149,11 @@ static void query_display( irc_t *irc, query_t *q )
 {
 	if( q->gc )
 	{
-		serv_got_crap( q->gc, "New request:" );
-		serv_got_crap( q->gc, "%s\nYou can use the yes/no commands to accept/reject this request.", q->question );
+		serv_got_crap( q->gc, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
 	}
 	else
 	{
-		irc_usermsg( irc, "New request:" );
-		irc_usermsg( irc, "%s\nYou can use the yes/no commands to accept/reject this request.", q->question );
+		irc_usermsg( irc, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
 	}
 }
 
