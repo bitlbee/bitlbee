@@ -461,10 +461,12 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="buddy_sendbuffer_delay" type="integer">
+		<default>200</default>
+
 		<description>
 
 			<para>
-				Tell BitlBee after how many seconds a buffered message should be sent.
+				Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
 			</para>
 
 			<para>

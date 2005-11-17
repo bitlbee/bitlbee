@@ -114,7 +114,7 @@ irc_t *irc_new( int fd )
 	set_add( irc, "auto_reconnect", "false", set_eval_bool );
 	set_add( irc, "auto_reconnect_delay", "300", set_eval_int );
 	set_add( irc, "buddy_sendbuffer", "false", set_eval_bool );
-	set_add( irc, "buddy_sendbuffer_delay", "1", set_eval_int );
+	set_add( irc, "buddy_sendbuffer_delay", "200", set_eval_int );
 	set_add( irc, "charset", "iso8859-1", set_eval_charset );
 	set_add( irc, "debug", "false", set_eval_bool );
 	set_add( irc, "default_target", "root", NULL );
@@ -1427,6 +1427,8 @@ int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 	
 	if( set_getint( irc, "buddy_sendbuffer" ) && set_getint( irc, "buddy_sendbuffer_delay" ) > 0 )
 	{
+		int delay;
+		
 		if( u->sendbuf_len > 0 && u->sendbuf_flags != flags)
 		{
 			//Flush the buffer
@@ -1450,10 +1452,13 @@ int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		strcat( u->sendbuf, msg );
 		strcat( u->sendbuf, "\n" );
 		
+		delay = set_getint( irc, "buddy_sendbuffer_delay" );
+		if( delay <= 5 )
+			delay *= 1000;
+		
 		if( u->sendbuf_timer > 0 )
 			g_source_remove( u->sendbuf_timer );
-		u->sendbuf_timer = g_timeout_add( set_getint( irc, "buddy_sendbuffer_delay" ) * 1000,
-		                                  buddy_send_handler_delayed, u );
+		u->sendbuf_timer = g_timeout_add( delay, buddy_send_handler_delayed, u );
 		
 		return( 1 );
 	}

@@ -331,7 +331,7 @@ allow &lt;connection&gt; &lt;handle&gt;
 			</p><p>
 				Please note that if you remove a buddy from your list (or if the connection to that user drops) and there's still data in the buffer, this data will be lost. BitlBee will not try to send the message to the user in those cases.
 			</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="set_buddy_sendbuffer_delay"></a>buddy_sendbuffer_delay</h2></div></div></div><table class="simplelist" border="0" summary="Simple list"><tr><td>Type: integer</td></tr></table><p>
-				Tell BitlBee after how many seconds a buffered message should be sent.
+				Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
 			</p><p>
 				See also the <span class="emphasis"><em>buddy_sendbuffer</em></span> setting.
 			</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="set_default_target"></a>default_target</h2></div></div></div><table class="simplelist" border="0" summary="Simple list"><tr><td>Type: string</td></tr></table><p>

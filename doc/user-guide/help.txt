@@ -436,9 +436,9 @@ Please note that if you remove a buddy from your list (or if the connection to t
 %
 ?set buddy_sendbuffer_delay
 Type: integer
-Default: 
+Default: 200
 
-Tell BitlBee after how many seconds a buffered message should be sent.
+Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
 
 See also the buddy_sendbuffer setting.
 %
