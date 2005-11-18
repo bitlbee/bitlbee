@@ -3,3 +3,6 @@ config.h
 bitlbee
 debian
 tags
+user-guide.txt
+user-guide.html
+help.txt
