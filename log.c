@@ -133,14 +133,14 @@ static void log_null(int level, char *message) {
 
 static void log_irc(int level, char *message) {
 	if(level==LOGLVL_ERROR)
-		irc_write_all("ERROR :Error: %s", message);
+		irc_write_all(1, "ERROR :Error: %s", message);
 	if(level==LOGLVL_WARNING)
-		irc_write_all("ERROR :Warning: %s", message);
+		irc_write_all(0, "ERROR :Warning: %s", message);
 	if(level==LOGLVL_INFO)
-		irc_write_all("ERROR :Informational: %s", message);	
+		irc_write_all(0, "ERROR :Informational: %s", message);	
 #ifdef DEBUG
 	if(level==LOGLVL_DEBUG)
-		irc_write_all("ERROR :Debug: %s", message);	
+		irc_write_all(0, "ERROR :Debug: %s", message);	
 #endif	
 
 	return;

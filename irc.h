@@ -117,7 +117,7 @@ int irc_process_line( irc_t *irc, char *line );
 
 void irc_vawrite( irc_t *irc, char *format, va_list params );
 void irc_write( irc_t *irc, char *format, ... );
-void irc_write_all( char *format, ... );
+void irc_write_all( int now, char *format, ... );
 void irc_reply( irc_t *irc, int code, char *format, ... );
 G_MODULE_EXPORT int irc_usermsg( irc_t *irc, char *format, ... );
 char **irc_tokenize( char *buffer );

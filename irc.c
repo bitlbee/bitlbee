@@ -930,19 +930,31 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	return;
 }
 
-void irc_write_all( char *format, ... )
+void irc_write_all( int now, char *format, ... )
 {
 	va_list params;
 	GSList *temp;	
-
+	
 	va_start( params, format );
-
+	
 	temp = irc_connection_list;
-	while( temp!=NULL ) {
+	while( temp != NULL )
+	{
+		irc_t *irc = temp->data;
+		
+		if( now )
+		{
+			g_free( irc->sendbuffer );
+			irc->sendbuffer = g_strdup( "\r\n" );
+		}
 		irc_vawrite( temp->data, format, params );
+		if( now )
+		{
+			bitlbee_io_current_client_write( irc->io_channel, G_IO_OUT, irc );
+		}
 		temp = temp->next;
 	}
-
+	
 	va_end( params );
 	return;
 } 
