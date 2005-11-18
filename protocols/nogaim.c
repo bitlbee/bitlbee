@@ -246,8 +246,8 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	else
 		msg = text;
 	
-	/* if( g_strcasecmp( set_getstr(gc->irc, "html" ), "strip" ) == 0 ) */
-	if( gc->flags & OPT_CONN_HTML )
+	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
 		strip_html( msg );
 	
 	irc_usermsg( gc->irc, "%s(%s) - %s", proto_name[gc->protocol], gc->username, msg );
@@ -636,8 +636,8 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 		}
 	}
 	
-	/* if( g_strcasecmp( set_getstr( irc, "html" ), "strip" ) == 0 ) */
-	if( gc->flags & OPT_CONN_HTML )
+	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
 		strip_html( msg );
 
 	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
@@ -736,8 +736,8 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	u = user_findhandle( gc, who );
 	for( c = gc->conversations; c && c->id != id; c = c->next );
 	
-	/* if( g_strcasecmp( set_getstr( gc->irc, "html" ), "strip" ) == 0 ) */
-	if( gc->flags & OPT_CONN_HTML )
+	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
 		strip_html( msg );
 	
 	if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
@@ -969,10 +969,15 @@ int serv_send_im( irc_t *irc, user_t *u, char *msg, int flags )
 	    do_iconv( set_getstr( irc, "charset" ), "UTF-8", msg, buf, 0, 8192 ) != -1 )
 		msg = buf;
 
-	if( u->gc->flags & OPT_CONN_HTML) {
-		char * html = escape_html(msg);
-		strncpy(buf, html, 8192);
-		g_free(html);
+	if( ( u->gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
+	{
+		char *html;
+		
+		html = escape_html( msg );
+		strncpy( buf, html, 8192 );
+		g_free( html );
+		
+		msg = buf;
 	}
 	
 	return( ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), flags ) );

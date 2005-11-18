@@ -120,12 +120,12 @@ irc_t *irc_new( int fd )
 	set_add( irc, "default_target", "root", NULL );
 	set_add( irc, "display_namechanges", "false", set_eval_bool );
 	set_add( irc, "handle_unknown", "root", NULL );
-	/* set_add( irc, "html", "nostrip", NULL ); */
 	set_add( irc, "lcnicks", "true", set_eval_bool );
 	set_add( irc, "ops", "both", set_eval_ops );
 	set_add( irc, "private", "true", set_eval_bool );
 	set_add( irc, "query_order", "lifo", NULL );
 	set_add( irc, "save_on_quit", "true", set_eval_bool );
+	set_add( irc, "strip_html", "true", NULL );
 	set_add( irc, "to_char", ": ", set_eval_to_char );
 	set_add( irc, "typing_notice", "false", set_eval_bool );
 	
