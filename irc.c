@@ -485,7 +485,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		{
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 		}
-		else if( *cmd[1] == '#' )
+		else if( *cmd[1] == '#' || *cmd[1] == '&' )
 		{
 			if( cmd[2] )
 			{
@@ -556,7 +556,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			     RFC doesn't have any reply for that though? */
 		else if( cmd[1] )
 		{
-			if( cmd[1][0] == '#' && cmd[1][1] )
+			if( ( cmd[1][0] == '#' || cmd[1][0] == '&' ) && cmd[1][1] )
 			{
 				user_t *u = user_find( irc, cmd[1] + 1 );
 				
@@ -1324,7 +1324,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	struct conversation *c = NULL;
 	user_t *u = NULL;
 	
-	if( *nick == '#' )
+	if( *nick == '#' || *nick == '&' )
 	{
 		if( !( c = conv_findchannel( nick ) ) )
 		{

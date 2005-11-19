@@ -770,7 +770,7 @@ struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, c
 	c->title = g_strdup( handle );
 	
 	s = g_new( char, 16 );
-	sprintf( s, "#chat_%03d", gc->irc->c_id++ );
+	sprintf( s, "&chat_%03d", gc->irc->c_id++ );
 	c->channel = g_strdup( s );
 	g_free( s );
 	
