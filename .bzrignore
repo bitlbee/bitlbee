@@ -1,8 +1,9 @@
 Makefile.settings
 config.h
 bitlbee
-debian
-tags
 user-guide.txt
 user-guide.html
 help.txt
+debian
+build-arch-stamp
+tags
