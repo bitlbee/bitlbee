@@ -114,18 +114,18 @@ irc_t *irc_new( int fd )
 	set_add( irc, "auto_reconnect", "false", set_eval_bool );
 	set_add( irc, "auto_reconnect_delay", "300", set_eval_int );
 	set_add( irc, "buddy_sendbuffer", "false", set_eval_bool );
-	set_add( irc, "buddy_sendbuffer_delay", "1", set_eval_int );
+	set_add( irc, "buddy_sendbuffer_delay", "200", set_eval_int );
 	set_add( irc, "charset", "iso8859-1", set_eval_charset );
 	set_add( irc, "debug", "false", set_eval_bool );
 	set_add( irc, "default_target", "root", NULL );
 	set_add( irc, "display_namechanges", "false", set_eval_bool );
 	set_add( irc, "handle_unknown", "root", NULL );
-	/* set_add( irc, "html", "nostrip", NULL ); */
 	set_add( irc, "lcnicks", "true", set_eval_bool );
 	set_add( irc, "ops", "both", set_eval_ops );
 	set_add( irc, "private", "true", set_eval_bool );
 	set_add( irc, "query_order", "lifo", NULL );
 	set_add( irc, "save_on_quit", "true", set_eval_bool );
+	set_add( irc, "strip_html", "true", NULL );
 	set_add( irc, "to_char", ": ", set_eval_to_char );
 	set_add( irc, "typing_notice", "false", set_eval_bool );
 	
@@ -485,7 +485,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		{
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 		}
-		else if( *cmd[1] == '#' )
+		else if( *cmd[1] == '#' || *cmd[1] == '&' )
 		{
 			if( cmd[2] )
 			{
@@ -556,7 +556,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			     RFC doesn't have any reply for that though? */
 		else if( cmd[1] )
 		{
-			if( cmd[1][0] == '#' && cmd[1][1] )
+			if( ( cmd[1][0] == '#' || cmd[1][0] == '&' ) && cmd[1][1] )
 			{
 				user_t *u = user_find( irc, cmd[1] + 1 );
 				
@@ -930,19 +930,31 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	return;
 }
 
-void irc_write_all( char *format, ... )
+void irc_write_all( int now, char *format, ... )
 {
 	va_list params;
 	GSList *temp;	
-
+	
 	va_start( params, format );
-
+	
 	temp = irc_connection_list;
-	while( temp!=NULL ) {
+	while( temp != NULL )
+	{
+		irc_t *irc = temp->data;
+		
+		if( now )
+		{
+			g_free( irc->sendbuffer );
+			irc->sendbuffer = g_strdup( "\r\n" );
+		}
 		irc_vawrite( temp->data, format, params );
+		if( now )
+		{
+			bitlbee_io_current_client_write( irc->io_channel, G_IO_OUT, irc );
+		}
 		temp = temp->next;
 	}
-
+	
 	va_end( params );
 	return;
 } 
@@ -1068,7 +1080,7 @@ void irc_login( irc_t *irc )
 //	u->send_handler = msg_echo;
 	irc_spawn( irc, u );
 	
-	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the help command. Lots of FAQ's are answered there." );
+	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the \x02help\x02 command. Lots of FAQ's are answered there." );
 	
 	irc->status = USTATUS_LOGGED_IN;
 }
@@ -1312,7 +1324,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	struct conversation *c = NULL;
 	user_t *u = NULL;
 	
-	if( *nick == '#' )
+	if( *nick == '#' || *nick == '&' )
 	{
 		if( !( c = conv_findchannel( nick ) ) )
 		{
@@ -1427,6 +1439,8 @@ int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 	
 	if( set_getint( irc, "buddy_sendbuffer" ) && set_getint( irc, "buddy_sendbuffer_delay" ) > 0 )
 	{
+		int delay;
+		
 		if( u->sendbuf_len > 0 && u->sendbuf_flags != flags)
 		{
 			//Flush the buffer
@@ -1450,10 +1464,13 @@ int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		strcat( u->sendbuf, msg );
 		strcat( u->sendbuf, "\n" );
 		
+		delay = set_getint( irc, "buddy_sendbuffer_delay" );
+		if( delay <= 5 )
+			delay *= 1000;
+		
 		if( u->sendbuf_timer > 0 )
 			g_source_remove( u->sendbuf_timer );
-		u->sendbuf_timer = g_timeout_add( set_getint( irc, "buddy_sendbuffer_delay" ) * 1000,
-		                                  buddy_send_handler_delayed, u );
+		u->sendbuf_timer = g_timeout_add( delay, buddy_send_handler_delayed, u );
 		
 		return( 1 );
 	}

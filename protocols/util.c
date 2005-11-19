@@ -376,8 +376,6 @@ char *escape_html( const char *html )
 	
 	if( html == NULL )
 		return( NULL );
-	if( g_strncasecmp( html, "<html>", 6 ) == 0 )
-		return( g_strdup( html ) );
 	
 	ret = g_string_new( "" );
 	

@@ -80,7 +80,7 @@
 #define _( x ) x
 
 #define ROOT_NICK "root"
-#define ROOT_CHAN "#bitlbee"
+#define ROOT_CHAN "&bitlbee"
 #define ROOT_FN "User manager"
 
 #define NS_NICK "NickServ"

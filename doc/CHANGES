@@ -1,6 +1,12 @@
 Version 1.0:
 - Removed some crashy debugging code.
 - QUIT command now works before logging in. (Mainly an RFC-compliancy fix.)
+- Hopefully slightly clearer handling of buddy add requests.
+- set buddy_sendbuffer_delay now also supports milisecond precision.
+- Renamed #bitlbee to &bitlbee to avoid confusion with the channel on OFTC.
+- Reviewed the xinetd file and installation instructions.
+- HTML stripping is configurable again.
+- Quit messages (at least on crashes) should appear again.
 
 Finished ...
 

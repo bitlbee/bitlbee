@@ -220,7 +220,7 @@ static int gaim_offlinemsgdone   (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parserights  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parselist    (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parseack     (aim_session_t *, aim_frame_t *, ...);
-
+static int gaim_parsemtn         (aim_session_t *, aim_frame_t *, ...);
 static int gaim_icqinfo          (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parseaiminfo     (aim_session_t *, aim_frame_t *, ...);
 
@@ -555,6 +555,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_LIST, gaim_ssi_parselist, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_SRVACK, gaim_ssi_parseack, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOC, AIM_CB_LOC_USERINFO, gaim_parseaiminfo, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_MSG, AIM_CB_MSG_MTN, gaim_parsemtn, 0);
 
 	((struct oscar_data *)gc->proto_data)->conn = bosconn;
 	for (i = 0; i < (int)strlen(info->bosip); i++) {
@@ -1675,6 +1676,7 @@ static int gaim_icbm_param_info(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_end(ap);
 
 	/* Maybe senderwarn and recverwarn should be user preferences... */
+	params->flags = 0x0000000b;
 	params->maxmsglen = 8000;
 	params->minmsginterval = 0;
 
@@ -2432,6 +2434,25 @@ static int gaim_parseaiminfo(aim_session_t *sess, aim_frame_t *fr, ...)
 	return 1;
 }
 
+int gaim_parsemtn(aim_session_t *sess, aim_frame_t *fr, ...)
+{
+	struct gaim_connection * gc = sess->aux_data;
+	va_list ap;
+	guint16 type1, type2;
+	char * sn;
+
+	va_start(ap, fr);
+	type1 = va_arg(ap, int);
+	sn = va_arg(ap, char*);
+	type2 = va_arg(ap, int);
+	va_end(ap);
+
+	if(type2 == 0x0001 || type2 == 0x0002)
+		serv_got_typing(gc, sn, 0);
+
+	return 1;
+}
+
 static char *oscar_get_status_string( struct gaim_connection *gc, int number )
 {
 	struct oscar_data *od = gc->proto_data;
@@ -2460,6 +2481,12 @@ static char *oscar_get_status_string( struct gaim_connection *gc, int number )
 	}
 }
 
+int oscar_send_typing(struct gaim_connection *gc, char * who, int typing)
+{
+	struct oscar_data *od = gc->proto_data;
+	return( aim_im_sendmtn(od->sess, 1, who, typing ? 0x0002 : 0x0000) );
+}
+
 void oscar_init() 
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
@@ -2481,6 +2508,7 @@ void oscar_init()
 	ret->keepalive = oscar_keepalive;
 	ret->cmp_buddynames = aim_sncmp;
 	ret->get_status_string = oscar_get_status_string;
+	ret->send_typing = oscar_send_typing;
 
 	register_protocol(ret);
 }

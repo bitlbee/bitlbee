@@ -37,21 +37,6 @@ A: 'root' is just the name for the most powerful user in BitlBee. Just like
    (security threatening) reason to change this non-creative piece of
    artistic creativity.
 
-Q: Why is there no mailing list/CVS/<insert your favourite development tool
-   here>?
-A: Short answer: we don't need it.
-   
-   Longer answer: and we're not completely convinced of their merits.
-   
-   Long answer: we currently use some shell scripts which make sure all
-   developers' copies are in sync with Wilmer's master copy. These shell
-   scripts also produce development "releases" and packages, as well as
-   stick them on a http-server. Patches are sent to Wilmer who decides
-   whether or not a patch should be applied and if it may need some
-   additional changes. This has the consistency advantage of a one-person
-   project while having the capacity of more people available. The system
-   works and we are kind of attached to it.
-   
 Q: When is $random_feature going to be implemented?
 A: Please do consult doc/TODO (preferably in a development snapshot, which
    is more up-to-date than a TODO in a release version) before asking.

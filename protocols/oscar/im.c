@@ -1995,6 +1995,90 @@ static int msgack(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_m
 	return ret;
 }
 
+/*
+ * Subtype 0x0014 - Send a mini typing notification (mtn) packet.
+ *
+ * This is supported by winaim5 and newer, MacAIM bleh and newer, iChat bleh and newer, 
+ * and Gaim 0.60 and newer.
+ *
+ */
+int aim_im_sendmtn(aim_session_t *sess, guint16 type1, const char *sn, guint16 type2)
+{
+	aim_conn_t *conn;
+	aim_frame_t *fr;
+	aim_snacid_t snacid;
+
+	if (!sess || !(conn = aim_conn_findbygroup(sess, 0x0002)))
+		return -EINVAL;
+
+	if (!sn)
+		return -EINVAL;
+
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+11+strlen(sn)+2)))
+		return -ENOMEM;
+
+	snacid = aim_cachesnac(sess, 0x0004, 0x0014, 0x0000, NULL, 0);
+	aim_putsnac(&fr->data, 0x0004, 0x0014, 0x0000, snacid);
+
+	/*
+	 * 8 days of light
+	 * Er, that is to say, 8 bytes of 0's
+	 */
+	aimbs_put16(&fr->data, 0x0000);
+	aimbs_put16(&fr->data, 0x0000);
+	aimbs_put16(&fr->data, 0x0000);
+	aimbs_put16(&fr->data, 0x0000);
+
+	/*
+	 * Type 1 (should be 0x0001 for mtn)
+	 */
+	aimbs_put16(&fr->data, type1);
+
+	/*
+	 * Dest sn
+	 */
+	aimbs_put8(&fr->data, strlen(sn));
+	aimbs_putraw(&fr->data, sn, strlen(sn));
+
+	/*
+	 * Type 2 (should be 0x0000, 0x0001, or 0x0002 for mtn)
+	 */
+	aimbs_put16(&fr->data, type2);
+
+	aim_tx_enqueue(sess, fr);
+
+	return 0;
+}
+
+/*
+ * Subtype 0x0014 - Receive a mini typing notification (mtn) packet.
+ *
+ * This is supported by winaim5 and newer, MacAIM bleh and newer, iChat bleh and newer, 
+ * and Gaim 0.60 and newer.
+ *
+ */
+static int mtn_receive(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
+{
+	int ret = 0;
+	aim_rxcallback_t userfunc;
+	char *sn;
+	guint8 snlen;
+	guint16 type1, type2;
+
+	aim_bstream_advance(bs, 8); /* Unknown - All 0's */
+	type1 = aimbs_get16(bs);
+	snlen = aimbs_get8(bs);
+	sn = aimbs_getstr(bs, snlen);
+	type2 = aimbs_get16(bs);
+
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+		ret = userfunc(sess, rx, type1, sn, type2);
+
+	g_free(sn);
+
+	return ret;
+}
+
 static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 
@@ -2010,6 +2094,8 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 		return clientautoresp(sess, mod, rx, snac, bs);
 	else if (snac->subtype == 0x000c)
 		return msgack(sess, mod, rx, snac, bs);
+	else if (snac->subtype == 0x0014)
+		return mtn_receive(sess, mod, rx, snac, bs);
 
 	return 0;
 }
