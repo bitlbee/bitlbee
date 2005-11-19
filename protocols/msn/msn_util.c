@@ -165,7 +165,7 @@ void msn_buddy_ask( struct gaim_connection *gc, char *handle, char *realname )
 	bla->realname = g_strdup( realname );
 	
 	g_snprintf( buf, sizeof( buf ),
-	            "The user %s (%s) wants to add you to his/her buddy list. Do you want to allow this?",
+	            "The user %s (%s) wants to add you to his/her buddy list.",
 	            handle, realname );
 	do_ask_dialog( gc, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
 }

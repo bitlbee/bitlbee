@@ -844,8 +844,6 @@ void ext_yahoo_conf_userjoin( int id, char *who, char *room )
 	
 	if( c )
 		add_chat_buddy( c, who );
-	else if( set_getint( gc->irc, "debug" ) )
-		serv_got_crap( gc, "Got ext_yahoo_conf_userjoin() from %s for unknown conference %s", who, room );
 }
 
 void ext_yahoo_conf_userleave( int id, char *who, char *room )
@@ -857,8 +855,6 @@ void ext_yahoo_conf_userleave( int id, char *who, char *room )
 	
 	if( c )
 		remove_chat_buddy( c, who, "" );
-	else if( set_getint( gc->irc, "debug" ) )
-		serv_got_crap( gc, "Got ext_yahoo_conf_userleave() from %s for unknown conference %s", who, room );
 }
 
 void ext_yahoo_conf_message( int id, char *who, char *room, char *msg, int utf8 )

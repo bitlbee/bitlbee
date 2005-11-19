@@ -302,13 +302,15 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="html" type="string">
-		<default>nostrip</default>
-		<possible-values>strip, nostrip</possible-values>
+	<bitlbee-setting name="strip_html" type="boolean">
+		<default>True</default>
 
 		<description>
 			<para>
-				Determines what BitlBee should do with HTML in messages. If set to nostrip, HTML in messages will not be touched. If set to strip, all HTML will be stripped from messages. Unfortunately this sometimes strips too much.
+				Determines what BitlBee should do with HTML in messages. Normally this is turned on and HTML will be stripped from messages, if BitlBee thinks there is HTML.
+			</para>
+			<para>
+				If BitlBee fails to detect this sometimes (most likely in AIM messages over an ICQ connection), you can set this setting to <emphasis>always</emphasis>, but this might sometimes accidentally strip non-HTML things too.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -461,10 +463,12 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="buddy_sendbuffer_delay" type="integer">
+		<default>200</default>
+
 		<description>
 
 			<para>
-				Tell BitlBee after how many seconds a buffered message should be sent.
+				Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
 			</para>
 
 			<para>

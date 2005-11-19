@@ -538,7 +538,7 @@ int root_command( irc_t *irc, char *cmd[] )
 			return( 1 );
 		}
 	
-	irc_usermsg( irc, "Unknown command: %s. Please use help commands to get a list of available commands.", cmd[0] );
+	irc_usermsg( irc, "Unknown command: %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[0] );
 	
 	return( 1 );
 }

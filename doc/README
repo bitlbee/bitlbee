@@ -8,6 +8,8 @@ If you want to compile BitlBee yourself, that's fine. Just run ./configure
 to set up the build system. If configure succeeds, run make to build BitlBee.
 make install will move all the files to the right places.
 
+--- inetd installation
+
 After installation you have to set up inetd (you got that one running,
 right? If not, just take a look at utils/bitlbeed.c) to start BitlBee. You
 need to add BitlBee to inetd.conf, like this:
@@ -17,11 +19,27 @@ need to add BitlBee to inetd.conf, like this:
 Creating a special BitlBee user and running BitlBee with that UID (instead
 of just 'nobody') might be a good idea.
 
+*BSD/Darwin/OSX NOTE: Most *BSD inetds are more scrict than the one that
+comes with Linux systems. Possibly all non-Linux inetds are like this. They
+don't allow you to specify a port number in the inetd.conf entry, instead
+you have to put a service name there (one that is also mentioned in
+/etc/services). So if there's no line in /services for 6667/tcp (or whatever
+you choose), add it and use that name in the inetd.conf entry.
+
+-- xinetd installation
+
+Most machines use xinetd instead of inetd these days. If your machine runs
+xinetd, you can copy the bitlbee.xinetd file from the doc/ directory to your
+xinetd.d/ directory. Most likely you'll have to change a thing or two before
+it'll work.
+
+After configuring your (x)inetd, send the daemon a SIGHUP and things should
+work. If not, see your syslogs, since both daemons will complain there when
+something's wrong.
+
 Also, don't forget to create the configuration directory (/var/lib/bitlbee/
 by default) and chown it to the UID BitlBee is running as. Make sure this
 directory is read-/writable by this user only.
-
-(For xinetd users a xinetd configuration file is included: doc/bitlbee.xinetd)
 
 
 DEPENDENCIES
@@ -47,15 +65,6 @@ when you attempt to use OpenSSL.
 PORTABILITY ISSUES
 ==================
 
-FreeBSD NOTE: It looks like FreeBSD does allow port numbers instead of service
-names in inetd.conf, as long as the service for this port exists in
-/etc/services. Linux isn't this strict. If you got problems in FreeBSD, just
-add a line for your chosen port number to /etc/services.
-
-Darwin/Mac OS X is even more strict; you should add a bitlbee service to
-/etc/services and use that name in inetd.conf. Not really a problem, since
-that's the cleanest way of doing this on any operating system anyway.
-
 Cygwin NOTE: You'll need a glib installation to run BitlBee. However, Cygwin
 doesn't provide a glib package. You can download a binary tar.gz from:
 <http://my.dreamwiz.com/jbdoll/>. When you installed it, BitlBee should work
@@ -65,6 +74,15 @@ network.
 On some non-Linux systems the program still suffers from some random bugs.
 Please do report them, we might be able to fix them if they're not too
 mysterious.
+
+Also, the configure script is known to not work very well with non-Bash
+shells, so if you experience problems, make sure you use bash to run the
+script. Same for the Makefile, it only works well with GNU make. (gmake on
+most BSD systems)
+
+If someone can tell us how to write Makefiles that work with both/all
+versions of make, we'd love to hear it, but it seems this just isn't
+possible.
 
 
 RUNNING ON SERVERS WITH MANY USERS

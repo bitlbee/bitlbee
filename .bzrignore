@@ -10,5 +10,9 @@ bitlbee.plg
 *.plg
 *.aps
 *.clw
+user-guide.txt
+user-guide.html
+help.txt
 debian
+build-arch-stamp
 tags

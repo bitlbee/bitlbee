@@ -1122,7 +1122,7 @@ static void jabber_handles10n(gjconn gjc, jpacket p)
 		 * A "subscribe to us" request was received - put up the approval dialog
 		 */
 		struct jabber_add_permit *jap = g_new0(struct jabber_add_permit, 1);
-		gchar *msg = g_strdup_printf(_("The user %s wants to add you to their buddy list."),
+		gchar *msg = g_strdup_printf(_("The user %s wants to add you to his/her buddy list."),
 				Jid);
 
 		jap->gjc = gjc;
