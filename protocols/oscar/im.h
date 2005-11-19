@@ -13,6 +13,7 @@
 #define AIM_CB_MSG_MISSEDCALL 0x000a
 #define AIM_CB_MSG_CLIENTAUTORESP 0x000b
 #define AIM_CB_MSG_ACK 0x000c
+#define AIM_CB_MSG_MTN 0x0014
 #define AIM_CB_MSG_DEFAULT 0xffff
 
 #define AIM_IMFLAGS_AWAY		0x0001 /* mark as an autoreply */
@@ -193,6 +194,7 @@ aim_conn_t *aim_directim_initiate(aim_session_t *, const char *destsn);
 aim_conn_t *aim_directim_connect(aim_session_t *, const char *sn, const char *addr, const guint8 *cookie);
 
 int aim_send_im_ch2_geticqmessage(aim_session_t *sess, const char *sn, int type);
+int aim_im_sendmtn(aim_session_t *sess, guint16 type1, const char *sn, guint16 type2);
 int aim_send_im_ch2_statusmessage(aim_session_t *sess, const char *sender, const guint8 *cookie, const char *message, const guint8 state, const guint16 dc);
 
 #endif /* __OSCAR_IM_H__ */
