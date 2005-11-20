@@ -274,53 +274,47 @@ static void oscar_callback(gpointer data, gint source,
 	odata = (struct oscar_data *)gc->proto_data;
 
 	if (condition & GAIM_INPUT_READ) {
-		if (conn->type == AIM_CONN_TYPE_RENDEZVOUS_OUT) {
-			if (aim_handlerendconnect(odata->sess, conn) < 0) {
-				aim_conn_kill(odata->sess, &conn);
-			}
+		if (aim_get_command(odata->sess, conn) >= 0) {
+			aim_rxdispatch(odata->sess);
+                               if (odata->killme)
+                                       signoff(gc);
 		} else {
-			if (aim_get_command(odata->sess, conn) >= 0) {
-				aim_rxdispatch(odata->sess);
-                                if (odata->killme)
-                                        signoff(gc);
-			} else {
-				if ((conn->type == AIM_CONN_TYPE_BOS) ||
-					   !(aim_getconn_type(odata->sess, AIM_CONN_TYPE_BOS))) {
-					hide_login_progress_error(gc, _("Disconnected."));
-					signoff(gc);
-				} else if (conn->type == AIM_CONN_TYPE_CHAT) {
-					struct chat_connection *c = find_oscar_chat_by_conn(gc, conn);
-					char buf[BUF_LONG];
-					c->conn = NULL;
-					if (c->inpa > 0)
-						gaim_input_remove(c->inpa);
-					c->inpa = 0;
-					c->fd = -1;
-					aim_conn_kill(odata->sess, &conn);
-					sprintf(buf, _("You have been disconnected from chat room %s."), c->name);
-					do_error_dialog(sess->aux_data, buf, _("Chat Error!"));
-				} else if (conn->type == AIM_CONN_TYPE_CHATNAV) {
-					if (odata->cnpa > 0)
-						gaim_input_remove(odata->cnpa);
-					odata->cnpa = 0;
-					while (odata->create_rooms) {
-						struct create_room *cr = odata->create_rooms->data;
-						g_free(cr->name);
-						odata->create_rooms =
-							g_slist_remove(odata->create_rooms, cr);
-						g_free(cr);
-						do_error_dialog(sess->aux_data, _("Chat is currently unavailable"),
-								_("Gaim - Chat"));
-					}
-					aim_conn_kill(odata->sess, &conn);
-				} else if (conn->type == AIM_CONN_TYPE_AUTH) {
-					if (odata->paspa > 0)
-						gaim_input_remove(odata->paspa);
-					odata->paspa = 0;
-					aim_conn_kill(odata->sess, &conn);
-				} else {
-					aim_conn_kill(odata->sess, &conn);
+			if ((conn->type == AIM_CONN_TYPE_BOS) ||
+				   !(aim_getconn_type(odata->sess, AIM_CONN_TYPE_BOS))) {
+				hide_login_progress_error(gc, _("Disconnected."));
+				signoff(gc);
+			} else if (conn->type == AIM_CONN_TYPE_CHAT) {
+				struct chat_connection *c = find_oscar_chat_by_conn(gc, conn);
+				char buf[BUF_LONG];
+				c->conn = NULL;
+				if (c->inpa > 0)
+					gaim_input_remove(c->inpa);
+				c->inpa = 0;
+				c->fd = -1;
+				aim_conn_kill(odata->sess, &conn);
+				sprintf(buf, _("You have been disconnected from chat room %s."), c->name);
+				do_error_dialog(sess->aux_data, buf, _("Chat Error!"));
+			} else if (conn->type == AIM_CONN_TYPE_CHATNAV) {
+				if (odata->cnpa > 0)
+					gaim_input_remove(odata->cnpa);
+				odata->cnpa = 0;
+				while (odata->create_rooms) {
+					struct create_room *cr = odata->create_rooms->data;
+					g_free(cr->name);
+					odata->create_rooms =
+						g_slist_remove(odata->create_rooms, cr);
+					g_free(cr);
+					do_error_dialog(sess->aux_data, _("Chat is currently unavailable"),
+							_("Gaim - Chat"));
 				}
+				aim_conn_kill(odata->sess, &conn);
+			} else if (conn->type == AIM_CONN_TYPE_AUTH) {
+				if (odata->paspa > 0)
+					gaim_input_remove(odata->paspa);
+				odata->paspa = 0;
+				aim_conn_kill(odata->sess, &conn);
+			} else {
+				aim_conn_kill(odata->sess, &conn);
 			}
 		}
 	}

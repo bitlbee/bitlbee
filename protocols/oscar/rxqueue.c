@@ -331,11 +331,7 @@ void aim_frame_destroy(aim_frame_t *frame)
 
 	g_free(frame->data.data); /* XXX aim_bstream_free */
 
-	if (frame->hdrtype == AIM_FRAMETYPE_OFT)
-		g_free(frame->hdr.oft.hdr2);
 	g_free(frame);
-	
-	return;
 } 
 
 
@@ -361,17 +357,6 @@ int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 
 	if (conn->status & AIM_CONN_STATUS_INPROGRESS)
 		return aim_conn_completeconnect(sess, conn);
-
-	/*
-	 * Rendezvous (client-client) connections do not speak
-	 * FLAP, so this function will break on them.
-	 */
-	if (conn->type == AIM_CONN_TYPE_RENDEZVOUS) 
-		return aim_get_command_rendezvous(sess, conn);
-	else if (conn->type == AIM_CONN_TYPE_RENDEZVOUS_OUT) {
-		do_error_dialog(sess->aux_data,"AIM_CONN_TYPE_RENDEZVOUS_OUT shouldn't use FLAP", "Gaim");
-		return 0; 
-	}
 
 	aim_bstream_init(&flaphdr, flaphdr_raw, sizeof(flaphdr_raw));
 

@@ -340,37 +340,6 @@ void aim_rxdispatch(aim_session_t *sess)
 		if (cur->handled)
 			continue;
 
-		/*
-		 * This is a debugging/sanity check only and probably 
-		 * could/should be removed for stable code.
-		 */
-		if (((cur->hdrtype == AIM_FRAMETYPE_OFT) && 
-		   (cur->conn->type != AIM_CONN_TYPE_RENDEZVOUS)) || 
-		  ((cur->hdrtype == AIM_FRAMETYPE_FLAP) && 
-		   (cur->conn->type == AIM_CONN_TYPE_RENDEZVOUS))) {
-			do_error_dialog(sess->aux_data, "incompatible frame type/connection type combination", "Gaim");
-			cur->handled = 1;
-			continue;
-		}
-
-		if (cur->conn->type == AIM_CONN_TYPE_RENDEZVOUS) {
-			if (cur->hdrtype != AIM_FRAMETYPE_OFT) {
-				do_error_dialog(sess->aux_data, "non-OFT frames on OFT connection", "Gaim");
-				cur->handled = 1; /* get rid of it */
-			} else {
-				/* FIXME: implement this (OFT frame) */
-				cur->handled = 1; /* get rid of it */
-			}
-			continue;
-		}
-
-		if (cur->conn->type == AIM_CONN_TYPE_RENDEZVOUS_OUT) {
-			/* not possible */
-			do_error_dialog(sess->aux_data, "RENDEZVOUS packet in rxqueue", "Gaim");
-			cur->handled = 1;
-			continue;
-		}
-
 		if (cur->hdr.flap.type == 0x01) {
 			
 			cur->handled = aim_callhandler_noparam(sess, cur->conn, AIM_CB_FAM_SPECIAL, AIM_CB_SPECIAL_FLAPVER, cur); /* XXX use consumenonsnac */
