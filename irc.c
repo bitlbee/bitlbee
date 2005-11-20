@@ -599,7 +599,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		}
 		else if ( irc->nick && g_strcasecmp( cmd[1], irc->nick ) == 0 ) 
 		{
-			irc_write( irc, ":%s!%s@%s PRIVMSG %s :%s", irc->nick, irc->user, irc->host, cmd[1], cmd[2] ); 
+			irc_write( irc, ":%s!%s@%s %s %s :%s", irc->nick, irc->user, irc->host, cmd[0], cmd[1], cmd[2] ); 
 		}
 		else 
 		{
