@@ -6,7 +6,7 @@ Welcome to BitlBee, your IRC gateway to ICQ, MSN, AOL, Jabber and Yahoo Instant 
 </para>
 
 <para>
-The center of BitlBee is the control channel, <emphasis>#bitlbee</emphasis>. Two users will always be there, <emphasis>you</emphasis> (where "you" is the nickname you are using) and the system user, <emphasis>root</emphasis>.
+The center of BitlBee is the control channel, <emphasis>&amp;bitlbee</emphasis>. Two users will always be there, <emphasis>you</emphasis> (where "you" is the nickname you are using) and the system user, <emphasis>root</emphasis>.
 </para>
 
 <para>
@@ -96,7 +96,7 @@ Now you might want to add some contacts, to do this we will use the <emphasis>ad
 
 <ircexample>
 	<ircline nick="you">add 0 r2d2@example.com</ircline>
-	<ircaction nick="r2d2"> has joined <emphasis>#bitlbee</emphasis></ircaction>
+	<ircaction nick="r2d2"> has joined <emphasis>&amp;bitlbee</emphasis></ircaction>
 </ircexample>
 
 <para>
@@ -121,7 +121,7 @@ When finished, type <emphasis>help quickstart5</emphasis> to continue.
 </para>
 
 <para>
-First of all, a person must be on your contact list for you to chat with them (unless it's a group chat, <emphasis>help groupchats</emphasis> for more). If someone not on your contact list sends you a message, simply add them to the proper account with the <emphasis>add</emphasis> command. Once they are on your list and online, you can chat with them in #bitlbee:
+First of all, a person must be on your contact list for you to chat with them (unless it's a group chat, <emphasis>help groupchats</emphasis> for more). If someone not on your contact list sends you a message, simply add them to the proper account with the <emphasis>add</emphasis> command. Once they are on your list and online, you can chat with them in &amp;bitlbee:
 </para>
 
 <ircexample>
@@ -130,7 +130,7 @@ First of all, a person must be on your contact list for you to chat with them (u
 </ircexample>
 
 <para>
-If you'd rather chat with them in a separate window use the <emphasis>/msg</emphasis> or <emphasis>/query</emphasis> command, just like you would for a private message in IRC.  If you want to have messages automatically come up in private messages rather than in the #bitlbee channel, use the <emphasis>set private</emphasis> command: <emphasis>set private true</emphasis> (<emphasis>set private false</emphasis> to change back).
+If you'd rather chat with them in a separate window use the <emphasis>/msg</emphasis> or <emphasis>/query</emphasis> command, just like you would for a private message in IRC.  If you want to have messages automatically come up in private messages rather than in the &amp;bitlbee channel, use the <emphasis>set private</emphasis> command: <emphasis>set private true</emphasis> (<emphasis>set private false</emphasis> to change back).
 </para>
 
 <para>
