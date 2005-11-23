@@ -40,7 +40,7 @@ clean: $(subdirs)
 
 distclean: clean $(subdirs)
 	rm -f Makefile.settings config.h
-	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' | xargs rm -f
+	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -exec rm -f {} \;
 
 install-doc:
 	$(MAKE) -C doc install
