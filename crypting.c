@@ -54,6 +54,8 @@ typedef struct irc
 #include <stdio.h>
 #include <stdlib.h>
 
+#define irc_usermsg
+
 #endif
 
 /*\

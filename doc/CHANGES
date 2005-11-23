@@ -7,6 +7,9 @@ Version 1.0:
 - Reviewed the xinetd file and installation instructions.
 - HTML stripping is configurable again.
 - Quit messages (at least on crashes) should appear again.
+- Cleaned up some unnecessary code in the Jabber module, and implemented
+  handlers for headline messages (which allows you to use RSS-to-Jabber
+  gateways).
 
 Finished ...
 

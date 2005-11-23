@@ -761,10 +761,10 @@ static time_t iso8601_to_time(char *timestamp)
 
 static void jabber_handlemessage(gjconn gjc, jpacket p)
 {
-	xmlnode y, xmlns, subj, z;
+	xmlnode y, xmlns, z;
 	time_t time_sent = time(NULL);
 
-	char *from = NULL, *msg = NULL, *type = NULL, *topic = NULL;
+	char *from = NULL, *msg = NULL, *type = NULL;
 	char m[BUF_LONG * 2];
 
 	type = xmlnode_get_attrib(p->x, "type");
@@ -802,18 +802,7 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 			return;
 
 		if (type && !g_strcasecmp(type, "jabber:x:conference")) {
-			char *room;
-			GList *m = NULL;
-			char **data;
-
-			room = xmlnode_get_attrib(xmlns, "jid");
-			data = g_strsplit(room, "@", 2);
-			m = g_list_append(m, g_strdup(data[0]));
-			m = g_list_append(m, g_strdup(data[1]));
-			m = g_list_append(m, g_strdup(gjc->user->user));
-			g_strfreev(data);
-
-			/* ** Bitlbee ** serv_got_chat_invite(GJ_GC(gjc), room, from, msg, m); */
+			/* do nothing */
 		} else if (msg) { /* whisper */
 			struct jabber_chat *jc;
 			g_snprintf(m, sizeof(m), "%s", msg);
@@ -821,22 +810,15 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 				serv_got_chat_in(GJ_GC(gjc), jc->b->id, p->from->resource, 1, m, time_sent);
 			else {
 				int flags = 0;
-				/* ** Bitlbee **
-				if (xmlnode_get_tag(p->x, "gaim"))
-					flags = IM_FLAG_GAIMUSER;
-				if (find_conversation(jid_full(p->from)))
-					serv_got_im(GJ_GC(gjc), jid_full(p->from), m, flags, time_sent, -1);
-				else {
-				** End - Bitlbee ** */
-					if(p->from->user) {
-					    from = g_strdup_printf("%s@%s", p->from->user, p->from->server);
-					} else {
-					    /* server message? */
-					    from = g_strdup(p->from->server);
-					}
-					serv_got_im(GJ_GC(gjc), from, m, flags, time_sent, -1);
-					g_free(from);
-				/* ** Bitlbee ** } ** End - Bitlbee ** */
+				
+				if(p->from->user) {
+				    from = g_strdup_printf("%s@%s", p->from->user, p->from->server);
+				} else {
+				    /* server message? */
+				    from = g_strdup(p->from->server);
+				}
+				serv_got_im(GJ_GC(gjc), from, m, flags, time_sent, -1);
+				g_free(from);
 			}
 		}
 
@@ -851,75 +833,45 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 			do_error_dialog(GJ_GC(gjc), msg, from);
 			g_free(from);
 		}
-	} else if (!g_strcasecmp(type, "groupchat")) {
-		struct jabber_chat *jc;
-		static int i = 0;
-
-		/*
-		if ((y = xmlnode_get_tag(p->x, "html"))) {
-			msg = xmlnode_get_data(y);
-		} else
-		*/
-		if ((y = xmlnode_get_tag(p->x, "body"))) {
-			msg = xmlnode_get_data(y);
-		}
-
-		msg = utf8_to_str(msg);
+	} else if (!g_strcasecmp(type, "headline")) {
+		char *subject, *body, *url;
 		
-		if ((subj = xmlnode_get_tag(p->x, "subject"))) {
-		   	topic = xmlnode_get_data(subj);
-		} 
-		topic = utf8_to_str(topic);
-
-		jc = find_existing_chat(GJ_GC(gjc), p->from);
-		if (!jc) {
-			/* we're not in this chat. are we supposed to be? */
-			if ((jc = find_pending_chat(GJ_GC(gjc), p->from)) != NULL) {
-				/* yes, we're supposed to be. so now we are. */
-				jc->b = serv_got_joined_chat(GJ_GC(gjc), i++, p->from->user);
-				jc->id = jc->b->id;
-				jc->state = JCS_ACTIVE;
-			} else {
-				/* no, we're not supposed to be. */
-				g_free(msg);
-				return;
+		y = xmlnode_get_tag( p->x, "body" );
+		body = y ? g_strdup( xmlnode_get_data( y ) ) : NULL;
+		
+		y = xmlnode_get_tag( p->x, "subject" );
+		subject = y ? g_strdup( xmlnode_get_data( y ) ) : NULL;
+		
+		url = NULL;
+		z = xmlnode_get_firstchild(p->x);
+		while( z )
+		{
+			char *xtype = xmlnode_get_attrib( z, "xmlns" );
+			
+			if( xtype && g_strcasecmp( xtype, "jabber:x:oob" ) == 0 &&
+			             ( y = xmlnode_get_tag( z, "url" ) ) )
+			{
+				url = g_strdup( xmlnode_get_data( y ) );
+				break;
 			}
+			
+			z = xmlnode_get_nextsibling( z );
 		}
-		if (p->from->resource) {
-			if (!y) {
-				if (!find_chat_buddy(jc->b, p->from->resource)) {
-					add_chat_buddy(jc->b, p->from->resource);
-				} else if ((y = xmlnode_get_tag(p->x, "status"))) {
-					char *buf;
+		
+		g_snprintf( m, BUF_LONG, "Subject: %s\nURL: %s\nMessage:\n%s", subject ? subject : "(none)",
+		                     url ? url : "(none)", body ? body : "(none)" );
 
-					buf = g_strdup_printf("%s@%s/%s",
-						p->from->user, p->from->server, p->from->resource);
-					jabber_track_away(gjc, p, buf, NULL);
-					g_free(buf);
-
-				}
-			} else if (jc->b && msg) {
-				char buf[8192];
-
-				if (topic) {
-					char tbuf[8192];
-					g_snprintf(tbuf, sizeof(tbuf), "%s", topic);
-				}
-				
-
-				g_snprintf(buf, sizeof(buf), "%s", msg);
-				serv_got_chat_in(GJ_GC(gjc), jc->b->id, p->from->resource, 0, buf, time_sent);
-			}
-		} else { /* message from the server */
-		   	if(jc->b && topic) {
-			   	char tbuf[8192];
-				g_snprintf(tbuf, sizeof(tbuf), "%s", topic);
-			}
-		}
-
-		g_free(msg);
-		g_free(topic);
-
+		if( p->from->user )
+			from = g_strdup_printf( "%s@%s", p->from->user, p->from->server );
+		else
+			from = g_strdup( p->from->server );
+		
+		serv_got_im( GJ_GC(gjc), from, m, 0, time_sent, -1 );
+		
+		g_free( from );
+		g_free( subject );
+		g_free( body );
+		g_free( url );
 	}
 }
 	   
