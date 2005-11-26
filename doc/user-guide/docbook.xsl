@@ -18,7 +18,7 @@
 	</xsl:template>
 
 	<xsl:template match="ircaction">
-		<xsl:text> * </xsl:text><xsl:value-of select="@nick"/><xsl:value-of select="normalize-space(.)"/><xsl:text>&#10;</xsl:text>
+		<xsl:text> * </xsl:text><xsl:value-of select="@nick"/><xsl:text> </xsl:text><xsl:value-of select="normalize-space(.)"/><xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
 	<xsl:template match="ircexample">
