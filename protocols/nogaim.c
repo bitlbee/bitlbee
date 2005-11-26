@@ -644,31 +644,34 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	    do_iconv( "UTF-8", set_getstr( irc, "charset" ), msg, buf, 0, 8192 ) != -1 )
 		msg = buf;
 	
-	while( strlen( msg ) > 450 )
+	while( strlen( msg ) > 425 )
 	{
 		char tmp, *nl;
 		
-		tmp = msg[450];
-		msg[450] = 0;
+		tmp = msg[425];
+		msg[425] = 0;
 		
-		/* If there's a newline in this string, split up there so we're not
-		   going to split up lines. If there isn't a newline, well, too bad. */
-		if( ( nl = strrchr( msg, '\n' ) ) )
+		/* If there's a newline/space in this string, split up there,
+		   looks a bit prettier. */
+		if( ( nl = strrchr( msg, '\n' ) ) || ( nl = strchr( msg, ' ' ) ) )
+		{
+			msg[425] = tmp;
+			tmp = *nl;
 			*nl = 0;
+		}
 		
 		irc_msgfrom( irc, u->nick, msg );
-		
-		msg[450] = tmp;
 		
 		/* Move on. */
 		if( nl )
 		{
-			*nl = '\n';
+			*nl = tmp;
 			msg = nl + 1;
 		}
 		else
 		{
-			msg += 450;
+			msg[425] = tmp;
+			msg += 425;
 		}
 	}
 	irc_msgfrom( irc, u->nick, msg );
