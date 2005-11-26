@@ -1,5 +1,9 @@
 -include ../Makefile.settings
 
+all:
+	# Only build the docs if this is a bzr checkout
+	test ! -d ../.bzr || $(MAKE) -C user-guide
+
 install:
 	mkdir -p $(DESTDIR)$(MANDIR)/man8/ $(DESTDIR)$(MANDIR)/man5/
 	install -m 0644 bitlbee.8 $(DESTDIR)$(MANDIR)/man8/
