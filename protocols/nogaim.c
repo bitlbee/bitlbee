@@ -233,8 +233,9 @@ void hide_login_progress_error( struct gaim_connection *gc, char *msg )
 void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 {
 	va_list params;
-	char text[1024], buf[1024];
+	char text[1024], buf[1024], acc_id[33];
 	char *msg;
+	account_t *a;
 	
 	va_start( params, format );
 	g_vsnprintf( text, sizeof( text ), format, params );
@@ -250,7 +251,18 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
 		strip_html( msg );
 	
-	irc_usermsg( gc->irc, "%s(%s) - %s", proto_name[gc->protocol], gc->username, msg );
+	/* Try to find a different connection on the same protocol. */
+	for( a = gc->irc->accounts; a; a = a->next )
+		if( proto_prpl[a->protocol] == gc->prpl && a->gc != gc )
+			break;
+	
+	/* If we found one, add the screenname to the acc_id. */
+	if( a )
+		g_snprintf( acc_id, 32, "%s(%s)", proto_name[gc->protocol], gc->username );
+	else
+		g_snprintf( acc_id, 32, "%s", proto_name[gc->protocol] );
+	
+	irc_usermsg( gc->irc, "%s - %s", acc_id, msg );
 }
 
 static gboolean send_keepalive( gpointer d )
