@@ -54,6 +54,7 @@ static int remove_chat_buddy_silent( struct conversation *b, char *handle );
 
 GSList *connections;
 
+#ifdef WITH_PLUGINS
 gboolean load_plugin(char *path)
 {
 	void (*init_function) (void);
@@ -74,6 +75,34 @@ gboolean load_plugin(char *path)
 
 	return TRUE;
 }
+
+void load_plugins(void)
+{
+	GDir *dir;
+	GError *error = NULL;
+
+	dir = g_dir_open(PLUGINDIR, 0, &error);
+
+	if (dir) {
+		const gchar *entry;
+		char *path;
+
+		while ((entry = g_dir_read_name(dir))) {
+			path = g_build_filename(PLUGINDIR, entry, NULL);
+			if(!path) {
+				log_message(LOGLVL_WARNING, "Can't build path for %s\n", entry);
+				continue;
+			}
+
+			load_plugin(path);
+
+			g_free(path);
+		}
+
+		g_dir_close(dir);
+	}
+}
+#endif
 
 /* nogaim.c */
 
@@ -100,49 +129,30 @@ struct prpl *find_protocol(const char *name)
 /* nogaim.c */
 void nogaim_init()
 {
-	GDir *dir;
-	GError *error = NULL;
+	extern void msn_init();
+	extern void oscar_init();
+	extern void byahoo_init();
+	extern void jabber_init();
 
 #ifdef WITH_MSN
-	extern void msn_init();
 	msn_init();
 #endif
 
 #ifdef WITH_OSCAR
-	extern void oscar_init();
 	oscar_init();
 #endif
 	
 #ifdef WITH_YAHOO
-	extern void byahoo_init();
 	byahoo_init();
 #endif
 	
 #ifdef WITH_JABBER
-	extern void jabber_init();
 	jabber_init();
 #endif
 
-	dir = g_dir_open(PLUGINDIR, 0, &error);
-
-	if (dir) {
-		const gchar *entry;
-		char *path;
-
-		while ((entry = g_dir_read_name(dir))) {
-			path = g_build_filename(PLUGINDIR, entry, NULL);
-			if(!path) {
-				log_message(LOGLVL_WARNING, "Can't build path for %s\n", entry);
-				continue;
-			}
-
-			load_plugin(path);
-
-			g_free(path);
-		}
-
-		g_dir_close(dir);
-	}
+#ifdef WITH_PLUGINS
+	load_plugins();
+#endif
 }
 
 GSList *get_connections() { return connections; }
