@@ -153,7 +153,7 @@
 
 		<ircexample>
 			<ircline nick="ctrlsoft">add 3 gryp@jabber.org grijp</ircline>
-			<ircaction nick="grijp" hostmask="gryp@jabber.org">has joined <emphasis>#bitlbee</emphasis></ircaction>
+			<ircaction nick="grijp" hostmask="gryp@jabber.org">has joined <emphasis>&amp;bitlbee</emphasis></ircaction>
 		</ircexample>
 	</bitlbee-command>
 
@@ -356,7 +356,7 @@
 
 		<description>
 			<para>
-				Some people prefer themself and root to have operator status in #bitlbee, other people don't. You can change these states using this setting.
+				Some people prefer themself and root to have operator status in &amp;bitlbee, other people don't. You can change these states using this setting.
 			</para>
 
 			<para>

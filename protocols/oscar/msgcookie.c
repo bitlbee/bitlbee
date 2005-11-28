@@ -177,20 +177,3 @@ int aim_cookie_free(aim_session_t *sess, aim_msgcookie_t *cookie)
 
 	return 0;
 } 
-
-/* XXX I hate switch */
-int aim_msgcookie_gettype(int reqclass) 
-{
-	/* XXX: hokey-assed. needs fixed. */
-	switch(reqclass) {
-	case AIM_CAPS_BUDDYICON: return AIM_COOKIETYPE_OFTICON;
-	case AIM_CAPS_VOICE: return AIM_COOKIETYPE_OFTVOICE;
-	case AIM_CAPS_IMIMAGE: return AIM_COOKIETYPE_OFTIMAGE;
-	case AIM_CAPS_CHAT: return AIM_COOKIETYPE_CHAT;
-	case AIM_CAPS_GETFILE: return AIM_COOKIETYPE_OFTGET;
-	case AIM_CAPS_SENDFILE: return AIM_COOKIETYPE_OFTSEND;
-	default: return AIM_COOKIETYPE_UNKNOWN;
-	}           
-}
-
-

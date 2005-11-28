@@ -191,7 +191,6 @@ aim_msgcookie_t *aim_uncachecookie(aim_session_t *sess, guint8 *cookie, int type
 aim_msgcookie_t *aim_mkcookie(guint8 *, int, void *);
 aim_msgcookie_t *aim_checkcookie(aim_session_t *sess, const unsigned char *, const int);
 int aim_freecookie(aim_session_t *sess, aim_msgcookie_t *cookie);
-int aim_msgcookie_gettype(int reqclass);
 int aim_cookie_free(aim_session_t *sess, aim_msgcookie_t *cookie);
 
 int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *);

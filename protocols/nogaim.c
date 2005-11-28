@@ -294,8 +294,9 @@ void hide_login_progress_error( struct gaim_connection *gc, char *msg )
 void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 {
 	va_list params;
-	char text[1024], buf[1024];
+	char text[1024], buf[1024], acc_id[33];
 	char *msg;
+	account_t *a;
 	
 	va_start( params, format );
 	g_vsnprintf( text, sizeof( text ), format, params );
@@ -311,7 +312,18 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
 		strip_html( msg );
 	
-	irc_usermsg( gc->irc, "%s(%s) - %s", gc->prpl->name, gc->username, msg );
+	/* Try to find a different connection on the same protocol. */
+	for( a = gc->irc->accounts; a; a = a->next )
+		if( a->prpl == gc->prpl && a->gc != gc )
+			break;
+	
+	/* If we found one, add the screenname to the acc_id. */
+	if( a )
+		g_snprintf( acc_id, 32, "%s(%s)", gc->prpl->name, gc->username );
+	else
+		g_snprintf( acc_id, 32, "%s", gc->prpl->name );
+	
+	irc_usermsg( gc->irc, "%s - %s", acc_id, msg );
 }
 
 static gboolean send_keepalive( gpointer d )
@@ -705,31 +717,34 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	    do_iconv( "UTF-8", set_getstr( irc, "charset" ), msg, buf, 0, 8192 ) != -1 )
 		msg = buf;
 	
-	while( strlen( msg ) > 450 )
+	while( strlen( msg ) > 425 )
 	{
 		char tmp, *nl;
 		
-		tmp = msg[450];
-		msg[450] = 0;
+		tmp = msg[425];
+		msg[425] = 0;
 		
-		/* If there's a newline in this string, split up there so we're not
-		   going to split up lines. If there isn't a newline, well, too bad. */
-		if( ( nl = strrchr( msg, '\n' ) ) )
+		/* If there's a newline/space in this string, split up there,
+		   looks a bit prettier. */
+		if( ( nl = strrchr( msg, '\n' ) ) || ( nl = strchr( msg, ' ' ) ) )
+		{
+			msg[425] = tmp;
+			tmp = *nl;
 			*nl = 0;
+		}
 		
 		irc_msgfrom( irc, u->nick, msg );
-		
-		msg[450] = tmp;
 		
 		/* Move on. */
 		if( nl )
 		{
-			*nl = '\n';
+			*nl = tmp;
 			msg = nl + 1;
 		}
 		else
 		{
-			msg += 450;
+			msg[425] = tmp;
+			msg += 425;
 		}
 	}
 	irc_msgfrom( irc, u->nick, msg );
@@ -743,7 +758,7 @@ void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout )
 		return;
 	
 	if( ( u = user_findhandle( gc, handle ) ) )
-		irc_noticefrom( gc->irc, u->nick, "* Typing a message *" );
+		irc_msgfrom( gc->irc, u->nick, "\1TYPING 1\1" );
 }
 
 void serv_got_chat_left( struct gaim_connection *gc, int id )

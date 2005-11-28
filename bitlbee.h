@@ -29,7 +29,7 @@
 #define _GNU_SOURCE /* Stupid GNU :-P */
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "0.99"
+#define BITLBEE_VERSION "1.0pre"
 #define VERSION BITLBEE_VERSION
 
 #define MAX_STRING 128
@@ -86,7 +86,7 @@
 #define NS_NICK "NickServ"
 
 #define DEFAULT_AWAY "Away from computer"
-#define CONTROL_TOPIC "Welcome to the control channel. Type help for help information."
+#define CONTROL_TOPIC "Welcome to the control channel. Type \2help\2 for help information."
 #define IRCD_INFO "BitlBee <http://www.bitlbee.org/>"
 
 #define MAX_NICK_LENGTH 24
