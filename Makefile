@@ -17,6 +17,7 @@ subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 CFLAGS += -Wall
 
 all: $(OUTFILE)
+	$(MAKE) -C doc
 
 uninstall: uninstall-bin uninstall-doc
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
@@ -40,7 +41,7 @@ clean: $(subdirs)
 
 distclean: clean $(subdirs)
 	rm -f Makefile.settings config.h
-	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' | xargs rm -f
+	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -exec rm -f {} \;
 
 install-doc:
 	$(MAKE) -C doc install

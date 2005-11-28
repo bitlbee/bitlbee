@@ -2038,7 +2038,7 @@ int aim_im_sendmtn(aim_session_t *sess, guint16 type1, const char *sn, guint16 t
 	 * Dest sn
 	 */
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (const guint8*)sn, strlen(sn));
 
 	/*
 	 * Type 2 (should be 0x0000, 0x0001, or 0x0002 for mtn)

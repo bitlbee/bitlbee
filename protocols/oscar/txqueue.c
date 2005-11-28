@@ -33,20 +33,6 @@ aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, guint8 framing, g
 		return NULL;
 	}
 
-	/* For sanity... */
-	if ((conn->type == AIM_CONN_TYPE_RENDEZVOUS) || 
-			(conn->type == AIM_CONN_TYPE_RENDEZVOUS_OUT)) {
-		if (framing != AIM_FRAMETYPE_OFT) {
-			do_error_dialog(sess->aux_data, "attempted to allocate inappropriate frame type for rendezvous connection", "Gaim");
-			return NULL;
-		}
-	} else {
-		if (framing != AIM_FRAMETYPE_FLAP) {
-			do_error_dialog(sess->aux_data, "attempted to allocate inappropriate frame type for FLAP connection", "Gaim");
-			return NULL;
-		}
-	}
-
 	if (!(fr = (aim_frame_t *)g_new0(aim_frame_t,1)))
 		return NULL;
 
@@ -57,11 +43,6 @@ aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, guint8 framing, g
 	if (fr->hdrtype == AIM_FRAMETYPE_FLAP) {
 
 		fr->hdr.flap.type = chan;
-
-	} else if (fr->hdrtype == AIM_FRAMETYPE_OFT) {
-
-		fr->hdr.oft.type = chan;
-		fr->hdr.oft.hdr2len = 0; /* this will get setup by caller */
 
 	} else 
 		do_error_dialog(sess->aux_data, "unknown framing", "Gaim");
@@ -236,21 +217,6 @@ static int aim_bstream_send(aim_bstream_t *bs, aim_conn_t *conn, size_t count)
 		count = aim_bstream_empty(bs); /* truncate to remaining space */
 
 	if (count) {
-		if ((conn->type == AIM_CONN_TYPE_RENDEZVOUS) && 
-		    (conn->subtype == AIM_CONN_SUBTYPE_OFT_DIRECTIM)) {
-			/* I strongly suspect that this is a horrible thing to do
-			 * and I feel really guilty doing it. */
-			const char *sn = aim_directim_getsn(conn);
-			aim_rxcallback_t userfunc;
-			while (count - wrote > 1024) {
-				wrote = wrote + aim_send(conn->fd, bs->data + bs->offset + wrote, 1024);
-				if ((userfunc=aim_callhandler(conn->sessv, conn, 
-							      AIM_CB_FAM_SPECIAL, 
-							      AIM_CB_SPECIAL_IMAGETRANSFER)))
-				  userfunc(conn->sessv, NULL, sn, 
-					   count-wrote>1024 ? ((double)wrote / count) : 1);
-			}
-		}
 		if (count - wrote) {
 			wrote = wrote + aim_send(conn->fd, bs->data + bs->offset + wrote, count - wrote);
 		}
@@ -298,58 +264,10 @@ static int sendframe_flap(aim_session_t *sess, aim_frame_t *fr)
 	return err;
 }
 
-static int sendframe_oft(aim_session_t *sess, aim_frame_t *fr)
-{
-	aim_bstream_t hbs;
-	guint8 *hbs_raw;
-	int hbslen;
-	int err = 0;
-	
-	hbslen = 8 + fr->hdr.oft.hdr2len;
-	if (!(hbs_raw = g_malloc(hbslen)))
-		return -1;
-
-	aim_bstream_init(&hbs, hbs_raw, hbslen);
-
-	aimbs_putraw(&hbs, fr->hdr.oft.magic, 4);
-	aimbs_put16(&hbs, fr->hdr.oft.hdr2len + 8);
-	aimbs_put16(&hbs, fr->hdr.oft.type);
-	aimbs_putraw(&hbs, fr->hdr.oft.hdr2, fr->hdr.oft.hdr2len);
-
-	aim_bstream_rewind(&hbs);
-	
-	
-	if (aim_bstream_send(&hbs, fr->conn, hbslen) != hbslen) {
-
-		err = -errno;
-		
-	} else if (aim_bstream_curpos(&fr->data)) {
-		int len;
-
-		len = aim_bstream_curpos(&fr->data);
-		aim_bstream_rewind(&fr->data);
-		
-		if (aim_bstream_send(&fr->data, fr->conn, len) != len)
-			err = -errno;
-	}
-
-	g_free(hbs_raw); /* XXX aim_bstream_free */
-
-	fr->handled = 1;
-	fr->conn->lastactivity = time(NULL);
-
-
-	return err;
-
-
-}
-
 int aim_tx_sendframe(aim_session_t *sess, aim_frame_t *fr)
 {
 	if (fr->hdrtype == AIM_FRAMETYPE_FLAP)
 		return sendframe_flap(sess, fr);
-	else if (fr->hdrtype == AIM_FRAMETYPE_OFT)
-		return sendframe_oft(sess, fr);
 	return -1;
 }
 

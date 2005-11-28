@@ -13,17 +13,28 @@ it with your favorite irc client. Launch it and connect to localhost port 6667
 </sect1>
 
 <sect1>
-<title>The #bitlbee control channel</title>
+<title>The &amp;bitlbee control channel</title>
 
 <para>
 Once you are connected to the BitlBee server, you are automatically joined
-to #bitlbee on that server. This channel acts like the 'buddy list' you have
+to &amp;bitlbee on that server. This channel acts like the 'buddy list' you have
 on the various other chat networks.
 </para>
 
 <para>
-The user 'root' always hangs around in #bitlbee and acts as your interface 
-to bitlbee. All commands you give on #bitlbee are 'answered' by root.
+The user 'root' always hangs around in &amp;bitlbee and acts as your interface 
+to bitlbee. All commands you give on &amp;bitlbee are 'answered' by root.
+</para>
+
+<para>
+You might be slightly confused by the &amp; in the channel name. This is,
+however, completely allowed by the IRC standards. Just try it on a regular
+IRC server, it should work. The difference between the standard #channels
+and &amp;channels is that the #channels are distributed over all the servers
+on the IRC network, while &amp;channels are local to one server. Because
+the BitlBee control channel is local to one server (and in fact, to one person),
+this name seems more suitable. Also, with this name, it's harder to confuse
+the control channel with the #bitlbee channel on OFTC.
 </para>
 
 </sect1>

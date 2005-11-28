@@ -167,19 +167,6 @@ struct client_info_s {
 #define AIM_CONN_TYPE_CHAT          0x000e
 #define AIM_CONN_TYPE_CHATNAV       0x000d
 
-/* they start getting arbitrary in rendezvous stuff =) */
-#define AIM_CONN_TYPE_RENDEZVOUS    0x0101 /* these do not speak FLAP! */
-#define AIM_CONN_TYPE_RENDEZVOUS_OUT 0x0102 /* socket waiting for accept() */
-
-/*
- * Subtypes, we need these for OFT stuff.
- */
-#define AIM_CONN_SUBTYPE_OFT_DIRECTIM  0x0001
-#define AIM_CONN_SUBTYPE_OFT_GETFILE   0x0002
-#define AIM_CONN_SUBTYPE_OFT_SENDFILE  0x0003
-#define AIM_CONN_SUBTYPE_OFT_BUDDYICON 0x0004
-#define AIM_CONN_SUBTYPE_OFT_VOICE     0x0005
-
 /*
  * Status values returned from aim_conn_new().  ORed together.
  */
@@ -190,7 +177,6 @@ struct client_info_s {
 #define AIM_CONN_STATUS_INPROGRESS  0x0100
 
 #define AIM_FRAMETYPE_FLAP 0x0000
-#define AIM_FRAMETYPE_OFT  0x0001
 
 /*
  * message type flags
@@ -257,12 +243,6 @@ typedef struct aim_frame_s {
 			guint8 type;
 			flap_seqnum_t seqnum;     
 		} flap;
-		struct {
-			guint16 type;
-			guint8 magic[4]; /* ODC2 OFT2 */
-			guint16 hdr2len;
-			guint8 *hdr2; /* rest of bloated header */
-		} oft;
 	} hdr;
 	aim_bstream_t data;	/* payload stream */
 	guint8 handled;		/* 0 = new, !0 = been handled */
@@ -669,14 +649,6 @@ struct aim_invite_priv {
 #define AIM_COOKIETYPE_CHAT     0x05
 #define AIM_COOKIETYPE_CHATNAV  0x06
 #define AIM_COOKIETYPE_INVITE   0x07
-/* we'll move OFT up a bit to give breathing room.  not like it really
- * matters. */
-#define AIM_COOKIETYPE_OFTIM    0x10
-#define AIM_COOKIETYPE_OFTGET   0x11
-#define AIM_COOKIETYPE_OFTSEND  0x12
-#define AIM_COOKIETYPE_OFTVOICE 0x13
-#define AIM_COOKIETYPE_OFTIMAGE 0x14
-#define AIM_COOKIETYPE_OFTICON  0x15
 
 int aim_handlerendconnect(aim_session_t *sess, aim_conn_t *cur);
 
