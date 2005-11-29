@@ -545,6 +545,11 @@ static void gjab_connected_ssl(gpointer data, void *source, GaimInputCondition c
 	struct jabber_data *jd;
 	gjconn gjc;
 	
+	if (source == NULL) {
+		STATE_EVT(JCONN_STATE_OFF)
+		return;
+	}
+	
 	if (!g_slist_find(get_connections(), gc)) {
 		ssl_disconnect(source);
 		return;
@@ -552,11 +557,6 @@ static void gjab_connected_ssl(gpointer data, void *source, GaimInputCondition c
 	
 	jd = gc->proto_data;
 	gjc = jd->gjc;
-	
-	if (source == NULL) {
-		STATE_EVT(JCONN_STATE_OFF)
-		return;
-	}
 	
 	gjab_connected(data, gjc->fd, cond);
 }
