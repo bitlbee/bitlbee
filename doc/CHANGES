@@ -10,6 +10,11 @@ Version 1.0:
 - Cleaned up some unnecessary code in the Jabber module, and implemented
   handlers for headline messages (which allows you to use RSS-to-Jabber
   gateways).
+- Lowered the line splitting limit a bit to fix data loss issues.
+- The $proto($handle) format used for messages specific to one IM-connection
+  now only include the ($handle) part when there's more than one $proto-
+  connection.
+- Fix for a crash-bug on broken Jabber/SSL connections.
 
 Finished ...
 
