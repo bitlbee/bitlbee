@@ -159,25 +159,6 @@ struct aim_user {
 	irc_t *irc;
 };
 
-struct ft 
-{
-	const char *filename;
-	
-	/* Total number of bytes in file */
-	size_t total_bytes;
-	
-	/* Current number of bytes received */
-	size_t cur_bytes;
-};
-
-struct ft_request 
-{
-	const char *filename;
-	struct gaim_connection *gc;
-};
-
-typedef void (*ft_recv_handler) (struct ft *, void *data, size_t len);
-
 struct prpl {
 	int options;
 	const char *name;
@@ -232,11 +213,6 @@ struct prpl {
 
 	/* change a buddy's group on a server list/roster */
 	void (* group_buddy)	(struct gaim_connection *, char *who, char *old_group, char *new_group);
-
-	/* file transfers */
-	struct ft_send_req *(* req_send_file) (struct gaim_connection *, const char *file);
-	void (* send_file_part) (struct gaim_connection *, struct ft*, void *data, size_t length);
-	void (* accept_recv_file) (struct gaim_connection *, struct ft*, ft_recv_handler);
 
 	void (* buddy_free)	(struct buddy *);
 
@@ -324,12 +300,6 @@ G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min
 G_MODULE_EXPORT void strip_html( char *msg );
 G_MODULE_EXPORT char * escape_html(const char *html);
 G_MODULE_EXPORT void info_string_append(GString *str, char *newline, char *name, char *value);
-
-/* file transfers */
-G_MODULE_EXPORT void ft_progress( struct ft *, int);
-G_MODULE_EXPORT void ft_incoming( struct ft_request * );
-G_MODULE_EXPORT void ft_accepted( struct ft_request *, struct ft *);
-G_MODULE_EXPORT void ft_denied( struct ft_request *, const char *reason);
 
 /* prefs.c */
 G_MODULE_EXPORT void build_block_list();
