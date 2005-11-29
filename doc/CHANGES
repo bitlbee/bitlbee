@@ -15,6 +15,9 @@ Version 1.0:
   now only include the ($handle) part when there's more than one $proto-
   connection.
 - Fix for a crash-bug on broken Jabber/SSL connections.
+- Incoming typing notifications now also come in as CTCP TYPING messages, for
+  better consistency. Don't forget to update your scripts!
+- AIM typing notifications are supported now.
 
 Finished ...
 
