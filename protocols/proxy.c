@@ -123,7 +123,7 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 	return TRUE;
 }
 
-static void no_one_calls(gpointer data, gint source, GaimInputCondition cond)
+static void gaim_io_connected(gpointer data, gint source, GaimInputCondition cond)
 {
 	struct PHB *phb = data;
 	unsigned int len;
@@ -172,7 +172,7 @@ static int proxy_connect_none(char *host, unsigned short port, struct PHB *phb)
 
 	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0) {
 		if (sockerr_again()) {
-			phb->inpa = gaim_input_add(fd, GAIM_INPUT_WRITE, no_one_calls, phb);
+			phb->inpa = gaim_input_add(fd, GAIM_INPUT_WRITE, gaim_io_connected, phb);
 			phb->fd = fd;
 		} else {
 			closesocket(fd);
