@@ -22,10 +22,6 @@
  * already had. isn't that lovely. people should just use linux or
  * freebsd, crypt works properly on those systems. i hate solaris */
 
-#if HAVE_CONFIG_H
-#  include <config.h>
-#endif
-
 #if HAVE_STRING_H
 #  include <string.h>
 #elif HAVE_STRINGS_H
