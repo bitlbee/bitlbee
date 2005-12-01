@@ -54,7 +54,6 @@ Option		Description				Default
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 
---flood=0/1	Flood protection			$flood
 --ipv6=0/1	IPv6 socket support			$ipv6
 
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
@@ -281,7 +280,11 @@ else
 fi
 
 if [ "$flood" = 1 ]; then
-	echo '#define FLOOD_SEND' >> config.h
+	# echo '#define FLOOD_SEND' >> config.h
+	echo 'Flood protection is disabled in this release because of too many bugs.' 2> /dev/stderr
+	rm config.h
+	rm Makefile.settings
+	exit 1
 fi
 
 if [ -n "$BITLBEE_VERSION" ]; then
@@ -388,11 +391,11 @@ if [ "$msn" = "1" ]; then
 	echo '  Using SSL library: '$ssl;
 fi
 
-if [ "$flood" = "0" ]; then
-	echo '  Flood protection disabled.';
-else
-	echo '  Flood protection enabled.';
-fi
+#if [ "$flood" = "0" ]; then
+#	echo '  Flood protection disabled.';
+#else
+#	echo '  Flood protection enabled.';
+#fi
 
 if [ -n "$protocols" ]; then
 	echo '  Building with these protocols:' $protocols;
