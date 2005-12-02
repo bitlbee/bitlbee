@@ -589,6 +589,11 @@ static void gjab_start(gjconn gjc)
 		port = DEFAULT_PORT;
 	else if (port == -1 && ssl)
 		port = DEFAULT_PORT_SSL;
+	else if (port != 5222 && port != 5223) {
+		serv_got_crap(GJ_GC(gjc), "Only port numbers 5222 and 5223 are allowed for Jabber connections.");
+		STATE_EVT(JCONN_STATE_OFF)
+		return;
+	}
 	
 	if (server == NULL)
 		server = g_strdup(gjc->user->server);
