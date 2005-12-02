@@ -54,6 +54,8 @@
 #define DEFAULT_GROUPCHAT "conference.jabber.org"
 #define DEFAULT_PORT 5222
 #define DEFAULT_PORT_SSL 5223
+#define JABBER_PORT_MIN 5220
+#define JABBER_PORT_MAX 5229
 
 #define JABBER_GROUP "Friends"
 
@@ -589,8 +591,8 @@ static void gjab_start(gjconn gjc)
 		port = DEFAULT_PORT;
 	else if (port == -1 && ssl)
 		port = DEFAULT_PORT_SSL;
-	else if (port != 5222 && port != 5223) {
-		serv_got_crap(GJ_GC(gjc), "Only port numbers 5222 and 5223 are allowed for Jabber connections.");
+	else if (port < JABBER_PORT_MIN || port > JABBER_PORT_MAX) {
+		serv_got_crap(GJ_GC(gjc), "For security reasons, the Jabber port number must be in the %d-%d range.", JABBER_PORT_MIN, JABBER_PORT_MAX);
 		STATE_EVT(JCONN_STATE_OFF)
 		return;
 	}

@@ -18,6 +18,9 @@ Version 1.0:
 - Incoming typing notifications now also come in as CTCP TYPING messages, for
   better consistency. Don't forget to update your scripts!
 - AIM typing notifications are supported now.
+- Jabber module only accepts ports 5220-5229 now, to prevent people from
+  abusing it as a port scanner. We aren't aware of any Jabber server that
+  runs on other ports than those. If you are, please warn us.
 
 Finished ...
 
