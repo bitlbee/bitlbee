@@ -665,7 +665,7 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 		
 		/* If there's a newline/space in this string, split up there,
 		   looks a bit prettier. */
-		if( ( nl = strrchr( msg, '\n' ) ) || ( nl = strchr( msg, ' ' ) ) )
+		if( ( nl = strrchr( msg, '\n' ) ) || ( nl = strrchr( msg, ' ' ) ) )
 		{
 			msg[425] = tmp;
 			tmp = *nl;
