@@ -38,23 +38,8 @@ A: 'root' is just the name for the most powerful user in BitlBee. Just like
    artistic creativity.
 
 Q: When is $random_feature going to be implemented?
-A: Please do consult doc/TODO (preferably in a development snapshot, which
-   is more up-to-date than a TODO in a release version) before asking.
-   Please also check the documentation. You'd not be the first one to request
-   a feature which already exists!
-   
-   If your fabulous feature seems not to be requested before, just join
-   #bitlbee on irc.oftc.net and tell us the news.
-   
-   If your feature request is already in the TODO list, of course you can
-   still request it again/make us know that you'd like to see the feature as
-   well. But when the feature is in the "post-1.0" list, it's probably not
-   going to help. Most of the features in this list are low-priority because
-   we (the developers) don't need (or even want) them. (File transfers are a
-   good example here.)
-   Hence, they'll only be implemented when we really got too much spare
-   time. Obviously, if you're willing to help (i.e. submit a patch), you're
-   always welcome.
+A: It depends on the feature. We keep a list of all wishlist "bugs" in our
+   Bug Tracking system at http://bugs.bitlbee.org/
 
 Q: The messages I send and/or receive look weird. I see weird characters and
    annoying HTML codes. Or, BitlBee does evil things when I send messages with
