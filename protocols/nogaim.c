@@ -704,7 +704,7 @@ void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout )
 		return;
 	
 	if( ( u = user_findhandle( gc, handle ) ) )
-		irc_privmsg( gc->irc, u, "PRIVMSG", gc->irc->nick, NULL, "\1TYPING \1" );
+		irc_privmsg( gc->irc, u, "PRIVMSG", gc->irc->nick, NULL, "\1TYPING 1\1" );
 }
 
 void serv_got_chat_left( struct gaim_connection *gc, int id )
