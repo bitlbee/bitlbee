@@ -107,11 +107,10 @@ not daemons).
 
 See utils/bitlbeed.c for more information about the program.
 
-Just a little note: We run our public server im.bitlbee.org for a couple of
-months now, and so far we haven't experienced this problem yet. The only
-BitlBee processes killed because of CPU-time overuse were running for a long
-time already, they were usually killed during the MSN login process (which
-is quite CPU-time consuming).
+Just a little note: Now that we reach version 1.0, this shouldn't be that
+much of an issue anymore. However, on a public server, especially if you
+also use it for other things, it can't hurt to protect yourself against
+possible problems.
 
 
 USAGE
@@ -144,6 +143,12 @@ WEBSITE
 
 You can find new releases of BitlBee at:
 http://www.bitlbee.org/
+
+The bug tracking system:
+http://bugs.bitlbee.org/
+
+Our version control system is Bazaar-NG. Our repository is at:
+http://code.bitlbee.org/
 
 
 A NOTE ON ENCRYPTION
@@ -186,5 +191,5 @@ also licensed under the GPL.
 
 	BitlBee - An IRC to other chat networks gateway 
 	          <http://www.bitlbee.org/>
-	Copyright (C) 2002-2004  Wilmer van der Gaast <wilmer@gaast.net>
+	Copyright (C) 2002-2005  Wilmer van der Gaast <wilmer@gaast.net>
 	                         and others
