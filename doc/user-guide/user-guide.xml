@@ -23,7 +23,10 @@
     </legalnotice>
 
    <releaseinfo>
-   		This is the initial release of the BitlBee User Guide.
+   		This is the BitlBee User Guide. For now, the on-line help is
+		the most up-to-date documentation. Although this document shares
+		some parts with the on-line help system, other parts might be
+		very outdated.
    </releaseinfo>
 
   </bookinfo>
