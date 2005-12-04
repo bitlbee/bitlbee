@@ -2442,10 +2442,20 @@ int gaim_parsemtn(aim_session_t *sess, aim_frame_t *fr, ...)
 	sn = va_arg(ap, char*);
 	type2 = va_arg(ap, int);
 	va_end(ap);
-
-	if(type2 == 0x0001 || type2 == 0x0002)
-		serv_got_typing(gc, sn, 0);
-
+    
+	if(type2 == 0x0002) {
+		/* User is typing */
+		serv_got_typing(gc, sn, 0, 1);
+	} 
+	else if (type2 == 0x0001) {
+		/* User has typed something, but is not actively typing (stale) */
+		serv_got_typing(gc, sn, 0, 2);
+	}
+	else {
+		/* User has stopped typing */
+		serv_got_typing(gc, sn, 0, 0);
+	}        
+	
 	return 1;
 }
 
