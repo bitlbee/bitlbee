@@ -342,33 +342,28 @@ echo
 echo Architecture: $arch
 case "$arch" in
 Linux )
-	echo 'Linux.'
 ;;
 GNU/* )
-	echo 'Debian with non-Linux kernel?'
 ;;
 *BSD )
-	echo '*BSD.'
 	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 SunOS )
-	echo 'Solaris.'
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
 	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 Darwin )
-	echo 'Darwin/Mac OS X.'
 	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 IRIX )
-	echo 'IRIX.'
 ;;
 CYGWIN* )
 	echo 'Cygwin is not officially supported.'
 ;;
 * )
-	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV. Please report any problems to <wilmer@gaast.net>.'
+	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'
+	echo 'Please report any problems at http://bugs.bitlbee.org/.'
 ;;
 esac
 
