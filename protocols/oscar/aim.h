@@ -465,6 +465,7 @@ int aim_addtlvtochain_availmsg(aim_tlvlist_t **list, const guint16 type, const c
 int aim_addtlvtochain_raw(aim_tlvlist_t **list, const guint16 t, const guint16 l, const guint8 *v);
 int aim_addtlvtochain_caps(aim_tlvlist_t **list, const guint16 t, const guint32 caps);
 int aim_addtlvtochain_noval(aim_tlvlist_t **list, const guint16 type);
+int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, guint16 type, guint16 exchange, const char *roomname, guint16 instance);
 int aim_addtlvtochain_userinfo(aim_tlvlist_t **list, guint16 type, aim_userinfo_t *ui);
 int aim_addtlvtochain_frozentlvlist(aim_tlvlist_t **list, guint16 type, aim_tlvlist_t **tl);
 int aim_counttlvchain(aim_tlvlist_t **list);
@@ -571,6 +572,11 @@ struct aim_chat_roominfo {
 	unsigned short instance;
 };
 
+struct aim_chat_invitation {
+	struct gaim_connection * gc;
+	char * name;
+	guint8 exchange;
+};
 
 #define AIM_VISIBILITYCHANGE_PERMITADD    0x05
 #define AIM_VISIBILITYCHANGE_PERMITREMOVE 0x06
