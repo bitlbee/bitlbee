@@ -164,7 +164,15 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		irc_free( irc );
 		return FALSE;
 	} 
-		
+	
+	/* Very naughty, go read the RFCs! >:) */
+	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )
+	{
+		log_message( LOGLVL_ERROR, "Maximum line length exceeded." );
+		irc_free( irc );
+		return FALSE;
+	}
+	
 	return TRUE;
 }
 

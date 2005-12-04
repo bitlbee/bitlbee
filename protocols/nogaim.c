@@ -451,7 +451,14 @@ void signoff( struct gaim_connection *gc )
 
 void do_error_dialog( struct gaim_connection *gc, char *msg, char *title )
 {
-	serv_got_crap( gc, "Error: %s", msg );
+	if( msg && title )
+		serv_got_crap( gc, "Error: %s: %s", title, msg );
+	else if( msg )
+		serv_got_crap( gc, "Error: %s", msg );
+	else if( title )
+		serv_got_crap( gc, "Error: %s", title );
+	else
+		serv_got_crap( gc, "Error" );
 }
 
 void do_ask_dialog( struct gaim_connection *gc, char *msg, void *data, void *doit, void *dont )
@@ -736,7 +743,7 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 		
 		/* If there's a newline/space in this string, split up there,
 		   looks a bit prettier. */
-		if( ( nl = strrchr( msg, '\n' ) ) || ( nl = strchr( msg, ' ' ) ) )
+		if( ( nl = strrchr( msg, '\n' ) ) || ( nl = strrchr( msg, ' ' ) ) )
 		{
 			msg[425] = tmp;
 			tmp = *nl;
@@ -768,7 +775,7 @@ void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout )
 		return;
 	
 	if( ( u = user_findhandle( gc, handle ) ) )
-		irc_msgfrom( gc->irc, u->nick, "\1TYPING 1\1" );
+		irc_privmsg( gc->irc, u, "PRIVMSG", gc->irc->nick, NULL, "\1TYPING 1\1" );
 }
 
 void serv_got_chat_left( struct gaim_connection *gc, int id )

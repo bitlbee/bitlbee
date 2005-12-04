@@ -21,10 +21,6 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #ifndef _WIN32
 #include <sys/utsname.h>
 #endif
@@ -58,6 +54,8 @@
 #define DEFAULT_GROUPCHAT "conference.jabber.org"
 #define DEFAULT_PORT 5222
 #define DEFAULT_PORT_SSL 5223
+#define JABBER_PORT_MIN 5220
+#define JABBER_PORT_MAX 5229
 
 #define JABBER_GROUP "Friends"
 
@@ -540,16 +538,16 @@ static void gjab_connected_ssl(gpointer data, void *source, GaimInputCondition c
 	struct jabber_data *jd;
 	gjconn gjc;
 	
-	if (!g_slist_find(get_connections(), gc)) {
-		ssl_disconnect(source);
-		return;
-	}
-	
 	jd = gc->proto_data;
 	gjc = jd->gjc;
 	
 	if (source == NULL) {
 		STATE_EVT(JCONN_STATE_OFF)
+		return;
+	}
+	
+	if (!g_slist_find(get_connections(), gc)) {
+		ssl_disconnect(source);
 		return;
 	}
 	
@@ -588,6 +586,11 @@ static void gjab_start(gjconn gjc)
 		port = DEFAULT_PORT;
 	else if (port == -1 && ssl)
 		port = DEFAULT_PORT_SSL;
+	else if (port < JABBER_PORT_MIN || port > JABBER_PORT_MAX) {
+		serv_got_crap(GJ_GC(gjc), "For security reasons, the Jabber port number must be in the %d-%d range.", JABBER_PORT_MIN, JABBER_PORT_MAX);
+		STATE_EVT(JCONN_STATE_OFF)
+		return;
+	}
 	
 	if (server == NULL)
 		server = g_strdup(gjc->user->server);

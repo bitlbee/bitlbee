@@ -1509,7 +1509,7 @@ int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char
 			else
 			{
 				irc_write( irc, ":%s!%s@%s %s %s :%s%s", u->nick, u->user, u->host,
-				           type, to, prefix, line );
+				           type, to, prefix ? prefix : "", line );
 			}
 			line = s + 1;
 		}
