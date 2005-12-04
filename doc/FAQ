@@ -45,8 +45,11 @@ Q: The messages I send and/or receive look weird. I see weird characters and
    annoying HTML codes. Or, BitlBee does evil things when I send messages with
    non-ASCII characters!
 A: You probably have to change some settings. To get rid of HTML in messages,
-   see "help set html". If you seem to have problems with your charset, see
-   "help set charset".
+   see "help set strip_html". If you seem to have problems with your charset,
+   see "help set charset".
+   
+   Although actually most of these problems should be gone by now. So if you
+   can't get things to work well, you might have found a bug.
 
 Q: Is BitlBee forked from Gaim?
 A: BitlBee 0.7 was, sort-of. It contained a lot of code from Gaim 0.58

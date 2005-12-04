@@ -21,8 +21,15 @@ Version 1.0:
 - Jabber module only accepts ports 5220-5229 now, to prevent people from
   abusing it as a port scanner. We aren't aware of any Jabber server that
   runs on other ports than those. If you are, please warn us.
+- Send flood protection can't be enabled anymore. It was disabled by default
+  for a good reason for some time already, but some package maintainers
+  turned it back on while it's way too unreliable and trigger-happy to be
+  used.
+- Removed TODO file, the current to-do list is always in the on-line bug
+  tracking system.
+- Fixed a potential DoS bug in input handling.
 
-Finished ...
+Finished 4 Dec 2005
 
 Version 0.99:
 - Fixed memory initialization bug in OSCAR module that caused crashes on
