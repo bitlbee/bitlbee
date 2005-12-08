@@ -115,15 +115,19 @@ int cmd_register( irc_t *irc, char **cmd )
 		return( 0 );
 	}
 
-	if( !global.storage->exists( irc->nick )) 
-	{
-		setpassnc( irc, cmd[1] );
-		root_command_string( irc, user_find( irc, irc->mynick ), "save", 0 );
-		irc->status = USTATUS_IDENTIFIED;
-	}
-	else
-	{
-		irc_usermsg( irc, "Nick is already registered" );
+	setpassnc( irc, cmd[1] );
+	switch( global.storage->save( irc, FALSE )) {
+		case STORAGE_ALREADY_EXISTS:
+			irc_usermsg( irc, "Nick is already registered" );
+			break;
+			
+		case STORAGE_OK:
+			irc->status = USTATUS_IDENTIFIED;
+			break;
+
+		default:
+			irc_usermsg( irc, "Error registering" );
+			break;
 	}
 	
 	return( 0 );
@@ -131,24 +135,24 @@ int cmd_register( irc_t *irc, char **cmd )
 
 int cmd_drop( irc_t *irc, char **cmd )
 {
-	if( ! global.storage->exists (irc->nick) )
-	{
+	storage_status_t status;
+	
+	status = global.storage->remove (irc->nick, cmd[1]);
+	switch (status) {
+	case STORAGE_NO_SUCH_USER:
 		irc_usermsg( irc, "That account does not exist" );
 		return( 0 );
-	}
-
-	if ( global.storage->check_pass (irc->nick, cmd[1]) ) 
-	{
+	case STORAGE_INVALID_PASSWORD:
 		irc_usermsg( irc, "Password invalid" );
 		return( 0 );
+	case STORAGE_OK:
+		setpassnc( irc, NULL );
+		irc_usermsg( irc, "Account `%s' removed", irc->nick );
+		return( 0 );
+	default:
+		irc_usermsg( irc, "Error: '%d'", status );
+		return( 0 );
 	}
-	
-	global.storage->remove (irc->nick);
-	
-	setpassnc( irc, NULL );
-	irc_usermsg( irc, "Files belonging to account `%s' removed", irc->nick );
-	
-	return( 0 );
 }
 
 int cmd_account( irc_t *irc, char **cmd )
@@ -613,7 +617,7 @@ int cmd_set( irc_t *irc, char **cmd )
 
 int cmd_save( irc_t *irc, char **cmd )
 {
-	if( global.storage->save( irc ) )
+	if( global.storage->save( irc, TRUE ) )
 		irc_usermsg( irc, "Configuration saved" );
 	else
 		irc_usermsg( irc, "Configuration could not be saved!" );

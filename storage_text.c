@@ -35,7 +35,7 @@ static void text_init (void)
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", global.conf->configdir );
 }
 
-static int text_load ( const char *my_nick, const char* password, irc_t *irc )
+static storage_status_t text_load ( const char *my_nick, const char* password, irc_t *irc )
 {
 	char s[512];
 	char *line;
@@ -49,13 +49,13 @@ static int text_load ( const char *my_nick, const char* password, irc_t *irc )
 	
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".accounts" );
    	fp = fopen( s, "r" );
-   	if( !fp ) return( 0 );
+   	if( !fp ) return STORAGE_NO_SUCH_USER;
 	
 	fscanf( fp, "%32[^\n]s", s );
 	if( setpass( irc, password, s ) < 0 )
 	{
 		fclose( fp );
-		return( -1 );
+		return STORAGE_INVALID_PASSWORD;
 	}
 	
 	/* Do this now. If the user runs with AuthMode = Registered, the
@@ -73,7 +73,7 @@ static int text_load ( const char *my_nick, const char* password, irc_t *irc )
 	
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".nicks" );
 	fp = fopen( s, "r" );
-	if( !fp ) return( 0 );
+	if( !fp ) return STORAGE_NO_SUCH_USER;
 	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
 	{
 		http_decode( s );
@@ -87,10 +87,10 @@ static int text_load ( const char *my_nick, const char* password, irc_t *irc )
 		root_command_string( irc, ru, s, 0 );
 	}
 	
-	return( 1 );
+	return STORAGE_OK;
 }
 
-static int text_save( irc_t *irc )
+static storage_status_t text_save( irc_t *irc, int overwrite )
 {
 	char s[512];
 	char path[512], new_path[512];
@@ -101,6 +101,16 @@ static int text_save( irc_t *irc )
 	account_t *a;
 	FILE *fp;
 	char *hash;
+
+	if (!overwrite) {
+		g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
+		if (access( path, F_OK ) != -1)
+			return STORAGE_ALREADY_EXISTS;
+	
+		g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
+		if (access( path, F_OK ) != -1)
+			return STORAGE_ALREADY_EXISTS;
+	}
 	
 	/*\
 	 *  [SH] Nothing should be saved if no password is set, because the
@@ -126,7 +136,7 @@ static int text_save( irc_t *irc )
 	
 	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
 	fp = fopen( path, "w" );
-	if( !fp ) return( 0 );
+	if( !fp ) return STORAGE_OTHER_ERROR;
 	for( n = irc->nicks; n; n = n->next )
 	{
 		strcpy( s, n->handle );
@@ -137,13 +147,13 @@ static int text_save( irc_t *irc )
 		{
 			irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
 			fclose( fp );
-			return( 0 );
+			return STORAGE_OTHER_ERROR;
 		}
 	}
 	if( fclose( fp ) != 0 )
 	{
 		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
-		return( 0 );
+		return STORAGE_OTHER_ERROR;
 	}
   
 	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
@@ -152,23 +162,23 @@ static int text_save( irc_t *irc )
 		if( errno != ENOENT )
 		{
 			irc_usermsg( irc, "Error while removing old .nicks file" );
-			return( 0 );
+			return STORAGE_OTHER_ERROR;
 		}
 	}
 	if( rename( path, new_path ) != 0 )
 	{
 		irc_usermsg( irc, "Error while renaming new .nicks file" );
-		return( 0 );
+		return STORAGE_OTHER_ERROR;
 	}
 	
 	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts~" );
 	fp = fopen( path, "w" );
-	if( !fp ) return( 0 );
+	if( !fp ) return STORAGE_OTHER_ERROR;
 	if( fprintf( fp, "%s", hash ) != strlen( hash ) )
 	{
 		irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
 		fclose( fp );
-		return( 0 );
+		return STORAGE_OTHER_ERROR;
 	}
 	g_free( hash );
 
@@ -187,7 +197,7 @@ static int text_save( irc_t *irc )
 			{
 				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
 				fclose( fp );
-				return( 0 );
+				return STORAGE_OTHER_ERROR;
 			}
 		}
 		g_free( line );
@@ -205,7 +215,7 @@ static int text_save( irc_t *irc )
 				{
 					irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
 					fclose( fp );
-					return( 0 );
+					return STORAGE_OTHER_ERROR;
 				}
 			}
 			g_free( line );
@@ -222,7 +232,7 @@ static int text_save( irc_t *irc )
 			{
 				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
 				fclose( fp );
-				return( 0 );
+				return STORAGE_OTHER_ERROR;
 			}
 		}
 		g_free( line );
@@ -230,7 +240,7 @@ static int text_save( irc_t *irc )
 	if( fclose( fp ) != 0 )
 	{
 		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
-		return( 0 );
+		return STORAGE_OTHER_ERROR;
 	}
 	
  	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
@@ -239,69 +249,49 @@ static int text_save( irc_t *irc )
 		if( errno != ENOENT )
 		{
 			irc_usermsg( irc, "Error while removing old .accounts file" );
-			return( 0 );
+			return STORAGE_OTHER_ERROR;
 		}
 	}
 	if( rename( path, new_path ) != 0 )
 	{
 		irc_usermsg( irc, "Error while renaming new .accounts file" );
-		return( 0 );
+		return STORAGE_OTHER_ERROR;
 	}
 	
 	umask( ou );
 	
-	return( 1 );
+	return STORAGE_OK;
 }
 
-static int text_exists( const char *nick )
-{
-	char path[512];
-	int checkie;
-
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, nick, ".accounts" );
-	checkie = access( path, F_OK );
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, nick, ".nicks" );
-	checkie += access( path, F_OK );
-	
-	return ( checkie != -2 );
-}
-
-static int text_remove( const char *nick )
-{
-	char s[512];
-
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".accounts" );
-	if (unlink( s ) == -1)
-		return( 1 );
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".nicks" );
-	if (unlink( s ) == -1)
-		return( 1 );
-
-	return( 0 );
-}
-
-static int text_check_pass( const char *nick, const char *password )
+static storage_status_t text_remove( const char *nick, const char *password )
 {
 	char s[512];
 	FILE *fp;
 	
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".nicks" );
 	fp = fopen( s, "r" );
+	if (!fp)
+		return STORAGE_NO_SUCH_USER;
 
 	fscanf( fp, "%32[^\n]s", s );
 	fclose( fp );
 
-	/* FIXME */
-	return( 0 );
+	/*FIXME Test if password is correct */
+
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".accounts" );
+	if (unlink( s ) == -1)
+		return STORAGE_OTHER_ERROR;
+	
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".nicks" );
+	if (unlink( s ) == -1)
+		return STORAGE_OTHER_ERROR;
+
+	return STORAGE_OK;
 }
 
 storage_t storage_text = {
 	.name = "text",
 	.init = text_init,
-	.exists = text_exists,
-	.check_pass = text_check_pass,
 	.remove = text_remove,
 	.load = text_load,
 	.save = text_save

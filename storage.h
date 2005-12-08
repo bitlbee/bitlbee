@@ -26,20 +26,28 @@
 #ifndef __STORAGE_H__
 #define __STORAGE_H__
 
+typedef enum {
+	STORAGE_OK = 0,
+	STORAGE_NO_SUCH_USER,
+	STORAGE_INVALID_PASSWORD,
+	STORAGE_ALREADY_EXISTS,
+	STORAGE_OTHER_ERROR /* Error that isn't caused by user input, such as 
+						   a database that is unreachable. log() will be 
+						   used for the exact error message */
+} storage_status_t;
+
 typedef struct {
 	const char *name;
 	
 	/* May be set to NULL if not required */
 	void (*init) (void);
 
-	int (*load) (const char *nick, const char *password, irc_t * irc);
-	int (*exists) (const char *nick);
-	int (*save) (irc_t *irc);
-	int (*remove) (const char *nick);
-	int (*check_pass) (const char *nick, const char *pass);
+	storage_status_t (*load) (const char *nick, const char *password, irc_t * irc);
+	storage_status_t (*save) (irc_t *irc, int overwrite);
+	storage_status_t (*remove) (const char *nick, const char *password);
 
 	/* May be NULL if not supported by backend */
-	int (*rename) (const char *onick, const char *nnick, const char *password);
+	storage_status_t (*rename) (const char *onick, const char *nnick, const char *password);
 } storage_t;
 
 void register_storage_backend(storage_t *);

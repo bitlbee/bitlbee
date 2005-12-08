@@ -153,7 +153,7 @@ void irc_free(irc_t * irc)
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
 	if( irc->status >= USTATUS_IDENTIFIED && set_getint( irc, "save_on_quit" ) ) 
-		if( !global.storage->save( irc ) )
+		if( !global.storage->save( irc, TRUE ) )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
 	if( irc->ping_source_id > 0 )
