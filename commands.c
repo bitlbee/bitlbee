@@ -113,7 +113,7 @@ int cmd_register( irc_t *irc, char **cmd )
 		return( 0 );
 	}
 
-	setpassnc( irc, cmd[1] );
+	irc_setpass( irc, cmd[1] );
 	switch( global.storage->save( irc, FALSE )) {
 		case STORAGE_ALREADY_EXISTS:
 			irc_usermsg( irc, "Nick is already registered" );
@@ -144,7 +144,7 @@ int cmd_drop( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Password invalid" );
 		return( 0 );
 	case STORAGE_OK:
-		setpassnc( irc, NULL );
+		irc_setpass( irc, NULL );
 		irc_usermsg( irc, "Account `%s' removed", irc->nick );
 		return( 0 );
 	default:

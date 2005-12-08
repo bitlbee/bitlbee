@@ -52,7 +52,8 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
    	if( !fp ) return STORAGE_NO_SUCH_USER;
 	
 	fscanf( fp, "%32[^\n]s", s );
-	if( setpass( irc, password, s ) < 0 )
+
+	if (checkpass (password, s) != 0) 
 	{
 		fclose( fp );
 		return STORAGE_INVALID_PASSWORD;
@@ -276,7 +277,8 @@ static storage_status_t text_check_pass( const char *nick, const char *password 
 	fscanf( fp, "%32[^\n]s", s );
 	fclose( fp );
 
-	/*FIXME: Check password */
+	if (checkpass( password, s) == -1)
+		return STORAGE_INVALID_PASSWORD;
 
 	return STORAGE_OK;
 }
