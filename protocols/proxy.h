@@ -55,6 +55,6 @@ typedef void (*GaimInputFunction)(gpointer, gint, GaimInputCondition);
 G_MODULE_EXPORT gint gaim_input_add(int, GaimInputCondition, GaimInputFunction, gpointer);
 G_MODULE_EXPORT void gaim_input_remove(gint);
 
-G_MODULE_EXPORT int proxy_connect(char *host, int port, GaimInputFunction func, gpointer data);
+G_MODULE_EXPORT int proxy_connect(const char *host, int port, GaimInputFunction func, gpointer data);
 
 #endif /* _PROXY_H_ */

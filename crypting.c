@@ -45,9 +45,6 @@ typedef struct irc
 	char *password;
 } irc_t;
 
-#define set_add( a, b, c, d )
-#define set_find( a, b ) NULL
-
 #include "md5.h"
 #include "crypting.h"
 #include <string.h>
@@ -68,9 +65,6 @@ typedef struct irc
    Sets pass without checking */
 void setpassnc (irc_t *irc, const char *pass) 
 {
-	if (!set_find (irc, "password"))
-		set_add (irc, "password", NULL, passchange);
-	
 	if (irc->password) g_free (irc->password);
 	
 	if (pass) {
@@ -81,12 +75,8 @@ void setpassnc (irc_t *irc, const char *pass)
 	}
 }
 
-char *passchange (irc_t *irc, void *set, char *value) {
-	setpassnc (irc, value);
-	return (NULL);
-}
-
-int setpass (irc_t *irc, const char *pass, char* md5sum) {
+int setpass (irc_t *irc, const char *pass, const char* md5sum) 
+{
 	md5_state_t md5state;
 	md5_byte_t digest[16];
 	int i, j;
