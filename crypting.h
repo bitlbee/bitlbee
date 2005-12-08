@@ -23,9 +23,9 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-void setpassnc (irc_t *irc, char *pass); /* USE WITH CAUTION! */
-char *passchange (irc_t *irc, void *set, char *value);
-int setpass (irc_t *irc, char *pass, char* md5sum);
+void setpassnc (irc_t *irc, const char *pass); /* USE WITH CAUTION! */
+char *passchange (irc_t *irc, void *set, const char *value);
+int setpass (irc_t *irc, const char *pass, const char* md5sum);
 char *hashpass (irc_t *irc);
 char *obfucrypt (irc_t *irc, char *line);
 char *deobfucrypt (irc_t *irc, char *line);

@@ -243,7 +243,7 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	}
 }
 
-int bitlbee_load( irc_t *irc, char* password )
+int bitlbee_load( irc_t *irc, const char* password )
 {
 	char s[512];
 	char *line;

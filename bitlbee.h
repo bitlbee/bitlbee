@@ -126,7 +126,7 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 
 int root_command_string( irc_t *irc, user_t *u, char *command, int flags );
 int root_command( irc_t *irc, char *command[] );
-int bitlbee_load( irc_t *irc, char *password );
+int bitlbee_load( irc_t *irc, const char *password );
 int bitlbee_save( irc_t *irc );
 void bitlbee_shutdown( gpointer data );
 double gettime( void );

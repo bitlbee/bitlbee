@@ -26,7 +26,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
-void nick_set( irc_t *irc, char *handle, int proto, char *nick )
+void nick_set( irc_t *irc, const char *handle, int proto, const char *nick )
 {
 	nick_t *m = NULL, *n = irc->nicks;
 	
@@ -55,7 +55,7 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 	nick_strip( n->nick );
 }
 
-char *nick_get( irc_t *irc, char *handle, int proto, const char *realname )
+char *nick_get( irc_t *irc, const char *handle, int proto, const char *realname )
 {
 	static char nick[MAX_NICK_LENGTH+1];
 	nick_t *n = irc->nicks;
@@ -128,7 +128,7 @@ char *nick_get( irc_t *irc, char *handle, int proto, const char *realname )
 	return( nick );
 }
 
-void nick_del( irc_t *irc, char *nick )
+void nick_del( irc_t *irc, const char *nick )
 {
 	nick_t *l = NULL, *n = irc->nicks;
 	
@@ -175,9 +175,9 @@ void nick_strip( char * nick )
 		nick[j++] = '\0';
 }
 
-int nick_ok( char *nick )
+int nick_ok( const char *nick )
 {
-	char *s;
+	const char *s;
 	
 	/* Empty/long nicks are not allowed */
 	if( !*nick || strlen( nick ) > MAX_NICK_LENGTH )
@@ -236,7 +236,7 @@ int nick_uc( char *nick )
 	return( 1 );
 }
 
-int nick_cmp( char *a, char *b )
+int nick_cmp( const char *a, const char *b )
 {
 	char aa[1024] = "", bb[1024] = "";
 	
@@ -252,12 +252,7 @@ int nick_cmp( char *a, char *b )
 	}
 }
 
-char *nick_dup( char *nick )
+char *nick_dup( const char *nick )
 {
-	char *cp;
-	
-	cp = g_new0 ( char, MAX_NICK_LENGTH + 1 );
-	strncpy( cp, nick, MAX_NICK_LENGTH );
-	
-	return( cp );
+	return g_strndup( nick, MAX_NICK_LENGTH );
 }

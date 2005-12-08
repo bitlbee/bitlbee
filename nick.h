@@ -31,13 +31,13 @@ typedef struct __NICK
 	struct __NICK *next;
 } nick_t;
 
-void nick_set( irc_t *irc, char *handle, int proto, char *nick );
-char *nick_get( irc_t *irc, char *handle, int proto, const char *realname );
-void nick_del( irc_t *irc, char *nick );
+void nick_set( irc_t *irc, const char *handle, int proto, const char *nick );
+char *nick_get( irc_t *irc, const char *handle, int proto, const char *realname );
+void nick_del( irc_t *irc, const char *nick );
 void nick_strip( char *nick );
 
-int nick_ok( char *nick );
+int nick_ok( const char *nick );
 int nick_lc( char *nick );
 int nick_uc( char *nick );
-int nick_cmp( char *a, char *b );
-char *nick_dup( char *nick );
+int nick_cmp( const char *a, const char *b );
+char *nick_dup( const char *nick );
