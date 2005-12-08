@@ -7,3 +7,5 @@ help.txt
 debian
 build-arch-stamp
 tags
+decode
+encode
