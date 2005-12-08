@@ -42,6 +42,8 @@ typedef struct {
 	/* May be set to NULL if not required */
 	void (*init) (void);
 
+	storage_status_t (*check_pass) (const char *nick, const char *password);
+
 	storage_status_t (*load) (const char *nick, const char *password, irc_t * irc);
 	storage_status_t (*save) (irc_t *irc, int overwrite);
 	storage_status_t (*remove) (const char *nick, const char *password);

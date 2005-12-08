@@ -263,7 +263,7 @@ static storage_status_t text_save( irc_t *irc, int overwrite )
 	return STORAGE_OK;
 }
 
-static storage_status_t text_remove( const char *nick, const char *password )
+static storage_status_t text_check_pass( const char *nick, const char *password )
 {
 	char s[512];
 	FILE *fp;
@@ -277,6 +277,18 @@ static storage_status_t text_remove( const char *nick, const char *password )
 	fclose( fp );
 
 	/*FIXME Test if password is correct */
+
+	return STORAGE_OK;
+}
+
+static storage_status_t text_remove( const char *nick, const char *password )
+{
+	char s[512];
+	storage_status_t status;
+
+	status = text_check_pass( nick, password );
+	if (status != STORAGE_OK)
+		return status;
 
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".accounts" );
 	if (unlink( s ) == -1)
@@ -292,6 +304,7 @@ static storage_status_t text_remove( const char *nick, const char *password )
 storage_t storage_text = {
 	.name = "text",
 	.init = text_init,
+	.check_pass = text_check_pass,
 	.remove = text_remove,
 	.load = text_load,
 	.save = text_save
