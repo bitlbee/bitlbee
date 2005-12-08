@@ -49,6 +49,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->port = 6667;
 	conf->nofork = 0;
 	conf->verbose = 0;
+	conf->storage = "text";
 	conf->runmode = RUNMODE_INETD;
 	conf->authmode = AUTHMODE_OPEN;
 	conf->password = NULL;
@@ -196,6 +197,11 @@ static int conf_loadini( conf_t *conf, char *file )
 			{
 				g_free( conf->motdfile );
 				conf->motdfile = g_strdup( ini->value );
+			}
+			else if( g_strcasecmp( ini->key, "storage" ) == 0 )
+			{
+				g_free( conf->storage );
+				conf->storage = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "pinginterval" ) == 0 )
 			{

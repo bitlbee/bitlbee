@@ -85,7 +85,7 @@ int cmd_help( irc_t *irc, char **cmd )
 
 int cmd_identify( irc_t *irc, char **cmd )
 {
-	int checkie = bitlbee_load( irc, cmd[1] );
+	int checkie = global.storage->load( irc->nick, cmd[1], irc );
 	
 	if( checkie == -1 )
 	{
@@ -109,22 +109,13 @@ int cmd_identify( irc_t *irc, char **cmd )
 
 int cmd_register( irc_t *irc, char **cmd )
 {
-	int checkie;
-	char path[512];
-	
 	if( global.conf->authmode == AUTHMODE_REGISTERED )
 	{
 		irc_usermsg( irc, "This server does not allow registering new accounts" );
 		return( 0 );
 	}
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-	checkie = access( path, F_OK );
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-	checkie += access( path, F_OK );
-	
-	if( checkie == -2 )
+
+	if( !global.storage->exists( irc->nick )) 
 	{
 		setpassnc( irc, cmd[1] );
 		root_command_string( irc, user_find( irc, irc->mynick ), "save", 0 );
@@ -140,30 +131,19 @@ int cmd_register( irc_t *irc, char **cmd )
 
 int cmd_drop( irc_t *irc, char **cmd )
 {
-	char s[512];
-	FILE *fp;
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-	fp = fopen( s, "r" );
-	if( !fp )
+	if( ! global.storage->exists (irc->nick) )
 	{
 		irc_usermsg( irc, "That account does not exist" );
 		return( 0 );
 	}
-	
-	fscanf( fp, "%32[^\n]s", s );
-	fclose( fp );
-	if( setpass( irc, cmd[1], s ) < 0 )
+
+	if ( global.storage->check_pass (irc->nick, cmd[1]) ) 
 	{
-		irc_usermsg( irc, "Incorrect password" );
+		irc_usermsg( irc, "Password invalid" );
 		return( 0 );
 	}
 	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-	unlink( s );
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-	unlink( s );
+	global.storage->remove (irc->nick);
 	
 	setpassnc( irc, NULL );
 	irc_usermsg( irc, "Files belonging to account `%s' removed", irc->nick );
@@ -633,7 +613,7 @@ int cmd_set( irc_t *irc, char **cmd )
 
 int cmd_save( irc_t *irc, char **cmd )
 {
-	if( bitlbee_save( irc ) )
+	if( global.storage->save( irc ) )
 		irc_usermsg( irc, "Configuration saved" );
 	else
 		irc_usermsg( irc, "Configuration could not be saved!" );

@@ -1,10 +1,10 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Sjoerd Hemminga and others                     *
+  * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* A little bit of encryption for the users' passwords                  */
+/* Layer for retrieving and storing buddy information */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,9 +23,26 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-void setpassnc (irc_t *irc, const char *pass); /* USE WITH CAUTION! */
-char *passchange (irc_t *irc, void *set, char *value);
-int setpass (irc_t *irc, const char *pass, char* md5sum);
-char *hashpass (irc_t *irc);
-char *obfucrypt (irc_t *irc, char *line);
-char *deobfucrypt (irc_t *irc, char *line);
+#ifndef __STORAGE_H__
+#define __STORAGE_H__
+
+typedef struct {
+	const char *name;
+	
+	/* May be set to NULL if not required */
+	void (*init) (void);
+
+	int (*load) (const char *nick, const char *password, irc_t * irc);
+	int (*exists) (const char *nick);
+	int (*save) (irc_t *irc);
+	int (*remove) (const char *nick);
+	int (*check_pass) (const char *nick, const char *pass);
+
+	/* May be NULL if not supported by backend */
+	int (*rename) (const char *onick, const char *nnick, const char *password);
+} storage_t;
+
+void register_storage_backend(storage_t *);
+storage_t *storage_init(const char *name);
+
+#endif /* __STORAGE_H__ */

@@ -66,7 +66,8 @@ typedef struct irc
 
 /* USE WITH CAUTION!
    Sets pass without checking */
-void setpassnc (irc_t *irc, char *pass) {
+void setpassnc (irc_t *irc, const char *pass) 
+{
 	if (!set_find (irc, "password"))
 		set_add (irc, "password", NULL, passchange);
 	
@@ -85,7 +86,7 @@ char *passchange (irc_t *irc, void *set, char *value) {
 	return (NULL);
 }
 
-int setpass (irc_t *irc, char *pass, char* md5sum) {
+int setpass (irc_t *irc, const char *pass, char* md5sum) {
 	md5_state_t md5state;
 	md5_byte_t digest[16];
 	int i, j;
