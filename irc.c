@@ -31,6 +31,12 @@ static gboolean irc_userping( gpointer _irc );
 
 GSList *irc_connection_list = NULL;
 
+char *passchange (irc_t *irc, void *set, char *value) 
+{
+	setpassnc (irc, value);
+	return (NULL);
+}
+
 irc_t *irc_new( int fd )
 {
 	irc_t *irc = g_new0( irc_t, 1 );
@@ -128,6 +134,7 @@ irc_t *irc_new( int fd )
 	set_add( irc, "strip_html", "true", NULL );
 	set_add( irc, "to_char", ": ", set_eval_to_char );
 	set_add( irc, "typing_notice", "false", set_eval_bool );
+	set_add( irc, "password", NULL, passchange);
 	
 	conf_loaddefaults( irc );
 	
