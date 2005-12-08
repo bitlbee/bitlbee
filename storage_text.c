@@ -276,7 +276,7 @@ static storage_status_t text_check_pass( const char *nick, const char *password 
 	fscanf( fp, "%32[^\n]s", s );
 	fclose( fp );
 
-	/*FIXME Test if password is correct */
+	/*FIXME: Check password */
 
 	return STORAGE_OK;
 }

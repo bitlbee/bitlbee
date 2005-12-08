@@ -85,23 +85,21 @@ int cmd_help( irc_t *irc, char **cmd )
 
 int cmd_identify( irc_t *irc, char **cmd )
 {
-	int checkie = global.storage->load( irc->nick, cmd[1], irc );
+	storage_status_t status = global.storage->load( irc->nick, cmd[1], irc );
 	
-	if( checkie == -1 )
-	{
+	switch (status) {
+	case STORAGE_INVALID_PASSWORD:
 		irc_usermsg( irc, "Incorrect password" );
-	}
-	else if( checkie == 0 )
-	{
+		break;
+	case STORAGE_NO_SUCH_USER:
 		irc_usermsg( irc, "The nick is (probably) not registered" );
-	}
-	else if( checkie == 1 )
-	{
+		break;
+	case STORAGE_OK:
 		irc_usermsg( irc, "Password accepted" );
-	}
-	else
-	{
+		break;
+	default:
 		irc_usermsg( irc, "Something very weird happened" );
+		break;
 	}
 	
 	return( 0 );
@@ -617,7 +615,7 @@ int cmd_set( irc_t *irc, char **cmd )
 
 int cmd_save( irc_t *irc, char **cmd )
 {
-	if( global.storage->save( irc, TRUE ) )
+	if( global.storage->save( irc, TRUE ) == STORAGE_OK )
 		irc_usermsg( irc, "Configuration saved" );
 	else
 		irc_usermsg( irc, "Configuration could not be saved!" );
