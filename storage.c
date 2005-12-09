@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* Configuration reading code						*/
+/* Support for multiple storage backends */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,30 +23,36 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef __CONF_H
-#define __CONF_H
+#define BITLBEE_CORE
+#include "bitlbee.h"
+#include "crypting.h"
 
-typedef enum runmode { RUNMODE_DAEMON, RUNMODE_INETD } runmode_t;
-typedef enum authmode { AUTHMODE_OPEN, AUTHMODE_CLOSED, AUTHMODE_REGISTERED } authmode_t;
+extern storage_t storage_text;
 
-typedef struct conf
+static GList text_entry = { &storage_text, NULL, NULL };
+static GList *storage_backends = &text_entry;
+
+void register_storage_backend(storage_t *backend)
 {
-	char *iface;
-	signed int port;
-	int nofork;
-	int verbose;
-	runmode_t runmode;
-	authmode_t authmode;
-	char *password;
-	char *hostname;
-	char *configdir;
-	char *motdfile;
-	char *storage;
-	int ping_interval;
-	int ping_timeout;
-} conf_t;
+	storage_backends = g_list_append(storage_backends, backend);
+}
 
-conf_t *conf_load( int argc, char *argv[] );
-void conf_loaddefaults( irc_t *irc );
+storage_t *storage_init(const char *name)
+{
+	GList *gl;
+	storage_t *st;
 
-#endif
+	for (gl = storage_backends; gl; gl = gl->next) {
+		st = gl->data;
+		if (strcmp(st->name, name) == 0)
+			break;
+	}
+
+	if (gl == NULL) 
+		return NULL;
+
+	if (st->init)
+		st->init();
+
+	return st;
+}

@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* Configuration reading code						*/
+/* Layer for retrieving and storing buddy information */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,30 +23,36 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef __CONF_H
-#define __CONF_H
+#ifndef __STORAGE_H__
+#define __STORAGE_H__
 
-typedef enum runmode { RUNMODE_DAEMON, RUNMODE_INETD } runmode_t;
-typedef enum authmode { AUTHMODE_OPEN, AUTHMODE_CLOSED, AUTHMODE_REGISTERED } authmode_t;
+typedef enum {
+	STORAGE_OK = 0,
+	STORAGE_NO_SUCH_USER,
+	STORAGE_INVALID_PASSWORD,
+	STORAGE_ALREADY_EXISTS,
+	STORAGE_OTHER_ERROR /* Error that isn't caused by user input, such as 
+						   a database that is unreachable. log() will be 
+						   used for the exact error message */
+} storage_status_t;
 
-typedef struct conf
-{
-	char *iface;
-	signed int port;
-	int nofork;
-	int verbose;
-	runmode_t runmode;
-	authmode_t authmode;
-	char *password;
-	char *hostname;
-	char *configdir;
-	char *motdfile;
-	char *storage;
-	int ping_interval;
-	int ping_timeout;
-} conf_t;
+typedef struct {
+	const char *name;
+	
+	/* May be set to NULL if not required */
+	void (*init) (void);
 
-conf_t *conf_load( int argc, char *argv[] );
-void conf_loaddefaults( irc_t *irc );
+	storage_status_t (*check_pass) (const char *nick, const char *password);
 
-#endif
+	storage_status_t (*load) (const char *nick, const char *password, irc_t * irc);
+	storage_status_t (*save) (irc_t *irc, int overwrite);
+	storage_status_t (*remove) (const char *nick, const char *password);
+
+	/* May be NULL if not supported by backend */
+	storage_status_t (*rename) (const char *onick, const char *nnick, const char *password);
+} storage_t;
+
+void register_storage_backend(storage_t *);
+storage_t *storage_init(const char *name);
+
+#endif /* __STORAGE_H__ */

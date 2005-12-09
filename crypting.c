@@ -51,8 +51,6 @@ typedef struct irc
 #include <stdio.h>
 #include <stdlib.h>
 
-#define irc_usermsg
-
 #endif
 
 /*\
@@ -61,21 +59,7 @@ typedef struct irc
  * correctness.
 \*/
 
-/* USE WITH CAUTION!
-   Sets pass without checking */
-void setpassnc (irc_t *irc, const char *pass) 
-{
-	if (irc->password) g_free (irc->password);
-	
-	if (pass) {
-		irc->password = g_strdup (pass);
-		irc_usermsg (irc, "Password successfully changed");
-	} else {
-		irc->password = NULL;
-	}
-}
-
-int setpass (irc_t *irc, const char *pass, const char* md5sum) 
+int checkpass (const char *pass, const char *md5sum)
 {
 	md5_state_t md5state;
 	md5_byte_t digest[16];
@@ -93,12 +77,10 @@ int setpass (irc_t *irc, const char *pass, const char* md5sum)
 		if (digits[0] != md5sum[j]) return (-1);
 		if (digits[1] != md5sum[j + 1]) return (-1);
 	}
-	
-	/* If pass is correct, we end up here and we set the pass */
-	setpassnc (irc, pass);
-	
-	return (0);
+
+	return( 0 );
 }
+
 
 char *hashpass (irc_t *irc) {
 	md5_state_t md5state;

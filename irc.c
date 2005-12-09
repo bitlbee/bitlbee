@@ -31,9 +31,9 @@ static gboolean irc_userping( gpointer _irc );
 
 GSList *irc_connection_list = NULL;
 
-char *passchange (irc_t *irc, void *set, char *value) 
+static char *passchange (irc_t *irc, void *set, char *value) 
 {
-	setpassnc (irc, value);
+	irc_setpass (irc, value);
 	return (NULL);
 }
 
@@ -160,7 +160,7 @@ void irc_free(irc_t * irc)
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
 	if( irc->status >= USTATUS_IDENTIFIED && set_getint( irc, "save_on_quit" ) ) 
-		if( !bitlbee_save( irc ) )
+		if( !global.storage->save( irc, TRUE ) )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
 	if( irc->ping_source_id > 0 )
@@ -265,6 +265,20 @@ void irc_free(irc_t * irc)
 	
 	if( global.conf->runmode == RUNMODE_INETD )
 		g_main_quit( global.loop );
+}
+
+/* USE WITH CAUTION!
+   Sets pass without checking */
+void irc_setpass (irc_t *irc, const char *pass) 
+{
+	if (irc->password) g_free (irc->password);
+	
+	if (pass) {
+		irc->password = g_strdup (pass);
+		irc_usermsg (irc, "Password successfully changed");
+	} else {
+		irc->password = NULL;
+	}
 }
 
 int irc_process( irc_t *irc )
