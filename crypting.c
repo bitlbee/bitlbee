@@ -107,14 +107,14 @@ char *hashpass (irc_t *irc) {
 	return (rv);
 }
 
-char *obfucrypt (irc_t *irc, char *line) {
+char *obfucrypt (irc_t *irc, char *line) 
+{
 	int i, j;
 	char *rv;
 	
 	if (irc->password == NULL) return (NULL);
 	
-	rv = (char *)g_malloc (strlen (line) + 1);
-	memset (rv, '\0', strlen (line) + 1);
+	rv = g_new0(char, strlen (line) + 1);
 	
 	i = j = 0;
 	while (*line) {
@@ -132,14 +132,14 @@ char *obfucrypt (irc_t *irc, char *line) {
 	return (rv);
 }
 
-char *deobfucrypt (irc_t *irc, char *line) {
+char *deobfucrypt (irc_t *irc, char *line) 
+{
 	int i, j;
 	char *rv;
 	
 	if (irc->password == NULL) return (NULL);
 	
-	rv = (char *)g_malloc (strlen (line) + 1);
-	memset (rv, '\0', strlen (line) + 1);
+	rv = g_new0(char, strlen (line) + 1);
 	
 	i = j = 0;
 	while (*line) {
@@ -161,7 +161,7 @@ char *deobfucrypt (irc_t *irc, char *line) {
 
 int main( int argc, char *argv[] )
 {
-	irc_t *irc = g_malloc( sizeof( irc_t ) );
+	irc_t *irc = g_new0( irc_t, 1 );
 	char *hash, *action, line[256];
 	char* (*func)( irc_t *, char * );
 	
@@ -173,7 +173,6 @@ int main( int argc, char *argv[] )
 		return( 1 );
 	}
 	
-	memset( irc, 0, sizeof( irc_t ) );
 	irc->password = g_strdup( argv[1] );
 	
 	hash = hashpass( irc );
