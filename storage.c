@@ -56,3 +56,28 @@ storage_t *storage_init(const char *name)
 
 	return st;
 }
+
+storage_status_t storage_check_pass (const char *nick, const char *password)
+{
+	return global.storage->check_pass(nick, password);
+}
+
+storage_status_t storage_load (const char *nick, const char *password, irc_t * irc)
+{
+	return global.storage->load(nick, password, irc);
+}
+
+storage_status_t storage_save (irc_t *irc, int overwrite)
+{
+	return global.storage->save(irc, overwrite);
+}
+
+storage_status_t storage_remove (const char *nick, const char *password)
+{
+	return global.storage->remove(nick, password);
+}
+
+storage_status_t storage_rename (const char *onick, const char *nnick, const char *password)
+{
+	return global.storage->rename(onick, nnick, password);
+}
