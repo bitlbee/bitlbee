@@ -1368,6 +1368,30 @@ static int incomingim_ch1(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	return ret;
 }
 
+
+static void incomingim_ch2_chat_free(aim_session_t *sess, struct aim_incomingim_ch2_args *args)
+{
+
+	/* XXX aim_chat_roominfo_free() */
+	g_free(args->info.chat.roominfo.name);
+
+	return;
+}
+
+static void incomingim_ch2_chat(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args, aim_bstream_t *servdata)
+{
+
+	/*
+	 * Chat room info.
+	 */
+	if (servdata)
+		aim_chat_readroominfo(servdata, &args->info.chat.roominfo);
+
+	args->destructor = (void *)incomingim_ch2_chat_free;
+
+	return;
+}
+
 static void incomingim_ch2_icqserverrelay_free(aim_session_t *sess, struct aim_incomingim_ch2_args *args)
 {
 
@@ -1616,6 +1640,8 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 
 	if (args.reqclass & AIM_CAPS_ICQSERVERRELAY)
 		incomingim_ch2_icqserverrelay(sess, mod, rx, snac, userinfo, &args, sdbsptr);
+	else if (args.reqclass & AIM_CAPS_CHAT)
+		incomingim_ch2_chat(sess, mod, rx, snac, userinfo, &args, sdbsptr);
 
 
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
