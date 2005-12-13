@@ -29,7 +29,7 @@
 #define _GNU_SOURCE /* Stupid GNU :-P */
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "1.0"
+#define BITLBEE_VERSION "BZR"
 #define VERSION BITLBEE_VERSION
 
 #define MAX_STRING 128
