@@ -66,7 +66,8 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	while( fscanf( fp, "%511[^\n]s", s ) > 0 )
 	{
 		fgetc( fp );
-		line = deobfucrypt( irc, s );
+		line = deobfucrypt( s, password );
+		if (line == NULL) return STORAGE_OTHER_ERROR;
 		root_command_string( irc, ru, line, 0 );
 		g_free( line );
 	}
@@ -128,11 +129,11 @@ static storage_status_t text_save( irc_t *irc, int overwrite )
 	 *  me. I just thought it was funny.
 	\*/
 	
-	hash = hashpass( irc );
+	hash = hashpass( irc->password );
 	if( hash == NULL )
 	{
 		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
-		return( 0 );
+		return STORAGE_OTHER_ERROR;
 	}
 	
 	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
@@ -191,7 +192,7 @@ static storage_status_t text_save( irc_t *irc, int overwrite )
 			g_snprintf( s, sizeof( s ), "account add %s \"%s\" \"%s\" \"%s\"",
 			            proto_name[a->protocol], a->user, a->pass, a->server ? a->server : "" );
 		
-		line = obfucrypt( irc, s );
+		line = obfucrypt( s, irc->password );
 		if( *line )
 		{
 			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
@@ -209,7 +210,7 @@ static storage_status_t text_save( irc_t *irc, int overwrite )
 		if( set->value && set->def )
 		{
 			g_snprintf( s, sizeof( s ), "set %s \"%s\"", set->key, set->value );
-			line = obfucrypt( irc, s );
+			line = obfucrypt( s, irc->password );
 			if( *line )
 			{
 				if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
@@ -226,7 +227,7 @@ static storage_status_t text_save( irc_t *irc, int overwrite )
 	if( strcmp( irc->mynick, ROOT_NICK ) != 0 )
 	{
 		g_snprintf( s, sizeof( s ), "rename %s %s", ROOT_NICK, irc->mynick );
-		line = obfucrypt( irc, s );
+		line = obfucrypt( s, irc->password );
 		if( *line )
 		{
 			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
@@ -269,7 +270,7 @@ static storage_status_t text_check_pass( const char *nick, const char *password 
 	char s[512];
 	FILE *fp;
 	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".nicks" );
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".accounts" );
 	fp = fopen( s, "r" );
 	if (!fp)
 		return STORAGE_NO_SUCH_USER;
