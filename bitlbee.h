@@ -115,7 +115,7 @@ typedef struct global_t {
 	int listen_socket;
 	help_t *help;
 	conf_t *conf;
-	storage_t *storage;
+	GList *storage; /* The first backend in the list will be used for saving */
 	char *helpfile;
 	GMainLoop *loop;
 } global_t;

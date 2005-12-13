@@ -24,6 +24,6 @@
 */
 
 int checkpass (const char *password, const char *md5sum);
-char *hashpass (irc_t *irc);
-char *obfucrypt (irc_t *irc, char *line);
-char *deobfucrypt (irc_t *irc, char *line);
+char *hashpass (const char *password);
+char *obfucrypt (char *line, const char *password);
+char *deobfucrypt (char *line, const char *password);

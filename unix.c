@@ -71,9 +71,10 @@ int main( int argc, char *argv[] )
 	if( i != 0 )
 		return( i );
 
-	global.storage = storage_init( global.conf->storage );
+	global.storage = storage_init( global.conf->primary_storage, 
+								   global.conf->migrate_storage );
 	if ( global.storage == NULL) {
-		log_message( LOGLVL_ERROR, "No such storage backend '%s'", global.conf->storage );
+		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
 		return( 1 );
 	}
 	

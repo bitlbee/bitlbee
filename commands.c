@@ -85,7 +85,7 @@ int cmd_help( irc_t *irc, char **cmd )
 
 int cmd_identify( irc_t *irc, char **cmd )
 {
-	storage_status_t status = global.storage->load( irc->nick, cmd[1], irc );
+	storage_status_t status = storage_load( irc->nick, cmd[1], irc );
 	
 	switch (status) {
 	case STORAGE_INVALID_PASSWORD:
@@ -101,7 +101,7 @@ int cmd_identify( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Something very weird happened" );
 		break;
 	}
-	
+
 	return( 0 );
 }
 
@@ -114,7 +114,7 @@ int cmd_register( irc_t *irc, char **cmd )
 	}
 
 	irc_setpass( irc, cmd[1] );
-	switch( global.storage->save( irc, FALSE )) {
+	switch( storage_save( irc, FALSE )) {
 		case STORAGE_ALREADY_EXISTS:
 			irc_usermsg( irc, "Nick is already registered" );
 			break;
@@ -135,7 +135,7 @@ int cmd_drop( irc_t *irc, char **cmd )
 {
 	storage_status_t status;
 	
-	status = global.storage->remove (irc->nick, cmd[1]);
+	status = storage_remove (irc->nick, cmd[1]);
 	switch (status) {
 	case STORAGE_NO_SUCH_USER:
 		irc_usermsg( irc, "That account does not exist" );
@@ -615,7 +615,7 @@ int cmd_set( irc_t *irc, char **cmd )
 
 int cmd_save( irc_t *irc, char **cmd )
 {
-	if( global.storage->save( irc, TRUE ) == STORAGE_OK )
+	if( storage_save( irc, TRUE ) == STORAGE_OK )
 		irc_usermsg( irc, "Configuration saved" );
 	else
 		irc_usermsg( irc, "Configuration could not be saved!" );
