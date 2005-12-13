@@ -101,7 +101,7 @@ int cmd_identify( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Something very weird happened" );
 		break;
 	}
-	
+
 	return( 0 );
 }
 
