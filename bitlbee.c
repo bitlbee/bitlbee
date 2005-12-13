@@ -246,7 +246,7 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 /* DO NOT USE THIS FUNCTION IN NEW CODE. This 
  * function is here merely because the save/load code still uses 
  * ids rather then names */
-struct prpl *find_protocol_by_id(int id)
+static struct prpl *find_protocol_by_id(int id)
 {
 	switch (id) {
 	case 1: return find_protocol("oscar");
@@ -258,11 +258,21 @@ struct prpl *find_protocol_by_id(int id)
 	return NULL;
 }
 
+static int find_protocol_id(const char *name)
+{
+	if (!strcmp(name, "oscar")) return 1;
+	if (!strcmp(name, "msn")) return 4;
+	if (!strcmp(name, "yahoo")) return 2;
+	if (!strcmp(name, "jabber")) return 8;
+
+	return -1;
+}
+
 int bitlbee_load( irc_t *irc, char* password )
 {
 	char s[512];
 	char *line;
-	char proto[20];
+	int proto;
 	char nick[MAX_NICK_LENGTH+1];
 	FILE *fp;
 	user_t *ru = user_find( irc, ROOT_NICK );
@@ -297,16 +307,11 @@ int bitlbee_load( irc_t *irc, char* password )
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
 	fp = fopen( s, "r" );
 	if( !fp ) return( 0 );
-	while( fscanf( fp, "%s %s %s", s, proto, nick ) > 0 )
+	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
 	{
 		struct prpl *prpl;
 
-		prpl = find_protocol(proto);
-
-		/* Older files saved the protocol number rather then the protocol name */
-		if (!prpl && atoi(proto)) {
-			prpl = find_protocol_by_id(atoi(proto));
-		}
+		prpl = find_protocol_by_id(proto);
 
 		if (!prpl)
 			continue;
@@ -367,7 +372,7 @@ int bitlbee_save( irc_t *irc )
 		strcpy( s, n->handle );
 		s[169] = 0; /* Prevent any overflow (169 ~ 512 / 3) */
 		http_encode( s );
-		g_snprintf( s + strlen( s ), 510 - strlen( s ), " %s %s", n->proto->name, n->nick );
+		g_snprintf( s + strlen( s ), 510 - strlen( s ), " %d %s", find_protocol_id(n->proto->name), n->nick );
 		if( fprintf( fp, "%s\n", s ) != strlen( s ) + 1 )
 		{
 			irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
