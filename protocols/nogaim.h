@@ -299,7 +299,7 @@ G_MODULE_EXPORT void show_got_added( struct gaim_connection *gc, char *id, char 
 /* server.c */                    
 G_MODULE_EXPORT void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps );
 G_MODULE_EXPORT void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 flags, time_t mtime, gint len );
-G_MODULE_EXPORT void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout );
+G_MODULE_EXPORT void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout, int type );
 G_MODULE_EXPORT void serv_got_chat_invite( struct gaim_connection *gc, char *handle, char *who, char *msg, GList *data );
 G_MODULE_EXPORT struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, char *handle );
 G_MODULE_EXPORT void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whisper, char *msg, time_t mtime );

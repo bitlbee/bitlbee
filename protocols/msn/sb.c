@@ -643,7 +643,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			
 			if( who )
 			{
-				serv_got_typing( gc, who, 5 );
+				serv_got_typing( gc, who, 5, 1 );
 				g_free( who );
 			}
 			
