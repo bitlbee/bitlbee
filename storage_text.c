@@ -27,6 +27,32 @@
 #include "bitlbee.h"
 #include "crypting.h"
 
+/* DO NOT USE THIS FUNCTION IN NEW CODE. This 
+ * function is here merely because the save/load code still uses 
+ * ids rather then names */
+static struct prpl *find_protocol_by_id(int id)
+{
+	switch (id) {
+	case 1: return find_protocol("oscar");
+	case 4: return find_protocol("msn");
+	case 2: return find_protocol("yahoo");
+	case 8: return find_protocol("jabber");
+	default: break;
+	}
+	return NULL;
+}
+
+static int find_protocol_id(const char *name)
+{
+	if (!strcmp(name, "oscar")) return 1;
+	if (!strcmp(name, "msn")) return 4;
+	if (!strcmp(name, "yahoo")) return 2;
+	if (!strcmp(name, "jabber")) return 8;
+
+	return -1;
+}
+
+
 static void text_init (void)
 {
 	if( access( global.conf->configdir, F_OK ) != 0 )
@@ -78,8 +104,15 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	if( !fp ) return STORAGE_NO_SUCH_USER;
 	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
 	{
+		struct prpl *prpl;
+
+		prpl = find_protocol_by_id(proto);
+
+		if (!prpl)
+			continue;
+
 		http_decode( s );
-		nick_set( irc, s, proto, nick );
+		nick_set( irc, s, prpl, nick );
 	}
 	fclose( fp );
 	
@@ -144,7 +177,7 @@ static storage_status_t text_save( irc_t *irc, int overwrite )
 		strcpy( s, n->handle );
 		s[169] = 0; /* Prevent any overflow (169 ~ 512 / 3) */
 		http_encode( s );
-		g_snprintf( s + strlen( s ), 510 - strlen( s ), " %d %s", n->proto, n->nick );
+		g_snprintf( s + strlen( s ), 510 - strlen( s ), " %d %s", find_protocol_id(n->proto->name), n->nick );
 		if( fprintf( fp, "%s\n", s ) != strlen( s ) + 1 )
 		{
 			irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
@@ -186,11 +219,11 @@ static storage_status_t text_save( irc_t *irc, int overwrite )
 
 	for( a = irc->accounts; a; a = a->next )
 	{
-		if( a->protocol == PROTO_OSCAR || a->protocol == PROTO_ICQ || a->protocol == PROTO_TOC )
+		if( !strcmp(a->prpl->name, "oscar") )
 			g_snprintf( s, sizeof( s ), "account add oscar \"%s\" \"%s\" %s", a->user, a->pass, a->server );
 		else
 			g_snprintf( s, sizeof( s ), "account add %s \"%s\" \"%s\" \"%s\"",
-			            proto_name[a->protocol], a->user, a->pass, a->server ? a->server : "" );
+			            a->prpl->name, a->user, a->pass, a->server ? a->server : "" );
 		
 		line = obfucrypt( s, irc->password );
 		if( *line )

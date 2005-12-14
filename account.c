@@ -27,7 +27,7 @@
 #include "bitlbee.h"
 #include "account.h"
 
-account_t *account_add( irc_t *irc, int protocol, char *user, char *pass )
+account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 {
 	account_t *a;
 	
@@ -41,7 +41,7 @@ account_t *account_add( irc_t *irc, int protocol, char *user, char *pass )
 		irc->accounts = a = g_new0 ( account_t, 1 );
 	}
 	
-	a->protocol = protocol;
+	a->prpl = prpl;
 	a->user = g_strdup( user );
 	a->pass = g_strdup( pass );
 	a->irc = irc;
@@ -65,7 +65,7 @@ account_t *account_get( irc_t *irc, char *id )
 	
 	for( a = irc->accounts; a; a = a->next )
 	{
-		if( g_strcasecmp( id, proto_name[a->protocol] ) == 0 )
+		if( g_strcasecmp( id, a->prpl->name ) == 0 )
 		{
 			if( !ret )
 				ret = a;
@@ -123,9 +123,9 @@ void account_on( irc_t *irc, account_t *a )
 		return;
 	}
 	
-	if( proto_prpl[a->protocol]->login == NULL )
+	if (a->prpl == NULL )
 	{
-		irc_usermsg( irc, "Support for protocol %s is not included in this BitlBee", proto_name[a->protocol] );
+		irc_usermsg( irc, "Support for protocol %s is not included in this BitlBee", a->prpl->name );
 		return;
 	}
 	
@@ -133,7 +133,7 @@ void account_on( irc_t *irc, account_t *a )
 	
 	u = g_new0 ( struct aim_user, 1 );
 	u->irc = irc;
-	u->protocol = a->protocol;
+	u->prpl = a->prpl;
 	strncpy( u->username, a->user, sizeof( u->username ) - 1 );
 	strncpy( u->password, a->pass, sizeof( u->password ) - 1 );
 	if( a->server) strncpy( u->proto_opt[0], a->server, sizeof( u->proto_opt[0] ) - 1 );
@@ -141,7 +141,7 @@ void account_on( irc_t *irc, account_t *a )
 	a->gc = (struct gaim_connection *) u; /* Bit hackish :-/ */
 	a->reconnect = 0;
 	
-	proto_prpl[a->protocol]->login( u );
+	a->prpl->login( u );
 }
 
 void account_off( irc_t *irc, account_t *a )

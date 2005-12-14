@@ -38,9 +38,6 @@
 #include <ctype.h>
 #include <iconv.h>
 
-struct prpl *proto_prpl[PROTO_MAX];
-char proto_name[PROTO_MAX][8] = { "TOC", "OSCAR", "YAHOO", "ICQ", "MSN", "", "", "", "JABBER", "", "", "", "", "", "", "" };
-
 static char *proto_away_alias[7][5] =
 {
 	{ "Away from computer", "Away", "Extended away", NULL },
@@ -57,29 +54,104 @@ static int remove_chat_buddy_silent( struct conversation *b, char *handle );
 
 GSList *connections;
 
+#ifdef WITH_PLUGINS
+gboolean load_plugin(char *path)
+{
+	void (*init_function) (void);
+	
+	GModule *mod = g_module_open(path, G_MODULE_BIND_LAZY);
+
+	if(!mod) {
+		log_message(LOGLVL_ERROR, "Can't find `%s', not loading", path);
+		return FALSE;
+	}
+
+	if(!g_module_symbol(mod,"init_plugin",(gpointer *) &init_function)) {
+		log_message(LOGLVL_WARNING, "Can't find function `init_plugin' in `%s'\n", path);
+		return FALSE;
+	}
+
+	init_function();
+
+	return TRUE;
+}
+
+void load_plugins(void)
+{
+	GDir *dir;
+	GError *error = NULL;
+
+	dir = g_dir_open(PLUGINDIR, 0, &error);
+
+	if (dir) {
+		const gchar *entry;
+		char *path;
+
+		while ((entry = g_dir_read_name(dir))) {
+			path = g_build_filename(PLUGINDIR, entry, NULL);
+			if(!path) {
+				log_message(LOGLVL_WARNING, "Can't build path for %s\n", entry);
+				continue;
+			}
+
+			load_plugin(path);
+
+			g_free(path);
+		}
+
+		g_dir_close(dir);
+	}
+}
+#endif
 
 /* nogaim.c */
 
+GList *protocols = NULL;
+  
+void register_protocol (struct prpl *p)
+{
+	protocols = g_list_append(protocols, p);
+}
+
+ 
+struct prpl *find_protocol(const char *name)
+{
+	GList *gl;
+	for (gl = protocols; gl; gl = gl->next) 
+ 	{
+ 		struct prpl *proto = gl->data;
+ 		if(!g_strcasecmp(proto->name, name)) 
+			return proto;
+ 	}
+ 	return NULL;
+}
+
+/* nogaim.c */
 void nogaim_init()
 {
-	proto_prpl[PROTO_MSN] = g_new0 ( struct prpl, 1 );
+	extern void msn_init();
+	extern void oscar_init();
+	extern void byahoo_init();
+	extern void jabber_init();
+
 #ifdef WITH_MSN
-	msn_init( proto_prpl[PROTO_MSN] );
+	msn_init();
 #endif
 
-	proto_prpl[PROTO_OSCAR] = g_new0( struct prpl, 1 );
 #ifdef WITH_OSCAR
-	oscar_init( proto_prpl[PROTO_OSCAR] );
+	oscar_init();
 #endif
 	
-	proto_prpl[PROTO_YAHOO] = g_new0( struct prpl, 1 );
 #ifdef WITH_YAHOO
-	byahoo_init( proto_prpl[PROTO_YAHOO] );
+	byahoo_init();
 #endif
 	
-	proto_prpl[PROTO_JABBER] = g_new0( struct prpl, 1 );
 #ifdef WITH_JABBER
-	jabber_init( proto_prpl[PROTO_JABBER] );
+	jabber_init();
+#endif
+
+#ifdef WITH_PLUGINS
+	load_plugins();
 #endif
 }
 
@@ -171,8 +243,7 @@ struct gaim_connection *new_gaim_conn( struct aim_user *user )
 	
 	gc = g_new0( struct gaim_connection, 1 );
 	
-	gc->protocol = user->protocol;
-	gc->prpl = proto_prpl[gc->protocol];
+	gc->prpl = user->prpl;
 	g_snprintf( gc->username, sizeof( gc->username ), "%s", user->username );
 	g_snprintf( gc->password, sizeof( gc->password ), "%s", user->password );
 	/* [MD]	BUGFIX: don't set gc->irc to the global IRC, but use the one from the struct aim_user.
@@ -253,14 +324,14 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	
 	/* Try to find a different connection on the same protocol. */
 	for( a = gc->irc->accounts; a; a = a->next )
-		if( proto_prpl[a->protocol] == gc->prpl && a->gc != gc )
+		if( a->prpl == gc->prpl && a->gc != gc )
 			break;
 	
 	/* If we found one, add the screenname to the acc_id. */
 	if( a )
-		g_snprintf( acc_id, 32, "%s(%s)", proto_name[gc->protocol], gc->username );
+		g_snprintf( acc_id, 32, "%s(%s)", gc->prpl->name, gc->username );
 	else
-		g_snprintf( acc_id, 32, "%s", proto_name[gc->protocol] );
+		g_snprintf( acc_id, 32, "%s", gc->prpl->name );
 	
 	irc_usermsg( gc->irc, "%s - %s", acc_id, msg );
 }
@@ -294,7 +365,7 @@ void account_online( struct gaim_connection *gc )
 	
 	if( u && u->away ) proto_away( gc, u->away );
 	
-	if( gc->protocol == PROTO_ICQ )
+ 	if( !strcmp(gc->prpl->name, "icq") )
 	{
 		for( u = gc->irc->users; u; u = u->next )
 			if( u->gc == gc )
@@ -429,7 +500,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	}
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
-	strcpy( nick, nick_get( gc->irc, handle, gc->protocol, realname ) );
+	strcpy( nick, nick_get( gc->irc, handle, gc->prpl, realname ) );
 	
 	u = user_add( gc->irc, nick );
 	
@@ -453,7 +524,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	}
 	else
 	{
-		u->host = g_strdup( proto_name[gc->user->protocol] );
+		u->host = g_strdup( gc->user->prpl->name );
 		u->user = g_strdup( handle );
 	}
 	
@@ -582,11 +653,11 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 			remove_chat_buddy_silent( c, handle );
 	}
 	
-	if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_TOC ) )
+	if( ( type & UC_UNAVAILABLE ) && ( !strcmp(gc->prpl->name, "oscar") || !strcmp(gc->prpl->name, "icq")) )
 	{
 		u->away = g_strdup( "Away" );
 	}
-	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_JABBER ) )
+	else if( ( type & UC_UNAVAILABLE ) && ( !strcmp(gc->prpl->name, "jabber") ) )
 	{
 		if( type & UC_DND )
 			u->away = g_strdup( "Do Not Disturb" );
