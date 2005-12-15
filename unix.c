@@ -46,8 +46,9 @@ int main( int argc, char *argv[] )
 	global.loop = g_main_new( FALSE );
 	
 	log_init( );
-	nogaim_init( );
-	
+
+	nogaim_init();
+
 	CONF_FILE = g_strdup( CONF_FILE_DEF );
 	
 	global.helpfile = g_strdup( HELP_FILE );

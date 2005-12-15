@@ -71,7 +71,6 @@
 struct gaim_connection {
 	/* we need to do either oscar or TOC */
 	/* we make this as an int in case if we want to add more protocols later */
-	int protocol;
 	struct prpl *prpl;
 	guint32 flags;
 	
@@ -151,7 +150,7 @@ struct aim_user {
 	char password[32];
 	char user_info[2048];
 	int options;
-	int protocol;
+	struct prpl *prpl;
 	/* prpls can use this to save information about the user,
 	 * like which server to connect to, etc */
 	char proto_opt[7][256];
@@ -161,9 +160,8 @@ struct aim_user {
 };
 
 struct prpl {
-	int protocol;
 	int options;
-	char *(* name)();
+	const char *name;
 
 	/* for ICQ and Yahoo, who have off/on per-conversation options */
 	/* char *checkbox; this should be per-connection */
@@ -223,22 +221,6 @@ struct prpl {
 	int (* cmp_buddynames) (const char *who1, const char *who2);
 };
 
-#define PROTO_TOC	0
-#define PROTO_OSCAR	1
-#define PROTO_YAHOO	2
-#define PROTO_ICQ	3
-#define PROTO_MSN	4
-#define PROTO_IRC	5
-#define PROTO_FTP	6
-#define PROTO_VGATE	7
-#define PROTO_JABBER	8
-#define PROTO_NAPSTER	9
-#define PROTO_ZEPHYR	10
-#define PROTO_GADUGADU	11
-#define PROTO_MAX	16
-
-extern char proto_name[PROTO_MAX][8];
-
 #define UC_UNAVAILABLE  1
 
 /* JABBER */
@@ -248,7 +230,8 @@ extern char proto_name[PROTO_MAX][8];
 #define UC_DND  (0x10 | UC_UNAVAILABLE)
 
 G_MODULE_EXPORT GSList *get_connections();
-extern struct prpl *proto_prpl[16];
+G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
+G_MODULE_EXPORT void register_protocol(struct prpl *);
 
 /* nogaim.c */
 int serv_send_im(irc_t *irc, user_t *u, char *msg, int flags);
@@ -317,26 +300,6 @@ G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min
 G_MODULE_EXPORT void strip_html( char *msg );
 G_MODULE_EXPORT char * escape_html(const char *html);
 G_MODULE_EXPORT void info_string_append(GString *str, char *newline, char *name, char *value);
-
-#ifdef WITH_MSN
-/* msn.c */
-G_MODULE_EXPORT void msn_init( struct prpl *ret );
-#endif
-
-#ifdef WITH_OSCAR
-/* oscar.c */
-G_MODULE_EXPORT void oscar_init( struct prpl *ret );
-#endif
-
-#ifdef WITH_JABBER
-/* jabber.c */
-G_MODULE_EXPORT void jabber_init( struct prpl *ret );
-#endif
-
-#ifdef WITH_YAHOO
-/* yahoo.c */
-G_MODULE_EXPORT void byahoo_init( struct prpl *ret );
-#endif
 
 /* prefs.c */
 G_MODULE_EXPORT void build_block_list();

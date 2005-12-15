@@ -1185,7 +1185,7 @@ void irc_whois( irc_t *irc, char *nick )
 		
 		if( u->gc )
 			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->gc->user->username,
-			           *u->gc->user->proto_opt[0] ? u->gc->user->proto_opt[0] : "", proto_name[u->gc->user->protocol] );
+			           *u->gc->user->proto_opt[0] ? u->gc->user->proto_opt[0] : "", u->gc->prpl->name );
 		else
 			irc_reply( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
 		

@@ -356,10 +356,8 @@ static void oscar_login(struct aim_user *user) {
 	if (isdigit(*user->username)) {
 		odata->icq = TRUE;
 		/* this is odd but it's necessary for a proper do_import and do_export */
-		gc->protocol = PROTO_ICQ;
 		gc->password[8] = 0;
 	} else {
-		gc->protocol = PROTO_TOC;
 		gc->flags |= OPT_CONN_HTML;
 	}
 
@@ -2632,10 +2630,10 @@ void oscar_reject_chat(gpointer w, struct aim_chat_invitation * inv)
 	g_free(inv);
 }
 
-static struct prpl *my_protocol = NULL;
-
-void oscar_init(struct prpl *ret) {
-	ret->protocol = PROTO_OSCAR;
+void oscar_init() 
+{
+	struct prpl *ret = g_new0(struct prpl, 1);
+	ret->name = "oscar";
 	ret->away_states = oscar_away_states;
 	ret->login = oscar_login;
 	ret->close = oscar_close;
@@ -2657,8 +2655,7 @@ void oscar_init(struct prpl *ret) {
 	ret->keepalive = oscar_keepalive;
 	ret->cmp_buddynames = aim_sncmp;
 	ret->get_status_string = oscar_get_status_string;
-
 	ret->send_typing = oscar_send_typing;
 
-	my_protocol = ret;
+	register_protocol(ret);
 }

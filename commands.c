@@ -165,7 +165,7 @@ int cmd_account( irc_t *irc, char **cmd )
 	
 	if( g_strcasecmp( cmd[1], "add" ) == 0 )
 	{
-		int prot;
+		struct prpl *prpl;
 		
 		if( cmd[2] == NULL || cmd[3] == NULL || cmd[4] == NULL )
 		{
@@ -173,23 +173,15 @@ int cmd_account( irc_t *irc, char **cmd )
 			return( 0 );
 		}
 		
-		for( prot = 0; prot < PROTO_MAX; prot ++ )
-			if( proto_name[prot] && *proto_name[prot] && g_strcasecmp( proto_name[prot], cmd[2] ) == 0 )
-				break;
+		prpl = find_protocol(cmd[2]);
 		
-		if( ( prot == PROTO_MAX ) || ( proto_prpl[prot] == NULL ) )
+		if( prpl == NULL )
 		{
 			irc_usermsg( irc, "Unknown protocol" );
 			return( 0 );
 		}
 
-		if( prot == PROTO_OSCAR && cmd[5] == NULL )
-		{
-			irc_usermsg( irc, "Not enough parameters" );
-			return( 0 );
-		}
-		
-		a = account_add( irc, prot, cmd[3], cmd[4] );
+		a = account_add( irc, prpl, cmd[3], cmd[4] );
 		
 		if( cmd[5] )
 			a->server = g_strdup( cmd[5] );
@@ -233,10 +225,7 @@ int cmd_account( irc_t *irc, char **cmd )
 			else
 				con = "";
 			
-			if( a->protocol == PROTO_OSCAR || a->protocol == PROTO_ICQ || a->protocol == PROTO_TOC )
-				irc_usermsg( irc, "%2d. OSCAR, %s on %s%s", i, a->user, a->server, con );
-			else
-				irc_usermsg( irc, "%2d. %s, %s%s", i, proto_name[a->protocol], a->user, con );
+			irc_usermsg( irc, "%2d. %s, %s%s", i, a->prpl->name, a->user, con );
 			
 			i ++;
 		}
@@ -353,7 +342,7 @@ int cmd_add( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			nick_set( irc, cmd[2], a->gc->protocol, cmd[3] );
+			nick_set( irc, cmd[2], a->gc->prpl, cmd[3] );
 		}
 	}
 	a->gc->prpl->add_buddy( a->gc, cmd[2] );
@@ -434,7 +423,7 @@ int cmd_rename( irc_t *irc, char **cmd )
 	}
 	else if( u->send_handler == buddy_send_handler )
 	{
-		nick_set( irc, u->handle, u->gc->protocol, cmd[2] );
+		nick_set( irc, u->handle, u->gc->prpl, cmd[2] );
 	}
 	
 	irc_usermsg( irc, "Nick successfully changed" );
@@ -645,21 +634,21 @@ int cmd_blist( irc_t *irc, char **cmd )
 	
 	if( online == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && u->online && !u->away )
 	{
-		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, proto_name[u->gc->user->protocol] );
+		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
 		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Online" );
 		n_online ++;
 	}
 
 	if( away == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && u->online && u->away )
 	{
-		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, proto_name[u->gc->user->protocol] );
+		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
 		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, u->away );
 		n_away ++;
 	}
 	
 	if( offline == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && !u->online )
 	{
-		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, proto_name[u->gc->user->protocol] );
+		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
 		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Offline" );
 		n_offline ++;
 	}
@@ -720,7 +709,7 @@ int cmd_qlist( irc_t *irc, char **cmd )
 	
 	for( num = 0; q; q = q->next, num ++ )
 		if( q->gc ) /* Not necessary yet, but it might come later */
-			irc_usermsg( irc, "%d, %s(%s): %s", num, proto_name[q->gc->protocol], q->gc->username, q->question );
+			irc_usermsg( irc, "%d, %s(%s): %s", num, q->gc->prpl->name, q->gc->username, q->question );
 		else
 			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
 	
@@ -768,7 +757,7 @@ int cmd_import_buddies( irc_t *irc, char **cmd )
 	
 	for( n = gc->irc->nicks; n; n = n->next )
 	{
-		if( n->proto == gc->protocol && !user_findhandle( gc, n->handle ) )
+		if( n->proto == gc->prpl && !user_findhandle( gc, n->handle ) )
 		{
 	                gc->prpl->add_buddy( gc, n->handle );
 	                add_buddy( gc, NULL, n->handle, NULL );

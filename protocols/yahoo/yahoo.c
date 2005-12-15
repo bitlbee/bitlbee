@@ -63,12 +63,6 @@ struct byahoo_conf_invitation
 	struct gaim_connection *gc;
 };
 
-static char *yahoo_name()
-{
-	return "Yahoo";
-}
-
-static struct prpl *my_protocol = NULL;
 static GSList *byahoo_inputs = NULL;
 static int byahoo_chat_id = 0;
 
@@ -395,15 +389,14 @@ static int byahoo_chat_open( struct gaim_connection *gc, char *who )
 	return( 1 );
 }
 
-void byahoo_init( struct prpl *ret )
+void byahoo_init( )
 {
-	ret->protocol = PROTO_YAHOO;
-	ret->name = yahoo_name;
+	struct prpl *ret = g_new0(struct prpl, 1);
+	ret->name = "yahoo";
 	
 	ret->login = byahoo_login;
 	ret->close = byahoo_close;
 	ret->send_im = byahoo_send_im;
-	ret->send_typing = byahoo_send_typing;
 	ret->get_info = byahoo_get_info;
 	ret->away_states = byahoo_away_states;
 	ret->set_away = byahoo_set_away;
@@ -411,6 +404,7 @@ void byahoo_init( struct prpl *ret )
 	ret->add_buddy = byahoo_add_buddy;
 	ret->remove_buddy = byahoo_remove_buddy;
 	ret->get_status_string = byahoo_get_status_string;
+	ret->send_typing = byahoo_send_typing;
 	
 	ret->chat_send = byahoo_chat_send;
 	ret->chat_invite = byahoo_chat_invite;
@@ -418,7 +412,7 @@ void byahoo_init( struct prpl *ret )
 	ret->chat_open = byahoo_chat_open;
 	ret->cmp_buddynames = g_strcasecmp;
 	
-	my_protocol = ret;
+	register_protocol(ret);
 }
 
 static struct gaim_connection *byahoo_get_gc_by_id( int id )
@@ -432,7 +426,7 @@ static struct gaim_connection *byahoo_get_gc_by_id( int id )
 		gc = l->data;
 		yd = gc->proto_data;
 		
-		if( gc->protocol == PROTO_YAHOO && yd->y2_id == id )
+		if( !strcmp(gc->prpl->name, "yahoo") && yd->y2_id == id )
 			return( gc );
 	}
 	
