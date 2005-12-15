@@ -1087,15 +1087,14 @@ static int incomingim_chan2(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 		char *name = extract_name(args->info.chat.roominfo.name);
 		int *exch = g_new0(int, 1);
 		GList *m = NULL;
+		char txt[1024];
+		struct aim_chat_invitation * inv = g_new0(struct aim_chat_invitation, 1);
+
 		m = g_list_append(m, g_strdup(name ? name : args->info.chat.roominfo.name));
 		*exch = args->info.chat.roominfo.exchange;
 		m = g_list_append(m, exch);
 
-		char txt[1024];
-
 		g_snprintf( txt, 1024, "Got an invitation to chatroom %s from %s: %s", name, userinfo->sn, args->msg );
-
-		struct aim_chat_invitation * inv = g_new0(struct aim_chat_invitation, 1);
 
 		inv->gc = gc;
 		inv->exchange = *exch;
@@ -2505,13 +2504,12 @@ int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
 {
 	struct oscar_data * od = (struct oscar_data*)gc->proto_data;
 	struct chat_connection * ccon;
-	
-	if(!(ccon = find_oscar_chat(gc, id)))
-		return -1;
-	
 	int ret;
 	guint8 len = strlen(message);
 	char *s;
+	
+	if(!(ccon = find_oscar_chat(gc, id)))
+		return -1;
 	  	
 	for (s = message; *s; s++)
 		if (*s & 128)
@@ -2606,12 +2604,13 @@ int oscar_chat_join(struct gaim_connection * gc, char * name)
 int oscar_chat_open(struct gaim_connection * gc, char *who)
 {
 	struct oscar_data * od = (struct oscar_data *)gc->proto_data;
-
+	int ret;
 	static int chat_id = 0;
 	char * chatname = g_new0(char, strlen(gc->username)+4);
+	
 	g_snprintf(chatname, strlen(gc->username) + 4, "%s%d", gc->username, chat_id++);
   
-	int ret = oscar_chat_join(gc, chatname);
+	ret = oscar_chat_join(gc, chatname);
 
 	aim_chat_invite(od->sess, od->conn, who, "", 4, chatname, 0x0);
 
