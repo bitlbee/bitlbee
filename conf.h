@@ -41,6 +41,8 @@ typedef struct conf
 	char *hostname;
 	char *configdir;
 	char *motdfile;
+	char *primary_storage;
+	char **migrate_storage;
 	int ping_interval;
 	int ping_timeout;
 } conf_t;

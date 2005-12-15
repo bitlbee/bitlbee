@@ -634,8 +634,14 @@ void ext_yahoo_got_file( int id, char *who, char *url, long expires, char *msg, 
 void ext_yahoo_typing_notify( int id, char *who, int stat )
 {
 	struct gaim_connection *gc = byahoo_get_gc_by_id( id );
-	
-	serv_got_typing( gc, who, 1 );
+	if (stat == 1) {
+		/* User is typing */
+		serv_got_typing( gc, who, 1, 1 );
+	}
+	else {
+		/* User stopped typing */
+		serv_got_typing( gc, who, 1, 0 );
+	}
 }
 
 void ext_yahoo_system_message( int id, char *msg )

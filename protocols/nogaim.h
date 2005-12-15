@@ -306,7 +306,7 @@ G_MODULE_EXPORT void show_got_added( struct gaim_connection *gc, char *id, char 
 /* server.c */                    
 G_MODULE_EXPORT void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps );
 G_MODULE_EXPORT void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 flags, time_t mtime, gint len );
-G_MODULE_EXPORT void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout );
+G_MODULE_EXPORT void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout, int type );
 G_MODULE_EXPORT void serv_got_chat_invite( struct gaim_connection *gc, char *handle, char *who, char *msg, GList *data );
 G_MODULE_EXPORT struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, char *handle );
 G_MODULE_EXPORT void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whisper, char *msg, time_t mtime );
@@ -324,12 +324,6 @@ G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min
 G_MODULE_EXPORT void strip_html( char *msg );
 G_MODULE_EXPORT char * escape_html(const char *html);
 G_MODULE_EXPORT void info_string_append(GString *str, char *newline, char *name, char *value);
-
-/* file transfers */
-G_MODULE_EXPORT void ft_progress( struct ft *, int);
-G_MODULE_EXPORT void ft_incoming( struct ft_request * );
-G_MODULE_EXPORT void ft_accepted( struct ft_request *, struct ft *);
-G_MODULE_EXPORT void ft_denied( struct ft_request *, const char *reason);
 
 /* prefs.c */
 G_MODULE_EXPORT void build_block_list();

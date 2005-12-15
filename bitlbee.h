@@ -29,7 +29,7 @@
 #define _GNU_SOURCE /* Stupid GNU :-P */
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "1.0pre"
+#define BITLBEE_VERSION "BZR"
 #define VERSION BITLBEE_VERSION
 
 #define MAX_STRING 128
@@ -99,6 +99,7 @@
 extern char *CONF_FILE;
 
 #include "irc.h"
+#include "storage.h"
 #include "set.h"
 #include "protocols/nogaim.h"
 #include "commands.h"
@@ -114,6 +115,7 @@ typedef struct global_t {
 	int listen_socket;
 	help_t *help;
 	conf_t *conf;
+	GList *storage; /* The first backend in the list will be used for saving */
 	char *helpfile;
 	GMainLoop *loop;
 } global_t;
@@ -126,8 +128,6 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 
 int root_command_string( irc_t *irc, user_t *u, char *command, int flags );
 int root_command( irc_t *irc, char *command[] );
-int bitlbee_load( irc_t *irc, char *password );
-int bitlbee_save( irc_t *irc );
 void bitlbee_shutdown( gpointer data );
 double gettime( void );
 G_MODULE_EXPORT void http_encode( char *s );

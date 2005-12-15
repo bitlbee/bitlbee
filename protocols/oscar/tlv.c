@@ -339,6 +339,31 @@ int aim_addtlvtochain_frozentlvlist(aim_tlvlist_t **list, guint16 type, aim_tlvl
 	return buflen;
 }
 
+int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, guint16 type, guint16 exchange, const char *roomname, guint16 instance)
+{
+	guint8 *buf;
+	int buflen;
+	aim_bstream_t bs;
+
+	buflen = 2 + 1 + strlen(roomname) + 2;
+	
+	if (!(buf = g_malloc(buflen)))
+		return 0;
+
+	aim_bstream_init(&bs, buf, buflen);
+
+	aimbs_put16(&bs, exchange);
+	aimbs_put8(&bs, strlen(roomname));
+	aimbs_putraw(&bs, (guint8 *)roomname, strlen(roomname));
+	aimbs_put16(&bs, instance);
+
+	aim_addtlvtochain_raw(list, type, aim_bstream_curpos(&bs), buf);
+
+	g_free(buf);
+
+	return 0;
+}
+
 /**
  * aim_writetlvchain - Write a TLV chain into a data buffer.
  * @buf: Destination buffer

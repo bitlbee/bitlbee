@@ -85,54 +85,47 @@ int cmd_help( irc_t *irc, char **cmd )
 
 int cmd_identify( irc_t *irc, char **cmd )
 {
-	int checkie = bitlbee_load( irc, cmd[1] );
+	storage_status_t status = storage_load( irc->nick, cmd[1], irc );
 	
-	if( checkie == -1 )
-	{
+	switch (status) {
+	case STORAGE_INVALID_PASSWORD:
 		irc_usermsg( irc, "Incorrect password" );
-	}
-	else if( checkie == 0 )
-	{
+		break;
+	case STORAGE_NO_SUCH_USER:
 		irc_usermsg( irc, "The nick is (probably) not registered" );
-	}
-	else if( checkie == 1 )
-	{
+		break;
+	case STORAGE_OK:
 		irc_usermsg( irc, "Password accepted" );
-	}
-	else
-	{
+		break;
+	default:
 		irc_usermsg( irc, "Something very weird happened" );
+		break;
 	}
-	
+
 	return( 0 );
 }
 
 int cmd_register( irc_t *irc, char **cmd )
 {
-	int checkie;
-	char path[512];
-	
 	if( global.conf->authmode == AUTHMODE_REGISTERED )
 	{
 		irc_usermsg( irc, "This server does not allow registering new accounts" );
 		return( 0 );
 	}
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-	checkie = access( path, F_OK );
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-	checkie += access( path, F_OK );
-	
-	if( checkie == -2 )
-	{
-		setpassnc( irc, cmd[1] );
-		root_command_string( irc, user_find( irc, irc->mynick ), "save", 0 );
-		irc->status = USTATUS_IDENTIFIED;
-	}
-	else
-	{
-		irc_usermsg( irc, "Nick is already registered" );
+
+	irc_setpass( irc, cmd[1] );
+	switch( storage_save( irc, FALSE )) {
+		case STORAGE_ALREADY_EXISTS:
+			irc_usermsg( irc, "Nick is already registered" );
+			break;
+			
+		case STORAGE_OK:
+			irc->status = USTATUS_IDENTIFIED;
+			break;
+
+		default:
+			irc_usermsg( irc, "Error registering" );
+			break;
 	}
 	
 	return( 0 );
@@ -140,35 +133,24 @@ int cmd_register( irc_t *irc, char **cmd )
 
 int cmd_drop( irc_t *irc, char **cmd )
 {
-	char s[512];
-	FILE *fp;
+	storage_status_t status;
 	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-	fp = fopen( s, "r" );
-	if( !fp )
-	{
+	status = storage_remove (irc->nick, cmd[1]);
+	switch (status) {
+	case STORAGE_NO_SUCH_USER:
 		irc_usermsg( irc, "That account does not exist" );
 		return( 0 );
-	}
-	
-	fscanf( fp, "%32[^\n]s", s );
-	fclose( fp );
-	if( setpass( irc, cmd[1], s ) < 0 )
-	{
-		irc_usermsg( irc, "Incorrect password" );
+	case STORAGE_INVALID_PASSWORD:
+		irc_usermsg( irc, "Password invalid" );
+		return( 0 );
+	case STORAGE_OK:
+		irc_setpass( irc, NULL );
+		irc_usermsg( irc, "Account `%s' removed", irc->nick );
+		return( 0 );
+	default:
+		irc_usermsg( irc, "Error: '%d'", status );
 		return( 0 );
 	}
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-	unlink( s );
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-	unlink( s );
-	
-	setpassnc( irc, NULL );
-	irc_usermsg( irc, "Files belonging to account `%s' removed", irc->nick );
-	
-	return( 0 );
 }
 
 int cmd_account( irc_t *irc, char **cmd )
@@ -622,7 +604,7 @@ int cmd_set( irc_t *irc, char **cmd )
 
 int cmd_save( irc_t *irc, char **cmd )
 {
-	if( bitlbee_save( irc ) )
+	if( storage_save( irc, TRUE ) == STORAGE_OK )
 		irc_usermsg( irc, "Configuration saved" );
 	else
 		irc_usermsg( irc, "Configuration could not be saved!" );

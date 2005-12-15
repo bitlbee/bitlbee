@@ -26,7 +26,6 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "commands.h"
-#include "crypting.h"
 #include "protocols/nogaim.h"
 #include "help.h"
 #include <signal.h>
@@ -158,7 +157,15 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		irc_free( irc );
 		return FALSE;
 	} 
-		
+	
+	/* Very naughty, go read the RFCs! >:) */
+	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )
+	{
+		log_message( LOGLVL_ERROR, "Maximum line length exceeded." );
+		irc_free( irc );
+		return FALSE;
+	}
+	
 	return TRUE;
 }
 
@@ -227,251 +234,6 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 		
 		return( TRUE );
 	}
-}
-
-/* DO NOT USE THIS FUNCTION IN NEW CODE. This 
- * function is here merely because the save/load code still uses 
- * ids rather then names */
-struct prpl *find_protocol_by_id(int id)
-{
-	switch (id) {
-	case 1: return find_protocol("oscar");
-	case 4: return find_protocol("msn");
-	case 2: return find_protocol("yahoo");
-	case 8: return find_protocol("jabber");
-	default: break;
-	}
-	return NULL;
-}
-
-int bitlbee_load( irc_t *irc, char* password )
-{
-	char s[512];
-	char *line;
-	char proto[20];
-	char nick[MAX_NICK_LENGTH+1];
-	FILE *fp;
-	user_t *ru = user_find( irc, ROOT_NICK );
-	
-	if( irc->status == USTATUS_IDENTIFIED )
-		return( 1 );
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-   	fp = fopen( s, "r" );
-   	if( !fp ) return( 0 );
-	
-	fscanf( fp, "%32[^\n]s", s );
-	if( setpass( irc, password, s ) < 0 )
-	{
-		fclose( fp );
-		return( -1 );
-	}
-	
-	/* Do this now. If the user runs with AuthMode = Registered, the
-	   account command will not work otherwise. */
-	irc->status = USTATUS_IDENTIFIED;
-	
-	while( fscanf( fp, "%511[^\n]s", s ) > 0 )
-	{
-		fgetc( fp );
-		line = deobfucrypt( irc, s );
-		root_command_string( irc, ru, line, 0 );
-		g_free( line );
-	}
-	fclose( fp );
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-	fp = fopen( s, "r" );
-	if( !fp ) return( 0 );
-	while( fscanf( fp, "%s %s %s", s, proto, nick ) > 0 )
-	{
-		struct prpl *prpl;
-
-		prpl = find_protocol(proto);
-
-		/* Older files saved the protocol number rather then the protocol name */
-		if (!prpl && atoi(proto)) {
-			prpl = find_protocol_by_id(atoi(proto));
-		}
-
-		if (!prpl)
-			continue;
-
-		http_decode( s );
-		nick_set( irc, s, prpl, nick );
-	}
-	fclose( fp );
-	
-	if( set_getint( irc, "auto_connect" ) )
-	{
-		strcpy( s, "account on" );	/* Can't do this directly because r_c_s alters the string */
-		root_command_string( irc, ru, s, 0 );
-	}
-	
-	return( 1 );
-}
-
-int bitlbee_save( irc_t *irc )
-{
-	char s[512];
-	char path[512], new_path[512];
-	char *line;
-	nick_t *n;
-	set_t *set;
-	mode_t ou = umask( 0077 );
-	account_t *a;
-	FILE *fp;
-	char *hash;
-	
-	/*\
-	 *  [SH] Nothing should be saved if no password is set, because the
-	 *  password is not set if it was wrong, or if one is not identified
-	 *  yet. This means that a malicious user could easily overwrite
-	 *  files owned by someone else:
-	 *  a Bad Thing, methinks
-	\*/
-
-	/* [WVG] No? Really? */
-
-	/*\
-	 *  [SH] Okay, okay, it wasn't really Wilmer who said that, it was
-	 *  me. I just thought it was funny.
-	\*/
-	
-	hash = hashpass( irc );
-	if( hash == NULL )
-	{
-		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
-		return( 0 );
-	}
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
-	fp = fopen( path, "w" );
-	if( !fp ) return( 0 );
-	for( n = irc->nicks; n; n = n->next )
-	{
-		strcpy( s, n->handle );
-		s[169] = 0; /* Prevent any overflow (169 ~ 512 / 3) */
-		http_encode( s );
-		g_snprintf( s + strlen( s ), 510 - strlen( s ), " %s %s", n->proto->name, n->nick );
-		if( fprintf( fp, "%s\n", s ) != strlen( s ) + 1 )
-		{
-			irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-			fclose( fp );
-			return( 0 );
-		}
-	}
-	if( fclose( fp ) != 0 )
-	{
-		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
-		return( 0 );
-	}
-  
-	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-	if( unlink( new_path ) != 0 )
-	{
-		if( errno != ENOENT )
-		{
-			irc_usermsg( irc, "Error while removing old .nicks file" );
-			return( 0 );
-		}
-	}
-	if( rename( path, new_path ) != 0 )
-	{
-		irc_usermsg( irc, "Error while renaming new .nicks file" );
-		return( 0 );
-	}
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts~" );
-	fp = fopen( path, "w" );
-	if( !fp ) return( 0 );
-	if( fprintf( fp, "%s", hash ) != strlen( hash ) )
-	{
-		irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-		fclose( fp );
-		return( 0 );
-	}
-	g_free( hash );
-
-	for( a = irc->accounts; a; a = a->next )
-	{
-		if( !strcmp( a->prpl->name, "oscar" ) )
-			g_snprintf( s, sizeof( s ), "account add oscar \"%s\" \"%s\" %s", a->user, a->pass, a->server );
-		else
-			g_snprintf( s, sizeof( s ), "account add %s \"%s\" \"%s\" \"%s\"",
-			            a->prpl->name, a->user, a->pass, a->server ? a->server : "" );
-		
-		line = obfucrypt( irc, s );
-		if( *line )
-		{
-			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
-			{
-				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-				fclose( fp );
-				return( 0 );
-			}
-		}
-		g_free( line );
-	}
-	
-	for( set = irc->set; set; set = set->next )
-	{
-		if( set->value && set->def )
-		{
-			g_snprintf( s, sizeof( s ), "set %s \"%s\"", set->key, set->value );
-			line = obfucrypt( irc, s );
-			if( *line )
-			{
-				if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
-				{
-					irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-					fclose( fp );
-					return( 0 );
-				}
-			}
-			g_free( line );
-		}
-	}
-	
-	if( strcmp( irc->mynick, ROOT_NICK ) != 0 )
-	{
-		g_snprintf( s, sizeof( s ), "rename %s %s", ROOT_NICK, irc->mynick );
-		line = obfucrypt( irc, s );
-		if( *line )
-		{
-			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
-			{
-				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-				fclose( fp );
-				return( 0 );
-			}
-		}
-		g_free( line );
-	}
-	if( fclose( fp ) != 0 )
-	{
-		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
-		return( 0 );
-	}
-	
- 	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
- 	if( unlink( new_path ) != 0 )
-	{
-		if( errno != ENOENT )
-		{
-			irc_usermsg( irc, "Error while removing old .accounts file" );
-			return( 0 );
-		}
-	}
-	if( rename( path, new_path ) != 0 )
-	{
-		irc_usermsg( irc, "Error while renaming new .accounts file" );
-		return( 0 );
-	}
-	
-	umask( ou );
-	
-	return( 1 );
 }
 
 void bitlbee_shutdown( gpointer data )

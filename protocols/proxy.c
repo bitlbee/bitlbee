@@ -72,7 +72,7 @@ typedef struct _GaimIOClosure {
 
 
 
-static struct sockaddr_in *gaim_gethostbyname(char *host, int port)
+static struct sockaddr_in *gaim_gethostbyname(const char *host, int port)
 {
 	static struct sockaddr_in sin;
 
@@ -113,7 +113,7 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 	return TRUE;
 }
 
-static void no_one_calls(gpointer data, gint source, GaimInputCondition cond)
+static void gaim_io_connected(gpointer data, gint source, GaimInputCondition cond)
 {
 	struct PHB *phb = data;
 	unsigned int len;
@@ -143,7 +143,7 @@ static void no_one_calls(gpointer data, gint source, GaimInputCondition cond)
 	}
 }
 
-static int proxy_connect_none(char *host, unsigned short port, struct PHB *phb)
+static int proxy_connect_none(const char *host, unsigned short port, struct PHB *phb)
 {
 	struct sockaddr_in *sin;
 	int fd = -1;
@@ -162,7 +162,7 @@ static int proxy_connect_none(char *host, unsigned short port, struct PHB *phb)
 
 	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0) {
 		if (sockerr_again()) {
-			phb->inpa = gaim_input_add(fd, GAIM_INPUT_WRITE, no_one_calls, phb);
+			phb->inpa = gaim_input_add(fd, GAIM_INPUT_WRITE, gaim_io_connected, phb);
 			phb->fd = fd;
 		} else {
 			closesocket(fd);
@@ -270,7 +270,7 @@ static void http_canwrite(gpointer data, gint source, GaimInputCondition cond)
 	phb->inpa = gaim_input_add(source, GAIM_INPUT_READ, http_canread, phb);
 }
 
-static int proxy_connect_http(char *host, unsigned short port, struct PHB *phb)
+static int proxy_connect_http(const char *host, unsigned short port, struct PHB *phb)
 {
 	phb->host = g_strdup(host);
 	phb->port = port;
@@ -354,7 +354,7 @@ static void s4_canwrite(gpointer data, gint source, GaimInputCondition cond)
 	phb->inpa = gaim_input_add(source, GAIM_INPUT_READ, s4_canread, phb);
 }
 
-static int proxy_connect_socks4(char *host, unsigned short port, struct PHB *phb)
+static int proxy_connect_socks4(const char *host, unsigned short port, struct PHB *phb)
 {
 	phb->host = g_strdup(host);
 	phb->port = port;
@@ -536,7 +536,7 @@ static void s5_canwrite(gpointer data, gint source, GaimInputCondition cond)
 	phb->inpa = gaim_input_add(source, GAIM_INPUT_READ, s5_canread, phb);
 }
 
-static int proxy_connect_socks5(char *host, unsigned short port, struct PHB *phb)
+static int proxy_connect_socks5(const char *host, unsigned short port, struct PHB *phb)
 {
 	phb->host = g_strdup(host);
 	phb->port = port;
@@ -577,7 +577,7 @@ void gaim_input_remove(gint tag)
 		g_source_remove(tag);
 }
 
-int proxy_connect(char *host, int port, GaimInputFunction func, gpointer data)
+int proxy_connect(const char *host, int port, GaimInputFunction func, gpointer data)
 {
 	struct PHB *phb;
 	

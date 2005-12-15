@@ -183,31 +183,6 @@ int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const
 	return 0;
 }
 
-static int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, guint16 type, guint16 exchange, const char *roomname, guint16 instance)
-{
-	guint8 *buf;
-	int buflen;
-	aim_bstream_t bs;
-
-	buflen = 2 + 1 + strlen(roomname) + 2;
-	
-	if (!(buf = g_malloc(buflen)))
-		return 0;
-
-	aim_bstream_init(&bs, buf, buflen);
-
-	aimbs_put16(&bs, exchange);
-	aimbs_put8(&bs, strlen(roomname));
-	aimbs_putraw(&bs, (guint8 *)roomname, strlen(roomname));
-	aimbs_put16(&bs, instance);
-
-	aim_addtlvtochain_raw(list, type, aim_bstream_curpos(&bs), buf);
-
-	g_free(buf);
-
-	return 0;
-}
-
 /*
  * Join a room of name roomname.  This is the first step to joining an 
  * already created room.  It's basically a Service Request for 

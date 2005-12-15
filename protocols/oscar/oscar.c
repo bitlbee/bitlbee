@@ -61,7 +61,7 @@
 /* Don't know if support for UTF8 is really working. For now it's UTF16 here.
    static int gaim_caps = AIM_CAPS_UTF8; */
 
-static int gaim_caps = AIM_CAPS_INTEROP | AIM_CAPS_ICHAT | AIM_CAPS_ICQSERVERRELAY;
+static int gaim_caps = AIM_CAPS_INTEROP | AIM_CAPS_ICHAT | AIM_CAPS_ICQSERVERRELAY | AIM_CAPS_CHAT;
 static guint8 gaim_features[] = {0x01, 0x01, 0x01, 0x02};
 
 struct oscar_data {
@@ -155,7 +155,6 @@ static char *extract_name(const char *name) {
 	return tmp;
 }
 
-#if 0
 static struct chat_connection *find_oscar_chat(struct gaim_connection *gc, int id) {
 	GSList *g = ((struct oscar_data *)gc->proto_data)->oscar_chats;
 	struct chat_connection *c = NULL;
@@ -170,7 +169,7 @@ static struct chat_connection *find_oscar_chat(struct gaim_connection *gc, int i
 
 	return c;
 }
-#endif
+
 
 static struct chat_connection *find_oscar_chat_by_conn(struct gaim_connection *gc,
 							aim_conn_t *conn) {
@@ -1073,30 +1072,38 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 	return 1;
 }
 
+void oscar_accept_chat(gpointer w, struct aim_chat_invitation * inv);
+void oscar_reject_chat(gpointer w, struct aim_chat_invitation * inv);
+	
 static int incomingim_chan2(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args) {
-#if 0
 	struct gaim_connection *gc = sess->aux_data;
-#endif
 
 	if (args->status != AIM_RENDEZVOUS_PROPOSE)
 		return 1;
-#if 0
+
 	if (args->reqclass & AIM_CAPS_CHAT) {
 		char *name = extract_name(args->info.chat.roominfo.name);
 		int *exch = g_new0(int, 1);
 		GList *m = NULL;
+		char txt[1024];
+		struct aim_chat_invitation * inv = g_new0(struct aim_chat_invitation, 1);
+
 		m = g_list_append(m, g_strdup(name ? name : args->info.chat.roominfo.name));
 		*exch = args->info.chat.roominfo.exchange;
 		m = g_list_append(m, exch);
-		serv_got_chat_invite(gc,
-				     name ? name : args->info.chat.roominfo.name,
-				     userinfo->sn,
-				     (char *)args->msg,
-				     m);
+
+		g_snprintf( txt, 1024, "Got an invitation to chatroom %s from %s: %s", name, userinfo->sn, args->msg );
+
+		inv->gc = gc;
+		inv->exchange = *exch;
+		inv->name = g_strdup(name);
+		
+		do_ask_dialog( gc, txt, inv, oscar_accept_chat, oscar_reject_chat);
+	
 		if (name)
 			g_free(name);
 	}
-#endif
+
 	return 1;
 }
 
@@ -2440,10 +2447,20 @@ int gaim_parsemtn(aim_session_t *sess, aim_frame_t *fr, ...)
 	sn = va_arg(ap, char*);
 	type2 = va_arg(ap, int);
 	va_end(ap);
-
-	if(type2 == 0x0001 || type2 == 0x0002)
-		serv_got_typing(gc, sn, 0);
-
+    
+	if(type2 == 0x0002) {
+		/* User is typing */
+		serv_got_typing(gc, sn, 0, 1);
+	} 
+	else if (type2 == 0x0001) {
+		/* User has typed something, but is not actively typing (stale) */
+		serv_got_typing(gc, sn, 0, 2);
+	}
+	else {
+		/* User has stopped typing */
+		serv_got_typing(gc, sn, 0, 0);
+	}        
+	
 	return 1;
 }
 
@@ -2481,6 +2498,138 @@ int oscar_send_typing(struct gaim_connection *gc, char * who, int typing)
 	return( aim_im_sendmtn(od->sess, 1, who, typing ? 0x0002 : 0x0000) );
 }
 
+int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
+{
+	struct oscar_data * od = (struct oscar_data*)gc->proto_data;
+	struct chat_connection * ccon;
+	int ret;
+	guint8 len = strlen(message);
+	char *s;
+	
+	if(!(ccon = find_oscar_chat(gc, id)))
+		return -1;
+	  	
+	for (s = message; *s; s++)
+		if (*s & 128)
+			break;
+	  	
+	/* Message contains high ASCII chars, time for some translation! */
+	if (*s) {
+		s = g_malloc(BUF_LONG);
+		/* Try if we can put it in an ISO8859-1 string first.
+		   If we can't, fall back to UTF16. */
+		if ((ret = do_iconv("UTF-8", "ISO8859-1", message, s, len, BUF_LONG)) >= 0) {
+			len = ret;
+		} else if ((ret = do_iconv("UTF-8", "UNICODEBIG", message, s, len, BUF_LONG)) >= 0) {
+			len = ret;
+		} else {
+			/* OOF, translation failed... Oh well.. */
+			g_free( s );
+			s = message;
+		}
+	} else {
+		s = message;
+	}
+	  	
+	ret = aim_chat_send_im(od->sess, ccon->conn, AIM_CHATFLAGS_NOREFLECT, s, len);
+	  	
+	if (s != message) {	
+		g_free(s);
+  }
+  
+  return (ret >= 0);
+}
+
+void oscar_chat_invite(struct gaim_connection * gc, int id, char *message, char *who)
+{
+	struct oscar_data * od = (struct oscar_data *)gc->proto_data;
+	struct chat_connection *ccon = find_oscar_chat(gc, id);
+	
+	if (ccon == NULL)
+		return;
+	
+	aim_chat_invite(od->sess, od->conn, who, message ? message : "",
+					ccon->exchange, ccon->name, 0x0);
+}
+
+void oscar_chat_kill(struct gaim_connection *gc, struct chat_connection *cc)
+{
+	struct oscar_data *od = (struct oscar_data *)gc->proto_data;
+
+	/* Notify the conversation window that we've left the chat */
+	serv_got_chat_left(gc, cc->id);
+
+	/* Destroy the chat_connection */
+	od->oscar_chats = g_slist_remove(od->oscar_chats, cc);
+	if (cc->inpa > 0)
+		gaim_input_remove(cc->inpa);
+	aim_conn_kill(od->sess, &cc->conn);
+	g_free(cc->name);
+	g_free(cc->show);
+	g_free(cc);
+}
+
+void oscar_chat_leave(struct gaim_connection * gc, int id)
+{
+	struct chat_connection * ccon = find_oscar_chat(gc, id);
+
+	if(ccon == NULL)
+		return;
+
+	oscar_chat_kill(gc, ccon);
+}
+
+int oscar_chat_join(struct gaim_connection * gc, char * name)
+{
+    struct oscar_data * od = (struct oscar_data *)gc->proto_data;
+	
+	aim_conn_t * cur;
+
+	if((cur = aim_getconn_type(od->sess, AIM_CONN_TYPE_CHATNAV))) {
+	
+		return (aim_chatnav_createroom(od->sess, cur, name, 4) == 0);
+	
+	} else {
+		struct create_room * cr = g_new0(struct create_room, 1);
+		cr->exchange = 4;
+		cr->name = g_strdup(name);
+		od->create_rooms = g_slist_append(od->create_rooms, cr);
+		aim_reqservice(od->sess, od->conn, AIM_CONN_TYPE_CHATNAV);
+		return 1;
+	}
+}
+
+int oscar_chat_open(struct gaim_connection * gc, char *who)
+{
+	struct oscar_data * od = (struct oscar_data *)gc->proto_data;
+	int ret;
+	static int chat_id = 0;
+	char * chatname = g_new0(char, strlen(gc->username)+4);
+	
+	g_snprintf(chatname, strlen(gc->username) + 4, "%s%d", gc->username, chat_id++);
+  
+	ret = oscar_chat_join(gc, chatname);
+
+	aim_chat_invite(od->sess, od->conn, who, "", 4, chatname, 0x0);
+
+	g_free(chatname);
+	
+	return ret;
+}
+
+void oscar_accept_chat(gpointer w, struct aim_chat_invitation * inv)
+{
+	oscar_chat_join(inv->gc, inv->name);
+	g_free(inv->name);
+	g_free(inv);
+}
+
+void oscar_reject_chat(gpointer w, struct aim_chat_invitation * inv)
+{
+	g_free(inv->name);
+	g_free(inv);
+}
+
 void oscar_init() 
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
@@ -2494,6 +2643,10 @@ void oscar_init()
 	ret->get_away = oscar_get_away;
 	ret->add_buddy = oscar_add_buddy;
 	ret->remove_buddy = oscar_remove_buddy;
+	ret->chat_send = oscar_chat_send;
+	ret->chat_invite = oscar_chat_invite;
+	ret->chat_leave = oscar_chat_leave;
+	ret->chat_open = oscar_chat_open;
 	ret->add_permit = oscar_add_permit;
 	ret->add_deny = oscar_add_deny;
 	ret->rem_permit = oscar_rem_permit;

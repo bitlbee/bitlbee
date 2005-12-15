@@ -56,7 +56,6 @@ Option		Description				Default
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 
---flood=0/1	Flood protection			$flood
 --ipv6=0/1	IPv6 socket support			$ipv6
 
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
@@ -286,7 +285,11 @@ else
 fi
 
 if [ "$flood" = 1 ]; then
-	echo '#define FLOOD_SEND' >> config.h
+	# echo '#define FLOOD_SEND' >> config.h
+	echo 'Flood protection is disabled in this release because of too many bugs.' 2> /dev/stderr
+	rm config.h
+	rm Makefile.settings
+	exit 1
 fi
 
 if [ -n "$BITLBEE_VERSION" ]; then
@@ -344,33 +347,28 @@ echo
 echo Architecture: $arch
 case "$arch" in
 Linux )
-	echo 'Linux.'
 ;;
 GNU/* )
-	echo 'Debian with non-Linux kernel?'
 ;;
 *BSD )
-	echo '*BSD.'
 	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 SunOS )
-	echo 'Solaris.'
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
 	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 Darwin )
-	echo 'Darwin/Mac OS X.'
 	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 IRIX )
-	echo 'IRIX.'
 ;;
 CYGWIN* )
 	echo 'Cygwin is not officially supported.'
 ;;
 * )
-	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV. Please report any problems to <wilmer@gaast.net>.'
+	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'
+	echo 'Please report any problems at http://bugs.bitlbee.org/.'
 ;;
 esac
 
@@ -393,11 +391,11 @@ if [ "$msn" = "1" ]; then
 	echo '  Using SSL library: '$ssl;
 fi
 
-if [ "$flood" = "0" ]; then
-	echo '  Flood protection disabled.';
-else
-	echo '  Flood protection enabled.';
-fi
+#if [ "$flood" = "0" ]; then
+#	echo '  Flood protection disabled.';
+#else
+#	echo '  Flood protection enabled.';
+#fi
 
 if [ -n "$protocols" ]; then
 	echo '  Building with these protocols:' $protocols;

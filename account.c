@@ -123,12 +123,6 @@ void account_on( irc_t *irc, account_t *a )
 		return;
 	}
 	
-	if (a->prpl == NULL )
-	{
-		irc_usermsg( irc, "Support for protocol %s is not included in this BitlBee", a->prpl->name );
-		return;
-	}
-	
 	cancel_auto_reconnect( a );
 	
 	u = g_new0 ( struct aim_user, 1 );

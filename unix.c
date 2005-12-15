@@ -52,11 +52,12 @@ int main( int argc, char *argv[] )
 	CONF_FILE = g_strdup( CONF_FILE_DEF );
 	
 	global.helpfile = g_strdup( HELP_FILE );
-	
+
 	global.conf = conf_load( argc, argv );
 	if( global.conf == NULL )
 		return( 1 );
-	
+
+
 	if( global.conf->runmode == RUNMODE_INETD )
 	{
 		log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
@@ -76,6 +77,14 @@ int main( int argc, char *argv[] )
 	}
 	if( i != 0 )
 		return( i );
+
+	global.storage = storage_init( global.conf->primary_storage, 
+								   global.conf->migrate_storage );
+	if ( global.storage == NULL) {
+		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
+		return( 1 );
+	}
+	
  	
 	/* Catch some signals to tell the user what's happening before quitting */
 	memset( &sig, 0, sizeof( sig ) );
@@ -93,10 +102,6 @@ int main( int argc, char *argv[] )
 	
 	if( !getuid() || !geteuid() )
 		log_message( LOGLVL_WARNING, "BitlBee is running with root privileges. Why?" );
-	if( access( global.conf->configdir, F_OK ) != 0 )
-		log_message( LOGLVL_WARNING, "The configuration directory %s does not exist. Configuration won't be saved.", CONFIG );
-	else if( access( global.conf->configdir, R_OK ) != 0 || access( global.conf->configdir, W_OK ) != 0 )
-		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", global.conf->configdir );
 	if( help_init( &(global.help) ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
