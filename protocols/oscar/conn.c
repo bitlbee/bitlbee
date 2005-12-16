@@ -626,9 +626,7 @@ int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 		return -1;
 	}
 
-#ifndef _WIN32
-	fcntl(conn->fd, F_SETFL, 0); /* XXX should restore original flags */
-#endif
+	sock_make_blocking(conn->fd);
 
 	conn->status &= ~AIM_CONN_STATUS_INPROGRESS;
 
