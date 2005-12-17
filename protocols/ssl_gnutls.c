@@ -37,7 +37,7 @@ static gboolean initialized = FALSE;
 
 struct scd
 {
-	SslInputFunction func;
+	ssl_input_function func;
 	gpointer data;
 	int fd;
 	gboolean established;
@@ -50,7 +50,7 @@ struct scd
 static void ssl_connected( gpointer data, gint source, GaimInputCondition cond );
 
 
-void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
+void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	

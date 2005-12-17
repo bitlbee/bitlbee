@@ -32,9 +32,9 @@
 
 extern int ssl_errno;
 
-typedef void (*SslInputFunction)(gpointer, void*, GaimInputCondition);
+typedef void (*ssl_input_function)(gpointer, void*, GaimInputCondition);
 
-G_MODULE_EXPORT void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data );
+G_MODULE_EXPORT void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data );
 G_MODULE_EXPORT int ssl_read( void *conn, char *buf, int len );
 G_MODULE_EXPORT int ssl_write( void *conn, const char *buf, int len );
 G_MODULE_EXPORT void ssl_disconnect( void *conn_ );

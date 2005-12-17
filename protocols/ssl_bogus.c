@@ -27,7 +27,7 @@
 
 int ssl_errno;
 
-void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
+void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	return( NULL );
 }
