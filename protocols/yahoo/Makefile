@@ -15,7 +15,7 @@ CFLAGS += -Wall -DSTDC_HEADERS -DHAVE_STRING_H -DHAVE_STRCHR -DHAVE_MEMCPY -DHAV
 LFLAGS += -r
 
 # [SH] Phony targets
-all: yahooo.o
+all: yahoo_mod.o
 
 .PHONY: all clean distclean
 
@@ -32,6 +32,6 @@ $(objects): %.o: %.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
-yahooo.o: $(objects)
-	@echo '*' Linking yahooo.o
-	@$(LD) $(LFLAGS) $(objects) -o yahooo.o
+yahoo_mod.o: $(objects)
+	@echo '*' Linking yahoo_mod.o
+	@$(LD) $(LFLAGS) $(objects) -o yahoo_mod.o

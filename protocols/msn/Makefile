@@ -15,7 +15,7 @@ CFLAGS += -Wall
 LFLAGS += -r
 
 # [SH] Phony targets
-all: msnn.o
+all: msn_mod.o
 	
 .PHONY: all clean distclean
 
@@ -32,8 +32,8 @@ $(objects): %.o: %.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
-msnn.o: $(objects)
-	@echo '*' Linking msnn.o
-	@$(LD) $(LFLAGS) $(objects) -o msnn.o
+msn_mod.o: $(objects)
+	@echo '*' Linking msn_mod.o
+	@$(LD) $(LFLAGS) $(objects) -o msn_mod.o
 	
 
