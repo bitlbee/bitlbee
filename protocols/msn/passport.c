@@ -19,7 +19,7 @@
  *
  */
 
-#include "ssl_client.h"
+#include "http_client.h"
 #include "passport.h"
 #include "msn.h"
 #include "bitlbee.h"
@@ -30,34 +30,91 @@
 
 static char *prd_cached = NULL;
 
-static char *passport_create_header( char *reply, char *email, char *pwd );
+static int passport_get_id_real( gpointer func, gpointer data, char *header );
+static void passport_get_id_ready( struct http_request *req );
+
 static int passport_retrieve_dalogin( gpointer data, gpointer func, char *header );
-static void passport_retrieve_dalogin_connected( gpointer data, void *ssl, GaimInputCondition cond );
-static int passport_get_id_from( gpointer data, gpointer func, char *header_i, char *url );
-static void passport_get_id_connected( gpointer data, void *ssl, GaimInputCondition cond );
+static void passport_retrieve_dalogin_ready( struct http_request *req );
+
+static char *passport_create_header( char *cookie, char *email, char *pwd );
 static void destroy_reply( struct passport_reply *rep );
 
-
-int passport_get_id( gpointer data, char *username, char *password, char *cookie, gpointer func )
+int passport_get_id( gpointer func, gpointer data, char *username, char *password, char *cookie )
 {
 	char *header = passport_create_header( cookie, username, password );
 	
-	if( prd_cached )
-	{
-		int st;
-		
-		st = passport_get_id_from( data, func, header, prd_cached );
-		g_free( header );
-		return( st );
-	}
+	if( prd_cached == NULL )
+		return passport_retrieve_dalogin( func, data, header );
 	else
-	{
-		return( passport_retrieve_dalogin( data, func, header ) );
-	}
+		return passport_get_id_real( func, data, header );
 }
 
+static int passport_get_id_real( gpointer func, gpointer data, char *header )
+{
+	struct passport_reply *rep;
+	char *server, *dummy, *reqs;
+	struct http_request *req;
+	
+	rep = g_new0( struct passport_reply, 1 );
+	rep->data = data;
+	rep->func = func;
+	
+	server = g_strdup( prd_cached );
+	dummy = strchr( server, '/' );
+	
+	if( dummy == NULL )
+	{
+		destroy_reply( rep );
+		return( 0 );
+	}
+	
+	reqs = g_malloc( strlen( header ) + strlen( dummy ) + 128 );
+	sprintf( reqs, "GET %s HTTP/1.0\r\n%s\r\n\r\n", dummy, header );
+	
+	*dummy = 0;
+	req = http_dorequest( server, 443, 1, reqs, passport_get_id_ready, rep );
+	
+	g_free( server );
+	g_free( reqs );
+	
+	if( req == NULL )
+		destroy_reply( rep );
+	
+	return( req != NULL );
+}
 
-static char *passport_create_header( char *reply, char *email, char *pwd )
+static void passport_get_id_ready( struct http_request *req )
+{
+	struct passport_reply *rep = req->data;
+	
+	if( !g_slist_find( msn_connections, rep->data ) )
+	{
+		destroy_reply( rep );
+		return;
+	}
+	
+	if( req->status_code == 200 )
+	{
+		char *dummy;
+		
+		if( ( dummy = strstr( req->reply_headers, "from-PP='" ) ) )
+		{
+			char *responseend;
+			
+			dummy += strlen( "from-PP='" );
+			responseend = strchr( dummy, '\'' );
+			if( responseend )
+				*responseend = 0;
+			
+			rep->result = g_strdup( dummy );
+		}
+	}
+	
+	rep->func( rep );
+	destroy_reply( rep );
+}
+
+static char *passport_create_header( char *cookie, char *email, char *pwd )
 {
 	char *buffer = g_new0( char, 2048 );
 	char *currenttoken;
@@ -71,7 +128,7 @@ static char *passport_create_header( char *reply, char *email, char *pwd )
 	strcpy( pwd_enc, pwd );
 	http_encode( pwd_enc );
 	
-	currenttoken = strstr( reply, "lc=" );
+	currenttoken = strstr( cookie, "lc=" );
 	if( currenttoken == NULL )
 		return( NULL );
 	
@@ -87,227 +144,68 @@ static char *passport_create_header( char *reply, char *email, char *pwd )
 	return( buffer );
 }
 
-
-static int passport_retrieve_dalogin( gpointer data, gpointer func, char *header )
+#define PPR_REQUEST "GET /rdr/pprdr.asp HTTP/1.0\r\n\r\n"
+static int passport_retrieve_dalogin( gpointer func, gpointer data, char *header )
 {
 	struct passport_reply *rep = g_new0( struct passport_reply, 1 );
-	void *ssl;
+	struct http_request *req;
 	
 	rep->data = data;
 	rep->func = func;
 	rep->header = header;
 	
-	ssl = ssl_connect( "nexus.passport.com", 443, passport_retrieve_dalogin_connected, rep );
+	req = http_dorequest( "nexus.passport.com", 443, 1, PPR_REQUEST, passport_retrieve_dalogin_ready, rep );
 	
-	if( !ssl )
+	if( !req )
 		destroy_reply( rep );
 	
-	return( ssl != NULL );
+	return( req != NULL );
 }
 
-#define PPR_BUFFERSIZE 2048
-#define PPR_REQUEST "GET /rdr/pprdr.asp HTTP/1.0\r\n\r\n"
-static void passport_retrieve_dalogin_connected( gpointer data, void *ssl, GaimInputCondition cond )
+static void passport_retrieve_dalogin_ready( struct http_request *req )
 {
-	int ret;
-	char buffer[PPR_BUFFERSIZE+1];
-	struct passport_reply *rep = data;
+	struct passport_reply *rep = req->data;
+	char *dalogin;
+	char *urlend;
 	
 	if( !g_slist_find( msn_connections, rep->data ) )
 	{
-		if( ssl ) ssl_disconnect( ssl );
 		destroy_reply( rep );
 		return;
 	}
 	
-	if( !ssl )
-	{
-		rep->func( rep );
-		destroy_reply( rep );
-		return;
-	}
+	dalogin = strstr( req->reply_headers, "DALogin=" );	
 	
-	ssl_write( ssl, PPR_REQUEST, strlen( PPR_REQUEST ) );
-	
-	if( ( ret = ssl_read( ssl, buffer, PPR_BUFFERSIZE ) ) <= 0 )
-	{
+	if( !dalogin )
 		goto failure;
-	}
-
-	{
-		char *dalogin = strstr( buffer, "DALogin=" );
-		char *urlend;
-		
-		if( !dalogin )
-			goto failure;
-		
-		dalogin += strlen( "DALogin=" );
-		urlend = strchr( dalogin, ',' );
-		if( urlend )
-			*urlend = 0;
-		
-		/* strip the http(s):// part from the url */
-		urlend = strstr( urlend, "://" );
-		if( urlend )
-			dalogin = urlend + strlen( "://" );
-		
-		if( prd_cached == NULL )
-			prd_cached = g_strdup( dalogin );
-	}
 	
-	if( passport_get_id_from( rep->data, rep->func, rep->header, prd_cached ) )
+	dalogin += strlen( "DALogin=" );
+	urlend = strchr( dalogin, ',' );
+	if( urlend )
+		*urlend = 0;
+	
+	/* strip the http(s):// part from the url */
+	urlend = strstr( urlend, "://" );
+	if( urlend )
+		dalogin = urlend + strlen( "://" );
+	
+	if( prd_cached == NULL )
+		prd_cached = g_strdup( dalogin );
+	
+	if( passport_get_id_real( rep->func, rep->data, rep->header ) )
 	{
-		ssl_disconnect( ssl );
 		destroy_reply( rep );
 		return;
 	}
 	
 failure:	
-	ssl_disconnect( ssl );
 	rep->func( rep );
 	destroy_reply( rep );
 }
-
-
-static int passport_get_id_from( gpointer data, gpointer func, char *header_i, char *url )
-{
-	struct passport_reply *rep = g_new0( struct passport_reply, 1 );
-	char server[512], *dummy;
-	void *ssl;
-	
-	rep->data = data;
-	rep->func = func;
-	rep->redirects = 4;
-	
-	strncpy( server, url, 512 );
-	dummy = strchr( server, '/' );
-	if( dummy )
-		*dummy = 0;
-	
-	ssl = ssl_connect( server, 443, passport_get_id_connected, rep );
-	
-	if( ssl )
-	{
-		rep->header = g_strdup( header_i );
-		rep->url = g_strdup( url );
-	}
-	else
-	{
-		destroy_reply( rep );
-	}
-	
-	return( ssl != NULL );
-}
-
-#define PPG_BUFFERSIZE 4096
-static void passport_get_id_connected( gpointer data, void *ssl, GaimInputCondition cond )
-{
-	struct passport_reply *rep = data;
-	char server[512], buffer[PPG_BUFFERSIZE+1], *dummy;
-	int ret;
-	
-	if( !g_slist_find( msn_connections, rep->data ) )
-	{
-		if( ssl ) ssl_disconnect( ssl );
-		destroy_reply( rep );
-		return;
-	}
-	
-	if( !ssl )
-	{
-		rep->func( rep );
-		destroy_reply( rep );
-		return;
-	}
-	
-	memset( buffer, 0, PPG_BUFFERSIZE + 1 );
-	
-	strncpy( server, rep->url, 512 );
-	dummy = strchr( server, '/' );
-	if( dummy == NULL )
-		goto end;
-	
-	g_snprintf( buffer, PPG_BUFFERSIZE - 1, "GET %s HTTP/1.0\r\n"
-	            "%s\r\n\r\n", dummy, rep->header );
-	
-	ssl_write( ssl, buffer, strlen( buffer ) );
-	memset( buffer, 0, PPG_BUFFERSIZE + 1 );
-	
-	{
-		char *buffer2 = buffer;
-		
-		while( ( ( ret = ssl_read( ssl, buffer2, 512 ) ) > 0 ) &&
-		       ( buffer + PPG_BUFFERSIZE - buffer2 - ret - 512 >= 0 ) )
-		{
-			buffer2 += ret;
-		}
-	}
-	
-	if( *buffer == 0 )
-		goto end;
-	
-	if( ( dummy = strstr( buffer, "Location:" ) ) )
-	{
-		char *urlend;
-		
-		rep->redirects --;
-		if( rep->redirects == 0 )
-			goto end;
-		
-		dummy += strlen( "Location:" );
-		while( isspace( *dummy ) ) dummy ++;
-		urlend = dummy;
-		while( !isspace( *urlend ) ) urlend ++;
-		*urlend = 0;
-		if( ( urlend = strstr( dummy, "://" ) ) )
-			dummy = urlend + strlen( "://" );
-		
-		g_free( rep->url );
-		rep->url = g_strdup( dummy );
-		
-		strncpy( server, dummy, sizeof( server ) - 1 );
-		dummy = strchr( server, '/' );
-		if( dummy ) *dummy = 0;
-		
-		ssl_disconnect( ssl );
-		
-		if( ssl_connect( server, 443, passport_get_id_connected, rep ) )
-		{
-			return;
-		}
-		else
-		{
-			rep->func( rep );
-			destroy_reply( rep );
-			return;
-		}
-	}
-	else if( strstr( buffer, "200 OK" ) )
-	{
-		if( ( dummy = strstr( buffer, "from-PP='" ) ) )
-		{
-			char *responseend;
-			
-			dummy += strlen( "from-PP='" );
-			responseend = strchr( dummy, '\'' );
-			if( responseend )
-				*responseend = 0;
-			
-			rep->result = g_strdup( dummy );
-		}
-	}
-	
-end:
-	ssl_disconnect( ssl );
-	rep->func( rep );
-	destroy_reply( rep );
-}
-
 
 static void destroy_reply( struct passport_reply *rep )
 {
-	if( rep->result ) g_free( rep->result );
-	if( rep->url ) g_free( rep->url );
-	if( rep->header ) g_free( rep->header );
-	if( rep ) g_free( rep );
+	g_free( rep->result );
+	g_free( rep->header );
+	g_free( rep );
 }

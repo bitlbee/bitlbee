@@ -207,7 +207,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts == 5 && strcmp( cmd[2], "TWN" ) == 0 && strcmp( cmd[3], "S" ) == 0 )
 		{
 			/* Time for some Passport black magic... */
-			if( !passport_get_id( gc, gc->username, gc->password, cmd[4], msn_auth_got_passport_id ) )
+			if( !passport_get_id( msn_auth_got_passport_id, gc, gc->username, gc->password, cmd[4] ) )
 			{
 				hide_login_progress_error( gc, "Error while contacting Passport server" );
 				signoff( gc );

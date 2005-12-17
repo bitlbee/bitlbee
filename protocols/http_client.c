@@ -163,7 +163,13 @@ static void http_incoming_data( gpointer data, int source, GaimInputCondition co
 		{
 			if( ssl_errno != SSL_AGAIN )
 			{
-				goto cleanup;
+				/* goto cleanup; */
+				
+				/* YAY! We have to deal with crappy Microsoft
+				   servers that LOVE to send invalid TLS
+				   packets that abort connections! \o/ */
+				
+				goto got_reply;
 			}
 		}
 		else if( st == 0 )
