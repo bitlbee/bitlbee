@@ -105,8 +105,6 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 		gaim_cond |= GAIM_INPUT_READ;
 	if (condition & GAIM_WRITE_COND)
 		gaim_cond |= GAIM_INPUT_WRITE;
-//	if (condition & GAIM_ERR_COND)
-//		fprintf( stderr, "ERROR! fd=%d\n", g_io_channel_unix_get_fd( source ) );
 
 	closure->function(closure->data, g_io_channel_unix_get_fd(source), gaim_cond);
 
