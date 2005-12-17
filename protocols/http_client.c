@@ -36,7 +36,7 @@ static void http_ssl_connected( gpointer data, void *source, GaimInputCondition 
 static void http_incoming_data( gpointer data, int source, GaimInputCondition cond );
 
 
-void *http_dorequest( char *host, int port, http_input_function func, int ssl, char *request, gpointer data )
+void *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data )
 {
 	struct http_request *req;
 	int error = 0;

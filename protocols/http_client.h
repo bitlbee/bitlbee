@@ -51,4 +51,4 @@ struct http_request
 	gpointer data;
 };
 
-void *http_dorequest( char *host, int port, http_input_function func, int ssl, char *request, gpointer data );
+void *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data );
