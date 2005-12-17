@@ -40,6 +40,7 @@ typedef struct conf
 	char *password;
 	char *hostname;
 	char *configdir;
+	char *plugindir;
 	char *motdfile;
 	char *primary_storage;
 	char **migrate_storage;
