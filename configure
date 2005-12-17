@@ -251,10 +251,10 @@ if [ "$msn" = 1 -o "$jabber" = 1 ]; then
 	
 	if [ "$ret" = "0" ]; then
 		echo
-		echo 'WARNING: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
-		echo '         This is necessary for MSN and full Jabber support. To continue,'
-		echo '         install a suitable SSL library or disable MSN support (--msn=0).'
-		echo '         If you want Jabber without SSL support you can try --ssl=bogus.'
+		echo 'ERROR: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
+		echo '       This is necessary for MSN and full Jabber support. To continue,'
+		echo '       install a suitable SSL library or disable MSN support (--msn=0).'
+		echo '       If you want Jabber without SSL support you can try --ssl=bogus.'
 		
 		exit 1;
 	fi;
