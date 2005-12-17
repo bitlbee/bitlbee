@@ -34,6 +34,8 @@
 #include "ssl_client.h"
 #include "sock.h"
 
+int ssl_errno = 0;
+
 static gboolean initialized = FALSE;
 
 struct scd

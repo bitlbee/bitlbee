@@ -81,14 +81,14 @@ void load_plugins(void)
 	GDir *dir;
 	GError *error = NULL;
 
-	dir = g_dir_open(PLUGINDIR, 0, &error);
+	dir = g_dir_open(global.conf->plugindir, 0, &error);
 
 	if (dir) {
 		const gchar *entry;
 		char *path;
 
 		while ((entry = g_dir_read_name(dir))) {
-			path = g_build_filename(PLUGINDIR, entry, NULL);
+			path = g_build_filename(global.conf->plugindir, entry, NULL);
 			if(!path) {
 				log_message(LOGLVL_WARNING, "Can't build path for %s\n", entry);
 				continue;

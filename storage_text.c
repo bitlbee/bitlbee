@@ -41,7 +41,7 @@
 static struct prpl *find_protocol_by_id(int id)
 {
 	switch (id) {
-	case 1: return find_protocol("oscar");
+	case 0: case 1: case 3: return find_protocol("oscar");
 	case 4: return find_protocol("msn");
 	case 2: return find_protocol("yahoo");
 	case 8: return find_protocol("jabber");

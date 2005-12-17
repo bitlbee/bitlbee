@@ -26,6 +26,12 @@
 #include <glib.h>
 #include "proxy.h"
 
+#define SSL_OK            0
+#define SSL_NOHANDSHAKE   1
+#define SSL_AGAIN         2
+
+extern int ssl_errno;
+
 typedef void (*SslInputFunction)(gpointer, void*, GaimInputCondition);
 
 G_MODULE_EXPORT void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data );

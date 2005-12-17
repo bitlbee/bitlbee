@@ -132,8 +132,8 @@ static void gaim_io_connected(gpointer data, gint source, GaimInputCondition con
 		}
 		return;
 	}
-	fcntl(source, F_SETFL, 0);
 #endif
+	sock_make_blocking(source);
 	gaim_input_remove(phb->inpa);
 	if( phb->proxy_func )
 		phb->proxy_func(phb->proxy_data, source, GAIM_INPUT_READ);
@@ -228,9 +228,7 @@ static void http_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		g_free(phb);
 		return;
 	}
-#ifdef F_SETFL
-	fcntl(source, F_SETFL, 0);
-#endif
+	sock_make_blocking(source);
 
 	g_snprintf(cmd, sizeof(cmd), "CONNECT %s:%d HTTP/1.1\r\nHost: %s:%d\r\n", phb->host, phb->port,
 		   phb->host, phb->port);
@@ -321,9 +319,7 @@ static void s4_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		g_free(phb);
 		return;
 	}
-#ifdef F_SETFL
-	fcntl(source, F_SETFL, 0);
-#endif
+	sock_make_blocking(source);
 
 	/* XXX does socks4 not support host name lookups by the proxy? */
 	if (!(hp = gethostbyname(phb->host))) {
@@ -508,9 +504,7 @@ static void s5_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		g_free(phb);
 		return;
 	}
-#ifdef F_SETFL
-	fcntl(source, F_SETFL, 0);
-#endif
+	sock_make_blocking(source);
 
 	i = 0;
 	buf[0] = 0x05;		/* SOCKS version 5 */

@@ -25,6 +25,8 @@
 
 #include "ssl_client.h"
 
+int ssl_errno;
+
 void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
 {
 	return( NULL );

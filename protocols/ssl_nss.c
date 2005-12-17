@@ -38,6 +38,8 @@
 #include <secerr.h>
 #include <sslerr.h>
 
+int ssl_errno = 0;
+
 static gboolean initialized = FALSE;
 
 struct scd
