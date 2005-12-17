@@ -1,3 +1,6 @@
+#include <errno.h>
+#include <fcntl.h>
+
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/socket.h>

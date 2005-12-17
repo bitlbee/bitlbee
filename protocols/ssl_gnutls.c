@@ -37,7 +37,7 @@ static gboolean initialized = FALSE;
 
 struct scd
 {
-	SslInputFunction func;
+	ssl_input_function func;
 	gpointer data;
 	int fd;
 	gboolean established;
@@ -50,7 +50,7 @@ struct scd
 static void ssl_connected( gpointer data, gint source, GaimInputCondition cond );
 
 
-void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
+void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	
@@ -116,9 +116,7 @@ static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond )
 	{
 		if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
 		{
-			conn->inpa = gaim_input_add( conn->fd,
-			                             gnutls_record_get_direction( conn->session ) ?
-			                                 GAIM_INPUT_WRITE : GAIM_INPUT_READ,
+			conn->inpa = gaim_input_add( conn->fd, ssl_getdirection( conn ),
 			                             ssl_handshake, data );
 		}
 		else
@@ -144,25 +142,40 @@ static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond )
 
 int ssl_read( void *conn, char *buf, int len )
 {
+	int st;
+	
 	if( !((struct scd*)conn)->established )
 	{
 		ssl_errno = SSL_NOHANDSHAKE;
 		return( -1 );
 	}
 	
-	return( gnutls_record_recv( ((struct scd*)conn)->session, buf, len ) );
+	st = gnutls_record_recv( ((struct scd*)conn)->session, buf, len );
 	
+	ssl_errno = SSL_OK;
+	if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
+		ssl_errno = SSL_AGAIN;
+	
+	return st;
 }
 
 int ssl_write( void *conn, const char *buf, int len )
 {
+	int st;
+	
 	if( !((struct scd*)conn)->established )
 	{
 		ssl_errno = SSL_NOHANDSHAKE;
 		return( -1 );
 	}
 	
-	return( gnutls_record_send( ((struct scd*)conn)->session, buf, len ) );
+	st = gnutls_record_send( ((struct scd*)conn)->session, buf, len );
+	
+	ssl_errno = SSL_OK;
+	if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
+		ssl_errno = SSL_AGAIN;
+	
+	return st;
 }
 
 void ssl_disconnect( void *conn_ )
@@ -182,4 +195,10 @@ void ssl_disconnect( void *conn_ )
 int ssl_getfd( void *conn )
 {
 	return( ((struct scd*)conn)->fd );
+}
+
+GaimInputCondition ssl_getdirection( void *conn )
+{
+	return( gnutls_record_get_direction( ((struct scd*)conn)->session ) ?
+	        GAIM_INPUT_WRITE : GAIM_INPUT_READ );
 }

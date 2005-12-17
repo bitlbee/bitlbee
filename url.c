@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2001-2004 Wilmer van der Gaast and others                *
+  * Copyright 2001-2005 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* URL/mirror stuff - Stolen from Axel                                  */
@@ -29,7 +29,7 @@
 int url_set( url_t *url, char *set_url )
 {
 	char s[MAX_STRING];
-	char *i, *j;
+	char *i;
 	
 	/* protocol://							*/
 	if( ( i = strstr( set_url, "://" ) ) == NULL )
@@ -39,7 +39,9 @@ int url_set( url_t *url, char *set_url )
 	}
 	else
 	{
-		if( g_strncasecmp( set_url, "http", i - set_url ) == 0 )
+		if( g_strncasecmp( set_url, "https", i - set_url ) == 0 )
+			url->proto = PROTO_HTTPS;
+		else if( g_strncasecmp( set_url, "http", i - set_url ) == 0 )
 			url->proto = PROTO_HTTP;
 		else if( g_strncasecmp( set_url, "socks4", i - set_url ) == 0 )
 			url->proto = PROTO_SOCKS4;
@@ -55,33 +57,14 @@ int url_set( url_t *url, char *set_url )
 	/* Split							*/
 	if( ( i = strchr( s, '/' ) ) == NULL )
 	{
-		strcpy( url->dir, "/" );
+		strcpy( url->file, "/" );
 	}
 	else
 	{
+		strncpy( url->file, i, MAX_STRING );
 		*i = 0;
-		g_snprintf( url->dir, MAX_STRING, "/%s", i + 1 );
-		if( url->proto == PROTO_HTTP )
-			http_encode( url->dir );
 	}
 	strncpy( url->host, s, MAX_STRING );
-	j = strchr( url->dir, '?' );
-	if( j != NULL )
-		*j = 0;
-	i = strrchr( url->dir, '/' );
-	*i = 0;
-	if( j != NULL )
-		*j = '?';
-	if( i == NULL )
-	{
-		strcpy( url->file, url->dir );
-		strcpy( url->dir, "/" );
-	}
-	else
-	{
-		strcpy( url->file, i + 1 );
-		strcat( url->dir, "/" );
-	}
 	
 	/* Check for username in host field				*/
 	if( strrchr( url->host, '@' ) != NULL )
@@ -95,15 +78,7 @@ int url_set( url_t *url, char *set_url )
 	/* If not: Fill in defaults					*/
 	else
 	{
-		if( url->proto == PROTO_FTP )
-		{
-			strcpy( url->user, "anonymous" );
-			strcpy( url->pass, "-p.artmaps@lintux.cx" );
-		}
-		else
-		{
-			*url->user = *url->pass = 0;
-		}
+		*url->user = *url->pass = 0;
 	}
 	
 	/* Password?							*/
@@ -116,13 +91,14 @@ int url_set( url_t *url, char *set_url )
 	if( ( i = strchr( url->host, ':' ) ) != NULL )
 	{
 		*i = 0;
-		sscanf( i + 1, "%i", &url->port );
+		sscanf( i + 1, "%d", &url->port );
 	}
-	/* Take default port numbers from /etc/services			*/
 	else
 	{
 		if( url->proto == PROTO_HTTP )
-			url->port = 8080;
+			url->port = 80;
+		else if( url->proto == PROTO_HTTPS )
+			url->port = 443;
 		else if( url->proto == PROTO_SOCKS4 || url->proto == PROTO_SOCKS4 )
 			url->port = 1080;
 	}
