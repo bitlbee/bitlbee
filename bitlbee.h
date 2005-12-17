@@ -47,9 +47,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <errno.h>
+
 #ifndef _WIN32
 #include <syslog.h>
-#include <errno.h>
 #endif
 
 #include <glib.h>
@@ -74,10 +75,6 @@
 #define strcasecmp	__PLEASE_USE_G_STRCASECMP_INSTEAD__
 #undef strncasecmp
 #define strncasecmp	__PLEASE_USE_G_STRNCASECMP_INSTEAD__
-
-#ifndef F_OK
-#define F_OK 0
-#endif
 
 #define _( x ) x
 

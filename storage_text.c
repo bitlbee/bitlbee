@@ -26,6 +26,14 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "crypting.h"
+#ifdef _WIN32
+# define umask _umask
+# define mode_t int
+#endif
+
+#ifndef F_OK
+#define F_OK 0
+#endif
 
 /* DO NOT USE THIS FUNCTION IN NEW CODE. This 
  * function is here merely because the save/load code still uses 

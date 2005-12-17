@@ -16,6 +16,9 @@ Instructions for building BitlBee on Windows
     - nss (in security/nss/)
     - nspr (in nspr/)
 
+  glib and gettext are only required for actually running BitlBee - building
+  should work fine without them.
+
 3. Set the following variables in Makefile.settings, if you don't have the 
    libraries above installed in the default directories searched by MSVC:
 
