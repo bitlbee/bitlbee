@@ -340,6 +340,7 @@ got_reply:
 			if( req->fd < 0 )
 				error = 1;
 		}
+		g_free( new_host );
 		
 		if( error )
 		{
