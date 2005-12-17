@@ -251,10 +251,10 @@ if [ "$msn" = 1 -o "$jabber" = 1 ]; then
 	
 	if [ "$ret" = "0" ]; then
 		echo
-		echo 'WARNING: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
-		echo '         This is necessary for MSN and full Jabber support. To continue,'
-		echo '         install a suitable SSL library or disable MSN support (--msn=0).'
-		echo '         If you want Jabber without SSL support you can try --ssl=bogus.'
+		echo 'ERROR: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
+		echo '       This is necessary for MSN and full Jabber support. To continue,'
+		echo '       install a suitable SSL library or disable MSN support (--msn=0).'
+		echo '       If you want Jabber without SSL support you can try --ssl=bogus.'
 		
 		exit 1;
 	fi;
@@ -307,7 +307,7 @@ if [ "$msn" = 0 ]; then
 else
 	echo '#define WITH_MSN' >> config.h
 	protocols=$protocols'msn '
-	protoobjs=$protoobjs'msnn.o '
+	protoobjs=$protoobjs'msn_mod.o '
 fi
 
 if [ "$jabber" = 0 ]; then
@@ -315,7 +315,7 @@ if [ "$jabber" = 0 ]; then
 else
 	echo '#define WITH_JABBER' >> config.h
 	protocols=$protocols'jabber '
-	protoobjs=$protoobjs'jabberr.o '
+	protoobjs=$protoobjs'jabber_mod.o '
 fi
 
 if [ "$oscar" = 0 ]; then
@@ -323,7 +323,7 @@ if [ "$oscar" = 0 ]; then
 else
 	echo '#define WITH_OSCAR' >> config.h
 	protocols=$protocols'oscar '
-	protoobjs=$protoobjs'oscarr.o '
+	protoobjs=$protoobjs'oscar_mod.o '
 fi
 
 if [ "$yahoo" = 0 ]; then
@@ -331,7 +331,7 @@ if [ "$yahoo" = 0 ]; then
 else
 	echo '#define WITH_YAHOO' >> config.h
 	protocols=$protocols'yahoo '
-	protoobjs=$protoobjs'yahooo.o '
+	protoobjs=$protoobjs'yahoo_mod.o '
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then

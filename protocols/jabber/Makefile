@@ -15,7 +15,7 @@ CFLAGS += -Wall
 LFLAGS += -r
 
 # [SH] Phony targets
-all: jabberr.o
+all: jabber_mod.o
 
 .PHONY: all clean distclean
 
@@ -32,6 +32,6 @@ $(objects): %.o: %.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
-jabberr.o: $(objects)
-	@echo '*' Linking jabberr.o
-	@$(LD) $(LFLAGS) $(objects) -o jabberr.o
+jabber_mod.o: $(objects)
+	@echo '*' Linking jabber_mod.o
+	@$(LD) $(LFLAGS) $(objects) -o jabber_mod.o

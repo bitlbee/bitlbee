@@ -4,7 +4,7 @@
   * Copyright 2002-2005 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* HTTP(S) module (actually, it only does HTTPS right now)              */
+/* HTTP(S) module                                                       */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -24,9 +24,11 @@
 */
 
 #include <string.h>
+#include <stdio.h>
 
 #include "sock.h"
 #include "http_client.h"
+#include "url.h"
 
 
 static void http_connected( gpointer data, int source, GaimInputCondition cond );
@@ -60,6 +62,8 @@ void *http_dorequest( char *host, int port, http_input_function func, int ssl, c
 		return( NULL );
 	}
 	
+	req->func = func;
+	req->data = data;
 	req->request = g_strdup( request );
 	req->request_length = strlen( request );
 	
@@ -102,7 +106,7 @@ static void http_connected( gpointer data, int source, GaimInputCondition cond )
 		{
 			if( !sockerr_again() )
 			{
-				close( req->fd );
+				closesocket( req->fd );
 				goto error;
 			}
 		}
@@ -187,6 +191,7 @@ static void http_incoming_data( gpointer data, int source, GaimInputCondition co
 	{
 		req->reply_headers = g_realloc( req->reply_headers, req->bytes_read + st + 1 );
 		memcpy( req->reply_headers + req->bytes_read, buffer, st );
+		req->bytes_read += st;
 	}
 	
 	/* There will be more! */
@@ -207,8 +212,12 @@ got_reply:
 	
 	if( end2 && end2 < end1 )
 	{
-		end1 = end2;
+		end1 = end2 + 1;
 		evil_server = 1;
+	}
+	else
+	{
+		end1 += 2;
 	}
 	
 	if( end1 )
@@ -216,9 +225,136 @@ got_reply:
 		*end1 = 0;
 		
 		if( evil_server )
-			req->reply_body = end1 + 2;
+			req->reply_body = end1 + 1;
 		else
-			req->reply_body = end1 + 4;
+			req->reply_body = end1 + 2;
+	}
+	
+	if( ( end1 = strchr( req->reply_headers, ' ' ) ) != NULL )
+	{
+		if( sscanf( end1 + 1, "%d", &req->status_code ) != 1 )
+			req->status_code = -1;
+	}
+	else
+	{
+		req->status_code = -1;
+	}
+	
+	if( req->status_code == 301 || req->status_code == 302 )
+	{
+		char *loc, *new_request, *new_host;
+		int error = 0, new_port, new_proto;
+		
+		loc = strstr( req->reply_headers, "\nLocation: " );
+		if( loc == NULL ) /* We can't handle this redirect... */
+			goto cleanup;
+		
+		loc += 11;
+		while( *loc == ' ' )
+			loc ++;
+		
+		/* TODO/FIXME: Possibly have to handle relative redirections,
+		   and rewrite Host: headers. Not necessary for now, it's
+		   enough for passport authentication like this. */
+		
+		if( *loc == '/' )
+		{
+			/* Just a different pathname... */
+			
+			/* Since we don't cache the servername, and since we
+			   don't need this yet anyway, I won't implement it. */
+			
+			goto cleanup;
+		}
+		else
+		{
+			/* A whole URL */
+			url_t *url;
+			char *s;
+			
+			s = strstr( loc, "\r\n" );
+			if( s == NULL )
+				goto cleanup;
+			
+			url = g_new0( url_t, 1 );
+			*s = 0;
+			
+			if( !url_set( url, loc ) )
+			{
+				g_free( url );
+				goto cleanup;
+			}
+			
+			/* Okay, this isn't fun! We have to rebuild the request... :-( */
+			new_request = g_malloc( req->request_length + strlen( url->file ) );
+			
+			/* So, now I just allocated enough memory, so I'm
+			   going to use strcat(), whether you like it or not. :-) */
+			
+			/* First, find the GET/POST/whatever from the original request. */
+			s = strchr( req->request, ' ' );
+			if( s == NULL )
+			{
+				g_free( new_request );
+				g_free( url );
+				goto cleanup;
+			}
+			
+			*s = 0;
+			sprintf( new_request, "%s %s HTTP/1.0\r\n", req->request, url->file );
+			*s = ' ';
+			
+			s = strstr( req->request, "\r\n" );
+			if( s == NULL )
+			{
+				g_free( new_request );
+				g_free( url );
+				goto cleanup;
+			}
+			
+			strcat( new_request, s + 2 );
+			new_host = g_strdup( url->host );
+			new_port = url->port;
+			new_proto = url->proto;
+			
+			g_free( url );
+		}
+		
+		if( req->ssl )
+			ssl_disconnect( req->ssl );
+		else
+			closesocket( req->fd );
+		
+		req->fd = -1;
+		req->ssl = 0;
+		
+		if( new_proto == PROTO_HTTPS )
+		{
+			req->ssl = ssl_connect( new_host, new_port, http_ssl_connected, req );
+			if( req->ssl == NULL )
+				error = 1;
+		}
+		else
+		{
+			req->fd = proxy_connect( new_host, new_port, http_connected, req );
+			if( req->fd < 0 )
+				error = 1;
+		}
+		
+		if( error )
+		{
+			g_free( new_request );
+			goto cleanup;
+		}
+		
+		g_free( req->request );
+		g_free( req->reply_headers );
+		req->request = new_request;
+		req->request_length = strlen( new_request );
+		req->bytes_read = req->bytes_written = req->inpa = 0;
+		req->reply_headers = req->reply_body = NULL;
+		
+		return;
 	}
 	
 	/* Assume that a closed connection means we're finished, this indeed
@@ -229,7 +365,7 @@ cleanup:
 	if( req->ssl )
 		ssl_disconnect( req->ssl );
 	else
-		close( req->fd );
+		closesocket( req->fd );
 	
 	req->func( req );
 	

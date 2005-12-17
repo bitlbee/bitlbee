@@ -15,7 +15,7 @@ CFLAGS += -Wall
 LFLAGS += -r
 
 # [SH] Phony targets
-all: oscarr.o
+all: oscar_mod.o
 
 .PHONY: all clean distclean
 
@@ -32,6 +32,6 @@ $(objects): %.o: %.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
-oscarr.o: $(objects)
-	@echo '*' Linking oscarr.o
-	@$(LD) $(LFLAGS) $(objects) -o oscarr.o
+oscar_mod.o: $(objects)
+	@echo '*' Linking oscar_mod.o
+	@$(LD) $(LFLAGS) $(objects) -o oscar_mod.o
