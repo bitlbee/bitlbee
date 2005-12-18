@@ -54,6 +54,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->authmode = AUTHMODE_OPEN;
 	conf->password = NULL;
 	conf->configdir = g_strdup( CONFIG );
+	conf->plugindir = g_strdup( PLUGINDIR );
 	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;

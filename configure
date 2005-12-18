@@ -144,10 +144,14 @@ else
 	exit 1;
 fi
 
-if type pkg-config > /dev/null 2>/dev/null && pkg-config glib-2.0; then
+if [ -z "$PKG_CONFIG" ]; then
+	PKG_CONFIG=pkg-config
+fi
+
+if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG glib-2.0; then
 	cat<<EOF>>Makefile.settings
-EFLAGS+=`pkg-config --libs glib-2.0 gmodule-2.0`
-CFLAGS+=`pkg-config --cflags glib-2.0 gmodule-2.0`
+EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0`
+CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0`
 EOF
 	echo '#define GLIB2' >> config.h
 elif type glib-config > /dev/null 2> /dev/null; then
@@ -189,10 +193,10 @@ EOF
 
 detect_nss()
 {
-	if type pkg-config > /dev/null 2>/dev/null && pkg-config mozilla-nss; then
+	if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG mozilla-nss; then
 		cat<<EOF>>Makefile.settings
-EFLAGS+=`pkg-config --libs mozilla-nss`
-CFLAGS+=`pkg-config --cflags mozilla-nss`
+EFLAGS+=`$PKG_CONFIG --libs mozilla-nss`
+CFLAGS+=`$PKG_CONFIG --cflags mozilla-nss`
 EOF
 		
 		ssl=nss
