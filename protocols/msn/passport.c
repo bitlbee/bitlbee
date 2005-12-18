@@ -87,7 +87,7 @@ static void passport_get_id_ready( struct http_request *req )
 {
 	struct passport_reply *rep = req->data;
 	
-	if( !g_slist_find( msn_connections, rep->data ) )
+	if( !g_slist_find( msn_connections, rep->data ) || !req->finished || !req->reply_headers )
 	{
 		destroy_reply( rep );
 		return;
@@ -168,7 +168,7 @@ static void passport_retrieve_dalogin_ready( struct http_request *req )
 	char *dalogin;
 	char *urlend;
 	
-	if( !g_slist_find( msn_connections, rep->data ) )
+	if( !g_slist_find( msn_connections, rep->data ) || !req->finished || !req->reply_headers )
 	{
 		destroy_reply( rep );
 		return;

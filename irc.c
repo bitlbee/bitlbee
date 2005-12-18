@@ -1075,7 +1075,7 @@ void irc_login( irc_t *irc )
 	irc_reply( irc,   2, ":Host %s is running BitlBee " BITLBEE_VERSION " " ARCH "/" CPU ".", irc->myhost );
 	irc_reply( irc,   3, ":%s", IRCD_INFO );
 	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES, CMODES );
-	irc_reply( irc,   5, "PREFIX=(ov)@% CHANTYPES=#& CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server", CMODES, MAX_NICK_LENGTH - 1 );
+	irc_reply( irc,   5, "PREFIX=(ov)@%% CHANTYPES=#& CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server", CMODES, MAX_NICK_LENGTH - 1 );
 	irc_motd( irc );
 	irc_umode_set( irc, irc->myhost, "+" UMODE );
 
