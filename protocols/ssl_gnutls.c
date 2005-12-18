@@ -110,7 +110,10 @@ static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond )
 	int st;
 	
 	if( conn->inpa != -1 )
+	{
 		gaim_input_remove( conn->inpa );
+		conn->inpa = -1;
+	}
 	
 	if( ( st = gnutls_handshake( conn->session ) ) < 0 )
 	{
@@ -181,6 +184,9 @@ int ssl_write( void *conn, const char *buf, int len )
 void ssl_disconnect( void *conn_ )
 {
 	struct scd *conn = conn_;
+	
+	if( conn->inpa != -1 )
+		gaim_input_remove( conn->inpa );
 	
 	if( conn->established )
 		gnutls_bye( conn->session, GNUTLS_SHUT_WR );
