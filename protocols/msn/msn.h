@@ -126,6 +126,8 @@ struct msn_handler_data
 /* Bitfield values for msn_status_code.flags */
 #define STATUS_FATAL            1
 #define STATUS_SB_FATAL         2
+#define STATUS_SB_IM_SPARE	4	/* Make one-to-one conversation switchboard available again, invite failed. */
+#define STATUS_SB_CHAT_SPARE	8	/* Same, but also for groupchats (not used yet). */
 
 int msn_chat_id;
 extern struct msn_away_state msn_away_state_list[];
