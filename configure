@@ -58,7 +58,7 @@ Option		Description				Default
 
 --ipv6=0/1	IPv6 socket support			$ipv6
 
---ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
+--ssl=...	SSL library to use (gnutls, nss, openssl, sspi, bogus, auto)
 							$ssl
 EOF
 		exit;
@@ -216,6 +216,8 @@ if [ "$msn" = 1 -o "$jabber" = 1 ]; then
 		detect_gnutls;
 	elif [ "$ssl" = "nss" ]; then
 		detect_nss;
+	elif [ "$ssl" = "sspi" ]; then
+		echo
 	elif [ "$ssl" = "openssl" ]; then
 		echo
 		echo 'No detection code exists for OpenSSL. Make sure that you have a complete'
