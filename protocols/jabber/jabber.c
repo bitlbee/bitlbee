@@ -1248,14 +1248,10 @@ static void jabber_handleauthresp(gjconn gjc, jpacket p)
 			}
 			gjab_auth(gjc);
 		} else {
-			account_online(GJ_GC(gjc));
-
-			if (bud_list_cache_exists(GJ_GC(gjc)))
-				do_import(GJ_GC(gjc), NULL);
-
-			((struct jabber_data *)GJ_GC(gjc)->proto_data)->did_import = TRUE;
-
 			gjab_reqroster(gjc);
+			account_online(GJ_GC(gjc));
+			
+			((struct jabber_data *)GJ_GC(gjc)->proto_data)->did_import = TRUE;
 		}
 	} else {
 		xmlnode xerr;
