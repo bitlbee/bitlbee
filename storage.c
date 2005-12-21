@@ -6,6 +6,8 @@
 
 /* Support for multiple storage backends */
 
+/* Copyright (C) 2005 Jelmer Vernooij <jelmer@samba.org> */
+
 /*
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by

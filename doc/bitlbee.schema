@@ -1,0 +1,27 @@
+## LDAP Schema file for BitlBee
+##
+## We need the following object classes and related attributes:
+## bitlBeeNick:
+##  - nick
+##  - password
+##  - setting (multiple values)
+## 
+## bitlBeeAccount:
+##  - protocol (msn, oscar, jabber, yahoo, ...)
+##  - username
+##  - password
+##  - server name
+##
+## bitlBeeBuddy:
+##  - nick
+##  - handle
+
+## each bitlBeeNick has zero or more bitlBeeAccount subentries
+## and bitlBeeAccount entries contain zero or more bitlBeeBuddy entries
+
+## The admin needs to setup the LDAP server to:
+## - allow anonymous users to auth against bitlBeeNick objects on the 
+##   password field
+## - allow anonymous users to create new objects that start with nick=
+## - allow read/write for a user that is authenticated only to his/her own 
+##   object and subentries
