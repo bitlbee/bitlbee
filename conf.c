@@ -52,7 +52,8 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->primary_storage = "text";
 	conf->runmode = RUNMODE_INETD;
 	conf->authmode = AUTHMODE_OPEN;
-	conf->password = NULL;
+	conf->auth_pass = NULL;
+	conf->oper_pass = NULL;
 	conf->configdir = g_strdup( CONFIG );
 	conf->plugindir = g_strdup( PLUGINDIR );
 	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
@@ -70,7 +71,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", CONF_FILE );
 	}
 	
-	while( ( opt = getopt( argc, argv, "i:p:nvIDc:d:h" ) ) >= 0 )
+	while( ( opt = getopt( argc, argv, "i:p:nvIDFc:d:h" ) ) >= 0 )
 	{
 		if( opt == 'i' )
 		{
@@ -93,6 +94,8 @@ conf_t *conf_load( int argc, char *argv[] )
 			conf->runmode=RUNMODE_INETD;
 		else if( opt == 'D' )
 			conf->runmode=RUNMODE_DAEMON;
+		else if( opt == 'F' )
+			conf->runmode=RUNMODE_FORKDAEMON;
 		else if( opt == 'c' )
 		{
 			if( strcmp( CONF_FILE, optarg ) != 0 )
@@ -117,6 +120,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "\n"
 			        "  -I  Classic/InetD mode. (Default)\n"
 			        "  -D  Daemon mode. (Still EXPERIMENTAL!)\n"
+			        "  -F  Forking daemon. (one process per client)\n"
 			        "  -i  Specify the interface (by IP address) to listen on.\n"
 			        "      (Default: 0.0.0.0 (any interface))\n"
 			        "  -p  Port number to listen on. (Default: 6667)\n"
@@ -156,6 +160,8 @@ static int conf_loadini( conf_t *conf, char *file )
 			{
 				if( g_strcasecmp( ini->value, "daemon" ) == 0 )
 					conf->runmode = RUNMODE_DAEMON;
+				else if( g_strcasecmp( ini->value, "forkdaemon" ) == 0 )
+					conf->runmode = RUNMODE_FORKDAEMON;
 				else
 					conf->runmode = RUNMODE_INETD;
 			}
@@ -183,7 +189,11 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else if( g_strcasecmp( ini->key, "authpassword" ) == 0 )
 			{
-				conf->password = g_strdup( ini->value );
+				conf->auth_pass = g_strdup( ini->value );
+			}
+			else if( g_strcasecmp( ini->key, "operpassword" ) == 0 )
+			{
+				conf->oper_pass = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "hostname" ) == 0 )
 			{

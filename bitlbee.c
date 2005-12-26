@@ -36,12 +36,30 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 {
 	size_t size = sizeof( struct sockaddr_in );
 	struct sockaddr_in conn_info;
-	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, 
-		                     &size );
+	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
+	pid_t client_pid = 0;
 	
-	log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
-	irc_new( new_socket );
-
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		client_pid = fork();
+	
+	if( client_pid == 0 )
+	{
+		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
+		irc_new( new_socket );
+		
+		if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		{
+			/* Close the listening socket, we're a client. */
+			close( global.listen_socket );
+			g_source_remove( global.listen_watch_source_id );
+		}
+	}
+	else
+	{
+		/* We don't need this one, only the client does. */
+		close( new_socket );
+	}
+	
 	return TRUE;
 }
  
@@ -65,24 +83,24 @@ int bitlbee_daemon_init()
 	listen_addr.sin_family = AF_INET;
 	listen_addr.sin_port = htons( global.conf->port );
 	listen_addr.sin_addr.s_addr = inet_addr( global.conf->iface );
-
+	
 	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( struct sockaddr ) );
 	if( i == -1 )
 	{
 		log_error( "bind" );
 		return( -1 );
 	}
-
+	
 	i = listen( global.listen_socket, 10 );
 	if( i == -1 )
 	{
 		log_error( "listen" );
 		return( -1 );
 	}
-
+	
 	ch = g_io_channel_unix_new( global.listen_socket );
-	g_io_add_watch( ch, G_IO_IN, bitlbee_io_new_client, NULL );
-
+	global.listen_watch_source_id = g_io_add_watch( ch, G_IO_IN, bitlbee_io_new_client, NULL );
+	
 #ifndef _WIN32
 	if( !global.conf->nofork )
 	{
@@ -163,6 +181,8 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		irc_free( irc );
 		return FALSE;
 	} 
+	
+	return TRUE;
 	
 	/* Very naughty, go read the RFCs! >:) */
 	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )

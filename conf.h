@@ -26,7 +26,7 @@
 #ifndef __CONF_H
 #define __CONF_H
 
-typedef enum runmode { RUNMODE_DAEMON, RUNMODE_INETD } runmode_t;
+typedef enum runmode { RUNMODE_DAEMON, RUNMODE_FORKDAEMON, RUNMODE_INETD } runmode_t;
 typedef enum authmode { AUTHMODE_OPEN, AUTHMODE_CLOSED, AUTHMODE_REGISTERED } authmode_t;
 
 typedef struct conf
@@ -37,7 +37,8 @@ typedef struct conf
 	int verbose;
 	runmode_t runmode;
 	authmode_t authmode;
-	char *password;
+	char *auth_pass;
+	char *oper_pass;
 	char *hostname;
 	char *configdir;
 	char *plugindir;

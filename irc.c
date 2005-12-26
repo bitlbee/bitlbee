@@ -263,7 +263,7 @@ void irc_free(irc_t * irc)
 	}
 	g_free(irc);
 	
-	if( global.conf->runmode == RUNMODE_INETD )
+	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )
 		g_main_quit( global.loop );
 }
 
@@ -421,7 +421,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			{
 				irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 			}
-			else if( strcmp( cmd[1], (global.conf)->password ) == 0 )
+			else if( strcmp( cmd[1], (global.conf)->auth_pass ) == 0 )
 			{
 				irc->status = USTATUS_AUTHORIZED;
 			}
@@ -499,6 +499,15 @@ int irc_exec( irc_t *irc, char **cmd )
 	if( g_strcasecmp( cmd[0], "PING" ) == 0 )
 	{
 		irc_write( irc, ":%s PONG %s :%s", irc->myhost, irc->myhost, cmd[1]?cmd[1]:irc->myhost );
+	}
+	else if( g_strcasecmp( cmd[0], "OPER" ) == 0 )
+	{
+		if( !cmd[2] )
+			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
+		else if( strcmp( cmd[2], global.conf->oper_pass ) == 0 )
+			irc_umode_set( irc, irc->nick, "+o" );
+		// else
+			/* FIXME/TODO: Find out which reply to send now. */
 	}
 	else if( g_strcasecmp( cmd[0], "MODE" ) == 0 )
 	{

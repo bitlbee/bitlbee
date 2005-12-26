@@ -39,7 +39,7 @@
 #define FLOOD_SEND_BYTES (1024*10)
 #define FLOOD_SEND_MAXBUFFER (1024*20)
 
-#define UMODES "ais"
+#define UMODES "aiso"
 #define CMODES "nt"
 #define CMODE "t"
 #define UMODE "s"
