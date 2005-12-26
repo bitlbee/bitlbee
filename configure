@@ -296,11 +296,18 @@ if [ "$flood" = 1 ]; then
 	exit 1
 fi
 
+echo
+if [ -z "$BITLBEE_VERSION" -a -d .bzr -a -x "`which bzr`" ]; then
+	rev=`bzr revno`
+	echo 'Using bzr revision #'$rev' as version number'
+	BITLBEE_VERSION=\"bzr-$rev\"
+fi
+
 if [ -n "$BITLBEE_VERSION" ]; then
-	echo
 	echo 'Spoofing version number: '$BITLBEE_VERSION
 	echo '#undef BITLBEE_VERSION' >> config.h
-	echo '#define BITLBEE_VERSION '$BITLBEE_VERSION >> config.h;
+	echo '#define BITLBEE_VERSION '$BITLBEE_VERSION >> config.h
+	echo
 fi
 
 protocols=''
@@ -339,7 +346,6 @@ else
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then
-	echo
 	echo "WARNING: You haven't selected any communication protocol to compile!"
 	echo "         Bitlbee will run, but you will be unable to connect to IM servers!"
 fi
@@ -347,7 +353,6 @@ fi
 echo "PROTOCOLS = $protocols" >> Makefile.settings
 echo "PROTOOBJS = $protoobjs" >> Makefile.settings
 
-echo
 echo Architecture: $arch
 case "$arch" in
 Linux )
