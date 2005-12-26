@@ -39,7 +39,8 @@
 #define FLOOD_SEND_BYTES (1024*10)
 #define FLOOD_SEND_MAXBUFFER (1024*20)
 
-#define UMODES "aiso"
+#define UMODES "ias"
+#define UMODES_PRIV "Ro"
 #define CMODES "nt"
 #define CMODE "t"
 #define UMODE "s"
@@ -126,7 +127,7 @@ void irc_login( irc_t *irc );
 void irc_motd( irc_t *irc );
 void irc_names( irc_t *irc, char *channel );
 void irc_topic( irc_t *irc, char *channel );
-void irc_umode_set( irc_t *irc, char *who, char *s );
+void irc_umode_set( irc_t *irc, char *s, int allow_priv );
 void irc_who( irc_t *irc, char *channel );
 void irc_spawn( irc_t *irc, user_t *u );
 void irc_join( irc_t *irc, user_t *u, char *channel );

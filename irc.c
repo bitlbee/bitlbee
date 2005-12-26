@@ -505,7 +505,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		if( !cmd[2] )
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 		else if( strcmp( cmd[2], global.conf->oper_pass ) == 0 )
-			irc_umode_set( irc, irc->nick, "+o" );
+			irc_umode_set( irc, "+o", 1 );
 		// else
 			/* FIXME/TODO: Find out which reply to send now. */
 	}
@@ -532,7 +532,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			if( nick_cmp( cmd[1], irc->nick ) == 0 )
 			{
 				if( cmd[2] )
-					irc_umode_set( irc, irc->nick, cmd[2] );
+					irc_umode_set( irc, cmd[2], 0 );
 			}
 			else
 				irc_reply( irc, 502, ":Don't touch their modes" );
@@ -1083,10 +1083,10 @@ void irc_login( irc_t *irc )
 	irc_reply( irc,   1, ":Welcome to the BitlBee gateway, %s", irc->nick );
 	irc_reply( irc,   2, ":Host %s is running BitlBee " BITLBEE_VERSION " " ARCH "/" CPU ".", irc->myhost );
 	irc_reply( irc,   3, ":%s", IRCD_INFO );
-	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES, CMODES );
+	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES UMODES_PRIV, CMODES );
 	irc_reply( irc,   5, "PREFIX=(ov)@+ CHANTYPES=#& CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server", CMODES, MAX_NICK_LENGTH - 1 );
 	irc_motd( irc );
-	irc_umode_set( irc, irc->myhost, "+" UMODE );
+	irc_umode_set( irc, "+" UMODE, 1 );
 
 	u = user_add( irc, irc->mynick );
 	u->host = g_strdup( irc->myhost );
@@ -1213,8 +1213,10 @@ void irc_whois( irc_t *irc, char *nick )
 }
 
 
-void irc_umode_set( irc_t *irc, char *who, char *s )
+void irc_umode_set( irc_t *irc, char *s, int allow_priv )
 {
+	/* allow_priv: Set to 0 if s contains user input, 1 if you want
+	   to set a "privileged" mode (+o, +R, etc). */
 	char m[256], st = 1, *t;
 	int i;
 	
@@ -1227,14 +1229,14 @@ void irc_umode_set( irc_t *irc, char *who, char *s )
 	{
 		if( *t == '+' || *t == '-' )
 			st = *t == '+';
-		else
+		else if( st == 0 || ( strchr( UMODES, *t ) || ( allow_priv && strchr( UMODES_PRIV, *t ) ) ) )
 			m[(int)*t] = st;
 	}
 	
 	memset( irc->umode, 0, sizeof( irc->umode ) );
 	
 	for( i = 0; i < 256 && strlen( irc->umode ) < ( sizeof( irc->umode ) - 1 ); i ++ )
-		if( m[i] && strchr( UMODES, i ) )
+		if( m[i] )
 			irc->umode[strlen(irc->umode)] = i;
 	
 	irc_reply( irc, 221, "+%s", irc->umode );

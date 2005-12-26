@@ -96,6 +96,7 @@ int cmd_identify( irc_t *irc, char **cmd )
 		break;
 	case STORAGE_OK:
 		irc_usermsg( irc, "Password accepted" );
+		irc_umode_set( irc, "+R", 1 );
 		break;
 	default:
 		irc_usermsg( irc, "Something very weird happened" );
@@ -121,6 +122,7 @@ int cmd_register( irc_t *irc, char **cmd )
 			
 		case STORAGE_OK:
 			irc->status = USTATUS_IDENTIFIED;
+			irc_umode_set( irc, "+R", 1 );
 			break;
 
 		default:
@@ -145,6 +147,8 @@ int cmd_drop( irc_t *irc, char **cmd )
 		return( 0 );
 	case STORAGE_OK:
 		irc_setpass( irc, NULL );
+		irc->status = USTATUS_LOGGED_IN;
+		irc_umode_set( irc, "-R", 1 );
 		irc_usermsg( irc, "Account `%s' removed", irc->nick );
 		return( 0 );
 	default:
