@@ -5,13 +5,12 @@
   \********************************************************************/
 
 /*
- * nogaim
- *
- * Gaim without gaim - for BitlBee
+ * Various utility functions. Some are copied from Gaim to support the
+ * IM-modules, most are from BitlBee.
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *                          (and possibly other members of the Gaim team)
- * Copyright 2002-2004 Wilmer van der Gaast <lintux@lintux.cx>
+ * Copyright 2002-2005 Wilmer van der Gaast <wilmer@gaast.net>
  */
 
 /*
@@ -31,7 +30,6 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-/* Parts from util.c from gaim needed by nogaim */
 #define BITLBEE_CORE
 #include "nogaim.h"
 #include <stdio.h>
@@ -410,4 +408,76 @@ void info_string_append(GString *str, char *newline, char *name, char *value)
 {
 	if( value && value[0] )
 		g_string_sprintfa( str, "%s%s: %s", newline, name, value );
+}
+
+/* Decode%20a%20file%20name						*/
+void http_decode( char *s )
+{
+	char *t;
+	int i, j, k;
+	
+	t = g_new( char, strlen( s ) + 1 );
+	
+	for( i = j = 0; s[i]; i ++, j ++ )
+	{
+		if( s[i] == '%' )
+		{
+			if( sscanf( s + i + 1, "%2x", &k ) )
+			{
+				t[j] = k;
+				i += 2;
+			}
+			else
+			{
+				*t = 0;
+				break;
+			}
+		}
+		else
+		{
+			t[j] = s[i];
+		}
+	}
+	t[j] = 0;
+	
+	strcpy( s, t );
+	g_free( t );
+}
+
+/* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
+/* This fuction is safe, but make sure you call it safely as well! */
+void http_encode( char *s )
+{
+	char *t;
+	int i, j;
+	
+	t = g_strdup( s );
+	
+	for( i = j = 0; t[i]; i ++, j ++ )
+	{
+		if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' )
+		{
+			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
+			j += 2;
+		}
+		else
+		{
+			s[j] = t[i];
+		}
+	}
+	s[j] = 0;
+	
+	g_free( t );
+}
+
+/* Strip newlines from a string. Modifies the string passed to it. */ 
+char *strip_newlines( char *source )
+{
+	int i;	
+
+	for( i = 0; source[i] != '\0'; i ++ )
+		if( source[i] == '\n' || source[i] == '\r' )
+			source[i] = ' ';
+	
+	return source;
 }

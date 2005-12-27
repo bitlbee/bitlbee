@@ -199,8 +199,6 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		return FALSE;
 	} 
 	
-	return TRUE;
-	
 	/* Very naughty, go read the RFCs! >:) */
 	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )
 	{
@@ -346,76 +344,4 @@ int root_command( irc_t *irc, char *cmd[] )
 	irc_usermsg( irc, "Unknown command: %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[0] );
 	
 	return( 1 );
-}
-
-/* Decode%20a%20file%20name						*/
-void http_decode( char *s )
-{
-	char *t;
-	int i, j, k;
-	
-	t = g_new( char, strlen( s ) + 1 );
-	
-	for( i = j = 0; s[i]; i ++, j ++ )
-	{
-		if( s[i] == '%' )
-		{
-			if( sscanf( s + i + 1, "%2x", &k ) )
-			{
-				t[j] = k;
-				i += 2;
-			}
-			else
-			{
-				*t = 0;
-				break;
-			}
-		}
-		else
-		{
-			t[j] = s[i];
-		}
-	}
-	t[j] = 0;
-	
-	strcpy( s, t );
-	g_free( t );
-}
-
-/* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
-/* This fuction is safe, but make sure you call it safely as well! */
-void http_encode( char *s )
-{
-	char *t;
-	int i, j;
-	
-	t = g_strdup( s );
-	
-	for( i = j = 0; t[i]; i ++, j ++ )
-	{
-		if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' )
-		{
-			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
-			j += 2;
-		}
-		else
-		{
-			s[j] = t[i];
-		}
-	}
-	s[j] = 0;
-	
-	g_free( t );
-}
-
-/* Strip newlines from a string. Modifies the string passed to it. */ 
-char *strip_newlines( char *source )
-{
-	int i;	
-
-	for( i = 0; source[i] != '\0'; i ++ )
-		if( source[i] == '\n' || source[i] == '\r' )
-			source[i] = 32;
-	
-	return source;
 }
