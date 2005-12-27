@@ -39,14 +39,17 @@ static char *passchange (irc_t *irc, void *set, char *value)
 
 irc_t *irc_new( int fd )
 {
-	irc_t *irc = g_new0( irc_t, 1 );
-	
-	struct sockaddr_in sock[1];
-#ifdef IPV6
-	struct sockaddr_in6 sock6[1];
-#endif
+	irc_t *irc;
 	struct hostent *peer;
-	unsigned int i, j;
+	unsigned int i;
+	char buf[128];
+#ifdef IPV6
+	struct sockaddr_in6 sock[1];
+#else
+	struct sockaddr_in sock[1];
+#endif
+	
+	irc = g_new0( irc_t, 1 );
 	
 	irc->fd = fd;
 	irc->io_channel = g_io_channel_unix_new( fd );
@@ -70,38 +73,43 @@ irc_t *irc_new( int fd )
 	irc->channel = g_strdup( ROOT_CHAN );
 	
 	i = sizeof( *sock );
-#ifdef IPV6
-	j = sizeof( *sock6 );
-#endif
+	
 	if( global.conf->hostname )
 		irc->myhost = g_strdup( global.conf->hostname );
-	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INET )
-	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INET ) ) )
-			irc->myhost = g_strdup( peer->h_name );
-	}
 #ifdef IPV6
-	else if( getsockname( irc->fd, (struct sockaddr*) sock6, &j ) == 0 && sock6->sin6_family == AF_INET6 )
+	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin6_family == AF_INETx )
 	{
-		if( ( peer = gethostbyaddr( (char*) &sock6->sin6_addr, sizeof( sock6->sin6_addr ), AF_INET6 ) ) )
+		if( ( peer = gethostbyaddr( (char*) &sock->sin6_addr, sizeof( sock->sin6_addr ), AF_INETx ) ) )
 			irc->myhost = g_strdup( peer->h_name );
+		else if( inet_ntop( AF_INETx, &sock->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
+			irc->myhost = g_strdup( buf );
+	}
+#else
+	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INETx )
+	{
+		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INETx ) ) )
+			irc->myhost = g_strdup( peer->h_name );
+		else if( inet_ntop( AF_INETx, &sock->sin_addr, buf, sizeof( buf ) - 1 ) != NULL )
+			irc->myhost = g_strdup( buf );
 	}
 #endif
 	
 	i = sizeof( *sock );
 #ifdef IPV6
-	j = sizeof( *sock6 );
-#endif
-	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INET )
+	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin6_family == AF_INETx )
 	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INET ) ) )
+		if( ( peer = gethostbyaddr( (char*) &sock->sin6_addr, sizeof( sock->sin6_addr ), AF_INETx ) ) )
 			irc->host = g_strdup( peer->h_name );
+		else if( inet_ntop( AF_INETx, &sock->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
+			irc->host = g_strdup( buf );
 	}
-#ifdef IPV6
-	else if( getpeername( irc->fd, (struct sockaddr*) sock6, &j ) == 0 && sock6->sin6_family == AF_INET6 )
+#else
+	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INETx )
 	{
-		if( ( peer = gethostbyaddr( (char*) &sock6->sin6_addr, sizeof( sock6->sin6_addr ), AF_INET6 ) ) )
+		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INETx ) ) )
 			irc->host = g_strdup( peer->h_name );
+		else if( inet_ntop( AF_INETx, &sock->sin_addr, buf, sizeof( buf ) - 1 ) != NULL )
+			irc->host = g_strdup( buf );
 	}
 #endif
 	

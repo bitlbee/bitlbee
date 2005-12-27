@@ -67,24 +67,41 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 
 int bitlbee_daemon_init()
 {
+#ifdef IPV6
+	struct sockaddr_in6 listen_addr;
+#else
 	struct sockaddr_in listen_addr;
+#endif
 	int i;
 	GIOChannel *ch;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
 	
-	global.listen_socket = socket( AF_INET, SOCK_STREAM, 0 );
+	global.listen_socket = socket( AF_INETx, SOCK_STREAM, 0 );
 	if( global.listen_socket == -1 )
 	{
 		log_error( "socket" );
 		return( -1 );
 	}
-	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_port = htons( global.conf->port );
-	listen_addr.sin_addr.s_addr = inet_addr( global.conf->iface );
 	
-	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( struct sockaddr ) );
+#ifdef IPV6
+	listen_addr.sin6_family = AF_INETx;
+	listen_addr.sin6_port = htons( global.conf->port );
+	i = inet_pton( AF_INETx, global.conf->iface, &listen_addr.sin6_addr );
+#else
+	listen_addr.sin_family = AF_INETx;
+	listen_addr.sin_port = htons( global.conf->port );
+	i = inet_pton( AF_INETx, global.conf->iface, &listen_addr.sin_addr );
+#endif
+	
+	if( i != 1 )
+	{
+		log_message( LOGLVL_ERROR, "Couldn't parse address `%s'", global.conf->iface );
+		return( -1 );
+	}
+	
+	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( listen_addr ) );
 	if( i == -1 )
 	{
 		log_error( "bind" );

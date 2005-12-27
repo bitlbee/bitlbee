@@ -26,9 +26,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "sock.h"
 #include "http_client.h"
 #include "url.h"
+#include "sock.h"
 
 
 static void http_connected( gpointer data, int source, GaimInputCondition cond );
