@@ -1855,11 +1855,7 @@ static void jabber_set_away(struct gaim_connection *gc, char *state, char *messa
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "away", -1);
 			y = xmlnode_insert_tag(x, "status");
-			{
-				char *utf8 = str_to_utf8(message);
-				xmlnode_insert_cdata(y, utf8, -1);
-				g_free(utf8);
-			}
+			xmlnode_insert_cdata(y, message, -1);
 			gc->away = "";
 		} else {
 			/* Gaim wants us to not be away */
