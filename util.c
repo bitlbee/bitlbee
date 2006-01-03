@@ -180,34 +180,39 @@ time_t get_time(int year, int month, int day, int hour, int min, int sec)
 typedef struct htmlentity
 {
 	char code[8];
-	char is;
+	char is[4];
 } htmlentity_t;
 
 /* FIXME: This is ISO8859-1(5) centric, so might cause problems with other charsets. */
 
-static htmlentity_t ent[] =
+static const htmlentity_t ent[] =
 {
-	{ "lt",     '<' },
-	{ "gt",     '>' },
-	{ "amp",    '&' },
-	{ "quot",   '"' },
-	{ "aacute", 'á' },
-	{ "eacute", 'é' },
-	{ "iacute", 'é' },
-	{ "oacute", 'ó' },
-	{ "uacute", 'ú' },
-	{ "agrave", 'à' },
-	{ "egrave", 'è' },
-	{ "igrave", 'ì' },
-	{ "ograve", 'ò' },
-	{ "ugrave", 'ù' },
-	{ "acirc",  'â' },
-	{ "ecirc",  'ê' },
-	{ "icirc",  'î' },
-	{ "ocirc",  'ô' },
-	{ "ucirc",  'û' },
-	{ "nbsp",   ' ' },
-	{ "",        0  }
+	{ "lt",     "<" },
+	{ "gt",     ">" },
+	{ "amp",    "&" },
+	{ "quot",   "\"" },
+	{ "aacute", "Ã¡" },
+	{ "eacute", "Ã©" },
+	{ "iacute", "Ã©" },
+	{ "oacute", "Ã³" },
+	{ "uacute", "Ãº" },
+	{ "agrave", "Ã " },
+	{ "egrave", "Ã¨" },
+	{ "igrave", "Ã¬" },
+	{ "ograve", "Ã²" },
+	{ "ugrave", "Ã¹" },
+	{ "acirc",  "Ã¢" },
+	{ "ecirc",  "Ãª" },
+	{ "icirc",  "Ã®" },
+	{ "ocirc",  "Ã´" },
+	{ "ucirc",  "Ã»" },
+	{ "auml",   "Ã¤" },
+	{ "euml",   "Ã«" },
+	{ "iuml",   "Ã¯" },
+	{ "ouml",   "Ã¶" },
+	{ "uuml",   "Ã¼" },
+	{ "nbsp",   " " },
+	{ "",        ""  }
 };
 
 void strip_html( char *in )
@@ -256,7 +261,11 @@ void strip_html( char *in )
 			for( i = 0; *ent[i].code; i ++ )
 				if( g_strncasecmp( ent[i].code, cs, strlen( ent[i].code ) ) == 0 )
 				{
-					*(s++) = ent[i].is;
+					int j;
+					
+					for( j = 0; ent[i].is[j]; j ++ )
+						*(s++) = ent[i].is[j];
+					
 					matched = 1;
 					break;
 				}
