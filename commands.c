@@ -31,7 +31,7 @@
 
 #include <string.h>
 
-command_t commands[] = {
+const command_t commands[] = {
 	{ "help",           0, cmd_help }, 
 	{ "identify",       1, cmd_identify },
 	{ "register",       1, cmd_register },
@@ -53,6 +53,65 @@ command_t commands[] = {
 	{ "qlist",          0, cmd_qlist },
 	{ NULL }
 };
+
+int root_command_string( irc_t *irc, user_t *u, char *command, int flags )
+{
+	char *cmd[IRC_MAX_ARGS];
+	char *s;
+	int k;
+	char q = 0;
+	
+	memset( cmd, 0, sizeof( cmd ) );
+	cmd[0] = command;
+	k = 1;
+	for( s = command; *s && k < ( IRC_MAX_ARGS - 1 ); s ++ )
+		if( *s == ' ' && !q )
+		{
+			*s = 0;
+			while( *++s == ' ' );
+			if( *s == '"' || *s == '\'' )
+			{
+				q = *s;
+				s ++;
+			}
+			if( *s )
+			{
+				cmd[k++] = s;
+				s --;
+			}
+		}
+		else if( *s == q )
+		{
+			q = *s = 0;
+		}
+	cmd[k] = NULL;
+	
+	return( root_command( irc, cmd ) );
+}
+
+int root_command( irc_t *irc, char *cmd[] )
+{	
+	int i;
+	
+	if( !cmd[0] )
+		return( 0 );
+	
+	for( i = 0; commands[i].command; i++ )
+		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
+		{
+			if( !cmd[commands[i].required_parameters] )
+			{
+				irc_usermsg( irc, "Not enough parameters given (need %d)", commands[i].required_parameters );
+				return( 0 );
+			}
+			commands[i].execute( irc, cmd );
+			return( 1 );
+		}
+	
+	irc_usermsg( irc, "Unknown command: %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[0] );
+	
+	return( 1 );
+}
 
 int cmd_help( irc_t *irc, char **cmd )
 {
