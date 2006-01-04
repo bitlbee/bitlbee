@@ -66,7 +66,7 @@ struct msn_data
 	GSList *msgq;
 	GSList *switchboards;
 	int buddycount;
-	struct msn_away_state *away_state;
+	const struct msn_away_state *away_state;
 };
 
 struct msn_switchboard
