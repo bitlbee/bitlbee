@@ -130,8 +130,8 @@ struct msn_handler_data
 #define STATUS_SB_CHAT_SPARE	8	/* Same, but also for groupchats (not used yet). */
 
 int msn_chat_id;
-extern struct msn_away_state msn_away_state_list[];
-extern struct msn_status_code msn_status_code_list[];
+extern const struct msn_away_state msn_away_state_list[];
+extern const struct msn_status_code msn_status_code_list[];
 
 /* Keep a list of all the active connections. We need these lists because
    "connected" callbacks might be called when the connection they belong too
@@ -155,10 +155,10 @@ char **msn_linesplit( char *line );
 int msn_handler( struct msn_handler_data *h );
 
 /* tables.c */
-struct msn_away_state *msn_away_state_by_number( int number );
-struct msn_away_state *msn_away_state_by_code( char *code );
-struct msn_away_state *msn_away_state_by_name( char *name );
-struct msn_status_code *msn_status_by_number( int number );
+const struct msn_away_state *msn_away_state_by_number( int number );
+const struct msn_away_state *msn_away_state_by_code( char *code );
+const struct msn_away_state *msn_away_state_by_name( char *name );
+const struct msn_status_code *msn_status_by_number( int number );
 
 /* sb.c */
 int msn_sb_write( struct msn_switchboard *sb, char *s, int len );
