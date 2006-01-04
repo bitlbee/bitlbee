@@ -82,7 +82,7 @@ irc_t *irc_new( int fd )
 		if( ( peer = gethostbyaddr( (char*) &sock->sin6_addr, sizeof( sock->sin6_addr ), AF_INETx ) ) )
 			irc->myhost = g_strdup( peer->h_name );
 		else if( inet_ntop( AF_INETx, &sock->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->myhost = g_strdup( buf );
+			irc->myhost = g_strdup( ipv6_unwrap( buf ) );
 	}
 #else
 	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INETx )
@@ -101,7 +101,7 @@ irc_t *irc_new( int fd )
 		if( ( peer = gethostbyaddr( (char*) &sock->sin6_addr, sizeof( sock->sin6_addr ), AF_INETx ) ) )
 			irc->host = g_strdup( peer->h_name );
 		else if( inet_ntop( AF_INETx, &sock->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->host = g_strdup( buf );
+			irc->host = g_strdup( ipv6_unwrap( buf ) );
 	}
 #else
 	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INETx )
@@ -113,6 +113,7 @@ irc_t *irc_new( int fd )
 	}
 #endif
 	
+	/* Rare, but possible. */
 	if( !irc->host ) irc->host = g_strdup( "localhost." );
 	if( !irc->myhost ) irc->myhost = g_strdup( "localhost." );
 

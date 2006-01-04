@@ -45,7 +45,11 @@ conf_t *conf_load( int argc, char *argv[] )
 	
 	conf = g_new0( conf_t, 1 );
 	
+#ifdef IPV6
+	conf->iface = "::";
+#else
 	conf->iface = "0.0.0.0";
+#endif
 	conf->port = 6667;
 	conf->nofork = 0;
 	conf->verbose = 0;

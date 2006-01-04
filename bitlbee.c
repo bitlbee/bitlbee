@@ -88,7 +88,7 @@ int bitlbee_daemon_init()
 #ifdef IPV6
 	listen_addr.sin6_family = AF_INETx;
 	listen_addr.sin6_port = htons( global.conf->port );
-	i = inet_pton( AF_INETx, global.conf->iface, &listen_addr.sin6_addr );
+	i = inet_pton( AF_INETx, ipv6_wrap( global.conf->iface ), &listen_addr.sin6_addr );
 #else
 	listen_addr.sin_family = AF_INETx;
 	listen_addr.sin_port = htons( global.conf->port );
