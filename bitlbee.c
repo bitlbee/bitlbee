@@ -58,6 +58,10 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 	{
 		/* We don't need this one, only the client does. */
 		close( new_socket );
+		
+		/* Or maybe we didn't even get a child process... */
+		if( client_pid == -1 )
+			log_message( LOGLVL_ERROR, "Failed to fork() subprocess for client: %s", strerror( errno ) );
 	}
 	
 	return TRUE;
