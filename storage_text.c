@@ -78,7 +78,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	FILE *fp;
 	user_t *ru = user_find( irc, ROOT_NICK );
 	
-	if( irc->status == USTATUS_IDENTIFIED )
+	if( irc->status >= USTATUS_IDENTIFIED )
 		return( 1 );
 	
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".accounts" );

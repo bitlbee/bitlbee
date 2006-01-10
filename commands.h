@@ -28,8 +28,6 @@
 
 #include "bitlbee.h"
 
-/* Hmm... Linked list? Plleeeeaaase?? ;-) */
-
 typedef struct command_t
 {
 	char *command;
@@ -57,8 +55,6 @@ int cmd_qlist( irc_t *irc, char **cmd );
 int cmd_import_buddies( irc_t *irc, char **cmd );
 int cmd_dump( irc_t *irc, char **cmd );
 
-
-
-extern command_t commands[];
+extern const command_t commands[];
 
 #endif

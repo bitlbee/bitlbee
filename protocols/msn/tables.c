@@ -26,7 +26,7 @@
 #include "nogaim.h"
 #include "msn.h"
 
-struct msn_away_state msn_away_state_list[] =
+const struct msn_away_state msn_away_state_list[] =
 {
 	{  0, "NLN", "Available" },
 	{  1, "BSY", "Busy" },
@@ -39,7 +39,7 @@ struct msn_away_state msn_away_state_list[] =
 	{ -1, "",    "" }
 };
 
-struct msn_away_state *msn_away_state_by_number( int number )
+const struct msn_away_state *msn_away_state_by_number( int number )
 {
 	int i;
 	
@@ -50,7 +50,7 @@ struct msn_away_state *msn_away_state_by_number( int number )
 	return( NULL );
 }
 
-struct msn_away_state *msn_away_state_by_code( char *code )
+const struct msn_away_state *msn_away_state_by_code( char *code )
 {
 	int i;
 	
@@ -61,7 +61,7 @@ struct msn_away_state *msn_away_state_by_code( char *code )
 	return( NULL );
 }
 
-struct msn_away_state *msn_away_state_by_name( char *name )
+const struct msn_away_state *msn_away_state_by_name( char *name )
 {
 	int i;
 	
@@ -72,19 +72,19 @@ struct msn_away_state *msn_away_state_by_name( char *name )
 	return( NULL );
 }
 
-struct msn_status_code msn_status_code_list[] =
+const struct msn_status_code msn_status_code_list[] =
 {
 	{ 200, "Invalid syntax",                                        0 },
 	{ 201, "Invalid parameter",                                     0 },
 	{ 205, "Invalid (non-existent) handle",                         0 },
 	{ 206, "Domain name missing",                                   0 },
 	{ 207, "Already logged in",                                     0 },
-	{ 208, "Invalid handle",                                        0 },
+	{ 208, "Invalid handle",                                        STATUS_SB_IM_SPARE },
 	{ 209, "Forbidden nickname",                                    0 },
 	{ 210, "Buddy list too long",                                   0 },
 	{ 215, "Handle is already in list",                             0 },
-	{ 216, "Handle is not in list",                                 0 },
-	{ 217, "Person is off-line or non-existent",                    0 },
+	{ 216, "Handle is not in list",                                 STATUS_SB_IM_SPARE },
+	{ 217, "Person is off-line or non-existent",                    STATUS_SB_IM_SPARE },
 	{ 218, "Already in that mode",                                  0 },
 	{ 219, "Handle is already in opposite list",                    0 },
 	{ 223, "Too many groups",                                       0 },
@@ -117,7 +117,7 @@ struct msn_status_code msn_status_code_list[] =
 	{ 710, "Invalid CVR parameters",                                STATUS_FATAL },
 	{ 711, "Write is blocking",                                     STATUS_FATAL },
 	{ 712, "Session is overloaded",                                 STATUS_FATAL },
-	{ 713, "Calling too rapidly",                                   0 },
+	{ 713, "Calling too rapidly",                                   STATUS_SB_IM_SPARE },
 	{ 714, "Too many sessions",                                     STATUS_FATAL },
 	{ 715, "Not expected/Invalid argument/action",                  0 },
 	{ 717, "Bad friend file",                                       STATUS_FATAL },
@@ -143,7 +143,7 @@ struct msn_status_code msn_status_code_list[] =
 	{  -1, NULL,                                                    0 }
 };
 
-struct msn_status_code *msn_status_by_number( int number )
+const struct msn_status_code *msn_status_by_number( int number )
 {
 	static struct msn_status_code *unknown = NULL;
 	int i;

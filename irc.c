@@ -39,14 +39,17 @@ static char *passchange (irc_t *irc, void *set, char *value)
 
 irc_t *irc_new( int fd )
 {
-	irc_t *irc = g_new0( irc_t, 1 );
-	
-	struct sockaddr_in sock[1];
-#ifdef IPV6
-	struct sockaddr_in6 sock6[1];
-#endif
+	irc_t *irc;
 	struct hostent *peer;
-	unsigned int i, j;
+	unsigned int i;
+	char buf[128];
+#ifdef IPV6
+	struct sockaddr_in6 sock[1];
+#else
+	struct sockaddr_in sock[1];
+#endif
+	
+	irc = g_new0( irc_t, 1 );
 	
 	irc->fd = fd;
 	irc->io_channel = g_io_channel_unix_new( fd );
@@ -70,41 +73,47 @@ irc_t *irc_new( int fd )
 	irc->channel = g_strdup( ROOT_CHAN );
 	
 	i = sizeof( *sock );
-#ifdef IPV6
-	j = sizeof( *sock6 );
-#endif
+	
 	if( global.conf->hostname )
 		irc->myhost = g_strdup( global.conf->hostname );
-	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INET )
-	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INET ) ) )
-			irc->myhost = g_strdup( peer->h_name );
-	}
 #ifdef IPV6
-	else if( getsockname( irc->fd, (struct sockaddr*) sock6, &j ) == 0 && sock6->sin6_family == AF_INET6 )
+	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin6_family == AF_INETx )
 	{
-		if( ( peer = gethostbyaddr( (char*) &sock6->sin6_addr, sizeof( sock6->sin6_addr ), AF_INET6 ) ) )
+		if( ( peer = gethostbyaddr( (char*) &sock->sin6_addr, sizeof( sock->sin6_addr ), AF_INETx ) ) )
 			irc->myhost = g_strdup( peer->h_name );
+		else if( inet_ntop( AF_INETx, &sock->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
+			irc->myhost = g_strdup( ipv6_unwrap( buf ) );
+	}
+#else
+	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INETx )
+	{
+		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INETx ) ) )
+			irc->myhost = g_strdup( peer->h_name );
+		else if( inet_ntop( AF_INETx, &sock->sin_addr, buf, sizeof( buf ) - 1 ) != NULL )
+			irc->myhost = g_strdup( buf );
 	}
 #endif
 	
 	i = sizeof( *sock );
 #ifdef IPV6
-	j = sizeof( *sock6 );
-#endif
-	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INET )
+	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin6_family == AF_INETx )
 	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INET ) ) )
+		if( ( peer = gethostbyaddr( (char*) &sock->sin6_addr, sizeof( sock->sin6_addr ), AF_INETx ) ) )
 			irc->host = g_strdup( peer->h_name );
+		else if( inet_ntop( AF_INETx, &sock->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
+			irc->host = g_strdup( ipv6_unwrap( buf ) );
 	}
-#ifdef IPV6
-	else if( getpeername( irc->fd, (struct sockaddr*) sock6, &j ) == 0 && sock6->sin6_family == AF_INET6 )
+#else
+	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INETx )
 	{
-		if( ( peer = gethostbyaddr( (char*) &sock6->sin6_addr, sizeof( sock6->sin6_addr ), AF_INET6 ) ) )
+		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INETx ) ) )
 			irc->host = g_strdup( peer->h_name );
+		else if( inet_ntop( AF_INETx, &sock->sin_addr, buf, sizeof( buf ) - 1 ) != NULL )
+			irc->host = g_strdup( buf );
 	}
 #endif
 	
+	/* Rare, but possible. */
 	if( !irc->host ) irc->host = g_strdup( "localhost." );
 	if( !irc->myhost ) irc->myhost = g_strdup( "localhost." );
 
@@ -263,7 +272,7 @@ void irc_free(irc_t * irc)
 	}
 	g_free(irc);
 	
-	if( global.conf->runmode == RUNMODE_INETD )
+	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )
 		g_main_quit( global.loop );
 }
 
@@ -421,7 +430,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			{
 				irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 			}
-			else if( strcmp( cmd[1], (global.conf)->password ) == 0 )
+			else if( strcmp( cmd[1], (global.conf)->auth_pass ) == 0 )
 			{
 				irc->status = USTATUS_AUTHORIZED;
 			}
@@ -500,6 +509,15 @@ int irc_exec( irc_t *irc, char **cmd )
 	{
 		irc_write( irc, ":%s PONG %s :%s", irc->myhost, irc->myhost, cmd[1]?cmd[1]:irc->myhost );
 	}
+	else if( g_strcasecmp( cmd[0], "OPER" ) == 0 )
+	{
+		if( !cmd[2] )
+			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
+		else if( strcmp( cmd[2], global.conf->oper_pass ) == 0 )
+			irc_umode_set( irc, "+o", 1 );
+		// else
+			/* FIXME/TODO: Find out which reply to send now. */
+	}
 	else if( g_strcasecmp( cmd[0], "MODE" ) == 0 )
 	{
 		if( !cmd[1] )
@@ -523,7 +541,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			if( nick_cmp( cmd[1], irc->nick ) == 0 )
 			{
 				if( cmd[2] )
-					irc_umode_set( irc, irc->nick, cmd[2] );
+					irc_umode_set( irc, cmd[2], 0 );
 			}
 			else
 				irc_reply( irc, 502, ":Don't touch their modes" );
@@ -922,21 +940,6 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 
 	if( irc->sendbuffer != NULL ) {
 		size = strlen( irc->sendbuffer ) + strlen( line );
-#ifdef FLOOD_SEND
-		if( size > FLOOD_SEND_MAXBUFFER ) {
-			/* Die flooder, die! >:) */
-
-			g_free(irc->sendbuffer);
-			
-			/* We need the \r\n at the start because else we might append our string to a half
-			 * sent line. A bit hackish, but it works.
-			 */
-			irc->sendbuffer = g_strdup( "\r\nERROR :Sendq Exceeded\r\n" );
-			irc->quit = 1;
-			
-			return;
-		}
-#endif
 		irc->sendbuffer = g_renew ( char, irc->sendbuffer, size + 1 );
 		strcpy( ( irc->sendbuffer + strlen( irc->sendbuffer ) ), line );
 	}
@@ -1074,9 +1077,10 @@ void irc_login( irc_t *irc )
 	irc_reply( irc,   1, ":Welcome to the BitlBee gateway, %s", irc->nick );
 	irc_reply( irc,   2, ":Host %s is running BitlBee " BITLBEE_VERSION " " ARCH "/" CPU ".", irc->myhost );
 	irc_reply( irc,   3, ":%s", IRCD_INFO );
-	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES, CMODES );
+	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES UMODES_PRIV, CMODES );
+	irc_reply( irc,   5, "PREFIX=(ov)@+ CHANTYPES=#& CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server", CMODES, MAX_NICK_LENGTH - 1 );
 	irc_motd( irc );
-	irc_umode_set( irc, irc->myhost, "+" UMODE );
+	irc_umode_set( irc, "+" UMODE, 1 );
 
 	u = user_add( irc, irc->mynick );
 	u->host = g_strdup( irc->myhost );
@@ -1203,8 +1207,10 @@ void irc_whois( irc_t *irc, char *nick )
 }
 
 
-void irc_umode_set( irc_t *irc, char *who, char *s )
+void irc_umode_set( irc_t *irc, char *s, int allow_priv )
 {
+	/* allow_priv: Set to 0 if s contains user input, 1 if you want
+	   to set a "privileged" mode (+o, +R, etc). */
 	char m[256], st = 1, *t;
 	int i;
 	
@@ -1217,14 +1223,14 @@ void irc_umode_set( irc_t *irc, char *who, char *s )
 	{
 		if( *t == '+' || *t == '-' )
 			st = *t == '+';
-		else
+		else if( st == 0 || ( strchr( UMODES, *t ) || ( allow_priv && strchr( UMODES_PRIV, *t ) ) ) )
 			m[(int)*t] = st;
 	}
 	
 	memset( irc->umode, 0, sizeof( irc->umode ) );
 	
 	for( i = 0; i < 256 && strlen( irc->umode ) < ( sizeof( irc->umode ) - 1 ); i ++ )
-		if( m[i] && strchr( UMODES, i ) )
+		if( m[i] )
 			irc->umode[strlen(irc->umode)] = i;
 	
 	irc_reply( irc, 221, "+%s", irc->umode );

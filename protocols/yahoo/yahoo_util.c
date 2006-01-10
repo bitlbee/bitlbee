@@ -51,56 +51,6 @@ char * y_string_append(char * string, char * append)
 	return new_string;
 }
 
-char * y_str_to_utf8(const char *in)
-{
-	unsigned int n, i = 0;
-	char *result = NULL;
-
-	if(in == NULL || *in == '\0')
-		return "";
-	
-	result = y_new(char, strlen(in) * 2 + 1);
-
-	/* convert a string to UTF-8 Format */
-	for (n = 0; n < strlen(in); n++) {
-		unsigned char c = (unsigned char)in[n];
-
-		if (c < 128) {
-			result[i++] = (char) c;
-		} else {
-			result[i++] = (char) ((c >> 6) | 192);
-			result[i++] = (char) ((c & 63) | 128);
-		}
-	}
-	result[i] = '\0';
-	return result;
-}
-
-char * y_utf8_to_str(const char *in)
-{
-	int i = 0;
-	unsigned int n;
-	char *result = NULL;
-
-	if(in == NULL || *in == '\0')
-		return "";
-	
-	result = y_new(char, strlen(in) + 1);
-
-	/* convert a string from UTF-8 Format */
-	for (n = 0; n < strlen(in); n++) {
-		unsigned char c = in[n];
-
-		if (c < 128) {
-			result[i++] = (char) c;
-		} else {
-			result[i++] = (c << 6) | (in[++n] & 63);
-		}
-	}
-	result[i] = '\0';
-	return result;
-}
-
 #if !HAVE_GLIB
 
 void y_strfreev(char ** vector)

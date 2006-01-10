@@ -22,7 +22,6 @@ yahoo=1
 
 debug=0
 strip=1
-flood=0
 ipv6=1
 ssl=auto
 
@@ -257,10 +256,10 @@ if [ "$msn" = 1 -o "$jabber" = 1 ]; then
 	
 	if [ "$ret" = "0" ]; then
 		echo
-		echo 'WARNING: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
-		echo '         This is necessary for MSN and full Jabber support. To continue,'
-		echo '         install a suitable SSL library or disable MSN support (--msn=0).'
-		echo '         If you want Jabber without SSL support you can try --ssl=bogus.'
+		echo 'ERROR: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
+		echo '       This is necessary for MSN and full Jabber support. To continue,'
+		echo '       install a suitable SSL library or disable MSN support (--msn=0).'
+		echo '       If you want Jabber without SSL support you can try --ssl=bogus.'
 		
 		exit 1;
 	fi;
@@ -290,19 +289,18 @@ else
 	fi;
 fi
 
-if [ "$flood" = 1 ]; then
-	# echo '#define FLOOD_SEND' >> config.h
-	echo 'Flood protection is disabled in this release because of too many bugs.' 2> /dev/stderr
-	rm config.h
-	rm Makefile.settings
-	exit 1
+echo
+if [ -z "$BITLBEE_VERSION" -a -d .bzr -a -x "`which bzr`" ]; then
+	rev=`bzr revno`
+	echo 'Using bzr revision #'$rev' as version number'
+	BITLBEE_VERSION=\"bzr-$rev\"
 fi
 
 if [ -n "$BITLBEE_VERSION" ]; then
-	echo
 	echo 'Spoofing version number: '$BITLBEE_VERSION
 	echo '#undef BITLBEE_VERSION' >> config.h
-	echo '#define BITLBEE_VERSION '$BITLBEE_VERSION >> config.h;
+	echo '#define BITLBEE_VERSION '$BITLBEE_VERSION >> config.h
+	echo
 fi
 
 protocols=''
@@ -313,7 +311,7 @@ if [ "$msn" = 0 ]; then
 else
 	echo '#define WITH_MSN' >> config.h
 	protocols=$protocols'msn '
-	protoobjs=$protoobjs'msnn.o '
+	protoobjs=$protoobjs'msn_mod.o '
 fi
 
 if [ "$jabber" = 0 ]; then
@@ -321,7 +319,7 @@ if [ "$jabber" = 0 ]; then
 else
 	echo '#define WITH_JABBER' >> config.h
 	protocols=$protocols'jabber '
-	protoobjs=$protoobjs'jabberr.o '
+	protoobjs=$protoobjs'jabber_mod.o '
 fi
 
 if [ "$oscar" = 0 ]; then
@@ -329,7 +327,7 @@ if [ "$oscar" = 0 ]; then
 else
 	echo '#define WITH_OSCAR' >> config.h
 	protocols=$protocols'oscar '
-	protoobjs=$protoobjs'oscarr.o '
+	protoobjs=$protoobjs'oscar_mod.o '
 fi
 
 if [ "$yahoo" = 0 ]; then
@@ -337,11 +335,10 @@ if [ "$yahoo" = 0 ]; then
 else
 	echo '#define WITH_YAHOO' >> config.h
 	protocols=$protocols'yahoo '
-	protoobjs=$protoobjs'yahooo.o '
+	protoobjs=$protoobjs'yahoo_mod.o '
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then
-	echo
 	echo "WARNING: You haven't selected any communication protocol to compile!"
 	echo "         Bitlbee will run, but you will be unable to connect to IM servers!"
 fi
@@ -349,7 +346,6 @@ fi
 echo "PROTOCOLS = $protocols" >> Makefile.settings
 echo "PROTOOBJS = $protoobjs" >> Makefile.settings
 
-echo
 echo Architecture: $arch
 case "$arch" in
 Linux )

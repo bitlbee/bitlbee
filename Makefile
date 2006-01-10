@@ -9,7 +9,7 @@
 -include Makefile.settings
 
 # Program variables
-objects = account.o bitlbee.o commands.o crypting.o help.o ini.o irc.o nick.o query.o set.o url.o user.o storage_text.o storage.o
+objects = account.o bitlbee.o commands.o crypting.o help.o ini.o irc.o nick.o query.o set.o storage.o storage_text.o url.o user.o util.o
 subdirs = protocols
 
 ifeq ($(ARCH),Windows)

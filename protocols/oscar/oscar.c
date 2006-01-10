@@ -20,7 +20,6 @@
  *
  */
 
-#include "sock.h"
 #include <errno.h>
 #include <ctype.h>
 #include <string.h>
@@ -32,6 +31,7 @@
 #include "nogaim.h"
 #include "bitlbee.h"
 #include "proxy.h"
+#include "sock.h"
 
 #include "aim.h"
 #include "icq.h"

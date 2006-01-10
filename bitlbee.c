@@ -36,12 +36,34 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 {
 	size_t size = sizeof( struct sockaddr_in );
 	struct sockaddr_in conn_info;
-	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, 
-		                     &size );
+	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
+	pid_t client_pid = 0;
 	
-	log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
-	irc_new( new_socket );
-
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		client_pid = fork();
+	
+	if( client_pid == 0 )
+	{
+		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
+		irc_new( new_socket );
+		
+		if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		{
+			/* Close the listening socket, we're a client. */
+			close( global.listen_socket );
+			g_source_remove( global.listen_watch_source_id );
+		}
+	}
+	else
+	{
+		/* We don't need this one, only the client does. */
+		close( new_socket );
+		
+		/* Or maybe we didn't even get a child process... */
+		if( client_pid == -1 )
+			log_message( LOGLVL_ERROR, "Failed to fork() subprocess for client: %s", strerror( errno ) );
+	}
+	
 	return TRUE;
 }
  
@@ -49,37 +71,57 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 
 int bitlbee_daemon_init()
 {
+#ifdef IPV6
+	struct sockaddr_in6 listen_addr;
+#else
 	struct sockaddr_in listen_addr;
+#endif
 	int i;
 	GIOChannel *ch;
 	
-	global.listen_socket = socket( AF_INET, SOCK_STREAM, 0 );
+	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
+	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
+	
+	global.listen_socket = socket( AF_INETx, SOCK_STREAM, 0 );
 	if( global.listen_socket == -1 )
 	{
 		log_error( "socket" );
 		return( -1 );
 	}
-	listen_addr.sin_family = AF_INET;
+	
+#ifdef IPV6
+	listen_addr.sin6_family = AF_INETx;
+	listen_addr.sin6_port = htons( global.conf->port );
+	i = inet_pton( AF_INETx, ipv6_wrap( global.conf->iface ), &listen_addr.sin6_addr );
+#else
+	listen_addr.sin_family = AF_INETx;
 	listen_addr.sin_port = htons( global.conf->port );
-	listen_addr.sin_addr.s_addr = inet_addr( global.conf->iface );
-
-	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( struct sockaddr ) );
+	i = inet_pton( AF_INETx, global.conf->iface, &listen_addr.sin_addr );
+#endif
+	
+	if( i != 1 )
+	{
+		log_message( LOGLVL_ERROR, "Couldn't parse address `%s'", global.conf->iface );
+		return( -1 );
+	}
+	
+	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( listen_addr ) );
 	if( i == -1 )
 	{
 		log_error( "bind" );
 		return( -1 );
 	}
-
+	
 	i = listen( global.listen_socket, 10 );
 	if( i == -1 )
 	{
 		log_error( "listen" );
 		return( -1 );
 	}
-
+	
 	ch = g_io_channel_unix_new( global.listen_socket );
-	g_io_add_watch( ch, G_IO_IN, bitlbee_io_new_client, NULL );
-
+	global.listen_watch_source_id = g_io_add_watch( ch, G_IO_IN, bitlbee_io_new_client, NULL );
+	
 #ifndef _WIN32
 	if( !global.conf->nofork )
 	{
@@ -174,32 +216,12 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	irc_t *irc = data;
 	int st, size;
 	char *temp;
-#ifdef FLOOD_SEND
-	time_t newtime;
-#endif
 
-#ifdef FLOOD_SEND	
-	newtime = time( NULL );
-	if( ( newtime - irc->oldtime ) > FLOOD_SEND_INTERVAL )
-	{
-		irc->sentbytes = 0;
-		irc->oldtime = newtime;
-	}
-#endif
-	
 	if( irc->sendbuffer == NULL )
 		return( FALSE );
 	
 	size = strlen( irc->sendbuffer );
-	
-#ifdef FLOOD_SEND
-	if( ( FLOOD_SEND_BYTES - irc->sentbytes ) > size )
-		st = write( irc->fd, irc->sendbuffer, size );
-	else
-		st = write( irc->fd, irc->sendbuffer, ( FLOOD_SEND_BYTES - irc->sentbytes ) );
-#else
 	st = write( irc->fd, irc->sendbuffer, size );
-#endif
 	
 	if( st <= 0 )
 	{
@@ -213,10 +235,6 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 			return FALSE;
 		}
 	}
-	
-#ifdef FLOOD_SEND
-	irc->sentbytes += st;
-#endif		
 	
 	if( st == size )
 	{
@@ -244,135 +262,4 @@ void bitlbee_shutdown( gpointer data )
 	
 	/* We'll only reach this point when not running in inetd mode: */
 	g_main_quit( global.loop );
-}
-
-int root_command_string( irc_t *irc, user_t *u, char *command, int flags )
-{
-	char *cmd[IRC_MAX_ARGS];
-	char *s;
-	int k;
-	char q = 0;
-	
-	memset( cmd, 0, sizeof( cmd ) );
-	cmd[0] = command;
-	k = 1;
-	for( s = command; *s && k < ( IRC_MAX_ARGS - 1 ); s ++ )
-		if( *s == ' ' && !q )
-		{
-			*s = 0;
-			while( *++s == ' ' );
-			if( *s == '"' || *s == '\'' )
-			{
-				q = *s;
-				s ++;
-			}
-			if( *s )
-			{
-				cmd[k++] = s;
-				s --;
-			}
-		}
-		else if( *s == q )
-		{
-			q = *s = 0;
-		}
-	cmd[k] = NULL;
-	
-	return( root_command( irc, cmd ) );
-}
-
-int root_command( irc_t *irc, char *cmd[] )
-{	
-	int i;
-	
-	if( !cmd[0] )
-		return( 0 );
-	
-	for( i = 0; commands[i].command; i++ )
-		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
-		{
-			if( !cmd[commands[i].required_parameters] )
-			{
-				irc_usermsg( irc, "Not enough parameters given (need %d)", commands[i].required_parameters );
-				return( 0 );
-			}
-			commands[i].execute( irc, cmd );
-			return( 1 );
-		}
-	
-	irc_usermsg( irc, "Unknown command: %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[0] );
-	
-	return( 1 );
-}
-
-/* Decode%20a%20file%20name						*/
-void http_decode( char *s )
-{
-	char *t;
-	int i, j, k;
-	
-	t = g_new( char, strlen( s ) + 1 );
-	
-	for( i = j = 0; s[i]; i ++, j ++ )
-	{
-		if( s[i] == '%' )
-		{
-			if( sscanf( s + i + 1, "%2x", &k ) )
-			{
-				t[j] = k;
-				i += 2;
-			}
-			else
-			{
-				*t = 0;
-				break;
-			}
-		}
-		else
-		{
-			t[j] = s[i];
-		}
-	}
-	t[j] = 0;
-	
-	strcpy( s, t );
-	g_free( t );
-}
-
-/* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
-/* This fuction is safe, but make sure you call it safely as well! */
-void http_encode( char *s )
-{
-	char *t;
-	int i, j;
-	
-	t = g_strdup( s );
-	
-	for( i = j = 0; t[i]; i ++, j ++ )
-	{
-		if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' )
-		{
-			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
-			j += 2;
-		}
-		else
-		{
-			s[j] = t[i];
-		}
-	}
-	s[j] = 0;
-	
-	g_free( t );
-}
-
-/* Strip newlines from a string. Modifies the string passed to it. */ 
-char *strip_newlines( char *source )
-{
-	int i;	
-
-	for( i = 0; source[i] != '\0'; i ++ )
-		if( source[i] == '\n' || source[i] == '\r' )
-			source[i] = 32;
-	
-	return source;
 }

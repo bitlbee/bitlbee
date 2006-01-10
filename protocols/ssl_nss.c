@@ -44,7 +44,7 @@ static gboolean initialized = FALSE;
 
 struct scd
 {
-	SslInputFunction func;
+	ssl_input_function func;
 	gpointer data;
 	int fd;
 	PRFileDesc *prfd;
@@ -90,7 +90,7 @@ static SECStatus nss_bad_cert (void *arg, PRFileDesc *socket)
 }
 
 
-void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
+void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	

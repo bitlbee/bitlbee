@@ -1,10 +1,10 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2005 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* SSL module - dummy version                                           */
+/* HTTP(S) module                                                       */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,35 +23,32 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <glib.h>
+
 #include "ssl_client.h"
 
-int ssl_errno;
+struct http_request;
 
-void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
-{
-	return( NULL );
-}
+typedef void (*http_input_function)( struct http_request * );
 
-int ssl_read( void *conn, char *buf, int len )
+struct http_request
 {
-	return( -1 );
-}
+	char *request;
+	int request_length;
+	int status_code;
+	char *reply_headers;
+	char *reply_body;
+	int finished;
+	
+	void *ssl;
+	int fd;
+	
+	int inpa;
+	int bytes_written;
+	int bytes_read;
+	
+	http_input_function func;
+	gpointer data;
+};
 
-int ssl_write( void *conn, const char *buf, int len )
-{
-	return( -1 );
-}
-
-void ssl_disconnect( void *conn_ )
-{
-}
-
-int ssl_getfd( void *conn )
-{
-	return( -1 );
-}
-
-GaimInputCondition ssl_getdirection( void *conn )
-{
-	return GAIM_INPUT_READ;
-}
+void *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data );

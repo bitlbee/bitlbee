@@ -511,7 +511,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	else if( isdigit( cmd[0][0] ) )
 	{
 		int num = atoi( cmd[0] );
-		struct msn_status_code *err = msn_status_by_number( num );
+		const struct msn_status_code *err = msn_status_by_number( num );
 		
 		g_snprintf( buf, sizeof( buf ), "Error reported by switchboard server: %s", err->text );
 		do_error_dialog( gc, buf, "MSN" );
@@ -521,10 +521,34 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			msn_sb_destroy( sb );
 			return( 0 );
 		}
-		else if( err->flags & STATUS_FATAL )
+		if( err->flags & STATUS_FATAL )
 		{
 			signoff( gc );
 			return( 0 );
+		}
+		if( err->flags & STATUS_SB_IM_SPARE )
+		{
+			if( sb->who )
+			{
+				struct msn_message *m;
+				GSList *l;
+				
+				/* Apparently some invitation failed. We might want to use this
+				   board later, so keep it as a spare. */
+				g_free( sb->who );
+				sb->who = NULL;
+				
+				/* Also clear the msgq, otherwise someone else might get them. */
+				for( l = sb->msgq; l; l = l->next )
+				{
+					m = l->data;
+					g_free( m->who );
+					g_free( m->text );
+					g_free( m );
+				}
+				g_slist_free( sb->msgq );
+				sb->msgq = NULL;
+			}
 		}
 	}
 	else

@@ -34,14 +34,12 @@
 
 struct passport_reply
 {
+	void (*func)( struct passport_reply * );
 	void *data;
 	char *result;
-	void (*func)( struct passport_reply * );
-	char *url;
 	char *header;
-	int redirects;
 };
 
-int passport_get_id( gpointer data, char *username, char *password, char *cookie, gpointer func );
+int passport_get_id( gpointer func, gpointer data, char *username, char *password, char *cookie );
 
 #endif /* __PASSPORT_H__ */

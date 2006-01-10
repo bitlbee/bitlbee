@@ -110,6 +110,7 @@ extern char *CONF_FILE;
 
 typedef struct global_t {
 	int listen_socket;
+	gint listen_watch_source_id;
 	help_t *help;
 	conf_t *conf;
 	GList *storage; /* The first backend in the list will be used for saving */
