@@ -22,7 +22,6 @@ yahoo=1
 
 debug=0
 strip=1
-flood=0
 ipv6=1
 ssl=auto
 
@@ -286,14 +285,6 @@ else
 		echo 'STRIP=\# skip strip' >> Makefile.settings
 		strip=0;
 	fi;
-fi
-
-if [ "$flood" = 1 ]; then
-	# echo '#define FLOOD_SEND' >> config.h
-	echo 'Flood protection is disabled in this release because of too many bugs.' 2> /dev/stderr
-	rm config.h
-	rm Makefile.settings
-	exit 1
 fi
 
 echo

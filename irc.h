@@ -32,13 +32,6 @@
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"
 
-/* #define FLOOD_SEND 
- * Not yet enabled by default due to some problems.
- */
-#define FLOOD_SEND_INTERVAL 30
-#define FLOOD_SEND_BYTES (1024*10)
-#define FLOOD_SEND_MAXBUFFER (1024*20)
-
 #define UMODES "ias"
 #define UMODES_PRIV "Ro"
 #define CMODES "nt"

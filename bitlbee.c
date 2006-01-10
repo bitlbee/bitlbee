@@ -219,32 +219,12 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	irc_t *irc = data;
 	int st, size;
 	char *temp;
-#ifdef FLOOD_SEND
-	time_t newtime;
-#endif
 
-#ifdef FLOOD_SEND	
-	newtime = time( NULL );
-	if( ( newtime - irc->oldtime ) > FLOOD_SEND_INTERVAL )
-	{
-		irc->sentbytes = 0;
-		irc->oldtime = newtime;
-	}
-#endif
-	
 	if( irc->sendbuffer == NULL )
 		return( FALSE );
 	
 	size = strlen( irc->sendbuffer );
-	
-#ifdef FLOOD_SEND
-	if( ( FLOOD_SEND_BYTES - irc->sentbytes ) > size )
-		st = write( irc->fd, irc->sendbuffer, size );
-	else
-		st = write( irc->fd, irc->sendbuffer, ( FLOOD_SEND_BYTES - irc->sentbytes ) );
-#else
 	st = write( irc->fd, irc->sendbuffer, size );
-#endif
 	
 	if( st <= 0 )
 	{
@@ -258,10 +238,6 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 			return FALSE;
 		}
 	}
-	
-#ifdef FLOOD_SEND
-	irc->sentbytes += st;
-#endif		
 	
 	if( st == size )
 	{
