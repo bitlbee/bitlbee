@@ -28,33 +28,18 @@
 
 #include "bitlbee.h"
 
-typedef struct command_t
+typedef struct command
 {
 	char *command;
 	int required_parameters;
 	int (*execute)(irc_t *, char **args);
+	int flags;
 } command_t;
 
-int cmd_account( irc_t *irc, char **cmd );
-int cmd_help( irc_t *irc, char **args);
-int cmd_info( irc_t *irc, char **args);
-int cmd_add( irc_t *irc, char **args) ;
-int cmd_rename( irc_t *irc, char **args );
-int cmd_remove( irc_t *irc, char **args );
-int cmd_block( irc_t *irc, char **args );
-int cmd_allow( irc_t *irc, char **args );
-int cmd_save( irc_t *irc, char **args );
-int cmd_set( irc_t *irc, char **args );
-int cmd_yesno( irc_t *irc, char **args );
-int cmd_identify( irc_t *irc, char **args );
-int cmd_register( irc_t *irc, char **args );
-int cmd_drop( irc_t *irc, char **args );
-int cmd_blist( irc_t *irc, char **cmd );
-int cmd_nick( irc_t *irc, char **cmd );
-int cmd_qlist( irc_t *irc, char **cmd );
-int cmd_import_buddies( irc_t *irc, char **cmd );
-int cmd_dump( irc_t *irc, char **cmd );
-
 extern const command_t commands[];
+
+#define IRC_CMD_PRE_LOGIN	1
+#define IRC_CMD_LOGGED_IN	2
+#define IRC_CMD_OPER_ONLY	4
 
 #endif
