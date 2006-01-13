@@ -873,6 +873,10 @@ int irc_exec( irc_t *irc, char **cmd )
 		
 		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS ", "END" );
 	}
+	else if( g_strcasecmp( cmd[0], "DIE" ) == 0 )
+	{
+		printf( "%d %d\n", global.listen_socket, write( global.listen_socket, "DIE\r\n", 5 ) );
+	}
 	else if( set_getint( irc, "debug" ) )
 	{
 		irc_usermsg( irc, "\002--- Unknown command:" );

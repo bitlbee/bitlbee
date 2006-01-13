@@ -32,39 +32,17 @@
 #include <stdio.h>
 #include <errno.h>
 
-gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
+struct bitlbee_child
 {
-	size_t size = sizeof( struct sockaddr_in );
-	struct sockaddr_in conn_info;
-	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
-	pid_t client_pid = 0;
-	
-	if( global.conf->runmode == RUNMODE_FORKDAEMON )
-		client_pid = fork();
-	
-	if( client_pid == 0 )
-	{
-		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
-		irc_new( new_socket );
-		
-		if( global.conf->runmode == RUNMODE_FORKDAEMON )
-		{
-			/* Close the listening socket, we're a client. */
-			close( global.listen_socket );
-			g_source_remove( global.listen_watch_source_id );
-		}
-	}
-	else
-	{
-		/* We don't need this one, only the client does. */
-		close( new_socket );
-	}
-	
-	return TRUE;
-}
+	pid_t pid;
+	int ipc_fd;
+	gint ipc_inpa;
+};
+
+static GSList *child_list = NULL;
+
+gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data );
  
-
-
 int bitlbee_daemon_init()
 {
 #ifdef IPV6
@@ -277,6 +255,71 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	}
 }
 
+gboolean bitlbee_io_master_ipc_read( gpointer data, gint source, GaimInputCondition cond );
+gboolean bitlbee_io_child_ipc_read( gpointer data, gint source, GaimInputCondition cond );
+
+gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
+{
+	size_t size = sizeof( struct sockaddr_in );
+	struct sockaddr_in conn_info;
+	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
+	pid_t client_pid = 0;
+	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		int fds[2];
+		
+		if( socketpair( AF_UNIX, SOCK_STREAM, 0, fds ) == -1 )
+		{
+			log_message( LOGLVL_WARNING, "Could not create IPC socket for client: %s", strerror( errno ) );
+			fds[0] = fds[1] = -1;
+		}
+		
+		sock_make_nonblocking( fds[0] );
+		sock_make_nonblocking( fds[1] );
+		
+		client_pid = fork();
+		
+		if( client_pid > 0 && fds[0] != -1 )
+		{
+			struct bitlbee_child *child;
+			
+			child = g_new0( struct bitlbee_child, 1 );
+			child->pid = client_pid;
+			child->ipc_fd = fds[0];
+			child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, bitlbee_io_master_ipc_read, child );
+			child_list = g_slist_append( child_list, child );
+			
+			close( fds[1] );
+		}
+		else if( client_pid == 0 )
+		{
+			/* Close the listening socket, we're a client. */
+			close( global.listen_socket );
+			g_source_remove( global.listen_watch_source_id );
+			
+			/* We can store the IPC fd there now. */
+			global.listen_socket = fds[1];
+			global.listen_watch_source_id = gaim_input_add( fds[1], GAIM_INPUT_READ, bitlbee_io_child_ipc_read, NULL );
+			
+			close( fds[0] );
+		}
+	}
+	
+	if( client_pid == 0 )
+	{
+		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
+		irc_new( new_socket );
+	}
+	else
+	{
+		/* We don't need this one, only the client does. */
+		close( new_socket );
+	}
+	
+	return TRUE;
+}
+
 void bitlbee_shutdown( gpointer data )
 {
 	/* Try to save data for all active connections (if desired). */
@@ -285,4 +328,61 @@ void bitlbee_shutdown( gpointer data )
 	
 	/* We'll only reach this point when not running in inetd mode: */
 	g_main_quit( global.loop );
+}
+
+gboolean bitlbee_io_master_ipc_read( gpointer data, gint source, GaimInputCondition cond )
+{
+	struct bitlbee_child *child = data;
+	char buf[513], *eol;
+	int size;
+	
+	size = recv( child->ipc_fd, buf, sizeof( buf ) - 1, MSG_PEEK );
+	
+	if( size < 0 || ( size < 0 && !sockerr_again() ) )
+		goto error_abort;
+	else
+		buf[size] = 0;
+	
+	eol = strstr( buf, "\r\n" );
+	if( eol == NULL )
+		goto error_abort;
+	
+	size = recv( child->ipc_fd, buf, eol - buf + 2, 0 );
+	buf[size] = 0;
+	
+	if( strcmp( buf, "DIE\r\n" ) == 0 )
+	{
+		printf( "Bye...\n" );
+		exit( 0 );
+	}
+	
+	return TRUE;
+	
+error_abort:
+	{
+		GSList *l;
+		struct bitlbee_child *c;
+		
+		for( l = child_list; l; l = l->next )
+		{
+			c = l->data;
+			if( c->ipc_fd == source )
+			{
+				close( c->ipc_fd );
+				gaim_input_remove( c->ipc_inpa );
+				g_free( c );
+				
+				child_list = g_slist_remove( child_list, l );
+				
+				break;
+			}
+		}
+		
+		return FALSE;
+	}
+}
+
+gboolean bitlbee_io_child_ipc_read( gpointer data, gint source, GaimInputCondition cond )
+{
+	return TRUE;
 }
