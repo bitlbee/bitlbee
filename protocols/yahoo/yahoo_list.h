@@ -20,55 +20,29 @@
  *
  */
 
-/*
- * This is a replacement for the GList.  It only provides functions that 
- * we use in Ayttm.  Thanks to Meredyyd from everybuddy dev for doing 
- * most of it.
- */
-
 #ifndef __YLIST_H__
 #define __YLIST_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/* GLib has linked list already, so I don't see why libyahoo2 has to copy this... */
 
-typedef struct _YList {
-	struct _YList *next;
-	struct _YList *prev;
-	void *data;
-} YList;
+typedef GList YList;
 
-typedef int (*YListCompFunc) (const void *, const void *);
-typedef void (*YListFunc) (void *, void *);
+#define y_list_append g_list_append
+#define y_list_concat g_list_concat
+#define y_list_copy g_list_copy
+#define y_list_empty g_list_empty
+#define y_list_find g_list_find
+#define y_list_find_custom g_list_find_custom
+#define y_list_foreach g_list_foreach
+#define y_list_free g_list_free
+#define y_list_free_1 g_list_free_1
+#define y_list_insert_sorted g_list_insert_sorted
+#define y_list_length g_list_length
+#define y_list_next g_list_next
+#define y_list_nth g_list_nth
+#define y_list_prepend g_list_prepend
+#define y_list_remove g_list_remove
+#define y_list_remove_link g_list_remove_link
+#define y_list_singleton g_list_singleton
 
-YList *y_list_append(YList * list, void *data);
-YList *y_list_prepend(YList * list, void *data);
-YList *y_list_remove_link(YList * list, const YList * link);
-YList *y_list_remove(YList * list, void *data);
-
-YList *y_list_insert_sorted(YList * list, void * data, YListCompFunc comp);
-
-YList *y_list_copy(YList * list);
-
-YList *y_list_concat(YList * list, YList * add);
-
-YList *y_list_find(YList * list, const void *data);
-YList *y_list_find_custom(YList * list, const void *data, YListCompFunc comp);
-
-YList *y_list_nth(YList * list, int n);
-
-void y_list_foreach(YList * list, YListFunc fn, void *user_data);
-
-void y_list_free_1(YList * list);
-void y_list_free(YList * list);
-int  y_list_length(const YList * list);
-int  y_list_empty(const YList * list);
-int  y_list_singleton(const YList * list);
-
-#define y_list_next(list)	list->next
-
-#ifdef __cplusplus
-}
-#endif
 #endif
