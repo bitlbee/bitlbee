@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <glib.h>
 #include <time.h>
 
@@ -376,7 +377,8 @@ void http_encode( char *s )
 	
 	for( i = j = 0; t[i]; i ++, j ++ )
 	{
-		if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' )
+		/* if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' ) */
+		if( !isalnum( t[i] ) )
 		{
 			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
 			j += 2;

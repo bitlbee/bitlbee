@@ -944,21 +944,6 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 
 	if( irc->sendbuffer != NULL ) {
 		size = strlen( irc->sendbuffer ) + strlen( line );
-#ifdef FLOOD_SEND
-		if( size > FLOOD_SEND_MAXBUFFER ) {
-			/* Die flooder, die! >:) */
-
-			g_free(irc->sendbuffer);
-			
-			/* We need the \r\n at the start because else we might append our string to a half
-			 * sent line. A bit hackish, but it works.
-			 */
-			irc->sendbuffer = g_strdup( "\r\nERROR :Sendq Exceeded\r\n" );
-			irc->quit = 1;
-			
-			return;
-		}
-#endif
 		irc->sendbuffer = g_renew ( char, irc->sendbuffer, size + 1 );
 		strcpy( ( irc->sendbuffer + strlen( irc->sendbuffer ) ), line );
 	}
