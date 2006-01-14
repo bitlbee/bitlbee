@@ -188,18 +188,18 @@ static int byahoo_send_typing( struct gaim_connection *gc, char *who, int typing
 static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) gc->proto_data;
-
+	
 	gc->away = NULL;
-
-	if (msg)
+	
+	if( msg )
 	{
 		yd->current_status = YAHOO_STATUS_CUSTOM;
 		gc->away = "";
 	}
-	else if (state)
+	if( state )
 	{
 		gc->away = "";
-		if( g_strcasecmp(state, "Available" ) == 0 )
+		if( g_strcasecmp( state, "Available" ) == 0 )
 		{
 			yd->current_status = YAHOO_STATUS_AVAILABLE;
 			gc->away = NULL;
@@ -234,12 +234,15 @@ static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg 
 			gc->away = NULL;
 		}
 	}
-	else if ( gc->is_idle )
+	else if( gc->is_idle )
 		yd->current_status = YAHOO_STATUS_IDLE;
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
-	yahoo_set_away( yd->y2_id, yd->current_status, msg, gc->away != NULL );
+	if( yd->current_status == YAHOO_STATUS_INVISIBLE )
+		yahoo_set_away( yd->y2_id, yd->current_status, NULL, gc->away != NULL );
+	else
+		yahoo_set_away( yd->y2_id, yd->current_status, msg, gc->away != NULL );
 }
 
 static GList *byahoo_away_states( struct gaim_connection *gc )
