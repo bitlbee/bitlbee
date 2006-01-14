@@ -107,7 +107,7 @@ void irc_free( irc_t *irc );
 
 int irc_exec( irc_t *irc, char **cmd );
 int irc_process( irc_t *irc );
-int irc_process_line( irc_t *irc, char *line );
+char **irc_parse_line( irc_t *irc, char *line );
 
 void irc_vawrite( irc_t *irc, char *format, va_list params );
 void irc_write( irc_t *irc, char *format, ... );

@@ -292,30 +292,45 @@ void irc_setpass (irc_t *irc, const char *pass)
 
 int irc_process( irc_t *irc )
 {
-	char **lines, *temp;	
+	char **lines, *temp, **cmd;
 	int i;
 
-	if( irc->readbuffer != NULL ) {
-		lines = irc_tokenize(irc->readbuffer );
-		for( i = 0; *lines[i] != '\0'; i++ ) {
-			if( lines[i+1] == NULL ) {
+	if( irc->readbuffer != NULL )
+	{
+		lines = irc_tokenize( irc->readbuffer );
+		
+		for( i = 0; *lines[i] != '\0'; i ++ )
+		{
+			if( lines[i+1] == NULL )
+			{
 				temp = g_strdup( lines[i] );
 				g_free( irc->readbuffer );
 				irc->readbuffer = temp;
-				i++;
+				i ++;
 				break;
 			}			
-			if (!irc_process_line(irc, lines[i])) {
+			
+			if( ( cmd = irc_parse_line( irc, lines[i] ) ) == NULL )
+				continue;
+			if( !irc_exec( irc, cmd ) )
+			{
+				g_free( cmd );
 				g_free( lines );
 				return 0;
 			}
+			
+			g_free( cmd );
 		}
-		if(lines[i]!=NULL) {
-			g_free(irc->readbuffer);
-			irc->readbuffer=NULL;	
+		
+		if( lines[i] != NULL )
+		{
+			g_free( irc->readbuffer );
+			irc->readbuffer = NULL;	
 		}
+		
 		g_free( lines );
 	}
+	
 	return 1;	
 }
 
@@ -325,97 +340,97 @@ char **irc_tokenize( char *buffer )
 	char **lines;
 
 	/* Count the number of elements we're gonna need. */
-	for(i=0, j=1; buffer[i]!='\0'; i++ ) {
-		if(buffer[i]=='\n' )
-			if(buffer[i+1]!='\r' && buffer[i+1]!='\n')
-				j++;
+	for( i = 0, j = 1; buffer[i] != '\0'; i ++ )
+	{
+		if( buffer[i] == '\n' )
+			if( buffer[i+1] != '\r' && buffer[i+1] != '\n' )
+				j ++;
 	}
 	
 	/* Allocate j+1 elements. */
-	lines=g_new (char *, j+1);
+	lines = g_new( char *, j + 1 );
 	
 	/* NULL terminate our list. */ 
-	lines[j]=NULL;
+	lines[j] = NULL;
 	
-	lines[0]=buffer;
+	lines[0] = buffer;
 	
 	/* Split the buffer in several strings, using \r\n as our seperator, where \r is optional.
 	 * Although this is not in the RFC, some braindead ircds (newnet's) use this, so some clients might too. 
 	 */
-	for( i=0, j=0; buffer[i]!='\0'; i++) {
-		if(buffer[i]=='\n') {
-			buffer[i]='\0';
-
-			/* We dont want to read 1 byte before our buffer
-			 * and (in rare cases) generate a SIGSEGV.
-			 */
-			if(i!=0)
-				if(buffer[i-1]=='\r')
-					buffer[i-1]='\0';
-			if(buffer[i+1]!='\r'&&buffer[i+1]!='\n')
-				lines[++j]=buffer+i+1;
+	for( i = 0, j = 0; buffer[i] != '\0'; i ++)
+	{
+		if( buffer[i] == '\n' )
+		{
+			buffer[i] = '\0';
+			
+			if( i > 0 && buffer[i-1] == '\r' )
+				buffer[i-1] = '\0';
+			if( buffer[i+1] != '\r' && buffer[i+1] != '\n' )
+				lines[++j] = buffer + i + 1;
 		}
 	}
-
-	return(lines);
+	
+	return( lines );
 }
 
-int irc_process_line( irc_t *irc, char *line )
+char **irc_parse_line( irc_t *irc, char *line )
 {
 	int i, j;
 	char **cmd;
 	
 	/* Move the line pointer to the start of the command, skipping spaces and the optional prefix. */
-	if(line[0]==':') {
-		for(i=0; line[i]!=32; i++);
-		line=line+i;
+	if( line[0] == ':' )
+	{
+		for( i = 0; line[i] != ' '; i ++ );
+		line = line + i;
 	}
-	for(i=0; line[i]==32; i++);
-	line=line+i;
-
-	/* If we're already at the end of the line, return. If not, we're going to need at least one element. */
-	if(line[0]=='\0')
-		return 1;
-	else
-		j=1;	
+	for( i = 0; line[i] == ' '; i ++ );
+	line = line + i;
 	
-	/* Count the number of char **cmd elements we're going to need. */	
-	for(i=0; line[i]!='\0'; i++) {
-		if((line[i]==32) && (line[i+1]!=32) && (line[i+1]!='\0') && (line[i+1]!=':'))		
-			j++;
-		else if((line[i]==':') && (line[i+1]!='\0') && (line[i-1]==32)) {
-			j++;
-			break;
-		}
+	/* If we're already at the end of the line, return. If not, we're going to need at least one element. */
+	if( line[0] == '\0')
+		return NULL;
+	
+	/* Count the number of char **cmd elements we're going to need. */
+	j = 1;
+	for( i = 0; line[i] != '\0'; i ++ )
+	{
+		if( line[i] == ' ' )
+		{
+			j ++;
 			
+			if( line[i+1] == ':' )
+				break;
+		}
 	}	
 
 	/* Allocate the space we need. */
-	cmd=g_new(char *, j+1);
-	cmd[j]=NULL;
+	cmd = g_new( char *, j + 1 );
+	cmd[j] = NULL;
 	
 	/* Do the actual line splitting, format is:
 	 * Input: "PRIVMSG #bitlbee :foo bar"
 	 * Output: cmd[0]=="PRIVMSG", cmd[1]=="#bitlbee", cmd[2]=="foo bar", cmd[3]==NULL
 	 */
 
-	cmd[0]=line;
-	for(i=0, j=0; line[i]!='\0'; i++) {
-		if((line[i]==32)) {
-			line[i]='\0';
-			if((line[i+1]!=32) && (line[i+1]!='\0') && (line[i+1]!=':')) 		
-				cmd[++j]=line+i+1;
-		}
-		else if((line[i]==':') && (line[i+1]!='\0') && (line[i-1]=='\0')) {
-			cmd[++j]=line+i+1;
-			break;
+	cmd[0] = line;
+	for( i = 0, j = 0; line[i] != '\0'; i ++ )
+	{
+		if( line[i] == ' ' )
+		{
+			line[i] = '\0';
+			cmd[++j] = line + i + 1;
+			
+			if( line[i+1] == ':' )
+			{
+				cmd[j] ++;
+				break;
+			}
 		}
 	}
 	
-	i=irc_exec(irc, cmd);
-	g_free(cmd);
-
-	return(i);	
+	return cmd;
 }
 
 void irc_reply( irc_t *irc, int code, char *format, ... )

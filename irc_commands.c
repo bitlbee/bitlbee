@@ -31,7 +31,7 @@ static int irc_cmd_pass( irc_t *irc, char **cmd )
 	if( global.conf->auth_pass && strcmp( cmd[1], global.conf->auth_pass ) == 0 )
 	{
 		irc->status = USTATUS_AUTHORIZED;
-		irc_check_login();
+		irc_check_login( irc );
 	}
 	else
 	{
