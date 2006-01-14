@@ -35,7 +35,7 @@ static int irc_cmd_pass( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		irc_reply( irc, 464, ":Incorrect password." );
+		irc_reply( irc, 464, ":Incorrect password" );
 	}
 	
 	return( 1 );
@@ -95,9 +95,14 @@ static int irc_cmd_ping( irc_t *irc, char **cmd )
 static int irc_cmd_oper( irc_t *irc, char **cmd )
 {
 	if( global.conf->oper_pass && strcmp( cmd[2], global.conf->oper_pass ) == 0 )
+	{
 		irc_umode_set( irc, "+o", 1 );
-	// else
-		/* FIXME/TODO: Find out which reply to send now. */
+		irc_reply( irc, 381, ":Password accepted" );
+	}
+	else
+	{
+		irc_reply( irc, 432, ":Incorrect password" );
+	}
 	
 	return( 1 );
 }
@@ -310,7 +315,7 @@ static int irc_cmd_who( irc_t *irc, char **cmd )
 	else if( ( u = user_find( irc, channel ) ) )
 		irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->online ? ( u->away ? 'G' : 'H' ) : 'G', u->realname );
 	
-	irc_reply( irc, 315, "%s :End of /WHO list.", channel?channel:"**" );
+	irc_reply( irc, 315, "%s :End of /WHO list", channel?channel:"**" );
 	
 	return( 1 );
 }
