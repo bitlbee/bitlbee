@@ -574,6 +574,28 @@ void irc_names( irc_t *irc, char *channel )
 	irc_reply( irc, 366, "%s :End of /NAMES list", channel );
 }
 
+int irc_check_login( irc_t *irc )
+{
+	if( irc->user && irc->nick )
+	{
+		if( global.conf->authmode == AUTHMODE_CLOSED && irc->status < USTATUS_AUTHORIZED )
+		{
+			irc_reply( irc, 464, ":This server is password-protected." );
+			return 0;
+		}
+		else
+		{
+			irc_login( irc );
+			return 1;
+		}
+	}
+	else
+	{
+		/* More information needed. */
+		return 0;
+	}
+}
+
 void irc_login( irc_t *irc )
 {
 	user_t *u;

@@ -117,6 +117,7 @@ G_MODULE_EXPORT int irc_usermsg( irc_t *irc, char *format, ... );
 char **irc_tokenize( char *buffer );
 
 void irc_login( irc_t *irc );
+int irc_check_login( irc_t *irc );
 void irc_motd( irc_t *irc );
 void irc_names( irc_t *irc, char *channel );
 void irc_topic( irc_t *irc, char *channel );

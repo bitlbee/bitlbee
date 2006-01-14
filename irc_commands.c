@@ -28,13 +28,14 @@
 
 static int irc_cmd_pass( irc_t *irc, char **cmd )
 {
-	if( strcmp( cmd[1], (global.conf)->auth_pass ) == 0 )
+	if( global.conf->auth_pass && strcmp( cmd[1], global.conf->auth_pass ) == 0 )
 	{
 		irc->status = USTATUS_AUTHORIZED;
+		irc_check_login();
 	}
 	else
 	{
-		irc_reply( irc, 464, ":Nope, maybe you should try it again..." );
+		irc_reply( irc, 464, ":Incorrect password." );
 	}
 	
 	return( 1 );
@@ -42,16 +43,10 @@ static int irc_cmd_pass( irc_t *irc, char **cmd )
 
 static int irc_cmd_user( irc_t *irc, char **cmd )
 {
-	if( irc->user )
-	{
-		irc_reply( irc, 462, ":You can't change your nick/userinfo" );
-	}
-	else
-	{
-		irc->user = g_strdup( cmd[1] );
-		irc->realname = g_strdup( cmd[4] );
-		if( irc->nick ) irc_login( irc );
-	}
+	irc->user = g_strdup( cmd[1] );
+	irc->realname = g_strdup( cmd[4] );
+	
+	irc_check_login( irc );
 	
 	return( 1 );
 }
@@ -75,7 +70,8 @@ static int irc_cmd_nick( irc_t *irc, char **cmd )
 	else
 	{
 		irc->nick = g_strdup( cmd[1] );
-		if( irc->user ) irc_login( irc );
+		
+		irc_check_login( irc );
 	}
 	
 	return( 1 );
@@ -88,14 +84,6 @@ static int irc_cmd_quit( irc_t *irc, char **cmd )
 	
 	return( 0 );
 }
-
-/*
-	if( !irc->user || !irc->nick )
-	{
-		irc_reply( irc, 451, ":Register first" );
-		return( 1 );
-	}
-*/
 
 static int irc_cmd_ping( irc_t *irc, char **cmd )
 {
@@ -625,12 +613,21 @@ int irc_exec( irc_t *irc, char *cmd[] )
 	for( i = 0; irc_commands[i].command; i++ )
 		if( g_strcasecmp( irc_commands[i].command, cmd[0] ) == 0 )
 		{
-			if( irc_commands[i].flags & IRC_CMD_PRE_LOGIN && irc->status > USTATUS_AUTHORIZED )
-				continue;
+			if( irc_commands[i].flags & IRC_CMD_PRE_LOGIN && irc->status >= USTATUS_LOGGED_IN )
+			{
+				irc_reply( irc, 462, ":Only allowed before logging in" );
+				return( 1 );
+			}
 			if( irc_commands[i].flags & IRC_CMD_LOGGED_IN && irc->status < USTATUS_LOGGED_IN )
-				continue;
+			{
+				irc_reply( irc, 451, ":Register first" );
+				return( 1 );
+			}
 			if( irc_commands[i].flags & IRC_CMD_OPER_ONLY && !strchr( irc->umode, 'o' ) )
-				continue;
+			{
+				irc_reply( irc, 481, ":Permission denied - You're not an IRC operator" );
+				return( 1 );
+			}
 			
 			for( j = 1; j <= irc_commands[i].required_parameters; j ++ )
 				if( !cmd[j] )
