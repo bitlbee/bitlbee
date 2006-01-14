@@ -106,7 +106,7 @@ static int irc_cmd_ping( irc_t *irc, char **cmd )
 
 static int irc_cmd_oper( irc_t *irc, char **cmd )
 {
-	if( strcmp( cmd[2], global.conf->oper_pass ) == 0 )
+	if( global.conf->oper_pass && strcmp( cmd[2], global.conf->oper_pass ) == 0 )
 		irc_umode_set( irc, "+o", 1 );
 	// else
 		/* FIXME/TODO: Find out which reply to send now. */
