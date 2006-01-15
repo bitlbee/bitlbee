@@ -32,16 +32,17 @@ GSList *child_list = NULL;
 
 static int ipc_master_cmd_die( irc_t *data, char **cmd )
 {
+	/* This shouldn't really be the final implementation... */
 	exit( 0 );
 }
 
-static int ipc_master_cmd_wallop( irc_t *data, char **cmd )
+static int ipc_master_cmd_wallops( irc_t *data, char **cmd )
 {
 	GSList *l;
 	char msg_buf[513];
 	int msg_len;
 	
-	if( ( msg_len = g_snprintf( msg_buf, sizeof( msg_buf ) - 1, "WALLOP :%s\r\n", cmd[1] ) ) > ( sizeof( msg_buf ) - 1 ) )
+	if( ( msg_len = g_snprintf( msg_buf, sizeof( msg_buf ) - 1, "%s :%s\r\n", cmd[0], cmd[1] ) ) > ( sizeof( msg_buf ) - 1 ) )
 		return 0;
 	
 	for( l = child_list; l; l = l->next )
@@ -55,22 +56,33 @@ static int ipc_master_cmd_wallop( irc_t *data, char **cmd )
 
 static const command_t ipc_master_commands[] = {
 	{ "die",        0, ipc_master_cmd_die,        0 },
-	{ "wallop",     1, ipc_master_cmd_wallop,     1 },
+	{ "wallops",    1, ipc_master_cmd_wallops,    1 },
+	{ "lilo",       1, ipc_master_cmd_wallops,    1 },
 	{ NULL }
 };
 
-static int ipc_child_cmd_wallop( irc_t *data, char **cmd )
+static int ipc_child_cmd_wallops( irc_t *data, char **cmd )
 {
 	irc_t *irc = data;
 	
 	if( strchr( irc->umode, 'w' ) )
-		irc_write( irc, ":%s WALLOP :%s", irc->myhost, cmd[1] );
+		irc_write( irc, ":%s WALLOPS :%s", irc->myhost, cmd[1] );
+	
+	return 1;
+}
+
+static int ipc_child_cmd_lilo( irc_t *data, char **cmd )
+{
+	irc_t *irc = data;
+	
+	irc_write( irc, ":%s NOTICE %s :%s", irc->myhost, irc->nick, cmd[1] );
 	
 	return 1;
 }
 
 static const command_t ipc_child_commands[] = {
-	{ "wallop",     1, ipc_child_cmd_wallop,      1 },
+	{ "wallops",    1, ipc_child_cmd_wallops,     1 },
+	{ "lilo",       1, ipc_child_cmd_lilo,        1 },
 	{ NULL }
 };
 
