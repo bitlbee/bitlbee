@@ -32,8 +32,7 @@ GSList *child_list = NULL;
 
 static int ipc_master_cmd_die( irc_t *data, char **cmd )
 {
-	/* This shouldn't really be the final implementation... */
-	exit( 0 );
+	bitlbee_shutdown( NULL );
 }
 
 static int ipc_master_cmd_wallops( irc_t *data, char **cmd )
