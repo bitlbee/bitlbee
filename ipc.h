@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* User manager (root) commands                                         */
+/* IPC - communication between BitlBee processes                        */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,24 +23,18 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef _COMMANDS_H
-#define _COMMANDS_H
-
+#define BITLBEE_CORE
 #include "bitlbee.h"
 
-typedef struct command
+void ipc_master_read( gpointer data, gint source, GaimInputCondition cond );
+void ipc_child_read( gpointer data, gint source, GaimInputCondition cond );
+void ipc_to_master( char **cmd );
+
+struct bitlbee_child
 {
-	char *command;
-	int required_parameters;
-	int (*execute)(irc_t *, char **args);
-	int flags;
-} command_t;
+	pid_t pid;
+	int ipc_fd;
+	gint ipc_inpa;
+};
 
-extern const command_t commands[];
-
-#define IRC_CMD_PRE_LOGIN	1
-#define IRC_CMD_LOGGED_IN	2
-#define IRC_CMD_OPER_ONLY	4
-#define IRC_CMD_TO_MASTER	8
-
-#endif
+extern GSList *child_list;

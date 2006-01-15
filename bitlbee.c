@@ -28,21 +28,13 @@
 #include "commands.h"
 #include "protocols/nogaim.h"
 #include "help.h"
+#include "ipc.h"
 #include <signal.h>
 #include <stdio.h>
 #include <errno.h>
 
-struct bitlbee_child
-{
-	pid_t pid;
-	int ipc_fd;
-	gint ipc_inpa;
-};
-
-static GSList *child_list = NULL;
-
 gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data );
- 
+
 int bitlbee_daemon_init()
 {
 #ifdef IPV6
@@ -231,9 +223,6 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	}
 }
 
-gboolean bitlbee_io_master_ipc_read( gpointer data, gint source, GaimInputCondition cond );
-gboolean bitlbee_io_child_ipc_read( gpointer data, gint source, GaimInputCondition cond );
-
 gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
 {
 	size_t size = sizeof( struct sockaddr_in );
@@ -263,34 +252,37 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 			child = g_new0( struct bitlbee_child, 1 );
 			child->pid = client_pid;
 			child->ipc_fd = fds[0];
-			child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, bitlbee_io_master_ipc_read, child );
+			child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
 			child_list = g_slist_append( child_list, child );
 			
+			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", client_pid );
+			
+			/* Close some things we don't need in the parent process. */
+			close( new_socket );
 			close( fds[1] );
 		}
 		else if( client_pid == 0 )
 		{
+			irc_t *irc;
+			
 			/* Close the listening socket, we're a client. */
 			close( global.listen_socket );
 			g_source_remove( global.listen_watch_source_id );
 			
+			/* Make the connection. */
+			irc = irc_new( new_socket );
+			
 			/* We can store the IPC fd there now. */
 			global.listen_socket = fds[1];
-			global.listen_watch_source_id = gaim_input_add( fds[1], GAIM_INPUT_READ, bitlbee_io_child_ipc_read, NULL );
+			global.listen_watch_source_id = gaim_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
 			
 			close( fds[0] );
 		}
 	}
-	
-	if( client_pid == 0 )
+	else
 	{
 		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
 		irc_new( new_socket );
-	}
-	else
-	{
-		/* We don't need this one, only the client does. */
-		close( new_socket );
 	}
 	
 	return TRUE;
@@ -304,61 +296,4 @@ void bitlbee_shutdown( gpointer data )
 	
 	/* We'll only reach this point when not running in inetd mode: */
 	g_main_quit( global.loop );
-}
-
-gboolean bitlbee_io_master_ipc_read( gpointer data, gint source, GaimInputCondition cond )
-{
-	struct bitlbee_child *child = data;
-	char buf[513], *eol;
-	int size;
-	
-	size = recv( child->ipc_fd, buf, sizeof( buf ) - 1, MSG_PEEK );
-	
-	if( size < 0 || ( size < 0 && !sockerr_again() ) )
-		goto error_abort;
-	else
-		buf[size] = 0;
-	
-	eol = strstr( buf, "\r\n" );
-	if( eol == NULL )
-		goto error_abort;
-	
-	size = recv( child->ipc_fd, buf, eol - buf + 2, 0 );
-	buf[size] = 0;
-	
-	if( strcmp( buf, "DIE\r\n" ) == 0 )
-	{
-		printf( "Bye...\n" );
-		exit( 0 );
-	}
-	
-	return TRUE;
-	
-error_abort:
-	{
-		GSList *l;
-		struct bitlbee_child *c;
-		
-		for( l = child_list; l; l = l->next )
-		{
-			c = l->data;
-			if( c->ipc_fd == source )
-			{
-				close( c->ipc_fd );
-				gaim_input_remove( c->ipc_inpa );
-				g_free( c );
-				
-				child_list = g_slist_remove( child_list, l );
-				
-				break;
-			}
-		}
-		
-		return FALSE;
-	}
-}
-
-gboolean bitlbee_io_child_ipc_read( gpointer data, gint source, GaimInputCondition cond )
-{
-	return TRUE;
 }

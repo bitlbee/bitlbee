@@ -32,7 +32,7 @@
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"
 
-#define UMODES "ias"
+#define UMODES "iasw"
 #define UMODES_PRIV "Ro"
 #define CMODES "nt"
 #define CMODE "t"
@@ -107,7 +107,7 @@ void irc_free( irc_t *irc );
 
 int irc_exec( irc_t *irc, char **cmd );
 int irc_process( irc_t *irc );
-int irc_process_line( irc_t *irc, char *line );
+char **irc_parse_line( char *line );
 
 void irc_vawrite( irc_t *irc, char *format, va_list params );
 void irc_write( irc_t *irc, char *format, ... );
@@ -117,6 +117,7 @@ G_MODULE_EXPORT int irc_usermsg( irc_t *irc, char *format, ... );
 char **irc_tokenize( char *buffer );
 
 void irc_login( irc_t *irc );
+int irc_check_login( irc_t *irc );
 void irc_motd( irc_t *irc );
 void irc_names( irc_t *irc, char *channel );
 void irc_topic( irc_t *irc, char *channel );

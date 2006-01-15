@@ -31,29 +31,6 @@
 
 #include <string.h>
 
-const command_t commands[] = {
-	{ "help",           0, cmd_help }, 
-	{ "identify",       1, cmd_identify },
-	{ "register",       1, cmd_register },
-	{ "drop",           1, cmd_drop },
-	{ "account",        1, cmd_account },
-	{ "add",            2, cmd_add },
-	{ "info",           1, cmd_info },
-	{ "rename",         2, cmd_rename },
-	{ "remove",         1, cmd_remove },
-	{ "block",          1, cmd_block },
-	{ "allow",          1, cmd_allow },
-	{ "save",           0, cmd_save },
-	{ "set",            0, cmd_set },
-	{ "yes",            0, cmd_yesno },
-	{ "no",             0, cmd_yesno },
-	{ "blist",          0, cmd_blist },
-	{ "nick",           1, cmd_nick },
-	{ "import_buddies", 1, cmd_import_buddies },
-	{ "qlist",          0, cmd_qlist },
-	{ NULL }
-};
-
 int root_command_string( irc_t *irc, user_t *u, char *command, int flags )
 {
 	char *cmd[IRC_MAX_ARGS];
@@ -113,7 +90,7 @@ int root_command( irc_t *irc, char *cmd[] )
 	return( 1 );
 }
 
-int cmd_help( irc_t *irc, char **cmd )
+static int cmd_help( irc_t *irc, char **cmd )
 {
 	char param[80];
 	int i;
@@ -142,7 +119,7 @@ int cmd_help( irc_t *irc, char **cmd )
 	}
 }
 
-int cmd_identify( irc_t *irc, char **cmd )
+static int cmd_identify( irc_t *irc, char **cmd )
 {
 	storage_status_t status = storage_load( irc->nick, cmd[1], irc );
 	
@@ -165,7 +142,7 @@ int cmd_identify( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_register( irc_t *irc, char **cmd )
+static int cmd_register( irc_t *irc, char **cmd )
 {
 	if( global.conf->authmode == AUTHMODE_REGISTERED )
 	{
@@ -192,7 +169,7 @@ int cmd_register( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_drop( irc_t *irc, char **cmd )
+static int cmd_drop( irc_t *irc, char **cmd )
 {
 	storage_status_t status;
 	
@@ -216,7 +193,7 @@ int cmd_drop( irc_t *irc, char **cmd )
 	}
 }
 
-int cmd_account( irc_t *irc, char **cmd )
+static int cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
 	
@@ -376,7 +353,7 @@ int cmd_account( irc_t *irc, char **cmd )
 	return( 1 );
 }
 
-int cmd_add( irc_t *irc, char **cmd )
+static int cmd_add( irc_t *irc, char **cmd )
 {
 	account_t *a;
 	
@@ -416,7 +393,7 @@ int cmd_add( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_info( irc_t *irc, char **cmd )
+static int cmd_info( irc_t *irc, char **cmd )
 {
 	struct gaim_connection *gc;
 	account_t *a;
@@ -453,7 +430,7 @@ int cmd_info( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_rename( irc_t *irc, char **cmd )
+static int cmd_rename( irc_t *irc, char **cmd )
 {
 	user_t *u;
 	
@@ -494,7 +471,7 @@ int cmd_rename( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_remove( irc_t *irc, char **cmd )
+static int cmd_remove( irc_t *irc, char **cmd )
 {
 	user_t *u;
 	char *s;
@@ -516,7 +493,7 @@ int cmd_remove( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_block( irc_t *irc, char **cmd )
+static int cmd_block( irc_t *irc, char **cmd )
 {
 	struct gaim_connection *gc;
 	account_t *a;
@@ -557,7 +534,7 @@ int cmd_block( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_allow( irc_t *irc, char **cmd )
+static int cmd_allow( irc_t *irc, char **cmd )
 {
 	struct gaim_connection *gc;
 	account_t *a;
@@ -599,7 +576,7 @@ int cmd_allow( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_yesno( irc_t *irc, char **cmd )
+static int cmd_yesno( irc_t *irc, char **cmd )
 {
 	query_t *q = NULL;
 	int numq = 0;
@@ -639,7 +616,7 @@ int cmd_yesno( irc_t *irc, char **cmd )
 	return( 1 );
 }
 
-int cmd_set( irc_t *irc, char **cmd )
+static int cmd_set( irc_t *irc, char **cmd )
 {
 	if( cmd[1] && cmd[2] )
 	{
@@ -665,7 +642,7 @@ int cmd_set( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_save( irc_t *irc, char **cmd )
+static int cmd_save( irc_t *irc, char **cmd )
 {
 	if( storage_save( irc, TRUE ) == STORAGE_OK )
 		irc_usermsg( irc, "Configuration saved" );
@@ -675,7 +652,7 @@ int cmd_save( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_blist( irc_t *irc, char **cmd )
+static int cmd_blist( irc_t *irc, char **cmd )
 {
 	int online = 0, away = 0, offline = 0;
 	user_t *u;
@@ -721,7 +698,7 @@ int cmd_blist( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_nick( irc_t *irc, char **cmd ) 
+static int cmd_nick( irc_t *irc, char **cmd ) 
 {
 	account_t *a;
 
@@ -757,7 +734,7 @@ int cmd_nick( irc_t *irc, char **cmd )
 	return( 1 );
 }
 
-int cmd_qlist( irc_t *irc, char **cmd )
+static int cmd_qlist( irc_t *irc, char **cmd )
 {
 	query_t *q = irc->queries;
 	int num;
@@ -779,7 +756,7 @@ int cmd_qlist( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
-int cmd_import_buddies( irc_t *irc, char **cmd )
+static int cmd_import_buddies( irc_t *irc, char **cmd )
 {
 	struct gaim_connection *gc;
 	account_t *a;
@@ -831,3 +808,26 @@ int cmd_import_buddies( irc_t *irc, char **cmd )
 	
 	return( 0 );
 }
+
+const command_t commands[] = {
+	{ "help",           0, cmd_help,           0 }, 
+	{ "identify",       1, cmd_identify,       0 },
+	{ "register",       1, cmd_register,       0 },
+	{ "drop",           1, cmd_drop,           0 },
+	{ "account",        1, cmd_account,        0 },
+	{ "add",            2, cmd_add,            0 },
+	{ "info",           1, cmd_info,           0 },
+	{ "rename",         2, cmd_rename,         0 },
+	{ "remove",         1, cmd_remove,         0 },
+	{ "block",          1, cmd_block,          0 },
+	{ "allow",          1, cmd_allow,          0 },
+	{ "save",           0, cmd_save,           0 },
+	{ "set",            0, cmd_set,            0 },
+	{ "yes",            0, cmd_yesno,          0 },
+	{ "no",             0, cmd_yesno,          0 },
+	{ "blist",          0, cmd_blist,          0 },
+	{ "nick",           1, cmd_nick,           0 },
+	{ "import_buddies", 1, cmd_import_buddies, 0 },
+	{ "qlist",          0, cmd_qlist,          0 },
+	{ NULL }
+};
