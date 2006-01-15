@@ -433,6 +433,37 @@ char **irc_parse_line( char *line )
 	return cmd;
 }
 
+char *irc_build_line( char **cmd )
+{
+	int i, len;
+	char *s;
+	
+	if( cmd[0] == NULL )
+		return NULL;
+	
+	len = 1;
+	for( i = 0; cmd[i]; i ++ )
+		len += strlen( cmd[i] ) + 1;
+	
+	if( strchr( cmd[i-1], ' ' ) != NULL )
+		len ++;
+	
+	s = g_new0( char, len + 1 );
+	for( i = 0; cmd[i]; i ++ )
+	{
+		if( cmd[i+1] == NULL && strchr( cmd[i], ' ' ) != NULL )
+			strcat( s, ":" );
+		
+		strcat( s, cmd[i] );
+		
+		if( cmd[i+1] )
+			strcat( s, " " );
+	}
+	strcat( s, "\r\n" );
+	
+	return s;
+}
+
 void irc_reply( irc_t *irc, int code, char *format, ... )
 {
 	char text[IRC_MAX_LINE];

@@ -30,35 +30,38 @@
 
 GSList *child_list = NULL;
 
+
 static int ipc_master_cmd_die( irc_t *data, char **cmd )
 {
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		ipc_to_children_str( "DIE\r\n" );
+	
 	bitlbee_shutdown( NULL );
+	
+	return 1;
 }
 
 static int ipc_master_cmd_wallops( irc_t *data, char **cmd )
 {
-	GSList *l;
-	char msg_buf[513];
-	int msg_len;
-	
-	if( ( msg_len = g_snprintf( msg_buf, sizeof( msg_buf ) - 1, "%s :%s\r\n", cmd[0], cmd[1] ) ) > ( sizeof( msg_buf ) - 1 ) )
-		return 0;
-	
-	for( l = child_list; l; l = l->next )
-	{
-		struct bitlbee_child *c = l->data;
-		write( c->ipc_fd, msg_buf, msg_len );
-	}
+	ipc_to_children( cmd );
 	
 	return 1;
 }
 
 static const command_t ipc_master_commands[] = {
 	{ "die",        0, ipc_master_cmd_die,        0 },
-	{ "wallops",    1, ipc_master_cmd_wallops,    1 },
-	{ "lilo",       1, ipc_master_cmd_wallops,    1 },
+	{ "wallops",    1, ipc_master_cmd_wallops,    0 },
+	{ "lilo",       1, ipc_master_cmd_wallops,    0 },
 	{ NULL }
 };
+
+
+static int ipc_child_cmd_die( irc_t *data, char **cmd )
+{
+	bitlbee_shutdown( NULL );
+	
+	return 1;
+}
 
 static int ipc_child_cmd_wallops( irc_t *data, char **cmd )
 {
@@ -74,16 +77,19 @@ static int ipc_child_cmd_lilo( irc_t *data, char **cmd )
 {
 	irc_t *irc = data;
 	
-	irc_write( irc, ":%s NOTICE %s :%s", irc->myhost, irc->nick, cmd[1] );
+	if( strchr( irc->umode, 's' ) )
+		irc_write( irc, ":%s NOTICE %s :%s", irc->myhost, irc->nick, cmd[1] );
 	
 	return 1;
 }
 
 static const command_t ipc_child_commands[] = {
-	{ "wallops",    1, ipc_child_cmd_wallops,     1 },
-	{ "lilo",       1, ipc_child_cmd_lilo,        1 },
+	{ "die",        0, ipc_child_cmd_die,         0 },
+	{ "wallops",    1, ipc_child_cmd_wallops,     0 },
+	{ "lilo",       1, ipc_child_cmd_lilo,        0 },
 	{ NULL }
 };
+
 
 static void ipc_command_exec( void *data, char **cmd, const command_t *commands )
 {
@@ -190,29 +196,33 @@ void ipc_to_master( char **cmd )
 {
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
-		int i, len;
-		char *s;
+		char *s = irc_build_line( cmd );
+		write( global.listen_socket, s, strlen( s ) );
+		g_free( s );
+	}
+}
+
+void ipc_to_children( char **cmd )
+{
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		char *msg_buf = irc_build_line( cmd );
+		ipc_to_children_str( msg_buf );
+		g_free( msg_buf );
+	}
+}
+
+void ipc_to_children_str( char *msg_buf )
+{
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		int msg_len = strlen( msg_buf );
+		GSList *l;
 		
-		len = 1;
-		for( i = 0; cmd[i]; i ++ )
-			len += strlen( cmd[i] ) + 1;
-		
-		if( strchr( cmd[i-1], ' ' ) != NULL )
-			len ++;
-		
-		s = g_new0( char, len + 1 );
-		for( i = 0; cmd[i]; i ++ )
+		for( l = child_list; l; l = l->next )
 		{
-			if( cmd[i+1] == NULL && strchr( cmd[i], ' ' ) != NULL )
-				strcat( s, ":" );
-			
-			strcat( s, cmd[i] );
-			
-			if( cmd[i+1] )
-				strcat( s, " " );
+			struct bitlbee_child *c = l->data;
+			write( c->ipc_fd, msg_buf, msg_len );
 		}
-		strcat( s, "\r\n" );
-		
-		write( global.listen_socket, s, len );
 	}
 }

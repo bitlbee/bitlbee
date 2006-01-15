@@ -55,6 +55,10 @@ int bitlbee_daemon_init()
 		return( -1 );
 	}
 	
+	/* TIME_WAIT (?) sucks.. */
+	i = 1;
+	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
+	
 #ifdef IPV6
 	listen_addr.sin6_family = AF_INETx;
 	listen_addr.sin6_port = htons( global.conf->port );
