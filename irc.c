@@ -1158,7 +1158,7 @@ void irc_motd( irc_t *irc )
 			}
 		}
 		irc_reply( irc, 376, ":End of MOTD" );
-		closesocket( fd );
+		close( fd );
 	}
 }
 
