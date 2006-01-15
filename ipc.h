@@ -28,7 +28,9 @@
 
 void ipc_master_read( gpointer data, gint source, GaimInputCondition cond );
 void ipc_child_read( gpointer data, gint source, GaimInputCondition cond );
+
 void ipc_to_master( char **cmd );
+void ipc_to_master_str( char *msg_buf );
 void ipc_to_children( char **cmd );
 void ipc_to_children_str( char *msg_buf );
 

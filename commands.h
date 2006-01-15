@@ -43,4 +43,6 @@ extern const command_t commands[];
 #define IRC_CMD_OPER_ONLY	4
 #define IRC_CMD_TO_MASTER	8
 
+#define IPC_CMD_TO_CHILDREN	1
+
 #endif

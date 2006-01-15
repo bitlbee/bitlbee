@@ -41,17 +41,32 @@ static int ipc_master_cmd_die( irc_t *data, char **cmd )
 	return 1;
 }
 
-static int ipc_master_cmd_wallops( irc_t *data, char **cmd )
+static int ipc_master_cmd_rehash( irc_t *data, char **cmd )
 {
-	ipc_to_children( cmd );
+	runmode_t oldmode;
+	
+	oldmode = global.conf->runmode;
+	
+	g_free( global.conf );
+	global.conf = conf_load( 0, NULL );
+	
+	if( global.conf->runmode != oldmode )
+	{
+		log_message( LOGLVL_WARNING, "Can't change RunMode setting at runtime, restoring original setting" );
+		global.conf->runmode = oldmode;
+	}
+	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		ipc_to_children( cmd );
 	
 	return 1;
 }
 
 static const command_t ipc_master_commands[] = {
 	{ "die",        0, ipc_master_cmd_die,        0 },
-	{ "wallops",    1, ipc_master_cmd_wallops,    0 },
-	{ "lilo",       1, ipc_master_cmd_wallops,    0 },
+	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
+	{ "lilo",       1, NULL,                      IPC_CMD_TO_CHILDREN },
+	{ "rehash",     0, ipc_master_cmd_rehash,     0 },
 	{ NULL }
 };
 
@@ -83,10 +98,25 @@ static int ipc_child_cmd_lilo( irc_t *data, char **cmd )
 	return 1;
 }
 
+static int ipc_child_cmd_rehash( irc_t *data, char **cmd )
+{
+	runmode_t oldmode;
+	
+	oldmode = global.conf->runmode;
+	
+	g_free( global.conf );
+	global.conf = conf_load( 0, NULL );
+	
+	global.conf->runmode = oldmode;
+	
+	return 1;
+}
+
 static const command_t ipc_child_commands[] = {
 	{ "die",        0, ipc_child_cmd_die,         0 },
 	{ "wallops",    1, ipc_child_cmd_wallops,     0 },
 	{ "lilo",       1, ipc_child_cmd_lilo,        0 },
+	{ "rehash",     0, ipc_child_cmd_rehash,     0 },
 	{ NULL }
 };
 
@@ -101,7 +131,11 @@ static void ipc_command_exec( void *data, char **cmd, const command_t *commands 
 	for( i = 0; commands[i].command; i ++ )
 		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
 		{
-			commands[i].execute( data, cmd );
+			if( commands[i].flags & IPC_CMD_TO_CHILDREN )
+				ipc_to_children( cmd );
+			else
+				commands[i].execute( data, cmd );
+			
 			return;
 		}
 }
@@ -197,7 +231,32 @@ void ipc_to_master( char **cmd )
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
 		char *s = irc_build_line( cmd );
-		write( global.listen_socket, s, strlen( s ) );
+		ipc_to_master_str( s );
+		g_free( s );
+	}
+	else if( global.conf->runmode == RUNMODE_DAEMON )
+	{
+		ipc_command_exec( NULL, cmd, ipc_master_commands );
+	}
+}
+
+void ipc_to_master_str( char *msg_buf )
+{
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		write( global.listen_socket, msg_buf, strlen( msg_buf ) );
+	}
+	else if( global.conf->runmode == RUNMODE_DAEMON )
+	{
+		char *s, **cmd;
+		
+		/* irc_parse_line() wants a read-write string, so get it one: */
+		s = g_strdup( msg_buf );
+		cmd = irc_parse_line( s );
+		
+		ipc_command_exec( NULL, cmd, ipc_master_commands );
+		
+		g_free( cmd );
 		g_free( s );
 	}
 }
@@ -209,6 +268,13 @@ void ipc_to_children( char **cmd )
 		char *msg_buf = irc_build_line( cmd );
 		ipc_to_children_str( msg_buf );
 		g_free( msg_buf );
+	}
+	else if( global.conf->runmode == RUNMODE_DAEMON )
+	{
+		GSList *l;
+		
+		for( l = irc_connection_list; l; l = l->next )
+			ipc_command_exec( l->data, cmd, ipc_child_commands );
 	}
 }
 
@@ -224,5 +290,18 @@ void ipc_to_children_str( char *msg_buf )
 			struct bitlbee_child *c = l->data;
 			write( c->ipc_fd, msg_buf, msg_len );
 		}
+	}
+	else if( global.conf->runmode == RUNMODE_DAEMON )
+	{
+		char *s, **cmd;
+		
+		/* irc_parse_line() wants a read-write string, so get it one: */
+		s = g_strdup( msg_buf );
+		cmd = irc_parse_line( s );
+		
+		ipc_to_children( cmd );
+		
+		g_free( cmd );
+		g_free( s );
 	}
 }

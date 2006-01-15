@@ -232,7 +232,6 @@ static int irc_cmd_invite( irc_t *irc, char **cmd )
 	return( 1 );
 }
 
-/* TODO: Attach this one to NOTICE too! */
 static int irc_cmd_privmsg( irc_t *irc, char **cmd )
 {
 	if ( !cmd[2] ) 
@@ -529,7 +528,6 @@ static int irc_cmd_whowas( irc_t *irc, char **cmd )
 	return( 1 );
 }
 
-/* TODO: Alias to NS */
 static int irc_cmd_nickserv( irc_t *irc, char **cmd )
 {
 	/* [SH] This aliases the NickServ command to PRIVMSG root */
@@ -579,6 +577,15 @@ static int irc_cmd_completions( irc_t *irc, char **cmd )
 	return( 1 );
 }
 
+static int irc_cmd_rehash( irc_t *irc, char **cmd )
+{
+	ipc_to_master( cmd );
+	
+	irc_reply( irc, 382, "%s :Rehashing", CONF_FILE );
+	
+	return( 1 );
+}
+
 static const command_t irc_commands[] = {
 	{ "pass",        1, irc_cmd_pass,        IRC_CMD_PRE_LOGIN },
 	{ "user",        4, irc_cmd_user,        IRC_CMD_PRE_LOGIN },
@@ -609,6 +616,7 @@ static const command_t irc_commands[] = {
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wallops",     0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "lilo",        0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
+	{ "rehash",      0, irc_cmd_rehash,      IRC_CMD_OPER_ONLY },
 	{ NULL }
 };
 
