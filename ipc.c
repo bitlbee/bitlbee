@@ -82,6 +82,9 @@ static int ipc_child_cmd_wallops( irc_t *data, char **cmd )
 {
 	irc_t *irc = data;
 	
+	if( irc->status < USTATUS_LOGGED_IN )
+		return 1;
+	
 	if( strchr( irc->umode, 'w' ) )
 		irc_write( irc, ":%s WALLOPS :%s", irc->myhost, cmd[1] );
 	
@@ -91,6 +94,9 @@ static int ipc_child_cmd_wallops( irc_t *data, char **cmd )
 static int ipc_child_cmd_lilo( irc_t *data, char **cmd )
 {
 	irc_t *irc = data;
+	
+	if( irc->status < USTATUS_LOGGED_IN )
+		return 1;
 	
 	if( strchr( irc->umode, 's' ) )
 		irc_write( irc, ":%s NOTICE %s :%s", irc->myhost, irc->nick, cmd[1] );
