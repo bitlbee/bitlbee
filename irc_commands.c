@@ -614,9 +614,10 @@ static const command_t irc_commands[] = {
 	{ "pong",        0, irc_cmd_pong,        IRC_CMD_LOGGED_IN },
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
-	{ "wallops",     0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
-	{ "lilo",        0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
+	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
+	{ "lilo",        1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "rehash",      0, irc_cmd_rehash,      IRC_CMD_OPER_ONLY },
+	{ "kill",        2, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ NULL }
 };
 

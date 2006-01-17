@@ -31,7 +31,7 @@
 GSList *child_list = NULL;
 
 
-static int ipc_master_cmd_die( irc_t *data, char **cmd )
+static int ipc_master_cmd_die( irc_t *irc, char **cmd )
 {
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_to_children_str( "DIE\r\n" );
@@ -41,7 +41,7 @@ static int ipc_master_cmd_die( irc_t *data, char **cmd )
 	return 1;
 }
 
-static int ipc_master_cmd_rehash( irc_t *data, char **cmd )
+static int ipc_master_cmd_rehash( irc_t *irc, char **cmd )
 {
 	runmode_t oldmode;
 	
@@ -67,21 +67,20 @@ static const command_t ipc_master_commands[] = {
 	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "lilo",       1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "rehash",     0, ipc_master_cmd_rehash,     0 },
+	{ "kill",       2, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ NULL }
 };
 
 
-static int ipc_child_cmd_die( irc_t *data, char **cmd )
+static int ipc_child_cmd_die( irc_t *irc, char **cmd )
 {
 	bitlbee_shutdown( NULL );
 	
 	return 1;
 }
 
-static int ipc_child_cmd_wallops( irc_t *data, char **cmd )
+static int ipc_child_cmd_wallops( irc_t *irc, char **cmd )
 {
-	irc_t *irc = data;
-	
 	if( irc->status < USTATUS_LOGGED_IN )
 		return 1;
 	
@@ -91,10 +90,8 @@ static int ipc_child_cmd_wallops( irc_t *data, char **cmd )
 	return 1;
 }
 
-static int ipc_child_cmd_lilo( irc_t *data, char **cmd )
+static int ipc_child_cmd_lilo( irc_t *irc, char **cmd )
 {
-	irc_t *irc = data;
-	
 	if( irc->status < USTATUS_LOGGED_IN )
 		return 1;
 	
@@ -104,7 +101,7 @@ static int ipc_child_cmd_lilo( irc_t *data, char **cmd )
 	return 1;
 }
 
-static int ipc_child_cmd_rehash( irc_t *data, char **cmd )
+static int ipc_child_cmd_rehash( irc_t *irc, char **cmd )
 {
 	runmode_t oldmode;
 	
@@ -118,11 +115,26 @@ static int ipc_child_cmd_rehash( irc_t *data, char **cmd )
 	return 1;
 }
 
+static int ipc_child_cmd_kill( irc_t *irc, char **cmd )
+{
+	if( irc->status < USTATUS_LOGGED_IN )
+		return 1;
+	
+	if( nick_cmp( cmd[1], irc->nick ) != 0 )
+		return 1;	/* It's not for us. */
+	
+	irc_write( irc, ":%s!%s@%s KILL %s :%s", irc->mynick, irc->mynick, irc->myhost, irc->nick, cmd[2] );
+	g_io_channel_close( irc->io_channel );
+	
+	return 0;
+}
+
 static const command_t ipc_child_commands[] = {
 	{ "die",        0, ipc_child_cmd_die,         0 },
 	{ "wallops",    1, ipc_child_cmd_wallops,     0 },
 	{ "lilo",       1, ipc_child_cmd_lilo,        0 },
-	{ "rehash",     0, ipc_child_cmd_rehash,     0 },
+	{ "rehash",     0, ipc_child_cmd_rehash,      0 },
+	{ "kill",       2, ipc_child_cmd_kill,        0 },
 	{ NULL }
 };
 
