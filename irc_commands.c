@@ -81,7 +81,7 @@ static int irc_cmd_nick( irc_t *irc, char **cmd )
 static int irc_cmd_quit( irc_t *irc, char **cmd )
 {
 	irc_write( irc, "ERROR :%s%s", cmd[1]?"Quit: ":"", cmd[1]?cmd[1]:"Client Quit" );
-	g_io_channel_close( irc->io_channel );
+	/* g_io_channel_close( irc->io_channel ); */
 	
 	return( 0 );
 }

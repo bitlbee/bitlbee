@@ -150,6 +150,20 @@ irc_t *irc_new( int fd )
 	return( irc );
 }
 
+void irc_abort( irc_t *irc )
+{
+	irc->status = USTATUS_SHUTDOWN;
+	if( irc->sendbuffer )
+	{
+		g_source_remove( irc->r_watch_source_id );
+		irc->r_watch_source_id = g_timeout_add_full( G_PRIORITY_HIGH, 1000, (GSourceFunc) irc_free, irc, NULL );
+	}
+	else
+	{
+		irc_free( irc );
+	}
+}
+
 static gboolean irc_free_userhash( gpointer key, gpointer value, gpointer data )
 {
 	g_free( key );

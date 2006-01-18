@@ -124,7 +124,8 @@ static int ipc_child_cmd_kill( irc_t *irc, char **cmd )
 		return 1;	/* It's not for us. */
 	
 	irc_write( irc, ":%s!%s@%s KILL %s :%s", irc->mynick, irc->mynick, irc->myhost, irc->nick, cmd[2] );
-	g_io_channel_close( irc->io_channel );
+	irc_abort( irc );
+	/* g_io_channel_close( irc->io_channel ); */
 	
 	return 0;
 }
