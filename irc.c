@@ -150,6 +150,20 @@ irc_t *irc_new( int fd )
 	return( irc );
 }
 
+void irc_abort( irc_t *irc )
+{
+	irc->status = USTATUS_SHUTDOWN;
+	if( irc->sendbuffer )
+	{
+		g_source_remove( irc->r_watch_source_id );
+		irc->r_watch_source_id = g_timeout_add_full( G_PRIORITY_HIGH, 1000, (GSourceFunc) irc_free, irc, NULL );
+	}
+	else
+	{
+		irc_free( irc );
+	}
+}
+
 static gboolean irc_free_userhash( gpointer key, gpointer value, gpointer data )
 {
 	g_free( key );
@@ -158,7 +172,7 @@ static gboolean irc_free_userhash( gpointer key, gpointer value, gpointer data )
 }
 
 /* Because we have no garbage collection, this is quite annoying */
-void irc_free(irc_t * irc)
+void irc_free( irc_t * irc )
 {
 	account_t *account, *accounttmp;
 	user_t *user, *usertmp;
@@ -495,7 +509,7 @@ int irc_exec( irc_t *irc, char **cmd )
 	else if( g_strcasecmp( cmd[0], "QUIT" ) == 0 )
 	{
 		irc_write( irc, "ERROR :%s%s", cmd[1]?"Quit: ":"", cmd[1]?cmd[1]:"Client Quit" );
-		g_io_channel_close( irc->io_channel );
+		/* g_io_channel_close( irc->io_channel ); */
 		return( 0 );
 	}
 	

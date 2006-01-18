@@ -199,7 +199,7 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	if( !irc_process( irc ) )
 	{
 		log_message( LOGLVL_INFO, "Destroying connection with fd %d.", irc->fd );
-		irc_free( irc );
+		irc_abort( irc );
 		return FALSE;
 	} 
 	
@@ -207,7 +207,7 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )
 	{
 		log_message( LOGLVL_ERROR, "Maximum line length exceeded." );
-		irc_free( irc );
+		irc_abort( irc );
 		return FALSE;
 	}
 	
@@ -226,25 +226,25 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	size = strlen( irc->sendbuffer );
 	st = write( irc->fd, irc->sendbuffer, size );
 	
-	if( st <= 0 )
+	if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
-		if( sockerr_again() )
-		{
-			return TRUE;
-		}
-		else
-		{
-			irc_free( irc );
-			return FALSE;
-		}
+		irc_free( irc );
+		return FALSE;
+	}
+	else if( st < 0 ) /* && sockerr_again() */
+	{
+		return TRUE;
 	}
 	
 	if( st == size )
 	{
 		g_free( irc->sendbuffer );
 		irc->sendbuffer = NULL;
-		
 		irc->w_watch_source_id = 0;
+		
+		if( irc->status == USTATUS_SHUTDOWN )
+			irc_free( irc );
+		
 		return( FALSE );
 	}
 	else
