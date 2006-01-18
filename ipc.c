@@ -173,6 +173,8 @@ static char *ipc_readline( int fd )
 	size = recv( fd, buf, 512, MSG_PEEK );
 	if( size == 0 || ( size < 0 && !sockerr_again() ) )
 		return NULL;
+	else if( size < 0 ) /* && sockerr_again() */
+		return( g_strdup( "" ) );
 	else
 		buf[size] = 0;
 	
