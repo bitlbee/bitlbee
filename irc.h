@@ -43,7 +43,8 @@ typedef enum
 	USTATUS_OFFLINE,
 	USTATUS_AUTHORIZED,
 	USTATUS_LOGGED_IN,
-	USTATUS_IDENTIFIED
+	USTATUS_IDENTIFIED,
+	USTATUS_SHUTDOWN
 } irc_status_t;
 
 typedef struct channel
@@ -103,6 +104,7 @@ typedef struct irc
 extern GSList *irc_connection_list;
 
 irc_t *irc_new( int fd );
+void irc_abort( irc_t *irc );
 void irc_free( irc_t *irc );
 
 int irc_exec( irc_t *irc, char **cmd );
