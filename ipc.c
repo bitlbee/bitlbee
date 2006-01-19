@@ -58,7 +58,7 @@ static int ipc_master_cmd_die( irc_t *data, char **cmd )
 	return 1;
 }
 
-static int ipc_master_cmd_rehash( irc_t *data, char **cmd )
+int ipc_master_cmd_rehash( irc_t *data, char **cmd )
 {
 	runmode_t oldmode;
 	

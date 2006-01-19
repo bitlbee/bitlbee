@@ -579,7 +579,10 @@ static int irc_cmd_completions( irc_t *irc, char **cmd )
 
 static int irc_cmd_rehash( irc_t *irc, char **cmd )
 {
-	ipc_to_master( cmd );
+	if( global.conf->runmode == RUNMODE_INETD )
+		ipc_master_cmd_rehash( NULL, NULL );
+	else
+		ipc_to_master( cmd );
 	
 	irc_reply( irc, 382, "%s :Rehashing", CONF_FILE );
 	
@@ -655,6 +658,8 @@ int irc_exec( irc_t *irc, char *cmd[] )
 				}
 			
 			if( irc_commands[i].flags & IRC_CMD_TO_MASTER )
+				/* IPC doesn't make sense in inetd mode,
+				    but the function will catch that. */
 				ipc_to_master( cmd );
 			else
 				return irc_commands[i].execute( irc, cmd );

@@ -26,6 +26,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
+
 struct bitlbee_child
 {
 	pid_t pid;
@@ -37,6 +38,7 @@ struct bitlbee_child
 	char *realname;
 };
 
+
 void ipc_master_read( gpointer data, gint source, GaimInputCondition cond );
 void ipc_child_read( gpointer data, gint source, GaimInputCondition cond );
 
@@ -47,5 +49,9 @@ void ipc_to_master( char **cmd );
 void ipc_to_master_str( char *format, ... );
 void ipc_to_children( char **cmd );
 void ipc_to_children_str( char *format, ... );
+
+/* We need this function in inetd mode, so let's just make it non-static. */
+int ipc_master_cmd_rehash( irc_t *data, char **cmd );
+
 
 extern GSList *child_list;
