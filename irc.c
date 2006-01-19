@@ -26,6 +26,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "crypting.h"
+#include "ipc.h"
 
 static gboolean irc_userping( gpointer _irc );
 
@@ -688,10 +689,12 @@ void irc_login( irc_t *irc )
 	u->host = g_strdup( irc->host );
 	u->realname = g_strdup( irc->realname );
 	u->online = 1;
-//	u->send_handler = msg_echo;
 	irc_spawn( irc, u );
 	
 	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the \x02help\x02 command. Lots of FAQ's are answered there." );
+	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->host, irc->nick, irc->realname );
 	
 	irc->status = USTATUS_LOGGED_IN;
 }

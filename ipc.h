@@ -26,19 +26,26 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
-void ipc_master_read( gpointer data, gint source, GaimInputCondition cond );
-void ipc_child_read( gpointer data, gint source, GaimInputCondition cond );
-
-void ipc_to_master( char **cmd );
-void ipc_to_master_str( char *msg_buf );
-void ipc_to_children( char **cmd );
-void ipc_to_children_str( char *msg_buf );
-
 struct bitlbee_child
 {
 	pid_t pid;
 	int ipc_fd;
 	gint ipc_inpa;
+	
+	char *host;
+	char *nick;
+	char *realname;
 };
+
+void ipc_master_read( gpointer data, gint source, GaimInputCondition cond );
+void ipc_child_read( gpointer data, gint source, GaimInputCondition cond );
+
+void ipc_master_free_one( struct bitlbee_child *child );
+void ipc_master_free_all();
+
+void ipc_to_master( char **cmd );
+void ipc_to_master_str( char *format, ... );
+void ipc_to_children( char **cmd );
+void ipc_to_children_str( char *format, ... );
 
 extern GSList *child_list;

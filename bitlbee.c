@@ -281,6 +281,8 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 			global.listen_watch_source_id = gaim_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
 			
 			close( fds[0] );
+			
+			ipc_master_free_all();
 		}
 	}
 	else

@@ -31,7 +31,21 @@
 GSList *child_list = NULL;
 
 
-static int ipc_master_cmd_die( irc_t *irc, char **cmd )
+static int ipc_master_cmd_client( irc_t *data, char **cmd )
+{
+	struct bitlbee_child *child = (void*) data;
+	
+	child->host = g_strdup( cmd[1] );
+	child->nick = g_strdup( cmd[2] );
+	child->realname = g_strdup( cmd[3] );
+	
+	ipc_to_children_str( "OPERMSG :Client connecting (PID=%d): %s@%s (%s)\r\n",
+	                     child->pid, child->nick, child->host, child->realname );
+	
+	return 1;
+}
+
+static int ipc_master_cmd_die( irc_t *data, char **cmd )
 {
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_to_children_str( "DIE\r\n" );
@@ -41,7 +55,7 @@ static int ipc_master_cmd_die( irc_t *irc, char **cmd )
 	return 1;
 }
 
-static int ipc_master_cmd_rehash( irc_t *irc, char **cmd )
+static int ipc_master_cmd_rehash( irc_t *data, char **cmd )
 {
 	runmode_t oldmode;
 	
@@ -63,9 +77,11 @@ static int ipc_master_cmd_rehash( irc_t *irc, char **cmd )
 }
 
 static const command_t ipc_master_commands[] = {
+	{ "client",     3, ipc_master_cmd_client,     0 },
 	{ "die",        0, ipc_master_cmd_die,        0 },
 	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "lilo",       1, NULL,                      IPC_CMD_TO_CHILDREN },
+	{ "opermsg",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "rehash",     0, ipc_master_cmd_rehash,     0 },
 	{ "kill",       2, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ NULL }
@@ -74,7 +90,10 @@ static const command_t ipc_master_commands[] = {
 
 static int ipc_child_cmd_die( irc_t *irc, char **cmd )
 {
-	bitlbee_shutdown( NULL );
+	if( irc->status >= USTATUS_LOGGED_IN )
+		irc_write( irc, "ERROR :Operator requested server shutdown, bye bye!" );
+	
+	irc_abort( irc );
 	
 	return 1;
 }
@@ -97,6 +116,17 @@ static int ipc_child_cmd_lilo( irc_t *irc, char **cmd )
 	
 	if( strchr( irc->umode, 's' ) )
 		irc_write( irc, ":%s NOTICE %s :%s", irc->myhost, irc->nick, cmd[1] );
+	
+	return 1;
+}
+
+static int ipc_child_cmd_opermsg( irc_t *irc, char **cmd )
+{
+	if( irc->status < USTATUS_LOGGED_IN )
+		return 1;
+	
+	if( strchr( irc->umode, 'o' ) )
+		irc_write( irc, ":%s NOTICE %s :*** OperMsg *** %s", irc->myhost, irc->nick, cmd[1] );
 	
 	return 1;
 }
@@ -134,6 +164,7 @@ static const command_t ipc_child_commands[] = {
 	{ "die",        0, ipc_child_cmd_die,         0 },
 	{ "wallops",    1, ipc_child_cmd_wallops,     0 },
 	{ "lilo",       1, ipc_child_cmd_lilo,        0 },
+	{ "opermsg",    1, ipc_child_cmd_opermsg,     0 },
 	{ "rehash",     0, ipc_child_cmd_rehash,      0 },
 	{ "kill",       2, ipc_child_cmd_kill,        0 },
 	{ NULL }
@@ -216,12 +247,8 @@ void ipc_master_read( gpointer data, gint source, GaimInputCondition cond )
 			c = l->data;
 			if( c->ipc_fd == source )
 			{
-				close( c->ipc_fd );
-				gaim_input_remove( c->ipc_inpa );
-				g_free( c );
-				
-				child_list = g_slist_remove( child_list, l );
-				
+				ipc_master_free_one( c );
+				child_list = g_slist_remove( child_list, c );
 				break;
 			}
 		}
@@ -252,7 +279,7 @@ void ipc_to_master( char **cmd )
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
 		char *s = irc_build_line( cmd );
-		ipc_to_master_str( s );
+		ipc_to_master_str( "%s", s );
 		g_free( s );
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
@@ -261,25 +288,33 @@ void ipc_to_master( char **cmd )
 	}
 }
 
-void ipc_to_master_str( char *msg_buf )
+void ipc_to_master_str( char *format, ... )
 {
-	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	char *msg_buf;
+	va_list params;
+
+	va_start( params, format );
+	msg_buf = g_strdup_vprintf( format, params );
+	va_end( params );
+	
+	if( strlen( msg_buf ) > 512 )
+	{
+		/* Don't send it, it's too long... */
+	}
+	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
 		write( global.listen_socket, msg_buf, strlen( msg_buf ) );
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
-		char *s, **cmd;
+		char **cmd;
 		
-		/* irc_parse_line() wants a read-write string, so get it one: */
-		s = g_strdup( msg_buf );
-		cmd = irc_parse_line( s );
-		
+		cmd = irc_parse_line( msg_buf );
 		ipc_command_exec( NULL, cmd, ipc_master_commands );
-		
 		g_free( cmd );
-		g_free( s );
 	}
+	
+	g_free( msg_buf );
 }
 
 void ipc_to_children( char **cmd )
@@ -287,7 +322,7 @@ void ipc_to_children( char **cmd )
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
 		char *msg_buf = irc_build_line( cmd );
-		ipc_to_children_str( msg_buf );
+		ipc_to_children_str( "%s", msg_buf );
 		g_free( msg_buf );
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
@@ -299,9 +334,20 @@ void ipc_to_children( char **cmd )
 	}
 }
 
-void ipc_to_children_str( char *msg_buf )
+void ipc_to_children_str( char *format, ... )
 {
-	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	char *msg_buf;
+	va_list params;
+
+	va_start( params, format );
+	msg_buf = g_strdup_vprintf( format, params );
+	va_end( params );
+	
+	if( strlen( msg_buf ) > 512 )
+	{
+		/* Don't send it, it's too long... */
+	}
+	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
 		int msg_len = strlen( msg_buf );
 		GSList *l;
@@ -314,15 +360,34 @@ void ipc_to_children_str( char *msg_buf )
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
-		char *s, **cmd;
+		char **cmd;
 		
-		/* irc_parse_line() wants a read-write string, so get it one: */
-		s = g_strdup( msg_buf );
-		cmd = irc_parse_line( s );
-		
+		cmd = irc_parse_line( msg_buf );
 		ipc_to_children( cmd );
-		
 		g_free( cmd );
-		g_free( s );
 	}
+	
+	g_free( msg_buf );
+}
+
+void ipc_master_free_one( struct bitlbee_child *c )
+{
+	gaim_input_remove( c->ipc_inpa );
+	closesocket( c->ipc_fd );
+	
+	g_free( c->host );
+	g_free( c->nick );
+	g_free( c->realname );
+	g_free( c );
+}
+
+void ipc_master_free_all()
+{
+	GSList *l;
+	
+	for( l = child_list; l; l = l->next )
+		ipc_master_free_one( l->data );
+	
+	g_slist_free( child_list );
+	child_list = NULL;
 }
