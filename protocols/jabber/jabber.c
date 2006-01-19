@@ -412,7 +412,7 @@ static void gjab_recv(gjconn gjc)
 		XML_Parse(gjc->parser, buf, len, 0);
 		if (jd->die)
 			signoff(GJ_GC(gjc));
-	} else if (len < 0 || errno != EAGAIN) {
+	} else if (len == 0 || (len < 0 && (!sockerr_again() || gjc->ssl))) {
 		STATE_EVT(JCONN_STATE_OFF)
 	}
 }
