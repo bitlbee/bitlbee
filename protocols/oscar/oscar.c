@@ -607,6 +607,7 @@ static void damn_you(gpointer data, gint source, GaimInputCondition c)
 		g_free(pos);
 		return;
 	}
+	/* [WvG] Wheeeee! Who needs error checking anyway? ;-) */
 	read(pos->fd, m, 16);
 	m[16] = '\0';
 	gaim_input_remove(pos->inpa);

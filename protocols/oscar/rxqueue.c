@@ -352,8 +352,15 @@ int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 	if (conn->fd == -1)
 		return -1; /* its a aim_conn_close()'d connection */
 
-	if (conn->fd < 3)  /* can happen when people abuse the interface */
+	/* KIDS, THIS IS WHAT HAPPENS IF YOU USE CODE WRITTEN FOR GUIS IN A DAEMON!
+	   
+	   And wouldn't it make sense to return something that prevents this function
+	   from being called again IMMEDIATELY (and making the program suck up all
+	   CPU time)?...
+	   
+	if (conn->fd < 3)
 		return 0;
+	*/
 
 	if (conn->status & AIM_CONN_STATUS_INPROGRESS)
 		return aim_conn_completeconnect(sess, conn);
