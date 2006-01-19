@@ -187,6 +187,8 @@ void irc_free(irc_t * irc)
 		if( storage_save( irc, TRUE ) != STORAGE_OK )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
+	closesocket( irc->fd );
+	
 	if( irc->ping_source_id > 0 )
 		g_source_remove( irc->ping_source_id );
 	g_source_remove( irc->r_watch_source_id );
@@ -693,7 +695,7 @@ void irc_login( irc_t *irc )
 	
 	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the \x02help\x02 command. Lots of FAQ's are answered there." );
 	
-	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	if( global.conf->runmode == RUNMODE_FORKDAEMON || global.conf->runmode == RUNMODE_DAEMON )
 		ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->host, irc->nick, irc->realname );
 	
 	irc->status = USTATUS_LOGGED_IN;

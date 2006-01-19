@@ -35,12 +35,15 @@ static int ipc_master_cmd_client( irc_t *data, char **cmd )
 {
 	struct bitlbee_child *child = (void*) data;
 	
-	child->host = g_strdup( cmd[1] );
-	child->nick = g_strdup( cmd[2] );
-	child->realname = g_strdup( cmd[3] );
+	if( child )
+	{
+		child->host = g_strdup( cmd[1] );
+		child->nick = g_strdup( cmd[2] );
+		child->realname = g_strdup( cmd[3] );
+	}
 	
 	ipc_to_children_str( "OPERMSG :Client connecting (PID=%d): %s@%s (%s)\r\n",
-	                     child->pid, child->nick, child->host, child->realname );
+	                     child ? child->pid : -1, cmd[2], cmd[1], cmd[3] );
 	
 	return 1;
 }
@@ -307,7 +310,10 @@ void ipc_to_master_str( char *format, ... )
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
-		char **cmd;
+		char **cmd, *s;
+		
+		if( ( s = strchr( msg_buf, '\r' ) ) )
+			*s = 0;
 		
 		cmd = irc_parse_line( msg_buf );
 		ipc_command_exec( NULL, cmd, ipc_master_commands );
@@ -360,7 +366,10 @@ void ipc_to_children_str( char *format, ... )
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
-		char **cmd;
+		char **cmd, *s;
+		
+		if( ( s = strchr( msg_buf, '\r' ) ) )
+			*s = 0;
 		
 		cmd = irc_parse_line( msg_buf );
 		ipc_to_children( cmd );
