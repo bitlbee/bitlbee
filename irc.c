@@ -150,11 +150,42 @@ irc_t *irc_new( int fd )
 	return( irc );
 }
 
-void irc_abort( irc_t *irc )
+void irc_abort( irc_t *irc, int immed, char *format, ... )
 {
-	irc->status = USTATUS_SHUTDOWN;
-	if( irc->sendbuffer )
+	va_list params;
+	
+	if( format != NULL )
 	{
+		char *reason;
+		
+		va_start( params, format );
+		reason = g_strdup_printf( format, params );
+		va_end( params );
+		
+		if( !immed )
+			irc_write( irc, "ERROR :Closing link: %s", reason );
+		
+		ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
+	                           irc->nick, irc->host, reason" );
+	     	
+		g_free( reason );
+	}
+	else
+	{
+		if( !immed )
+			irc_write( irc, "ERROR :Closing link" );
+		
+		ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
+	        	           irc->nick, irc->host, "No reason given" );
+	}
+	
+	irc->status = USTATUS_SHUTDOWN;
+	if( irc->sendbuffer && !immed )
+	{
+		/* We won't read from this socket anymore. Instead, we'll connect a timer
+		   to it that should shut down the connection in a second, just in case
+		   bitlbee_.._write doesn't do it first. */
+		
 		g_source_remove( irc->r_watch_source_id );
 		irc->r_watch_source_id = g_timeout_add_full( G_PRIORITY_HIGH, 1000, (GSourceFunc) irc_free, irc, NULL );
 	}
@@ -1622,8 +1653,7 @@ static gboolean irc_userping( gpointer _irc )
 	
 	if( rv > 0 )
 	{
-		irc_write( irc, "ERROR :Closing Link: Ping Timeout: %d seconds", rv );
-		irc_free( irc );
+		irc_abort( irc, "ERROR :Closing Link: Ping Timeout: %d seconds", rv );
 		return FALSE;
 	}
 	

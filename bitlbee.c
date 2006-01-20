@@ -162,14 +162,14 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	
 	if( condition & G_IO_ERR || condition & G_IO_HUP )
 	{
-		irc_free( irc );
+		irc_abort( irc, 1, "Read error" );
 		return FALSE;
 	}
 	
 	st = read( irc->fd, line, sizeof( line ) - 1 );
 	if( st == 0 )
 	{
-		irc_free( irc );
+		irc_abort( irc, 1, "Connection reset by peer" );
 		return FALSE;
 	}
 	else if( st < 0 )
@@ -180,7 +180,7 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		}
 		else
 		{
-			irc_free( irc );
+			irc_abort( irc, 1, "Read error: %s", strerror( errno ) );
 			return FALSE;
 		}
 	}
@@ -206,8 +206,7 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	/* Very naughty, go read the RFCs! >:) */
 	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )
 	{
-		log_message( LOGLVL_ERROR, "Maximum line length exceeded." );
-		irc_abort( irc );
+		irc_abort( irc, 0, "Maximum line length exceeded" );
 		return FALSE;
 	}
 	
@@ -228,7 +227,7 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	
 	if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
-		irc_free( irc );
+		irc_abort( irc, 1, "Write error: %s", strerror( errno ) );
 		return FALSE;
 	}
 	else if( st < 0 ) /* && sockerr_again() */
