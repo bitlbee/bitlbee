@@ -151,23 +151,25 @@ irc_t *irc_new( int fd )
 	return( irc );
 }
 
+/* immed=1 makes this function pretty much equal to irc_free(), except that
+   this one will "log". In case the connection is already broken and we
+   shouldn't try to write to it. */
 void irc_abort( irc_t *irc, int immed, char *format, ... )
 {
-	va_list params;
-	
 	if( format != NULL )
 	{
+		va_list params;
 		char *reason;
 		
 		va_start( params, format );
-		reason = g_strdup_printf( format, params );
+		reason = g_strdup_vprintf( format, params );
 		va_end( params );
 		
 		if( !immed )
 			irc_write( irc, "ERROR :Closing link: %s", reason );
 		
 		ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
-	                           irc->nick, irc->host, reason" );
+	                           irc->nick ? irc->nick : "(NONE)", irc->host, reason );
 	     	
 		g_free( reason );
 	}
@@ -177,7 +179,7 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 			irc_write( irc, "ERROR :Closing link" );
 		
 		ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
-	        	           irc->nick, irc->host, "No reason given" );
+	        	           irc->nick ? irc->nick : "(NONE)", irc->host, "No reason given" );
 	}
 	
 	irc->status = USTATUS_SHUTDOWN;
@@ -338,7 +340,7 @@ void irc_setpass (irc_t *irc, const char *pass)
 	}
 }
 
-int irc_process( irc_t *irc )
+void irc_process( irc_t *irc )
 {
 	char **lines, *temp, **cmd;
 	int i;
@@ -360,14 +362,16 @@ int irc_process( irc_t *irc )
 			
 			if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
 				continue;
-			if( !irc_exec( irc, cmd ) )
-			{
-				g_free( cmd );
-				g_free( lines );
-				return 0;
-			}
+			irc_exec( irc, cmd );
 			
 			g_free( cmd );
+			
+			/* Shouldn't really happen, but just in case... */
+			if( !g_slist_find( irc_connection_list, irc ) )
+			{
+				g_free( lines );
+				return;
+			}
 		}
 		
 		if( lines[i] != NULL )
@@ -378,8 +382,6 @@ int irc_process( irc_t *irc )
 		
 		g_free( lines );
 	}
-	
-	return 1;	
 }
 
 char **irc_tokenize( char *buffer )
@@ -971,7 +973,10 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 		}
 		
 		if( u->send_handler )
-			return( u->send_handler( irc, u, s, flags ) );
+		{
+			u->send_handler( irc, u, s, flags );
+			return 1;
+		}
 	}
 	else if( c && c->gc && c->gc->prpl )
 	{
@@ -997,9 +1002,9 @@ gboolean buddy_send_handler_delayed( gpointer data )
 	return( FALSE );
 }
 
-int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
+void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 {
-	if( !u || !u->gc ) return( 0 );
+	if( !u || !u->gc ) return;
 	
 	if( set_getint( irc, "buddy_sendbuffer" ) && set_getint( irc, "buddy_sendbuffer_delay" ) > 0 )
 	{
@@ -1035,12 +1040,10 @@ int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		if( u->sendbuf_timer > 0 )
 			g_source_remove( u->sendbuf_timer );
 		u->sendbuf_timer = g_timeout_add( delay, buddy_send_handler_delayed, u );
-		
-		return( 1 );
 	}
 	else
 	{
-		return( serv_send_im( irc, u, msg, flags ) );
+		serv_send_im( irc, u, msg, flags );
 	}
 }
 
@@ -1145,7 +1148,7 @@ static gboolean irc_userping( gpointer _irc )
 	
 	if( rv > 0 )
 	{
-		irc_abort( irc, "ERROR :Closing Link: Ping Timeout: %d seconds", rv );
+		irc_abort( irc, 0, "Ping Timeout: %d seconds", rv );
 		return FALSE;
 	}
 	

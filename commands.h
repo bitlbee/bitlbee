@@ -32,7 +32,7 @@ typedef struct command
 {
 	char *command;
 	int required_parameters;
-	int (*execute)(irc_t *, char **args);
+	void (*execute)(irc_t *, char **args);
 	int flags;
 } command_t;
 

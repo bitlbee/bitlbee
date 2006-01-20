@@ -128,8 +128,8 @@ int bitlbee_inetd_init( void );
 gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condition, gpointer data );
 gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condition, gpointer data );
 
-int root_command_string( irc_t *irc, user_t *u, char *command, int flags );
-int root_command( irc_t *irc, char *command[] );
+void root_command_string( irc_t *irc, user_t *u, char *command, int flags );
+void root_command( irc_t *irc, char *command[] );
 void bitlbee_shutdown( gpointer data );
 double gettime( void );
 G_MODULE_EXPORT void http_encode( char *s );

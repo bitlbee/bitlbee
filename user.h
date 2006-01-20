@@ -44,7 +44,7 @@ typedef struct __USER
  	guint sendbuf_timer;
     	int sendbuf_flags;
 	
-	int (*send_handler) ( irc_t *irc, struct __USER *u, char *msg, int flags );
+	void (*send_handler) ( irc_t *irc, struct __USER *u, char *msg, int flags );
 	
 	struct __USER *next;
 } user_t;

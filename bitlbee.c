@@ -166,10 +166,12 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		strcpy( ( irc->readbuffer + strlen( irc->readbuffer ) ), line );
 	}
 	
-	if( !irc_process( irc ) )
+	irc_process( irc );
+	
+	/* Normally, irc_process() shouldn't call irc_free() but irc_abort(). Just in case: */
+	if( !g_slist_find( irc_connection_list, irc ) )
 	{
-		log_message( LOGLVL_INFO, "Destroying connection with fd %d.", irc->fd );
-		irc_abort( irc );
+		log_message( LOGLVL_WARNING, "Abnormal termination of connection with fd %d.", irc->fd );
 		return FALSE;
 	} 
 	

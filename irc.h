@@ -107,8 +107,8 @@ irc_t *irc_new( int fd );
 void irc_abort( irc_t *irc, int immed, char *format, ... );
 void irc_free( irc_t *irc );
 
-int irc_exec( irc_t *irc, char **cmd );
-int irc_process( irc_t *irc );
+void irc_exec( irc_t *irc, char **cmd );
+void irc_process( irc_t *irc );
 char **irc_parse_line( char *line );
 char *irc_build_line( char **cmd );
 
@@ -133,7 +133,6 @@ void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker );
 void irc_kill( irc_t *irc, user_t *u );
 void irc_invite( irc_t *irc, char *nick, char *channel );
 void irc_whois( irc_t *irc, char *nick );
-int irc_away( irc_t *irc, char *away );
 void irc_setpass( irc_t *irc, const char *pass ); /* USE WITH CAUTION! */
 
 int irc_send( irc_t *irc, char *nick, char *s, int flags );
@@ -141,6 +140,6 @@ int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char
 int irc_msgfrom( irc_t *irc, char *nick, char *msg );
 int irc_noticefrom( irc_t *irc, char *nick, char *msg );
 
-int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags );
+void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags );
 
 #endif

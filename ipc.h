@@ -51,7 +51,7 @@ void ipc_to_children( char **cmd );
 void ipc_to_children_str( char *format, ... );
 
 /* We need this function in inetd mode, so let's just make it non-static. */
-int ipc_master_cmd_rehash( irc_t *data, char **cmd );
+void ipc_master_cmd_rehash( irc_t *data, char **cmd );
 
 
 extern GSList *child_list;

@@ -31,7 +31,7 @@
 GSList *child_list = NULL;
 
 
-static int ipc_master_cmd_client( irc_t *data, char **cmd )
+static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
 	struct bitlbee_child *child = (void*) data;
 	
@@ -44,21 +44,17 @@ static int ipc_master_cmd_client( irc_t *data, char **cmd )
 	
 	ipc_to_children_str( "OPERMSG :Client connecting (PID=%d): %s@%s (%s)\r\n",
 	                     child ? child->pid : -1, cmd[2], cmd[1], cmd[3] );
-	
-	return 1;
 }
 
-static int ipc_master_cmd_die( irc_t *data, char **cmd )
+static void ipc_master_cmd_die( irc_t *data, char **cmd )
 {
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_to_children_str( "DIE\r\n" );
 	
 	bitlbee_shutdown( NULL );
-	
-	return 1;
 }
 
-int ipc_master_cmd_rehash( irc_t *data, char **cmd )
+void ipc_master_cmd_rehash( irc_t *data, char **cmd )
 {
 	runmode_t oldmode;
 	
@@ -75,8 +71,6 @@ int ipc_master_cmd_rehash( irc_t *data, char **cmd )
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_to_children( cmd );
-	
-	return 1;
 }
 
 static const command_t ipc_master_commands[] = {
@@ -91,50 +85,39 @@ static const command_t ipc_master_commands[] = {
 };
 
 
-static int ipc_child_cmd_die( irc_t *irc, char **cmd )
+static void ipc_child_cmd_die( irc_t *irc, char **cmd )
 {
-	if( irc->status >= USTATUS_LOGGED_IN )
-		irc_write( irc, "ERROR :Operator requested server shutdown, bye bye!" );
-	
-	irc_abort( irc );
-	
-	return 1;
+	irc_abort( irc, 1, "Shutdown requested by operator" );
 }
 
-static int ipc_child_cmd_wallops( irc_t *irc, char **cmd )
+static void ipc_child_cmd_wallops( irc_t *irc, char **cmd )
 {
 	if( irc->status < USTATUS_LOGGED_IN )
-		return 1;
+		return;
 	
 	if( strchr( irc->umode, 'w' ) )
 		irc_write( irc, ":%s WALLOPS :%s", irc->myhost, cmd[1] );
-	
-	return 1;
 }
 
-static int ipc_child_cmd_lilo( irc_t *irc, char **cmd )
+static void ipc_child_cmd_lilo( irc_t *irc, char **cmd )
 {
 	if( irc->status < USTATUS_LOGGED_IN )
-		return 1;
+		return;
 	
 	if( strchr( irc->umode, 's' ) )
 		irc_write( irc, ":%s NOTICE %s :%s", irc->myhost, irc->nick, cmd[1] );
-	
-	return 1;
 }
 
-static int ipc_child_cmd_opermsg( irc_t *irc, char **cmd )
+static void ipc_child_cmd_opermsg( irc_t *irc, char **cmd )
 {
 	if( irc->status < USTATUS_LOGGED_IN )
-		return 1;
+		return;
 	
 	if( strchr( irc->umode, 'o' ) )
 		irc_write( irc, ":%s NOTICE %s :*** OperMsg *** %s", irc->myhost, irc->nick, cmd[1] );
-	
-	return 1;
 }
 
-static int ipc_child_cmd_rehash( irc_t *irc, char **cmd )
+static void ipc_child_cmd_rehash( irc_t *irc, char **cmd )
 {
 	runmode_t oldmode;
 	
@@ -144,23 +127,18 @@ static int ipc_child_cmd_rehash( irc_t *irc, char **cmd )
 	global.conf = conf_load( 0, NULL );
 	
 	global.conf->runmode = oldmode;
-	
-	return 1;
 }
 
-static int ipc_child_cmd_kill( irc_t *irc, char **cmd )
+static void ipc_child_cmd_kill( irc_t *irc, char **cmd )
 {
 	if( irc->status < USTATUS_LOGGED_IN )
-		return 1;
+		return;
 	
 	if( nick_cmp( cmd[1], irc->nick ) != 0 )
-		return 1;	/* It's not for us. */
+		return;		/* It's not for us. */
 	
 	irc_write( irc, ":%s!%s@%s KILL %s :%s", irc->mynick, irc->mynick, irc->myhost, irc->nick, cmd[2] );
-	irc_abort( irc );
-	/* g_io_channel_close( irc->io_channel ); */
-	
-	return 0;
+	irc_abort( irc, 0, "Killed by operator: %s", cmd[2] );
 }
 
 static const command_t ipc_child_commands[] = {
