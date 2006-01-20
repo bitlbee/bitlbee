@@ -111,7 +111,8 @@ extern char *CONF_FILE;
 #include "query.h"
 #include "sock.h"
 
-typedef struct global_t {
+typedef struct global {
+	/* In forked mode, child processes store the fd of the IPC socket here. */
 	int listen_socket;
 	gint listen_watch_source_id;
 	help_t *help;

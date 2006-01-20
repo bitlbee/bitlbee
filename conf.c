@@ -63,6 +63,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
+	proxytype = 0;
 	
 	i = conf_loadini( conf, CONF_FILE );
 	if( i == 0 )
@@ -75,7 +76,8 @@ conf_t *conf_load( int argc, char *argv[] )
 		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", CONF_FILE );
 	}
 	
-	while( ( opt = getopt( argc, argv, "i:p:nvIDFc:d:h" ) ) >= 0 )
+	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:nvIDFc:d:h" ) ) >= 0 )
+	/*     ^^^^ Just to make sure we skip this step from the REHASH handler. */
 	{
 		if( opt == 'i' )
 		{
@@ -91,15 +93,15 @@ conf_t *conf_load( int argc, char *argv[] )
 			conf->port = i;
 		}
 		else if( opt == 'n' )
-			conf->nofork=1;
+			conf->nofork = 1;
 		else if( opt == 'v' )
-			conf->verbose=1;
+			conf->verbose = 1;
 		else if( opt == 'I' )
-			conf->runmode=RUNMODE_INETD;
+			conf->runmode = RUNMODE_INETD;
 		else if( opt == 'D' )
-			conf->runmode=RUNMODE_DAEMON;
+			conf->runmode = RUNMODE_DAEMON;
 		else if( opt == 'F' )
-			conf->runmode=RUNMODE_FORKDAEMON;
+			conf->runmode = RUNMODE_FORKDAEMON;
 		else if( opt == 'c' )
 		{
 			if( strcmp( CONF_FILE, optarg ) != 0 )
@@ -107,6 +109,10 @@ conf_t *conf_load( int argc, char *argv[] )
 				g_free( CONF_FILE );
 				CONF_FILE = g_strdup( optarg );
 				g_free( conf );
+				/* Re-evaluate arguments. Don't use this option twice, 
+				   you'll end up in an infinite loop! Hope this trick
+				   works with all libcs BTW.. */
+				optind = 1;
 				return( conf_load( argc, argv ) );
 			}
 		}

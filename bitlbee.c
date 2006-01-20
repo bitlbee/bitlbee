@@ -28,46 +28,12 @@
 #include "commands.h"
 #include "protocols/nogaim.h"
 #include "help.h"
+#include "ipc.h"
 #include <signal.h>
 #include <stdio.h>
 #include <errno.h>
 
-gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
-{
-	size_t size = sizeof( struct sockaddr_in );
-	struct sockaddr_in conn_info;
-	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
-	pid_t client_pid = 0;
-	
-	if( global.conf->runmode == RUNMODE_FORKDAEMON )
-		client_pid = fork();
-	
-	if( client_pid == 0 )
-	{
-		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
-		irc_new( new_socket );
-		
-		if( global.conf->runmode == RUNMODE_FORKDAEMON )
-		{
-			/* Close the listening socket, we're a client. */
-			close( global.listen_socket );
-			g_source_remove( global.listen_watch_source_id );
-		}
-	}
-	else
-	{
-		/* We don't need this one, only the client does. */
-		close( new_socket );
-		
-		/* Or maybe we didn't even get a child process... */
-		if( client_pid == -1 )
-			log_message( LOGLVL_ERROR, "Failed to fork() subprocess for client: %s", strerror( errno ) );
-	}
-	
-	return TRUE;
-}
- 
-
+gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data );
 
 int bitlbee_daemon_init()
 {
@@ -88,6 +54,10 @@ int bitlbee_daemon_init()
 		log_error( "socket" );
 		return( -1 );
 	}
+	
+	/* TIME_WAIT (?) sucks.. */
+	i = 1;
+	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
 	
 #ifdef IPV6
 	listen_addr.sin6_family = AF_INETx;
@@ -254,6 +224,73 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 		
 		return( TRUE );
 	}
+}
+
+gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
+{
+	size_t size = sizeof( struct sockaddr_in );
+	struct sockaddr_in conn_info;
+	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
+	pid_t client_pid = 0;
+	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		int fds[2];
+		
+		if( socketpair( AF_UNIX, SOCK_STREAM, 0, fds ) == -1 )
+		{
+			log_message( LOGLVL_WARNING, "Could not create IPC socket for client: %s", strerror( errno ) );
+			fds[0] = fds[1] = -1;
+		}
+		
+		sock_make_nonblocking( fds[0] );
+		sock_make_nonblocking( fds[1] );
+		
+		client_pid = fork();
+		
+		if( client_pid > 0 && fds[0] != -1 )
+		{
+			struct bitlbee_child *child;
+			
+			child = g_new0( struct bitlbee_child, 1 );
+			child->pid = client_pid;
+			child->ipc_fd = fds[0];
+			child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+			child_list = g_slist_append( child_list, child );
+			
+			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", client_pid );
+			
+			/* Close some things we don't need in the parent process. */
+			close( new_socket );
+			close( fds[1] );
+		}
+		else if( client_pid == 0 )
+		{
+			irc_t *irc;
+			
+			/* Close the listening socket, we're a client. */
+			close( global.listen_socket );
+			g_source_remove( global.listen_watch_source_id );
+			
+			/* Make the connection. */
+			irc = irc_new( new_socket );
+			
+			/* We can store the IPC fd there now. */
+			global.listen_socket = fds[1];
+			global.listen_watch_source_id = gaim_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
+			
+			close( fds[0] );
+			
+			ipc_master_free_all();
+		}
+	}
+	else
+	{
+		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
+		irc_new( new_socket );
+	}
+	
+	return TRUE;
 }
 
 void bitlbee_shutdown( gpointer data )
