@@ -154,7 +154,7 @@ static const command_t ipc_child_commands[] = {
 
 static void ipc_command_exec( void *data, char **cmd, const command_t *commands )
 {
-	int i;
+	int i, j;
 	
 	if( !cmd[0] )
 		return;
@@ -162,12 +162,18 @@ static void ipc_command_exec( void *data, char **cmd, const command_t *commands 
 	for( i = 0; commands[i].command; i ++ )
 		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
 		{
+			/* There is no typo in this line: */
+			for( j = 1; cmd[j]; j ++ ); j --;
+			
+			if( j < commands[i].required_parameters )
+				break;
+			
 			if( commands[i].flags & IPC_CMD_TO_CHILDREN )
 				ipc_to_children( cmd );
 			else
 				commands[i].execute( data, cmd );
 			
-			return;
+			break;
 		}
 }
 
