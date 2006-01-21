@@ -31,6 +31,7 @@
 #include "conf.h"
 #include "ini.h"
 #include "url.h"
+#include "ipc.h"
 
 #include "protocols/proxy.h"
 
@@ -76,7 +77,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", CONF_FILE );
 	}
 	
-	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:nvIDFc:d:h" ) ) >= 0 )
+	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:nvIDFc:d:hR:" ) ) >= 0 )
 	/*     ^^^^ Just to make sure we skip this step from the REHASH handler. */
 	{
 		if( opt == 'i' )
@@ -140,6 +141,14 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -d  Specify alternative user configuration directory\n"
 			        "  -h  Show this help page.\n" );
 			return( NULL );
+		}
+		else if( opt == 'R' )
+		{
+			/* We can't load the statefile yet (and should make very sure we do this
+			   only once), so set the filename here and load the state information
+			   when initializing ForkDaemon. (This option only makes sense in that
+			   mode anyway!) */
+			ipc_master_set_statefile( optarg );
 		}
 	}
 	

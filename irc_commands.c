@@ -572,13 +572,14 @@ static const command_t irc_commands[] = {
 	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "lilo",        1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "rehash",      0, irc_cmd_rehash,      IRC_CMD_OPER_ONLY },
+	{ "restart",     0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "kill",        2, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ NULL }
 };
 
 void irc_exec( irc_t *irc, char *cmd[] )
 {	
-	int i;
+	int i, n_arg;
 	
 	if( !cmd[0] )
 		return;
@@ -586,6 +587,9 @@ void irc_exec( irc_t *irc, char *cmd[] )
 	for( i = 0; irc_commands[i].command; i++ )
 		if( g_strcasecmp( irc_commands[i].command, cmd[0] ) == 0 )
 		{
+			/* There should be no typo in the next line: */
+			for( n_arg = 0; cmd[n_arg]; n_arg ++ ); n_arg --;
+			
 			if( irc_commands[i].flags & IRC_CMD_PRE_LOGIN && irc->status >= USTATUS_LOGGED_IN )
 			{
 				irc_reply( irc, 462, ":Only allowed before logging in" );
@@ -598,7 +602,7 @@ void irc_exec( irc_t *irc, char *cmd[] )
 			{
 				irc_reply( irc, 481, ":Permission denied - You're not an IRC operator" );
 			}
-			else if( !cmd[irc_commands[i].required_parameters] )
+			else if( n_arg < irc_commands[i].required_parameters )
 			{
 				irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 			}

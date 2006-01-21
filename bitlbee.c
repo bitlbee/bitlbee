@@ -110,6 +110,9 @@ int bitlbee_daemon_init()
 	}
 #endif
 	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		ipc_master_load_state();
+	
 	return( 0 );
 }
  

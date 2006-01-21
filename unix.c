@@ -28,6 +28,7 @@
 #include "crypting.h"
 #include "protocols/nogaim.h"
 #include "help.h"
+#include "ipc.h"
 #include <signal.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -37,9 +38,10 @@ global_t global;	/* Against global namespace pollution */
 
 static void sighandler( int signal );
 
-int main( int argc, char *argv[] )
+int main( int argc, char *argv[], char **envp )
 {
 	int i = 0;
+	char *old_cwd;
 	struct sigaction sig, old;
 	
 	memset( &global, 0, sizeof( global_t ) );
@@ -72,6 +74,15 @@ int main( int argc, char *argv[] )
 	}
 	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
+		/* In case the operator requests a restart, we need this. */
+		old_cwd = g_malloc( 256 );
+		if( getcwd( old_cwd, 255 ) == NULL )
+		{
+			log_message( LOGLVL_WARNING, "Could not save current directory: %s", strerror( errno ) );
+			g_free( old_cwd );
+			old_cwd = NULL;
+		}
+		
 		i = bitlbee_daemon_init();
 		log_message( LOGLVL_INFO, "Bitlbee %s starting in forking daemon mode.", BITLBEE_VERSION );
 	}
@@ -106,6 +117,35 @@ int main( int argc, char *argv[] )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
 	g_main_run( global.loop );
+	
+	if( global.restart )
+	{
+		char *fn = ipc_master_save_state();
+		char **args;
+		int n, i;
+		
+		chdir( old_cwd );
+		
+		n = 0;
+		args = g_new0( char *, argc + 3 );
+		args[n++] = argv[0];
+		if( fn )
+		{
+			args[n++] = "-R";
+			args[n++] = fn;
+		}
+		for( i = 1; argv[i] && i < argc; i ++ )
+		{
+			if( strcmp( argv[i], "-R" ) == 0 )
+				i += 2;
+			
+			args[n++] = argv[i];
+		}
+		
+		close( global.listen_socket );
+		
+		execve( args[0], args, envp );
+	}
 	
 	return( 0 );
 }
