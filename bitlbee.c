@@ -238,6 +238,12 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
 	pid_t client_pid = 0;
 	
+	if( new_socket == -1 )
+	{
+		log_message( LOGLVL_WARNING, "Could not accept new connection: %s", strerror( errno ) );
+		return TRUE;
+	}
+	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
 		int fds[2];
