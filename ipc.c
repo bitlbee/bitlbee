@@ -87,7 +87,7 @@ static const command_t ipc_master_commands[] = {
 
 static void ipc_child_cmd_die( irc_t *irc, char **cmd )
 {
-	irc_abort( irc, 1, "Shutdown requested by operator" );
+	irc_abort( irc, 0, "Shutdown requested by operator" );
 }
 
 static void ipc_child_cmd_wallops( irc_t *irc, char **cmd )
