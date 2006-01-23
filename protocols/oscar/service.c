@@ -736,8 +736,6 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
 
 	tlvlen = aim_addtlvtochain32(&tl, 0x0006, data);
 
-	printf("%d\n", tlvlen);
-
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 8)))
 		return -ENOMEM;
 
