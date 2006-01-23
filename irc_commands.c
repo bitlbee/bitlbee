@@ -414,8 +414,8 @@ static void irc_cmd_topic( irc_t *irc, char **cmd )
 static void irc_cmd_away( irc_t *irc, char **cmd )
 {
 	user_t *u = user_find( irc, irc->nick );
-	GSList *c = get_connections();
 	char *away = cmd[1];
+	account_t *a;
 	
 	if( !u ) return;
 	
@@ -442,12 +442,12 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 		irc_reply( irc, 305, ":Welcome back" );
 	}
 	
-	while( c )
+	for( a = irc->accounts; a; a = a->next )
 	{
-		if( ((struct gaim_connection *)c->data)->flags & OPT_LOGGED_IN )
-			proto_away( c->data, u->away );
+		struct gaim_connection *gc = a->gc;
 		
-		c = c->next;
+		if( gc && gc->flags & OPT_LOGGED_IN )
+			proto_away( gc, u->away );
 	}
 }
 
