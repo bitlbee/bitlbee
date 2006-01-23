@@ -32,24 +32,19 @@
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"
 
-/* #define FLOOD_SEND 
- * Not yet enabled by default due to some problems.
- */
-#define FLOOD_SEND_INTERVAL 30
-#define FLOOD_SEND_BYTES (1024*10)
-#define FLOOD_SEND_MAXBUFFER (1024*20)
-
-#define UMODES "ais"
+#define UMODES "iasw"
+#define UMODES_PRIV "Ro"
 #define CMODES "nt"
 #define CMODE "t"
 #define UMODE "s"
 
 typedef enum
 {
-	USTATUS_OFFLINE,
+	USTATUS_OFFLINE = 0,
 	USTATUS_AUTHORIZED,
 	USTATUS_LOGGED_IN,
-	USTATUS_IDENTIFIED
+	USTATUS_IDENTIFIED,
+	USTATUS_SHUTDOWN = -1
 } irc_status_t;
 
 typedef struct channel
@@ -109,11 +104,13 @@ typedef struct irc
 extern GSList *irc_connection_list;
 
 irc_t *irc_new( int fd );
+void irc_abort( irc_t *irc, int immed, char *format, ... );
 void irc_free( irc_t *irc );
 
-int irc_exec( irc_t *irc, char **cmd );
-int irc_process( irc_t *irc );
-int irc_process_line( irc_t *irc, char *line );
+void irc_exec( irc_t *irc, char **cmd );
+void irc_process( irc_t *irc );
+char **irc_parse_line( char *line );
+char *irc_build_line( char **cmd );
 
 void irc_vawrite( irc_t *irc, char *format, va_list params );
 void irc_write( irc_t *irc, char *format, ... );
@@ -123,10 +120,11 @@ G_MODULE_EXPORT int irc_usermsg( irc_t *irc, char *format, ... );
 char **irc_tokenize( char *buffer );
 
 void irc_login( irc_t *irc );
+int irc_check_login( irc_t *irc );
 void irc_motd( irc_t *irc );
 void irc_names( irc_t *irc, char *channel );
 void irc_topic( irc_t *irc, char *channel );
-void irc_umode_set( irc_t *irc, char *who, char *s );
+void irc_umode_set( irc_t *irc, char *s, int allow_priv );
 void irc_who( irc_t *irc, char *channel );
 void irc_spawn( irc_t *irc, user_t *u );
 void irc_join( irc_t *irc, user_t *u, char *channel );
@@ -135,7 +133,6 @@ void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker );
 void irc_kill( irc_t *irc, user_t *u );
 void irc_invite( irc_t *irc, char *nick, char *channel );
 void irc_whois( irc_t *irc, char *nick );
-int irc_away( irc_t *irc, char *away );
 void irc_setpass( irc_t *irc, const char *pass ); /* USE WITH CAUTION! */
 
 int irc_send( irc_t *irc, char *nick, char *s, int flags );
@@ -143,6 +140,6 @@ int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char
 int irc_msgfrom( irc_t *irc, char *nick, char *msg );
 int irc_noticefrom( irc_t *irc, char *nick, char *msg );
 
-int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags );
+void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags );
 
 #endif

@@ -20,7 +20,6 @@
  *
  */
 
-#include "sock.h"
 #include <errno.h>
 #include <ctype.h>
 #include <string.h>
@@ -32,6 +31,7 @@
 #include "nogaim.h"
 #include "bitlbee.h"
 #include "proxy.h"
+#include "sock.h"
 
 #include "aim.h"
 #include "icq.h"
@@ -607,6 +607,7 @@ static void damn_you(gpointer data, gint source, GaimInputCondition c)
 		g_free(pos);
 		return;
 	}
+	/* [WvG] Wheeeee! Who needs error checking anyway? ;-) */
 	read(pos->fd, m, 16);
 	m[16] = '\0';
 	gaim_input_remove(pos->inpa);

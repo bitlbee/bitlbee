@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 
 global_t global;	/* Against global namespace pollution */
 
@@ -45,7 +46,7 @@ int main( int argc, char *argv[] )
 	
 	global.loop = g_main_new( FALSE );
 	
-	log_init( );
+	log_init();
 
 	nogaim_init();
 
@@ -69,11 +70,15 @@ int main( int argc, char *argv[] )
 		i = bitlbee_daemon_init();
 		log_message( LOGLVL_INFO, "Bitlbee %s starting in daemon mode.", BITLBEE_VERSION );
 	}
+	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		i = bitlbee_daemon_init();
+		log_message( LOGLVL_INFO, "Bitlbee %s starting in forking daemon mode.", BITLBEE_VERSION );
+	}
 	if( i != 0 )
 		return( i );
 
-	global.storage = storage_init( global.conf->primary_storage, 
-								   global.conf->migrate_storage );
+	global.storage = storage_init( global.conf->primary_storage, global.conf->migrate_storage );
 	if ( global.storage == NULL) {
 		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
 		return( 1 );
@@ -83,6 +88,7 @@ int main( int argc, char *argv[] )
 	/* Catch some signals to tell the user what's happening before quitting */
 	memset( &sig, 0, sizeof( sig ) );
 	sig.sa_handler = sighandler;
+	sigaction( SIGCHLD, &sig, &old );
 	sigaction( SIGPIPE, &sig, &old );
 	sig.sa_flags = SA_RESETHAND;
 	sigaction( SIGINT,  &sig, &old );
@@ -106,7 +112,7 @@ int main( int argc, char *argv[] )
 
 static void sighandler( int signal )
 {
-	/* FIXME: In fact, calling log_message() here can be dangerous. But well, let's take the risk for now. */
+	/* FIXME: Calling log_message() here is not a very good idea! */
 	
 	if( signal == SIGTERM )
 	{
@@ -130,6 +136,19 @@ static void sighandler( int signal )
 			
 			log_message( LOGLVL_ERROR, "SIGTERM received twice, so long for a clean shutdown." );
 			raise( signal );
+		}
+	}
+	else if( signal == SIGCHLD )
+	{
+		pid_t pid;
+		int st;
+		
+		while( ( pid = waitpid( 0, &st, WNOHANG ) ) > 0 )
+		{
+			if( WIFSIGNALED( st ) )
+				log_message( LOGLVL_INFO, "Client %d terminated normally. (status = %d)", pid, WEXITSTATUS( st ) );
+			else if( WIFEXITED( st ) )
+				log_message( LOGLVL_INFO, "Client %d killed by signal %d.", pid, WTERMSIG( st ) );
 		}
 	}
 	else if( signal != SIGPIPE )

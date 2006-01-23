@@ -412,7 +412,7 @@ static void gjab_recv(gjconn gjc)
 		XML_Parse(gjc->parser, buf, len, 0);
 		if (jd->die)
 			signoff(GJ_GC(gjc));
-	} else if (len < 0 || errno != EAGAIN) {
+	} else if (len == 0 || (len < 0 && (!sockerr_again() || gjc->ssl))) {
 		STATE_EVT(JCONN_STATE_OFF)
 	}
 }
@@ -1248,14 +1248,10 @@ static void jabber_handleauthresp(gjconn gjc, jpacket p)
 			}
 			gjab_auth(gjc);
 		} else {
-			account_online(GJ_GC(gjc));
-
-			if (bud_list_cache_exists(GJ_GC(gjc)))
-				do_import(GJ_GC(gjc), NULL);
-
-			((struct jabber_data *)GJ_GC(gjc)->proto_data)->did_import = TRUE;
-
 			gjab_reqroster(gjc);
+			account_online(GJ_GC(gjc));
+			
+			((struct jabber_data *)GJ_GC(gjc)->proto_data)->did_import = TRUE;
 		}
 	} else {
 		xmlnode xerr;
@@ -1859,11 +1855,7 @@ static void jabber_set_away(struct gaim_connection *gc, char *state, char *messa
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "away", -1);
 			y = xmlnode_insert_tag(x, "status");
-			{
-				char *utf8 = str_to_utf8(message);
-				xmlnode_insert_cdata(y, utf8, -1);
-				g_free(utf8);
-			}
+			xmlnode_insert_cdata(y, message, -1);
 			gc->away = "";
 		} else {
 			/* Gaim wants us to not be away */

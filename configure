@@ -22,7 +22,6 @@ yahoo=1
 
 debug=0
 strip=1
-flood=0
 ipv6=1
 ssl=auto
 
@@ -288,19 +287,18 @@ else
 	fi;
 fi
 
-if [ "$flood" = 1 ]; then
-	# echo '#define FLOOD_SEND' >> config.h
-	echo 'Flood protection is disabled in this release because of too many bugs.' 2> /dev/stderr
-	rm config.h
-	rm Makefile.settings
-	exit 1
+echo
+if [ -z "$BITLBEE_VERSION" -a -d .bzr -a -x "`which bzr`" ]; then
+	rev=`bzr revno`
+	echo 'Using bzr revision #'$rev' as version number'
+	BITLBEE_VERSION=\"bzr-$rev\"
 fi
 
 if [ -n "$BITLBEE_VERSION" ]; then
-	echo
 	echo 'Spoofing version number: '$BITLBEE_VERSION
 	echo '#undef BITLBEE_VERSION' >> config.h
-	echo '#define BITLBEE_VERSION '$BITLBEE_VERSION >> config.h;
+	echo '#define BITLBEE_VERSION '$BITLBEE_VERSION >> config.h
+	echo
 fi
 
 protocols=''
@@ -339,7 +337,6 @@ else
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then
-	echo
 	echo "WARNING: You haven't selected any communication protocol to compile!"
 	echo "         Bitlbee will run, but you will be unable to connect to IM servers!"
 fi
@@ -347,7 +344,6 @@ fi
 echo "PROTOCOLS = $protocols" >> Makefile.settings
 echo "PROTOOBJS = $protoobjs" >> Makefile.settings
 
-echo
 echo Architecture: $arch
 case "$arch" in
 Linux )

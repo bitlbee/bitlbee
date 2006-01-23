@@ -9,7 +9,7 @@
 -include ../../Makefile.settings
 
 # [SH] Program variables
-objects = yahoo.o crypt.o libyahoo2.o yahoo_fn.o yahoo_httplib.o yahoo_list.o yahoo_util.o
+objects = yahoo.o crypt.o libyahoo2.o yahoo_fn.o yahoo_httplib.o yahoo_util.o
 
 CFLAGS += -Wall -DSTDC_HEADERS -DHAVE_STRING_H -DHAVE_STRCHR -DHAVE_MEMCPY -DHAVE_GLIB
 LFLAGS += -r
