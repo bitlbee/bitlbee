@@ -600,6 +600,9 @@ static void cmd_set( irc_t *irc, char **cmd )
 	if( cmd[1] && cmd[2] )
 	{
 		set_setstr( irc, cmd[1], cmd[2] );
+		
+		if( ( strcmp( cmd[2], "=" ) ) == 0 && cmd[3] )
+			irc_usermsg( irc, "Warning: Correct syntax: \002set <variable> <value>\002 (without =)" );
 	}
 	if( cmd[1] ) /* else 'forgotten' on purpose.. Must show new value after changing */
 	{
