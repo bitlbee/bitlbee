@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2006 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* IPC - communication between BitlBee processes                        */
@@ -29,21 +29,22 @@
 #include "commands.h"
 
 GSList *child_list = NULL;
-
+static char *statefile = NULL;
 
 static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
 	struct bitlbee_child *child = (void*) data;
 	
-	if( child )
+	if( child && cmd[1] )
 	{
 		child->host = g_strdup( cmd[1] );
 		child->nick = g_strdup( cmd[2] );
 		child->realname = g_strdup( cmd[3] );
 	}
 	
-	ipc_to_children_str( "OPERMSG :Client connecting (PID=%d): %s@%s (%s)\r\n",
-	                     child ? child->pid : -1, cmd[2], cmd[1], cmd[3] );
+	if( g_strcasecmp( cmd[0], "CLIENT" ) == 0 )
+		ipc_to_children_str( "OPERMSG :Client connecting (PID=%d): %s@%s (%s)\r\n",
+		                     child ? child->pid : -1, cmd[2], cmd[1], cmd[3] );
 }
 
 static void ipc_master_cmd_die( irc_t *data, char **cmd )
@@ -73,14 +74,30 @@ void ipc_master_cmd_rehash( irc_t *data, char **cmd )
 		ipc_to_children( cmd );
 }
 
+void ipc_master_cmd_restart( irc_t *data, char **cmd )
+{
+	struct bitlbee_child *child = (void*) data;
+	
+	if( global.conf->runmode != RUNMODE_FORKDAEMON )
+	{
+		/* Tell child that this is unsupported. */
+		return;
+	}
+	
+	global.restart = -1;
+	bitlbee_shutdown( NULL );
+}
+
 static const command_t ipc_master_commands[] = {
 	{ "client",     3, ipc_master_cmd_client,     0 },
+	{ "hello",      0, ipc_master_cmd_client,     0 },
 	{ "die",        0, ipc_master_cmd_die,        0 },
 	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "lilo",       1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "opermsg",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "rehash",     0, ipc_master_cmd_rehash,     0 },
 	{ "kill",       2, NULL,                      IPC_CMD_TO_CHILDREN },
+	{ "restart",    0, ipc_master_cmd_restart,    0 },
 	{ NULL }
 };
 
@@ -141,6 +158,14 @@ static void ipc_child_cmd_kill( irc_t *irc, char **cmd )
 	irc_abort( irc, 0, "Killed by operator: %s", cmd[2] );
 }
 
+static void ipc_child_cmd_hello( irc_t *irc, char **cmd )
+{
+	if( irc->status < USTATUS_LOGGED_IN )
+		ipc_to_master_str( "HELLO\r\n" );
+	else
+		ipc_to_master_str( "HELLO %s %s :%s\r\n", irc->host, irc->nick, irc->realname );
+}
+
 static const command_t ipc_child_commands[] = {
 	{ "die",        0, ipc_child_cmd_die,         0 },
 	{ "wallops",    1, ipc_child_cmd_wallops,     0 },
@@ -148,6 +173,7 @@ static const command_t ipc_child_commands[] = {
 	{ "opermsg",    1, ipc_child_cmd_opermsg,     0 },
 	{ "rehash",     0, ipc_child_cmd_rehash,      0 },
 	{ "kill",       2, ipc_child_cmd_kill,        0 },
+	{ "hello",      0, ipc_child_cmd_hello,       0 },
 	{ NULL }
 };
 
@@ -383,4 +409,92 @@ void ipc_master_free_all()
 	
 	g_slist_free( child_list );
 	child_list = NULL;
+}
+
+char *ipc_master_save_state()
+{
+	char *fn = g_strdup( "/tmp/bee-restart.XXXXXX" );
+	int fd = mkstemp( fn );
+	GSList *l;
+	FILE *fp;
+	int i;
+	
+	if( fd == -1 )
+	{
+		log_message( LOGLVL_ERROR, "Could not create temporary file: %s", strerror( errno ) );
+		g_free( fn );
+		return NULL;
+	}
+	
+	/* This is more convenient now. */
+	fp = fdopen( fd, "w" );
+	
+	for( l = child_list, i = 0; l; l = l->next )
+		i ++;
+	
+	/* Number of client processes. */
+	fprintf( fp, "%d\n", i );
+	
+	for( l = child_list; l; l = l->next )
+		fprintf( fp, "%d %d\n", ((struct bitlbee_child*)l->data)->pid,
+		                        ((struct bitlbee_child*)l->data)->ipc_fd );
+	
+	if( fclose( fp ) == 0 )
+	{
+		return fn;
+	}
+	else
+	{
+		unlink( fn );
+		g_free( fn );
+		return NULL;
+	}
+}
+
+void ipc_master_set_statefile( char *fn )
+{
+	statefile = g_strdup( fn );
+}
+
+int ipc_master_load_state()
+{
+	struct bitlbee_child *child;
+	FILE *fp;
+	int i, n;
+	
+	if( statefile == NULL )
+		return 0;
+	fp = fopen( statefile, "r" );
+	unlink( statefile );	/* Why do it later? :-) */
+	if( fp == NULL )
+		return 0;
+	
+	if( fscanf( fp, "%d", &n ) != 1 )
+	{
+		log_message( LOGLVL_WARNING, "Could not import state information for child processes." );
+		fclose( fp );
+		return 0;
+	}
+	
+	log_message( LOGLVL_INFO, "Importing information for %d child processes.", n );
+	for( i = 0; i < n; i ++ )
+	{
+		child = g_new0( struct bitlbee_child, 1 );
+		
+		if( fscanf( fp, "%d %d", &child->pid, &child->ipc_fd ) != 2 )
+		{
+			log_message( LOGLVL_WARNING, "Unexpected end of file: Only processed %d clients.", i );
+			g_free( child );
+			fclose( fp );
+			return 0;
+		}
+		child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+		
+		child_list = g_slist_append( child_list, child );
+	}
+	
+	ipc_to_children_str( "HELLO\r\n" );
+	ipc_to_children_str( "OPERMSG :New BitlBee master process started (version " BITLBEE_VERSION ")\r\n" );
+	
+	return 1;
 }

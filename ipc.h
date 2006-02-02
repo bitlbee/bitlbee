@@ -53,5 +53,9 @@ void ipc_to_children_str( char *format, ... );
 /* We need this function in inetd mode, so let's just make it non-static. */
 void ipc_master_cmd_rehash( irc_t *data, char **cmd );
 
+char *ipc_master_save_state();
+void ipc_master_set_statefile( char *fn );
+int ipc_master_load_state();
+
 
 extern GSList *child_list;
