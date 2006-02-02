@@ -44,6 +44,7 @@ int bitlbee_daemon_init()
 #endif
 	int i;
 	GIOChannel *ch;
+	FILE *fp;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
@@ -109,6 +110,16 @@ int bitlbee_daemon_init()
 		chdir( "/" );
 	}
 #endif
+	
+	if( ( fp = fopen( global.conf->pidfile, "w" ) ) )
+	{
+		fprintf( fp, "%d\n", (int) getpid() );
+		fclose( fp );
+	}
+	else
+	{
+		log_message( LOGLVL_WARNING, "Warning: Couldn't write PID to `%s'", global.conf->pidfile );
+	}
 	
 	return( 0 );
 }
