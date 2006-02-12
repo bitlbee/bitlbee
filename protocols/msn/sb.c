@@ -212,13 +212,16 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 		for( l = sb->msgq; l; l = l->next )
 		{
 			m = l->data;
+
 			g_free( m->who );
 			g_free( m->text );
 			g_free( m );
 		}
 		g_slist_free( sb->msgq );
 		
-		serv_got_crap( gc, "Warning: Closing down MSN switchboard connection with unsent message(s), you'll have to resend them." );
+		serv_got_crap( gc, "Warning: Closing down MSN switchboard connection with "
+		                   "unsent message to %s, you'll have to resend it.",
+		                   m->who ? m->who : "(unknown)" );
 	}
 	
 	if( sb->chat )
@@ -511,7 +514,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	else if( isdigit( cmd[0][0] ) )
 	{
 		int num = atoi( cmd[0] );
-		struct msn_status_code *err = msn_status_by_number( num );
+		const struct msn_status_code *err = msn_status_by_number( num );
 		
 		g_snprintf( buf, sizeof( buf ), "Error reported by switchboard server: %s", err->text );
 		do_error_dialog( gc, buf, "MSN" );

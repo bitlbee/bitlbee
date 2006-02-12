@@ -28,61 +28,71 @@
 #include "commands.h"
 #include "protocols/nogaim.h"
 #include "help.h"
+#include "ipc.h"
 #include <signal.h>
 #include <stdio.h>
 #include <errno.h>
 
-gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
-{
-	size_t size = sizeof( struct sockaddr_in );
-	struct sockaddr_in conn_info;
-	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, 
-		                     &size );
-	
-	log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
-	irc_new( new_socket );
-
-	return TRUE;
-}
- 
-
+gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data );
 
 int bitlbee_daemon_init()
 {
+#ifdef IPV6
+	struct sockaddr_in6 listen_addr;
+#else
 	struct sockaddr_in listen_addr;
+#endif
 	int i;
 	GIOChannel *ch;
+	FILE *fp;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
 	
-	global.listen_socket = socket( AF_INET, SOCK_STREAM, 0 );
+	global.listen_socket = socket( AF_INETx, SOCK_STREAM, 0 );
 	if( global.listen_socket == -1 )
 	{
 		log_error( "socket" );
 		return( -1 );
 	}
-	listen_addr.sin_family = AF_INET;
+	
+	/* TIME_WAIT (?) sucks.. */
+	i = 1;
+	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
+	
+#ifdef IPV6
+	listen_addr.sin6_family = AF_INETx;
+	listen_addr.sin6_port = htons( global.conf->port );
+	i = inet_pton( AF_INETx, ipv6_wrap( global.conf->iface ), &listen_addr.sin6_addr );
+#else
+	listen_addr.sin_family = AF_INETx;
 	listen_addr.sin_port = htons( global.conf->port );
-	listen_addr.sin_addr.s_addr = inet_addr( global.conf->iface );
-
-	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( struct sockaddr ) );
+	i = inet_pton( AF_INETx, global.conf->iface, &listen_addr.sin_addr );
+#endif
+	
+	if( i != 1 )
+	{
+		log_message( LOGLVL_ERROR, "Couldn't parse address `%s'", global.conf->iface );
+		return( -1 );
+	}
+	
+	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( listen_addr ) );
 	if( i == -1 )
 	{
 		log_error( "bind" );
 		return( -1 );
 	}
-
+	
 	i = listen( global.listen_socket, 10 );
 	if( i == -1 )
 	{
 		log_error( "listen" );
 		return( -1 );
 	}
-
+	
 	ch = g_io_channel_unix_new( global.listen_socket );
-	g_io_add_watch( ch, G_IO_IN, bitlbee_io_new_client, NULL );
-
+	global.listen_watch_source_id = g_io_add_watch( ch, G_IO_IN, bitlbee_io_new_client, NULL );
+	
 #ifndef _WIN32
 	if( !global.conf->nofork )
 	{
@@ -94,12 +104,29 @@ int bitlbee_daemon_init()
 		}
 		else if( i != 0 ) 
 			exit( 0 );
-		close( 0 );
-		close( 1 );
-		close( 2 );
+		
 		chdir( "/" );
+		
+		/* Sometimes std* are already closed (for example when we're in a RESTARTed
+		   BitlBee process. So let's only close TTY-fds. */
+		if( isatty( 0 ) ) close( 0 );
+		if( isatty( 0 ) ) close( 1 );
+		if( isatty( 0 ) ) close( 2 );
 	}
 #endif
+	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		ipc_master_load_state();
+	
+	if( ( fp = fopen( global.conf->pidfile, "w" ) ) )
+	{
+		fprintf( fp, "%d\n", (int) getpid() );
+		fclose( fp );
+	}
+	else
+	{
+		log_message( LOGLVL_WARNING, "Warning: Couldn't write PID to `%s'", global.conf->pidfile );
+	}
 	
 	return( 0 );
 }
@@ -123,14 +150,14 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	
 	if( condition & G_IO_ERR || condition & G_IO_HUP )
 	{
-		irc_free( irc );
+		irc_abort( irc, 1, "Read error" );
 		return FALSE;
 	}
 	
 	st = read( irc->fd, line, sizeof( line ) - 1 );
 	if( st == 0 )
 	{
-		irc_free( irc );
+		irc_abort( irc, 1, "Connection reset by peer" );
 		return FALSE;
 	}
 	else if( st < 0 )
@@ -141,7 +168,7 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		}
 		else
 		{
-			irc_free( irc );
+			irc_abort( irc, 1, "Read error: %s", strerror( errno ) );
 			return FALSE;
 		}
 	}
@@ -157,18 +184,19 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		strcpy( ( irc->readbuffer + strlen( irc->readbuffer ) ), line );
 	}
 	
-	if( !irc_process( irc ) )
+	irc_process( irc );
+	
+	/* Normally, irc_process() shouldn't call irc_free() but irc_abort(). Just in case: */
+	if( !g_slist_find( irc_connection_list, irc ) )
 	{
-		log_message( LOGLVL_INFO, "Destroying connection with fd %d.", irc->fd );
-		irc_free( irc );
+		log_message( LOGLVL_WARNING, "Abnormal termination of connection with fd %d.", irc->fd );
 		return FALSE;
 	} 
 	
 	/* Very naughty, go read the RFCs! >:) */
 	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )
 	{
-		log_message( LOGLVL_ERROR, "Maximum line length exceeded." );
-		irc_free( irc );
+		irc_abort( irc, 0, "Maximum line length exceeded" );
 		return FALSE;
 	}
 	
@@ -180,56 +208,32 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	irc_t *irc = data;
 	int st, size;
 	char *temp;
-#ifdef FLOOD_SEND
-	time_t newtime;
-#endif
 
-#ifdef FLOOD_SEND	
-	newtime = time( NULL );
-	if( ( newtime - irc->oldtime ) > FLOOD_SEND_INTERVAL )
-	{
-		irc->sentbytes = 0;
-		irc->oldtime = newtime;
-	}
-#endif
-	
 	if( irc->sendbuffer == NULL )
 		return( FALSE );
 	
 	size = strlen( irc->sendbuffer );
-	
-#ifdef FLOOD_SEND
-	if( ( FLOOD_SEND_BYTES - irc->sentbytes ) > size )
-		st = write( irc->fd, irc->sendbuffer, size );
-	else
-		st = write( irc->fd, irc->sendbuffer, ( FLOOD_SEND_BYTES - irc->sentbytes ) );
-#else
 	st = write( irc->fd, irc->sendbuffer, size );
-#endif
 	
-	if( st <= 0 )
+	if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
-		if( sockerr_again() )
-		{
-			return TRUE;
-		}
-		else
-		{
-			irc_free( irc );
-			return FALSE;
-		}
+		irc_abort( irc, 1, "Write error: %s", strerror( errno ) );
+		return FALSE;
 	}
-	
-#ifdef FLOOD_SEND
-	irc->sentbytes += st;
-#endif		
+	else if( st < 0 ) /* && sockerr_again() */
+	{
+		return TRUE;
+	}
 	
 	if( st == size )
 	{
 		g_free( irc->sendbuffer );
 		irc->sendbuffer = NULL;
-		
 		irc->w_watch_source_id = 0;
+		
+		if( irc->status == USTATUS_SHUTDOWN )
+			irc_free( irc );
+		
 		return( FALSE );
 	}
 	else
@@ -242,6 +246,79 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	}
 }
 
+gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
+{
+	size_t size = sizeof( struct sockaddr_in );
+	struct sockaddr_in conn_info;
+	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
+	pid_t client_pid = 0;
+	
+	if( new_socket == -1 )
+	{
+		log_message( LOGLVL_WARNING, "Could not accept new connection: %s", strerror( errno ) );
+		return TRUE;
+	}
+	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		int fds[2];
+		
+		if( socketpair( AF_UNIX, SOCK_STREAM, 0, fds ) == -1 )
+		{
+			log_message( LOGLVL_WARNING, "Could not create IPC socket for client: %s", strerror( errno ) );
+			fds[0] = fds[1] = -1;
+		}
+		
+		sock_make_nonblocking( fds[0] );
+		sock_make_nonblocking( fds[1] );
+		
+		client_pid = fork();
+		
+		if( client_pid > 0 && fds[0] != -1 )
+		{
+			struct bitlbee_child *child;
+			
+			child = g_new0( struct bitlbee_child, 1 );
+			child->pid = client_pid;
+			child->ipc_fd = fds[0];
+			child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+			child_list = g_slist_append( child_list, child );
+			
+			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", client_pid );
+			
+			/* Close some things we don't need in the parent process. */
+			close( new_socket );
+			close( fds[1] );
+		}
+		else if( client_pid == 0 )
+		{
+			irc_t *irc;
+			
+			/* Close the listening socket, we're a client. */
+			close( global.listen_socket );
+			g_source_remove( global.listen_watch_source_id );
+			
+			/* Make the connection. */
+			irc = irc_new( new_socket );
+			
+			/* We can store the IPC fd there now. */
+			global.listen_socket = fds[1];
+			global.listen_watch_source_id = gaim_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
+			
+			close( fds[0] );
+			
+			ipc_master_free_all();
+		}
+	}
+	else
+	{
+		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
+		irc_new( new_socket );
+	}
+	
+	return TRUE;
+}
+
 void bitlbee_shutdown( gpointer data )
 {
 	/* Try to save data for all active connections (if desired). */
@@ -250,135 +327,4 @@ void bitlbee_shutdown( gpointer data )
 	
 	/* We'll only reach this point when not running in inetd mode: */
 	g_main_quit( global.loop );
-}
-
-int root_command_string( irc_t *irc, user_t *u, char *command, int flags )
-{
-	char *cmd[IRC_MAX_ARGS];
-	char *s;
-	int k;
-	char q = 0;
-	
-	memset( cmd, 0, sizeof( cmd ) );
-	cmd[0] = command;
-	k = 1;
-	for( s = command; *s && k < ( IRC_MAX_ARGS - 1 ); s ++ )
-		if( *s == ' ' && !q )
-		{
-			*s = 0;
-			while( *++s == ' ' );
-			if( *s == '"' || *s == '\'' )
-			{
-				q = *s;
-				s ++;
-			}
-			if( *s )
-			{
-				cmd[k++] = s;
-				s --;
-			}
-		}
-		else if( *s == q )
-		{
-			q = *s = 0;
-		}
-	cmd[k] = NULL;
-	
-	return( root_command( irc, cmd ) );
-}
-
-int root_command( irc_t *irc, char *cmd[] )
-{	
-	int i;
-	
-	if( !cmd[0] )
-		return( 0 );
-	
-	for( i = 0; commands[i].command; i++ )
-		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
-		{
-			if( !cmd[commands[i].required_parameters] )
-			{
-				irc_usermsg( irc, "Not enough parameters given (need %d)", commands[i].required_parameters );
-				return( 0 );
-			}
-			commands[i].execute( irc, cmd );
-			return( 1 );
-		}
-	
-	irc_usermsg( irc, "Unknown command: %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[0] );
-	
-	return( 1 );
-}
-
-/* Decode%20a%20file%20name						*/
-void http_decode( char *s )
-{
-	char *t;
-	int i, j, k;
-	
-	t = g_new( char, strlen( s ) + 1 );
-	
-	for( i = j = 0; s[i]; i ++, j ++ )
-	{
-		if( s[i] == '%' )
-		{
-			if( sscanf( s + i + 1, "%2x", &k ) )
-			{
-				t[j] = k;
-				i += 2;
-			}
-			else
-			{
-				*t = 0;
-				break;
-			}
-		}
-		else
-		{
-			t[j] = s[i];
-		}
-	}
-	t[j] = 0;
-	
-	strcpy( s, t );
-	g_free( t );
-}
-
-/* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
-/* This fuction is safe, but make sure you call it safely as well! */
-void http_encode( char *s )
-{
-	char *t;
-	int i, j;
-	
-	t = g_strdup( s );
-	
-	for( i = j = 0; t[i]; i ++, j ++ )
-	{
-		if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' )
-		{
-			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
-			j += 2;
-		}
-		else
-		{
-			s[j] = t[i];
-		}
-	}
-	s[j] = 0;
-	
-	g_free( t );
-}
-
-/* Strip newlines from a string. Modifies the string passed to it. */ 
-char *strip_newlines( char *source )
-{
-	int i;	
-
-	for( i = 0; source[i] != '\0'; i ++ )
-		if( source[i] == '\n' || source[i] == '\r' )
-			source[i] = 32;
-	
-	return source;
 }

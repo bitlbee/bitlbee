@@ -26,7 +26,7 @@
 #include "nogaim.h"
 #include "msn.h"
 
-struct msn_away_state msn_away_state_list[] =
+const struct msn_away_state msn_away_state_list[] =
 {
 	{  0, "NLN", "Available" },
 	{  1, "BSY", "Busy" },
@@ -39,7 +39,7 @@ struct msn_away_state msn_away_state_list[] =
 	{ -1, "",    "" }
 };
 
-struct msn_away_state *msn_away_state_by_number( int number )
+const struct msn_away_state *msn_away_state_by_number( int number )
 {
 	int i;
 	
@@ -50,7 +50,7 @@ struct msn_away_state *msn_away_state_by_number( int number )
 	return( NULL );
 }
 
-struct msn_away_state *msn_away_state_by_code( char *code )
+const struct msn_away_state *msn_away_state_by_code( char *code )
 {
 	int i;
 	
@@ -61,7 +61,7 @@ struct msn_away_state *msn_away_state_by_code( char *code )
 	return( NULL );
 }
 
-struct msn_away_state *msn_away_state_by_name( char *name )
+const struct msn_away_state *msn_away_state_by_name( char *name )
 {
 	int i;
 	
@@ -72,7 +72,7 @@ struct msn_away_state *msn_away_state_by_name( char *name )
 	return( NULL );
 }
 
-struct msn_status_code msn_status_code_list[] =
+const struct msn_status_code msn_status_code_list[] =
 {
 	{ 200, "Invalid syntax",                                        0 },
 	{ 201, "Invalid parameter",                                     0 },
@@ -143,7 +143,7 @@ struct msn_status_code msn_status_code_list[] =
 	{  -1, NULL,                                                    0 }
 };
 
-struct msn_status_code *msn_status_by_number( int number )
+const struct msn_status_code *msn_status_by_number( int number )
 {
 	static struct msn_status_code *unknown = NULL;
 	int i;

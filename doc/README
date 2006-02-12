@@ -49,7 +49,7 @@ BitlBee's only real dependency is GLib. This is available on virtually every
 platform. Any recent version of GLib (including 1.x versions) will work.
 
 These days, MSN Messenger clients have to connect to the MS Passport servers
-through HTTPS. BitlBee can use serveral SSL libraries for this: GnuTLS, NSS
+through HTTPS. BitlBee can use several SSL libraries for this: GnuTLS, NSS
 (which comes with Mozilla) and OpenSSL. OpenSSL is not GPL-compatible in some
 situations, so using GnuTLS or NSS is preferred. However, especially on *BSD,
 OpenSSL can be considered part of the operating system, which eliminates the

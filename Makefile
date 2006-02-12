@@ -9,7 +9,7 @@
 -include Makefile.settings
 
 # Program variables
-objects = account.o bitlbee.o commands.o conf.o crypting.o help.o ini.o irc.o log.o nick.o query.o set.o storage.o storage_text.o unix.o url.o user.o
+objects = account.o bitlbee.o conf.o crypting.o help.o ini.o ipc.o irc.o irc_commands.o log.o nick.o query.o root_commands.o set.o storage.o storage_text.o unix.o url.o user.o util.o
 subdirs = protocols
 
 # Expansion of variables

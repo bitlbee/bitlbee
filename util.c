@@ -5,13 +5,12 @@
   \********************************************************************/
 
 /*
- * nogaim
- *
- * Gaim without gaim - for BitlBee
+ * Various utility functions. Some are copied from Gaim to support the
+ * IM-modules, most are from BitlBee.
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *                          (and possibly other members of the Gaim team)
- * Copyright 2002-2004 Wilmer van der Gaast <lintux@lintux.cx>
+ * Copyright 2002-2005 Wilmer van der Gaast <wilmer@gaast.net>
  */
 
 /*
@@ -31,102 +30,14 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-/* Parts from util.c from gaim needed by nogaim */
 #define BITLBEE_CORE
 #include "nogaim.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <glib.h>
 #include <time.h>
-
-char *utf8_to_str(const char *in)
-{
-	int n = 0, i = 0;
-	int inlen;
-	char *result;
-
-	if (!in)
-		return NULL;
-
-	inlen = strlen(in);
-
-	result = g_malloc(inlen + 1);
-
-	while (n <= inlen - 1) {
-		long c = (long)in[n];
-		if (c < 0x80)
-			result[i++] = (char)c;
-		else {
-			if ((c & 0xC0) == 0xC0)
-				result[i++] =
-				    (char)(((c & 0x03) << 6) | (((unsigned char)in[++n]) & 0x3F));
-			else if ((c & 0xE0) == 0xE0) {
-				if (n + 2 <= inlen) {
-					result[i] =
-					    (char)(((c & 0xF) << 4) | (((unsigned char)in[++n]) & 0x3F));
-					result[i] =
-					    (char)(((unsigned char)result[i]) |
-						   (((unsigned char)in[++n]) & 0x3F));
-					i++;
-				} else
-					n += 2;
-			} else if ((c & 0xF0) == 0xF0)
-				n += 3;
-			else if ((c & 0xF8) == 0xF8)
-				n += 4;
-			else if ((c & 0xFC) == 0xFC)
-				n += 5;
-		}
-		n++;
-	}
-	result[i] = '\0';
-
-	return result;
-}
-
-char *str_to_utf8(const char *in)
-{
-	int n = 0, i = 0;
-	int inlen;
-	char *result = NULL;
-
-	if (!in)
-		return NULL;
-
-	inlen = strlen(in);
-
-	result = g_malloc(inlen * 2 + 1);
-
-	while (n < inlen) {
-		long c = (long)in[n];
-		if (c == 27) {
-			n += 2;
-			if (in[n] == 'x')
-				n++;
-			if (in[n] == '3')
-				n++;
-			n += 2;
-			continue;
-		}
-		/* why are we removing newlines and carriage returns?
-		if ((c == 0x0D) || (c == 0x0A)) {
-			n++;
-			continue;
-		}
-		*/
-		if (c < 128)
-			result[i++] = (char)c;
-		else {
-			result[i++] = (char)((c >> 6) | 192);
-			result[i++] = (char)((c & 63) | 128);
-		}
-		n++;
-	}
-	result[i] = '\0';
-
-	return result;
-}
 
 void strip_linefeed(gchar *text)
 {
@@ -270,34 +181,39 @@ time_t get_time(int year, int month, int day, int hour, int min, int sec)
 typedef struct htmlentity
 {
 	char code[8];
-	char is;
+	char is[4];
 } htmlentity_t;
 
 /* FIXME: This is ISO8859-1(5) centric, so might cause problems with other charsets. */
 
-static htmlentity_t ent[] =
+static const htmlentity_t ent[] =
 {
-	{ "lt",     '<' },
-	{ "gt",     '>' },
-	{ "amp",    '&' },
-	{ "quot",   '"' },
-	{ "aacute", 'á' },
-	{ "eacute", 'é' },
-	{ "iacute", 'é' },
-	{ "oacute", 'ó' },
-	{ "uacute", 'ú' },
-	{ "agrave", 'à' },
-	{ "egrave", 'è' },
-	{ "igrave", 'ì' },
-	{ "ograve", 'ò' },
-	{ "ugrave", 'ù' },
-	{ "acirc",  'â' },
-	{ "ecirc",  'ê' },
-	{ "icirc",  'î' },
-	{ "ocirc",  'ô' },
-	{ "ucirc",  'û' },
-	{ "nbsp",   ' ' },
-	{ "",        0  }
+	{ "lt",     "<" },
+	{ "gt",     ">" },
+	{ "amp",    "&" },
+	{ "quot",   "\"" },
+	{ "aacute", "Ã¡" },
+	{ "eacute", "Ã©" },
+	{ "iacute", "Ã©" },
+	{ "oacute", "Ã³" },
+	{ "uacute", "Ãº" },
+	{ "agrave", "Ã " },
+	{ "egrave", "Ã¨" },
+	{ "igrave", "Ã¬" },
+	{ "ograve", "Ã²" },
+	{ "ugrave", "Ã¹" },
+	{ "acirc",  "Ã¢" },
+	{ "ecirc",  "Ãª" },
+	{ "icirc",  "Ã®" },
+	{ "ocirc",  "Ã´" },
+	{ "ucirc",  "Ã»" },
+	{ "auml",   "Ã¤" },
+	{ "euml",   "Ã«" },
+	{ "iuml",   "Ã¯" },
+	{ "ouml",   "Ã¶" },
+	{ "uuml",   "Ã¼" },
+	{ "nbsp",   " " },
+	{ "",        ""  }
 };
 
 void strip_html( char *in )
@@ -346,7 +262,11 @@ void strip_html( char *in )
 			for( i = 0; *ent[i].code; i ++ )
 				if( g_strncasecmp( ent[i].code, cs, strlen( ent[i].code ) ) == 0 )
 				{
-					*(s++) = ent[i].is;
+					int j;
+					
+					for( j = 0; ent[i].is[j]; j ++ )
+						*(s++) = ent[i].is[j];
+					
 					matched = 1;
 					break;
 				}
@@ -411,3 +331,116 @@ void info_string_append(GString *str, char *newline, char *name, char *value)
 	if( value && value[0] )
 		g_string_sprintfa( str, "%s%s: %s", newline, name, value );
 }
+
+/* Decode%20a%20file%20name						*/
+void http_decode( char *s )
+{
+	char *t;
+	int i, j, k;
+	
+	t = g_new( char, strlen( s ) + 1 );
+	
+	for( i = j = 0; s[i]; i ++, j ++ )
+	{
+		if( s[i] == '%' )
+		{
+			if( sscanf( s + i + 1, "%2x", &k ) )
+			{
+				t[j] = k;
+				i += 2;
+			}
+			else
+			{
+				*t = 0;
+				break;
+			}
+		}
+		else
+		{
+			t[j] = s[i];
+		}
+	}
+	t[j] = 0;
+	
+	strcpy( s, t );
+	g_free( t );
+}
+
+/* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
+/* This fuction is safe, but make sure you call it safely as well! */
+void http_encode( char *s )
+{
+	char *t;
+	int i, j;
+	
+	t = g_strdup( s );
+	
+	for( i = j = 0; t[i]; i ++, j ++ )
+	{
+		/* if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' ) */
+		if( !isalnum( t[i] ) )
+		{
+			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
+			j += 2;
+		}
+		else
+		{
+			s[j] = t[i];
+		}
+	}
+	s[j] = 0;
+	
+	g_free( t );
+}
+
+/* Strip newlines from a string. Modifies the string passed to it. */ 
+char *strip_newlines( char *source )
+{
+	int i;	
+
+	for( i = 0; source[i] != '\0'; i ++ )
+		if( source[i] == '\n' || source[i] == '\r' )
+			source[i] = ' ';
+	
+	return source;
+}
+
+#ifdef IPV6
+/* Wrap an IPv4 address into IPv6 space. Not thread-safe... */
+char *ipv6_wrap( char *src )
+{
+	static char dst[64];
+	int i;
+	
+	for( i = 0; src[i]; i ++ )
+		if( ( src[i] < '0' || src[i] > '9' ) && src[i] != '.' )
+			break;
+	
+	/* Hmm, it's not even an IP... */
+	if( src[i] )
+		return src;
+	
+	g_snprintf( dst, sizeof( dst ), "::ffff:%s", src );
+	
+	return dst;
+}
+
+/* Unwrap an IPv4 address into IPv6 space. Thread-safe, because it's very simple. :-) */
+char *ipv6_unwrap( char *src )
+{
+	int i;
+	
+	if( g_strncasecmp( src, "::ffff:", 7 ) != 0 )
+		return src;
+	
+	for( i = 7; src[i]; i ++ )
+		if( ( src[i] < '0' || src[i] > '9' ) && src[i] != '.' )
+			break;
+	
+	/* Hmm, it's not even an IP... */
+	if( src[i] )
+		return src;
+	
+	return ( src + 7 );
+}
+#endif

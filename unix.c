@@ -28,24 +28,27 @@
 #include "crypting.h"
 #include "protocols/nogaim.h"
 #include "help.h"
+#include "ipc.h"
 #include <signal.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 
 global_t global;	/* Against global namespace pollution */
 
 static void sighandler( int signal );
 
-int main( int argc, char *argv[] )
+int main( int argc, char *argv[], char **envp )
 {
 	int i = 0;
+	char *old_cwd = NULL;
 	struct sigaction sig, old;
 	
 	memset( &global, 0, sizeof( global_t ) );
 	
 	global.loop = g_main_new( FALSE );
 	
-	log_init( );
+	log_init();
 
 	nogaim_init();
 
@@ -69,11 +72,24 @@ int main( int argc, char *argv[] )
 		i = bitlbee_daemon_init();
 		log_message( LOGLVL_INFO, "Bitlbee %s starting in daemon mode.", BITLBEE_VERSION );
 	}
+	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		/* In case the operator requests a restart, we need this. */
+		old_cwd = g_malloc( 256 );
+		if( getcwd( old_cwd, 255 ) == NULL )
+		{
+			log_message( LOGLVL_WARNING, "Could not save current directory: %s", strerror( errno ) );
+			g_free( old_cwd );
+			old_cwd = NULL;
+		}
+		
+		i = bitlbee_daemon_init();
+		log_message( LOGLVL_INFO, "Bitlbee %s starting in forking daemon mode.", BITLBEE_VERSION );
+	}
 	if( i != 0 )
 		return( i );
 
-	global.storage = storage_init( global.conf->primary_storage, 
-								   global.conf->migrate_storage );
+	global.storage = storage_init( global.conf->primary_storage, global.conf->migrate_storage );
 	if ( global.storage == NULL) {
 		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
 		return( 1 );
@@ -83,6 +99,7 @@ int main( int argc, char *argv[] )
 	/* Catch some signals to tell the user what's happening before quitting */
 	memset( &sig, 0, sizeof( sig ) );
 	sig.sa_handler = sighandler;
+	sigaction( SIGCHLD, &sig, &old );
 	sigaction( SIGPIPE, &sig, &old );
 	sig.sa_flags = SA_RESETHAND;
 	sigaction( SIGINT,  &sig, &old );
@@ -101,12 +118,41 @@ int main( int argc, char *argv[] )
 	
 	g_main_run( global.loop );
 	
+	if( global.restart )
+	{
+		char *fn = ipc_master_save_state();
+		char **args;
+		int n, i;
+		
+		chdir( old_cwd );
+		
+		n = 0;
+		args = g_new0( char *, argc + 3 );
+		args[n++] = argv[0];
+		if( fn )
+		{
+			args[n++] = "-R";
+			args[n++] = fn;
+		}
+		for( i = 1; argv[i] && i < argc; i ++ )
+		{
+			if( strcmp( argv[i], "-R" ) == 0 )
+				i += 2;
+			
+			args[n++] = argv[i];
+		}
+		
+		close( global.listen_socket );
+		
+		execve( args[0], args, envp );
+	}
+	
 	return( 0 );
 }
 
 static void sighandler( int signal )
 {
-	/* FIXME: In fact, calling log_message() here can be dangerous. But well, let's take the risk for now. */
+	/* FIXME: Calling log_message() here is not a very good idea! */
 	
 	if( signal == SIGTERM )
 	{
@@ -130,6 +176,19 @@ static void sighandler( int signal )
 			
 			log_message( LOGLVL_ERROR, "SIGTERM received twice, so long for a clean shutdown." );
 			raise( signal );
+		}
+	}
+	else if( signal == SIGCHLD )
+	{
+		pid_t pid;
+		int st;
+		
+		while( ( pid = waitpid( 0, &st, WNOHANG ) ) > 0 )
+		{
+			if( WIFSIGNALED( st ) )
+				log_message( LOGLVL_INFO, "Client %d terminated normally. (status = %d)", pid, WEXITSTATUS( st ) );
+			else if( WIFEXITED( st ) )
+				log_message( LOGLVL_INFO, "Client %d killed by signal %d.", pid, WTERMSIG( st ) );
 		}
 	}
 	else if( signal != SIGPIPE )

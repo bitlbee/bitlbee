@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* User manager (root) commands                                         */
+/* IPC - communication between BitlBee processes                        */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,26 +23,39 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef _COMMANDS_H
-#define _COMMANDS_H
-
+#define BITLBEE_CORE
 #include "bitlbee.h"
 
-typedef struct command
+
+struct bitlbee_child
 {
-	char *command;
-	int required_parameters;
-	void (*execute)(irc_t *, char **args);
-	int flags;
-} command_t;
+	pid_t pid;
+	int ipc_fd;
+	gint ipc_inpa;
+	
+	char *host;
+	char *nick;
+	char *realname;
+};
 
-extern const command_t commands[];
 
-#define IRC_CMD_PRE_LOGIN	1
-#define IRC_CMD_LOGGED_IN	2
-#define IRC_CMD_OPER_ONLY	4
-#define IRC_CMD_TO_MASTER	8
+void ipc_master_read( gpointer data, gint source, GaimInputCondition cond );
+void ipc_child_read( gpointer data, gint source, GaimInputCondition cond );
 
-#define IPC_CMD_TO_CHILDREN	1
+void ipc_master_free_one( struct bitlbee_child *child );
+void ipc_master_free_all();
 
-#endif
+void ipc_to_master( char **cmd );
+void ipc_to_master_str( char *format, ... );
+void ipc_to_children( char **cmd );
+void ipc_to_children_str( char *format, ... );
+
+/* We need this function in inetd mode, so let's just make it non-static. */
+void ipc_master_cmd_rehash( irc_t *data, char **cmd );
+
+char *ipc_master_save_state();
+void ipc_master_set_statefile( char *fn );
+int ipc_master_load_state();
+
+
+extern GSList *child_list;

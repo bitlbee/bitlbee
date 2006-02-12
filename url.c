@@ -39,10 +39,10 @@ int url_set( url_t *url, char *set_url )
 	}
 	else
 	{
-		if( g_strncasecmp( set_url, "https", i - set_url ) == 0 )
-			url->proto = PROTO_HTTPS;
-		else if( g_strncasecmp( set_url, "http", i - set_url ) == 0 )
+		if( g_strncasecmp( set_url, "http", i - set_url ) == 0 )
 			url->proto = PROTO_HTTP;
+		else if( g_strncasecmp( set_url, "https", i - set_url ) == 0 )
+			url->proto = PROTO_HTTPS;
 		else if( g_strncasecmp( set_url, "socks4", i - set_url ) == 0 )
 			url->proto = PROTO_SOCKS4;
 		else if( g_strncasecmp( set_url, "socks5", i - set_url ) == 0 )

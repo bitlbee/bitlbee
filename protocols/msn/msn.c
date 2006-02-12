@@ -83,13 +83,13 @@ static void msn_close( struct gaim_connection *gc )
 		for( l = md->msgq; l; l = l->next )
 		{
 			m = l->data;
+		
+			serv_got_crap( gc, "Warning: Closing down MSN connection with unsent message to %s, you'll have to resend it.", m->who );
 			g_free( m->who );
 			g_free( m->text );
 			g_free( m );
 		}
 		g_slist_free( md->msgq );
-		
-		serv_got_crap( gc, "Warning: Closing down MSN connection with unsent message(s), you'll have to resend them." );
 	}
 	
 	for( l = gc->permit; l; l = l->next )
@@ -169,17 +169,17 @@ static GList *msn_away_states( struct gaim_connection *gc )
 	int i;
 	
 	for( i = 0; msn_away_state_list[i].number > -1; i ++ )
-		l = g_list_append( l, msn_away_state_list[i].name );
+		l = g_list_append( l, (void*) msn_away_state_list[i].name );
 	
 	return( l );
 }
 
 static char *msn_get_status_string( struct gaim_connection *gc, int number )
 {
-	struct msn_away_state *st = msn_away_state_by_number( number );
+	const struct msn_away_state *st = msn_away_state_by_number( number );
 	
 	if( st )
-		return( st->name );
+		return( (char*) st->name );
 	else
 		return( "" );
 }
@@ -188,7 +188,7 @@ static void msn_set_away( struct gaim_connection *gc, char *state, char *message
 {
 	char buf[1024];
 	struct msn_data *md = gc->proto_data;
-	struct msn_away_state *st;
+	const struct msn_away_state *st;
 	
 	if( strcmp( state, GAIM_AWAY_CUSTOM ) == 0 )
 		st = msn_away_state_by_name( "Away" );
