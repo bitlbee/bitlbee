@@ -11,6 +11,7 @@
 ##  - username
 ##  - password
 ##  - server name
+##  - autoconnect (true/false)
 ##
 ## bitlBeeBuddy:
 ##  - nick
