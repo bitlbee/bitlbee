@@ -44,6 +44,7 @@ int bitlbee_daemon_init()
 #endif
 	int i;
 	GIOChannel *ch;
+	FILE *fp;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
@@ -103,12 +104,29 @@ int bitlbee_daemon_init()
 		}
 		else if( i != 0 ) 
 			exit( 0 );
-		close( 0 );
-		close( 1 );
-		close( 2 );
+		
 		chdir( "/" );
+		
+		/* Sometimes std* are already closed (for example when we're in a RESTARTed
+		   BitlBee process. So let's only close TTY-fds. */
+		if( isatty( 0 ) ) close( 0 );
+		if( isatty( 0 ) ) close( 1 );
+		if( isatty( 0 ) ) close( 2 );
 	}
 #endif
+	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		ipc_master_load_state();
+	
+	if( ( fp = fopen( global.conf->pidfile, "w" ) ) )
+	{
+		fprintf( fp, "%d\n", (int) getpid() );
+		fclose( fp );
+	}
+	else
+	{
+		log_message( LOGLVL_WARNING, "Warning: Couldn't write PID to `%s'", global.conf->pidfile );
+	}
 	
 	return( 0 );
 }
@@ -234,6 +252,12 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 	struct sockaddr_in conn_info;
 	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
 	pid_t client_pid = 0;
+	
+	if( new_socket == -1 )
+	{
+		log_message( LOGLVL_WARNING, "Could not accept new connection: %s", strerror( errno ) );
+		return TRUE;
+	}
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{

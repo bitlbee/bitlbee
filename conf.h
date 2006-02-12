@@ -42,6 +42,7 @@ typedef struct conf
 	char *hostname;
 	char *configdir;
 	char *plugindir;
+	char *pidfile;
 	char *motdfile;
 	char *primary_storage;
 	char **migrate_storage;

@@ -83,13 +83,13 @@ static void msn_close( struct gaim_connection *gc )
 		for( l = md->msgq; l; l = l->next )
 		{
 			m = l->data;
+		
+			serv_got_crap( gc, "Warning: Closing down MSN connection with unsent message to %s, you'll have to resend it.", m->who );
 			g_free( m->who );
 			g_free( m->text );
 			g_free( m );
 		}
 		g_slist_free( md->msgq );
-		
-		serv_got_crap( gc, "Warning: Closing down MSN connection with unsent message(s), you'll have to resend them." );
 	}
 	
 	for( l = gc->permit; l; l = l->next )

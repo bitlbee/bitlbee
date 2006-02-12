@@ -120,6 +120,7 @@ typedef struct global {
 	GList *storage; /* The first backend in the list will be used for saving */
 	char *helpfile;
 	GMainLoop *loop;
+	int restart;
 } global_t;
 
 int bitlbee_daemon_init( void );

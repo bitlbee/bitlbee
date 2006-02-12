@@ -31,6 +31,7 @@
 #include "conf.h"
 #include "ini.h"
 #include "url.h"
+#include "ipc.h"
 
 #include "protocols/proxy.h"
 
@@ -60,6 +61,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->oper_pass = NULL;
 	conf->configdir = g_strdup( CONFIG );
 	conf->plugindir = g_strdup( PLUGINDIR );
+	conf->pidfile = g_strdup( "/var/run/bitlbee.pid" );
 	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
@@ -76,7 +78,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", CONF_FILE );
 	}
 	
-	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:nvIDFc:d:h" ) ) >= 0 )
+	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:" ) ) >= 0 )
 	/*     ^^^^ Just to make sure we skip this step from the REHASH handler. */
 	{
 		if( opt == 'i' )
@@ -91,6 +93,11 @@ conf_t *conf_load( int argc, char *argv[] )
 				return( NULL );
 			}
 			conf->port = i;
+		}
+		else if( opt == 'p' )
+		{
+			g_free( conf->pidfile );
+			conf->pidfile = g_strdup( optarg );
 		}
 		else if( opt == 'n' )
 			conf->nofork = 1;
@@ -141,6 +148,14 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -h  Show this help page.\n" );
 			return( NULL );
 		}
+		else if( opt == 'R' )
+		{
+			/* We can't load the statefile yet (and should make very sure we do this
+			   only once), so set the filename here and load the state information
+			   when initializing ForkDaemon. (This option only makes sense in that
+			   mode anyway!) */
+			ipc_master_set_statefile( optarg );
+		}
 	}
 	
 	if( conf->configdir[strlen(conf->configdir)-1] != '/' )
@@ -174,6 +189,11 @@ static int conf_loadini( conf_t *conf, char *file )
 					conf->runmode = RUNMODE_FORKDAEMON;
 				else
 					conf->runmode = RUNMODE_INETD;
+			}
+			else if( g_strcasecmp( ini->key, "pidfile" ) == 0 )
+			{
+				g_free( conf->pidfile );
+				conf->pidfile = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "daemoninterface" ) == 0 )
 			{
