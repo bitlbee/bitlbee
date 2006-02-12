@@ -12,6 +12,8 @@
 objects = account.o bitlbee.o conf.o crypting.o help.o ini.o ipc.o irc.o irc_commands.o log.o nick.o query.o root_commands.o set.o storage.o storage_text.o unix.o url.o user.o util.o
 subdirs = protocols
 
+objects += $(LDB_OBJ)
+
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 CFLAGS += -Wall
