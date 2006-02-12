@@ -41,7 +41,7 @@ static void sighandler( int signal );
 int main( int argc, char *argv[], char **envp )
 {
 	int i = 0;
-	char *old_cwd;
+	char *old_cwd = NULL;
 	struct sigaction sig, old;
 	
 	memset( &global, 0, sizeof( global_t ) );
