@@ -27,6 +27,9 @@
 #include "bitlbee.h"
 #include "ipc.h"
 #include "commands.h"
+#ifndef _WIN32
+#include <sys/un.h>
+#endif
 
 GSList *child_list = NULL;
 static char *statefile = NULL;
@@ -455,6 +458,51 @@ void ipc_master_set_statefile( char *fn )
 {
 	statefile = g_strdup( fn );
 }
+
+
+static gboolean new_ipc_client (GIOChannel *gio, GIOCondition cond, gpointer data)
+{
+	struct bitlbee_child *child = g_new0( struct bitlbee_child, 1 );
+	int serversock;
+
+	serversock = g_io_channel_unix_get_fd(gio);
+
+	child->ipc_fd = accept(serversock, NULL, 0);
+		
+	child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+		
+	child_list = g_slist_append( child_list, child );
+
+	return TRUE;
+}
+
+#ifndef _WIN32
+int ipc_master_listen_socket()
+{
+	struct sockaddr_un un_addr;
+	int serversock;
+	GIOChannel *gio;
+
+	/* Clean up old socket files that were hanging around.. */
+	unlink(IPCSOCKET);
+
+	un_addr.sun_family = AF_UNIX;
+	strcpy(un_addr.sun_path, IPCSOCKET);
+
+	serversock = socket(AF_UNIX, SOCK_STREAM, PF_UNIX);
+
+	bind(serversock, &un_addr, sizeof(un_addr));
+
+	listen(serversock, 5);
+	
+	gio = g_io_channel_unix_new(serversock);
+
+	g_io_add_watch(gio, G_IO_IN, new_ipc_client, NULL);
+	return 1;
+}
+#else
+	/* FIXME: Open named pipe \\.\BITLBEE */
+#endif
 
 int ipc_master_load_state()
 {
