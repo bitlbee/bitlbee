@@ -33,6 +33,10 @@ static char *statefile = NULL;
 
 static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
+	/* Normally data points at an irc_t block, but for the IPC master
+	   this is different. We think this scary cast is better than
+	   creating a new command_t structure, just to make the compiler
+	   happy. */
 	struct bitlbee_child *child = (void*) data;
 	
 	if( child && cmd[1] )
