@@ -212,13 +212,16 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 		for( l = sb->msgq; l; l = l->next )
 		{
 			m = l->data;
+
 			g_free( m->who );
 			g_free( m->text );
 			g_free( m );
 		}
 		g_slist_free( sb->msgq );
 		
-		serv_got_crap( gc, "Warning: Closing down MSN switchboard connection with unsent message(s), you'll have to resend them." );
+		serv_got_crap( gc, "Warning: Closing down MSN switchboard connection with "
+		                   "unsent message to %s, you'll have to resend it.",
+		                   m->who ? m->who : "(unknown)" );
 	}
 	
 	if( sb->chat )

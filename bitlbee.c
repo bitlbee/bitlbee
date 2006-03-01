@@ -28,46 +28,12 @@
 #include "commands.h"
 #include "protocols/nogaim.h"
 #include "help.h"
+#include "ipc.h"
 #include <signal.h>
 #include <stdio.h>
 #include <errno.h>
 
-gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
-{
-	size_t size = sizeof( struct sockaddr_in );
-	struct sockaddr_in conn_info;
-	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
-	pid_t client_pid = 0;
-	
-	if( global.conf->runmode == RUNMODE_FORKDAEMON )
-		client_pid = fork();
-	
-	if( client_pid == 0 )
-	{
-		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
-		irc_new( new_socket );
-		
-		if( global.conf->runmode == RUNMODE_FORKDAEMON )
-		{
-			/* Close the listening socket, we're a client. */
-			close( global.listen_socket );
-			g_source_remove( global.listen_watch_source_id );
-		}
-	}
-	else
-	{
-		/* We don't need this one, only the client does. */
-		close( new_socket );
-		
-		/* Or maybe we didn't even get a child process... */
-		if( client_pid == -1 )
-			log_message( LOGLVL_ERROR, "Failed to fork() subprocess for client: %s", strerror( errno ) );
-	}
-	
-	return TRUE;
-}
- 
-
+gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data );
 
 int bitlbee_daemon_init()
 {
@@ -78,6 +44,7 @@ int bitlbee_daemon_init()
 #endif
 	int i;
 	GIOChannel *ch;
+	FILE *fp;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
@@ -88,6 +55,10 @@ int bitlbee_daemon_init()
 		log_error( "socket" );
 		return( -1 );
 	}
+	
+	/* TIME_WAIT (?) sucks.. */
+	i = 1;
+	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
 	
 #ifdef IPV6
 	listen_addr.sin6_family = AF_INETx;
@@ -133,12 +104,33 @@ int bitlbee_daemon_init()
 		}
 		else if( i != 0 ) 
 			exit( 0 );
-		close( 0 );
-		close( 1 );
-		close( 2 );
+		
 		chdir( "/" );
+		
+		/* Sometimes std* are already closed (for example when we're in a RESTARTed
+		   BitlBee process. So let's only close TTY-fds. */
+		if( isatty( 0 ) ) close( 0 );
+		if( isatty( 0 ) ) close( 1 );
+		if( isatty( 0 ) ) close( 2 );
 	}
 #endif
+	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+		ipc_master_load_state();
+
+	if( global.conf->runmode == RUNMODE_DAEMON || 
+		global.conf->runmode == RUNMODE_FORKDAEMON )
+		ipc_master_listen_socket();
+	
+	if( ( fp = fopen( global.conf->pidfile, "w" ) ) )
+	{
+		fprintf( fp, "%d\n", (int) getpid() );
+		fclose( fp );
+	}
+	else
+	{
+		log_message( LOGLVL_WARNING, "Warning: Couldn't write PID to `%s'", global.conf->pidfile );
+	}
 	
 	return( 0 );
 }
@@ -159,14 +151,14 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	
 	if( condition & G_IO_ERR || condition & G_IO_HUP )
 	{
-		irc_free( irc );
+		irc_abort( irc, 1, "Read error" );
 		return FALSE;
 	}
 	
 	st = read( irc->fd, line, sizeof( line ) - 1 );
 	if( st == 0 )
 	{
-		irc_free( irc );
+		irc_abort( irc, 1, "Connection reset by peer" );
 		return FALSE;
 	}
 	else if( st < 0 )
@@ -177,7 +169,7 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		}
 		else
 		{
-			irc_free( irc );
+			irc_abort( irc, 1, "Read error: %s", strerror( errno ) );
 			return FALSE;
 		}
 	}
@@ -193,18 +185,19 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 		strcpy( ( irc->readbuffer + strlen( irc->readbuffer ) ), line );
 	}
 	
-	if( !irc_process( irc ) )
+	irc_process( irc );
+	
+	/* Normally, irc_process() shouldn't call irc_free() but irc_abort(). Just in case: */
+	if( !g_slist_find( irc_connection_list, irc ) )
 	{
-		log_message( LOGLVL_INFO, "Destroying connection with fd %d.", irc->fd );
-		irc_free( irc );
+		log_message( LOGLVL_WARNING, "Abnormal termination of connection with fd %d.", irc->fd );
 		return FALSE;
 	} 
 	
 	/* Very naughty, go read the RFCs! >:) */
 	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )
 	{
-		log_message( LOGLVL_ERROR, "Maximum line length exceeded." );
-		irc_free( irc );
+		irc_abort( irc, 0, "Maximum line length exceeded" );
 		return FALSE;
 	}
 	
@@ -223,25 +216,25 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	size = strlen( irc->sendbuffer );
 	st = write( irc->fd, irc->sendbuffer, size );
 	
-	if( st <= 0 )
+	if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
-		if( sockerr_again() )
-		{
-			return TRUE;
-		}
-		else
-		{
-			irc_free( irc );
-			return FALSE;
-		}
+		irc_abort( irc, 1, "Write error: %s", strerror( errno ) );
+		return FALSE;
+	}
+	else if( st < 0 ) /* && sockerr_again() */
+	{
+		return TRUE;
 	}
 	
 	if( st == size )
 	{
 		g_free( irc->sendbuffer );
 		irc->sendbuffer = NULL;
-		
 		irc->w_watch_source_id = 0;
+		
+		if( irc->status == USTATUS_SHUTDOWN )
+			irc_free( irc );
+		
 		return( FALSE );
 	}
 	else
@@ -252,6 +245,79 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 		
 		return( TRUE );
 	}
+}
+
+gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
+{
+	size_t size = sizeof( struct sockaddr_in );
+	struct sockaddr_in conn_info;
+	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
+	pid_t client_pid = 0;
+	
+	if( new_socket == -1 )
+	{
+		log_message( LOGLVL_WARNING, "Could not accept new connection: %s", strerror( errno ) );
+		return TRUE;
+	}
+	
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		int fds[2];
+		
+		if( socketpair( AF_UNIX, SOCK_STREAM, 0, fds ) == -1 )
+		{
+			log_message( LOGLVL_WARNING, "Could not create IPC socket for client: %s", strerror( errno ) );
+			fds[0] = fds[1] = -1;
+		}
+		
+		sock_make_nonblocking( fds[0] );
+		sock_make_nonblocking( fds[1] );
+		
+		client_pid = fork();
+		
+		if( client_pid > 0 && fds[0] != -1 )
+		{
+			struct bitlbee_child *child;
+			
+			child = g_new0( struct bitlbee_child, 1 );
+			child->pid = client_pid;
+			child->ipc_fd = fds[0];
+			child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+			child_list = g_slist_append( child_list, child );
+			
+			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", client_pid );
+			
+			/* Close some things we don't need in the parent process. */
+			close( new_socket );
+			close( fds[1] );
+		}
+		else if( client_pid == 0 )
+		{
+			irc_t *irc;
+			
+			/* Close the listening socket, we're a client. */
+			close( global.listen_socket );
+			g_source_remove( global.listen_watch_source_id );
+			
+			/* Make the connection. */
+			irc = irc_new( new_socket );
+			
+			/* We can store the IPC fd there now. */
+			global.listen_socket = fds[1];
+			global.listen_watch_source_id = gaim_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
+			
+			close( fds[0] );
+			
+			ipc_master_free_all();
+		}
+	}
+	else
+	{
+		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
+		irc_new( new_socket );
+	}
+	
+	return TRUE;
 }
 
 void bitlbee_shutdown( gpointer data )
