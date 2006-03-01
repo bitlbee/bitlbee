@@ -468,6 +468,11 @@ static gboolean new_ipc_client (GIOChannel *gio, GIOCondition cond, gpointer dat
 	serversock = g_io_channel_unix_get_fd(gio);
 
 	child->ipc_fd = accept(serversock, NULL, 0);
+
+	if (child->ipc_fd == -1) {
+		log_message( LOGLVL_WARNING, "Unable to accept connection on UNIX domain socket: %s", strerror(errno) );
+		return TRUE;
+	}
 		
 	child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
 		
@@ -484,18 +489,37 @@ int ipc_master_listen_socket()
 	GIOChannel *gio;
 
 	/* Clean up old socket files that were hanging around.. */
-	unlink(IPCSOCKET);
+	if (unlink(IPCSOCKET) == -1 && errno != ENOENT) {
+		log_message( LOGLVL_ERROR, "Could not remove old IPC socket at %s: %s", IPCSOCKET, strerror(errno) );
+		return 0;
+	}
 
 	un_addr.sun_family = AF_UNIX;
 	strcpy(un_addr.sun_path, IPCSOCKET);
 
 	serversock = socket(AF_UNIX, SOCK_STREAM, PF_UNIX);
 
-	bind(serversock, &un_addr, sizeof(un_addr));
+	if (serversock == -1) {
+		log_message( LOGLVL_WARNING, "Unable to create UNIX socket: %s", strerror(errno) );
+		return 0;
+	}
 
-	listen(serversock, 5);
+	if (bind(serversock, &un_addr, sizeof(un_addr)) == -1) {
+		log_message( LOGLVL_WARNING, "Unable to bind UNIX socket to %s: %s", IPCSOCKET, strerror(errno) );
+		return 0;
+	}
+
+	if (listen(serversock, 5) == -1) {
+		log_message( LOGLVL_WARNING, "Unable to listen on UNIX socket: %s", strerror(errno) );
+		return 0;
+	}
 	
 	gio = g_io_channel_unix_new(serversock);
+	
+	if (gio == NULL) {
+		log_message( LOGLVL_WARNING, "Unable to create IO channel for unix socket" );
+		return 0;
+	}
 
 	g_io_add_watch(gio, G_IO_IN, new_ipc_client, NULL);
 	return 1;
