@@ -202,7 +202,8 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf_get_string(key_main, "interface", "0.0.0.0", &global.conf->iface);
 	conf_get_int(key_main, "port", 6667, &global.conf->port);
 	conf_get_int(key_main, "verbose", 0, &global.conf->verbose);
-	conf_get_string(key_main, "password", "", &global.conf->password);
+	conf_get_string(key_main, "auth_pass", "", &global.conf->auth_pass);
+	conf_get_string(key_main, "oper_pass", "", &global.conf->oper_pass);
 	conf_get_int(key_main, "ping_interval_timeout", 60, &global.conf->ping_interval);
 	conf_get_string(key_main, "hostname", "localhost", &global.conf->hostname);
 	conf_get_string(key_main, "configdir", NULL, &global.conf->configdir);
