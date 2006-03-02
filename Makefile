@@ -20,10 +20,10 @@ CFLAGS += -Wall
 all: $(OUTFILE)
 	$(MAKE) -C doc
 
-uninstall: uninstall-bin uninstall-doc uninstall-header uninstall-pc
+uninstall: uninstall-bin uninstall-doc 
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
 
-install: install-bin install-doc install-header install-pc
+install: install-bin install-doc
 	@if ! [ -d $(DESTDIR)$(CONFIG) ]; then echo -e '\nThe configuration directory $(DESTDIR)$(CONFIG) does not exist yet, don'\''t forget to create it!'; fi
 	@if ! [ -e $(DESTDIR)$(ETCDIR)/bitlbee.conf ]; then echo -e '\nNo files are installed in '$(DESTDIR)$(ETCDIR)' by make install. Run make install-etc to do that.'; fi
 	@echo
@@ -57,19 +57,15 @@ install-bin:
 uninstall-bin:
 	rm -f $(DESTDIR)$(BINDIR)/$(OUTFILE)
 
-install-header:
+install-dev:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	install -m 0644 $(headers) $(DESTDIR)$(INCLUDEDIR)
-
-uninstall-header:
-	rm -f $(foreach hdr,$(headers),$(DESTDIR)$(INCLUDEDIR)/$(hdr))
-	-rmdir $(DESTDIR)$(INCLUDEDIR)
-
-install-pc:
 	mkdir -p $(DESTDIR)$(PCDIR)
 	install -m 0644 bitlbee.pc $(DESTDIR)$(PCDIR)
 
-uninstall-pc:
+uninstall-dev:
+	rm -f $(foreach hdr,$(headers),$(DESTDIR)$(INCLUDEDIR)/$(hdr))
+	-rmdir $(DESTDIR)$(INCLUDEDIR)
 	rm -f $(DESTDIR)$(PCDIR)/bitlbee.pc
 
 install-etc:
