@@ -10,6 +10,7 @@
 
 # Program variables
 objects = account.o bitlbee.o conf.o crypting.o help.o ini.o ipc.o irc.o irc_commands.o log.o nick.o query.o root_commands.o set.o storage.o storage_text.o unix.o url.o user.o util.o
+headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ini.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h url.h user.h protocols/http_client.h protocols/md5.h protocols/nogaim.h protocols/proxy.h protocols/sha.h protocols/ssl_client.h
 subdirs = protocols
 
 # Expansion of variables
@@ -19,10 +20,10 @@ CFLAGS += -Wall
 all: $(OUTFILE)
 	$(MAKE) -C doc
 
-uninstall: uninstall-bin uninstall-doc
+uninstall: uninstall-bin uninstall-doc uninstall-header uninstall-pc
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
 
-install: install-bin install-doc
+install: install-bin install-doc install-header install-pc
 	@if ! [ -d $(DESTDIR)$(CONFIG) ]; then echo -e '\nThe configuration directory $(DESTDIR)$(CONFIG) does not exist yet, don'\''t forget to create it!'; fi
 	@if ! [ -e $(DESTDIR)$(ETCDIR)/bitlbee.conf ]; then echo -e '\nNo files are installed in '$(DESTDIR)$(ETCDIR)' by make install. Run make install-etc to do that.'; fi
 	@echo
@@ -55,6 +56,21 @@ install-bin:
 
 uninstall-bin:
 	rm -f $(DESTDIR)$(BINDIR)/$(OUTFILE)
+
+install-header:
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+	install -m 0644 $(headers) $(DESTDIR)$(INCLUDEDIR)
+
+uninstall-header:
+	rm -f $(foreach hdr,$(headers),$(DESTDIR)$(INCLUDEDIR)/$(hdr))
+	-rmdir $(DESTDIR)$(INCLUDEDIR)
+
+install-pc:
+	mkdir -p $(DESTDIR)$(PCDIR)
+	install -m 0644 bitlbee.pc $(DESTDIR)$(PCDIR)
+
+uninstall-pc:
+	rm -f $(DESTDIR)$(PCDIR)/bitlbee.pc
 
 install-etc:
 	mkdir -p $(DESTDIR)$(ETCDIR)
