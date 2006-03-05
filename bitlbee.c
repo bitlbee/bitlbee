@@ -117,6 +117,10 @@ int bitlbee_daemon_init()
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_master_load_state();
+
+	if( global.conf->runmode == RUNMODE_DAEMON || 
+		global.conf->runmode == RUNMODE_FORKDAEMON )
+		ipc_master_listen_socket();
 	
 	if( ( fp = fopen( global.conf->pidfile, "w" ) ) )
 	{

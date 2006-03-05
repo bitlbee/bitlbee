@@ -101,7 +101,7 @@ extern char *CONF_FILE;
 #include "irc.h"
 #include "storage.h"
 #include "set.h"
-#include "protocols/nogaim.h"
+#include "nogaim.h"
 #include "commands.h"
 #include "account.h"
 #include "conf.h"

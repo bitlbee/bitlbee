@@ -56,6 +56,6 @@ void ipc_master_cmd_rehash( irc_t *data, char **cmd );
 char *ipc_master_save_state();
 void ipc_master_set_statefile( char *fn );
 int ipc_master_load_state();
-
+int ipc_master_listen_socket();
 
 extern GSList *child_list;

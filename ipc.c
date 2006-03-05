@@ -27,12 +27,19 @@
 #include "bitlbee.h"
 #include "ipc.h"
 #include "commands.h"
+#ifndef _WIN32
+#include <sys/un.h>
+#endif
 
 GSList *child_list = NULL;
 static char *statefile = NULL;
 
 static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
+	/* Normally data points at an irc_t block, but for the IPC master
+	   this is different. We think this scary cast is better than
+	   creating a new command_t structure, just to make the compiler
+	   happy. */
 	struct bitlbee_child *child = (void*) data;
 	
 	if( child && cmd[1] )
@@ -455,6 +462,75 @@ void ipc_master_set_statefile( char *fn )
 {
 	statefile = g_strdup( fn );
 }
+
+
+static gboolean new_ipc_client (GIOChannel *gio, GIOCondition cond, gpointer data)
+{
+	struct bitlbee_child *child = g_new0( struct bitlbee_child, 1 );
+	int serversock;
+
+	serversock = g_io_channel_unix_get_fd(gio);
+
+	child->ipc_fd = accept(serversock, NULL, 0);
+
+	if (child->ipc_fd == -1) {
+		log_message( LOGLVL_WARNING, "Unable to accept connection on UNIX domain socket: %s", strerror(errno) );
+		return TRUE;
+	}
+		
+	child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+		
+	child_list = g_slist_append( child_list, child );
+
+	return TRUE;
+}
+
+#ifndef _WIN32
+int ipc_master_listen_socket()
+{
+	struct sockaddr_un un_addr;
+	int serversock;
+	GIOChannel *gio;
+
+	/* Clean up old socket files that were hanging around.. */
+	if (unlink(IPCSOCKET) == -1 && errno != ENOENT) {
+		log_message( LOGLVL_ERROR, "Could not remove old IPC socket at %s: %s", IPCSOCKET, strerror(errno) );
+		return 0;
+	}
+
+	un_addr.sun_family = AF_UNIX;
+	strcpy(un_addr.sun_path, IPCSOCKET);
+
+	serversock = socket(AF_UNIX, SOCK_STREAM, PF_UNIX);
+
+	if (serversock == -1) {
+		log_message( LOGLVL_WARNING, "Unable to create UNIX socket: %s", strerror(errno) );
+		return 0;
+	}
+
+	if (bind(serversock, &un_addr, sizeof(un_addr)) == -1) {
+		log_message( LOGLVL_WARNING, "Unable to bind UNIX socket to %s: %s", IPCSOCKET, strerror(errno) );
+		return 0;
+	}
+
+	if (listen(serversock, 5) == -1) {
+		log_message( LOGLVL_WARNING, "Unable to listen on UNIX socket: %s", strerror(errno) );
+		return 0;
+	}
+	
+	gio = g_io_channel_unix_new(serversock);
+	
+	if (gio == NULL) {
+		log_message( LOGLVL_WARNING, "Unable to create IO channel for unix socket" );
+		return 0;
+	}
+
+	g_io_add_watch(gio, G_IO_IN, new_ipc_client, NULL);
+	return 1;
+}
+#else
+	/* FIXME: Open named pipe \\.\BITLBEE */
+#endif
 
 int ipc_master_load_state()
 {

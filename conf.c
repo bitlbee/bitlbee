@@ -138,6 +138,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -I  Classic/InetD mode. (Default)\n"
 			        "  -D  Daemon mode. (Still EXPERIMENTAL!)\n"
 			        "  -F  Forking daemon. (one process per client)\n"
+			        "  -P  Specify PID-file (not for inetd mode)\n"
 			        "  -i  Specify the interface (by IP address) to listen on.\n"
 			        "      (Default: 0.0.0.0 (any interface))\n"
 			        "  -p  Port number to listen on. (Default: 6667)\n"
