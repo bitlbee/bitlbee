@@ -83,8 +83,6 @@ void ipc_master_cmd_rehash( irc_t *data, char **cmd )
 
 void ipc_master_cmd_restart( irc_t *data, char **cmd )
 {
-	struct bitlbee_child *child = (void*) data;
-	
 	if( global.conf->runmode != RUNMODE_FORKDAEMON )
 	{
 		/* Tell child that this is unsupported. */

@@ -355,7 +355,9 @@ static void oscar_login(struct aim_user *user) {
 
 	if (isdigit(*user->username)) {
 		odata->icq = TRUE;
-		/* this is odd but it's necessary for a proper do_import and do_export */
+		/* This is odd but it's necessary for a proper do_import and do_export.
+		   We don't do those anymore, but let's stick with it, just in case
+		   it accidentally fixes something else too... */
 		gc->password[8] = 0;
 	} else {
 		gc->flags |= OPT_CONN_HTML;
@@ -1736,11 +1738,6 @@ static int gaim_bosrights(aim_session_t *sess, aim_frame_t *fr, ...) {
 	odata->rights.maxpermits = (guint)maxpermits;
 	odata->rights.maxdenies = (guint)maxdenies;
 
-//	serv_finish_login(gc);
-
-	if (bud_list_cache_exists(gc))
-		do_import(gc, NULL);
-
 	aim_clientready(sess, fr->conn);
 
 	aim_reqservice(sess, fr->conn, AIM_CONN_TYPE_CHATNAV);
@@ -2095,8 +2092,6 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 		} /* End of switch on curitem->type */
 	} /* End of for loop */
 
-	if (tmp)
-		do_export(gc);
 	aim_ssi_enable(sess, fr->conn);
 	
 	/* Request offline messages, now that the buddy list is complete. */

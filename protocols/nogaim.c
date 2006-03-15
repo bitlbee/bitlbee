@@ -13,7 +13,7 @@
  * from scratch for BitlBee and doesn't contain any code from Gaim anymore
  * (except for the function names).
  *
- * Copyright 2002-2004 Wilmer van der Gaast <lintux@lintux.cx>
+ * Copyright 2002-2006 Wilmer van der Gaast <wilmer@gaast.net> and others
  */
 
 /*
@@ -351,7 +351,7 @@ void account_online( struct gaim_connection *gc )
 	user_t *u;
 	
 	/* MSN servers sometimes redirect you to a different server and do
-	   the whole login sequence again, so subsequent calls to this
+	   the whole login sequence again, so these "late" calls to this
 	   function should be handled correctly. (IOW, ignored) */
 	if( gc->flags & OPT_LOGGED_IN )
 		return;
@@ -365,7 +365,7 @@ void account_online( struct gaim_connection *gc )
 	
 	if( u && u->away ) proto_away( gc, u->away );
 	
- 	if( !strcmp(gc->prpl->name, "icq") )
+ 	if( strcmp( gc->prpl->name, "ICQ" ) == 0 )
 	{
 		for( u = gc->irc->users; u; u = u->next )
 			if( u->gc == gc )
@@ -469,16 +469,6 @@ void do_ask_dialog( struct gaim_connection *gc, char *msg, void *data, void *doi
 
 /* list.c */
 
-int bud_list_cache_exists( struct gaim_connection *gc )
-{
-	return( 0 );
-}
-
-void do_import( struct gaim_connection *gc, void *null )
-{
-	return;
-}
-
 void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *realname )
 {
 	user_t *u;
@@ -551,11 +541,6 @@ struct buddy *find_buddy( struct gaim_connection *gc, char *handle )
 	b->gc = u->gc;
 	
 	return( b );
-}
-
-void do_export( struct gaim_connection *gc )
-{
-	return;
 }
 
 void signoff_blocked( struct gaim_connection *gc )
@@ -881,11 +866,6 @@ struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, c
 		serv_got_crap( gc, "Creating new conversation: (id=%d,handle=%s)", id, handle );
 	
 	return( c );
-}
-
-void serv_finish_login( struct gaim_connection *gc )
-{
-	return;
 }
 
 
