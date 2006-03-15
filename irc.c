@@ -231,9 +231,12 @@ void irc_free(irc_t * irc)
 	g_io_channel_unref( irc->io_channel );
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
-	for (account = irc->accounts; account; account = account->next)
+	for (account = irc->accounts; account; account = account->next) {
 		if (account->gc)
-			signoff(account->gc);
+			account_offline(account->gc);
+		else if (account->reconnect)
+			g_source_remove(account->reconnect);
+	}
 	
 	g_free(irc->sendbuffer);
 	g_free(irc->readbuffer);
