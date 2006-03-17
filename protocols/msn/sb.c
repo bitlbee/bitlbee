@@ -201,9 +201,6 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 	
 	debug( "Destroying switchboard: %s", sb->who ? sb->who : sb->key ? sb->key : "" );
 	
-	if( sb->key ) g_free( sb->key );
-	if( sb->who ) g_free( sb->who );
-	
 	if( sb->msgq )
 	{
 		struct msn_message *m;
@@ -221,8 +218,11 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 		
 		serv_got_crap( gc, "Warning: Closing down MSN switchboard connection with "
 		                   "unsent message to %s, you'll have to resend it.",
-		                   m->who ? m->who : "(unknown)" );
+		                   sb->who ? sb->who : "(unknown)" );
 	}
+	
+	if( sb->key ) g_free( sb->key );
+	if( sb->who ) g_free( sb->who );
 	
 	if( sb->chat )
 	{
