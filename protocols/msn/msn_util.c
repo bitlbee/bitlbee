@@ -45,9 +45,6 @@ int msn_write( struct gaim_connection *gc, char *s, int len )
 
 int msn_logged_in( struct gaim_connection *gc )
 {
-	struct msn_data *md = gc->proto_data;
-	char buf[1024];
-	
 	account_online( gc );
 	
 	return( 0 );
