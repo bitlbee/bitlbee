@@ -1231,9 +1231,7 @@ static void jabber_handleroster(gjconn gjc, xmlnode querynode)
 		x = xmlnode_get_nextsibling(x);
 	}
 
-	x = jutil_presnew(0, NULL, "Online");
-	gjab_send(gjc, x);
-	xmlnode_free(x);
+	account_online(GJ_GC(gjc));
 }
 
 static void jabber_handleauthresp(gjconn gjc, jpacket p)
@@ -1249,7 +1247,6 @@ static void jabber_handleauthresp(gjconn gjc, jpacket p)
 			gjab_auth(gjc);
 		} else {
 			gjab_reqroster(gjc);
-			account_online(GJ_GC(gjc));
 			
 			((struct jabber_data *)GJ_GC(gjc)->proto_data)->did_import = TRUE;
 		}

@@ -50,14 +50,6 @@ int msn_logged_in( struct gaim_connection *gc )
 	
 	account_online( gc );
 	
-	/* account_online() sets an away state if there is any, so only
-	   execute this code if we're not away. */
-	if( md->away_state == msn_away_state_list )
-	{
-		g_snprintf( buf, sizeof( buf ), "CHG %d %s %d\r\n", ++md->trId, md->away_state->code, 0 );
-		return( msn_write( gc, buf, strlen( buf ) ) );
-	}
-	
 	return( 0 );
 }
 

@@ -363,7 +363,9 @@ void account_online( struct gaim_connection *gc )
 	gc->keepalive = g_timeout_add( 60000, send_keepalive, gc );
 	gc->flags |= OPT_LOGGED_IN;
 	
-	if( u && u->away ) proto_away( gc, u->away );
+	/* Also necessary when we're not away, at least for some of the
+	   protocols. */
+	proto_away( gc, u->away );
 	
  	if( strcmp( gc->prpl->name, "ICQ" ) == 0 )
 	{
