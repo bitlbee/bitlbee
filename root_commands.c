@@ -483,7 +483,27 @@ static void cmd_block( irc_t *irc, char **cmd )
 	struct gaim_connection *gc;
 	account_t *a;
 	
-	if( !cmd[2] )
+	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->gc )
+	{
+		char *format;
+		GSList *l;
+		
+		if( strchr( irc->umode, 'b' ) != NULL )
+			format = "%s\t%s";
+		else
+			format = "%-32.32  %-16.16s";
+		
+		irc_usermsg( irc, format, "Handle", "Nickname" );
+		for( l = a->gc->deny; l; l = l->next )
+		{
+			user_t *u = user_findhandle( a->gc, l->data );
+			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+		}
+		irc_usermsg( irc, "End of list." );
+		
+		return;
+	}
+	else if( !cmd[2] )
 	{
 		user_t *u = user_find( irc, cmd[1] );
 		if( !u || !u->gc )
@@ -522,7 +542,27 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	struct gaim_connection *gc;
 	account_t *a;
 	
-	if( !cmd[2] )
+	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->gc )
+	{
+		char *format;
+		GSList *l;
+		
+		if( strchr( irc->umode, 'b' ) != NULL )
+			format = "%s\t%s";
+		else
+			format = "%-32.32  %-16.16s";
+		
+		irc_usermsg( irc, format, "Handle", "Nickname" );
+		for( l = a->gc->deny; l; l = l->next )
+		{
+			user_t *u = user_findhandle( a->gc, l->data );
+			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+		}
+		irc_usermsg( irc, "End of list." );
+		
+		return;
+	}
+	else if( !cmd[2] )
 	{
 		user_t *u = user_find( irc, cmd[1] );
 		if( !u || !u->gc )
