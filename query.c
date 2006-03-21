@@ -39,6 +39,17 @@ query_t *query_add( irc_t *irc, struct gaim_connection *gc, char *question, void
 	q->no = no;
 	q->data = data;
 	
+	if( strchr( irc->umode, 'b' ) != NULL )
+	{
+		char *s;
+		
+		/* At least for the machine-parseable version, get rid of
+		   newlines to make "parsing" easier. */
+		for( s = q->question; *s; s ++ )
+			if( *s == '\r' || *s == '\n' )
+				*s = ' ';
+	}
+	
 	if( irc->queries )
 	{
 		query_t *l = irc->queries;
@@ -126,7 +137,6 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		q = query_default( irc );
 		disp = 1;
 	}
-	//Using irc_usermsg instead of serv_got_crap because \x02A is a char too, so a SPACE is needed.	
 	if( ans )
 	{
 		q->yes( NULL, q->data );

@@ -1149,7 +1149,7 @@ static void gaim_icq_authask(struct gaim_connection *gc, guint32 uin, char *msg)
 	if (strlen(msg) > 6)
 		reason = msg + 6;
 	
-	dialog_msg = g_strdup_printf("The user %u wants to add you to their buddy list for the following reason:\n\n%s", uin, reason ? reason : "No reason given.");
+	dialog_msg = g_strdup_printf("The user %u wants to add you to their buddy list for the following reason: %s", uin, reason ? reason : "No reason given.");
 	data->gc = gc;
 	data->uin = uin;
 	do_ask_dialog(gc, dialog_msg, data, gaim_icq_authgrant, gaim_icq_authdeny);

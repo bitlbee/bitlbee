@@ -32,7 +32,7 @@
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"
 
-#define UMODES "iasw"
+#define UMODES "abisw"
 #define UMODES_PRIV "Ro"
 #define CMODES "nt"
 #define CMODE "t"
