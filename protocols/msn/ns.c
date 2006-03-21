@@ -287,7 +287,13 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( list & 1 ) /* FL */
 		{
-			add_buddy( gc, NULL, cmd[1], cmd[2] );
+			char *group = NULL;
+			int num;
+			
+			if( cmd[4] != NULL && sscanf( cmd[4], "%d", &num ) == 1 )
+				group = md->grouplist[num];
+			
+			add_buddy( gc, group, cmd[1], cmd[2] );
 		}
 		if( list & 2 ) /* AL */
 		{
