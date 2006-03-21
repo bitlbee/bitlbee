@@ -38,7 +38,7 @@
 #include <ctype.h>
 #include <iconv.h>
 
-static char *proto_away_alias[7][5] =
+static char *proto_away_alias[8][5] =
 {
 	{ "Away from computer", "Away", "Extended away", NULL },
 	{ "NA", "N/A", "Not available", NULL },
@@ -46,6 +46,7 @@ static char *proto_away_alias[7][5] =
 	{ "Be right back", "BRB", NULL },
 	{ "On the phone", "Phone", "On phone", NULL },
 	{ "Out to lunch", "Lunch", "Food", NULL },
+	{ "Invisible", "Hidden" },
 	{ NULL }
 };
 static char *proto_away_alias_find( GList *gcm, char *away );
