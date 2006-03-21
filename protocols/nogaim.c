@@ -305,7 +305,7 @@ void hide_login_progress_error( struct gaim_connection *gc, char *msg )
 void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 {
 	va_list params;
-	char text[1024], buf[1024], acc_id[33];
+	char text[1024], buf[1024], *acc_id;
 	char *msg;
 	account_t *a;
 	
@@ -330,11 +330,13 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	
 	/* If we found one, add the screenname to the acc_id. */
 	if( a )
-		g_snprintf( acc_id, 32, "%s(%s)", gc->prpl->name, gc->username );
+		acc_id = g_strdup_printf( "%s(%s)", gc->prpl->name, gc->username );
 	else
-		g_snprintf( acc_id, 32, "%s", gc->prpl->name );
+		acc_id = g_strdup( gc->prpl->name );
 	
 	irc_usermsg( gc->irc, "%s - %s", acc_id, msg );
+	
+	g_free( acc_id );
 }
 
 static gboolean send_keepalive( gpointer d )
