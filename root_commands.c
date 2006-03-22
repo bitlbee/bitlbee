@@ -727,8 +727,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 		n_offline ++;
 	}
 	
-	if( strchr( irc->umode, 'b' ) == NULL )
-		irc_usermsg( irc, "%d buddies (%d available, %d away, %d offline)", n_online + n_away + n_offline, n_online, n_away, n_offline );
+	irc_usermsg( irc, "%d buddies (%d available, %d away, %d offline)", n_online + n_away + n_offline, n_online, n_away, n_offline );
 }
 
 static void cmd_nick( irc_t *irc, char **cmd ) 
