@@ -36,6 +36,7 @@ typedef struct __USER
 	char online;
 	
 	char *handle;
+	char *group;
 	struct gaim_connection *gc;
 
  	char *sendbuf;

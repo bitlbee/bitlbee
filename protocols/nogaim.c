@@ -525,6 +525,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	
 	u->gc = gc;
 	u->handle = g_strdup( handle );
+	if( group ) u->group = g_strdup( group );
 	u->send_handler = buddy_send_handler;
 	u->last_typing_notice = 0;
 }
