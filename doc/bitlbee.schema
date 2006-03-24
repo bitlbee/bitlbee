@@ -1,17 +1,7 @@
 ## LDAP Schema file for BitlBee
+## Copyright (C) 2006 Jelmer Vernooij <jelmer@samba.org>
 ##
 ## We need the following object classes and related attributes:
-## bitlBeeNick:
-##  - nick
-##  - password
-##  - setting (multiple values)
-## 
-## bitlBeeAccount:
-##  - protocol (msn, oscar, jabber, yahoo, ...)
-##  - username
-##  - password
-##  - server name
-##  - autoconnect (true/false)
 ##
 ## bitlBeeBuddy:
 ##  - nick
@@ -26,3 +16,56 @@
 ## - allow anonymous users to create new objects that start with nick=
 ## - allow read/write for a user that is authenticated only to his/her own 
 ##   object and subentries
+
+##  - userid 
+##  - userPassword
+##  - setting (multiple values)
+##  depends: top, account
+
+#FIXME: Unique OID
+
+attributetype ( 1.3.6.1.4.1.7165.2.1.24 NAME 'bitlBeeAutoConnect'
+	DESC 'Autoconnect setting'
+	EQUALITY booleanMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 SINGLE-VALUE )
+
+#FIXME: Unique OID
+ 
+attributetype ( 1.3.6.1.4.1.7165.2.1.24 NAME 'bitlBeeAccountNo'
+	DESC 'Account number'
+	EQUALITY integerMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 SINGLE-VALUE )
+
+#FIXME: Unique OID
+
+objectclass ( 1.3.6.1.4.1.7165.2.2.12 NAME 'bitlBeeAccount' SUP account STRUCTURAL
+	DESC 'BitlBee User Account '
+	MUST ( userid, userPassword )
+	MAY ( ) )
+
+## bitlBeeAccount:
+##  - accountNo 1.3.6.1.4.1.1466.115.121.1.27
+##  - protocol (msn, oscar, jabber, yahoo, ...)
+##  - username
+##  - password
+##  - server name
+##  - autoconnect (true/false) 1.3.6.1.4.1.1466.115.121.1.7
+##  depends: top
+
+#FIXME: Unique OID
+objectclass ( 1.3.6.1.4.1.7165.2.2.12 NAME 'bitlBeeIMAccount' SUP account STRUCTURAL
+	DESC 'BitlBee IM Account '
+	MUST ( bitlBeeAccountNo, userid, userPassword )
+	MAY ( host, bitlBeeAutoconnect ) )
+
+#FIXME: Unique OID
+objectclass ( 1.3.6.1.4.1.7165.2.2.12 NAME 'bitlBeeSetting' SUP top STRUCTURAL
+	DESC 'BitlBee Configuration Setting'
+	MUST ( bitlBeeSettingName )
+	MAY ( bitlBeeSettingValue ) )
+
+#FIXME: Unique OID
+objectclass ( 1.3.6.1.4.1.7165.2.2.12 NAME 'bitlBeeBuddy' SUP top STRUCTURAL
+	DESC 'BitlBee Nick Mapping'
+	MUST ( bitlBeeBuddyHandle )
+	MAY ( ircNick ) )
