@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* SSL module - OpenTLS version                                          */
+/* SSL module - OpenSSL version                                         */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -40,11 +40,13 @@ static gboolean initialized = FALSE;
 
 struct scd
 {
-	SslInputFunction func;
+	ssl_input_function func;
 	gpointer data;
 	int fd;
 	gboolean established;
 	
+	int inpa;
+	int lasterr;		/* Necessary for SSL_get_error */
 	SSL *ssl;
 	SSL_CTX *ssl_ctx;
 };
@@ -53,7 +55,7 @@ static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
 
 
 
-void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
+void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	SSL_METHOD *meth;
@@ -92,19 +94,45 @@ void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
 	return( conn );
 }
 
+static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond );
+
 static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
 {
 	struct scd *conn = data;
 	
 	if( source == -1 )
-		goto ssl_connected_failure;
+		return ssl_handshake( data, -1, cond );
 	
+	/* Make it non-blocking at least during the handshake... */
+	sock_make_nonblocking( conn->fd );
 	SSL_set_fd( conn->ssl, conn->fd );
 	
-	if( SSL_connect( conn->ssl ) < 0 )
-		goto ssl_connected_failure;
+	return ssl_handshake( data, source, cond );
+}	
+
+static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond )
+{
+	struct scd *conn = data;
+	int st;
+	
+	if( conn->inpa != -1 )
+	{
+		gaim_input_remove( conn->inpa );
+		conn->inpa = -1;
+	}
+	
+	if( ( st = SSL_connect( conn->ssl ) ) < 0 )
+	{
+		conn->lasterr = SSL_get_error( conn->ssl, st );
+		if( conn->lasterr != SSL_ERROR_WANT_READ && conn->lasterr != SSL_ERROR_WANT_WRITE )
+			goto ssl_connected_failure;
+		
+		conn->inpa = gaim_input_add( conn->fd, ssl_getdirection( conn ), ssl_handshake, data );
+		return;
+	}
 	
 	conn->established = TRUE;
+	sock_make_blocking( conn->fd );		/* For now... */
 	conn->func( conn->data, conn, cond );
 	return;
 	
@@ -126,23 +154,56 @@ ssl_connected_failure:
 
 int ssl_read( void *conn, char *buf, int len )
 {
-	if( !((struct scd*)conn)->established )
-		return( 0 );
+	int st;
 	
-	return( SSL_read( ((struct scd*)conn)->ssl, buf, len ) );
+	if( !((struct scd*)conn)->established )
+	{
+		ssl_errno = SSL_NOHANDSHAKE;
+		return -1;
+	}
+	
+	st = SSL_read( ((struct scd*)conn)->ssl, buf, len );
+	
+	ssl_errno = SSL_OK;
+	if( st <= 0 )
+	{
+		((struct scd*)conn)->lasterr = SSL_get_error( ((struct scd*)conn)->ssl, st );
+		if( ((struct scd*)conn)->lasterr == SSL_ERROR_WANT_READ || ((struct scd*)conn)->lasterr == SSL_ERROR_WANT_WRITE )
+			ssl_errno = SSL_AGAIN;
+	}
+	
+	return st;
 }
 
 int ssl_write( void *conn, const char *buf, int len )
 {
-	if( !((struct scd*)conn)->established )
-		return( 0 );
+	int st;
 	
-	return( SSL_write( ((struct scd*)conn)->ssl, buf, len ) );
+	if( !((struct scd*)conn)->established )
+	{
+		ssl_errno = SSL_NOHANDSHAKE;
+		return -1;
+	}
+	
+	st = SSL_write( ((struct scd*)conn)->ssl, buf, len );
+	
+	ssl_errno = SSL_OK;
+	if( st <= 0 )
+	{
+		((struct scd*)conn)->lasterr = SSL_get_error( ((struct scd*)conn)->ssl, st );
+		if( ((struct scd*)conn)->lasterr == SSL_ERROR_WANT_READ || ((struct scd*)conn)->lasterr == SSL_ERROR_WANT_WRITE )
+			ssl_errno = SSL_AGAIN;
+	}
+	
+	return st;
 }
 
 void ssl_disconnect( void *conn_ )
 {
 	struct scd *conn = conn_;
+	
+	if( conn->inpa != -1 )
+		gaim_input_remove( conn->inpa );
 	
 	if( conn->established )
 		SSL_shutdown( conn->ssl );
@@ -157,4 +218,9 @@ void ssl_disconnect( void *conn_ )
 int ssl_getfd( void *conn )
 {
 	return( ((struct scd*)conn)->fd );
+}
+
+GaimInputCondition ssl_getdirection( void *conn )
+{
+	return( ((struct scd*)conn)->lasterr == SSL_ERROR_WANT_WRITE ? GAIM_INPUT_WRITE : GAIM_INPUT_READ );
 }

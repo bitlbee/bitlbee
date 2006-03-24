@@ -510,6 +510,11 @@ static void irc_cmd_pong( irc_t *irc, char **cmd )
 	irc->pinging = 0;
 }
 
+static void irc_cmd_version( irc_t *irc, char **cmd )
+{
+	irc_reply( irc, 351, "bitlbee-%s. %s :%s/%s ", BITLBEE_VERSION, irc->myhost, ARCH, CPU );
+}
+
 static void irc_cmd_completions( irc_t *irc, char **cmd )
 {
 	user_t *u = user_find( irc, irc->mynick );
@@ -567,6 +572,7 @@ static const command_t irc_commands[] = {
 	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "motd",        0, irc_cmd_motd,        IRC_CMD_LOGGED_IN },
 	{ "pong",        0, irc_cmd_pong,        IRC_CMD_LOGGED_IN },
+	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },

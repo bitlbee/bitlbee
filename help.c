@@ -115,22 +115,21 @@ char *help_get( help_t **help, char *string )
 		if( g_strcasecmp( h->string, string ) == 0 ) break;
 		h = h->next;
 	}
-	if( h )
+	if( h && h->length > 0 )
 	{
 		char *s = g_new( char, h->length + 1 );
 		
 		if( fstat( h->fd, stat ) != 0 )
 		{
 			g_free( h );
-			*help=NULL;
-			return( NULL );
+			*help = NULL;
+			return NULL;
 		}
 		mtime = stat->st_mtime;
 		
-		if( mtime > h->mtime ) {
-			return( NULL );
-			return( g_strdup( "Help file changed during this session. Please restart to get help back." ) );
-		}
+		if( mtime > h->mtime )
+			return NULL;
+		
 		s[h->length] = 0;
 		if( h->fd >= 0 )
 		{
@@ -141,8 +140,8 @@ char *help_get( help_t **help, char *string )
 		{
 			strncpy( s, h->offset.mem_offset, h->length );
 		}
-		return( s );
+		return s;
 	}
 	
-	return( NULL );
+	return NULL;
 }

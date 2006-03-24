@@ -196,10 +196,15 @@
 		<short-description>Block someone</short-description>
 		<syntax>block &lt;nick&gt;</syntax>
 		<syntax>block &lt;connection&gt; &lt;handle&gt;</syntax>
+		<syntax>block &lt;connection&gt;</syntax>
 
 		<description>
 			<para>
 				Puts the specified user on your ignore list. Either specify the user's nick when you have him/her in your contact list or a connection number and a user handle.
+			</para>
+			
+			<para>
+				When called with only a connection specification as an argument, the command displays the current block list for that connection.
 			</para>
 		</description>
 	</bitlbee-command>
@@ -212,6 +217,10 @@
 		<description>
 			<para>
 				Reverse of block. Unignores the specified user or user handle on specified connection.
+			</para>
+			
+			<para>
+				When called with only a connection specification as an argument, the command displays the current allow list for that connection.
 			</para>
 		</description>
 	</bitlbee-command>

@@ -483,7 +483,27 @@ static void cmd_block( irc_t *irc, char **cmd )
 	struct gaim_connection *gc;
 	account_t *a;
 	
-	if( !cmd[2] )
+	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->gc )
+	{
+		char *format;
+		GSList *l;
+		
+		if( strchr( irc->umode, 'b' ) != NULL )
+			format = "%s\t%s";
+		else
+			format = "%-32.32  %-16.16s";
+		
+		irc_usermsg( irc, format, "Handle", "Nickname" );
+		for( l = a->gc->deny; l; l = l->next )
+		{
+			user_t *u = user_findhandle( a->gc, l->data );
+			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+		}
+		irc_usermsg( irc, "End of list." );
+		
+		return;
+	}
+	else if( !cmd[2] )
 	{
 		user_t *u = user_find( irc, cmd[1] );
 		if( !u || !u->gc )
@@ -522,7 +542,27 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	struct gaim_connection *gc;
 	account_t *a;
 	
-	if( !cmd[2] )
+	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->gc )
+	{
+		char *format;
+		GSList *l;
+		
+		if( strchr( irc->umode, 'b' ) != NULL )
+			format = "%s\t%s";
+		else
+			format = "%-32.32  %-16.16s";
+		
+		irc_usermsg( irc, format, "Handle", "Nickname" );
+		for( l = a->gc->deny; l; l = l->next )
+		{
+			user_t *u = user_findhandle( a->gc, l->data );
+			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+		}
+		irc_usermsg( irc, "End of list." );
+		
+		return;
+	}
+	else if( !cmd[2] )
 	{
 		user_t *u = user_find( irc, cmd[1] );
 		if( !u || !u->gc )
@@ -634,7 +674,8 @@ static void cmd_blist( irc_t *irc, char **cmd )
 {
 	int online = 0, away = 0, offline = 0;
 	user_t *u;
-	char s[64];
+	char s[256];
+	char *format;
 	int n_online = 0, n_away = 0, n_offline = 0;
 	
 	if( cmd[1] && g_strcasecmp( cmd[1], "all" ) == 0 )
@@ -648,26 +689,41 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	else
 		online =  away = 1;
 	
-	irc_usermsg( irc, "%-16.16s  %-40.40s  %s", "Nick", "User/Host/Network", "Status" );
+	if( strchr( irc->umode, 'b' ) != NULL )
+		format = "%s\t%s\t%s";
+	else
+		format = "%-16.16s  %-40.40s  %s";
 	
-	if( online == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && u->online && !u->away )
+	irc_usermsg( irc, format, "Nick", "User/Host/Network", "Status" );
+	
+	for( u = irc->users; u; u = u->next ) if( u->gc && u->online && !u->away )
 	{
-		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
-		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Online" );
+		if( online == 1 )
+		{
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			irc_usermsg( irc, format, u->nick, s, "Online" );
+		}
+		
 		n_online ++;
 	}
 
-	if( away == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && u->online && u->away )
+	for( u = irc->users; u; u = u->next ) if( u->gc && u->online && u->away )
 	{
-		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
-		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, u->away );
+		if( away == 1 )
+		{
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			irc_usermsg( irc, format, u->nick, s, u->away );
+		}
 		n_away ++;
 	}
 	
-	if( offline == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && !u->online )
+	for( u = irc->users; u; u = u->next ) if( u->gc && !u->online )
 	{
-		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
-		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Offline" );
+		if( offline == 1 )
+		{
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			irc_usermsg( irc, format, u->nick, s, "Offline" );
+		}
 		n_offline ++;
 	}
 	
