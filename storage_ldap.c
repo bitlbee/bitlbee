@@ -45,7 +45,7 @@ static storage_status_t nick_connect(const char *nick, const char *password, LDA
 	*ld = ldap_init(BB_LDAP_HOST, LDAP_PORT);
 
 	if (!ld) {
-		/* FIXME: report error */
+		log_message( LOGLVL_WARNING, "Unable to connect to LDAP server at %s", BB_LDAP_HOST );
 		return STORAGE_OTHER_ERROR;
 	}
 
@@ -57,7 +57,7 @@ static storage_status_t nick_connect(const char *nick, const char *password, LDA
 	 case LDAP_SUCCESS: status = STORAGE_OK; break;
 	 case LDAP_INVALID_CREDENTIALS: status = STORAGE_INVALID_PASSWORD; break;
 	 default: 
-		/* FIXME: Log */
+		log_message( LOGLVL_WARNING, "Unable to authenticate %s: %s", mydn, ldap_err2string(ret) );
 		status = STORAGE_OTHER_ERROR;
 		break;
 	}
@@ -67,15 +67,11 @@ static storage_status_t nick_connect(const char *nick, const char *password, LDA
 	return status;
 }
 
-static void sldap_init (void)
-{
-}
-
 static storage_status_t sldap_load ( const char *my_nick, const char* password, irc_t *irc )
 {
-	LDAPMessage *res;
+	LDAPMessage *res, *msg;
 	LDAP *ld;
-	int ret;
+	int ret, i;
 	storage_status_t status;
 	char *mydn; 
 
@@ -85,32 +81,22 @@ static storage_status_t sldap_load ( const char *my_nick, const char* password, 
 
 	mydn = nick_dn(my_nick);
 
-	ret = ldap_search_s(ld, mydn, LDAP_SCOPE_ONELEVEL, "(objectClass=*)", NULL, 0, &res);
+	ret = ldap_search_s(ld, mydn, LDAP_SCOPE_BASE, "(objectClass=*)", NULL, 0, &res);
+
+	if (ret != LDAP_SUCCESS) {
+		log_message( LOGLVL_WARNING, "Unable to search for %s: %s", mydn, ldap_err2string(ret) );
+		ldap_unbind_s(ld);
+		return STORAGE_OTHER_ERROR;
+	}
 
 	g_free(mydn);
 
-	/* FIXME: Check ret */
+	for (msg = ldap_first_entry(ld, res); msg; msg = ldap_next_entry(ld, msg)) {
+	}
 
 	/* FIXME: Store in irc_t */
-	
-	return STORAGE_OK;
-}
 
-static storage_status_t sldap_save( irc_t *irc, int overwrite )
-{
-	LDAP *ld;
-	char *mydn;
-	storage_status_t status;
-
-	status = nick_connect(irc->nick, irc->password, &ld);
-	if (status != STORAGE_OK)
-		return status;
-
-	mydn = nick_dn(irc->nick);
-
-	/* FIXME */
-	
-	g_free(mydn);
+	ldap_unbind_s(ld);
 	
 	return STORAGE_OK;
 }
@@ -144,17 +130,46 @@ static storage_status_t sldap_remove( const char *nick, const char *password )
 	ret = ldap_delete(ld, mydn);
 
 	if (ret != LDAP_SUCCESS) {
-		/* FIXME: report */
+		log_message( LOGLVL_WARNING, "Error removing %s: %s", mydn, ldap_err2string(ret) );
+		ldap_unbind_s(ld);
 		return STORAGE_OTHER_ERROR;
 	}
+
+	ldap_unbind_s(ld);
 
 	g_free(mydn);
 	return STORAGE_OK;
 }
 
+static storage_status_t sldap_save( irc_t *irc, int overwrite )
+{
+	LDAP *ld;
+	char *mydn;
+	storage_status_t status;
+	LDAPMessage *msg;
+
+	status = nick_connect(irc->nick, irc->password, &ld);
+	if (status != STORAGE_OK)
+		return status;
+
+	mydn = nick_dn(irc->nick);
+
+	/* FIXME: Make this a bit more atomic? What if we crash after 
+	 * removing the old account but before adding the new one ? */
+	if (overwrite) 
+		sldap_remove(irc->nick, irc->password);
+
+	g_free(mydn);
+
+	ldap_unbind_s(ld);
+	
+	return STORAGE_OK;
+}
+
+
+
 storage_t storage_ldap = {
 	.name = "ldap",
-	.init = sldap_init,
 	.check_pass = sldap_check_pass,
 	.remove = sldap_remove,
 	.load = sldap_load,
