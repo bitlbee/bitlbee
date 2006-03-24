@@ -13,7 +13,7 @@ objects = account.o bitlbee.o conf.o crypting.o help.o ini.o ipc.o irc.o irc_com
 headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ini.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h url.h user.h protocols/http_client.h protocols/md5.h protocols/nogaim.h protocols/proxy.h protocols/sha.h protocols/ssl_client.h
 subdirs = protocols
 
-objects += $(LDB_OBJ)
+objects += $(LDAP_OBJ)
 
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)

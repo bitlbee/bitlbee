@@ -27,7 +27,7 @@ yahoo=1
 debug=0
 strip=1
 ipv6=1
-ldb=auto
+ldap=auto
 ssl=auto
 
 arch=`uname -s`
@@ -64,7 +64,7 @@ Option		Description				Default
 
 --ipv6=0/1	IPv6 socket support			$ipv6
 
---ldb=0/1/auto	LDB support				$ldb
+--ldap=0/1/auto	LDAP support				$ldap
 
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
 							$ssl
@@ -223,14 +223,14 @@ EOF
 	fi;
 }
 
-detect_ldb()
+detect_ldap()
 {
 	if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG ldb; then
 		cat<<EOF>>Makefile.settings
 EFLAGS+=`$PKG_CONFIG --libs ldb`
 CFLAGS+=`$PKG_CONFIG --cflags ldb`
 EOF
-		ldb=1
+		ldap=1
 		ret=1
 	else
 		ret=0
@@ -297,16 +297,16 @@ if [ "$msn" = 1 -o "$jabber" = 1 ]; then
 	echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 fi
 
-if [ "$ldb" = "auto" ]; then
-	detect_ldb
+if [ "$ldap" = "auto" ]; then
+	detect_ldap
 fi
 
-if [ "$ldb" = 0 ]; then
-	echo "LDB_OBJ=\# no ldb" >> Makefile.settings
-	echo "#undef LDB" >> config.h
-elif [ "$ldb" = 1 ]; then
-	echo "#define LDB 1" >> config.h
-	echo "LDB_OBJ=storage_ldb.o" >> Makefile.settings
+if [ "$ldap" = 0 ]; then
+	echo "LDAP_OBJ=\# no ldap" >> Makefile.settings
+	echo "#undef LDAP" >> config.h
+elif [ "$ldap" = 1 ]; then
+	echo "#define LDAP 1" >> config.h
+	echo "LDAP_OBJ=storage_ldap.o" >> Makefile.settings
 fi
 
 if [ "$strip" = 0 ]; then
@@ -460,8 +460,8 @@ else
 	echo '  Building without IM-protocol support. We wish you a lot of fun...';
 fi
 
-if [ "$ldb" = "0" ]; then
-	echo "  LDB storage backend disabled."
+if [ "$ldap" = "0" ]; then
+	echo "  LDAP storage backend disabled."
 else
-	echo "  LDB storage backend enabled."
+	echo "  LDAP storage backend enabled."
 fi
