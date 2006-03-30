@@ -303,10 +303,16 @@ else
 fi
 
 echo
-if [ -z "$BITLBEE_VERSION" -a -d .bzr -a -x "`which bzr`" ]; then
+if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; then
+	nick=`bzr nick`
+	if [ -n "$nick" -a "$nick" != "bitlbee" ]; then
+		nick="-$nick"
+	else
+		nick=""
+	fi
 	rev=`bzr revno`
 	echo 'Using bzr revision #'$rev' as version number'
-	BITLBEE_VERSION=\"bzr-$rev\"
+	BITLBEE_VERSION=\"bzr$nick-$rev\"
 fi
 
 if [ -n "$BITLBEE_VERSION" ]; then
