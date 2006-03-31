@@ -226,16 +226,11 @@ static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg 
 			yd->current_status = YAHOO_STATUS_INVISIBLE;
 		else if( g_strcasecmp( state, GAIM_AWAY_CUSTOM ) == 0 )
 		{
-			if (gc->is_idle)
-				yd->current_status = YAHOO_STATUS_IDLE;
-			else
-				yd->current_status = YAHOO_STATUS_AVAILABLE;
+			yd->current_status = YAHOO_STATUS_AVAILABLE;
 			
 			gc->away = NULL;
 		}
 	}
-	else if( gc->is_idle )
-		yd->current_status = YAHOO_STATUS_IDLE;
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
 	

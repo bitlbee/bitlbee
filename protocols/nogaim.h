@@ -68,14 +68,17 @@
 #define GAIM_INFO	3
 
 /* ok. now the fun begins. first we create a connection structure */
-struct gaim_connection {
-	/* we need to do either oscar or TOC */
-	/* we make this as an int in case if we want to add more protocols later */
+struct gaim_connection
+{
 	struct prpl *prpl;
 	guint32 flags;
 	
+	/* each connection then can have its own protocol-specific data */
+	void *proto_data;
+	
 	/* all connections need an input watcher */
 	int inpa;
+	guint keepalive;
 	
 	/* buddy list stuff. there is still a global groups for the buddy list, but
 	 * we need to maintain our own set of buddies, and our own permit/deny lists */
@@ -83,33 +86,19 @@ struct gaim_connection {
 	GSList *deny;
 	int permdeny;
 	
-	/* all connections need a list of chats, even if they don't have chat */
-	GSList *buddy_chats;
-	
-	/* each connection then can have its own protocol-specific data */
-	void *proto_data;
-	
 	struct aim_user *user;
 	
 	char username[64];
 	char displayname[128];
 	char password[32];
-	guint keepalive;
-	/* stuff needed for per-connection idle times */
-	guint idle_timer;
-	time_t login_time;
-	time_t lastsent;
-	int is_idle;
 	
 	char *away;
-	int is_auto_away;
 	
 	int evil;
 	gboolean wants_to_die; /* defaults to FALSE */
 	
 	/* BitlBee */
 	irc_t *irc;
-	int lstitems;  /* added for msnP8 */
 	
 	struct conversation *conversations;
 };
@@ -163,61 +152,41 @@ struct prpl {
 	int options;
 	const char *name;
 
-	/* for ICQ and Yahoo, who have off/on per-conversation options */
-	/* char *checkbox; this should be per-connection */
-
-	GList *(* away_states)(struct gaim_connection *gc);
-	GList *(* actions)();
-	void   (* do_action)(struct gaim_connection *, char *);
-	/* user_opts returns a GList* of g_malloc'd struct proto_user_opts */
-	GList *(* user_opts)();
-	GList *(* chat_info)(struct gaim_connection *);
-
-	/* all the server-related functions */
-
-	/* a lot of these (like get_dir) are protocol-dependent and should be removed. ones like
-	 * set_dir (which is also protocol-dependent) can stay though because there's a dialog
-	 * (i.e. the prpl says you can set your dir info, the ui shows a dialog and needs to call
-	 * set_dir in order to set it) */
-
 	void (* login)		(struct aim_user *);
+	void (* keepalive)	(struct gaim_connection *);
 	void (* close)		(struct gaim_connection *);
+	
 	int  (* send_im)	(struct gaim_connection *, char *who, char *message, int len, int away);
-	int  (* send_typing)	(struct gaim_connection *, char *who, int typing);
-	void (* set_info)	(struct gaim_connection *, char *info);
-	void (* get_info)	(struct gaim_connection *, char *who);
 	void (* set_away)	(struct gaim_connection *, char *state, char *message);
 	void (* get_away)       (struct gaim_connection *, char *who);
-	void (* set_idle)	(struct gaim_connection *, int idletime);
+	int  (* send_typing)	(struct gaim_connection *, char *who, int typing);
+	
 	void (* add_buddy)	(struct gaim_connection *, char *name);
+	void (* group_buddy)	(struct gaim_connection *, char *who, char *old_group, char *new_group);
 	void (* remove_buddy)	(struct gaim_connection *, char *name, char *group);
 	void (* add_permit)	(struct gaim_connection *, char *name);
 	void (* add_deny)	(struct gaim_connection *, char *name);
 	void (* rem_permit)	(struct gaim_connection *, char *name);
 	void (* rem_deny)	(struct gaim_connection *, char *name);
 	void (* set_permit_deny)(struct gaim_connection *);
+	
+	void (* set_info)	(struct gaim_connection *, char *info);
+	void (* get_info)	(struct gaim_connection *, char *who);
+	void (* alias_buddy)	(struct gaim_connection *, char *who);	/* save/store buddy's alias on server list/roster */
+	
+	/* Group chat stuff. */
 	void (* join_chat)	(struct gaim_connection *, GList *data);
 	void (* chat_invite)	(struct gaim_connection *, int id, char *who, char *message);
 	void (* chat_leave)	(struct gaim_connection *, int id);
-	void (* chat_whisper)	(struct gaim_connection *, int id, char *who, char *message);
 	int  (* chat_send)	(struct gaim_connection *, int id, char *message);
 	int  (* chat_open)	(struct gaim_connection *, char *who);
-	void (* keepalive)	(struct gaim_connection *);
-
-	/* get "chat buddy" info and away message */
-	void (* get_cb_info)	(struct gaim_connection *, int, char *who);
-	void (* get_cb_away)	(struct gaim_connection *, int, char *who);
-
-	/* save/store buddy's alias on server list/roster */
-	void (* alias_buddy)	(struct gaim_connection *, char *who);
-
-	/* change a buddy's group on a server list/roster */
-	void (* group_buddy)	(struct gaim_connection *, char *who, char *old_group, char *new_group);
-
-	void (* buddy_free)	(struct buddy *);
-
+	
+	/* DIE! */
 	char *(* get_status_string) (struct gaim_connection *gc, int stat);
-
+	
+	GList *(* away_states)(struct gaim_connection *gc);
+	
+	/* Mainly for AOL, since they think "Bung hole" == "Bu ngho le". *sigh* */
 	int (* cmp_buddynames) (const char *who1, const char *who2);
 };
 
@@ -305,6 +274,5 @@ G_MODULE_EXPORT void build_block_list();
 G_MODULE_EXPORT void build_allow_list();
 
 struct conversation *conv_findchannel( char *channel );
-
 
 #endif
