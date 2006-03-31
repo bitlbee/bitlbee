@@ -752,15 +752,9 @@ static void cmd_nick( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		char utf8[1024];
-		
 		irc_usermsg( irc, "Setting your name to `%s'", cmd[2] );
 		
-		if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
-		    do_iconv( set_getstr( irc, "charset" ), "UTF-8", cmd[2], utf8, 0, 1024 ) != -1 )
-			a->gc->prpl->set_info( a->gc, utf8 );
-		else
-			a->gc->prpl->set_info( a->gc, cmd[2] );
+		a->gc->prpl->set_info( a->gc, cmd[2] );
 	}
 }
 

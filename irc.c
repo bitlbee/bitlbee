@@ -354,6 +354,8 @@ void irc_process( irc_t *irc )
 		
 		for( i = 0; *lines[i] != '\0'; i ++ )
 		{
+			char conv[IRC_MAX_LINE+1];
+			
 			/* [WvG] Because irc_tokenize splits at every newline, the lines[] list
 			    should end with an empty string. This is why this actually works.
 			    Took me a while to figure out, Maurits. :-P */
@@ -366,13 +368,11 @@ void irc_process( irc_t *irc )
 				break;
 			}
 			
-			if( ( cs = set_getstr( irc, "charset" ) ) )
+			if( ( cs = set_getstr( irc, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
 			{
-				char conv[IRC_MAX_LINE+1];
-				
 				conv[IRC_MAX_LINE] = 0;
 				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) != -1 )
-					strcpy( lines[i], conv );
+					lines[i] = conv;
 			}
 			
 			if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
@@ -587,7 +587,7 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	g_vsnprintf( line, IRC_MAX_LINE - 2, format, params );
 	
 	strip_newlines( line );
-	if( ( cs = set_getstr( irc, "charset" ) ) )
+	if( ( cs = set_getstr( irc, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
 	{
 		char conv[IRC_MAX_LINE+1];
 		
