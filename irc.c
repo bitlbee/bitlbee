@@ -562,16 +562,25 @@ void irc_write( irc_t *irc, char *format, ... )
 void irc_vawrite( irc_t *irc, char *format, va_list params )
 {
 	int size;
-	char line[IRC_MAX_LINE];
-	
+	char line[IRC_MAX_LINE+1], *cs;
+		
 	if( irc->quit )
 		return;
-
-	g_vsnprintf( line, IRC_MAX_LINE - 3, format, params );
-
+	
+	line[IRC_MAX_LINE] = 0;
+	g_vsnprintf( line, IRC_MAX_LINE - 2, format, params );
+	
 	strip_newlines( line );
+	if( ( cs = set_getstr( irc, "charset" ) ) )
+	{
+		char conv[IRC_MAX_LINE+1];
+		
+		conv[IRC_MAX_LINE] = 0;
+		if( do_iconv( "UTF-8", cs, line, conv, 0, IRC_MAX_LINE - 2 ) != -1 )
+			strcpy( line, conv );
+	}
 	strcat( line, "\r\n" );
-
+	
 	if( irc->sendbuffer != NULL ) {
 		size = strlen( irc->sendbuffer ) + strlen( line );
 		irc->sendbuffer = g_renew ( char, irc->sendbuffer, size + 1 );
