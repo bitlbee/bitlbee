@@ -36,7 +36,6 @@
 #define BITLBEE_CORE
 #include "nogaim.h"
 #include <ctype.h>
-#include <iconv.h>
 
 static char *proto_away_alias[8][5] =
 {
@@ -305,38 +304,29 @@ void hide_login_progress_error( struct gaim_connection *gc, char *msg )
 void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 {
 	va_list params;
-	char text[1024], buf[1024], *acc_id;
-	char *msg;
+	char *text;
 	account_t *a;
 	
 	va_start( params, format );
-	g_vsnprintf( text, sizeof( text ), format, params );
+	text = g_strdup_vprintf( format, params );
 	va_end( params );
 
-	if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( "UTF8", set_getstr( gc->irc, "charset" ), text, buf, 0, 1024 ) != -1 )
-		msg = buf;
-	else
-		msg = text;
-	
 	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
 	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
-		strip_html( msg );
+		strip_html( text );
 	
 	/* Try to find a different connection on the same protocol. */
 	for( a = gc->irc->accounts; a; a = a->next )
 		if( a->prpl == gc->prpl && a->gc != gc )
 			break;
 	
-	/* If we found one, add the screenname to the acc_id. */
+	/* If we found one, include the screenname in the message. */
 	if( a )
-		acc_id = g_strdup_printf( "%s(%s)", gc->prpl->name, gc->username );
+		irc_usermsg( gc->irc, "%s(%s) - %s", gc->prpl->name, gc->username, text );
 	else
-		acc_id = g_strdup( gc->prpl->name );
+		irc_usermsg( gc->irc, "%s - %s", gc->prpl->name, text );
 	
-	irc_usermsg( gc->irc, "%s - %s", acc_id, msg );
-	
-	g_free( acc_id );
+	g_free( text );
 }
 
 static gboolean send_keepalive( gpointer d )
@@ -558,22 +548,14 @@ void signoff_blocked( struct gaim_connection *gc )
 void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname )
 {
 	user_t *u = user_findhandle( gc, handle );
-	char *name, buf[1024];
 	
 	if( !u ) return;
 	
-	/* Convert all UTF-8 */
-	if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( "UTF-8", set_getstr( gc->irc, "charset" ), realname, buf, 0, sizeof( buf ) ) != -1 )
-		name = buf;
-	else
-		name = realname;
-	
-	if( g_strcasecmp( u->realname, name ) != 0 )
+	if( g_strcasecmp( u->realname, realname ) != 0 )
 	{
 		if( u->realname != u->nick ) g_free( u->realname );
 		
-		u->realname = g_strdup( name );
+		u->realname = g_strdup( realname );
 		
 		if( ( gc->flags & OPT_LOGGED_IN ) && set_getint( gc->irc, "display_namechanges" ) )
 			serv_got_crap( gc, "User `%s' changed name to `%s'", u->nick, u->realname );
@@ -679,7 +661,6 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 {
 	irc_t *irc = gc->irc;
 	user_t *u;
-	char buf[8192];
 	
 	u = user_findhandle( gc, handle );
 	
@@ -721,10 +702,6 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
 		strip_html( msg );
 
-	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( "UTF-8", set_getstr( irc, "charset" ), msg, buf, 0, 8192 ) != -1 )
-		msg = buf;
-	
 	while( strlen( msg ) > 425 )
 	{
 		char tmp, *nl;
@@ -821,7 +798,6 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 {
 	struct conversation *c;
 	user_t *u;
-	char buf[8192];
 	
 	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
 	if( g_strcasecmp( who, gc->user->username ) == 0 )
@@ -833,10 +809,6 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
 	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
 		strip_html( msg );
-	
-	if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( "UTF-8", set_getstr( gc->irc, "charset" ), msg, buf, 0, 8192 ) != -1 )
-		msg = buf;
 	
 	if( c && u )
 		irc_privmsg( gc->irc, u, "PRIVMSG", c->channel, "", msg );
@@ -1052,87 +1024,34 @@ char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
 
 int serv_send_im( irc_t *irc, user_t *u, char *msg, int flags )
 {
-	char buf[8192];
+	char *buf = NULL;
+	int st;
 	
-	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( set_getstr( irc, "charset" ), "UTF-8", msg, buf, 0, 8192 ) != -1 )
-		msg = buf;
-
 	if( ( u->gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
 	{
-		char *html;
-		
-		html = escape_html( msg );
-		strncpy( buf, html, 8192 );
-		g_free( html );
-		
+		buf = escape_html( msg );
 		msg = buf;
 	}
 	
-	return( ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), flags ) );
+	st = ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), flags );
+	g_free( buf );
+	
+	return st;
 }
 
 int serv_send_chat( irc_t *irc, struct gaim_connection *gc, int id, char *msg )
 {
-	char buf[8192];
+	char *buf = NULL;
+	int st;
 	
-	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( set_getstr( irc, "charset" ), "UTF-8", msg, buf, 0, 8192 ) != -1 )
+	if( ( gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
+	{
+		buf = escape_html( msg );
 		msg = buf;
-
-	if( gc->flags & OPT_CONN_HTML) {
-		char * html = escape_html(msg);
-		strncpy(buf, html, 8192);
-		g_free(html);
 	}
 	
-	return( gc->prpl->chat_send( gc, id, msg ) );
-}
-
-/* Convert from one charset to another.
-   
-   from_cs, to_cs: Source and destination charsets
-   src, dst: Source and destination strings
-   size: Size if src. 0 == use strlen(). strlen() is not reliable for UNICODE/UTF16 strings though.
-   maxbuf: Maximum number of bytes to write to dst
-   
-   Returns the number of bytes written to maxbuf or -1 on an error.
-*/
-signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf )
-{
-	iconv_t cd;
-	size_t res;
-	size_t inbytesleft, outbytesleft;
-	char *inbuf = src;
-	char *outbuf = dst;
+	st = gc->prpl->chat_send( gc, id, msg );
+	g_free( buf );
 	
-	cd = iconv_open( to_cs, from_cs );
-	if( cd == (iconv_t) -1 )
-		return( -1 );
-	
-	inbytesleft = size ? size : strlen( src );
-	outbytesleft = maxbuf - 1;
-	res = iconv( cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft );
-	*outbuf = '\0';
-	iconv_close( cd );
-	
-	if( res == (size_t) -1 )
-		return( -1 );
-	else
-		return( outbuf - dst );
-}
-
-char *set_eval_charset( irc_t *irc, set_t *set, char *value )
-{
-	iconv_t cd;
-
-	if ( g_strncasecmp( value, "none", 4 ) == 0 )
-		return( value );
-
-	cd = iconv_open( "UTF-8", value );
-	if( cd == (iconv_t) -1 )
-		return( NULL );
-
-	iconv_close( cd );
-	return( value );
+	return st;
 }

@@ -206,9 +206,6 @@ G_MODULE_EXPORT void register_protocol(struct prpl *);
 int serv_send_im(irc_t *irc, user_t *u, char *msg, int flags);
 int serv_send_chat(irc_t *irc, struct gaim_connection *gc, int id, char *msg );
 
-G_MODULE_EXPORT signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf );
-char *set_eval_charset( irc_t *irc, set_t *set, char *value );
-
 void nogaim_init();
 int proto_away( struct gaim_connection *gc, char *away );
 char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
@@ -256,18 +253,6 @@ G_MODULE_EXPORT void serv_got_chat_invite( struct gaim_connection *gc, char *han
 G_MODULE_EXPORT struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, char *handle );
 G_MODULE_EXPORT void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whisper, char *msg, time_t mtime );
 G_MODULE_EXPORT void serv_got_chat_left( struct gaim_connection *gc, int id );
-
-/* util.c */
-G_MODULE_EXPORT void strip_linefeed( gchar *text );
-G_MODULE_EXPORT char *add_cr( char *text );
-G_MODULE_EXPORT char *tobase64( const char *text );
-G_MODULE_EXPORT char *normalize( const char *s );
-G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min, int sec );
-G_MODULE_EXPORT void strip_html( char *msg );
-G_MODULE_EXPORT char *escape_html( const char *html );
-G_MODULE_EXPORT void info_string_append(GString *str, char *newline, char *name, char *value);
-G_MODULE_EXPORT char *ipv6_wrap( char *src );
-G_MODULE_EXPORT char *ipv6_unwrap( char *src );
 
 /* prefs.c */
 G_MODULE_EXPORT void build_block_list();

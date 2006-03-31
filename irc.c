@@ -345,7 +345,7 @@ void irc_setpass (irc_t *irc, const char *pass)
 
 void irc_process( irc_t *irc )
 {
-	char **lines, *temp, **cmd;
+	char **lines, *temp, **cmd, *cs;
 	int i;
 
 	if( irc->readbuffer != NULL )
@@ -354,6 +354,9 @@ void irc_process( irc_t *irc )
 		
 		for( i = 0; *lines[i] != '\0'; i ++ )
 		{
+			/* [WvG] Because irc_tokenize splits at every newline, the lines[] list
+			    should end with an empty string. This is why this actually works.
+			    Took me a while to figure out, Maurits. :-P */
 			if( lines[i+1] == NULL )
 			{
 				temp = g_strdup( lines[i] );
@@ -361,7 +364,16 @@ void irc_process( irc_t *irc )
 				irc->readbuffer = temp;
 				i ++;
 				break;
-			}			
+			}
+			
+			if( ( cs = set_getstr( irc, "charset" ) ) )
+			{
+				char conv[IRC_MAX_LINE+1];
+				
+				conv[IRC_MAX_LINE] = 0;
+				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) != -1 )
+					strcpy( lines[i], conv );
+			}
 			
 			if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
 				continue;
@@ -387,6 +399,8 @@ void irc_process( irc_t *irc )
 	}
 }
 
+/* Splits a long string into separate lines. The array is NULL-terminated and, unless the string
+   contains an incomplete line at the end, ends with an empty string. */
 char **irc_tokenize( char *buffer )
 {
 	int i, j;
@@ -427,6 +441,7 @@ char **irc_tokenize( char *buffer )
 	return( lines );
 }
 
+/* Split an IRC-style line into little parts/arguments. */
 char **irc_parse_line( char *line )
 {
 	int i, j;
@@ -486,6 +501,7 @@ char **irc_parse_line( char *line )
 	return cmd;
 }
 
+/* Converts such an array back into a command string. Mainly used for the IPC code right now. */
 char *irc_build_line( char **cmd )
 {
 	int i, len;
