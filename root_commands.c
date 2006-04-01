@@ -244,6 +244,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		int i = 0;
 		
+		if( strchr( irc->umode, 'b' ) )
+			irc_usermsg( irc, "Account list:" );
+		
 		for( a = irc->accounts; a; a = a->next )
 		{
 			char *con;
