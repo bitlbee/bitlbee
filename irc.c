@@ -235,7 +235,7 @@ void irc_free(irc_t * irc)
 		if (account->gc)
 			account_offline(account->gc);
 		else if (account->reconnect)
-			g_source_remove(account->reconnect);
+			cancel_auto_reconnect(account);
 	}
 	
 	g_free(irc->sendbuffer);
