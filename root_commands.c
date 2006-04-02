@@ -494,7 +494,7 @@ static void cmd_block( irc_t *irc, char **cmd )
 		if( strchr( irc->umode, 'b' ) != NULL )
 			format = "%s\t%s";
 		else
-			format = "%-32.32  %-16.16s";
+			format = "%-32.32s  %-16.16s";
 		
 		irc_usermsg( irc, format, "Handle", "Nickname" );
 		for( l = a->gc->deny; l; l = l->next )
@@ -553,7 +553,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 		if( strchr( irc->umode, 'b' ) != NULL )
 			format = "%s\t%s";
 		else
-			format = "%-32.32  %-16.16s";
+			format = "%-32.32s  %-16.16s";
 		
 		irc_usermsg( irc, format, "Handle", "Nickname" );
 		for( l = a->gc->deny; l; l = l->next )
