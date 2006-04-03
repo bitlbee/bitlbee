@@ -732,7 +732,7 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
 	guint32 data;
 	int tlvlen;
 
-	data = AIM_ICQ_STATE_WEBAWARE | AIM_ICQ_STATE_HIDEIP | status; /* yay for error checking ;^) */
+	data = AIM_ICQ_STATE_HIDEIP | status; /* yay for error checking ;^) */
 
 	tlvlen = aim_addtlvtochain32(&tl, 0x0006, data);
 

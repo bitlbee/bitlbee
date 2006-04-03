@@ -565,7 +565,7 @@ void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname
 
 /* prpl.c */
 
-void show_got_added( struct gaim_connection *gc, char *id, char *handle, const char *realname, const char *msg )
+void show_got_added( struct gaim_connection *gc, char *handle, const char *realname )
 {
 	return;
 }

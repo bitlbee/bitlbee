@@ -1044,7 +1044,7 @@ static void jabber_accept_add(gpointer w, struct jabber_add_permit *jap)
 	 * ask if we want him or her added.
 	 */
 	if(find_buddy(GJ_GC(jap->gjc), jap->user) == NULL) {
-		show_got_added(GJ_GC(jap->gjc), NULL, jap->user, NULL, NULL);
+		show_got_added(GJ_GC(jap->gjc), jap->user, NULL);
 	}
 	g_free(jap->user);
 	g_free(jap);

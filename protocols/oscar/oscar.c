@@ -1118,7 +1118,8 @@ static void gaim_icq_authgrant(gpointer w, struct icq_auth *data) {
 	message = 0;
 	aim_ssi_auth_reply(od->sess, od->conn, uin, 1, "");
 	// aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHGRANTED, &message);
-	show_got_added(data->gc, NULL, uin, NULL, NULL);
+	if(find_buddy(data->gc, uin) == NULL)
+		show_got_added(data->gc, uin, NULL);
 	
 	g_free(uin);
 	g_free(data);

@@ -243,7 +243,7 @@ G_MODULE_EXPORT void add_chat_buddy( struct conversation *b, char *handle );
 G_MODULE_EXPORT void remove_chat_buddy( struct conversation *b, char *handle, char *reason );
 
 /* prpl.c */
-G_MODULE_EXPORT void show_got_added( struct gaim_connection *gc, char *id, char *handle, const char *realname, const char *msg );
+G_MODULE_EXPORT void show_got_added( struct gaim_connection *gc, char *handle, const char *realname );
 
 /* server.c */                    
 G_MODULE_EXPORT void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps );
