@@ -198,7 +198,7 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 	}
 }
 
-static gboolean irc_free_userhash( gpointer key, gpointer value, gpointer data )
+static gboolean irc_free_hashkey( gpointer key, gpointer value, gpointer data )
 {
 	g_free( key );
 	
@@ -284,10 +284,10 @@ void irc_free(irc_t * irc)
 		}
 	}
 	
-	g_hash_table_foreach_remove(irc->userhash, irc_free_userhash, NULL);
+	g_hash_table_foreach_remove(irc->userhash, irc_free_hashkey, NULL);
 	g_hash_table_destroy(irc->userhash);
 	
-	g_hash_table_foreach_remove(irc->watches, irc_free_userhash, NULL);
+	g_hash_table_foreach_remove(irc->watches, irc_free_hashkey, NULL);
 	g_hash_table_destroy(irc->watches);
 	
 	if (irc->nicks != NULL) {
