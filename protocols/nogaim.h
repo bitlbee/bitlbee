@@ -14,7 +14,7 @@
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *                          (and possibly other members of the Gaim team)
- * Copyright 2002-2004 Wilmer van der Gaast <lintux@lintux.cx>
+ * Copyright 2002-2004 Wilmer van der Gaast <wilmer@gaast.net>
  */
 
 /*
