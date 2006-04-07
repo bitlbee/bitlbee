@@ -565,9 +565,40 @@ void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname
 
 /* prpl.c */
 
+struct show_got_added_data
+{
+	struct gaim_connection *gc;
+	char *handle;
+};
+
+void show_got_added_no( gpointer w, struct show_got_added_data *data )
+{
+	g_free( data->handle );
+	g_free( data );
+}
+
+void show_got_added_yes( gpointer w, struct show_got_added_data *data )
+{
+	data->gc->prpl->add_buddy( data->gc, data->handle );
+	add_buddy( data->gc, NULL, data->handle, data->handle );
+	
+	return show_got_added_no( w, data );
+}
+
 void show_got_added( struct gaim_connection *gc, char *handle, const char *realname )
 {
-	return;
+	struct show_got_added_data *data = g_new0( struct show_got_added_data, 1 );
+	char *s;
+	
+	/* TODO: Make a setting for this! */
+	if( user_findhandle( gc, handle ) != NULL )
+		return;
+	
+	s = g_strdup_printf( "The user %s is not in your buddy list yet. Do you want to add him/her now?", handle );
+	
+	data->gc = gc;
+	data->handle = g_strdup( handle );
+	query_add( gc->irc, gc, s, show_got_added_yes, show_got_added_no, data );
 }
 
 
