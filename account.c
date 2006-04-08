@@ -52,7 +52,33 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 account_t *account_get( irc_t *irc, char *id )
 {
 	account_t *a, *ret = NULL;
+	char *handle, *s;
 	int nr;
+	
+	/* This checks if the id string ends with (...) */
+	if( ( handle = strchr( id, '(' ) ) && ( s = strchr( handle, ')' ) ) && s[1] == 0 )
+	{
+		struct prpl *proto;
+		
+		*s = *handle = 0;
+		handle ++;
+		
+		if( ( proto = find_protocol( id ) ) )
+		{
+			for( a = irc->accounts; a; a = a->next )
+				if( a->prpl == proto &&
+				    a->prpl->cmp_buddynames( handle, a->user ) == 0 )
+					ret = a;
+		}
+		
+		/* Restore the string. */
+		handle --;
+		*handle = '(';
+		*s = ')';
+		
+		if( ret )
+			return ret;
+	}
 	
 	if( sscanf( id, "%d", &nr ) == 1 && nr < 1000 )
 	{
