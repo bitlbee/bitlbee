@@ -14,7 +14,7 @@
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *                          (and possibly other members of the Gaim team)
- * Copyright 2002-2004 Wilmer van der Gaast <lintux@lintux.cx>
+ * Copyright 2002-2004 Wilmer van der Gaast <wilmer@gaast.net>
  */
 
 /*
@@ -51,21 +51,11 @@
 #define SELF_ALIAS_LEN 400
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
-#define PERMIT_ALL      1
-#define PERMIT_NONE     2
-#define PERMIT_SOME     3
-#define DENY_SOME       4
-
 #define WEBSITE "http://www.bitlee.org/"
 #define IM_FLAG_AWAY 0x0020
 #define OPT_CONN_HTML 0x00000001
 #define OPT_LOGGED_IN 0x00010000
 #define GAIM_AWAY_CUSTOM "Custom"
-
-#define GAIM_LOGO	0
-#define GAIM_ERROR	1
-#define GAIM_WARNING	2
-#define GAIM_INFO	3
 
 /* ok. now the fun begins. first we create a connection structure */
 struct gaim_connection
