@@ -2057,7 +2057,6 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 						char *name;
 						name = g_strdup(normalize(curitem->name));
 						gc->permit = g_slist_append(gc->permit, name);
-						build_allow_list();
 						tmp++;
 					}
 				}
@@ -2071,7 +2070,6 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 						char *name;
 						name = g_strdup(normalize(curitem->name));
 						gc->deny = g_slist_append(gc->deny, name);
-						build_block_list();
 						tmp++;
 					}
 				}

@@ -961,20 +961,6 @@ static int remove_chat_buddy_silent( struct conversation *b, char *handle )
 }
 
 
-/* prefs.c */
-
-/* Necessary? */
-void build_block_list()
-{
-	return;
-}
-
-void build_allow_list()
-{
-	return;
-}
-
-
 /* Misc. BitlBee stuff which shouldn't really be here */
 
 struct conversation *conv_findchannel( char *channel )

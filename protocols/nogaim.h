@@ -219,11 +219,8 @@ G_MODULE_EXPORT void do_error_dialog( struct gaim_connection *gc, char *msg, cha
 G_MODULE_EXPORT void do_ask_dialog( struct gaim_connection *gc, char *msg, void *data, void *doit, void *dont );
 
 /* list.c */
-G_MODULE_EXPORT int bud_list_cache_exists( struct gaim_connection *gc );
-G_MODULE_EXPORT void do_import( struct gaim_connection *gc, void *null );
 G_MODULE_EXPORT void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *realname );
 G_MODULE_EXPORT struct buddy *find_buddy( struct gaim_connection *gc, char *handle );
-G_MODULE_EXPORT void do_export( struct gaim_connection *gc );
 G_MODULE_EXPORT void signoff_blocked( struct gaim_connection *gc );
 
 G_MODULE_EXPORT void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname );
@@ -243,10 +240,6 @@ G_MODULE_EXPORT void serv_got_chat_invite( struct gaim_connection *gc, char *han
 G_MODULE_EXPORT struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, char *handle );
 G_MODULE_EXPORT void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whisper, char *msg, time_t mtime );
 G_MODULE_EXPORT void serv_got_chat_left( struct gaim_connection *gc, int id );
-
-/* prefs.c */
-G_MODULE_EXPORT void build_block_list();
-G_MODULE_EXPORT void build_allow_list();
 
 struct conversation *conv_findchannel( char *channel );
 
