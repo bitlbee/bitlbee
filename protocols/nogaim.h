@@ -211,7 +211,6 @@ G_MODULE_EXPORT void hide_login_progress( struct gaim_connection *gc, char *msg 
 G_MODULE_EXPORT void hide_login_progress_error( struct gaim_connection *gc, char *msg );
 G_MODULE_EXPORT void serv_got_crap( struct gaim_connection *gc, char *format, ... );
 G_MODULE_EXPORT void account_online( struct gaim_connection *gc );
-G_MODULE_EXPORT void account_offline( struct gaim_connection *gc );
 G_MODULE_EXPORT void signoff( struct gaim_connection *gc );
 
 /* dialogs.c */

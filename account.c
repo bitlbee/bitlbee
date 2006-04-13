@@ -140,7 +140,8 @@ void account_on( irc_t *irc, account_t *a )
 
 void account_off( irc_t *irc, account_t *a )
 {
-	account_offline( a->gc );
+	a->gc->wants_to_die = TRUE;
+	signoff( a->gc );
 	a->gc = NULL;
 	if( a->reconnect )
 	{

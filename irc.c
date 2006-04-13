@@ -232,10 +232,12 @@ void irc_free(irc_t * irc)
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
 	for (account = irc->accounts; account; account = account->next) {
-		if (account->gc)
-			account_offline(account->gc);
-		else if (account->reconnect)
+		if (account->gc) {
+			account->gc->wants_to_die = TRUE;
+			signoff(account->gc);
+		} else if (account->reconnect) {
 			cancel_auto_reconnect(account);
+		}
 	}
 	
 	g_free(irc->sendbuffer);

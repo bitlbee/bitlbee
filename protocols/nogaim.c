@@ -388,12 +388,6 @@ void cancel_auto_reconnect( account_t *a )
 	a->reconnect = 0;
 }
 
-void account_offline( struct gaim_connection *gc )
-{
-	gc->wants_to_die = TRUE;
-	signoff( gc );
-}
-
 void signoff( struct gaim_connection *gc )
 {
 	irc_t *irc = gc->irc;
