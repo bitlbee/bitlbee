@@ -359,17 +359,6 @@ void account_online( struct gaim_connection *gc )
 	/* Also necessary when we're not away, at least for some of the
 	   protocols. */
 	proto_away( gc, u->away );
-	
- 	if( strcmp( gc->prpl->name, "ICQ" ) == 0 )
-	{
-		for( u = gc->irc->users; u; u = u->next )
-			if( u->gc == gc )
-				break;
-		
-		if( u == NULL )
-			serv_got_crap( gc, "\x02""***\x02"" BitlBee now supports ICQ server-side contact lists. "
-			                      "See \x02""help import_buddies\x02"" for more information." );
-	}
 }
 
 gboolean auto_reconnect( gpointer data )
