@@ -2275,7 +2275,7 @@ static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)
                 struct tm tm;
                 tm.tm_mday = (int)info->birthday;
                 tm.tm_mon = (int)info->birthmonth-1;
-                tm.tm_year = (int)info->birthyear-1900;
+                tm.tm_year = (int)info->birthyear%100;
                 strftime(date, sizeof(date), "%Y-%m-%d", &tm);
                 info_string_append(str, "\n", _("Birthday"), date);
         }
