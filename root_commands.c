@@ -57,6 +57,13 @@ void root_command_string( irc_t *irc, user_t *u, char *command, int flags )
 				s --;
 			}
 		}
+		else if( *s == '\\' && ( ( !q && s[1] ) || ( q && q == s[1] ) ) )
+		{
+			char *cpy;
+			
+			for( cpy = s; *cpy; cpy ++ )
+				cpy[0] = cpy[1];
+		}
 		else if( *s == q )
 		{
 			q = *s = 0;
