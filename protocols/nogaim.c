@@ -359,17 +359,6 @@ void account_online( struct gaim_connection *gc )
 	/* Also necessary when we're not away, at least for some of the
 	   protocols. */
 	proto_away( gc, u->away );
-	
- 	if( strcmp( gc->prpl->name, "ICQ" ) == 0 )
-	{
-		for( u = gc->irc->users; u; u = u->next )
-			if( u->gc == gc )
-				break;
-		
-		if( u == NULL )
-			serv_got_crap( gc, "\x02""***\x02"" BitlBee now supports ICQ server-side contact lists. "
-			                      "See \x02""help import_buddies\x02"" for more information." );
-	}
 }
 
 gboolean auto_reconnect( gpointer data )
@@ -386,12 +375,6 @@ void cancel_auto_reconnect( account_t *a )
 {
 	while( g_source_remove_by_user_data( (gpointer) a ) );
 	a->reconnect = 0;
-}
-
-void account_offline( struct gaim_connection *gc )
-{
-	gc->wants_to_die = TRUE;
-	signoff( gc );
 }
 
 void signoff( struct gaim_connection *gc )
@@ -958,20 +941,6 @@ static int remove_chat_buddy_silent( struct conversation *b, char *handle )
 	}
 	
 	return( 0 );
-}
-
-
-/* prefs.c */
-
-/* Necessary? */
-void build_block_list()
-{
-	return;
-}
-
-void build_allow_list()
-{
-	return;
 }
 
 
