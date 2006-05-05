@@ -140,6 +140,7 @@
 	<bitlbee-command name="add">
 		<short-description>Add a buddy to your contact list</short-description>
 		<syntax>add &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
+		<syntax>add -tmp &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
 
 		<description>
 			<para>
@@ -148,6 +149,10 @@
 
 			<para>
 				If you want, you can also tell BitlBee what nick to give the new contact. Of course you can also use the <emphasis>rename</emphasis> command for that, but sometimes this might be more convenient.
+			</para>
+			
+			<para>
+				Adding -tmp only adds the buddy to the internal BitlBee structures, not to the real contact list (like done by <emphasis>set handle_unknown add</emphasis>). This allows you to talk to people outside your contact list.
 			</para>
 		</description>
 
