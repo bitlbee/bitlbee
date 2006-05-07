@@ -462,25 +462,21 @@ void ipc_master_set_statefile( char *fn )
 }
 
 
-static gboolean new_ipc_client (GIOChannel *gio, GIOCondition cond, gpointer data)
+static void new_ipc_client( gpointer data, gint serversock, GaimInputCondition cond )
 {
 	struct bitlbee_child *child = g_new0( struct bitlbee_child, 1 );
-	int serversock;
-
-	serversock = g_io_channel_unix_get_fd(gio);
-
-	child->ipc_fd = accept(serversock, NULL, 0);
-
-	if (child->ipc_fd == -1) {
+	
+	child->ipc_fd = accept( serversock, NULL, 0 );
+	
+	if( child->ipc_fd == -1 )
+	{
 		log_message( LOGLVL_WARNING, "Unable to accept connection on UNIX domain socket: %s", strerror(errno) );
-		return TRUE;
+		return;
 	}
 		
 	child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
-		
+	
 	child_list = g_slist_append( child_list, child );
-
-	return TRUE;
 }
 
 #ifndef _WIN32
@@ -488,7 +484,6 @@ int ipc_master_listen_socket()
 {
 	struct sockaddr_un un_addr;
 	int serversock;
-	GIOChannel *gio;
 
 	/* Clean up old socket files that were hanging around.. */
 	if (unlink(IPCSOCKET) == -1 && errno != ENOENT) {
@@ -516,14 +511,8 @@ int ipc_master_listen_socket()
 		return 0;
 	}
 	
-	gio = g_io_channel_unix_new(serversock);
+	gaim_input_add( serversock, GAIM_INPUT_READ, new_ipc_client, NULL );
 	
-	if (gio == NULL) {
-		log_message( LOGLVL_WARNING, "Unable to create IO channel for unix socket" );
-		return 0;
-	}
-
-	g_io_add_watch(gio, G_IO_IN, new_ipc_client, NULL);
 	return 1;
 }
 #else

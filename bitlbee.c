@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data );
+void bitlbee_io_new_client( gpointer data, gint source, GaimInputCondition condition );
 
 int bitlbee_daemon_init()
 {
@@ -43,7 +43,6 @@ int bitlbee_daemon_init()
 	struct sockaddr_in listen_addr;
 #endif
 	int i;
-	GIOChannel *ch;
 	FILE *fp;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
@@ -90,8 +89,7 @@ int bitlbee_daemon_init()
 		return( -1 );
 	}
 	
-	ch = g_io_channel_unix_new( global.listen_socket );
-	global.listen_watch_source_id = g_io_add_watch( ch, G_IO_IN, bitlbee_io_new_client, NULL );
+	global.listen_watch_source_id = gaim_input_add( global.listen_socket, GAIM_INPUT_READ, bitlbee_io_new_client, NULL );
 	
 #ifndef _WIN32
 	if( !global.conf->nofork )
@@ -146,34 +144,28 @@ int bitlbee_inetd_init()
 	return( 0 );
 }
 
-gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condition, gpointer data )
+void bitlbee_io_current_client_read( gpointer data, gint source, GaimInputCondition cond )
 {
 	irc_t *irc = data;
 	char line[513];
 	int st;
 	
-	if( condition & G_IO_ERR || condition & G_IO_HUP )
-	{
-		irc_abort( irc, 1, "Read error" );
-		return FALSE;
-	}
-	
 	st = read( irc->fd, line, sizeof( line ) - 1 );
 	if( st == 0 )
 	{
 		irc_abort( irc, 1, "Connection reset by peer" );
-		return FALSE;
+		goto no_more_events;
 	}
 	else if( st < 0 )
 	{
 		if( sockerr_again() )
 		{
-			return TRUE;
+			return;
 		}
 		else
 		{
 			irc_abort( irc, 1, "Read error: %s", strerror( errno ) );
-			return FALSE;
+			goto no_more_events;
 		}
 	}
 	
@@ -194,27 +186,31 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	if( !g_slist_find( irc_connection_list, irc ) )
 	{
 		log_message( LOGLVL_WARNING, "Abnormal termination of connection with fd %d.", irc->fd );
-		return FALSE;
+		goto no_more_events;
 	} 
 	
 	/* Very naughty, go read the RFCs! >:) */
 	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )
 	{
 		irc_abort( irc, 0, "Maximum line length exceeded" );
-		return FALSE;
+		goto no_more_events;
 	}
 	
-	return TRUE;
+	return;
+	
+no_more_events:
+	gaim_input_remove( irc->r_watch_source_id );
+	irc->r_watch_source_id = 0;
 }
 
-gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condition, gpointer data )
+void bitlbee_io_current_client_write( gpointer data, gint source, GaimInputCondition cond )
 {
 	irc_t *irc = data;
 	int st, size;
 	char *temp;
 
 	if( irc->sendbuffer == NULL )
-		return( FALSE );
+		goto no_more_events;
 	
 	size = strlen( irc->sendbuffer );
 	st = write( irc->fd, irc->sendbuffer, size );
@@ -222,23 +218,22 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 	if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
 		irc_abort( irc, 1, "Write error: %s", strerror( errno ) );
-		return FALSE;
+		goto no_more_events;
 	}
 	else if( st < 0 ) /* && sockerr_again() */
 	{
-		return TRUE;
+		return;
 	}
 	
 	if( st == size )
 	{
 		g_free( irc->sendbuffer );
 		irc->sendbuffer = NULL;
-		irc->w_watch_source_id = 0;
 		
 		if( irc->status == USTATUS_SHUTDOWN )
 			irc_free( irc );
 		
-		return( FALSE );
+		goto no_more_events;
 	}
 	else
 	{
@@ -246,13 +241,17 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 		g_free( irc->sendbuffer );
 		irc->sendbuffer = temp;
 		
-		return( TRUE );
+		return;
 	}
+	
+no_more_events:
+	gaim_input_remove( irc->w_watch_source_id );
+	irc->w_watch_source_id = 0;
 }
 
-gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
+void bitlbee_io_new_client( gpointer data, gint source, GaimInputCondition condition )
 {
-	size_t size = sizeof( struct sockaddr_in );
+	socklen_t size = sizeof( struct sockaddr_in );
 	struct sockaddr_in conn_info;
 	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
 	pid_t client_pid = 0;
@@ -260,7 +259,7 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 	if( new_socket == -1 )
 	{
 		log_message( LOGLVL_WARNING, "Could not accept new connection: %s", strerror( errno ) );
-		return TRUE;
+		return;
 	}
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
@@ -319,8 +318,6 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
 		irc_new( new_socket );
 	}
-	
-	return TRUE;
 }
 
 void bitlbee_shutdown( gpointer data )

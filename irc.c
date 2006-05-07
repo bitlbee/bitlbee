@@ -53,15 +53,9 @@ irc_t *irc_new( int fd )
 	irc = g_new0( irc_t, 1 );
 	
 	irc->fd = fd;
-	irc->io_channel = g_io_channel_unix_new( fd );
-#ifdef GLIB2
-	g_io_channel_set_encoding (irc->io_channel, NULL, NULL);
-	g_io_channel_set_buffered (irc->io_channel, FALSE);
-	g_io_channel_set_flags( irc->io_channel, G_IO_FLAG_NONBLOCK, NULL );
-#else
-	fcntl( irc->fd, F_SETFL, O_NONBLOCK);
-#endif
-	irc->r_watch_source_id = g_io_add_watch( irc->io_channel, G_IO_IN | G_IO_ERR | G_IO_HUP, bitlbee_io_current_client_read, irc );
+	sock_make_nonblocking( irc->fd );
+	
+	irc->r_watch_source_id = gaim_input_add( irc->fd, GAIM_INPUT_READ, bitlbee_io_current_client_read, irc );
 	
 	irc->status = USTATUS_OFFLINE;
 	irc->last_pong = gettime();
@@ -228,7 +222,6 @@ void irc_free(irc_t * irc)
 	if( irc->w_watch_source_id > 0 )
 		g_source_remove( irc->w_watch_source_id );
 	
-	g_io_channel_unref( irc->io_channel );
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
 	for (account = irc->accounts; account; account = account->next) {
@@ -599,18 +592,19 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	}
 	strcat( line, "\r\n" );
 	
-	if( irc->sendbuffer != NULL ) {
+	if( irc->sendbuffer != NULL )
+	{
 		size = strlen( irc->sendbuffer ) + strlen( line );
 		irc->sendbuffer = g_renew ( char, irc->sendbuffer, size + 1 );
 		strcpy( ( irc->sendbuffer + strlen( irc->sendbuffer ) ), line );
 	}
-	else 
-		irc->sendbuffer = g_strdup(line);	
+	else
+	{
+		irc->sendbuffer = g_strdup(line);
+	}
 	
 	if( irc->w_watch_source_id == 0 )
-	{
-		irc->w_watch_source_id = g_io_add_watch( irc->io_channel, G_IO_OUT, bitlbee_io_current_client_write, irc );
-	}
+		irc->w_watch_source_id = gaim_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
 	
 	return;
 }
@@ -635,7 +629,7 @@ void irc_write_all( int now, char *format, ... )
 		irc_vawrite( temp->data, format, params );
 		if( now )
 		{
-			bitlbee_io_current_client_write( irc->io_channel, G_IO_OUT, irc );
+			bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE );
 		}
 		temp = temp->next;
 	}
