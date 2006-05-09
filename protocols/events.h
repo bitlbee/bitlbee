@@ -1,7 +1,7 @@
 /*
  * nogaim
  *
- * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
+ * Copyright (C) 2006 Wilmer van der Gaast and others
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,15 @@
  *
  */
 
-/* this is the export part of the proxy.c file. it does a little
-   prototype-ing stuff and redefine some net function to mask them
-   with some kind of transparent layer */ 
+/*
+ * Split off the event handling things from proxy.[ch] (and adding timer
+ * stuff. This to allow BitlBee to use other libs than GLib for event
+ * handling.
+ */
 
-#ifndef _PROXY_H_
-#define _PROXY_H_
+
+#ifndef _EVENTS_H_
+#define _EVENTS_H_
 
 #include <sys/types.h>
 #ifndef _WIN32
@@ -35,19 +38,19 @@
 #include <glib.h>
 #include <gmodule.h>
 
-#include "events.h"
+typedef enum {
+	GAIM_INPUT_READ = 1 << 0,
+	GAIM_INPUT_WRITE = 1 << 1
+} GaimInputCondition;
+typedef void (*GaimInputFunction)(gpointer, gint, GaimInputCondition);
 
-#define PROXY_NONE 0
-#define PROXY_HTTP 1
-#define PROXY_SOCKS4 2
-#define PROXY_SOCKS5 3
+#define GAIM_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
+#define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
+#define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-extern char proxyhost[128];
-extern int  proxyport;
-extern int  proxytype;
-extern char proxyuser[128];
-extern char proxypass[128];
+G_MODULE_EXPORT gint gaim_input_add(int fd, GaimInputCondition cond, GaimInputFunction func, gpointer data);
+G_MODULE_EXPORT void gaim_input_remove(gint id);
 
-G_MODULE_EXPORT int proxy_connect(const char *host, int port, GaimInputFunction func, gpointer data);
+G_MODULE_EXPORT gint bee_timeout_add(gint timeout, GaimInputFunction func, gpointer data, gint priority);
 
-#endif /* _PROXY_H_ */
+#endif /* _EVENTS_H_ */

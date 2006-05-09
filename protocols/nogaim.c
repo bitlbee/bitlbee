@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2006 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -12,8 +12,6 @@
  * This file contains functions called by the Gaim IM-modules. It's written
  * from scratch for BitlBee and doesn't contain any code from Gaim anymore
  * (except for the function names).
- *
- * Copyright 2002-2006 Wilmer van der Gaast <wilmer@gaast.net> and others
  */
 
 /*

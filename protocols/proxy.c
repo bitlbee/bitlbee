@@ -20,10 +20,6 @@
  *
  */
 
-/* this is a little piece of code to handle proxy connection */
-/* it is intended to : 1st handle http proxy, using the CONNECT command
- , 2nd provide an easy way to add socks support */
-
 #define BITLBEE_CORE
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,10 +41,6 @@
 #include "nogaim.h"
 #include "proxy.h"
 
-#define GAIM_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
-#define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
-#define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
-
 char proxyhost[128] = "";
 int proxyport = 0;
 int proxytype = PROXY_NONE;
@@ -63,12 +55,6 @@ struct PHB {
 	int fd;
 	gint inpa;
 };
-
-typedef struct _GaimIOClosure {
-	GaimInputFunction function;
-	guint result;
-	gpointer data;
-} GaimIOClosure;
 
 
 
@@ -89,26 +75,6 @@ static struct sockaddr_in *gaim_gethostbyname(const char *host, int port)
 	sin.sin_port = htons(port);
 
 	return &sin;
-}
-
-static void gaim_io_destroy(gpointer data)
-{
-	g_free(data);
-}
-
-static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
-{
-	GaimIOClosure *closure = data;
-	GaimInputCondition gaim_cond = 0;
-
-	if (condition & GAIM_READ_COND)
-		gaim_cond |= GAIM_INPUT_READ;
-	if (condition & GAIM_WRITE_COND)
-		gaim_cond |= GAIM_INPUT_WRITE;
-
-	closure->function(closure->data, g_io_channel_unix_get_fd(source), gaim_cond);
-
-	return TRUE;
 }
 
 static void gaim_io_connected(gpointer data, gint source, GaimInputCondition cond)
@@ -540,34 +506,6 @@ static int proxy_connect_socks5(const char *host, unsigned short port, struct PH
 
 
 /* Export functions */
-
-gint gaim_input_add(gint source, GaimInputCondition condition, GaimInputFunction function, gpointer data)
-{
-	GaimIOClosure *closure = g_new0(GaimIOClosure, 1);
-	GIOChannel *channel;
-	GIOCondition cond = 0;
-	
-	closure->function = function;
-	closure->data = data;
-	
-	if (condition & GAIM_INPUT_READ)
-		cond |= GAIM_READ_COND;
-	if (condition & GAIM_INPUT_WRITE)
-		cond |= GAIM_WRITE_COND;
-	
-	channel = g_io_channel_unix_new(source);
-	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
-					      gaim_io_invoke, closure, gaim_io_destroy);
-	
-	g_io_channel_unref(channel);
-	return closure->result;
-}
-
-void gaim_input_remove(gint tag)
-{
-	if (tag > 0)
-		g_source_remove(tag);
-}
 
 int proxy_connect(const char *host, int port, GaimInputFunction func, gpointer data)
 {

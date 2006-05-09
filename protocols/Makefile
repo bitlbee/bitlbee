@@ -9,7 +9,7 @@
 -include ../Makefile.settings
 
 # [SH] Program variables
-objects = http_client.o md5.o nogaim.o proxy.o sha.o $(SSL_CLIENT)
+objects = events_glib.o http_client.o md5.o nogaim.o proxy.o sha.o $(SSL_CLIENT)
 
 # [SH] The next two lines should contain the directory name (in $(subdirs))
 #      and the name of the object file, which should be linked into
