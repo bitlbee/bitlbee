@@ -57,23 +57,38 @@
 
 /* The following functions should not be used if we want to maintain Windows compatibility... */
 #undef free
-#define free		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM_INSTEAD__
+#define free		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM__
 #undef malloc
-#define malloc		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM_INSTEAD__
+#define malloc		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM__
 #undef calloc
-#define calloc		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM_INSTEAD__
+#define calloc		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM__
 #undef realloc
-#define realloc		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM_INSTEAD__
+#define realloc		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM__
 #undef strdup
-#define strdup		__PLEASE_USE_THE_GLIB_STRDUP_FUNCTIONS_SYSTEM_INSTEAD__
+#define strdup		__PLEASE_USE_THE_GLIB_STRDUP_FUNCTIONS_SYSTEM__
 #undef strndup
-#define strndup		__PLEASE_USE_THE_GLIB_STRDUP_FUNCTIONS_SYSTEM_INSTEAD__
+#define strndup		__PLEASE_USE_THE_GLIB_STRDUP_FUNCTIONS_SYSTEM__
 #undef snprintf
-#define snprintf	__PLEASE_USE_G_SNPRINTF_INSTEAD__
+#define snprintf	__PLEASE_USE_G_SNPRINTF__
 #undef strcasecmp
-#define strcasecmp	__PLEASE_USE_G_STRCASECMP_INSTEAD__
+#define strcasecmp	__PLEASE_USE_G_STRCASECMP__
 #undef strncasecmp
-#define strncasecmp	__PLEASE_USE_G_STRNCASECMP_INSTEAD__
+#define strncasecmp	__PLEASE_USE_G_STRNCASECMP__
+
+/* And the following functions shouldn't be used anymore to keep compatibility
+   with other event handling libs than GLib. */
+#undef g_timeout_add
+#define g_timeout_add		__PLEASE_USE_B_TIMEOUT_ADD__
+#undef g_timeout_add_full
+#define g_timeout_add_full	__PLEASE_USE_B_TIMEOUT_ADD__
+#undef g_source_remove
+#define g_source_remove		__PLEASE_USE_B_SOURCE_REMOVE__
+#undef g_source_remove_by_user_data
+#define g_source_remove_by_user_data	__PLEASE_USE_B_SOURCE_REMOVE_BY_USER_DATA__
+#undef g_main_run
+#define g_main_run		__PLEASE_USE_B_MAIN_RUN__
+#undef g_main_quit
+#define g_main_quit		__PLEASE_USE_B_MAIN_QUIT__
 
 #ifndef F_OK
 #define F_OK 0
