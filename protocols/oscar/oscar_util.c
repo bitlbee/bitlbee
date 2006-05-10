@@ -108,7 +108,7 @@ static int aim_snlen(const char *sn)
 		return 0;
 
 	curPtr = sn;
-	while ( (*curPtr) != (char) NULL) {
+	while ( (*curPtr) != (char) '\0') {
 		if ((*curPtr) != ' ')
 		i++;
 		curPtr++;
@@ -139,7 +139,7 @@ int aim_sncmp(const char *sn1, const char *sn2)
 
 	curPtr1 = sn1;
 	curPtr2 = sn2;
-	while ( (*curPtr1 != (char) NULL) && (*curPtr2 != (char) NULL) ) {
+	while ( (*curPtr1 != (char) '\0') && (*curPtr2 != (char) '\0') ) {
 		if ( (*curPtr1 == ' ') || (*curPtr2 == ' ') ) {
 			if (*curPtr1 == ' ')
 				curPtr1++;
