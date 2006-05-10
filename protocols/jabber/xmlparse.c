@@ -1460,7 +1460,7 @@ initializeEncoding(XML_Parser parser)
 #else
 s = protocolEncodingName;
 #endif
-    if ((ns ? XmlInitEncodingNS : XmlInitEncoding)(&initEncoding, &encoding, s))
+    if (ns ? XmlInitEncodingNS(&initEncoding, &encoding, s) : XmlInitEncoding(&initEncoding, &encoding, s))
         return XML_ERROR_NONE;
     return handleUnknownEncoding(parser, protocolEncodingName);
 }
@@ -1474,8 +1474,7 @@ processXmlDecl(XML_Parser parser, int isGeneralTextEntity,
     const char *version;
     int standalone = -1;
     if (!(ns
-            ? XmlParseXmlDeclNS
-            : XmlParseXmlDecl)(isGeneralTextEntity,
+            ? XmlParseXmlDeclNS(isGeneralTextEntity,
                                encoding,
                                s,
                                next,
@@ -1483,7 +1482,16 @@ processXmlDecl(XML_Parser parser, int isGeneralTextEntity,
                                &version,
                                &encodingName,
                                &newEncoding,
-                               &standalone))
+                               &standalone)
+            : XmlParseXmlDecl(isGeneralTextEntity,
+                               encoding,
+                               s,
+                               next,
+                               &eventPtr,
+                               &version,
+                               &encodingName,
+                               &newEncoding,
+                               &standalone)))
         return XML_ERROR_SYNTAX;
     if (!isGeneralTextEntity && standalone == 1)
         dtd.standalone = 1;
@@ -1536,11 +1544,14 @@ handleUnknownEncoding(XML_Parser parser, const XML_Char *encodingName)
                 return XML_ERROR_NO_MEMORY;
             }
             enc = (ns
-                   ? XmlInitUnknownEncodingNS
-                   : XmlInitUnknownEncoding)(unknownEncodingMem,
+                   ? XmlInitUnknownEncodingNS(unknownEncodingMem,
                                              info.map,
                                              info.convert,
-                                             info.data);
+                                             info.data)
+                   : XmlInitUnknownEncoding(unknownEncodingMem,
+                                             info.map,
+                                             info.convert,
+                                             info.data));
             if (enc) {
                 unknownEncodingData = info.data;
                 unknownEncodingRelease = info.release;
