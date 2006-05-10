@@ -41,16 +41,20 @@
 typedef enum {
 	GAIM_INPUT_READ = 1 << 0,
 	GAIM_INPUT_WRITE = 1 << 1
-} GaimInputCondition;
-typedef void (*GaimInputFunction)(gpointer, gint, GaimInputCondition);
+} b_input_condition;
+typedef gboolean (*b_event_handler)(gpointer data, gint fd, b_input_condition cond);
 
 #define GAIM_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
 #define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 #define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-G_MODULE_EXPORT gint gaim_input_add(int fd, GaimInputCondition cond, GaimInputFunction func, gpointer data);
-G_MODULE_EXPORT void gaim_input_remove(gint id);
+G_MODULE_EXPORT void b_main_init();
+G_MODULE_EXPORT void b_main_run();
+G_MODULE_EXPORT void b_main_quit();
 
-G_MODULE_EXPORT gint bee_timeout_add(gint timeout, GaimInputFunction func, gpointer data, gint priority);
+G_MODULE_EXPORT gint b_input_add(int fd, b_input_condition cond, b_event_handler func, gpointer data);
+G_MODULE_EXPORT gint b_timeout_add(gint timeout, b_event_handler func, gpointer data);
+G_MODULE_EXPORT void b_event_remove(gint id);
+G_MODULE_EXPORT gboolean b_event_remove_by_data(gpointer data);
 
 #endif /* _EVENTS_H_ */

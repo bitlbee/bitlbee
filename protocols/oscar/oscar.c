@@ -252,8 +252,8 @@ static char *msgerrreason[] = {
 };
 static int msgerrreasonlen = 25;
 
-static void oscar_callback(gpointer data, gint source,
-				GaimInputCondition condition) {
+static gboolean oscar_callback(gpointer data, gint source,
+				b_input_condition condition) {
 	aim_conn_t *conn = (aim_conn_t *)data;
 	aim_session_t *sess = aim_conn_getsess(conn);
 	struct gaim_connection *gc = sess ? sess->aux_data : NULL;
@@ -261,13 +261,13 @@ static void oscar_callback(gpointer data, gint source,
 
 	if (!gc) {
 		/* gc is null. we return, else we seg SIGSEG on next line. */
-		return;
+		return FALSE;
 	}
       
 	if (!g_slist_find(get_connections(), gc)) {
 		/* oh boy. this is probably bad. i guess the only thing we 
 		 * can really do is return? */
-		return;
+		return FALSE;
 	}
 
 	odata = (struct oscar_data *)gc->proto_data;
@@ -287,7 +287,7 @@ static void oscar_callback(gpointer data, gint source,
 				char buf[BUF_LONG];
 				c->conn = NULL;
 				if (c->inpa > 0)
-					gaim_input_remove(c->inpa);
+					b_event_remove(c->inpa);
 				c->inpa = 0;
 				c->fd = -1;
 				aim_conn_kill(odata->sess, &conn);
@@ -295,7 +295,7 @@ static void oscar_callback(gpointer data, gint source,
 				do_error_dialog(sess->aux_data, buf, _("Chat Error!"));
 			} else if (conn->type == AIM_CONN_TYPE_CHATNAV) {
 				if (odata->cnpa > 0)
-					gaim_input_remove(odata->cnpa);
+					b_event_remove(odata->cnpa);
 				odata->cnpa = 0;
 				while (odata->create_rooms) {
 					struct create_room *cr = odata->create_rooms->data;
@@ -309,17 +309,22 @@ static void oscar_callback(gpointer data, gint source,
 				aim_conn_kill(odata->sess, &conn);
 			} else if (conn->type == AIM_CONN_TYPE_AUTH) {
 				if (odata->paspa > 0)
-					gaim_input_remove(odata->paspa);
+					b_event_remove(odata->paspa);
 				odata->paspa = 0;
 				aim_conn_kill(odata->sess, &conn);
 			} else {
 				aim_conn_kill(odata->sess, &conn);
 			}
 		}
+	} else {
+		/* WTF??? */
+		return FALSE;
 	}
+		
+	return TRUE;
 }
 
-static void oscar_login_connect(gpointer data, gint source, GaimInputCondition cond)
+static gboolean oscar_login_connect(gpointer data, gint source, b_input_condition cond)
 {
 	struct gaim_connection *gc = data;
 	struct oscar_data *odata;
@@ -328,7 +333,7 @@ static void oscar_login_connect(gpointer data, gint source, GaimInputCondition c
 
 	if (!g_slist_find(get_connections(), gc)) {
 		closesocket(source);
-		return;
+		return FALSE;
 	}
 
 	odata = gc->proto_data;
@@ -338,12 +343,14 @@ static void oscar_login_connect(gpointer data, gint source, GaimInputCondition c
 	if (source < 0) {
 		hide_login_progress(gc, _("Couldn't connect to host"));
 		signoff(gc);
-		return;
+		return FALSE;
 	}
 
 	aim_conn_completeconnect(sess, conn);
-	gc->inpa = gaim_input_add(conn->fd, GAIM_INPUT_READ,
+	gc->inpa = b_input_add(conn->fd, GAIM_INPUT_READ,
 			oscar_callback, conn);
+	
+	return FALSE;
 }
 
 static void oscar_login(struct aim_user *user) {
@@ -411,7 +418,7 @@ static void oscar_close(struct gaim_connection *gc) {
 	while (odata->oscar_chats) {
 		struct chat_connection *n = odata->oscar_chats->data;
 		if (n->inpa > 0)
-			gaim_input_remove(n->inpa);
+			b_event_remove(n->inpa);
 		g_free(n->name);
 		g_free(n->show);
 		odata->oscar_chats = g_slist_remove(odata->oscar_chats, n);
@@ -430,11 +437,11 @@ static void oscar_close(struct gaim_connection *gc) {
 	if (odata->oldp)
 		g_free(odata->oldp);
 	if (gc->inpa > 0)
-		gaim_input_remove(gc->inpa);
+		b_event_remove(gc->inpa);
 	if (odata->cnpa > 0)
-		gaim_input_remove(odata->cnpa);
+		b_event_remove(odata->cnpa);
 	if (odata->paspa > 0)
-		gaim_input_remove(odata->paspa);
+		b_event_remove(odata->paspa);
 	aim_session_kill(odata->sess);
 	g_free(odata->sess);
 	odata->sess = NULL;
@@ -442,7 +449,7 @@ static void oscar_close(struct gaim_connection *gc) {
 	gc->proto_data = NULL;
 }
 
-static void oscar_bos_connect(gpointer data, gint source, GaimInputCondition cond) {
+static gboolean oscar_bos_connect(gpointer data, gint source, b_input_condition cond) {
 	struct gaim_connection *gc = data;
 	struct oscar_data *odata;
 	aim_session_t *sess;
@@ -450,7 +457,7 @@ static void oscar_bos_connect(gpointer data, gint source, GaimInputCondition con
 
 	if (!g_slist_find(get_connections(), gc)) {
 		closesocket(source);
-		return;
+		return FALSE;
 	}
 
 	odata = gc->proto_data;
@@ -460,13 +467,15 @@ static void oscar_bos_connect(gpointer data, gint source, GaimInputCondition con
 	if (source < 0) {
 		hide_login_progress(gc, _("Could Not Connect"));
 		signoff(gc);
-		return;
+		return FALSE;
 	}
 
 	aim_conn_completeconnect(sess, bosconn);
-	gc->inpa = gaim_input_add(bosconn->fd, GAIM_INPUT_READ,
+	gc->inpa = b_input_add(bosconn->fd, GAIM_INPUT_READ,
 			oscar_callback, bosconn);
 	set_login_progress(gc, 4, _("Connection established, cookie sent"));
+	
+	return FALSE;
 }
 
 static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
@@ -569,7 +578,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 		return 0;
 	}
 	aim_sendcookie(sess, bosconn, info->cookie);
-	gaim_input_remove(gc->inpa);
+	b_event_remove(gc->inpa);
 
 	return 1;
 }
@@ -584,7 +593,7 @@ struct pieceofcrap {
 	unsigned int inpa;
 };
 
-static void damn_you(gpointer data, gint source, GaimInputCondition c)
+static gboolean damn_you(gpointer data, gint source, b_input_condition c)
 {
 	struct pieceofcrap *pos = data;
 	struct oscar_data *od = pos->gc->proto_data;
@@ -604,21 +613,23 @@ static void damn_you(gpointer data, gint source, GaimInputCondition c)
 	if (in != '\n') {
 		do_error_dialog(pos->gc, "Gaim was unable to get a valid hash for logging into AIM."
 				" You may be disconnected shortly.", "Login Error");
-		gaim_input_remove(pos->inpa);
+		b_event_remove(pos->inpa);
 		closesocket(pos->fd);
 		g_free(pos);
-		return;
+		return FALSE;
 	}
 	/* [WvG] Wheeeee! Who needs error checking anyway? ;-) */
 	read(pos->fd, m, 16);
 	m[16] = '\0';
-	gaim_input_remove(pos->inpa);
+	b_event_remove(pos->inpa);
 	closesocket(pos->fd);
 	aim_sendmemblock(od->sess, pos->conn, 0, 16, m, AIM_SENDMEMBLOCK_FLAG_ISHASH);
 	g_free(pos);
+	
+	return FALSE;
 }
 
-static void straight_to_hell(gpointer data, gint source, GaimInputCondition cond) {
+static gboolean straight_to_hell(gpointer data, gint source, b_input_condition cond) {
 	struct pieceofcrap *pos = data;
 	char buf[BUF_LONG];
 
@@ -628,7 +639,7 @@ static void straight_to_hell(gpointer data, gint source, GaimInputCondition cond
 		if (pos->modname)
 			g_free(pos->modname);
 		g_free(pos);
-		return;
+		return FALSE;
 	}
 
 	g_snprintf(buf, sizeof(buf), "GET " AIMHASHDATA
@@ -637,8 +648,8 @@ static void straight_to_hell(gpointer data, gint source, GaimInputCondition cond
 	write(pos->fd, buf, strlen(buf));
 	if (pos->modname)
 		g_free(pos->modname);
-	pos->inpa = gaim_input_add(pos->fd, GAIM_INPUT_READ, damn_you, pos);
-	return;
+	pos->inpa = b_input_add(pos->fd, GAIM_INPUT_READ, damn_you, pos);
+	return FALSE;
 }
 
 /* size of icbmui.ocm, the largest module in AIM 3.5 */
@@ -760,7 +771,7 @@ static int conninitdone_chatnav(aim_session_t *sess, aim_frame_t *fr, ...) {
 	return 1;
 }
 
-static void oscar_chatnav_connect(gpointer data, gint source, GaimInputCondition cond) {
+static gboolean oscar_chatnav_connect(gpointer data, gint source, b_input_condition cond) {
 	struct gaim_connection *gc = data;
 	struct oscar_data *odata;
 	aim_session_t *sess;
@@ -768,7 +779,7 @@ static void oscar_chatnav_connect(gpointer data, gint source, GaimInputCondition
 
 	if (!g_slist_find(get_connections(), gc)) {
 		closesocket(source);
-		return;
+		return FALSE;
 	}
 
 	odata = gc->proto_data;
@@ -777,15 +788,17 @@ static void oscar_chatnav_connect(gpointer data, gint source, GaimInputCondition
 
 	if (source < 0) {
 		aim_conn_kill(sess, &tstconn);
-		return;
+		return FALSE;
 	}
 
 	aim_conn_completeconnect(sess, tstconn);
-	odata->cnpa = gaim_input_add(tstconn->fd, GAIM_INPUT_READ,
+	odata->cnpa = b_input_add(tstconn->fd, GAIM_INPUT_READ,
 					oscar_callback, tstconn);
+	
+	return FALSE;
 }
 
-static void oscar_auth_connect(gpointer data, gint source, GaimInputCondition cond)
+static gboolean oscar_auth_connect(gpointer data, gint source, b_input_condition cond)
 {
 	struct gaim_connection *gc = data;
 	struct oscar_data *odata;
@@ -794,7 +807,7 @@ static void oscar_auth_connect(gpointer data, gint source, GaimInputCondition co
 
 	if (!g_slist_find(get_connections(), gc)) {
 		closesocket(source);
-		return;
+		return FALSE;
 	}
 
 	odata = gc->proto_data;
@@ -803,15 +816,17 @@ static void oscar_auth_connect(gpointer data, gint source, GaimInputCondition co
 
 	if (source < 0) {
 		aim_conn_kill(sess, &tstconn);
-		return;
+		return FALSE;
 	}
 
 	aim_conn_completeconnect(sess, tstconn);
-	odata->paspa = gaim_input_add(tstconn->fd, GAIM_INPUT_READ,
+	odata->paspa = b_input_add(tstconn->fd, GAIM_INPUT_READ,
 				oscar_callback, tstconn);
+	
+	return FALSE;
 }
 
-static void oscar_chat_connect(gpointer data, gint source, GaimInputCondition cond)
+static gboolean oscar_chat_connect(gpointer data, gint source, b_input_condition cond)
 {
 	struct chat_connection *ccon = data;
 	struct gaim_connection *gc = ccon->gc;
@@ -824,7 +839,7 @@ static void oscar_chat_connect(gpointer data, gint source, GaimInputCondition co
 		g_free(ccon->show);
 		g_free(ccon->name);
 		g_free(ccon);
-		return;
+		return FALSE;
 	}
 
 	odata = gc->proto_data;
@@ -836,14 +851,16 @@ static void oscar_chat_connect(gpointer data, gint source, GaimInputCondition co
 		g_free(ccon->show);
 		g_free(ccon->name);
 		g_free(ccon);
-		return;
+		return FALSE;
 	}
 
 	aim_conn_completeconnect(sess, ccon->conn);
-	ccon->inpa = gaim_input_add(tstconn->fd,
+	ccon->inpa = b_input_add(tstconn->fd,
 			GAIM_INPUT_READ,
 			oscar_callback, tstconn);
 	odata->oscar_chats = g_slist_append(odata->oscar_chats, ccon);
+	
+	return FALSE;
 }
 
 /* Hrmph. I don't know how to make this look better. --mid */
@@ -2557,7 +2574,7 @@ void oscar_chat_kill(struct gaim_connection *gc, struct chat_connection *cc)
 	/* Destroy the chat_connection */
 	od->oscar_chats = g_slist_remove(od->oscar_chats, cc);
 	if (cc->inpa > 0)
-		gaim_input_remove(cc->inpa);
+		b_event_remove(cc->inpa);
 	aim_conn_kill(od->sess, &cc->conn);
 	g_free(cc->name);
 	g_free(cc->show);

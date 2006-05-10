@@ -81,8 +81,12 @@
 #define g_timeout_add		__PLEASE_USE_B_TIMEOUT_ADD__
 #undef g_timeout_add_full
 #define g_timeout_add_full	__PLEASE_USE_B_TIMEOUT_ADD__
+#undef g_io_add_watch
+#define g_io_add_watch		__PLEASE_USE_B_INPUT_ADD__
+#undef g_io_add_watch_full
+#define g_io_add_watch_full	__PLEASE_USE_B_INPUT_ADD__
 #undef g_source_remove
-#define g_source_remove		__PLEASE_USE_B_SOURCE_REMOVE__
+#define g_source_remove		__PLEASE_USE_B_EVENT_REMOVE__
 #undef g_source_remove_by_user_data
 #define g_source_remove_by_user_data	__PLEASE_USE_B_SOURCE_REMOVE_BY_USER_DATA__
 #undef g_main_run
@@ -136,19 +140,18 @@ typedef struct global {
 	conf_t *conf;
 	GList *storage; /* The first backend in the list will be used for saving */
 	char *helpfile;
-	GMainLoop *loop;
 	int restart;
 } global_t;
 
 int bitlbee_daemon_init( void );
 int bitlbee_inetd_init( void );
 
-void bitlbee_io_current_client_read( gpointer data, gint source, GaimInputCondition cond );
-void bitlbee_io_current_client_write( gpointer data, gint source, GaimInputCondition cond );
+gboolean bitlbee_io_current_client_read( gpointer data, gint source, b_input_condition cond );
+gboolean bitlbee_io_current_client_write( gpointer data, gint source, b_input_condition cond );
 
 void root_command_string( irc_t *irc, user_t *u, char *command, int flags );
 void root_command( irc_t *irc, char *command[] );
-void bitlbee_shutdown( gpointer data );
+gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond );
 
 extern global_t global;
 

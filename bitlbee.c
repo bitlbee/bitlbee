@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-void bitlbee_io_new_client( gpointer data, gint source, GaimInputCondition condition );
+static gboolean bitlbee_io_new_client( gpointer data, gint source, b_input_condition condition );
 
 int bitlbee_daemon_init()
 {
@@ -89,7 +89,7 @@ int bitlbee_daemon_init()
 		return( -1 );
 	}
 	
-	global.listen_watch_source_id = gaim_input_add( global.listen_socket, GAIM_INPUT_READ, bitlbee_io_new_client, NULL );
+	global.listen_watch_source_id = b_input_add( global.listen_socket, GAIM_INPUT_READ, bitlbee_io_new_client, NULL );
 	
 #ifndef _WIN32
 	if( !global.conf->nofork )
@@ -144,7 +144,7 @@ int bitlbee_inetd_init()
 	return( 0 );
 }
 
-void bitlbee_io_current_client_read( gpointer data, gint source, GaimInputCondition cond )
+gboolean bitlbee_io_current_client_read( gpointer data, gint source, b_input_condition cond )
 {
 	irc_t *irc = data;
 	char line[513];
@@ -154,18 +154,18 @@ void bitlbee_io_current_client_read( gpointer data, gint source, GaimInputCondit
 	if( st == 0 )
 	{
 		irc_abort( irc, 1, "Connection reset by peer" );
-		goto no_more_events;
+		return FALSE;
 	}
 	else if( st < 0 )
 	{
 		if( sockerr_again() )
 		{
-			return;
+			return TRUE;
 		}
 		else
 		{
 			irc_abort( irc, 1, "Read error: %s", strerror( errno ) );
-			goto no_more_events;
+			return FALSE;
 		}
 	}
 	
@@ -186,31 +186,27 @@ void bitlbee_io_current_client_read( gpointer data, gint source, GaimInputCondit
 	if( !g_slist_find( irc_connection_list, irc ) )
 	{
 		log_message( LOGLVL_WARNING, "Abnormal termination of connection with fd %d.", irc->fd );
-		goto no_more_events;
+		return FALSE;
 	} 
 	
 	/* Very naughty, go read the RFCs! >:) */
 	if( irc->readbuffer && ( strlen( irc->readbuffer ) > 1024 ) )
 	{
 		irc_abort( irc, 0, "Maximum line length exceeded" );
-		goto no_more_events;
+		return FALSE;
 	}
 	
-	return;
-	
-no_more_events:
-	gaim_input_remove( irc->r_watch_source_id );
-	irc->r_watch_source_id = 0;
+	return TRUE;
 }
 
-void bitlbee_io_current_client_write( gpointer data, gint source, GaimInputCondition cond )
+gboolean bitlbee_io_current_client_write( gpointer data, gint source, b_input_condition cond )
 {
 	irc_t *irc = data;
 	int st, size;
 	char *temp;
 
 	if( irc->sendbuffer == NULL )
-		goto no_more_events;
+		return FALSE;
 	
 	size = strlen( irc->sendbuffer );
 	st = write( irc->fd, irc->sendbuffer, size );
@@ -218,22 +214,23 @@ void bitlbee_io_current_client_write( gpointer data, gint source, GaimInputCondi
 	if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
 		irc_abort( irc, 1, "Write error: %s", strerror( errno ) );
-		goto no_more_events;
+		return FALSE;
 	}
 	else if( st < 0 ) /* && sockerr_again() */
 	{
-		return;
+		return TRUE;
 	}
 	
 	if( st == size )
 	{
 		g_free( irc->sendbuffer );
 		irc->sendbuffer = NULL;
+		irc->w_watch_source_id = 0;
 		
 		if( irc->status == USTATUS_SHUTDOWN )
 			irc_free( irc );
 		
-		goto no_more_events;
+		return FALSE;
 	}
 	else
 	{
@@ -241,15 +238,11 @@ void bitlbee_io_current_client_write( gpointer data, gint source, GaimInputCondi
 		g_free( irc->sendbuffer );
 		irc->sendbuffer = temp;
 		
-		return;
+		return TRUE;
 	}
-	
-no_more_events:
-	gaim_input_remove( irc->w_watch_source_id );
-	irc->w_watch_source_id = 0;
 }
 
-void bitlbee_io_new_client( gpointer data, gint source, GaimInputCondition condition )
+static gboolean bitlbee_io_new_client( gpointer data, gint source, b_input_condition condition )
 {
 	socklen_t size = sizeof( struct sockaddr_in );
 	struct sockaddr_in conn_info;
@@ -259,7 +252,7 @@ void bitlbee_io_new_client( gpointer data, gint source, GaimInputCondition condi
 	if( new_socket == -1 )
 	{
 		log_message( LOGLVL_WARNING, "Could not accept new connection: %s", strerror( errno ) );
-		return;
+		return TRUE;
 	}
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
@@ -284,7 +277,7 @@ void bitlbee_io_new_client( gpointer data, gint source, GaimInputCondition condi
 			child = g_new0( struct bitlbee_child, 1 );
 			child->pid = client_pid;
 			child->ipc_fd = fds[0];
-			child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+			child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
 			child_list = g_slist_append( child_list, child );
 			
 			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", client_pid );
@@ -299,14 +292,14 @@ void bitlbee_io_new_client( gpointer data, gint source, GaimInputCondition condi
 			
 			/* Close the listening socket, we're a client. */
 			close( global.listen_socket );
-			g_source_remove( global.listen_watch_source_id );
+			b_event_remove( global.listen_watch_source_id );
 			
 			/* Make the connection. */
 			irc = irc_new( new_socket );
 			
 			/* We can store the IPC fd there now. */
 			global.listen_socket = fds[1];
-			global.listen_watch_source_id = gaim_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
+			global.listen_watch_source_id = b_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
 			
 			close( fds[0] );
 			
@@ -318,14 +311,18 @@ void bitlbee_io_new_client( gpointer data, gint source, GaimInputCondition condi
 		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
 		irc_new( new_socket );
 	}
+	
+	return TRUE;
 }
 
-void bitlbee_shutdown( gpointer data )
+gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond )
 {
 	/* Try to save data for all active connections (if desired). */
 	while( irc_connection_list != NULL )
 		irc_free( irc_connection_list->data );
 	
 	/* We'll only reach this point when not running in inetd mode: */
-	g_main_quit( global.loop );
+	b_main_quit();
+	
+	return FALSE;
 }

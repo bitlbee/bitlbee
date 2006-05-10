@@ -46,24 +46,39 @@
 #include "proxy.h"
 
 typedef struct _GaimIOClosure {
-	GaimInputFunction function;
+	b_event_handler function;
 	guint result;
 	gpointer data;
 } GaimIOClosure;
 
+static GMainLoop *loop;
+
+void b_main_init()
+{
+	loop = g_main_new( FALSE );
+}
+
+void b_main_run()
+{
+	g_main_run( loop );
+}
+
+void b_main_quit()
+{
+	g_main_quit( loop );
+}
+
 static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
 {
 	GaimIOClosure *closure = data;
-	GaimInputCondition gaim_cond = 0;
+	b_input_condition gaim_cond = 0;
 
 	if (condition & GAIM_READ_COND)
 		gaim_cond |= GAIM_INPUT_READ;
 	if (condition & GAIM_WRITE_COND)
 		gaim_cond |= GAIM_INPUT_WRITE;
 
-	closure->function(closure->data, g_io_channel_unix_get_fd(source), gaim_cond);
-
-	return TRUE;
+	return closure->function(closure->data, g_io_channel_unix_get_fd(source), gaim_cond);
 }
 
 static void gaim_io_destroy(gpointer data)
@@ -71,7 +86,7 @@ static void gaim_io_destroy(gpointer data)
 	g_free(data);
 }
 
-gint gaim_input_add(gint source, GaimInputCondition condition, GaimInputFunction function, gpointer data)
+gint b_input_add(gint source, b_input_condition condition, b_event_handler function, gpointer data)
 {
 	GaimIOClosure *closure = g_new0(GaimIOClosure, 1);
 	GIOChannel *channel;
@@ -93,8 +108,18 @@ gint gaim_input_add(gint source, GaimInputCondition condition, GaimInputFunction
 	return closure->result;
 }
 
-void gaim_input_remove(gint tag)
+gint b_timeout_add(gint timeout, b_event_handler func, gpointer data)
+{
+	return g_timeout_add(timeout, func, data);
+}
+
+void b_event_remove(gint tag)
 {
 	if (tag > 0)
 		g_source_remove(tag);
+}
+
+gboolean b_event_remove_by_data(gpointer data)
+{
+	return g_source_remove_by_user_data(data);
 }

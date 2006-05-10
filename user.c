@@ -108,7 +108,7 @@ int user_del( irc_t *irc, char *nick )
 			if( u->away ) g_free( u->away );
 			if( u->handle ) g_free( u->handle );
 			if( u->sendbuf ) g_free( u->sendbuf );
-			if( u->sendbuf_timer ) g_source_remove( u->sendbuf_timer );
+			if( u->sendbuf_timer ) b_event_remove( u->sendbuf_timer );
 			g_free( u );
 			
 			if( !g_hash_table_lookup_extended( irc->userhash, key, &okey, &ovalue ) || ovalue != u )

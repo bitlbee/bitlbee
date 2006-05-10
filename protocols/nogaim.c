@@ -327,7 +327,7 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	g_free( text );
 }
 
-static gboolean send_keepalive( gpointer d )
+static gboolean send_keepalive( gpointer d, gint fd, b_input_condition cond )
 {
 	struct gaim_connection *gc = d;
 	
@@ -351,7 +351,7 @@ void account_online( struct gaim_connection *gc )
 	
 	serv_got_crap( gc, "Logged in" );
 	
-	gc->keepalive = g_timeout_add( 60000, send_keepalive, gc );
+	gc->keepalive = b_timeout_add( 60000, send_keepalive, gc );
 	gc->flags |= OPT_LOGGED_IN;
 	
 	/* Also necessary when we're not away, at least for some of the
@@ -359,7 +359,7 @@ void account_online( struct gaim_connection *gc )
 	proto_away( gc, u->away );
 }
 
-gboolean auto_reconnect( gpointer data )
+gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
 {
 	account_t *a = data;
 	
@@ -371,7 +371,7 @@ gboolean auto_reconnect( gpointer data )
 
 void cancel_auto_reconnect( account_t *a )
 {
-	while( g_source_remove_by_user_data( (gpointer) a ) );
+	while( b_event_remove_by_data( (gpointer) a ) );
 	a->reconnect = 0;
 }
 
@@ -383,10 +383,10 @@ void signoff( struct gaim_connection *gc )
 	
 	serv_got_crap( gc, "Signing off.." );
 
-	gaim_input_remove( gc->keepalive );
+	b_event_remove( gc->keepalive );
 	gc->keepalive = 0;
 	gc->prpl->close( gc );
-	gaim_input_remove( gc->inpa );
+	b_event_remove( gc->inpa );
 	
 	while( u )
 	{
@@ -416,7 +416,7 @@ void signoff( struct gaim_connection *gc )
 		serv_got_crap( gc, "Reconnecting in %d seconds..", delay );
 		
 		a->reconnect = 1;
-		g_timeout_add( delay * 1000, auto_reconnect, a );
+		b_timeout_add( delay * 1000, auto_reconnect, a );
 	}
 	
 	destroy_gaim_conn( gc );

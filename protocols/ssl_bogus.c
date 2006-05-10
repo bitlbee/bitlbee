@@ -51,7 +51,7 @@ int ssl_getfd( void *conn )
 	return( -1 );
 }
 
-GaimInputCondition ssl_getdirection( void *conn )
+b_input_condition ssl_getdirection( void *conn )
 {
 	return GAIM_INPUT_READ;
 }

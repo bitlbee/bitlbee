@@ -28,7 +28,7 @@
 #include "crypting.h"
 #include "ipc.h"
 
-static gboolean irc_userping( gpointer _irc );
+static gboolean irc_userping( gpointer _irc, int fd, b_input_condition cond );
 
 GSList *irc_connection_list = NULL;
 
@@ -55,7 +55,7 @@ irc_t *irc_new( int fd )
 	irc->fd = fd;
 	sock_make_nonblocking( irc->fd );
 	
-	irc->r_watch_source_id = gaim_input_add( irc->fd, GAIM_INPUT_READ, bitlbee_io_current_client_read, irc );
+	irc->r_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_READ, bitlbee_io_current_client_read, irc );
 	
 	irc->status = USTATUS_OFFLINE;
 	irc->last_pong = gettime();
@@ -113,7 +113,7 @@ irc_t *irc_new( int fd )
 	if( !irc->myhost ) irc->myhost = g_strdup( "localhost." );
 
 	if( global.conf->ping_interval > 0 && global.conf->ping_timeout > 0 )
-		irc->ping_source_id = g_timeout_add( global.conf->ping_interval * 1000, irc_userping, irc );
+		irc->ping_source_id = b_timeout_add( global.conf->ping_interval * 1000, irc_userping, irc );
 	
 	irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost, "BitlBee-IRCd initialized, please go on" );
 
@@ -183,8 +183,8 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 		   to it that should shut down the connection in a second, just in case
 		   bitlbee_.._write doesn't do it first. */
 		
-		g_source_remove( irc->r_watch_source_id );
-		irc->r_watch_source_id = g_timeout_add_full( G_PRIORITY_HIGH, 1000, (GSourceFunc) irc_free, irc, NULL );
+		b_event_remove( irc->r_watch_source_id );
+		irc->r_watch_source_id = b_timeout_add( 1000, (b_event_handler) irc_free, irc );
 	}
 	else
 	{
@@ -217,10 +217,10 @@ void irc_free(irc_t * irc)
 	closesocket( irc->fd );
 	
 	if( irc->ping_source_id > 0 )
-		g_source_remove( irc->ping_source_id );
-	g_source_remove( irc->r_watch_source_id );
+		b_event_remove( irc->ping_source_id );
+	b_event_remove( irc->r_watch_source_id );
 	if( irc->w_watch_source_id > 0 )
-		g_source_remove( irc->w_watch_source_id );
+		b_event_remove( irc->w_watch_source_id );
 	
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
@@ -271,7 +271,7 @@ void irc_free(irc_t * irc)
 			if(user->user!=user->nick) g_free(user->user);
 			if(user->host!=user->nick) g_free(user->host);
 			if(user->realname!=user->nick) g_free(user->realname);
-			gaim_input_remove(user->sendbuf_timer);
+			b_event_remove(user->sendbuf_timer);
 					
 			usertmp = user;
 			user = user->next;
@@ -321,7 +321,7 @@ void irc_free(irc_t * irc)
 	g_free(irc);
 	
 	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )
-		g_main_quit( global.loop );
+		b_main_quit();
 }
 
 /* USE WITH CAUTION!
@@ -604,7 +604,7 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	}
 	
 	if( irc->w_watch_source_id == 0 )
-		irc->w_watch_source_id = gaim_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
+		irc->w_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
 	
 	return;
 }
@@ -1010,7 +1010,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	return( 0 );
 }
 
-gboolean buddy_send_handler_delayed( gpointer data )
+static gboolean buddy_send_handler_delayed( gpointer data, gint fd, b_input_condition cond )
 {
 	user_t *u = data;
 	
@@ -1023,7 +1023,7 @@ gboolean buddy_send_handler_delayed( gpointer data )
 	u->sendbuf_timer = 0;
 	u->sendbuf_flags = 0;
 	
-	return( FALSE );
+	return FALSE;
 }
 
 void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
@@ -1037,8 +1037,8 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		if( u->sendbuf_len > 0 && u->sendbuf_flags != flags)
 		{
 			//Flush the buffer
-			g_source_remove( u->sendbuf_timer );
-			buddy_send_handler_delayed( u );
+			b_event_remove( u->sendbuf_timer );
+			buddy_send_handler_delayed( u, -1, 0 );
 		}
 
 		if( u->sendbuf_len == 0 )
@@ -1062,8 +1062,8 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 			delay *= 1000;
 		
 		if( u->sendbuf_timer > 0 )
-			g_source_remove( u->sendbuf_timer );
-		u->sendbuf_timer = g_timeout_add( delay, buddy_send_handler_delayed, u );
+			b_event_remove( u->sendbuf_timer );
+		u->sendbuf_timer = b_timeout_add( delay, buddy_send_handler_delayed, u );
 	}
 	else
 	{
@@ -1147,7 +1147,7 @@ int irc_noticefrom( irc_t *irc, char *nick, char *msg )
    timeout. The number returned is the number of seconds we received no
    pongs from the user. When not connected yet, we don't ping but drop the
    connection when the user fails to connect in IRC_LOGIN_TIMEOUT secs. */
-static gboolean irc_userping( gpointer _irc )
+static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond )
 {
 	irc_t *irc = _irc;
 	int rv = 0;

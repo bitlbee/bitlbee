@@ -29,7 +29,7 @@
 #include "passport.h"
 #include "md5.h"
 
-static void msn_sb_callback( gpointer data, gint source, GaimInputCondition cond );
+static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition cond );
 static int msn_sb_command( gpointer data, char **cmd, int num_parts );
 static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
@@ -236,7 +236,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 		g_free( sb->handler );
 	}
 	
-	if( sb->inp ) gaim_input_remove( sb->inp );
+	if( sb->inp ) b_event_remove( sb->inp );
 	closesocket( sb->fd );
 	
 	msn_switchboards = g_slist_remove( msn_switchboards, sb );
@@ -244,7 +244,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 	g_free( sb );
 }
 
-void msn_sb_connected( gpointer data, gint source, GaimInputCondition cond )
+gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct msn_switchboard *sb = data;
 	struct gaim_connection *gc;
@@ -253,7 +253,7 @@ void msn_sb_connected( gpointer data, gint source, GaimInputCondition cond )
 	
 	/* Are we still alive? */
 	if( !g_slist_find( msn_switchboards, sb ) )
-		return;
+		return FALSE;
 	
 	gc = sb->gc;
 	md = gc->proto_data;
@@ -262,7 +262,7 @@ void msn_sb_connected( gpointer data, gint source, GaimInputCondition cond )
 	{
 		debug( "ERROR %d while connecting to switchboard server", 1 );
 		msn_sb_destroy( sb );
-		return;
+		return FALSE;
 	}
 	
 	/* Prepare the callback */
@@ -279,12 +279,14 @@ void msn_sb_connected( gpointer data, gint source, GaimInputCondition cond )
 		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, gc->username, sb->key, sb->session );
 	
 	if( msn_sb_write( sb, buf, strlen( buf ) ) )
-		sb->inp = gaim_input_add( sb->fd, GAIM_INPUT_READ, msn_sb_callback, sb );
+		sb->inp = b_input_add( sb->fd, GAIM_INPUT_READ, msn_sb_callback, sb );
 	else
 		debug( "ERROR %d while connecting to switchboard server", 2 );
+	
+	return FALSE;
 }
 
-static void msn_sb_callback( gpointer data, gint source, GaimInputCondition cond )
+static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition cond )
 {
 	struct msn_switchboard *sb = data;
 	
@@ -292,7 +294,11 @@ static void msn_sb_callback( gpointer data, gint source, GaimInputCondition cond
 	{
 		debug( "ERROR: Switchboard died" );
 		msn_sb_destroy( sb );
+		
+		return FALSE;
 	}
+	else
+		return TRUE;
 }
 
 static int msn_sb_command( gpointer data, char **cmd, int num_parts )

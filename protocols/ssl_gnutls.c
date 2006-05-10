@@ -47,7 +47,7 @@ struct scd
 	gnutls_certificate_credentials xcred;
 };
 
-static void ssl_connected( gpointer data, gint source, GaimInputCondition cond );
+static void ssl_connected( gpointer data, gint source, b_input_condition cond );
 
 
 void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
@@ -80,9 +80,9 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	return( conn );
 }
 
-static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond );
+static void ssl_handshake( gpointer data, gint source, b_input_condition cond );
 
-static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
+static void ssl_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
 	
@@ -104,7 +104,7 @@ static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
 	ssl_handshake( data, source, cond );
 }
 
-static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond )
+static void ssl_handshake( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
 	int st;
@@ -203,7 +203,7 @@ int ssl_getfd( void *conn )
 	return( ((struct scd*)conn)->fd );
 }
 
-GaimInputCondition ssl_getdirection( void *conn )
+b_input_condition ssl_getdirection( void *conn )
 {
 	return( gnutls_record_get_direction( ((struct scd*)conn)->session ) ?
 	        GAIM_INPUT_WRITE : GAIM_INPUT_READ );

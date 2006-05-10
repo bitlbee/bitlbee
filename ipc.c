@@ -59,7 +59,7 @@ static void ipc_master_cmd_die( irc_t *data, char **cmd )
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_to_children_str( "DIE\r\n" );
 	
-	bitlbee_shutdown( NULL );
+	bitlbee_shutdown( NULL, -1, 0 );
 }
 
 void ipc_master_cmd_rehash( irc_t *data, char **cmd )
@@ -90,7 +90,7 @@ void ipc_master_cmd_restart( irc_t *data, char **cmd )
 	}
 	
 	global.restart = -1;
-	bitlbee_shutdown( NULL );
+	bitlbee_shutdown( NULL, -1, 0 );
 }
 
 static const command_t ipc_master_commands[] = {
@@ -245,7 +245,7 @@ static char *ipc_readline( int fd )
 	return buf;
 }
 
-void ipc_master_read( gpointer data, gint source, GaimInputCondition cond )
+gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
 {
 	char *buf, **cmd;
 	
@@ -271,9 +271,11 @@ void ipc_master_read( gpointer data, gint source, GaimInputCondition cond )
 			}
 		}
 	}
+	
+	return TRUE;
 }
 
-void ipc_child_read( gpointer data, gint source, GaimInputCondition cond )
+gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond )
 {
 	char *buf, **cmd;
 	
@@ -285,11 +287,13 @@ void ipc_child_read( gpointer data, gint source, GaimInputCondition cond )
 	}
 	else
 	{
-		gaim_input_remove( global.listen_watch_source_id );
+		b_event_remove( global.listen_watch_source_id );
 		close( global.listen_socket );
 		
 		global.listen_socket = -1;
 	}
+	
+	return TRUE;
 }
 
 void ipc_to_master( char **cmd )
@@ -396,7 +400,7 @@ void ipc_to_children_str( char *format, ... )
 
 void ipc_master_free_one( struct bitlbee_child *c )
 {
-	gaim_input_remove( c->ipc_inpa );
+	b_event_remove( c->ipc_inpa );
 	closesocket( c->ipc_fd );
 	
 	g_free( c->host );
@@ -462,7 +466,7 @@ void ipc_master_set_statefile( char *fn )
 }
 
 
-static void new_ipc_client( gpointer data, gint serversock, GaimInputCondition cond )
+static gboolean new_ipc_client( gpointer data, gint serversock, b_input_condition cond )
 {
 	struct bitlbee_child *child = g_new0( struct bitlbee_child, 1 );
 	
@@ -471,12 +475,14 @@ static void new_ipc_client( gpointer data, gint serversock, GaimInputCondition c
 	if( child->ipc_fd == -1 )
 	{
 		log_message( LOGLVL_WARNING, "Unable to accept connection on UNIX domain socket: %s", strerror(errno) );
-		return;
+		return TRUE;
 	}
 		
-	child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+	child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
 	
 	child_list = g_slist_append( child_list, child );
+	
+	return TRUE;
 }
 
 #ifndef _WIN32
@@ -511,7 +517,7 @@ int ipc_master_listen_socket()
 		return 0;
 	}
 	
-	gaim_input_add( serversock, GAIM_INPUT_READ, new_ipc_client, NULL );
+	b_input_add( serversock, GAIM_INPUT_READ, new_ipc_client, NULL );
 	
 	return 1;
 }
@@ -551,7 +557,7 @@ int ipc_master_load_state()
 			fclose( fp );
 			return 0;
 		}
-		child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+		child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
 		
 		child_list = g_slist_append( child_list, child );
 	}
