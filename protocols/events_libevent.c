@@ -38,7 +38,6 @@
 static guint id_next;
 static GHashTable *id_hash;
 
-
 struct b_event_data
 {
 	guint id;
@@ -72,12 +71,15 @@ static void b_event_passthrough( int fd, short event, void *data )
 {
 	struct b_event_data *b_ev = data;
 	b_input_condition cond = 0;
-
-	if( event & EV_READ )
-		cond |= GAIM_INPUT_READ;
-	if( event & EV_WRITE )
-		cond |= GAIM_INPUT_WRITE;
-
+	
+	if( fd >= 0 )
+	{
+		if( event & EV_READ )
+			cond |= GAIM_INPUT_READ;
+		if( event & EV_WRITE )
+			cond |= GAIM_INPUT_WRITE;
+	}
+	
 	if( !b_ev->function( b_ev->data, fd, cond ) )
 		b_event_remove( b_ev->id );
 }
@@ -87,7 +89,7 @@ gint b_input_add( gint source, b_input_condition condition, b_event_handler func
 	struct b_event_data *b_ev = g_new0( struct b_event_data, 1 );
 	GIOCondition cond;
 	
-	b_ev->id == id_next++;
+	b_ev->id = id_next++;
 	b_ev->function = function;
 	b_ev->data = data;
 	
@@ -105,12 +107,13 @@ gint b_input_add( gint source, b_input_condition condition, b_event_handler func
 	return b_ev->id;
 }
 
+/* TODO: Persistence for timers! */
 gint b_timeout_add( gint timeout, b_event_handler function, gpointer data )
 {
 	struct b_event_data *b_ev = g_new0( struct b_event_data, 1 );
 	struct timeval tv;
 	
-	b_ev->id == id_next++;
+	b_ev->id = id_next++;
 	b_ev->function = function;
 	b_ev->data = data;
 	
@@ -118,7 +121,7 @@ gint b_timeout_add( gint timeout, b_event_handler function, gpointer data )
 	tv.tv_usec = ( timeout % 1000 ) * 1000;
 	
 	evtimer_set( &b_ev->evinfo, b_event_passthrough, b_ev );
-	evtimer_add( &b_ev->evinfo, &tv);
+	evtimer_add( &b_ev->evinfo, &tv );
 	
 	g_hash_table_insert( id_hash, &b_ev->id, b_ev );
 	
@@ -132,7 +135,7 @@ void b_event_remove( gint tag )
 	if( b_ev )
 	{
 		event_del( &b_ev->evinfo );
-		g_hash_table_remove( id_hash, &tag );
+		g_hash_table_remove( id_hash, &b_ev->id );
 		g_free( b_ev );
 	}
 }
