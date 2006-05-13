@@ -114,7 +114,7 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 	struct scd *conn = data;
 	int st;
 	
-	if( conn->inpa != -1 )
+	if( 0 && conn->inpa != -1 )
 	{
 		b_event_remove( conn->inpa );
 		conn->inpa = -1;

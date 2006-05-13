@@ -130,7 +130,7 @@ gint b_timeout_add(gint timeout, b_event_handler func, gpointer data)
 
 void b_event_remove(gint tag)
 {
-	event_debug( "g_source_remove( %d )\n", tag );
+	event_debug( "b_event_remove( %d )\n", tag );
 	
 	if (tag > 0)
 		g_source_remove(tag);

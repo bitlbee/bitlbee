@@ -39,8 +39,8 @@
 #include <gmodule.h>
 
 typedef enum {
-	GAIM_INPUT_READ = 1 << 0,
-	GAIM_INPUT_WRITE = 1 << 1
+	GAIM_INPUT_READ = 1 << 1,
+	GAIM_INPUT_WRITE = 1 << 2
 } b_input_condition;
 typedef gboolean (*b_event_handler)(gpointer data, gint fd, b_input_condition cond);
 
@@ -48,8 +48,8 @@ typedef gboolean (*b_event_handler)(gpointer data, gint fd, b_input_condition co
 #define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 #define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-// #define event_debug( x... ) printf( x )
-#define event_debug( x... )
+#define event_debug( x... ) printf( x )
+// #define event_debug( x... )
 
 G_MODULE_EXPORT void b_main_init();
 G_MODULE_EXPORT void b_main_run();
