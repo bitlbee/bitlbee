@@ -71,6 +71,7 @@ static void b_event_passthrough( int fd, short event, void *data )
 {
 	struct b_event_data *b_ev = data;
 	b_input_condition cond = 0;
+	int id;
 	
 	if( fd >= 0 )
 	{
@@ -82,10 +83,14 @@ static void b_event_passthrough( int fd, short event, void *data )
 	
 	event_debug( "b_event_passthrough( %d, %d, 0x%x ) (%d)\n", fd, event, (int) data, b_ev->id );
 	
+	/* Since the called function might cancel this handler already
+	   (which free()s b_ev, we have to remember the ID here. */
+	id = b_ev->id;
+	
 	if( !b_ev->function( b_ev->data, fd, cond ) )
 	{
 		event_debug( "Handler returned FALSE: " );
-		b_event_remove( b_ev->id );
+		b_event_remove( id );
 	}
 }
 
@@ -150,7 +155,7 @@ void b_event_remove( gint id )
 	}
 	else
 	{
-		event_debug( "Invalid?\n" );
+		event_debug( "Double remove?\n" );
 	}
 }
 

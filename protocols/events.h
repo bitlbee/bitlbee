@@ -48,6 +48,8 @@ typedef gboolean (*b_event_handler)(gpointer data, gint fd, b_input_condition co
 #define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 #define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
+#define event_debug( x... ) printf( x )
+
 G_MODULE_EXPORT void b_main_init();
 G_MODULE_EXPORT void b_main_run();
 G_MODULE_EXPORT void b_main_quit();

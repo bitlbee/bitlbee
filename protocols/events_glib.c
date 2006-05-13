@@ -72,17 +72,26 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 {
 	GaimIOClosure *closure = data;
 	b_input_condition gaim_cond = 0;
+	gboolean st;
 
 	if (condition & GAIM_READ_COND)
 		gaim_cond |= GAIM_INPUT_READ;
 	if (condition & GAIM_WRITE_COND)
 		gaim_cond |= GAIM_INPUT_WRITE;
+	
+	event_debug( "gaim_io_invoke( %d, %d, 0x%x )\n", g_io_channel_unix_get_fd(source), condition, data );
 
-	return closure->function(closure->data, g_io_channel_unix_get_fd(source), gaim_cond);
+	st = closure->function(closure->data, g_io_channel_unix_get_fd(source), gaim_cond);
+	
+	if( !st )
+		event_debug( "Returned FALSE, cancelling.\n" );
+	
+	return st;
 }
 
 static void gaim_io_destroy(gpointer data)
 {
+	event_debug( "gaim_io_destroy( 0x%x )\n", data );
 	g_free(data);
 }
 
@@ -104,17 +113,25 @@ gint b_input_add(gint source, b_input_condition condition, b_event_handler funct
 	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
 					      gaim_io_invoke, closure, gaim_io_destroy);
 	
+	event_debug( "b_input_add( %d, %d, 0x%x, 0x%x ) = %d (0x%x)\n", source, condition, function, data, closure->result, closure );
+	
 	g_io_channel_unref(channel);
 	return closure->result;
 }
 
 gint b_timeout_add(gint timeout, b_event_handler func, gpointer data)
 {
-	return g_timeout_add(timeout, func, data);
+	gint st = g_timeout_add(timeout, func, data);
+	
+	event_debug( "b_timeout_add( %d, %d, %d ) = %d\n", timeout, func, data, st );
+	
+	return st;
 }
 
 void b_event_remove(gint tag)
 {
+	event_debug( "g_source_remove( %d )\n", tag );
+	
 	if (tag > 0)
 		g_source_remove(tag);
 }
