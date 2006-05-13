@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include "proxy.h"
 
@@ -215,4 +216,20 @@ gboolean b_event_remove_by_data( gpointer data )
 	/* FIXME! */
 	event_debug( "FALSE!\n" );
 	return FALSE;
+}
+
+void closesocket( int fd )
+{
+	struct b_event_data *b_ev;
+	
+	/* Since epoll() (the main reason we use libevent) automatically removes sockets from
+	   the epoll() list when a socket gets closed and some modules have a habit of
+	   closing sockets before removing event handlers, our and libevent's administration
+	   get a little bit messed up. So this little function will remove the handlers
+	   properly before closing a socket. */
+	
+	if( ( b_ev = g_hash_table_lookup( read_hash, &fd ) ) || ( b_ev = g_hash_table_lookup( write_hash, &fd ) ) )
+		b_event_remove( b_ev->id );
+	
+	close( fd );
 }

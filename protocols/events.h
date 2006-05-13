@@ -60,4 +60,8 @@ G_MODULE_EXPORT gint b_timeout_add(gint timeout, b_event_handler func, gpointer 
 G_MODULE_EXPORT void b_event_remove(gint id);
 G_MODULE_EXPORT gboolean b_event_remove_by_data(gpointer data);
 
+#ifdef EVENTS_LIBEVENT
+G_MODULE_EXPORT void closesocket(int fd);
+#endif
+
 #endif /* _EVENTS_H_ */

@@ -17,7 +17,9 @@
 #define sock_make_nonblocking(fd) fcntl(fd, F_SETFL, O_NONBLOCK)
 #define sock_make_blocking(fd) fcntl(fd, F_SETFL, 0)
 #define sockerr_again() (errno == EINPROGRESS || errno == EINTR)
+#ifndef EVENTS_LIBEVENT
 #define closesocket(a) close(a)
+#endif
 #else
 # include <winsock2.h>
 # ifndef _MSC_VER
