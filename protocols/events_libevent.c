@@ -229,7 +229,10 @@ void closesocket( int fd )
 	   properly before closing a socket. */
 	
 	if( ( b_ev = g_hash_table_lookup( read_hash, &fd ) ) || ( b_ev = g_hash_table_lookup( write_hash, &fd ) ) )
+	{
+		event_debug( "Warning: Had to clean up some event handlers before closing fd %d.\n", fd );
 		b_event_remove( b_ev->id );
+	}
 	
 	close( fd );
 }
