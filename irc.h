@@ -60,7 +60,6 @@ typedef struct irc
 	int pinging;
 	char *sendbuffer;
 	char *readbuffer;
-	int quit;
 
 	int sentbytes;
 	time_t oldtime;

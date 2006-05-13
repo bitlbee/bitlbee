@@ -575,7 +575,8 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	int size;
 	char line[IRC_MAX_LINE+1], *cs;
 		
-	if( irc->quit )
+	/* Don't try to write anything new anymore when shutting down. */
+	if( irc->status == USTATUS_SHUTDOWN )
 		return;
 	
 	line[IRC_MAX_LINE] = 0;
@@ -604,7 +605,14 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	}
 	
 	if( irc->w_watch_source_id == 0 )
-		irc->w_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
+	{
+		/* If the buffer is empty we can probably write, so call the write event handler
+		   immediately. If it returns TRUE, it should be called again, so add the event to
+		   the queue. If it's FALSE, we emptied the buffer and saved ourselves some work
+		   in the event queue. */
+		if( bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE ) )
+			irc->w_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
+	}
 	
 	return;
 }
