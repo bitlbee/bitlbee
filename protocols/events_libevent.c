@@ -49,6 +49,7 @@ struct b_event_data
 {
 	guint id;
 	struct event evinfo;
+	gint timeout;
 	b_event_handler function;
 	void *data;
 };
@@ -100,6 +101,15 @@ static void b_event_passthrough( int fd, short event, void *data )
 	{
 		event_debug( "Handler returned FALSE: " );
 		b_event_remove( id );
+	}
+	else if( fd == -1 )
+	{
+		struct timeval tv;
+		
+		tv.tv_sec = b_ev->timeout / 1000;
+		tv.tv_usec = ( b_ev->timeout % 1000 ) * 1000;
+		
+		evtimer_add( &b_ev->evinfo, &tv );
 	}
 }
 
@@ -158,6 +168,7 @@ gint b_timeout_add( gint timeout, b_event_handler function, gpointer data )
 	struct timeval tv;
 	
 	b_ev->id = id_next++;
+	b_ev->timeout = timeout;
 	b_ev->function = function;
 	b_ev->data = data;
 	

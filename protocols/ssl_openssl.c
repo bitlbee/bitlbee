@@ -114,12 +114,6 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 	struct scd *conn = data;
 	int st;
 	
-	if( 0 && conn->inpa != -1 )
-	{
-		b_event_remove( conn->inpa );
-		conn->inpa = -1;
-	}
-	
 	if( ( st = SSL_connect( conn->ssl ) ) < 0 )
 	{
 		conn->lasterr = SSL_get_error( conn->ssl, st );

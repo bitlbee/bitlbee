@@ -125,7 +125,9 @@ static int proxy_connect_none(const char *host, unsigned short port, struct PHB 
 	}
 
 	sock_make_nonblocking(fd);
-
+	
+	event_debug("proxy_connect_none( \"%s\", %d ) = %d\n", host, port, fd);
+	
 	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0) {
 		if (sockerr_again()) {
 			phb->inpa = b_input_add(fd, GAIM_INPUT_WRITE, gaim_io_connected, phb);
