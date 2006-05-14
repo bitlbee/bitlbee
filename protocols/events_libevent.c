@@ -228,9 +228,14 @@ void closesocket( int fd )
 	   get a little bit messed up. So this little function will remove the handlers
 	   properly before closing a socket. */
 	
-	if( ( b_ev = g_hash_table_lookup( read_hash, &fd ) ) || ( b_ev = g_hash_table_lookup( write_hash, &fd ) ) )
+	if( b_ev = g_hash_table_lookup( read_hash, &fd ) )
 	{
-		event_debug( "Warning: Had to clean up some event handlers before closing fd %d.\n", fd );
+		event_debug( "Warning: fd %d still had a read event handler when shutting down.\n", fd );
+		b_event_remove( b_ev->id );
+	}
+	if( b_ev = g_hash_table_lookup( write_hash, &fd ) )
+	{
+		event_debug( "Warning: fd %d still had a write event handler when shutting down.\n", fd );
 		b_event_remove( b_ev->id );
 	}
 	
