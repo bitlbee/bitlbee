@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-static gboolean bitlbee_io_new_client( gpointer data, gint source, b_input_condition condition );
+static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition condition );
 
 int bitlbee_daemon_init()
 {
@@ -144,7 +144,7 @@ int bitlbee_inetd_init()
 	return( 0 );
 }
 
-gboolean bitlbee_io_current_client_read( gpointer data, gint source, b_input_condition cond )
+gboolean bitlbee_io_current_client_read( gpointer data, gint fd, b_input_condition cond )
 {
 	irc_t *irc = data;
 	char line[513];
@@ -185,7 +185,7 @@ gboolean bitlbee_io_current_client_read( gpointer data, gint source, b_input_con
 	/* Normally, irc_process() shouldn't call irc_free() but irc_abort(). Just in case: */
 	if( !g_slist_find( irc_connection_list, irc ) )
 	{
-		log_message( LOGLVL_WARNING, "Abnormal termination of connection with fd %d.", irc->fd );
+		log_message( LOGLVL_WARNING, "Abnormal termination of connection with fd %d.", fd );
 		return FALSE;
 	} 
 	
@@ -199,7 +199,7 @@ gboolean bitlbee_io_current_client_read( gpointer data, gint source, b_input_con
 	return TRUE;
 }
 
-gboolean bitlbee_io_current_client_write( gpointer data, gint source, b_input_condition cond )
+gboolean bitlbee_io_current_client_write( gpointer data, gint fd, b_input_condition cond )
 {
 	irc_t *irc = data;
 	int st, size;
@@ -242,7 +242,7 @@ gboolean bitlbee_io_current_client_write( gpointer data, gint source, b_input_co
 	}
 }
 
-static gboolean bitlbee_io_new_client( gpointer data, gint source, b_input_condition condition )
+static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition condition )
 {
 	socklen_t size = sizeof( struct sockaddr_in );
 	struct sockaddr_in conn_info;
