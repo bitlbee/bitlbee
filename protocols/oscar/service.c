@@ -880,13 +880,14 @@ int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, guint32 offset, guin
 			aimbs_put32(&fr->data, 0xa46d3b39);
 #endif
 
+/* len can't be 0 here anyway...
 		} else if ((offset == 0x00001000) && (len == 0x00000000)) {
 
 			aimbs_put32(&fr->data, 0xd41d8cd9);
 			aimbs_put32(&fr->data, 0x8f00b204);
 			aimbs_put32(&fr->data, 0xe9800998);
 			aimbs_put32(&fr->data, 0xecf8427e);
-
+*/
 		} else
 			do_error_dialog(sess->aux_data, "WARNING: unknown hash request", "Gaim");
 

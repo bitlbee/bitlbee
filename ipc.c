@@ -570,5 +570,6 @@ int ipc_master_load_state()
 	ipc_to_children_str( "HELLO\r\n" );
 	ipc_to_children_str( "OPERMSG :New BitlBee master process started (version " BITLBEE_VERSION ")\r\n" );
 	
+	fclose( fp );
 	return 1;
 }
