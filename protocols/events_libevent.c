@@ -211,13 +211,6 @@ void b_event_remove( gint id )
 	}
 }
 
-gboolean b_event_remove_by_data( gpointer data )
-{
-	/* FIXME! */
-	event_debug( "FALSE!\n" );
-	return FALSE;
-}
-
 void closesocket( int fd )
 {
 	struct b_event_data *b_ev;

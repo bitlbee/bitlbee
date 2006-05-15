@@ -135,8 +135,3 @@ void b_event_remove(gint tag)
 	if (tag > 0)
 		g_source_remove(tag);
 }
-
-gboolean b_event_remove_by_data(gpointer data)
-{
-	return g_source_remove_by_user_data(data);
-}
