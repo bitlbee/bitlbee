@@ -247,7 +247,7 @@ struct gaim_connection *new_gaim_conn( struct aim_user *user )
 	/* [MD]	BUGFIX: don't set gc->irc to the global IRC, but use the one from the struct aim_user.
 	 * This fixes daemon mode breakage where IRC doesn't point to the currently active connection.
 	 */
-	gc->irc=user->irc;
+	gc->irc = user->irc;
 	
 	connections = g_slist_append( connections, gc );
 	
@@ -371,7 +371,8 @@ gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
 
 void cancel_auto_reconnect( account_t *a )
 {
-	while( b_event_remove_by_data( (gpointer) a ) );
+	/* while( b_event_remove_by_data( (gpointer) a ) ); */
+	b_event_remove( a->reconnect );
 	a->reconnect = 0;
 }
 
@@ -413,10 +414,9 @@ void signoff( struct gaim_connection *gc )
 	else if( !gc->wants_to_die && set_getint( irc, "auto_reconnect" ) )
 	{
 		int delay = set_getint( irc, "auto_reconnect_delay" );
-		serv_got_crap( gc, "Reconnecting in %d seconds..", delay );
 		
-		a->reconnect = 1;
-		b_timeout_add( delay * 1000, auto_reconnect, a );
+		serv_got_crap( gc, "Reconnecting in %d seconds..", delay );
+		a->reconnect = b_timeout_add( delay * 1000, auto_reconnect, a );
 	}
 	
 	destroy_gaim_conn( gc );
