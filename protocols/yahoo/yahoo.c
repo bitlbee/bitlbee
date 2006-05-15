@@ -469,13 +469,12 @@ gboolean byahoo_read_ready_callback( gpointer data, gint source, b_input_conditi
 	struct byahoo_read_ready_data *d = data;
 	
 	if( !byahoo_get_gc_by_id( d->id ) )
-	{
 		/* WTF doesn't libyahoo clean this up? */
-		ext_yahoo_remove_handler( d->id, d->tag );
 		return FALSE;
-	}
 	
 	yahoo_read_ready( d->id, d->fd, d->data );
+	
+	return TRUE;
 }
 
 struct byahoo_write_ready_data
@@ -491,13 +490,12 @@ gboolean byahoo_write_ready_callback( gpointer data, gint source, b_input_condit
 	struct byahoo_write_ready_data *d = data;
 	
 	if( !byahoo_get_gc_by_id( d->id ) )
-	{
 		/* WTF doesn't libyahoo clean this up? */
-		ext_yahoo_remove_handler( d->id, d->tag );
 		return FALSE;
-	}
 	
 	yahoo_write_ready( d->id, d->fd, d->data );
+	
+	return FALSE;
 }
 
 void ext_yahoo_login_response( int id, int succ, char *url )
