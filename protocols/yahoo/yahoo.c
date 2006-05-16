@@ -609,7 +609,8 @@ void ext_yahoo_status_changed( int id, char *who, int stat, char *msg, int away 
 {
 	struct gaim_connection *gc = byahoo_get_gc_by_id( id );
 	
-	serv_got_update( gc, who, stat != YAHOO_STATUS_OFFLINE, 0, 0, 0,
+	serv_got_update( gc, who, stat != YAHOO_STATUS_OFFLINE, 0, 0,
+	                 ( stat == YAHOO_STATUS_IDLE ) ? away : 0,
 	                 ( stat != YAHOO_STATUS_AVAILABLE ) | ( stat << 1 ), 0 );
 }
 
