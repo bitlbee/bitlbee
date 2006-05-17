@@ -70,6 +70,37 @@ void *http_dorequest( char *host, int port, int ssl, char *request, http_input_f
 	return( req );
 }
 
+void *http_dorequest_url( char *url_string, http_input_function func, gpointer data )
+{
+	url_t *url = g_new0( url_t, 1 );
+	char *request;
+	void *ret;
+	
+	if( !url_set( url, url_string ) )
+	{
+		g_free( url );
+		return NULL;
+	}
+	
+	if( url->proto != PROTO_HTTP && url->proto != PROTO_HTTPS )
+	{
+		g_free( url );
+		return NULL;
+	}
+	
+	request = g_strdup_printf( "GET %s HTTP/1.0\r\n"
+	                           "Host: %s\r\n"
+	                           "User-Agent: BitlBee " BITLBEE_VERSION "\r\n"
+	                           "\r\n", url->file, url->host );
+	
+	ret = http_dorequest( url->host, url->port,
+	                      url->proto == PROTO_HTTPS, request, func, data );
+	
+	g_free( url );
+	g_free( request );
+	return NULL;
+}
+
 /* This one is actually pretty simple... Might get more calls if we can't write 
    the whole request at once. */
 static void http_connected( gpointer data, int source, GaimInputCondition cond )
