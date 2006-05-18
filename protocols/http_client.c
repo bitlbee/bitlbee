@@ -268,7 +268,7 @@ got_reply:
 	else
 		req->reply_body = end1 + 2;
 	
-	req->body_size = req->reply_headers + bytes_read - req->reply_body;
+	req->body_size = req->reply_headers + req->bytes_read - req->reply_body;
 	
 	if( ( end1 = strchr( req->reply_headers, ' ' ) ) != NULL )
 	{
