@@ -98,7 +98,7 @@ void *http_dorequest_url( char *url_string, http_input_function func, gpointer d
 	
 	g_free( url );
 	g_free( request );
-	return NULL;
+	return ret;
 }
 
 /* This one is actually pretty simple... Might get more calls if we can't write 
