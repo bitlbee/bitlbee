@@ -38,6 +38,7 @@ struct http_request
 	int status_code;
 	char *reply_headers;
 	char *reply_body;
+	int body_size;
 	int finished;
 	
 	void *ssl;

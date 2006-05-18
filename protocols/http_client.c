@@ -252,20 +252,23 @@ got_reply:
 		end1 = end2 + 1;
 		evil_server = 1;
 	}
-	else
+	else if( end1 )
 	{
 		end1 += 2;
 	}
-	
-	if( end1 )
+	else
 	{
-		*end1 = 0;
-		
-		if( evil_server )
-			req->reply_body = end1 + 1;
-		else
-			req->reply_body = end1 + 2;
+		goto cleanup;
 	}
+	
+	*end1 = 0;
+	
+	if( evil_server )
+		req->reply_body = end1 + 1;
+	else
+		req->reply_body = end1 + 2;
+	
+	req->body_size = req->reply_headers + bytes_read - req->reply_body;
 	
 	if( ( end1 = strchr( req->reply_headers, ' ' ) ) != NULL )
 	{
