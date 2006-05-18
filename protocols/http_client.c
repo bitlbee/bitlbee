@@ -90,7 +90,7 @@ void *http_dorequest_url( char *url_string, http_input_function func, gpointer d
 	
 	request = g_strdup_printf( "GET %s HTTP/1.0\r\n"
 	                           "Host: %s\r\n"
-	                           "User-Agent: BitlBee " BITLBEE_VERSION "\r\n"
+	                           "User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n"
 	                           "\r\n", url->file, url->host );
 	
 	ret = http_dorequest( url->host, url->port,
