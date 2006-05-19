@@ -609,7 +609,8 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 			
 			return;
 		}
-		return;
+		/* Why did we have this here....
+		return; */
 	}
 	
 	oa = u->away != NULL;

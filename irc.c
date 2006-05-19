@@ -549,7 +549,7 @@ int irc_usermsg( irc_t *irc, char *format, ... )
 	user_t *u;
 	
 	u = user_find( irc, irc->mynick );
-	if( u ) is_private = u->is_private;
+	is_private = u->is_private;
 	
 	va_start( params, format );
 	g_vsnprintf( text, sizeof( text ), format, params );

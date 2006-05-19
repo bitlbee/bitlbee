@@ -1552,7 +1552,9 @@ static gboolean jabber_free(gpointer data, gint fd, b_input_condition cond)
 
 	if(jd->gjc != NULL) {
 		gjab_delete(jd->gjc);
+		/* YAY for modules with their own memory pool managers!...
 		g_free(jd->gjc->sid);
+		And a less sarcastic yay for valgrind. :-) */
 		jd->gjc = NULL;
 	}
 	g_free(jd);

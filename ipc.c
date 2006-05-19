@@ -507,7 +507,7 @@ int ipc_master_listen_socket()
 		return 0;
 	}
 
-	if (bind(serversock, &un_addr, sizeof(un_addr)) == -1) {
+	if (bind(serversock, (struct sockaddr *)&un_addr, sizeof(un_addr)) == -1) {
 		log_message( LOGLVL_WARNING, "Unable to bind UNIX socket to %s: %s", IPCSOCKET, strerror(errno) );
 		return 0;
 	}
@@ -565,5 +565,6 @@ int ipc_master_load_state()
 	ipc_to_children_str( "HELLO\r\n" );
 	ipc_to_children_str( "OPERMSG :New BitlBee master process started (version " BITLBEE_VERSION ")\r\n" );
 	
+	fclose( fp );
 	return 1;
 }

@@ -149,7 +149,11 @@ void set_del( irc_t *irc, char *key )
 	}
 	if( s )
 	{
-		t->next = s->next;
+		if( t )
+			t->next = s->next;
+		else
+			irc->set = s->next;
+		
 		g_free( s->key );
 		if( s->value ) g_free( s->value );
 		if( s->def ) g_free( s->def );
