@@ -482,7 +482,14 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	}
 	else if( gc->user->proto_opt[0] && *gc->user->proto_opt[0] )
 	{
-		u->host = g_strdup( gc->user->proto_opt[0] );
+		char *colon;
+		
+		if( ( colon = strchr( gc->user->proto_opt[0], ':' ) ) )
+			u->host = g_strndup( gc->user->proto_opt[0],
+			                     colon - gc->user->proto_opt[0] );
+		else
+			u->host = g_strdup( gc->user->proto_opt[0] );
+		
 		u->user = g_strdup( handle );
 		
 		/* s/ /_/ ... important for AOL screennames */

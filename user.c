@@ -167,8 +167,8 @@ void user_rename( irc_t *irc, char *oldnick, char *newnick )
 	if( u->nick == u->realname ) u->realname = NULL;
 	u->nick = g_strdup( newnick );
 	if( !u->user ) u->user = u->nick;
-	if( !u->host ) u->user = u->host;
-	if( !u->realname ) u->user = u->realname;
+	if( !u->host ) u->host = u->nick;
+	if( !u->realname ) u->realname = u->nick;
 	
 	/* Remove the old reference to this user from the hash and create a
 	   new one with the new nick. This is indeed a bit messy. */
