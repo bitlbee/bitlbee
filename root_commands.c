@@ -56,6 +56,10 @@ void root_command_string( irc_t *irc, user_t *u, char *command, int flags )
 				cmd[k++] = s;
 				s --;
 			}
+			else
+			{
+				break;
+			}
 		}
 		else if( *s == '\\' && ( ( !q && s[1] ) || ( q && q == s[1] ) ) )
 		{
