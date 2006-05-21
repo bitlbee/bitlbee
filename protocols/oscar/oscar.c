@@ -1,6 +1,8 @@
 /*
  * gaim
  *
+ * Some code copyright (C) 2002-2006, Jelmer Vernooij <jelmer@samba.org>
+ *                                    and the BitlBee team.
  * Some code copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  * libfaim code copyright 1998, 1999 Adam Fritzler <afritz@auk.cx>
  *
