@@ -727,8 +727,11 @@ struct aim_chat_exchangeinfo {
 	char *lang2;
 };
 
-#define AIM_CHATFLAGS_NOREFLECT 0x0001
-#define AIM_CHATFLAGS_AWAY      0x0002
+#define AIM_CHATFLAGS_NOREFLECT 	0x0001
+#define AIM_CHATFLAGS_AWAY      	0x0002
+#define AIM_CHATFLAGS_UNICODE		0x0004
+#define AIM_CHATFLAGS_ISO_8859_1	0x0008
+
 int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const char *msg, int msglen);
 int aim_chat_join(aim_session_t *sess, aim_conn_t *conn, guint16 exchange, const char *roomname, guint16 instance);
 int aim_chat_attachname(aim_conn_t *conn, guint16 exchange, const char *roomname, guint16 instance);

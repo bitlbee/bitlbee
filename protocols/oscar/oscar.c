@@ -2501,6 +2501,7 @@ int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
 	struct chat_connection * ccon;
 	int ret;
 	guint8 len = strlen(message);
+	guint16 flags;
 	char *s;
 	
 	if(!(ccon = find_oscar_chat(gc, id)))
@@ -2509,15 +2510,19 @@ int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
 	for (s = message; *s; s++)
 		if (*s & 128)
 			break;
-	  	
+	
+	flags = AIM_CHATFLAGS_NOREFLECT;
+	
 	/* Message contains high ASCII chars, time for some translation! */
 	if (*s) {
 		s = g_malloc(BUF_LONG);
 		/* Try if we can put it in an ISO8859-1 string first.
 		   If we can't, fall back to UTF16. */
 		if ((ret = do_iconv("UTF-8", "ISO8859-1", message, s, len, BUF_LONG)) >= 0) {
+			flags |= AIM_CHATFLAGS_ISO_8859_1;
 			len = ret;
 		} else if ((ret = do_iconv("UTF-8", "UNICODEBIG", message, s, len, BUF_LONG)) >= 0) {
+			flags |= AIM_CHATFLAGS_UNICODE;
 			len = ret;
 		} else {
 			/* OOF, translation failed... Oh well.. */
@@ -2528,7 +2533,7 @@ int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
 		s = message;
 	}
 	  	
-	ret = aim_chat_send_im(od->sess, ccon->conn, AIM_CHATFLAGS_NOREFLECT, s, len);
+	ret = aim_chat_send_im(od->sess, ccon->conn, flags, s, len);
 	  	
 	if (s != message) {	
 		g_free(s);
