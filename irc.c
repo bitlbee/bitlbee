@@ -1010,7 +1010,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	}
 	else if( c && c->gc && c->gc->prpl )
 	{
-		return( serv_send_chat( irc, c->gc, c->id, s ) );
+		return( bim_chat_msg( c->gc, c->id, s ) );
 	}
 	
 	return( 0 );
@@ -1020,8 +1020,12 @@ gboolean buddy_send_handler_delayed( gpointer data )
 {
 	user_t *u = data;
 	
+	/* Shouldn't happen, but just to be sure. */
+	if( u->sendbuf_len < 2 )
+		return FALSE;
+	
 	u->sendbuf[u->sendbuf_len-2] = 0; /* Cut off the last newline */
-	serv_send_im( u->gc->irc, u, u->sendbuf, u->sendbuf_flags );
+	bim_buddy_msg( u->gc, u->handle, u->sendbuf, u->sendbuf_flags );
 	
 	g_free( u->sendbuf );
 	u->sendbuf = NULL;
@@ -1029,7 +1033,7 @@ gboolean buddy_send_handler_delayed( gpointer data )
 	u->sendbuf_timer = 0;
 	u->sendbuf_flags = 0;
 	
-	return( FALSE );
+	return FALSE;
 }
 
 void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
@@ -1042,7 +1046,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		
 		if( u->sendbuf_len > 0 && u->sendbuf_flags != flags)
 		{
-			//Flush the buffer
+			/* Flush the buffer */
 			g_source_remove( u->sendbuf_timer );
 			buddy_send_handler_delayed( u );
 		}
@@ -1050,14 +1054,14 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		if( u->sendbuf_len == 0 )
 		{
 			u->sendbuf_len = strlen( msg ) + 2;
-			u->sendbuf = g_new (char, u->sendbuf_len );
+			u->sendbuf = g_new( char, u->sendbuf_len );
 			u->sendbuf[0] = 0;
 			u->sendbuf_flags = flags;
 		}
 		else
 		{
 			u->sendbuf_len += strlen( msg ) + 1;
-			u->sendbuf = g_renew ( char, u->sendbuf, u->sendbuf_len );
+			u->sendbuf = g_renew( char, u->sendbuf, u->sendbuf_len );
 		}
 		
 		strcat( u->sendbuf, msg );
@@ -1073,7 +1077,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 	}
 	else
 	{
-		serv_send_im( irc, u, msg, flags );
+		bim_buddy_msg( u->gc, u->handle, msg, flags );
 	}
 }
 

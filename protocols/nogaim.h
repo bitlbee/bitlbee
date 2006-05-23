@@ -193,11 +193,11 @@ G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
 G_MODULE_EXPORT void register_protocol(struct prpl *);
 
 /* nogaim.c */
-int serv_send_im(irc_t *irc, user_t *u, char *msg, int flags);
-int serv_send_chat(irc_t *irc, struct gaim_connection *gc, int id, char *msg );
+int bim_set_away( struct gaim_connection *gc, char *away );
+int bim_buddy_msg( struct gaim_connection *gc, char *handle, char *msg, int flags );
+int bim_chat_msg( struct gaim_connection *gc, int id, char *msg );
 
 void nogaim_init();
-int proto_away( struct gaim_connection *gc, char *away );
 char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
 
 gboolean auto_reconnect( gpointer data );
