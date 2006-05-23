@@ -214,7 +214,7 @@ G_MODULE_EXPORT void destroy_gaim_conn( struct gaim_connection *gc );
 G_MODULE_EXPORT void set_login_progress( struct gaim_connection *gc, int step, char *msg );
 G_MODULE_EXPORT void hide_login_progress( struct gaim_connection *gc, char *msg );
 G_MODULE_EXPORT void hide_login_progress_error( struct gaim_connection *gc, char *msg );
-G_MODULE_EXPORT void serv_got_crap( struct gaim_connection *gc, char *format, ... );
+G_MODULE_EXPORT void serv_got_crap( struct gaim_connection *gc, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 G_MODULE_EXPORT void account_online( struct gaim_connection *gc );
 G_MODULE_EXPORT void signoff( struct gaim_connection *gc );
 
