@@ -557,9 +557,9 @@ static void cmd_block( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		gc->prpl->rem_permit( gc, cmd[2] );
-		gc->prpl->add_deny( gc, cmd[2] );
-		irc_usermsg( irc, "Buddy `%s' moved from your permit- to your deny-list", cmd[2] );
+		bim_rem_allow( gc, cmd[2] );
+		bim_add_block( gc, cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from your allow- to your block-list", cmd[2] );
 	}
 }
 
@@ -616,10 +616,10 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		gc->prpl->rem_deny( gc, cmd[2] );
-		gc->prpl->add_permit( gc, cmd[2] );
+		bim_rem_block( gc, cmd[2] );
+		bim_add_allow( gc, cmd[2] );
 		
-		irc_usermsg( irc, "Buddy `%s' moved from your deny- to your permit-list", cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from your block- to your allow-list", cmd[2] );
 	}
 }
 

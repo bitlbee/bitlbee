@@ -197,6 +197,11 @@ int bim_set_away( struct gaim_connection *gc, char *away );
 int bim_buddy_msg( struct gaim_connection *gc, char *handle, char *msg, int flags );
 int bim_chat_msg( struct gaim_connection *gc, int id, char *msg );
 
+void bim_add_allow( struct gaim_connection *gc, char *handle );
+void bim_rem_allow( struct gaim_connection *gc, char *handle );
+void bim_add_block( struct gaim_connection *gc, char *handle );
+void bim_rem_block( struct gaim_connection *gc, char *handle );
+
 void nogaim_init();
 char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
 

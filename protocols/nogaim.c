@@ -1070,3 +1070,49 @@ static char *bim_away_alias_find( GList *gcm, char *away )
 	
 	return( NULL );
 }
+
+void bim_add_allow( struct gaim_connection *gc, char *handle )
+{
+	if( g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) == NULL )
+	{
+		gc->permit = g_slist_prepend( gc->permit, g_strdup( handle ) );
+	}
+	
+	gc->prpl->add_permit( gc, handle );
+}
+
+void bim_rem_allow( struct gaim_connection *gc, char *handle )
+{
+	GSList *l;
+	
+	if( ( l = g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) ) )
+	{
+		g_free( l->data );
+		gc->permit = g_slist_delete_link( gc->permit, l );
+	}
+	
+	gc->prpl->rem_permit( gc, handle );
+}
+
+void bim_add_block( struct gaim_connection *gc, char *handle )
+{
+	if( g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) == NULL )
+	{
+		gc->deny = g_slist_prepend( gc->deny, g_strdup( handle ) );
+	}
+	
+	gc->prpl->add_deny( gc, handle );
+}
+
+void bim_rem_block( struct gaim_connection *gc, char *handle )
+{
+	GSList *l;
+	
+	if( ( l = g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) ) )
+	{
+		g_free( l->data );
+		gc->deny = g_slist_delete_link( gc->deny, l );
+	}
+	
+	gc->prpl->rem_deny( gc, handle );
+}
