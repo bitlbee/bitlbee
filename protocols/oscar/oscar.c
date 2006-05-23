@@ -384,7 +384,7 @@ static void oscar_login(struct aim_user *user) {
 	
 	if (g_strcasecmp(user->proto_opt[USEROPT_AUTH], "login.icq.com") != 0 &&
 	    g_strcasecmp(user->proto_opt[USEROPT_AUTH], "login.oscar.aol.com") != 0) {
-		serv_got_crap(gc, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.");
+		serv_got_crap(gc, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.",user->proto_opt[USEROPT_AUTH]);
 	}
 	
 	g_snprintf(buf, sizeof(buf), _("Signon: %s"), gc->username);

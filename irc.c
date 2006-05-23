@@ -829,7 +829,7 @@ void irc_topic( irc_t *irc, char *channel )
 		if( c )
 			irc_reply( irc, 332, "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", channel, c->title );
 		else
-			irc_reply( irc, 331, "%s :No topic for this channel" );
+			irc_reply( irc, 331, "%s :No topic for this channel", channel );
 	}
 }
 
@@ -885,7 +885,7 @@ void irc_join( irc_t *irc, user_t *u, char *channel )
 	nick_lc( nick );
 	if( g_hash_table_lookup( irc->watches, nick ) )
 	{
-		irc_reply( irc, 600, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "logged online" );
+		irc_reply( irc, 600, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "logged online" );
 	}
 	g_free( nick );
 }
@@ -910,7 +910,7 @@ void irc_kill( irc_t *irc, user_t *u )
 	nick_lc( nick );
 	if( g_hash_table_lookup( irc->watches, nick ) )
 	{
-		irc_reply( irc, 601, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "logged offline" );
+		irc_reply( irc, 601, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "logged offline" );
 	}
 	g_free( nick );
 }
