@@ -416,6 +416,7 @@ void ipc_master_free_all()
 	child_list = NULL;
 }
 
+#ifndef _WIN32
 char *ipc_master_save_state()
 {
 	char *fn = g_strdup( "/tmp/bee-restart.XXXXXX" );
@@ -483,7 +484,6 @@ static gboolean new_ipc_client (GIOChannel *gio, GIOCondition cond, gpointer dat
 	return TRUE;
 }
 
-#ifndef _WIN32
 int ipc_master_listen_socket()
 {
 	struct sockaddr_un un_addr;

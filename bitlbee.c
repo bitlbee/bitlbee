@@ -122,6 +122,7 @@ int bitlbee_daemon_init()
 		global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_master_listen_socket();
 	
+#ifndef _WIN32
 	if( ( fp = fopen( global.conf->pidfile, "w" ) ) )
 	{
 		fprintf( fp, "%d\n", (int) getpid() );
@@ -131,6 +132,7 @@ int bitlbee_daemon_init()
 	{
 		log_message( LOGLVL_WARNING, "Warning: Couldn't write PID to `%s'", global.conf->pidfile );
 	}
+#endif
 	
 	return( 0 );
 }
@@ -252,7 +254,6 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 	size_t size = sizeof( struct sockaddr_in );
 	struct sockaddr_in conn_info;
 	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
-	pid_t client_pid = 0;
 	
 	if( new_socket == -1 )
 	{
@@ -260,8 +261,10 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 		return TRUE;
 	}
 	
+#ifndef _WIN32
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
+		pid_t client_pid = 0;
 		int fds[2];
 		
 		if( socketpair( AF_UNIX, SOCK_STREAM, 0, fds ) == -1 )
@@ -312,6 +315,7 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 		}
 	}
 	else
+#endif
 	{
 		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
 		irc_new( new_socket );

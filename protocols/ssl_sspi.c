@@ -38,7 +38,7 @@ int ssl_errno;
 struct scd
 {
 	int fd;
-	SslInputFunction func;
+	ssl_input_function func;
 	gpointer data;
 	gboolean established;
 	int inpa;
@@ -59,7 +59,7 @@ void sspi_global_deinit( void )
 	/* FIXME */
 }
 
-void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
+void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	SCHANNEL_CRED ssl_cred;
