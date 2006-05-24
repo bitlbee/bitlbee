@@ -18,3 +18,5 @@ build-arch-stamp
 tags
 decode
 encode
+bitlbee.pc
+.gdb_history

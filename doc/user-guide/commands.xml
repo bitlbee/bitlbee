@@ -140,6 +140,7 @@
 	<bitlbee-command name="add">
 		<short-description>Add a buddy to your contact list</short-description>
 		<syntax>add &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
+		<syntax>add -tmp &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
 
 		<description>
 			<para>
@@ -148,6 +149,10 @@
 
 			<para>
 				If you want, you can also tell BitlBee what nick to give the new contact. Of course you can also use the <emphasis>rename</emphasis> command for that, but sometimes this might be more convenient.
+			</para>
+			
+			<para>
+				Adding -tmp adds the buddy to the internal BitlBee structures only, not to the real contact list (like done by <emphasis>set handle_unknown add</emphasis>). This allows you to talk to people who are not in your contact list.
 			</para>
 		</description>
 
@@ -196,10 +201,15 @@
 		<short-description>Block someone</short-description>
 		<syntax>block &lt;nick&gt;</syntax>
 		<syntax>block &lt;connection&gt; &lt;handle&gt;</syntax>
+		<syntax>block &lt;connection&gt;</syntax>
 
 		<description>
 			<para>
 				Puts the specified user on your ignore list. Either specify the user's nick when you have him/her in your contact list or a connection number and a user handle.
+			</para>
+			
+			<para>
+				When called with only a connection specification as an argument, the command displays the current block list for that connection.
 			</para>
 		</description>
 	</bitlbee-command>
@@ -212,6 +222,10 @@
 		<description>
 			<para>
 				Reverse of block. Unignores the specified user or user handle on specified connection.
+			</para>
+			
+			<para>
+				When called with only a connection specification as an argument, the command displays the current allow list for that connection.
 			</para>
 		</description>
 	</bitlbee-command>
@@ -606,7 +620,7 @@
 			</para>
 
 			<para>
-				To identify yourself in later sessions, you can use the <emphasis>identify</emphasis> command.
+				To identify yourself in later sessions, you can use the <emphasis>identify</emphasis> command. To change your password later, you can use the <emphasis>set password</emphasis> command.
 			</para>
 		</description>
 

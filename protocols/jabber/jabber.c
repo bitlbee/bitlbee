@@ -1044,7 +1044,7 @@ static void jabber_accept_add(gpointer w, struct jabber_add_permit *jap)
 	 * ask if we want him or her added.
 	 */
 	if(find_buddy(GJ_GC(jap->gjc), jap->user) == NULL) {
-		show_got_added(GJ_GC(jap->gjc), NULL, jap->user, NULL, NULL);
+		show_got_added(GJ_GC(jap->gjc), jap->user, NULL);
 	}
 	g_free(jap->user);
 	g_free(jap);
@@ -1231,9 +1231,7 @@ static void jabber_handleroster(gjconn gjc, xmlnode querynode)
 		x = xmlnode_get_nextsibling(x);
 	}
 
-	x = jutil_presnew(0, NULL, "Online");
-	gjab_send(gjc, x);
-	xmlnode_free(x);
+	account_online(GJ_GC(gjc));
 }
 
 static void jabber_handleauthresp(gjconn gjc, jpacket p)
@@ -1249,7 +1247,6 @@ static void jabber_handleauthresp(gjconn gjc, jpacket p)
 			gjab_auth(gjc);
 		} else {
 			gjab_reqroster(gjc);
-			account_online(GJ_GC(gjc));
 			
 			((struct jabber_data *)GJ_GC(gjc)->proto_data)->did_import = TRUE;
 		}
@@ -1551,7 +1548,9 @@ static gboolean jabber_free(gpointer data)
 
 	if(jd->gjc != NULL) {
 		gjab_delete(jd->gjc);
+		/* YAY for modules with their own memory pool managers!...
 		g_free(jd->gjc->sid);
+		And a less sarcastic yay for valgrind. :-) */
 		jd->gjc = NULL;
 	}
 	g_free(jd);
@@ -1887,22 +1886,9 @@ static void jabber_set_away(struct gaim_connection *gc, char *state, char *messa
 	xmlnode_free(x);
 }
 
-static void jabber_set_idle(struct gaim_connection *gc, int idle) {
-	struct jabber_data *jd = (struct jabber_data *)gc->proto_data;
-   	jd->idle = idle ? time(NULL) - idle : idle;
-}
-
 static void jabber_keepalive(struct gaim_connection *gc) {
 	struct jabber_data *jd = (struct jabber_data *)gc->proto_data;
 	gjab_send_raw(jd->gjc, "  \t  ");
-}
-
-static void jabber_buddy_free(struct buddy *b)
-{
-	while (b->proto_data) {
-		g_free(((GSList *)b->proto_data)->data);
-		b->proto_data = g_slist_remove(b->proto_data, ((GSList *)b->proto_data)->data);
-	}
 }
 
 /*---------------------------------------*/
@@ -2340,29 +2326,12 @@ static void jabber_handlevcard(gjconn gjc, xmlnode querynode, char *from)
 	g_string_free(str, TRUE);
 }
 
-
-static GList *jabber_actions()
-{
-	GList *m = NULL;
-
-	m = g_list_append(m, _("Set User Info"));
-	/*
-	m = g_list_append(m, _("Set Dir Info"));
-	m = g_list_append(m, _("Change Password"));
-	 */
-
-	return m;
-}
-
-
 void jabber_init()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
 
-	/* the NULL's aren't required but they're nice to have */
 	ret->name = "jabber";
 	ret->away_states = jabber_away_states;
-	ret->actions = jabber_actions;
 	ret->login = jabber_login;
 	ret->close = jabber_close;
 	ret->send_im = jabber_send_im;
@@ -2370,16 +2339,9 @@ void jabber_init()
 	ret->get_info = jabber_get_info;
 	ret->set_away = jabber_set_away;
 	ret->get_away = jabber_get_away_msg;
-	ret->set_idle = jabber_set_idle;
 	ret->add_buddy = jabber_add_buddy;
 	ret->remove_buddy = jabber_remove_buddy;
-	ret->add_permit = NULL;
-	ret->add_deny = NULL;
-	ret->rem_permit = NULL;
-	ret->rem_deny = NULL;
-	ret->set_permit_deny = NULL;
 	ret->keepalive = jabber_keepalive;
-	ret->buddy_free = jabber_buddy_free;
 	ret->alias_buddy = jabber_roster_update;
 	ret->group_buddy = jabber_group_change;
 	ret->cmp_buddynames = g_strcasecmp;

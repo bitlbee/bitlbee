@@ -56,6 +56,17 @@ void root_command_string( irc_t *irc, user_t *u, char *command, int flags )
 				cmd[k++] = s;
 				s --;
 			}
+			else
+			{
+				break;
+			}
+		}
+		else if( *s == '\\' && ( ( !q && s[1] ) || ( q && q == s[1] ) ) )
+		{
+			char *cpy;
+			
+			for( cpy = s; *cpy; cpy ++ )
+				cpy[0] = cpy[1];
 		}
 		else if( *s == q )
 		{
@@ -244,6 +255,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		int i = 0;
 		
+		if( strchr( irc->umode, 'b' ) )
+			irc_usermsg( irc, "Account list:" );
+		
 		for( a = irc->accounts; a; a = a->next )
 		{
 			char *con;
@@ -346,6 +360,13 @@ static void cmd_account( irc_t *irc, char **cmd )
 static void cmd_add( irc_t *irc, char **cmd )
 {
 	account_t *a;
+	int add_for_real = 1;
+	
+	if( g_strcasecmp( cmd[1], "-tmp" ) == 0 )
+	{
+		add_for_real = 0;
+		cmd ++;		/* So evil... :-D */
+	}
 	
 	if( !( a = account_get( irc, cmd[1] ) ) )
 	{
@@ -375,7 +396,12 @@ static void cmd_add( irc_t *irc, char **cmd )
 			nick_set( irc, cmd[2], a->gc->prpl, cmd[3] );
 		}
 	}
-	a->gc->prpl->add_buddy( a->gc, cmd[2] );
+	
+	/* By making this optional, you can talk to people without having to
+	   add them to your *real* (server-side) contact list. */
+	if( add_for_real )
+		a->gc->prpl->add_buddy( a->gc, cmd[2] );
+		
 	add_buddy( a->gc, NULL, cmd[2], cmd[2] );
 	
 	irc_usermsg( irc, "User `%s' added to your contact list as `%s'", cmd[2], user_findhandle( a->gc, cmd[2] )->nick );
@@ -483,7 +509,27 @@ static void cmd_block( irc_t *irc, char **cmd )
 	struct gaim_connection *gc;
 	account_t *a;
 	
-	if( !cmd[2] )
+	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->gc )
+	{
+		char *format;
+		GSList *l;
+		
+		if( strchr( irc->umode, 'b' ) != NULL )
+			format = "%s\t%s";
+		else
+			format = "%-32.32s  %-16.16s";
+		
+		irc_usermsg( irc, format, "Handle", "Nickname" );
+		for( l = a->gc->deny; l; l = l->next )
+		{
+			user_t *u = user_findhandle( a->gc, l->data );
+			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+		}
+		irc_usermsg( irc, "End of list." );
+		
+		return;
+	}
+	else if( !cmd[2] )
 	{
 		user_t *u = user_find( irc, cmd[1] );
 		if( !u || !u->gc )
@@ -511,9 +557,9 @@ static void cmd_block( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		gc->prpl->rem_permit( gc, cmd[2] );
-		gc->prpl->add_deny( gc, cmd[2] );
-		irc_usermsg( irc, "Buddy `%s' moved from your permit- to your deny-list", cmd[2] );
+		bim_rem_allow( gc, cmd[2] );
+		bim_add_block( gc, cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from your allow- to your block-list", cmd[2] );
 	}
 }
 
@@ -522,7 +568,27 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	struct gaim_connection *gc;
 	account_t *a;
 	
-	if( !cmd[2] )
+	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->gc )
+	{
+		char *format;
+		GSList *l;
+		
+		if( strchr( irc->umode, 'b' ) != NULL )
+			format = "%s\t%s";
+		else
+			format = "%-32.32s  %-16.16s";
+		
+		irc_usermsg( irc, format, "Handle", "Nickname" );
+		for( l = a->gc->deny; l; l = l->next )
+		{
+			user_t *u = user_findhandle( a->gc, l->data );
+			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+		}
+		irc_usermsg( irc, "End of list." );
+		
+		return;
+	}
+	else if( !cmd[2] )
 	{
 		user_t *u = user_find( irc, cmd[1] );
 		if( !u || !u->gc )
@@ -550,10 +616,10 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		gc->prpl->rem_deny( gc, cmd[2] );
-		gc->prpl->add_permit( gc, cmd[2] );
+		bim_rem_block( gc, cmd[2] );
+		bim_add_allow( gc, cmd[2] );
 		
-		irc_usermsg( irc, "Buddy `%s' moved from your deny- to your permit-list", cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from your block- to your allow-list", cmd[2] );
 	}
 }
 
@@ -634,7 +700,8 @@ static void cmd_blist( irc_t *irc, char **cmd )
 {
 	int online = 0, away = 0, offline = 0;
 	user_t *u;
-	char s[64];
+	char s[256];
+	char *format;
 	int n_online = 0, n_away = 0, n_offline = 0;
 	
 	if( cmd[1] && g_strcasecmp( cmd[1], "all" ) == 0 )
@@ -648,26 +715,41 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	else
 		online =  away = 1;
 	
-	irc_usermsg( irc, "%-16.16s  %-40.40s  %s", "Nick", "User/Host/Network", "Status" );
+	if( strchr( irc->umode, 'b' ) != NULL )
+		format = "%s\t%s\t%s";
+	else
+		format = "%-16.16s  %-40.40s  %s";
 	
-	if( online == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && u->online && !u->away )
+	irc_usermsg( irc, format, "Nick", "User/Host/Network", "Status" );
+	
+	for( u = irc->users; u; u = u->next ) if( u->gc && u->online && !u->away )
 	{
-		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
-		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Online" );
+		if( online == 1 )
+		{
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			irc_usermsg( irc, format, u->nick, s, "Online" );
+		}
+		
 		n_online ++;
 	}
 
-	if( away == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && u->online && u->away )
+	for( u = irc->users; u; u = u->next ) if( u->gc && u->online && u->away )
 	{
-		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
-		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, u->away );
+		if( away == 1 )
+		{
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			irc_usermsg( irc, format, u->nick, s, u->away );
+		}
 		n_away ++;
 	}
 	
-	if( offline == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && !u->online )
+	for( u = irc->users; u; u = u->next ) if( u->gc && !u->online )
 	{
-		g_snprintf( s, 63, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
-		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Offline" );
+		if( offline == 1 )
+		{
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			irc_usermsg( irc, format, u->nick, s, "Offline" );
+		}
 		n_offline ++;
 	}
 	
@@ -696,15 +778,9 @@ static void cmd_nick( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		char utf8[1024];
-		
 		irc_usermsg( irc, "Setting your name to `%s'", cmd[2] );
 		
-		if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
-		    do_iconv( set_getstr( irc, "charset" ), "UTF-8", cmd[2], utf8, 0, 1024 ) != -1 )
-			a->gc->prpl->set_info( a->gc, utf8 );
-		else
-			a->gc->prpl->set_info( a->gc, cmd[2] );
+		a->gc->prpl->set_info( a->gc, cmd[2] );
 	}
 }
 

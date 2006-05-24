@@ -38,6 +38,7 @@ struct http_request
 	int status_code;
 	char *reply_headers;
 	char *reply_body;
+	int body_size;
 	int finished;
 	
 	void *ssl;
@@ -52,3 +53,4 @@ struct http_request
 };
 
 void *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data );
+void *http_dorequest_url( char *url_string, http_input_function func, gpointer data );

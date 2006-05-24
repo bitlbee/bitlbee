@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* Stuff to handle, save and search buddies                             */
+/* Misc. functions                                                      */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,35 +23,28 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-typedef struct __USER
-{
-	char *nick;
-	char *user;
-	char *host;
-	char *realname;
-	
-	char *away;
-	
-	char is_private;
-	char online;
-	
-	char *handle;
-	char *group;
-	struct gaim_connection *gc;
+#ifndef _UTIL_H
+#define _UTIL_H
 
- 	char *sendbuf;
- 	time_t last_typing_notice;
- 	int sendbuf_len;
- 	guint sendbuf_timer;
-    	int sendbuf_flags;
-	
-	void (*send_handler) ( irc_t *irc, struct __USER *u, char *msg, int flags );
-	
-	struct __USER *next;
-} user_t;
+G_MODULE_EXPORT void strip_linefeed( gchar *text );
+G_MODULE_EXPORT char *add_cr( char *text );
+G_MODULE_EXPORT char *strip_newlines(char *source);
+G_MODULE_EXPORT char *tobase64( const char *text );
+G_MODULE_EXPORT char *normalize( const char *s );
+G_MODULE_EXPORT void info_string_append( GString *str, char *newline, char *name, char *value );
 
-user_t *user_add( struct irc *irc, char *nick );
-int user_del( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_find( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_findhandle( struct gaim_connection *gc, char *handle );
-void user_rename( irc_t *irc, char *oldnick, char *newnick );
+G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min, int sec );
+double gettime( void );
+
+G_MODULE_EXPORT void strip_html( char *msg );
+G_MODULE_EXPORT char *escape_html( const char *html );
+G_MODULE_EXPORT void http_decode( char *s );
+G_MODULE_EXPORT void http_encode( char *s );
+
+G_MODULE_EXPORT char *ipv6_wrap( char *src );
+G_MODULE_EXPORT char *ipv6_unwrap( char *src );
+
+G_MODULE_EXPORT signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf );
+char *set_eval_charset( irc_t *irc, set_t *set, char *value );
+
+#endif

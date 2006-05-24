@@ -13,7 +13,7 @@
  * from scratch for BitlBee and doesn't contain any code from Gaim anymore
  * (except for the function names).
  *
- * Copyright 2002-2004 Wilmer van der Gaast <lintux@lintux.cx>
+ * Copyright 2002-2006 Wilmer van der Gaast <wilmer@gaast.net> and others
  */
 
 /*
@@ -36,19 +36,6 @@
 #define BITLBEE_CORE
 #include "nogaim.h"
 #include <ctype.h>
-#include <iconv.h>
-
-static char *proto_away_alias[7][5] =
-{
-	{ "Away from computer", "Away", "Extended away", NULL },
-	{ "NA", "N/A", "Not available", NULL },
-	{ "Busy", "Do not disturb", "DND", "Occupied", NULL },
-	{ "Be right back", "BRB", NULL },
-	{ "On the phone", "Phone", "On phone", NULL },
-	{ "Out to lunch", "Lunch", "Food", NULL },
-	{ NULL }
-};
-static char *proto_away_alias_find( GList *gcm, char *away );
 
 static int remove_chat_buddy_silent( struct conversation *b, char *handle );
 
@@ -157,83 +144,6 @@ void nogaim_init()
 
 GSList *get_connections() { return connections; }
 
-int proto_away( struct gaim_connection *gc, char *away )
-{
-	GList *m, *ms;
-	char *s;
-	
-	if( !away ) away = "";
-	ms = m = gc->prpl->away_states( gc );
-	
-	while( m )
-	{
-		if( *away )
-		{
-			if( g_strncasecmp( m->data, away, strlen( m->data ) ) == 0 )
-				break;
-		}
-		else
-		{
-			if( g_strcasecmp( m->data, "Available" ) == 0 )
-				break;
-			if( g_strcasecmp( m->data, "Online" ) == 0 )
-				break;
-		}
-		m = m->next;
-	}
-	
-	if( m )
-	{
-		gc->prpl->set_away( gc, m->data, *away ? away : NULL );
-	}
-	else
-	{
-		s = proto_away_alias_find( ms, away );
-		if( s )
-		{
-			gc->prpl->set_away( gc, s, away );
-			if( set_getint( gc->irc, "debug" ) )
-				serv_got_crap( gc, "Setting away state to %s", s );
-		}
-		else
-			gc->prpl->set_away( gc, GAIM_AWAY_CUSTOM, away );
-	}
-	
-	g_list_free( ms );
-	
-	return( 1 );
-}
-
-static char *proto_away_alias_find( GList *gcm, char *away )
-{
-	GList *m;
-	int i, j;
-	
-	for( i = 0; *proto_away_alias[i]; i ++ )
-	{
-		for( j = 0; proto_away_alias[i][j]; j ++ )
-			if( g_strncasecmp( away, proto_away_alias[i][j], strlen( proto_away_alias[i][j] ) ) == 0 )
-				break;
-		
-		if( !proto_away_alias[i][j] )	/* If we reach the end, this row */
-			continue;		/* is not what we want. Next!    */
-		
-		/* Now find an entry in this row which exists in gcm */
-		for( j = 0; proto_away_alias[i][j]; j ++ )
-		{
-			m = gcm;
-			while( m )
-			{
-				if( g_strcasecmp( proto_away_alias[i][j], m->data ) == 0 )
-					return( proto_away_alias[i][j] );
-				m = m->next;
-			}
-		}
-	}
-	
-	return( NULL );
-}
-
 /* multi.c */
 
 struct gaim_connection *new_gaim_conn( struct aim_user *user )
@@ -304,36 +214,29 @@ void hide_login_progress_error( struct gaim_connection *gc, char *msg )
 void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 {
 	va_list params;
-	char text[1024], buf[1024], acc_id[33];
-	char *msg;
+	char *text;
 	account_t *a;
 	
 	va_start( params, format );
-	g_vsnprintf( text, sizeof( text ), format, params );
+	text = g_strdup_vprintf( format, params );
 	va_end( params );
 
-	if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( "UTF8", set_getstr( gc->irc, "charset" ), text, buf, 0, 1024 ) != -1 )
-		msg = buf;
-	else
-		msg = text;
-	
 	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
 	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
-		strip_html( msg );
+		strip_html( text );
 	
 	/* Try to find a different connection on the same protocol. */
 	for( a = gc->irc->accounts; a; a = a->next )
 		if( a->prpl == gc->prpl && a->gc != gc )
 			break;
 	
-	/* If we found one, add the screenname to the acc_id. */
+	/* If we found one, include the screenname in the message. */
 	if( a )
-		g_snprintf( acc_id, 32, "%s(%s)", gc->prpl->name, gc->username );
+		irc_usermsg( gc->irc, "%s(%s) - %s", gc->prpl->name, gc->username, text );
 	else
-		g_snprintf( acc_id, 32, "%s", gc->prpl->name );
+		irc_usermsg( gc->irc, "%s - %s", gc->prpl->name, text );
 	
-	irc_usermsg( gc->irc, "%s - %s", acc_id, msg );
+	g_free( text );
 }
 
 static gboolean send_keepalive( gpointer d )
@@ -351,7 +254,7 @@ void account_online( struct gaim_connection *gc )
 	user_t *u;
 	
 	/* MSN servers sometimes redirect you to a different server and do
-	   the whole login sequence again, so subsequent calls to this
+	   the whole login sequence again, so these "late" calls to this
 	   function should be handled correctly. (IOW, ignored) */
 	if( gc->flags & OPT_LOGGED_IN )
 		return;
@@ -363,18 +266,9 @@ void account_online( struct gaim_connection *gc )
 	gc->keepalive = g_timeout_add( 60000, send_keepalive, gc );
 	gc->flags |= OPT_LOGGED_IN;
 	
-	if( u && u->away ) proto_away( gc, u->away );
-	
- 	if( !strcmp(gc->prpl->name, "icq") )
-	{
-		for( u = gc->irc->users; u; u = u->next )
-			if( u->gc == gc )
-				break;
-		
-		if( u == NULL )
-			serv_got_crap( gc, "\x02""***\x02"" BitlBee now supports ICQ server-side contact lists. "
-			                      "See \x02""help import_buddies\x02"" for more information." );
-	}
+	/* Also necessary when we're not away, at least for some of the
+	   protocols. */
+	bim_set_away( gc, u->away );
 }
 
 gboolean auto_reconnect( gpointer data )
@@ -391,12 +285,6 @@ void cancel_auto_reconnect( account_t *a )
 {
 	while( g_source_remove_by_user_data( (gpointer) a ) );
 	a->reconnect = 0;
-}
-
-void account_offline( struct gaim_connection *gc )
-{
-	gc->wants_to_die = TRUE;
-	signoff( gc );
 }
 
 void signoff( struct gaim_connection *gc )
@@ -469,16 +357,6 @@ void do_ask_dialog( struct gaim_connection *gc, char *msg, void *data, void *doi
 
 /* list.c */
 
-int bud_list_cache_exists( struct gaim_connection *gc )
-{
-	return( 0 );
-}
-
-void do_import( struct gaim_connection *gc, void *null )
-{
-	return;
-}
-
 void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *realname )
 {
 	user_t *u;
@@ -514,7 +392,14 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	}
 	else if( gc->user->proto_opt[0] && *gc->user->proto_opt[0] )
 	{
-		u->host = g_strdup( gc->user->proto_opt[0] );
+		char *colon;
+		
+		if( ( colon = strchr( gc->user->proto_opt[0], ':' ) ) )
+			u->host = g_strndup( gc->user->proto_opt[0],
+			                     colon - gc->user->proto_opt[0] );
+		else
+			u->host = g_strdup( gc->user->proto_opt[0] );
+		
 		u->user = g_strdup( handle );
 		
 		/* s/ /_/ ... important for AOL screennames */
@@ -530,6 +415,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	
 	u->gc = gc;
 	u->handle = g_strdup( handle );
+	if( group ) u->group = g_strdup( group );
 	u->send_handler = buddy_send_handler;
 	u->last_typing_notice = 0;
 }
@@ -553,11 +439,6 @@ struct buddy *find_buddy( struct gaim_connection *gc, char *handle )
 	return( b );
 }
 
-void do_export( struct gaim_connection *gc )
-{
-	return;
-}
-
 void signoff_blocked( struct gaim_connection *gc )
 {
 	return; /* Make all blocked users look invisible (TODO?) */
@@ -567,22 +448,14 @@ void signoff_blocked( struct gaim_connection *gc )
 void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname )
 {
 	user_t *u = user_findhandle( gc, handle );
-	char *name, buf[1024];
 	
 	if( !u ) return;
 	
-	/* Convert all UTF-8 */
-	if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( "UTF-8", set_getstr( gc->irc, "charset" ), realname, buf, 0, sizeof( buf ) ) != -1 )
-		name = buf;
-	else
-		name = realname;
-	
-	if( g_strcasecmp( u->realname, name ) != 0 )
+	if( g_strcasecmp( u->realname, realname ) != 0 )
 	{
 		if( u->realname != u->nick ) g_free( u->realname );
 		
-		u->realname = g_strdup( name );
+		u->realname = g_strdup( realname );
 		
 		if( ( gc->flags & OPT_LOGGED_IN ) && set_getint( gc->irc, "display_namechanges" ) )
 			serv_got_crap( gc, "User `%s' changed name to `%s'", u->nick, u->realname );
@@ -592,9 +465,40 @@ void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname
 
 /* prpl.c */
 
-void show_got_added( struct gaim_connection *gc, char *id, char *handle, const char *realname, const char *msg )
+struct show_got_added_data
 {
-	return;
+	struct gaim_connection *gc;
+	char *handle;
+};
+
+void show_got_added_no( gpointer w, struct show_got_added_data *data )
+{
+	g_free( data->handle );
+	g_free( data );
+}
+
+void show_got_added_yes( gpointer w, struct show_got_added_data *data )
+{
+	data->gc->prpl->add_buddy( data->gc, data->handle );
+	add_buddy( data->gc, NULL, data->handle, data->handle );
+	
+	return show_got_added_no( w, data );
+}
+
+void show_got_added( struct gaim_connection *gc, char *handle, const char *realname )
+{
+	struct show_got_added_data *data = g_new0( struct show_got_added_data, 1 );
+	char *s;
+	
+	/* TODO: Make a setting for this! */
+	if( user_findhandle( gc, handle ) != NULL )
+		return;
+	
+	s = g_strdup_printf( "The user %s is not in your buddy list yet. Do you want to add him/her now?", handle );
+	
+	data->gc = gc;
+	data->handle = g_strdup( handle );
+	query_add( gc->irc, gc, s, show_got_added_yes, show_got_added_no, data );
 }
 
 
@@ -624,7 +528,8 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 			
 			return;
 		}
-		return;
+		/* Why did we have this here....
+		return; */
 	}
 	
 	oa = u->away != NULL;
@@ -688,7 +593,6 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 {
 	irc_t *irc = gc->irc;
 	user_t *u;
-	char buf[8192];
 	
 	u = user_findhandle( gc, handle );
 	
@@ -730,10 +634,6 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
 		strip_html( msg );
 
-	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( "UTF-8", set_getstr( irc, "charset" ), msg, buf, 0, 8192 ) != -1 )
-		msg = buf;
-	
 	while( strlen( msg ) > 425 )
 	{
 		char tmp, *nl;
@@ -830,7 +730,6 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 {
 	struct conversation *c;
 	user_t *u;
-	char buf[8192];
 	
 	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
 	if( g_strcasecmp( who, gc->user->username ) == 0 )
@@ -842,10 +741,6 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
 	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
 		strip_html( msg );
-	
-	if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( "UTF-8", set_getstr( gc->irc, "charset" ), msg, buf, 0, 8192 ) != -1 )
-		msg = buf;
 	
 	if( c && u )
 		irc_privmsg( gc->irc, u, "PRIVMSG", c->channel, "", msg );
@@ -881,11 +776,6 @@ struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, c
 		serv_got_crap( gc, "Creating new conversation: (id=%d,handle=%s)", id, handle );
 	
 	return( c );
-}
-
-void serv_finish_login( struct gaim_connection *gc )
-{
-	return;
 }
 
 
@@ -972,20 +862,6 @@ static int remove_chat_buddy_silent( struct conversation *b, char *handle )
 }
 
 
-/* prefs.c */
-
-/* Necessary? */
-void build_block_list()
-{
-	return;
-}
-
-void build_allow_list()
-{
-	return;
-}
-
-
 /* Misc. BitlBee stuff which shouldn't really be here */
 
 struct conversation *conv_findchannel( char *channel )
@@ -1064,89 +940,179 @@ char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
 	return( set_eval_bool( irc, set, value ) );
 }
 
-int serv_send_im( irc_t *irc, user_t *u, char *msg, int flags )
-{
-	char buf[8192];
-	
-	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( set_getstr( irc, "charset" ), "UTF-8", msg, buf, 0, 8192 ) != -1 )
-		msg = buf;
 
-	if( ( u->gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
+
+
+/* The plan is to not allow straight calls to prpl functions anymore, but do
+   them all from some wrappers. We'll start to define some down here: */
+
+int bim_buddy_msg( struct gaim_connection *gc, char *handle, char *msg, int flags )
+{
+	char *buf = NULL;
+	int st;
+	
+	if( ( gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
 	{
-		char *html;
-		
-		html = escape_html( msg );
-		strncpy( buf, html, 8192 );
-		g_free( html );
-		
+		buf = escape_html( msg );
 		msg = buf;
 	}
 	
-	return( ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), flags ) );
+	st = gc->prpl->send_im( gc, handle, msg, strlen( msg ), flags );
+	g_free( buf );
+	
+	return st;
 }
 
-int serv_send_chat( irc_t *irc, struct gaim_connection *gc, int id, char *msg )
+int bim_chat_msg( struct gaim_connection *gc, int id, char *msg )
 {
-	char buf[8192];
+	char *buf = NULL;
+	int st;
 	
-	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
-	    do_iconv( set_getstr( irc, "charset" ), "UTF-8", msg, buf, 0, 8192 ) != -1 )
+	if( ( gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
+	{
+		buf = escape_html( msg );
 		msg = buf;
-
-	if( gc->flags & OPT_CONN_HTML) {
-		char * html = escape_html(msg);
-		strncpy(buf, html, 8192);
-		g_free(html);
 	}
 	
-	return( gc->prpl->chat_send( gc, id, msg ) );
+	st = gc->prpl->chat_send( gc, id, msg );
+	g_free( buf );
+	
+	return st;
 }
 
-/* Convert from one charset to another.
-   
-   from_cs, to_cs: Source and destination charsets
-   src, dst: Source and destination strings
-   size: Size if src. 0 == use strlen(). strlen() is not reliable for UNICODE/UTF16 strings though.
-   maxbuf: Maximum number of bytes to write to dst
-   
-   Returns the number of bytes written to maxbuf or -1 on an error.
-*/
-signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf )
+static char *bim_away_alias_find( GList *gcm, char *away );
+
+int bim_set_away( struct gaim_connection *gc, char *away )
 {
-	iconv_t cd;
-	size_t res;
-	size_t inbytesleft, outbytesleft;
-	char *inbuf = src;
-	char *outbuf = dst;
+	GList *m, *ms;
+	char *s;
 	
-	cd = iconv_open( to_cs, from_cs );
-	if( cd == (iconv_t) -1 )
-		return( -1 );
+	if( !away ) away = "";
+	ms = m = gc->prpl->away_states( gc );
 	
-	inbytesleft = size ? size : strlen( src );
-	outbytesleft = maxbuf - 1;
-	res = iconv( cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft );
-	*outbuf = '\0';
-	iconv_close( cd );
+	while( m )
+	{
+		if( *away )
+		{
+			if( g_strncasecmp( m->data, away, strlen( m->data ) ) == 0 )
+				break;
+		}
+		else
+		{
+			if( g_strcasecmp( m->data, "Available" ) == 0 )
+				break;
+			if( g_strcasecmp( m->data, "Online" ) == 0 )
+				break;
+		}
+		m = m->next;
+	}
 	
-	if( res == (size_t) -1 )
-		return( -1 );
+	if( m )
+	{
+		gc->prpl->set_away( gc, m->data, *away ? away : NULL );
+	}
 	else
-		return( outbuf - dst );
+	{
+		s = bim_away_alias_find( ms, away );
+		if( s )
+		{
+			gc->prpl->set_away( gc, s, away );
+			if( set_getint( gc->irc, "debug" ) )
+				serv_got_crap( gc, "Setting away state to %s", s );
+		}
+		else
+			gc->prpl->set_away( gc, GAIM_AWAY_CUSTOM, away );
+	}
+	
+	g_list_free( ms );
+	
+	return( 1 );
 }
 
-char *set_eval_charset( irc_t *irc, set_t *set, char *value )
+static char *bim_away_alias_list[8][5] =
 {
-	iconv_t cd;
+	{ "Away from computer", "Away", "Extended away", NULL },
+	{ "NA", "N/A", "Not available", NULL },
+	{ "Busy", "Do not disturb", "DND", "Occupied", NULL },
+	{ "Be right back", "BRB", NULL },
+	{ "On the phone", "Phone", "On phone", NULL },
+	{ "Out to lunch", "Lunch", "Food", NULL },
+	{ "Invisible", "Hidden" },
+	{ NULL }
+};
 
-	if ( g_strncasecmp( value, "none", 4 ) == 0 )
-		return( value );
+static char *bim_away_alias_find( GList *gcm, char *away )
+{
+	GList *m;
+	int i, j;
+	
+	for( i = 0; *bim_away_alias_list[i]; i ++ )
+	{
+		for( j = 0; bim_away_alias_list[i][j]; j ++ )
+			if( g_strncasecmp( away, bim_away_alias_list[i][j], strlen( bim_away_alias_list[i][j] ) ) == 0 )
+				break;
+		
+		if( !bim_away_alias_list[i][j] )	/* If we reach the end, this row */
+			continue;			/* is not what we want. Next!    */
+		
+		/* Now find an entry in this row which exists in gcm */
+		for( j = 0; bim_away_alias_list[i][j]; j ++ )
+		{
+			m = gcm;
+			while( m )
+			{
+				if( g_strcasecmp( bim_away_alias_list[i][j], m->data ) == 0 )
+					return( bim_away_alias_list[i][j] );
+				m = m->next;
+			}
+		}
+	}
+	
+	return( NULL );
+}
 
-	cd = iconv_open( "UTF-8", value );
-	if( cd == (iconv_t) -1 )
-		return( NULL );
+void bim_add_allow( struct gaim_connection *gc, char *handle )
+{
+	if( g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) == NULL )
+	{
+		gc->permit = g_slist_prepend( gc->permit, g_strdup( handle ) );
+	}
+	
+	gc->prpl->add_permit( gc, handle );
+}
 
-	iconv_close( cd );
-	return( value );
+void bim_rem_allow( struct gaim_connection *gc, char *handle )
+{
+	GSList *l;
+	
+	if( ( l = g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) ) )
+	{
+		g_free( l->data );
+		gc->permit = g_slist_delete_link( gc->permit, l );
+	}
+	
+	gc->prpl->rem_permit( gc, handle );
+}
+
+void bim_add_block( struct gaim_connection *gc, char *handle )
+{
+	if( g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) == NULL )
+	{
+		gc->deny = g_slist_prepend( gc->deny, g_strdup( handle ) );
+	}
+	
+	gc->prpl->add_deny( gc, handle );
+}
+
+void bim_rem_block( struct gaim_connection *gc, char *handle )
+{
+	GSList *l;
+	
+	if( ( l = g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) ) )
+	{
+		g_free( l->data );
+		gc->deny = g_slist_delete_link( gc->deny, l );
+	}
+	
+	gc->prpl->rem_deny( gc, handle );
 }

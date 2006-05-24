@@ -110,8 +110,8 @@ int bitlbee_daemon_init()
 		/* Sometimes std* are already closed (for example when we're in a RESTARTed
 		   BitlBee process. So let's only close TTY-fds. */
 		if( isatty( 0 ) ) close( 0 );
-		if( isatty( 0 ) ) close( 1 );
-		if( isatty( 0 ) ) close( 2 );
+		if( isatty( 1 ) ) close( 1 );
+		if( isatty( 2 ) ) close( 2 );
 	}
 #endif
 	

@@ -45,18 +45,7 @@ int msn_write( struct gaim_connection *gc, char *s, int len )
 
 int msn_logged_in( struct gaim_connection *gc )
 {
-	struct msn_data *md = gc->proto_data;
-	char buf[1024];
-	
 	account_online( gc );
-	
-	/* account_online() sets an away state if there is any, so only
-	   execute this code if we're not away. */
-	if( md->away_state == msn_away_state_list )
-	{
-		g_snprintf( buf, sizeof( buf ), "CHG %d %s %d\r\n", ++md->trId, md->away_state->code, 0 );
-		return( msn_write( gc, buf, strlen( buf ) ) );
-	}
 	
 	return( 0 );
 }
@@ -140,6 +129,9 @@ struct msn_buddy_ask_data
 static void msn_buddy_ask_yes( gpointer w, struct msn_buddy_ask_data *bla )
 {
 	msn_buddy_list_add( bla->gc, "AL", bla->handle, bla->realname );
+	
+	if( find_buddy( bla->gc, bla->handle ) == NULL )
+		show_got_added( bla->gc, bla->handle, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla->realname );

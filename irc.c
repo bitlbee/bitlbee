@@ -198,7 +198,7 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 	}
 }
 
-static gboolean irc_free_userhash( gpointer key, gpointer value, gpointer data )
+static gboolean irc_free_hashkey( gpointer key, gpointer value, gpointer data )
 {
 	g_free( key );
 	
@@ -231,9 +231,14 @@ void irc_free(irc_t * irc)
 	g_io_channel_unref( irc->io_channel );
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
-	for (account = irc->accounts; account; account = account->next)
-		if (account->gc)
+	for (account = irc->accounts; account; account = account->next) {
+		if (account->gc) {
+			account->gc->wants_to_die = TRUE;
 			signoff(account->gc);
+		} else if (account->reconnect) {
+			cancel_auto_reconnect(account);
+		}
+	}
 	
 	g_free(irc->sendbuffer);
 	g_free(irc->readbuffer);
@@ -281,10 +286,10 @@ void irc_free(irc_t * irc)
 		}
 	}
 	
-	g_hash_table_foreach_remove(irc->userhash, irc_free_userhash, NULL);
+	g_hash_table_foreach_remove(irc->userhash, irc_free_hashkey, NULL);
 	g_hash_table_destroy(irc->userhash);
 	
-	g_hash_table_foreach_remove(irc->watches, irc_free_userhash, NULL);
+	g_hash_table_foreach_remove(irc->watches, irc_free_hashkey, NULL);
 	g_hash_table_destroy(irc->watches);
 	
 	if (irc->nicks != NULL) {
@@ -342,7 +347,7 @@ void irc_setpass (irc_t *irc, const char *pass)
 
 void irc_process( irc_t *irc )
 {
-	char **lines, *temp, **cmd;
+	char **lines, *temp, **cmd, *cs;
 	int i;
 
 	if( irc->readbuffer != NULL )
@@ -351,6 +356,11 @@ void irc_process( irc_t *irc )
 		
 		for( i = 0; *lines[i] != '\0'; i ++ )
 		{
+			char conv[IRC_MAX_LINE+1];
+			
+			/* [WvG] Because irc_tokenize splits at every newline, the lines[] list
+			    should end with an empty string. This is why this actually works.
+			    Took me a while to figure out, Maurits. :-P */
 			if( lines[i+1] == NULL )
 			{
 				temp = g_strdup( lines[i] );
@@ -358,7 +368,14 @@ void irc_process( irc_t *irc )
 				irc->readbuffer = temp;
 				i ++;
 				break;
-			}			
+			}
+			
+			if( ( cs = set_getstr( irc, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
+			{
+				conv[IRC_MAX_LINE] = 0;
+				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) != -1 )
+					lines[i] = conv;
+			}
 			
 			if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
 				continue;
@@ -384,6 +401,8 @@ void irc_process( irc_t *irc )
 	}
 }
 
+/* Splits a long string into separate lines. The array is NULL-terminated and, unless the string
+   contains an incomplete line at the end, ends with an empty string. */
 char **irc_tokenize( char *buffer )
 {
 	int i, j;
@@ -424,6 +443,7 @@ char **irc_tokenize( char *buffer )
 	return( lines );
 }
 
+/* Split an IRC-style line into little parts/arguments. */
 char **irc_parse_line( char *line )
 {
 	int i, j;
@@ -483,6 +503,7 @@ char **irc_parse_line( char *line )
 	return cmd;
 }
 
+/* Converts such an array back into a command string. Mainly used for the IPC code right now. */
 char *irc_build_line( char **cmd )
 {
 	int i, len;
@@ -535,7 +556,7 @@ int irc_usermsg( irc_t *irc, char *format, ... )
 	user_t *u;
 	
 	u = user_find( irc, irc->mynick );
-	if( u ) is_private = u->is_private;
+	is_private = u->is_private;
 	
 	va_start( params, format );
 	g_vsnprintf( text, sizeof( text ), format, params );
@@ -559,16 +580,25 @@ void irc_write( irc_t *irc, char *format, ... )
 void irc_vawrite( irc_t *irc, char *format, va_list params )
 {
 	int size;
-	char line[IRC_MAX_LINE];
-	
+	char line[IRC_MAX_LINE+1], *cs;
+		
 	if( irc->quit )
 		return;
-
-	g_vsnprintf( line, IRC_MAX_LINE - 3, format, params );
-
+	
+	line[IRC_MAX_LINE] = 0;
+	g_vsnprintf( line, IRC_MAX_LINE - 2, format, params );
+	
 	strip_newlines( line );
+	if( ( cs = set_getstr( irc, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
+	{
+		char conv[IRC_MAX_LINE+1];
+		
+		conv[IRC_MAX_LINE] = 0;
+		if( do_iconv( "UTF-8", cs, line, conv, 0, IRC_MAX_LINE - 2 ) != -1 )
+			strcpy( line, conv );
+	}
 	strcat( line, "\r\n" );
-
+	
 	if( irc->sendbuffer != NULL ) {
 		size = strlen( irc->sendbuffer ) + strlen( line );
 		irc->sendbuffer = g_renew ( char, irc->sendbuffer, size + 1 );
@@ -799,7 +829,7 @@ void irc_topic( irc_t *irc, char *channel )
 		if( c )
 			irc_reply( irc, 332, "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", channel, c->title );
 		else
-			irc_reply( irc, 331, "%s :No topic for this channel" );
+			irc_reply( irc, 331, "%s :No topic for this channel", channel );
 	}
 }
 
@@ -855,7 +885,7 @@ void irc_join( irc_t *irc, user_t *u, char *channel )
 	nick_lc( nick );
 	if( g_hash_table_lookup( irc->watches, nick ) )
 	{
-		irc_reply( irc, 600, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "logged online" );
+		irc_reply( irc, 600, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "logged online" );
 	}
 	g_free( nick );
 }
@@ -880,7 +910,7 @@ void irc_kill( irc_t *irc, user_t *u )
 	nick_lc( nick );
 	if( g_hash_table_lookup( irc->watches, nick ) )
 	{
-		irc_reply( irc, 601, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "logged offline" );
+		irc_reply( irc, 601, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "logged offline" );
 	}
 	g_free( nick );
 }
@@ -980,7 +1010,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	}
 	else if( c && c->gc && c->gc->prpl )
 	{
-		return( serv_send_chat( irc, c->gc, c->id, s ) );
+		return( bim_chat_msg( c->gc, c->id, s ) );
 	}
 	
 	return( 0 );
@@ -990,8 +1020,12 @@ gboolean buddy_send_handler_delayed( gpointer data )
 {
 	user_t *u = data;
 	
+	/* Shouldn't happen, but just to be sure. */
+	if( u->sendbuf_len < 2 )
+		return FALSE;
+	
 	u->sendbuf[u->sendbuf_len-2] = 0; /* Cut off the last newline */
-	serv_send_im( u->gc->irc, u, u->sendbuf, u->sendbuf_flags );
+	bim_buddy_msg( u->gc, u->handle, u->sendbuf, u->sendbuf_flags );
 	
 	g_free( u->sendbuf );
 	u->sendbuf = NULL;
@@ -999,7 +1033,7 @@ gboolean buddy_send_handler_delayed( gpointer data )
 	u->sendbuf_timer = 0;
 	u->sendbuf_flags = 0;
 	
-	return( FALSE );
+	return FALSE;
 }
 
 void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
@@ -1012,7 +1046,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		
 		if( u->sendbuf_len > 0 && u->sendbuf_flags != flags)
 		{
-			//Flush the buffer
+			/* Flush the buffer */
 			g_source_remove( u->sendbuf_timer );
 			buddy_send_handler_delayed( u );
 		}
@@ -1020,14 +1054,14 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		if( u->sendbuf_len == 0 )
 		{
 			u->sendbuf_len = strlen( msg ) + 2;
-			u->sendbuf = g_new (char, u->sendbuf_len );
+			u->sendbuf = g_new( char, u->sendbuf_len );
 			u->sendbuf[0] = 0;
 			u->sendbuf_flags = flags;
 		}
 		else
 		{
 			u->sendbuf_len += strlen( msg ) + 1;
-			u->sendbuf = g_renew ( char, u->sendbuf, u->sendbuf_len );
+			u->sendbuf = g_renew( char, u->sendbuf, u->sendbuf_len );
 		}
 		
 		strcat( u->sendbuf, msg );
@@ -1043,7 +1077,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 	}
 	else
 	{
-		serv_send_im( irc, u, msg, flags );
+		bim_buddy_msg( u->gc, u->handle, msg, flags );
 	}
 }
 

@@ -53,7 +53,7 @@ typedef struct log_t {
 
 void log_init(void);
 void log_link(int level, int output);
-void log_message(int level, char *message, ...);
+void log_message(int level, char *message, ...) G_GNUC_PRINTF( 2, 3 );
 void log_error(char *functionname);
 
 #endif

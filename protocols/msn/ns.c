@@ -256,6 +256,9 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts == 5 )
 		{
 			md->buddycount = atoi( cmd[3] );
+			md->groupcount = atoi( cmd[4] );
+			if( md->groupcount > 0 )
+				md->grouplist = g_new0( char *, md->groupcount );
 			
 			if( !*cmd[3] || md->buddycount == 0 )
 				msn_logged_in( gc );
@@ -267,18 +270,6 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			
 			msn_logged_in( gc );
 		}
-	}
-	else if( strcmp( cmd[0], "GTC" ) == 0 )
-	{
-	}
-	else if( strcmp( cmd[0], "BLP" ) == 0 )
-	{
-	}
-	else if( strcmp( cmd[0], "PRP" ) == 0 )
-	{
-	}
-	else if( strcmp( cmd[0], "LSG" ) == 0 )
-	{
 	}
 	else if( strcmp( cmd[0], "LST" ) == 0 )
 	{
@@ -296,7 +287,13 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( list & 1 ) /* FL */
 		{
-			add_buddy( gc, NULL, cmd[1], cmd[2] );
+			char *group = NULL;
+			int num;
+			
+			if( cmd[4] != NULL && sscanf( cmd[4], "%d", &num ) == 1 )
+				group = md->grouplist[num];
+			
+			add_buddy( gc, group, cmd[1], cmd[2] );
 		}
 		if( list & 2 ) /* AL */
 		{
@@ -326,11 +323,22 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			}
 		}
 	}
-	else if( strcmp( cmd[0], "BPR" ) == 0 )
+	else if( strcmp( cmd[0], "LSG" ) == 0 )
 	{
-	}
-	else if( strcmp( cmd[0], "CHG" ) == 0 )
-	{
+		int num;
+		
+		if( num_parts != 4 )
+		{
+			hide_login_progress_error( gc, "Syntax error" );
+			signoff( gc );
+			return( 0 );
+		}
+		
+		http_decode( cmd[2] );
+		num = atoi( cmd[1] );
+		
+		if( num < md->groupcount )
+			md->grouplist[num] = g_strdup( cmd[2] );
 	}
 	else if( strcmp( cmd[0], "CHL" ) == 0 )
 	{
@@ -355,12 +363,6 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			g_snprintf( buf + strlen( buf ), 3, "%02x", digest[i] );
 		
 		return( msn_write( gc, buf, strlen( buf ) ) );
-	}
-	else if( strcmp( cmd[0], "QRY" ) == 0 )
-	{
-	}
-	else if( strcmp( cmd[0], "QNG" ) == 0 )
-	{
 	}
 	else if( strcmp( cmd[0], "ILN" ) == 0 )
 	{
@@ -477,9 +479,6 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			
 			msn_buddy_ask( gc, cmd[4], cmd[5] );
 		}
-	}
-	else if( strcmp( cmd[0], "REM" ) == 0 )
-	{
 	}
 	else if( strcmp( cmd[0], "OUT" ) == 0 )
 	{

@@ -10,6 +10,7 @@
 
 # Program variables
 objects = account.o bitlbee.o crypting.o help.o ini.o ipc.o irc.o irc_commands.o nick.o query.o root_commands.o set.o storage.o storage_text.o url.o user.o util.o
+headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ini.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h url.h user.h protocols/http_client.h protocols/md5.h protocols/nogaim.h protocols/proxy.h protocols/sha.h protocols/ssl_client.h
 subdirs = protocols
 
 ifeq ($(ARCH),Windows)
@@ -25,7 +26,7 @@ CFLAGS += -Wall
 all: $(OUTFILE)
 	$(MAKE) -C doc
 
-uninstall: uninstall-bin uninstall-doc
+uninstall: uninstall-bin uninstall-doc 
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
 
 install: install-bin install-doc
@@ -61,6 +62,17 @@ install-bin:
 
 uninstall-bin:
 	rm -f $(DESTDIR)$(BINDIR)/$(OUTFILE)
+
+install-dev:
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+	install -m 0644 $(headers) $(DESTDIR)$(INCLUDEDIR)
+	mkdir -p $(DESTDIR)$(PCDIR)
+	install -m 0644 bitlbee.pc $(DESTDIR)$(PCDIR)
+
+uninstall-dev:
+	rm -f $(foreach hdr,$(headers),$(DESTDIR)$(INCLUDEDIR)/$(hdr))
+	-rmdir $(DESTDIR)$(INCLUDEDIR)
+	rm -f $(DESTDIR)$(PCDIR)/bitlbee.pc
 
 install-etc:
 	mkdir -p $(DESTDIR)$(ETCDIR)
