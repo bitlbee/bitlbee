@@ -51,7 +51,7 @@
 #define SELF_ALIAS_LEN 400
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
-#define WEBSITE "http://www.bitlee.org/"
+#define WEBSITE "http://www.bitlbee.org/"
 #define IM_FLAG_AWAY 0x0020
 #define OPT_CONN_HTML 0x00000001
 #define OPT_LOGGED_IN 0x00010000
