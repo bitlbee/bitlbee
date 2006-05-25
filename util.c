@@ -38,14 +38,6 @@
 #include <ctype.h>
 #include <glib.h>
 #include <time.h>
-#ifdef GLIB2
-#define iconv_t GIConv
-#define iconv_open g_iconv_open
-#define iconv_close g_iconv_close
-#define iconv g_iconv
-#else
-#include <iconv.h>
-#endif
 
 void strip_linefeed(gchar *text)
 {
@@ -464,21 +456,21 @@ char *ipv6_unwrap( char *src )
 */
 signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf )
 {
-	iconv_t cd;
+	GIConv cd;
 	size_t res;
 	size_t inbytesleft, outbytesleft;
 	char *inbuf = src;
 	char *outbuf = dst;
 	
-	cd = iconv_open( to_cs, from_cs );
-	if( cd == (iconv_t) -1 )
+	cd = g_iconv_open( to_cs, from_cs );
+	if( cd == (GIConv) -1 )
 		return( -1 );
 	
 	inbytesleft = size ? size : strlen( src );
 	outbytesleft = maxbuf - 1;
-	res = iconv( cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft );
+	res = g_iconv( cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft );
 	*outbuf = '\0';
-	iconv_close( cd );
+	g_iconv_close( cd );
 	
 	if( res == (size_t) -1 )
 		return( -1 );
@@ -488,15 +480,15 @@ signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t si
 
 char *set_eval_charset( irc_t *irc, set_t *set, char *value )
 {
-	iconv_t cd;
+	GIConv cd;
 
 	if ( g_strncasecmp( value, "none", 4 ) == 0 )
 		return( value );
 
-	cd = iconv_open( "UTF-8", value );
-	if( cd == (iconv_t) -1 )
+	cd = g_iconv_open( "UTF-8", value );
+	if( cd == (GIConv) -1 )
 		return( NULL );
 
-	iconv_close( cd );
+	g_iconv_close( cd );
 	return( value );
 }
