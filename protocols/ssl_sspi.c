@@ -64,6 +64,13 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	struct scd *conn = g_new0( struct scd, 1 );
 	SCHANNEL_CRED ssl_cred;
 	TimeStamp timestamp;
+	SecBuffer ibuf[2],obuf[1];
+	SecBufferDesc ibufs,obufs;
+	ULONG req = ISC_REQ_REPLAY_DETECT | ISC_REQ_SEQUENCE_DETECT |
+    	ISC_REQ_CONFIDENTIALITY | ISC_REQ_USE_SESSION_KEY |
+      	ISC_REQ_ALLOCATE_MEMORY | ISC_REQ_STREAM | ISC_REQ_EXTENDED_ERROR |
+		ISC_REQ_MANUAL_CRED_VALIDATION;
+	ULONG a;
 	
 	conn->fd = proxy_connect( host, port, ssl_connected, conn );
 	conn->func = func;
@@ -83,17 +90,42 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 		atexit( sspi_global_deinit );
 	}
 
-	conn->context = NULL;
-
 	memset(&ssl_cred, 0, sizeof(SCHANNEL_CRED));
 	ssl_cred.dwVersion = SCHANNEL_CRED_VERSION;
 	ssl_cred.grbitEnabledProtocols = SP_PROT_SSL3_CLIENT;
 
 	SECURITY_STATUS st = AcquireCredentialsHandle(NULL, UNISP_NAME, SECPKG_CRED_OUTBOUND, NULL, &ssl_cred, NULL, NULL, &conn->cred, &timestamp);
-	
-	InitializeSecurityContext(&conn->cred, &conn->context, host, FIXME, 1, FIXME);  
 
-	QueryContextAttributes(&conn->context, SECPKG_ATTR_STREAM_SIZES, &conn->sizes);
+	if (st != SEC_E_OK) 
+		return NULL;
+	
+	do {
+		/* initialize buffers */
+	    ibuf[0].cbBuffer = size; ibuf[0].pvBuffer = buf;
+	    ibuf[1].cbBuffer = 0; ibuf[1].pvBuffer = NIL;
+	    obuf[0].cbBuffer = 0; obuf[0].pvBuffer = NIL;
+    	ibuf[0].BufferType = obuf[0].BufferType = SECBUFFER_TOKEN;
+	    ibuf[1].BufferType = SECBUFFER_EMPTY;
+
+		/* initialize buffer descriptors */
+	    ibufs.ulVersion = obufs.ulVersion = SECBUFFER_VERSION;
+	    ibufs.cBuffers = 2; obufs.cBuffers = 1;
+	    ibufs.pBuffers = ibuf; obufs.pBuffers = obuf;
+
+		st = InitializeSecurityContext(&conn->cred, size?&conn->context:NULL, host, req, 0, SECURITY_NETWORK_DREP, size?&ibufs:NULL, 0, &conn->context, &obufs, &a, &timestamp);  
+    	if (obuf[0].pvBuffer && obuf[0].cbBuffer) {
+			send(conn->fd, obuf[0].pvBuffer, obuf[0].cbBuffer, 0);
+		}
+
+		switch (st) {
+		case SEC_I_INCOMPLETE_CREDENTIALS:
+			break;
+		case SEC_I_CONTINUE_NEEDED:
+
+		}
+	
+
+		QueryContextAttributes(&conn->context, SECPKG_ATTR_STREAM_SIZES, &conn->sizes);
 
 	
 	return( conn );
@@ -199,6 +231,8 @@ void ssl_disconnect( void *conn )
 	 * in empty buffers*/
 
 	DeleteSecurityContext(&scd->context);
+
+	FreeCredentialHandle(&scd->cred);
 
 	closesocket( scd->fd );
 	g_free(scd);
