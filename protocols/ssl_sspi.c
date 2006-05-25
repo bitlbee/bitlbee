@@ -47,7 +47,7 @@ struct scd
 	SecPkgContext_StreamSizes sizes;
 };
 
-static void ssl_connected( gpointer data, gint source, GaimInputCondition cond );
+static void ssl_connected(gpointer, gint, GaimInputCondition);
 
 void sspi_global_init( void )
 {
@@ -62,16 +62,7 @@ void sspi_global_deinit( void )
 void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
-	SCHANNEL_CRED ssl_cred;
-	TimeStamp timestamp;
-	SecBuffer ibuf[2],obuf[1];
-	SecBufferDesc ibufs,obufs;
-	ULONG req = ISC_REQ_REPLAY_DETECT | ISC_REQ_SEQUENCE_DETECT |
-    	ISC_REQ_CONFIDENTIALITY | ISC_REQ_USE_SESSION_KEY |
-      	ISC_REQ_ALLOCATE_MEMORY | ISC_REQ_STREAM | ISC_REQ_EXTENDED_ERROR |
-		ISC_REQ_MANUAL_CRED_VALIDATION;
-	ULONG a;
-	
+		
 	conn->fd = proxy_connect( host, port, ssl_connected, conn );
 	conn->func = func;
 	conn->data = data;
@@ -90,20 +81,38 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 		atexit( sspi_global_deinit );
 	}
 
+	return conn;
+}
+
+static void ssl_connected(gpointer data, gint fd, GaimInputCondition cond)
+{
+	struct scd *conn = data;
+	SCHANNEL_CRED ssl_cred;
+	TimeStamp timestamp;
+	SecBuffer ibuf[2],obuf[1];
+	SecBufferDesc ibufs,obufs;
+	ULONG req = ISC_REQ_REPLAY_DETECT | ISC_REQ_SEQUENCE_DETECT |
+    	ISC_REQ_CONFIDENTIALITY | ISC_REQ_USE_SESSION_KEY |
+      	ISC_REQ_ALLOCATE_MEMORY | ISC_REQ_STREAM | ISC_REQ_EXTENDED_ERROR |
+		ISC_REQ_MANUAL_CRED_VALIDATION;
+	ULONG a;
+
 	memset(&ssl_cred, 0, sizeof(SCHANNEL_CRED));
 	ssl_cred.dwVersion = SCHANNEL_CRED_VERSION;
 	ssl_cred.grbitEnabledProtocols = SP_PROT_SSL3_CLIENT;
 
 	SECURITY_STATUS st = AcquireCredentialsHandle(NULL, UNISP_NAME, SECPKG_CRED_OUTBOUND, NULL, &ssl_cred, NULL, NULL, &conn->cred, &timestamp);
 
-	if (st != SEC_E_OK) 
-		return NULL;
+	if (st != SEC_E_OK) {
+		conn->func( conn->data, NULL, cond );
+		return;
+	
 	
 	do {
 		/* initialize buffers */
 	    ibuf[0].cbBuffer = size; ibuf[0].pvBuffer = buf;
-	    ibuf[1].cbBuffer = 0; ibuf[1].pvBuffer = NIL;
-	    obuf[0].cbBuffer = 0; obuf[0].pvBuffer = NIL;
+	    ibuf[1].cbBuffer = 0; ibuf[1].pvBuffer = NULL;
+	    obuf[0].cbBuffer = 0; obuf[0].pvBuffer = NULL;
     	ibuf[0].BufferType = obuf[0].BufferType = SECBUFFER_TOKEN;
 	    ibuf[1].BufferType = SECBUFFER_EMPTY;
 
@@ -126,9 +135,9 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	
 
 		QueryContextAttributes(&conn->context, SECPKG_ATTR_STREAM_SIZES, &conn->sizes);
+	} while (1);
 
-	
-	return( conn );
+	conn->func( conn->data, conn, cond );
 }
 
 int ssl_read( void *conn, char *retdata, int len )
@@ -232,7 +241,7 @@ void ssl_disconnect( void *conn )
 
 	DeleteSecurityContext(&scd->context);
 
-	FreeCredentialHandle(&scd->cred);
+	FreeCredentialsHandle(&scd->cred);
 
 	closesocket( scd->fd );
 	g_free(scd);

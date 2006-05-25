@@ -162,24 +162,28 @@ if [ -z "$PKG_CONFIG" ]; then
 	PKG_CONFIG=pkg-config
 fi
 
+GLIB=0
+
 if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG glib-2.0; then
 	cat<<EOF>>Makefile.settings
 EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0`
 CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0`
 EOF
 	echo '#define GLIB2' >> config.h
+	GLIB=2
 elif type glib-config > /dev/null 2> /dev/null; then
 	cat<<EOF>>Makefile.settings
 EFLAGS+=`glib-config --libs`
 CFLAGS+=`glib-config --cflags`
 EOF
 	echo '#define GLIB1' >> config.h
+	GLIB=1
 else
 	echo 'Cannot find glib development libraries, aborting. (Install libglib-dev?)'
 	exit 1;
 fi
 
-if [ -r /usr/include/iconv.h ]; then
+if [ GLIB = 1 -o -r /usr/include/iconv.h ]; then
 	:;
 elif [ -r /usr/local/include/iconv.h ]; then
 	echo CFLAGS+=-I/usr/local/include >> Makefile.settings;
