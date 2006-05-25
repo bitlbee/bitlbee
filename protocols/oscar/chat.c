@@ -162,6 +162,7 @@ int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const
 	/* [WvG] This wasn't there originally, but we really should send
 	         the right charset flags, as we also do with normal
 	         messages. Hope this will work. :-) */
+	/*
 	if (flags & AIM_CHATFLAGS_UNICODE)
 		aimbs_put16(&fr->data, 0x0002);
 	else if (flags & AIM_CHATFLAGS_ISO_8859_1)
@@ -170,6 +171,7 @@ int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const
 		aimbs_put16(&fr->data, 0x0000);
 	
 	aimbs_put16(&fr->data, 0x0000);
+	*/
 	
 	/*
 	 * SubTLV: Type 1: Message
