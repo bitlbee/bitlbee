@@ -6,18 +6,17 @@ GTK_SITE=ftp://ftp.gtk.org/pub/gtk/v2.8/win32
 
 GLIB_VERSION=2.10.1
 LIBICONV_VERSION=1.9.1
+GETTEXT_VERSION=0.14.5
 
 wget -c $GTK_SITE/glib-dev-$GLIB_VERSION.zip
 wget -c $GTK_SITE/dependencies/libiconv-$LIBICONV_VERSION.bin.woe32.zip 
+wget -c $GTK_SITE/dependencies/gettext-dev-$GETTEXT_VERSION.zip 
 
 DEPSDIR=`pwd`/win32
 mkdir $DEPSDIR
 
 unzip -d $DEPSDIR -o libiconv-$LIBICONV_VERSION.bin.woe32.zip
 unzip -d $DEPSDIR -o glib-dev-$GLIB_VERSION.zip
+unzip -d $DEPSDIR -o gettext-dev-$GETTEXT_VERSION.zip
 
-LD=i586-mingw32msvc-ld CC=i586-mingw32msvc-gcc STRIP=i586-mingw32msvc-strip PKG_CONFIG_PATH="$DEPSDIR" PKG_CONFIG="pkg-config --define-variable=prefix=\"$DEPSDIR\"" ./configure --ssl=sspi --ipv6=0 --yahoo=0 
-echo OUTFILE=bitlbee.exe >> Makefile.settings
-echo ARCH=Windows >> Makefile.settings
-echo LFLAGS+=-lwsock32 >> Makefile.settings
-$MAKE
+LD=i586-mingw32msvc-ld CC=i586-mingw32msvc-gcc STRIP=i586-mingw32msvc-strip PKG_CONFIG_PATH="$DEPSDIR/lib/pkgconfig" PKG_CONFIG="pkg-config --define-variable=prefix=\"$DEPSDIR\"" ./configure --ssl=sspi --arch=Windows
