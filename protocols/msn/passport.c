@@ -152,7 +152,6 @@ static char *passport_create_header( char *cookie, char *email, char *pwd )
 	return( buffer );
 }
 
-#define PPR_REQUEST "GET /rdr/pprdr.asp HTTP/1.0\r\n\r\n"
 static int passport_retrieve_dalogin( gpointer func, gpointer data, char *header )
 {
 	struct passport_reply *rep = g_new0( struct passport_reply, 1 );
@@ -162,7 +161,7 @@ static int passport_retrieve_dalogin( gpointer func, gpointer data, char *header
 	rep->func = func;
 	rep->header = header;
 	
-	req = http_dorequest( "nexus.passport.com", 443, 1, PPR_REQUEST, passport_retrieve_dalogin_ready, rep );
+	req = http_dorequest_url( "https://nexus.passport.com/rdr/pprdr.asp", passport_retrieve_dalogin_ready, rep );
 	
 	if( !req )
 		destroy_reply( rep );
@@ -184,7 +183,7 @@ static void passport_retrieve_dalogin_ready( struct http_request *req )
 	
 	if( !req->finished || !req->reply_headers || req->status_code != 200 )
 	{
-		rep->error_string = g_strdup_printf( "HTTP error while fetching DALogin (%s)",
+		rep->error_string = g_strdup_printf( "HTTP error while fetching DALogin: %s",
 		                        req->status_string ? req->status_string : "Unknown error" );
 		goto failure;
 	}
