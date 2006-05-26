@@ -137,9 +137,9 @@ static char *extract_name(const char *name) {
 	char *tmp;
 	int i, j;
 	char *x = strchr(name, '-');
-	if (!x) return NULL;
+	if (!x) return g_strdup(name);
 	x = strchr(++x, '-');
-	if (!x) return NULL;
+	if (!x) return g_strdup(name);
 	tmp = g_strdup(++x);
 
 	for (i = 0, j = 0; x[i]; i++) {
@@ -2606,9 +2606,9 @@ int oscar_chat_open(struct gaim_connection * gc, char *who)
 	struct oscar_data * od = (struct oscar_data *)gc->proto_data;
 	int ret;
 	static int chat_id = 0;
-	char * chatname = g_new0(char, strlen(gc->username)+4);
+	char * chatname;
 	
-	g_snprintf(chatname, strlen(gc->username) + 4, "%s%d", gc->username, chat_id++);
+	chatname = g_strdup_printf("%s%d", gc->username, chat_id++);
   
 	ret = oscar_chat_join(gc, chatname);
 
