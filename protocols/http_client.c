@@ -374,19 +374,7 @@ got_reply:
 			/* So, now I just allocated enough memory, so I'm
 			   going to use strcat(), whether you like it or not. :-) */
 			
-			/* First, find the GET/POST/whatever from the original request. */
-			s = strchr( req->request, ' ' );
-			if( s == NULL )
-			{
-				req->status_string = g_strdup( "Error while rebuilding request string" );
-				g_free( new_request );
-				g_free( url );
-				goto cleanup;
-			}
-			
-			*s = 0;
-			sprintf( new_request, "%s %s HTTP/1.0\r\n", req->request, url->file );
-			*s = ' ';
+			sprintf( new_request, "GET %s HTTP/1.0", url->file );
 			
 			s = strstr( req->request, "\r\n" );
 			if( s == NULL )
@@ -397,7 +385,7 @@ got_reply:
 				goto cleanup;
 			}
 			
-			strcat( new_request, s + 2 );
+			strcat( new_request, s );
 			new_host = g_strdup( url->host );
 			new_port = url->port;
 			new_proto = url->proto;
