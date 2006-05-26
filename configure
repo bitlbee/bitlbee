@@ -65,6 +65,8 @@ Option		Description				Default
 
 --ssl=...	SSL library to use (gnutls, nss, openssl, sspi, bogus, auto)
 							$ssl
+--arch=...  Override target architecture $arch
+
 EOF
 		exit;
 	fi
@@ -405,6 +407,11 @@ IRIX )
 ;;
 CYGWIN* )
 	echo 'Cygwin is not officially supported.'
+;;
+Windows )
+	echo OUTFILE=bitlbee.exe >> Makefile.settings
+	echo LFLAGS+=-lwsock32 >> Makefile.settings
+	echo EFLAGS+=-lsecur32 >> Makefile.settings
 ;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'
