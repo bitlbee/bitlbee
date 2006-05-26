@@ -126,7 +126,7 @@ const struct msn_status_code msn_status_code_list[] =
 	{ 800, "Changing too rapidly",                                  0 },
 	
 	{ 910, "Server is busy",                                        STATUS_FATAL },
-	{ 911, "Authentication failed",                                 STATUS_FATAL },
+	{ 911, "Authentication failed",                                 STATUS_SB_FATAL | STATUS_FATAL },
 	{ 912, "Server is busy",                                        STATUS_FATAL },
 	{ 913, "Not allowed when hiding",                               0 },
 	{ 914, "Server is unavailable",                                 STATUS_FATAL },
