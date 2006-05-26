@@ -384,9 +384,9 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 				g_hash_table_insert( irc->watches, nick, nick );
 			
 			if( u && u->online )
-				irc_reply( irc, 604, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "is online" );
+				irc_reply( irc, 604, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "is online" );
 			else
-				irc_reply( irc, 605, "%s %s %s %d :%s", nick, "*", "*", time( NULL ), "is offline" );
+				irc_reply( irc, 605, "%s %s %s %d :%s", nick, "*", "*", (int) time( NULL ), "is offline" );
 		}
 		else if( cmd[i][0] == '-' )
 		{
@@ -447,7 +447,7 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 		struct gaim_connection *gc = a->gc;
 		
 		if( gc && gc->flags & OPT_LOGGED_IN )
-			proto_away( gc, u->away );
+			bim_set_away( gc, u->away );
 	}
 }
 

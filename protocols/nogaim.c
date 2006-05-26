@@ -35,19 +35,6 @@
 #include "nogaim.h"
 #include <ctype.h>
 
-static char *proto_away_alias[8][5] =
-{
-	{ "Away from computer", "Away", "Extended away", NULL },
-	{ "NA", "N/A", "Not available", NULL },
-	{ "Busy", "Do not disturb", "DND", "Occupied", NULL },
-	{ "Be right back", "BRB", NULL },
-	{ "On the phone", "Phone", "On phone", NULL },
-	{ "Out to lunch", "Lunch", "Food", NULL },
-	{ "Invisible", "Hidden" },
-	{ NULL }
-};
-static char *proto_away_alias_find( GList *gcm, char *away );
-
 static int remove_chat_buddy_silent( struct conversation *b, char *handle );
 
 GSList *connections;
@@ -154,83 +141,6 @@ void nogaim_init()
 }
 
 GSList *get_connections() { return connections; }
-
-int proto_away( struct gaim_connection *gc, char *away )
-{
-	GList *m, *ms;
-	char *s;
-	
-	if( !away ) away = "";
-	ms = m = gc->prpl->away_states( gc );
-	
-	while( m )
-	{
-		if( *away )
-		{
-			if( g_strncasecmp( m->data, away, strlen( m->data ) ) == 0 )
-				break;
-		}
-		else
-		{
-			if( g_strcasecmp( m->data, "Available" ) == 0 )
-				break;
-			if( g_strcasecmp( m->data, "Online" ) == 0 )
-				break;
-		}
-		m = m->next;
-	}
-	
-	if( m )
-	{
-		gc->prpl->set_away( gc, m->data, *away ? away : NULL );
-	}
-	else
-	{
-		s = proto_away_alias_find( ms, away );
-		if( s )
-		{
-			gc->prpl->set_away( gc, s, away );
-			if( set_getint( gc->irc, "debug" ) )
-				serv_got_crap( gc, "Setting away state to %s", s );
-		}
-		else
-			gc->prpl->set_away( gc, GAIM_AWAY_CUSTOM, away );
-	}
-	
-	g_list_free( ms );
-	
-	return( 1 );
-}
-
-static char *proto_away_alias_find( GList *gcm, char *away )
-{
-	GList *m;
-	int i, j;
-	
-	for( i = 0; *proto_away_alias[i]; i ++ )
-	{
-		for( j = 0; proto_away_alias[i][j]; j ++ )
-			if( g_strncasecmp( away, proto_away_alias[i][j], strlen( proto_away_alias[i][j] ) ) == 0 )
-				break;
-		
-		if( !proto_away_alias[i][j] )	/* If we reach the end, this row */
-			continue;		/* is not what we want. Next!    */
-		
-		/* Now find an entry in this row which exists in gcm */
-		for( j = 0; proto_away_alias[i][j]; j ++ )
-		{
-			m = gcm;
-			while( m )
-			{
-				if( g_strcasecmp( proto_away_alias[i][j], m->data ) == 0 )
-					return( proto_away_alias[i][j] );
-				m = m->next;
-			}
-		}
-	}
-	
-	return( NULL );
-}
 
 /* multi.c */
 
@@ -356,7 +266,7 @@ void account_online( struct gaim_connection *gc )
 	
 	/* Also necessary when we're not away, at least for some of the
 	   protocols. */
-	proto_away( gc, u->away );
+	bim_set_away( gc, u->away );
 }
 
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
@@ -480,7 +390,14 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	}
 	else if( gc->user->proto_opt[0] && *gc->user->proto_opt[0] )
 	{
-		u->host = g_strdup( gc->user->proto_opt[0] );
+		char *colon;
+		
+		if( ( colon = strchr( gc->user->proto_opt[0], ':' ) ) )
+			u->host = g_strndup( gc->user->proto_opt[0],
+			                     colon - gc->user->proto_opt[0] );
+		else
+			u->host = g_strdup( gc->user->proto_opt[0] );
+		
 		u->user = g_strdup( handle );
 		
 		/* s/ /_/ ... important for AOL screennames */
@@ -1021,24 +938,30 @@ char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
 	return( set_eval_bool( irc, set, value ) );
 }
 
-int serv_send_im( irc_t *irc, user_t *u, char *msg, int flags )
+
+
+
+/* The plan is to not allow straight calls to prpl functions anymore, but do
+   them all from some wrappers. We'll start to define some down here: */
+
+int bim_buddy_msg( struct gaim_connection *gc, char *handle, char *msg, int flags )
 {
 	char *buf = NULL;
 	int st;
 	
-	if( ( u->gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
+	if( ( gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
 	{
 		buf = escape_html( msg );
 		msg = buf;
 	}
 	
-	st = ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), flags );
+	st = gc->prpl->send_im( gc, handle, msg, strlen( msg ), flags );
 	g_free( buf );
 	
 	return st;
 }
 
-int serv_send_chat( irc_t *irc, struct gaim_connection *gc, int id, char *msg )
+int bim_chat_msg( struct gaim_connection *gc, int id, char *msg )
 {
 	char *buf = NULL;
 	int st;
@@ -1053,4 +976,141 @@ int serv_send_chat( irc_t *irc, struct gaim_connection *gc, int id, char *msg )
 	g_free( buf );
 	
 	return st;
+}
+
+static char *bim_away_alias_find( GList *gcm, char *away );
+
+int bim_set_away( struct gaim_connection *gc, char *away )
+{
+	GList *m, *ms;
+	char *s;
+	
+	if( !away ) away = "";
+	ms = m = gc->prpl->away_states( gc );
+	
+	while( m )
+	{
+		if( *away )
+		{
+			if( g_strncasecmp( m->data, away, strlen( m->data ) ) == 0 )
+				break;
+		}
+		else
+		{
+			if( g_strcasecmp( m->data, "Available" ) == 0 )
+				break;
+			if( g_strcasecmp( m->data, "Online" ) == 0 )
+				break;
+		}
+		m = m->next;
+	}
+	
+	if( m )
+	{
+		gc->prpl->set_away( gc, m->data, *away ? away : NULL );
+	}
+	else
+	{
+		s = bim_away_alias_find( ms, away );
+		if( s )
+		{
+			gc->prpl->set_away( gc, s, away );
+			if( set_getint( gc->irc, "debug" ) )
+				serv_got_crap( gc, "Setting away state to %s", s );
+		}
+		else
+			gc->prpl->set_away( gc, GAIM_AWAY_CUSTOM, away );
+	}
+	
+	g_list_free( ms );
+	
+	return( 1 );
+}
+
+static char *bim_away_alias_list[8][5] =
+{
+	{ "Away from computer", "Away", "Extended away", NULL },
+	{ "NA", "N/A", "Not available", NULL },
+	{ "Busy", "Do not disturb", "DND", "Occupied", NULL },
+	{ "Be right back", "BRB", NULL },
+	{ "On the phone", "Phone", "On phone", NULL },
+	{ "Out to lunch", "Lunch", "Food", NULL },
+	{ "Invisible", "Hidden" },
+	{ NULL }
+};
+
+static char *bim_away_alias_find( GList *gcm, char *away )
+{
+	GList *m;
+	int i, j;
+	
+	for( i = 0; *bim_away_alias_list[i]; i ++ )
+	{
+		for( j = 0; bim_away_alias_list[i][j]; j ++ )
+			if( g_strncasecmp( away, bim_away_alias_list[i][j], strlen( bim_away_alias_list[i][j] ) ) == 0 )
+				break;
+		
+		if( !bim_away_alias_list[i][j] )	/* If we reach the end, this row */
+			continue;			/* is not what we want. Next!    */
+		
+		/* Now find an entry in this row which exists in gcm */
+		for( j = 0; bim_away_alias_list[i][j]; j ++ )
+		{
+			m = gcm;
+			while( m )
+			{
+				if( g_strcasecmp( bim_away_alias_list[i][j], m->data ) == 0 )
+					return( bim_away_alias_list[i][j] );
+				m = m->next;
+			}
+		}
+	}
+	
+	return( NULL );
+}
+
+void bim_add_allow( struct gaim_connection *gc, char *handle )
+{
+	if( g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) == NULL )
+	{
+		gc->permit = g_slist_prepend( gc->permit, g_strdup( handle ) );
+	}
+	
+	gc->prpl->add_permit( gc, handle );
+}
+
+void bim_rem_allow( struct gaim_connection *gc, char *handle )
+{
+	GSList *l;
+	
+	if( ( l = g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) ) )
+	{
+		g_free( l->data );
+		gc->permit = g_slist_delete_link( gc->permit, l );
+	}
+	
+	gc->prpl->rem_permit( gc, handle );
+}
+
+void bim_add_block( struct gaim_connection *gc, char *handle )
+{
+	if( g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) == NULL )
+	{
+		gc->deny = g_slist_prepend( gc->deny, g_strdup( handle ) );
+	}
+	
+	gc->prpl->add_deny( gc, handle );
+}
+
+void bim_rem_block( struct gaim_connection *gc, char *handle )
+{
+	GSList *l;
+	
+	if( ( l = g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) ) )
+	{
+		g_free( l->data );
+		gc->deny = g_slist_delete_link( gc->deny, l );
+	}
+	
+	gc->prpl->rem_deny( gc, handle );
 }

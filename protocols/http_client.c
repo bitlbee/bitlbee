@@ -239,6 +239,11 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 	return FALSE;
 
 got_reply:
+	/* Maybe if the webserver is overloaded, or when there's bad SSL
+	   support... */
+	if( req->bytes_read == 0 )
+		goto cleanup;
+	
 	/* Zero termination is very convenient. */
 	req->reply_headers[req->bytes_read] = 0;
 	

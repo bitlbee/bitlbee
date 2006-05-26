@@ -38,7 +38,14 @@
 #include <ctype.h>
 #include <glib.h>
 #include <time.h>
+#ifdef GLIB2
+#define iconv_t GIConv
+#define iconv_open g_iconv_open
+#define iconv_close g_iconv_close
+#define iconv g_iconv
+#else
 #include <iconv.h>
+#endif
 
 void strip_linefeed(gchar *text)
 {

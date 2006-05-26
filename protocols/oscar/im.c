@@ -1468,7 +1468,7 @@ static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod
             case AIM_MTYPE_AUTOFFC:
 	    case 0x9c:	/* ICQ 5 seems to send this */
                 aim_send_im_ch2_statusmessage(sess, userinfo->sn, args->cookie,
-                        gc->away, sess->aim_icq_state, dc);
+                        gc->away ? gc->away : "", sess->aim_icq_state, dc);
                 break;
 
         }

@@ -46,9 +46,9 @@ void ipc_master_free_one( struct bitlbee_child *child );
 void ipc_master_free_all();
 
 void ipc_to_master( char **cmd );
-void ipc_to_master_str( char *format, ... );
+void ipc_to_master_str( char *format, ... ) G_GNUC_PRINTF( 1, 2 );
 void ipc_to_children( char **cmd );
-void ipc_to_children_str( char *format, ... );
+void ipc_to_children_str( char *format, ... ) G_GNUC_PRINTF( 1, 2 );
 
 /* We need this function in inetd mode, so let's just make it non-static. */
 void ipc_master_cmd_rehash( irc_t *data, char **cmd );

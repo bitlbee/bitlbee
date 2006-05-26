@@ -831,7 +831,7 @@ void irc_topic( irc_t *irc, char *channel )
 		if( c )
 			irc_reply( irc, 332, "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", channel, c->title );
 		else
-			irc_reply( irc, 331, "%s :No topic for this channel" );
+			irc_reply( irc, 331, "%s :No topic for this channel", channel );
 	}
 }
 
@@ -887,7 +887,7 @@ void irc_join( irc_t *irc, user_t *u, char *channel )
 	nick_lc( nick );
 	if( g_hash_table_lookup( irc->watches, nick ) )
 	{
-		irc_reply( irc, 600, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "logged online" );
+		irc_reply( irc, 600, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "logged online" );
 	}
 	g_free( nick );
 }
@@ -912,7 +912,7 @@ void irc_kill( irc_t *irc, user_t *u )
 	nick_lc( nick );
 	if( g_hash_table_lookup( irc->watches, nick ) )
 	{
-		irc_reply( irc, 601, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "logged offline" );
+		irc_reply( irc, 601, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "logged offline" );
 	}
 	g_free( nick );
 }
@@ -1012,7 +1012,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	}
 	else if( c && c->gc && c->gc->prpl )
 	{
-		return( serv_send_chat( irc, c->gc, c->id, s ) );
+		return( bim_chat_msg( c->gc, c->id, s ) );
 	}
 	
 	return( 0 );
@@ -1022,8 +1022,12 @@ static gboolean buddy_send_handler_delayed( gpointer data, gint fd, b_input_cond
 {
 	user_t *u = data;
 	
+	/* Shouldn't happen, but just to be sure. */
+	if( u->sendbuf_len < 2 )
+		return FALSE;
+	
 	u->sendbuf[u->sendbuf_len-2] = 0; /* Cut off the last newline */
-	serv_send_im( u->gc->irc, u, u->sendbuf, u->sendbuf_flags );
+	bim_buddy_msg( u->gc, u->handle, u->sendbuf, u->sendbuf_flags );
 	
 	g_free( u->sendbuf );
 	u->sendbuf = NULL;
@@ -1044,7 +1048,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		
 		if( u->sendbuf_len > 0 && u->sendbuf_flags != flags)
 		{
-			//Flush the buffer
+			/* Flush the buffer */
 			b_event_remove( u->sendbuf_timer );
 			buddy_send_handler_delayed( u, -1, 0 );
 		}
@@ -1052,14 +1056,14 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		if( u->sendbuf_len == 0 )
 		{
 			u->sendbuf_len = strlen( msg ) + 2;
-			u->sendbuf = g_new (char, u->sendbuf_len );
+			u->sendbuf = g_new( char, u->sendbuf_len );
 			u->sendbuf[0] = 0;
 			u->sendbuf_flags = flags;
 		}
 		else
 		{
 			u->sendbuf_len += strlen( msg ) + 1;
-			u->sendbuf = g_renew ( char, u->sendbuf, u->sendbuf_len );
+			u->sendbuf = g_renew( char, u->sendbuf, u->sendbuf_len );
 		}
 		
 		strcat( u->sendbuf, msg );
@@ -1075,7 +1079,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 	}
 	else
 	{
-		serv_send_im( irc, u, msg, flags );
+		bim_buddy_msg( u->gc, u->handle, msg, flags );
 	}
 }
 
