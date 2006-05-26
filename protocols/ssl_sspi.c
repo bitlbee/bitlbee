@@ -31,6 +31,7 @@
 #include <security.h>
 #include <sspi.h>
 #include <schannel.h>
+#include "sock.h"
 
 static gboolean initialized = FALSE;
 int ssl_errno;
@@ -41,52 +42,59 @@ struct scd
 	ssl_input_function func;
 	gpointer data;
 	gboolean established;
-	int inpa;
   	CredHandle cred;		/* SSL credentials */
 	CtxtHandle context;		/* SSL context */
 	SecPkgContext_StreamSizes sizes;
+
+	char *host;
+
+	char *pending_raw_data;
+	gsize pending_raw_data_len;
+	char *pending_data;
+	gsize pending_data_len;
 };
 
 static void ssl_connected(gpointer, gint, GaimInputCondition);
 
-void sspi_global_init( void )
+void sspi_global_init(void)
 {
 	/* FIXME */
 }
 
-void sspi_global_deinit( void )
+void sspi_global_deinit(void)
 {
 	/* FIXME */
 }
 
-void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
+void *ssl_connect(char *host, int port, ssl_input_function func, gpointer data)
 {
-	struct scd *conn = g_new0( struct scd, 1 );
+	struct scd *conn = g_new0(struct scd, 1);
 		
-	conn->fd = proxy_connect( host, port, ssl_connected, conn );
+	conn->fd = proxy_connect(host, port, ssl_connected, conn);
+	sock_make_nonblocking(conn->fd);
 	conn->func = func;
 	conn->data = data;
-	conn->inpa = -1;
+	conn->host = g_strdup(host);
 	
-	if( conn->fd < 0 )
+	if (conn->fd < 0)
 	{
-		g_free( conn );
-		return( NULL );
+		g_free(conn);
+		return NULL;
 	}
 	
-	if( !initialized )
+	if (!initialized)
 	{
 		sspi_global_init();
 		initialized = TRUE;
-		atexit( sspi_global_deinit );
+		atexit(sspi_global_deinit);
 	}
 
 	return conn;
 }
 
-static void ssl_connected(gpointer data, gint fd, GaimInputCondition cond)
+static void ssl_connected(gpointer _conn, gint fd, GaimInputCondition cond)
 {
-	struct scd *conn = data;
+	struct scd *conn = _conn;
 	SCHANNEL_CRED ssl_cred;
 	TimeStamp timestamp;
 	SecBuffer ibuf[2],obuf[1];
@@ -96,6 +104,8 @@ static void ssl_connected(gpointer data, gint fd, GaimInputCondition cond)
       	ISC_REQ_ALLOCATE_MEMORY | ISC_REQ_STREAM | ISC_REQ_EXTENDED_ERROR |
 		ISC_REQ_MANUAL_CRED_VALIDATION;
 	ULONG a;
+	gsize size = 0;
+	gchar *data = NULL;
 
 	memset(&ssl_cred, 0, sizeof(SCHANNEL_CRED));
 	ssl_cred.dwVersion = SCHANNEL_CRED_VERSION;
@@ -104,13 +114,13 @@ static void ssl_connected(gpointer data, gint fd, GaimInputCondition cond)
 	SECURITY_STATUS st = AcquireCredentialsHandle(NULL, UNISP_NAME, SECPKG_CRED_OUTBOUND, NULL, &ssl_cred, NULL, NULL, &conn->cred, &timestamp);
 
 	if (st != SEC_E_OK) {
-		conn->func( conn->data, NULL, cond );
+		conn->func(conn->data, NULL, cond);
 		return;
-	
+	}
 	
 	do {
 		/* initialize buffers */
-	    ibuf[0].cbBuffer = size; ibuf[0].pvBuffer = buf;
+	    ibuf[0].cbBuffer = size; ibuf[0].pvBuffer = data;
 	    ibuf[1].cbBuffer = 0; ibuf[1].pvBuffer = NULL;
 	    obuf[0].cbBuffer = 0; obuf[0].pvBuffer = NULL;
     	ibuf[0].BufferType = obuf[0].BufferType = SECBUFFER_TOKEN;
@@ -121,8 +131,9 @@ static void ssl_connected(gpointer data, gint fd, GaimInputCondition cond)
 	    ibufs.cBuffers = 2; obufs.cBuffers = 1;
 	    ibufs.pBuffers = ibuf; obufs.pBuffers = obuf;
 
-		st = InitializeSecurityContext(&conn->cred, size?&conn->context:NULL, host, req, 0, SECURITY_NETWORK_DREP, size?&ibufs:NULL, 0, &conn->context, &obufs, &a, &timestamp);  
+		st = InitializeSecurityContext(&conn->cred, size?&conn->context:NULL, conn->host, req, 0, SECURITY_NETWORK_DREP, size?&ibufs:NULL, 0, &conn->context, &obufs, &a, &timestamp);  
     	if (obuf[0].pvBuffer && obuf[0].cbBuffer) {
+			/* FIXME: Check return value */
 			send(conn->fd, obuf[0].pvBuffer, obuf[0].cbBuffer, 0);
 		}
 
@@ -130,17 +141,20 @@ static void ssl_connected(gpointer data, gint fd, GaimInputCondition cond)
 		case SEC_I_INCOMPLETE_CREDENTIALS:
 			break;
 		case SEC_I_CONTINUE_NEEDED:
-
+			break;
+		case SEC_E_INCOMPLETE_MESSAGE:
+			break;
+		case SEC_E_OK:
+			break;
 		}
 	
-
 		QueryContextAttributes(&conn->context, SECPKG_ATTR_STREAM_SIZES, &conn->sizes);
 	} while (1);
 
-	conn->func( conn->data, conn, cond );
+	conn->func(conn->data, conn, cond);
 }
 
-int ssl_read( void *conn, char *retdata, int len )
+int ssl_read(void *conn, char *retdata, int len)
 {
 	struct scd *scd = conn;
 	SecBufferDesc msg;
@@ -164,6 +178,11 @@ int ssl_read( void *conn, char *retdata, int len )
 
 	SECURITY_STATUS st = DecryptMessage(&scd->context, &msg, 0, NULL);
 
+	if (st != SEC_E_OK) {
+		/* FIXME */
+		return -1;
+	}
+
 	for (i = 0; i < 4; i++) {
 		if (buf[i].BufferType == SECBUFFER_DATA) {
 			memcpy(retdata, buf[i].pvBuffer, len);
@@ -172,10 +191,10 @@ int ssl_read( void *conn, char *retdata, int len )
 	}
 
 	g_free(data);
-	return( -1 );
+	return -1;
 }
 
-int ssl_write( void *conn, const char *userdata, int len )
+int ssl_write(void *conn, const char *userdata, int len)
 {
 	struct scd *scd = conn;
 	SecBuffer buf[4];
@@ -213,7 +232,7 @@ int ssl_write( void *conn, const char *userdata, int len )
 	return ret;
 }
 
-void ssl_disconnect( void *conn )
+void ssl_disconnect(void *conn)
 {
 	struct scd *scd = conn;
 
@@ -243,11 +262,17 @@ void ssl_disconnect( void *conn )
 
 	FreeCredentialsHandle(&scd->cred);
 
-	closesocket( scd->fd );
+	closesocket(scd->fd);
+	g_free(scd->host);
 	g_free(scd);
 }
 
-int ssl_getfd( void *conn )
+int ssl_getfd(void *conn)
 {
-	return( ((struct scd*)conn)->fd );
+	return ((struct scd*)conn)->fd;
+}
+
+GaimInputCondition ssl_getdirection( void *conn )
+{
+	return GAIM_INPUT_WRITE; /* FIXME: or GAIM_INPUT_READ */
 }

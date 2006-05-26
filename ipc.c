@@ -527,7 +527,11 @@ int ipc_master_listen_socket()
 	return 1;
 }
 #else
+int ipc_master_listen_socket()
+{
 	/* FIXME: Open named pipe \\.\BITLBEE */
+	return 0;
+}
 #endif
 
 int ipc_master_load_state()

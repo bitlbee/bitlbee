@@ -543,7 +543,9 @@ static void irc_cmd_rehash( irc_t *irc, char **cmd )
 	else
 		ipc_to_master( cmd );
 	
+#ifndef _WIN32
 	irc_reply( irc, 382, "%s :Rehashing", CONF_FILE );
+#endif
 }
 
 static const command_t irc_commands[] = {
