@@ -68,8 +68,7 @@ static int passport_get_id_real( gpointer func, gpointer data, char *header )
 		return( 0 );
 	}
 	
-	reqs = g_malloc( strlen( header ) + strlen( dummy ) + 128 );
-	sprintf( reqs, "GET %s HTTP/1.0\r\n%s\r\n\r\n", dummy, header );
+	reqs = g_strdup_printf( "GET %s HTTP/1.0\r\n%s\r\n\r\n", dummy, header );
 	
 	*dummy = 0;
 	req = http_dorequest( server, 443, 1, reqs, passport_get_id_ready, rep );
@@ -87,13 +86,13 @@ static void passport_get_id_ready( struct http_request *req )
 {
 	struct passport_reply *rep = req->data;
 	
-	if( !g_slist_find( msn_connections, rep->data ) || !req->finished || !req->reply_headers )
+	if( !g_slist_find( msn_connections, rep->data ) )
 	{
 		destroy_reply( rep );
 		return;
 	}
 	
-	if( req->status_code == 200 )
+	if( req->finished && req->reply_headers && req->status_code == 200 )
 	{
 		char *dummy;
 		
@@ -108,6 +107,15 @@ static void passport_get_id_ready( struct http_request *req )
 			
 			rep->result = g_strdup( dummy );
 		}
+		else
+		{
+			rep->error_string = g_strdup( "Could not parse Passport server response" );
+		}
+	}
+	else
+	{
+		rep->error_string = g_strdup_printf( "HTTP error: %s",
+		                      req->status_string ? req->status_string : "Unknown error" );
 	}
 	
 	rep->func( rep );
@@ -168,16 +176,26 @@ static void passport_retrieve_dalogin_ready( struct http_request *req )
 	char *dalogin;
 	char *urlend;
 	
-	if( !g_slist_find( msn_connections, rep->data ) || !req->finished || !req->reply_headers )
+	if( !g_slist_find( msn_connections, rep->data ) )
 	{
 		destroy_reply( rep );
 		return;
 	}
 	
+	if( !req->finished || !req->reply_headers || req->status_code != 200 )
+	{
+		rep->error_string = g_strdup_printf( "HTTP error while fetching DALogin (%s)",
+		                        req->status_string ? req->status_string : "Unknown error" );
+		goto failure;
+	}
+	
 	dalogin = strstr( req->reply_headers, "DALogin=" );	
 	
 	if( !dalogin )
+	{
+		rep->error_string = g_strdup( "Parse error while fetching DALogin" );
 		goto failure;
+	}
 	
 	dalogin += strlen( "DALogin=" );
 	urlend = strchr( dalogin, ',' );
@@ -207,5 +225,6 @@ static void destroy_reply( struct passport_reply *rep )
 {
 	g_free( rep->result );
 	g_free( rep->header );
+	g_free( rep->error_string );
 	g_free( rep );
 }

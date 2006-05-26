@@ -649,8 +649,15 @@ static void msn_auth_got_passport_id( struct passport_reply *rep )
 	
 	if( key == NULL )
 	{
-		hide_login_progress( gc, "Error during Passport authentication" );
+		char *err;
+		
+		err = g_strdup_printf( "Error during Passport authentication (%s)",
+		                       rep->error_string ? rep->error_string : "Unknown error" );
+		
+		hide_login_progress( gc, err );
 		signoff( gc );
+		
+		g_free( err );
 	}
 	else
 	{
