@@ -12,8 +12,7 @@ wget -c $GTK_SITE/glib-dev-$GLIB_VERSION.zip
 wget -c $GTK_SITE/dependencies/libiconv-$LIBICONV_VERSION.bin.woe32.zip 
 wget -c $GTK_SITE/dependencies/gettext-dev-$GETTEXT_VERSION.zip 
 
-DEPSDIR=`pwd`/win32
-mkdir $DEPSDIR
+DEPSDIR=`mktemp -d`
 
 unzip -d $DEPSDIR -o libiconv-$LIBICONV_VERSION.bin.woe32.zip
 unzip -d $DEPSDIR -o glib-dev-$GLIB_VERSION.zip
