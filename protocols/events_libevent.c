@@ -38,6 +38,7 @@
 
 static guint id_next;
 static GHashTable *id_hash;
+static int quitting = 0;
 
 /* Since libevent doesn't handle two event handlers for one fd-condition
    very well (which happens sometimes when BitlBee changes event handlers
@@ -74,6 +75,10 @@ void b_main_quit()
 {
 	struct timeval tv;
 	
+	/* libevent sometimes generates events before really quitting,
+	   we want to stop them. */
+	quitting = 1;
+	
 	memset( &tv, 0, sizeof( struct timeval ) );
 	event_loopexit( &tv );
 }
@@ -97,6 +102,12 @@ static void b_event_passthrough( int fd, short event, void *data )
 	/* Since the called function might cancel this handler already
 	   (which free()s b_ev, we have to remember the ID here. */
 	id = b_ev->id;
+	
+	if( quitting )
+	{
+		b_event_remove( id );
+		return;
+	}
 	
 	if( !b_ev->function( b_ev->data, fd, cond ) )
 	{
