@@ -156,6 +156,8 @@ static gboolean http_connected( gpointer data, int source, b_input_condition con
 	return FALSE;
 	
 error:
+	req->status_string = g_strdup( "Error while writing HTTP request" );
+	
 	req->func( req );
 	
 	g_free( req->request );
@@ -215,6 +217,7 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 		{
 			if( !sockerr_again() )
 			{
+				req->status_string = g_strdup( strerror( errno ) );
 				goto cleanup;
 			}
 		}
@@ -242,7 +245,10 @@ got_reply:
 	/* Maybe if the webserver is overloaded, or when there's bad SSL
 	   support... */
 	if( req->bytes_read == 0 )
+	{
+		req->status_string = g_strdup( "Empty HTTP reply" );
 		goto cleanup;
+	}
 	
 	/* Zero termination is very convenient. */
 	req->reply_headers[req->bytes_read] = 0;
@@ -263,6 +269,7 @@ got_reply:
 	}
 	else
 	{
+		req->status_string = g_strdup( "Malformed HTTP reply" );
 		goto cleanup;
 	}
 	
@@ -278,10 +285,31 @@ got_reply:
 	if( ( end1 = strchr( req->reply_headers, ' ' ) ) != NULL )
 	{
 		if( sscanf( end1 + 1, "%d", &req->status_code ) != 1 )
+		{
+			req->status_string = g_strdup( "Can't parse status code" );
 			req->status_code = -1;
+		}
+		else
+		{
+			char *eol;
+			
+			if( evil_server )
+				eol = strchr( end1, '\n' );
+			else
+				eol = strchr( end1, '\r' );
+			
+			req->status_string = g_strndup( end1 + 1, eol - end1 - 1 );
+			
+			/* Just to be sure... */
+			if( ( eol = strchr( req->status_string, '\r' ) ) )
+				*eol = 0;
+			if( ( eol = strchr( req->status_string, '\n' ) ) )
+				*eol = 0;
+		}
 	}
 	else
 	{
+		req->status_string = g_strdup( "Can't locate status code" );
 		req->status_code = -1;
 	}
 	
@@ -290,9 +318,16 @@ got_reply:
 		char *loc, *new_request, *new_host;
 		int error = 0, new_port, new_proto;
 		
+		/* We might fill it again, so let's not leak any memory. */
+		g_free( req->status_string );
+		req->status_string = NULL;
+		
 		loc = strstr( req->reply_headers, "\nLocation: " );
 		if( loc == NULL ) /* We can't handle this redirect... */
+		{
+			req->status_string = g_strdup( "Can't locate Location: header" );
 			goto cleanup;
+		}
 		
 		loc += 11;
 		while( *loc == ' ' )
@@ -308,6 +343,8 @@ got_reply:
 			
 			/* Since we don't cache the servername, and since we
 			   don't need this yet anyway, I won't implement it. */
+			
+			req->status_string = g_strdup( "Can't handle recursive redirects" );
 			
 			goto cleanup;
 		}
@@ -326,6 +363,7 @@ got_reply:
 			
 			if( !url_set( url, loc ) )
 			{
+				req->status_string = g_strdup( "Malformed redirect URL" );
 				g_free( url );
 				goto cleanup;
 			}
@@ -336,28 +374,18 @@ got_reply:
 			/* So, now I just allocated enough memory, so I'm
 			   going to use strcat(), whether you like it or not. :-) */
 			
-			/* First, find the GET/POST/whatever from the original request. */
-			s = strchr( req->request, ' ' );
-			if( s == NULL )
-			{
-				g_free( new_request );
-				g_free( url );
-				goto cleanup;
-			}
-			
-			*s = 0;
-			sprintf( new_request, "%s %s HTTP/1.0\r\n", req->request, url->file );
-			*s = ' ';
+			sprintf( new_request, "GET %s HTTP/1.0", url->file );
 			
 			s = strstr( req->request, "\r\n" );
 			if( s == NULL )
 			{
+				req->status_string = g_strdup( "Error while rebuilding request string" );
 				g_free( new_request );
 				g_free( url );
 				goto cleanup;
 			}
 			
-			strcat( new_request, s + 2 );
+			strcat( new_request, s );
 			new_host = g_strdup( url->host );
 			new_port = url->port;
 			new_proto = url->proto;
@@ -371,7 +399,7 @@ got_reply:
 			closesocket( req->fd );
 		
 		req->fd = -1;
-		req->ssl = 0;
+		req->ssl = NULL;
 		
 		if( new_proto == PROTO_HTTPS )
 		{
@@ -389,6 +417,7 @@ got_reply:
 		
 		if( error )
 		{
+			req->status_string = g_strdup( "Connection problem during redirect" );
 			g_free( new_request );
 			goto cleanup;
 		}
@@ -417,6 +446,7 @@ cleanup:
 	
 	g_free( req->request );
 	g_free( req->reply_headers );
+	g_free( req->status_string );
 	g_free( req );
 	
 	return FALSE;

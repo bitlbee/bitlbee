@@ -36,6 +36,7 @@ struct http_request
 	char *request;
 	int request_length;
 	int status_code;
+	char *status_string;
 	char *reply_headers;
 	char *reply_body;
 	int body_size;

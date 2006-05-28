@@ -320,7 +320,7 @@ static void irc_cmd_userhost( irc_t *irc, char **cmd )
 static void irc_cmd_ison( irc_t *irc, char **cmd )
 {
 	user_t *u;
-	char buff[IRC_MAX_LINE];
+	char buff[IRC_MAX_LINE], *s;
 	int lenleft, i;
 	
 	buff[0] = '\0';
@@ -330,28 +330,41 @@ static void irc_cmd_ison( irc_t *irc, char **cmd )
 	
 	for( i = 1; cmd[i]; i ++ )
 	{
-		if( ( u = user_find( irc, cmd[i] ) ) && u->online )
+		char *this, *next;
+		
+		this = cmd[i];
+		while( *this )
 		{
-			/* [SH] Make sure we don't use too much buffer space. */
-			lenleft -= strlen( u->nick ) + 1;
+			if( ( next = strchr( this, ' ' ) ) )
+				*next = 0;
 			
-			if( lenleft < 0 )
+			if( ( u = user_find( irc, this ) ) && u->online )
 			{
-				break;
+				lenleft -= strlen( u->nick ) + 1;
+				
+				if( lenleft < 0 )
+					break;
+				
+				strcat( buff, u->nick );
+				strcat( buff, " " );
 			}
 			
-			/* [SH] Add the nick to the buffer. Note
-			 * that an extra space is always added. Even
-			 * if it's the last nick in the list. Who
-			 * cares?
-			 */
-			
-			strcat( buff, u->nick );
-			strcat( buff, " " );
+			if( next )
+			{
+				*next = ' ';
+				this = next + 1;
+			}
+			else
+			{
+				break;
+			}    
 		}
+		
+		/* *sigh* */
+		if( lenleft < 0 )
+			break;
 	}
 	
-	/* [WvG] Well, maybe someone cares, so why not remove it? */
 	if( strlen( buff ) > 0 )
 		buff[strlen(buff)-1] = '\0';
 	

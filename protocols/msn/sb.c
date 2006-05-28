@@ -528,14 +528,14 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		if( err->flags & STATUS_SB_FATAL )
 		{
 			msn_sb_destroy( sb );
-			return( 0 );
+			return 0;
 		}
-		if( err->flags & STATUS_FATAL )
+		else if( err->flags & STATUS_FATAL )
 		{
 			signoff( gc );
-			return( 0 );
+			return 0;
 		}
-		if( err->flags & STATUS_SB_IM_SPARE )
+		else if( err->flags & STATUS_SB_IM_SPARE )
 		{
 			if( sb->who )
 			{
@@ -558,6 +558,8 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 				g_slist_free( sb->msgq );
 				sb->msgq = NULL;
 			}
+			
+			/* Do NOT return 0 here, we want to keep this sb. */
 		}
 	}
 	else
