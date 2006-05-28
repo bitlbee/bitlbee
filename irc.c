@@ -54,13 +54,9 @@ irc_t *irc_new( int fd )
 	
 	irc->fd = fd;
 	irc->io_channel = g_io_channel_unix_new( fd );
-#ifdef GLIB2
 	g_io_channel_set_encoding (irc->io_channel, NULL, NULL);
 	g_io_channel_set_buffered (irc->io_channel, FALSE);
 	g_io_channel_set_flags( irc->io_channel, G_IO_FLAG_NONBLOCK, NULL );
-#else
-	fcntl( irc->fd, F_SETFL, O_NONBLOCK);
-#endif
 	irc->r_watch_source_id = g_io_add_watch( irc->io_channel, G_IO_IN | G_IO_ERR | G_IO_HUP, bitlbee_io_current_client_read, irc );
 	
 	irc->status = USTATUS_OFFLINE;
