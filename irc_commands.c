@@ -176,7 +176,7 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 				
 				if( !u->gc->prpl->chat_open( u->gc, u->handle ) )
 				{
-					irc_usermsg( irc, "Could not open a groupchat with %s, maybe you don't have a connection to him/her yet?", u->nick );
+					irc_usermsg( irc, "Could not open a groupchat with %s.", u->nick );
 				}
 			}
 			else if( u )
