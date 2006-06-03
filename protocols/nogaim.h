@@ -53,9 +53,11 @@
 
 #define WEBSITE "http://www.bitlbee.org/"
 #define IM_FLAG_AWAY 0x0020
-#define OPT_CONN_HTML 0x00000001
-#define OPT_LOGGED_IN 0x00010000
 #define GAIM_AWAY_CUSTOM "Custom"
+
+#define OPT_CONN_HTML   0x00000001
+#define OPT_LOGGED_IN   0x00010000
+#define OPT_LOGGING_OUT 0x00020000
 
 /* ok. now the fun begins. first we create a connection structure */
 struct gaim_connection
