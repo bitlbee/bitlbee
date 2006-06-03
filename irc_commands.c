@@ -176,7 +176,7 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 				
 				if( !u->gc->prpl->chat_open( u->gc, u->handle ) )
 				{
-					irc_usermsg( irc, "Could not open a groupchat with %s, maybe you don't have a connection to him/her yet?", u->nick );
+					irc_usermsg( irc, "Could not open a groupchat with %s.", u->nick );
 				}
 			}
 			else if( u )
@@ -320,7 +320,7 @@ static void irc_cmd_userhost( irc_t *irc, char **cmd )
 static void irc_cmd_ison( irc_t *irc, char **cmd )
 {
 	user_t *u;
-	char buff[IRC_MAX_LINE];
+	char buff[IRC_MAX_LINE], *s;
 	int lenleft, i;
 	
 	buff[0] = '\0';
@@ -330,28 +330,41 @@ static void irc_cmd_ison( irc_t *irc, char **cmd )
 	
 	for( i = 1; cmd[i]; i ++ )
 	{
-		if( ( u = user_find( irc, cmd[i] ) ) && u->online )
+		char *this, *next;
+		
+		this = cmd[i];
+		while( *this )
 		{
-			/* [SH] Make sure we don't use too much buffer space. */
-			lenleft -= strlen( u->nick ) + 1;
+			if( ( next = strchr( this, ' ' ) ) )
+				*next = 0;
 			
-			if( lenleft < 0 )
+			if( ( u = user_find( irc, this ) ) && u->online )
 			{
-				break;
+				lenleft -= strlen( u->nick ) + 1;
+				
+				if( lenleft < 0 )
+					break;
+				
+				strcat( buff, u->nick );
+				strcat( buff, " " );
 			}
 			
-			/* [SH] Add the nick to the buffer. Note
-			 * that an extra space is always added. Even
-			 * if it's the last nick in the list. Who
-			 * cares?
-			 */
-			
-			strcat( buff, u->nick );
-			strcat( buff, " " );
+			if( next )
+			{
+				*next = ' ';
+				this = next + 1;
+			}
+			else
+			{
+				break;
+			}    
 		}
+		
+		/* *sigh* */
+		if( lenleft < 0 )
+			break;
 	}
 	
-	/* [WvG] Well, maybe someone cares, so why not remove it? */
 	if( strlen( buff ) > 0 )
 		buff[strlen(buff)-1] = '\0';
 	
@@ -384,9 +397,9 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 				g_hash_table_insert( irc->watches, nick, nick );
 			
 			if( u && u->online )
-				irc_reply( irc, 604, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "is online" );
+				irc_reply( irc, 604, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "is online" );
 			else
-				irc_reply( irc, 605, "%s %s %s %d :%s", nick, "*", "*", time( NULL ), "is offline" );
+				irc_reply( irc, 605, "%s %s %s %d :%s", nick, "*", "*", (int) time( NULL ), "is offline" );
 		}
 		else if( cmd[i][0] == '-' )
 		{
@@ -447,7 +460,7 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 		struct gaim_connection *gc = a->gc;
 		
 		if( gc && gc->flags & OPT_LOGGED_IN )
-			proto_away( gc, u->away );
+			bim_set_away( gc, u->away );
 	}
 }
 

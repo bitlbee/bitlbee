@@ -38,6 +38,7 @@ struct passport_reply
 	void *data;
 	char *result;
 	char *header;
+	char *error_string;
 };
 
 int passport_get_id( gpointer func, gpointer data, char *username, char *password, char *cookie );

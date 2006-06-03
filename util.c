@@ -444,3 +444,51 @@ char *ipv6_unwrap( char *src )
 	return ( src + 7 );
 }
 #endif
+
+/* Convert from one charset to another.
+   
+   from_cs, to_cs: Source and destination charsets
+   src, dst: Source and destination strings
+   size: Size if src. 0 == use strlen(). strlen() is not reliable for UNICODE/UTF16 strings though.
+   maxbuf: Maximum number of bytes to write to dst
+   
+   Returns the number of bytes written to maxbuf or -1 on an error.
+*/
+signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf )
+{
+	GIConv cd;
+	size_t res;
+	size_t inbytesleft, outbytesleft;
+	char *inbuf = src;
+	char *outbuf = dst;
+	
+	cd = g_iconv_open( to_cs, from_cs );
+	if( cd == (GIConv) -1 )
+		return( -1 );
+	
+	inbytesleft = size ? size : strlen( src );
+	outbytesleft = maxbuf - 1;
+	res = g_iconv( cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft );
+	*outbuf = '\0';
+	g_iconv_close( cd );
+	
+	if( res == (size_t) -1 )
+		return( -1 );
+	else
+		return( outbuf - dst );
+}
+
+char *set_eval_charset( irc_t *irc, set_t *set, char *value )
+{
+	GIConv cd;
+
+	if ( g_strncasecmp( value, "none", 4 ) == 0 )
+		return( value );
+
+	cd = g_iconv_open( "UTF-8", value );
+	if( cd == (GIConv) -1 )
+		return( NULL );
+
+	g_iconv_close( cd );
+	return( value );
+}

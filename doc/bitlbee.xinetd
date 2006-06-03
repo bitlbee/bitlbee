@@ -13,7 +13,12 @@ service ircd
 	user            = nobody
 	server          = /usr/local/sbin/bitlbee
 	
-	## xinetd is fucking retarded, what's the use of this port flag if
-	## it HAS to be the same as in /etc/services ?
-	# port		= 6667
+	## You might want to limit access to localhost only:
+	# bind            = 127.0.0.1
+	
+	## Thanks a lot to friedman@splode.com for telling us about the type
+	## argument, so now this file can be used without having to edit
+	## /etc/services too.
+	type            = UNLISTED
+	port            = 6667
 }

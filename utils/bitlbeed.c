@@ -5,7 +5,7 @@
 *  A tiny daemon to allow you to run The Bee as a non-root user  *
 *  (without access to /etc/inetd.conf or whatever)               *
 *                                                                *
-*  Copyright 2002-2004 Wilmer van der Gaast <lintux@debian.org>  *
+*  Copyright 2002-2004 Wilmer van der Gaast <wilmer@gaast.net>   *
 *                                                                *
 *  Licensed under the GNU General Public License                 *
 *                                                                *

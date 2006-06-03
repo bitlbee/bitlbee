@@ -130,6 +130,9 @@ static void msn_buddy_ask_yes( gpointer w, struct msn_buddy_ask_data *bla )
 {
 	msn_buddy_list_add( bla->gc, "AL", bla->handle, bla->realname );
 	
+	if( find_buddy( bla->gc, bla->handle ) == NULL )
+		show_got_added( bla->gc, bla->handle, NULL );
+	
 	g_free( bla->handle );
 	g_free( bla->realname );
 	g_free( bla );

@@ -104,7 +104,7 @@ typedef struct irc
 extern GSList *irc_connection_list;
 
 irc_t *irc_new( int fd );
-void irc_abort( irc_t *irc, int immed, char *format, ... );
+void irc_abort( irc_t *irc, int immed, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
 void irc_free( irc_t *irc );
 
 void irc_exec( irc_t *irc, char **cmd );
@@ -113,10 +113,10 @@ char **irc_parse_line( char *line );
 char *irc_build_line( char **cmd );
 
 void irc_vawrite( irc_t *irc, char *format, va_list params );
-void irc_write( irc_t *irc, char *format, ... );
-void irc_write_all( int now, char *format, ... );
-void irc_reply( irc_t *irc, int code, char *format, ... );
-G_MODULE_EXPORT int irc_usermsg( irc_t *irc, char *format, ... );
+void irc_write( irc_t *irc, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
+void irc_write_all( int now, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
+void irc_reply( irc_t *irc, int code, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
+G_MODULE_EXPORT int irc_usermsg( irc_t *irc, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 char **irc_tokenize( char *buffer );
 
 void irc_login( irc_t *irc );

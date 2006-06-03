@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* IPC - communication between BitlBee processes                        */
+/* Misc. functions                                                      */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,39 +23,28 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#define BITLBEE_CORE
-#include "bitlbee.h"
+#ifndef _UTIL_H
+#define _UTIL_H
 
+G_MODULE_EXPORT void strip_linefeed( gchar *text );
+G_MODULE_EXPORT char *add_cr( char *text );
+G_MODULE_EXPORT char *strip_newlines(char *source);
+G_MODULE_EXPORT char *tobase64( const char *text );
+G_MODULE_EXPORT char *normalize( const char *s );
+G_MODULE_EXPORT void info_string_append( GString *str, char *newline, char *name, char *value );
 
-struct bitlbee_child
-{
-	pid_t pid;
-	int ipc_fd;
-	gint ipc_inpa;
-	
-	char *host;
-	char *nick;
-	char *realname;
-};
+G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min, int sec );
+double gettime( void );
 
+G_MODULE_EXPORT void strip_html( char *msg );
+G_MODULE_EXPORT char *escape_html( const char *html );
+G_MODULE_EXPORT void http_decode( char *s );
+G_MODULE_EXPORT void http_encode( char *s );
 
-void ipc_master_read( gpointer data, gint source, GaimInputCondition cond );
-void ipc_child_read( gpointer data, gint source, GaimInputCondition cond );
+G_MODULE_EXPORT char *ipv6_wrap( char *src );
+G_MODULE_EXPORT char *ipv6_unwrap( char *src );
 
-void ipc_master_free_one( struct bitlbee_child *child );
-void ipc_master_free_all();
+G_MODULE_EXPORT signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf );
+char *set_eval_charset( irc_t *irc, set_t *set, char *value );
 
-void ipc_to_master( char **cmd );
-void ipc_to_master_str( char *format, ... ) G_GNUC_PRINTF( 1, 2 );
-void ipc_to_children( char **cmd );
-void ipc_to_children_str( char *format, ... ) G_GNUC_PRINTF( 1, 2 );
-
-/* We need this function in inetd mode, so let's just make it non-static. */
-void ipc_master_cmd_rehash( irc_t *data, char **cmd );
-
-char *ipc_master_save_state();
-void ipc_master_set_statefile( char *fn );
-int ipc_master_load_state();
-int ipc_master_listen_socket();
-
-extern GSList *child_list;
+#endif

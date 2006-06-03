@@ -94,7 +94,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			}
 			conf->port = i;
 		}
-		else if( opt == 'p' )
+		else if( opt == 'P' )
 		{
 			g_free( conf->pidfile );
 			conf->pidfile = g_strdup( optarg );

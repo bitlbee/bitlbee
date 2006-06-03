@@ -121,10 +121,10 @@ static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
 	
 	if( source == -1 )
 		goto ssl_connected_failure;
-
 	
-
-
+	/* Until we find out how to handle non-blocking I/O with NSS... */
+	sock_make_blocking( conn->fd );
+	
 	conn->prfd = SSL_ImportFD(NULL, PR_ImportTCPSocket(source));
 	SSL_OptionSet(conn->prfd, SSL_SECURITY, PR_TRUE);
 	SSL_OptionSet(conn->prfd, SSL_HANDSHAKE_AS_CLIENT, PR_TRUE);
@@ -179,4 +179,10 @@ void ssl_disconnect( void *conn_ )
 int ssl_getfd( void *conn )
 {
 	return( ((struct scd*)conn)->fd );
+}
+
+GaimInputCondition ssl_getdirection( void *conn )
+{
+	/* Just in case someone calls us, let's return the most likely case: */
+	return GAIM_INPUT_READ;
 }

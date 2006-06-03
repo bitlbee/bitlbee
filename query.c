@@ -139,13 +139,13 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 	}
 	if( ans )
 	{
-		q->yes( NULL, q->data );
 		serv_got_crap( q->gc, "Accepted: %s", q->question );
+		q->yes( NULL, q->data );
 	}
 	else
 	{
-		q->no( NULL, q->data );
 		serv_got_crap( q->gc, "Rejected: %s", q->question );
+		q->no( NULL, q->data );
 	}
 	q->data = NULL;
 	

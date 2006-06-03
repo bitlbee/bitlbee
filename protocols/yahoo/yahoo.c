@@ -226,16 +226,11 @@ static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg 
 			yd->current_status = YAHOO_STATUS_INVISIBLE;
 		else if( g_strcasecmp( state, GAIM_AWAY_CUSTOM ) == 0 )
 		{
-			if (gc->is_idle)
-				yd->current_status = YAHOO_STATUS_IDLE;
-			else
-				yd->current_status = YAHOO_STATUS_AVAILABLE;
+			yd->current_status = YAHOO_STATUS_AVAILABLE;
 			
 			gc->away = NULL;
 		}
 	}
-	else if( gc->is_idle )
-		yd->current_status = YAHOO_STATUS_IDLE;
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
@@ -614,7 +609,8 @@ void ext_yahoo_status_changed( int id, char *who, int stat, char *msg, int away 
 {
 	struct gaim_connection *gc = byahoo_get_gc_by_id( id );
 	
-	serv_got_update( gc, who, stat != YAHOO_STATUS_OFFLINE, 0, 0, 0,
+	serv_got_update( gc, who, stat != YAHOO_STATUS_OFFLINE, 0, 0,
+	                 ( stat == YAHOO_STATUS_IDLE ) ? away : 0,
 	                 ( stat != YAHOO_STATUS_AVAILABLE ) | ( stat << 1 ), 0 );
 }
 

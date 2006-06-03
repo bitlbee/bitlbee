@@ -110,6 +110,7 @@ extern char *CONF_FILE;
 #include "help.h"
 #include "query.h"
 #include "sock.h"
+#include "util.h"
 
 typedef struct global {
 	/* In forked mode, child processes store the fd of the IPC socket here. */
@@ -132,10 +133,6 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 void root_command_string( irc_t *irc, user_t *u, char *command, int flags );
 void root_command( irc_t *irc, char *command[] );
 void bitlbee_shutdown( gpointer data );
-double gettime( void );
-G_MODULE_EXPORT void http_encode( char *s );
-G_MODULE_EXPORT void http_decode( char *s );
-G_MODULE_EXPORT char *strip_newlines(char *source);
 
 extern global_t global;
 

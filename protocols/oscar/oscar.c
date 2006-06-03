@@ -1,6 +1,8 @@
 /*
  * gaim
  *
+ * Some code copyright (C) 2002-2006, Jelmer Vernooij <jelmer@samba.org>
+ *                                    and the BitlBee team.
  * Some code copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  * libfaim code copyright 1998, 1999 Adam Fritzler <afritz@auk.cx>
  *
@@ -135,9 +137,9 @@ static char *extract_name(const char *name) {
 	char *tmp;
 	int i, j;
 	char *x = strchr(name, '-');
-	if (!x) return NULL;
+	if (!x) return g_strdup(name);
 	x = strchr(++x, '-');
-	if (!x) return NULL;
+	if (!x) return g_strdup(name);
 	tmp = g_strdup(++x);
 
 	for (i = 0, j = 0; x[i]; i++) {
@@ -382,7 +384,7 @@ static void oscar_login(struct aim_user *user) {
 	
 	if (g_strcasecmp(user->proto_opt[USEROPT_AUTH], "login.icq.com") != 0 &&
 	    g_strcasecmp(user->proto_opt[USEROPT_AUTH], "login.oscar.aol.com") != 0) {
-		serv_got_crap(gc, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.");
+		serv_got_crap(gc, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.",user->proto_opt[USEROPT_AUTH]);
 	}
 	
 	g_snprintf(buf, sizeof(buf), _("Signon: %s"), gc->username);
@@ -1118,7 +1120,8 @@ static void gaim_icq_authgrant(gpointer w, struct icq_auth *data) {
 	message = 0;
 	aim_ssi_auth_reply(od->sess, od->conn, uin, 1, "");
 	// aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHGRANTED, &message);
-	show_got_added(data->gc, NULL, uin, NULL, NULL);
+	if(find_buddy(data->gc, uin) == NULL)
+		show_got_added(data->gc, uin, NULL);
 	
 	g_free(uin);
 	g_free(data);
@@ -2056,7 +2059,6 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 						char *name;
 						name = g_strdup(normalize(curitem->name));
 						gc->permit = g_slist_append(gc->permit, name);
-						build_allow_list();
 						tmp++;
 					}
 				}
@@ -2070,7 +2072,6 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 						char *name;
 						name = g_strdup(normalize(curitem->name));
 						gc->deny = g_slist_append(gc->deny, name);
-						build_block_list();
 						tmp++;
 					}
 				}
@@ -2276,7 +2277,7 @@ static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)
                 struct tm tm;
                 tm.tm_mday = (int)info->birthday;
                 tm.tm_mon = (int)info->birthmonth-1;
-                tm.tm_year = (int)info->birthyear-1900;
+                tm.tm_year = (int)info->birthyear%100;
                 strftime(date, sizeof(date), "%Y-%m-%d", &tm);
                 info_string_append(str, "\n", _("Birthday"), date);
         }
@@ -2500,6 +2501,7 @@ int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
 	struct chat_connection * ccon;
 	int ret;
 	guint8 len = strlen(message);
+	guint16 flags;
 	char *s;
 	
 	if(!(ccon = find_oscar_chat(gc, id)))
@@ -2508,15 +2510,19 @@ int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
 	for (s = message; *s; s++)
 		if (*s & 128)
 			break;
-	  	
+	
+	flags = AIM_CHATFLAGS_NOREFLECT;
+	
 	/* Message contains high ASCII chars, time for some translation! */
 	if (*s) {
 		s = g_malloc(BUF_LONG);
 		/* Try if we can put it in an ISO8859-1 string first.
 		   If we can't, fall back to UTF16. */
 		if ((ret = do_iconv("UTF-8", "ISO8859-1", message, s, len, BUF_LONG)) >= 0) {
+			flags |= AIM_CHATFLAGS_ISO_8859_1;
 			len = ret;
 		} else if ((ret = do_iconv("UTF-8", "UNICODEBIG", message, s, len, BUF_LONG)) >= 0) {
+			flags |= AIM_CHATFLAGS_UNICODE;
 			len = ret;
 		} else {
 			/* OOF, translation failed... Oh well.. */
@@ -2527,7 +2533,7 @@ int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
 		s = message;
 	}
 	  	
-	ret = aim_chat_send_im(od->sess, ccon->conn, AIM_CHATFLAGS_NOREFLECT, s, len);
+	ret = aim_chat_send_im(od->sess, ccon->conn, flags, s, len);
 	  	
 	if (s != message) {	
 		g_free(s);
@@ -2600,9 +2606,9 @@ int oscar_chat_open(struct gaim_connection * gc, char *who)
 	struct oscar_data * od = (struct oscar_data *)gc->proto_data;
 	int ret;
 	static int chat_id = 0;
-	char * chatname = g_new0(char, strlen(gc->username)+4);
+	char * chatname;
 	
-	g_snprintf(chatname, strlen(gc->username) + 4, "%s%d", gc->username, chat_id++);
+	chatname = g_strdup_printf("%s%d", gc->username, chat_id++);
   
 	ret = oscar_chat_join(gc, chatname);
 

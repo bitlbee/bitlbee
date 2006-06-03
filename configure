@@ -170,28 +170,10 @@ if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG glib-2.0; then
 EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0`
 CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0`
 EOF
-	echo '#define GLIB2' >> config.h
-elif type glib-config > /dev/null 2> /dev/null; then
-	cat<<EOF>>Makefile.settings
-EFLAGS+=`glib-config --libs`
-CFLAGS+=`glib-config --cflags`
-EOF
-	echo '#define GLIB1' >> config.h
 else
-	echo 'Cannot find glib development libraries, aborting. (Install libglib-dev?)'
+	echo 'Cannot find glib2 development libraries, aborting. (Install libglib2-dev?)'
 	exit 1;
 fi
-
-if [ -r /usr/include/iconv.h ]; then
-	:;
-elif [ -r /usr/local/include/iconv.h ]; then
-	echo CFLAGS+=-I/usr/local/include >> Makefile.settings;
-else
-	echo
-	echo 'Warning: Could not find iconv.h, you might have to install it and/or modify'
-	echo 'Makefile.settings to tell where this file is.';
-fi
-
 
 detect_gnutls()
 {
@@ -332,10 +314,16 @@ else
 fi
 
 echo
-if [ -z "$BITLBEE_VERSION" -a -d .bzr -a -x "`which bzr`" ]; then
+if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; then
+	nick=`bzr nick`
+	if [ -n "$nick" -a "$nick" != "bitlbee" ]; then
+		nick="-$nick"
+	else
+		nick=""
+	fi
 	rev=`bzr revno`
 	echo 'Using bzr revision #'$rev' as version number'
-	BITLBEE_VERSION=\"bzr-$rev\"
+	BITLBEE_VERSION=\"bzr$nick-$rev\"
 fi
 
 if [ -n "$BITLBEE_VERSION" ]; then
@@ -408,17 +396,14 @@ Linux )
 GNU/* )
 ;;
 *BSD )
-	echo 'EFLAGS+=-liconv' >> Makefile.settings;
+;;
+Darwin )
+;;
+IRIX )
 ;;
 SunOS )
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
-	echo 'EFLAGS+=-liconv' >> Makefile.settings;
-;;
-Darwin )
-	echo 'EFLAGS+=-liconv' >> Makefile.settings;
-;;
-IRIX )
 ;;
 CYGWIN* )
 	echo 'Cygwin is not officially supported.'
