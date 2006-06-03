@@ -142,15 +142,17 @@ echo CFLAGS+=-I`pwd` -I`pwd`/protocols -I. >> Makefile.settings
 echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
 
 if [ -n "$CC" ]; then
-	echo "CC=$CC" >> Makefile.settings;
+	CC=$CC
 elif type gcc > /dev/null 2> /dev/null; then
-	echo "CC=gcc" >> Makefile.settings;
+	CC=gcc
 elif type cc > /dev/null 2> /dev/null; then
-	echo "CC=cc" >> Makefile.settings;
+	CC=cc
 else
 	echo 'Cannot find a C compiler, aborting.'
 	exit 1;
 fi
+
+echo "CC=$CC" >> Makefile.settings;
 
 if [ -n "$LD" ]; then
 	echo "LD=$LD" >> Makefile.settings;
@@ -207,14 +209,17 @@ EOF
 
 detect_ldap()
 {
-	if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG ldb; then
+	TMPFILE=`mktemp`
+	if $CC -o $TMPFILE -shared -lldap 2>/dev/null >/dev/null; then
 		cat<<EOF>>Makefile.settings
-EFLAGS+=`$PKG_CONFIG --libs ldb`
-CFLAGS+=`$PKG_CONFIG --cflags ldb`
+EFLAGS+=-lldap
+CFLAGS+=
 EOF
 		ldap=1
+		rm -f $TMPFILE
 		ret=1
 	else
+		ldap=0
 		ret=0
 	fi
 }
@@ -285,9 +290,9 @@ fi
 
 if [ "$ldap" = 0 ]; then
 	echo "LDAP_OBJ=\# no ldap" >> Makefile.settings
-	echo "#undef LDAP" >> config.h
+	echo "#undef WITH_LDAP" >> config.h
 elif [ "$ldap" = 1 ]; then
-	echo "#define LDAP 1" >> config.h
+	echo "#define WITH_LDAP 1" >> config.h
 	echo "LDAP_OBJ=storage_ldap.o" >> Makefile.settings
 fi
 
