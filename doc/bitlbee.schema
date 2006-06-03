@@ -22,23 +22,17 @@
 ##  - setting (multiple values)
 ##  depends: top, account
 
-#FIXME: Unique OID
-
-attributetype ( 1.3.6.1.4.1.7165.2.1.24 NAME 'bitlBeeAutoConnect'
+attributetype ( 1.3.6.1.4.1.25873.2.1.1 NAME 'bitlBeeAutoConnect'
 	DESC 'Autoconnect setting'
 	EQUALITY booleanMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7 SINGLE-VALUE )
 
-#FIXME: Unique OID
- 
-attributetype ( 1.3.6.1.4.1.7165.2.1.24 NAME 'bitlBeeAccountNo'
+attributetype ( 1.3.6.1.4.1.25873.2.1.2 NAME 'bitlBeeAccountNo'
 	DESC 'Account number'
 	EQUALITY integerMatch
 	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27 SINGLE-VALUE )
 
-#FIXME: Unique OID
-
-objectclass ( 1.3.6.1.4.1.7165.2.2.12 NAME 'bitlBeeAccount' SUP account STRUCTURAL
+objectclass ( 1.3.6.1.4.1.25873.2.2.3 NAME 'bitlBeeAccount' SUP account STRUCTURAL
 	DESC 'BitlBee User Account '
 	MUST ( userid, userPassword )
 	MAY ( ) )
@@ -52,20 +46,17 @@ objectclass ( 1.3.6.1.4.1.7165.2.2.12 NAME 'bitlBeeAccount' SUP account STRUCTUR
 ##  - autoconnect (true/false) 1.3.6.1.4.1.1466.115.121.1.7
 ##  depends: top
 
-#FIXME: Unique OID
-objectclass ( 1.3.6.1.4.1.7165.2.2.12 NAME 'bitlBeeIMAccount' SUP account STRUCTURAL
+objectclass ( 1.3.6.1.4.1.25873.2.2.1 NAME 'bitlBeeIMAccount' SUP account STRUCTURAL
 	DESC 'BitlBee IM Account '
 	MUST ( bitlBeeAccountNo, userid, userPassword )
 	MAY ( host, bitlBeeAutoconnect ) )
 
-#FIXME: Unique OID
-objectclass ( 1.3.6.1.4.1.7165.2.2.12 NAME 'bitlBeeSetting' SUP top STRUCTURAL
+objectclass ( 1.3.6.1.4.1.25873.2.2.2 NAME 'bitlBeeSetting' SUP top STRUCTURAL
 	DESC 'BitlBee Configuration Setting'
 	MUST ( bitlBeeSettingName )
 	MAY ( bitlBeeSettingValue ) )
 
-#FIXME: Unique OID
-objectclass ( 1.3.6.1.4.1.7165.2.2.12 NAME 'bitlBeeBuddy' SUP top STRUCTURAL
+objectclass ( 1.3.6.1.4.1.25873.2.2.3 NAME 'bitlBeeBuddy' SUP top STRUCTURAL
 	DESC 'BitlBee Nick Mapping'
 	MUST ( bitlBeeBuddyHandle )
 	MAY ( ircNick ) )
