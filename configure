@@ -30,6 +30,7 @@ strip=1
 ipv6=1
 
 events=glib
+ldap=auto
 ssl=auto
 
 arch=`uname -s`
@@ -65,6 +66,8 @@ Option		Description				Default
 --strip=0/1	Disable/enable binary stripping		$strip
 
 --ipv6=0/1	IPv6 socket support			$ipv6
+
+--ldap=0/1/auto	LDAP support				$ldap
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
@@ -145,15 +148,17 @@ echo CFLAGS+=-I`pwd` -I`pwd`/protocols -I. >> Makefile.settings
 echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
 
 if [ -n "$CC" ]; then
-	echo "CC=$CC" >> Makefile.settings;
+	CC=$CC
 elif type gcc > /dev/null 2> /dev/null; then
-	echo "CC=gcc" >> Makefile.settings;
+	CC=gcc
 elif type cc > /dev/null 2> /dev/null; then
-	echo "CC=cc" >> Makefile.settings;
+	CC=cc
 else
 	echo 'Cannot find a C compiler, aborting.'
 	exit 1;
 fi
+
+echo "CC=$CC" >> Makefile.settings;
 
 if [ -n "$LD" ]; then
 	echo "LD=$LD" >> Makefile.settings;
@@ -231,6 +236,23 @@ EOF
 	fi;
 }
 
+detect_ldap()
+{
+	TMPFILE=`mktemp`
+	if $CC -o $TMPFILE -shared -lldap 2>/dev/null >/dev/null; then
+		cat<<EOF>>Makefile.settings
+EFLAGS+=-lldap
+CFLAGS+=
+EOF
+		ldap=1
+		rm -f $TMPFILE
+		ret=1
+	else
+		ldap=0
+		ret=0
+	fi
+}
+
 if [ "$msn" = 1 -o "$jabber" = 1 ]; then
 	if [ "$ssl" = "auto" ]; then
 		detect_gnutls
@@ -289,6 +311,18 @@ if [ "$msn" = 1 -o "$jabber" = 1 ]; then
 	fi;
 	
 	echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
+fi
+
+if [ "$ldap" = "auto" ]; then
+	detect_ldap
+fi
+
+if [ "$ldap" = 0 ]; then
+	echo "LDAP_OBJ=\# no ldap" >> Makefile.settings
+	echo "#undef WITH_LDAP" >> config.h
+elif [ "$ldap" = 1 ]; then
+	echo "#define WITH_LDAP 1" >> config.h
+	echo "LDAP_OBJ=storage_ldap.o" >> Makefile.settings
 fi
 
 if [ "$strip" = 0 ]; then
@@ -442,4 +476,10 @@ if [ -n "$protocols" ]; then
 	echo '  Building with these protocols:' $protocols;
 else
 	echo '  Building without IM-protocol support. We wish you a lot of fun...';
+fi
+
+if [ "$ldap" = "0" ]; then
+	echo "  LDAP storage backend disabled."
+else
+	echo "  LDAP storage backend enabled."
 fi

@@ -904,9 +904,31 @@ void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker )
 
 void irc_kill( irc_t *irc, user_t *u )
 {
-	char *nick;
+	char *nick, *s;
+	char reason[64];
 	
-	irc_write( irc, ":%s!%s@%s QUIT :%s", u->nick, u->user, u->host, "Leaving..." );
+	if( u->gc && u->gc->flags & OPT_LOGGING_OUT )
+	{
+		if( u->gc->user->proto_opt[0][0] )
+			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
+			            u->gc->user->proto_opt[0] );
+		else if( ( s = strchr( u->gc->username, '@' ) ) )
+			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
+			            s + 1 );
+		else
+			g_snprintf( reason, sizeof( reason ), "%s %s.%s", irc->myhost,
+			            u->gc->prpl->name, irc->myhost );
+		
+		/* proto_opt might contain garbage after the : */
+		if( ( s = strchr( reason, ':' ) ) )
+			*s = 0;
+	}
+	else
+	{
+		strcpy( reason, "Leaving..." );
+	}
+	
+	irc_write( irc, ":%s!%s@%s QUIT :%s", u->nick, u->user, u->host, reason );
 	
 	nick = g_strdup( u->nick );
 	nick_lc( nick );
