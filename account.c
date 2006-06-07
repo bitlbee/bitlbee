@@ -34,7 +34,7 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	if( irc->accounts )
 	{
 		for( a = irc->accounts; a->next; a = a->next );
-		a = a->next = g_new0 ( account_t, 1 );
+		a = a->next = g_new0( account_t, 1 );
 	}
 	else
 	{
