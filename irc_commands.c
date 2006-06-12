@@ -320,7 +320,7 @@ static void irc_cmd_userhost( irc_t *irc, char **cmd )
 static void irc_cmd_ison( irc_t *irc, char **cmd )
 {
 	user_t *u;
-	char buff[IRC_MAX_LINE], *s;
+	char buff[IRC_MAX_LINE];
 	int lenleft, i;
 	
 	buff[0] = '\0';
