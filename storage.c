@@ -30,9 +30,9 @@
 #include "crypting.h"
 
 extern storage_t storage_text;
+extern storage_t storage_xml;
 
-static GList text_entry = { &storage_text, NULL, NULL };
-static GList *storage_backends = &text_entry;
+static GList *storage_backends = NULL;
 
 void register_storage_backend(storage_t *backend)
 {
@@ -64,7 +64,10 @@ GList *storage_init(const char *primary, char **migrate)
 	GList *ret = NULL;
 	int i;
 	storage_t *storage;
-
+	
+	register_storage_backend(&storage_text);
+	register_storage_backend(&storage_xml);
+	
 	storage = storage_init_single(primary);
 	if (storage == NULL)
 		return NULL;

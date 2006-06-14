@@ -26,11 +26,23 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
+typedef enum
+{
+	XML_PASS_CHECK_ONLY = -1,
+	XML_PASS_UNKNOWN = 0,
+	XML_PASS_OK
+} xml_pass_st;
+
+#define XML_PASS_ERRORMSG "Wrong username or password"
+
 struct xml_parsedata
 {
 	irc_t *irc;
 	char *current_setting;
 	account_t *current_account;
+	char *given_nick;
+	char *given_pass;
+	xml_pass_st pass_st;
 };
 
 static char *xml_attr( const gchar **attr_names, const gchar **attr_values, const gchar *key )
@@ -39,58 +51,118 @@ static char *xml_attr( const gchar **attr_names, const gchar **attr_values, cons
 	
 	for( i = 0; attr_names[i]; i ++ )
 		if( g_strcasecmp( attr_names[i], key ) == 0 )
-			return attr_values[i];
+			return (char*) attr_values[i];
 	
 	return NULL;
+}
+
+static void xml_destroy_xd( gpointer data )
+{
+	struct xml_parsedata *xd = data;
+	
+	g_free( xd->given_nick );
+	g_free( xd->given_pass );
+	g_free( xd );
 }
 
 static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_name, const gchar **attr_names, const gchar **attr_values, gpointer data, GError **error )
 {
 	struct xml_parsedata *xd = data;
-	irc_t *irc = data->irc;
+	irc_t *irc = xd->irc;
 	
 	if( g_strcasecmp( element_name, "user" ) == 0 )
 	{
 		char *nick = xml_attr( attr_names, attr_values, "nick" );
+		char *pass = xml_attr( attr_names, attr_values, "password" );
 		
-		if( nick && g_strcasecmp( nick, irc->nick ) == 0 )
+		if( !nick || !pass )
 		{
-			/* Okay! */
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Missing attributes for %s element", element_name );
 		}
+		else if( strcmp( nick, xd->given_nick ) == 0 &&
+		         strcmp( pass, xd->given_pass ) == 0 )
+		{
+			if( xd->pass_st != XML_PASS_CHECK_ONLY )
+				xd->pass_st = XML_PASS_OK;
+		}
+		else
+		{
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             XML_PASS_ERRORMSG );
+		}
+	}
+	else if( xd->pass_st < XML_PASS_OK )
+	{
+		/* Let's not parse anything else if we only have to check
+		   the password. */
 	}
 	else if( g_strcasecmp( element_name, "account" ) == 0 )
 	{
-		char *protocol, *handle, *password;
+		char *protocol, *handle, *server, *password;
 		struct prpl *prpl = NULL;
 		
 		handle = xml_attr( attr_names, attr_values, "handle" );
 		password = xml_attr( attr_names, attr_values, "password" );
+		server = xml_attr( attr_names, attr_values, "server" );
 		
 		protocol = xml_attr( attr_names, attr_values, "protocol" );
 		if( protocol )
 			prpl = find_protocol( protocol );
 		
-		if( handle && password && prpl )
+		if( !handle || !password )
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Missing attributes for %s element", element_name );
+		else if( !prpl )
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Missing or unknown protocol %s element", element_name );
+		else
 		{
-			xd->current_account = account_add( irc, prpl, handle, password )
+			xd->current_account = account_add( irc, prpl, handle, password );
+			if( server )
+				xd->current_account->server = g_strdup( server );
 		}
 	}
 	else if( g_strcasecmp( element_name, "setting" ) == 0 )
 	{
 		if( xd->current_account == NULL )
 		{
-			current_setting = xml_attr( attr_names, attr_values, "name" );
+			char *setting;
+			
+			if( xd->current_setting )
+			{
+				g_free( xd->current_setting );
+				xd->current_setting = NULL;
+			}
+			
+			if( ( setting = xml_attr( attr_names, attr_values, "name" ) ) )
+				xd->current_setting = g_strdup( setting );
+			else
+				g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+				             "Missing attributes for %s element", element_name );
 		}
 	}
 	else if( g_strcasecmp( element_name, "buddy" ) == 0 )
 	{
-	}
-	else if( g_strcasecmp( element_name, "password" ) == 0 )
-	{
+		char *handle, *nick;
+		
+		handle = xml_attr( attr_names, attr_values, "handle" );
+		nick = xml_attr( attr_names, attr_values, "nick" );
+		
+		if( xd->current_account && handle && nick )
+		{
+			nick_set( irc, handle, xd->current_account->prpl, nick );
+		}
+		else
+		{
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Missing attributes for %s element", element_name );
+		}
 	}
 	else
 	{
-		/* Return "unknown element" error. */
+		g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_UNKNOWN_ELEMENT,
+		             "Unkown element: %s", element_name );
 	}
 }
 
@@ -101,11 +173,19 @@ static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name
 static void xml_text( GMarkupParseContext *ctx, const gchar *text, gsize text_len, gpointer data, GError **error )
 {
 	struct xml_parsedata *xd = data;
-	irc_t *irc = data->irc;
+	irc_t *irc = xd->irc;
 	
-	if( xd->current_setting )
+	if( xd->pass_st < XML_PASS_OK )
 	{
-		set_setstr( irc, xd->current_setting, text );
+		/* Let's not parse anything else if we only have to check
+		   the password. */
+	}
+	else if( g_strcasecmp( g_markup_parse_context_get_element( ctx ), "setting" ) == 0 &&
+	         xd->current_setting && xd->current_account == NULL )
+	{
+		set_setstr( irc, xd->current_setting, (char*) text );
+		g_free( xd->current_setting );
+		xd->current_setting = NULL;
 	}
 }
 
@@ -130,79 +210,66 @@ static void xml_init( void )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", global.conf->configdir );
 }
 
-static storage_status_t xml_load ( const char *my_nick, const char* password, irc_t *irc )
+static storage_status_t xml_load( const char *my_nick, const char *password, irc_t *irc )
 {
 	GMarkupParseContext *ctx;
+	struct xml_parsedata *xd;
+	char *fn, buf[512];
+	GError *gerr = NULL;
+	int fd, st;
 	
-	ctx = g_markup_parse_context_new( parser, 0, xd, NULL );
 	if( irc->status >= USTATUS_IDENTIFIED )
 		return( 1 );
 	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".accounts" );
-   	fp = fopen( s, "r" );
-   	if( !fp ) return STORAGE_NO_SUCH_USER;
+	xd = g_new0( struct xml_parsedata, 1 );
+	xd->irc = irc;
+	xd->given_nick = g_strdup( my_nick );
+	xd->given_pass = g_strdup( password );
+	nick_lc( xd->given_nick );
 	
-	fscanf( fp, "%32[^\n]s", s );
-
-	if (checkpass (password, s) != 0) 
+	fn = g_strdup_printf( "%s%s%s", global.conf->configdir, xd->given_nick, ".xml" );
+	if( ( fd = open( fn, O_RDONLY ) ) < 0 )
 	{
-		fclose( fp );
-		return STORAGE_INVALID_PASSWORD;
+		xml_destroy_xd( xd );
+		g_free( fn );
+		return STORAGE_NO_SUCH_USER;
+	}
+	g_free( fn );
+	
+	ctx = g_markup_parse_context_new( &xml_parser, 0, xd, xml_destroy_xd );
+	
+	while( ( st = read( fd, buf, sizeof( buf ) ) ) > 0 )
+	{
+		if( !g_markup_parse_context_parse( ctx, buf, st, &gerr ) || gerr )
+		{
+			g_markup_parse_context_free( ctx );
+			
+			/* TODO: Display useful error msg */
+			
+			if( gerr && strcmp( gerr->message, XML_PASS_ERRORMSG ) == 0 )
+				return STORAGE_INVALID_PASSWORD;
+			else
+				return STORAGE_OTHER_ERROR;
+		}
 	}
 	
-	/* Do this now. If the user runs with AuthMode = Registered, the
-	   account command will not work otherwise. */
+	g_markup_parse_context_free( ctx );
+	
 	irc->status = USTATUS_IDENTIFIED;
-	
-	while( fscanf( fp, "%511[^\n]s", s ) > 0 )
-	{
-		fgetc( fp );
-		line = deobfucrypt( s, password );
-		if (line == NULL) return STORAGE_OTHER_ERROR;
-		root_command_string( irc, ru, line, 0 );
-		g_free( line );
-	}
-	fclose( fp );
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".nicks" );
-	fp = fopen( s, "r" );
-	if( !fp ) return STORAGE_NO_SUCH_USER;
-	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
-	{
-		struct prpl *prpl;
-
-		prpl = find_protocol_by_id(proto);
-
-		if (!prpl)
-			continue;
-
-		http_decode( s );
-		nick_set( irc, s, prpl, nick );
-	}
-	fclose( fp );
 	
 	if( set_getint( irc, "auto_connect" ) )
 	{
-		strcpy( s, "account on" );	/* Can't do this directly because r_c_s alters the string */
-		root_command_string( irc, ru, s, 0 );
+		/* Can't do this directly because r_c_s alters the string */
+		strcpy( buf, "account on" );
+		root_command_string( irc, NULL, buf, 0 );
 	}
 	
 	return STORAGE_OK;
 }
 
-static storage_status_t text_save( irc_t *irc, int overwrite )
+static storage_status_t xml_save( irc_t *irc, int overwrite )
 {
-	char s[512];
-	char path[512], new_path[512];
-	char *line;
-	nick_t *n;
-	set_t *set;
-	mode_t ou = umask( 0077 );
-	account_t *a;
-	FILE *fp;
-	char *hash;
-
-	if (!overwrite) {
+/*	if (!overwrite) {
 		g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
 		if (access( path, F_OK ) != -1)
 			return STORAGE_ALREADY_EXISTS;
@@ -211,202 +278,15 @@ static storage_status_t text_save( irc_t *irc, int overwrite )
 		if (access( path, F_OK ) != -1)
 			return STORAGE_ALREADY_EXISTS;
 	}
-	
-	/*\
-	 *  [SH] Nothing should be saved if no password is set, because the
-	 *  password is not set if it was wrong, or if one is not identified
-	 *  yet. This means that a malicious user could easily overwrite
-	 *  files owned by someone else:
-	 *  a Bad Thing, methinks
-	\*/
-
-	/* [WVG] No? Really? */
-
-	/*\
-	 *  [SH] Okay, okay, it wasn't really Wilmer who said that, it was
-	 *  me. I just thought it was funny.
-	\*/
-	
-	hash = hashpass( irc->password );
-	if( hash == NULL )
-	{
-		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
-		return STORAGE_OTHER_ERROR;
-	}
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
-	fp = fopen( path, "w" );
-	if( !fp ) return STORAGE_OTHER_ERROR;
-	for( n = irc->nicks; n; n = n->next )
-	{
-		strcpy( s, n->handle );
-		s[169] = 0; /* Prevent any overflow (169 ~ 512 / 3) */
-		http_encode( s );
-		g_snprintf( s + strlen( s ), 510 - strlen( s ), " %d %s", find_protocol_id(n->proto->name), n->nick );
-		if( fprintf( fp, "%s\n", s ) != strlen( s ) + 1 )
-		{
-			irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-			fclose( fp );
-			return STORAGE_OTHER_ERROR;
-		}
-	}
-	if( fclose( fp ) != 0 )
-	{
-		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
-		return STORAGE_OTHER_ERROR;
-	}
-  
-	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-	if( unlink( new_path ) != 0 )
-	{
-		if( errno != ENOENT )
-		{
-			irc_usermsg( irc, "Error while removing old .nicks file" );
-			return STORAGE_OTHER_ERROR;
-		}
-	}
-	if( rename( path, new_path ) != 0 )
-	{
-		irc_usermsg( irc, "Error while renaming new .nicks file" );
-		return STORAGE_OTHER_ERROR;
-	}
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts~" );
-	fp = fopen( path, "w" );
-	if( !fp ) return STORAGE_OTHER_ERROR;
-	if( fprintf( fp, "%s", hash ) != strlen( hash ) )
-	{
-		irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-		fclose( fp );
-		return STORAGE_OTHER_ERROR;
-	}
-	g_free( hash );
-
-	for( a = irc->accounts; a; a = a->next )
-	{
-		if( !strcmp(a->prpl->name, "oscar") )
-			g_snprintf( s, sizeof( s ), "account add oscar \"%s\" \"%s\" %s", a->user, a->pass, a->server );
-		else
-			g_snprintf( s, sizeof( s ), "account add %s \"%s\" \"%s\" \"%s\"",
-			            a->prpl->name, a->user, a->pass, a->server ? a->server : "" );
-		
-		line = obfucrypt( s, irc->password );
-		if( *line )
-		{
-			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
-			{
-				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-				fclose( fp );
-				return STORAGE_OTHER_ERROR;
-			}
-		}
-		g_free( line );
-	}
-	
-	for( set = irc->set; set; set = set->next )
-	{
-		if( set->value && set->def )
-		{
-			g_snprintf( s, sizeof( s ), "set %s \"%s\"", set->key, set->value );
-			line = obfucrypt( s, irc->password );
-			if( *line )
-			{
-				if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
-				{
-					irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-					fclose( fp );
-					return STORAGE_OTHER_ERROR;
-				}
-			}
-			g_free( line );
-		}
-	}
-	
-	if( strcmp( irc->mynick, ROOT_NICK ) != 0 )
-	{
-		g_snprintf( s, sizeof( s ), "rename %s %s", ROOT_NICK, irc->mynick );
-		line = obfucrypt( s, irc->password );
-		if( *line )
-		{
-			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
-			{
-				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-				fclose( fp );
-				return STORAGE_OTHER_ERROR;
-			}
-		}
-		g_free( line );
-	}
-	if( fclose( fp ) != 0 )
-	{
-		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
-		return STORAGE_OTHER_ERROR;
-	}
-	
- 	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
- 	if( unlink( new_path ) != 0 )
-	{
-		if( errno != ENOENT )
-		{
-			irc_usermsg( irc, "Error while removing old .accounts file" );
-			return STORAGE_OTHER_ERROR;
-		}
-	}
-	if( rename( path, new_path ) != 0 )
-	{
-		irc_usermsg( irc, "Error while renaming new .accounts file" );
-		return STORAGE_OTHER_ERROR;
-	}
-	
-	umask( ou );
-	
-	return STORAGE_OK;
-}
-
-static storage_status_t text_check_pass( const char *nick, const char *password )
-{
-	char s[512];
-	FILE *fp;
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".accounts" );
-	fp = fopen( s, "r" );
-	if (!fp)
-		return STORAGE_NO_SUCH_USER;
-
-	fscanf( fp, "%32[^\n]s", s );
-	fclose( fp );
-
-	if (checkpass( password, s) == -1)
-		return STORAGE_INVALID_PASSWORD;
-
-	return STORAGE_OK;
-}
-
-static storage_status_t text_remove( const char *nick, const char *password )
-{
-	char s[512];
-	storage_status_t status;
-
-	status = text_check_pass( nick, password );
-	if (status != STORAGE_OK)
-		return status;
-
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".accounts" );
-	if (unlink( s ) == -1)
-		return STORAGE_OTHER_ERROR;
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".nicks" );
-	if (unlink( s ) == -1)
-		return STORAGE_OTHER_ERROR;
-
+*/	
 	return STORAGE_OK;
 }
 
 storage_t storage_xml = {
 	.name = "xml",
 	.init = xml_init,
-	.check_pass = xml_check_pass,
-	.remove = xml_remove,
+//	.check_pass = xml_check_pass,
+//	.remove = xml_remove,
 	.load = xml_load,
 	.save = xml_save
 };

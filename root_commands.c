@@ -141,8 +141,9 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Password accepted" );
 		irc_umode_set( irc, "+R", 1 );
 		break;
+	case STORAGE_OTHER_ERROR:
 	default:
-		irc_usermsg( irc, "Something very weird happened" );
+		irc_usermsg( irc, "Unknown error while loading configuration" );
 		break;
 	}
 }

@@ -54,7 +54,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->port = 6667;
 	conf->nofork = 0;
 	conf->verbose = 0;
-	conf->primary_storage = "text";
+	conf->primary_storage = "xml";
 	conf->runmode = RUNMODE_INETD;
 	conf->authmode = AUTHMODE_OPEN;
 	conf->auth_pass = NULL;
