@@ -700,7 +700,7 @@ int irc_check_login( irc_t *irc )
 {
 	if( irc->user && irc->nick )
 	{
-		if( global.conf->authmode == AUTHMODE_CLOSED && ! irc->status & USTATUS_AUTHORIZED )
+		if( global.conf->authmode == AUTHMODE_CLOSED && !( irc->status & USTATUS_AUTHORIZED ) )
 		{
 			irc_reply( irc, 464, ":This server is password-protected." );
 			return 0;
@@ -1180,7 +1180,7 @@ static gboolean irc_userping( gpointer _irc )
 	irc_t *irc = _irc;
 	int rv = 0;
 	
-	if( ! irc->status & USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 	{
 		if( gettime() > ( irc->last_pong + IRC_LOGIN_TIMEOUT ) )
 			rv = gettime() - irc->last_pong;

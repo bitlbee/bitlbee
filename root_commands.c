@@ -200,7 +200,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
 	
-	if( global.conf->authmode == AUTHMODE_REGISTERED && ! irc->status & USTATUS_IDENTIFIED )
+	if( global.conf->authmode == AUTHMODE_REGISTERED && !( irc->status & USTATUS_IDENTIFIED ) )
 	{
 		irc_usermsg( irc, "This server only accepts registered users" );
 		return;

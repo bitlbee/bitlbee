@@ -613,7 +613,7 @@ void irc_exec( irc_t *irc, char *cmd[] )
 			{
 				irc_reply( irc, 462, ":Only allowed before logging in" );
 			}
-			else if( irc_commands[i].flags & IRC_CMD_LOGGED_IN && ! irc->status & USTATUS_LOGGED_IN )
+			else if( irc_commands[i].flags & IRC_CMD_LOGGED_IN && !( irc->status & USTATUS_LOGGED_IN ) )
 			{
 				irc_reply( irc, 451, ":Register first" );
 			}
