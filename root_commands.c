@@ -162,7 +162,7 @@ static void cmd_register( irc_t *irc, char **cmd )
 			break;
 			
 		case STORAGE_OK:
-			irc->status = USTATUS_IDENTIFIED;
+			irc->status |= USTATUS_IDENTIFIED;
 			irc_umode_set( irc, "+R", 1 );
 			break;
 
@@ -186,7 +186,7 @@ static void cmd_drop( irc_t *irc, char **cmd )
 		break;
 	case STORAGE_OK:
 		irc_setpass( irc, NULL );
-		irc->status = USTATUS_LOGGED_IN;
+		irc->status &= ~USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "-R", 1 );
 		irc_usermsg( irc, "Account `%s' removed", irc->nick );
 		break;
@@ -200,7 +200,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
 	
-	if( global.conf->authmode == AUTHMODE_REGISTERED && irc->status < USTATUS_IDENTIFIED )
+	if( global.conf->authmode == AUTHMODE_REGISTERED && ! irc->status & USTATUS_IDENTIFIED )
 	{
 		irc_usermsg( irc, "This server only accepts registered users" );
 		return;

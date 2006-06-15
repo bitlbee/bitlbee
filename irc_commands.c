@@ -31,7 +31,7 @@ static void irc_cmd_pass( irc_t *irc, char **cmd )
 {
 	if( global.conf->auth_pass && strcmp( cmd[1], global.conf->auth_pass ) == 0 )
 	{
-		irc->status = USTATUS_AUTHORIZED;
+		irc->status |= USTATUS_AUTHORIZED;
 		irc_check_login( irc );
 	}
 	else
@@ -609,11 +609,11 @@ void irc_exec( irc_t *irc, char *cmd[] )
 			/* There should be no typo in the next line: */
 			for( n_arg = 0; cmd[n_arg]; n_arg ++ ); n_arg --;
 			
-			if( irc_commands[i].flags & IRC_CMD_PRE_LOGIN && irc->status >= USTATUS_LOGGED_IN )
+			if( irc_commands[i].flags & IRC_CMD_PRE_LOGIN && irc->status & USTATUS_LOGGED_IN )
 			{
 				irc_reply( irc, 462, ":Only allowed before logging in" );
 			}
-			else if( irc_commands[i].flags & IRC_CMD_LOGGED_IN && irc->status < USTATUS_LOGGED_IN )
+			else if( irc_commands[i].flags & IRC_CMD_LOGGED_IN && ! irc->status & USTATUS_LOGGED_IN )
 			{
 				irc_reply( irc, 451, ":Register first" );
 			}
