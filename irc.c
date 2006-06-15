@@ -176,7 +176,7 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 	        	           irc->nick ? irc->nick : "(NONE)", irc->host, "No reason given" );
 	}
 	
-	irc->status = USTATUS_SHUTDOWN;
+	irc->status |= USTATUS_SHUTDOWN;
 	if( irc->sendbuffer && !immed )
 	{
 		/* We won't read from this socket anymore. Instead, we'll connect a timer
@@ -210,7 +210,7 @@ void irc_free(irc_t * irc)
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
-	if( irc->status >= USTATUS_IDENTIFIED && set_getint( irc, "save_on_quit" ) ) 
+	if( irc->status & USTATUS_IDENTIFIED && set_getint( irc, "save_on_quit" ) ) 
 		if( storage_save( irc, TRUE ) != STORAGE_OK )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
@@ -576,7 +576,7 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	char line[IRC_MAX_LINE+1], *cs;
 		
 	/* Don't try to write anything new anymore when shutting down. */
-	if( irc->status == USTATUS_SHUTDOWN )
+	if( irc->status & USTATUS_SHUTDOWN )
 		return;
 	
 	line[IRC_MAX_LINE] = 0;
@@ -706,7 +706,7 @@ int irc_check_login( irc_t *irc )
 {
 	if( irc->user && irc->nick )
 	{
-		if( global.conf->authmode == AUTHMODE_CLOSED && irc->status < USTATUS_AUTHORIZED )
+		if( global.conf->authmode == AUTHMODE_CLOSED && !( irc->status & USTATUS_AUTHORIZED ) )
 		{
 			irc_reply( irc, 464, ":This server is password-protected." );
 			return 0;
@@ -763,7 +763,7 @@ void irc_login( irc_t *irc )
 	if( global.conf->runmode == RUNMODE_FORKDAEMON || global.conf->runmode == RUNMODE_DAEMON )
 		ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->host, irc->nick, irc->realname );
 	
-	irc->status = USTATUS_LOGGED_IN;
+	irc->status |= USTATUS_LOGGED_IN;
 }
 
 void irc_motd( irc_t *irc )
@@ -1186,7 +1186,7 @@ static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond )
 	irc_t *irc = _irc;
 	int rv = 0;
 	
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 	{
 		if( gettime() > ( irc->last_pong + IRC_LOGIN_TIMEOUT ) )
 			rv = gettime() - irc->last_pong;

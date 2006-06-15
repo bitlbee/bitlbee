@@ -227,7 +227,7 @@ gboolean bitlbee_io_current_client_write( gpointer data, gint fd, b_input_condit
 		irc->sendbuffer = NULL;
 		irc->w_watch_source_id = 0;
 		
-		if( irc->status == USTATUS_SHUTDOWN )
+		if( irc->status & USTATUS_SHUTDOWN )
 			irc_free( irc );
 		
 		return FALSE;

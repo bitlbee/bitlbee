@@ -63,33 +63,38 @@ static void msn_close( struct gaim_connection *gc )
 	struct msn_data *md = gc->proto_data;
 	GSList *l;
 	
-	if( md->fd >= 0 )
-		closesocket( md->fd );
-	
-	if( md->handler )
+	if( md )
 	{
-		if( md->handler->rxq ) g_free( md->handler->rxq );
-		if( md->handler->cmd_text ) g_free( md->handler->cmd_text );
-		g_free( md->handler );
-	}
-	
-	while( md->switchboards )
-		msn_sb_destroy( md->switchboards->data );
-	
-	if( md->msgq )
-	{
-		struct msn_message *m;
+		if( md->fd >= 0 )
+			closesocket( md->fd );
 		
-		for( l = md->msgq; l; l = l->next )
+		if( md->handler )
 		{
-			m = l->data;
-		
-			serv_got_crap( gc, "Warning: Closing down MSN connection with unsent message to %s, you'll have to resend it.", m->who );
-			g_free( m->who );
-			g_free( m->text );
-			g_free( m );
+			if( md->handler->rxq ) g_free( md->handler->rxq );
+			if( md->handler->cmd_text ) g_free( md->handler->cmd_text );
+			g_free( md->handler );
 		}
-		g_slist_free( md->msgq );
+		
+		while( md->switchboards )
+			msn_sb_destroy( md->switchboards->data );
+		
+		if( md->msgq )
+		{
+			struct msn_message *m;
+			
+			for( l = md->msgq; l; l = l->next )
+			{
+				m = l->data;
+			
+				serv_got_crap( gc, "Warning: Closing down MSN connection with unsent message to %s, you'll have to resend it.", m->who );
+				g_free( m->who );
+				g_free( m->text );
+				g_free( m );
+			}
+			g_slist_free( md->msgq );
+		}
+		
+		g_free( md );
 	}
 	
 	for( l = gc->permit; l; l = l->next )
@@ -99,8 +104,6 @@ static void msn_close( struct gaim_connection *gc )
 	for( l = gc->deny; l; l = l->next )
 		g_free( l->data );
 	g_slist_free( gc->deny );
-	
-	g_free( md );
 	
 	msn_connections = g_slist_remove( msn_connections, gc );
 }

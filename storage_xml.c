@@ -168,6 +168,18 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 
 static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name, gpointer data, GError **error )
 {
+	struct xml_parsedata *xd = data;
+	// irc_t *irc = xd->irc;
+	
+	if( g_strcasecmp( element_name, "setting" ) == 0 && xd->current_setting )
+	{
+		g_free( xd->current_setting );
+		xd->current_setting = NULL;
+	}
+	else if( g_strcasecmp( element_name, "account" ) == 0 )
+	{
+		xd->current_account = NULL;
+	}
 }
 
 static void xml_text( GMarkupParseContext *ctx, const gchar *text, gsize text_len, gpointer data, GError **error )
@@ -189,17 +201,13 @@ static void xml_text( GMarkupParseContext *ctx, const gchar *text, gsize text_le
 	}
 }
 
-static void xml_error( GMarkupParseContext *ctx, GError *error, gpointer data )
-{
-}
-
 GMarkupParser xml_parser =
 {
 	xml_start_element,
 	xml_end_element,
 	xml_text,
 	NULL,
-	xml_error
+	NULL
 };
 
 static void xml_init( void )
@@ -218,7 +226,7 @@ static storage_status_t xml_load( const char *my_nick, const char *password, irc
 	GError *gerr = NULL;
 	int fd, st;
 	
-	if( irc->status >= USTATUS_IDENTIFIED )
+	if( irc->status & USTATUS_IDENTIFIED )
 		return( 1 );
 	
 	xd = g_new0( struct xml_parsedata, 1 );
@@ -243,19 +251,25 @@ static storage_status_t xml_load( const char *my_nick, const char *password, irc
 		if( !g_markup_parse_context_parse( ctx, buf, st, &gerr ) || gerr )
 		{
 			g_markup_parse_context_free( ctx );
+			close( fd );
 			
-			/* TODO: Display useful error msg */
-			
+			/* Slightly dirty... */
 			if( gerr && strcmp( gerr->message, XML_PASS_ERRORMSG ) == 0 )
 				return STORAGE_INVALID_PASSWORD;
 			else
+			{
+				if( gerr )
+					irc_usermsg( irc, "Error from XML-parser: %s", gerr->message );
+				
 				return STORAGE_OTHER_ERROR;
+			}
 		}
 	}
 	
 	g_markup_parse_context_free( ctx );
+	close( fd );
 	
-	irc->status = USTATUS_IDENTIFIED;
+	irc->status |= USTATUS_IDENTIFIED;
 	
 	if( set_getint( irc, "auto_connect" ) )
 	{
@@ -267,19 +281,94 @@ static storage_status_t xml_load( const char *my_nick, const char *password, irc
 	return STORAGE_OK;
 }
 
+static int xml_printf( int fd, char *fmt, ... )
+{
+	va_list params;
+	char *out;
+	int len;
+	
+	va_start( params, fmt );
+	out = g_markup_vprintf_escaped( fmt, params );
+	va_end( params );
+	
+	len = strlen( out );
+	len -= write( fd, out, len );
+	g_free( out );
+	
+	return len == 0;
+}
+
 static storage_status_t xml_save( irc_t *irc, int overwrite )
 {
-/*	if (!overwrite) {
-		g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-		if (access( path, F_OK ) != -1)
-			return STORAGE_ALREADY_EXISTS;
+	char path[512], *path2;
+	set_t *set;
+	nick_t *nick;
+	account_t *acc;
+	int fd;
 	
-		g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-		if (access( path, F_OK ) != -1)
-			return STORAGE_ALREADY_EXISTS;
+	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, irc->nick, ".xml" );
+	
+	if( !overwrite && access( path, F_OK ) != -1 )
+		return STORAGE_ALREADY_EXISTS;
+	
+	strcat( path, "~" );
+	if( ( fd = open( path, O_WRONLY | O_CREAT, 0600 ) ) < 0 )
+	{
+		irc_usermsg( irc, "Error while opening configuration file." );
+		return STORAGE_OTHER_ERROR;
 	}
-*/	
+	
+	if( !xml_printf( fd, "<user nick=\"%s\" password=\"%s\">\n", irc->nick, irc->password ) )
+		goto write_error;
+	
+	for( set = irc->set; set; set = set->next )
+		if( set->value && set->def )
+			if( !xml_printf( fd, "\t<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
+				goto write_error;
+	
+	for( acc = irc->accounts; acc; acc = acc->next )
+	{
+		if( !xml_printf( fd, "\t<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%s\"", acc->prpl->name, acc->user, acc->pass, "yes" ) )
+			goto write_error;
+		if( acc->server && acc->server[0] && !xml_printf( fd, " server=\"%s\"", acc->server ) )
+			goto write_error;
+		if( !xml_printf( fd, ">\n" ) )
+			goto write_error;
+		
+		for( nick = irc->nicks; nick; nick = nick->next )
+			if( nick->proto == acc->prpl )
+				if( !xml_printf( fd, "\t\t<buddy handle=\"%s\" nick=\"%s\" />\n", nick->handle, nick->nick ) )
+					goto write_error;
+		
+		if( !xml_printf( fd, "\t</account>\n" ) )
+			goto write_error;
+	}
+	
+	if( !xml_printf( fd, "</user>\n" ) )
+		goto write_error;
+	
+	close( fd );
+	
+	path2 = g_strndup( path, strlen( path ) - 1 );
+	if( rename( path, path2 ) != 0 )
+	{
+		irc_usermsg( irc, "Error while renaming temporary configuration file." );
+		
+		g_free( path2 );
+		unlink( path );
+		
+		return STORAGE_OTHER_ERROR;
+	}
+	
+	g_free( path2 );
+	
 	return STORAGE_OK;
+
+write_error:
+	irc_usermsg( irc, "Write error. Disk full?" );
+	close( fd );
+	
+	return STORAGE_OTHER_ERROR;
 }
 
 storage_t storage_xml = {
