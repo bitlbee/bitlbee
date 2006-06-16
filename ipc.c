@@ -114,7 +114,7 @@ static void ipc_child_cmd_die( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_wallops( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
 	if( strchr( irc->umode, 'w' ) )
@@ -123,7 +123,7 @@ static void ipc_child_cmd_wallops( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_lilo( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
 	if( strchr( irc->umode, 's' ) )
@@ -132,7 +132,7 @@ static void ipc_child_cmd_lilo( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_opermsg( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
 	if( strchr( irc->umode, 'o' ) )
@@ -153,7 +153,7 @@ static void ipc_child_cmd_rehash( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_kill( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
 	if( nick_cmp( cmd[1], irc->nick ) != 0 )
@@ -165,7 +165,7 @@ static void ipc_child_cmd_kill( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_hello( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		ipc_to_master_str( "HELLO\r\n" );
 	else
 		ipc_to_master_str( "HELLO %s %s :%s\r\n", irc->host, irc->nick, irc->realname );

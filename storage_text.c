@@ -70,7 +70,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	FILE *fp;
 	user_t *ru = user_find( irc, ROOT_NICK );
 	
-	if( irc->status >= USTATUS_IDENTIFIED )
+	if( irc->status & USTATUS_IDENTIFIED )
 		return( 1 );
 	
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".accounts" );
@@ -87,7 +87,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	
 	/* Do this now. If the user runs with AuthMode = Registered, the
 	   account command will not work otherwise. */
-	irc->status = USTATUS_IDENTIFIED;
+	irc->status |= USTATUS_IDENTIFIED;
 	
 	while( fscanf( fp, "%511[^\n]s", s ) > 0 )
 	{
