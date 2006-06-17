@@ -318,7 +318,7 @@ if [ "$ldap" = "auto" ]; then
 fi
 
 if [ "$ldap" = 0 ]; then
-	echo "LDAP_OBJ=\# no ldap" >> Makefile.settings
+	echo "LDAP_OBJ=" >> Makefile.settings
 	echo "#undef WITH_LDAP" >> config.h
 elif [ "$ldap" = 1 ]; then
 	echo "#define WITH_LDAP 1" >> config.h
