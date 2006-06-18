@@ -25,6 +25,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
+#include "md5.h"
 
 typedef enum
 {
@@ -80,16 +81,35 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Missing attributes for %s element", element_name );
 		}
-		else if( strcmp( nick, xd->given_nick ) == 0 &&
-		         strcmp( pass, xd->given_pass ) == 0 )
-		{
-			if( xd->pass_st != XML_PASS_CHECK_ONLY )
-				xd->pass_st = XML_PASS_OK;
-		}
 		else
 		{
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             XML_PASS_ERRORMSG );
+			md5_byte_t pass_md5[16];
+			md5_state_t md5_state;
+			int pass_match, i, j;
+			
+			md5_init( &md5_state );
+			md5_append( &md5_state, xd->given_pass, strlen( xd->given_pass ) );
+			md5_finish( &md5_state, pass_md5 );
+			
+			for( i = 0; i < 16 && pass[i*2] && pass[i*2+1]; i ++ )
+			{
+				sscanf( pass + i * 2, "%2x", &j );
+				if( j != pass_md5[i] )
+					break;
+			}
+			/* If we reached the end of the loop, it was a match! */
+			pass_match = i == 16;
+			
+			if( strcmp( nick, xd->given_nick ) == 0 && pass_match )
+			{
+				if( xd->pass_st != XML_PASS_CHECK_ONLY )
+					xd->pass_st = XML_PASS_OK;
+			}
+			else
+			{
+				g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+				             XML_PASS_ERRORMSG );
+			}
 		}
 	}
 	else if( xd->pass_st < XML_PASS_OK )
