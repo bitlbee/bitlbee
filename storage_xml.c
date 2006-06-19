@@ -85,30 +85,34 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		{
 			md5_byte_t pass_md5[16];
 			md5_state_t md5_state;
-			int pass_match, i, j;
+			int i, j;
 			
 			md5_init( &md5_state );
-			md5_append( &md5_state, xd->given_pass, strlen( xd->given_pass ) );
+			md5_append( &md5_state, (md5_byte_t*) xd->given_pass, strlen( xd->given_pass ) );
 			md5_finish( &md5_state, pass_md5 );
 			
-			for( i = 0; i < 16 && pass[i*2] && pass[i*2+1]; i ++ )
+			for( i = 0; i < 16; i ++ )
 			{
-				sscanf( pass + i * 2, "%2x", &j );
-				if( j != pass_md5[i] )
+				if( !isxdigit( pass[i*2] ) || !isxdigit( pass[i*2+1] ) ||
+				     sscanf( pass + i * 2, "%2x", &j ) != 1 )
+				{
+					g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+					             "Incorrect password MD5-hash" );
 					break;
+				}
+				if( j != pass_md5[i] )
+				{
+					g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+					             XML_PASS_ERRORMSG );
+					break;
+				}
 			}
-			/* If we reached the end of the loop, it was a match! */
-			pass_match = i == 16;
 			
-			if( strcmp( nick, xd->given_nick ) == 0 && pass_match )
+			/* If we reached the end of the loop, it was a match! */
+			if( i == 16 )
 			{
 				if( xd->pass_st != XML_PASS_CHECK_ONLY )
 					xd->pass_st = XML_PASS_OK;
-			}
-			else
-			{
-				g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-				             XML_PASS_ERRORMSG );
 			}
 		}
 	}
