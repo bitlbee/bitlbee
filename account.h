@@ -33,6 +33,7 @@ typedef struct account
 	char *pass;
 	char *server;
 	
+	int auto_connect;
 	int reconnect;
 	
 	struct irc *irc;

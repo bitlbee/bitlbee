@@ -125,12 +125,13 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	}
 	else if( g_strcasecmp( element_name, "account" ) == 0 )
 	{
-		char *protocol, *handle, *server, *password;
+		char *protocol, *handle, *server, *password, *autoconnect;
 		struct prpl *prpl = NULL;
 		
 		handle = xml_attr( attr_names, attr_values, "handle" );
 		password = xml_attr( attr_names, attr_values, "password" );
 		server = xml_attr( attr_names, attr_values, "server" );
+		autoconnect = xml_attr( attr_names, attr_values, "autoconnect" );
 		
 		protocol = xml_attr( attr_names, attr_values, "protocol" );
 		if( protocol )
@@ -147,6 +148,10 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			xd->current_account = account_add( irc, prpl, handle, password );
 			if( server )
 				xd->current_account->server = g_strdup( server );
+			if( autoconnect )
+				/* Return value doesn't matter, since account_add() already sets
+				   a default! */
+				sscanf( autoconnect, "%d", &xd->current_account->auto_connect );
 		}
 	}
 	else if( g_strcasecmp( element_name, "setting" ) == 0 )
@@ -384,7 +389,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	
 	for( acc = irc->accounts; acc; acc = acc->next )
 	{
-		if( !xml_printf( fd, "\t<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%s\"", acc->prpl->name, acc->user, acc->pass, "yes" ) )
+		if( !xml_printf( fd, "\t<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%d\"", acc->prpl->name, acc->user, acc->pass, acc->auto_connect ) )
 			goto write_error;
 		if( acc->server && acc->server[0] && !xml_printf( fd, " server=\"%s\"", acc->server ) )
 			goto write_error;

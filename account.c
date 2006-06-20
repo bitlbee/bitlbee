@@ -44,6 +44,7 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	a->prpl = prpl;
 	a->user = g_strdup( user );
 	a->pass = g_strdup( pass );
+	a->auto_connect = 1;
 	a->irc = irc;
 	
 	return( a );

@@ -306,7 +306,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 				irc_usermsg( irc, "Trying to get all accounts connected..." );
 			
 				for( a = irc->accounts; a; a = a->next )
-					if( !a->gc )
+					if( !a->gc && a->auto_connect )
 						account_on( irc, a );
 			} 
 			else
