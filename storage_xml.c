@@ -34,6 +34,8 @@ typedef enum
 	XML_PASS_OK
 } xml_pass_st;
 
+/* This isn't very clean, probably making a separate error class + code for
+   BitlBee would be a better solution. But this will work for now... */
 #define XML_PASS_ERRORMSG "Wrong username or password"
 
 struct xml_parsedata
@@ -193,7 +195,6 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name, gpointer data, GError **error )
 {
 	struct xml_parsedata *xd = data;
-	// irc_t *irc = xd->irc;
 	
 	if( g_strcasecmp( element_name, "setting" ) == 0 && xd->current_setting )
 	{
@@ -214,7 +215,8 @@ static void xml_text( GMarkupParseContext *ctx, const gchar *text, gsize text_le
 	if( xd->pass_st < XML_PASS_OK )
 	{
 		/* Let's not parse anything else if we only have to check
-		   the password. */
+		   the password, or if we didn't get the chance to check it
+		   yet. */
 	}
 	else if( g_strcasecmp( g_markup_parse_context_get_element( ctx ), "setting" ) == 0 &&
 	         xd->current_setting && xd->current_account == NULL )
@@ -242,7 +244,7 @@ static void xml_init( void )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", global.conf->configdir );
 }
 
-static storage_status_t xml_load( const char *my_nick, const char *password, irc_t *irc )
+static storage_status_t xml_load_real( const char *my_nick, const char *password, irc_t *irc, xml_pass_st action )
 {
 	GMarkupParseContext *ctx;
 	struct xml_parsedata *xd;
@@ -250,13 +252,14 @@ static storage_status_t xml_load( const char *my_nick, const char *password, irc
 	GError *gerr = NULL;
 	int fd, st;
 	
-	if( irc->status & USTATUS_IDENTIFIED )
+	if( irc && irc->status & USTATUS_IDENTIFIED )
 		return( 1 );
 	
 	xd = g_new0( struct xml_parsedata, 1 );
 	xd->irc = irc;
 	xd->given_nick = g_strdup( my_nick );
 	xd->given_pass = g_strdup( password );
+	xd->pass_st = action;
 	nick_lc( xd->given_nick );
 	
 	fn = g_strdup_printf( "%s%s%s", global.conf->configdir, xd->given_nick, ".xml" );
@@ -282,7 +285,7 @@ static storage_status_t xml_load( const char *my_nick, const char *password, irc
 				return STORAGE_INVALID_PASSWORD;
 			else
 			{
-				if( gerr )
+				if( gerr && irc )
 					irc_usermsg( irc, "Error from XML-parser: %s", gerr->message );
 				
 				return STORAGE_OTHER_ERROR;
@@ -292,6 +295,9 @@ static storage_status_t xml_load( const char *my_nick, const char *password, irc
 	
 	g_markup_parse_context_free( ctx );
 	close( fd );
+	
+	if( action == XML_PASS_CHECK_ONLY )
+		return STORAGE_OK;
 	
 	irc->status |= USTATUS_IDENTIFIED;
 	
@@ -303,6 +309,18 @@ static storage_status_t xml_load( const char *my_nick, const char *password, irc
 	}
 	
 	return STORAGE_OK;
+}
+
+static storage_status_t xml_load( const char *my_nick, const char *password, irc_t *irc )
+{
+	return xml_load_real( my_nick, password, irc, XML_PASS_UNKNOWN );
+}
+
+static storage_status_t xml_check_pass( const char *my_nick, const char *password )
+{
+	/* This is a little bit risky because we have to pass NULL for the
+	   irc_t argument. This *should* be fine, if I didn't miss anything... */
+	return xml_load_real( my_nick, password, NULL, XML_PASS_CHECK_ONLY );
 }
 
 static int xml_printf( int fd, char *fmt, ... )
@@ -395,11 +413,27 @@ write_error:
 	return STORAGE_OTHER_ERROR;
 }
 
+static storage_status_t xml_remove( const char *nick, const char *password )
+{
+	char s[512];
+	storage_status_t status;
+
+	status = xml_check_pass( nick, password );
+	if( status != STORAGE_OK )
+		return status;
+
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".xml" );
+	if( unlink( s ) == -1 )
+		return STORAGE_OTHER_ERROR;
+	
+	return STORAGE_OK;
+}
+
 storage_t storage_xml = {
 	.name = "xml",
 	.init = xml_init,
-//	.check_pass = xml_check_pass,
-//	.remove = xml_remove,
+	.check_pass = xml_check_pass,
+	.remove = xml_remove,
 	.load = xml_load,
 	.save = xml_save
 };
