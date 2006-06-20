@@ -136,12 +136,12 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		if( protocol )
 			prpl = find_protocol( protocol );
 		
-		if( !handle || !password )
+		if( !handle || !password || !protocol )
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Missing attributes for %s element", element_name );
 		else if( !prpl )
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Missing or unknown protocol %s element", element_name );
+			             "Unknown protocol: %s", protocol );
 		else
 		{
 			xd->current_account = account_add( irc, prpl, handle, password );
