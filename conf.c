@@ -41,6 +41,7 @@ static int conf_loadini( conf_t *conf, char *file );
 
 conf_t *conf_load( int argc, char *argv[] )
 {
+	char *mig_list[2] = { "text", NULL };
 	conf_t *conf;
 	int opt, i;
 	
@@ -55,6 +56,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->nofork = 0;
 	conf->verbose = 0;
 	conf->primary_storage = "xml";
+	conf->migrate_storage = mig_list;
 	conf->runmode = RUNMODE_INETD;
 	conf->authmode = AUTHMODE_OPEN;
 	conf->auth_pass = NULL;
