@@ -342,11 +342,19 @@ static int xml_printf( int fd, char *fmt, ... )
 
 static storage_status_t xml_save( irc_t *irc, int overwrite )
 {
-	char path[512], *path2;
+	char path[512], *path2, md5_buf[33];
 	set_t *set;
 	nick_t *nick;
 	account_t *acc;
-	int fd;
+	int fd, i;
+	md5_byte_t pass_md5[16];
+	md5_state_t md5_state;
+	
+	if( irc->password == NULL )
+	{
+		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
+		return STORAGE_OTHER_ERROR;
+	}
 	
 	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, irc->nick, ".xml" );
 	
@@ -360,7 +368,13 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		return STORAGE_OTHER_ERROR;
 	}
 	
-	if( !xml_printf( fd, "<user nick=\"%s\" password=\"%s\">\n", irc->nick, irc->password ) )
+	md5_init( &md5_state );
+	md5_append( &md5_state, (md5_byte_t*) irc->password, strlen( irc->password ) );
+	md5_finish( &md5_state, pass_md5 );
+	for( i = 0; i < 16; i ++ )
+		g_snprintf( md5_buf + i * 2, 3, "%02x", pass_md5[i] );
+	
+	if( !xml_printf( fd, "<user nick=\"%s\" password=\"%s\">\n", irc->nick, md5_buf ) )
 		goto write_error;
 	
 	for( set = irc->set; set; set = set->next )
