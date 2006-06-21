@@ -287,16 +287,22 @@ static storage_status_t xml_load_real( const char *my_nick, const char *password
 			
 			/* Slightly dirty... */
 			if( gerr && strcmp( gerr->message, XML_PASS_ERRORMSG ) == 0 )
+			{
+				g_clear_error( &gerr );
 				return STORAGE_INVALID_PASSWORD;
+			}
 			else
 			{
 				if( gerr && irc )
 					irc_usermsg( irc, "Error from XML-parser: %s", gerr->message );
 				
+				g_clear_error( &gerr );
 				return STORAGE_OTHER_ERROR;
 			}
 		}
 	}
+	/* Just to be sure... */
+	g_clear_error( &gerr );
 	
 	g_markup_parse_context_free( ctx );
 	close( fd );
