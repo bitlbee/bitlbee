@@ -47,7 +47,7 @@ struct scd
 	gnutls_certificate_credentials xcred;
 };
 
-static void ssl_connected( gpointer data, gint source, GaimInputCondition cond );
+static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
 
 
 void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
@@ -80,9 +80,9 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	return( conn );
 }
 
-static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond );
+static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
 
-static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
+static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
 	
@@ -95,32 +95,26 @@ static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
 		
 		g_free( conn );
 		
-		return;
+		return FALSE;
 	}
 	
 	sock_make_nonblocking( conn->fd );
 	gnutls_transport_set_ptr( conn->session, (gnutls_transport_ptr) conn->fd );
 	
-	ssl_handshake( data, source, cond );
+	return ssl_handshake( data, source, cond );
 }
 
-static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond )
+static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
 	int st;
-	
-	if( conn->inpa != -1 )
-	{
-		gaim_input_remove( conn->inpa );
-		conn->inpa = -1;
-	}
 	
 	if( ( st = gnutls_handshake( conn->session ) ) < 0 )
 	{
 		if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
 		{
-			conn->inpa = gaim_input_add( conn->fd, ssl_getdirection( conn ),
-			                             ssl_handshake, data );
+			conn->inpa = b_input_add( conn->fd, ssl_getdirection( conn ),
+			                          ssl_handshake, data );
 		}
 		else
 		{
@@ -141,6 +135,8 @@ static void ssl_handshake( gpointer data, gint source, GaimInputCondition cond )
 		conn->established = TRUE;
 		conn->func( conn->data, conn, cond );
 	}
+	
+	return FALSE;
 }
 
 int ssl_read( void *conn, char *buf, int len )
@@ -186,7 +182,7 @@ void ssl_disconnect( void *conn_ )
 	struct scd *conn = conn_;
 	
 	if( conn->inpa != -1 )
-		gaim_input_remove( conn->inpa );
+		b_event_remove( conn->inpa );
 	
 	if( conn->established )
 		gnutls_bye( conn->session, GNUTLS_SHUT_WR );
@@ -203,7 +199,7 @@ int ssl_getfd( void *conn )
 	return( ((struct scd*)conn)->fd );
 }
 
-GaimInputCondition ssl_getdirection( void *conn )
+b_input_condition ssl_getdirection( void *conn )
 {
 	return( gnutls_record_get_direction( ((struct scd*)conn)->session ) ?
 	        GAIM_INPUT_WRITE : GAIM_INPUT_READ );

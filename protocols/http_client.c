@@ -31,9 +31,9 @@
 #include "sock.h"
 
 
-static void http_connected( gpointer data, int source, GaimInputCondition cond );
-static void http_ssl_connected( gpointer data, void *source, GaimInputCondition cond );
-static void http_incoming_data( gpointer data, int source, GaimInputCondition cond );
+static gboolean http_connected( gpointer data, int source, b_input_condition cond );
+static gboolean http_ssl_connected( gpointer data, void *source, b_input_condition cond );
+static gboolean http_incoming_data( gpointer data, int source, b_input_condition cond );
 
 
 void *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data )
@@ -103,7 +103,7 @@ void *http_dorequest_url( char *url_string, http_input_function func, gpointer d
 
 /* This one is actually pretty simple... Might get more calls if we can't write 
    the whole request at once. */
-static void http_connected( gpointer data, int source, GaimInputCondition cond )
+static gboolean http_connected( gpointer data, int source, b_input_condition cond )
 {
 	struct http_request *req = data;
 	int st;
@@ -112,7 +112,7 @@ static void http_connected( gpointer data, int source, GaimInputCondition cond )
 		goto error;
 	
 	if( req->inpa > 0 )
-		gaim_input_remove( req->inpa );
+		b_event_remove( req->inpa );
 	
 	sock_make_nonblocking( req->fd );
 	
@@ -147,13 +147,13 @@ static void http_connected( gpointer data, int source, GaimInputCondition cond )
 		req->bytes_written += st;
 	
 	if( req->bytes_written < req->request_length )
-		req->inpa = gaim_input_add( source,
-		                            req->ssl ? ssl_getdirection( req->ssl ) : GAIM_INPUT_WRITE,
-	        	                    http_connected, req );
+		req->inpa = b_input_add( source,
+		                         req->ssl ? ssl_getdirection( req->ssl ) : GAIM_INPUT_WRITE,
+	        	                 http_connected, req );
 	else
-		req->inpa = gaim_input_add( source, GAIM_INPUT_READ, http_incoming_data, req );
+		req->inpa = b_input_add( source, GAIM_INPUT_READ, http_incoming_data, req );
 	
-	return;
+	return FALSE;
 	
 error:
 	req->status_string = g_strdup( "Error while writing HTTP request" );
@@ -163,10 +163,10 @@ error:
 	g_free( req->request );
 	g_free( req );
 	
-	return;
+	return FALSE;
 }
 
-static void http_ssl_connected( gpointer data, void *source, GaimInputCondition cond )
+static gboolean http_ssl_connected( gpointer data, void *source, b_input_condition cond )
 {
 	struct http_request *req = data;
 	
@@ -178,7 +178,7 @@ static void http_ssl_connected( gpointer data, void *source, GaimInputCondition 
 	return http_connected( data, req->fd, cond );
 }
 
-static void http_incoming_data( gpointer data, int source, GaimInputCondition cond )
+static gboolean http_incoming_data( gpointer data, int source, b_input_condition cond )
 {
 	struct http_request *req = data;
 	int evil_server = 0;
@@ -187,7 +187,7 @@ static void http_incoming_data( gpointer data, int source, GaimInputCondition co
 	int st;
 	
 	if( req->inpa > 0 )
-		gaim_input_remove( req->inpa );
+		b_event_remove( req->inpa );
 	
 	if( req->ssl )
 	{
@@ -235,11 +235,11 @@ static void http_incoming_data( gpointer data, int source, GaimInputCondition co
 	}
 	
 	/* There will be more! */
-	req->inpa = gaim_input_add( req->fd,
-	                            req->ssl ? ssl_getdirection( req->ssl ) : GAIM_INPUT_READ,
-	                            http_incoming_data, req );
+	req->inpa = b_input_add( req->fd,
+	                         req->ssl ? ssl_getdirection( req->ssl ) : GAIM_INPUT_READ,
+	                         http_incoming_data, req );
 	
-	return;
+	return FALSE;
 
 got_reply:
 	/* Maybe if the webserver is overloaded, or when there's bad SSL
@@ -429,7 +429,7 @@ got_reply:
 		req->bytes_read = req->bytes_written = req->inpa = 0;
 		req->reply_headers = req->reply_body = NULL;
 		
-		return;
+		return FALSE;
 	}
 	
 	/* Assume that a closed connection means we're finished, this indeed
@@ -448,4 +448,6 @@ cleanup:
 	g_free( req->reply_headers );
 	g_free( req->status_string );
 	g_free( req );
+	
+	return FALSE;
 }

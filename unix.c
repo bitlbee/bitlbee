@@ -46,7 +46,7 @@ int main( int argc, char *argv[], char **envp )
 	
 	memset( &global, 0, sizeof( global_t ) );
 	
-	global.loop = g_main_new( FALSE );
+	b_main_init();
 	
 	log_init();
 
@@ -116,7 +116,7 @@ int main( int argc, char *argv[], char **envp )
 	if( help_init( &(global.help) ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
-	g_main_run( global.loop );
+	b_main_run();
 	
 	if( global.restart )
 	{
@@ -164,7 +164,7 @@ static void sighandler( int signal )
 			   the user data now (not to mention writing them to disk), so add a timer. */
 			
 			log_message( LOGLVL_ERROR, "SIGTERM received, cleaning up process." );
-			g_timeout_add_full( G_PRIORITY_LOW, 1, (GSourceFunc) bitlbee_shutdown, NULL, NULL );
+			b_timeout_add( 1, (b_event_handler) bitlbee_shutdown, NULL );
 			
 			first = 0;
 		}

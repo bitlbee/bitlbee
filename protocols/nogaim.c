@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2006 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -12,8 +12,6 @@
  * This file contains functions called by the Gaim IM-modules. It's written
  * from scratch for BitlBee and doesn't contain any code from Gaim anymore
  * (except for the function names).
- *
- * Copyright 2002-2006 Wilmer van der Gaast <wilmer@gaast.net> and others
  */
 
 /*
@@ -159,7 +157,7 @@ struct gaim_connection *new_gaim_conn( struct aim_user *user )
 	/* [MD]	BUGFIX: don't set gc->irc to the global IRC, but use the one from the struct aim_user.
 	 * This fixes daemon mode breakage where IRC doesn't point to the currently active connection.
 	 */
-	gc->irc=user->irc;
+	gc->irc = user->irc;
 	
 	connections = g_slist_append( connections, gc );
 	
@@ -239,7 +237,7 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	g_free( text );
 }
 
-static gboolean send_keepalive( gpointer d )
+static gboolean send_keepalive( gpointer d, gint fd, b_input_condition cond )
 {
 	struct gaim_connection *gc = d;
 	
@@ -263,7 +261,7 @@ void account_online( struct gaim_connection *gc )
 	
 	serv_got_crap( gc, "Logged in" );
 	
-	gc->keepalive = g_timeout_add( 60000, send_keepalive, gc );
+	gc->keepalive = b_timeout_add( 60000, send_keepalive, gc );
 	gc->flags |= OPT_LOGGED_IN;
 	
 	/* Also necessary when we're not away, at least for some of the
@@ -271,7 +269,7 @@ void account_online( struct gaim_connection *gc )
 	bim_set_away( gc, u->away );
 }
 
-gboolean auto_reconnect( gpointer data )
+gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
 {
 	account_t *a = data;
 	
@@ -283,7 +281,8 @@ gboolean auto_reconnect( gpointer data )
 
 void cancel_auto_reconnect( account_t *a )
 {
-	while( g_source_remove_by_user_data( (gpointer) a ) );
+	/* while( b_event_remove_by_data( (gpointer) a ) ); */
+	b_event_remove( a->reconnect );
 	a->reconnect = 0;
 }
 
@@ -294,12 +293,12 @@ void signoff( struct gaim_connection *gc )
 	account_t *a;
 	
 	serv_got_crap( gc, "Signing off.." );
-	gc->flags |= OPT_LOGGING_OUT;
 	
-	gaim_input_remove( gc->keepalive );
+	b_event_remove( gc->keepalive );
+	gc->flags |= OPT_LOGGING_OUT;
 	gc->keepalive = 0;
 	gc->prpl->close( gc );
-	gaim_input_remove( gc->inpa );
+	b_event_remove( gc->inpa );
 	
 	while( u )
 	{
@@ -326,10 +325,9 @@ void signoff( struct gaim_connection *gc )
 	else if( !gc->wants_to_die && set_getint( irc, "auto_reconnect" ) )
 	{
 		int delay = set_getint( irc, "auto_reconnect_delay" );
-		serv_got_crap( gc, "Reconnecting in %d seconds..", delay );
 		
-		a->reconnect = 1;
-		g_timeout_add( delay * 1000, auto_reconnect, a );
+		serv_got_crap( gc, "Reconnecting in %d seconds..", delay );
+		a->reconnect = b_timeout_add( delay * 1000, auto_reconnect, a );
 	}
 	
 	destroy_gaim_conn( gc );

@@ -442,7 +442,7 @@ struct byahoo_connect_callback_data
 	int id;
 };
 
-void byahoo_connect_callback( gpointer data, gint source, GaimInputCondition cond )
+void byahoo_connect_callback( gpointer data, gint source, b_input_condition cond )
 {
 	struct byahoo_connect_callback_data *d = data;
 	
@@ -464,18 +464,17 @@ struct byahoo_read_ready_data
 	gpointer data;
 };
 
-void byahoo_read_ready_callback( gpointer data, gint source, GaimInputCondition cond )
+gboolean byahoo_read_ready_callback( gpointer data, gint source, b_input_condition cond )
 {
 	struct byahoo_read_ready_data *d = data;
 	
 	if( !byahoo_get_gc_by_id( d->id ) )
-	{
 		/* WTF doesn't libyahoo clean this up? */
-		ext_yahoo_remove_handler( d->id, d->tag );
-		return;
-	}
+		return FALSE;
 	
 	yahoo_read_ready( d->id, d->fd, d->data );
+	
+	return TRUE;
 }
 
 struct byahoo_write_ready_data
@@ -486,18 +485,17 @@ struct byahoo_write_ready_data
 	gpointer data;
 };
 
-void byahoo_write_ready_callback( gpointer data, gint source, GaimInputCondition cond )
+gboolean byahoo_write_ready_callback( gpointer data, gint source, b_input_condition cond )
 {
 	struct byahoo_write_ready_data *d = data;
 	
 	if( !byahoo_get_gc_by_id( d->id ) )
-	{
 		/* WTF doesn't libyahoo clean this up? */
-		ext_yahoo_remove_handler( d->id, d->tag );
-		return;
-	}
+		return FALSE;
 	
 	yahoo_write_ready( d->id, d->fd, d->data );
+	
+	return FALSE;
 }
 
 void ext_yahoo_login_response( int id, int succ, char *url )
@@ -686,7 +684,7 @@ int ext_yahoo_add_handler( int id, int fd, yahoo_input_condition cond, void *dat
 		d->data = data;
 		
 		inp->d = d;
-		d->tag = inp->h = gaim_input_add( fd, GAIM_INPUT_READ, (GaimInputFunction) byahoo_read_ready_callback, (gpointer) d );
+		d->tag = inp->h = b_input_add( fd, GAIM_INPUT_READ, (b_event_handler) byahoo_read_ready_callback, (gpointer) d );
 	}
 	else if( cond == YAHOO_INPUT_WRITE )
 	{
@@ -697,7 +695,7 @@ int ext_yahoo_add_handler( int id, int fd, yahoo_input_condition cond, void *dat
 		d->data = data;
 		
 		inp->d = d;
-		d->tag = inp->h = gaim_input_add( fd, GAIM_INPUT_WRITE, (GaimInputFunction) byahoo_write_ready_callback, (gpointer) d );
+		d->tag = inp->h = b_input_add( fd, GAIM_INPUT_WRITE, (b_event_handler) byahoo_write_ready_callback, (gpointer) d );
 	}
 	else
 	{
@@ -728,7 +726,7 @@ void ext_yahoo_remove_handler( int id, int tag )
 		l = l->next;
 	}
 	
-	gaim_input_remove( tag );
+	b_event_remove( tag );
 }
 
 int ext_yahoo_connect_async( int id, char *host, int port, yahoo_connect_callback callback, void *data )
@@ -737,7 +735,7 @@ int ext_yahoo_connect_async( int id, char *host, int port, yahoo_connect_callbac
 	int fd;
 	
 	d = g_new0( struct byahoo_connect_callback_data, 1 );
-	if( ( fd = proxy_connect( host, port, (GaimInputFunction) byahoo_connect_callback, (gpointer) d ) ) < 0 )
+	if( ( fd = proxy_connect( host, port, (b_event_handler) byahoo_connect_callback, (gpointer) d ) ) < 0 )
 	{
 		g_free( d );
 		return( fd );

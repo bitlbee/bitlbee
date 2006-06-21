@@ -1,5 +1,5 @@
 /*
- * gaim
+ * nogaim
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *
@@ -35,6 +35,8 @@
 #include <glib.h>
 #include <gmodule.h>
 
+#include "events.h"
+
 #define PROXY_NONE 0
 #define PROXY_HTTP 1
 #define PROXY_SOCKS4 2
@@ -46,15 +48,6 @@ extern int  proxytype;
 extern char proxyuser[128];
 extern char proxypass[128];
 
-typedef enum {
-	GAIM_INPUT_READ = 1 << 0,
-	GAIM_INPUT_WRITE = 1 << 1
-} GaimInputCondition;
-typedef void (*GaimInputFunction)(gpointer, gint, GaimInputCondition);
-
-G_MODULE_EXPORT gint gaim_input_add(int, GaimInputCondition, GaimInputFunction, gpointer);
-G_MODULE_EXPORT void gaim_input_remove(gint);
-
-G_MODULE_EXPORT int proxy_connect(const char *host, int port, GaimInputFunction func, gpointer data);
+G_MODULE_EXPORT int proxy_connect(const char *host, int port, b_event_handler func, gpointer data);
 
 #endif /* _PROXY_H_ */

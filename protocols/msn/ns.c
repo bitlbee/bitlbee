@@ -29,26 +29,26 @@
 #include "passport.h"
 #include "md5.h"
 
-static void msn_ns_callback( gpointer data, gint source, GaimInputCondition cond );
+static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond );
 static int msn_ns_command( gpointer data, char **cmd, int num_parts );
 static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
 static void msn_auth_got_passport_id( struct passport_reply *rep );
 
-void msn_ns_connected( gpointer data, gint source, GaimInputCondition cond )
+gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct gaim_connection *gc = data;
 	struct msn_data *md;
 	char s[1024];
 	
 	if( !g_slist_find( msn_connections, gc ) )
-		return;
+		return FALSE;
 	
 	if( source == -1 )
 	{
 		hide_login_progress( gc, "Could not connect to server" );
 		signoff( gc );
-		return;
+		return FALSE;
 	}
 	
 	md = gc->proto_data;
@@ -74,12 +74,14 @@ void msn_ns_connected( gpointer data, gint source, GaimInputCondition cond )
 	g_snprintf( s, sizeof( s ), "VER %d MSNP8 CVR0\r\n", ++md->trId );
 	if( msn_write( gc, s, strlen( s ) ) )
 	{
-		gc->inpa = gaim_input_add( md->fd, GAIM_INPUT_READ, msn_ns_callback, gc );
+		gc->inpa = b_input_add( md->fd, GAIM_INPUT_READ, msn_ns_callback, gc );
 		set_login_progress( gc, 1, "Connected to server, waiting for reply" );
 	}
+	
+	return FALSE;
 }
 
-void msn_ns_callback( gpointer data, gint source, GaimInputCondition cond )
+static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond )
 {
 	struct gaim_connection *gc = data;
 	struct msn_data *md = gc->proto_data;
@@ -88,7 +90,11 @@ void msn_ns_callback( gpointer data, gint source, GaimInputCondition cond )
 	{
 		hide_login_progress( gc, "Error while reading from server" );
 		signoff( gc );
+		
+		return FALSE;
 	}
+	else
+		return TRUE;
 }
 
 static int msn_ns_command( gpointer data, char **cmd, int num_parts )
@@ -129,7 +135,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( num_parts == 6 && strcmp( cmd[2], "NS" ) == 0 )
 		{
-			gaim_input_remove( gc->inpa );
+			b_event_remove( gc->inpa );
 			gc->inpa = 0;
 			closesocket( md->fd );
 			

@@ -51,7 +51,7 @@ struct scd
 	gboolean established;
 };
 
-static void ssl_connected( gpointer data, gint source, GaimInputCondition cond );
+static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
 
 
 static SECStatus nss_auth_cert (void *arg, PRFileDesc *socket, PRBool checksig, PRBool isserver)
@@ -115,7 +115,7 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	return( conn );
 }
 
-static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
+static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
 	
@@ -139,7 +139,7 @@ static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
 	
 	conn->established = TRUE;
 	conn->func( conn->data, conn, cond );
-	return;
+	return FALSE;
 	
 	ssl_connected_failure:
 	
@@ -148,6 +148,8 @@ static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
 	PR_Close( conn -> prfd );
 	if( source >= 0 ) closesocket( source );
 	g_free( conn );
+	
+	return FALSE;
 }
 
 int ssl_read( void *conn, char *buf, int len )
@@ -181,7 +183,7 @@ int ssl_getfd( void *conn )
 	return( ((struct scd*)conn)->fd );
 }
 
-GaimInputCondition ssl_getdirection( void *conn )
+b_input_condition ssl_getdirection( void *conn )
 {
 	/* Just in case someone calls us, let's return the most likely case: */
 	return GAIM_INPUT_READ;

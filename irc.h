@@ -60,7 +60,6 @@ typedef struct irc
 	int pinging;
 	char *sendbuffer;
 	char *readbuffer;
-	int quit;
 
 	int sentbytes;
 	time_t oldtime;
@@ -92,7 +91,6 @@ typedef struct irc
 	struct help *help;
 	struct set *set;
 
-	GIOChannel *io_channel;
 	gint r_watch_source_id;
 	gint w_watch_source_id;
 	gint ping_source_id;

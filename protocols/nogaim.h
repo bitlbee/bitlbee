@@ -207,7 +207,7 @@ void bim_rem_block( struct gaim_connection *gc, char *handle );
 void nogaim_init();
 char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
 
-gboolean auto_reconnect( gpointer data );
+gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond );
 void cancel_auto_reconnect( struct account *a );
 
 /* multi.c */

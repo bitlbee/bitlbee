@@ -470,12 +470,14 @@ static void endElement(void *userdata, const char *name)
 	gjc->current = x;
 }
 
-static void jabber_callback(gpointer data, gint source, GaimInputCondition condition)
+static gboolean jabber_callback(gpointer data, gint source, b_input_condition condition)
 {
 	struct gaim_connection *gc = (struct gaim_connection *)data;
 	struct jabber_data *jd = (struct jabber_data *)gc->proto_data;
 
 	gjab_recv(jd->gjc);
+	
+	return TRUE;
 }
 
 static void charData(void *userdata, const char *s, int slen)
@@ -486,7 +488,7 @@ static void charData(void *userdata, const char *s, int slen)
 		xmlnode_insert_cdata(gjc->current, s, slen);
 }
 
-static void gjab_connected(gpointer data, gint source, GaimInputCondition cond)
+static gboolean gjab_connected(gpointer data, gint source, b_input_condition cond)
 {
 	xmlnode x;
 	char *t, *t2;
@@ -496,7 +498,7 @@ static void gjab_connected(gpointer data, gint source, GaimInputCondition cond)
 
 	if (!g_slist_find(get_connections(), gc)) {
 		closesocket(source);
-		return;
+		return FALSE;
 	}
 
 	jd = gc->proto_data;
@@ -507,7 +509,7 @@ static void gjab_connected(gpointer data, gint source, GaimInputCondition cond)
 
 	if (source == -1) {
 		STATE_EVT(JCONN_STATE_OFF)
-		return;
+		return FALSE;
 	}
 
 	gjc->state = JCONN_STATE_CONNECTED;
@@ -529,10 +531,12 @@ static void gjab_connected(gpointer data, gint source, GaimInputCondition cond)
 	STATE_EVT(JCONN_STATE_ON);
 
 	gc = GJ_GC(gjc);
-	gc->inpa = gaim_input_add(gjc->fd, GAIM_INPUT_READ, jabber_callback, gc);
+	gc->inpa = b_input_add(gjc->fd, GAIM_INPUT_READ, jabber_callback, gc);
+	
+	return FALSE;
 }
 
-static void gjab_connected_ssl(gpointer data, void *source, GaimInputCondition cond)
+static gboolean gjab_connected_ssl(gpointer data, void *source, b_input_condition cond)
 {
 	struct gaim_connection *gc = data;
 	struct jabber_data *jd;
@@ -543,15 +547,15 @@ static void gjab_connected_ssl(gpointer data, void *source, GaimInputCondition c
 	
 	if (source == NULL) {
 		STATE_EVT(JCONN_STATE_OFF)
-		return;
+		return FALSE;
 	}
 	
 	if (!g_slist_find(get_connections(), gc)) {
 		ssl_disconnect(source);
-		return;
+		return FALSE;
 	}
 	
-	gjab_connected(data, gjc->fd, cond);
+	return gjab_connected(data, gjc->fd, cond);
 }
 
 static void gjab_start(gjconn gjc)
@@ -1542,7 +1546,7 @@ static gboolean jabber_destroy_hash(gpointer key, gpointer val, gpointer data) {
 	return TRUE;
 }
 
-static gboolean jabber_free(gpointer data)
+static gboolean jabber_free(gpointer data, gint fd, b_input_condition cond)
 {
 	struct jabber_data *jd = data;
 
@@ -1587,10 +1591,10 @@ static void jabber_close(struct gaim_connection *gc)
 		}
 	}
 	if (gc->inpa)
-		gaim_input_remove(gc->inpa);
+		b_event_remove(gc->inpa);
 
 	if(jd) {
-		g_timeout_add(50, jabber_free, jd);
+		b_timeout_add(50, jabber_free, jd);
 		if(jd->gjc != NULL)
 			xmlnode_free(jd->gjc->current);
 	}

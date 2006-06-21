@@ -145,7 +145,7 @@ GSList *msn_connections;
 GSList *msn_switchboards;
 
 /* ns.c */
-void msn_ns_connected( gpointer data, gint source, GaimInputCondition cond );
+gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
 
 /* msn_util.c */
 int msn_write( struct gaim_connection *gc, char *s, int len );
@@ -172,4 +172,4 @@ struct msn_switchboard *msn_sb_spare( struct gaim_connection *gc );
 int msn_sb_sendmessage( struct msn_switchboard *sb, char *text );
 void msn_sb_to_chat( struct msn_switchboard *sb );
 void msn_sb_destroy( struct msn_switchboard *sb );
-void msn_sb_connected( gpointer data, gint source, GaimInputCondition cond );
+gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond );

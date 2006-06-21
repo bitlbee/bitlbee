@@ -20,10 +20,6 @@
  *
  */
 
-/* this is a little piece of code to handle proxy connection */
-/* it is intended to : 1st handle http proxy, using the CONNECT command
- , 2nd provide an easy way to add socks support */
-
 #define BITLBEE_CORE
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,10 +41,6 @@
 #include "nogaim.h"
 #include "proxy.h"
 
-#define GAIM_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
-#define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
-#define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
-
 char proxyhost[128] = "";
 int proxyport = 0;
 int proxytype = PROXY_NONE;
@@ -56,19 +48,13 @@ char proxyuser[128] = "";
 char proxypass[128] = "";
 
 struct PHB {
-	GaimInputFunction func, proxy_func;
+	b_event_handler func, proxy_func;
 	gpointer data, proxy_data;
 	char *host;
 	int port;
 	int fd;
 	gint inpa;
 };
-
-typedef struct _GaimIOClosure {
-	GaimInputFunction function;
-	guint result;
-	gpointer data;
-} GaimIOClosure;
 
 
 
@@ -91,27 +77,7 @@ static struct sockaddr_in *gaim_gethostbyname(const char *host, int port)
 	return &sin;
 }
 
-static void gaim_io_destroy(gpointer data)
-{
-	g_free(data);
-}
-
-static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
-{
-	GaimIOClosure *closure = data;
-	GaimInputCondition gaim_cond = 0;
-
-	if (condition & GAIM_READ_COND)
-		gaim_cond |= GAIM_INPUT_READ;
-	if (condition & GAIM_WRITE_COND)
-		gaim_cond |= GAIM_INPUT_WRITE;
-
-	closure->function(closure->data, g_io_channel_unix_get_fd(source), gaim_cond);
-
-	return TRUE;
-}
-
-static void gaim_io_connected(gpointer data, gint source, GaimInputCondition cond)
+static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition cond)
 {
 	struct PHB *phb = data;
 	unsigned int len;
@@ -121,24 +87,26 @@ static void gaim_io_connected(gpointer data, gint source, GaimInputCondition con
 #ifndef _WIN32
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
 		closesocket(source);
-		gaim_input_remove(phb->inpa);
+		b_event_remove(phb->inpa);
 		if( phb->proxy_func )
 			phb->proxy_func(phb->proxy_data, -1, GAIM_INPUT_READ);
 		else {
 			phb->func(phb->data, -1, GAIM_INPUT_READ);
 			g_free(phb);
 		}
-		return;
+		return FALSE;
 	}
 #endif
 	sock_make_blocking(source);
-	gaim_input_remove(phb->inpa);
+	b_event_remove(phb->inpa);
 	if( phb->proxy_func )
 		phb->proxy_func(phb->proxy_data, source, GAIM_INPUT_READ);
 	else {
 		phb->func(phb->data, source, GAIM_INPUT_READ);
 		g_free(phb);
 	}
+	
+	return FALSE;
 }
 
 static int proxy_connect_none(const char *host, unsigned short port, struct PHB *phb)
@@ -157,10 +125,12 @@ static int proxy_connect_none(const char *host, unsigned short port, struct PHB 
 	}
 
 	sock_make_nonblocking(fd);
-
+	
+	event_debug("proxy_connect_none( \"%s\", %d ) = %d\n", host, port, fd);
+	
 	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0) {
 		if (sockerr_again()) {
-			phb->inpa = gaim_input_add(fd, GAIM_INPUT_WRITE, gaim_io_connected, phb);
+			phb->inpa = b_input_add(fd, GAIM_INPUT_WRITE, gaim_io_connected, phb);
 			phb->fd = fd;
 		} else {
 			closesocket(fd);
@@ -178,14 +148,14 @@ static int proxy_connect_none(const char *host, unsigned short port, struct PHB 
 #define HTTP_GOODSTRING "HTTP/1.0 200 Connection established"
 #define HTTP_GOODSTRING2 "HTTP/1.1 200 Connection established"
 
-static void http_canread(gpointer data, gint source, GaimInputCondition cond)
+static gboolean http_canread(gpointer data, gint source, b_input_condition cond)
 {
 	int nlc = 0;
 	int pos = 0;
 	struct PHB *phb = data;
 	char inputline[8192];
 
-	gaim_input_remove(phb->inpa);
+	b_event_remove(phb->inpa);
 
 	while ((pos < sizeof(inputline)-1) && (nlc != 2) && (read(source, &inputline[pos++], 1) == 1)) {
 		if (inputline[pos - 1] == '\n')
@@ -200,31 +170,32 @@ static void http_canread(gpointer data, gint source, GaimInputCondition cond)
 		phb->func(phb->data, source, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
 	close(source);
 	phb->func(phb->data, -1, GAIM_INPUT_READ);
 	g_free(phb->host);
 	g_free(phb);
-	return;
+	
+	return FALSE;
 }
 
-static void http_canwrite(gpointer data, gint source, GaimInputCondition cond)
+static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond)
 {
 	char cmd[384];
 	struct PHB *phb = data;
 	unsigned int len;
 	int error = ETIMEDOUT;
 	if (phb->inpa > 0)
-		gaim_input_remove(phb->inpa);
+		b_event_remove(phb->inpa);
 	len = sizeof(error);
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
 		close(source);
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 	sock_make_blocking(source);
 
@@ -235,7 +206,7 @@ static void http_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
 	if (proxyuser && *proxyuser) {
@@ -250,7 +221,7 @@ static void http_canwrite(gpointer data, gint source, GaimInputCondition cond)
 			phb->func(phb->data, -1, GAIM_INPUT_READ);
 			g_free(phb->host);
 			g_free(phb);
-			return;
+			return FALSE;
 		}
 	}
 
@@ -260,10 +231,12 @@ static void http_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
-	phb->inpa = gaim_input_add(source, GAIM_INPUT_READ, http_canread, phb);
+	phb->inpa = b_input_add(source, GAIM_INPUT_READ, http_canread, phb);
+	
+	return FALSE;
 }
 
 static int proxy_connect_http(const char *host, unsigned short port, struct PHB *phb)
@@ -279,28 +252,30 @@ static int proxy_connect_http(const char *host, unsigned short port, struct PHB 
 
 /* Connecting to SOCKS4 proxies */
 
-static void s4_canread(gpointer data, gint source, GaimInputCondition cond)
+static gboolean s4_canread(gpointer data, gint source, b_input_condition cond)
 {
 	unsigned char packet[12];
 	struct PHB *phb = data;
 
-	gaim_input_remove(phb->inpa);
+	b_event_remove(phb->inpa);
 
 	memset(packet, 0, sizeof(packet));
 	if (read(source, packet, 9) >= 4 && packet[1] == 90) {
 		phb->func(phb->data, source, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
 	close(source);
 	phb->func(phb->data, -1, GAIM_INPUT_READ);
 	g_free(phb->host);
 	g_free(phb);
+	
+	return FALSE;
 }
 
-static void s4_canwrite(gpointer data, gint source, GaimInputCondition cond)
+static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
 {
 	unsigned char packet[12];
 	struct hostent *hp;
@@ -308,14 +283,14 @@ static void s4_canwrite(gpointer data, gint source, GaimInputCondition cond)
 	unsigned int len;
 	int error = ETIMEDOUT;
 	if (phb->inpa > 0)
-		gaim_input_remove(phb->inpa);
+		b_event_remove(phb->inpa);
 	len = sizeof(error);
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
 		close(source);
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 	sock_make_blocking(source);
 
@@ -325,7 +300,7 @@ static void s4_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
 	packet[0] = 4;
@@ -342,10 +317,12 @@ static void s4_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
-	phb->inpa = gaim_input_add(source, GAIM_INPUT_READ, s4_canread, phb);
+	phb->inpa = b_input_add(source, GAIM_INPUT_READ, s4_canread, phb);
+	
+	return FALSE;
 }
 
 static int proxy_connect_socks4(const char *host, unsigned short port, struct PHB *phb)
@@ -361,32 +338,33 @@ static int proxy_connect_socks4(const char *host, unsigned short port, struct PH
 
 /* Connecting to SOCKS5 proxies */
 
-static void s5_canread_again(gpointer data, gint source, GaimInputCondition cond)
+static gboolean s5_canread_again(gpointer data, gint source, b_input_condition cond)
 {
 	unsigned char buf[512];
 	struct PHB *phb = data;
 
-	gaim_input_remove(phb->inpa);
+	b_event_remove(phb->inpa);
 
 	if (read(source, buf, 10) < 10) {
 		close(source);
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 	if ((buf[0] != 0x05) || (buf[1] != 0x00)) {
 		close(source);
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
 	phb->func(phb->data, source, GAIM_INPUT_READ);
 	g_free(phb->host);
 	g_free(phb);
-	return;
+	
+	return FALSE;
 }
 
 static void s5_sendconnect(gpointer data, gint source)
@@ -394,7 +372,7 @@ static void s5_sendconnect(gpointer data, gint source)
 	unsigned char buf[512];
 	struct PHB *phb = data;
 	int hlen = strlen(phb->host);
-
+	
 	buf[0] = 0x05;
 	buf[1] = 0x01;		/* CONNECT */
 	buf[2] = 0x00;		/* reserved */
@@ -412,22 +390,22 @@ static void s5_sendconnect(gpointer data, gint source)
 		return;
 	}
 
-	phb->inpa = gaim_input_add(source, GAIM_INPUT_READ, s5_canread_again, phb);
+	phb->inpa = b_input_add(source, GAIM_INPUT_READ, s5_canread_again, phb);
 }
 
-static void s5_readauth(gpointer data, gint source, GaimInputCondition cond)
+static gboolean s5_readauth(gpointer data, gint source, b_input_condition cond)
 {
 	unsigned char buf[512];
 	struct PHB *phb = data;
 
-	gaim_input_remove(phb->inpa);
+	b_event_remove(phb->inpa);
 
 	if (read(source, buf, 2) < 2) {
 		close(source);
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
 	if ((buf[0] != 0x01) || (buf[1] != 0x00)) {
@@ -435,25 +413,27 @@ static void s5_readauth(gpointer data, gint source, GaimInputCondition cond)
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
 	s5_sendconnect(phb, source);
+	
+	return FALSE;
 }
 
-static void s5_canread(gpointer data, gint source, GaimInputCondition cond)
+static gboolean s5_canread(gpointer data, gint source, b_input_condition cond)
 {
 	unsigned char buf[512];
 	struct PHB *phb = data;
 
-	gaim_input_remove(phb->inpa);
+	b_event_remove(phb->inpa);
 
 	if (read(source, buf, 2) < 2) {
 		close(source);
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
 	if ((buf[0] != 0x05) || (buf[1] == 0xff)) {
@@ -461,7 +441,7 @@ static void s5_canread(gpointer data, gint source, GaimInputCondition cond)
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
 	if (buf[1] == 0x02) {
@@ -476,16 +456,18 @@ static void s5_canread(gpointer data, gint source, GaimInputCondition cond)
 			phb->func(phb->data, -1, GAIM_INPUT_READ);
 			g_free(phb->host);
 			g_free(phb);
-			return;
+			return FALSE;
 		}
 
-		phb->inpa = gaim_input_add(source, GAIM_INPUT_READ, s5_readauth, phb);
+		phb->inpa = b_input_add(source, GAIM_INPUT_READ, s5_readauth, phb);
 	} else {
 		s5_sendconnect(phb, source);
 	}
+	
+	return FALSE;
 }
 
-static void s5_canwrite(gpointer data, gint source, GaimInputCondition cond)
+static gboolean s5_canwrite(gpointer data, gint source, b_input_condition cond)
 {
 	unsigned char buf[512];
 	int i;
@@ -493,14 +475,14 @@ static void s5_canwrite(gpointer data, gint source, GaimInputCondition cond)
 	unsigned int len;
 	int error = ETIMEDOUT;
 	if (phb->inpa > 0)
-		gaim_input_remove(phb->inpa);
+		b_event_remove(phb->inpa);
 	len = sizeof(error);
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
 		close(source);
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 	sock_make_blocking(source);
 
@@ -522,10 +504,12 @@ static void s5_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		phb->func(phb->data, -1, GAIM_INPUT_READ);
 		g_free(phb->host);
 		g_free(phb);
-		return;
+		return FALSE;
 	}
 
-	phb->inpa = gaim_input_add(source, GAIM_INPUT_READ, s5_canread, phb);
+	phb->inpa = b_input_add(source, GAIM_INPUT_READ, s5_canread, phb);
+	
+	return FALSE;
 }
 
 static int proxy_connect_socks5(const char *host, unsigned short port, struct PHB *phb)
@@ -541,35 +525,7 @@ static int proxy_connect_socks5(const char *host, unsigned short port, struct PH
 
 /* Export functions */
 
-gint gaim_input_add(gint source, GaimInputCondition condition, GaimInputFunction function, gpointer data)
-{
-	GaimIOClosure *closure = g_new0(GaimIOClosure, 1);
-	GIOChannel *channel;
-	GIOCondition cond = 0;
-	
-	closure->function = function;
-	closure->data = data;
-	
-	if (condition & GAIM_INPUT_READ)
-		cond |= GAIM_READ_COND;
-	if (condition & GAIM_INPUT_WRITE)
-		cond |= GAIM_WRITE_COND;
-	
-	channel = g_io_channel_unix_new(source);
-	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
-					      gaim_io_invoke, closure, gaim_io_destroy);
-	
-	g_io_channel_unref(channel);
-	return closure->result;
-}
-
-void gaim_input_remove(gint tag)
-{
-	if (tag > 0)
-		g_source_remove(tag);
-}
-
-int proxy_connect(const char *host, int port, GaimInputFunction func, gpointer data)
+int proxy_connect(const char *host, int port, b_event_handler func, gpointer data)
 {
 	struct PHB *phb;
 	
