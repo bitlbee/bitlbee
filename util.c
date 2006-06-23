@@ -83,61 +83,48 @@ char *add_cr(char *text)
 	return ret;
 }
 
-static char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" "0123456789+/";
-
-/* XXX Find bug */
 char *tobase64(const char *text)
 {
-	char *out = NULL;
-	const char *c;
-	unsigned int tmp = 0;
-	int len = 0, n = 0;
-
-	c = text;
-
-	while (*c) {
-		tmp = tmp << 8;
-		tmp += *c;
-		n++;
-
-		if (n == 3) {
-			out = g_realloc(out, len + 4);
-			out[len] = alphabet[(tmp >> 18) & 0x3f];
-			out[len + 1] = alphabet[(tmp >> 12) & 0x3f];
-			out[len + 2] = alphabet[(tmp >> 6) & 0x3f];
-			out[len + 3] = alphabet[tmp & 0x3f];
-			len += 4;
-			tmp = 0;
-			n = 0;
-		}
-		c++;
-	}
-	switch (n) {
-
-	case 2:
-		tmp <<= 8;
-		out = g_realloc(out, len + 5);
-		out[len] = alphabet[(tmp >> 18) & 0x3f];
-		out[len + 1] = alphabet[(tmp >> 12) & 0x3f];
-		out[len + 2] = alphabet[(tmp >> 6) & 0x3f];
-		out[len + 3] = '=';
-		out[len + 4] = 0;
-		break;
-	case 1:
-		tmp <<= 16;
-		out = g_realloc(out, len + 5);
-		out[len] = alphabet[(tmp >> 18) & 0x3f];
-		out[len + 1] = alphabet[(tmp >> 12) & 0x3f];
-		out[len + 2] = '=';
-		out[len + 3] = '=';
-		out[len + 4] = 0;
-		break;
-	case 0:
-		out = g_realloc(out, len + 1);
-		out[len] = 0;
-		break;
-	}
+	char *out;
+	int len;
+	
+	len = strlen(text);
+	out = g_malloc((len + 2)    /* the == padding */
+	                    / 3     /* every 3-byte block */
+	                    * 4     /* becomes a 4-byte one */
+	                    + 1);   /* and of course, ASCIIZ! */
+	
+	base64_encode_real(text, len, out, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=");
+	
 	return out;
+}
+
+void base64_encode_real(const unsigned char *in, int inlen, unsigned char *out, char *b64digits)
+{
+	for (; inlen >= 3; inlen -= 3)
+	{
+		*out++ = b64digits[in[0] >> 2];
+		*out++ = b64digits[((in[0]<<4) & 0x30) | (in[1]>>4)];
+		*out++ = b64digits[((in[1]<<2) & 0x3c) | (in[2]>>6)];
+		*out++ = b64digits[in[2] & 0x3f];
+		in += 3;
+	}
+	if (inlen > 0)
+	{
+		*out++ = b64digits[in[0] >> 2];
+		if (inlen > 1)
+		{
+			*out++ = b64digits[((in[0]<<4) & 0x30) | (in[1]>>4)];
+			*out++ = b64digits[((in[1]<<2) & 0x3c)];
+		}
+		else
+		{
+			*out++ = b64digits[((in[0]<<4) & 0x30) | (in[1]>>4)];
+			*out++ = b64digits[64];
+		}
+		*out++ = b64digits[64];
+	}
+	*out = '\0';
 }
 
 char *normalize(const char *s)

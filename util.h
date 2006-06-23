@@ -30,6 +30,7 @@ G_MODULE_EXPORT void strip_linefeed( gchar *text );
 G_MODULE_EXPORT char *add_cr( char *text );
 G_MODULE_EXPORT char *strip_newlines(char *source);
 G_MODULE_EXPORT char *tobase64( const char *text );
+G_MODULE_EXPORT void base64_encode_real( const unsigned char *in, int inlen, unsigned char *out, char *b64digits );
 G_MODULE_EXPORT char *normalize( const char *s );
 G_MODULE_EXPORT void info_string_append( GString *str, char *newline, char *name, char *value );
 
