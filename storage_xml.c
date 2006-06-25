@@ -25,6 +25,8 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
+#include "base64.h"
+#include "rc4.h"
 #include "md5.h"
 
 typedef enum
@@ -77,32 +79,32 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	{
 		char *nick = xml_attr( attr_names, attr_values, "nick" );
 		char *pass = xml_attr( attr_names, attr_values, "password" );
+		md5_byte_t *pass_dec = NULL;
 		
 		if( !nick || !pass )
 		{
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Missing attributes for %s element", element_name );
 		}
+		else if( base64_decode( pass, &pass_dec ) != 21 )
+		{
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Error while decoding password attribute" );
+		}
 		else
 		{
 			md5_byte_t pass_md5[16];
 			md5_state_t md5_state;
-			int i, j;
+			int i;
 			
 			md5_init( &md5_state );
 			md5_append( &md5_state, (md5_byte_t*) xd->given_pass, strlen( xd->given_pass ) );
+			md5_append( &md5_state, (md5_byte_t*) pass_dec + 16, 5 ); /* Hmmm, salt! */
 			md5_finish( &md5_state, pass_md5 );
 			
 			for( i = 0; i < 16; i ++ )
 			{
-				if( !isxdigit( pass[i*2] ) || !isxdigit( pass[i*2+1] ) ||
-				     sscanf( pass + i * 2, "%2x", &j ) != 1 )
-				{
-					g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-					             "Incorrect password MD5-hash" );
-					break;
-				}
-				if( j != pass_md5[i] )
+				if( pass_dec[i] != pass_md5[i] )
 				{
 					g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 					             XML_PASS_ERRORMSG );
@@ -117,6 +119,8 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 					xd->pass_st = XML_PASS_OK;
 			}
 		}
+		
+		g_free( pass_dec );
 	}
 	else if( xd->pass_st < XML_PASS_OK )
 	{
@@ -126,10 +130,12 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	else if( g_strcasecmp( element_name, "account" ) == 0 )
 	{
 		char *protocol, *handle, *server, *password, *autoconnect;
+		char *pass_b64 = NULL, *pass_rc4 = NULL;
+		int pass_len;
 		struct prpl *prpl = NULL;
 		
 		handle = xml_attr( attr_names, attr_values, "handle" );
-		password = xml_attr( attr_names, attr_values, "password" );
+		pass_b64 = xml_attr( attr_names, attr_values, "password" );
 		server = xml_attr( attr_names, attr_values, "server" );
 		autoconnect = xml_attr( attr_names, attr_values, "autoconnect" );
 		
@@ -137,13 +143,15 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		if( protocol )
 			prpl = find_protocol( protocol );
 		
-		if( !handle || !password || !protocol )
+		if( !handle || !pass_b64 || !protocol )
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Missing attributes for %s element", element_name );
 		else if( !prpl )
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Unknown protocol: %s", protocol );
-		else
+		else if( ( pass_len = base64_decode( pass_b64, (unsigned char**) &pass_rc4 ) ) &&
+		                rc4_decode( (unsigned char*) pass_rc4, pass_len,
+		                            (unsigned char**) &password, xd->given_pass ) )
 		{
 			xd->current_account = account_add( irc, prpl, handle, password );
 			if( server )
@@ -153,6 +161,16 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 				   a default! */
 				sscanf( autoconnect, "%d", &xd->current_account->auto_connect );
 		}
+		else
+		{
+			/* Actually the _decode functions don't even return error codes,
+			   but maybe they will later... */
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Error while decrypting account password" );
+		}
+		
+		g_free( pass_rc4 );
+		g_free( password );
 	}
 	else if( g_strcasecmp( element_name, "setting" ) == 0 )
 	{
@@ -353,12 +371,12 @@ static int xml_printf( int fd, char *fmt, ... )
 
 static storage_status_t xml_save( irc_t *irc, int overwrite )
 {
-	char path[512], *path2, md5_buf[33];
+	char path[512], *path2, *pass_buf = NULL;
 	set_t *set;
 	nick_t *nick;
 	account_t *acc;
 	int fd, i;
-	md5_byte_t pass_md5[16];
+	md5_byte_t pass_md5[21];
 	md5_state_t md5_state;
 	
 	if( irc->password == NULL )
@@ -379,14 +397,22 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		return STORAGE_OTHER_ERROR;
 	}
 	
+	/* Generate a salted md5sum of the password. Use 5 bytes for the salt
+	   (to prevent dictionary lookups of passwords) to end up with a 21-
+	   byte password hash, more convenient for base64 encoding. */
+	for( i = 0; i < 5; i ++ )
+		pass_md5[16+i] = rand() & 0xff;
 	md5_init( &md5_state );
 	md5_append( &md5_state, (md5_byte_t*) irc->password, strlen( irc->password ) );
+	md5_append( &md5_state, pass_md5 + 16, 5 ); /* Add the salt. */
 	md5_finish( &md5_state, pass_md5 );
-	for( i = 0; i < 16; i ++ )
-		g_snprintf( md5_buf + i * 2, 3, "%02x", pass_md5[i] );
+	/* Save the hash in base64-encoded form. */
+	pass_buf = base64_encode( (char*) pass_md5, 21 );
 	
-	if( !xml_printf( fd, "<user nick=\"%s\" password=\"%s\">\n", irc->nick, md5_buf ) )
+	if( !xml_printf( fd, "<user nick=\"%s\" password=\"%s\">\n", irc->nick, pass_buf ) )
 		goto write_error;
+	
+	g_free( pass_buf );
 	
 	for( set = irc->set; set; set = set->next )
 		if( set->value && set->def )
@@ -395,8 +421,21 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	
 	for( acc = irc->accounts; acc; acc = acc->next )
 	{
-		if( !xml_printf( fd, "\t<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%d\"", acc->prpl->name, acc->user, acc->pass, acc->auto_connect ) )
+		char *pass_rc4, *pass_b64;
+		int pass_len;
+		
+		pass_len = rc4_encode( (unsigned char*) acc->pass, strlen( acc->pass ), (unsigned char**) &pass_rc4, irc->password );
+		pass_b64 = base64_encode( pass_rc4, pass_len );
+		
+		if( !xml_printf( fd, "\t<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%d\"", acc->prpl->name, acc->user, pass_b64, acc->auto_connect ) )
+		{
+			g_free( pass_rc4 );
+			g_free( pass_b64 );
 			goto write_error;
+		}
+		g_free( pass_rc4 );
+		g_free( pass_b64 );
+		
 		if( acc->server && acc->server[0] && !xml_printf( fd, " server=\"%s\"", acc->server ) )
 			goto write_error;
 		if( !xml_printf( fd, ">\n" ) )
@@ -432,6 +471,8 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	return STORAGE_OK;
 
 write_error:
+	g_free( pass_buf );
+	
 	irc_usermsg( irc, "Write error. Disk full?" );
 	close( fd );
 	

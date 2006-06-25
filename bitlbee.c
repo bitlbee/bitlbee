@@ -290,6 +290,10 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 		{
 			irc_t *irc;
 			
+			/* Since we're fork()ing here, let's make sure we won't
+			   get the same random numbers as the parent/siblings. */
+			srand( time( NULL ) ^ getpid() );
+			
 			/* Close the listening socket, we're a client. */
 			close( global.listen_socket );
 			b_event_remove( global.listen_watch_source_id );

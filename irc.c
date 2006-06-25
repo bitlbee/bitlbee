@@ -328,11 +328,10 @@ void irc_free(irc_t * irc)
    Sets pass without checking */
 void irc_setpass (irc_t *irc, const char *pass) 
 {
-	if (irc->password) g_free (irc->password);
+	g_free (irc->password);
 	
 	if (pass) {
 		irc->password = g_strdup (pass);
-		irc_usermsg (irc, "Password successfully changed");
 	} else {
 		irc->password = NULL;
 	}
