@@ -157,6 +157,12 @@ int rc4_decode( unsigned char *crypt, int crypt_len, unsigned char **clear, char
 	key_len = strlen( password ) + RC4_IV_LEN;
 	clear_len = crypt_len - RC4_IV_LEN;
 	
+	if( clear_len < 0 )
+	{
+		*clear = g_strdup( "" );
+		return 0;
+	}
+	
 	/* Prepare buffers and the key + IV */
 	*clear = g_malloc( clear_len + 1 );
 	key = g_malloc( key_len );

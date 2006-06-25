@@ -39,6 +39,7 @@ typedef enum
 /* This isn't very clean, probably making a separate error class + code for
    BitlBee would be a better solution. But this will work for now... */
 #define XML_PASS_ERRORMSG "Wrong username or password"
+#define XML_FORMAT_VERSION 1
 
 struct xml_parsedata
 {
@@ -409,7 +410,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	/* Save the hash in base64-encoded form. */
 	pass_buf = base64_encode( (char*) pass_md5, 21 );
 	
-	if( !xml_printf( fd, "<user nick=\"%s\" password=\"%s\">\n", irc->nick, pass_buf ) )
+	if( !xml_printf( fd, "<user nick=\"%s\" password=\"%s\" version=\"%d\">\n", irc->nick, pass_buf, XML_FORMAT_VERSION ) )
 		goto write_error;
 	
 	g_free( pass_buf );
