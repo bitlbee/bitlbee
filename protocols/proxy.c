@@ -537,10 +537,6 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 	phb->func = func;
 	phb->data = data;
 	
-#ifndef _WIN32
-	sethostent(1);
-#endif
-	
 	if ((proxytype == PROXY_NONE) || !proxyhost || !proxyhost[0] || !proxyport || (proxyport == -1))
 		return proxy_connect_none(host, port, phb);
 	else if (proxytype == PROXY_HTTP)
