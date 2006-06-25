@@ -576,7 +576,7 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	char line[IRC_MAX_LINE+1], *cs;
 		
 	/* Don't try to write anything new anymore when shutting down. */
-	if( irc->status == USTATUS_SHUTDOWN )
+	if( irc->status & USTATUS_SHUTDOWN )
 		return;
 	
 	line[IRC_MAX_LINE] = 0;
