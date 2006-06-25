@@ -105,9 +105,10 @@ int user_del( irc_t *irc, char *nick )
 			if( u->nick != u->user ) g_free( u->user );
 			if( u->nick != u->host ) g_free( u->host );
 			if( u->nick != u->realname ) g_free( u->realname );
-			if( u->away ) g_free( u->away );
-			if( u->handle ) g_free( u->handle );
-			if( u->sendbuf ) g_free( u->sendbuf );
+			g_free( u->group );
+			g_free( u->away );
+			g_free( u->handle );
+			g_free( u->sendbuf );
 			if( u->sendbuf_timer ) b_event_remove( u->sendbuf_timer );
 			g_free( u );
 			
