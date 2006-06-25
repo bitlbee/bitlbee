@@ -89,6 +89,8 @@ char *strchr (), *strrchr ();
 #define vsnprintf _vsnprintf
 #endif
 
+#include "base64.h"
+
 #ifdef USE_STRUCT_CALLBACKS
 struct yahoo_callbacks *yc=NULL;
 
@@ -697,7 +699,7 @@ static void yahoo_packet_dump(unsigned char *data, int len)
 /* raw bytes in quasi-big-endian order to base 64 string (NUL-terminated) */
 static void to_y64(unsigned char *out, const unsigned char *in, int inlen)
 {
-	return base64_encode_real(in, inlen, out, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-");
+	base64_encode_real(in, inlen, out, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-");
 }
 
 static void yahoo_add_to_send_queue(struct yahoo_input_data *yid, void *data, int length)

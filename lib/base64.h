@@ -1,7 +1,8 @@
 /***************************************************************************\
 *                                                                           *
 *  BitlBee - An IRC to IM gateway                                           *
-*  Simple (but secure) RC4 implementation for safer password storage.       *
+*  Base64 handling functions. encode_real() is mostly based on the y64 en-  *
+*  coder from libyahoo2. Moving it to a new file because it's getting big.  *
 *                                                                           *
 *  Copyright 2006 Wilmer van der Gaast <wilmer@gaast.net>                   *
 *                                                                           *
@@ -21,14 +22,12 @@
 *                                                                           *
 \***************************************************************************/
 
+#include <glib.h>
+#include <gmodule.h>
 
-struct rc4_state
-{
-	unsigned char S[256];
-	unsigned char i, j;
-};
-
-struct rc4_state *rc4_keymaker( unsigned char *key, int kl, int cycles );
-unsigned char rc4_getbyte( struct rc4_state *st );
-int rc4_encode( unsigned char *clear, int clear_len, unsigned char **crypt, char *password );
-int rc4_decode( unsigned char *crypt, int crypt_len, unsigned char **clear, char *password );
+G_MODULE_EXPORT char *tobase64( const char *text );
+G_MODULE_EXPORT char *base64_encode( const char *in, int len );
+G_MODULE_EXPORT int base64_encode_real( const unsigned char *in, int inlen, unsigned char *out, const char *b64digits );
+G_MODULE_EXPORT char *frombase64( const char *in );
+G_MODULE_EXPORT int base64_decode( const char *in, unsigned char **out );
+G_MODULE_EXPORT int base64_decode_real( const unsigned char *in, unsigned char *out, char *b64reverse );

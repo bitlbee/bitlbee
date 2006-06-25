@@ -40,6 +40,7 @@
 #include <errno.h>
 #include "nogaim.h"
 #include "proxy.h"
+#include "base64.h"
 
 char proxyhost[128] = "";
 int proxyport = 0;

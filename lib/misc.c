@@ -83,50 +83,6 @@ char *add_cr(char *text)
 	return ret;
 }
 
-char *tobase64(const char *text)
-{
-	char *out;
-	int len;
-	
-	len = strlen(text);
-	out = g_malloc((len + 2)    /* the == padding */
-	                    / 3     /* every 3-byte block */
-	                    * 4     /* becomes a 4-byte one */
-	                    + 1);   /* and of course, ASCIIZ! */
-	
-	base64_encode_real(text, len, out, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=");
-	
-	return out;
-}
-
-void base64_encode_real(const unsigned char *in, int inlen, unsigned char *out, char *b64digits)
-{
-	for (; inlen >= 3; inlen -= 3)
-	{
-		*out++ = b64digits[in[0] >> 2];
-		*out++ = b64digits[((in[0]<<4) & 0x30) | (in[1]>>4)];
-		*out++ = b64digits[((in[1]<<2) & 0x3c) | (in[2]>>6)];
-		*out++ = b64digits[in[2] & 0x3f];
-		in += 3;
-	}
-	if (inlen > 0)
-	{
-		*out++ = b64digits[in[0] >> 2];
-		if (inlen > 1)
-		{
-			*out++ = b64digits[((in[0]<<4) & 0x30) | (in[1]>>4)];
-			*out++ = b64digits[((in[1]<<2) & 0x3c)];
-		}
-		else
-		{
-			*out++ = b64digits[((in[0]<<4) & 0x30) | (in[1]>>4)];
-			*out++ = b64digits[64];
-		}
-		*out++ = b64digits[64];
-	}
-	*out = '\0';
-}
-
 char *normalize(const char *s)
 {
 	static char buf[BUF_LEN];
