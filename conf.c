@@ -33,7 +33,7 @@
 #include "url.h"
 #include "ipc.h"
 
-#include "protocols/proxy.h"
+#include "proxy.h"
 
 char *CONF_FILE;
 
