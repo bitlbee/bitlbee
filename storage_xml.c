@@ -130,7 +130,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	}
 	else if( g_strcasecmp( element_name, "account" ) == 0 )
 	{
-		char *protocol, *handle, *server, *password, *autoconnect;
+		char *protocol, *handle, *server, *password = NULL, *autoconnect;
 		char *pass_b64 = NULL, *pass_rc4 = NULL;
 		int pass_len;
 		struct prpl *prpl = NULL;

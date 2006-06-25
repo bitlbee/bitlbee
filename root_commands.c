@@ -138,7 +138,7 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "The nick is (probably) not registered" );
 		break;
 	case STORAGE_OK:
-		irc_usermsg( irc, "Password accepted" );
+		irc_usermsg( irc, "Password accepted, settings and accounts loaded" );
 		irc_umode_set( irc, "+R", 1 );
 		break;
 	case STORAGE_OTHER_ERROR:
