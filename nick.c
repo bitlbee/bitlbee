@@ -162,7 +162,7 @@ void nick_strip( char * nick )
 {
 	int i, j;
 	
-	for( i = j = 0; nick[i] && i < MAX_NICK_LENGTH; i++ )
+	for( i = j = 0; nick[i] && j < MAX_NICK_LENGTH; i++ )
 	{
 		if( strchr( nick_lc_chars, nick[i] ) || 
 		    strchr( nick_uc_chars, nick[i] ) )
@@ -171,7 +171,7 @@ void nick_strip( char * nick )
 			j++;
 		}
 	}
-	while( j < MAX_NICK_LENGTH )
+	while( j <= MAX_NICK_LENGTH )
 		nick[j++] = '\0';
 }
 

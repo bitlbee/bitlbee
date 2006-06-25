@@ -44,6 +44,9 @@ distclean: clean $(subdirs)
 	rm -f Makefile.settings config.h
 	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -exec rm -f {} \;
 
+check:
+	$(MAKE) -C tests
+
 install-doc:
 	$(MAKE) -C doc install
 
