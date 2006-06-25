@@ -206,6 +206,29 @@ else
 fi
 echo 'EVENT_HANDLER=events_'$events'.o' >> Makefile.settings
 
+if [ "$events" = "libevent" ]; then
+	if ! [ -e "${libevent}include/event.h" ]; then
+		echo
+		echo 'Warning: Could not find event.h, you might have to install it and/or specify'
+		echo 'its location using the --libevent= argument. (Example: If event.h is in'
+		echo '/usr/local/include and binaries are in /usr/local/lib: --libevent=/usr/local)'
+	fi
+	
+	echo '#define EVENTS_LIBEVENT' >> config.h
+	cat <<EOF>>Makefile.settings
+EFLAGS+=-levent -L${libevent}lib
+CFLAGS+=-I${libevent}include
+EOF
+elif [ "$events" = "glib" ]; then
+	## We already use glib anyway, so this is all we need (and in fact not even this, but just to be sure...):
+	echo '#define EVENTS_GLIB' >> config.h
+else
+	echo
+	echo 'ERROR: Unknown event handler specified.'
+	exit 1
+fi
+echo 'EVENT_HANDLER=events_'$events'.o' >> Makefile.settings
+
 detect_gnutls()
 {
 	if libgnutls-config --version > /dev/null 2> /dev/null; then

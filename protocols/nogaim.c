@@ -293,9 +293,10 @@ void signoff( struct gaim_connection *gc )
 	account_t *a;
 	
 	serv_got_crap( gc, "Signing off.." );
-	gc->flags |= OPT_LOGGING_OUT;
 	
 	b_event_remove( gc->keepalive );
+	gc->flags |= OPT_LOGGING_OUT;
+	
 	gc->keepalive = 0;
 	gc->prpl->close( gc );
 	b_event_remove( gc->inpa );

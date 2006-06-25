@@ -11,3 +11,4 @@ decode
 encode
 bitlbee.pc
 .gdb_history
+tests/check
