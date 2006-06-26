@@ -33,12 +33,11 @@ typedef enum
 {
 	XML_PASS_CHECK_ONLY = -1,
 	XML_PASS_UNKNOWN = 0,
+	XML_PASS_WRONG,
 	XML_PASS_OK
 } xml_pass_st;
 
-/* This isn't very clean, probably making a separate error class + code for
-   BitlBee would be a better solution. But this will work for now... */
-#define XML_PASS_ERRORMSG "Wrong username or password"
+/* To make it easier later when extending the format: */
 #define XML_FORMAT_VERSION 1
 
 struct xml_parsedata
@@ -107,8 +106,9 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			{
 				if( pass_dec[i] != pass_md5[i] )
 				{
+					xd->pass_st = XML_PASS_WRONG;
 					g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-					             XML_PASS_ERRORMSG );
+					             "Password mismatch" );
 					break;
 				}
 			}
@@ -301,11 +301,12 @@ static storage_status_t xml_load_real( const char *my_nick, const char *password
 	{
 		if( !g_markup_parse_context_parse( ctx, buf, st, &gerr ) || gerr )
 		{
+			xml_pass_st pass_st = xd->pass_st;
+			
 			g_markup_parse_context_free( ctx );
 			close( fd );
 			
-			/* Slightly dirty... */
-			if( gerr && strcmp( gerr->message, XML_PASS_ERRORMSG ) == 0 )
+			if( pass_st == XML_PASS_WRONG )
 			{
 				g_clear_error( &gerr );
 				return STORAGE_INVALID_PASSWORD;
@@ -331,6 +332,7 @@ static storage_status_t xml_load_real( const char *my_nick, const char *password
 	
 	irc->status |= USTATUS_IDENTIFIED;
 	
+	/* TODO: This really shouldn't be here, I think... */
 	if( set_getint( irc, "auto_connect" ) )
 	{
 		/* Can't do this directly because r_c_s alters the string */
