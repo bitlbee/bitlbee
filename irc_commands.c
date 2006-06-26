@@ -118,6 +118,8 @@ static void irc_cmd_mode( irc_t *irc, char **cmd )
 		{
 			if( cmd[2] )
 				irc_umode_set( irc, cmd[2], 0 );
+			else
+				irc_reply( irc, 221, "+%s", irc->umode );
 		}
 		else
 			irc_reply( irc, 502, ":Don't touch their modes" );
@@ -636,6 +638,9 @@ void irc_exec( irc_t *irc, char *cmd[] )
 				irc_commands[i].execute( irc, cmd );
 			}
 			
-			break;
+			return;
 		}
+	
+	if( irc->status >= USTATUS_LOGGED_IN )
+		irc_reply( irc, 421, "%s :Unknown command", cmd[0] );
 }

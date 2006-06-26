@@ -656,7 +656,7 @@ void irc_names( irc_t *irc, char *channel )
 	if( !control )
 		c = conv_findchannel( channel );
 	
-	/* RFC's say there is no error reply allowed on NAMES, so when the
+	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
 	
 	if( control || c ) while( u )
@@ -670,7 +670,7 @@ void irc_names( irc_t *irc, char *channel )
 				else
 					s = "";
 				
-				irc_reply( irc, 353, "@ %s :%s%s", channel, s, u->nick );
+				irc_reply( irc, 353, "= %s :%s%s", channel, s, u->nick );
 			}
 			else if( !u->gc )
 			{
@@ -681,7 +681,7 @@ void irc_names( irc_t *irc, char *channel )
 				else
 					s = "";
 				
-				irc_reply( irc, 353, "@ %s :%s%s", channel, s, u->nick );
+				irc_reply( irc, 353, "= %s :%s%s", channel, s, u->nick );
 			}
 		}
 		
@@ -696,7 +696,7 @@ void irc_names( irc_t *irc, char *channel )
 		
 		for( l = c->in_room; l; l = l->next )
 			if( ( u = user_findhandle( c->gc, l->data ) ) )
-				irc_reply( irc, 353, "@ %s :%s%s", channel, "", u->nick );
+				irc_reply( irc, 353, "= %s :%s%s", channel, "", u->nick );
 	}
 	
 	irc_reply( irc, 366, "%s :End of /NAMES list", channel );
@@ -734,6 +734,7 @@ void irc_login( irc_t *irc )
 	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES UMODES_PRIV, CMODES );
 	irc_reply( irc,   5, "PREFIX=(ov)@+ CHANTYPES=#& CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server", CMODES, MAX_NICK_LENGTH - 1 );
 	irc_motd( irc );
+	irc->umode[0] = '\0';
 	irc_umode_set( irc, "+" UMODE, 1 );
 
 	u = user_add( irc, irc->mynick );
@@ -841,19 +842,33 @@ void irc_umode_set( irc_t *irc, char *s, int allow_priv )
 	   to set a "privileged" mode (+o, +R, etc). */
 	char m[256], st = 1, *t;
 	int i;
+	char changes[512], *p, st2 = 2;
+	char badflag = 0;
 	
 	memset( m, 0, sizeof( m ) );
 	
 	for( t = irc->umode; *t; t ++ )
 		m[(int)*t] = 1;
-	
+
+	p = changes;
 	for( t = s; *t; t ++ )
 	{
 		if( *t == '+' || *t == '-' )
 			st = *t == '+';
 		else if( st == 0 || ( strchr( UMODES, *t ) || ( allow_priv && strchr( UMODES_PRIV, *t ) ) ) )
+		{
+			if( m[(int)*t] != st)
+			{
+				if( st != st2 )
+					st2 = st, *p++ = st ? '+' : '-';
+				*p++ = *t;
+			}
 			m[(int)*t] = st;
+		}
+		else
+			badflag = 1;
 	}
+	*p = '\0';
 	
 	memset( irc->umode, 0, sizeof( irc->umode ) );
 	
@@ -861,7 +876,11 @@ void irc_umode_set( irc_t *irc, char *s, int allow_priv )
 		if( m[i] )
 			irc->umode[strlen(irc->umode)] = i;
 	
-	irc_reply( irc, 221, "+%s", irc->umode );
+	if( badflag )
+		irc_reply( irc, 501, ":Unknown MODE flag" );
+	/* Deliberately no !user@host on the prefix here */
+	if( *changes )
+		irc_write( irc, ":%s MODE %s %s", irc->nick, irc->nick, changes );
 }
 
 void irc_spawn( irc_t *irc, user_t *u )
