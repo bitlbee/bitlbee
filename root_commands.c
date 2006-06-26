@@ -126,9 +126,12 @@ static void cmd_help( irc_t *irc, char **cmd )
 	}
 }
 
+static void cmd_account( irc_t *irc, char **cmd );
+
 static void cmd_identify( irc_t *irc, char **cmd )
 {
 	storage_status_t status = storage_load( irc->nick, cmd[1], irc );
+	char *account_on[] = { "account", "on", NULL };
 	
 	switch (status) {
 	case STORAGE_INVALID_PASSWORD:
@@ -140,6 +143,8 @@ static void cmd_identify( irc_t *irc, char **cmd )
 	case STORAGE_OK:
 		irc_usermsg( irc, "Password accepted, settings and accounts loaded" );
 		irc_umode_set( irc, "+R", 1 );
+		if( set_getint( irc, "auto_connect" ) )
+			cmd_account( irc, account_on );
 		break;
 	case STORAGE_OTHER_ERROR:
 	default:

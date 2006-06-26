@@ -116,12 +116,6 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	}
 	fclose( fp );
 	
-	if( set_getint( irc, "auto_connect" ) )
-	{
-		strcpy( s, "account on" );	/* Can't do this directly because r_c_s alters the string */
-		root_command_string( irc, ru, s, 0 );
-	}
-	
 	return STORAGE_OK;
 }
 

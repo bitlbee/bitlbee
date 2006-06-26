@@ -332,14 +332,6 @@ static storage_status_t xml_load_real( const char *my_nick, const char *password
 	
 	irc->status |= USTATUS_IDENTIFIED;
 	
-	/* TODO: This really shouldn't be here, I think... */
-	if( set_getint( irc, "auto_connect" ) )
-	{
-		/* Can't do this directly because r_c_s alters the string */
-		strcpy( buf, "account on" );
-		root_command_string( irc, NULL, buf, 0 );
-	}
-	
 	return STORAGE_OK;
 }
 
