@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2006 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -10,7 +10,7 @@
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *                          (and possibly other members of the Gaim team)
- * Copyright 2002-2005 Wilmer van der Gaast <wilmer@gaast.net>
+ * Copyright 2002-2006 Wilmer van der Gaast <wilmer@gaast.net>
  */
 
 /*
@@ -421,17 +421,67 @@ signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t si
 		return( outbuf - dst );
 }
 
-char *set_eval_charset( irc_t *irc, set_t *set, char *value )
+/* A pretty reliable random number generator. Tries to use the /dev/random
+   devices first, and falls back to the random number generator from libc
+   when it fails. Opens randomizer devices with O_NONBLOCK to make sure a
+   lack of entropy won't halt BitlBee. */
+void random_bytes( unsigned char *buf, int count )
 {
-	GIConv cd;
-
-	if ( g_strncasecmp( value, "none", 4 ) == 0 )
-		return( value );
-
-	cd = g_iconv_open( "UTF-8", value );
-	if( cd == (GIConv) -1 )
-		return( NULL );
-
-	g_iconv_close( cd );
-	return( value );
+	static int use_dev = -1;
+	
+	/* Actually this probing code isn't really necessary, is it? */
+	if( use_dev == -1 )
+	{
+		if( access( "/dev/random", R_OK ) == 0 || access( "/dev/urandom", R_OK ) == 0 )
+			use_dev = 1;
+		else
+		{
+			use_dev = 0;
+			srand( ( getpid() << 16 ) ^ time( NULL ) );
+		}
+	}
+	
+	if( use_dev )
+	{
+		int fd;
+		
+		/* At least on Linux, /dev/random can block if there's not
+		   enough entropy. We really don't want that, so if it can't
+		   give anything, use /dev/urandom instead. */
+		if( ( fd = open( "/dev/random", O_RDONLY | O_NONBLOCK ) ) >= 0 )
+			if( read( fd, buf, count ) == count )
+			{
+				close( fd );
+				return;
+			}
+		close( fd );
+		
+		/* urandom isn't supposed to block at all, but just to be
+		   sure. If it blocks, we'll disable use_dev and use the libc
+		   randomizer instead. */
+		if( ( fd = open( "/dev/urandom", O_RDONLY | O_NONBLOCK ) ) >= 0 )
+			if( read( fd, buf, count ) == count )
+			{
+				close( fd );
+				return;
+			}
+		close( fd );
+		
+		/* If /dev/random blocks once, we'll still try to use it
+		   again next time. If /dev/urandom also fails for some
+		   reason, stick with libc during this session. */
+		
+		use_dev = 0;
+		srand( ( getpid() << 16 ) ^ time( NULL ) );
+	}
+	
+	if( !use_dev )
+	{
+		int i;
+		
+		/* Possibly the LSB of rand() isn't very random on some
+		   platforms. Seems okay on at least Linux and OSX though. */
+		for( i = 0; i < count; i ++ )
+			buf[i] = rand() & 0xff;
+	}
 }

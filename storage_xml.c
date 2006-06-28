@@ -370,7 +370,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	set_t *set;
 	nick_t *nick;
 	account_t *acc;
-	int fd, i;
+	int fd;
 	md5_byte_t pass_md5[21];
 	md5_state_t md5_state;
 	
@@ -395,8 +395,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	/* Generate a salted md5sum of the password. Use 5 bytes for the salt
 	   (to prevent dictionary lookups of passwords) to end up with a 21-
 	   byte password hash, more convenient for base64 encoding. */
-	for( i = 0; i < 5; i ++ )
-		pass_md5[16+i] = rand() & 0xff;
+	random_bytes( pass_md5 + 16, 5 );
 	md5_init( &md5_state );
 	md5_append( &md5_state, (md5_byte_t*) irc->password, strlen( irc->password ) );
 	md5_append( &md5_state, pass_md5 + 16, 5 ); /* Add the salt. */

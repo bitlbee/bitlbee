@@ -38,8 +38,10 @@
 
 
 #include <glib.h>
+#include <gmodule.h>
 #include <stdlib.h>
 #include <string.h>
+#include "misc.h"
 #include "rc4.h"
 
 /* Add some seed to the password, to make sure we *never* use the same key.
@@ -133,8 +135,11 @@ int rc4_encode( unsigned char *clear, int clear_len, unsigned char **crypt, char
 	*crypt = g_malloc( clear_len + RC4_IV_LEN );
 	key = g_malloc( key_len );
 	strcpy( (char*) key, password );
-	for( i = 0; i < RC4_IV_LEN; i ++ )
-		key[key_len-RC4_IV_LEN+i] = crypt[0][i] = rand() & 0xff;
+	
+	/* Add the salt. Save it for later (when decrypting) and, of course,
+	   add it to the encryption key. */
+	random_bytes( crypt[0], RC4_IV_LEN );
+	memcpy( key + key_len - RC4_IV_LEN, crypt[0], RC4_IV_LEN );
 	
 	/* Generate the initial S[] from the IVed key. */
 	st = rc4_keymaker( key, key_len, RC4_CYCLES );
