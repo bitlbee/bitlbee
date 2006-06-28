@@ -42,7 +42,7 @@ void register_storage_backend(storage_t *backend)
 static storage_t *storage_init_single(const char *name)
 {
 	GList *gl;
-	storage_t *st;
+	storage_t *st = NULL;
 
 	for (gl = storage_backends; gl; gl = gl->next) {
 		st = gl->data;

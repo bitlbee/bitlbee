@@ -9,11 +9,9 @@
 -include Makefile.settings
 
 # Program variables
-objects = account.o bitlbee.o conf.o crypting.o help.o ipc.o irc.o irc_commands.o log.o nick.o query.o root_commands.o set.o storage.o storage_text.o storage_xml.o unix.o user.o
+objects = account.o bitlbee.o conf.o crypting.o help.o ipc.o irc.o irc_commands.o log.o nick.o query.o root_commands.o set.o storage.o $(STORAGE_OBJS) unix.o user.o
 headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ini.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h url.h user.h protocols/http_client.h protocols/md5.h protocols/nogaim.h protocols/proxy.h protocols/sha.h protocols/ssl_client.h
 subdirs = protocols lib
-
-objects += $(LDAP_OBJ)
 
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
@@ -43,7 +41,7 @@ clean: $(subdirs)
 	rm -f *.o $(OUTFILE) core utils/bitlbeed encode decode
 
 distclean: clean $(subdirs)
-	rm -f Makefile.settings config.h
+	rm -f Makefile.settings config.h bitlbee.pc
 	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -exec rm -f {} \;
 
 check:
