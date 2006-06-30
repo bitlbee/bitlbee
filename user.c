@@ -146,7 +146,7 @@ user_t *user_findhandle( struct gaim_connection *gc, char *handle )
 	
 	while( u )
 	{
-		if( u->gc == gc && u->handle && gc->prpl->cmp_buddynames ( u->handle, handle ) == 0 )
+		if( u->gc == gc && u->handle && gc->acc->prpl->cmp_buddynames ( u->handle, handle ) == 0 )
 			break;
 		u = u->next;
 	}

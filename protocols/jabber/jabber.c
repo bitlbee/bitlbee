@@ -560,29 +560,29 @@ static gboolean gjab_connected_ssl(gpointer data, void *source, b_input_conditio
 
 static void gjab_start(gjconn gjc)
 {
-	struct aim_user *user;
+	account_t *acc;
 	int port = -1, ssl = 0;
 	char *server = NULL, *s;
 
 	if (!gjc || gjc->state != JCONN_STATE_OFF)
 		return;
 
-	user = GJ_GC(gjc)->user;
-	if (*user->proto_opt[0]) {
+	acc = GJ_GC(gjc)->acc;
+	if (acc->server) {
 		/* If there's a dot, assume there's a hostname in the beginning */
-		if (strchr(user->proto_opt[0], '.')) {
-			server = g_strdup(user->proto_opt[0]);
+		if (strchr(acc->server, '.')) {
+			server = g_strdup(acc->server);
 			if ((s = strchr(server, ':')))
 				*s = 0;
 		}
 		
 		/* After the hostname, there can be a port number */
-		s = strchr(user->proto_opt[0], ':');
+		s = strchr(acc->server, ':');
 		if (s && isdigit(s[1]))
 			sscanf(s + 1, "%d", &port);
 		
 		/* And if there's the string ssl, the user wants an SSL-connection */
-		if (strstr(user->proto_opt[0], ":ssl") || g_strcasecmp(user->proto_opt[0], "ssl") == 0)
+		if (strstr(acc->server, ":ssl") || g_strcasecmp(acc->server, "ssl") == 0)
 			ssl = 1;
 	}
 	
@@ -615,7 +615,7 @@ static void gjab_start(gjconn gjc)
 	
 	g_free(server);
 	
-	if (!user->gc || (gjc->fd < 0)) {
+	if (!acc->gc || (gjc->fd < 0)) {
 		STATE_EVT(JCONN_STATE_OFF)
 		return;
 	}
@@ -1515,18 +1515,18 @@ static void jabber_handlestate(gjconn gjc, int state)
 	return;
 }
 
-static void jabber_login(struct aim_user *user)
+static void jabber_login(account_t *acc)
 {
-	struct gaim_connection *gc = new_gaim_conn(user);
+	struct gaim_connection *gc = new_gaim_conn(acc);
 	struct jabber_data *jd = gc->proto_data = g_new0(struct jabber_data, 1);
-	char *loginname = create_valid_jid(user->username, DEFAULT_SERVER, "BitlBee");
+	char *loginname = create_valid_jid(acc->user, DEFAULT_SERVER, "BitlBee");
 
 	jd->hash = g_hash_table_new(g_str_hash, g_str_equal);
 	jd->chats = NULL;	/* we have no chats yet */
 
 	set_login_progress(gc, 1, _("Connecting"));
 
-	if (!(jd->gjc = gjab_new(loginname, user->password, gc))) {
+	if (!(jd->gjc = gjab_new(loginname, acc->pass, gc))) {
 		g_free(loginname);
 		hide_login_progress(gc, _("Unable to connect"));
 		signoff(gc);

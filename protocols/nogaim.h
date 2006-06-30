@@ -38,6 +38,7 @@
 #define _NOGAIM_H
 
 #include "bitlbee.h"
+#include "account.h"
 #include "proxy.h"
 #include "md5.h"
 #include "sha.h"
@@ -62,7 +63,7 @@
 /* ok. now the fun begins. first we create a connection structure */
 struct gaim_connection
 {
-	struct prpl *prpl;
+	account_t *acc;
 	guint32 flags;
 	
 	/* each connection then can have its own protocol-specific data */
@@ -77,8 +78,6 @@ struct gaim_connection
 	GSList *permit;
 	GSList *deny;
 	int permdeny;
-	
-	struct aim_user *user;
 	
 	char username[64];
 	char displayname[128];
@@ -125,26 +124,11 @@ struct buddy {
 	struct gaim_connection *gc; /* the connection it belongs to */
 };
 
-struct aim_user {
-	char username[64];
-	char alias[SELF_ALIAS_LEN]; 
-	char password[32];
-	char user_info[2048];
-	int options;
-	struct prpl *prpl;
-	/* prpls can use this to save information about the user,
-	 * like which server to connect to, etc */
-	char proto_opt[7][256];
-
-	struct gaim_connection *gc;
-	irc_t *irc;
-};
-
 struct prpl {
 	int options;
 	const char *name;
 
-	void (* login)		(struct aim_user *);
+	void (* login)		(account_t *);
 	void (* keepalive)	(struct gaim_connection *);
 	void (* close)		(struct gaim_connection *);
 	
@@ -211,7 +195,7 @@ gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond );
 void cancel_auto_reconnect( struct account *a );
 
 /* multi.c */
-G_MODULE_EXPORT struct gaim_connection *new_gaim_conn( struct aim_user *user );
+G_MODULE_EXPORT struct gaim_connection *new_gaim_conn( account_t *acc );
 G_MODULE_EXPORT void destroy_gaim_conn( struct gaim_connection *gc );
 G_MODULE_EXPORT void set_login_progress( struct gaim_connection *gc, int step, char *msg );
 G_MODULE_EXPORT void hide_login_progress( struct gaim_connection *gc, char *msg );

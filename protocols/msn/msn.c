@@ -26,9 +26,9 @@
 #include "nogaim.h"
 #include "msn.h"
 
-static void msn_login( struct aim_user *acct )
+static void msn_login( account_t *acc )
 {
-	struct gaim_connection *gc = new_gaim_conn( acct );
+	struct gaim_connection *gc = new_gaim_conn( acc );
 	struct msn_data *md = g_new0( struct msn_data, 1 );
 	
 	set_login_progress( gc, 1, "Connecting" );
@@ -36,7 +36,7 @@ static void msn_login( struct aim_user *acct )
 	gc->proto_data = md;
 	md->fd = -1;
 	
-	if( strchr( acct->username, '@' ) == NULL )
+	if( strchr( acc->user, '@' ) == NULL )
 	{
 		hide_login_progress( gc, "Invalid account name" );
 		signoff( gc );

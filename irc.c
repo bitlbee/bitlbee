@@ -924,19 +924,19 @@ void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker )
 void irc_kill( irc_t *irc, user_t *u )
 {
 	char *nick, *s;
-	char reason[64];
+	char reason[128];
 	
 	if( u->gc && u->gc->flags & OPT_LOGGING_OUT )
 	{
-		if( u->gc->user->proto_opt[0][0] )
+		if( u->gc->acc->server )
 			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
-			            u->gc->user->proto_opt[0] );
+			            u->gc->acc->server );
 		else if( ( s = strchr( u->gc->username, '@' ) ) )
 			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
 			            s + 1 );
 		else
 			g_snprintf( reason, sizeof( reason ), "%s %s.%s", irc->myhost,
-			            u->gc->prpl->name, irc->myhost );
+			            u->gc->acc->prpl->name, irc->myhost );
 		
 		/* proto_opt might contain garbage after the : */
 		if( ( s = strchr( reason, ':' ) ) )
@@ -1012,13 +1012,13 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 		}
 		else if( g_strncasecmp( s + 1, "TYPING", 6 ) == 0 )
 		{
-			if( u && u->gc && u->gc->prpl->send_typing && strlen( s ) >= 10 )
+			if( u && u->gc && u->gc->acc->prpl->send_typing && strlen( s ) >= 10 )
 			{
 				time_t current_typing_notice = time( NULL );
 				
 				if( current_typing_notice - u->last_typing_notice >= 5 )
 				{
-					u->gc->prpl->send_typing( u->gc, u->handle, s[8] == '1' );
+					u->gc->acc->prpl->send_typing( u->gc, u->handle, s[8] == '1' );
 					u->last_typing_notice = current_typing_notice;
 				}
 			}
@@ -1051,7 +1051,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 			return 1;
 		}
 	}
-	else if( c && c->gc && c->gc->prpl )
+	else if( c && c->gc && c->gc->acc && c->gc->acc->prpl )
 	{
 		return( bim_chat_msg( c->gc, c->id, s ) );
 	}

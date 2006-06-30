@@ -399,14 +399,14 @@ static void cmd_add( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			nick_set( irc, cmd[2], a->gc->prpl, cmd[3] );
+			nick_set( irc, cmd[2], a->gc->acc->prpl, cmd[3] );
 		}
 	}
 	
 	/* By making this optional, you can talk to people without having to
 	   add them to your *real* (server-side) contact list. */
 	if( add_for_real )
-		a->gc->prpl->add_buddy( a->gc, cmd[2] );
+		a->gc->acc->prpl->add_buddy( a->gc, cmd[2] );
 		
 	add_buddy( a->gc, NULL, cmd[2], cmd[2] );
 	
@@ -440,13 +440,13 @@ static void cmd_info( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( !gc->prpl->get_info )
+	if( !gc->acc->prpl->get_info )
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 	}
 	else
 	{
-		gc->prpl->get_info( gc, cmd[2] );
+		gc->acc->prpl->get_info( gc, cmd[2] );
 	}
 }
 
@@ -481,7 +481,7 @@ static void cmd_rename( irc_t *irc, char **cmd )
 		}
 		else if( u->send_handler == buddy_send_handler )
 		{
-			nick_set( irc, u->handle, u->gc->prpl, cmd[2] );
+			nick_set( irc, u->handle, u->gc->acc->prpl, cmd[2] );
 		}
 		
 		irc_usermsg( irc, "Nick successfully changed" );
@@ -500,7 +500,7 @@ static void cmd_remove( irc_t *irc, char **cmd )
 	}
 	s = g_strdup( u->handle );
 	
-	u->gc->prpl->remove_buddy( u->gc, u->handle, NULL );
+	u->gc->acc->prpl->remove_buddy( u->gc, u->handle, NULL );
 	user_del( irc, cmd[1] );
 	nick_del( irc, cmd[1] );
 	
@@ -557,7 +557,7 @@ static void cmd_block( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( !gc->prpl->add_deny || !gc->prpl->rem_permit )
+	if( !gc->acc->prpl->add_deny || !gc->acc->prpl->rem_permit )
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 	}
@@ -616,7 +616,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( !gc->prpl->rem_deny || !gc->prpl->add_permit )
+	if( !gc->acc->prpl->rem_deny || !gc->acc->prpl->add_permit )
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 	}
@@ -732,7 +732,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( online == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->acc->prpl->name );
 			irc_usermsg( irc, format, u->nick, s, "Online" );
 		}
 		
@@ -743,7 +743,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( away == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->acc->prpl->name );
 			irc_usermsg( irc, format, u->nick, s, u->away );
 		}
 		n_away ++;
@@ -753,7 +753,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( offline == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->acc->prpl->name );
 			irc_usermsg( irc, format, u->nick, s, "Offline" );
 		}
 		n_offline ++;
@@ -778,7 +778,7 @@ static void cmd_nick( irc_t *irc, char **cmd )
 	{
 		irc_usermsg( irc, "Your name is `%s'" , a->gc->displayname ? a->gc->displayname : "NULL" );
 	}
-	else if ( !a->gc->prpl->set_info ) 
+	else if ( !a->prpl->set_info ) 
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 	}
@@ -786,7 +786,7 @@ static void cmd_nick( irc_t *irc, char **cmd )
 	{
 		irc_usermsg( irc, "Setting your name to `%s'", cmd[2] );
 		
-		a->gc->prpl->set_info( a->gc, cmd[2] );
+		a->prpl->set_info( a->gc, cmd[2] );
 	}
 }
 
@@ -805,7 +805,7 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 	
 	for( num = 0; q; q = q->next, num ++ )
 		if( q->gc ) /* Not necessary yet, but it might come later */
-			irc_usermsg( irc, "%d, %s(%s): %s", num, q->gc->prpl->name, q->gc->username, q->question );
+			irc_usermsg( irc, "%d, %s(%s): %s", num, q->gc->acc->prpl->name, q->gc->username, q->question );
 		else
 			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
 }
@@ -833,10 +833,11 @@ static void cmd_import_buddies( irc_t *irc, char **cmd )
 		{
 			user_t *u;
 			
+			/* FIXME: Hmmm, this is actually pretty dangerous code... REMOVEME? :-) */
 			for( u = irc->users; u; u = u->next )
 				if( u->gc == gc )
 				{
-					u->gc->prpl->remove_buddy( u->gc, u->handle, NULL );
+					u->gc->acc->prpl->remove_buddy( u->gc, u->handle, NULL );
 					user_del( irc, u->nick );
 				}
 			
@@ -851,9 +852,9 @@ static void cmd_import_buddies( irc_t *irc, char **cmd )
 	
 	for( n = gc->irc->nicks; n; n = n->next )
 	{
-		if( n->proto == gc->prpl && !user_findhandle( gc, n->handle ) )
+		if( n->proto == gc->acc->prpl && !user_findhandle( gc, n->handle ) )
 		{
-	                gc->prpl->add_buddy( gc, n->handle );
+	                gc->acc->prpl->add_buddy( gc, n->handle );
 	                add_buddy( gc, NULL, n->handle, NULL );
 		}
 	}

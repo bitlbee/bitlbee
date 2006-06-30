@@ -144,33 +144,21 @@ GSList *get_connections() { return connections; }
 
 /* multi.c */
 
-struct gaim_connection *new_gaim_conn( struct aim_user *user )
+struct gaim_connection *new_gaim_conn( account_t *acc )
 {
 	struct gaim_connection *gc;
-	account_t *a;
 	
 	gc = g_new0( struct gaim_connection, 1 );
 	
-	gc->prpl = user->prpl;
-	g_snprintf( gc->username, sizeof( gc->username ), "%s", user->username );
-	g_snprintf( gc->password, sizeof( gc->password ), "%s", user->password );
-	/* [MD]	BUGFIX: don't set gc->irc to the global IRC, but use the one from the struct aim_user.
-	 * This fixes daemon mode breakage where IRC doesn't point to the currently active connection.
-	 */
-	gc->irc = user->irc;
+	/* Maybe we should get rid of this memory waste later. ;-) */
+	g_snprintf( gc->username, sizeof( gc->username ), "%s", acc->user );
+	g_snprintf( gc->password, sizeof( gc->password ), "%s", acc->pass );
+	
+	gc->irc = acc->irc;
+	gc->acc = acc;
+	acc->gc = gc;
 	
 	connections = g_slist_append( connections, gc );
-	
-	user->gc = gc;
-	gc->user = user;
-	
-	// Find the account_t so we can set its gc pointer
-	for( a = gc->irc->accounts; a; a = a->next )
-		if( ( struct aim_user * ) a->gc == user )
-		{
-			a->gc = gc;
-			break;
-		}
 	
 	return( gc );
 }
@@ -188,7 +176,6 @@ void destroy_gaim_conn( struct gaim_connection *gc )
 		}
 	
 	connections = g_slist_remove( connections, gc );
-	g_free( gc->user );
 	g_free( gc );
 }
 
@@ -225,14 +212,14 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	
 	/* Try to find a different connection on the same protocol. */
 	for( a = gc->irc->accounts; a; a = a->next )
-		if( a->prpl == gc->prpl && a->gc != gc )
+		if( a->prpl == gc->acc->prpl && a->gc != gc )
 			break;
 	
 	/* If we found one, include the screenname in the message. */
 	if( a )
-		irc_usermsg( gc->irc, "%s(%s) - %s", gc->prpl->name, gc->username, text );
+		irc_usermsg( gc->irc, "%s(%s) - %s", gc->acc->prpl->name, gc->username, text );
 	else
-		irc_usermsg( gc->irc, "%s - %s", gc->prpl->name, text );
+		irc_usermsg( gc->irc, "%s - %s", gc->acc->prpl->name, text );
 	
 	g_free( text );
 }
@@ -241,8 +228,8 @@ static gboolean send_keepalive( gpointer d, gint fd, b_input_condition cond )
 {
 	struct gaim_connection *gc = d;
 	
-	if( gc->prpl && gc->prpl->keepalive )
-		gc->prpl->keepalive( gc );
+	if( gc->acc->prpl->keepalive )
+		gc->acc->prpl->keepalive( gc );
 	
 	return TRUE;
 }
@@ -298,7 +285,7 @@ void signoff( struct gaim_connection *gc )
 	gc->flags |= OPT_LOGGING_OUT;
 	
 	gc->keepalive = 0;
-	gc->prpl->close( gc );
+	gc->acc->prpl->close( gc );
 	b_event_remove( gc->inpa );
 	
 	while( u )
@@ -378,7 +365,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	}
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
-	strcpy( nick, nick_get( gc->irc, handle, gc->prpl, realname ) );
+	strcpy( nick, nick_get( gc->irc, handle, gc->acc->prpl, realname ) );
 	
 	u = user_add( gc->irc, nick );
 	
@@ -390,15 +377,15 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 		u->host = g_strdup( s + 1 );
 		u->user = g_strndup( handle, s - handle );
 	}
-	else if( gc->user->proto_opt[0] && *gc->user->proto_opt[0] )
+	else if( *gc->acc->server )
 	{
 		char *colon;
 		
-		if( ( colon = strchr( gc->user->proto_opt[0], ':' ) ) )
-			u->host = g_strndup( gc->user->proto_opt[0],
-			                     colon - gc->user->proto_opt[0] );
+		if( ( colon = strchr( gc->acc->server, ':' ) ) )
+			u->host = g_strndup( gc->acc->server,
+			                     colon - gc->acc->server );
 		else
-			u->host = g_strdup( gc->user->proto_opt[0] );
+			u->host = g_strdup( gc->acc->server );
 		
 		u->user = g_strdup( handle );
 		
@@ -409,7 +396,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	}
 	else
 	{
-		u->host = g_strdup( gc->user->prpl->name );
+		u->host = g_strdup( gc->acc->prpl->name );
 		u->user = g_strdup( handle );
 	}
 	
@@ -479,7 +466,7 @@ void show_got_added_no( gpointer w, struct show_got_added_data *data )
 
 void show_got_added_yes( gpointer w, struct show_got_added_data *data )
 {
-	data->gc->prpl->add_buddy( data->gc, data->handle );
+	data->gc->acc->prpl->add_buddy( data->gc, data->handle );
 	add_buddy( data->gc, NULL, data->handle, data->handle );
 	
 	return show_got_added_no( w, data );
@@ -558,11 +545,11 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 			remove_chat_buddy_silent( c, handle );
 	}
 	
-	if( ( type & UC_UNAVAILABLE ) && ( !strcmp(gc->prpl->name, "oscar") || !strcmp(gc->prpl->name, "icq")) )
+	if( ( type & UC_UNAVAILABLE ) && ( strcmp( gc->acc->prpl->name, "oscar" ) == 0 || strcmp( gc->acc->prpl->name, "icq" ) == 0 ) )
 	{
 		u->away = g_strdup( "Away" );
 	}
-	else if( ( type & UC_UNAVAILABLE ) && ( !strcmp(gc->prpl->name, "jabber") ) )
+	else if( ( type & UC_UNAVAILABLE ) && ( strcmp( gc->acc->prpl->name, "jabber" ) == 0 ) )
 	{
 		if( type & UC_DND )
 			u->away = g_strdup( "Do Not Disturb" );
@@ -571,9 +558,9 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 		else // if( type & UC_AWAY )
 			u->away = g_strdup( "Away" );
 	}
-	else if( ( type & UC_UNAVAILABLE ) && gc->prpl->get_status_string )
+	else if( ( type & UC_UNAVAILABLE ) && gc->acc->prpl->get_status_string )
 	{
-		u->away = g_strdup( gc->prpl->get_status_string( gc, type ) );
+		u->away = g_strdup( gc->acc->prpl->get_status_string( gc, type ) );
 	}
 	else
 		u->away = NULL;
@@ -732,7 +719,7 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	user_t *u;
 	
 	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
-	if( g_strcasecmp( who, gc->user->username ) == 0 )
+	if( g_strcasecmp( who, gc->username ) == 0 )
 		return;
 	
 	u = user_findhandle( gc, who );
@@ -790,7 +777,7 @@ void add_chat_buddy( struct conversation *b, char *handle )
 		serv_got_crap( b->gc, "User %s added to conversation %d", handle, b->id );
 	
 	/* It might be yourself! */
-	if( b->gc->prpl->cmp_buddynames( handle, b->gc->user->username ) == 0 )
+	if( b->gc->acc->prpl->cmp_buddynames( handle, b->gc->username ) == 0 )
 	{
 		u = user_find( b->gc->irc, b->gc->irc->nick );
 		if( !b->joined )
@@ -824,7 +811,7 @@ void remove_chat_buddy( struct conversation *b, char *handle, char *reason )
 		serv_got_crap( b->gc, "User %s removed from conversation %d (%s)", handle, b->id, reason ? reason : "" );
 	
 	/* It might be yourself! */
-	if( g_strcasecmp( handle, b->gc->user->username ) == 0 )
+	if( g_strcasecmp( handle, b->gc->username ) == 0 )
 	{
 		u = user_find( b->gc->irc, b->gc->irc->nick );
 		b->joined = 0;
@@ -958,7 +945,7 @@ int bim_buddy_msg( struct gaim_connection *gc, char *handle, char *msg, int flag
 		msg = buf;
 	}
 	
-	st = gc->prpl->send_im( gc, handle, msg, strlen( msg ), flags );
+	st = gc->acc->prpl->send_im( gc, handle, msg, strlen( msg ), flags );
 	g_free( buf );
 	
 	return st;
@@ -975,7 +962,7 @@ int bim_chat_msg( struct gaim_connection *gc, int id, char *msg )
 		msg = buf;
 	}
 	
-	st = gc->prpl->chat_send( gc, id, msg );
+	st = gc->acc->prpl->chat_send( gc, id, msg );
 	g_free( buf );
 	
 	return st;
@@ -989,7 +976,7 @@ int bim_set_away( struct gaim_connection *gc, char *away )
 	char *s;
 	
 	if( !away ) away = "";
-	ms = m = gc->prpl->away_states( gc );
+	ms = m = gc->acc->prpl->away_states( gc );
 	
 	while( m )
 	{
@@ -1010,19 +997,19 @@ int bim_set_away( struct gaim_connection *gc, char *away )
 	
 	if( m )
 	{
-		gc->prpl->set_away( gc, m->data, *away ? away : NULL );
+		gc->acc->prpl->set_away( gc, m->data, *away ? away : NULL );
 	}
 	else
 	{
 		s = bim_away_alias_find( ms, away );
 		if( s )
 		{
-			gc->prpl->set_away( gc, s, away );
+			gc->acc->prpl->set_away( gc, s, away );
 			if( set_getint( &gc->irc->set, "debug" ) )
 				serv_got_crap( gc, "Setting away state to %s", s );
 		}
 		else
-			gc->prpl->set_away( gc, GAIM_AWAY_CUSTOM, away );
+			gc->acc->prpl->set_away( gc, GAIM_AWAY_CUSTOM, away );
 	}
 	
 	g_list_free( ms );
@@ -1074,46 +1061,46 @@ static char *bim_away_alias_find( GList *gcm, char *away )
 
 void bim_add_allow( struct gaim_connection *gc, char *handle )
 {
-	if( g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) == NULL )
+	if( g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->acc->prpl->cmp_buddynames ) == NULL )
 	{
 		gc->permit = g_slist_prepend( gc->permit, g_strdup( handle ) );
 	}
 	
-	gc->prpl->add_permit( gc, handle );
+	gc->acc->prpl->add_permit( gc, handle );
 }
 
 void bim_rem_allow( struct gaim_connection *gc, char *handle )
 {
 	GSList *l;
 	
-	if( ( l = g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) ) )
+	if( ( l = g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->acc->prpl->cmp_buddynames ) ) )
 	{
 		g_free( l->data );
 		gc->permit = g_slist_delete_link( gc->permit, l );
 	}
 	
-	gc->prpl->rem_permit( gc, handle );
+	gc->acc->prpl->rem_permit( gc, handle );
 }
 
 void bim_add_block( struct gaim_connection *gc, char *handle )
 {
-	if( g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) == NULL )
+	if( g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->acc->prpl->cmp_buddynames ) == NULL )
 	{
 		gc->deny = g_slist_prepend( gc->deny, g_strdup( handle ) );
 	}
 	
-	gc->prpl->add_deny( gc, handle );
+	gc->acc->prpl->add_deny( gc, handle );
 }
 
 void bim_rem_block( struct gaim_connection *gc, char *handle )
 {
 	GSList *l;
 	
-	if( ( l = g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->prpl->cmp_buddynames ) ) )
+	if( ( l = g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->acc->prpl->cmp_buddynames ) ) )
 	{
 		g_free( l->data );
 		gc->deny = g_slist_delete_link( gc->deny, l );
 	}
 	
-	gc->prpl->rem_deny( gc, handle );
+	gc->acc->prpl->rem_deny( gc, handle );
 }

@@ -142,8 +142,6 @@ void account_del( irc_t *irc, account_t *acc )
 
 void account_on( irc_t *irc, account_t *a )
 {
-	struct aim_user *u;
-	
 	if( a->gc )
 	{
 		/* Trying to enable an already-enabled account */
@@ -152,17 +150,8 @@ void account_on( irc_t *irc, account_t *a )
 	
 	cancel_auto_reconnect( a );
 	
-	u = g_new0 ( struct aim_user, 1 );
-	u->irc = irc;
-	u->prpl = a->prpl;
-	strncpy( u->username, a->user, sizeof( u->username ) - 1 );
-	strncpy( u->password, a->pass, sizeof( u->password ) - 1 );
-	if( a->server) strncpy( u->proto_opt[0], a->server, sizeof( u->proto_opt[0] ) - 1 );
-	
-	a->gc = (struct gaim_connection *) u; /* Bit hackish :-/ */
 	a->reconnect = 0;
-	
-	a->prpl->login( u );
+	a->prpl->login( a );
 }
 
 void account_off( irc_t *irc, account_t *a )
