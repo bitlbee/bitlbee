@@ -229,7 +229,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 		if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
 		{
 			unsigned int i;
-			char *t = set_getstr( irc, "default_target" );
+			char *t = set_getstr( &irc->set, "default_target" );
 			
 			if( g_strcasecmp( t, "last" ) == 0 && irc->last_target )
 				cmd[1] = irc->last_target;

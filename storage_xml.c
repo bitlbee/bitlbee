@@ -245,7 +245,7 @@ static void xml_text( GMarkupParseContext *ctx, const gchar *text, gsize text_le
 	else if( g_strcasecmp( g_markup_parse_context_get_element( ctx ), "setting" ) == 0 &&
 	         xd->current_setting && xd->current_account == NULL )
 	{
-		set_setstr( irc, xd->current_setting, (char*) text );
+		set_setstr( &irc->set, xd->current_setting, (char*) text );
 		g_free( xd->current_setting );
 		xd->current_setting = NULL;
 	}
@@ -420,14 +420,13 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		
 		pass_len = rc4_encode( (unsigned char*) acc->pass, strlen( acc->pass ), (unsigned char**) &pass_rc4, irc->password );
 		pass_b64 = base64_encode( pass_rc4, pass_len );
+		g_free( pass_rc4 );
 		
 		if( !xml_printf( fd, "\t<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%d\"", acc->prpl->name, acc->user, pass_b64, acc->auto_connect ) )
 		{
-			g_free( pass_rc4 );
 			g_free( pass_b64 );
 			goto write_error;
 		}
-		g_free( pass_rc4 );
 		g_free( pass_b64 );
 		
 		if( acc->server && acc->server[0] && !xml_printf( fd, " server=\"%s\"", acc->server ) )

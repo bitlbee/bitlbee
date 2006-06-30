@@ -85,7 +85,7 @@ char *nick_get( irc_t *irc, const char *handle, struct prpl *proto, const char *
 			g_snprintf( nick, MAX_NICK_LENGTH, "%s", realname );
 		
 		nick_strip( nick );
-		if (set_getint(irc, "lcnicks")) 
+		if( set_getint( &irc->set, "lcnicks" ) )
 			nick_lc( nick );
 	}
 	

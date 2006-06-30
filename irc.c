@@ -120,26 +120,26 @@ irc_t *irc_new( int fd )
 
 	irc_connection_list = g_slist_append( irc_connection_list, irc );
 	
-	set_add( irc, "away_devoice", "true",  set_eval_away_devoice );
-	set_add( irc, "auto_connect", "true", set_eval_bool );
-	set_add( irc, "auto_reconnect", "false", set_eval_bool );
-	set_add( irc, "auto_reconnect_delay", "300", set_eval_int );
-	set_add( irc, "buddy_sendbuffer", "false", set_eval_bool );
-	set_add( irc, "buddy_sendbuffer_delay", "200", set_eval_int );
-	set_add( irc, "charset", "iso8859-1", set_eval_charset );
-	set_add( irc, "debug", "false", set_eval_bool );
-	set_add( irc, "default_target", "root", NULL );
-	set_add( irc, "display_namechanges", "false", set_eval_bool );
-	set_add( irc, "handle_unknown", "root", NULL );
-	set_add( irc, "lcnicks", "true", set_eval_bool );
-	set_add( irc, "ops", "both", set_eval_ops );
-	set_add( irc, "private", "true", set_eval_bool );
-	set_add( irc, "query_order", "lifo", NULL );
-	set_add( irc, "save_on_quit", "true", set_eval_bool );
-	set_add( irc, "strip_html", "true", NULL );
-	set_add( irc, "to_char", ": ", set_eval_to_char );
-	set_add( irc, "typing_notice", "false", set_eval_bool );
-	set_add( irc, "password", NULL, passchange);
+	set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
+	set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
+	set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
+	set_add( &irc->set, "auto_reconnect_delay", "300", set_eval_int, irc );
+	set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
+	set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
+	set_add( &irc->set, "charset", "iso8859-1", set_eval_charset, irc );
+	set_add( &irc->set, "debug", "false", set_eval_bool, irc );
+	set_add( &irc->set, "default_target", "root", NULL, irc );
+	set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
+	set_add( &irc->set, "handle_unknown", "root", NULL, irc );
+	set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
+	set_add( &irc->set, "ops", "both", set_eval_ops, irc );
+	set_add( &irc->set, "password", NULL, passchange, irc );
+	set_add( &irc->set, "private", "true", set_eval_bool, irc );
+	set_add( &irc->set, "query_order", "lifo", NULL, irc );
+	set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
+	set_add( &irc->set, "strip_html", "true", NULL, irc );
+	set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
+	set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
 	
 	conf_loaddefaults( irc );
 	
@@ -211,7 +211,7 @@ void irc_free(irc_t * irc)
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
-	if( irc->status & USTATUS_IDENTIFIED && set_getint( irc, "save_on_quit" ) ) 
+	if( irc->status & USTATUS_IDENTIFIED && set_getint( &irc->set, "save_on_quit" ) ) 
 		if( storage_save( irc, TRUE ) != STORAGE_OK )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
@@ -363,7 +363,7 @@ void irc_process( irc_t *irc )
 				break;
 			}
 			
-			if( ( cs = set_getstr( irc, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
+			if( ( cs = set_getstr( &irc->set, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
 			{
 				conv[IRC_MAX_LINE] = 0;
 				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) != -1 )
@@ -583,7 +583,7 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	g_vsnprintf( line, IRC_MAX_LINE - 2, format, params );
 	
 	strip_newlines( line );
-	if( ( cs = set_getstr( irc, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
+	if( ( cs = set_getstr( &irc->set, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
 	{
 		char conv[IRC_MAX_LINE+1];
 		
@@ -665,7 +665,7 @@ void irc_names( irc_t *irc, char *channel )
 		{
 			if( u->gc && control )
 			{
-				if( set_getint( irc, "away_devoice" ) && !u->away )
+				if( set_getint( &irc->set, "away_devoice" ) && !u->away )
 					s = "+";
 				else
 					s = "";
@@ -674,9 +674,9 @@ void irc_names( irc_t *irc, char *channel )
 			}
 			else if( !u->gc )
 			{
-				if( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( set_getstr( irc, "ops" ), "root" ) == 0 || strcmp( set_getstr( irc, "ops" ), "both" ) == 0 ) )
+				if( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( set_getstr( &irc->set, "ops" ), "root" ) == 0 || strcmp( set_getstr( &irc->set, "ops" ), "both" ) == 0 ) )
 					s = "@";
-				else if( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( set_getstr( irc, "ops" ), "user" ) == 0 || strcmp( set_getstr( irc, "ops" ), "both" ) == 0 ) )
+				else if( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( set_getstr( &irc->set, "ops" ), "user" ) == 0 || strcmp( set_getstr( &irc->set, "ops" ), "both" ) == 0 ) )
 					s = "@";
 				else
 					s = "";
@@ -1083,7 +1083,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 {
 	if( !u || !u->gc ) return;
 	
-	if( set_getint( irc, "buddy_sendbuffer" ) && set_getint( irc, "buddy_sendbuffer_delay" ) > 0 )
+	if( set_getint( &irc->set, "buddy_sendbuffer" ) && set_getint( &irc->set, "buddy_sendbuffer_delay" ) > 0 )
 	{
 		int delay;
 		
@@ -1110,7 +1110,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		strcat( u->sendbuf, msg );
 		strcat( u->sendbuf, "\n" );
 		
-		delay = set_getint( irc, "buddy_sendbuffer_delay" );
+		delay = set_getint( &irc->set, "buddy_sendbuffer_delay" );
 		if( delay <= 5 )
 			delay *= 1000;
 		
@@ -1175,7 +1175,7 @@ int irc_msgfrom( irc_t *irc, char *nick, char *msg )
 	{
 		int len = strlen( irc->nick) + 3;
 		prefix = g_new (char, len );
-		g_snprintf( prefix, len, "%s%s", irc->nick, set_getstr( irc, "to_char" ) );
+		g_snprintf( prefix, len, "%s%s", irc->nick, set_getstr( &irc->set, "to_char" ) );
 		prefix[len-1] = 0;
 	}
 	else

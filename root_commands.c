@@ -143,7 +143,7 @@ static void cmd_identify( irc_t *irc, char **cmd )
 	case STORAGE_OK:
 		irc_usermsg( irc, "Password accepted, settings and accounts loaded" );
 		irc_umode_set( irc, "+R", 1 );
-		if( set_getint( irc, "auto_connect" ) )
+		if( set_getint( &irc->set, "auto_connect" ) )
 			cmd_account( irc, account_on );
 		break;
 	case STORAGE_OTHER_ERROR:
@@ -671,14 +671,14 @@ static void cmd_set( irc_t *irc, char **cmd )
 {
 	if( cmd[1] && cmd[2] )
 	{
-		set_setstr( irc, cmd[1], cmd[2] );
+		set_setstr( &irc->set, cmd[1], cmd[2] );
 		
 		if( ( strcmp( cmd[2], "=" ) ) == 0 && cmd[3] )
 			irc_usermsg( irc, "Warning: Correct syntax: \002set <variable> <value>\002 (without =)" );
 	}
 	if( cmd[1] ) /* else 'forgotten' on purpose.. Must show new value after changing */
 	{
-		char *s = set_getstr( irc, cmd[1] );
+		char *s = set_getstr( &irc->set, cmd[1] );
 		if( s )
 			irc_usermsg( irc, "%s = `%s'", cmd[1], s );
 	}

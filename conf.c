@@ -322,7 +322,7 @@ void conf_loaddefaults( irc_t *irc )
 	{
 		if( g_strcasecmp( ini->section, "defaults" ) == 0 )
 		{
-			set_t *s = set_find( irc, ini->key );
+			set_t *s = set_find( &irc->set, ini->key );
 			
 			if( s )
 			{

@@ -219,8 +219,8 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	text = g_strdup_vprintf( format, params );
 	va_end( params );
 
-	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
+	if( ( g_strcasecmp( set_getstr( &gc->irc->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( &gc->irc->set, "strip_html" ) ) )
 		strip_html( text );
 	
 	/* Try to find a different connection on the same protocol. */
@@ -323,9 +323,9 @@ void signoff( struct gaim_connection *gc )
 	{
 		/* Uhm... This is very sick. */
 	}
-	else if( !gc->wants_to_die && set_getint( irc, "auto_reconnect" ) )
+	else if( !gc->wants_to_die && set_getint( &irc->set, "auto_reconnect" ) )
 	{
-		int delay = set_getint( irc, "auto_reconnect_delay" );
+		int delay = set_getint( &irc->set, "auto_reconnect_delay" );
 		
 		serv_got_crap( gc, "Reconnecting in %d seconds..", delay );
 		a->reconnect = b_timeout_add( delay * 1000, auto_reconnect, a );
@@ -364,12 +364,12 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	char *s;
 	irc_t *irc = gc->irc;
 	
-	if( set_getint( irc, "debug" ) && 0 ) /* This message is too useless */
+	if( set_getint( &irc->set, "debug" ) && 0 ) /* This message is too useless */
 		serv_got_crap( gc, "Receiving user add from handle: %s", handle );
 	
 	if( user_findhandle( gc, handle ) )
 	{
-		if( set_getint( irc, "debug" ) )
+		if( set_getint( &irc->set, "debug" ) )
 			serv_got_crap( gc, "User already exists, ignoring add request: %s", handle );
 		
 		return;
@@ -457,7 +457,7 @@ void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname
 		
 		u->realname = g_strdup( realname );
 		
-		if( ( gc->flags & OPT_LOGGED_IN ) && set_getint( gc->irc, "display_namechanges" ) )
+		if( ( gc->flags & OPT_LOGGED_IN ) && set_getint( &gc->irc->set, "display_namechanges" ) )
 			serv_got_crap( gc, "User `%s' changed name to `%s'", u->nick, u->realname );
 	}
 }
@@ -513,14 +513,14 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	
 	if( !u )
 	{
-		if( g_strcasecmp( set_getstr( gc->irc, "handle_unknown" ), "add" ) == 0 )
+		if( g_strcasecmp( set_getstr( &gc->irc->set, "handle_unknown" ), "add" ) == 0 )
 		{
 			add_buddy( gc, NULL, handle, NULL );
 			u = user_findhandle( gc, handle );
 		}
 		else
 		{
-			if( set_getint( gc->irc, "debug" ) || g_strcasecmp( set_getstr( gc->irc, "handle_unknown" ), "ignore" ) != 0 )
+			if( set_getint( &gc->irc->set, "debug" ) || g_strcasecmp( set_getstr( &gc->irc->set, "handle_unknown" ), "ignore" ) != 0 )
 			{
 				serv_got_crap( gc, "serv_got_update() for handle %s:", handle );
 				serv_got_crap( gc, "loggedin = %d, type = %d", loggedin, type );
@@ -579,7 +579,7 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 		u->away = NULL;
 	
 	/* LISPy... */
-	if( ( set_getint( gc->irc, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
+	if( ( set_getint( &gc->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
 	    ( u->online ) &&						/* Don't touch offline people */
 	    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
 	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
@@ -598,18 +598,18 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	
 	if( !u )
 	{
-		char *h = set_getstr( irc, "handle_unknown" );
+		char *h = set_getstr( &irc->set, "handle_unknown" );
 		
 		if( g_strcasecmp( h, "ignore" ) == 0 )
 		{
-			if( set_getint( irc, "debug" ) )
+			if( set_getint( &irc->set, "debug" ) )
 				serv_got_crap( gc, "Ignoring message from unknown handle %s", handle );
 			
 			return;
 		}
 		else if( g_strncasecmp( h, "add", 3 ) == 0 )
 		{
-			int private = set_getint( irc, "private" );
+			int private = set_getint( &irc->set, "private" );
 			
 			if( h[3] )
 			{
@@ -630,8 +630,8 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 		}
 	}
 	
-	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
+	if( ( g_strcasecmp( set_getstr( &gc->irc->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( &gc->irc->set, "strip_html" ) ) )
 		strip_html( msg );
 
 	while( strlen( msg ) > 425 )
@@ -671,7 +671,7 @@ void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout, int
 {
 	user_t *u;
 	
-	if( !set_getint( gc->irc, "typing_notice" ) )
+	if( !set_getint( &gc->irc->set, "typing_notice" ) )
 		return;
 	
 	if( ( u = user_findhandle( gc, handle ) ) ) {
@@ -693,7 +693,7 @@ void serv_got_chat_left( struct gaim_connection *gc, int id )
 	struct conversation *c, *l = NULL;
 	GList *ir;
 	
-	if( set_getint( gc->irc, "debug" ) )
+	if( set_getint( &gc->irc->set, "debug" ) )
 		serv_got_crap( gc, "You were removed from conversation %d", (int) id );
 	
 	for( c = gc->conversations; c && c->id != id; c = (l=c)->next );
@@ -738,8 +738,8 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	u = user_findhandle( gc, who );
 	for( c = gc->conversations; c && c->id != id; c = c->next );
 	
-	if( ( g_strcasecmp( set_getstr( gc->irc, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( gc->irc, "strip_html" ) ) )
+	if( ( g_strcasecmp( set_getstr( &gc->irc->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( &gc->irc->set, "strip_html" ) ) )
 		strip_html( msg );
 	
 	if( c && u )
@@ -772,7 +772,7 @@ struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, c
 	c->channel = g_strdup( s );
 	g_free( s );
 	
-	if( set_getint( gc->irc, "debug" ) )
+	if( set_getint( &gc->irc->set, "debug" ) )
 		serv_got_crap( gc, "Creating new conversation: (id=%d,handle=%s)", id, handle );
 	
 	return( c );
@@ -786,7 +786,7 @@ void add_chat_buddy( struct conversation *b, char *handle )
 	user_t *u = user_findhandle( b->gc, handle );
 	int me = 0;
 	
-	if( set_getint( b->gc->irc, "debug" ) )
+	if( set_getint( &b->gc->irc->set, "debug" ) )
 		serv_got_crap( b->gc, "User %s added to conversation %d", handle, b->id );
 	
 	/* It might be yourself! */
@@ -820,7 +820,7 @@ void remove_chat_buddy( struct conversation *b, char *handle, char *reason )
 	user_t *u;
 	int me = 0;
 	
-	if( set_getint( b->gc->irc, "debug" ) )
+	if( set_getint( &b->gc->irc->set, "debug" ) )
 		serv_got_crap( b->gc, "User %s removed from conversation %d (%s)", handle, b->id, reason ? reason : "" );
 	
 	/* It might be yourself! */
@@ -882,8 +882,9 @@ struct conversation *conv_findchannel( char *channel )
 	return( NULL );
 }
 
-char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
+char *set_eval_away_devoice( set_t *set, char *value )
 {
+	irc_t *irc = set->data;
 	int st;
 	
 	if( ( g_strcasecmp( value, "true" ) == 0 ) || ( g_strcasecmp( value, "yes" ) == 0 ) || ( g_strcasecmp( value, "on" ) == 0 ) )
@@ -897,7 +898,7 @@ char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
 	
 	/* Horror.... */
 	
-	if( st != set_getint( irc, "away_devoice" ) )
+	if( st != set_getint( &irc->set, "away_devoice" ) )
 	{
 		char list[80] = "";
 		user_t *u = irc->users;
@@ -937,7 +938,7 @@ char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
 		                                            irc->channel, pm, v, list );
 	}
 	
-	return( set_eval_bool( irc, set, value ) );
+	return( set_eval_bool( set, value ) );
 }
 
 
@@ -1017,7 +1018,7 @@ int bim_set_away( struct gaim_connection *gc, char *away )
 		if( s )
 		{
 			gc->prpl->set_away( gc, s, away );
-			if( set_getint( gc->irc, "debug" ) )
+			if( set_getint( &gc->irc->set, "debug" ) )
 				serv_got_crap( gc, "Setting away state to %s", s );
 		}
 		else

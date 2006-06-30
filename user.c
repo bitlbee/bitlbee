@@ -66,7 +66,7 @@ user_t *user_add( irc_t *irc, char *nick )
 	}
 	
 	u->user = u->realname = u->host = u->nick = g_strdup( nick );
-	u->is_private = set_getint( irc, "private" );
+	u->is_private = set_getint( &irc->set, "private" );
 	
 	key = g_strdup( nick );
 	nick_lc( key );
