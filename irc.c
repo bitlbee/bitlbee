@@ -648,56 +648,55 @@ void irc_write_all( int now, char *format, ... )
 
 void irc_names( irc_t *irc, char *channel )
 {
-	user_t *u = irc->users;
-	char *s;
-	int control = ( g_strcasecmp( channel, irc->channel ) == 0 );
+	user_t *u;
+	char namelist[385] = "";
 	struct conversation *c = NULL;
-	
-	if( !control )
-		c = conv_findchannel( channel );
 	
 	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
 	
-	if( control || c ) while( u )
+	if( g_strcasecmp( channel, irc->channel ) == 0 )
 	{
-		if( u->online )
+		for( u = irc->users; u; u = u->next ) if( u->online )
 		{
-			if( u->gc && control )
+			if( strlen( namelist ) + strlen( u->nick ) > sizeof( namelist ) - 4 )
 			{
-				if( set_getint( &irc->set, "away_devoice" ) && !u->away )
-					s = "+";
-				else
-					s = "";
-				
-				irc_reply( irc, 353, "= %s :%s%s", channel, s, u->nick );
+				irc_reply( irc, 353, "= %s :%s", channel, namelist );
+				*namelist = 0;
 			}
-			else if( !u->gc )
-			{
-				if( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( set_getstr( &irc->set, "ops" ), "root" ) == 0 || strcmp( set_getstr( &irc->set, "ops" ), "both" ) == 0 ) )
-					s = "@";
-				else if( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( set_getstr( &irc->set, "ops" ), "user" ) == 0 || strcmp( set_getstr( &irc->set, "ops" ), "both" ) == 0 ) )
-					s = "@";
-				else
-					s = "";
-				
-				irc_reply( irc, 353, "= %s :%s%s", channel, s, u->nick );
-			}
+			
+			if( u->gc && !u->away && set_getbool( &irc->set, "away_devoice" ) )
+				strcat( namelist, "+" );
+			
+			strcat( namelist, u->nick );
+			strcat( namelist, " " );
 		}
-		
-		u = u->next;
 	}
-	
-	/* For non-controlchannel channels (group conversations) only root and
-	   you are listed now. Time to show the channel people: */
-	if( !control && c )
+	else if( ( c = conv_findchannel( channel ) ) )
 	{
 		GList *l;
+		char *ops = set_getstr( &irc->set, "ops" );
 		
-		for( l = c->in_room; l; l = l->next )
-			if( ( u = user_findhandle( c->gc, l->data ) ) )
-				irc_reply( irc, 353, "= %s :%s%s", channel, "", u->nick );
+		/* root and the user aren't in the channel userlist but should
+		   show up in /NAMES, so list them first: */
+		sprintf( namelist, "%s%s %s%s ", strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) ? "@" : "", irc->mynick,
+		                                 strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) ? "@" : "", irc->nick );
+		
+		for( l = c->in_room; l; l = l->next ) if( ( u = user_findhandle( c->gc, l->data ) ) )
+		{
+			if( strlen( namelist ) + strlen( u->nick ) > sizeof( namelist ) - 4 )
+			{
+				irc_reply( irc, 353, "= %s :%s", channel, namelist );
+				*namelist = 0;
+			}
+			
+			strcat( namelist, u->nick );
+			strcat( namelist, " " );
+		}
 	}
+	
+	if( *namelist )
+		irc_reply( irc, 353, "= %s :%s", channel, namelist );
 	
 	irc_reply( irc, 366, "%s :End of /NAMES list", channel );
 }

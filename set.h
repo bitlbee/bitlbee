@@ -44,6 +44,7 @@ set_t *set_add( set_t **head, char *key, char *def, void *eval, void *data );
 set_t *set_find( set_t **head, char *key );
 G_MODULE_EXPORT char *set_getstr( set_t **head, char *key );
 G_MODULE_EXPORT int set_getint( set_t **head, char *key );
+G_MODULE_EXPORT int set_getbool( set_t **head, char *key );
 int set_setstr( set_t **head, char *key, char *value );
 int set_setint( set_t **head, char *key, int value );
 void set_del( set_t **head, char *key );

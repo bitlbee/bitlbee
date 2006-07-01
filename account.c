@@ -71,7 +71,7 @@ char *set_eval_account( set_t *set, char *value )
 	account_t *acc = set->data;
 	
 	/* Double-check: We refuse to edit on-line accounts. */
-	if( acc->gc )
+	if( set->flags & ACC_SET_OFFLINE_ONLY && acc->gc )
 		return NULL;
 	
 	if( strcmp( set->key, "username" ) == 0 )
