@@ -27,9 +27,12 @@
 #include "bitlbee.h"
 #include "account.h"
 
+char *set_eval_account( set_t *set, char *value );
+
 account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 {
 	account_t *a;
+	set_t *s;
 	
 	if( irc->accounts )
 	{
@@ -47,7 +50,61 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	a->auto_connect = 1;
 	a->irc = irc;
 	
+	s = set_add( &a->set, "auto_connect", NULL, set_eval_account, a );
+	s->flags |= ACC_SET_NOSAVE;
+	
+	s = set_add( &a->set, "password", NULL, set_eval_account, a );
+	s->flags |= ACC_SET_NOSAVE;
+	
+	s = set_add( &a->set, "server", NULL, set_eval_account, a );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	
+	s = set_add( &a->set, "username", NULL, set_eval_account, a );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	set_setstr( &a->set, "username", user );
+	
 	return( a );
+}
+
+char *set_eval_account( set_t *set, char *value )
+{
+	account_t *acc = set->data;
+	
+	/* Double-check: We refuse to edit on-line accounts. */
+	if( acc->gc )
+		return NULL;
+	
+	if( strcmp( set->key, "username" ) == 0 )
+	{
+		g_free( acc->user );
+		acc->user = g_strdup( value );
+		return value;
+	}
+	else if( strcmp( set->key, "password" ) == 0 )
+	{
+		g_free( acc->pass );
+		acc->pass = g_strdup( value );
+		return NULL;	/* password shouldn't be visible in plaintext! */
+	}
+	else if( strcmp( set->key, "server" ) == 0 )
+	{
+		g_free( acc->server );
+		if( *value )
+			acc->server = g_strdup( value );
+		else
+			acc->server = NULL;
+		return value;
+	}
+	else if( strcmp( set->key, "auto_connect" ) == 0 )
+	{
+		if( !is_bool( value ) )
+			return NULL;
+		
+		acc->auto_connect = bool2int( value );
+		return value;
+	}
+	
+	return NULL;
 }
 
 account_t *account_get( irc_t *irc, char *id )
@@ -128,6 +185,9 @@ void account_del( irc_t *irc, account_t *acc )
 			{
 				irc->accounts = a->next;
 			}
+			
+			while( a->set )
+				set_del( &a->set, a->set->key );
 			
 			g_free( a->user );
 			g_free( a->pass );

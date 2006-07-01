@@ -31,6 +31,8 @@ typedef struct set
 	char *value;
 	char *def;	/* Default */
 	
+	int flags;
+	
 	/* Eval: Returns NULL if the value is incorrect or exactly the
 	   passed value variable. When returning a corrected value,
 	   set_setstr() should be able to free() the returned string! */
@@ -39,7 +41,7 @@ typedef struct set
 } set_t;
 
 set_t *set_add( set_t **head, char *key, char *def, void *eval, void *data );
-G_MODULE_EXPORT set_t *set_find( set_t **head, char *key );
+set_t *set_find( set_t **head, char *key );
 G_MODULE_EXPORT char *set_getstr( set_t **head, char *key );
 G_MODULE_EXPORT int set_getint( set_t **head, char *key );
 int set_setstr( set_t **head, char *key, char *value );

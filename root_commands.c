@@ -231,9 +231,8 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 
 		a = account_add( irc, prpl, cmd[3], cmd[4] );
-		
 		if( cmd[5] )
-			a->server = g_strdup( cmd[5] );
+			set_setstr( &a->set, "server", cmd[5] );
 		
 		irc_usermsg( irc, "Account successfully added" );
 	}
@@ -356,6 +355,68 @@ static void cmd_account( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Invalid account" );
 			return;
 		}
+	}
+	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
+	{
+		char *acc_handle, *set_name = NULL, *tmp;
+		
+		if( !cmd[2] )
+		{
+			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
+			return;
+		}
+		
+		acc_handle = g_strdup( cmd[2] );
+		if( ( tmp = strchr( acc_handle, '/' ) ) )
+		{
+			*tmp = 0;
+			set_name = tmp + 1;
+		}
+		a = account_get( irc, acc_handle );
+		
+		if( a == NULL )
+		{
+			irc_usermsg( irc, "Invalid account" );
+			return;
+		}
+		
+		if( cmd[3] )
+		{
+			set_t *s = set_find( &a->set, set_name );
+			
+			if( a->gc && s && s->flags & ACC_SET_OFFLINE_ONLY )
+			{
+				irc_usermsg( irc, "This setting can only be changed when the account is off-line" );
+				return;
+			}
+			
+			set_setstr( &a->set, set_name, cmd[3] );
+			
+			if( ( strcmp( cmd[3], "=" ) ) == 0 && cmd[4] )
+				irc_usermsg( irc, "Warning: Correct syntax: \002account set <variable> <value>\002 (without =)" );
+		}
+		if( set_name ) /* else 'forgotten' on purpose.. Must show new value after changing */
+		{
+			char *s = set_getstr( &a->set, set_name );
+			if( s )
+				irc_usermsg( irc, "%s = `%s'", set_name, s );
+			else
+				irc_usermsg( irc, "%s is empty", set_name );
+		}
+		else
+		{
+			set_t *s = a->set;
+			while( s )
+			{
+				if( s->value || s->def )
+					irc_usermsg( irc, "%s = `%s'", s->key, s->value?s->value:s->def );
+				else
+					irc_usermsg( irc, "%s is empty", s->key );
+				s = s->next;
+			}
+		}
+		
+		g_free( acc_handle );
 	}
 	else
 	{
@@ -681,6 +742,8 @@ static void cmd_set( irc_t *irc, char **cmd )
 		char *s = set_getstr( &irc->set, cmd[1] );
 		if( s )
 			irc_usermsg( irc, "%s = `%s'", cmd[1], s );
+		else
+			irc_usermsg( irc, "%s is empty", cmd[1] );
 	}
 	else
 	{
@@ -689,6 +752,8 @@ static void cmd_set( irc_t *irc, char **cmd )
 		{
 			if( s->value || s->def )
 				irc_usermsg( irc, "%s = `%s'", s->key, s->value?s->value:s->def );
+			else
+				irc_usermsg( irc, "%s is empty", s->key );
 			s = s->next;
 		}
 	}

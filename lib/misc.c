@@ -485,3 +485,37 @@ void random_bytes( unsigned char *buf, int count )
 			buf[i] = rand() & 0xff;
 	}
 }
+
+int is_bool( char *value )
+{
+	if( *value == 0 )
+		return 0;
+	
+	if( ( g_strcasecmp( value, "true" ) == 0 ) || ( g_strcasecmp( value, "yes" ) == 0 ) || ( g_strcasecmp( value, "on" ) == 0 ) )
+		return 1;
+	if( ( g_strcasecmp( value, "false" ) == 0 ) || ( g_strcasecmp( value, "no" ) == 0 ) || ( g_strcasecmp( value, "off" ) == 0 ) )
+		return 1;
+	
+	while( *value )
+		if( !isdigit( *value ) )
+			return 0;
+		else
+			value ++;
+	
+	return 1;
+}
+
+int bool2int( char *value )
+{
+	int i;
+	
+	if( ( g_strcasecmp( value, "true" ) == 0 ) || ( g_strcasecmp( value, "yes" ) == 0 ) || ( g_strcasecmp( value, "on" ) == 0 ) )
+		return 1;
+	if( ( g_strcasecmp( value, "false" ) == 0 ) || ( g_strcasecmp( value, "no" ) == 0 ) || ( g_strcasecmp( value, "off" ) == 0 ) )
+		return 0;
+	
+	if( sscanf( value, "%d", &i ) == 1 )
+		return i;
+	
+	return 0;
+}

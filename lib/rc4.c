@@ -164,7 +164,7 @@ int rc4_decode( unsigned char *crypt, int crypt_len, unsigned char **clear, char
 	
 	if( clear_len < 0 )
 	{
-		*clear = g_strdup( "" );
+		*clear = (unsigned char*) g_strdup( "" );
 		return 0;
 	}
 	

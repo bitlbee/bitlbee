@@ -100,6 +100,16 @@ int set_getint( set_t **head, char *key )
 	return i;
 }
 
+int set_getbool( set_t **head, char *key )
+{
+	char *s = set_getstr( head, key );
+	
+	if( !s )
+		return 0;
+	
+	return bool2int( s );
+}
+
 int set_setstr( set_t **head, char *key, char *value )
 {
 	set_t *s = set_find( head, key );
@@ -165,7 +175,7 @@ char *set_eval_int( set_t *set, char *value )
 	char *s;
 	
 	for( s = value; *s; s ++ )
-		if( *s < '0' || *s > '9' )
+		if( !isdigit( *s ) )
 			return NULL;
 	
 	return value;
@@ -173,11 +183,7 @@ char *set_eval_int( set_t *set, char *value )
 
 char *set_eval_bool( set_t *set, char *value )
 {
-	if( ( g_strcasecmp( value, "true" ) == 0 ) || ( g_strcasecmp( value, "yes" ) == 0 ) || ( g_strcasecmp( value, "on" ) == 0 ) )
-		return( value );
-	if( ( g_strcasecmp( value, "false" ) == 0 ) || ( g_strcasecmp( value, "no" ) == 0 ) || ( g_strcasecmp( value, "off" ) == 0 ) )
-		return( value );
-	return( set_eval_int( set, value ) );
+	return is_bool( value ) ? value : NULL;
 }
 
 char *set_eval_to_char( set_t *set, char *value )

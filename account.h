@@ -36,6 +36,8 @@ typedef struct account
 	int auto_connect;
 	int reconnect;
 	
+	set_t *set;
+	
 	struct irc *irc;
 	struct gaim_connection *gc;
 	struct account *next;
@@ -46,5 +48,8 @@ account_t *account_get( irc_t *irc, char *id );
 void account_del( irc_t *irc, account_t *acc );
 void account_on( irc_t *irc, account_t *a );
 void account_off( irc_t *irc, account_t *a );
+
+#define ACC_SET_NOSAVE		1
+#define ACC_SET_OFFLINE_ONLY	2
 
 #endif

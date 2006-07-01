@@ -50,4 +50,7 @@ G_MODULE_EXPORT signed int do_iconv( char *from_cs, char *to_cs, char *src, char
 
 G_MODULE_EXPORT void random_bytes( unsigned char *buf, int count );
 
+G_MODULE_EXPORT int is_bool( char *value );
+G_MODULE_EXPORT int bool2int( char *value );
+
 #endif

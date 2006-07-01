@@ -156,11 +156,9 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		{
 			xd->current_account = account_add( irc, prpl, handle, password );
 			if( server )
-				xd->current_account->server = g_strdup( server );
+				set_setstr( &xd->current_account->set, "server", server );
 			if( autoconnect )
-				/* Return value doesn't matter, since account_add() already sets
-				   a default! */
-				sscanf( autoconnect, "%d", &xd->current_account->auto_connect );
+				set_setstr( &xd->current_account->set, "auto_connect", autoconnect );
 		}
 		else
 		{
@@ -175,22 +173,19 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	}
 	else if( g_strcasecmp( element_name, "setting" ) == 0 )
 	{
-		if( xd->current_account == NULL )
+		char *setting;
+		
+		if( xd->current_setting )
 		{
-			char *setting;
-			
-			if( xd->current_setting )
-			{
-				g_free( xd->current_setting );
-				xd->current_setting = NULL;
-			}
-			
-			if( ( setting = xml_attr( attr_names, attr_values, "name" ) ) )
-				xd->current_setting = g_strdup( setting );
-			else
-				g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-				             "Missing attributes for %s element", element_name );
+			g_free( xd->current_setting );
+			xd->current_setting = NULL;
 		}
+		
+		if( ( setting = xml_attr( attr_names, attr_values, "name" ) ) )
+			xd->current_setting = g_strdup( setting );
+		else
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Missing attributes for %s element", element_name );
 	}
 	else if( g_strcasecmp( element_name, "buddy" ) == 0 )
 	{
@@ -242,10 +237,10 @@ static void xml_text( GMarkupParseContext *ctx, const gchar *text, gsize text_le
 		   the password, or if we didn't get the chance to check it
 		   yet. */
 	}
-	else if( g_strcasecmp( g_markup_parse_context_get_element( ctx ), "setting" ) == 0 &&
-	         xd->current_setting && xd->current_account == NULL )
+	else if( g_strcasecmp( g_markup_parse_context_get_element( ctx ), "setting" ) == 0 && xd->current_setting )
 	{
-		set_setstr( &irc->set, xd->current_setting, (char*) text );
+		set_setstr( xd->current_account ? &xd->current_account->set : &irc->set,
+		            xd->current_setting, (char*) text );
 		g_free( xd->current_setting );
 		xd->current_setting = NULL;
 	}
@@ -347,11 +342,16 @@ static storage_status_t xml_check_pass( const char *my_nick, const char *passwor
 	return xml_load_real( my_nick, password, NULL, XML_PASS_CHECK_ONLY );
 }
 
-static int xml_printf( int fd, char *fmt, ... )
+static int xml_printf( int fd, int indent, char *fmt, ... )
 {
 	va_list params;
 	char *out;
+	char tabs[9] = "\t\t\t\t\t\t\t\t";
 	int len;
+	
+	/* Maybe not very clean, but who needs more than 8 levels of indentation anyway? */
+	if( write( fd, tabs, indent <= 8 ? indent : 8 ) != indent )
+		return 0;
 	
 	va_start( params, fmt );
 	out = g_markup_vprintf_escaped( fmt, params );
@@ -403,14 +403,14 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	/* Save the hash in base64-encoded form. */
 	pass_buf = base64_encode( (char*) pass_md5, 21 );
 	
-	if( !xml_printf( fd, "<user nick=\"%s\" password=\"%s\" version=\"%d\">\n", irc->nick, pass_buf, XML_FORMAT_VERSION ) )
+	if( !xml_printf( fd, 0, "<user nick=\"%s\" password=\"%s\" version=\"%d\">\n", irc->nick, pass_buf, XML_FORMAT_VERSION ) )
 		goto write_error;
 	
 	g_free( pass_buf );
 	
 	for( set = irc->set; set; set = set->next )
 		if( set->value && set->def )
-			if( !xml_printf( fd, "\t<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
+			if( !xml_printf( fd, 1, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
 				goto write_error;
 	
 	for( acc = irc->accounts; acc; acc = acc->next )
@@ -422,28 +422,33 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		pass_b64 = base64_encode( pass_rc4, pass_len );
 		g_free( pass_rc4 );
 		
-		if( !xml_printf( fd, "\t<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%d\"", acc->prpl->name, acc->user, pass_b64, acc->auto_connect ) )
+		if( !xml_printf( fd, 1, "<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%d\"", acc->prpl->name, acc->user, pass_b64, acc->auto_connect ) )
 		{
 			g_free( pass_b64 );
 			goto write_error;
 		}
 		g_free( pass_b64 );
 		
-		if( acc->server && acc->server[0] && !xml_printf( fd, " server=\"%s\"", acc->server ) )
+		if( acc->server && acc->server[0] && !xml_printf( fd, 0, " server=\"%s\"", acc->server ) )
 			goto write_error;
-		if( !xml_printf( fd, ">\n" ) )
+		if( !xml_printf( fd, 0, ">\n" ) )
 			goto write_error;
+		
+		for( set = acc->set; set; set = set->next )
+			if( set->value && set->def && !( set->flags & ACC_SET_NOSAVE ) )
+				if( !xml_printf( fd, 2, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
+					goto write_error;
 		
 		for( nick = irc->nicks; nick; nick = nick->next )
 			if( nick->proto == acc->prpl )
-				if( !xml_printf( fd, "\t\t<buddy handle=\"%s\" nick=\"%s\" />\n", nick->handle, nick->nick ) )
+				if( !xml_printf( fd, 2, "<buddy handle=\"%s\" nick=\"%s\" />\n", nick->handle, nick->nick ) )
 					goto write_error;
 		
-		if( !xml_printf( fd, "\t</account>\n" ) )
+		if( !xml_printf( fd, 1, "</account>\n" ) )
 			goto write_error;
 	}
 	
-	if( !xml_printf( fd, "</user>\n" ) )
+	if( !xml_printf( fd, 0, "</user>\n" ) )
 		goto write_error;
 	
 	close( fd );
