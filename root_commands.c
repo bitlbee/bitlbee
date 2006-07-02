@@ -386,7 +386,12 @@ static void cmd_account( irc_t *irc, char **cmd )
 			
 			if( a->gc && s && s->flags & ACC_SET_OFFLINE_ONLY )
 			{
-				irc_usermsg( irc, "This setting can only be changed when the account is off-line" );
+				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );
+				return;
+			}
+			else if( !a->gc && s && s->flags & ACC_SET_ONLINE_ONLY )
+			{
+				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "on" );
 				return;
 			}
 			

@@ -53,5 +53,6 @@ char *set_eval_account( set_t *set, char *value );
 
 #define ACC_SET_NOSAVE		1
 #define ACC_SET_OFFLINE_ONLY	2
+#define ACC_SET_ONLINE_ONLY	4
 
 #endif
