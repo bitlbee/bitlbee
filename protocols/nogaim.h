@@ -128,6 +128,7 @@ struct prpl {
 	int options;
 	const char *name;
 
+	void (* acc_init)	(account_t *);
 	void (* login)		(account_t *);
 	void (* keepalive)	(struct gaim_connection *);
 	void (* close)		(struct gaim_connection *);

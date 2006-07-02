@@ -49,6 +49,8 @@ void account_del( irc_t *irc, account_t *acc );
 void account_on( irc_t *irc, account_t *a );
 void account_off( irc_t *irc, account_t *a );
 
+char *set_eval_account( set_t *set, char *value );
+
 #define ACC_SET_NOSAVE		1
 #define ACC_SET_OFFLINE_ONLY	2
 

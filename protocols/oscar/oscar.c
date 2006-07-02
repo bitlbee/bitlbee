@@ -355,6 +355,14 @@ static gboolean oscar_login_connect(gpointer data, gint source, b_input_conditio
 	return FALSE;
 }
 
+static void oscar_acc_init(account_t *acc)
+{
+	set_t *s;
+	
+	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+}
+
 static void oscar_login(account_t *acc) {
 	aim_session_t *sess;
 	aim_conn_t *conn;
@@ -385,6 +393,12 @@ static void oscar_login(account_t *acc) {
 	conn = aim_newconn(sess, AIM_CONN_TYPE_AUTH, NULL);
 	if (conn == NULL) {
 		hide_login_progress(gc, _("Unable to login to AIM"));
+		signoff(gc);
+		return;
+	}
+	
+	if (acc->server == NULL) {
+		hide_login_progress(gc, "No servername specified");
 		signoff(gc);
 		return;
 	}
@@ -2648,6 +2662,7 @@ void oscar_init()
 	ret->name = "oscar";
 	ret->away_states = oscar_away_states;
 	ret->login = oscar_login;
+	ret->acc_init = oscar_acc_init;
 	ret->close = oscar_close;
 	ret->send_im = oscar_send_im;
 	ret->get_info = oscar_get_info;

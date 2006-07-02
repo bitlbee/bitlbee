@@ -27,8 +27,6 @@
 #include "bitlbee.h"
 #include "account.h"
 
-char *set_eval_account( set_t *set, char *value );
-
 account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 {
 	account_t *a;
@@ -50,18 +48,20 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	a->auto_connect = 1;
 	a->irc = irc;
 	
-	s = set_add( &a->set, "auto_connect", NULL, set_eval_account, a );
+	s = set_add( &a->set, "auto_connect", "true", set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE;
 	
 	s = set_add( &a->set, "password", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE;
 	
-	s = set_add( &a->set, "server", NULL, set_eval_account, a );
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
-	
 	s = set_add( &a->set, "username", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	set_setstr( &a->set, "username", user );
+	
+	/* This function adds some more settings (and might want to do more
+	   things that have to be done now, although I can't think of anything. */
+	if( prpl->acc_init )
+		prpl->acc_init( a );
 	
 	return( a );
 }
