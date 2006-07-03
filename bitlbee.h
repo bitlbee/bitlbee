@@ -123,6 +123,7 @@ extern char *CONF_FILE;
 #include "nogaim.h"
 #include "commands.h"
 #include "account.h"
+#include "nick.h"
 #include "conf.h"
 #include "log.h"
 #include "ini.h"

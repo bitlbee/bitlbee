@@ -58,6 +58,8 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	set_setstr( &a->set, "username", user );
 	
+	a->nicks = g_hash_table_new_full( g_str_hash, g_str_equal, g_free, g_free );
+	
 	/* This function adds some more settings (and might want to do more
 	   things that have to be done now, although I can't think of anything. */
 	if( prpl->acc_init )
@@ -125,7 +127,7 @@ account_t *account_get( irc_t *irc, char *id )
 		{
 			for( a = irc->accounts; a; a = a->next )
 				if( a->prpl == proto &&
-				    a->prpl->cmp_buddynames( handle, a->user ) == 0 )
+				    a->prpl->handle_cmp( handle, a->user ) == 0 )
 					ret = a;
 		}
 		
@@ -188,6 +190,8 @@ void account_del( irc_t *irc, account_t *acc )
 			
 			while( a->set )
 				set_del( &a->set, a->set->key );
+			
+			g_hash_table_destroy( a->nicks );
 			
 			g_free( a->user );
 			g_free( a->pass );

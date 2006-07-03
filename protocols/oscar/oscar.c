@@ -2680,9 +2680,10 @@ void oscar_init()
 	ret->rem_deny = oscar_rem_deny;
 	ret->set_permit_deny = oscar_set_permit_deny;
 	ret->keepalive = oscar_keepalive;
-	ret->cmp_buddynames = aim_sncmp;
 	ret->get_status_string = oscar_get_status_string;
 	ret->send_typing = oscar_send_typing;
+	
+	ret->handle_cmp = aim_sncmp;
 
 	register_protocol(ret);
 }

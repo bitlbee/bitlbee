@@ -203,11 +203,9 @@ static gboolean irc_free_hashkey( gpointer key, gpointer value, gpointer data )
 /* Because we have no garbage collection, this is quite annoying */
 void irc_free(irc_t * irc)
 {
-	account_t *account, *accounttmp;
+	account_t *account;
 	user_t *user, *usertmp;
-	nick_t *nick, *nicktmp;
 	help_t *helpnode, *helpnodetmp;
-	set_t *setnode, *setnodetmp;
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
@@ -251,17 +249,11 @@ void irc_free(irc_t * irc)
 	while (irc->queries != NULL)
 		query_del(irc, irc->queries);
 	
-	if (irc->accounts != NULL) {
-		account = irc->accounts;
-		while (account != NULL) {
-			g_free(account->user);
-			g_free(account->pass);
-			g_free(account->server);
-			accounttmp = account;
-			account = account->next;
-			g_free(accounttmp);
-		}
-	}
+	while (irc->accounts)
+		account_del(irc, irc->accounts);
+	
+	while (irc->set)
+		set_del(&irc->set, irc->set->key);
 	
 	if (irc->users != NULL) {
 		user = irc->users;
@@ -286,17 +278,6 @@ void irc_free(irc_t * irc)
 	g_hash_table_foreach_remove(irc->watches, irc_free_hashkey, NULL);
 	g_hash_table_destroy(irc->watches);
 	
-	if (irc->nicks != NULL) {
-		nick = irc->nicks;
-		while (nick != NULL) {
-			g_free(nick->nick);
-			g_free(nick->handle);
-					
-			nicktmp = nick;
-			nick = nick->next;
-			g_free(nicktmp);
-		}
-	}
 	if (irc->help != NULL) {
 		helpnode = irc->help;
 		while (helpnode != NULL) {
@@ -305,18 +286,6 @@ void irc_free(irc_t * irc)
 			helpnodetmp = helpnode;
 			helpnode = helpnode->next;
 			g_free(helpnodetmp);
-		}
-	}
-	if (irc->set != NULL) {
-		setnode = irc->set;
-		while (setnode != NULL) {
-			g_free(setnode->key);
-			g_free(setnode->def);
-			g_free(setnode->value);
-			
-			setnodetmp = setnode;
-			setnode = setnode->next;
-			g_free(setnodetmp);
 		}
 	}
 	g_free(irc);

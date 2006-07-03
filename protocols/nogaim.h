@@ -164,7 +164,7 @@ struct prpl {
 	GList *(* away_states)(struct gaim_connection *gc);
 	
 	/* Mainly for AOL, since they think "Bung hole" == "Bu ngho le". *sigh* */
-	int (* cmp_buddynames) (const char *who1, const char *who2);
+	int (* handle_cmp) (const char *who1, const char *who2);
 };
 
 #define UC_UNAVAILABLE  1

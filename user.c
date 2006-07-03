@@ -142,16 +142,22 @@ user_t *user_find( irc_t *irc, char *nick )
 
 user_t *user_findhandle( struct gaim_connection *gc, char *handle )
 {
-	user_t *u = gc->irc->users;
+	user_t *u;
+	char *nick;
 	
-	while( u )
-	{
-		if( u->gc == gc && u->handle && gc->acc->prpl->cmp_buddynames ( u->handle, handle ) == 0 )
-			break;
-		u = u->next;
-	}
+	/* First, let's try a hash lookup. If it works, it's probably faster. */
+	if( ( nick = g_hash_table_lookup( gc->acc->nicks, handle ) ) &&
+	    ( u = user_find( gc->irc, nick ) ) &&
+	    ( gc->acc->prpl->handle_cmp( handle, u->handle ) == 0 ) )
+		return u;
 	
-	return( u );
+	/* However, it doesn't always work, so in that case we'll have to dig
+	   through the whole userlist. :-( */
+	for( u = gc->irc->users; u; u = u->next )
+		if( u->gc == gc && u->handle && gc->acc->prpl->handle_cmp( u->handle, handle ) == 0 )
+			return u;
+	
+	return NULL;
 }
 
 void user_rename( irc_t *irc, char *oldnick, char *newnick )

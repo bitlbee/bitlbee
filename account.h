@@ -37,6 +37,7 @@ typedef struct account
 	int reconnect;
 	
 	set_t *set;
+	GHashTable *nicks;
 	
 	struct irc *irc;
 	struct gaim_connection *gc;

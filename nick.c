@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2006 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Some stuff to fetch, save and handle nicknames for your buddies      */
@@ -26,50 +26,48 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
-void nick_set( irc_t *irc, const char *handle, struct prpl *proto, const char *nick )
+/* Store handles in lower case and strip spaces, because AIM is braindead. */
+static char *clean_handle( const char *orig )
 {
-	nick_t *m = NULL, *n = irc->nicks;
+	char *new = g_malloc( strlen( orig ) + 1 );
+	int i = 0;
 	
-	while( n )
-	{
-		if( ( g_strcasecmp( n->handle, handle ) == 0 ) && n->proto == proto )
-		{
-			g_free( n->nick );
-			n->nick = nick_dup( nick );
-			nick_strip( n->nick );
-			
-			return;
-		}
-		n = ( m = n )->next;	// :-P
+	do {
+		if (*orig != ' ')
+			new[i++] = tolower( *orig );
 	}
+	while (*(orig++));
 	
-	if( m )
-		n = m->next = g_new0( nick_t, 1 );
-	else
-		n = irc->nicks = g_new0( nick_t, 1 );
-	
-	n->handle = g_strdup( handle );
-	n->proto = proto;
-	n->nick = nick_dup( nick );
-	
-	nick_strip( n->nick );
+	return new;
 }
 
-char *nick_get( irc_t *irc, const char *handle, struct prpl *proto, const char *realname )
+void nick_set( account_t *acc, const char *handle, const char *nick )
+{
+	char *store_handle, *store_nick = g_malloc( MAX_NICK_LENGTH + 1 );
+	
+	store_handle = clean_handle( handle );
+	strncpy( store_nick, nick, MAX_NICK_LENGTH );
+	nick_strip( store_nick );
+	
+	g_hash_table_replace( acc->nicks, store_handle, store_nick );
+}
+
+char *nick_get( account_t *acc, const char *handle, const char *realname )
 {
 	static char nick[MAX_NICK_LENGTH+1];
-	nick_t *n = irc->nicks;
+	char *store_handle, *found_nick;
 	int inf_protection = 256;
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	
-	while( n && !*nick )
-		if( ( n->proto == proto ) && ( g_strcasecmp( n->handle, handle ) == 0 ) )
-			strcpy( nick, n->nick );
-		else
-			n = n->next;
-	
-	if( !n )
+	store_handle = clean_handle( handle );
+	/* Find out if we stored a nick for this person already. If not, try
+	   to generate a sane nick automatically. */
+	if( ( found_nick = g_hash_table_lookup( acc->nicks, store_handle ) ) )
+	{
+		strncpy( nick, found_nick, MAX_NICK_LENGTH );
+	}
+	else
 	{
 		char *s;
 		
@@ -85,11 +83,14 @@ char *nick_get( irc_t *irc, const char *handle, struct prpl *proto, const char *
 			g_snprintf( nick, MAX_NICK_LENGTH, "%s", realname );
 		
 		nick_strip( nick );
-		if( set_getint( &irc->set, "lcnicks" ) )
+		if( set_getbool( &acc->irc->set, "lcnicks" ) )
 			nick_lc( nick );
 	}
+	g_free( store_handle );
 	
-	while( !nick_ok( nick ) || user_find( irc, nick ) )
+	/* Now, find out if the nick is already in use at the moment, and make
+	   subtle changes to make it unique. */
+	while( !nick_ok( nick ) || user_find( acc->irc, nick ) )
 	{
 		if( strlen( nick ) < ( MAX_NICK_LENGTH - 1 ) )
 		{
@@ -105,19 +106,19 @@ char *nick_get( irc_t *irc, const char *handle, struct prpl *proto, const char *
 		{
 			int i;
 			
-			irc_usermsg( irc, "WARNING: Almost had an infinite loop in nick_get()! "
-			                  "This used to be a fatal BitlBee bug, but we tried to fix it. "
-			                  "This message should *never* appear anymore. "
-			                  "If it does, please *do* send us a bug report! "
-			                  "Please send all the following lines in your report:" );
+			irc_usermsg( acc->irc, "WARNING: Almost had an infinite loop in nick_get()! "
+			                       "This used to be a fatal BitlBee bug, but we tried to fix it. "
+			                       "This message should *never* appear anymore. "
+			                       "If it does, please *do* send us a bug report! "
+			                       "Please send all the following lines in your report:" );
 			
-			irc_usermsg( irc, "Trying to get a sane nick for handle %s", handle );
+			irc_usermsg( acc->irc, "Trying to get a sane nick for handle %s", handle );
 			for( i = 0; i < MAX_NICK_LENGTH; i ++ )
-				irc_usermsg( irc, "Char %d: %c/%d", i, nick[i], nick[i] );
+				irc_usermsg( acc->irc, "Char %d: %c/%d", i, nick[i], nick[i] );
 			
-			irc_usermsg( irc, "FAILED. Returning an insane nick now. Things might break. "
-			                  "Good luck, and please don't forget to paste the lines up here "
-			                  "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
+			irc_usermsg( acc->irc, "FAILED. Returning an insane nick now. Things might break. "
+			                       "Good luck, and please don't forget to paste the lines up here "
+			                       "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
 			
 			g_snprintf( nick, MAX_NICK_LENGTH + 1, "xx%x", rand() );
 			
@@ -125,30 +126,12 @@ char *nick_get( irc_t *irc, const char *handle, struct prpl *proto, const char *
 		}
 	}
 	
-	return( nick );
+	return nick;
 }
 
-void nick_del( irc_t *irc, const char *nick )
+void nick_del( account_t *acc, const char *handle )
 {
-	nick_t *l = NULL, *n = irc->nicks;
-	
-	while( n )
-	{
-		if( g_strcasecmp( n->nick, nick ) == 0 )
-		{
-			if( l )
-				l->next = n->next;
-			else
-				irc->nicks = n->next;
-			
-			g_free( n->handle );
-			g_free( n->nick );
-			g_free( n );
-			
-			break;
-		}
-		n = (l=n)->next;
-	}
+	g_hash_table_remove( acc->nicks, handle );
 }
 
 

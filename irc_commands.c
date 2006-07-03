@@ -477,7 +477,8 @@ static void irc_cmd_whois( irc_t *irc, char **cmd )
 		
 		if( u->gc )
 			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->gc->acc->user,
-			           *u->gc->acc->server ? u->gc->acc->server : "", u->gc->acc->prpl->name );
+			           u->gc->acc->server && *u->gc->acc->server ? u->gc->acc->server : "",
+			           u->gc->acc->prpl->name );
 		else
 			irc_reply( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
 		

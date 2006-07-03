@@ -196,7 +196,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		
 		if( xd->current_account && handle && nick )
 		{
-			nick_set( irc, handle, xd->current_account->prpl, nick );
+			nick_set( xd->current_account, handle, nick );
 		}
 		else
 		{
@@ -364,11 +364,12 @@ static int xml_printf( int fd, int indent, char *fmt, ... )
 	return len == 0;
 }
 
+static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data );
+
 static storage_status_t xml_save( irc_t *irc, int overwrite )
 {
 	char path[512], *path2, *pass_buf = NULL;
 	set_t *set;
-	nick_t *nick;
 	account_t *acc;
 	int fd;
 	md5_byte_t pass_md5[21];
@@ -439,10 +440,15 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 				if( !xml_printf( fd, 2, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
 					goto write_error;
 		
-		for( nick = irc->nicks; nick; nick = nick->next )
-			if( nick->proto == acc->prpl )
-				if( !xml_printf( fd, 2, "<buddy handle=\"%s\" nick=\"%s\" />\n", nick->handle, nick->nick ) )
-					goto write_error;
+		/* This probably looks pretty strange. g_hash_table_foreach
+		   is quite a PITA already (but it can't get much better in
+		   C without using #define, I'm afraid), and since it
+		   doesn't seem to be possible to abort the foreach on write
+		   errors, so instead let's use the _find function and
+		   return TRUE on write errors. Which means, if we found
+		   something, there was an error. :-) */
+		if( g_hash_table_find( acc->nicks, xml_save_nick, (gpointer) fd ) )
+			goto write_error;
 		
 		if( !xml_printf( fd, 1, "</account>\n" ) )
 			goto write_error;
@@ -475,6 +481,11 @@ write_error:
 	close( fd );
 	
 	return STORAGE_OTHER_ERROR;
+}
+
+static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data )
+{
+	return !xml_printf( (int) data, 2, "<buddy handle=\"%s\" nick=\"%s\" />\n", key, value );
 }
 
 static storage_status_t xml_remove( const char *nick, const char *password )

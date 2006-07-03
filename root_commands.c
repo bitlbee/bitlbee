@@ -465,7 +465,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			nick_set( irc, cmd[2], a->gc->acc->prpl, cmd[3] );
+			nick_set( a, cmd[2], cmd[3] );
 		}
 	}
 	
@@ -547,7 +547,7 @@ static void cmd_rename( irc_t *irc, char **cmd )
 		}
 		else if( u->send_handler == buddy_send_handler )
 		{
-			nick_set( irc, u->handle, u->gc->acc->prpl, cmd[2] );
+			nick_set( u->gc->acc, u->handle, cmd[2] );
 		}
 		
 		irc_usermsg( irc, "Nick successfully changed" );
@@ -568,7 +568,7 @@ static void cmd_remove( irc_t *irc, char **cmd )
 	
 	u->gc->acc->prpl->remove_buddy( u->gc, u->handle, NULL );
 	user_del( irc, cmd[1] );
-	nick_del( irc, cmd[1] );
+	nick_del( u->gc->acc, u->handle );
 	
 	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
 	g_free( s );
@@ -880,58 +880,6 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
 }
 
-static void cmd_import_buddies( irc_t *irc, char **cmd )
-{
-	struct gaim_connection *gc;
-	account_t *a;
-	nick_t *n;
-	
-	if( !( a = account_get( irc, cmd[1] ) ) )
-	{
-		irc_usermsg( irc, "Invalid account" );
-		return;
-	}
-	else if( !( ( gc = a->gc ) && ( a->gc->flags & OPT_LOGGED_IN ) ) )
-	{
-		irc_usermsg( irc, "That account is not on-line" );
-		return;
-	}
-	
-	if( cmd[2] )
-	{
-		if( g_strcasecmp( cmd[2], "clear" ) == 0 )
-		{
-			user_t *u;
-			
-			/* FIXME: Hmmm, this is actually pretty dangerous code... REMOVEME? :-) */
-			for( u = irc->users; u; u = u->next )
-				if( u->gc == gc )
-				{
-					u->gc->acc->prpl->remove_buddy( u->gc, u->handle, NULL );
-					user_del( irc, u->nick );
-				}
-			
-			irc_usermsg( irc, "Old buddy list cleared." );
-		}
-		else
-		{
-			irc_usermsg( irc, "Invalid argument: %s", cmd[2] );
-			return;
-		}
-	}
-	
-	for( n = gc->irc->nicks; n; n = n->next )
-	{
-		if( n->proto == gc->acc->prpl && !user_findhandle( gc, n->handle ) )
-		{
-	                gc->acc->prpl->add_buddy( gc, n->handle );
-	                add_buddy( gc, NULL, n->handle, NULL );
-		}
-	}
-	
-	irc_usermsg( irc, "Sent all add requests. Please wait for a while, the server needs some time to handle all the adds." );
-}
-
 const command_t commands[] = {
 	{ "help",           0, cmd_help,           0 }, 
 	{ "identify",       1, cmd_identify,       0 },
@@ -950,7 +898,6 @@ const command_t commands[] = {
 	{ "no",             0, cmd_yesno,          0 },
 	{ "blist",          0, cmd_blist,          0 },
 	{ "nick",           1, cmd_nick,           0 },
-	{ "import_buddies", 1, cmd_import_buddies, 0 },
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ NULL }
 };

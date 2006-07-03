@@ -23,17 +23,9 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-typedef struct __NICK
-{
-	char *handle;
-	struct prpl *proto;
-	char *nick;
-	struct __NICK *next;
-} nick_t;
-
-void nick_set( irc_t *irc, const char *handle, struct prpl *proto, const char *nick );
-char *nick_get( irc_t *irc, const char *handle, struct prpl *proto, const char *realname );
-void nick_del( irc_t *irc, const char *nick );
+void nick_set( account_t *acc, const char *handle, const char *nick );
+char *nick_get( account_t *acc, const char *handle, const char *realname );
+void nick_del( account_t *acc, const char *handle );
 void nick_strip( char *nick );
 
 int nick_ok( const char *nick );

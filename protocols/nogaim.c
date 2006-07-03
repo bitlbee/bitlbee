@@ -365,7 +365,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	}
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
-	strcpy( nick, nick_get( gc->irc, handle, gc->acc->prpl, realname ) );
+	strcpy( nick, nick_get( gc->acc, handle, realname ) );
 	
 	u = user_add( gc->irc, nick );
 	
@@ -377,7 +377,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 		u->host = g_strdup( s + 1 );
 		u->user = g_strndup( handle, s - handle );
 	}
-	else if( *gc->acc->server )
+	else if( gc->acc->server )
 	{
 		char *colon;
 		
@@ -777,7 +777,7 @@ void add_chat_buddy( struct conversation *b, char *handle )
 		serv_got_crap( b->gc, "User %s added to conversation %d", handle, b->id );
 	
 	/* It might be yourself! */
-	if( b->gc->acc->prpl->cmp_buddynames( handle, b->gc->username ) == 0 )
+	if( b->gc->acc->prpl->handle_cmp( handle, b->gc->username ) == 0 )
 	{
 		u = user_find( b->gc->irc, b->gc->irc->nick );
 		if( !b->joined )
@@ -1061,7 +1061,7 @@ static char *bim_away_alias_find( GList *gcm, char *away )
 
 void bim_add_allow( struct gaim_connection *gc, char *handle )
 {
-	if( g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->acc->prpl->cmp_buddynames ) == NULL )
+	if( g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->acc->prpl->handle_cmp ) == NULL )
 	{
 		gc->permit = g_slist_prepend( gc->permit, g_strdup( handle ) );
 	}
@@ -1073,7 +1073,7 @@ void bim_rem_allow( struct gaim_connection *gc, char *handle )
 {
 	GSList *l;
 	
-	if( ( l = g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->acc->prpl->cmp_buddynames ) ) )
+	if( ( l = g_slist_find_custom( gc->permit, handle, (GCompareFunc) gc->acc->prpl->handle_cmp ) ) )
 	{
 		g_free( l->data );
 		gc->permit = g_slist_delete_link( gc->permit, l );
@@ -1084,7 +1084,7 @@ void bim_rem_allow( struct gaim_connection *gc, char *handle )
 
 void bim_add_block( struct gaim_connection *gc, char *handle )
 {
-	if( g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->acc->prpl->cmp_buddynames ) == NULL )
+	if( g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->acc->prpl->handle_cmp ) == NULL )
 	{
 		gc->deny = g_slist_prepend( gc->deny, g_strdup( handle ) );
 	}
@@ -1096,7 +1096,7 @@ void bim_rem_block( struct gaim_connection *gc, char *handle )
 {
 	GSList *l;
 	
-	if( ( l = g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->acc->prpl->cmp_buddynames ) ) )
+	if( ( l = g_slist_find_custom( gc->deny, handle, (GCompareFunc) gc->acc->prpl->handle_cmp ) ) )
 	{
 		g_free( l->data );
 		gc->deny = g_slist_delete_link( gc->deny, l );
