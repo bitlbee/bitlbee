@@ -381,7 +381,10 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		return STORAGE_OTHER_ERROR;
 	}
 	
-	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, irc->nick, ".xml" );
+	path2 = g_strdup( irc->nick );
+	nick_lc( path2 );
+	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, path2, ".xml" );
+	g_free( path2 );
 	
 	if( !overwrite && access( path, F_OK ) != -1 )
 		return STORAGE_ALREADY_EXISTS;

@@ -27,32 +27,6 @@
 #include "bitlbee.h"
 #include "crypting.h"
 
-/* DO NOT USE THIS FUNCTION IN NEW CODE. This 
- * function is here merely because the save/load code still uses 
- * ids rather than names */
-static struct prpl *find_protocol_by_id(int id)
-{
-	switch (id) {
-	case 0: case 1: case 3: return find_protocol("oscar");
-	case 4: return find_protocol("msn");
-	case 2: return find_protocol("yahoo");
-	case 8: return find_protocol("jabber");
-	default: break;
-	}
-	return NULL;
-}
-
-static int find_protocol_id(const char *name)
-{
-	if (!strcmp(name, "oscar")) return 1;
-	if (!strcmp(name, "msn")) return 4;
-	if (!strcmp(name, "yahoo")) return 2;
-	if (!strcmp(name, "jabber")) return 8;
-
-	return -1;
-}
-
-
 static void text_init (void)
 {
 	if( access( global.conf->configdir, F_OK ) != 0 )
@@ -69,6 +43,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	char nick[MAX_NICK_LENGTH+1];
 	FILE *fp;
 	user_t *ru = user_find( irc, ROOT_NICK );
+	account_t *acc, *acc_lookup[9];
 	
 	if( irc->status & USTATUS_IDENTIFIED )
 		return( 1 );
@@ -79,7 +54,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	
 	fscanf( fp, "%32[^\n]s", s );
 
-	if (checkpass (password, s) != 0) 
+	if( checkpass( password, s ) != 0 )
 	{
 		fclose( fp );
 		return STORAGE_INVALID_PASSWORD;
@@ -99,20 +74,34 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	}
 	fclose( fp );
 	
+	/* Build a list with the first listed account of every protocol
+	   number. So if the user had nicks defined for a second account on
+	   the same IM network, those nicks will be added to the wrong
+	   account, and the user should rename those buddies again. But at
+	   least from now on things will be saved properly. */
+	memset( acc_lookup, 0, sizeof( acc_lookup ) );
+	for( acc = irc->accounts; acc; acc = acc->next )
+	{
+		if( acc_lookup[0] == NULL && strcmp( acc->prpl->name, "oscar" ) == 0 )
+			acc_lookup[0] = acc_lookup[1] = acc_lookup[3] = acc;
+		else if( acc_lookup[2] == NULL && strcmp( acc->prpl->name, "yahoo" ) == 0 )
+			acc_lookup[2] = acc;
+		else if( acc_lookup[4] == NULL && strcmp( acc->prpl->name, "msn" ) == 0 )
+			acc_lookup[4] = acc;
+		else if( acc_lookup[8] == NULL && strcmp( acc->prpl->name, "jabber" ) == 0 )
+			acc_lookup[8] = acc;
+	}
+	
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".nicks" );
 	fp = fopen( s, "r" );
 	if( !fp ) return STORAGE_NO_SUCH_USER;
 	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
 	{
-		struct prpl *prpl;
-
-		prpl = find_protocol_by_id(proto);
-
-		if (!prpl)
+		if( ( acc = acc_lookup[proto] ) == NULL )
 			continue;
-
+		
 		http_decode( s );
-		// FIXME!!!! nick_set( irc, s, prpl, nick );
+		nick_set( acc, s, nick );
 	}
 	fclose( fp );
 	

@@ -69,7 +69,7 @@ GList *storage_init(const char *primary, char **migrate)
 	register_storage_backend(&storage_xml);
 	
 	storage = storage_init_single(primary);
-	if (storage == NULL)
+	if (storage == NULL && storage->save == NULL)
 		return NULL;
 
 	ret = g_list_append(ret, storage);
