@@ -16,6 +16,9 @@ LFLAGS += -r
 
 # [SH] Phony targets
 all: msn_mod.o
+check: all
+gcov: 
+	gcov *.c
 	
 .PHONY: all clean distclean
 

@@ -16,6 +16,7 @@ LFLAGS += -r
 
 # [SH] Phony targets
 all: jabber_mod.o
+check: all
 
 .PHONY: all clean distclean
 
