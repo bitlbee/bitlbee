@@ -651,6 +651,7 @@ void irc_names( irc_t *irc, char *channel )
 	user_t *u;
 	char namelist[385] = "";
 	struct conversation *c = NULL;
+	char *ops = set_getstr( irc, "ops" );
 	
 	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
@@ -667,6 +668,9 @@ void irc_names( irc_t *irc, char *channel )
 			
 			if( u->gc && !u->away && set_getint( irc, "away_devoice" ) )
 				strcat( namelist, "+" );
+			else if( ( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) == 0 ) ) ||
+			         ( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) == 0 ) ) )
+				strcat( namelist, "@" );
 			
 			strcat( namelist, u->nick );
 			strcat( namelist, " " );
@@ -675,7 +679,6 @@ void irc_names( irc_t *irc, char *channel )
 	else if( ( c = conv_findchannel( channel ) ) )
 	{
 		GList *l;
-		char *ops = set_getstr( irc, "ops" );
 		
 		/* root and the user aren't in the channel userlist but should
 		   show up in /NAMES, so list them first: */
