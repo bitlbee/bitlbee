@@ -35,9 +35,6 @@
 
 static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition condition );
 
-#undef AF_INET6
-#define AF_INET6 666
-
 int bitlbee_daemon_init()
 {
 #ifdef IPV6
