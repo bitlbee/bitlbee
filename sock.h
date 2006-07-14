@@ -1,13 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
 
-/* To cut down on the ifdef stuff a little bit in other places */
-#ifdef IPV6
-#define AF_INETx AF_INET6
-#else
-#define AF_INETx AF_INET
-#endif
-
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/socket.h>

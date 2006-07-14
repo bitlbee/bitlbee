@@ -104,6 +104,8 @@ static void msn_close( struct gaim_connection *gc )
 			g_slist_free( md->msgq );
 		}
 		
+		while( md->groupcount > 0 )
+			g_free( md->grouplist[--md->groupcount] );
 		g_free( md->grouplist );
 		
 		g_free( md );
