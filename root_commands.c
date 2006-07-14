@@ -376,6 +376,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 		
 		if( a == NULL )
 		{
+			g_free( acc_handle );
 			irc_usermsg( irc, "Invalid account" );
 			return;
 		}
@@ -386,11 +387,13 @@ static void cmd_account( irc_t *irc, char **cmd )
 			
 			if( a->gc && s && s->flags & ACC_SET_OFFLINE_ONLY )
 			{
+				g_free( acc_handle );
 				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );
 				return;
 			}
 			else if( !a->gc && s && s->flags & ACC_SET_ONLINE_ONLY )
 			{
+				g_free( acc_handle );
 				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "on" );
 				return;
 			}

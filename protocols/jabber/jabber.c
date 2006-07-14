@@ -1548,6 +1548,13 @@ static void jabber_login(account_t *acc)
 	gc = new_gaim_conn(acc);
 	jd = gc->proto_data = g_new0(struct jabber_data, 1);
 	
+	if( strchr( acc->user, '@' ) == NULL )
+	{
+		hide_login_progress( gc, "Invalid account name" );
+		signoff( gc );
+		return;
+	}
+	
 	resource = set_getstr(&acc->set, "resource");
 	loginname = create_valid_jid(acc->user, DEFAULT_SERVER, resource);
 	
