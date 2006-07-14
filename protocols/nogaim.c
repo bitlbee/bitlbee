@@ -310,7 +310,8 @@ void signoff( struct gaim_connection *gc )
 	{
 		/* Uhm... This is very sick. */
 	}
-	else if( !gc->wants_to_die && set_getint( &irc->set, "auto_reconnect" ) )
+	else if( !gc->wants_to_die && set_getbool( &irc->set, "auto_reconnect" ) &&
+	         set_getbool( &a->set, "auto_reconnect" ) )
 	{
 		int delay = set_getint( &irc->set, "auto_reconnect_delay" );
 		
