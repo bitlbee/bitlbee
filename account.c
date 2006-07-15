@@ -51,7 +51,7 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	s = set_add( &a->set, "auto_connect", "true", set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE;
 	
-	s = set_add( &a->set, "auto_reconnect", "true", set_eval_account, a );
+	s = set_add( &a->set, "auto_reconnect", "true", set_eval_bool, a );
 	
 	s = set_add( &a->set, "password", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE;

@@ -623,7 +623,7 @@ void irc_names( irc_t *irc, char *channel )
 	user_t *u;
 	char namelist[385] = "";
 	struct conversation *c = NULL;
-	char *ops = set_getstr( irc, "ops" );
+	char *ops = set_getstr( &irc->set, "ops" );
 	
 	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
