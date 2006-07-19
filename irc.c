@@ -651,7 +651,6 @@ void irc_names( irc_t *irc, char *channel )
 	else if( ( c = conv_findchannel( channel ) ) )
 	{
 		GList *l;
-		char *ops = set_getstr( &irc->set, "ops" );
 		
 		/* root and the user aren't in the channel userlist but should
 		   show up in /NAMES, so list them first: */

@@ -745,6 +745,10 @@
 			<para>
 				This command allows to set the friendly name of an im account. If no new name is specified the command will report the current name. When the name contains spaces, don't forget to quote the whole nick in double quotes. Currently this command is only supported by the MSN protocol.
 			</para>
+
+			<para>
+				It is recommended to use the per-account <emphasis>display_name</emphasis> setting to read and change this information. The <emphasis>nick</emphasis> command is deprecated.
+			</para>
 		</description>
 
 		<ircexample>

@@ -22,6 +22,8 @@
 \***************************************************************************/
 
 
+/* See rc4.c for more information. */
+
 struct rc4_state
 {
 	unsigned char S[256];

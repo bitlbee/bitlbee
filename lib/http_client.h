@@ -23,24 +23,48 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include <glib.h>
+/* http_client allows you to talk (asynchronously, again) to HTTP servers.
+   In the "background" it will send the whole query and wait for a complete
+   response to come back. Right now it's only used by the MSN Passport
+   authentication code, but it might be useful for other things too (for
+   example the AIM usericon patch uses this so icons can be stored on
+   webservers instead of the local filesystem).
+   
+   Didn't test this too much, but it seems to work well. Just don't look
+   at the code that handles HTTP 30x redirects. ;-) The function is
+   probably not very useful for downloading lots of data since it keeps 
+   everything in a memory buffer until the download is completed (and
+   can't pass any data or whatever before then). It's very useful for
+   doing quick requests without blocking the whole program, though. */
 
+#include <glib.h>
 #include "ssl_client.h"
 
 struct http_request;
 
+/* Your callback function should look like this: */
 typedef void (*http_input_function)( struct http_request * );
 
+/* This structure will be filled in by the http_dorequest* functions, and
+   it will be passed to the callback function. Use the data field to add
+   your own data. */
 struct http_request
 {
-	char *request;
-	int request_length;
-	int status_code;
-	char *status_string;
+	char *request;          /* The request to send to the server. */
+	int request_length;     /* Its size. */
+	int status_code;        /* The numeric HTTP status code. (Or -1
+	                           if something really went wrong) */
+	char *status_string;    /* The error text. */
 	char *reply_headers;
 	char *reply_body;
-	int body_size;
-	int finished;
+	int body_size;          /* The number of bytes in reply_body. */
+	int finished;           /* Set to non-0 if the request was completed
+	                           successfully. */
+	
+	http_input_function func;
+	gpointer data;
+	
+	/* Please don't touch the things down here, you shouldn't need them. */
 	
 	void *ssl;
 	int fd;
@@ -48,10 +72,11 @@ struct http_request
 	int inpa;
 	int bytes_written;
 	int bytes_read;
-	
-	http_input_function func;
-	gpointer data;
 };
 
+/* The _url variant is probably more useful than the raw version. The raw
+   version is probably only useful if you want to do POST requests or if
+   you want to add some extra headers. As you can see, HTTPS connections
+   are also supported (using ssl_client). */
 void *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data );
 void *http_dorequest_url( char *url_string, http_input_function func, gpointer data );
