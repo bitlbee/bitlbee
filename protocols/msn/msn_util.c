@@ -53,18 +53,7 @@ int msn_logged_in( struct gaim_connection *gc )
 int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char *realname_ )
 {
 	struct msn_data *md = gc->proto_data;
-	GSList *l, **lp = NULL;
 	char buf[1024], *realname;
-	
-	if( strcmp( list, "AL" ) == 0 )
-		lp = &gc->permit;
-	else if( strcmp( list, "BL" ) == 0 )
-		lp = &gc->deny;
-	
-	if( lp )
-		for( l = *lp; l; l = l->next )
-			if( g_strcasecmp( l->data, who ) == 0 )
-				return( 1 );
 	
 	realname = g_new0( char, strlen( realname_ ) * 3 + 1 );
 	strcpy( realname, realname_ );
@@ -74,9 +63,6 @@ int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char 
 	if( msn_write( gc, buf, strlen( buf ) ) )
 	{
 		g_free( realname );
-		
-		if( lp )
-			*lp = g_slist_append( *lp, g_strdup( who ) );
 		
 		return( 1 );
 	}
@@ -89,32 +75,11 @@ int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char 
 int msn_buddy_list_remove( struct gaim_connection *gc, char *list, char *who )
 {
 	struct msn_data *md = gc->proto_data;
-	GSList *l = NULL, **lp = NULL;
 	char buf[1024];
-	
-	if( strcmp( list, "AL" ) == 0 )
-		lp = &gc->permit;
-	else if( strcmp( list, "BL" ) == 0 )
-		lp = &gc->deny;
-	
-	if( lp )
-	{
-		for( l = *lp; l; l = l->next )
-			if( g_strcasecmp( l->data, who ) == 0 )
-				break;
-		
-		if( !l )
-			return( 1 );
-	}
 	
 	g_snprintf( buf, sizeof( buf ), "REM %d %s %s\r\n", ++md->trId, list, who );
 	if( msn_write( gc, buf, strlen( buf ) ) )
-	{
-		if( lp )
-			*lp = g_slist_remove( *lp, l->data );
-		
 		return( 1 );
-	}
 	
 	return( 0 );
 }

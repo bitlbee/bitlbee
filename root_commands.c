@@ -579,7 +579,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 			format = "%-32.32s  %-16.16s";
 		
 		irc_usermsg( irc, format, "Handle", "Nickname" );
-		for( l = a->gc->deny; l; l = l->next )
+		for( l = a->gc->permit; l; l = l->next )
 		{
 			user_t *u = user_findhandle( a->gc, l->data );
 			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
