@@ -361,6 +361,11 @@ static void oscar_acc_init(account_t *acc)
 	
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	
+	if (isdigit(acc->user[0])) {
+		s = set_add( &acc->set, "web_aware", "false", set_eval_bool, acc );
+		s->flags |= ACC_SET_OFFLINE_ONLY;
+	}
 }
 
 static void oscar_login(account_t *acc) {
