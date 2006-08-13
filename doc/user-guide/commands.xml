@@ -618,6 +618,20 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="web_aware" type="string" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				ICQ allows people to see if you're on-line via a CGI-script. (http://status.icq.com/online.gif?icq=UIN) This can be nice to put on your website, but it seems that spammers also use it to see if you're online without having to add you to their contact list. So to prevent ICQ spamming, recent versions of BitlBee disable this feature by default.
+			</para>
+
+			<para>
+				Unless you really intend to use this feature somewhere (on forums or maybe a website), it's probably better to keep this setting disabled.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-command name="rename">
 		<short-description>Rename (renick) a buddy</short-description>
 		<syntax>rename &lt;oldnick&gt; &lt;newnick&gt;</syntax>
