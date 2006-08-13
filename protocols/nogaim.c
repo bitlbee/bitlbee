@@ -207,7 +207,7 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	va_end( params );
 
 	if( ( g_strcasecmp( set_getstr( &gc->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( &gc->irc->set, "strip_html" ) ) )
+	    ( ( gc->flags & OPT_CONN_HTML ) && set_getbool( &gc->irc->set, "strip_html" ) ) )
 		strip_html( text );
 	
 	/* Try to find a different connection on the same protocol. */
@@ -352,12 +352,12 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	char *s;
 	irc_t *irc = gc->irc;
 	
-	if( set_getint( &irc->set, "debug" ) && 0 ) /* This message is too useless */
+	if( set_getbool( &irc->set, "debug" ) && 0 ) /* This message is too useless */
 		serv_got_crap( gc, "Receiving user add from handle: %s", handle );
 	
 	if( user_findhandle( gc, handle ) )
 	{
-		if( set_getint( &irc->set, "debug" ) )
+		if( set_getbool( &irc->set, "debug" ) )
 			serv_got_crap( gc, "User already exists, ignoring add request: %s", handle );
 		
 		return;
@@ -445,7 +445,7 @@ void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname
 		
 		u->realname = g_strdup( realname );
 		
-		if( ( gc->flags & OPT_LOGGED_IN ) && set_getint( &gc->irc->set, "display_namechanges" ) )
+		if( ( gc->flags & OPT_LOGGED_IN ) && set_getbool( &gc->irc->set, "display_namechanges" ) )
 			serv_got_crap( gc, "User `%s' changed name to `%s'", u->nick, u->realname );
 	}
 }
@@ -508,7 +508,7 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 		}
 		else
 		{
-			if( set_getint( &gc->irc->set, "debug" ) || g_strcasecmp( set_getstr( &gc->irc->set, "handle_unknown" ), "ignore" ) != 0 )
+			if( set_getbool( &gc->irc->set, "debug" ) || g_strcasecmp( set_getstr( &gc->irc->set, "handle_unknown" ), "ignore" ) != 0 )
 			{
 				serv_got_crap( gc, "serv_got_update() for handle %s:", handle );
 				serv_got_crap( gc, "loggedin = %d, type = %d", loggedin, type );
@@ -567,7 +567,7 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 		u->away = NULL;
 	
 	/* LISPy... */
-	if( ( set_getint( &gc->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
+	if( ( set_getbool( &gc->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
 	    ( u->online ) &&						/* Don't touch offline people */
 	    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
 	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
@@ -590,14 +590,14 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 		
 		if( g_strcasecmp( h, "ignore" ) == 0 )
 		{
-			if( set_getint( &irc->set, "debug" ) )
+			if( set_getbool( &irc->set, "debug" ) )
 				serv_got_crap( gc, "Ignoring message from unknown handle %s", handle );
 			
 			return;
 		}
 		else if( g_strncasecmp( h, "add", 3 ) == 0 )
 		{
-			int private = set_getint( &irc->set, "private" );
+			int private = set_getbool( &irc->set, "private" );
 			
 			if( h[3] )
 			{
@@ -619,7 +619,7 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	}
 	
 	if( ( g_strcasecmp( set_getstr( &gc->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( &gc->irc->set, "strip_html" ) ) )
+	    ( ( gc->flags & OPT_CONN_HTML ) && set_getbool( &gc->irc->set, "strip_html" ) ) )
 		strip_html( msg );
 
 	while( strlen( msg ) > 425 )
@@ -659,7 +659,7 @@ void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout, int
 {
 	user_t *u;
 	
-	if( !set_getint( &gc->irc->set, "typing_notice" ) )
+	if( !set_getbool( &gc->irc->set, "typing_notice" ) )
 		return;
 	
 	if( ( u = user_findhandle( gc, handle ) ) ) {
@@ -681,7 +681,7 @@ void serv_got_chat_left( struct gaim_connection *gc, int id )
 	struct conversation *c, *l = NULL;
 	GList *ir;
 	
-	if( set_getint( &gc->irc->set, "debug" ) )
+	if( set_getbool( &gc->irc->set, "debug" ) )
 		serv_got_crap( gc, "You were removed from conversation %d", (int) id );
 	
 	for( c = gc->conversations; c && c->id != id; c = (l=c)->next );
@@ -727,7 +727,7 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	for( c = gc->conversations; c && c->id != id; c = c->next );
 	
 	if( ( g_strcasecmp( set_getstr( &gc->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( gc->flags & OPT_CONN_HTML ) && set_getint( &gc->irc->set, "strip_html" ) ) )
+	    ( ( gc->flags & OPT_CONN_HTML ) && set_getbool( &gc->irc->set, "strip_html" ) ) )
 		strip_html( msg );
 	
 	if( c && u )
@@ -760,7 +760,7 @@ struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, c
 	c->channel = g_strdup( s );
 	g_free( s );
 	
-	if( set_getint( &gc->irc->set, "debug" ) )
+	if( set_getbool( &gc->irc->set, "debug" ) )
 		serv_got_crap( gc, "Creating new conversation: (id=%d,handle=%s)", id, handle );
 	
 	return( c );
@@ -774,7 +774,7 @@ void add_chat_buddy( struct conversation *b, char *handle )
 	user_t *u = user_findhandle( b->gc, handle );
 	int me = 0;
 	
-	if( set_getint( &b->gc->irc->set, "debug" ) )
+	if( set_getbool( &b->gc->irc->set, "debug" ) )
 		serv_got_crap( b->gc, "User %s added to conversation %d", handle, b->id );
 	
 	/* It might be yourself! */
@@ -808,7 +808,7 @@ void remove_chat_buddy( struct conversation *b, char *handle, char *reason )
 	user_t *u;
 	int me = 0;
 	
-	if( set_getint( &b->gc->irc->set, "debug" ) )
+	if( set_getbool( &b->gc->irc->set, "debug" ) )
 		serv_got_crap( b->gc, "User %s removed from conversation %d (%s)", handle, b->id, reason ? reason : "" );
 	
 	/* It might be yourself! */
@@ -886,7 +886,7 @@ char *set_eval_away_devoice( set_t *set, char *value )
 	
 	/* Horror.... */
 	
-	if( st != set_getint( &irc->set, "away_devoice" ) )
+	if( st != set_getbool( &irc->set, "away_devoice" ) )
 	{
 		char list[80] = "";
 		user_t *u = irc->users;
@@ -1006,7 +1006,7 @@ int bim_set_away( struct gaim_connection *gc, char *away )
 		if( s )
 		{
 			gc->acc->prpl->set_away( gc, s, away );
-			if( set_getint( &gc->irc->set, "debug" ) )
+			if( set_getbool( &gc->irc->set, "debug" ) )
 				serv_got_crap( gc, "Setting away state to %s", s );
 		}
 		else

@@ -1251,10 +1251,6 @@ static int gaim_parse_incoming_im(aim_session_t *sess, aim_frame_t *fr, ...) {
 	channel = va_arg(ap, int);
 	userinfo = va_arg(ap, aim_userinfo_t *);
 
-    if (set_getint(sess->aux_data, "debug")) {
-        serv_got_crap(sess->aux_data, "channel %i called", channel);
-    }
-
 	switch (channel) {
 		case 1: { /* standard message */
 			struct aim_incomingim_ch1_args *args;

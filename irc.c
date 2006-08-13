@@ -212,7 +212,7 @@ void irc_free(irc_t * irc)
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
-	if( irc->status & USTATUS_IDENTIFIED && set_getint( &irc->set, "save_on_quit" ) ) 
+	if( irc->status & USTATUS_IDENTIFIED && set_getbool( &irc->set, "save_on_quit" ) ) 
 		if( storage_save( irc, TRUE ) != STORAGE_OK )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
@@ -1057,7 +1057,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 {
 	if( !u || !u->gc ) return;
 	
-	if( set_getint( &irc->set, "buddy_sendbuffer" ) && set_getint( &irc->set, "buddy_sendbuffer_delay" ) > 0 )
+	if( set_getbool( &irc->set, "buddy_sendbuffer" ) && set_getint( &irc->set, "buddy_sendbuffer_delay" ) > 0 )
 	{
 		int delay;
 		

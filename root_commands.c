@@ -143,7 +143,7 @@ static void cmd_identify( irc_t *irc, char **cmd )
 	case STORAGE_OK:
 		irc_usermsg( irc, "Password accepted, settings and accounts loaded" );
 		irc_umode_set( irc, "+R", 1 );
-		if( set_getint( &irc->set, "auto_connect" ) )
+		if( set_getbool( &irc->set, "auto_connect" ) )
 			cmd_account( irc, account_on );
 		break;
 	case STORAGE_OTHER_ERROR:
