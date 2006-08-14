@@ -154,17 +154,27 @@ http://code.bitlbee.org/
 A NOTE ON ENCRYPTION
 ====================
 
-BitlBee stores the accounts and settings (not your contact list though) in
-some sort of encrypted/obfuscated format.
+There used to be a note here about the simple obfuscation method used to
+make the passwords in the configuration files unreadable. However, BitlBee
+now uses a better format (and real encryption (salted MD5 and RC4)) to store
+the passwords. This means that people who somehow get their hands on your
+configuration files can't easily extract your passwords from them anymore.
 
-*** THIS IS NOT A SAFE FORMAT! ***
+However, once you log into the BitlBee server and send your password, an
+intruder with tcpdump can still read your passwords. This can't really be
+avoided, of course. The new format is a lot more reliable (because it can't
+be cracked with just very basic crypto analysis anymore), but you still have
+to be careful. The main extra protection offered by the new format is that
+the files can only be cracked with some help from the user (by sending the
+password at login time).
 
-You should still make sure the rights to the configuration directory and
-files are set so that only root and the BitlBee user can read/write them.
-
-This format is not to prevent malicicous users from running with your
-passwords, but to prevent accidental glimpses of the administrators to cause
-any harm. You have no choice but to trust root though.
+So if you run a public server, it's most important that you don't give root
+access to people who like to play with tcpdump. Also, it's a good idea to
+delete all *.nicks/*.accounts files as soon as BitlBee converted them to the
+new format (which happens as soon as the user logs in, it can't be done
+automatically because it needs the password for that account). You won't
+need them anymore (unless you want to switch back to an older BitlBee
+version) and they only make it easier for others to crack your passwords.
 
 
 LEGAL
@@ -191,5 +201,5 @@ also licensed under the GPL.
 
 	BitlBee - An IRC to other chat networks gateway 
 	          <http://www.bitlbee.org/>
-	Copyright (C) 2002-2005  Wilmer van der Gaast <wilmer@gaast.net>
+	Copyright (C) 2002-2006  Wilmer van der Gaast <wilmer@gaast.net>
 	                         and others
