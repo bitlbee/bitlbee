@@ -45,7 +45,7 @@
 #include "rc4.h"
 
 /* Add some seed to the password, to make sure we *never* use the same key.
-   This defines how many byes we use as a seed. */
+   This defines how many bytes we use as a seed. */
 #define RC4_IV_LEN 6
 
 /* To defend against a "Fluhrer, Mantin and Shamir attack", it is recommended
