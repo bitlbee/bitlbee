@@ -1,3 +1,27 @@
+Version x.x:
+- Most important change: New file format for user data (accounts, nicks and
+  settings). Migration to the new format should happen transparently,
+  BitlBee will read the old files and once you quit/save it will save in the
+  new format. It is recommended to delete the old files (BitlBee doesn't do
+  this automatically, it will just ignore them) since they won't be used
+  anymore (and since the old file format is a security risk). Some advantages
+  of this file format switch:
+  * Safer format, since the identify-password is now salted before generating
+    a checksum. This way one can't use MD5 reverse lookup databases to crack
+    passwords. Also, the IM-account passwords are encrypted using RC4 instead
+    of the simple obfuscation scheme which BitlBee used so far.
+  * Easier to extend than the previous format (at least the .nicks format was
+    horribly limited).
+  * Nicknames for buddies are now saved per-account instead of per-protocol.
+    So far having one buddy on multiple accounts of the same protocol was a
+    problem because the nicks generated for the two "instances" of this buddy
+    were very unpredictable.
+    NOTE: This also means that "account del" removes not just the account,
+    BUT ALSO ALL NICKNAMES! If you're changing IM accounts and don't want to
+    lose the nicknames, you can now use "account set" to change the username
+    and password for the existing connection.
+  * Per-account settings (see the new "account set" command).
+
 Version 1.0:
 - Removed some crashy debugging code.
 - QUIT command now works before logging in. (Mainly an RFC-compliancy fix.)
