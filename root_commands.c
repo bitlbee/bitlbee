@@ -168,6 +168,7 @@ static void cmd_register( irc_t *irc, char **cmd )
 			break;
 			
 		case STORAGE_OK:
+			irc_usermsg( irc, "Account successfully created" );
 			irc->status |= USTATUS_IDENTIFIED;
 			irc_umode_set( irc, "+R", 1 );
 			break;

@@ -25,7 +25,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
-set_t *set_add( set_t **head, char *key, char *def, void *eval, void *data )
+set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data )
 {
 	set_t *s = set_find( head, key );
 	

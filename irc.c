@@ -32,8 +32,10 @@ static gboolean irc_userping( gpointer _irc, int fd, b_input_condition cond );
 
 GSList *irc_connection_list = NULL;
 
-static char *passchange( irc_t *irc, void *set, char *value )
+static char *passchange( set_t *set, char *value )
 {
+	irc_t *irc = set->data;
+	
 	irc_setpass( irc, value );
 	irc_usermsg( irc, "Password successfully changed" );
 	return NULL;

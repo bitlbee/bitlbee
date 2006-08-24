@@ -33,6 +33,8 @@
    every setting, which can check a new value and block it by returning
    NULL, or replace it by returning a new value. See struct set.eval. */
 
+typedef char *(*set_eval) ( struct set *set, char *value );
+
 typedef struct set
 {
 	void *data;     /* Here you can save a pointer to the
@@ -51,12 +53,12 @@ typedef struct set
 	/* Eval: Returns NULL if the value is incorrect or exactly the
 	   passed value variable. When returning a corrected value,
 	   set_setstr() should be able to free() the returned string! */
-	char *(*eval) ( struct set *set, char *value );
+	set_eval eval;
 	struct set *next;
 } set_t;
 
 /* Should be pretty clear. */
-set_t *set_add( set_t **head, char *key, char *def, void *eval, void *data );
+set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data );
 
 /* Returns the raw set_t. Might be useful sometimes. */
 set_t *set_find( set_t **head, char *key );
