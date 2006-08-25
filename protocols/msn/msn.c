@@ -211,8 +211,7 @@ static void msn_set_away( struct gaim_connection *gc, char *state, char *message
 
 static void msn_set_info( struct gaim_connection *gc, char *info )
 {
-	int i;
-	char buf[1024], *fn, *s;
+	char buf[1024], *fn;
 	struct msn_data *md = gc->proto_data;
 	
 	if( strlen( info ) > 129 )
@@ -221,22 +220,7 @@ static void msn_set_info( struct gaim_connection *gc, char *info )
 		return;
 	}
 	
-	/* Of course we could use http_encode() here, but when we encode
-	   every character, the server is less likely to complain about the
-	   chosen name. However, the MSN server doesn't seem to like escaped
-	   non-ASCII chars, so we keep those unescaped. */
-	s = fn = g_new0( char, strlen( info ) * 3 + 1 );
-	for( i = 0; info[i]; i ++ )
-		if( info[i] & 128 )
-		{
-			*s = info[i];
-			s ++;
-		}
-		else
-		{
-			g_snprintf( s, 4, "%%%02X", info[i] );
-			s += 3;
-		}
+	fn = msn_http_encode( info );
 	
 	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, gc->username, fn );
 	msn_write( gc, buf, strlen( buf ) );
