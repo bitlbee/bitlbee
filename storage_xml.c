@@ -226,10 +226,14 @@ static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name
 	}
 }
 
-static void xml_text( GMarkupParseContext *ctx, const gchar *text, gsize text_len, gpointer data, GError **error )
+static void xml_text( GMarkupParseContext *ctx, const gchar *text_orig, gsize text_len, gpointer data, GError **error )
 {
+	char text[text_len+1];
 	struct xml_parsedata *xd = data;
 	irc_t *irc = xd->irc;
+	
+	strncpy( text, text_orig, text_len );
+	text[text_len] = 0;
 	
 	if( xd->pass_st < XML_PASS_OK )
 	{
