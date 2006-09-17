@@ -53,36 +53,6 @@ void strip_linefeed(gchar *text)
 	g_free(text2);
 }
 
-char *add_cr(char *text)
-{
-	char *ret = NULL;
-	int count = 0, j;
-	unsigned int i;
-
-	if (text[0] == '\n')
-		count++;
-	for (i = 1; i < strlen(text); i++)
-		if (text[i] == '\n' && text[i - 1] != '\r')
-			count++;
-
-	if (count == 0)
-		return g_strdup(text);
-
-	ret = g_malloc0(strlen(text) + count + 1);
-
-	i = 0; j = 0;
-	if (text[i] == '\n')
-		ret[j++] = '\r';
-	ret[j++] = text[i++];
-	for (; i < strlen(text); i++) {
-		if (text[i] == '\n' && text[i - 1] != '\r')
-			ret[j++] = '\r';
-		ret[j++] = text[i];
-	}
-
-	return ret;
-}
-
 char *normalize(const char *s)
 {
 	static char buf[BUF_LEN];
@@ -123,11 +93,9 @@ time_t get_time(int year, int month, int day, int hour, int min, int sec)
 
 typedef struct htmlentity
 {
-	char code[8];
-	char is[4];
+	char code[7];
+	char is[3];
 } htmlentity_t;
-
-/* FIXME: This is ISO8859-1(5) centric, so might cause problems with other charsets. */
 
 static const htmlentity_t ent[] =
 {
