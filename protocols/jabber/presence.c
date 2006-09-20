@@ -33,3 +33,18 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	return XT_HANDLED;
 }
 
+int presence_announce( struct gaim_connection *gc )
+{
+	struct xt_node *node;
+	int st;
+	
+	node = jabber_make_packet( "presence", NULL, NULL, NULL );
+	
+	st = jabber_write_packet( gc, node );
+	
+	if( st )
+		account_online( gc );
+	
+	xt_free_node( node );
+	return st;
+}

@@ -41,7 +41,10 @@ int jabber_start_auth( struct gaim_connection *gc );
 int jabber_get_roster( struct gaim_connection *gc );
 
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
+
+/* presence.c */
 xt_status jabber_pkt_presence( struct xt_node *node, gpointer data );
+int presence_announce( struct gaim_connection *gc );
 
 /* jabber_util.c */
 char *set_eval_resprio( set_t *set, char *value );

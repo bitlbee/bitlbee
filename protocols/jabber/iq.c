@@ -86,6 +86,25 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		
 		return st ? XT_HANDLED : XT_ABORT;
 	}
+	if( strcmp( type, "result" ) == 0 && xmlns && strcmp( xmlns, "jabber:iq:roster" ) == 0 )
+	{
+		struct xt_node *node;
+		
+		node = query->children;
+		while( ( node = xt_find_node( node, "item" ) ) )
+		{
+			char *jid = xt_find_attr( node, "jid" );
+			char *name = xt_find_attr( node, "name" );
+			char *sub = xt_find_attr( node, "subscription" );
+			
+			if( jid && sub && ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
+				add_buddy( gc, NULL, jid, name );
+			
+			node = node->next;
+		}
+		
+		presence_announce( gc );
+	}
 	else if( strcmp( type, "result" ) == 0 )
 	{
 		/* If we weren't authenticated yet, let's assume we are now.
