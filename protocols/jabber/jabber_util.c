@@ -1,7 +1,7 @@
 /***************************************************************************\
 *                                                                           *
 *  BitlBee - An IRC to IM gateway                                           *
-*  Jabber module - Main file                                                *
+*  Jabber module - Misc. stuff                                              *
 *                                                                           *
 *  Copyright 2006 Wilmer van der Gaast <wilmer@gaast.net>                   *
 *                                                                           *
@@ -22,6 +22,8 @@
 \***************************************************************************/
 
 #include "jabber.h"
+
+static int next_id = 1;
 
 char *set_eval_resprio( set_t *set, char *value )
 {
@@ -45,4 +47,22 @@ char *set_eval_tls( set_t *set, char *value )
 		return value;
 	else
 		return set_eval_bool( set, value );
+}
+
+struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children )
+{
+	char *id = g_strdup_printf( "BeeX%04x", next_id++ );
+	struct xt_node *node;
+	
+	node = xt_new_node( name, NULL, children );
+	
+	xt_add_attr( node, "id", id );
+	if( type )
+		xt_add_attr( node, "type", type );
+	if( to )
+		xt_add_attr( node, "to", to );
+	
+	g_free( id );
+	
+	return node;
 }

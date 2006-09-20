@@ -27,6 +27,7 @@
 #include <ctype.h>
 #include <stdio.h>
 
+#include "ssl_client.h"
 #include "xmltree.h"
 #include "bitlbee.h"
 #include "jabber.h"
@@ -54,14 +55,58 @@ static void jabber_acc_init( account_t *acc )
 
 static void jabber_login( account_t *acc )
 {
+	struct gaim_connection *gc = new_gaim_conn( acc );
+	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
+	
+	jd->gc = gc;
+	gc->proto_data = jd;
+	
+	jd->username = g_strdup( acc->user );
+	jd->server = strchr( jd->username, '@' );
+	
+	if( jd->server == NULL )
+	{
+		hide_login_progress( gc, "Incomplete account name (format it like <username@jabberserver.name>)" );
+		signoff( gc );
+		return;
+	}
+	
+	/* So don't think of free()ing jd->server.. :-) */
+	*jd->server = 0;
+	jd->server ++;
+	
+	if( set_getbool( &acc->set, "ssl" ) )
+	{
+		signoff( gc );
+		/* TODO! */
+	}
+	else
+	{
+		jd->fd = proxy_connect( jd->server, set_getint( &acc->set, "port" ), jabber_connected_plain, gc );
+	}
 }
 
 static void jabber_close( struct gaim_connection *gc )
 {
+	struct jabber_data *jd = gc->proto_data;
+	
+	if( jd->r_inpa >= 0 )
+		b_event_remove( jd->r_inpa );
+	if( jd->w_inpa >= 0 )
+		b_event_remove( jd->w_inpa );
+	
+	if( jd->ssl )
+		ssl_disconnect( jd->ssl );
+	if( jd->fd >= 0 )
+		closesocket( jd->fd );
+	
+	g_free( jd->username );
+	g_free( jd );
 }
 
 static int jabber_send_im( struct gaim_connection *gc, char *who, char *message, int len, int away )
 {
+	return 0;
 }
 
 void jabber_init()
@@ -94,28 +139,6 @@ void jabber_init()
 
 	register_protocol(ret);
 }
-
-static xt_status jabber_end_of_stream( struct xt_node *node, gpointer data )
-{
-	return XT_ABORT;
-}
-
-static xt_status jabber_pkt_misc( struct xt_node *node, gpointer data )
-{
-	printf( "Received unknown packet:\n" );
-	xt_print( node );
-	
-	return XT_HANDLED;
-}
-
-static const struct xt_handler_entry jabber_handlers[] = {
-	{ "stream:stream",      "<root>",               jabber_end_of_stream },
-	{ "iq",                 "stream:stream",        jabber_pkt_iq },
-	{ "message",            "stream:stream",        jabber_pkt_message },
-	{ "presence",           "stream:stream",        jabber_pkt_presence },
-	{ NULL,                 "stream:stream",        jabber_pkt_misc },
-	{ NULL,                 NULL,                   NULL }
-};
 
 #if 0
 int main( int argc, char *argv[] )

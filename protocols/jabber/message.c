@@ -1,7 +1,7 @@
 /***************************************************************************\
 *                                                                           *
 *  BitlBee - An IRC to IM gateway                                           *
-*  Jabber module - Main file                                                *
+*  Jabber module - Handling of message(s) (tags), etc                       *
 *                                                                           *
 *  Copyright 2006 Wilmer van der Gaast <wilmer@gaast.net>                   *
 *                                                                           *

@@ -205,7 +205,9 @@ void xt_cleanup( struct xt_parser *xt, struct xt_node *node )
 {
 	struct xt_node *c, *prev;
 	
-	/* Let's just hope xt->root isn't NULL! */
+	if( !xt || !xt->root )
+		return;
+	
 	if( node == NULL )
 		return xt_cleanup( xt, xt->root );
 	
@@ -356,6 +358,9 @@ void xt_free_node( struct xt_node *node )
 {
 	int i;
 	
+	if( !node )
+		return;
+	
 	g_free( node->name );
 	g_free( node->text );
 	
@@ -379,6 +384,9 @@ void xt_free_node( struct xt_node *node )
 
 void xt_free( struct xt_parser *xt )
 {
+	if( !xt )
+		return;
+	
 	if( xt->root )
 		xt_free_node( xt->root );
 	
@@ -406,6 +414,9 @@ struct xt_node *xt_find_node( struct xt_node *node, char *name )
 char *xt_find_attr( struct xt_node *node, char *key )
 {
 	int i;
+	
+	if( !node )
+		return NULL;
 	
 	for( i = 0; node->attr[i].key; i ++ )
 		if( g_strcasecmp( node->attr[i].key, key ) == 0 )
