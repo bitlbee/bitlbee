@@ -38,6 +38,7 @@ typedef enum
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
 int jabber_start_auth( struct gaim_connection *gc );
+int jabber_get_roster( struct gaim_connection *gc );
 
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
 xt_status jabber_pkt_presence( struct xt_node *node, gpointer data );

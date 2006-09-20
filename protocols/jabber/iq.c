@@ -23,26 +23,23 @@
 
 #include "jabber.h"
 
-/*
-<iq xmlns="jabber:client" id="BeeX00000001" type="result"><query
-xmlns="jabber:iq:auth"><username>wilmer</username><resource/><password/><digest/>
-<sequence>499</sequence><token>450D1FFD</token></query></iq>
-*/
-
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 {
 	struct gaim_connection *gc = data;
 	struct jabber_data *jd = gc->proto_data;
 	struct xt_node *query, *reply = NULL;
-	char *s;
+	char *s, *type, *xmlns;
 	int st;
 	
 	query = xt_find_node( node->children, "query" );
+	type = xt_find_attr( node, "type" );
 	
-	if( !query )
+	if( !type )
 		return XT_HANDLED;	/* Ignore it for now, don't know what's best... */
 	
-	if( ( s = xt_find_attr( query, "xmlns" ) ) && strcmp( s, "jabber:iq:auth" ) == 0 )
+	xmlns = xt_find_attr( query, "xmlns" );
+	
+	if( strcmp( type, "result" ) == 0 && xmlns && strcmp( xmlns, "jabber:iq:auth" ) == 0 )
 	{
 		/* Time to authenticate ourselves! */
 		reply = xt_new_node( "query", NULL, NULL );
@@ -78,7 +75,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		{
 			xt_free_node( reply );
 			
-			hide_login_progress_error( gc, "Can't find suitable authentication method" );
+			hide_login_progress( gc, "Can't find suitable authentication method" );
 			signoff( gc );
 			return XT_ABORT;
 		}
@@ -88,6 +85,26 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		xt_free_node( reply );
 		
 		return st ? XT_HANDLED : XT_ABORT;
+	}
+	else if( strcmp( type, "result" ) == 0 )
+	{
+		/* If we weren't authenticated yet, let's assume we are now.
+		   There are cleaner ways to do this, probably, but well.. */
+		if( !( jd->flags & JFLAG_AUTHENTICATED ) )
+		{
+			jd->flags |= JFLAG_AUTHENTICATED;
+			if( !jabber_get_roster( gc ) )
+				return XT_ABORT;
+		}
+	}
+	else if( strcmp( type, "error" ) == 0 )
+	{
+		if( !( jd->flags & JFLAG_AUTHENTICATED ) )
+		{
+			hide_login_progress( gc, "Authentication failure" );
+			signoff( gc );
+			return XT_ABORT;
+		}
 	}
 	
 	return XT_HANDLED;
@@ -101,6 +118,23 @@ int jabber_start_auth( struct gaim_connection *gc )
 	
 	node = xt_new_node( "query", NULL, xt_new_node( "username", jd->username, NULL ) );
 	xt_add_attr( node, "xmlns", "jabber:iq:auth" );
+	node = jabber_make_packet( "iq", "get", NULL, node );
+	
+	st = jabber_write_packet( gc, node );
+	
+	xt_free_node( node );
+	return st;
+}
+
+int jabber_get_roster( struct gaim_connection *gc )
+{
+	struct xt_node *node;
+	int st;
+	
+	set_login_progress( gc, 1, "Authenticated, requesting buddy list" );
+	
+	node = xt_new_node( "query", NULL, NULL );
+	xt_add_attr( node, "xmlns", "jabber:iq:roster" );
 	node = jabber_make_packet( "iq", "get", NULL, node );
 	
 	st = jabber_write_packet( gc, node );

@@ -100,6 +100,8 @@ static void jabber_close( struct gaim_connection *gc )
 	if( jd->fd >= 0 )
 		closesocket( jd->fd );
 	
+	xt_free( jd->xt );
+	
 	g_free( jd->username );
 	g_free( jd );
 }
