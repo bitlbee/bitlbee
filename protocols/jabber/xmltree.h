@@ -21,6 +21,9 @@
 *                                                                           *
 ****************************************************************************/
 
+#ifndef _XMLTREE_H
+#define _XMLTREE_H
+
 typedef enum
 {
 	XT_COMPLETE	= 1,	/* </tag> reached */
@@ -88,3 +91,5 @@ char *xt_find_attr( struct xt_node *node, char *key );
 struct xt_node *xt_new_node( char *name, char *text, struct xt_node *children );
 void xt_add_child( struct xt_node *parent, struct xt_node *child );
 void xt_add_attr( struct xt_node *node, char *key, char *value );
+
+#endif
