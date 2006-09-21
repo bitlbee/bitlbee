@@ -304,9 +304,6 @@ void xt_print( struct xt_node *node )
 	int i;
 	struct xt_node *c;
 	
-	printf( "%s\n", xt_to_string( node ) );
-	return;
-	
 	/* Indentation */
 	for( c = node; c->parent; c = c->parent )
 		printf( "\t" );

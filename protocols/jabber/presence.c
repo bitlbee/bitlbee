@@ -25,10 +25,30 @@
 
 xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 {
+	struct gaim_connection *gc = data;
 	char *from = xt_find_attr( node, "from" );
+	char *type = xt_find_attr( node, "type" );	/* NULL should mean the person is online. */
+	char *s;
 	
-	printf( "Received PRES from %s:\n", from );
-	xt_print( node );
+	if( !from )
+		return XT_HANDLED;
+	
+	s = strchr( from, '/' );
+	if( s )
+		*s = 0;
+	
+	if( type == NULL )
+		serv_got_update( gc, from, 1, 0, 0, 0, 0, 0 );
+	else if( strcmp( type, "unavailable" ) == 0 )
+		serv_got_update( gc, from, 0, 0, 0, 0, 0, 0 );
+	else
+	{
+		printf( "Received PRES from %s:\n", from );
+		xt_print( node );
+	}
+	
+	if( s )
+		*s = '/';
 	
 	return XT_HANDLED;
 }

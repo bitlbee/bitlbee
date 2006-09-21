@@ -169,8 +169,6 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 	return TRUE;
 }
 
-static gboolean jabber_start_stream( struct gaim_connection *gc );
-
 gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond )
 {
 	struct gaim_connection *gc = data;
@@ -209,7 +207,7 @@ static const struct xt_handler_entry jabber_handlers[] = {
 	{ NULL,                 NULL,                   NULL }
 };
 
-static gboolean jabber_start_stream( struct gaim_connection *gc )
+gboolean jabber_start_stream( struct gaim_connection *gc )
 {
 	struct jabber_data *jd = gc->proto_data;
 	int st;
@@ -234,4 +232,17 @@ static gboolean jabber_start_stream( struct gaim_connection *gc )
 	g_free( greet );
 	
 	return st;
+}
+
+gboolean jabber_end_stream( struct gaim_connection *gc )
+{
+	struct jabber_data *jd = gc->proto_data;
+	char eos[] = "</stream:stream>";
+	
+	/* Let's only do this if the queue is currently empty, otherwise it'd
+	   take too long anyway. */
+	if( jd->tx_len > 0 )
+		return TRUE;
+	else
+		return jabber_write( gc, eos, strlen( eos ) );
 }

@@ -90,6 +90,8 @@ static void jabber_close( struct gaim_connection *gc )
 {
 	struct jabber_data *jd = gc->proto_data;
 	
+	jabber_end_stream( gc );
+	
 	if( jd->r_inpa >= 0 )
 		b_event_remove( jd->r_inpa );
 	if( jd->w_inpa >= 0 )
@@ -108,7 +110,15 @@ static void jabber_close( struct gaim_connection *gc )
 
 static int jabber_send_im( struct gaim_connection *gc, char *who, char *message, int len, int away )
 {
-	return 0;
+	struct xt_node *node;
+	int st;
+	
+	node = xt_new_node( "body", message, NULL );
+	node = jabber_make_packet( "message", "chat", who, node );
+	st = jabber_write_packet( gc, node );
+	xt_free_node( node );
+	
+	return st;
 }
 
 static GList *jabber_away_states( struct gaim_connection *gc )
