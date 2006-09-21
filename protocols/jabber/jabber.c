@@ -111,6 +111,22 @@ static int jabber_send_im( struct gaim_connection *gc, char *who, char *message,
 	return 0;
 }
 
+static GList *jabber_away_states( struct gaim_connection *gc )
+{
+	GList *l = NULL;
+	
+	l = g_list_append( l, (void*) "Online" );
+	l = g_list_append( l, (void*) "Away" );
+	l = g_list_append( l, (void*) "Extended Away" );
+	l = g_list_append( l, (void*) "Do Not Disturb" );
+	
+	return( l );
+}
+
+static void jabber_set_away( struct gaim_connection *gc, char *state, char *message )
+{
+}
+
 void jabber_init()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
@@ -120,9 +136,9 @@ void jabber_init()
 	ret->acc_init = jabber_acc_init;
 	ret->close = jabber_close;
 	ret->send_im = jabber_send_im;
-//	ret->away_states = jabber_away_states;
+	ret->away_states = jabber_away_states;
 //	ret->get_status_string = jabber_get_status_string;
-//	ret->set_away = jabber_set_away;
+	ret->set_away = jabber_set_away;
 //	ret->set_info = jabber_set_info;
 //	ret->get_info = jabber_get_info;
 //	ret->add_buddy = jabber_add_buddy;

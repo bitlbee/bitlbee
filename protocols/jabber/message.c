@@ -25,11 +25,32 @@
 
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 {
+	struct gaim_connection *gc = data;
 	char *from = xt_find_attr( node, "from" );
+	char *type = xt_find_attr( node, "type" );
 	struct xt_node *msg = xt_find_node( node->children, "body" );
 	
-	printf( "Received MSG from %s: %s\n", from, msg ? msg->text : "<null>" );
-	xt_print( node );
+	if( !type || !msg )
+		return XT_HANDLED;	/* Grmbl... FIXME */
+	
+	if( strcmp( type, "chat" ) == 0 )
+	{
+		char *s;
+		
+		s = strchr( from, '/' );
+		if( s )
+			*s = 0;
+		
+		serv_got_im( gc, from, msg->text, 0, 0, 0 );
+		
+		if( s )
+			*s = '/';
+	}
+	else
+	{
+		printf( "Received MSG from %s: %s\n", from, msg ? msg->text : "<null>" );
+		xt_print( node );
+	}
 	
 	return XT_HANDLED;
 }
