@@ -56,7 +56,7 @@ int jabber_write_packet( struct gaim_connection *gc, struct xt_node *node );
 int jabber_write( struct gaim_connection *gc, char *buf, int len );
 gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond );
 gboolean jabber_start_stream( struct gaim_connection *gc );
-gboolean jabber_end_stream( struct gaim_connection *gc );
+void jabber_end_stream( struct gaim_connection *gc );
 
 struct jabber_data
 {

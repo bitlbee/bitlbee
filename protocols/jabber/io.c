@@ -234,15 +234,23 @@ gboolean jabber_start_stream( struct gaim_connection *gc )
 	return st;
 }
 
-gboolean jabber_end_stream( struct gaim_connection *gc )
+void jabber_end_stream( struct gaim_connection *gc )
 {
 	struct jabber_data *jd = gc->proto_data;
-	char eos[] = "</stream:stream>";
 	
 	/* Let's only do this if the queue is currently empty, otherwise it'd
 	   take too long anyway. */
-	if( jd->tx_len > 0 )
-		return TRUE;
-	else
-		return jabber_write( gc, eos, strlen( eos ) );
+	if( jd->tx_len == 0 )
+	{
+		char eos[] = "</stream:stream>";
+		struct xt_node *node;
+		int st;
+		
+		node = jabber_make_packet( "presence", "unavailable", NULL, NULL );
+		st = jabber_write_packet( gc, node );
+		xt_free_node( node );
+		
+		if( st )
+			jabber_write( gc, eos, strlen( eos ) );
+	}
 }
