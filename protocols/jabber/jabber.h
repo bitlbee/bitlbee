@@ -45,6 +45,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
 /* presence.c */
 xt_status jabber_pkt_presence( struct xt_node *node, gpointer data );
 int presence_announce( struct gaim_connection *gc );
+int presence_send( struct gaim_connection *gc, char *to, char *show, char *status );
 
 /* jabber_util.c */
 char *set_eval_resprio( set_t *set, char *value );

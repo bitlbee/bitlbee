@@ -121,6 +121,7 @@ static int jabber_send_im( struct gaim_connection *gc, char *who, char *message,
 	return st;
 }
 
+/* TODO: For away state handling, implement some list like the one for MSN. */
 static GList *jabber_away_states( struct gaim_connection *gc )
 {
 	GList *l = NULL;
@@ -135,11 +136,19 @@ static GList *jabber_away_states( struct gaim_connection *gc )
 
 static void jabber_set_away( struct gaim_connection *gc, char *state, char *message )
 {
+	/* For now let's just always set state to "away" and send the message, if available. */
+	presence_send( gc, NULL, g_strcasecmp( state, "Online" ) == 0 ? NULL : "away", message );
+}
+
+static void jabber_keepalive( struct gaim_connection *gc )
+{
+	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
+	jabber_write( gc, "\n", 1 );
 }
 
 void jabber_init()
 {
-	struct prpl *ret = g_new0(struct prpl, 1);
+	struct prpl *ret = g_new0( struct prpl, 1 );
 	
 	ret->name = "jabber";
 	ret->login = jabber_login;
@@ -157,7 +166,7 @@ void jabber_init()
 //	ret->chat_invite = jabber_chat_invite;
 //	ret->chat_leave = jabber_chat_leave;
 //	ret->chat_open = jabber_chat_open;
-//	ret->keepalive = jabber_keepalive;
+	ret->keepalive = jabber_keepalive;
 //	ret->add_permit = jabber_add_permit;
 //	ret->rem_permit = jabber_rem_permit;
 //	ret->add_deny = jabber_add_deny;
@@ -165,34 +174,5 @@ void jabber_init()
 //	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;
 
-	register_protocol(ret);
+	register_protocol( ret );
 }
-
-#if 0
-int main( int argc, char *argv[] )
-{
-	struct xt_parser *xt = xt_new( NULL );
-	struct xt_node *msg;
-	int i;
-	char buf[512];
-	
-	msg = xt_new_node( "message", NULL, xt_new_node( "body", "blaataap-test", NULL ) );
-	xt_add_child( msg, xt_new_node( "html", NULL, xt_new_node( "body", "<b>blaataap in html</b>", NULL ) ) );
-	xt_add_attr( msg, "xmlns", "jabber:client" );
-	xt_add_attr( xt_find_node( msg->children, "html" ), "xmlns", "html rotte zooi" );
-	printf( "%s\n", xt_to_string( msg ) );
-	
-	while( ( i = read( 0, buf, 512 ) ) > 0 )
-	{
-		if( xt_feed( xt, buf, i ) < 1 )
-			break;
-	}
-	xt->handlers = jabber_handlers;
-	xt_handle( xt, NULL );
-	
-	xt_cleanup( xt, NULL );
-	printf( "%d\n", xt->root );
-	
-	xt_free( xt );
-}
-#endif
