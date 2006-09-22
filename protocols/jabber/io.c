@@ -135,6 +135,13 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 			return FALSE;
 		}
 		
+		if( jd->flags & JFLAG_STREAM_RESTART )
+		{
+			jd->flags &= ~JFLAG_STREAM_RESTART;
+			xt_reset( jd->xt );
+			jabber_start_stream( gc );
+		}
+		
 		/* Garbage collection. */
 		xt_cleanup( jd->xt, NULL );
 		
@@ -203,6 +210,10 @@ static const struct xt_handler_entry jabber_handlers[] = {
 	{ "iq",                 "stream:stream",        jabber_pkt_iq },
 	{ "message",            "stream:stream",        jabber_pkt_message },
 	{ "presence",           "stream:stream",        jabber_pkt_presence },
+	{ "mechanisms",         "stream:features",      sasl_pkt_mechanisms },
+	{ "challenge",          "stream:stream",        sasl_pkt_challenge },
+	{ "success",            "stream:stream",        sasl_pkt_result },
+	{ "failure",            "stream:stream",        sasl_pkt_result },
 	{ NULL,                 "stream:stream",        jabber_pkt_misc },
 	{ NULL,                 NULL,                   NULL }
 };
@@ -223,9 +234,7 @@ gboolean jabber_start_stream( struct gaim_connection *gc )
 	
 	greet = g_strdup_printf( "<?xml version='1.0' ?>"
 	                         "<stream:stream to=\"%s\" xmlns=\"jabber:client\" "
-	                          "xmlns:stream=\"http://etherx.jabber.org/streams\">", jd->server );
-	/* Add this when TLS and SASL are supported? */
-	// version=\"1.0\">"
+	                          "xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\">", jd->server );
 	
 	st = jabber_write( gc, greet, strlen( greet ) );
 	

@@ -9,7 +9,7 @@
 -include ../../Makefile.settings
 
 # [SH] Program variables
-objects = io.o iq.o jabber.o jabber_util.o message.o presence.o xmltree.o
+objects = io.o iq.o jabber.o jabber_util.o message.o presence.o sasl.o xmltree.o
 
 CFLAGS += -Wall
 LFLAGS += -r

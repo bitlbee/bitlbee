@@ -31,8 +31,10 @@
 
 typedef enum
 {
-	JFLAG_STREAM_STARTED = 1,
-	JFLAG_AUTHENTICATED = 2,
+	JFLAG_STREAM_STARTED = 1,	/* Set when we detected the beginning of the stream and want to do auth. */
+	JFLAG_AUTHENTICATED = 2,	/* Set when we're successfully authenticatd. */
+	JFLAG_STREAM_RESTART = 4,	/* Set when we want to restart the stream (after SASL or TLS). */
+	JFLAG_SUPPORTS_TLS = 8,		/* Set when there's <starttls/> in <stream:features>. */
 } jabber_flags_t;
 
 /* iq.c */
@@ -58,6 +60,11 @@ int jabber_write( struct gaim_connection *gc, char *buf, int len );
 gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond );
 gboolean jabber_start_stream( struct gaim_connection *gc );
 void jabber_end_stream( struct gaim_connection *gc );
+
+/* sasl.c */
+xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data );
+xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data );
+xt_status sasl_pkt_result( struct xt_node *node, gpointer data );
 
 struct jabber_data
 {
