@@ -129,7 +129,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	return XT_HANDLED;
 }
 
-int jabber_start_auth( struct gaim_connection *gc )
+int jabber_start_iq_auth( struct gaim_connection *gc )
 {
 	struct jabber_data *jd = gc->proto_data;
 	struct xt_node *node;

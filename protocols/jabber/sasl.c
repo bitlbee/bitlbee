@@ -34,6 +34,15 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	char *s;
 	int sup_plain = 0, sup_digest = 0;
 	
+	if( !sasl_supported( gc ) )
+	{
+		/* Should abort this now, since we should already be doing
+		   IQ authentication. Strange things happen when you try
+		   to do both... */
+		serv_got_crap( gc, "XMPP 1.0 non-compliant server seems to support SASL, please report this as a BitlBee bug!" );
+		return XT_HANDLED;
+	}
+	
 	s = xt_find_attr( node, "xmlns" );
 	if( !s || strcmp( s, SASL_NS ) != 0 )
 	{
@@ -93,6 +102,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 
 xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 {
+	return XT_HANDLED;
 }
 
 xt_status sasl_pkt_result( struct xt_node *node, gpointer data )
@@ -121,4 +131,14 @@ xt_status sasl_pkt_result( struct xt_node *node, gpointer data )
 	}
 	
 	return XT_HANDLED;
+}
+
+/* This one is needed to judge if we'll do authentication using IQ or SASL.
+   It's done by checking if the <stream:stream> from the server has a
+   version attribute. I don't know if this is the right way though... */
+gboolean sasl_supported( struct gaim_connection *gc )
+{
+	struct jabber_data *jd = gc->proto_data;
+	
+	return ( jd->xt && jd->xt->root && xt_find_attr( jd->xt->root, "version" ) ) != NULL;
 }

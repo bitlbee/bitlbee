@@ -72,6 +72,9 @@ static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition
 	struct jabber_data *jd = gc->proto_data;
 	int st;
 	
+	if( jd->fd == -1 )
+		return FALSE;
+	
 	st = write( jd->fd, jd->txq, jd->tx_len );
 	
 	if( st == jd->tx_len )
@@ -85,6 +88,10 @@ static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition
 	}
 	else if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
+		/* Set fd to -1 to make sure we won't write to it anymore. */
+		closesocket( jd->fd );	/* Shouldn't be necessary after errors? */
+		jd->fd = -1;
+		
 		hide_login_progress_error( gc, "Short write() to server" );
 		signoff( gc );
 		return FALSE;
@@ -98,7 +105,7 @@ static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition
 		g_free( jd->txq );
 		jd->txq = s;
 		
-		return FALSE;
+		return TRUE;
 	}
 	else
 	{
@@ -114,6 +121,9 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 	struct jabber_data *jd = gc->proto_data;
 	char buf[512];
 	int st;
+	
+	if( jd->fd == -1 )
+		return FALSE;
 	
 	st = read( fd, buf, sizeof( buf ) );
 	
@@ -138,7 +148,6 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		if( jd->flags & JFLAG_STREAM_RESTART )
 		{
 			jd->flags &= ~JFLAG_STREAM_RESTART;
-			xt_reset( jd->xt );
 			jabber_start_stream( gc );
 		}
 		
@@ -155,7 +164,12 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 			if( g_strcasecmp( jd->xt->root->name, "stream:stream" ) == 0 )
 			{
 				jd->flags |= JFLAG_STREAM_STARTED;
-				return jabber_start_auth( gc );
+				
+				/* If there's no version attribute, assume
+				   this is an old server that can't do SASL
+				   authentication. */
+				if( !sasl_supported( gc ) )
+					return jabber_start_iq_auth( gc );
 			}
 			else
 			{
@@ -167,6 +181,9 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 	}
 	else if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
+		closesocket( jd->fd );
+		jd->fd = -1;
+		
 		hide_login_progress_error( gc, "Error while reading from server" );
 		signoff( gc );
 		return FALSE;
@@ -197,6 +214,33 @@ static xt_status jabber_end_of_stream( struct xt_node *node, gpointer data )
 	return XT_ABORT;
 }
 
+static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
+{
+	struct gaim_connection *gc = data;
+	struct jabber_data *jd = gc->proto_data;
+	struct xt_node *c;
+	
+	c = xt_find_node( node->children, "starttls" );
+	if( c )
+	{
+		/*
+		jd->flags |= JFLAG_SUPPORTS_TLS;
+		if( xt_find_node( c->children, "required" ) )
+			jd->flags |= JFLAG_REQUIRES_TLS;
+		*/
+	}
+	
+	/* This flag is already set if we authenticated via SASL, so now
+	   we can resume the session in the new stream. */
+	if( jd->flags & JFLAG_AUTHENTICATED )
+	{
+		if( !jabber_get_roster( gc ) )
+			return XT_ABORT;
+	}
+	
+	return XT_HANDLED;
+}
+
 static xt_status jabber_pkt_misc( struct xt_node *node, gpointer data )
 {
 	printf( "Received unknown packet:\n" );
@@ -207,9 +251,10 @@ static xt_status jabber_pkt_misc( struct xt_node *node, gpointer data )
 
 static const struct xt_handler_entry jabber_handlers[] = {
 	{ "stream:stream",      "<root>",               jabber_end_of_stream },
-	{ "iq",                 "stream:stream",        jabber_pkt_iq },
 	{ "message",            "stream:stream",        jabber_pkt_message },
 	{ "presence",           "stream:stream",        jabber_pkt_presence },
+	{ "iq",                 "stream:stream",        jabber_pkt_iq },
+	{ "stream:features",    "stream:stream",        jabber_pkt_features },
 	{ "mechanisms",         "stream:features",      sasl_pkt_mechanisms },
 	{ "challenge",          "stream:stream",        sasl_pkt_challenge },
 	{ "success",            "stream:stream",        sasl_pkt_result },
@@ -230,7 +275,8 @@ gboolean jabber_start_stream( struct gaim_connection *gc )
 	jd->xt = xt_new( gc );
 	jd->xt->handlers = (struct xt_handler_entry*) jabber_handlers;
 	
-	jd->r_inpa = b_input_add( jd->fd, GAIM_INPUT_READ, jabber_read_callback, gc );
+	if( jd->r_inpa <= 0 )
+		jd->r_inpa = b_input_add( jd->fd, GAIM_INPUT_READ, jabber_read_callback, gc );
 	
 	greet = g_strdup_printf( "<?xml version='1.0' ?>"
 	                         "<stream:stream to=\"%s\" xmlns=\"jabber:client\" "
@@ -253,11 +299,14 @@ void jabber_end_stream( struct gaim_connection *gc )
 	{
 		char eos[] = "</stream:stream>";
 		struct xt_node *node;
-		int st;
+		int st = 1;
 		
-		node = jabber_make_packet( "presence", "unavailable", NULL, NULL );
-		st = jabber_write_packet( gc, node );
-		xt_free_node( node );
+		if( gc->flags & OPT_LOGGED_IN )
+		{
+			node = jabber_make_packet( "presence", "unavailable", NULL, NULL );
+			st = jabber_write_packet( gc, node );
+			xt_free_node( node );
+		}
 		
 		if( st )
 			jabber_write( gc, eos, strlen( eos ) );

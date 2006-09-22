@@ -279,6 +279,11 @@ void signoff( struct gaim_connection *gc )
 	user_t *t, *u = irc->users;
 	account_t *a;
 	
+	/* Nested calls might happen sometimes, this is probably the best
+	   place to catch them. */
+	if( gc->flags & OPT_LOGGING_OUT )
+		return;
+	
 	serv_got_crap( gc, "Signing off.." );
 	
 	b_event_remove( gc->keepalive );
