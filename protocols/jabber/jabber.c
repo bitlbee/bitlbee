@@ -75,6 +75,8 @@ static void jabber_login( account_t *acc )
 	*jd->server = 0;
 	jd->server ++;
 	
+	jd->node_cache = xt_new_node( "cache", NULL, NULL );
+	
 	if( set_getbool( &acc->set, "ssl" ) )
 	{
 		signoff( gc );
@@ -102,6 +104,10 @@ static void jabber_close( struct gaim_connection *gc )
 	if( jd->fd >= 0 )
 		closesocket( jd->fd );
 	
+	if( jd->tx_len )
+		g_free( jd->txq );
+	
+	xt_free_node( jd->node_cache );
 	xt_free( jd->xt );
 	
 	g_free( jd->username );

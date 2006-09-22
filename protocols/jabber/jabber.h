@@ -34,6 +34,8 @@ typedef enum
 	JFLAG_STREAM_STARTED = 1,	/* Set when we detected the beginning of the stream and want to do auth. */
 	JFLAG_AUTHENTICATED = 2,	/* Set when we're successfully authenticatd. */
 	JFLAG_STREAM_RESTART = 4,	/* Set when we want to restart the stream (after SASL or TLS). */
+	JFLAG_WAIT_SESSION = 8,		/* Set if we sent a <session> tag and need a reply before we continue. */
+	JFLAG_WAIT_BIND = 16,		/* ... for <bind> tag. */
 } jabber_flags_t;
 
 /* iq.c */
@@ -52,6 +54,8 @@ int presence_send( struct gaim_connection *gc, char *to, char *show, char *statu
 char *set_eval_resprio( set_t *set, char *value );
 char *set_eval_tls( set_t *set, char *value );
 struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
+void jabber_cache_packet( struct gaim_connection *gc, struct xt_node *node );
+struct xt_node *jabber_packet_from_cache( struct gaim_connection *gc, char *id );
 
 /* io.c */
 int jabber_write_packet( struct gaim_connection *gc, struct xt_node *node );
@@ -81,6 +85,8 @@ struct jabber_data
 	
 	char *username;		/* USERNAME@server */
 	char *server;		/* username@SERVER -=> server/domain, not hostname */
+	
+	struct xt_node *node_cache;
 };
 
 #endif

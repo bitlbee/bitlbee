@@ -51,18 +51,43 @@ char *set_eval_tls( set_t *set, char *value )
 
 struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children )
 {
-	char *id = g_strdup_printf( "BeeX%04x", next_id++ );
 	struct xt_node *node;
 	
 	node = xt_new_node( name, NULL, children );
 	
-	xt_add_attr( node, "id", id );
 	if( type )
 		xt_add_attr( node, "type", type );
 	if( to )
 		xt_add_attr( node, "to", to );
 	
+	return node;
+}
+
+/* Cache a node/packet for later use. Mainly useful for IQ packets if you need
+   them when you receive the response. Use this BEFORE sending the packet so
+   it'll get an id= tag, and do NOT free() the packet after writing it! */
+void jabber_cache_packet( struct gaim_connection *gc, struct xt_node *node )
+{
+	struct jabber_data *jd = gc->proto_data;
+	char *id = g_strdup_printf( "BeeX%04x", next_id++ );
+	
+	/* FIXME: Maybe start using g_error() here if nodes still have a parent, for example? */
+	
+	xt_add_attr( node, "id", id );
+	xt_add_child( jd->node_cache, node );
 	g_free( id );
+}
+
+/* Emptying this cache is a BIG TODO! */
+struct xt_node *jabber_packet_from_cache( struct gaim_connection *gc, char *id )
+{
+	struct jabber_data *jd = gc->proto_data;
+	struct xt_node *node;
+	char *s;
+	
+	for( node = jd->node_cache->children; node; node = node->next )
+		if( ( s = xt_find_attr( node, "id" ) ) && strcmp( id, s ) == 0 )
+			break;
 	
 	return node;
 }

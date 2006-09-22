@@ -70,7 +70,13 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	reply = xt_new_node( "auth", NULL, NULL );
 	xt_add_attr( reply, "xmlns", SASL_NS );
 	
-	if( sup_plain )
+	if( sup_digest && 0 )
+	{
+		xt_add_attr( reply, "mechanism", "DIGEST-MD5" );
+		
+		/* The rest will be done later, when we receive a <challenge/>. */
+	}
+	else if( sup_plain )
 	{
 		int len;
 		
@@ -140,5 +146,5 @@ gboolean sasl_supported( struct gaim_connection *gc )
 {
 	struct jabber_data *jd = gc->proto_data;
 	
-	return ( jd->xt && jd->xt->root && xt_find_attr( jd->xt->root, "version" ) ) != NULL;
+	return ( (void*) ( jd->xt && jd->xt->root && xt_find_attr( jd->xt->root, "version" ) ) ) != NULL;
 }

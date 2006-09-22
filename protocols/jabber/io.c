@@ -218,7 +218,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 {
 	struct gaim_connection *gc = data;
 	struct jabber_data *jd = gc->proto_data;
-	struct xt_node *c;
+	struct xt_node *c, *reply;
 	
 	c = xt_find_node( node->children, "starttls" );
 	if( c )
@@ -230,9 +230,36 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		*/
 	}
 	
+	if( ( c = xt_find_node( node->children, "bind" ) ) )
+	{
+		reply = xt_new_node( "bind", NULL, xt_new_node( "resource", set_getstr( &gc->acc->set, "resource" ), NULL ) );
+		xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-bind" );
+		reply = jabber_make_packet( "iq", "set", NULL, reply );
+		jabber_cache_packet( gc, reply );
+		
+		if( !jabber_write_packet( gc, reply ) )
+			return XT_ABORT;
+		
+		jd->flags |= JFLAG_WAIT_BIND;
+	}
+	
+	if( ( c = xt_find_node( node->children, "session" ) ) )
+	{
+		reply = xt_new_node( "session", NULL, NULL );
+		xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-session" );
+		reply = jabber_make_packet( "iq", "set", NULL, reply );
+		jabber_cache_packet( gc, reply );
+		
+		if( !jabber_write_packet( gc, reply ) )
+			return XT_ABORT;
+		
+		jd->flags |= JFLAG_WAIT_SESSION;
+	}
+	
 	/* This flag is already set if we authenticated via SASL, so now
-	   we can resume the session in the new stream. */
-	if( jd->flags & JFLAG_AUTHENTICATED )
+	   we can resume the session in the new stream, if we don't have
+	   to bind/initialize the session. */
+	if( jd->flags & JFLAG_AUTHENTICATED && ( jd->flags & ( JFLAG_WAIT_BIND | JFLAG_WAIT_SESSION ) ) == 0 )
 	{
 		if( !jabber_get_roster( gc ) )
 			return XT_ABORT;

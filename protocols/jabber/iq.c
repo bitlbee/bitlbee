@@ -27,7 +27,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 {
 	struct gaim_connection *gc = data;
 	struct jabber_data *jd = gc->proto_data;
-	struct xt_node *query, *reply = NULL;
+	struct xt_node *query, *reply = NULL, *orig = NULL;
 	char *s, *type, *xmlns;
 	int st;
 	
@@ -38,6 +38,9 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		return XT_HANDLED;	/* Ignore it for now, don't know what's best... */
 	
 	xmlns = xt_find_attr( query, "xmlns" );
+	
+	if( ( s = xt_find_attr( node, "id" ) ) )
+		orig = jabber_packet_from_cache( gc, s );
 	
 	if( strcmp( type, "result" ) == 0 && xmlns && strcmp( xmlns, "jabber:iq:auth" ) == 0 )
 	{
@@ -81,8 +84,8 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		}
 		
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
+		jabber_cache_packet( gc, reply );
 		st = jabber_write_packet( gc, reply );
-		xt_free_node( reply );
 		
 		return st ? XT_HANDLED : XT_ABORT;
 	}
@@ -105,15 +108,34 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		
 		presence_announce( gc );
 	}
-	else if( strcmp( type, "result" ) == 0 )
+	else if( strcmp( type, "result" ) == 0 && orig )
 	{
-		/* If we weren't authenticated yet, let's assume we are now.
-		   There are cleaner ways to do this, probably, but well.. */
-		if( !( jd->flags & JFLAG_AUTHENTICATED ) )
+		struct xt_node *node;
+		
+		if( !( jd->flags & JFLAG_AUTHENTICATED ) &&
+		    ( node = xt_find_node( orig->children, "query" ) ) &&
+		    ( node = xt_find_node( node->children, "username" ) ) &&
+		    node->text_len )
 		{
+			/* This happens when we just successfully authenticated
+			   the old (non-SASL) way. */
 			jd->flags |= JFLAG_AUTHENTICATED;
 			if( !jabber_get_roster( gc ) )
 				return XT_ABORT;
+		}
+		else if( ( node = xt_find_node( orig->children, "bind" ) ) ||
+		         ( node = xt_find_node( orig->children, "session" ) ) )
+		{
+			if( strcmp( node->name, "bind" ) == 0 )
+				jd->flags &= ~JFLAG_WAIT_BIND;
+			else if( strcmp( node->name, "session" ) == 0 )
+				jd->flags &= ~JFLAG_WAIT_SESSION;
+			
+			if( ( jd->flags & ( JFLAG_WAIT_BIND | JFLAG_WAIT_SESSION ) ) == 0 )
+			{
+				if( !jabber_get_roster( gc ) )
+					return XT_ABORT;
+			}
 		}
 	}
 	else if( strcmp( type, "error" ) == 0 )
