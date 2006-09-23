@@ -106,7 +106,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			node = node->next;
 		}
 		
-		presence_announce( gc );
+		account_online( gc );
 	}
 	else if( strcmp( type, "result" ) == 0 && orig )
 	{

@@ -91,3 +91,35 @@ struct xt_node *jabber_packet_from_cache( struct gaim_connection *gc, char *id )
 	
 	return node;
 }
+
+const struct jabber_away_state jabber_away_state_list[] =
+{
+	{ "away",  "Away" },
+	{ "chat",  "Free for Chat" },
+	{ "dnd",   "Do not Disturb" },
+	{ "xa",    "Extended Away" },
+	{ "",      "Online" },
+	{ "",      NULL }
+};
+
+const struct jabber_away_state *jabber_away_state_by_code( char *code )
+{
+	int i;
+	
+	for( i = 0; jabber_away_state_list[i].full_name; i ++ )
+		if( g_strcasecmp( jabber_away_state_list[i].code, code ) == 0 )
+			return jabber_away_state_list + i;
+	
+	return NULL;
+}
+
+const struct jabber_away_state *jabber_away_state_by_name( char *name )
+{
+	int i;
+	
+	for( i = 0; jabber_away_state_list[i].full_name; i ++ )
+		if( g_strcasecmp( jabber_away_state_list[i].full_name, name ) == 0 )
+			return jabber_away_state_list + i;
+	
+	return NULL;
+}

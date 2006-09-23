@@ -110,6 +110,7 @@ static void jabber_close( struct gaim_connection *gc )
 	xt_free_node( jd->node_cache );
 	xt_free( jd->xt );
 	
+	g_free( jd->away_message );
 	g_free( jd->username );
 	g_free( jd );
 }
@@ -127,23 +128,30 @@ static int jabber_send_im( struct gaim_connection *gc, char *who, char *message,
 	return st;
 }
 
-/* TODO: For away state handling, implement some list like the one for MSN. */
 static GList *jabber_away_states( struct gaim_connection *gc )
 {
-	GList *l = NULL;
+	static GList *l = NULL;
+	int i;
 	
-	l = g_list_append( l, (void*) "Online" );
-	l = g_list_append( l, (void*) "Away" );
-	l = g_list_append( l, (void*) "Extended Away" );
-	l = g_list_append( l, (void*) "Do Not Disturb" );
+	if( l == NULL )
+		for( i = 0; jabber_away_state_list[i].full_name; i ++ )
+			l = g_list_append( l, (void*) jabber_away_state_list[i].full_name );
 	
-	return( l );
+	return l;
 }
 
-static void jabber_set_away( struct gaim_connection *gc, char *state, char *message )
+static void jabber_set_away( struct gaim_connection *gc, char *state_txt, char *message )
 {
-	/* For now let's just always set state to "away" and send the message, if available. */
-	presence_send( gc, NULL, g_strcasecmp( state, "Online" ) == 0 ? NULL : "away", message );
+	struct jabber_data *jd = gc->proto_data;
+	struct jabber_away_state *state;
+	
+	/* Save all this info. We need it, for example, when changing the priority setting. */
+	state = (void *) jabber_away_state_by_name( state_txt );
+	jd->away_state = state ? state : (void *) jabber_away_state_list; /* Fall back to "Away" if necessary. */
+	g_free( jd->away_message );
+	jd->away_message = ( message && *message ) ? g_strdup( message ) : NULL;
+	
+	presence_send( gc, NULL, jd->away_state->code, jd->away_message );
 }
 
 static void jabber_keepalive( struct gaim_connection *gc )

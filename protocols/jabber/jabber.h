@@ -38,38 +38,6 @@ typedef enum
 	JFLAG_WAIT_BIND = 16,		/* ... for <bind> tag. */
 } jabber_flags_t;
 
-/* iq.c */
-xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
-int jabber_start_iq_auth( struct gaim_connection *gc );
-int jabber_get_roster( struct gaim_connection *gc );
-
-xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
-
-/* presence.c */
-xt_status jabber_pkt_presence( struct xt_node *node, gpointer data );
-int presence_announce( struct gaim_connection *gc );
-int presence_send( struct gaim_connection *gc, char *to, char *show, char *status );
-
-/* jabber_util.c */
-char *set_eval_resprio( set_t *set, char *value );
-char *set_eval_tls( set_t *set, char *value );
-struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
-void jabber_cache_packet( struct gaim_connection *gc, struct xt_node *node );
-struct xt_node *jabber_packet_from_cache( struct gaim_connection *gc, char *id );
-
-/* io.c */
-int jabber_write_packet( struct gaim_connection *gc, struct xt_node *node );
-int jabber_write( struct gaim_connection *gc, char *buf, int len );
-gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond );
-gboolean jabber_start_stream( struct gaim_connection *gc );
-void jabber_end_stream( struct gaim_connection *gc );
-
-/* sasl.c */
-xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data );
-xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data );
-xt_status sasl_pkt_result( struct xt_node *node, gpointer data );
-gboolean sasl_supported( struct gaim_connection *gc );
-
 struct jabber_data
 {
 	struct gaim_connection *gc;
@@ -85,8 +53,51 @@ struct jabber_data
 	
 	char *username;		/* USERNAME@server */
 	char *server;		/* username@SERVER -=> server/domain, not hostname */
+	struct jabber_away_state *away_state;
+	char *away_message;
 	
 	struct xt_node *node_cache;
 };
+
+struct jabber_away_state
+{
+	char code[5];
+	char *full_name;
+};
+
+/* iq.c */
+xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
+int jabber_start_iq_auth( struct gaim_connection *gc );
+int jabber_get_roster( struct gaim_connection *gc );
+
+xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
+
+/* presence.c */
+xt_status jabber_pkt_presence( struct xt_node *node, gpointer data );
+int presence_send( struct gaim_connection *gc, char *to, char *show, char *status );
+
+/* jabber_util.c */
+char *set_eval_resprio( set_t *set, char *value );
+char *set_eval_tls( set_t *set, char *value );
+struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
+void jabber_cache_packet( struct gaim_connection *gc, struct xt_node *node );
+struct xt_node *jabber_packet_from_cache( struct gaim_connection *gc, char *id );
+const struct jabber_away_state *jabber_away_state_by_code( char *code );
+const struct jabber_away_state *jabber_away_state_by_name( char *name );
+
+extern const struct jabber_away_state jabber_away_state_list[];
+
+/* io.c */
+int jabber_write_packet( struct gaim_connection *gc, struct xt_node *node );
+int jabber_write( struct gaim_connection *gc, char *buf, int len );
+gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond );
+gboolean jabber_start_stream( struct gaim_connection *gc );
+void jabber_end_stream( struct gaim_connection *gc );
+
+/* sasl.c */
+xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data );
+xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data );
+xt_status sasl_pkt_result( struct xt_node *node, gpointer data );
+gboolean sasl_supported( struct gaim_connection *gc );
 
 #endif

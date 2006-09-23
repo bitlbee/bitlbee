@@ -53,31 +53,13 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	return XT_HANDLED;
 }
 
-/* Send the <presence/> tag that finalizes the whole login process, from here
-   we'll actually show up as online to our buddies. */
-int presence_announce( struct gaim_connection *gc )
-{
-	struct xt_node *node;
-	int st;
-	
-	node = jabber_make_packet( "presence", NULL, NULL, NULL );
-	
-	st = jabber_write_packet( gc, node );
-	
-	if( st )
-		account_online( gc );
-	
-	xt_free_node( node );
-	return st;
-}
-
 int presence_send( struct gaim_connection *gc, char *to, char *show, char *status )
 {
 	struct xt_node *node;
 	int st;
 	
 	node = jabber_make_packet( "presence", NULL, to, NULL );
-	if( show )
+	if( show && *show )
 		xt_add_child( node, xt_new_node( "show", show, NULL ) );
 	if( status )
 		xt_add_child( node, xt_new_node( "status", status, NULL ) );

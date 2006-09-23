@@ -1018,8 +1018,6 @@ int bim_set_away( struct gaim_connection *gc, char *away )
 			gc->acc->prpl->set_away( gc, GAIM_AWAY_CUSTOM, away );
 	}
 	
-	g_list_free( ms );
-	
 	return( 1 );
 }
 
