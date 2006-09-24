@@ -117,11 +117,20 @@ static void jabber_close( struct gaim_connection *gc )
 
 static int jabber_send_im( struct gaim_connection *gc, char *who, char *message, int len, int away )
 {
-	struct xt_node *node;
+	struct xt_node *node, *event;
 	int st;
+	
+	/*
+	event = xt_new_node( "active", NULL, NULL );
+	xt_add_attr( event, "xlmns", "http://jabber.org/protocol/chatstates" );
+	
+	event = xt_new_node( "x", NULL, xt_new_node( "composing", NULL, NULL ) );
+	xt_add_attr( event, "xmlns", "jabber:x:event" );
+	*/
 	
 	node = xt_new_node( "body", message, NULL );
 	node = jabber_make_packet( "message", "chat", who, node );
+	xt_add_child( node, event );
 	st = jabber_write_packet( gc, node );
 	xt_free_node( node );
 	
@@ -168,8 +177,39 @@ static void jabber_remove_buddy( struct gaim_connection *gc, char *who, char *gr
 
 static void jabber_keepalive( struct gaim_connection *gc )
 {
+	struct jabber_data *jd = gc->proto_data;
+	struct xt_node *c, *prev;
+	
 	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
 	jabber_write( gc, "\n", 1 );
+	
+	/* Let's abuse this keepalive for garbage collection of the node cache too.
+	   It runs every minute, so let's mark every node with a special flag the
+	   first time we see it, and clean it up the second time (clean up all
+	   packets with the flag set).
+	   
+	   node->flags is normally only used by xmltree itself for parsing/handling,
+	   so it should be safe to use the variable for gc. */
+	
+	/* This horrible loop is explained in xmltree.c. Makes me wonder if maybe I
+	   didn't choose the perfect data structure... */
+	for( prev = NULL, c = jd->node_cache->children; c; prev = c, c = c ? c->next : jd->node_cache->children )
+	{
+		if( c->flags == 0 )
+		{
+			c->flags ++;
+		}
+		else
+		{
+			if( prev )
+				prev->next = c->next;
+			else
+				jd->node_cache->children = c->next;
+			
+			xt_free_node( c );
+			c = prev;
+		}
+	}
 }
 
 static void jabber_add_permit( struct gaim_connection *gc, char *who )
