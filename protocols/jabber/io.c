@@ -246,20 +246,27 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	struct gaim_connection *gc = data;
 	struct jabber_data *jd = gc->proto_data;
 	struct xt_node *c, *reply;
+	int trytls;
 	
+	trytls = g_strcasecmp( set_getstr( &gc->acc->set, "tls" ), "try" ) == 0;
 	c = xt_find_node( node->children, "starttls" );
 	if( c && !jd->ssl )
 	{
 		/* If the server advertises the STARTTLS feature and if we're
 		   not in a secure connection already: */
 		
-		int try;
-		
-		try = g_strcasecmp( set_getstr( &gc->acc->set, "tls" ), "try" ) == 0;
 		c = xt_find_node( c->children, "required" );
 		
+		if( c && ( !trytls && !set_getbool( &gc->acc->set, "tls" ) ) )
+		{
+			hide_login_progress( gc, "Server requires TLS connections, but TLS is turned off for this account" );
+			signoff( gc );
+			
+			return XT_ABORT;
+		}
+		
 		/* Only run this if the tls setting is set to true or try: */
-		if( ( try | set_getbool( &gc->acc->set, "tls" ) ) )
+		if( ( trytls || set_getbool( &gc->acc->set, "tls" ) ) )
 		{
 			reply = xt_new_node( "starttls", NULL, NULL );
 			xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-tls" );
@@ -273,9 +280,20 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 			return XT_HANDLED;
 		}
 	}
-	else
+	else if( !c && !jd->ssl )
 	{
-		/* TODO: Abort if TLS is required by the user. */
+		/* If the server does not advertise the STARTTLS feature and
+		   we're not in a secure connection already: (Servers have a
+		   habit of not advertising <starttls/> anymore when already
+		   using SSL/TLS. */
+		
+		if( !trytls && set_getbool( &gc->acc->set, "tls" ) )
+		{
+			hide_login_progress( gc, "TLS is turned on for this account, but is not supported by this server" );
+			signoff( gc );
+			
+			return XT_ABORT;
+		}
 	}
 	
 	/* This one used to be in jabber_handlers[], but it has to be done
