@@ -51,6 +51,10 @@ typedef gboolean (*ssl_input_function)(gpointer, void*, b_input_condition);
    blocking I/O! (Except for the DNS lookups, for now...) */
 G_MODULE_EXPORT void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data );
 
+/* Start an SSL session on an existing fd. Useful for STARTTLS functionality,
+   for example in Jabber. */
+G_MODULE_EXPORT void *ssl_starttls( int fd, ssl_input_function func, gpointer data );
+
 /* Obviously you need special read/write functions to read data. */
 G_MODULE_EXPORT int ssl_read( void *conn, char *buf, int len );
 G_MODULE_EXPORT int ssl_write( void *conn, const char *buf, int len );

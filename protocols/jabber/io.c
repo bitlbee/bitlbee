@@ -22,6 +22,7 @@
 \***************************************************************************/
 
 #include "jabber.h"
+#include "ssl_client.h"
 
 static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition cond );
 
@@ -75,7 +76,12 @@ static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition
 	if( jd->fd == -1 )
 		return FALSE;
 	
-	st = write( jd->fd, jd->txq, jd->tx_len );
+	if( jd->ssl )
+		st = ssl_write( jd->ssl, jd->txq, jd->tx_len );
+	else
+		st = write( jd->fd, jd->txq, jd->tx_len );
+	
+//	if( st > 0 ) write( 1, jd->txq, st );
 	
 	if( st == jd->tx_len )
 	{
@@ -125,7 +131,12 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 	if( jd->fd == -1 )
 		return FALSE;
 	
-	st = read( fd, buf, sizeof( buf ) );
+	if( jd->ssl )
+		st = ssl_read( jd->ssl, buf, sizeof( buf ) );
+	else
+		st = read( jd->fd, buf, sizeof( buf ) );
+	
+//	if( st > 0 ) write( 1, buf, st );
 	
 	if( st > 0 )
 	{
@@ -209,6 +220,22 @@ gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition c
 	return jabber_start_stream( gc );
 }
 
+gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition cond )
+{
+	struct gaim_connection *gc = data;
+	
+	if( source == NULL )
+	{
+		hide_login_progress( gc, "Could not connect to server" );
+		signoff( gc );
+		return FALSE;
+	}
+	
+	set_login_progress( gc, 1, "Connected to server, logging in" );
+	
+	return jabber_start_stream( gc );
+}
+
 static xt_status jabber_end_of_stream( struct xt_node *node, gpointer data )
 {
 	return XT_ABORT;
@@ -221,14 +248,42 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	struct xt_node *c, *reply;
 	
 	c = xt_find_node( node->children, "starttls" );
-	if( c )
+	if( c && !jd->ssl )
 	{
-		/*
-		jd->flags |= JFLAG_SUPPORTS_TLS;
-		if( xt_find_node( c->children, "required" ) )
-			jd->flags |= JFLAG_REQUIRES_TLS;
-		*/
+		/* If the server advertises the STARTTLS feature and if we're
+		   not in a secure connection already: */
+		
+		int try;
+		
+		try = g_strcasecmp( set_getstr( &gc->acc->set, "tls" ), "try" ) == 0;
+		c = xt_find_node( c->children, "required" );
+		
+		/* Only run this if the tls setting is set to true or try: */
+		if( ( try | set_getbool( &gc->acc->set, "tls" ) ) )
+		{
+			reply = xt_new_node( "starttls", NULL, NULL );
+			xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-tls" );
+			if( !jabber_write_packet( gc, reply ) )
+			{
+				xt_free_node( reply );
+				return XT_ABORT;
+			}
+			xt_free_node( reply );
+			
+			return XT_HANDLED;
+		}
 	}
+	else
+	{
+		/* TODO: Abort if TLS is required by the user. */
+	}
+	
+	/* This one used to be in jabber_handlers[], but it has to be done
+	   from here to make sure the TLS session will be initialized
+	   properly before we attempt SASL authentication. */
+	if( ( c = xt_find_node( node->children, "mechanisms" ) ) )
+		if( sasl_pkt_mechanisms( c, data ) == XT_ABORT )
+			return XT_ABORT;
 	
 	if( ( c = xt_find_node( node->children, "bind" ) ) )
 	{
@@ -268,6 +323,40 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	return XT_HANDLED;
 }
 
+static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
+{
+	struct gaim_connection *gc = data;
+	struct jabber_data *jd = gc->proto_data;
+	char *xmlns;
+	
+	xmlns = xt_find_attr( node, "xmlns" );
+	
+	/* Just ignore it when it doesn't seem to be TLS-related (is that at
+	   all possible??). */
+	if( !xmlns || strcmp( xmlns, "urn:ietf:params:xml:ns:xmpp-tls" ) != 0 )
+		return XT_HANDLED;
+	
+	/* We don't want event handlers to touch our TLS session while it's
+	   still initializing! */
+	b_event_remove( jd->r_inpa );
+	if( jd->tx_len > 0 )
+	{
+		/* Actually the write queue should be empty here, but just
+		   to be sure... */
+		b_event_remove( jd->w_inpa );
+		g_free( jd->txq );
+		jd->txq = NULL;
+		jd->tx_len = 0;
+	}
+	jd->w_inpa = jd->r_inpa = 0;
+	
+	set_login_progress( gc, 1, "Converting stream to TLS" );
+	
+	jd->ssl = ssl_starttls( jd->fd, jabber_connected_ssl, gc );
+	
+	return XT_HANDLED;
+}
+
 static xt_status jabber_pkt_misc( struct xt_node *node, gpointer data )
 {
 	printf( "Received unknown packet:\n" );
@@ -282,7 +371,7 @@ static const struct xt_handler_entry jabber_handlers[] = {
 	{ "presence",           "stream:stream",        jabber_pkt_presence },
 	{ "iq",                 "stream:stream",        jabber_pkt_iq },
 	{ "stream:features",    "stream:stream",        jabber_pkt_features },
-	{ "mechanisms",         "stream:features",      sasl_pkt_mechanisms },
+	{ "proceed",            "stream:stream",        jabber_pkt_proceed_tls },
 	{ "challenge",          "stream:stream",        sasl_pkt_challenge },
 	{ "success",            "stream:stream",        sasl_pkt_result },
 	{ "failure",            "stream:stream",        sasl_pkt_result },

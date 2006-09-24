@@ -79,8 +79,8 @@ static void jabber_login( account_t *acc )
 	
 	if( set_getbool( &acc->set, "ssl" ) )
 	{
-		signoff( gc );
-		/* TODO! */
+		jd->ssl = ssl_connect( jd->server, set_getint( &acc->set, "port" ), jabber_connected_ssl, gc );
+		jd->fd = ssl_getfd( jd->ssl );
 	}
 	else
 	{
