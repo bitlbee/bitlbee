@@ -434,7 +434,7 @@ struct xt_node *xt_new_node( char *name, char *text, struct xt_node *children )
 	if( text )
 	{
 		node->text_len = strlen( text );
-		node->text = g_memdup( text, node->text_len );
+		node->text = g_memdup( text, node->text_len + 1 );
 	}
 	
 	for( c = children; c; c = c->next )
