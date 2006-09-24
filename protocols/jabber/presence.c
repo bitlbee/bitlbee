@@ -53,16 +53,24 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	return XT_HANDLED;
 }
 
-int presence_send( struct gaim_connection *gc, char *to, char *show, char *status )
+/* Whenever presence information is updated, call this function to inform the
+   server. */
+int presence_send_update( struct gaim_connection *gc )
 {
+	struct jabber_data *jd = gc->proto_data;
 	struct xt_node *node;
+	char *show = jd->away_state->code;
+	char *status = jd->away_message;
 	int st;
 	
-	node = jabber_make_packet( "presence", NULL, to, NULL );
+	node = jabber_make_packet( "presence", NULL, NULL, NULL );
 	if( show && *show )
 		xt_add_child( node, xt_new_node( "show", show, NULL ) );
 	if( status )
 		xt_add_child( node, xt_new_node( "status", status, NULL ) );
+	/* if( set_getint( &gc->acc->set, "priority" ) != 0 ) */
+	/* Let's just send this every time... */
+		xt_add_child( node, xt_new_node( "priority", set_getstr( &gc->acc->set, "priority" ), NULL ) );
 	
 	st = jabber_write_packet( gc, node );
 	

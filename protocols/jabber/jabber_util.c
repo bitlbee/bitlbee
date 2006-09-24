@@ -28,17 +28,42 @@ static int next_id = 1;
 char *set_eval_resprio( set_t *set, char *value )
 {
 	account_t *acc = set->data;
+	char *ret;
 	
-	/* Only run this stuff if the account is online ATM. */
-	if( acc->gc )
+	if( strcmp( set->key, "priority" ) == 0 )
+		ret = set_eval_int( set, value );
+	else
+		ret = value;
+	
+	/* Only run this stuff if the account is online ATM,
+	   and if the setting seems to be acceptable. */
+	if( acc->gc && ret )
 	{
-		/* ... */
+		if( strcmp( set->key, "priority" ) == 0 )
+		{
+			/* Although set_eval functions usually are very nice
+			   and convenient, they have one disadvantage: If I
+			   would just call p_s_u() now to send the new prio
+			   setting, it would send the old setting because the
+			   set->value gets changed when the eval returns a
+			   non-NULL value.
+			   
+			   So now I can choose between implementing post-set
+			   functions next to evals, or just do this little
+			   hack: */
+			g_free( set->value );
+			set->value = g_strdup( ret );
+			
+			/* (Yes, sorry, I prefer the hack. :-P) */
+			
+			presence_send_update( acc->gc );
+		}
+		else
+		{
+		}
 	}
 	
-	if( g_strcasecmp( set->key, "priority" ) == 0 )
-		return set_eval_int( set, value );
-	else
-		return value;
+	return ret;
 }
 
 char *set_eval_tls( set_t *set, char *value )

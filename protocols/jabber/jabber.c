@@ -151,7 +151,7 @@ static void jabber_set_away( struct gaim_connection *gc, char *state_txt, char *
 	g_free( jd->away_message );
 	jd->away_message = ( message && *message ) ? g_strdup( message ) : NULL;
 	
-	presence_send( gc, NULL, jd->away_state->code, jd->away_message );
+	presence_send_update( gc );
 }
 
 static void jabber_keepalive( struct gaim_connection *gc )

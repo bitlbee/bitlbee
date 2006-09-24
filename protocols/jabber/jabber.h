@@ -53,6 +53,9 @@ struct jabber_data
 	
 	char *username;		/* USERNAME@server */
 	char *server;		/* username@SERVER -=> server/domain, not hostname */
+	
+	/* After changing one of these two (or the priority setting), call
+	   presence_send_update() to inform the server about the changes. */
 	struct jabber_away_state *away_state;
 	char *away_message;
 	
@@ -74,7 +77,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
 
 /* presence.c */
 xt_status jabber_pkt_presence( struct xt_node *node, gpointer data );
-int presence_send( struct gaim_connection *gc, char *to, char *show, char *status );
+int presence_send_update( struct gaim_connection *gc );
 
 /* jabber_util.c */
 char *set_eval_resprio( set_t *set, char *value );
