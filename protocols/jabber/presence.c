@@ -41,6 +41,21 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		serv_got_update( gc, from, 1, 0, 0, 0, 0, 0 );
 	else if( strcmp( type, "unavailable" ) == 0 )
 		serv_got_update( gc, from, 0, 0, 0, 0, 0, 0 );
+	else if( strcmp( type, "subscribe" ) == 0 )
+		jabber_buddy_ask( gc, from );
+	else if( strcmp( type, "subscribed" ) == 0 )
+		serv_got_crap( gc, "%s just accepted your authorization request", from );
+	else if( strcmp( type, "unsubscribe" ) == 0 || strcmp( type, "unsubscribed" ) == 0 )
+	{
+		/* Do nothing here. Plenty of control freaks or over-curious
+		   souls get excited when they can see who still has them in
+		   their buddy list and who finally removed them. Somehow I
+		   got the impression that those are the people who get
+		   removed from many buddy lists for "some" reason...
+		   
+		   If you're one of those people, this is your chance to write
+		   your first line of code in C... */
+	}
 	else
 	{
 		printf( "Received PRES from %s:\n", from );

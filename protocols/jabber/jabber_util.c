@@ -148,3 +148,41 @@ const struct jabber_away_state *jabber_away_state_by_name( char *name )
 	
 	return NULL;
 }
+
+struct jabber_buddy_ask_data
+{
+	struct gaim_connection *gc;
+	char *handle;
+	char *realname;
+};
+
+static void jabber_buddy_ask_yes( gpointer w, struct jabber_buddy_ask_data *bla )
+{
+	presence_send_request( bla->gc, bla->handle, "subscribed" );
+	
+	if( find_buddy( bla->gc, bla->handle ) == NULL )
+		show_got_added( bla->gc, bla->handle, NULL );
+	
+	g_free( bla->handle );
+	g_free( bla );
+}
+
+static void jabber_buddy_ask_no( gpointer w, struct jabber_buddy_ask_data *bla )
+{
+	presence_send_request( bla->gc, bla->handle, "subscribed" );
+	
+	g_free( bla->handle );
+	g_free( bla );
+}
+
+void jabber_buddy_ask( struct gaim_connection *gc, char *handle )
+{
+	struct jabber_buddy_ask_data *bla = g_new0( struct jabber_buddy_ask_data, 1 );
+	char *buf;
+	
+	bla->gc = gc;
+	bla->handle = g_strdup( handle );
+	
+	buf = g_strdup_printf( "The user %s wants to add you to his/her buddy list.", handle );
+	do_ask_dialog( gc, buf, bla, jabber_buddy_ask_yes, jabber_buddy_ask_no );
+}

@@ -172,6 +172,24 @@ static void jabber_keepalive( struct gaim_connection *gc )
 	jabber_write( gc, "\n", 1 );
 }
 
+static void jabber_add_permit( struct gaim_connection *gc, char *who )
+{
+	presence_send_request( gc, who, "subscribed" );
+}
+
+static void jabber_rem_permit( struct gaim_connection *gc, char *who )
+{
+	presence_send_request( gc, who, "unsubscribed" );
+}
+
+static void jabber_add_deny( struct gaim_connection *gc, char *who )
+{
+}
+
+static void jabber_rem_deny( struct gaim_connection *gc, char *who )
+{
+}
+
 void jabber_init()
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
@@ -193,10 +211,10 @@ void jabber_init()
 //	ret->chat_leave = jabber_chat_leave;
 //	ret->chat_open = jabber_chat_open;
 	ret->keepalive = jabber_keepalive;
-//	ret->add_permit = jabber_add_permit;
-//	ret->rem_permit = jabber_rem_permit;
-//	ret->add_deny = jabber_add_deny;
-//	ret->rem_deny = jabber_rem_deny;
+	ret->add_permit = jabber_add_permit;
+	ret->rem_permit = jabber_rem_permit;
+	ret->add_deny = jabber_add_deny;
+	ret->rem_deny = jabber_rem_deny;
 //	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;
 

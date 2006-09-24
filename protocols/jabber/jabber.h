@@ -91,6 +91,7 @@ void jabber_cache_packet( struct gaim_connection *gc, struct xt_node *node );
 struct xt_node *jabber_packet_from_cache( struct gaim_connection *gc, char *id );
 const struct jabber_away_state *jabber_away_state_by_code( char *code );
 const struct jabber_away_state *jabber_away_state_by_name( char *name );
+void jabber_buddy_ask( struct gaim_connection *gc, char *handle );
 
 extern const struct jabber_away_state jabber_away_state_list[];
 
