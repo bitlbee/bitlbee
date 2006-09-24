@@ -183,3 +183,46 @@ int jabber_get_roster( struct gaim_connection *gc )
 	xt_free_node( node );
 	return st;
 }
+
+int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name )
+{
+	struct xt_node *node;
+	int st;
+	
+	/* Build the item entry */
+	node = xt_new_node( "item", NULL, NULL );
+	xt_add_attr( node, "jid", handle );
+	if( name )
+		xt_add_attr( node, "name", name );
+	
+	/* And pack it into a roster-add packet */
+	node = xt_new_node( "query", NULL, node );
+	xt_add_attr( node, "xmlns", "jabber:iq:roster" );
+	node = jabber_make_packet( "iq", "set", NULL, node );
+	
+	st = jabber_write_packet( gc, node );
+	
+	xt_free_node( node );
+	return st;
+}
+
+int jabber_remove_from_roster( struct gaim_connection *gc, char *handle )
+{
+	struct xt_node *node;
+	int st;
+	
+	/* Build the item entry */
+	node = xt_new_node( "item", NULL, NULL );
+	xt_add_attr( node, "jid", handle );
+	xt_add_attr( node, "subscription", "remove" );
+	
+	/* And pack it into a roster-add packet */
+	node = xt_new_node( "query", NULL, node );
+	xt_add_attr( node, "xmlns", "jabber:iq:roster" );
+	node = jabber_make_packet( "iq", "set", NULL, node );
+	
+	st = jabber_write_packet( gc, node );
+	
+	xt_free_node( node );
+	return st;
+}

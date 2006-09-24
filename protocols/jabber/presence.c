@@ -77,3 +77,19 @@ int presence_send_update( struct gaim_connection *gc )
 	xt_free_node( node );
 	return st;
 }
+
+/* Send a subscribe/unsubscribe request to a buddy. */
+int presence_send_request( struct gaim_connection *gc, char *handle, char *request )
+{
+	struct xt_node *node;
+	int st;
+	
+	node = jabber_make_packet( "presence", NULL, NULL, NULL );
+	xt_add_attr( node, "to", handle );
+	xt_add_attr( node, "type", request );
+	
+	st = jabber_write_packet( gc, node );
+	
+	xt_free_node( node );
+	return st;
+}

@@ -72,12 +72,16 @@ struct jabber_away_state
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
 int jabber_start_iq_auth( struct gaim_connection *gc );
 int jabber_get_roster( struct gaim_connection *gc );
+int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name );
+int jabber_remove_from_roster( struct gaim_connection *gc, char *handle );
 
+/* message.c */
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
 
 /* presence.c */
 xt_status jabber_pkt_presence( struct xt_node *node, gpointer data );
 int presence_send_update( struct gaim_connection *gc );
+int presence_send_request( struct gaim_connection *gc, char *handle, char *request );
 
 /* jabber_util.c */
 char *set_eval_resprio( set_t *set, char *value );

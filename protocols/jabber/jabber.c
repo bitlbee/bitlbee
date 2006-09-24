@@ -154,6 +154,18 @@ static void jabber_set_away( struct gaim_connection *gc, char *state_txt, char *
 	presence_send_update( gc );
 }
 
+static void jabber_add_buddy( struct gaim_connection *gc, char *who )
+{
+	if( jabber_add_to_roster( gc, who, NULL ) )
+		presence_send_request( gc, who, "subscribe" );
+}
+
+static void jabber_remove_buddy( struct gaim_connection *gc, char *who, char *group )
+{
+	if( jabber_remove_from_roster( gc, who ) )
+		presence_send_request( gc, who, "unsubscribe" );
+}
+
 static void jabber_keepalive( struct gaim_connection *gc )
 {
 	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
@@ -174,8 +186,8 @@ void jabber_init()
 	ret->set_away = jabber_set_away;
 //	ret->set_info = jabber_set_info;
 //	ret->get_info = jabber_get_info;
-//	ret->add_buddy = jabber_add_buddy;
-//	ret->remove_buddy = jabber_remove_buddy;
+	ret->add_buddy = jabber_add_buddy;
+	ret->remove_buddy = jabber_remove_buddy;
 //	ret->chat_send = jabber_chat_send;
 //	ret->chat_invite = jabber_chat_invite;
 //	ret->chat_leave = jabber_chat_leave;
