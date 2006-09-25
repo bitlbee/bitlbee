@@ -131,7 +131,6 @@ static int jabber_send_im( struct gaim_connection *gc, char *who, char *message,
 	
 	node = xt_new_node( "body", message, NULL );
 	node = jabber_make_packet( "message", "chat", who, node );
-	xt_add_child( node, event );
 	st = jabber_write_packet( gc, node );
 	xt_free_node( node );
 	
