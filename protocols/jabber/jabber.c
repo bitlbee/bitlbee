@@ -39,9 +39,10 @@ static void jabber_acc_init( account_t *acc )
 	s = set_add( &acc->set, "port", "5222", set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
-	s = set_add( &acc->set, "priority", "0", set_eval_resprio, acc );
+	s = set_add( &acc->set, "priority", "0", set_eval_priority, acc );
 	
-	s = set_add( &acc->set, "resource", "BitlBee", set_eval_resprio, acc );
+	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
@@ -233,6 +234,8 @@ static void jabber_rem_permit( struct gaim_connection *gc, char *who )
 	presence_send_request( gc, who, "unsubscribed" );
 }
 
+/* XMPP doesn't have both a block- and and allow-list, so these two functions
+   will be no-ops: */
 static void jabber_add_deny( struct gaim_connection *gc, char *who )
 {
 }

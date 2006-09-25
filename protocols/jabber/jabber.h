@@ -84,7 +84,7 @@ int presence_send_update( struct gaim_connection *gc );
 int presence_send_request( struct gaim_connection *gc, char *handle, char *request );
 
 /* jabber_util.c */
-char *set_eval_resprio( set_t *set, char *value );
+char *set_eval_priority( set_t *set, char *value );
 char *set_eval_tls( set_t *set, char *value );
 struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
 void jabber_cache_packet( struct gaim_connection *gc, struct xt_node *node );
