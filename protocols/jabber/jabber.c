@@ -178,7 +178,7 @@ static void jabber_remove_buddy( struct gaim_connection *gc, char *who, char *gr
 static void jabber_keepalive( struct gaim_connection *gc )
 {
 	struct jabber_data *jd = gc->proto_data;
-	struct xt_node *c, *prev;
+	struct xt_node *c, *tmp;
 	
 	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
 	jabber_write( gc, "\n", 1 );
@@ -193,22 +193,33 @@ static void jabber_keepalive( struct gaim_connection *gc )
 	
 	/* This horrible loop is explained in xmltree.c. Makes me wonder if maybe I
 	   didn't choose the perfect data structure... */
-	for( prev = NULL, c = jd->node_cache->children; c; prev = c, c = c ? c->next : jd->node_cache->children )
+	for( c = jd->node_cache->children; c; c =  c->next )
+		if( !( c->flags & XT_SEEN ) )
+			break;
+	
+	/* Now c points at the first unflagged node (or at NULL). Clean up
+	   everything until that point. */
+	while( jd->node_cache->children != c )
 	{
-		if( c->flags == 0 )
-		{
-			c->flags ++;
-		}
-		else
-		{
-			if( prev )
-				prev->next = c->next;
-			else
-				jd->node_cache->children = c->next;
-			
-			xt_free_node( c );
-			c = prev;
-		}
+		/*
+		printf( "Cleaning up:\n" );
+		xt_print( jd->node_cache->children );
+		*/
+		
+		tmp = jd->node_cache->children->next;
+		xt_free_node( jd->node_cache->children );
+		jd->node_cache->children = tmp;
+	}
+	
+	/* Now flag the ones that were still unflagged. */
+	for( c = jd->node_cache->children; c; c = c->next )
+	{
+		/*
+		printf( "Flagged:\n" );
+		xt_print( c );
+		*/
+		
+		c->flags |= XT_SEEN;
 	}
 }
 
