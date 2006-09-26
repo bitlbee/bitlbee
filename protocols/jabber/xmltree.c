@@ -350,6 +350,47 @@ void xt_print( struct xt_node *node )
 	printf( "</%s>\n", node->name );
 }
 
+struct xt_node *xt_dup( struct xt_node *node )
+{
+	struct xt_node *dup = g_new0( struct xt_node, 1 );
+	struct xt_node *c, *dc = NULL;
+	int i;
+	
+	/* Let's NOT copy the parent element here BTW! Only do it for children. */
+	
+	dup->name = g_strdup( node->name );
+	dup->flags = node->flags;
+	if( node->text )
+	{
+		dup->text = g_memdup( node->text, node->text_len + 1 );
+		dup->text_len = node->text_len;
+	}
+	
+	/* Count the number of attributes and allocate the new array. */
+	for( i = 0; node->attr[i].key; i ++ );
+	dup->attr = g_new0( struct xt_attr, i + 1 );
+	
+	/* Copy them all! */
+	for( i --; i >= 0; i -- )
+	{
+		dup->attr[i].key = g_strdup( node->attr[i].key );
+		dup->attr[i].value = g_strdup( node->attr[i].value );
+	}
+	
+	/* This nice mysterious loop takes care of the children. */
+	for( c = node->children; c; c = c->next )
+	{
+		if( dc == NULL )
+			dc = dup->children = xt_dup( c );
+		else
+			dc = ( dc->next = xt_dup( c ) );
+		
+		dc->parent = dup;
+	}
+	
+	return dup;
+}
+
 /* Frees a node. This doesn't clean up references to itself from parents! */
 void xt_free_node( struct xt_node *node )
 {
