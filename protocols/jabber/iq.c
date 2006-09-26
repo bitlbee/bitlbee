@@ -110,12 +110,12 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	}
 	else if( strcmp( type, "result" ) == 0 && orig )
 	{
-		struct xt_node *node;
+		struct xt_node *c;
 		
 		if( !( jd->flags & JFLAG_AUTHENTICATED ) &&
-		    ( node = xt_find_node( orig->children, "query" ) ) &&
-		    ( node = xt_find_node( node->children, "username" ) ) &&
-		    node->text_len )
+		    ( c = xt_find_node( orig->children, "query" ) ) &&
+		    ( c = xt_find_node( c->children, "username" ) ) &&
+		    c->text_len )
 		{
 			/* This happens when we just successfully authenticated
 			   the old (non-SASL) way. */
@@ -123,12 +123,23 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			if( !jabber_get_roster( gc ) )
 				return XT_ABORT;
 		}
-		else if( ( node = xt_find_node( orig->children, "bind" ) ) ||
-		         ( node = xt_find_node( orig->children, "session" ) ) )
+		/* Tricky: Look for <bind> in the reply, because the server
+		   should confirm the chosen resource string there. For
+		   <session>, however, look in the cache, because the server
+		   will probably not include it in its reply. */
+		else if( ( c = xt_find_node( node->children, "bind" ) ) ||
+		         ( c = xt_find_node( orig->children, "session" ) ) )
 		{
-			if( strcmp( node->name, "bind" ) == 0 )
+			if( strcmp( c->name, "bind" ) == 0 )
+			{
+				c = xt_find_node( c->children, "jid" );
+				if( c && c->text_len && ( s = strchr( c->text, '/' ) ) &&
+				    strcmp( s + 1, set_getstr( &gc->acc->set, "resource" ) ) != 0 )
+					serv_got_crap( gc, "Server changed session resource string to `%s'", s + 1 );
+				
 				jd->flags &= ~JFLAG_WAIT_BIND;
-			else if( strcmp( node->name, "session" ) == 0 )
+			}
+			else if( strcmp( c->name, "session" ) == 0 )
 				jd->flags &= ~JFLAG_WAIT_SESSION;
 			
 			if( ( jd->flags & ( JFLAG_WAIT_BIND | JFLAG_WAIT_SESSION ) ) == 0 )
