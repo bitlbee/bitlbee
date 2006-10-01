@@ -59,6 +59,10 @@ struct jabber_data
 	struct jabber_away_state *away_state;
 	char *away_message;
 	
+	/* Updates to this one should be synchronized using jabber_privacy_update(). */
+	struct xt_node *privacy_list;
+	char *privacy_active;
+	
 	struct xt_node *node_cache;
 };
 
@@ -68,12 +72,16 @@ struct jabber_away_state
 	char *full_name;
 };
 
+#define DEFAULT_PRIVACY_LIST "simple_blocklist"
+
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
 int jabber_start_iq_auth( struct gaim_connection *gc );
 int jabber_get_roster( struct gaim_connection *gc );
 int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name );
 int jabber_remove_from_roster( struct gaim_connection *gc, char *handle );
+int jabber_get_privacy( struct gaim_connection *gc );
+int jabber_set_privacy( struct gaim_connection *gc, char *name );
 
 /* message.c */
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data );

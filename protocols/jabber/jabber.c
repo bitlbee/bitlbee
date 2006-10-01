@@ -41,6 +41,9 @@ static void jabber_acc_init( account_t *acc )
 	
 	s = set_add( &acc->set, "priority", "0", set_eval_priority, acc );
 	
+	s = set_add( &acc->set, "privacy_list", NULL, NULL, acc );
+	/* TODO: Add evaluator. */
+	
 	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
@@ -80,12 +83,12 @@ static void jabber_login( account_t *acc )
 	
 	if( set_getbool( &acc->set, "ssl" ) )
 	{
-		jd->ssl = ssl_connect( jd->server, set_getint( &acc->set, "port" ), jabber_connected_ssl, gc );
+		jd->ssl = ssl_connect( acc->server ? acc->server : jd->server, set_getint( &acc->set, "port" ), jabber_connected_ssl, gc );
 		jd->fd = ssl_getfd( jd->ssl );
 	}
 	else
 	{
-		jd->fd = proxy_connect( jd->server, set_getint( &acc->set, "port" ), jabber_connected_plain, gc );
+		jd->fd = proxy_connect( acc->server ? acc->server : jd->server, set_getint( &acc->set, "port" ), jabber_connected_plain, gc );
 	}
 }
 
@@ -107,6 +110,9 @@ static void jabber_close( struct gaim_connection *gc )
 	
 	if( jd->tx_len )
 		g_free( jd->txq );
+	
+	xt_free_node( jd->privacy_list );
+	g_free( jd->privacy_active );
 	
 	xt_free_node( jd->node_cache );
 	xt_free( jd->xt );
