@@ -304,15 +304,14 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		if( sasl_pkt_mechanisms( c, data ) == XT_ABORT )
 			return XT_ABORT;
 	}
-	else
+	/* If the server *SEEMS* to support SASL authentication but doesn't
+	   support it after all, we should try to do authentication the
+	   other way. jabber.com doesn't seem to do SASL while it pretends
+	   to be XMPP 1.0 compliant! */
+	else if( !( jd->flags & JFLAG_AUTHENTICATED ) && sasl_supported( gc ) )
 	{
-		/* If the server *SEEMS* to support SASL authentication but
-		   doesn't support it after all, we should try to do
-		   authentication the other way. jabber.com doesn't seem to
-		   do SASL while it pretends to be XMPP 1.0 compliant! */
-		if( sasl_supported( gc ) )
-			if( !jabber_start_iq_auth( gc ) )
-				return XT_ABORT;
+		if( !jabber_start_iq_auth( gc ) )
+			return XT_ABORT;
 	}
 	
 	if( ( c = xt_find_node( node->children, "bind" ) ) )
