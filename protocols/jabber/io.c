@@ -300,8 +300,20 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	   from here to make sure the TLS session will be initialized
 	   properly before we attempt SASL authentication. */
 	if( ( c = xt_find_node( node->children, "mechanisms" ) ) )
+	{
 		if( sasl_pkt_mechanisms( c, data ) == XT_ABORT )
 			return XT_ABORT;
+	}
+	else
+	{
+		/* If the server *SEEMS* to support SASL authentication but
+		   doesn't support it after all, we should try to do
+		   authentication the other way. jabber.com doesn't seem to
+		   do SASL while it pretends to be XMPP 1.0 compliant! */
+		if( sasl_supported( gc ) )
+			if( !jabber_start_iq_auth( gc ) )
+				return XT_ABORT;
+	}
 	
 	if( ( c = xt_find_node( node->children, "bind" ) ) )
 	{
