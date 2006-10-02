@@ -206,8 +206,14 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 		nonce = sasl_get_part( dec, "nonce" );
 		realm = sasl_get_part( dec, "realm" );
 		
-		if( !nonce || !realm )
+		if( !nonce )
 			goto error;
+		
+		/* Jabber.Org considers the realm part optional and doesn't
+		   specify one. Oh well, actually they're right, but still,
+		   don't know if this is right... */
+		if( !realm )
+			realm = g_strdup( jd->server );
 		
 		random_bytes( (unsigned char *) cnonce_bin, sizeof( cnonce_bin ) );
 		cnonce = base64_encode( cnonce_bin, sizeof( cnonce_bin ) );
