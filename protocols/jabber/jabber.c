@@ -41,8 +41,7 @@ static void jabber_acc_init( account_t *acc )
 	
 	s = set_add( &acc->set, "priority", "0", set_eval_priority, acc );
 	
-	s = set_add( &acc->set, "privacy_list", NULL, NULL, acc );
-	/* TODO: Add evaluator. */
+	s = set_add( &acc->set, "privacy_list", NULL, set_eval_privacy_list, acc );
 	
 	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -231,12 +230,24 @@ static void jabber_keepalive( struct gaim_connection *gc )
 
 static void jabber_add_permit( struct gaim_connection *gc, char *who )
 {
-	presence_send_request( gc, who, "subscribed" );
+	struct jabber_data *jd = gc->proto_data;
+	
+	if( jd->flags & JFLAG_PRIVACY_BROKEN )
+	{
+		serv_got_crap( gc, "Privacy lists not supported by this server" );
+		return;
+	}
 }
 
 static void jabber_rem_permit( struct gaim_connection *gc, char *who )
 {
-	presence_send_request( gc, who, "unsubscribed" );
+	struct jabber_data *jd = gc->proto_data;
+	
+	if( jd->flags & JFLAG_PRIVACY_BROKEN )
+	{
+		serv_got_crap( gc, "Privacy lists not supported by this server" );
+		return;
+	}
 }
 
 /* XMPP doesn't have both a block- and and allow-list, so these two functions

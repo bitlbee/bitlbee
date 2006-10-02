@@ -147,6 +147,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	else if( strcmp( type, "result" ) == 0 && orig )
 	{
 		struct xt_node *c;
+		
 		if( !( jd->flags & JFLAG_AUTHENTICATED ) &&
 		    ( c = xt_find_node( orig->children, "query" ) ) &&
 		    ( c = xt_find_node( c->children, "username" ) ) &&
@@ -198,6 +199,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	else if( strcmp( type, "error" ) == 0 )
 	{
 		if( !( jd->flags & JFLAG_AUTHENTICATED ) &&
+		      orig &&
 		    ( c = xt_find_node( orig->children, "query" ) ) &&
 		    ( c = xt_find_node( c->children, "username" ) ) &&
 		    c->text_len )
@@ -206,11 +208,32 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			signoff( gc );
 			return XT_ABORT;
 		}
-		else if( orig &&
-		         ( c = xt_find_node( orig->children, "query" ) ) &&
-		         ( c = xt_find_node( c->children, "active" ) ) )
+		else if( ( xmlns && strcmp( xmlns, "jabber:iq:privacy" ) == 0 ) ||
+		         ( orig &&
+		           ( c = xt_find_node( orig->children, "query" ) ) &&
+		           ( s = xt_find_attr( c, "xmlns" ) ) &&
+		           strcmp( s, "jabber:iq:privacy" ) == 0 ) )
 		{
-			serv_got_crap( gc, "Error while activating privacy list, maybe it doesn't exist" );
+			/* All errors related to privacy lists. */
+			if( ( c = xt_find_node( node->children, "error" ) ) == NULL )
+			{
+				hide_login_progress_error( gc, "Received malformed error packet" );
+				signoff( gc );
+				return XT_ABORT;
+			}
+			
+			if( xt_find_node( c->children, "item-not-found" ) )
+			{
+				serv_got_crap( gc, "Error while activating privacy list, maybe it doesn't exist" );
+				/* Should I do anything else here? */
+			}
+			else if( xt_find_node( c->children, "feature-not-implemented" ) )
+			{
+				jd->flags |= JFLAG_PRIVACY_BROKEN;
+				/* Probably there's no need to inform the user.
+				   We can do that if the user ever tries to use
+				   the block/allow commands. */
+			}
 		}
 	}
 	
@@ -326,9 +349,9 @@ int jabber_get_privacy( struct gaim_connection *gc )
 	xt_add_attr( node, "xmlns", "jabber:iq:privacy" );
 	node = jabber_make_packet( "iq", "get", NULL, node );
 	
+	jabber_cache_packet( gc, node );
 	st = jabber_write_packet( gc, node );
 	
-	xt_free_node( node );
 	return st;
 }
 
@@ -345,4 +368,24 @@ int jabber_set_privacy( struct gaim_connection *gc, char *name )
 	jabber_cache_packet( gc, node );
 	
 	return jabber_write_packet( gc, node );
+}
+
+char *set_eval_privacy_list( set_t *set, char *value )
+{
+	account_t *acc = set->data;
+	struct jabber_data *jd = acc->gc->proto_data;
+	
+	if( jd->flags & JFLAG_PRIVACY_BROKEN )
+	{
+		serv_got_crap( acc->gc, "Privacy lists not supported by this server" );
+		return NULL;
+	}
+	
+	/* If we're on-line, return NULL and let the server decide if the
+	   chosen list is valid. If we're off-line, just accept it and we'll
+	   see later (when we connect). */
+	if( acc->gc )
+		jabber_set_privacy( acc->gc, value );
+	
+	return acc->gc ? NULL : value;
 }
