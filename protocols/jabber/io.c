@@ -223,9 +223,14 @@ gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition c
 gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition cond )
 {
 	struct gaim_connection *gc = data;
+	struct jabber_data *jd = gc->proto_data;
 	
 	if( source == NULL )
 	{
+		/* The SSL connection will be cleaned up by the SSL lib
+		   already, set it to NULL here to prevent a double cleanup: */
+		jd->ssl = NULL;
+		
 		hide_login_progress( gc, "Could not connect to server" );
 		signoff( gc );
 		return FALSE;

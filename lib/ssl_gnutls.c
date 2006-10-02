@@ -48,6 +48,8 @@ struct scd
 };
 
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
+static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition cond );
+static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
 
 
 void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
@@ -68,10 +70,6 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	return conn;
 }
 
-/* FIXME: It can happen that the handshake fails even before ssl_connected()
-   returns already. This function will then return an invalid pointer because
-   these failures can't be detected properly yet. Maybe ssl_connected()
-   shouldn't be called directly, but via a short timeout? */
 void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
@@ -81,12 +79,26 @@ void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
 	conn->data = data;
 	conn->inpa = -1;
 	
-	ssl_connected( conn, fd, GAIM_INPUT_WRITE );
+	/* This function should be called via a (short) timeout instead of
+	   directly from here, because these SSL calls are *supposed* to be
+	   *completely* asynchronous and not ready yet when this function
+	   (or *_connect, for examle) returns. Also, errors are reported via
+	   the callback function, not via this function's return value.
+	   
+	   In short, doing things like this makes the rest of the code a lot
+	   simpler. */
+	
+	b_timeout_add( 1, ssl_starttls_real, conn );
 	
 	return conn;
 }
 
-static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
+static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition cond )
+{
+	struct scd *conn = data;
+	
+	return ssl_connected( conn, conn->fd, GAIM_INPUT_WRITE );
+}
 
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
 {
