@@ -63,6 +63,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	
 	if( !sup_plain && !sup_digest )
 	{
+		hide_login_progress( gc, "No known SASL authentication schemes supported" );
 		signoff( gc );
 		return XT_ABORT;
 	}

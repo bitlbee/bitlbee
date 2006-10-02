@@ -51,7 +51,10 @@ int jabber_write( struct gaim_connection *gc, char *buf, int len )
 		/* Try if we can write it immediately so we don't have to do
 		   it via the event handler. If not, add the handler. (In
 		   most cases it probably won't be necessary.) */
+		/* Disabling this trick for now because there's really not
+		   a good way to catch errors yet. :-(
 		if( jabber_write_callback( gc, jd->fd, GAIM_INPUT_WRITE ) )
+		*/
 			jd->w_inpa = b_input_add( jd->fd, GAIM_INPUT_WRITE, jabber_write_callback, gc );
 	}
 	else
@@ -63,7 +66,10 @@ int jabber_write( struct gaim_connection *gc, char *buf, int len )
 		jd->tx_len += len;
 	}
 	
-	/* FIXME: write_callback could've generated a real error! */
+	/* FIXME: write_callback could've generated a real error! Have to
+	   find a way to find out if we have to return 0 here. Looking for
+	   ourselves in the linked list of connections is a possibility,
+	   but it'd be too time-consuming... */
 	return 1;
 }
 
