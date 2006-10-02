@@ -175,4 +175,5 @@ void jabber_buddy_ask( struct gaim_connection *gc, char *handle )
 	
 	buf = g_strdup_printf( "The user %s wants to add you to his/her buddy list.", handle );
 	do_ask_dialog( gc, buf, bla, jabber_buddy_ask_yes, jabber_buddy_ask_no );
+	g_free( buf );
 }

@@ -56,6 +56,10 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		   If you're one of those people, this is your chance to write
 		   your first line of code in C... */
 	}
+	else if( strcmp( type, "error" ) == 0 )
+	{
+		/* What to do with it? */
+	}
 	else
 	{
 		printf( "Received PRES from %s:\n", from );
