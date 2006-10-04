@@ -25,6 +25,7 @@
 #include "ssl_client.h"
 
 static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition cond );
+static gboolean jabber_write_queue( struct gaim_connection *gc );
 
 int jabber_write_packet( struct gaim_connection *gc, struct xt_node *node )
 {
@@ -41,6 +42,7 @@ int jabber_write_packet( struct gaim_connection *gc, struct xt_node *node )
 int jabber_write( struct gaim_connection *gc, char *buf, int len )
 {
 	struct jabber_data *jd = gc->proto_data;
+	gboolean ret;
 	
 	if( jd->tx_len == 0 )
 	{
@@ -51,10 +53,7 @@ int jabber_write( struct gaim_connection *gc, char *buf, int len )
 		/* Try if we can write it immediately so we don't have to do
 		   it via the event handler. If not, add the handler. (In
 		   most cases it probably won't be necessary.) */
-		/* Disabling this trick for now because there's really not
-		   a good way to catch errors yet. :-(
-		if( jabber_write_callback( gc, jd->fd, GAIM_INPUT_WRITE ) )
-		*/
+		if( ( ret = jabber_write_queue( gc ) ) && jd->tx_len > 0 )
 			jd->w_inpa = b_input_add( jd->fd, GAIM_INPUT_WRITE, jabber_write_callback, gc );
 	}
 	else
@@ -64,23 +63,38 @@ int jabber_write( struct gaim_connection *gc, char *buf, int len )
 		jd->txq = g_renew( char, jd->txq, jd->tx_len + len );
 		memcpy( jd->txq + jd->tx_len, buf, len );
 		jd->tx_len += len;
+		
+		/* The return value for write() doesn't necessarily mean
+		   that everything got sent, it mainly means that the
+		   connection (officially) still exists and can still
+		   be accessed without hitting SIGSEGV. IOW: */
+		ret = TRUE;
 	}
 	
-	/* FIXME: write_callback could've generated a real error! Have to
-	   find a way to find out if we have to return 0 here. Looking for
-	   ourselves in the linked list of connections is a possibility,
-	   but it'd be too time-consuming... */
-	return 1;
+	return ret;
 }
 
+/* Splitting up in two separate functions: One to use as a callback and one
+   to use in the function above to escape from having to wait for the event
+   handler to call us, if possible.
+   
+   Two different functions are necessary because of the return values: The
+   callback should only return TRUE if the write was successful AND if the
+   buffer is not empty yet (ie. if the handler has to be called again when
+   the socket is ready for more data). */
 static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition cond )
 {
-	struct gaim_connection *gc = data;
+	struct jabber_data *jd = ((struct gaim_connection *)data)->proto_data;
+	
+	return jd->fd != -1 &&
+	       jabber_write_queue( data ) &&
+	       jd->tx_len > 0;
+}
+
+static gboolean jabber_write_queue( struct gaim_connection *gc )
+{
 	struct jabber_data *jd = gc->proto_data;
 	int st;
-	
-	if( jd->fd == -1 )
-		return FALSE;
 	
 	if( jd->ssl )
 		st = ssl_write( jd->ssl, jd->txq, jd->tx_len );
@@ -96,7 +110,7 @@ static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition
 		jd->txq = NULL;
 		jd->tx_len = 0;
 		
-		return FALSE;
+		return TRUE;
 	}
 	else if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
@@ -186,11 +200,26 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 				   this is an old server that can't do SASL
 				   authentication. */
 				if( !sasl_supported( gc ) )
-					return jabber_start_iq_auth( gc );
+				{
+					/* If there's no version= tag, we suppose
+					   this server does NOT implement: XMPP 1.0,
+					   SASL and TLS. */
+					if( set_getbool( &gc->acc->set, "tls" ) )
+					{
+						hide_login_progress( gc, "TLS is turned on for this "
+						          "account, but is not supported by this server" );
+						signoff( gc );
+						return FALSE;
+					}
+					else
+					{
+						return jabber_start_iq_auth( gc );
+					}
+				}
 			}
 			else
 			{
-				hide_login_progress_error( gc, "XML stream error" );
+				hide_login_progress( gc, "XML stream error" );
 				signoff( gc );
 				return FALSE;
 			}

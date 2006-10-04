@@ -123,7 +123,7 @@ static void jabber_close( struct gaim_connection *gc )
 
 static int jabber_send_im( struct gaim_connection *gc, char *who, char *message, int len, int away )
 {
-	struct xt_node *node, *event;
+	struct xt_node *node;
 	int st;
 	
 	/*
