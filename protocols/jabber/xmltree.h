@@ -79,8 +79,8 @@ struct xt_parser
 struct xt_parser *xt_new( gpointer data );
 void xt_reset( struct xt_parser *xt );
 int xt_feed( struct xt_parser *xt, char *text, int text_len );
-int xt_handle( struct xt_parser *xt, struct xt_node *node );
-void xt_cleanup( struct xt_parser *xt, struct xt_node *node );
+int xt_handle( struct xt_parser *xt, struct xt_node *node, int depth );
+void xt_cleanup( struct xt_parser *xt, struct xt_node *node, int depth );
 char *xt_to_string( struct xt_node *node );
 void xt_print( struct xt_node *node );
 struct xt_node *xt_dup( struct xt_node *node );

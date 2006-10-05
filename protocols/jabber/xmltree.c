@@ -151,20 +151,24 @@ int xt_feed( struct xt_parser *xt, char *text, int text_len )
 
 /* Find completed nodes and see if a handler has to be called. Passing
    a node isn't necessary if you want to start at the root, just pass
-   NULL. This second argument is needed for recursive calls. FIXME: Retval? */
-int xt_handle( struct xt_parser *xt, struct xt_node *node )
+   NULL. This second argument is needed for recursive calls. */
+int xt_handle( struct xt_parser *xt, struct xt_node *node, int depth )
 {
 	struct xt_node *c;
 	xt_status st;
 	int i;
 	
-	/* Let's just hope xt->root isn't NULL! */
-	if( node == NULL )
-		return xt_handle( xt, xt->root );
+	/* Just in case someone likes infinite loops... */
+	if( xt->root == NULL )
+		return 0;
 	
-	for( c = node->children; c; c = c->next )
-		if( !xt_handle( xt, c ) )
-			return 0;
+	if( node == NULL )
+		return xt_handle( xt, xt->root, depth );
+	
+	if( depth != 0 )
+		for( c = node->children; c; c = c->next )
+			if( !xt_handle( xt, c, depth > 0 ? depth - 1 : depth ) )
+				return 0;
 	
 	if( node->flags & XT_COMPLETE && !( node->flags & XT_SEEN ) )
 	{
@@ -201,7 +205,7 @@ int xt_handle( struct xt_parser *xt, struct xt_node *node )
 /* Garbage collection: Cleans up all nodes that are handled. Useful for
    streams because there's no reason to keep a complete packet history
    in memory. */
-void xt_cleanup( struct xt_parser *xt, struct xt_node *node )
+void xt_cleanup( struct xt_parser *xt, struct xt_node *node, int depth )
 {
 	struct xt_node *c, *prev;
 	
@@ -209,7 +213,7 @@ void xt_cleanup( struct xt_parser *xt, struct xt_node *node )
 		return;
 	
 	if( node == NULL )
-		return xt_cleanup( xt, xt->root );
+		return xt_cleanup( xt, xt->root, depth );
 	
 	if( node->flags & XT_SEEN && node == xt->root )
 	{
@@ -245,7 +249,8 @@ void xt_cleanup( struct xt_parser *xt, struct xt_node *node )
 		{
 			/* This node can't be cleaned up yet, but maybe a
 			   subnode can. */
-			xt_cleanup( xt, c );
+			if( depth != 0 )
+				xt_cleanup( xt, c, depth > 0 ? depth - 1 : depth );
 		}
 	}
 }

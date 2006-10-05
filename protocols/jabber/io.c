@@ -169,7 +169,7 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		}
 		
 		/* Execute all handlers. */
-		if( !xt_handle( jd->xt, NULL ) )
+		if( !xt_handle( jd->xt, NULL, 1 ) )
 		{
 			/* Don't do anything, the handlers should have
 			   aborted the connection already... Or not? FIXME */
@@ -183,7 +183,7 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		}
 		
 		/* Garbage collection. */
-		xt_cleanup( jd->xt, NULL );
+		xt_cleanup( jd->xt, NULL, 1 );
 		
 		/* This is a bit hackish, unfortunately. Although xmltree
 		   has nifty event handler stuff, it only calls handlers
