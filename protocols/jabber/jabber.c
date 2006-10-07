@@ -41,8 +41,6 @@ static void jabber_acc_init( account_t *acc )
 	
 	s = set_add( &acc->set, "priority", "0", set_eval_priority, acc );
 	
-	s = set_add( &acc->set, "privacy_list", NULL, set_eval_privacy_list, acc );
-	
 	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
@@ -109,9 +107,6 @@ static void jabber_close( struct gaim_connection *gc )
 	
 	if( jd->tx_len )
 		g_free( jd->txq );
-	
-	xt_free_node( jd->privacy_list );
-	g_free( jd->privacy_active );
 	
 	xt_free_node( jd->node_cache );
 	xt_free( jd->xt );
@@ -228,38 +223,6 @@ static void jabber_keepalive( struct gaim_connection *gc )
 	}
 }
 
-static void jabber_add_permit( struct gaim_connection *gc, char *who )
-{
-	struct jabber_data *jd = gc->proto_data;
-	
-	if( jd->flags & JFLAG_PRIVACY_BROKEN )
-	{
-		serv_got_crap( gc, "Privacy lists not supported by this server" );
-		return;
-	}
-}
-
-static void jabber_rem_permit( struct gaim_connection *gc, char *who )
-{
-	struct jabber_data *jd = gc->proto_data;
-	
-	if( jd->flags & JFLAG_PRIVACY_BROKEN )
-	{
-		serv_got_crap( gc, "Privacy lists not supported by this server" );
-		return;
-	}
-}
-
-/* XMPP doesn't have both a block- and and allow-list, so these two functions
-   will be no-ops: */
-static void jabber_add_deny( struct gaim_connection *gc, char *who )
-{
-}
-
-static void jabber_rem_deny( struct gaim_connection *gc, char *who )
-{
-}
-
 void jabber_init()
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
@@ -281,10 +244,6 @@ void jabber_init()
 //	ret->chat_leave = jabber_chat_leave;
 //	ret->chat_open = jabber_chat_open;
 	ret->keepalive = jabber_keepalive;
-	ret->add_permit = jabber_add_permit;
-	ret->rem_permit = jabber_rem_permit;
-	ret->add_deny = jabber_add_deny;
-	ret->rem_deny = jabber_rem_deny;
 //	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;
 

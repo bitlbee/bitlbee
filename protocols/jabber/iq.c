@@ -108,42 +108,6 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		
 		account_online( gc );
 	}
-	if( strcmp( type, "result" ) == 0 && xmlns && strcmp( xmlns, "jabber:iq:privacy" ) == 0 )
-	{
-		struct xt_node *node;
-		
-		/* When receiving a list of lists: */
-		if( ( node = xt_find_node( query->children, "active" ) ) )
-		{
-			if( ( s = xt_find_attr( node, "name" ) ) )
-			{
-				set_t *set;
-				
-				g_free( jd->privacy_active );
-				jd->privacy_active = g_strdup( s );
-				
-				/* Save it so the user can see it. */
-				if( ( set = set_find( &gc->acc->set, "privacy_list" ) ) )
-				{
-					g_free( set->value );
-					set->value = g_strdup( s );
-				}
-				
-				if( !jabber_get_privacy( gc ) )
-					return XT_ABORT;
-			}
-		}
-		/* When receiving an actual list: */
-		else if( ( node = xt_find_node( query->children, "list" ) ) )
-		{
-			xt_free_node( jd->privacy_list );
-			jd->privacy_list = xt_dup( node );
-		}
-		else if( query->children == NULL )
-		{
-			/* What to do here if there is no privacy list defined yet... */
-		}
-	}
 	else if( strcmp( type, "result" ) == 0 && orig )
 	{
 		struct xt_node *c;
@@ -156,7 +120,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			/* This happens when we just successfully authenticated
 			   the old (non-SASL) way. */
 			jd->flags |= JFLAG_AUTHENTICATED;
-			if( !jabber_get_roster( gc ) || !jabber_get_privacy( gc ) )
+			if( !jabber_get_roster( gc ) )
 				return XT_ABORT;
 		}
 		/* Tricky: Look for <bind> in the reply, because the server
@@ -180,20 +144,9 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			
 			if( ( jd->flags & ( JFLAG_WAIT_BIND | JFLAG_WAIT_SESSION ) ) == 0 )
 			{
-				if( !jabber_get_roster( gc ) || !jabber_get_privacy( gc ) )
+				if( !jabber_get_roster( gc ) )
 					return XT_ABORT;
 			}
-		}
-		else if( ( c = xt_find_node( orig->children, "query" ) ) &&
-		         ( c = xt_find_node( c->children, "active" ) ) )
-		{
-			/* We just successfully activated a (different)
-			   privacy list. Fetch it now. */
-			g_free( jd->privacy_active );
-			jd->privacy_active = g_strdup( xt_find_attr( c, "name" ) );
-			
-			if( !jabber_get_privacy( gc ) )
-				return XT_ABORT;
 		}
 	}
 	else if( strcmp( type, "error" ) == 0 )
@@ -207,33 +160,6 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			hide_login_progress( gc, "Authentication failure" );
 			signoff( gc );
 			return XT_ABORT;
-		}
-		else if( ( xmlns && strcmp( xmlns, "jabber:iq:privacy" ) == 0 ) ||
-		         ( orig &&
-		           ( c = xt_find_node( orig->children, "query" ) ) &&
-		           ( s = xt_find_attr( c, "xmlns" ) ) &&
-		           strcmp( s, "jabber:iq:privacy" ) == 0 ) )
-		{
-			/* All errors related to privacy lists. */
-			if( ( c = xt_find_node( node->children, "error" ) ) == NULL )
-			{
-				hide_login_progress_error( gc, "Received malformed error packet" );
-				signoff( gc );
-				return XT_ABORT;
-			}
-			
-			if( xt_find_node( c->children, "item-not-found" ) )
-			{
-				serv_got_crap( gc, "Error while activating privacy list, maybe it doesn't exist" );
-				/* Should I do anything else here? */
-			}
-			else if( xt_find_node( c->children, "feature-not-implemented" ) )
-			{
-				jd->flags |= JFLAG_PRIVACY_BROKEN;
-				/* Probably there's no need to inform the user.
-				   We can do that if the user ever tries to use
-				   the block/allow commands. */
-			}
 		}
 	}
 	
@@ -314,78 +240,4 @@ int jabber_remove_from_roster( struct gaim_connection *gc, char *handle )
 	
 	xt_free_node( node );
 	return st;
-}
-
-/* Request the privacy list from the server. We need this, because every
-   time we remove/add something we have to send the whole new list to the
-   server again... If no privacy list is specified yet, this function will
-   first ask for the list of lists (XMPP supports multiple "privacy lists",
-   don't ask me why), later we can then fetch the list we want to use. */
-int jabber_get_privacy( struct gaim_connection *gc )
-{
-	struct jabber_data *jd = gc->proto_data;
-	struct xt_node *node = NULL;
-	char *name;
-	int st;
-	
-	if( jd->privacy_active )
-	{
-		/* If we know what is the active list right now, fetch it. */
-		node = xt_new_node( "list", NULL, NULL );
-		xt_add_attr( node, "name", jd->privacy_active );
-	}
-	/* Okay, we don't know yet. If the user set a specific list, we'll
-	   activate that one. Otherwise, we should figure out which list is
-	   currently active. */
-	else if( ( name = set_getstr( &gc->acc->set, "privacy_list" ) ) )
-	{
-		return jabber_set_privacy( gc, name );
-	}
-	/* else: sending this packet without a <list/> element will give
-	   a list of available lists and information about the currently
-	   active list. */
-	
-	node = xt_new_node( "query", NULL, node );
-	xt_add_attr( node, "xmlns", "jabber:iq:privacy" );
-	node = jabber_make_packet( "iq", "get", NULL, node );
-	
-	jabber_cache_packet( gc, node );
-	st = jabber_write_packet( gc, node );
-	
-	return st;
-}
-
-int jabber_set_privacy( struct gaim_connection *gc, char *name )
-{
-	struct xt_node *node;
-	
-	node = xt_new_node( "active", NULL, NULL );
-	xt_add_attr( node, "name", name );
-	node = xt_new_node( "query", NULL, node );
-	xt_add_attr( node, "xmlns", "jabber:iq:privacy" );
-	
-	node = jabber_make_packet( "iq", "set", NULL, node );
-	jabber_cache_packet( gc, node );
-	
-	return jabber_write_packet( gc, node );
-}
-
-char *set_eval_privacy_list( set_t *set, char *value )
-{
-	account_t *acc = set->data;
-	struct jabber_data *jd = acc->gc->proto_data;
-	
-	if( jd->flags & JFLAG_PRIVACY_BROKEN )
-	{
-		serv_got_crap( acc->gc, "Privacy lists not supported by this server" );
-		return NULL;
-	}
-	
-	/* If we're on-line, return NULL and let the server decide if the
-	   chosen list is valid. If we're off-line, just accept it and we'll
-	   see later (when we connect). */
-	if( acc->gc )
-		jabber_set_privacy( acc->gc, value );
-	
-	return acc->gc ? NULL : value;
 }

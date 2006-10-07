@@ -385,7 +385,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	   to bind/initialize the session. */
 	if( jd->flags & JFLAG_AUTHENTICATED && ( jd->flags & ( JFLAG_WAIT_BIND | JFLAG_WAIT_SESSION ) ) == 0 )
 	{
-		if( !jabber_get_roster( gc ) || !jabber_get_privacy( gc ) )
+		if( !jabber_get_roster( gc ) )
 			return XT_ABORT;
 	}
 	

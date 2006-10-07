@@ -527,9 +527,25 @@ void xt_add_attr( struct xt_node *node, char *key, char *value )
 {
 	int i;
 	
-	for( i = 0; node->attr[i].key; i ++ );
-	node->attr = g_renew( struct xt_attr, node->attr, i + 2 );
-	node->attr[i].key = g_strdup( key );
+	/* Now actually it'd be nice if we can also change existing attributes
+	   (which actually means this function doesn't have the right name).
+	   So let's find out if we have this attribute already... */
+	for( i = 0; node->attr[i].key; i ++ )
+		if( strcmp( node->attr[i].key, key ) == 0 )
+			break;
+	
+	if( node->attr[i].key == NULL )
+	{
+		/* If not, allocate space for a new attribute. */
+		node->attr = g_renew( struct xt_attr, node->attr, i + 2 );
+		node->attr[i].key = g_strdup( key );
+		node->attr[i+1].key = NULL;
+	}
+	else
+	{
+		/* Otherwise, free the old value before setting the new one. */
+		g_free( node->attr[i].value );
+	}
+	
 	node->attr[i].value = g_strdup( value );
-	node->attr[i+1].key = NULL;
 }

@@ -36,7 +36,6 @@ typedef enum
 	JFLAG_STREAM_RESTART = 4,	/* Set when we want to restart the stream (after SASL or TLS). */
 	JFLAG_WAIT_SESSION = 8,		/* Set if we sent a <session> tag and need a reply before we continue. */
 	JFLAG_WAIT_BIND = 16,		/* ... for <bind> tag. */
-	JFLAG_PRIVACY_BROKEN = 32,	/* Or just not supported, actually. */
 } jabber_flags_t;
 
 struct jabber_data
@@ -60,10 +59,6 @@ struct jabber_data
 	struct jabber_away_state *away_state;
 	char *away_message;
 	
-	/* Updates to this one should be synchronized using jabber_privacy_update(). */
-	struct xt_node *privacy_list;
-	char *privacy_active;
-	
 	struct xt_node *node_cache;
 };
 
@@ -73,17 +68,12 @@ struct jabber_away_state
 	char *full_name;
 };
 
-#define DEFAULT_PRIVACY_LIST "simple_blocklist"
-
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
 int jabber_start_iq_auth( struct gaim_connection *gc );
 int jabber_get_roster( struct gaim_connection *gc );
 int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name );
 int jabber_remove_from_roster( struct gaim_connection *gc, char *handle );
-int jabber_get_privacy( struct gaim_connection *gc );
-int jabber_set_privacy( struct gaim_connection *gc, char *name );
-char *set_eval_privacy_list( set_t *set, char *value );
 
 /* message.c */
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
