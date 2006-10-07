@@ -37,6 +37,9 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	if( s )
 		*s = 0;
 	
+	/* Will implement better parsing of away states/msgs when we
+	   finally do those API changes. Which will probably be after
+	   merging this module into the main tree. */
 	if( type == NULL )
 		serv_got_update( gc, from, 1, 0, 0, 0, 0, 0 );
 	else if( strcmp( type, "unavailable" ) == 0 )
@@ -83,13 +86,11 @@ int presence_send_update( struct gaim_connection *gc )
 	int st;
 	
 	node = jabber_make_packet( "presence", NULL, NULL, NULL );
+	xt_add_child( node, xt_new_node( "priority", set_getstr( &gc->acc->set, "priority" ), NULL ) );
 	if( show && *show )
 		xt_add_child( node, xt_new_node( "show", show, NULL ) );
 	if( status )
 		xt_add_child( node, xt_new_node( "status", status, NULL ) );
-	/* if( set_getint( &gc->acc->set, "priority" ) != 0 ) */
-	/* Let's just send this every time... */
-		xt_add_child( node, xt_new_node( "priority", set_getstr( &gc->acc->set, "priority" ), NULL ) );
 	
 	st = jabber_write_packet( gc, node );
 	

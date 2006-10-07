@@ -318,6 +318,14 @@ fi;
 
 echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 
+for i in /lib /usr/lib /usr/local/lib; do
+	if [ -e $i/libresolv.a ]; then
+		echo '#define HAVE_RESOLV_A' >> config.h
+		echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
+		break
+	fi
+done
+
 STORAGES="text xml"
 
 if [ "$ldap" = "auto" ]; then

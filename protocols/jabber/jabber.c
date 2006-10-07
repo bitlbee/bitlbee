@@ -58,6 +58,8 @@ static void jabber_login( account_t *acc )
 {
 	struct gaim_connection *gc = new_gaim_conn( acc );
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
+	struct ns_srv_reply *srv = NULL;
+	char *connect_to;
 	
 	jd->gc = gc;
 	gc->proto_data = jd;
@@ -78,15 +80,29 @@ static void jabber_login( account_t *acc )
 	
 	jd->node_cache = xt_new_node( "cache", NULL, NULL );
 	
+	/* Figure out the hostname to connect to. */
+	if( acc->server )
+		connect_to = acc->server;
+	else if( ( srv = srv_lookup( "xmpp-client", "tcp", jd->server ) ) ||
+		 ( srv = srv_lookup( "jabber-client", "tcp", jd->server ) ) )
+		connect_to = srv->name;
+	else
+		connect_to = jd->server;
+	
+	/* For non-SSL connections we can try to use the port # from the SRV
+	   reply, but let's not do that when using SSL, SSL usually runs on
+	   non-standard ports... */
 	if( set_getbool( &acc->set, "ssl" ) )
 	{
-		jd->ssl = ssl_connect( acc->server ? acc->server : jd->server, set_getint( &acc->set, "port" ), jabber_connected_ssl, gc );
+		jd->ssl = ssl_connect( connect_to, set_getint( &acc->set, "port" ), jabber_connected_ssl, gc );
 		jd->fd = ssl_getfd( jd->ssl );
 	}
 	else
 	{
-		jd->fd = proxy_connect( acc->server ? acc->server : jd->server, set_getint( &acc->set, "port" ), jabber_connected_plain, gc );
+		jd->fd = proxy_connect( connect_to, srv ? srv->port : set_getint( &acc->set, "port" ), jabber_connected_plain, gc );
 	}
+	
+	g_free( srv );
 }
 
 static void jabber_close( struct gaim_connection *gc )

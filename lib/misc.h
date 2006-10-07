@@ -29,6 +29,14 @@
 #include <gmodule.h>
 #include <time.h>
 
+struct ns_srv_reply
+{
+	int prio;
+	int weight;
+	int port;
+	char name[];
+};
+
 G_MODULE_EXPORT void strip_linefeed( gchar *text );
 G_MODULE_EXPORT char *add_cr( char *text );
 G_MODULE_EXPORT char *strip_newlines(char *source);
@@ -52,5 +60,7 @@ G_MODULE_EXPORT void random_bytes( unsigned char *buf, int count );
 
 G_MODULE_EXPORT int is_bool( char *value );
 G_MODULE_EXPORT int bool2int( char *value );
+
+G_MODULE_EXPORT struct ns_srv_reply *srv_lookup( char *service, char *protocol, char *domain );
 
 #endif
