@@ -78,7 +78,7 @@ static void jabber_login( account_t *acc )
 	*jd->server = 0;
 	jd->server ++;
 	
-	jd->node_cache = xt_new_node( "cache", NULL, NULL );
+	jd->node_cache = g_hash_table_new_full( g_str_hash, g_str_equal, NULL, jabber_cache_entry_free );
 	
 	/* Figure out the hostname to connect to. */
 	if( acc->server )
@@ -124,7 +124,8 @@ static void jabber_close( struct gaim_connection *gc )
 	if( jd->tx_len )
 		g_free( jd->txq );
 	
-	xt_free_node( jd->node_cache );
+	g_hash_table_destroy( jd->node_cache );
+	
 	xt_free( jd->xt );
 	
 	g_free( jd->away_message );
@@ -165,6 +166,18 @@ static GList *jabber_away_states( struct gaim_connection *gc )
 	return l;
 }
 
+static void jabber_get_info( struct gaim_connection *gc, char *who )
+{
+	struct xt_node *node;
+	
+	node = xt_new_node( "query", NULL, NULL );
+	xt_add_attr( node, "xmlns", "http://jabber.org/protocol/disco#info" );
+	node = jabber_make_packet( "iq", "get", who, node );
+	jabber_cache_add( gc, node );
+	
+	jabber_write_packet( gc, node );
+}
+
 static void jabber_set_away( struct gaim_connection *gc, char *state_txt, char *message )
 {
 	struct jabber_data *jd = gc->proto_data;
@@ -193,50 +206,12 @@ static void jabber_remove_buddy( struct gaim_connection *gc, char *who, char *gr
 
 static void jabber_keepalive( struct gaim_connection *gc )
 {
-	struct jabber_data *jd = gc->proto_data;
-	struct xt_node *c, *tmp;
-	
 	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
 	jabber_write( gc, "\n", 1 );
 	
-	/* Let's abuse this keepalive for garbage collection of the node cache too.
-	   It runs every minute, so let's mark every node with a special flag the
-	   first time we see it, and clean it up the second time (clean up all
-	   packets with the flag set).
-	   
-	   node->flags is normally only used by xmltree itself for parsing/handling,
-	   so it should be safe to use the variable for gc. */
-	
-	/* This horrible loop is explained in xmltree.c. Makes me wonder if maybe I
-	   didn't choose the perfect data structure... */
-	for( c = jd->node_cache->children; c; c =  c->next )
-		if( !( c->flags & XT_SEEN ) )
-			break;
-	
-	/* Now c points at the first unflagged node (or at NULL). Clean up
-	   everything until that point. */
-	while( jd->node_cache->children != c )
-	{
-		/*
-		printf( "Cleaning up:\n" );
-		xt_print( jd->node_cache->children );
-		*/
-		
-		tmp = jd->node_cache->children->next;
-		xt_free_node( jd->node_cache->children );
-		jd->node_cache->children = tmp;
-	}
-	
-	/* Now flag the ones that were still unflagged. */
-	for( c = jd->node_cache->children; c; c = c->next )
-	{
-		/*
-		printf( "Flagged:\n" );
-		xt_print( c );
-		*/
-		
-		c->flags |= XT_SEEN;
-	}
+	/* This runs the garbage collection every minute, which means every packet
+	   is in the cache for about a minute (which should be enough AFAIK). */
+	jabber_cache_clean( gc );
 }
 
 void jabber_init()
@@ -252,7 +227,7 @@ void jabber_init()
 //	ret->get_status_string = jabber_get_status_string;
 	ret->set_away = jabber_set_away;
 //	ret->set_info = jabber_set_info;
-//	ret->get_info = jabber_get_info;
+	ret->get_info = jabber_get_info;
 	ret->add_buddy = jabber_add_buddy;
 	ret->remove_buddy = jabber_remove_buddy;
 //	ret->chat_send = jabber_chat_send;

@@ -59,13 +59,21 @@ struct jabber_data
 	struct jabber_away_state *away_state;
 	char *away_message;
 	
-	struct xt_node *node_cache;
+	GHashTable *node_cache;
 };
 
 struct jabber_away_state
 {
 	char code[5];
 	char *full_name;
+};
+
+typedef xt_status (*jabber_cache_event) ( struct gaim_connection *gc, struct xt_node *packet );
+
+struct jabber_cache_entry
+{
+	struct xt_node *node;
+	jabber_cache_event func;
 };
 
 /* iq.c */
@@ -87,8 +95,10 @@ int presence_send_request( struct gaim_connection *gc, char *handle, char *reque
 char *set_eval_priority( set_t *set, char *value );
 char *set_eval_tls( set_t *set, char *value );
 struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
-void jabber_cache_packet( struct gaim_connection *gc, struct xt_node *node );
-struct xt_node *jabber_packet_from_cache( struct gaim_connection *gc, char *id );
+void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node );
+struct xt_node *jabber_cache_get( struct gaim_connection *gc, char *id );
+void jabber_cache_entry_free( gpointer entry );
+void jabber_cache_clean( struct gaim_connection *gc );
 const struct jabber_away_state *jabber_away_state_by_code( char *code );
 const struct jabber_away_state *jabber_away_state_by_name( char *name );
 void jabber_buddy_ask( struct gaim_connection *gc, char *handle );

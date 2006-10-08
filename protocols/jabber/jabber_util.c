@@ -81,30 +81,56 @@ struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_
 /* Cache a node/packet for later use. Mainly useful for IQ packets if you need
    them when you receive the response. Use this BEFORE sending the packet so
    it'll get an id= tag, and do NOT free() the packet after writing it! */
-void jabber_cache_packet( struct gaim_connection *gc, struct xt_node *node )
+void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node )
 {
 	struct jabber_data *jd = gc->proto_data;
 	char *id = g_strdup_printf( "BeeX%04x", next_id++ );
-	
-	/* FIXME: Maybe start using g_error() here if nodes still have a parent, for example? */
+	struct jabber_cache_entry *entry = g_new0( struct jabber_cache_entry, 1 );
 	
 	xt_add_attr( node, "id", id );
-	xt_add_child( jd->node_cache, node );
 	g_free( id );
+	
+	entry->node = node;
+	g_hash_table_insert( jd->node_cache, xt_find_attr( node, "id" ), entry );
 }
 
-/* Emptying this cache is a BIG TODO! */
-struct xt_node *jabber_packet_from_cache( struct gaim_connection *gc, char *id )
+struct xt_node *jabber_cache_get( struct gaim_connection *gc, char *id )
 {
 	struct jabber_data *jd = gc->proto_data;
-	struct xt_node *node;
-	char *s;
+	struct jabber_cache_entry *entry = g_hash_table_lookup( jd->node_cache, id );
 	
-	for( node = jd->node_cache->children; node; node = node->next )
-		if( ( s = xt_find_attr( node, "id" ) ) && strcmp( id, s ) == 0 )
-			break;
+	return entry ? entry->node : NULL;
+}
+
+void jabber_cache_entry_free( gpointer data )
+{
+	struct jabber_cache_entry *entry = data;
 	
-	return node;
+	xt_free_node( entry->node );
+	g_free( entry );
+}
+
+gboolean jabber_cache_clean_entry( gpointer key, gpointer entry, gpointer nullpointer );
+
+void jabber_cache_clean( struct gaim_connection *gc )
+{
+	struct jabber_data *jd = gc->proto_data;
+	
+	g_hash_table_foreach_remove( jd->node_cache, jabber_cache_clean_entry, NULL );
+}
+
+gboolean jabber_cache_clean_entry( gpointer key, gpointer entry_, gpointer nullpointer )
+{
+	struct jabber_cache_entry *entry = entry_;
+	struct xt_node *node = entry->node;
+	
+	if( node->flags & XT_SEEN )
+		return TRUE;
+	else
+	{
+		node->flags |= XT_SEEN;
+		return FALSE;
+	}
 }
 
 const struct jabber_away_state jabber_away_state_list[] =

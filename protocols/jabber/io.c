@@ -359,7 +359,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		reply = xt_new_node( "bind", NULL, xt_new_node( "resource", set_getstr( &gc->acc->set, "resource" ), NULL ) );
 		xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-bind" );
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
-		jabber_cache_packet( gc, reply );
+		jabber_cache_add( gc, reply );
 		
 		if( !jabber_write_packet( gc, reply ) )
 			return XT_ABORT;
@@ -372,7 +372,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		reply = xt_new_node( "session", NULL, NULL );
 		xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-session" );
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
-		jabber_cache_packet( gc, reply );
+		jabber_cache_add( gc, reply );
 		
 		if( !jabber_write_packet( gc, reply ) )
 			return XT_ABORT;

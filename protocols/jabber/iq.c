@@ -40,7 +40,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	xmlns = xt_find_attr( query, "xmlns" );
 	
 	if( ( s = xt_find_attr( node, "id" ) ) )
-		orig = jabber_packet_from_cache( gc, s );
+		orig = jabber_cache_get( gc, s );
 	
 	if( strcmp( type, "result" ) == 0 && xmlns && strcmp( xmlns, "jabber:iq:auth" ) == 0 )
 	{
@@ -84,7 +84,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		}
 		
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
-		jabber_cache_packet( gc, reply );
+		jabber_cache_add( gc, reply );
 		st = jabber_write_packet( gc, reply );
 		
 		return st ? XT_HANDLED : XT_ABORT;
