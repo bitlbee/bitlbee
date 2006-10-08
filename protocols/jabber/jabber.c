@@ -173,7 +173,7 @@ static void jabber_get_info( struct gaim_connection *gc, char *who )
 	node = xt_new_node( "query", NULL, NULL );
 	xt_add_attr( node, "xmlns", "http://jabber.org/protocol/disco#info" );
 	node = jabber_make_packet( "iq", "get", who, node );
-	jabber_cache_add( gc, node );
+	// jabber_cache_add( gc, node,  );
 	
 	jabber_write_packet( gc, node );
 }

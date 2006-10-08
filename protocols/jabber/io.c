@@ -213,7 +213,7 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 					}
 					else
 					{
-						return jabber_start_iq_auth( gc );
+						return jabber_init_iq_auth( gc );
 					}
 				}
 			}
@@ -350,7 +350,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	   to be XMPP 1.0 compliant! */
 	else if( !( jd->flags & JFLAG_AUTHENTICATED ) && sasl_supported( gc ) )
 	{
-		if( !jabber_start_iq_auth( gc ) )
+		if( !jabber_init_iq_auth( gc ) )
 			return XT_ABORT;
 	}
 	
@@ -359,7 +359,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		reply = xt_new_node( "bind", NULL, xt_new_node( "resource", set_getstr( &gc->acc->set, "resource" ), NULL ) );
 		xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-bind" );
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
-		jabber_cache_add( gc, reply );
+		jabber_cache_add( gc, reply, jabber_pkt_bind_sess );
 		
 		if( !jabber_write_packet( gc, reply ) )
 			return XT_ABORT;
@@ -372,7 +372,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		reply = xt_new_node( "session", NULL, NULL );
 		xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-session" );
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
-		jabber_cache_add( gc, reply );
+		jabber_cache_add( gc, reply, jabber_pkt_bind_sess );
 		
 		if( !jabber_write_packet( gc, reply ) )
 			return XT_ABORT;

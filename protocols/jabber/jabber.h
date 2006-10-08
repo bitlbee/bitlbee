@@ -68,7 +68,7 @@ struct jabber_away_state
 	char *full_name;
 };
 
-typedef xt_status (*jabber_cache_event) ( struct gaim_connection *gc, struct xt_node *packet );
+typedef xt_status (*jabber_cache_event) ( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
 
 struct jabber_cache_entry
 {
@@ -78,7 +78,8 @@ struct jabber_cache_entry
 
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
-int jabber_start_iq_auth( struct gaim_connection *gc );
+int jabber_init_iq_auth( struct gaim_connection *gc );
+xt_status jabber_pkt_bind_sess( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
 int jabber_get_roster( struct gaim_connection *gc );
 int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name );
 int jabber_remove_from_roster( struct gaim_connection *gc, char *handle );
@@ -95,7 +96,7 @@ int presence_send_request( struct gaim_connection *gc, char *handle, char *reque
 char *set_eval_priority( set_t *set, char *value );
 char *set_eval_tls( set_t *set, char *value );
 struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
-void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node );
+void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node, jabber_cache_event func );
 struct xt_node *jabber_cache_get( struct gaim_connection *gc, char *id );
 void jabber_cache_entry_free( gpointer entry );
 void jabber_cache_clean( struct gaim_connection *gc );

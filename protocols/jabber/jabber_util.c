@@ -81,7 +81,7 @@ struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_
 /* Cache a node/packet for later use. Mainly useful for IQ packets if you need
    them when you receive the response. Use this BEFORE sending the packet so
    it'll get an id= tag, and do NOT free() the packet after writing it! */
-void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node )
+void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node, jabber_cache_event func )
 {
 	struct jabber_data *jd = gc->proto_data;
 	char *id = g_strdup_printf( "BeeX%04x", next_id++ );
@@ -91,15 +91,8 @@ void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node )
 	g_free( id );
 	
 	entry->node = node;
+	entry->func = func;
 	g_hash_table_insert( jd->node_cache, xt_find_attr( node, "id" ), entry );
-}
-
-struct xt_node *jabber_cache_get( struct gaim_connection *gc, char *id )
-{
-	struct jabber_data *jd = gc->proto_data;
-	struct jabber_cache_entry *entry = g_hash_table_lookup( jd->node_cache, id );
-	
-	return entry ? entry->node : NULL;
 }
 
 void jabber_cache_entry_free( gpointer data )
@@ -112,6 +105,11 @@ void jabber_cache_entry_free( gpointer data )
 
 gboolean jabber_cache_clean_entry( gpointer key, gpointer entry, gpointer nullpointer );
 
+/* This one should be called from time to time (from keepalive, in this case)
+   to make sure things don't stay in the node cache forever. By marking nodes
+   during the first run and deleting marked nodes during a next run, every
+   node should be available in the cache for at least a minute (assuming the
+   function is indeed called every minute). */
 void jabber_cache_clean( struct gaim_connection *gc )
 {
 	struct jabber_data *jd = gc->proto_data;
