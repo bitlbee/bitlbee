@@ -201,3 +201,135 @@ void jabber_buddy_ask( struct gaim_connection *gc, char *handle )
 	do_ask_dialog( gc, buf, bla, jabber_buddy_ask_yes, jabber_buddy_ask_no );
 	g_free( buf );
 }
+
+/* Adds a buddy/resource to our list. Returns NULL if full_jid is not really a
+   FULL jid or if we already have this buddy/resource. */
+struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_jid )
+{
+	struct jabber_data *jd = gc->proto_data;
+	struct jabber_buddy *bud, *new, *bi;
+	char *s;
+	
+	if( !( s = strchr( full_jid, '/' ) ) )
+		return NULL;
+	
+	new = g_new0( struct jabber_buddy, 1 );
+	
+	*s = 0;
+	if( ( bud = g_hash_table_lookup( jd->buddies, full_jid ) ) )
+	{
+		new->handle = bud->handle;
+		
+		/* We already have another resource for this buddy, add the
+		   new one to the list. */
+		for( bi = bud; bi; bi = bi->next )
+		{
+			/* Check for dupes. Resource seem to be case sensitive. */
+			if( strcmp( bi->resource, s + 1 ) == 0 )
+			{
+				*s = '/';
+				g_free( new );
+				return NULL;
+			}
+			/* Append the new item to the list. */
+			else if( bi->next == NULL )
+			{
+				bi->next = new;
+				break;
+			}
+		}
+	}
+	else
+	{
+		new->handle = g_strdup( full_jid );
+		g_hash_table_insert( jd->buddies, new->handle, new );
+	}
+	
+	*s = '/';
+	new->resource = g_strdup( s + 1 );
+	
+	return new;
+}
+
+struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid )
+{
+	struct jabber_data *jd = gc->proto_data;
+	struct jabber_buddy *bud;
+	char *s;
+	
+	if( ( s = strchr( jid, '/' ) ) )
+	{
+		*s = 0;
+		if( ( bud = g_hash_table_lookup( jd->buddies, jid ) ) )
+			for( ; bud; bud = bud->next )
+				if( strcmp( bud->resource, s + 1 ) == 0 )
+					break;
+	}
+	else
+	{
+		/* TODO: Add selection. */
+		return g_hash_table_lookup( jd->buddies, jid );
+	}
+	
+	*s = '/';
+	return bud;
+}
+
+int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid )
+{
+	struct jabber_data *jd = gc->proto_data;
+	struct jabber_buddy *bud, *prev, *bi;
+	char *s;
+	
+	if( !( s = strchr( full_jid, '/' ) ) )
+		return 0;
+	
+	*s = 0;
+	if( ( bud = g_hash_table_lookup( jd->buddies, full_jid ) ) )
+	{
+		/* If there's only one item in the list (and if the resource
+		   matches), removing it is simple. (And the hash reference
+		   should be removed too!) */
+		if( bud->next == NULL && strcmp( bud->resource, s + 1 ) == 0 )
+		{
+			g_hash_table_remove( jd->buddies, bud->handle );
+			g_free( bud->handle );
+			g_free( bud->resource );
+			g_free( bud->away_message );
+			g_free( bud );
+		}
+		else
+		{
+			for( bi = bud, prev = NULL; bi; bi = (prev=bi)->next )
+				if( strcmp( bi->resource, s + 1 ) == 0 )
+					break;
+			
+			if( bi )
+			{
+				if( prev )
+					prev->next = bi->next;
+				else
+					/* The hash table should point at the second
+					   item, because we're removing the first. */
+					g_hash_table_replace( jd->buddies, bi->handle, bi->next );
+				
+				g_free( bi->resource );
+				g_free( bi->away_message );
+				g_free( bi );
+			}
+			else
+			{
+				*s = '/';
+				return 0;
+			}
+		}
+		
+		*s = '/';
+		return 1;
+	}
+	else
+	{
+		*s = '/';
+		return 0;
+	}
+}

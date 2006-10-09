@@ -60,6 +60,7 @@ struct jabber_data
 	char *away_message;
 	
 	GHashTable *node_cache;
+	GHashTable *buddies;
 };
 
 struct jabber_away_state
@@ -74,6 +75,21 @@ struct jabber_cache_entry
 {
 	struct xt_node *node;
 	jabber_cache_event func;
+};
+
+struct jabber_buddy
+{
+	char *handle;
+	char *resource;
+	
+	int priority;
+	struct jabber_away_state *away_state;
+	char *away_message;
+	
+	time_t last_act;
+	int flags;
+	
+	struct jabber_buddy *next;
 };
 
 /* iq.c */
@@ -103,6 +119,9 @@ void jabber_cache_clean( struct gaim_connection *gc );
 const struct jabber_away_state *jabber_away_state_by_code( char *code );
 const struct jabber_away_state *jabber_away_state_by_name( char *name );
 void jabber_buddy_ask( struct gaim_connection *gc, char *handle );
+struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_jid );
+struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid );
+int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid );
 
 extern const struct jabber_away_state jabber_away_state_list[];
 

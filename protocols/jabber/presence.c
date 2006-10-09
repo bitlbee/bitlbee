@@ -28,26 +28,62 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	struct gaim_connection *gc = data;
 	char *from = xt_find_attr( node, "from" );
 	char *type = xt_find_attr( node, "type" );	/* NULL should mean the person is online. */
-	char *s;
+	struct xt_node *c;
 	
 	if( !from )
 		return XT_HANDLED;
 	
-	s = strchr( from, '/' );
-	if( s )
-		*s = 0;
-	
-	/* Will implement better parsing of away states/msgs when we
-	   finally do those API changes. Which will probably be after
-	   merging this module into the main tree. */
 	if( type == NULL )
-		serv_got_update( gc, from, 1, 0, 0, 0, 0, 0 );
+	{
+		struct jabber_buddy *bud;
+		
+		if( !( bud = jabber_buddy_by_jid( gc, from ) ) )
+		{
+			bud = jabber_buddy_add( gc, from );
+		}
+		
+		g_free( bud->away_message );
+		if( ( c = xt_find_node( node->children, "status" ) ) && c->text_len > 0 )
+			bud->away_message = g_strdup( c->text );
+		else
+			bud->away_message = NULL;
+		
+		if( ( c = xt_find_node( node->children, "show" ) ) && c->text_len > 0 )
+			bud->away_state = (void*) jabber_away_state_by_code( c->text );
+		else
+			bud->away_state = NULL;
+		
+		if( ( c = xt_find_node( node->children, "priority" ) ) && c->text_len > 0 )
+			bud->priority = atoi( c->text );
+		else
+			bud->priority = 0;
+		
+		serv_got_update( gc, bud->handle, 1, 0, 0, 0, 0, 0 );
+	}
 	else if( strcmp( type, "unavailable" ) == 0 )
-		serv_got_update( gc, from, 0, 0, 0, 0, 0, 0 );
+	{
+		char *s;
+		
+		jabber_buddy_remove( gc, from );
+		
+		if( ( s = strchr( from, '/' ) ) )
+			*s = 0;
+		
+		/* Only count this as offline if there's no other resource
+		   available anymore. */
+		if( jabber_buddy_by_jid( gc, from ) == NULL )
+			serv_got_update( gc, from, 0, 0, 0, 0, 0, 0 );
+		
+		*s = '/';
+	}
 	else if( strcmp( type, "subscribe" ) == 0 )
+	{
 		jabber_buddy_ask( gc, from );
+	}
 	else if( strcmp( type, "subscribed" ) == 0 )
+	{
 		serv_got_crap( gc, "%s just accepted your authorization request", from );
+	}
 	else if( strcmp( type, "unsubscribe" ) == 0 || strcmp( type, "unsubscribed" ) == 0 )
 	{
 		/* Do nothing here. Plenty of control freaks or over-curious
@@ -68,9 +104,6 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		printf( "Received PRES from %s:\n", from );
 		xt_print( node );
 	}
-	
-	if( s )
-		*s = '/';
 	
 	return XT_HANDLED;
 }

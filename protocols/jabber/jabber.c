@@ -79,6 +79,7 @@ static void jabber_login( account_t *acc )
 	jd->server ++;
 	
 	jd->node_cache = g_hash_table_new_full( g_str_hash, g_str_equal, NULL, jabber_cache_entry_free );
+	jd->buddies = g_hash_table_new( g_str_hash, g_str_equal );
 	
 	/* Figure out the hostname to connect to. */
 	if( acc->server )
@@ -168,10 +169,23 @@ static GList *jabber_away_states( struct gaim_connection *gc )
 
 static void jabber_get_info( struct gaim_connection *gc, char *who )
 {
+	struct jabber_buddy *bud;
 	struct xt_node *node;
 	
+	bud = jabber_buddy_by_jid( gc, who );
+	while( bud )
+	{
+		serv_got_crap( gc, "Buddy %s/%s (%d) information:\nAway state: %s\nAway message: %s",
+		                   bud->handle, bud->resource, bud->priority,
+		                   bud->away_state ? bud->away_state->full_name : "(none)",
+		                   bud->away_message ? : "(none)" );
+		bud = bud->next;
+	}
+	
+//	node = xt_new_node( "vCard", NULL, NULL );
+//	xt_add_attr( node, "xmlns", "vcard-temp" );
 	node = xt_new_node( "query", NULL, NULL );
-	xt_add_attr( node, "xmlns", "http://jabber.org/protocol/disco#info" );
+	xt_add_attr( node, "xmlns", "jabber:iq:version" );
 	node = jabber_make_packet( "iq", "get", who, node );
 	// jabber_cache_add( gc, node,  );
 	
