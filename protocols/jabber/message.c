@@ -28,27 +28,42 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 	struct gaim_connection *gc = data;
 	char *from = xt_find_attr( node, "from" );
 	char *type = xt_find_attr( node, "type" );
-	struct xt_node *msg = xt_find_node( node->children, "body" );
+	struct xt_node *body = xt_find_node( node->children, "body" );
 	
-	if( !type || !msg )
+	if( !type )
 		return XT_HANDLED;	/* Grmbl... FIXME */
 	
 	if( strcmp( type, "chat" ) == 0 )
 	{
-		char *s;
+		struct jabber_buddy *bud = NULL;
 		
-		s = strchr( from, '/' );
-		if( s )
-			*s = 0;
+		if( strchr( from, '/' ) == NULL )
+		{
+			/* It just shouldn't happen. */
+			hide_login_progress( gc, "Received message packet from bare JID" );
+			signoff( gc );
+			return XT_ABORT;
+		}
 		
-		serv_got_im( gc, from, msg->text, 0, 0, 0 );
+		bud = jabber_buddy_by_jid( gc, from );
+		bud->last_act = time( NULL );
 		
-		if( s )
-			*s = '/';
+		if( body ) /* Could be just a typing notification. */
+			serv_got_im( gc, bud->handle, body->text, 0, 0, 0 );
+		
+		if( xt_find_node( node->children, "composing" ) )
+		{
+			bud->flags |= JBFLAG_DOES_JEP85;
+			serv_got_typing( gc, bud->handle, 0, 1 );
+		}
+		else if( xt_find_node( node->children, "active" ) )
+		{
+			bud->flags |= JBFLAG_DOES_JEP85;
+		}
 	}
 	else
 	{
-		printf( "Received MSG from %s: %s\n", from, msg ? msg->text : "<null>" );
+		printf( "Received MSG from %s:\n", from );
 		xt_print( node );
 	}
 	

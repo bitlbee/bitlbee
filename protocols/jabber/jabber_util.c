@@ -246,7 +246,8 @@ struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_ji
 	}
 	
 	*s = '/';
-	new->resource = g_strdup( s + 1 );
+	new->full_jid = g_strdup( full_jid );
+	new->resource = strchr( new->full_jid, '/' ) + 1;
 	
 	return new;
 }
@@ -267,8 +268,24 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid 
 	}
 	else
 	{
-		/* TODO: Add selection. */
-		return g_hash_table_lookup( jd->buddies, jid );
+		struct jabber_buddy *best_prio, *best_time;
+		char *set;
+		
+		best_prio = best_time = bud = g_hash_table_lookup( jd->buddies, jid );
+		for( ; bud; bud = bud->next )
+		{
+			if( bud->priority > best_prio->priority )
+				best_prio = bud;
+			if( bud->last_act > best_time->last_act )
+				best_time = bud;
+		}
+		
+		if( ( set = set_getstr( &gc->acc->set, "resource_select" ) ) == NULL )
+			return NULL;
+		else if( strcmp( set, "activity" ) == 0 )
+			return best_time;
+		else /* if( strcmp( set, "priority" ) == 0 ) */
+			return best_prio;
 	}
 	
 	*s = '/';
@@ -294,7 +311,7 @@ int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid )
 		{
 			g_hash_table_remove( jd->buddies, bud->handle );
 			g_free( bud->handle );
-			g_free( bud->resource );
+			g_free( bud->full_jid );
 			g_free( bud->away_message );
 			g_free( bud );
 		}
@@ -313,7 +330,7 @@ int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid )
 					   item, because we're removing the first. */
 					g_hash_table_replace( jd->buddies, bi->handle, bi->next );
 				
-				g_free( bi->resource );
+				g_free( bi->full_jid );
 				g_free( bi->away_message );
 				g_free( bi );
 			}

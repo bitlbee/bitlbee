@@ -44,6 +44,8 @@ static void jabber_acc_init( account_t *acc )
 	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
+	s = set_add( &acc->set, "resource_select", "priority", NULL, acc );
+	
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	
@@ -136,19 +138,33 @@ static void jabber_close( struct gaim_connection *gc )
 
 static int jabber_send_im( struct gaim_connection *gc, char *who, char *message, int len, int away )
 {
+	struct jabber_data *jd = gc->proto_data;
+	struct jabber_buddy *bud;
 	struct xt_node *node;
 	int st;
 	
-	/*
-	event = xt_new_node( "active", NULL, NULL );
-	xt_add_attr( event, "xlmns", "http://jabber.org/protocol/chatstates" );
-	
-	event = xt_new_node( "x", NULL, xt_new_node( "composing", NULL, NULL ) );
-	xt_add_attr( event, "xmlns", "jabber:x:event" );
-	*/
+	bud = jabber_buddy_by_jid( gc, who );
 	
 	node = xt_new_node( "body", message, NULL );
-	node = jabber_make_packet( "message", "chat", who, node );
+	node = jabber_make_packet( "message", "chat", bud->full_jid, node );
+	
+	if( ( jd->flags & JFLAG_WANT_TYPING ) &&
+	    ( ( bud->flags & JBFLAG_DOES_JEP85 ) ||
+	     !( bud->flags & JBFLAG_PROBED_JEP85 ) ) )
+	{
+		struct xt_node *act;
+		
+		/* If the user likes typing notification and if we don't know
+		   (and didn't probe before) if this resource supports JEP85,
+		   include a probe in this packet now. */
+		act = xt_new_node( "active", NULL, NULL );
+		xt_add_attr( act, "xmlns", "http://jabber.org/protocol/chatstates" );
+		xt_add_child( node, act );
+		
+		/* Just make sure we do this only once. */
+		bud->flags |= JBFLAG_PROBED_JEP85;
+	}
+	
 	st = jabber_write_packet( gc, node );
 	xt_free_node( node );
 	
@@ -228,6 +244,44 @@ static void jabber_keepalive( struct gaim_connection *gc )
 	jabber_cache_clean( gc );
 }
 
+static int jabber_send_typing( struct gaim_connection *gc, char *who, int typing )
+{
+	struct jabber_data *jd = gc->proto_data;
+	struct jabber_buddy *bud;
+	
+	/* Enable typing notification related code from now. */
+	jd->flags |= JFLAG_WANT_TYPING;
+	
+	bud = jabber_buddy_by_jid( gc, who );
+	if( bud->flags & JBFLAG_DOES_JEP85 )
+	{
+		/* We're only allowed to send this stuff if we know the other
+		   side supports it. */
+		
+		struct xt_node *node;
+		char *type;
+		int st;
+		
+		if( typing == 0 )
+			type = "active";
+		else if( typing == 2 )
+			type = "paused";
+		else /* if( typing == 1 ) */
+			type = "composing";
+		
+		node = xt_new_node( type, NULL, NULL );
+		xt_add_attr( node, "xmlns", "http://jabber.org/protocol/chatstates" );
+		node = jabber_make_packet( "message", "chat", bud->full_jid, node );
+		
+		st = jabber_write_packet( gc, node );
+		xt_free_node( node );
+		
+		return st;
+	}
+	
+	return 1;
+}
+
 void jabber_init()
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
@@ -249,7 +303,7 @@ void jabber_init()
 //	ret->chat_leave = jabber_chat_leave;
 //	ret->chat_open = jabber_chat_open;
 	ret->keepalive = jabber_keepalive;
-//	ret->send_typing = jabber_send_typing;
+	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;
 
 	register_protocol( ret );

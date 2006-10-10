@@ -29,13 +29,19 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	char *from = xt_find_attr( node, "from" );
 	char *type = xt_find_attr( node, "type" );	/* NULL should mean the person is online. */
 	struct xt_node *c;
+	struct jabber_buddy *bud;
 	
 	if( !from )
 		return XT_HANDLED;
 	
 	if( type == NULL )
 	{
-		struct jabber_buddy *bud;
+		if( strchr( from, '/' ) == NULL )
+		{
+			char *s = xt_to_string( node );
+			serv_got_crap( gc, "WARNING: Ignoring presence tag with bare JID: %s\n", s );
+			g_free( s );
+		}
 		
 		if( !( bud = jabber_buddy_by_jid( gc, from ) ) )
 		{
@@ -51,23 +57,34 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		if( ( c = xt_find_node( node->children, "show" ) ) && c->text_len > 0 )
 			bud->away_state = (void*) jabber_away_state_by_code( c->text );
 		else
+		{
 			bud->away_state = NULL;
+			/* Let's only set last_act if there's *no* away state,
+			   since it could be some auto-away thingy. */
+			bud->last_act = time( NULL );
+		}
 		
 		if( ( c = xt_find_node( node->children, "priority" ) ) && c->text_len > 0 )
 			bud->priority = atoi( c->text );
 		else
 			bud->priority = 0;
 		
-		serv_got_update( gc, bud->handle, 1, 0, 0, 0, 0, 0 );
+		serv_got_update( gc, bud->handle, 1, 0, 0, 0,
+		                 bud->away_state ? UC_UNAVAILABLE : 0, 0 );
 	}
 	else if( strcmp( type, "unavailable" ) == 0 )
 	{
 		char *s;
 		
-		jabber_buddy_remove( gc, from );
+		if( ( s = strchr( from, '/' ) ) == NULL )
+		{
+			char *s = xt_to_string( node );
+			serv_got_crap( gc, "WARNING: Ignoring presence tag with bare JID: %s\n", s );
+			g_free( s );
+		}
 		
-		if( ( s = strchr( from, '/' ) ) )
-			*s = 0;
+		jabber_buddy_remove( gc, from );
+		*s = 0;
 		
 		/* Only count this as offline if there's no other resource
 		   available anymore. */

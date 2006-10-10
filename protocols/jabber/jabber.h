@@ -31,12 +31,25 @@
 
 typedef enum
 {
-	JFLAG_STREAM_STARTED = 1,	/* Set when we detected the beginning of the stream and want to do auth. */
+	JFLAG_STREAM_STARTED = 1,	/* Set when we detected the beginning of the stream
+	                                   and want to do auth. */
 	JFLAG_AUTHENTICATED = 2,	/* Set when we're successfully authenticatd. */
-	JFLAG_STREAM_RESTART = 4,	/* Set when we want to restart the stream (after SASL or TLS). */
-	JFLAG_WAIT_SESSION = 8,		/* Set if we sent a <session> tag and need a reply before we continue. */
+	JFLAG_STREAM_RESTART = 4,	/* Set when we want to restart the stream (after
+	                                   SASL or TLS). */
+	JFLAG_WAIT_SESSION = 8,		/* Set if we sent a <session> tag and need a reply
+	                                   before we continue. */
 	JFLAG_WAIT_BIND = 16,		/* ... for <bind> tag. */
+	JFLAG_WANT_TYPING = 32,		/* Set if we ever sent a typing notification, this
+	                                   activates all JEP-85 related code. */
 } jabber_flags_t;
+
+typedef enum
+{
+	JBFLAG_PROBED_JEP85 = 1,	/* Set this when we sent our probe packet to make
+	                                   sure it gets sent only once. */
+	JBFLAG_DOES_JEP85 = 2,		/* Set this when the resource seems to support
+	                                   JEP85 (typing notification shite). */
+} jabber_buddy_flag_t;
 
 struct jabber_data
 {
@@ -80,6 +93,7 @@ struct jabber_cache_entry
 struct jabber_buddy
 {
 	char *handle;
+	char *full_jid;
 	char *resource;
 	
 	int priority;
