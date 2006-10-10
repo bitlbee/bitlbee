@@ -41,6 +41,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 			char *s = xt_to_string( node );
 			serv_got_crap( gc, "WARNING: Ignoring presence tag with bare JID: %s\n", s );
 			g_free( s );
+			return XT_HANDLED;
 		}
 		
 		if( !( bud = jabber_buddy_by_jid( gc, from ) ) )
@@ -81,6 +82,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 			char *s = xt_to_string( node );
 			serv_got_crap( gc, "WARNING: Ignoring presence tag with bare JID: %s\n", s );
 			g_free( s );
+			return XT_HANDLED;
 		}
 		
 		jabber_buddy_remove( gc, from );
