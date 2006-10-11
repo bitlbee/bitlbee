@@ -27,21 +27,30 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 {
 	struct gaim_connection *gc = data;
 	struct jabber_data *jd = gc->proto_data;
+	struct xt_node *c, *reply = NULL;
 	char *type, *s;
+	int st;
 	
 	type = xt_find_attr( node, "type" );
 	
 	if( !type )
 	{
-		hide_login_progress_error( gc, "Received IQ packet without type!" );
+		hide_login_progress_error( gc, "Received IQ packet without type." );
 		signoff( gc );
 		return XT_ABORT;
 	}
 	
-	if( ( s = xt_find_attr( node, "id" ) ) &&
-	    ( strcmp( type, "result" ) == 0 || strcmp( type, "error" ) == 0 ) )
+	if( strcmp( type, "result" ) == 0 || strcmp( type, "error" ) == 0 )
 	{
 		struct jabber_cache_entry *entry;
+		
+		if( ( s = xt_find_attr( node, "id" ) ) == NULL )
+		{
+			/* Silently ignore it, without an ID we don't know
+			   how to handle the packet, but it doesn't have
+			   to be a serious problem. */
+			return XT_HANDLED;
+		}
 		
 		entry = g_hash_table_lookup( jd->node_cache, s );
 		
@@ -49,6 +58,64 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			serv_got_crap( gc, "WARNING: Received IQ %s packet with unknown/expired ID %s!", type, s );
 		else if( entry->func )
 			return entry->func( gc, node, entry->node );
+	}
+	else if( strcmp( type, "get" ) == 0 )
+	{
+		if( !( c = xt_find_node( node->children, "query" ) ) ||
+		    !( s = xt_find_attr( c, "xmlns" ) ) )
+		{
+			serv_got_crap( gc, "WARNING: Received incomplete IQ-get packet" );
+			return XT_HANDLED;
+		}
+		
+		reply = xt_new_node( "query", NULL, NULL );
+		xt_add_attr( reply, "xmlns", s );
+		
+		/* Of course this is a very essential query to support. ;-) */
+		if( strcmp( s, "jabber:iq:version" ) == 0 )
+		{
+			xt_add_child( reply, xt_new_node( "name", "BitlBee", NULL ) );
+			xt_add_child( reply, xt_new_node( "version", BITLBEE_VERSION, NULL ) );
+			xt_add_child( reply, xt_new_node( "os", ARCH, NULL ) );
+		}
+		else if( strcmp( s, "http://jabber.org/protocol/disco#info" ) == 0 )
+		{
+			c = xt_new_node( "identity", NULL, NULL );
+			xt_add_attr( c, "category", "client" );
+			xt_add_attr( c, "type", "pc" );
+			xt_add_attr( c, "name", "BitlBee" );
+			xt_add_child( reply, c );
+			
+			c = xt_new_node( "feature", NULL, NULL );
+			xt_add_attr( c, "var", "jabber:iq:version" );
+			xt_add_child( reply, c );
+			
+			c = xt_new_node( "feature", NULL, NULL );
+			xt_add_attr( c, "var", "http://jabber.org/protocol/chatstates" );
+			xt_add_child( reply, c );
+			
+			/* Later this can be useful to announce things like
+			   MUC support. */
+		}
+		else
+		{
+			xt_free_node( reply );
+			reply = NULL;
+		}
+		
+		/* If we recognized the xmlns and managed to generate a reply,
+		   finish and send it. */
+		if( reply )
+		{
+			reply = jabber_make_packet( "iq", "result", xt_find_attr( node, "from" ), reply );
+			if( ( s = xt_find_attr( node, "id" ) ) )
+				xt_add_attr( reply, "id", s );
+			
+			st = jabber_write_packet( gc, reply );
+			xt_free_node( reply );
+			if( !st )
+				return XT_ABORT;
+		}
 	}
 	
 	return XT_HANDLED;
