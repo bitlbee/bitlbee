@@ -161,7 +161,7 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 	if( st > 0 )
 	{
 		/* Parse. */
-		if( !xt_feed( jd->xt, buf, st ) )
+		if( xt_feed( jd->xt, buf, st ) < 0 )
 		{
 			hide_login_progress_error( gc, "XML stream error" );
 			signoff( gc );
@@ -278,6 +278,7 @@ gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition co
 
 static xt_status jabber_end_of_stream( struct xt_node *node, gpointer data )
 {
+	signoff( data );
 	return XT_ABORT;
 }
 
@@ -426,6 +427,53 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 	return XT_HANDLED;
 }
 
+static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
+{
+	struct gaim_connection *gc = data;
+	struct xt_node *c;
+	char *s, *type = NULL, *text = NULL;
+	
+	for( c = node->children; c; c = c->next )
+	{
+		if( !( s = xt_find_attr( c, "xmlns" ) ) ||
+		    strcmp( s, "urn:ietf:params:xml:ns:xmpp-streams" ) != 0 )
+			continue;
+		
+		if( strcmp( c->name, "text" ) != 0 )
+		{
+			type = c->name;
+		}
+		/* Only use the text if it doesn't have an xml:lang attribute,
+		   if it's empty or if it's set to something English. */
+		else if( !( s = xt_find_attr( c, "xml:lang" ) ) ||
+		         !*s || strncmp( s, "en", 2 ) == 0 )
+		{
+			text = c->text;
+		}
+	}
+	
+	/* Tssk... */
+	if( type == NULL )
+	{
+		hide_login_progress_error( gc, "Unknown stream error reported by server" );
+		signoff( gc );
+		return XT_ABORT;
+	}
+	
+	/* We know that this is a fatal error. If it's a "conflict" error, we
+	   should turn off auto-reconnect to make sure we won't get some nasty
+	   infinite loop! */
+	if( strcmp( type, "conflict" ) == 0 )
+		gc->wants_to_die = TRUE;
+	
+	s = g_strdup_printf( "Stream error: %s%s%s", type, text ? ": " : "", text ? text : "" );
+	hide_login_progress_error( gc, s );
+	g_free( s );
+	signoff( gc );
+	
+	return XT_ABORT;
+}
+
 static xt_status jabber_pkt_misc( struct xt_node *node, gpointer data )
 {
 	printf( "Received unknown packet:\n" );
@@ -440,6 +488,7 @@ static const struct xt_handler_entry jabber_handlers[] = {
 	{ "presence",           "stream:stream",        jabber_pkt_presence },
 	{ "iq",                 "stream:stream",        jabber_pkt_iq },
 	{ "stream:features",    "stream:stream",        jabber_pkt_features },
+	{ "stream:error",       "stream:stream",        jabber_pkt_stream_error },
 	{ "proceed",            "stream:stream",        jabber_pkt_proceed_tls },
 	{ "challenge",          "stream:stream",        sasl_pkt_challenge },
 	{ "success",            "stream:stream",        sasl_pkt_result },
