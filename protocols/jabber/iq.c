@@ -78,6 +78,20 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			xt_add_child( reply, xt_new_node( "version", BITLBEE_VERSION, NULL ) );
 			xt_add_child( reply, xt_new_node( "os", ARCH, NULL ) );
 		}
+		else if( strcmp( s, "jabber:iq:time" ) == 0 )
+		{
+			time_t time_ep;
+			char buf[1024];
+			
+			buf[sizeof(buf)-1] = 0;
+			time_ep = time( NULL );
+			
+			strftime( buf, sizeof( buf ) - 1, "%Y%m%dT%H:%M:%S", gmtime( &time_ep ) );
+			xt_add_child( reply, xt_new_node( "utc", buf, NULL ) );
+			
+			strftime( buf, sizeof( buf ) - 1, "%Z", localtime( &time_ep ) );
+			xt_add_child( reply, xt_new_node( "tz", buf, NULL ) );
+		}
 		else if( strcmp( s, "http://jabber.org/protocol/disco#info" ) == 0 )
 		{
 			c = xt_new_node( "identity", NULL, NULL );
@@ -88,6 +102,10 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			
 			c = xt_new_node( "feature", NULL, NULL );
 			xt_add_attr( c, "var", "jabber:iq:version" );
+			xt_add_child( reply, c );
+			
+			c = xt_new_node( "feature", NULL, NULL );
+			xt_add_attr( c, "var", "jabber:iq:time" );
 			xt_add_child( reply, c );
 			
 			c = xt_new_node( "feature", NULL, NULL );
