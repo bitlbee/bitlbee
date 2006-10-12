@@ -185,10 +185,14 @@ static GList *jabber_away_states( struct gaim_connection *gc )
 
 static void jabber_get_info( struct gaim_connection *gc, char *who )
 {
+	struct jabber_data *jd = gc->proto_data;
 	struct jabber_buddy *bud;
-	struct xt_node *node;
 	
-	bud = jabber_buddy_by_jid( gc, who );
+	if( strchr( who, '/' ) )
+		bud = jabber_buddy_by_jid( gc, who );
+	else
+		bud = g_hash_table_lookup( jd->buddies, who );
+	
 	while( bud )
 	{
 		serv_got_crap( gc, "Buddy %s/%s (%d) information:\nAway state: %s\nAway message: %s",
@@ -197,15 +201,6 @@ static void jabber_get_info( struct gaim_connection *gc, char *who )
 		                   bud->away_message ? : "(none)" );
 		bud = bud->next;
 	}
-	
-//	node = xt_new_node( "vCard", NULL, NULL );
-//	xt_add_attr( node, "xmlns", "vcard-temp" );
-	node = xt_new_node( "query", NULL, NULL );
-	xt_add_attr( node, "xmlns", "jabber:iq:version" );
-	node = jabber_make_packet( "iq", "get", who, node );
-	// jabber_cache_add( gc, node,  );
-	
-	jabber_write_packet( gc, node );
 }
 
 static void jabber_set_away( struct gaim_connection *gc, char *state_txt, char *message )
