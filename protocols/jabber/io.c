@@ -464,11 +464,17 @@ static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 	   should turn off auto-reconnect to make sure we won't get some nasty
 	   infinite loop! */
 	if( strcmp( type, "conflict" ) == 0 )
+	{
+		hide_login_progress( gc, "Account and resource used from a different location" );
 		gc->wants_to_die = TRUE;
+	}
+	else
+	{
+		s = g_strdup_printf( "Stream error: %s%s%s", type, text ? ": " : "", text ? text : "" );
+		hide_login_progress_error( gc, s );
+		g_free( s );
+	}
 	
-	s = g_strdup_printf( "Stream error: %s%s%s", type, text ? ": " : "", text ? text : "" );
-	hide_login_progress_error( gc, s );
-	g_free( s );
 	signoff( gc );
 	
 	return XT_ABORT;

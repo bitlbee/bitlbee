@@ -549,3 +549,39 @@ void xt_add_attr( struct xt_node *node, char *key, char *value )
 	
 	node->attr[i].value = g_strdup( value );
 }
+
+int xt_remove_attr( struct xt_node *node, char *key )
+{
+	int i, last;
+	
+	for( i = 0; node->attr[i].key; i ++ )
+		if( strcmp( node->attr[i].key, key ) == 0 )
+			break;
+	
+	/* If we didn't find the attribute... */
+	if( node->attr[i].key == NULL )
+		return 0;
+	
+	g_free( node->attr[i].key );
+	g_free( node->attr[i].value );
+	
+	/* If it's the last, this is easy: */
+	if( node->attr[i+1].key == NULL )
+	{
+		node->attr[i].key = node->attr[i].value = NULL;
+	}
+	else /* It's also pretty easy, actually. */
+	{
+		/* Find the last item. */
+		for( last = i + 1; node->attr[last+1].key; last ++ );
+		
+		node->attr[i] = node->attr[last];
+		node->attr[last].key = NULL;
+		node->attr[last].value = NULL;
+	}
+	
+	/* Let's not bother with reallocating memory here. It takes time and
+	   most packets don't stay in memory for long anyway. */
+	
+	return 1;
+}

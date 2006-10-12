@@ -126,6 +126,7 @@ int presence_send_request( struct gaim_connection *gc, char *handle, char *reque
 char *set_eval_priority( set_t *set, char *value );
 char *set_eval_tls( set_t *set, char *value );
 struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
+struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type );
 void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node, jabber_cache_event func );
 struct xt_node *jabber_cache_get( struct gaim_connection *gc, char *id );
 void jabber_cache_entry_free( gpointer entry );

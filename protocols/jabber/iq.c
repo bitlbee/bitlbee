@@ -29,7 +29,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	struct jabber_data *jd = gc->proto_data;
 	struct xt_node *c, *reply = NULL;
 	char *type, *s;
-	int st;
+	int st, pack = 1;
 	
 	type = xt_find_attr( node, "type" );
 	
@@ -100,22 +100,34 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		else
 		{
 			xt_free_node( reply );
-			reply = NULL;
+			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel" );
+			pack = 0;
 		}
-		
-		/* If we recognized the xmlns and managed to generate a reply,
-		   finish and send it. */
-		if( reply )
+	}
+	else if( strcmp( type, "set" ) == 0 )
+	{
+		xt_free_node( reply );
+		reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel" );
+		pack = 0;
+	}
+	
+	/* If we recognized the xmlns and managed to generate a reply,
+	   finish and send it. */
+	if( reply )
+	{
+		/* Normally we still have to pack it into an iq-result
+		   packet, but for errors, for example, we don't. */
+		if( pack )
 		{
 			reply = jabber_make_packet( "iq", "result", xt_find_attr( node, "from" ), reply );
 			if( ( s = xt_find_attr( node, "id" ) ) )
 				xt_add_attr( reply, "id", s );
-			
-			st = jabber_write_packet( gc, reply );
-			xt_free_node( reply );
-			if( !st )
-				return XT_ABORT;
 		}
+		
+		st = jabber_write_packet( gc, reply );
+		xt_free_node( reply );
+		if( !st )
+			return XT_ABORT;
 	}
 	
 	return XT_HANDLED;

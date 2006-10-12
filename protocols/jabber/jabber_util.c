@@ -78,7 +78,37 @@ struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_
 	return node;
 }
 
-/* Cache a node/packet for later use. Mainly useful for IQ packets if you need
+struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type )
+{
+	struct xt_node *node, *c;
+	char *to;
+	
+	/* Create the "defined-condition" tag. */
+	c = xt_new_node( err_cond, NULL, NULL );
+	xt_add_attr( c, "xmlns", "urn:ietf:params:xml:ns:xmpp-stanzas" );
+	
+	/* Put it in an <error> tag. */
+	c = xt_new_node( "error", NULL, c );
+	xt_add_attr( c, "type", err_type );
+	
+	/* To make the actual error packet, we copy the original packet and
+	   add our <error>/type="error" tag. Including the original packet
+	   is recommended, so let's just do it. */
+	node = xt_dup( orig );
+	xt_add_child( node, c );
+	xt_add_attr( node, "type", "error" );
+	
+	/* Return to sender. */
+	if( ( to = xt_find_attr( node, "from" ) ) )
+	{
+		xt_add_attr( node, "to", to );
+		xt_remove_attr( node, "from" );
+	}
+		
+	return node;
+}
+
+/* Cache a node/epacket for later use. Mainly useful for IQ packets if you need
    them when you receive the response. Use this BEFORE sending the packet so
    it'll get an id= tag, and do NOT free() the packet after writing it! */
 void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node, jabber_cache_event func )
