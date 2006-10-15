@@ -174,6 +174,10 @@ char *set_eval_int( set_t *set, char *value )
 {
 	char *s;
 	
+	/* Allow a minus at the first position. */
+	if( *s == '-' )
+		s ++;
+	
 	for( s = value; *s; s ++ )
 		if( !isdigit( *s ) )
 			return NULL;
