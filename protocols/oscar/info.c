@@ -260,6 +260,7 @@ guint32 aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 
 		if (!identified) {
 			/*FIXME*/
+			/*REMOVEME :-)
 			g_strdup_printf("unknown capability: {%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x}\n",
 					cap[0], cap[1], cap[2], cap[3],
 					cap[4], cap[5],
@@ -267,7 +268,7 @@ guint32 aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 					cap[8], cap[9],
 					cap[10], cap[11], cap[12], cap[13],
 					cap[14], cap[15]);
-			
+			*/
 		}
 
 		g_free(cap);

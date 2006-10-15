@@ -367,7 +367,6 @@ static char *msn_set_display_name( set_t *set, char *value )
 	struct gaim_connection *gc = acc->gc;
 	struct msn_data *md;
 	char buf[1024], *fn;
-	int i;
 	
 	/* Double-check. */
 	if( gc == NULL )
