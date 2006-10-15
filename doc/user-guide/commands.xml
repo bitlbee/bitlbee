@@ -29,20 +29,13 @@
 
 				<description>
 					<para>
-						Note that the servertag argument is optional. You only have to use it if the part after the @ in your handle isn't the hostname of your Jabber server, or if you want to use SSL/connect to a non-standard port number. The format is simple: [&lt;servername&gt;[:&lt;portnumber&gt;][:ssl]].
+						The handle should be a full handle, including the domain name. You can specify a servername if necessary. Normally BitlBee doesn't need this though, since it's able to find out the server by doing DNS SRV lookups.
 					</para>
-				</description>
 
-				<description>
 					<para>
-						Google Talk uses the Jabber protocol. Please note that Google talk is SSL-only, but officially reachable over both port 5222 and 5223. Usually BitlBee users have to connect via port 5223, for example like this:
+						In previous versions it was also possible to specify port numbers and/or SSL in the server tag. This is deprecated and should now be done using the <emphasis>account set</emphasis> command. This also applies to specifying a resource in the handle (like <emphasis>wilmer@bitlbee.org/work</emphasis>).
 					</para>
 				</description>
-
-				<ircexample>
-					<ircline nick="wilmer">account add jabber example@gmail.com hobbelmeeuw talk.google.com:5223:ssl</ircline>
-					<ircline nick="root">Account successfully added</ircline>
-				</ircexample>
 			</bitlbee-command>
 
 			<bitlbee-command name="msn">
@@ -514,6 +507,20 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="priority" type="integer" scope="account">
+		<default>0</default>
+
+		<description>
+			<para>
+				Can be set for Jabber connections. When connecting to one account from multiple places, this priority value will help the server to determine where to deliver incoming messages (that aren't addressed to a specific resource already).
+			</para>
+
+			<para>
+				According to RFC 3921 servers will always deliver messages to the server with the highest priority value. Mmessages will not be delivered to resources with a negative priority setting (and should be saved as an off-line message if all available resources have a negative priority value).
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="private" type="boolean" scope="global">
 		<default>true</default>
 
@@ -549,6 +556,21 @@
 		<description>
 			<para>
 				Can be set for Jabber connections. You can use this to connect to your Jabber account from multiple clients at once, with every client using a different resource string.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="resource_select" type="string" scope="account">
+		<default>priority</default>
+		<possible-values>priority, time</possible-values>
+
+		<description>
+			<para>
+				Because the IRC interface makes it pretty hard to specify the resource to talk to (when a buddy is online through different resources), this setting was added.
+			</para>
+
+			<para>
+				Normally it's set to <emphasis>priority</emphasis> which means messages will always be delivered to the buddy's resource with the highest priority. If the setting is set to <emphasis>time</emphasis>, messages will be delivered to the resource that was last used to send you a message (or the resource that most recently connected).
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -590,6 +612,20 @@
 			</para>
 			<para>
 				If BitlBee fails to detect this sometimes (most likely in AIM messages over an ICQ connection), you can set this setting to <emphasis>always</emphasis>, but this might sometimes accidentally strip non-HTML things too.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="tls" type="boolean" scope="account">
+		<default>try</default>
+
+		<description>
+			<para>
+				Newer Jabber servers allow clients to convert a plain-text session to a TLS/SSL-encrypted session. Normally (with this setting set to <emphasis>try</emphasis>) BitlBee will do this, if possible.
+			</para>
+
+			<para>
+				If you want to force BitlBee to use TLS sessions only (and to give up if that doesn't seem to be possible) you can set this setting to <emphasis>true</emphasis>. Set it to <emphasis>false</emphasis> if you want the session to remain plain-text.
 			</para>
 		</description>
 	</bitlbee-setting>
