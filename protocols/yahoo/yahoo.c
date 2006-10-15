@@ -191,13 +191,18 @@ static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg 
 	
 	gc->away = NULL;
 	
-	if( msg )
+	if( state && msg && g_strcasecmp( state, msg ) != 0 )
 	{
 		yd->current_status = YAHOO_STATUS_CUSTOM;
 		gc->away = "";
 	}
-	if( state )
+	else if( state )
 	{
+		/* Set msg to NULL since (if it isn't NULL already) it's equal
+		   to state. msg must be empty if we want to use an existing
+		   away state. */
+		msg = NULL;
+		
 		gc->away = "";
 		if( g_strcasecmp( state, "Available" ) == 0 )
 		{
@@ -234,10 +239,7 @@ static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg 
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
-	if( yd->current_status == YAHOO_STATUS_INVISIBLE )
-		yahoo_set_away( yd->y2_id, yd->current_status, NULL, gc->away != NULL );
-	else
-		yahoo_set_away( yd->y2_id, yd->current_status, msg, gc->away != NULL );
+	yahoo_set_away( yd->y2_id, yd->current_status, msg, gc->away != NULL );
 }
 
 static GList *byahoo_away_states( struct gaim_connection *gc )

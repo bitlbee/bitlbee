@@ -58,6 +58,7 @@ static int passport_get_id_real( gpointer func, gpointer data, char *header )
 	rep = g_new0( struct passport_reply, 1 );
 	rep->data = data;
 	rep->func = func;
+	rep->header = header;
 	
 	server = g_strdup( prd_cached );
 	dummy = strchr( server, '/' );
@@ -124,9 +125,13 @@ static void passport_get_id_ready( struct http_request *req )
 
 static char *passport_create_header( char *cookie, char *email, char *pwd )
 {
-	char *buffer = g_new0( char, 2048 );
+	char *buffer;
 	char *currenttoken;
 	char *email_enc, *pwd_enc;
+	
+	currenttoken = strstr( cookie, "lc=" );
+	if( currenttoken == NULL )
+		return NULL;
 	
 	email_enc = g_new0( char, strlen( email ) * 3 + 1 );
 	strcpy( email_enc, email );
@@ -136,20 +141,15 @@ static char *passport_create_header( char *cookie, char *email, char *pwd )
 	strcpy( pwd_enc, pwd );
 	http_encode( pwd_enc );
 	
-	currenttoken = strstr( cookie, "lc=" );
-	if( currenttoken == NULL )
-		return( NULL );
-	
-	g_snprintf( buffer, 2048,
-	            "Authorization: Passport1.4 OrgVerb=GET,"
-	            "OrgURL=http%%3A%%2F%%2Fmessenger%%2Emsn%%2Ecom,"
-	            "sign-in=%s,pwd=%s,%s", email_enc, pwd_enc,
-	            currenttoken );
+	buffer = g_strdup_printf( "Authorization: Passport1.4 OrgVerb=GET,"
+	                          "OrgURL=http%%3A%%2F%%2Fmessenger%%2Emsn%%2Ecom,"
+	                          "sign-in=%s,pwd=%s,%s", email_enc, pwd_enc,
+	                          currenttoken );
 	
 	g_free( email_enc );
 	g_free( pwd_enc );
 	
-	return( buffer );
+	return buffer;
 }
 
 static int passport_retrieve_dalogin( gpointer func, gpointer data, char *header )
