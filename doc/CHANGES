@@ -1,4 +1,23 @@
 Version x.x:
+- Added ForkDaemon mode next to the existing Daemon- and inetd modes. With
+  ForkDaemon you can run BitlBee as a stand-alone daemon and every connection
+  will run in its own process. No more need to configure inetd, and still you
+  don't get the stability problems BitlBee unfortunately still has in ordinary
+  (one-process) daemon mode.
+- Added inter-process/connection communication. This made it possible to
+  implement some IRC operator features like WALLOPs, KILL, DIE, REHASH and
+  more.
+- Added hooks for using libevent instead of GLib for event handling. This
+  should improve scalability, although this won't really be useful yet because
+  the one-process daemon mode is not reliable enough.
+- BitlBee now makes the buddy quits when doing "account off" look like a
+  netsplit. Modern IRC clients show this in a different, more compact way.
+- GLib 1.x compatibility was dropped. BitlBee now requires GLib 2.6 (FIXME)
+  or newer. This allows us to use more GLib features. By now GLib 1.x is so
+  old that supporting it isn't really necessary anymore.
+- Many, many, MANY little changes, improvements, fixes. Using non-blocking
+  I/O as much as possible, fixed lots of little bugs (including bugs that
+  affected daemon mode stability). See the bzr logs for more information.
 - Most important change: New file format for user data (accounts, nicks and
   settings). Migration to the new format should happen transparently,
   BitlBee will read the old files and once you quit/save it will save in the
