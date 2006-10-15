@@ -100,7 +100,7 @@ static void b_event_passthrough( int fd, short event, void *data )
 	event_debug( "b_event_passthrough( %d, %d, 0x%x ) (%d)\n", fd, event, (int) data, b_ev->id );
 	
 	/* Since the called function might cancel this handler already
-	   (which free()s b_ev, we have to remember the ID here. */
+	   (which free()s b_ev), we have to remember the ID here. */
 	id = b_ev->id;
 	
 	if( quitting )

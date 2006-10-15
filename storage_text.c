@@ -27,32 +27,6 @@
 #include "bitlbee.h"
 #include "crypting.h"
 
-/* DO NOT USE THIS FUNCTION IN NEW CODE. This 
- * function is here merely because the save/load code still uses 
- * ids rather than names */
-static struct prpl *find_protocol_by_id(int id)
-{
-	switch (id) {
-	case 0: case 1: case 3: return find_protocol("oscar");
-	case 4: return find_protocol("msn");
-	case 2: return find_protocol("yahoo");
-	case 8: return find_protocol("jabber");
-	default: break;
-	}
-	return NULL;
-}
-
-static int find_protocol_id(const char *name)
-{
-	if (!strcmp(name, "oscar")) return 1;
-	if (!strcmp(name, "msn")) return 4;
-	if (!strcmp(name, "yahoo")) return 2;
-	if (!strcmp(name, "jabber")) return 8;
-
-	return -1;
-}
-
-
 static void text_init (void)
 {
 	if( access( global.conf->configdir, F_OK ) != 0 )
@@ -69,6 +43,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	char nick[MAX_NICK_LENGTH+1];
 	FILE *fp;
 	user_t *ru = user_find( irc, ROOT_NICK );
+	account_t *acc, *acc_lookup[9];
 	
 	if( irc->status & USTATUS_IDENTIFIED )
 		return( 1 );
@@ -79,7 +54,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	
 	fscanf( fp, "%32[^\n]s", s );
 
-	if (checkpass (password, s) != 0) 
+	if( checkpass( password, s ) != 0 )
 	{
 		fclose( fp );
 		return STORAGE_INVALID_PASSWORD;
@@ -99,201 +74,36 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	}
 	fclose( fp );
 	
+	/* Build a list with the first listed account of every protocol
+	   number. So if the user had nicks defined for a second account on
+	   the same IM network, those nicks will be added to the wrong
+	   account, and the user should rename those buddies again. But at
+	   least from now on things will be saved properly. */
+	memset( acc_lookup, 0, sizeof( acc_lookup ) );
+	for( acc = irc->accounts; acc; acc = acc->next )
+	{
+		if( acc_lookup[0] == NULL && strcmp( acc->prpl->name, "oscar" ) == 0 )
+			acc_lookup[0] = acc_lookup[1] = acc_lookup[3] = acc;
+		else if( acc_lookup[2] == NULL && strcmp( acc->prpl->name, "yahoo" ) == 0 )
+			acc_lookup[2] = acc;
+		else if( acc_lookup[4] == NULL && strcmp( acc->prpl->name, "msn" ) == 0 )
+			acc_lookup[4] = acc;
+		else if( acc_lookup[8] == NULL && strcmp( acc->prpl->name, "jabber" ) == 0 )
+			acc_lookup[8] = acc;
+	}
+	
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".nicks" );
 	fp = fopen( s, "r" );
 	if( !fp ) return STORAGE_NO_SUCH_USER;
 	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
 	{
-		struct prpl *prpl;
-
-		prpl = find_protocol_by_id(proto);
-
-		if (!prpl)
+		if( ( acc = acc_lookup[proto] ) == NULL )
 			continue;
-
+		
 		http_decode( s );
-		nick_set( irc, s, prpl, nick );
+		nick_set( acc, s, nick );
 	}
 	fclose( fp );
-	
-	if( set_getint( irc, "auto_connect" ) )
-	{
-		strcpy( s, "account on" );	/* Can't do this directly because r_c_s alters the string */
-		root_command_string( irc, ru, s, 0 );
-	}
-	
-	return STORAGE_OK;
-}
-
-static storage_status_t text_save( irc_t *irc, int overwrite )
-{
-	char s[512];
-	char path[512], new_path[512];
-	char *line;
-	nick_t *n;
-	set_t *set;
-	mode_t ou = umask( 0077 );
-	account_t *a;
-	FILE *fp;
-	char *hash;
-
-	if (!overwrite) {
-		g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-		if (access( path, F_OK ) != -1)
-			return STORAGE_ALREADY_EXISTS;
-	
-		g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-		if (access( path, F_OK ) != -1)
-			return STORAGE_ALREADY_EXISTS;
-	}
-	
-	/*\
-	 *  [SH] Nothing should be saved if no password is set, because the
-	 *  password is not set if it was wrong, or if one is not identified
-	 *  yet. This means that a malicious user could easily overwrite
-	 *  files owned by someone else:
-	 *  a Bad Thing, methinks
-	\*/
-
-	/* [WVG] No? Really? */
-
-	/*\
-	 *  [SH] Okay, okay, it wasn't really Wilmer who said that, it was
-	 *  me. I just thought it was funny.
-	\*/
-	
-	hash = hashpass( irc->password );
-	if( hash == NULL )
-	{
-		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
-		return STORAGE_OTHER_ERROR;
-	}
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
-	fp = fopen( path, "w" );
-	if( !fp ) return STORAGE_OTHER_ERROR;
-	for( n = irc->nicks; n; n = n->next )
-	{
-		strcpy( s, n->handle );
-		s[169] = 0; /* Prevent any overflow (169 ~ 512 / 3) */
-		http_encode( s );
-		g_snprintf( s + strlen( s ), 510 - strlen( s ), " %d %s", find_protocol_id(n->proto->name), n->nick );
-		if( fprintf( fp, "%s\n", s ) != strlen( s ) + 1 )
-		{
-			irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-			fclose( fp );
-			return STORAGE_OTHER_ERROR;
-		}
-	}
-	if( fclose( fp ) != 0 )
-	{
-		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
-		return STORAGE_OTHER_ERROR;
-	}
-  
-	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-	if( unlink( new_path ) != 0 )
-	{
-		if( errno != ENOENT )
-		{
-			irc_usermsg( irc, "Error while removing old .nicks file" );
-			return STORAGE_OTHER_ERROR;
-		}
-	}
-	if( rename( path, new_path ) != 0 )
-	{
-		irc_usermsg( irc, "Error while renaming new .nicks file" );
-		return STORAGE_OTHER_ERROR;
-	}
-	
-	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts~" );
-	fp = fopen( path, "w" );
-	if( !fp ) return STORAGE_OTHER_ERROR;
-	if( fprintf( fp, "%s", hash ) != strlen( hash ) )
-	{
-		irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-		fclose( fp );
-		return STORAGE_OTHER_ERROR;
-	}
-	g_free( hash );
-
-	for( a = irc->accounts; a; a = a->next )
-	{
-		if( !strcmp(a->prpl->name, "oscar") )
-			g_snprintf( s, sizeof( s ), "account add oscar \"%s\" \"%s\" %s", a->user, a->pass, a->server );
-		else
-			g_snprintf( s, sizeof( s ), "account add %s \"%s\" \"%s\" \"%s\"",
-			            a->prpl->name, a->user, a->pass, a->server ? a->server : "" );
-		
-		line = obfucrypt( s, irc->password );
-		if( *line )
-		{
-			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
-			{
-				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-				fclose( fp );
-				return STORAGE_OTHER_ERROR;
-			}
-		}
-		g_free( line );
-	}
-	
-	for( set = irc->set; set; set = set->next )
-	{
-		if( set->value && set->def )
-		{
-			g_snprintf( s, sizeof( s ), "set %s \"%s\"", set->key, set->value );
-			line = obfucrypt( s, irc->password );
-			if( *line )
-			{
-				if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
-				{
-					irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-					fclose( fp );
-					return STORAGE_OTHER_ERROR;
-				}
-			}
-			g_free( line );
-		}
-	}
-	
-	if( strcmp( irc->mynick, ROOT_NICK ) != 0 )
-	{
-		g_snprintf( s, sizeof( s ), "rename %s %s", ROOT_NICK, irc->mynick );
-		line = obfucrypt( s, irc->password );
-		if( *line )
-		{
-			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
-			{
-				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
-				fclose( fp );
-				return STORAGE_OTHER_ERROR;
-			}
-		}
-		g_free( line );
-	}
-	if( fclose( fp ) != 0 )
-	{
-		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
-		return STORAGE_OTHER_ERROR;
-	}
-	
- 	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
- 	if( unlink( new_path ) != 0 )
-	{
-		if( errno != ENOENT )
-		{
-			irc_usermsg( irc, "Error while removing old .accounts file" );
-			return STORAGE_OTHER_ERROR;
-		}
-	}
-	if( rename( path, new_path ) != 0 )
-	{
-		irc_usermsg( irc, "Error while renaming new .accounts file" );
-		return STORAGE_OTHER_ERROR;
-	}
-	
-	umask( ou );
 	
 	return STORAGE_OK;
 }
@@ -342,6 +152,5 @@ storage_t storage_text = {
 	.init = text_init,
 	.check_pass = text_check_pass,
 	.remove = text_remove,
-	.load = text_load,
-	.save = text_save
+	.load = text_load
 };

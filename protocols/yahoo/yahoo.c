@@ -120,16 +120,16 @@ static char *byahoo_strip( char *in )
 	return( g_strndup( in, len ) );
 }
 
-static void byahoo_login( struct aim_user *user )
+static void byahoo_login( account_t *acc )
 {
-	struct gaim_connection *gc = new_gaim_conn( user );
+	struct gaim_connection *gc = new_gaim_conn( acc );
 	struct byahoo_data *yd = gc->proto_data = g_new0( struct byahoo_data, 1 );
 	
 	yd->logged_in = FALSE;
 	yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
 	set_login_progress( gc, 1, "Connecting" );
-	yd->y2_id = yahoo_init( user->username, user->password );
+	yd->y2_id = yahoo_init( acc->user, acc->pass );
 	yahoo_login( yd->y2_id, yd->current_status );
 }
 
@@ -410,7 +410,8 @@ void byahoo_init( )
 	ret->chat_invite = byahoo_chat_invite;
 	ret->chat_leave = byahoo_chat_leave;
 	ret->chat_open = byahoo_chat_open;
-	ret->cmp_buddynames = g_strcasecmp;
+
+	ret->handle_cmp = g_strcasecmp;
 	
 	register_protocol(ret);
 }
@@ -426,7 +427,7 @@ static struct gaim_connection *byahoo_get_gc_by_id( int id )
 		gc = l->data;
 		yd = gc->proto_data;
 		
-		if( !strcmp(gc->prpl->name, "yahoo") && yd->y2_id == id )
+		if( strcmp( gc->acc->prpl->name, "yahoo" ) == 0 && yd->y2_id == id )
 			return( gc );
 	}
 	

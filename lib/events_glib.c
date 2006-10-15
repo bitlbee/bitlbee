@@ -121,7 +121,10 @@ gint b_input_add(gint source, b_input_condition condition, b_event_handler funct
 
 gint b_timeout_add(gint timeout, b_event_handler func, gpointer data)
 {
-	gint st = g_timeout_add(timeout, func, data);
+	/* GSourceFunc and the BitlBee event handler function aren't
+	   really the same, but they're "compatible". ;-) It will do
+	   for now, BitlBee only looks at the "data" argument. */
+	gint st = g_timeout_add(timeout, (GSourceFunc) func, data);
 	
 	event_debug( "b_timeout_add( %d, %d, %d ) = %d\n", timeout, func, data, st );
 	

@@ -33,7 +33,7 @@
 #include "url.h"
 #include "ipc.h"
 
-#include "protocols/proxy.h"
+#include "proxy.h"
 
 char *CONF_FILE;
 
@@ -54,7 +54,8 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->port = 6667;
 	conf->nofork = 0;
 	conf->verbose = 0;
-	conf->primary_storage = "text";
+	conf->primary_storage = "xml";
+	conf->migrate_storage = g_strsplit( "text", ",", -1 );
 	conf->runmode = RUNMODE_INETD;
 	conf->authmode = AUTHMODE_OPEN;
 	conf->auth_pass = NULL;
@@ -321,7 +322,7 @@ void conf_loaddefaults( irc_t *irc )
 	{
 		if( g_strcasecmp( ini->section, "defaults" ) == 0 )
 		{
-			set_t *s = set_find( irc, ini->key );
+			set_t *s = set_find( &irc->set, ini->key );
 			
 			if( s )
 			{

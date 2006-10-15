@@ -26,9 +26,19 @@
 #include "nogaim.h"
 #include "msn.h"
 
-static void msn_login( struct aim_user *acct )
+static char *msn_set_display_name( set_t *set, char *value );
+
+static void msn_acc_init( account_t *acc )
 {
-	struct gaim_connection *gc = new_gaim_conn( acct );
+	set_t *s;
+	
+	s = set_add( &acc->set, "display_name", NULL, msn_set_display_name, acc );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+}
+
+static void msn_login( account_t *acc )
+{
+	struct gaim_connection *gc = new_gaim_conn( acc );
 	struct msn_data *md = g_new0( struct msn_data, 1 );
 	
 	set_login_progress( gc, 1, "Connecting" );
@@ -36,7 +46,7 @@ static void msn_login( struct aim_user *acct )
 	gc->proto_data = md;
 	md->fd = -1;
 	
-	if( strchr( acct->username, '@' ) == NULL )
+	if( strchr( acc->user, '@' ) == NULL )
 	{
 		hide_login_progress( gc, "Invalid account name" );
 		signoff( gc );
@@ -211,20 +221,7 @@ static void msn_set_away( struct gaim_connection *gc, char *state, char *message
 
 static void msn_set_info( struct gaim_connection *gc, char *info )
 {
-	char buf[1024], *fn;
-	struct msn_data *md = gc->proto_data;
-	
-	if( strlen( info ) > 129 )
-	{
-		do_error_dialog( gc, "Maximum name length exceeded", "MSN" );
-		return;
-	}
-	
-	fn = msn_http_encode( info );
-	
-	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, gc->username, fn );
-	msn_write( gc, buf, strlen( buf ) );
-	g_free( fn );
+	msn_set_display_name( set_find( &gc->acc->set, "display_name" ), info );
 }
 
 static void msn_get_info(struct gaim_connection *gc, char *who) 
@@ -363,11 +360,45 @@ static int msn_send_typing( struct gaim_connection *gc, char *who, int typing )
 		return( 1 );
 }
 
+static char *msn_set_display_name( set_t *set, char *value )
+{
+	account_t *acc = set->data;
+	struct gaim_connection *gc = acc->gc;
+	struct msn_data *md;
+	char buf[1024], *fn;
+	int i;
+	
+	/* Double-check. */
+	if( gc == NULL )
+		return NULL;
+	
+	md = gc->proto_data;
+	
+	if( strlen( value ) > 129 )
+	{
+		serv_got_crap( gc, "Maximum name length exceeded" );
+		return NULL;
+	}
+	
+	fn = msn_http_encode( value );
+	
+	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, gc->username, fn );
+	msn_write( gc, buf, strlen( buf ) );
+	g_free( fn );
+	
+	/* Returning NULL would be better, because the server still has to
+	   confirm the name change. However, it looks a bit confusing to the
+	   user. */
+	return value;
+}
+
 void msn_init()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
+	
 	ret->name = "msn";
 	ret->login = msn_login;
+	ret->acc_init = msn_acc_init;
 	ret->close = msn_close;
 	ret->send_im = msn_send_im;
 	ret->away_states = msn_away_states;
@@ -387,7 +418,7 @@ void msn_init()
 	ret->add_deny = msn_add_deny;
 	ret->rem_deny = msn_rem_deny;
 	ret->send_typing = msn_send_typing;
-	ret->cmp_buddynames = g_strcasecmp;
+	ret->handle_cmp = g_strcasecmp;
 
 	register_protocol(ret);
 }

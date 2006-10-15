@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2006 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -10,7 +10,7 @@
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *                          (and possibly other members of the Gaim team)
- * Copyright 2002-2005 Wilmer van der Gaast <wilmer@gaast.net>
+ * Copyright 2002-2006 Wilmer van der Gaast <wilmer@gaast.net>
  */
 
 /*
@@ -53,93 +53,6 @@ void strip_linefeed(gchar *text)
 	g_free(text2);
 }
 
-char *add_cr(char *text)
-{
-	char *ret = NULL;
-	int count = 0, j;
-	unsigned int i;
-
-	if (text[0] == '\n')
-		count++;
-	for (i = 1; i < strlen(text); i++)
-		if (text[i] == '\n' && text[i - 1] != '\r')
-			count++;
-
-	if (count == 0)
-		return g_strdup(text);
-
-	ret = g_malloc0(strlen(text) + count + 1);
-
-	i = 0; j = 0;
-	if (text[i] == '\n')
-		ret[j++] = '\r';
-	ret[j++] = text[i++];
-	for (; i < strlen(text); i++) {
-		if (text[i] == '\n' && text[i - 1] != '\r')
-			ret[j++] = '\r';
-		ret[j++] = text[i];
-	}
-
-	return ret;
-}
-
-static char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" "0123456789+/";
-
-/* XXX Find bug */
-char *tobase64(const char *text)
-{
-	char *out = NULL;
-	const char *c;
-	unsigned int tmp = 0;
-	int len = 0, n = 0;
-
-	c = text;
-
-	while (*c) {
-		tmp = tmp << 8;
-		tmp += *c;
-		n++;
-
-		if (n == 3) {
-			out = g_realloc(out, len + 4);
-			out[len] = alphabet[(tmp >> 18) & 0x3f];
-			out[len + 1] = alphabet[(tmp >> 12) & 0x3f];
-			out[len + 2] = alphabet[(tmp >> 6) & 0x3f];
-			out[len + 3] = alphabet[tmp & 0x3f];
-			len += 4;
-			tmp = 0;
-			n = 0;
-		}
-		c++;
-	}
-	switch (n) {
-
-	case 2:
-		tmp <<= 8;
-		out = g_realloc(out, len + 5);
-		out[len] = alphabet[(tmp >> 18) & 0x3f];
-		out[len + 1] = alphabet[(tmp >> 12) & 0x3f];
-		out[len + 2] = alphabet[(tmp >> 6) & 0x3f];
-		out[len + 3] = '=';
-		out[len + 4] = 0;
-		break;
-	case 1:
-		tmp <<= 16;
-		out = g_realloc(out, len + 5);
-		out[len] = alphabet[(tmp >> 18) & 0x3f];
-		out[len + 1] = alphabet[(tmp >> 12) & 0x3f];
-		out[len + 2] = '=';
-		out[len + 3] = '=';
-		out[len + 4] = 0;
-		break;
-	case 0:
-		out = g_realloc(out, len + 1);
-		out[len] = 0;
-		break;
-	}
-	return out;
-}
-
 char *normalize(const char *s)
 {
 	static char buf[BUF_LEN];
@@ -180,11 +93,9 @@ time_t get_time(int year, int month, int day, int hour, int min, int sec)
 
 typedef struct htmlentity
 {
-	char code[8];
-	char is[4];
+	char code[7];
+	char is[3];
 } htmlentity_t;
-
-/* FIXME: This is ISO8859-1(5) centric, so might cause problems with other charsets. */
 
 static const htmlentity_t ent[] =
 {
@@ -478,17 +389,101 @@ signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t si
 		return( outbuf - dst );
 }
 
-char *set_eval_charset( irc_t *irc, set_t *set, char *value )
+/* A pretty reliable random number generator. Tries to use the /dev/random
+   devices first, and falls back to the random number generator from libc
+   when it fails. Opens randomizer devices with O_NONBLOCK to make sure a
+   lack of entropy won't halt BitlBee. */
+void random_bytes( unsigned char *buf, int count )
 {
-	GIConv cd;
+	static int use_dev = -1;
+	
+	/* Actually this probing code isn't really necessary, is it? */
+	if( use_dev == -1 )
+	{
+		if( access( "/dev/random", R_OK ) == 0 || access( "/dev/urandom", R_OK ) == 0 )
+			use_dev = 1;
+		else
+		{
+			use_dev = 0;
+			srand( ( getpid() << 16 ) ^ time( NULL ) );
+		}
+	}
+	
+	if( use_dev )
+	{
+		int fd;
+		
+		/* At least on Linux, /dev/random can block if there's not
+		   enough entropy. We really don't want that, so if it can't
+		   give anything, use /dev/urandom instead. */
+		if( ( fd = open( "/dev/random", O_RDONLY | O_NONBLOCK ) ) >= 0 )
+			if( read( fd, buf, count ) == count )
+			{
+				close( fd );
+				return;
+			}
+		close( fd );
+		
+		/* urandom isn't supposed to block at all, but just to be
+		   sure. If it blocks, we'll disable use_dev and use the libc
+		   randomizer instead. */
+		if( ( fd = open( "/dev/urandom", O_RDONLY | O_NONBLOCK ) ) >= 0 )
+			if( read( fd, buf, count ) == count )
+			{
+				close( fd );
+				return;
+			}
+		close( fd );
+		
+		/* If /dev/random blocks once, we'll still try to use it
+		   again next time. If /dev/urandom also fails for some
+		   reason, stick with libc during this session. */
+		
+		use_dev = 0;
+		srand( ( getpid() << 16 ) ^ time( NULL ) );
+	}
+	
+	if( !use_dev )
+	{
+		int i;
+		
+		/* Possibly the LSB of rand() isn't very random on some
+		   platforms. Seems okay on at least Linux and OSX though. */
+		for( i = 0; i < count; i ++ )
+			buf[i] = rand() & 0xff;
+	}
+}
 
-	if ( g_strncasecmp( value, "none", 4 ) == 0 )
-		return( value );
+int is_bool( char *value )
+{
+	if( *value == 0 )
+		return 0;
+	
+	if( ( g_strcasecmp( value, "true" ) == 0 ) || ( g_strcasecmp( value, "yes" ) == 0 ) || ( g_strcasecmp( value, "on" ) == 0 ) )
+		return 1;
+	if( ( g_strcasecmp( value, "false" ) == 0 ) || ( g_strcasecmp( value, "no" ) == 0 ) || ( g_strcasecmp( value, "off" ) == 0 ) )
+		return 1;
+	
+	while( *value )
+		if( !isdigit( *value ) )
+			return 0;
+		else
+			value ++;
+	
+	return 1;
+}
 
-	cd = g_iconv_open( "UTF-8", value );
-	if( cd == (GIConv) -1 )
-		return( NULL );
-
-	g_iconv_close( cd );
-	return( value );
+int bool2int( char *value )
+{
+	int i;
+	
+	if( ( g_strcasecmp( value, "true" ) == 0 ) || ( g_strcasecmp( value, "yes" ) == 0 ) || ( g_strcasecmp( value, "on" ) == 0 ) )
+		return 1;
+	if( ( g_strcasecmp( value, "false" ) == 0 ) || ( g_strcasecmp( value, "no" ) == 0 ) || ( g_strcasecmp( value, "off" ) == 0 ) )
+		return 0;
+	
+	if( sscanf( value, "%d", &i ) == 1 )
+		return i;
+	
+	return 0;
 }

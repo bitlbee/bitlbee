@@ -23,13 +23,15 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef _MISC_H
+#define _MISC_H
+
+#include <gmodule.h>
+#include <time.h>
 
 G_MODULE_EXPORT void strip_linefeed( gchar *text );
 G_MODULE_EXPORT char *add_cr( char *text );
 G_MODULE_EXPORT char *strip_newlines(char *source);
-G_MODULE_EXPORT char *tobase64( const char *text );
 G_MODULE_EXPORT char *normalize( const char *s );
 G_MODULE_EXPORT void info_string_append( GString *str, char *newline, char *name, char *value );
 
@@ -45,6 +47,10 @@ G_MODULE_EXPORT char *ipv6_wrap( char *src );
 G_MODULE_EXPORT char *ipv6_unwrap( char *src );
 
 G_MODULE_EXPORT signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf );
-char *set_eval_charset( irc_t *irc, set_t *set, char *value );
+
+G_MODULE_EXPORT void random_bytes( unsigned char *buf, int count );
+
+G_MODULE_EXPORT int is_bool( char *value );
+G_MODULE_EXPORT int bool2int( char *value );
 
 #endif

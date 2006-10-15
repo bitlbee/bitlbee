@@ -123,13 +123,14 @@ extern char *CONF_FILE;
 #include "nogaim.h"
 #include "commands.h"
 #include "account.h"
+#include "nick.h"
 #include "conf.h"
 #include "log.h"
 #include "ini.h"
 #include "help.h"
 #include "query.h"
 #include "sock.h"
-#include "util.h"
+#include "misc.h"
 #include "proxy.h"
 
 typedef struct global {

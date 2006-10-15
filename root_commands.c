@@ -126,9 +126,12 @@ static void cmd_help( irc_t *irc, char **cmd )
 	}
 }
 
+static void cmd_account( irc_t *irc, char **cmd );
+
 static void cmd_identify( irc_t *irc, char **cmd )
 {
 	storage_status_t status = storage_load( irc->nick, cmd[1], irc );
+	char *account_on[] = { "account", "on", NULL };
 	
 	switch (status) {
 	case STORAGE_INVALID_PASSWORD:
@@ -138,11 +141,14 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "The nick is (probably) not registered" );
 		break;
 	case STORAGE_OK:
-		irc_usermsg( irc, "Password accepted" );
+		irc_usermsg( irc, "Password accepted, settings and accounts loaded" );
 		irc_umode_set( irc, "+R", 1 );
+		if( set_getbool( &irc->set, "auto_connect" ) )
+			cmd_account( irc, account_on );
 		break;
+	case STORAGE_OTHER_ERROR:
 	default:
-		irc_usermsg( irc, "Something very weird happened" );
+		irc_usermsg( irc, "Unknown error while loading configuration" );
 		break;
 	}
 }
@@ -162,6 +168,7 @@ static void cmd_register( irc_t *irc, char **cmd )
 			break;
 			
 		case STORAGE_OK:
+			irc_usermsg( irc, "Account successfully created" );
 			irc->status |= USTATUS_IDENTIFIED;
 			irc_umode_set( irc, "+R", 1 );
 			break;
@@ -225,9 +232,8 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 
 		a = account_add( irc, prpl, cmd[3], cmd[4] );
-		
 		if( cmd[5] )
-			a->server = g_strdup( cmd[5] );
+			set_setstr( &a->set, "server", cmd[5] );
 		
 		irc_usermsg( irc, "Account successfully added" );
 	}
@@ -305,7 +311,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 				irc_usermsg( irc, "Trying to get all accounts connected..." );
 			
 				for( a = irc->accounts; a; a = a->next )
-					if( !a->gc )
+					if( !a->gc && a->auto_connect )
 						account_on( irc, a );
 			} 
 			else
@@ -351,6 +357,76 @@ static void cmd_account( irc_t *irc, char **cmd )
 			return;
 		}
 	}
+	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
+	{
+		char *acc_handle, *set_name = NULL, *tmp;
+		
+		if( !cmd[2] )
+		{
+			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
+			return;
+		}
+		
+		acc_handle = g_strdup( cmd[2] );
+		if( ( tmp = strchr( acc_handle, '/' ) ) )
+		{
+			*tmp = 0;
+			set_name = tmp + 1;
+		}
+		a = account_get( irc, acc_handle );
+		
+		if( a == NULL )
+		{
+			g_free( acc_handle );
+			irc_usermsg( irc, "Invalid account" );
+			return;
+		}
+		
+		if( cmd[3] )
+		{
+			set_t *s = set_find( &a->set, set_name );
+			
+			if( a->gc && s && s->flags & ACC_SET_OFFLINE_ONLY )
+			{
+				g_free( acc_handle );
+				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );
+				return;
+			}
+			else if( !a->gc && s && s->flags & ACC_SET_ONLINE_ONLY )
+			{
+				g_free( acc_handle );
+				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "on" );
+				return;
+			}
+			
+			set_setstr( &a->set, set_name, cmd[3] );
+			
+			if( ( strcmp( cmd[3], "=" ) ) == 0 && cmd[4] )
+				irc_usermsg( irc, "Warning: Correct syntax: \002account set <variable> <value>\002 (without =)" );
+		}
+		if( set_name ) /* else 'forgotten' on purpose.. Must show new value after changing */
+		{
+			char *s = set_getstr( &a->set, set_name );
+			if( s )
+				irc_usermsg( irc, "%s = `%s'", set_name, s );
+			else
+				irc_usermsg( irc, "%s is empty", set_name );
+		}
+		else
+		{
+			set_t *s = a->set;
+			while( s )
+			{
+				if( s->value || s->def )
+					irc_usermsg( irc, "%s = `%s'", s->key, s->value?s->value:s->def );
+				else
+					irc_usermsg( irc, "%s is empty", s->key );
+				s = s->next;
+			}
+		}
+		
+		g_free( acc_handle );
+	}
 	else
 	{
 		irc_usermsg( irc, "Unknown command: account %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[1] );
@@ -393,14 +469,14 @@ static void cmd_add( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			nick_set( irc, cmd[2], a->gc->prpl, cmd[3] );
+			nick_set( a, cmd[2], cmd[3] );
 		}
 	}
 	
 	/* By making this optional, you can talk to people without having to
 	   add them to your *real* (server-side) contact list. */
 	if( add_for_real )
-		a->gc->prpl->add_buddy( a->gc, cmd[2] );
+		a->gc->acc->prpl->add_buddy( a->gc, cmd[2] );
 		
 	add_buddy( a->gc, NULL, cmd[2], cmd[2] );
 	
@@ -434,13 +510,13 @@ static void cmd_info( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( !gc->prpl->get_info )
+	if( !gc->acc->prpl->get_info )
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 	}
 	else
 	{
-		gc->prpl->get_info( gc, cmd[2] );
+		gc->acc->prpl->get_info( gc, cmd[2] );
 	}
 }
 
@@ -475,7 +551,7 @@ static void cmd_rename( irc_t *irc, char **cmd )
 		}
 		else if( u->send_handler == buddy_send_handler )
 		{
-			nick_set( irc, u->handle, u->gc->prpl, cmd[2] );
+			nick_set( u->gc->acc, u->handle, cmd[2] );
 		}
 		
 		irc_usermsg( irc, "Nick successfully changed" );
@@ -494,9 +570,9 @@ static void cmd_remove( irc_t *irc, char **cmd )
 	}
 	s = g_strdup( u->handle );
 	
-	u->gc->prpl->remove_buddy( u->gc, u->handle, NULL );
+	u->gc->acc->prpl->remove_buddy( u->gc, u->handle, NULL );
 	user_del( irc, cmd[1] );
-	nick_del( irc, cmd[1] );
+	nick_del( u->gc->acc, s );
 	
 	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
 	g_free( s );
@@ -551,7 +627,7 @@ static void cmd_block( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( !gc->prpl->add_deny || !gc->prpl->rem_permit )
+	if( !gc->acc->prpl->add_deny || !gc->acc->prpl->rem_permit )
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 	}
@@ -610,7 +686,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( !gc->prpl->rem_deny || !gc->prpl->add_permit )
+	if( !gc->acc->prpl->rem_deny || !gc->acc->prpl->add_permit )
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 	}
@@ -665,16 +741,18 @@ static void cmd_set( irc_t *irc, char **cmd )
 {
 	if( cmd[1] && cmd[2] )
 	{
-		set_setstr( irc, cmd[1], cmd[2] );
+		set_setstr( &irc->set, cmd[1], cmd[2] );
 		
 		if( ( strcmp( cmd[2], "=" ) ) == 0 && cmd[3] )
 			irc_usermsg( irc, "Warning: Correct syntax: \002set <variable> <value>\002 (without =)" );
 	}
 	if( cmd[1] ) /* else 'forgotten' on purpose.. Must show new value after changing */
 	{
-		char *s = set_getstr( irc, cmd[1] );
+		char *s = set_getstr( &irc->set, cmd[1] );
 		if( s )
 			irc_usermsg( irc, "%s = `%s'", cmd[1], s );
+		else
+			irc_usermsg( irc, "%s is empty", cmd[1] );
 	}
 	else
 	{
@@ -683,6 +761,8 @@ static void cmd_set( irc_t *irc, char **cmd )
 		{
 			if( s->value || s->def )
 				irc_usermsg( irc, "%s = `%s'", s->key, s->value?s->value:s->def );
+			else
+				irc_usermsg( irc, "%s is empty", s->key );
 			s = s->next;
 		}
 	}
@@ -726,7 +806,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( online == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->acc->prpl->name );
 			irc_usermsg( irc, format, u->nick, s, "Online" );
 		}
 		
@@ -737,7 +817,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( away == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->acc->prpl->name );
 			irc_usermsg( irc, format, u->nick, s, u->away );
 		}
 		n_away ++;
@@ -747,7 +827,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( offline == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->user->prpl->name );
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->gc->acc->prpl->name );
 			irc_usermsg( irc, format, u->nick, s, "Offline" );
 		}
 		n_offline ++;
@@ -772,7 +852,7 @@ static void cmd_nick( irc_t *irc, char **cmd )
 	{
 		irc_usermsg( irc, "Your name is `%s'" , a->gc->displayname ? a->gc->displayname : "NULL" );
 	}
-	else if ( !a->gc->prpl->set_info ) 
+	else if ( !a->prpl->set_info ) 
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 	}
@@ -780,7 +860,7 @@ static void cmd_nick( irc_t *irc, char **cmd )
 	{
 		irc_usermsg( irc, "Setting your name to `%s'", cmd[2] );
 		
-		a->gc->prpl->set_info( a->gc, cmd[2] );
+		a->prpl->set_info( a->gc, cmd[2] );
 	}
 }
 
@@ -799,60 +879,9 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 	
 	for( num = 0; q; q = q->next, num ++ )
 		if( q->gc ) /* Not necessary yet, but it might come later */
-			irc_usermsg( irc, "%d, %s(%s): %s", num, q->gc->prpl->name, q->gc->username, q->question );
+			irc_usermsg( irc, "%d, %s(%s): %s", num, q->gc->acc->prpl->name, q->gc->username, q->question );
 		else
 			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
-}
-
-static void cmd_import_buddies( irc_t *irc, char **cmd )
-{
-	struct gaim_connection *gc;
-	account_t *a;
-	nick_t *n;
-	
-	if( !( a = account_get( irc, cmd[1] ) ) )
-	{
-		irc_usermsg( irc, "Invalid account" );
-		return;
-	}
-	else if( !( ( gc = a->gc ) && ( a->gc->flags & OPT_LOGGED_IN ) ) )
-	{
-		irc_usermsg( irc, "That account is not on-line" );
-		return;
-	}
-	
-	if( cmd[2] )
-	{
-		if( g_strcasecmp( cmd[2], "clear" ) == 0 )
-		{
-			user_t *u;
-			
-			for( u = irc->users; u; u = u->next )
-				if( u->gc == gc )
-				{
-					u->gc->prpl->remove_buddy( u->gc, u->handle, NULL );
-					user_del( irc, u->nick );
-				}
-			
-			irc_usermsg( irc, "Old buddy list cleared." );
-		}
-		else
-		{
-			irc_usermsg( irc, "Invalid argument: %s", cmd[2] );
-			return;
-		}
-	}
-	
-	for( n = gc->irc->nicks; n; n = n->next )
-	{
-		if( n->proto == gc->prpl && !user_findhandle( gc, n->handle ) )
-		{
-	                gc->prpl->add_buddy( gc, n->handle );
-	                add_buddy( gc, NULL, n->handle, NULL );
-		}
-	}
-	
-	irc_usermsg( irc, "Sent all add requests. Please wait for a while, the server needs some time to handle all the adds." );
 }
 
 const command_t commands[] = {
@@ -873,7 +902,6 @@ const command_t commands[] = {
 	{ "no",             0, cmd_yesno,          0 },
 	{ "blist",          0, cmd_blist,          0 },
 	{ "nick",           1, cmd_nick,           0 },
-	{ "import_buddies", 1, cmd_import_buddies, 0 },
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ NULL }
 };

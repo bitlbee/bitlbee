@@ -30,11 +30,12 @@
 account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 {
 	account_t *a;
+	set_t *s;
 	
 	if( irc->accounts )
 	{
 		for( a = irc->accounts; a->next; a = a->next );
-		a = a->next = g_new0 ( account_t, 1 );
+		a = a->next = g_new0( account_t, 1 );
 	}
 	else
 	{
@@ -44,9 +45,70 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	a->prpl = prpl;
 	a->user = g_strdup( user );
 	a->pass = g_strdup( pass );
+	a->auto_connect = 1;
 	a->irc = irc;
 	
+	s = set_add( &a->set, "auto_connect", "true", set_eval_account, a );
+	s->flags |= ACC_SET_NOSAVE;
+	
+	s = set_add( &a->set, "auto_reconnect", "true", set_eval_bool, a );
+	
+	s = set_add( &a->set, "password", NULL, set_eval_account, a );
+	s->flags |= ACC_SET_NOSAVE;
+	
+	s = set_add( &a->set, "username", NULL, set_eval_account, a );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	set_setstr( &a->set, "username", user );
+	
+	a->nicks = g_hash_table_new_full( g_str_hash, g_str_equal, g_free, g_free );
+	
+	/* This function adds some more settings (and might want to do more
+	   things that have to be done now, although I can't think of anything. */
+	if( prpl->acc_init )
+		prpl->acc_init( a );
+	
 	return( a );
+}
+
+char *set_eval_account( set_t *set, char *value )
+{
+	account_t *acc = set->data;
+	
+	/* Double-check: We refuse to edit on-line accounts. */
+	if( set->flags & ACC_SET_OFFLINE_ONLY && acc->gc )
+		return NULL;
+	
+	if( strcmp( set->key, "username" ) == 0 )
+	{
+		g_free( acc->user );
+		acc->user = g_strdup( value );
+		return value;
+	}
+	else if( strcmp( set->key, "password" ) == 0 )
+	{
+		g_free( acc->pass );
+		acc->pass = g_strdup( value );
+		return NULL;	/* password shouldn't be visible in plaintext! */
+	}
+	else if( strcmp( set->key, "server" ) == 0 )
+	{
+		g_free( acc->server );
+		if( *value )
+			acc->server = g_strdup( value );
+		else
+			acc->server = NULL;
+		return value;
+	}
+	else if( strcmp( set->key, "auto_connect" ) == 0 )
+	{
+		if( !is_bool( value ) )
+			return NULL;
+		
+		acc->auto_connect = bool2int( value );
+		return value;
+	}
+	
+	return NULL;
 }
 
 account_t *account_get( irc_t *irc, char *id )
@@ -67,7 +129,7 @@ account_t *account_get( irc_t *irc, char *id )
 		{
 			for( a = irc->accounts; a; a = a->next )
 				if( a->prpl == proto &&
-				    a->prpl->cmp_buddynames( handle, a->user ) == 0 )
+				    a->prpl->handle_cmp( handle, a->user ) == 0 )
 					ret = a;
 		}
 		
@@ -128,6 +190,11 @@ void account_del( irc_t *irc, account_t *acc )
 				irc->accounts = a->next;
 			}
 			
+			while( a->set )
+				set_del( &a->set, a->set->key );
+			
+			g_hash_table_destroy( a->nicks );
+			
 			g_free( a->user );
 			g_free( a->pass );
 			if( a->server ) g_free( a->server );
@@ -141,8 +208,6 @@ void account_del( irc_t *irc, account_t *acc )
 
 void account_on( irc_t *irc, account_t *a )
 {
-	struct aim_user *u;
-	
 	if( a->gc )
 	{
 		/* Trying to enable an already-enabled account */
@@ -151,17 +216,8 @@ void account_on( irc_t *irc, account_t *a )
 	
 	cancel_auto_reconnect( a );
 	
-	u = g_new0 ( struct aim_user, 1 );
-	u->irc = irc;
-	u->prpl = a->prpl;
-	strncpy( u->username, a->user, sizeof( u->username ) - 1 );
-	strncpy( u->password, a->pass, sizeof( u->password ) - 1 );
-	if( a->server) strncpy( u->proto_opt[0], a->server, sizeof( u->proto_opt[0] ) - 1 );
-	
-	a->gc = (struct gaim_connection *) u; /* Bit hackish :-/ */
 	a->reconnect = 0;
-	
-	a->prpl->login( u );
+	a->prpl->login( a );
 }
 
 void account_off( irc_t *irc, account_t *a )

@@ -355,18 +355,31 @@ static gboolean oscar_login_connect(gpointer data, gint source, b_input_conditio
 	return FALSE;
 }
 
-static void oscar_login(struct aim_user *user) {
+static void oscar_acc_init(account_t *acc)
+{
+	set_t *s;
+	
+	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	
+	if (isdigit(acc->user[0])) {
+		s = set_add( &acc->set, "web_aware", "false", set_eval_bool, acc );
+		s->flags |= ACC_SET_OFFLINE_ONLY;
+	}
+}
+
+static void oscar_login(account_t *acc) {
 	aim_session_t *sess;
 	aim_conn_t *conn;
 	char buf[256];
-	struct gaim_connection *gc = new_gaim_conn(user);
+	struct gaim_connection *gc = new_gaim_conn(acc);
 	struct oscar_data *odata = gc->proto_data = g_new0(struct oscar_data, 1);
 
-	if (isdigit(*user->username)) {
+	if (isdigit(acc->user[0])) {
 		odata->icq = TRUE;
 		/* This is odd but it's necessary for a proper do_import and do_export.
 		   We don't do those anymore, but let's stick with it, just in case
-		   it accidentally fixes something else too... */
+		   it accidentally fixes something else too... </bitlbee> */
 		gc->password[8] = 0;
 	} else {
 		gc->flags |= OPT_CONN_HTML;
@@ -389,9 +402,15 @@ static void oscar_login(struct aim_user *user) {
 		return;
 	}
 	
-	if (g_strcasecmp(user->proto_opt[USEROPT_AUTH], "login.icq.com") != 0 &&
-	    g_strcasecmp(user->proto_opt[USEROPT_AUTH], "login.oscar.aol.com") != 0) {
-		serv_got_crap(gc, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.",user->proto_opt[USEROPT_AUTH]);
+	if (acc->server == NULL) {
+		hide_login_progress(gc, "No servername specified");
+		signoff(gc);
+		return;
+	}
+	
+	if (g_strcasecmp(acc->server, "login.icq.com") != 0 &&
+	    g_strcasecmp(acc->server, "login.oscar.aol.com") != 0) {
+		serv_got_crap(gc, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.",acc->server);
 	}
 	
 	g_snprintf(buf, sizeof(buf), _("Signon: %s"), gc->username);
@@ -401,11 +420,7 @@ static void oscar_login(struct aim_user *user) {
 	aim_conn_addhandler(sess, conn, 0x0017, 0x0003, gaim_parse_auth_resp, 0);
 
 	conn->status |= AIM_CONN_STATUS_INPROGRESS;
-	conn->fd = proxy_connect(user->proto_opt[USEROPT_AUTH][0] ?
-					user->proto_opt[USEROPT_AUTH] : AIM_DEFAULT_LOGIN_SERVER,
-				 user->proto_opt[USEROPT_AUTHPORT][0] ?
-					atoi(user->proto_opt[USEROPT_AUTHPORT]) : AIM_LOGIN_PORT,
-				 oscar_login_connect, gc);
+	conn->fd = proxy_connect(acc->server, AIM_LOGIN_PORT, oscar_login_connect, gc);
 	if (conn->fd < 0) {
 		hide_login_progress(gc, _("Couldn't connect to host"));
 		signoff(gc);
@@ -484,14 +499,11 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
 	struct aim_authresp_info *info;
 	int i; char *host; int port;
-	struct aim_user *user;
 	aim_conn_t *bosconn;
 
 	struct gaim_connection *gc = sess->aux_data;
         struct oscar_data *od = gc->proto_data;
-	user = gc->user;
-	port = user->proto_opt[USEROPT_AUTHPORT][0] ?
-		atoi(user->proto_opt[USEROPT_AUTHPORT]) : AIM_LOGIN_PORT,
+	port = AIM_LOGIN_PORT;
 
 	va_start(ap, fr);
 	info = va_arg(ap, struct aim_authresp_info *);
@@ -870,19 +882,16 @@ static int gaim_handle_redirect(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
 	struct aim_redirect_data *redir;
 	struct gaim_connection *gc = sess->aux_data;
-	struct aim_user *user = gc->user;
 	aim_conn_t *tstconn;
 	int i;
 	char *host;
 	int port;
 
-	port = user->proto_opt[USEROPT_AUTHPORT][0] ?
-		atoi(user->proto_opt[USEROPT_AUTHPORT]) : AIM_LOGIN_PORT,
-
 	va_start(ap, fr);
 	redir = va_arg(ap, struct aim_redirect_data *);
 	va_end(ap);
 
+	port = AIM_LOGIN_PORT;
 	for (i = 0; i < (int)strlen(redir->ip); i++) {
 		if (redir->ip[i] == ':') {
 			port = atoi(&(redir->ip[i+1]));
@@ -1241,10 +1250,6 @@ static int gaim_parse_incoming_im(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_start(ap, fr);
 	channel = va_arg(ap, int);
 	userinfo = va_arg(ap, aim_userinfo_t *);
-
-    if (set_getint(sess->aux_data, "debug")) {
-        serv_got_crap(sess->aux_data, "channel %i called", channel);
-    }
 
 	switch (channel) {
 		case 1: { /* standard message */
@@ -1722,8 +1727,11 @@ static int gaim_parse_locaterights(aim_session_t *sess, aim_frame_t *fr, ...)
 
 	odata->rights.maxsiglen = odata->rights.maxawaymsglen = (guint)maxsiglen;
 
+	/* FIXME: It seems we're not really using this, and it broke now that
+	   struct aim_user is dead.
 	aim_bos_setprofile(sess, fr->conn, gc->user->user_info, NULL, gaim_caps);
-
+	*/
+	
 	return 1;
 }
 
@@ -2655,6 +2663,7 @@ void oscar_init()
 	ret->name = "oscar";
 	ret->away_states = oscar_away_states;
 	ret->login = oscar_login;
+	ret->acc_init = oscar_acc_init;
 	ret->close = oscar_close;
 	ret->send_im = oscar_send_im;
 	ret->get_info = oscar_get_info;
@@ -2672,9 +2681,10 @@ void oscar_init()
 	ret->rem_deny = oscar_rem_deny;
 	ret->set_permit_deny = oscar_set_permit_deny;
 	ret->keepalive = oscar_keepalive;
-	ret->cmp_buddynames = aim_sncmp;
 	ret->get_status_string = oscar_get_status_string;
 	ret->send_typing = oscar_send_typing;
+	
+	ret->handle_cmp = aim_sncmp;
 
 	register_protocol(ret);
 }

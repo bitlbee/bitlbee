@@ -47,20 +47,18 @@ int main( int argc, char *argv[], char **envp )
 	memset( &global, 0, sizeof( global_t ) );
 	
 	b_main_init();
-	
 	log_init();
-
 	nogaim_init();
-
-	CONF_FILE = g_strdup( CONF_FILE_DEF );
 	
+	srand( time( NULL ) ^ getpid() );
+	
+	CONF_FILE = g_strdup( CONF_FILE_DEF );
 	global.helpfile = g_strdup( HELP_FILE );
-
+	
 	global.conf = conf_load( argc, argv );
 	if( global.conf == NULL )
 		return( 1 );
-
-
+	
 	if( global.conf->runmode == RUNMODE_INETD )
 	{
 		i = bitlbee_inetd_init();
@@ -88,7 +86,7 @@ int main( int argc, char *argv[], char **envp )
 	}
 	if( i != 0 )
 		return( i );
-
+	
 	global.storage = storage_init( global.conf->primary_storage, global.conf->migrate_storage );
 	if ( global.storage == NULL) {
 		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
