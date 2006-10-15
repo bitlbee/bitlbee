@@ -211,6 +211,7 @@ static void passport_retrieve_dalogin_ready( struct http_request *req )
 	
 	if( passport_get_id_real( rep->func, rep->data, rep->header ) )
 	{
+		rep->header = NULL;
 		destroy_reply( rep );
 		return;
 	}
