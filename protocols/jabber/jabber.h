@@ -40,15 +40,15 @@ typedef enum
 	                                   before we continue. */
 	JFLAG_WAIT_BIND = 16,		/* ... for <bind> tag. */
 	JFLAG_WANT_TYPING = 32,		/* Set if we ever sent a typing notification, this
-	                                   activates all JEP-85 related code. */
+	                                   activates all XEP-85 related code. */
 } jabber_flags_t;
 
 typedef enum
 {
-	JBFLAG_PROBED_JEP85 = 1,	/* Set this when we sent our probe packet to make
+	JBFLAG_PROBED_XEP85 = 1,	/* Set this when we sent our probe packet to make
 	                                   sure it gets sent only once. */
-	JBFLAG_DOES_JEP85 = 2,		/* Set this when the resource seems to support
-	                                   JEP85 (typing notification shite). */
+	JBFLAG_DOES_XEP85 = 2,		/* Set this when the resource seems to support
+	                                   XEP85 (typing notification shite). */
 } jabber_buddy_flag_t;
 
 struct jabber_data
@@ -137,6 +137,7 @@ void jabber_buddy_ask( struct gaim_connection *gc, char *handle );
 struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_jid );
 struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid );
 int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid );
+int jabber_buddy_remove_bare( struct gaim_connection *gc, char *bare_jid );
 
 extern const struct jabber_away_state jabber_away_state_list[];
 

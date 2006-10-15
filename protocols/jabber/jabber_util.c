@@ -28,13 +28,20 @@ static int next_id = 1;
 char *set_eval_priority( set_t *set, char *value )
 {
 	account_t *acc = set->data;
-	char *ret;
+	int i;
 	
-	ret = set_eval_int( set, value );
+	if( sscanf( value, "%d", &i ) == 1 )
+	{
+		/* Priority is a signed 8-bit integer, according to RFC 3921. */
+		if( i < -128 || i > 127 )
+			return NULL;
+	}
+	else
+		return NULL;
 	
 	/* Only run this stuff if the account is online ATM,
 	   and if the setting seems to be acceptable. */
-	if( acc->gc && ret )
+	if( acc->gc )
 	{
 		/* Although set_eval functions usually are very nice and
 		   convenient, they have one disadvantage: If I would just
@@ -46,14 +53,14 @@ char *set_eval_priority( set_t *set, char *value )
 		   functions next to evals, or just do this little hack: */
 		
 		g_free( set->value );
-		set->value = g_strdup( ret );
+		set->value = g_strdup( value );
 		
 		/* (Yes, sorry, I prefer the hack. :-P) */
 		
 		presence_send_update( acc->gc );
 	}
 	
-	return ret;
+	return value;
 }
 
 char *set_eval_tls( set_t *set, char *value )
@@ -282,6 +289,9 @@ struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_ji
 	return new;
 }
 
+/* Finds a buddy from our structures. Can find both full- and bare JIDs. When
+   asked for a bare JID, it uses the "resource_select" setting to see which
+   resource to pick. */
 struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid )
 {
 	struct jabber_data *jd = gc->proto_data;
@@ -322,6 +332,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid 
 	return bud;
 }
 
+/* Remove one specific full JID from our list. Use this when a buddy goes
+   off-line (because (s)he can still be online from a different location. */
 int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid )
 {
 	struct jabber_data *jd = gc->proto_data;
@@ -377,6 +389,41 @@ int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid )
 	else
 	{
 		*s = '/';
+		return 0;
+	}
+}
+
+/* Remove a buddy completely; removes all resources that belong to the
+   specified bare JID. Use this when removing someone from the contact
+   list, for example. */
+int jabber_buddy_remove_bare( struct gaim_connection *gc, char *bare_jid )
+{
+	struct jabber_data *jd = gc->proto_data;
+	struct jabber_buddy *bud, *next;
+	
+	if( strchr( bare_jid, '/' ) )
+		return 0;
+	
+	if( ( bud = g_hash_table_lookup( jd->buddies, bare_jid ) ) )
+	{
+		/* Most important: Remove the hash reference. We don't know
+		   this buddy anymore. */
+		g_hash_table_remove( jd->buddies, bud->handle );
+		
+		/* Deallocate the linked list of resources. */
+		while( bud )
+		{
+			next = bud->next;
+			g_free( bud->full_jid );
+			g_free( bud->away_message );
+			g_free( bud );
+			bud = next;
+		}
+		
+		return 1;
+	}
+	else
+	{
 		return 0;
 	}
 }

@@ -146,23 +146,23 @@ static int jabber_send_im( struct gaim_connection *gc, char *who, char *message,
 	bud = jabber_buddy_by_jid( gc, who );
 	
 	node = xt_new_node( "body", message, NULL );
-	node = jabber_make_packet( "message", "chat", bud->full_jid, node );
+	node = jabber_make_packet( "message", "chat", bud ? bud->full_jid : who, node );
 	
-	if( ( jd->flags & JFLAG_WANT_TYPING ) &&
-	    ( ( bud->flags & JBFLAG_DOES_JEP85 ) ||
-	     !( bud->flags & JBFLAG_PROBED_JEP85 ) ) )
+	if( ( jd->flags & JFLAG_WANT_TYPING ) && bud &&
+	    ( ( bud->flags & JBFLAG_DOES_XEP85 ) ||
+	     !( bud->flags & JBFLAG_PROBED_XEP85 ) ) )
 	{
 		struct xt_node *act;
 		
 		/* If the user likes typing notification and if we don't know
-		   (and didn't probe before) if this resource supports JEP85,
+		   (and didn't probe before) if this resource supports XEP85,
 		   include a probe in this packet now. */
 		act = xt_new_node( "active", NULL, NULL );
 		xt_add_attr( act, "xmlns", "http://jabber.org/protocol/chatstates" );
 		xt_add_child( node, act );
 		
 		/* Just make sure we do this only once. */
-		bud->flags |= JBFLAG_PROBED_JEP85;
+		bud->flags |= JBFLAG_PROBED_XEP85;
 	}
 	
 	st = jabber_write_packet( gc, node );
@@ -225,6 +225,9 @@ static void jabber_add_buddy( struct gaim_connection *gc, char *who )
 
 static void jabber_remove_buddy( struct gaim_connection *gc, char *who, char *group )
 {
+	/* We should always do this part. Clean up our administration a little bit. */
+	jabber_buddy_remove_bare( gc, who );
+	
 	if( jabber_remove_from_roster( gc, who ) )
 		presence_send_request( gc, who, "unsubscribe" );
 }
@@ -247,8 +250,14 @@ static int jabber_send_typing( struct gaim_connection *gc, char *who, int typing
 	/* Enable typing notification related code from now. */
 	jd->flags |= JFLAG_WANT_TYPING;
 	
-	bud = jabber_buddy_by_jid( gc, who );
-	if( bud->flags & JBFLAG_DOES_JEP85 )
+	if( ( bud = jabber_buddy_by_jid( gc, who ) ) == NULL )
+	{
+		/* Sending typing notifications to unknown buddies is
+		   unsupported for now. Shouldn't be a problem, I think. */
+		return 0;
+	}
+	
+	if( bud->flags & JBFLAG_DOES_XEP85 )
 	{
 		/* We're only allowed to send this stuff if we know the other
 		   side supports it. */
