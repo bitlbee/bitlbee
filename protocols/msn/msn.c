@@ -366,7 +366,7 @@ static char *msn_set_display_name( set_t *set, char *value )
 	account_t *acc = set->data;
 	struct gaim_connection *gc = acc->gc;
 	struct msn_data *md;
-	char buf[1024], *fn, *s;
+	char buf[1024], *fn;
 	int i;
 	
 	/* Double-check. */
@@ -381,22 +381,7 @@ static char *msn_set_display_name( set_t *set, char *value )
 		return NULL;
 	}
 	
-	/* Of course we could use http_encode() here, but when we encode
-	   every character, the server is less likely to complain about the
-	   chosen name. However, the MSN server doesn't seem to like escaped
-	   non-ASCII chars, so we keep those unescaped. */
-	s = fn = g_new0( char, strlen( value ) * 3 + 1 );
-	for( i = 0; value[i]; i ++ )
-		if( value[i] & 128 )
-		{
-			*s = value[i];
-			s ++;
-		}
-		else
-		{
-			g_snprintf( s, 4, "%%%02X", value[i] );
-			s += 3;
-		}
+	fn = msn_http_encode( value );
 	
 	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, gc->username, fn );
 	msn_write( gc, buf, strlen( buf ) );

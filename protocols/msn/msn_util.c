@@ -53,30 +53,14 @@ int msn_logged_in( struct gaim_connection *gc )
 int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char *realname_ )
 {
 	struct msn_data *md = gc->proto_data;
-	GSList *l, **lp = NULL;
 	char buf[1024], *realname;
 	
-	if( strcmp( list, "AL" ) == 0 )
-		lp = &gc->permit;
-	else if( strcmp( list, "BL" ) == 0 )
-		lp = &gc->deny;
-	
-	if( lp )
-		for( l = *lp; l; l = l->next )
-			if( g_strcasecmp( l->data, who ) == 0 )
-				return( 1 );
-	
-	realname = g_new0( char, strlen( realname_ ) * 3 + 1 );
-	strcpy( realname, realname_ );
-	http_encode( realname );
+	realname = msn_http_encode( realname_ );
 	
 	g_snprintf( buf, sizeof( buf ), "ADD %d %s %s %s\r\n", ++md->trId, list, who, realname );
 	if( msn_write( gc, buf, strlen( buf ) ) )
 	{
 		g_free( realname );
-		
-		if( lp )
-			*lp = g_slist_append( *lp, g_strdup( who ) );
 		
 		return( 1 );
 	}
@@ -89,32 +73,11 @@ int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char 
 int msn_buddy_list_remove( struct gaim_connection *gc, char *list, char *who )
 {
 	struct msn_data *md = gc->proto_data;
-	GSList *l = NULL, **lp = NULL;
 	char buf[1024];
-	
-	if( strcmp( list, "AL" ) == 0 )
-		lp = &gc->permit;
-	else if( strcmp( list, "BL" ) == 0 )
-		lp = &gc->deny;
-	
-	if( lp )
-	{
-		for( l = *lp; l; l = l->next )
-			if( g_strcasecmp( l->data, who ) == 0 )
-				break;
-		
-		if( !l )
-			return( 1 );
-	}
 	
 	g_snprintf( buf, sizeof( buf ), "REM %d %s %s\r\n", ++md->trId, list, who );
 	if( msn_write( gc, buf, strlen( buf ) ) )
-	{
-		if( lp )
-			*lp = g_slist_remove( *lp, l->data );
-		
 		return( 1 );
-	}
 	
 	return( 0 );
 }
@@ -348,4 +311,30 @@ int msn_handler( struct msn_handler_data *h )
 	}
 	
 	return( 1 );
+}
+
+/* The difference between this function and the normal http_encode() function
+   is that this one escapes every 7-bit ASCII character because this is said
+   to avoid some lame server-side checks when setting a real-name. Also,
+   non-ASCII characters are not escaped because MSN servers don't seem to
+   appreciate that! */
+char *msn_http_encode( const char *input )
+{
+	char *ret, *s;
+	int i;
+	
+	ret = s = g_new0( char, strlen( input ) * 3 + 1 );
+	for( i = 0; input[i]; i ++ )
+		if( input[i] & 128 )
+		{
+			*s = input[i];
+			s ++;
+		}
+		else
+		{
+			g_snprintf( s, 4, "%%%02X", input[i] );
+			s += 3;
+		}
+	
+	return ret;
 }

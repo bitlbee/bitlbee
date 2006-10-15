@@ -572,7 +572,7 @@ static void cmd_remove( irc_t *irc, char **cmd )
 	
 	u->gc->acc->prpl->remove_buddy( u->gc, u->handle, NULL );
 	user_del( irc, cmd[1] );
-	nick_del( u->gc->acc, u->handle );
+	nick_del( u->gc->acc, s );
 	
 	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
 	g_free( s );
@@ -655,7 +655,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 			format = "%-32.32s  %-16.16s";
 		
 		irc_usermsg( irc, format, "Handle", "Nickname" );
-		for( l = a->gc->deny; l; l = l->next )
+		for( l = a->gc->permit; l; l = l->next )
 		{
 			user_t *u = user_findhandle( a->gc, l->data );
 			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );

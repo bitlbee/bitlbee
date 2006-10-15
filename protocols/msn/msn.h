@@ -156,6 +156,7 @@ void msn_buddy_ask( struct gaim_connection *gc, char *handle, char *realname );
 char *msn_findheader( char *text, char *header, int len );
 char **msn_linesplit( char *line );
 int msn_handler( struct msn_handler_data *h );
+char *msn_http_encode( const char *input );
 
 /* tables.c */
 const struct msn_away_state *msn_away_state_by_number( int number );
