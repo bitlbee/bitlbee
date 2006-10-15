@@ -572,7 +572,7 @@ static void cmd_remove( irc_t *irc, char **cmd )
 	
 	u->gc->acc->prpl->remove_buddy( u->gc, u->handle, NULL );
 	user_del( irc, cmd[1] );
-	nick_del( u->gc->acc, u->handle );
+	nick_del( u->gc->acc, s );
 	
 	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
 	g_free( s );
