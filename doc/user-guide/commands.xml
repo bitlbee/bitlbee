@@ -432,9 +432,11 @@
 	<bitlbee-setting name="display_namechanges" type="boolean" scope="global">
 		<default>false</default>
 
-		<para>
-			With this option enabled, root will inform you when someone in your buddy list changes his/her "friendly name".
-		</para>
+		<description>
+			<para>
+				With this option enabled, root will inform you when someone in your buddy list changes his/her "friendly name".
+			</para>
+		</description>
 	</bitlbee-setting>
 
 	<bitlbee-setting name="handle_unknown" type="string" scope="global">
