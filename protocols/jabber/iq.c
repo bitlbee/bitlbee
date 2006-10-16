@@ -190,7 +190,7 @@ static xt_status jabber_do_iq_auth( struct gaim_connection *gc, struct xt_node *
 		/* We can do digest authentication, it seems, and of
 		   course we prefer that. */
 		SHA_CTX sha;
-		char hash_hex[40];
+		char hash_hex[41];
 		unsigned char hash[20];
 		int i;
 		
