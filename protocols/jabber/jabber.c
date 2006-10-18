@@ -201,6 +201,8 @@ static void jabber_get_info( struct gaim_connection *gc, char *who )
 		                   bud->away_message ? : "(none)" );
 		bud = bud->next;
 	}
+	
+	jabber_get_vcard( gc, bud ? bud->handle : who );
 }
 
 static void jabber_set_away( struct gaim_connection *gc, char *state_txt, char *message )

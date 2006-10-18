@@ -111,6 +111,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
 int jabber_init_iq_auth( struct gaim_connection *gc );
 xt_status jabber_pkt_bind_sess( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
 int jabber_get_roster( struct gaim_connection *gc );
+int jabber_get_vcard( struct gaim_connection *gc, char *bare_jid );
 int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name );
 int jabber_remove_from_roster( struct gaim_connection *gc, char *handle );
 

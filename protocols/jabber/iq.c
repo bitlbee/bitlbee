@@ -320,6 +320,148 @@ static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node
 	return XT_HANDLED;
 }
 
+static xt_status jabber_iq_display_vcard( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
+
+int jabber_get_vcard( struct gaim_connection *gc, char *bare_jid )
+{
+	struct xt_node *node;
+	
+	if( strchr( bare_jid, '/' ) )
+		return 1;	/* This was an error, but return 0 should only be done if the connection died... */
+	
+	node = xt_new_node( "vCard", NULL, NULL );
+	xt_add_attr( node, "xmlns", "vcard-temp" );
+	node = jabber_make_packet( "iq", "get", bare_jid, node );
+	
+	jabber_cache_add( gc, node, jabber_iq_display_vcard );
+	return jabber_write_packet( gc, node );
+}
+
+static xt_status jabber_iq_display_vcard( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig )
+{
+	struct xt_node *vc, *c, *sc; /* subchild, gc is already in use ;-) */
+	GString *reply;
+	char *s;
+	
+	if( ( s = xt_find_attr( node, "type" ) ) == NULL ||
+	    strcmp( s, "result" ) != 0 ||
+	    ( vc = xt_find_node( node->children, "vCard" ) ) == NULL )
+	{
+		s = xt_find_attr( orig, "to" ); /* If this returns NULL something's wrong.. */
+		serv_got_crap( gc, "Could not retrieve vCard of %s", s ? s : "(NULL)" );
+		return XT_HANDLED;
+	}
+	
+	s = xt_find_attr( orig, "to" );
+	reply = g_string_new( "vCard information for " );
+	reply = g_string_append( reply, s ? s : "(NULL)" );
+	reply = g_string_append( reply, ":\n" );
+	
+	/* I hate this format, I really do... */
+	
+	if( ( c = xt_find_node( vc->children, "FN" ) ) && c->text_len )
+		g_string_append_printf( reply, "Name: %s\n", c->text );
+	
+	if( ( c = xt_find_node( vc->children, "N" ) ) && c->children )
+	{
+		reply = g_string_append( reply, "Full name:" );
+		
+		if( ( sc = xt_find_node( c->children, "PREFIX" ) ) && sc->text_len )
+			g_string_append_printf( reply, " %s", sc->text );
+		if( ( sc = xt_find_node( c->children, "GIVEN" ) ) && sc->text_len )
+			g_string_append_printf( reply, " %s", sc->text );
+		if( ( sc = xt_find_node( c->children, "MIDDLE" ) ) && sc->text_len )
+			g_string_append_printf( reply, " %s", sc->text );
+		if( ( sc = xt_find_node( c->children, "FAMILY" ) ) && sc->text_len )
+			g_string_append_printf( reply, " %s", sc->text );
+		if( ( sc = xt_find_node( c->children, "SUFFIX" ) ) && sc->text_len )
+			g_string_append_printf( reply, " %s", sc->text );
+		
+		reply = g_string_append_c( reply, '\n' );
+	}
+	
+	if( ( c = xt_find_node( vc->children, "NICKNAME" ) ) && c->text_len )
+		g_string_append_printf( reply, "Nickname: %s\n", c->text );
+	
+	if( ( c = xt_find_node( vc->children, "BDAY" ) ) && c->text_len )
+		g_string_append_printf( reply, "Date of birth: %s\n", c->text );
+	
+	/* Slightly alternative use of for... ;-) */
+	for( c = vc->children; ( c = xt_find_node( c, "EMAIL" ) ); c = c->next )
+	{
+		if( ( sc = xt_find_node( c->children, "USERID" ) ) == NULL || sc->text_len == 0 )
+			continue;
+		
+		if( xt_find_node( c->children, "HOME" ) )
+			s = "Home";
+		else if( xt_find_node( c->children, "WORK" ) )
+			s = "Work";
+		else
+			s = "Misc.";
+		
+		g_string_append_printf( reply, "%s e-mail address: %s\n", s, sc->text );
+	}
+	
+	if( ( c = xt_find_node( vc->children, "URL" ) ) && c->text_len )
+		g_string_append_printf( reply, "Homepage: %s\n", c->text );
+	
+	/* Slightly alternative use of for... ;-) */
+	for( c = vc->children; ( c = xt_find_node( c, "ADR" ) ); c = c->next )
+	{
+		if( xt_find_node( c->children, "HOME" ) )
+			s = "Home";
+		else if( xt_find_node( c->children, "WORK" ) )
+			s = "Work";
+		else
+			s = "Misc.";
+		
+		g_string_append_printf( reply, "%s address: ", s );
+		
+		if( ( sc = xt_find_node( c->children, "STREET" ) ) && sc->text_len )
+			g_string_append_printf( reply, "%s ", sc->text );
+		if( ( sc = xt_find_node( c->children, "EXTADR" ) ) && sc->text_len )
+			g_string_append_printf( reply, "%s, ", sc->text );
+		if( ( sc = xt_find_node( c->children, "PCODE" ) ) && sc->text_len )
+			g_string_append_printf( reply, "%s, ", sc->text );
+		if( ( sc = xt_find_node( c->children, "LOCALITY" ) ) && sc->text_len )
+			g_string_append_printf( reply, "%s, ", sc->text );
+		if( ( sc = xt_find_node( c->children, "REGION" ) ) && sc->text_len )
+			g_string_append_printf( reply, "%s, ", sc->text );
+		if( ( sc = xt_find_node( c->children, "CTRY" ) ) && sc->text_len )
+			g_string_append_printf( reply, "%s", sc->text );
+		
+		if( reply->str[reply->len-2] == ',' )
+			reply = g_string_truncate( reply, reply->len-2 );
+		
+		reply = g_string_append_c( reply, '\n' );
+	}
+	
+	for( c = vc->children; ( c = xt_find_node( c, "TEL" ) ); c = c->next )
+	{
+		if( ( sc = xt_find_node( c->children, "NUMBER" ) ) == NULL || sc->text_len == 0 )
+			continue;
+		
+		if( xt_find_node( c->children, "HOME" ) )
+			s = "Home";
+		else if( xt_find_node( c->children, "WORK" ) )
+			s = "Work";
+		else
+			s = "Misc.";
+		
+		g_string_append_printf( reply, "%s phone number: %s\n", s, sc->text );
+	}
+	
+	if( ( c = xt_find_node( vc->children, "DESC" ) ) && c->text_len )
+		g_string_append_printf( reply, "Other information:\n%s", c->text );
+	
+	/* *sigh* */
+	
+	serv_got_crap( gc, reply->str );
+	g_string_free( reply, TRUE );
+	
+	return XT_HANDLED;
+}
+
 int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name )
 {
 	struct xt_node *node;
