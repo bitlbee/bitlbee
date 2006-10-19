@@ -107,9 +107,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	if( source == -1 )
 	{
 		conn->func( conn->data, NULL, cond );
-		
 		g_free( conn );
-		
 		return FALSE;
 	}
 	
