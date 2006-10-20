@@ -61,7 +61,7 @@ static void jabber_login( account_t *acc )
 	struct gaim_connection *gc = new_gaim_conn( acc );
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
 	struct ns_srv_reply *srv = NULL;
-	char *connect_to;
+	char *connect_to, *s;
 	
 	jd->gc = gc;
 	gc->proto_data = jd;
@@ -80,11 +80,77 @@ static void jabber_login( account_t *acc )
 	*jd->server = 0;
 	jd->server ++;
 	
+	if( ( s = strchr( jd->server, '/' ) ) )
+	{
+		*s = 0;
+		set_setstr( &acc->set, "resource", s + 1 );
+		
+		/* Also remove the /resource from the original variable so we
+		   won't have to do this again every time. */
+		s = strchr( acc->user, '/' );
+		*s = 0;
+	}
+	
+	/* This code isn't really pretty. Backwards compatibility never is... */
+	s = acc->server;
+	while( s )
+	{
+		static int had_port = 0;
+		
+		if( strncmp( s, "ssl", 3 ) == 0 )
+		{
+			set_setstr( &acc->set, "ssl", "true" );
+			
+			/* Flush this part so that (if this was the first
+			   part of the server string) acc->server gets
+			   flushed. We don't want to have to do this another
+			   time. :-) */
+			*s = 0;
+			s ++;
+			
+			/* Only set this if the user didn't specify a custom
+			   port number already... */
+			if( !had_port )
+				set_setint( &acc->set, "port", 5223 );
+		}
+		else if( isdigit( *s ) )
+		{
+			int i;
+			
+			/* The first character is a digit. It could be an
+			   IP address though. Only accept this as a port#
+			   if there are only digits. */
+			for( i = 0; isdigit( s[i] ); i ++ );
+			
+			/* If the first non-digit character is a colon or
+			   the end of the string, save the port number
+			   where it should be. */
+			if( s[i] == ':' || s[i] == 0 )
+			{
+				sscanf( s, "%d", &i );
+				set_setint( &acc->set, "port", i );
+				
+				/* See above. */
+				*s = 0;
+				s ++;
+			}
+			
+			had_port = 1;
+		}
+		
+		s = strchr( s, ':' );
+		if( s )
+		{
+			*s = 0;
+			s ++;
+		}
+	}
+	
 	jd->node_cache = g_hash_table_new_full( g_str_hash, g_str_equal, NULL, jabber_cache_entry_free );
 	jd->buddies = g_hash_table_new( g_str_hash, g_str_equal );
 	
 	/* Figure out the hostname to connect to. */
-	if( acc->server )
+	if( acc->server && *acc->server )
 		connect_to = acc->server;
 	else if( ( srv = srv_lookup( "xmpp-client", "tcp", jd->server ) ) ||
 		 ( srv = srv_lookup( "jabber-client", "tcp", jd->server ) ) )
@@ -98,7 +164,7 @@ static void jabber_login( account_t *acc )
 	if( set_getbool( &acc->set, "ssl" ) )
 	{
 		jd->ssl = ssl_connect( connect_to, set_getint( &acc->set, "port" ), jabber_connected_ssl, gc );
-		jd->fd = ssl_getfd( jd->ssl );
+		jd->fd = jd->ssl ? ssl_getfd( jd->ssl ) : -1;
 	}
 	else
 	{
