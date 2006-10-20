@@ -44,11 +44,12 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	{
 		struct jabber_cache_entry *entry;
 		
-		if( ( s = xt_find_attr( node, "id" ) ) == NULL )
+		if( ( s = xt_find_attr( node, "id" ) ) == NULL ||
+		    strncmp( s, JABBER_CACHED_ID, strlen( JABBER_CACHED_ID ) ) != 0 )
 		{
-			/* Silently ignore it, without an ID we don't know
-			   how to handle the packet, but it doesn't have
-			   to be a serious problem. */
+			/* Silently ignore it, without an ID (or an non-cache
+			   ID) we don't know how to handle the packet and we
+			   probably don't have to. */
 			return XT_HANDLED;
 		}
 		
@@ -64,7 +65,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		if( !( c = xt_find_node( node->children, "query" ) ) ||
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
-			serv_got_crap( gc, "WARNING: Received incomplete IQ-get packet" );
+			serv_got_crap( gc, "WARNING: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
 		}
 		
@@ -124,9 +125,26 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	}
 	else if( strcmp( type, "set" ) == 0 )
 	{
-		xt_free_node( reply );
-		reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel" );
-		pack = 0;
+		if( !( c = xt_find_node( node->children, "query" ) ) ||
+		    !( s = xt_find_attr( c, "xmlns" ) ) )
+		{
+			serv_got_crap( gc, "WARNING: Received incomplete IQ-%s packet", type );
+			return XT_HANDLED;
+		}
+		
+		if( strcmp( s, "jabber:iq:roster" ) == 0 )
+		{
+			/* This is a roster push packet, probably. Here we
+			   should check if the packet is legitimate by
+			   checking if it really comes from the user's JID
+			   and, if so, process it. */
+		}
+		else
+		{
+			xt_free_node( reply );
+			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel" );
+			pack = 0;
+		}
 	}
 	
 	/* If we recognized the xmlns and managed to generate a reply,

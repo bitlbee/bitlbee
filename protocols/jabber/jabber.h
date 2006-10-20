@@ -101,10 +101,17 @@ struct jabber_buddy
 	char *away_message;
 	
 	time_t last_act;
-	int flags;
+	jabber_buddy_flag_t flags;
 	
 	struct jabber_buddy *next;
 };
+
+/* Prefixes to use for packet IDs (mainly for IQ packets ATM). Usually the
+   first one should be used, but when storing a packet in the cache, a
+   "special" kind of ID is assigned to make it easier later to figure out
+   if we have to do call an event handler for the response packet. */
+#define JABBER_PACKET_ID "BeeP"
+#define JABBER_CACHED_ID "BeeC"
 
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );

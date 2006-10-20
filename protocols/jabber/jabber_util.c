@@ -23,7 +23,7 @@
 
 #include "jabber.h"
 
-static int next_id = 1;
+static unsigned int next_id = 1;
 
 char *set_eval_priority( set_t *set, char *value )
 {
@@ -82,6 +82,17 @@ struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_
 	if( to )
 		xt_add_attr( node, "to", to );
 	
+	/* IQ packets should always have an ID, so let's generate one. It
+	   might get overwritten by jabber_cache_add() if this packet has
+	   to be saved until we receive a response. Cached packets get
+	   slightly different IDs so we can recognize them. */
+	if( strcmp( name, "iq" ) == 0 )
+	{
+		char *id = g_strdup_printf( "%s%05x", JABBER_PACKET_ID, ( next_id++ ) & 0xfffff );
+		xt_add_attr( node, "id", id );
+		g_free( id );
+	}
+	
 	return node;
 }
 
@@ -115,13 +126,13 @@ struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, 
 	return node;
 }
 
-/* Cache a node/epacket for later use. Mainly useful for IQ packets if you need
+/* Cache a node/packet for later use. Mainly useful for IQ packets if you need
    them when you receive the response. Use this BEFORE sending the packet so
-   it'll get an id= tag, and do NOT free() the packet after writing it! */
+   it'll get a new id= tag, and do NOT free() the packet after writing it! */
 void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node, jabber_cache_event func )
 {
 	struct jabber_data *jd = gc->proto_data;
-	char *id = g_strdup_printf( "BeeX%04x", next_id++ );
+	char *id = g_strdup_printf( "%s%05x", JABBER_CACHED_ID, ( next_id++ ) & 0xfffff );
 	struct jabber_cache_entry *entry = g_new0( struct jabber_cache_entry, 1 );
 	
 	xt_add_attr( node, "id", id );
