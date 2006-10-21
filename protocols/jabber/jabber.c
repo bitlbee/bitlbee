@@ -158,7 +158,7 @@ static void jabber_login( account_t *acc )
 	else
 		connect_to = jd->server;
 	
-	set_login_progress( gc, "Connecting" );
+	set_login_progress( gc, 0, "Connecting" );
 	
 	/* For non-SSL connections we can try to use the port # from the SRV
 	   reply, but let's not do that when using SSL, SSL usually runs on
