@@ -101,8 +101,6 @@ static gboolean jabber_write_queue( struct gaim_connection *gc )
 	else
 		st = write( jd->fd, jd->txq, jd->tx_len );
 	
-//	if( st > 0 ) write( 1, jd->txq, st );
-	
 	if( st == jd->tx_len )
 	{
 		/* We wrote everything, clear the buffer. */
@@ -155,8 +153,6 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		st = ssl_read( jd->ssl, buf, sizeof( buf ) );
 	else
 		st = read( jd->fd, buf, sizeof( buf ) );
-	
-//	if( st > 0 ) write( 1, buf, st );
 	
 	if( st > 0 )
 	{

@@ -158,6 +158,8 @@ static void jabber_login( account_t *acc )
 	else
 		connect_to = jd->server;
 	
+	set_login_progress( gc, "Connecting" );
+	
 	/* For non-SSL connections we can try to use the port # from the SRV
 	   reply, but let's not do that when using SSL, SSL usually runs on
 	   non-standard ports... */
@@ -170,8 +172,13 @@ static void jabber_login( account_t *acc )
 	{
 		jd->fd = proxy_connect( connect_to, srv ? srv->port : set_getint( &acc->set, "port" ), jabber_connected_plain, gc );
 	}
-	
 	g_free( srv );
+	
+	if( jd->fd == -1 )
+	{
+		hide_login_progress( gc, "Could not connect to server" );
+		signoff( gc );
+	}
 }
 
 static void jabber_close( struct gaim_connection *gc )
