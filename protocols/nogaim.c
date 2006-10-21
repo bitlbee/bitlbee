@@ -283,12 +283,12 @@ void signoff( struct gaim_connection *gc )
 	   place to catch them. */
 	if( gc->flags & OPT_LOGGING_OUT )
 		return;
+	else
+		gc->flags |= OPT_LOGGING_OUT;
 	
 	serv_got_crap( gc, "Signing off.." );
 	
 	b_event_remove( gc->keepalive );
-	gc->flags |= OPT_LOGGING_OUT;
-	
 	gc->keepalive = 0;
 	gc->acc->prpl->close( gc );
 	b_event_remove( gc->inpa );
