@@ -41,8 +41,6 @@ static void msn_login( account_t *acc )
 	struct gaim_connection *gc = new_gaim_conn( acc );
 	struct msn_data *md = g_new0( struct msn_data, 1 );
 	
-	set_login_progress( gc, 1, "Connecting" );
-	
 	gc->proto_data = md;
 	md->fd = -1;
 	
@@ -53,19 +51,20 @@ static void msn_login( account_t *acc )
 		return;
 	}
 	
+	set_login_progress( gc, 1, "Connecting" );
+	
 	md->fd = proxy_connect( "messenger.hotmail.com", 1863, msn_ns_connected, gc );
 	if( md->fd < 0 )
 	{
 		hide_login_progress( gc, "Could not connect to server" );
 		signoff( gc );
+		return;
 	}
-	else
-	{
-		md->gc = gc;
-		md->away_state = msn_away_state_list;
-		
-		msn_connections = g_slist_append( msn_connections, gc );
-	}
+	
+	md->gc = gc;
+	md->away_state = msn_away_state_list;
+	
+	msn_connections = g_slist_append( msn_connections, gc );
 }
 
 static void msn_close( struct gaim_connection *gc )
