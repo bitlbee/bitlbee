@@ -172,13 +172,13 @@ void set_del( set_t **head, char *key )
 
 char *set_eval_int( set_t *set, char *value )
 {
-	char *s;
+	char *s = value;
 	
 	/* Allow a minus at the first position. */
 	if( *s == '-' )
 		s ++;
 	
-	for( s = value; *s; s ++ )
+	for( ; *s; s ++ )
 		if( !isdigit( *s ) )
 			return NULL;
 	
