@@ -572,7 +572,7 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
 	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
 	{
-		irc_write( gc->irc, ":%s!%s@%s MODE %s %cv %s", gc->irc->mynick, gc->irc->mynick, gc->irc->myhost,
+		irc_write( gc->irc, ":%s MODE %s %cv %s", gc->irc->myhost,
 		                                                gc->irc->channel, u->away?'-':'+', u->nick );
 	}
 }
@@ -906,8 +906,8 @@ char *set_eval_away_devoice( set_t *set, char *value )
 				if( ( strlen( list ) + strlen( u->nick ) ) >= 79 )
 				{
 					for( i = 0; i < count; v[i++] = 'v' ); v[i] = 0;
-					irc_write( irc, ":%s!%s@%s MODE %s %c%s%s",
-					           irc->mynick, irc->mynick, irc->myhost,
+					irc_write( irc, ":%s MODE %s %c%s%s",
+					           irc->myhost,
 		        			   irc->channel, pm, v, list );
 					
 					*list = 0;
@@ -922,7 +922,7 @@ char *set_eval_away_devoice( set_t *set, char *value )
 		
 		/* $v = 'v' x $i */
 		for( i = 0; i < count; v[i++] = 'v' ); v[i] = 0;
-		irc_write( irc, ":%s!%s@%s MODE %s %c%s%s", irc->mynick, irc->mynick, irc->myhost,
+		irc_write( irc, ":%s MODE %s %c%s%s", irc->myhost,
 		                                            irc->channel, pm, v, list );
 	}
 	
