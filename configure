@@ -30,11 +30,13 @@ strip=1
 ipv6=1
 
 events=glib
-ldap=auto
+ldap=0
 ssl=auto
 
 arch=`uname -s`
 cpu=`uname -m`
+
+GLIB_MIN_VERSION=2.4
 
 echo BitlBee configure
 
@@ -174,13 +176,20 @@ if [ -z "$PKG_CONFIG" ]; then
 fi
 
 if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG glib-2.0; then
-	cat<<EOF>>Makefile.settings
+	if $PKG_CONFIG glib-2.0 --atleast-version=$GLIB_MIN_VERSION; then
+		cat<<EOF>>Makefile.settings
 EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0`
 CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0`
 EOF
+	else
+		echo
+		echo 'Found glib2 '`$PKG_CONFIG glib-2.0 --modversion`', but version '$GLIB_MIN_VERSION' or newer is required.'
+		exit 1
+	fi
 else
+	echo
 	echo 'Cannot find glib2 development libraries, aborting. (Install libglib2-dev?)'
-	exit 1;
+	exit 1
 fi
 
 if [ "$events" = "libevent" ]; then
@@ -289,7 +298,7 @@ elif [ "$ssl" = "openssl" ]; then
 	ret=1
 elif [ "$ssl" = "bogus" ]; then
 	echo
-	echo 'Using bogus SSL code. This means some features have to be disabled.'
+	echo 'Using bogus SSL code. This means some features will not work properly.'
 	
 	## Yes, you, at the console! How can you authenticate if you don't have any SSL!?
 	if [ "$msn" = "1" ]; then
