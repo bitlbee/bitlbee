@@ -28,31 +28,56 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 	struct gaim_connection *gc = data;
 	char *from = xt_find_attr( node, "from" );
 	char *type = xt_find_attr( node, "type" );
-	struct xt_node *body = xt_find_node( node->children, "body" );
+	struct xt_node *body = xt_find_node( node->children, "body" ), *c;
 	char *s;
 	
-	if( !type )
-		return XT_HANDLED;	/* Grmbl... FIXME */
-	
-	if( strcmp( type, "chat" ) == 0 )
+	if( type && strcmp( type, "error" ) == 0 )
+	{
+		/* Handle type=error packet. */
+	}
+	else if( type && strcmp( type, "groupchat" ) == 0 )
+	{
+		/* TODO! */
+	}
+	else /* "chat", "normal", "headline", no-type or whatever. Should all be pretty similar. */
 	{
 		struct jabber_buddy *bud = NULL;
+		GString *fullmsg = g_string_new( "" );
 		
-		if( ( s = strchr( from, '/' ) ) == NULL )
+		if( ( s = strchr( from, '/' ) ) )
 		{
-			/* It just shouldn't happen. */
-			hide_login_progress( gc, "Received message packet from bare JID" );
-			signoff( gc );
-			return XT_ABORT;
+			if( ( bud = jabber_buddy_by_jid( gc, from ) ) )
+				bud->last_act = time( NULL );
+			else
+				*s = 0; /* We need to generate a bare JID now. */
 		}
 		
-		if( ( bud = jabber_buddy_by_jid( gc, from ) ) )
-			bud->last_act = time( NULL );
-		else
-			*s = 0; /* We need to generate a bare JID now. */
+		if( strcmp( type, "headline" ) == 0 )
+		{
+			c = xt_find_node( node->children, "subject" );
+			g_string_append_printf( fullmsg, "Headline: %s\n", c && c->text_len > 0 ? c->text : "" );
+			
+			/* <x xmlns="jabber:x:oob"><url>http://....</url></x> can contain a URL, it seems. */
+			for( c = node->children; c; c = c->next )
+			{
+				struct xt_node *url;
+				
+				if( ( url = xt_find_node( c->children, "url" ) ) && url->text_len > 0 )
+					g_string_append_printf( fullmsg, "URL: %s\n", url->text );
+			}
+		}
+		else if( ( c = xt_find_node( node->children, "subject" ) ) && c->text_len > 0 )
+		{
+			g_string_append_printf( fullmsg, "<< \002BitlBee\002 - Message with subject: %s >>\n", c->text );
+		}
 		
-		if( body ) /* Could be just a typing notification. */
-			serv_got_im( gc, bud ? bud->handle : from, body->text, 0, 0, 0 );
+		if( body && body->text_len > 0 ) /* Could be just a typing notification. */
+			fullmsg = g_string_append( fullmsg, body->text );
+		
+		if( fullmsg->len > 0 )
+			serv_got_im( gc, bud ? bud->handle : from, fullmsg->str, 0, 0, fullmsg->len );
+		
+		g_string_free( fullmsg, TRUE );
 		
 		/* Handling of incoming typing notifications. */
 		if( xt_find_node( node->children, "composing" ) )
@@ -74,11 +99,6 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 		
 		if( s )
 			*s = '/'; /* And convert it back to a full JID. */
-	}
-	else
-	{
-		printf( "Received MSG from %s:\n", from );
-		xt_print( node );
 	}
 	
 	return XT_HANDLED;
