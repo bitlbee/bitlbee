@@ -52,7 +52,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 				*s = 0; /* We need to generate a bare JID now. */
 		}
 		
-		if( strcmp( type, "headline" ) == 0 )
+		if( type && strcmp( type, "headline" ) == 0 )
 		{
 			c = xt_find_node( node->children, "subject" );
 			g_string_append_printf( fullmsg, "Headline: %s\n", c && c->text_len > 0 ? c->text : "" );
