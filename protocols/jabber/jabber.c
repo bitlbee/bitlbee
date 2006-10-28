@@ -229,7 +229,10 @@ static int jabber_send_im( struct gaim_connection *gc, char *who, char *message,
 		
 		/* If the user likes typing notification and if we don't know
 		   (and didn't probe before) if this resource supports XEP85,
-		   include a probe in this packet now. */
+		   include a probe in this packet now. Also, if we know this
+		   buddy does support XEP85, we have to send this <active/>
+		   tag to tell that the user stopped typing (well, that's what
+		   we guess when s/he pressed Enter...). */
 		act = xt_new_node( "active", NULL, NULL );
 		xt_add_attr( act, "xmlns", "http://jabber.org/protocol/chatstates" );
 		xt_add_child( node, act );

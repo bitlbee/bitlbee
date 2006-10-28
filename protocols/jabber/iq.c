@@ -23,6 +23,9 @@
 
 #include "jabber.h"
 
+static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
+static xt_status jabber_iq_display_vcard( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
+
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 {
 	struct gaim_connection *gc = data;
@@ -134,10 +137,25 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		
 		if( strcmp( s, "jabber:iq:roster" ) == 0 )
 		{
-			/* This is a roster push packet, probably. Here we
-			   should check if the packet is legitimate by
-			   checking if it really comes from the user's JID
-			   and, if so, process it. */
+			int bare_len = strlen( gc->acc->user );
+			
+			if( ( s = xt_find_attr( node, "from" ) ) == NULL ||
+			    ( strncmp( s, gc->acc->user, bare_len ) == 0 &&
+			      ( s[bare_len] == 0 || s[bare_len] == '/' ) ) )
+			{
+				jabber_parse_roster( gc, node, NULL );
+				
+				/* Should we generate a reply here? Don't think it's
+				   very important... */
+			}
+			else
+			{
+				serv_got_crap( gc, "WARNING: %s tried to fake a roster push!", s );
+				
+				xt_free_node( reply );
+				reply = jabber_make_error_packet( node, "not-allowed", "cancel" );
+				pack = 0;
+			}
 		}
 		else
 		{
@@ -295,8 +313,6 @@ xt_status jabber_pkt_bind_sess( struct gaim_connection *gc, struct xt_node *node
 	return XT_HANDLED;
 }
 
-static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
-
 int jabber_get_roster( struct gaim_connection *gc )
 {
 	struct xt_node *node;
@@ -317,6 +333,7 @@ int jabber_get_roster( struct gaim_connection *gc )
 static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig )
 {
 	struct xt_node *query, *c;
+	int initial = ( orig != NULL );
 	
 	query = xt_find_node( node->children, "query" );
 	
@@ -327,18 +344,43 @@ static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node
 		char *name = xt_find_attr( c, "name" );
 		char *sub = xt_find_attr( c, "subscription" );
 		
-		if( jid && sub && ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
-			add_buddy( gc, NULL, jid, name );
+		if( !jid || !sub )
+		{
+			/* Maybe warn. But how likely is this to happen in the first place? */
+		}
+		else if( initial )
+		{
+			if( ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
+				add_buddy( gc, NULL, jid, name );
+		}
+		else
+		{
+			/* This is a roster push item. Find out what changed exactly. */
+			if( ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
+			{
+				if( find_buddy( gc, jid ) == NULL )
+					add_buddy( gc, NULL, jid, name );
+				else
+					serv_buddy_rename( gc, jid, name );
+			}
+			else if( strcmp( sub, "remove" ) == 0 )
+			{
+				/* Don't have any API call for this yet! So let's
+				   just try to handle this as well as we can. */
+				jabber_buddy_remove_bare( gc, jid );
+				serv_got_update( gc, jid, 0, 0, 0, 0, 0, 0 );
+				/* FIXME! */
+			}
+		}
 		
 		c = c->next;
 	}
 	
-	account_online( gc );
+	if( initial )
+		account_online( gc );
 	
 	return XT_HANDLED;
 }
-
-static xt_status jabber_iq_display_vcard( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
 
 int jabber_get_vcard( struct gaim_connection *gc, char *bare_jid )
 {
