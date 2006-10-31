@@ -584,8 +584,11 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 		   immediately. If it returns TRUE, it should be called again, so add the event to
 		   the queue. If it's FALSE, we emptied the buffer and saved ourselves some work
 		   in the event queue. */
-		if( bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE ) )
-			irc->w_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
+		/* Really can't be done as long as the code doesn't do error checking very well:
+		if( bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE ) ) */
+		
+		/* So just always do it via the event handler. */
+		irc->w_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
 	}
 	
 	return;
