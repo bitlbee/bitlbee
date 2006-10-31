@@ -103,7 +103,7 @@ struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, 
 	
 	/* Create the "defined-condition" tag. */
 	c = xt_new_node( err_cond, NULL, NULL );
-	xt_add_attr( c, "xmlns", "urn:ietf:params:xml:ns:xmpp-stanzas" );
+	xt_add_attr( c, "xmlns", XMLNS_STANZA_ERROR );
 	
 	/* Put it in an <error> tag. */
 	c = xt_new_node( "error", NULL, c );

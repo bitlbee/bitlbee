@@ -76,13 +76,13 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		xt_add_attr( reply, "xmlns", s );
 		
 		/* Of course this is a very essential query to support. ;-) */
-		if( strcmp( s, "jabber:iq:version" ) == 0 )
+		if( strcmp( s, XMLNS_VERSION ) == 0 )
 		{
 			xt_add_child( reply, xt_new_node( "name", "BitlBee", NULL ) );
 			xt_add_child( reply, xt_new_node( "version", BITLBEE_VERSION, NULL ) );
 			xt_add_child( reply, xt_new_node( "os", ARCH, NULL ) );
 		}
-		else if( strcmp( s, "jabber:iq:time" ) == 0 )
+		else if( strcmp( s, XMLNS_TIME ) == 0 )
 		{
 			time_t time_ep;
 			char buf[1024];
@@ -96,7 +96,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			strftime( buf, sizeof( buf ) - 1, "%Z", localtime( &time_ep ) );
 			xt_add_child( reply, xt_new_node( "tz", buf, NULL ) );
 		}
-		else if( strcmp( s, "http://jabber.org/protocol/disco#info" ) == 0 )
+		else if( strcmp( s, XMLNS_DISCOVER ) == 0 )
 		{
 			c = xt_new_node( "identity", NULL, NULL );
 			xt_add_attr( c, "category", "client" );
@@ -105,15 +105,15 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			xt_add_child( reply, c );
 			
 			c = xt_new_node( "feature", NULL, NULL );
-			xt_add_attr( c, "var", "jabber:iq:version" );
+			xt_add_attr( c, "var", XMLNS_VERSION );
 			xt_add_child( reply, c );
 			
 			c = xt_new_node( "feature", NULL, NULL );
-			xt_add_attr( c, "var", "jabber:iq:time" );
+			xt_add_attr( c, "var", XMLNS_TIME );
 			xt_add_child( reply, c );
 			
 			c = xt_new_node( "feature", NULL, NULL );
-			xt_add_attr( c, "var", "http://jabber.org/protocol/chatstates" );
+			xt_add_attr( c, "var", XMLNS_CHATSTATES );
 			xt_add_child( reply, c );
 			
 			/* Later this can be useful to announce things like
@@ -135,7 +135,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			return XT_HANDLED;
 		}
 		
-		if( strcmp( s, "jabber:iq:roster" ) == 0 )
+		if( strcmp( s, XMLNS_ROSTER ) == 0 )
 		{
 			int bare_len = strlen( gc->acc->user );
 			
@@ -197,7 +197,7 @@ int jabber_init_iq_auth( struct gaim_connection *gc )
 	int st;
 	
 	node = xt_new_node( "query", NULL, xt_new_node( "username", jd->username, NULL ) );
-	xt_add_attr( node, "xmlns", "jabber:iq:auth" );
+	xt_add_attr( node, "xmlns", XMLNS_AUTH );
 	node = jabber_make_packet( "iq", "get", NULL, node );
 	
 	jabber_cache_add( gc, node, jabber_do_iq_auth );
@@ -217,7 +217,7 @@ static xt_status jabber_do_iq_auth( struct gaim_connection *gc, struct xt_node *
 	
 	/* Time to authenticate ourselves! */
 	reply = xt_new_node( "query", NULL, NULL );
-	xt_add_attr( reply, "xmlns", "jabber:iq:auth" );
+	xt_add_attr( reply, "xmlns", XMLNS_AUTH );
 	xt_add_child( reply, xt_new_node( "username", jd->username, NULL ) );
 	xt_add_child( reply, xt_new_node( "resource", set_getstr( &gc->acc->set, "resource" ), NULL ) );
 	
@@ -321,7 +321,7 @@ int jabber_get_roster( struct gaim_connection *gc )
 	set_login_progress( gc, 1, "Authenticated, requesting buddy list" );
 	
 	node = xt_new_node( "query", NULL, NULL );
-	xt_add_attr( node, "xmlns", "jabber:iq:roster" );
+	xt_add_attr( node, "xmlns", XMLNS_ROSTER );
 	node = jabber_make_packet( "iq", "get", NULL, node );
 	
 	jabber_cache_add( gc, node, jabber_parse_roster );
@@ -390,7 +390,7 @@ int jabber_get_vcard( struct gaim_connection *gc, char *bare_jid )
 		return 1;	/* This was an error, but return 0 should only be done if the connection died... */
 	
 	node = xt_new_node( "vCard", NULL, NULL );
-	xt_add_attr( node, "xmlns", "vcard-temp" );
+	xt_add_attr( node, "xmlns", XMLNS_VCARD );
 	node = jabber_make_packet( "iq", "get", bare_jid, node );
 	
 	jabber_cache_add( gc, node, jabber_iq_display_vcard );
@@ -535,7 +535,7 @@ int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name )
 	
 	/* And pack it into a roster-add packet */
 	node = xt_new_node( "query", NULL, node );
-	xt_add_attr( node, "xmlns", "jabber:iq:roster" );
+	xt_add_attr( node, "xmlns", XMLNS_ROSTER );
 	node = jabber_make_packet( "iq", "set", NULL, node );
 	
 	st = jabber_write_packet( gc, node );
@@ -556,7 +556,7 @@ int jabber_remove_from_roster( struct gaim_connection *gc, char *handle )
 	
 	/* And pack it into a roster-add packet */
 	node = xt_new_node( "query", NULL, node );
-	xt_add_attr( node, "xmlns", "jabber:iq:roster" );
+	xt_add_attr( node, "xmlns", XMLNS_ROSTER );
 	node = jabber_make_packet( "iq", "set", NULL, node );
 	
 	st = jabber_write_packet( gc, node );

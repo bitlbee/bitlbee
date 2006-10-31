@@ -234,7 +234,7 @@ static int jabber_send_im( struct gaim_connection *gc, char *who, char *message,
 		   tag to tell that the user stopped typing (well, that's what
 		   we guess when s/he pressed Enter...). */
 		act = xt_new_node( "active", NULL, NULL );
-		xt_add_attr( act, "xmlns", "http://jabber.org/protocol/chatstates" );
+		xt_add_attr( act, "xmlns", XMLNS_CHATSTATES );
 		xt_add_child( node, act );
 		
 		/* Just make sure we do this only once. */
@@ -352,7 +352,7 @@ static int jabber_send_typing( struct gaim_connection *gc, char *who, int typing
 			type = "composing";
 		
 		node = xt_new_node( type, NULL, NULL );
-		xt_add_attr( node, "xmlns", "http://jabber.org/protocol/chatstates" );
+		xt_add_attr( node, "xmlns", XMLNS_CHATSTATES );
 		node = jabber_make_packet( "message", "chat", bud->full_jid, node );
 		
 		st = jabber_write_packet( gc, node );

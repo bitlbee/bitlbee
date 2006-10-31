@@ -113,6 +113,23 @@ struct jabber_buddy
 #define JABBER_PACKET_ID "BeeP"
 #define JABBER_CACHED_ID "BeeC"
 
+/* RFC 392[01] stuff */
+#define XMLNS_TLS          "urn:ietf:params:xml:ns:xmpp-tls"
+#define XMLNS_SASL         "urn:ietf:params:xml:ns:xmpp-sasl"
+#define XMLNS_BIND         "urn:ietf:params:xml:ns:xmpp-bind"
+#define XMLNS_SESSION      "urn:ietf:params:xml:ns:xmpp-session"
+#define XMLNS_STANZA_ERROR "urn:ietf:params:xml:ns:xmpp-stanzas"
+#define XMLNS_STREAM_ERROR "urn:ietf:params:xml:ns:xmpp-streams"
+#define XMLNS_ROSTER       "jabber:iq:roster"
+
+/* Some supported extensions/legacy stuff */
+#define XMLNS_AUTH         "jabber:iq:auth"                     /* XEP-0078 */
+#define XMLNS_VERSION      "jabber:iq:version"                  /* XEP-0092 */
+#define XMLNS_TIME         "jabber:iq:time"                     /* XEP-0090 */
+#define XMLNS_VCARD        "vcard-temp"                         /* XEP-0054 */
+#define XMLNS_CHATSTATES   "http://jabber.org/protocol/chatstates"  /* 0085 */
+#define XMLNS_DISCOVER     "http://jabber.org/protocol/disco#info"  /* 0030 */
+
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
 int jabber_init_iq_auth( struct gaim_connection *gc );

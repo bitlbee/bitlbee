@@ -306,7 +306,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		if( ( trytls || set_getbool( &gc->acc->set, "tls" ) ) )
 		{
 			reply = xt_new_node( "starttls", NULL, NULL );
-			xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-tls" );
+			xt_add_attr( reply, "xmlns", XMLNS_TLS );
 			if( !jabber_write_packet( gc, reply ) )
 			{
 				xt_free_node( reply );
@@ -354,7 +354,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	if( ( c = xt_find_node( node->children, "bind" ) ) )
 	{
 		reply = xt_new_node( "bind", NULL, xt_new_node( "resource", set_getstr( &gc->acc->set, "resource" ), NULL ) );
-		xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-bind" );
+		xt_add_attr( reply, "xmlns", XMLNS_BIND );
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
 		jabber_cache_add( gc, reply, jabber_pkt_bind_sess );
 		
@@ -367,7 +367,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	if( ( c = xt_find_node( node->children, "session" ) ) )
 	{
 		reply = xt_new_node( "session", NULL, NULL );
-		xt_add_attr( reply, "xmlns", "urn:ietf:params:xml:ns:xmpp-session" );
+		xt_add_attr( reply, "xmlns", XMLNS_SESSION );
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
 		jabber_cache_add( gc, reply, jabber_pkt_bind_sess );
 		
@@ -399,7 +399,7 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 	
 	/* Just ignore it when it doesn't seem to be TLS-related (is that at
 	   all possible??). */
-	if( !xmlns || strcmp( xmlns, "urn:ietf:params:xml:ns:xmpp-tls" ) != 0 )
+	if( !xmlns || strcmp( xmlns, XMLNS_TLS ) != 0 )
 		return XT_HANDLED;
 	
 	/* We don't want event handlers to touch our TLS session while it's
@@ -432,7 +432,7 @@ static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 	for( c = node->children; c; c = c->next )
 	{
 		if( !( s = xt_find_attr( c, "xmlns" ) ) ||
-		    strcmp( s, "urn:ietf:params:xml:ns:xmpp-streams" ) != 0 )
+		    strcmp( s, XMLNS_STREAM_ERROR ) != 0 )
 			continue;
 		
 		if( strcmp( c->name, "text" ) != 0 )

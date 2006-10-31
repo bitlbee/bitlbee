@@ -24,8 +24,6 @@
 #include "jabber.h"
 #include "base64.h"
 
-#define SASL_NS "urn:ietf:params:xml:ns:xmpp-sasl"
-
 xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 {
 	struct gaim_connection *gc = data;
@@ -44,7 +42,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	}
 	
 	s = xt_find_attr( node, "xmlns" );
-	if( !s || strcmp( s, SASL_NS ) != 0 )
+	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
 		signoff( gc );
 		return XT_ABORT;
@@ -69,7 +67,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	}
 	
 	reply = xt_new_node( "auth", NULL, NULL );
-	xt_add_attr( reply, "xmlns", SASL_NS );
+	xt_add_attr( reply, "xmlns", XMLNS_SASL );
 	
 	if( sup_digest )
 	{
@@ -271,7 +269,7 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	}
 	
 	reply = xt_new_node( "response", s, NULL );
-	xt_add_attr( reply, "xmlns", SASL_NS );
+	xt_add_attr( reply, "xmlns", XMLNS_SASL );
 	
 	if( !jabber_write_packet( gc, reply ) )
 		goto silent_error;
@@ -302,7 +300,7 @@ xt_status sasl_pkt_result( struct xt_node *node, gpointer data )
 	char *s;
 	
 	s = xt_find_attr( node, "xmlns" );
-	if( !s || strcmp( s, SASL_NS ) != 0 )
+	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
 		signoff( gc );
 		return XT_ABORT;
