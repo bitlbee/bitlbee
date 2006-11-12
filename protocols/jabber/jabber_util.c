@@ -250,33 +250,63 @@ void jabber_buddy_ask( struct gaim_connection *gc, char *handle )
 	g_free( buf );
 }
 
+/* Returns a new string. Don't leak it! */
+char *jabber_normalize( char *orig )
+{
+	int len, i;
+	char *new;
+	
+	len = strlen( orig );
+	new = g_new( char, len + 1 );
+	for( i = 0; i < len; i ++ )
+		new[i] = tolower( orig[i] );
+	
+	new[i] = 0;
+	return new;
+}
+
 /* Adds a buddy/resource to our list. Returns NULL if full_jid is not really a
-   FULL jid or if we already have this buddy/resource. */
-struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_jid )
+   FULL jid or if we already have this buddy/resource. XXX: No, great, actually
+   buddies from transports don't (usually) have resources. So we'll really have
+   to deal with that properly. Set their ->resource property to NULL. Do *NOT*
+   allow to mix this stuff, though... */
+struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_jid_ )
 {
 	struct jabber_data *jd = gc->proto_data;
 	struct jabber_buddy *bud, *new, *bi;
-	char *s;
+	char *s, *full_jid;
 	
-	if( !( s = strchr( full_jid, '/' ) ) )
-		return NULL;
+	full_jid = jabber_normalize( full_jid_ );
+	
+	if( ( s = strchr( full_jid, '/' ) ) )
+		*s = 0;
 	
 	new = g_new0( struct jabber_buddy, 1 );
 	
-	*s = 0;
 	if( ( bud = g_hash_table_lookup( jd->buddies, full_jid ) ) )
 	{
-		new->handle = bud->handle;
+		/* If this is a transport buddy or whatever, it can't have more
+		   than one instance, so this is always wrong: */
+		if( s == NULL || bud->resource == NULL )
+		{
+			if( s ) *s = '/';
+			g_free( new );
+			g_free( full_jid );
+			return NULL;
+		}
+		
+		new->bare_jid = bud->bare_jid;
 		
 		/* We already have another resource for this buddy, add the
 		   new one to the list. */
 		for( bi = bud; bi; bi = bi->next )
 		{
-			/* Check for dupes. Resource seem to be case sensitive. */
-			if( strcmp( bi->resource, s + 1 ) == 0 )
+			/* Check for dupes. */
+			if( g_strcasecmp( bi->resource, s + 1 ) == 0 )
 			{
 				*s = '/';
 				g_free( new );
+				g_free( full_jid );
 				return NULL;
 			}
 			/* Append the new item to the list. */
@@ -289,13 +319,22 @@ struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_ji
 	}
 	else
 	{
-		new->handle = g_strdup( full_jid );
-		g_hash_table_insert( jd->buddies, new->handle, new );
+		new->bare_jid = g_strdup( full_jid );
+		g_hash_table_insert( jd->buddies, new->bare_jid, new );
 	}
 	
-	*s = '/';
-	new->full_jid = g_strdup( full_jid );
-	new->resource = strchr( new->full_jid, '/' ) + 1;
+	if( s )
+	{
+		*s = '/';
+		new->full_jid = full_jid;
+		new->resource = strchr( new->full_jid, '/' ) + 1;
+	}
+	else
+	{
+		/* Let's waste some more bytes of RAM instead of to make
+		   memory management a total disaster here.. */
+		new->full_jid = full_jid;
+	}
 	
 	return new;
 }
@@ -303,26 +342,56 @@ struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_ji
 /* Finds a buddy from our structures. Can find both full- and bare JIDs. When
    asked for a bare JID, it uses the "resource_select" setting to see which
    resource to pick. */
-struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid )
+struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_, get_buddy_flags_t flags )
 {
 	struct jabber_data *jd = gc->proto_data;
 	struct jabber_buddy *bud;
-	char *s;
+	char *s, *jid;
+	
+	jid = jabber_normalize( jid_ );
 	
 	if( ( s = strchr( jid, '/' ) ) )
 	{
 		*s = 0;
 		if( ( bud = g_hash_table_lookup( jd->buddies, jid ) ) )
-			for( ; bud; bud = bud->next )
-				if( strcmp( bud->resource, s + 1 ) == 0 )
-					break;
+		{
+			/* Is this one of those no-resource buddies? */
+			if( bud->resource == NULL )
+			{
+				bud = NULL;
+			}
+			else
+			{
+				/* See if there's an exact match. */
+				for( ; bud; bud = bud->next )
+					if( g_strcasecmp( bud->resource, s + 1 ) == 0 )
+						break;
+			}
+		}
+		
+		*s = '/';
+		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) )
+			bud = jabber_buddy_add( gc, jid );
+		
+		g_free( jid );
+		return bud;
 	}
 	else
 	{
 		struct jabber_buddy *best_prio, *best_time;
 		char *set;
 		
-		best_prio = best_time = bud = g_hash_table_lookup( jd->buddies, jid );
+		bud = g_hash_table_lookup( jd->buddies, jid );
+		
+		g_free( jid );
+		
+		/* An exact match, or only one option. */
+		if( bud == NULL )
+			return ( flags & GET_BUDDY_CREAT ) ? jabber_buddy_add( gc, jid ) : NULL;
+		else if( ( bud->resource == NULL || bud->next == NULL ) )
+			return bud;
+		
+		best_prio = best_time = bud;
 		for( ; bud; bud = bud->next )
 		{
 			if( bud->priority > best_prio->priority )
@@ -338,41 +407,53 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid 
 		else /* if( strcmp( set, "priority" ) == 0 ) */
 			return best_prio;
 	}
-	
-	*s = '/';
-	return bud;
 }
 
 /* Remove one specific full JID from our list. Use this when a buddy goes
-   off-line (because (s)he can still be online from a different location. */
-int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid )
+   off-line (because (s)he can still be online from a different location.
+   XXX: See above, we should accept bare JIDs too... */
+int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid_ )
 {
 	struct jabber_data *jd = gc->proto_data;
 	struct jabber_buddy *bud, *prev, *bi;
-	char *s;
+	char *s, *full_jid;
 	
-	if( !( s = strchr( full_jid, '/' ) ) )
-		return 0;
+	full_jid = jabber_normalize( full_jid_ );
 	
-	*s = 0;
+	if( ( s = strchr( full_jid, '/' ) ) )
+		*s = 0;
+	
 	if( ( bud = g_hash_table_lookup( jd->buddies, full_jid ) ) )
 	{
 		/* If there's only one item in the list (and if the resource
 		   matches), removing it is simple. (And the hash reference
 		   should be removed too!) */
-		if( bud->next == NULL && strcmp( bud->resource, s + 1 ) == 0 )
+		if( bud->next == NULL && ( ( s == NULL || bud->resource == NULL ) || g_strcasecmp( bud->resource, s + 1 ) == 0 ) )
 		{
-			g_hash_table_remove( jd->buddies, bud->handle );
-			g_free( bud->handle );
+			g_hash_table_remove( jd->buddies, bud->bare_jid );
+			g_free( bud->bare_jid );
 			g_free( bud->full_jid );
 			g_free( bud->away_message );
 			g_free( bud );
+			
+			g_free( full_jid );
+			
+			return 1;
+		}
+		else if( s == NULL || bud->resource == NULL )
+		{
+			/* Tried to remove a bare JID while this JID does seem
+			   to have resources... (Or the opposite.) *sigh* */
+			g_free( full_jid );
+			return 0;
 		}
 		else
 		{
 			for( bi = bud, prev = NULL; bi; bi = (prev=bi)->next )
-				if( strcmp( bi->resource, s + 1 ) == 0 )
+				if( g_strcasecmp( bi->resource, s + 1 ) == 0 )
 					break;
+			
+			g_free( full_jid );
 			
 			if( bi )
 			{
@@ -381,25 +462,23 @@ int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid )
 				else
 					/* The hash table should point at the second
 					   item, because we're removing the first. */
-					g_hash_table_replace( jd->buddies, bi->handle, bi->next );
+					g_hash_table_replace( jd->buddies, bi->bare_jid, bi->next );
 				
 				g_free( bi->full_jid );
 				g_free( bi->away_message );
 				g_free( bi );
+				
+				return 1;
 			}
 			else
 			{
-				*s = '/';
 				return 0;
 			}
 		}
-		
-		*s = '/';
-		return 1;
 	}
 	else
 	{
-		*s = '/';
+		g_free( full_jid );
 		return 0;
 	}
 }
@@ -407,19 +486,22 @@ int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid )
 /* Remove a buddy completely; removes all resources that belong to the
    specified bare JID. Use this when removing someone from the contact
    list, for example. */
-int jabber_buddy_remove_bare( struct gaim_connection *gc, char *bare_jid )
+int jabber_buddy_remove_bare( struct gaim_connection *gc, char *bare_jid_ )
 {
 	struct jabber_data *jd = gc->proto_data;
 	struct jabber_buddy *bud, *next;
+	char *bare_jid;
 	
-	if( strchr( bare_jid, '/' ) )
+	if( strchr( bare_jid_, '/' ) )
 		return 0;
+	
+	bare_jid = jabber_normalize( bare_jid_ );
 	
 	if( ( bud = g_hash_table_lookup( jd->buddies, bare_jid ) ) )
 	{
 		/* Most important: Remove the hash reference. We don't know
 		   this buddy anymore. */
-		g_hash_table_remove( jd->buddies, bud->handle );
+		g_hash_table_remove( jd->buddies, bud->bare_jid );
 		
 		/* Deallocate the linked list of resources. */
 		while( bud )
@@ -431,10 +513,12 @@ int jabber_buddy_remove_bare( struct gaim_connection *gc, char *bare_jid )
 			bud = next;
 		}
 		
+		g_free( bare_jid );
 		return 1;
 	}
 	else
 	{
+		g_free( bare_jid );
 		return 0;
 	}
 }

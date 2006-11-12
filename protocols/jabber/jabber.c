@@ -216,12 +216,12 @@ static int jabber_send_im( struct gaim_connection *gc, char *who, char *message,
 	struct xt_node *node;
 	int st;
 	
-	bud = jabber_buddy_by_jid( gc, who );
+	bud = jabber_buddy_by_jid( gc, who, 0 );
 	
 	node = xt_new_node( "body", message, NULL );
 	node = jabber_make_packet( "message", "chat", bud ? bud->full_jid : who, node );
 	
-	if( ( jd->flags & JFLAG_WANT_TYPING ) && bud &&
+	if( bud && ( jd->flags & JFLAG_WANT_TYPING ) &&
 	    ( ( bud->flags & JBFLAG_DOES_XEP85 ) ||
 	     !( bud->flags & JBFLAG_PROBED_XEP85 ) ) )
 	{
@@ -265,20 +265,24 @@ static void jabber_get_info( struct gaim_connection *gc, char *who )
 	struct jabber_buddy *bud;
 	
 	if( strchr( who, '/' ) )
-		bud = jabber_buddy_by_jid( gc, who );
+		bud = jabber_buddy_by_jid( gc, who, 0 );
 	else
-		bud = g_hash_table_lookup( jd->buddies, who );
+	{
+		char *s = jabber_normalize( who );
+		bud = g_hash_table_lookup( jd->buddies, s );
+		g_free( s );
+	}
 	
 	while( bud )
 	{
-		serv_got_crap( gc, "Buddy %s/%s (%d) information:\nAway state: %s\nAway message: %s",
-		                   bud->handle, bud->resource, bud->priority,
+		serv_got_crap( gc, "Buddy %s (%d) information:\nAway state: %s\nAway message: %s",
+		                   bud->full_jid, bud->priority,
 		                   bud->away_state ? bud->away_state->full_name : "(none)",
 		                   bud->away_message ? : "(none)" );
 		bud = bud->next;
 	}
 	
-	jabber_get_vcard( gc, bud ? bud->handle : who );
+	jabber_get_vcard( gc, bud ? bud->full_jid : who );
 }
 
 static void jabber_set_away( struct gaim_connection *gc, char *state_txt, char *message )
@@ -328,7 +332,7 @@ static int jabber_send_typing( struct gaim_connection *gc, char *who, int typing
 	/* Enable typing notification related code from now. */
 	jd->flags |= JFLAG_WANT_TYPING;
 	
-	if( ( bud = jabber_buddy_by_jid( gc, who ) ) == NULL )
+	if( ( bud = jabber_buddy_by_jid( gc, who, 0 ) ) == NULL )
 	{
 		/* Sending typing notifications to unknown buddies is
 		   unsupported for now. Shouldn't be a problem, I think. */

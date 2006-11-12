@@ -49,7 +49,7 @@ typedef enum
 	                                   sure it gets sent only once. */
 	JBFLAG_DOES_XEP85 = 2,		/* Set this when the resource seems to support
 	                                   XEP85 (typing notification shite). */
-} jabber_buddy_flag_t;
+} jabber_buddy_flags_t;
 
 struct jabber_data
 {
@@ -92,7 +92,7 @@ struct jabber_cache_entry
 
 struct jabber_buddy
 {
-	char *handle;
+	char *bare_jid;
 	char *full_jid;
 	char *resource;
 	
@@ -101,7 +101,7 @@ struct jabber_buddy
 	char *away_message;
 	
 	time_t last_act;
-	jabber_buddy_flag_t flags;
+	jabber_buddy_flags_t flags;
 	
 	struct jabber_buddy *next;
 };
@@ -159,8 +159,16 @@ void jabber_cache_clean( struct gaim_connection *gc );
 const struct jabber_away_state *jabber_away_state_by_code( char *code );
 const struct jabber_away_state *jabber_away_state_by_name( char *name );
 void jabber_buddy_ask( struct gaim_connection *gc, char *handle );
+char *jabber_normalize( char *orig );
+
+typedef enum
+{
+	GET_BUDDY_CREAT = 1,	/* Try to create it, if necessary. */
+	GET_BUDDY_EXACT = 2,	/* Get an exact message (only makes sense with bare JIDs). */
+} get_buddy_flags_t;
+
 struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_jid );
-struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid );
+struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid, get_buddy_flags_t flags );
 int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid );
 int jabber_buddy_remove_bare( struct gaim_connection *gc, char *bare_jid );
 

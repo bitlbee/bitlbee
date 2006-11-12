@@ -37,34 +37,10 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	
 	if( type == NULL )
 	{
-		if( ( s = strchr( from, '/' ) ) == NULL )
+		if( !( bud = jabber_buddy_by_jid( gc, from, GET_BUDDY_EXACT | GET_BUDDY_CREAT ) ) )
 		{
-			char *s = xt_to_string( node );
-			serv_got_crap( gc, "WARNING: Ignoring presence tag with bare JID: %s", s );
-			g_free( s );
+			serv_got_crap( gc, "WARNING: Could not handle presence information from JID: %s", from );
 			return XT_HANDLED;
-		}
-		
-		if( !( bud = jabber_buddy_by_jid( gc, from ) ) )
-		{
-			/* FOR NOW, s still contains the location of the /.
-			   Keep this in mind when changing things here. :-) */
-			
-			/* We check if the buddy is in the contact list,
-			   because Jabber servers seem to like to send
-			   presence information of buddies we removed
-			   from our list sometimes, for example... */
-			
-			*s = 0;
-			if( find_buddy( gc, from ) == NULL )
-			{
-				*s = '/';
-				serv_got_crap( gc, "WARNING: Ignoring presence information from unknown JID: %s", from );
-				return XT_HANDLED;
-			}
-			*s = '/';
-			
-			bud = jabber_buddy_add( gc, from );
 		}
 		
 		g_free( bud->away_message );
@@ -88,36 +64,34 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		else
 			bud->priority = 0;
 		
-		serv_got_update( gc, bud->handle, 1, 0, 0, 0,
+		serv_got_update( gc, bud->bare_jid, 1, 0, 0, 0,
 		                 bud->away_state ? UC_UNAVAILABLE : 0, 0 );
 	}
 	else if( strcmp( type, "unavailable" ) == 0 )
 	{
-		char *s;
-		
-		if( ( s = strchr( from, '/' ) ) == NULL )
-		{
-			char *s = xt_to_string( node );
-			serv_got_crap( gc, "WARNING: Ignoring presence tag with bare JID: %s\n", s );
-			g_free( s );
-			return XT_HANDLED;
-		}
-		
-		if( jabber_buddy_by_jid( gc, from ) == NULL )
+		if( jabber_buddy_by_jid( gc, from, GET_BUDDY_EXACT ) == NULL )
 		{
 			serv_got_crap( gc, "WARNING: Received presence information from unknown JID: %s", from );
 			return XT_HANDLED;
 		}
 		
 		jabber_buddy_remove( gc, from );
-		*s = 0;
 		
-		/* Only count this as offline if there's no other resource
-		   available anymore. */
-		if( jabber_buddy_by_jid( gc, from ) == NULL )
+		if( ( s = strchr( from, '/' ) ) )
+		{
+			*s = 0;
+		
+			/* Only count this as offline if there's no other resource
+			   available anymore. */
+			if( jabber_buddy_by_jid( gc, from, 0 ) == NULL )
+				serv_got_update( gc, from, 0, 0, 0, 0, 0, 0 );
+			
+			*s = '/';
+		}
+		else
+		{
 			serv_got_update( gc, from, 0, 0, 0, 0, 0, 0 );
-		
-		*s = '/';
+		}
 	}
 	else if( strcmp( type, "subscribe" ) == 0 )
 	{
@@ -125,6 +99,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	}
 	else if( strcmp( type, "subscribed" ) == 0 )
 	{
+		/* Not sure about this one, actually... */
 		serv_got_crap( gc, "%s just accepted your authorization request", from );
 	}
 	else if( strcmp( type, "unsubscribe" ) == 0 || strcmp( type, "unsubscribed" ) == 0 )
