@@ -358,7 +358,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_
 			/* Is this one of those no-resource buddies? */
 			if( bud->resource == NULL )
 			{
-				bud = NULL;
+				g_free( jid );
+				return NULL;
 			}
 			else
 			{
@@ -369,9 +370,11 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_
 			}
 		}
 		
-		*s = '/';
-		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) )
+		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && find_buddy( gc, jid ) )
+		{
+			*s = '/';
 			bud = jabber_buddy_add( gc, jid );
+		}
 		
 		g_free( jid );
 		return bud;
@@ -385,10 +388,15 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_
 		
 		g_free( jid );
 		
-		/* An exact match, or only one option. */
 		if( bud == NULL )
-			return ( flags & GET_BUDDY_CREAT ) ? jabber_buddy_add( gc, jid ) : NULL;
+			/* No match. Create it now? */
+			return ( ( flags & GET_BUDDY_CREAT ) && find_buddy( gc, jid ) ) ?
+			           jabber_buddy_add( gc, jid ) : NULL;
+		else if( bud->resource && ( flags & GET_BUDDY_EXACT ) )
+			/* We want an exact match, so in thise case there shouldn't be a /resource. */
+			return NULL;
 		else if( ( bud->resource == NULL || bud->next == NULL ) )
+			/* No need for selection if there's only one option. */
 			return bud;
 		
 		best_prio = best_time = bud;
