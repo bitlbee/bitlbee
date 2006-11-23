@@ -50,7 +50,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		if( ( s = xt_find_attr( node, "id" ) ) == NULL ||
 		    strncmp( s, JABBER_CACHED_ID, strlen( JABBER_CACHED_ID ) ) != 0 )
 		{
-			/* Silently ignore it, without an ID (or an non-cache
+			/* Silently ignore it, without an ID (or a non-cache
 			   ID) we don't know how to handle the packet and we
 			   probably don't have to. */
 			return XT_HANDLED;
@@ -59,7 +59,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		entry = g_hash_table_lookup( jd->node_cache, s );
 		
 		if( entry == NULL )
-			serv_got_crap( gc, "WARNING: Received IQ %s packet with unknown/expired ID %s!", type, s );
+			serv_got_crap( gc, "WARNING: Received IQ-%s packet with unknown/expired ID %s!", type, s );
 		else if( entry->func )
 			return entry->func( gc, node, entry->node );
 	}
@@ -135,6 +135,9 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			return XT_HANDLED;
 		}
 		
+		/* This is a roster push. XMPP servers send this when someone
+		   was added to (or removed from) the buddy list. AFAIK they're
+		   sent even if we added this buddy in our own session. */
 		if( strcmp( s, XMLNS_ROSTER ) == 0 )
 		{
 			int bare_len = strlen( gc->acc->user );
@@ -150,7 +153,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			}
 			else
 			{
-				serv_got_crap( gc, "WARNING: %s tried to fake a roster push!", s );
+				serv_got_crap( gc, "WARNING: %s tried to fake a roster push!", s ? s : "(unknown)" );
 				
 				xt_free_node( reply );
 				reply = jabber_make_error_packet( node, "not-allowed", "cancel" );
@@ -213,7 +216,12 @@ static xt_status jabber_do_iq_auth( struct gaim_connection *gc, struct xt_node *
 	xt_status st;
 	char *s;
 	
-	query = xt_find_node( node->children, "query" );
+	if( !( query = xt_find_node( node->children, "query" ) ) )
+	{
+		serv_got_crap( gc, "WARNING: Received incomplete IQ packet while authenticating" );
+		signoff( gc );
+		return XT_HANDLED;
+	}
 	
 	/* Time to authenticate ourselves! */
 	reply = xt_new_node( "query", NULL, NULL );
@@ -263,8 +271,15 @@ static xt_status jabber_do_iq_auth( struct gaim_connection *gc, struct xt_node *
 
 static xt_status jabber_finish_iq_auth( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig )
 {
-	char *type = xt_find_attr( node, "type" );
 	struct jabber_data *jd = gc->proto_data;
+	char *type;
+	
+	if( !( type = xt_find_attr( node, "type" ) ) )
+	{
+		serv_got_crap( gc, "WARNING: Received incomplete IQ packet while authenticating" );
+		signoff( gc );
+		return XT_HANDLED;
+	}
 	
 	if( strcmp( type, "error" ) == 0 )
 	{
@@ -335,7 +350,11 @@ static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node
 	struct xt_node *query, *c;
 	int initial = ( orig != NULL );
 	
-	query = xt_find_node( node->children, "query" );
+	if( !( query = xt_find_node( node->children, "query" ) ) )
+	{
+		serv_got_crap( gc, "WARNING: Received NULL roster packet" );
+		return XT_HANDLED;
+	}
 	
 	c = query->children;
 	while( ( c = xt_find_node( c, "item" ) ) )
@@ -360,7 +379,7 @@ static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node
 			{
 				if( find_buddy( gc, jid ) == NULL )
 					add_buddy( gc, NULL, jid, name );
-				else
+				else if( name )
 					serv_buddy_rename( gc, jid, name );
 			}
 			else if( strcmp( sub, "remove" ) == 0 )
