@@ -168,7 +168,7 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		if( !xt_handle( jd->xt, NULL, 1 ) )
 		{
 			/* Don't do anything, the handlers should have
-			   aborted the connection already... Or not? FIXME */
+			   aborted the connection already. */
 			return FALSE;
 		}
 		
