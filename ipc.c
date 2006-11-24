@@ -98,7 +98,7 @@ static const command_t ipc_master_commands[] = {
 	{ "hello",      0, ipc_master_cmd_client,     0 },
 	{ "die",        0, ipc_master_cmd_die,        0 },
 	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
-	{ "lilo",       1, NULL,                      IPC_CMD_TO_CHILDREN },
+	{ "wall",       1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "opermsg",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "rehash",     0, ipc_master_cmd_rehash,     0 },
 	{ "kill",       2, NULL,                      IPC_CMD_TO_CHILDREN },
@@ -121,7 +121,7 @@ static void ipc_child_cmd_wallops( irc_t *irc, char **cmd )
 		irc_write( irc, ":%s WALLOPS :%s", irc->myhost, cmd[1] );
 }
 
-static void ipc_child_cmd_lilo( irc_t *irc, char **cmd )
+static void ipc_child_cmd_wall( irc_t *irc, char **cmd )
 {
 	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
@@ -174,7 +174,7 @@ static void ipc_child_cmd_hello( irc_t *irc, char **cmd )
 static const command_t ipc_child_commands[] = {
 	{ "die",        0, ipc_child_cmd_die,         0 },
 	{ "wallops",    1, ipc_child_cmd_wallops,     0 },
-	{ "lilo",       1, ipc_child_cmd_lilo,        0 },
+	{ "wall",       1, ipc_child_cmd_wall,        0 },
 	{ "opermsg",    1, ipc_child_cmd_opermsg,     0 },
 	{ "rehash",     0, ipc_child_cmd_rehash,      0 },
 	{ "kill",       2, ipc_child_cmd_kill,        0 },
