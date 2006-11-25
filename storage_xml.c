@@ -394,7 +394,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		return STORAGE_ALREADY_EXISTS;
 	
 	strcat( path, "~" );
-	if( ( fd = open( path, O_WRONLY | O_CREAT, 0600 ) ) < 0 )
+	if( ( fd = open( path, O_WRONLY | O_CREAT | O_TRUNC, 0600 ) ) < 0 )
 	{
 		irc_usermsg( irc, "Error while opening configuration file." );
 		return STORAGE_OTHER_ERROR;
