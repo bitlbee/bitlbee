@@ -390,8 +390,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_
 		
 		if( bud == NULL )
 			/* No match. Create it now? */
-			return ( ( flags & GET_BUDDY_CREAT ) && find_buddy( gc, jid ) ) ?
-			           jabber_buddy_add( gc, jid ) : NULL;
+			return ( ( flags & GET_BUDDY_CREAT ) && find_buddy( gc, jid_ ) ) ?
+			           jabber_buddy_add( gc, jid_ ) : NULL;
 		else if( bud->resource && ( flags & GET_BUDDY_EXACT ) )
 			/* We want an exact match, so in thise case there shouldn't be a /resource. */
 			return NULL;
