@@ -30,6 +30,7 @@
 	</xsl:template>
 
 	<xsl:template name="subject">
+		<xsl:param name="id"/>
 		<xsl:message><xsl:text>Processing: </xsl:text><xsl:value-of select="$id"/></xsl:message>
 		<xsl:text>?</xsl:text><xsl:value-of select="$id"/><xsl:text>&#10;</xsl:text>
 
@@ -121,6 +122,7 @@
 	</xsl:template>
 
 	<xsl:template name="cmd">
+		<xsl:param name="prefix"/>
 		<xsl:variable name="thiscmd"><xsl:value-of select="$prefix"/><xsl:value-of select="@name"/></xsl:variable>
 		<xsl:message><xsl:text>Processing command '</xsl:text><xsl:value-of select="$thiscmd"/><xsl:text>'</xsl:text></xsl:message>
 		<xsl:text>?</xsl:text><xsl:value-of select="$thiscmd"/><xsl:text>&#10;</xsl:text>
