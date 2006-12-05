@@ -25,23 +25,24 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
-set_t *set_add( irc_t *irc, char *key, char *def, void *eval )
+set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data )
 {
-	set_t *s = set_find( irc, key );
+	set_t *s = set_find( head, key );
 	
+	/* Possibly the setting already exists. If it doesn't exist yet,
+	   we create it. If it does, we'll just change the default. */
 	if( !s )
 	{
-		if( ( s = irc->set ) )
+		if( ( s = *head ) )
 		{
 			while( s->next ) s = s->next;
-			s->next = g_new ( set_t, 1 );
+			s->next = g_new0( set_t, 1 );
 			s = s->next;
 		}
 		else
 		{
-			s = irc->set = g_new( set_t, 1 );
+			s = *head = g_new0( set_t, 1 );
 		}
-		memset( s, 0, sizeof( set_t ) );
 		s->key = g_strdup( key );
 	}
 	
@@ -52,19 +53,15 @@ set_t *set_add( irc_t *irc, char *key, char *def, void *eval )
 	}
 	if( def ) s->def = g_strdup( def );
 	
-	if( s->eval )
-	{
-		g_free( s->eval );
-		s->eval = NULL;
-	}
-	if( eval ) s->eval = eval;
+	s->eval = eval;
+	s->data = data;
 	
-	return( s );
+	return s;
 }
 
-set_t *set_find( irc_t *irc, char *key )
+set_t *set_find( set_t **head, char *key )
 {
-	set_t *s = irc->set;
+	set_t *s = *head;
 	
 	while( s )
 	{
@@ -73,46 +70,56 @@ set_t *set_find( irc_t *irc, char *key )
 		s = s->next;
 	}
 	
-	return( s );
+	return s;
 }
 
-char *set_getstr( irc_t *irc, char *key )
+char *set_getstr( set_t **head, char *key )
 {
-	set_t *s = set_find( irc, key );
+	set_t *s = set_find( head, key );
 	
 	if( !s || ( !s->value && !s->def ) )
-		return( NULL );
+		return NULL;
 	
-	return( s->value?s->value:s->def );
+	return s->value ? s->value : s->def;
 }
 
-int set_getint( irc_t *irc, char *key )
+int set_getint( set_t **head, char *key )
 {
-	char *s = set_getstr( irc, key );
+	char *s = set_getstr( head, key );
 	int i = 0;
 	
 	if( !s )
-		return( 0 );
+		return 0;
 	
 	if( ( g_strcasecmp( s, "true" ) == 0 ) || ( g_strcasecmp( s, "yes" ) == 0 ) || ( g_strcasecmp( s, "on" ) == 0 ) )
-		return( 1 );
+		return 1;
 	
 	if( sscanf( s, "%d", &i ) != 1 )
-		return( 0 );
+		return 0;
 	
-	return( i );
+	return i;
 }
 
-int set_setstr( irc_t *irc, char *key, char *value )
+int set_getbool( set_t **head, char *key )
 {
-	set_t *s = set_find( irc, key );
+	char *s = set_getstr( head, key );
+	
+	if( !s )
+		return 0;
+	
+	return bool2int( s );
+}
+
+int set_setstr( set_t **head, char *key, char *value )
+{
+	set_t *s = set_find( head, key );
 	char *nv = value;
 	
 	if( !s )
-		s = set_add( irc, key, NULL, NULL );
+		s = set_add( head, key, NULL, NULL, NULL );
 	
-	if( s->eval && !( nv = s->eval( irc, s, value ) ) )
-		return( 0 );
+	if( s->eval && !( nv = s->eval( s, value ) ) )
+		return 0;
 	
 	if( s->value )
 	{
@@ -120,26 +127,28 @@ int set_setstr( irc_t *irc, char *key, char *value )
 		s->value = NULL;
 	}
 	
+	/* If there's a default setting and it's equal to what we're trying to
+	   set, stick with s->value = NULL. Otherwise, remember the setting. */
 	if( !s->def || ( strcmp( nv, s->def ) != 0 ) )
 		s->value = g_strdup( nv );
 	
 	if( nv != value )
 		g_free( nv );
 	
-	return( 1 );
+	return 1;
 }
 
-int set_setint( irc_t *irc, char *key, int value )
+int set_setint( set_t **head, char *key, int value )
 {
 	char s[24];	/* Not quite 128-bit clean eh? ;-) */
 	
-	sprintf( s, "%d", value );
-	return( set_setstr( irc, key, s ) );
+	g_snprintf( s, sizeof( s ), "%d", value );
+	return set_setstr( head, key, s );
 }
 
-void set_del( irc_t *irc, char *key )
+void set_del( set_t **head, char *key )
 {
-	set_t *s = irc->set, *t = NULL;
+	set_t *s = *head, *t = NULL;
 	
 	while( s )
 	{
@@ -152,7 +161,7 @@ void set_del( irc_t *irc, char *key )
 		if( t )
 			t->next = s->next;
 		else
-			irc->set = s->next;
+			*head = s->next;
 		
 		g_free( s->key );
 		if( s->value ) g_free( s->value );
@@ -161,27 +170,27 @@ void set_del( irc_t *irc, char *key )
 	}
 }
 
-char *set_eval_int( irc_t *irc, set_t *set, char *value )
+char *set_eval_int( set_t *set, char *value )
 {
 	char *s = value;
 	
-	for( ; *s; s ++ )
-		if( *s < '0' || *s > '9' )
-			return( NULL );
+	/* Allow a minus at the first position. */
+	if( *s == '-' )
+		s ++;
 	
-	return( value );
+	for( ; *s; s ++ )
+		if( !isdigit( *s ) )
+			return NULL;
+	
+	return value;
 }
 
-char *set_eval_bool( irc_t *irc, set_t *set, char *value )
+char *set_eval_bool( set_t *set, char *value )
 {
-	if( ( g_strcasecmp( value, "true" ) == 0 ) || ( g_strcasecmp( value, "yes" ) == 0 ) || ( g_strcasecmp( value, "on" ) == 0 ) )
-		return( value );
-	if( ( g_strcasecmp( value, "false" ) == 0 ) || ( g_strcasecmp( value, "no" ) == 0 ) || ( g_strcasecmp( value, "off" ) == 0 ) )
-		return( value );
-	return( set_eval_int( irc, set, value ) );
+	return is_bool( value ) ? value : NULL;
 }
 
-char *set_eval_to_char( irc_t *irc, set_t *set, char *value )
+char *set_eval_to_char( set_t *set, char *value )
 {
 	char *s = g_new( char, 3 );
 	
@@ -190,36 +199,42 @@ char *set_eval_to_char( irc_t *irc, set_t *set, char *value )
 	else
 		sprintf( s, "%c ", *value );
 	
-	return( s );
+	return s;
 }
 
-char *set_eval_ops( irc_t *irc, set_t *set, char *value )
+char *set_eval_ops( set_t *set, char *value )
 {
+	irc_t *irc = set->data;
+	
 	if( g_strcasecmp( value, "user" ) == 0 )
-	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "+o-o", irc->nick, irc->mynick );
-		return( value );
-	}
 	else if( g_strcasecmp( value, "root" ) == 0 )
-	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "-o+o", irc->nick, irc->mynick );
-		return( value );
-	}
 	else if( g_strcasecmp( value, "both" ) == 0 )
-	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "+oo", irc->nick, irc->mynick );
-		return( value );
-	}
 	else if( g_strcasecmp( value, "none" ) == 0 )
-	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "-oo", irc->nick, irc->mynick );
-		return( value );
-	}
+	else
+		return NULL;
 	
-	return( NULL );
+	return value;
 }
 
+char *set_eval_charset( set_t *set, char *value )
+{
+	GIConv cd;
+
+	if ( g_strncasecmp( value, "none", 4 ) == 0 )
+		return value;
+
+	cd = g_iconv_open( "UTF-8", value );
+	if( cd == (GIConv) -1 )
+		return NULL;
+
+	g_iconv_close( cd );
+	return value;
+}

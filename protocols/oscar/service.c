@@ -731,8 +731,12 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
 	aim_tlvlist_t *tl = NULL;
 	guint32 data;
 	int tlvlen;
+	struct gaim_connection *gc = sess ? sess->aux_data : NULL;
 
 	data = AIM_ICQ_STATE_HIDEIP | status; /* yay for error checking ;^) */
+	
+	if (gc && set_getbool(&gc->acc->set, "web_aware"))
+		data |= AIM_ICQ_STATE_WEBAWARE;
 
 	tlvlen = aim_addtlvtochain32(&tl, 0x0006, data);
 

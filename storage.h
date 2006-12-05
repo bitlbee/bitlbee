@@ -32,8 +32,8 @@ typedef enum {
 	STORAGE_INVALID_PASSWORD,
 	STORAGE_ALREADY_EXISTS,
 	STORAGE_OTHER_ERROR /* Error that isn't caused by user input, such as 
-						   a database that is unreachable. log() will be 
-						   used for the exact error message */
+	                       a database that is unreachable. log() will be 
+	                       used for the exact error message */
 } storage_status_t;
 
 typedef struct {

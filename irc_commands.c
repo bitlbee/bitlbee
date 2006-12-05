@@ -149,10 +149,10 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 		
 		irc_part( irc, u, c->channel );
 		
-		if( c->gc && c->gc->prpl )
+		if( c->gc )
 		{
 			c->joined = 0;
-			c->gc->prpl->chat_leave( c->gc, c->id );
+			c->gc->acc->prpl->chat_leave( c->gc, c->id );
 		}
 	}
 	else
@@ -172,11 +172,11 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		{
 			user_t *u = user_find( irc, cmd[1] + 1 );
 			
-			if( u && u->gc && u->gc->prpl && u->gc->prpl->chat_open )
+			if( u && u->gc && u->gc->acc->prpl->chat_open )
 			{
 				irc_reply( irc, 403, "%s :Initializing groupchat in a different channel", cmd[1] );
 				
-				if( !u->gc->prpl->chat_open( u->gc, u->handle ) )
+				if( !u->gc->acc->prpl->chat_open( u->gc, u->handle ) )
 				{
 					irc_usermsg( irc, "Could not open a groupchat with %s.", u->nick );
 				}
@@ -204,9 +204,9 @@ static void irc_cmd_invite( irc_t *irc, char **cmd )
 	user_t *u = user_find( irc, nick );
 	
 	if( u && c && ( u->gc == c->gc ) )
-		if( c->gc && c->gc->prpl && c->gc->prpl->chat_invite )
+		if( c->gc && c->gc->acc->prpl->chat_invite )
 		{
-			c->gc->prpl->chat_invite( c->gc, c->id, "", u->handle );
+			c->gc->acc->prpl->chat_invite( c->gc, c->id, "", u->handle );
 			irc_reply( irc, 341, "%s %s", nick, channel );
 			return;
 		}
@@ -229,7 +229,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 		if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
 		{
 			unsigned int i;
-			char *t = set_getstr( irc, "default_target" );
+			char *t = set_getstr( &irc->set, "default_target" );
 			
 			if( g_strcasecmp( t, "last" ) == 0 && irc->last_target )
 				cmd[1] = irc->last_target;
@@ -476,8 +476,9 @@ static void irc_cmd_whois( irc_t *irc, char **cmd )
 		irc_reply( irc, 311, "%s %s %s * :%s", u->nick, u->user, u->host, u->realname );
 		
 		if( u->gc )
-			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->gc->user->username,
-			           *u->gc->user->proto_opt[0] ? u->gc->user->proto_opt[0] : "", u->gc->prpl->name );
+			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->gc->acc->user,
+			           u->gc->acc->server && *u->gc->acc->server ? u->gc->acc->server : "",
+			           u->gc->acc->prpl->name );
 		else
 			irc_reply( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
 		
@@ -591,7 +592,7 @@ static const command_t irc_commands[] = {
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
-	{ "lilo",        1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
+	{ "wall",        1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "rehash",      0, irc_cmd_rehash,      IRC_CMD_OPER_ONLY },
 	{ "restart",     0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "kill",        2, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },

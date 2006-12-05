@@ -97,7 +97,7 @@ typedef struct irc
 } irc_t;
 
 #include "user.h"
-#include "nick.h"
+// #include "nick.h"
 
 extern GSList *irc_connection_list;
 

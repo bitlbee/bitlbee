@@ -10,7 +10,7 @@
 		<description>
 
 			<para>
-				Available actions: add, del, list, on, off. See <emphasis>help account &lt;action&gt;</emphasis> for more information.
+				Available actions: add, del, list, on, off and set. See <emphasis>help account &lt;action&gt;</emphasis> for more information.
 			</para>
 
 		</description>
@@ -25,11 +25,17 @@
 			</description>
 			
 			<bitlbee-command name="jabber">
-				<syntax>account add jabber &lt;handle&gt; &lt;password&gt; [&lt;servertag&gt;]</syntax>
+				<syntax>account add jabber &lt;handle@server.tld&gt; &lt;password&gt; [&lt;servertag&gt;]</syntax>
 
 				<description>
 					<para>
-						Note that the servertag argument is optional. You only have to use it if the part after the @ in your handle isn't the hostname of your Jabber server, or if you want to use SSL/connect to a non-standard port number. The format is simple: [&lt;servername&gt;[:&lt;portnumber&gt;][:ssl]]. For example, this is how you can connect to Google Talk:
+						Note that the servertag argument is optional. You only have to use it if the part after the @ in your handle isn't the hostname of your Jabber server, or if you want to use SSL/connect to a non-standard port number. The format is simple: [&lt;servername&gt;[:&lt;portnumber&gt;][:ssl]].
+					</para>
+				</description>
+
+				<description>
+					<para>
+						Google Talk uses the Jabber protocol. Please note that Google talk is SSL-only, but officially reachable over both port 5222 and 5223. Usually BitlBee users have to connect via port 5223, for example like this:
 					</para>
 				</description>
 
@@ -37,16 +43,10 @@
 					<ircline nick="wilmer">account add jabber example@gmail.com hobbelmeeuw talk.google.com:5223:ssl</ircline>
 					<ircline nick="root">Account successfully added</ircline>
 				</ircexample>
-
-				<description>
-					<para>
-						Note that Google talk is SSL-only, but officially reachable over both port 5222 and 5223. However, for some people only port 5222 works, for some people only 5223. This is something you'll have to try out.
-					</para>
-				</description>
 			</bitlbee-command>
 
 			<bitlbee-command name="msn">
-				<syntax>account add msn &lt;handle&gt; &lt;password&gt;</syntax>
+				<syntax>account add msn &lt;handle@server.tld&gt; &lt;password&gt;</syntax>
 
 				<description>
 					<para>
@@ -102,7 +102,7 @@
 
 			<description>
 				<para>
-					This command will try to log into the specified account. If no account is specified, BitlBee will log into all the accounts. (Including accounts awaiting a reconnection)
+					This command will try to log into the specified account. If no account is specified, BitlBee will log into all the accounts that have the auto_connect flag set.
 				</para>
 
 				<para>
@@ -117,7 +117,7 @@
 
 			<description>
 				<para>
-					This command disconnects the connection for the specified account. If no account is specified, BitlBee will deactivate all active accounts. (Including accounts awaiting a reconnection)
+					This command disconnects the connection for the specified account. If no account is specified, BitlBee will deactivate all active accounts and cancel all pending reconnects.
 				</para>
 
 				<para>
@@ -132,6 +132,26 @@
 			<description>
 				<para>
 					This command gives you a list of all the accounts known by BitlBee, including the numbers you'll need for most account commands.
+				</para>
+			</description>
+		</bitlbee-command>
+
+		<bitlbee-command name="set">
+			<syntax>account set &lt;account id&gt;</syntax>
+			<syntax>account set &lt;account id&gt;/&lt;setting&gt;</syntax>
+			<syntax>account set &lt;account id&gt;/&lt;setting&gt; &lt;value&gt;</syntax>
+
+			<description>
+				<para>
+					This account can be used to change various settings for IM accounts. For all protocols, this command can be used to change the handle or the password BitlBee uses to log in and if it should be logged in automatically. Some protocols have additional settings. You can see the settings available for a connection by typing <emphasis>account set &lt;account id&gt;</emphasis>.
+				</para>
+				
+				<para>
+					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+				</para>
+				
+				<para>
+					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 		</bitlbee-command>
@@ -275,7 +295,96 @@
 		</description>
 	</bitlbee-command>
 
-	<bitlbee-setting name="charset" type="string">
+	<bitlbee-setting name="auto_connect" type="boolean" scope="both">
+		<default>true</default>
+
+		<description>
+			<para>
+				With this option enabled, when you identify BitlBee will automatically connect to your accounts, with this disabled it will not do this.
+			</para>
+			
+			<para>
+				This setting can also be changed for specific accounts using the <emphasis>account set</emphasis> command. (However, these values will be ignored if the global <emphasis>auto_connect</emphasis> setting is disabled!)
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="auto_reconnect" type="boolean" scope="both">
+		<default>false</default>
+
+		<description>
+			<para>
+				If an IM-connections breaks, you're supposed to bring it back up yourself. Having BitlBee do this automatically might not always be a good idea, for several reasons. If you want the connections to be restored automatically, you can enable this setting.
+			</para>
+
+			<para>
+				See also the <emphasis>auto_reconnect_delay</emphasis> setting.
+			</para>
+
+			<para>
+				This setting can also be changed for specific accounts using the <emphasis>account set</emphasis> command. (However, these values will be ignored if the global <emphasis>auto_reconnect</emphasis> setting is disabled!)
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="auto_reconnect_delay" type="integer" scope="global">
+		<default>300</default>
+
+		<description>
+			<para>
+				Tell BitlBee after how many seconds it should attempt to bring an IM-connection back up after a crash. It's not a good idea to set this value very low, it will cause too much useless traffic when an IM-server is down for a few hours.
+			</para>
+
+			<para>
+				See also the <emphasis>auto_reconnect</emphasis> setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="away_devoice" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				With this option enabled, the root user devoices people when they go away (just away, not offline) and gives the voice back when they come back. You might dislike the voice-floods you'll get if your contact list is huge, so this option can be disabled.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="buddy_sendbuffer" type="boolean" scope="global">
+		<default>false</default>
+
+		<description>
+			<para>
+				By default, when you send a message to someone, BitlBee forwards this message to the user immediately. When you paste a large number of lines, the lines will be sent in separate messages, which might not be very nice to read. If you enable this setting, BitlBee will buffer your messages and wait for more data.
+			</para>
+
+			<para>
+				Using the <emphasis>buddy_sendbuffer_delay</emphasis> setting you can specify the number of seconds BitlBee should wait for more data before the complete message is sent.
+			</para>
+
+			<para>
+				Please note that if you remove a buddy from your list (or if the connection to that user drops) and there's still data in the buffer, this data will be lost. BitlBee will not try to send the message to the user in those cases.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="buddy_sendbuffer_delay" type="integer" scope="global">
+		<default>200</default>
+
+		<description>
+
+			<para>
+				Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
+			</para>
+
+			<para>
+				See also the <emphasis>buddy_sendbuffer</emphasis> setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="charset" type="string" scope="global">
 		<default>iso8859-1</default>
 		<possible-values>you can get a list of all possible values by doing 'iconv -l' in a shell</possible-values>
 
@@ -291,46 +400,8 @@
 
 	</bitlbee-setting>
 
-	<bitlbee-setting name="private" type="boolean">
-		<default>True</default>
-
-		<description>
-
-			<para>
-				If value is true, messages from users will appear in separate query windows. If false, messages from users will appear in the control channel.
-			</para>
-
-			<para>
-				This setting is remembered (during one session) per-user, this setting only changes the default state. This option takes effect as soon as you reconnect.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="save_on_quit" type="boolean">
-		<default>True</default>
-
-		<description>
-			<para>
-				If enabled causes BitlBee to save all current settings and account details when user disconnects. This is enabled by default, and these days there's not really a reason to have it disabled anymore.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="strip_html" type="boolean">
-		<default>True</default>
-
-		<description>
-			<para>
-				Determines what BitlBee should do with HTML in messages. Normally this is turned on and HTML will be stripped from messages, if BitlBee thinks there is HTML.
-			</para>
-			<para>
-				If BitlBee fails to detect this sometimes (most likely in AIM messages over an ICQ connection), you can set this setting to <emphasis>always</emphasis>, but this might sometimes accidentally strip non-HTML things too.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="debug" type="boolean">
-		<default>False</default>
+	<bitlbee-setting name="debug" type="boolean" scope="global">
+		<default>false</default>
 
 		<description>
 			<para>
@@ -339,57 +410,36 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="to_char" type="string">
-		<default>": "</default>
+	<bitlbee-setting name="default_target" type="string" scope="global">
+		<default>root</default>
+		<possible-values>root, last</possible-values>
 
 		<description>
-
 			<para>
-				It's customary that messages meant for one specific person on an IRC channel are prepended by his/her alias followed by a colon ':'. BitlBee does this by default. If you prefer a different character, you can set it using <emphasis>set to_char</emphasis>.
-			</para>
-
-			<para>
-				Please note that this setting is only used for incoming messages. For outgoing messages you can use ':' (colon) or ',' to separate the destination nick from the message, and this is not configurable.
+				With this value set to <emphasis>root</emphasis>, lines written in the control channel without any nickname in front of them will be interpreted as commands. If you want BitlBee to send those lines to the last person you addressed in the control channel, set this to <emphasis>last</emphasis>.
 			</para>
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="typing_notice" type="boolean">
-		<default>False</default>
-
+	<bitlbee-setting name="display_name" type="string" scope="account">
 		<description>
 			<para>
-				Sends you a /notice when a user starts typing a message (if the protocol supports it, MSN for example). This is a bug, not a feature. (But please don't report it.. ;-) You don't want to use it. Really. In fact the typing-notification is just one of the least useful 'innovations' ever. It's just there because some guy will probably ask me about it anyway. ;-)
+				Currently only available for MSN connections. This setting allows you to read and change your "friendly name" for this connection. Since this is a server-side setting, it can't be changed when the account is off-line.
 			</para>
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="ops" type="string">
-		<default>both</default>
-		<possible-values>both, root, user, none</possible-values>
+	<bitlbee-setting name="display_namechanges" type="boolean" scope="global">
+		<default>false</default>
 
 		<description>
 			<para>
-				Some people prefer themself and root to have operator status in &amp;bitlbee, other people don't. You can change these states using this setting.
-			</para>
-
-			<para>
-				The value "both" means both user and root get ops. "root" means, well, just root. "user" means just the user. "none" means nobody will get operator status.
+				With this option enabled, root will inform you when someone in your buddy list changes his/her "friendly name".
 			</para>
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="away_devoice" type="boolean">
-		<default>True</default>
-
-		<description>
-			<para>
-				With this option enabled, the root user devoices people when they go away (just away, not offline) and gives the voice back when they come back. You might dislike the voice-floods you'll get if your contact list is huge, so this option can be disabled.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="handle_unknown" type="string">
+	<bitlbee-setting name="handle_unknown" type="string" scope="global">
 		<default>root</default>
 		<possible-values>root, add, add_private, add_channel, ignore</possible-values>
 
@@ -416,111 +466,71 @@
 
 	</bitlbee-setting>
 
-	<bitlbee-setting name="auto_connect" type="boolean">
-		<default>True</default>
+	<bitlbee-setting name="lcnicks" type="boolean" scope="global">
+		<default>true</default>
 
 		<description>
 			<para>
-				With this option enabled, when you identify BitlBee will automatically connect to your accounts, with this disabled it will not do this.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="auto_reconnect" type="boolean">
-		<default>False</default>
-
-		<description>
-			<para>
-				If an IM-connections breaks, you're supposed to bring it back up yourself. Having BitlBee do this automatically might not always be a good idea, for several reasons. If you want the connections to be restored automatically, you can enable this setting.
-			</para>
-
-			<para>
-				See also the <emphasis>auto_reconnect_delay</emphasis> setting.
+				Hereby you can change whether you want all lower case nick names or leave the case as it intended by your peer.
 			</para>
 		</description>
 
 	</bitlbee-setting>
 
-	<bitlbee-setting name="auto_reconnect_delay" type="integer">
-		<default>300</default>
+	<bitlbee-setting name="ops" type="string" scope="global">
+		<default>both</default>
+		<possible-values>both, root, user, none</possible-values>
 
 		<description>
-
 			<para>
-				Tell BitlBee after how many seconds it should attempt to bring an IM-connection back up after a crash. It's not a good idea to set this value very low, it will cause too much useless traffic when an IM-server is down for a few hours.
+				Some people prefer themself and root to have operator status in &amp;bitlbee, other people don't. You can change these states using this setting.
 			</para>
 
 			<para>
-				See also the <emphasis>auto_reconnect</emphasis> setting.
+				The value "both" means both user and root get ops. "root" means, well, just root. "user" means just the user. "none" means nobody will get operator status.
 			</para>
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="buddy_sendbuffer" type="boolean">
-		<default>False</default>
-
+	<bitlbee-setting name="password" type="string" scope="both">
 		<description>
-
 			<para>
-				By default, when you send a message to someone, BitlBee forwards this message to the user immediately. When you paste a large number of lines, the lines will be sent in separate messages, which might not be very nice to read. If you enable this setting, BitlBee will buffer your messages and wait for more data.
+				Use this global setting to change your "NickServ" password.
 			</para>
-
+			
 			<para>
-				Using the <emphasis>buddy_sendbuffer_delay</emphasis> setting you can specify the number of seconds BitlBee should wait for more data before the complete message is sent.
+				This setting is also available for all IM accounts to change the password BitlBee uses to connect to the service.
 			</para>
-
+			
 			<para>
-				Please note that if you remove a buddy from your list (or if the connection to that user drops) and there's still data in the buffer, this data will be lost. BitlBee will not try to send the message to the user in those cases.
+				Note that BitlBee will always say this setting is empty. This doesn't mean there is no password, it just means that, for security reasons, BitlBee stores passwords somewhere else so they can't just be retrieved in plain text.
 			</para>
 		</description>
-
 	</bitlbee-setting>
-
-	<bitlbee-setting name="buddy_sendbuffer_delay" type="integer">
-		<default>200</default>
-
-		<description>
-
-			<para>
-				Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
-			</para>
-
-			<para>
-				See also the <emphasis>buddy_sendbuffer</emphasis> setting.
-			</para>
-		</description>
-
-	</bitlbee-setting>
-
-	<bitlbee-setting name="default_target" type="string">
-		<default>root</default>
-		<possible-values>root, last</possible-values>
-
+	
+	<bitlbee-setting name="port" type="integer" scope="account">
 		<description>
 			<para>
-				With this value set to <emphasis>root</emphasis>, lines written in the control channel without any nickname in front of them will be interpreted as commands. If you want BitlBee to send those lines to the last person you addressed in the control channel, set this to <emphasis>last</emphasis>.
-			</para>
-		</description>
-
-	</bitlbee-setting>
-
-	<bitlbee-setting name="display_namechanges" type="boolean">
-		<default>False</default>
-
-		<para>
-			With this option enabled, root will inform you when someone in your buddy list changes his/her "friendly name".
-		</para>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="password" type="string">
-		<description>
-			<para>
-				Use this setting to change your "NickServ" password.
+				Currently only available for Jabber connections. Specifies the port number to connect to. Usually this should be set to 5222, or 5223 for SSL-connections.
 			</para>
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="query_order" type="string">
+	<bitlbee-setting name="private" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				If value is true, messages from users will appear in separate query windows. If false, messages from users will appear in the control channel.
+			</para>
+
+			<para>
+				This setting is remembered (during one session) per-user, this setting only changes the default state. This option takes effect as soon as you reconnect.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="query_order" type="string" scope="global">
 		<default>lifo</default>
 		<possible-values>lifo, fifo</possible-values>
 
@@ -535,15 +545,93 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="lcnicks" type="boolean">
-		<default>True</default>
+	<bitlbee-setting name="resource" type="string" scope="account">
+		<default>BitlBee</default>
 
 		<description>
 			<para>
-				Hereby you can change whether you want all lower case nick names or leave the case as it intended by your peer.
+				Can be set for Jabber connections. You can use this to connect to your Jabber account from multiple clients at once, with every client using a different resource string.
 			</para>
 		</description>
+	</bitlbee-setting>
 
+	<bitlbee-setting name="save_on_quit" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				If enabled causes BitlBee to save all current settings and account details when user disconnects. This is enabled by default, and these days there's not really a reason to have it disabled anymore.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="server" type="string" scope="account">
+		<description>
+			<para>
+				Can be set for Jabber- and OSCAR-connections. For OSCAR, this must be set to <emphasis>login.icq.com</emphasis> if it's an ICQ connection, or <emphasis>login.oscar.aol.com</emphasis> if it's an AIM connection. For Jabber, you have to set this if the servername isn't equal to the part after the @ in the Jabber handle.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="ssl" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				Currently only available for Jabber connections. Set this to true if the server accepts SSL connections.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="strip_html" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				Determines what BitlBee should do with HTML in messages. Normally this is turned on and HTML will be stripped from messages, if BitlBee thinks there is HTML.
+			</para>
+			<para>
+				If BitlBee fails to detect this sometimes (most likely in AIM messages over an ICQ connection), you can set this setting to <emphasis>always</emphasis>, but this might sometimes accidentally strip non-HTML things too.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="to_char" type="string" scope="global">
+		<default>": "</default>
+
+		<description>
+			<para>
+				It's customary that messages meant for one specific person on an IRC channel are prepended by his/her alias followed by a colon ':'. BitlBee does this by default. If you prefer a different character, you can set it using <emphasis>set to_char</emphasis>.
+			</para>
+
+			<para>
+				Please note that this setting is only used for incoming messages. For outgoing messages you can use ':' (colon) or ',' to separate the destination nick from the message, and this is not configurable.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="typing_notice" type="boolean" scope="global">
+		<default>false</default>
+
+		<description>
+			<para>
+				Sends you a /notice when a user starts typing a message (if the protocol supports it, MSN for example). This is a bug, not a feature. (But please don't report it.. ;-) You don't want to use it. Really. In fact the typing-notification is just one of the least useful 'innovations' ever. It's just there because some guy will probably ask me about it anyway. ;-)
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="web_aware" type="string" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				ICQ allows people to see if you're on-line via a CGI-script. (http://status.icq.com/online.gif?icq=UIN) This can be nice to put on your website, but it seems that spammers also use it to see if you're online without having to add you to their contact list. So to prevent ICQ spamming, recent versions of BitlBee disable this feature by default.
+			</para>
+
+			<para>
+				Unless you really intend to use this feature somewhere (on forums or maybe a website), it's probably better to keep this setting disabled.
+			</para>
+		</description>
 	</bitlbee-setting>
 
 	<bitlbee-command name="rename">
@@ -672,6 +760,10 @@
 		<description>
 			<para>
 				This command allows to set the friendly name of an im account. If no new name is specified the command will report the current name. When the name contains spaces, don't forget to quote the whole nick in double quotes. Currently this command is only supported by the MSN protocol.
+			</para>
+
+			<para>
+				It is recommended to use the per-account <emphasis>display_name</emphasis> setting to read and change this information. The <emphasis>nick</emphasis> command is deprecated.
 			</para>
 		</description>
 

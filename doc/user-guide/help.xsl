@@ -6,7 +6,7 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	version="1.1">
 
-	<xsl:output method="text" encoding="iso-8859-1" standalone="yes"/>
+	<xsl:output method="text" encoding="utf-8" standalone="yes"/>
 	<xsl:strip-space elements="*"/>
 
 	<xsl:template match="text()">
@@ -57,7 +57,10 @@
 			<xsl:message><xsl:text>Processing setting '</xsl:text><xsl:value-of select="@name"/><xsl:text>'</xsl:text></xsl:message>
 			<xsl:text>?set </xsl:text><xsl:value-of select="@name"/><xsl:text>&#10;</xsl:text>
 			<xsl:text>_b_Type:_b_ </xsl:text><xsl:value-of select="@type"/><xsl:text>&#10;</xsl:text>
-			<xsl:text>_b_Default:_b_ </xsl:text><xsl:value-of select="default"/><xsl:text>&#10;</xsl:text>
+			<xsl:text>_b_Scope:_b_ </xsl:text><xsl:value-of select="@scope"/><xsl:text>&#10;</xsl:text>
+			<xsl:if test="default">
+				<xsl:text>_b_Default:_b_ </xsl:text><xsl:value-of select="default"/><xsl:text>&#10;</xsl:text>
+			</xsl:if>
 			<xsl:if test="possible-values">
 				<xsl:text>_b_Possible Values:_b_ </xsl:text><xsl:value-of select="possible-values"/><xsl:text>&#10;</xsl:text>
 			</xsl:if>

@@ -120,16 +120,16 @@ static char *byahoo_strip( char *in )
 	return( g_strndup( in, len ) );
 }
 
-static void byahoo_login( struct aim_user *user )
+static void byahoo_login( account_t *acc )
 {
-	struct gaim_connection *gc = new_gaim_conn( user );
+	struct gaim_connection *gc = new_gaim_conn( acc );
 	struct byahoo_data *yd = gc->proto_data = g_new0( struct byahoo_data, 1 );
 	
 	yd->logged_in = FALSE;
 	yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
 	set_login_progress( gc, 1, "Connecting" );
-	yd->y2_id = yahoo_init( user->username, user->password );
+	yd->y2_id = yahoo_init( acc->user, acc->pass );
 	yahoo_login( yd->y2_id, yd->current_status );
 }
 
@@ -191,13 +191,18 @@ static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg 
 	
 	gc->away = NULL;
 	
-	if( msg )
+	if( state && msg && g_strcasecmp( state, msg ) != 0 )
 	{
 		yd->current_status = YAHOO_STATUS_CUSTOM;
 		gc->away = "";
 	}
-	if( state )
+	else if( state )
 	{
+		/* Set msg to NULL since (if it isn't NULL already) it's equal
+		   to state. msg must be empty if we want to use an existing
+		   away state. */
+		msg = NULL;
+		
 		gc->away = "";
 		if( g_strcasecmp( state, "Available" ) == 0 )
 		{
@@ -234,10 +239,7 @@ static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg 
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
-	if( yd->current_status == YAHOO_STATUS_INVISIBLE )
-		yahoo_set_away( yd->y2_id, yd->current_status, NULL, gc->away != NULL );
-	else
-		yahoo_set_away( yd->y2_id, yd->current_status, msg, gc->away != NULL );
+	yahoo_set_away( yd->y2_id, yd->current_status, msg, gc->away != NULL );
 }
 
 static GList *byahoo_away_states( struct gaim_connection *gc )
@@ -408,7 +410,8 @@ void byahoo_init( )
 	ret->chat_invite = byahoo_chat_invite;
 	ret->chat_leave = byahoo_chat_leave;
 	ret->chat_open = byahoo_chat_open;
-	ret->cmp_buddynames = g_strcasecmp;
+
+	ret->handle_cmp = g_strcasecmp;
 	
 	register_protocol(ret);
 }
@@ -424,7 +427,7 @@ static struct gaim_connection *byahoo_get_gc_by_id( int id )
 		gc = l->data;
 		yd = gc->proto_data;
 		
-		if( !strcmp(gc->prpl->name, "yahoo") && yd->y2_id == id )
+		if( strcmp( gc->acc->prpl->name, "yahoo" ) == 0 && yd->y2_id == id )
 			return( gc );
 	}
 	

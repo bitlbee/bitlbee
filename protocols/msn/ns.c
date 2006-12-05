@@ -222,10 +222,18 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		else if( num_parts == 7 && strcmp( cmd[2], "OK" ) == 0 )
 		{
+			set_t *s;
+			
 			http_decode( cmd[4] );
 			
 			strncpy( gc->displayname, cmd[4], sizeof( gc->displayname ) );
 			gc->displayname[sizeof(gc->displayname)-1] = 0;
+			
+			if( ( s = set_find( &gc->acc->set, "display_name" ) ) )
+			{
+				g_free( s->value );
+				s->value = g_strdup( cmd[4] );
+			}
 			
 			set_login_progress( gc, 1, "Authenticated, getting buddy list" );
 			
@@ -516,9 +524,17 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( g_strcasecmp( cmd[3], gc->username ) == 0 )
 		{
+			set_t *s;
+			
 			http_decode( cmd[4] );
 			strncpy( gc->displayname, cmd[4], sizeof( gc->displayname ) );
 			gc->displayname[sizeof(gc->displayname)-1] = 0;
+			
+			if( ( s = set_find( &gc->acc->set, "display_name" ) ) )
+			{
+				g_free( s->value );
+				s->value = g_strdup( cmd[4] );
+			}
 		}
 		else
 		{

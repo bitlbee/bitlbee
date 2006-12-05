@@ -38,17 +38,25 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 int bitlbee_daemon_init()
 {
 #ifdef IPV6
-	struct sockaddr_in6 listen_addr;
-#else
-	struct sockaddr_in listen_addr;
+	int use_ipv6 = 1;
+	struct sockaddr_in6 listen_addr6;
 #endif
+	struct sockaddr_in listen_addr;
 	int i;
 	FILE *fp;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
 	
-	global.listen_socket = socket( AF_INETx, SOCK_STREAM, 0 );
+#ifdef IPV6
+	if( ( global.listen_socket = socket( AF_INET6, SOCK_STREAM, 0 ) ) == -1 )
+	{
+		use_ipv6 = 0;
+#endif
+		global.listen_socket = socket( AF_INET, SOCK_STREAM, 0 );
+#ifdef IPV6
+	}
+#endif
 	if( global.listen_socket == -1 )
 	{
 		log_error( "socket" );
@@ -60,13 +68,21 @@ int bitlbee_daemon_init()
 	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
 	
 #ifdef IPV6
-	listen_addr.sin6_family = AF_INETx;
-	listen_addr.sin6_port = htons( global.conf->port );
-	i = inet_pton( AF_INETx, ipv6_wrap( global.conf->iface ), &listen_addr.sin6_addr );
-#else
-	listen_addr.sin_family = AF_INETx;
-	listen_addr.sin_port = htons( global.conf->port );
-	i = inet_pton( AF_INETx, global.conf->iface, &listen_addr.sin_addr );
+	listen_addr6.sin6_family = AF_INET6;
+	listen_addr6.sin6_port = htons( global.conf->port );
+	if( ( i = inet_pton( AF_INET6, ipv6_wrap( global.conf->iface ), &listen_addr6.sin6_addr ) ) != 1 )
+	{
+		/* Forget about IPv6 in this function. */
+		use_ipv6 = 0;
+#endif
+		listen_addr.sin_family = AF_INET;
+		listen_addr.sin_port = htons( global.conf->port );
+		if( strcmp( global.conf->iface, "::" ) == 0 )
+			i = inet_pton( AF_INET, "0.0.0.0", &listen_addr.sin_addr );
+		else
+			i = inet_pton( AF_INET, global.conf->iface, &listen_addr.sin_addr );
+#ifdef IPV6
+	}
 #endif
 	
 	if( i != 1 )
@@ -75,7 +91,10 @@ int bitlbee_daemon_init()
 		return( -1 );
 	}
 	
-	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( listen_addr ) );
+#ifdef IPV6
+	if( !use_ipv6 || ( i = bind( global.listen_socket, (struct sockaddr *) &listen_addr6, sizeof( listen_addr6 ) ) ) == -1 )
+#endif
+		i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( listen_addr ) );
 	if( i == -1 )
 	{
 		log_error( "bind" );
@@ -289,6 +308,10 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 		else if( client_pid == 0 )
 		{
 			irc_t *irc;
+			
+			/* Since we're fork()ing here, let's make sure we won't
+			   get the same random numbers as the parent/siblings. */
+			srand( time( NULL ) ^ getpid() );
 			
 			/* Close the listening socket, we're a client. */
 			close( global.listen_socket );

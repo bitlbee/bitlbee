@@ -560,37 +560,19 @@ static gboolean gjab_connected_ssl(gpointer data, void *source, b_input_conditio
 
 static void gjab_start(gjconn gjc)
 {
-	struct aim_user *user;
+	account_t *acc;
 	int port = -1, ssl = 0;
-	char *server = NULL, *s;
+	char *server = NULL;
 
 	if (!gjc || gjc->state != JCONN_STATE_OFF)
 		return;
 
-	user = GJ_GC(gjc)->user;
-	if (*user->proto_opt[0]) {
-		/* If there's a dot, assume there's a hostname in the beginning */
-		if (strchr(user->proto_opt[0], '.')) {
-			server = g_strdup(user->proto_opt[0]);
-			if ((s = strchr(server, ':')))
-				*s = 0;
-		}
-		
-		/* After the hostname, there can be a port number */
-		s = strchr(user->proto_opt[0], ':');
-		if (s && isdigit(s[1]))
-			sscanf(s + 1, "%d", &port);
-		
-		/* And if there's the string ssl, the user wants an SSL-connection */
-		if (strstr(user->proto_opt[0], ":ssl") || g_strcasecmp(user->proto_opt[0], "ssl") == 0)
-			ssl = 1;
-	}
+	acc = GJ_GC(gjc)->acc;
+	server = acc->server;
+	port = set_getint(&acc->set, "port");
+	ssl = set_getbool(&acc->set, "ssl");
 	
-	if (port == -1 && !ssl)
-		port = DEFAULT_PORT;
-	else if (port == -1 && ssl)
-		port = DEFAULT_PORT_SSL;
-	else if (port < JABBER_PORT_MIN || port > JABBER_PORT_MAX) {
+	if (port < JABBER_PORT_MIN || port > JABBER_PORT_MAX) {
 		serv_got_crap(GJ_GC(gjc), "For security reasons, the Jabber port number must be in the %d-%d range.", JABBER_PORT_MIN, JABBER_PORT_MAX);
 		STATE_EVT(JCONN_STATE_OFF)
 		return;
@@ -613,9 +595,7 @@ static void gjab_start(gjconn gjc)
 		gjc->fd = proxy_connect(server, port, gjab_connected, GJ_GC(gjc));
 	}
 	
-	g_free(server);
-	
-	if (!user->gc || (gjc->fd < 0)) {
+	if (!acc->gc || (gjc->fd < 0)) {
 		STATE_EVT(JCONN_STATE_OFF)
 		return;
 	}
@@ -1515,18 +1495,75 @@ static void jabber_handlestate(gjconn gjc, int state)
 	return;
 }
 
-static void jabber_login(struct aim_user *user)
+static void jabber_acc_init(account_t *acc)
 {
-	struct gaim_connection *gc = new_gaim_conn(user);
-	struct jabber_data *jd = gc->proto_data = g_new0(struct jabber_data, 1);
-	char *loginname = create_valid_jid(user->username, DEFAULT_SERVER, "BitlBee");
+	set_t *s;
+	
+	s = set_add( &acc->set, "port", "5222", set_eval_int, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+	
+	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+	
+	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	
+	s = set_add( &acc->set, "ssl", "false", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+}
 
+static void jabber_login(account_t *acc)
+{
+	struct gaim_connection *gc;
+	struct jabber_data *jd;
+	char *resource, *loginname;
+	
+	/* Time to move some data/things from the old syntax to the new one: */
+	if (acc->server) {
+		char *s, *tmp_server;
+		int port;
+		
+		if (g_strcasecmp(acc->server, "ssl") == 0) {
+			set_setstr(&acc->set, "server", "");
+			set_setint(&acc->set, "port", DEFAULT_PORT_SSL);
+			set_setstr(&acc->set, "ssl", "true");
+			
+			g_free(acc->server);
+			acc->server = NULL;
+		} else if ((s = strchr(acc->server, ':'))) {
+			if (strstr(acc->server, ":ssl")) {
+				set_setint(&acc->set, "port", DEFAULT_PORT_SSL);
+				set_setstr(&acc->set, "ssl", "true");
+			}
+			if (isdigit(s[1])) {
+				if (sscanf(s + 1, "%d", &port) == 1)
+					set_setint(&acc->set, "port", port);
+			}
+			tmp_server = g_strndup(acc->server, s - acc->server);
+			set_setstr(&acc->set, "server", tmp_server);
+			g_free(tmp_server);
+		}
+	}
+	
+	gc = new_gaim_conn(acc);
+	jd = gc->proto_data = g_new0(struct jabber_data, 1);
+	
+	if( strchr( acc->user, '@' ) == NULL )
+	{
+		hide_login_progress( gc, "Invalid account name" );
+		signoff( gc );
+		return;
+	}
+	
+	resource = set_getstr(&acc->set, "resource");
+	loginname = create_valid_jid(acc->user, DEFAULT_SERVER, resource);
+	
 	jd->hash = g_hash_table_new(g_str_hash, g_str_equal);
 	jd->chats = NULL;	/* we have no chats yet */
 
 	set_login_progress(gc, 1, _("Connecting"));
 
-	if (!(jd->gjc = gjab_new(loginname, user->password, gc))) {
+	if (!(jd->gjc = gjab_new(loginname, acc->pass, gc))) {
 		g_free(loginname);
 		hide_login_progress(gc, _("Unable to connect"));
 		signoff(gc);
@@ -2336,6 +2373,7 @@ void jabber_init()
 
 	ret->name = "jabber";
 	ret->away_states = jabber_away_states;
+	ret->acc_init = jabber_acc_init;
 	ret->login = jabber_login;
 	ret->close = jabber_close;
 	ret->send_im = jabber_send_im;
@@ -2348,7 +2386,7 @@ void jabber_init()
 	ret->keepalive = jabber_keepalive;
 	ret->alias_buddy = jabber_roster_update;
 	ret->group_buddy = jabber_group_change;
-	ret->cmp_buddynames = g_strcasecmp;
+	ret->handle_cmp = g_strcasecmp;
 
 	register_protocol (ret);
 }
