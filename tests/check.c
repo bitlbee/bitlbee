@@ -37,6 +37,9 @@ Suite *nick_suite(void);
 /* From check_md5.c */
 Suite *md5_suite(void);
 
+/* From check_irc.c */
+Suite *irc_suite(void);
+
 int main (int argc, char **argv)
 {
 	int nf;
@@ -59,10 +62,22 @@ int main (int argc, char **argv)
 
 	g_option_context_free(pc);
 
+	log_init();
+
+	if (verbose) {
+		log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
+		log_link( LOGLVL_DEBUG, LOGOUTPUT_CONSOLE );
+		log_link( LOGLVL_INFO, LOGOUTPUT_CONSOLE );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
+	}
+
+	global.conf = conf_load( 0, NULL);
+	global.conf->runmode = RUNMODE_DAEMON;
 
 	sr = srunner_create(util_suite());
 	srunner_add_suite(sr, nick_suite());
 	srunner_add_suite(sr, md5_suite());
+	srunner_add_suite(sr, irc_suite());
 	if (no_fork)
 		srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all (sr, verbose?CK_VERBOSE:CK_NORMAL);
