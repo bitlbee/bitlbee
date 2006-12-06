@@ -5,7 +5,7 @@
 #include <string.h>
 #include "irc.h"
 #include "set.h"
-#include "util.h"
+#include "misc.h"
 
 START_TEST(test_nick_strip)
 {

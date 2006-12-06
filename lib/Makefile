@@ -17,6 +17,8 @@ LFLAGS += -r
 # [SH] Phony targets
 all: lib.o
 
+check:
+
 .PHONY: all clean distclean
 
 clean: $(subdirs)
