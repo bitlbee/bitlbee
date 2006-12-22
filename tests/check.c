@@ -3,8 +3,22 @@
 #include <gmodule.h>
 #include <check.h>
 #include "bitlbee.h"
+#include "testsuite.h"
 
 global_t global;	/* Against global namespace pollution */
+
+gboolean g_io_channel_pair(GIOChannel **ch1, GIOChannel **ch2)
+{
+	int sock[2];
+	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, sock) < 0) {
+		perror("socketpair");
+		return FALSE;
+	}
+
+	*ch1 = g_io_channel_unix_new(sock[0]);
+	*ch2 = g_io_channel_unix_new(sock[1]);
+	return TRUE;
+}
 
 double gettime()
 {
@@ -20,12 +34,53 @@ Suite *util_suite(void);
 /* From check_nick.c */
 Suite *nick_suite(void);
 
-int main (void)
+/* From check_md5.c */
+Suite *md5_suite(void);
+
+/* From check_irc.c */
+Suite *irc_suite(void);
+
+int main (int argc, char **argv)
 {
 	int nf;
-	SRunner *sr = srunner_create(util_suite());
+	SRunner *sr;
+	GOptionContext *pc;
+	gboolean no_fork = FALSE;
+	gboolean verbose = FALSE;
+	GOptionEntry options[] = {
+		{"no-fork", 'n', 0, G_OPTION_ARG_NONE, &no_fork, "Don't fork" },
+		{"verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Be verbose", NULL },
+		{ NULL }
+	};
+	int i;
+
+	pc = g_option_context_new("");
+	g_option_context_add_main_entries(pc, options, NULL);
+
+	if(!g_option_context_parse(pc, &argc, &argv, NULL))
+		return 1;
+
+	g_option_context_free(pc);
+
+	log_init();
+
+	if (verbose) {
+		log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
+		log_link( LOGLVL_DEBUG, LOGOUTPUT_CONSOLE );
+		log_link( LOGLVL_INFO, LOGOUTPUT_CONSOLE );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
+	}
+
+	global.conf = conf_load( 0, NULL);
+	global.conf->runmode = RUNMODE_DAEMON;
+
+	sr = srunner_create(util_suite());
 	srunner_add_suite(sr, nick_suite());
-	srunner_run_all (sr, CK_NORMAL);
+	srunner_add_suite(sr, md5_suite());
+	srunner_add_suite(sr, irc_suite());
+	if (no_fork)
+		srunner_set_fork_status(sr, CK_NOFORK);
+	srunner_run_all (sr, verbose?CK_VERBOSE:CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

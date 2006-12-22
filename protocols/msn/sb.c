@@ -121,9 +121,10 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 {
 	if( sb->ready )
 	{
-		char cmd[1024], *buf;
+		char *packet, *buf;
 		int i, j;
 		
+		/* Build the message. Convert LF to CR-LF for normal messages. */
 		if( strcmp( text, TYPING_NOTIFICATION_MESSAGE ) != 0 )
 		{
 			buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 );
@@ -141,19 +142,21 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 		else
 		{
 			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->gc->username );
-			buf = g_new0( char, strlen( MSN_TYPING_HEADERS ) + strlen( sb->gc->username ) );
+			buf = g_new0( char, i );
 			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->gc->username );
 		}
 		
-		g_snprintf( cmd, sizeof( cmd ), "MSG %d N %d\r\n", ++sb->trId, i );
-		if( msn_sb_write( sb, cmd, strlen( cmd ) ) && msn_sb_write( sb, buf, i ) )
+		/* Build the final packet (MSG command + the message). */
+		packet = g_strdup_printf( "MSG %d N %d\r\n%s", ++sb->trId, i, buf );
+		g_free( buf );
+		if( msn_sb_write( sb, packet, strlen( packet ) ) )
 		{
-			g_free( buf );
+			g_free( packet );
 			return( 1 );
 		}
 		else
 		{
-			g_free( buf );
+			g_free( packet );
 			return( 0 );
 		}
 	}

@@ -25,6 +25,9 @@ LFLAGS += -r
 
 # [SH] Phony targets
 all: protocols.o
+check: all
+gcov:
+	gcov *.c
 
 .PHONY: all clean distclean $(subdirs)
 

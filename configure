@@ -27,6 +27,7 @@ yahoo=1
 
 debug=0
 strip=1
+gcov=0
 ipv6=1
 
 events=glib
@@ -66,6 +67,7 @@ Option		Description				Default
 
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
+--gcov=0/1	Disable/enable test coverage reporting	$gcov
 
 --ipv6=0/1	IPv6 socket support			$ipv6
 
@@ -363,6 +365,11 @@ else
 		echo 'STRIP=\# skip strip' >> Makefile.settings
 		strip=0;
 	fi;
+fi
+
+if [ "$gcov" = "1" ]; then
+	echo "CFLAGS+=-ftest-coverage -fprofile-arcs" >> Makefile.settings
+	echo "EFLAGS+=-lgcov" >> Makefile.settings
 fi
 
 echo

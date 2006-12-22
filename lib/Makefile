@@ -16,6 +16,9 @@ LFLAGS += -r
 
 # [SH] Phony targets
 all: lib.o
+check: all
+gcov:
+	gcov *.c
 
 .PHONY: all clean distclean
 

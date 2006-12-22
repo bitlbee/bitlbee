@@ -39,13 +39,18 @@ Makefile.settings:
 
 clean: $(subdirs)
 	rm -f *.o $(OUTFILE) core utils/bitlbeed encode decode
+	$(MAKE) -C tests clean
 
 distclean: clean $(subdirs)
 	rm -f Makefile.settings config.h bitlbee.pc
 	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -exec rm -f {} \;
+	$(MAKE) -C test distclean
 
-check:
+check: all
 	$(MAKE) -C tests
+
+gcov: check
+	gcov *.c
 
 install-doc:
 	$(MAKE) -C doc install

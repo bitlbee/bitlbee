@@ -5,7 +5,7 @@
 #include <string.h>
 #include "irc.h"
 #include "set.h"
-#include "util.h"
+#include "misc.h"
 
 START_TEST(test_nick_strip)
 {
@@ -22,7 +22,7 @@ START_TEST(test_nick_strip)
 		NULL };
 
 	for (i = 0; get[i]; i++) {
-		char copy[30];
+		char copy[60];
 		strcpy(copy, get[i]);
 		nick_strip(copy);
 		fail_unless (strcmp(copy, expected[i]) == 0, 
