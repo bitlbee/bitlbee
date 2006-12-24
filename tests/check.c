@@ -40,6 +40,9 @@ Suite *md5_suite(void);
 /* From check_irc.c */
 Suite *irc_suite(void);
 
+/* From check_help.c */
+Suite *help_suite(void);
+
 int main (int argc, char **argv)
 {
 	int nf;
@@ -80,6 +83,7 @@ int main (int argc, char **argv)
 	srunner_add_suite(sr, nick_suite());
 	srunner_add_suite(sr, md5_suite());
 	srunner_add_suite(sr, irc_suite());
+	srunner_add_suite(sr, help_suite());
 	if (no_fork)
 		srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all (sr, verbose?CK_VERBOSE:CK_NORMAL);
