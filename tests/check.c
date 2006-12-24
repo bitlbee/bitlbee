@@ -66,7 +66,9 @@ int main (int argc, char **argv)
 
 	if (verbose) {
 		log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
+#ifdef DEBUG
 		log_link( LOGLVL_DEBUG, LOGOUTPUT_CONSOLE );
+#endif
 		log_link( LOGLVL_INFO, LOGOUTPUT_CONSOLE );
 		log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
 	}
