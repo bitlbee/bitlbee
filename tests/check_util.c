@@ -6,6 +6,7 @@
 #include "irc.h"
 #include "set.h"
 #include "misc.h"
+#include "url.h"
 
 START_TEST(test_strip_linefeed)
 {
@@ -42,6 +43,66 @@ START_TEST(test_strip_newlines)
 }
 END_TEST
 
+START_TEST(test_set_url_http)
+	url_t url;
+	
+	fail_if (0 == url_set(&url, "http://host/"));
+	fail_unless (!strcmp(url.host, "host"));
+	fail_unless (!strcmp(url.file, "/"));
+	fail_unless (!strcmp(url.user, ""));
+	fail_unless (!strcmp(url.pass, ""));
+	fail_unless (url.proto == PROTO_HTTP);
+	fail_unless (url.port == 80);
+END_TEST
+
+START_TEST(test_set_url_https)
+	url_t url;
+	
+	fail_if (0 == url_set(&url, "https://ahost/AimeeMann"));
+	fail_unless (!strcmp(url.host, "ahost"));
+	fail_unless (!strcmp(url.file, "/AimeeMann"));
+	fail_unless (!strcmp(url.user, ""));
+	fail_unless (!strcmp(url.pass, ""));
+	fail_unless (url.proto == PROTO_HTTPS);
+	fail_unless (url.port == 443);
+END_TEST
+
+START_TEST(test_set_url_port)
+	url_t url;
+	
+	fail_if (0 == url_set(&url, "https://ahost:200/Lost/In/Space"));
+	fail_unless (!strcmp(url.host, "ahost"));
+	fail_unless (!strcmp(url.file, "/Lost/In/Space"));
+	fail_unless (!strcmp(url.user, ""));
+	fail_unless (!strcmp(url.pass, ""));
+	fail_unless (url.proto == PROTO_HTTPS);
+	fail_unless (url.port == 200);
+END_TEST
+
+START_TEST(test_set_url_username)
+	url_t url;
+	
+	fail_if (0 == url_set(&url, "socks4://user@ahost/Space"));
+	fail_unless (!strcmp(url.host, "ahost"));
+	fail_unless (!strcmp(url.file, "/Space"));
+	fail_unless (!strcmp(url.user, "user"));
+	fail_unless (!strcmp(url.pass, ""));
+	fail_unless (url.proto == PROTO_SOCKS4);
+	fail_unless (url.port == 1080);
+END_TEST
+
+START_TEST(test_set_url_username_pwd)
+	url_t url;
+	
+	fail_if (0 == url_set(&url, "socks5://user:pass@ahost/"));
+	fail_unless (!strcmp(url.host, "ahost"));
+	fail_unless (!strcmp(url.file, "/"));
+	fail_unless (!strcmp(url.user, "user"));
+	fail_unless (!strcmp(url.pass, "pass"));
+	fail_unless (url.proto == PROTO_SOCKS5);
+	fail_unless (url.port == 1080);
+END_TEST
+
 Suite *util_suite (void)
 {
 	Suite *s = suite_create("Util");
@@ -49,5 +110,10 @@ Suite *util_suite (void)
 	suite_add_tcase (s, tc_core);
 	tcase_add_test (tc_core, test_strip_linefeed);
 	tcase_add_test (tc_core, test_strip_newlines);
+	tcase_add_test (tc_core, test_set_url_http);
+	tcase_add_test (tc_core, test_set_url_https);
+	tcase_add_test (tc_core, test_set_url_port);
+	tcase_add_test (tc_core, test_set_url_username);
+	tcase_add_test (tc_core, test_set_url_username_pwd);
 	return s;
 }
