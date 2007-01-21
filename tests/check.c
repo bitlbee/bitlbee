@@ -20,6 +20,16 @@ gboolean g_io_channel_pair(GIOChannel **ch1, GIOChannel **ch2)
 	return TRUE;
 }
 
+irc_t *torture_irc(void)
+{
+	irc_t *irc;
+	GIOChannel *ch1, *ch2;
+	if (!g_io_channel_pair(&ch1, &ch2))
+		return NULL;
+	irc = irc_new(g_io_channel_unix_get_fd(ch1));
+	return irc;
+}
+
 double gettime()
 {
 	struct timeval time[1];
@@ -42,6 +52,9 @@ Suite *irc_suite(void);
 
 /* From check_help.c */
 Suite *help_suite(void);
+
+/* From check_user.c */
+Suite *user_suite(void);
 
 int main (int argc, char **argv)
 {
@@ -84,6 +97,7 @@ int main (int argc, char **argv)
 	srunner_add_suite(sr, md5_suite());
 	srunner_add_suite(sr, irc_suite());
 	srunner_add_suite(sr, help_suite());
+	srunner_add_suite(sr, user_suite());
 	if (no_fork)
 		srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all (sr, verbose?CK_VERBOSE:CK_NORMAL);
