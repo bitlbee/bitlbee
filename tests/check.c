@@ -56,6 +56,9 @@ Suite *help_suite(void);
 /* From check_user.c */
 Suite *user_suite(void);
 
+/* From check_crypting.c */
+Suite *crypting_suite(void);
+
 int main (int argc, char **argv)
 {
 	int nf;
@@ -98,6 +101,7 @@ int main (int argc, char **argv)
 	srunner_add_suite(sr, irc_suite());
 	srunner_add_suite(sr, help_suite());
 	srunner_add_suite(sr, user_suite());
+	srunner_add_suite(sr, crypting_suite());
 	if (no_fork)
 		srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all (sr, verbose?CK_VERBOSE:CK_NORMAL);
