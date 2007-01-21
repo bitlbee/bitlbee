@@ -26,6 +26,8 @@
 #ifndef __SET_H__
 #define __SET_H__
 
+struct set;
+
 /* This used to be specific to irc_t structures, but it's more generic now
    (so it can also be used for account_t structs). It's pretty simple, but
    so far pretty useful.
