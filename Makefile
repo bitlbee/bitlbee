@@ -49,8 +49,13 @@ distclean: clean $(subdirs)
 check: all
 	$(MAKE) -C tests
 
+lcov:
 gcov: check
 	gcov *.c
+
+lcov: check
+	lcov --directory . --capture --output-file bitlbee.info
+	genhtml -o coverage bitlbee.info
 
 install-doc:
 	$(MAKE) -C doc install
