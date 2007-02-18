@@ -17,7 +17,7 @@ plugindir='$prefix/lib/bitlbee/'
 includedir='$prefix/include/bitlbee/'
 libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
-ipcsocket='/var/run/bitlbee'
+ipcsocket='/var/run/bitlbee.sock'
 pcdir='$prefix/lib/pkgconfig'
 
 msn=1
@@ -106,7 +106,6 @@ MANDIR=$mandir
 DATADIR=$datadir
 PLUGINDIR=$plugindir
 CONFIG=$config
-IPCSOCKET=$ipcsocket
 INCLUDEDIR=$includedir
 PCDIR=$pcdir
 
@@ -338,6 +337,11 @@ fi
 if [ "$ldap" = 0 ]; then
 	echo "#undef WITH_LDAP" >> config.h
 elif [ "$ldap" = 1 ]; then
+	echo
+	echo 'LDAP support is a work in progress and does NOT work AT ALL right now.'
+	echo
+	exit 1
+	
 	echo "#define WITH_LDAP 1" >> config.h
 	STORAGES="$STORAGES ldap"
 fi
