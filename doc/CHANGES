@@ -40,6 +40,26 @@ Version x.x:
     lose the nicknames, you can now use "account set" to change the username
     and password for the existing connection.
   * Per-account settings (see the new "account set" command).
+- A brand new Jabber module. Besides the major code cleanup, it also has
+  has these new features:
+  * Pretty complete XMPP support: RFC3920, RFC3921 plus a number of XEPs
+    including XEP73 and XEP85. (See http://www.xmpp.org/ for what all these
+    things mean exactly.) Privacy lists are not supported for obvious
+    reasons.
+  * This complete support also includes TLS and SASL support and SRV record
+    lookup. This means that specifying a server tag for connections should
+    (almost) never be necessary anymore, BitlBee can find the server and can
+    automatically convert plaintext connections to TLS-encrypted ones.
+  * XEP85 means typing notifications. The older XEP22 (still used by some
+    clients including Gaim <2.0) is not supported.
+  * Better handling of buddies who have more than one resource on-line. As
+    long as one resource is on-line (and visible), BitlBee will show this. 
+    (The previous module didn't keep track of resources and sent an offline
+    event as soon as any resource disappears.)
+  * You can now set your resource priority.
+  * The info command now gives away state/message information for all
+    resources available for that buddy. (Of course this only works if the
+    buddy is in your contact list.)
 
 Version 1.0.3:
 - Fixed ugliness in block/allow list commands (still not perfect though, the

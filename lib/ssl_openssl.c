@@ -52,22 +52,65 @@ struct scd
 };
 
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
+static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition cond );
+static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
 
 
 void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
-	SSL_METHOD *meth;
 	
 	conn->fd = proxy_connect( host, port, ssl_connected, conn );
 	conn->func = func;
 	conn->data = data;
+	conn->inpa = -1;
 	
 	if( conn->fd < 0 )
 	{
 		g_free( conn );
-		return( NULL );
+		return NULL;
 	}
+	
+	return conn;
+}
+
+void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
+{
+	struct scd *conn = g_new0( struct scd, 1 );
+	
+	conn->fd = fd;
+	conn->func = func;
+	conn->data = data;
+	conn->inpa = -1;
+	
+	/* This function should be called via a (short) timeout instead of
+	   directly from here, because these SSL calls are *supposed* to be
+	   *completely* asynchronous and not ready yet when this function
+	   (or *_connect, for examle) returns. Also, errors are reported via
+	   the callback function, not via this function's return value.
+	   
+	   In short, doing things like this makes the rest of the code a lot
+	   simpler. */
+	
+	b_timeout_add( 1, ssl_starttls_real, conn );
+	
+	return conn;
+}
+
+static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition cond )
+{
+	struct scd *conn = data;
+	
+	return ssl_connected( conn, conn->fd, GAIM_INPUT_WRITE );
+}
+
+static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
+{
+	struct scd *conn = data;
+	SSL_METHOD *meth;
+	
+	if( source == -1 )
+		goto ssl_connected_failure;
 	
 	if( !initialized )
 	{
@@ -78,57 +121,18 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	meth = TLSv1_client_method();
 	conn->ssl_ctx = SSL_CTX_new( meth );
 	if( conn->ssl_ctx == NULL )
-	{
-		conn->fd = -1;
-		return( NULL );
-	}
+		goto ssl_connected_failure;
 	
 	conn->ssl = SSL_new( conn->ssl_ctx );
 	if( conn->ssl == NULL )
-	{
-		conn->fd = -1;
-		return( NULL );
-	}
-	
-	return( conn );
-}
-
-static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
-
-static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
-{
-	struct scd *conn = data;
-	
-	if( source == -1 )
-		return ssl_handshake( data, -1, cond );
+		goto ssl_connected_failure;
 	
 	/* We can do at least the handshake with non-blocking I/O */
 	sock_make_nonblocking( conn->fd );
 	SSL_set_fd( conn->ssl, conn->fd );
 	
 	return ssl_handshake( data, source, cond );
-}	
 
-static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond )
-{
-	struct scd *conn = data;
-	int st;
-	
-	if( ( st = SSL_connect( conn->ssl ) ) < 0 )
-	{
-		conn->lasterr = SSL_get_error( conn->ssl, st );
-		if( conn->lasterr != SSL_ERROR_WANT_READ && conn->lasterr != SSL_ERROR_WANT_WRITE )
-			goto ssl_connected_failure;
-		
-		conn->inpa = b_input_add( conn->fd, ssl_getdirection( conn ), ssl_handshake, data );
-		return FALSE;
-	}
-	
-	conn->established = TRUE;
-	sock_make_blocking( conn->fd );		/* For now... */
-	conn->func( conn->data, conn, cond );
-	return FALSE;
-	
 ssl_connected_failure:
 	conn->func( conn->data, NULL, cond );
 	
@@ -144,6 +148,39 @@ ssl_connected_failure:
 	if( source >= 0 ) closesocket( source );
 	g_free( conn );
 	
+	return FALSE;
+
+}	
+
+static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond )
+{
+	struct scd *conn = data;
+	int st;
+	
+	if( ( st = SSL_connect( conn->ssl ) ) < 0 )
+	{
+		conn->lasterr = SSL_get_error( conn->ssl, st );
+		if( conn->lasterr != SSL_ERROR_WANT_READ && conn->lasterr != SSL_ERROR_WANT_WRITE )
+		{
+			conn->func( conn->data, NULL, cond );
+			
+			SSL_shutdown( conn->ssl );
+			SSL_free( conn->ssl );
+			SSL_CTX_free( conn->ssl_ctx );
+			
+			if( source >= 0 ) closesocket( source );
+			g_free( conn );
+			
+			return FALSE;
+		}
+		
+		conn->inpa = b_input_add( conn->fd, ssl_getdirection( conn ), ssl_handshake, data );
+		return FALSE;
+	}
+	
+	conn->established = TRUE;
+	sock_make_blocking( conn->fd );		/* For now... */
+	conn->func( conn->data, conn, cond );
 	return FALSE;
 }
 

@@ -181,13 +181,14 @@ static int msn_send_im( struct gaim_connection *gc, char *who, char *message, in
 
 static GList *msn_away_states( struct gaim_connection *gc )
 {
-	GList *l = NULL;
+	static GList *l = NULL;
 	int i;
 	
-	for( i = 0; msn_away_state_list[i].number > -1; i ++ )
-		l = g_list_append( l, (void*) msn_away_state_list[i].name );
+	if( l == NULL )
+		for( i = 0; msn_away_state_list[i].number > -1; i ++ )
+			l = g_list_append( l, (void*) msn_away_state_list[i].name );
 	
-	return( l );
+	return l;
 }
 
 static char *msn_get_status_string( struct gaim_connection *gc, int number )

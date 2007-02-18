@@ -39,6 +39,11 @@
 #include <glib.h>
 #include <time.h>
 
+#ifdef HAVE_RESOLV_A
+#include <arpa/nameser.h>
+#include <resolv.h>
+#endif
+
 void strip_linefeed(gchar *text)
 {
 	int i, j;
@@ -486,4 +491,56 @@ int bool2int( char *value )
 		return i;
 	
 	return 0;
+}
+
+struct ns_srv_reply *srv_lookup( char *service, char *protocol, char *domain )
+{	
+	struct ns_srv_reply *reply = NULL;
+#ifdef HAVE_RESOLV_A
+	char name[1024];
+	unsigned char querybuf[1024];
+	const unsigned char *buf;
+	ns_msg nsh;
+	ns_rr rr;
+	int i, len, size;
+	
+	g_snprintf( name, sizeof( name ), "_%s._%s.%s", service, protocol, domain );
+	
+	if( ( size = res_query( name, ns_c_in, ns_t_srv, querybuf, sizeof( querybuf ) ) ) <= 0 )
+		return NULL;
+	
+	if( ns_initparse( querybuf, size, &nsh ) != 0 )
+		return NULL;
+	
+	if( ns_parserr( &nsh, ns_s_an, 0, &rr ) != 0 )
+		return NULL;
+	
+	size = ns_rr_rdlen( rr );
+	buf = ns_rr_rdata( rr );
+	
+	len = 0;
+	for( i = 6; i < size && buf[i]; i += buf[i] + 1 )
+		len += buf[i] + 1;
+	
+	if( i > size )
+		return NULL;
+	
+	reply = g_malloc( sizeof( struct ns_srv_reply ) + len );
+	memcpy( reply->name, buf + 7, len );
+	
+	for( i = buf[6]; i < len && buf[7+i]; i += buf[7+i] + 1 )
+		reply->name[i] = '.';
+	
+	if( i > len )
+	{
+		g_free( reply );
+		return NULL;
+	}
+	
+	reply->prio = ( buf[0] << 8 ) | buf[1];
+	reply->weight = ( buf[2] << 8 ) | buf[3];
+	reply->port = ( buf[4] << 8 ) | buf[5];
+#endif
+	
+	return reply;
 }

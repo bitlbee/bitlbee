@@ -9,7 +9,7 @@
 -include ../../Makefile.settings
 
 # [SH] Program variables
-objects = expat.o hashtable.o jid.o jpacket.o jutil.o log.o pool.o str.o xmlnode.o xmlparse.o xmlrole.o xmltok.o jabber.o
+objects = io.o iq.o jabber.o jabber_util.o message.o presence.o sasl.o xmltree.o
 
 CFLAGS += -Wall
 LFLAGS += -r
