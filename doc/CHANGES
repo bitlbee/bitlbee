@@ -1,4 +1,4 @@
-Version x.x:
+Version 1.1: (1.1.x will be a (hopefully short) development release)
 - Added ForkDaemon mode next to the existing Daemon- and inetd modes. With
   ForkDaemon you can run BitlBee as a stand-alone daemon and every connection
   will run in its own process. No more need to configure inetd, and still you

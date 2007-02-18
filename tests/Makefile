@@ -1,4 +1,4 @@
-include ../Makefile.settings
+-include ../Makefile.settings
 
 LFLAGS +=-lcheck
 
@@ -7,6 +7,8 @@ all: check
 
 clean:
 	rm -f check *.o
+
+distclean: clean
 
 main_objs = account.o bitlbee.o conf.o crypting.o help.o ipc.o irc.o irc_commands.o log.o nick.o query.o root_commands.o set.o storage.o storage_xml.o storage_text.o user.o 
 
