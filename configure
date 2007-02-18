@@ -468,6 +468,9 @@ SunOS )
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
 ;;
+AIX )
+	echo 'EFLAGS+=-Wl,-brtl' >> Makefile.settings
+;;
 CYGWIN* )
 	echo 'Cygwin is not officially supported.'
 ;;
