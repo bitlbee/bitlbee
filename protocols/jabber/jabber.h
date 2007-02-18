@@ -51,6 +51,10 @@ typedef enum
 	                                   XEP85 (typing notification shite). */
 } jabber_buddy_flags_t;
 
+#define JABBER_PORT_DEFAULT "5222"
+#define JABBER_PORT_MIN 5220
+#define JABBER_PORT_MAX 5229
+
 struct jabber_data
 {
 	struct gaim_connection *gc;

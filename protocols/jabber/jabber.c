@@ -36,7 +36,7 @@ static void jabber_acc_init( account_t *acc )
 {
 	set_t *s;
 	
-	s = set_add( &acc->set, "port", "5222", set_eval_int, acc );
+	s = set_add( &acc->set, "port", JABBER_PORT_DEFAULT, set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
 	s = set_add( &acc->set, "priority", "0", set_eval_priority, acc );
@@ -159,6 +159,15 @@ static void jabber_login( account_t *acc )
 		connect_to = jd->server;
 	
 	set_login_progress( gc, 0, "Connecting" );
+	
+	if( set_getint( &acc->set, "port" ) < JABBER_PORT_MIN ||
+	    set_getint( &acc->set, "port" ) > JABBER_PORT_MAX )
+	{
+		serv_got_crap( gc, "Incorrect port number, must be in the %d-%d range",
+		               JABBER_PORT_MIN, JABBER_PORT_MAX );
+		signoff( gc );
+		return;
+	}
 	
 	/* For non-SSL connections we can try to use the port # from the SRV
 	   reply, but let's not do that when using SSL, SSL usually runs on
