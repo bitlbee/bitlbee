@@ -62,7 +62,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->oper_pass = NULL;
 	conf->configdir = g_strdup( CONFIG );
 	conf->plugindir = g_strdup( PLUGINDIR );
-	conf->pidfile = g_strdup( "/var/run/bitlbee.pid" );
+	conf->pidfile = g_strdup( PIDFILE );
 	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
