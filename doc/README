@@ -46,7 +46,7 @@ DEPENDENCIES
 ============
 
 BitlBee's only real dependency is GLib. This is available on virtually every
-platform. Any recent version of GLib (2.0 or higher) will work.
+platform. Any recent version of GLib (2.4 or higher) will work.
 
 These days, MSN Messenger clients have to connect to the MS Passport servers
 through HTTPS. BitlBee can use several SSL libraries for this: GnuTLS, NSS
@@ -183,17 +183,10 @@ LEGAL
 BitlBee is distributed under the GPL (GNU General Public License). See the
 file COPYING for this license.
 
-Unfortunately some parts of the Gaim Jabber plugin (most notably the XML
-code) were licensed under the MPL (Mozilla Public License) version 1.1. We
-could not relicense this code under the GPL. As such it is still licensed
-under the MPL. The parts of the code to which this applies are marked as
-such.
-
-The MPL is provided in the file MPL-1.1.txt. This license is not GPL
-compatible. It is however a free software license.
-
-Another part (the md5 algorithm) is licensed under the Aladdin license.
-This license can be found in the files, to which this applies.
+The MD5 algorithm code is licensed under the Aladdin license. This license
+can be found in the files, to which this applies. The SHA1 algorithm code
+is licensed under the Mozilla Public License, see http://www.mozilla.org/MPL/
+for details.
 
 The Yahoo! library used by BitlBee is libyahoo2 <http://libyahoo2.sf.net/>,
 also licensed under the GPL.
@@ -201,5 +194,5 @@ also licensed under the GPL.
 
 	BitlBee - An IRC to other chat networks gateway 
 	          <http://www.bitlbee.org/>
-	Copyright (C) 2002-2006  Wilmer van der Gaast <wilmer@gaast.net>
+	Copyright (C) 2002-2007  Wilmer van der Gaast <wilmer@gaast.net>
 	                         and others

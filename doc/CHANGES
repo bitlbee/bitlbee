@@ -1,4 +1,7 @@
-Version 1.1: (1.1.x will be a (hopefully short) development release)
+Version 1.1:
+- First BitlBee development/testing RELEASE. This should be quite stable
+  though (and for most people more stable than 1.0.x). It just has a couple
+  of rough edges and needs a bit more testing.
 - Added ForkDaemon mode next to the existing Daemon- and inetd modes. With
   ForkDaemon you can run BitlBee as a stand-alone daemon and every connection
   will run in its own process. No more need to configure inetd, and still you

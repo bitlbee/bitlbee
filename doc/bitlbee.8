@@ -62,6 +62,10 @@ option.
 Run in daemon mode. In this mode, BitlBee forks to the background and
 waits for new connections. All clients will be served from one process.
 This is still experimental. See the note above for more information.
+.IP "-F"
+Run in ForkDaemon mode. This is similar to ordinary daemon mode, but every
+client gets its own process. Easier to set up than inetd mode, but without
+the possible stability issues.
 .IP "-i \fIaddress\fP"
 Only useful when running in daemon mode, to specify the network interface
 (identified by IP address) to which the daemon should attach. Use this if

@@ -131,7 +131,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		}
 		else if( opt == 'h' )
 		{
-			printf( "Usage: bitlbee [-D [-i <interface>] [-p <port>] [-n] [-v]] [-I]\n"
+			printf( "Usage: bitlbee [-D/-F [-i <interface>] [-p <port>] [-n] [-v]] [-I]\n"
 			        "               [-c <file>] [-d <dir>] [-h]\n"
 			        "\n"
 			        "An IRC-to-other-chat-networks gateway\n"
