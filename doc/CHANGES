@@ -21,6 +21,7 @@ Version 1.1dev:
 - Many, many, MANY little changes, improvements, fixes. Using non-blocking
   I/O as much as possible, fixed lots of little bugs (including bugs that
   affected daemon mode stability). See the bzr logs for more information.
+- Added units tests, will have to add some more before the real release.
 - Most important change: New file format for user data (accounts, nicks and
   settings). Migration to the new format should happen transparently,
   BitlBee will read the old files and once you quit/save it will save in the

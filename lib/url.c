@@ -99,7 +99,7 @@ int url_set( url_t *url, char *set_url )
 			url->port = 80;
 		else if( url->proto == PROTO_HTTPS )
 			url->port = 443;
-		else if( url->proto == PROTO_SOCKS4 || url->proto == PROTO_SOCKS4 )
+		else if( url->proto == PROTO_SOCKS4 || url->proto == PROTO_SOCKS5 )
 			url->port = 1080;
 	}
 	
