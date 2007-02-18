@@ -68,6 +68,7 @@ int bitlbee_daemon_init()
 	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
 	
 #ifdef IPV6
+	memset( &listen_addr6, 0, sizeof( listen_addr6 ) );
 	listen_addr6.sin6_family = AF_INET6;
 	listen_addr6.sin6_port = htons( global.conf->port );
 	if( ( i = inet_pton( AF_INET6, ipv6_wrap( global.conf->iface ), &listen_addr6.sin6_addr ) ) != 1 )
@@ -75,6 +76,7 @@ int bitlbee_daemon_init()
 		/* Forget about IPv6 in this function. */
 		use_ipv6 = 0;
 #endif
+		memset( &listen_addr, 0, sizeof( listen_addr ) );
 		listen_addr.sin_family = AF_INET;
 		listen_addr.sin_port = htons( global.conf->port );
 		if( strcmp( global.conf->iface, "::" ) == 0 )
