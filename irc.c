@@ -255,7 +255,12 @@ void irc_free(irc_t * irc)
 		query_del(irc, irc->queries);
 	
 	while (irc->accounts)
-		account_del(irc, irc->accounts);
+		if (irc->accounts->gc == NULL)
+			account_del(irc, irc->accounts);
+		else
+			/* Nasty hack, but account_del() doesn't work in this
+			   case and we don't want infinite loops, do we? ;-) */
+			irc->accounts = irc->accounts->next;
 	
 	while (irc->set)
 		set_del(&irc->set, irc->set->key);
