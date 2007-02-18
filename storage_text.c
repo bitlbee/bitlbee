@@ -97,7 +97,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	if( !fp ) return STORAGE_NO_SUCH_USER;
 	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
 	{
-		if( ( acc = acc_lookup[proto] ) == NULL )
+		if( proto < 0 || proto > 8 || ( acc = acc_lookup[proto] ) == NULL )
 			continue;
 		
 		http_decode( s );
