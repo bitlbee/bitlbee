@@ -31,7 +31,10 @@
    remembers a default value for every setting. And to prevent the user
    from setting invalid values, you can write an evaluator function for
    every setting, which can check a new value and block it by returning
-   NULL, or replace it by returning a new value. See struct set.eval. */
+   NULL, or replace it by returning a new value. See struct set.eval.
+   One thing that is really missing here is additional data for the
+   evaluator. This could be useful to add minimum and maximum values for
+   integers, for example. */
 
 typedef char *(*set_eval) ( struct set *set, char *value );
 
@@ -45,7 +48,9 @@ typedef struct set
 	char *def;      /* Default value. If the set_setstr() function
 	                   notices a new value is exactly the same as
 	                   the default, value gets set to NULL. So when
-	                   you read a setting, don't forget about this! */
+	                   you read a setting, don't forget about this!
+	                   In fact, you should only read values using
+	                   set_getstr/int(). */
 	
 	int flags;      /* See account.h, for example. set.c doesn't use
 	                   this (yet?). */
@@ -67,9 +72,8 @@ set_t *set_find( set_t **head, char *key );
    returned string, and don't free() it! */
 G_MODULE_EXPORT char *set_getstr( set_t **head, char *key );
 
-/* Get an integer. Right now this also converts true/false/on/off/etc to
-   numbers, but this is for historical reasons, please use set_getbool()
-   for booleans instead. */
+/* Get an integer. In previous versions set_getint() was also used to read
+   boolean values, but this SHOULD be done with set_getbool() now! */
 G_MODULE_EXPORT int set_getint( set_t **head, char *key );
 G_MODULE_EXPORT int set_getbool( set_t **head, char *key );
 

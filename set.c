@@ -91,9 +91,6 @@ int set_getint( set_t **head, char *key )
 	if( !s )
 		return 0;
 	
-	if( ( g_strcasecmp( s, "true" ) == 0 ) || ( g_strcasecmp( s, "yes" ) == 0 ) || ( g_strcasecmp( s, "on" ) == 0 ) )
-		return 1;
-	
 	if( sscanf( s, "%d", &i ) != 1 )
 		return 0;
 	
