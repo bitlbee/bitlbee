@@ -139,7 +139,7 @@ static void byahoo_close( struct gaim_connection *gc )
 	GSList *l;
 	
 	while( gc->conversations )
-		serv_got_chat_left( gc, gc->conversations->id );
+		serv_got_chat_left( gc->conversations );
 	
 	for( l = yd->buddygroups; l; l = l->next )
 	{
@@ -331,40 +331,31 @@ static char *byahoo_get_status_string( struct gaim_connection *gc, int stat )
 	}
 }
 
-static int byahoo_chat_send( struct gaim_connection *gc, int id, char *message )
+static int byahoo_chat_send( struct conversation *c, char *message )
 {
-	struct byahoo_data *yd = (struct byahoo_data *) gc->proto_data;
-	struct conversation *c;
+	struct byahoo_data *yd = (struct byahoo_data *) c->gc->proto_data;
 	
-	for( c = gc->conversations; c && c->id != id; c = c->next );
-
 	yahoo_conference_message( yd->y2_id, NULL, c->data, c->title, message, 1 );
 	
 	return( 0 );
 }
 
-static void byahoo_chat_invite( struct gaim_connection *gc, int id, char *msg, char *who )
+static void byahoo_chat_invite( struct conversation *c, char *msg, char *who )
 {
-	struct byahoo_data *yd = (struct byahoo_data *) gc->proto_data;
-	struct conversation *c;
-	
-	for( c = gc->conversations; c && c->id != id; c = c->next );
+	struct byahoo_data *yd = (struct byahoo_data *) c->gc->proto_data;
 	
 	yahoo_conference_invite( yd->y2_id, NULL, c->data, c->title, msg );
 }
 
-static void byahoo_chat_leave( struct gaim_connection *gc, int id )
+static void byahoo_chat_leave( struct conversation *c )
 {
-	struct byahoo_data *yd = (struct byahoo_data *) gc->proto_data;
-	struct conversation *c;
-	
-	for( c = gc->conversations; c && c->id != id; c = c->next );
+	struct byahoo_data *yd = (struct byahoo_data *) c->gc->proto_data;
 	
 	yahoo_conference_logoff( yd->y2_id, NULL, c->data, c->title );
-	serv_got_chat_left( gc, c->id );
+	serv_got_chat_left( c );
 }
 
-static int byahoo_chat_open( struct gaim_connection *gc, char *who )
+static struct conversation *byahoo_chat_open( struct gaim_connection *gc, char *who )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) gc->proto_data;
 	struct conversation *c;
@@ -374,7 +365,7 @@ static int byahoo_chat_open( struct gaim_connection *gc, char *who )
 	roomname = g_new0( char, strlen( gc->username ) + 16 );
 	g_snprintf( roomname, strlen( gc->username ) + 16, "%s-Bee-%d", gc->username, byahoo_chat_id );
 	
-	c = serv_got_joined_chat( gc, ++byahoo_chat_id, roomname );
+	c = serv_got_joined_chat( gc, roomname );
 	add_chat_buddy( c, gc->username );
 	
 	/* FIXME: Free this thing when the chat's destroyed. We can't *always*
@@ -386,7 +377,7 @@ static int byahoo_chat_open( struct gaim_connection *gc, char *who )
 	
 	g_free( roomname );
 	
-	return( 1 );
+	return c;
 }
 
 void byahoo_init( )
@@ -804,7 +795,7 @@ static void byahoo_accept_conf( gpointer w, struct byahoo_conf_invitation *inv )
 static void byahoo_reject_conf( gpointer w, struct byahoo_conf_invitation *inv )
 {
 	yahoo_conference_decline( inv->yid, NULL, inv->members, inv->name, "User rejected groupchat" );
-	serv_got_chat_left( inv->gc, inv->c->id );
+	serv_got_chat_left( inv->c );
 	g_free( inv->name );
 	g_free( inv );
 }
@@ -819,7 +810,7 @@ void ext_yahoo_got_conf_invite( int id, char *who, char *room, char *msg, YList 
 	inv = g_malloc( sizeof( struct byahoo_conf_invitation ) );
 	memset( inv, 0, sizeof( struct byahoo_conf_invitation ) );
 	inv->name = g_strdup( room );
-	inv->c = serv_got_joined_chat( gc, ++byahoo_chat_id, room );
+	inv->c = serv_got_joined_chat( gc, room );
 	inv->c->data = members;
 	inv->yid = id;
 	inv->members = members;
@@ -871,7 +862,8 @@ void ext_yahoo_conf_message( int id, char *who, char *room, char *msg, int utf8 
 	
 	for( c = gc->conversations; c && strcmp( c->title, room ) != 0; c = c->next );
 	
-	serv_got_chat_in( gc, c ? c->id : 0, who, 0, m, 0 );
+	if( c )
+		serv_got_chat_in( c, who, 0, m, 0 );
 	g_free( m );
 }
 

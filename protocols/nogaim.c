@@ -681,15 +681,14 @@ void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout, int
 	}
 }
 
-void serv_got_chat_left( struct gaim_connection *gc, int id )
+void serv_got_chat_left( struct conversation *c )
 {
-	struct conversation *c, *l = NULL;
+	struct gaim_connection *gc = c->gc;
+	struct conversation *l = NULL;
 	GList *ir;
 	
 	if( set_getbool( &gc->irc->set, "debug" ) )
-		serv_got_crap( gc, "You were removed from conversation %d", (int) id );
-	
-	for( c = gc->conversations; c && c->id != id; c = (l=c)->next );
+		serv_got_crap( gc, "You were removed from conversation 0x%x", (int) c );
 	
 	if( c )
 	{
@@ -719,9 +718,9 @@ void serv_got_chat_left( struct gaim_connection *gc, int id )
 	}
 }
 
-void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whisper, char *msg, time_t mtime )
+void serv_got_chat_in( struct conversation *c, char *who, int whisper, char *msg, time_t mtime )
 {
-	struct conversation *c;
+	struct gaim_connection *gc = c->gc;
 	user_t *u;
 	
 	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
@@ -729,7 +728,6 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 		return;
 	
 	u = user_findhandle( gc, who );
-	for( c = gc->conversations; c && c->id != id; c = c->next );
 	
 	if( ( g_strcasecmp( set_getstr( &gc->irc->set, "strip_html" ), "always" ) == 0 ) ||
 	    ( ( gc->flags & OPT_CONN_HTML ) && set_getbool( &gc->irc->set, "strip_html" ) ) )
@@ -738,13 +736,12 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	if( c && u )
 		irc_privmsg( gc->irc, u, "PRIVMSG", c->channel, "", msg );
 	else
-		serv_got_crap( gc, "Message from/to conversation %s@%d (unknown conv/user): %s", who, id, msg );
+		serv_got_crap( gc, "Message from/to conversation %s@0x%x (unknown conv/user): %s", who, (int) c, msg );
 }
 
-struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, char *handle )
+struct conversation *serv_got_joined_chat( struct gaim_connection *gc, char *handle )
 {
 	struct conversation *c;
-	char *s;
 	
 	/* This one just creates the conversation structure, user won't see anything yet */
 	
@@ -754,21 +751,16 @@ struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, c
 		c = c->next = g_new0( struct conversation, 1 );
 	}
 	else
-		gc->conversations = c = g_new0( struct conversation, 1);
+		gc->conversations = c = g_new0( struct conversation, 1 );
 	
-	c->id = id;
 	c->gc = gc;
 	c->title = g_strdup( handle );
-	
-	s = g_new( char, 16 );
-	sprintf( s, "&chat_%03d", gc->irc->c_id++ );
-	c->channel = g_strdup( s );
-	g_free( s );
+	c->channel = g_strdup_printf( "&chat_%03d", gc->irc->c_id++ );
 	
 	if( set_getbool( &gc->irc->set, "debug" ) )
-		serv_got_crap( gc, "Creating new conversation: (id=%d,handle=%s)", id, handle );
+		serv_got_crap( gc, "Creating new conversation: (id=0x%x,handle=%s)", (int) c, handle );
 	
-	return( c );
+	return c;
 }
 
 
@@ -780,7 +772,7 @@ void add_chat_buddy( struct conversation *b, char *handle )
 	int me = 0;
 	
 	if( set_getbool( &b->gc->irc->set, "debug" ) )
-		serv_got_crap( b->gc, "User %s added to conversation %d", handle, b->id );
+		serv_got_crap( b->gc, "User %s added to conversation 0x%x", handle, (int) b );
 	
 	/* It might be yourself! */
 	if( b->gc->acc->prpl->handle_cmp( handle, b->gc->username ) == 0 )
@@ -814,7 +806,7 @@ void remove_chat_buddy( struct conversation *b, char *handle, char *reason )
 	int me = 0;
 	
 	if( set_getbool( &b->gc->irc->set, "debug" ) )
-		serv_got_crap( b->gc, "User %s removed from conversation %d (%s)", handle, b->id, reason ? reason : "" );
+		serv_got_crap( b->gc, "User %s removed from conversation 0x%x (%s)", handle, (int) b, reason ? reason : "" );
 	
 	/* It might be yourself! */
 	if( g_strcasecmp( handle, b->gc->username ) == 0 )
@@ -857,7 +849,7 @@ static int remove_chat_buddy_silent( struct conversation *b, char *handle )
 
 /* Misc. BitlBee stuff which shouldn't really be here */
 
-struct conversation *conv_findchannel( char *channel )
+struct conversation *chat_by_channel( char *channel )
 {
 	struct gaim_connection *gc;
 	struct conversation *c;
@@ -869,10 +861,10 @@ struct conversation *conv_findchannel( char *channel )
 		gc = l->data;
 		for( c = gc->conversations; c && g_strcasecmp( c->channel, channel ) != 0; c = c->next );
 		if( c )
-			return( c );
+			return c;
 	}
 	
-	return( NULL );
+	return NULL;
 }
 
 char *set_eval_away_devoice( set_t *set, char *value )
@@ -957,18 +949,18 @@ int bim_buddy_msg( struct gaim_connection *gc, char *handle, char *msg, int flag
 	return st;
 }
 
-int bim_chat_msg( struct gaim_connection *gc, int id, char *msg )
+int bim_chat_msg( struct conversation *c, char *msg )
 {
 	char *buf = NULL;
 	int st;
 	
-	if( ( gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
+	if( ( c->gc->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
 	{
 		buf = escape_html( msg );
 		msg = buf;
 	}
 	
-	st = gc->acc->prpl->chat_send( gc, id, msg );
+	st = c->gc->acc->prpl->chat_send( c, msg );
 	g_free( buf );
 	
 	return st;

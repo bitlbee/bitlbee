@@ -143,7 +143,7 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 		irc_part( irc, u, irc->channel );
 		irc_join( irc, u, irc->channel );
 	}
-	else if( ( c = conv_findchannel( cmd[1] ) ) )
+	else if( ( c = chat_by_channel( cmd[1] ) ) )
 	{
 		user_t *u = user_find( irc, irc->nick );
 		
@@ -152,7 +152,7 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 		if( c->gc )
 		{
 			c->joined = 0;
-			c->gc->acc->prpl->chat_leave( c->gc, c->id );
+			c->gc->acc->prpl->chat_leave( c );
 		}
 	}
 	else
@@ -200,13 +200,13 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 static void irc_cmd_invite( irc_t *irc, char **cmd )
 {
 	char *nick = cmd[1], *channel = cmd[2];
-	struct conversation *c = conv_findchannel( channel );
+	struct conversation *c = chat_by_channel( channel );
 	user_t *u = user_find( irc, nick );
 	
 	if( u && c && ( u->gc == c->gc ) )
 		if( c->gc && c->gc->acc->prpl->chat_invite )
 		{
-			c->gc->acc->prpl->chat_invite( c->gc, c->id, "", u->handle );
+			c->gc->acc->prpl->chat_invite( c, "", u->handle );
 			irc_reply( irc, 341, "%s %s", nick, channel );
 			return;
 		}
@@ -286,7 +286,7 @@ static void irc_cmd_who( irc_t *irc, char **cmd )
 				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
 			u = u->next;
 		}
-	else if( ( c = conv_findchannel( channel ) ) )
+	else if( ( c = chat_by_channel( channel ) ) )
 		for( l = c->in_room; l; l = l->next )
 		{
 			if( ( u = user_findhandle( c->gc, l->data ) ) )

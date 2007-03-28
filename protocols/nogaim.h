@@ -99,26 +99,25 @@ struct conversation {
 	struct gaim_connection *gc;
 
 	/* stuff used just for chat */
-        GList *in_room;
-        GList *ignored;
-        int id;
-        
-        /* BitlBee */
-        struct conversation *next;
-        char *channel;
-        char *title;
-        char joined;
-        void *data;
+	GList *in_room;
+	GList *ignored;
+	
+	/* BitlBee */
+	struct conversation *next;
+	char *channel;
+	char *title;
+	char joined;
+	void *data;
 };
 
 struct buddy {
 	char name[80];
 	char show[BUDDY_ALIAS_MAXLEN];
-        int present;
+	int present;
 	int evil;
 	time_t signon;
 	time_t idle;
-        int uc;
+	int uc;
 	guint caps; /* woohoo! */
 	void *proto_data; /* what a hack */
 	struct gaim_connection *gc; /* the connection it belongs to */
@@ -152,11 +151,13 @@ struct prpl {
 	void (* alias_buddy)	(struct gaim_connection *, char *who);	/* save/store buddy's alias on server list/roster */
 	
 	/* Group chat stuff. */
-	void (* join_chat)	(struct gaim_connection *, GList *data);
-	void (* chat_invite)	(struct gaim_connection *, int id, char *who, char *message);
-	void (* chat_leave)	(struct gaim_connection *, int id);
-	int  (* chat_send)	(struct gaim_connection *, int id, char *message);
-	int  (* chat_open)	(struct gaim_connection *, char *who);
+	void (* chat_invite)	(struct conversation *, char *who, char *message);
+	void (* chat_leave)	(struct conversation *);
+	int  (* chat_send)	(struct conversation *, char *message);
+	struct conversation *
+	     (* chat_open)	(struct gaim_connection *, char *who);
+	struct conversation *
+	     (* chat_join)	(struct gaim_connection *, char *chat, char *nick, char *password);
 	
 	/* DIE! */
 	char *(* get_status_string) (struct gaim_connection *gc, int stat);
@@ -182,7 +183,7 @@ G_MODULE_EXPORT void register_protocol(struct prpl *);
 /* nogaim.c */
 int bim_set_away( struct gaim_connection *gc, char *away );
 int bim_buddy_msg( struct gaim_connection *gc, char *handle, char *msg, int flags );
-int bim_chat_msg( struct gaim_connection *gc, int id, char *msg );
+int bim_chat_msg( struct conversation *c, char *msg );
 
 void bim_add_allow( struct gaim_connection *gc, char *handle );
 void bim_rem_allow( struct gaim_connection *gc, char *handle );
@@ -223,15 +224,16 @@ G_MODULE_EXPORT void remove_chat_buddy( struct conversation *b, char *handle, ch
 /* prpl.c */
 G_MODULE_EXPORT void show_got_added( struct gaim_connection *gc, char *handle, const char *realname );
 
-/* server.c */                    
+/* server.c */
 G_MODULE_EXPORT void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps );
 G_MODULE_EXPORT void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 flags, time_t mtime, gint len );
 G_MODULE_EXPORT void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout, int type );
 G_MODULE_EXPORT void serv_got_chat_invite( struct gaim_connection *gc, char *handle, char *who, char *msg, GList *data );
-G_MODULE_EXPORT struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, char *handle );
-G_MODULE_EXPORT void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whisper, char *msg, time_t mtime );
-G_MODULE_EXPORT void serv_got_chat_left( struct gaim_connection *gc, int id );
+G_MODULE_EXPORT struct conversation *serv_got_joined_chat( struct gaim_connection *gc, char *handle );
+G_MODULE_EXPORT void serv_got_chat_in( struct conversation *c, char *who, int whisper, char *msg, time_t mtime );
+G_MODULE_EXPORT void serv_got_chat_left( struct conversation *c );
 
-struct conversation *conv_findchannel( char *channel );
+struct conversation *chat_by_channel( char *channel );
+struct conversation *chat_by_id( int id );
 
 #endif

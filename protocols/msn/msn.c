@@ -240,9 +240,9 @@ static void msn_remove_buddy( struct gaim_connection *gc, char *who, char *group
 	msn_buddy_list_remove( gc, "FL", who );
 }
 
-static int msn_chat_send( struct gaim_connection *gc, int id, char *message )
+static int msn_chat_send( struct conversation *c, char *message )
 {
-	struct msn_switchboard *sb = msn_sb_by_id( gc, id );
+	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	
 	if( sb )
 		return( msn_sb_sendmessage( sb, message ) );
@@ -250,9 +250,9 @@ static int msn_chat_send( struct gaim_connection *gc, int id, char *message )
 		return( 0 );
 }
 
-static void msn_chat_invite( struct gaim_connection *gc, int id, char *msg, char *who )
+static void msn_chat_invite( struct conversation *c, char *msg, char *who )
 {
-	struct msn_switchboard *sb = msn_sb_by_id( gc, id );
+	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	char buf[1024];
 	
 	if( sb )
@@ -262,15 +262,15 @@ static void msn_chat_invite( struct gaim_connection *gc, int id, char *msg, char
 	}
 }
 
-static void msn_chat_leave( struct gaim_connection *gc, int id )
+static void msn_chat_leave( struct conversation *c )
 {
-	struct msn_switchboard *sb = msn_sb_by_id( gc, id );
+	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	
 	if( sb )
 		msn_sb_write( sb, "OUT\r\n", 5 );
 }
 
-static int msn_chat_open( struct gaim_connection *gc, char *who )
+static struct conversation *msn_chat_open( struct gaim_connection *gc, char *who )
 {
 	struct msn_switchboard *sb;
 	struct msn_data *md = gc->proto_data;
@@ -279,8 +279,7 @@ static int msn_chat_open( struct gaim_connection *gc, char *who )
 	if( ( sb = msn_sb_by_handle( gc, who ) ) )
 	{
 		debug( "Converting existing switchboard to %s to a groupchat", who );
-		msn_sb_to_chat( sb );
-		return( 1 );
+		return msn_sb_to_chat( sb );
 	}
 	else
 	{
@@ -291,10 +290,7 @@ static int msn_chat_open( struct gaim_connection *gc, char *who )
 			debug( "Trying to reuse an existing switchboard as a groupchat with %s", who );
 			g_snprintf( buf, sizeof( buf ), "CAL %d %s\r\n", ++sb->trId, who );
 			if( msn_sb_write( sb, buf, strlen( buf ) ) )
-			{
-				msn_sb_to_chat( sb );
-				return( 1 );
-			}
+				return msn_sb_to_chat( sb );
 		}
 		
 		/* If the stuff above failed for some reason: */
@@ -313,10 +309,11 @@ static int msn_chat_open( struct gaim_connection *gc, char *who )
 		/* Queue the magic message and cross your fingers. */
 		md->msgq = g_slist_append( md->msgq, m );
 		
-		return( 1 );
+		/* FIXME: Can I try to return something here already? */
+		return NULL;
 	}
 	
-	return( 0 );
+	return NULL;
 }
 
 static void msn_keepalive( struct gaim_connection *gc )

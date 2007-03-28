@@ -85,16 +85,16 @@ struct msn_switchboard *msn_sb_by_handle( struct gaim_connection *gc, char *hand
 	return( NULL );
 }
 
-struct msn_switchboard *msn_sb_by_id( struct gaim_connection *gc, int id )
+struct msn_switchboard *msn_sb_by_chat( struct conversation *c )
 {
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = c->gc->proto_data;
 	struct msn_switchboard *sb;
 	GSList *l;
 	
 	for( l = md->switchboards; l; l = l->next )
 	{
 		sb = l->data;
-		if( sb->chat && sb->chat->id == id )
+		if( sb->chat == c )
 			return( sb );
 	}
 	
@@ -176,14 +176,14 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 	}
 }
 
-void msn_sb_to_chat( struct msn_switchboard *sb )
+struct conversation *msn_sb_to_chat( struct msn_switchboard *sb )
 {
 	struct gaim_connection *gc = sb->gc;
 	char buf[1024];
 	
 	/* Create the groupchat structure. */
 	g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
-	sb->chat = serv_got_joined_chat( gc, ++msn_chat_id, buf );
+	sb->chat = serv_got_joined_chat( gc, buf );
 	
 	/* Populate the channel. */
 	if( sb->who ) add_chat_buddy( sb->chat, sb->who );
@@ -195,6 +195,8 @@ void msn_sb_to_chat( struct msn_switchboard *sb )
 		g_free( sb->who );
 		sb->who = NULL;
 	}
+	
+	return sb->chat;
 }
 
 void msn_sb_destroy( struct msn_switchboard *sb )
@@ -229,7 +231,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 	
 	if( sb->chat )
 	{
-		serv_got_chat_left( gc, sb->chat->id );
+		serv_got_chat_left( sb->chat );
 	}
 	
 	if( sb->handler )
@@ -371,7 +373,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			if( num == 1 )
 			{
 				g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
-				sb->chat = serv_got_joined_chat( gc, ++msn_chat_id, buf );
+				sb->chat = serv_got_joined_chat( gc, buf );
 				
 				g_free( sb->who );
 				sb->who = NULL;
@@ -609,7 +611,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			}
 			else if( sb->chat )
 			{
-				serv_got_chat_in( gc, sb->chat->id, cmd[1], 0, body, 0 );
+				serv_got_chat_in( sb->chat, cmd[1], 0, body, 0 );
 			}
 			else
 			{
@@ -668,7 +670,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			}
 			else if( sb->chat )
 			{
-				serv_got_chat_in( gc, sb->chat->id, cmd[1], 0, buf, 0 );
+				serv_got_chat_in( sb->chat, cmd[1], 0, buf, 0 );
 			}
 			else
 			{

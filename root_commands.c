@@ -884,6 +884,53 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
 }
 
+static void cmd_join_chat( irc_t *irc, char **cmd )
+{
+	account_t *a;
+	struct gaim_connection *gc;
+	char *chat, *channel, *nick = NULL, *password = NULL;
+	struct conversation *c;
+	
+	if( !( a = account_get( irc, cmd[1] ) ) )
+	{
+		irc_usermsg( irc, "Invalid account" );
+		return;
+	}
+	else if( !( a->gc && ( a->gc->flags & OPT_LOGGED_IN ) ) )
+	{
+		irc_usermsg( irc, "That account is not on-line" );
+		return;
+	}
+	else if( a->prpl->chat_join == NULL )
+	{
+		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
+		return;
+	}
+	gc = a->gc;
+	
+	chat = cmd[2];
+	if( cmd[3] )
+	{
+		channel = g_strdup( cmd[3] );
+	}
+	else
+	{
+		char *s;
+		
+		channel = g_strdup( chat );
+		if( ( s = strchr( channel, '@' ) ) )
+			*s = 0;
+	}
+	if( cmd[3] && cmd[4] )
+		nick = cmd[4];
+	if( cmd[3] && cmd[4] && cmd[5] )
+		password = cmd[5];
+	
+	c = a->prpl->chat_join( gc, chat, nick, password );
+	
+	g_free( channel );
+}
+
 const command_t commands[] = {
 	{ "help",           0, cmd_help,           0 }, 
 	{ "identify",       1, cmd_identify,       0 },
@@ -903,5 +950,6 @@ const command_t commands[] = {
 	{ "blist",          0, cmd_blist,          0 },
 	{ "nick",           1, cmd_nick,           0 },
 	{ "qlist",          0, cmd_qlist,          0 },
+	{ "join_chat",      2, cmd_join_chat,      0 },
 	{ NULL }
 };

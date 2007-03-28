@@ -658,7 +658,7 @@ void irc_names( irc_t *irc, char *channel )
 			strcat( namelist, " " );
 		}
 	}
-	else if( ( c = conv_findchannel( channel ) ) )
+	else if( ( c = chat_by_channel( channel ) ) )
 	{
 		GList *l;
 		
@@ -811,7 +811,7 @@ void irc_topic( irc_t *irc, char *channel )
 	}
 	else
 	{
-		struct conversation *c = conv_findchannel( channel );
+		struct conversation *c = chat_by_channel( channel );
 		
 		if( c )
 			irc_reply( irc, 332, "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", channel, c->title );
@@ -949,7 +949,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	
 	if( *nick == '#' || *nick == '&' )
 	{
-		if( !( c = conv_findchannel( nick ) ) )
+		if( !( c = chat_by_channel( nick ) ) )
 		{
 			irc_reply( irc, 403, "%s :Channel does not exist", nick );
 			return( 0 );
@@ -1037,7 +1037,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	}
 	else if( c && c->gc && c->gc->acc && c->gc->acc->prpl )
 	{
-		return( bim_chat_msg( c->gc, c->id, s ) );
+		return( bim_chat_msg( c, s ) );
 	}
 	
 	return( 0 );

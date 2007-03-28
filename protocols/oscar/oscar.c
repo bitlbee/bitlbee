@@ -157,22 +157,6 @@ static char *extract_name(const char *name) {
 	return tmp;
 }
 
-static struct chat_connection *find_oscar_chat(struct gaim_connection *gc, int id) {
-	GSList *g = ((struct oscar_data *)gc->proto_data)->oscar_chats;
-	struct chat_connection *c = NULL;
-
-	while (g) {
-		c = (struct chat_connection *)g->data;
-		if (c->id == id)
-			break;
-		g = g->next;
-		c = NULL;
-	}
-
-	return c;
-}
-
-
 static struct chat_connection *find_oscar_chat_by_conn(struct gaim_connection *gc,
 							aim_conn_t *conn) {
 	GSList *g = ((struct oscar_data *)gc->proto_data)->oscar_chats;
@@ -768,7 +752,8 @@ static int conninitdone_chat(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	chatcon = find_oscar_chat_by_conn(gc, fr->conn);
 	chatcon->id = id;
-	chatcon->cnv = serv_got_joined_chat(gc, id++, chatcon->show);
+	chatcon->cnv = serv_got_joined_chat(gc, chatcon->show);
+	chatcon->cnv->data = chatcon;
 
 	return 1;
 }
@@ -1579,7 +1564,7 @@ static int gaim_chat_incoming_msg(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	tmp = g_malloc(BUF_LONG);
 	g_snprintf(tmp, BUF_LONG, "%s", msg);
-	serv_got_chat_in(gc, ccon->id, info->sn, 0, tmp, time((time_t)NULL));
+	serv_got_chat_in(ccon->cnv, info->sn, 0, tmp, time((time_t)NULL));
 	g_free(tmp);
 
 	return 1;
@@ -2520,8 +2505,9 @@ int oscar_send_typing(struct gaim_connection *gc, char * who, int typing)
 	return( aim_im_sendmtn(od->sess, 1, who, typing ? 0x0002 : 0x0000) );
 }
 
-int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
+int oscar_chat_send(struct conversation *c, char *message)
 {
+	struct gaim_connection *gc = c->gc;
 	struct oscar_data * od = (struct oscar_data*)gc->proto_data;
 	struct chat_connection * ccon;
 	int ret;
@@ -2529,8 +2515,7 @@ int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
 	guint16 flags;
 	char *s;
 	
-	if(!(ccon = find_oscar_chat(gc, id)))
-		return -1;
+	ccon = c->data;
 	  	
 	for (s = message; *s; s++)
 		if (*s & 128)
@@ -2567,13 +2552,11 @@ int oscar_chat_send(struct gaim_connection * gc, int id, char *message)
   return (ret >= 0);
 }
 
-void oscar_chat_invite(struct gaim_connection * gc, int id, char *message, char *who)
+void oscar_chat_invite(struct conversation *c, char *message, char *who)
 {
+	struct gaim_connection *gc = c->gc;
 	struct oscar_data * od = (struct oscar_data *)gc->proto_data;
-	struct chat_connection *ccon = find_oscar_chat(gc, id);
-	
-	if (ccon == NULL)
-		return;
+	struct chat_connection *ccon = c->data;
 	
 	aim_chat_invite(od->sess, od->conn, who, message ? message : "",
 					ccon->exchange, ccon->name, 0x0);
@@ -2584,7 +2567,7 @@ void oscar_chat_kill(struct gaim_connection *gc, struct chat_connection *cc)
 	struct oscar_data *od = (struct oscar_data *)gc->proto_data;
 
 	/* Notify the conversation window that we've left the chat */
-	serv_got_chat_left(gc, cc->id);
+	serv_got_chat_left(cc->cnv);
 
 	/* Destroy the chat_connection */
 	od->oscar_chats = g_slist_remove(od->oscar_chats, cc);
@@ -2596,19 +2579,14 @@ void oscar_chat_kill(struct gaim_connection *gc, struct chat_connection *cc)
 	g_free(cc);
 }
 
-void oscar_chat_leave(struct gaim_connection * gc, int id)
+void oscar_chat_leave(struct conversation *c)
 {
-	struct chat_connection * ccon = find_oscar_chat(gc, id);
-
-	if(ccon == NULL)
-		return;
-
-	oscar_chat_kill(gc, ccon);
+	oscar_chat_kill(c->gc, c->data);
 }
 
 int oscar_chat_join(struct gaim_connection * gc, char * name)
 {
-    struct oscar_data * od = (struct oscar_data *)gc->proto_data;
+	struct oscar_data * od = (struct oscar_data *)gc->proto_data;
 	
 	aim_conn_t * cur;
 
@@ -2626,7 +2604,7 @@ int oscar_chat_join(struct gaim_connection * gc, char * name)
 	}
 }
 
-int oscar_chat_open(struct gaim_connection * gc, char *who)
+struct conversation *oscar_chat_open(struct gaim_connection * gc, char *who)
 {
 	struct oscar_data * od = (struct oscar_data *)gc->proto_data;
 	int ret;
@@ -2641,7 +2619,7 @@ int oscar_chat_open(struct gaim_connection * gc, char *who)
 
 	g_free(chatname);
 	
-	return ret;
+	return NULL;
 }
 
 void oscar_accept_chat(gpointer w, struct aim_chat_invitation * inv)
