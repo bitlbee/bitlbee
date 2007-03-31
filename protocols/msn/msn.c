@@ -28,7 +28,7 @@
 
 static char *msn_set_display_name( set_t *set, char *value );
 
-static void msn_acc_init( account_t *acc )
+static void msn_init( account_t *acc )
 {
 	set_t *s;
 	
@@ -38,38 +38,38 @@ static void msn_acc_init( account_t *acc )
 
 static void msn_login( account_t *acc )
 {
-	struct gaim_connection *gc = new_gaim_conn( acc );
+	struct im_connection *ic = new_gaim_conn( acc );
 	struct msn_data *md = g_new0( struct msn_data, 1 );
 	
-	gc->proto_data = md;
+	ic->proto_data = md;
 	md->fd = -1;
 	
 	if( strchr( acc->user, '@' ) == NULL )
 	{
-		hide_login_progress( gc, "Invalid account name" );
-		signoff( gc );
+		hide_login_progress( ic, "Invalid account name" );
+		signoff( ic );
 		return;
 	}
 	
-	set_login_progress( gc, 1, "Connecting" );
+	set_login_progress( ic, 1, "Connecting" );
 	
-	md->fd = proxy_connect( "messenger.hotmail.com", 1863, msn_ns_connected, gc );
+	md->fd = proxy_connect( "messenger.hotmail.com", 1863, msn_ns_connected, ic );
 	if( md->fd < 0 )
 	{
-		hide_login_progress( gc, "Could not connect to server" );
-		signoff( gc );
+		hide_login_progress( ic, "Could not connect to server" );
+		signoff( ic );
 		return;
 	}
 	
-	md->gc = gc;
+	md->ic = ic;
 	md->away_state = msn_away_state_list;
 	
-	msn_connections = g_slist_append( msn_connections, gc );
+	msn_connections = g_slist_append( msn_connections, ic );
 }
 
-static void msn_close( struct gaim_connection *gc )
+static void msn_logout( struct im_connection *ic )
 {
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	GSList *l;
 	
 	if( md )
@@ -95,7 +95,7 @@ static void msn_close( struct gaim_connection *gc )
 			{
 				m = l->data;
 			
-				serv_got_crap( gc, "Warning: Closing down MSN connection with unsent message to %s, you'll have to resend it.", m->who );
+				serv_got_crap( ic, "Warning: Closing down MSN connection with unsent message to %s, you'll have to resend it.", m->who );
 				g_free( m->who );
 				g_free( m->text );
 				g_free( m );
@@ -110,23 +110,23 @@ static void msn_close( struct gaim_connection *gc )
 		g_free( md );
 	}
 	
-	for( l = gc->permit; l; l = l->next )
+	for( l = ic->permit; l; l = l->next )
 		g_free( l->data );
-	g_slist_free( gc->permit );
+	g_slist_free( ic->permit );
 	
-	for( l = gc->deny; l; l = l->next )
+	for( l = ic->deny; l; l = l->next )
 		g_free( l->data );
-	g_slist_free( gc->deny );
+	g_slist_free( ic->deny );
 	
-	msn_connections = g_slist_remove( msn_connections, gc );
+	msn_connections = g_slist_remove( msn_connections, ic );
 }
 
-static int msn_send_im( struct gaim_connection *gc, char *who, char *message, int len, int away )
+static int msn_send_im( struct im_connection *ic, char *who, char *message, int away )
 {
 	struct msn_switchboard *sb;
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	
-	if( ( sb = msn_sb_by_handle( gc, who ) ) )
+	if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
 		return( msn_sb_sendmessage( sb, message ) );
 	}
@@ -141,7 +141,7 @@ static int msn_send_im( struct gaim_connection *gc, char *who, char *message, in
 		m->text = g_strdup( message );
 		
 		/* FIXME: *CHECK* the reliability of using spare sb's! */
-		if( ( sb = msn_sb_spare( gc ) ) )
+		if( ( sb = msn_sb_spare( ic ) ) )
 		{
 			debug( "Trying to use a spare switchboard to message %s", who );
 			
@@ -159,7 +159,7 @@ static int msn_send_im( struct gaim_connection *gc, char *who, char *message, in
 		
 		/* If we reach this line, there was no spare switchboard, so let's make one. */
 		g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
-		if( !msn_write( gc, buf, strlen( buf ) ) )
+		if( !msn_write( ic, buf, strlen( buf ) ) )
 		{
 			g_free( m->who );
 			g_free( m->text );
@@ -179,7 +179,7 @@ static int msn_send_im( struct gaim_connection *gc, char *who, char *message, in
 	return( 0 );
 }
 
-static GList *msn_away_states( struct gaim_connection *gc )
+static GList *msn_away_states( struct im_connection *ic )
 {
 	static GList *l = NULL;
 	int i;
@@ -191,7 +191,7 @@ static GList *msn_away_states( struct gaim_connection *gc )
 	return l;
 }
 
-static char *msn_get_status_string( struct gaim_connection *gc, int number )
+static char *msn_get_status_string( struct im_connection *ic, int number )
 {
 	const struct msn_away_state *st = msn_away_state_by_number( number );
 	
@@ -201,10 +201,10 @@ static char *msn_get_status_string( struct gaim_connection *gc, int number )
 		return( "" );
 }
 
-static void msn_set_away( struct gaim_connection *gc, char *state, char *message )
+static void msn_set_away( struct im_connection *ic, char *state, char *message )
 {
 	char buf[1024];
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	const struct msn_away_state *st;
 	
 	if( strcmp( state, GAIM_AWAY_CUSTOM ) == 0 )
@@ -216,41 +216,41 @@ static void msn_set_away( struct gaim_connection *gc, char *state, char *message
 	md->away_state = st;
 	
 	g_snprintf( buf, sizeof( buf ), "CHG %d %s\r\n", ++md->trId, st->code );
-	msn_write( gc, buf, strlen( buf ) );
+	msn_write( ic, buf, strlen( buf ) );
 }
 
-static void msn_set_info( struct gaim_connection *gc, char *info )
+static void msn_set_my_name( struct im_connection *ic, char *info )
 {
-	msn_set_display_name( set_find( &gc->acc->set, "display_name" ), info );
+	msn_set_display_name( set_find( &ic->acc->set, "display_name" ), info );
 }
 
-static void msn_get_info(struct gaim_connection *gc, char *who) 
+static void msn_get_info(struct im_connection *ic, char *who) 
 {
 	/* Just make an URL and let the user fetch the info */
-	serv_got_crap( gc, "%s\n%s: %s%s", _("User Info"), _("For now, fetch yourself"), PROFILE_URL, who );
+	serv_got_crap( ic, "%s\n%s: %s%s", _("User Info"), _("For now, fetch yourself"), PROFILE_URL, who );
 }
 
-static void msn_add_buddy( struct gaim_connection *gc, char *who )
+static void msn_add_buddy( struct im_connection *ic, char *who, char *group )
 {
-	msn_buddy_list_add( gc, "FL", who, who );
+	msn_buddy_list_add( ic, "FL", who, who );
 }
 
-static void msn_remove_buddy( struct gaim_connection *gc, char *who, char *group )
+static void msn_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
-	msn_buddy_list_remove( gc, "FL", who );
+	msn_buddy_list_remove( ic, "FL", who );
 }
 
-static int msn_chat_send( struct conversation *c, char *message )
+static void msn_chat_send( struct groupchat *c, char *message, int flags )
 {
 	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	
 	if( sb )
-		return( msn_sb_sendmessage( sb, message ) );
-	else
-		return( 0 );
+		msn_sb_sendmessage( sb, message );
+	/* FIXME: Error handling (although this can't happen unless something's
+	   already severely broken) disappeared here! */
 }
 
-static void msn_chat_invite( struct conversation *c, char *msg, char *who )
+static void msn_chat_invite( struct groupchat *c, char *msg, char *who )
 {
 	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	char buf[1024];
@@ -262,7 +262,7 @@ static void msn_chat_invite( struct conversation *c, char *msg, char *who )
 	}
 }
 
-static void msn_chat_leave( struct conversation *c )
+static void msn_chat_leave( struct groupchat *c )
 {
 	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	
@@ -270,13 +270,13 @@ static void msn_chat_leave( struct conversation *c )
 		msn_sb_write( sb, "OUT\r\n", 5 );
 }
 
-static struct conversation *msn_chat_open( struct gaim_connection *gc, char *who )
+static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
 {
 	struct msn_switchboard *sb;
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	char buf[1024];
 	
-	if( ( sb = msn_sb_by_handle( gc, who ) ) )
+	if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
 		debug( "Converting existing switchboard to %s to a groupchat", who );
 		return msn_sb_to_chat( sb );
@@ -285,7 +285,7 @@ static struct conversation *msn_chat_open( struct gaim_connection *gc, char *who
 	{
 		struct msn_message *m;
 		
-		if( ( sb = msn_sb_spare( gc ) ) )
+		if( ( sb = msn_sb_spare( ic ) ) )
 		{
 			debug( "Trying to reuse an existing switchboard as a groupchat with %s", who );
 			g_snprintf( buf, sizeof( buf ), "CAL %d %s\r\n", ++sb->trId, who );
@@ -298,7 +298,7 @@ static struct conversation *msn_chat_open( struct gaim_connection *gc, char *who
 		
 		/* Request a new switchboard. */
 		g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
-		if( !msn_write( gc, buf, strlen( buf ) ) )
+		if( !msn_write( ic, buf, strlen( buf ) ) )
 			return( 0 );
 		
 		/* Create a magic message. This is quite hackish, but who cares? :-P */
@@ -316,43 +316,43 @@ static struct conversation *msn_chat_open( struct gaim_connection *gc, char *who
 	return NULL;
 }
 
-static void msn_keepalive( struct gaim_connection *gc )
+static void msn_keepalive( struct im_connection *ic )
 {
-	msn_write( gc, "PNG\r\n", strlen( "PNG\r\n" ) );
+	msn_write( ic, "PNG\r\n", strlen( "PNG\r\n" ) );
 }
 
-static void msn_add_permit( struct gaim_connection *gc, char *who )
+static void msn_add_permit( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_add( gc, "AL", who, who );
+	msn_buddy_list_add( ic, "AL", who, who );
 }
 
-static void msn_rem_permit( struct gaim_connection *gc, char *who )
+static void msn_rem_permit( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_remove( gc, "AL", who );
+	msn_buddy_list_remove( ic, "AL", who );
 }
 
-static void msn_add_deny( struct gaim_connection *gc, char *who )
+static void msn_add_deny( struct im_connection *ic, char *who )
 {
 	struct msn_switchboard *sb;
 	
-	msn_buddy_list_add( gc, "BL", who, who );
+	msn_buddy_list_add( ic, "BL", who, who );
 	
 	/* If there's still a conversation with this person, close it. */
-	if( ( sb = msn_sb_by_handle( gc, who ) ) )
+	if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
 		msn_sb_destroy( sb );
 	}
 }
 
-static void msn_rem_deny( struct gaim_connection *gc, char *who )
+static void msn_rem_deny( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_remove( gc, "BL", who );
+	msn_buddy_list_remove( ic, "BL", who );
 }
 
-static int msn_send_typing( struct gaim_connection *gc, char *who, int typing )
+static int msn_send_typing( struct im_connection *ic, char *who, int typing )
 {
 	if( typing )
-		return( msn_send_im( gc, who, TYPING_NOTIFICATION_MESSAGE, strlen( TYPING_NOTIFICATION_MESSAGE ), 0 ) );
+		return( msn_send_im( ic, who, TYPING_NOTIFICATION_MESSAGE, 0 ) );
 	else
 		return( 1 );
 }
@@ -360,26 +360,26 @@ static int msn_send_typing( struct gaim_connection *gc, char *who, int typing )
 static char *msn_set_display_name( set_t *set, char *value )
 {
 	account_t *acc = set->data;
-	struct gaim_connection *gc = acc->gc;
+	struct im_connection *ic = acc->ic;
 	struct msn_data *md;
 	char buf[1024], *fn;
 	
 	/* Double-check. */
-	if( gc == NULL )
+	if( ic == NULL )
 		return NULL;
 	
-	md = gc->proto_data;
+	md = ic->proto_data;
 	
 	if( strlen( value ) > 129 )
 	{
-		serv_got_crap( gc, "Maximum name length exceeded" );
+		serv_got_crap( ic, "Maximum name length exceeded" );
 		return NULL;
 	}
 	
 	fn = msn_http_encode( value );
 	
-	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, gc->username, fn );
-	msn_write( gc, buf, strlen( buf ) );
+	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, ic->username, fn );
+	msn_write( ic, buf, strlen( buf ) );
 	g_free( fn );
 	
 	/* Returning NULL would be better, because the server still has to
@@ -388,26 +388,26 @@ static char *msn_set_display_name( set_t *set, char *value )
 	return value;
 }
 
-void msn_init()
+void msn_initmodule()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
 	
 	ret->name = "msn";
 	ret->login = msn_login;
-	ret->acc_init = msn_acc_init;
-	ret->close = msn_close;
+	ret->init = msn_init;
+	ret->logout = msn_logout;
 	ret->send_im = msn_send_im;
 	ret->away_states = msn_away_states;
 	ret->get_status_string = msn_get_status_string;
 	ret->set_away = msn_set_away;
-	ret->set_info = msn_set_info;
 	ret->get_info = msn_get_info;
+	ret->set_my_name = msn_set_my_name;
 	ret->add_buddy = msn_add_buddy;
 	ret->remove_buddy = msn_remove_buddy;
 	ret->chat_send = msn_chat_send;
 	ret->chat_invite = msn_chat_invite;
 	ret->chat_leave = msn_chat_leave;
-	ret->chat_open = msn_chat_open;
+	ret->chat_with = msn_chat_with;
 	ret->keepalive = msn_keepalive;
 	ret->add_permit = msn_add_permit;
 	ret->rem_permit = msn_rem_permit;

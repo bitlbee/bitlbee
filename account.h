@@ -40,7 +40,7 @@ typedef struct account
 	GHashTable *nicks;
 	
 	struct irc *irc;
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	struct account *next;
 } account_t;
 

@@ -64,8 +64,8 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	
 	/* This function adds some more settings (and might want to do more
 	   things that have to be done now, although I can't think of anything. */
-	if( prpl->acc_init )
-		prpl->acc_init( a );
+	if( prpl->init )
+		prpl->init( a );
 	
 	return( a );
 }
@@ -75,7 +75,7 @@ char *set_eval_account( set_t *set, char *value )
 	account_t *acc = set->data;
 	
 	/* Double-check: We refuse to edit on-line accounts. */
-	if( set->flags & ACC_SET_OFFLINE_ONLY && acc->gc )
+	if( set->flags & ACC_SET_OFFLINE_ONLY && acc->ic )
 		return NULL;
 	
 	if( strcmp( set->key, "username" ) == 0 )
@@ -179,7 +179,7 @@ void account_del( irc_t *irc, account_t *acc )
 	for( a = irc->accounts; a; a = (l=a)->next )
 		if( a == acc )
 		{
-			if( a->gc ) return; /* Caller should have checked, accounts still in use can't be deleted. */
+			if( a->ic ) return; /* Caller should have checked, accounts still in use can't be deleted. */
 			
 			if( l )
 			{
@@ -208,7 +208,7 @@ void account_del( irc_t *irc, account_t *acc )
 
 void account_on( irc_t *irc, account_t *a )
 {
-	if( a->gc )
+	if( a->ic )
 	{
 		/* Trying to enable an already-enabled account */
 		return;
@@ -222,9 +222,9 @@ void account_on( irc_t *irc, account_t *a )
 
 void account_off( irc_t *irc, account_t *a )
 {
-	a->gc->wants_to_die = TRUE;
-	signoff( a->gc );
-	a->gc = NULL;
+	a->ic->wants_to_die = TRUE;
+	signoff( a->ic );
+	a->ic = NULL;
 	if( a->reconnect )
 	{
 		/* Shouldn't happen */

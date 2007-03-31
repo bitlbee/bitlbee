@@ -29,11 +29,11 @@
 static void query_display( irc_t *irc, query_t *q );
 static query_t *query_default( irc_t *irc );
 
-query_t *query_add( irc_t *irc, struct gaim_connection *gc, char *question, void *yes, void *no, void *data )
+query_t *query_add( irc_t *irc, struct im_connection *ic, char *question, void *yes, void *no, void *data )
 {
 	query_t *q = g_new0( query_t, 1 );
 	
-	q->gc = gc;
+	q->ic = ic;
 	q->question = g_strdup( question );
 	q->yes = yes;
 	q->no = no;
@@ -96,7 +96,7 @@ void query_del( irc_t *irc, query_t *q )
 	g_free( q );
 }
 
-void query_del_by_gc( irc_t *irc, struct gaim_connection *gc )
+void query_del_by_conn( irc_t *irc, struct im_connection *ic )
 {
 	query_t *q, *n, *def;
 	int count = 0;
@@ -106,7 +106,7 @@ void query_del_by_gc( irc_t *irc, struct gaim_connection *gc )
 	
 	while( q )
 	{
-		if( q->gc == gc )
+		if( q->ic == ic )
 		{
 			n = q->next;
 			query_del( irc, q );
@@ -121,7 +121,7 @@ void query_del_by_gc( irc_t *irc, struct gaim_connection *gc )
 	}
 	
 	if( count > 0 )
-		serv_got_crap( gc, "Flushed %d unanswered question(s) for this connection.", count );
+		serv_got_crap( ic, "Flushed %d unanswered question(s) for this connection.", count );
 	
 	q = query_default( irc );
 	if( q && q != def )
@@ -139,12 +139,12 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 	}
 	if( ans )
 	{
-		serv_got_crap( q->gc, "Accepted: %s", q->question );
+		serv_got_crap( q->ic, "Accepted: %s", q->question );
 		q->yes( NULL, q->data );
 	}
 	else
 	{
-		serv_got_crap( q->gc, "Rejected: %s", q->question );
+		serv_got_crap( q->ic, "Rejected: %s", q->question );
 		q->no( NULL, q->data );
 	}
 	q->data = NULL;
@@ -157,9 +157,9 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 
 static void query_display( irc_t *irc, query_t *q )
 {
-	if( q->gc )
+	if( q->ic )
 	{
-		serv_got_crap( q->gc, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
+		serv_got_crap( q->ic, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
 	}
 	else
 	{

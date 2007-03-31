@@ -56,7 +56,7 @@
 
 struct msn_data
 {
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	
 	int fd;
 	struct msn_handler_data *handler;
@@ -74,7 +74,7 @@ struct msn_data
 
 struct msn_switchboard
 {
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	
 	int fd;
 	gint inp;
@@ -88,7 +88,7 @@ struct msn_switchboard
 	
 	GSList *msgq;
 	char *who;
-	struct conversation *chat;
+	struct groupchat *chat;
 };
 
 struct msn_away_state
@@ -148,11 +148,11 @@ GSList *msn_switchboards;
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
 
 /* msn_util.c */
-int msn_write( struct gaim_connection *gc, char *s, int len );
-int msn_logged_in( struct gaim_connection *gc );
-int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char *realname );
-int msn_buddy_list_remove( struct gaim_connection *gc, char *list, char *who );
-void msn_buddy_ask( struct gaim_connection *gc, char *handle, char *realname );
+int msn_write( struct im_connection *ic, char *s, int len );
+int msn_logged_in( struct im_connection *ic );
+int msn_buddy_list_add( struct im_connection *ic, char *list, char *who, char *realname );
+int msn_buddy_list_remove( struct im_connection *ic, char *list, char *who );
+void msn_buddy_ask( struct im_connection *ic, char *handle, char *realname );
 char *msn_findheader( char *text, char *header, int len );
 char **msn_linesplit( char *line );
 int msn_handler( struct msn_handler_data *h );
@@ -166,11 +166,11 @@ const struct msn_status_code *msn_status_by_number( int number );
 
 /* sb.c */
 int msn_sb_write( struct msn_switchboard *sb, char *s, int len );
-struct msn_switchboard *msn_sb_create( struct gaim_connection *gc, char *host, int port, char *key, int session );
-struct msn_switchboard *msn_sb_by_handle( struct gaim_connection *gc, char *handle );
-struct msn_switchboard *msn_sb_by_chat( struct conversation *c );
-struct msn_switchboard *msn_sb_spare( struct gaim_connection *gc );
+struct msn_switchboard *msn_sb_create( struct im_connection *ic, char *host, int port, char *key, int session );
+struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, char *handle );
+struct msn_switchboard *msn_sb_by_chat( struct groupchat *c );
+struct msn_switchboard *msn_sb_spare( struct im_connection *ic );
 int msn_sb_sendmessage( struct msn_switchboard *sb, char *text );
-struct conversation *msn_sb_to_chat( struct msn_switchboard *sb );
+struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb );
 void msn_sb_destroy( struct msn_switchboard *sb );
 gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond );

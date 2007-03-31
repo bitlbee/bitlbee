@@ -27,38 +27,38 @@
 #include "msn.h"
 #include <ctype.h>
 
-int msn_write( struct gaim_connection *gc, char *s, int len )
+int msn_write( struct im_connection *ic, char *s, int len )
 {
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	int st;
 	
 	st = write( md->fd, s, len );
 	if( st != len )
 	{
-		hide_login_progress_error( gc, "Short write() to main server" );
-		signoff( gc );
+		hide_login_progress_error( ic, "Short write() to main server" );
+		signoff( ic );
 		return( 0 );
 	}
 	
 	return( 1 );
 }
 
-int msn_logged_in( struct gaim_connection *gc )
+int msn_logged_in( struct im_connection *ic )
 {
-	account_online( gc );
+	account_online( ic );
 	
 	return( 0 );
 }
 
-int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char *realname_ )
+int msn_buddy_list_add( struct im_connection *ic, char *list, char *who, char *realname_ )
 {
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	char buf[1024], *realname;
 	
 	realname = msn_http_encode( realname_ );
 	
 	g_snprintf( buf, sizeof( buf ), "ADD %d %s %s %s\r\n", ++md->trId, list, who, realname );
-	if( msn_write( gc, buf, strlen( buf ) ) )
+	if( msn_write( ic, buf, strlen( buf ) ) )
 	{
 		g_free( realname );
 		
@@ -70,13 +70,13 @@ int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char 
 	return( 0 );
 }
 
-int msn_buddy_list_remove( struct gaim_connection *gc, char *list, char *who )
+int msn_buddy_list_remove( struct im_connection *ic, char *list, char *who )
 {
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	char buf[1024];
 	
 	g_snprintf( buf, sizeof( buf ), "REM %d %s %s\r\n", ++md->trId, list, who );
-	if( msn_write( gc, buf, strlen( buf ) ) )
+	if( msn_write( ic, buf, strlen( buf ) ) )
 		return( 1 );
 	
 	return( 0 );
@@ -84,17 +84,17 @@ int msn_buddy_list_remove( struct gaim_connection *gc, char *list, char *who )
 
 struct msn_buddy_ask_data
 {
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	char *handle;
 	char *realname;
 };
 
 static void msn_buddy_ask_yes( gpointer w, struct msn_buddy_ask_data *bla )
 {
-	msn_buddy_list_add( bla->gc, "AL", bla->handle, bla->realname );
+	msn_buddy_list_add( bla->ic, "AL", bla->handle, bla->realname );
 	
-	if( find_buddy( bla->gc, bla->handle ) == NULL )
-		show_got_added( bla->gc, bla->handle, NULL );
+	if( find_buddy( bla->ic, bla->handle ) == NULL )
+		show_got_added( bla->ic, bla->handle, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla->realname );
@@ -103,26 +103,26 @@ static void msn_buddy_ask_yes( gpointer w, struct msn_buddy_ask_data *bla )
 
 static void msn_buddy_ask_no( gpointer w, struct msn_buddy_ask_data *bla )
 {
-	msn_buddy_list_add( bla->gc, "BL", bla->handle, bla->realname );
+	msn_buddy_list_add( bla->ic, "BL", bla->handle, bla->realname );
 	
 	g_free( bla->handle );
 	g_free( bla->realname );
 	g_free( bla );
 }
 
-void msn_buddy_ask( struct gaim_connection *gc, char *handle, char *realname )
+void msn_buddy_ask( struct im_connection *ic, char *handle, char *realname )
 {
 	struct msn_buddy_ask_data *bla = g_new0( struct msn_buddy_ask_data, 1 );
 	char buf[1024];
 	
-	bla->gc = gc;
+	bla->ic = ic;
 	bla->handle = g_strdup( handle );
 	bla->realname = g_strdup( realname );
 	
 	g_snprintf( buf, sizeof( buf ),
 	            "The user %s (%s) wants to add you to his/her buddy list.",
 	            handle, realname );
-	do_ask_dialog( gc, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
+	do_ask_dialog( ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
 }
 
 char *msn_findheader( char *text, char *header, int len )

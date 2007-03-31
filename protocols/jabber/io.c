@@ -25,23 +25,23 @@
 #include "ssl_client.h"
 
 static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition cond );
-static gboolean jabber_write_queue( struct gaim_connection *gc );
+static gboolean jabber_write_queue( struct im_connection *ic );
 
-int jabber_write_packet( struct gaim_connection *gc, struct xt_node *node )
+int jabber_write_packet( struct im_connection *ic, struct xt_node *node )
 {
 	char *buf;
 	int st;
 	
 	buf = xt_to_string( node );
-	st = jabber_write( gc, buf, strlen( buf ) );
+	st = jabber_write( ic, buf, strlen( buf ) );
 	g_free( buf );
 	
 	return st;
 }
 
-int jabber_write( struct gaim_connection *gc, char *buf, int len )
+int jabber_write( struct im_connection *ic, char *buf, int len )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	gboolean ret;
 	
 	if( jd->tx_len == 0 )
@@ -53,8 +53,8 @@ int jabber_write( struct gaim_connection *gc, char *buf, int len )
 		/* Try if we can write it immediately so we don't have to do
 		   it via the event handler. If not, add the handler. (In
 		   most cases it probably won't be necessary.) */
-		if( ( ret = jabber_write_queue( gc ) ) && jd->tx_len > 0 )
-			jd->w_inpa = b_input_add( jd->fd, GAIM_INPUT_WRITE, jabber_write_callback, gc );
+		if( ( ret = jabber_write_queue( ic ) ) && jd->tx_len > 0 )
+			jd->w_inpa = b_input_add( jd->fd, GAIM_INPUT_WRITE, jabber_write_callback, ic );
 	}
 	else
 	{
@@ -84,16 +84,16 @@ int jabber_write( struct gaim_connection *gc, char *buf, int len )
    the socket is ready for more data). */
 static gboolean jabber_write_callback( gpointer data, gint fd, b_input_condition cond )
 {
-	struct jabber_data *jd = ((struct gaim_connection *)data)->proto_data;
+	struct jabber_data *jd = ((struct im_connection *)data)->proto_data;
 	
 	return jd->fd != -1 &&
 	       jabber_write_queue( data ) &&
 	       jd->tx_len > 0;
 }
 
-static gboolean jabber_write_queue( struct gaim_connection *gc )
+static gboolean jabber_write_queue( struct im_connection *ic )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	int st;
 	
 	if( jd->ssl )
@@ -116,8 +116,8 @@ static gboolean jabber_write_queue( struct gaim_connection *gc )
 		closesocket( jd->fd );	/* Shouldn't be necessary after errors? */
 		jd->fd = -1;
 		
-		hide_login_progress_error( gc, "Short write() to server" );
-		signoff( gc );
+		hide_login_progress_error( ic, "Short write() to server" );
+		signoff( ic );
 		return FALSE;
 	}
 	else if( st > 0 )
@@ -141,8 +141,8 @@ static gboolean jabber_write_queue( struct gaim_connection *gc )
 
 static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition cond )
 {
-	struct gaim_connection *gc = data;
-	struct jabber_data *jd = gc->proto_data;
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	char buf[512];
 	int st;
 	
@@ -159,8 +159,8 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		/* Parse. */
 		if( xt_feed( jd->xt, buf, st ) < 0 )
 		{
-			hide_login_progress_error( gc, "XML stream error" );
-			signoff( gc );
+			hide_login_progress_error( ic, "XML stream error" );
+			signoff( ic );
 			return FALSE;
 		}
 		
@@ -175,7 +175,7 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		if( jd->flags & JFLAG_STREAM_RESTART )
 		{
 			jd->flags &= ~JFLAG_STREAM_RESTART;
-			jabber_start_stream( gc );
+			jabber_start_stream( ic );
 		}
 		
 		/* Garbage collection. */
@@ -195,28 +195,28 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 				/* If there's no version attribute, assume
 				   this is an old server that can't do SASL
 				   authentication. */
-				if( !sasl_supported( gc ) )
+				if( !sasl_supported( ic ) )
 				{
 					/* If there's no version= tag, we suppose
 					   this server does NOT implement: XMPP 1.0,
 					   SASL and TLS. */
-					if( set_getbool( &gc->acc->set, "tls" ) )
+					if( set_getbool( &ic->acc->set, "tls" ) )
 					{
-						hide_login_progress( gc, "TLS is turned on for this "
+						hide_login_progress( ic, "TLS is turned on for this "
 						          "account, but is not supported by this server" );
-						signoff( gc );
+						signoff( ic );
 						return FALSE;
 					}
 					else
 					{
-						return jabber_init_iq_auth( gc );
+						return jabber_init_iq_auth( ic );
 					}
 				}
 			}
 			else
 			{
-				hide_login_progress( gc, "XML stream error" );
-				signoff( gc );
+				hide_login_progress( ic, "XML stream error" );
+				signoff( ic );
 				return FALSE;
 			}
 		}
@@ -226,8 +226,8 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		closesocket( jd->fd );
 		jd->fd = -1;
 		
-		hide_login_progress_error( gc, "Error while reading from server" );
-		signoff( gc );
+		hide_login_progress_error( ic, "Error while reading from server" );
+		signoff( ic );
 		return FALSE;
 	}
 	
@@ -237,24 +237,24 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 
 gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond )
 {
-	struct gaim_connection *gc = data;
+	struct im_connection *ic = data;
 	
 	if( source == -1 )
 	{
-		hide_login_progress( gc, "Could not connect to server" );
-		signoff( gc );
+		hide_login_progress( ic, "Could not connect to server" );
+		signoff( ic );
 		return FALSE;
 	}
 	
-	set_login_progress( gc, 1, "Connected to server, logging in" );
+	set_login_progress( ic, 1, "Connected to server, logging in" );
 	
-	return jabber_start_stream( gc );
+	return jabber_start_stream( ic );
 }
 
 gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition cond )
 {
-	struct gaim_connection *gc = data;
-	struct jabber_data *jd = gc->proto_data;
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	
 	if( source == NULL )
 	{
@@ -262,14 +262,14 @@ gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition co
 		   already, set it to NULL here to prevent a double cleanup: */
 		jd->ssl = NULL;
 		
-		hide_login_progress( gc, "Could not connect to server" );
-		signoff( gc );
+		hide_login_progress( ic, "Could not connect to server" );
+		signoff( ic );
 		return FALSE;
 	}
 	
-	set_login_progress( gc, 1, "Connected to server, logging in" );
+	set_login_progress( ic, 1, "Connected to server, logging in" );
 	
-	return jabber_start_stream( gc );
+	return jabber_start_stream( ic );
 }
 
 static xt_status jabber_end_of_stream( struct xt_node *node, gpointer data )
@@ -280,12 +280,12 @@ static xt_status jabber_end_of_stream( struct xt_node *node, gpointer data )
 
 static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 {
-	struct gaim_connection *gc = data;
-	struct jabber_data *jd = gc->proto_data;
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	int trytls;
 	
-	trytls = g_strcasecmp( set_getstr( &gc->acc->set, "tls" ), "try" ) == 0;
+	trytls = g_strcasecmp( set_getstr( &ic->acc->set, "tls" ), "try" ) == 0;
 	c = xt_find_node( node->children, "starttls" );
 	if( c && !jd->ssl )
 	{
@@ -294,20 +294,20 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		
 		c = xt_find_node( c->children, "required" );
 		
-		if( c && ( !trytls && !set_getbool( &gc->acc->set, "tls" ) ) )
+		if( c && ( !trytls && !set_getbool( &ic->acc->set, "tls" ) ) )
 		{
-			hide_login_progress( gc, "Server requires TLS connections, but TLS is turned off for this account" );
-			signoff( gc );
+			hide_login_progress( ic, "Server requires TLS connections, but TLS is turned off for this account" );
+			signoff( ic );
 			
 			return XT_ABORT;
 		}
 		
 		/* Only run this if the tls setting is set to true or try: */
-		if( ( trytls || set_getbool( &gc->acc->set, "tls" ) ) )
+		if( ( trytls || set_getbool( &ic->acc->set, "tls" ) ) )
 		{
 			reply = xt_new_node( "starttls", NULL, NULL );
 			xt_add_attr( reply, "xmlns", XMLNS_TLS );
-			if( !jabber_write_packet( gc, reply ) )
+			if( !jabber_write_packet( ic, reply ) )
 			{
 				xt_free_node( reply );
 				return XT_ABORT;
@@ -324,10 +324,10 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		   habit of not advertising <starttls/> anymore when already
 		   using SSL/TLS. */
 		
-		if( !trytls && set_getbool( &gc->acc->set, "tls" ) )
+		if( !trytls && set_getbool( &ic->acc->set, "tls" ) )
 		{
-			hide_login_progress( gc, "TLS is turned on for this account, but is not supported by this server" );
-			signoff( gc );
+			hide_login_progress( ic, "TLS is turned on for this account, but is not supported by this server" );
+			signoff( ic );
 			
 			return XT_ABORT;
 		}
@@ -345,20 +345,20 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	   support it after all, we should try to do authentication the
 	   other way. jabber.com doesn't seem to do SASL while it pretends
 	   to be XMPP 1.0 compliant! */
-	else if( !( jd->flags & JFLAG_AUTHENTICATED ) && sasl_supported( gc ) )
+	else if( !( jd->flags & JFLAG_AUTHENTICATED ) && sasl_supported( ic ) )
 	{
-		if( !jabber_init_iq_auth( gc ) )
+		if( !jabber_init_iq_auth( ic ) )
 			return XT_ABORT;
 	}
 	
 	if( ( c = xt_find_node( node->children, "bind" ) ) )
 	{
-		reply = xt_new_node( "bind", NULL, xt_new_node( "resource", set_getstr( &gc->acc->set, "resource" ), NULL ) );
+		reply = xt_new_node( "bind", NULL, xt_new_node( "resource", set_getstr( &ic->acc->set, "resource" ), NULL ) );
 		xt_add_attr( reply, "xmlns", XMLNS_BIND );
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
-		jabber_cache_add( gc, reply, jabber_pkt_bind_sess );
+		jabber_cache_add( ic, reply, jabber_pkt_bind_sess );
 		
-		if( !jabber_write_packet( gc, reply ) )
+		if( !jabber_write_packet( ic, reply ) )
 			return XT_ABORT;
 		
 		jd->flags |= JFLAG_WAIT_BIND;
@@ -369,9 +369,9 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		reply = xt_new_node( "session", NULL, NULL );
 		xt_add_attr( reply, "xmlns", XMLNS_SESSION );
 		reply = jabber_make_packet( "iq", "set", NULL, reply );
-		jabber_cache_add( gc, reply, jabber_pkt_bind_sess );
+		jabber_cache_add( ic, reply, jabber_pkt_bind_sess );
 		
-		if( !jabber_write_packet( gc, reply ) )
+		if( !jabber_write_packet( ic, reply ) )
 			return XT_ABORT;
 		
 		jd->flags |= JFLAG_WAIT_SESSION;
@@ -382,7 +382,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	   to bind/initialize the session. */
 	if( jd->flags & JFLAG_AUTHENTICATED && ( jd->flags & ( JFLAG_WAIT_BIND | JFLAG_WAIT_SESSION ) ) == 0 )
 	{
-		if( !jabber_get_roster( gc ) )
+		if( !jabber_get_roster( ic ) )
 			return XT_ABORT;
 	}
 	
@@ -391,8 +391,8 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 
 static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 {
-	struct gaim_connection *gc = data;
-	struct jabber_data *jd = gc->proto_data;
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	char *xmlns;
 	
 	xmlns = xt_find_attr( node, "xmlns" );
@@ -416,16 +416,16 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 	}
 	jd->w_inpa = jd->r_inpa = 0;
 	
-	set_login_progress( gc, 1, "Converting stream to TLS" );
+	set_login_progress( ic, 1, "Converting stream to TLS" );
 	
-	jd->ssl = ssl_starttls( jd->fd, jabber_connected_ssl, gc );
+	jd->ssl = ssl_starttls( jd->fd, jabber_connected_ssl, ic );
 	
 	return XT_HANDLED;
 }
 
 static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 {
-	struct gaim_connection *gc = data;
+	struct im_connection *ic = data;
 	struct xt_node *c;
 	char *s, *type = NULL, *text = NULL;
 	
@@ -451,8 +451,8 @@ static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 	/* Tssk... */
 	if( type == NULL )
 	{
-		hide_login_progress_error( gc, "Unknown stream error reported by server" );
-		signoff( gc );
+		hide_login_progress_error( ic, "Unknown stream error reported by server" );
+		signoff( ic );
 		return XT_ABORT;
 	}
 	
@@ -461,17 +461,17 @@ static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 	   infinite loop! */
 	if( strcmp( type, "conflict" ) == 0 )
 	{
-		hide_login_progress( gc, "Account and resource used from a different location" );
-		gc->wants_to_die = TRUE;
+		hide_login_progress( ic, "Account and resource used from a different location" );
+		ic->wants_to_die = TRUE;
 	}
 	else
 	{
 		s = g_strdup_printf( "Stream error: %s%s%s", type, text ? ": " : "", text ? text : "" );
-		hide_login_progress_error( gc, s );
+		hide_login_progress_error( ic, s );
 		g_free( s );
 	}
 	
-	signoff( gc );
+	signoff( ic );
 	
 	return XT_ABORT;
 }
@@ -499,35 +499,35 @@ static const struct xt_handler_entry jabber_handlers[] = {
 	{ NULL,                 NULL,                   NULL }
 };
 
-gboolean jabber_start_stream( struct gaim_connection *gc )
+gboolean jabber_start_stream( struct im_connection *ic )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	int st;
 	char *greet;
 	
 	/* We'll start our stream now, so prepare everything to receive one
 	   from the server too. */
 	xt_free( jd->xt );	/* In case we're RE-starting. */
-	jd->xt = xt_new( gc );
+	jd->xt = xt_new( ic );
 	jd->xt->handlers = (struct xt_handler_entry*) jabber_handlers;
 	
 	if( jd->r_inpa <= 0 )
-		jd->r_inpa = b_input_add( jd->fd, GAIM_INPUT_READ, jabber_read_callback, gc );
+		jd->r_inpa = b_input_add( jd->fd, GAIM_INPUT_READ, jabber_read_callback, ic );
 	
 	greet = g_strdup_printf( "<?xml version='1.0' ?>"
 	                         "<stream:stream to=\"%s\" xmlns=\"jabber:client\" "
 	                          "xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\">", jd->server );
 	
-	st = jabber_write( gc, greet, strlen( greet ) );
+	st = jabber_write( ic, greet, strlen( greet ) );
 	
 	g_free( greet );
 	
 	return st;
 }
 
-void jabber_end_stream( struct gaim_connection *gc )
+void jabber_end_stream( struct im_connection *ic )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	
 	/* Let's only do this if the queue is currently empty, otherwise it'd
 	   take too long anyway. */
@@ -537,14 +537,14 @@ void jabber_end_stream( struct gaim_connection *gc )
 		struct xt_node *node;
 		int st = 1;
 		
-		if( gc->flags & OPT_LOGGED_IN )
+		if( ic->flags & OPT_LOGGED_IN )
 		{
 			node = jabber_make_packet( "presence", "unavailable", NULL, NULL );
-			st = jabber_write_packet( gc, node );
+			st = jabber_write_packet( ic, node );
 			xt_free_node( node );
 		}
 		
 		if( st )
-			jabber_write( gc, eos, strlen( eos ) );
+			jabber_write( ic, eos, strlen( eos ) );
 	}
 }

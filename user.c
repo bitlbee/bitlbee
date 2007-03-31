@@ -140,21 +140,21 @@ user_t *user_find( irc_t *irc, char *nick )
 		return( NULL );
 }
 
-user_t *user_findhandle( struct gaim_connection *gc, char *handle )
+user_t *user_findhandle( struct im_connection *ic, char *handle )
 {
 	user_t *u;
 	char *nick;
 	
 	/* First, let's try a hash lookup. If it works, it's probably faster. */
-	if( ( nick = g_hash_table_lookup( gc->acc->nicks, handle ) ) &&
-	    ( u = user_find( gc->irc, nick ) ) &&
-	    ( gc->acc->prpl->handle_cmp( handle, u->handle ) == 0 ) )
+	if( ( nick = g_hash_table_lookup( ic->acc->nicks, handle ) ) &&
+	    ( u = user_find( ic->irc, nick ) ) &&
+	    ( ic->acc->prpl->handle_cmp( handle, u->handle ) == 0 ) )
 		return u;
 	
 	/* However, it doesn't always work, so in that case we'll have to dig
 	   through the whole userlist. :-( */
-	for( u = gc->irc->users; u; u = u->next )
-		if( u->gc == gc && u->handle && gc->acc->prpl->handle_cmp( u->handle, handle ) == 0 )
+	for( u = ic->irc->users; u; u = u->next )
+		if( u->ic == ic && u->handle && ic->acc->prpl->handle_cmp( u->handle, handle ) == 0 )
 			return u;
 	
 	return NULL;

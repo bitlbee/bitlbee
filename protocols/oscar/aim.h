@@ -573,7 +573,7 @@ struct aim_chat_roominfo {
 };
 
 struct aim_chat_invitation {
-	struct gaim_connection * gc;
+	struct im_connection * ic;
 	char * name;
 	guint8 exchange;
 };

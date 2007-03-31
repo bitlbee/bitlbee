@@ -1416,7 +1416,7 @@ static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod
 	guint8 msgtype, msgflags;
     guint8 *plugin;
     int i = 0, tmp = 0;
-    struct gaim_connection *gc = sess->aux_data;
+    struct im_connection *ic = sess->aux_data;
 
     /* at the moment we just can deal with requests, not with cancel or accept */
     if (args->status != 0) return;
@@ -1468,7 +1468,7 @@ static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod
             case AIM_MTYPE_AUTOFFC:
 	    case 0x9c:	/* ICQ 5 seems to send this */
                 aim_send_im_ch2_statusmessage(sess, userinfo->sn, args->cookie,
-                        gc->away ? gc->away : "", sess->aim_icq_state, dc);
+                        ic->away ? ic->away : "", sess->aim_icq_state, dc);
                 break;
 
         }

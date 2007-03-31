@@ -23,13 +23,13 @@
 
 #include "jabber.h"
 
-static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
-static xt_status jabber_iq_display_vcard( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
+static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 {
-	struct gaim_connection *gc = data;
-	struct jabber_data *jd = gc->proto_data;
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply = NULL;
 	char *type, *s;
 	int st, pack = 1;
@@ -38,8 +38,8 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	
 	if( !type )
 	{
-		hide_login_progress_error( gc, "Received IQ packet without type." );
-		signoff( gc );
+		hide_login_progress_error( ic, "Received IQ packet without type." );
+		signoff( ic );
 		return XT_ABORT;
 	}
 	
@@ -59,16 +59,16 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		entry = g_hash_table_lookup( jd->node_cache, s );
 		
 		if( entry == NULL )
-			serv_got_crap( gc, "WARNING: Received IQ-%s packet with unknown/expired ID %s!", type, s );
+			serv_got_crap( ic, "WARNING: Received IQ-%s packet with unknown/expired ID %s!", type, s );
 		else if( entry->func )
-			return entry->func( gc, node, entry->node );
+			return entry->func( ic, node, entry->node );
 	}
 	else if( strcmp( type, "get" ) == 0 )
 	{
 		if( !( c = xt_find_node( node->children, "query" ) ) ||
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
-			serv_got_crap( gc, "WARNING: Received incomplete IQ-%s packet", type );
+			serv_got_crap( ic, "WARNING: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
 		}
 		
@@ -131,7 +131,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		if( !( c = xt_find_node( node->children, "query" ) ) ||
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
-			serv_got_crap( gc, "WARNING: Received incomplete IQ-%s packet", type );
+			serv_got_crap( ic, "WARNING: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
 		}
 		
@@ -140,20 +140,20 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		   sent even if we added this buddy in our own session. */
 		if( strcmp( s, XMLNS_ROSTER ) == 0 )
 		{
-			int bare_len = strlen( gc->acc->user );
+			int bare_len = strlen( ic->acc->user );
 			
 			if( ( s = xt_find_attr( node, "from" ) ) == NULL ||
-			    ( strncmp( s, gc->acc->user, bare_len ) == 0 &&
+			    ( strncmp( s, ic->acc->user, bare_len ) == 0 &&
 			      ( s[bare_len] == 0 || s[bare_len] == '/' ) ) )
 			{
-				jabber_parse_roster( gc, node, NULL );
+				jabber_parse_roster( ic, node, NULL );
 				
 				/* Should we generate a reply here? Don't think it's
 				   very important... */
 			}
 			else
 			{
-				serv_got_crap( gc, "WARNING: %s tried to fake a roster push!", s ? s : "(unknown)" );
+				serv_got_crap( ic, "WARNING: %s tried to fake a roster push!", s ? s : "(unknown)" );
 				
 				xt_free_node( reply );
 				reply = jabber_make_error_packet( node, "not-allowed", "cancel" );
@@ -181,7 +181,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 				xt_add_attr( reply, "id", s );
 		}
 		
-		st = jabber_write_packet( gc, reply );
+		st = jabber_write_packet( ic, reply );
 		xt_free_node( reply );
 		if( !st )
 			return XT_ABORT;
@@ -190,12 +190,12 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	return XT_HANDLED;
 }
 
-static xt_status jabber_do_iq_auth( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
-static xt_status jabber_finish_iq_auth( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
+static xt_status jabber_do_iq_auth( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+static xt_status jabber_finish_iq_auth( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 
-int jabber_init_iq_auth( struct gaim_connection *gc )
+int jabber_init_iq_auth( struct im_connection *ic )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *node;
 	int st;
 	
@@ -203,23 +203,23 @@ int jabber_init_iq_auth( struct gaim_connection *gc )
 	xt_add_attr( node, "xmlns", XMLNS_AUTH );
 	node = jabber_make_packet( "iq", "get", NULL, node );
 	
-	jabber_cache_add( gc, node, jabber_do_iq_auth );
-	st = jabber_write_packet( gc, node );
+	jabber_cache_add( ic, node, jabber_do_iq_auth );
+	st = jabber_write_packet( ic, node );
 	
 	return st;
 }
 
-static xt_status jabber_do_iq_auth( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig )
+static xt_status jabber_do_iq_auth( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *reply, *query;
 	xt_status st;
 	char *s;
 	
 	if( !( query = xt_find_node( node->children, "query" ) ) )
 	{
-		serv_got_crap( gc, "WARNING: Received incomplete IQ packet while authenticating" );
-		signoff( gc );
+		serv_got_crap( ic, "WARNING: Received incomplete IQ packet while authenticating" );
+		signoff( ic );
 		return XT_HANDLED;
 	}
 	
@@ -227,7 +227,7 @@ static xt_status jabber_do_iq_auth( struct gaim_connection *gc, struct xt_node *
 	reply = xt_new_node( "query", NULL, NULL );
 	xt_add_attr( reply, "xmlns", XMLNS_AUTH );
 	xt_add_child( reply, xt_new_node( "username", jd->username, NULL ) );
-	xt_add_child( reply, xt_new_node( "resource", set_getstr( &gc->acc->set, "resource" ), NULL ) );
+	xt_add_child( reply, xt_new_node( "resource", set_getstr( &ic->acc->set, "resource" ), NULL ) );
 	
 	if( xt_find_node( query->children, "digest" ) && ( s = xt_find_attr( jd->xt->root, "id" ) ) )
 	{
@@ -240,7 +240,7 @@ static xt_status jabber_do_iq_auth( struct gaim_connection *gc, struct xt_node *
 		
 		shaInit( &sha );
 		shaUpdate( &sha, (unsigned char*) s, strlen( s ) );
-		shaUpdate( &sha, (unsigned char*) gc->acc->pass, strlen( gc->acc->pass ) );
+		shaUpdate( &sha, (unsigned char*) ic->acc->pass, strlen( ic->acc->pass ) );
 		shaFinal( &sha, hash );
 		
 		for( i = 0; i < 20; i ++ )
@@ -251,40 +251,40 @@ static xt_status jabber_do_iq_auth( struct gaim_connection *gc, struct xt_node *
 	else if( xt_find_node( query->children, "password" ) )
 	{
 		/* We'll have to stick with plaintext. Let's hope we're using SSL/TLS... */
-		xt_add_child( reply, xt_new_node( "password", gc->acc->pass, NULL ) );
+		xt_add_child( reply, xt_new_node( "password", ic->acc->pass, NULL ) );
 	}
 	else
 	{
 		xt_free_node( reply );
 		
-		hide_login_progress( gc, "Can't find suitable authentication method" );
-		signoff( gc );
+		hide_login_progress( ic, "Can't find suitable authentication method" );
+		signoff( ic );
 		return XT_ABORT;
 	}
 	
 	reply = jabber_make_packet( "iq", "set", NULL, reply );
-	jabber_cache_add( gc, reply, jabber_finish_iq_auth );
-	st = jabber_write_packet( gc, reply );
+	jabber_cache_add( ic, reply, jabber_finish_iq_auth );
+	st = jabber_write_packet( ic, reply );
 	
 	return st ? XT_HANDLED : XT_ABORT;
 }
 
-static xt_status jabber_finish_iq_auth( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig )
+static xt_status jabber_finish_iq_auth( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	char *type;
 	
 	if( !( type = xt_find_attr( node, "type" ) ) )
 	{
-		serv_got_crap( gc, "WARNING: Received incomplete IQ packet while authenticating" );
-		signoff( gc );
+		serv_got_crap( ic, "WARNING: Received incomplete IQ packet while authenticating" );
+		signoff( ic );
 		return XT_HANDLED;
 	}
 	
 	if( strcmp( type, "error" ) == 0 )
 	{
-		hide_login_progress( gc, "Authentication failure" );
-		signoff( gc );
+		hide_login_progress( ic, "Authentication failure" );
+		signoff( ic );
 		return XT_ABORT;
 	}
 	else if( strcmp( type, "result" ) == 0 )
@@ -292,16 +292,16 @@ static xt_status jabber_finish_iq_auth( struct gaim_connection *gc, struct xt_no
 		/* This happens when we just successfully authenticated the
 		   old (non-SASL) way. */
 		jd->flags |= JFLAG_AUTHENTICATED;
-		if( !jabber_get_roster( gc ) )
+		if( !jabber_get_roster( ic ) )
 			return XT_ABORT;
 	}
 	
 	return XT_HANDLED;
 }
 
-xt_status jabber_pkt_bind_sess( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig )
+xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c;
 	char *s;
 	
@@ -309,8 +309,8 @@ xt_status jabber_pkt_bind_sess( struct gaim_connection *gc, struct xt_node *node
 	{
 		c = xt_find_node( c->children, "jid" );
 		if( c && c->text_len && ( s = strchr( c->text, '/' ) ) &&
-		    strcmp( s + 1, set_getstr( &gc->acc->set, "resource" ) ) != 0 )
-			serv_got_crap( gc, "Server changed session resource string to `%s'", s + 1 );
+		    strcmp( s + 1, set_getstr( &ic->acc->set, "resource" ) ) != 0 )
+			serv_got_crap( ic, "Server changed session resource string to `%s'", s + 1 );
 		
 		jd->flags &= ~JFLAG_WAIT_BIND;
 	}
@@ -321,38 +321,38 @@ xt_status jabber_pkt_bind_sess( struct gaim_connection *gc, struct xt_node *node
 	
 	if( ( jd->flags & ( JFLAG_WAIT_BIND | JFLAG_WAIT_SESSION ) ) == 0 )
 	{
-		if( !jabber_get_roster( gc ) )
+		if( !jabber_get_roster( ic ) )
 			return XT_ABORT;
 	}
 	
 	return XT_HANDLED;
 }
 
-int jabber_get_roster( struct gaim_connection *gc )
+int jabber_get_roster( struct im_connection *ic )
 {
 	struct xt_node *node;
 	int st;
 	
-	set_login_progress( gc, 1, "Authenticated, requesting buddy list" );
+	set_login_progress( ic, 1, "Authenticated, requesting buddy list" );
 	
 	node = xt_new_node( "query", NULL, NULL );
 	xt_add_attr( node, "xmlns", XMLNS_ROSTER );
 	node = jabber_make_packet( "iq", "get", NULL, node );
 	
-	jabber_cache_add( gc, node, jabber_parse_roster );
-	st = jabber_write_packet( gc, node );
+	jabber_cache_add( ic, node, jabber_parse_roster );
+	st = jabber_write_packet( ic, node );
 	
 	return st;
 }
 
-static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig )
+static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
 {
 	struct xt_node *query, *c;
 	int initial = ( orig != NULL );
 	
 	if( !( query = xt_find_node( node->children, "query" ) ) )
 	{
-		serv_got_crap( gc, "WARNING: Received NULL roster packet" );
+		serv_got_crap( ic, "WARNING: Received NULL roster packet" );
 		return XT_HANDLED;
 	}
 	
@@ -370,24 +370,24 @@ static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node
 		else if( initial )
 		{
 			if( ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
-				add_buddy( gc, NULL, jid, name );
+				add_buddy( ic, NULL, jid, name );
 		}
 		else
 		{
 			/* This is a roster push item. Find out what changed exactly. */
 			if( ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
 			{
-				if( find_buddy( gc, jid ) == NULL )
-					add_buddy( gc, NULL, jid, name );
+				if( find_buddy( ic, jid ) == NULL )
+					add_buddy( ic, NULL, jid, name );
 				else if( name )
-					serv_buddy_rename( gc, jid, name );
+					serv_buddy_rename( ic, jid, name );
 			}
 			else if( strcmp( sub, "remove" ) == 0 )
 			{
 				/* Don't have any API call for this yet! So let's
 				   just try to handle this as well as we can. */
-				jabber_buddy_remove_bare( gc, jid );
-				serv_got_update( gc, jid, 0, 0, 0, 0, 0, 0 );
+				jabber_buddy_remove_bare( ic, jid );
+				serv_got_update( ic, jid, 0, 0, 0, 0, 0, 0 );
 				/* FIXME! */
 			}
 		}
@@ -396,12 +396,12 @@ static xt_status jabber_parse_roster( struct gaim_connection *gc, struct xt_node
 	}
 	
 	if( initial )
-		account_online( gc );
+		account_online( ic );
 	
 	return XT_HANDLED;
 }
 
-int jabber_get_vcard( struct gaim_connection *gc, char *bare_jid )
+int jabber_get_vcard( struct im_connection *ic, char *bare_jid )
 {
 	struct xt_node *node;
 	
@@ -412,13 +412,13 @@ int jabber_get_vcard( struct gaim_connection *gc, char *bare_jid )
 	xt_add_attr( node, "xmlns", XMLNS_VCARD );
 	node = jabber_make_packet( "iq", "get", bare_jid, node );
 	
-	jabber_cache_add( gc, node, jabber_iq_display_vcard );
-	return jabber_write_packet( gc, node );
+	jabber_cache_add( ic, node, jabber_iq_display_vcard );
+	return jabber_write_packet( ic, node );
 }
 
-static xt_status jabber_iq_display_vcard( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig )
+static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
 {
-	struct xt_node *vc, *c, *sc; /* subchild, gc is already in use ;-) */
+	struct xt_node *vc, *c, *sc; /* subchild, ic is already in use ;-) */
 	GString *reply;
 	char *s;
 	
@@ -427,7 +427,7 @@ static xt_status jabber_iq_display_vcard( struct gaim_connection *gc, struct xt_
 	    ( vc = xt_find_node( node->children, "vCard" ) ) == NULL )
 	{
 		s = xt_find_attr( orig, "to" ); /* If this returns NULL something's wrong.. */
-		serv_got_crap( gc, "Could not retrieve vCard of %s", s ? s : "(NULL)" );
+		serv_got_crap( ic, "Could not retrieve vCard of %s", s ? s : "(NULL)" );
 		return XT_HANDLED;
 	}
 	
@@ -535,13 +535,13 @@ static xt_status jabber_iq_display_vcard( struct gaim_connection *gc, struct xt_
 	
 	/* *sigh* */
 	
-	serv_got_crap( gc, reply->str );
+	serv_got_crap( ic, reply->str );
 	g_string_free( reply, TRUE );
 	
 	return XT_HANDLED;
 }
 
-int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name )
+int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name )
 {
 	struct xt_node *node;
 	int st;
@@ -557,13 +557,13 @@ int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name )
 	xt_add_attr( node, "xmlns", XMLNS_ROSTER );
 	node = jabber_make_packet( "iq", "set", NULL, node );
 	
-	st = jabber_write_packet( gc, node );
+	st = jabber_write_packet( ic, node );
 	
 	xt_free_node( node );
 	return st;
 }
 
-int jabber_remove_from_roster( struct gaim_connection *gc, char *handle )
+int jabber_remove_from_roster( struct im_connection *ic, char *handle )
 {
 	struct xt_node *node;
 	int st;
@@ -578,7 +578,7 @@ int jabber_remove_from_roster( struct gaim_connection *gc, char *handle )
 	xt_add_attr( node, "xmlns", XMLNS_ROSTER );
 	node = jabber_make_packet( "iq", "set", NULL, node );
 	
-	st = jabber_write_packet( gc, node );
+	st = jabber_write_packet( ic, node );
 	
 	xt_free_node( node );
 	return st;

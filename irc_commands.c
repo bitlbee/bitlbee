@@ -133,7 +133,7 @@ static void irc_cmd_names( irc_t *irc, char **cmd )
 
 static void irc_cmd_part( irc_t *irc, char **cmd )
 {
-	struct conversation *c;
+	struct groupchat *c;
 	
 	if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
 	{
@@ -149,10 +149,10 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 		
 		irc_part( irc, u, c->channel );
 		
-		if( c->gc )
+		if( c->ic )
 		{
 			c->joined = 0;
-			c->gc->acc->prpl->chat_leave( c );
+			c->ic->acc->prpl->chat_leave( c );
 		}
 	}
 	else
@@ -172,11 +172,11 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		{
 			user_t *u = user_find( irc, cmd[1] + 1 );
 			
-			if( u && u->gc && u->gc->acc->prpl->chat_open )
+			if( u && u->ic && u->ic->acc->prpl->chat_with )
 			{
 				irc_reply( irc, 403, "%s :Initializing groupchat in a different channel", cmd[1] );
 				
-				if( !u->gc->acc->prpl->chat_open( u->gc, u->handle ) )
+				if( !u->ic->acc->prpl->chat_with( u->ic, u->handle ) )
 				{
 					irc_usermsg( irc, "Could not open a groupchat with %s.", u->nick );
 				}
@@ -200,13 +200,13 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 static void irc_cmd_invite( irc_t *irc, char **cmd )
 {
 	char *nick = cmd[1], *channel = cmd[2];
-	struct conversation *c = chat_by_channel( channel );
+	struct groupchat *c = chat_by_channel( channel );
 	user_t *u = user_find( irc, nick );
 	
-	if( u && c && ( u->gc == c->gc ) )
-		if( c->gc && c->gc->acc->prpl->chat_invite )
+	if( u && c && ( u->ic == c->ic ) )
+		if( c->ic && c->ic->acc->prpl->chat_invite )
 		{
-			c->gc->acc->prpl->chat_invite( c, "", u->handle );
+			c->ic->acc->prpl->chat_invite( c, "", u->handle );
 			irc_reply( irc, 341, "%s %s", nick, channel );
 			return;
 		}
@@ -270,7 +270,7 @@ static void irc_cmd_who( irc_t *irc, char **cmd )
 {
 	char *channel = cmd[1];
 	user_t *u = irc->users;
-	struct conversation *c;
+	struct groupchat *c;
 	GList *l;
 	
 	if( !channel || *channel == '0' || *channel == '*' || !*channel )
@@ -289,7 +289,7 @@ static void irc_cmd_who( irc_t *irc, char **cmd )
 	else if( ( c = chat_by_channel( channel ) ) )
 		for( l = c->in_room; l; l = l->next )
 		{
-			if( ( u = user_findhandle( c->gc, l->data ) ) )
+			if( ( u = user_findhandle( c->ic, l->data ) ) )
 				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
 		}
 	else if( ( u = user_find( irc, channel ) ) )
@@ -459,10 +459,10 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 	
 	for( a = irc->accounts; a; a = a->next )
 	{
-		struct gaim_connection *gc = a->gc;
+		struct im_connection *ic = a->ic;
 		
-		if( gc && gc->flags & OPT_LOGGED_IN )
-			bim_set_away( gc, u->away );
+		if( ic && ic->flags & OPT_LOGGED_IN )
+			bim_set_away( ic, u->away );
 	}
 }
 
@@ -475,10 +475,10 @@ static void irc_cmd_whois( irc_t *irc, char **cmd )
 	{
 		irc_reply( irc, 311, "%s %s %s * :%s", u->nick, u->user, u->host, u->realname );
 		
-		if( u->gc )
-			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->gc->acc->user,
-			           u->gc->acc->server && *u->gc->acc->server ? u->gc->acc->server : "",
-			           u->gc->acc->prpl->name );
+		if( u->ic )
+			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->ic->acc->user,
+			           u->ic->acc->server && *u->ic->acc->server ? u->ic->acc->server : "",
+			           u->ic->acc->prpl->name );
 		else
 			irc_reply( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
 		

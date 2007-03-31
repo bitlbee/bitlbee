@@ -47,9 +47,9 @@ int msn_sb_write( struct msn_switchboard *sb, char *s, int len )
 	return( 1 );
 }
 
-struct msn_switchboard *msn_sb_create( struct gaim_connection *gc, char *host, int port, char *key, int session )
+struct msn_switchboard *msn_sb_create( struct im_connection *ic, char *host, int port, char *key, int session )
 {
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	struct msn_switchboard *sb = g_new0( struct msn_switchboard, 1 );
 	
 	sb->fd = proxy_connect( host, port, msn_sb_connected, sb );
@@ -59,7 +59,7 @@ struct msn_switchboard *msn_sb_create( struct gaim_connection *gc, char *host, i
 		return( NULL );
 	}
 	
-	sb->gc = gc;
+	sb->ic = ic;
 	sb->key = g_strdup( key );
 	sb->session = session;
 	
@@ -69,9 +69,9 @@ struct msn_switchboard *msn_sb_create( struct gaim_connection *gc, char *host, i
 	return( sb );
 }
 
-struct msn_switchboard *msn_sb_by_handle( struct gaim_connection *gc, char *handle )
+struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, char *handle )
 {
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	struct msn_switchboard *sb;
 	GSList *l;
 	
@@ -85,9 +85,9 @@ struct msn_switchboard *msn_sb_by_handle( struct gaim_connection *gc, char *hand
 	return( NULL );
 }
 
-struct msn_switchboard *msn_sb_by_chat( struct conversation *c )
+struct msn_switchboard *msn_sb_by_chat( struct groupchat *c )
 {
-	struct msn_data *md = c->gc->proto_data;
+	struct msn_data *md = c->ic->proto_data;
 	struct msn_switchboard *sb;
 	GSList *l;
 	
@@ -101,9 +101,9 @@ struct msn_switchboard *msn_sb_by_chat( struct conversation *c )
 	return( NULL );
 }
 
-struct msn_switchboard *msn_sb_spare( struct gaim_connection *gc )
+struct msn_switchboard *msn_sb_spare( struct im_connection *ic )
 {
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	struct msn_switchboard *sb;
 	GSList *l;
 	
@@ -141,9 +141,9 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 		}
 		else
 		{
-			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->gc->username );
+			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->username );
 			buf = g_new0( char, i );
-			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->gc->username );
+			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->username );
 		}
 		
 		/* Build the final packet (MSG command + the message). */
@@ -176,18 +176,18 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 	}
 }
 
-struct conversation *msn_sb_to_chat( struct msn_switchboard *sb )
+struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb )
 {
-	struct gaim_connection *gc = sb->gc;
+	struct im_connection *ic = sb->ic;
 	char buf[1024];
 	
 	/* Create the groupchat structure. */
 	g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
-	sb->chat = serv_got_joined_chat( gc, buf );
+	sb->chat = serv_got_joined_chat( ic, buf );
 	
 	/* Populate the channel. */
 	if( sb->who ) add_chat_buddy( sb->chat, sb->who );
-	add_chat_buddy( sb->chat, gc->username );
+	add_chat_buddy( sb->chat, ic->username );
 	
 	/* And make sure the switchboard doesn't look like a regular chat anymore. */
 	if( sb->who )
@@ -201,8 +201,8 @@ struct conversation *msn_sb_to_chat( struct msn_switchboard *sb )
 
 void msn_sb_destroy( struct msn_switchboard *sb )
 {
-	struct gaim_connection *gc = sb->gc;
-	struct msn_data *md = gc->proto_data;
+	struct im_connection *ic = sb->ic;
+	struct msn_data *md = ic->proto_data;
 	
 	debug( "Destroying switchboard: %s", sb->who ? sb->who : sb->key ? sb->key : "" );
 	
@@ -221,7 +221,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 		}
 		g_slist_free( sb->msgq );
 		
-		serv_got_crap( gc, "Warning: Closing down MSN switchboard connection with "
+		serv_got_crap( ic, "Warning: Closing down MSN switchboard connection with "
 		                   "unsent message to %s, you'll have to resend it.",
 		                   sb->who ? sb->who : "(unknown)" );
 	}
@@ -252,7 +252,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct msn_switchboard *sb = data;
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	struct msn_data *md;
 	char buf[1024];
 	
@@ -260,8 +260,8 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 	if( !g_slist_find( msn_switchboards, sb ) )
 		return FALSE;
 	
-	gc = sb->gc;
-	md = gc->proto_data;
+	ic = sb->ic;
+	md = ic->proto_data;
 	
 	if( source != sb->fd )
 	{
@@ -279,9 +279,9 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 	sb->handler->exec_message = msn_sb_message;
 	
 	if( sb->session == MSN_SB_NEW )
-		g_snprintf( buf, sizeof( buf ), "USR %d %s %s\r\n", ++sb->trId, gc->username, sb->key );
+		g_snprintf( buf, sizeof( buf ), "USR %d %s %s\r\n", ++sb->trId, ic->username, sb->key );
 	else
-		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, gc->username, sb->key, sb->session );
+		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, ic->username, sb->key, sb->session );
 	
 	if( msn_sb_write( sb, buf, strlen( buf ) ) )
 		sb->inp = b_input_add( sb->fd, GAIM_INPUT_READ, msn_sb_callback, sb );
@@ -309,7 +309,7 @@ static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition c
 static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 {
 	struct msn_switchboard *sb = data;
-	struct gaim_connection *gc = sb->gc;
+	struct im_connection *ic = sb->ic;
 	char buf[1024];
 	
 	if( !num_parts )
@@ -320,8 +320,8 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	
 	if( strcmp( cmd[0], "XFR" ) == 0 )
 	{
-		hide_login_progress_error( gc, "Received an XFR from a switchboard server, unable to comply! This is likely to be a bug, please report it!" );
-		signoff( gc );
+		hide_login_progress_error( ic, "Received an XFR from a switchboard server, unable to comply! This is likely to be a bug, please report it!" );
+		signoff( ic );
 		return( 0 );
 	}
 	else if( strcmp( cmd[0], "USR" ) == 0 )
@@ -373,7 +373,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			if( num == 1 )
 			{
 				g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
-				sb->chat = serv_got_joined_chat( gc, buf );
+				sb->chat = serv_got_joined_chat( ic, buf );
 				
 				g_free( sb->who );
 				sb->who = NULL;
@@ -383,7 +383,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			
 			if( num == tot )
 			{
-				add_chat_buddy( sb->chat, gc->username );
+				add_chat_buddy( sb->chat, ic->username );
 			}
 		}
 	}
@@ -528,7 +528,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		const struct msn_status_code *err = msn_status_by_number( num );
 		
 		g_snprintf( buf, sizeof( buf ), "Error reported by switchboard server: %s", err->text );
-		do_error_dialog( gc, buf, "MSN" );
+		do_error_dialog( ic, buf, "MSN" );
 		
 		if( err->flags & STATUS_SB_FATAL )
 		{
@@ -537,7 +537,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		}
 		else if( err->flags & STATUS_FATAL )
 		{
-			signoff( gc );
+			signoff( ic );
 			return 0;
 		}
 		else if( err->flags & STATUS_SB_IM_SPARE )
@@ -578,7 +578,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts )
 {
 	struct msn_switchboard *sb = data;
-	struct gaim_connection *gc = sb->gc;
+	struct im_connection *ic = sb->ic;
 	char *body;
 	int blen = 0;
 	
@@ -607,7 +607,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			
 			if( sb->who )
 			{
-				serv_got_im( gc, cmd[1], body, 0, 0, blen );
+				serv_got_im( ic, cmd[1], body, 0, 0, blen );
 			}
 			else if( sb->chat )
 			{
@@ -666,7 +666,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			
 			if( sb->who )
 			{
-				serv_got_im( gc, cmd[1], buf, 0, 0, strlen( buf ) );
+				serv_got_im( ic, cmd[1], buf, 0, 0, strlen( buf ) );
 			}
 			else if( sb->chat )
 			{
@@ -683,7 +683,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			
 			if( who )
 			{
-				serv_got_typing( gc, who, 5, 1 );
+				serv_got_typing( ic, who, 5, 1 );
 				g_free( who );
 			}
 			

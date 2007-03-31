@@ -32,7 +32,7 @@
 #include "bitlbee.h"
 #include "jabber.h"
 
-static void jabber_acc_init( account_t *acc )
+static void jabber_init( account_t *acc )
 {
 	set_t *s;
 	
@@ -58,21 +58,21 @@ static void jabber_acc_init( account_t *acc )
 
 static void jabber_login( account_t *acc )
 {
-	struct gaim_connection *gc = new_gaim_conn( acc );
+	struct im_connection *ic = new_gaim_conn( acc );
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
 	struct ns_srv_reply *srv = NULL;
 	char *connect_to, *s;
 	
-	jd->gc = gc;
-	gc->proto_data = jd;
+	jd->ic = ic;
+	ic->proto_data = jd;
 	
 	jd->username = g_strdup( acc->user );
 	jd->server = strchr( jd->username, '@' );
 	
 	if( jd->server == NULL )
 	{
-		hide_login_progress( gc, "Incomplete account name (format it like <username@jabberserver.name>)" );
-		signoff( gc );
+		hide_login_progress( ic, "Incomplete account name (format it like <username@jabberserver.name>)" );
+		signoff( ic );
 		return;
 	}
 	
@@ -158,14 +158,14 @@ static void jabber_login( account_t *acc )
 	else
 		connect_to = jd->server;
 	
-	set_login_progress( gc, 0, "Connecting" );
+	set_login_progress( ic, 0, "Connecting" );
 	
 	if( set_getint( &acc->set, "port" ) < JABBER_PORT_MIN ||
 	    set_getint( &acc->set, "port" ) > JABBER_PORT_MAX )
 	{
-		serv_got_crap( gc, "Incorrect port number, must be in the %d-%d range",
+		serv_got_crap( ic, "Incorrect port number, must be in the %d-%d range",
 		               JABBER_PORT_MIN, JABBER_PORT_MAX );
-		signoff( gc );
+		signoff( ic );
 		return;
 	}
 	
@@ -174,27 +174,27 @@ static void jabber_login( account_t *acc )
 	   non-standard ports... */
 	if( set_getbool( &acc->set, "ssl" ) )
 	{
-		jd->ssl = ssl_connect( connect_to, set_getint( &acc->set, "port" ), jabber_connected_ssl, gc );
+		jd->ssl = ssl_connect( connect_to, set_getint( &acc->set, "port" ), jabber_connected_ssl, ic );
 		jd->fd = jd->ssl ? ssl_getfd( jd->ssl ) : -1;
 	}
 	else
 	{
-		jd->fd = proxy_connect( connect_to, srv ? srv->port : set_getint( &acc->set, "port" ), jabber_connected_plain, gc );
+		jd->fd = proxy_connect( connect_to, srv ? srv->port : set_getint( &acc->set, "port" ), jabber_connected_plain, ic );
 	}
 	g_free( srv );
 	
 	if( jd->fd == -1 )
 	{
-		hide_login_progress( gc, "Could not connect to server" );
-		signoff( gc );
+		hide_login_progress( ic, "Could not connect to server" );
+		signoff( ic );
 	}
 }
 
-static void jabber_close( struct gaim_connection *gc )
+static void jabber_logout( struct im_connection *ic )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	
-	jabber_end_stream( gc );
+	jabber_end_stream( ic );
 	
 	if( jd->r_inpa >= 0 )
 		b_event_remove( jd->r_inpa );
@@ -218,14 +218,14 @@ static void jabber_close( struct gaim_connection *gc )
 	g_free( jd );
 }
 
-static int jabber_send_im( struct gaim_connection *gc, char *who, char *message, int len, int away )
+static int jabber_send_im( struct im_connection *ic, char *who, char *message, int flags )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud;
 	struct xt_node *node;
 	int st;
 	
-	bud = jabber_buddy_by_jid( gc, who, 0 );
+	bud = jabber_buddy_by_jid( ic, who, 0 );
 	
 	node = xt_new_node( "body", message, NULL );
 	node = jabber_make_packet( "message", "chat", bud ? bud->full_jid : who, node );
@@ -250,13 +250,13 @@ static int jabber_send_im( struct gaim_connection *gc, char *who, char *message,
 		bud->flags |= JBFLAG_PROBED_XEP85;
 	}
 	
-	st = jabber_write_packet( gc, node );
+	st = jabber_write_packet( ic, node );
 	xt_free_node( node );
 	
 	return st;
 }
 
-static GList *jabber_away_states( struct gaim_connection *gc )
+static GList *jabber_away_states( struct im_connection *ic )
 {
 	static GList *l = NULL;
 	int i;
@@ -268,13 +268,13 @@ static GList *jabber_away_states( struct gaim_connection *gc )
 	return l;
 }
 
-static void jabber_get_info( struct gaim_connection *gc, char *who )
+static void jabber_get_info( struct im_connection *ic, char *who )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud;
 	
 	if( strchr( who, '/' ) )
-		bud = jabber_buddy_by_jid( gc, who, 0 );
+		bud = jabber_buddy_by_jid( ic, who, 0 );
 	else
 	{
 		char *s = jabber_normalize( who );
@@ -284,19 +284,19 @@ static void jabber_get_info( struct gaim_connection *gc, char *who )
 	
 	while( bud )
 	{
-		serv_got_crap( gc, "Buddy %s (%d) information:\nAway state: %s\nAway message: %s",
+		serv_got_crap( ic, "Buddy %s (%d) information:\nAway state: %s\nAway message: %s",
 		                   bud->full_jid, bud->priority,
 		                   bud->away_state ? bud->away_state->full_name : "(none)",
 		                   bud->away_message ? : "(none)" );
 		bud = bud->next;
 	}
 	
-	jabber_get_vcard( gc, bud ? bud->full_jid : who );
+	jabber_get_vcard( ic, bud ? bud->full_jid : who );
 }
 
-static void jabber_set_away( struct gaim_connection *gc, char *state_txt, char *message )
+static void jabber_set_away( struct im_connection *ic, char *state_txt, char *message )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct jabber_away_state *state;
 	
 	/* Save all this info. We need it, for example, when changing the priority setting. */
@@ -305,43 +305,43 @@ static void jabber_set_away( struct gaim_connection *gc, char *state_txt, char *
 	g_free( jd->away_message );
 	jd->away_message = ( message && *message ) ? g_strdup( message ) : NULL;
 	
-	presence_send_update( gc );
+	presence_send_update( ic );
 }
 
-static void jabber_add_buddy( struct gaim_connection *gc, char *who )
+static void jabber_add_buddy( struct im_connection *ic, char *who, char *group )
 {
-	if( jabber_add_to_roster( gc, who, NULL ) )
-		presence_send_request( gc, who, "subscribe" );
+	if( jabber_add_to_roster( ic, who, NULL ) )
+		presence_send_request( ic, who, "subscribe" );
 }
 
-static void jabber_remove_buddy( struct gaim_connection *gc, char *who, char *group )
+static void jabber_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
 	/* We should always do this part. Clean up our administration a little bit. */
-	jabber_buddy_remove_bare( gc, who );
+	jabber_buddy_remove_bare( ic, who );
 	
-	if( jabber_remove_from_roster( gc, who ) )
-		presence_send_request( gc, who, "unsubscribe" );
+	if( jabber_remove_from_roster( ic, who ) )
+		presence_send_request( ic, who, "unsubscribe" );
 }
 
-static void jabber_keepalive( struct gaim_connection *gc )
+static void jabber_keepalive( struct im_connection *ic )
 {
 	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
-	jabber_write( gc, "\n", 1 );
+	jabber_write( ic, "\n", 1 );
 	
 	/* This runs the garbage collection every minute, which means every packet
 	   is in the cache for about a minute (which should be enough AFAIK). */
-	jabber_cache_clean( gc );
+	jabber_cache_clean( ic );
 }
 
-static int jabber_send_typing( struct gaim_connection *gc, char *who, int typing )
+static int jabber_send_typing( struct im_connection *ic, char *who, int typing )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud;
 	
 	/* Enable typing notification related code from now. */
 	jd->flags |= JFLAG_WANT_TYPING;
 	
-	if( ( bud = jabber_buddy_by_jid( gc, who, 0 ) ) == NULL )
+	if( ( bud = jabber_buddy_by_jid( ic, who, 0 ) ) == NULL )
 	{
 		/* Sending typing notifications to unknown buddies is
 		   unsupported for now. Shouldn't be a problem, I think. */
@@ -368,7 +368,7 @@ static int jabber_send_typing( struct gaim_connection *gc, char *who, int typing
 		xt_add_attr( node, "xmlns", XMLNS_CHATSTATES );
 		node = jabber_make_packet( "message", "chat", bud->full_jid, node );
 		
-		st = jabber_write_packet( gc, node );
+		st = jabber_write_packet( ic, node );
 		xt_free_node( node );
 		
 		return st;
@@ -377,14 +377,14 @@ static int jabber_send_typing( struct gaim_connection *gc, char *who, int typing
 	return 1;
 }
 
-void jabber_init()
+void jabber_initmodule()
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
 	
 	ret->name = "jabber";
 	ret->login = jabber_login;
-	ret->acc_init = jabber_acc_init;
-	ret->close = jabber_close;
+	ret->init = jabber_init;
+	ret->logout = jabber_logout;
 	ret->send_im = jabber_send_im;
 	ret->away_states = jabber_away_states;
 //	ret->get_status_string = jabber_get_status_string;

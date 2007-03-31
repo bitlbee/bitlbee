@@ -26,25 +26,25 @@
 
 xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 {
-	struct gaim_connection *gc = data;
-	struct jabber_data *jd = gc->proto_data;
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	char *s;
 	int sup_plain = 0, sup_digest = 0;
 	
-	if( !sasl_supported( gc ) )
+	if( !sasl_supported( ic ) )
 	{
 		/* Should abort this now, since we should already be doing
 		   IQ authentication. Strange things happen when you try
 		   to do both... */
-		serv_got_crap( gc, "XMPP 1.0 non-compliant server seems to support SASL, please report this as a BitlBee bug!" );
+		serv_got_crap( ic, "XMPP 1.0 non-compliant server seems to support SASL, please report this as a BitlBee bug!" );
 		return XT_HANDLED;
 	}
 	
 	s = xt_find_attr( node, "xmlns" );
 	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
-		signoff( gc );
+		signoff( ic );
 		return XT_ABORT;
 	}
 	
@@ -61,8 +61,8 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	
 	if( !sup_plain && !sup_digest )
 	{
-		hide_login_progress( gc, "No known SASL authentication schemes supported" );
-		signoff( gc );
+		hide_login_progress( ic, "No known SASL authentication schemes supported" );
+		signoff( ic );
 		return XT_ABORT;
 	}
 	
@@ -82,17 +82,17 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		xt_add_attr( reply, "mechanism", "PLAIN" );
 		
 		/* With SASL PLAIN in XMPP, the text should be b64(\0user\0pass) */
-		len = strlen( jd->username ) + strlen( gc->acc->pass ) + 2;
+		len = strlen( jd->username ) + strlen( ic->acc->pass ) + 2;
 		s = g_malloc( len + 1 );
 		s[0] = 0;
 		strcpy( s + 1, jd->username );
-		strcpy( s + 2 + strlen( jd->username ), gc->acc->pass );
+		strcpy( s + 2 + strlen( jd->username ), ic->acc->pass );
 		reply->text = base64_encode( s, len );
 		reply->text_len = strlen( reply->text );
 		g_free( s );
 	}
 	
-	if( !jabber_write_packet( gc, reply ) )
+	if( !jabber_write_packet( ic, reply ) )
 	{
 		xt_free_node( reply );
 		return XT_ABORT;
@@ -180,8 +180,8 @@ static char *sasl_get_part( char *data, char *field )
 
 xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 {
-	struct gaim_connection *gc = data;
-	struct jabber_data *jd = gc->proto_data;
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *reply = NULL;
 	char *nonce = NULL, *realm = NULL, *cnonce = NULL, cnonce_bin[30];
 	char *digest_uri = NULL;
@@ -221,7 +221,7 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 		/* Generate the MD5 hash of username:realm:password,
 		   I decided to call it H. */
 		md5_init( &H );
-		s = g_strdup_printf( "%s:%s:%s", jd->username, realm, gc->acc->pass );
+		s = g_strdup_printf( "%s:%s:%s", jd->username, realm, ic->acc->pass );
 		md5_append( &H, (unsigned char *) s, strlen( s ) );
 		g_free( s );
 		md5_finish( &H, Hr );
@@ -271,15 +271,15 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	reply = xt_new_node( "response", s, NULL );
 	xt_add_attr( reply, "xmlns", XMLNS_SASL );
 	
-	if( !jabber_write_packet( gc, reply ) )
+	if( !jabber_write_packet( ic, reply ) )
 		goto silent_error;
 	
 	ret = XT_HANDLED;
 	goto silent_error;
 
 error:
-	hide_login_progress( gc, "Incorrect SASL challenge received" );
-	signoff( gc );
+	hide_login_progress( ic, "Incorrect SASL challenge received" );
+	signoff( ic );
 
 silent_error:
 	g_free( digest_uri );
@@ -295,26 +295,26 @@ silent_error:
 
 xt_status sasl_pkt_result( struct xt_node *node, gpointer data )
 {
-	struct gaim_connection *gc = data;
-	struct jabber_data *jd = gc->proto_data;
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	char *s;
 	
 	s = xt_find_attr( node, "xmlns" );
 	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
-		signoff( gc );
+		signoff( ic );
 		return XT_ABORT;
 	}
 	
 	if( strcmp( node->name, "success" ) == 0 )
 	{
-		set_login_progress( gc, 1, "Authentication finished" );
+		set_login_progress( ic, 1, "Authentication finished" );
 		jd->flags |= JFLAG_AUTHENTICATED | JFLAG_STREAM_RESTART;
 	}
 	else if( strcmp( node->name, "failure" ) == 0 )
 	{
-		hide_login_progress( gc, "Authentication failure" );
-		signoff( gc );
+		hide_login_progress( ic, "Authentication failure" );
+		signoff( ic );
 		return XT_ABORT;
 	}
 	
@@ -324,9 +324,9 @@ xt_status sasl_pkt_result( struct xt_node *node, gpointer data )
 /* This one is needed to judge if we'll do authentication using IQ or SASL.
    It's done by checking if the <stream:stream> from the server has a
    version attribute. I don't know if this is the right way though... */
-gboolean sasl_supported( struct gaim_connection *gc )
+gboolean sasl_supported( struct im_connection *ic )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	
 	return ( (void*) ( jd->xt && jd->xt->root && xt_find_attr( jd->xt->root, "version" ) ) ) != NULL;
 }

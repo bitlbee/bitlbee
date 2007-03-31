@@ -41,7 +41,7 @@ char *set_eval_priority( set_t *set, char *value )
 	
 	/* Only run this stuff if the account is online ATM,
 	   and if the setting seems to be acceptable. */
-	if( acc->gc )
+	if( acc->ic )
 	{
 		/* Although set_eval functions usually are very nice and
 		   convenient, they have one disadvantage: If I would just
@@ -57,7 +57,7 @@ char *set_eval_priority( set_t *set, char *value )
 		
 		/* (Yes, sorry, I prefer the hack. :-P) */
 		
-		presence_send_update( acc->gc );
+		presence_send_update( acc->ic );
 	}
 	
 	return value;
@@ -129,9 +129,9 @@ struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, 
 /* Cache a node/packet for later use. Mainly useful for IQ packets if you need
    them when you receive the response. Use this BEFORE sending the packet so
    it'll get a new id= tag, and do NOT free() the packet after writing it! */
-void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node, jabber_cache_event func )
+void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_cache_event func )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	char *id = g_strdup_printf( "%s%05x", JABBER_CACHED_ID, ( next_id++ ) & 0xfffff );
 	struct jabber_cache_entry *entry = g_new0( struct jabber_cache_entry, 1 );
 	
@@ -158,9 +158,9 @@ gboolean jabber_cache_clean_entry( gpointer key, gpointer entry, gpointer nullpo
    during the first run and deleting marked nodes during a next run, every
    node should be available in the cache for at least a minute (assuming the
    function is indeed called every minute). */
-void jabber_cache_clean( struct gaim_connection *gc )
+void jabber_cache_clean( struct im_connection *ic )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	
 	g_hash_table_foreach_remove( jd->node_cache, jabber_cache_clean_entry, NULL );
 }
@@ -213,17 +213,17 @@ const struct jabber_away_state *jabber_away_state_by_name( char *name )
 
 struct jabber_buddy_ask_data
 {
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	char *handle;
 	char *realname;
 };
 
 static void jabber_buddy_ask_yes( gpointer w, struct jabber_buddy_ask_data *bla )
 {
-	presence_send_request( bla->gc, bla->handle, "subscribed" );
+	presence_send_request( bla->ic, bla->handle, "subscribed" );
 	
-	if( find_buddy( bla->gc, bla->handle ) == NULL )
-		show_got_added( bla->gc, bla->handle, NULL );
+	if( find_buddy( bla->ic, bla->handle ) == NULL )
+		show_got_added( bla->ic, bla->handle, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla );
@@ -231,22 +231,22 @@ static void jabber_buddy_ask_yes( gpointer w, struct jabber_buddy_ask_data *bla 
 
 static void jabber_buddy_ask_no( gpointer w, struct jabber_buddy_ask_data *bla )
 {
-	presence_send_request( bla->gc, bla->handle, "subscribed" );
+	presence_send_request( bla->ic, bla->handle, "subscribed" );
 	
 	g_free( bla->handle );
 	g_free( bla );
 }
 
-void jabber_buddy_ask( struct gaim_connection *gc, char *handle )
+void jabber_buddy_ask( struct im_connection *ic, char *handle )
 {
 	struct jabber_buddy_ask_data *bla = g_new0( struct jabber_buddy_ask_data, 1 );
 	char *buf;
 	
-	bla->gc = gc;
+	bla->ic = ic;
 	bla->handle = g_strdup( handle );
 	
 	buf = g_strdup_printf( "The user %s wants to add you to his/her buddy list.", handle );
-	do_ask_dialog( gc, buf, bla, jabber_buddy_ask_yes, jabber_buddy_ask_no );
+	do_ask_dialog( ic, buf, bla, jabber_buddy_ask_yes, jabber_buddy_ask_no );
 	g_free( buf );
 }
 
@@ -270,9 +270,9 @@ char *jabber_normalize( char *orig )
    buddies from transports don't (usually) have resources. So we'll really have
    to deal with that properly. Set their ->resource property to NULL. Do *NOT*
    allow to mix this stuff, though... */
-struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_jid_ )
+struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid_ )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud, *new, *bi;
 	char *s, *full_jid;
 	
@@ -342,9 +342,9 @@ struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_ji
 /* Finds a buddy from our structures. Can find both full- and bare JIDs. When
    asked for a bare JID, it uses the "resource_select" setting to see which
    resource to pick. */
-struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_, get_buddy_flags_t flags )
+struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, get_buddy_flags_t flags )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud;
 	char *s, *jid;
 	
@@ -370,10 +370,10 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_
 			}
 		}
 		
-		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && find_buddy( gc, jid ) )
+		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && find_buddy( ic, jid ) )
 		{
 			*s = '/';
-			bud = jabber_buddy_add( gc, jid );
+			bud = jabber_buddy_add( ic, jid );
 		}
 		
 		g_free( jid );
@@ -390,8 +390,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_
 		
 		if( bud == NULL )
 			/* No match. Create it now? */
-			return ( ( flags & GET_BUDDY_CREAT ) && find_buddy( gc, jid_ ) ) ?
-			           jabber_buddy_add( gc, jid_ ) : NULL;
+			return ( ( flags & GET_BUDDY_CREAT ) && find_buddy( ic, jid_ ) ) ?
+			           jabber_buddy_add( ic, jid_ ) : NULL;
 		else if( bud->resource && ( flags & GET_BUDDY_EXACT ) )
 			/* We want an exact match, so in thise case there shouldn't be a /resource. */
 			return NULL;
@@ -408,7 +408,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_
 				best_time = bud;
 		}
 		
-		if( ( set = set_getstr( &gc->acc->set, "resource_select" ) ) == NULL )
+		if( ( set = set_getstr( &ic->acc->set, "resource_select" ) ) == NULL )
 			return NULL;
 		else if( strcmp( set, "activity" ) == 0 )
 			return best_time;
@@ -420,9 +420,9 @@ struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid_
 /* Remove one specific full JID from our list. Use this when a buddy goes
    off-line (because (s)he can still be online from a different location.
    XXX: See above, we should accept bare JIDs too... */
-int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid_ )
+int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud, *prev, *bi;
 	char *s, *full_jid;
 	
@@ -494,9 +494,9 @@ int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid_ )
 /* Remove a buddy completely; removes all resources that belong to the
    specified bare JID. Use this when removing someone from the contact
    list, for example. */
-int jabber_buddy_remove_bare( struct gaim_connection *gc, char *bare_jid_ )
+int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid_ )
 {
-	struct jabber_data *jd = gc->proto_data;
+	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud, *next;
 	char *bare_jid;
 	

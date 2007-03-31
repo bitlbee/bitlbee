@@ -229,9 +229,9 @@ void irc_free(irc_t * irc)
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
 	for (account = irc->accounts; account; account = account->next) {
-		if (account->gc) {
-			account->gc->wants_to_die = TRUE;
-			signoff(account->gc);
+		if (account->ic) {
+			account->ic->wants_to_die = TRUE;
+			signoff(account->ic);
 		} else if (account->reconnect) {
 			cancel_auto_reconnect(account);
 		}
@@ -255,7 +255,7 @@ void irc_free(irc_t * irc)
 		query_del(irc, irc->queries);
 	
 	while (irc->accounts)
-		if (irc->accounts->gc == NULL)
+		if (irc->accounts->ic == NULL)
 			account_del(irc, irc->accounts);
 		else
 			/* Nasty hack, but account_del() doesn't work in this
@@ -632,7 +632,7 @@ void irc_names( irc_t *irc, char *channel )
 {
 	user_t *u;
 	char namelist[385] = "";
-	struct conversation *c = NULL;
+	struct groupchat *c = NULL;
 	char *ops = set_getstr( &irc->set, "ops" );
 	
 	/* RFCs say there is no error reply allowed on NAMES, so when the
@@ -648,7 +648,7 @@ void irc_names( irc_t *irc, char *channel )
 				*namelist = 0;
 			}
 			
-			if( u->gc && !u->away && set_getbool( &irc->set, "away_devoice" ) )
+			if( u->ic && !u->away && set_getbool( &irc->set, "away_devoice" ) )
 				strcat( namelist, "+" );
 			else if( ( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) == 0 ) ) ||
 			         ( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) == 0 ) ) )
@@ -667,7 +667,7 @@ void irc_names( irc_t *irc, char *channel )
 		sprintf( namelist, "%s%s %s%s ", strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) ? "@" : "", irc->mynick,
 		                                 strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) ? "@" : "", irc->nick );
 		
-		for( l = c->in_room; l; l = l->next ) if( ( u = user_findhandle( c->gc, l->data ) ) )
+		for( l = c->in_room; l; l = l->next ) if( ( u = user_findhandle( c->ic, l->data ) ) )
 		{
 			if( strlen( namelist ) + strlen( u->nick ) > sizeof( namelist ) - 4 )
 			{
@@ -811,7 +811,7 @@ void irc_topic( irc_t *irc, char *channel )
 	}
 	else
 	{
-		struct conversation *c = chat_by_channel( channel );
+		struct groupchat *c = chat_by_channel( channel );
 		
 		if( c )
 			irc_reply( irc, 332, "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", channel, c->title );
@@ -910,17 +910,17 @@ void irc_kill( irc_t *irc, user_t *u )
 	char *nick, *s;
 	char reason[128];
 	
-	if( u->gc && u->gc->flags & OPT_LOGGING_OUT )
+	if( u->ic && u->ic->flags & OPT_LOGGING_OUT )
 	{
-		if( u->gc->acc->server )
+		if( u->ic->acc->server )
 			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
-			            u->gc->acc->server );
-		else if( ( s = strchr( u->gc->username, '@' ) ) )
+			            u->ic->acc->server );
+		else if( ( s = strchr( u->ic->username, '@' ) ) )
 			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
 			            s + 1 );
 		else
 			g_snprintf( reason, sizeof( reason ), "%s %s.%s", irc->myhost,
-			            u->gc->acc->prpl->name, irc->myhost );
+			            u->ic->acc->prpl->name, irc->myhost );
 		
 		/* proto_opt might contain garbage after the : */
 		if( ( s = strchr( reason, ':' ) ) )
@@ -944,7 +944,7 @@ void irc_kill( irc_t *irc, user_t *u )
 
 int irc_send( irc_t *irc, char *nick, char *s, int flags )
 {
-	struct conversation *c = NULL;
+	struct groupchat *c = NULL;
 	user_t *u = NULL;
 	
 	if( *nick == '#' || *nick == '&' )
@@ -996,13 +996,13 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 		}
 		else if( g_strncasecmp( s + 1, "TYPING", 6 ) == 0 )
 		{
-			if( u && u->gc && u->gc->acc->prpl->send_typing && strlen( s ) >= 10 )
+			if( u && u->ic && u->ic->acc->prpl->send_typing && strlen( s ) >= 10 )
 			{
 				time_t current_typing_notice = time( NULL );
 				
 				if( current_typing_notice - u->last_typing_notice >= 5 )
 				{
-					u->gc->acc->prpl->send_typing( u->gc, u->handle, s[8] == '1' );
+					u->ic->acc->prpl->send_typing( u->ic, u->handle, s[8] == '1' );
 					u->last_typing_notice = current_typing_notice;
 				}
 			}
@@ -1035,9 +1035,9 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 			return 1;
 		}
 	}
-	else if( c && c->gc && c->gc->acc && c->gc->acc->prpl )
+	else if( c && c->ic && c->ic->acc && c->ic->acc->prpl )
 	{
-		return( bim_chat_msg( c, s ) );
+		return( bim_chat_msg( c, s, 0 ) );
 	}
 	
 	return( 0 );
@@ -1052,7 +1052,7 @@ static gboolean buddy_send_handler_delayed( gpointer data, gint fd, b_input_cond
 		return FALSE;
 	
 	u->sendbuf[u->sendbuf_len-2] = 0; /* Cut off the last newline */
-	bim_buddy_msg( u->gc, u->handle, u->sendbuf, u->sendbuf_flags );
+	bim_buddy_msg( u->ic, u->handle, u->sendbuf, u->sendbuf_flags );
 	
 	g_free( u->sendbuf );
 	u->sendbuf = NULL;
@@ -1065,7 +1065,7 @@ static gboolean buddy_send_handler_delayed( gpointer data, gint fd, b_input_cond
 
 void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 {
-	if( !u || !u->gc ) return;
+	if( !u || !u->ic ) return;
 	
 	if( set_getbool( &irc->set, "buddy_sendbuffer" ) && set_getint( &irc->set, "buddy_sendbuffer_delay" ) > 0 )
 	{
@@ -1104,7 +1104,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 	}
 	else
 	{
-		bim_buddy_msg( u->gc, u->handle, msg, flags );
+		bim_buddy_msg( u->ic, u->handle, msg, flags );
 	}
 }
 

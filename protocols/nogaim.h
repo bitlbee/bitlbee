@@ -61,7 +61,7 @@
 #define OPT_LOGGING_OUT 0x00020000
 
 /* ok. now the fun begins. first we create a connection structure */
-struct gaim_connection
+struct im_connection
 {
 	account_t *acc;
 	guint32 flags;
@@ -91,19 +91,19 @@ struct gaim_connection
 	/* BitlBee */
 	irc_t *irc;
 	
-	struct conversation *conversations;
+	struct groupchat *conversations;
 };
 
 /* struct buddy_chat went away and got merged with this. */
-struct conversation {
-	struct gaim_connection *gc;
+struct groupchat {
+	struct im_connection *ic;
 
 	/* stuff used just for chat */
 	GList *in_room;
 	GList *ignored;
 	
 	/* BitlBee */
-	struct conversation *next;
+	struct groupchat *next;
 	char *channel;
 	char *title;
 	char joined;
@@ -120,49 +120,57 @@ struct buddy {
 	int uc;
 	guint caps; /* woohoo! */
 	void *proto_data; /* what a hack */
-	struct gaim_connection *gc; /* the connection it belongs to */
+	struct im_connection *ic; /* the connection it belongs to */
 };
 
 struct prpl {
 	int options;
 	const char *name;
 
-	void (* acc_init)	(account_t *);
+	/* Added this one to be able to add per-account settings, don't think
+	   it should be used for anything else. */
+	void (* init)		(account_t *);
+	/* These should all be pretty obvious. */
 	void (* login)		(account_t *);
-	void (* keepalive)	(struct gaim_connection *);
-	void (* close)		(struct gaim_connection *);
+	void (* keepalive)	(struct im_connection *);
+	void (* logout)		(struct im_connection *);
 	
-	int  (* send_im)	(struct gaim_connection *, char *who, char *message, int len, int away);
-	void (* set_away)	(struct gaim_connection *, char *state, char *message);
-	void (* get_away)       (struct gaim_connection *, char *who);
-	int  (* send_typing)	(struct gaim_connection *, char *who, int typing);
+	int  (* send_im)	(struct im_connection *, char *to, char *message, int flags);
+	void (* set_away)	(struct im_connection *, char *state, char *message);
+	void (* get_away)       (struct im_connection *, char *who);
+	int  (* send_typing)	(struct im_connection *, char *who, int typing);
 	
-	void (* add_buddy)	(struct gaim_connection *, char *name);
-	void (* group_buddy)	(struct gaim_connection *, char *who, char *old_group, char *new_group);
-	void (* remove_buddy)	(struct gaim_connection *, char *name, char *group);
-	void (* add_permit)	(struct gaim_connection *, char *name);
-	void (* add_deny)	(struct gaim_connection *, char *name);
-	void (* rem_permit)	(struct gaim_connection *, char *name);
-	void (* rem_deny)	(struct gaim_connection *, char *name);
-	void (* set_permit_deny)(struct gaim_connection *);
+	/* For now BitlBee doesn't really handle groups, just set it to NULL. */
+	void (* add_buddy)	(struct im_connection *, char *name, char *group);
+	void (* remove_buddy)	(struct im_connection *, char *name, char *group);
 	
-	void (* set_info)	(struct gaim_connection *, char *info);
-	void (* get_info)	(struct gaim_connection *, char *who);
-	void (* alias_buddy)	(struct gaim_connection *, char *who);	/* save/store buddy's alias on server list/roster */
+	/* Block list stuff. */
+	void (* add_permit)	(struct im_connection *, char *who);
+	void (* add_deny)	(struct im_connection *, char *who);
+	void (* rem_permit)	(struct im_connection *, char *who);
+	void (* rem_deny)	(struct im_connection *, char *who);
+	/* Doesn't actually have UI hooks. */
+	void (* set_permit_deny)(struct im_connection *);
+	
+	/* Request profile info. Free-formatted stuff, the IM module gives back
+	   this info via imc_log(). */
+	void (* get_info)	(struct im_connection *, char *who);
+	void (* set_my_name)	(struct im_connection *, char *name);
+	void (* set_name)	(struct im_connection *, char *who, char *name);
 	
 	/* Group chat stuff. */
-	void (* chat_invite)	(struct conversation *, char *who, char *message);
-	void (* chat_leave)	(struct conversation *);
-	int  (* chat_send)	(struct conversation *, char *message);
-	struct conversation *
-	     (* chat_open)	(struct gaim_connection *, char *who);
-	struct conversation *
-	     (* chat_join)	(struct gaim_connection *, char *chat, char *nick, char *password);
+	void (* chat_invite)	(struct groupchat *, char *who, char *message);
+	void (* chat_leave)	(struct groupchat *);
+	void (* chat_send)	(struct groupchat *, char *message, int flags);
+	struct groupchat *
+	     (* chat_with)	(struct im_connection *, char *who);
+	struct groupchat *
+	     (* chat_join)	(struct im_connection *, char *chat, char *nick, char *password);
 	
 	/* DIE! */
-	char *(* get_status_string) (struct gaim_connection *gc, int stat);
+	char *(* get_status_string) (struct im_connection *ic, int stat);
 	
-	GList *(* away_states)(struct gaim_connection *gc);
+	GList *(* away_states)(struct im_connection *ic);
 	
 	/* Mainly for AOL, since they think "Bung hole" == "Bu ngho le". *sigh* */
 	int (* handle_cmp) (const char *who1, const char *who2);
@@ -181,14 +189,14 @@ G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
 G_MODULE_EXPORT void register_protocol(struct prpl *);
 
 /* nogaim.c */
-int bim_set_away( struct gaim_connection *gc, char *away );
-int bim_buddy_msg( struct gaim_connection *gc, char *handle, char *msg, int flags );
-int bim_chat_msg( struct conversation *c, char *msg );
+int bim_set_away( struct im_connection *ic, char *away );
+int bim_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags );
+int bim_chat_msg( struct groupchat *c, char *msg, int flags );
 
-void bim_add_allow( struct gaim_connection *gc, char *handle );
-void bim_rem_allow( struct gaim_connection *gc, char *handle );
-void bim_add_block( struct gaim_connection *gc, char *handle );
-void bim_rem_block( struct gaim_connection *gc, char *handle );
+void bim_add_allow( struct im_connection *ic, char *handle );
+void bim_rem_allow( struct im_connection *ic, char *handle );
+void bim_add_block( struct im_connection *ic, char *handle );
+void bim_rem_block( struct im_connection *ic, char *handle );
 
 void nogaim_init();
 char *set_eval_away_devoice( set_t *set, char *value );
@@ -197,43 +205,43 @@ gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond );
 void cancel_auto_reconnect( struct account *a );
 
 /* multi.c */
-G_MODULE_EXPORT struct gaim_connection *new_gaim_conn( account_t *acc );
-G_MODULE_EXPORT void destroy_gaim_conn( struct gaim_connection *gc );
-G_MODULE_EXPORT void set_login_progress( struct gaim_connection *gc, int step, char *msg );
-G_MODULE_EXPORT void hide_login_progress( struct gaim_connection *gc, char *msg );
-G_MODULE_EXPORT void hide_login_progress_error( struct gaim_connection *gc, char *msg );
-G_MODULE_EXPORT void serv_got_crap( struct gaim_connection *gc, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
-G_MODULE_EXPORT void account_online( struct gaim_connection *gc );
-G_MODULE_EXPORT void signoff( struct gaim_connection *gc );
+G_MODULE_EXPORT struct im_connection *new_gaim_conn( account_t *acc );
+G_MODULE_EXPORT void destroy_gaim_conn( struct im_connection *ic );
+G_MODULE_EXPORT void set_login_progress( struct im_connection *ic, int step, char *msg );
+G_MODULE_EXPORT void hide_login_progress( struct im_connection *ic, char *msg );
+G_MODULE_EXPORT void hide_login_progress_error( struct im_connection *ic, char *msg );
+G_MODULE_EXPORT void serv_got_crap( struct im_connection *ic, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
+G_MODULE_EXPORT void account_online( struct im_connection *ic );
+G_MODULE_EXPORT void signoff( struct im_connection *ic );
 
 /* dialogs.c */
-G_MODULE_EXPORT void do_error_dialog( struct gaim_connection *gc, char *msg, char *title );
-G_MODULE_EXPORT void do_ask_dialog( struct gaim_connection *gc, char *msg, void *data, void *doit, void *dont );
+G_MODULE_EXPORT void do_error_dialog( struct im_connection *ic, char *msg, char *title );
+G_MODULE_EXPORT void do_ask_dialog( struct im_connection *ic, char *msg, void *data, void *doit, void *dont );
 
 /* list.c */
-G_MODULE_EXPORT void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *realname );
-G_MODULE_EXPORT struct buddy *find_buddy( struct gaim_connection *gc, char *handle );
-G_MODULE_EXPORT void signoff_blocked( struct gaim_connection *gc );
+G_MODULE_EXPORT void add_buddy( struct im_connection *ic, char *group, char *handle, char *realname );
+G_MODULE_EXPORT struct buddy *find_buddy( struct im_connection *ic, char *handle );
+G_MODULE_EXPORT void signoff_blocked( struct im_connection *ic );
 
-G_MODULE_EXPORT void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname );
+G_MODULE_EXPORT void serv_buddy_rename( struct im_connection *ic, char *handle, char *realname );
 
 /* buddy_chat.c */
-G_MODULE_EXPORT void add_chat_buddy( struct conversation *b, char *handle );
-G_MODULE_EXPORT void remove_chat_buddy( struct conversation *b, char *handle, char *reason );
+G_MODULE_EXPORT void add_chat_buddy( struct groupchat *b, char *handle );
+G_MODULE_EXPORT void remove_chat_buddy( struct groupchat *b, char *handle, char *reason );
 
 /* prpl.c */
-G_MODULE_EXPORT void show_got_added( struct gaim_connection *gc, char *handle, const char *realname );
+G_MODULE_EXPORT void show_got_added( struct im_connection *ic, char *handle, const char *realname );
 
 /* server.c */
-G_MODULE_EXPORT void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps );
-G_MODULE_EXPORT void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 flags, time_t mtime, gint len );
-G_MODULE_EXPORT void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout, int type );
-G_MODULE_EXPORT void serv_got_chat_invite( struct gaim_connection *gc, char *handle, char *who, char *msg, GList *data );
-G_MODULE_EXPORT struct conversation *serv_got_joined_chat( struct gaim_connection *gc, char *handle );
-G_MODULE_EXPORT void serv_got_chat_in( struct conversation *c, char *who, int whisper, char *msg, time_t mtime );
-G_MODULE_EXPORT void serv_got_chat_left( struct conversation *c );
+G_MODULE_EXPORT void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps );
+G_MODULE_EXPORT void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 flags, time_t mtime, gint len );
+G_MODULE_EXPORT void serv_got_typing( struct im_connection *ic, char *handle, int timeout, int type );
+G_MODULE_EXPORT void serv_got_chat_invite( struct im_connection *ic, char *handle, char *who, char *msg, GList *data );
+G_MODULE_EXPORT struct groupchat *serv_got_joined_chat( struct im_connection *ic, char *handle );
+G_MODULE_EXPORT void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, time_t mtime );
+G_MODULE_EXPORT void serv_got_chat_left( struct groupchat *c );
 
-struct conversation *chat_by_channel( char *channel );
-struct conversation *chat_by_id( int id );
+struct groupchat *chat_by_channel( char *channel );
+struct groupchat *chat_by_id( int id );
 
 #endif

@@ -25,7 +25,7 @@
 
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 {
-	struct gaim_connection *gc = data;
+	struct im_connection *ic = data;
 	char *from = xt_find_attr( node, "from" );
 	char *type = xt_find_attr( node, "type" );
 	struct xt_node *body = xt_find_node( node->children, "body" ), *c;
@@ -46,7 +46,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 		
 		if( ( s = strchr( from, '/' ) ) )
 		{
-			if( ( bud = jabber_buddy_by_jid( gc, from, GET_BUDDY_EXACT ) ) )
+			if( ( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT ) ) )
 				bud->last_act = time( NULL );
 			else
 				*s = 0; /* We need to generate a bare JID now. */
@@ -75,7 +75,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 			fullmsg = g_string_append( fullmsg, body->text );
 		
 		if( fullmsg->len > 0 )
-			serv_got_im( gc, bud ? bud->bare_jid : from, fullmsg->str, 0, 0, fullmsg->len );
+			serv_got_im( ic, bud ? bud->bare_jid : from, fullmsg->str, 0, 0, fullmsg->len );
 		
 		g_string_free( fullmsg, TRUE );
 		
@@ -83,18 +83,18 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 		if( xt_find_node( node->children, "composing" ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
-			serv_got_typing( gc, bud ? bud->bare_jid : from, 0, 1 );
+			serv_got_typing( ic, bud ? bud->bare_jid : from, 0, 1 );
 		}
 		/* No need to send a "stopped typing" signal when there's a message. */
 		else if( xt_find_node( node->children, "active" ) && ( body == NULL ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
-			serv_got_typing( gc, bud ? bud->bare_jid : from, 0, 0 );
+			serv_got_typing( ic, bud ? bud->bare_jid : from, 0, 0 );
 		}
 		else if( xt_find_node( node->children, "paused" ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
-			serv_got_typing( gc, bud ? bud->bare_jid : from, 0, 2 );
+			serv_got_typing( ic, bud ? bud->bare_jid : from, 0, 2 );
 		}
 		
 		if( s )

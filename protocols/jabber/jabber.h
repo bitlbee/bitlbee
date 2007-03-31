@@ -57,7 +57,7 @@ typedef enum
 
 struct jabber_data
 {
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	
 	int fd;
 	void *ssl;
@@ -86,7 +86,7 @@ struct jabber_away_state
 	char *full_name;
 };
 
-typedef xt_status (*jabber_cache_event) ( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
+typedef xt_status (*jabber_cache_event) ( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 
 struct jabber_cache_entry
 {
@@ -136,33 +136,33 @@ struct jabber_buddy
 
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
-int jabber_init_iq_auth( struct gaim_connection *gc );
-xt_status jabber_pkt_bind_sess( struct gaim_connection *gc, struct xt_node *node, struct xt_node *orig );
-int jabber_get_roster( struct gaim_connection *gc );
-int jabber_get_vcard( struct gaim_connection *gc, char *bare_jid );
-int jabber_add_to_roster( struct gaim_connection *gc, char *handle, char *name );
-int jabber_remove_from_roster( struct gaim_connection *gc, char *handle );
+int jabber_init_iq_auth( struct im_connection *ic );
+xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+int jabber_get_roster( struct im_connection *ic );
+int jabber_get_vcard( struct im_connection *ic, char *bare_jid );
+int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name );
+int jabber_remove_from_roster( struct im_connection *ic, char *handle );
 
 /* message.c */
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
 
 /* presence.c */
 xt_status jabber_pkt_presence( struct xt_node *node, gpointer data );
-int presence_send_update( struct gaim_connection *gc );
-int presence_send_request( struct gaim_connection *gc, char *handle, char *request );
+int presence_send_update( struct im_connection *ic );
+int presence_send_request( struct im_connection *ic, char *handle, char *request );
 
 /* jabber_util.c */
 char *set_eval_priority( set_t *set, char *value );
 char *set_eval_tls( set_t *set, char *value );
 struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
 struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type );
-void jabber_cache_add( struct gaim_connection *gc, struct xt_node *node, jabber_cache_event func );
-struct xt_node *jabber_cache_get( struct gaim_connection *gc, char *id );
+void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_cache_event func );
+struct xt_node *jabber_cache_get( struct im_connection *ic, char *id );
 void jabber_cache_entry_free( gpointer entry );
-void jabber_cache_clean( struct gaim_connection *gc );
+void jabber_cache_clean( struct im_connection *ic );
 const struct jabber_away_state *jabber_away_state_by_code( char *code );
 const struct jabber_away_state *jabber_away_state_by_name( char *name );
-void jabber_buddy_ask( struct gaim_connection *gc, char *handle );
+void jabber_buddy_ask( struct im_connection *ic, char *handle );
 char *jabber_normalize( char *orig );
 
 typedef enum
@@ -171,25 +171,25 @@ typedef enum
 	GET_BUDDY_EXACT = 2,	/* Get an exact message (only makes sense with bare JIDs). */
 } get_buddy_flags_t;
 
-struct jabber_buddy *jabber_buddy_add( struct gaim_connection *gc, char *full_jid );
-struct jabber_buddy *jabber_buddy_by_jid( struct gaim_connection *gc, char *jid, get_buddy_flags_t flags );
-int jabber_buddy_remove( struct gaim_connection *gc, char *full_jid );
-int jabber_buddy_remove_bare( struct gaim_connection *gc, char *bare_jid );
+struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid );
+struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
+int jabber_buddy_remove( struct im_connection *ic, char *full_jid );
+int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid );
 
 extern const struct jabber_away_state jabber_away_state_list[];
 
 /* io.c */
-int jabber_write_packet( struct gaim_connection *gc, struct xt_node *node );
-int jabber_write( struct gaim_connection *gc, char *buf, int len );
+int jabber_write_packet( struct im_connection *ic, struct xt_node *node );
+int jabber_write( struct im_connection *ic, char *buf, int len );
 gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond );
 gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition cond );
-gboolean jabber_start_stream( struct gaim_connection *gc );
-void jabber_end_stream( struct gaim_connection *gc );
+gboolean jabber_start_stream( struct im_connection *ic );
+void jabber_end_stream( struct im_connection *ic );
 
 /* sasl.c */
 xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data );
 xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data );
 xt_status sasl_pkt_result( struct xt_node *node, gpointer data );
-gboolean sasl_supported( struct gaim_connection *gc );
+gboolean sasl_supported( struct im_connection *ic );
 
 #endif
