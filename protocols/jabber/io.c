@@ -466,9 +466,7 @@ static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 	}
 	else
 	{
-		s = g_strdup_printf( "Stream error: %s%s%s", type, text ? ": " : "", text ? text : "" );
-		imc_error( ic, s );
-		g_free( s );
+		imc_error( ic, "Stream error: %s%s%s", type, text ? ": " : "", text ? text : "" );
 	}
 	
 	imc_logout( ic );

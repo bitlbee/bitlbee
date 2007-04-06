@@ -670,15 +670,9 @@ static void msn_auth_got_passport_id( struct passport_reply *rep )
 	
 	if( key == NULL )
 	{
-		char *err;
-		
-		err = g_strdup_printf( "Error during Passport authentication (%s)",
-		                       rep->error_string ? rep->error_string : "Unknown error" );
-		
-		imc_error( ic, err );
+		imc_error( ic, "Error during Passport authentication (%s)",
+		               rep->error_string ? rep->error_string : "Unknown error" );
 		imc_logout( ic );
-		
-		g_free( err );
 	}
 	else
 	{
