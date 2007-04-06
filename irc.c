@@ -231,7 +231,7 @@ void irc_free(irc_t * irc)
 	for (account = irc->accounts; account; account = account->next) {
 		if (account->ic) {
 			account->ic->wants_to_die = TRUE;
-			signoff(account->ic);
+			imc_logout(account->ic);
 		} else if (account->reconnect) {
 			cancel_auto_reconnect(account);
 		}

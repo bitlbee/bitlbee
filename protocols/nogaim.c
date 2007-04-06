@@ -144,7 +144,7 @@ GSList *get_connections() { return connections; }
 
 /* multi.c */
 
-struct im_connection *new_gaim_conn( account_t *acc )
+struct im_connection *imc_new( account_t *acc )
 {
 	struct im_connection *ic;
 	
@@ -163,7 +163,7 @@ struct im_connection *new_gaim_conn( account_t *acc )
 	return( ic );
 }
 
-void destroy_gaim_conn( struct im_connection *ic )
+void imc_free( struct im_connection *ic )
 {
 	account_t *a;
 	
@@ -179,24 +179,7 @@ void destroy_gaim_conn( struct im_connection *ic )
 	g_free( ic );
 }
 
-void set_login_progress( struct im_connection *ic, int step, char *msg )
-{
-	serv_got_crap( ic, "Logging in: %s", msg );
-}
-
-/* Errors *while* logging in */
-void hide_login_progress( struct im_connection *ic, char *msg )
-{
-	serv_got_crap( ic, "Login error: %s", msg );
-}
-
-/* Errors *after* logging in */
-void hide_login_progress_error( struct im_connection *ic, char *msg )
-{
-	serv_got_crap( ic, "Logged out: %s", msg );
-}
-
-void serv_got_crap( struct im_connection *ic, char *format, ... )
+static void serv_got_crap( struct im_connection *ic, char *format, ... )
 {
 	va_list params;
 	char *text;
@@ -224,6 +207,40 @@ void serv_got_crap( struct im_connection *ic, char *format, ... )
 	g_free( text );
 }
 
+void imc_log( struct im_connection *ic, char *format, ... )
+{
+	va_list params;
+	char *text;
+	
+	va_start( params, format );
+	text = g_strdup_vprintf( format, params );
+	va_end( params );
+	
+	if( ic->flags & OPT_LOGGED_IN )
+		serv_got_crap( ic, "%s", text );
+	else
+		serv_got_crap( ic, "Logging in: %s", text );
+	
+	g_free( text );
+}
+
+void imc_error( struct im_connection *ic, char *format, ... )
+{
+	va_list params;
+	char *text;
+	
+	va_start( params, format );
+	text = g_strdup_vprintf( format, params );
+	va_end( params );
+	
+	if( ic->flags & OPT_LOGGED_IN )
+		serv_got_crap( ic, "Error: %s", text );
+	else
+		serv_got_crap( ic, "Couldn't log in: %s", text );
+	
+	g_free( text );
+}
+
 static gboolean send_keepalive( gpointer d, gint fd, b_input_condition cond )
 {
 	struct im_connection *ic = d;
@@ -234,7 +251,7 @@ static gboolean send_keepalive( gpointer d, gint fd, b_input_condition cond )
 	return TRUE;
 }
 
-void account_online( struct im_connection *ic )
+void imc_connected( struct im_connection *ic )
 {
 	user_t *u;
 	
@@ -246,7 +263,7 @@ void account_online( struct im_connection *ic )
 	
 	u = user_find( ic->irc, ic->irc->nick );
 	
-	serv_got_crap( ic, "Logged in" );
+	imc_log( ic, "Logged in" );
 	
 	ic->keepalive = b_timeout_add( 60000, send_keepalive, ic );
 	ic->flags |= OPT_LOGGED_IN;
@@ -273,7 +290,7 @@ void cancel_auto_reconnect( account_t *a )
 	a->reconnect = 0;
 }
 
-void signoff( struct im_connection *ic )
+void imc_logout( struct im_connection *ic )
 {
 	irc_t *irc = ic->irc;
 	user_t *t, *u = irc->users;
@@ -286,7 +303,7 @@ void signoff( struct im_connection *ic )
 	else
 		ic->flags |= OPT_LOGGING_OUT;
 	
-	serv_got_crap( ic, "Signing off.." );
+	imc_log( ic, "Signing off.." );
 	
 	b_event_remove( ic->keepalive );
 	ic->keepalive = 0;
@@ -320,27 +337,15 @@ void signoff( struct im_connection *ic )
 	{
 		int delay = set_getint( &irc->set, "auto_reconnect_delay" );
 		
-		serv_got_crap( ic, "Reconnecting in %d seconds..", delay );
+		imc_log( ic, "Reconnecting in %d seconds..", delay );
 		a->reconnect = b_timeout_add( delay * 1000, auto_reconnect, a );
 	}
 	
-	destroy_gaim_conn( ic );
+	imc_free( ic );
 }
 
 
 /* dialogs.c */
-
-void do_error_dialog( struct im_connection *ic, char *msg, char *title )
-{
-	if( msg && title )
-		serv_got_crap( ic, "Error: %s: %s", title, msg );
-	else if( msg )
-		serv_got_crap( ic, "Error: %s", msg );
-	else if( title )
-		serv_got_crap( ic, "Error: %s", title );
-	else
-		serv_got_crap( ic, "Error" );
-}
 
 void do_ask_dialog( struct im_connection *ic, char *msg, void *data, void *doit, void *dont )
 {
@@ -358,12 +363,12 @@ void add_buddy( struct im_connection *ic, char *group, char *handle, char *realn
 	irc_t *irc = ic->irc;
 	
 	if( set_getbool( &irc->set, "debug" ) && 0 ) /* This message is too useless */
-		serv_got_crap( ic, "Receiving user add from handle: %s", handle );
+		imc_log( ic, "Receiving user add from handle: %s", handle );
 	
 	if( user_findhandle( ic, handle ) )
 	{
 		if( set_getbool( &irc->set, "debug" ) )
-			serv_got_crap( ic, "User already exists, ignoring add request: %s", handle );
+			imc_log( ic, "User already exists, ignoring add request: %s", handle );
 		
 		return;
 		
@@ -451,7 +456,7 @@ void serv_buddy_rename( struct im_connection *ic, char *handle, char *realname )
 		u->realname = g_strdup( realname );
 		
 		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->irc->set, "display_namechanges" ) )
-			serv_got_crap( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
+			imc_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
 	}
 }
 
@@ -515,8 +520,8 @@ void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int 
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) || g_strcasecmp( set_getstr( &ic->irc->set, "handle_unknown" ), "ignore" ) != 0 )
 			{
-				serv_got_crap( ic, "serv_got_update() for handle %s:", handle );
-				serv_got_crap( ic, "loggedin = %d, type = %d", loggedin, type );
+				imc_log( ic, "serv_got_update() for handle %s:", handle );
+				imc_log( ic, "loggedin = %d, type = %d", loggedin, type );
 			}
 			
 			return;
@@ -596,7 +601,7 @@ void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 fla
 		if( g_strcasecmp( h, "ignore" ) == 0 )
 		{
 			if( set_getbool( &irc->set, "debug" ) )
-				serv_got_crap( ic, "Ignoring message from unknown handle %s", handle );
+				imc_log( ic, "Ignoring message from unknown handle %s", handle );
 			
 			return;
 		}
@@ -618,7 +623,7 @@ void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 fla
 		}
 		else
 		{
-			serv_got_crap( ic, "Message from unknown handle %s:", handle );
+			imc_log( ic, "Message from unknown handle %s:", handle );
 			u = user_find( irc, irc->mynick );
 		}
 	}
@@ -688,7 +693,7 @@ void serv_got_chat_left( struct groupchat *c )
 	GList *ir;
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
-		serv_got_crap( ic, "You were removed from conversation 0x%x", (int) c );
+		imc_log( ic, "You were removed from conversation 0x%x", (int) c );
 	
 	if( c )
 	{
@@ -736,7 +741,7 @@ void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, t
 	if( c && u )
 		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, "", msg );
 	else
-		serv_got_crap( ic, "Message from/to conversation %s@0x%x (unknown conv/user): %s", who, (int) c, msg );
+		imc_log( ic, "Message from/to conversation %s@0x%x (unknown conv/user): %s", who, (int) c, msg );
 }
 
 struct groupchat *serv_got_joined_chat( struct im_connection *ic, char *handle )
@@ -758,7 +763,7 @@ struct groupchat *serv_got_joined_chat( struct im_connection *ic, char *handle )
 	c->channel = g_strdup_printf( "&chat_%03d", ic->irc->c_id++ );
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
-		serv_got_crap( ic, "Creating new conversation: (id=0x%x,handle=%s)", (int) c, handle );
+		imc_log( ic, "Creating new conversation: (id=0x%x,handle=%s)", (int) c, handle );
 	
 	return c;
 }
@@ -772,7 +777,7 @@ void add_chat_buddy( struct groupchat *b, char *handle )
 	int me = 0;
 	
 	if( set_getbool( &b->ic->irc->set, "debug" ) )
-		serv_got_crap( b->ic, "User %s added to conversation 0x%x", handle, (int) b );
+		imc_log( b->ic, "User %s added to conversation 0x%x", handle, (int) b );
 	
 	/* It might be yourself! */
 	if( b->ic->acc->prpl->handle_cmp( handle, b->ic->username ) == 0 )
@@ -806,7 +811,7 @@ void remove_chat_buddy( struct groupchat *b, char *handle, char *reason )
 	int me = 0;
 	
 	if( set_getbool( &b->ic->irc->set, "debug" ) )
-		serv_got_crap( b->ic, "User %s removed from conversation 0x%x (%s)", handle, (int) b, reason ? reason : "" );
+		imc_log( b->ic, "User %s removed from conversation 0x%x (%s)", handle, (int) b, reason ? reason : "" );
 	
 	/* It might be yourself! */
 	if( g_strcasecmp( handle, b->ic->username ) == 0 )
@@ -1004,7 +1009,7 @@ int bim_set_away( struct im_connection *ic, char *away )
 		{
 			ic->acc->prpl->set_away( ic, s, away );
 			if( set_getbool( &ic->irc->set, "debug" ) )
-				serv_got_crap( ic, "Setting away state to %s", s );
+				imc_log( ic, "Setting away state to %s", s );
 		}
 		else
 			ic->acc->prpl->set_away( ic, GAIM_AWAY_CUSTOM, away );

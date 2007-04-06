@@ -35,8 +35,8 @@ int msn_write( struct im_connection *ic, char *s, int len )
 	st = write( md->fd, s, len );
 	if( st != len )
 	{
-		hide_login_progress_error( ic, "Short write() to main server" );
-		signoff( ic );
+		imc_error( ic, "Short write() to main server" );
+		imc_logout( ic );
 		return( 0 );
 	}
 	
@@ -45,7 +45,7 @@ int msn_write( struct im_connection *ic, char *s, int len )
 
 int msn_logged_in( struct im_connection *ic )
 {
-	account_online( ic );
+	imc_connected( ic );
 	
 	return( 0 );
 }

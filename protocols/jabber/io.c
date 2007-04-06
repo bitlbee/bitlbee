@@ -116,8 +116,8 @@ static gboolean jabber_write_queue( struct im_connection *ic )
 		closesocket( jd->fd );	/* Shouldn't be necessary after errors? */
 		jd->fd = -1;
 		
-		hide_login_progress_error( ic, "Short write() to server" );
-		signoff( ic );
+		imc_error( ic, "Short write() to server" );
+		imc_logout( ic );
 		return FALSE;
 	}
 	else if( st > 0 )
@@ -159,8 +159,8 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		/* Parse. */
 		if( xt_feed( jd->xt, buf, st ) < 0 )
 		{
-			hide_login_progress_error( ic, "XML stream error" );
-			signoff( ic );
+			imc_error( ic, "XML stream error" );
+			imc_logout( ic );
 			return FALSE;
 		}
 		
@@ -202,9 +202,9 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 					   SASL and TLS. */
 					if( set_getbool( &ic->acc->set, "tls" ) )
 					{
-						hide_login_progress( ic, "TLS is turned on for this "
+						imc_error( ic, "TLS is turned on for this "
 						          "account, but is not supported by this server" );
-						signoff( ic );
+						imc_logout( ic );
 						return FALSE;
 					}
 					else
@@ -215,8 +215,8 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 			}
 			else
 			{
-				hide_login_progress( ic, "XML stream error" );
-				signoff( ic );
+				imc_error( ic, "XML stream error" );
+				imc_logout( ic );
 				return FALSE;
 			}
 		}
@@ -226,8 +226,8 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		closesocket( jd->fd );
 		jd->fd = -1;
 		
-		hide_login_progress_error( ic, "Error while reading from server" );
-		signoff( ic );
+		imc_error( ic, "Error while reading from server" );
+		imc_logout( ic );
 		return FALSE;
 	}
 	
@@ -241,12 +241,12 @@ gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition c
 	
 	if( source == -1 )
 	{
-		hide_login_progress( ic, "Could not connect to server" );
-		signoff( ic );
+		imc_error( ic, "Could not connect to server" );
+		imc_logout( ic );
 		return FALSE;
 	}
 	
-	set_login_progress( ic, 1, "Connected to server, logging in" );
+	imc_log( ic, "Connected to server, logging in" );
 	
 	return jabber_start_stream( ic );
 }
@@ -262,19 +262,19 @@ gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition co
 		   already, set it to NULL here to prevent a double cleanup: */
 		jd->ssl = NULL;
 		
-		hide_login_progress( ic, "Could not connect to server" );
-		signoff( ic );
+		imc_error( ic, "Could not connect to server" );
+		imc_logout( ic );
 		return FALSE;
 	}
 	
-	set_login_progress( ic, 1, "Connected to server, logging in" );
+	imc_log( ic, "Connected to server, logging in" );
 	
 	return jabber_start_stream( ic );
 }
 
 static xt_status jabber_end_of_stream( struct xt_node *node, gpointer data )
 {
-	signoff( data );
+	imc_logout( data );
 	return XT_ABORT;
 }
 
@@ -296,8 +296,8 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		
 		if( c && ( !trytls && !set_getbool( &ic->acc->set, "tls" ) ) )
 		{
-			hide_login_progress( ic, "Server requires TLS connections, but TLS is turned off for this account" );
-			signoff( ic );
+			imc_error( ic, "Server requires TLS connections, but TLS is turned off for this account" );
+			imc_logout( ic );
 			
 			return XT_ABORT;
 		}
@@ -326,8 +326,8 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 		
 		if( !trytls && set_getbool( &ic->acc->set, "tls" ) )
 		{
-			hide_login_progress( ic, "TLS is turned on for this account, but is not supported by this server" );
-			signoff( ic );
+			imc_error( ic, "TLS is turned on for this account, but is not supported by this server" );
+			imc_logout( ic );
 			
 			return XT_ABORT;
 		}
@@ -416,7 +416,7 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 	}
 	jd->w_inpa = jd->r_inpa = 0;
 	
-	set_login_progress( ic, 1, "Converting stream to TLS" );
+	imc_log( ic, "Converting stream to TLS" );
 	
 	jd->ssl = ssl_starttls( jd->fd, jabber_connected_ssl, ic );
 	
@@ -451,8 +451,8 @@ static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 	/* Tssk... */
 	if( type == NULL )
 	{
-		hide_login_progress_error( ic, "Unknown stream error reported by server" );
-		signoff( ic );
+		imc_error( ic, "Unknown stream error reported by server" );
+		imc_logout( ic );
 		return XT_ABORT;
 	}
 	
@@ -461,17 +461,17 @@ static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 	   infinite loop! */
 	if( strcmp( type, "conflict" ) == 0 )
 	{
-		hide_login_progress( ic, "Account and resource used from a different location" );
+		imc_error( ic, "Account and resource used from a different location" );
 		ic->wants_to_die = TRUE;
 	}
 	else
 	{
 		s = g_strdup_printf( "Stream error: %s%s%s", type, text ? ": " : "", text ? text : "" );
-		hide_login_progress_error( ic, s );
+		imc_error( ic, s );
 		g_free( s );
 	}
 	
-	signoff( ic );
+	imc_logout( ic );
 	
 	return XT_ABORT;
 }

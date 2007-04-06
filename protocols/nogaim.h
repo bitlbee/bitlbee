@@ -205,17 +205,14 @@ gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond );
 void cancel_auto_reconnect( struct account *a );
 
 /* multi.c */
-G_MODULE_EXPORT struct im_connection *new_gaim_conn( account_t *acc );
-G_MODULE_EXPORT void destroy_gaim_conn( struct im_connection *ic );
-G_MODULE_EXPORT void set_login_progress( struct im_connection *ic, int step, char *msg );
-G_MODULE_EXPORT void hide_login_progress( struct im_connection *ic, char *msg );
-G_MODULE_EXPORT void hide_login_progress_error( struct im_connection *ic, char *msg );
-G_MODULE_EXPORT void serv_got_crap( struct im_connection *ic, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
-G_MODULE_EXPORT void account_online( struct im_connection *ic );
-G_MODULE_EXPORT void signoff( struct im_connection *ic );
+G_MODULE_EXPORT struct im_connection *imc_new( account_t *acc );
+G_MODULE_EXPORT void imc_free( struct im_connection *ic );
+G_MODULE_EXPORT void imc_log( struct im_connection *ic, char *format, ... );
+G_MODULE_EXPORT void imc_error( struct im_connection *ic, char *format, ... );
+G_MODULE_EXPORT void imc_connected( struct im_connection *ic );
+G_MODULE_EXPORT void imc_logout( struct im_connection *ic );
 
 /* dialogs.c */
-G_MODULE_EXPORT void do_error_dialog( struct im_connection *ic, char *msg, char *title );
 G_MODULE_EXPORT void do_ask_dialog( struct im_connection *ic, char *msg, void *data, void *doit, void *dont );
 
 /* list.c */

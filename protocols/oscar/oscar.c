@@ -262,23 +262,21 @@ static gboolean oscar_callback(gpointer data, gint source,
 		if (aim_get_command(odata->sess, conn) >= 0) {
 			aim_rxdispatch(odata->sess);
                                if (odata->killme)
-                                       signoff(ic);
+                                       imc_logout(ic);
 		} else {
 			if ((conn->type == AIM_CONN_TYPE_BOS) ||
 				   !(aim_getconn_type(odata->sess, AIM_CONN_TYPE_BOS))) {
-				hide_login_progress_error(ic, _("Disconnected."));
-				signoff(ic);
+				imc_error(ic, _("Disconnected."));
+				imc_logout(ic);
 			} else if (conn->type == AIM_CONN_TYPE_CHAT) {
 				struct chat_connection *c = find_oscar_chat_by_conn(ic, conn);
-				char buf[BUF_LONG];
 				c->conn = NULL;
 				if (c->inpa > 0)
 					b_event_remove(c->inpa);
 				c->inpa = 0;
 				c->fd = -1;
 				aim_conn_kill(odata->sess, &conn);
-				sprintf(buf, _("You have been disconnected from chat room %s."), c->name);
-				do_error_dialog(sess->aux_data, buf, _("Chat Error!"));
+				imc_error(sess->aux_data, _("You have been disconnected from chat room %s."), c->name);
 			} else if (conn->type == AIM_CONN_TYPE_CHATNAV) {
 				if (odata->cnpa > 0)
 					b_event_remove(odata->cnpa);
@@ -289,8 +287,7 @@ static gboolean oscar_callback(gpointer data, gint source,
 					odata->create_rooms =
 						g_slist_remove(odata->create_rooms, cr);
 					g_free(cr);
-					do_error_dialog(sess->aux_data, _("Chat is currently unavailable"),
-							_("Gaim - Chat"));
+					imc_error(sess->aux_data, _("Chat is currently unavailable"));
 				}
 				aim_conn_kill(odata->sess, &conn);
 			} else if (conn->type == AIM_CONN_TYPE_AUTH) {
@@ -327,8 +324,8 @@ static gboolean oscar_login_connect(gpointer data, gint source, b_input_conditio
 	conn = aim_getconn_type_all(sess, AIM_CONN_TYPE_AUTH);
 
 	if (source < 0) {
-		hide_login_progress(ic, _("Couldn't connect to host"));
-		signoff(ic);
+		imc_error(ic, _("Couldn't connect to host"));
+		imc_logout(ic);
 		return FALSE;
 	}
 
@@ -355,8 +352,7 @@ static void oscar_init(account_t *acc)
 static void oscar_login(account_t *acc) {
 	aim_session_t *sess;
 	aim_conn_t *conn;
-	char buf[256];
-	struct im_connection *ic = new_gaim_conn(acc);
+	struct im_connection *ic = imc_new(acc);
 	struct oscar_data *odata = ic->proto_data = g_new0(struct oscar_data, 1);
 
 	if (isdigit(acc->user[0])) {
@@ -381,24 +377,23 @@ static void oscar_login(account_t *acc) {
 
 	conn = aim_newconn(sess, AIM_CONN_TYPE_AUTH, NULL);
 	if (conn == NULL) {
-		hide_login_progress(ic, _("Unable to login to AIM"));
-		signoff(ic);
+		imc_error(ic, _("Unable to login to AIM"));
+		imc_logout(ic);
 		return;
 	}
 	
 	if (acc->server == NULL) {
-		hide_login_progress(ic, "No servername specified");
-		signoff(ic);
+		imc_error(ic, "No servername specified");
+		imc_logout(ic);
 		return;
 	}
 	
 	if (g_strcasecmp(acc->server, "login.icq.com") != 0 &&
 	    g_strcasecmp(acc->server, "login.oscar.aol.com") != 0) {
-		serv_got_crap(ic, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.",acc->server);
+		imc_log(ic, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.",acc->server);
 	}
 	
-	g_snprintf(buf, sizeof(buf), _("Signon: %s"), ic->username);
-	set_login_progress(ic, 2, buf);
+	imc_log(ic, _("Signon: %s"), ic->username);
 
 	aim_conn_addhandler(sess, conn, 0x0017, 0x0007, gaim_parse_login, 0);
 	aim_conn_addhandler(sess, conn, 0x0017, 0x0003, gaim_parse_auth_resp, 0);
@@ -406,8 +401,8 @@ static void oscar_login(account_t *acc) {
 	conn->status |= AIM_CONN_STATUS_INPROGRESS;
 	conn->fd = proxy_connect(acc->server, AIM_LOGIN_PORT, oscar_login_connect, ic);
 	if (conn->fd < 0) {
-		hide_login_progress(ic, _("Couldn't connect to host"));
-		signoff(ic);
+		imc_error(ic, _("Couldn't connect to host"));
+		imc_logout(ic);
 		return;
 	}
 	aim_request_login(sess, conn, ic->username);
@@ -466,15 +461,15 @@ static gboolean oscar_bos_connect(gpointer data, gint source, b_input_condition 
 	bosconn = odata->conn;
 
 	if (source < 0) {
-		hide_login_progress(ic, _("Could Not Connect"));
-		signoff(ic);
+		imc_error(ic, _("Could Not Connect"));
+		imc_logout(ic);
 		return FALSE;
 	}
 
 	aim_conn_completeconnect(sess, bosconn);
 	ic->inpa = b_input_add(bosconn->fd, GAIM_INPUT_READ,
 			oscar_callback, bosconn);
-	set_login_progress(ic, 4, _("Connection established, cookie sent"));
+	imc_log(ic, _("Connection established, cookie sent"));
 	
 	return FALSE;
 }
@@ -497,23 +492,23 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 		switch (info->errorcode) {
 		case 0x05:
 			/* Incorrect nick/password */
-			hide_login_progress(ic, _("Incorrect nickname or password."));
+			imc_error(ic, _("Incorrect nickname or password."));
 //			plugin_event(event_error, (void *)980, 0, 0, 0);
 			break;
 		case 0x11:
 			/* Suspended account */
-			hide_login_progress(ic, _("Your account is currently suspended."));
+			imc_error(ic, _("Your account is currently suspended."));
 			break;
 		case 0x18:
 			/* connecting too frequently */
-			hide_login_progress(ic, _("You have been connecting and disconnecting too frequently. Wait ten minutes and try again. If you continue to try, you will need to wait even longer."));
+			imc_error(ic, _("You have been connecting and disconnecting too frequently. Wait ten minutes and try again. If you continue to try, you will need to wait even longer."));
 			break;
 		case 0x1c:
 			/* client too old */
-			hide_login_progress(ic, _("The client version you are using is too old. Please upgrade at " WEBSITE));
+			imc_error(ic, _("The client version you are using is too old. Please upgrade at " WEBSITE));
 			break;
 		default:
-			hide_login_progress(ic, _("Authentication Failed"));
+			imc_error(ic, _("Authentication Failed"));
 			break;
 		}
 		od->killme = TRUE;
@@ -525,7 +520,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	bosconn = aim_newconn(sess, AIM_CONN_TYPE_BOS, NULL);
 	if (bosconn == NULL) {
-		hide_login_progress(ic, _("Internal Error"));
+		imc_error(ic, _("Internal Error"));
 		od->killme = TRUE;
 		return 0;
 	}
@@ -571,7 +566,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	bosconn->fd = proxy_connect(host, port, oscar_bos_connect, ic);
 	g_free(host);
 	if (bosconn->fd < 0) {
-		hide_login_progress(ic, _("Could Not Connect"));
+		imc_error(ic, _("Could Not Connect"));
 		od->killme = TRUE;
 		return 0;
 	}
@@ -609,8 +604,8 @@ static gboolean damn_you(gpointer data, gint source, b_input_condition c)
 		in = '\0';
 	}
 	if (in != '\n') {
-		do_error_dialog(pos->ic, "Gaim was unable to get a valid hash for logging into AIM."
-				" You may be disconnected shortly.", "Login Error");
+		imc_error(pos->ic, "Gaim was unable to get a valid hash for logging into AIM."
+				" You may be disconnected shortly.");
 		b_event_remove(pos->inpa);
 		closesocket(pos->fd);
 		g_free(pos);
@@ -632,8 +627,8 @@ static gboolean straight_to_hell(gpointer data, gint source, b_input_condition c
 	char buf[BUF_LONG];
 
 	if (source < 0) {
-		do_error_dialog(pos->ic, "Gaim was unable to get a valid hash for logging into AIM."
-				" You may be disconnected shortly.", "Login Error");
+		imc_error(pos->ic, "Gaim was unable to get a valid hash for logging into AIM."
+				" You may be disconnected shortly.");
 		if (pos->modname)
 			g_free(pos->modname);
 		g_free(pos);
@@ -710,8 +705,8 @@ int gaim_memrequest(aim_session_t *sess, aim_frame_t *fr, ...) {
 		if (pos->modname)
 			g_free(pos->modname);
 		g_free(pos);
-		do_error_dialog(sess->aux_data, "Gaim was unable to get a valid hash for logging into AIM."
-				" You may be disconnected shortly.", "Login Error");
+		imc_error(sess->aux_data, "Gaim was unable to get a valid hash for logging into AIM."
+				" You may be disconnected shortly.");
 	}
 	pos->fd = fd;
 
@@ -1209,11 +1204,11 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 		} break;
 
 		case 0x0007: { /* Someone has denied you authorization */
-			serv_got_crap(sess->aux_data, "The user %u has denied your request to add them to your contact list for the following reason:\n%s", args->uin, args->msg ? args->msg : _("No reason given.") );
+			imc_log(sess->aux_data, "The user %u has denied your request to add them to your contact list for the following reason:\n%s", args->uin, args->msg ? args->msg : _("No reason given.") );
 		} break;
 
 		case 0x0008: { /* Someone has granted you authorization */
-			serv_got_crap(sess->aux_data, "The user %u has granted your request to add them to your contact list for the following reason:\n%s", args->uin, args->msg ? args->msg : _("No reason given.") );
+			imc_log(sess->aux_data, "The user %u has granted your request to add them to your contact list for the following reason:\n%s", args->uin, args->msg ? args->msg : _("No reason given.") );
 		} break;
 
 		case 0x0012: {
@@ -1338,7 +1333,7 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 				   userinfo->sn);
 			break;
 	}
-	do_error_dialog(sess->aux_data, buf, _("Gaim - Error"));
+	imc_error(sess->aux_data, buf);
 
 	return 1;
 }
@@ -1346,16 +1341,13 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 static int gaim_parse_genericerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
 	guint16 reason;
-	char *m;
 
 	va_start(ap, fr);
 	reason = (guint16)va_arg(ap, unsigned int);
 	va_end(ap);
 
-	m = g_strdup_printf(_("SNAC threw error: %s\n"),
-			reason < msgerrreasonlen ? msgerrreason[reason] : "Unknown error");
-	do_error_dialog(sess->aux_data, m, _("Gaim - Oscar SNAC Error"));
-	g_free(m);
+	imc_error(sess->aux_data, _("SNAC threw error: %s"),
+	          reason < msgerrreasonlen ? msgerrreason[reason] : "Unknown error");
 
 	return 1;
 }
@@ -1364,16 +1356,14 @@ static int gaim_parse_msgerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
 	char *destn;
 	guint16 reason;
-	char buf[1024];
 
 	va_start(ap, fr);
 	reason = (guint16)va_arg(ap, unsigned int);
 	destn = va_arg(ap, char *);
 	va_end(ap);
 
-	sprintf(buf, _("Your message to %s did not get sent: %s"), destn,
+	imc_error(sess->aux_data, _("Your message to %s did not get sent: %s"), destn,
 			(reason < msgerrreasonlen) ? msgerrreason[reason] : _("Reason unknown"));
-	do_error_dialog(sess->aux_data, buf, _("Gaim - Error"));
 
 	return 1;
 }
@@ -1382,17 +1372,14 @@ static int gaim_parse_locerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
 	char *destn;
 	guint16 reason;
-	char buf[1024];
 
 	va_start(ap, fr);
 	reason = (guint16)va_arg(ap, unsigned int);
 	destn = va_arg(ap, char *);
 	va_end(ap);
 
-	sprintf(buf, _("User information for %s unavailable: %s"), destn,
+	imc_error(sess->aux_data, _("User information for %s unavailable: %s"), destn,
 			(reason < msgerrreasonlen) ? msgerrreason[reason] : _("Reason unknown"));
-	do_error_dialog(sess->aux_data, buf, _("Gaim - Error"));
-
 
 	return 1;
 }
@@ -1408,8 +1395,7 @@ static int gaim_parse_motd(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_end(ap);
 
 	if (id < 4)
-		do_error_dialog(sess->aux_data, _("Your connection may be lost."),
-				_("AOL error"));
+		imc_error(sess->aux_data, _("Your connection may be lost."));
 
 	return 1;
 }
@@ -1603,8 +1589,8 @@ static int gaim_parse_ratechange(aim_session_t *sess, aim_frame_t *fr, ...) {
 	} else if (code == AIM_RATE_CODE_WARNING) {
 		aim_conn_setlatency(fr->conn, windowsize/4);
 	} else if (code == AIM_RATE_CODE_LIMIT) {
-		do_error_dialog(sess->aux_data, _("The last message was not sent because you are over the rate limit. "
-				  "Please wait 10 seconds and try again."), _("Gaim - Error"));
+		imc_error(sess->aux_data, _("The last message was not sent because you are over the rate limit. "
+			  "Please wait 10 seconds and try again."));
 		aim_conn_setlatency(fr->conn, windowsize/2);
 	} else if (code == AIM_RATE_CODE_CLEARLIMIT) {
 		aim_conn_setlatency(fr->conn, 0);
@@ -1808,11 +1794,11 @@ static int gaim_offlinemsg(aim_session_t *sess, aim_frame_t *fr, ...) {
 		} break;
 
 		case 0x0007: { /* Someone has denied you authorization */
-			serv_got_crap(sess->aux_data, "The user %u has denied your request to add them to your contact list for the following reason:\n%s", msg->sender, msg->msg ? msg->msg : _("No reason given.") );
+			imc_log(sess->aux_data, "The user %u has denied your request to add them to your contact list for the following reason:\n%s", msg->sender, msg->msg ? msg->msg : _("No reason given.") );
 		} break;
 
 		case 0x0008: { /* Someone has granted you authorization */
-			serv_got_crap(sess->aux_data, "The user %u has granted your request to add them to your contact list for the following reason:\n%s", msg->sender, msg->msg ? msg->msg : _("No reason given.") );
+			imc_log(sess->aux_data, "The user %u has granted your request to add them to your contact list for the following reason:\n%s", msg->sender, msg->msg ? msg->msg : _("No reason given.") );
 		} break;
 
 		case 0x0012: {
@@ -1925,7 +1911,7 @@ static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, 
 	} /* else... */
 
 	if (od->rights.maxawaymsglen == 0)
-		do_error_dialog(ic, "oscar_set_away_aim called before locate rights received", "Protocol Error");
+		imc_error(ic, "oscar_set_away_aim called before locate rights received");
 
 	aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 
@@ -1943,7 +1929,7 @@ static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, 
 
 		errstr = g_strdup_printf("Maximum away message length of %d bytes exceeded, truncating", od->rights.maxawaymsglen);
 
-		do_error_dialog(ic, errstr, "Away Message Too Long");
+		imc_error(ic, errstr);
 
 		g_free(errstr);
 	}
@@ -2109,7 +2095,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_icq_reqofflinemsgs(sess);
 	
 	/* Now that we have a buddy list, we can tell BitlBee that we're online. */
-	account_online(ic);
+	imc_connected(ic);
 	
 	return 1;
 }
@@ -2131,7 +2117,7 @@ static int gaim_ssi_parseack( aim_session_t *sess, aim_frame_t *fr, ... )
 		if( count & 1 )
 		{
 			/* Hmm, the length should be even... */
-			do_error_dialog( sess->aux_data, "Received SSI ACK package with non-even length", "Gaim - Error" );
+			imc_error( sess->aux_data, "Received SSI ACK package with non-even length");
 			return( 0 );
 		}
 		count >>= 1;
@@ -2142,7 +2128,7 @@ static int gaim_ssi_parseack( aim_session_t *sess, aim_frame_t *fr, ... )
 			st = aimbs_get16( &fr->data );
 			if( st == 0x0E )
 			{
-				serv_got_crap( sess->aux_data, "Buddy %s can't be added without authorization, requesting authorization", list );
+				imc_log( sess->aux_data, "Buddy %s can't be added without authorization, requesting authorization", list );
 				
 				aim_ssi_auth_request( sess, fr->conn, list, "" );
 				aim_ssi_addbuddies( sess, fr->conn, OSCAR_GROUP, &list, 1, 1 );
@@ -2329,7 +2315,7 @@ static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)
                 g_string_sprintfa(str, "\n");
         }
 
-		serv_got_crap(ic, "%s\n%s", _("User Info"), str->str);
+		imc_log(ic, "%s\n%s", _("User Info"), str->str);
         g_string_free(str, TRUE);
 
         return 1;
@@ -2423,18 +2409,18 @@ static int gaim_parseaiminfo(aim_session_t *sess, aim_frame_t *fr, ...)
 			idletime.tm_min = userinfo->idletime % 60;
 			idletime.tm_sec = 0;
 			strftime(buff, 256, _("%d days %H hours %M minutes"), &idletime);
-			serv_got_crap(ic, "%s: %s", _("Idle Time"), buff);
+			imc_log(ic, "%s: %s", _("Idle Time"), buff);
 		}
 		
 		if(text) {
 			utf8 = oscar_encoding_to_utf8(extracted_encoding, text, text_length);
-			serv_got_crap(ic, "%s\n%s", _("User Info"), utf8);
+			imc_log(ic, "%s\n%s", _("User Info"), utf8);
 		} else {
-			serv_got_crap(ic, _("No user info available."));
+			imc_log(ic, _("No user info available."));
 		}
 	} else if(infotype == AIM_GETINFO_AWAYMESSAGE && userinfo->flags & AIM_FLAG_AWAY) {
 		utf8 = oscar_encoding_to_utf8(extracted_encoding, text, text_length);
-		serv_got_crap(ic, "%s\n%s", _("Away Message"), utf8);
+		imc_log(ic, "%s\n%s", _("Away Message"), utf8);
 	}
 
 	g_free(utf8);

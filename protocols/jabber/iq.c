@@ -38,8 +38,8 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	
 	if( !type )
 	{
-		hide_login_progress_error( ic, "Received IQ packet without type." );
-		signoff( ic );
+		imc_error( ic, "Received IQ packet without type." );
+		imc_logout( ic );
 		return XT_ABORT;
 	}
 	
@@ -59,7 +59,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		entry = g_hash_table_lookup( jd->node_cache, s );
 		
 		if( entry == NULL )
-			serv_got_crap( ic, "WARNING: Received IQ-%s packet with unknown/expired ID %s!", type, s );
+			imc_log( ic, "WARNING: Received IQ-%s packet with unknown/expired ID %s!", type, s );
 		else if( entry->func )
 			return entry->func( ic, node, entry->node );
 	}
@@ -68,7 +68,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		if( !( c = xt_find_node( node->children, "query" ) ) ||
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
-			serv_got_crap( ic, "WARNING: Received incomplete IQ-%s packet", type );
+			imc_log( ic, "WARNING: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
 		}
 		
@@ -131,7 +131,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		if( !( c = xt_find_node( node->children, "query" ) ) ||
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
-			serv_got_crap( ic, "WARNING: Received incomplete IQ-%s packet", type );
+			imc_log( ic, "WARNING: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
 		}
 		
@@ -153,7 +153,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			}
 			else
 			{
-				serv_got_crap( ic, "WARNING: %s tried to fake a roster push!", s ? s : "(unknown)" );
+				imc_log( ic, "WARNING: %s tried to fake a roster push!", s ? s : "(unknown)" );
 				
 				xt_free_node( reply );
 				reply = jabber_make_error_packet( node, "not-allowed", "cancel" );
@@ -218,8 +218,8 @@ static xt_status jabber_do_iq_auth( struct im_connection *ic, struct xt_node *no
 	
 	if( !( query = xt_find_node( node->children, "query" ) ) )
 	{
-		serv_got_crap( ic, "WARNING: Received incomplete IQ packet while authenticating" );
-		signoff( ic );
+		imc_log( ic, "WARNING: Received incomplete IQ packet while authenticating" );
+		imc_logout( ic );
 		return XT_HANDLED;
 	}
 	
@@ -257,8 +257,8 @@ static xt_status jabber_do_iq_auth( struct im_connection *ic, struct xt_node *no
 	{
 		xt_free_node( reply );
 		
-		hide_login_progress( ic, "Can't find suitable authentication method" );
-		signoff( ic );
+		imc_error( ic, "Can't find suitable authentication method" );
+		imc_logout( ic );
 		return XT_ABORT;
 	}
 	
@@ -276,15 +276,15 @@ static xt_status jabber_finish_iq_auth( struct im_connection *ic, struct xt_node
 	
 	if( !( type = xt_find_attr( node, "type" ) ) )
 	{
-		serv_got_crap( ic, "WARNING: Received incomplete IQ packet while authenticating" );
-		signoff( ic );
+		imc_log( ic, "WARNING: Received incomplete IQ packet while authenticating" );
+		imc_logout( ic );
 		return XT_HANDLED;
 	}
 	
 	if( strcmp( type, "error" ) == 0 )
 	{
-		hide_login_progress( ic, "Authentication failure" );
-		signoff( ic );
+		imc_error( ic, "Authentication failure" );
+		imc_logout( ic );
 		return XT_ABORT;
 	}
 	else if( strcmp( type, "result" ) == 0 )
@@ -310,7 +310,7 @@ xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, 
 		c = xt_find_node( c->children, "jid" );
 		if( c && c->text_len && ( s = strchr( c->text, '/' ) ) &&
 		    strcmp( s + 1, set_getstr( &ic->acc->set, "resource" ) ) != 0 )
-			serv_got_crap( ic, "Server changed session resource string to `%s'", s + 1 );
+			imc_log( ic, "Server changed session resource string to `%s'", s + 1 );
 		
 		jd->flags &= ~JFLAG_WAIT_BIND;
 	}
@@ -333,7 +333,7 @@ int jabber_get_roster( struct im_connection *ic )
 	struct xt_node *node;
 	int st;
 	
-	set_login_progress( ic, 1, "Authenticated, requesting buddy list" );
+	imc_log( ic, "Authenticated, requesting buddy list" );
 	
 	node = xt_new_node( "query", NULL, NULL );
 	xt_add_attr( node, "xmlns", XMLNS_ROSTER );
@@ -352,7 +352,7 @@ static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *
 	
 	if( !( query = xt_find_node( node->children, "query" ) ) )
 	{
-		serv_got_crap( ic, "WARNING: Received NULL roster packet" );
+		imc_log( ic, "WARNING: Received NULL roster packet" );
 		return XT_HANDLED;
 	}
 	
@@ -396,7 +396,7 @@ static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *
 	}
 	
 	if( initial )
-		account_online( ic );
+		imc_connected( ic );
 	
 	return XT_HANDLED;
 }
@@ -427,7 +427,7 @@ static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_no
 	    ( vc = xt_find_node( node->children, "vCard" ) ) == NULL )
 	{
 		s = xt_find_attr( orig, "to" ); /* If this returns NULL something's wrong.. */
-		serv_got_crap( ic, "Could not retrieve vCard of %s", s ? s : "(NULL)" );
+		imc_log( ic, "Could not retrieve vCard of %s", s ? s : "(NULL)" );
 		return XT_HANDLED;
 	}
 	
@@ -535,7 +535,7 @@ static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_no
 	
 	/* *sigh* */
 	
-	serv_got_crap( ic, reply->str );
+	imc_log( ic, reply->str );
 	g_string_free( reply, TRUE );
 	
 	return XT_HANDLED;

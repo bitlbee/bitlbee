@@ -285,7 +285,7 @@ static int parseinfo_create(aim_session_t *sess, aim_module_t *mod, aim_frame_t 
 	tlvlist = aim_readtlvchain(bs);
 
 	if (!(bigblock = aim_gettlv(tlvlist, 0x0004, 1))) {
-		do_error_dialog(sess->aux_data, "no bigblock in top tlv in create room response", "Gaim");
+		imc_error(sess->aux_data, "no bigblock in top tlv in create room response");
 	
 		aim_freetlvchain(&tlvlist);
 		return 0;
@@ -300,7 +300,7 @@ static int parseinfo_create(aim_session_t *sess, aim_module_t *mod, aim_frame_t 
 	detaillevel = aimbs_get8(&bbbs);
 
 	if (detaillevel != 0x02) {
-		do_error_dialog(sess->aux_data, "unknown detaillevel in create room response", "Gaim");
+		imc_error(sess->aux_data, "unknown detaillevel in create room response");
 		aim_freetlvchain(&tlvlist);
 		g_free(ck);
 		return 0;
@@ -366,12 +366,12 @@ static int parseinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
 	int ret = 0;
 
 	if (!(snac2 = aim_remsnac(sess, snac->id))) {
-		do_error_dialog(sess->aux_data, "received response to unknown request!", "Gaim");
+		imc_error(sess->aux_data, "received response to unknown request!");
 		return 0;
 	}
 
 	if (snac2->family != 0x000d) {
-		do_error_dialog(sess->aux_data, "recieved response that maps to corrupt request!", "Gaim");
+		imc_error(sess->aux_data, "recieved response that maps to corrupt request!");
 		return 0;
 	}
 
@@ -388,7 +388,7 @@ static int parseinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
 	else if (snac2->type == 0x0008) /* create room */
 		ret = parseinfo_create(sess, mod, rx, snac, bs, snac2);
 	else
-		do_error_dialog(sess->aux_data, "unknown request subtype", "Gaim");
+		imc_error(sess->aux_data, "unknown request subtype");
 
 	if (snac2)
 		g_free(snac2->data);

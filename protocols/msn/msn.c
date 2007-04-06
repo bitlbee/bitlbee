@@ -38,7 +38,7 @@ static void msn_init( account_t *acc )
 
 static void msn_login( account_t *acc )
 {
-	struct im_connection *ic = new_gaim_conn( acc );
+	struct im_connection *ic = imc_new( acc );
 	struct msn_data *md = g_new0( struct msn_data, 1 );
 	
 	ic->proto_data = md;
@@ -46,18 +46,18 @@ static void msn_login( account_t *acc )
 	
 	if( strchr( acc->user, '@' ) == NULL )
 	{
-		hide_login_progress( ic, "Invalid account name" );
-		signoff( ic );
+		imc_error( ic, "Invalid account name" );
+		imc_logout( ic );
 		return;
 	}
 	
-	set_login_progress( ic, 1, "Connecting" );
+	imc_log( ic, "Connecting" );
 	
 	md->fd = proxy_connect( "messenger.hotmail.com", 1863, msn_ns_connected, ic );
 	if( md->fd < 0 )
 	{
-		hide_login_progress( ic, "Could not connect to server" );
-		signoff( ic );
+		imc_error( ic, "Could not connect to server" );
+		imc_logout( ic );
 		return;
 	}
 	
@@ -95,7 +95,7 @@ static void msn_logout( struct im_connection *ic )
 			{
 				m = l->data;
 			
-				serv_got_crap( ic, "Warning: Closing down MSN connection with unsent message to %s, you'll have to resend it.", m->who );
+				imc_log( ic, "Warning: Closing down MSN connection with unsent message to %s, you'll have to resend it.", m->who );
 				g_free( m->who );
 				g_free( m->text );
 				g_free( m );
@@ -227,7 +227,7 @@ static void msn_set_my_name( struct im_connection *ic, char *info )
 static void msn_get_info(struct im_connection *ic, char *who) 
 {
 	/* Just make an URL and let the user fetch the info */
-	serv_got_crap( ic, "%s\n%s: %s%s", _("User Info"), _("For now, fetch yourself"), PROFILE_URL, who );
+	imc_log( ic, "%s\n%s: %s%s", _("User Info"), _("For now, fetch yourself"), PROFILE_URL, who );
 }
 
 static void msn_add_buddy( struct im_connection *ic, char *who, char *group )
@@ -372,7 +372,7 @@ static char *msn_set_display_name( set_t *set, char *value )
 	
 	if( strlen( value ) > 129 )
 	{
-		serv_got_crap( ic, "Maximum name length exceeded" );
+		imc_log( ic, "Maximum name length exceeded" );
 		return NULL;
 	}
 	

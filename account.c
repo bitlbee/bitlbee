@@ -223,7 +223,7 @@ void account_on( irc_t *irc, account_t *a )
 void account_off( irc_t *irc, account_t *a )
 {
 	a->ic->wants_to_die = TRUE;
-	signoff( a->ic );
+	imc_logout( a->ic );
 	a->ic = NULL;
 	if( a->reconnect )
 	{

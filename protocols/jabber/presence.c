@@ -40,7 +40,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		if( !( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT | GET_BUDDY_CREAT ) ) )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
-				serv_got_crap( ic, "WARNING: Could not handle presence information from JID: %s", from );
+				imc_log( ic, "WARNING: Could not handle presence information from JID: %s", from );
 			return XT_HANDLED;
 		}
 		
@@ -73,7 +73,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		if( jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT ) == NULL )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
-				serv_got_crap( ic, "WARNING: Received presence information from unknown JID: %s", from );
+				imc_log( ic, "WARNING: Received presence information from unknown JID: %s", from );
 			return XT_HANDLED;
 		}
 		
@@ -102,7 +102,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	else if( strcmp( type, "subscribed" ) == 0 )
 	{
 		/* Not sure about this one, actually... */
-		serv_got_crap( ic, "%s just accepted your authorization request", from );
+		imc_log( ic, "%s just accepted your authorization request", from );
 	}
 	else if( strcmp( type, "unsubscribe" ) == 0 || strcmp( type, "unsubscribed" ) == 0 )
 	{

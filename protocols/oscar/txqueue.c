@@ -29,7 +29,7 @@ aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, guint8 framing, g
 	aim_frame_t *fr;
 
 	if (!conn) {
-		do_error_dialog(sess->aux_data, "no connection specified", "Gaim");
+		imc_error(sess->aux_data, "no connection specified");
 		return NULL;
 	}
 
@@ -45,7 +45,7 @@ aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, guint8 framing, g
 		fr->hdr.flap.type = chan;
 
 	} else 
-		do_error_dialog(sess->aux_data, "unknown framing", "Gaim");
+		imc_error(sess->aux_data, "unknown framing");
 
 	if (datalen > 0) {
 		guint8 *data;
@@ -79,7 +79,7 @@ static int aim_tx_enqueue__queuebased(aim_session_t *sess, aim_frame_t *fr)
 {
 
 	if (!fr->conn) {
-		do_error_dialog(sess->aux_data, "WARNING: enqueueing packet with no connection", "Gaim");
+		imc_error(sess->aux_data, "WARNING: enqueueing packet with no connection");
 		fr->conn = aim_getconn_type(sess, AIM_CONN_TYPE_BOS);
 	}
 
@@ -119,7 +119,7 @@ static int aim_tx_enqueue__immediate(aim_session_t *sess, aim_frame_t *fr)
 {
 
 	if (!fr->conn) {
-		do_error_dialog(sess->aux_data, "packet has no connection", "Gaim");
+		imc_error(sess->aux_data, "packet has no connection");
 		aim_frame_destroy(fr);
 		return 0;
 	}

@@ -38,7 +38,7 @@ static int error(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 
 	/* XXX the modules interface should have already retrieved this for us */
 	if (!(snac2 = aim_remsnac(sess, snac->id))) {
-		do_error_dialog(sess->aux_data, "couldn't get snac", "Gaim");
+		imc_error(sess->aux_data, "couldn't get snac");
 		return 0;
 	}
 

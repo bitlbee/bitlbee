@@ -121,7 +121,7 @@ void query_del_by_conn( irc_t *irc, struct im_connection *ic )
 	}
 	
 	if( count > 0 )
-		serv_got_crap( ic, "Flushed %d unanswered question(s) for this connection.", count );
+		imc_log( ic, "Flushed %d unanswered question(s) for this connection.", count );
 	
 	q = query_default( irc );
 	if( q && q != def )
@@ -139,12 +139,12 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 	}
 	if( ans )
 	{
-		serv_got_crap( q->ic, "Accepted: %s", q->question );
+		imc_log( q->ic, "Accepted: %s", q->question );
 		q->yes( NULL, q->data );
 	}
 	else
 	{
-		serv_got_crap( q->ic, "Rejected: %s", q->question );
+		imc_log( q->ic, "Rejected: %s", q->question );
 		q->no( NULL, q->data );
 	}
 	q->data = NULL;
@@ -159,7 +159,7 @@ static void query_display( irc_t *irc, query_t *q )
 {
 	if( q->ic )
 	{
-		serv_got_crap( q->ic, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
+		imc_log( q->ic, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
 	}
 	else
 	{

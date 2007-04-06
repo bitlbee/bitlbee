@@ -37,14 +37,14 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		/* Should abort this now, since we should already be doing
 		   IQ authentication. Strange things happen when you try
 		   to do both... */
-		serv_got_crap( ic, "XMPP 1.0 non-compliant server seems to support SASL, please report this as a BitlBee bug!" );
+		imc_log( ic, "XMPP 1.0 non-compliant server seems to support SASL, please report this as a BitlBee bug!" );
 		return XT_HANDLED;
 	}
 	
 	s = xt_find_attr( node, "xmlns" );
 	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
-		signoff( ic );
+		imc_logout( ic );
 		return XT_ABORT;
 	}
 	
@@ -61,8 +61,8 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	
 	if( !sup_plain && !sup_digest )
 	{
-		hide_login_progress( ic, "No known SASL authentication schemes supported" );
-		signoff( ic );
+		imc_error( ic, "No known SASL authentication schemes supported" );
+		imc_logout( ic );
 		return XT_ABORT;
 	}
 	
@@ -278,8 +278,8 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	goto silent_error;
 
 error:
-	hide_login_progress( ic, "Incorrect SASL challenge received" );
-	signoff( ic );
+	imc_error( ic, "Incorrect SASL challenge received" );
+	imc_logout( ic );
 
 silent_error:
 	g_free( digest_uri );
@@ -302,19 +302,19 @@ xt_status sasl_pkt_result( struct xt_node *node, gpointer data )
 	s = xt_find_attr( node, "xmlns" );
 	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
-		signoff( ic );
+		imc_logout( ic );
 		return XT_ABORT;
 	}
 	
 	if( strcmp( node->name, "success" ) == 0 )
 	{
-		set_login_progress( ic, 1, "Authentication finished" );
+		imc_log( ic, "Authentication finished" );
 		jd->flags |= JFLAG_AUTHENTICATED | JFLAG_STREAM_RESTART;
 	}
 	else if( strcmp( node->name, "failure" ) == 0 )
 	{
-		hide_login_progress( ic, "Authentication failure" );
-		signoff( ic );
+		imc_error( ic, "Authentication failure" );
+		imc_logout( ic );
 		return XT_ABORT;
 	}
 	
