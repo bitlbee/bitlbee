@@ -36,7 +36,7 @@ int msn_write( struct im_connection *ic, char *s, int len )
 	if( st != len )
 	{
 		imc_error( ic, "Short write() to main server" );
-		imc_logout( ic );
+		imc_logout( ic, TRUE );
 		return( 0 );
 	}
 	

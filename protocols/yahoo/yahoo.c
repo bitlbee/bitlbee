@@ -360,11 +360,10 @@ static struct groupchat *byahoo_chat_with( struct im_connection *ic, char *who )
 	char *roomname;
 	YList *members;
 	
-	roomname = g_new0( char, strlen( ic->username ) + 16 );
-	g_snprintf( roomname, strlen( ic->username ) + 16, "%s-Bee-%d", ic->username, byahoo_chat_id );
+	roomname = g_strdup_printf( "%s-Bee-%d", ic->acc->user, byahoo_chat_id );
 	
 	c = serv_got_joined_chat( ic, roomname );
-	add_chat_buddy( c, ic->username );
+	add_chat_buddy( c, ic->acc->user );
 	
 	/* FIXME: Free this thing when the chat's destroyed. We can't *always*
 	          do this because it's not always created here. */
@@ -517,6 +516,7 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 	else
 	{
 		char *errstr;
+		int allow_reconnect = TRUE;
 		
 		yd->logged_in = FALSE;
 		
@@ -529,7 +529,7 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 		else if( succ == YAHOO_LOGIN_DUPL )
 		{
 			errstr = "Logged in on a different machine or device";
-			ic->wants_to_die = TRUE;
+			allow_reconnect = FALSE;
 		}
 		else if( succ == YAHOO_LOGIN_SOCK )
 			errstr = "Socket problem";
@@ -541,7 +541,7 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 		else
 			imc_error( ic, "Error %d (%s)", succ, errstr );
 		
-		imc_logout( ic );
+		imc_logout( ic, allow_reconnect );
 	}
 }
 
@@ -641,7 +641,7 @@ void ext_yahoo_error( int id, char *err, int fatal )
 	imc_error( ic, "%s", err );
 	
 	if( fatal )
-		imc_logout( ic );
+		imc_logout( ic, TRUE );
 }
 
 /* TODO: Clear up the mess of inp and d structures */
@@ -767,7 +767,7 @@ int ext_yahoo_connect(char *host, int port)
 static void byahoo_accept_conf( gpointer w, struct byahoo_conf_invitation *inv )
 {
 	yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
-	add_chat_buddy( inv->c, inv->ic->username );
+	add_chat_buddy( inv->c, inv->ic->acc->user );
 	g_free( inv->name );
 	g_free( inv );
 }
@@ -797,7 +797,7 @@ void ext_yahoo_got_conf_invite( int id, char *who, char *room, char *msg, YList 
 	inv->ic = ic;
 	
 	for( m = members; m; m = m->next )
-		if( g_strcasecmp( m->data, ic->username ) != 0 )
+		if( g_strcasecmp( m->data, ic->acc->user ) != 0 )
 			add_chat_buddy( inv->c, m->data );
 	
 	g_snprintf( txt, 1024, "Got an invitation to chatroom %s from %s: %s", room, who, msg );

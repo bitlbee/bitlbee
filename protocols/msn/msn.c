@@ -47,7 +47,7 @@ static void msn_login( account_t *acc )
 	if( strchr( acc->user, '@' ) == NULL )
 	{
 		imc_error( ic, "Invalid account name" );
-		imc_logout( ic );
+		imc_logout( ic, FALSE );
 		return;
 	}
 	
@@ -57,7 +57,7 @@ static void msn_login( account_t *acc )
 	if( md->fd < 0 )
 	{
 		imc_error( ic, "Could not connect to server" );
-		imc_logout( ic );
+		imc_logout( ic, TRUE );
 		return;
 	}
 	
@@ -378,7 +378,7 @@ static char *msn_set_display_name( set_t *set, char *value )
 	
 	fn = msn_http_encode( value );
 	
-	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, ic->username, fn );
+	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, ic->acc->user, fn );
 	msn_write( ic, buf, strlen( buf ) );
 	g_free( fn );
 	

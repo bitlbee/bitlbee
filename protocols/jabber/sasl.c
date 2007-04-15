@@ -44,7 +44,8 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	s = xt_find_attr( node, "xmlns" );
 	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
-		imc_logout( ic );
+		imc_log( ic, "Stream error while authenticating" );
+		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}
 	
@@ -62,7 +63,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	if( !sup_plain && !sup_digest )
 	{
 		imc_error( ic, "No known SASL authentication schemes supported" );
-		imc_logout( ic );
+		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}
 	
@@ -279,7 +280,7 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 
 error:
 	imc_error( ic, "Incorrect SASL challenge received" );
-	imc_logout( ic );
+	imc_logout( ic, FALSE );
 
 silent_error:
 	g_free( digest_uri );
@@ -302,7 +303,8 @@ xt_status sasl_pkt_result( struct xt_node *node, gpointer data )
 	s = xt_find_attr( node, "xmlns" );
 	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
-		imc_logout( ic );
+		imc_log( ic, "Stream error while authenticating" );
+		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}
 	
@@ -314,7 +316,7 @@ xt_status sasl_pkt_result( struct xt_node *node, gpointer data )
 	else if( strcmp( node->name, "failure" ) == 0 )
 	{
 		imc_error( ic, "Authentication failure" );
-		imc_logout( ic );
+		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}
 	

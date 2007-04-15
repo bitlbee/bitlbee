@@ -72,7 +72,7 @@ static void jabber_login( account_t *acc )
 	if( jd->server == NULL )
 	{
 		imc_error( ic, "Incomplete account name (format it like <username@jabberserver.name>)" );
-		imc_logout( ic );
+		imc_logout( ic, FALSE );
 		return;
 	}
 	
@@ -165,7 +165,7 @@ static void jabber_login( account_t *acc )
 	{
 		imc_log( ic, "Incorrect port number, must be in the %d-%d range",
 		               JABBER_PORT_MIN, JABBER_PORT_MAX );
-		imc_logout( ic );
+		imc_logout( ic, FALSE );
 		return;
 	}
 	
@@ -186,7 +186,7 @@ static void jabber_login( account_t *acc )
 	if( jd->fd == -1 )
 	{
 		imc_error( ic, "Could not connect to server" );
-		imc_logout( ic );
+		imc_logout( ic, TRUE );
 	}
 }
 

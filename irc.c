@@ -230,8 +230,7 @@ void irc_free(irc_t * irc)
 	
 	for (account = irc->accounts; account; account = account->next) {
 		if (account->ic) {
-			account->ic->wants_to_die = TRUE;
-			imc_logout(account->ic);
+			imc_logout(account->ic, TRUE);
 		} else if (account->reconnect) {
 			cancel_auto_reconnect(account);
 		}
@@ -915,7 +914,7 @@ void irc_kill( irc_t *irc, user_t *u )
 		if( u->ic->acc->server )
 			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
 			            u->ic->acc->server );
-		else if( ( s = strchr( u->ic->username, '@' ) ) )
+		else if( ( s = strchr( u->ic->acc->user, '@' ) ) )
 			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
 			            s + 1 );
 		else

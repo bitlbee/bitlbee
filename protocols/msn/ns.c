@@ -47,7 +47,7 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 	if( source == -1 )
 	{
 		imc_error( ic, "Could not connect to server" );
-		imc_logout( ic );
+		imc_logout( ic, TRUE );
 		return FALSE;
 	}
 	
@@ -89,7 +89,7 @@ static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition c
 	if( msn_handler( md->handler ) == -1 ) /* Don't do this on ret == 0, it's already done then. */
 	{
 		imc_error( ic, "Error while reading from server" );
-		imc_logout( ic );
+		imc_logout( ic, TRUE );
 		
 		return FALSE;
 	}
@@ -114,18 +114,18 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( cmd[2] && strncmp( cmd[2], "MSNP8", 5 ) != 0 )
 		{
 			imc_error( ic, "Unsupported protocol" );
-			imc_logout( ic );
+			imc_logout( ic, FALSE );
 			return( 0 );
 		}
 		
 		g_snprintf( buf, sizeof( buf ), "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s\r\n",
-		                                ++md->trId, ic->username );
+		                                ++md->trId, ic->acc->user );
 		return( msn_write( ic, buf, strlen( buf ) ) );
 	}
 	else if( strcmp( cmd[0], "CVR" ) == 0 )
 	{
 		/* We don't give a damn about the information we just received */
-		g_snprintf( buf, sizeof( buf ), "USR %d TWN I %s\r\n", ++md->trId, ic->username );
+		g_snprintf( buf, sizeof( buf ), "USR %d TWN I %s\r\n", ++md->trId, ic->acc->user );
 		return( msn_write( ic, buf, strlen( buf ) ) );
 	}
 	else if( strcmp( cmd[0], "XFR" ) == 0 )
@@ -143,7 +143,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			if( !server )
 			{
 				imc_error( ic, "Syntax error" );
-				imc_logout( ic );
+				imc_logout( ic, TRUE );
 				return( 0 );
 			}
 			*server = 0;
@@ -162,7 +162,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			if( !server )
 			{
 				imc_error( ic, "Syntax error" );
-				imc_logout( ic );
+				imc_logout( ic, TRUE );
 				return( 0 );
 			}
 			*server = 0;
@@ -172,7 +172,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			if( strcmp( cmd[4], "CKI" ) != 0 )
 			{
 				imc_error( ic, "Unknown authentication method for switchboard" );
-				imc_logout( ic );
+				imc_logout( ic, TRUE );
 				return( 0 );
 			}
 			
@@ -204,7 +204,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		else
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
@@ -213,10 +213,10 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts == 5 && strcmp( cmd[2], "TWN" ) == 0 && strcmp( cmd[3], "S" ) == 0 )
 		{
 			/* Time for some Passport black magic... */
-			if( !passport_get_id( msn_auth_got_passport_id, ic, ic->username, ic->password, cmd[4] ) )
+			if( !passport_get_id( msn_auth_got_passport_id, ic, ic->acc->user, ic->acc->pass, cmd[4] ) )
 			{
 				imc_error( ic, "Error while contacting Passport server" );
-				imc_logout( ic );
+				imc_logout( ic, TRUE );
 				return( 0 );
 			}
 		}
@@ -243,7 +243,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		else
 		{
 			imc_error( ic, "Unknown authentication type" );
-			imc_logout( ic );
+			imc_logout( ic, FALSE );
 			return( 0 );
 		}
 	}
@@ -252,7 +252,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts != 4 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -261,7 +261,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( md->handler->msglen <= 0 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
@@ -292,7 +292,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts != 4 && num_parts != 5 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -344,7 +344,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts != 4 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -363,7 +363,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts != 3 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -385,7 +385,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts != 6 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -413,7 +413,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts != 5 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -438,7 +438,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts != 7 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -448,7 +448,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( !server )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		*server = 0;
@@ -458,7 +458,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( strcmp( cmd[3], "CKI" ) != 0 )
 		{
 			imc_error( ic, "Unknown authentication method for switchboard" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -478,7 +478,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			if( strchr( cmd[4], '@' ) == NULL )
 			{
 				imc_error( ic, "Syntax error" );
-				imc_logout( ic );
+				imc_logout( ic, TRUE );
 				return( 0 );
 			}
 			
@@ -496,10 +496,12 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "OUT" ) == 0 )
 	{
+		int allow_reconnect = TRUE;
+		
 		if( cmd[1] && strcmp( cmd[1], "OTH" ) == 0 )
 		{
 			imc_error( ic, "Someone else logged in with your account" );
-			ic->wants_to_die = 1;
+			allow_reconnect = FALSE;
 		}
 		else if( cmd[1] && strcmp( cmd[1], "SSD" ) == 0 )
 		{
@@ -510,7 +512,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			imc_error( ic, "Session terminated by remote server (reason unknown)" );
 		}
 		
-		imc_logout( ic );
+		imc_logout( ic, allow_reconnect );
 		return( 0 );
 	}
 	else if( strcmp( cmd[0], "REA" ) == 0 )
@@ -518,11 +520,11 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts != 5 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
-		if( g_strcasecmp( cmd[3], ic->username ) == 0 )
+		if( g_strcasecmp( cmd[3], ic->acc->user ) == 0 )
 		{
 			set_t *s;
 			
@@ -552,7 +554,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( md->handler->msglen <= 0 )
 		{
 			imc_error( ic, "Syntax error" );
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
@@ -565,7 +567,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( err->flags & STATUS_FATAL )
 		{
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
@@ -672,7 +674,7 @@ static void msn_auth_got_passport_id( struct passport_reply *rep )
 	{
 		imc_error( ic, "Error during Passport authentication (%s)",
 		               rep->error_string ? rep->error_string : "Unknown error" );
-		imc_logout( ic );
+		imc_logout( ic, TRUE );
 	}
 	else
 	{

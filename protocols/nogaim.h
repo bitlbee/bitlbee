@@ -79,14 +79,10 @@ struct im_connection
 	GSList *deny;
 	int permdeny;
 	
-	char username[64];
 	char displayname[128];
-	char password[32];
-	
 	char *away;
 	
 	int evil;
-	gboolean wants_to_die; /* defaults to FALSE */
 	
 	/* BitlBee */
 	irc_t *irc;
@@ -210,7 +206,7 @@ G_MODULE_EXPORT void imc_free( struct im_connection *ic );
 G_MODULE_EXPORT void imc_log( struct im_connection *ic, char *format, ... );
 G_MODULE_EXPORT void imc_error( struct im_connection *ic, char *format, ... );
 G_MODULE_EXPORT void imc_connected( struct im_connection *ic );
-G_MODULE_EXPORT void imc_logout( struct im_connection *ic );
+G_MODULE_EXPORT void imc_logout( struct im_connection *ic, int allow_reconnect );
 
 /* dialogs.c */
 G_MODULE_EXPORT void do_ask_dialog( struct im_connection *ic, char *msg, void *data, void *doit, void *dont );

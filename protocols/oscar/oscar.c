@@ -262,12 +262,12 @@ static gboolean oscar_callback(gpointer data, gint source,
 		if (aim_get_command(odata->sess, conn) >= 0) {
 			aim_rxdispatch(odata->sess);
                                if (odata->killme)
-                                       imc_logout(ic);
+                                       imc_logout(ic, TRUE);
 		} else {
 			if ((conn->type == AIM_CONN_TYPE_BOS) ||
 				   !(aim_getconn_type(odata->sess, AIM_CONN_TYPE_BOS))) {
 				imc_error(ic, _("Disconnected."));
-				imc_logout(ic);
+				imc_logout(ic, TRUE);
 			} else if (conn->type == AIM_CONN_TYPE_CHAT) {
 				struct chat_connection *c = find_oscar_chat_by_conn(ic, conn);
 				c->conn = NULL;
@@ -325,7 +325,7 @@ static gboolean oscar_login_connect(gpointer data, gint source, b_input_conditio
 
 	if (source < 0) {
 		imc_error(ic, _("Couldn't connect to host"));
-		imc_logout(ic);
+		imc_logout(ic, TRUE);
 		return FALSE;
 	}
 
@@ -360,7 +360,9 @@ static void oscar_login(account_t *acc) {
 		/* This is odd but it's necessary for a proper do_import and do_export.
 		   We don't do those anymore, but let's stick with it, just in case
 		   it accidentally fixes something else too... </bitlbee> */
-		ic->password[8] = 0;
+		/* ic->acc->pass[8] = 0;
+		   Not touching this anymore now that it belongs to account_t!
+		   Let's hope nothing will break. ;-) */
 	} else {
 		ic->flags |= OPT_CONN_HTML;
 	}
@@ -378,13 +380,13 @@ static void oscar_login(account_t *acc) {
 	conn = aim_newconn(sess, AIM_CONN_TYPE_AUTH, NULL);
 	if (conn == NULL) {
 		imc_error(ic, _("Unable to login to AIM"));
-		imc_logout(ic);
+		imc_logout(ic, TRUE);
 		return;
 	}
 	
 	if (acc->server == NULL) {
 		imc_error(ic, "No servername specified");
-		imc_logout(ic);
+		imc_logout(ic, FALSE);
 		return;
 	}
 	
@@ -393,7 +395,7 @@ static void oscar_login(account_t *acc) {
 		imc_log(ic, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.",acc->server);
 	}
 	
-	imc_log(ic, _("Signon: %s"), ic->username);
+	imc_log(ic, _("Signon: %s"), ic->acc->user);
 
 	aim_conn_addhandler(sess, conn, 0x0017, 0x0007, gaim_parse_login, 0);
 	aim_conn_addhandler(sess, conn, 0x0017, 0x0003, gaim_parse_auth_resp, 0);
@@ -402,10 +404,10 @@ static void oscar_login(account_t *acc) {
 	conn->fd = proxy_connect(acc->server, AIM_LOGIN_PORT, oscar_login_connect, ic);
 	if (conn->fd < 0) {
 		imc_error(ic, _("Couldn't connect to host"));
-		imc_logout(ic);
+		imc_logout(ic, TRUE);
 		return;
 	}
-	aim_request_login(sess, conn, ic->username);
+	aim_request_login(sess, conn, ic->acc->user);
 }
 
 static void oscar_logout(struct im_connection *ic) {
@@ -462,7 +464,7 @@ static gboolean oscar_bos_connect(gpointer data, gint source, b_input_condition 
 
 	if (source < 0) {
 		imc_error(ic, _("Could Not Connect"));
-		imc_logout(ic);
+		imc_logout(ic, TRUE);
 		return FALSE;
 	}
 
@@ -727,7 +729,7 @@ static int gaim_parse_login(aim_session_t *sess, aim_frame_t *fr, ...) {
 	key = va_arg(ap, char *);
 	va_end(ap);
 
-	aim_send_login(sess, fr->conn, ic->username, ic->password, &info, key);
+	aim_send_login(sess, fr->conn, ic->acc->user, ic->acc->pass, &info, key);
 
 	return 1;
 }
@@ -1012,7 +1014,7 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 	if (info->present & AIM_USERINFO_PRESENT_SESSIONLEN)
 		signon = time(NULL) - info->sessionlen;
 
-	tmp = g_strdup(normalize(ic->username));
+	tmp = g_strdup(normalize(ic->acc->user));
 	if (!strcmp(tmp, normalize(info->sn)))
 		g_snprintf(ic->displayname, sizeof(ic->displayname), "%s", info->sn);
 	g_free(tmp);
@@ -2135,10 +2137,10 @@ static void oscar_set_permit_deny(struct im_connection *ic) {
 
 		switch(ic->permdeny) {
 		case 1:
-			aim_bos_changevisibility(od->sess, od->conn, AIM_VISIBILITYCHANGE_DENYADD, ic->username);
+			aim_bos_changevisibility(od->sess, od->conn, AIM_VISIBILITYCHANGE_DENYADD, ic->acc->user);
 			break;
 		case 2:
-			aim_bos_changevisibility(od->sess, od->conn, AIM_VISIBILITYCHANGE_PERMITADD, ic->username);
+			aim_bos_changevisibility(od->sess, od->conn, AIM_VISIBILITYCHANGE_PERMITADD, ic->acc->user);
 			break;
 		case 3:
 			list = ic->permit;
@@ -2161,7 +2163,6 @@ static void oscar_set_permit_deny(struct im_connection *ic) {
 			default:
 			break;
 		}
-		signoff_blocked(ic);
 	} else {
 		if (od->sess->ssi.received_data)
 			aim_ssi_setpermdeny(od->sess, od->conn, ic->permdeny, 0xffffffff);
@@ -2583,7 +2584,7 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	static int chat_id = 0;
 	char * chatname;
 	
-	chatname = g_strdup_printf("%s%d", ic->username, chat_id++);
+	chatname = g_strdup_printf("%s%d", ic->acc->user, chat_id++);
   
 	ret = oscar_chat_join(ic, chatname);
 

@@ -150,10 +150,6 @@ struct im_connection *imc_new( account_t *acc )
 	
 	ic = g_new0( struct im_connection, 1 );
 	
-	/* Maybe we should get rid of this memory waste later. ;-) */
-	g_snprintf( ic->username, sizeof( ic->username ), "%s", acc->user );
-	g_snprintf( ic->password, sizeof( ic->password ), "%s", acc->pass );
-	
 	ic->irc = acc->irc;
 	ic->acc = acc;
 	acc->ic = ic;
@@ -200,7 +196,7 @@ static void serv_got_crap( struct im_connection *ic, char *format, ... )
 	
 	/* If we found one, include the screenname in the message. */
 	if( a )
-		irc_usermsg( ic->irc, "%s(%s) - %s", ic->acc->prpl->name, ic->username, text );
+		irc_usermsg( ic->irc, "%s(%s) - %s", ic->acc->prpl->name, ic->acc->user, text );
 	else
 		irc_usermsg( ic->irc, "%s - %s", ic->acc->prpl->name, text );
 	
@@ -290,7 +286,7 @@ void cancel_auto_reconnect( account_t *a )
 	a->reconnect = 0;
 }
 
-void imc_logout( struct im_connection *ic )
+void imc_logout( struct im_connection *ic, int allow_reconnect )
 {
 	irc_t *irc = ic->irc;
 	user_t *t, *u = irc->users;
@@ -332,7 +328,7 @@ void imc_logout( struct im_connection *ic )
 	{
 		/* Uhm... This is very sick. */
 	}
-	else if( !ic->wants_to_die && set_getbool( &irc->set, "auto_reconnect" ) &&
+	else if( allow_reconnect && set_getbool( &irc->set, "auto_reconnect" ) &&
 	         set_getbool( &a->set, "auto_reconnect" ) )
 	{
 		int delay = set_getint( &irc->set, "auto_reconnect_delay" );
@@ -435,11 +431,6 @@ struct buddy *find_buddy( struct im_connection *ic, char *handle )
 	b->ic = u->ic;
 	
 	return( b );
-}
-
-void signoff_blocked( struct im_connection *ic )
-{
-	return; /* Make all blocked users look invisible (TODO?) */
 }
 
 
@@ -729,7 +720,7 @@ void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, t
 	user_t *u;
 	
 	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
-	if( g_strcasecmp( who, ic->username ) == 0 )
+	if( g_strcasecmp( who, ic->acc->user ) == 0 )
 		return;
 	
 	u = user_findhandle( ic, who );
@@ -780,7 +771,7 @@ void add_chat_buddy( struct groupchat *b, char *handle )
 		imc_log( b->ic, "User %s added to conversation 0x%x", handle, (int) b );
 	
 	/* It might be yourself! */
-	if( b->ic->acc->prpl->handle_cmp( handle, b->ic->username ) == 0 )
+	if( b->ic->acc->prpl->handle_cmp( handle, b->ic->acc->user ) == 0 )
 	{
 		u = user_find( b->ic->irc, b->ic->irc->nick );
 		if( !b->joined )
@@ -814,7 +805,7 @@ void remove_chat_buddy( struct groupchat *b, char *handle, char *reason )
 		imc_log( b->ic, "User %s removed from conversation 0x%x (%s)", handle, (int) b, reason ? reason : "" );
 	
 	/* It might be yourself! */
-	if( g_strcasecmp( handle, b->ic->username ) == 0 )
+	if( g_strcasecmp( handle, b->ic->acc->user ) == 0 )
 	{
 		u = user_find( b->ic->irc, b->ic->irc->nick );
 		b->joined = 0;
@@ -957,7 +948,6 @@ int bim_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags 
 int bim_chat_msg( struct groupchat *c, char *msg, int flags )
 {
 	char *buf = NULL;
-	int st;
 	
 	if( ( c->ic->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
 	{

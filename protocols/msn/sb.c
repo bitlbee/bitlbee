@@ -141,9 +141,9 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 		}
 		else
 		{
-			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->username );
+			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->acc->user );
 			buf = g_new0( char, i );
-			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->username );
+			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->acc->user );
 		}
 		
 		/* Build the final packet (MSG command + the message). */
@@ -187,7 +187,7 @@ struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb )
 	
 	/* Populate the channel. */
 	if( sb->who ) add_chat_buddy( sb->chat, sb->who );
-	add_chat_buddy( sb->chat, ic->username );
+	add_chat_buddy( sb->chat, ic->acc->user );
 	
 	/* And make sure the switchboard doesn't look like a regular chat anymore. */
 	if( sb->who )
@@ -279,9 +279,9 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 	sb->handler->exec_message = msn_sb_message;
 	
 	if( sb->session == MSN_SB_NEW )
-		g_snprintf( buf, sizeof( buf ), "USR %d %s %s\r\n", ++sb->trId, ic->username, sb->key );
+		g_snprintf( buf, sizeof( buf ), "USR %d %s %s\r\n", ++sb->trId, ic->acc->user, sb->key );
 	else
-		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, ic->username, sb->key, sb->session );
+		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, ic->acc->user, sb->key, sb->session );
 	
 	if( msn_sb_write( sb, buf, strlen( buf ) ) )
 		sb->inp = b_input_add( sb->fd, GAIM_INPUT_READ, msn_sb_callback, sb );
@@ -321,7 +321,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	if( strcmp( cmd[0], "XFR" ) == 0 )
 	{
 		imc_error( ic, "Received an XFR from a switchboard server, unable to comply! This is likely to be a bug, please report it!" );
-		imc_logout( ic );
+		imc_logout( ic, TRUE );
 		return( 0 );
 	}
 	else if( strcmp( cmd[0], "USR" ) == 0 )
@@ -383,7 +383,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			
 			if( num == tot )
 			{
-				add_chat_buddy( sb->chat, ic->username );
+				add_chat_buddy( sb->chat, ic->acc->user );
 			}
 		}
 	}
@@ -536,7 +536,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		}
 		else if( err->flags & STATUS_FATAL )
 		{
-			imc_logout( ic );
+			imc_logout( ic, TRUE );
 			return 0;
 		}
 		else if( err->flags & STATUS_SB_IM_SPARE )

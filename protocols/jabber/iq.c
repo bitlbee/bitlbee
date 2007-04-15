@@ -39,7 +39,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	if( !type )
 	{
 		imc_error( ic, "Received IQ packet without type." );
-		imc_logout( ic );
+		imc_logout( ic, TRUE );
 		return XT_ABORT;
 	}
 	
@@ -219,7 +219,7 @@ static xt_status jabber_do_iq_auth( struct im_connection *ic, struct xt_node *no
 	if( !( query = xt_find_node( node->children, "query" ) ) )
 	{
 		imc_log( ic, "WARNING: Received incomplete IQ packet while authenticating" );
-		imc_logout( ic );
+		imc_logout( ic, FALSE );
 		return XT_HANDLED;
 	}
 	
@@ -258,7 +258,7 @@ static xt_status jabber_do_iq_auth( struct im_connection *ic, struct xt_node *no
 		xt_free_node( reply );
 		
 		imc_error( ic, "Can't find suitable authentication method" );
-		imc_logout( ic );
+		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}
 	
@@ -277,14 +277,14 @@ static xt_status jabber_finish_iq_auth( struct im_connection *ic, struct xt_node
 	if( !( type = xt_find_attr( node, "type" ) ) )
 	{
 		imc_log( ic, "WARNING: Received incomplete IQ packet while authenticating" );
-		imc_logout( ic );
+		imc_logout( ic, FALSE );
 		return XT_HANDLED;
 	}
 	
 	if( strcmp( type, "error" ) == 0 )
 	{
 		imc_error( ic, "Authentication failure" );
-		imc_logout( ic );
+		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}
 	else if( strcmp( type, "result" ) == 0 )
