@@ -535,7 +535,7 @@ static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_no
 	
 	/* *sigh* */
 	
-	imc_log( ic, reply->str );
+	imc_log( ic, "%s", reply->str );
 	g_string_free( reply, TRUE );
 	
 	return XT_HANDLED;

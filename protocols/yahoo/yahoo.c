@@ -517,7 +517,6 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 	else
 	{
 		char *errstr;
-		char *s;
 		
 		yd->logged_in = FALSE;
 		
@@ -538,22 +537,9 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 			errstr = "Unknown error";
 		
 		if( url && *url )
-		{
-			s = g_malloc( strlen( "Error %d (%s). See %s for more information." ) + strlen( url ) + strlen( errstr ) + 16 );
-			sprintf( s, "Error %d (%s). See %s for more information.", succ, errstr, url );
-		}
+			imc_error( ic, "Error %d (%s). See %s for more information.", succ, errstr, url );
 		else
-		{
-			s = g_malloc( strlen( "Error %d (%s)" ) + strlen( errstr ) + 16 );
-			sprintf( s, "Error %d (%s)", succ, errstr );
-		}
-		
-		if( yd->logged_in )
-			imc_error( ic, s );
-		else
-			imc_error( ic, s );
-		
-		g_free( s );
+			imc_error( ic, "Error %d (%s)", succ, errstr );
 		
 		imc_logout( ic );
 	}

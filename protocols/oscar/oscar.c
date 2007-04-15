@@ -1263,7 +1263,6 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
 	guint16 chan, nummissed, reason;
 	aim_userinfo_t *userinfo;
-	char buf[1024];
 
 	va_start(ap, fr);
 	chan = (guint16)va_arg(ap, unsigned int);
@@ -1275,8 +1274,7 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 	switch(reason) {
 		case 0:
 			/* Invalid (0) */
-			g_snprintf(buf,
-				   sizeof(buf),
+			imc_error(sess->aux_data,
 				   nummissed == 1 ? 
 				   _("You missed %d message from %s because it was invalid.") :
 				   _("You missed %d messages from %s because they were invalid."),
@@ -1285,8 +1283,7 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 			break;
 		case 1:
 			/* Message too large */
-			g_snprintf(buf,
-				   sizeof(buf),
+			imc_error(sess->aux_data,
 				   nummissed == 1 ?
 				   _("You missed %d message from %s because it was too large.") :
 				   _("You missed %d messages from %s because they were too large."),
@@ -1295,8 +1292,7 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 			break;
 		case 2:
 			/* Rate exceeded */
-			g_snprintf(buf,
-				   sizeof(buf),
+			imc_error(sess->aux_data,
 				   nummissed == 1 ? 
 				   _("You missed %d message from %s because the rate limit has been exceeded.") :
 				   _("You missed %d messages from %s because the rate limit has been exceeded."),
@@ -1305,8 +1301,7 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 			break;
 		case 3:
 			/* Evil Sender */
-			g_snprintf(buf,
-				   sizeof(buf),
+			imc_error(sess->aux_data,
 				   nummissed == 1 ?
 				   _("You missed %d message from %s because it was too evil.") : 
 				   _("You missed %d messages from %s because they are too evil."),
@@ -1315,8 +1310,7 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 			break;
 		case 4:
 			/* Evil Receiver */
-			g_snprintf(buf,
-				   sizeof(buf),
+			imc_error(sess->aux_data,
 				   nummissed == 1 ? 
 				   _("You missed %d message from %s because you are too evil.") :
 				   _("You missed %d messages from %s because you are too evil."),
@@ -1324,8 +1318,7 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 				   userinfo->sn);
 			break;
 		default:
-			g_snprintf(buf,
-				   sizeof(buf),
+			imc_error(sess->aux_data,
 				   nummissed == 1 ? 
 				   _("You missed %d message from %s for unknown reasons.") :
 				   _("You missed %d messages from %s for unknown reasons."),
@@ -1333,7 +1326,6 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 				   userinfo->sn);
 			break;
 	}
-	imc_error(sess->aux_data, buf);
 
 	return 1;
 }
@@ -1925,13 +1917,7 @@ static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, 
 	}
 
 	if (strlen(message) > od->rights.maxawaymsglen) {
-		gchar *errstr;
-
-		errstr = g_strdup_printf("Maximum away message length of %d bytes exceeded, truncating", od->rights.maxawaymsglen);
-
-		imc_error(ic, errstr);
-
-		g_free(errstr);
+		imc_error(ic, "Maximum away message length of %d bytes exceeded, truncating", od->rights.maxawaymsglen);
 	}
 
 	ic->away = g_strndup(message, od->rights.maxawaymsglen);
