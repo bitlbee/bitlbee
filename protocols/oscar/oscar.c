@@ -364,7 +364,7 @@ static void oscar_login(account_t *acc) {
 		   Not touching this anymore now that it belongs to account_t!
 		   Let's hope nothing will break. ;-) */
 	} else {
-		ic->flags |= OPT_CONN_HTML;
+		ic->flags |= OPT_DOES_HTML;
 	}
 
 	sess = g_new0(aim_session_t, 1);
@@ -967,44 +967,34 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 	struct oscar_data *od = ic->proto_data;
 	aim_userinfo_t *info;
 	time_t time_idle = 0, signon = 0;
-	int type = 0;
-	int caps = 0;
-	char *tmp;
+	int flags = OPT_LOGGED_IN;
+	char *tmp, *state_string = NULL;
 
 	va_list ap;
 	va_start(ap, fr);
 	info = va_arg(ap, aim_userinfo_t *);
 	va_end(ap);
 
-	if (info->present & AIM_USERINFO_PRESENT_CAPABILITIES)
-		caps = info->capabilities;
-	if (info->flags & AIM_FLAG_ACTIVEBUDDY)
-		type |= UC_AB;
-
 	if ((!od->icq) && (info->present & AIM_USERINFO_PRESENT_FLAGS)) {
-		if (info->flags & AIM_FLAG_UNCONFIRMED)
-			type |= UC_UNCONFIRMED;
-		if (info->flags & AIM_FLAG_ADMINISTRATOR)
-			type |= UC_ADMIN;
-		if (info->flags & AIM_FLAG_AOL)
-			type |= UC_AOL;
-		if (info->flags & AIM_FLAG_FREE)
-			type |= UC_NORMAL;
 		if (info->flags & AIM_FLAG_AWAY)
-			type |= UC_UNAVAILABLE;
-		if (info->flags & AIM_FLAG_WIRELESS)
-			type |= UC_WIRELESS;
+			flags |= OPT_AWAY;
 	}
+	
 	if (info->present & AIM_USERINFO_PRESENT_ICQEXTSTATUS) {
-		type = (info->icqinfo.status << 7);
 		if (!(info->icqinfo.status & AIM_ICQ_STATE_CHAT) &&
 		      (info->icqinfo.status != AIM_ICQ_STATE_NORMAL)) {
-			type |= UC_UNAVAILABLE;
+			flags |= OPT_AWAY;
 		}
+		
+		if( info->icqinfo.status & AIM_ICQ_STATE_DND )
+			state_string = "Do Not Disturb";
+		else if( info->icqinfo.status & AIM_ICQ_STATE_OUT )
+			state_string = "Not Available";
+		else if( info->icqinfo.status & AIM_ICQ_STATE_BUSY )
+			state_string = "Occupied";
+		else if( info->icqinfo.status & AIM_ICQ_STATE_INVISIBLE )
+			state_string = "Invisible";
 	}
-
-	if (caps & AIM_CAPS_ICQ)
-		caps ^= AIM_CAPS_ICQ;
 
 	if (info->present & AIM_USERINFO_PRESENT_IDLE) {
 		time(&time_idle);
@@ -1019,8 +1009,8 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 		g_snprintf(ic->displayname, sizeof(ic->displayname), "%s", info->sn);
 	g_free(tmp);
 
-	serv_got_update(ic, info->sn, 1, info->warnlevel/10, signon,
-			time_idle, type, caps);
+	imcb_buddy_status(ic, info->sn, flags, state_string, NULL);
+	/* imcb_buddy_times(ic, info->sn, signon, time_idle); */
 
 	return 1;
 }
@@ -1034,7 +1024,7 @@ static int gaim_parse_offgoing(aim_session_t *sess, aim_frame_t *fr, ...) {
 	info = va_arg(ap, aim_userinfo_t *);
 	va_end(ap);
 
-	serv_got_update(ic, info->sn, 0, 0, 0, 0, 0, 0);
+	imcb_buddy_status(ic, info->sn, 0, NULL, NULL );
 
 	return 1;
 }
@@ -1045,7 +1035,7 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 	int flags = 0;
 	
 	if (args->icbmflags & AIM_IMFLAGS_AWAY)
-		flags |= IM_FLAG_AWAY;
+		flags |= OPT_AWAY;
 	
 	if ((args->icbmflags & AIM_IMFLAGS_UNICODE) || (args->icbmflags & AIM_IMFLAGS_ISO_8859_1)) {
 		char *src;
@@ -1820,7 +1810,7 @@ static void oscar_keepalive(struct im_connection *ic) {
 static int oscar_send_im(struct im_connection *ic, char *name, char *message, int imflags) {
 	struct oscar_data *odata = (struct oscar_data *)ic->proto_data;
 	int ret = 0, len = strlen(message);
-	if (imflags & IM_FLAG_AWAY) {
+	if (imflags & OPT_AWAY) {
 		ret = aim_send_im(odata->sess, name, AIM_IMFLAGS_AWAY, message);
 	} else {
 		struct aim_sendimext_args args;
@@ -2444,34 +2434,6 @@ int gaim_parsemtn(aim_session_t *sess, aim_frame_t *fr, ...)
 	return 1;
 }
 
-static char *oscar_get_status_string( struct im_connection *ic, int number )
-{
-	struct oscar_data *od = ic->proto_data;
-	
-	if( ! number & UC_UNAVAILABLE )
-	{
-		return( NULL );
-	}
-	else if( od->icq )
-	{
-		number >>= 7;
-		if( number & AIM_ICQ_STATE_DND )
-			return( "Do Not Disturb" );
-		else if( number & AIM_ICQ_STATE_OUT )
-			return( "Not Available" );
-		else if( number & AIM_ICQ_STATE_BUSY )
-			return( "Occupied" );
-		else if( number & AIM_ICQ_STATE_INVISIBLE )
-			return( "Invisible" );
-		else
-			return( "Away" );
-	}
-	else
-	{
-		return( "Away" );
-	}
-}
-
 int oscar_send_typing(struct im_connection *ic, char * who, int typing)
 {
 	struct oscar_data *od = ic->proto_data;
@@ -2632,7 +2594,6 @@ void oscar_initmodule()
 	ret->rem_permit = oscar_rem_permit;
 	ret->rem_deny = oscar_rem_deny;
 	ret->set_permit_deny = oscar_set_permit_deny;
-	ret->get_status_string = oscar_get_status_string;
 	ret->send_typing = oscar_send_typing;
 	
 	ret->handle_cmp = aim_sncmp;

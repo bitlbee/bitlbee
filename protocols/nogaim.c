@@ -186,7 +186,7 @@ static void serv_got_crap( struct im_connection *ic, char *format, ... )
 	va_end( params );
 
 	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( ic->flags & OPT_CONN_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
+	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
 		strip_html( text );
 	
 	/* Try to find a different connection on the same protocol. */
@@ -493,32 +493,31 @@ void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname 
 
 /* server.c */                    
 
-void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps )
+void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message )
 {
 	user_t *u;
 	int oa, oo;
 	
-	u = user_findhandle( ic, handle );
+	u = user_findhandle( ic, (char*) handle );
 	
 	if( !u )
 	{
 		if( g_strcasecmp( set_getstr( &ic->irc->set, "handle_unknown" ), "add" ) == 0 )
 		{
-			add_buddy( ic, NULL, handle, NULL );
-			u = user_findhandle( ic, handle );
+			add_buddy( ic, NULL, (char*) handle, NULL );
+			u = user_findhandle( ic, (char*) handle );
 		}
 		else
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) || g_strcasecmp( set_getstr( &ic->irc->set, "handle_unknown" ), "ignore" ) != 0 )
 			{
-				imcb_log( ic, "serv_got_update() for handle %s:", handle );
-				imcb_log( ic, "loggedin = %d, type = %d", loggedin, type );
+				imcb_log( ic, "imcb_buddy_status() for unknown handle %s:", handle );
+				imcb_log( ic, "flags = %d, state = %s, message = %s", flags,
+				          state ? state : "NULL", message ? message : "NULL" );
 			}
 			
 			return;
 		}
-		/* Why did we have this here....
-		return; */
 	}
 	
 	oa = u->away != NULL;
@@ -530,12 +529,12 @@ void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int 
 		u->away = NULL;
 	}
 	
-	if( loggedin && !u->online )
+	if( ( flags & OPT_LOGGED_IN ) && !u->online )
 	{
 		irc_spawn( ic->irc, u );
 		u->online = 1;
 	}
-	else if( !loggedin && u->online )
+	else if( !( flags & OPT_LOGGED_IN ) && u->online )
 	{
 		struct groupchat *c;
 		
@@ -544,19 +543,29 @@ void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int 
 		
 		/* Remove him/her from the conversations to prevent PART messages after he/she QUIT already */
 		for( c = ic->conversations; c; c = c->next )
-			remove_chat_buddy_silent( c, handle );
+			remove_chat_buddy_silent( c, (char*) handle );
 	}
 	
-	if( ( type & UC_UNAVAILABLE ) && ( strcmp( ic->acc->prpl->name, "oscar" ) == 0 || strcmp( ic->acc->prpl->name, "icq" ) == 0 ) )
+	if( flags & OPT_AWAY )
 	{
-		u->away = g_strdup( "Away" );
+		if( state && message )
+		{
+			u->away = g_strdup_printf( "%s (%s)", state, message );
+		}
+		else if( state )
+		{
+			u->away = g_strdup( state );
+		}
+		else if( message )
+		{
+			u->away = g_strdup( message );
+		}
+		else
+		{
+			u->away = g_strdup( "Away" );
+		}
 	}
-	else if( ( type & UC_UNAVAILABLE ) && ic->acc->prpl->get_status_string )
-	{
-		u->away = g_strdup( ic->acc->prpl->get_status_string( ic, type ) );
-	}
-	else
-		u->away = NULL;
+	/* else waste_any_state_information_for_now(); */
 	
 	/* LISPy... */
 	if( ( set_getbool( &ic->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
@@ -611,7 +620,7 @@ void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 fla
 	}
 	
 	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( ic->flags & OPT_CONN_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
+	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
 		strip_html( msg );
 
 	while( strlen( msg ) > 425 )
@@ -717,7 +726,7 @@ void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, t
 	u = user_findhandle( ic, who );
 	
 	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( ic->flags & OPT_CONN_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
+	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
 		strip_html( msg );
 	
 	if( c && u )
@@ -924,7 +933,7 @@ int imc_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags 
 	char *buf = NULL;
 	int st;
 	
-	if( ( ic->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
+	if( ( ic->flags & OPT_DOES_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
 	{
 		buf = escape_html( msg );
 		msg = buf;
@@ -940,7 +949,7 @@ int imc_chat_msg( struct groupchat *c, char *msg, int flags )
 {
 	char *buf = NULL;
 	
-	if( ( c->ic->flags & OPT_CONN_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
+	if( ( c->ic->flags & OPT_DOES_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
 	{
 		buf = escape_html( msg );
 		msg = buf;

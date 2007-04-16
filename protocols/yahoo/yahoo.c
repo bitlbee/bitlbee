@@ -292,45 +292,6 @@ static void byahoo_remove_buddy( struct im_connection *ic, char *who, char *grou
 	}
 }
 
-static char *byahoo_get_status_string( struct im_connection *ic, int stat )
-{
-	enum yahoo_status a = stat >> 1;
-	
-	switch (a)
-	{
-	case YAHOO_STATUS_BRB:
-		return "Be Right Back";
-	case YAHOO_STATUS_BUSY:
-		return "Busy";
-	case YAHOO_STATUS_NOTATHOME:
-		return "Not At Home";
-	case YAHOO_STATUS_NOTATDESK:
-		return "Not At Desk";
-	case YAHOO_STATUS_NOTINOFFICE:
-		return "Not In Office";
-	case YAHOO_STATUS_ONPHONE:
-		return "On Phone";
-	case YAHOO_STATUS_ONVACATION:
-		return "On Vacation";
-	case YAHOO_STATUS_OUTTOLUNCH:
-		return "Out To Lunch";
-	case YAHOO_STATUS_STEPPEDOUT:
-		return "Stepped Out";
-	case YAHOO_STATUS_INVISIBLE:
-		return "Invisible";
-	case YAHOO_STATUS_CUSTOM:
-		return "Away";
-	case YAHOO_STATUS_IDLE:
-		return "Idle";
-	case YAHOO_STATUS_OFFLINE:
-		return "Offline";
-	case YAHOO_STATUS_NOTIFY:
-		return "Notify";
-	default:
-		return "Away";
-	}
-}
-
 static void byahoo_chat_send( struct groupchat *c, char *message, int flags )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) c->ic->proto_data;
@@ -392,7 +353,6 @@ void byahoo_initmodule( )
 	ret->set_away = byahoo_set_away;
 	ret->add_buddy = byahoo_add_buddy;
 	ret->remove_buddy = byahoo_remove_buddy;
-	ret->get_status_string = byahoo_get_status_string;
 	ret->send_typing = byahoo_send_typing;
 	
 	ret->chat_send = byahoo_chat_send;
@@ -585,10 +545,65 @@ void ext_yahoo_got_cookies( int id )
 void ext_yahoo_status_changed( int id, char *who, int stat, char *msg, int away )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
+	char *state_string = NULL;
+	int flags = OPT_LOGGED_IN;
 	
-	serv_got_update( ic, who, stat != YAHOO_STATUS_OFFLINE, 0, 0,
-	                 ( stat == YAHOO_STATUS_IDLE ) ? away : 0,
-	                 ( stat != YAHOO_STATUS_AVAILABLE ) | ( stat << 1 ), 0 );
+	if( away )
+		flags |= OPT_AWAY;
+	
+	switch (stat)
+	{
+	case YAHOO_STATUS_BRB:
+		state_string = "Be Right Back";
+		break;
+	case YAHOO_STATUS_BUSY:
+		state_string = "Busy";
+		break;
+	case YAHOO_STATUS_NOTATHOME:
+		state_string = "Not At Home";
+		break;
+	case YAHOO_STATUS_NOTATDESK:
+		state_string = "Not At Desk";
+		break;
+	case YAHOO_STATUS_NOTINOFFICE:
+		state_string = "Not In Office";
+		break;
+	case YAHOO_STATUS_ONPHONE:
+		state_string = "On Phone";
+		break;
+	case YAHOO_STATUS_ONVACATION:
+		state_string = "On Vacation";
+		break;
+	case YAHOO_STATUS_OUTTOLUNCH:
+		state_string = "Out To Lunch";
+		break;
+	case YAHOO_STATUS_STEPPEDOUT:
+		state_string = "Stepped Out";
+		break;
+	case YAHOO_STATUS_INVISIBLE:
+		state_string = "Invisible";
+		break;
+	case YAHOO_STATUS_CUSTOM:
+		state_string = "Away";
+		break;
+	case YAHOO_STATUS_IDLE:
+		state_string = "Idle";
+		break;
+	case YAHOO_STATUS_OFFLINE:
+		state_string = "Offline";
+		flags = 0;
+		break;
+	case YAHOO_STATUS_NOTIFY:
+		state_string = "Notify";
+		break;
+	}
+	
+	imcb_buddy_status( ic, who, flags, state_string, msg );
+	
+	/* Not implemented yet...
+	if( stat == YAHOO_STATUS_IDLE )
+		imcb_buddy_times( ic, who, 0, away );
+	*/
 }
 
 void ext_yahoo_got_im( int id, char *who, char *msg, long tm, int stat, int utf8 )

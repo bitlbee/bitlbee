@@ -191,16 +191,6 @@ static GList *msn_away_states( struct im_connection *ic )
 	return l;
 }
 
-static char *msn_get_status_string( struct im_connection *ic, int number )
-{
-	const struct msn_away_state *st = msn_away_state_by_number( number );
-	
-	if( st )
-		return( (char*) st->name );
-	else
-		return( "" );
-}
-
 static void msn_set_away( struct im_connection *ic, char *state, char *message )
 {
 	char buf[1024];
@@ -398,7 +388,6 @@ void msn_initmodule()
 	ret->logout = msn_logout;
 	ret->send_im = msn_send_im;
 	ret->away_states = msn_away_states;
-	ret->get_status_string = msn_get_status_string;
 	ret->set_away = msn_set_away;
 	ret->get_info = msn_get_info;
 	ret->set_my_name = msn_set_my_name;

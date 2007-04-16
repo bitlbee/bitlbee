@@ -5,7 +5,8 @@
   \********************************************************************/
 
 /*
- * nogaim
+ * nogaim, soon to be known as im_api. Not a separate product (unless
+ * someone would be interested in such a thing), just a new name.
  *
  * Gaim without gaim - for BitlBee
  *
@@ -14,7 +15,7 @@
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *                          (and possibly other members of the Gaim team)
- * Copyright 2002-2004 Wilmer van der Gaast <wilmer@gaast.net>
+ * Copyright 2002-2007 Wilmer van der Gaast <wilmer@gaast.net>
  */
 
 /*
@@ -43,7 +44,6 @@
 #include "md5.h"
 #include "sha.h"
 
-
 #define BUF_LEN MSG_LEN
 #define BUF_LONG ( BUF_LEN * 2 )
 #define MSG_LEN 2048
@@ -53,18 +53,19 @@
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
 #define WEBSITE "http://www.bitlbee.org/"
-#define IM_FLAG_AWAY 0x0020
 #define GAIM_AWAY_CUSTOM "Custom"
 
-#define OPT_CONN_HTML   0x00000001
-#define OPT_LOGGED_IN   0x00010000
-#define OPT_LOGGING_OUT 0x00020000
+/* Sharing flags between buddies and connections. Or planning to, at least... */
+#define OPT_LOGGED_IN   0x00000001
+#define OPT_LOGGING_OUT 0x00000002
+#define OPT_AWAY        0x00000004
+#define OPT_DOES_HTML   0x00000010
 
 /* ok. now the fun begins. first we create a connection structure */
 struct im_connection
 {
 	account_t *acc;
-	guint32 flags;
+	u_int32_t flags;
 	
 	/* each connection then can have its own protocol-specific data */
 	void *proto_data;
@@ -163,9 +164,6 @@ struct prpl {
 	struct groupchat *
 	     (* chat_join)	(struct im_connection *, char *chat, char *nick, char *password);
 	
-	/* DIE! */
-	char *(* get_status_string) (struct im_connection *ic, int stat);
-	
 	GList *(* away_states)(struct im_connection *ic);
 	
 	/* Mainly for AOL, since they think "Bung hole" == "Bu ngho le". *sigh* */
@@ -200,7 +198,6 @@ G_MODULE_EXPORT struct groupchat *serv_got_joined_chat( struct im_connection *ic
 G_MODULE_EXPORT void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, time_t mtime );
 G_MODULE_EXPORT void serv_got_chat_left( struct groupchat *c );
 struct groupchat *chat_by_channel( char *channel );
-struct groupchat *chat_by_id( int id );
 
 /* Buddy management */
 G_MODULE_EXPORT void add_buddy( struct im_connection *ic, char *group, char *handle, char *realname );
@@ -208,7 +205,8 @@ G_MODULE_EXPORT struct buddy *find_buddy( struct im_connection *ic, char *handle
 G_MODULE_EXPORT void serv_buddy_rename( struct im_connection *ic, char *handle, char *realname );
 
 /* Buddy activity */
-G_MODULE_EXPORT void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps );
+G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message );
+/* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
 G_MODULE_EXPORT void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 flags, time_t mtime, gint len );
 G_MODULE_EXPORT void serv_got_typing( struct im_connection *ic, char *handle, int timeout, int type );
 

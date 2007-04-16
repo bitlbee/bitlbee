@@ -262,7 +262,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 		{
 			irc->is_private = 1;
 		}
-		irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? IM_FLAG_AWAY : 0 );
+		irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? OPT_AWAY : 0 );
 	}
 }
 

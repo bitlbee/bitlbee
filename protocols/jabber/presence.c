@@ -37,6 +37,8 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	
 	if( type == NULL )
 	{
+		int is_away = 0;
+		
 		if( !( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT | GET_BUDDY_CREAT ) ) )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
@@ -51,7 +53,11 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 			bud->away_message = NULL;
 		
 		if( ( c = xt_find_node( node->children, "show" ) ) && c->text_len > 0 )
+		{
 			bud->away_state = (void*) jabber_away_state_by_code( c->text );
+			if( strcmp( c->text, "chat" ) != 0 )
+				is_away = OPT_AWAY;
+		}
 		else
 		{
 			bud->away_state = NULL;
@@ -65,8 +71,9 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		else
 			bud->priority = 0;
 		
-		serv_got_update( ic, bud->bare_jid, 1, 0, 0, 0,
-		                 bud->away_state ? UC_UNAVAILABLE : 0, 0 );
+		/* FIXME: What to send if there are other resources??? */
+		imcb_buddy_status( ic, bud->bare_jid, OPT_LOGGED_IN | is_away,
+		                   bud->away_state->full_name, bud->away_message );
 	}
 	else if( strcmp( type, "unavailable" ) == 0 )
 	{
@@ -86,13 +93,13 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 			/* Only count this as offline if there's no other resource
 			   available anymore. */
 			if( jabber_buddy_by_jid( ic, from, 0 ) == NULL )
-				serv_got_update( ic, from, 0, 0, 0, 0, 0, 0 );
+				imcb_buddy_status( ic, from, 0, NULL, NULL );
 			
 			*s = '/';
 		}
 		else
 		{
-			serv_got_update( ic, from, 0, 0, 0, 0, 0, 0 );
+			imcb_buddy_status( ic, from, 0, NULL, NULL );
 		}
 	}
 	else if( strcmp( type, "subscribe" ) == 0 )
