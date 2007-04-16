@@ -119,7 +119,7 @@ void yahoo_chat_keepalive(int id);
 
 /* from is the identity you're sending from.  if NULL, the default is used */
 /* utf8 is whether msg is a utf8 string or not. */
-void yahoo_send_im(int id, const char *from, const char *who, const char *msg, int utf8);
+void yahoo_send_im(int id, const char *from, const char *who, const char *msg, int utf8, int picture);
 /* if type is true, send typing notice, else send stopped typing notice */
 void yahoo_send_typing(int id, const char *from, const char *who, int typ);
 
@@ -127,9 +127,10 @@ void yahoo_send_typing(int id, const char *from, const char *who, int typ);
 /* away says whether the custom message is an away message or a sig */
 void yahoo_set_away(int id, enum yahoo_status state, const char *msg, int away);
 
-void yahoo_add_buddy(int id, const char *who, const char *group);
+void yahoo_add_buddy(int id, const char *who, const char *group, const char *msg);
 void yahoo_remove_buddy(int id, const char *who, const char *group);
 void yahoo_reject_buddy(int id, const char *who, const char *msg);
+void yahoo_stealth_buddy(int id, const char *who, int unstealth);
 /* if unignore is true, unignore, else ignore */
 void yahoo_ignore_buddy(int id, const char *who, int unignore);
 void yahoo_change_buddy_group(int id, const char *who, const char *old_group, const char *new_group);
@@ -212,6 +213,8 @@ const char  * yahoo_get_cookie(int id, const char *which);
 /* as of now this is http://profiles.yahoo.com/ */
 /* You'll have to do urlencoding yourself, but see yahoo_httplib.h first */
 const char  * yahoo_get_profile_url( void );
+
+void yahoo_buddyicon_request(int id, const char *who);
 
 #include "yahoo_httplib.h"
 

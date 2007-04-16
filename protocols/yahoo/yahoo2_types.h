@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 enum yahoo_status {
+	YAHOO_STATUS_DISCONNECTED = -1,
 	YAHOO_STATUS_AVAILABLE = 0,
 	YAHOO_STATUS_BRB,
 	YAHOO_STATUS_BUSY,
@@ -42,13 +43,15 @@ enum yahoo_status {
 	YAHOO_STATUS_INVISIBLE = 12,
 	YAHOO_STATUS_CUSTOM = 99,
 	YAHOO_STATUS_IDLE = 999,
+	YAHOO_STATUS_WEBLOGIN = 0x5a55aa55,
 	YAHOO_STATUS_OFFLINE = 0x5a55aa56, /* don't ask */
-	YAHOO_STATUS_NOTIFY = 0x16
+	YAHOO_STATUS_NOTIFY = 0x16 /* TYPING */
 };
 #define YAHOO_STATUS_GAME	0x2 		/* Games don't fit into the regular status model */
 
 enum yahoo_login_status {
 	YAHOO_LOGIN_OK = 0,
+	YAHOO_LOGIN_LOGOFF = 2,
 	YAHOO_LOGIN_UNAME = 3,
 	YAHOO_LOGIN_PASSWD = 13,
 	YAHOO_LOGIN_LOCK = 14,
@@ -57,6 +60,9 @@ enum yahoo_login_status {
 };
 
 enum yahoo_error {
+	E_UNKNOWN = -1,
+	E_CONNECTION = -2,
+	E_SYSTEM = -3,
 	E_CUSTOM = 0,
 
 	/* responses from ignore buddy */
@@ -78,6 +84,7 @@ enum yahoo_log_level {
 	YAHOO_LOG_DEBUG
 };
 
+#define YAHOO_PROTO_VER 0x000b
 
 /* Yahoo style/color directives */
 #define YAHOO_COLOR_BLACK "\033[30m"
@@ -113,6 +120,12 @@ enum yahoo_connection_type {
 enum yahoo_webcam_direction_type {
         YAHOO_WEBCAM_DOWNLOAD=0,
         YAHOO_WEBCAM_UPLOAD
+};
+
+enum yahoo_stealth_visibility_type {
+	YAHOO_STEALTH_DEFAULT = 0,
+  	YAHOO_STEALTH_ONLINE,
+  	YAHOO_STEALTH_PERM_OFFLINE
 };
 
 /* chat member attribs */
