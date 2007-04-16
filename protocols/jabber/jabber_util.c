@@ -223,7 +223,7 @@ static void jabber_buddy_ask_yes( gpointer w, struct jabber_buddy_ask_data *bla 
 	presence_send_request( bla->ic, bla->handle, "subscribed" );
 	
 	if( find_buddy( bla->ic, bla->handle ) == NULL )
-		show_got_added( bla->ic, bla->handle, NULL );
+		imcb_ask_add( bla->ic, bla->handle, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla );
@@ -246,7 +246,7 @@ void jabber_buddy_ask( struct im_connection *ic, char *handle )
 	bla->handle = g_strdup( handle );
 	
 	buf = g_strdup_printf( "The user %s wants to add you to his/her buddy list.", handle );
-	do_ask_dialog( ic, buf, bla, jabber_buddy_ask_yes, jabber_buddy_ask_no );
+	imcb_ask( ic, buf, bla, jabber_buddy_ask_yes, jabber_buddy_ask_no );
 	g_free( buf );
 }
 

@@ -11,7 +11,7 @@
 # Program variables
 objects = account.o bitlbee.o conf.o crypting.o help.o ipc.o irc.o irc_commands.o log.o nick.o query.o root_commands.o set.o storage.o $(STORAGE_OBJS) unix.o user.o
 headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ini.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h url.h user.h protocols/http_client.h protocols/md5.h protocols/nogaim.h protocols/proxy.h protocols/sha.h protocols/ssl_client.h
-subdirs = protocols lib
+subdirs = lib protocols
 
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)

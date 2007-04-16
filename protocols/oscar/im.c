@@ -936,7 +936,7 @@ static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	channel = aimbs_get16(bs);
 
 	if (channel != 0x01) {
-		imc_error(sess->aux_data, "icbm: ICBM recieved on unsupported channel.  Ignoring.");
+		imcb_error(sess->aux_data, "icbm: ICBM recieved on unsupported channel.  Ignoring.");
 		return 0;
 	}
 
@@ -1344,7 +1344,7 @@ static int incomingim_ch1(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 			args.extdata = aimbs_getraw(bs, args.extdatalen);
 
 		} else {
-			// imc_error(sess->aux_data, "Unknown TLV encountered");
+			// imcb_error(sess->aux_data, "Unknown TLV encountered");
 		}
 
 		/*
@@ -1516,7 +1516,7 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	 */
 	cookie2 = aimbs_getraw(&bbs, 8);
 	if (memcmp(cookie, cookie2, 8) != 0) 
-		imc_error(sess->aux_data, "rend: warning cookies don't match!");
+		imcb_error(sess->aux_data, "rend: warning cookies don't match!");
 	memcpy(args.cookie, cookie2, 8);
 	g_free(cookie2);
 
@@ -1782,7 +1782,7 @@ static int incomingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 	} else {
 
-		imc_error(sess->aux_data, "ICBM received on an unsupported channel.  Ignoring.");
+		imcb_error(sess->aux_data, "ICBM received on an unsupported channel.  Ignoring.");
 
 		return 0;
 	}

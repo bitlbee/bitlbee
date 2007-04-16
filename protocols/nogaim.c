@@ -144,7 +144,7 @@ GSList *get_connections() { return connections; }
 
 /* multi.c */
 
-struct im_connection *imc_new( account_t *acc )
+struct im_connection *imcb_new( account_t *acc )
 {
 	struct im_connection *ic;
 	
@@ -203,7 +203,7 @@ static void serv_got_crap( struct im_connection *ic, char *format, ... )
 	g_free( text );
 }
 
-void imc_log( struct im_connection *ic, char *format, ... )
+void imcb_log( struct im_connection *ic, char *format, ... )
 {
 	va_list params;
 	char *text;
@@ -220,7 +220,7 @@ void imc_log( struct im_connection *ic, char *format, ... )
 	g_free( text );
 }
 
-void imc_error( struct im_connection *ic, char *format, ... )
+void imcb_error( struct im_connection *ic, char *format, ... )
 {
 	va_list params;
 	char *text;
@@ -247,7 +247,7 @@ static gboolean send_keepalive( gpointer d, gint fd, b_input_condition cond )
 	return TRUE;
 }
 
-void imc_connected( struct im_connection *ic )
+void imcb_connected( struct im_connection *ic )
 {
 	user_t *u;
 	
@@ -259,14 +259,14 @@ void imc_connected( struct im_connection *ic )
 	
 	u = user_find( ic->irc, ic->irc->nick );
 	
-	imc_log( ic, "Logged in" );
+	imcb_log( ic, "Logged in" );
 	
 	ic->keepalive = b_timeout_add( 60000, send_keepalive, ic );
 	ic->flags |= OPT_LOGGED_IN;
 	
 	/* Also necessary when we're not away, at least for some of the
 	   protocols. */
-	bim_set_away( ic, u->away );
+	imc_set_away( ic, u->away );
 }
 
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
@@ -299,7 +299,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	else
 		ic->flags |= OPT_LOGGING_OUT;
 	
-	imc_log( ic, "Signing off.." );
+	imcb_log( ic, "Signing off.." );
 	
 	b_event_remove( ic->keepalive );
 	ic->keepalive = 0;
@@ -333,7 +333,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	{
 		int delay = set_getint( &irc->set, "auto_reconnect_delay" );
 		
-		imc_log( ic, "Reconnecting in %d seconds..", delay );
+		imcb_log( ic, "Reconnecting in %d seconds..", delay );
 		a->reconnect = b_timeout_add( delay * 1000, auto_reconnect, a );
 	}
 	
@@ -343,7 +343,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 
 /* dialogs.c */
 
-void do_ask_dialog( struct im_connection *ic, char *msg, void *data, void *doit, void *dont )
+void imcb_ask( struct im_connection *ic, char *msg, void *data, void *doit, void *dont )
 {
 	query_add( ic->irc, ic, msg, doit, dont, data );
 }
@@ -359,12 +359,12 @@ void add_buddy( struct im_connection *ic, char *group, char *handle, char *realn
 	irc_t *irc = ic->irc;
 	
 	if( set_getbool( &irc->set, "debug" ) && 0 ) /* This message is too useless */
-		imc_log( ic, "Receiving user add from handle: %s", handle );
+		imcb_log( ic, "Receiving user add from handle: %s", handle );
 	
 	if( user_findhandle( ic, handle ) )
 	{
 		if( set_getbool( &irc->set, "debug" ) )
-			imc_log( ic, "User already exists, ignoring add request: %s", handle );
+			imcb_log( ic, "User already exists, ignoring add request: %s", handle );
 		
 		return;
 		
@@ -447,7 +447,7 @@ void serv_buddy_rename( struct im_connection *ic, char *handle, char *realname )
 		u->realname = g_strdup( realname );
 		
 		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->irc->set, "display_namechanges" ) )
-			imc_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
+			imcb_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
 	}
 }
 
@@ -474,7 +474,7 @@ void show_got_added_yes( gpointer w, struct show_got_added_data *data )
 	return show_got_added_no( w, data );
 }
 
-void show_got_added( struct im_connection *ic, char *handle, const char *realname )
+void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname )
 {
 	struct show_got_added_data *data = g_new0( struct show_got_added_data, 1 );
 	char *s;
@@ -511,8 +511,8 @@ void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int 
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) || g_strcasecmp( set_getstr( &ic->irc->set, "handle_unknown" ), "ignore" ) != 0 )
 			{
-				imc_log( ic, "serv_got_update() for handle %s:", handle );
-				imc_log( ic, "loggedin = %d, type = %d", loggedin, type );
+				imcb_log( ic, "serv_got_update() for handle %s:", handle );
+				imcb_log( ic, "loggedin = %d, type = %d", loggedin, type );
 			}
 			
 			return;
@@ -551,15 +551,6 @@ void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int 
 	{
 		u->away = g_strdup( "Away" );
 	}
-	else if( ( type & UC_UNAVAILABLE ) && ( strcmp( ic->acc->prpl->name, "jabber" ) == 0 ) )
-	{
-		if( type & UC_DND )
-			u->away = g_strdup( "Do Not Disturb" );
-		else if( type & UC_XA )
-			u->away = g_strdup( "Extended Away" );
-		else // if( type & UC_AWAY )
-			u->away = g_strdup( "Away" );
-	}
 	else if( ( type & UC_UNAVAILABLE ) && ic->acc->prpl->get_status_string )
 	{
 		u->away = g_strdup( ic->acc->prpl->get_status_string( ic, type ) );
@@ -592,7 +583,7 @@ void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 fla
 		if( g_strcasecmp( h, "ignore" ) == 0 )
 		{
 			if( set_getbool( &irc->set, "debug" ) )
-				imc_log( ic, "Ignoring message from unknown handle %s", handle );
+				imcb_log( ic, "Ignoring message from unknown handle %s", handle );
 			
 			return;
 		}
@@ -614,7 +605,7 @@ void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 fla
 		}
 		else
 		{
-			imc_log( ic, "Message from unknown handle %s:", handle );
+			imcb_log( ic, "Message from unknown handle %s:", handle );
 			u = user_find( irc, irc->mynick );
 		}
 	}
@@ -684,7 +675,7 @@ void serv_got_chat_left( struct groupchat *c )
 	GList *ir;
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
-		imc_log( ic, "You were removed from conversation 0x%x", (int) c );
+		imcb_log( ic, "You were removed from conversation 0x%x", (int) c );
 	
 	if( c )
 	{
@@ -732,7 +723,7 @@ void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, t
 	if( c && u )
 		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, "", msg );
 	else
-		imc_log( ic, "Message from/to conversation %s@0x%x (unknown conv/user): %s", who, (int) c, msg );
+		imcb_log( ic, "Message from/to conversation %s@0x%x (unknown conv/user): %s", who, (int) c, msg );
 }
 
 struct groupchat *serv_got_joined_chat( struct im_connection *ic, char *handle )
@@ -754,7 +745,7 @@ struct groupchat *serv_got_joined_chat( struct im_connection *ic, char *handle )
 	c->channel = g_strdup_printf( "&chat_%03d", ic->irc->c_id++ );
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
-		imc_log( ic, "Creating new conversation: (id=0x%x,handle=%s)", (int) c, handle );
+		imcb_log( ic, "Creating new conversation: (id=0x%x,handle=%s)", (int) c, handle );
 	
 	return c;
 }
@@ -768,7 +759,7 @@ void add_chat_buddy( struct groupchat *b, char *handle )
 	int me = 0;
 	
 	if( set_getbool( &b->ic->irc->set, "debug" ) )
-		imc_log( b->ic, "User %s added to conversation 0x%x", handle, (int) b );
+		imcb_log( b->ic, "User %s added to conversation 0x%x", handle, (int) b );
 	
 	/* It might be yourself! */
 	if( b->ic->acc->prpl->handle_cmp( handle, b->ic->acc->user ) == 0 )
@@ -802,7 +793,7 @@ void remove_chat_buddy( struct groupchat *b, char *handle, char *reason )
 	int me = 0;
 	
 	if( set_getbool( &b->ic->irc->set, "debug" ) )
-		imc_log( b->ic, "User %s removed from conversation 0x%x (%s)", handle, (int) b, reason ? reason : "" );
+		imcb_log( b->ic, "User %s removed from conversation 0x%x (%s)", handle, (int) b, reason ? reason : "" );
 	
 	/* It might be yourself! */
 	if( g_strcasecmp( handle, b->ic->acc->user ) == 0 )
@@ -928,7 +919,7 @@ char *set_eval_away_devoice( set_t *set, char *value )
 /* The plan is to not allow straight calls to prpl functions anymore, but do
    them all from some wrappers. We'll start to define some down here: */
 
-int bim_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags )
+int imc_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags )
 {
 	char *buf = NULL;
 	int st;
@@ -945,7 +936,7 @@ int bim_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags 
 	return st;
 }
 
-int bim_chat_msg( struct groupchat *c, char *msg, int flags )
+int imc_chat_msg( struct groupchat *c, char *msg, int flags )
 {
 	char *buf = NULL;
 	
@@ -961,9 +952,9 @@ int bim_chat_msg( struct groupchat *c, char *msg, int flags )
 	return 1;
 }
 
-static char *bim_away_alias_find( GList *gcm, char *away );
+static char *imc_away_alias_find( GList *gcm, char *away );
 
-int bim_set_away( struct im_connection *ic, char *away )
+int imc_set_away( struct im_connection *ic, char *away )
 {
 	GList *m, *ms;
 	char *s;
@@ -994,12 +985,12 @@ int bim_set_away( struct im_connection *ic, char *away )
 	}
 	else
 	{
-		s = bim_away_alias_find( ms, away );
+		s = imc_away_alias_find( ms, away );
 		if( s )
 		{
 			ic->acc->prpl->set_away( ic, s, away );
 			if( set_getbool( &ic->irc->set, "debug" ) )
-				imc_log( ic, "Setting away state to %s", s );
+				imcb_log( ic, "Setting away state to %s", s );
 		}
 		else
 			ic->acc->prpl->set_away( ic, GAIM_AWAY_CUSTOM, away );
@@ -1008,7 +999,7 @@ int bim_set_away( struct im_connection *ic, char *away )
 	return( 1 );
 }
 
-static char *bim_away_alias_list[8][5] =
+static char *imc_away_alias_list[8][5] =
 {
 	{ "Away from computer", "Away", "Extended away", NULL },
 	{ "NA", "N/A", "Not available", NULL },
@@ -1020,28 +1011,28 @@ static char *bim_away_alias_list[8][5] =
 	{ NULL }
 };
 
-static char *bim_away_alias_find( GList *gcm, char *away )
+static char *imc_away_alias_find( GList *gcm, char *away )
 {
 	GList *m;
 	int i, j;
 	
-	for( i = 0; *bim_away_alias_list[i]; i ++ )
+	for( i = 0; *imc_away_alias_list[i]; i ++ )
 	{
-		for( j = 0; bim_away_alias_list[i][j]; j ++ )
-			if( g_strncasecmp( away, bim_away_alias_list[i][j], strlen( bim_away_alias_list[i][j] ) ) == 0 )
+		for( j = 0; imc_away_alias_list[i][j]; j ++ )
+			if( g_strncasecmp( away, imc_away_alias_list[i][j], strlen( imc_away_alias_list[i][j] ) ) == 0 )
 				break;
 		
-		if( !bim_away_alias_list[i][j] )	/* If we reach the end, this row */
+		if( !imc_away_alias_list[i][j] )	/* If we reach the end, this row */
 			continue;			/* is not what we want. Next!    */
 		
 		/* Now find an entry in this row which exists in gcm */
-		for( j = 0; bim_away_alias_list[i][j]; j ++ )
+		for( j = 0; imc_away_alias_list[i][j]; j ++ )
 		{
 			m = gcm;
 			while( m )
 			{
-				if( g_strcasecmp( bim_away_alias_list[i][j], m->data ) == 0 )
-					return( bim_away_alias_list[i][j] );
+				if( g_strcasecmp( imc_away_alias_list[i][j], m->data ) == 0 )
+					return( imc_away_alias_list[i][j] );
 				m = m->next;
 			}
 		}
@@ -1050,7 +1041,7 @@ static char *bim_away_alias_find( GList *gcm, char *away )
 	return( NULL );
 }
 
-void bim_add_allow( struct im_connection *ic, char *handle )
+void imc_add_allow( struct im_connection *ic, char *handle )
 {
 	if( g_slist_find_custom( ic->permit, handle, (GCompareFunc) ic->acc->prpl->handle_cmp ) == NULL )
 	{
@@ -1060,7 +1051,7 @@ void bim_add_allow( struct im_connection *ic, char *handle )
 	ic->acc->prpl->add_permit( ic, handle );
 }
 
-void bim_rem_allow( struct im_connection *ic, char *handle )
+void imc_rem_allow( struct im_connection *ic, char *handle )
 {
 	GSList *l;
 	
@@ -1073,7 +1064,7 @@ void bim_rem_allow( struct im_connection *ic, char *handle )
 	ic->acc->prpl->rem_permit( ic, handle );
 }
 
-void bim_add_block( struct im_connection *ic, char *handle )
+void imc_add_block( struct im_connection *ic, char *handle )
 {
 	if( g_slist_find_custom( ic->deny, handle, (GCompareFunc) ic->acc->prpl->handle_cmp ) == NULL )
 	{
@@ -1083,7 +1074,7 @@ void bim_add_block( struct im_connection *ic, char *handle )
 	ic->acc->prpl->add_deny( ic, handle );
 }
 
-void bim_rem_block( struct im_connection *ic, char *handle )
+void imc_rem_block( struct im_connection *ic, char *handle )
 {
 	GSList *l;
 	

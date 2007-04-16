@@ -473,7 +473,7 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 			 *
 			 */
 #ifdef DEBUG
-			// imc_error(sess->aux_data, G_STRLOC);
+			// imcb_error(sess->aux_data, G_STRLOC);
 #endif
 
 		}
@@ -634,7 +634,7 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	origsnac = aim_remsnac(sess, snac->id);
 
 	if (!origsnac || !origsnac->data) {
-		imc_error(sess->aux_data, "major problem: no snac stored!");
+		imcb_error(sess->aux_data, "major problem: no snac stored!");
 		return 0;
 	}
 
@@ -643,7 +643,7 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	if ((inforeq->infotype != AIM_GETINFO_GENERALINFO) &&
 			(inforeq->infotype != AIM_GETINFO_AWAYMESSAGE) &&
 			(inforeq->infotype != AIM_GETINFO_CAPABILITIES)) {
-		imc_error(sess->aux_data, "unknown infotype in request!");
+		imcb_error(sess->aux_data, "unknown infotype in request!");
 		return 0;
 	}
 

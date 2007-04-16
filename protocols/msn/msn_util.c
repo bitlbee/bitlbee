@@ -35,7 +35,7 @@ int msn_write( struct im_connection *ic, char *s, int len )
 	st = write( md->fd, s, len );
 	if( st != len )
 	{
-		imc_error( ic, "Short write() to main server" );
+		imcb_error( ic, "Short write() to main server" );
 		imc_logout( ic, TRUE );
 		return( 0 );
 	}
@@ -45,7 +45,7 @@ int msn_write( struct im_connection *ic, char *s, int len )
 
 int msn_logged_in( struct im_connection *ic )
 {
-	imc_connected( ic );
+	imcb_connected( ic );
 	
 	return( 0 );
 }
@@ -94,7 +94,7 @@ static void msn_buddy_ask_yes( gpointer w, struct msn_buddy_ask_data *bla )
 	msn_buddy_list_add( bla->ic, "AL", bla->handle, bla->realname );
 	
 	if( find_buddy( bla->ic, bla->handle ) == NULL )
-		show_got_added( bla->ic, bla->handle, NULL );
+		imcb_ask_add( bla->ic, bla->handle, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla->realname );
@@ -122,7 +122,7 @@ void msn_buddy_ask( struct im_connection *ic, char *handle, char *realname )
 	g_snprintf( buf, sizeof( buf ),
 	            "The user %s (%s) wants to add you to his/her buddy list.",
 	            handle, realname );
-	do_ask_dialog( ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
+	imcb_ask( ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
 }
 
 char *msn_findheader( char *text, char *header, int len )

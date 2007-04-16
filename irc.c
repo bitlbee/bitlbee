@@ -1036,7 +1036,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	}
 	else if( c && c->ic && c->ic->acc && c->ic->acc->prpl )
 	{
-		return( bim_chat_msg( c, s, 0 ) );
+		return( imc_chat_msg( c, s, 0 ) );
 	}
 	
 	return( 0 );
@@ -1051,7 +1051,7 @@ static gboolean buddy_send_handler_delayed( gpointer data, gint fd, b_input_cond
 		return FALSE;
 	
 	u->sendbuf[u->sendbuf_len-2] = 0; /* Cut off the last newline */
-	bim_buddy_msg( u->ic, u->handle, u->sendbuf, u->sendbuf_flags );
+	imc_buddy_msg( u->ic, u->handle, u->sendbuf, u->sendbuf_flags );
 	
 	g_free( u->sendbuf );
 	u->sendbuf = NULL;
@@ -1103,7 +1103,7 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 	}
 	else
 	{
-		bim_buddy_msg( u->ic, u->handle, msg, flags );
+		imc_buddy_msg( u->ic, u->handle, msg, flags );
 	}
 }
 

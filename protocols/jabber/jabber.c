@@ -58,7 +58,7 @@ static void jabber_init( account_t *acc )
 
 static void jabber_login( account_t *acc )
 {
-	struct im_connection *ic = imc_new( acc );
+	struct im_connection *ic = imcb_new( acc );
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
 	struct ns_srv_reply *srv = NULL;
 	char *connect_to, *s;
@@ -71,7 +71,7 @@ static void jabber_login( account_t *acc )
 	
 	if( jd->server == NULL )
 	{
-		imc_error( ic, "Incomplete account name (format it like <username@jabberserver.name>)" );
+		imcb_error( ic, "Incomplete account name (format it like <username@jabberserver.name>)" );
 		imc_logout( ic, FALSE );
 		return;
 	}
@@ -158,12 +158,12 @@ static void jabber_login( account_t *acc )
 	else
 		connect_to = jd->server;
 	
-	imc_log( ic, "Connecting" );
+	imcb_log( ic, "Connecting" );
 	
 	if( set_getint( &acc->set, "port" ) < JABBER_PORT_MIN ||
 	    set_getint( &acc->set, "port" ) > JABBER_PORT_MAX )
 	{
-		imc_log( ic, "Incorrect port number, must be in the %d-%d range",
+		imcb_log( ic, "Incorrect port number, must be in the %d-%d range",
 		               JABBER_PORT_MIN, JABBER_PORT_MAX );
 		imc_logout( ic, FALSE );
 		return;
@@ -185,7 +185,7 @@ static void jabber_login( account_t *acc )
 	
 	if( jd->fd == -1 )
 	{
-		imc_error( ic, "Could not connect to server" );
+		imcb_error( ic, "Could not connect to server" );
 		imc_logout( ic, TRUE );
 	}
 }
@@ -284,7 +284,7 @@ static void jabber_get_info( struct im_connection *ic, char *who )
 	
 	while( bud )
 	{
-		imc_log( ic, "Buddy %s (%d) information:\nAway state: %s\nAway message: %s",
+		imcb_log( ic, "Buddy %s (%d) information:\nAway state: %s\nAway message: %s",
 		                   bud->full_jid, bud->priority,
 		                   bud->away_state ? bud->away_state->full_name : "(none)",
 		                   bud->away_message ? : "(none)" );

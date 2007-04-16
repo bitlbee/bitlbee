@@ -221,7 +221,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 		}
 		g_slist_free( sb->msgq );
 		
-		imc_log( ic, "Warning: Closing down MSN switchboard connection with "
+		imcb_log( ic, "Warning: Closing down MSN switchboard connection with "
 		                   "unsent message to %s, you'll have to resend it.",
 		                   sb->who ? sb->who : "(unknown)" );
 	}
@@ -320,7 +320,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	
 	if( strcmp( cmd[0], "XFR" ) == 0 )
 	{
-		imc_error( ic, "Received an XFR from a switchboard server, unable to comply! This is likely to be a bug, please report it!" );
+		imcb_error( ic, "Received an XFR from a switchboard server, unable to comply! This is likely to be a bug, please report it!" );
 		imc_logout( ic, TRUE );
 		return( 0 );
 	}
@@ -527,7 +527,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		int num = atoi( cmd[0] );
 		const struct msn_status_code *err = msn_status_by_number( num );
 		
-		imc_error( ic, "Error reported by switchboard server: %s", err->text );
+		imcb_error( ic, "Error reported by switchboard server: %s", err->text );
 		
 		if( err->flags & STATUS_SB_FATAL )
 		{

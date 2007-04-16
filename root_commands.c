@@ -633,8 +633,8 @@ static void cmd_block( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		bim_rem_allow( ic, cmd[2] );
-		bim_add_block( ic, cmd[2] );
+		imc_rem_allow( ic, cmd[2] );
+		imc_add_block( ic, cmd[2] );
 		irc_usermsg( irc, "Buddy `%s' moved from your allow- to your block-list", cmd[2] );
 	}
 }
@@ -692,8 +692,8 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		bim_rem_block( ic, cmd[2] );
-		bim_add_allow( ic, cmd[2] );
+		imc_rem_block( ic, cmd[2] );
+		imc_add_allow( ic, cmd[2] );
 		
 		irc_usermsg( irc, "Buddy `%s' moved from your block- to your allow-list", cmd[2] );
 	}

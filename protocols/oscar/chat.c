@@ -53,7 +53,7 @@ aim_conn_t *aim_chat_getconn(aim_session_t *sess, const char *name)
 		if (cur->type != AIM_CONN_TYPE_CHAT)
 			continue;
 		if (!cur->priv) {
-			imc_error(sess->aux_data, "chat connection with no name!");
+			imcb_error(sess->aux_data, "chat connection with no name!");
 			continue;
 		}
 
@@ -396,7 +396,7 @@ static int infoupdate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	detaillevel = aimbs_get8(bs);
 
 	if (detaillevel != 0x02) {
-		imc_error(sess->aux_data, "Only detaillevel 0x2 is support at the moment");
+		imcb_error(sess->aux_data, "Only detaillevel 0x2 is support at the moment");
 		return 1;
 	}
 
@@ -614,7 +614,7 @@ static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	channel = aimbs_get16(bs);
 
 	if (channel != 0x0003) {
-		imc_error(sess->aux_data, "unknown channel!");
+		imcb_error(sess->aux_data, "unknown channel!");
 		return 0;
 	}
 

@@ -462,7 +462,7 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 		struct im_connection *ic = a->ic;
 		
 		if( ic && ic->flags & OPT_LOGGED_IN )
-			bim_set_away( ic, u->away );
+			imc_set_away( ic, u->away );
 	}
 }
 

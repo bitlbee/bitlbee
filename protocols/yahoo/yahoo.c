@@ -122,13 +122,13 @@ static char *byahoo_strip( char *in )
 
 static void byahoo_login( account_t *acc )
 {
-	struct im_connection *ic = imc_new( acc );
+	struct im_connection *ic = imcb_new( acc );
 	struct byahoo_data *yd = ic->proto_data = g_new0( struct byahoo_data, 1 );
 	
 	yd->logged_in = FALSE;
 	yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
-	imc_log( ic, "Connecting" );
+	imcb_log( ic, "Connecting" );
 	yd->y2_id = yahoo_init( acc->user, acc->pass );
 	yahoo_login( yd->y2_id, yd->current_status );
 }
@@ -162,7 +162,7 @@ static void byahoo_logout( struct im_connection *ic )
 static void byahoo_get_info(struct im_connection *ic, char *who) 
 {
 	/* Just make an URL and let the user fetch the info */
-	imc_log(ic, "%s\n%s: %s%s", _("User Info"), 
+	imcb_log(ic, "%s\n%s: %s%s", _("User Info"), 
 			_("For now, fetch yourself"), yahoo_get_profile_url(),
 			who);
 }
@@ -509,7 +509,7 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 	
 	if( succ == YAHOO_LOGIN_OK )
 	{
-		imc_connected( ic );
+		imcb_connected( ic );
 		
 		yd->logged_in = TRUE;
 	}
@@ -537,9 +537,9 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 			errstr = "Unknown error";
 		
 		if( url && *url )
-			imc_error( ic, "Error %d (%s). See %s for more information.", succ, errstr, url );
+			imcb_error( ic, "Error %d (%s). See %s for more information.", succ, errstr, url );
 		else
-			imc_error( ic, "Error %d (%s)", succ, errstr );
+			imcb_error( ic, "Error %d (%s)", succ, errstr );
 		
 		imc_logout( ic, allow_reconnect );
 	}
@@ -604,7 +604,7 @@ void ext_yahoo_got_file( int id, char *who, char *url, long expires, char *msg, 
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
-	imc_log( ic, "Got a file transfer (file = %s) from %s. Ignoring for now due to lack of support.", fname, who );
+	imcb_log( ic, "Got a file transfer (file = %s) from %s. Ignoring for now due to lack of support.", fname, who );
 }
 
 void ext_yahoo_typing_notify( int id, char *who, int stat )
@@ -624,21 +624,21 @@ void ext_yahoo_system_message( int id, char *msg )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
-	imc_log( ic, "Yahoo! system message: %s", msg );
+	imcb_log( ic, "Yahoo! system message: %s", msg );
 }
 
 void ext_yahoo_webcam_invite( int id, char *from )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
-	imc_log( ic, "Got a webcam invitation from %s. IRC+webcams is a no-no though...", from );
+	imcb_log( ic, "Got a webcam invitation from %s. IRC+webcams is a no-no though...", from );
 }
 
 void ext_yahoo_error( int id, char *err, int fatal )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
-	imc_error( ic, "%s", err );
+	imcb_error( ic, "%s", err );
 	
 	if( fatal )
 		imc_logout( ic, TRUE );
@@ -802,14 +802,14 @@ void ext_yahoo_got_conf_invite( int id, char *who, char *room, char *msg, YList 
 	
 	g_snprintf( txt, 1024, "Got an invitation to chatroom %s from %s: %s", room, who, msg );
 	
-	do_ask_dialog( ic, txt, inv, byahoo_accept_conf, byahoo_reject_conf );
+	imcb_ask( ic, txt, inv, byahoo_accept_conf, byahoo_reject_conf );
 }
 
 void ext_yahoo_conf_userdecline( int id, char *who, char *room, char *msg )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
-	imc_log( ic, "Invite to chatroom %s rejected by %s: %s", room, who, msg );
+	imcb_log( ic, "Invite to chatroom %s rejected by %s: %s", room, who, msg );
 }
 
 void ext_yahoo_conf_userjoin( int id, char *who, char *room )
@@ -892,9 +892,9 @@ void ext_yahoo_mail_notify( int id, char *from, char *subj, int cnt )
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
 	if( from && subj )
-		imc_log( ic, "Received e-mail message from %s with subject `%s'", from, subj );
+		imcb_log( ic, "Received e-mail message from %s with subject `%s'", from, subj );
 	else if( cnt > 0 )
-		imc_log( ic, "Received %d new e-mails", cnt );
+		imcb_log( ic, "Received %d new e-mails", cnt );
 }
 
 void ext_yahoo_webcam_invite_reply( int id, char *from, int accept )

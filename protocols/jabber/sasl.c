@@ -37,14 +37,14 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		/* Should abort this now, since we should already be doing
 		   IQ authentication. Strange things happen when you try
 		   to do both... */
-		imc_log( ic, "XMPP 1.0 non-compliant server seems to support SASL, please report this as a BitlBee bug!" );
+		imcb_log( ic, "XMPP 1.0 non-compliant server seems to support SASL, please report this as a BitlBee bug!" );
 		return XT_HANDLED;
 	}
 	
 	s = xt_find_attr( node, "xmlns" );
 	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
-		imc_log( ic, "Stream error while authenticating" );
+		imcb_log( ic, "Stream error while authenticating" );
 		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}
@@ -62,7 +62,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	
 	if( !sup_plain && !sup_digest )
 	{
-		imc_error( ic, "No known SASL authentication schemes supported" );
+		imcb_error( ic, "No known SASL authentication schemes supported" );
 		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}
@@ -279,7 +279,7 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	goto silent_error;
 
 error:
-	imc_error( ic, "Incorrect SASL challenge received" );
+	imcb_error( ic, "Incorrect SASL challenge received" );
 	imc_logout( ic, FALSE );
 
 silent_error:
@@ -303,19 +303,19 @@ xt_status sasl_pkt_result( struct xt_node *node, gpointer data )
 	s = xt_find_attr( node, "xmlns" );
 	if( !s || strcmp( s, XMLNS_SASL ) != 0 )
 	{
-		imc_log( ic, "Stream error while authenticating" );
+		imcb_log( ic, "Stream error while authenticating" );
 		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}
 	
 	if( strcmp( node->name, "success" ) == 0 )
 	{
-		imc_log( ic, "Authentication finished" );
+		imcb_log( ic, "Authentication finished" );
 		jd->flags |= JFLAG_AUTHENTICATED | JFLAG_STREAM_RESTART;
 	}
 	else if( strcmp( node->name, "failure" ) == 0 )
 	{
-		imc_error( ic, "Authentication failure" );
+		imcb_error( ic, "Authentication failure" );
 		imc_logout( ic, FALSE );
 		return XT_ABORT;
 	}

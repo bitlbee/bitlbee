@@ -149,7 +149,7 @@ struct prpl {
 	void (* set_permit_deny)(struct im_connection *);
 	
 	/* Request profile info. Free-formatted stuff, the IM module gives back
-	   this info via imc_log(). */
+	   this info via imcb_log(). */
 	void (* get_info)	(struct im_connection *, char *who);
 	void (* set_my_name)	(struct im_connection *, char *name);
 	void (* set_name)	(struct im_connection *, char *who, char *name);
@@ -174,67 +174,57 @@ struct prpl {
 
 #define UC_UNAVAILABLE  1
 
-/* JABBER */
-#define UC_AWAY (0x02 | UC_UNAVAILABLE)
-#define UC_CHAT  0x04
-#define UC_XA   (0x08 | UC_UNAVAILABLE)
-#define UC_DND  (0x10 | UC_UNAVAILABLE)
-
+/* im_api core stuff. */
+void nogaim_init();
 G_MODULE_EXPORT GSList *get_connections();
 G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
 G_MODULE_EXPORT void register_protocol(struct prpl *);
 
-/* nogaim.c */
-int bim_set_away( struct im_connection *ic, char *away );
-int bim_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags );
-int bim_chat_msg( struct groupchat *c, char *msg, int flags );
-
-void bim_add_allow( struct im_connection *ic, char *handle );
-void bim_rem_allow( struct im_connection *ic, char *handle );
-void bim_add_block( struct im_connection *ic, char *handle );
-void bim_rem_block( struct im_connection *ic, char *handle );
-
-void nogaim_init();
-char *set_eval_away_devoice( set_t *set, char *value );
-
-gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond );
-void cancel_auto_reconnect( struct account *a );
-
-/* multi.c */
-G_MODULE_EXPORT struct im_connection *imc_new( account_t *acc );
-G_MODULE_EXPORT void imc_free( struct im_connection *ic );
-G_MODULE_EXPORT void imc_log( struct im_connection *ic, char *format, ... );
-G_MODULE_EXPORT void imc_error( struct im_connection *ic, char *format, ... );
-G_MODULE_EXPORT void imc_connected( struct im_connection *ic );
+/* Connection management. */
+G_MODULE_EXPORT struct im_connection *imcb_new( account_t *acc );
+G_MODULE_EXPORT void imcb_free( struct im_connection *ic );
+G_MODULE_EXPORT void imcb_connected( struct im_connection *ic );
 G_MODULE_EXPORT void imc_logout( struct im_connection *ic, int allow_reconnect );
 
-/* dialogs.c */
-G_MODULE_EXPORT void do_ask_dialog( struct im_connection *ic, char *msg, void *data, void *doit, void *dont );
+/* Communicating with the user. */
+G_MODULE_EXPORT void imcb_log( struct im_connection *ic, char *format, ... );
+G_MODULE_EXPORT void imcb_error( struct im_connection *ic, char *format, ... );
+G_MODULE_EXPORT void imcb_ask( struct im_connection *ic, char *msg, void *data, void *doit, void *dont );
+G_MODULE_EXPORT void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname );
 
-/* list.c */
-G_MODULE_EXPORT void add_buddy( struct im_connection *ic, char *group, char *handle, char *realname );
-G_MODULE_EXPORT struct buddy *find_buddy( struct im_connection *ic, char *handle );
-G_MODULE_EXPORT void signoff_blocked( struct im_connection *ic );
-
-G_MODULE_EXPORT void serv_buddy_rename( struct im_connection *ic, char *handle, char *realname );
-
-/* buddy_chat.c */
+/* Groupchats */
 G_MODULE_EXPORT void add_chat_buddy( struct groupchat *b, char *handle );
 G_MODULE_EXPORT void remove_chat_buddy( struct groupchat *b, char *handle, char *reason );
-
-/* prpl.c */
-G_MODULE_EXPORT void show_got_added( struct im_connection *ic, char *handle, const char *realname );
-
-/* server.c */
-G_MODULE_EXPORT void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps );
-G_MODULE_EXPORT void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 flags, time_t mtime, gint len );
-G_MODULE_EXPORT void serv_got_typing( struct im_connection *ic, char *handle, int timeout, int type );
 G_MODULE_EXPORT void serv_got_chat_invite( struct im_connection *ic, char *handle, char *who, char *msg, GList *data );
 G_MODULE_EXPORT struct groupchat *serv_got_joined_chat( struct im_connection *ic, char *handle );
 G_MODULE_EXPORT void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, time_t mtime );
 G_MODULE_EXPORT void serv_got_chat_left( struct groupchat *c );
-
 struct groupchat *chat_by_channel( char *channel );
 struct groupchat *chat_by_id( int id );
+
+/* Buddy management */
+G_MODULE_EXPORT void add_buddy( struct im_connection *ic, char *group, char *handle, char *realname );
+G_MODULE_EXPORT struct buddy *find_buddy( struct im_connection *ic, char *handle );
+G_MODULE_EXPORT void serv_buddy_rename( struct im_connection *ic, char *handle, char *realname );
+
+/* Buddy activity */
+G_MODULE_EXPORT void serv_got_update( struct im_connection *ic, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps );
+G_MODULE_EXPORT void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 flags, time_t mtime, gint len );
+G_MODULE_EXPORT void serv_got_typing( struct im_connection *ic, char *handle, int timeout, int type );
+
+/* Actions, or whatever. */
+int imc_set_away( struct im_connection *ic, char *away );
+int imc_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags );
+int imc_chat_msg( struct groupchat *c, char *msg, int flags );
+
+void imc_add_allow( struct im_connection *ic, char *handle );
+void imc_rem_allow( struct im_connection *ic, char *handle );
+void imc_add_block( struct im_connection *ic, char *handle );
+void imc_rem_block( struct im_connection *ic, char *handle );
+
+/* Misc. stuff */
+char *set_eval_away_devoice( set_t *set, char *value );
+gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond );
+void cancel_auto_reconnect( struct account *a );
 
 #endif
