@@ -423,7 +423,7 @@ struct buddy *find_buddy( struct im_connection *ic, char *handle )
 	
 	if( !u )
 		return( NULL );
-
+	
 	memset( b, 0, sizeof( b ) );
 	strncpy( b->name, handle, 80 );
 	strncpy( b->show, u->realname, BUDDY_ALIAS_MAXLEN );
@@ -574,11 +574,11 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
 	{
 		irc_write( ic->irc, ":%s MODE %s %cv %s", ic->irc->myhost,
-		                                                ic->irc->channel, u->away?'-':'+', u->nick );
+		                                          ic->irc->channel, u->away?'-':'+', u->nick );
 	}
 }
 
-void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 flags, time_t mtime, gint len )
+void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_t flags, time_t sent_at )
 {
 	irc_t *irc = ic->irc;
 	user_t *u;
@@ -656,24 +656,19 @@ void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 fla
 	irc_msgfrom( irc, u->nick, msg );
 }
 
-void serv_got_typing( struct im_connection *ic, char *handle, int timeout, int type )
+void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags )
 {
 	user_t *u;
 	
 	if( !set_getbool( &ic->irc->set, "typing_notice" ) )
 		return;
 	
-	if( ( u = user_findhandle( ic, handle ) ) ) {
-		/* If type is:
-		 * 0: user has stopped typing
-		 * 1: user is actively typing
-		 * 2: user has entered text, but is not actively typing
-		 */
-		if (type == 0 || type == 1 || type == 2) {
-			char buf[256]; 
-			g_snprintf(buf, 256, "\1TYPING %d\1", type); 
-			irc_privmsg( ic->irc, u, "PRIVMSG", ic->irc->nick, NULL, buf );
-		}
+	if( ( u = user_findhandle( ic, handle ) ) )
+	{
+		char buf[256]; 
+		
+		g_snprintf( buf, 256, "\1TYPING %d\1", ( flags >> 8 ) & 3 );
+		irc_privmsg( ic->irc, u, "PRIVMSG", ic->irc->nick, NULL, buf );
 	}
 }
 

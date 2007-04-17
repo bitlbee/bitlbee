@@ -49,17 +49,19 @@
 #define MSG_LEN 2048
 #define BUF_LEN MSG_LEN
 
-#define SELF_ALIAS_LEN 400
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
 #define WEBSITE "http://www.bitlbee.org/"
 #define GAIM_AWAY_CUSTOM "Custom"
 
-/* Sharing flags between buddies and connections. Or planning to, at least... */
+/* Sharing flags between all kinds of things. I just hope I won't hit any
+   limits before 32-bit machines become extinct. ;-) */
 #define OPT_LOGGED_IN   0x00000001
 #define OPT_LOGGING_OUT 0x00000002
 #define OPT_AWAY        0x00000004
 #define OPT_DOES_HTML   0x00000010
+#define OPT_TYPING      0x00000100
+#define OPT_THINKING    0x00000200
 
 /* ok. now the fun begins. first we create a connection structure */
 struct im_connection
@@ -135,7 +137,7 @@ struct prpl {
 	int  (* send_im)	(struct im_connection *, char *to, char *message, int flags);
 	void (* set_away)	(struct im_connection *, char *state, char *message);
 	void (* get_away)       (struct im_connection *, char *who);
-	int  (* send_typing)	(struct im_connection *, char *who, int typing);
+	int  (* send_typing)	(struct im_connection *, char *who, int flags);
 	
 	/* For now BitlBee doesn't really handle groups, just set it to NULL. */
 	void (* add_buddy)	(struct im_connection *, char *name, char *group);
@@ -169,8 +171,6 @@ struct prpl {
 	/* Mainly for AOL, since they think "Bung hole" == "Bu ngho le". *sigh* */
 	int (* handle_cmp) (const char *who1, const char *who2);
 };
-
-#define UC_UNAVAILABLE  1
 
 /* im_api core stuff. */
 void nogaim_init();
@@ -207,8 +207,8 @@ G_MODULE_EXPORT void serv_buddy_rename( struct im_connection *ic, char *handle, 
 /* Buddy activity */
 G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message );
 /* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
-G_MODULE_EXPORT void serv_got_im( struct im_connection *ic, char *handle, char *msg, guint32 flags, time_t mtime, gint len );
-G_MODULE_EXPORT void serv_got_typing( struct im_connection *ic, char *handle, int timeout, int type );
+G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_t flags, time_t sent_at );
+G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags );
 
 /* Actions, or whatever. */
 int imc_set_away( struct im_connection *ic, char *away );

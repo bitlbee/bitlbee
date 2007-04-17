@@ -617,7 +617,7 @@ void ext_yahoo_got_im( int id, const char *me, const char *who, const char *msg,
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	char *m = byahoo_strip( msg );
 	
-	serv_got_im( ic, (char*) who, (char*) m, 0, 0, strlen( m ) );
+	imcb_buddy_msg( ic, (char*) who, (char*) m, 0, 0 );
 	g_free( m );
 }
 
@@ -633,14 +633,11 @@ void ext_yahoo_got_file( int id,
 void ext_yahoo_typing_notify( int id, const char *ignored, const char *who, int stat )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
-	if (stat == 1) {
-		/* User is typing */
-		serv_got_typing( ic, (char*) who, 1, 1 );
-	}
-	else {
-		/* User stopped typing */
-		serv_got_typing( ic, (char*) who, 1, 0 );
-	}
+	
+	if( stat == 1 )
+		imcb_buddy_typing( ic, (char*) who, OPT_TYPING );
+	else
+		imcb_buddy_typing( ic, (char*) who, 0 );
 }
 
 void ext_yahoo_system_message( int id, const char *msg )

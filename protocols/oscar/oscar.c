@@ -1069,7 +1069,7 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 		g_snprintf(tmp, BUF_LONG, "%s", args->msg);
 	
 	strip_linefeed(tmp);
-	serv_got_im(ic, userinfo->sn, tmp, flags, time(NULL), -1);
+	imcb_buddy_msg(ic, userinfo->sn, tmp, flags, 0);
 	g_free(tmp);
 	
 	return 1;
@@ -1166,7 +1166,7 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 			uin = g_strdup_printf("%u", args->uin);
 			message = g_strdup(args->msg);
 			strip_linefeed(message);
-			serv_got_im(ic, uin, message, 0, time(NULL), -1);
+			imcb_buddy_msg(ic, uin, message, 0, 0);
 			g_free(uin);
 			g_free(message);
 		} break;
@@ -1185,7 +1185,7 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 			}
 
 			strip_linefeed(message);
-			serv_got_im(ic, uin, message, 0, time(NULL), -1);
+			imcb_buddy_msg(ic, uin, message, 0, 0);
 			g_free(uin);
 			g_free(m);
 			g_free(message);
@@ -1747,7 +1747,7 @@ static int gaim_offlinemsg(aim_session_t *sess, aim_frame_t *fr, ...) {
 			time_t t = get_time(msg->year, msg->month, msg->day, msg->hour, msg->minute, 0);
 			g_snprintf(sender, sizeof(sender), "%u", msg->sender);
 			strip_linefeed(dialog_msg);
-			serv_got_im(ic, sender, dialog_msg, 0, t, -1);
+			imcb_buddy_msg(ic, sender, dialog_msg, 0, t);
 			g_free(dialog_msg);
 		} break;
 
@@ -1768,7 +1768,7 @@ static int gaim_offlinemsg(aim_session_t *sess, aim_frame_t *fr, ...) {
 			}
 
 			strip_linefeed(dialog_msg);
-			serv_got_im(ic, sender, dialog_msg, 0, t, -1);
+			imcb_buddy_msg(ic, sender, dialog_msg, 0, t);
 			g_free(dialog_msg);
 			g_free(m);
 		} break;
@@ -2420,15 +2420,15 @@ int gaim_parsemtn(aim_session_t *sess, aim_frame_t *fr, ...)
     
 	if(type2 == 0x0002) {
 		/* User is typing */
-		serv_got_typing(ic, sn, 0, 1);
+		imcb_buddy_typing(ic, sn, OPT_TYPING);
 	} 
 	else if (type2 == 0x0001) {
 		/* User has typed something, but is not actively typing (stale) */
-		serv_got_typing(ic, sn, 0, 2);
+		imcb_buddy_typing(ic, sn, OPT_THINKING);
 	}
 	else {
 		/* User has stopped typing */
-		serv_got_typing(ic, sn, 0, 0);
+		imcb_buddy_typing(ic, sn, 0);
 	}        
 	
 	return 1;

@@ -606,7 +606,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			
 			if( sb->who )
 			{
-				serv_got_im( ic, cmd[1], body, 0, 0, blen );
+				imcb_buddy_msg( ic, cmd[1], body, 0, 0 );
 			}
 			else if( sb->chat )
 			{
@@ -665,7 +665,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			
 			if( sb->who )
 			{
-				serv_got_im( ic, cmd[1], buf, 0, 0, strlen( buf ) );
+				imcb_buddy_msg( ic, cmd[1], buf, 0, 0 );
 			}
 			else if( sb->chat )
 			{
@@ -682,7 +682,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			
 			if( who )
 			{
-				serv_got_typing( ic, who, 5, 1 );
+				imcb_buddy_typing( ic, who, OPT_TYPING );
 				g_free( who );
 			}
 			

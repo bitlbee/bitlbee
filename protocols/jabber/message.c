@@ -75,7 +75,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 			fullmsg = g_string_append( fullmsg, body->text );
 		
 		if( fullmsg->len > 0 )
-			serv_got_im( ic, bud ? bud->bare_jid : from, fullmsg->str, 0, 0, fullmsg->len );
+			imcb_buddy_msg( ic, bud ? bud->bare_jid : from, fullmsg->str, 0, 0 );
 		
 		g_string_free( fullmsg, TRUE );
 		
@@ -83,18 +83,18 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 		if( xt_find_node( node->children, "composing" ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
-			serv_got_typing( ic, bud ? bud->bare_jid : from, 0, 1 );
+			imcb_buddy_typing( ic, bud ? bud->bare_jid : from, OPT_TYPING );
 		}
 		/* No need to send a "stopped typing" signal when there's a message. */
 		else if( xt_find_node( node->children, "active" ) && ( body == NULL ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
-			serv_got_typing( ic, bud ? bud->bare_jid : from, 0, 0 );
+			imcb_buddy_typing( ic, bud ? bud->bare_jid : from, 0 );
 		}
 		else if( xt_find_node( node->children, "paused" ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
-			serv_got_typing( ic, bud ? bud->bare_jid : from, 0, 2 );
+			imcb_buddy_typing( ic, bud ? bud->bare_jid : from, OPT_THINKING );
 		}
 		
 		if( s )
