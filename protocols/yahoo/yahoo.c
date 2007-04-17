@@ -70,7 +70,7 @@ static char *byahoo_strip( const char *in )
 {
 	int len;
 	
-	/* This should get rid of HTML tags at the beginning of the string. */
+	/* This should get rid of the markup noise at the beginning of the string. */
 	while( *in )
 	{
 		if( g_strncasecmp( in, "<font", 5 ) == 0 ||
@@ -100,17 +100,23 @@ static char *byahoo_strip( const char *in )
 		}
 	}
 	
-	/* This is supposed to get rid of the closing HTML tags at the end of the line. */
+	/* This is supposed to get rid of the noise at the end of the line. */
 	len = strlen( in );
-	while( len > 0 && in[len-1] == '>' )
+	while( len > 0 && ( in[len-1] == '>' || in[len-1] == 'm' ) )
 	{
 		int blen = len;
+		const char *search;
 		
-		len --;
-		while( len > 0 && ( in[len] != '<' || in[len+1] != '/' ) )
+		if( in[len-1] == '>' )
+			search = "</";
+		else
+			search = "\e[";
+		
+		len -= 3;
+		while( len > 0 && strncmp( in + len, search, 2 ) != 0 )
 			len --;
 		
-		if( len == 0 && ( in[len] != '<' || in[len+1] != '/' ) )
+		if( len <= 0 && strncmp( in, search, 2 ) != 0 )
 		{
 			len = blen;
 			break;
