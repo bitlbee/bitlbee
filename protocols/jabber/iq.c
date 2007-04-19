@@ -359,28 +359,20 @@ static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *
 	c = query->children;
 	while( ( c = xt_find_node( c, "item" ) ) )
 	{
+		struct xt_node *group = xt_find_node( node->children, "group" );
 		char *jid = xt_find_attr( c, "jid" );
 		char *name = xt_find_attr( c, "name" );
 		char *sub = xt_find_attr( c, "subscription" );
 		
-		if( !jid || !sub )
+		if( jid && sub )
 		{
-			/* Maybe warn. But how likely is this to happen in the first place? */
-		}
-		else if( initial )
-		{
-			if( ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
-				add_buddy( ic, NULL, jid, name );
-		}
-		else
-		{
-			/* This is a roster push item. Find out what changed exactly. */
 			if( ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
 			{
-				if( find_buddy( ic, jid ) == NULL )
-					add_buddy( ic, NULL, jid, name );
-				else if( name )
-					serv_buddy_rename( ic, jid, name );
+				if( initial || imcb_find_buddy( ic, jid ) == NULL )
+					imcb_add_buddy( ic, jid, ( group && group->text_len ) ?
+					                           group->text : NULL );
+				
+				imcb_rename_buddy( ic, jid, name );
 			}
 			else if( strcmp( sub, "remove" ) == 0 )
 			{

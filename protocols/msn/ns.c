@@ -304,10 +304,11 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			char *group = NULL;
 			int num;
 			
-			if( cmd[4] != NULL && sscanf( cmd[4], "%d", &num ) == 1 )
+			if( cmd[4] != NULL && sscanf( cmd[4], "%d", &num ) == 1 && num < md->groupcount )
 				group = md->grouplist[num];
 			
-			add_buddy( ic, group, cmd[1], cmd[2] );
+			imcb_add_buddy( ic, cmd[1], group );
+			imcb_rename_buddy( ic, cmd[1], cmd[2] );
 		}
 		if( list & 2 ) /* AL */
 		{
@@ -390,7 +391,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		http_decode( cmd[4] );
-		serv_buddy_rename( ic, cmd[3], cmd[4] );
+		imcb_rename_buddy( ic, cmd[3], cmd[4] );
 		
 		st = msn_away_state_by_code( cmd[2] );
 		if( !st )
@@ -419,7 +420,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		http_decode( cmd[3] );
-		serv_buddy_rename( ic, cmd[2], cmd[3] );
+		imcb_rename_buddy( ic, cmd[2], cmd[3] );
 		
 		st = msn_away_state_by_code( cmd[1] );
 		if( !st )
@@ -481,19 +482,26 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			{
 				imcb_error( ic, "Syntax error" );
 				imc_logout( ic, TRUE );
-				return( 0 );
+				return 0;
 			}
 			
-			/* We got added by someone. If we don't have this person in permit/deny yet, inform the user. */
+			/* We got added by someone. If we don't have this
+			   person in permit/deny yet, inform the user. */
 			for( l = ic->permit; l; l = l->next )
 				if( g_strcasecmp( l->data, cmd[4] ) == 0 )
-					return( 1 );
+					return 1;
 			
 			for( l = ic->deny; l; l = l->next )
 				if( g_strcasecmp( l->data, cmd[4] ) == 0 )
-					return( 1 );
+					return 1;
 			
 			msn_buddy_ask( ic, cmd[4], cmd[5] );
+		}
+		else if( num_parts >= 6 && strcmp( cmd[2], "FL" ) == 0 )
+		{
+			http_decode( cmd[5] );
+			imcb_add_buddy( ic, cmd[4], NULL );
+			imcb_rename_buddy( ic, cmd[4], cmd[5] );
 		}
 	}
 	else if( strcmp( cmd[0], "OUT" ) == 0 )
@@ -544,7 +552,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		{
 			/* This is not supposed to happen, but let's handle it anyway... */
 			http_decode( cmd[4] );
-			serv_buddy_rename( ic, cmd[3], cmd[4] );
+			imcb_rename_buddy( ic, cmd[3], cmd[4] );
 		}
 	}
 	else if( strcmp( cmd[0], "IPG" ) == 0 )

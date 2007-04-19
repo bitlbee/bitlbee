@@ -1118,7 +1118,7 @@ static void gaim_icq_authgrant(gpointer w, struct icq_auth *data) {
 	message = 0;
 	aim_ssi_auth_reply(od->sess, od->conn, uin, 1, "");
 	// aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHGRANTED, &message);
-	if(find_buddy(data->ic, uin) == NULL)
+	if(imcb_find_buddy(data->ic, uin) == NULL)
 		imcb_ask_add(data->ic, uin, NULL);
 	
 	g_free(uin);
@@ -1874,7 +1874,7 @@ static void oscar_get_info(struct im_connection *g, char *name) {
 static void oscar_get_away(struct im_connection *g, char *who) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
 	if (odata->icq) {
-		struct buddy *budlight = find_buddy(g, who);
+		struct buddy *budlight = imcb_find_buddy(g, who);
 		if (budlight)
 			if ((budlight->uc & 0xff80) >> 7)
 				if (budlight->caps & AIM_CAPS_ICQSERVERRELAY)
@@ -2012,16 +2012,18 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	for (curitem=sess->ssi.items; curitem; curitem=curitem->next) {
 		switch (curitem->type) {
 			case 0x0000: /* Buddy */
-				if ((curitem->name) && (!find_buddy(ic, curitem->name))) {
+				if ((curitem->name) && (!imcb_find_buddy(ic, curitem->name))) {
 					char *realname = NULL;
 
 					if (curitem->data && aim_gettlv(curitem->data, 0x0131, 1))
 						    realname = aim_gettlv_str(curitem->data, 0x0131, 1);
 						
-					add_buddy(ic, NULL, curitem->name, realname);
+					imcb_add_buddy(ic, curitem->name, NULL);
 					
-					if (realname)
-					    g_free(realname);
+					if (realname) {
+						imcb_rename_buddy(ic, curitem->name, realname);
+						g_free(realname);
+					}
 				}
 				break;
 
@@ -2104,12 +2106,20 @@ static int gaim_ssi_parseack( aim_session_t *sess, aim_frame_t *fr, ... )
 		for( i = 0; i < count; i ++ )
 		{
 			st = aimbs_get16( &fr->data );
-			if( st == 0x0E )
+			if( st == 0x00 )
+			{
+				imcb_add_buddy( sess->aux_data, list, NULL );
+			}
+			else if( st == 0x0E )
 			{
 				imcb_log( sess->aux_data, "Buddy %s can't be added without authorization, requesting authorization", list );
 				
 				aim_ssi_auth_request( sess, fr->conn, list, "" );
 				aim_ssi_addbuddies( sess, fr->conn, OSCAR_GROUP, &list, 1, 1 );
+			}
+			else
+			{
+				imcb_error( sess->aux_data, "Error while adding buddy: 0x%04x", st );
 			}
 			list += strlen( list ) + 1;
 		}

@@ -436,11 +436,11 @@ static void cmd_account( irc_t *irc, char **cmd )
 static void cmd_add( irc_t *irc, char **cmd )
 {
 	account_t *a;
-	int add_for_real = 1;
+	int add_on_server = 1;
 	
 	if( g_strcasecmp( cmd[1], "-tmp" ) == 0 )
 	{
-		add_for_real = 0;
+		add_on_server = 0;
 		cmd ++;		/* So evil... :-D */
 	}
 	
@@ -475,12 +475,12 @@ static void cmd_add( irc_t *irc, char **cmd )
 	
 	/* By making this optional, you can talk to people without having to
 	   add them to your *real* (server-side) contact list. */
-	if( add_for_real )
+	if( add_on_server )
 		a->ic->acc->prpl->add_buddy( a->ic, cmd[2], NULL );
-		
-	add_buddy( a->ic, NULL, cmd[2], cmd[2] );
 	
-	irc_usermsg( irc, "User `%s' added to your contact list as `%s'", cmd[2], user_findhandle( a->ic, cmd[2] )->nick );
+	/* add_buddy( a->ic, NULL, cmd[2], cmd[2] ); */
+	
+	irc_usermsg( irc, "Adding `%s' to your contact list", cmd[2]  );
 }
 
 static void cmd_info( irc_t *irc, char **cmd )

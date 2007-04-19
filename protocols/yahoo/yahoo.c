@@ -531,7 +531,9 @@ void ext_yahoo_got_buddies( int id, YList *buds )
 			yd->buddygroups = g_slist_append( yd->buddygroups, bg );
 		}
 		
-		add_buddy( ic, b->group, b->id, b->real_name );
+		imcb_add_buddy( ic, b->id, b->group );
+		imcb_rename_buddy( ic, b->id, b->real_name );
+		
 		bl = bl->next;
 	}
 }
@@ -903,6 +905,9 @@ void ext_yahoo_chat_yahooerror( int id, const char *me )
 
 void ext_yahoo_contact_added( int id, const char *myid, const char *who, const char *msg )
 {
+	/* Groups schmoups. If I want to handle groups properly I can get the
+	   buddy data from some internal libyahoo2 structure. */
+	imcb_add_buddy( byahoo_get_ic_by_id( id ), (char*) who, NULL );
 }
 
 void ext_yahoo_rejected( int id, const char *who, const char *msg )

@@ -222,7 +222,7 @@ static void jabber_buddy_ask_yes( gpointer w, struct jabber_buddy_ask_data *bla 
 {
 	presence_send_request( bla->ic, bla->handle, "subscribed" );
 	
-	if( find_buddy( bla->ic, bla->handle ) == NULL )
+	if( imcb_find_buddy( bla->ic, bla->handle ) == NULL )
 		imcb_ask_add( bla->ic, bla->handle, NULL );
 	
 	g_free( bla->handle );
@@ -370,7 +370,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 			}
 		}
 		
-		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && find_buddy( ic, jid ) )
+		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && imcb_find_buddy( ic, jid ) )
 		{
 			*s = '/';
 			bud = jabber_buddy_add( ic, jid );
@@ -390,7 +390,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		
 		if( bud == NULL )
 			/* No match. Create it now? */
-			return ( ( flags & GET_BUDDY_CREAT ) && find_buddy( ic, jid_ ) ) ?
+			return ( ( flags & GET_BUDDY_CREAT ) && imcb_find_buddy( ic, jid_ ) ) ?
 			           jabber_buddy_add( ic, jid_ ) : NULL;
 		else if( bud->resource && ( flags & GET_BUDDY_EXACT ) )
 			/* We want an exact match, so in thise case there shouldn't be a /resource. */

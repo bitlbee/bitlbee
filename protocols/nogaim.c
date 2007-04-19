@@ -351,15 +351,11 @@ void imcb_ask( struct im_connection *ic, char *msg, void *data, void *doit, void
 
 /* list.c */
 
-void add_buddy( struct im_connection *ic, char *group, char *handle, char *realname )
+void imcb_add_buddy( struct im_connection *ic, char *handle, char *group )
 {
 	user_t *u;
-	char nick[MAX_NICK_LENGTH+1];
-	char *s;
+	char nick[MAX_NICK_LENGTH+1], *s;
 	irc_t *irc = ic->irc;
-	
-	if( set_getbool( &irc->set, "debug" ) && 0 ) /* This message is too useless */
-		imcb_log( ic, "Receiving user add from handle: %s", handle );
 	
 	if( user_findhandle( ic, handle ) )
 	{
@@ -368,16 +364,19 @@ void add_buddy( struct im_connection *ic, char *group, char *handle, char *realn
 		
 		return;
 		
-		/* Buddy seems to exist already. Let's ignore this request then... */
+		/* Buddy seems to exist already. Let's ignore this request then...
+		   Eventually subsequent calls to this function *should* be possible
+		   when a buddy is in multiple groups. But for now BitlBee doesn't
+		   even support groups so let's silently ignore this for now. */
 	}
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
-	strcpy( nick, nick_get( ic->acc, handle, realname ) );
+	strcpy( nick, nick_get( ic->acc, handle, NULL ) );
 	
 	u = user_add( ic->irc, nick );
 	
-	if( !realname || !*realname ) realname = nick;
-	u->realname = g_strdup( realname );
+//	if( !realname || !*realname ) realname = nick;
+//	u->realname = g_strdup( realname );
 	
 	if( ( s = strchr( handle, '@' ) ) )
 	{
@@ -386,14 +385,7 @@ void add_buddy( struct im_connection *ic, char *group, char *handle, char *realn
 	}
 	else if( ic->acc->server )
 	{
-		char *colon;
-		
-		if( ( colon = strchr( ic->acc->server, ':' ) ) )
-			u->host = g_strndup( ic->acc->server,
-			                     colon - ic->acc->server );
-		else
-			u->host = g_strdup( ic->acc->server );
-		
+		u->host = g_strdup( ic->acc->server );
 		u->user = g_strdup( handle );
 		
 		/* s/ /_/ ... important for AOL screennames */
@@ -414,7 +406,7 @@ void add_buddy( struct im_connection *ic, char *group, char *handle, char *realn
 	u->last_typing_notice = 0;
 }
 
-struct buddy *find_buddy( struct im_connection *ic, char *handle )
+struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle )
 {
 	static struct buddy b[1];
 	user_t *u;
@@ -434,11 +426,11 @@ struct buddy *find_buddy( struct im_connection *ic, char *handle )
 }
 
 
-void serv_buddy_rename( struct im_connection *ic, char *handle, char *realname )
+void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 {
 	user_t *u = user_findhandle( ic, handle );
 	
-	if( !u ) return;
+	if( !u || !realname ) return;
 	
 	if( g_strcasecmp( u->realname, realname ) != 0 )
 	{
@@ -469,7 +461,7 @@ void show_got_added_no( gpointer w, struct show_got_added_data *data )
 void show_got_added_yes( gpointer w, struct show_got_added_data *data )
 {
 	data->ic->acc->prpl->add_buddy( data->ic, data->handle, NULL );
-	add_buddy( data->ic, NULL, data->handle, data->handle );
+	/* imcb_add_buddy( data->ic, NULL, data->handle, data->handle ); */
 	
 	return show_got_added_no( w, data );
 }
@@ -504,7 +496,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	{
 		if( g_strcasecmp( set_getstr( &ic->irc->set, "handle_unknown" ), "add" ) == 0 )
 		{
-			add_buddy( ic, NULL, (char*) handle, NULL );
+			imcb_add_buddy( ic, (char*) handle, NULL );
 			u = user_findhandle( ic, (char*) handle );
 		}
 		else
@@ -608,7 +600,7 @@ void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_
 					private = 0;
 			}
 			
-			add_buddy( ic, NULL, handle, NULL );
+			imcb_add_buddy( ic, handle, NULL );
 			u = user_findhandle( ic, handle );
 			u->is_private = private;
 		}
@@ -778,7 +770,7 @@ void add_chat_buddy( struct groupchat *b, char *handle )
 	   your contact list. Try to handle that here */
 	if( !u )
 	{
-		add_buddy( b->ic, NULL, handle, NULL );
+		imcb_add_buddy( b->ic, handle, NULL );
 		u = user_findhandle( b->ic, handle );
 	}
 	

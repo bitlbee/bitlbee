@@ -2402,12 +2402,19 @@ static void yahoo_process_buddyadd(struct yahoo_input_data *yid, struct yahoo_pa
 	if(!where)
 		where = "Unknown";
 
-	bud = y_new0(struct yahoo_buddy, 1);
-	bud->id = strdup(who);
-	bud->group = strdup(where);
-	bud->real_name = NULL;
-
-	yd->buddies = y_list_append(yd->buddies, bud);
+	/* status: 0 == Successful, 1 == Error (does not exist), 2 == Already in list */
+	if( status == 0 ) {
+		bud = y_new0(struct yahoo_buddy, 1);
+		bud->id = strdup(who);
+		bud->group = strdup(where);
+		bud->real_name = NULL;
+		
+		yd->buddies = y_list_append(yd->buddies, bud);
+		
+		/* Possibly called already, but at least the call above doesn't
+		   seem to happen every time (not anytime I tried). */
+		YAHOO_CALLBACK(ext_yahoo_contact_added)(yd->client_id, me, who, NULL);
+	}
 
 /*	YAHOO_CALLBACK(ext_yahoo_status_changed)(yd->client_id, who, status, NULL, (status==YAHOO_STATUS_AVAILABLE?0:1)); */
 }
