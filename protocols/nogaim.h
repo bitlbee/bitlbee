@@ -93,7 +93,6 @@ struct im_connection
 	struct groupchat *conversations;
 };
 
-/* struct buddy_chat went away and got merged with this. */
 struct groupchat {
 	struct im_connection *ic;
 
@@ -190,15 +189,6 @@ G_MODULE_EXPORT void imcb_error( struct im_connection *ic, char *format, ... );
 G_MODULE_EXPORT void imcb_ask( struct im_connection *ic, char *msg, void *data, void *doit, void *dont );
 G_MODULE_EXPORT void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname );
 
-/* Groupchats */
-G_MODULE_EXPORT void add_chat_buddy( struct groupchat *b, char *handle );
-G_MODULE_EXPORT void remove_chat_buddy( struct groupchat *b, char *handle, char *reason );
-G_MODULE_EXPORT void serv_got_chat_invite( struct im_connection *ic, char *handle, char *who, char *msg, GList *data );
-G_MODULE_EXPORT struct groupchat *serv_got_joined_chat( struct im_connection *ic, char *handle );
-G_MODULE_EXPORT void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, time_t mtime );
-G_MODULE_EXPORT void serv_got_chat_left( struct groupchat *c );
-struct groupchat *chat_by_channel( char *channel );
-
 /* Buddy management */
 G_MODULE_EXPORT void imcb_add_buddy( struct im_connection *ic, char *handle, char *group );
 G_MODULE_EXPORT void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group );
@@ -210,6 +200,15 @@ G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *ha
 /* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
 G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_t flags, time_t sent_at );
 G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags );
+
+/* Groupchats */
+G_MODULE_EXPORT void imcb_chat_invited( struct im_connection *ic, char *handle, char *who, char *msg, GList *data );
+G_MODULE_EXPORT struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle );
+G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, char *handle );
+G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason );
+G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at );
+G_MODULE_EXPORT void imcb_chat_removed( struct groupchat *c );
+struct groupchat *chat_by_channel( char *channel );
 
 /* Actions, or whatever. */
 int imc_set_away( struct im_connection *ic, char *away );

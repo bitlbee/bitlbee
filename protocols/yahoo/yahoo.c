@@ -145,7 +145,7 @@ static void byahoo_logout( struct im_connection *ic )
 	GSList *l;
 	
 	while( ic->conversations )
-		serv_got_chat_left( ic->conversations );
+		imcb_chat_removed( ic->conversations );
 	
 	for( l = yd->buddygroups; l; l = l->next )
 	{
@@ -317,7 +317,7 @@ static void byahoo_chat_leave( struct groupchat *c )
 	struct byahoo_data *yd = (struct byahoo_data *) c->ic->proto_data;
 	
 	yahoo_conference_logoff( yd->y2_id, NULL, c->data, c->title );
-	serv_got_chat_left( c );
+	imcb_chat_removed( c );
 }
 
 static struct groupchat *byahoo_chat_with( struct im_connection *ic, char *who )
@@ -329,8 +329,8 @@ static struct groupchat *byahoo_chat_with( struct im_connection *ic, char *who )
 	
 	roomname = g_strdup_printf( "%s-Bee-%d", ic->acc->user, byahoo_chat_id );
 	
-	c = serv_got_joined_chat( ic, roomname );
-	add_chat_buddy( c, ic->acc->user );
+	c = imcb_chat_new( ic, roomname );
+	imcb_chat_add_buddy( c, ic->acc->user );
 	
 	/* FIXME: Free this thing when the chat's destroyed. We can't *always*
 	          do this because it's not always created here. */
@@ -789,7 +789,7 @@ int ext_yahoo_connect(const char *host, int port)
 static void byahoo_accept_conf( gpointer w, struct byahoo_conf_invitation *inv )
 {
 	yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
-	add_chat_buddy( inv->c, inv->ic->acc->user );
+	imcb_chat_add_buddy( inv->c, inv->ic->acc->user );
 	g_free( inv->name );
 	g_free( inv );
 }
@@ -797,7 +797,7 @@ static void byahoo_accept_conf( gpointer w, struct byahoo_conf_invitation *inv )
 static void byahoo_reject_conf( gpointer w, struct byahoo_conf_invitation *inv )
 {
 	yahoo_conference_decline( inv->yid, NULL, inv->members, inv->name, "User rejected groupchat" );
-	serv_got_chat_left( inv->c );
+	imcb_chat_removed( inv->c );
 	g_free( inv->name );
 	g_free( inv );
 }
@@ -813,7 +813,7 @@ void ext_yahoo_got_conf_invite( int id, const char *ignored,
 	inv = g_malloc( sizeof( struct byahoo_conf_invitation ) );
 	memset( inv, 0, sizeof( struct byahoo_conf_invitation ) );
 	inv->name = g_strdup( room );
-	inv->c = serv_got_joined_chat( ic, (char*) room );
+	inv->c = imcb_chat_new( ic, (char*) room );
 	inv->c->data = members;
 	inv->yid = id;
 	inv->members = members;
@@ -821,7 +821,7 @@ void ext_yahoo_got_conf_invite( int id, const char *ignored,
 	
 	for( m = members; m; m = m->next )
 		if( g_strcasecmp( m->data, ic->acc->user ) != 0 )
-			add_chat_buddy( inv->c, m->data );
+			imcb_chat_add_buddy( inv->c, m->data );
 	
 	g_snprintf( txt, 1024, "Got an invitation to chatroom %s from %s: %s", room, who, msg );
 	
@@ -843,7 +843,7 @@ void ext_yahoo_conf_userjoin( int id, const char *ignored, const char *who, cons
 	for( c = ic->conversations; c && strcmp( c->title, room ) != 0; c = c->next );
 	
 	if( c )
-		add_chat_buddy( c, (char*) who );
+		imcb_chat_add_buddy( c, (char*) who );
 }
 
 void ext_yahoo_conf_userleave( int id, const char *ignored, const char *who, const char *room )
@@ -855,7 +855,7 @@ void ext_yahoo_conf_userleave( int id, const char *ignored, const char *who, con
 	for( c = ic->conversations; c && strcmp( c->title, room ) != 0; c = c->next );
 	
 	if( c )
-		remove_chat_buddy( c, (char*) who, "" );
+		imcb_chat_remove_buddy( c, (char*) who, "" );
 }
 
 void ext_yahoo_conf_message( int id, const char *ignored, const char *who, const char *room, const char *msg, int utf8 )
@@ -867,7 +867,7 @@ void ext_yahoo_conf_message( int id, const char *ignored, const char *who, const
 	for( c = ic->conversations; c && strcmp( c->title, room ) != 0; c = c->next );
 	
 	if( c )
-		serv_got_chat_in( c, (char*) who, 0, (char*) m, 0 );
+		imcb_chat_msg( c, (char*) who, (char*) m, 0, 0 );
 	g_free( m );
 }
 

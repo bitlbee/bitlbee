@@ -749,7 +749,7 @@ static int conninitdone_chat(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	chatcon = find_oscar_chat_by_conn(ic, fr->conn);
 	chatcon->id = id;
-	chatcon->cnv = serv_got_joined_chat(ic, chatcon->show);
+	chatcon->cnv = imcb_chat_new(ic, chatcon->show);
 	chatcon->cnv->data = chatcon;
 
 	return 1;
@@ -1460,7 +1460,7 @@ static int gaim_chat_join(aim_session_t *sess, aim_frame_t *fr, ...) {
 		return 1;
 
 	for (i = 0; i < count; i++)
-		add_chat_buddy(c->cnv, info[i].sn);
+		imcb_chat_add_buddy(c->cnv, info[i].sn);
 
 	return 1;
 }
@@ -1483,7 +1483,7 @@ static int gaim_chat_leave(aim_session_t *sess, aim_frame_t *fr, ...) {
 		return 1;
 
 	for (i = 0; i < count; i++)
-		remove_chat_buddy(c->cnv, info[i].sn, NULL);
+		imcb_chat_remove_buddy(c->cnv, info[i].sn, NULL);
 
 	return 1;
 }
@@ -1534,7 +1534,7 @@ static int gaim_chat_incoming_msg(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	tmp = g_malloc(BUF_LONG);
 	g_snprintf(tmp, BUF_LONG, "%s", msg);
-	serv_got_chat_in(ccon->cnv, info->sn, 0, tmp, time((time_t)NULL));
+	imcb_chat_msg(ccon->cnv, info->sn, tmp, 0, 0);
 	g_free(tmp);
 
 	return 1;
@@ -2512,7 +2512,7 @@ void oscar_chat_kill(struct im_connection *ic, struct chat_connection *cc)
 	struct oscar_data *od = (struct oscar_data *)ic->proto_data;
 
 	/* Notify the conversation window that we've left the chat */
-	serv_got_chat_left(cc->cnv);
+	imcb_chat_removed(cc->cnv);
 
 	/* Destroy the chat_connection */
 	od->oscar_chats = g_slist_remove(od->oscar_chats, cc);

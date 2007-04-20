@@ -685,7 +685,7 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags 
 	}
 }
 
-void serv_got_chat_left( struct groupchat *c )
+void imcb_chat_removed( struct groupchat *c )
 {
 	struct im_connection *ic = c->ic;
 	struct groupchat *l = NULL;
@@ -722,7 +722,7 @@ void serv_got_chat_left( struct groupchat *c )
 	}
 }
 
-void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, time_t mtime )
+void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at )
 {
 	struct im_connection *ic = c->ic;
 	user_t *u;
@@ -743,7 +743,7 @@ void serv_got_chat_in( struct groupchat *c, char *who, int whisper, char *msg, t
 		imcb_log( ic, "Message from/to conversation %s@0x%x (unknown conv/user): %s", who, (int) c, msg );
 }
 
-struct groupchat *serv_got_joined_chat( struct im_connection *ic, char *handle )
+struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
 {
 	struct groupchat *c;
 	
@@ -770,7 +770,7 @@ struct groupchat *serv_got_joined_chat( struct im_connection *ic, char *handle )
 
 /* buddy_chat.c */
 
-void add_chat_buddy( struct groupchat *b, char *handle )
+void imcb_chat_add_buddy( struct groupchat *b, char *handle )
 {
 	user_t *u = user_findhandle( b->ic, handle );
 	int me = 0;
@@ -804,7 +804,7 @@ void add_chat_buddy( struct groupchat *b, char *handle )
 	}
 }
 
-void remove_chat_buddy( struct groupchat *b, char *handle, char *reason )
+void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
 {
 	user_t *u;
 	int me = 0;

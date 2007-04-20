@@ -183,11 +183,11 @@ struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb )
 	
 	/* Create the groupchat structure. */
 	g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
-	sb->chat = serv_got_joined_chat( ic, buf );
+	sb->chat = imcb_chat_new( ic, buf );
 	
 	/* Populate the channel. */
-	if( sb->who ) add_chat_buddy( sb->chat, sb->who );
-	add_chat_buddy( sb->chat, ic->acc->user );
+	if( sb->who ) imcb_chat_add_buddy( sb->chat, sb->who );
+	imcb_chat_add_buddy( sb->chat, ic->acc->user );
 	
 	/* And make sure the switchboard doesn't look like a regular chat anymore. */
 	if( sb->who )
@@ -231,7 +231,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 	
 	if( sb->chat )
 	{
-		serv_got_chat_left( sb->chat );
+		imcb_chat_removed( sb->chat );
 	}
 	
 	if( sb->handler )
@@ -373,17 +373,17 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			if( num == 1 )
 			{
 				g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
-				sb->chat = serv_got_joined_chat( ic, buf );
+				sb->chat = imcb_chat_new( ic, buf );
 				
 				g_free( sb->who );
 				sb->who = NULL;
 			}
 			
-			add_chat_buddy( sb->chat, cmd[4] );
+			imcb_chat_add_buddy( sb->chat, cmd[4] );
 			
 			if( num == tot )
 			{
-				add_chat_buddy( sb->chat, ic->acc->user );
+				imcb_chat_add_buddy( sb->chat, ic->acc->user );
 			}
 		}
 	}
@@ -461,11 +461,11 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			/* This SB is a one-to-one chat right now, but someone else is joining. */
 			msn_sb_to_chat( sb );
 			
-			add_chat_buddy( sb->chat, cmd[1] );
+			imcb_chat_add_buddy( sb->chat, cmd[1] );
 		}
 		else if( sb->chat )
 		{
-			add_chat_buddy( sb->chat, cmd[1] );
+			imcb_chat_add_buddy( sb->chat, cmd[1] );
 			sb->ready = 1;
 		}
 		else
@@ -515,7 +515,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		}
 		else if( sb->chat )
 		{
-			remove_chat_buddy( sb->chat, cmd[1], "" );
+			imcb_chat_remove_buddy( sb->chat, cmd[1], "" );
 		}
 		else
 		{
@@ -610,7 +610,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			}
 			else if( sb->chat )
 			{
-				serv_got_chat_in( sb->chat, cmd[1], 0, body, 0 );
+				imcb_chat_msg( sb->chat, cmd[1], body, 0, 0 );
 			}
 			else
 			{
@@ -669,7 +669,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			}
 			else if( sb->chat )
 			{
-				serv_got_chat_in( sb->chat, cmd[1], 0, buf, 0 );
+				imcb_chat_msg( sb->chat, cmd[1], buf, 0, 0 );
 			}
 			else
 			{
