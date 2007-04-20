@@ -24,7 +24,8 @@
 */
 
 void nick_set( account_t *acc, const char *handle, const char *nick );
-char *nick_get( account_t *acc, const char *handle, const char *realname );
+char *nick_get( account_t *acc, const char *handle );
+int nick_saved( account_t *acc, const char *handle );
 void nick_del( account_t *acc, const char *handle );
 void nick_strip( char *nick );
 

@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2006 Wilmer van der Gaast and others                *
+  * Copyright 2002-2007 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Some stuff to fetch, save and handle nicknames for your buddies      */
@@ -52,7 +52,7 @@ void nick_set( account_t *acc, const char *handle, const char *nick )
 	g_hash_table_replace( acc->nicks, store_handle, store_nick );
 }
 
-char *nick_get( account_t *acc, const char *handle, const char *realname )
+char *nick_get( account_t *acc, const char *handle )
 {
 	static char nick[MAX_NICK_LENGTH+1];
 	char *store_handle, *found_nick;
@@ -75,12 +75,6 @@ char *nick_get( account_t *acc, const char *handle, const char *realname )
 		if( ( s = strchr( nick, '@' ) ) )
 			while( *s )
 				*(s++) = 0;
-		
-		/* All-digit handles (mainly ICQ UINs) aren't cool, try to
-		   use the realname instead. */
-		for( s = nick; *s && isdigit( *s ); s ++ );
-		if( !*s && realname && *realname )
-			g_snprintf( nick, MAX_NICK_LENGTH, "%s", realname );
 		
 		nick_strip( nick );
 		if( set_getbool( &acc->irc->set, "lcnicks" ) )
@@ -129,6 +123,19 @@ char *nick_get( account_t *acc, const char *handle, const char *realname )
 	return nick;
 }
 
+/* Just check if there is a nickname set for this buddy or if we'd have to
+   generate one. */
+int nick_saved( account_t *acc, const char *handle )
+{
+	char *store_handle, *found;
+	
+	store_handle = clean_handle( handle );
+	found = g_hash_table_lookup( acc->nicks, store_handle );
+	g_free( store_handle );
+	
+	return found != NULL;
+}
+
 void nick_del( account_t *acc, const char *handle )
 {
 	g_hash_table_remove( acc->nicks, handle );
@@ -175,7 +182,7 @@ int nick_ok( const char *nick )
 
 int nick_lc( char *nick )
 {
-	static char tab[256] = { 0 };
+	static char tab[128] = { 0 };
 	int i;
 	
 	if( tab['A'] == 0 )

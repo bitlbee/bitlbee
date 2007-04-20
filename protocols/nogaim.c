@@ -371,7 +371,7 @@ void imcb_add_buddy( struct im_connection *ic, char *handle, char *group )
 	}
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
-	strcpy( nick, nick_get( ic->acc, handle, NULL ) );
+	strcpy( nick, nick_get( ic->acc, handle ) );
 	
 	u = user_add( ic->irc, nick );
 	
@@ -425,10 +425,10 @@ struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle )
 	return( b );
 }
 
-
 void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 {
 	user_t *u = user_findhandle( ic, handle );
+	char *s, newnick[MAX_NICK_LENGTH+1];
 	
 	if( !u || !realname ) return;
 	
@@ -440,6 +440,27 @@ void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 		
 		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->irc->set, "display_namechanges" ) )
 			imcb_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
+		
+		if( !u->online && !nick_saved( ic->acc, handle ) )
+		{
+			/* Detect numeric handles: */
+			for( s = u->user; isdigit( *s ); s++ );
+			
+			if( *s == 0 )
+			{
+				/* If we reached the end of the string, it only contained numbers.
+				   Seems to be an ICQ# then, so hopefully realname contains
+				   something more useful. */
+				strcpy( newnick, realname );
+				
+				/* Some processing to make sure this string is a valid IRC nickname. */
+				nick_strip( newnick );
+				if( set_getbool( &ic->irc->set, "lcnicks" ) )
+					nick_lc( newnick );
+				
+				u->nick = g_strdup( newnick );
+			}
+		}
 	}
 }
 
