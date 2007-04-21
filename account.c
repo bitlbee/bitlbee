@@ -222,7 +222,7 @@ void account_on( irc_t *irc, account_t *a )
 
 void account_off( irc_t *irc, account_t *a )
 {
-	imc_logout( a->ic, TRUE );
+	imc_logout( a->ic, FALSE );
 	a->ic = NULL;
 	if( a->reconnect )
 	{
