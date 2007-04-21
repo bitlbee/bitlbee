@@ -1807,7 +1807,7 @@ static void oscar_keepalive(struct im_connection *ic) {
 	aim_flap_nop(odata->sess, odata->conn);
 }
 
-static int oscar_send_im(struct im_connection *ic, char *name, char *message, int imflags) {
+static int oscar_buddy_msg(struct im_connection *ic, char *name, char *message, int imflags) {
 	struct oscar_data *odata = (struct oscar_data *)ic->proto_data;
 	int ret = 0, len = strlen(message);
 	if (imflags & OPT_AWAY) {
@@ -2450,7 +2450,7 @@ int oscar_send_typing(struct im_connection *ic, char * who, int typing)
 	return( aim_im_sendmtn(od->sess, 1, who, typing ? 0x0002 : 0x0000) );
 }
 
-void oscar_chat_send(struct groupchat *c, char *message, int msgflags)
+void oscar_chat_msg(struct groupchat *c, char *message, int msgflags)
 {
 	struct im_connection *ic = c->ic;
 	struct oscar_data * od = (struct oscar_data*)ic->proto_data;
@@ -2589,13 +2589,13 @@ void oscar_initmodule()
 	ret->login = oscar_login;
 	ret->keepalive = oscar_keepalive;
 	ret->logout = oscar_logout;
-	ret->send_im = oscar_send_im;
+	ret->buddy_msg = oscar_buddy_msg;
 	ret->get_info = oscar_get_info;
 	ret->set_away = oscar_set_away;
 	ret->get_away = oscar_get_away;
 	ret->add_buddy = oscar_add_buddy;
 	ret->remove_buddy = oscar_remove_buddy;
-	ret->chat_send = oscar_chat_send;
+	ret->chat_msg = oscar_chat_msg;
 	ret->chat_invite = oscar_chat_invite;
 	ret->chat_leave = oscar_chat_leave;
 	ret->chat_with = oscar_chat_with;

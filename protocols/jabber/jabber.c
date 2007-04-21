@@ -218,7 +218,7 @@ static void jabber_logout( struct im_connection *ic )
 	g_free( jd );
 }
 
-static int jabber_send_im( struct im_connection *ic, char *who, char *message, int flags )
+static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
 {
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud;
@@ -385,7 +385,7 @@ void jabber_initmodule()
 	ret->login = jabber_login;
 	ret->init = jabber_init;
 	ret->logout = jabber_logout;
-	ret->send_im = jabber_send_im;
+	ret->buddy_msg = jabber_buddy_msg;
 	ret->away_states = jabber_away_states;
 //	ret->get_status_string = jabber_get_status_string;
 	ret->set_away = jabber_set_away;
@@ -393,7 +393,7 @@ void jabber_initmodule()
 	ret->get_info = jabber_get_info;
 	ret->add_buddy = jabber_add_buddy;
 	ret->remove_buddy = jabber_remove_buddy;
-//	ret->chat_send = jabber_chat_send;
+//	ret->chat_msg = jabber_chat_msg;
 //	ret->chat_invite = jabber_chat_invite;
 //	ret->chat_leave = jabber_chat_leave;
 //	ret->chat_open = jabber_chat_open;

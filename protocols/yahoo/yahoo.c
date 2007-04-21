@@ -173,7 +173,7 @@ static void byahoo_get_info(struct im_connection *ic, char *who)
 			who);
 }
 
-static int byahoo_send_im( struct im_connection *ic, char *who, char *what, int flags )
+static int byahoo_buddy_msg( struct im_connection *ic, char *who, char *what, int flags )
 {
 	struct byahoo_data *yd = ic->proto_data;
 	
@@ -298,7 +298,7 @@ static void byahoo_remove_buddy( struct im_connection *ic, char *who, char *grou
 	}
 }
 
-static void byahoo_chat_send( struct groupchat *c, char *message, int flags )
+static void byahoo_chat_msg( struct groupchat *c, char *message, int flags )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) c->ic->proto_data;
 	
@@ -353,7 +353,7 @@ void byahoo_initmodule( )
 	ret->keepalive = byahoo_keepalive;
 	ret->logout = byahoo_logout;
 	
-	ret->send_im = byahoo_send_im;
+	ret->buddy_msg = byahoo_buddy_msg;
 	ret->get_info = byahoo_get_info;
 	ret->away_states = byahoo_away_states;
 	ret->set_away = byahoo_set_away;
@@ -361,7 +361,7 @@ void byahoo_initmodule( )
 	ret->remove_buddy = byahoo_remove_buddy;
 	ret->send_typing = byahoo_send_typing;
 	
-	ret->chat_send = byahoo_chat_send;
+	ret->chat_msg = byahoo_chat_msg;
 	ret->chat_invite = byahoo_chat_invite;
 	ret->chat_leave = byahoo_chat_leave;
 	ret->chat_with = byahoo_chat_with;

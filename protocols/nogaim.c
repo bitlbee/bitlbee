@@ -281,7 +281,6 @@ gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
 
 void cancel_auto_reconnect( account_t *a )
 {
-	/* while( b_event_remove_by_data( (gpointer) a ) ); */
 	b_event_remove( a->reconnect );
 	a->reconnect = 0;
 }
@@ -947,7 +946,7 @@ int imc_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags 
 		msg = buf;
 	}
 	
-	st = ic->acc->prpl->send_im( ic, handle, msg, flags );
+	st = ic->acc->prpl->buddy_msg( ic, handle, msg, flags );
 	g_free( buf );
 	
 	return st;
@@ -963,7 +962,7 @@ int imc_chat_msg( struct groupchat *c, char *msg, int flags )
 		msg = buf;
 	}
 	
-	c->ic->acc->prpl->chat_send( c, msg, flags );
+	c->ic->acc->prpl->chat_msg( c, msg, flags );
 	g_free( buf );
 	
 	return 1;

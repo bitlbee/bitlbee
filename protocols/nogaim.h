@@ -133,7 +133,7 @@ struct prpl {
 	void (* keepalive)	(struct im_connection *);
 	void (* logout)		(struct im_connection *);
 	
-	int  (* send_im)	(struct im_connection *, char *to, char *message, int flags);
+	int  (* buddy_msg)	(struct im_connection *, char *to, char *message, int flags);
 	void (* set_away)	(struct im_connection *, char *state, char *message);
 	void (* get_away)       (struct im_connection *, char *who);
 	int  (* send_typing)	(struct im_connection *, char *who, int flags);
@@ -159,7 +159,7 @@ struct prpl {
 	/* Group chat stuff. */
 	void (* chat_invite)	(struct groupchat *, char *who, char *message);
 	void (* chat_leave)	(struct groupchat *);
-	void (* chat_send)	(struct groupchat *, char *message, int flags);
+	void (* chat_msg)	(struct groupchat *, char *message, int flags);
 	struct groupchat *
 	     (* chat_with)	(struct im_connection *, char *who);
 	struct groupchat *
@@ -174,8 +174,8 @@ struct prpl {
 /* im_api core stuff. */
 void nogaim_init();
 G_MODULE_EXPORT GSList *get_connections();
-G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
-G_MODULE_EXPORT void register_protocol(struct prpl *);
+G_MODULE_EXPORT struct prpl *find_protocol( const char *name );
+G_MODULE_EXPORT void register_protocol( struct prpl * );
 
 /* Connection management. */
 G_MODULE_EXPORT struct im_connection *imcb_new( account_t *acc );

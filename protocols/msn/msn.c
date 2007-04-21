@@ -121,7 +121,7 @@ static void msn_logout( struct im_connection *ic )
 	msn_connections = g_slist_remove( msn_connections, ic );
 }
 
-static int msn_send_im( struct im_connection *ic, char *who, char *message, int away )
+static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, int away )
 {
 	struct msn_switchboard *sb;
 	struct msn_data *md = ic->proto_data;
@@ -230,7 +230,7 @@ static void msn_remove_buddy( struct im_connection *ic, char *who, char *group )
 	msn_buddy_list_remove( ic, "FL", who );
 }
 
-static void msn_chat_send( struct groupchat *c, char *message, int flags )
+static void msn_chat_msg( struct groupchat *c, char *message, int flags )
 {
 	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	
@@ -342,7 +342,7 @@ static void msn_rem_deny( struct im_connection *ic, char *who )
 static int msn_send_typing( struct im_connection *ic, char *who, int typing )
 {
 	if( typing )
-		return( msn_send_im( ic, who, TYPING_NOTIFICATION_MESSAGE, 0 ) );
+		return( msn_buddy_msg( ic, who, TYPING_NOTIFICATION_MESSAGE, 0 ) );
 	else
 		return( 1 );
 }
@@ -386,14 +386,14 @@ void msn_initmodule()
 	ret->login = msn_login;
 	ret->init = msn_init;
 	ret->logout = msn_logout;
-	ret->send_im = msn_send_im;
+	ret->buddy_msg = msn_buddy_msg;
 	ret->away_states = msn_away_states;
 	ret->set_away = msn_set_away;
 	ret->get_info = msn_get_info;
 	ret->set_my_name = msn_set_my_name;
 	ret->add_buddy = msn_add_buddy;
 	ret->remove_buddy = msn_remove_buddy;
-	ret->chat_send = msn_chat_send;
+	ret->chat_msg = msn_chat_msg;
 	ret->chat_invite = msn_chat_invite;
 	ret->chat_leave = msn_chat_leave;
 	ret->chat_with = msn_chat_with;
