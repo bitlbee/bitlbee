@@ -357,12 +357,12 @@ static int jabber_send_typing( struct im_connection *ic, char *who, int typing )
 		char *type;
 		int st;
 		
-		if( typing == 0 )
-			type = "active";
-		else if( typing == 2 )
-			type = "paused";
-		else /* if( typing == 1 ) */
+		if( typing & OPT_TYPING )
 			type = "composing";
+		else if( typing & OPT_THINKING )
+			type = "paused";
+		else
+			type = "active";
 		
 		node = xt_new_node( type, NULL, NULL );
 		xt_add_attr( node, "xmlns", XMLNS_CHATSTATES );

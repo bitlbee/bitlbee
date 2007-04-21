@@ -186,7 +186,7 @@ static int byahoo_send_typing( struct im_connection *ic, char *who, int typing )
 {
 	struct byahoo_data *yd = ic->proto_data;
 	
-	yahoo_send_typing( yd->y2_id, NULL, who, typing );
+	yahoo_send_typing( yd->y2_id, NULL, who, ( typing & OPT_TYPING ) != 0 );
 	
 	return 1;
 }

@@ -1001,7 +1001,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 				
 				if( current_typing_notice - u->last_typing_notice >= 5 )
 				{
-					u->ic->acc->prpl->send_typing( u->ic, u->handle, s[8] == '1' );
+					u->ic->acc->prpl->send_typing( u->ic, u->handle, ( s[8] - '0' ) << 8 );
 					u->last_typing_notice = current_typing_notice;
 				}
 			}

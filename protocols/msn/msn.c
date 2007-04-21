@@ -341,7 +341,7 @@ static void msn_rem_deny( struct im_connection *ic, char *who )
 
 static int msn_send_typing( struct im_connection *ic, char *who, int typing )
 {
-	if( typing )
+	if( typing & OPT_TYPING )
 		return( msn_buddy_msg( ic, who, TYPING_NOTIFICATION_MESSAGE, 0 ) );
 	else
 		return( 1 );

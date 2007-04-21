@@ -2447,7 +2447,7 @@ int gaim_parsemtn(aim_session_t *sess, aim_frame_t *fr, ...)
 int oscar_send_typing(struct im_connection *ic, char * who, int typing)
 {
 	struct oscar_data *od = ic->proto_data;
-	return( aim_im_sendmtn(od->sess, 1, who, typing ? 0x0002 : 0x0000) );
+	return( aim_im_sendmtn(od->sess, 1, who, (typing & OPT_TYPING) ? 0x0002 : 0x0000) );
 }
 
 void oscar_chat_msg(struct groupchat *c, char *message, int msgflags)

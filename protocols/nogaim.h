@@ -60,8 +60,8 @@
 #define OPT_LOGGING_OUT 0x00000002
 #define OPT_AWAY        0x00000004
 #define OPT_DOES_HTML   0x00000010
-#define OPT_TYPING      0x00000100
-#define OPT_THINKING    0x00000200
+#define OPT_TYPING      0x00000100 /* Some pieces of code make assumptions */
+#define OPT_THINKING    0x00000200 /* about these values... Stupid me! */
 
 /* ok. now the fun begins. first we create a connection structure */
 struct im_connection
