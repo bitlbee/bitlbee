@@ -184,8 +184,8 @@ G_MODULE_EXPORT void imcb_connected( struct im_connection *ic );
 G_MODULE_EXPORT void imc_logout( struct im_connection *ic, int allow_reconnect );
 
 /* Communicating with the user. */
-G_MODULE_EXPORT void imcb_log( struct im_connection *ic, char *format, ... );
-G_MODULE_EXPORT void imcb_error( struct im_connection *ic, char *format, ... );
+G_MODULE_EXPORT void imcb_log( struct im_connection *ic, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
+G_MODULE_EXPORT void imcb_error( struct im_connection *ic, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 G_MODULE_EXPORT void imcb_ask( struct im_connection *ic, char *msg, void *data, void *doit, void *dont );
 G_MODULE_EXPORT void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname );
 
