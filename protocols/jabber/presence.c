@@ -71,10 +71,10 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		else
 			bud->priority = 0;
 		
-		/* FIXME: What to send if there are other resources??? */
-		imcb_buddy_status( ic, bud->bare_jid, OPT_LOGGED_IN | is_away,
-		                   ( is_away && bud->away_state ) ? bud->away_state->full_name : NULL,
-		                   bud->away_message );
+		if( bud == jabber_buddy_by_jid( ic, bud->bare_jid, 0 ) )
+			imcb_buddy_status( ic, bud->bare_jid, OPT_LOGGED_IN | is_away,
+			                   ( is_away && bud->away_state ) ? bud->away_state->full_name : NULL,
+			                   bud->away_message );
 	}
 	else if( strcmp( type, "unavailable" ) == 0 )
 	{
