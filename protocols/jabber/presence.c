@@ -30,10 +30,19 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	char *type = xt_find_attr( node, "type" );	/* NULL should mean the person is online. */
 	struct xt_node *c;
 	struct jabber_buddy *bud;
+	int is_chat = 0;
 	char *s;
 	
 	if( !from )
 		return XT_HANDLED;
+	
+	if( ( s = strchr( from, '/' ) ) )
+	{
+		*s = 0;
+		if( jabber_chat_by_name( ic, from ) )
+			is_chat = 1;
+		*s = '/';
+	}
 	
 	if( type == NULL )
 	{
@@ -71,23 +80,35 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		else
 			bud->priority = 0;
 		
-		if( bud == jabber_buddy_by_jid( ic, bud->bare_jid, 0 ) )
+		if( is_chat )
+			jabber_chat_pkt_presence( ic, bud, node );
+		else if( bud == jabber_buddy_by_jid( ic, bud->bare_jid, 0 ) )
 			imcb_buddy_status( ic, bud->bare_jid, OPT_LOGGED_IN | is_away,
 			                   ( is_away && bud->away_state ) ? bud->away_state->full_name : NULL,
 			                   bud->away_message );
 	}
 	else if( strcmp( type, "unavailable" ) == 0 )
 	{
-		if( jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT ) == NULL )
+		if( ( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT ) ) == NULL )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
 				imcb_log( ic, "WARNING: Received presence information from unknown JID: %s", from );
 			return XT_HANDLED;
 		}
 		
+		/* Handle this before we delete the JID. */
+		if( is_chat )
+		{
+			jabber_chat_pkt_presence( ic, bud, node );
+		}
+		
 		jabber_buddy_remove( ic, from );
 		
-		if( ( s = strchr( from, '/' ) ) )
+		if( is_chat )
+		{
+			/* Nothing else to do for now? */
+		}
+		else if( ( s = strchr( from, '/' ) ) )
 		{
 			*s = 0;
 		
@@ -95,6 +116,8 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 			   available anymore. */
 			if( jabber_buddy_by_jid( ic, from, 0 ) == NULL )
 				imcb_buddy_status( ic, from, 0, NULL, NULL );
+			/* FIXME: If this resource was not away and another resource is,
+			   we should definitely send an update here. */
 			
 			*s = '/';
 		}

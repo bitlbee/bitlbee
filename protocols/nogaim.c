@@ -553,8 +553,8 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 		irc_kill( ic->irc, u );
 		u->online = 0;
 		
-		/* Remove him/her from the conversations to prevent PART messages after he/she QUIT already */
-		for( c = ic->conversations; c; c = c->next )
+		/* Remove him/her from the groupchats to prevent PART messages after he/she QUIT already */
+		for( c = ic->groupchats; c; c = c->next )
 			remove_chat_buddy_silent( c, (char*) handle );
 	}
 	
@@ -684,10 +684,10 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags 
 	}
 }
 
-void imcb_chat_removed( struct groupchat *c )
+void imcb_chat_free( struct groupchat *c )
 {
 	struct im_connection *ic = c->ic;
-	struct groupchat *l = NULL;
+	struct groupchat *l;
 	GList *ir;
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
@@ -707,10 +707,13 @@ void imcb_chat_removed( struct groupchat *c )
 			/* irc_part( ic->irc, u, c->channel ); */
 		}
 		
+		/* Find the previous chat in the linked list. */
+		for( l = ic->groupchats; l && l->next != c; l = l->next );
+		
 		if( l )
 			l->next = c->next;
 		else
-			ic->conversations = c->next;
+			ic->groupchats = c->next;
 		
 		for( ir = c->in_room; ir; ir = ir->next )
 			g_free( ir->data );
@@ -748,13 +751,13 @@ struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
 	
 	/* This one just creates the conversation structure, user won't see anything yet */
 	
-	if( ic->conversations )
+	if( ic->groupchats )
 	{
-		for( c = ic->conversations; c->next; c = c->next );
+		for( c = ic->groupchats; c->next; c = c->next );
 		c = c->next = g_new0( struct groupchat, 1 );
 	}
 	else
-		ic->conversations = c = g_new0( struct groupchat, 1 );
+		ic->groupchats = c = g_new0( struct groupchat, 1 );
 	
 	c->ic = ic;
 	c->title = g_strdup( handle );
@@ -862,7 +865,7 @@ struct groupchat *chat_by_channel( char *channel )
 	for( l = connections; l; l = l->next )
 	{
 		ic = l->data;
-		for( c = ic->conversations; c && g_strcasecmp( c->channel, channel ) != 0; c = c->next );
+		for( c = ic->groupchats; c && g_strcasecmp( c->channel, channel ) != 0; c = c->next );
 		if( c )
 			return c;
 	}

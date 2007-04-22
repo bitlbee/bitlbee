@@ -144,8 +144,8 @@ static void byahoo_logout( struct im_connection *ic )
 	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
 	GSList *l;
 	
-	while( ic->conversations )
-		imcb_chat_removed( ic->conversations );
+	while( ic->groupchats )
+		imcb_chat_free( ic->groupchats );
 	
 	for( l = yd->buddygroups; l; l = l->next )
 	{
@@ -317,7 +317,7 @@ static void byahoo_chat_leave( struct groupchat *c )
 	struct byahoo_data *yd = (struct byahoo_data *) c->ic->proto_data;
 	
 	yahoo_conference_logoff( yd->y2_id, NULL, c->data, c->title );
-	imcb_chat_removed( c );
+	imcb_chat_free( c );
 }
 
 static struct groupchat *byahoo_chat_with( struct im_connection *ic, char *who )
@@ -797,7 +797,7 @@ static void byahoo_accept_conf( gpointer w, struct byahoo_conf_invitation *inv )
 static void byahoo_reject_conf( gpointer w, struct byahoo_conf_invitation *inv )
 {
 	yahoo_conference_decline( inv->yid, NULL, inv->members, inv->name, "User rejected groupchat" );
-	imcb_chat_removed( inv->c );
+	imcb_chat_free( inv->c );
 	g_free( inv->name );
 	g_free( inv );
 }
@@ -840,7 +840,7 @@ void ext_yahoo_conf_userjoin( int id, const char *ignored, const char *who, cons
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	struct groupchat *c;
 	
-	for( c = ic->conversations; c && strcmp( c->title, room ) != 0; c = c->next );
+	for( c = ic->groupchats; c && strcmp( c->title, room ) != 0; c = c->next );
 	
 	if( c )
 		imcb_chat_add_buddy( c, (char*) who );
@@ -852,7 +852,7 @@ void ext_yahoo_conf_userleave( int id, const char *ignored, const char *who, con
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	struct groupchat *c;
 	
-	for( c = ic->conversations; c && strcmp( c->title, room ) != 0; c = c->next );
+	for( c = ic->groupchats; c && strcmp( c->title, room ) != 0; c = c->next );
 	
 	if( c )
 		imcb_chat_remove_buddy( c, (char*) who, "" );
@@ -864,7 +864,7 @@ void ext_yahoo_conf_message( int id, const char *ignored, const char *who, const
 	char *m = byahoo_strip( msg );
 	struct groupchat *c;
 	
-	for( c = ic->conversations; c && strcmp( c->title, room ) != 0; c = c->next );
+	for( c = ic->groupchats; c && strcmp( c->title, room ) != 0; c = c->next );
 	
 	if( c )
 		imcb_chat_msg( c, (char*) who, (char*) m, 0, 0 );

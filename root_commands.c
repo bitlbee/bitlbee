@@ -923,12 +923,21 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 	}
 	if( cmd[3] && cmd[4] )
 		nick = cmd[4];
+	else
+		nick = irc->nick;
 	if( cmd[3] && cmd[4] && cmd[5] )
 		password = cmd[5];
 	
-	c = a->prpl->chat_join( ic, chat, nick, password );
-	
-	g_free( channel );
+	if( ( c = a->prpl->chat_join( ic, chat, nick, password ) ) )
+	{
+		g_free( c->channel );
+		c->channel = channel;
+	}
+	else
+	{
+		irc_usermsg( irc, "Tried to join chat, not sure if this was successful" );
+		g_free( channel );
+	}
 }
 
 const command_t commands[] = {

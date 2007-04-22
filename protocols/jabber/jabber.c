@@ -323,6 +323,24 @@ static void jabber_remove_buddy( struct im_connection *ic, char *who, char *grou
 		presence_send_request( ic, who, "unsubscribe" );
 }
 
+static struct groupchat *jabber_chat_join_( struct im_connection *ic, char *room, char *nick, char *password )
+{
+	if( strchr( room, '@' ) == NULL )
+		imcb_error( ic, "Invalid room name: %s", room );
+	else if( jabber_chat_by_name( ic, room ) )
+		imcb_error( ic, "Already present in chat `%s'", room );
+	else
+		return jabber_chat_join( ic, room, nick, password );
+	
+	return NULL;
+}
+
+static void jabber_chat_leave_( struct groupchat *c )
+{
+	if( c )
+		jabber_chat_leave( c, NULL );
+}
+
 static void jabber_keepalive( struct im_connection *ic )
 {
 	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
@@ -395,8 +413,8 @@ void jabber_initmodule()
 	ret->remove_buddy = jabber_remove_buddy;
 //	ret->chat_msg = jabber_chat_msg;
 //	ret->chat_invite = jabber_chat_invite;
-//	ret->chat_leave = jabber_chat_leave;
-//	ret->chat_open = jabber_chat_open;
+	ret->chat_leave = jabber_chat_leave_;
+	ret->chat_join = jabber_chat_join_;
 	ret->keepalive = jabber_keepalive;
 	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;

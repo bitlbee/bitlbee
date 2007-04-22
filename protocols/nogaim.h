@@ -90,17 +90,15 @@ struct im_connection
 	/* BitlBee */
 	irc_t *irc;
 	
-	struct groupchat *conversations;
+	struct groupchat *groupchats;
 };
 
 struct groupchat {
 	struct im_connection *ic;
 
-	/* stuff used just for chat */
 	GList *in_room;
 	GList *ignored;
 	
-	/* BitlBee */
 	struct groupchat *next;
 	char *channel;
 	char *title;
@@ -207,7 +205,7 @@ G_MODULE_EXPORT struct groupchat *imcb_chat_new( struct im_connection *ic, char 
 G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, char *handle );
 G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason );
 G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at );
-G_MODULE_EXPORT void imcb_chat_removed( struct groupchat *c );
+G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
 struct groupchat *chat_by_channel( char *channel );
 
 /* Actions, or whatever. */

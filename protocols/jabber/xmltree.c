@@ -187,6 +187,8 @@ int xt_handle( struct xt_parser *xt, struct xt_node *node, int depth )
 						/* If there's no parent, the handler should mention <root> as a parent. */
 			                       g_strcasecmp( xt->handlers[i].parent, "<root>" ) == 0 ) ) )
 			{
+				xt_print( node );
+				
 				st = xt->handlers[i].func( node, xt->data );
 				
 				if( st == XT_ABORT )

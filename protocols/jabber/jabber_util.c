@@ -47,7 +47,7 @@ char *set_eval_priority( set_t *set, char *value )
 		   convenient, they have one disadvantage: If I would just
 		   call p_s_u() now to send the new prio setting, it would
 		   send the old setting because the set->value gets changed
-		   when the eval returns a non-NULL value.
+		   after the (this) eval returns a non-NULL value.
 		   
 		   So now I can choose between implementing post-set
 		   functions next to evals, or just do this little hack: */
@@ -128,7 +128,7 @@ struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, 
 
 /* Cache a node/packet for later use. Mainly useful for IQ packets if you need
    them when you receive the response. Use this BEFORE sending the packet so
-   it'll get a new id= tag, and do NOT free() the packet after writing it! */
+   it'll get a new id= tag, and do NOT free() the packet after sending it! */
 void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_cache_event func )
 {
 	struct jabber_data *jd = ic->proto_data;
@@ -251,7 +251,7 @@ void jabber_buddy_ask( struct im_connection *ic, char *handle )
 }
 
 /* Returns a new string. Don't leak it! */
-char *jabber_normalize( char *orig )
+char *jabber_normalize( const char *orig )
 {
 	int len, i;
 	char *new;
@@ -352,6 +352,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 	
 	if( ( s = strchr( jid, '/' ) ) )
 	{
+		int none_found = 0;
+		
 		*s = 0;
 		if( ( bud = g_hash_table_lookup( jd->buddies, jid ) ) )
 		{
@@ -369,8 +371,16 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 						break;
 			}
 		}
+		else
+		{
+			/* This hack is there to make sure that O_CREAT will
+			   work if there's already another resouce present
+			   for this JID, even if it's an unknown buddy. This
+			   is done to handle conferences properly. */
+			none_found = 1;
+		}
 		
-		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && imcb_find_buddy( ic, jid ) )
+		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && ( imcb_find_buddy( ic, jid ) || !none_found ) )
 		{
 			*s = '/';
 			bud = jabber_buddy_add( ic, jid );
@@ -529,4 +539,21 @@ int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid_ )
 		g_free( bare_jid );
 		return 0;
 	}
+}
+
+struct groupchat *jabber_chat_by_name( struct im_connection *ic, const char *name )
+{
+	char *normalized = jabber_normalize( name );
+	struct groupchat *ret;
+	struct jabber_chat *jc;
+	
+	for( ret = ic->groupchats; ret; ret = ret->next )
+	{
+		jc = ret->data;
+		if( strcmp( normalized, jc->name ) == 0 )
+			break;
+	}
+	g_free( normalized );
+	
+	return ret;
 }
