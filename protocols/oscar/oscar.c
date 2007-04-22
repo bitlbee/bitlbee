@@ -2529,36 +2529,39 @@ void oscar_chat_leave(struct groupchat *c)
 	oscar_chat_kill(c->ic, c->data);
 }
 
-int oscar_chat_join(struct im_connection * ic, char * name)
+struct groupchat *oscar_chat_join(struct im_connection * ic, char * room, char * nick, char * password )
 {
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
-	
 	aim_conn_t * cur;
 
 	if((cur = aim_getconn_type(od->sess, AIM_CONN_TYPE_CHATNAV))) {
-	
-		return (aim_chatnav_createroom(od->sess, cur, name, 4) == 0);
-	
+		int st;
+		
+		st = aim_chatnav_createroom(od->sess, cur, room, 4);
+		
+		return NULL;
 	} else {
 		struct create_room * cr = g_new0(struct create_room, 1);
+		
 		cr->exchange = 4;
-		cr->name = g_strdup(name);
+		cr->name = g_strdup(room);
 		od->create_rooms = g_slist_append(od->create_rooms, cr);
 		aim_reqservice(od->sess, od->conn, AIM_CONN_TYPE_CHATNAV);
-		return 1;
+		
+		return NULL;
 	}
 }
 
 struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 {
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
-	int ret;
+	struct groupchat *ret;
 	static int chat_id = 0;
 	char * chatname;
 	
 	chatname = g_strdup_printf("%s%d", ic->acc->user, chat_id++);
   
-	ret = oscar_chat_join(ic, chatname);
+	ret = oscar_chat_join(ic, chatname, NULL, NULL);
 
 	aim_chat_invite(od->sess, od->conn, who, "", 4, chatname, 0x0);
 
@@ -2569,7 +2572,7 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 
 void oscar_accept_chat(gpointer w, struct aim_chat_invitation * inv)
 {
-	oscar_chat_join(inv->ic, inv->name);
+	oscar_chat_join(inv->ic, inv->name, NULL, NULL);
 	g_free(inv->name);
 	g_free(inv);
 }
@@ -2599,6 +2602,7 @@ void oscar_initmodule()
 	ret->chat_invite = oscar_chat_invite;
 	ret->chat_leave = oscar_chat_leave;
 	ret->chat_with = oscar_chat_with;
+	ret->chat_join = oscar_chat_join;
 	ret->add_permit = oscar_add_permit;
 	ret->add_deny = oscar_add_deny;
 	ret->rem_permit = oscar_rem_permit;

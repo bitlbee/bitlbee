@@ -163,7 +163,7 @@ struct prpl {
 	struct groupchat *
 	     (* chat_with)	(struct im_connection *, char *who);
 	struct groupchat *
-	     (* chat_join)	(struct im_connection *, char *chat, char *nick, char *password);
+	     (* chat_join)	(struct im_connection *, char *room, char *nick, char *password);
 	
 	GList *(* away_states)(struct im_connection *ic);
 	
