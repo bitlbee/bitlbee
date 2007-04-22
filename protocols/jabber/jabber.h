@@ -143,6 +143,7 @@ struct jabber_chat
 #define XMLNS_VERSION      "jabber:iq:version"                  /* XEP-0092 */
 #define XMLNS_TIME         "jabber:iq:time"                     /* XEP-0090 */
 #define XMLNS_VCARD        "vcard-temp"                         /* XEP-0054 */
+#define XMLNS_DELAY        "jabber:x:delay"                     /* XEP-0091 */
 #define XMLNS_CHATSTATES   "http://jabber.org/protocol/chatstates"  /* 0085 */
 #define XMLNS_DISCOVER     "http://jabber.org/protocol/disco#info"  /* 0030 */
 #define XMLNS_MUC          "http://jabber.org/protocol/muc"     /* XEP-0045 */
@@ -191,6 +192,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid, g
 int jabber_buddy_remove( struct im_connection *ic, char *full_jid );
 int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid );
 struct groupchat *jabber_chat_by_name( struct im_connection *ic, const char *name );
+time_t jabber_get_timestamp( struct xt_node *xt );
 
 extern const struct jabber_away_state jabber_away_state_list[];
 
@@ -210,6 +212,7 @@ gboolean sasl_supported( struct im_connection *ic );
 
 /* conference.c */
 struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *nick, char *password );
+int jabber_chat_msg( struct groupchat *ic, char *message, int flags );
 int jabber_chat_leave( struct groupchat *c, const char *reason );
 void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
 void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );

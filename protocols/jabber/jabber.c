@@ -335,6 +335,12 @@ static struct groupchat *jabber_chat_join_( struct im_connection *ic, char *room
 	return NULL;
 }
 
+static void jabber_chat_msg_( struct groupchat *c, char *message, int flags )
+{
+	if( c && message )
+		jabber_chat_msg( c, message, flags );
+}
+
 static void jabber_chat_leave_( struct groupchat *c )
 {
 	if( c )
@@ -405,13 +411,12 @@ void jabber_initmodule()
 	ret->logout = jabber_logout;
 	ret->buddy_msg = jabber_buddy_msg;
 	ret->away_states = jabber_away_states;
-//	ret->get_status_string = jabber_get_status_string;
 	ret->set_away = jabber_set_away;
 //	ret->set_info = jabber_set_info;
 	ret->get_info = jabber_get_info;
 	ret->add_buddy = jabber_add_buddy;
 	ret->remove_buddy = jabber_remove_buddy;
-//	ret->chat_msg = jabber_chat_msg;
+	ret->chat_msg = jabber_chat_msg_;
 //	ret->chat_invite = jabber_chat_invite;
 	ret->chat_leave = jabber_chat_leave_;
 	ret->chat_join = jabber_chat_join_;

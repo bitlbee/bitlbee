@@ -557,3 +557,52 @@ struct groupchat *jabber_chat_by_name( struct im_connection *ic, const char *nam
 	
 	return ret;
 }
+
+time_t jabber_get_timestamp( struct xt_node *xt )
+{
+	struct tm tp, utc;
+	struct xt_node *c;
+	time_t res, tres;
+	char *s = NULL;
+	
+	for( c = xt->children; ( c = xt_find_node( c, "x" ) ); c = c->next )
+	{
+		if( ( s = xt_find_attr( c, "xmlns" ) ) && strcmp( s, XMLNS_DELAY ) == 0 )
+			break;
+	}
+	
+	if( !c || !( s = xt_find_attr( c, "stamp" ) ) )
+		return 0;
+	
+	memset( &tp, 0, sizeof( tp ) );
+	if( sscanf( s, "%4d%2d%2dT%2d:%2d:%2d", &tp.tm_year, &tp.tm_mon, &tp.tm_mday,
+	                                        &tp.tm_hour, &tp.tm_min, &tp.tm_sec ) != 6 )
+		return 0;
+	
+	tp.tm_year -= 1900;
+	tp.tm_mon --;
+	tp.tm_isdst = -1; /* GRRRRRRRRRRR */
+	
+	res = mktime( &tp );
+	/* Problem is, mktime() just gave us the GMT timestamp for the
+	   given local time... While the given time WAS NOT local. So
+	   we should fix this now.
+	
+	   Now I could choose between messing with environment variables
+	   (kludgy) or using timegm() (not portable)... Or doing the
+	   following, which I actually prefer... */
+	gmtime_r( &res, &utc );
+	utc.tm_isdst = -1; /* Once more: GRRRRRRRRRRRRRRRRRR!!! */
+	if( utc.tm_hour == tp.tm_hour && utc.tm_min == tp.tm_min )
+		/* Sweet! We're in UTC right now... */
+		return res;
+	
+	tres = mktime( &utc );
+	res += res - tres;
+	
+	/* Yes, this is a hack. And it will go wrong around DST changes.
+	   BUT this is more likely to be threadsafe than messing with
+	   environment variables, and possibly more portable... */
+	
+	return res;
+}

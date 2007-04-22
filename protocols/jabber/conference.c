@@ -61,6 +61,25 @@ struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *
 	return c;
 }
 
+int jabber_chat_msg( struct groupchat *c, char *message, int flags )
+{
+	struct im_connection *ic = c->ic;
+	struct jabber_chat *jc = c->data;
+	struct xt_node *node;
+	
+	node = xt_new_node( "body", message, NULL );
+	node = jabber_make_packet( "message", "groupchat", jc->name, node );
+	
+	if( !jabber_write_packet( ic, node ) )
+	{
+		xt_free_node( node );
+		return 0;
+	}
+	xt_free_node( node );
+	
+	return 1;
+}
+
 int jabber_chat_leave( struct groupchat *c, const char *reason )
 {
 	struct im_connection *ic = c->ic;
@@ -77,14 +96,6 @@ int jabber_chat_leave( struct groupchat *c, const char *reason )
 		return 0;
 	}
 	xt_free_node( node );
-	
-	/* Remove all participants from jc->buddies and clean up our data. */
-	jabber_buddy_remove_bare( ic, jc->name );
-	g_free( jc->name );
-	g_free( jc );
-	
-	/* And the generic stuff. */
-	imcb_chat_free( c );
 	
 	return 1;
 }
@@ -187,7 +198,7 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 	{
 		s = strchr( bud->orig_jid, '/' );
 		if( s ) *s = 0;
-		imcb_chat_msg( chat, bud->orig_jid, body->text, 0, 0 );
+		imcb_chat_msg( chat, bud->orig_jid, body->text, 0, jabber_get_timestamp( node ) );
 		if( s ) *s = '/';
 	}
 }

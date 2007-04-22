@@ -80,7 +80,8 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 			fullmsg = g_string_append( fullmsg, body->text );
 		
 		if( fullmsg->len > 0 )
-			imcb_buddy_msg( ic, bud ? bud->bare_jid : from, fullmsg->str, 0, 0 );
+			imcb_buddy_msg( ic, bud ? bud->bare_jid : from, fullmsg->str,
+			                0, jabber_get_timestamp( node ) );
 		
 		g_string_free( fullmsg, TRUE );
 		
