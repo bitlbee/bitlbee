@@ -806,6 +806,7 @@ void imcb_chat_add_buddy( struct groupchat *b, char *handle )
 	}
 }
 
+/* This function is one BIG hack... :-( EREWRITE */
 void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
 {
 	user_t *u;
@@ -817,6 +818,9 @@ void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
 	/* It might be yourself! */
 	if( g_strcasecmp( handle, b->ic->acc->user ) == 0 )
 	{
+		if( b->joined == 0 )
+			return;
+		
 		u = user_find( b->ic->irc, b->ic->irc->nick );
 		b->joined = 0;
 		me = 1;
@@ -826,9 +830,8 @@ void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
 		u = user_findhandle( b->ic, handle );
 	}
 	
-	if( remove_chat_buddy_silent( b, handle ) )
-		if( ( b->joined || me ) && u )
-			irc_part( b->ic->irc, u, b->channel );
+	if( me || ( remove_chat_buddy_silent( b, handle ) && b->joined && u ) )
+		irc_part( b->ic->irc, u, b->channel );
 }
 
 static int remove_chat_buddy_silent( struct groupchat *b, char *handle )

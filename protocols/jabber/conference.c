@@ -162,6 +162,8 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 		
 		if( bud == jc->me )
 		{
+			jabber_buddy_remove_bare( ic, jc->name );
+			
 			g_free( jc->name );
 			g_free( jc );
 			imcb_chat_free( chat );

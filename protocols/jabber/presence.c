@@ -167,6 +167,7 @@ int presence_send_update( struct im_connection *ic )
 	struct xt_node *node;
 	char *show = jd->away_state->code;
 	char *status = jd->away_message;
+	struct groupchat *c;
 	int st;
 	
 	node = jabber_make_packet( "presence", NULL, NULL, NULL );
@@ -177,6 +178,16 @@ int presence_send_update( struct im_connection *ic )
 		xt_add_child( node, xt_new_node( "status", status, NULL ) );
 	
 	st = jabber_write_packet( ic, node );
+	
+	/* Have to send this update to all groupchats too, the server won't
+	   do this automatically. */
+	for( c = ic->groupchats; c && st; c = c->next )
+	{
+		struct jabber_chat *jc = c->data;
+		
+		xt_add_attr( node, "to", jc->me->full_jid );
+		st = jabber_write_packet( ic, node );
+	}
 	
 	xt_free_node( node );
 	return st;
