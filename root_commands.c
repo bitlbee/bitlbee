@@ -917,7 +917,7 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 	{
 		char *s;
 		
-		channel = g_strdup( chat );
+		channel = g_strdup_printf( "&%s", chat );
 		if( ( s = strchr( channel, '@' ) ) )
 			*s = 0;
 	}
@@ -927,6 +927,19 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 		nick = irc->nick;
 	if( cmd[3] && cmd[4] && cmd[5] )
 		password = cmd[5];
+	
+	if( channel[0] != '#' && channel[0] != '&' )
+	{
+		irc_usermsg( irc, "Invalid channel name: %s", channel );
+		g_free( channel );
+		return;
+	}
+	else if( g_strcasecmp( channel, irc->channel ) == 0 || irc_chat_by_channel( irc, channel ) )
+	{
+		irc_usermsg( irc, "Channel already exists: %s", channel );
+		g_free( channel );
+		return;
+	}
 	
 	if( ( c = a->prpl->chat_join( ic, chat, nick, password ) ) )
 	{

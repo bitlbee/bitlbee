@@ -101,7 +101,7 @@ int jabber_chat_leave( struct groupchat *c, const char *reason )
 }
 
 /* Not really the same syntax as the normal pkt_ functions, but this isn't
-   called by the xmltree parser exactly and this way I can add some extra
+   called by the xmltree parser directly and this way I can add some extra
    parameters so we won't have to repeat too many things done by the caller
    already. */
 void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node )
@@ -150,7 +150,7 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 		imcb_chat_add_buddy( chat, bud->orig_jid );
 		if( s ) *s = '/';
 	}
-	else if( type ) /* This only gets called if type=="unavailable" */
+	else if( type ) /* This only gets called if type is NULL or "unavailable" */
 	{
 		/* Won't handle this for now. */
 		if( bud->orig_jid == NULL )

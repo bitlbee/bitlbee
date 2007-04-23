@@ -139,5 +139,6 @@ int irc_msgfrom( irc_t *irc, char *nick, char *msg );
 int irc_noticefrom( irc_t *irc, char *nick, char *msg );
 
 void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags );
+struct groupchat *irc_chat_by_channel( irc_t *irc, char *channel );
 
 #endif

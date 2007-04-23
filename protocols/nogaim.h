@@ -206,7 +206,6 @@ G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, char *handle );
 G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason );
 G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at );
 G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
-struct groupchat *chat_by_channel( char *channel );
 
 /* Actions, or whatever. */
 int imc_set_away( struct im_connection *ic, char *away );

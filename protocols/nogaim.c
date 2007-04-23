@@ -855,24 +855,6 @@ static int remove_chat_buddy_silent( struct groupchat *b, char *handle )
 
 /* Misc. BitlBee stuff which shouldn't really be here */
 
-struct groupchat *chat_by_channel( char *channel )
-{
-	struct im_connection *ic;
-	struct groupchat *c;
-	GSList *l;
-	
-	/* This finds the connection which has a conversation which belongs to this channel */
-	for( l = connections; l; l = l->next )
-	{
-		ic = l->data;
-		for( c = ic->groupchats; c && g_strcasecmp( c->channel, channel ) != 0; c = c->next );
-		if( c )
-			return c;
-	}
-	
-	return NULL;
-}
-
 char *set_eval_away_devoice( set_t *set, char *value )
 {
 	irc_t *irc = set->data;
