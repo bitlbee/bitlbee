@@ -136,28 +136,31 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 				if( ( s = xt_find_attr( c, "jid" ) ) )
 				{
 					/* Yay, found what we need. :-) */
-					bud->orig_jid = g_strdup( s );
+					bud->ext_jid = g_strdup( s );
 					break;
 				}
 			}
 		
-		/* Won't handle this for now. */
-		if( bud->orig_jid == NULL )
-			return;
+		/* Make up some other handle, if necessary. */
+		if( bud->ext_jid == NULL )
+		{
+			/* Don't want the nick to be at the end, so let's
+			   think of some slightly different notation to use
+			   for anonymous groupchat participants in BitlBee. */
+			bud->ext_jid = g_strdup_printf( "%s=%s", bud->resource, bud->bare_jid );
+			bud->flags |= JBFLAG_IS_ANONYMOUS;
+		}
 		
-		s = strchr( bud->orig_jid, '/' );
+		s = strchr( bud->ext_jid, '/' );
 		if( s ) *s = 0; /* Should NEVER be NULL, but who knows... */
-		imcb_chat_add_buddy( chat, bud->orig_jid );
+		imcb_chat_add_buddy( chat, bud->ext_jid );
 		if( s ) *s = '/';
 	}
 	else if( type ) /* This only gets called if type is NULL or "unavailable" */
 	{
-		/* Won't handle this for now. */
-		if( bud->orig_jid == NULL )
-			return;
-		s = strchr( bud->orig_jid, '/' );
-		if( s ) *s = 0; /* Should NEVER be NULL, but who knows... */
-		imcb_chat_remove_buddy( chat, bud->orig_jid, NULL );
+		s = strchr( bud->ext_jid, '/' );
+		if( s ) *s = 0;
+		imcb_chat_remove_buddy( chat, bud->ext_jid, NULL );
 		if( s ) *s = '/';
 		
 		if( bud == jc->me )
@@ -198,9 +201,9 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 	
 	if( body && body->text_len > 0 )
 	{
-		s = strchr( bud->orig_jid, '/' );
+		s = strchr( bud->ext_jid, '/' );
 		if( s ) *s = 0;
-		imcb_chat_msg( chat, bud->orig_jid, body->text, 0, jabber_get_timestamp( node ) );
+		imcb_chat_msg( chat, bud->ext_jid, body->text, 0, jabber_get_timestamp( node ) );
 		if( s ) *s = '/';
 	}
 }

@@ -51,6 +51,8 @@ typedef enum
 	                                   XEP85 (typing notification shite). */
 	JBFLAG_IS_CHATROOM = 4,		/* It's convenient to use this JID thingy for
 	                                   groupchat state info too. */
+	JBFLAG_IS_ANONYMOUS = 8,	/* For anonymous chatrooms, when we don't have
+	                                   have a real JID. */
 } jabber_buddy_flags_t;
 
 #define JABBER_PORT_DEFAULT "5222"
@@ -102,8 +104,8 @@ struct jabber_buddy
 	char *full_jid;
 	char *resource;
 	
-	/* Groupchat-only */
-	char *orig_jid;
+	char *ext_jid; /* The JID to use in BitlBee. The real JID if possible, */
+	               /* otherwise something similar to the conference JID. */
 	
 	int priority;
 	struct jabber_away_state *away_state;

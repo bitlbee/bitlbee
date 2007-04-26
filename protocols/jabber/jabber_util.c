@@ -450,6 +450,7 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 		{
 			g_hash_table_remove( jd->buddies, bud->bare_jid );
 			g_free( bud->bare_jid );
+			g_free( bud->ext_jid );
 			g_free( bud->full_jid );
 			g_free( bud->away_message );
 			g_free( bud );
@@ -482,6 +483,7 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 					   item, because we're removing the first. */
 					g_hash_table_replace( jd->buddies, bi->bare_jid, bi->next );
 				
+				g_free( bi->ext_jid );
 				g_free( bi->full_jid );
 				g_free( bi->away_message );
 				g_free( bi );
@@ -525,6 +527,7 @@ int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid_ )
 		while( bud )
 		{
 			next = bud->next;
+			g_free( bud->ext_jid );
 			g_free( bud->full_jid );
 			g_free( bud->away_message );
 			g_free( bud );

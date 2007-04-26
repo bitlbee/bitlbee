@@ -60,6 +60,7 @@
 #define OPT_LOGGING_OUT 0x00000002
 #define OPT_AWAY        0x00000004
 #define OPT_DOES_HTML   0x00000010
+#define OPT_LOCALBUDDY  0x00000020 /* For nicks local to one groupchat */
 #define OPT_TYPING      0x00000100 /* Some pieces of code make assumptions */
 #define OPT_THINKING    0x00000200 /* about these values... Stupid me! */
 
