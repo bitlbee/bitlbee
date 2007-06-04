@@ -372,7 +372,11 @@ static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *
 					imcb_add_buddy( ic, jid, ( group && group->text_len ) ?
 					                           group->text : NULL );
 				
-				imcb_rename_buddy( ic, jid, name );
+				if( name )
+				{
+					imcb_rename_buddy( ic, jid, name );
+					imcb_buddy_nick_hint( ic, jid, name );
+				}
 			}
 			else if( strcmp( sub, "remove" ) == 0 )
 			{

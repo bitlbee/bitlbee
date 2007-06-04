@@ -193,6 +193,7 @@ G_MODULE_EXPORT void imcb_add_buddy( struct im_connection *ic, char *handle, cha
 G_MODULE_EXPORT void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group );
 G_MODULE_EXPORT struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle );
 G_MODULE_EXPORT void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname );
+G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick );
 
 /* Buddy activity */
 G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message );

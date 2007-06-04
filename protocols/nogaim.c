@@ -427,7 +427,6 @@ struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle )
 void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 {
 	user_t *u = user_findhandle( ic, handle );
-	char *s, newnick[MAX_NICK_LENGTH+1];
 	
 	if( !u || !realname ) return;
 	
@@ -439,30 +438,34 @@ void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 		
 		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->irc->set, "display_namechanges" ) )
 			imcb_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
-		
-		if( !u->online && !nick_saved( ic->acc, handle ) )
-		{
-			/* Detect numeric handles: */
-			for( s = u->user; isdigit( *s ); s++ );
-			
-			if( *s == 0 )
-			{
-				/* If we reached the end of the string, it only contained numbers.
-				   Seems to be an ICQ# then, so hopefully realname contains
-				   something more useful. */
-				strcpy( newnick, realname );
-				
-				/* Some processing to make sure this string is a valid IRC nickname. */
-				nick_strip( newnick );
-				if( set_getbool( &ic->irc->set, "lcnicks" ) )
-					nick_lc( newnick );
-				
-				u->nick = g_strdup( newnick );
-			}
-		}
 	}
 }
 
+/* Mainly meant for ICQ (and now also for Jabber conferences) to allow IM
+   modules to suggest a nickname for a handle. */
+void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
+{
+	user_t *u = user_findhandle( ic, handle );
+	char newnick[MAX_NICK_LENGTH+1];
+	
+	if( !u->online && !nick_saved( ic->acc, handle ) )
+	{
+		/* Only do this if the person isn't online yet (which should
+		   be the case if we just added it) and if the user hasn't
+		   assigned a nickname to this buddy already. */
+		
+		strcpy( newnick, nick );
+		
+		/* Some processing to make sure this string is a valid IRC nickname. */
+		nick_strip( newnick );
+		if( set_getbool( &ic->irc->set, "lcnicks" ) )
+			nick_lc( newnick );
+		
+		nick_dedupe( ic->acc, handle, newnick );
+		
+		u->nick = g_strdup( newnick );
+	}
+}
 
 /* prpl.c */
 

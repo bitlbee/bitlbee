@@ -2021,6 +2021,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 					imcb_add_buddy(ic, curitem->name, NULL);
 					
 					if (realname) {
+						imcb_buddy_nick_hint(ic, curitem->name, realname);
 						imcb_rename_buddy(ic, curitem->name, realname);
 						g_free(realname);
 					}
