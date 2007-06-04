@@ -155,13 +155,16 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 			bud->flags |= JBFLAG_IS_ANONYMOUS;
 		}
 		
+		if( bud != jc->me )
+		{
+			imcb_add_buddy( ic, bud->ext_jid, NULL );
+			imcb_buddy_nick_hint( ic, bud->ext_jid, bud->resource );
+		}
+		
 		s = strchr( bud->ext_jid, '/' );
 		if( s ) *s = 0; /* Should NEVER be NULL, but who knows... */
 		imcb_chat_add_buddy( chat, bud->ext_jid );
 		if( s ) *s = '/';
-		
-		if( bud != jc->me )
-			imcb_buddy_nick_hint( ic, bud->ext_jid, bud->resource );
 	}
 	else if( type ) /* This only gets called if type is NULL or "unavailable" */
 	{
