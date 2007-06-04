@@ -44,6 +44,15 @@ int jabber_write( struct im_connection *ic, char *buf, int len )
 	struct jabber_data *jd = ic->proto_data;
 	gboolean ret;
 	
+	if( jd->flags & JFLAG_XMLCONSOLE )
+	{
+		char *msg;
+		
+		msg = g_strdup_printf( "TX: %s", buf );
+		imcb_buddy_msg( ic, JABBER_XMLCONSOLE_HANDLE, msg, 0, 0 );
+		g_free( msg );
+	}
+	
 	if( jd->tx_len == 0 )
 	{
 		/* If the queue is empty, allocate a new buffer. */
@@ -483,7 +492,27 @@ static xt_status jabber_pkt_misc( struct xt_node *node, gpointer data )
 	return XT_HANDLED;
 }
 
+static xt_status jabber_xmlconsole( struct xt_node *node, gpointer data )
+{
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
+	
+	if( jd->flags & JFLAG_XMLCONSOLE )
+	{
+		char *msg, *pkt;
+		
+		pkt = xt_to_string( node );
+		msg = g_strdup_printf( "RX: %s", pkt );
+		imcb_buddy_msg( ic, JABBER_XMLCONSOLE_HANDLE, msg, 0, 0 );
+		g_free( msg );
+		g_free( pkt );
+	}
+	
+	return XT_NEXT;
+}
+
 static const struct xt_handler_entry jabber_handlers[] = {
+	{ NULL,                 "stream:stream",        jabber_xmlconsole },
 	{ "stream:stream",      "<root>",               jabber_end_of_stream },
 	{ "message",            "stream:stream",        jabber_pkt_message },
 	{ "presence",           "stream:stream",        jabber_pkt_presence },

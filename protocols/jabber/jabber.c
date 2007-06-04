@@ -225,6 +225,9 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 	struct xt_node *node;
 	int st;
 	
+	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
+		return jabber_write( ic, message, strlen( message ) );
+	
 	bud = jabber_buddy_by_jid( ic, who, 0 );
 	
 	node = xt_new_node( "body", message, NULL );
@@ -310,12 +313,30 @@ static void jabber_set_away( struct im_connection *ic, char *state_txt, char *me
 
 static void jabber_add_buddy( struct im_connection *ic, char *who, char *group )
 {
+	struct jabber_data *jd = ic->proto_data;
+	
+	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
+	{
+		jd->flags |= JFLAG_XMLCONSOLE;
+		imcb_add_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL );
+		return;
+	}
+	
 	if( jabber_add_to_roster( ic, who, NULL ) )
 		presence_send_request( ic, who, "subscribe" );
 }
 
 static void jabber_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
+	struct jabber_data *jd = ic->proto_data;
+	
+	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
+	{
+		jd->flags &= ~JFLAG_XMLCONSOLE;
+		/* FIXME imcb_remove_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL ); */
+		return;
+	}
+	
 	/* We should always do this part. Clean up our administration a little bit. */
 	jabber_buddy_remove_bare( ic, who );
 	

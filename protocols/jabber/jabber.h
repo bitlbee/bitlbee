@@ -31,16 +31,17 @@
 
 typedef enum
 {
-	JFLAG_STREAM_STARTED = 1,	/* Set when we detected the beginning of the stream
+	JFLAG_STREAM_STARTED = 1,       /* Set when we detected the beginning of the stream
 	                                   and want to do auth. */
-	JFLAG_AUTHENTICATED = 2,	/* Set when we're successfully authenticatd. */
-	JFLAG_STREAM_RESTART = 4,	/* Set when we want to restart the stream (after
+	JFLAG_AUTHENTICATED = 2,        /* Set when we're successfully authenticatd. */
+	JFLAG_STREAM_RESTART = 4,       /* Set when we want to restart the stream (after
 	                                   SASL or TLS). */
-	JFLAG_WAIT_SESSION = 8,		/* Set if we sent a <session> tag and need a reply
+	JFLAG_WAIT_SESSION = 8,	        /* Set if we sent a <session> tag and need a reply
 	                                   before we continue. */
-	JFLAG_WAIT_BIND = 16,		/* ... for <bind> tag. */
-	JFLAG_WANT_TYPING = 32,		/* Set if we ever sent a typing notification, this
+	JFLAG_WAIT_BIND = 16,           /* ... for <bind> tag. */
+	JFLAG_WANT_TYPING = 32,         /* Set if we ever sent a typing notification, this
 	                                   activates all XEP-85 related code. */
+	JFLAG_XMLCONSOLE = 64,          /* If the user added an xmlconsole buddy. */
 } jabber_flags_t;
 
 typedef enum
@@ -54,10 +55,6 @@ typedef enum
 	JBFLAG_IS_ANONYMOUS = 8,	/* For anonymous chatrooms, when we don't have
 	                                   have a real JID. */
 } jabber_buddy_flags_t;
-
-#define JABBER_PORT_DEFAULT "5222"
-#define JABBER_PORT_MIN 5220
-#define JABBER_PORT_MAX 5229
 
 struct jabber_data
 {
@@ -123,6 +120,12 @@ struct jabber_chat
 	char *name;
 	struct jabber_buddy *me;
 };
+
+#define JABBER_XMLCONSOLE_HANDLE "xmlconsole"
+
+#define JABBER_PORT_DEFAULT "5222"
+#define JABBER_PORT_MIN 5220
+#define JABBER_PORT_MAX 5229
 
 /* Prefixes to use for packet IDs (mainly for IQ packets ATM). Usually the
    first one should be used, but when storing a packet in the cache, a
