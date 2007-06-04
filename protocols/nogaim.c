@@ -448,13 +448,14 @@ void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
 	user_t *u = user_findhandle( ic, handle );
 	char newnick[MAX_NICK_LENGTH+1];
 	
-	if( !u->online && !nick_saved( ic->acc, handle ) )
+	if( u && !u->online && !nick_saved( ic->acc, handle ) )
 	{
 		/* Only do this if the person isn't online yet (which should
 		   be the case if we just added it) and if the user hasn't
 		   assigned a nickname to this buddy already. */
 		
-		strcpy( newnick, nick );
+		strncpy( newnick, nick, MAX_NICK_LENGTH );
+		newnick[MAX_NICK_LENGTH] = 0;
 		
 		/* Some processing to make sure this string is a valid IRC nickname. */
 		nick_strip( newnick );

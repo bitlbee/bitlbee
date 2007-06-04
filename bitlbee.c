@@ -124,7 +124,7 @@ int bitlbee_daemon_init()
 		else if( i != 0 ) 
 			exit( 0 );
 		
-		chdir( "/" );
+//		chdir( "/" );
 		
 		/* Sometimes std* are already closed (for example when we're in a RESTARTed
 		   BitlBee process. So let's only close TTY-fds. */
