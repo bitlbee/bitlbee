@@ -333,7 +333,7 @@ static void jabber_remove_buddy( struct im_connection *ic, char *who, char *grou
 	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
 	{
 		jd->flags &= ~JFLAG_XMLCONSOLE;
-		/* FIXME imcb_remove_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL ); */
+		imcb_remove_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL );
 		return;
 	}
 	

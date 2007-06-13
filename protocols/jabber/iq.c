@@ -377,11 +377,8 @@ static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *
 			}
 			else if( strcmp( sub, "remove" ) == 0 )
 			{
-				/* Don't have any API call for this yet! So let's
-				   just try to handle this as well as we can. */
 				jabber_buddy_remove_bare( ic, jid );
-				imcb_buddy_status( ic, jid, 0, NULL, NULL );
-				/* FIXME! */
+				imcb_remove_buddy( ic, jid, NULL );
 			}
 		}
 		

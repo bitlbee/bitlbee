@@ -166,11 +166,13 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 		imcb_chat_add_buddy( chat, bud->ext_jid );
 		if( s ) *s = '/';
 	}
-	else if( type ) /* This only gets called if type is NULL or "unavailable" */
+	else if( type ) /* type can only be NULL or "unavailable" in this function */
 	{
 		s = strchr( bud->ext_jid, '/' );
 		if( s ) *s = 0;
 		imcb_chat_remove_buddy( chat, bud->ext_jid, NULL );
+		if( bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS )
+			imcb_remove_buddy( ic, bud->ext_jid, NULL );
 		if( s ) *s = '/';
 		
 		if( bud == jc->me )

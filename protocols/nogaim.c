@@ -441,6 +441,14 @@ void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 	}
 }
 
+void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group )
+{
+	user_t *u;
+	
+	if( ( u = user_findhandle( ic, handle ) ) )
+		user_del( ic->irc, u->nick );
+}
+
 /* Mainly meant for ICQ (and now also for Jabber conferences) to allow IM
    modules to suggest a nickname for a handle. */
 void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
