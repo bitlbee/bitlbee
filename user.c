@@ -160,6 +160,7 @@ user_t *user_findhandle( struct im_connection *ic, char *handle )
 	return NULL;
 }
 
+/* DO NOT PASS u->nick FOR oldnick !!! */
 void user_rename( irc_t *irc, char *oldnick, char *newnick )
 {
 	user_t *u = user_find( irc, oldnick );

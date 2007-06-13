@@ -446,7 +446,7 @@ void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
 {
 	user_t *u = user_findhandle( ic, handle );
-	char newnick[MAX_NICK_LENGTH+1];
+	char newnick[MAX_NICK_LENGTH+1], *orig_nick;
 	
 	if( u && !u->online && !nick_saved( ic->acc, handle ) )
 	{
@@ -464,7 +464,11 @@ void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
 		
 		nick_dedupe( ic->acc, handle, newnick );
 		
-		user_rename( ic->irc, u->nick, newnick );
+		/* u->nick will be freed halfway the process, so it can't be
+		   passed as an argument. */
+		orig_nick = g_strdup( u->nick );
+		user_rename( ic->irc, orig_nick, newnick );
+		g_free( orig_nick );
 	}
 }
 
