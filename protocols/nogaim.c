@@ -464,7 +464,7 @@ void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
 		
 		nick_dedupe( ic->acc, handle, newnick );
 		
-		u->nick = g_strdup( newnick );
+		user_rename( ic->irc, u->nick, newnick );
 	}
 }
 
