@@ -1223,9 +1223,17 @@ struct groupchat *irc_chat_by_channel( irc_t *irc, char *channel )
 	/* This finds the connection which has a conversation which belongs to this channel */
 	for( a = irc->accounts; a; a = a->next )
 	{
-		for( c = a->ic->groupchats; c && g_strcasecmp( c->channel, channel ) != 0; c = c->next );
-		if( c )
-			return c;
+		if( a->ic == NULL )
+			continue;
+		
+		c = a->ic->groupchats;
+		while( c )
+		{
+			if( c->channel && g_strcasecmp( c->channel, channel ) == 0 )
+				return c;
+			
+			c = c->next;
+		}
 	}
 	
 	return NULL;
