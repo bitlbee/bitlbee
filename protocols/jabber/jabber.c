@@ -333,7 +333,11 @@ static void jabber_remove_buddy( struct im_connection *ic, char *who, char *grou
 	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
 	{
 		jd->flags &= ~JFLAG_XMLCONSOLE;
+		/* Not necessary for now. And for now the code isn't too
+		   happy if the buddy is completely gone right after calling
+		   this function already.
 		imcb_remove_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL );
+		*/
 		return;
 	}
 	
