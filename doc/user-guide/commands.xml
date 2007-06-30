@@ -810,27 +810,27 @@
 
 	</bitlbee-command>
 
-	<bitlbee-command name="import_buddies">
-		<short-description>Copy local buddy list to server (normally only needed when upgrading)</short-description>
-		<syntax>import_buddies &lt;connection&gt; [clear]</syntax>
+	<bitlbee-command name="join_chat">
+		<short-description>Join a named groupchat/conference room</short-description>
+		<syntax>import_buddies &lt;connection&gt; &lt;room name&gt; [&lt;channel name&gt;] [&lt;room nickname&gt;] [&lt;password&gt;]</syntax>
 
 		<description>
 			<para>
-				This command copies the locally stored buddy list to the server. This command exists for upgrading purposes. Previous versions of BitlBee didn't support server-side buddy lists for ICQ, so the list was stored locally.
+				On most IM-networks groupchats can be started using the /join command. (<emphasis>/join #foo</emphasis> to start a chatroom with you and <emphasis>foo</emphasis>) This doesn't work with names groupchats though (which exist on Jabber networks and AIM, for example), instead you can use this command.
 			</para>
 
 			<para>
-				Since version 0.91 however, server-side contact lists are supported for all protocols, so the local list is now ignored. When upgrading from an older BitlBee to version 0.91, you might need this command to get your buddy list back.
+				The first two arguments are required. <emphasis>room name</emphasis> is the name of the chatroom on the IM-network. <emphasis>channel name</emphasis> is the IRC channel name BitlBee should map this to. <emphasis>room nickname</emphasis> is the nickname you want to have in this channel. If you don't give these options, BitlBee will do the right guesses.
 			</para>
 
 			<para>
-				The only argument this command needs is your ICQ account identification. If your serverside buddy list contains some old buddies you don't want anymore, you can pass <emphasis>clear</emphasis> as a second argument.
-			</para>
-
-			<para>
-				After giving this command, you have to wait for a while before all the adds are handled, because of ICQ's rate limiting. If your buddy list is very large and the ICQ server starts complaining, you might have to reconnect and enter this command again.
+				The following command will join you to the chatroom called <emphasis>bitlbee@conference.bitlbee.org</emphasis>. The channel will be called <emphasis>&amp;bitlbee-help</emphasis> because <emphasis>&amp;bitlbee</emphasis> will already be in use. Your nickname will be <emphasis>help-me</emphasis>.
 			</para>
 		</description>
+
+		<ircexample>
+			<ircline nick="wilmer">join_chat jabber bitlbee@conference.bitlbee.org &amp;bitlbee-help help-me</ircline>
+		</ircexample>
 
 	</bitlbee-command>
 </chapter>
