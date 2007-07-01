@@ -223,12 +223,16 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud;
 	struct xt_node *node;
+	char *s;
 	int st;
 	
 	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
 		return jabber_write( ic, message, strlen( message ) );
 	
-	bud = jabber_buddy_by_jid( ic, who, 0 );
+	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_name( ic, s + 1 ) )
+		bud = jabber_buddy_by_ext_jid( ic, who, 0 );
+	else
+		bud = jabber_buddy_by_jid( ic, who, 0 );
 	
 	node = xt_new_node( "body", message, NULL );
 	node = jabber_make_packet( "message", "chat", bud ? bud->full_jid : who, node );

@@ -127,7 +127,9 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 		/* If this one wasn't set yet, this buddy just joined the chat.
 		   Slightly hackish way of finding out eh? ;-) */
 		
-		/* This is pretty messy... */
+		/* This is pretty messy... Here it sets ext_jid to the real
+		   JID of the participant. Works for non-anonymized channels.
+		   Might break if someone joins a chat twice, though. */
 		for( c = node->children; ( c = xt_find_node( c, "x" ) ); c = c->next )
 			if( ( s = xt_find_attr( c, "xmlns" ) ) &&
 			    ( strcmp( s, XMLNS_MUC_USER ) == 0 ) )
@@ -136,7 +138,7 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 				if( ( s = xt_find_attr( c, "jid" ) ) )
 				{
 					/* Yay, found what we need. :-) */
-					bud->ext_jid = g_strdup( s );
+					bud->ext_jid = jabber_normalize( s );
 					break;
 				}
 			}
@@ -145,7 +147,7 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 		if( bud->ext_jid == NULL )
 		{
 			if( bud == jc->me )
-				bud->ext_jid = g_strdup( ic->acc->user );
+				bud->ext_jid = jabber_normalize( ic->acc->user );
 			else
 				/* Don't want the nick to be at the end, so let's
 				   think of some slightly different notation to use

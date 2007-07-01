@@ -319,6 +319,8 @@ struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid_
 	}
 	else
 	{
+		/* Keep in mind that full_jid currently isn't really
+		   a full JID... */
 		new->bare_jid = g_strdup( full_jid );
 		g_hash_table_insert( jd->buddies, new->bare_jid, new );
 	}
@@ -332,7 +334,8 @@ struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid_
 	else
 	{
 		/* Let's waste some more bytes of RAM instead of to make
-		   memory management a total disaster here.. */
+		   memory management a total disaster here. And it saves
+		   me one g_free() call in this function. :-P */
 		new->full_jid = full_jid;
 	}
 	
@@ -425,6 +428,38 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		else /* if( strcmp( set, "priority" ) == 0 ) */
 			return best_prio;
 	}
+}
+
+/* I'm keeping a separate ext_jid attribute to save a JID that makes sense
+   to export to BitlBee. This is mainly for groupchats right now. It's
+   a bit of a hack, but I just think having the user nickname in the hostname
+   part of the hostmask doesn't look nice on IRC. Normally you can convert
+   a normal JID to ext_jid by swapping the part before and after the / and
+   replacing the / with a =. But there should be some stripping (@s are
+   allowed in Jabber nicks...). */
+struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *jid_, get_buddy_flags_t flags )
+{
+	struct jabber_buddy *bud;
+	char *s, *jid;
+	
+	jid = jabber_normalize( jid_ );
+	
+	if( ( s = strchr( jid, '=' ) ) == NULL )
+		return NULL;
+	
+	for( bud = jabber_buddy_by_jid( ic, s + 1, GET_BUDDY_FIRST ); bud; bud = bud->next )
+	{
+		/* Hmmm, could happen if not all people in the chat are anonymized? */
+		if( bud->ext_jid == NULL )
+			continue;
+		
+		if( strcmp( bud->ext_jid, jid ) == 0 )
+			break;
+	}
+	
+	g_free( jid );
+	
+	return bud;
 }
 
 /* Remove one specific full JID from our list. Use this when a buddy goes

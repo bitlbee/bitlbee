@@ -194,6 +194,7 @@ typedef enum
 
 struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid );
 struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
+struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
 int jabber_buddy_remove( struct im_connection *ic, char *full_jid );
 int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid );
 struct groupchat *jabber_chat_by_name( struct im_connection *ic, const char *name );
