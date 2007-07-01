@@ -98,26 +98,25 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		}
 		else if( strcmp( s, XMLNS_DISCOVER ) == 0 )
 		{
+			const char *features[] = { XMLNS_VERSION,
+			                           XMLNS_TIME,
+			                           XMLNS_CHATSTATES,
+			                           XMLNS_MUC,
+			                           NULL };
+			const char **f;
+			
 			c = xt_new_node( "identity", NULL, NULL );
 			xt_add_attr( c, "category", "client" );
 			xt_add_attr( c, "type", "pc" );
 			xt_add_attr( c, "name", "BitlBee" );
 			xt_add_child( reply, c );
 			
-			c = xt_new_node( "feature", NULL, NULL );
-			xt_add_attr( c, "var", XMLNS_VERSION );
-			xt_add_child( reply, c );
-			
-			c = xt_new_node( "feature", NULL, NULL );
-			xt_add_attr( c, "var", XMLNS_TIME );
-			xt_add_child( reply, c );
-			
-			c = xt_new_node( "feature", NULL, NULL );
-			xt_add_attr( c, "var", XMLNS_CHATSTATES );
-			xt_add_child( reply, c );
-			
-			/* Later this can be useful to announce things like
-			   MUC support. */
+			for( f = features; *f; f ++ )
+			{
+				c = xt_new_node( "feature", NULL, NULL );
+				xt_add_attr( c, "var", *f );
+				xt_add_child( reply, c );
+			}
 		}
 		else
 		{

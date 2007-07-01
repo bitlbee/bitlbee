@@ -86,12 +86,12 @@ void xt_print( struct xt_node *node );
 struct xt_node *xt_dup( struct xt_node *node );
 void xt_free_node( struct xt_node *node );
 void xt_free( struct xt_parser *xt );
-struct xt_node *xt_find_node( struct xt_node *node, char *name );
-char *xt_find_attr( struct xt_node *node, char *key );
+struct xt_node *xt_find_node( struct xt_node *node, const char *name );
+char *xt_find_attr( struct xt_node *node, const char *key );
 
 struct xt_node *xt_new_node( char *name, char *text, struct xt_node *children );
 void xt_add_child( struct xt_node *parent, struct xt_node *child );
-void xt_add_attr( struct xt_node *node, char *key, char *value );
-int xt_remove_attr( struct xt_node *node, char *key );
+void xt_add_attr( struct xt_node *node, const char *key, const char *value );
+int xt_remove_attr( struct xt_node *node, const char *key );
 
 #endif
