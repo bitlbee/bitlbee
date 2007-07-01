@@ -911,7 +911,10 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 	chat = cmd[2];
 	if( cmd[3] )
 	{
-		channel = g_strdup( cmd[3] );
+		if( channel[0] != '#' && channel[0] != '&' )
+			channel = g_strdup_printf( "&%s", cmd[3] );
+		else
+			channel = g_strdup( cmd[3] );
 	}
 	else
 	{
@@ -928,7 +931,7 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 	if( cmd[3] && cmd[4] && cmd[5] )
 		password = cmd[5];
 	
-	if( channel[0] != '#' && channel[0] != '&' )
+	if( !nick_ok( channel + 1 ) )
 	{
 		irc_usermsg( irc, "Invalid channel name: %s", channel );
 		g_free( channel );
