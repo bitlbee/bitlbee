@@ -30,7 +30,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	char *type = xt_find_attr( node, "type" );	/* NULL should mean the person is online. */
 	struct xt_node *c;
 	struct jabber_buddy *bud;
-	int is_chat = 0;
+	int is_chat = 0, is_away = 0;
 	char *s;
 	
 	if( !from )
@@ -46,8 +46,6 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	
 	if( type == NULL )
 	{
-		int is_away = 0;
-		
 		if( !( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT | GET_BUDDY_CREAT ) ) )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
@@ -112,12 +110,23 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		{
 			*s = 0;
 		
-			/* Only count this as offline if there's no other resource
-			   available anymore. */
-			if( jabber_buddy_by_jid( ic, from, 0 ) == NULL )
+			/* If another resource is still available, send its presence
+			   information. */
+			if( ( bud = jabber_buddy_by_jid( ic, from, 0 ) ) )
+			{
+				if( bud->away_state && ( *bud->away_state->code == 0 ||
+				    strcmp( bud->away_state->code, "chat" ) == 0 ) )
+					is_away = OPT_AWAY;
+				
+				imcb_buddy_status( ic, bud->bare_jid, OPT_LOGGED_IN | is_away,
+				                   ( is_away && bud->away_state ) ? bud->away_state->full_name : NULL,
+				                   bud->away_message );
+			}
+			else
+			{
+				/* Otherwise, count him/her as offline now. */
 				imcb_buddy_status( ic, from, 0, NULL, NULL );
-			/* FIXME: If this resource was not away and another resource is,
-			   we should definitely send an update here. */
+			}
 			
 			*s = '/';
 		}
