@@ -118,6 +118,7 @@ struct jabber_chat
 {
 	int flags;
 	char *name;
+	char *my_full_jid; /* Separate copy because of case sensitivity. */
 	struct jabber_buddy *me;
 };
 

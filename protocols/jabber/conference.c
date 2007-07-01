@@ -53,7 +53,10 @@ struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *
 		g_free( jc );
 		return NULL;
 	}
-	g_free( roomjid );
+	
+	/* roomjid isn't normalized yet, and we need an original version
+	   of the nick to send a proper presence update. */
+	jc->my_full_jid = roomjid;
 	
 	c = imcb_chat_new( ic, room );
 	c->data = jc;
@@ -88,7 +91,7 @@ int jabber_chat_leave( struct groupchat *c, const char *reason )
 	
 	node = xt_new_node( "x", NULL, NULL );
 	xt_add_attr( node, "xmlns", XMLNS_MUC );
-	node = jabber_make_packet( "presence", "unavailable", jc->me->full_jid, node );
+	node = jabber_make_packet( "presence", "unavailable", jc->my_full_jid, node );
 	
 	if( !jabber_write_packet( ic, node ) )
 	{

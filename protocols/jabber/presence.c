@@ -194,7 +194,7 @@ int presence_send_update( struct im_connection *ic )
 	{
 		struct jabber_chat *jc = c->data;
 		
-		xt_add_attr( node, "to", jc->me->full_jid );
+		xt_add_attr( node, "to", jc->my_full_jid );
 		st = jabber_write_packet( ic, node );
 	}
 	
