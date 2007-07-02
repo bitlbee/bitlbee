@@ -541,26 +541,31 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 /* Remove a buddy completely; removes all resources that belong to the
    specified bare JID. Use this when removing someone from the contact
    list, for example. */
-int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid_ )
+int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid )
 {
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud, *next;
-	char *bare_jid;
 	
-	if( strchr( bare_jid_, '/' ) )
+	if( strchr( bare_jid, '/' ) )
 		return 0;
 	
-	bare_jid = jabber_normalize( bare_jid_ );
-	
-	if( ( bud = g_hash_table_lookup( jd->buddies, bare_jid ) ) )
+	if( ( bud = jabber_buddy_by_jid( ic, bare_jid, GET_BUDDY_FIRST ) ) )
 	{
 		/* Most important: Remove the hash reference. We don't know
 		   this buddy anymore. */
 		g_hash_table_remove( jd->buddies, bud->bare_jid );
+		g_free( bud->bare_jid );
 		
 		/* Deallocate the linked list of resources. */
 		while( bud )
 		{
+			/* ext_jid && anonymous means that this buddy is
+			   specific to one groupchat (the one we're
+			   currently cleaning up) so it can be deleted
+			   completely. */
+			if( bud->ext_jid && bud->flags & JBFLAG_IS_ANONYMOUS )
+				imcb_remove_buddy( ic, bud->ext_jid, NULL );
+			
 			next = bud->next;
 			g_free( bud->ext_jid );
 			g_free( bud->full_jid );
@@ -569,12 +574,10 @@ int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid_ )
 			bud = next;
 		}
 		
-		g_free( bare_jid );
 		return 1;
 	}
 	else
 	{
-		g_free( bare_jid );
 		return 0;
 	}
 }

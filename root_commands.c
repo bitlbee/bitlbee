@@ -911,7 +911,7 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 	chat = cmd[2];
 	if( cmd[3] )
 	{
-		if( channel[0] != '#' && channel[0] != '&' )
+		if( cmd[3][0] != '#' && cmd[3][0] != '&' )
 			channel = g_strdup_printf( "&%s", cmd[3] );
 		else
 			channel = g_strdup( cmd[3] );

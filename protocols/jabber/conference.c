@@ -64,6 +64,19 @@ struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *
 	return c;
 }
 
+void jabber_chat_free( struct groupchat *c )
+{
+	struct jabber_chat *jc = c->data;
+	
+	jabber_buddy_remove_bare( c->ic, jc->name );
+	
+	g_free( jc->my_full_jid );
+	g_free( jc->name );
+	g_free( jc );
+	
+	imcb_chat_free( c );
+}
+
 int jabber_chat_msg( struct groupchat *c, char *message, int flags )
 {
 	struct im_connection *ic = c->ic;
@@ -191,13 +204,7 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 		if( s ) *s = '/';
 		
 		if( bud == jc->me )
-		{
-			jabber_buddy_remove_bare( ic, jc->name );
-			
-			g_free( jc->name );
-			g_free( jc );
-			imcb_chat_free( chat );
-		}
+			jabber_chat_free( chat );
 	}
 }
 

@@ -197,7 +197,7 @@ static void jabber_logout( struct im_connection *ic )
 	jabber_end_stream( ic );
 	
 	while( ic->groupchats )
-		imcb_chat_free( ic->groupchats );
+		jabber_chat_free( ic->groupchats );
 	
 	if( jd->r_inpa >= 0 )
 		b_event_remove( jd->r_inpa );
