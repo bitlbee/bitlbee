@@ -470,13 +470,19 @@ void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
 		if( set_getbool( &ic->irc->set, "lcnicks" ) )
 			nick_lc( newnick );
 		
-		nick_dedupe( ic->acc, handle, newnick );
-		
-		/* u->nick will be freed halfway the process, so it can't be
-		   passed as an argument. */
-		orig_nick = g_strdup( u->nick );
-		user_rename( ic->irc, orig_nick, newnick );
-		g_free( orig_nick );
+		if( strcmp( u->nick, newnick ) != 0 )
+		{
+			/* Only do this if newnick is different from the current one.
+			   If rejoining a channel, maybe we got this nick already
+			   (and dedupe would only add an underscore. */
+			nick_dedupe( ic->acc, handle, newnick );
+			
+			/* u->nick will be freed halfway the process, so it can't be
+			   passed as an argument. */
+			orig_nick = g_strdup( u->nick );
+			user_rename( ic->irc, orig_nick, newnick );
+			g_free( orig_nick );
+		}
 	}
 }
 
