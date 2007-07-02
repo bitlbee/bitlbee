@@ -150,13 +150,23 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 		if( bud->ext_jid == NULL )
 		{
 			if( bud == jc->me )
+			{
 				bud->ext_jid = jabber_normalize( ic->acc->user );
+			}
 			else
+			{
+				int i;
+				
 				/* Don't want the nick to be at the end, so let's
 				   think of some slightly different notation to use
 				   for anonymous groupchat participants in BitlBee. */
 				bud->ext_jid = g_strdup_printf( "%s=%s", bud->resource, bud->bare_jid );
-			
+				
+				/* And strip any unwanted characters. */
+				for( i = 0; bud->resource[i]; i ++ )
+					if( bud->ext_jid[i] == '=' || bud->ext_jid[i] == '@' )
+						bud->ext_jid[i] = '_';
+			}
 			bud->flags |= JBFLAG_IS_ANONYMOUS;
 		}
 		
