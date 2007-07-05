@@ -1,0 +1,11 @@
+#!/bin/sh -e
+
+[ "$1" = "purge" ] || exit 0
+
+if [ -e /usr/share/debconf/confmodule ]; then
+	. /usr/share/debconf/confmodule;
+	db_purge;
+fi
+
+update-rc.d bitlbee remove > /dev/null 2>&1 || true
+deluser --remove-home bitlbee || true

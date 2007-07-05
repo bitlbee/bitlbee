@@ -2255,7 +2255,8 @@ static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)
                 }
         }
         info_string_append(str, "\n", _("Mobile Phone"), info->mobile);
-        info_string_append(str, "\n", _("Gender"), info->gender==1 ? _("Female") : info->gender==2 ? _("Male") : _("Unknown"));
+        if (info->gender != 0)
+        	info_string_append(str, "\n", _("Gender"), info->gender==1 ? _("Female") : _("Male"));
         if (info->birthyear || info->birthmonth || info->birthday) {
                 char date[30];
                 struct tm tm;

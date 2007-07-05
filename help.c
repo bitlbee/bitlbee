@@ -30,7 +30,7 @@
 
 #define BUFSIZE 1100
 
-help_t *help_init( help_t **help )
+help_t *help_init( help_t **help, const char *helpfile )
 {
 	int i, buflen = 0;
 	help_t *h;
@@ -40,7 +40,7 @@ help_t *help_init( help_t **help )
 	
 	*help = h = g_new0 ( help_t, 1 );
 	
-	h->fd = open( global.helpfile, O_RDONLY
+	h->fd = open( helpfile, O_RDONLY
 #ifdef _WIN32
 				  | O_BINARY
 #endif
@@ -108,12 +108,11 @@ char *help_get( help_t **help, char *string )
 	struct stat stat[1];
 	help_t *h;
 
-	h=*help;	
-
-	while( h )
+	for( h = *help; h; h = h->next )
 	{
-		if( g_strcasecmp( h->string, string ) == 0 ) break;
-		h = h->next;
+		if( h->string != NULL && 
+			g_strcasecmp( h->string, string ) == 0 ) 
+			break;
 	}
 	if( h && h->length > 0 )
 	{

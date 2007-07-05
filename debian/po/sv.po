@@ -1,0 +1,43 @@
+# Translators, if you are not familiar with the PO format, gettext
+# documentation is worth reading, especially sections dedicated to
+# this format, e.g. by running:
+# info -n '(gettext)PO Files'
+# info -n '(gettext)Header Entry'
+# Some information specific to po-debconf are available at
+# /usr/share/doc/po-debconf/README-trans
+# or http://www.debian.org/intl/l10n/po-debconf/README-trans
+# Developers do not need to manually edit POT or PO files.
+# , fuzzy
+# 
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: bitlbee 0.92-2\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2004-09-25 18:12+0200\n"
+"PO-Revision-Date: 2005-10-03 23:18+0200\n"
+"Last-Translator: Daniel Nylander <po@danielnylander.se>\n"
+"Language-Team: Swedish <sv@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=iso-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: string
+#. Description
+#: ../bitlbee.templates.master:4
+msgid "On what TCP port should BitlBee listen for connections?"
+msgstr "På vilken TCP-port ska BitlBee lyssna på efter anslutningar?"
+
+#. Type: string
+#. Description
+#: ../bitlbee.templates.master:4
+msgid ""
+"BitlBee normally listens on the regular IRC port, 6667. This might not be a "
+"very good idea when you're running a real IRC daemon as well. 6668 might be "
+"a good alternative. Leaving this value blank means that BitlBee will not be "
+"run automatically."
+msgstr ""
+"BitlBee lyssnar normalt på den standardporten för IRC, 6667. Detta kanske "
+"inte är en bra ide om du kör en riktig IRC-daemon på samma system. 6668 kan "
+"vara ett bra alternativ då. Lämnar du detta värde blankt betyder det att "
+"BitlBee inte kommer att startas automatiskt."

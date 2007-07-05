@@ -23,6 +23,11 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#ifndef __SET_H__
+#define __SET_H__
+
+struct set;
+
 /* This used to be specific to irc_t structures, but it's more generic now
    (so it can also be used for account_t structs). It's pretty simple, but
    so far pretty useful.
@@ -91,3 +96,5 @@ char *set_eval_bool( set_t *set, char *value );
 char *set_eval_to_char( set_t *set, char *value );
 char *set_eval_ops( set_t *set, char *value );
 char *set_eval_charset( set_t *set, char *value );
+
+#endif /* __SET_H__ */

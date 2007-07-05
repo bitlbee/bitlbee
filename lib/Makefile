@@ -17,6 +17,7 @@ LFLAGS += -r
 # [SH] Phony targets
 all: lib.o
 check: all
+lcov:
 gcov:
 	gcov *.c
 

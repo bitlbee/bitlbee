@@ -1,0 +1,8 @@
+#!/bin/sh -e
+
+if [ "$1" = "upgrade" ]; then
+	## To prevent the help function from breaking in currently running BitlBee processes
+	rm -f /usr/share/bitlbee/help.txt
+else
+	/etc/init.d/bitlbee stop || exit 0
+fi
