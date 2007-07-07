@@ -121,7 +121,7 @@ unsigned char rc4_getbyte( struct rc4_state *st )
    Both functions return the number of bytes in the result string.
 */
 
-int rc4_encode( unsigned char *clear, int clear_len, unsigned char **crypt, char *password )
+int rc4_encode( char *clear, int clear_len, unsigned char **crypt, char *password )
 {
 	struct rc4_state *st;
 	unsigned char *key;
@@ -129,7 +129,7 @@ int rc4_encode( unsigned char *clear, int clear_len, unsigned char **crypt, char
 	
 	key_len = strlen( password ) + RC4_IV_LEN;
 	if( clear_len <= 0 )
-		clear_len = strlen( (char*) clear );
+		clear_len = strlen( clear );
 	
 	/* Prepare buffers and the key + IV */
 	*crypt = g_malloc( clear_len + RC4_IV_LEN );
@@ -153,7 +153,7 @@ int rc4_encode( unsigned char *clear, int clear_len, unsigned char **crypt, char
 	return clear_len + RC4_IV_LEN;
 }
 
-int rc4_decode( unsigned char *crypt, int crypt_len, unsigned char **clear, char *password )
+int rc4_decode( unsigned char *crypt, int crypt_len, char **clear, char *password )
 {
 	struct rc4_state *st;
 	unsigned char *key;
@@ -164,7 +164,7 @@ int rc4_decode( unsigned char *crypt, int crypt_len, unsigned char **clear, char
 	
 	if( clear_len < 0 )
 	{
-		*clear = (unsigned char*) g_strdup( "" );
+		*clear = g_strdup( "" );
 		return 0;
 	}
 	

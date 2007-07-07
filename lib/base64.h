@@ -26,7 +26,7 @@
 #include <gmodule.h>
 
 G_MODULE_EXPORT char *tobase64( const char *text );
-G_MODULE_EXPORT char *base64_encode( const char *in, int len );
+G_MODULE_EXPORT char *base64_encode( const unsigned char *in, int len );
 G_MODULE_EXPORT int base64_encode_real( const unsigned char *in, int inlen, unsigned char *out, const char *b64digits );
 G_MODULE_EXPORT char *frombase64( const char *in );
 G_MODULE_EXPORT int base64_decode( const char *in, unsigned char **out );

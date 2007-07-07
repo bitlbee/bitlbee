@@ -88,7 +88,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		s[0] = 0;
 		strcpy( s + 1, jd->username );
 		strcpy( s + 2 + strlen( jd->username ), ic->acc->pass );
-		reply->text = base64_encode( s, len );
+		reply->text = base64_encode( (unsigned char *)s, len );
 		reply->text_len = strlen( reply->text );
 		g_free( s );
 	}
@@ -184,7 +184,8 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	struct im_connection *ic = data;
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *reply = NULL;
-	char *nonce = NULL, *realm = NULL, *cnonce = NULL, cnonce_bin[30];
+	char *nonce = NULL, *realm = NULL, *cnonce = NULL;
+	unsigned char cnonce_bin[30];
 	char *digest_uri = NULL;
 	char *dec = NULL;
 	char *s = NULL;
@@ -215,7 +216,7 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 		if( !realm )
 			realm = g_strdup( jd->server );
 		
-		random_bytes( (unsigned char *) cnonce_bin, sizeof( cnonce_bin ) );
+		random_bytes( cnonce_bin, sizeof( cnonce_bin ) );
 		cnonce = base64_encode( cnonce_bin, sizeof( cnonce_bin ) );
 		digest_uri = g_strdup_printf( "%s/%s", "xmpp", jd->server );
 		
