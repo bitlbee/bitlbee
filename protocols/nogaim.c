@@ -288,7 +288,7 @@ void cancel_auto_reconnect( account_t *a )
 void imc_logout( struct im_connection *ic, int allow_reconnect )
 {
 	irc_t *irc = ic->irc;
-	user_t *t, *u = irc->users;
+	user_t *t, *u;
 	account_t *a;
 	
 	/* Nested calls might happen sometimes, this is probably the best
@@ -305,6 +305,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	ic->acc->prpl->logout( ic );
 	b_event_remove( ic->inpa );
 	
+	u = irc->users;
 	while( u )
 	{
 		if( u->ic == ic )
