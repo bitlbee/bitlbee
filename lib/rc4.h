@@ -32,5 +32,5 @@ struct rc4_state
 
 struct rc4_state *rc4_keymaker( unsigned char *key, int kl, int cycles );
 unsigned char rc4_getbyte( struct rc4_state *st );
-int rc4_encode( unsigned char *clear, int clear_len, unsigned char **crypt, char *password );
-int rc4_decode( unsigned char *crypt, int crypt_len, unsigned char **clear, char *password );
+int rc4_encode( char *clear, int clear_len, unsigned char **crypt, char *password );
+int rc4_decode( unsigned char *crypt, int crypt_len, char **clear, char *password );

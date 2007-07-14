@@ -51,6 +51,11 @@ int ssl_getfd( void *conn )
 	return( -1 );
 }
 
+void *ssl_starttls( int fd, ssl_input_function func, gpointer data ) 
+{
+	return NULL;
+}
+
 b_input_condition ssl_getdirection( void *conn )
 {
 	return GAIM_INPUT_READ;
