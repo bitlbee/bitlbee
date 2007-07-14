@@ -71,8 +71,6 @@ Option		Description				Default
 
 --ipv6=0/1	IPv6 socket support			$ipv6
 
---ldap=0/1/auto	LDAP support				$ldap
-
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
 							$ssl
