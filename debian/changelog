@@ -4,8 +4,9 @@ bitlbee (1.1.1dev-0pre) unstable; urgency=low
     file, an init script. People who want to stick with inetd can do so, see
     the defaults file.
   * Got rid of debconf Woody compatibility stuff.
+  * No more MPL code in BitlBee, thanks to the Jabber module rewrite!
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Fri,  6 Jul 2007 00:27:38 +0100
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Fri, 06 Jul 2007 09:09:36 +0100
 
 bitlbee (1.0.3-1.3) unstable; urgency=low
 
