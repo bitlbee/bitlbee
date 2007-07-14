@@ -66,7 +66,7 @@ binary-arch: build-arch install-arch
 		find usr -type f -exec md5sum {} \; > DEBIAN/md5sums
 	dpkg-shlibdeps -Tdebian/bitlbee.substvars -dDepends debian/bitlbee/usr/sbin/bitlbee
 ifdef BITLBEE_VERSION
-	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee -Tdebian/bitlbee.substvars -Pdebian/bitlbee -v$(BITLBEE_VERSION)-0 -V'debconf-depends=debconf (>= 1.2.0) | debconf-2.0'
+	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee -Tdebian/bitlbee.substvars -Pdebian/bitlbee -v1:$(BITLBEE_VERSION)-0 -V'debconf-depends=debconf (>= 1.2.0) | debconf-2.0'
 else
 	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee -Tdebian/bitlbee.substvars -Pdebian/bitlbee -V'debconf-depends=debconf (>= 1.2.0) | debconf-2.0'
 endif
