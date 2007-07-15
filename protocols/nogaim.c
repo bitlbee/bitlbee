@@ -98,7 +98,6 @@ void register_protocol (struct prpl *p)
 	protocols = g_list_append(protocols, p);
 }
 
- 
 struct prpl *find_protocol(const char *name)
 {
 	GList *gl;
@@ -1112,4 +1111,36 @@ void imc_rem_block( struct im_connection *ic, char *handle )
 	}
 	
 	ic->acc->prpl->rem_deny( ic, handle );
+}
+
+void imcb_clean_handle( struct im_connection *ic, char *handle )
+{
+	/* Accepts a handle and does whatever is necessary to make it
+	   BitlBee-friendly. Currently this means removing everything
+	   outside 33-127 (ASCII printable excl spaces), @ (only one
+	   is allowed) and ! and : */
+	char out[strlen(handle)+1];
+	int s, d;
+	
+	s = d = 0;
+	while( handle[s] )
+	{
+		if( handle[s] > ' ' && handle[s] != '!' && handle[s] != ':' &&
+		    ( handle[s] & 0x80 ) == 0 )
+		{
+			if( handle[s] == '@' )
+			{
+				/* See if we got an @ already? */
+				out[d] = 0;
+				if( strchr( out, '@' ) )
+					continue;
+			}
+			
+			out[d++] = handle[s];
+		}
+		s ++;
+	}
+	out[d] = handle[s];
+	
+	strcpy( handle, out );
 }

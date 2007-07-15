@@ -200,6 +200,7 @@ G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *ha
 /* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
 G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_t flags, time_t sent_at );
 G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags );
+G_MODULE_EXPORT void imcb_clean_handle( struct im_connection *ic, char *handle );
 
 /* Groupchats */
 G_MODULE_EXPORT void imcb_chat_invited( struct im_connection *ic, char *handle, char *who, char *msg, GList *data );
