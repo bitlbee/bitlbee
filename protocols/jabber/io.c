@@ -435,50 +435,35 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
-	struct xt_node *c;
-	char *s, *type = NULL, *text = NULL;
 	int allow_reconnect = TRUE;
+	struct jabber_error *err;
 	
-	for( c = node->children; c; c = c->next )
-	{
-		if( !( s = xt_find_attr( c, "xmlns" ) ) ||
-		    strcmp( s, XMLNS_STREAM_ERROR ) != 0 )
-			continue;
-		
-		if( strcmp( c->name, "text" ) != 0 )
-		{
-			type = c->name;
-		}
-		/* Only use the text if it doesn't have an xml:lang attribute,
-		   if it's empty or if it's set to something English. */
-		else if( !( s = xt_find_attr( c, "xml:lang" ) ) ||
-		         !*s || strncmp( s, "en", 2 ) == 0 )
-		{
-			text = c->text;
-		}
-	}
+	err = jabber_error_parse( node, XMLNS_STREAM_ERROR );
 	
 	/* Tssk... */
-	if( type == NULL )
+	if( err->code == NULL )
 	{
 		imcb_error( ic, "Unknown stream error reported by server" );
 		imc_logout( ic, allow_reconnect );
+		jabber_error_free( err );
 		return XT_ABORT;
 	}
 	
 	/* We know that this is a fatal error. If it's a "conflict" error, we
 	   should turn off auto-reconnect to make sure we won't get some nasty
 	   infinite loop! */
-	if( strcmp( type, "conflict" ) == 0 )
+	if( strcmp( err->code, "conflict" ) == 0 )
 	{
 		imcb_error( ic, "Account and resource used from a different location" );
 		allow_reconnect = FALSE;
 	}
 	else
 	{
-		imcb_error( ic, "Stream error: %s%s%s", type, text ? ": " : "", text ? text : "" );
+		imcb_error( ic, "Stream error: %s%s%s", err->code, err->text ? ": " : "",
+		            err->text ? err->text : "" );
 	}
 	
+	jabber_error_free( err );
 	imc_logout( ic, allow_reconnect );
 	
 	return XT_ABORT;

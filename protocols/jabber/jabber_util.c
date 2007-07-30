@@ -647,3 +647,38 @@ time_t jabber_get_timestamp( struct xt_node *xt )
 	
 	return res;
 }
+
+struct jabber_error *jabber_error_parse( struct xt_node *node, char *xmlns )
+{
+	struct jabber_error *err = g_new0( struct jabber_error, 1 );
+	struct xt_node *c;
+	char *s;
+	
+	err->type = xt_find_attr( node, "type" );
+	
+	for( c = node->children; c; c = c->next )
+	{
+		if( !( s = xt_find_attr( c, "xmlns" ) ) ||
+		    strcmp( s, xmlns ) != 0 )
+			continue;
+		
+		if( strcmp( c->name, "text" ) != 0 )
+		{
+			err->code = c->name;
+		}
+		/* Only use the text if it doesn't have an xml:lang attribute,
+		   if it's empty or if it's set to something English. */
+		else if( !( s = xt_find_attr( c, "xml:lang" ) ) ||
+		         !*s || strncmp( s, "en", 2 ) == 0 )
+		{
+			err->text = c->text;
+		}
+	}
+	
+	return err;
+}
+
+void jabber_error_free( struct jabber_error *err )
+{
+	g_free( err );
+}

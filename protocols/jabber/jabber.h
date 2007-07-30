@@ -193,6 +193,11 @@ typedef enum
 	GET_BUDDY_FIRST = 4,	/* No selection, simply get the first resource for this JID. */
 } get_buddy_flags_t;
 
+struct jabber_error
+{
+	char *code, *text, *type;
+};
+
 struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid );
 struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
 struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
@@ -200,6 +205,8 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid );
 int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid );
 struct groupchat *jabber_chat_by_name( struct im_connection *ic, const char *name );
 time_t jabber_get_timestamp( struct xt_node *xt );
+struct jabber_error *jabber_error_parse( struct xt_node *node, char *xmlns );
+void jabber_error_free( struct jabber_error *err );
 
 extern const struct jabber_away_state jabber_away_state_list[];
 

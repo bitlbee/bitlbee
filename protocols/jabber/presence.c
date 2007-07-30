@@ -157,7 +157,17 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	}
 	else if( strcmp( type, "error" ) == 0 )
 	{
-		/* What to do with it? */
+		struct jabber_error *err;
+		
+		if( ( c = xt_find_node( node->children, "error" ) ) )
+		{
+			err = jabber_error_parse( c, XMLNS_STANZA_ERROR );
+			imcb_error( ic, "Stanza (%s) error: %s%s%s", node->name,
+			            err->code, err->text ? ": " : "",
+			            err->text ? err->text : "" );
+			jabber_error_free( err );
+		}
+		/* What else to do with it? */
 	}
 	else
 	{
