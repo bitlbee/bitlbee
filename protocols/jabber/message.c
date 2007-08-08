@@ -89,7 +89,11 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 		g_string_free( fullmsg, TRUE );
 		
 		/* Handling of incoming typing notifications. */
-		if( xt_find_node( node->children, "composing" ) )
+		if( bud == NULL )
+		{
+			/* Can't handle these for unknown buddies. */
+		}
+		else if( xt_find_node( node->children, "composing" ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
 			imcb_buddy_typing( ic, from, OPT_TYPING );
