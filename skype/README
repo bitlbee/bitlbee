@@ -1,0 +1,15 @@
+What works:
+
+- Download buddies from Skype
+
+What needs to be done:
+
+- Away statuses (now OFFLINE = Offline, anything else is Online)
+
+- join / parts
+
+- msg sending
+
+- msg receiving
+
+- status change (send / receive)
