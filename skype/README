@@ -4,15 +4,13 @@ What works:
 
 What needs to be done:
 
-- Away status changes
+- Away status changes (send / receive)
 
 - join / parts
 
 - msg sending
 
 - msg receiving
-
-- status change (send / receive)
 
 Shots at:
 
