@@ -81,16 +81,16 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 			}
 			else if(!strncmp(line, "USER ", 5))
 			{
-				// TODO we should add the buddy even if the status is offline
-				if((ptr = strrchr(line, ' ')) && strcmp(++ptr, "OFFLINE") != 0)
-				{
-					char *user = strchr(line, ' ');
-					ptr = strchr(++user, ' ');
-					*ptr = '\0';
-					ptr = g_strdup_printf("%s@skype.com", user);
-					imcb_add_buddy(ic, ptr, NULL);
+				char *status = strrchr(line, ' ');
+				char *user = strchr(line, ' ');
+				ptr = strchr(++user, ' ');
+				*ptr = '\0';
+				ptr = g_strdup_printf("%s@skype.com", user);
+				imcb_add_buddy(ic, ptr, NULL);
+				// TODO online can be away
+				if(strcmp(++status, "OFFLINE") != 0)
 					imcb_buddy_status(ic, ptr, OPT_LOGGED_IN, NULL, NULL);
-				}
+				g_free(ptr);
 			}
 			lineptr++;
 		}
