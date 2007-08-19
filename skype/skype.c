@@ -19,6 +19,23 @@ struct skype_data
 	int r_inpa, w_inpa;
 };
 
+struct skype_away_state
+{
+	char *code;
+	char *full_name;
+};
+
+const struct skype_away_state skype_away_state_list[] =
+{
+	{ "ONLINE",  "Online" },
+	{ "SKYPEME",  "Skype Me" },
+	{ "AWAY",   "Away" },
+	{ "NA",    "Not available" },
+	{ "DND",      "Do Not Disturb" },
+	{ "INVISIBLE",      "Invisible" },
+	{ "OFFLINE",      "Offline" }
+};
+
 static void skype_init( account_t *acc )
 {
 	set_t *s;
@@ -81,15 +98,20 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 			}
 			else if(!strncmp(line, "USER ", 5))
 			{
+				int flags = 0;
 				char *status = strrchr(line, ' ');
 				char *user = strchr(line, ' ');
+				status++;
 				ptr = strchr(++user, ' ');
 				*ptr = '\0';
 				ptr = g_strdup_printf("%s@skype.com", user);
 				imcb_add_buddy(ic, ptr, NULL);
 				// TODO online can be away
-				if(strcmp(++status, "OFFLINE") != 0)
-					imcb_buddy_status(ic, ptr, OPT_LOGGED_IN, NULL, NULL);
+				if(strcmp(status, "OFFLINE") != 0)
+					flags |= OPT_LOGGED_IN;
+				if(strcmp(status, "ONLINE") != 0 && strcmp(status, "SKYPEME") != 0)
+					flags |= OPT_AWAY;
+				imcb_buddy_status(ic, ptr, flags, NULL, NULL);
 				g_free(ptr);
 			}
 			lineptr++;
@@ -169,8 +191,12 @@ static void skype_set_away( struct im_connection *ic, char *state_txt, char *mes
 static GList *skype_away_states( struct im_connection *ic )
 {
 	static GList *l = NULL;
-
-	l = g_list_append( l, (void*)"Online" );
+	int i;
+	
+	if( l == NULL )
+		for( i = 0; skype_away_state_list[i].full_name; i ++ )
+			l = g_list_append( l, (void*) skype_away_state_list[i].full_name );
+	
 	return l;
 }
 

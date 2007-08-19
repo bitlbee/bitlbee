@@ -1,10 +1,10 @@
 What works:
 
-- Download buddies from Skype
+- Download nicks and away statuses from Skype
 
 What needs to be done:
 
-- Away statuses (now OFFLINE = Offline, anything else is Online)
+- Away status changes
 
 - join / parts
 
