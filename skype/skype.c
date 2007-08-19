@@ -64,11 +64,41 @@ static gboolean skype_write_callback( gpointer data, gint fd, b_input_condition 
 		sd->tx_len > 0;
 }
 
+static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition cond )
+{
+	struct im_connection *ic = data;
+	struct skype_data *sd = ic->proto_data;
+	char buf[1024];
+	int st;
+
+	if( sd->fd == -1 )
+		return FALSE;
+	st = read( sd->fd, buf, sizeof( buf ) );
+	if( st > 0 )
+	{
+		buf[st] = '\0';
+		printf("read(): '%s'\n", buf);
+	}
+	else if( st == 0 || ( st < 0 && !sockerr_again() ) )
+	{
+		closesocket( sd->fd );
+		sd->fd = -1;
+
+		imcb_error( ic, "Error while reading from server" );
+		imc_logout( ic, TRUE );
+		return FALSE;
+	}
+
+	/* EAGAIN/etc or a successful read. */
+	return TRUE;
+}
+
 static gboolean skype_write_queue( struct im_connection *ic )
 {
 	struct skype_data *sd = ic->proto_data;
 	int st;
 
+	printf("sd->fd: %d\n", sd->fd);
 	st = write( sd->fd, sd->txq, sd->tx_len );
 
 	if( st == sd->tx_len )
@@ -109,8 +139,12 @@ static gboolean skype_write_queue( struct im_connection *ic )
 
 gboolean skype_start_stream( struct im_connection *ic )
 {
+	struct skype_data *sd = ic->proto_data;
 	char *buf;
 	int st;
+
+	if( sd->r_inpa <= 0 )
+		sd->r_inpa = b_input_add( sd->fd, GAIM_INPUT_READ, skype_read_callback, ic );
 
 	buf = g_strdup_printf("SEARCH FRIENDS");
 	st = skype_write( ic, buf, strlen( buf ) );
@@ -121,8 +155,15 @@ gboolean skype_start_stream( struct im_connection *ic )
 gboolean skype_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct im_connection *ic = data;
+	struct skype_data *sd = ic->proto_data;
 
 	imcb_connected(ic);
+	if( sd->fd < 0 )
+	{
+		imcb_error( ic, "Could not connect to server" );
+		imc_logout( ic, TRUE );
+		return;
+	}
 	//imcb_add_buddy(ic, "vmiklos_dsd@skype.com", NULL);
 	//imcb_buddy_status(ic, "vmiklos_dsd@skype.com", OPT_LOGGED_IN, NULL, NULL);
 	return skype_start_stream(ic);
@@ -139,12 +180,6 @@ static void skype_login( account_t *acc )
 	printf("%s:%d\n", acc->server, set_getint( &acc->set, "port"));
 	sd->fd = proxy_connect(acc->server, set_getint( &acc->set, "port" ), skype_connected, ic );
 	printf("sd->fd: %d\n", sd->fd);
-	if( sd->fd < 0 )
-	{
-		imcb_error( ic, "Could not connect to server" );
-		imc_logout( ic, TRUE );
-		return;
-	}
 
 	sd->ic = ic;
 }
