@@ -19,9 +19,6 @@ struct skype_data
 	int r_inpa, w_inpa;
 };
 
-static gboolean skype_write_callback( gpointer data, gint fd, b_input_condition cond );
-static gboolean skype_write_queue( struct im_connection *ic );
-
 static void skype_init( account_t *acc )
 {
 	set_t *s;
@@ -36,32 +33,13 @@ static void skype_init( account_t *acc )
 int skype_write( struct im_connection *ic, char *buf, int len )
 {
 	struct skype_data *sd = ic->proto_data;
-	gboolean ret;
 
-	if( sd->tx_len == 0 )
-	{
-		sd->tx_len = len;
-		sd->txq = g_memdup( buf, len );
-		if( ( ret = skype_write_queue( ic ) ) && sd->tx_len > 0 )
-			sd->w_inpa = b_input_add( sd->fd, GAIM_INPUT_WRITE, skype_write_callback, ic );
-	}
-	else
-	{
-		sd->txq = g_renew( char, sd->txq, sd->tx_len + len );
-		memcpy( sd->txq + sd->tx_len, buf, len );
-		sd->tx_len += len;
-		ret = TRUE;
-	}
-	return ret;
-}
+	printf("write(): %s", buf);
+	write( sd->fd, buf, len );
 
-static gboolean skype_write_callback( gpointer data, gint fd, b_input_condition cond )
-{
-	struct skype_data *sd = ((struct im_connection *)data)->proto_data;
+	// TODO: error handling
 
-	return sd->fd != -1 &&
-		skype_write_queue( data ) &&
-		sd->tx_len > 0;
+	return TRUE;
 }
 
 static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition cond )
@@ -70,6 +48,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 	struct skype_data *sd = ic->proto_data;
 	char buf[1024];
 	int st;
+	char **lines, **lineptr, *line, *ptr;
 
 	if( sd->fd == -1 )
 		return FALSE;
@@ -78,6 +57,44 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 	{
 		buf[st] = '\0';
 		printf("read(): '%s'\n", buf);
+		lines = g_strsplit(buf, "\n", 0);
+		lineptr = lines;
+		while((line = *lineptr))
+		{
+			if(!strlen(line))
+				break;
+			printf("skype_read_callback() new line: '%s'\n", line);
+			if(!strncmp(line, "USERS ", 6))
+			{
+				char **i;
+				char **nicks;
+
+				nicks = g_strsplit(line + 6, ", ", 0);
+				i = nicks;
+				while(*i)
+				{
+					g_snprintf(buf, 1024, "GET USER %s ONLINESTATUS\n", *i);
+					skype_write( ic, buf, strlen( buf ) );
+					i++;
+				}
+				g_strfreev(nicks);
+			}
+			else if(!strncmp(line, "USER ", 5))
+			{
+				// TODO we should add the buddy even if the status is offline
+				if((ptr = strrchr(line, ' ')) && strcmp(++ptr, "OFFLINE") != 0)
+				{
+					char *user = strchr(line, ' ');
+					ptr = strchr(++user, ' ');
+					*ptr = '\0';
+					ptr = g_strdup_printf("%s@skype.com", user);
+					imcb_add_buddy(ic, ptr, NULL);
+					imcb_buddy_status(ic, ptr, OPT_LOGGED_IN, NULL, NULL);
+				}
+			}
+			lineptr++;
+		}
+		g_strfreev(lines);
 	}
 	else if( st == 0 || ( st < 0 && !sockerr_again() ) )
 	{
@@ -93,50 +110,6 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 	return TRUE;
 }
 
-static gboolean skype_write_queue( struct im_connection *ic )
-{
-	struct skype_data *sd = ic->proto_data;
-	int st;
-
-	printf("sd->fd: %d\n", sd->fd);
-	st = write( sd->fd, sd->txq, sd->tx_len );
-
-	if( st == sd->tx_len )
-	{
-		/* We wrote everything, clear the buffer. */
-		g_free( sd->txq );
-		sd->txq = NULL;
-		sd->tx_len = 0;
-
-		return TRUE;
-	}
-	else if( st == 0 || ( st < 0 && !sockerr_again() ) )
-	{
-		/* Set fd to -1 to make sure we won't write to it anymore. */
-		closesocket( sd->fd );  /* Shouldn't be necessary after errors? */
-		sd->fd = -1;
-
-		imcb_error( ic, "Short write() to server" );
-		imc_logout( ic, TRUE );
-		return FALSE;
-	}
-	else if( st > 0 )
-	{
-		char *s;
-
-		s = g_memdup( sd->txq + st, sd->tx_len - st );
-		sd->tx_len -= st;
-		g_free( sd->txq );
-		sd->txq = s;
-
-		return TRUE;
-	}
-	else
-	{
-		return TRUE;
-	}
-}
-
 gboolean skype_start_stream( struct im_connection *ic )
 {
 	struct skype_data *sd = ic->proto_data;
@@ -146,7 +119,8 @@ gboolean skype_start_stream( struct im_connection *ic )
 	if( sd->r_inpa <= 0 )
 		sd->r_inpa = b_input_add( sd->fd, GAIM_INPUT_READ, skype_read_callback, ic );
 
-	buf = g_strdup_printf("SEARCH FRIENDS");
+	// download buddies
+	buf = g_strdup_printf("SEARCH FRIENDS\n");
 	st = skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
 	return st;
@@ -162,10 +136,8 @@ gboolean skype_connected( gpointer data, gint source, b_input_condition cond )
 	{
 		imcb_error( ic, "Could not connect to server" );
 		imc_logout( ic, TRUE );
-		return;
+		return FALSE;
 	}
-	//imcb_add_buddy(ic, "vmiklos_dsd@skype.com", NULL);
-	//imcb_buddy_status(ic, "vmiklos_dsd@skype.com", OPT_LOGGED_IN, NULL, NULL);
 	return skype_start_stream(ic);
 }
 
@@ -197,7 +169,6 @@ static void skype_set_away( struct im_connection *ic, char *state_txt, char *mes
 static GList *skype_away_states( struct im_connection *ic )
 {
 	static GList *l = NULL;
-	int i;
 
 	l = g_list_append( l, (void*)"Online" );
 	return l;

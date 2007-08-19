@@ -1,4 +1,5 @@
-CFLAGS += $(shell pkg-config --cflags bitlbee) -g
+CFLAGS += $(shell pkg-config --cflags bitlbee) -g -Wall
+LDFLAGS += $(shell pkg-config --libs bitlbee)
 
 skype.so: skype.c
 	gcc -o skype.so -shared skype.c $(CFLAGS)
