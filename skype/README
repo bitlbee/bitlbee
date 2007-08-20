@@ -88,11 +88,12 @@ NOTE: the <pass> option is not used currently.
 
 == What needs to be done (aka. TODO)
 
-- Away status changes (send)
-
 - add/remove users, detect when somebody wants to add us
 
-- maybe on account on/off, change our state from/to offline? so that we won't miss any message
+- Due to some API limitations, I have no idea how to change status. This affects:
+  * When you `/away`, Skype will be still show `Online`
+  * When you `account off`, Skype will not set status to `Offline`
+  * When you `account on`, Skype will not set status to `Online`
 
 == I would like to have support for ...
 
