@@ -289,6 +289,7 @@ void init_plugin(void)
 	ret->init = skype_init;
 	ret->logout = skype_logout;
 	ret->buddy_msg = skype_buddy_msg;
+	ret->set_away = skype_set_away;
 	ret->away_states = skype_away_states;
 	ret->add_buddy = skype_add_buddy;
 	ret->remove_buddy = skype_remove_buddy;
