@@ -32,7 +32,7 @@ git clone http://ftp.frugalware.org/pub/other/people/vmiklos/bitlbee-skype
 make
 cp skype.so /usr/lib/bitlbee
 
-- Start the tcp server:
+- Start skyped (the tcp server):
 
 python skyped.py
 
@@ -47,7 +47,9 @@ What works:
 
 - Receiving messages
 
-- Writing a tcp daemon that is a gateway between Skype and tcp
+- skyped (the tcp daemon that is a gateway between Skype and tcp)
+
+- Error handling when skyped is not running and when it exists
 
 What needs to be done (aka. TODO):
 
@@ -64,8 +66,6 @@ What needs to be done (aka. TODO):
 - add/remove users, detect when somebody wants to add us (maybe detect when we're removed?)
 
 - maybe on account on/off, change our state from/to offline? so that we won't miss any message
-
-- handle the case when the tcp server is not running (currently SIGPIPE is not handled at all by the plugin)
 
 If something does not work and it's not in the TODO section, then please contact me!
 

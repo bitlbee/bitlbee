@@ -6,6 +6,7 @@
  * cp example.so /usr/local/lib/bitlbee
  */
 #include <stdio.h>
+#include <poll.h>
 #include <bitlbee.h>
 
 #define SKYPE_PORT_DEFAULT "2727"
@@ -57,8 +58,6 @@ int skype_write( struct im_connection *ic, char *buf, int len )
 
 	printf("write(): %s", buf);
 	write( sd->fd, buf, len );
-
-	// TODO: error handling
 
 	return TRUE;
 }
@@ -146,7 +145,8 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						info += 5;
 						// new body
 						printf("<%s> %s\n", sd->handle, info);
-						imcb_buddy_msg(ic, sd->handle, info, 0, 0);
+						if(sd->handle)
+							imcb_buddy_msg(ic, sd->handle, info, 0, 0);
 						g_free(sd->handle);
 						sd->handle = NULL;
 					}
@@ -190,14 +190,19 @@ gboolean skype_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct im_connection *ic = data;
 	struct skype_data *sd = ic->proto_data;
+	struct pollfd pfd[1];
 
-	imcb_connected(ic);
-	if( sd->fd < 0 )
+	pfd[0].fd = sd->fd;
+	pfd[0].events = POLLOUT;
+
+	poll(pfd, 1, 1000);
+	if(pfd[0].revents & POLLHUP)
 	{
 		imcb_error( ic, "Could not connect to server" );
 		imc_logout( ic, TRUE );
 		return FALSE;
 	}
+	imcb_connected(ic);
 	return skype_start_stream(ic);
 }
 
