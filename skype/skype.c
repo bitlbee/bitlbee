@@ -190,7 +190,8 @@ static int skype_buddy_msg( struct im_connection *ic, char *who, char *message, 
 	int st;
 
 	ptr = strchr(who, '@');
-	*ptr = '\0';
+	if(ptr)
+		*ptr = '\0';
 
 	buf = g_strdup_printf("MESSAGE %s %s\n", who, message);
 	st = skype_write( ic, buf, strlen( buf ) );
