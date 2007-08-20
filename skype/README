@@ -91,14 +91,14 @@ NOTE: the <pass> option is not used currently.
 
 - Adding / removing contacts
 
+- Set away state when you do a `/away`.
+
 == What needs to be done (aka. TODO)
 
 - detect when somebody wants to add us (confirm callback)
 
-- Due to some API limitations, I have no idea how to change status. This affects:
-  * When you `/away`, Skype will be still show `Online`
-  * When you `account off`, Skype will not set status to `Offline`
-  * When you `account on`, Skype will not set status to `Online`
+-  When you `account off`, Skype will not set status to `Offline`
+-  When you `account on`, Skype will not set status to `Online`
 
 == I would like to have support for ...
 

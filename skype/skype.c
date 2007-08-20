@@ -39,7 +39,8 @@ const struct skype_away_state skype_away_state_list[] =
 	{ "NA",    "Not available" },
 	{ "DND",      "Do Not Disturb" },
 	{ "INVISIBLE",      "Invisible" },
-	{ "OFFLINE",      "Offline" }
+	{ "OFFLINE",      "Offline" },
+	{ NULL, NULL}
 };
 
 static void skype_init( account_t *acc )
@@ -257,18 +258,39 @@ static int skype_buddy_msg( struct im_connection *ic, char *who, char *message, 
 	return st;
 }
 
+const struct skype_away_state *skype_away_state_by_name( char *name )
+{
+	int i;
+
+	for( i = 0; skype_away_state_list[i].full_name; i ++ )
+		if( g_strcasecmp( skype_away_state_list[i].full_name, name ) == 0 )
+			return( skype_away_state_list + i );
+
+	return NULL;
+}
+
 static void skype_set_away( struct im_connection *ic, char *state_txt, char *message )
 {
+	const struct skype_away_state *state;
+	char *buf;
+
+	if( strcmp( state_txt, GAIM_AWAY_CUSTOM ) == 0 )
+		state = skype_away_state_by_name( "Away" );
+	else
+		state = skype_away_state_by_name( state_txt );
+	printf("would set to: '%s'\n", state->code);
+	buf = g_strdup_printf("SET USERSTATUS %s\n", state->code);
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
 }
 
 static GList *skype_away_states( struct im_connection *ic )
 {
-	static GList *l = NULL;
+	GList *l = NULL;
 	int i;
 	
-	if( l == NULL )
-		for( i = 0; skype_away_state_list[i].full_name; i ++ )
-			l = g_list_append( l, (void*) skype_away_state_list[i].full_name );
+	for( i = 0; skype_away_state_list[i].full_name; i ++ )
+		l = g_list_append( l, (void*) skype_away_state_list[i].full_name );
 	
 	return l;
 }
@@ -314,8 +336,6 @@ void init_plugin(void)
 	ret->away_states = skype_away_states;
 	ret->add_buddy = skype_add_buddy;
 	ret->remove_buddy = skype_remove_buddy;
-	ret->away_states = skype_away_states;
-	ret->set_away = skype_set_away;
 	ret->handle_cmp = g_strcasecmp;
 	register_protocol( ret );
 }
