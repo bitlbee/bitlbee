@@ -22,67 +22,65 @@ need_conv = (local_encoding != 'utf-8')
 conn = None
 
 def utf8_decode(utf8_str):
-   if need_conv:
-       return utf8_str.decode('utf-8').encode(local_encoding, 'replace')
-   else:
-       return utf8_str
+	if need_conv:
+		return utf8_str.decode('utf-8').encode(local_encoding, 'replace')
+	else:
+		return utf8_str
 
 def utf8_encode(local_str):
-   if need_conv:
-       return local_str.decode(local_encoding).encode('utf-8')
-   else:
-       return local_str
+	if need_conv:
+		return local_str.decode(local_encoding).encode('utf-8')
+	else:
+		return local_str
 
 def sig_handler(signum, frame):
-   print 'Caught signal %d, exiting.' % signum
-   mainloop.quit()
+	print 'Caught signal %d, exiting.' % signum
+	mainloop.quit()
 
 def input_handler(fd, io_condition):
-   input = fd.recv(1024)
-   for i in input.split("\n"):
-       if i:
-           fd.send(skype.send(i.strip()) + "\n")
-   return True
-
+	input = fd.recv(1024)
+	for i in input.split("\n"):
+	if i:
+		fd.send(skype.send(i.strip()) + "\n")
+	return True
 
 class SkypeApi(dbus.service.Object):
-   def __init__(self):
-       bus = dbus.SessionBus()
+	def __init__(self):
+		bus = dbus.SessionBus()
 
-       try:
-           self.skype_api = bus.get_object(SKYPE_SERVICE, '/com/Skype')
-       except dbus.exceptions.DBusException:
-	   sys.exit("Can't find any Skype instance. Are you sure you have started Skype?")
+	try:
+		self.skype_api = bus.get_object(SKYPE_SERVICE, '/com/Skype')
+	except dbus.exceptions.DBusException:
+		sys.exit("Can't find any Skype instance. Are you sure you have started Skype?")
 
-       reply = self.send('NAME ' + CLIENT_NAME)
-       if reply != 'OK':
-           sys.exit('Could not bind to Skype client')
+	reply = self.send('NAME ' + CLIENT_NAME)
+	if reply != 'OK':
+		sys.exit('Could not bind to Skype client')
 
-       reply = self.send('PROTOCOL 5')
-       dbus.service.Object.__init__(self, bus, "/com/Skype/Client", bus_name='com.Skype.API')
+	reply = self.send('PROTOCOL 5')
+	dbus.service.Object.__init__(self, bus, "/com/Skype/Client", bus_name='com.Skype.API')
 
 
-   # skype -> client (async)
-   @dbus.service.method(dbus_interface='com.Skype.API')
-   def Notify(self, msg_text):
-       global conn
-       text = utf8_decode(msg_text)
-       print '<<', text
-       if conn:
-           conn.send(msg_text + "\n")
+	# skype -> client (async)
+	@dbus.service.method(dbus_interface='com.Skype.API')
+	def Notify(self, msg_text):
+		global conn
+		text = utf8_decode(msg_text)
+		print '<<', text
+		if conn:
+			conn.send(msg_text + "\n")
 
-   # client -> skype (sync, 5 sec timeout)
-   def send(self, msg_text):
-       if not len(msg_text):
-           return
-       print '>> ', msg_text
-       try:
-	       reply = utf8_decode(self.skype_api.Invoke(utf8_encode(msg_text)))
-       except dbus.exceptions.DBusException, s:
-	       reply = str(s)
-       print '<< ', reply
-       return reply
-
+	# client -> skype (sync, 5 sec timeout)
+	def send(self, msg_text):
+		if not len(msg_text):
+			return
+		print '>> ', msg_text
+		try:
+			reply = utf8_decode(self.skype_api.Invoke(utf8_encode(msg_text)))
+		except dbus.exceptions.DBusException, s:
+			reply = str(s)
+		print '<< ', reply
+		return reply
 
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 skype = SkypeApi()
