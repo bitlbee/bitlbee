@@ -4,15 +4,19 @@ What works:
 
 - Sending messages
 
+- Receiving messages
+
 What needs to be done:
+
+- mark received messages as read so that skype won't say there are unread messages
 
 - Away status changes (send / receive)
 
 - join / parts
 
-- msg receiving
-
 - add/remove users, detect when somebody wants to add us (maybe detect when we're removed?)
+
+- maybe on account on/off, change our state from/to offline? so that we won't miss any message
 
 Shots at:
 
