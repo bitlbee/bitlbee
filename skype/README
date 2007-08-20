@@ -1,45 +1,57 @@
-Hello,
+= Skype plugin for BitlBee
+Miklos Vajna <vmiklos@frugalware.org>
 
-This plugin allows you to add Skype support to BitlBee. It's mainly written by
-Miklos Vajna <vmiklos@frugalware.org>.
-
-How to set it up:
+== How to set it up:
 
 - You need the BitlBee bzr branch:
 
+----
 bzr branch http://code.bitlbee.org/bitlbee/
+----
 
 - You need to enable plugin support:
 
+----
 http://frugalware.org/~vmiklos/patches/bitlbee-configure-plugins.patch
+----
 
 - To be able to do an install-dev:
 
+----
 http://frugalware.org/~vmiklos/patches/bitlbee-makefile-headers.patch
+----
 
 - Now compile and install it:
 
+----
 ./configure --prefix=/usr
 make
 make install install-dev
+----
 
 - Get the plugin code:
 
+----
 git clone http://ftp.frugalware.org/pub/other/people/vmiklos/bitlbee-skype
+----
 
 - Compile and install it:
 
+----
 make
 cp skype.so /usr/lib/bitlbee
+----
 
 - Start skyped (the tcp server):
 
+----
 python skyped.py
+----
 
 NOTE: It's important to start skyped on the same machine and using the same
 user as you run Skype as it uses the session DBus for communication!
 
-What works:
+== What works:
 
 - Download nicks and away statuses from Skype
 
@@ -51,9 +63,7 @@ What works:
 
 - Error handling when skyped is not running and when it exists
 
-What needs to be done (aka. TODO):
-
-- convert this readme to asciidoc
+== What needs to be done (aka. TODO):
 
 - we can't ourselves join to &bitlbee (ignore such a message from skype)
 
@@ -67,8 +77,12 @@ What needs to be done (aka. TODO):
 
 - maybe on account on/off, change our state from/to offline? so that we won't miss any message
 
+== I would like to have support for ...
+
 If something does not work and it's not in the TODO section, then please contact me!
 
-Shots at:
+== Screenshots
 
-http://frugalware.org/~vmiklos/pics/shots/bitlbee-skype/
+You can reach some screenshots http://frugalware.org/~vmiklos/pics/shots/bitlbee-skype/[here].
+
+// vim: ft=asciidoc

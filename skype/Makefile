@@ -6,3 +6,8 @@ skype.so: skype.c
 
 clean:
 	rm -f skype.so
+
+doc:
+	ln -s README HEADER.txt
+	asciidoc -a toc -a numbered HEADER.txt
+	rm HEADER.txt
