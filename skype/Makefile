@@ -7,9 +7,12 @@ skype.so: skype.c
 clean:
 	rm -f skype.so
 
-doc: HEADER.html
+doc: HEADER.html Changelog
 
 HEADER.html: README
 	ln -s README HEADER.txt
 	asciidoc -a toc -a numbered HEADER.txt
 	rm HEADER.txt
+
+Changelog: .git/refs/heads/master
+	git log --no-merges > Changelog
