@@ -78,6 +78,8 @@ NOTE: the <pass> option is not used currently.
 
 - Receiving messages
 
+- Receiving away status changes
+
 - skyped (the tcp daemon that is a gateway between Skype and tcp)
 
 - Error handling when skyped is not running and when it exists
@@ -86,7 +88,7 @@ NOTE: the <pass> option is not used currently.
 
 - mark received messages as read so that skype won't say there are unread messages
 
-- Away status changes (send / receive)
+- Away status changes (send)
 
 - add/remove users, detect when somebody wants to add us
 
