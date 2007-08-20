@@ -17,6 +17,10 @@ struct skype_data
 	char *txq;
 	int tx_len;
 	int r_inpa, w_inpa;
+	// when we receive a new message id, we query the handle, then the body
+	// store the handle here
+	// TODO: it would be nicer to use a hashmap for this or something
+	char *handle;
 };
 
 struct skype_away_state
@@ -106,13 +110,47 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				*ptr = '\0';
 				ptr = g_strdup_printf("%s@skype.com", user);
 				imcb_add_buddy(ic, ptr, NULL);
-				// TODO online can be away
 				if(strcmp(status, "OFFLINE") != 0)
 					flags |= OPT_LOGGED_IN;
 				if(strcmp(status, "ONLINE") != 0 && strcmp(status, "SKYPEME") != 0)
 					flags |= OPT_AWAY;
 				imcb_buddy_status(ic, ptr, flags, NULL, NULL);
 				g_free(ptr);
+			}
+			else if(!strncmp(line, "CHATMESSAGE ", 12))
+			{
+				char *id = strchr(line, ' ');
+				if(++id)
+				{
+					char *info = strchr(id, ' ');
+					*info = '\0';
+					info++;
+					if(!strcmp(info, "STATUS RECEIVED"))
+					{
+						// new message, request its body
+						printf("new received message  #%s\n", id);
+						g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+						g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+					}
+					else if(!strncmp(info, "FROM_HANDLE ", 12))
+					{
+						info += 12;
+						// new handle
+						sd->handle = g_strdup_printf("%s@skype.com", info);
+						printf("new handle: '%s'\n", info);
+					}
+					else if(!strncmp(info, "BODY ", 5))
+					{
+						info += 5;
+						// new body
+						printf("<%s> %s\n", sd->handle, info);
+						imcb_buddy_msg(ic, sd->handle, info, 0, 0);
+						g_free(sd->handle);
+						sd->handle = NULL;
+					}
+				}
 			}
 			lineptr++;
 		}
@@ -174,6 +212,9 @@ static void skype_login( account_t *acc )
 	printf("%s:%d\n", acc->server, set_getint( &acc->set, "port"));
 	sd->fd = proxy_connect(acc->server, set_getint( &acc->set, "port" ), skype_connected, ic );
 	printf("sd->fd: %d\n", sd->fd);
+	/*imcb_add_buddy(ic, "test@skype.com", NULL);
+	imcb_buddy_status(ic, "test@skype.com", OPT_LOGGED_IN, NULL, NULL);
+	imcb_buddy_msg(ic, "test@skype.com", "test from skype plugin", 0, 0);*/
 
 	sd->ic = ic;
 }
@@ -186,14 +227,16 @@ static void skype_logout( struct im_connection *ic )
 
 static int skype_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
 {
-	char *buf, *ptr;
+	char *buf, *ptr, *nick;
 	int st;
 
-	ptr = strchr(who, '@');
+	nick = g_strdup_printf("%s", who);
+	ptr = strchr(nick, '@');
 	if(ptr)
 		*ptr = '\0';
 
-	buf = g_strdup_printf("MESSAGE %s %s\n", who, message);
+	buf = g_strdup_printf("MESSAGE %s %s\n", nick, message);
+	g_free(nick);
 	st = skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
 
