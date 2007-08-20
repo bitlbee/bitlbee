@@ -67,6 +67,8 @@ NOTE: the <pass> option is not used currently.
 
 - Download nicks and away statuses from Skype
 
+- Noticing joins / parts while we're connected
+
 - Sending messages
 
 - Receiving messages
@@ -82,8 +84,6 @@ NOTE: the <pass> option is not used currently.
 - mark received messages as read so that skype won't say there are unread messages
 
 - Away status changes (send / receive)
-
-- join / parts
 
 - add/remove users, detect when somebody wants to add us (maybe detect when we're removed?)
 
