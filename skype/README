@@ -93,7 +93,7 @@ NOTE: the <pass> option is not used currently.
 
 == What needs to be done (aka. TODO)
 
-- detect when somebody wants to add us
+- detect when somebody wants to add us (confirm callback)
 
 - Due to some API limitations, I have no idea how to change status. This affects:
   * When you `/away`, Skype will be still show `Online`
@@ -103,6 +103,13 @@ NOTE: the <pass> option is not used currently.
 == I would like to have support for ...
 
 If something does not work and it's not in the TODO section, then please contact me!
+
+== Known bugs
+
+- Sometimes when you get a lot of messages in a short time, some of the
+  messages are dropped. This is a known bug in Skype itself as of version
+  1.4.0.99
+  (http://forum.skype.com/index.php?s=&showtopic=94545&view=findpost&p=431710[link]).
 
 == Screenshots
 
