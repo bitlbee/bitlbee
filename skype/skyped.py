@@ -14,24 +14,9 @@ import socket
 SKYPE_SERVICE = 'com.Skype.API'
 CLIENT_NAME = 'SkypeApiPythonShell'
 
-local_encoding = locale.getdefaultlocale()[1]
-need_conv = (local_encoding != 'utf-8')
-
 # well, this is a bit hackish. we store the socket of the last connected client
 # here and notify it. maybe later notify all connected clients?
 conn = None
-
-def utf8_decode(utf8_str):
-	if need_conv:
-		return utf8_str.decode('utf-8').encode(local_encoding, 'replace')
-	else:
-		return utf8_str
-
-def utf8_encode(local_str):
-	if need_conv:
-		return local_str.decode(local_encoding).encode('utf-8')
-	else:
-		return local_str
 
 def sig_handler(signum, frame):
 	mainloop.quit()
@@ -40,7 +25,7 @@ def input_handler(fd, io_condition):
 	input = fd.recv(1024)
 	for i in input.split("\n"):
 		if i:
-			fd.send(skype.send(i.strip()) + "\n")
+			fd.send((skype.send(i.strip()) + "\n").encode(locale.getdefaultlocale()[1]))
 	return True
 
 def server(host, port):
@@ -80,8 +65,7 @@ class SkypeApi(dbus.service.Object):
 	@dbus.service.method(dbus_interface='com.Skype.API')
 	def Notify(self, msg_text):
 		global conn
-		text = utf8_decode(msg_text)
-		dprint('<< ' + text)
+		dprint('<< ' + msg_text)
 		if conn:
 			conn.send(msg_text + "\n")
 
@@ -91,7 +75,7 @@ class SkypeApi(dbus.service.Object):
 			return
 		dprint('>> ' + msg_text)
 		try:
-			reply = utf8_decode(self.skype_api.Invoke(utf8_encode(msg_text)))
+			reply = self.skype_api.Invoke(msg_text)
 		except dbus.exceptions.DBusException, s:
 			reply = str(s)
 		dprint('<< ' + reply)
