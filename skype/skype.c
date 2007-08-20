@@ -108,7 +108,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				status++;
 				ptr = strchr(++user, ' ');
 				*ptr = '\0';
-				if(strcmp(user, sd->username) != 0)
+				if(strcmp(user, sd->username) != 0 && strcmp(user, "echo123") != 0)
 				{
 					ptr = g_strdup_printf("%s@skype.com", user);
 					imcb_add_buddy(ic, ptr, NULL);
