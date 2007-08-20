@@ -48,6 +48,8 @@ What needs to be done (aka. TODO):
 
 - import the daemon code
 
+- convert this readme to asciidoc
+
 - mark received messages as read so that skype won't say there are unread messages
 
 - Away status changes (send / receive)
