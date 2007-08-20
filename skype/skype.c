@@ -244,7 +244,7 @@ static int skype_buddy_msg( struct im_connection *ic, char *who, char *message, 
 	char *buf, *ptr, *nick;
 	int st;
 
-	nick = g_strdup_printf("%s", who);
+	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if(ptr)
 		*ptr = '\0';
@@ -277,7 +277,7 @@ static void skype_add_buddy( struct im_connection *ic, char *who, char *group )
 {
 	char *buf, *nick, *ptr;
 
-	nick = g_strdup_printf("%s", who);
+	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if(ptr)
 		*ptr = '\0';
@@ -291,7 +291,7 @@ static void skype_remove_buddy( struct im_connection *ic, char *who, char *group
 {
 	char *buf, *nick, *ptr;
 
-	nick = g_strdup_printf("%s", who);
+	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if(ptr)
 		*ptr = '\0';
