@@ -108,7 +108,8 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				status++;
 				ptr = strchr(++user, ' ');
 				*ptr = '\0';
-				if(strcmp(user, sd->username) != 0 && strcmp(user, "echo123") != 0)
+				ptr++;
+				if(!strncmp(ptr, "ONLINESTATUS ", 13) && strcmp(user, sd->username) != 0 && strcmp(user, "echo123") != 0)
 				{
 					ptr = g_strdup_printf("%s@skype.com", user);
 					imcb_add_buddy(ic, ptr, NULL);
@@ -274,10 +275,30 @@ static GList *skype_away_states( struct im_connection *ic )
 
 static void skype_add_buddy( struct im_connection *ic, char *who, char *group )
 {
+	char *buf, *nick, *ptr;
+
+	nick = g_strdup_printf("%s", who);
+	ptr = strchr(nick, '@');
+	if(ptr)
+		*ptr = '\0';
+	buf = g_strdup_printf("SET USER %s BUDDYSTATUS 2 Please authorize me\n", nick);
+	skype_write( ic, buf, strlen( buf ) );
+	printf("add '%s'\n", nick);
+	g_free(nick);
 }
 
 static void skype_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
+	char *buf, *nick, *ptr;
+
+	nick = g_strdup_printf("%s", who);
+	ptr = strchr(nick, '@');
+	if(ptr)
+		*ptr = '\0';
+	buf = g_strdup_printf("SET USER %s BUDDYSTATUS 1\n", nick);
+	skype_write( ic, buf, strlen( buf ) );
+	printf("remove '%s'\n", nick);
+	g_free(nick);
 }
 
 void init_plugin(void)

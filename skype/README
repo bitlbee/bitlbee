@@ -86,9 +86,11 @@ NOTE: the <pass> option is not used currently.
 
 - Marking received messages as seen so that Skype won't say there are unread messages
 
+- Adding / removing contacts
+
 == What needs to be done (aka. TODO)
 
-- add/remove users, detect when somebody wants to add us
+- detect when somebody wants to add us
 
 - Due to some API limitations, I have no idea how to change status. This affects:
   * When you `/away`, Skype will be still show `Online`
