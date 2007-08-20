@@ -93,12 +93,13 @@ NOTE: the <pass> option is not used currently.
 
 - Set away state when you do a `/away`.
 
+-  When you `account off`, Skype will set status to `Offline`
+
+-  When you `account on`, Skype will set status to `Online`
+
 == What needs to be done (aka. TODO)
 
 - detect when somebody wants to add us (confirm callback)
-
--  When you `account off`, Skype will not set status to `Offline`
--  When you `account on`, Skype will not set status to `Online`
 
 == I would like to have support for ...
 

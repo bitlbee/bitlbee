@@ -191,6 +191,9 @@ gboolean skype_start_stream( struct im_connection *ic )
 	buf = g_strdup_printf("SEARCH FRIENDS\n");
 	st = skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
+	buf = g_strdup_printf("SET USERSTATUS ONLINE\n");
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
 	return st;
 }
 
