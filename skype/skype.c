@@ -72,7 +72,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 	int st;
 	char **lines, **lineptr, *line, *ptr;
 
-	if( sd->fd == -1 )
+	if( !sd || sd->fd == -1 )
 		return FALSE;
 	st = read( sd->fd, buf, sizeof( buf ) );
 	if( st > 0 )
@@ -236,8 +236,15 @@ static void skype_login( account_t *acc )
 static void skype_logout( struct im_connection *ic )
 {
 	struct skype_data *sd = ic->proto_data;
+	char *buf;
+
+	buf = g_strdup_printf("SET USERSTATUS OFFLINE\n");
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+
 	g_free(sd->username);
 	g_free(sd);
+	ic->proto_data = NULL;
 }
 
 static int skype_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
