@@ -8,6 +8,9 @@ Skype servers (the company's ones). It needs a running Skype client to do so.
 In fact BitlBee will connect to `skyped` (a tcp server, provided in this
 package) and `skyped` will connecto to your Skype client.
 
+NOTE: The order is important. First you have to start Skype. Then `skyped` can
+connect to it, finally BitlBee can connect to `skyped`.
+
 - You need the BitlBee bzr branch:
 
 ----
