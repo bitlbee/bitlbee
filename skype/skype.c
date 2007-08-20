@@ -57,7 +57,18 @@ static void skype_init( account_t *acc )
 int skype_write( struct im_connection *ic, char *buf, int len )
 {
 	struct skype_data *sd = ic->proto_data;
+	struct pollfd pfd[1];
 
+	pfd[0].fd = sd->fd;
+	pfd[0].events = POLLOUT;
+
+	poll(pfd, 1, 1000);
+	if(pfd[0].revents & POLLHUP)
+	{
+		imcb_error( ic, "Could not connect to server" );
+		imc_logout( ic, TRUE );
+		return FALSE;
+	}
 	printf("write(): %s", buf);
 	write( sd->fd, buf, len );
 
@@ -184,6 +195,9 @@ gboolean skype_start_stream( struct im_connection *ic )
 	char *buf;
 	int st;
 
+	if(!sd)
+		return FALSE;
+
 	if( sd->r_inpa <= 0 )
 		sd->r_inpa = b_input_add( sd->fd, GAIM_INPUT_READ, skype_read_callback, ic );
 
@@ -200,19 +214,6 @@ gboolean skype_start_stream( struct im_connection *ic )
 gboolean skype_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct im_connection *ic = data;
-	struct skype_data *sd = ic->proto_data;
-	struct pollfd pfd[1];
-
-	pfd[0].fd = sd->fd;
-	pfd[0].events = POLLOUT;
-
-	poll(pfd, 1, 1000);
-	if(pfd[0].revents & POLLHUP)
-	{
-		imcb_error( ic, "Could not connect to server" );
-		imc_logout( ic, TRUE );
-		return FALSE;
-	}
 	imcb_connected(ic);
 	return skype_start_stream(ic);
 }
