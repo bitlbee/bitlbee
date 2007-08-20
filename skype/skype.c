@@ -136,6 +136,8 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						skype_write( ic, buf, strlen( buf ) );
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
 						skype_write( ic, buf, strlen( buf ) );
+						g_snprintf(buf, 1024, "SET CHATMESSAGE %s SEEN\n", id);
+						skype_write( ic, buf, strlen( buf ) );
 					}
 					else if(!strncmp(info, "FROM_HANDLE ", 12))
 					{

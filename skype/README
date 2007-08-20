@@ -80,13 +80,13 @@ NOTE: the <pass> option is not used currently.
 
 - Receiving away status changes
 
-- skyped (the tcp daemon that is a gateway between Skype and tcp)
+- `skyped` (the tcp daemon that is a gateway between Skype and tcp)
 
-- Error handling when skyped is not running and when it exists
+- Error handling when `skyped` is not running and when it exits
+
+- Marking received messages as seen so that Skype won't say there are unread messages
 
 == What needs to be done (aka. TODO)
-
-- mark received messages as read so that skype won't say there are unread messages
 
 - Away status changes (send)
 
