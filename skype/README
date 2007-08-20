@@ -51,6 +51,18 @@ python skyped.py
 NOTE: It's important to start skyped on the same machine and using the same
 user as you run Skype as it uses the session DBus for communication!
 
+- Start your IRC client, connect to BitlBee and add your account:
+
+----
+account add skype <user> <pass>
+account set 0/server localhost
+----
+
+IMPORTANT: <user> should be your skype account name. This way you won't see
+yourself joining to `&bitlbee`.
+
+NOTE: the <pass> option is not used currently.
+
 == What works
 
 - Download nicks and away statuses from Skype
