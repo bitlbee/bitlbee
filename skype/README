@@ -1,7 +1,7 @@
 = Skype plugin for BitlBee
 Miklos Vajna <vmiklos@frugalware.org>
 
-== How to set it up:
+== How to set it up
 
 - You need the BitlBee bzr branch:
 
@@ -51,7 +51,7 @@ python skyped.py
 NOTE: It's important to start skyped on the same machine and using the same
 user as you run Skype as it uses the session DBus for communication!
 
-== What works:
+== What works
 
 - Download nicks and away statuses from Skype
 
@@ -63,7 +63,7 @@ user as you run Skype as it uses the session DBus for communication!
 
 - Error handling when skyped is not running and when it exists
 
-== What needs to be done (aka. TODO):
+== What needs to be done (aka. TODO)
 
 - we can't ourselves join to &bitlbee (ignore such a message from skype)
 
