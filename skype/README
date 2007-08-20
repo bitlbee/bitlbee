@@ -32,9 +32,12 @@ git clone http://ftp.frugalware.org/pub/other/people/vmiklos/bitlbee-skype
 make
 cp skype.so /usr/lib/bitlbee
 
-- Set up the tcp server:
+- Start the tcp server:
 
-FIXME
+python skyped.py
+
+NOTE: It's important to start skyped on the same machine and using the same
+user as you run Skype as it uses the session DBus for communication!
 
 What works:
 
@@ -44,9 +47,9 @@ What works:
 
 - Receiving messages
 
-What needs to be done (aka. TODO):
+- Writing a tcp daemon that is a gateway between Skype and tcp
 
-- import the daemon code
+What needs to be done (aka. TODO):
 
 - convert this readme to asciidoc
 
