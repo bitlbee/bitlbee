@@ -79,8 +79,6 @@ NOTE: the <pass> option is not used currently.
 
 == What needs to be done (aka. TODO)
 
-- we can't ourselves join to &bitlbee (ignore such a message from skype)
-
 - mark received messages as read so that skype won't say there are unread messages
 
 - Away status changes (send / receive)

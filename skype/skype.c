@@ -14,6 +14,7 @@
 struct skype_data
 {
 	struct im_connection *ic;
+	char *username;
 	int fd;
 	char *txq;
 	int tx_len;
@@ -107,14 +108,17 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				status++;
 				ptr = strchr(++user, ' ');
 				*ptr = '\0';
-				ptr = g_strdup_printf("%s@skype.com", user);
-				imcb_add_buddy(ic, ptr, NULL);
-				if(strcmp(status, "OFFLINE") != 0)
-					flags |= OPT_LOGGED_IN;
-				if(strcmp(status, "ONLINE") != 0 && strcmp(status, "SKYPEME") != 0)
-					flags |= OPT_AWAY;
-				imcb_buddy_status(ic, ptr, flags, NULL, NULL);
-				g_free(ptr);
+				if(strcmp(user, sd->username) != 0)
+				{
+					ptr = g_strdup_printf("%s@skype.com", user);
+					imcb_add_buddy(ic, ptr, NULL);
+					if(strcmp(status, "OFFLINE") != 0)
+						flags |= OPT_LOGGED_IN;
+					if(strcmp(status, "ONLINE") != 0 && strcmp(status, "SKYPEME") != 0)
+						flags |= OPT_AWAY;
+					imcb_buddy_status(ic, ptr, flags, NULL, NULL);
+					g_free(ptr);
+				}
 			}
 			else if(!strncmp(line, "CHATMESSAGE ", 12))
 			{
@@ -220,6 +224,7 @@ static void skype_login( account_t *acc )
 	/*imcb_add_buddy(ic, "test@skype.com", NULL);
 	imcb_buddy_status(ic, "test@skype.com", OPT_LOGGED_IN, NULL, NULL);
 	imcb_buddy_msg(ic, "test@skype.com", "test from skype plugin", 0, 0);*/
+	sd->username = g_strdup( acc->user );
 
 	sd->ic = ic;
 }
@@ -227,6 +232,7 @@ static void skype_login( account_t *acc )
 static void skype_logout( struct im_connection *ic )
 {
 	struct skype_data *sd = ic->proto_data;
+	g_free(sd->username);
 	g_free(sd);
 }
 
