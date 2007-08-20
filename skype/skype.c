@@ -184,6 +184,21 @@ static void skype_logout( struct im_connection *ic )
 	g_free(sd);
 }
 
+static int skype_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
+{
+	char *buf, *ptr;
+	int st;
+
+	ptr = strchr(who, '@');
+	*ptr = '\0';
+
+	buf = g_strdup_printf("MESSAGE %s %s\n", who, message);
+	st = skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+
+	return st;
+}
+
 static void skype_set_away( struct im_connection *ic, char *state_txt, char *message )
 {
 }
@@ -216,6 +231,7 @@ void init_plugin(void)
 	ret->login = skype_login;
 	ret->init = skype_init;
 	ret->logout = skype_logout;
+	ret->buddy_msg = skype_buddy_msg;
 	ret->away_states = skype_away_states;
 	ret->add_buddy = skype_add_buddy;
 	ret->remove_buddy = skype_remove_buddy;
