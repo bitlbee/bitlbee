@@ -101,6 +101,8 @@ NOTE: the <pass> option is not used currently.
 
 - detect when somebody wants to add us (confirm callback)
 
+- implement block/allow commands
+
 == I would like to have support for ...
 
 If something does not work and it's not in the TODO section, then please contact me!
