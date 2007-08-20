@@ -83,7 +83,7 @@ NOTE: the <pass> option is not used currently.
 
 - Away status changes (send / receive)
 
-- add/remove users, detect when somebody wants to add us (maybe detect when we're removed?)
+- add/remove users, detect when somebody wants to add us
 
 - maybe on account on/off, change our state from/to offline? so that we won't miss any message
 
