@@ -1,7 +1,11 @@
 -include config.mak
 
-skype.so: skype.c
+skype.so: skype.c config.mak
 	$(CC) $(CFLAGS) -shared -o skype.so skype.c $(LDFLAGS)
+
+install: skype.so
+	$(INSTALL) -d $(DESTDIR)$(plugindir)
+	$(INSTALL) skype.so $(DESTDIR)$(plugindir)
 
 client: client.c
 
