@@ -26,13 +26,12 @@ distclean: clean
 	rm -f configure install-sh aclocal.m4
 
 dist:
-	git-archive --format=tar --prefix=bitlbee-skype-$(VERSION)/ HEAD > bitlbee-skype-$(VERSION).tar
+	git-archive --format=tar --prefix=bitlbee-skype-$(VERSION)/ HEAD | tar xf -
 	mkdir -p bitlbee-skype-$(VERSION)
 	git log --no-merges |git name-rev --tags --stdin > bitlbee-skype-$(VERSION)/Changelog
 	make -C bitlbee-skype-$(VERSION) prepare
-	tar rf bitlbee-skype-$(VERSION).tar bitlbee-skype-$(VERSION)/Changelog
+	tar czf bitlbee-skype-$(VERSION).tar.gz bitlbee-skype-$(VERSION)
 	rm -rf bitlbee-skype-$(VERSION)
-	gzip -f -9 bitlbee-skype-$(VERSION).tar
 
 release:
 	git tag $(VERSION)
