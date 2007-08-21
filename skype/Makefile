@@ -3,9 +3,11 @@
 skype.so: skype.c config.mak
 	$(CC) $(CFLAGS) -shared -o skype.so skype.c $(LDFLAGS)
 
-install: skype.so
+install: skype.so skyped.py
 	$(INSTALL) -d $(DESTDIR)$(plugindir)
+	$(INSTALL) -d $(DESTDIR)$(sbindir)
 	$(INSTALL) skype.so $(DESTDIR)$(plugindir)
+	$(INSTALL) skyped.py $(DESTDIR)$(sbindir)/skyped
 
 client: client.c
 

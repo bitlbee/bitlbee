@@ -64,10 +64,11 @@ make
 make install
 ----
 
-- Start skyped (the tcp server):
+- Start Skype and `skyped` (the tcp server):
 
 ----
-python skyped.py
+skype
+skyped
 ----
 
 NOTE: It's important to start skyped on the same machine and using the same
@@ -114,6 +115,8 @@ NOTE: the <pass> option is not used currently.
 - Detect when somebody wants to add you and ask for confirmation
 
 == What needs to be done (aka. TODO)
+
+- `--daemon` option for `skyped`
 
 == I would like to have support for ...
 
