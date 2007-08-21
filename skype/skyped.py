@@ -111,7 +111,10 @@ class SkypeApi(dbus.service.Object):
 		except dbus.exceptions.DBusException, s:
 			reply = str(s)
 			if(reply.startswith("org.freedesktop.DBus.Error.ServiceUnknown")):
-				self.remove_from_connection(dbus.SessionBus(), "/com/Skype/Client")
+				try:
+					self.remove_from_connection(dbus.SessionBus(), "/com/Skype/Client")
+				except LookupError:
+					pass
 				mainloop.quit()
 		dprint('<< ' + reply)
 		return reply
