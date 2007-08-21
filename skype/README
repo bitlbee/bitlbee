@@ -10,6 +10,9 @@ it in two days or so (and not because I'm a genius or anything ;-) ). I think
 it's pretty stable, but it needs wider testing. Also see the 'Known bugs'
 section, I really hope those random hangups will be fixed soon by Skype.
 
+Oh, before I forget. I'm not a wizard, the Skype API documentation is
+https://developer.skype.com/Docs/ApiDoc[here] if you're interested.
+
 == How to set it up
 
 Before you start. The setup is the following: BitlBee can't connect directly to
