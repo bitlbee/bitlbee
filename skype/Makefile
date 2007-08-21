@@ -1,5 +1,7 @@
 -include config.mak
 
+VERSION = 0.1.0
+
 skype.so: skype.c config.mak
 	$(CC) $(CFLAGS) -shared -o skype.so skype.c $(LDFLAGS)
 
@@ -22,6 +24,21 @@ clean:
 distclean: clean
 	rm -rf autom4te.cache config.log config.mak config.status
 	rm -f configure install-sh aclocal.m4
+
+dist:
+	git-archive --format=tar --prefix=bitlbee-skype-$(VERSION)/ HEAD > bitlbee-skype-$(VERSION).tar
+	mkdir -p bitlbee-skype-$(VERSION)
+	git log --no-merges |git name-rev --tags --stdin > bitlbee-skype-$(VERSION)/Changelog
+	tar rf bitlbee-skype-$(VERSION).tar bitlbee-skype-$(VERSION)/Changelog
+	rm -rf bitlbee-skype-$(VERSION)
+	gzip -f -9 bitlbee-skype-$(VERSION).tar
+
+release:
+	git tag $(VERSION)
+	$(MAKE) dist
+	gpg --comment "See http://ftp.frugalware.org/pub/README.GPG for info" \
+		-ba -u 20F55619 bitlbee-skype-$(VERSION).tar.gz
+	mv bitlbee-skype-$(VERSION).tar.gz{,.asc} ../
 
 doc: HEADER.html Changelog
 
