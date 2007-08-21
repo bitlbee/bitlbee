@@ -17,17 +17,17 @@ connect to it, finally BitlBee can connect to `skyped`.
 bzr branch http://code.bitlbee.org/bitlbee/
 ----
 
-- You need to enable plugin support:
+- You need some additional patches:
 
 ----
 http://frugalware.org/~vmiklos/patches/bitlbee-configure-plugins.patch
-----
-
-- To be able to do an install-dev:
-
-----
+http://frugalware.org/~vmiklos/patches/bitlbee-global-conf-may-be-null.patch
 http://frugalware.org/~vmiklos/patches/bitlbee-makefile-headers.patch
+http://frugalware.org/~vmiklos/patches/bitlbee-more-verbose-on-plugin-errors.patch
 ----
+
+(Yes, I submitted all of them to the
+http://bugs.bitlbee.org/bitlbee/[bugtracker] already.)
 
 - Now compile and install it:
 
