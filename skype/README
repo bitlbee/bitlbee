@@ -21,7 +21,8 @@ In fact BitlBee will connect to `skyped` (a tcp server, provided in this
 package) and `skyped` will connecto to your Skype client.
 
 NOTE: The order is important. First you have to start Skype. Then `skyped` can
-connect to it, finally BitlBee can connect to `skyped`.
+connect to it, finally BitlBee can connect to `skyped`. (In fact `skyped`
+automatically reconnect if you restart Skype.)
 
 - If you happen to be a happy Frugalware user, you can install the `bitlbee`
   and `bitlbee-skype` packages from
