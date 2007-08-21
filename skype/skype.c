@@ -1,15 +1,37 @@
-/* 
- * This is the most simple possible BitlBee plugin. To use, compile it as 
- * a shared library and place it in the plugin directory: 
+/*
+ *  skype.c - Skype plugin for BitlBee
+ * 
+ *  Copyright (c) 2007 by Miklos Vajna <vmiklos@frugalware.org>
  *
- * gcc -o example.so -shared example.c `pkg-config --cflags bitlbee`
- * cp example.so /usr/local/lib/bitlbee
+ *  Several ideas are used from the BitlBee Jabber plugin, which is
+ *
+ *  Copyright (c) 2006 by Wilmer van der Gaast <wilmer@gaast.net>
+ * 
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, 
+ *  USA.
  */
+
 #include <stdio.h>
 #include <poll.h>
 #include <bitlbee.h>
 
 #define SKYPE_PORT_DEFAULT "2727"
+
+/*
+ * Structures
+ */
 
 struct skype_data
 {
@@ -19,9 +41,9 @@ struct skype_data
 	char *txq;
 	int tx_len;
 	int r_inpa, w_inpa;
-	// when we receive a new message id, we query the handle, then the body
-	// store the handle here
-	// TODO: it would be nicer to use a hashmap for this or something
+	/* When we receive a new message id, we query the handle, then the
+	 * body. Store the handle here so that we imcb_buddy_msg() when we got
+	 * the body. */
 	char *handle;
 };
 
@@ -30,6 +52,16 @@ struct skype_away_state
 	char *code;
 	char *full_name;
 };
+
+struct skype_buddy_ask_data
+{
+	struct im_connection *ic;
+	char *handle;
+};
+
+/*
+ * Tables
+ */
 
 const struct skype_away_state skype_away_state_list[] =
 {
@@ -43,11 +75,9 @@ const struct skype_away_state skype_away_state_list[] =
 	{ NULL, NULL}
 };
 
-struct skype_buddy_ask_data
-{
-	struct im_connection *ic;
-	char *handle;
-};
+/*
+ * Functions
+ */
 
 static void skype_init( account_t *acc )
 {
@@ -68,6 +98,8 @@ int skype_write( struct im_connection *ic, char *buf, int len )
 	pfd[0].fd = sd->fd;
 	pfd[0].events = POLLOUT;
 
+	/* This poll is necessary or we'll get a SIGPIPE when we write() to
+	 * sd->fd. */
 	poll(pfd, 1, 1000);
 	if(pfd[0].revents & POLLHUP)
 	{
@@ -75,7 +107,6 @@ int skype_write( struct im_connection *ic, char *buf, int len )
 		imc_logout( ic, TRUE );
 		return FALSE;
 	}
-	printf("write(): %s", buf);
 	write( sd->fd, buf, len );
 
 	return TRUE;
@@ -122,18 +153,18 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 
 	if( !sd || sd->fd == -1 )
 		return FALSE;
+	/* Read the whole data. */
 	st = read( sd->fd, buf, sizeof( buf ) );
 	if( st > 0 )
 	{
 		buf[st] = '\0';
-		printf("read(): '%s'\n", buf);
+		/* Then split it up to lines. */
 		lines = g_strsplit(buf, "\n", 0);
 		lineptr = lines;
 		while((line = *lineptr))
 		{
 			if(!strlen(line))
 				break;
-			printf("skype_read_callback() new line: '%s'\n", line);
 			if(!strncmp(line, "USERS ", 6))
 			{
 				char **i;
@@ -158,7 +189,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				ptr = strchr(++user, ' ');
 				*ptr = '\0';
 				ptr++;
-				if(!strncmp(ptr, "ONLINESTATUS ", 13) && strcmp(user, sd->username) != 0 && strcmp(user, "echo123") != 0)
+				if(!strncmp(ptr, "ONLINESTATUS ", 13) &&
+						strcmp(user, sd->username) != 0
+						&& strcmp(user, "echo123") != 0)
 				{
 					ptr = g_strdup_printf("%s@skype.com", user);
 					imcb_add_buddy(ic, ptr, NULL);
@@ -196,8 +229,11 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					info++;
 					if(!strcmp(info, "STATUS RECEIVED"))
 					{
-						// new message, request its body
-						printf("new received message  #%s\n", id);
+						/* New message ID:
+						 * (1) Request its from field
+						 * (2) Request its body
+						 * (3) Mark it as seen
+						 */
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
 						skype_write( ic, buf, strlen( buf ) );
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
@@ -208,19 +244,22 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					else if(!strncmp(info, "FROM_HANDLE ", 12))
 					{
 						info += 12;
-						// new handle
+						/* New from field value. Store
+						 * it, then we can later use it
+						 * when we got the message's
+						 * body. */
 						sd->handle = g_strdup_printf("%s@skype.com", info);
-						printf("new handle: '%s'\n", info);
 					}
 					else if(!strncmp(info, "BODY ", 5))
 					{
 						info += 5;
-						// new body
-						printf("<%s> %s\n", sd->handle, info);
 						if(sd->handle)
+						{
+							/* New body, we have everything to use imcb_buddy_msg() now! */
 							imcb_buddy_msg(ic, sd->handle, info, 0, 0);
-						g_free(sd->handle);
-						sd->handle = NULL;
+							g_free(sd->handle);
+							sd->handle = NULL;
+						}
 					}
 				}
 			}
@@ -237,8 +276,6 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 		imc_logout( ic, TRUE );
 		return FALSE;
 	}
-
-	/* EAGAIN/etc or a successful read. */
 	return TRUE;
 }
 
@@ -254,7 +291,7 @@ gboolean skype_start_stream( struct im_connection *ic )
 	if( sd->r_inpa <= 0 )
 		sd->r_inpa = b_input_add( sd->fd, GAIM_INPUT_READ, skype_read_callback, ic );
 
-	// download buddies
+	/* This will download all buddies. */
 	buf = g_strdup_printf("SEARCH FRIENDS\n");
 	st = skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
@@ -279,12 +316,7 @@ static void skype_login( account_t *acc )
 	ic->proto_data = sd;
 
 	imcb_log( ic, "Connecting" );
-	printf("%s:%d\n", acc->server, set_getint( &acc->set, "port"));
 	sd->fd = proxy_connect(acc->server, set_getint( &acc->set, "port" ), skype_connected, ic );
-	printf("sd->fd: %d\n", sd->fd);
-	/*imcb_add_buddy(ic, "test@skype.com", NULL);
-	imcb_buddy_status(ic, "test@skype.com", OPT_LOGGED_IN, NULL, NULL);
-	imcb_buddy_msg(ic, "test@skype.com", "test from skype plugin", 0, 0);*/
 	sd->username = g_strdup( acc->user );
 
 	sd->ic = ic;
@@ -342,7 +374,6 @@ static void skype_set_away( struct im_connection *ic, char *state_txt, char *mes
 		state = skype_away_state_by_name( "Away" );
 	else
 		state = skype_away_state_by_name( state_txt );
-	printf("would set to: '%s'\n", state->code);
 	buf = g_strdup_printf("SET USERSTATUS %s\n", state->code);
 	skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
@@ -369,7 +400,6 @@ static void skype_add_buddy( struct im_connection *ic, char *who, char *group )
 		*ptr = '\0';
 	buf = g_strdup_printf("SET USER %s BUDDYSTATUS 2 Please authorize me\n", nick);
 	skype_write( ic, buf, strlen( buf ) );
-	printf("add '%s'\n", nick);
 	g_free(nick);
 }
 
@@ -383,7 +413,6 @@ static void skype_remove_buddy( struct im_connection *ic, char *who, char *group
 		*ptr = '\0';
 	buf = g_strdup_printf("SET USER %s BUDDYSTATUS 1\n", nick);
 	skype_write( ic, buf, strlen( buf ) );
-	printf("remove '%s'\n", nick);
 	g_free(nick);
 }
 
@@ -396,8 +425,8 @@ void init_plugin(void)
 	ret->init = skype_init;
 	ret->logout = skype_logout;
 	ret->buddy_msg = skype_buddy_msg;
-	ret->set_away = skype_set_away;
 	ret->away_states = skype_away_states;
+	ret->set_away = skype_set_away;
 	ret->add_buddy = skype_add_buddy;
 	ret->remove_buddy = skype_remove_buddy;
 	ret->handle_cmp = g_strcasecmp;
