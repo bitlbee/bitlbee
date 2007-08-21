@@ -29,6 +29,7 @@ dist:
 	git-archive --format=tar --prefix=bitlbee-skype-$(VERSION)/ HEAD > bitlbee-skype-$(VERSION).tar
 	mkdir -p bitlbee-skype-$(VERSION)
 	git log --no-merges |git name-rev --tags --stdin > bitlbee-skype-$(VERSION)/Changelog
+	make -C bitlbee-skype-$(VERSION) prepare
 	tar rf bitlbee-skype-$(VERSION).tar bitlbee-skype-$(VERSION)/Changelog
 	rm -rf bitlbee-skype-$(VERSION)
 	gzip -f -9 bitlbee-skype-$(VERSION).tar
