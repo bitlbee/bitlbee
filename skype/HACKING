@@ -1,0 +1,8 @@
+I use the following commands to debug bitlbee itself:
+
+gdb bitlbee
+run -v -n -D
+
+For skyped:
+
+python skyped.py -d
