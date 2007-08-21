@@ -5,7 +5,7 @@ Miklos Vajna <vmiklos@frugalware.org>
 
 One day I browsed the BitlBee bugtracker and found
 http://bugs.bitlbee.org/bitlbee/ticket/82[this] ticket. Then after a while I
-returned and saw that it's still open. So I wrote it. Not a big deal, I wrote
+returned and saw that it was still open. So I wrote it. Not a big deal, I wrote
 it in two days or so (and not because I'm a genius or anything ;-) ). I think
 it's pretty stable, but it needs wider testing. Also see the 'Known bugs'
 section, I really hope those random hangups will be fixed soon by Skype.
