@@ -23,6 +23,10 @@ package) and `skyped` will connecto to your Skype client.
 NOTE: The order is important. First you have to start Skype. Then `skyped` can
 connect to it, finally BitlBee can connect to `skyped`.
 
+- If you happen to be a happy Frugalware user, you can install the `bitlbee`
+  and `bitlbee-skype` packages from
+  http://ftp.frugalware.org/pub/other/people/vmiklos/bmf/[my repo].
+
 - You need the BitlBee bzr branch:
 
 ----
