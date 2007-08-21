@@ -93,15 +93,18 @@ NOTE: the <pass> option is not used currently.
 
 - Set away state when you do a `/away`.
 
--  When you `account off`, Skype will set status to `Offline`
+- When you `account off`, Skype will set status to `Offline`
 
--  When you `account on`, Skype will set status to `Online`
+- When you `account on`, Skype will set status to `Online`
+
+- Detect when somebody wants to add you and ask for confirmation
 
 == What needs to be done (aka. TODO)
 
-- detect when somebody wants to add us (confirm callback)
-
 - implement block/allow commands
+
+- when you remove a nick, it'll still shown as being offline (no
+  `imcb_remove_buddy()`?)
 
 == I would like to have support for ...
 

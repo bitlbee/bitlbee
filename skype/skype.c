@@ -43,6 +43,12 @@ const struct skype_away_state skype_away_state_list[] =
 	{ NULL, NULL}
 };
 
+struct skype_buddy_ask_data
+{
+	struct im_connection *ic;
+	char *handle;
+};
+
 static void skype_init( account_t *acc )
 {
 	set_t *s;
@@ -73,6 +79,37 @@ int skype_write( struct im_connection *ic, char *buf, int len )
 	write( sd->fd, buf, len );
 
 	return TRUE;
+}
+
+static void skype_buddy_ask_yes( gpointer w, struct skype_buddy_ask_data *bla )
+{
+	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED TRUE", bla->handle);
+	skype_write( bla->ic, buf, strlen( buf ) );
+	g_free(buf);
+	g_free(bla->handle);
+	g_free(bla);
+}
+
+static void skype_buddy_ask_no( gpointer w, struct skype_buddy_ask_data *bla )
+{
+	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED FALSE", bla->handle);
+	skype_write( bla->ic, buf, strlen( buf ) );
+	g_free(buf);
+	g_free(bla->handle);
+	g_free(bla);
+}
+
+void skype_buddy_ask( struct im_connection *ic, char *handle, char *message)
+{
+	struct skype_buddy_ask_data *bla = g_new0( struct skype_buddy_ask_data, 1 );
+	char *buf;
+
+	bla->ic = ic;
+	bla->handle = g_strdup(handle);
+
+	buf = g_strdup_printf( "The user %s wants to add you to his/her buddy list, saying: '%s'.", handle, message);
+	imcb_ask( ic, buf, bla, skype_buddy_ask_yes, skype_buddy_ask_no );
+	g_free( buf );
 }
 
 static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition cond )
@@ -131,6 +168,22 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						flags |= OPT_AWAY;
 					imcb_buddy_status(ic, ptr, flags, NULL, NULL);
 					g_free(ptr);
+				}
+				else if(!strncmp(ptr, "RECEIVEDAUTHREQUEST ", 20))
+				{
+					char *message = ptr + 20;
+					if(strlen(message))
+						skype_buddy_ask(ic, user, message);
+				}
+				else if(!strncmp(ptr, "BUDDYSTATUS ", 12))
+				{
+					char *st = ptr + 12;
+					if(!strcmp(st, "3"))
+					{
+						char *buf = g_strdup_printf("%s@skype.com", user);
+						imcb_add_buddy(ic, buf, NULL);
+						g_free(buf);
+					}
 				}
 			}
 			else if(!strncmp(line, "CHATMESSAGE ", 12))
