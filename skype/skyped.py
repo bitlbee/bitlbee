@@ -85,7 +85,10 @@ class SkypeApi(dbus.service.Object):
 			sys.exit('Could not bind to Skype client')
 
 		reply = self.send('PROTOCOL 5')
-		dbus.service.Object.__init__(self, bus, "/com/Skype/Client", bus_name='com.Skype.API')
+		try:
+			dbus.service.Object.__init__(self, bus, "/com/Skype/Client", bus_name='com.Skype.API')
+		except KeyError:
+			sys.exit()
 
 	# skype -> client (async)
 	@dbus.service.method(dbus_interface='com.Skype.API')
@@ -104,13 +107,17 @@ class SkypeApi(dbus.service.Object):
 			reply = self.skype_api.Invoke(msg_text)
 		except dbus.exceptions.DBusException, s:
 			reply = str(s)
+			if(reply.startswith("org.freedesktop.DBus.Error.ServiceUnknown")):
+				self.remove_from_connection(dbus.SessionBus(), "/com/Skype/Client")
+				mainloop.quit()
 		dprint('<< ' + reply)
 		return reply
 
 if __name__=='__main__':
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-	skype = SkypeApi()
 	signal.signal(signal.SIGINT, sig_handler)
 	mainloop = gobject.MainLoop()
 	server('localhost', 2727)
-	mainloop.run()
+	while True:
+		skype = SkypeApi()
+		mainloop.run()
