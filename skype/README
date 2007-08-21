@@ -121,8 +121,6 @@ NOTE: the <pass> option is not used currently.
 
 == What needs to be done (aka. TODO)
 
-- `--daemon` option for `skyped`
-
 - document how do I run skype on a server using vnc
 
 == I would like to have support for ...

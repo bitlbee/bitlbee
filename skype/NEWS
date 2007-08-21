@@ -1,5 +1,6 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+              - skyped now runs as daemon in the background by default
               - skyped now automatically reconnects on Skype restarts
 0.1.0         - initial release
               - see README for major features

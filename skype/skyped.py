@@ -24,9 +24,8 @@
 #   USA.
 #
 
-# makepkg configuration
-""" GPL """
 import sys
+import os
 import signal
 import locale
 import time
@@ -35,7 +34,9 @@ import dbus.service
 import dbus.mainloop.glib
 import gobject
 import socket
+import getopt
 
+__version__ = "0.1.1"
 
 SKYPE_SERVICE = 'com.Skype.API'
 CLIENT_NAME = 'SkypeApiPythonShell'
@@ -69,7 +70,9 @@ def listener(sock, *args):
 	return True
 
 def dprint(msg):
-	if len(sys.argv) > 1 and sys.argv[1] == "-d":
+	global options
+
+	if options.debug:
 		print msg
 
 class SkypeApi(dbus.service.Object):
@@ -113,11 +116,64 @@ class SkypeApi(dbus.service.Object):
 		dprint('<< ' + reply)
 		return reply
 
+class Options:
+	def __init__(self):
+		self.daemon = True
+		self.debug = False
+		self.help = False
+		self.port = 2727
+		self.version = False
+
+	def usage(self, ret):
+		print """Usage: skyped [OPTION]...
+
+skyped is a daemon that acts as a tcp server on top of a Skype instance.
+
+Options:
+	-d	--debug		enable debug messages
+	-h	--help		this help
+	-n	--nofork	don't run as daemon in the background
+	-p	--port		set the tcp port (default: %d)
+	-v	--version	display version information""" % self.port
+		sys.exit(ret)
+
 if __name__=='__main__':
+	options = Options()
+	try:
+		opts, args = getopt.getopt(sys.argv[1:], "dhnp:v", ["daemon", "help", "nofork", "port=", "version"])
+	except getopt.GetoptError:
+		options.usage(1)
+	for opt, arg in opts:
+		if opt in ("-d", "--debug"):
+			options.debug = True
+		elif opt in ("-h", "--help"):
+			options.help = True
+		elif opt in ("-n", "--nofork"):
+			options.daemon = False
+		elif opt in ("-p", "--port"):
+			options.port = arg
+		elif opt in ("-v", "--version"):
+			options.version = True
+	if options.help:
+		options.usage(0)
+	elif options.version:
+		print "skyped %s" % __version__
+		sys.exit(0)
+	elif options.daemon:
+		pid = os.fork()
+		if pid == 0:
+			nullin = file('/dev/null', 'r')
+			nullout = file('/dev/null', 'w')
+			os.dup2(nullin.fileno(), sys.stdin.fileno())
+			os.dup2(nullout.fileno(), sys.stdout.fileno())
+			os.dup2(nullout.fileno(), sys.stderr.fileno())
+		else:
+			print 'skyped is started on port %s, pid: %d' % (options.port, pid)
+			sys.exit(0)
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 	signal.signal(signal.SIGINT, sig_handler)
 	mainloop = gobject.MainLoop()
-	server('localhost', 2727)
+	server('localhost', options.port)
 	while True:
 		skype = SkypeApi()
 		mainloop.run()
