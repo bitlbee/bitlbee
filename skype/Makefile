@@ -1,13 +1,21 @@
-CFLAGS += $(shell pkg-config --cflags bitlbee) -g -Wall
-LDFLAGS += $(shell pkg-config --libs bitlbee)
+-include config.mak
 
 skype.so: skype.c
-	gcc -o skype.so -shared skype.c $(CFLAGS)
+	$(CC) $(CFLAGS) -shared -o skype.so skype.c $(LDFLAGS)
 
 client: client.c
 
+prepare: configure.ac
+	cp /usr/share/automake/install-sh ./
+	cp /usr/share/aclocal/pkg.m4 aclocal.m4
+	autoconf
+
 clean:
 	rm -f skype.so
+
+distclean: clean
+	rm -rf autom4te.cache config.log config.mak config.status
+	rm -f configure install-sh aclocal.m4
 
 doc: HEADER.html Changelog
 
