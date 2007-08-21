@@ -48,4 +48,4 @@ HEADER.html: README
 	rm HEADER.txt
 
 Changelog: .git/refs/heads/master
-	git log --no-merges > Changelog
+	git log --no-merges |git name-rev --tags --stdin >Changelog
