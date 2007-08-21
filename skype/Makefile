@@ -38,7 +38,6 @@ release:
 	$(MAKE) dist
 	gpg --comment "See http://ftp.frugalware.org/pub/README.GPG for info" \
 		-ba -u 20F55619 bitlbee-skype-$(VERSION).tar.gz
-	mv bitlbee-skype-$(VERSION).tar.gz{,.asc} ../
 
 doc: HEADER.html Changelog
 
