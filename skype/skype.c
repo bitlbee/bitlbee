@@ -38,9 +38,7 @@ struct skype_data
 	struct im_connection *ic;
 	char *username;
 	int fd;
-	char *txq;
-	int tx_len;
-	int r_inpa, w_inpa;
+	int r_inpa;
 	/* When we receive a new message id, we query the handle, then the
 	 * body. Store the handle here so that we imcb_buddy_msg() when we got
 	 * the body. */
