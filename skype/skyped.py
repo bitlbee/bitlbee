@@ -176,7 +176,7 @@ if __name__=='__main__':
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 	signal.signal(signal.SIGINT, sig_handler)
 	mainloop = gobject.MainLoop()
-	server('localhost', options.port)
+	server('0.0.0.0', options.port)
 	while True:
 		skype = SkypeApi()
 		mainloop.run()
