@@ -60,6 +60,9 @@ make install install-dev
 git clone http://ftp.frugalware.org/pub/other/people/vmiklos/bitlbee-skype/.git
 ----
 
+(Or you can use the tarballs below, see the Changelog about what
+features/bugfixes will you miss in this case).
+
 - Compile and install it:
 
 ----
