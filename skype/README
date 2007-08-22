@@ -57,7 +57,7 @@ make install install-dev
 - Get the plugin code:
 
 ----
-git clone http://ftp.frugalware.org/pub/other/people/vmiklos/bitlbee-skype
+git clone http://ftp.frugalware.org/pub/other/people/vmiklos/bitlbee-skype/.git
 ----
 
 - Compile and install it:
