@@ -261,6 +261,26 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					}
 				}
 			}
+			else if(!strncmp(line, "CALL ", 5))
+			{
+				char *id = strchr(line, ' ');
+				if(++id)
+				{
+					char *info = strchr(id, ' ');
+					*info = '\0';
+					info++;
+					if(!strcmp(info, "STATUS RINGING"))
+					{
+						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+					}
+					else if(!strncmp(info, "PARTNER_HANDLE ", 15))
+					{
+						info += 15;
+						imcb_log(ic, "The user %s is currently ringing you.", info);
+					}
+				}
+			}
 			lineptr++;
 		}
 		g_strfreev(lines);
