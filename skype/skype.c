@@ -30,6 +30,16 @@
 #define SKYPE_PORT_DEFAULT "2727"
 
 /*
+ * Enumerations
+ */
+
+typedef enum
+{
+	SKYPE_CALL_RINGING,
+	SKYPE_CALL_MISSED
+} skype_call_status;
+
+/*
  * Structures
  */
 
@@ -43,6 +53,10 @@ struct skype_data
 	 * body. Store the handle here so that we imcb_buddy_msg() when we got
 	 * the body. */
 	char *handle;
+	/* This is necessary because we send a notification when we get the
+	 * handle. So we store the state here and then we can send a
+	 * notification about the handle is in a given status. */
+	skype_call_status call_status;
 };
 
 struct skype_away_state
@@ -273,11 +287,26 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					{
 						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
 						skype_write( ic, buf, strlen( buf ) );
+						sd->call_status = SKYPE_CALL_RINGING;
+					}
+					else if(!strcmp(info, "STATUS MISSED"))
+					{
+						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+						sd->call_status = SKYPE_CALL_MISSED;
 					}
 					else if(!strncmp(info, "PARTNER_HANDLE ", 15))
 					{
 						info += 15;
-						imcb_log(ic, "The user %s is currently ringing you.", info);
+						switch(sd->call_status)
+						{
+							case SKYPE_CALL_RINGING:
+								imcb_log(ic, "The user %s is currently ringing you.", info);
+							break;
+							case SKYPE_CALL_MISSED:
+								imcb_log(ic, "You have missed a call from user %s.", info);
+							break;
+						}
 					}
 				}
 			}
