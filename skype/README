@@ -164,7 +164,8 @@ allow the `SkypeApiPythonShell` client when Skype asks about it).
 
 == What needs to be done (aka. TODO)
 
-- Empty? No, this is not possible. I need more testers! :-)
+- Group chat support. Sadly I'm not too motivated to implement this at the
+  moment.
 
 == I would like to have support for ...
 
