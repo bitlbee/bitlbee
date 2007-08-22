@@ -91,6 +91,40 @@ yourself joining to `&bitlbee`.
 
 NOTE: the <pass> option is not used currently.
 
+== Setting up Skype in a VNC server (optional)
+
+Optionally, if you want to run Skype on a server, you might want to setup up
+a VNC server as well. I used `tightvnc` but probably other VNC servers will
+work, too.
+
+First run
+
+----
+vncpasswd ~/.vnc/passwd
+----
+
+and create a password. You will need it at least once.
+
+Now create `~/.vnc/xstartup` with the following contents:
+
+----
+#!/bin/sh
+
+/usr/bin/sleep 1
+/usr/bin/skype &
+/usr/bin/sleep 5
+/usr/sbin/skyped
+----
+
+Then start the server:
+
+----
+vncserver
+----
+
+Then connect to it, and set up Skype (username, password, enable autologin, and
+allow the `SkypeApiPythonShell` client when Skype asks about it).
+
 == What works
 
 - Download nicks and away statuses from Skype
@@ -121,11 +155,16 @@ NOTE: the <pass> option is not used currently.
 
 == What needs to be done (aka. TODO)
 
-- document how do I run skype on a server using vnc
+- Empty? No, this is not possible. I need more testers! :-)
 
 == I would like to have support for ...
 
-If something does not work and it's not in the TODO section, then please contact me!
+If something does not work and it's not in the TODO section, then please
+contact me!
+
+In fact, of course, I wrote this documentation after figured out how to do this
+setup, so maybe I left out some steps. If you needed 'any' additional tricks,
+then it would be nice to include them here.
 
 == Known bugs
 
