@@ -116,6 +116,12 @@ Now create `~/.vnc/xstartup` with the following contents:
 /usr/sbin/skyped
 ----
 
+Adjust the permissions:
+
+----
+chmod +x ~/.vnc/xstartup
+----
+
 Then start the server:
 
 ----
