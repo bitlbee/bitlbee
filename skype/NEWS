@@ -1,5 +1,8 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.1.2         - notification when a new call arrives in
+              - more documentation (vnc)
+              - first release which works with unpatched bitlbee
 0.1.1         - skyped now runs as daemon in the background by default
               - skyped now automatically reconnects on Skype restarts
 0.1.0         - initial release
