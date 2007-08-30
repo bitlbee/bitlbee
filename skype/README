@@ -34,17 +34,7 @@ automatically reconnect if you restart Skype.)
 bzr branch http://code.bitlbee.org/bitlbee/
 ----
 
-- You need some additional patches:
-
-----
-http://frugalware.org/~vmiklos/patches/bitlbee-configure-plugins.patch
-http://frugalware.org/~vmiklos/patches/bitlbee-global-conf-may-be-null.patch
-http://frugalware.org/~vmiklos/patches/bitlbee-makefile-headers.patch
-http://frugalware.org/~vmiklos/patches/bitlbee-more-verbose-on-plugin-errors.patch
-----
-
-(Yes, I submitted all of them to the
-http://bugs.bitlbee.org/bitlbee/[bugtracker] already.)
+NOTE: You no longer need additional patches, as of revision 245.
 
 - Now compile and install it:
 
