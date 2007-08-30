@@ -28,6 +28,7 @@ yahoo=1
 debug=0
 strip=1
 gcov=0
+plugins=1
 ipv6=1
 
 events=glib
@@ -68,6 +69,7 @@ Option		Description				Default
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
+--plugins=0/1	Disable/enable plugins support		$plugins
 
 --ipv6=0/1	IPv6 socket support			$ipv6
 
@@ -380,6 +382,12 @@ fi
 if [ "$gcov" = "1" ]; then
 	echo "CFLAGS+=-ftest-coverage -fprofile-arcs" >> Makefile.settings
 	echo "EFLAGS+=-lgcov" >> Makefile.settings
+fi
+
+if [ "$plugins" = 0 ]; then
+	echo '#undef WITH_PLUGINS' >> config.h
+else
+	echo '#define WITH_PLUGINS' >> config.h
 fi
 
 echo
