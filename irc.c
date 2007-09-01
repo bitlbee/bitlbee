@@ -131,7 +131,7 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "auto_reconnect_delay", "300", set_eval_int, irc );
 	set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
 	set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
-	set_add( &irc->set, "charset", "iso8859-1", set_eval_charset, irc );
+	set_add( &irc->set, "charset", "utf-8", set_eval_charset, irc );
 	set_add( &irc->set, "debug", "false", set_eval_bool, irc );
 	set_add( &irc->set, "default_target", "root", NULL, irc );
 	set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
