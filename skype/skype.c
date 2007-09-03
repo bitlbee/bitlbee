@@ -265,7 +265,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					else if(!strncmp(info, "BODY ", 5))
 					{
 						info += 5;
-						if(sd->handle)
+						if(sd->handle && strlen(info))
 						{
 							/* New body, we have everything to use imcb_buddy_msg() now! */
 							imcb_buddy_msg(ic, sd->handle, info, 0, 0);
