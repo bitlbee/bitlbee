@@ -52,7 +52,8 @@ def input_handler(fd, io_condition):
 	input = fd.recv(1024)
 	for i in input.split("\n"):
 		if i:
-			fd.send((skype.send(i.strip()) + "\n").encode(locale.getdefaultlocale()[1]))
+			for j in skype.send(i.strip()):
+				fd.send((j + "\n").encode(locale.getdefaultlocale()[1]))
 	return True
 
 def server(host, port):
@@ -84,7 +85,7 @@ class SkypeApi(dbus.service.Object):
 			sys.exit("Can't find any Skype instance. Are you sure you have started Skype?")
 
 		reply = self.send('NAME ' + CLIENT_NAME)
-		if reply != 'OK':
+		if reply[0] != 'OK':
 			sys.exit('Could not bind to Skype client')
 
 		reply = self.send('PROTOCOL 5')
@@ -116,7 +117,18 @@ class SkypeApi(dbus.service.Object):
 				except LookupError:
 					pass
 				mainloop.quit()
-		dprint('<< ' + reply)
+		if "\n" in reply:
+			# crappy skype prefixes only the first line for
+			# multiline messages so we need to do so for the other
+			# lines, too. this is something like:
+			# 'CHATMESSAGE id BODY first line\nsecond line' ->
+			# 'CHATMESSAGE id BODY first line\nCHATMESSAGE id BODY second line'
+			prefix = " ".join(reply.split(" ")[:3])
+			reply = ["%s %s" % (prefix, i) for i in " ".join(reply.split(" ")[3:]).split("\n")]
+		else:
+			reply = [reply]
+		for i in reply:
+			dprint('<< ' + i)
 		return reply
 
 class Options:

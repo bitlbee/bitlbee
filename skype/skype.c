@@ -260,6 +260,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						 * it, then we can later use it
 						 * when we got the message's
 						 * body. */
+						g_free(sd->handle);
 						sd->handle = g_strdup_printf("%s@skype.com", info);
 					}
 					else if(!strncmp(info, "BODY ", 5))
@@ -269,8 +270,6 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						{
 							/* New body, we have everything to use imcb_buddy_msg() now! */
 							imcb_buddy_msg(ic, sd->handle, info, 0, 0);
-							g_free(sd->handle);
-							sd->handle = NULL;
 						}
 					}
 				}
@@ -379,6 +378,7 @@ static void skype_logout( struct im_connection *ic )
 	g_free(buf);
 
 	g_free(sd->username);
+	g_free(sd->handle);
 	g_free(sd);
 	ic->proto_data = NULL;
 }
