@@ -1,8 +1,18 @@
-I use the following commands to debug bitlbee itself:
+I use the following tabs during the development:
+
+1) bitlbee-skype:
+
+vim, make, etc.
+
+2) bitlbee:
 
 gdb ./bitlbee
 run -v -n -D
 
-For skyped:
+3) skyped:
 
 python skyped.py -n -d
+
+4) skype
+
+5) irssi
