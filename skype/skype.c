@@ -263,6 +263,17 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						g_free(sd->handle);
 						sd->handle = g_strdup_printf("%s@skype.com", info);
 					}
+					else if(!strncmp(info, "EDITED_BY ", 10))
+					{
+						info += 10;
+						/* This is the same as
+						 * FROM_HANDLE, except that we
+						 * never request these lines
+						 * from Skype, we just get
+						 * them. */
+						g_free(sd->handle);
+						sd->handle = g_strdup_printf("%s@skype.com", info);
+					}
 					else if(!strncmp(info, "BODY ", 5))
 					{
 						info += 5;
