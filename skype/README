@@ -157,8 +157,6 @@ allow the `SkypeApiPythonShell` client when Skype asks about it).
 - Group chat support. Sadly I'm not too motivated to implement this at the
   moment.
 
-- Support for receiving messages which consists of multiple lines.
-
 - Support for receiving edited messages.
 
 - Add a question callback for calls.
