@@ -7,9 +7,9 @@ skype.so: skype.c config.mak
 
 install: skype.so skyped.py
 	$(INSTALL) -d $(DESTDIR)$(plugindir)
-	$(INSTALL) -d $(DESTDIR)$(sbindir)
+	$(INSTALL) -d $(DESTDIR)$(bindir)
 	$(INSTALL) skype.so $(DESTDIR)$(plugindir)
-	$(INSTALL) skyped.py $(DESTDIR)$(sbindir)/skyped
+	$(INSTALL) skyped.py $(DESTDIR)$(bindir)/skyped
 
 client: client.c
 
