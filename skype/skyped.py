@@ -29,12 +29,11 @@ import os
 import signal
 import locale
 import time
-import dbus
-import dbus.service
-import dbus.mainloop.glib
 import gobject
 import socket
 import getopt
+import Skype4Py
+import threading
 
 __version__ = "0.1.1"
 
@@ -45,15 +44,18 @@ CLIENT_NAME = 'SkypeApiPythonShell'
 # here and notify it. maybe later notify all connected clients?
 conn = None
 
-def sig_handler(signum, frame):
-	mainloop.quit()
-
 def input_handler(fd, io_condition):
 	input = fd.recv(1024)
 	for i in input.split("\n"):
-		if i:
-			for j in skype.send(i.strip()):
-				fd.send((j + "\n").encode(locale.getdefaultlocale()[1]))
+		skype.send(i.strip())
+	return True
+
+def idle_handler(skype):
+	skype.send("PING")
+	try:
+		time.sleep(10)
+	except KeyboardInterrupt:
+		sys.exit("Exiting.")
 	return True
 
 def server(host, port):
@@ -76,60 +78,40 @@ def dprint(msg):
 	if options.debug:
 		print msg
 
-class SkypeApi(dbus.service.Object):
+class SkypeApi():
 	def __init__(self):
-		bus = dbus.SessionBus()
-		try:
-			self.skype_api = bus.get_object(SKYPE_SERVICE, '/com/Skype')
-		except dbus.exceptions.DBusException:
-			sys.exit("Can't find any Skype instance. Are you sure you have started Skype?")
+		self.skype = Skype4Py.Skype()
+		self.skype._API.Handlers.append(Skype4Py.utils.WeakCallableRef(self.recv))
+		self.skype._API._Handler = self.recv
+		self.skype.Attach()
 
-		reply = self.send('NAME ' + CLIENT_NAME)
-		if reply[0] != 'OK':
-			sys.exit('Could not bind to Skype client')
-
-		reply = self.send('PROTOCOL 5')
-		try:
-			dbus.service.Object.__init__(self, bus, "/com/Skype/Client", bus_name='com.Skype.API')
-		except KeyError:
-			sys.exit()
-
-	# skype -> client (async)
-	@dbus.service.method(dbus_interface='com.Skype.API')
-	def Notify(self, msg_text):
+	def recv(self, mode, msg_text):
 		global conn
-		dprint('<< ' + msg_text)
-		if conn:
-			conn.send(msg_text + "\n")
-
-	# client -> skype (sync, 5 sec timeout)
-	def send(self, msg_text):
-		if not len(msg_text):
+		if mode != "rece_api":
 			return
-		dprint('>> ' + msg_text)
-		try:
-			reply = self.skype_api.Invoke(msg_text)
-		except dbus.exceptions.DBusException, s:
-			reply = str(s)
-			if(reply.startswith("org.freedesktop.DBus.Error.ServiceUnknown")):
-				try:
-					self.remove_from_connection(dbus.SessionBus(), "/com/Skype/Client")
-				except LookupError:
-					pass
-				mainloop.quit()
-		if "\n" in reply:
+		if "\n" in msg_text:
 			# crappy skype prefixes only the first line for
 			# multiline messages so we need to do so for the other
 			# lines, too. this is something like:
 			# 'CHATMESSAGE id BODY first line\nsecond line' ->
 			# 'CHATMESSAGE id BODY first line\nCHATMESSAGE id BODY second line'
-			prefix = " ".join(reply.split(" ")[:3])
-			reply = ["%s %s" % (prefix, i) for i in " ".join(reply.split(" ")[3:]).split("\n")]
+			prefix = " ".join(msg_text.split(" ")[:3])
+			msg_text = ["%s %s" % (prefix, i) for i in " ".join(msg_text.split(" ")[3:]).split("\n")]
 		else:
-			reply = [reply]
-		for i in reply:
+			msg_text = [msg_text]
+		for i in msg_text:
 			dprint('<< ' + i)
-		return reply
+			if conn:
+				conn.send(i + "\n")
+
+	def send(self, msg_text):
+		if not len(msg_text):
+			return
+		dprint('>> ' + msg_text)
+		try:
+			self.skype._DoCommand(msg_text)
+		except Skype4Py.ISkypeError:
+			pass
 
 class Options:
 	def __init__(self):
@@ -185,10 +167,10 @@ if __name__=='__main__':
 		else:
 			print 'skyped is started on port %s, pid: %d' % (options.port, pid)
 			sys.exit(0)
-	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-	signal.signal(signal.SIGINT, sig_handler)
-	mainloop = gobject.MainLoop()
 	server('0.0.0.0', options.port)
-	while True:
+	try:
 		skype = SkypeApi()
-		mainloop.run()
+	except Skype4Py.errors.ISkypeAPIError, s:
+		sys.exit("%s. Are you sure you have started Skype?" % s)
+	gobject.idle_add(idle_handler, skype)
+	gobject.MainLoop().run()
