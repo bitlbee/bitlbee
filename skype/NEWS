@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.1.3         - support for edited messages
+              - ignore empty messages (skype does the same)
+              - support for multiline messages
+              - switch to the x11 api instead of dbus (it's much more stable)
 0.1.2         - notification when a new call arrives in
               - more documentation (vnc)
               - first release which works with unpatched bitlbee
