@@ -51,9 +51,9 @@ def input_handler(fd, io_condition):
 	return True
 
 def idle_handler(skype):
-	skype.send("PING")
+	skype.skype._DoCommand("PING")
 	try:
-		time.sleep(10)
+		time.sleep(2)
 	except KeyboardInterrupt:
 		sys.exit("Exiting.")
 	return True
@@ -88,6 +88,8 @@ class SkypeApi():
 	def recv(self, mode, msg_text):
 		global conn
 		if mode != "rece_api":
+			return
+		if msg_text == "PONG":
 			return
 		if "\n" in msg_text:
 			# crappy skype prefixes only the first line for
