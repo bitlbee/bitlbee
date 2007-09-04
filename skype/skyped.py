@@ -112,6 +112,8 @@ class SkypeApi():
 			self.skype._DoCommand(msg_text)
 		except Skype4Py.ISkypeError:
 			pass
+		except Skype4Py.errors.ISkypeAPIError, s:
+			dprint("Warning, seding '%s' failed (%s)." % (msg_text, s))
 
 class Options:
 	def __init__(self):
