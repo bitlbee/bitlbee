@@ -115,10 +115,10 @@ Now create `~/.vnc/xstartup` with the following contents:
 ----
 #!/bin/sh
 
-/usr/bin/sleep 1
-/usr/bin/skype &
-/usr/bin/sleep 5
-/usr/sbin/skyped
+sleep 1
+skype &
+sleep 5
+skyped
 ----
 
 Adjust the permissions:
