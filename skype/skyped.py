@@ -100,20 +100,22 @@ class SkypeApi():
 		else:
 			msg_text = [msg_text]
 		for i in msg_text:
-			dprint('<< ' + i)
+			e = i.encode(locale.getdefaultlocale()[1])
+			dprint('<< ' + e)
 			if conn:
-				conn.send(i + "\n")
+				conn.send(e + "\n")
 
 	def send(self, msg_text):
 		if not len(msg_text):
 			return
-		dprint('>> ' + msg_text)
+		e = msg_text.decode(locale.getdefaultlocale()[1])
+		dprint('>> ' + e)
 		try:
-			self.skype._DoCommand(msg_text)
+			self.skype._DoCommand(e)
 		except Skype4Py.ISkypeError:
 			pass
 		except Skype4Py.errors.ISkypeAPIError, s:
-			dprint("Warning, seding '%s' failed (%s)." % (msg_text, s))
+			dprint("Warning, seding '%s' failed (%s)." % (e, s))
 
 class Options:
 	def __init__(self):
