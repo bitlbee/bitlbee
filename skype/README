@@ -72,6 +72,8 @@ problems]), but I wanted to prevent a large code duplication from that project.
 In addition it then no longer requires the `dbus-python` package, just
 `pygobject`.)
 
+- Install Skype 1.4.0.99. 1.4.0.74 did *not* work for me.
+
 - Start Skype and `skyped` (the tcp server):
 
 ----
