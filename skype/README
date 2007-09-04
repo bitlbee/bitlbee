@@ -13,6 +13,14 @@ section, I really hope those random hangups will be fixed soon by Skype.
 Oh, before I forget. I'm not a wizard, the Skype API documentation is
 https://developer.skype.com/Docs/ApiDoc[here] if you're interested.
 
+== Requirements
+
+* Skype 1.4.0.99. 1.4.0.74 did *not* work for me.
+* bitlbee-dev >= rev245. Previous versions need patching.
+* Skype4Py >= 0.9.28.1. Previous versions uses DBus by default.
+* Python 2.5. Skype4Py does not work with 2.4.
+* pygobject
+
 == How to set it up
 
 Before you start. The setup is the following: BitlBee can't connect directly to
@@ -71,8 +79,6 @@ http://forum.skype.com/index.php?s=&showtopic=94545&view=findpost&p=431710[known
 problems]), but I wanted to prevent a large code duplication from that project.
 In addition it then no longer requires the `dbus-python` package, just
 `pygobject`.)
-
-- Install Skype 1.4.0.99. 1.4.0.74 did *not* work for me.
 
 - Start Skype and `skyped` (the tcp server):
 
