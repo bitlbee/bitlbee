@@ -13,6 +13,13 @@ section, I really hope those random hangups will be fixed soon by Skype.
 Oh, before I forget. I'm not a wizard, the Skype API documentation is
 https://developer.skype.com/Docs/ApiDoc[here] if you're interested.
 
+NOTE: You will see that this implementation of the Skype plugin still requires
+a Skype instance to be running. This is because I'm not motivated to reverse
+engineer Skype's
+http://en.wikipedia.org/wiki/Skype_Protocol#Obfuscation_Layer[obfuscation
+layer]. (Not mentioning that you should ask your lawyer about if it is legal or
+not..)
+
 == Requirements
 
 * Skype 1.4.0.99. 1.4.0.74 did *not* work for me.
