@@ -113,7 +113,7 @@ class SkypeApi():
 			self.skype.SendCommand(self.skype.Command(-1, e))
 		except Skype4Py.ISkypeError:
 			pass
-		except Skype4Py.errors.ISkypeAPIError, s:
+		except Skype4Py.SkypeAPIError, s:
 			dprint("Warning, seding '%s' failed (%s)." % (e, s))
 
 class Options:
@@ -173,7 +173,7 @@ if __name__=='__main__':
 	server('0.0.0.0', options.port)
 	try:
 		skype = SkypeApi()
-	except Skype4Py.errors.ISkypeAPIError, s:
+	except Skype4Py.SkypeAPIError, s:
 		sys.exit("%s. Are you sure you have started Skype?" % s)
 	gobject.idle_add(idle_handler, skype)
 	gobject.MainLoop().run()
