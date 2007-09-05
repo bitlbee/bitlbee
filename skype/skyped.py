@@ -81,14 +81,11 @@ def dprint(msg):
 class SkypeApi():
 	def __init__(self):
 		self.skype = Skype4Py.Skype()
-		self.skype._API.Handlers.append(Skype4Py.utils.WeakCallableRef(self.recv))
-		self.skype._API._Handler = self.recv
+		self.skype.OnNotify = self.recv
 		self.skype.Attach()
 
-	def recv(self, mode, msg_text):
+	def recv(self, msg_text):
 		global conn
-		if mode != "rece_api":
-			return
 		if msg_text == "PONG":
 			return
 		if "\n" in msg_text:
