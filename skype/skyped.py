@@ -51,7 +51,7 @@ def input_handler(fd, io_condition):
 	return True
 
 def idle_handler(skype):
-	skype.skype._DoCommand("PING")
+	skype.skype.SendCommand(skype.skype.Command(-1, "PING"))
 	try:
 		time.sleep(2)
 	except KeyboardInterrupt:
@@ -113,7 +113,7 @@ class SkypeApi():
 		e = msg_text.decode(locale.getdefaultlocale()[1])
 		dprint('>> ' + e)
 		try:
-			self.skype._DoCommand(e)
+			self.skype.SendCommand(self.skype.Command(-1, e))
 		except Skype4Py.ISkypeError:
 			pass
 		except Skype4Py.errors.ISkypeAPIError, s:
