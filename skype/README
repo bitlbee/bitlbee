@@ -149,6 +149,10 @@ vncserver
 Then connect to it, and set up Skype (username, password, enable autologin, and
 allow the `SkypeApiPythonShell` client when Skype asks about it).
 
+Please be aware about that Skype has serious memory leak issues. After running
+with for a few weeks it may eat >300 MB of memory. Just don't forget to restart
+your VNC server regularly. (How ugly.)
+
 == What works
 
 - Download nicks and away statuses from Skype
