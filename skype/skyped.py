@@ -102,7 +102,10 @@ class SkypeApi():
 			e = i.encode(locale.getdefaultlocale()[1])
 			dprint('<< ' + e)
 			if conn:
-				conn.send(e + "\n")
+				try:
+					conn.send(e + "\n")
+				except IOError, s:
+					dprint("Warning, seding '%s' failed (%s)." % (e, s))
 
 	def send(self, msg_text):
 		if not len(msg_text):
