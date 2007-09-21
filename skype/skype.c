@@ -47,8 +47,12 @@ struct skype_data
 {
 	struct im_connection *ic;
 	char *username;
+	/* The effective file descriptor. We store it here so any function can
+	 * write() to it. */
 	int fd;
-	int r_inpa;
+	/* File descriptor returned by bitlbee. we store it so we know when
+	 * we're connected and when we aren't. */
+	int bfd;
 	/* When we receive a new message id, we query the handle, then the
 	 * body. Store the handle here so that we imcb_buddy_msg() when we got
 	 * the body. */
@@ -345,8 +349,8 @@ gboolean skype_start_stream( struct im_connection *ic )
 	if(!sd)
 		return FALSE;
 
-	if( sd->r_inpa <= 0 )
-		sd->r_inpa = b_input_add( sd->fd, GAIM_INPUT_READ, skype_read_callback, ic );
+	if( sd->bfd <= 0 )
+		sd->bfd = b_input_add( sd->fd, GAIM_INPUT_READ, skype_read_callback, ic );
 
 	/* This will download all buddies. */
 	buf = g_strdup_printf("SEARCH FRIENDS\n");
