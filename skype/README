@@ -206,9 +206,10 @@ then it would be nice to include them here.
 
 You can reach some screenshots http://frugalware.org/~vmiklos/pics/shots/bitlbee-skype/[here].
 
-== Changelog
+== Additional resources
 
-You can reach the Changelog link:Changelog[here].
+You can reach the Changelog link:Changelog[here], and a gitweb interface
+link:http://git.frugalware.org/gitweb/gitweb.cgi?p=bitlbee-skype.git;a=summary[here].
 
 == Thanks
 
