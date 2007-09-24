@@ -13,7 +13,7 @@ section, I really hope those random hangups will be fixed soon by Skype.
 Oh, before I forget. I'm not a wizard, the Skype API documentation is
 https://developer.skype.com/Docs/ApiDoc[here] if you're interested.
 
-NOTE: You will see that this implementation of the Skype plugin still requires
+NOTE: You will see that this implementation of the Skype plug-in still requires
 a Skype instance to be running. This is because I'm not motivated to reverse
 engineer Skype's
 http://en.wikipedia.org/wiki/Skype_Protocol#Obfuscation_Layer[obfuscation
@@ -24,7 +24,7 @@ not..)
 
 * Skype 1.4.0.99. 1.4.0.74 did *not* work for me.
 * bitlbee-dev >= rev245. Previous versions need patching.
-* Skype4Py >= 0.9.28.1. Previous versions uses DBus by default.
+* Skype4Py >= 0.9.28.1. Previous versions uses `DBus` by default.
 * Python 2.5. Skype4Py does not work with 2.4.
 * pygobject
 
@@ -33,7 +33,7 @@ not..)
 Before you start. The setup is the following: BitlBee can't connect directly to
 Skype servers (the company's ones). It needs a running Skype client to do so.
 In fact BitlBee will connect to `skyped` (a tcp server, provided in this
-package) and `skyped` will connecto to your Skype client.
+package) and `skyped` will connect to to your Skype client.
 
 NOTE: The order is important. First you have to start Skype. Then `skyped` can
 connect to it, finally BitlBee can connect to `skyped`. (In fact `skyped`
@@ -81,7 +81,7 @@ make install
 
 (You may remember that previous versions of `skyped` did not require this
 package. This because it now uses the X11 interface of Skype (because the
-previously used DBus interface had
+previously used `DBus` interface had
 http://forum.skype.com/index.php?s=&showtopic=94545&view=findpost&p=431710[known
 problems]), but I wanted to prevent a large code duplication from that project.
 In addition it then no longer requires the `dbus-python` package, just
@@ -94,17 +94,17 @@ skype
 skyped
 ----
 
-NOTE: It's important to start skyped on the same machine and using the same
-user as you run Skype as it uses the session DBus for communication!
+NOTE: It's important to start `skyped` on the same machine and using the same
+user as you run Skype as it uses the session `DBus` for communication!
 
-- Start your IRC client, connect to BitlBee and add your account:
+- Start your `IRC` client, connect to BitlBee and add your account:
 
 ----
 account add skype <user> <pass>
 account set 0/server localhost
 ----
 
-IMPORTANT: <user> should be your skype account name. This way you won't see
+IMPORTANT: <user> should be your Skype account name. This way you won't see
 yourself joining to `&bitlbee`.
 
 NOTE: the <pass> option is not used currently.
@@ -112,7 +112,7 @@ NOTE: the <pass> option is not used currently.
 == Setting up Skype in a VNC server (optional)
 
 Optionally, if you want to run Skype on a server, you might want to setup up
-a VNC server as well. I used `tightvnc` but probably other VNC servers will
+a `VNC` server as well. I used `tightvnc` but probably other `VNC` servers will
 work, too.
 
 First run
@@ -146,7 +146,7 @@ Then start the server:
 vncserver
 ----
 
-Then connect to it, and set up Skype (username, password, enable autologin, and
+Then connect to it, and set up Skype (username, password, enable auto-login, and
 allow the `SkypeApiPythonShell` client when Skype asks about it).
 
 Please be aware about that Skype has serious memory leak issues. After running
