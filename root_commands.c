@@ -382,7 +382,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 			return;
 		}
 		
-		if( cmd[3] )
+		if( cmd[3] && set_name )
 		{
 			set_t *s = set_find( &a->set, set_name );
 			
