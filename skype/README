@@ -183,10 +183,17 @@ your VNC server regularly. (How ugly.)
 
 == What needs to be done (aka. TODO)
 
-- Group chat support. Sadly I'm not too motivated to implement this at the
-  moment.
+- Group chat support. For an initial support the followings would be needed:
+
+  * Detect if we're invited.
+
+  * Send / receive group chat messages.
+
+  * Handle topic changes.
 
 - Add a question callback for calls.
+
+- Somehow at least mention that somebody offers a file for transfer.
 
 == I would like to have support for ...
 
