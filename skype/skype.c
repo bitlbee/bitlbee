@@ -586,9 +586,13 @@ static void skype_remove_buddy( struct im_connection *ic, char *who, char *group
 	g_free(nick);
 }
 
-void skype_chat_msg( struct groupchat *c, char *message, int flags )
+void skype_chat_msg( struct groupchat *gc, char *message, int flags )
 {
-	// TODO: this is just here atm to prevent a segfault
+	struct im_connection *ic = gc->ic;
+	char *buf;
+	buf = g_strdup_printf("CHATMESSAGE %s %s\n", gc->title, message);
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
 }
 
 void init_plugin(void)
