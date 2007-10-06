@@ -183,6 +183,8 @@ your VNC server regularly. (How ugly.)
 
 - Detect when somebody wants to transfer a file
 
+- Handle topic changes
+
 == What needs to be done (aka. TODO)
 
 - Group chat support. For an initial support the followings would be needed:
@@ -190,8 +192,6 @@ your VNC server regularly. (How ugly.)
   * Detect if we're invited.
 
   * Send / receive group chat messages.
-
-  * Handle topic changes.
 
 - Add a question callback for calls.
 
