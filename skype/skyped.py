@@ -102,13 +102,18 @@ class SkypeApi():
 		else:
 			msg_text = [msg_text]
 		for i in msg_text:
-			e = i.encode(locale.getdefaultlocale()[1])
+			# use utf-8 here to solve the following problem:
+			# people use env vars like LC_ALL=en_US (latin1) then
+			# they complain about why can't they receive latin2
+			# messages.. so here it is: always use utf-8 then
+			# everybody will be happy
+			e = i.encode('UTF-8')
 			dprint('<< ' + e)
 			if conn:
 				try:
 					conn.send(e + "\n")
 				except IOError, s:
-					dprint("Warning, seding '%s' failed (%s)." % (e, s))
+					dprint("Warning, sending '%s' failed (%s)." % (e, s))
 
 	def send(self, msg_text):
 		if not len(msg_text):
@@ -120,7 +125,7 @@ class SkypeApi():
 		except Skype4Py.ISkypeError:
 			pass
 		except Skype4Py.SkypeAPIError, s:
-			dprint("Warning, seding '%s' failed (%s)." % (e, s))
+			dprint("Warning, sending '%s' failed (%s)." % (e, s))
 
 class Options:
 	def __init__(self):
