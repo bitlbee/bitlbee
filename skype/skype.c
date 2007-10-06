@@ -416,19 +416,20 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					{
 						info += 14;
 						struct groupchat *gc = skype_chat_by_name(ic, id);
-						if(!gc)
-							gc = imcb_chat_new( ic, id );
-						char **members = g_strsplit(info, " ", 0);
-						int i;
-						for(i=0;members[i];i++)
+						if(gc)
 						{
-							if(!strcmp(members[i], sd->username))
-								continue;
-							g_snprintf(buf, 1024, "%s@skype.com", members[i]);
-							imcb_chat_add_buddy(gc, buf);
+							char **members = g_strsplit(info, " ", 0);
+							int i;
+							for(i=0;members[i];i++)
+							{
+								if(!strcmp(members[i], sd->username))
+									continue;
+								g_snprintf(buf, 1024, "%s@skype.com", members[i]);
+								imcb_chat_add_buddy(gc, buf);
+							}
+							imcb_chat_add_buddy(gc, sd->username);
+							g_strfreev(members);
 						}
-						imcb_chat_add_buddy(gc, sd->username);
-						g_strfreev(members);
 					}
 				}
 			}
