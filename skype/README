@@ -24,7 +24,7 @@ not..)
 
 * Skype 1.4.0.99. 1.4.0.74 did *not* work for me.
 * bitlbee-dev >= rev245. Previous versions need patching.
-* Skype4Py >= 0.9.28.1. Previous versions uses `DBus` by default.
+* Skype4Py >= 0.9.28.1. Previous versions uses `DBus` by default. The latest version I've tested is 0.9.28.3.
 * Python 2.5. Skype4Py does not work with 2.4.
 * pygobject
 
@@ -95,7 +95,7 @@ skyped
 ----
 
 NOTE: It's important to start `skyped` on the same machine and using the same
-user as you run Skype as it uses the session `DBus` for communication!
+user!
 
 - Start your `IRC` client, connect to BitlBee and add your account:
 
