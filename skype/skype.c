@@ -70,8 +70,6 @@ struct skype_data
 	skype_call_status call_status;
 	/* Same for file transfers. */
 	skype_filetransfer_status filetransfer_status;
-	/* True if the next message will be a topic */
-	int topic;
 };
 
 struct skype_away_state
@@ -308,13 +306,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						if(sd->handle && strlen(info))
 						{
 							/* New body, we have everything to use imcb_buddy_msg() now! */
-							if(sd->topic)
-							{
-								imcb_log(ic, "%s has changed the chat topic to \"%s\"", sd->handle, info);
-								sd->topic = 0;
-							}
-							else
-								imcb_buddy_msg(ic, sd->handle, info, 0, 0);
+							imcb_buddy_msg(ic, sd->handle, info, 0, 0);
 						}
 					}
 				}
@@ -403,9 +395,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					char *info = strchr(id, ' ');
 					*info = '\0';
 					info++;
-					if(!strncmp(info, "TOPIC ", 6))
-						sd->topic = 1;
-					else if(!strcmp(info, "STATUS MULTI_SUBSCRIBED"))
+					if(!strcmp(info, "STATUS MULTI_SUBSCRIBED"))
 					{
 						struct groupchat *gc;
 						gc = imcb_chat_new( ic, id );
