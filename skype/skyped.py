@@ -51,7 +51,10 @@ def input_handler(fd, io_condition):
 	return True
 
 def idle_handler(skype):
-	skype.skype.SendCommand(skype.skype.Command(-1, "PING"))
+	try:
+		skype.skype.SendCommand(skype.skype.Command(-1, "PING"))
+	except Skype4Py.SkypeAPIError, s:
+		dprint("Warning, pinging Skype failed (%s)." % (s))
 	try:
 		time.sleep(2)
 	except KeyboardInterrupt:
