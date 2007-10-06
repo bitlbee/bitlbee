@@ -322,9 +322,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						info += 9;
 						if(sd->handle && sd->body && sd->type)
 						{
+							struct groupchat *gc = skype_chat_by_name(ic, info);
 							if(!strcmp(sd->type, "SAID"))
 							{
-								struct groupchat *gc = skype_chat_by_name(ic, info);
 								if(!gc)
 									/* Private message */
 									imcb_buddy_msg(ic, sd->handle, sd->body, 0, 0);
@@ -334,9 +334,13 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 							}
 							else if(!strcmp(sd->type, "SETTOPIC"))
 							{
-								struct groupchat *gc = skype_chat_by_name(ic, info);
 								if(gc)
 									imcb_log(ic, "%s changed the topic of %s to: %s", sd->handle, gc->title, sd->body);
+							}
+							else if(!strcmp(sd->type, "LEFT"))
+							{
+								if(gc)
+									imcb_chat_remove_buddy(gc, sd->handle, NULL);
 							}
 						}
 					}
