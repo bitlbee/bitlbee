@@ -619,6 +619,15 @@ void skype_chat_msg( struct groupchat *gc, char *message, int flags )
 	g_free(buf);
 }
 
+void skype_chat_leave( struct groupchat *gc )
+{
+	struct im_connection *ic = gc->ic;
+	char *buf;
+	buf = g_strdup_printf("ALTER CHAT %s LEAVE\n", gc->title);
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+}
+
 void init_plugin(void)
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
@@ -633,6 +642,7 @@ void init_plugin(void)
 	ret->add_buddy = skype_add_buddy;
 	ret->remove_buddy = skype_remove_buddy;
 	ret->chat_msg = skype_chat_msg;
+	ret->chat_leave = skype_chat_leave;
 	ret->handle_cmp = g_strcasecmp;
 	register_protocol( ret );
 }
