@@ -584,6 +584,11 @@ static void skype_remove_buddy( struct im_connection *ic, char *who, char *group
 	g_free(nick);
 }
 
+int skype_chat_msg( struct groupchat *c, char *message, int flags )
+{
+	// TODO: this is just here atm to prevent a segfault
+}
+
 void init_plugin(void)
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
@@ -597,6 +602,7 @@ void init_plugin(void)
 	ret->set_away = skype_set_away;
 	ret->add_buddy = skype_add_buddy;
 	ret->remove_buddy = skype_remove_buddy;
+	ret->chat_msg = skype_chat_msg;
 	ret->handle_cmp = g_strcasecmp;
 	register_protocol( ret );
 }
