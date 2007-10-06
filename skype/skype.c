@@ -60,11 +60,12 @@ struct skype_data
 	/* File descriptor returned by bitlbee. we store it so we know when
 	 * we're connected and when we aren't. */
 	int bfd;
-	/* When we receive a new message id, we query the handle, the body and
-	 * the chatname. Store the handle and the body here so that we
+	/* When we receive a new message id, we query the properties, finally
+	 * the chatname. Store the properties here so that we can use
 	 * imcb_buddy_msg() when we got the chatname. */
 	char *handle;
 	char *body;
+	char *type;
 	/* This is necessary because we send a notification when we get the
 	 * handle. So we store the state here and then we can send a
 	 * notification about the handle is in a given status. */
@@ -271,11 +272,14 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						/* New message ID:
 						 * (1) Request its from field
 						 * (2) Request its body
-						 * (3) Query chatname
+						 * (3) Request its type
+						 * (4) Query chatname
 						 */
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
 						skype_write( ic, buf, strlen( buf ) );
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+						g_snprintf(buf, 1024, "GET CHATMESSAGE %s TYPE\n", id);
 						skype_write( ic, buf, strlen( buf ) );
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s CHATNAME\n", id);
 						skype_write( ic, buf, strlen( buf ) );
@@ -307,18 +311,33 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						g_free(sd->body);
 						sd->body = g_strdup(info);
 					}
+					else if(!strncmp(info, "TYPE ", 5))
+					{
+						info += 5;
+						g_free(sd->type);
+						sd->type = g_strdup(info);
+					}
 					else if(!strncmp(info, "CHATNAME ", 9))
 					{
 						info += 9;
-						if(sd->handle && sd->body && strlen(info))
+						if(sd->handle && sd->body && sd->type)
 						{
-							struct groupchat *gc = skype_chat_by_name(ic, info);
-							if(!gc)
-								/* Private message */
-								imcb_buddy_msg(ic, sd->handle, sd->body, 0, 0);
-							else
-								/* Groupchat message */
-								imcb_chat_msg(gc, sd->handle, sd->body, 0, 0);
+							if(!strcmp(sd->type, "SAID"))
+							{
+								struct groupchat *gc = skype_chat_by_name(ic, info);
+								if(!gc)
+									/* Private message */
+									imcb_buddy_msg(ic, sd->handle, sd->body, 0, 0);
+								else
+									/* Groupchat message */
+									imcb_chat_msg(gc, sd->handle, sd->body, 0, 0);
+							}
+							else if(!strcmp(sd->type, "SETTOPIC"))
+							{
+								struct groupchat *gc = skype_chat_by_name(ic, info);
+								if(gc)
+									imcb_log(ic, "%s changed the topic of %s to: %s", sd->handle, gc->title, sd->body);
+							}
 						}
 					}
 				}
