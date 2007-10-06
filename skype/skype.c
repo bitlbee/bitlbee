@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <poll.h>
 #include <bitlbee.h>
+#include <glib.h>
 
 #define SKYPE_PORT_DEFAULT "2727"
 
@@ -167,6 +168,19 @@ void skype_buddy_ask( struct im_connection *ic, char *handle, char *message)
 	buf = g_strdup_printf( "The user %s wants to add you to his/her buddy list, saying: '%s'.", handle, message);
 	imcb_ask( ic, buf, bla, skype_buddy_ask_yes, skype_buddy_ask_no );
 	g_free( buf );
+}
+
+struct groupchat *skype_chat_by_name( struct im_connection *ic, char *name )
+{
+	struct groupchat *ret;
+
+	for( ret = ic->conversations; ret; ret = ret->next )
+	{
+		if(strcmp(name, ret->title ) == 0 )
+			break;
+	}
+
+	return ret;
 }
 
 static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition cond )
@@ -391,6 +405,29 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					info++;
 					if(!strncmp(info, "TOPIC ", 6))
 						sd->topic = 1;
+					else if(!strcmp(info, "STATUS MULTI_SUBSCRIBED"))
+					{
+						struct groupchat *gc;
+						gc = imcb_chat_new( ic, id );
+					}
+					else if(!strncmp(info, "ACTIVEMEMBERS ", 14))
+					{
+						info += 14;
+						struct groupchat *gc = skype_chat_by_name(ic, id);
+						if(!gc)
+							gc = imcb_chat_new( ic, id );
+						char **members = g_strsplit(info, " ", 0);
+						int i;
+						for(i=0;members[i];i++)
+						{
+							if(!strcmp(members[i], sd->username))
+								continue;
+							g_snprintf(buf, 1024, "%s@skype.com", members[i]);
+							imcb_chat_add_buddy(gc, buf);
+						}
+						imcb_chat_add_buddy(gc, sd->username);
+						g_strfreev(members);
+					}
 				}
 			}
 			lineptr++;
