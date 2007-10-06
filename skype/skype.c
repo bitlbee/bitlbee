@@ -314,16 +314,11 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						{
 							struct groupchat *gc = skype_chat_by_name(ic, info);
 							if(!gc)
-							{
-								printf("gc is null, id is '%s'\n", info);
 								/* Private message */
 								imcb_buddy_msg(ic, sd->handle, sd->body, 0, 0);
-							}
 							else
-							{
-								printf("gc is not null, id is '%s'\n", info);
+								/* Groupchat message */
 								imcb_chat_msg(gc, sd->handle, sd->body, 0, 0);
-							}
 						}
 					}
 				}
