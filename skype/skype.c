@@ -60,10 +60,11 @@ struct skype_data
 	/* File descriptor returned by bitlbee. we store it so we know when
 	 * we're connected and when we aren't. */
 	int bfd;
-	/* When we receive a new message id, we query the handle, then the
-	 * body. Store the handle here so that we imcb_buddy_msg() when we got
-	 * the body. */
+	/* When we receive a new message id, we query the handle, the body and
+	 * the chatname. Store the handle and the body here so that we
+	 * imcb_buddy_msg() when we got the chatname. */
 	char *handle;
+	char *body;
 	/* This is necessary because we send a notification when we get the
 	 * handle. So we store the state here and then we can send a
 	 * notification about the handle is in a given status. */
@@ -270,10 +271,13 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						/* New message ID:
 						 * (1) Request its from field
 						 * (2) Request its body
+						 * (3) Query chatname
 						 */
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
 						skype_write( ic, buf, strlen( buf ) );
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+						g_snprintf(buf, 1024, "GET CHATMESSAGE %s CHATNAME\n", id);
 						skype_write( ic, buf, strlen( buf ) );
 					}
 					else if(!strncmp(info, "FROM_HANDLE ", 12))
@@ -300,10 +304,26 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					else if(!strncmp(info, "BODY ", 5))
 					{
 						info += 5;
-						if(sd->handle && strlen(info))
+						g_free(sd->body);
+						sd->body = g_strdup(info);
+					}
+					else if(!strncmp(info, "CHATNAME ", 9))
+					{
+						info += 9;
+						if(sd->handle && sd->body && strlen(info))
 						{
-							/* New body, we have everything to use imcb_buddy_msg() now! */
-							imcb_buddy_msg(ic, sd->handle, info, 0, 0);
+							struct groupchat *gc = skype_chat_by_name(ic, info);
+							if(!gc)
+							{
+								printf("gc is null, id is '%s'\n", info);
+								/* Private message */
+								imcb_buddy_msg(ic, sd->handle, sd->body, 0, 0);
+							}
+							else
+							{
+								printf("gc is not null, id is '%s'\n", info);
+								imcb_chat_msg(gc, sd->handle, sd->body, 0, 0);
+							}
 						}
 					}
 				}
@@ -571,7 +591,7 @@ static void skype_remove_buddy( struct im_connection *ic, char *who, char *group
 	g_free(nick);
 }
 
-int skype_chat_msg( struct groupchat *c, char *message, int flags )
+void skype_chat_msg( struct groupchat *c, char *message, int flags )
 {
 	// TODO: this is just here atm to prevent a segfault
 }
