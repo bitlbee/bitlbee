@@ -35,9 +35,15 @@
 
 typedef enum
 {
-	SKYPE_CALL_RINGING,
+	SKYPE_CALL_RINGING = 1,
 	SKYPE_CALL_MISSED
 } skype_call_status;
+
+typedef enum
+{
+	SKYPE_FILETRANSFER_NEW = 1,
+	SKYPE_FILETRANSFER_FAILED
+} skype_filetransfer_status;
 
 /*
  * Structures
@@ -61,6 +67,8 @@ struct skype_data
 	 * handle. So we store the state here and then we can send a
 	 * notification about the handle is in a given status. */
 	skype_call_status call_status;
+	/* Same for file transfers. */
+	skype_filetransfer_status filetransfer_status;
 };
 
 struct skype_away_state
@@ -312,14 +320,55 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					else if(!strncmp(info, "PARTNER_HANDLE ", 15))
 					{
 						info += 15;
-						switch(sd->call_status)
-						{
-							case SKYPE_CALL_RINGING:
-								imcb_log(ic, "The user %s is currently ringing you.", info);
-							break;
-							case SKYPE_CALL_MISSED:
-								imcb_log(ic, "You have missed a call from user %s.", info);
-							break;
+						if(sd->call_status) {
+							switch(sd->call_status)
+							{
+								case SKYPE_CALL_RINGING:
+									imcb_log(ic, "The user %s is currently ringing you.", info);
+									break;
+								case SKYPE_CALL_MISSED:
+									imcb_log(ic, "You have missed a call from user %s.", info);
+									break;
+							}
+							sd->call_status = 0;
+						}
+					}
+				}
+			}
+			else if(!strncmp(line, "FILETRANSFER ", 13))
+			{
+				char *id = strchr(line, ' ');
+				if(++id)
+				{
+					char *info = strchr(id, ' ');
+					*info = '\0';
+					info++;
+					if(!strcmp(info, "STATUS NEW"))
+					{
+						g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+						sd->filetransfer_status = SKYPE_FILETRANSFER_NEW;
+					}
+					else if(!strcmp(info, "STATUS FAILED"))
+					{
+						g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+						sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
+					}
+					else if(!strncmp(info, "PARTNER_HANDLE ", 15))
+					{
+						info += 15;
+						if(sd->filetransfer_status) {
+							switch(sd->filetransfer_status)
+							{
+								case SKYPE_FILETRANSFER_NEW:
+									imcb_log(ic, "The user %s offered a new file for you.", info);
+									break;
+								case SKYPE_FILETRANSFER_FAILED:
+									imcb_log(ic, "Failed to transfer file from user %s.", info);
+									break;
+							}
+							sd->filetransfer_status = 0;
 						}
 					}
 				}

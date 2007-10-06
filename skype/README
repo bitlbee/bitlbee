@@ -181,6 +181,8 @@ your VNC server regularly. (How ugly.)
 
 - Detect when somebody wants to add you and ask for confirmation
 
+- Detect when somebody wants to transfer a file
+
 == What needs to be done (aka. TODO)
 
 - Group chat support. For an initial support the followings would be needed:
@@ -192,8 +194,6 @@ your VNC server regularly. (How ugly.)
   * Handle topic changes.
 
 - Add a question callback for calls.
-
-- Somehow at least mention that somebody offers a file for transfer.
 
 == I would like to have support for ...
 
