@@ -191,9 +191,11 @@ your VNC server regularly. (How ugly.)
 
   * Send / receive group chat messages
 
-  * Invite others
+  * Invite others (using `/invite <nick>`)
 
   * Part from group chats
+
+  * Starting a group chat (using `/j #nick`)
 
 == What needs to be done (aka. TODO)
 
@@ -201,8 +203,7 @@ your VNC server regularly. (How ugly.)
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
 
-- Currently we can't start a new group chat, just we can join if we're invited
-  and then invite others.
+- Are there public named chats for Skype? If yes, they are not supported ATM.
 
 == I would like to have support for ...
 
