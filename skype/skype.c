@@ -435,11 +435,21 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						struct groupchat *gc;
 						gc = imcb_chat_new( ic, id );
 					}
+					else if(!strcmp(info, "STATUS UNSUBSCRIBED"))
+					{
+						struct groupchat *gc = skype_chat_by_name(ic, id);
+						if(gc)
+							gc->data = (void*)FALSE;
+					}
 					else if(!strncmp(info, "ACTIVEMEMBERS ", 14))
 					{
 						info += 14;
 						struct groupchat *gc = skype_chat_by_name(ic, id);
-						if(gc)
+						/* Hack! We set ->data to TRUE
+						 * while we're on the channel
+						 * so that we won't rejoin
+						 * after a /part. */
+						if(gc && !gc->data)
 						{
 							char **members = g_strsplit(info, " ", 0);
 							int i;
@@ -453,6 +463,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 							}
 							imcb_chat_add_buddy(gc, sd->username);
 							g_strfreev(members);
+							gc->data = (void*)TRUE;
 						}
 					}
 				}
