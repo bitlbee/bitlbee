@@ -26,7 +26,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "base64.h"
-#include "rc4.h"
+#include "arc.h"
 #include "md5.h"
 
 typedef enum
@@ -132,7 +132,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	{
 		char *protocol, *handle, *server, *password = NULL, *autoconnect;
 		char *pass_b64 = NULL;
-		unsigned char *pass_rc4 = NULL;
+		unsigned char *pass_cr = NULL;
 		int pass_len;
 		struct prpl *prpl = NULL;
 		
@@ -151,8 +151,8 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		else if( !prpl )
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Unknown protocol: %s", protocol );
-		else if( ( pass_len = base64_decode( pass_b64, (unsigned char**) &pass_rc4 ) ) &&
-		                         rc4_decode( pass_rc4, pass_len, &password, xd->given_pass ) )
+		else if( ( pass_len = base64_decode( pass_b64, (unsigned char**) &pass_cr ) ) &&
+		                         arc_decode( pass_cr, pass_len, &password, xd->given_pass ) )
 		{
 			xd->current_account = account_add( irc, prpl, handle, password );
 			if( server )
@@ -168,7 +168,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			             "Error while decrypting account password" );
 		}
 		
-		g_free( pass_rc4 );
+		g_free( pass_cr );
 		g_free( password );
 	}
 	else if( g_strcasecmp( element_name, "setting" ) == 0 )
@@ -423,13 +423,13 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	
 	for( acc = irc->accounts; acc; acc = acc->next )
 	{
-		unsigned char *pass_rc4;
+		unsigned char *pass_cr;
 		char *pass_b64;
 		int pass_len;
 		
-		pass_len = rc4_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_rc4, irc->password );
-		pass_b64 = base64_encode( pass_rc4, pass_len );
-		g_free( pass_rc4 );
+		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password );
+		pass_b64 = base64_encode( pass_cr, pass_len );
+		g_free( pass_cr );
 		
 		if( !xml_printf( fd, 1, "<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%d\"", acc->prpl->name, acc->user, pass_b64, acc->auto_connect ) )
 		{
