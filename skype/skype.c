@@ -428,7 +428,8 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				if(++id)
 				{
 					char *info = strchr(id, ' ');
-					*info = '\0';
+					if(info)
+						*info = '\0';
 					info++;
 					if(!strcmp(info, "STATUS MULTI_SUBSCRIBED"))
 					{
