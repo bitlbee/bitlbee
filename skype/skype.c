@@ -448,7 +448,8 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 								if(!strcmp(members[i], sd->username))
 									continue;
 								g_snprintf(buf, 1024, "%s@skype.com", members[i]);
-								imcb_chat_add_buddy(gc, buf);
+								if(!g_list_find_custom(gc->in_room, buf, (GCompareFunc)strcmp))
+									imcb_chat_add_buddy(gc, buf);
 							}
 							imcb_chat_add_buddy(gc, sd->username);
 							g_strfreev(members);
