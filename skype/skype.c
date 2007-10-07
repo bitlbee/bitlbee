@@ -464,7 +464,6 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 							}
 							imcb_chat_add_buddy(gc, sd->username);
 							g_strfreev(members);
-							gc->data = (void*)TRUE;
 						}
 					}
 				}
@@ -639,6 +638,21 @@ void skype_chat_leave( struct groupchat *gc )
 	buf = g_strdup_printf("ALTER CHAT %s LEAVE\n", gc->title);
 	skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
+	gc->data = (void*)TRUE;
+}
+
+void skype_chat_invite(struct groupchat *gc, char *who, char *message)
+{
+	struct im_connection *ic = gc->ic;
+	char *buf, *ptr, *nick;
+	nick = g_strdup(message);
+	ptr = strchr(nick, '@');
+	if(ptr)
+		*ptr = '\0';
+	buf = g_strdup_printf("ALTER CHAT %s ADDMEMBERS %s\n", gc->title, nick);
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+	g_free(nick);
 }
 
 void init_plugin(void)
@@ -656,6 +670,7 @@ void init_plugin(void)
 	ret->remove_buddy = skype_remove_buddy;
 	ret->chat_msg = skype_chat_msg;
 	ret->chat_leave = skype_chat_leave;
+	ret->chat_invite = skype_chat_invite;
 	ret->handle_cmp = g_strcasecmp;
 	register_protocol( ret );
 }
