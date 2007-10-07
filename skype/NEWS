@@ -1,5 +1,8 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.2.0         - group chat support
+              - ~300 lines of new code, so be careful :)
+              - the version number mentions that this is not a minor change
 0.1.4         - documentation: mention the version of all deps (requirements
                 section)
               - fix sending / sending accents
