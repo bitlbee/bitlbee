@@ -60,22 +60,29 @@ struct arc_state *arc_keymaker( unsigned char *key, int kl, int cycles )
 {
 	struct arc_state *st;
 	int i, j, tmp;
+	unsigned char S2[256];
 	
 	st = g_malloc( sizeof( struct arc_state ) );
 	st->i = st->j = 0;
-	for( i = 0; i < 256; i ++ )
-		st->S[i] = i;
-	
 	if( kl <= 0 )
 		kl = strlen( (char*) key );
 	
+	for( i = 0; i < 256; i ++ )
+	{
+		st->S[i] = i;
+		S2[i] = key[i%kl];
+	}
+	
 	for( i = j = 0; i < 256; i ++ )
 	{
-		j = ( j + st->S[i] + key[i%kl] ) & 0xff;
+		j = ( j + st->S[i] + S2[i] ) & 0xff;
 		tmp = st->S[i];
 		st->S[i] = st->S[j];
 		st->S[j] = tmp;
 	}
+	
+	memset( S2, 0, 256 );
+	i = j = 0;
 	
 	for( i = 0; i < cycles; i ++ )
 		arc_getbyte( st );
@@ -103,8 +110,9 @@ unsigned char arc_getbyte( struct arc_state *st )
 	tmp = st->S[st->i];
 	st->S[st->i] = st->S[st->j];
 	st->S[st->j] = tmp;
+	tmp = (st->S[st->i] + st->S[st->j]) & 0xff;
 	
-	return st->S[(st->S[st->i] + st->S[st->j]) & 0xff];
+	return st->S[tmp];
 }
 
 /*

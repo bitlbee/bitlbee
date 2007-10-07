@@ -40,7 +40,7 @@ static void check_codec(int l)
 
 struct
 {
-	const unsigned char crypted[24];
+	unsigned char crypted[24];
 	int len;
 	char *decrypted;
 } decrypt_tests[] = {
