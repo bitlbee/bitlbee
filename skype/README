@@ -185,15 +185,24 @@ your VNC server regularly. (How ugly.)
 
 - Handle topic changes
 
+- Group chat support:
+
+  * Detect if we're invited
+
+  * Send / receive group chat messages
+
+  * Invite others
+
+  * Part from group chats
+
 == What needs to be done (aka. TODO)
 
-- Group chat support. For an initial support the followings would be needed:
-
-  * Detect if we're invited.
-
-  * Send / receive group chat messages.
-
 - Add a question callback for calls.
+
+- Notice if foo invites bar. Currently you can see only that bar joined.
+
+- Currently we can't start a new group chat, just we can join if we're invited
+  and then invite others.
 
 == I would like to have support for ...
 
