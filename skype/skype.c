@@ -72,6 +72,9 @@ struct skype_data
 	skype_call_status call_status;
 	/* Same for file transfers. */
 	skype_filetransfer_status filetransfer_status;
+	/* Using /j #nick we want to have a groupchat with two people. Usually
+	 * not (default). */
+	char* groupchat_with;
 };
 
 struct skype_away_state
@@ -433,8 +436,24 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					info++;
 					if(!strcmp(info, "STATUS MULTI_SUBSCRIBED"))
 					{
-						struct groupchat *gc;
-						gc = imcb_chat_new( ic, id );
+						imcb_chat_new( ic, id );
+					}
+					else if(!strcmp(info, "STATUS DIALOG") && sd->groupchat_with)
+					{
+						struct groupchat *gc = imcb_chat_new( ic, id );
+						/* According to the docs this
+						 * is necessary. However it
+						 * does not seem the situation
+						 * and it would open an extra
+						 * window on our client, so
+						 * just leave it out. */
+						/*g_snprintf(buf, 1024, "OPEN CHAT %s\n", id);
+						skype_write(ic, buf, strlen(buf));*/
+						g_snprintf(buf, 1024, "%s@skype.com", sd->groupchat_with);
+						imcb_chat_add_buddy(gc, buf);
+						imcb_chat_add_buddy(gc, sd->username);
+						g_free(sd->groupchat_with);
+						sd->groupchat_with = NULL;
 					}
 					else if(!strcmp(info, "STATUS UNSUBSCRIBED"))
 					{
@@ -655,6 +674,22 @@ void skype_chat_invite(struct groupchat *gc, char *who, char *message)
 	g_free(nick);
 }
 
+struct groupchat *skype_chat_with(struct im_connection *ic, char *who)
+{
+	struct skype_data *sd = ic->proto_data;
+	char *ptr, *nick, *buf;
+	nick = g_strdup(who);
+	ptr = strchr(nick, '@');
+	if(ptr)
+		*ptr = '\0';
+	buf = g_strdup_printf("CHAT CREATE %s\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	sd->groupchat_with = g_strdup(nick);
+	g_free(nick);
+	return(NULL);
+}
+
 void init_plugin(void)
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
@@ -671,6 +706,7 @@ void init_plugin(void)
 	ret->chat_msg = skype_chat_msg;
 	ret->chat_leave = skype_chat_leave;
 	ret->chat_invite = skype_chat_invite;
+	ret->chat_with = skype_chat_with;
 	ret->handle_cmp = g_strcasecmp;
 	register_protocol( ret );
 }
