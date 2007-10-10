@@ -258,7 +258,8 @@ G_MODULE_EXPORT void imcb_ask_add( struct im_connection *ic, char *handle, const
 
 /* Buddy management */
 /* This function should be called for each handle which are visible to the
- * user, usually after a login. */
+ * user, usually after a login, or if the user added a buddy and the IM
+ * server confirms that the add was successful. Don't forget to do this! */
 G_MODULE_EXPORT void imcb_add_buddy( struct im_connection *ic, char *handle, char *group );
 G_MODULE_EXPORT void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group );
 G_MODULE_EXPORT struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle );
