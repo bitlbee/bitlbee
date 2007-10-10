@@ -139,13 +139,14 @@ if [ "$ipv6" = "1" ]; then
 fi
 
 if [ "$debug" = "1" ]; then
-	echo 'CFLAGS=-g' >> Makefile.settings
+	[ -z "$CFLAGS" ] && CFLAGS=-g
 	echo 'DEBUG=1' >> Makefile.settings
 	echo '#define DEBUG' >> config.h
 else
-	echo 'CFLAGS=-O3' >> Makefile.settings
+	[ -z "$CFLAGS" ] && CFLAGS=-O3
 fi
 
+echo CFLAGS=$CFLAGS >> Makefile.settings
 echo CFLAGS+=-I`pwd` -I`pwd`/lib -I`pwd`/protocols -I. >> Makefile.settings
 
 echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
