@@ -1,4 +1,4 @@
-Version 1.1dev:
+Version 1.2:
 - First BitlBee development/testing RELEASE. This should be quite stable
   though (and for most people more stable than 1.0.x). It just has a couple
   of rough edges and needs a bit more testing.
@@ -64,6 +64,21 @@ Version 1.1dev:
   * The info command now gives away state/message information for all
     resources available for that buddy. (Of course this only works if the
     buddy is in your contact list.)
+
+Finished ???
+
+Version 1.0.4:
+- Removed sethostent(), which causes problems for many people, especially on
+  *BSD. This is basically the reason for this release.
+- "allow" command actually displays the allow list, not the block list.
+- Yahoo away state/msg fix.
+- Don't display "Gender: Male" by default if nothing's filled in (OSCAR
+  "info" command)
+- Fixed account cleanup (possible infinite loop) in irc_free().
+- Fixed configdir error message to not always display the compile-time
+  setting.
+
+Finished 20 Aug 2007
 
 Version 1.0.3:
 - Fixed ugliness in block/allow list commands (still not perfect though, the
