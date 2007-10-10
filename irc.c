@@ -142,6 +142,7 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "private", "true", set_eval_bool, irc );
 	set_add( &irc->set, "query_order", "lifo", NULL, irc );
 	set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
+	set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	set_add( &irc->set, "strip_html", "true", NULL, irc );
 	set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
 	set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
@@ -909,7 +910,7 @@ void irc_kill( irc_t *irc, user_t *u )
 	char *nick, *s;
 	char reason[128];
 	
-	if( u->ic && u->ic->flags & OPT_LOGGING_OUT )
+	if( u->ic && u->ic->flags & OPT_LOGGING_OUT && set_getbool( &irc->set, "simulate_netsplit" ) )
 	{
 		if( u->ic->acc->server )
 			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
