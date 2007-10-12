@@ -210,7 +210,7 @@ static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond
 		return FALSE;
 	}
 
-	if (proxyuser && *proxyuser) {
+	if (strlen(proxyuser) > 0) {
 		char *t1, *t2;
 		t1 = g_strdup_printf("%s:%s", proxyuser, proxypass);
 		t2 = tobase64(t1);
@@ -538,7 +538,7 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 	phb->func = func;
 	phb->data = data;
 	
-	if ((proxytype == PROXY_NONE) || !proxyhost || !proxyhost[0] || !proxyport || (proxyport == -1))
+	if ((proxytype == PROXY_NONE) || strlen(proxyhost) > 0 || !proxyport || (proxyport == -1))
 		return proxy_connect_none(host, port, phb);
 	else if (proxytype == PROXY_HTTP)
 		return proxy_connect_http(host, port, phb);
