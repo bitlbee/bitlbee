@@ -1,9 +1,9 @@
 /***************************************************************************\
 *                                                                           *
 *  BitlBee - An IRC to IM gateway                                           *
-*  Simple (but secure) RC4 implementation for safer password storage.       *
+*  Simple (but secure) ArcFour implementation for safer password storage.   *
 *                                                                           *
-*  Copyright 2006 Wilmer van der Gaast <wilmer@gaast.net>                   *
+*  Copyright 2007 Wilmer van der Gaast <wilmer@gaast.net>                   *
 *                                                                           *
 *  This program is free software; you can redistribute it and/or modify     *
 *  it under the terms of the GNU General Public License as published by     *
@@ -22,15 +22,15 @@
 \***************************************************************************/
 
 
-/* See rc4.c for more information. */
+/* See arc.c for more information. */
 
-struct rc4_state
+struct arc_state
 {
 	unsigned char S[256];
 	unsigned char i, j;
 };
 
-struct rc4_state *rc4_keymaker( unsigned char *key, int kl, int cycles );
-unsigned char rc4_getbyte( struct rc4_state *st );
-int rc4_encode( unsigned char *clear, int clear_len, unsigned char **crypt, char *password );
-int rc4_decode( unsigned char *crypt, int crypt_len, unsigned char **clear, char *password );
+struct arc_state *arc_keymaker( unsigned char *key, int kl, int cycles );
+unsigned char arc_getbyte( struct arc_state *st );
+int arc_encode( char *clear, int clear_len, unsigned char **crypt, char *password );
+int arc_decode( unsigned char *crypt, int crypt_len, char **clear, char *password );

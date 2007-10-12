@@ -47,6 +47,9 @@ Suite *nick_suite(void);
 /* From check_md5.c */
 Suite *md5_suite(void);
 
+/* From check_arc.c */
+Suite *arc_suite(void);
+
 /* From check_irc.c */
 Suite *irc_suite(void);
 
@@ -101,6 +104,7 @@ int main (int argc, char **argv)
 	sr = srunner_create(util_suite());
 	srunner_add_suite(sr, nick_suite());
 	srunner_add_suite(sr, md5_suite());
+	srunner_add_suite(sr, arc_suite());
 	srunner_add_suite(sr, irc_suite());
 	srunner_add_suite(sr, help_suite());
 	srunner_add_suite(sr, user_suite());

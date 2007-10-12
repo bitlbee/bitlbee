@@ -46,18 +46,17 @@ int main( int argc, char *argv[], char **envp )
 	
 	memset( &global, 0, sizeof( global_t ) );
 	
-	b_main_init();
 	log_init();
-	nogaim_init();
-	
-	srand( time( NULL ) ^ getpid() );
-	
 	CONF_FILE = g_strdup( CONF_FILE_DEF );
-	global.helpfile = g_strdup( HELP_FILE );
-	
 	global.conf = conf_load( argc, argv );
 	if( global.conf == NULL )
 		return( 1 );
+	
+	b_main_init();
+	nogaim_init();
+	
+	srand( time( NULL ) ^ getpid() );
+	global.helpfile = g_strdup( HELP_FILE );
 	
 	if( global.conf->runmode == RUNMODE_INETD )
 	{

@@ -544,3 +544,51 @@ struct ns_srv_reply *srv_lookup( char *service, char *protocol, char *domain )
 	
 	return reply;
 }
+
+/* Word wrapping. Yes, I know this isn't UTF-8 clean. I'm willing to take the risk. */
+char *word_wrap( char *msg, int line_len )
+{
+	GString *ret = g_string_sized_new( strlen( msg ) + 16 );
+	
+	while( strlen( msg ) > line_len )
+	{
+		int i;
+		
+		/* First try to find out if there's a newline already. Don't
+		   want to add more splits than necessary. */
+		for( i = line_len; i > 0 && msg[i] != '\n'; i -- );
+		if( msg[i] == '\n' )
+		{
+			g_string_append_len( ret, msg, i + 1 );
+			msg += i + 1;
+			continue;
+		}
+		
+		for( i = line_len; i > 0; i -- )
+		{
+			if( msg[i] == '-' )
+			{
+				g_string_append_len( ret, msg, i + 1 );
+				g_string_append_c( ret, '\n' );
+				msg += i + 1;
+				break;
+			}
+			else if( msg[i] == ' ' )
+			{
+				g_string_append_len( ret, msg, i );
+				g_string_append_c( ret, '\n' );
+				msg += i + 1;
+				break;
+			}
+		}
+		if( i == 0 )
+		{
+			g_string_append_len( ret, msg, line_len );
+			g_string_append_c( ret, '\n' );
+			msg += line_len;
+		}
+	}
+	g_string_append( ret, msg );
+	
+	return g_string_free( ret, FALSE );
+}

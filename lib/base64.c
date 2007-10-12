@@ -30,10 +30,10 @@ static const char real_b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv
 
 char *tobase64(const char *text)
 {
-	return base64_encode(text, strlen(text));
+	return base64_encode((const unsigned char *)text, strlen(text));
 }
 
-char *base64_encode(const char *in, int len)
+char *base64_encode(const unsigned char *in, int len)
 {
 	char *out;
 	

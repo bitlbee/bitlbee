@@ -28,6 +28,7 @@ yahoo=1
 debug=0
 strip=1
 gcov=0
+plugins=1
 ipv6=1
 
 events=glib
@@ -68,10 +69,9 @@ Option		Description				Default
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
+--plugins=0/1	Disable/enable plugins support		$plugins
 
 --ipv6=0/1	IPv6 socket support			$ipv6
-
---ldap=0/1/auto	LDAP support				$ldap
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
@@ -139,13 +139,14 @@ if [ "$ipv6" = "1" ]; then
 fi
 
 if [ "$debug" = "1" ]; then
-	echo 'CFLAGS=-g' >> Makefile.settings
+	[ -z "$CFLAGS" ] && CFLAGS=-g
 	echo 'DEBUG=1' >> Makefile.settings
 	echo '#define DEBUG' >> config.h
 else
-	echo 'CFLAGS=-O3' >> Makefile.settings
+	[ -z "$CFLAGS" ] && CFLAGS=-O3
 fi
 
+echo CFLAGS=$CFLAGS >> Makefile.settings
 echo CFLAGS+=-I`pwd` -I`pwd`/lib -I`pwd`/protocols -I. >> Makefile.settings
 
 echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
@@ -382,6 +383,12 @@ fi
 if [ "$gcov" = "1" ]; then
 	echo "CFLAGS+=-ftest-coverage -fprofile-arcs" >> Makefile.settings
 	echo "EFLAGS+=-lgcov" >> Makefile.settings
+fi
+
+if [ "$plugins" = 0 ]; then
+	echo '#undef WITH_PLUGINS' >> config.h
+else
+	echo '#define WITH_PLUGINS' >> config.h
 fi
 
 echo

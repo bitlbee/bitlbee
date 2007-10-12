@@ -595,6 +595,16 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="simulate_netsplit" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				Some IRC clients parse quit messages sent by the IRC server to see if someone really left or just disappeared because of a netsplit. By default, BitlBee tries to simulate netsplit-like quit messages to keep the control channel window clean. If you don't like this (or if your IRC client doesn't support this) you can disable this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="ssl" type="boolean" scope="account">
 		<default>false</default>
 
