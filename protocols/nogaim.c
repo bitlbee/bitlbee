@@ -605,6 +605,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_t flags, time_t sent_at )
 {
 	irc_t *irc = ic->irc;
+	char *wrapped;
 	user_t *u;
 	
 	u = user_findhandle( ic, handle );
@@ -647,37 +648,9 @@ void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_
 	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
 		strip_html( msg );
 
-	while( strlen( msg ) > 425 )
-	{
-		char tmp, *nl;
-		
-		tmp = msg[425];
-		msg[425] = 0;
-		
-		/* If there's a newline/space in this string, split up there,
-		   looks a bit prettier. */
-		if( ( nl = strrchr( msg, '\n' ) ) || ( nl = strrchr( msg, ' ' ) ) )
-		{
-			msg[425] = tmp;
-			tmp = *nl;
-			*nl = 0;
-		}
-		
-		irc_msgfrom( irc, u->nick, msg );
-		
-		/* Move on. */
-		if( nl )
-		{
-			*nl = tmp;
-			msg = nl + 1;
-		}
-		else
-		{
-			msg[425] = tmp;
-			msg += 425;
-		}
-	}
-	irc_msgfrom( irc, u->nick, msg );
+	wrapped = word_wrap( msg, 425 );
+	irc_msgfrom( irc, u->nick, wrapped );
+	g_free( wrapped );
 }
 
 void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags )
@@ -736,6 +709,7 @@ void imcb_chat_removed( struct groupchat *c )
 void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at )
 {
 	struct im_connection *ic = c->ic;
+	char *wrapped;
 	user_t *u;
 	
 	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
@@ -748,10 +722,16 @@ void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, 
 	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
 		strip_html( msg );
 	
+	wrapped = word_wrap( msg, 425 );
 	if( c && u )
-		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, "", msg );
+	{
+		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, "", wrapped );
+	}
 	else
-		imcb_log( ic, "Message from/to conversation %s@0x%x (unknown conv/user): %s", who, (int) c, msg );
+	{
+		imcb_log( ic, "Message from/to conversation %s@0x%x (unknown conv/user): %s", who, (int) c, wrapped );
+	}
+	g_free( wrapped );
 }
 
 struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
