@@ -50,7 +50,7 @@ typedef struct conf
 	int ping_timeout;
 } conf_t;
 
-conf_t *conf_load( int argc, char *argv[] );
+G_GNUC_MALLOC conf_t *conf_load( int argc, char *argv[] );
 void conf_loaddefaults( irc_t *irc );
 
 #endif
