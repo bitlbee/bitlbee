@@ -203,7 +203,9 @@ your VNC server regularly. (How ugly.)
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
 
-- Are there public named chats for Skype? If yes, they are not supported ATM.
+- Public chats. See link:http://forum.skype.com/index.php?showtopic=98872[this
+  forum thread], it is still unclear how could it be done for you to be able to
+  `/join` to a public chat..
 
 == I would like to have support for ...
 
@@ -217,7 +219,9 @@ then it would be nice to include them here.
 
 == Known bugs
 
-- None at this time.
+- When you join start a group chat, a warning is shown saying creating the
+  group chat is failed. Indeed it is created. I should improve the API to be
+  able to suppress that warning.
 
 == Screenshots
 
