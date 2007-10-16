@@ -338,7 +338,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 							else if(!strcmp(sd->type, "SETTOPIC"))
 							{
 								if(gc)
-									imcb_log(ic, "%s changed the topic of %s to: %s", sd->handle, gc->title, sd->body);
+									imcb_chat_topic(gc, sd->handle, sd->body);
 							}
 							else if(!strcmp(sd->type, "LEFT"))
 							{
@@ -460,6 +460,13 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						struct groupchat *gc = skype_chat_by_name(ic, id);
 						if(gc)
 							gc->data = (void*)FALSE;
+					}
+					else if(!strncmp(info, "TOPIC ", 6))
+					{
+						info += 6;
+						struct groupchat *gc = skype_chat_by_name(ic, id);
+						if(gc)
+							imcb_chat_topic(gc, NULL, info);
 					}
 					else if(!strncmp(info, "ACTIVEMEMBERS ", 14))
 					{
