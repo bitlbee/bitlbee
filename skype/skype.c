@@ -681,6 +681,15 @@ void skype_chat_invite(struct groupchat *gc, char *who, char *message)
 	g_free(nick);
 }
 
+void skype_chat_topic(struct groupchat *gc, char *message)
+{
+	struct im_connection *ic = gc->ic;
+	char *buf;
+	buf = g_strdup_printf("ALTER CHAT %s SETTOPIC %s\n", gc->title, message);
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+}
+
 struct groupchat *skype_chat_with(struct im_connection *ic, char *who)
 {
 	struct skype_data *sd = ic->proto_data;
@@ -715,5 +724,6 @@ void init_plugin(void)
 	ret->chat_invite = skype_chat_invite;
 	ret->chat_with = skype_chat_with;
 	ret->handle_cmp = g_strcasecmp;
+	ret->chat_topic = skype_chat_topic;
 	register_protocol( ret );
 }
