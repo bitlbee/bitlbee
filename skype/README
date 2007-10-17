@@ -183,7 +183,13 @@ your VNC server regularly. (How ugly.)
 
 - Detect when somebody wants to transfer a file
 
-- Handle topic changes
+- Topic changes:
+
+  * Show the current topic (if any) on join
+
+  * Notice when someone changes the topic
+
+  * Support changing the topic using `/topic`
 
 - Group chat support:
 
