@@ -75,6 +75,8 @@ struct skype_data
 	/* Using /j #nick we want to have a groupchat with two people. Usually
 	 * not (default). */
 	char* groupchat_with;
+	/* The user who invited us to the chat. */
+	char* adder;
 };
 
 struct skype_away_state
@@ -437,6 +439,10 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					if(!strcmp(info, "STATUS MULTI_SUBSCRIBED"))
 					{
 						imcb_chat_new( ic, id );
+						g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
+						skype_write(ic, buf, strlen(buf));
+						g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
+						skype_write(ic, buf, strlen(buf));
 					}
 					else if(!strcmp(info, "STATUS DIALOG") && sd->groupchat_with)
 					{
@@ -454,6 +460,10 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						imcb_chat_add_buddy(gc, sd->username);
 						g_free(sd->groupchat_with);
 						sd->groupchat_with = NULL;
+						g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
+						skype_write(ic, buf, strlen(buf));
+						g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
+						skype_write(ic, buf, strlen(buf));
 					}
 					else if(!strcmp(info, "STATUS UNSUBSCRIBED"))
 					{
@@ -461,12 +471,22 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						if(gc)
 							gc->data = (void*)FALSE;
 					}
+					else if(!strncmp(info, "ADDER ", 6))
+					{
+						info += 6;
+						g_free(sd->adder);
+						sd->adder = g_strdup_printf("%s@skype.com", info);
+					}
 					else if(!strncmp(info, "TOPIC ", 6))
 					{
 						info += 6;
 						struct groupchat *gc = skype_chat_by_name(ic, id);
-						if(gc)
-							imcb_chat_topic(gc, NULL, info);
+						if(gc && sd->adder)
+						{
+							imcb_chat_topic(gc, sd->adder, info);
+							g_free(sd->adder);
+							sd->adder = NULL;
+						}
 					}
 					else if(!strncmp(info, "ACTIVEMEMBERS ", 14))
 					{
