@@ -64,7 +64,8 @@ struct skype_data
 	 * the chatname. Store the properties here so that we can use
 	 * imcb_buddy_msg() when we got the chatname. */
 	char *handle;
-	char *body;
+	/* List, because of multiline messages. */
+	GList *body;
 	char *type;
 	/* This is necessary because we send a notification when we get the
 	 * handle. So we store the state here and then we can send a
@@ -313,8 +314,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					else if(!strncmp(info, "BODY ", 5))
 					{
 						info += 5;
-						g_free(sd->body);
-						sd->body = g_strdup(info);
+						sd->body = g_list_append(sd->body, g_strdup(info));
 					}
 					else if(!strncmp(info, "TYPE ", 5))
 					{
@@ -328,25 +328,32 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						if(sd->handle && sd->body && sd->type)
 						{
 							struct groupchat *gc = skype_chat_by_name(ic, info);
-							if(!strcmp(sd->type, "SAID"))
+							int i;
+							for(i=0;i<g_list_length(sd->body);i++)
 							{
-								if(!gc)
-									/* Private message */
-									imcb_buddy_msg(ic, sd->handle, sd->body, 0, 0);
-								else
-									/* Groupchat message */
-									imcb_chat_msg(gc, sd->handle, sd->body, 0, 0);
+								char *body = g_list_nth_data(sd->body, i);
+								if(!strcmp(sd->type, "SAID"))
+								{
+									if(!gc)
+										/* Private message */
+										imcb_buddy_msg(ic, sd->handle, body, 0, 0);
+									else
+										/* Groupchat message */
+										imcb_chat_msg(gc, sd->handle, body, 0, 0);
+								}
+								else if(!strcmp(sd->type, "SETTOPIC"))
+								{
+									if(gc)
+										imcb_chat_topic(gc, sd->handle, body);
+								}
+								else if(!strcmp(sd->type, "LEFT"))
+								{
+									if(gc)
+										imcb_chat_remove_buddy(gc, sd->handle, NULL);
+								}
 							}
-							else if(!strcmp(sd->type, "SETTOPIC"))
-							{
-								if(gc)
-									imcb_chat_topic(gc, sd->handle, sd->body);
-							}
-							else if(!strcmp(sd->type, "LEFT"))
-							{
-								if(gc)
-									imcb_chat_remove_buddy(gc, sd->handle, NULL);
-							}
+							g_list_free(sd->body);
+							sd->body = NULL;
 						}
 					}
 				}
