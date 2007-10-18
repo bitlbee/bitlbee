@@ -822,7 +822,7 @@
 
 	<bitlbee-command name="join_chat">
 		<short-description>Join a named groupchat/conference room</short-description>
-		<syntax>import_buddies &lt;connection&gt; &lt;room name&gt; [&lt;channel name&gt;] [&lt;room nickname&gt;] [&lt;password&gt;]</syntax>
+		<syntax>join_chat &lt;connection&gt; &lt;room name&gt; [&lt;channel name&gt;] [&lt;room nickname&gt;] [&lt;password&gt;]</syntax>
 
 		<description>
 			<para>
