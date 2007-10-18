@@ -321,46 +321,6 @@ char *strip_newlines( char *source )
 	return source;
 }
 
-#ifdef IPV6
-/* Wrap an IPv4 address into IPv6 space. Not thread-safe... */
-char *ipv6_wrap( char *src )
-{
-	static char dst[64];
-	int i;
-	
-	for( i = 0; src[i]; i ++ )
-		if( ( src[i] < '0' || src[i] > '9' ) && src[i] != '.' )
-			break;
-	
-	/* Hmm, it's not even an IP... */
-	if( src[i] )
-		return src;
-	
-	g_snprintf( dst, sizeof( dst ), "::ffff:%s", src );
-	
-	return dst;
-}
-
-/* Unwrap an IPv4 address into IPv6 space. Thread-safe, because it's very simple. :-) */
-char *ipv6_unwrap( char *src )
-{
-	int i;
-	
-	if( g_strncasecmp( src, "::ffff:", 7 ) != 0 )
-		return src;
-	
-	for( i = 7; src[i]; i ++ )
-		if( ( src[i] < '0' || src[i] > '9' ) && src[i] != '.' )
-			break;
-	
-	/* Hmm, it's not even an IP... */
-	if( src[i] )
-		return src;
-	
-	return ( src + 7 );
-}
-#endif
-
 /* Convert from one charset to another.
    
    from_cs, to_cs: Source and destination charsets
