@@ -45,7 +45,7 @@ irc_t *irc_new( int fd )
 {
 	irc_t *irc;
 	struct sockaddr_storage sock;
-	socklen_t socklen = sizeof(sock);
+	socklen_t socklen = sizeof( sock );
 	
 	irc = g_new0( irc_t, 1 );
 	
@@ -66,25 +66,25 @@ irc_t *irc_new( int fd )
 	
 	if( global.conf->hostname )
 		irc->myhost = g_strdup( global.conf->hostname );
-	else if( getsockname( irc->fd, (struct sockaddr*) &sock, &socklen ) == 0) 
+	else if( getsockname( irc->fd, (struct sockaddr*) &sock, &socklen ) == 0 ) 
 	{
-		irc->myhost = g_new0(char, NI_MAXHOST);
+		irc->myhost = g_new0( char, NI_MAXHOST );
 
-		if (getnameinfo((struct sockaddr *)&sock, socklen, irc->myhost, 
-						NI_MAXHOST, NULL, -1, 0)) {
+		if (getnameinfo( (struct sockaddr *) &sock, socklen, irc->myhost, 
+						NI_MAXHOST, NULL, -1, 0) ) {
 			/* Rare, but possible. */
-			strncpy(irc->myhost, "localhost.", NI_MAXHOST);
+			strncpy( irc->myhost, "localhost.", NI_MAXHOST );
 		}
 	}
 	
-	if( getpeername( irc->fd, (struct sockaddr*) &sock, &socklen ) == 0)
+	if( getpeername( irc->fd, (struct sockaddr*) &sock, &socklen ) == 0 )
 	{
-		irc->host = g_new0(char, NI_MAXHOST);
+		irc->host = g_new0( char, NI_MAXHOST );
 
-		if (getnameinfo((struct sockaddr *)&sock, socklen, irc->host, 
-						NI_MAXHOST, NULL, -1, 0)) {
+		if ( getnameinfo( (struct sockaddr *)&sock, socklen, irc->host, 
+						NI_MAXHOST, NULL, -1, 0 ) ) {
 			/* Rare, but possible. */
-			strncpy(irc->myhost, "localhost.", NI_MAXHOST);
+			strncpy( irc->myhost, "localhost.", NI_MAXHOST );
 		}
 	}
 	

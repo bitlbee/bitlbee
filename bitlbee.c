@@ -44,14 +44,14 @@ int bitlbee_daemon_init()
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
 	
-	memset(&hints, 0, sizeof(hints));
+	memset( &hints, 0, sizeof( hints ) );
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_ADDRCONFIG | AI_PASSIVE;
 
-	i = getaddrinfo(global.conf->iface, global.conf->port, &hints, 
-						&addrinfo_bind);
-	if (i) {
+	i = getaddrinfo( global.conf->iface, global.conf->port, &hints, 
+						&addrinfo_bind );
+	if ( i ) {
 		log_message( LOGLVL_ERROR, "Couldn't parse address `%s': %s", 
 					 global.conf->iface, gai_strerror(i) );
 		return -1;
@@ -59,10 +59,10 @@ int bitlbee_daemon_init()
 
 	global.listen_socket = -1;
 
-	for (res = addrinfo_bind; res; res = res->ai_next) {
-		global.listen_socket = socket(res->ai_family, res->ai_socktype, 
-									  res->ai_protocol);
-		if (global.listen_socket < 0)
+	for ( res = addrinfo_bind; res; res = res->ai_next ) {
+		global.listen_socket = socket( res->ai_family, res->ai_socktype, 
+									   res->ai_protocol );
+		if ( global.listen_socket < 0 )
 			continue;
 
 		/* TIME_WAIT (?) sucks.. */
@@ -70,7 +70,7 @@ int bitlbee_daemon_init()
 		setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, 
 					sizeof( i ) );
 
-		i = bind( global.listen_socket, res->ai_addr, res->ai_addrlen);
+		i = bind( global.listen_socket, res->ai_addr, res->ai_addrlen );
 		if( i == -1 )
 		{
 			log_error( "bind" );
@@ -80,7 +80,7 @@ int bitlbee_daemon_init()
 		break;
 	}
 
-	freeaddrinfo(addrinfo_bind);
+	freeaddrinfo( addrinfo_bind );
 
 	i = listen( global.listen_socket, 10 );
 	if( i == -1 )
