@@ -45,6 +45,15 @@ EOF
 ## Bye-bye DebConf, we don't need you anymore.
 db_stop
 
+## Restore the helpfile in case we weren't upgrading but just reconfiguring:
+if [ -e /usr/share/bitlbee/help.upgrading ]; then
+	if [ -e /usr/share/bitlbee/help.txt ]; then
+		rm -f /usr/share/bitlbee/help.upgrading
+	else
+		mv /usr/share/bitlbee/help.upgrading /usr/share/bitlbee/help.txt
+	fi
+fi
+
 if [ -n "$2" -a "$BITLBEE_UPGRADE_DONT_RESTART" != "1" ]; then
 	/etc/init.d/bitlbee restart
 fi

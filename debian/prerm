@@ -1,8 +1,13 @@
 #!/bin/sh -e
 
 if [ "$1" = "upgrade" ]; then
-	## To prevent the help function from breaking in currently running BitlBee processes
-	rm -f /usr/share/bitlbee/help.txt
+	## To prevent the help function from breaking in currently running
+	## BitlBee processes. Have to do it like this because dpkg-reconfigure
+	## looks a lot like an upgrade and we don't want to lose help.txt...
+	if [ -e /usr/share/bitlbee/help.txt ]; then
+		rm -f /usr/share/bitlbee/help.upgrading
+		mv /usr/share/bitlbee/help.txt /usr/share/bitlbee/help.upgrading
+	fi
 else
 	/etc/init.d/bitlbee stop || exit 0
 fi
