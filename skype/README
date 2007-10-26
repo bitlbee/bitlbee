@@ -28,6 +28,9 @@ not..)
 * Python 2.5. Skype4Py does not work with 2.4.
 * pygobject
 
+`bitlbee-skype` has been tested under Linux and Windows. Skype is available
+under OSX, too, so it probably works, but this has not been tested.
+
 == How to set it up
 
 Before you start. The setup is the following: BitlBee can't connect directly to
