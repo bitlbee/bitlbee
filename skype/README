@@ -66,6 +66,7 @@ make install install-dev
 
 ----
 git clone http://ftp.frugalware.org/pub/other/people/vmiklos/bitlbee-skype/.git
+git checkout `git tag -l|tail -n 1`
 ----
 
 (Or you can use the tarballs below, see the Changelog about what
