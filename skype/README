@@ -65,12 +65,13 @@ make install install-dev
 - Get the plugin code:
 
 ----
-git clone http://ftp.frugalware.org/pub/other/people/vmiklos/bitlbee-skype/.git
-git checkout `git tag -l|tail -n 1`
+git clone git://git.frugalware.org/pub/other/people/vmiklos/bitlbee-skype
 ----
 
 (Or you can use the tarballs below, see the Changelog about what
 features/bugfixes will you miss in this case).
+
+- Apply a not yet merged patch: http://frugalware.org/~vmiklos/patches/bitlbee-topic-write.patch[download]
 
 - Compile and install it:
 
@@ -187,14 +188,6 @@ your VNC server regularly. (How ugly.)
 
 - Detect when somebody wants to transfer a file
 
-- Topic changes:
-
-  * Show the current topic (if any) on join
-
-  * Notice when someone changes the topic
-
-  * Support changing the topic using `/topic`
-
 - Group chat support:
 
   * Detect if we're invited
@@ -206,6 +199,14 @@ your VNC server regularly. (How ugly.)
   * Part from group chats
 
   * Starting a group chat (using `/j #nick`)
+
+- Topic changes in group chats:
+
+  * Show the current topic (if any) on join
+
+  * Notice when someone changes the topic
+
+  * Support changing the topic using `/topic`
 
 == What needs to be done (aka. TODO)
 
