@@ -24,6 +24,6 @@
 */
 
 int checkpass (const char *password, const char *md5sum);
-char *hashpass (const char *password);
-char *obfucrypt (char *line, const char *password);
-char *deobfucrypt (char *line, const char *password);
+G_GNUC_MALLOC char *hashpass (const char *password);
+G_GNUC_MALLOC char *obfucrypt (char *line, const char *password);
+G_GNUC_MALLOC char *deobfucrypt (char *line, const char *password);

@@ -42,7 +42,7 @@ typedef struct help
 	struct help *next;
 } help_t;
 
-help_t *help_init( help_t **help, const char *helpfile );
+G_GNUC_MALLOC help_t *help_init( help_t **help, const char *helpfile );
 char *help_get( help_t **help, char *string );
 
 #endif

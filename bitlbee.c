@@ -37,72 +37,53 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 
 int bitlbee_daemon_init()
 {
-#ifdef IPV6
-	int use_ipv6 = 1;
-	struct sockaddr_in6 listen_addr6;
-#endif
-	struct sockaddr_in listen_addr;
+	struct addrinfo *res, hints, *addrinfo_bind;
 	int i;
 	FILE *fp;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
 	
-#ifdef IPV6
-	if( ( global.listen_socket = socket( AF_INET6, SOCK_STREAM, 0 ) ) == -1 )
+	memset( &hints, 0, sizeof( hints ) );
+	hints.ai_family = PF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_ADDRCONFIG | AI_PASSIVE;
+
+	i = getaddrinfo( global.conf->iface, global.conf->port, &hints, 
+						&addrinfo_bind );
+	if( i )
 	{
-		use_ipv6 = 0;
-#endif
-		global.listen_socket = socket( AF_INET, SOCK_STREAM, 0 );
-#ifdef IPV6
+		log_message( LOGLVL_ERROR, "Couldn't parse address `%s': %s", 
+					 global.conf->iface, gai_strerror(i) );
+		return -1;
 	}
-#endif
-	if( global.listen_socket == -1 )
+
+	global.listen_socket = -1;
+
+	for( res = addrinfo_bind; res; res = res->ai_next )
 	{
-		log_error( "socket" );
-		return( -1 );
+		global.listen_socket = socket( res->ai_family, res->ai_socktype, 
+									   res->ai_protocol );
+		if( global.listen_socket < 0 )
+			continue;
+
+		/* TIME_WAIT (?) sucks.. */
+		i = 1;
+		setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, 
+					sizeof( i ) );
+
+		i = bind( global.listen_socket, res->ai_addr, res->ai_addrlen );
+		if( i == -1 )
+		{
+			log_error( "bind" );
+			return( -1 );
+		}
+
+		break;
 	}
-	
-	/* TIME_WAIT (?) sucks.. */
-	i = 1;
-	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
-	
-#ifdef IPV6
-	memset( &listen_addr6, 0, sizeof( listen_addr6 ) );
-	listen_addr6.sin6_family = AF_INET6;
-	listen_addr6.sin6_port = htons( global.conf->port );
-	if( ( i = inet_pton( AF_INET6, ipv6_wrap( global.conf->iface ), &listen_addr6.sin6_addr ) ) != 1 )
-	{
-		/* Forget about IPv6 in this function. */
-		use_ipv6 = 0;
-#endif
-		memset( &listen_addr, 0, sizeof( listen_addr ) );
-		listen_addr.sin_family = AF_INET;
-		listen_addr.sin_port = htons( global.conf->port );
-		if( strcmp( global.conf->iface, "::" ) == 0 )
-			i = inet_pton( AF_INET, "0.0.0.0", &listen_addr.sin_addr );
-		else
-			i = inet_pton( AF_INET, global.conf->iface, &listen_addr.sin_addr );
-#ifdef IPV6
-	}
-#endif
-	
-	if( i != 1 )
-	{
-		log_message( LOGLVL_ERROR, "Couldn't parse address `%s'", global.conf->iface );
-		return( -1 );
-	}
-	
-#ifdef IPV6
-	if( !use_ipv6 || ( i = bind( global.listen_socket, (struct sockaddr *) &listen_addr6, sizeof( listen_addr6 ) ) ) == -1 )
-#endif
-		i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( listen_addr ) );
-	if( i == -1 )
-	{
-		log_error( "bind" );
-		return( -1 );
-	}
-	
+
+	freeaddrinfo( addrinfo_bind );
+
 	i = listen( global.listen_socket, 10 );
 	if( i == -1 )
 	{

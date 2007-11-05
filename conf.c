@@ -46,12 +46,8 @@ conf_t *conf_load( int argc, char *argv[] )
 	
 	conf = g_new0( conf_t, 1 );
 	
-#ifdef IPV6
-	conf->iface = "::";
-#else
-	conf->iface = "0.0.0.0";
-#endif
-	conf->port = 6667;
+	conf->iface = NULL;
+	conf->port = "6667";
 	conf->nofork = 0;
 	conf->verbose = 0;
 	conf->primary_storage = "xml";
@@ -88,12 +84,8 @@ conf_t *conf_load( int argc, char *argv[] )
 		}
 		else if( opt == 'p' )
 		{
-			if( ( sscanf( optarg, "%d", &i ) != 1 ) || ( i <= 0 ) || ( i > 65535 ) )
-			{
-				fprintf( stderr, "Invalid port number: %s\n", optarg );
-				return( NULL );
-			}
-			conf->port = i;
+			g_free( conf->port );
+			conf->port = g_strdup( optarg );
 		}
 		else if( opt == 'P' )
 		{
@@ -203,12 +195,7 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else if( g_strcasecmp( ini->key, "daemonport" ) == 0 )
 			{
-				if( ( sscanf( ini->value, "%d", &i ) != 1 ) || ( i <= 0 ) || ( i > 65535 ) )
-				{
-					fprintf( stderr, "Invalid port number: %s\n", ini->value );
-					return( 0 );
-				}
-				conf->port = i;
+				conf->port = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "authmode" ) == 0 )
 			{

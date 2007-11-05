@@ -29,7 +29,6 @@ debug=0
 strip=1
 gcov=0
 plugins=1
-ipv6=1
 
 events=glib
 ldap=0
@@ -70,8 +69,6 @@ Option		Description				Default
 --strip=0/1	Disable/enable binary stripping		$strip
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
 --plugins=0/1	Disable/enable plugins support		$plugins
-
---ipv6=0/1	IPv6 socket support			$ipv6
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
@@ -133,10 +130,6 @@ cat<<EOF>config.h
 #define ARCH "$arch"
 #define CPU "$cpu"
 EOF
-
-if [ "$ipv6" = "1" ]; then
-	echo '#define IPV6' >> config.h
-fi
 
 if [ "$debug" = "1" ]; then
 	[ -z "$CFLAGS" ] && CFLAGS=-g
