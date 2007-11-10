@@ -1065,8 +1065,17 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 		} else {
 			g_snprintf(tmp, BUF_LONG, "%s", args->msg);
 		}
-	} else
+	} else if (args->mpmsg.numparts == 0) {
 		g_snprintf(tmp, BUF_LONG, "%s", args->msg);
+	} else {
+		int i;
+		
+		*tmp = 0;
+		for (i = 0; i < args->mpmsg.numparts; i ++) {
+			g_strlcat(tmp, (char*) args->mpmsg.parts[i].data, BUF_LONG);
+			g_strlcat(tmp, "\n", BUF_LONG);
+		}
+	}
 	
 	strip_linefeed(tmp);
 	imcb_buddy_msg(ic, userinfo->sn, tmp, flags, 0);
