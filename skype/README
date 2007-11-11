@@ -52,7 +52,9 @@ automatically reconnect if you restart Skype.)
 bzr branch http://code.bitlbee.org/bitlbee/
 ----
 
-NOTE: You no longer need additional patches, as of revision 245.
+//NOTE: You no longer need additional patches, as of revision 245.
+- Apply a not yet merged patch: http://frugalware.org/~vmiklos/patches/bitlbee-topic-write.patch[download]
+
 
 - Now compile and install it:
 
@@ -70,8 +72,6 @@ git clone git://git.frugalware.org/pub/other/people/vmiklos/bitlbee-skype
 
 (Or you can use the tarballs below, see the Changelog about what
 features/bugfixes will you miss in this case).
-
-- Apply a not yet merged patch: http://frugalware.org/~vmiklos/patches/bitlbee-topic-write.patch[download]
 
 - Compile and install it:
 
