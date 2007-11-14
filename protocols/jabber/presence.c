@@ -127,11 +127,6 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	{
 		/* What to do with it? */
 	}
-	else
-	{
-		printf( "Received PRES from %s:\n", from );
-		xt_print( node );
-	}
 	
 	return XT_HANDLED;
 }
