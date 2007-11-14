@@ -35,7 +35,7 @@
 #include "nogaim.h"
 #include <ctype.h>
 
-static int remove_chat_buddy_silent( struct groupchat *b, char *handle );
+static int remove_chat_buddy_silent( struct groupchat *b, const char *handle );
 
 GSList *connections;
 
@@ -577,7 +577,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 		
 		/* Remove him/her from the groupchats to prevent PART messages after he/she QUIT already */
 		for( c = ic->groupchats; c; c = c->next )
-			remove_chat_buddy_silent( c, (char*) handle );
+			remove_chat_buddy_silent( c, handle );
 	}
 	
 	if( flags & OPT_AWAY )
@@ -848,7 +848,7 @@ void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
 		irc_part( b->ic->irc, u, b->channel );
 }
 
-static int remove_chat_buddy_silent( struct groupchat *b, char *handle )
+static int remove_chat_buddy_silent( struct groupchat *b, const char *handle )
 {
 	GList *i;
 	

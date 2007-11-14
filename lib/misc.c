@@ -321,7 +321,6 @@ char *strip_newlines( char *source )
 	return source;
 }
 
-#ifdef IPV6
 /* Wrap an IPv4 address into IPv6 space. Not thread-safe... */
 char *ipv6_wrap( char *src )
 {
@@ -359,7 +358,6 @@ char *ipv6_unwrap( char *src )
 	
 	return ( src + 7 );
 }
-#endif
 
 /* Convert from one charset to another.
    

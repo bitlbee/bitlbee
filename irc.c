@@ -44,14 +44,8 @@ static char *passchange( set_t *set, char *value )
 irc_t *irc_new( int fd )
 {
 	irc_t *irc;
-	struct hostent *peer;
-	unsigned int i;
-	char buf[128];
-#ifdef IPV6
-	struct sockaddr_in6 sock6[1];
-	unsigned int i6;
-#endif
-	struct sockaddr_in sock[1];
+	struct sockaddr_storage sock;
+	socklen_t socklen = sizeof( sock );
 	
 	irc = g_new0( irc_t, 1 );
 	
@@ -70,54 +64,42 @@ irc_t *irc_new( int fd )
 	irc->mynick = g_strdup( ROOT_NICK );
 	irc->channel = g_strdup( ROOT_CHAN );
 	
-	i = sizeof( *sock );
-#ifdef IPV6
-	i6 = sizeof( *sock6 );
-#endif
-	
 	if( global.conf->hostname )
+	{
 		irc->myhost = g_strdup( global.conf->hostname );
-#ifdef IPV6
-	else if( getsockname( irc->fd, (struct sockaddr*) sock6, &i6 ) == 0 && sock6->sin6_family == AF_INET6 )
-	{
-		if( ( peer = gethostbyaddr( (char*) &sock6->sin6_addr, sizeof( sock6->sin6_addr ), AF_INET6 ) ) )
-			irc->myhost = g_strdup( peer->h_name );
-		else if( inet_ntop( AF_INET6, &sock6->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->myhost = g_strdup( ipv6_unwrap( buf ) );
 	}
-#endif
-	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INET )
+	else if( getsockname( irc->fd, (struct sockaddr*) &sock, &socklen ) == 0 ) 
 	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INET ) ) )
-			irc->myhost = g_strdup( peer->h_name );
-		else if( inet_ntop( AF_INET, &sock->sin_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->myhost = g_strdup( buf );
-	}
-	
-	i = sizeof( *sock );
-#ifdef IPV6
-	i6 = sizeof( *sock6 );
-	if( getpeername( irc->fd, (struct sockaddr*) sock6, &i6 ) == 0 && sock6->sin6_family == AF_INET6 )
-	{
-		if( ( peer = gethostbyaddr( (char*) &sock6->sin6_addr, sizeof( sock6->sin6_addr ), AF_INET6 ) ) )
-			irc->host = g_strdup( peer->h_name );
-		else if( inet_ntop( AF_INET6, &sock6->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->host = g_strdup( ipv6_unwrap( buf ) );
-	}
-	else
-#endif
-	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INET )
-	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INET ) ) )
-			irc->host = g_strdup( peer->h_name );
-		else if( inet_ntop( AF_INET, &sock->sin_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->host = g_strdup( buf );
-	}
-	
-	/* Rare, but possible. */
-	if( !irc->host ) irc->host = g_strdup( "localhost." );
-	if( !irc->myhost ) irc->myhost = g_strdup( "localhost." );
+		char buf[NI_MAXHOST+1];
 
+		if( getnameinfo( (struct sockaddr *) &sock, socklen, buf,
+		                 NI_MAXHOST, NULL, -1, 0 ) == 0 )
+		{
+			irc->myhost = g_strdup( ipv6_unwrap( buf ) );
+		}
+		else
+		{
+			/* Rare, but possible. */
+			strncpy( irc->myhost, "localhost.localdomain", NI_MAXHOST );
+		}
+	}
+	
+	if( getpeername( irc->fd, (struct sockaddr*) &sock, &socklen ) == 0 )
+	{
+		char buf[NI_MAXHOST+1];
+
+		if( getnameinfo( (struct sockaddr *)&sock, socklen, buf,
+		                 NI_MAXHOST, NULL, -1, 0 ) == 0 )
+		{
+			irc->host = g_strdup( ipv6_unwrap( buf ) );
+		}
+		else
+		{
+			/* Rare, but possible. */
+			strncpy( irc->host, "localhost.localdomain", NI_MAXHOST );
+		}
+	}
+	
 	if( global.conf->ping_interval > 0 && global.conf->ping_timeout > 0 )
 		irc->ping_source_id = b_timeout_add( global.conf->ping_interval * 1000, irc_userping, irc );
 	
@@ -743,7 +725,7 @@ void irc_login( irc_t *irc )
 	u->online = 1;
 	irc_spawn( irc, u );
 	
-	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the \x02help\x02 command. Lots of FAQ's are answered there." );
+	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the \x02help\x02 command. Lots of FAQs are answered there." );
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON || global.conf->runmode == RUNMODE_DAEMON )
 		ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->host, irc->nick, irc->realname );

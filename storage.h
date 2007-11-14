@@ -61,6 +61,6 @@ storage_status_t storage_remove (const char *nick, const char *password);
 storage_status_t storage_rename (const char *onick, const char *nnick, const char *password);
 
 void register_storage_backend(storage_t *);
-GList *storage_init(const char *primary, char **migrate);
+G_GNUC_MALLOC GList *storage_init(const char *primary, char **migrate);
 
 #endif /* __STORAGE_H__ */

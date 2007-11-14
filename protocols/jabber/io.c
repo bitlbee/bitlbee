@@ -469,14 +469,6 @@ static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 	return XT_ABORT;
 }
 
-static xt_status jabber_pkt_misc( struct xt_node *node, gpointer data )
-{
-	printf( "Received unknown packet:\n" );
-	xt_print( node );
-	
-	return XT_HANDLED;
-}
-
 static xt_status jabber_xmlconsole( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
@@ -508,7 +500,6 @@ static const struct xt_handler_entry jabber_handlers[] = {
 	{ "challenge",          "stream:stream",        sasl_pkt_challenge },
 	{ "success",            "stream:stream",        sasl_pkt_result },
 	{ "failure",            "stream:stream",        sasl_pkt_result },
-	{ NULL,                 "stream:stream",        jabber_pkt_misc },
 	{ NULL,                 NULL,                   NULL }
 };
 
