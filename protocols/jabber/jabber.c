@@ -54,6 +54,9 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "tls", "try", set_eval_tls, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
+	
+	s = set_add( &acc->set, "xmlconsole", "false", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
 }
 
 static void jabber_login( account_t *acc )
@@ -187,6 +190,14 @@ static void jabber_login( account_t *acc )
 	{
 		imcb_error( ic, "Could not connect to server" );
 		imc_logout( ic, TRUE );
+	}
+	
+	if( set_getbool( &acc->set, "xmlconsole" ) )
+	{
+		jd->flags |= JFLAG_XMLCONSOLE;
+		/* Shouldn't really do this at this stage already, maybe. But
+		   I think this shouldn't break anything. */
+		imcb_add_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL );
 	}
 }
 

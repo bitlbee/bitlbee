@@ -680,6 +680,19 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="xmlconsole" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				The Jabber module allows you to add a buddy <emphasis>xmlconsole</emphasis> to your contact list, which will then show you the raw XMPP stream between you and the server. You can also send XMPP packets to this buddy, which will then be sent to the server.
+			</para>
+			<para>
+				If you want to enable this XML console permanently (and at login time already), you can set this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-command name="rename">
 		<short-description>Rename (renick) a buddy</short-description>
 		<syntax>rename &lt;oldnick&gt; &lt;newnick&gt;</syntax>
