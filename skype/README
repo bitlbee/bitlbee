@@ -23,7 +23,8 @@ not..)
 == Requirements
 
 * Skype >= 1.4.0.99. (1.4.0.74 did not work for me, 1.4.0.118 seems to be OK.)
-* bitlbee-dev >= rev245. Previous versions need patching.
+* bitlbee-dev >= rev256. (This is the latest version I've tested, probably
+  newer versions probably will work, too.)
 * Skype4Py >= 0.9.28.1. Previous versions uses `DBus` by default. The latest version I've tested is 0.9.28.3.
 * Python 2.5. Skype4Py does not work with 2.4.
 * pygobject
@@ -53,7 +54,13 @@ bzr branch http://code.bitlbee.org/bitlbee/
 ----
 
 //NOTE: You no longer need additional patches, as of revision 245.
-- Apply a not yet merged patch: http://frugalware.org/~vmiklos/patches/bitlbee-topic-write.patch[download]
+- Apply a not yet merged patch:
+
+----
+cd bitlbee
+wget http://frugalware.org/~vmiklos/patches/bitlbee-topic-write.patch
+patch -p0 < bitlbee-topic-write.patch
+----
 
 
 - Now compile and install it:
