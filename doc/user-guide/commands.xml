@@ -133,6 +133,7 @@
 			<syntax>account set &lt;account id&gt;</syntax>
 			<syntax>account set &lt;account id&gt;/&lt;setting&gt;</syntax>
 			<syntax>account set &lt;account id&gt;/&lt;setting&gt; &lt;value&gt;</syntax>
+			<syntax>account set -del &lt;account id&gt;/&lt;setting&gt;</syntax>
 
 			<description>
 				<para>
@@ -140,7 +141,7 @@
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>. For details about the syntax of this command, see <emphasis>help set</emphasis>.
 				</para>
 				
 				<para>
@@ -245,12 +246,15 @@
 
 	<bitlbee-command name="set">
 		<short-description>Miscellaneous settings</short-description>
-		<syntax>set [&lt;variable&gt; [&lt;value&gt;]]</syntax>
+		<syntax>set</syntax>
+		<syntax>set &lt;variable&gt;</syntax>
+		<syntax>set &lt;variable&gt; &lt;value&gt;</syntax>
+		<syntax>set -del &lt;variable&gt;</syntax>
 
 		<description>
 
 			<para>
-				Without any arguments, this command lists all the set variables. You can also specify a single argument, a variable name, to get that variable's value. To change this value, specify the new value as the second argument.
+				Without any arguments, this command lists all the set variables. You can also specify a single argument, a variable name, to get that variable's value. To change this value, specify the new value as the second argument. With <emphasis>-del</emphasis> you can reset a setting to its default value.
 			</para>
 
 			<para>

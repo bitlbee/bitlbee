@@ -367,15 +367,18 @@ static void cmd_account( irc_t *irc, char **cmd )
 			return;
 		}
 		
-		acc_handle = g_strdup( cmd[2] );
+		if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
+			acc_handle = g_strdup( cmd[3] );
+		else
+			acc_handle = g_strdup( cmd[2] );
+		
 		if( ( tmp = strchr( acc_handle, '/' ) ) )
 		{
 			*tmp = 0;
 			set_name = tmp + 1;
 		}
-		a = account_get( irc, acc_handle );
 		
-		if( a == NULL )
+		if( ( a = account_get( irc, acc_handle ) ) == NULL )
 		{
 			g_free( acc_handle );
 			irc_usermsg( irc, "Invalid account" );
@@ -399,10 +402,12 @@ static void cmd_account( irc_t *irc, char **cmd )
 				return;
 			}
 			
-			set_setstr( &a->set, set_name, cmd[3] );
-			
 			if( ( strcmp( cmd[3], "=" ) ) == 0 && cmd[4] )
 				irc_usermsg( irc, "Warning: Correct syntax: \002account set <variable> <value>\002 (without =)" );
+			else if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
+				set_reset( &a->set, set_name );
+			else
+				set_setstr( &a->set, set_name, cmd[3] );
 		}
 		if( set_name ) /* else 'forgotten' on purpose.. Must show new value after changing */
 		{
@@ -418,7 +423,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 			while( s )
 			{
 				if( s->value || s->def )
-					irc_usermsg( irc, "%s = `%s'", s->key, s->value?s->value:s->def );
+					irc_usermsg( irc, "%s = `%s'", s->key, s->value ? s->value : s->def );
 				else
 					irc_usermsg( irc, "%s is empty", s->key );
 				s = s->next;
@@ -739,20 +744,33 @@ static void cmd_yesno( irc_t *irc, char **cmd )
 
 static void cmd_set( irc_t *irc, char **cmd )
 {
+	char *set_name;
+	
 	if( cmd[1] && cmd[2] )
 	{
-		set_setstr( &irc->set, cmd[1], cmd[2] );
-		
 		if( ( strcmp( cmd[2], "=" ) ) == 0 && cmd[3] )
+		{
 			irc_usermsg( irc, "Warning: Correct syntax: \002set <variable> <value>\002 (without =)" );
+			return;
+		}
+		else if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
+		{
+			set_reset( &irc->set, cmd[2] );
+			set_name = cmd[2];
+		}
+		else
+		{
+			set_setstr( &irc->set, cmd[1], cmd[2] );
+			set_name = cmd[1];
+		}
 	}
 	if( cmd[1] ) /* else 'forgotten' on purpose.. Must show new value after changing */
 	{
-		char *s = set_getstr( &irc->set, cmd[1] );
-		if( s )
-			irc_usermsg( irc, "%s = `%s'", cmd[1], s );
+		char *s = set_getstr( &irc->set, set_name );
+ 		if( s )
+			irc_usermsg( irc, "%s = `%s'", set_name, s );
 		else
-			irc_usermsg( irc, "%s is empty", cmd[1] );
+			irc_usermsg( irc, "%s is empty", set_name );
 	}
 	else
 	{
@@ -760,7 +778,7 @@ static void cmd_set( irc_t *irc, char **cmd )
 		while( s )
 		{
 			if( s->value || s->def )
-				irc_usermsg( irc, "%s = `%s'", s->key, s->value?s->value:s->def );
+				irc_usermsg( irc, "%s = `%s'", s->key, s->value ? s->value : s->def );
 			else
 				irc_usermsg( irc, "%s is empty", s->key );
 			s = s->next;
