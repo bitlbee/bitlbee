@@ -15,6 +15,7 @@ Version 1.2:
   the one-process daemon mode is not reliable enough.
 - BitlBee now makes the buddy quits when doing "account off" look like a
   netsplit. Modern IRC clients show this in a different, more compact way.
+  (This can be disabled if your client doesn't support this.)
 - GLib 1.x compatibility was dropped. BitlBee now requires GLib 2.4 or newer.
   This allows us to use more GLib features (like the XML parser). By now GLib
   1.x is so old that supporting it really isn't necessary anymore.
@@ -47,13 +48,14 @@ Version 1.2:
 - A brand new Jabber module. Besides the major code cleanup, it also has
   has these new features:
   * Pretty complete XMPP support: RFC3920, RFC3921 plus a number of XEPs
-    including XEP73 and XEP85. (See http://www.xmpp.org/ for what all these
-    things mean exactly.) Privacy lists are not supported for obvious
+    including XEP45, XEP73 and XEP85. (See http://www.xmpp.org/ for what all
+    these things mean exactly.) Privacy lists are not supported for obvious
     reasons.
   * This complete support also includes TLS and SASL support and SRV record
     lookup. This means that specifying a server tag for connections should
     (almost) never be necessary anymore, BitlBee can find the server and can
     automatically convert plaintext connections to TLS-encrypted ones.
+  * XEP45: Jabber chatroom support!
   * XEP85 means typing notifications. The older XEP22 (still used by some
     clients including Gaim <2.0) is not supported.
   * Better handling of buddies who have more than one resource on-line. As
