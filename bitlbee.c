@@ -49,12 +49,11 @@ int bitlbee_daemon_init()
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_ADDRCONFIG | AI_PASSIVE;
 
-	i = getaddrinfo( global.conf->iface, global.conf->port, &hints, 
-						&addrinfo_bind );
+	i = getaddrinfo( global.conf->iface, global.conf->port, &hints, &addrinfo_bind );
 	if( i )
 	{
-		log_message( LOGLVL_ERROR, "Couldn't parse address `%s': %s", 
-					 global.conf->iface, gai_strerror(i) );
+		log_message( LOGLVL_ERROR, "Couldn't parse address `%s': %s",
+		                           global.conf->iface, gai_strerror(i) );
 		return -1;
 	}
 
@@ -62,15 +61,13 @@ int bitlbee_daemon_init()
 
 	for( res = addrinfo_bind; res; res = res->ai_next )
 	{
-		global.listen_socket = socket( res->ai_family, res->ai_socktype, 
-									   res->ai_protocol );
+		global.listen_socket = socket( res->ai_family, res->ai_socktype, res->ai_protocol );
 		if( global.listen_socket < 0 )
 			continue;
 
 		/* TIME_WAIT (?) sucks.. */
 		i = 1;
-		setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, 
-					sizeof( i ) );
+		setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
 
 		i = bind( global.listen_socket, res->ai_addr, res->ai_addrlen );
 		if( i == -1 )
@@ -118,8 +115,7 @@ int bitlbee_daemon_init()
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_master_load_state();
 
-	if( global.conf->runmode == RUNMODE_DAEMON || 
-		global.conf->runmode == RUNMODE_FORKDAEMON )
+	if( global.conf->runmode == RUNMODE_DAEMON || global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_master_listen_socket();
 	
 	if( ( fp = fopen( global.conf->pidfile, "w" ) ) )

@@ -77,11 +77,6 @@ irc_t *irc_new( int fd )
 		{
 			irc->myhost = g_strdup( ipv6_unwrap( buf ) );
 		}
-		else
-		{
-			/* Rare, but possible. */
-			strncpy( irc->myhost, "localhost.localdomain", NI_MAXHOST );
-		}
 	}
 	
 	if( getpeername( irc->fd, (struct sockaddr*) &sock, &socklen ) == 0 )
@@ -93,12 +88,12 @@ irc_t *irc_new( int fd )
 		{
 			irc->host = g_strdup( ipv6_unwrap( buf ) );
 		}
-		else
-		{
-			/* Rare, but possible. */
-			strncpy( irc->host, "localhost.localdomain", NI_MAXHOST );
-		}
 	}
+	
+	if( irc->host == NULL )
+		irc->host = g_strdup( "localhost.localdomain" );
+	if( irc->myhost == NULL )
+		irc->myhost = g_strdup( "localhost.localdomain" );
 	
 	if( global.conf->ping_interval > 0 && global.conf->ping_timeout > 0 )
 		irc->ping_source_id = b_timeout_add( global.conf->ping_interval * 1000, irc_userping, irc );
