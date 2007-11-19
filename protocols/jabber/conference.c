@@ -96,6 +96,25 @@ int jabber_chat_msg( struct groupchat *c, char *message, int flags )
 	return 1;
 }
 
+int jabber_chat_topic( struct groupchat *c, char *topic )
+{
+	struct im_connection *ic = c->ic;
+	struct jabber_chat *jc = c->data;
+	struct xt_node *node;
+	
+	node = xt_new_node( "subject", topic, NULL );
+	node = jabber_make_packet( "message", "groupchat", jc->name, node );
+	
+	if( !jabber_write_packet( ic, node ) )
+	{
+		xt_free_node( node );
+		return 0;
+	}
+	xt_free_node( node );
+	
+	return 1;
+}
+
 int jabber_chat_leave( struct groupchat *c, const char *reason )
 {
 	struct im_connection *ic = c->ic;
@@ -213,6 +232,7 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 
 void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node )
 {
+	struct xt_node *subject = xt_find_node( node->children, "subject" );
 	struct xt_node *body = xt_find_node( node->children, "body" );
 	struct groupchat *chat;
 	char *s;
@@ -236,6 +256,14 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 		return;
 	}
 	
+	if( subject )
+	{
+		s = strchr( bud->ext_jid, '/' );
+		if( s ) *s = 0;
+		imcb_chat_topic( chat, bud->ext_jid, subject->text_len > 0 ?
+		                 subject->text : NULL, jabber_get_timestamp( node ) );
+		if( s ) *s = '/';
+	}
 	if( body && body->text_len > 0 )
 	{
 		s = strchr( bud->ext_jid, '/' );

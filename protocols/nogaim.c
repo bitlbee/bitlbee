@@ -759,15 +759,15 @@ void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, 
 	g_free( wrapped );
 }
 
-void imcb_chat_topic( struct groupchat *c, char *who, char *topic )
+void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at )
 {
 	struct im_connection *ic = c->ic;
 	user_t *u = NULL;
 	
 	if( who == NULL)
-		u = user_find( ic, ic->irc->mynick );
+		u = user_find( ic->irc, ic->irc->mynick );
 	else if( g_strcasecmp( who, ic->acc->user ) == 0 )
-		u = user_find( ic, ic->irc->nick );
+		u = user_find( ic->irc, ic->irc->nick );
 	else
 		u = user_findhandle( ic, who );
 	

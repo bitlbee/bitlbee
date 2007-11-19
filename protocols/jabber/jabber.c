@@ -384,6 +384,12 @@ static void jabber_chat_msg_( struct groupchat *c, char *message, int flags )
 		jabber_chat_msg( c, message, flags );
 }
 
+static void jabber_chat_topic_( struct groupchat *c, char *topic )
+{
+	if( c && topic )
+		jabber_chat_topic( c, topic );
+}
+
 static void jabber_chat_leave_( struct groupchat *c )
 {
 	if( c )
@@ -460,6 +466,7 @@ void jabber_initmodule()
 	ret->add_buddy = jabber_add_buddy;
 	ret->remove_buddy = jabber_remove_buddy;
 	ret->chat_msg = jabber_chat_msg_;
+	ret->chat_topic = jabber_chat_topic_;
 //	ret->chat_invite = jabber_chat_invite;
 	ret->chat_leave = jabber_chat_leave_;
 	ret->chat_join = jabber_chat_join_;

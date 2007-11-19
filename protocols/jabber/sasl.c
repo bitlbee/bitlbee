@@ -331,5 +331,5 @@ gboolean sasl_supported( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
 	
-	return ( (void*) ( jd->xt && jd->xt->root && xt_find_attr( jd->xt->root, "version" ) ) ) != NULL;
+	return ( jd->xt && jd->xt->root && xt_find_attr( jd->xt->root, "version" ) ) != 0;
 }

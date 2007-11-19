@@ -228,6 +228,7 @@ gboolean sasl_supported( struct im_connection *ic );
 struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *nick, char *password );
 void jabber_chat_free( struct groupchat *c );
 int jabber_chat_msg( struct groupchat *ic, char *message, int flags );
+int jabber_chat_topic( struct groupchat *c, char *topic );
 int jabber_chat_leave( struct groupchat *c, const char *reason );
 void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
 void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
