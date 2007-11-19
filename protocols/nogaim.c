@@ -759,6 +759,29 @@ void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, 
 	g_free( wrapped );
 }
 
+void imcb_chat_topic( struct groupchat *c, char *who, char *topic )
+{
+	struct im_connection *ic = c->ic;
+	user_t *u = NULL;
+	
+	if( who == NULL)
+		u = user_find( ic, ic->irc->mynick );
+	else if( g_strcasecmp( who, ic->acc->user ) == 0 )
+		u = user_find( ic, ic->irc->nick );
+	else
+		u = user_findhandle( ic, who );
+	
+	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
+		strip_html( topic );
+	
+	g_free( c->topic );
+	c->topic = g_strdup( topic );
+	
+	if( c->joined && u )
+		irc_write( ic->irc, ":%s!%s@%s TOPIC %s :%s", u->nick, u->user, u->host, c->channel, topic );
+}
+
 struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
 {
 	struct groupchat *c;
@@ -776,6 +799,7 @@ struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
 	c->ic = ic;
 	c->title = g_strdup( handle );
 	c->channel = g_strdup_printf( "&chat_%03d", ic->irc->c_id++ );
+	c->topic = g_strdup_printf( "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->channel, c->title );
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
 		imcb_log( ic, "Creating new conversation: (id=0x%x,handle=%s)", (int) c, handle );

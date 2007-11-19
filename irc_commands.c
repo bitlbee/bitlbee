@@ -420,10 +420,21 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 
 static void irc_cmd_topic( irc_t *irc, char **cmd )
 {
-	if( cmd[2] )
-		irc_reply( irc, 482, "%s :Cannot change topic", cmd[1] );
+	char *channel = cmd[1];
+	char *topic = cmd[2];
+	
+	if( topic )
+	{
+		/* Send the topic */
+		struct groupchat *c = irc_chat_by_channel( irc, channel );
+		if( c && c->ic && c->ic->acc->prpl->chat_topic )
+			c->ic->acc->prpl->chat_topic( c, topic );
+	}
 	else
-		irc_topic( irc, cmd[1] );
+	{
+		/* Get the topic */
+		irc_topic( irc, channel );
+	}
 }
 
 static void irc_cmd_away( irc_t *irc, char **cmd )

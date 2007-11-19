@@ -109,6 +109,9 @@ struct groupchat {
 	/* The title variable contains the ID you gave when you created the
 	 * chat using imcb_chat_new(). */
 	char *title;
+	/* Use imcb_chat_topic() to change this variable otherwise the user
+	 * won't notice the topic change. */
+	char *topic;
 	char joined;
 	/* This is for you, you can add your own structure here to extend this
 	 * structure for your protocol's needs. */
@@ -211,6 +214,11 @@ struct prpl {
 	 * not implement this. */
 	struct groupchat *
 	     (* chat_join)	(struct im_connection *, char *room, char *nick, char *password);
+	/* Change the topic, if supported. Note that BitlBee expects the IM
+	   server to confirm the topic change with a regular topic change
+	   event. If it doesn't do that, you have to fake it to make it
+	   visible to the user. */
+	void (* chat_topic)	(struct groupchat *, char *message);
 	
 	/* You can tell what away states your protocol supports, so that
 	 * BitlBee will try to map the IRC away reasons to them, or use
@@ -292,6 +300,8 @@ G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, char *handle );
 G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason );
 /* To tell BitlBee 'who' said 'msg' in 'c'. 'flags' and 'sent_at' can be 0. */
 G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at );
+/* To tell BitlBee 'who' changed the topic of 'c' to 'topic'. */
+G_MODULE_EXPORT void imcb_chat_topic( struct groupchat *c, char *who, char *topic );
 G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
 
 /* Actions, or whatever. */

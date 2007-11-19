@@ -787,19 +787,14 @@ void irc_motd( irc_t *irc )
 
 void irc_topic( irc_t *irc, char *channel )
 {
-	if( g_strcasecmp( channel, irc->channel ) == 0 )
-	{
+	struct groupchat *c = irc_chat_by_channel( irc, channel );
+	
+	if( c && c->topic )
+		irc_reply( irc, 332, "%s :%s", channel, c->topic );
+	else if( g_strcasecmp( channel, irc->channel ) == 0 )
 		irc_reply( irc, 332, "%s :%s", channel, CONTROL_TOPIC );
-	}
 	else
-	{
-		struct groupchat *c = irc_chat_by_channel( irc, channel );
-		
-		if( c )
-			irc_reply( irc, 332, "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", channel, c->title );
-		else
-			irc_reply( irc, 331, "%s :No topic for this channel", channel );
-	}
+		irc_reply( irc, 331, "%s :No topic for this channel", channel );
 }
 
 void irc_umode_set( irc_t *irc, char *s, int allow_priv )
