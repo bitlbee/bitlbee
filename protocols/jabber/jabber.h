@@ -31,16 +31,17 @@
 
 typedef enum
 {
-	JFLAG_STREAM_STARTED = 1,	/* Set when we detected the beginning of the stream
+	JFLAG_STREAM_STARTED = 1,       /* Set when we detected the beginning of the stream
 	                                   and want to do auth. */
-	JFLAG_AUTHENTICATED = 2,	/* Set when we're successfully authenticatd. */
-	JFLAG_STREAM_RESTART = 4,	/* Set when we want to restart the stream (after
+	JFLAG_AUTHENTICATED = 2,        /* Set when we're successfully authenticatd. */
+	JFLAG_STREAM_RESTART = 4,       /* Set when we want to restart the stream (after
 	                                   SASL or TLS). */
-	JFLAG_WAIT_SESSION = 8,		/* Set if we sent a <session> tag and need a reply
+	JFLAG_WAIT_SESSION = 8,	        /* Set if we sent a <session> tag and need a reply
 	                                   before we continue. */
-	JFLAG_WAIT_BIND = 16,		/* ... for <bind> tag. */
-	JFLAG_WANT_TYPING = 32,		/* Set if we ever sent a typing notification, this
+	JFLAG_WAIT_BIND = 16,           /* ... for <bind> tag. */
+	JFLAG_WANT_TYPING = 32,         /* Set if we ever sent a typing notification, this
 	                                   activates all XEP-85 related code. */
+	JFLAG_XMLCONSOLE = 64,          /* If the user added an xmlconsole buddy. */
 } jabber_flags_t;
 
 typedef enum
@@ -49,11 +50,11 @@ typedef enum
 	                                   sure it gets sent only once. */
 	JBFLAG_DOES_XEP85 = 2,		/* Set this when the resource seems to support
 	                                   XEP85 (typing notification shite). */
+	JBFLAG_IS_CHATROOM = 4,		/* It's convenient to use this JID thingy for
+	                                   groupchat state info too. */
+	JBFLAG_IS_ANONYMOUS = 8,	/* For anonymous chatrooms, when we don't have
+	                                   have a real JID. */
 } jabber_buddy_flags_t;
-
-#define JABBER_PORT_DEFAULT "5222"
-#define JABBER_PORT_MIN 5220
-#define JABBER_PORT_MAX 5229
 
 struct jabber_data
 {
@@ -100,6 +101,9 @@ struct jabber_buddy
 	char *full_jid;
 	char *resource;
 	
+	char *ext_jid; /* The JID to use in BitlBee. The real JID if possible, */
+	               /* otherwise something similar to the conference JID. */
+	
 	int priority;
 	struct jabber_away_state *away_state;
 	char *away_message;
@@ -109,6 +113,20 @@ struct jabber_buddy
 	
 	struct jabber_buddy *next;
 };
+
+struct jabber_chat
+{
+	int flags;
+	char *name;
+	char *my_full_jid; /* Separate copy because of case sensitivity. */
+	struct jabber_buddy *me;
+};
+
+#define JABBER_XMLCONSOLE_HANDLE "xmlconsole"
+
+#define JABBER_PORT_DEFAULT "5222"
+#define JABBER_PORT_MIN 5220
+#define JABBER_PORT_MAX 5229
 
 /* Prefixes to use for packet IDs (mainly for IQ packets ATM). Usually the
    first one should be used, but when storing a packet in the cache, a
@@ -131,8 +149,11 @@ struct jabber_buddy
 #define XMLNS_VERSION      "jabber:iq:version"                  /* XEP-0092 */
 #define XMLNS_TIME         "jabber:iq:time"                     /* XEP-0090 */
 #define XMLNS_VCARD        "vcard-temp"                         /* XEP-0054 */
+#define XMLNS_DELAY        "jabber:x:delay"                     /* XEP-0091 */
 #define XMLNS_CHATSTATES   "http://jabber.org/protocol/chatstates"  /* 0085 */
 #define XMLNS_DISCOVER     "http://jabber.org/protocol/disco#info"  /* 0030 */
+#define XMLNS_MUC          "http://jabber.org/protocol/muc"     /* XEP-0045 */
+#define XMLNS_MUC_USER     "http://jabber.org/protocol/muc#user"/* XEP-0045 */
 
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
@@ -163,18 +184,29 @@ void jabber_cache_clean( struct im_connection *ic );
 const struct jabber_away_state *jabber_away_state_by_code( char *code );
 const struct jabber_away_state *jabber_away_state_by_name( char *name );
 void jabber_buddy_ask( struct im_connection *ic, char *handle );
-char *jabber_normalize( char *orig );
+char *jabber_normalize( const char *orig );
 
 typedef enum
 {
 	GET_BUDDY_CREAT = 1,	/* Try to create it, if necessary. */
-	GET_BUDDY_EXACT = 2,	/* Get an exact message (only makes sense with bare JIDs). */
+	GET_BUDDY_EXACT = 2,	/* Get an exact match (only makes sense with bare JIDs). */
+	GET_BUDDY_FIRST = 4,	/* No selection, simply get the first resource for this JID. */
 } get_buddy_flags_t;
+
+struct jabber_error
+{
+	char *code, *text, *type;
+};
 
 struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid );
 struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
+struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
 int jabber_buddy_remove( struct im_connection *ic, char *full_jid );
 int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid );
+struct groupchat *jabber_chat_by_name( struct im_connection *ic, const char *name );
+time_t jabber_get_timestamp( struct xt_node *xt );
+struct jabber_error *jabber_error_parse( struct xt_node *node, char *xmlns );
+void jabber_error_free( struct jabber_error *err );
 
 extern const struct jabber_away_state jabber_away_state_list[];
 
@@ -191,5 +223,14 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data );
 xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data );
 xt_status sasl_pkt_result( struct xt_node *node, gpointer data );
 gboolean sasl_supported( struct im_connection *ic );
+
+/* conference.c */
+struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *nick, char *password );
+void jabber_chat_free( struct groupchat *c );
+int jabber_chat_msg( struct groupchat *ic, char *message, int flags );
+int jabber_chat_topic( struct groupchat *c, char *topic );
+int jabber_chat_leave( struct groupchat *c, const char *reason );
+void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
+void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
 
 #endif

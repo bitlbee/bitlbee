@@ -44,6 +44,15 @@ int jabber_write( struct im_connection *ic, char *buf, int len )
 	struct jabber_data *jd = ic->proto_data;
 	gboolean ret;
 	
+	if( jd->flags & JFLAG_XMLCONSOLE )
+	{
+		char *msg;
+		
+		msg = g_strdup_printf( "TX: %s", buf );
+		imcb_buddy_msg( ic, JABBER_XMLCONSOLE_HANDLE, msg, 0, 0 );
+		g_free( msg );
+	}
+	
 	if( jd->tx_len == 0 )
 	{
 		/* If the queue is empty, allocate a new buffer. */
@@ -426,56 +435,61 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
-	struct xt_node *c;
-	char *s, *type = NULL, *text = NULL;
 	int allow_reconnect = TRUE;
+	struct jabber_error *err;
 	
-	for( c = node->children; c; c = c->next )
-	{
-		if( !( s = xt_find_attr( c, "xmlns" ) ) ||
-		    strcmp( s, XMLNS_STREAM_ERROR ) != 0 )
-			continue;
-		
-		if( strcmp( c->name, "text" ) != 0 )
-		{
-			type = c->name;
-		}
-		/* Only use the text if it doesn't have an xml:lang attribute,
-		   if it's empty or if it's set to something English. */
-		else if( !( s = xt_find_attr( c, "xml:lang" ) ) ||
-		         !*s || strncmp( s, "en", 2 ) == 0 )
-		{
-			text = c->text;
-		}
-	}
+	err = jabber_error_parse( node, XMLNS_STREAM_ERROR );
 	
 	/* Tssk... */
-	if( type == NULL )
+	if( err->code == NULL )
 	{
 		imcb_error( ic, "Unknown stream error reported by server" );
 		imc_logout( ic, allow_reconnect );
+		jabber_error_free( err );
 		return XT_ABORT;
 	}
 	
 	/* We know that this is a fatal error. If it's a "conflict" error, we
 	   should turn off auto-reconnect to make sure we won't get some nasty
 	   infinite loop! */
-	if( strcmp( type, "conflict" ) == 0 )
+	if( strcmp( err->code, "conflict" ) == 0 )
 	{
 		imcb_error( ic, "Account and resource used from a different location" );
 		allow_reconnect = FALSE;
 	}
 	else
 	{
-		imcb_error( ic, "Stream error: %s%s%s", type, text ? ": " : "", text ? text : "" );
+		imcb_error( ic, "Stream error: %s%s%s", err->code, err->text ? ": " : "",
+		            err->text ? err->text : "" );
 	}
 	
+	jabber_error_free( err );
 	imc_logout( ic, allow_reconnect );
 	
 	return XT_ABORT;
 }
 
+static xt_status jabber_xmlconsole( struct xt_node *node, gpointer data )
+{
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
+	
+	if( jd->flags & JFLAG_XMLCONSOLE )
+	{
+		char *msg, *pkt;
+		
+		pkt = xt_to_string( node );
+		msg = g_strdup_printf( "RX: %s", pkt );
+		imcb_buddy_msg( ic, JABBER_XMLCONSOLE_HANDLE, msg, 0, 0 );
+		g_free( msg );
+		g_free( pkt );
+	}
+	
+	return XT_NEXT;
+}
+
 static const struct xt_handler_entry jabber_handlers[] = {
+	{ NULL,                 "stream:stream",        jabber_xmlconsole },
 	{ "stream:stream",      "<root>",               jabber_end_of_stream },
 	{ "message",            "stream:stream",        jabber_pkt_message },
 	{ "presence",           "stream:stream",        jabber_pkt_presence },

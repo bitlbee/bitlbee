@@ -60,6 +60,7 @@
 #define OPT_LOGGING_OUT 0x00000002
 #define OPT_AWAY        0x00000004
 #define OPT_DOES_HTML   0x00000010
+#define OPT_LOCALBUDDY  0x00000020 /* For nicks local to one groupchat */
 #define OPT_TYPING      0x00000100 /* Some pieces of code make assumptions */
 #define OPT_THINKING    0x00000200 /* about these values... Stupid me! */
 
@@ -90,7 +91,7 @@ struct im_connection
 	/* BitlBee */
 	irc_t *irc;
 	
-	struct groupchat *conversations;
+	struct groupchat *groupchats;
 };
 
 struct groupchat {
@@ -103,12 +104,14 @@ struct groupchat {
 	GList *in_room;
 	GList *ignored;
 	
-	/* BitlBee */
 	struct groupchat *next;
 	char *channel;
 	/* The title variable contains the ID you gave when you created the
 	 * chat using imcb_chat_new(). */
 	char *title;
+	/* Use imcb_chat_topic() to change this variable otherwise the user
+	 * won't notice the topic change. */
+	char *topic;
 	char joined;
 	/* This is for you, you can add your own structure here to extend this
 	 * structure for your protocol's needs. */
@@ -211,6 +214,11 @@ struct prpl {
 	 * not implement this. */
 	struct groupchat *
 	     (* chat_join)	(struct im_connection *, char *room, char *nick, char *password);
+	/* Change the topic, if supported. Note that BitlBee expects the IM
+	   server to confirm the topic change with a regular topic change
+	   event. If it doesn't do that, you have to fake it to make it
+	   visible to the user. */
+	void (* chat_topic)	(struct groupchat *, char *topic);
 	
 	/* You can tell what away states your protocol supports, so that
 	 * BitlBee will try to map the IRC away reasons to them, or use
@@ -264,6 +272,7 @@ G_MODULE_EXPORT void imcb_add_buddy( struct im_connection *ic, char *handle, cha
 G_MODULE_EXPORT void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group );
 G_MODULE_EXPORT struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle );
 G_MODULE_EXPORT void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname );
+G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick );
 
 /* Buddy activity */
 /* To manipulate the status of a handle.
@@ -275,6 +284,7 @@ G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *ha
 /* Call when a handle says something. 'flags' and 'sent_at may be just 0. */
 G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_t flags, time_t sent_at );
 G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags );
+G_MODULE_EXPORT void imcb_clean_handle( struct im_connection *ic, char *handle );
 
 /* Groupchats */
 G_MODULE_EXPORT void imcb_chat_invited( struct im_connection *ic, char *handle, char *who, char *msg, GList *data );
@@ -290,8 +300,9 @@ G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, char *handle );
 G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason );
 /* To tell BitlBee 'who' said 'msg' in 'c'. 'flags' and 'sent_at' can be 0. */
 G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at );
-G_MODULE_EXPORT void imcb_chat_removed( struct groupchat *c );
-struct groupchat *chat_by_channel( char *channel );
+/* To tell BitlBee 'who' changed the topic of 'c' to 'topic'. */
+G_MODULE_EXPORT void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at );
+G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
 
 /* Actions, or whatever. */
 int imc_set_away( struct im_connection *ic, char *away );

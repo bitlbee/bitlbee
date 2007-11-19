@@ -143,7 +143,7 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 		irc_part( irc, u, irc->channel );
 		irc_join( irc, u, irc->channel );
 	}
-	else if( ( c = chat_by_channel( cmd[1] ) ) )
+	else if( ( c = irc_chat_by_channel( irc, cmd[1] ) ) )
 	{
 		user_t *u = user_find( irc, irc->nick );
 		
@@ -200,7 +200,7 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 static void irc_cmd_invite( irc_t *irc, char **cmd )
 {
 	char *nick = cmd[1], *channel = cmd[2];
-	struct groupchat *c = chat_by_channel( channel );
+	struct groupchat *c = irc_chat_by_channel( irc, channel );
 	user_t *u = user_find( irc, nick );
 	
 	if( u && c && ( u->ic == c->ic ) )
@@ -286,7 +286,7 @@ static void irc_cmd_who( irc_t *irc, char **cmd )
 				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
 			u = u->next;
 		}
-	else if( ( c = chat_by_channel( channel ) ) )
+	else if( ( c = irc_chat_by_channel( irc, channel ) ) )
 		for( l = c->in_room; l; l = l->next )
 		{
 			if( ( u = user_findhandle( c->ic, l->data ) ) )
@@ -420,10 +420,21 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 
 static void irc_cmd_topic( irc_t *irc, char **cmd )
 {
-	if( cmd[2] )
-		irc_reply( irc, 482, "%s :Cannot change topic", cmd[1] );
+	char *channel = cmd[1];
+	char *topic = cmd[2];
+	
+	if( topic )
+	{
+		/* Send the topic */
+		struct groupchat *c = irc_chat_by_channel( irc, channel );
+		if( c && c->ic && c->ic->acc->prpl->chat_topic )
+			c->ic->acc->prpl->chat_topic( c, topic );
+	}
 	else
-		irc_topic( irc, cmd[1] );
+	{
+		/* Get the topic */
+		irc_topic( irc, channel );
+	}
 }
 
 static void irc_cmd_away( irc_t *irc, char **cmd )

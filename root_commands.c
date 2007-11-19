@@ -929,24 +929,49 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 	chat = cmd[2];
 	if( cmd[3] )
 	{
-		channel = g_strdup( cmd[3] );
+		if( cmd[3][0] != '#' && cmd[3][0] != '&' )
+			channel = g_strdup_printf( "&%s", cmd[3] );
+		else
+			channel = g_strdup( cmd[3] );
 	}
 	else
 	{
 		char *s;
 		
-		channel = g_strdup( chat );
+		channel = g_strdup_printf( "&%s", chat );
 		if( ( s = strchr( channel, '@' ) ) )
 			*s = 0;
 	}
 	if( cmd[3] && cmd[4] )
 		nick = cmd[4];
+	else
+		nick = irc->nick;
 	if( cmd[3] && cmd[4] && cmd[5] )
 		password = cmd[5];
 	
-	c = a->prpl->chat_join( ic, chat, nick, password );
+	if( !nick_ok( channel + 1 ) )
+	{
+		irc_usermsg( irc, "Invalid channel name: %s", channel );
+		g_free( channel );
+		return;
+	}
+	else if( g_strcasecmp( channel, irc->channel ) == 0 || irc_chat_by_channel( irc, channel ) )
+	{
+		irc_usermsg( irc, "Channel already exists: %s", channel );
+		g_free( channel );
+		return;
+	}
 	
-	g_free( channel );
+	if( ( c = a->prpl->chat_join( ic, chat, nick, password ) ) )
+	{
+		g_free( c->channel );
+		c->channel = channel;
+	}
+	else
+	{
+		irc_usermsg( irc, "Tried to join chat, not sure if this was successful" );
+		g_free( channel );
+	}
 }
 
 const command_t commands[] = {

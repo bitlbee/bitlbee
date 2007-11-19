@@ -30,15 +30,22 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	char *type = xt_find_attr( node, "type" );	/* NULL should mean the person is online. */
 	struct xt_node *c;
 	struct jabber_buddy *bud;
+	int is_chat = 0, is_away = 0;
 	char *s;
 	
 	if( !from )
 		return XT_HANDLED;
 	
+	if( ( s = strchr( from, '/' ) ) )
+	{
+		*s = 0;
+		if( jabber_chat_by_name( ic, from ) )
+			is_chat = 1;
+		*s = '/';
+	}
+	
 	if( type == NULL )
 	{
-		int is_away = 0;
-		
 		if( !( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT | GET_BUDDY_CREAT ) ) )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
@@ -71,30 +78,55 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		else
 			bud->priority = 0;
 		
-		if( bud == jabber_buddy_by_jid( ic, bud->bare_jid, 0 ) )
+		if( is_chat )
+			jabber_chat_pkt_presence( ic, bud, node );
+		else if( bud == jabber_buddy_by_jid( ic, bud->bare_jid, 0 ) )
 			imcb_buddy_status( ic, bud->bare_jid, OPT_LOGGED_IN | is_away,
 			                   ( is_away && bud->away_state ) ? bud->away_state->full_name : NULL,
 			                   bud->away_message );
 	}
 	else if( strcmp( type, "unavailable" ) == 0 )
 	{
-		if( jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT ) == NULL )
+		if( ( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT ) ) == NULL )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
 				imcb_log( ic, "WARNING: Received presence information from unknown JID: %s", from );
 			return XT_HANDLED;
 		}
 		
+		/* Handle this before we delete the JID. */
+		if( is_chat )
+		{
+			jabber_chat_pkt_presence( ic, bud, node );
+		}
+		
 		jabber_buddy_remove( ic, from );
 		
-		if( ( s = strchr( from, '/' ) ) )
+		if( is_chat )
+		{
+			/* Nothing else to do for now? */
+		}
+		else if( ( s = strchr( from, '/' ) ) )
 		{
 			*s = 0;
 		
-			/* Only count this as offline if there's no other resource
-			   available anymore. */
-			if( jabber_buddy_by_jid( ic, from, 0 ) == NULL )
+			/* If another resource is still available, send its presence
+			   information. */
+			if( ( bud = jabber_buddy_by_jid( ic, from, 0 ) ) )
+			{
+				if( bud->away_state && ( *bud->away_state->code == 0 ||
+				    strcmp( bud->away_state->code, "chat" ) == 0 ) )
+					is_away = OPT_AWAY;
+				
+				imcb_buddy_status( ic, bud->bare_jid, OPT_LOGGED_IN | is_away,
+				                   ( is_away && bud->away_state ) ? bud->away_state->full_name : NULL,
+				                   bud->away_message );
+			}
+			else
+			{
+				/* Otherwise, count him/her as offline now. */
 				imcb_buddy_status( ic, from, 0, NULL, NULL );
+			}
 			
 			*s = '/';
 		}
@@ -125,7 +157,17 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	}
 	else if( strcmp( type, "error" ) == 0 )
 	{
-		/* What to do with it? */
+		struct jabber_error *err;
+		
+		if( ( c = xt_find_node( node->children, "error" ) ) )
+		{
+			err = jabber_error_parse( c, XMLNS_STANZA_ERROR );
+			imcb_error( ic, "Stanza (%s) error: %s%s%s", node->name,
+			            err->code, err->text ? ": " : "",
+			            err->text ? err->text : "" );
+			jabber_error_free( err );
+		}
+		/* What else to do with it? */
 	}
 	
 	return XT_HANDLED;
@@ -139,6 +181,7 @@ int presence_send_update( struct im_connection *ic )
 	struct xt_node *node;
 	char *show = jd->away_state->code;
 	char *status = jd->away_message;
+	struct groupchat *c;
 	int st;
 	
 	node = jabber_make_packet( "presence", NULL, NULL, NULL );
@@ -149,6 +192,16 @@ int presence_send_update( struct im_connection *ic )
 		xt_add_child( node, xt_new_node( "status", status, NULL ) );
 	
 	st = jabber_write_packet( ic, node );
+	
+	/* Have to send this update to all groupchats too, the server won't
+	   do this automatically. */
+	for( c = ic->groupchats; c && st; c = c->next )
+	{
+		struct jabber_chat *jc = c->data;
+		
+		xt_add_attr( node, "to", jc->my_full_jid );
+		st = jabber_write_packet( ic, node );
+	}
 	
 	xt_free_node( node );
 	return st;

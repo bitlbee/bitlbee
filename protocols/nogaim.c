@@ -98,7 +98,6 @@ void register_protocol (struct prpl *p)
 	protocols = g_list_append(protocols, p);
 }
 
- 
 struct prpl *find_protocol(const char *name)
 {
 	GList *gl;
@@ -288,7 +287,7 @@ void cancel_auto_reconnect( account_t *a )
 void imc_logout( struct im_connection *ic, int allow_reconnect )
 {
 	irc_t *irc = ic->irc;
-	user_t *t, *u = irc->users;
+	user_t *t, *u;
 	account_t *a;
 	
 	/* Nested calls might happen sometimes, this is probably the best
@@ -305,6 +304,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	ic->acc->prpl->logout( ic );
 	b_event_remove( ic->inpa );
 	
+	u = irc->users;
 	while( u )
 	{
 		if( u->ic == ic )
@@ -427,7 +427,6 @@ struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle )
 void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 {
 	user_t *u = user_findhandle( ic, handle );
-	char *s, newnick[MAX_NICK_LENGTH+1];
 	
 	if( !u || !realname ) return;
 	
@@ -439,30 +438,53 @@ void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 		
 		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->irc->set, "display_namechanges" ) )
 			imcb_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
-		
-		if( !u->online && !nick_saved( ic->acc, handle ) )
-		{
-			/* Detect numeric handles: */
-			for( s = u->user; isdigit( *s ); s++ );
-			
-			if( *s == 0 )
-			{
-				/* If we reached the end of the string, it only contained numbers.
-				   Seems to be an ICQ# then, so hopefully realname contains
-				   something more useful. */
-				strcpy( newnick, realname );
-				
-				/* Some processing to make sure this string is a valid IRC nickname. */
-				nick_strip( newnick );
-				if( set_getbool( &ic->irc->set, "lcnicks" ) )
-					nick_lc( newnick );
-				
-				u->nick = g_strdup( newnick );
-			}
-		}
 	}
 }
 
+void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group )
+{
+	user_t *u;
+	
+	if( ( u = user_findhandle( ic, handle ) ) )
+		user_del( ic->irc, u->nick );
+}
+
+/* Mainly meant for ICQ (and now also for Jabber conferences) to allow IM
+   modules to suggest a nickname for a handle. */
+void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
+{
+	user_t *u = user_findhandle( ic, handle );
+	char newnick[MAX_NICK_LENGTH+1], *orig_nick;
+	
+	if( u && !u->online && !nick_saved( ic->acc, handle ) )
+	{
+		/* Only do this if the person isn't online yet (which should
+		   be the case if we just added it) and if the user hasn't
+		   assigned a nickname to this buddy already. */
+		
+		strncpy( newnick, nick, MAX_NICK_LENGTH );
+		newnick[MAX_NICK_LENGTH] = 0;
+		
+		/* Some processing to make sure this string is a valid IRC nickname. */
+		nick_strip( newnick );
+		if( set_getbool( &ic->irc->set, "lcnicks" ) )
+			nick_lc( newnick );
+		
+		if( strcmp( u->nick, newnick ) != 0 )
+		{
+			/* Only do this if newnick is different from the current one.
+			   If rejoining a channel, maybe we got this nick already
+			   (and dedupe would only add an underscore. */
+			nick_dedupe( ic->acc, handle, newnick );
+			
+			/* u->nick will be freed halfway the process, so it can't be
+			   passed as an argument. */
+			orig_nick = g_strdup( u->nick );
+			user_rename( ic->irc, orig_nick, newnick );
+			g_free( orig_nick );
+		}
+	}
+}
 
 /* prpl.c */
 
@@ -553,8 +575,8 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 		irc_kill( ic->irc, u );
 		u->online = 0;
 		
-		/* Remove him/her from the conversations to prevent PART messages after he/she QUIT already */
-		for( c = ic->conversations; c; c = c->next )
+		/* Remove him/her from the groupchats to prevent PART messages after he/she QUIT already */
+		for( c = ic->groupchats; c; c = c->next )
 			remove_chat_buddy_silent( c, handle );
 	}
 	
@@ -669,10 +691,10 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags 
 	}
 }
 
-void imcb_chat_removed( struct groupchat *c )
+void imcb_chat_free( struct groupchat *c )
 {
 	struct im_connection *ic = c->ic;
-	struct groupchat *l = NULL;
+	struct groupchat *l;
 	GList *ir;
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
@@ -692,10 +714,13 @@ void imcb_chat_removed( struct groupchat *c )
 			/* irc_part( ic->irc, u, c->channel ); */
 		}
 		
+		/* Find the previous chat in the linked list. */
+		for( l = ic->groupchats; l && l->next != c; l = l->next );
+		
 		if( l )
 			l->next = c->next;
 		else
-			ic->conversations = c->next;
+			ic->groupchats = c->next;
 		
 		for( ir = c->in_room; ir; ir = ir->next )
 			g_free( ir->data );
@@ -734,23 +759,47 @@ void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, 
 	g_free( wrapped );
 }
 
+void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at )
+{
+	struct im_connection *ic = c->ic;
+	user_t *u = NULL;
+	
+	if( who == NULL)
+		u = user_find( ic->irc, ic->irc->mynick );
+	else if( g_strcasecmp( who, ic->acc->user ) == 0 )
+		u = user_find( ic->irc, ic->irc->nick );
+	else
+		u = user_findhandle( ic, who );
+	
+	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
+		strip_html( topic );
+	
+	g_free( c->topic );
+	c->topic = g_strdup( topic );
+	
+	if( c->joined && u )
+		irc_write( ic->irc, ":%s!%s@%s TOPIC %s :%s", u->nick, u->user, u->host, c->channel, topic );
+}
+
 struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
 {
 	struct groupchat *c;
 	
 	/* This one just creates the conversation structure, user won't see anything yet */
 	
-	if( ic->conversations )
+	if( ic->groupchats )
 	{
-		for( c = ic->conversations; c->next; c = c->next );
+		for( c = ic->groupchats; c->next; c = c->next );
 		c = c->next = g_new0( struct groupchat, 1 );
 	}
 	else
-		ic->conversations = c = g_new0( struct groupchat, 1 );
+		ic->groupchats = c = g_new0( struct groupchat, 1 );
 	
 	c->ic = ic;
 	c->title = g_strdup( handle );
 	c->channel = g_strdup_printf( "&chat_%03d", ic->irc->c_id++ );
+	c->topic = g_strdup_printf( "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->channel, c->title );
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
 		imcb_log( ic, "Creating new conversation: (id=0x%x,handle=%s)", (int) c, handle );
@@ -795,6 +844,7 @@ void imcb_chat_add_buddy( struct groupchat *b, char *handle )
 	}
 }
 
+/* This function is one BIG hack... :-( EREWRITE */
 void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
 {
 	user_t *u;
@@ -806,6 +856,9 @@ void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
 	/* It might be yourself! */
 	if( g_strcasecmp( handle, b->ic->acc->user ) == 0 )
 	{
+		if( b->joined == 0 )
+			return;
+		
 		u = user_find( b->ic->irc, b->ic->irc->nick );
 		b->joined = 0;
 		me = 1;
@@ -815,9 +868,8 @@ void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
 		u = user_findhandle( b->ic, handle );
 	}
 	
-	if( remove_chat_buddy_silent( b, handle ) )
-		if( ( b->joined || me ) && u )
-			irc_part( b->ic->irc, u, b->channel );
+	if( me || ( remove_chat_buddy_silent( b, handle ) && b->joined && u ) )
+		irc_part( b->ic->irc, u, b->channel );
 }
 
 static int remove_chat_buddy_silent( struct groupchat *b, const char *handle )
@@ -843,24 +895,6 @@ static int remove_chat_buddy_silent( struct groupchat *b, const char *handle )
 
 
 /* Misc. BitlBee stuff which shouldn't really be here */
-
-struct groupchat *chat_by_channel( char *channel )
-{
-	struct im_connection *ic;
-	struct groupchat *c;
-	GSList *l;
-	
-	/* This finds the connection which has a conversation which belongs to this channel */
-	for( l = connections; l; l = l->next )
-	{
-		ic = l->data;
-		for( c = ic->conversations; c && g_strcasecmp( c->channel, channel ) != 0; c = c->next );
-		if( c )
-			return c;
-	}
-	
-	return NULL;
-}
 
 char *set_eval_away_devoice( set_t *set, char *value )
 {
@@ -1093,4 +1127,36 @@ void imc_rem_block( struct im_connection *ic, char *handle )
 	}
 	
 	ic->acc->prpl->rem_deny( ic, handle );
+}
+
+void imcb_clean_handle( struct im_connection *ic, char *handle )
+{
+	/* Accepts a handle and does whatever is necessary to make it
+	   BitlBee-friendly. Currently this means removing everything
+	   outside 33-127 (ASCII printable excl spaces), @ (only one
+	   is allowed) and ! and : */
+	char out[strlen(handle)+1];
+	int s, d;
+	
+	s = d = 0;
+	while( handle[s] )
+	{
+		if( handle[s] > ' ' && handle[s] != '!' && handle[s] != ':' &&
+		    ( handle[s] & 0x80 ) == 0 )
+		{
+			if( handle[s] == '@' )
+			{
+				/* See if we got an @ already? */
+				out[d] = 0;
+				if( strchr( out, '@' ) )
+					continue;
+			}
+			
+			out[d++] = handle[s];
+		}
+		s ++;
+	}
+	out[d] = handle[s];
+	
+	strcpy( handle, out );
 }

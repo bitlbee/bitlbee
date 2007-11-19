@@ -443,7 +443,7 @@ void xt_free( struct xt_parser *xt )
 /* To find a node's child with a specific name, pass the node's children
    list, not the node itself! The reason you have to do this by hand: So
    that you can also use this function as a find-next. */
-struct xt_node *xt_find_node( struct xt_node *node, char *name )
+struct xt_node *xt_find_node( struct xt_node *node, const char *name )
 {
 	while( node )
 	{
@@ -456,7 +456,7 @@ struct xt_node *xt_find_node( struct xt_node *node, char *name )
 	return node;
 }
 
-char *xt_find_attr( struct xt_node *node, char *key )
+char *xt_find_attr( struct xt_node *node, const char *key )
 {
 	int i;
 	
@@ -525,7 +525,7 @@ void xt_add_child( struct xt_node *parent, struct xt_node *child )
 	}
 }
 
-void xt_add_attr( struct xt_node *node, char *key, char *value )
+void xt_add_attr( struct xt_node *node, const char *key, const char *value )
 {
 	int i;
 	
@@ -552,7 +552,7 @@ void xt_add_attr( struct xt_node *node, char *key, char *value )
 	node->attr[i].value = g_strdup( value );
 }
 
-int xt_remove_attr( struct xt_node *node, char *key )
+int xt_remove_attr( struct xt_node *node, const char *key )
 {
 	int i, last;
 	

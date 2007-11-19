@@ -80,6 +80,10 @@ Of course a channel with only two people isn't really exciting yet. So the next 
 </para>
 
 <para>
+Some protocols (like Jabber) also support named groupchats. BitlBee now supports these too. You can use the <emphasis>join_chat</emphasis> command to join them. See <emphasis>help join_chat</emphasis> for more information.
+</para>
+
+<para>
 This is all you'll probably need to know. If you have any problems, please read <emphasis>help groupchats3</emphasis>.
 </para>
 

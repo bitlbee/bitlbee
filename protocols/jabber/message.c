@@ -29,25 +29,33 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 	char *from = xt_find_attr( node, "from" );
 	char *type = xt_find_attr( node, "type" );
 	struct xt_node *body = xt_find_node( node->children, "body" ), *c;
+	struct jabber_buddy *bud = NULL;
 	char *s;
+	
+	if( !from )
+		return XT_HANDLED; /* Consider this packet corrupted. */
+	
+	bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT );
 	
 	if( type && strcmp( type, "error" ) == 0 )
 	{
 		/* Handle type=error packet. */
 	}
-	else if( type && strcmp( type, "groupchat" ) == 0 )
+	else if( type && from && strcmp( type, "groupchat" ) == 0 )
 	{
-		/* TODO! */
+		jabber_chat_pkt_message( ic, bud, node );
 	}
 	else /* "chat", "normal", "headline", no-type or whatever. Should all be pretty similar. */
 	{
-		struct jabber_buddy *bud = NULL;
 		GString *fullmsg = g_string_new( "" );
 		
 		if( ( s = strchr( from, '/' ) ) )
 		{
-			if( ( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT ) ) )
+			if( bud )
+			{
 				bud->last_act = time( NULL );
+				from = bud->ext_jid ? : bud->bare_jid;
+			}
 			else
 				*s = 0; /* We need to generate a bare JID now. */
 		}
@@ -75,26 +83,31 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 			fullmsg = g_string_append( fullmsg, body->text );
 		
 		if( fullmsg->len > 0 )
-			imcb_buddy_msg( ic, bud ? bud->bare_jid : from, fullmsg->str, 0, 0 );
+			imcb_buddy_msg( ic, from, fullmsg->str,
+			                0, jabber_get_timestamp( node ) );
 		
 		g_string_free( fullmsg, TRUE );
 		
 		/* Handling of incoming typing notifications. */
-		if( xt_find_node( node->children, "composing" ) )
+		if( bud == NULL )
+		{
+			/* Can't handle these for unknown buddies. */
+		}
+		else if( xt_find_node( node->children, "composing" ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
-			imcb_buddy_typing( ic, bud ? bud->bare_jid : from, OPT_TYPING );
+			imcb_buddy_typing( ic, from, OPT_TYPING );
 		}
 		/* No need to send a "stopped typing" signal when there's a message. */
 		else if( xt_find_node( node->children, "active" ) && ( body == NULL ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
-			imcb_buddy_typing( ic, bud ? bud->bare_jid : from, 0 );
+			imcb_buddy_typing( ic, from, 0 );
 		}
 		else if( xt_find_node( node->children, "paused" ) )
 		{
 			bud->flags |= JBFLAG_DOES_XEP85;
-			imcb_buddy_typing( ic, bud ? bud->bare_jid : from, OPT_THINKING );
+			imcb_buddy_typing( ic, from, OPT_THINKING );
 		}
 		
 		if( s )

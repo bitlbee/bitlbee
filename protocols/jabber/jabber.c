@@ -54,6 +54,9 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "tls", "try", set_eval_tls, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
+	
+	s = set_add( &acc->set, "xmlconsole", "false", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
 }
 
 static void jabber_login( account_t *acc )
@@ -188,6 +191,14 @@ static void jabber_login( account_t *acc )
 		imcb_error( ic, "Could not connect to server" );
 		imc_logout( ic, TRUE );
 	}
+	
+	if( set_getbool( &acc->set, "xmlconsole" ) )
+	{
+		jd->flags |= JFLAG_XMLCONSOLE;
+		/* Shouldn't really do this at this stage already, maybe. But
+		   I think this shouldn't break anything. */
+		imcb_add_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL );
+	}
 }
 
 static void jabber_logout( struct im_connection *ic )
@@ -195,6 +206,9 @@ static void jabber_logout( struct im_connection *ic )
 	struct jabber_data *jd = ic->proto_data;
 	
 	jabber_end_stream( ic );
+	
+	while( ic->groupchats )
+		jabber_chat_free( ic->groupchats );
 	
 	if( jd->r_inpa >= 0 )
 		b_event_remove( jd->r_inpa );
@@ -223,9 +237,16 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud;
 	struct xt_node *node;
+	char *s;
 	int st;
 	
-	bud = jabber_buddy_by_jid( ic, who, 0 );
+	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
+		return jabber_write( ic, message, strlen( message ) );
+	
+	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_name( ic, s + 1 ) )
+		bud = jabber_buddy_by_ext_jid( ic, who, 0 );
+	else
+		bud = jabber_buddy_by_jid( ic, who, 0 );
 	
 	node = xt_new_node( "body", message, NULL );
 	node = jabber_make_packet( "message", "chat", bud ? bud->full_jid : who, node );
@@ -310,17 +331,69 @@ static void jabber_set_away( struct im_connection *ic, char *state_txt, char *me
 
 static void jabber_add_buddy( struct im_connection *ic, char *who, char *group )
 {
+	struct jabber_data *jd = ic->proto_data;
+	
+	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
+	{
+		jd->flags |= JFLAG_XMLCONSOLE;
+		imcb_add_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL );
+		return;
+	}
+	
 	if( jabber_add_to_roster( ic, who, NULL ) )
 		presence_send_request( ic, who, "subscribe" );
 }
 
 static void jabber_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
+	struct jabber_data *jd = ic->proto_data;
+	
+	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
+	{
+		jd->flags &= ~JFLAG_XMLCONSOLE;
+		/* Not necessary for now. And for now the code isn't too
+		   happy if the buddy is completely gone right after calling
+		   this function already.
+		imcb_remove_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL );
+		*/
+		return;
+	}
+	
 	/* We should always do this part. Clean up our administration a little bit. */
 	jabber_buddy_remove_bare( ic, who );
 	
 	if( jabber_remove_from_roster( ic, who ) )
 		presence_send_request( ic, who, "unsubscribe" );
+}
+
+static struct groupchat *jabber_chat_join_( struct im_connection *ic, char *room, char *nick, char *password )
+{
+	if( strchr( room, '@' ) == NULL )
+		imcb_error( ic, "Invalid room name: %s", room );
+	else if( jabber_chat_by_name( ic, room ) )
+		imcb_error( ic, "Already present in chat `%s'", room );
+	else
+		return jabber_chat_join( ic, room, nick, password );
+	
+	return NULL;
+}
+
+static void jabber_chat_msg_( struct groupchat *c, char *message, int flags )
+{
+	if( c && message )
+		jabber_chat_msg( c, message, flags );
+}
+
+static void jabber_chat_topic_( struct groupchat *c, char *topic )
+{
+	if( c && topic )
+		jabber_chat_topic( c, topic );
+}
+
+static void jabber_chat_leave_( struct groupchat *c )
+{
+	if( c )
+		jabber_chat_leave( c, NULL );
 }
 
 static void jabber_keepalive( struct im_connection *ic )
@@ -387,16 +460,16 @@ void jabber_initmodule()
 	ret->logout = jabber_logout;
 	ret->buddy_msg = jabber_buddy_msg;
 	ret->away_states = jabber_away_states;
-//	ret->get_status_string = jabber_get_status_string;
 	ret->set_away = jabber_set_away;
 //	ret->set_info = jabber_set_info;
 	ret->get_info = jabber_get_info;
 	ret->add_buddy = jabber_add_buddy;
 	ret->remove_buddy = jabber_remove_buddy;
-//	ret->chat_msg = jabber_chat_msg;
+	ret->chat_msg = jabber_chat_msg_;
+	ret->chat_topic = jabber_chat_topic_;
 //	ret->chat_invite = jabber_chat_invite;
-//	ret->chat_leave = jabber_chat_leave;
-//	ret->chat_open = jabber_chat_open;
+	ret->chat_leave = jabber_chat_leave_;
+	ret->chat_join = jabber_chat_join_;
 	ret->keepalive = jabber_keepalive;
 	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;

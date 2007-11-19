@@ -2030,6 +2030,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 					imcb_add_buddy(ic, curitem->name, NULL);
 					
 					if (realname) {
+						imcb_buddy_nick_hint(ic, curitem->name, realname);
 						imcb_rename_buddy(ic, curitem->name, realname);
 						g_free(realname);
 					}
@@ -2522,7 +2523,7 @@ void oscar_chat_kill(struct im_connection *ic, struct chat_connection *cc)
 	struct oscar_data *od = (struct oscar_data *)ic->proto_data;
 
 	/* Notify the conversation window that we've left the chat */
-	imcb_chat_removed(cc->cnv);
+	imcb_chat_free(cc->cnv);
 
 	/* Destroy the chat_connection */
 	od->oscar_chats = g_slist_remove(od->oscar_chats, cc);

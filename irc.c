@@ -640,7 +640,7 @@ void irc_names( irc_t *irc, char *channel )
 			strcat( namelist, " " );
 		}
 	}
-	else if( ( c = chat_by_channel( channel ) ) )
+	else if( ( c = irc_chat_by_channel( irc, channel ) ) )
 	{
 		GList *l;
 		
@@ -787,19 +787,14 @@ void irc_motd( irc_t *irc )
 
 void irc_topic( irc_t *irc, char *channel )
 {
-	if( g_strcasecmp( channel, irc->channel ) == 0 )
-	{
+	struct groupchat *c = irc_chat_by_channel( irc, channel );
+	
+	if( c && c->topic )
+		irc_reply( irc, 332, "%s :%s", channel, c->topic );
+	else if( g_strcasecmp( channel, irc->channel ) == 0 )
 		irc_reply( irc, 332, "%s :%s", channel, CONTROL_TOPIC );
-	}
 	else
-	{
-		struct groupchat *c = chat_by_channel( channel );
-		
-		if( c )
-			irc_reply( irc, 332, "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", channel, c->title );
-		else
-			irc_reply( irc, 331, "%s :No topic for this channel", channel );
-	}
+		irc_reply( irc, 331, "%s :No topic for this channel", channel );
 }
 
 void irc_umode_set( irc_t *irc, char *s, int allow_priv )
@@ -931,7 +926,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	
 	if( *nick == '#' || *nick == '&' )
 	{
-		if( !( c = chat_by_channel( nick ) ) )
+		if( !( c = irc_chat_by_channel( irc, nick ) ) )
 		{
 			irc_reply( irc, 403, "%s :Channel does not exist", nick );
 			return( 0 );
@@ -1196,4 +1191,28 @@ static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond )
 	}
 	
 	return TRUE;
+}
+
+struct groupchat *irc_chat_by_channel( irc_t *irc, char *channel )
+{
+	struct groupchat *c;
+	account_t *a;
+	
+	/* This finds the connection which has a conversation which belongs to this channel */
+	for( a = irc->accounts; a; a = a->next )
+	{
+		if( a->ic == NULL )
+			continue;
+		
+		c = a->ic->groupchats;
+		while( c )
+		{
+			if( c->channel && g_strcasecmp( c->channel, channel ) == 0 )
+				return c;
+			
+			c = c->next;
+		}
+	}
+	
+	return NULL;
 }

@@ -231,7 +231,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 	
 	if( sb->chat )
 	{
-		imcb_chat_removed( sb->chat );
+		imcb_chat_free( sb->chat );
 	}
 	
 	if( sb->handler )

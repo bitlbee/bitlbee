@@ -56,7 +56,6 @@ char *nick_get( account_t *acc, const char *handle )
 {
 	static char nick[MAX_NICK_LENGTH+1];
 	char *store_handle, *found_nick;
-	int inf_protection = 256;
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	
@@ -81,6 +80,17 @@ char *nick_get( account_t *acc, const char *handle )
 			nick_lc( nick );
 	}
 	g_free( store_handle );
+	
+	/* Make sure the nick doesn't collide with an existing one by adding
+	   underscores and that kind of stuff, if necessary. */
+	nick_dedupe( acc, handle, nick );
+	
+	return nick;
+}
+
+void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+1] )
+{
+	int inf_protection = 256;
 	
 	/* Now, find out if the nick is already in use at the moment, and make
 	   subtle changes to make it unique. */
@@ -119,8 +129,6 @@ char *nick_get( account_t *acc, const char *handle )
 			break;
 		}
 	}
-	
-	return nick;
 }
 
 /* Just check if there is a nickname set for this buddy or if we'd have to

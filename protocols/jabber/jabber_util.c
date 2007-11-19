@@ -47,7 +47,7 @@ char *set_eval_priority( set_t *set, char *value )
 		   convenient, they have one disadvantage: If I would just
 		   call p_s_u() now to send the new prio setting, it would
 		   send the old setting because the set->value gets changed
-		   when the eval returns a non-NULL value.
+		   after the (this) eval returns a non-NULL value.
 		   
 		   So now I can choose between implementing post-set
 		   functions next to evals, or just do this little hack: */
@@ -128,7 +128,7 @@ struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, 
 
 /* Cache a node/packet for later use. Mainly useful for IQ packets if you need
    them when you receive the response. Use this BEFORE sending the packet so
-   it'll get a new id= tag, and do NOT free() the packet after writing it! */
+   it'll get a new id= tag, and do NOT free() the packet after sending it! */
 void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_cache_event func )
 {
 	struct jabber_data *jd = ic->proto_data;
@@ -251,7 +251,7 @@ void jabber_buddy_ask( struct im_connection *ic, char *handle )
 }
 
 /* Returns a new string. Don't leak it! */
-char *jabber_normalize( char *orig )
+char *jabber_normalize( const char *orig )
 {
 	int len, i;
 	char *new;
@@ -319,6 +319,8 @@ struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid_
 	}
 	else
 	{
+		/* Keep in mind that full_jid currently isn't really
+		   a full JID... */
 		new->bare_jid = g_strdup( full_jid );
 		g_hash_table_insert( jd->buddies, new->bare_jid, new );
 	}
@@ -332,7 +334,8 @@ struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid_
 	else
 	{
 		/* Let's waste some more bytes of RAM instead of to make
-		   memory management a total disaster here.. */
+		   memory management a total disaster here. And it saves
+		   me one g_free() call in this function. :-P */
 		new->full_jid = full_jid;
 	}
 	
@@ -352,6 +355,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 	
 	if( ( s = strchr( jid, '/' ) ) )
 	{
+		int none_found = 0;
+		
 		*s = 0;
 		if( ( bud = g_hash_table_lookup( jd->buddies, jid ) ) )
 		{
@@ -369,8 +374,16 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 						break;
 			}
 		}
+		else
+		{
+			/* This hack is there to make sure that O_CREAT will
+			   work if there's already another resouce present
+			   for this JID, even if it's an unknown buddy. This
+			   is done to handle conferences properly. */
+			none_found = 1;
+		}
 		
-		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && imcb_find_buddy( ic, jid ) )
+		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && ( imcb_find_buddy( ic, jid ) || !none_found ) )
 		{
 			*s = '/';
 			bud = jabber_buddy_add( ic, jid );
@@ -417,6 +430,38 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 	}
 }
 
+/* I'm keeping a separate ext_jid attribute to save a JID that makes sense
+   to export to BitlBee. This is mainly for groupchats right now. It's
+   a bit of a hack, but I just think having the user nickname in the hostname
+   part of the hostmask doesn't look nice on IRC. Normally you can convert
+   a normal JID to ext_jid by swapping the part before and after the / and
+   replacing the / with a =. But there should be some stripping (@s are
+   allowed in Jabber nicks...). */
+struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *jid_, get_buddy_flags_t flags )
+{
+	struct jabber_buddy *bud;
+	char *s, *jid;
+	
+	jid = jabber_normalize( jid_ );
+	
+	if( ( s = strchr( jid, '=' ) ) == NULL )
+		return NULL;
+	
+	for( bud = jabber_buddy_by_jid( ic, s + 1, GET_BUDDY_FIRST ); bud; bud = bud->next )
+	{
+		/* Hmmm, could happen if not all people in the chat are anonymized? */
+		if( bud->ext_jid == NULL )
+			continue;
+		
+		if( strcmp( bud->ext_jid, jid ) == 0 )
+			break;
+	}
+	
+	g_free( jid );
+	
+	return bud;
+}
+
 /* Remove one specific full JID from our list. Use this when a buddy goes
    off-line (because (s)he can still be online from a different location.
    XXX: See above, we should accept bare JIDs too... */
@@ -440,6 +485,7 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 		{
 			g_hash_table_remove( jd->buddies, bud->bare_jid );
 			g_free( bud->bare_jid );
+			g_free( bud->ext_jid );
 			g_free( bud->full_jid );
 			g_free( bud->away_message );
 			g_free( bud );
@@ -472,6 +518,7 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 					   item, because we're removing the first. */
 					g_hash_table_replace( jd->buddies, bi->bare_jid, bi->next );
 				
+				g_free( bi->ext_jid );
 				g_free( bi->full_jid );
 				g_free( bi->away_message );
 				g_free( bi );
@@ -494,39 +541,144 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 /* Remove a buddy completely; removes all resources that belong to the
    specified bare JID. Use this when removing someone from the contact
    list, for example. */
-int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid_ )
+int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid )
 {
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud, *next;
-	char *bare_jid;
 	
-	if( strchr( bare_jid_, '/' ) )
+	if( strchr( bare_jid, '/' ) )
 		return 0;
 	
-	bare_jid = jabber_normalize( bare_jid_ );
-	
-	if( ( bud = g_hash_table_lookup( jd->buddies, bare_jid ) ) )
+	if( ( bud = jabber_buddy_by_jid( ic, bare_jid, GET_BUDDY_FIRST ) ) )
 	{
 		/* Most important: Remove the hash reference. We don't know
 		   this buddy anymore. */
 		g_hash_table_remove( jd->buddies, bud->bare_jid );
+		g_free( bud->bare_jid );
 		
 		/* Deallocate the linked list of resources. */
 		while( bud )
 		{
+			/* ext_jid && anonymous means that this buddy is
+			   specific to one groupchat (the one we're
+			   currently cleaning up) so it can be deleted
+			   completely. */
+			if( bud->ext_jid && bud->flags & JBFLAG_IS_ANONYMOUS )
+				imcb_remove_buddy( ic, bud->ext_jid, NULL );
+			
 			next = bud->next;
+			g_free( bud->ext_jid );
 			g_free( bud->full_jid );
 			g_free( bud->away_message );
 			g_free( bud );
 			bud = next;
 		}
 		
-		g_free( bare_jid );
 		return 1;
 	}
 	else
 	{
-		g_free( bare_jid );
 		return 0;
 	}
+}
+
+struct groupchat *jabber_chat_by_name( struct im_connection *ic, const char *name )
+{
+	char *normalized = jabber_normalize( name );
+	struct groupchat *ret;
+	struct jabber_chat *jc;
+	
+	for( ret = ic->groupchats; ret; ret = ret->next )
+	{
+		jc = ret->data;
+		if( strcmp( normalized, jc->name ) == 0 )
+			break;
+	}
+	g_free( normalized );
+	
+	return ret;
+}
+
+time_t jabber_get_timestamp( struct xt_node *xt )
+{
+	struct tm tp, utc;
+	struct xt_node *c;
+	time_t res, tres;
+	char *s = NULL;
+	
+	for( c = xt->children; ( c = xt_find_node( c, "x" ) ); c = c->next )
+	{
+		if( ( s = xt_find_attr( c, "xmlns" ) ) && strcmp( s, XMLNS_DELAY ) == 0 )
+			break;
+	}
+	
+	if( !c || !( s = xt_find_attr( c, "stamp" ) ) )
+		return 0;
+	
+	memset( &tp, 0, sizeof( tp ) );
+	if( sscanf( s, "%4d%2d%2dT%2d:%2d:%2d", &tp.tm_year, &tp.tm_mon, &tp.tm_mday,
+	                                        &tp.tm_hour, &tp.tm_min, &tp.tm_sec ) != 6 )
+		return 0;
+	
+	tp.tm_year -= 1900;
+	tp.tm_mon --;
+	tp.tm_isdst = -1; /* GRRRRRRRRRRR */
+	
+	res = mktime( &tp );
+	/* Problem is, mktime() just gave us the GMT timestamp for the
+	   given local time... While the given time WAS NOT local. So
+	   we should fix this now.
+	
+	   Now I could choose between messing with environment variables
+	   (kludgy) or using timegm() (not portable)... Or doing the
+	   following, which I actually prefer... */
+	gmtime_r( &res, &utc );
+	utc.tm_isdst = -1; /* Once more: GRRRRRRRRRRRRRRRRRR!!! */
+	if( utc.tm_hour == tp.tm_hour && utc.tm_min == tp.tm_min )
+		/* Sweet! We're in UTC right now... */
+		return res;
+	
+	tres = mktime( &utc );
+	res += res - tres;
+	
+	/* Yes, this is a hack. And it will go wrong around DST changes.
+	   BUT this is more likely to be threadsafe than messing with
+	   environment variables, and possibly more portable... */
+	
+	return res;
+}
+
+struct jabber_error *jabber_error_parse( struct xt_node *node, char *xmlns )
+{
+	struct jabber_error *err = g_new0( struct jabber_error, 1 );
+	struct xt_node *c;
+	char *s;
+	
+	err->type = xt_find_attr( node, "type" );
+	
+	for( c = node->children; c; c = c->next )
+	{
+		if( !( s = xt_find_attr( c, "xmlns" ) ) ||
+		    strcmp( s, xmlns ) != 0 )
+			continue;
+		
+		if( strcmp( c->name, "text" ) != 0 )
+		{
+			err->code = c->name;
+		}
+		/* Only use the text if it doesn't have an xml:lang attribute,
+		   if it's empty or if it's set to something English. */
+		else if( !( s = xt_find_attr( c, "xml:lang" ) ) ||
+		         !*s || strncmp( s, "en", 2 ) == 0 )
+		{
+			err->text = c->text;
+		}
+	}
+	
+	return err;
+}
+
+void jabber_error_free( struct jabber_error *err )
+{
+	g_free( err );
 }
