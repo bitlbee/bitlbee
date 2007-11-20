@@ -47,10 +47,10 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf = g_new0( conf_t, 1 );
 	
 	conf->iface = NULL;
-	conf->port = "6667";
+	conf->port = g_strdup( "6667" );
 	conf->nofork = 0;
 	conf->verbose = 0;
-	conf->primary_storage = "xml";
+	conf->primary_storage = g_strdup( "xml" );
 	conf->migrate_storage = g_strsplit( "text", ",", -1 );
 	conf->runmode = RUNMODE_INETD;
 	conf->authmode = AUTHMODE_OPEN;
