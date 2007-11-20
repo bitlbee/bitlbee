@@ -78,6 +78,8 @@ struct skype_data
 	char* groupchat_with;
 	/* The user who invited us to the chat. */
 	char* adder;
+	/* If we are waiting for a confirmation about we changed the topic. */
+	int topic_wait;
 };
 
 struct skype_away_state
@@ -488,9 +490,14 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					{
 						info += 6;
 						struct groupchat *gc = skype_chat_by_name(ic, id);
-						if(gc && sd->adder)
+						if(gc && (sd->adder || sd->topic_wait))
 						{
-							imcb_chat_topic(gc, sd->adder, info);
+							if(sd->topic_wait)
+							{
+								sd->adder = g_strdup(sd->username);
+								sd->topic_wait = 0;
+							}
+							imcb_chat_topic(gc, sd->adder, info, 0);
 							g_free(sd->adder);
 							sd->adder = NULL;
 						}
@@ -711,10 +718,12 @@ void skype_chat_invite(struct groupchat *gc, char *who, char *message)
 void skype_chat_topic(struct groupchat *gc, char *message)
 {
 	struct im_connection *ic = gc->ic;
+	struct skype_data *sd = ic->proto_data;
 	char *buf;
 	buf = g_strdup_printf("ALTER CHAT %s SETTOPIC %s\n", gc->title, message);
 	skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
+	sd->topic_wait = 1;
 }
 
 struct groupchat *skype_chat_with(struct im_connection *ic, char *who)
