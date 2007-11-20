@@ -182,7 +182,7 @@ struct groupchat *skype_chat_by_name( struct im_connection *ic, char *name )
 {
 	struct groupchat *ret;
 
-	for( ret = ic->conversations; ret; ret = ret->next )
+	for( ret = ic->groupchats; ret; ret = ret->next )
 	{
 		if(strcmp(name, ret->title ) == 0 )
 			break;
@@ -346,7 +346,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 								else if(!strcmp(sd->type, "SETTOPIC"))
 								{
 									if(gc)
-										imcb_chat_topic(gc, sd->handle, body);
+										imcb_chat_topic(gc, sd->handle, body, 0);
 								}
 								else if(!strcmp(sd->type, "LEFT"))
 								{
@@ -647,11 +647,12 @@ static void skype_set_away( struct im_connection *ic, char *state_txt, char *mes
 
 static GList *skype_away_states( struct im_connection *ic )
 {
-	GList *l = NULL;
+	static GList *l = NULL;
 	int i;
 	
-	for( i = 0; skype_away_state_list[i].full_name; i ++ )
-		l = g_list_append( l, (void*) skype_away_state_list[i].full_name );
+	if( l == NULL )
+		for( i = 0; skype_away_state_list[i].full_name; i ++ )
+			l = g_list_append( l, (void*) skype_away_state_list[i].full_name );
 	
 	return l;
 }
