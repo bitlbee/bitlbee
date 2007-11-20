@@ -1,5 +1,8 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.2.2         - don't change the topic if skype does not report a successful
+                topic change
+              - fixed for the recent bitlbee API changes
 0.2.1         - topic support in group chats
               - bugfixes for multiline messages
               - this version should be again as stable as 0.1.4 was
