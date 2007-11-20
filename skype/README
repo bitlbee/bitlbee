@@ -1,5 +1,5 @@
 = Skype plugin for BitlBee
-Miklos Vajna <vmiklos@frugalware.org>
+Miklos Vajna <vmiklos@vmiklos.hu>
 
 == Status
 
@@ -66,7 +66,7 @@ make install install-dev
 - Get the plugin code:
 
 ----
-git clone git://git.frugalware.org/pub/other/people/vmiklos/bitlbee-skype
+git clone git://vmiklos.hu/~vmiklos/pyrssi
 ----
 
 (Or you can use the tarballs below, see the Changelog about what
@@ -235,7 +235,7 @@ then it would be nice to include them here.
 
 == Screenshots
 
-You can reach some screenshots http://frugalware.org/~vmiklos/pics/shots/bitlbee-skype/[here].
+You can reach some screenshots link:shot[here].
 
 == Additional resources
 
