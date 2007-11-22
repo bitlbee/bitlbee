@@ -744,7 +744,7 @@ static void cmd_yesno( irc_t *irc, char **cmd )
 
 static void cmd_set( irc_t *irc, char **cmd )
 {
-	char *set_name;
+	char *set_name = NULL;
 	
 	if( cmd[1] && cmd[2] )
 	{
@@ -764,7 +764,7 @@ static void cmd_set( irc_t *irc, char **cmd )
 			set_name = cmd[1];
 		}
 	}
-	if( cmd[1] ) /* else 'forgotten' on purpose.. Must show new value after changing */
+	if( set_name ) /* else 'forgotten' on purpose.. Must show new value after changing */
 	{
 		char *s = set_getstr( &irc->set, set_name );
  		if( s )

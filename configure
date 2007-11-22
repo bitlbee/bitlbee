@@ -136,7 +136,7 @@ if [ "$debug" = "1" ]; then
 	echo 'DEBUG=1' >> Makefile.settings
 	echo '#define DEBUG' >> config.h
 else
-	[ -z "$CFLAGS" ] && CFLAGS=-O3
+	[ -z "$CFLAGS" ] && CFLAGS="-O2 -fno-strict-aliasing"
 fi
 
 echo CFLAGS=$CFLAGS >> Makefile.settings

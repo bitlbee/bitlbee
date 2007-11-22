@@ -455,7 +455,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		   errors, so instead let's use the _find function and
 		   return TRUE on write errors. Which means, if we found
 		   something, there was an error. :-) */
-		if( g_hash_table_find( acc->nicks, xml_save_nick, (gpointer) fd ) )
+		if( g_hash_table_find( acc->nicks, xml_save_nick, & fd ) )
 			goto write_error;
 		
 		if( !xml_printf( fd, 1, "</account>\n" ) )
@@ -493,7 +493,7 @@ write_error:
 
 static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data )
 {
-	return !xml_printf( (int) data, 2, "<buddy handle=\"%s\" nick=\"%s\" />\n", key, value );
+	return !xml_printf( *( (int*) data ), 2, "<buddy handle=\"%s\" nick=\"%s\" />\n", key, value );
 }
 
 static storage_status_t xml_remove( const char *nick, const char *password )

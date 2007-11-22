@@ -35,6 +35,14 @@ int ssl_errno = 0;
 
 static gboolean initialized = FALSE;
 
+#include <limits.h>
+
+#if defined(ULONG_MAX) && ULONG_MAX > 4294967295UL
+#define GNUTLS_STUPID_CAST (long)
+#else
+#define GNUTLS_STUPID_CAST (int)
+#endif
+
 struct scd
 {
 	ssl_input_function func;
@@ -124,7 +132,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	gnutls_credentials_set( conn->session, GNUTLS_CRD_CERTIFICATE, conn->xcred );
 	
 	sock_make_nonblocking( conn->fd );
-	gnutls_transport_set_ptr( conn->session, (gnutls_transport_ptr) conn->fd );
+	gnutls_transport_set_ptr( conn->session, (gnutls_transport_ptr) GNUTLS_STUPID_CAST conn->fd );
 	
 	return ssl_handshake( data, source, cond );
 }

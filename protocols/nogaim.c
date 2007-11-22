@@ -698,7 +698,7 @@ void imcb_chat_free( struct groupchat *c )
 	GList *ir;
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
-		imcb_log( ic, "You were removed from conversation 0x%x", (int) c );
+		imcb_log( ic, "You were removed from conversation %p", c );
 	
 	if( c )
 	{
@@ -754,7 +754,7 @@ void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, 
 	}
 	else
 	{
-		imcb_log( ic, "Message from/to conversation %s@0x%x (unknown conv/user): %s", who, (int) c, wrapped );
+		imcb_log( ic, "Message from/to conversation %s@%p (unknown conv/user): %s", who, c, wrapped );
 	}
 	g_free( wrapped );
 }
@@ -802,7 +802,7 @@ struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
 	c->topic = g_strdup_printf( "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->channel, c->title );
 	
 	if( set_getbool( &ic->irc->set, "debug" ) )
-		imcb_log( ic, "Creating new conversation: (id=0x%x,handle=%s)", (int) c, handle );
+		imcb_log( ic, "Creating new conversation: (id=%p,handle=%s)", c, handle );
 	
 	return c;
 }
@@ -816,7 +816,7 @@ void imcb_chat_add_buddy( struct groupchat *b, char *handle )
 	int me = 0;
 	
 	if( set_getbool( &b->ic->irc->set, "debug" ) )
-		imcb_log( b->ic, "User %s added to conversation 0x%x", handle, (int) b );
+		imcb_log( b->ic, "User %s added to conversation %p", handle, b );
 	
 	/* It might be yourself! */
 	if( b->ic->acc->prpl->handle_cmp( handle, b->ic->acc->user ) == 0 )
@@ -851,7 +851,7 @@ void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
 	int me = 0;
 	
 	if( set_getbool( &b->ic->irc->set, "debug" ) )
-		imcb_log( b->ic, "User %s removed from conversation 0x%x (%s)", handle, (int) b, reason ? reason : "" );
+		imcb_log( b->ic, "User %s removed from conversation %p (%s)", handle, b, reason ? reason : "" );
 	
 	/* It might be yourself! */
 	if( g_strcasecmp( handle, b->ic->acc->user ) == 0 )
