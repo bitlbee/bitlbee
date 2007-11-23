@@ -22,6 +22,7 @@
 \***************************************************************************/
 
 #include "jabber.h"
+#include "sha1.h"
 
 static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
@@ -232,15 +233,15 @@ static xt_status jabber_do_iq_auth( struct im_connection *ic, struct xt_node *no
 	{
 		/* We can do digest authentication, it seems, and of
 		   course we prefer that. */
-		SHA_CTX sha;
+		sha1_state_t sha;
 		char hash_hex[41];
 		unsigned char hash[20];
 		int i;
 		
-		shaInit( &sha );
-		shaUpdate( &sha, (unsigned char*) s, strlen( s ) );
-		shaUpdate( &sha, (unsigned char*) ic->acc->pass, strlen( ic->acc->pass ) );
-		shaFinal( &sha, hash );
+		sha1_init( &sha );
+		sha1_append( &sha, (unsigned char*) s, strlen( s ) );
+		sha1_append( &sha, (unsigned char*) ic->acc->pass, strlen( ic->acc->pass ) );
+		sha1_finish( &sha, hash );
 		
 		for( i = 0; i < 20; i ++ )
 			sprintf( hash_hex + i * 2, "%02x", hash[i] );

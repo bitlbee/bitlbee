@@ -42,7 +42,6 @@
 #include "account.h"
 #include "proxy.h"
 #include "md5.h"
-#include "sha.h"
 
 #define BUF_LEN MSG_LEN
 #define BUF_LONG ( BUF_LEN * 2 )
