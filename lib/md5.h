@@ -1,85 +1,41 @@
 /*
-  Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
-  
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
-
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
-
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
-
-  L. Peter Deutsch
-  ghost@aladdin.com
-
+ * MD5 hashing code copied from Lepton's crack <http://usuarios.lycos.es/reinob/>
+ *
+ * Adapted to be API-compatible with the previous (GPL-incompatible) code.
  */
+
 /*
-  Independent implementation of MD5 (RFC 1321).
-
-  This code implements the MD5 Algorithm defined in RFC 1321.
-  It is derived directly from the text of the RFC and not from the
-  reference implementation.
-
-  The original and principal author of md5.h is L. Peter Deutsch
-  <ghost@aladdin.com>.  Other authors are noted in the change history
-  that follows (in reverse chronological order):
-
-  2004-03-09 Jelmer Vernooij add G_MODULE_EXPORT for Bitlbee
-  1999-11-04 lpd Edited comments slightly for automatic TOC extraction.
-  1999-10-18 lpd Fixed typo in header comment (ansi2knr rather than md5);
-	added conditionalization for C++ compilation from Martin
-	Purschke <purschke@bnl.gov>.
-  1999-05-03 lpd Original version.
+ * This code implements the MD5 message-digest algorithm.
+ * The algorithm is due to Ron Rivest.  This code was
+ * written by Colin Plumb in 1993, no copyright is claimed.
+ * This code is in the public domain; do with it what you wish.
+ *
+ * Equivalent code is available from RSA Data Security, Inc.
+ * This code has been tested against that, and is equivalent,
+ * except that you don't need to include two pages of legalese
+ * with every copy.
+ *
+ * To compute the message digest of a chunk of bytes, declare an
+ * MD5Context structure, pass it to MD5Init, call MD5Update as
+ * needed on buffers full of bytes, and then call MD5Final, which
+ * will fill a supplied 16-byte array with the digest.
  */
 
-#ifndef md5_INCLUDED
-#  define md5_INCLUDED
+#ifndef _MD5_H
+#define _MD5_H
 
-#include <glib.h>
+#include <sys/types.h>
 #include <gmodule.h>
 
-/*
- * This code has some adaptations for the Ghostscript environment, but it
- * will compile and run correctly in any environment with 8-bit chars and
- * 32-bit ints.  Specifically, it assumes that if the following are
- * defined, they have the same meaning as in Ghostscript: P1, P2, P3,
- * ARCH_IS_BIG_ENDIAN.
- */
-
-typedef unsigned char md5_byte_t; /* 8-bit byte */
-typedef unsigned int md5_word_t; /* 32-bit word */
-
-/* Define the state of the MD5 Algorithm. */
-typedef struct md5_state_s {
-    md5_word_t count[2];	/* message length in bits, lsw first */
-    md5_word_t abcd[4];		/* digest buffer */
-    md5_byte_t buf[64];		/* accumulate block */
+typedef u_int8_t md5_byte_t;
+typedef struct MD5Context {
+	u_int32_t buf[4];
+	u_int32_t bits[2];
+	unsigned char in[64];
 } md5_state_t;
 
-#ifdef __cplusplus
-extern "C" 
-{
+G_MODULE_EXPORT void md5_init(struct MD5Context *context);
+G_MODULE_EXPORT void md5_append(struct MD5Context *context, const md5_byte_t *buf, unsigned int len);
+G_MODULE_EXPORT void md5_finish(struct MD5Context *context, md5_byte_t digest[16]);
+
 #endif
-
-/* Initialize the algorithm. */
-G_MODULE_EXPORT void md5_init(md5_state_t *pms);
-
-/* Append a string to the message. */
-G_MODULE_EXPORT void md5_append(md5_state_t *pms, const md5_byte_t *data, int nbytes);
-
-/* Finish the message and return the digest. */
-G_MODULE_EXPORT void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
-
-#ifdef __cplusplus
-}  /* end extern "C" */
-#endif
-
-#endif /* md5_INCLUDED */

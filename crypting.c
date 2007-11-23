@@ -28,11 +28,12 @@
    included if CRYPTING_MAIN is defined. Or just do "make decode" and
    the programs will be built. */
 
-#include "md5.h"
-#include "crypting.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <glib.h>
+#include "md5.h"
+#include "crypting.h"
 
 /*\
  * [SH] Do _not_ call this if it's not entirely sure that it will not cause
