@@ -1,5 +1,6 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.2.3         - fixed that annoying "creating groupchat failed" warning
 0.2.2         - don't change the topic if skype does not report a successful
                 topic change
               - fixed for the recent bitlbee API changes
