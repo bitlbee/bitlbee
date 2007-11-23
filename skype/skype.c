@@ -445,6 +445,10 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					if(info)
 						*info = '\0';
 					info++;
+					/* Remove fake chat if we created one in skype_chat_with() */
+					struct groupchat *gc = skype_chat_by_name(ic, "");
+					if(gc)
+						imcb_chat_free(gc);
 					if(!strcmp(info, "STATUS MULTI_SUBSCRIBED"))
 					{
 						imcb_chat_new( ic, id );
@@ -455,7 +459,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					}
 					else if(!strcmp(info, "STATUS DIALOG") && sd->groupchat_with)
 					{
-						struct groupchat *gc = imcb_chat_new( ic, id );
+						gc = imcb_chat_new( ic, id );
 						/* According to the docs this
 						 * is necessary. However it
 						 * does not seem the situation
@@ -476,7 +480,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					}
 					else if(!strcmp(info, "STATUS UNSUBSCRIBED"))
 					{
-						struct groupchat *gc = skype_chat_by_name(ic, id);
+						gc = skype_chat_by_name(ic, id);
 						if(gc)
 							gc->data = (void*)FALSE;
 					}
@@ -489,7 +493,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					else if(!strncmp(info, "TOPIC ", 6))
 					{
 						info += 6;
-						struct groupchat *gc = skype_chat_by_name(ic, id);
+						gc = skype_chat_by_name(ic, id);
 						if(gc && (sd->adder || sd->topic_wait))
 						{
 							if(sd->topic_wait)
@@ -505,7 +509,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					else if(!strncmp(info, "ACTIVEMEMBERS ", 14))
 					{
 						info += 14;
-						struct groupchat *gc = skype_chat_by_name(ic, id);
+						gc = skype_chat_by_name(ic, id);
 						/* Hack! We set ->data to TRUE
 						 * while we're on the channel
 						 * so that we won't rejoin
@@ -740,7 +744,9 @@ struct groupchat *skype_chat_with(struct im_connection *ic, char *who)
 	g_free(buf);
 	sd->groupchat_with = g_strdup(nick);
 	g_free(nick);
-	return(NULL);
+	/* We create a fake chat for now. We will replace it with a real one in
+	 * the real callback. */
+	return(imcb_chat_new( ic, "" ));
 }
 
 void init_plugin(void)

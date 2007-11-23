@@ -229,9 +229,7 @@ then it would be nice to include them here.
 
 == Known bugs
 
-- When you join start a group chat, a warning is shown saying creating the
-  group chat is failed. Indeed it is created. I should improve the API to be
-  able to suppress that warning.
+- None at this time.
 
 == Screenshots
 
