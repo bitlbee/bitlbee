@@ -2,3 +2,5 @@ Changelog
 HEADER.html
 *.gz
 *.asc
+.htaccess
+shot
