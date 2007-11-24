@@ -77,6 +77,7 @@ struct jabber_data
 	struct jabber_away_state *away_state;
 	char *away_message;
 	
+	char *cached_id_prefix;
 	GHashTable *node_cache;
 	GHashTable *buddies;
 };
@@ -131,7 +132,9 @@ struct jabber_chat
 /* Prefixes to use for packet IDs (mainly for IQ packets ATM). Usually the
    first one should be used, but when storing a packet in the cache, a
    "special" kind of ID is assigned to make it easier later to figure out
-   if we have to do call an event handler for the response packet. */
+   if we have to do call an event handler for the response packet. Also
+   we'll append a hash to make sure we won't trigger on cached packets from
+   other BitlBee users. :-) */
 #define JABBER_PACKET_ID "BeeP"
 #define JABBER_CACHED_ID "BeeC"
 

@@ -49,7 +49,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		struct jabber_cache_entry *entry;
 		
 		if( ( s = xt_find_attr( node, "id" ) ) == NULL ||
-		    strncmp( s, JABBER_CACHED_ID, strlen( JABBER_CACHED_ID ) ) != 0 )
+		    strncmp( s, jd->cached_id_prefix, strlen( jd->cached_id_prefix ) ) != 0 )
 		{
 			/* Silently ignore it, without an ID (or a non-cache
 			   ID) we don't know how to handle the packet and we

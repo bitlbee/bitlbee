@@ -132,9 +132,10 @@ struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, 
 void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_cache_event func )
 {
 	struct jabber_data *jd = ic->proto_data;
-	char *id = g_strdup_printf( "%s%05x", JABBER_CACHED_ID, ( next_id++ ) & 0xfffff );
 	struct jabber_cache_entry *entry = g_new0( struct jabber_cache_entry, 1 );
+	char *id;
 	
+	id = g_strdup_printf( "%s%05x", jd->cached_id_prefix, ( next_id++ ) & 0xfffff );
 	xt_add_attr( node, "id", id );
 	g_free( id );
 	
