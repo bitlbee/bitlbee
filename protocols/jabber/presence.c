@@ -87,7 +87,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	}
 	else if( strcmp( type, "unavailable" ) == 0 )
 	{
-		if( ( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT ) ) == NULL )
+		if( ( bud = jabber_buddy_by_jid( ic, from, 0 ) ) == NULL )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
 				imcb_log( ic, "WARNING: Received presence information from unknown JID: %s", from );
@@ -100,7 +100,13 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 			jabber_chat_pkt_presence( ic, bud, node );
 		}
 		
-		jabber_buddy_remove( ic, from );
+		if( strchr( from, '/' ) == NULL )
+			/* Sometimes servers send a type="unavailable" from a
+			   bare JID, which should mean that suddenly all
+			   resources for this JID disappeared. */
+			jabber_buddy_remove_bare( ic, from );
+		else
+			jabber_buddy_remove( ic, from );
 		
 		if( is_chat )
 		{
