@@ -66,6 +66,8 @@ Version 1.2:
   * The info command now gives away state/message information for all
     resources available for that buddy. (Of course this only works if the
     buddy is in your contact list.)
+  * An XML console (add xmlconsole to your contact list or see "help set
+    xmlconsole" if you want it permanently).
 
 Finished ???
 
