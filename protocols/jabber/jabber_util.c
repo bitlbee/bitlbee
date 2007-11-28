@@ -96,7 +96,7 @@ struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_
 	return node;
 }
 
-struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type )
+struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type, char *err_code )
 {
 	struct xt_node *node, *c;
 	char *to;
@@ -108,6 +108,10 @@ struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, 
 	/* Put it in an <error> tag. */
 	c = xt_new_node( "error", NULL, c );
 	xt_add_attr( c, "type", err_type );
+	
+	/* Add the error code, if present */
+	if (err_code)
+		xt_add_attr( c, "code", err_code );
 	
 	/* To make the actual error packet, we copy the original packet and
 	   add our <error>/type="error" tag. Including the original packet

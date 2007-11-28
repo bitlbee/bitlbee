@@ -62,6 +62,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
+	conf->max_filetransfer_size = G_MAXUINT;
 	proxytype = 0;
 	
 	i = conf_loadini( conf, CONF_FILE );

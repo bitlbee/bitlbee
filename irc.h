@@ -83,6 +83,7 @@ typedef struct irc
 	
 	struct query *queries;
 	struct account *accounts;
+	GSList *file_transfers;
 	
 	struct __USER *users;
 	GHashTable *userhash;

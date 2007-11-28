@@ -103,6 +103,9 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			                           XMLNS_TIME,
 			                           XMLNS_CHATSTATES,
 			                           XMLNS_MUC,
+						   XMLNS_SI,
+						   XMLNS_BYTESTREAMS,
+						   XMLNS_FILETRANSFER,
 			                           NULL };
 			const char **f;
 			
@@ -122,24 +125,26 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		else
 		{
 			xt_free_node( reply );
-			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel" );
+			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel", NULL );
 			pack = 0;
 		}
 	}
 	else if( strcmp( type, "set" ) == 0 )
 	{
-		if( !( c = xt_find_node( node->children, "query" ) ) ||
+		if(  ( c = xt_find_node( node->children, "si" ) ) &&
+		     ( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_SI ) == 0 ) )
+		{
+			return jabber_si_handle_request( ic, node, c );
+		} else if( !( c = xt_find_node( node->children, "query" ) ) ||
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
 			imcb_log( ic, "WARNING: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
-		}
-		
+		} else if( strcmp( s, XMLNS_ROSTER ) == 0 )
+		{
 		/* This is a roster push. XMPP servers send this when someone
 		   was added to (or removed from) the buddy list. AFAIK they're
 		   sent even if we added this buddy in our own session. */
-		if( strcmp( s, XMLNS_ROSTER ) == 0 )
-		{
 			int bare_len = strlen( ic->acc->user );
 			
 			if( ( s = xt_find_attr( node, "from" ) ) == NULL ||
@@ -156,14 +161,17 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 				imcb_log( ic, "WARNING: %s tried to fake a roster push!", s ? s : "(unknown)" );
 				
 				xt_free_node( reply );
-				reply = jabber_make_error_packet( node, "not-allowed", "cancel" );
+				reply = jabber_make_error_packet( node, "not-allowed", "cancel", NULL );
 				pack = 0;
 			}
-		}
-		else
+		} else if( strcmp( s, XMLNS_BYTESTREAMS ) == 0 )
+		{
+		     	/* Bytestream Request (stage 2 of file transfer) */
+			return jabber_bs_request( ic, node, c );
+		} else
 		{
 			xt_free_node( reply );
-			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel" );
+			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel", NULL );
 			pack = 0;
 		}
 	}
