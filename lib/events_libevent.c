@@ -31,13 +31,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include "proxy.h"
-
 #include <sys/time.h>
 #include <event.h>
+#include "proxy.h"
 
 static void b_main_restart();
-
 static guint id_next = 1;
 static GHashTable *id_hash;
 static int quitting = 0;
@@ -92,7 +90,7 @@ void b_main_run()
 			old_leh = NULL;
 		}
 		
-		printf( "New event loop.\n" );
+		event_debug( "New event loop.\n" );
 	}
 }
 
@@ -103,7 +101,7 @@ static void b_main_restart()
 	memset( &tv, 0, sizeof( struct timeval ) );
 	event_base_loopexit( leh, &tv );
 	
-	printf( "b_main_restart()\n" );
+	event_debug( "b_main_restart()\n" );
 }
 
 void b_main_quit()
