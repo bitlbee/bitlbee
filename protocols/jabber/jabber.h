@@ -207,7 +207,6 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid, g
 struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
 int jabber_buddy_remove( struct im_connection *ic, char *full_jid );
 int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid );
-struct groupchat *jabber_chat_by_name( struct im_connection *ic, const char *name );
 time_t jabber_get_timestamp( struct xt_node *xt );
 struct jabber_error *jabber_error_parse( struct xt_node *node, char *xmlns );
 void jabber_error_free( struct jabber_error *err );
@@ -230,6 +229,7 @@ gboolean sasl_supported( struct im_connection *ic );
 
 /* conference.c */
 struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *nick, char *password );
+struct groupchat *jabber_chat_by_jid( struct im_connection *ic, const char *name );
 void jabber_chat_free( struct groupchat *c );
 int jabber_chat_msg( struct groupchat *ic, char *message, int flags );
 int jabber_chat_topic( struct groupchat *c, char *topic );

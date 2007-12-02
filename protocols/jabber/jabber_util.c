@@ -613,23 +613,6 @@ int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid )
 	}
 }
 
-struct groupchat *jabber_chat_by_name( struct im_connection *ic, const char *name )
-{
-	char *normalized = jabber_normalize( name );
-	struct groupchat *ret;
-	struct jabber_chat *jc;
-	
-	for( ret = ic->groupchats; ret; ret = ret->next )
-	{
-		jc = ret->data;
-		if( strcmp( normalized, jc->name ) == 0 )
-			break;
-	}
-	g_free( normalized );
-	
-	return ret;
-}
-
 time_t jabber_get_timestamp( struct xt_node *xt )
 {
 	struct tm tp, utc;
@@ -681,10 +664,14 @@ time_t jabber_get_timestamp( struct xt_node *xt )
 
 struct jabber_error *jabber_error_parse( struct xt_node *node, char *xmlns )
 {
-	struct jabber_error *err = g_new0( struct jabber_error, 1 );
+	struct jabber_error *err;
 	struct xt_node *c;
 	char *s;
 	
+	if( node == NULL )
+		return NULL;
+	
+	err = g_new0( struct jabber_error, 1 );
 	err->type = xt_find_attr( node, "type" );
 	
 	for( c = node->children; c; c = c->next )

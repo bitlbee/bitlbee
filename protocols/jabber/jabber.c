@@ -269,7 +269,7 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
 		return jabber_write( ic, message, strlen( message ) );
 	
-	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_name( ic, s + 1 ) )
+	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_jid( ic, s + 1 ) )
 		bud = jabber_buddy_by_ext_jid( ic, who, 0 );
 	else
 		bud = jabber_buddy_by_jid( ic, who, 0 );
@@ -396,7 +396,7 @@ static struct groupchat *jabber_chat_join_( struct im_connection *ic, char *room
 {
 	if( strchr( room, '@' ) == NULL )
 		imcb_error( ic, "Invalid room name: %s", room );
-	else if( jabber_chat_by_name( ic, room ) )
+	else if( jabber_chat_by_jid( ic, room ) )
 		imcb_error( ic, "Already present in chat `%s'", room );
 	else
 		return jabber_chat_join( ic, room, nick, password );

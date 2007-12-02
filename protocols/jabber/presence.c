@@ -39,7 +39,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	if( ( s = strchr( from, '/' ) ) )
 	{
 		*s = 0;
-		if( jabber_chat_by_name( ic, from ) )
+		if( jabber_chat_by_jid( ic, from ) )
 			is_chat = 1;
 		*s = '/';
 	}
@@ -163,8 +163,10 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	}
 	else if( strcmp( type, "error" ) == 0 )
 	{
-		struct jabber_error *err;
+		return jabber_cache_handle_packet( ic, node );
 		
+		/*
+		struct jabber_error *err;
 		if( ( c = xt_find_node( node->children, "error" ) ) )
 		{
 			err = jabber_error_parse( c, XMLNS_STANZA_ERROR );
@@ -172,8 +174,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 			            err->code, err->text ? ": " : "",
 			            err->text ? err->text : "" );
 			jabber_error_free( err );
-		}
-		/* What else to do with it? */
+		} */
 	}
 	
 	return XT_HANDLED;
