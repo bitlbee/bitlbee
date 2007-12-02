@@ -225,8 +225,6 @@ static void jabber_generate_id_hash( struct jabber_data *jd )
 	s = base64_encode( binbuf, 9 );
 	jd->cached_id_prefix = g_strdup_printf( "%s%s", JABBER_CACHED_ID, s );
 	g_free( s );
-	
-	printf( "%s\n", jd->cached_id_prefix );
 }
 
 static void jabber_logout( struct im_connection *ic )
