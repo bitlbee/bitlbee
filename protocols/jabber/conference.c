@@ -72,7 +72,8 @@ static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_no
 	char *room;
 	
 	room = xt_find_attr( orig, "to" );
-	bud = jabber_buddy_by_jid( ic, room, 0 );
+	if( ( bud = jabber_buddy_by_jid( ic, room, 0 ) ) )
+		jabber_chat_free( jabber_chat_by_jid( ic, bud->bare_jid ) );
 	
 	err = jabber_error_parse( xt_find_node( node->children, "error" ), XMLNS_STANZA_ERROR );
 	if( err )
@@ -83,8 +84,7 @@ static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_no
 		jabber_error_free( err );
 	}
 	
-	if( bud )
-		jabber_chat_free( jabber_chat_by_jid( ic, bud->bare_jid ) );
+	return XT_HANDLED;
 }
 
 struct groupchat *jabber_chat_by_jid( struct im_connection *ic, const char *name )
