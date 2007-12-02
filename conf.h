@@ -48,6 +48,7 @@ typedef struct conf
 	char **migrate_storage;
 	int ping_interval;
 	int ping_timeout;
+	char *user;
 } conf_t;
 
 G_GNUC_MALLOC conf_t *conf_load( int argc, char *argv[] );
