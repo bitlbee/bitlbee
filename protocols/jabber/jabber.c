@@ -501,6 +501,7 @@ void jabber_initmodule()
 	ret->keepalive = jabber_keepalive;
 	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;
+	ret->transfer_request = jabber_si_transfer_request;
 
 	register_protocol( ret );
 }

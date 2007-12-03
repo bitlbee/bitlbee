@@ -28,9 +28,10 @@
 
 typedef enum {
 	FT_STATUS_LISTENING	= 1,
-	FT_STATUS_TRANSFERING	= 2,
+	FT_STATUS_TRANSFERRING	= 2,
 	FT_STATUS_FINISHED	= 4,
-	FT_STATUS_CANCELED	= 8
+	FT_STATUS_CANCELED	= 8,
+	FT_STATUS_CONNECTING	= 16
 } file_status_t;
 
 /*
@@ -60,6 +61,10 @@ typedef enum {
  *	                 \------------------------/
  */
 typedef struct file_transfer {
+
+	/* Are we sending something? */
+	int sending;
+
 	/*
 	 * The current status of this file transfer.
 	 */ 
@@ -130,6 +135,11 @@ typedef struct file_transfer {
 	 */
 	void (*out_of_data) ( struct file_transfer *file );
 
+	/*
+	 * When sending files, protocols register this function to receive data.
+	 */
+	gboolean (*write) (struct file_transfer *file, char *buffer, int len );
+
 } file_transfer_t;
 
 /*
@@ -150,4 +160,5 @@ void imcb_file_canceled( file_transfer_t *file, char *reason );
  */
 gboolean imcb_file_write( file_transfer_t *file, gpointer data, size_t data_size );
 
+gboolean imcb_file_recv_start( file_transfer_t *ft );
 #endif

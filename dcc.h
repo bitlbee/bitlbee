@@ -111,8 +111,11 @@ typedef struct dcc_file_transfer {
 	 */
 	size_t bytes_sent;
 	
-	/* imcb's handle */
+	/* imc's handle */
 	file_transfer_t *ft;
+
+	/* if we're receiving, this is the sender's socket address */
+	struct sockaddr_storage saddr;
 
 } dcc_file_transfer_t;
 
@@ -122,4 +125,5 @@ void dcc_canceled( file_transfer_t *file, char *reason );
 
 gboolean dccs_send_write( file_transfer_t *file, gpointer data, unsigned int data_size );
 
+file_transfer_t *dcc_request( struct im_connection *ic, char *line );
 #endif

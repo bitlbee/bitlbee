@@ -27,6 +27,7 @@
 #include "dcc.h"
 #include <poll.h>
 #include <netinet/tcp.h>
+#include <regex.h>
 
 /* 
  * Since that might be confusing a note on naming:
@@ -75,6 +76,9 @@ static void dcc_close( file_transfer_t *file );
 gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond );
 gboolean dcc_listen( dcc_file_transfer_t *df, struct sockaddr_storage **saddr_ptr );
 int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct sockaddr_storage *saddr );
+gboolean dccs_recv_start( file_transfer_t *ft );
+gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond);
+void dccs_recv_out_of_data( file_transfer_t *ft );
 
 /* As defined in ft.h */
 file_transfer_t *imcb_file_send_start( struct im_connection *ic, char *handle, char *file_name, size_t file_size )
@@ -103,31 +107,44 @@ gboolean imcb_file_write( file_transfer_t *file, gpointer data, size_t data_size
 	return dccs_send_write( file, data, data_size );
 }
 
-/* This is where the sending magic starts... */
-file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, char *file_name, size_t file_size )
+/* As defined in ft.h */
+gboolean imcb_file_recv_start( file_transfer_t *ft )
 {
-	file_transfer_t *file;
-	dcc_file_transfer_t *df;
-	struct sockaddr_storage **saddr;
+	return dccs_recv_start( ft );
+}
 
-	if( file_size > global.conf->max_filetransfer_size )
-		return NULL;
-	
-	/* alloc stuff */
-	file = g_new0( file_transfer_t, 1 );
-	file->priv = df = g_new0( dcc_file_transfer_t, 1);
+dcc_file_transfer_t *dcc_alloc_transfer( char *file_name, size_t file_size, struct im_connection *ic )
+{
+	file_transfer_t *file = g_new0( file_transfer_t, 1 );
+	dcc_file_transfer_t *df = file->priv = g_new0( dcc_file_transfer_t, 1);
 	file->file_size = file_size;
 	file->file_name = g_strdup( file_name );
 	file->local_id = local_transfer_id++;
 	df->ic = ic;
 	df->ft = file;
 	
+	return df;
+}
+
+/* This is where the sending magic starts... */
+file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, char *file_name, size_t file_size )
+{
+	file_transfer_t *file;
+	dcc_file_transfer_t *df;
+	struct sockaddr_storage *saddr;
+
+	if( file_size > global.conf->max_filetransfer_size )
+		return NULL;
+	
+	df = dcc_alloc_transfer( file_name, file_size, ic );
+	file = df->ft;
+
 	/* listen and request */
-	if( !dcc_listen( df, saddr ) ||
-	    !dccs_send_request( df, user_nick, *saddr ) )
+	if( !dcc_listen( df, &saddr ) ||
+	    !dccs_send_request( df, user_nick, saddr ) )
 		return NULL;
 
-	g_free( *saddr );
+	g_free( saddr );
 
 	/* watch */
 	df->watch_in = b_input_add( df->fd, GAIM_INPUT_READ, dccs_send_proto, df );
@@ -260,25 +277,15 @@ gboolean dcc_listen( dcc_file_transfer_t *df, struct sockaddr_storage **saddr_pt
 }
 
 /*
- * After setup, the transfer itself is handled entirely by this function.
- * There are basically four things to handle: connect, receive, send, and error.
+ * Checks poll(), same for receiving and sending
  */
-gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
+gboolean dcc_poll( dcc_file_transfer_t *df, int fd, short *revents )
 {
-	dcc_file_transfer_t *df = data;
-	file_transfer_t *file = df->ft;
 	struct pollfd pfd = { .fd = fd, .events = POLLHUP|POLLERR|POLLIN|POLLOUT };
-	short revents;
-	
-	if ( poll( &pfd, 1, 0 ) == -1 )
-	{
-		imcb_log( df->ic, "poll() failed, weird!" );
-		revents = 0;
-	};
 
-	revents = pfd.revents;
+	ASSERTSOCKOP( poll( &pfd, 1, 0 ), "poll()" )
 
-	if( revents & POLLERR )
+	if( pfd.revents & POLLERR )
 	{
 		int sockerror;
 		socklen_t errlen = sizeof( sockerror );
@@ -289,9 +296,44 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 		return dcc_abort( df, "Socket error: %s", strerror( sockerror ) );
 	}
 	
-	if( revents & POLLHUP ) 
+	if( pfd.revents & POLLHUP ) 
 		return dcc_abort( df, "Remote end closed connection" );
 	
+	*revents = pfd.revents;
+
+	return TRUE;
+}
+
+gboolean  dcc_check_maxseg( dcc_file_transfer_t *df, int fd )
+{
+#ifdef DCC_SEND_AHEAD
+	/* 
+	 * use twice the maximum segment size as a maximum for calls to send().
+	 */
+	if( max_packet_size == 0 )
+	{
+		unsigned int mpslen = sizeof( max_packet_size );
+		if( getsockopt( fd, IPPROTO_TCP, TCP_MAXSEG, &max_packet_size, &mpslen ) )
+			return dcc_abort( df, "getsockopt() failed" );
+		max_packet_size *= 2;
+	}
+#endif
+	return TRUE;
+}
+
+/*
+ * After setup, the transfer itself is handled entirely by this function.
+ * There are basically four things to handle: connect, receive, send, and error.
+ */
+gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
+{
+	dcc_file_transfer_t *df = data;
+	file_transfer_t *file = df->ft;
+	short revents;
+	
+	if( !dcc_poll( df, fd, &revents) )
+		return FALSE;
+
 	if( ( revents & POLLIN ) &&
 	    ( file->status & FT_STATUS_LISTENING ) )
 	{ 	
@@ -304,21 +346,12 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 
 		closesocket( fd );
 		fd = df->fd;
-		file->status = FT_STATUS_TRANSFERING;
+		file->status = FT_STATUS_TRANSFERRING;
 		sock_make_nonblocking( fd );
 
-#ifdef DCC_SEND_AHEAD
-		/* 
-		 * use twice the maximum segment size as a maximum for calls to send().
-		 */
-		if( max_packet_size == 0 )
-		{
-			unsigned int mpslen = sizeof( max_packet_size );
-			if( getsockopt( fd, IPPROTO_TCP, TCP_MAXSEG, &max_packet_size, &mpslen ) )
-				return dcc_abort( df, "getsockopt() failed" );
-			max_packet_size *= 2;
-		}
-#endif
+		if ( !dcc_check_maxseg( df, fd ) )
+			return FALSE;
+
 		/* IM protocol callback */
 
 		if( file->accept )
@@ -452,6 +485,113 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 	return TRUE;
 }
 
+gboolean dccs_recv_start( file_transfer_t *ft )
+{
+	dcc_file_transfer_t *df = ft->priv;
+	struct sockaddr_storage *saddr = &df->saddr;
+	int fd;
+	socklen_t sa_len = saddr->ss_family == AF_INET ? 
+		sizeof( struct sockaddr_in ) : sizeof( struct sockaddr_in6 );
+	
+	if( !ft->write )
+		return dcc_abort( df, "Protocol didn't register write()" );
+	
+	ASSERTSOCKOP( fd = df->fd = socket( saddr->ss_family, SOCK_STREAM, 0 ) , "Opening Socket" );
+
+	sock_make_nonblocking( fd );
+
+	if( ( connect( fd, (struct sockaddr *)saddr, sa_len ) == -1 ) &&
+	    ( errno != EINPROGRESS ) )
+		return dcc_abort( df, "Connecting" );
+
+	ft->status = FT_STATUS_CONNECTING;
+
+	/* watch */
+	df->watch_out = b_input_add( df->fd, GAIM_INPUT_WRITE, dccs_recv_proto, df );
+	ft->out_of_data = dccs_recv_out_of_data;
+
+	return TRUE;
+}
+
+gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond)
+{
+	dcc_file_transfer_t *df = data;
+	file_transfer_t *ft = df->ft;
+	short revents;
+
+	if( !dcc_poll( df, fd, &revents ) )
+		return FALSE;
+	
+	if( ( revents & POLLOUT ) &&
+	    ( ft->status & FT_STATUS_CONNECTING ) )
+	{
+		ft->status = FT_STATUS_TRANSFERRING;
+		if ( !dcc_check_maxseg( df, fd ) )
+			return FALSE;
+
+		//df->watch_in = b_input_add( df->fd, GAIM_INPUT_READ, dccs_recv_proto, df );
+
+		df->watch_out = 0;
+		return FALSE;
+	}
+
+	if( revents & POLLIN )
+	{
+		char *buffer = g_malloc( 65536 );
+		int ret, done;
+
+		ASSERTSOCKOP( ret = recv( fd, buffer, 65536, 0 ), "Receiving" );
+
+		if( ret == 0 )
+			return dcc_abort( df, "Remote end closed connection" );
+
+		buffer = g_realloc( buffer, ret );
+
+		df->bytes_sent += ret;
+
+		done = df->bytes_sent >= ft->file_size;
+
+		if( ( ( df->bytes_sent - ft->bytes_transferred ) > DCC_PACKET_SIZE ) ||
+		    done )
+		{
+			int ack, ackret;
+			ack = htonl( ft->bytes_transferred = df->bytes_sent );
+
+			ASSERTSOCKOP( ackret = send( fd, &ack, 4, 0 ), "Sending DCC ACK" );
+			
+			if ( ackret != 4 )
+				return dcc_abort( df, "Error sending DCC ACK, sent %d instead of 4 bytes", ret );
+		}
+		
+		if( !ft->write( df->ft, buffer, ret ) && !done )
+		{
+			df->watch_in = 0;
+			return FALSE;
+		}
+
+		if( done )
+		{
+			closesocket( fd );
+			dcc_finish( ft );
+
+			df->watch_in = 0;
+			return FALSE;
+		}
+
+		return TRUE;
+	}
+
+	return TRUE;
+}
+
+void dccs_recv_out_of_data( file_transfer_t *ft )
+{
+	dcc_file_transfer_t *df = ft->priv;
+
+	if( !df->watch_in )
+		df->watch_in = b_input_add( df->fd, GAIM_INPUT_READ, dccs_recv_proto, df );
+}
+
 /* 
  * Incoming data. Note that the buffer MUST NOT be freed by the caller!
  * We don't copy the buffer but put it in our queue.
@@ -471,7 +611,7 @@ gboolean dccs_send_write( file_transfer_t *file, gpointer data, unsigned int dat
 
 	df->queued_bytes += data_size;
 
-	if( ( file->status & FT_STATUS_TRANSFERING ) && 
+	if( ( file->status & FT_STATUS_TRANSFERRING ) && 
 #ifndef DCC_SEND_AHEAD
 	    ( file->bytes_transferred >= df->bytes_sent ) && 
 #endif
@@ -532,3 +672,91 @@ void dcc_finish( file_transfer_t *file )
 
 	dcc_close( file );
 }
+
+/* 
+ * DCC SEND <filename> <IP> <port> <filesize>
+ *
+ * filename can be in "" or not. If it is, " can probably be escaped...
+ * IP can be an unsigned int (IPV4) or something else (IPV6)
+ * 
+ */
+file_transfer_t *dcc_request( struct im_connection *ic, char *line )
+{
+	char *pattern = "SEND"
+		" (([^\"][^ ]*)|\"([^\"]|\\\")*\")"
+		" (([0-9]*)|([^ ]*))"
+		" ([0-9]*)"
+		" ([0-9]*)\001";
+	regmatch_t pmatch[9];
+	regex_t re;
+	file_transfer_t *ft;
+	dcc_file_transfer_t *df;
+
+	if( regcomp( &re, pattern, REG_EXTENDED ) )
+		return NULL;
+	if( regexec( &re, line, 9, pmatch, 0 ) )
+		return NULL;
+
+	if( ( pmatch[1].rm_so > 0 ) &&
+	    ( pmatch[4].rm_so > 0 ) &&
+	    ( pmatch[7].rm_so > 0 ) &&
+	    ( pmatch[8].rm_so > 0 ) )
+	{
+		char *input = g_strdup( line );
+		char *filename, *host, *port;
+		size_t filesize;
+		struct addrinfo hints, *rp;
+
+		/* "filename" or filename */
+		if ( pmatch[2].rm_so > 0 )
+		{
+			input[pmatch[2].rm_eo] = '\0';
+			filename = input + pmatch[2].rm_so;
+		} else
+		{
+			input[pmatch[3].rm_eo] = '\0';
+			filename = input + pmatch[3].rm_so;
+		}
+			
+		input[pmatch[4].rm_eo] = '\0';
+
+		/* number means ipv4, something else means ipv6 */
+		if ( pmatch[5].rm_so > 0 )
+		{
+			struct in_addr ipaddr = { htonl( atoi( input + pmatch[5].rm_so ) ) };
+			host = inet_ntoa( ipaddr );
+		} else
+		{
+			/* Contains non-numbers, hopefully an IPV6 address */
+			host = input + pmatch[6].rm_so;
+		}
+
+		input[pmatch[7].rm_eo] = '\0';
+		input[pmatch[8].rm_eo] = '\0';
+
+		port = input + pmatch[7].rm_so;
+		filesize = atoll( input + pmatch[8].rm_so );
+
+		memset( &hints, 0, sizeof ( struct addrinfo ) );
+		if ( getaddrinfo( host, port, &hints, &rp ) )
+		{
+			g_free( input );
+			return NULL;
+		}
+
+		df = dcc_alloc_transfer( filename, filesize, ic );
+		ft = df->ft;
+		ft->sending = TRUE;
+		memcpy( &df->saddr, rp->ai_addr, rp->ai_addrlen );
+
+		freeaddrinfo( rp );
+		g_free( input );
+
+		df->ic->irc->file_transfers = g_slist_prepend( df->ic->irc->file_transfers, ft );
+
+		return ft;
+	}
+
+	return NULL;
+}
+

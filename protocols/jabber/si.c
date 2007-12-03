@@ -25,8 +25,9 @@
 #include "sha1.h"
 
 void jabber_si_answer_request( file_transfer_t *ft );
+int jabber_si_send_request(struct im_connection *ic, char *who, struct jabber_transfer *tf );
 
-/* imcb callback */
+/* file_transfer free() callback */
 void jabber_si_free_transfer( file_transfer_t *ft)
 {
 	struct jabber_transfer *tf = ft->data;
@@ -49,7 +50,7 @@ void jabber_si_free_transfer( file_transfer_t *ft)
 	g_free( tf->sid );
 }
 
-/* imcb callback */
+/* file_transfer finished() callback */
 void jabber_si_finished( file_transfer_t *ft )
 {
 	struct jabber_transfer *tf = ft->data;
@@ -57,7 +58,7 @@ void jabber_si_finished( file_transfer_t *ft )
 	imcb_log( tf->ic, "File %s transferred successfully!" , ft->file_name );
 }
 
-/* imcb callback */
+/* file_transfer canceled() callback */
 void jabber_si_canceled( file_transfer_t *ft, char *reason )
 {
 	struct jabber_transfer *tf = ft->data;
@@ -75,6 +76,29 @@ void jabber_si_canceled( file_transfer_t *ft, char *reason )
 		imcb_log( tf->ic, "WARNING: Error generating reply to file transfer request" );
 	xt_free_node( reply );
 
+}
+
+void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *who ) 
+{
+	struct jabber_transfer *tf;
+	struct jabber_data *jd = ic->proto_data;
+
+	imcb_log( ic, "Incoming file from %s : %s %zd bytes", ic->irc->nick, ft->file_name, ft->file_size );
+
+	tf = g_new0( struct jabber_transfer, 1 );
+
+	tf->ic = ic;
+	tf->ft = ft;
+	tf->ft->data = tf;
+	tf->ft->free = jabber_si_free_transfer;
+	tf->ft->finished = jabber_si_finished;
+	ft->write = jabber_bs_send_write;
+
+	jd->filetransfers = g_slist_prepend( jd->filetransfers, tf );
+
+	jabber_si_send_request( ic, who, tf );
+
+	imcb_file_recv_start( ft );
 }
 
 /*
@@ -135,6 +159,9 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 				requestok = TRUE;
 				break;
 			}
+
+		if ( !requestok )
+			imcb_log( ic, "WARNING: Unsupported file transfer request from %s", ini_jid);
 	}
 	
 	if ( requestok )
@@ -159,8 +186,7 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 		}
 
 		*s = '/';
-	} else 
-		imcb_log( ic, "WARNING: Unsupported file transfer request from %s", ini_jid);
+	}
 
 	if ( !requestok )
 	{ 
@@ -243,4 +269,159 @@ void jabber_si_answer_request( file_transfer_t *ft ) {
 	else
 		tf->accepted = TRUE;
 	xt_free_node( reply );
+}
+
+static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
+{
+	struct xt_node *c, *d;
+	char *ini_jid, *tgt_jid;
+	GSList *tflist;
+	struct jabber_transfer *tf=NULL;
+	struct jabber_data *jd = ic->proto_data;
+	char *sid;
+
+	if( !( tgt_jid = xt_find_attr( node, "from" ) ) ||
+	    !( ini_jid = xt_find_attr( node, "to" ) ) )
+	{
+		imcb_log( ic, "Invalid SI response from=%s to=%s", tgt_jid, ini_jid );
+		return XT_HANDLED;
+	}
+	
+	imcb_log( ic, "GOT RESPONSE TO FILE" );
+	/* All this means we expect something like this: ( I think )
+	 * <iq from=... to=...>
+	 * 	<si xmlns=si>
+	 * 		<file xmlns=ft/>
+	 * 		<feature xmlns=feature>
+	 * 			<x xmlns=xdata type=submit>
+	 * 				<field var=stream-method>
+	 * 					<value>
+	 */
+	if( !( tgt_jid = xt_find_attr( node, "from" ) ) ||
+	    !( ini_jid = xt_find_attr( node, "to" ) ) ||
+	    !( c = xt_find_node( node->children, "si" ) ) ||
+	    !( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_SI ) == 0 ) ||
+	    !( sid = xt_find_attr( c, "id" ) )||
+	    !( d = xt_find_node( c->children, "file" ) ) ||
+	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FILETRANSFER ) == 0 ) ||
+	    !( d = xt_find_node( c->children, "feature" ) ) ||
+	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FEATURE ) == 0 ) ||
+	    !( d = xt_find_node( d->children, "x" ) ) ||
+	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_XDATA ) == 0 ) ||
+	    !( strcmp( xt_find_attr( d, "type" ), "submit" ) == 0 ) ||
+	    !( d = xt_find_node( d->children, "field" ) ) ||
+	    !( strcmp( xt_find_attr( d, "var" ), "stream-method" ) == 0 ) ||
+	    !( d = xt_find_node( d->children, "value" ) ) )
+	{
+		imcb_log( ic, "WARNING: Received incomplete Stream Initiation response" );
+		return XT_HANDLED;
+	}
+
+	if( !( strcmp( d->text, XMLNS_BYTESTREAMS ) == 0 ) ) { 
+		/* since we should only have advertised what we can do and the peer should
+		 * only have chosen what we offered, this should never happen */
+		imcb_log( ic, "WARNING: Received invalid Stream Initiation response, method %s", d->text );
+			
+		return XT_HANDLED;
+	}
+	
+	/* Let's see if we can find out what this bytestream should be for... */
+
+	for( tflist = jd->filetransfers ; tflist; tflist = g_slist_next(tflist) )
+	{
+		struct jabber_transfer *tft = tflist->data;
+		if( ( strcmp( tft->sid, sid ) == 0 ) )
+		{
+		    	tf = tft;
+			break;
+		}
+	}
+
+	if (!tf) 
+	{
+		imcb_log( ic, "WARNING: Received bytestream request from %s that doesn't match an SI request", ini_jid );
+		return XT_HANDLED;
+	}
+
+	tf->ini_jid = g_strdup( ini_jid );
+	tf->tgt_jid = g_strdup( tgt_jid );
+
+	jabber_bs_send_start( tf );
+
+	return XT_HANDLED;
+}
+
+int jabber_si_send_request(struct im_connection *ic, char *who, struct jabber_transfer *tf )
+{
+	struct xt_node *node, *sinode;
+	struct jabber_buddy *bud;
+
+	/* who knows how many bits the future holds :) */
+	char filesizestr[ 1 + ( int ) ( 0.301029995663981198f * sizeof( size_t ) * 8 ) ];
+
+	const char *methods[] = 
+	{  	
+		XMLNS_BYTESTREAMS,
+		//XMLNS_IBB,
+		NULL 
+	};
+	const char **m;
+	char *s;
+
+	/* Maybe we should hash this? */
+	tf->sid = g_strdup_printf( "BitlBeeJabberSID%d", tf->ft->local_id );
+	
+	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_name( ic, s + 1 ) )
+		bud = jabber_buddy_by_ext_jid( ic, who, 0 );
+	else
+		bud = jabber_buddy_by_jid( ic, who, 0 );
+
+	/* start with the SI tag */
+	sinode = xt_new_node( "si", NULL, NULL );
+	xt_add_attr( sinode, "xmlns", XMLNS_SI );
+	xt_add_attr( sinode, "profile", XMLNS_FILETRANSFER );
+	xt_add_attr( sinode, "id", tf->sid );
+
+/*	if( mimetype ) 
+		xt_add_attr( node, "mime-type", mimetype ); */
+
+	/* now the file tag */
+/*	if( desc )
+ 		node = xt_new_node( "desc", descr, NULL ); */
+	node = xt_new_node( "range", NULL, NULL );
+
+	sprintf( filesizestr, "%zd", tf->ft->file_size );
+	node = xt_new_node( "file", NULL, node );
+	xt_add_attr( node, "xmlns", XMLNS_FILETRANSFER );
+	xt_add_attr( node, "name", tf->ft->file_name );
+	xt_add_attr( node, "size", filesizestr );
+/*	if (hash)
+		xt_add_attr( node, "hash", hash );
+	if (date)
+		xt_add_attr( node, "date", date ); */
+
+	xt_add_child( sinode, node );
+
+	/* and finally the feature tag */
+	node = xt_new_node( "field", NULL, NULL );
+	xt_add_attr( node, "var", "stream-method" );
+	xt_add_attr( node, "type", "list-single" );
+
+	for ( m = methods ; *m ; m ++ )
+		xt_add_child( node, xt_new_node( "option", NULL, xt_new_node( "value", (char *)*m, NULL ) ) );
+
+	node = xt_new_node( "x", NULL, node );
+	xt_add_attr( node, "xmlns", XMLNS_XDATA );
+	xt_add_attr( node, "type", "form" );
+
+	node = xt_new_node( "feature", NULL, node );
+	xt_add_attr( node, "xmlns", XMLNS_FEATURE );
+
+	xt_add_child( sinode, node );
+
+	/* and we are there... */
+	node = jabber_make_packet( "iq", "set", bud ? bud->full_jid : who, sinode );
+	jabber_cache_add( ic, node, jabber_si_handle_response );
+	
+	return jabber_write_packet( ic, node );
 }

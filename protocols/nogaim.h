@@ -228,6 +228,9 @@ struct prpl {
 	/* Mainly for AOL, since they think "Bung hole" == "Bu ngho le". *sigh*
 	 * - Most protocols will just want to set this to g_strcasecmp().*/
 	int (* handle_cmp) (const char *who1, const char *who2);
+
+	/* Incoming transfer request */
+	void (* transfer_request) (struct im_connection *, file_transfer_t *ft, char *handle );
 };
 
 /* im_api core stuff. */

@@ -27,6 +27,10 @@
 #include "bitlbee.h"
 #include "crypting.h"
 #include "ipc.h"
+#include "dcc.h"
+
+#include <regex.h>
+#include <netinet/in.h>
 
 static gboolean irc_userping( gpointer _irc, int fd, b_input_condition cond );
 
@@ -980,9 +984,19 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 			}
 			return( 1 );
 		}
+		else if( g_strncasecmp( s + 1, "DCC", 3 ) == 0 )
+		{
+			if( u && u->ic && u->ic->acc->prpl->transfer_request )
+			{
+				file_transfer_t *ft = dcc_request( u->ic, s + 5 );
+				if ( ft )
+					u->ic->acc->prpl->transfer_request( u->ic, ft, u->handle );
+			}
+			return( 1 );
+		}		
 		else
 		{
-			irc_usermsg( irc, "Non-ACTION CTCP's aren't supported" );
+			irc_usermsg( irc, "Supported CTCPs are ACTION, VERSION, PING, TYPING, DCC" );
 			return( 0 );
 		}
 	}
