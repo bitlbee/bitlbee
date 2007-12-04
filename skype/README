@@ -3,6 +3,15 @@ Miklos Vajna <vmiklos@vmiklos.hu>
 
 == Status
 
+[Wilmer van der Gaast (author of BitlBee)]
+____
+Okay, this exists now, with lots of thanks to vmiklos for his *excellent*
+work!!
+
+It's not in the main BitlBee and it'll never be for various reasons, but
+because it's a plugin that shouldn't be a problem.
+____
+
 One day I browsed the BitlBee bugtracker and found
 http://bugs.bitlbee.org/bitlbee/ticket/82[this] ticket. Then after a while I
 returned and saw that it was still open. So I wrote it.
