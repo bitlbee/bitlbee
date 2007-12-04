@@ -371,7 +371,7 @@ int jabber_si_send_request(struct im_connection *ic, char *who, struct jabber_tr
 	/* Maybe we should hash this? */
 	tf->sid = g_strdup_printf( "BitlBeeJabberSID%d", tf->ft->local_id );
 	
-	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_name( ic, s + 1 ) )
+	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_jid( ic, s + 1 ) )
 		bud = jabber_buddy_by_ext_jid( ic, who, 0 );
 	else
 		bud = jabber_buddy_by_jid( ic, who, 0 );
