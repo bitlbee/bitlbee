@@ -43,32 +43,8 @@
 #ifndef _DCC_H
 #define _DCC_H
 
-/* don't wait for acknowledgments */
-#define DCC_SEND_AHEAD
-
-/* This multiplier specifies how many bytes we
- * can go ahead within one event loop cycle. Notice that all in all,
- * we can easily be more ahead if the event loop shoots often enough.
- * (or the receiver processes slow enough)
- *
- * Setting this value too high will cause send buffer overflows.
- */
-#define DCC_SEND_AHEAD_MUL 10
-
-/*
- * queue thresholds for the out of data and overflow conditions
- */
-#define DCC_QUEUE_THRESHOLD_LOW 2048
-#define DCC_QUEUE_THRESHOLD_HIGH 65536
-
-/* only used in non-ahead mode */
+/* Send an ACK after receiving this amount of data */
 #define DCC_PACKET_SIZE 1024
-
-/* stores buffers handed over by IM protocols */
-struct dcc_buffer {
-	char *b;
-	int len;
-};
 
 typedef struct dcc_file_transfer {
 
@@ -88,25 +64,6 @@ typedef struct dcc_file_transfer {
 	gint watch_out;  /* writable */
 	
 	/*
-	 * The total number of queued bytes. The following equality should always hold:
-	 *
-	 * 	queued_bytes = sum(queued_buffers.len) - buffer_pos
-	 */
-	unsigned int queued_bytes;
-
-	/* 
-	 * A list of dcc_buffer structures.
-	 * These are provided by the protocols directly so that no copying is neccessary.
-	 */
-	GSList *queued_buffers;
-	
-	/* 
-	 * current position within the first buffer.
-	 * Is non-null if the whole buffer couldn't be sent at once.
-	 */
-	int buffer_pos;
-
-	/*
 	 * The total amount of bytes that have been sent to the irc client.
 	 */
 	size_t bytes_sent;
@@ -123,7 +80,7 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 
 void dcc_canceled( file_transfer_t *file, char *reason );
 
-gboolean dccs_send_write( file_transfer_t *file, gpointer data, unsigned int data_size );
+gboolean dccs_send_write( file_transfer_t *file, char *data, unsigned int data_size );
 
 file_transfer_t *dcc_request( struct im_connection *ic, char *line );
 #endif

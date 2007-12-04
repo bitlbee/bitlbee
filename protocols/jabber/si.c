@@ -83,7 +83,7 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 	struct jabber_transfer *tf;
 	struct jabber_data *jd = ic->proto_data;
 
-	imcb_log( ic, "Incoming file from %s : %s %zd bytes", ic->irc->nick, ft->file_name, ft->file_size );
+	imcb_log( ic, "Trying to send %s(%zd bytes) to %s", ft->file_name, ft->file_size, who );
 
 	tf = g_new0( struct jabber_transfer, 1 );
 
@@ -223,7 +223,7 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 }
 
 /*
- * imcb called the accept callback which probably means that the user accepted this file transfer.
+ * imc called the accept callback which probably means that the user accepted this file transfer.
  * We send our response to the initiator.
  * In the next step, the initiator will send us a request for the given stream type.
  * (currently that can only be a SOCKS5 bytestream)
@@ -274,11 +274,10 @@ void jabber_si_answer_request( file_transfer_t *ft ) {
 static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
 {
 	struct xt_node *c, *d;
-	char *ini_jid, *tgt_jid;
+	char *ini_jid, *tgt_jid, *iq_id;
 	GSList *tflist;
 	struct jabber_transfer *tf=NULL;
 	struct jabber_data *jd = ic->proto_data;
-	char *sid;
 
 	if( !( tgt_jid = xt_find_attr( node, "from" ) ) ||
 	    !( ini_jid = xt_find_attr( node, "to" ) ) )
@@ -287,11 +286,10 @@ static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_n
 		return XT_HANDLED;
 	}
 	
-	imcb_log( ic, "GOT RESPONSE TO FILE" );
 	/* All this means we expect something like this: ( I think )
-	 * <iq from=... to=...>
+	 * <iq from=... to=... id=...>
 	 * 	<si xmlns=si>
-	 * 		<file xmlns=ft/>
+	 * 	[	<file xmlns=ft/>    ] <-- not neccessary
 	 * 		<feature xmlns=feature>
 	 * 			<x xmlns=xdata type=submit>
 	 * 				<field var=stream-method>
@@ -299,11 +297,11 @@ static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_n
 	 */
 	if( !( tgt_jid = xt_find_attr( node, "from" ) ) ||
 	    !( ini_jid = xt_find_attr( node, "to" ) ) ||
+	    !( iq_id   = xt_find_attr( node, "id" ) ) ||
 	    !( c = xt_find_node( node->children, "si" ) ) ||
 	    !( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_SI ) == 0 ) ||
-	    !( sid = xt_find_attr( c, "id" ) )||
-	    !( d = xt_find_node( c->children, "file" ) ) ||
-	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FILETRANSFER ) == 0 ) ||
+/*	    !( d = xt_find_node( c->children, "file" ) ) ||
+	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FILETRANSFER ) == 0 ) || */
 	    !( d = xt_find_node( c->children, "feature" ) ) ||
 	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FEATURE ) == 0 ) ||
 	    !( d = xt_find_node( d->children, "x" ) ) ||
@@ -330,7 +328,7 @@ static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_n
 	for( tflist = jd->filetransfers ; tflist; tflist = g_slist_next(tflist) )
 	{
 		struct jabber_transfer *tft = tflist->data;
-		if( ( strcmp( tft->sid, sid ) == 0 ) )
+		if( ( strcmp( tft->iq_id, iq_id ) == 0 ) )
 		{
 		    	tf = tft;
 			break;
@@ -345,6 +343,8 @@ static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_n
 
 	tf->ini_jid = g_strdup( ini_jid );
 	tf->tgt_jid = g_strdup( tgt_jid );
+
+	imcb_log( ic, "File %s: %s accepted the transfer!", tf->ft->file_name, tgt_jid );
 
 	jabber_bs_send_start( tf );
 
@@ -422,6 +422,7 @@ int jabber_si_send_request(struct im_connection *ic, char *who, struct jabber_tr
 	/* and we are there... */
 	node = jabber_make_packet( "iq", "set", bud ? bud->full_jid : who, sinode );
 	jabber_cache_add( ic, node, jabber_si_handle_response );
+	tf->iq_id = g_strdup( xt_find_attr( node, "id" ) );
 	
 	return jabber_write_packet( ic, node );
 }

@@ -71,8 +71,6 @@ struct socks5_message
 	if( (op) == -1 ) \
 		return jabber_bs_abort( bt , msg ": %s", strerror( errno ) );
 
-#define JABBER_BS_BUFSIZE 65536
-
 gboolean jabber_bs_abort( struct bs_transfer *bt, char *format, ... );
 void jabber_bs_canceled( file_transfer_t *ft , char *reason );
 void jabber_bs_free_transfer( file_transfer_t *ft);
@@ -82,7 +80,7 @@ gboolean jabber_bs_peek( struct bs_transfer *bt, void *buffer, int buflen );
 
 void jabber_bs_recv_answer_request( struct bs_transfer *bt );
 gboolean jabber_bs_recv_read( gpointer data, gint fd, b_input_condition cond );
-void jabber_bs_recv_out_of_data( file_transfer_t *ft );
+gboolean jabber_bs_recv_write_request( file_transfer_t *ft );
 gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition cond );
 gboolean jabber_bs_recv_handshake_abort( struct bs_transfer *bt, char *error );
 int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, struct xt_node *qnode);
@@ -108,7 +106,7 @@ void jabber_bs_free_transfer( file_transfer_t *ft) {
 	g_free( bt->pseudoadr );
 	xt_free_node( bt->qnode );
 	g_free( bt );
-//iq_id
+
 	jabber_si_free_transfer( ft );
 }
 
@@ -325,7 +323,7 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 
 				sock_make_nonblocking( fd );
 
-				imcb_log( bt->tf->ic, "Transferring file %s: Connecting to streamhost %s:%s", bt->tf->ft->file_name, host, port );
+				imcb_log( bt->tf->ic, "File %s: Connecting to streamhost %s:%s", bt->tf->ft->file_name, host, port );
 
 				if( ( connect( fd, rp->ai_addr, rp->ai_addrlen ) == -1 ) &&
 				    ( errno != EINPROGRESS ) )
@@ -425,7 +423,6 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 
 			jabber_bs_recv_answer_request( bt );
 
-			// reset in answer_request bt->tf->watch_in = 0;
 			return FALSE;
 		}
 	default:
@@ -440,8 +437,10 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 /*
  * If the handshake failed we can try the next streamhost, if there is one.
  * An intelligent sender would probably specify himself as the first streamhost and
- * a proxy as the second (Kopete is an example here). That way, a (potentially) 
- * slow proxy is only used if neccessary.
+ * a proxy as the second (Kopete and PSI are examples here). That way, a (potentially) 
+ * slow proxy is only used if neccessary. This of course also means, that the timeout
+ * per streamhost should be kept short. If one or two firewalled adresses are specified,
+ * they have to timeout first before a proxy is tried.
  */
 gboolean jabber_bs_recv_handshake_abort( struct bs_transfer *bt, char *error )
 {
@@ -493,15 +492,15 @@ void jabber_bs_recv_answer_request( struct bs_transfer *bt )
 	struct jabber_transfer *tf = bt->tf;
 	struct xt_node *reply;
 
-	imcb_log( tf->ic, "Transferring file %s: established SOCKS5 connection to %s:%s", 
+	imcb_log( tf->ic, "File %s: established SOCKS5 connection to %s:%s", 
 		  tf->ft->file_name, 
 		  xt_find_attr( bt->shnode, "host" ),
 		  xt_find_attr( bt->shnode, "port" ) );
 
 	tf->ft->data = tf;
 	tf->ft->started = time( NULL );
-	tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_recv_read, tf );
-	tf->ft->out_of_data = jabber_bs_recv_out_of_data;
+	tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_recv_read, bt );
+	tf->ft->write_request = jabber_bs_recv_write_request;
 
 	reply = xt_new_node( "streamhost-used", NULL, NULL );
 	xt_add_attr( reply, "jid", xt_find_attr( bt->shnode, "jid" ) );
@@ -518,90 +517,107 @@ void jabber_bs_recv_answer_request( struct bs_transfer *bt )
 	xt_free_node( reply );
 }
 
-/* Reads till it is unscheduled or the receiver signifies an overflow. */
+/* 
+ * This function is called from write_request directly. If no data is available, it will install itself
+ * as a watcher for input on fd and once that happens, deliver the data and unschedule itself again.
+ */
 gboolean jabber_bs_recv_read( gpointer data, gint fd, b_input_condition cond )
 {
 	int ret;
-	struct jabber_transfer *tf = data;
-	struct bs_transfer *bt = tf->streamhandle;
-	char *buffer = g_malloc( JABBER_BS_BUFSIZE );
+	struct bs_transfer *bt = data;
+	struct jabber_transfer *tf = bt->tf;
 
-	if (tf->receiver_overflow)
+	if( fd != 0 ) /* called via event thread */
 	{
-		if( tf->watch_in )
+		tf->watch_in = 0;
+		ASSERTSOCKOP( ret = recv( fd, tf->ft->buffer, sizeof( tf->ft->buffer ), 0 ) , "Receiving" );
+	}
+	else
+	{
+		/* called directly. There might not be any data available. */
+		if( ( ( ret = recv( tf->fd, tf->ft->buffer, sizeof( tf->ft->buffer ), 0 ) ) == -1 ) &&
+		    ( errno != EAGAIN ) )
+		    return jabber_bs_abort( bt, "Receiving: %s", strerror( errno ) );
+
+		if( ( ret == -1 ) && ( errno == EAGAIN ) )
 		{
-			/* should never happen, BUG */
-			imcb_file_canceled( tf->ft, "Bug in jabber file transfer code: read while overflow is true. Please report" );
+			tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_recv_read, bt );
 			return FALSE;
 		}
 	}
 
-	ASSERTSOCKOP( ret = recv( fd, buffer, JABBER_BS_BUFSIZE, 0 ) , "Receiving" );
-
-	/* that should be all */
+	/* shouldn't happen since we know the file size */
 	if( ret == 0 )
-		return FALSE;
+		return jabber_bs_abort( bt, "Remote end closed connection" );
 	
 	tf->bytesread += ret;
 
-	buffer = g_realloc( buffer, ret );
+	tf->ft->write( tf->ft, tf->ft->buffer, ret );	
 
-	if ( ( tf->receiver_overflow = imcb_file_write( tf->ft, buffer, ret ) ) )
-	{
-		/* wait for imcb to run out of data */
-		tf->watch_in = 0;
-		return FALSE;
-	}
-		
-	return TRUE;
+	return FALSE;
 }
 
-/* imcb callback that is invoked when it runs out of data.
- * We reschedule jabber_bs_read here if neccessary. */
-void jabber_bs_recv_out_of_data( file_transfer_t *ft )
+/* 
+ * imc callback that is invoked when it is ready to receive some data.
+ */
+gboolean jabber_bs_recv_write_request( file_transfer_t *ft )
 {
 	struct jabber_transfer *tf = ft->data;
 
-	tf->receiver_overflow = FALSE;
+	if( tf->watch_in )
+	{
+		imcb_file_canceled( ft, "BUG in jabber file transfer: write_request called when already watching for input" );
+		return FALSE;
+	}
+	
+	jabber_bs_recv_read( tf->streamhandle, 0 , 0 );
 
-	if ( !tf->watch_in )
-		tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_recv_read, tf );
+	return TRUE;
 }
 
-/* signal ood and be done */
+/* 
+ * Issues a write_request to imc.
+ * */
 gboolean jabber_bs_send_can_write( gpointer data, gint fd, b_input_condition cond )
 {
 	struct bs_transfer *bt = data;
 
-	bt->tf->ft->out_of_data( bt->tf->ft );
-
 	bt->tf->watch_out = 0;
+
+	bt->tf->ft->write_request( bt->tf->ft );
+
 	return FALSE;
 }
 
-/* try to send the stuff. If you can't return false and wait for writable */
-gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, int len )
+/*
+ * This should only be called if we can write, so just do it.
+ * Add a write watch so we can write more during the next cycle (if possible).
+ */
+gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, unsigned int len )
 {
 	struct jabber_transfer *tf = ft->data;
 	struct bs_transfer *bt = tf->streamhandle;
 	int ret;
 
-	if ( ( ( ret = send( tf->fd, buffer, len, 0 ) ) == -1 ) &&
-	     ( errno != EAGAIN ) )
-		return jabber_bs_abort( bt, "send failed on socket with: %s", strerror( errno ) );
+	if( tf->watch_out )
+		return jabber_bs_abort( bt, "BUG: write() called while watching " );
 	
-	if( ret == 0 )
-		return jabber_bs_abort( bt, "Remote end closed connection" );
+	ASSERTSOCKOP( ret = send( tf->fd, buffer, len, 0 ), "Sending" );
+
+	tf->byteswritten += ret;
 	
-	if( ret == -1 )
-	{
-		bt->tf->watch_out = b_input_add( tf->fd, GAIM_INPUT_WRITE, jabber_bs_send_can_write, bt );
-		return FALSE;
-	}
+	/* TODO: this should really not be fatal */
+	if( ret < len )
+		return jabber_bs_abort( bt, "send() sent %d instead of %d (send buffer too big!)", ret, len );
+
+	bt->tf->watch_out = b_input_add( tf->fd, GAIM_INPUT_WRITE, jabber_bs_send_can_write, bt );
 		
 	return TRUE;
 }
 
+/*
+ * Handles the reply by the receiver containing the used streamhost.
+ */
 static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt_node *node, struct xt_node *orig ) {
 	struct jabber_transfer *tf = NULL;
 	struct jabber_data *jd = ic->proto_data;
@@ -650,11 +666,10 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 
 	if( bt->phase == BS_PHASE_REPLY )
 	{
+		/* handshake went through, let's start transferring */
 		tf->ft->started = time( NULL );
-		tf->ft->out_of_data( tf->ft );
+		tf->ft->write_request( tf->ft );
 	}
-
-	//bt->tf->watch_out = b_input_add( tf->fd, GAIM_INPUT_WRITE, jabber_bs_send_write, tf );
 
 	return XT_HANDLED;
 }
@@ -680,8 +695,6 @@ gboolean jabber_bs_send_start( struct jabber_transfer *tf )
 		
 	bt = g_new0( struct bs_transfer, 1 );
 	bt->tf = tf;
-	//bt->qnode = xt_dup( qnode );
-	//bt->shnode = bt->qnode->children;
 	bt->phase = BS_PHASE_CONNECT;
 	bt->pseudoadr = g_strdup( hash_hex );
 	tf->streamhandle = bt;
@@ -713,8 +726,6 @@ gboolean jabber_bs_send_request( struct jabber_transfer *tf, char *host, char *p
 
 	iq = jabber_make_packet( "iq", "set", tf->tgt_jid, query );
 	xt_add_attr( iq, "from", tf->ini_jid );
-
-	//xt_free_node( query );
 
 	jabber_cache_add( tf->ic, iq, jabber_bs_send_handle_reply );
 
@@ -884,11 +895,13 @@ gboolean jabber_bs_send_handshake( gpointer data, gint fd, b_input_condition con
 
 			bt->phase = BS_PHASE_REPLY;
 
-			/* don't start sending till the streamhost-used message comes in */
+			imcb_log( tf->ic, "File %s: SOCKS5 handshake successful! Transfer about to start...", tf->ft->file_name );
+
 			if( tf->accepted )
 			{
+				/* streamhost-used message came already in(possible?), let's start sending */
 				tf->ft->started = time( NULL );
-				tf->ft->out_of_data( tf->ft );
+				tf->ft->write_request( tf->ft );
 			}
 
 			tf->watch_in = 0;

@@ -145,7 +145,6 @@ struct jabber_transfer
 	int accepted;
 
 	size_t bytesread, byteswritten;
-	int receiver_overflow;
 	int fd;
 	struct sockaddr_storage saddr;
 };
@@ -208,7 +207,7 @@ void jabber_si_free_transfer( file_transfer_t *ft);
 /* s5bytestream.c */
 int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, struct xt_node *qnode);
 gboolean jabber_bs_send_start( struct jabber_transfer *tf );
-gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, int len );
+gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, unsigned int len );
 
 /* message.c */
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
