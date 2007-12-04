@@ -292,6 +292,8 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 			   get the same random numbers as the parent/siblings. */
 			srand( time( NULL ) ^ getpid() );
 			
+			b_main_init();
+			
 			/* Close the listening socket, we're a client. */
 			close( global.listen_socket );
 			b_event_remove( global.listen_watch_source_id );

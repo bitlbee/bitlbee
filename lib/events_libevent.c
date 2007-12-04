@@ -31,12 +31,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include "proxy.h"
-
 #include <sys/time.h>
 #include <event.h>
+#include "proxy.h"
 
-static guint id_next;
+static void b_main_restart();
+static guint id_next = 1;
 static GHashTable *id_hash;
 static int quitting = 0;
 
@@ -46,6 +46,9 @@ static int quitting = 0;
    already, just in time. */
 static GHashTable *read_hash;
 static GHashTable *write_hash;
+
+struct event_base *leh;
+struct event_base *old_leh;
 
 struct b_event_data
 {
@@ -58,9 +61,16 @@ struct b_event_data
 
 void b_main_init()
 {
-	event_init();
+	if( leh != NULL )
+	{
+		/* Clean up the hash tables? */
+		
+		b_main_restart();
+		old_leh = leh;
+	}
 	
-	id_next = 1;
+	leh = event_init();
+	
 	id_hash = g_hash_table_new( g_int_hash, g_int_equal );
 	read_hash = g_hash_table_new( g_int_hash, g_int_equal );
 	write_hash = g_hash_table_new( g_int_hash, g_int_equal );
@@ -68,19 +78,40 @@ void b_main_init()
 
 void b_main_run()
 {
-	event_dispatch();
+	/* This while loop is necessary to exit the event loop and start a
+	   different one (necessary for ForkDaemon mode). */
+	while( event_base_dispatch( leh ) == 0 && !quitting )
+	{
+		if( old_leh != NULL )
+		{
+			/* For some reason this just isn't allowed...
+			   Possibly a bug in older versions, will see later.
+			event_base_free( old_leh ); */
+			old_leh = NULL;
+		}
+		
+		event_debug( "New event loop.\n" );
+	}
+}
+
+static void b_main_restart()
+{
+	struct timeval tv;
+	
+	memset( &tv, 0, sizeof( struct timeval ) );
+	event_base_loopexit( leh, &tv );
+	
+	event_debug( "b_main_restart()\n" );
 }
 
 void b_main_quit()
 {
-	struct timeval tv;
-	
-	/* libevent sometimes generates events before really quitting,
+	/* Tell b_main_run() that it shouldn't restart the loop. Also,
+	   libevent sometimes generates events before really quitting,
 	   we want to stop them. */
 	quitting = 1;
 	
-	memset( &tv, 0, sizeof( struct timeval ) );
-	event_loopexit( &tv );
+	b_main_restart();
 }
 
 static void b_event_passthrough( int fd, short event, void *data )

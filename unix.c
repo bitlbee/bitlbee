@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <pwd.h>
 
 global_t global;	/* Against global namespace pollution */
 
@@ -43,8 +44,6 @@ int main( int argc, char *argv[], char **envp )
 	int i = 0;
 	char *old_cwd = NULL;
 	struct sigaction sig, old;
-	
-	memset( &global, 0, sizeof( global_t ) );
 	
 	log_init();
 	CONF_FILE = g_strdup( CONF_FILE_DEF );
@@ -86,12 +85,26 @@ int main( int argc, char *argv[], char **envp )
 	if( i != 0 )
 		return( i );
 	
+	if( ( global.conf->user && *global.conf->user ) &&
+	    ( global.conf->runmode == RUNMODE_DAEMON || 
+	      global.conf->runmode == RUNMODE_FORKDAEMON ) &&
+	    ( !getuid() || !geteuid() ) )
+	{
+		struct passwd *pw = NULL;
+		pw = getpwnam( global.conf->user );
+		if( pw )
+		{
+			setgid( pw->pw_gid );
+			setuid( pw->pw_uid );
+		}
+	}
+
 	global.storage = storage_init( global.conf->primary_storage, global.conf->migrate_storage );
-	if ( global.storage == NULL) {
+	if( global.storage == NULL )
+	{
 		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
 		return( 1 );
 	}
-	
  	
 	/* Catch some signals to tell the user what's happening before quitting */
 	memset( &sig, 0, sizeof( sig ) );

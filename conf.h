@@ -48,6 +48,7 @@ typedef struct conf
 	char **migrate_storage;
 	int ping_interval;
 	int ping_timeout;
+	char *user;
 	size_t max_filetransfer_size;
 } conf_t;
 

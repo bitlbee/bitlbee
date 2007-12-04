@@ -62,6 +62,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
+	conf->user = NULL;
 	conf->max_filetransfer_size = G_MAXUINT;
 	proxytype = 0;
 	
@@ -76,7 +77,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", CONF_FILE );
 	}
 	
-	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:" ) ) >= 0 )
+	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:u:" ) ) >= 0 )
 	/*     ^^^^ Just to make sure we skip this step from the REHASH handler. */
 	{
 		if( opt == 'i' )
@@ -132,6 +133,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -I  Classic/InetD mode. (Default)\n"
 			        "  -D  Daemon mode. (Still EXPERIMENTAL!)\n"
 			        "  -F  Forking daemon. (one process per client)\n"
+				"  -u  Run daemon as specified user.\n"
 			        "  -P  Specify PID-file (not for inetd mode)\n"
 			        "  -i  Specify the interface (by IP address) to listen on.\n"
 			        "      (Default: 0.0.0.0 (any interface))\n"
@@ -150,6 +152,11 @@ conf_t *conf_load( int argc, char *argv[] )
 			   when initializing ForkDaemon. (This option only makes sense in that
 			   mode anyway!) */
 			ipc_master_set_statefile( optarg );
+		}
+		else if( opt == 'u' )
+		{
+			g_free( conf->user );
+			conf->user = g_strdup( optarg );
 		}
 	}
 	
@@ -192,10 +199,12 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else if( g_strcasecmp( ini->key, "daemoninterface" ) == 0 )
 			{
+				g_free( conf->iface );
 				conf->iface = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "daemonport" ) == 0 )
 			{
+				g_free( conf->port );
 				conf->port = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "authmode" ) == 0 )
@@ -209,14 +218,17 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else if( g_strcasecmp( ini->key, "authpassword" ) == 0 )
 			{
+				g_free( conf->auth_pass );
 				conf->auth_pass = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "operpassword" ) == 0 )
 			{
+				g_free( conf->oper_pass );
 				conf->oper_pass = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "hostname" ) == 0 )
 			{
+				g_free( conf->hostname );
 				conf->hostname = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "configdir" ) == 0 )
@@ -280,6 +292,11 @@ static int conf_loadini( conf_t *conf, char *file )
 					proxytype = PROXY_SOCKS5;
 				
 				g_free( url );
+			}
+			else if( g_strcasecmp( ini->key, "user" ) == 0 )
+			{
+				g_free( conf->user );
+				conf->user = g_strdup( ini->value );
 			}
 			else
 			{

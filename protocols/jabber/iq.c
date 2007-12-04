@@ -30,7 +30,6 @@ static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_no
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
-	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply = NULL;
 	char *type, *s;
 	int st, pack = 1;
@@ -46,23 +45,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	
 	if( strcmp( type, "result" ) == 0 || strcmp( type, "error" ) == 0 )
 	{
-		struct jabber_cache_entry *entry;
-		
-		if( ( s = xt_find_attr( node, "id" ) ) == NULL ||
-		    strncmp( s, jd->cached_id_prefix, strlen( jd->cached_id_prefix ) ) != 0 )
-		{
-			/* Silently ignore it, without an ID (or a non-cache
-			   ID) we don't know how to handle the packet and we
-			   probably don't have to. */
-			return XT_HANDLED;
-		}
-		
-		entry = g_hash_table_lookup( jd->node_cache, s );
-		
-		if( entry == NULL )
-			imcb_log( ic, "WARNING: Received IQ-%s packet with unknown/expired ID %s!", type, s );
-		else if( entry->func )
-			return entry->func( ic, node, entry->node );
+		return jabber_cache_handle_packet( ic, node );
 	}
 	else if( strcmp( type, "get" ) == 0 )
 	{
