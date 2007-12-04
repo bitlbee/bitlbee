@@ -264,7 +264,14 @@ char *jabber_normalize( const char *orig )
 	len = strlen( orig );
 	new = g_new( char, len + 1 );
 	for( i = 0; i < len; i ++ )
+	{
+		/* don't normalize the resource */
+		if( orig[i] == '/' )
+			break;
 		new[i] = tolower( orig[i] );
+	}
+	for( ; i < len; i ++ )
+		new[i] = orig[i];
 	
 	new[i] = 0;
 	return new;

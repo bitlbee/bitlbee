@@ -26,11 +26,19 @@
 #ifndef _FT_H
 #define _FT_H
 
+/*
+ * One buffer is needed for each transfer. The receiver stores a message
+ * in it and gives it to the sender. The sender will stall the receiver
+ * till the buffer has been sent out.
+ */
+#define FT_BUFFER_SIZE 2048
+
 typedef enum {
 	FT_STATUS_LISTENING	= 1,
-	FT_STATUS_TRANSFERING	= 2,
+	FT_STATUS_TRANSFERRING	= 2,
 	FT_STATUS_FINISHED	= 4,
-	FT_STATUS_CANCELED	= 8
+	FT_STATUS_CANCELED	= 8,
+	FT_STATUS_CONNECTING	= 16
 } file_status_t;
 
 /*
@@ -60,6 +68,10 @@ typedef enum {
  *	                 \------------------------/
  */
 typedef struct file_transfer {
+
+	/* Are we sending something? */
+	int sending;
+
 	/*
 	 * The current status of this file transfer.
 	 */ 
@@ -125,10 +137,24 @@ typedef struct file_transfer {
 	void (*canceled) ( struct file_transfer *file, char *reason );
 	
 	/*
-	 * If set, called when the transfer queue is running empty and
-	 * more data can be added.
+	 * called by the sending side to indicate that it is writable.
+	 * The callee should check if data is available and call the 
+	 * function(as seen below) if that is the case.
 	 */
-	void (*out_of_data) ( struct file_transfer *file );
+	gboolean (*write_request) ( struct file_transfer *file );
+
+	/*
+	 * When sending files, protocols register this function to receive data.
+	 * This should only be called once after write_request is called. The caller
+	 * should not read more data until write_request is called again. This technique
+	 * avoids buffering.
+	 */
+	gboolean (*write) (struct file_transfer *file, char *buffer, unsigned int len );
+
+	/* The send buffer associated with this transfer.
+	 * Since receivers always wait for a write_request call one is enough.
+	 */
+	char buffer[FT_BUFFER_SIZE];
 
 } file_transfer_t;
 
@@ -143,11 +169,5 @@ file_transfer_t *imcb_file_send_start( struct im_connection *ic, char *user_nick
  */
 void imcb_file_canceled( file_transfer_t *file, char *reason );
 
-/*
- * The given buffer is queued for transfer and MUST NOT be freed by the caller.
- * When the method returns false the caller should not invoke this method again
- * until out_of_data has been called.
- */
-gboolean imcb_file_write( file_transfer_t *file, gpointer data, size_t data_size );
-
+gboolean imcb_file_recv_start( file_transfer_t *ft );
 #endif

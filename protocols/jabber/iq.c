@@ -167,7 +167,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		} else if( strcmp( s, XMLNS_BYTESTREAMS ) == 0 )
 		{
 		     	/* Bytestream Request (stage 2 of file transfer) */
-			return jabber_bs_request( ic, node, c );
+			return jabber_bs_recv_request( ic, node, c );
 		} else
 		{
 			xt_free_node( reply );

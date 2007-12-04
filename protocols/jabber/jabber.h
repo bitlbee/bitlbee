@@ -145,8 +145,8 @@ struct jabber_transfer
 	int accepted;
 
 	size_t bytesread, byteswritten;
-	int receiver_overflow;
 	int fd;
+	struct sockaddr_storage saddr;
 };
 
 #define JABBER_XMLCONSOLE_HANDLE "xmlconsole"
@@ -200,10 +200,14 @@ int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name );
 int jabber_remove_from_roster( struct im_connection *ic, char *handle );
 
 /* si.c */
-int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, struct xt_node *sinode);
+int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, struct xt_node *sinode );
+void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *who );
+void jabber_si_free_transfer( file_transfer_t *ft);
 
-/* stream.c */
-int jabber_bs_request( struct im_connection *ic, struct xt_node *node, struct xt_node *qnode);
+/* s5bytestream.c */
+int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, struct xt_node *qnode);
+gboolean jabber_bs_send_start( struct jabber_transfer *tf );
+gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, unsigned int len );
 
 /* message.c */
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
