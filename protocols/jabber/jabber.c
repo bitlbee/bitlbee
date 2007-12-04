@@ -76,6 +76,8 @@ static void jabber_login( account_t *acc )
 	jd->username = g_strdup( acc->user );
 	jd->server = strchr( jd->username, '@' );
 	
+	jd->fd = jd->r_inpa = jd->w_inpa = -1;
+	
 	if( jd->server == NULL )
 	{
 		imcb_error( ic, "Incomplete account name (format it like <username@jabberserver.name>)" );
@@ -231,7 +233,8 @@ static void jabber_logout( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
 	
-	jabber_end_stream( ic );
+	if( jd->fd >= 0 )
+		jabber_end_stream( ic );
 	
 	while( ic->groupchats )
 		jabber_chat_free( ic->groupchats );
@@ -249,7 +252,8 @@ static void jabber_logout( struct im_connection *ic )
 	if( jd->tx_len )
 		g_free( jd->txq );
 	
-	g_hash_table_destroy( jd->node_cache );
+	if( jd->node_cache )
+		g_hash_table_destroy( jd->node_cache );
 	
 	xt_free( jd->xt );
 	
