@@ -23,6 +23,8 @@
 
 #include "jabber.h"
 
+static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+
 struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *nick, char *password )
 {
 	struct jabber_chat *jc;
@@ -34,14 +36,13 @@ struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *
 	node = xt_new_node( "x", NULL, NULL );
 	xt_add_attr( node, "xmlns", XMLNS_MUC );
 	node = jabber_make_packet( "presence", NULL, roomjid, node );
+	jabber_cache_add( ic, node, jabber_chat_join_failed );
 	
 	if( !jabber_write_packet( ic, node ) )
 	{
 		g_free( roomjid );
-		xt_free_node( node );
 		return NULL;
 	}
-	xt_free_node( node );
 	
 	jc = g_new0( struct jabber_chat, 1 );
 	jc->name = jabber_normalize( room );
@@ -62,6 +63,45 @@ struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *
 	c->data = jc;
 	
 	return c;
+}
+
+static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
+{
+	struct jabber_error *err;
+	struct jabber_buddy *bud;
+	char *room;
+	
+	room = xt_find_attr( orig, "to" );
+	if( ( bud = jabber_buddy_by_jid( ic, room, 0 ) ) )
+		jabber_chat_free( jabber_chat_by_jid( ic, bud->bare_jid ) );
+	
+	err = jabber_error_parse( xt_find_node( node->children, "error" ), XMLNS_STANZA_ERROR );
+	if( err )
+	{
+		imcb_error( ic, "Error joining groupchat %s: %s%s%s",
+		            bud->bare_jid, err->code, err->text ? ": " : "",
+		            err->text ? err->text : "" );
+		jabber_error_free( err );
+	}
+	
+	return XT_HANDLED;
+}
+
+struct groupchat *jabber_chat_by_jid( struct im_connection *ic, const char *name )
+{
+	char *normalized = jabber_normalize( name );
+	struct groupchat *ret;
+	struct jabber_chat *jc;
+	
+	for( ret = ic->groupchats; ret; ret = ret->next )
+	{
+		jc = ret->data;
+		if( strcmp( normalized, jc->name ) == 0 )
+			break;
+	}
+	g_free( normalized );
+	
+	return ret;
 }
 
 void jabber_chat_free( struct groupchat *c )
@@ -147,7 +187,7 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 	struct jabber_chat *jc;
 	char *s;
 	
-	if( ( chat = jabber_chat_by_name( ic, bud->bare_jid ) ) == NULL )
+	if( ( chat = jabber_chat_by_jid( ic, bud->bare_jid ) ) == NULL )
 	{
 		/* How could this happen?? We could do kill( self, 11 )
 		   now or just wait for the OS to do it. :-) */
@@ -249,7 +289,7 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 		
 		return;
 	}
-	else if( ( chat = jabber_chat_by_name( ic, bud->bare_jid ) ) == NULL )
+	else if( ( chat = jabber_chat_by_jid( ic, bud->bare_jid ) ) == NULL )
 	{
 		/* How could this happen?? We could do kill( self, 11 )
 		   now or just wait for the OS to do it. :-) */

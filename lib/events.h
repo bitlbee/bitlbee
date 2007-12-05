@@ -44,7 +44,7 @@
 #include <glib.h>
 #include <gmodule.h>
 
-/* The conditions you can pass to gaim_input_add()/that will be passed to
+/* The conditions you can pass to b_input_add()/that will be passed to
    the given callback function. */
 typedef enum {
 	GAIM_INPUT_READ = 1 << 1,
@@ -57,7 +57,7 @@ typedef gboolean (*b_event_handler)(gpointer data, gint fd, b_input_condition co
 #define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 #define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-// #define event_debug( x... ) printf( x )
+/* #define event_debug( x... ) printf( x ) */
 #define event_debug( x... )
 
 /* Call this once when the program starts. It'll initialize the event handler
