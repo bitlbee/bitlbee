@@ -2508,7 +2508,7 @@ void oscar_chat_msg(struct groupchat *c, char *message, int msgflags)
 /*  return (ret >= 0); */
 }
 
-void oscar_chat_invite(struct groupchat *c, char *message, char *who)
+void oscar_chat_invite(struct groupchat *c, char *who, char *message)
 {
 	struct im_connection *ic = c->ic;
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;

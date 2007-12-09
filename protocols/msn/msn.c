@@ -240,7 +240,7 @@ static void msn_chat_msg( struct groupchat *c, char *message, int flags )
 	   already severely broken) disappeared here! */
 }
 
-static void msn_chat_invite( struct groupchat *c, char *msg, char *who )
+static void msn_chat_invite( struct groupchat *c, char *who, char *message )
 {
 	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	char buf[1024];

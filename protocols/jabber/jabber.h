@@ -236,5 +236,6 @@ int jabber_chat_topic( struct groupchat *c, char *topic );
 int jabber_chat_leave( struct groupchat *c, const char *reason );
 void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
 void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
+void jabber_chat_invite( struct groupchat *c, char *who, char *message );
 
 #endif
