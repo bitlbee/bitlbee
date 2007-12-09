@@ -16,7 +16,8 @@ One day I browsed the BitlBee bugtracker and found
 http://bugs.bitlbee.org/bitlbee/ticket/82[this] ticket. Then after a while I
 returned and saw that it was still open. So I wrote it.
 
-It's pretty stable, I use it for my daily work.
+It's pretty stable, I use it for my daily work. Being a plug-in, you patching
+is required, you can just install it after installing BitlBee itself.
 
 NOTE: You will see that this implementation of the Skype plug-in still requires
 a Skype instance to be running. This is because I'm not motivated to reverse
