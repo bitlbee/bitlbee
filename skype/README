@@ -80,9 +80,14 @@ git clone git://vmiklos.hu/~vmiklos/bitlbee-skype
 (Or you can use the tarballs below, see the Changelog about what
 features/bugfixes will you miss in this case).
 
+NOTE: It doesn't matter where do you get it, it'll install the plugin to
+`/usr/local` by default (that's the location where BitlBee searches for plugins
+by default).
+
 - Compile and install it:
 
 ----
+cd bitlbee-skype
 make prepare
 ./configure
 make
