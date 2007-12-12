@@ -37,12 +37,12 @@ For instance, suppose you have an ICQ account with UIN <emphasis>72696705</empha
 </para>
 
 <ircexample>
-	<ircline nick="you">account add oscar 72696705 QuickStart login.icq.com</ircline>
+	<ircline nick="you">account add jabber bitlbee@jabber.org QuickStart</ircline>
 	<ircline nick="root">Account successfully added</ircline>
 </ircexample>
 
 <para>
-Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth argument (for msn and yahoo there is no fourth argument). For AOL Instant Messenger, the server name is <emphasis>login.oscar.aol.com</emphasis>. For ICQ, the server name is <emphasis>login.icq.com</emphasis>.
+Other available IM protocols are msn, oscar, and yahoo. Oscar is the protocol used by ICQ and AOL.
 </para>
 
 <para>

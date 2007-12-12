@@ -198,7 +198,7 @@ static void cmd_drop( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Account `%s' removed", irc->nick );
 		break;
 	default:
-		irc_usermsg( irc, "Error: '%d'", status );
+		irc_usermsg( irc, "Error: `%d'", status );
 		break;
 	}
 }
@@ -233,7 +233,11 @@ static void cmd_account( irc_t *irc, char **cmd )
 
 		a = account_add( irc, prpl, cmd[3], cmd[4] );
 		if( cmd[5] )
+		{
+			irc_usermsg( irc, "Warning: Passing a servername/other flags to `account add' "
+			                  "is now deprecated. Use `account set' instead." );
 			set_setstr( &a->set, "server", cmd[5] );
+		}
 		
 		irc_usermsg( irc, "Account successfully added" );
 	}
@@ -316,7 +320,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 			} 
 			else
 			{
-				irc_usermsg( irc, "No accounts known. Use 'account add' to add one." );
+				irc_usermsg( irc, "No accounts known. Use `account add' to add one." );
 			}
 		}
 	}

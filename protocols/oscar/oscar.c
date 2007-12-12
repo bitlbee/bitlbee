@@ -340,7 +340,7 @@ static void oscar_init(account_t *acc)
 {
 	set_t *s;
 	
-	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
+	s = set_add( &acc->set, "server", AIM_DEFAULT_LOGIN_SERVER, set_eval_account, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	
 	if (isdigit(acc->user[0])) {
@@ -355,15 +355,7 @@ static void oscar_login(account_t *acc) {
 	struct im_connection *ic = imcb_new(acc);
 	struct oscar_data *odata = ic->proto_data = g_new0(struct oscar_data, 1);
 
-	if (isdigit(acc->user[0])) {
-		odata->icq = TRUE;
-		/* This is odd but it's necessary for a proper do_import and do_export.
-		   We don't do those anymore, but let's stick with it, just in case
-		   it accidentally fixes something else too... </bitlbee> */
-		/* ic->acc->pass[8] = 0;
-		   Not touching this anymore now that it belongs to account_t!
-		   Let's hope nothing will break. ;-) */
-	} else {
+	if (!isdigit(acc->user[0])) {
 		ic->flags |= OPT_DOES_HTML;
 	}
 
@@ -384,24 +376,14 @@ static void oscar_login(account_t *acc) {
 		return;
 	}
 	
-	if (acc->server == NULL) {
-		imcb_error(ic, "No servername specified");
-		imc_logout(ic, FALSE);
-		return;
-	}
-	
-	if (g_strcasecmp(acc->server, "login.icq.com") != 0 &&
-	    g_strcasecmp(acc->server, "login.oscar.aol.com") != 0) {
-		imcb_log(ic, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.",acc->server);
-	}
-	
 	imcb_log(ic, _("Signon: %s"), ic->acc->user);
 
 	aim_conn_addhandler(sess, conn, 0x0017, 0x0007, gaim_parse_login, 0);
 	aim_conn_addhandler(sess, conn, 0x0017, 0x0003, gaim_parse_auth_resp, 0);
 
 	conn->status |= AIM_CONN_STATUS_INPROGRESS;
-	conn->fd = proxy_connect(acc->server, AIM_LOGIN_PORT, oscar_login_connect, ic);
+	conn->fd = proxy_connect(set_getstr(&acc->set, "server"),
+	                         AIM_LOGIN_PORT, oscar_login_connect, ic);
 	if (conn->fd < 0) {
 		imcb_error(ic, _("Couldn't connect to host"));
 		imc_logout(ic, TRUE);
