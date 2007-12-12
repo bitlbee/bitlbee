@@ -222,8 +222,10 @@ void ssl_disconnect( void *conn_ )
 	
 	closesocket( conn->fd );
 	
-	gnutls_deinit( conn->session );
-	gnutls_certificate_free_credentials( conn->xcred );
+	if( conn->session )
+		gnutls_deinit( conn->session );
+	if( conn->xcred )
+		gnutls_certificate_free_credentials( conn->xcred );
 	g_free( conn );
 }
 
