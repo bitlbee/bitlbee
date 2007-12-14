@@ -31,7 +31,8 @@ not..)
 * Skype >= 1.4.0.99. (1.4.0.74 did not work for me, 1.4.0.118 seems to be OK.)
 * bitlbee 1.1.1dev. (This is the latest version I've tested, probably
   newer versions probably will work, too.)
-* Skype4Py >= 0.9.28.1. Previous versions uses `DBus` by default. The latest version I've tested is 0.9.28.3.
+* Skype4Py >= 0.9.28.4. Previous versions report synchronous replies twice. The
+  latest version I've tested is 0.9.28.7.
 * Python 2.5. Skype4Py does not work with 2.4.
 * pygobject
 

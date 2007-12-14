@@ -121,8 +121,10 @@ class SkypeApi():
 		e = msg_text.decode(locale.getdefaultlocale()[1])
 		dprint('>> ' + e)
 		try:
-			self.skype.SendCommand(self.skype.Command(-1, e))
-		except Skype4Py.ISkypeError:
+			c = self.skype.Command(e, Block=True)
+			self.skype.SendCommand(c)
+			self.recv(c.Reply)
+		except Skype4Py.SkypeError:
 			pass
 		except Skype4Py.SkypeAPIError, s:
 			dprint("Warning, sending '%s' failed (%s)." % (e, s))
