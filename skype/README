@@ -28,7 +28,7 @@ not..)
 
 == Requirements
 
-* Skype >= 1.4.0.99. (1.4.0.74 did not work for me, 1.4.0.118 seems to be OK.)
+* Skype >= 1.4.0.99. The latest version I've tested is 2.0.0.27.
 * bitlbee 1.1.1dev. (This is the latest version I've tested, probably
   newer versions probably will work, too.)
 * Skype4Py >= 0.9.28.4. Previous versions report synchronous replies twice. The
