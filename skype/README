@@ -220,6 +220,8 @@ your VNC server regularly. (How ugly.)
 
   * Support changing the topic using `/topic`
 
+- Viewing the profile using the `info` command.
+
 == What needs to be done (aka. TODO)
 
 - Add a question callback for calls.
@@ -229,8 +231,6 @@ your VNC server regularly. (How ugly.)
 - Public chats. See link:http://forum.skype.com/index.php?showtopic=98872[this
   forum thread], it is still unclear how could it be done for you to be able to
   `/join` to a public chat..
-
-- Implement `info` command.
 
 == I would like to have support for ...
 
