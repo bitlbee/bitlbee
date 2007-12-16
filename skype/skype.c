@@ -409,7 +409,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 								iptr++;
 							else
 								iptr = sd->info_country;
-							g_string_append_printf(st, "Country: %s\n", sd->iptr);
+							g_string_append_printf(st, "Country: %s\n", iptr);
 						}
 						g_free(sd->info_country);
 					}
