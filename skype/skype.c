@@ -351,8 +351,8 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					{
 						if(strlen(sd->info_tz))
 						{
-							// FIXME secs -> str
-							g_string_append_printf(st, "Local Time: %s\n", sd->info_tz);
+							/* this is currently buggy, says gmt+12 when I set gmt+1
+							g_string_append_printf(st, "Local Time: %s\n", sd->info_tz); */
 						}
 						g_free(sd->info_tz);
 					}
