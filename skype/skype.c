@@ -284,16 +284,128 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				}
 				else if(!strncmp(ptr, "FULLNAME ", 9))
 					sd->info_fullname = g_strdup_printf("%s", ptr + 9);
+				else if(!strncmp(ptr, "PHONE_HOME ", 11))
+					sd->info_phonehome = g_strdup_printf("%s", ptr + 11);
+				else if(!strncmp(ptr, "PHONE_OFFICE ", 13))
+					sd->info_phoneoffice = g_strdup_printf("%s", ptr + 13);
+				else if(!strncmp(ptr, "PHONE_MOBILE ", 13))
+					sd->info_phonemobile = g_strdup_printf("%s", ptr + 13);
+				else if(!strncmp(ptr, "NROF_AUTHED_BUDDIES ", 20))
+					sd->info_nrbuddies = g_strdup_printf("%s", ptr + 20);
+				else if(!strncmp(ptr, "TIMEZONE ", 9))
+					sd->info_tz = g_strdup_printf("%s", ptr + 9);
+				else if(!strncmp(ptr, "LASTONLINETIMESTAMP ", 20))
+					sd->info_seen = g_strdup_printf("%s", ptr + 20);
+				else if(!strncmp(ptr, "BIRTHDAY ", 9))
+					sd->info_birthday = g_strdup_printf("%s", ptr + 9);
+				else if(!strncmp(ptr, "SEX ", 4))
+					sd->info_sex = g_strdup_printf("%s", ptr + 4);
+				else if(!strncmp(ptr, "LANGUAGE ", 9))
+					sd->info_language = g_strdup_printf("%s", ptr + 9);
+				else if(!strncmp(ptr, "COUNTRY ", 8))
+					sd->info_country = g_strdup_printf("%s", ptr + 8);
+				else if(!strncmp(ptr, "PROVINCE ", 9))
+					sd->info_province = g_strdup_printf("%s", ptr + 9);
+				else if(!strncmp(ptr, "CITY ", 5))
+					sd->info_city = g_strdup_printf("%s", ptr + 5);
+				else if(!strncmp(ptr, "HOMEPAGE ", 9))
+					sd->info_homepage = g_strdup_printf("%s", ptr + 9);
 				else if(!strncmp(ptr, "ABOUT ", 6))
 				{
 					sd->info_about = g_strdup_printf("%s", ptr + 6);
 
-					GString *st = g_string_new("User Info\n");
+					GString *st = g_string_new("Contact Information\n");
 					g_string_append_printf(st, "Skype Name: %s\n", user);
 					if(sd->info_fullname)
 					{
-						g_string_append_printf(st, "Full Name: %s\n", sd->info_fullname);
+						if(strlen(sd->info_fullname))
+							g_string_append_printf(st, "Full Name: %s\n", sd->info_fullname);
 						g_free(sd->info_fullname);
+					}
+					if(sd->info_phonehome)
+					{
+						if(strlen(sd->info_phonehome))
+							g_string_append_printf(st, "Home Phone: %s\n", sd->info_phonehome);
+						g_free(sd->info_phonehome);
+					}
+					if(sd->info_phoneoffice)
+					{
+						if(strlen(sd->info_phoneoffice))
+							g_string_append_printf(st, "Office Phone: %s\n", sd->info_phoneoffice);
+						g_free(sd->info_phoneoffice);
+					}
+					if(sd->info_phonemobile)
+					{
+						if(strlen(sd->info_phonemobile))
+							g_string_append_printf(st, "Mobile Phone: %s\n", sd->info_phonemobile);
+						g_free(sd->info_phonemobile);
+					}
+					g_string_append_printf(st, "Personal Information\n");
+					if(sd->info_nrbuddies)
+					{
+						if(strlen(sd->info_nrbuddies))
+							g_string_append_printf(st, "Contacts: %s\n", sd->info_nrbuddies);
+						g_free(sd->info_nrbuddies);
+					}
+					if(sd->info_tz)
+					{
+						if(strlen(sd->info_tz))
+							g_string_append_printf(st, "Local Time: %s\n", sd->info_tz);
+						g_free(sd->info_tz);
+					}
+					if(sd->info_seen)
+					{
+						if(strlen(sd->info_seen))
+							g_string_append_printf(st, "Last Seen: %s\n", sd->info_seen);
+						g_free(sd->info_seen);
+					}
+					if(sd->info_birthday)
+					{
+						if(strlen(sd->info_birthday))
+							g_string_append_printf(st, "Birthday: %s\n", sd->info_birthday);
+						g_free(sd->info_birthday);
+					}
+					if(sd->info_sex)
+					{
+						if(strlen(sd->info_sex))
+							g_string_append_printf(st, "Gender: %s\n", sd->info_sex);
+						g_free(sd->info_sex);
+					}
+					if(sd->info_language)
+					{
+						if(strlen(sd->info_language))
+							g_string_append_printf(st, "Language: %s\n", sd->info_language);
+						g_free(sd->info_language);
+					}
+					if(sd->info_country)
+					{
+						if(strlen(sd->info_country))
+							g_string_append_printf(st, "Country: %s\n", sd->info_country);
+						g_free(sd->info_country);
+					}
+					if(sd->info_province)
+					{
+						if(strlen(sd->info_province))
+							g_string_append_printf(st, "Region: %s\n", sd->info_province);
+						g_free(sd->info_province);
+					}
+					if(sd->info_city)
+					{
+						if(strlen(sd->info_city))
+							g_string_append_printf(st, "City: %s\n", sd->info_city);
+						g_free(sd->info_city);
+					}
+					if(sd->info_homepage)
+					{
+						if(strlen(sd->info_homepage))
+							g_string_append_printf(st, "Homepage: %s\n", sd->info_homepage);
+						g_free(sd->info_homepage);
+					}
+					if(sd->info_about)
+					{
+						if(strlen(sd->info_about))
+							g_string_append_printf(st, "%s\n", sd->info_about);
+						g_free(sd->info_about);
 					}
 					imcb_log(ic, "%s", st->str);
 					g_string_free(st, TRUE);
