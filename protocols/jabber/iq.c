@@ -49,7 +49,8 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	}
 	else if( strcmp( type, "get" ) == 0 )
 	{
-		if( !( c = xt_find_node( node->children, "query" ) ) ||
+		if( !( ( c = xt_find_node( node->children, "query" ) ) ||
+		       ( c = xt_find_node( node->children, "ping" ) ) ) || /* O_o WHAT is wrong with just <query/> ????? */
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
 			imcb_log( ic, "WARNING: Received incomplete IQ-%s packet", type );
@@ -80,12 +81,21 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			strftime( buf, sizeof( buf ) - 1, "%Z", localtime( &time_ep ) );
 			xt_add_child( reply, xt_new_node( "tz", buf, NULL ) );
 		}
+		else if( strcmp( s, XMLNS_PING ) == 0 )
+		{
+			xt_free_node( reply );
+			reply = jabber_make_packet( "iq", "result", xt_find_attr( node, "from" ), NULL );
+			if( ( s = xt_find_attr( node, "id" ) ) )
+				xt_add_attr( reply, "id", s );
+			pack = 0;
+		}
 		else if( strcmp( s, XMLNS_DISCOVER ) == 0 )
 		{
 			const char *features[] = { XMLNS_VERSION,
 			                           XMLNS_TIME,
 			                           XMLNS_CHATSTATES,
 			                           XMLNS_MUC,
+			                           XMLNS_PING,
 			                           NULL };
 			const char **f;
 			
