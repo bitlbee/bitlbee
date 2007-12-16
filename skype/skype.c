@@ -391,7 +391,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					{
 						if(strlen(sd->info_sex))
 						{
-							// FIXME: UNKNOWN -> Unknown
+							char *iptr = sd->info_sex;
+							while(*iptr++)
+								*iptr = tolower(*iptr);
 							g_string_append_printf(st, "Gender: %s\n", sd->info_sex);
 						}
 						g_free(sd->info_sex);
