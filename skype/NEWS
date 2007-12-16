@@ -1,5 +1,7 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.2.5         - now bitlbee's info command is supported (it displays full name,
+		birthday, homepage, age, etc.)
 0.2.4         - improve documentation based on feedback from people on #bitlbee
 	      - fixed for Skype4Py >= 0.9.28.4
 	      - tested with latest Skype beta, too (the one which supports
