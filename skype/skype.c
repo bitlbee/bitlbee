@@ -378,7 +378,12 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 							strptime(sd->info_birthday, "%Y%m%d", &tm);
 							strftime(ib, 256, "%B %d, %Y", &tm);
 							g_string_append_printf(st, "Birthday: %s\n", ib);
-							g_string_append_printf(st, "Age:\n");
+
+							strftime(ib, 256, "%Y", &tm);
+							int year = atoi(ib);
+							time_t t = time(NULL);
+							struct tm *lt = localtime(&t);
+							g_string_append_printf(st, "Age: %d\n", lt->tm_year+1900-year);
 						}
 						g_free(sd->info_birthday);
 					}
