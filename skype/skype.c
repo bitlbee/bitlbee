@@ -375,7 +375,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					}
 					if(sd->info_birthday)
 					{
-						if(strlen(sd->info_birthday))
+						if(strlen(sd->info_birthday) && strcmp(sd->info_birthday, "0"))
 						{
 							char ib[256];
 							struct tm tm;
