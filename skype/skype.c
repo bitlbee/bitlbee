@@ -350,37 +350,64 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					if(sd->info_tz)
 					{
 						if(strlen(sd->info_tz))
+						{
+							// FIXME secs -> str
 							g_string_append_printf(st, "Local Time: %s\n", sd->info_tz);
+						}
 						g_free(sd->info_tz);
 					}
 					if(sd->info_seen)
 					{
 						if(strlen(sd->info_seen))
+						{
+							// FIXME unixtimestamp -> str
 							g_string_append_printf(st, "Last Seen: %s\n", sd->info_seen);
+						}
 						g_free(sd->info_seen);
 					}
 					if(sd->info_birthday)
 					{
 						if(strlen(sd->info_birthday))
+						{
+							// FIXME 19880101 -> str
 							g_string_append_printf(st, "Birthday: %s\n", sd->info_birthday);
+							g_string_append_printf(st, "Age:\n");
+						}
 						g_free(sd->info_birthday);
 					}
 					if(sd->info_sex)
 					{
 						if(strlen(sd->info_sex))
+						{
+							// FIXME: UNKNOWN -> Unknown
 							g_string_append_printf(st, "Gender: %s\n", sd->info_sex);
+						}
 						g_free(sd->info_sex);
 					}
 					if(sd->info_language)
 					{
 						if(strlen(sd->info_language))
-							g_string_append_printf(st, "Language: %s\n", sd->info_language);
+						{
+							char *iptr = strchr(sd->info_language, ' ');
+							if(iptr)
+								iptr++;
+							else
+								iptr = sd->info_language;
+							g_string_append_printf(st, "Language: %s\n", iptr);
+						}
 						g_free(sd->info_language);
 					}
 					if(sd->info_country)
 					{
 						if(strlen(sd->info_country))
-							g_string_append_printf(st, "Country: %s\n", sd->info_country);
+						{
+							char *iptr = strchr(sd->info_country, ' ');
+							if(iptr)
+								iptr++;
+							else
+								iptr = sd->info_country;
+							g_string_append_printf(st, "Country: %s\n", sd->iptr);
+						}
 						g_free(sd->info_country);
 					}
 					if(sd->info_province)
