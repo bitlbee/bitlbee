@@ -266,7 +266,11 @@ for the following people:
 
 * Arkadiusz Wahlig, author of skype4py, for making suggestions to skyped
 
-* Gabor Adam TOTH, for usable bugreports
+* Gabor Adam Toth (tg), for noticing extra code is needed to handle multiline
+  messages
+
+* Cristobal Palmer (tarheelcoxn), for helping to testing the plugin in a
+  timezone different to mine
 
 * people on `#bitlbee` for feedback
 
