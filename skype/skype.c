@@ -360,8 +360,11 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					{
 						if(strlen(sd->info_seen))
 						{
-							// FIXME unixtimestamp -> str
-							g_string_append_printf(st, "Last Seen: %s\n", sd->info_seen);
+							char ib[256];
+							time_t it = atoi(sd->info_seen);
+							struct tm *tm = localtime(&it);
+							strftime(ib, 256, ("%Y. %m. %d. %H:%M"), tm);
+							g_string_append_printf(st, "Last Seen: %s\n", ib);
 						}
 						g_free(sd->info_seen);
 					}
