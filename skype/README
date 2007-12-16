@@ -74,7 +74,7 @@ make install install-dev
 - Get the plugin code:
 
 ----
-git clone git://vmiklos.hu/~vmiklos/bitlbee-skype
+git clone git://vmiklos.hu/bitlbee-skype
 ----
 
 (Or you can use the tarballs below, see the Changelog about what
