@@ -80,6 +80,22 @@ struct skype_data
 	char* adder;
 	/* If we are waiting for a confirmation about we changed the topic. */
 	int topic_wait;
+	/* These are used by the info command. */
+	char *info_fullname;
+	char *info_phonehome;
+	char *info_phoneoffice;
+	char *info_phonemobile;
+	char *info_nrbuddies;
+	char *info_tz;
+	char *info_seen;
+	char *info_birthday;
+	char *info_sex;
+	char *info_language;
+	char *info_country;
+	char *info_province;
+	char *info_city;
+	char *info_homepage;
+	char *info_about;
 };
 
 struct skype_away_state
@@ -265,6 +281,22 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						imcb_add_buddy(ic, buf, NULL);
 						g_free(buf);
 					}
+				}
+				else if(!strncmp(ptr, "FULLNAME ", 9))
+					sd->info_fullname = g_strdup_printf("%s", ptr + 9);
+				else if(!strncmp(ptr, "ABOUT ", 6))
+				{
+					sd->info_about = g_strdup_printf("%s", ptr + 6);
+
+					GString *st = g_string_new("User Info\n");
+					g_string_append_printf(st, "Skype Name: %s\n", user);
+					if(sd->info_fullname)
+					{
+						g_string_append_printf(st, "Full Name: %s\n", sd->info_fullname);
+						g_free(sd->info_fullname);
+					}
+					imcb_log(ic, "%s", st->str);
+					g_string_free(st, TRUE);
 				}
 			}
 			else if(!strncmp(line, "CHATMESSAGE ", 12))
@@ -749,6 +781,60 @@ struct groupchat *skype_chat_with(struct im_connection *ic, char *who)
 	return(imcb_chat_new( ic, "" ));
 }
 
+static void skype_get_info(struct im_connection *ic, char *who)
+{
+	char *ptr, *nick, *buf;
+	nick = g_strdup(who);
+	ptr = strchr(nick, '@');
+	if(ptr)
+		*ptr = '\0';
+	buf = g_strdup_printf("GET USER %s FULLNAME\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s PHONE_HOME\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s PHONE_OFFICE\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s PHONE_MOBILE\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s NROF_AUTHED_BUDDIES\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s TIMEZONE\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s LASTONLINETIMESTAMP\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s BIRTHDAY\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s SEX\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s LANGUAGE\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s COUNTRY\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s PROVINCE\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s CITY\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s HOMEPAGE\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+	buf = g_strdup_printf("GET USER %s ABOUT\n", nick);
+	skype_write(ic, buf, strlen(buf));
+	g_free(buf);
+}
+
 void init_plugin(void)
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
@@ -758,6 +844,7 @@ void init_plugin(void)
 	ret->init = skype_init;
 	ret->logout = skype_logout;
 	ret->buddy_msg = skype_buddy_msg;
+	ret->get_info = skype_get_info;
 	ret->away_states = skype_away_states;
 	ret->set_away = skype_set_away;
 	ret->add_buddy = skype_add_buddy;
