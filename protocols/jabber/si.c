@@ -82,6 +82,7 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 {
 	struct jabber_transfer *tf;
 	struct jabber_data *jd = ic->proto_data;
+	char *server  = jd->server;
 
 	imcb_log( ic, "Trying to send %s(%zd bytes) to %s", ft->file_name, ft->file_size, who );
 
@@ -96,8 +97,17 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 
 	jd->filetransfers = g_slist_prepend( jd->filetransfers, tf );
 
+	/* query the buddy's features */
+	jabber_iq_query_features( ic, who );
+
+	/* query proxies from the server */
+	if( !jd->have_streamhosts )
+		jabber_iq_query_server( ic, server, XMLNS_DISCO_ITEMS );
+
+	/* send the request to our buddy */
 	jabber_si_send_request( ic, who, tf );
 
+	/* and start the receive logic */
 	imcb_file_recv_start( ft );
 }
 

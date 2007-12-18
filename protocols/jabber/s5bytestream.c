@@ -29,8 +29,8 @@ struct bs_transfer {
 
 	struct jabber_transfer *tf;
 
-	/* <query> element and <streamhost> elements */
-	struct xt_node *qnode, *shnode;
+	jabber_streamhost_t *sh;
+	GSList *streamhosts;
 
 	enum 
 	{ 
@@ -73,7 +73,7 @@ struct socks5_message
 
 gboolean jabber_bs_abort( struct bs_transfer *bt, char *format, ... );
 void jabber_bs_canceled( file_transfer_t *ft , char *reason );
-void jabber_bs_free_transfer( file_transfer_t *ft);
+void jabber_bs_free_transfer( file_transfer_t *ft );
 gboolean jabber_bs_connect_timeout( gpointer data, gint fd, b_input_condition cond );
 gboolean jabber_bs_poll( struct bs_transfer *bt, int fd, short *revents );
 gboolean jabber_bs_peek( struct bs_transfer *bt, void *buffer, int buflen );
@@ -83,12 +83,14 @@ gboolean jabber_bs_recv_read( gpointer data, gint fd, b_input_condition cond );
 gboolean jabber_bs_recv_write_request( file_transfer_t *ft );
 gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition cond );
 gboolean jabber_bs_recv_handshake_abort( struct bs_transfer *bt, char *error );
-int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, struct xt_node *qnode);
+int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, struct xt_node *qnode );
 
 gboolean jabber_bs_send_handshake_abort( struct bs_transfer *bt, char *error );
-gboolean jabber_bs_send_request( struct jabber_transfer *tf, char *host, char *port );
+gboolean jabber_bs_send_request( struct jabber_transfer *tf, GSList *streamhosts );
 gboolean jabber_bs_send_handshake( gpointer data, gint fd, b_input_condition cond );
 gboolean jabber_bs_send_listen( struct bs_transfer *bt, struct sockaddr_storage *saddr, char *host, char *port );
+static xt_status jabber_bs_send_handle_activate( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+void jabber_bs_send_activate( struct bs_transfer *bt );
 
 /*
  * Frees a bs_transfer struct and calls the SI free function
@@ -96,6 +98,7 @@ gboolean jabber_bs_send_listen( struct bs_transfer *bt, struct sockaddr_storage 
 void jabber_bs_free_transfer( file_transfer_t *ft) {
 	struct jabber_transfer *tf = ft->data;
 	struct bs_transfer *bt = tf->streamhandle;
+	jabber_streamhost_t *sh;
 
 	if ( tf->watch_in )
 		b_event_remove( tf->watch_in );
@@ -104,12 +107,25 @@ void jabber_bs_free_transfer( file_transfer_t *ft) {
 		b_event_remove( tf->watch_out );
 	
 	g_free( bt->pseudoadr );
-	xt_free_node( bt->qnode );
+
+	while( bt->streamhosts )
+	{
+		sh = bt->streamhosts->data;
+		bt->streamhosts = g_slist_remove( bt->streamhosts, sh );
+		g_free( sh->jid );
+		g_free( sh->host );
+		g_free( sh );
+	}
+	
 	g_free( bt );
 
 	jabber_si_free_transfer( ft );
 }
 
+/*
+ * Checks if buflen data is available on the socket and
+ * writes it to buffer if that's the case.
+ */
 gboolean jabber_bs_peek( struct bs_transfer *bt, void *buffer, int buflen )
 {
 	int ret;
@@ -146,6 +162,10 @@ gboolean jabber_bs_connect_timeout( gpointer data, gint fd, b_input_condition co
 	return FALSE;
 }
 
+/* 
+ * Polls the socket, checks for errors and removes a connect timer
+ * if there is one.
+ */
 gboolean jabber_bs_poll( struct bs_transfer *bt, int fd, short *revents )
 {
 	struct pollfd pfd = { .fd = fd, .events = POLLHUP|POLLERR };
@@ -180,6 +200,9 @@ gboolean jabber_bs_poll( struct bs_transfer *bt, int fd, short *revents )
 	return TRUE;
 }
 
+/*
+ * Used for receive and send path.
+ */
 gboolean jabber_bs_abort( struct bs_transfer *bt, char *format, ... )
 {
 	va_list params;
@@ -190,9 +213,9 @@ gboolean jabber_bs_abort( struct bs_transfer *bt, char *format, ... )
 		sprintf( error, "internal error parsing error string (BUG)" );
 	va_end( params );
 	if( bt->tf->ft->sending )
-		return jabber_bs_recv_handshake_abort( bt, error );
-	else
 		return jabber_bs_send_handshake_abort( bt, error );
+	else
+		return jabber_bs_recv_handshake_abort( bt, error );
 }
 
 /* Bad luck */
@@ -213,6 +236,8 @@ int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, stru
 	struct jabber_transfer *tf = NULL;
 	GSList *tflist;
 	struct bs_transfer *bt;
+	GSList *shlist=NULL;
+	struct xt_node *shnode;
 
 	sha1_state_t sha;
 	char hash_hex[41];
@@ -232,6 +257,30 @@ int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, stru
 	      ( strcmp( mode, "tcp" ) != 0 ) ) 
 	{
 		imcb_log( ic, "WARNING: Received SI Request for unsupported bytestream mode %s", xt_find_attr( qnode, "mode" ) );
+		return XT_HANDLED;
+	}
+
+	shnode = qnode->children;
+	while( ( shnode = xt_find_node( shnode, "streamhost" ) ) )
+	{
+		char *jid, *host;
+		int port;
+		if( ( jid = xt_find_attr( shnode, "jid" ) ) &&
+		    ( host = xt_find_attr( shnode, "host" ) ) &&
+		    ( ( port = atoi( xt_find_attr( shnode, "port" ) ) ) ) )
+		{
+			jabber_streamhost_t *sh = g_new0( jabber_streamhost_t, 1 );
+			sh->jid = g_strdup(jid);
+			sh->host = g_strdup(host);
+			sprintf( sh->port, "%u", port );
+			shlist = g_slist_append( shlist, sh );
+		}
+		shnode = shnode->next;
+	}
+	
+	if( !shlist )
+	{
+		imcb_log( ic, "WARNING: Received incomplete SI bytestream request, no parseable streamhost entries");
 		return XT_HANDLED;
 	}
 
@@ -273,8 +322,8 @@ int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, stru
 		
 	bt = g_new0( struct bs_transfer, 1 );
 	bt->tf = tf;
-	bt->qnode = xt_dup( qnode );
-	bt->shnode = bt->qnode->children;
+	bt->streamhosts = shlist;
+	bt->sh = shlist->data;
 	bt->phase = BS_PHASE_CONNECT;
 	bt->pseudoadr = g_strdup( hash_hex );
 	tf->streamhandle = bt;
@@ -284,6 +333,7 @@ int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, stru
 
 	return XT_HANDLED;
 }
+
 /*
  * This is what a protocol handshake can look like in cooperative multitasking :)
  * Might be confusing at first because it's called from different places and is recursing.
@@ -304,45 +354,35 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 	{
 	case BS_PHASE_CONNECT:
 		{
-			struct xt_node *c;
-			char *host, *port;
 			struct addrinfo hints, *rp;
 
-			if( ( c = bt->shnode = xt_find_node( bt->shnode, "streamhost" ) ) &&
-			    ( port = xt_find_attr( c, "port" ) ) &&
-			    ( host = xt_find_attr( c, "host" ) ) &&
-			    xt_find_attr( c, "jid" ) )
-			{
-				memset( &hints, 0, sizeof( struct addrinfo ) );
-				hints.ai_socktype = SOCK_STREAM;
+			memset( &hints, 0, sizeof( struct addrinfo ) );
+			hints.ai_socktype = SOCK_STREAM;
 
-				if ( getaddrinfo( host, port, &hints, &rp ) != 0 )
-					return jabber_bs_abort( bt, "getaddrinfo() failed: %s", strerror( errno ) );
+			if ( getaddrinfo( bt->sh->host, bt->sh->port, &hints, &rp ) != 0 )
+				return jabber_bs_abort( bt, "getaddrinfo() failed: %s", strerror( errno ) );
 
-				ASSERTSOCKOP( bt->tf->fd = fd = socket( rp->ai_family, rp->ai_socktype, 0 ), "Opening socket" );
+			ASSERTSOCKOP( bt->tf->fd = fd = socket( rp->ai_family, rp->ai_socktype, 0 ), "Opening socket" );
 
-				sock_make_nonblocking( fd );
+			sock_make_nonblocking( fd );
 
-				imcb_log( bt->tf->ic, "File %s: Connecting to streamhost %s:%s", bt->tf->ft->file_name, host, port );
+			imcb_log( bt->tf->ic, "File %s: Connecting to streamhost %s:%s", bt->tf->ft->file_name, bt->sh->host, bt->sh->port );
 
-				if( ( connect( fd, rp->ai_addr, rp->ai_addrlen ) == -1 ) &&
-				    ( errno != EINPROGRESS ) )
-					return jabber_bs_abort( bt , "connect() failed: %s", strerror( errno ) );
+			if( ( connect( fd, rp->ai_addr, rp->ai_addrlen ) == -1 ) &&
+			    ( errno != EINPROGRESS ) )
+				return jabber_bs_abort( bt , "connect() failed: %s", strerror( errno ) );
 
-				freeaddrinfo( rp );
+			freeaddrinfo( rp );
 
-				bt->phase = BS_PHASE_CONNECTED;
-				
-				bt->tf->watch_out = b_input_add( fd, GAIM_INPUT_WRITE, jabber_bs_recv_handshake, bt );
+			bt->phase = BS_PHASE_CONNECTED;
+			
+			bt->tf->watch_out = b_input_add( fd, GAIM_INPUT_WRITE, jabber_bs_recv_handshake, bt );
 
-				/* since it takes forever(3mins?) till connect() fails on itself we schedule a timeout */
-				bt->connect_timeout = b_timeout_add( JABBER_BS_CONTIMEOUT * 1000, jabber_bs_connect_timeout, bt );
+			/* since it takes forever(3mins?) till connect() fails on itself we schedule a timeout */
+			bt->connect_timeout = b_timeout_add( JABBER_BS_CONTIMEOUT * 1000, jabber_bs_connect_timeout, bt );
 
-				bt->tf->watch_in = 0;
-				return FALSE;
-			} else
-				return jabber_bs_abort( bt, c ? "incomplete streamhost entry: host=%s port=%s jid=%s" : NULL,
-								  host, port, xt_find_attr( c, "jid" ) );
+			bt->tf->watch_in = 0;
+			return FALSE;
 		}
 	case BS_PHASE_CONNECTED:
 		{
@@ -421,7 +461,10 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 					socks5_reply.atyp,
 					socks5_reply.addrlen);
 
-			jabber_bs_recv_answer_request( bt );
+			if( bt->tf->ft->sending )
+				jabber_bs_send_activate( bt );
+			else
+				jabber_bs_recv_answer_request( bt );
 
 			return FALSE;
 		}
@@ -446,23 +489,23 @@ gboolean jabber_bs_recv_handshake_abort( struct bs_transfer *bt, char *error )
 {
 	struct jabber_transfer *tf = bt->tf;
 	struct xt_node *reply, *iqnode;
+	GSList *shlist;
 
-	if( bt->shnode ) 
+	imcb_log( tf->ic, "Transferring file %s: connection to streamhost %s:%s failed (%s)", 
+		  tf->ft->file_name, 
+		  bt->sh->host,
+		  bt->sh->port,
+		  error );
+
+	/* Alright, this streamhost failed, let's try the next... */
+	bt->phase = BS_PHASE_CONNECT;
+	shlist = g_slist_find( bt->streamhosts, bt->sh );
+	if( shlist && shlist->next )
 	{
-		imcb_log( tf->ic, "Transferring file %s: connection to streamhost %s:%s failed (%s)", 
-			  tf->ft->file_name, 
-			  xt_find_attr( bt->shnode, "host" ),
-			  xt_find_attr( bt->shnode, "port" ),
-			  error );
-
-		/* Alright, this streamhost failed, let's try the next... */
-		bt->phase = BS_PHASE_CONNECT;
-		bt->shnode = bt->shnode->next;
-		
-		/* the if is not neccessary but saves us one recursion */
-		if( bt->shnode )
-			return jabber_bs_recv_handshake( bt, 0, 0 );
+		bt->sh = shlist->next->data;
+		return jabber_bs_recv_handshake( bt, 0, 0 );
 	}
+
 
 	/* out of stream hosts */
 
@@ -494,16 +537,15 @@ void jabber_bs_recv_answer_request( struct bs_transfer *bt )
 
 	imcb_log( tf->ic, "File %s: established SOCKS5 connection to %s:%s", 
 		  tf->ft->file_name, 
-		  xt_find_attr( bt->shnode, "host" ),
-		  xt_find_attr( bt->shnode, "port" ) );
+		  bt->sh->host,
+		  bt->sh->port );
 
 	tf->ft->data = tf;
-	tf->ft->started = time( NULL );
 	tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_recv_read, bt );
 	tf->ft->write_request = jabber_bs_recv_write_request;
 
 	reply = xt_new_node( "streamhost-used", NULL, NULL );
-	xt_add_attr( reply, "jid", xt_find_attr( bt->shnode, "jid" ) );
+	xt_add_attr( reply, "jid", bt->sh->jid );
 
 	reply = xt_new_node( "query", NULL, reply );
 	xt_add_attr( reply, "xmlns", XMLNS_BYTESTREAMS );
@@ -550,6 +592,9 @@ gboolean jabber_bs_recv_read( gpointer data, gint fd, b_input_condition cond )
 	if( ret == 0 )
 		return jabber_bs_abort( bt, "Remote end closed connection" );
 	
+	if( tf->bytesread == 0 )
+		tf->ft->started = time( NULL );
+
 	tf->bytesread += ret;
 
 	tf->ft->write( tf->ft, tf->ft->buffer, ret );	
@@ -602,7 +647,11 @@ gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, unsigned int l
 	if( tf->watch_out )
 		return jabber_bs_abort( bt, "BUG: write() called while watching " );
 	
+	/* TODO: catch broken pipe */
 	ASSERTSOCKOP( ret = send( tf->fd, buffer, len, 0 ), "Sending" );
+
+	if( tf->byteswritten == 0 )
+		tf->ft->started = time( NULL );
 
 	tf->byteswritten += ret;
 	
@@ -664,24 +713,110 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 
 	tf->accepted = TRUE;
 
-	if( bt->phase == BS_PHASE_REPLY )
+	if( strcmp( jid, tf->ini_jid ) == 0 )
 	{
-		/* handshake went through, let's start transferring */
-		tf->ft->started = time( NULL );
-		tf->ft->write_request( tf->ft );
+		/* we're streamhost and target */
+		if( bt->phase == BS_PHASE_REPLY )
+		{
+			/* handshake went through, let's start transferring */
+			tf->ft->write_request( tf->ft );
+		}
+	} else
+	{
+		/* using a proxy */
+		GSList *shlist;
+		for( shlist = jd->streamhosts ; shlist ; shlist = g_slist_next( shlist ) )
+		{
+			jabber_streamhost_t *sh = shlist->data;
+			if( strcmp( sh->jid, jid ) == 0 )
+			{
+				bt->sh = sh;
+				jabber_bs_recv_handshake( bt, 0, 0 );
+				return XT_HANDLED;
+			}
+		}
+
+		imcb_log( ic, "WARNING: Received SOCKS5 bytestream reply with unknown streamhost %s", jid );
 	}
 
 	return XT_HANDLED;
 }
 
+/* 
+ * Tell the proxy to activate the stream. Looks like this:
+ *
+ * <iq type=set>
+ * 	<query xmlns=bs sid=sid>
+ * 		<activate>tgt_jid</activate>
+ * 	</query>
+ * </iq>
+ */
+void jabber_bs_send_activate( struct bs_transfer *bt )
+{
+	struct xt_node *node;
+
+	node = xt_new_node( "activate", bt->tf->tgt_jid, NULL );
+	node = xt_new_node( "query", NULL, node );
+	xt_add_attr( node, "xmlns", XMLNS_BYTESTREAMS );
+	xt_add_attr( node, "sid", bt->tf->sid );
+	node = jabber_make_packet( "iq", "set", bt->sh->jid, node );
+
+	jabber_cache_add( bt->tf->ic, node, jabber_bs_send_handle_activate );
+
+	jabber_write_packet( bt->tf->ic, node );
+}
+
+/*
+ * The proxy has activated the bytestream.
+ * We can finally start pushing some data out.
+ */
+static xt_status jabber_bs_send_handle_activate( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
+{
+	char *sid;
+	GSList *tflist;
+	struct jabber_transfer *tf;
+	struct xt_node *query;
+	struct jabber_data *jd = ic->proto_data;
+
+	query = xt_find_node( orig->children, "query" );
+	sid = xt_find_attr( query, "sid" );
+
+	for( tflist = jd->filetransfers ; tflist; tflist = g_slist_next(tflist) )
+	{
+		struct jabber_transfer *tft = tflist->data;
+		if( ( strcmp( tft->sid, sid ) == 0 ) )
+		{
+		    	tf = tft;
+			break;
+		}
+	}
+
+	if( !tf )
+	{
+		imcb_log( ic, "WARNING: Received SOCKS5 bytestream activation for unknown stream" );
+		return XT_HANDLED;
+	}
+
+	/* handshake went through, let's start transferring */
+	tf->ft->write_request( tf->ft );
+
+	return XT_HANDLED;
+}
+
+/*
+ * Starts a bytestream.
+ */
 gboolean jabber_bs_send_start( struct jabber_transfer *tf )
 {
-	char host[INET6_ADDRSTRLEN], port[6];
+	char host[INET6_ADDRSTRLEN];
 	struct bs_transfer *bt;
 	sha1_state_t sha;
 	char hash_hex[41];
 	unsigned char hash[20];
-	int i;
+	int i,ret;
+	struct jabber_data *jd = tf->ic->proto_data;
+	jabber_streamhost_t sh;
+	GSList *streamhosts = jd->streamhosts;
 
 	/* SHA1( SID + Initiator JID + Target JID ) is given to the streamhost which it will match against the initiator's value */
 	sha1_init( &sha );
@@ -701,28 +836,43 @@ gboolean jabber_bs_send_start( struct jabber_transfer *tf )
 	tf->ft->free = jabber_bs_free_transfer;
 	tf->ft->canceled = jabber_bs_canceled;
 
-	if ( !jabber_bs_send_listen( bt, &tf->saddr, host, port ) )
+	if ( !jabber_bs_send_listen( bt, &tf->saddr, sh.host = host, sh.port ) )
 		return FALSE;
 
 	bt->tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_send_handshake, bt );
 	bt->connect_timeout = b_timeout_add( JABBER_BS_LISTEN_TIMEOUT * 1000, jabber_bs_connect_timeout, bt );
-	return jabber_bs_send_request( tf, host, port );
+
+	sh.jid = tf->ini_jid;
+
+	/* temporarily add listen address to streamhosts, send the request and remove it */
+	streamhosts = g_slist_prepend( streamhosts, &sh );
+	ret = jabber_bs_send_request( tf, streamhosts);
+	streamhosts = g_slist_remove( streamhosts, &sh );
+
+	return ret;
 }
 
-gboolean jabber_bs_send_request( struct jabber_transfer *tf, char *host, char *port )
+gboolean jabber_bs_send_request( struct jabber_transfer *tf, GSList *streamhosts )
 {
-	struct xt_node *sh, *query, *iq;
-
-	sh = xt_new_node( "streamhost", NULL, NULL );
-	xt_add_attr( sh, "jid", tf->ini_jid );
-	xt_add_attr( sh, "host", host );
-	xt_add_attr( sh, "port", port );
+	struct xt_node *shnode, *query, *iq;
 
 	query = xt_new_node( "query", NULL, NULL );
 	xt_add_attr( query, "xmlns", XMLNS_BYTESTREAMS );
 	xt_add_attr( query, "sid", tf->sid );
 	xt_add_attr( query, "mode", "tcp" );
-	xt_add_child( query, sh );
+
+	while( streamhosts ) {
+		jabber_streamhost_t *sh = streamhosts->data;
+		shnode = xt_new_node( "streamhost", NULL, NULL );
+		xt_add_attr( shnode, "jid", sh->jid );
+		xt_add_attr( shnode, "host", sh->host );
+		xt_add_attr( shnode, "port", sh->port );
+
+		xt_add_child( query, shnode );
+
+		streamhosts = g_slist_next( streamhosts );
+	}
+
 
 	iq = jabber_make_packet( "iq", "set", tf->tgt_jid, query );
 	xt_add_attr( iq, "from", tf->ini_jid );
@@ -738,6 +888,7 @@ gboolean jabber_bs_send_handshake_abort(struct bs_transfer *bt, char *error )
 {
 	struct jabber_transfer *tf = bt->tf;
 
+	/* TODO: did the receiver get here somehow??? */
 	imcb_log( tf->ic, "Transferring file %s: SOCKS5 handshake failed: %s", 
 		  tf->ft->file_name, 
 		  error );
@@ -900,7 +1051,6 @@ gboolean jabber_bs_send_handshake( gpointer data, gint fd, b_input_condition con
 			if( tf->accepted )
 			{
 				/* streamhost-used message came already in(possible?), let's start sending */
-				tf->ft->started = time( NULL );
 				tf->ft->write_request( tf->ft );
 			}
 
