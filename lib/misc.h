@@ -65,4 +65,6 @@ G_MODULE_EXPORT struct ns_srv_reply *srv_lookup( char *service, char *protocol, 
 
 G_MODULE_EXPORT char *word_wrap( char *msg, int line_len );
 
+G_MODULE_EXPORT gboolean ssl_sockerr_again( void *ssl );
+
 #endif

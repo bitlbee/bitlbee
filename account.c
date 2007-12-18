@@ -94,10 +94,15 @@ char *set_eval_account( set_t *set, char *value )
 	{
 		g_free( acc->server );
 		if( *value )
+		{
 			acc->server = g_strdup( value );
+			return value;
+		}
 		else
+		{
 			acc->server = NULL;
-		return value;
+			return g_strdup( set->def );
+		}
 	}
 	else if( strcmp( set->key, "auto_connect" ) == 0 )
 	{

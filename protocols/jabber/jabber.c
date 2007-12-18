@@ -422,6 +422,20 @@ static void jabber_chat_leave_( struct groupchat *c )
 		jabber_chat_leave( c, NULL );
 }
 
+static void jabber_chat_invite_( struct groupchat *c, char *who, char *msg )
+{
+	struct jabber_chat *jc = c->data;
+	gchar *msg_alt = NULL;
+
+	if( msg == NULL )
+		msg_alt = g_strdup_printf( "%s invited you to %s", c->ic->acc->user, jc->name );
+	
+	if( c && who )
+		jabber_chat_invite( c, who, msg ? msg : msg_alt );
+	
+	g_free( msg_alt );
+}
+
 static void jabber_keepalive( struct im_connection *ic )
 {
 	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
@@ -493,7 +507,7 @@ void jabber_initmodule()
 	ret->remove_buddy = jabber_remove_buddy;
 	ret->chat_msg = jabber_chat_msg_;
 	ret->chat_topic = jabber_chat_topic_;
-//	ret->chat_invite = jabber_chat_invite;
+	ret->chat_invite = jabber_chat_invite_;
 	ret->chat_leave = jabber_chat_leave_;
 	ret->chat_join = jabber_chat_join_;
 	ret->keepalive = jabber_keepalive;

@@ -188,6 +188,7 @@ struct jabber_transfer
 #define XMLNS_AUTH         "jabber:iq:auth"                                      /* XEP-0078 */
 #define XMLNS_VERSION      "jabber:iq:version"                                   /* XEP-0092 */
 #define XMLNS_TIME         "jabber:iq:time"                                      /* XEP-0090 */
+#define XMLNS_PING         "urn:xmpp:ping"                                       /* XEP-0199 */
 #define XMLNS_VCARD        "vcard-temp"                                          /* XEP-0054 */
 #define XMLNS_DELAY        "jabber:x:delay"                                      /* XEP-0091 */
 #define XMLNS_XDATA        "jabber:x:data"                                       /* XEP-0004 */
@@ -292,5 +293,6 @@ int jabber_chat_topic( struct groupchat *c, char *topic );
 int jabber_chat_leave( struct groupchat *c, const char *reason );
 void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
 void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
+void jabber_chat_invite( struct groupchat *c, char *who, char *message );
 
 #endif

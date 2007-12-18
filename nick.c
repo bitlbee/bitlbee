@@ -153,10 +153,10 @@ void nick_del( account_t *acc, const char *handle )
 /* Character maps, _lc_[x] == _uc_[x] (but uppercase), according to the RFC's.
    With one difference, we allow dashes. */
 
-static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^-_|";
-static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~-_\\";
+static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^`-_|";
+static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~`-_\\";
 
-void nick_strip( char * nick )
+void nick_strip( char *nick )
 {
 	int i, j;
 	
@@ -169,6 +169,15 @@ void nick_strip( char * nick )
 			j++;
 		}
 	}
+	if( isdigit( nick[0] ) )
+	{
+		char *orig;
+		
+		orig = g_strdup( nick );
+		g_snprintf( nick, MAX_NICK_LENGTH, "_%s", orig );
+		g_free( orig );
+		j ++;
+	}
 	while( j <= MAX_NICK_LENGTH )
 		nick[j++] = '\0';
 }
@@ -177,8 +186,8 @@ int nick_ok( const char *nick )
 {
 	const char *s;
 	
-	/* Empty/long nicks are not allowed */
-	if( !*nick || strlen( nick ) > MAX_NICK_LENGTH )
+	/* Empty/long nicks are not allowed, nor numbers at [0] */
+	if( !*nick || isdigit( nick[0] ) || strlen( nick ) > MAX_NICK_LENGTH )
 		return( 0 );
 	
 	for( s = nick; *s; s ++ )
