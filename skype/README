@@ -29,10 +29,10 @@ not..)
 == Requirements
 
 * Skype >= 1.4.0.99. The latest version I've tested is 2.0.0.27.
-* bitlbee 1.1.1dev. (This is the latest version I've tested, probably
+* bitlbee >= 1.1.1dev. (This is the latest version I've tested, probably
   newer versions probably will work, too.)
 * Skype4Py >= 0.9.28.7. Previous versions won't work due to API changes.
-* Python 2.5. Skype4Py does not work with 2.4.
+* Python >= 2.5. Skype4Py does not work with 2.4.
 * pygobject
 
 `bitlbee-skype` has been tested under Linux and Windows. Skype is available
@@ -111,8 +111,8 @@ skype
 skyped
 ----
 
-NOTE: It's important to start `skyped` on the same machine and using the same
-user!
+NOTE: You should run `skyped` on the same `X11` display, otherwise it won't be
+able to connect to Skype!
 
 - Start your `IRC` client, connect to BitlBee and add your account:
 
