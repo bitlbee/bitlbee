@@ -76,6 +76,8 @@ static void jabber_login( account_t *acc )
 	jd->username = g_strdup( acc->user );
 	jd->server = strchr( jd->username, '@' );
 	
+	jd->fd = jd->r_inpa = jd->w_inpa = -1;
+	
 	if( jd->server == NULL )
 	{
 		imcb_error( ic, "Incomplete account name (format it like <username@jabberserver.name>)" );
@@ -231,7 +233,8 @@ static void jabber_logout( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
 	
-	jabber_end_stream( ic );
+	if( jd->fd >= 0 )
+		jabber_end_stream( ic );
 	
 	while( ic->groupchats )
 		jabber_chat_free( ic->groupchats );
@@ -249,7 +252,8 @@ static void jabber_logout( struct im_connection *ic )
 	if( jd->tx_len )
 		g_free( jd->txq );
 	
-	g_hash_table_destroy( jd->node_cache );
+	if( jd->node_cache )
+		g_hash_table_destroy( jd->node_cache );
 	
 	xt_free( jd->xt );
 	
@@ -422,6 +426,20 @@ static void jabber_chat_leave_( struct groupchat *c )
 		jabber_chat_leave( c, NULL );
 }
 
+static void jabber_chat_invite_( struct groupchat *c, char *who, char *msg )
+{
+	struct jabber_chat *jc = c->data;
+	gchar *msg_alt = NULL;
+
+	if( msg == NULL )
+		msg_alt = g_strdup_printf( "%s invited you to %s", c->ic->acc->user, jc->name );
+	
+	if( c && who )
+		jabber_chat_invite( c, who, msg ? msg : msg_alt );
+	
+	g_free( msg_alt );
+}
+
 static void jabber_keepalive( struct im_connection *ic )
 {
 	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
@@ -493,7 +511,7 @@ void jabber_initmodule()
 	ret->remove_buddy = jabber_remove_buddy;
 	ret->chat_msg = jabber_chat_msg_;
 	ret->chat_topic = jabber_chat_topic_;
-//	ret->chat_invite = jabber_chat_invite;
+	ret->chat_invite = jabber_chat_invite_;
 	ret->chat_leave = jabber_chat_leave_;
 	ret->chat_join = jabber_chat_join_;
 	ret->keepalive = jabber_keepalive;

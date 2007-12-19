@@ -119,7 +119,7 @@ static gboolean jabber_write_queue( struct im_connection *ic )
 		
 		return TRUE;
 	}
-	else if( st == 0 || ( st < 0 && !sockerr_again() ) )
+	else if( st == 0 || ( st < 0 && !ssl_sockerr_again( jd->ssl ) ) )
 	{
 		/* Set fd to -1 to make sure we won't write to it anymore. */
 		closesocket( jd->fd );	/* Shouldn't be necessary after errors? */
@@ -230,7 +230,7 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 			}
 		}
 	}
-	else if( st == 0 || ( st < 0 && !sockerr_again() ) )
+	else if( st == 0 || ( st < 0 && !ssl_sockerr_again( jd->ssl ) ) )
 	{
 		closesocket( jd->fd );
 		jd->fd = -1;

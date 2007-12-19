@@ -56,6 +56,14 @@ typedef enum
 	                                   have a real JID. */
 } jabber_buddy_flags_t;
 
+/* Stores a streamhost's(a.k.a. proxy) data */
+typedef struct
+{
+	char *jid;
+	char *host;
+	char port[6];
+} jabber_streamhost_t;
+
 struct jabber_data
 {
 	struct im_connection *ic;
@@ -82,6 +90,8 @@ struct jabber_data
 	GHashTable *buddies;
 
 	GSList *filetransfers;
+	GSList *streamhosts;
+	int have_streamhosts;
 };
 
 struct jabber_away_state
@@ -110,6 +120,7 @@ struct jabber_buddy
 	int priority;
 	struct jabber_away_state *away_state;
 	char *away_message;
+	GSList *features;
 	
 	time_t last_act;
 	jabber_buddy_flags_t flags;
@@ -177,11 +188,13 @@ struct jabber_transfer
 #define XMLNS_AUTH         "jabber:iq:auth"                                      /* XEP-0078 */
 #define XMLNS_VERSION      "jabber:iq:version"                                   /* XEP-0092 */
 #define XMLNS_TIME         "jabber:iq:time"                                      /* XEP-0090 */
+#define XMLNS_PING         "urn:xmpp:ping"                                       /* XEP-0199 */
 #define XMLNS_VCARD        "vcard-temp"                                          /* XEP-0054 */
 #define XMLNS_DELAY        "jabber:x:delay"                                      /* XEP-0091 */
 #define XMLNS_XDATA        "jabber:x:data"                                       /* XEP-0004 */
 #define XMLNS_CHATSTATES   "http://jabber.org/protocol/chatstates"               /* XEP-0085 */
-#define XMLNS_DISCOVER     "http://jabber.org/protocol/disco#info"               /* XEP-0030 */
+#define XMLNS_DISCO_INFO   "http://jabber.org/protocol/disco#info"               /* XEP-0030 */
+#define XMLNS_DISCO_ITEMS  "http://jabber.org/protocol/disco#items"              /* XEP-0030 */
 #define XMLNS_MUC          "http://jabber.org/protocol/muc"                      /* XEP-0045 */
 #define XMLNS_MUC_USER     "http://jabber.org/protocol/muc#user"                 /* XEP-0045 */
 #define XMLNS_FEATURE      "http://jabber.org/protocol/feature-neg"              /* XEP-0020 */
@@ -198,6 +211,8 @@ int jabber_get_roster( struct im_connection *ic );
 int jabber_get_vcard( struct im_connection *ic, char *bare_jid );
 int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name );
 int jabber_remove_from_roster( struct im_connection *ic, char *handle );
+xt_status jabber_iq_query_features( struct im_connection *ic, char *bare_jid );
+xt_status jabber_iq_query_server( struct im_connection *ic, char *jid, char *xmlns );
 
 /* si.c */
 int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, struct xt_node *sinode );
@@ -278,5 +293,6 @@ int jabber_chat_topic( struct groupchat *c, char *topic );
 int jabber_chat_leave( struct groupchat *c, const char *reason );
 void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
 void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
+void jabber_chat_invite( struct groupchat *c, char *who, char *message );
 
 #endif

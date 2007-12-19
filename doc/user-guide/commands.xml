@@ -16,7 +16,7 @@
 		</description>
 
 		<bitlbee-command name="add">
-			<syntax>account add &lt;protocol&gt; &lt;username&gt; &lt;password&gt; [&lt;server&gt;]</syntax>
+			<syntax>account add &lt;protocol&gt; &lt;username&gt; &lt;password&gt;</syntax>
 
 			<description>
 				<para>
@@ -25,7 +25,7 @@
 			</description>
 			
 			<bitlbee-command name="jabber">
-				<syntax>account add jabber &lt;handle@server.tld&gt; &lt;password&gt; [&lt;servertag&gt;]</syntax>
+				<syntax>account add jabber &lt;handle@server.tld&gt; &lt;password&gt;</syntax>
 
 				<description>
 					<para>
@@ -49,16 +49,16 @@
 			</bitlbee-command>
 			
 			<bitlbee-command name="oscar">
-				<syntax>account add oscar &lt;handle&gt; &lt;password&gt; [&lt;servername&gt;]</syntax>
+				<syntax>account add oscar &lt;handle&gt; &lt;password&gt;</syntax>
 
 				<description>
 					<para>
-						Specifying a server is required for OSCAR, since OSCAR can be used for both ICQ- and AIM-connections. Although these days it's supposed to be possible to connect to ICQ via AIM-servers and vice versa, we like to stick with this separation for now. For ICQ connections, the servername is <emphasis>login.icq.com</emphasis>, for AIM connections it's <emphasis>login.oscar.aol.com</emphasis>.
+						OSCAR is the protocol used to connect to AIM and/or ICQ. The servers will automatically detect if you're using a numeric or non-numeric username so there's no need to tell which network you want to connect to.
 					</para>
 				</description>
 
 				<ircexample>
-					<ircline nick="wilmer">account add oscar 72696705 hobbelmeeuw login.icq.com</ircline>
+					<ircline nick="wilmer">account add oscar 72696705 hobbelmeeuw</ircline>
 					<ircline nick="root">Account successfully added</ircline>
 				</ircexample>
 			</bitlbee-command>
@@ -594,7 +594,7 @@
 	<bitlbee-setting name="server" type="string" scope="account">
 		<description>
 			<para>
-				Can be set for Jabber- and OSCAR-connections. For OSCAR, this must be set to <emphasis>login.icq.com</emphasis> if it's an ICQ connection, or <emphasis>login.oscar.aol.com</emphasis> if it's an AIM connection. For Jabber, you have to set this if the servername isn't equal to the part after the @ in the Jabber handle.
+				Can be set for Jabber- and OSCAR-connections. For Jabber, you might have to set this if the servername isn't equal to the part after the @ in the Jabber handle. For OSCAR this shouldn't be necessary anymore in recent BitlBee versions.
 			</para>
 		</description>
 	</bitlbee-setting>

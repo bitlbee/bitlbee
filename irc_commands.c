@@ -206,7 +206,7 @@ static void irc_cmd_invite( irc_t *irc, char **cmd )
 	if( u && c && ( u->ic == c->ic ) )
 		if( c->ic && c->ic->acc->prpl->chat_invite )
 		{
-			c->ic->acc->prpl->chat_invite( c, "", u->handle );
+			c->ic->acc->prpl->chat_invite( c, u->handle, NULL );
 			irc_reply( irc, 341, "%s %s", nick, channel );
 			return;
 		}

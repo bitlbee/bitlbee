@@ -198,7 +198,7 @@ static void cmd_drop( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Account `%s' removed", irc->nick );
 		break;
 	default:
-		irc_usermsg( irc, "Error: '%d'", status );
+		irc_usermsg( irc, "Error: `%d'", status );
 		break;
 	}
 }
@@ -233,7 +233,11 @@ static void cmd_account( irc_t *irc, char **cmd )
 
 		a = account_add( irc, prpl, cmd[3], cmd[4] );
 		if( cmd[5] )
+		{
+			irc_usermsg( irc, "Warning: Passing a servername/other flags to `account add' "
+			                  "is now deprecated. Use `account set' instead." );
 			set_setstr( &a->set, "server", cmd[5] );
+		}
 		
 		irc_usermsg( irc, "Account successfully added" );
 	}
@@ -316,7 +320,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 			} 
 			else
 			{
-				irc_usermsg( irc, "No accounts known. Use 'account add' to add one." );
+				irc_usermsg( irc, "No accounts known. Use `account add' to add one." );
 			}
 		}
 	}
@@ -402,9 +406,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 				return;
 			}
 			
-			if( ( strcmp( cmd[3], "=" ) ) == 0 && cmd[4] )
-				irc_usermsg( irc, "Warning: Correct syntax: \002account set <variable> <value>\002 (without =)" );
-			else if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
+			if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
 				set_reset( &a->set, set_name );
 			else
 				set_setstr( &a->set, set_name, cmd[3] );
@@ -744,16 +746,11 @@ static void cmd_yesno( irc_t *irc, char **cmd )
 
 static void cmd_set( irc_t *irc, char **cmd )
 {
-	char *set_name = NULL;
+	char *set_name = cmd[1];
 	
 	if( cmd[1] && cmd[2] )
 	{
-		if( ( strcmp( cmd[2], "=" ) ) == 0 && cmd[3] )
-		{
-			irc_usermsg( irc, "Warning: Correct syntax: \002set <variable> <value>\002 (without =)" );
-			return;
-		}
-		else if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
+		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
 		{
 			set_reset( &irc->set, cmd[2] );
 			set_name = cmd[2];
@@ -761,7 +758,6 @@ static void cmd_set( irc_t *irc, char **cmd )
 		else
 		{
 			set_setstr( &irc->set, cmd[1], cmd[2] );
-			set_name = cmd[1];
 		}
 	}
 	if( set_name ) /* else 'forgotten' on purpose.. Must show new value after changing */

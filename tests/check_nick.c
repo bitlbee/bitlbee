@@ -14,11 +14,17 @@ START_TEST(test_nick_strip)
 		"thisisaveryveryveryverylongnick", 
 		"thisisave:ryveryveryverylongnick",
 		"t::::est",
+		"test123",
+		"123test",
+		"123",
 		NULL };
 	const char *expected[] = { "test", "test", "test", 
 		"thisisaveryveryveryveryl", 
 		"thisisaveryveryveryveryl", 
 		"test",
+		"test123",
+		"_123test",
+		"_123",
 		NULL };
 
 	for (i = 0; get[i]; i++) {
@@ -34,8 +40,8 @@ END_TEST
 
 START_TEST(test_nick_ok_ok)
 {
-	const char *nicks[] = { "foo", "bar", "bla[", "blie]", 
-		                    "BreEZaH", "\\od^~", NULL };
+	const char *nicks[] = { "foo", "bar123", "bla[", "blie]", "BreEZaH",
+	                        "\\od^~", "_123", "_123test", NULL };
 	int i;
 
 	for (i = 0; nicks[i]; i++) {
@@ -48,7 +54,7 @@ END_TEST
 START_TEST(test_nick_ok_notok)
 {
 	const char *nicks[] = { "thisisaveryveryveryveryveryveryverylongnick",
-		                    "\nillegalchar", "", "nick%", NULL };
+		                    "\nillegalchar", "", "nick%", "123test", NULL };
 	int i;
 
 	for (i = 0; nicks[i]; i++) {

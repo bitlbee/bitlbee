@@ -124,7 +124,6 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 	df = dcc_alloc_transfer( file_name, file_size, ic );
 	file = df->ft;
 	file->write = dccs_send_write;
-	file->sending = TRUE;
 
 	/* listen and request */
 	if( !dcc_listen( df, &saddr ) ||

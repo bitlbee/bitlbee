@@ -44,6 +44,8 @@
 #include <resolv.h>
 #endif
 
+#include "ssl_client.h"
+
 void strip_linefeed(gchar *text)
 {
 	int i, j;
@@ -589,4 +591,12 @@ char *word_wrap( char *msg, int line_len )
 	g_string_append( ret, msg );
 	
 	return g_string_free( ret, FALSE );
+}
+
+gboolean ssl_sockerr_again( void *ssl )
+{
+	if( ssl )
+		return ssl_errno == SSL_AGAIN;
+	else
+		return sockerr_again();
 }
