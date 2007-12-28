@@ -129,18 +129,17 @@ static int proxy_connect_none(const char *host, unsigned short port, struct PHB 
 	
 	event_debug("proxy_connect_none( \"%s\", %d ) = %d\n", host, port, fd);
 	
-	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0) {
-		if (sockerr_again()) {
-			phb->inpa = b_input_add(fd, GAIM_INPUT_WRITE, gaim_io_connected, phb);
-			phb->fd = fd;
-		} else {
-			closesocket(fd);
-			g_free(phb);
-			return -1;
-		}
+	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0 && !sockerr_again()) {
+		closesocket(fd);
+		g_free(phb);
+		
+		return -1;
+	} else {
+		phb->inpa = b_input_add(fd, GAIM_INPUT_WRITE, gaim_io_connected, phb);
+		phb->fd = fd;
+		
+		return fd;
 	}
-
-	return fd;
 }
 
 
