@@ -196,6 +196,8 @@ static void jabber_login( account_t *acc )
 	{
 		imcb_error( ic, "Could not connect to server" );
 		imc_logout( ic, TRUE );
+		
+		return;
 	}
 	
 	if( set_getbool( &acc->set, "xmlconsole" ) )
