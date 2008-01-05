@@ -115,7 +115,7 @@ ifndef DEBUG
 endif
 
 encode: crypting.c
-	$(CC) crypting.c protocols/md5.c $(CFLAGS) -o encode -DCRYPTING_MAIN $(CFLAGS) $(EFLAGS) $(LFLAGS)
+	$(CC) crypting.c lib/md5.c $(CFLAGS) -o encode -DCRYPTING_MAIN $(CFLAGS) $(EFLAGS) $(LFLAGS)
 
 decode: encode
 	cp encode decode
