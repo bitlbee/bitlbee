@@ -47,7 +47,6 @@
 
 typedef struct _GaimIOClosure {
 	b_event_handler function;
-	guint result;
 	gpointer data;
 } GaimIOClosure;
 
@@ -100,6 +99,7 @@ gint b_input_add(gint source, b_input_condition condition, b_event_handler funct
 	GaimIOClosure *closure = g_new0(GaimIOClosure, 1);
 	GIOChannel *channel;
 	GIOCondition cond = 0;
+	int st;
 	
 	closure->function = function;
 	closure->data = data;
@@ -110,13 +110,13 @@ gint b_input_add(gint source, b_input_condition condition, b_event_handler funct
 		cond |= GAIM_WRITE_COND;
 	
 	channel = g_io_channel_unix_new(source);
-	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
-					      gaim_io_invoke, closure, gaim_io_destroy);
+	st = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
+	                         gaim_io_invoke, closure, gaim_io_destroy);
 	
-	event_debug( "b_input_add( %d, %d, 0x%x, 0x%x ) = %d (0x%x)\n", source, condition, function, data, closure->result, closure );
+	event_debug( "b_input_add( %d, %d, 0x%x, 0x%x ) = %d (%p)\n", source, condition, function, data, st, closure );
 	
 	g_io_channel_unref(channel);
-	return closure->result;
+	return st;
 }
 
 gint b_timeout_add(gint timeout, b_event_handler func, gpointer data)
