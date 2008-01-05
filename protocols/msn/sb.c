@@ -490,6 +490,17 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			return( 0 );
 		}
 	}
+	else if( strcmp( cmd[0], "NAK" ) == 0 )
+	{
+		if( sb->who )
+		{
+			imcb_log( ic, "The MSN servers could not deliver one of your messages to %s.", sb->who );
+		}
+		else
+		{
+			imcb_log( ic, "The MSN servers could not deliver one of your groupchat messages to all participants." );
+		}
+	}
 	else if( strcmp( cmd[0], "BYE" ) == 0 )
 	{
 		if( num_parts < 2 )
