@@ -34,6 +34,8 @@ static void msn_init( account_t *acc )
 	
 	s = set_add( &acc->set, "display_name", NULL, msn_set_display_name, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+
+	s = set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
 }
 
 static void msn_login( account_t *acc )

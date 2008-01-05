@@ -642,7 +642,7 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 				char *inbox = msn_findheader( body, "Inbox-Unread:", blen );
 				char *folders = msn_findheader( body, "Folders-Unread:", blen );
 				
-				if( inbox && folders )
+				if( inbox && folders && set_getbool( &ic->acc->set, "mail_notifications" ) )
 				{
 					imcb_log( ic, "INBOX contains %s new messages, plus %s messages in other folders.", inbox, folders );
 				}
@@ -652,7 +652,7 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 				char *from = msn_findheader( body, "From-Addr:", blen );
 				char *fromname = msn_findheader( body, "From:", blen );
 				
-				if( from && fromname )
+				if( from && fromname && set_getbool( &ic->acc->set, "mail_notifications" ) )
 				{
 					imcb_log( ic, "Received an e-mail message from %s <%s>.", fromname, from );
 				}
