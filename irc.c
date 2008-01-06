@@ -325,7 +325,7 @@ void irc_process( irc_t *irc )
 				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) == -1 )
 				{
 					if( irc->status & USTATUS_LOGGED_IN )
-						irc_usermsg( irc, "ERROR: Charset mismatch detected. The charset "
+						irc_usermsg( irc, "Error: Charset mismatch detected. The charset "
 						                  "setting is currently set to %s, so please make "
 						                  "sure your IRC client will send and accept text in "
 						                  "that charset, or tell BitlBee which charset to "

@@ -199,7 +199,7 @@ xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *
 	
 	if( entry == NULL )
 	{
-		imcb_log( ic, "WARNING: Received %s-%s packet with unknown/expired ID %s!",
+		imcb_log( ic, "Warning: Received %s-%s packet with unknown/expired ID %s!",
 		              node->name, xt_find_attr( node, "type" ) ? : "(no type)", s );
 	}
 	else if( entry->func )

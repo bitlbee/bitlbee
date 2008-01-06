@@ -79,7 +79,7 @@ static int aim_tx_enqueue__queuebased(aim_session_t *sess, aim_frame_t *fr)
 {
 
 	if (!fr->conn) {
-		imcb_error(sess->aux_data, "WARNING: enqueueing packet with no connection");
+		imcb_error(sess->aux_data, "Warning: enqueueing packet with no connection");
 		fr->conn = aim_getconn_type(sess, AIM_CONN_TYPE_BOS);
 	}
 

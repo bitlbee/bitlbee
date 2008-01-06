@@ -351,7 +351,7 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list )
 	
 	m = l->data;
 	ret = g_string_sized_new( 1024 );
-	g_string_printf( ret, "WARNING: Cleaning up MSN (switchboard) connection with unsent "
+	g_string_printf( ret, "Warning: Cleaning up MSN (switchboard) connection with unsent "
 	                      "messages to %s:", m->who ? m->who : "unknown recipient" );
 	
 	while( l )

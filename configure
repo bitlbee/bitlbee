@@ -453,7 +453,7 @@ else
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then
-	echo "WARNING: You haven't selected any communication protocol to compile!"
+	echo "Warning: You haven't selected any communication protocol to compile!"
 	echo "         BitlBee will run, but you will be unable to connect to IM servers!"
 fi
 

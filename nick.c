@@ -110,7 +110,7 @@ void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+
 		{
 			int i;
 			
-			irc_usermsg( acc->irc, "WARNING: Almost had an infinite loop in nick_get()! "
+			irc_usermsg( acc->irc, "Warning: Almost had an infinite loop in nick_get()! "
 			                       "This used to be a fatal BitlBee bug, but we tried to fix it. "
 			                       "This message should *never* appear anymore. "
 			                       "If it does, please *do* send us a bug report! "

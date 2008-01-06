@@ -53,7 +53,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		       ( c = xt_find_node( node->children, "ping" ) ) ) || /* O_o WHAT is wrong with just <query/> ????? */
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
-			imcb_log( ic, "WARNING: Received incomplete IQ-%s packet", type );
+			imcb_log( ic, "Warning: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
 		}
 		
@@ -124,7 +124,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		if( !( c = xt_find_node( node->children, "query" ) ) ||
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
-			imcb_log( ic, "WARNING: Received incomplete IQ-%s packet", type );
+			imcb_log( ic, "Warning: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
 		}
 		
@@ -146,7 +146,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			}
 			else
 			{
-				imcb_log( ic, "WARNING: %s tried to fake a roster push!", s ? s : "(unknown)" );
+				imcb_log( ic, "Warning: %s tried to fake a roster push!", s ? s : "(unknown)" );
 				
 				xt_free_node( reply );
 				reply = jabber_make_error_packet( node, "not-allowed", "cancel" );
@@ -211,7 +211,7 @@ static xt_status jabber_do_iq_auth( struct im_connection *ic, struct xt_node *no
 	
 	if( !( query = xt_find_node( node->children, "query" ) ) )
 	{
-		imcb_log( ic, "WARNING: Received incomplete IQ packet while authenticating" );
+		imcb_log( ic, "Warning: Received incomplete IQ packet while authenticating" );
 		imc_logout( ic, FALSE );
 		return XT_HANDLED;
 	}
@@ -269,7 +269,7 @@ static xt_status jabber_finish_iq_auth( struct im_connection *ic, struct xt_node
 	
 	if( !( type = xt_find_attr( node, "type" ) ) )
 	{
-		imcb_log( ic, "WARNING: Received incomplete IQ packet while authenticating" );
+		imcb_log( ic, "Warning: Received incomplete IQ packet while authenticating" );
 		imc_logout( ic, FALSE );
 		return XT_HANDLED;
 	}
@@ -345,7 +345,7 @@ static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *
 	
 	if( !( query = xt_find_node( node->children, "query" ) ) )
 	{
-		imcb_log( ic, "WARNING: Received NULL roster packet" );
+		imcb_log( ic, "Warning: Received NULL roster packet" );
 		return XT_HANDLED;
 	}
 	

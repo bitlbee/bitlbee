@@ -49,7 +49,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		if( !( bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT | GET_BUDDY_CREAT ) ) )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
-				imcb_log( ic, "WARNING: Could not handle presence information from JID: %s", from );
+				imcb_log( ic, "Warning: Could not handle presence information from JID: %s", from );
 			return XT_HANDLED;
 		}
 		
@@ -90,7 +90,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		if( ( bud = jabber_buddy_by_jid( ic, from, 0 ) ) == NULL )
 		{
 			if( set_getbool( &ic->irc->set, "debug" ) )
-				imcb_log( ic, "WARNING: Received presence information from unknown JID: %s", from );
+				imcb_log( ic, "Warning: Received presence information from unknown JID: %s", from );
 			return XT_HANDLED;
 		}
 		
