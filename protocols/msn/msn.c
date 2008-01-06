@@ -89,21 +89,7 @@ static void msn_logout( struct im_connection *ic )
 		while( md->switchboards )
 			msn_sb_destroy( md->switchboards->data );
 		
-		if( md->msgq )
-		{
-			struct msn_message *m;
-			
-			for( l = md->msgq; l; l = l->next )
-			{
-				m = l->data;
-			
-				imcb_log( ic, "Warning: Closing down MSN connection with unsent message to %s, you'll have to resend it.", m->who );
-				g_free( m->who );
-				g_free( m->text );
-				g_free( m );
-			}
-			g_slist_free( md->msgq );
-		}
+		msn_msgq_purge( ic, &md->msgq );
 		
 		while( md->groupcount > 0 )
 			g_free( md->grouplist[--md->groupcount] );
