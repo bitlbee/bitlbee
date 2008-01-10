@@ -1023,3 +1023,5 @@ void init_plugin(void)
 	ret->chat_topic = skype_chat_topic;
 	register_protocol( ret );
 }
+
+/* vim: set ts=2 sw=2 noet: */
