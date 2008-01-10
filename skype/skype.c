@@ -29,7 +29,7 @@
 #include <bitlbee.h>
 #include <glib.h>
 
-#define SKYPE_PORT_DEFAULT "2727"
+#define SKYPE_DEFAULT_PORT "2727"
 
 /*
  * Enumerations
@@ -135,7 +135,7 @@ static void skype_init( account_t *acc )
 {
 	set_t *s;
 
-	s = set_add( &acc->set, "port", SKYPE_PORT_DEFAULT, set_eval_int, acc );
+	s = set_add( &acc->set, "port", SKYPE_DEFAULT_PORT, set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
