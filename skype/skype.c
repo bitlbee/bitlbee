@@ -136,10 +136,10 @@ static void skype_init( account_t *acc )
 {
 	set_t *s;
 
-	s = set_add( &acc->set, "port", SKYPE_DEFAULT_PORT, set_eval_int, acc );
+	s = set_add( &acc->set, "server", SKYPE_DEFAULT_SERVER, set_eval_account, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add( &acc->set, "server", SKYPE_DEFAULT_SERVER, set_eval_account, acc );
+	s = set_add( &acc->set, "port", SKYPE_DEFAULT_PORT, set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 }
 
