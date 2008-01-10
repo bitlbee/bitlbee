@@ -355,9 +355,10 @@ static void oscar_login(account_t *acc) {
 	struct im_connection *ic = imcb_new(acc);
 	struct oscar_data *odata = ic->proto_data = g_new0(struct oscar_data, 1);
 
-	if (!isdigit(acc->user[0])) {
+	if (isdigit(acc->user[0]))
+		odata->icq = TRUE;
+	else
 		ic->flags |= OPT_DOES_HTML;
-	}
 
 	sess = g_new0(aim_session_t, 1);
 
