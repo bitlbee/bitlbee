@@ -132,17 +132,6 @@ const struct skype_away_state skype_away_state_list[] =
  * Functions
  */
 
-static void skype_init( account_t *acc )
-{
-	set_t *s;
-
-	s = set_add( &acc->set, "server", SKYPE_DEFAULT_SERVER, set_eval_account, acc );
-	s->flags |= ACC_SET_OFFLINE_ONLY;
-
-	s = set_add( &acc->set, "port", SKYPE_DEFAULT_PORT, set_eval_int, acc );
-	s->flags |= ACC_SET_OFFLINE_ONLY;
-}
-
 int skype_write( struct im_connection *ic, char *buf, int len )
 {
 	struct skype_data *sd = ic->proto_data;
@@ -859,6 +848,19 @@ static GList *skype_away_states( struct im_connection *ic )
 	return l;
 }
 
+static char *skype_set_display_name( set_t *set, char *value )
+{
+	account_t *acc = set->data;
+	struct im_connection *ic = acc->ic;
+	//struct skype_data *sd = ic->proto_data;
+	char *buf;
+
+	buf = g_strdup_printf("SET PROFILE MOOD_TEXT %s", value);
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+	return(value);
+}
+
 static void skype_add_buddy( struct im_connection *ic, char *who, char *group )
 {
 	char *buf, *nick, *ptr;
@@ -1001,6 +1003,25 @@ static void skype_get_info(struct im_connection *ic, char *who)
 	g_free(buf);
 }
 
+static void skype_set_my_name( struct im_connection *ic, char *info )
+{
+	skype_set_display_name( set_find( &ic->acc->set, "display_name" ), info );
+}
+
+static void skype_init( account_t *acc )
+{
+	set_t *s;
+
+	s = set_add( &acc->set, "server", SKYPE_DEFAULT_SERVER, set_eval_account, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add( &acc->set, "port", SKYPE_DEFAULT_PORT, set_eval_int, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add( &acc->set, "display_name", NULL, skype_set_display_name, acc );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+}
+
 void init_plugin(void)
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
@@ -1011,6 +1032,7 @@ void init_plugin(void)
 	ret->logout = skype_logout;
 	ret->buddy_msg = skype_buddy_msg;
 	ret->get_info = skype_get_info;
+	ret->set_my_name = skype_set_my_name;
 	ret->away_states = skype_away_states;
 	ret->set_away = skype_set_away;
 	ret->add_buddy = skype_add_buddy;
