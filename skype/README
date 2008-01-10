@@ -221,6 +221,10 @@ your VNC server regularly. (How ugly.)
 
 - Viewing the profile using the `info` command.
 
+- Handling skype actions (when the `CHATMESSAGE` has `EMOTED` type)
+
+- Setting your mood text using the `nick` command.
+
 == What needs to be done (aka. TODO)
 
 - Add a question callback for calls.
@@ -230,8 +234,6 @@ your VNC server regularly. (How ugly.)
 - Public chats. See link:http://forum.skype.com/index.php?showtopic=98872[this
   forum thread], it is still unclear how could it be done for you to be able to
   `/join` to a public chat..
-
-- Handle skype actions (when the `CHATMESSAGE` has `EMOTED` type)
 
 == I would like to have support for ...
 
