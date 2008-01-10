@@ -1,5 +1,11 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.2.6         - the server setting has a default value, 'localhost' so in most
+		cases you no longer have to set it explicitly
+	      - support for receiving emoted messages, ie. when the user types
+	        '/me foo'
+	      - support for setting the display name (nick 0 "foo bar") - it
+	        sets the mood text
 0.2.5         - now bitlbee's info command is supported (it displays full name,
 		birthday, homepage, age, etc.)
 0.2.4         - improve documentation based on feedback from people on #bitlbee
