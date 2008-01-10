@@ -1,7 +1,7 @@
 /*
  *  skype.c - Skype plugin for BitlBee
  * 
- *  Copyright (c) 2007 by Miklos Vajna <vmiklos@frugalware.org>
+ *  Copyright (c) 2007, 2008 by Miklos Vajna <vmiklos@frugalware.org>
  *
  *  Several ideas are used from the BitlBee Jabber plugin, which is
  *
