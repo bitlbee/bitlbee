@@ -118,7 +118,6 @@ able to connect to Skype!
 
 ----
 account add skype <user> <pass>
-account set 0/server localhost
 ----
 
 IMPORTANT: <user> should be your Skype account name. This way you won't see

@@ -29,6 +29,7 @@
 #include <bitlbee.h>
 #include <glib.h>
 
+#define SKYPE_DEFAULT_SERVER "localhost"
 #define SKYPE_DEFAULT_PORT "2727"
 
 /*
@@ -138,8 +139,8 @@ static void skype_init( account_t *acc )
 	s = set_add( &acc->set, "port", SKYPE_DEFAULT_PORT, set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	s = set_add( &acc->set, "server", SKYPE_DEFAULT_SERVER, set_eval_account, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
 }
 
 int skype_write( struct im_connection *ic, char *buf, int len )
@@ -774,7 +775,7 @@ static void skype_login( account_t *acc )
 	ic->proto_data = sd;
 
 	imcb_log( ic, "Connecting" );
-	sd->fd = proxy_connect(acc->server, set_getint( &acc->set, "port" ), skype_connected, ic );
+	sd->fd = proxy_connect(set_getstr( &acc->set, "server" ), set_getint( &acc->set, "port" ), skype_connected, ic );
 	sd->username = g_strdup( acc->user );
 
 	sd->ic = ic;
