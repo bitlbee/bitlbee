@@ -524,14 +524,22 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 							for(i=0;i<g_list_length(sd->body);i++)
 							{
 								char *body = g_list_nth_data(sd->body, i);
-								if(!strcmp(sd->type, "SAID"))
+								if(!strcmp(sd->type, "SAID") || !strcmp(sd->type, "EMOTED"))
 								{
+									char *st;
+									if(!strcmp(sd->type, "SAID"))
+										st = g_strdup(body);
+									else
+									{
+										st = g_strdup_printf("/me %s", body);
+									}
 									if(!gc)
 										/* Private message */
-										imcb_buddy_msg(ic, sd->handle, body, 0, 0);
+										imcb_buddy_msg(ic, sd->handle, st, 0, 0);
 									else
 										/* Groupchat message */
-										imcb_chat_msg(gc, sd->handle, body, 0, 0);
+										imcb_chat_msg(gc, sd->handle, st, 0, 0);
+									g_free(st);
 								}
 								else if(!strcmp(sd->type, "SETTOPIC"))
 								{
