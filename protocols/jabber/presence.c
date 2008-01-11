@@ -29,8 +29,8 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	char *from = xt_find_attr( node, "from" );
 	char *type = xt_find_attr( node, "type" );	/* NULL should mean the person is online. */
 	struct xt_node *c;
-	struct jabber_buddy *bud;
-	int is_chat = 0, is_away = 0;
+	struct jabber_buddy *bud, *send_presence = NULL;
+	int is_chat = 0;
 	char *s;
 	
 	if( !from )
@@ -62,8 +62,6 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		if( ( c = xt_find_node( node->children, "show" ) ) && c->text_len > 0 )
 		{
 			bud->away_state = (void*) jabber_away_state_by_code( c->text );
-			if( strcmp( c->text, "chat" ) != 0 )
-				is_away = OPT_AWAY;
 		}
 		else
 		{
@@ -80,10 +78,8 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		
 		if( is_chat )
 			jabber_chat_pkt_presence( ic, bud, node );
-		else if( bud == jabber_buddy_by_jid( ic, bud->bare_jid, 0 ) )
-			imcb_buddy_status( ic, bud->bare_jid, OPT_LOGGED_IN | is_away,
-			                   ( is_away && bud->away_state ) ? bud->away_state->full_name : NULL,
-			                   bud->away_message );
+		else
+			send_presence = jabber_buddy_by_jid( ic, bud->bare_jid, 0 );
 	}
 	else if( strcmp( type, "unavailable" ) == 0 )
 	{
@@ -118,17 +114,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		
 			/* If another resource is still available, send its presence
 			   information. */
-			if( ( bud = jabber_buddy_by_jid( ic, from, 0 ) ) )
-			{
-				if( bud->away_state && ( *bud->away_state->code == 0 ||
-				    strcmp( bud->away_state->code, "chat" ) == 0 ) )
-					is_away = OPT_AWAY;
-				
-				imcb_buddy_status( ic, bud->bare_jid, OPT_LOGGED_IN | is_away,
-				                   ( is_away && bud->away_state ) ? bud->away_state->full_name : NULL,
-				                   bud->away_message );
-			}
-			else
+			if( ( send_presence = jabber_buddy_by_jid( ic, from, 0 ) ) == NULL )
 			{
 				/* Otherwise, count him/her as offline now. */
 				imcb_buddy_status( ic, from, 0, NULL, NULL );
@@ -175,6 +161,20 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 			            err->text ? err->text : "" );
 			jabber_error_free( err );
 		} */
+	}
+
+	if( send_presence )
+	{
+		int is_away;
+
+		if( send_presence->away_state && !( *send_presence->away_state->code == 0 ||
+		    strcmp( send_presence->away_state->code, "chat" ) == 0 ) )
+			is_away = OPT_AWAY;
+
+		imcb_buddy_status( ic, send_presence->bare_jid, OPT_LOGGED_IN | is_away,
+		                   ( is_away && send_presence->away_state ) ?
+		                   send_presence->away_state->full_name : NULL,
+		                   send_presence->away_message );
 	}
 	
 	return XT_HANDLED;
