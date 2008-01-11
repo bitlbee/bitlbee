@@ -820,7 +820,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( online == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->ic->acc->prpl->name );
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
 			irc_usermsg( irc, format, u->nick, s, "Online" );
 		}
 		
@@ -831,7 +831,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( away == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->ic->acc->prpl->name );
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
 			irc_usermsg( irc, format, u->nick, s, u->away );
 		}
 		n_away ++;
@@ -841,7 +841,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( offline == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s (%s)", u->user, u->host, u->ic->acc->prpl->name );
+			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
 			irc_usermsg( irc, format, u->nick, s, "Offline" );
 		}
 		n_offline ++;
