@@ -134,6 +134,7 @@ class Options:
 		self.daemon = True
 		self.debug = False
 		self.help = False
+		self.host = "0.0.0.0"
 		self.port = 2727
 		self.version = False
 
@@ -145,15 +146,16 @@ skyped is a daemon that acts as a tcp server on top of a Skype instance.
 Options:
 	-d	--debug		enable debug messages
 	-h	--help		this help
+	-H	--host		set the tcp host (default: %s)
 	-n	--nofork	don't run as daemon in the background
 	-p	--port		set the tcp port (default: %d)
-	-v	--version	display version information""" % self.port
+	-v	--version	display version information""" % (self.host, self.port)
 		sys.exit(ret)
 
 if __name__=='__main__':
 	options = Options()
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "dhnp:v", ["daemon", "help", "nofork", "port=", "version"])
+		opts, args = getopt.getopt(sys.argv[1:], "dhH:np:v", ["daemon", "help", "host=", "nofork", "port=", "version"])
 	except getopt.GetoptError:
 		options.usage(1)
 	for opt, arg in opts:
@@ -161,6 +163,8 @@ if __name__=='__main__':
 			options.debug = True
 		elif opt in ("-h", "--help"):
 			options.help = True
+		elif opt in ("-H", "--host"):
+			options.host = arg
 		elif opt in ("-n", "--nofork"):
 			options.daemon = False
 		elif opt in ("-p", "--port"):
@@ -183,7 +187,7 @@ if __name__=='__main__':
 		else:
 			print 'skyped is started on port %s, pid: %d' % (options.port, pid)
 			sys.exit(0)
-	server('0.0.0.0', options.port)
+	server(options.host, options.port)
 	try:
 		skype = SkypeApi()
 	except Skype4Py.SkypeAPIError, s:
