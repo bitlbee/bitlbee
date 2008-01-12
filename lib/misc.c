@@ -244,12 +244,6 @@ char *escape_html( const char *html )
 	return( str );
 }
 
-void info_string_append(GString *str, char *newline, char *name, char *value)
-{
-	if( value && value[0] )
-		g_string_sprintfa( str, "%s%s: %s", newline, name, value );
-}
-
 /* Decode%20a%20file%20name						*/
 void http_decode( char *s )
 {
