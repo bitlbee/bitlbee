@@ -37,11 +37,21 @@ import threading
 import sha
 from ConfigParser import ConfigParser
 from OpenSSL import SSL
+from traceback import print_exception
+#from exceptions import KeyboardInterrupt
 
 __version__ = "0.1.1"
 
 SKYPE_SERVICE = 'com.Skype.API'
 CLIENT_NAME = 'SkypeApiPythonShell'
+
+def eh(type, value, tb):
+	if type == KeyboardInterrupt:
+		sys.exit("Exiting.")
+	print_exception(type, value, tb)
+	sys.exit(1)
+
+sys.excepthook = eh
 
 def input_handler(fd, io_condition):
 	global options
@@ -60,10 +70,7 @@ def idle_handler(skype):
 		skype.skype.SendCommand(skype.skype.Command(-1, "PING"))
 	except Skype4Py.SkypeAPIError, s:
 		dprint("Warning, pinging Skype failed (%s)." % (s))
-	try:
 		time.sleep(2)
-	except KeyboardInterrupt:
-		sys.exit("Exiting.")
 	return True
 
 def server(host, port):
