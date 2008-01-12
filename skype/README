@@ -255,6 +255,9 @@ your VNC server regularly. (How ugly.)
   forum thread], it is still unclear how could it be done for you to be able to
   `/join` to a public chat..
 
+- Split skyped from the plugin, so that one could install just the relevant
+  code if they are not running on the same machine.
+
 == I would like to have support for ...
 
 If something does not work and it's not in the TODO section, then please
