@@ -2,7 +2,7 @@
 # 
 #   skyped.py
 #  
-#   Copyright (c) 2007 by Miklos Vajna <vmiklos@frugalware.org>
+#   Copyright (c) 2007, 2008 by Miklos Vajna <vmiklos@frugalware.org>
 #
 #   It uses several code from a very basic python CLI interface, available at:
 #
