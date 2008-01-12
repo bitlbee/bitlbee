@@ -136,11 +136,12 @@ able to connect to Skype!
 - Start your `IRC` client, connect to BitlBee and add your account:
 
 ----
-account add skype <user> <pass>
+account add skype <user> <pass> localhost
 ----
 
 <user> should be your Skype account name, <pass> should be the one you declared
-in `skyped.conf`.
+in `skyped.conf`. If you want to run skyped on a remote machine, replace
+`localhost` with the name of the machine.
 
 == Setting up Skype in a VNC server (optional)
 
