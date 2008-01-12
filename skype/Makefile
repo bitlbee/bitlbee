@@ -13,6 +13,7 @@ install: skype.so skyped.py
 	$(INSTALL) skyped.py $(DESTDIR)$(bindir)/skyped
 	sed -i 's|/usr/local/etc/skyped|$(sysconfdir)|' $(DESTDIR)$(bindir)/skyped
 	$(INSTALL) -m644 skyped.conf.dist $(DESTDIR)$(sysconfdir)/skyped.conf
+	$(INSTALL) -m644 skyped.cnf $(DESTDIR)$(sysconfdir)
 
 client: client.c
 
