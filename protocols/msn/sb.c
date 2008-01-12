@@ -276,16 +276,59 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition cond )
 {
 	struct msn_switchboard *sb = data;
+	struct im_connection *ic = sb->ic;
+	struct msn_data *md = ic->proto_data;
 	
 	if( msn_handler( sb->handler ) == -1 )
 	{
+		time_t now = time( NULL );
+		
+		if( now - md->first_sb_failure > 600 )
+		{
+			/* It's not really the first one, but the start of this "series".
+			   With this, the warning below will be shown only if this happens
+			   at least three times in ten minutes. This algorithm isn't
+			   perfect, but for this purpose it will do. */
+			md->first_sb_failure = now;
+			md->sb_failures = 0;
+		}
+		
 		debug( "Error: Switchboard died" );
+		if( ++ md->sb_failures >= 3 )
+			imcb_log( ic, "Warning: Many switchboard failures on MSN connection. "
+			              "There might be problems delivering your messages." );
+		
+		if( sb->msgq != NULL )
+		{
+			char buf[1024];
+			
+			if( md->msgq == NULL )
+			{
+				md->msgq = sb->msgq;
+			}
+			else
+			{
+				GSList *l;
+				
+				for( l = md->msgq; l->next; l = l->next );
+				l->next = sb->msgq;
+			}
+			sb->msgq = NULL;
+			
+			debug( "Moved queued messages back to the main queue, creating a new switchboard to retry." );
+			g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
+			if( !msn_write( ic, buf, strlen( buf ) ) )
+				return FALSE;
+		}
+		
 		msn_sb_destroy( sb );
 		
 		return FALSE;
 	}
 	else
+	{
 		return TRUE;
+	}
 }
 
 static int msn_sb_command( gpointer data, char **cmd, int num_parts )
