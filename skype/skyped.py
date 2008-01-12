@@ -34,21 +34,25 @@ import socket
 import getopt
 import Skype4Py
 import threading
+import sha
+from ConfigParser import ConfigParser
 
 __version__ = "0.1.1"
 
 SKYPE_SERVICE = 'com.Skype.API'
 CLIENT_NAME = 'SkypeApiPythonShell'
 
-# well, this is a bit hackish. we store the socket of the last connected client
-# here and notify it. maybe later notify all connected clients?
-conn = None
-
 def input_handler(fd, io_condition):
-	input = fd.recv(1024)
-	for i in input.split("\n"):
-		skype.send(i.strip())
-	return True
+	global options
+	if options.buf:
+		for i in options.buf:
+			skype.send(i.strip())
+		options.buf = None
+	else:
+		input = fd.recv(1024)
+		for i in input.split("\n"):
+			skype.send(i.strip())
+		return True
 
 def idle_handler(skype):
 	try:
@@ -69,11 +73,28 @@ def server(host, port):
 	gobject.io_add_watch(sock, gobject.IO_IN, listener)
 
 def listener(sock, *args):
-	global conn
-	conn, addr = sock.accept()
-	fileno = conn.fileno()
-	gobject.io_add_watch(conn, gobject.IO_IN, input_handler)
-	return True
+	global options
+	options.conn, addr = sock.accept()
+	lines = options.conn.recv(512).split('\n')
+	ret = 0
+	nlines = []
+	for i in lines:
+		if i.startswith("USERNAME") and i.split(' ')[1].strip() == options.config.username:
+			ret += 1
+		elif i.startswith("PASSWORD") and sha.sha(i.split(' ')[1].strip()).hexdigest() == options.config.password:
+			ret += 1
+		else:
+			nlines.append(i)
+	del lines
+	if ret == 2:
+		dprint("Username and password OK.")
+		options.buf = nlines
+		input_handler(None, None)
+		gobject.io_add_watch(options.conn, gobject.IO_IN, input_handler)
+		return True
+	else:
+		dprint("Username and/or password WRONG.")
+		return False
 
 def dprint(msg):
 	global options
@@ -88,7 +109,7 @@ class SkypeApi():
 		self.skype.Attach()
 
 	def recv(self, msg_text):
-		global conn
+		global options
 		if msg_text == "PONG":
 			return
 		if "\n" in msg_text:
@@ -109,9 +130,9 @@ class SkypeApi():
 			# everybody will be happy
 			e = i.encode('UTF-8')
 			dprint('<< ' + e)
-			if conn:
+			if options.conn:
 				try:
-					conn.send(e + "\n")
+					options.conn.send(e + "\n")
 				except IOError, s:
 					dprint("Warning, sending '%s' failed (%s)." % (e, s))
 
@@ -131,12 +152,19 @@ class SkypeApi():
 
 class Options:
 	def __init__(self):
+		self.cfgpath = "/etc/skyped.conf"
 		self.daemon = True
 		self.debug = False
 		self.help = False
 		self.host = "0.0.0.0"
 		self.port = 2727
 		self.version = False
+		# well, this is a bit hackish. we store the socket of the last connected client
+		# here and notify it. maybe later notify all connected clients?
+		self.conn = None
+		# this will be read first by the input handler
+		self.buf = None
+
 
 	def usage(self, ret):
 		print """Usage: skyped [OPTION]...
@@ -144,22 +172,25 @@ class Options:
 skyped is a daemon that acts as a tcp server on top of a Skype instance.
 
 Options:
+	-c      --config        path to configuration file (default: %s)
 	-d	--debug		enable debug messages
 	-h	--help		this help
 	-H	--host		set the tcp host (default: %s)
 	-n	--nofork	don't run as daemon in the background
 	-p	--port		set the tcp port (default: %d)
-	-v	--version	display version information""" % (self.host, self.port)
+	-v	--version	display version information""" % (self.cfgpath, self.host, self.port)
 		sys.exit(ret)
 
 if __name__=='__main__':
 	options = Options()
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "dhH:np:v", ["daemon", "help", "host=", "nofork", "port=", "version"])
+		opts, args = getopt.getopt(sys.argv[1:], "c:dhH:np:v", ["config=", "daemon", "help", "host=", "nofork", "port=", "version"])
 	except getopt.GetoptError:
 		options.usage(1)
 	for opt, arg in opts:
-		if opt in ("-d", "--debug"):
+		if opt in ("-c", "--config"):
+			options.cfgpath = arg
+		elif opt in ("-d", "--debug"):
 			options.debug = True
 		elif opt in ("-h", "--help"):
 			options.help = True
@@ -176,7 +207,17 @@ if __name__=='__main__':
 	elif options.version:
 		print "skyped %s" % __version__
 		sys.exit(0)
-	elif options.daemon:
+	# parse our config
+	if not os.path.exists(options.cfgpath):
+		print "Can't find configuration file at '%s'." % options.cfgpath
+		print "Use the -c option to specify an alternate one."
+		sys.exit(1)
+	options.config = ConfigParser()
+	options.config.read(options.cfgpath)
+	options.config.username = options.config.get('skyped', 'username').split('#')[0]
+	options.config.password = options.config.get('skyped', 'password').split('#')[0]
+	dprint("Parsing config file '%s' done, username is '%s'." % (options.cfgpath, options.config.username))
+	if options.daemon:
 		pid = os.fork()
 		if pid == 0:
 			nullin = file('/dev/null', 'r')
