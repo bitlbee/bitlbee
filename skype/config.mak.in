@@ -2,6 +2,7 @@ CFLAGS = @CFLAGS@
 LDFLAGS = @LDFLAGS@
 INSTALL = @INSTALL@
 prefix = @prefix@
+sysconfdir = @sysconfdir@
 exec_prefix = @exec_prefix@
 bindir = @bindir@
 libdir = @libdir@
