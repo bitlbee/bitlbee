@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.3.0         - authentication support in skyped via ssl
+              - ~200 lines of new code, so be careful :)
+	      - upgraders: please read the documentation about how to set up
+	        your config the ssl certificate, this was no necessary till now
 0.2.6         - the server setting has a default value, 'localhost' so in most
 		cases you no longer have to set it explicitly
 	      - support for receiving emoted messages, ie. when the user types
