@@ -747,6 +747,14 @@ gboolean skype_start_stream( struct im_connection *ic )
 	if( sd->bfd <= 0 )
 		sd->bfd = b_input_add( sd->fd, GAIM_INPUT_READ, skype_read_callback, ic );
 
+	/* Log in */
+	buf = g_strdup_printf("USERNAME %s\n", ic->acc->user);
+	st = skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+	buf = g_strdup_printf("PASSWORD %s\n", ic->acc->pass);
+	st = skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+
 	/* This will download all buddies. */
 	buf = g_strdup_printf("SEARCH FRIENDS\n");
 	st = skype_write( ic, buf, strlen( buf ) );
