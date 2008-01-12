@@ -104,6 +104,11 @@ problems]), but I wanted to prevent a large code duplication from that project.
 In addition it then no longer requires the `dbus-python` package, just
 `pygobject`.)
 
+- Edit `/usr/local/etc/skyped.conf`: adjust `username` and `password`. The
+  `username` should be your Skype login and the `password` can be whatever you
+  want, but you will have to specify that one when adding the Skype account to
+  BitlBee (see later).
+
 - Start Skype and `skyped` (the tcp server):
 
 ----
@@ -120,10 +125,8 @@ able to connect to Skype!
 account add skype <user> <pass>
 ----
 
-IMPORTANT: <user> should be your Skype account name. This way you won't see
-yourself joining to `&bitlbee`.
-
-NOTE: the <pass> option is not used currently.
+<user> should be your Skype account name, <pass> should be the one you declared
+in `skyped.conf`.
 
 == Setting up Skype in a VNC server (optional)
 
