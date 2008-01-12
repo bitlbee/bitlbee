@@ -11,7 +11,7 @@ run -v -n -D
 
 3) skyped:
 
-python skyped.py -n -d
+python skyped.py -n -d -c ./skyped.conf
 
 4) skype
 
