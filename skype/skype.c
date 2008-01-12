@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <poll.h>
 #include <bitlbee.h>
+#include <bitlbee/ssl_client.h>
 #include <glib.h>
 
 #define SKYPE_DEFAULT_SERVER "localhost"
@@ -62,6 +63,8 @@ struct skype_data
 	/* File descriptor returned by bitlbee. we store it so we know when
 	 * we're connected and when we aren't. */
 	int bfd;
+	/* ssl_getfd() uses this to get the file desciptor. */
+	void *ssl;
 	/* When we receive a new message id, we query the properties, finally
 	 * the chatname. Store the properties here so that we can use
 	 * imcb_buddy_msg() when we got the chatname. */
@@ -145,11 +148,10 @@ int skype_write( struct im_connection *ic, char *buf, int len )
 	poll(pfd, 1, 1000);
 	if(pfd[0].revents & POLLHUP)
 	{
-		imcb_error( ic, "Could not connect to server" );
 		imc_logout( ic, TRUE );
 		return FALSE;
 	}
-	write( sd->fd, buf, len );
+	ssl_write( sd->ssl, buf, len );
 
 	return TRUE;
 }
@@ -209,7 +211,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 	if( !sd || sd->fd == -1 )
 		return FALSE;
 	/* Read the whole data. */
-	st = read( sd->fd, buf, sizeof( buf ) );
+	st = ssl_read( sd->ssl, buf, sizeof( buf ) );
 	if( st > 0 )
 	{
 		buf[st] = '\0';
@@ -719,6 +721,16 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					}
 				}
 			}
+			else if(!strncmp(line, "PASSWORD ", 9))
+			{
+				if(!strncmp(line+9, "OK", 2))
+					imcb_connected(ic);
+				else
+				{
+					imcb_error(ic, "Authentication Failed");
+					imc_logout( ic, TRUE );
+				}
+			}
 			lineptr++;
 		}
 		g_strfreev(lines);
@@ -765,10 +777,18 @@ gboolean skype_start_stream( struct im_connection *ic )
 	return st;
 }
 
-gboolean skype_connected( gpointer data, gint source, b_input_condition cond )
+gboolean skype_connected( gpointer data, void *source, b_input_condition cond )
 {
 	struct im_connection *ic = data;
-	imcb_connected(ic);
+	struct skype_data *sd = ic->proto_data;
+	if(!source)
+	{
+		sd->ssl = NULL;
+		imcb_error( ic, "Could not connect to server" );
+		imc_logout( ic, TRUE );
+		return FALSE;
+	}
+	imcb_log( ic, "Connected to server, logging in" );
 	return skype_start_stream(ic);
 }
 
@@ -780,7 +800,8 @@ static void skype_login( account_t *acc )
 	ic->proto_data = sd;
 
 	imcb_log( ic, "Connecting" );
-	sd->fd = proxy_connect(set_getstr( &acc->set, "server" ), set_getint( &acc->set, "port" ), skype_connected, ic );
+	sd->ssl = ssl_connect(set_getstr( &acc->set, "server" ), set_getint( &acc->set, "port" ), skype_connected, ic );
+	sd->fd = sd->ssl ? ssl_getfd( sd->ssl ) : -1;
 	sd->username = g_strdup( acc->user );
 
 	sd->ic = ic;

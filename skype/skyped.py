@@ -36,6 +36,7 @@ import Skype4Py
 import threading
 import sha
 from ConfigParser import ConfigParser
+from OpenSSL import SSL
 
 __version__ = "0.1.1"
 
@@ -66,7 +67,12 @@ def idle_handler(skype):
 	return True
 
 def server(host, port):
-	sock = socket.socket()
+	global options
+
+	ctx = SSL.Context(SSL.TLSv1_METHOD)
+	ctx.use_privatekey_file(options.config.sslkey)
+	ctx.use_certificate_file(options.config.sslcert)
+	sock = SSL.Connection(ctx, socket.socket())
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((host, port))
 	sock.listen(1)
@@ -75,25 +81,21 @@ def server(host, port):
 def listener(sock, *args):
 	global options
 	options.conn, addr = sock.accept()
-	lines = options.conn.recv(512).split('\n')
 	ret = 0
-	nlines = []
-	for i in lines:
-		if i.startswith("USERNAME") and i.split(' ')[1].strip() == options.config.username:
-			ret += 1
-		elif i.startswith("PASSWORD") and sha.sha(i.split(' ')[1].strip()).hexdigest() == options.config.password:
-			ret += 1
-		else:
-			nlines.append(i)
-	del lines
+	line = options.conn.recv(1024)
+	if line.startswith("USERNAME") and line.split(' ')[1].strip() == options.config.username:
+		ret += 1
+	line = options.conn.recv(1024)
+	if line.startswith("PASSWORD") and sha.sha(line.split(' ')[1].strip()).hexdigest() == options.config.password:
+		ret += 1
 	if ret == 2:
 		dprint("Username and password OK.")
-		options.buf = nlines
-		input_handler(None, None)
+		options.conn.send("PASSWORD OK\n")
 		gobject.io_add_watch(options.conn, gobject.IO_IN, input_handler)
 		return True
 	else:
 		dprint("Username and/or password WRONG.")
+		options.conn.send("PASSWORD KO\n")
 		return False
 
 def dprint(msg):
@@ -152,7 +154,7 @@ class SkypeApi():
 
 class Options:
 	def __init__(self):
-		self.cfgpath = "/etc/skyped.conf"
+		self.cfgpath = "/usr/local/etc/skyped/skyped.conf"
 		self.daemon = True
 		self.debug = False
 		self.help = False
@@ -216,6 +218,8 @@ if __name__=='__main__':
 	options.config.read(options.cfgpath)
 	options.config.username = options.config.get('skyped', 'username').split('#')[0]
 	options.config.password = options.config.get('skyped', 'password').split('#')[0]
+	options.config.sslkey = options.config.get('skyped', 'key').split('#')[0]
+	options.config.sslcert = options.config.get('skyped', 'cert').split('#')[0]
 	dprint("Parsing config file '%s' done, username is '%s'." % (options.cfgpath, options.config.username))
 	if options.daemon:
 		pid = os.fork()
