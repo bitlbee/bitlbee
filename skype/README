@@ -56,9 +56,9 @@ automatically reconnect if you restart Skype.)
 - You need the BitlBee testing/development version:
 
 ----
-wget http://get.bitlbee.org/src/bitlbee-1.1.1dev.tar.gz
-tar xf bitlbee-1.1.1dev.tar.gz
-cd bitlbee-1.1.1dev
+$ wget http://get.bitlbee.org/src/bitlbee-1.1.1dev.tar.gz
+$ tar xf bitlbee-1.1.1dev.tar.gz
+$ cd bitlbee-1.1.1dev
 ----
 
 NOTE: You no longer need additional patches, as of version 1.1.1dev.
@@ -66,15 +66,15 @@ NOTE: You no longer need additional patches, as of version 1.1.1dev.
 - Now compile and install it:
 
 ----
-./configure
-make
-make install install-dev
+$ ./configure
+$ make
+# make install install-dev
 ----
 
 - Get the plugin code:
 
 ----
-git clone git://vmiklos.hu/bitlbee-skype
+$ git clone git://vmiklos.hu/bitlbee-skype
 ----
 
 (Or you can use the tarballs below, see the Changelog about what
@@ -87,11 +87,11 @@ by default).
 - Compile and install it:
 
 ----
-cd bitlbee-skype
-make prepare
-./configure
-make
-make install
+$ cd bitlbee-skype
+$ make prepare
+$ ./configure
+$ make
+# make install
 ----
 
 - Install http://skype4py.sourceforge.net/[Skype4Py].
@@ -115,16 +115,19 @@ if you used the `--sysconfdir` switch when running bitlbee-skype's `configure`.
 - Generate the SSL pem files:
 
 ----
-cd /usr/local/etc/skyped
-openssl req -new -x509 -days 365 -nodes -config skyped.cnf -out skyped.cert.pem \
+# cd /usr/local/etc/skyped
+# openssl req -new -x509 -days 365 -nodes -config skyped.cnf -out skyped.cert.pem \
 	-keyout skyped.key.pem
 ----
+
+NOTE: Maybe you want to adjust the permissions in the `/usr/local/etc/skyped`
+dir. For example make it readable by just your user.
 
 - Start Skype and `skyped` (the tcp server):
 
 ----
-skype
-skyped
+$ skype
+$ skyped
 ----
 
 NOTE: You should run `skyped` on the same `X11` display, otherwise it won't be
@@ -148,7 +151,7 @@ work, too.
 First run
 
 ----
-vncpasswd ~/.vnc/passwd
+$ vncpasswd ~/.vnc/passwd
 ----
 
 and create a password. You will need it at least once.
@@ -167,13 +170,13 @@ skyped
 Adjust the permissions:
 
 ----
-chmod +x ~/.vnc/xstartup
+$ chmod +x ~/.vnc/xstartup
 ----
 
 Then start the server:
 
 ----
-vncserver
+$ vncserver
 ----
 
 Then connect to it, and set up Skype (username, password, enable auto-login, and
@@ -238,6 +241,9 @@ your VNC server regularly. (How ugly.)
 - Handling skype actions (when the `CHATMESSAGE` has `EMOTED` type)
 
 - Setting your mood text using the `nick` command.
+
+- Running Skype on a machine different to BitlBee is possible, the
+  communication is encrypted.
 
 == What needs to be done (aka. TODO)
 
