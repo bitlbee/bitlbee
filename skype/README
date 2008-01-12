@@ -104,10 +104,21 @@ problems]), but I wanted to prevent a large code duplication from that project.
 In addition it then no longer requires the `dbus-python` package, just
 `pygobject`.)
 
-- Edit `/usr/local/etc/skyped.conf`: adjust `username` and `password`. The
+- Edit `/usr/local/etc/skyped/skyped.conf`: adjust `username` and `password`. The
   `username` should be your Skype login and the `password` can be whatever you
   want, but you will have to specify that one when adding the Skype account to
   BitlBee (see later).
+
+NOTE: Here, and later - `/usr/local/etc` can be different on your installation
+if you used the `--sysconfdir` switch when running bitlbee-skype's `configure`.
+
+- Generate the SSL pem files:
+
+----
+cd /usr/local/etc/skyped
+openssl req -new -x509 -days 365 -nodes -config skyped.cnf -out skyped.cert.pem \
+	-keyout skyped.key.pem
+----
 
 - Start Skype and `skyped` (the tcp server):
 
