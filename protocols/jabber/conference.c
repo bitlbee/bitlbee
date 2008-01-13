@@ -72,17 +72,16 @@ static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_no
 	char *room;
 	
 	room = xt_find_attr( orig, "to" );
-	if( ( bud = jabber_buddy_by_jid( ic, room, 0 ) ) )
-		jabber_chat_free( jabber_chat_by_jid( ic, bud->bare_jid ) );
-	
+	bud = jabber_buddy_by_jid( ic, room, 0 );
 	err = jabber_error_parse( xt_find_node( node->children, "error" ), XMLNS_STANZA_ERROR );
 	if( err )
 	{
-		imcb_error( ic, "Error joining groupchat %s: %s%s%s",
-		            bud->bare_jid, err->code, err->text ? ": " : "",
-		            err->text ? err->text : "" );
+		imcb_error( ic, "Error joining groupchat %s: %s%s%s", room, err->code,
+		            err->text ? ": " : "", err->text ? err->text : "" );
 		jabber_error_free( err );
 	}
+	if( bud )
+		jabber_chat_free( jabber_chat_by_jid( ic, bud->bare_jid ) );
 	
 	return XT_HANDLED;
 }
