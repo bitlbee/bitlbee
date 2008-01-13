@@ -324,7 +324,10 @@ void irc_process( irc_t *irc )
 				conv[IRC_MAX_LINE] = 0;
 				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) == -1 )
 				{
+					/* GLib can do strange things if things are not in the expected charset,
+					   so let's be a little bit paranoid here: */
 					if( irc->status & USTATUS_LOGGED_IN )
+					{
 						irc_usermsg( irc, "Error: Charset mismatch detected. The charset "
 						                  "setting is currently set to %s, so please make "
 						                  "sure your IRC client will send and accept text in "
@@ -332,7 +335,18 @@ void irc_process( irc_t *irc )
 						                  "expect by changing the charset setting. See "
 						                  "`help set charset' for more information. Your "
 						                  "message was ignored.", cs );
-					*conv = 0;
+						*conv = 0;
+					}
+					else
+					{
+						irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost,
+						           "Warning: invalid (non-UTF8) characters received at login time." );
+						
+						strncpy( conv, lines[i], IRC_MAX_LINE );
+						for( temp = conv; *temp; temp ++ )
+							if( *temp & 0x80 )
+								*temp = '?';
+					}
 				}
 				lines[i] = conv;
 			}
