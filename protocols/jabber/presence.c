@@ -165,7 +165,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 
 	if( send_presence )
 	{
-		int is_away;
+		int is_away = 0;
 
 		if( send_presence->away_state && !( *send_presence->away_state->code == 0 ||
 		    strcmp( send_presence->away_state->code, "chat" ) == 0 ) )
