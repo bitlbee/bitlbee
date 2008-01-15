@@ -79,17 +79,12 @@ $ tar xf bitlbee-skype-@VERSION@.tar.gz
 $ cd bitlbee-skype-@VERSION@
 ----
 
-NOTE: Alternatively, if you want to test the latest code, you can use `git
-clone git://vmiklos.hu/bitlbee-skype` to get the code directly from git.
-
 It doesn't matter where do you get it, it'll install the plugin to `/usr/local`
 by default (that's the location where BitlBee searches for plugins by default).
 
 - Compile and install it:
 
 ----
-$ cd bitlbee-skype
-$ make prepare
 $ ./configure
 $ make
 # make install
