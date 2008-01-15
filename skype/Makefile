@@ -48,6 +48,7 @@ doc: HEADER.html Changelog
 HEADER.html: README
 	ln -s README HEADER.txt
 	asciidoc -a toc -a numbered -a sectids HEADER.txt
+	sed -i 's|@VERSION@|$(VERSION)|g' HEADER.html
 	rm HEADER.txt
 
 Changelog: .git/refs/heads/master
