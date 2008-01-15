@@ -30,7 +30,7 @@ not..)
 
 * Skype >= 1.4.0.99. The latest version I've tested is 2.0.0.27.
 * bitlbee >= 1.1.1dev. (This is the latest version I've tested, probably
-  newer versions probably will work, too.)
+  newer versions will work, too.)
 * Skype4Py >= 0.9.28.7. Previous versions won't work due to API changes.
 * Python >= 2.5. Skype4Py does not work with 2.4.
 * pygobject
