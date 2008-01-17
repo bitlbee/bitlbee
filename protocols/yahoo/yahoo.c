@@ -623,10 +623,14 @@ void ext_yahoo_status_changed( int id, const char *who, int stat, const char *ms
 void ext_yahoo_got_im( int id, const char *me, const char *who, const char *msg, long tm, int stat, int utf8 )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
-	char *m = byahoo_strip( msg );
+	char *m;
 	
-	imcb_buddy_msg( ic, (char*) who, (char*) m, 0, 0 );
-	g_free( m );
+	if( msg )
+	{
+		m = byahoo_strip( msg );
+		imcb_buddy_msg( ic, (char*) who, (char*) m, 0, 0 );
+		g_free( m );
+	}
 }
 
 void ext_yahoo_got_file( int id,
