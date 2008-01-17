@@ -67,7 +67,7 @@
 struct im_connection
 {
 	account_t *acc;
-	u_int32_t flags;
+	uint32_t flags;
 	
 	/* each connection then can have its own protocol-specific data */
 	void *proto_data;
@@ -281,8 +281,8 @@ G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, char *handl
 G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message );
 /* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
 /* Call when a handle says something. 'flags' and 'sent_at may be just 0. */
-G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_t flags, time_t sent_at );
-G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags );
+G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, uint32_t flags, time_t sent_at );
+G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags );
 G_MODULE_EXPORT void imcb_clean_handle( struct im_connection *ic, char *handle );
 
 /* Groupchats */
@@ -298,7 +298,7 @@ G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, char *handle );
 /* To remove a handle from a group chat. Reason can be NULL. */
 G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason );
 /* To tell BitlBee 'who' said 'msg' in 'c'. 'flags' and 'sent_at' can be 0. */
-G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at );
+G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, time_t sent_at );
 /* To tell BitlBee 'who' changed the topic of 'c' to 'topic'. */
 G_MODULE_EXPORT void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at );
 G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );

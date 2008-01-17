@@ -196,9 +196,9 @@ static void sighandler( int signal )
 		while( ( pid = waitpid( 0, &st, WNOHANG ) ) > 0 )
 		{
 			if( WIFSIGNALED( st ) )
-				log_message( LOGLVL_INFO, "Client %d terminated normally. (status = %d)", pid, WEXITSTATUS( st ) );
+				log_message( LOGLVL_INFO, "Client %d terminated normally. (status = %d)", (int) pid, WEXITSTATUS( st ) );
 			else if( WIFEXITED( st ) )
-				log_message( LOGLVL_INFO, "Client %d killed by signal %d.", pid, WTERMSIG( st ) );
+				log_message( LOGLVL_INFO, "Client %d killed by signal %d.", (int) pid, WTERMSIG( st ) );
 		}
 	}
 	else if( signal != SIGPIPE )

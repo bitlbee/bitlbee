@@ -51,7 +51,7 @@ static void ipc_master_cmd_client( irc_t *data, char **cmd )
 	
 	if( g_strcasecmp( cmd[0], "CLIENT" ) == 0 )
 		ipc_to_children_str( "OPERMSG :Client connecting (PID=%d): %s@%s (%s)\r\n",
-		                     child ? child->pid : -1, cmd[2], cmd[1], cmd[3] );
+		                     (int) ( child ? child->pid : -1 ), cmd[2], cmd[1], cmd[3] );
 }
 
 static void ipc_master_cmd_die( irc_t *data, char **cmd )
@@ -445,7 +445,7 @@ char *ipc_master_save_state()
 	fprintf( fp, "%d\n", i );
 	
 	for( l = child_list; l; l = l->next )
-		fprintf( fp, "%d %d\n", ((struct bitlbee_child*)l->data)->pid,
+		fprintf( fp, "%d %d\n", (int) ((struct bitlbee_child*)l->data)->pid,
 		                        ((struct bitlbee_child*)l->data)->ipc_fd );
 	
 	if( fclose( fp ) == 0 )
@@ -550,7 +550,7 @@ int ipc_master_load_state()
 	{
 		child = g_new0( struct bitlbee_child, 1 );
 		
-		if( fscanf( fp, "%d %d", &child->pid, &child->ipc_fd ) != 2 )
+		if( fscanf( fp, "%d %d", (int *) &child->pid, &child->ipc_fd ) != 2 )
 		{
 			log_message( LOGLVL_WARNING, "Unexpected end of file: Only processed %d clients.", i );
 			g_free( child );

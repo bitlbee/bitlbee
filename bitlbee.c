@@ -278,7 +278,7 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 			child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
 			child_list = g_slist_append( child_list, child );
 			
-			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", client_pid );
+			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", (int) client_pid );
 			
 			/* Close some things we don't need in the parent process. */
 			close( new_socket );

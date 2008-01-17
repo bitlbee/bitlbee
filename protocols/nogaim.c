@@ -624,7 +624,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	}
 }
 
-void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_t flags, time_t sent_at )
+void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, uint32_t flags, time_t sent_at )
 {
 	irc_t *irc = ic->irc;
 	char *wrapped;
@@ -675,7 +675,7 @@ void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_
 	g_free( wrapped );
 }
 
-void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags )
+void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
 {
 	user_t *u;
 	
@@ -731,7 +731,7 @@ void imcb_chat_free( struct groupchat *c )
 	}
 }
 
-void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at )
+void imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, time_t sent_at )
 {
 	struct im_connection *ic = c->ic;
 	char *wrapped;
