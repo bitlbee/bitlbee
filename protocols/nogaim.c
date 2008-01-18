@@ -691,6 +691,31 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
 	}
 }
 
+struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
+{
+	struct groupchat *c;
+	
+	/* This one just creates the conversation structure, user won't see anything yet */
+	
+	if( ic->groupchats )
+	{
+		for( c = ic->groupchats; c->next; c = c->next );
+		c = c->next = g_new0( struct groupchat, 1 );
+	}
+	else
+		ic->groupchats = c = g_new0( struct groupchat, 1 );
+	
+	c->ic = ic;
+	c->title = g_strdup( handle );
+	c->channel = g_strdup_printf( "&chat_%03d", ic->irc->c_id++ );
+	c->topic = g_strdup_printf( "BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->title );
+	
+	if( set_getbool( &ic->irc->set, "debug" ) )
+		imcb_log( ic, "Creating new conversation: (id=%p,handle=%s)", c, handle );
+	
+	return c;
+}
+
 void imcb_chat_free( struct groupchat *c )
 {
 	struct im_connection *ic = c->ic;
@@ -727,6 +752,7 @@ void imcb_chat_free( struct groupchat *c )
 		g_list_free( c->in_room );
 		g_free( c->channel );
 		g_free( c->title );
+		g_free( c->topic );
 		g_free( c );
 	}
 }
@@ -780,31 +806,6 @@ void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at
 	
 	if( c->joined && u )
 		irc_write( ic->irc, ":%s!%s@%s TOPIC %s :%s", u->nick, u->user, u->host, c->channel, topic );
-}
-
-struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
-{
-	struct groupchat *c;
-	
-	/* This one just creates the conversation structure, user won't see anything yet */
-	
-	if( ic->groupchats )
-	{
-		for( c = ic->groupchats; c->next; c = c->next );
-		c = c->next = g_new0( struct groupchat, 1 );
-	}
-	else
-		ic->groupchats = c = g_new0( struct groupchat, 1 );
-	
-	c->ic = ic;
-	c->title = g_strdup( handle );
-	c->channel = g_strdup_printf( "&chat_%03d", ic->irc->c_id++ );
-	c->topic = g_strdup_printf( "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->channel, c->title );
-	
-	if( set_getbool( &ic->irc->set, "debug" ) )
-		imcb_log( ic, "Creating new conversation: (id=%p,handle=%s)", c, handle );
-	
-	return c;
 }
 
 
