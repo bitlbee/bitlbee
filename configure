@@ -188,7 +188,7 @@ else
 fi
 
 if [ "$events" = "libevent" ]; then
-	if ! [ -e "${libevent}include/event.h" ]; then
+	if ! [ -f "${libevent}include/event.h" ]; then
 		echo
 		echo 'Warning: Could not find event.h, you might have to install it and/or specify'
 		echo 'its location using the --libevent= argument. (Example: If event.h is in'
@@ -323,7 +323,7 @@ fi;
 echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 
 for i in /lib /usr/lib /usr/local/lib; do
-	if [ -e $i/libresolv.a ]; then
+	if [ -f $i/libresolv.a ]; then
 		echo '#define HAVE_RESOLV_A' >> config.h
 		echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
 		break
