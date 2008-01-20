@@ -391,19 +391,26 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		*s = 0;
 		if( ( bud = g_hash_table_lookup( jd->buddies, jid ) ) )
 		{
+			/* Just return the first one for this bare JID. */
+			if( flags & GET_BUDDY_FIRST )
+			{
+				*s = '/';
+				g_free( jid );
+				return bud;
+			}
+			
 			/* Is this one of those no-resource buddies? */
 			if( bud->resource == NULL )
 			{
+				*s = '/';
 				g_free( jid );
 				return NULL;
 			}
-			else
-			{
-				/* See if there's an exact match. */
-				for( ; bud; bud = bud->next )
-					if( g_strcasecmp( bud->resource, s + 1 ) == 0 )
-						break;
-			}
+			
+			/* See if there's an exact match. */
+			for( ; bud; bud = bud->next )
+				if( g_strcasecmp( bud->resource, s + 1 ) == 0 )
+					break;
 		}
 		else
 		{
@@ -412,6 +419,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 			   for this JID, even if it's an unknown buddy. This
 			   is done to handle conferences properly. */
 			none_found = 1;
+			/* TODO(wilmer): Find out what I was thinking when I
+			   wrote this??? And then fix it. This makes me sad... */
 		}
 		
 		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && ( imcb_find_buddy( ic, jid ) || !none_found ) )
@@ -441,6 +450,9 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 			return NULL;
 		else if( ( bud->resource == NULL || bud->next == NULL ) )
 			/* No need for selection if there's only one option. */
+			return bud;
+		else if( flags & GET_BUDDY_FIRST )
+			/* Looks like the caller doesn't care about details. */
 			return bud;
 		
 		best_prio = best_time = bud;
