@@ -785,6 +785,24 @@ void imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, t
 	g_free( wrapped );
 }
 
+void imcb_chat_log( struct groupchat *c, char *format, ... )
+{
+	irc_t *irc = c->ic->irc;
+	va_list params;
+	char *text;
+	user_t *u;
+	
+	va_start( params, format );
+	text = g_strdup_vprintf( format, params );
+	va_end( params );
+	
+	u = user_find( irc, irc->mynick );
+	
+	irc_privmsg( irc, u, "PRIVMSG", c->channel, "System message: ", text );
+	
+	g_free( text );
+}
+
 void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at )
 {
 	struct im_connection *ic = c->ic;

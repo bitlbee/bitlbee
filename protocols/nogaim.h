@@ -299,6 +299,8 @@ G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, char *handle );
 G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason );
 /* To tell BitlBee 'who' said 'msg' in 'c'. 'flags' and 'sent_at' can be 0. */
 G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, time_t sent_at );
+/* System messages specific to a groupchat, so they can be displayed in the right context. */
+G_MODULE_EXPORT void imcb_chat_log( struct groupchat *c, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 /* To tell BitlBee 'who' changed the topic of 'c' to 'topic'. */
 G_MODULE_EXPORT void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at );
 G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
