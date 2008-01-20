@@ -294,18 +294,54 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 {
 	struct xt_node *subject = xt_find_node( node->children, "subject" );
 	struct xt_node *body = xt_find_node( node->children, "body" );
-	struct groupchat *chat;
+	struct groupchat *chat = NULL;
 	char *s;
 	
 	if( bud == NULL )
 	{
+		char *nick;
+		
+		if( body == NULL || body->text_len == 0 )
+			/* Meh. Empty messages aren't very interesting, no matter
+			   how much some servers love to send them. */
+			return;
+		
 		s = xt_find_attr( node, "from" ); /* pkt_message() already NULL-checked this one. */
-		if( strchr( s, '/' ) == NULL )
-			/* This is fine, the groupchat itself isn't in jd->buddies. */
-			imcb_log( ic, "System message from groupchat %s: %s", s, body? body->text : "NULL" );
+		nick = strchr( s, '/' );
+		if( nick )
+		{
+			/* If this message included a resource/nick we don't know,
+			   we might still know the groupchat itself. */
+			*nick = 0;
+			chat = jabber_chat_by_jid( ic, s );
+			*nick = '/';
+			
+			nick ++;
+		}
 		else
-			/* This, however, isn't fine! */
-			imcb_log( ic, "Groupchat message from unknown participant %s: %s", s, body ? body->text : "NULL" );
+		{
+			/* message.c uses the EXACT_JID option, so bud should
+			   always be NULL here for bare JIDs. */
+			chat = jabber_chat_by_jid( ic, s );
+		}
+		
+		if( nick == NULL )
+		{
+			/* This is fine, the groupchat itself isn't in jd->buddies. */
+			if( chat )
+				imcb_chat_log( chat, "From conference server: %s", body->text );
+			else
+				imcb_log( ic, "System message from unknown groupchat %s: %s", s, body->text );
+		}
+		else
+		{
+			/* This can happen too, at least when receiving a backlog when
+			   just joining a channel. */
+			if( chat )
+				imcb_chat_log( chat, "Message from unknown participant %s: %s", nick, body->text );
+			else
+				imcb_log( ic, "Groupchat message from unknown JID %s: %s", s, body->text );
+		}
 		
 		return;
 	}
