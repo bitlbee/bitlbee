@@ -884,7 +884,7 @@ static char *skype_set_display_name( set_t *set, char *value )
 	//struct skype_data *sd = ic->proto_data;
 	char *buf;
 
-	buf = g_strdup_printf("SET PROFILE MOOD_TEXT %s", value);
+	buf = g_strdup_printf("SET PROFILE FULLNAME %s", value);
 	skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
 	return(value);
