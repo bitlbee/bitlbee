@@ -237,7 +237,7 @@ your VNC server regularly. (How ugly.)
 
 - Handling skype actions (when the `CHATMESSAGE` has `EMOTED` type)
 
-- Setting your mood text using the `nick` command.
+- Setting your display name using the `nick` command.
 
 - Running Skype on a machine different to BitlBee is possible, the
   communication is encrypted.
