@@ -1,6 +1,6 @@
 -include config.mak
 
-VERSION = 0.3.0
+VERSION = 0.3.1
 
 skype.so: skype.c config.mak
 	$(CC) $(CFLAGS) -shared -o skype.so skype.c $(LDFLAGS)

@@ -1,5 +1,10 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.3.1         - beautify output when skyped is interrupted using ^C
+              - 'nick skype foo' now really sets display name, not the mood
+                text
+              - documentation fixups
+              - this version should be again as stable as 0.2.6 was
 0.3.0         - authentication support in skyped via ssl
               - ~200 lines of new code, so be careful :)
 	      - upgraders: please read the documentation about how to set up
