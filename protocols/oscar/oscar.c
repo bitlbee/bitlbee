@@ -2272,6 +2272,7 @@ static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)
 	if (info->birthyear || info->birthmonth || info->birthday) {
 		char date[30];
 		struct tm tm;
+		memset(&tm, 0, sizeof(struct tm));
 		tm.tm_mday = (int)info->birthday;
 		tm.tm_mon = (int)info->birthmonth-1;
 		tm.tm_year = (int)info->birthyear%100;

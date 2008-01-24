@@ -89,12 +89,14 @@ time_t get_time(int year, int month, int day, int hour, int min, int sec)
 {
 	struct tm tm;
 
+	memset(&tm, 0, sizeof(struct tm));
 	tm.tm_year = year - 1900;
 	tm.tm_mon = month - 1;
 	tm.tm_mday = day;
 	tm.tm_hour = hour;
 	tm.tm_min = min;
 	tm.tm_sec = sec >= 0 ? sec : time(NULL) % 60;
+	
 	return mktime(&tm);
 }
 
