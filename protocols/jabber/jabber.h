@@ -29,6 +29,8 @@
 #include "xmltree.h"
 #include "bitlbee.h"
 
+extern GSList *jabber_connections;
+
 typedef enum
 {
 	JFLAG_STREAM_STARTED = 1,       /* Set when we detected the beginning of the stream

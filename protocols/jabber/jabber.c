@@ -34,6 +34,8 @@
 #include "md5.h"
 #include "base64.h"
 
+GSList *jabber_connections;
+
 static void jabber_init( account_t *acc )
 {
 	set_t *s;
@@ -69,6 +71,11 @@ static void jabber_login( account_t *acc )
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
 	struct ns_srv_reply *srv = NULL;
 	char *connect_to, *s;
+	
+	/* For now this is needed in the _connected() handlers if using
+	   GLib event handling, to make sure we're not handling events
+	   on dead connections. */
+	jabber_connections = g_slist_prepend( jabber_connections, ic );
 	
 	jd->ic = ic;
 	ic->proto_data = jd;
@@ -262,6 +269,8 @@ static void jabber_logout( struct im_connection *ic )
 	g_free( jd->away_message );
 	g_free( jd->username );
 	g_free( jd );
+	
+	jabber_connections = g_slist_remove( jabber_connections, ic );
 }
 
 static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
