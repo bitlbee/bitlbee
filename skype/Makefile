@@ -2,6 +2,8 @@
 
 VERSION = 0.3.1
 
+AMVERSION = $(shell automake --version|sed 's/.*) //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
+
 skype.so: skype.c config.mak
 	$(CC) $(CFLAGS) -shared -o skype.so skype.c $(LDFLAGS)
 
@@ -18,7 +20,7 @@ install: skype.so skyped.py
 client: client.c
 
 prepare: configure.ac
-	cp /usr/share/automake/install-sh ./
+	cp /usr/share/automake-$(AMVERSION)/install-sh ./
 	cp /usr/share/aclocal/pkg.m4 aclocal.m4
 	autoconf
 
