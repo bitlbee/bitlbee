@@ -555,7 +555,7 @@ static void irc_cmd_completions( irc_t *irc, char **cmd )
 		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS ", commands[i].command );
 	
 	for( h = global.help; h; h = h->next )
-		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS help ", h->string );
+		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS help ", h->title );
 	
 	for( s = irc->set; s; s = s->next )
 		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS set ", s->key );

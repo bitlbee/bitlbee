@@ -123,10 +123,13 @@ int main( int argc, char *argv[], char **envp )
 	
 	if( !getuid() || !geteuid() )
 		log_message( LOGLVL_WARNING, "BitlBee is running with root privileges. Why?" );
-	if( help_init( &(global.help), global.helpfile ) == NULL )
+	if( help_init( &global.help, global.helpfile ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
 	b_main_run();
+	
+	/* Mainly good for restarting, to make sure we close the help.txt fd. */
+	help_free( &global.help );
 	
 	if( global.restart )
 	{

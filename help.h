@@ -36,13 +36,14 @@ typedef struct help
 {
 	int fd;
 	time_t mtime;
-	char *string;
+	char *title;
 	help_off_t offset;
 	int length;
 	struct help *next;
 } help_t;
 
 G_GNUC_MALLOC help_t *help_init( help_t **help, const char *helpfile );
-char *help_get( help_t **help, char *string );
+void help_free( help_t **help );
+char *help_get( help_t **help, char *title );
 
 #endif

@@ -188,7 +188,6 @@ void irc_free(irc_t * irc)
 {
 	account_t *account;
 	user_t *user, *usertmp;
-	help_t *helpnode, *helpnodetmp;
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
@@ -265,16 +264,6 @@ void irc_free(irc_t * irc)
 	g_hash_table_foreach_remove(irc->watches, irc_free_hashkey, NULL);
 	g_hash_table_destroy(irc->watches);
 	
-	if (irc->help != NULL) {
-		helpnode = irc->help;
-		while (helpnode != NULL) {
-			g_free(helpnode->string);
-			
-			helpnodetmp = helpnode;
-			helpnode = helpnode->next;
-			g_free(helpnodetmp);
-		}
-	}
 	g_free(irc);
 	
 	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )
