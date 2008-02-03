@@ -163,12 +163,12 @@ void otr_load(irc_t *irc)
 	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, irc->nick);
 	e = otrl_privkey_read(irc->otr_us, s);
 	if(e && e!=ENOENT) {
-		log_message(LOGLVL_ERROR, "%s: %s", s, strerror(e));
+		log_message(LOGLVL_ERROR, "otr load: %s: %s", s, strerror(e));
 	}
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->nick);
 	e = otrl_privkey_read_fingerprints(irc->otr_us, s, NULL, NULL);
 	if(e && e!=ENOENT) {
-		log_message(LOGLVL_ERROR, "%s: %s", s, strerror(e));
+		log_message(LOGLVL_ERROR, "otr load: %s: %s", s, strerror(e));
 	}
 	
 	/* check for otr keys on all accounts */
@@ -180,11 +180,15 @@ void otr_load(irc_t *irc)
 void otr_save(irc_t *irc)
 {
 	char s[512];
+	gcry_error_t e;
 
 	log_message(LOGLVL_DEBUG, "otr_save '%s'", irc->nick);
 
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->nick);
-	otrl_privkey_write_fingerprints(irc->otr_us, s);
+	e = otrl_privkey_write_fingerprints(irc->otr_us, s);
+	if(e) {
+		log_message(LOGLVL_ERROR, "otr save: %s: %s", s, strerror(e));
+	}
 }
 
 void otr_remove(const char *nick)
@@ -536,6 +540,7 @@ void cmd_otr_auth(irc_t *irc, char **args)
 	ctx = otrl_context_find(irc->otr_us, u->handle,
 		u->ic->acc->user, u->ic->acc->prpl->name, 1, NULL, NULL, NULL);
 	if(!ctx) {
+		/* huh? out of memory or what? */
 		return;
 	}
 
@@ -685,7 +690,10 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	if(!u) return;
 	context = otrl_context_find(us, handle,
 		ic->acc->user, ic->acc->prpl->name, 1, NULL, NULL, NULL);
-	if(!context) return;
+	if(!context) {
+		/* huh? out of memory or what? */
+		return;
+	}
 	nextMsg = context->smstate->nextExpected;
 
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1);
@@ -914,7 +922,7 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 	g_mutex_unlock(kg->mutex);
 	if(kg->done) {
 		if(kg->result) {
-			irc_usermsg(kg->irc, "otr keygen failed: libgcrypt error"); /* TODO: diagnostics */
+			irc_usermsg(kg->irc, "otr keygen: %s", strerror(kg->result));
 		} else {
 			irc_usermsg(kg->irc, "otr keygen for %s/%s complete", kg->handle, kg->protocol);
 		}
