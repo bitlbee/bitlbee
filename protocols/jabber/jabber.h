@@ -165,6 +165,7 @@ struct jabber_chat
 #define XMLNS_DISCOVER     "http://jabber.org/protocol/disco#info"  /* 0030 */
 #define XMLNS_MUC          "http://jabber.org/protocol/muc"     /* XEP-0045 */
 #define XMLNS_MUC_USER     "http://jabber.org/protocol/muc#user"/* XEP-0045 */
+#define XMLNS_CAPS         "http://jabber.org/protocol/caps"    /* XEP-0115 */
 
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );

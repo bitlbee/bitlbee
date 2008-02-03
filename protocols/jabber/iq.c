@@ -91,7 +91,8 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		}
 		else if( strcmp( s, XMLNS_DISCOVER ) == 0 )
 		{
-			const char *features[] = { XMLNS_VERSION,
+			const char *features[] = { XMLNS_DISCOVER,
+			                           XMLNS_VERSION,
 			                           XMLNS_TIME,
 			                           XMLNS_CHATSTATES,
 			                           XMLNS_MUC,
