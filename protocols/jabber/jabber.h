@@ -48,15 +48,21 @@ typedef enum
 
 typedef enum
 {
-	JBFLAG_PROBED_XEP85 = 1,	/* Set this when we sent our probe packet to make
+	JBFLAG_PROBED_XEP85 = 1,        /* Set this when we sent our probe packet to make
 	                                   sure it gets sent only once. */
-	JBFLAG_DOES_XEP85 = 2,		/* Set this when the resource seems to support
+	JBFLAG_DOES_XEP85 = 2,          /* Set this when the resource seems to support
 	                                   XEP85 (typing notification shite). */
-	JBFLAG_IS_CHATROOM = 4,		/* It's convenient to use this JID thingy for
+	JBFLAG_IS_CHATROOM = 4,         /* It's convenient to use this JID thingy for
 	                                   groupchat state info too. */
-	JBFLAG_IS_ANONYMOUS = 8,	/* For anonymous chatrooms, when we don't have
+	JBFLAG_IS_ANONYMOUS = 8,        /* For anonymous chatrooms, when we don't have
 	                                   have a real JID. */
 } jabber_buddy_flags_t;
+
+typedef enum
+{
+	JCFLAG_MESSAGE_SENT = 1,        /* Set this after sending the first message, so
+	                                   we can detect echoes/backlogs. */
+} jabber_chat_flags_t;
 
 struct jabber_data
 {

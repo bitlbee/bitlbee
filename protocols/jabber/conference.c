@@ -122,6 +122,8 @@ int jabber_chat_msg( struct groupchat *c, char *message, int flags )
 	struct jabber_chat *jc = c->data;
 	struct xt_node *node;
 	
+	jc->flags |= JCFLAG_MESSAGE_SENT;
+	
 	node = xt_new_node( "body", message, NULL );
 	node = jabber_make_packet( "message", "groupchat", jc->name, node );
 	
@@ -294,10 +296,11 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 {
 	struct xt_node *subject = xt_find_node( node->children, "subject" );
 	struct xt_node *body = xt_find_node( node->children, "body" );
-	struct groupchat *chat = NULL;
+	struct groupchat *chat = bud ? jabber_chat_by_jid( ic, bud->bare_jid ) : NULL;
+	struct jabber_chat *jc = chat ? chat->data : NULL;
 	char *s;
 	
-	if( bud == NULL )
+	if( bud == NULL || ( jc && ~jc->flags & JCFLAG_MESSAGE_SENT && bud == jc->me ) )
 	{
 		char *nick;
 		
@@ -345,7 +348,7 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 		
 		return;
 	}
-	else if( ( chat = jabber_chat_by_jid( ic, bud->bare_jid ) ) == NULL )
+	else if( chat == NULL )
 	{
 		/* How could this happen?? We could do kill( self, 11 )
 		   now or just wait for the OS to do it. :-) */
