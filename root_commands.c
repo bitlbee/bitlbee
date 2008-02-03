@@ -28,6 +28,7 @@
 #include "crypting.h"
 #include "bitlbee.h"
 #include "help.h"
+#include "otr.h"
 
 #include <string.h>
 
@@ -84,19 +85,27 @@ void root_command( irc_t *irc, char *cmd[] )
 	if( !cmd[0] )
 		return;
 	
+	if(!g_mutex_trylock(irc->otr_mutex)) {
+		irc_usermsg(irc, "keygen in progress, bitlbee comatose - please wait");
+		return;
+	}
+	
 	for( i = 0; commands[i].command; i++ )
 		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
 		{
 			if( !cmd[commands[i].required_parameters] )
 			{
 				irc_usermsg( irc, "Not enough parameters given (need %d)", commands[i].required_parameters );
+				g_mutex_unlock(irc->otr_mutex);
 				return;
 			}
 			commands[i].execute( irc, cmd );
+			g_mutex_unlock(irc->otr_mutex);
 			return;
 		}
 	
 	irc_usermsg( irc, "Unknown command: %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[0] );
+	g_mutex_unlock(irc->otr_mutex);
 }
 
 static void cmd_help( irc_t *irc, char **cmd )
@@ -240,6 +249,8 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 		
 		irc_usermsg( irc, "Account successfully added" );
+		
+		otr_check_for_key(a);
 	}
 	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
 	{
@@ -990,5 +1001,6 @@ const command_t commands[] = {
 	{ "nick",           1, cmd_nick,           0 },
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "join_chat",      2, cmd_join_chat,      0 },
+	{ "otr",            1, cmd_otr,            0 },	
 	{ NULL }
 };

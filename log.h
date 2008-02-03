@@ -43,17 +43,17 @@ typedef enum {
 } logoutput_t;
 
 typedef struct log_t {
-	void (*error)(int level, char *logmessage);
-	void (*warning)(int level, char *logmessage); 
-	void (*informational)(int level, char *logmessage);
+	void (*error)(int level, const char *logmessage);
+	void (*warning)(int level, const char *logmessage); 
+	void (*informational)(int level, const char *logmessage);
 #ifdef DEBUG
-	void (*debug)(int level, char *logmessage);
+	void (*debug)(int level, const char *logmessage);
 #endif
 } log_t;
 
 void log_init(void);
 void log_link(int level, int output);
-void log_message(int level, char *message, ...) G_GNUC_PRINTF( 2, 3 );
-void log_error(char *functionname);
+void log_message(int level, const char *message, ...) G_GNUC_PRINTF( 2, 3 );
+void log_error(const char *functionname);
 
 #endif

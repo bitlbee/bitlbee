@@ -29,6 +29,7 @@ debug=0
 strip=1
 gcov=0
 plugins=1
+otr=auto
 
 events=glib
 ldap=0
@@ -69,6 +70,7 @@ Option		Description				Default
 --strip=0/1	Disable/enable binary stripping		$strip
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
 --plugins=0/1	Disable/enable plugins support		$plugins
+--otr=0/1/auto	Disable/enable OTR encryption support	$otr
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
@@ -173,8 +175,8 @@ fi
 if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG glib-2.0; then
 	if $PKG_CONFIG glib-2.0 --atleast-version=$GLIB_MIN_VERSION; then
 		cat<<EOF>>Makefile.settings
-EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0`
-CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0`
+EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0 gthread-2.0`
+CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0 gthread-2.0`
 EOF
 	else
 		echo
@@ -384,6 +386,21 @@ else
 	echo '#define WITH_PLUGINS' >> config.h
 fi
 
+if [ "$otr" = "auto" ]; then
+	for i in /lib /usr/lib /usr/local/lib; do
+		if [ -f $i/libotr.a ]; then
+			otr=1
+			break
+		fi
+	done
+fi
+if [ "$otr" = 0 ]; then
+	echo '#undef WITH_OTR' >> config.h
+else
+	echo '#define WITH_OTR' >> config.h
+	echo "EFLAGS+=-lotr" >> Makefile.settings
+fi
+
 echo
 if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; then
 	nick=`bzr nick`
@@ -501,6 +518,12 @@ if [ "$strip" = "1" ]; then
 	echo '  Binary stripping enabled.'
 else
 	echo '  Binary stripping disabled.'
+fi
+
+if [ "$otr" = "1" ]; then
+	echo '  Off-the-Record (OTR) Messaging enabled.'
+else
+	echo '  Off-the-Record (OTR) Messaging disabled.'
 fi
 
 echo '  Using event handler: '$events

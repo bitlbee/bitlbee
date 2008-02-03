@@ -26,6 +26,8 @@
 #ifndef _IRC_H
 #define _IRC_H
 
+#include "otr.h"
+
 #define IRC_MAX_LINE 512
 #define IRC_MAX_ARGS 8
 
@@ -94,6 +96,9 @@ typedef struct irc
 	gint r_watch_source_id;
 	gint w_watch_source_id;
 	gint ping_source_id;
+	
+	OtrlUserState otr_us;
+	GMutex *otr_mutex;      /* for locking otr during keygen */
 } irc_t;
 
 #include "user.h"

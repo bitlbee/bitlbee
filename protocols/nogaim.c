@@ -629,9 +629,15 @@ void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, uint32_t
 	irc_t *irc = ic->irc;
 	char *wrapped;
 	user_t *u;
-	
+
+	/* pass the message through OTR */
+	msg = otr_handle_message(ic, handle, msg);
+	if(!msg) {
+		/* this was an internal OTR protocol message */
+		return;
+	}
+
 	u = user_findhandle( ic, handle );
-	
 	if( !u )
 	{
 		char *h = set_getstr( &irc->set, "handle_unknown" );
@@ -641,6 +647,7 @@ void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, uint32_t
 			if( set_getbool( &irc->set, "debug" ) )
 				imcb_log( ic, "Ignoring message from unknown handle %s", handle );
 			
+			g_free(msg);
 			return;
 		}
 		else if( g_strncasecmp( h, "add", 3 ) == 0 )
@@ -673,6 +680,7 @@ void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, uint32_t
 	wrapped = word_wrap( msg, 425 );
 	irc_msgfrom( irc, u->nick, wrapped );
 	g_free( wrapped );
+	g_free( msg );
 }
 
 void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
@@ -990,10 +998,11 @@ int imc_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags 
 		buf = escape_html( msg );
 		msg = buf;
 	}
+
+	/* if compiled without otr support, this just calls the prpl buddy_msg */
+	st = otr_send_message(ic, handle, msg, flags);
 	
-	st = ic->acc->prpl->buddy_msg( ic, handle, msg, flags );
-	g_free( buf );
-	
+	g_free(buf);
 	return st;
 }
 

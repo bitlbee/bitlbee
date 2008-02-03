@@ -125,6 +125,9 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
 	
 	conf_loaddefaults( irc );
+
+	irc->otr_us = otrl_userstate_create();
+	irc->otr_mutex = g_mutex_new();
 	
 	return( irc );
 }
@@ -275,6 +278,10 @@ void irc_free(irc_t * irc)
 			g_free(helpnodetmp);
 		}
 	}
+	
+	otrl_userstate_free(irc->otr_us);
+	g_mutex_free(irc->otr_mutex);
+	
 	g_free(irc);
 	
 	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )

@@ -132,6 +132,7 @@ extern char *CONF_FILE;
 #include "sock.h"
 #include "misc.h"
 #include "proxy.h"
+#include "otr.h"
 
 typedef struct global {
 	/* In forked mode, child processes store the fd of the IPC socket here. */
@@ -142,6 +143,7 @@ typedef struct global {
 	GList *storage; /* The first backend in the list will be used for saving */
 	char *helpfile;
 	int restart;
+	OtrlMessageAppOps otr_ops;   /* collects interface functions required by OTR */
 } global_t;
 
 int bitlbee_daemon_init( void );

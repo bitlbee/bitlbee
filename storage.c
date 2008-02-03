@@ -28,6 +28,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "crypting.h"
+#include "otr.h"
 
 extern storage_t storage_text;
 extern storage_t storage_xml;
@@ -114,11 +115,13 @@ storage_status_t storage_load (const char *nick, const char *password, irc_t * i
 		status = st->load(nick, password, irc);
 		if (status == STORAGE_OK) {
 			irc_setpass(irc, password);
+			otr_load(irc);		/* load our OTR userstate */
 			return status;
 		}
 		
-		if (status != STORAGE_NO_SUCH_USER) 
+		if (status != STORAGE_NO_SUCH_USER) {
 			return status;
+		}
 	}
 	
 	return STORAGE_NO_SUCH_USER;
@@ -126,7 +129,11 @@ storage_status_t storage_load (const char *nick, const char *password, irc_t * i
 
 storage_status_t storage_save (irc_t *irc, int overwrite)
 {
-	return ((storage_t *)global.storage->data)->save(irc, overwrite);
+	storage_status_t st;
+	
+	otr_save(irc);
+	st = ((storage_t *)global.storage->data)->save(irc, overwrite);
+	return st;
 }
 
 storage_status_t storage_remove (const char *nick, const char *password)
@@ -146,6 +153,9 @@ storage_status_t storage_remove (const char *nick, const char *password)
 			status != STORAGE_OK)
 			ret = status;
 	}
+	if (ret == STORAGE_OK) {
+		otr_remove(nick);
+	}
 	
 	return ret;
 }
@@ -156,12 +166,14 @@ storage_status_t storage_rename (const char *onick, const char *nnick, const cha
 	GList *gl = global.storage;
 	storage_t *primary_storage = gl->data;
 	irc_t *irc;
-
+	
 	/* First, try to rename in the current write backend, assuming onick 
 	 * is stored there */
 	status = primary_storage->rename(onick, nnick, password);
-	if (status != STORAGE_NO_SUCH_USER)
+	if (status != STORAGE_NO_SUCH_USER) {
+		otr_rename(onick, nnick);
 		return status;
+	}
 
 	/* Try to load from a migration backend and save to the current backend. 
 	 * Explicitly remove the account from the migration backend as otherwise 
@@ -185,6 +197,7 @@ storage_status_t storage_rename (const char *onick, const char *nnick, const cha
 	irc_free(irc);
 
 	storage_remove(onick, password);
+	otr_rename(onick, nnick);
 
 	return STORAGE_OK;
 }

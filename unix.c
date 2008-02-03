@@ -26,6 +26,7 @@
 #include "bitlbee.h"
 #include "commands.h"
 #include "crypting.h"
+#include "otr.h"
 #include "protocols/nogaim.h"
 #include "help.h"
 #include "ipc.h"
@@ -53,6 +54,7 @@ int main( int argc, char *argv[], char **envp )
 	
 	b_main_init();
 	nogaim_init();
+	otr_init();
 	
 	srand( time( NULL ) ^ getpid() );
 	global.helpfile = g_strdup( HELP_FILE );
