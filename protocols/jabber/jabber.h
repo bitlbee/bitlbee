@@ -94,6 +94,7 @@ typedef xt_status (*jabber_cache_event) ( struct im_connection *ic, struct xt_no
 
 struct jabber_cache_entry
 {
+	time_t saved_at;
 	struct xt_node *node;
 	jabber_cache_event func;
 };
@@ -139,6 +140,10 @@ struct jabber_chat
    other BitlBee users. :-) */
 #define JABBER_PACKET_ID "BeeP"
 #define JABBER_CACHED_ID "BeeC"
+
+/* The number of seconds to keep cached packets before garbage collecting
+   them. This gc is done on every keepalive (every minute). */
+#define JABBER_CACHE_MAX_AGE 600
 
 /* RFC 392[01] stuff */
 #define XMLNS_TLS          "urn:ietf:params:xml:ns:xmpp-tls"
