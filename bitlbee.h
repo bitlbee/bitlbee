@@ -98,6 +98,12 @@
 #define F_OK 0
 #endif
 
+#ifndef G_GNUC_MALLOC
+/* Doesn't exist in GLib <=2.4 while everything else in BitlBee should
+   work with it, so let's fake this one. */
+#define G_GNUC_MALLOC
+#endif
+
 #define _( x ) x
 
 #define ROOT_NICK "root"
