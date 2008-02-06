@@ -42,10 +42,9 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply);
 
 void op_log_message(void *opdata, const char *message);
 
-/* TODO: int op_max_message_size(void *opdata, ConnContext *context); */
+int op_max_message_size(void *opdata, ConnContext *context);
 
-/* TODO: const char *op_account_name(void *opdata, const char *account,
-	const char *protocol); */
+const char *op_account_name(void *opdata, const char *account, const char *protocol);
 
 
 /** otr sub-command handlers: **/
@@ -131,8 +130,8 @@ void otr_init(void)
 	global.otr_ops.gone_insecure = &op_gone_insecure;
 	global.otr_ops.still_secure = &op_still_secure;
 	global.otr_ops.log_message = &op_log_message;
-	global.otr_ops.max_message_size = NULL;
-	global.otr_ops.account_name = NULL;
+	global.otr_ops.max_message_size = &op_max_message_size;
+	global.otr_ops.account_name = &op_account_name;
 	global.otr_ops.account_name_free = NULL;
 }
 
@@ -220,13 +219,12 @@ void otr_rename(const char *onick, const char *nnick)
 void otr_check_for_key(account_t *a)
 {
 	irc_t *irc = a->irc;
-	char buf[45];
-	char *fp;
+	OtrlPrivKey *k;
 	
-	fp = otrl_privkey_fingerprint(irc->otr_us, buf, a->user, a->prpl->name);
-	if(fp) {
-		irc_usermsg(irc, "otr: %s/%s ready with f'print %s",
-			a->user, a->prpl->name, fp);
+	k = otrl_privkey_find(irc->otr_us, a->user, a->prpl->name);
+	if(k) {
+		irc_usermsg(irc, "otr: %s/%s ready",
+			a->user, a->prpl->name);
 	} else {
 		otr_keygen(irc, a->user, a->prpl->name);
 	}
@@ -241,8 +239,8 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	
     if(!g_mutex_trylock(ic->irc->otr_mutex)) {
     	/* TODO: queue msgs received during keygen for later */
-		irc_usermsg(ic->irc, "msg from %s/%s during keygen - dropped",
-			handle, ic->acc->prpl->name);
+		irc_usermsg(ic->irc, "msg from %s during keygen - dropped",
+			peernick(ic->irc, handle, ic->acc->prpl->name));
 		return NULL;
 	}
 
@@ -289,8 +287,8 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
     ConnContext *ctx = NULL;
     
     if(!g_mutex_trylock(ic->irc->otr_mutex)) {
-    	irc_usermsg(ic->irc, "msg to %s/%s during keygen - not sent",
-    		handle, ic->acc->prpl->name);
+    	irc_usermsg(ic->irc, "msg to %s during keygen - not sent",
+    		peernick(ic->irc, handle, ic->acc->prpl->name));
     	return 1;
     }
     
@@ -486,6 +484,27 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 void op_log_message(void *opdata, const char *message)
 {
 	log_message(LOGLVL_INFO, "%s", message);
+}
+
+int op_max_message_size(void *opdata, ConnContext *context)
+{
+	/* TODO: make max_message_size a property of the prpl.
+	         the values here are taken from the libotr UPGRADING file */
+	if(!strcmp(context->protocol, "msn"))
+		return 1409;
+	if(!strcmp(context->protocol, "yahoo"))
+		return 832;
+	if(!strcmp(context->protocol, "oscar"))
+		return 2343;
+}
+
+const char *op_account_name(void *opdata, const char *account, const char *protocol)
+{
+	struct im_connection *ic = (struct im_connection *)opdata;
+
+	log_message(LOGLVL_DEBUG, "op_account_name '%s' '%s'", account, protocol);
+	
+	return peernick(ic->irc, account, protocol);
 }
 
 
@@ -946,6 +965,7 @@ void no_keygen(gpointer w, void *data)
 {
 	account_t *acc = (account_t *)data;
 	
+	/* TODO: remember that we didn't want a key? */
 	irc_usermsg(acc->irc, "proceeding without key, otr inoperable on %s/%s",
 		acc->user, acc->prpl->name);
 }
