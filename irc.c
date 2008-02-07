@@ -73,7 +73,7 @@ irc_t *irc_new( int fd )
 		char buf[NI_MAXHOST+1];
 
 		if( getnameinfo( (struct sockaddr *) &sock, socklen, buf,
-		                 NI_MAXHOST, NULL, -1, 0 ) == 0 )
+		                 NI_MAXHOST, NULL, 0, 0 ) == 0 )
 		{
 			irc->myhost = g_strdup( ipv6_unwrap( buf ) );
 		}
@@ -84,7 +84,7 @@ irc_t *irc_new( int fd )
 		char buf[NI_MAXHOST+1];
 
 		if( getnameinfo( (struct sockaddr *)&sock, socklen, buf,
-		                 NI_MAXHOST, NULL, -1, 0 ) == 0 )
+		                 NI_MAXHOST, NULL, 0, 0 ) == 0 )
 		{
 			irc->host = g_strdup( ipv6_unwrap( buf ) );
 		}
