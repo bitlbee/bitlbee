@@ -142,6 +142,7 @@ void strip_html( char *in )
 	char *out = g_malloc( strlen( in ) + 1 );
 	char *s = out, *cs;
 	int i, matched;
+	int taglen;
 	
 	memset( out, 0, strlen( in ) + 1 );
 	
@@ -158,9 +159,18 @@ void strip_html( char *in )
 			while( *in && *in != '>' )
 				in ++;
 			
+			taglen = in-cs-1;   /* not <0 because the above loop runs at least once */
 			if( *in )
 			{
-				if( g_strncasecmp( cs+1, "br", 2) == 0 )
+				if( g_strncasecmp( cs+1, "b", taglen) == 0 )
+					*(s++) = '\x02';
+				else if( g_strncasecmp( cs+1, "/b", taglen) == 0 )
+					*(s++) = '\x02';
+				else if( g_strncasecmp( cs+1, "i", taglen) == 0 )
+					*(s++) = '\x1f';
+				else if( g_strncasecmp( cs+1, "/i", taglen) == 0 )
+					*(s++) = '\x1f';
+				else if( g_strncasecmp( cs+1, "br", 2) == 0 )
 					*(s++) = '\n';
 				in ++;
 			}

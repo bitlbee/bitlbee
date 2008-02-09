@@ -208,26 +208,145 @@ char *set_eval_to_char( set_t *set, char *value )
 	return s;
 }
 
-char *set_eval_ops( set_t *set, char *value )
+char *set_eval_op_root( set_t *set, char *value )
 {
 	irc_t *irc = set->data;
+	char *ret = set_eval_bool(set, value);
+	int b = bool2int(ret);
 	
-	if( g_strcasecmp( value, "user" ) == 0 )
-		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-		                                              irc->channel, "+o-o", irc->nick, irc->mynick );
-	else if( g_strcasecmp( value, "root" ) == 0 )
-		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-		                                              irc->channel, "-o+o", irc->nick, irc->mynick );
-	else if( g_strcasecmp( value, "both" ) == 0 )
-		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-		                                              irc->channel, "+oo", irc->nick, irc->mynick );
-	else if( g_strcasecmp( value, "none" ) == 0 )
-		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-		                                              irc->channel, "-oo", irc->nick, irc->mynick );
+	irc_write( irc, ":%s!%s@%s MODE %s %s %s", irc->mynick, irc->mynick, irc->myhost,
+	                                           irc->channel, b?"+o":"-o", irc->mynick );
+	return ret;
+}
+
+char *set_eval_op_user( set_t *set, char *value )
+{
+	irc_t *irc = set->data;
+	char *ret = set_eval_bool(set, value);
+	int b = bool2int(ret);
+	
+	irc_write( irc, ":%s!%s@%s MODE %s %s %s", irc->mynick, irc->mynick, irc->myhost,
+	                                           irc->channel, b?"+o":"-o", irc->nick );
+	return ret;
+}
+
+/* generalized version of set_eval_op/voice_buddies */
+char *set_eval_mode_buddies( set_t *set, char *value, char modeflag )
+{
+	irc_t *irc = set->data;
+	char op[64], deop[64];
+	int nop=0, ndeop=0;
+	user_t *u;
+	int mode;
+	
+	if(!strcmp(value, "false"))
+		mode=0;
+	else if(!strcmp(value, "encrypted"))
+		mode=1;
+	else if(!strcmp(value, "trusted"))
+		mode=2;
+	else if(!strcmp(value, "notaway"))
+		mode=3;
 	else
 		return NULL;
 	
+	/* sorry for calling them op/deop - too lazy for search+replace :P */
+	op[0]='\0';
+	deop[0]='\0';
+	for(u=irc->users; u; u=u->next) {
+		/* we're only concerned with online buddies */
+		if(!u->ic || !u->online)
+			continue;
+
+		/* just in case... */
+		if(strlen(u->nick) >= 64)
+			continue;
+		
+		/* dump out ops/deops when the corresponding name list fills up */
+		if(strlen(op)+strlen(u->nick)+2 > 64) {
+			char *flags = g_strnfill(nop, modeflag);
+			irc_write( irc, ":%s!%s@%s MODE %s +%s%s", irc->mynick, irc->mynick, irc->myhost,
+		                                               irc->channel, flags, op );
+		    op[0]='\0';
+		    g_free(flags);
+		}
+		if(strlen(deop)+strlen(u->nick)+2 > 64) {
+			char *flags = g_strnfill(ndeop, modeflag);
+			irc_write( irc, ":%s!%s@%s MODE %s -%s%s", irc->mynick, irc->mynick, irc->myhost,
+		                                               irc->channel, flags, deop );
+		    deop[0]='\0';
+		    g_free(flags);
+		}
+		
+		switch(mode) {
+		/* "false" */
+		case 0:
+			g_strlcat(deop, " ", 64);
+			g_strlcat(deop, u->nick, 64);
+			ndeop++;
+			break;
+		/* "encrypted" */
+		case 1:
+			if(u->encrypted) {
+				g_strlcat(op, " ", 64);
+				g_strlcat(op, u->nick, 64);
+				nop++;
+			} else {
+				g_strlcat(deop, " ", 64);
+				g_strlcat(deop, u->nick, 64);
+				ndeop++;
+			}
+			break;
+		/* "trusted" */
+		case 2:
+			if(u->encrypted > 1) {
+				g_strlcat(op, " ", 64);
+				g_strlcat(op, u->nick, 64);
+				nop++;
+			} else {
+				g_strlcat(deop, " ", 64);
+				g_strlcat(deop, u->nick, 64);
+				ndeop++;
+			}
+			break;
+		/* "notaway" */
+		case 3:
+			if(u->away) {
+				g_strlcat(deop, " ", 64);
+				g_strlcat(deop, u->nick, 64);
+				ndeop++;
+			} else {
+				g_strlcat(op, " ", 64);
+				g_strlcat(op, u->nick, 64);
+				nop++;
+			}
+		}
+	}
+	/* dump anything left in op/deop lists */
+	if(*op) {
+		char *flags = g_strnfill(nop, modeflag);
+		irc_write( irc, ":%s!%s@%s MODE %s +%s%s", irc->mynick, irc->mynick, irc->myhost,
+		                                               irc->channel, flags, op );
+		g_free(flags);
+	}
+	if(*deop) {
+		char *flags = g_strnfill(ndeop, modeflag);
+		irc_write( irc, ":%s!%s@%s MODE %s -%s%s", irc->mynick, irc->mynick, irc->myhost,
+	                                               irc->channel, flags, deop );
+		g_free(flags);
+	}
+	
 	return value;
+}
+
+char *set_eval_op_buddies( set_t *set, char *value )
+{
+	return set_eval_mode_buddies(set, value, 'o');
+}
+
+char *set_eval_voice_buddies( set_t *set, char *value )
+{
+	return set_eval_mode_buddies(set, value, 'v');
 }
 
 char *set_eval_charset( set_t *set, char *value )

@@ -29,7 +29,7 @@
 #include "otr.h"
 
 #define IRC_MAX_LINE 512
-#define IRC_MAX_ARGS 8
+#define IRC_MAX_ARGS 16
 
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"

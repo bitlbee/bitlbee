@@ -2602,6 +2602,7 @@ void oscar_initmodule()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
 	ret->name = "oscar";
+    ret->mms = 2343;       /* this guess taken from libotr UPGRADING file */
 	ret->away_states = oscar_away_states;
 	ret->init = oscar_init;
 	ret->login = oscar_login;

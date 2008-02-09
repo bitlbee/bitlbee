@@ -101,8 +101,7 @@ irc_t *irc_new( int fd )
 	irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost, "BitlBee-IRCd initialized, please go on" );
 
 	irc_connection_list = g_slist_append( irc_connection_list, irc );
-	
-	set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
+
 	set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
 	set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
 	set_add( &irc->set, "auto_reconnect_delay", "300", set_eval_int, irc );
@@ -114,7 +113,9 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
 	set_add( &irc->set, "handle_unknown", "root", NULL, irc );
 	set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
-	set_add( &irc->set, "ops", "both", set_eval_ops, irc );
+	set_add( &irc->set, "op_buddies", "false", set_eval_op_buddies, irc );
+	set_add( &irc->set, "op_root", "true", set_eval_op_root, irc );
+	set_add( &irc->set, "op_user", "true", set_eval_op_user, irc );
 	set_add( &irc->set, "password", NULL, passchange, irc );
 	set_add( &irc->set, "private", "true", set_eval_bool, irc );
 	set_add( &irc->set, "query_order", "lifo", NULL, irc );
@@ -123,6 +124,7 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "strip_html", "true", NULL, irc );
 	set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
 	set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
+	set_add( &irc->set, "voice_buddies", "notaway",  set_eval_voice_buddies, irc );
 	
 	conf_loaddefaults( irc );
 
@@ -642,7 +644,8 @@ void irc_names( irc_t *irc, char *channel )
 	user_t *u;
 	char namelist[385] = "";
 	struct groupchat *c = NULL;
-	char *ops = set_getstr( &irc->set, "ops" );
+	char *oo = set_getstr(&irc->set, "op_buddies");
+	char *vo = set_getstr(&irc->set, "voice_buddies");
 	
 	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
@@ -657,10 +660,13 @@ void irc_names( irc_t *irc, char *channel )
 				*namelist = 0;
 			}
 			
-			if( u->ic && !u->away && set_getbool( &irc->set, "away_devoice" ) )
+			if( u->ic && !u->away && !strcmp(vo, "notaway") )
 				strcat( namelist, "+" );
-			else if( ( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) == 0 ) ) ||
-			         ( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) == 0 ) ) )
+			else if( ( strcmp( u->nick, irc->mynick ) == 0 && set_getbool(&irc->set, "op_root") ) ||
+			         ( strcmp( u->nick, irc->nick ) == 0 && set_getbool(&irc->set, "op_user") ) ||
+			         ( !u->away && !strcmp(oo, "notaway") ) ||
+			         ( u->encrypted>1 && !strcmp(oo, "trusted") ) ||
+			         ( u->encrypted && !strcmp(oo, "encrypted") ) )
 				strcat( namelist, "@" );
 			
 			strcat( namelist, u->nick );
@@ -673,9 +679,10 @@ void irc_names( irc_t *irc, char *channel )
 		
 		/* root and the user aren't in the channel userlist but should
 		   show up in /NAMES, so list them first: */
-		sprintf( namelist, "%s%s %s%s ", strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) ? "@" : "", irc->mynick,
-		                                 strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) ? "@" : "", irc->nick );
+		sprintf( namelist, "%s%s %s%s ", set_getbool(&irc->set, "op_root") ? "@" : "", irc->mynick,
+		                                 set_getbool(&irc->set, "op_user") ? "@" : "", irc->nick );
 		
+		/* TODO: Honor op/voice_buddies in chats?! */
 		for( l = c->in_room; l; l = l->next ) if( ( u = user_findhandle( c->ic, l->data ) ) )
 		{
 			if( strlen( namelist ) + strlen( u->nick ) > sizeof( namelist ) - 4 )

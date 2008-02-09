@@ -34,8 +34,6 @@ void op_write_fingerprints(void *opdata);
 
 void op_gone_secure(void *opdata, ConnContext *context);
 
-void op_gone_secure(void *opdata, ConnContext *context);
-
 void op_gone_insecure(void *opdata, ConnContext *context);
 
 void op_still_secure(void *opdata, ConnContext *context, int is_reply);
@@ -52,7 +50,8 @@ const char *op_account_name(void *opdata, const char *account, const char *proto
 /* TODO: void cmd_otr_keygen(irc_t *irc, char **args); */
 void cmd_otr_abort(irc_t *irc, char **args); /* TODO: does this cmd even make sense? */
 void cmd_otr_request(irc_t *irc, char **args); /* TODO: do we even need this? */
-void cmd_otr_auth(irc_t *irc, char **args);
+void cmd_otr_smp(irc_t *irc, char **args);
+void cmd_otr_trust(irc_t *irc, char **args);
 /* TODO: void cmd_otr_affirm(irc_t *irc, char **args); */
 void cmd_otr_fprints(irc_t *irc, char **args);
 void cmd_otr_info(irc_t *irc, char **args);
@@ -61,7 +60,8 @@ void cmd_otr_policy(irc_t *irc, char **args);
 const command_t otr_commands[] = {
 	{ "abort",    1, &cmd_otr_abort,    0 },
 	{ "request",  1, &cmd_otr_request,  0 },
-	{ "auth",     2, &cmd_otr_auth,     0 },
+	{ "smp",      2, &cmd_otr_smp,      0 },
+	{ "trust",    6, &cmd_otr_trust,    0 },
 	{ "fprints",  0, &cmd_otr_fprints,  0 },
 	{ "info",     1, &cmd_otr_info,     0 },
 	{ "policy",   0, &cmd_otr_policy,   0 },
@@ -96,11 +96,21 @@ void no_keygen(gpointer w, void *data);
 struct im_connection *check_imc(void *opdata, const char *accountname,
 	const char *protocol);
 
-/* determine the nick for a given handle/protocol pair */
+/* determine the nick for a given handle/protocol pair
+   returns "handle/protocol" if not found */
 const char *peernick(irc_t *irc, const char *handle, const char *protocol);
+
+/* determine the user_t for a given handle/protocol pair
+   returns NULL if not found */
+user_t *peeruser(irc_t *irc, const char *handle, const char *protocol);
 
 /* handle SMP TLVs from a received message */
 void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs);
+
+/* update op/voice flag of given user according to encryption state and settings
+   returns 0 if neither op_buddies nor voice_buddies is set to "encrypted",
+   i.e. msgstate should be announced seperately */
+int otr_update_modeflags(irc_t *irc, user_t *u);
 
 /* show the list of fingerprints associated with a given context */
 void show_fingerprints(irc_t *irc, ConnContext *ctx);
@@ -238,8 +248,15 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	char *colormsg;
 	
     if(!g_mutex_trylock(ic->irc->otr_mutex)) {
-    	/* TODO: queue msgs received during keygen for later */
-		irc_usermsg(ic->irc, "msg from %s during keygen - dropped",
+    	user_t *u = user_findhandle(ic, handle);
+    	
+    	/* fallback for non-otr clients */
+    	if(u && !u->encrypted) {
+    		return g_strdup(msg);
+    	}
+    	
+    	/* TODO: queue msgs received during keygen for later? */
+		irc_usermsg(ic->irc, "otr msg from %s during keygen - dropped",
 			peernick(ic->irc, handle, ic->acc->prpl->name));
 		return NULL;
 	}
@@ -282,14 +299,24 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 
 int otr_send_message(struct im_connection *ic, const char *handle, const char *msg, int flags)
 {	
-    int st;
-    char *otrmsg = NULL;
-    ConnContext *ctx = NULL;
-    
+	int st;
+	char *otrmsg = NULL;
+	ConnContext *ctx = NULL;
+	
     if(!g_mutex_trylock(ic->irc->otr_mutex)) {
-    	irc_usermsg(ic->irc, "msg to %s during keygen - not sent",
-    		peernick(ic->irc, handle, ic->acc->prpl->name));
-    	return 1;
+		user_t *u = user_findhandle(ic, handle);
+    	
+		/* Fallback for non-otr clients.
+		   Yes, we must be very sure this doesn't send stuff in the clear where it
+		   shouldn't... */
+		if(u && !u->encrypted) {
+			return ic->acc->prpl->buddy_msg(ic, (char *)handle, (char *)msg, flags);
+		}
+		
+		/* otherwise refuse to send */
+		irc_usermsg(ic->irc, "otr msg to %s not sent during keygen",
+			peernick(ic->irc, handle, ic->acc->prpl->name));
+		return 1;
     }
     
 	st = otrl_message_sending(ic->irc->otr_us, &global.otr_ops, ic,
@@ -413,14 +440,17 @@ void op_inject_message(void *opdata, const char *accountname,
 }
 
 int op_display_otr_message(void *opdata, const char *accountname,
-	const char *protocol, const char *username, const char *msg)
+	const char *protocol, const char *username, const char *message)
 {
 	struct im_connection *ic = check_imc(opdata, accountname, protocol);
+	char *msg = g_strdup(message);
 
-	log_message(LOGLVL_DEBUG, "op_display_otr_message '%s' '%s' '%s' '%s'", accountname, protocol, username, msg);
+	log_message(LOGLVL_DEBUG, "op_display_otr_message '%s' '%s' '%s' '%s'", accountname, protocol, username, message);
 
-	irc_usermsg(ic->irc, "%s", msg);
+	strip_html(msg);
+	irc_usermsg(ic->irc, "otr: %s", msg);
 
+	g_free(msg);
 	return 0;
 }
 
@@ -451,51 +481,84 @@ void op_gone_secure(void *opdata, ConnContext *context)
 {
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
+	user_t *u;
 
 	log_message(LOGLVL_DEBUG, "op_gone_secure '%s' '%s' '%s'", context->accountname, context->protocol, context->username);
 
-	irc_usermsg(ic->irc, "conversation with %s is now off the record",
-		peernick(ic->irc, context->username, context->protocol));
+	u = peeruser(ic->irc, context->username, context->protocol);
+	if(!u) {
+		log_message(LOGLVL_ERROR,
+			"BUG: otr.c: op_gone_secure: user_t for %s/%s not found!",
+			context->username, context->protocol);
+		return;
+	}
+	if(context->active_fingerprint->trust[0])
+		u->encrypted = 2;
+	else
+		u->encrypted = 1;
+	if(!otr_update_modeflags(ic->irc, u))
+		irc_usermsg(ic->irc, "conversation with %s is now off the record", u->nick);
 }
 
 void op_gone_insecure(void *opdata, ConnContext *context)
 {
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
+	user_t *u;
 
 	log_message(LOGLVL_DEBUG, "op_gone_insecure '%s' '%s' '%s'", context->accountname, context->protocol, context->username);
 
-	irc_usermsg(ic->irc, "conversation with %s is now in the clear",
-		peernick(ic->irc, context->username, context->protocol));
+	u = peeruser(ic->irc, context->username, context->protocol);
+	if(!u) {
+		log_message(LOGLVL_ERROR,
+			"BUG: otr.c: op_gone_insecure: user_t for %s/%s not found!",
+			context->username, context->protocol);
+		return;
+	}
+	u->encrypted = 0;
+	if(!otr_update_modeflags(ic->irc, u))
+		irc_usermsg(ic->irc, "conversation with %s is now in the clear", u->nick);
 }
 
 void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 {
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
+	user_t *u;
 
 	log_message(LOGLVL_DEBUG, "op_still_secure '%s' '%s' '%s' is_reply=%d",
 		context->accountname, context->protocol, context->username, is_reply);
 
-	irc_usermsg(ic->irc, "otr connection with %s has been refreshed",
-		peernick(ic->irc, context->username, context->protocol));
+	u = peeruser(ic->irc, context->username, context->protocol);
+	if(!u) {
+		log_message(LOGLVL_ERROR,
+			"BUG: otr.c: op_still_secure: user_t for %s/%s not found!",
+			context->username, context->protocol);
+		return;
+	}
+	if(context->active_fingerprint->trust[0])
+		u->encrypted = 2;
+	else
+		u->encrypted = 1;
+	if(!otr_update_modeflags(ic->irc, u))
+		irc_usermsg(ic->irc, "otr connection with %s has been refreshed", u->nick);
 }
 
 void op_log_message(void *opdata, const char *message)
 {
-	log_message(LOGLVL_INFO, "%s", message);
+	char *msg = g_strdup(message);
+	
+	strip_html(msg);
+	log_message(LOGLVL_INFO, "otr: %s", msg);
+	g_free(msg);
 }
 
 int op_max_message_size(void *opdata, ConnContext *context)
 {
-	/* TODO: make max_message_size a property of the prpl.
-	         the values here are taken from the libotr UPGRADING file */
-	if(!strcmp(context->protocol, "msn"))
-		return 1409;
-	if(!strcmp(context->protocol, "yahoo"))
-		return 832;
-	if(!strcmp(context->protocol, "oscar"))
-		return 2343;
+	struct im_connection *ic =
+		check_imc(opdata, context->accountname, context->protocol);
+
+	return ic->acc->prpl->mms;
 }
 
 const char *op_account_name(void *opdata, const char *account, const char *protocol)
@@ -541,7 +604,7 @@ void cmd_otr_request(irc_t *irc, char **args)
 	imc_buddy_msg(u->ic, u->handle, "?OTR?", 0);
 }
 
-void cmd_otr_auth(irc_t *irc, char **args)
+void cmd_otr_smp(irc_t *irc, char **args)
 {
 	user_t *u;
 	ConnContext *ctx;
@@ -585,6 +648,80 @@ void cmd_otr_auth(irc_t *irc, char **args)
 		otrl_message_respond_smp(irc->otr_us, &global.otr_ops,
 			u->ic, ctx, (unsigned char *)args[2], strlen(args[2]));
 		/* smp is now in EXPECT3 */
+	}
+}
+
+int hexval(char a)
+{
+	int x=tolower(a);
+	
+	if(x>='a' && x<='f')
+		x = x - 'a' + 10;
+	else if(x>='0' && x<='9')
+		x = x - '0';
+	else
+		return -1;
+	
+	return x;
+}
+
+void cmd_otr_trust(irc_t *irc, char **args)
+{
+	user_t *u;
+	ConnContext *ctx;
+	unsigned char raw[20];
+	Fingerprint *fp;
+	int i,j;
+	
+	u = user_find(irc, args[1]);
+	if(!u || !u->ic) {
+		irc_usermsg(irc, "%s: unknown user", args[1]);
+		return;
+	}
+	
+	ctx = otrl_context_find(irc->otr_us, u->handle,
+		u->ic->acc->user, u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+	if(!ctx) {
+		irc_usermsg(irc, "%s: no otr context with user", args[1]);
+		return;
+	}
+	
+	/* convert given fingerprint to raw representation */
+	for(i=0; i<5; i++) {
+		for(j=0; j<4; j++) {
+			char *p = args[2+i]+(2*j);
+			char *q = p+1;
+			int x, y;
+			
+			if(!*p || !*q) {
+				irc_usermsg(irc, "failed: truncated fingerprint block %d", i+1);
+				return;
+			}
+			
+			x = hexval(*p);
+			y = hexval(*q);
+			if(x<0) {
+				irc_usermsg(irc, "failed: %d. hex digit of block %d out of range", 2*j+1, i+1);
+				return;
+			}
+			if(y<0) {
+				irc_usermsg(irc, "failed: %d. hex digit of block %d out of range", 2*j+2, i+1);
+				return;
+			}
+
+			raw[i*4+j] = x*16 + y;
+		}
+	}
+	fp = otrl_context_find_fingerprint(ctx, raw, 0, NULL);
+	if(!fp) {
+		irc_usermsg(irc, "failed: no such fingerprint for %s", args[1]);
+	} else {
+		char *trust = args[7] ? args[7] : "affirmed";
+		otrl_context_set_trust(fp, trust);
+		irc_usermsg(irc, "fingerprint match, trust set to \"%s\"", trust);
+		if(u->encrypted)
+			u->encrypted = 2;
+		otr_update_modeflags(irc, u);
 	}
 }
 
@@ -648,7 +785,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 	ctx = otrl_context_find(irc->otr_us, u->handle,
 		u->ic->acc->user, u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 	if(!ctx) {
-		irc_usermsg(irc, "no otr info on %s", args[1]);
+		irc_usermsg(irc, "no otr context with %s", args[1]);
 		return;
 	}
 
@@ -671,18 +808,21 @@ void cmd_otr_info(irc_t *irc, char **args)
 		ctx->username, ctx->protocol, ctx->accountname, ctx->protocol);
 	irc_usermsg(irc, "  otr offer status: %s", offer_status);
 	irc_usermsg(irc, "  connection state: %s", message_state);
-	irc_usermsg(irc, "  protocol version: %d", ctx->protocol_version);
-	fp = ctx->active_fingerprint;
-	if(!fp) {
-		irc_usermsg(irc, "  active f'print:   none");
-	} else {
-		otrl_privkey_hash_to_human(human, fp->fingerprint);
-		if(!fp->trust || fp->trust[0] == '\0') {
-			trust="untrusted";
+	
+	if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
+		irc_usermsg(irc, "  protocol version: %d", ctx->protocol_version);
+		fp = ctx->active_fingerprint;
+		if(!fp) {
+			irc_usermsg(irc, "  active f'print:   none?");
 		} else {
-			trust=fp->trust;
+			otrl_privkey_hash_to_human(human, fp->fingerprint);
+			if(!fp->trust || fp->trust[0] == '\0') {
+				trust="untrusted";
+			} else {
+				trust=fp->trust;
+			}
+			irc_usermsg(irc, "  active f'print:   %s (%s)", human, trust);
 		}
-		irc_usermsg(irc, "  active f'print:   %s (%s)", human, trust);
 	}
 }
 
@@ -808,12 +948,10 @@ struct im_connection *check_imc(void *opdata, const char *accountname,
 	return ic;
 }
 
-const char *peernick(irc_t *irc, const char *handle, const char *protocol)
+user_t *peeruser(irc_t *irc, const char *handle, const char *protocol)
 {
 	user_t *u;
-	static char fallback[512];
 	
-	g_snprintf(fallback, 511, "%s/%s", handle, protocol);
 	for(u=irc->users; u; u=u->next) {
 		struct prpl *prpl;
 		if(!u->ic || !u->handle)
@@ -821,11 +959,55 @@ const char *peernick(irc_t *irc, const char *handle, const char *protocol)
 		prpl = u->ic->acc->prpl;
 		if(strcmp(prpl->name, protocol) == 0
 			&& prpl->handle_cmp(u->handle, handle) == 0) {
-			return u->nick;
+			return u;
 		}
 	}
 	
-	return fallback;
+	return NULL;
+}
+
+const char *peernick(irc_t *irc, const char *handle, const char *protocol)
+{
+	static char fallback[512];
+	
+	user_t *u = peeruser(irc, handle, protocol);
+	if(u) {
+		return u->nick;
+	} else {
+		g_snprintf(fallback, 511, "%s/%s", handle, protocol);
+		return fallback;
+	}
+}
+
+int otr_update_modeflags(irc_t *irc, user_t *u)
+{
+	char *vo = set_getstr(&irc->set, "voice_buddies");
+	char *oo = set_getstr(&irc->set, "op_buddies");
+	char eflag=0, tflag=0;
+	int e = u->encrypted;
+	int t = (u->encrypted > 1);
+	
+	if(!strcmp(vo, "encrypted"))
+		eflag='v';
+	else if(!strcmp(oo, "encrypted"))
+		eflag='o';
+	if(!strcmp(vo, "trusted"))
+		tflag='v';
+	else if(!strcmp(oo, "trusted"))
+		tflag='o';
+	
+	if(!eflag)
+		return 0;
+	
+	if(tflag) {
+		irc_write( irc, ":%s!%s@%s MODE %s %c%c%c%c %s %s", irc->mynick, irc->mynick, irc->myhost,
+			irc->channel, e?'+':'-', eflag, t?'+':'-', tflag, u->nick, u->nick );
+	} else {
+		irc_write( irc, ":%s!%s@%s MODE %s %c%c %s", irc->mynick, irc->mynick, irc->myhost,
+			irc->channel, e?'+':'-', eflag, u->nick );
+	}
+		
+	return 1;
 }
 
 void show_fingerprints(irc_t *irc, ConnContext *ctx)
@@ -965,9 +1147,13 @@ void no_keygen(gpointer w, void *data)
 {
 	account_t *acc = (account_t *)data;
 	
-	/* TODO: remember that we didn't want a key? */
 	irc_usermsg(acc->irc, "proceeding without key, otr inoperable on %s/%s",
 		acc->user, acc->prpl->name);
+	/* TODO: 
+	irc_usermsg(acc->irc, "setting otr policy for %s/%s to \"never\"",
+		acc->user, acc->prpl->name);
+	set_setstr(acc->set, "otr_policy", "never");
+	*/
 }
 
 

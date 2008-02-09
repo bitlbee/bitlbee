@@ -371,6 +371,7 @@ void msn_initmodule()
 	struct prpl *ret = g_new0(struct prpl, 1);
 	
 	ret->name = "msn";
+    ret->mms = 1409;         /* this guess taken from libotr UPGRADING file */
 	ret->login = msn_login;
 	ret->init = msn_init;
 	ret->logout = msn_logout;

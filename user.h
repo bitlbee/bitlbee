@@ -36,6 +36,7 @@ typedef struct __USER
 	
 	char is_private;
 	char online;
+	char encrypted;
 	
 	char *handle;
 	char *group;

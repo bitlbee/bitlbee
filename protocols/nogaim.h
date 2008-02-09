@@ -135,6 +135,10 @@ struct prpl {
 	/* You should set this to the name of your protocol.
 	 * - The user sees this name ie. when imcb_log() is used. */
 	const char *name;
+    /* Maximum Message Size of this protocol.
+     * - Introduced for OTR, in order to fragment large protocol messages.
+     * - 0 means "unlimited". */
+    unsigned int mms;
 
 	/* Added this one to be able to add per-account settings, don't think
 	 * it should be used for anything else. You are supposed to use the

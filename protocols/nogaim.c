@@ -602,10 +602,9 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	/* else waste_any_state_information_for_now(); */
 	
 	/* LISPy... */
-	if( ( set_getbool( &ic->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
-	    ( u->online ) &&						/* Don't touch offline people */
-	    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
-	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
+	if( ( u->online ) &&						/* Don't touch offline people */
+	    ( ( ( u->online != oo ) && !u->away ) ||			/* Do joining people */
+	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* Do people changing state */
 	{
 		char *from;
 		
@@ -618,8 +617,14 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 			from = g_strdup_printf( "%s!%s@%s", ic->irc->mynick, ic->irc->mynick,
 			                                    ic->irc->myhost );
 		}
-		irc_write( ic->irc, ":%s MODE %s %cv %s", from, ic->irc->channel,
-		                                          u->away?'-':'+', u->nick );
+		if(!strcmp(set_getstr(&ic->irc->set, "voice_buddies"), "notaway")) {
+			irc_write( ic->irc, ":%s MODE %s %cv %s", from, ic->irc->channel,
+		 	                                         u->away?'-':'+', u->nick );
+		}
+		if(!strcmp(set_getstr(&ic->irc->set, "op_buddies"), "notaway")) {
+			irc_write( ic->irc, ":%s MODE %s %co %s", from, ic->irc->channel,
+		 	                                         u->away?'-':'+', u->nick );
+		}
 		g_free( from );
 	}
 }
