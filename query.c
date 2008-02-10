@@ -139,12 +139,18 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 	}
 	if( ans )
 	{
-		imcb_log( q->ic, "Accepted: %s", q->question );
+		if(q->ic)
+			imcb_log( q->ic, "Accepted: %s", q->question );
+		else
+			irc_usermsg( irc, "Accepted: %s", q->question );
 		q->yes( NULL, q->data );
 	}
 	else
 	{
-		imcb_log( q->ic, "Rejected: %s", q->question );
+		if(q->ic)
+			imcb_log( q->ic, "Rejected: %s", q->question );
+		else
+			irc_usermsg( irc, "Rejected: %s", q->question );
 		q->no( NULL, q->data );
 	}
 	q->data = NULL;

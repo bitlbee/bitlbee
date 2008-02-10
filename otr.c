@@ -52,6 +52,7 @@ void cmd_otr_disconnect(irc_t *irc, char **args);
 void cmd_otr_smp(irc_t *irc, char **args);
 void cmd_otr_trust(irc_t *irc, char **args);
 void cmd_otr_info(irc_t *irc, char **args);
+void cmd_otr_keygen(irc_t *irc, char **args);
 /* void cmd_otr_forget(irc_t *irc, char **args); */
 
 const command_t otr_commands[] = {
@@ -60,6 +61,7 @@ const command_t otr_commands[] = {
 	{ "smp",         2, &cmd_otr_smp,        0 },
 	{ "trust",       6, &cmd_otr_trust,      0 },
 	{ "info",        0, &cmd_otr_info,       0 },
+	{ "keygen",      1, &cmd_otr_keygen,     0 },
 	/*
 	{ "forget",      1, &cmd_otr_forget,     0 },
 	*/
@@ -770,6 +772,32 @@ void cmd_otr_info(irc_t *irc, char **args)
 	}
 }
 
+void cmd_otr_keygen(irc_t *irc, char **args)
+{
+	int i, n;
+	account_t *a;
+	
+	n = atoi(args[1]);
+	if(n<0 || (!n && strcmp(args[1], "0"))) {
+		irc_usermsg(irc, "%s: invalid account number", args[1]);
+		return;
+	}
+	
+	a = irc->accounts;
+	for(i=0; i<n && a; i++, a=a->next);
+	if(!a) {
+		irc_usermsg(irc, "%s: no such account", args[1]);
+		return;
+	}
+	
+	if(otrl_privkey_find(irc->otr_us, a->user, a->prpl->name)) {
+		char *s = g_strdup_printf("account %d already has a key, replace it?", n);
+		query_add(irc, a->ic, s, yes_keygen, no_keygen, a);
+	} else {
+		otr_keygen(irc, a->user, a->prpl->name);
+	}
+}
+
 
 /*** local helpers / subroutines: ***/
 
@@ -1219,13 +1247,8 @@ void no_keygen(gpointer w, void *data)
 {
 	account_t *acc = (account_t *)data;
 	
-	irc_usermsg(acc->irc, "proceeding without key, otr inoperable on %s/%s",
+	irc_usermsg(acc->irc, "keygen cancelled for %s/%s",
 		acc->user, acc->prpl->name);
-	/* TODO: 
-	irc_usermsg(acc->irc, "setting otr policy for %s/%s to \"never\"",
-		acc->user, acc->prpl->name);
-	set_setstr(acc->set, "otr_policy", "never");
-	*/
 }
 
 
