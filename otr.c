@@ -256,15 +256,7 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	char *colormsg;
 	
     if(!g_mutex_trylock(ic->irc->otr_mutex)) {
-    	user_t *u = user_findhandle(ic, handle);
-    	
-    	/* fallback for non-otr clients */
-    	if(u && !u->encrypted) {
-    		return g_strdup(msg);
-    	}
-    	
-    	/* TODO: queue msgs received during keygen for later? */
-		irc_usermsg(ic->irc, "otr msg from %s during keygen - dropped",
+		irc_usermsg(ic->irc, "otr keygen in progress - msg from %s dropped",
 			peernick(ic->irc, handle, ic->acc->prpl->name));
 		return NULL;
 	}
@@ -312,17 +304,7 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	ConnContext *ctx = NULL;
 	
     if(!g_mutex_trylock(ic->irc->otr_mutex)) {
-		user_t *u = user_findhandle(ic, handle);
-    	
-		/* Fallback for non-otr clients.
-		   Yes, we must be very sure this doesn't send stuff in the clear where it
-		   shouldn't... */
-		if(u && !u->encrypted) {
-			return ic->acc->prpl->buddy_msg(ic, (char *)handle, (char *)msg, flags);
-		}
-		
-		/* otherwise refuse to send */
-		irc_usermsg(ic->irc, "otr msg to %s not sent during keygen",
+		irc_usermsg(ic->irc, "otr keygen in progress - msg to %s not sent",
 			peernick(ic->irc, handle, ic->acc->prpl->name));
 		return 1;
     }
