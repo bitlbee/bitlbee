@@ -47,7 +47,11 @@ int bitlbee_daemon_init()
 	memset( &hints, 0, sizeof( hints ) );
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_ADDRCONFIG | AI_PASSIVE;
+	hints.ai_flags = AI_PASSIVE
+#ifdef AI_ADDRCONFIG
+	               | AI_ADDRCONFIG
+#endif
+	;
 
 	i = getaddrinfo( global.conf->iface, global.conf->port, &hints, &addrinfo_bind );
 	if( i )
