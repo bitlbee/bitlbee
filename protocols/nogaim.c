@@ -621,6 +621,10 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 			irc_write( ic->irc, ":%s MODE %s %cv %s", from, ic->irc->channel,
 		 	                                         u->away?'-':'+', u->nick );
 		}
+		if(!strcmp(set_getstr(&ic->irc->set, "halfop_buddies"), "notaway")) {
+			irc_write( ic->irc, ":%s MODE %s %ch %s", from, ic->irc->channel,
+		 	                                         u->away?'-':'+', u->nick );
+		}
 		if(!strcmp(set_getstr(&ic->irc->set, "op_buddies"), "notaway")) {
 			irc_write( ic->irc, ":%s MODE %s %co %s", from, ic->irc->channel,
 		 	                                         u->away?'-':'+', u->nick );

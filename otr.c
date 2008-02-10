@@ -981,31 +981,56 @@ const char *peernick(irc_t *irc, const char *handle, const char *protocol)
 
 int otr_update_modeflags(irc_t *irc, user_t *u)
 {
-	char *vo = set_getstr(&irc->set, "voice_buddies");
-	char *oo = set_getstr(&irc->set, "op_buddies");
-	char eflag=0, tflag=0;
-	int e = u->encrypted;
-	int t = (u->encrypted > 1);
+	char *vb = set_getstr(&irc->set, "voice_buddies");
+	char *hb = set_getstr(&irc->set, "halfop_buddies");
+	char *ob = set_getstr(&irc->set, "op_buddies");
+	int encrypted = u->encrypted;
+	int trusted = u->encrypted > 1;
+	char flags[7];
+	int nflags;
+	char *p = flags;
+	int i;
 	
-	if(!strcmp(vo, "encrypted"))
-		eflag='v';
-	else if(!strcmp(oo, "encrypted"))
-		eflag='o';
-	if(!strcmp(vo, "trusted"))
-		tflag='v';
-	else if(!strcmp(oo, "trusted"))
-		tflag='o';
-	
-	if(!eflag)
-		return 0;
-	
-	if(tflag) {
-		irc_write( irc, ":%s!%s@%s MODE %s %c%c%c%c %s %s", irc->mynick, irc->mynick, irc->myhost,
-			irc->channel, e?'+':'-', eflag, t?'+':'-', tflag, u->nick, u->nick );
-	} else {
-		irc_write( irc, ":%s!%s@%s MODE %s %c%c %s", irc->mynick, irc->mynick, irc->myhost,
-			irc->channel, e?'+':'-', eflag, u->nick );
+	if(!strcmp(vb, "encrypted")) {
+		*(p++) = encrypted ? '+' : '-';
+		*(p++) = 'v';
+		nflags++;
+	} else if(!strcmp(vb, "trusted")) {
+		*(p++) = trusted ? '+' : '-';
+		*(p++) = 'v';
+		nflags++;
 	}
+	if(!strcmp(hb, "encrypted")) {
+		*(p++) = encrypted ? '+' : '-';
+		*(p++) = 'h';
+		nflags++;
+	} else if(!strcmp(hb, "trusted")) {
+		*(p++) = trusted ? '+' : '-';
+		*(p++) = 'h';
+		nflags++;
+	}
+	if(!strcmp(ob, "encrypted")) {
+		*(p++) = encrypted ? '+' : '-';
+		*(p++) = 'o';
+		nflags++;
+	} else if(!strcmp(ob, "trusted")) {
+		*(p++) = trusted ? '+' : '-';
+		*(p++) = 'o';
+		nflags++;
+	}
+	*p = '\0';
+	
+	p = g_malloc(nflags * (strlen(u->nick)+1) + 1);
+	*p = '\0';
+	if(!p)
+		return 0;
+	for(i=0; i<nflags; i++) {
+		strcat(p, " ");
+		strcat(p, u->nick);
+	}
+	irc_write( irc, ":%s!%s@%s MODE %s %s%s", irc->mynick, irc->mynick, irc->myhost,
+		irc->channel, flags, p );
+	g_free(p);
 		
 	return 1;
 }

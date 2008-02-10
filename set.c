@@ -344,6 +344,11 @@ char *set_eval_op_buddies( set_t *set, char *value )
 	return set_eval_mode_buddies(set, value, 'o');
 }
 
+char *set_eval_halfop_buddies( set_t *set, char *value )
+{
+	return set_eval_mode_buddies(set, value, 'h');
+}
+
 char *set_eval_voice_buddies( set_t *set, char *value )
 {
 	return set_eval_mode_buddies(set, value, 'v');

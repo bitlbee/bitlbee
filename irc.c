@@ -112,6 +112,7 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "default_target", "root", NULL, irc );
 	set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
 	set_add( &irc->set, "handle_unknown", "root", NULL, irc );
+	set_add( &irc->set, "halfop_buddies", "false", set_eval_halfop_buddies, irc );
 	set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
 	set_add( &irc->set, "op_buddies", "false", set_eval_op_buddies, irc );
 	set_add( &irc->set, "op_root", "true", set_eval_op_root, irc );

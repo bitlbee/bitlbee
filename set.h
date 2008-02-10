@@ -98,6 +98,7 @@ char *set_eval_to_char( set_t *set, char *value );
 char *set_eval_op_root( set_t *set, char *value );
 char *set_eval_op_user( set_t *set, char *value );
 char *set_eval_op_buddies( set_t *set, char *value );
+char *set_eval_halfop_buddies( set_t *set, char *value );
 char *set_eval_voice_buddies( set_t *set, char *value );
 char *set_eval_charset( set_t *set, char *value );
 
