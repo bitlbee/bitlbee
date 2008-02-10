@@ -124,6 +124,9 @@ void show_otr_context_info(irc_t *irc, ConnContext *ctx);
 /* show the list of fingerprints associated with a given context */
 void show_fingerprints(irc_t *irc, ConnContext *ctx);
 
+/* to log out accounts during keygen */
+extern void cmd_account(irc_t *irc, char **cmd);
+
 
 /*** routines declared in otr.h: ***/
 
@@ -1121,13 +1124,11 @@ void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 {
+	char *account_off[] = {"account", "off", NULL};
 	GError *err;
 	GThread *thr;
 	struct kgdata *kg;
 	gint ev;
-	
-	irc_usermsg(irc, "generating new otr privkey for %s/%s...",
-		handle, protocol);
 	
 	kg = g_new0(struct kgdata, 1);
 	if(!kg) {
@@ -1166,6 +1167,13 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 		return;
 	}
 
+	/* tell the user what's happening, go comatose, and start the keygen */
+	irc_usermsg(irc, "going comatose for otr key generation, this will take a moment");
+	irc_usermsg(irc, "all accounts logging out, user commands disabled");
+	cmd_account(irc, account_off);
+	irc_usermsg(irc, "generating new otr privkey for %s/%s...",
+		handle, protocol);
+	
 	thr = g_thread_create(&otr_keygen_thread_func, kg, FALSE, &err);
 	if(!thr) {
 		irc_usermsg(irc, "otr keygen failed: %s", err->message);
