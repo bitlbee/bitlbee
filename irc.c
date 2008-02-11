@@ -707,7 +707,6 @@ void irc_names( irc_t *irc, char *channel )
 		sprintf( namelist, "%s%s %s%s ", set_getbool(&irc->set, "op_root") ? "@" : "", irc->mynick,
 		                                 set_getbool(&irc->set, "op_user") ? "@" : "", irc->nick );
 		
-		/* TODO: Honor op/voice_buddies in chats?! */
 		for( l = c->in_room; l; l = l->next ) if( ( u = user_findhandle( c->ic, l->data ) ) )
 		{
 			if( strlen( namelist ) + strlen( u->nick ) > sizeof( namelist ) - 4 )
@@ -716,6 +715,7 @@ void irc_names( irc_t *irc, char *channel )
 				*namelist = 0;
 			}
 			
+			strcat( namelist, user_mode_prefix(irc, u) );
 			strcat( namelist, u->nick );
 			strcat( namelist, " " );
 		}
