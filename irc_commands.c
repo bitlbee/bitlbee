@@ -570,7 +570,7 @@ static void irc_cmd_rehash( irc_t *irc, char **cmd )
 	else
 		ipc_to_master( cmd );
 	
-	irc_reply( irc, 382, "%s :Rehashing", CONF_FILE );
+	irc_reply( irc, 382, "%s :Rehashing", global.conf_file );
 }
 
 static const command_t irc_commands[] = {

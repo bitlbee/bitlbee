@@ -46,7 +46,7 @@ int main( int argc, char *argv[], char **envp )
 	struct sigaction sig, old;
 	
 	log_init();
-	CONF_FILE = g_strdup( CONF_FILE_DEF );
+	global.conf_file = g_strdup( CONF_FILE_DEF );
 	global.conf = conf_load( argc, argv );
 	if( global.conf == NULL )
 		return( 1 );

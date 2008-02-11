@@ -35,14 +35,12 @@
 
 #include "proxy.h"
 
-char *CONF_FILE;
-
 static int conf_loadini( conf_t *conf, char *file );
 
 conf_t *conf_load( int argc, char *argv[] )
 {
 	conf_t *conf;
-	int opt, i;
+	int opt, i, config_missing = 0;
 	
 	conf = g_new0( conf_t, 1 );
 	
@@ -65,15 +63,17 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->user = NULL;
 	proxytype = 0;
 	
-	i = conf_loadini( conf, CONF_FILE );
+	i = conf_loadini( conf, global.conf_file );
 	if( i == 0 )
 	{
-		fprintf( stderr, "Error: Syntax error in configuration file `%s'.\n", CONF_FILE );
-		return( NULL );
+		fprintf( stderr, "Error: Syntax error in configuration file `%s'.\n", global.conf_file );
+		return NULL;
 	}
 	else if( i == -1 )
 	{
-		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", CONF_FILE );
+		config_missing ++;
+		/* Whine after parsing the options if there was no -c pointing
+		   at a *valid* configuration file. */
 	}
 	
 	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:u:" ) ) >= 0 )
@@ -105,16 +105,16 @@ conf_t *conf_load( int argc, char *argv[] )
 			conf->runmode = RUNMODE_FORKDAEMON;
 		else if( opt == 'c' )
 		{
-			if( strcmp( CONF_FILE, optarg ) != 0 )
+			if( strcmp( global.conf_file, optarg ) != 0 )
 			{
-				g_free( CONF_FILE );
-				CONF_FILE = g_strdup( optarg );
+				g_free( global.conf_file );
+				global.conf_file = g_strdup( optarg );
 				g_free( conf );
 				/* Re-evaluate arguments. Don't use this option twice, 
 				   you'll end up in an infinite loop! Hope this trick
 				   works with all libcs BTW.. */
 				optind = 1;
-				return( conf_load( argc, argv ) );
+				return conf_load( argc, argv );
 			}
 		}
 		else if( opt == 'd' )
@@ -142,7 +142,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -c  Load alternative configuration file\n"
 			        "  -d  Specify alternative user configuration directory\n"
 			        "  -h  Show this help page.\n" );
-			return( NULL );
+			return NULL;
 		}
 		else if( opt == 'R' )
 		{
@@ -168,7 +168,10 @@ conf_t *conf_load( int argc, char *argv[] )
 		conf->configdir = s;
 	}
 	
-	return( conf );
+	if( config_missing )
+		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", global.conf_file );
+	
+	return conf;
 }
 
 static int conf_loadini( conf_t *conf, char *file )
@@ -177,7 +180,7 @@ static int conf_loadini( conf_t *conf, char *file )
 	int i;
 	
 	ini = ini_open( file );
-	if( ini == NULL ) return( -1 );
+	if( ini == NULL ) return -1;
 	while( ini_read( ini ) )
 	{
 		if( g_strcasecmp( ini->section, "settings" ) == 0 )
@@ -255,7 +258,7 @@ static int conf_loadini( conf_t *conf, char *file )
 				if( sscanf( ini->value, "%d", &i ) != 1 )
 				{
 					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
-					return( 0 );
+					return 0;
 				}
 				conf->ping_interval = i;
 			}
@@ -264,7 +267,7 @@ static int conf_loadini( conf_t *conf, char *file )
 				if( sscanf( ini->value, "%d", &i ) != 1 )
 				{
 					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
-					return( 0 );
+					return 0;
 				}
 				conf->ping_timeout = i;
 			}
@@ -276,7 +279,7 @@ static int conf_loadini( conf_t *conf, char *file )
 				{
 					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
 					g_free( url );
-					return( 0 );
+					return 0;
 				}
 				
 				strncpy( proxyhost, url->host, sizeof( proxyhost ) );
@@ -300,7 +303,7 @@ static int conf_loadini( conf_t *conf, char *file )
 			else
 			{
 				fprintf( stderr, "Error: Unknown setting `%s` in configuration file.\n", ini->key );
-				return( 0 );
+				return 0;
 				/* For now just ignore unknown keys... */
 			}
 		}
@@ -308,19 +311,19 @@ static int conf_loadini( conf_t *conf, char *file )
 		{
 			fprintf( stderr, "Error: Unknown section [%s] in configuration file. "
 			                 "BitlBee configuration must be put in a [settings] section!\n", ini->section );
-			return( 0 );
+			return 0;
 		}
 	}
 	ini_close( ini );
 	
-	return( 1 );
+	return 1;
 }
 
 void conf_loaddefaults( irc_t *irc )
 {
 	ini_t *ini;
 	
-	ini = ini_open( CONF_FILE );
+	ini = ini_open( global.conf_file );
 	if( ini == NULL ) return;
 	while( ini_read( ini ) )
 	{

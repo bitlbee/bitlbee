@@ -121,8 +121,6 @@
 #define HELP_FILE VARDIR "help.txt"
 #define CONF_FILE_DEF ETCDIR "bitlbee.conf"
 
-extern char *CONF_FILE;
-
 #include "irc.h"
 #include "storage.h"
 #include "set.h"
@@ -144,6 +142,7 @@ typedef struct global {
 	int listen_socket;
 	gint listen_watch_source_id;
 	help_t *help;
+	char *conf_file;
 	conf_t *conf;
 	GList *storage; /* The first backend in the list will be used for saving */
 	char *helpfile;
