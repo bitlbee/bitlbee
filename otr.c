@@ -957,6 +957,7 @@ int otr_update_modeflags(irc_t *irc, user_t *u)
 	char flags[7];
 	int nflags;
 	char *p = flags;
+	char *from;
 	int i;
 	
 	if(!strcmp(vb, "encrypted")) {
@@ -996,8 +997,12 @@ int otr_update_modeflags(irc_t *irc, user_t *u)
 		strcat(p, " ");
 		strcat(p, u->nick);
 	}
-	irc_write( irc, ":%s!%s@%s MODE %s %s%s", irc->mynick, irc->mynick, irc->myhost,
-		irc->channel, flags, p );
+	if(set_getbool(&irc->set, "simulate_netsplit"))
+		from = g_strdup(irc->myhost);
+	else
+		from = g_strdup_printf("%s!%s@%s", irc->mynick, irc->mynick, irc->myhost);
+	irc_write(irc, ":%s MODE %s %s%s", from, irc->channel, flags, p);
+	g_free(from);
 	g_free(p);
 		
 	return 1;
