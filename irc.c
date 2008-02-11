@@ -640,13 +640,45 @@ void irc_write_all( int now, char *format, ... )
 	return;
 } 
 
+const char *user_mode_prefix( irc_t *irc, user_t *u )
+{
+	static char op[] = "@";
+	static char halfop[] = "%";
+	static char voice[] = "+";
+	static char none[] = "";
+
+	int or = set_getbool(&irc->set, "op_root");
+	int ou = set_getbool(&irc->set, "op_user");
+	char *ob = set_getstr(&irc->set, "op_buddies");
+	char *hb = set_getstr(&irc->set, "halfop_buddies");
+	char *vb = set_getstr(&irc->set, "voice_buddies");
+
+	if( (!strcmp(u->nick, irc->mynick) && or) ||
+	    (!strcmp(u->nick, irc->nick) && ou) ||
+        (!u->away && !strcmp(ob, "notaway")) ||
+        (u->encrypted && !strcmp(ob, "encrypted")) ||
+        (u->encrypted>1 && !strcmp(ob, "trusted"))
+      )
+		return op;
+	else if( (!u->away && !strcmp(hb, "notaway")) ||
+             (u->encrypted && !strcmp(hb, "encrypted")) ||
+             (u->encrypted>1 && !strcmp(hb, "trusted"))
+	       )
+		return halfop;
+	else if( (!u->away && !strcmp(vb, "notaway")) ||
+             (u->encrypted && !strcmp(vb, "encrypted")) ||
+             (u->encrypted>1 && !strcmp(vb, "trusted"))
+	       )
+		return voice;
+	else
+		return none;
+}
+			
 void irc_names( irc_t *irc, char *channel )
 {
 	user_t *u;
 	char namelist[385] = "";
 	struct groupchat *c = NULL;
-	char *oo = set_getstr(&irc->set, "op_buddies");
-	char *vo = set_getstr(&irc->set, "voice_buddies");
 	
 	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
@@ -661,15 +693,7 @@ void irc_names( irc_t *irc, char *channel )
 				*namelist = 0;
 			}
 			
-			if( u->ic && !u->away && !strcmp(vo, "notaway") )
-				strcat( namelist, "+" );
-			else if( ( strcmp( u->nick, irc->mynick ) == 0 && set_getbool(&irc->set, "op_root") ) ||
-			         ( strcmp( u->nick, irc->nick ) == 0 && set_getbool(&irc->set, "op_user") ) ||
-			         ( !u->away && !strcmp(oo, "notaway") ) ||
-			         ( u->encrypted>1 && !strcmp(oo, "trusted") ) ||
-			         ( u->encrypted && !strcmp(oo, "encrypted") ) )
-				strcat( namelist, "@" );
-			
+			strcat( namelist, user_mode_prefix(irc, u) );
 			strcat( namelist, u->nick );
 			strcat( namelist, " " );
 		}
