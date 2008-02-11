@@ -101,6 +101,9 @@ void query_del_by_conn( irc_t *irc, struct im_connection *ic )
 	query_t *q, *n, *def;
 	int count = 0;
 	
+	if(!ic)
+		return;
+	
 	q = irc->queries;
 	def = query_default( irc );
 	
@@ -144,7 +147,7 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		else
 			irc_usermsg( irc, "Accepted: %s", q->question );
 		if(q->yes)
-			q->yes( q->ic, q->data );
+			q->yes( q->ic ? q->ic : irc, q->data );
 	}
 	else
 	{
@@ -153,7 +156,7 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		else
 			irc_usermsg( irc, "Rejected: %s", q->question );
 		if(q->no)
-			q->no( q->ic, q->data );
+			q->no( q->ic ? q->ic : irc, q->data );
 	}
 	q->data = NULL;
 	
