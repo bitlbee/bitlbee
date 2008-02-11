@@ -144,7 +144,7 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		else
 			irc_usermsg( irc, "Accepted: %s", q->question );
 		if(q->yes)
-			q->yes( NULL, q->data );
+			q->yes( q->ic, q->data );
 	}
 	else
 	{
@@ -153,7 +153,7 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		else
 			irc_usermsg( irc, "Rejected: %s", q->question );
 		if(q->no)
-			q->no( NULL, q->data );
+			q->no( q->ic, q->data );
 	}
 	q->data = NULL;
 	
