@@ -147,7 +147,7 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		else
 			irc_usermsg( irc, "Accepted: %s", q->question );
 		if(q->yes)
-			q->yes( q->ic ? q->ic : irc, q->data );
+			q->yes( q->ic ? (gpointer)q->ic : (gpointer)irc, q->data );
 	}
 	else
 	{
@@ -156,7 +156,7 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		else
 			irc_usermsg( irc, "Rejected: %s", q->question );
 		if(q->no)
-			q->no( q->ic ? q->ic : irc, q->data );
+			q->no( q->ic ? (gpointer)q->ic : (gpointer)irc, q->data );
 	}
 	q->data = NULL;
 	
