@@ -130,7 +130,7 @@ irc_t *irc_new( int fd )
 	conf_loaddefaults( irc );
 
 	irc->otr_us = otrl_userstate_create();
-	irc->otr_mutex = g_mutex_new();
+	g_static_rec_mutex_init(&irc->otr_mutex);
 	
 	return( irc );
 }
@@ -283,7 +283,7 @@ void irc_free(irc_t * irc)
 	}
 	
 	otrl_userstate_free(irc->otr_us);
-	g_mutex_free(irc->otr_mutex);
+	g_static_rec_mutex_free(&irc->otr_mutex);
 	
 	g_free(irc);
 	

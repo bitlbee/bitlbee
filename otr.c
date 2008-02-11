@@ -53,7 +53,7 @@ void cmd_otr_smp(irc_t *irc, char **args);
 void cmd_otr_trust(irc_t *irc, char **args);
 void cmd_otr_info(irc_t *irc, char **args);
 void cmd_otr_keygen(irc_t *irc, char **args);
-/* void cmd_otr_forget(irc_t *irc, char **args); */
+void cmd_otr_forget(irc_t *irc, char **args);
 
 const command_t otr_commands[] = {
 	{ "connect",     1, &cmd_otr_connect,    0 },
@@ -62,9 +62,7 @@ const command_t otr_commands[] = {
 	{ "trust",       6, &cmd_otr_trust,      0 },
 	{ "info",        0, &cmd_otr_info,       0 },
 	{ "keygen",      1, &cmd_otr_keygen,     0 },
-	/*
-	{ "forget",      1, &cmd_otr_forget,     0 },
-	*/
+	{ "forget",      2, &cmd_otr_forget,     0 },
 	{ NULL }
 };
 
@@ -73,10 +71,13 @@ const command_t otr_commands[] = {
 
 /* start background thread to generate a (new) key for a given account */
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol);
+
 /* keygen thread main func */
 gpointer otr_keygen_thread_func(gpointer data);
+
 /* mainloop handler for when keygen thread finishes */
 gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond);
+
 /* data to be passed to otr_keygen_thread_func */
 struct kgdata {
 	irc_t *irc;            /* access to OTR userstate */
@@ -88,9 +89,10 @@ struct kgdata {
 	gcry_error_t result;   /* return value of otrl_privkey_generate */
 };
 
-/* yes/no handlers for "generate key now?" */
+/* some yes/no handlers */
 void yes_keygen(gpointer w, void *data);
-void no_keygen(gpointer w, void *data);
+void yes_forget_fingerprint(gpointer w, void *data);
+void yes_forget_context(gpointer w, void *data);
 
 /* helper to make sure accountname and protocol match the incoming "opdata" */
 struct im_connection *check_imc(void *opdata, const char *accountname,
@@ -123,6 +125,9 @@ void show_otr_context_info(irc_t *irc, ConnContext *ctx);
 
 /* show the list of fingerprints associated with a given context */
 void show_fingerprints(irc_t *irc, ConnContext *ctx);
+
+/* find a fingerprint by prefix (given as any number of hex strings) */
+Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args);
 
 /* to log out accounts during keygen */
 extern void cmd_account(irc_t *irc, char **cmd);
@@ -258,7 +263,7 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	OtrlTLV *tlvs = NULL;
 	char *colormsg;
 	
-    if(!g_mutex_trylock(ic->irc->otr_mutex)) {
+    if(!g_static_rec_mutex_trylock(&ic->irc->otr_mutex)) {
 		irc_usermsg(ic->irc, "otr keygen in progress - msg from %s dropped",
 			peernick(ic->irc, handle, ic->acc->prpl->name));
 		return NULL;
@@ -272,11 +277,11 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	
 	if(ignore_msg) {
 		/* this was an internal OTR protocol message */
-		g_mutex_unlock(ic->irc->otr_mutex);
+		g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 		return NULL;
 	} else if(!newmsg) {
 		/* this was a non-OTR message */
-		g_mutex_unlock(ic->irc->otr_mutex);
+		g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 		return g_strdup(msg);
 	} else {
 		/* OTR has processed this message */
@@ -295,7 +300,7 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 			colormsg = g_strdup(newmsg);
 		}
 		otrl_message_free(newmsg);
-		g_mutex_unlock(ic->irc->otr_mutex);
+		g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 		return colormsg;
 	}
 }
@@ -306,7 +311,7 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	char *otrmsg = NULL;
 	ConnContext *ctx = NULL;
 	
-    if(!g_mutex_trylock(ic->irc->otr_mutex)) {
+    if(!g_static_rec_mutex_trylock(&ic->irc->otr_mutex)) {
 		irc_usermsg(ic->irc, "otr keygen in progress - msg to %s not sent",
 			peernick(ic->irc, handle, ic->acc->prpl->name));
 		return 1;
@@ -316,7 +321,7 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 		ic->acc->user, ic->acc->prpl->name, handle,
 		msg, NULL, &otrmsg, NULL, NULL);
 	if(st) {
-		g_mutex_unlock(ic->irc->otr_mutex);
+		g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 		return st;
 	}
 
@@ -327,7 +332,7 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	if(otrmsg) {
 		if(!ctx) {
 			otrl_message_free(otrmsg);
-			g_mutex_unlock(ic->irc->otr_mutex);
+			g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 			return 1;
 		}
 		st = otrl_message_fragment_and_send(&global.otr_ops, ic, ctx,
@@ -338,7 +343,7 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 		st = ic->acc->prpl->buddy_msg( ic, (char *)handle, (char *)msg, flags );
 	}
 	
-	g_mutex_unlock(ic->irc->otr_mutex);
+	g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 	return st;
 }
 
@@ -358,7 +363,7 @@ void cmd_otr(irc_t *irc, char **args)
 	}
 	
 	if(!cmd->command) {
-		irc_usermsg(irc, "%s %s: unknown subcommand, see \x02help otr\x02",
+		irc_usermsg(irc, "%s: unknown subcommand \"%s\", see \x02help otr\x02",
 			args[0], args[1]);
 		return;
 	}
@@ -391,7 +396,7 @@ void op_create_privkey(void *opdata, const char *accountname,
 
 	s = g_strdup_printf("oops, no otr privkey for %s/%s - generate one now?",
 		accountname, protocol);
-	query_add(ic->irc, ic, s, yes_keygen, no_keygen, ic->acc);
+	query_add(ic->irc, ic, s, yes_keygen, NULL, ic->acc);
 }
 
 int op_is_logged_in(void *opdata, const char *accountname,
@@ -475,6 +480,7 @@ void op_gone_secure(void *opdata, ConnContext *context)
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
 	user_t *u;
+	const char *trust;
 
 	log_message(LOGLVL_DEBUG, "op_gone_secure '%s' '%s' '%s'", context->accountname, context->protocol, context->username);
 
@@ -485,7 +491,9 @@ void op_gone_secure(void *opdata, ConnContext *context)
 			context->username, context->protocol, context->accountname);
 		return;
 	}
-	if(context->active_fingerprint->trust[0])
+	
+	trust = context->active_fingerprint->trust;
+	if(trust && trust[0])
 		u->encrypted = 2;
 	else
 		u->encrypted = 1;
@@ -578,6 +586,17 @@ void cmd_otr_disconnect(irc_t *irc, char **args)
 	
 	otrl_message_disconnect(irc->otr_us, &global.otr_ops,
 		u->ic, u->ic->acc->user, u->ic->acc->prpl->name, u->handle);
+	
+	/* for some reason, libotr (3.1.0) doesn't do this itself: */
+	if(u->encrypted) {
+		ConnContext *ctx;
+		ctx = otrl_context_find(irc->otr_us, u->handle, u->ic->acc->user,
+			u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+		if(ctx)
+			op_gone_insecure(u->ic, ctx);
+		else /* huh? */
+			u->encrypted = 0;
+	}
 }
 
 void cmd_otr_connect(irc_t *irc, char **args)
@@ -718,16 +737,13 @@ void cmd_otr_info(irc_t *irc, char **args)
 		if(protocol) {
 			*(protocol++) = '\0';
 			myhandle = strchr(protocol, '/');
-			if(!myhandle) {
-				/* TODO: try to find a unique account for this context */
-			}
 		}
 		if(protocol && myhandle) {
 			*(myhandle++) = '\0';
 			handle = arg;
 			ctx = otrl_context_find(irc->otr_us, handle, myhandle, protocol, 0, NULL, NULL, NULL);
 			if(!ctx) {
-				irc_usermsg(irc, "no such context (%s %s %s)", handle, protocol, myhandle);
+				irc_usermsg(irc, "no such context");
 				g_free(arg);
 				return;
 			}
@@ -777,9 +793,122 @@ void cmd_otr_keygen(irc_t *irc, char **args)
 	
 	if(otrl_privkey_find(irc->otr_us, a->user, a->prpl->name)) {
 		char *s = g_strdup_printf("account %d already has a key, replace it?", n);
-		query_add(irc, a->ic, s, yes_keygen, no_keygen, a);
+		query_add(irc, a->ic, s, yes_keygen, NULL, a);
 	} else {
 		otr_keygen(irc, a->user, a->prpl->name);
+	}
+}
+
+void yes_forget_fingerprint(gpointer w, void *data)
+{
+	struct im_connection *ic = (struct im_connection *)w;
+	Fingerprint *fp = (Fingerprint *)data;
+	
+	if(fp == fp->context->active_fingerprint) {
+		irc_usermsg(ic->irc, "that fingerprint is active, terminate otr connection first");
+		return;
+	}
+		
+	otrl_context_forget_fingerprint(fp, 0);
+}
+
+void yes_forget_context(gpointer w, void *data)
+{
+	struct im_connection *ic = (struct im_connection *)w;
+	ConnContext *ctx = (ConnContext *)data;
+	
+	if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
+		irc_usermsg(ic->irc, "active otr connection with %s, terminate it first",
+			peernick(ic->irc, ctx->username, ctx->protocol));
+		return;
+	}
+		
+	if(ctx->msgstate == OTRL_MSGSTATE_FINISHED)
+		otrl_context_force_plaintext(ctx);
+	otrl_context_forget(ctx);
+}
+
+void cmd_otr_forget(irc_t *irc, char **args)
+{
+	if(!strcmp(args[1], "fingerprint"))
+	{
+		user_t *u;
+		ConnContext *ctx;
+		Fingerprint *fp;
+		char human[54];
+		char *s;
+		
+		if(!args[3]) {
+			irc_usermsg(irc, "otr %s %s: not enough arguments (2 req.)", args[0], args[1]);
+			return;
+		}
+		
+		u = user_find(irc, args[2]);
+		if(!u || !u->ic) {
+			irc_usermsg(irc, "%s: unknown user", args[2]);
+			return;
+		}
+		
+		ctx = otrl_context_find(irc->otr_us, u->handle, u->ic->acc->user,
+			u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+		if(!ctx) {
+			irc_usermsg(irc, "no otr context with %s", args[2]);
+			return;
+		}
+		
+		fp = match_fingerprint(irc, ctx, ((const char **)args)+3);
+		if(!fp) {
+			/* match_fingerprint does error messages */
+			return;
+		}
+		
+		if(fp == ctx->active_fingerprint) {
+			irc_usermsg(irc, "that fingerprint is active, terminate otr connection first");
+			return;
+		}
+		
+		otrl_privkey_hash_to_human(human, fp->fingerprint);
+		s = g_strdup_printf("about to forget fingerprint %s, are you sure?", human);
+		query_add(irc, u->ic, s, yes_forget_fingerprint, NULL, fp);
+	}
+	
+	else if(!strcmp(args[1], "context"))
+	{
+		user_t *u;
+		ConnContext *ctx;
+		char *s;
+		
+		u = user_find(irc, args[2]);
+		if(!u || !u->ic) {
+			irc_usermsg(irc, "%s: unknown user", args[2]);
+			return;
+		}
+		
+		ctx = otrl_context_find(irc->otr_us, u->handle, u->ic->acc->user,
+			u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+		if(!ctx) {
+			irc_usermsg(irc, "no otr context with %s", args[2]);
+			return;
+		}
+		
+		if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
+			irc_usermsg(irc, "active otr connection with %s, terminate it first", args[2]);
+			return;
+		}
+		
+		s = g_strdup_printf("about to forget otr data about %s, are you sure?", args[2]);
+		query_add(irc, u->ic, s, yes_forget_context, NULL, ctx);
+	}
+	
+	else if(!strcmp(args[1], "key"))
+	{
+		irc_usermsg(irc, "n/a: TODO");
+	}
+	
+	else
+	{
+		irc_usermsg(irc, "otr %s: unknown subcommand \"%s\", see \x02help otr forget\x02",
+			args[0], args[1]);
 	}
 }
 
@@ -955,7 +1084,7 @@ int otr_update_modeflags(irc_t *irc, user_t *u)
 	int encrypted = u->encrypted;
 	int trusted = u->encrypted > 1;
 	char flags[7];
-	int nflags;
+	int nflags=0;
 	char *p = flags;
 	char *from;
 	int i;
@@ -1035,6 +1164,72 @@ void show_fingerprints(irc_t *irc, ConnContext *ctx)
 		irc_usermsg(irc, "  no fingerprints");
 }
 
+Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args)
+{
+	Fingerprint *fp, *fp2;
+	char human[45];
+	char prefix[45], *p;
+	int n;
+	int i,j;
+	
+	/* assemble the args into a prefix in standard "human" form */
+	n=0;
+	p=prefix;
+	for(i=0; args[i]; i++) {
+		for(j=0; args[i][j]; j++) {
+			char c = toupper(args[i][j]);
+			
+			if(n>=40) {
+				irc_usermsg(irc, "too many fingerprint digits given, expected at most 40");
+				return NULL;
+			}
+			
+			if( (c>='A' && c<='F') || (c>='0' && c<='9') ) {
+				*(p++) = c;
+			} else {
+				irc_usermsg(irc, "invalid hex digit '%c' in block %d", args[i][j], i+1);
+				return NULL;
+			}
+			
+			n++;
+			if(n%8 == 0)
+				*(p++) = ' ';
+		}
+	}
+	*p = '\0';
+	log_message(LOGLVL_DEBUG, "match_fingerprint '%s'", prefix);
+	log_message(LOGLVL_DEBUG, "n=%d strlen(prefix)=%d", n, strlen(prefix));
+	
+	/* find first fingerprint with the given prefix */
+	n = strlen(prefix);
+	for(fp=&ctx->fingerprint_root; fp; fp=fp->next) {
+		if(!fp->fingerprint)
+			continue;
+		otrl_privkey_hash_to_human(human, fp->fingerprint);
+		if(!strncmp(prefix, human, n))
+			break;
+	}
+	if(!fp) {
+		irc_usermsg(irc, "%s: no match", prefix);
+		return NULL;
+	}
+	
+	/* make sure the match, if any, is unique */
+	for(fp2=fp->next; fp2; fp2=fp2->next) {
+		if(!fp2->fingerprint)
+			continue;
+		otrl_privkey_hash_to_human(human, fp2->fingerprint);
+		if(!strncmp(prefix, human, n))
+			break;
+	}
+	if(fp2) {
+		irc_usermsg(irc, "%s: multiple matches", prefix);
+		return NULL;
+	}
+	
+	return fp;
+}
+
 void show_general_otr_info(irc_t *irc)
 {
 	ConnContext *ctx;
@@ -1079,9 +1274,7 @@ void show_general_otr_info(irc_t *irc)
 				ctx->username, ctx->protocol, ctx->accountname);
 		
 		if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
-			otrl_privkey_hash_to_human(human, ctx->active_fingerprint->fingerprint);
 			irc_usermsg(irc, "  \x02%s\x02", userstring);
-			irc_usermsg(irc, "    %s", human);
 		} else {
 			irc_usermsg(irc, "  %s", userstring);
 		}
@@ -1123,7 +1316,7 @@ void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 		irc_usermsg(irc, "  connection state: %d", ctx->msgstate);
 	}
 
-    irc_usermsg(irc, "  known fingerprints: (bold=active)");	
+    irc_usermsg(irc, "  fingerprints: (bold=active)");	
 	show_fingerprints(irc, ctx);
 }
 
@@ -1158,7 +1351,7 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 		g_free(kg);
 		return;
 	}
-	kg->done = FALSE;
+	kg->done = 0;
 
 	/* Poll for completion of the thread periodically. I would have preferred
 	   to just wait on a pipe but this way it's portable to Windows. *sigh*
@@ -1194,15 +1387,15 @@ gpointer otr_keygen_thread_func(gpointer data)
 	struct kgdata *kg = (struct kgdata *)data;
 	
 	/* lock OTR subsystem and do the work */
-	g_mutex_lock(kg->irc->otr_mutex);
+	g_static_rec_mutex_lock(&kg->irc->otr_mutex);
 	kg->result = otrl_privkey_generate(kg->irc->otr_us, kg->keyfile, kg->handle,
 		kg->protocol);
-	g_mutex_unlock(kg->irc->otr_mutex);
+	g_static_rec_mutex_unlock(&kg->irc->otr_mutex);
 	/* OTR enabled again */
 	
 	/* notify mainloop */
 	g_mutex_lock(kg->mutex);
-	kg->done = TRUE;
+	kg->done = 1;
 	g_mutex_unlock(kg->mutex);
 	
 	return NULL;
@@ -1236,14 +1429,6 @@ void yes_keygen(gpointer w, void *data)
 	account_t *acc = (account_t *)data;
 	
 	otr_keygen(acc->irc, acc->user, acc->prpl->name);
-}
-
-void no_keygen(gpointer w, void *data)
-{
-	account_t *acc = (account_t *)data;
-	
-	irc_usermsg(acc->irc, "keygen cancelled for %s/%s",
-		acc->user, acc->prpl->name);
 }
 
 
