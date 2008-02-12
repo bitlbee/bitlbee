@@ -243,6 +243,155 @@
 			</para>
 		</description>
 	</bitlbee-command>
+	
+	<bitlbee-command name="otr">
+		<short-description>Off-the-Record encryption control</short-description>
+		<syntax>otr &lt;subcommand&gt; [&lt;arguments&gt;]</syntax>
+
+		<description>
+
+			<para>
+				Available subcommands: connect, disconnect, smp, trust, info, keygen, and forget. See <emphasis>help otr &lt;subcommand&gt;</emphasis> for more information.
+			</para>
+
+		</description>
+		
+		<bitlbee-command name="connect">
+			<syntax>otr connect &lt;nick&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Attempts to establish an encrypted connection with the specified user by sending a magic string.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="disconnect">
+			<syntax>otr disconnect &lt;nick&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Resets the connection with the specified user to cleartext.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="smp">
+			<syntax>otr smp &lt;nick&gt; &lt;secret&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Attempts to authenticate the given user's active fingerprint via the Socialist Millionaires' Protocol.
+				</para>
+				
+				<para>
+					If an SMP challenge has already been received from the given user, responds with the specified secret. Otherwise, a challenge for the secret will be sent. If the protocol succeeds (i.e. both parties gave the same secret), the fingerprint will be trusted.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="trust">
+			<syntax>otr trust &lt;nick&gt; &lt;fp1&gt; &lt;fp2&gt; &lt;fp3&gt; &lt;fp4&gt; &lt;fp5&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Manually affirms trust in the specified fingerprint, given as five blocks of precisely eight (hexadecimal) digits each.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="info">
+			<syntax>otr info</syntax>
+			<syntax>otr info &lt;nick&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Shows information about the OTR state. The first form lists our private keys and current OTR contexts. The second form displays information about the connection with a given user, including the list of their known fingerprints.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="keygen">
+			<syntax>otr keygen &lt;account-no&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Generates a new OTR private key for the given account.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="forget">
+			<syntax>otr forget &lt;thing&gt; &lt;arguments&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Forgets some part of our OTR userstate. Available things: fingerprint, context, and key. See <emphasis>help otr forget &lt;thing&gt;</emphasis> for more information.
+				</para>
+			
+			</description>
+			
+			<bitlbee-command name="fingerprint">
+				<syntax>otr forget fingerprint &lt;nick&gt; &lt;fingerprint&gt;</syntax>
+				
+				<description>
+				
+					<para>
+						Drops the specified fingerprint from the given user's OTR connection context. It is allowed to specify only a (unique) prefix of the desired fingerprint.
+					</para>
+					
+				</description>
+				
+			</bitlbee-command>
+				
+			<bitlbee-command name="context">
+				<syntax>otr forget context &lt;nick&gt;</syntax>
+				
+				<description>
+				
+					<para>
+						Forgets the entire OTR context associated with the given user. This includes current message and protocol states, as well as any fingerprints for that user.
+					</para>
+					
+				</description>
+				
+			</bitlbee-command>
+
+			<bitlbee-command name="key">
+				<syntax>otr forget key &lt;fingerprint&gt;</syntax>
+				
+				<description>
+				
+					<para>
+						Forgets an OTR private key matching the specified fingerprint. It is allowed to specify only a (unique) prefix of the fingerprint.
+					</para>
+					
+				</description>
+				
+			</bitlbee-command>
+		
+		</bitlbee-command>
+		
+	</bitlbee-command>
 
 	<bitlbee-command name="set">
 		<short-description>Miscellaneous settings</short-description>
