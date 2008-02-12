@@ -118,6 +118,7 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "op_buddies", "trusted", set_eval_op_buddies, irc );
 	set_add( &irc->set, "op_root", "true", set_eval_op_root, irc );
 	set_add( &irc->set, "op_user", "true", set_eval_op_user, irc );
+	set_add( &irc->set, "otr_policy", "opportunistic", set_eval_otr_policy, irc );
 	set_add( &irc->set, "password", NULL, passchange, irc );
 	set_add( &irc->set, "private", "true", set_eval_bool, irc );
 	set_add( &irc->set, "query_order", "lifo", NULL, irc );

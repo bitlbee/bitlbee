@@ -368,3 +368,17 @@ char *set_eval_charset( set_t *set, char *value )
 	g_iconv_close( cd );
 	return value;
 }
+
+/* possible values: never, opportunistic, manual, always */
+char *set_eval_otr_policy( set_t *set, char *value )
+{
+	if ( !strcmp(value, "never") )
+		return value;
+	if ( !strcmp(value, "opportunistic") )
+		return value;
+	if ( !strcmp(value, "manual") )
+		return value;
+	if ( !strcmp(value, "always") )
+		return value;
+	return NULL;
+}

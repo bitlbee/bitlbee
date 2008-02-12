@@ -1,15 +1,46 @@
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2008 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
+/*
+  OTR support (cf. http://www.cypherpunks.ca/otr/)
+  2008, Sven Moritz Hallberg <pesco@khjk.org>
+    
+  files used to store OTR data:
+    <configdir>/<nick>.otr_keys
+    <configdir>/<nick>.otr_fprints
+    
+  top-level todos: (search for TODO for more ;-))
+    integrate otr_load/otr_save with existing storage backends
+    per-account policy settings
+    per-user policy settings
+*/
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
+
 #include "bitlbee.h"
 #ifdef WITH_OTR
 #include "irc.h"
 #include "otr.h"
 #include <sys/types.h>
 #include <unistd.h>
-
-/**
-files used to store OTR data:
-  $configdir/$nick.otr_keys
-  $configdir/$nick.otr_fprints
- **/
 
 
 /** OTR interface routines for the OtrlMessageAppOps struct: **/
@@ -344,7 +375,8 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 			otrmsg, OTRL_FRAGMENT_SEND_ALL, NULL);
 		otrl_message_free(otrmsg);
 	} else {
-		/* yeah, well, some const casts as usual... ;-) */
+		/* note: otrl_message_sending handles policy, so that if REQUIRE_ENCRYPTION is set,
+		   this case does not occur */
 		st = ic->acc->prpl->buddy_msg( ic, (char *)handle, (char *)msg, flags );
 	}
 	
@@ -387,7 +419,19 @@ void cmd_otr(irc_t *irc, char **args)
 
 OtrlPolicy op_policy(void *opdata, ConnContext *context)
 {
-	/* TODO: OTR policy configurable */
+	struct im_connection *ic = check_imc(opdata, context->accountname, context->protocol);
+	const char *p;
+
+	p = set_getstr(&ic->irc->set, "otr_policy");
+	if(!strcmp(p, "never"))
+		return OTRL_POLICY_NEVER;
+	if(!strcmp(p, "opportunistic"))
+		return OTRL_POLICY_OPPORTUNISTIC;
+	if(!strcmp(p, "manual"))
+		return OTRL_POLICY_MANUAL;
+	if(!strcmp(p, "always"))
+		return OTRL_POLICY_ALWAYS;
+	
 	return OTRL_POLICY_OPPORTUNISTIC;
 }
 
@@ -857,6 +901,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 			return;
 		}
 		
+		/* TODO: allow context specs ("user/proto/account") in 'otr forget fingerprint'? */
 		u = user_find(irc, args[2]);
 		if(!u || !u->ic) {
 			irc_usermsg(irc, "%s: unknown user", args[2]);
@@ -892,6 +937,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		ConnContext *ctx;
 		char *s;
 		
+		/* TODO: allow context specs ("user/proto/account") in 'otr forget contex'? */
 		u = user_find(irc, args[2]);
 		if(!u || !u->ic) {
 			irc_usermsg(irc, "%s: unknown user", args[2]);
