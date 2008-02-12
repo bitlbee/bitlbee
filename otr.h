@@ -80,7 +80,7 @@ typedef void *OtrlMessageAppOps;
 #define otr_remove(nick) {}
 #define otr_rename(onick,nnick) {}
 #define otr_check_for_key(acc) {}
-#define otr_handle_msg(ic,handle,msg) (g_strdup(msg))
+#define otr_handle_message(ic,handle,msg) (g_strdup(msg))
 #define otr_send_message(ic,h,m,f) (ic->acc->prpl->buddy_msg(ic,h,m,f))
 
 void cmd_otr_nosupport(void *, char **);
