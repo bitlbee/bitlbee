@@ -546,6 +546,17 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="color_encrypted" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				If set to true, BitlBee will color incoming encrypted messages according to their fingerprint trust level: untrusted=red, trusted=green.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="debug" type="boolean" scope="global">
 		<default>false</default>
 
@@ -612,6 +623,22 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="halfop_buddies" type="string" scope="global">
+		<default>encrypted</default>
+		<possible-values>encrypted, trusted, notaway, false</possible-values>
+
+		<description>
+			<para>
+				Specifies under which circumstances BitlBee should give the "halfop" mode flag (+h) to buddies.
+			</para>
+			
+			<para>
+				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="lcnicks" type="boolean" scope="global">
 		<default>true</default>
 
@@ -634,17 +661,52 @@
 
 	</bitlbee-setting>
 
-	<bitlbee-setting name="ops" type="string" scope="global">
-		<default>both</default>
-		<possible-values>both, root, user, none</possible-values>
+	<bitlbee-setting name="op_buddies" type="string" scope="global">
+		<default>trusted</default>
+		<possible-values>encrypted, trusted, notaway, false</possible-values>
 
 		<description>
 			<para>
-				Some people prefer themself and root to have operator status in &amp;bitlbee, other people don't. You can change these states using this setting.
+				Specifies under which circumstances BitlBee should give the "op" mode flag (+o) to buddies.
 			</para>
-
+			
 			<para>
-				The value "both" means both user and root get ops. "root" means, well, just root. "user" means just the user. "none" means nobody will get operator status.
+				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="op_root" type="bool" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				Some people prefer themself and root to have operator status in &amp;bitlbee, other people don't. You can set the desired state for root using this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="op_user" type="bool" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				Some people prefer themself and root to have operator status in &amp;bitlbee, other people don't. You can set the desired state for yourself using this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="otr_policy" type="string" scope="global">
+		<default>opportunistic</default>
+		<possible-values>never, opportunistic, manual, always</possible-values>
+
+		<description>
+			<para>
+				This setting controls the policy for establishing Off-the-Record connections.
+			</para>
+			<para>
+				A value of "never" effectively disables the OTR subsystem. In "opportunistic" mode, a magic whitespace pattern will be appended to the first message sent to any user. If the peer is also running opportunistic OTR, an encrypted connection will be set up automatically. On "manual", on the other hand, OTR connections must be established explicitly using <emphasis>otr connect</emphasis>. Finally, the setting "always" enforces encrypted communication by causing BitlBee to refuse to send any cleartext messages at all.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -828,6 +890,22 @@
 				Sends you a /notice when a user starts typing a message (if the protocol supports it, MSN for example). This is a bug, not a feature. (But please don't report it.. ;-) You don't want to use it. Really. In fact the typing-notification is just one of the least useful 'innovations' ever. It's just there because some guy will probably ask me about it anyway. ;-)
 			</para>
 		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="voice_buddies" type="string" scope="global">
+		<default>trusted</default>
+		<possible-values>encrypted, trusted, notaway, false</possible-values>
+
+		<description>
+			<para>
+				Specifies under which circumstances BitlBee should give the "voice" mode flag (+v) to buddies.
+			</para>
+			
+			<para>
+				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key.
+			</para>
+		</description>
+
 	</bitlbee-setting>
 
 	<bitlbee-setting name="web_aware" type="string" scope="account">
