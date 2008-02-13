@@ -268,6 +268,7 @@ char *set_eval_mode_buddies( set_t *set, char *value, char modeflag )
 			irc_write( irc, ":%s!%s@%s MODE %s +%s%s", irc->mynick, irc->mynick, irc->myhost,
 		                                               irc->channel, flags, op );
 		    op[0]='\0';
+            nop=0;
 		    g_free(flags);
 		}
 		if(strlen(deop)+strlen(u->nick)+2 > 64) {
@@ -275,6 +276,7 @@ char *set_eval_mode_buddies( set_t *set, char *value, char modeflag )
 			irc_write( irc, ":%s!%s@%s MODE %s -%s%s", irc->mynick, irc->mynick, irc->myhost,
 		                                               irc->channel, flags, deop );
 		    deop[0]='\0';
+            ndeop=0;
 		    g_free(flags);
 		}
 		
