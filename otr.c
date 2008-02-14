@@ -249,6 +249,7 @@ void otr_save(irc_t *irc)
 	if(e) {
 		log_message(LOGLVL_ERROR, "otr save: %s: %s", s, strerror(e));
 	}
+	chmod(s, 0600);
 }
 
 void otr_remove(const char *nick)
@@ -1532,6 +1533,7 @@ gpointer otr_keygen_thread_func(gpointer data)
 	g_static_rec_mutex_lock(&kg->irc->otr_mutex);
 	kg->result = otrl_privkey_generate(kg->irc->otr_us, kg->keyfile, kg->handle,
 		kg->protocol);
+	chmod(kg->keyfile, 0600);
 	g_static_rec_mutex_unlock(&kg->irc->otr_mutex);
 	/* OTR enabled again */
 	
