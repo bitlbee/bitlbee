@@ -111,6 +111,7 @@ static const htmlentity_t ent[] =
 	{ "lt",     "<" },
 	{ "gt",     ">" },
 	{ "amp",    "&" },
+	{ "apos",   "'" },
 	{ "quot",   "\"" },
 	{ "aacute", "á" },
 	{ "eacute", "é" },
