@@ -135,7 +135,7 @@ static void cmd_help( irc_t *irc, char **cmd )
 	}
 }
 
-void cmd_account( irc_t *irc, char **cmd );
+static void cmd_account( irc_t *irc, char **cmd );
 
 static void cmd_identify( irc_t *irc, char **cmd )
 {
@@ -212,7 +212,7 @@ static void cmd_drop( irc_t *irc, char **cmd )
 	}
 }
 
-void cmd_account( irc_t *irc, char **cmd )
+static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
 	

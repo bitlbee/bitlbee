@@ -164,9 +164,6 @@ Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args);
 /* find a private key by fingerprint prefix (given as any number of hex strings) */
 OtrlPrivKey *match_privkey(irc_t *irc, const char **args);
 
-/* to log out accounts during keygen */
-extern void cmd_account(irc_t *irc, char **cmd);
-
 
 /*** routines declared in otr.h: ***/
 
@@ -300,7 +297,14 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	char *colormsg;
 	
     if(!g_static_rec_mutex_trylock(&ic->irc->otr_mutex)) {
-		irc_usermsg(ic->irc, "otr keygen in progress - msg from %s dropped",
+		user_t *u = user_findhandle(ic, handle);
+		
+		/* fallback for non-otr clients */
+		if(u && !u->encrypted) {
+			return g_strdup(msg);
+		}
+		
+		irc_usermsg(ic->irc, "encrypted msg from %s during keygen - dropped",
 			peernick(ic->irc, handle, ic->acc->prpl->name));
 		return NULL;
 	}
@@ -349,7 +353,15 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	ConnContext *ctx = NULL;
 	
     if(!g_static_rec_mutex_trylock(&ic->irc->otr_mutex)) {
-		irc_usermsg(ic->irc, "otr keygen in progress - msg to %s not sent",
+		user_t *u = user_findhandle(ic, handle);
+		
+		/* Fallback for non-otr clients.
+		   Yes, this better shouldn't send private stuff in the clear... */
+		if(u && !u->encrypted) {
+			return ic->acc->prpl->buddy_msg(ic, (char *)handle, (char *)msg, flags);
+		}
+		
+		irc_usermsg(ic->irc, "encrypted message to %s during keygen - not sent",
 			peernick(ic->irc, handle, ic->acc->prpl->name));
 		return 1;
     }
@@ -1465,11 +1477,12 @@ void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 {
-	char *account_off[] = {"account", "off", NULL};
 	GError *err;
 	GThread *thr;
 	struct kgdata *kg;
 	gint ev;
+	
+	irc_usermsg(irc, "generating new private key for %s/%s...", handle, protocol);
 	
 	kg = g_new0(struct kgdata, 1);
 	if(!kg) {
@@ -1508,13 +1521,6 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 		return;
 	}
 
-	/* tell the user what's happening, go comatose, and start the keygen */
-	irc_usermsg(irc, "going comatose for otr key generation, this will take a moment");
-	irc_usermsg(irc, "all accounts logging out, user commands disabled");
-	cmd_account(irc, account_off);
-	irc_usermsg(irc, "generating new otr privkey for %s/%s...",
-		handle, protocol);
-	
 	thr = g_thread_create(&otr_keygen_thread_func, kg, FALSE, &err);
 	if(!thr) {
 		irc_usermsg(irc, "otr keygen failed: %s", err->message);
