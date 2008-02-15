@@ -6,7 +6,9 @@
 
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
+  
   2008, Sven Moritz Hallberg <pesco@khjk.org>
+  (c) and funded by stonedcoder.org
     
   files used to store OTR data:
     <configdir>/<nick>.otr_keys
@@ -214,17 +216,20 @@ void otr_load(irc_t *irc)
 	char s[512];
 	account_t *a;
 	gcry_error_t e;
+	int eno;
 
 	log_message(LOGLVL_DEBUG, "otr_load '%s'", irc->nick);
 
 	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, irc->nick);
 	e = otrl_privkey_read(irc->otr_us, s);
-	if(e && e!=ENOENT) {
+	eno = gcry_error_code_to_errno(e);
+	if(e && eno!=ENOENT) {
 		log_message(LOGLVL_ERROR, "otr load: %s: %s", s, strerror(e));
 	}
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->nick);
 	e = otrl_privkey_read_fingerprints(irc->otr_us, s, NULL, NULL);
-	if(e && e!=ENOENT) {
+	eno = gcry_error_code_to_errno(e);
+	if(e && eno!=ENOENT) {
 		log_message(LOGLVL_ERROR, "otr load: %s: %s", s, strerror(e));
 	}
 	
@@ -1471,7 +1476,7 @@ void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 		irc_usermsg(irc, "  connection state: %d", ctx->msgstate);
 	}
 
-    irc_usermsg(irc, "  fingerprints: (bold=active)");	
+	irc_usermsg(irc, "  fingerprints: (bold=active)");	
 	show_fingerprints(irc, ctx);
 }
 
