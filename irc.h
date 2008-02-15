@@ -98,8 +98,10 @@ typedef struct irc
 	gint ping_source_id;
 	
 	OtrlUserState otr_us;
-	pid_t otr_keygen;
-	int otr_ntodo;
+	pid_t otr_keygen;    /* pid of keygen slave */
+	FILE *otr_to;        /* pipe to keygen slave */
+	FILE *otr_from;      /* pipe from keygen slave */
+	int otr_ntodo;       /* number of keys left to generate */
 } irc_t;
 
 #include "user.h"

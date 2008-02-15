@@ -135,6 +135,8 @@ irc_t *irc_new( int fd )
 
 	irc->otr_us = otrl_userstate_create();
 	irc->otr_keygen = 0;
+	irc->otr_to = NULL;
+	irc->otr_from = NULL;
 	irc->otr_ntodo = 0;
 	
 	return( irc );

@@ -42,6 +42,7 @@
 #include "irc.h"
 #include "otr.h"
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 
@@ -105,8 +106,17 @@ const command_t otr_commands[] = {
 /* start background process to generate a (new) key for a given account */
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol);
 
+/* main function for the forked keygen slave */
+void keygen_child_main(OtrlUserState us, int infd, int outfd);
+
 /* mainloop handler for when a keygen finishes */
 gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond);
+
+/* copy the contents of file a to file b, overwriting it if it exists */
+void copyfile(const char *a, const char *b);
+
+/* read one line of input from a stream, excluding trailing newline */
+void myfgets(char *s, int size, FILE *stream);
 
 /* some yes/no handlers */
 void yes_keygen(gpointer w, void *data);
@@ -1416,43 +1426,154 @@ void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 {
-	
 	irc_usermsg(irc, "generating new private key for %s/%s...", handle, protocol);
-	irc_usermsg(irc, "n/a: not implemented");
-	return;
 
 	/* see if we already have a keygen child running. if not, start one and put a
-	   handler on its output.
-	   
-	b_input_add(fd, GAIM_INPUT_READ, keygen_finish_handler, NULL);
-	
-	   generate a fresh temp file name for our new key and save our current keys to it.
-	   send the child filename and accountname/protocol for the new key
-	   increment 'ntodo' */
-	
-	/* in the child:
-	   read filename, accountname, protocol from input, and start work:
-
-	result = otrl_privkey_generate(kg->irc->otr_us, kg->keyfile, kg->handle,
-		kg->protocol);
+	   handler on its output. */
+	if(!irc->otr_keygen || waitpid(irc->otr_keygen, NULL, WNOHANG)) {
+		pid_t p;
+		int to[2], from[2];
+		FILE *tof, *fromf;
 		
-		when done, send filename, accountname, and protocol to output. */
+		if(pipe(to) < 0 || pipe(from) < 0) {
+			irc_usermsg(irc, "otr keygen: couldn't create pipe: %s", strerror(errno));
+			return;
+		}
+		
+		tof = fdopen(to[1], "w");
+		fromf = fdopen(from[0], "r");
+		if(!tof || !fromf) {
+			irc_usermsg(irc, "otr keygen: couldn't streamify pipe: %s", strerror(errno));
+			return;
+		}
+		
+		p = fork();
+		if(p<0) {
+			irc_usermsg(irc, "otr keygen: couldn't fork: %s", strerror(errno));
+			return;
+		}
+		
+		if(!p) {
+			/* child process */
+			signal(SIGTERM, exit);
+			keygen_child_main(irc->otr_us, to[0], from[1]);
+			exit(0);
+		}
+		
+		irc->otr_keygen = p;
+		irc->otr_to = tof;
+		irc->otr_from = fromf;
+		irc->otr_ntodo = 0;
+		b_input_add(from[0], GAIM_INPUT_READ, keygen_finish_handler, irc);
+	}
 	
+	/* send accountname and protocol for the new key to our keygen slave */
+	fprintf(irc->otr_to, "%s\n%s\n", handle, protocol);
+	fflush(irc->otr_to);
+	irc->otr_ntodo++;
+}
+
+void keygen_child_main(OtrlUserState us, int infd, int outfd)
+{
+	FILE *input, *output;
+	char filename[128], accountname[512], protocol[512];
+	gcry_error_t e;
+	int tempfd;
+	
+	input = fdopen(infd, "r");
+	output = fdopen(outfd, "w");
+	
+	while(!feof(input) && !ferror(input) && !feof(output) && !ferror(output)) {
+		myfgets(accountname, 512, input);
+		myfgets(protocol, 512, input);
+		
+		strncpy(filename, "/tmp/bitlbee-XXXXXX", 128);
+		tempfd = mkstemp(filename);
+		close(tempfd);
+
+		e = otrl_privkey_generate(us, filename, accountname, protocol);
+		if(e) {
+			fprintf(output, "\n");  /* this means failure */
+			fprintf(output, "otr keygen: %s\n", gcry_strerror(e));
+			unlink(filename);
+		} else {
+			fprintf(output, "%s\n", filename);
+			fprintf(output, "otr keygen for %s/%s complete\n", accountname, protocol);
+		}
+		fflush(output);
+	}
+	
+	fclose(input);
+	fclose(output);
 }
 
 gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 {
-	/* in the handler:
-	   read filename, accountname, and protocol from child output
-	   print a message to the user
-			irc_usermsg(kg->irc, "otr keygen for %s/%s complete", kg->handle, kg->protocol);
-	   load the file into userstate
-	   call otr_save.
-	   remove the tempfile.
-	   decrement 'ntodo'
-	   if 'ntodo' reaches zero, send SIGTERM to the child, waitpid for it, return FALSE */
+	irc_t *irc = (irc_t *)data;
+	char filename[512], msg[512];
 
-	return TRUE;  /* still working, keep watching */
+	log_message(LOGLVL_DEBUG, "keygen_finish_handler cond=%d", cond);
+
+	myfgets(filename, 512, irc->otr_from);
+	myfgets(msg, 512, irc->otr_from);
+	
+	log_message(LOGLVL_DEBUG, "filename='%s'", filename);
+	log_message(LOGLVL_DEBUG, "msg='%s'", msg);
+	
+	irc_usermsg(irc, "%s", msg);
+	if(filename[0]) {
+		char *kf = g_strdup_printf("%s%s.otr_keys", global.conf->configdir, irc->nick);
+		char *tmp = g_strdup_printf("%s.new", kf);
+		copyfile(filename, tmp);
+		unlink(filename);
+		rename(tmp,kf);
+		otrl_privkey_read(irc->otr_us, kf);
+		g_free(kf);
+		g_free(tmp);
+	}
+		
+	irc->otr_ntodo--;
+	if(irc->otr_ntodo < 1) {
+		/* okay, we think the slave is idle now, so kill him */
+		log_message(LOGLVL_DEBUG, "all keys done. die, slave!");
+		fclose(irc->otr_from);
+		fclose(irc->otr_to);
+		kill(irc->otr_keygen, SIGTERM);
+		waitpid(irc->otr_keygen, NULL, 0);
+		irc->otr_keygen = 0;
+		return FALSE;  /* unregister ourselves */
+	} else {
+		return TRUE;   /* slave still working, keep watching */
+	}
+}
+
+void copyfile(const char *a, const char *b)
+{
+	int fda, fdb;
+	int n;
+	char buf[1024];
+	
+	log_message(LOGLVL_DEBUG, "copyfile '%s' '%s'", a, b);
+	
+	fda = open(a, O_RDONLY);
+	fdb = open(b, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	
+	while((n=read(fda, buf, 1024)) > 0)
+		write(fdb, buf, n);
+	
+	close(fda);
+	close(fdb);	
+}
+
+void myfgets(char *s, int size, FILE *stream)
+{
+	if(!fgets(s, size, stream)) {
+		s[0] = '\0';
+	} else {
+		int n = strlen(s);
+		if(n>0 && s[n-1] == '\n')
+			s[n-1] = '\0';
+	}
 }
 
 void yes_keygen(gpointer w, void *data)
