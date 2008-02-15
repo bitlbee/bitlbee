@@ -98,7 +98,8 @@ typedef struct irc
 	gint ping_source_id;
 	
 	OtrlUserState otr_us;
-	GStaticRecMutex otr_mutex;      /* for locking otr during keygen */
+	pid_t otr_keygen;
+	int otr_ntodo;
 } irc_t;
 
 #include "user.h"

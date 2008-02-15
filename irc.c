@@ -27,6 +27,8 @@
 #include "bitlbee.h"
 #include "crypting.h"
 #include "ipc.h"
+#include <sys/types.h>
+#include <sys/wait.h>
 
 static gboolean irc_userping( gpointer _irc, int fd, b_input_condition cond );
 
@@ -132,7 +134,8 @@ irc_t *irc_new( int fd )
 	conf_loaddefaults( irc );
 
 	irc->otr_us = otrl_userstate_create();
-	g_static_rec_mutex_init(&irc->otr_mutex);
+	irc->otr_keygen = 0;
+	irc->otr_ntodo = 0;
 	
 	return( irc );
 }
@@ -285,7 +288,11 @@ void irc_free(irc_t * irc)
 	}
 	
 	otrl_userstate_free(irc->otr_us);
-	g_static_rec_mutex_free(&irc->otr_mutex);
+	if(irc->otr_keygen) {
+		kill(irc->otr_keygen, SIGTERM);
+		waitpid(irc->otr_keygen, NULL, 0);
+		/* TODO: remove stale keygen tempfiles */
+	}
 	
 	g_free(irc);
 	

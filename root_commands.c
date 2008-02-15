@@ -85,27 +85,19 @@ void root_command( irc_t *irc, char *cmd[] )
 	if( !cmd[0] )
 		return;
 	
-	if(!g_static_rec_mutex_trylock(&irc->otr_mutex)) {
-		irc_usermsg(irc, "keygen in progress, bitlbee comatose - please wait");
-		return;
-	}
-	
 	for( i = 0; commands[i].command; i++ )
 		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
 		{
 			if( !cmd[commands[i].required_parameters] )
 			{
 				irc_usermsg( irc, "Not enough parameters given (need %d)", commands[i].required_parameters );
-				g_static_rec_mutex_unlock(&irc->otr_mutex);
 				return;
 			}
 			commands[i].execute( irc, cmd );
-			g_static_rec_mutex_unlock(&irc->otr_mutex);
 			return;
 		}
 	
 	irc_usermsg( irc, "Unknown command: %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[0] );
-	g_static_rec_mutex_unlock(&irc->otr_mutex);
 }
 
 static void cmd_help( irc_t *irc, char **cmd )

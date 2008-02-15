@@ -102,25 +102,11 @@ const command_t otr_commands[] = {
 
 /** misc. helpers/subroutines: **/
 
-/* start background thread to generate a (new) key for a given account */
+/* start background process to generate a (new) key for a given account */
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol);
 
-/* keygen thread main func */
-gpointer otr_keygen_thread_func(gpointer data);
-
-/* mainloop handler for when keygen thread finishes */
+/* mainloop handler for when a keygen finishes */
 gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond);
-
-/* data to be passed to otr_keygen_thread_func */
-struct kgdata {
-	irc_t *irc;            /* access to OTR userstate */
-	char *keyfile;         /* free me! */
-	const char *handle;      /* don't free! */
-	const char *protocol;    /* don't free! */
-	GMutex *mutex;         /* lock for the 'done' flag, free me! */
-	int done;              /* is the thread done? */
-	gcry_error_t result;   /* return value of otrl_privkey_generate */
-};
 
 /* some yes/no handlers */
 void yes_keygen(gpointer w, void *data);
@@ -171,7 +157,6 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args);
 
 void otr_init(void)
 {
-	if(!g_thread_supported()) g_thread_init(NULL);
 	OTRL_INIT;
 	
 	/* fill global OtrlMessageAppOps */
@@ -195,42 +180,24 @@ void otr_init(void)
 	global.otr_ops.account_name_free = NULL;
 }
 
-/* Notice on the otr_mutex:
-
-   The incoming/outgoing message handlers try to lock the otr_mutex. If they succeed,
-   this will prevent a concurrent keygen (possibly spawned by that very command)
-   from messing up the userstate. If the lock fails, that means there already is
-   a keygen in progress. Instead of blocking for an unknown time, they
-   will bail out gracefully, informing the user of this temporary "coma".
-   TODO: Hold back incoming/outgoing messages and process them when keygen completes?
-
-   The other routines do not lock the otr_mutex themselves, it is done as a
-   catch-all in the root command handler. Rationale:
-     a) it's easy to code
-     b) it makes it obvious that no command can get its userstate corrupted
-     c) the "irc" struct is readily available there for feedback to the user
- */
-
 void otr_load(irc_t *irc)
 {
 	char s[512];
 	account_t *a;
 	gcry_error_t e;
-	int eno;
+	gcry_error_t enoent = gcry_error_from_errno(ENOENT);
 
 	log_message(LOGLVL_DEBUG, "otr_load '%s'", irc->nick);
 
 	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, irc->nick);
 	e = otrl_privkey_read(irc->otr_us, s);
-	eno = gcry_error_code_to_errno(e);
-	if(e && eno!=ENOENT) {
-		log_message(LOGLVL_ERROR, "otr load: %s: %s", s, strerror(e));
+	if(e && e!=enoent) {
+		irc_usermsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
 	}
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->nick);
 	e = otrl_privkey_read_fingerprints(irc->otr_us, s, NULL, NULL);
-	eno = gcry_error_code_to_errno(e);
-	if(e && eno!=ENOENT) {
-		log_message(LOGLVL_ERROR, "otr load: %s: %s", s, strerror(e));
+	if(e && e!=enoent) {
+		irc_usermsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
 	}
 	
 	/* check for otr keys on all accounts */
@@ -249,7 +216,7 @@ void otr_save(irc_t *irc)
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->nick);
 	e = otrl_privkey_write_fingerprints(irc->otr_us, s);
 	if(e) {
-		log_message(LOGLVL_ERROR, "otr save: %s: %s", s, strerror(e));
+		irc_usermsg(irc, "otr save: %s: %s", s, gcry_strerror(e));
 	}
 	chmod(s, 0600);
 }
@@ -301,19 +268,6 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	OtrlTLV *tlvs = NULL;
 	char *colormsg;
 	
-    if(!g_static_rec_mutex_trylock(&ic->irc->otr_mutex)) {
-		user_t *u = user_findhandle(ic, handle);
-		
-		/* fallback for non-otr clients */
-		if(u && !u->encrypted) {
-			return g_strdup(msg);
-		}
-		
-		irc_usermsg(ic->irc, "encrypted msg from %s during keygen - dropped",
-			peernick(ic->irc, handle, ic->acc->prpl->name));
-		return NULL;
-	}
-
 	ignore_msg = otrl_message_receiving(ic->irc->otr_us, &global.otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, handle, msg, &newmsg,
 		&tlvs, NULL, NULL);
@@ -322,11 +276,9 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	
 	if(ignore_msg) {
 		/* this was an internal OTR protocol message */
-		g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 		return NULL;
 	} else if(!newmsg) {
 		/* this was a non-OTR message */
-		g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 		return g_strdup(msg);
 	} else {
 		/* OTR has processed this message */
@@ -346,7 +298,6 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 			colormsg = g_strdup(newmsg);
 		}
 		otrl_message_free(newmsg);
-		g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 		return colormsg;
 	}
 }
@@ -357,25 +308,10 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	char *otrmsg = NULL;
 	ConnContext *ctx = NULL;
 	
-    if(!g_static_rec_mutex_trylock(&ic->irc->otr_mutex)) {
-		user_t *u = user_findhandle(ic, handle);
-		
-		/* Fallback for non-otr clients.
-		   Yes, this better shouldn't send private stuff in the clear... */
-		if(u && !u->encrypted) {
-			return ic->acc->prpl->buddy_msg(ic, (char *)handle, (char *)msg, flags);
-		}
-		
-		irc_usermsg(ic->irc, "encrypted message to %s during keygen - not sent",
-			peernick(ic->irc, handle, ic->acc->prpl->name));
-		return 1;
-    }
-    
 	st = otrl_message_sending(ic->irc->otr_us, &global.otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, handle,
 		msg, NULL, &otrmsg, NULL, NULL);
 	if(st) {
-		g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 		return st;
 	}
 
@@ -386,7 +322,6 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	if(otrmsg) {
 		if(!ctx) {
 			otrl_message_free(otrmsg);
-			g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 			return 1;
 		}
 		st = otrl_message_fragment_and_send(&global.otr_ops, ic, ctx,
@@ -398,7 +333,6 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 		st = ic->acc->prpl->buddy_msg( ic, (char *)handle, (char *)msg, flags );
 	}
 	
-	g_static_rec_mutex_unlock(&ic->irc->otr_mutex);
 	return st;
 }
 
@@ -1482,101 +1416,43 @@ void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 {
-	GError *err;
-	GThread *thr;
-	struct kgdata *kg;
-	gint ev;
 	
 	irc_usermsg(irc, "generating new private key for %s/%s...", handle, protocol);
+	irc_usermsg(irc, "n/a: not implemented");
+	return;
+
+	/* see if we already have a keygen child running. if not, start one and put a
+	   handler on its output.
+	   
+	b_input_add(fd, GAIM_INPUT_READ, keygen_finish_handler, NULL);
 	
-	kg = g_new0(struct kgdata, 1);
-	if(!kg) {
-		irc_usermsg(irc, "otr keygen failed: out of memory");
-		return;
-	}
-
-	/* Assemble the job description to be passed to thread and handler */
-	kg->irc = irc;
-	kg->keyfile = g_strdup_printf("%s%s.otr_keys", global.conf->configdir, kg->irc->nick);
-	if(!kg->keyfile) {
-		irc_usermsg(irc, "otr keygen failed: out of memory");
-		g_free(kg);
-		return;
-	}
-	kg->handle = handle;
-	kg->protocol = protocol;
-	kg->mutex = g_mutex_new();
-	if(!kg->mutex) {
-		irc_usermsg(irc, "otr keygen failed: couldn't create mutex");
-		g_free(kg->keyfile);
-		g_free(kg);
-		return;
-	}
-	kg->done = 0;
-
-	/* Poll for completion of the thread periodically. I would have preferred
-	   to just wait on a pipe but this way it's portable to Windows. *sigh*
-	*/
-	ev = b_timeout_add(1000, &keygen_finish_handler, kg);
-	if(!ev) {
-		irc_usermsg(irc, "otr keygen failed: couldn't register timeout");
-		g_free(kg->keyfile);
-		g_mutex_free(kg->mutex);
-		g_free(kg);
-		return;
-	}
-
-	thr = g_thread_create(&otr_keygen_thread_func, kg, FALSE, &err);
-	if(!thr) {
-		irc_usermsg(irc, "otr keygen failed: %s", err->message);
-		g_free(kg->keyfile);
-		g_mutex_free(kg->mutex);
-		g_free(kg);
-		b_event_remove(ev);
-	}
-}
-
-gpointer otr_keygen_thread_func(gpointer data)
-{
-	struct kgdata *kg = (struct kgdata *)data;
+	   generate a fresh temp file name for our new key and save our current keys to it.
+	   send the child filename and accountname/protocol for the new key
+	   increment 'ntodo' */
 	
-	/* lock OTR subsystem and do the work */
-	g_static_rec_mutex_lock(&kg->irc->otr_mutex);
-	kg->result = otrl_privkey_generate(kg->irc->otr_us, kg->keyfile, kg->handle,
+	/* in the child:
+	   read filename, accountname, protocol from input, and start work:
+
+	result = otrl_privkey_generate(kg->irc->otr_us, kg->keyfile, kg->handle,
 		kg->protocol);
-	chmod(kg->keyfile, 0600);
-	g_static_rec_mutex_unlock(&kg->irc->otr_mutex);
-	/* OTR enabled again */
+		
+		when done, send filename, accountname, and protocol to output. */
 	
-	/* notify mainloop */
-	g_mutex_lock(kg->mutex);
-	kg->done = 1;
-	g_mutex_unlock(kg->mutex);
-	
-	return NULL;
 }
 
 gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 {
-	struct kgdata *kg = (struct kgdata *)data;
-	int done;
-	
-	g_mutex_lock(kg->mutex);
-	done = kg->done;
-	g_mutex_unlock(kg->mutex);
-	if(kg->done) {
-		if(kg->result) {
-			irc_usermsg(kg->irc, "otr keygen: %s", strerror(kg->result));
-		} else {
+	/* in the handler:
+	   read filename, accountname, and protocol from child output
+	   print a message to the user
 			irc_usermsg(kg->irc, "otr keygen for %s/%s complete", kg->handle, kg->protocol);
-		}
-		g_free(kg->keyfile);
-		g_mutex_free(kg->mutex);
-		g_free(kg);
-		return FALSE; /* unregister timeout */
-	}
+	   load the file into userstate
+	   call otr_save.
+	   remove the tempfile.
+	   decrement 'ntodo'
+	   if 'ntodo' reaches zero, send SIGTERM to the child, waitpid for it, return FALSE */
 
-	return TRUE;  /* still working, continue checking */
+	return TRUE;  /* still working, keep watching */
 }
 
 void yes_keygen(gpointer w, void *data)
