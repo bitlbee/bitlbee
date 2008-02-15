@@ -624,7 +624,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	}
 }
 
-void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_t flags, time_t sent_at )
+void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, uint32_t flags, time_t sent_at )
 {
 	irc_t *irc = ic->irc;
 	char *wrapped;
@@ -675,7 +675,7 @@ void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, u_int32_
 	g_free( wrapped );
 }
 
-void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags )
+void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
 {
 	user_t *u;
 	
@@ -689,6 +689,31 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, u_int32_t flags 
 		g_snprintf( buf, 256, "\1TYPING %d\1", ( flags >> 8 ) & 3 );
 		irc_privmsg( ic->irc, u, "PRIVMSG", ic->irc->nick, NULL, buf );
 	}
+}
+
+struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
+{
+	struct groupchat *c;
+	
+	/* This one just creates the conversation structure, user won't see anything yet */
+	
+	if( ic->groupchats )
+	{
+		for( c = ic->groupchats; c->next; c = c->next );
+		c = c->next = g_new0( struct groupchat, 1 );
+	}
+	else
+		ic->groupchats = c = g_new0( struct groupchat, 1 );
+	
+	c->ic = ic;
+	c->title = g_strdup( handle );
+	c->channel = g_strdup_printf( "&chat_%03d", ic->irc->c_id++ );
+	c->topic = g_strdup_printf( "BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->title );
+	
+	if( set_getbool( &ic->irc->set, "debug" ) )
+		imcb_log( ic, "Creating new conversation: (id=%p,handle=%s)", c, handle );
+	
+	return c;
 }
 
 void imcb_chat_free( struct groupchat *c )
@@ -727,11 +752,12 @@ void imcb_chat_free( struct groupchat *c )
 		g_list_free( c->in_room );
 		g_free( c->channel );
 		g_free( c->title );
+		g_free( c->topic );
 		g_free( c );
 	}
 }
 
-void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, time_t sent_at )
+void imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, time_t sent_at )
 {
 	struct im_connection *ic = c->ic;
 	char *wrapped;
@@ -759,6 +785,24 @@ void imcb_chat_msg( struct groupchat *c, char *who, char *msg, u_int32_t flags, 
 	g_free( wrapped );
 }
 
+void imcb_chat_log( struct groupchat *c, char *format, ... )
+{
+	irc_t *irc = c->ic->irc;
+	va_list params;
+	char *text;
+	user_t *u;
+	
+	va_start( params, format );
+	text = g_strdup_vprintf( format, params );
+	va_end( params );
+	
+	u = user_find( irc, irc->mynick );
+	
+	irc_privmsg( irc, u, "PRIVMSG", c->channel, "System message: ", text );
+	
+	g_free( text );
+}
+
 void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at )
 {
 	struct im_connection *ic = c->ic;
@@ -780,31 +824,6 @@ void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at
 	
 	if( c->joined && u )
 		irc_write( ic->irc, ":%s!%s@%s TOPIC %s :%s", u->nick, u->user, u->host, c->channel, topic );
-}
-
-struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
-{
-	struct groupchat *c;
-	
-	/* This one just creates the conversation structure, user won't see anything yet */
-	
-	if( ic->groupchats )
-	{
-		for( c = ic->groupchats; c->next; c = c->next );
-		c = c->next = g_new0( struct groupchat, 1 );
-	}
-	else
-		ic->groupchats = c = g_new0( struct groupchat, 1 );
-	
-	c->ic = ic;
-	c->title = g_strdup( handle );
-	c->channel = g_strdup_printf( "&chat_%03d", ic->irc->c_id++ );
-	c->topic = g_strdup_printf( "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->channel, c->title );
-	
-	if( set_getbool( &ic->irc->set, "debug" ) )
-		imcb_log( ic, "Creating new conversation: (id=%p,handle=%s)", c, handle );
-	
-	return c;
 }
 
 

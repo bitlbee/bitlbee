@@ -893,7 +893,7 @@ int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, guint32 offset, guin
 			aimbs_put32(&fr->data, 0xecf8427e);
 */
 		} else
-			imcb_error(sess->aux_data, "WARNING: unknown hash request");
+			imcb_error(sess->aux_data, "Warning: unknown hash request");
 
 	}
 

@@ -26,11 +26,12 @@
 
 #include <sys/types.h>
 #include <gmodule.h>
+#include <stdint.h>
 
-typedef u_int8_t md5_byte_t;
+typedef uint8_t md5_byte_t;
 typedef struct MD5Context {
-	u_int32_t buf[4];
-	u_int32_t bits[2];
+	uint32_t buf[4];
+	uint32_t bits[2];
 	unsigned char in[64];
 } md5_state_t;
 

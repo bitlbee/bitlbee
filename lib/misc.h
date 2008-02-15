@@ -41,7 +41,6 @@ G_MODULE_EXPORT void strip_linefeed( gchar *text );
 G_MODULE_EXPORT char *add_cr( char *text );
 G_MODULE_EXPORT char *strip_newlines(char *source);
 G_MODULE_EXPORT char *normalize( const char *s );
-G_MODULE_EXPORT void info_string_append( GString *str, char *newline, char *name, char *value );
 
 G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min, int sec );
 double gettime( void );

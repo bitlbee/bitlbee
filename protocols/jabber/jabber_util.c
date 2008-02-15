@@ -145,6 +145,7 @@ void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_ca
 	
 	entry->node = node;
 	entry->func = func;
+	entry->saved_at = time( NULL );
 	g_hash_table_insert( jd->node_cache, xt_find_attr( node, "id" ), entry );
 }
 
@@ -166,22 +167,17 @@ gboolean jabber_cache_clean_entry( gpointer key, gpointer entry, gpointer nullpo
 void jabber_cache_clean( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
+	time_t threshold = time( NULL ) - JABBER_CACHE_MAX_AGE;
 	
-	g_hash_table_foreach_remove( jd->node_cache, jabber_cache_clean_entry, NULL );
+	g_hash_table_foreach_remove( jd->node_cache, jabber_cache_clean_entry, &threshold );
 }
 
-gboolean jabber_cache_clean_entry( gpointer key, gpointer entry_, gpointer nullpointer )
+gboolean jabber_cache_clean_entry( gpointer key, gpointer entry_, gpointer threshold_ )
 {
 	struct jabber_cache_entry *entry = entry_;
-	struct xt_node *node = entry->node;
+	time_t *threshold = threshold_;
 	
-	if( node->flags & XT_SEEN )
-		return TRUE;
-	else
-	{
-		node->flags |= XT_SEEN;
-		return FALSE;
-	}
+	return entry->saved_at < *threshold;
 }
 
 xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *node )
@@ -203,7 +199,7 @@ xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *
 	
 	if( entry == NULL )
 	{
-		imcb_log( ic, "WARNING: Received %s-%s packet with unknown/expired ID %s!",
+		imcb_log( ic, "Warning: Received %s-%s packet with unknown/expired ID %s!",
 		              node->name, xt_find_attr( node, "type" ) ? : "(no type)", s );
 	}
 	else if( entry->func )
@@ -402,19 +398,26 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		*s = 0;
 		if( ( bud = g_hash_table_lookup( jd->buddies, jid ) ) )
 		{
+			/* Just return the first one for this bare JID. */
+			if( flags & GET_BUDDY_FIRST )
+			{
+				*s = '/';
+				g_free( jid );
+				return bud;
+			}
+			
 			/* Is this one of those no-resource buddies? */
 			if( bud->resource == NULL )
 			{
+				*s = '/';
 				g_free( jid );
 				return NULL;
 			}
-			else
-			{
-				/* See if there's an exact match. */
-				for( ; bud; bud = bud->next )
-					if( g_strcasecmp( bud->resource, s + 1 ) == 0 )
-						break;
-			}
+			
+			/* See if there's an exact match. */
+			for( ; bud; bud = bud->next )
+				if( g_strcasecmp( bud->resource, s + 1 ) == 0 )
+					break;
 		}
 		else
 		{
@@ -423,6 +426,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 			   for this JID, even if it's an unknown buddy. This
 			   is done to handle conferences properly. */
 			none_found = 1;
+			/* TODO(wilmer): Find out what I was thinking when I
+			   wrote this??? And then fix it. This makes me sad... */
 		}
 		
 		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && ( imcb_find_buddy( ic, jid ) || !none_found ) )
@@ -452,6 +457,9 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 			return NULL;
 		else if( ( bud->resource == NULL || bud->next == NULL ) )
 			/* No need for selection if there's only one option. */
+			return bud;
+		else if( flags & GET_BUDDY_FIRST )
+			/* Looks like the caller doesn't care about details. */
 			return bud;
 		
 		best_prio = best_time = bud;

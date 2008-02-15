@@ -28,11 +28,9 @@
 #define TYPING_NOTIFICATION_MESSAGE "\r\r\rBEWARE, ME R TYPINK MESSAGE!!!!\r\r\r"
 #define GROUPCHAT_SWITCHBOARD_MESSAGE "\r\r\rME WANT TALK TO MANY PEOPLE\r\r\r"
 
-#ifdef _WIN32
-#define debug 
+#ifdef DEBUG
+#define debug( text... ) imcb_log( ic, text );
 #else
-#define debug( text... ) irc_usermsg( IRC, text );
-#undef debug
 #define debug( text... )
 #endif
 
@@ -65,8 +63,10 @@ struct msn_data
 	
 	GSList *msgq;
 	GSList *switchboards;
-	const struct msn_away_state *away_state;
+	int sb_failures;
+	time_t first_sb_failure;
 	
+	const struct msn_away_state *away_state;
 	int buddycount;
 	int groupcount;
 	char **grouplist;
@@ -157,6 +157,7 @@ char *msn_findheader( char *text, char *header, int len );
 char **msn_linesplit( char *line );
 int msn_handler( struct msn_handler_data *h );
 char *msn_http_encode( const char *input );
+void msn_msgq_purge( struct im_connection *ic, GSList **list );
 
 /* tables.c */
 const struct msn_away_state *msn_away_state_by_number( int number );

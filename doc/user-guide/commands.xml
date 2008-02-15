@@ -474,6 +474,17 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="mail_notifications" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				Some protocols (MSN, Yahoo!) can notify via IM about new e-mail. Since most people use their Hotmail/Yahoo! addresses as a spam-box, this is disabled default. If you want these notifications, you can enable this setting.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="ops" type="string" scope="global">
 		<default>both</default>
 		<possible-values>both, root, user, none</possible-values>

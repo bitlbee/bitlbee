@@ -28,10 +28,7 @@
    included if CRYPTING_MAIN is defined. Or just do "make decode" and
    the programs will be built. */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <glib.h>
+#include <bitlbee.h>
 #include "md5.h"
 #include "crypting.h"
 

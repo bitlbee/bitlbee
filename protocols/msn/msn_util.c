@@ -338,3 +338,37 @@ char *msn_http_encode( const char *input )
 	
 	return ret;
 }
+
+void msn_msgq_purge( struct im_connection *ic, GSList **list )
+{
+	struct msn_message *m;
+	GString *ret;
+	GSList *l;
+	
+	l = *list;
+	if( l == NULL )
+		return;
+	
+	m = l->data;
+	ret = g_string_sized_new( 1024 );
+	g_string_printf( ret, "Warning: Cleaning up MSN (switchboard) connection with unsent "
+	                      "messages to %s:", m->who ? m->who : "unknown recipient" );
+	
+	while( l )
+	{
+		m = l->data;
+		
+		g_string_append_printf( ret, "\n%s", m->text );
+		
+		g_free( m->who );
+		g_free( m->text );
+		g_free( m );
+		
+		l = l->next;
+	}
+	g_slist_free( *list );
+	*list = NULL;
+	
+	imcb_log( ic, ret->str );
+	g_string_free( ret, TRUE );
+}

@@ -248,6 +248,9 @@ gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition c
 {
 	struct im_connection *ic = data;
 	
+	if( g_slist_find( jabber_connections, ic ) == NULL )
+		return FALSE;
+	
 	if( source == -1 )
 	{
 		imcb_error( ic, "Could not connect to server" );
@@ -263,7 +266,12 @@ gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition c
 gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition cond )
 {
 	struct im_connection *ic = data;
-	struct jabber_data *jd = ic->proto_data;
+	struct jabber_data *jd;
+	
+	if( g_slist_find( jabber_connections, ic ) == NULL )
+		return FALSE;
+	
+	jd = ic->proto_data;
 	
 	if( source == NULL )
 	{

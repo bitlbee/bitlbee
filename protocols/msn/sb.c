@@ -127,7 +127,7 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 		/* Build the message. Convert LF to CR-LF for normal messages. */
 		if( strcmp( text, TYPING_NOTIFICATION_MESSAGE ) != 0 )
 		{
-			buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 );
+			buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 + 1 );
 			i = strlen( MSN_MESSAGE_HEADERS );
 			
 			strcpy( buf, MSN_MESSAGE_HEADERS );
@@ -206,25 +206,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 	
 	debug( "Destroying switchboard: %s", sb->who ? sb->who : sb->key ? sb->key : "" );
 	
-	if( sb->msgq )
-	{
-		struct msn_message *m;
-		GSList *l;
-		
-		for( l = sb->msgq; l; l = l->next )
-		{
-			m = l->data;
-
-			g_free( m->who );
-			g_free( m->text );
-			g_free( m );
-		}
-		g_slist_free( sb->msgq );
-		
-		imcb_log( ic, "Warning: Closing down MSN switchboard connection with "
-		                   "unsent message to %s, you'll have to resend it.",
-		                   sb->who ? sb->who : "(unknown)" );
-	}
+	msn_msgq_purge( ic, &sb->msgq );
 	
 	if( sb->key ) g_free( sb->key );
 	if( sb->who ) g_free( sb->who );
@@ -265,7 +247,7 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 	
 	if( source != sb->fd )
 	{
-		debug( "ERROR %d while connecting to switchboard server", 1 );
+		debug( "Error %d while connecting to switchboard server", 1 );
 		msn_sb_destroy( sb );
 		return FALSE;
 	}
@@ -286,7 +268,7 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 	if( msn_sb_write( sb, buf, strlen( buf ) ) )
 		sb->inp = b_input_add( sb->fd, GAIM_INPUT_READ, msn_sb_callback, sb );
 	else
-		debug( "ERROR %d while connecting to switchboard server", 2 );
+		debug( "Error %d while connecting to switchboard server", 2 );
 	
 	return FALSE;
 }
@@ -294,16 +276,59 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition cond )
 {
 	struct msn_switchboard *sb = data;
+	struct im_connection *ic = sb->ic;
+	struct msn_data *md = ic->proto_data;
 	
 	if( msn_handler( sb->handler ) == -1 )
 	{
-		debug( "ERROR: Switchboard died" );
+		time_t now = time( NULL );
+		
+		if( now - md->first_sb_failure > 600 )
+		{
+			/* It's not really the first one, but the start of this "series".
+			   With this, the warning below will be shown only if this happens
+			   at least three times in ten minutes. This algorithm isn't
+			   perfect, but for this purpose it will do. */
+			md->first_sb_failure = now;
+			md->sb_failures = 0;
+		}
+		
+		debug( "Error: Switchboard died" );
+		if( ++ md->sb_failures >= 3 )
+			imcb_log( ic, "Warning: Many switchboard failures on MSN connection. "
+			              "There might be problems delivering your messages." );
+		
+		if( sb->msgq != NULL )
+		{
+			char buf[1024];
+			
+			if( md->msgq == NULL )
+			{
+				md->msgq = sb->msgq;
+			}
+			else
+			{
+				GSList *l;
+				
+				for( l = md->msgq; l->next; l = l->next );
+				l->next = sb->msgq;
+			}
+			sb->msgq = NULL;
+			
+			debug( "Moved queued messages back to the main queue, creating a new switchboard to retry." );
+			g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
+			if( !msn_write( ic, buf, strlen( buf ) ) )
+				return FALSE;
+		}
+		
 		msn_sb_destroy( sb );
 		
 		return FALSE;
 	}
 	else
+	{
 		return TRUE;
+	}
 }
 
 static int msn_sb_command( gpointer data, char **cmd, int num_parts )
@@ -490,6 +515,17 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			return( 0 );
 		}
 	}
+	else if( strcmp( cmd[0], "NAK" ) == 0 )
+	{
+		if( sb->who )
+		{
+			imcb_log( ic, "The MSN servers could not deliver one of your messages to %s.", sb->who );
+		}
+		else
+		{
+			imcb_log( ic, "The MSN servers could not deliver one of your groupchat messages to all participants." );
+		}
+	}
 	else if( strcmp( cmd[0], "BYE" ) == 0 )
 	{
 		if( num_parts < 2 )
@@ -543,24 +579,13 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		{
 			if( sb->who )
 			{
-				struct msn_message *m;
-				GSList *l;
-				
 				/* Apparently some invitation failed. We might want to use this
 				   board later, so keep it as a spare. */
 				g_free( sb->who );
 				sb->who = NULL;
 				
 				/* Also clear the msgq, otherwise someone else might get them. */
-				for( l = sb->msgq; l; l = l->next )
-				{
-					m = l->data;
-					g_free( m->who );
-					g_free( m->text );
-					g_free( m );
-				}
-				g_slist_free( sb->msgq );
-				sb->msgq = NULL;
+				msn_msgq_purge( ic, &sb->msgq );
 			}
 			
 			/* Do NOT return 0 here, we want to keep this sb. */
@@ -568,7 +593,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	}
 	else
 	{
-		debug( "Received unknown command from switchboard server: %s", cmd[0] );
+		/* debug( "Received unknown command from switchboard server: %s", cmd[0] ); */
 	}
 	
 	return( 1 );

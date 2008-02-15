@@ -46,7 +46,7 @@ int main( int argc, char *argv[], char **envp )
 	struct sigaction sig, old;
 	
 	log_init();
-	CONF_FILE = g_strdup( CONF_FILE_DEF );
+	global.conf_file = g_strdup( CONF_FILE_DEF );
 	global.conf = conf_load( argc, argv );
 	if( global.conf == NULL )
 		return( 1 );
@@ -123,10 +123,13 @@ int main( int argc, char *argv[], char **envp )
 	
 	if( !getuid() || !geteuid() )
 		log_message( LOGLVL_WARNING, "BitlBee is running with root privileges. Why?" );
-	if( help_init( &(global.help), global.helpfile ) == NULL )
+	if( help_init( &global.help, global.helpfile ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
 	b_main_run();
+	
+	/* Mainly good for restarting, to make sure we close the help.txt fd. */
+	help_free( &global.help );
 	
 	if( global.restart )
 	{
@@ -196,9 +199,9 @@ static void sighandler( int signal )
 		while( ( pid = waitpid( 0, &st, WNOHANG ) ) > 0 )
 		{
 			if( WIFSIGNALED( st ) )
-				log_message( LOGLVL_INFO, "Client %d terminated normally. (status = %d)", pid, WEXITSTATUS( st ) );
+				log_message( LOGLVL_INFO, "Client %d terminated normally. (status = %d)", (int) pid, WEXITSTATUS( st ) );
 			else if( WIFEXITED( st ) )
-				log_message( LOGLVL_INFO, "Client %d killed by signal %d.", pid, WTERMSIG( st ) );
+				log_message( LOGLVL_INFO, "Client %d killed by signal %d.", (int) pid, WTERMSIG( st ) );
 		}
 	}
 	else if( signal != SIGPIPE )

@@ -36,6 +36,8 @@ struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *
 	node = xt_new_node( "x", NULL, NULL );
 	xt_add_attr( node, "xmlns", XMLNS_MUC );
 	node = jabber_make_packet( "presence", NULL, roomjid, node );
+	if( password )
+		xt_add_child( node, xt_new_node( "password", password, NULL ) );
 	jabber_cache_add( ic, node, jabber_chat_join_failed );
 	
 	if( !jabber_write_packet( ic, node ) )
@@ -72,17 +74,16 @@ static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_no
 	char *room;
 	
 	room = xt_find_attr( orig, "to" );
-	if( ( bud = jabber_buddy_by_jid( ic, room, 0 ) ) )
-		jabber_chat_free( jabber_chat_by_jid( ic, bud->bare_jid ) );
-	
+	bud = jabber_buddy_by_jid( ic, room, 0 );
 	err = jabber_error_parse( xt_find_node( node->children, "error" ), XMLNS_STANZA_ERROR );
 	if( err )
 	{
-		imcb_error( ic, "Error joining groupchat %s: %s%s%s",
-		            bud->bare_jid, err->code, err->text ? ": " : "",
-		            err->text ? err->text : "" );
+		imcb_error( ic, "Error joining groupchat %s: %s%s%s", room, err->code,
+		            err->text ? ": " : "", err->text ? err->text : "" );
 		jabber_error_free( err );
 	}
+	if( bud )
+		jabber_chat_free( jabber_chat_by_jid( ic, bud->bare_jid ) );
 	
 	return XT_HANDLED;
 }
@@ -122,6 +123,8 @@ int jabber_chat_msg( struct groupchat *c, char *message, int flags )
 	struct im_connection *ic = c->ic;
 	struct jabber_chat *jc = c->data;
 	struct xt_node *node;
+	
+	jc->flags |= JCFLAG_MESSAGE_SENT;
 	
 	node = xt_new_node( "body", message, NULL );
 	node = jabber_make_packet( "message", "groupchat", jc->name, node );
@@ -295,22 +298,59 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 {
 	struct xt_node *subject = xt_find_node( node->children, "subject" );
 	struct xt_node *body = xt_find_node( node->children, "body" );
-	struct groupchat *chat;
+	struct groupchat *chat = bud ? jabber_chat_by_jid( ic, bud->bare_jid ) : NULL;
+	struct jabber_chat *jc = chat ? chat->data : NULL;
 	char *s;
 	
-	if( bud == NULL )
+	if( bud == NULL || ( jc && ~jc->flags & JCFLAG_MESSAGE_SENT && bud == jc->me ) )
 	{
+		char *nick;
+		
+		if( body == NULL || body->text_len == 0 )
+			/* Meh. Empty messages aren't very interesting, no matter
+			   how much some servers love to send them. */
+			return;
+		
 		s = xt_find_attr( node, "from" ); /* pkt_message() already NULL-checked this one. */
-		if( strchr( s, '/' ) == NULL )
-			/* This is fine, the groupchat itself isn't in jd->buddies. */
-			imcb_log( ic, "System message from groupchat %s: %s", s, body? body->text : "NULL" );
+		nick = strchr( s, '/' );
+		if( nick )
+		{
+			/* If this message included a resource/nick we don't know,
+			   we might still know the groupchat itself. */
+			*nick = 0;
+			chat = jabber_chat_by_jid( ic, s );
+			*nick = '/';
+			
+			nick ++;
+		}
 		else
-			/* This, however, isn't fine! */
-			imcb_log( ic, "Groupchat message from unknown participant %s: %s", s, body ? body->text : "NULL" );
+		{
+			/* message.c uses the EXACT_JID option, so bud should
+			   always be NULL here for bare JIDs. */
+			chat = jabber_chat_by_jid( ic, s );
+		}
+		
+		if( nick == NULL )
+		{
+			/* This is fine, the groupchat itself isn't in jd->buddies. */
+			if( chat )
+				imcb_chat_log( chat, "From conference server: %s", body->text );
+			else
+				imcb_log( ic, "System message from unknown groupchat %s: %s", s, body->text );
+		}
+		else
+		{
+			/* This can happen too, at least when receiving a backlog when
+			   just joining a channel. */
+			if( chat )
+				imcb_chat_log( chat, "Message from unknown participant %s: %s", nick, body->text );
+			else
+				imcb_log( ic, "Groupchat message from unknown JID %s: %s", s, body->text );
+		}
 		
 		return;
 	}
-	else if( ( chat = jabber_chat_by_jid( ic, bud->bare_jid ) ) == NULL )
+	else if( chat == NULL )
 	{
 		/* How could this happen?? We could do kill( self, 11 )
 		   now or just wait for the OS to do it. :-) */

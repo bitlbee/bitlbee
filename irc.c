@@ -77,7 +77,7 @@ irc_t *irc_new( int fd )
 		char buf[NI_MAXHOST+1];
 
 		if( getnameinfo( (struct sockaddr *) &sock, socklen, buf,
-		                 NI_MAXHOST, NULL, -1, 0 ) == 0 )
+		                 NI_MAXHOST, NULL, 0, 0 ) == 0 )
 		{
 			irc->myhost = g_strdup( ipv6_unwrap( buf ) );
 		}
@@ -88,7 +88,7 @@ irc_t *irc_new( int fd )
 		char buf[NI_MAXHOST+1];
 
 		if( getnameinfo( (struct sockaddr *)&sock, socklen, buf,
-		                 NI_MAXHOST, NULL, -1, 0 ) == 0 )
+		                 NI_MAXHOST, NULL, 0, 0 ) == 0 )
 		{
 			irc->host = g_strdup( ipv6_unwrap( buf ) );
 		}
@@ -192,7 +192,6 @@ void irc_free(irc_t * irc)
 {
 	account_t *account;
 	user_t *user, *usertmp;
-	help_t *helpnode, *helpnodetmp;
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
@@ -269,16 +268,6 @@ void irc_free(irc_t * irc)
 	g_hash_table_foreach_remove(irc->watches, irc_free_hashkey, NULL);
 	g_hash_table_destroy(irc->watches);
 	
-	if (irc->help != NULL) {
-		helpnode = irc->help;
-		while (helpnode != NULL) {
-			g_free(helpnode->string);
-			
-			helpnodetmp = helpnode;
-			helpnode = helpnode->next;
-			g_free(helpnodetmp);
-		}
-	}
 	g_free(irc);
 	
 	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )
@@ -328,15 +317,29 @@ void irc_process( irc_t *irc )
 				conv[IRC_MAX_LINE] = 0;
 				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) == -1 )
 				{
+					/* GLib can do strange things if things are not in the expected charset,
+					   so let's be a little bit paranoid here: */
 					if( irc->status & USTATUS_LOGGED_IN )
-						irc_usermsg( irc, "ERROR: Charset mismatch detected. The charset "
+					{
+						irc_usermsg( irc, "Error: Charset mismatch detected. The charset "
 						                  "setting is currently set to %s, so please make "
 						                  "sure your IRC client will send and accept text in "
 						                  "that charset, or tell BitlBee which charset to "
 						                  "expect by changing the charset setting. See "
 						                  "`help set charset' for more information. Your "
 						                  "message was ignored.", cs );
-					*conv = 0;
+						*conv = 0;
+					}
+					else
+					{
+						irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost,
+						           "Warning: invalid (non-UTF8) characters received at login time." );
+						
+						strncpy( conv, lines[i], IRC_MAX_LINE );
+						for( temp = conv; *temp; temp ++ )
+							if( *temp & 0x80 )
+								*temp = '?';
+					}
 				}
 				lines[i] = conv;
 			}

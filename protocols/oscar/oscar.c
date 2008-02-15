@@ -90,6 +90,8 @@ struct oscar_data {
 	gboolean killme;
 	gboolean icq;
 	GSList *evilhack;
+	
+	GHashTable *ips;
 
 	struct {
 		guint maxbuddies; /* max users you can watch */
@@ -355,9 +357,10 @@ static void oscar_login(account_t *acc) {
 	struct im_connection *ic = imcb_new(acc);
 	struct oscar_data *odata = ic->proto_data = g_new0(struct oscar_data, 1);
 
-	if (!isdigit(acc->user[0])) {
+	if (isdigit(acc->user[0]))
+		odata->icq = TRUE;
+	else
 		ic->flags |= OPT_DOES_HTML;
-	}
 
 	sess = g_new0(aim_session_t, 1);
 
@@ -410,6 +413,8 @@ static void oscar_logout(struct im_connection *ic) {
 		odata->create_rooms = g_slist_remove(odata->create_rooms, cr);
 		g_free(cr);
 	}
+	if (odata->ips)
+		g_hash_table_destroy(odata->ips);
 	if (odata->email)
 		g_free(odata->email);
 	if (odata->newp)
@@ -986,6 +991,16 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 	if (info->present & AIM_USERINFO_PRESENT_SESSIONLEN)
 		signon = time(NULL) - info->sessionlen;
 
+	if (info->present & AIM_USERINFO_PRESENT_ICQIPADDR) {
+		uint32_t *uin = g_new0(uint32_t, 1);
+		
+		if (od->ips == NULL)
+			od->ips = g_hash_table_new_full(g_int_hash, g_int_equal, g_free, NULL);
+		
+		if (sscanf(info->sn, "%d", uin) == 1)
+			g_hash_table_insert(od->ips, uin, (gpointer) (long) info->icqinfo.ipaddr);
+	}
+
 	tmp = g_strdup(normalize(ic->acc->user));
 	if (!strcmp(tmp, normalize(info->sn)))
 		g_snprintf(ic->displayname, sizeof(ic->displayname), "%s", info->sn);
@@ -1050,12 +1065,14 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 	} else if (args->mpmsg.numparts == 0) {
 		g_snprintf(tmp, BUF_LONG, "%s", args->msg);
 	} else {
-		int i;
+		aim_mpmsg_section_t *part;
 		
 		*tmp = 0;
-		for (i = 0; i < args->mpmsg.numparts; i ++) {
-			g_strlcat(tmp, (char*) args->mpmsg.parts[i].data, BUF_LONG);
-			g_strlcat(tmp, "\n", BUF_LONG);
+		for (part = args->mpmsg.parts; part; part = part->next) {
+			if (part->data) {
+				g_strlcat(tmp, (char*) part->data, BUF_LONG);
+				g_strlcat(tmp, "\n", BUF_LONG);
+			}
 		}
 	}
 	
@@ -2218,87 +2235,94 @@ static GList *oscar_away_states(struct im_connection *ic)
 
 static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)
 {
-        struct im_connection *ic = sess->aux_data;
-        gchar who[16];
-        GString *str;
-        va_list ap;
-        struct aim_icq_info *info;
+	struct im_connection *ic = sess->aux_data;
+	struct oscar_data *od = ic->proto_data;
+	gchar who[16];
+	GString *str;
+	va_list ap;
+	struct aim_icq_info *info;
+	uint32_t ip;
 
-        va_start(ap, fr);
-        info = va_arg(ap, struct aim_icq_info *);
-        va_end(ap);
+	va_start(ap, fr);
+	info = va_arg(ap, struct aim_icq_info *);
+	va_end(ap);
 
-        if (!info->uin)
-                return 0;
+	if (!info->uin)
+		return 0;
 
-        str = g_string_sized_new(100);
-        g_snprintf(who, sizeof(who), "%u", info->uin);
+	str = g_string_sized_new(512);
+	g_snprintf(who, sizeof(who), "%u", info->uin);
 
-        g_string_sprintfa(str, "%s: %s - %s: %s", _("UIN"), who, _("Nick"), 
-				info->nick ? info->nick : "-");
-        info_string_append(str, "\n", _("First Name"), info->first);
-        info_string_append(str, "\n", _("Last Name"), info->last);
-		info_string_append(str, "\n", _("Email Address"), info->email);
-        if (info->numaddresses && info->email2) {
-                int i;
-                for (i = 0; i < info->numaddresses; i++) {
-					info_string_append(str, "\n", _("Email Address"), info->email2[i]);
-                }
-        }
-        info_string_append(str, "\n", _("Mobile Phone"), info->mobile);
-        if (info->gender != 0)
-        	info_string_append(str, "\n", _("Gender"), info->gender==1 ? _("Female") : _("Male"));
-        if (info->birthyear || info->birthmonth || info->birthday) {
-                char date[30];
-                struct tm tm;
-                tm.tm_mday = (int)info->birthday;
-                tm.tm_mon = (int)info->birthmonth-1;
-                tm.tm_year = (int)info->birthyear%100;
-                strftime(date, sizeof(date), "%Y-%m-%d", &tm);
-                info_string_append(str, "\n", _("Birthday"), date);
-        }
-        if (info->age) {
-                char age[5];
-                g_snprintf(age, sizeof(age), "%hhd", info->age);
-                info_string_append(str, "\n", _("Age"), age);
-        }
-		info_string_append(str, "\n", _("Personal Web Page"), info->personalwebpage);
-        if (info->info && info->info[0]) {
-                g_string_sprintfa(str, "\n%s:\n%s\n%s", _("Additional Information"), 
-						info->info, _("End of Additional Information"));
-        }
-        g_string_sprintfa(str, "\n");
-        if ((info->homeaddr && (info->homeaddr[0])) || (info->homecity && info->homecity[0]) || (info->homestate && info->homestate[0]) || (info->homezip && info->homezip[0])) {
-                g_string_sprintfa(str, "%s:", _("Home Address"));
-                info_string_append(str, "\n", _("Address"), info->homeaddr);
-                info_string_append(str, "\n", _("City"), info->homecity);
-                info_string_append(str, "\n", _("State"), info->homestate); 
-				info_string_append(str, "\n", _("Zip Code"), info->homezip);
-                g_string_sprintfa(str, "\n");
-        }
-        if ((info->workaddr && info->workaddr[0]) || (info->workcity && info->workcity[0]) || (info->workstate && info->workstate[0]) || (info->workzip && info->workzip[0])) {
-                g_string_sprintfa(str, "%s:", _("Work Address"));
-                info_string_append(str, "\n", _("Address"), info->workaddr);
-                info_string_append(str, "\n", _("City"), info->workcity);
-                info_string_append(str, "\n", _("State"), info->workstate);
-				info_string_append(str, "\n", _("Zip Code"), info->workzip);
-                g_string_sprintfa(str, "\n");
-        }
-        if ((info->workcompany && info->workcompany[0]) || (info->workdivision && info->workdivision[0]) || (info->workposition && info->workposition[0]) || (info->workwebpage && info->workwebpage[0])) {
-                g_string_sprintfa(str, "%s:", _("Work Information"));
-                info_string_append(str, "\n", _("Company"), info->workcompany);
-                info_string_append(str, "\n", _("Division"), info->workdivision);
-                info_string_append(str, "\n", _("Position"), info->workposition);
-                if (info->workwebpage && info->workwebpage[0]) {
-                        info_string_append(str, "\n", _("Web Page"), info->workwebpage);
-                }
-                g_string_sprintfa(str, "\n");
-        }
+	g_string_printf(str, "%s: %s - %s: %s", _("UIN"), who, _("Nick"), 
+	info->nick ? info->nick : "-");
+	g_string_append_printf(str, "\n%s: %s", _("First Name"), info->first);
+	g_string_append_printf(str, "\n%s: %s", _("Last Name"), info->last);
+	g_string_append_printf(str, "\n%s: %s", _("Email Address"), info->email);
+	if (info->numaddresses && info->email2) {
+		int i;
+		for (i = 0; i < info->numaddresses; i++) {
+			g_string_append_printf(str, "\n%s: %s", _("Email Address"), info->email2[i]);
+		}
+	}
+	if ((ip = (long) g_hash_table_lookup(od->ips, &info->uin)) != 0) {
+		g_string_append_printf(str, "\n%s: %d.%d.%d.%d", _("Last used IP address"),
+		                       (ip >> 24), (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff);
+	}
+	g_string_append_printf(str, "\n%s: %s", _("Mobile Phone"), info->mobile);
+	if (info->gender != 0)
+		g_string_append_printf(str, "\n%s: %s", _("Gender"), info->gender==1 ? _("Female") : _("Male"));
+	if (info->birthyear || info->birthmonth || info->birthday) {
+		char date[30];
+		struct tm tm;
+		memset(&tm, 0, sizeof(struct tm));
+		tm.tm_mday = (int)info->birthday;
+		tm.tm_mon = (int)info->birthmonth-1;
+		tm.tm_year = (int)info->birthyear%100;
+		strftime(date, sizeof(date), "%Y-%m-%d", &tm);
+		g_string_append_printf(str, "\n%s: %s", _("Birthday"), date);
+	}
+	if (info->age) {
+		char age[5];
+		g_snprintf(age, sizeof(age), "%hhd", info->age);
+		g_string_append_printf(str, "\n%s: %s", _("Age"), age);
+	}
+	g_string_append_printf(str, "\n%s: %s", _("Personal Web Page"), info->personalwebpage);
+	if (info->info && info->info[0]) {
+		g_string_sprintfa(str, "\n%s:\n%s\n%s", _("Additional Information"), 
+		info->info, _("End of Additional Information"));
+	}
+	g_string_append_c(str, '\n');
+	if ((info->homeaddr && (info->homeaddr[0])) || (info->homecity && info->homecity[0]) || (info->homestate && info->homestate[0]) || (info->homezip && info->homezip[0])) {
+		g_string_append_printf(str, "%s:", _("Home Address"));
+		g_string_append_printf(str, "\n%s: %s", _("Address"), info->homeaddr);
+		g_string_append_printf(str, "\n%s: %s", _("City"), info->homecity);
+		g_string_append_printf(str, "\n%s: %s", _("State"), info->homestate); 
+		g_string_append_printf(str, "\n%s: %s", _("Zip Code"), info->homezip);
+		g_string_append_c(str, '\n');
+	}
+	if ((info->workaddr && info->workaddr[0]) || (info->workcity && info->workcity[0]) || (info->workstate && info->workstate[0]) || (info->workzip && info->workzip[0])) {
+		g_string_append_printf(str, "%s:", _("Work Address"));
+		g_string_append_printf(str, "\n%s: %s", _("Address"), info->workaddr);
+		g_string_append_printf(str, "\n%s: %s", _("City"), info->workcity);
+		g_string_append_printf(str, "\n%s: %s", _("State"), info->workstate);
+		g_string_append_printf(str, "\n%s: %s", _("Zip Code"), info->workzip);
+		g_string_append_c(str, '\n');
+	}
+	if ((info->workcompany && info->workcompany[0]) || (info->workdivision && info->workdivision[0]) || (info->workposition && info->workposition[0]) || (info->workwebpage && info->workwebpage[0])) {
+		g_string_append_printf(str, "%s:", _("Work Information"));
+		g_string_append_printf(str, "\n%s: %s", _("Company"), info->workcompany);
+		g_string_append_printf(str, "\n%s: %s", _("Division"), info->workdivision);
+		g_string_append_printf(str, "\n%s: %s", _("Position"), info->workposition);
+		if (info->workwebpage && info->workwebpage[0]) {
+			g_string_append_printf(str, "\n%s: %s", _("Web Page"), info->workwebpage);
+		}
+		g_string_append_c(str, '\n');
+	}
 
-		imcb_log(ic, "%s\n%s", _("User Info"), str->str);
-        g_string_free(str, TRUE);
+	imcb_log(ic, "%s\n%s", _("User Info"), str->str);
+	g_string_free(str, TRUE);
 
-        return 1;
+	return 1;
 
 }
 
@@ -2432,7 +2456,7 @@ int gaim_parsemtn(aim_session_t *sess, aim_frame_t *fr, ...)
 	else {
 		/* User has stopped typing */
 		imcb_buddy_typing(ic, sn, 0);
-	}        
+	}
 	
 	return 1;
 }

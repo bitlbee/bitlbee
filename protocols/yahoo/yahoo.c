@@ -126,6 +126,11 @@ static char *byahoo_strip( const char *in )
 	return( g_strndup( in, len ) );
 }
 
+static void byahoo_init( account_t *acc )
+{
+	set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
+}
+
 static void byahoo_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
@@ -348,6 +353,7 @@ void byahoo_initmodule( )
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
 	ret->name = "yahoo";
+	ret->init = byahoo_init;
 	
 	ret->login = byahoo_login;
 	ret->keepalive = byahoo_keepalive;
@@ -617,10 +623,14 @@ void ext_yahoo_status_changed( int id, const char *who, int stat, const char *ms
 void ext_yahoo_got_im( int id, const char *me, const char *who, const char *msg, long tm, int stat, int utf8 )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
-	char *m = byahoo_strip( msg );
+	char *m;
 	
-	imcb_buddy_msg( ic, (char*) who, (char*) m, 0, 0 );
-	g_free( m );
+	if( msg )
+	{
+		m = byahoo_strip( msg );
+		imcb_buddy_msg( ic, (char*) who, (char*) m, 0, 0 );
+		g_free( m );
+	}
 }
 
 void ext_yahoo_got_file( int id,
@@ -922,7 +932,9 @@ void ext_yahoo_mail_notify( int id, const char *from, const char *subj, int cnt 
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
-	if( from && subj )
+	if( !set_getbool( &ic->acc->set, "mail_notifications" ) )
+		; /* The user doesn't care. */
+	else if( from && subj )
 		imcb_log( ic, "Received e-mail message from %s with subject `%s'", from, subj );
 	else if( cnt > 0 )
 		imcb_log( ic, "Received %d new e-mails", cnt );

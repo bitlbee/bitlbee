@@ -98,6 +98,12 @@
 #define F_OK 0
 #endif
 
+#ifndef G_GNUC_MALLOC
+/* Doesn't exist in GLib <=2.4 while everything else in BitlBee should
+   work with it, so let's fake this one. */
+#define G_GNUC_MALLOC
+#endif
+
 #define _( x ) x
 
 #define ROOT_NICK "root"
@@ -114,8 +120,6 @@
 
 #define HELP_FILE VARDIR "help.txt"
 #define CONF_FILE_DEF ETCDIR "bitlbee.conf"
-
-extern char *CONF_FILE;
 
 #include "irc.h"
 #include "storage.h"
@@ -138,6 +142,7 @@ typedef struct global {
 	int listen_socket;
 	gint listen_watch_source_id;
 	help_t *help;
+	char *conf_file;
 	conf_t *conf;
 	GList *storage; /* The first backend in the list will be used for saving */
 	char *helpfile;

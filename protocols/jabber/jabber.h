@@ -29,6 +29,8 @@
 #include "xmltree.h"
 #include "bitlbee.h"
 
+extern GSList *jabber_connections;
+
 typedef enum
 {
 	JFLAG_STREAM_STARTED = 1,       /* Set when we detected the beginning of the stream
@@ -46,13 +48,13 @@ typedef enum
 
 typedef enum
 {
-	JBFLAG_PROBED_XEP85 = 1,	/* Set this when we sent our probe packet to make
+	JBFLAG_PROBED_XEP85 = 1,        /* Set this when we sent our probe packet to make
 	                                   sure it gets sent only once. */
-	JBFLAG_DOES_XEP85 = 2,		/* Set this when the resource seems to support
+	JBFLAG_DOES_XEP85 = 2,          /* Set this when the resource seems to support
 	                                   XEP85 (typing notification shite). */
-	JBFLAG_IS_CHATROOM = 4,		/* It's convenient to use this JID thingy for
+	JBFLAG_IS_CHATROOM = 4,         /* It's convenient to use this JID thingy for
 	                                   groupchat state info too. */
-	JBFLAG_IS_ANONYMOUS = 8,	/* For anonymous chatrooms, when we don't have
+	JBFLAG_IS_ANONYMOUS = 8,        /* For anonymous chatrooms, when we don't have
 	                                   have a real JID. */
 } jabber_buddy_flags_t;
 
@@ -63,6 +65,12 @@ typedef struct
 	char *host;
 	char port[6];
 } jabber_streamhost_t;
+
+typedef enum
+{
+	JCFLAG_MESSAGE_SENT = 1,        /* Set this after sending the first message, so
+	                                   we can detect echoes/backlogs. */
+} jabber_chat_flags_t;
 
 struct jabber_data
 {
@@ -104,6 +112,7 @@ typedef xt_status (*jabber_cache_event) ( struct im_connection *ic, struct xt_no
 
 struct jabber_cache_entry
 {
+	time_t saved_at;
 	struct xt_node *node;
 	jabber_cache_event func;
 };
@@ -175,6 +184,10 @@ struct jabber_transfer
 #define JABBER_PACKET_ID "BeeP"
 #define JABBER_CACHED_ID "BeeC"
 
+/* The number of seconds to keep cached packets before garbage collecting
+   them. This gc is done on every keepalive (every minute). */
+#define JABBER_CACHE_MAX_AGE 600
+
 /* RFC 392[01] stuff */
 #define XMLNS_TLS          "urn:ietf:params:xml:ns:xmpp-tls"
 #define XMLNS_SASL         "urn:ietf:params:xml:ns:xmpp-sasl"
@@ -197,6 +210,7 @@ struct jabber_transfer
 #define XMLNS_DISCO_ITEMS  "http://jabber.org/protocol/disco#items"              /* XEP-0030 */
 #define XMLNS_MUC          "http://jabber.org/protocol/muc"                      /* XEP-0045 */
 #define XMLNS_MUC_USER     "http://jabber.org/protocol/muc#user"                 /* XEP-0045 */
+#define XMLNS_CAPS         "http://jabber.org/protocol/caps"                     /* XEP-0115 */
 #define XMLNS_FEATURE      "http://jabber.org/protocol/feature-neg"              /* XEP-0020 */
 #define XMLNS_SI           "http://jabber.org/protocol/si"                       /* XEP-0095 */
 #define XMLNS_FILETRANSFER "http://jabber.org/protocol/si/profile/file-transfer" /* XEP-0096 */
