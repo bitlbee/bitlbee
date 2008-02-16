@@ -1421,11 +1421,18 @@ void show_general_otr_info(irc_t *irc)
 		if(hash) /* should always succeed */
 			irc_usermsg(irc, "    %s", human);
 	}
-	for(kg=irc->otr->todo; kg; kg=kg->next) {
-		irc_usermsg(irc, "  %s/%s - DSA", kg->accountname, kg->protocol);
+	if(irc->otr->sent_accountname) {
+		irc_usermsg(irc, "  %s/%s - DSA", irc->otr->sent_accountname,
+			irc->otr->sent_protocol);
 		irc_usermsg(irc, "    (being generated)");
 	}
-	if(key == irc->otr->us->privkey_root && kg == irc->otr->todo)
+	for(kg=irc->otr->todo; kg; kg=kg->next) {
+		irc_usermsg(irc, "  %s/%s - DSA", kg->accountname, kg->protocol);
+		irc_usermsg(irc, "    (queued)");
+	}
+	if(key == irc->otr->us->privkey_root &&
+	   !irc->otr->sent_accountname &&
+	   kg == irc->otr->todo)
 		irc_usermsg(irc, "  (none)");
 
 	/* list all contexts */
