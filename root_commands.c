@@ -453,7 +453,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 	if( g_strcasecmp( cmd[1], "-tmp" ) == 0 )
 	{
 		add_on_server = 0;
-		cmd ++;		/* So evil... :-D */
+		cmd ++;
 	}
 	
 	if( !( a = account_get( irc, cmd[1] ) ) )
@@ -485,12 +485,13 @@ static void cmd_add( irc_t *irc, char **cmd )
 		}
 	}
 	
-	/* By making this optional, you can talk to people without having to
-	   add them to your *real* (server-side) contact list. */
 	if( add_on_server )
 		a->ic->acc->prpl->add_buddy( a->ic, cmd[2], NULL );
-	
-	/* add_buddy( a->ic, NULL, cmd[2], cmd[2] ); */
+	else
+		/* Yeah, officially this is a call-*back*... So if we just
+		   called add_buddy, we'll wait for the IM server to respond
+		   before we do this. */
+		imcb_add_buddy( a->ic, cmd[2], NULL );
 	
 	irc_usermsg( irc, "Adding `%s' to your contact list", cmd[2]  );
 }

@@ -28,7 +28,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	struct im_connection *ic = data;
 	char *from = xt_find_attr( node, "from" );
 	char *type = xt_find_attr( node, "type" );	/* NULL should mean the person is online. */
-	struct xt_node *c;
+	struct xt_node *c, *cap;
 	struct jabber_buddy *bud, *send_presence = NULL;
 	int is_chat = 0;
 	char *s;
@@ -75,6 +75,26 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 			bud->priority = atoi( c->text );
 		else
 			bud->priority = 0;
+		
+		if( bud && ( cap = xt_find_node( node->children, "c" ) ) &&
+		    ( s = xt_find_attr( cap, "xmlns" ) ) && strcmp( s, XMLNS_CAPS ) == 0 )
+		{
+			/* This <presence> stanza includes an XEP-0115
+			   capabilities part. Not too interesting, but we can
+			   see if it has an ext= attribute. */
+			s = xt_find_attr( cap, "ext" );
+			if( s && ( strstr( s, "cstates" ) || strstr( s, "chatstate" ) ) )
+				bud->flags |= JBFLAG_DOES_XEP85;
+			
+			/* This field can contain more information like xhtml
+			   support, but we don't support that ourselves.
+			   Officially the ext= tag was deprecated, but enough
+			   clients do send it.
+			   
+			   (I'm aware that this is not the right way to use
+			   this field.) See for an explanation of ext=:
+			   http://www.xmpp.org/extensions/attic/xep-0115-1.3.html*/
+		}
 		
 		if( is_chat )
 			jabber_chat_pkt_presence( ic, bud, node );
@@ -185,7 +205,7 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 int presence_send_update( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct xt_node *node;
+	struct xt_node *node, *cap;
 	char *show = jd->away_state->code;
 	char *status = jd->away_message;
 	struct groupchat *c;
@@ -197,6 +217,16 @@ int presence_send_update( struct im_connection *ic )
 		xt_add_child( node, xt_new_node( "show", show, NULL ) );
 	if( status )
 		xt_add_child( node, xt_new_node( "status", status, NULL ) );
+	
+	/* This makes the packet slightly bigger, but clients interested in
+	   capabilities can now cache the discovery info. This reduces the
+	   usual post-login iq-flood. See XEP-0115. At least libpurple and
+	   Trillian seem to do this right. */
+	cap = xt_new_node( "c", NULL, NULL );
+	xt_add_attr( cap, "xmlns", XMLNS_CAPS );
+	xt_add_attr( cap, "node", "http://bitlbee.org/xmpp/caps" );
+	xt_add_attr( cap, "ver", BITLBEE_VERSION ); /* The XEP wants this hashed, but nobody's doing that. */
+	xt_add_child( node, cap );
 	
 	st = jabber_write_packet( ic, node );
 	

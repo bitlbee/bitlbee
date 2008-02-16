@@ -593,7 +593,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	}
 	else
 	{
-		debug( "Received unknown command from switchboard server: %s", cmd[0] );
+		/* debug( "Received unknown command from switchboard server: %s", cmd[0] ); */
 	}
 	
 	return( 1 );

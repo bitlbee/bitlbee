@@ -141,6 +141,7 @@ void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_ca
 	
 	entry->node = node;
 	entry->func = func;
+	entry->saved_at = time( NULL );
 	g_hash_table_insert( jd->node_cache, xt_find_attr( node, "id" ), entry );
 }
 
@@ -162,22 +163,17 @@ gboolean jabber_cache_clean_entry( gpointer key, gpointer entry, gpointer nullpo
 void jabber_cache_clean( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
+	time_t threshold = time( NULL ) - JABBER_CACHE_MAX_AGE;
 	
-	g_hash_table_foreach_remove( jd->node_cache, jabber_cache_clean_entry, NULL );
+	g_hash_table_foreach_remove( jd->node_cache, jabber_cache_clean_entry, &threshold );
 }
 
-gboolean jabber_cache_clean_entry( gpointer key, gpointer entry_, gpointer nullpointer )
+gboolean jabber_cache_clean_entry( gpointer key, gpointer entry_, gpointer threshold_ )
 {
 	struct jabber_cache_entry *entry = entry_;
-	struct xt_node *node = entry->node;
+	time_t *threshold = threshold_;
 	
-	if( node->flags & XT_SEEN )
-		return TRUE;
-	else
-	{
-		node->flags |= XT_SEEN;
-		return FALSE;
-	}
+	return entry->saved_at < *threshold;
 }
 
 xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *node )

@@ -26,7 +26,7 @@ LFLAGS += -r
 # [SH] Phony targets
 all: protocols.o
 check: all
-lcov:
+lcov: check
 gcov:
 	gcov *.c
 

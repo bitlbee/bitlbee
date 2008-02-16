@@ -29,10 +29,10 @@
 
 static void text_init (void)
 {
-	if( access( global.conf->configdir, F_OK ) != 0 )
-		log_message( LOGLVL_WARNING, "The configuration directory %s does not exist. Configuration won't be saved.", global.conf->configdir );
-	else if( access( global.conf->configdir, R_OK ) != 0 || access( global.conf->configdir, W_OK ) != 0 )
-		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", global.conf->configdir );
+	/* Don't complain about the configuration directory anymore, leave it
+	   up to the XML storage module, which uses the same directory for it
+	   anyway. Nobody should be using just the text plugin anymore since
+	   it's read only! */
 }
 
 static storage_status_t text_load ( const char *my_nick, const char* password, irc_t *irc )

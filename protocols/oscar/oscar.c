@@ -1065,12 +1065,14 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 	} else if (args->mpmsg.numparts == 0) {
 		g_snprintf(tmp, BUF_LONG, "%s", args->msg);
 	} else {
-		int i;
+		aim_mpmsg_section_t *part;
 		
 		*tmp = 0;
-		for (i = 0; i < args->mpmsg.numparts; i ++) {
-			g_strlcat(tmp, (char*) args->mpmsg.parts[i].data, BUF_LONG);
-			g_strlcat(tmp, "\n", BUF_LONG);
+		for (part = args->mpmsg.parts; part; part = part->next) {
+			if (part->data) {
+				g_strlcat(tmp, (char*) part->data, BUF_LONG);
+				g_strlcat(tmp, "\n", BUF_LONG);
+			}
 		}
 	}
 	

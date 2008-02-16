@@ -583,7 +583,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else
 	{
-		debug( "Received unknown command from main server: %s", cmd[0] );
+		/* debug( "Received unknown command from main server: %s", cmd[0] ); */
 	}
 	
 	return( 1 );

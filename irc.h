@@ -90,7 +90,6 @@ typedef struct irc
 	GHashTable *userhash;
 	GHashTable *watches;
 	struct __NICK *nicks;
-	struct help *help;
 	struct set *set;
 
 	gint r_watch_source_id;
