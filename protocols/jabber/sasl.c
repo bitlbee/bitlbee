@@ -21,6 +21,8 @@
 *                                                                           *
 \***************************************************************************/
 
+#include <ctype.h>
+
 #include "jabber.h"
 #include "base64.h"
 
@@ -106,11 +108,16 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	return XT_HANDLED;
 }
 
-static char *sasl_get_part( char *data, char *field )
+/* Non-static function, but not mentioned in jabber.h because it's for internal
+   use, just that the unittest should be able to reach it... */
+char *sasl_get_part( char *data, char *field )
 {
 	int i, len;
 	
 	len = strlen( field );
+	
+	while( isspace( *data ) || *data == ',' )
+		data ++;
 	
 	if( g_strncasecmp( data, field, len ) == 0 && data[len] == '=' )
 	{
@@ -128,13 +135,19 @@ static char *sasl_get_part( char *data, char *field )
 					i ++;
 			}
 			
-			/* If we got a comma, we got a new field. Check it. */
-			if( data[i] == ',' &&
-			    g_strncasecmp( data + i + 1, field, len ) == 0 &&
-			    data[i+len+1] == '=' )
+			/* If we got a comma, we got a new field. Check it,
+			   find the next key after it. */
+			if( data[i] == ',' )
 			{
-				i += len + 2;
-				break;
+				while( isspace( data[i] ) || data[i] == ',' )
+					i ++;
+				
+				if( g_strncasecmp( data + i, field, len ) == 0 &&
+				    data[i+len] == '=' )
+				{
+					i += len + 1;
+					break;
+				}
 			}
 		}
 	}
