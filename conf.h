@@ -44,6 +44,7 @@ typedef struct conf
 	char *plugindir;
 	char *pidfile;
 	char *motdfile;
+	char *welcomefile;
 	char *primary_storage;
 	char **migrate_storage;
 	int ping_interval;

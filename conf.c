@@ -60,6 +60,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->plugindir = g_strdup( PLUGINDIR );
 	conf->pidfile = g_strdup( PIDFILE );
 	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
+	conf->welcomefile = g_strdup( ETCDIR "/welcome.txt" );
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
 	conf->user = NULL;
@@ -239,6 +240,11 @@ static int conf_loadini( conf_t *conf, char *file )
 			{
 				g_free( conf->motdfile );
 				conf->motdfile = g_strdup( ini->value );
+			}
+			else if( g_strcasecmp( ini->key, "welcomefile" ) == 0 )
+			{
+				g_free( conf->welcomefile );
+				conf->welcomefile = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "account_storage" ) == 0 )
 			{

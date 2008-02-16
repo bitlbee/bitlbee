@@ -84,10 +84,12 @@ uninstall-dev:
 install-etc:
 	mkdir -p $(DESTDIR)$(ETCDIR)
 	install -m 0644 motd.txt $(DESTDIR)$(ETCDIR)/motd.txt
+	install -m 0644 welcome.txt $(DESTDIR)$(ETCDIR)/welcome.txt
 	install -m 0644 bitlbee.conf $(DESTDIR)$(ETCDIR)/bitlbee.conf
 
 uninstall-etc:
 	rm -f $(DESTDIR)$(ETCDIR)/motd.txt
+	rm -f $(DESTDIR)$(ETCDIR)/welcome.txt
 	rm -f $(DESTDIR)$(ETCDIR)/bitlbee.conf
 	-rmdir $(DESTDIR)$(ETCDIR)
 
