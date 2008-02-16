@@ -48,8 +48,35 @@ void cmd_otr(struct irc *, char **args);
 #include <libotr/message.h>
 #include <libotr/privkey.h>
 
+/* representing a keygen job */
+typedef struct kg {
+	const char *accountname;
+	const char *protocol;
+	
+	struct kg *next;
+} kg_t;
+
+/* struct to encapsulate our book keeping stuff */
+typedef struct otr {
+	OtrlUserState us;
+	pid_t keygen;    /* pid of keygen slave (0 if none) */
+	FILE *to;        /* pipe to keygen slave */
+	FILE *from;      /* pipe from keygen slave */
+	
+	/* active keygen job (NULL if none) */
+	const char *sent_accountname;
+	const char *sent_protocol;
+	
+	/* keygen jobs waiting to be sent to slave */
+	kg_t *todo;
+} otr_t;
+
 /* called from main() */
 void otr_init(void);
+
+/* called from irc_new()/irc_free() */
+otr_t *otr_new();
+void otr_free(otr_t *otr);
 
 /* called by storage_* functions */
 void otr_load(struct irc *irc);
@@ -70,13 +97,12 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 
 #else
 
-typedef void *OtrlUserState;
+typedef void otr_t;
 typedef void *OtrlMessageAppOps;
 
-#define otrl_userstate_create() (NULL)
-#define otrl_userstate_free(us) {}
-
 #define otr_init() {}
+#define otr_new() (NULL)
+#define otr_free(otr) {}
 #define otr_load(irc) {}
 #define otr_save(irc) {}
 #define otr_remove(nick) {}

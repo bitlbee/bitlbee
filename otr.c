@@ -44,6 +44,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <assert.h>
 
 
 /** OTR interface routines for the OtrlMessageAppOps struct: **/
@@ -102,6 +103,9 @@ const command_t otr_commands[] = {
 
 
 /** misc. helpers/subroutines: **/
+
+/* check whether we are already generating a key for a given account */
+int keygen_in_progress(irc_t *irc, const char *handle, const char *protocol);
 
 /* start background process to generate a (new) key for a given account */
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol);
@@ -190,6 +194,35 @@ void otr_init(void)
 	global.otr_ops.account_name_free = NULL;
 }
 
+otr_t *otr_new(void)
+{
+	otr_t *otr = g_new0(otr_t, 1);
+
+	otr->us = otrl_userstate_create();
+	
+	return otr;
+}
+
+void otr_free(otr_t *otr)
+{
+	otrl_userstate_free(otr->us);
+	if(otr->keygen) {
+		kill(otr->keygen, SIGTERM);
+		waitpid(otr->keygen, NULL, 0);
+		/* TODO: remove stale keygen tempfiles */
+	}
+	if(otr->to)
+		fclose(otr->to);
+	if(otr->from)
+		fclose(otr->from);
+	while(otr->todo) {
+		kg_t *p = otr->todo;
+		otr->todo = p->next;
+		g_free(p);
+	}
+	g_free(otr);
+}
+
 void otr_load(irc_t *irc)
 {
 	char s[512];
@@ -200,12 +233,12 @@ void otr_load(irc_t *irc)
 	log_message(LOGLVL_DEBUG, "otr_load '%s'", irc->nick);
 
 	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, irc->nick);
-	e = otrl_privkey_read(irc->otr_us, s);
+	e = otrl_privkey_read(irc->otr->us, s);
 	if(e && e!=enoent) {
 		irc_usermsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
 	}
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->nick);
-	e = otrl_privkey_read_fingerprints(irc->otr_us, s, NULL, NULL);
+	e = otrl_privkey_read_fingerprints(irc->otr->us, s, NULL, NULL);
 	if(e && e!=enoent) {
 		irc_usermsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
 	}
@@ -224,7 +257,7 @@ void otr_save(irc_t *irc)
 	log_message(LOGLVL_DEBUG, "otr_save '%s'", irc->nick);
 
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->nick);
-	e = otrl_privkey_write_fingerprints(irc->otr_us, s);
+	e = otrl_privkey_write_fingerprints(irc->otr->us, s);
 	if(e) {
 		irc_usermsg(irc, "otr save: %s: %s", s, gcry_strerror(e));
 	}
@@ -262,10 +295,11 @@ void otr_check_for_key(account_t *a)
 	irc_t *irc = a->irc;
 	OtrlPrivKey *k;
 	
-	k = otrl_privkey_find(irc->otr_us, a->user, a->prpl->name);
+	k = otrl_privkey_find(irc->otr->us, a->user, a->prpl->name);
 	if(k) {
-		irc_usermsg(irc, "otr: %s/%s ready",
-			a->user, a->prpl->name);
+		irc_usermsg(irc, "otr: %s/%s ready", a->user, a->prpl->name);
+	} if(keygen_in_progress(irc, a->user, a->prpl->name)) {
+		irc_usermsg(irc, "otr: keygen for %s/%s in progress", a->user, a->prpl->name);
 	} else {
 		otr_keygen(irc, a->user, a->prpl->name);
 	}
@@ -278,7 +312,7 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	OtrlTLV *tlvs = NULL;
 	char *colormsg;
 	
-	ignore_msg = otrl_message_receiving(ic->irc->otr_us, &global.otr_ops, ic,
+	ignore_msg = otrl_message_receiving(ic->irc->otr->us, &global.otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, handle, msg, &newmsg,
 		&tlvs, NULL, NULL);
 
@@ -292,7 +326,7 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 		return g_strdup(msg);
 	} else {
 		/* OTR has processed this message */
-		ConnContext *context = otrl_context_find(ic->irc->otr_us, handle,
+		ConnContext *context = otrl_context_find(ic->irc->otr->us, handle,
 			ic->acc->user, ic->acc->prpl->name, 0, NULL, NULL, NULL);
 		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
 		   set_getbool(&ic->irc->set, "color_encrypted")) {
@@ -318,14 +352,14 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	char *otrmsg = NULL;
 	ConnContext *ctx = NULL;
 	
-	st = otrl_message_sending(ic->irc->otr_us, &global.otr_ops, ic,
+	st = otrl_message_sending(ic->irc->otr->us, &global.otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, handle,
 		msg, NULL, &otrmsg, NULL, NULL);
 	if(st) {
 		return st;
 	}
 
-	ctx = otrl_context_find(ic->irc->otr_us,
+	ctx = otrl_context_find(ic->irc->otr->us,
 			handle, ic->acc->user, ic->acc->prpl->name,
 			1, NULL, NULL, NULL);
 
@@ -383,6 +417,14 @@ OtrlPolicy op_policy(void *opdata, ConnContext *context)
 {
 	struct im_connection *ic = check_imc(opdata, context->accountname, context->protocol);
 	const char *p;
+	
+	log_message(LOGLVL_DEBUG, "op_policy '%s' '%s'", context->accountname, context->protocol);
+	
+	/* policy override during keygen: if we're missing the key for context but are currently
+	   generating it, then that's as much as we can do. => temporarily return NEVER. */
+	if(keygen_in_progress(ic->irc, context->accountname, context->protocol) &&
+	   !otrl_privkey_find(ic->irc->otr->us, context->accountname, context->protocol))
+		return OTRL_POLICY_NEVER;
 
 	p = set_getstr(&ic->irc->set, "otr_policy");
 	if(!strcmp(p, "never"))
@@ -401,13 +443,11 @@ void op_create_privkey(void *opdata, const char *accountname,
 	const char *protocol)
 {
 	struct im_connection *ic = check_imc(opdata, accountname, protocol);
-	char *s;
 	
 	log_message(LOGLVL_DEBUG, "op_create_privkey '%s' '%s'", accountname, protocol);
 
-	s = g_strdup_printf("oops, no otr privkey for %s - generate one now?",
-		accountname);
-	query_add(ic->irc, ic, s, yes_keygen, NULL, ic->acc);
+	/* will fail silently if keygen already in progress */
+	otr_keygen(ic->irc, accountname, protocol);
 }
 
 int op_is_logged_in(void *opdata, const char *accountname,
@@ -595,13 +635,13 @@ void cmd_otr_disconnect(irc_t *irc, char **args)
 		return;
 	}
 	
-	otrl_message_disconnect(irc->otr_us, &global.otr_ops,
+	otrl_message_disconnect(irc->otr->us, &global.otr_ops,
 		u->ic, u->ic->acc->user, u->ic->acc->prpl->name, u->handle);
 	
 	/* for some reason, libotr (3.1.0) doesn't do this itself: */
 	if(u->encrypted) {
 		ConnContext *ctx;
-		ctx = otrl_context_find(irc->otr_us, u->handle, u->ic->acc->user,
+		ctx = otrl_context_find(irc->otr->us, u->handle, u->ic->acc->user,
 			u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 		if(ctx)
 			op_gone_insecure(u->ic, ctx);
@@ -642,7 +682,7 @@ void cmd_otr_smp(irc_t *irc, char **args)
 		return;
 	}
 	
-	ctx = otrl_context_find(irc->otr_us, u->handle,
+	ctx = otrl_context_find(irc->otr->us, u->handle,
 		u->ic->acc->user, u->ic->acc->prpl->name, 1, NULL, NULL, NULL);
 	if(!ctx) {
 		/* huh? out of memory or what? */
@@ -653,7 +693,7 @@ void cmd_otr_smp(irc_t *irc, char **args)
 		log_message(LOGLVL_INFO,
 			"SMP already in phase %d, sending abort before reinitiating",
 			ctx->smstate->nextExpected+1);
-		otrl_message_abort_smp(irc->otr_us, &global.otr_ops, u->ic, ctx);
+		otrl_message_abort_smp(irc->otr->us, &global.otr_ops, u->ic, ctx);
 		otrl_sm_state_free(ctx->smstate);
 	}
 	
@@ -661,14 +701,14 @@ void cmd_otr_smp(irc_t *irc, char **args)
 	   is completed or aborted! */ 
 	if(ctx->smstate->secret == NULL) {
 		irc_usermsg(irc, "smp: initiating with %s...", u->nick);
-		otrl_message_initiate_smp(irc->otr_us, &global.otr_ops,
+		otrl_message_initiate_smp(irc->otr->us, &global.otr_ops,
 			u->ic, ctx, (unsigned char *)args[2], strlen(args[2]));
 		/* smp is now in EXPECT2 */
 	} else {
 		/* if we're still in EXPECT1 but smstate is initialized, we must have
 		   received the SMP1, so let's issue a response */
 		irc_usermsg(irc, "smp: responding to %s...", u->nick);
-		otrl_message_respond_smp(irc->otr_us, &global.otr_ops,
+		otrl_message_respond_smp(irc->otr->us, &global.otr_ops,
 			u->ic, ctx, (unsigned char *)args[2], strlen(args[2]));
 		/* smp is now in EXPECT3 */
 	}
@@ -688,7 +728,7 @@ void cmd_otr_trust(irc_t *irc, char **args)
 		return;
 	}
 	
-	ctx = otrl_context_find(irc->otr_us, u->handle,
+	ctx = otrl_context_find(irc->otr->us, u->handle,
 		u->ic->acc->user, u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 	if(!ctx) {
 		irc_usermsg(irc, "%s: no otr context with user", args[1]);
@@ -752,7 +792,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 		if(protocol && myhandle) {
 			*(myhandle++) = '\0';
 			handle = arg;
-			ctx = otrl_context_find(irc->otr_us, handle, myhandle, protocol, 0, NULL, NULL, NULL);
+			ctx = otrl_context_find(irc->otr->us, handle, myhandle, protocol, 0, NULL, NULL, NULL);
 			if(!ctx) {
 				irc_usermsg(irc, "no such context");
 				g_free(arg);
@@ -765,7 +805,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 				g_free(arg);
 				return;
 			}
-			ctx = otrl_context_find(irc->otr_us, u->handle, u->ic->acc->user,
+			ctx = otrl_context_find(irc->otr->us, u->handle, u->ic->acc->user,
 				u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 			if(!ctx) {
 				irc_usermsg(irc, "no otr context with %s", args[1]);
@@ -802,7 +842,12 @@ void cmd_otr_keygen(irc_t *irc, char **args)
 		return;
 	}
 	
-	if(otrl_privkey_find(irc->otr_us, a->user, a->prpl->name)) {
+	if(keygen_in_progress(irc, a->user, a->prpl->name)) {
+		irc_usermsg(irc, "keygen for account %d already in progress", n);
+		return;
+	}
+	
+	if(otrl_privkey_find(irc->otr->us, a->user, a->prpl->name)) {
 		char *s = g_strdup_printf("account %d already has a key, replace it?", n);
 		query_add(irc, NULL, s, yes_keygen, NULL, a);
 	} else {
@@ -870,7 +915,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 			return;
 		}
 		
-		ctx = otrl_context_find(irc->otr_us, u->handle, u->ic->acc->user,
+		ctx = otrl_context_find(irc->otr->us, u->handle, u->ic->acc->user,
 			u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 		if(!ctx) {
 			irc_usermsg(irc, "no otr context with %s", args[2]);
@@ -906,7 +951,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 			return;
 		}
 		
-		ctx = otrl_context_find(irc->otr_us, u->handle, u->ic->acc->user,
+		ctx = otrl_context_find(irc->otr->us, u->handle, u->ic->acc->user,
 			u->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 		if(!ctx) {
 			irc_usermsg(irc, "no otr context with %s", args[2]);
@@ -957,7 +1002,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 {
 	irc_t *irc = ic->irc;
-	OtrlUserState us = irc->otr_us;
+	OtrlUserState us = irc->otr->us;
 	OtrlMessageAppOps *ops = &global.otr_ops;
 	OtrlTLV *tlv = NULL;
 	ConnContext *context;
@@ -1306,8 +1351,8 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args)
 	
 	/* find first key which matches the given prefix */
 	n = strlen(prefix);
-	for(k=irc->otr_us->privkey_root; k; k=k->next) {
-		p = otrl_privkey_fingerprint(irc->otr_us, human, k->accountname, k->protocol);
+	for(k=irc->otr->us->privkey_root; k; k=k->next) {
+		p = otrl_privkey_fingerprint(irc->otr->us, human, k->accountname, k->protocol);
 		if(!p) /* gah! :-P */
 			continue;
 		if(!strncmp(prefix, human, n))
@@ -1320,7 +1365,7 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args)
 	
 	/* make sure the match, if any, is unique */
 	for(k2=k->next; k2; k2=k2->next) {
-		p = otrl_privkey_fingerprint(irc->otr_us, human, k2->accountname, k2->protocol);
+		p = otrl_privkey_fingerprint(irc->otr->us, human, k2->accountname, k2->protocol);
 		if(!p) /* gah! :-P */
 			continue;
 		if(!strncmp(prefix, human, n))
@@ -1342,7 +1387,7 @@ void show_general_otr_info(irc_t *irc)
 
 	/* list all privkeys */
 	irc_usermsg(irc, "\x1fprivate keys:\x1f");
-	for(key=irc->otr_us->privkey_root; key; key=key->next) {
+	for(key=irc->otr->us->privkey_root; key; key=key->next) {
 		const char *hash;
 		
 		switch(key->pubkey_type) {
@@ -1357,7 +1402,7 @@ void show_general_otr_info(irc_t *irc)
 		/* No, it doesn't make much sense to search for the privkey again by
 		   account/protocol, but libotr currently doesn't provide a direct routine
 		   for hashing a given 'OtrlPrivKey'... */
-		hash = otrl_privkey_fingerprint(irc->otr_us, human, key->accountname, key->protocol);
+		hash = otrl_privkey_fingerprint(irc->otr->us, human, key->accountname, key->protocol);
 		if(hash) /* should always succeed */
 			irc_usermsg(irc, "    %s", human);
 	}
@@ -1365,7 +1410,7 @@ void show_general_otr_info(irc_t *irc)
 	/* list all contexts */
 	irc_usermsg(irc, "%s", "");
 	irc_usermsg(irc, "\x1f" "connection contexts:\x1f (bold=currently encrypted)");
-	for(ctx=irc->otr_us->context_root; ctx; ctx=ctx->next) {\
+	for(ctx=irc->otr->us->context_root; ctx; ctx=ctx->next) {\
 		user_t *u;
 		char *userstring;
 		
@@ -1424,13 +1469,41 @@ void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 	show_fingerprints(irc, ctx);
 }
 
+int keygen_in_progress(irc_t *irc, const char *handle, const char *protocol)
+{
+	kg_t *kg;
+	
+	log_message(LOGLVL_DEBUG, "keygen_in_progress '%s' '%s'", handle, protocol);
+	
+	if(!irc->otr->sent_accountname || !irc->otr->sent_protocol)
+		return 0;
+
+	/* are we currently working on this key? */
+	if(!strcmp(handle, irc->otr->sent_accountname) &&
+	   !strcmp(protocol, irc->otr->sent_protocol))
+		return 1;
+	
+	/* do we have it queued for later? */
+	for(kg=irc->otr->todo; kg; kg=kg->next) {
+		if(!strcmp(handle, kg->accountname) &&
+		   !strcmp(protocol, kg->protocol))
+			return 1;
+	}
+	
+	return 0;
+}
+
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 {
+	/* do nothing if a key for the requested account is already being generated */
+	if(keygen_in_progress(irc, handle, protocol))
+		return;
+	
 	irc_usermsg(irc, "generating new private key for %s/%s...", handle, protocol);
 
 	/* see if we already have a keygen child running. if not, start one and put a
 	   handler on its output. */
-	if(!irc->otr_keygen || waitpid(irc->otr_keygen, NULL, WNOHANG)) {
+	if(!irc->otr->keygen || waitpid(irc->otr->keygen, NULL, WNOHANG)) {
 		pid_t p;
 		int to[2], from[2];
 		FILE *tof, *fromf;
@@ -1456,21 +1529,37 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 		if(!p) {
 			/* child process */
 			signal(SIGTERM, exit);
-			keygen_child_main(irc->otr_us, to[0], from[1]);
+			keygen_child_main(irc->otr->us, to[0], from[1]);
 			exit(0);
 		}
 		
-		irc->otr_keygen = p;
-		irc->otr_to = tof;
-		irc->otr_from = fromf;
-		irc->otr_ntodo = 0;
+		irc->otr->keygen = p;
+		irc->otr->to = tof;
+		irc->otr->from = fromf;
+		irc->otr->sent_accountname = NULL;
+		irc->otr->sent_protocol = NULL;
+		irc->otr->todo = NULL;
 		b_input_add(from[0], GAIM_INPUT_READ, keygen_finish_handler, irc);
 	}
 	
-	/* send accountname and protocol for the new key to our keygen slave */
-	fprintf(irc->otr_to, "%s\n%s\n", handle, protocol);
-	fflush(irc->otr_to);
-	irc->otr_ntodo++;
+	/* is the keygen slave currently working? */
+	if(irc->otr->sent_accountname) {
+		/* enqueue our job for later transmission */
+		log_message(LOGLVL_DEBUG, "enqueueing keygen for %s/%s", handle, protocol);
+		kg_t **kg = &irc->otr->todo;
+		while(*kg)
+			kg=&((*kg)->next);
+		*kg = g_new0(kg_t, 1);
+		(*kg)->accountname = handle;
+		(*kg)->protocol = protocol;
+	} else {
+		/* send our job over and remember it */
+		log_message(LOGLVL_DEBUG, "slave: generate for %s/%s!", handle, protocol);
+		fprintf(irc->otr->to, "%s\n%s\n", handle, protocol);
+		fflush(irc->otr->to);
+		irc->otr->sent_accountname = handle;
+		irc->otr->sent_protocol = protocol;
+	}
 }
 
 void keygen_child_main(OtrlUserState us, int infd, int outfd)
@@ -1514,8 +1603,8 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 
 	log_message(LOGLVL_DEBUG, "keygen_finish_handler cond=%d", cond);
 
-	myfgets(filename, 512, irc->otr_from);
-	myfgets(msg, 512, irc->otr_from);
+	myfgets(filename, 512, irc->otr->from);
+	myfgets(msg, 512, irc->otr->from);
 	
 	log_message(LOGLVL_DEBUG, "filename='%s'", filename);
 	log_message(LOGLVL_DEBUG, "msg='%s'", msg);
@@ -1527,23 +1616,36 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 		copyfile(filename, tmp);
 		unlink(filename);
 		rename(tmp,kf);
-		otrl_privkey_read(irc->otr_us, kf);
+		otrl_privkey_read(irc->otr->us, kf);
 		g_free(kf);
 		g_free(tmp);
 	}
-		
-	irc->otr_ntodo--;
-	if(irc->otr_ntodo < 1) {
-		/* okay, we think the slave is idle now, so kill him */
-		log_message(LOGLVL_DEBUG, "all keys done. die, slave!");
-		fclose(irc->otr_from);
-		fclose(irc->otr_to);
-		kill(irc->otr_keygen, SIGTERM);
-		waitpid(irc->otr_keygen, NULL, 0);
-		irc->otr_keygen = 0;
-		return FALSE;  /* unregister ourselves */
+	
+	/* forget this job */
+	irc->otr->sent_accountname = NULL;
+	irc->otr->sent_protocol = NULL;
+	
+	/* see if there are any more in the queue */
+	if(irc->otr->todo) {
+		kg_t *p = irc->otr->todo;
+		/* send the next one over */
+		log_message(LOGLVL_DEBUG, "slave: keygen for %s/%s!", p->accountname, p->protocol);
+		fprintf(irc->otr->to, "%s\n%s\n", p->accountname, p->protocol);
+		fflush(irc->otr->to);
+		irc->otr->sent_accountname = p->accountname;
+		irc->otr->sent_protocol = p->protocol;
+		irc->otr->todo = p->next;
+		g_free(p);
+		return TRUE;   /* keep watching */
 	} else {
-		return TRUE;   /* slave still working, keep watching */
+		/* okay, the slave is idle now, so kill him */
+		log_message(LOGLVL_DEBUG, "all keys done. die, slave!");
+		fclose(irc->otr->from);
+		fclose(irc->otr->to);
+		kill(irc->otr->keygen, SIGTERM);
+		waitpid(irc->otr->keygen, NULL, 0);
+		irc->otr->keygen = 0;
+		return FALSE;  /* unregister ourselves */
 	}
 }
 
@@ -1580,7 +1682,12 @@ void yes_keygen(gpointer w, void *data)
 {
 	account_t *acc = (account_t *)data;
 	
-	otr_keygen(acc->irc, acc->user, acc->prpl->name);
+	if(keygen_in_progress(acc->irc, acc->user, acc->prpl->name)) {
+		irc_usermsg(acc->irc, "keygen for %s/%s already in progress",
+			acc->user, acc->prpl->name);
+	} else {
+		otr_keygen(acc->irc, acc->user, acc->prpl->name);
+	}
 }
 
 

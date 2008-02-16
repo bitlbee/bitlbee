@@ -133,11 +133,7 @@ irc_t *irc_new( int fd )
 	
 	conf_loaddefaults( irc );
 
-	irc->otr_us = otrl_userstate_create();
-	irc->otr_keygen = 0;
-	irc->otr_to = NULL;
-	irc->otr_from = NULL;
-	irc->otr_ntodo = 0;
+	irc->otr = otr_new();
 	
 	return( irc );
 }
@@ -289,12 +285,7 @@ void irc_free(irc_t * irc)
 		}
 	}
 	
-	otrl_userstate_free(irc->otr_us);
-	if(irc->otr_keygen) {
-		kill(irc->otr_keygen, SIGTERM);
-		waitpid(irc->otr_keygen, NULL, 0);
-		/* TODO: remove stale keygen tempfiles */
-	}
+	otr_free(irc->otr);
 	
 	g_free(irc);
 	
