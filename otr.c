@@ -126,7 +126,6 @@ void myfgets(char *s, int size, FILE *stream);
 void yes_keygen(gpointer w, void *data);
 void yes_forget_fingerprint(gpointer w, void *data);
 void yes_forget_context(gpointer w, void *data);
-void yes_forget_key(gpointer w, void *data);
 
 /* helper to make sure accountname and protocol match the incoming "opdata" */
 struct im_connection *check_imc(void *opdata, const char *accountname,
@@ -898,15 +897,6 @@ void yes_forget_context(gpointer w, void *data)
 	otrl_context_forget(ctx);
 }
 
-void yes_forget_key(gpointer w, void *data)
-{
-	OtrlPrivKey *key = (OtrlPrivKey *)data;
-	
-	/* FIXME: For some reason which /completely eludes me/, this call keeps
-	   barfing on the gcry_sexp_release inside (invalid pointer free). */
-	otrl_privkey_forget(key);
-}
-
 void cmd_otr_forget(irc_t *irc, char **args)
 {
 	if(!strcmp(args[1], "fingerprint"))
@@ -979,27 +969,6 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		
 		s = g_strdup_printf("about to forget otr data about %s, are you sure?", args[2]);
 		query_add(irc, NULL, s, yes_forget_context, NULL, ctx);
-	}
-	
-	else if(!strcmp(args[1], "key"))
-	{
-		OtrlPrivKey *key;
-		char *s;
-		
-		key = match_privkey(irc, ((const char **)args)+2);
-		if(!key) {
-			/* match_privkey does error messages */
-			return;
-		}
-		
-		/* TODO: Find out why 'otr forget key' barfs (cf. yes_forget_key) */
-		irc_usermsg(irc, "otr %s %s: not implemented, please edit \x02%s%s.otr_keys\x02 manually :-/",
-			args[0], args[1], global.conf->configdir, irc->nick);
-		return;
-
-		s = g_strdup_printf("about to forget the private key for %s/%s, are you sure?",
-			key->accountname, key->protocol);
-		query_add(irc, NULL, s, yes_forget_key, NULL, key);
 	}
 	
 	else
