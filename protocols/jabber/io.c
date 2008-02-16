@@ -520,8 +520,7 @@ gboolean jabber_start_stream( struct im_connection *ic )
 	/* We'll start our stream now, so prepare everything to receive one
 	   from the server too. */
 	xt_free( jd->xt );	/* In case we're RE-starting. */
-	jd->xt = xt_new( ic );
-	jd->xt->handlers = (struct xt_handler_entry*) jabber_handlers;
+	jd->xt = xt_new( jabber_handlers, ic );
 	
 	if( jd->r_inpa <= 0 )
 		jd->r_inpa = b_input_add( jd->fd, GAIM_INPUT_READ, jabber_read_callback, ic );

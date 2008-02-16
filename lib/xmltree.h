@@ -70,13 +70,13 @@ struct xt_parser
 	struct xt_node *root;
 	struct xt_node *cur;
 	
-	struct xt_handler_entry *handlers;
+	const struct xt_handler_entry *handlers;
 	gpointer data;
 	
 	GError *gerr;
 };
 
-struct xt_parser *xt_new( gpointer data );
+struct xt_parser *xt_new( const struct xt_handler_entry *handlers, gpointer data );
 void xt_reset( struct xt_parser *xt );
 int xt_feed( struct xt_parser *xt, char *text, int text_len );
 int xt_handle( struct xt_parser *xt, struct xt_node *node, int depth );

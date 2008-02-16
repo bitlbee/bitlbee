@@ -110,11 +110,12 @@ GMarkupParser xt_parser_funcs =
 	NULL
 };
 
-struct xt_parser *xt_new( gpointer data )
+struct xt_parser *xt_new( const struct xt_handler_entry *handlers, gpointer data )
 {
 	struct xt_parser *xt = g_new0( struct xt_parser, 1 );
 	
 	xt->data = data;
+	xt->handlers = handlers;
 	xt_reset( xt );
 	
 	return xt;
