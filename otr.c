@@ -1221,13 +1221,13 @@ void show_fingerprints(irc_t *irc, ConnContext *ctx)
 			trust=fp->trust;
 		}
 		if(fp == ctx->active_fingerprint) {
-			irc_usermsg(irc, "  \x02%s (%s)\x02", human, trust);
+			irc_usermsg(irc, "    \x02%s (%s)\x02", human, trust);
 		} else {
-			irc_usermsg(irc, "  %s (%s)", human, trust);
+			irc_usermsg(irc, "    %s (%s)", human, trust);
 		}
 	}
 	if(count==0)
-		irc_usermsg(irc, "  (none)");
+		irc_usermsg(irc, "    (none)");
 }
 
 Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args)
