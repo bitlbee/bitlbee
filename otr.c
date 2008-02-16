@@ -229,6 +229,7 @@ void otr_load(irc_t *irc)
 	account_t *a;
 	gcry_error_t e;
 	gcry_error_t enoent = gcry_error_from_errno(ENOENT);
+	int kg=0;
 
 	log_message(LOGLVL_DEBUG, "otr_load '%s'", irc->nick);
 
@@ -245,7 +246,16 @@ void otr_load(irc_t *irc)
 	
 	/* check for otr keys on all accounts */
 	for(a=irc->accounts; a; a=a->next) {
-		otr_check_for_key(a);
+		kg = otr_check_for_key(a) || kg;
+	}
+	if(kg) {
+		irc_usermsg(irc, "Notice: "
+			"The accounts above do not have OTR encryption keys associated with them, yet. "
+		    "These keys are now being generated in the background. "
+		    "You will be notified as they are completed. "
+		    "It is not necessary to wait; "
+		    "BitlBee can be used normally during key generation. "
+		    "You may safely ignore this message if you don't know what OTR is. ;)");
 	}
 }
 
@@ -290,7 +300,7 @@ void otr_rename(const char *onick, const char *nnick)
 	rename(s,t);
 }
 
-void otr_check_for_key(account_t *a)
+int otr_check_for_key(account_t *a)
 {
 	irc_t *irc = a->irc;
 	OtrlPrivKey *k;
@@ -298,10 +308,14 @@ void otr_check_for_key(account_t *a)
 	k = otrl_privkey_find(irc->otr->us, a->user, a->prpl->name);
 	if(k) {
 		irc_usermsg(irc, "otr: %s/%s ready", a->user, a->prpl->name);
+		return 0;
 	} if(keygen_in_progress(irc, a->user, a->prpl->name)) {
-		irc_usermsg(irc, "otr: keygen for %s/%s in progress", a->user, a->prpl->name);
+		irc_usermsg(irc, "otr: keygen for %s/%s already in progress", a->user, a->prpl->name);
+		return 0;
 	} else {
+		irc_usermsg(irc, "otr: starting background keygen for %s/%s", a->user, a->prpl->name);
 		otr_keygen(irc, a->user, a->prpl->name);
+		return 1;
 	}
 }
 
@@ -1244,7 +1258,7 @@ void show_fingerprints(irc_t *irc, ConnContext *ctx)
 		}
 	}
 	if(count==0)
-		irc_usermsg(irc, "  no fingerprints");
+		irc_usermsg(irc, "  (none)");
 }
 
 Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args)
@@ -1384,8 +1398,9 @@ void show_general_otr_info(irc_t *irc)
 	ConnContext *ctx;
 	OtrlPrivKey *key;
 	char human[45];
+	kg_t *kg;
 
-	/* list all privkeys */
+	/* list all privkeys (including ones being generated) */
 	irc_usermsg(irc, "\x1fprivate keys:\x1f");
 	for(key=irc->otr->us->privkey_root; key; key=key->next) {
 		const char *hash;
@@ -1406,6 +1421,12 @@ void show_general_otr_info(irc_t *irc)
 		if(hash) /* should always succeed */
 			irc_usermsg(irc, "    %s", human);
 	}
+	for(kg=irc->otr->todo; kg; kg=kg->next) {
+		irc_usermsg(irc, "  %s/%s - DSA", kg->accountname, kg->protocol);
+		irc_usermsg(irc, "    (being generated)");
+	}
+	if(key == irc->otr->us->privkey_root && kg == irc->otr->todo)
+		irc_usermsg(irc, "  (none)");
 
 	/* list all contexts */
 	irc_usermsg(irc, "%s", "");
@@ -1430,6 +1451,8 @@ void show_general_otr_info(irc_t *irc)
 		
 		g_free(userstring);
 	}
+	if(ctx == irc->otr->us->context_root)
+		irc_usermsg(irc, "  (none)");
 }
 
 void show_otr_context_info(irc_t *irc, ConnContext *ctx)
@@ -1498,8 +1521,6 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 	/* do nothing if a key for the requested account is already being generated */
 	if(keygen_in_progress(irc, handle, protocol))
 		return;
-	
-	irc_usermsg(irc, "generating new private key for %s/%s...", handle, protocol);
 
 	/* see if we already have a keygen child running. if not, start one and put a
 	   handler on its output. */
@@ -1686,6 +1707,9 @@ void yes_keygen(gpointer w, void *data)
 		irc_usermsg(acc->irc, "keygen for %s/%s already in progress",
 			acc->user, acc->prpl->name);
 	} else {
+		irc_usermsg(acc->irc, "starting background keygen for %s/%s",
+			acc->user, acc->prpl->name);
+		irc_usermsg(acc->irc, "you will be notified when it completes");
 		otr_keygen(acc->irc, acc->user, acc->prpl->name);
 	}
 }

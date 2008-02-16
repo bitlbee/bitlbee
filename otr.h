@@ -85,7 +85,7 @@ void otr_remove(const char *nick);
 void otr_rename(const char *onick, const char *nnick);
 
 /* called from account_add() */
-void otr_check_for_key(struct account *a);
+int otr_check_for_key(struct account *a);
 
 /* called from imcb_buddy_msg() */
 char *otr_handle_message(struct im_connection *ic, const char *handle,

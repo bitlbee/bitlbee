@@ -242,7 +242,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 		
 		irc_usermsg( irc, "Account successfully added" );
 		
-		otr_check_for_key(a);
+		if(otr_check_for_key(a)) {
+			irc_usermsg(irc, "otr: you will be notified when it completes");
+		}
 	}
 	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
 	{
