@@ -17,7 +17,7 @@ LFLAGS += -r
 # [SH] Phony targets
 all: jabber_mod.o
 check: all
-lcov:
+lcov: check
 gcov: 
 	gcov *.c
 

@@ -49,7 +49,6 @@ distclean: clean $(subdirs)
 check: all
 	$(MAKE) -C tests
 
-lcov:
 gcov: check
 	gcov *.c
 
