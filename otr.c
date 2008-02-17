@@ -904,6 +904,9 @@ void yes_forget_key(gpointer w, void *data)
 	OtrlPrivKey *key = (OtrlPrivKey *)data;
 	
 	otrl_privkey_forget(key);
+	/* Hm, libotr doesn't seem to offer a function for explicitly /writing/
+	   keyfiles. So the key will be back on the next load... */
+	/* TODO: Actually erase forgotten keys from storage? */
 }
 
 void cmd_otr_forget(irc_t *irc, char **args)
