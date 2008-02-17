@@ -345,7 +345,7 @@
 			<description>
 			
 				<para>
-					Forgets some part of our OTR userstate. Available things: fingerprint and context. See <emphasis>help otr forget &lt;thing&gt;</emphasis> for more information.
+					Forgets some part of our OTR userstate. Available things: fingerprint, context, and key. See <emphasis>help otr forget &lt;thing&gt;</emphasis> for more information.
 				</para>
 			
 			</description>
@@ -376,6 +376,19 @@
 				
 			</bitlbee-command>
 
+			<bitlbee-command name="key">
+				<syntax>otr forget key &lt;fingerprint&gt;</syntax>
+				
+				<description>
+				
+					<para>
+						Forgets an OTR private key matching the specified fingerprint. It is allowed to specify only a (unique) prefix of the fingerprint.
+					</para>
+					
+				</description>
+				
+			</bitlbee-command>
+		
 		</bitlbee-command>
 		
 	</bitlbee-command>
