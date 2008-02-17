@@ -863,6 +863,7 @@ void cmd_otr_keygen(irc_t *irc, char **args)
 	if(otrl_privkey_find(irc->otr->us, a->user, a->prpl->name)) {
 		char *s = g_strdup_printf("account %d already has a key, replace it?", n);
 		query_add(irc, NULL, s, yes_keygen, NULL, a);
+		g_free(s);
 	} else {
 		otr_keygen(irc, a->user, a->prpl->name);
 	}
@@ -940,6 +941,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		otrl_privkey_hash_to_human(human, fp->fingerprint);
 		s = g_strdup_printf("about to forget fingerprint %s, are you sure?", human);
 		query_add(irc, NULL, s, yes_forget_fingerprint, NULL, fp);
+		g_free(s);
 	}
 	
 	else if(!strcmp(args[1], "context"))
@@ -969,6 +971,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		
 		s = g_strdup_printf("about to forget otr data about %s, are you sure?", args[2]);
 		query_add(irc, NULL, s, yes_forget_context, NULL, ctx);
+		g_free(s);
 	}
 	
 	else
