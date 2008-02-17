@@ -281,7 +281,7 @@ You can reach some screenshots link:shot[here].
 == Additional resources
 
 You can reach the Changelog link:Changelog[here], and a gitweb interface
-http://repo.or.cz/w/bitlbee-skype.git[here].
+http://vmiklos.hu/gitweb/?p=bitlbee-skype.git[here].
 
 The Skype API documentation is
 https://developer.skype.com/Docs/ApiDoc[here] if you're interested.
