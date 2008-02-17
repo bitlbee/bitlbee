@@ -111,7 +111,7 @@ int keygen_in_progress(irc_t *irc, const char *handle, const char *protocol);
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol);
 
 /* main function for the forked keygen slave */
-void keygen_child_main(const char *nick, int infd, int outfd);
+void keygen_child_main(OtrlUserState us, int infd, int outfd);
 
 /* mainloop handler for when a keygen finishes */
 gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond);
@@ -1519,7 +1519,7 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 		if(!p) {
 			/* child process */
 			signal(SIGTERM, exit);
-			keygen_child_main(irc->nick, to[0], from[1]);
+			keygen_child_main(irc->otr->us, to[0], from[1]);
 			exit(0);
 		}
 		
@@ -1550,19 +1550,12 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 	}
 }
 
-void keygen_child_main(const char *nick, int infd, int outfd)
+void keygen_child_main(OtrlUserState us, int infd, int outfd)
 {
-	OtrlUserState us;
-	char *kf;
 	FILE *input, *output;
 	char filename[128], accountname[512], protocol[512];
 	gcry_error_t e;
 	int tempfd;
-	
-	us = otrl_userstate_create();
-	kf = g_strdup_printf("%s%s.otr_keys", global.conf->configdir, nick);
-	otrl_privkey_read(us, kf);
-	g_free(kf);
 	
 	input = fdopen(infd, "r");
 	output = fdopen(outfd, "w");
