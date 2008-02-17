@@ -211,7 +211,7 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 
 	imcb_log( ic, "File transfer request from %s for %s (%zd kb). ", xt_find_attr( node, "from" ), name, size/1024 );
 
-	imcb_log( ic, "Accept the DCC transfer if you'd like the file. If you don't, issue the 'transfers reject' command.");
+	imcb_log( ic, "Accept the file transfer if you'd like the file. If you don't, issue the 'transfers reject' command.");
 
 	tf = g_new0( struct jabber_transfer, 1 );
 

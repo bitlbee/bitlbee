@@ -47,7 +47,7 @@ typedef enum {
  * imcb_file_send_start() method, which will initialize most of the fields. The data field and the various
  * methods are zero-initialized. Instances will automatically be deleted once the transfer is completed,
  * canceled, or the connection to the irc client has been lost (note that also if only the irc connection
- * and not the dcc connection is lost, the file transfer will still be canceled and freed).
+ * and not the file transfer connection is lost, the file transfer will still be canceled and freed).
  *
  * The following (poor ascii-art) diagram illustrates what methods are called for which status-changes:
  *
@@ -159,7 +159,7 @@ typedef struct file_transfer {
 } file_transfer_t;
 
 /*
- * This starts a file transfer from bitlbee to the user (currently via DCC).
+ * This starts a file transfer from bitlbee to the user.
  */
 file_transfer_t *imcb_file_send_start( struct im_connection *ic, char *user_nick, char *file_name, size_t file_size );
 
