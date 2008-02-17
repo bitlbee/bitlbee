@@ -768,6 +768,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 		
 		/* interpret arg as 'user/protocol/account' if possible */
 		protocol = strchr(arg, '/');
+		myhandle = NULL;
 		if(protocol) {
 			*(protocol++) = '\0';
 			myhandle = strchr(protocol, '/');
