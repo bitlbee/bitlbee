@@ -249,11 +249,11 @@ void otr_load(irc_t *irc)
 	if(kg) {
 		irc_usermsg(irc, "Notice: "
 			"The accounts above do not have OTR encryption keys associated with them, yet. "
-		    "These keys are now being generated in the background. "
-		    "You will be notified as they are completed. "
-		    "It is not necessary to wait; "
-		    "BitlBee can be used normally during key generation. "
-		    "You may safely ignore this message if you don't know what OTR is. ;)");
+			"These keys are now being generated in the background. "
+			"You will be notified as they are completed. "
+			"It is not necessary to wait; "
+			"BitlBee can be used normally during key generation. "
+			"You may safely ignore this message if you don't know what OTR is. ;)");
 	}
 }
 
