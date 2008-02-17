@@ -175,8 +175,8 @@ fi
 if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG glib-2.0; then
 	if $PKG_CONFIG glib-2.0 --atleast-version=$GLIB_MIN_VERSION; then
 		cat<<EOF>>Makefile.settings
-EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0 gthread-2.0`
-CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0 gthread-2.0`
+EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0`
+CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0`
 EOF
 	else
 		echo
