@@ -50,8 +50,8 @@ void cmd_otr(struct irc *, char **args);
 
 /* representing a keygen job */
 typedef struct kg {
-	const char *accountname;
-	const char *protocol;
+	char *accountname;
+	char *protocol;
 	
 	struct kg *next;
 } kg_t;
@@ -64,8 +64,8 @@ typedef struct otr {
 	FILE *from;      /* pipe from keygen slave */
 	
 	/* active keygen job (NULL if none) */
-	const char *sent_accountname;
-	const char *sent_protocol;
+	char *sent_accountname;
+	char *sent_protocol;
 	
 	/* keygen jobs waiting to be sent to slave */
 	kg_t *todo;

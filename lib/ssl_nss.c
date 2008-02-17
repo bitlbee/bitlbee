@@ -90,6 +90,14 @@ static SECStatus nss_bad_cert (void *arg, PRFileDesc *socket)
 }
 
 
+void ssl_init( void )
+{
+	PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
+	NSS_NoDB_Init(NULL);
+	NSS_SetDomesticPolicy();
+	initialized = TRUE;
+}
+
 void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
@@ -106,9 +114,7 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	
 	if( !initialized )
 	{
-		PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
-		NSS_NoDB_Init(NULL);
-		NSS_SetDomesticPolicy();
+		ssl_init();
 	}
 
 	

@@ -111,7 +111,7 @@ int keygen_in_progress(irc_t *irc, const char *handle, const char *protocol);
 void otr_keygen(irc_t *irc, const char *handle, const char *protocol);
 
 /* main function for the forked keygen slave */
-void keygen_child_main(OtrlUserState us, int infd, int outfd);
+void keygen_child_main(const char *nick, int infd, int outfd);
 
 /* mainloop handler for when a keygen finishes */
 gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond);
@@ -1526,7 +1526,7 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 		if(!p) {
 			/* child process */
 			signal(SIGTERM, exit);
-			keygen_child_main(irc->otr->us, to[0], from[1]);
+			keygen_child_main(irc->nick, to[0], from[1]);
 			exit(0);
 		}
 		
@@ -1547,24 +1547,31 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 		while(*kg)
 			kg=&((*kg)->next);
 		*kg = g_new0(kg_t, 1);
-		(*kg)->accountname = handle;
-		(*kg)->protocol = protocol;
+		(*kg)->accountname = g_strdup(handle);
+		(*kg)->protocol = g_strdup(protocol);
 	} else {
 		/* send our job over and remember it */
 		log_message(LOGLVL_DEBUG, "slave: generate for %s/%s!", handle, protocol);
 		fprintf(irc->otr->to, "%s\n%s\n", handle, protocol);
 		fflush(irc->otr->to);
-		irc->otr->sent_accountname = handle;
-		irc->otr->sent_protocol = protocol;
+		irc->otr->sent_accountname = g_strdup(handle);
+		irc->otr->sent_protocol = g_strdup(protocol);
 	}
 }
 
-void keygen_child_main(OtrlUserState us, int infd, int outfd)
+void keygen_child_main(const char *nick, int infd, int outfd)
 {
+	OtrlUserState us;
+	char *kf;
 	FILE *input, *output;
 	char filename[128], accountname[512], protocol[512];
 	gcry_error_t e;
 	int tempfd;
+	
+	us = otrl_userstate_create();
+	kf = g_strdup_printf("%s%s.otr_keys", global.conf->configdir, nick);
+	otrl_privkey_read(us, kf);
+	g_free(kf);
 	
 	input = fdopen(infd, "r");
 	output = fdopen(outfd, "w");
@@ -1619,6 +1626,8 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 	}
 	
 	/* forget this job */
+	g_free(irc->otr->sent_accountname);
+	g_free(irc->otr->sent_protocol);
 	irc->otr->sent_accountname = NULL;
 	irc->otr->sent_protocol = NULL;
 	

@@ -56,6 +56,12 @@ static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition
 static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
 
 
+void ssl_init( void );
+{
+	initialized = TRUE;
+	SSLeay_add_ssl_algorithms();
+}
+
 void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
@@ -114,8 +120,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	
 	if( !initialized )
 	{
-		initialized = TRUE;
-		SSLeay_add_ssl_algorithms();
+		ssl_init();
 	}
 	
 	meth = TLSv1_client_method();
