@@ -142,9 +142,6 @@ int bitlbee_inetd_init()
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
-    /* TODO: Remove debugging log_link's */
-	log_link( LOGLVL_INFO, LOGOUTPUT_IRC );
-	log_link( LOGLVL_DEBUG, LOGOUTPUT_IRC );
 	
 	return( 0 );
 }

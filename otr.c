@@ -231,8 +231,6 @@ void otr_load(irc_t *irc)
 	gcry_error_t enoent = gcry_error_from_errno(ENOENT);
 	int kg=0;
 
-	log_message(LOGLVL_DEBUG, "otr_load '%s'", irc->nick);
-
 	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, irc->nick);
 	e = otrl_privkey_read(irc->otr->us, s);
 	if(e && e!=enoent) {
@@ -264,8 +262,6 @@ void otr_save(irc_t *irc)
 	char s[512];
 	gcry_error_t e;
 
-	log_message(LOGLVL_DEBUG, "otr_save '%s'", irc->nick);
-
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->nick);
 	e = otrl_privkey_write_fingerprints(irc->otr->us, s);
 	if(e) {
@@ -278,8 +274,6 @@ void otr_remove(const char *nick)
 {
 	char s[512];
 	
-	log_message(LOGLVL_DEBUG, "otr_remove '%s'", nick);
-
 	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, nick);
 	unlink(s);
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, nick);
@@ -290,8 +284,6 @@ void otr_rename(const char *onick, const char *nnick)
 {
 	char s[512], t[512];
 	
-	log_message(LOGLVL_DEBUG, "otr_rename '%s' -> '%s'", onick, nnick);
-
 	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, onick);
 	g_snprintf(t, 511, "%s%s.otr_keys", global.conf->configdir, nnick);
 	rename(s,t);
@@ -432,8 +424,6 @@ OtrlPolicy op_policy(void *opdata, ConnContext *context)
 	struct im_connection *ic = check_imc(opdata, context->accountname, context->protocol);
 	const char *p;
 	
-	log_message(LOGLVL_DEBUG, "op_policy '%s' '%s'", context->accountname, context->protocol);
-	
 	/* policy override during keygen: if we're missing the key for context but are currently
 	   generating it, then that's as much as we can do. => temporarily return NEVER. */
 	if(keygen_in_progress(ic->irc, context->accountname, context->protocol) &&
@@ -458,8 +448,6 @@ void op_create_privkey(void *opdata, const char *accountname,
 {
 	struct im_connection *ic = check_imc(opdata, accountname, protocol);
 	
-	log_message(LOGLVL_DEBUG, "op_create_privkey '%s' '%s'", accountname, protocol);
-
 	/* will fail silently if keygen already in progress */
 	otr_keygen(ic->irc, accountname, protocol);
 }
@@ -470,8 +458,6 @@ int op_is_logged_in(void *opdata, const char *accountname,
 	struct im_connection *ic = check_imc(opdata, accountname, protocol);
 	user_t *u;
 
-	log_message(LOGLVL_DEBUG, "op_is_logged_in '%s' '%s' '%s'", accountname, protocol, recipient);
-	
 	/* lookup the user_t for the given recipient */
 	u = user_findhandle(ic, recipient);
 	if(u) {
@@ -488,8 +474,6 @@ void op_inject_message(void *opdata, const char *accountname,
 	const char *protocol, const char *recipient, const char *message)
 {
 	struct im_connection *ic = check_imc(opdata, accountname, protocol);
-
-	log_message(LOGLVL_DEBUG, "op_inject_message '%s' '%s' '%s' '%s'", accountname, protocol, recipient, message);
 
 	if (strcmp(accountname, recipient) == 0) {
 		/* huh? injecting messages to myself? */
@@ -508,8 +492,6 @@ int op_display_otr_message(void *opdata, const char *accountname,
 	struct im_connection *ic = check_imc(opdata, accountname, protocol);
 	char *msg = g_strdup(message);
 
-	log_message(LOGLVL_DEBUG, "op_display_otr_message '%s' '%s' '%s' '%s'", accountname, protocol, username, message);
-
 	strip_html(msg);
 	irc_usermsg(ic->irc, "otr: %s", msg);
 
@@ -525,8 +507,6 @@ void op_new_fingerprint(void *opdata, OtrlUserState us,
 	char hunam[45];		/* anybody looking? ;-) */
 	
 	otrl_privkey_hash_to_human(hunam, fingerprint);
-	log_message(LOGLVL_DEBUG, "op_new_fingerprint '%s' '%s' '%s' '%s'", accountname, protocol, username, hunam);
-
 	irc_usermsg(ic->irc, "new fingerprint for %s: %s",
 		peernick(ic->irc, username, protocol), hunam);
 }
@@ -534,8 +514,6 @@ void op_new_fingerprint(void *opdata, OtrlUserState us,
 void op_write_fingerprints(void *opdata)
 {
 	struct im_connection *ic = (struct im_connection *)opdata;
-
-	log_message(LOGLVL_DEBUG, "op_write_fingerprints");
 
 	otr_save(ic->irc);
 }
@@ -546,8 +524,6 @@ void op_gone_secure(void *opdata, ConnContext *context)
 		check_imc(opdata, context->accountname, context->protocol);
 	user_t *u;
 	const char *trust;
-
-	log_message(LOGLVL_DEBUG, "op_gone_secure '%s' '%s' '%s'", context->accountname, context->protocol, context->username);
 
 	u = peeruser(ic->irc, context->username, context->protocol);
 	if(!u) {
@@ -572,8 +548,6 @@ void op_gone_insecure(void *opdata, ConnContext *context)
 		check_imc(opdata, context->accountname, context->protocol);
 	user_t *u;
 
-	log_message(LOGLVL_DEBUG, "op_gone_insecure '%s' '%s' '%s'", context->accountname, context->protocol, context->username);
-
 	u = peeruser(ic->irc, context->username, context->protocol);
 	if(!u) {
 		log_message(LOGLVL_ERROR,
@@ -591,9 +565,6 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
 	user_t *u;
-
-	log_message(LOGLVL_DEBUG, "op_still_secure '%s' '%s' '%s' is_reply=%d",
-		context->accountname, context->protocol, context->username, is_reply);
 
 	u = peeruser(ic->irc, context->username, context->protocol);
 	if(!u) {
@@ -631,8 +602,6 @@ const char *op_account_name(void *opdata, const char *account, const char *proto
 {
 	struct im_connection *ic = (struct im_connection *)opdata;
 
-	log_message(LOGLVL_DEBUG, "op_account_name '%s' '%s'", account, protocol);
-	
 	return peernick(ic->irc, account, protocol);
 }
 
@@ -1130,8 +1099,6 @@ user_t *peeruser(irc_t *irc, const char *handle, const char *protocol)
 {
 	user_t *u;
 	
-	log_message(LOGLVL_DEBUG, "peeruser '%s' '%s'", handle, protocol);
-	
 	for(u=irc->users; u; u=u->next) {
 		struct prpl *prpl;
 		if(!u->ic || !u->handle)
@@ -1294,8 +1261,6 @@ Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args)
 		}
 	}
 	*p = '\0';
-	log_message(LOGLVL_DEBUG, "match_fingerprint '%s'", prefix);
-	log_message(LOGLVL_DEBUG, "n=%d strlen(prefix)=%d", n, strlen(prefix));
 	
 	/* find first fingerprint with the given prefix */
 	n = strlen(prefix);
@@ -1360,8 +1325,6 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args)
 		}
 	}
 	*p = '\0';
-	log_message(LOGLVL_DEBUG, "match_privkey '%s'", prefix);
-	log_message(LOGLVL_DEBUG, "n=%d strlen(prefix)=%d", n, strlen(prefix));
 	
 	/* find first key which matches the given prefix */
 	n = strlen(prefix);
@@ -1503,8 +1466,6 @@ int keygen_in_progress(irc_t *irc, const char *handle, const char *protocol)
 {
 	kg_t *kg;
 	
-	log_message(LOGLVL_DEBUG, "keygen_in_progress '%s' '%s'", handle, protocol);
-	
 	if(!irc->otr->sent_accountname || !irc->otr->sent_protocol)
 		return 0;
 
@@ -1573,7 +1534,6 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 	/* is the keygen slave currently working? */
 	if(irc->otr->sent_accountname) {
 		/* enqueue our job for later transmission */
-		log_message(LOGLVL_DEBUG, "enqueueing keygen for %s/%s", handle, protocol);
 		kg_t **kg = &irc->otr->todo;
 		while(*kg)
 			kg=&((*kg)->next);
@@ -1582,7 +1542,6 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 		(*kg)->protocol = g_strdup(protocol);
 	} else {
 		/* send our job over and remember it */
-		log_message(LOGLVL_DEBUG, "slave: generate for %s/%s!", handle, protocol);
 		fprintf(irc->otr->to, "%s\n%s\n", handle, protocol);
 		fflush(irc->otr->to);
 		irc->otr->sent_accountname = g_strdup(handle);
@@ -1636,13 +1595,8 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 	irc_t *irc = (irc_t *)data;
 	char filename[512], msg[512];
 
-	log_message(LOGLVL_DEBUG, "keygen_finish_handler cond=%d", cond);
-
 	myfgets(filename, 512, irc->otr->from);
 	myfgets(msg, 512, irc->otr->from);
-	
-	log_message(LOGLVL_DEBUG, "filename='%s'", filename);
-	log_message(LOGLVL_DEBUG, "msg='%s'", msg);
 	
 	irc_usermsg(irc, "%s", msg);
 	if(filename[0]) {
@@ -1666,7 +1620,6 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 	if(irc->otr->todo) {
 		kg_t *p = irc->otr->todo;
 		/* send the next one over */
-		log_message(LOGLVL_DEBUG, "slave: keygen for %s/%s!", p->accountname, p->protocol);
 		fprintf(irc->otr->to, "%s\n%s\n", p->accountname, p->protocol);
 		fflush(irc->otr->to);
 		irc->otr->sent_accountname = p->accountname;
@@ -1676,7 +1629,6 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 		return TRUE;   /* keep watching */
 	} else {
 		/* okay, the slave is idle now, so kill him */
-		log_message(LOGLVL_DEBUG, "all keys done. die, slave!");
 		fclose(irc->otr->from);
 		fclose(irc->otr->to);
 		kill(irc->otr->keygen, SIGTERM);
@@ -1691,8 +1643,6 @@ void copyfile(const char *a, const char *b)
 	int fda, fdb;
 	int n;
 	char buf[1024];
-	
-	log_message(LOGLVL_DEBUG, "copyfile '%s' '%s'", a, b);
 	
 	fda = open(a, O_RDONLY);
 	fdb = open(b, O_WRONLY | O_CREAT | O_TRUNC, 0600);
