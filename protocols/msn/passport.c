@@ -52,6 +52,11 @@ int passport_get_token( gpointer func, gpointer data, char *username, char *pass
 		if( mad->cookie[i] == ',' )
 			mad->cookie[i] = '&';
 	
+	/* Microsoft doesn't allow password longer than 16 chars and silently
+	   fails authentication if you give the "full version" of your passwd. */
+	if( strlen( mad->password ) > MAX_PASSPORT_PWLEN )
+		mad->password[MAX_PASSPORT_PWLEN] = 0;
+	
 	return passport_get_token_real( mad );
 }
 

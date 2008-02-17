@@ -35,6 +35,8 @@
 #endif
 #include "nogaim.h"
 
+#define MAX_PASSPORT_PWLEN 16
+
 struct msn_auth_data
 {
 	char *url;
