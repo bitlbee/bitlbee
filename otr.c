@@ -337,13 +337,13 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
 		   set_getbool(&ic->irc->set, "color_encrypted")) {
 			/* color according to f'print trust */
-			char color;
+			int color;
 			const char *trust = context->active_fingerprint->trust;
 			if(trust && trust[0] != '\0')
-				color='3';   /* green */
+				color=3;   /* green */
 			else
-				color='5';   /* red */
-			colormsg = g_strdup_printf("\x03%c%s\x0F", color, newmsg);
+				color=5;   /* red */
+			colormsg = g_strdup_printf("\x03%.2d%s\x0F", color, newmsg);
 		} else {
 			colormsg = g_strdup(newmsg);
 		}
