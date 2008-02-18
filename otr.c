@@ -343,7 +343,7 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 				color=3;   /* green */
 			else
 				color=5;   /* red */
-			colormsg = g_strdup_printf("\x03%.2d%s\x0F", color, newmsg);
+			colormsg = g_strdup_printf("\x03%.2d,00%s\x0F", color, newmsg);
 		} else {
 			colormsg = g_strdup(newmsg);
 		}
