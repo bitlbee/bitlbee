@@ -2,7 +2,7 @@
 
 VERSION = 0.3.1
 
-AMVERSION = $(shell automake --version|sed 's/.*) //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
+AMVERSION = $(shell automake --version|sed 's/.* //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
 
 skype.so: skype.c config.mak
 	$(CC) $(CFLAGS) -shared -o skype.so skype.c $(LDFLAGS)
