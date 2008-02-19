@@ -33,7 +33,6 @@ import gobject
 import socket
 import getopt
 import Skype4Py
-import threading
 import sha
 from ConfigParser import ConfigParser
 from OpenSSL import SSL
