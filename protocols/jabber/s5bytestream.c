@@ -100,6 +100,12 @@ void jabber_bs_free_transfer( file_transfer_t *ft) {
 	struct bs_transfer *bt = tf->streamhandle;
 	jabber_streamhost_t *sh;
 
+	if ( bt->connect_timeout )
+	{
+		b_event_remove( bt->connect_timeout );
+		bt->connect_timeout = 0;
+	}
+
 	if ( tf->watch_in )
 		b_event_remove( tf->watch_in );
 	
@@ -347,7 +353,7 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 	struct bs_transfer *bt = data;
 	short revents;
 
-	if ( !jabber_bs_poll( bt, fd, &revents ) )
+	if ( ( fd != 0 ) && !jabber_bs_poll( bt, fd, &revents ) )
 		return FALSE;
 	
 	switch( bt->phase ) 
@@ -723,7 +729,17 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 		}
 	} else
 	{
-		/* using a proxy */
+		/* using a proxy, abort listen */
+
+		closesocket( tf->fd );
+		tf->fd = 0;
+
+		if ( bt->connect_timeout )
+		{
+			b_event_remove( bt->connect_timeout );
+			bt->connect_timeout = 0;
+		}
+
 		GSList *shlist;
 		for( shlist = jd->streamhosts ; shlist ; shlist = g_slist_next( shlist ) )
 		{
@@ -887,13 +903,15 @@ gboolean jabber_bs_send_request( struct jabber_transfer *tf, GSList *streamhosts
 gboolean jabber_bs_send_handshake_abort(struct bs_transfer *bt, char *error )
 {
 	struct jabber_transfer *tf = bt->tf;
+	struct jabber_data *jd = tf->ic->proto_data;
 
 	/* TODO: did the receiver get here somehow??? */
 	imcb_log( tf->ic, "Transferring file %s: SOCKS5 handshake failed: %s", 
 		  tf->ft->file_name, 
 		  error );
 
-	imcb_file_canceled( tf->ft, error );
+	if( jd->streamhosts==NULL ) /* we're done here unless we have a proxy to try */
+		imcb_file_canceled( tf->ft, error );
 
 	return FALSE;
 }
