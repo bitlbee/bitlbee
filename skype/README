@@ -29,14 +29,15 @@ not..)
 == Requirements
 
 * Skype >= 1.4.0.99. The latest version I've tested is 2.0.0.43.
-* bitlbee >= 1.1.1dev. (This is the latest version I've tested, probably
-  newer versions will work, too.)
+* BitlBee >= 1.1.1dev. This is the latest version I've tested, probably
+  newer versions will work, too.
 * Skype4Py >= 0.9.28.7. Previous versions won't work due to API changes.
 * Python >= 2.5. Skype4Py does not work with 2.4.
-* pygobject
+* PyGObject >= 2.8.0. Older versions are part of PyGTK. (And you don't want to
+  install GTK for nothing, right?)
 
-`bitlbee-skype` has been tested under Linux and Windows. Skype is available
-under OSX, too, so it probably works, but this has not been tested.
+`bitlbee-skype` has been tested under Linux and Windows. Skype and Skype4py is
+available under OSX, too, so it probably works, but this has not been tested.
 
 == How to set it up
 
@@ -283,7 +284,7 @@ https://developer.skype.com/Docs/ApiDoc[here] if you're interested.
 
 for the following people:
 
-* Wilmer van der Gaast, for answering questions about the bitlbee plugin interface
+* Wilmer van der Gaast, for answering questions about the BitlBee plugin interface
 
 * Arkadiusz Wahlig, author of skype4py, for making suggestions to skyped
 
