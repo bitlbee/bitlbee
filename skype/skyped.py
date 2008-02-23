@@ -37,7 +37,6 @@ import sha
 from ConfigParser import ConfigParser
 from OpenSSL import SSL
 from traceback import print_exception
-#from exceptions import KeyboardInterrupt
 
 __version__ = "0.1.1"
 
