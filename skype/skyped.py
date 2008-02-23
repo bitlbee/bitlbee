@@ -44,10 +44,11 @@ SKYPE_SERVICE = 'com.Skype.API'
 CLIENT_NAME = 'SkypeApiPythonShell'
 
 def eh(type, value, tb):
-	if type == KeyboardInterrupt:
-		sys.exit("Exiting.")
-	print_exception(type, value, tb)
-	sys.exit(1)
+	if type != KeyboardInterrupt:
+		print_exception(type, value, tb)
+	gobject.MainLoop().quit()
+	skype.skype.Client.Shutdown()
+	sys.exit("Exiting.")
 
 sys.excepthook = eh
 
