@@ -4,10 +4,6 @@
 #  
 #   Copyright (c) 2007, 2008 by Miklos Vajna <vmiklos@frugalware.org>
 #
-#   It uses several code from a very basic python CLI interface, available at:
-#
-#   http://forum.skype.com/index.php?showtopic=42640
-#  
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation; either version 2 of the License, or
