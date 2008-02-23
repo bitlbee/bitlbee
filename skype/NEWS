@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.3.2         - support for Skype 2.0.0.43
+              - skyped now automatically starts/shuts down skype
+              - improved 'make prepare' to handle more automake versions
+              - documentation improvements
 0.3.1         - beautify output when skyped is interrupted using ^C
               - 'nick skype foo' now really sets display name, not the mood
                 text
