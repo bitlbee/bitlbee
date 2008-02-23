@@ -66,7 +66,8 @@ def input_handler(fd, io_condition):
 
 def idle_handler(skype):
 	try:
-		skype.skype.SendCommand(skype.skype.Command(-1, "PING"))
+		c = skype.skype.Command("PING", Block=True)
+		skype.skype.SendCommand(c)
 	except Skype4Py.SkypeAPIError, s:
 		dprint("Warning, pinging Skype failed (%s)." % (s))
 		time.sleep(2)
@@ -114,7 +115,7 @@ class SkypeApi():
 	def __init__(self):
 		self.skype = Skype4Py.Skype()
 		self.skype.OnNotify = self.recv
-		self.skype.Attach()
+		self.skype.Client.Start()
 
 	def recv(self, msg_text):
 		global options
