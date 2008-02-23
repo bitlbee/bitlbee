@@ -45,9 +45,8 @@ Skype servers (the company's ones). It needs a running Skype client to do so.
 In fact BitlBee will connect to `skyped` (a tcp server, provided in this
 package) and `skyped` will connect to to your Skype client.
 
-NOTE: The order is important. First you have to start Skype. Then `skyped` can
-connect to it, finally BitlBee can connect to `skyped`. (In fact `skyped`
-automatically reconnect if you restart Skype.)
+NOTE: The order is important. First `skyped` starts Skype. Then `skyped` can
+connect to Skype, finally BitlBee can connect to `skyped`.
 
 - If you happen to be a happy Frugalware user, you can install the `bitlbee`
   and `bitlbee-skype` packages from
@@ -119,15 +118,11 @@ if you used the `--sysconfdir` switch when running bitlbee-skype's `configure`.
 NOTE: Maybe you want to adjust the permissions in the `/usr/local/etc/skyped`
 dir. For example make it readable by just your user.
 
-- Start Skype and `skyped` (the tcp server):
+- Start `skyped` (the tcp server):
 
 ----
-$ skype
 $ skyped
 ----
-
-NOTE: You should run `skyped` on the same `X11` display, otherwise it won't be
-able to connect to Skype!
 
 - Start your `IRC` client, connect to BitlBee and add your account:
 
@@ -159,8 +154,6 @@ Now create `~/.vnc/xstartup` with the following contents:
 #!/bin/sh
 
 sleep 1
-skype &
-sleep 5
 skyped
 ----
 
