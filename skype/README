@@ -28,7 +28,7 @@ not..)
 
 == Requirements
 
-* Skype >= 1.4.0.99. The latest version I've tested is 2.0.0.27.
+* Skype >= 1.4.0.99. The latest version I've tested is 2.0.0.43.
 * bitlbee >= 1.1.1dev. (This is the latest version I've tested, probably
   newer versions will work, too.)
 * Skype4Py >= 0.9.28.7. Previous versions won't work due to API changes.
