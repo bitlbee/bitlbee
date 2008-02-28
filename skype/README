@@ -128,7 +128,8 @@ $ skyped
 - Start your `IRC` client, connect to BitlBee and add your account:
 
 ----
-account add skype <user> <pass> localhost
+account add skype <user> <pass>
+account set skype/server localhost
 ----
 
 <user> should be your Skype account name, <pass> should be the one you declared
