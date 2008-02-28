@@ -15,9 +15,7 @@ run -v -n -D
 
 python skyped.py -n -d -c ./skyped.conf
 
-4) skype
-
-5) irssi
+4) irssi
 
 == Get the code from git
 
