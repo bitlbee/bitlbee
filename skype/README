@@ -239,9 +239,6 @@ your VNC server regularly. (How ugly.)
 
 == What needs to be done (aka. TODO)
 
-- Fix `set skype/display_name foo`. It seem to be an upstream issue. (`nick
-  skype foo` works fine.)
-
 - Add support for accepting/rejecting and starting calls via settings. (Depends
   on the previous fix.)
 
