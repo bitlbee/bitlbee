@@ -842,8 +842,8 @@
 		</description>
 
 		<ircexample>
-			<ircline nick="wouter">nick 1 "Wouter Paesen"</ircline>
-			<ircline nick="root">Setting your name on connection 1 to `Wouter Paesen'</ircline>
+			<ircline nick="wouter">account set 1/display_name "The majestik møøse"</ircline>
+			<ircline nick="root">display_name = `The majestik møøse'</ircline>
 		</ircexample>
 
 	</bitlbee-command>

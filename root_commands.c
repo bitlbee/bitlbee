@@ -768,6 +768,9 @@ static void cmd_set( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "%s = `%s'", set_name, s );
 		else
 			irc_usermsg( irc, "%s is empty", set_name );
+
+		if( strchr( set_name, '/' ) )
+			irc_usermsg( irc, "Warning: / found in setting name, you're probably looking for the `account set' command." );
 	}
 	else
 	{
