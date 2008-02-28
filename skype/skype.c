@@ -889,6 +889,31 @@ static char *skype_set_display_name( set_t *set, char *value )
 	return(value);
 }
 
+static char *skype_set_call( set_t *set, char *value )
+{
+	account_t *acc = set->data;
+	struct im_connection *ic = acc->ic;
+	char *nick, *ptr, *buf;
+	user_t *u = user_find(acc->irc, value);
+
+	if(!u)
+	{
+		imcb_error(ic, "%s - no such nick", value);
+		return(value);
+	}
+	nick = g_strdup(u->handle);
+	ptr = strchr(nick, '@');
+	if(ptr)
+		*ptr = '\0';
+
+	buf = g_strdup_printf("CALL %s", nick);
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+	g_free(nick);
+	imcb_log(ic, "Ringing the user %s.", value);
+	return(value);
+}
+
 static void skype_add_buddy( struct im_connection *ic, char *who, char *group )
 {
 	char *buf, *nick, *ptr;
@@ -1047,6 +1072,9 @@ static void skype_init( account_t *acc )
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add( &acc->set, "display_name", NULL, skype_set_display_name, acc );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+
+	s = set_add( &acc->set, "call", NULL, skype_set_call, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 }
 
