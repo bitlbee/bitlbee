@@ -881,7 +881,6 @@ static char *skype_set_display_name( set_t *set, char *value )
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
-	//struct skype_data *sd = ic->proto_data;
 	char *buf;
 
 	buf = g_strdup_printf("SET PROFILE FULLNAME %s", value);
