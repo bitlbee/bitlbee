@@ -178,7 +178,7 @@ Please be aware about that Skype has serious memory leak issues. After running
 with for a few weeks it may eat >300 MB of memory. Just don't forget to restart
 your VNC server regularly. (How ugly.)
 
-== What works
+== Features
 
 - Download nicks and away statuses from Skype
 
@@ -237,10 +237,11 @@ your VNC server regularly. (How ugly.)
 - Running Skype on a machine different to BitlBee is possible, the
   communication is encrypted.
 
+- Starting calls: `account set skype/call nick`
+
 == What needs to be done (aka. TODO)
 
-- Add support for accepting/rejecting and starting calls via settings. (Depends
-  on the previous fix.)
+- Add support for accepting/rejecting calls via settings.
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
 
