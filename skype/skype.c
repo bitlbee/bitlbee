@@ -40,7 +40,10 @@
 typedef enum
 {
 	SKYPE_CALL_RINGING = 1,
-	SKYPE_CALL_MISSED
+	SKYPE_CALL_MISSED,
+	SKYPE_CALL_UNPLACED,
+	/* This means we are ringing somebody, not somebody rings us. */
+	SKYPE_CALL_RINGING_OUT
 } skype_call_status;
 
 typedef enum
@@ -561,7 +564,10 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					{
 						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
 						skype_write( ic, buf, strlen( buf ) );
-						sd->call_status = SKYPE_CALL_RINGING;
+						if(sd->call_status != SKYPE_CALL_UNPLACED)
+							sd->call_status = SKYPE_CALL_RINGING;
+						else
+							sd->call_status = SKYPE_CALL_RINGING_OUT;
 					}
 					else if(!strcmp(info, "STATUS MISSED"))
 					{
@@ -569,6 +575,8 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						skype_write( ic, buf, strlen( buf ) );
 						sd->call_status = SKYPE_CALL_MISSED;
 					}
+					else if(!strcmp(info, "STATUS UNPLACED"))
+						sd->call_status = SKYPE_CALL_UNPLACED;
 					else if(!strncmp(info, "PARTNER_HANDLE ", 15))
 					{
 						info += 15;
@@ -580,6 +588,12 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 									break;
 								case SKYPE_CALL_MISSED:
 									imcb_log(ic, "You have missed a call from user %s.", info);
+									break;
+								case SKYPE_CALL_RINGING_OUT:
+									imcb_log(ic, "You are currently ringing the user %s.", info);
+									break;
+								default:
+									/* Don't be noisy, ignore other statuses for now. */
 									break;
 							}
 							sd->call_status = 0;
@@ -910,7 +924,6 @@ static char *skype_set_call( set_t *set, char *value )
 	skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
 	g_free(nick);
-	imcb_log(ic, "Ringing the user %s.", value);
 	return(value);
 }
 
