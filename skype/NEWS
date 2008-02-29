@@ -1,5 +1,10 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.4.0         - support for starting, accepting and rejecting calls
+              - also updated documentation (the key is the account set
+                skype/call command)
+	      - as usual with the .0 releases, be careful, ~200 lines of
+	        new code
 0.3.2         - support for Skype 2.0.0.43
               - skyped now automatically starts/shuts down skype
               - improved 'make prepare' to handle more automake versions

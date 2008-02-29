@@ -1,6 +1,6 @@
 -include config.mak
 
-VERSION = 0.3.2
+VERSION = 0.4.0
 
 AMVERSION = $(shell automake --version|sed 's/.* //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
 
