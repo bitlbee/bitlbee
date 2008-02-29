@@ -119,6 +119,7 @@ struct skype_away_state
 struct skype_buddy_ask_data
 {
 	struct im_connection *ic;
+	/* This is also used for call IDs for simplicity */
 	char *handle;
 };
 
@@ -194,6 +195,33 @@ void skype_buddy_ask( struct im_connection *ic, char *handle, char *message)
 	g_free( buf );
 }
 
+static void skype_call_ask_yes( gpointer w, struct skype_buddy_ask_data *bla )
+{
+	char *buf = g_strdup_printf("SET CALL %s STATUS INPROGRESS", bla->handle);
+	skype_write( bla->ic, buf, strlen( buf ) );
+	g_free(buf);
+	g_free(bla->handle);
+	g_free(bla);
+}
+
+static void skype_call_ask_no( gpointer w, struct skype_buddy_ask_data *bla )
+{
+	char *buf = g_strdup_printf("SET CALL %s STATUS FINISHED", bla->handle);
+	skype_write( bla->ic, buf, strlen( buf ) );
+	g_free(buf);
+	g_free(bla->handle);
+	g_free(bla);
+}
+
+void skype_call_ask( struct im_connection *ic, char *call_id, char *message)
+{
+	struct skype_buddy_ask_data *bla = g_new0( struct skype_buddy_ask_data, 1 );
+
+	bla->ic = ic;
+	bla->handle = g_strdup(call_id);
+
+	imcb_ask( ic, message, bla, skype_call_ask_yes, skype_call_ask_no );
+}
 struct groupchat *skype_chat_by_name( struct im_connection *ic, char *name )
 {
 	struct groupchat *ret;
@@ -566,6 +594,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					info++;
 					if(!strcmp(info, "STATUS RINGING"))
 					{
+						if(sd->call_id)
+							g_free(sd->call_id);
+						sd->call_id = g_strdup(id);
 						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
 						skype_write( ic, buf, strlen( buf ) );
 						sd->call_status = SKYPE_CALL_RINGING;
@@ -618,7 +649,10 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 									if(sd->call_out)
 										imcb_log(ic, "You are currently ringing the user %s.", info);
 									else
-										imcb_log(ic, "The user %s is currently ringing you.", info);
+									{
+										g_snprintf(buf, 1024, "The user %s is currently ringing you.", info);
+										skype_call_ask(ic, sd->call_id, buf);
+									}
 									break;
 								case SKYPE_CALL_MISSED:
 									imcb_log(ic, "You have missed a call from user %s.", info);

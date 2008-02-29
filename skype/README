@@ -242,9 +242,10 @@ your VNC server regularly. (How ugly.)
   * `account set skype/call nick`
   * `account set -del skype/call`
 
-== What needs to be done (aka. TODO)
+- Managing incoming calls via questions, just like when you add / remove
+  contacts.
 
-- Add support for accepting/rejecting calls via settings.
+== What needs to be done (aka. TODO)
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
 
