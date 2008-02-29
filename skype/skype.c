@@ -43,6 +43,7 @@ typedef enum
 	SKYPE_CALL_MISSED,
 	SKYPE_CALL_UNPLACED,
 	SKYPE_CALL_CANCELLED,
+	SKYPE_CALL_FINISHED,
 	/* This means we are ringing somebody, not somebody rings us. */
 	SKYPE_CALL_RINGING_OUT
 } skype_call_status;
@@ -583,6 +584,12 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						skype_write( ic, buf, strlen( buf ) );
 						sd->call_status = SKYPE_CALL_CANCELLED;
 					}
+					else if(!strcmp(info, "STATUS FINISHED"))
+					{
+						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+						sd->call_status = SKYPE_CALL_FINISHED;
+					}
 					else if(!strcmp(info, "STATUS UNPLACED"))
 					{
 						if(sd->call_id)
@@ -608,6 +615,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 									break;
 								case SKYPE_CALL_CANCELLED:
 									imcb_log(ic, "You cancelled the call to the user %s.", info);
+									break;
+								case SKYPE_CALL_FINISHED:
+									imcb_log(ic, "You finished the call to the user %s.", info);
 									break;
 								default:
 									/* Don't be noisy, ignore other statuses for now. */
