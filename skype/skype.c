@@ -41,12 +41,9 @@ typedef enum
 {
 	SKYPE_CALL_RINGING = 1,
 	SKYPE_CALL_MISSED,
-	SKYPE_CALL_UNPLACED,
 	SKYPE_CALL_CANCELLED,
 	SKYPE_CALL_FINISHED,
-	SKYPE_CALL_REFUSED,
-	/* This means we are ringing somebody, not somebody rings us. */
-	SKYPE_CALL_RINGING_OUT
+	SKYPE_CALL_REFUSED
 } skype_call_status;
 
 typedef enum
@@ -84,6 +81,8 @@ struct skype_data
 	skype_call_status call_status;
 	char *call_id;
 	char *call_duration;
+	/* If the call is outgoing or not */
+	int call_out;
 	/* Same for file transfers. */
 	skype_filetransfer_status filetransfer_status;
 	/* Using /j #nick we want to have a groupchat with two people. Usually
@@ -569,10 +568,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					{
 						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
 						skype_write( ic, buf, strlen( buf ) );
-						if(sd->call_status != SKYPE_CALL_UNPLACED)
-							sd->call_status = SKYPE_CALL_RINGING;
-						else
-							sd->call_status = SKYPE_CALL_RINGING_OUT;
+						sd->call_status = SKYPE_CALL_RINGING;
 					}
 					else if(!strcmp(info, "STATUS MISSED"))
 					{
@@ -582,9 +578,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					}
 					else if(!strcmp(info, "STATUS CANCELLED"))
 					{
-						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-						skype_write( ic, buf, strlen( buf ) );
-						sd->call_status = SKYPE_CALL_CANCELLED;
+							g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+							skype_write( ic, buf, strlen( buf ) );
+							sd->call_status = SKYPE_CALL_CANCELLED;
 					}
 					else if(!strcmp(info, "STATUS FINISHED"))
 					{
@@ -604,7 +600,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 							g_free(sd->call_id);
 						/* Save the ID for later usage (Cancel/Finish). */
 						sd->call_id = g_strdup(id);
-						sd->call_status = SKYPE_CALL_UNPLACED;
+						sd->call_out = TRUE;
 					}
 					else if(!strncmp(info, "DURATION ", 9))
 					{
@@ -619,29 +615,32 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 							switch(sd->call_status)
 							{
 								case SKYPE_CALL_RINGING:
-									imcb_log(ic, "The user %s is currently ringing you.", info);
+									if(sd->call_out)
+										imcb_log(ic, "You are currently ringing the user %s.", info);
+									else
+										imcb_log(ic, "The user %s is currently ringing you.", info);
 									break;
 								case SKYPE_CALL_MISSED:
 									imcb_log(ic, "You have missed a call from user %s.", info);
 									break;
-								case SKYPE_CALL_RINGING_OUT:
-									imcb_log(ic, "You are currently ringing the user %s.", info);
-									break;
 								case SKYPE_CALL_CANCELLED:
 									imcb_log(ic, "You cancelled the call to the user %s.", info);
+									sd->call_status = 0;
+									sd->call_out = FALSE;
 									break;
 								case SKYPE_CALL_REFUSED:
-									imcb_log(ic, "The user %s refused the call.", info);
+									if(sd->call_out)
+										imcb_log(ic, "The user %s refused the call.", info);
+									else
+										imcb_log(ic, "You refused the call from user %s.", info);
+									sd->call_out = FALSE;
 									break;
 								case SKYPE_CALL_FINISHED:
 									if(sd->call_duration)
-									{
 										imcb_log(ic, "You finished the call to the user %s (duration: %s seconds).", info, sd->call_duration);
-									}
 									else
-									{
 										imcb_log(ic, "You finished the call to the user %s.", info);
-									}
+									sd->call_out = FALSE;
 									break;
 								default:
 									/* Don't be noisy, ignore other statuses for now. */
