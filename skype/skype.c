@@ -42,6 +42,7 @@ typedef enum
 	SKYPE_CALL_RINGING = 1,
 	SKYPE_CALL_MISSED,
 	SKYPE_CALL_UNPLACED,
+	SKYPE_CALL_CANCELLED,
 	/* This means we are ringing somebody, not somebody rings us. */
 	SKYPE_CALL_RINGING_OUT
 } skype_call_status;
@@ -79,6 +80,7 @@ struct skype_data
 	 * handle. So we store the state here and then we can send a
 	 * notification about the handle is in a given status. */
 	skype_call_status call_status;
+	char *call_id;
 	/* Same for file transfers. */
 	skype_filetransfer_status filetransfer_status;
 	/* Using /j #nick we want to have a groupchat with two people. Usually
@@ -575,8 +577,20 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						skype_write( ic, buf, strlen( buf ) );
 						sd->call_status = SKYPE_CALL_MISSED;
 					}
+					else if(!strcmp(info, "STATUS CANCELLED"))
+					{
+						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+						skype_write( ic, buf, strlen( buf ) );
+						sd->call_status = SKYPE_CALL_CANCELLED;
+					}
 					else if(!strcmp(info, "STATUS UNPLACED"))
+					{
+						if(sd->call_id)
+							g_free(sd->call_id);
+						/* Save the ID for later usage (Cancel/Finish). */
+						sd->call_id = g_strdup(id);
 						sd->call_status = SKYPE_CALL_UNPLACED;
+					}
 					else if(!strncmp(info, "PARTNER_HANDLE ", 15))
 					{
 						info += 15;
@@ -591,6 +605,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 									break;
 								case SKYPE_CALL_RINGING_OUT:
 									imcb_log(ic, "You are currently ringing the user %s.", info);
+									break;
+								case SKYPE_CALL_CANCELLED:
+									imcb_log(ic, "You cancelled the call to the user %s.", info);
 									break;
 								default:
 									/* Don't be noisy, ignore other statuses for now. */
@@ -907,23 +924,42 @@ static char *skype_set_call( set_t *set, char *value )
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
+	struct skype_data *sd = ic->proto_data;
 	char *nick, *ptr, *buf;
-	user_t *u = user_find(acc->irc, value);
 
-	if(!u)
+	if(value)
 	{
-		imcb_error(ic, "%s - no such nick", value);
-		return(value);
-	}
-	nick = g_strdup(u->handle);
-	ptr = strchr(nick, '@');
-	if(ptr)
-		*ptr = '\0';
+		user_t *u = user_find(acc->irc, value);
+		/* We are starting a call */
+		if(!u)
+		{
+			imcb_error(ic, "%s - no such nick", value);
+			return(value);
+		}
+		nick = g_strdup(u->handle);
+		ptr = strchr(nick, '@');
+		if(ptr)
+			*ptr = '\0';
 
-	buf = g_strdup_printf("CALL %s", nick);
-	skype_write( ic, buf, strlen( buf ) );
-	g_free(buf);
-	g_free(nick);
+		buf = g_strdup_printf("CALL %s", nick);
+		skype_write( ic, buf, strlen( buf ) );
+		g_free(buf);
+		g_free(nick);
+	}
+	else
+	{
+		/* We are ending a call */
+		if(sd->call_id)
+		{
+			buf = g_strdup_printf("SET CALL %s STATUS FINISHED", sd->call_id);
+			skype_write( ic, buf, strlen( buf ) );
+			g_free(buf);
+		}
+		else
+		{
+			imcb_error(ic, "There are no active calls currently.");
+		}
+	}
 	return(value);
 }
 

@@ -55,7 +55,10 @@ def input_handler(fd, io_condition):
 			skype.send(i.strip())
 		options.buf = None
 	else:
-		input = fd.recv(1024)
+		try:
+			input = fd.recv(1024)
+		except SysCallError:
+			return True
 		for i in input.split("\n"):
 			skype.send(i.strip())
 		return True
