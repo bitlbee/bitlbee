@@ -237,7 +237,7 @@ your VNC server regularly. (How ugly.)
 - Running Skype on a machine different to BitlBee is possible, the
   communication is encrypted.
 
-- Managing outgoing calls:
+- Managing outgoing calls (with call duration at the end):
 
   * `account set skype/call nick`
   * `account set -del skype/call`

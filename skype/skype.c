@@ -82,6 +82,7 @@ struct skype_data
 	 * notification about the handle is in a given status. */
 	skype_call_status call_status;
 	char *call_id;
+	char *call_duration;
 	/* Same for file transfers. */
 	skype_filetransfer_status filetransfer_status;
 	/* Using /j #nick we want to have a groupchat with two people. Usually
@@ -598,6 +599,12 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						sd->call_id = g_strdup(id);
 						sd->call_status = SKYPE_CALL_UNPLACED;
 					}
+					else if(!strncmp(info, "DURATION ", 9))
+					{
+						if(sd->call_duration)
+							g_free(sd->call_duration);
+						sd->call_duration = g_strdup(info+9);
+					}
 					else if(!strncmp(info, "PARTNER_HANDLE ", 15))
 					{
 						info += 15;
@@ -617,7 +624,14 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 									imcb_log(ic, "You cancelled the call to the user %s.", info);
 									break;
 								case SKYPE_CALL_FINISHED:
-									imcb_log(ic, "You finished the call to the user %s.", info);
+									if(sd->call_duration)
+									{
+										imcb_log(ic, "You finished the call to the user %s (duration: %s seconds).", info, sd->call_duration);
+									}
+									else
+									{
+										imcb_log(ic, "You finished the call to the user %s.", info);
+									}
 									break;
 								default:
 									/* Don't be noisy, ignore other statuses for now. */
