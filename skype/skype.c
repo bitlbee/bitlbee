@@ -978,6 +978,8 @@ static char *skype_set_call( set_t *set, char *value )
 			buf = g_strdup_printf("SET CALL %s STATUS FINISHED", sd->call_id);
 			skype_write( ic, buf, strlen( buf ) );
 			g_free(buf);
+			g_free(sd->call_id);
+			sd->call_id = NULL;
 		}
 		else
 		{
