@@ -41,6 +41,20 @@ Also, don't forget to create the configuration directory (/var/lib/bitlbee/
 by default) and chown it to the UID BitlBee is running as. Make sure this
 directory is read-/writable by this user only.
 
+--- (Fork)Daemon mode
+
+If you don't want to run any inetd daemon, you can run BitlBee in Daemon
+mode. Right now, daemon mode may be a bad idea on servers with multiple
+users, since possible fatal BitlBee bugs will crash the BitlBee process and
+disconnect all connected users at once. Instead, you can use ForkDaemon
+mode, which serves every user from a separate process, without depending on
+an inetd daemon.
+
+To use BitlBee in daemon mode, just start it with the right flags or enable
+it in bitlbee.conf. You probably want to write an init script to start
+BitlBee automatically after a reboot. (This is where you realise using
+a package from your distro would've been a better idea. :-P)
+
 
 DEPENDENCIES
 ============
