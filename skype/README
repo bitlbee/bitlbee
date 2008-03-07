@@ -36,8 +36,8 @@ not..)
 * PyGObject >= 2.8.0. Older versions are part of PyGTK. (And you don't want to
   install GTK for nothing, right?)
 
-`bitlbee-skype` has been tested under Linux and Windows. Skype and Skype4py is
-available under OSX, too, so it probably works, but this has not been tested.
+`bitlbee-skype` has been tested under Linux and Mac OS X. Skype and Skype4py is
+available under Windows, too, so it probably works, but this has not been tested.
 
 == How to set it up
 

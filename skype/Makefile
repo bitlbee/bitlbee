@@ -4,14 +4,14 @@ VERSION = 0.4.0
 
 AMVERSION = $(shell automake --version|sed 's/.* //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
 
-skype.so: skype.c config.mak
-	$(CC) $(CFLAGS) -shared -o skype.so skype.c $(LDFLAGS)
+skype.$(SHARED_EXT): skype.c config.mak
+	$(CC) $(CFLAGS) $(SHARED_FLAGS) -o skype.$(SHARED_EXT) skype.c $(LDFLAGS)
 
-install: skype.so skyped.py
+install: skype.$(SHARED_EXT) skyped.py
 	$(INSTALL) -d $(DESTDIR)$(plugindir)
 	$(INSTALL) -d $(DESTDIR)$(bindir)
 	$(INSTALL) -d $(DESTDIR)$(sysconfdir)
-	$(INSTALL) skype.so $(DESTDIR)$(plugindir)
+	$(INSTALL) skype.$(SHARED_EXT) $(DESTDIR)$(plugindir)
 	$(INSTALL) skyped.py $(DESTDIR)$(bindir)/skyped
 	sed -i 's|/usr/local/etc/skyped|$(sysconfdir)|' $(DESTDIR)$(bindir)/skyped
 	$(INSTALL) -m644 skyped.conf.dist $(DESTDIR)$(sysconfdir)/skyped.conf
@@ -25,7 +25,7 @@ prepare: configure.ac
 	autoconf
 
 clean:
-	rm -f skype.so
+	rm -f skype.$(SHARED_EXT)
 
 distclean: clean
 	rm -rf autom4te.cache config.log config.mak config.status

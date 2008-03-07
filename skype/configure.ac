@@ -11,6 +11,22 @@ else
 	AC_MSG_RESULT(no)
 fi
 
+case "`$CC -dumpmachine`" in
+	*linux*)
+		SHARED_FLAGS="-shared"
+		SHARED_EXT="so"
+		;;
+	*apple-darwin*)
+		SHARED_FLAGS="-dynamiclib -Wl,-headerpad_max_install_names,-undefined,dynamic_lookup"
+		SHARED_EXT="dynlib"
+		;;
+	*)
+		AC_MSG_ERROR([Your machine is not yet supported])
+		;;
+esac
+AC_SUBST(SHARED_FLAGS)
+AC_SUBST(SHARED_EXT)
+
 dnl Check for bitlbee
 PKG_CHECK_MODULES(BITLBEE, bitlbee)
 CFLAGS="$CFLAGS $BITLBEE_CFLAGS"
