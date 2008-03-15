@@ -736,7 +736,7 @@ static void yahoo_send_packet(struct yahoo_input_data *yid, struct yahoo_packet 
 	data = y_new0(unsigned char, len + 1);
 
 	memcpy(data + pos, "YMSG", 4); pos += 4;
-	pos += yahoo_put16(data + pos, 0x0a00);
+	pos += yahoo_put16(data + pos, 0x000c);
 	pos += yahoo_put16(data + pos, 0x0000);
 	pos += yahoo_put16(data + pos, pktlen + extra_pad);
 	pos += yahoo_put16(data + pos, pkt->service);
