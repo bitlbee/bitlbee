@@ -32,7 +32,7 @@
 #define BITLBEE_VERSION "1.1.1dev"
 #define VERSION BITLBEE_VERSION
 
-#define MAX_STRING 128
+#define MAX_STRING 511
 
 #if HAVE_CONFIG_H
 #include "config.h"
