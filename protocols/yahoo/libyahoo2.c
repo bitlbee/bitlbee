@@ -3350,7 +3350,7 @@ static void yahoo_process_search_connection(struct yahoo_input_data *yid, int ov
 					yct->age = atoi(cp);
 					break;
 				case 5: 
-					if(cp != "\005")
+					if(strcmp(cp, "5") != 0)
 						yct->location = cp;
 					k = 0;
 					break;
