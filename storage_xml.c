@@ -427,7 +427,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		char *pass_b64;
 		int pass_len;
 		
-		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password );
+		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password, 12 );
 		pass_b64 = base64_encode( pass_cr, pass_len );
 		g_free( pass_cr );
 		
