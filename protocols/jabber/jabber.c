@@ -266,6 +266,7 @@ static void jabber_logout( struct im_connection *ic )
 	
 	xt_free( jd->xt );
 	
+	g_free( jd->cached_id_prefix );
 	g_free( jd->away_message );
 	g_free( jd->username );
 	g_free( jd );
