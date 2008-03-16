@@ -29,7 +29,10 @@
 
 static void irc_cmd_pass( irc_t *irc, char **cmd )
 {
-	if( global.conf->auth_pass && strcmp( cmd[1], global.conf->auth_pass ) == 0 )
+	if( global.conf->auth_pass &&
+	    strncmp( global.conf->auth_pass, "md5:", 4 ) == 0 ?
+	      md5_verify_password( cmd[1], global.conf->auth_pass + 4 ) == 0 :
+	      strcmp( cmd[1], global.conf->auth_pass ) == 0 )
 	{
 		irc->status |= USTATUS_AUTHORIZED;
 		irc_check_login( irc );
@@ -87,7 +90,10 @@ static void irc_cmd_ping( irc_t *irc, char **cmd )
 
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
-	if( global.conf->oper_pass && strcmp( cmd[2], global.conf->oper_pass ) == 0 )
+	if( global.conf->oper_pass &&
+	    strncmp( global.conf->oper_pass, "md5:", 4 ) == 0 ?
+	      md5_verify_password( cmd[2], global.conf->oper_pass + 4 ) == 0 :
+	      strcmp( cmd[2], global.conf->oper_pass ) == 0 )
 	{
 		irc_umode_set( irc, "+o", 1 );
 		irc_reply( irc, 381, ":Password accepted" );
