@@ -79,49 +79,30 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	{
 		char *nick = xml_attr( attr_names, attr_values, "nick" );
 		char *pass = xml_attr( attr_names, attr_values, "password" );
-		md5_byte_t *pass_dec = NULL;
+		int st;
 		
 		if( !nick || !pass )
 		{
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Missing attributes for %s element", element_name );
 		}
-		else if( base64_decode( pass, &pass_dec ) != 21 )
+		else if( ( st = md5_verify_password( xd->given_pass, pass ) ) == -1 )
 		{
+			xd->pass_st = XML_PASS_WRONG;
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Error while decoding password attribute" );
 		}
+		else if( st == 0 )
+		{
+			if( xd->pass_st != XML_PASS_CHECK_ONLY )
+				xd->pass_st = XML_PASS_OK;
+		}
 		else
 		{
-			md5_byte_t pass_md5[16];
-			md5_state_t md5_state;
-			int i;
-			
-			md5_init( &md5_state );
-			md5_append( &md5_state, (md5_byte_t*) xd->given_pass, strlen( xd->given_pass ) );
-			md5_append( &md5_state, (md5_byte_t*) pass_dec + 16, 5 ); /* Hmmm, salt! */
-			md5_finish( &md5_state, pass_md5 );
-			
-			for( i = 0; i < 16; i ++ )
-			{
-				if( pass_dec[i] != pass_md5[i] )
-				{
-					xd->pass_st = XML_PASS_WRONG;
-					g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-					             "Password mismatch" );
-					break;
-				}
-			}
-			
-			/* If we reached the end of the loop, it was a match! */
-			if( i == 16 )
-			{
-				if( xd->pass_st != XML_PASS_CHECK_ONLY )
-					xd->pass_st = XML_PASS_OK;
-			}
+			xd->pass_st = XML_PASS_WRONG;
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Password mismatch" );
 		}
-		
-		g_free( pass_dec );
 	}
 	else if( xd->pass_st < XML_PASS_OK )
 	{
