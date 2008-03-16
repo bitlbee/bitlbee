@@ -1,7 +1,4 @@
 Version 1.2:
-- First BitlBee development/testing RELEASE. This should be quite stable
-  though (and for most people more stable than 1.0.x). It just has a couple
-  of rough edges and needs a bit more testing.
 - Added ForkDaemon mode next to the existing Daemon- and inetd modes. With
   ForkDaemon you can run BitlBee as a stand-alone daemon and every connection
   will run in its own process. No more need to configure inetd, and still you
@@ -20,9 +17,16 @@ Version 1.2:
   This allows us to use more GLib features (like the XML parser). By now GLib
   1.x is so old that supporting it really isn't necessary anymore.
 - Many, many, MANY little changes, improvements, fixes. Using non-blocking
-  I/O as much as possible, fixed lots of little bugs (including bugs that
-  affected daemon mode stability). See the bzr logs for more information.
-- Added units tests, will have to add some more before the real release.
+  I/O as much as possible, replaced the Gaim (0.59, IOW heavily outdated)
+  API, fixed lots of little bugs (including bugs that affected daemon mode
+  stability). See the bzr logs for more information.
+- One of the user-visible changes from the API change: You can finally see
+  all away states/messages properly.
+- Added units tests. Test coverage is very minimal for now.
+- Better charset handling: Everything is just converted from/to UTF-8 right
+  in the IRC core, and charset mismatches are detected (if possible) and the
+  user is asked to resolve this before continuing. Also, UTF-8 is the default
+  setting now, since that's how the world seems to work these days.
 - Most important change: New file format for user data (accounts, nicks and
   settings). Migration to the new format should happen transparently,
   BitlBee will read the old files and once you quit/save it will save in the
@@ -68,6 +72,11 @@ Version 1.2:
     buddy is in your contact list.)
   * An XML console (add xmlconsole to your contact list or see "help set
     xmlconsole" if you want it permanently).
+- The Yahoo! module now says it supports YMSG protocol version 12, which will
+  hopefully keep the Yahoo module working after 2008-04-02 (when Yahoo! is
+  dropping support for version 6.x of their client).
+- MSN switchboard handling changes. Hopefully less messages will get lost now,
+  although things are still not perfect.
 
 Finished ???
 
