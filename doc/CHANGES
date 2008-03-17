@@ -80,7 +80,7 @@ Version 1.2:
 - MSN switchboard handling changes. Hopefully less messages will get lost now,
   although things are still not perfect.
 
-Finished ???
+Finished 17 Mar 2008
 
 Version 1.0.4:
 - Removed sethostent(), which causes problems for many people, especially on
