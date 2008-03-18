@@ -93,14 +93,6 @@ $ make
 
 - Install http://skype4py.sourceforge.net/[Skype4Py].
 
-(You may remember that previous versions of `skyped` did not require this
-package. This because it now uses the X11 interface of Skype (because the
-previously used `DBus` interface had
-http://forum.skype.com/index.php?s=&showtopic=94545&view=findpost&p=431710[known
-problems]), but I wanted to prevent a large code duplication from that project.
-In addition it then no longer requires the `dbus-python` package, just
-`pygobject`.)
-
 - Edit `/usr/local/etc/skyped/skyped.conf`: adjust `username` and `password`. The
   `username` should be your Skype login and the `password` can be whatever you
   want, but you will have to specify that one when adding the Skype account to
