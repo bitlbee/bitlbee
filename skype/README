@@ -29,8 +29,7 @@ not..)
 == Requirements
 
 * Skype >= 1.4.0.99. The latest version I've tested is 2.0.0.63.
-* BitlBee >= 1.1.1dev. This is the latest version I've tested, probably
-  newer versions will work, too.
+* BitlBee >= 1.1.1dev. The latest version I've tested is 1.2.
 * Skype4Py >= 0.9.28.7. Previous versions won't work due to API changes.
 * Python >= 2.5. Skype4Py does not work with 2.4.
 * PyGObject >= 2.8.0. Older versions are part of PyGTK. (And you don't want to
@@ -49,16 +48,18 @@ package) and `skyped` will connect to to your Skype client.
 NOTE: The order is important. First `skyped` starts Skype. Then `skyped` can
 connect to Skype, finally BitlBee can connect to `skyped`.
 
-- If you happen to be a happy Frugalware user, you can install the `bitlbee`
-  and `bitlbee-skype` packages from
-  http://ftp.frugalware.org/pub/other/people/vmiklos/bmf/[my repo].
-
-- You need the BitlBee testing/development version:
+- If you happen to be a happy Frugalware user:
 
 ----
-$ wget http://get.bitlbee.org/src/bitlbee-1.1.1dev.tar.gz
-$ tar xf bitlbee-1.1.1dev.tar.gz
-$ cd bitlbee-1.1.1dev
+# pacman-g2 -S bitlbee-skype
+----
+
+- You need the latest stable BitlBee release:
+
+----
+$ wget http://get.bitlbee.org/src/bitlbee-1.2.tar.gz
+$ tar xf bitlbee-1.2.tar.gz
+$ cd bitlbee-1.2
 ----
 
 NOTE: You no longer need additional patches, as of version 1.1.1dev.
