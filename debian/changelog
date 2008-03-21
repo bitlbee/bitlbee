@@ -1,12 +1,33 @@
-bitlbee (1.1.1dev-0pre) unstable; urgency=low
+bitlbee (1.2-1) unstable; urgency=low
 
+  * New upstream release. (Closes: #325017, #386914, #437515)
+  * With hopefully completely sane charset handling (Closes: #296145)
   * Switched to the new forking daemon mode. Added /etc/default/bitlbee
     file, an init script. People who want to stick with inetd can do so, see
     the defaults file.
+    (Closes: #460741, #466171, #294585, #345038, #306452, #392682)
   * Got rid of debconf Woody compatibility stuff.
   * No more MPL code in BitlBee, thanks to the Jabber module rewrite!
+  * Added Italian translation, sorry for taking so long! (Closes: #448238)
+  * Added libevent dependency (more reliable event handling).
+  * Removed GLib 1.x dependency because BitlBee really requires GLib >=2.4.
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Fri, 06 Jul 2007 09:09:36 +0100
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Tue, 18 Mar 2008 23:44:19 +0000
+
+bitlbee (1.0.4-2) unstable; urgency=low
+
+  * Removed $DEB_BUILD_OPTIONS because apparently buildds fill it with crap.
+    (Closes: #458717)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Mon, 11 Feb 2008 19:15:33 +0000
+
+bitlbee (1.0.4-1) unstable; urgency=low
+
+  * New upstream release.
+  * Changed libnss-dev dependency. (Closes: #370442)
+  * Added build-indep rule to debian/rules. (Closes: #395673)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Wed, 29 Aug 2007 20:24:28 +0100
 
 bitlbee (1.0.3-1.3) unstable; urgency=low
 

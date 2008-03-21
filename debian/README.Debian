@@ -1,6 +1,6 @@
-                   *** NEWS (Version 1.1 and later) ***
+                   *** NEWS (Version 1.2 and later) ***
 
-Starting from version 1.1, BitlBee has a forking daemon mode. The Debian
+Starting from version 1.2, BitlBee has a forking daemon mode. The Debian
 package now uses this mode by default, instead of inetd mode. If you don't
 want to use this, you can disable the init scripts (best way to do this is
 by editing /etc/default/bitlbee) and restore the inetd.conf entry. This

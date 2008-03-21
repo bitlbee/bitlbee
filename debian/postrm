@@ -8,4 +8,5 @@ if [ -e /usr/share/debconf/confmodule ]; then
 fi
 
 update-rc.d bitlbee remove > /dev/null 2>&1 || true
-deluser --remove-home bitlbee || true
+deluser --system --remove-home bitlbee || true
+rm -f /etc/default/bitlbee

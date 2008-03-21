@@ -1,0 +1,36 @@
+# Italian translation of the bitlbee debconf template
+# This file is distributed under the same license as the bitlbee package
+# Copyright (C) 2007 Free Software Foundation, Inc.
+# Luca Monducci <luca.mo@tiscali.it>, 2007.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: bitlbee\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2007-08-30 04:31+0200\n"
+"PO-Revision-Date: 2007-10-27 11:52+0200\n"
+"Last-Translator: Luca Monducci <luca.mo@tiscali.it>\n"
+"Language-Team: Italian <debian-l10n-italian@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: string
+#. Description
+#: ../bitlbee.templates.master:1001
+msgid "On what TCP port should BitlBee listen for connections?"
+msgstr "Su quale porta TCP si deve mettere in ascolto BitlBee?"
+
+#. Type: string
+#. Description
+#: ../bitlbee.templates.master:1001
+msgid ""
+"BitlBee normally listens on the regular IRC port, 6667. This might not be a "
+"very good idea when you're running a real IRC daemon as well. 6668 might be "
+"a good alternative. Leaving this value blank means that BitlBee will not be "
+"run automatically."
+msgstr ""
+"Normalmente BitlBee si mette in ascolto sulla consueta porta IRC, la 6667. "
+"Questa potrebbe non essere una buona idea se è in esecuzione anche un reale "
+"demone IRC. La porta 6668 potrebbe essere una valida alternativa. Lasciando "
+"vuoto questo valore BitlBee non viene avviato automaticamente."

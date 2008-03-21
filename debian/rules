@@ -2,15 +2,18 @@
 
 DEBUG ?= 0
 
+ifdef BITLBEE_VERSION
+BITLBEE_FORCE_VERSION=1
+else
 # Want to use the full package version number instead of just the release.
 BITLBEE_VERSION ?= "$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}')"
 export BITLBEE_VERSION
-
+endif
 
 build-arch: build-arch-stamp
 build-arch-stamp:
 	if [ ! -d debian ]; then exit 1; fi
-	./configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee $(DEB_BUILD_OPTIONS)
+	./configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent $(DEB_BUILD_OPTIONS)
 	$(MAKE)
 #	$(MAKE) -C doc/ all
 	touch build-arch-stamp
@@ -65,7 +68,7 @@ binary-arch: build-arch install-arch
 	cd debian/bitlbee; \
 		find usr -type f -exec md5sum {} \; > DEBIAN/md5sums
 	dpkg-shlibdeps -Tdebian/bitlbee.substvars -dDepends debian/bitlbee/usr/sbin/bitlbee
-ifdef BITLBEE_VERSION
+ifdef BITLBEE_FORCE_VERSION
 	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee -Tdebian/bitlbee.substvars -Pdebian/bitlbee -v1:$(BITLBEE_VERSION)-0 -V'debconf-depends=debconf (>= 1.2.0) | debconf-2.0'
 else
 	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee -Tdebian/bitlbee.substvars -Pdebian/bitlbee -V'debconf-depends=debconf (>= 1.2.0) | debconf-2.0'
