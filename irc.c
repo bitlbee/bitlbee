@@ -308,7 +308,7 @@ void irc_process( irc_t *irc )
 				break;
 			}
 			
-			if( ( cs = set_getstr( &irc->set, "charset" ) ) )
+			if( ( cs = set_getstr( &irc->set, "charset" ) ) && g_strcasecmp( cs, "none" ) != 0 )
 			{
 				conv[IRC_MAX_LINE] = 0;
 				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) == -1 )
@@ -329,7 +329,7 @@ void irc_process( irc_t *irc )
 					else
 					{
 						irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost,
-						           "Warning: invalid (non-UTF8) characters received at login time." );
+						           "Warning: invalid characters received at login time." );
 						
 						strncpy( conv, lines[i], IRC_MAX_LINE );
 						for( temp = conv; *temp; temp ++ )
@@ -553,7 +553,8 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	g_vsnprintf( line, IRC_MAX_LINE - 2, format, params );
 	
 	strip_newlines( line );
-	if( ( cs = set_getstr( &irc->set, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
+	if( ( cs = set_getstr( &irc->set, "charset" ) ) &&
+	    g_strcasecmp( cs, "none" ) != 0 && g_strcasecmp( cs, "utf-8" ) != 0 )
 	{
 		char conv[IRC_MAX_LINE+1];
 		

@@ -234,7 +234,7 @@ char *set_eval_charset( set_t *set, char *value )
 {
 	GIConv cd;
 
-	if ( g_strncasecmp( value, "none", 4 ) == 0 )
+	if( g_strcasecmp( value, "none" ) == 0 )
 		return value;
 
 	cd = g_iconv_open( "UTF-8", value );
