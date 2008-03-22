@@ -763,7 +763,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 		show_general_otr_info(irc);
 	} else {
 		char *arg = g_strdup(args[1]);
-		char *myhandle, *handle, *protocol;
+		char *myhandle, *handle=NULL, *protocol;
 		ConnContext *ctx;
 		
 		/* interpret arg as 'user/protocol/account' if possible */
