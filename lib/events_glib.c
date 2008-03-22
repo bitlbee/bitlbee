@@ -50,11 +50,12 @@ typedef struct _GaimIOClosure {
 	gpointer data;
 } GaimIOClosure;
 
-static GMainLoop *loop;
+static GMainLoop *loop = NULL;
 
 void b_main_init()
 {
-	loop = g_main_new( FALSE );
+	if( loop == NULL )
+		loop = g_main_new( FALSE );
 }
 
 void b_main_run()
