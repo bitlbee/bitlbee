@@ -240,8 +240,13 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		return FALSE;
 	}
 	
-	/* EAGAIN/etc or a successful read. */
-	return TRUE;
+	if( ssl_pending( jd->ssl ) )
+		/* OpenSSL empties the TCP buffers completely but may keep some
+		   data in its internap buffers. select() won't see that, but
+		   ssl_pending() does. */
+		return jabber_read_callback( data, fd, cond );
+	else
+		return TRUE;
 }
 
 gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond )
