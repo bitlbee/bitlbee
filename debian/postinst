@@ -13,17 +13,19 @@ update-rc.d bitlbee defaults > /dev/null 2>&1
 BITLBEE_OPTS=-F
 BITLBEE_DISABLED=0
 BITLBEE_UPGRADE_DONT_RESTART=0
-[ -r /etc/default/bitlbee ] && source /etc/default/bitlbee
+[ -r /etc/default/bitlbee ] && . /etc/default/bitlbee
 
-if [ "$BITLBEE_DISABLED" = "0" ] && expr "$2" : '0\..*' > /dev/null || expr "$2" : '1\.0\..*' > /dev/null; then
-	## In case it's still there (if we're upgrading right now)
+if [ "$BITLBEE_DISABLED" = "0" ] && type update-inetd > /dev/null 2> /dev/null &&
+   ( expr "$2" : '0\..*' > /dev/null || expr "$2" : '1\.0\..*' > /dev/null ); then
+	## Make sure the inetd entry is gone (can still be there from a
+	## previous version.
 	update-inetd --remove '.*/usr/sbin/bitlbee'
 	if grep -q /usr/sbin/bitlbee /etc/inetd.conf 2> /dev/null; then
 		# Thanks for breaking update-inetd! (bugs.debian.org/311111)
 		# I hope that it works at least with xinetd, because this
 		# emergency hack doesn't:
 		perl -pi -e 's:^[^#].*/usr/sbin/bitlbee$:## Now using daemon mode\: # $&:' /etc/inetd.conf
-		killall -HUP inetd
+		killall -HUP inetd || true
 	fi
 fi
 

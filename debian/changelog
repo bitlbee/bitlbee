@@ -1,3 +1,10 @@
+bitlbee (1.2-2) unstable; urgency=low
+
+  * Fixed some packaging issues reported by IRC and e-mail. (Closes: #472373)
+  * Not ready yet.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 23 Mar 2008 21:51:57 +0000
+
 bitlbee (1.2-1) unstable; urgency=low
 
   * New upstream release. (Closes: #325017, #386914, #437515)
