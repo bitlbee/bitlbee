@@ -2,9 +2,8 @@ bitlbee (1.2-2) unstable; urgency=low
 
   * Fixed some packaging issues reported by IRC and e-mail. (Closes: #472373)
   * Fixed proxy support. (Closes: #472395)
-  * Not ready yet.
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 23 Mar 2008 21:51:57 +0000
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Mon, 24 Mar 2008 19:10:46 +0000
 
 bitlbee (1.2-1) unstable; urgency=low
 
