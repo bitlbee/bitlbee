@@ -1,3 +1,14 @@
+Version 1.2.1:
+- Fixed proxy support.
+- Fixed stalling issues while connecting to Jabber when using the OpenSSL
+  module.
+- Fixed problem with GLib and ForkDaemon where processes didn't die when
+  the client disconnects.
+- Fixed handling of "set charset none". (Which pretty much breaks the account
+  completely in 1.2.)
+
+Finished ...
+
 Version 1.2:
 - Added ForkDaemon mode next to the existing Daemon- and inetd modes. With
   ForkDaemon you can run BitlBee as a stand-alone daemon and every connection
