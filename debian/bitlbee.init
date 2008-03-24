@@ -36,7 +36,7 @@ d_start() {
 	chown bitlbee /var/run/bitlbee.pid
 	
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
-		-c bitlbee -g nogroup \
+		-c bitlbee: \
 		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $DAEMON_OPT
 }
 

@@ -73,13 +73,21 @@ if [ -d $CONFDIR ] && chown -R bitlbee $CONFDIR; then
 	exit 0
 fi
 
-adduser --system --home /var/lib/bitlbee/ --disabled-login --disabled-password bitlbee
+adduser --system --group --disabled-login --disabled-password --home /var/lib/bitlbee/ bitlbee
 chmod 700 /var/lib/bitlbee/
 
 ## Can't do this in packaging phase: Don't know the UID yet. Access to
-## the file should be limited, now that it stores passwords.
-chmod 600 /etc/bitlbee/bitlbee.conf
-chown bitlbee /etc/bitlbee/bitlbee.conf
+## the file should be limited, now that it stores passwords. Added
+## --group later for a little more security, but have to see if I can
+## apply this change to existing installations on upgrades. Will think
+## about that later.
+if getent group bitlbee > /dev/null; then
+	chmod 640 /etc/bitlbee/bitlbee.conf
+	chown root:bitlbee /etc/bitlbee/bitlbee.conf
+else
+	chmod 600 /etc/bitlbee/bitlbee.conf
+	chown bitlbee /etc/bitlbee/bitlbee.conf
+fi
 
 if [ -z "$2" ]; then
 	/etc/init.d/bitlbee start
