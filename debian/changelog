@@ -2,9 +2,12 @@ bitlbee (1.2-2) unstable; urgency=low
 
   * Fixed some packaging issues reported by IRC and e-mail. (Closes: #472373)
   * Fixed proxy support. (Closes: #472395)
-  * Not ready yet.
+  * Added a BitlBee group so only root can edit the configs and BitlBee can
+    just *read* it.
+  * Manually deleting /var/lib/bitlbee/ when purging, deluser doesn't want to
+    do it.
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 23 Mar 2008 21:51:57 +0000
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Mon, 24 Mar 2008 19:48:24 +0000
 
 bitlbee (1.2-1) unstable; urgency=low
 
