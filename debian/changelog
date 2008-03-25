@@ -1,3 +1,11 @@
+bitlbee (1.2-3) unstable; urgency=low
+
+  * Removed DEB_BUILD_OPTIONS again (forgot to apply that change to the 1.2
+    branch when I finished 1.0.4-2, things diverged too much anyway.)
+    Closes: #472540.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Mon, 24 Mar 2008 21:10:14 +0000
+
 bitlbee (1.2-2) unstable; urgency=low
 
   * Fixed some packaging issues reported by IRC and e-mail. (Closes: #472373)

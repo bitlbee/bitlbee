@@ -13,7 +13,7 @@ endif
 build-arch: build-arch-stamp
 build-arch-stamp:
 	if [ ! -d debian ]; then exit 1; fi
-	./configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent $(DEB_BUILD_OPTIONS)
+	./configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent
 	$(MAKE)
 #	$(MAKE) -C doc/ all
 	touch build-arch-stamp
