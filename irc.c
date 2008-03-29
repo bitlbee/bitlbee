@@ -296,9 +296,8 @@ void irc_process( irc_t *irc )
 		{
 			char conv[IRC_MAX_LINE+1];
 			
-			/* [WvG] Because irc_tokenize splits at every newline, the lines[] list
-			    should end with an empty string. This is why this actually works.
-			    Took me a while to figure out, Maurits. :-P */
+			/* [WvG] If the last line isn't empty, it's an incomplete line and we
+			   should wait for the rest to come in before processing it. */
 			if( lines[i+1] == NULL )
 			{
 				temp = g_strdup( lines[i] );
@@ -368,42 +367,41 @@ void irc_process( irc_t *irc )
    contains an incomplete line at the end, ends with an empty string. */
 char **irc_tokenize( char *buffer )
 {
-	int i, j;
+	int i, j, n = 3;
 	char **lines;
 
-	/* Count the number of elements we're gonna need. */
-	for( i = 0, j = 1; buffer[i] != '\0'; i ++ )
-	{
-		if( buffer[i] == '\n' )
-			if( buffer[i+1] != '\r' && buffer[i+1] != '\n' )
-				j ++;
-	}
-	
-	/* Allocate j+1 elements. */
-	lines = g_new( char *, j + 1 );
-	
-	/* NULL terminate our list. */ 
-	lines[j] = NULL;
+	/* Allocate n+1 elements. */
+	lines = g_new( char *, n + 1 );
 	
 	lines[0] = buffer;
 	
-	/* Split the buffer in several strings, using \r\n as our seperator, where \r is optional.
-	 * Although this is not in the RFC, some braindead ircds (newnet's) use this, so some clients might too. 
-	 */
-	for( i = 0, j = 0; buffer[i] != '\0'; i ++)
+	/* Split the buffer in several strings, and accept any kind of line endings,
+	 * knowing that ERC on Windows may send something interesting like \r\r\n,
+	 * and surely there must be clients that think just \n is enough... */
+	for( i = 0, j = 0; buffer[i] != '\0'; i ++ )
 	{
-		if( buffer[i] == '\n' )
+		if( buffer[i] == '\r' || buffer[i] == '\n' )
 		{
-			buffer[i] = '\0';
+			while( buffer[i] == '\r' || buffer[i] == '\n' )
+				buffer[i++] = '\0';
 			
-			if( i > 0 && buffer[i-1] == '\r' )
-				buffer[i-1] = '\0';
-			if( buffer[i+1] != '\r' && buffer[i+1] != '\n' )
-				lines[++j] = buffer + i + 1;
+			lines[++j] = buffer + i;
+			
+			if( j >= n )
+			{
+				n *= 2;
+				lines = g_renew( char *, lines, n + 1 );
+			}
+
+			if( buffer[i] == '\0' )
+				break;
 		}
 	}
 	
-	return( lines );
+	/* NULL terminate our list. */ 
+	lines[++j] = NULL;
+	
+	return lines;
 }
 
 /* Split an IRC-style line into little parts/arguments. */
