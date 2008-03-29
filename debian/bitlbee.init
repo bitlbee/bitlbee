@@ -17,7 +17,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 
 # Default value
 BITLBEE_PORT=6667
-DAEMON_OPT=-F
+BITLBEE_OPTS=-F
 
 # Read config file if it is present.
 if [ -r /etc/default/$NAME ]; then
@@ -37,7 +37,7 @@ d_start() {
 	
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
 		-c bitlbee: \
-		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $DAEMON_OPT
+		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $BITLBEE_OPTS
 }
 
 #
