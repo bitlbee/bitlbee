@@ -1,4 +1,11 @@
 #! /bin/sh
+### BEGIN INIT INFO
+# Provides:          bitlbee
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      1
+### END INIT INFO
 #
 # Init script for BitlBee Debian package. Based on skeleton init script:
 #
