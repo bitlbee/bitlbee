@@ -1,3 +1,12 @@
+bitlbee (1.2-4) unstable; urgency=low
+
+  * Not a real release, just a placeholder for the changelog.
+  * Fixed init script to use the BITLBEE_OPTS variable, not an undefined
+    DAEMON_OPT.
+  * Added dependency information to the init script. (Closes: #472567)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 29 Mar 2008 21:10:33 +0000
+
 bitlbee (1.2-3) unstable; urgency=low
 
   * Removed DEB_BUILD_OPTIONS again (forgot to apply that change to the 1.2
