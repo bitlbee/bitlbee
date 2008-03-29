@@ -735,12 +735,27 @@ void irc_login( irc_t *irc )
 	u->online = 1;
 	irc_spawn( irc, u );
 	
-	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the \x02help\x02 command. Lots of FAQs are answered there." );
+	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\n"
+	                  "If you've never used BitlBee before, please do read the help "
+	                  "information using the \x02help\x02 command. Lots of FAQs are "
+	                  "answered there.\n"
+	                  "If you already have an account on this server, just use the "
+	                  "\x02identify\x02 command to identify yourself." );
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON || global.conf->runmode == RUNMODE_DAEMON )
 		ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->host, irc->nick, irc->realname );
 	
 	irc->status |= USTATUS_LOGGED_IN;
+	
+	/* This is for bug #209 (use PASS to identify to NickServ). */
+	if( irc->password != NULL )
+	{
+		char *send_cmd[] = { "identify", g_strdup( irc->password ), NULL };
+		
+		irc_setpass( irc, NULL );
+		root_command( irc, send_cmd );
+		g_free( send_cmd[1] );
+	}
 }
 
 void irc_motd( irc_t *irc )

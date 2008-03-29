@@ -29,7 +29,19 @@
 
 static void irc_cmd_pass( irc_t *irc, char **cmd )
 {
-	if( global.conf->auth_pass &&
+	if( irc->status & USTATUS_LOGGED_IN )
+	{
+		char *send_cmd[] = { "identify", cmd[1], NULL };
+		
+		/* We're already logged in, this client seems to send the PASS
+		   command last. (Possibly it won't send it at all if it turns
+		   out we don't require it, which will break this feature.)
+		   Try to identify using the given password. */
+		return root_command( irc, send_cmd );
+	}
+	/* Handling in pre-logged-in state, first see if this server is
+	   password-protected: */
+	else if( global.conf->auth_pass &&
 	    ( strncmp( global.conf->auth_pass, "md5:", 4 ) == 0 ?
 	        md5_verify_password( cmd[1], global.conf->auth_pass + 4 ) == 0 :
 	        strcmp( cmd[1], global.conf->auth_pass ) == 0 ) )
@@ -37,9 +49,15 @@ static void irc_cmd_pass( irc_t *irc, char **cmd )
 		irc->status |= USTATUS_AUTHORIZED;
 		irc_check_login( irc );
 	}
-	else
+	else if( global.conf->auth_pass )
 	{
 		irc_reply( irc, 464, ":Incorrect password" );
+	}
+	else
+	{
+		/* Remember the password and try to identify after USER/NICK. */
+		irc_setpass( irc, cmd[1] );
+		irc_check_login( irc );
 	}
 }
 
@@ -580,7 +598,7 @@ static void irc_cmd_rehash( irc_t *irc, char **cmd )
 }
 
 static const command_t irc_commands[] = {
-	{ "pass",        1, irc_cmd_pass,        IRC_CMD_PRE_LOGIN },
+	{ "pass",        1, irc_cmd_pass,        0 },
 	{ "user",        4, irc_cmd_user,        IRC_CMD_PRE_LOGIN },
 	{ "nick",        1, irc_cmd_nick,        0 },
 	{ "quit",        0, irc_cmd_quit,        0 },
