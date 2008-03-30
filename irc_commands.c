@@ -277,8 +277,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 			
 			if( cmd[1] != irc->last_target )
 			{
-				if( irc->last_target )
-					g_free( irc->last_target );
+				g_free( irc->last_target );
 				irc->last_target = g_strdup( cmd[1] );
 			}
 		}
