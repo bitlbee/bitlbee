@@ -6,6 +6,9 @@ Version 1.2.1:
   the client disconnects.
 - Fixed handling of "set charset none". (Which pretty much breaks the account
   completely in 1.2.)
+- You can now automatically identify yourself to BitlBee by setting a server
+  password in your IRC client.
+- Compatible with all crazy kinds of line endings that clients can send.
 
 Finished ...
 
