@@ -20,7 +20,7 @@ install: skype.$(SHARED_EXT) skyped.py
 
 client: client.c
 
-prepare: configure.ac
+autogen: configure.ac
 	cp /usr/share/automake-$(AMVERSION)/install-sh ./
 	cp /usr/share/aclocal/pkg.m4 aclocal.m4
 	autoconf
@@ -38,7 +38,7 @@ dist:
 	git archive --format=tar --prefix=bitlbee-skype-$(VERSION)/ HEAD | tar xf -
 	mkdir -p bitlbee-skype-$(VERSION)
 	git log --no-merges |git name-rev --tags --stdin > bitlbee-skype-$(VERSION)/Changelog
-	make -C bitlbee-skype-$(VERSION) prepare
+	make -C bitlbee-skype-$(VERSION) autogen
 	tar czf bitlbee-skype-$(VERSION).tar.gz bitlbee-skype-$(VERSION)
 	rm -rf bitlbee-skype-$(VERSION)
 

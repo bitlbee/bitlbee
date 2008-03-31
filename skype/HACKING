@@ -23,4 +23,4 @@ To get the code directly from git, you need:
 
 git clone git://vmiklos.hu/bitlbee-skype
 cd bitlbee-skype
-make prepare
+make autogen
