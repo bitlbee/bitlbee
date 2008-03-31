@@ -1,5 +1,10 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.4.1         - support for building the plugin on Mac OSX
+              - tested with BitlBee 1.2 and Skype 2.0.0.63
+              - avoid ${prefix} (by autoconf) in the config file as we
+                don't handle such a variable
+              - now you can call echo123 (patch by Riskó Gergely)
 0.4.0         - support for starting, accepting and rejecting calls
               - also updated documentation (the key is the account set
                 skype/call command)
