@@ -29,8 +29,10 @@ clean:
 	rm -f skype.$(SHARED_EXT)
 
 distclean: clean
-	rm -rf autom4te.cache config.log config.mak config.status
-	rm -f configure install-sh aclocal.m4
+	rm -f config.log config.mak config.status
+
+autoclean: distclean
+	rm -rf aclocal.m4 autom4te.cache configure install-sh
 
 dist:
 	git archive --format=tar --prefix=bitlbee-skype-$(VERSION)/ HEAD | tar xf -
