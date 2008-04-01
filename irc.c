@@ -219,9 +219,8 @@ static gboolean irc_free_hashkey( gpointer key, gpointer value, gpointer data )
 }
 
 /* Because we have no garbage collection, this is quite annoying */
-void irc_free(irc_t * irc)
+void irc_free( irc_t * irc )
 {
-	account_t *account;
 	user_t *user, *usertmp;
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
@@ -230,7 +229,47 @@ void irc_free(irc_t * irc)
 		if( storage_save( irc, TRUE ) != STORAGE_OK )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
-	closesocket( irc->fd );
+	irc_connection_list = g_slist_remove( irc_connection_list, irc );
+	
+	while( irc->accounts )
+	{
+		if( irc->accounts->ic )
+			imc_logout( irc->accounts->ic, FALSE );
+		else if( irc->accounts->reconnect )
+			cancel_auto_reconnect( irc->accounts );
+		
+		if( irc->accounts->ic == NULL )
+			account_del( irc, irc->accounts );
+		else
+			/* Nasty hack, but account_del() doesn't work in this
+			   case and we don't want infinite loops, do we? ;-) */
+			irc->accounts = irc->accounts->next;
+	}
+	
+	while( irc->queries != NULL )
+		query_del( irc, irc->queries );
+	
+	while( irc->set )
+		set_del( &irc->set, irc->set->key );
+	
+	if (irc->users != NULL)
+	{
+		user = irc->users;
+		while( user != NULL )
+		{
+			g_free( user->nick );
+			g_free( user->away );
+			g_free( user->handle );
+			if( user->user != user->nick ) g_free( user->user );
+			if( user->host != user->nick ) g_free( user->host );
+			if( user->realname != user->nick ) g_free( user->realname );
+			b_event_remove( user->sendbuf_timer );
+					
+			usertmp = user;
+			user = user->next;
+			g_free( usertmp );
+		}
+	}
 	
 	if( irc->ping_source_id > 0 )
 		b_event_remove( irc->ping_source_id );
@@ -238,75 +277,37 @@ void irc_free(irc_t * irc)
 	if( irc->w_watch_source_id > 0 )
 		b_event_remove( irc->w_watch_source_id );
 	
-	irc_connection_list = g_slist_remove( irc_connection_list, irc );
+	closesocket( irc->fd );
+	irc->fd = -1;
 	
-	for (account = irc->accounts; account; account = account->next) {
-		if (account->ic) {
-			imc_logout(account->ic, TRUE);
-		} else if (account->reconnect) {
-			cancel_auto_reconnect(account);
-		}
-	}
+	g_hash_table_foreach_remove( irc->userhash, irc_free_hashkey, NULL );
+	g_hash_table_destroy( irc->userhash );
 	
-	g_free(irc->sendbuffer);
-	g_free(irc->readbuffer);
-	
-	g_free(irc->nick);
-	g_free(irc->user);
-	g_free(irc->host);
-	g_free(irc->realname);
-	g_free(irc->password);
-	
-	g_free(irc->myhost);
-	g_free(irc->mynick);
-	
-	g_free(irc->channel);
-	
-	while (irc->queries != NULL)
-		query_del(irc, irc->queries);
-	
-	while (irc->accounts)
-		if (irc->accounts->ic == NULL)
-			account_del(irc, irc->accounts);
-		else
-			/* Nasty hack, but account_del() doesn't work in this
-			   case and we don't want infinite loops, do we? ;-) */
-			irc->accounts = irc->accounts->next;
-	
-	while (irc->set)
-		set_del(&irc->set, irc->set->key);
-	
-	if (irc->users != NULL) {
-		user = irc->users;
-		while (user != NULL) {
-			g_free(user->nick);
-			g_free(user->away);
-			g_free(user->handle);
-			if(user->user!=user->nick) g_free(user->user);
-			if(user->host!=user->nick) g_free(user->host);
-			if(user->realname!=user->nick) g_free(user->realname);
-			b_event_remove(user->sendbuf_timer);
-					
-			usertmp = user;
-			user = user->next;
-			g_free(usertmp);
-		}
-	}
-	
-	g_hash_table_foreach_remove(irc->userhash, irc_free_hashkey, NULL);
-	g_hash_table_destroy(irc->userhash);
-	
-	g_hash_table_foreach_remove(irc->watches, irc_free_hashkey, NULL);
-	g_hash_table_destroy(irc->watches);
+	g_hash_table_foreach_remove( irc->watches, irc_free_hashkey, NULL );
+	g_hash_table_destroy( irc->watches );
 	
 	if( irc->iconv != (GIConv) -1 )
 		g_iconv_close( irc->iconv );
 	if( irc->oconv != (GIConv) -1 )
 		g_iconv_close( irc->oconv );
 	
+	g_free( irc->sendbuffer );
+	g_free( irc->readbuffer );
+	
+	g_free( irc->nick );
+	g_free( irc->user );
+	g_free( irc->host );
+	g_free( irc->realname );
+	g_free( irc->password );
+	
+	g_free( irc->myhost );
+	g_free( irc->mynick );
+	
+	g_free( irc->channel );
+	
 	g_free( irc->last_target );
 	
-	g_free(irc);
+	g_free( irc );
 	
 	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )
 		b_main_quit();

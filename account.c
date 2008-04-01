@@ -181,19 +181,17 @@ void account_del( irc_t *irc, account_t *acc )
 {
 	account_t *a, *l = NULL;
 	
+	if( acc->ic )
+		/* Caller should have checked, accounts still in use can't be deleted. */
+		return;
+	
 	for( a = irc->accounts; a; a = (l=a)->next )
 		if( a == acc )
 		{
-			if( a->ic ) return; /* Caller should have checked, accounts still in use can't be deleted. */
-			
 			if( l )
-			{
 				l->next = a->next;
-			}
 			else
-			{
 				irc->accounts = a->next;
-			}
 			
 			while( a->set )
 				set_del( &a->set, a->set->key );
@@ -202,7 +200,7 @@ void account_del( irc_t *irc, account_t *acc )
 			
 			g_free( a->user );
 			g_free( a->pass );
-			if( a->server ) g_free( a->server );
+			g_free( a->server );
 			if( a->reconnect )	/* This prevents any reconnect still queued to happen */
 				cancel_auto_reconnect( a );
 			g_free( a );
