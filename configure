@@ -73,8 +73,8 @@ Option		Description				Default
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
 							$ssl
---arch=...  Override target architecture $arch
 
+--target=...	Cross compilation target 		same as host
 EOF
 		exit;
 	fi
@@ -133,6 +133,13 @@ cat<<EOF>config.h
 #define CPU "$cpu"
 EOF
 
+if [ -n "$target" ]; then
+	PKG_CONFIG_PATH=/usr/$target/lib/pkgconfig
+	PATH=/usr/$target/bin:$PATH
+	CC=$target-cc
+	LD=$target-ld
+fi
+
 if [ "$debug" = "1" ]; then
 	[ -z "$CFLAGS" ] && CFLAGS=-g
 	echo 'DEBUG=1' >> Makefile.settings
@@ -159,14 +166,16 @@ fi
 
 echo "CC=$CC" >> Makefile.settings;
 
-if [ -n "$LD" ]; then
-	echo "LD=$LD" >> Makefile.settings;
-elif type ld > /dev/null 2> /dev/null; then
-	echo "LD=ld" >> Makefile.settings;
-else
-	echo 'Cannot find ld, aborting.'
-	exit 1;
+if [ -z "$LD" ]; then
+	if type ld > /dev/null 2> /dev/null; then
+		LD=ld
+	else
+		echo 'Cannot find ld, aborting.'
+		exit 1;
+	fi
 fi
+
+echo "LD=$LD" >> Makefile.settings
 
 if [ -z "$PKG_CONFIG" ]; then
 	PKG_CONFIG=pkg-config
@@ -503,6 +512,10 @@ Windows )
 	echo 'Please report any problems at http://bugs.bitlbee.org/.'
 ;;
 esac
+
+if [ -n "$target" ]; then
+	echo "Cross-compiling for: $target"
+fi
 
 echo
 echo 'Configuration done:'
