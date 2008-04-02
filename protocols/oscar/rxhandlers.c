@@ -112,10 +112,6 @@ static int consumesnac(aim_session_t *sess, aim_frame_t *rx)
 		/* Following SNAC will be related */
 	}
 
-    if (set_getint(sess->aux_data, "debug")) {
-        serv_got_crap(sess->aux_data, "snac %x/%x received", snac.family, snac.subtype);
-    }
-
 	for (cur = (aim_module_t *)sess->modlistv; cur; cur = cur->next) {
 
 		if (!(cur->flags & AIM_MODFLAG_MULTIFAMILY) && 

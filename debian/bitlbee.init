@@ -1,0 +1,89 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          bitlbee
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      1
+### END INIT INFO
+#
+# Init script for BitlBee Debian package. Based on skeleton init script:
+#
+# Version:	@(#)skeleton  2.85-23  28-Jul-2004  miquels@cistron.nl
+#
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DESC="BitlBee IRC/IM gateway"
+NAME=bitlbee
+DAEMON=/usr/sbin/$NAME
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+
+# Gracefully exit if the package has been removed.
+[ -x $DAEMON ] || exit 0
+
+# Default value
+BITLBEE_PORT=6667
+BITLBEE_OPTS=-F
+
+# Read config file if it is present.
+if [ -r /etc/default/$NAME ]; then
+	. /etc/default/$NAME
+fi
+
+[ "$BITLBEE_DISABLED" = "1" ] && exit 0
+
+
+#
+#	Function that starts the daemon/service.
+#
+d_start() {
+	# Make sure BitlBee can actually write its PID...
+	touch /var/run/bitlbee.pid
+	chown bitlbee /var/run/bitlbee.pid
+	
+	start-stop-daemon --start --quiet --pidfile $PIDFILE \
+		-c bitlbee: \
+		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $BITLBEE_OPTS
+}
+
+#
+#	Function that stops the daemon/service.
+#
+d_stop() {
+	start-stop-daemon --stop --quiet --pidfile $PIDFILE \
+		--name $NAME
+}
+
+
+case "$1" in
+  start)
+	echo -n "Starting $DESC: $NAME"
+	d_start
+	echo "."
+	;;
+  stop)
+	echo -n "Stopping $DESC: $NAME"
+	d_stop
+	echo "."
+	;;
+  #reload)
+	#
+	#	No reload target, but there's a REHASH command which we
+	#	might use later...
+	#
+  #;;
+  restart|force-reload)
+	echo -n "Restarting $DESC: $NAME"
+	d_stop
+	sleep 1
+	d_start
+	echo "."
+	;;
+  *)
+	echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

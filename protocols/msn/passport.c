@@ -1,8 +1,7 @@
-/* passport.c
+/** passport.c
  *
- * Functions to login to microsoft passport service for Messenger
- * Copyright (C) 2004 Wouter Paesen <wouter@blue-gate.be>
- * Copyright (C) 2004 Wilmer van der Gaast <wilmer@gaast.net>
+ * Functions to login to Microsoft Passport service for Messenger
+ * Copyright (C) 2004-2008 Wilmer van der Gaast <wilmer@gaast.net>
  *
  * This program is free software; you can redistribute it and/or modify             
  * it under the terms of the GNU General Public License version 2                   
@@ -23,189 +22,149 @@
 #include "passport.h"
 #include "msn.h"
 #include "bitlbee.h"
+#include "url.h"
+#include "misc.h"
+#include "xmltree.h"
 #include <ctype.h>
 #include <errno.h>
 
-#define MSN_BUF_LEN 8192
+static int passport_get_token_real( struct msn_auth_data *mad );
+static void passport_get_token_ready( struct http_request *req );
 
-static char *prd_cached = NULL;
-
-static int passport_get_id_real( gpointer func, gpointer data, char *header );
-static void passport_get_id_ready( struct http_request *req );
-
-static int passport_retrieve_dalogin( gpointer data, gpointer func, char *header );
-static void passport_retrieve_dalogin_ready( struct http_request *req );
-
-static char *passport_create_header( char *cookie, char *email, char *pwd );
-static void destroy_reply( struct passport_reply *rep );
-
-int passport_get_id( gpointer func, gpointer data, char *username, char *password, char *cookie )
+int passport_get_token( gpointer func, gpointer data, char *username, char *password, char *cookie )
 {
-	char *header = passport_create_header( cookie, username, password );
+	struct msn_auth_data *mad = g_new0( struct msn_auth_data, 1 );
+	int i;
 	
-	if( prd_cached == NULL )
-		return passport_retrieve_dalogin( func, data, header );
-	else
-		return passport_get_id_real( func, data, header );
+	mad->username = g_strdup( username );
+	mad->password = g_strdup( password );
+	mad->cookie = g_strdup( cookie );
+	
+	mad->callback = func;
+	mad->data = data;
+	
+	mad->url = g_strdup( SOAP_AUTHENTICATION_URL );
+	mad->ttl = 3; /* Max. # of redirects. */
+	
+	/* HTTP-escape stuff and s/,/&/ */
+	http_decode( mad->cookie );
+	for( i = 0; mad->cookie[i]; i ++ )
+		if( mad->cookie[i] == ',' )
+			mad->cookie[i] = '&';
+	
+	/* Microsoft doesn't allow password longer than 16 chars and silently
+	   fails authentication if you give the "full version" of your passwd. */
+	if( strlen( mad->password ) > MAX_PASSPORT_PWLEN )
+		mad->password[MAX_PASSPORT_PWLEN] = 0;
+	
+	return passport_get_token_real( mad );
 }
 
-static int passport_get_id_real( gpointer func, gpointer data, char *header )
+static int passport_get_token_real( struct msn_auth_data *mad )
 {
-	struct passport_reply *rep;
-	char *server, *dummy, *reqs;
+	char *post_payload, *post_request;
 	struct http_request *req;
+	url_t url;
 	
-	rep = g_new0( struct passport_reply, 1 );
-	rep->data = data;
-	rep->func = func;
+	url_set( &url, mad->url );
 	
-	server = g_strdup( prd_cached );
-	dummy = strchr( server, '/' );
+	post_payload = g_markup_printf_escaped( SOAP_AUTHENTICATION_PAYLOAD,
+	                                        mad->username,
+	                                        mad->password,
+	                                        mad->cookie );
 	
-	if( dummy == NULL )
-	{
-		destroy_reply( rep );
-		return( 0 );
-	}
+	post_request = g_strdup_printf( SOAP_AUTHENTICATION_REQUEST,
+	                                url.file, url.host,
+	                                (int) strlen( post_payload ),
+	                                post_payload );
+	                                
+	req = http_dorequest( url.host, url.port, 1, post_request,
+	                      passport_get_token_ready, mad );
 	
-	reqs = g_malloc( strlen( header ) + strlen( dummy ) + 128 );
-	sprintf( reqs, "GET %s HTTP/1.0\r\n%s\r\n\r\n", dummy, header );
+	g_free( post_request );
+	g_free( post_payload );
 	
-	*dummy = 0;
-	req = http_dorequest( server, 443, 1, reqs, passport_get_id_ready, rep );
-	
-	g_free( server );
-	g_free( reqs );
-	
-	if( req == NULL )
-		destroy_reply( rep );
-	
-	return( req != NULL );
+	return req != NULL;
 }
 
-static void passport_get_id_ready( struct http_request *req )
+static xt_status passport_xt_extract_token( struct xt_node *node, gpointer data );
+static xt_status passport_xt_handle_fault( struct xt_node *node, gpointer data );
+
+static const struct xt_handler_entry passport_xt_handlers[] = {
+	{ "wsse:BinarySecurityToken", "wst:RequestedSecurityToken", passport_xt_extract_token },
+	{ "S:Fault",                  "S:Envelope",                 passport_xt_handle_fault  },
+	{ NULL,                       NULL,                         NULL                      }
+};
+
+static void passport_get_token_ready( struct http_request *req )
 {
-	struct passport_reply *rep = req->data;
+	struct msn_auth_data *mad = req->data;
+	struct xt_parser *parser;
 	
-	if( !g_slist_find( msn_connections, rep->data ) || !req->finished || !req->reply_headers )
-	{
-		destroy_reply( rep );
-		return;
-	}
+	g_free( mad->url );
+	g_free( mad->error );
+	mad->url = mad->error = NULL;
 	
 	if( req->status_code == 200 )
 	{
-		char *dummy;
+		parser = xt_new( passport_xt_handlers, mad );
+		xt_feed( parser, req->reply_body, req->body_size );
+		xt_handle( parser, NULL, -1 );
+		xt_free( parser );
+	}
+	else
+	{
+		mad->error = g_strdup_printf( "HTTP error %d (%s)", req->status_code,
+		                              req->status_string ? req->status_string : "unknown" );
+	}
+	
+	if( mad->error == NULL && mad->token == NULL )
+		mad->error = g_strdup( "Could not parse Passport server response" );
+	
+	if( mad->url && mad->token == NULL )
+	{
+		passport_get_token_real( mad );
+	}
+	else
+	{
+		mad->callback( mad );
 		
-		if( ( dummy = strstr( req->reply_headers, "from-PP='" ) ) )
-		{
-			char *responseend;
-			
-			dummy += strlen( "from-PP='" );
-			responseend = strchr( dummy, '\'' );
-			if( responseend )
-				*responseend = 0;
-			
-			rep->result = g_strdup( dummy );
-		}
+		g_free( mad->url );
+		g_free( mad->username );
+		g_free( mad->password );
+		g_free( mad->cookie );
+		g_free( mad->token );
+		g_free( mad->error );
+		g_free( mad );
 	}
-	
-	rep->func( rep );
-	destroy_reply( rep );
 }
 
-static char *passport_create_header( char *cookie, char *email, char *pwd )
+static xt_status passport_xt_extract_token( struct xt_node *node, gpointer data )
 {
-	char *buffer = g_new0( char, 2048 );
-	char *currenttoken;
-	char *email_enc, *pwd_enc;
+	struct msn_auth_data *mad = data;
+	char *s;
 	
-	email_enc = g_new0( char, strlen( email ) * 3 + 1 );
-	strcpy( email_enc, email );
-	http_encode( email_enc );
+	if( ( s = xt_find_attr( node, "Id" ) ) && strcmp( s, "PPToken1" ) == 0 )
+		mad->token = g_memdup( node->text, node->text_len + 1 );
 	
-	pwd_enc = g_new0( char, strlen( pwd ) * 3 + 1 );
-	strcpy( pwd_enc, pwd );
-	http_encode( pwd_enc );
-	
-	currenttoken = strstr( cookie, "lc=" );
-	if( currenttoken == NULL )
-		return( NULL );
-	
-	g_snprintf( buffer, 2048,
-	            "Authorization: Passport1.4 OrgVerb=GET,"
-	            "OrgURL=http%%3A%%2F%%2Fmessenger%%2Emsn%%2Ecom,"
-	            "sign-in=%s,pwd=%s,%s", email_enc, pwd_enc,
-	            currenttoken );
-	
-	g_free( email_enc );
-	g_free( pwd_enc );
-	
-	return( buffer );
+	return XT_HANDLED;
 }
 
-#define PPR_REQUEST "GET /rdr/pprdr.asp HTTP/1.0\r\n\r\n"
-static int passport_retrieve_dalogin( gpointer func, gpointer data, char *header )
+static xt_status passport_xt_handle_fault( struct xt_node *node, gpointer data )
 {
-	struct passport_reply *rep = g_new0( struct passport_reply, 1 );
-	struct http_request *req;
+	struct msn_auth_data *mad = data;
+	struct xt_node *code = xt_find_node( node->children, "faultcode" );
+	struct xt_node *string = xt_find_node( node->children, "faultstring" );
+	struct xt_node *redirect = xt_find_node( node->children, "psf:redirectUrl" );
 	
-	rep->data = data;
-	rep->func = func;
-	rep->header = header;
+	if( redirect && redirect->text_len && mad->ttl-- > 0 )
+		mad->url = g_memdup( redirect->text, redirect->text_len + 1 );
 	
-	req = http_dorequest( "nexus.passport.com", 443, 1, PPR_REQUEST, passport_retrieve_dalogin_ready, rep );
+	if( code == NULL || code->text_len == 0 )
+		mad->error = g_strdup( "Unknown error" );
+	else
+		mad->error = g_strdup_printf( "%s (%s)", code->text, string && string->text_len ?
+		                              string->text : "no description available" );
 	
-	if( !req )
-		destroy_reply( rep );
-	
-	return( req != NULL );
-}
-
-static void passport_retrieve_dalogin_ready( struct http_request *req )
-{
-	struct passport_reply *rep = req->data;
-	char *dalogin;
-	char *urlend;
-	
-	if( !g_slist_find( msn_connections, rep->data ) || !req->finished || !req->reply_headers )
-	{
-		destroy_reply( rep );
-		return;
-	}
-	
-	dalogin = strstr( req->reply_headers, "DALogin=" );	
-	
-	if( !dalogin )
-		goto failure;
-	
-	dalogin += strlen( "DALogin=" );
-	urlend = strchr( dalogin, ',' );
-	if( urlend )
-		*urlend = 0;
-	
-	/* strip the http(s):// part from the url */
-	urlend = strstr( urlend, "://" );
-	if( urlend )
-		dalogin = urlend + strlen( "://" );
-	
-	if( prd_cached == NULL )
-		prd_cached = g_strdup( dalogin );
-	
-	if( passport_get_id_real( rep->func, rep->data, rep->header ) )
-	{
-		destroy_reply( rep );
-		return;
-	}
-	
-failure:	
-	rep->func( rep );
-	destroy_reply( rep );
-}
-
-static void destroy_reply( struct passport_reply *rep )
-{
-	g_free( rep->result );
-	g_free( rep->header );
-	g_free( rep );
+	return XT_HANDLED;
 }

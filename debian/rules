@@ -1,0 +1,86 @@
+#!/usr/bin/make -f
+
+DEBUG ?= 0
+
+ifdef BITLBEE_VERSION
+BITLBEE_FORCE_VERSION=1
+else
+# Want to use the full package version number instead of just the release.
+BITLBEE_VERSION ?= "$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}')"
+export BITLBEE_VERSION
+endif
+
+build-arch: build-arch-stamp
+build-arch-stamp:
+	if [ ! -d debian ]; then exit 1; fi
+	./configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent
+	$(MAKE)
+#	$(MAKE) -C doc/ all
+	touch build-arch-stamp
+
+clean:
+	if [ "`whoami`" != "root" -o ! -d debian ]; then exit 1; fi
+	rm -rf build-arch-stamp debian/bitlbee debian/*.substvars debian/files
+	-$(MAKE) distclean
+#	-$(MAKE) -C doc/ clean
+				
+
+install-arch: build-arch
+	if [ "`whoami`" != "root" -o ! -d debian ]; then exit 1; fi
+	mkdir -p debian/bitlbee/DEBIAN/
+	$(MAKE) install install-etc DESTDIR=`pwd`/debian/bitlbee
+
+	mkdir -p debian/bitlbee/usr/share/doc/bitlbee/
+	cp doc/user-guide/user-guide.txt debian/bitlbee/usr/share/doc/bitlbee/
+	cp doc/user-guide/user-guide.html debian/bitlbee/usr/share/doc/bitlbee/
+
+binary-arch: build-arch install-arch
+	if [ "`whoami`" != "root" -o ! -d debian ]; then exit 1; fi
+
+	chmod 755 debian/post* debian/pre* debian/config debian/bitlbee.init
+
+	mkdir -p debian/bitlbee/usr/share/doc/bitlbee/examples/ debian/bitlbee/etc/init.d/
+	-cp doc/RELEASE-SPEECH* debian/bitlbee/usr/share/doc/bitlbee/ && gzip -9 debian/bitlbee/usr/share/doc/bitlbee/RELEASE-SPEECH*
+	cp doc/CREDITS doc/AUTHORS doc/README doc/FAQ debian/README.Debian debian/bitlbee/usr/share/doc/bitlbee/
+	cp debian/changelog debian/bitlbee/usr/share/doc/bitlbee/changelog.Debian
+	cp debian/copyright debian/bitlbee/usr/share/doc/bitlbee/copyright
+	cp doc/CHANGES debian/bitlbee/usr/share/doc/bitlbee/changelog
+	cp utils/* debian/bitlbee/usr/share/doc/bitlbee/examples/
+	cp debian/bitlbee.init debian/bitlbee/etc/init.d/bitlbee
+	cd debian/bitlbee/usr/share/; \
+		gzip -9 doc/bitlbee/changelog.Debian doc/bitlbee/changelog doc/bitlbee/user-guide.txt \
+		        doc/bitlbee/examples/* man/man8/bitlbee.8 man/man5/bitlbee.conf.5
+	
+	chown -R root.root debian/bitlbee/
+	find debian/bitlbee/usr/share/ -type d -exec chmod 755 {} \;
+	find debian/bitlbee/usr/share/ -type f -exec chmod 644 {} \;
+	
+	cp debian/prerm debian/bitlbee/DEBIAN/
+	cp debian/postinst debian/bitlbee/DEBIAN/
+	cp debian/postrm debian/bitlbee/DEBIAN/
+	cp debian/config debian/bitlbee/DEBIAN/
+
+	po2debconf debian/templates > debian/bitlbee/DEBIAN/templates
+	cp debian/conffiles debian/bitlbee/DEBIAN/
+	
+	if [ "$(DEBUG)" = "0" ]; then strip -R .comment -R .note debian/bitlbee/usr/sbin/bitlbee; fi
+
+	cd debian/bitlbee; \
+		find usr -type f -exec md5sum {} \; > DEBIAN/md5sums
+	dpkg-shlibdeps -Tdebian/bitlbee.substvars -dDepends debian/bitlbee/usr/sbin/bitlbee
+ifdef BITLBEE_FORCE_VERSION
+	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee -Tdebian/bitlbee.substvars -Pdebian/bitlbee -v1:$(BITLBEE_VERSION)-0 -V'debconf-depends=debconf (>= 1.2.0) | debconf-2.0'
+else
+	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee -Tdebian/bitlbee.substvars -Pdebian/bitlbee -V'debconf-depends=debconf (>= 1.2.0) | debconf-2.0'
+endif
+
+	dpkg --build debian/bitlbee ..
+
+debug-build:
+	BITLBEE_VERSION=\"`date +%Y%m%d`-`hostname`-debug\" debian/rules clean binary DEBUG=1
+
+binary: binary-arch
+build: build-arch
+install: install-arch
+
+.PHONY: build-arch build clean binary-arch binary install-arch install

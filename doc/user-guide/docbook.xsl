@@ -82,6 +82,7 @@
 	</xsl:template>
 
 	<xsl:template name="cmd">
+		<xsl:param name="prefix"/>
 		<xsl:variable name="thiscmd"><xsl:value-of select="$prefix"/><xsl:value-of select="@name"/></xsl:variable>
 		<xsl:attribute name="id">
 			<xsl:text>cmd_</xsl:text>

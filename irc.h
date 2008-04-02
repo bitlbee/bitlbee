@@ -41,10 +41,10 @@
 typedef enum
 {
 	USTATUS_OFFLINE = 0,
-	USTATUS_AUTHORIZED,
-	USTATUS_LOGGED_IN,
-	USTATUS_IDENTIFIED,
-	USTATUS_SHUTDOWN = -1
+	USTATUS_AUTHORIZED = 1,
+	USTATUS_LOGGED_IN = 2,
+	USTATUS_IDENTIFIED = 4,
+	USTATUS_SHUTDOWN = 8
 } irc_status_t;
 
 typedef struct channel
@@ -60,7 +60,7 @@ typedef struct irc
 	int pinging;
 	char *sendbuffer;
 	char *readbuffer;
-	int quit;
+	GIConv iconv, oconv;
 
 	int sentbytes;
 	time_t oldtime;
@@ -69,7 +69,9 @@ typedef struct irc
 	char *user;
 	char *host;
 	char *realname;
-	char *password;
+	char *password; /* HACK: Used to save the user's password, but before
+	                   logging in, this may contain a password we should
+	                   send to identify after USER/NICK are received. */
 
 	char umode[8];
 	
@@ -89,17 +91,15 @@ typedef struct irc
 	GHashTable *userhash;
 	GHashTable *watches;
 	struct __NICK *nicks;
-	struct help *help;
 	struct set *set;
 
-	GIOChannel *io_channel;
 	gint r_watch_source_id;
 	gint w_watch_source_id;
 	gint ping_source_id;
 } irc_t;
 
 #include "user.h"
-#include "nick.h"
+// #include "nick.h"
 
 extern GSList *irc_connection_list;
 
@@ -141,5 +141,6 @@ int irc_msgfrom( irc_t *irc, char *nick, char *msg );
 int irc_noticefrom( irc_t *irc, char *nick, char *msg );
 
 void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags );
+struct groupchat *irc_chat_by_channel( irc_t *irc, char *channel );
 
 #endif

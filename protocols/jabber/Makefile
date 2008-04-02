@@ -9,13 +9,17 @@
 -include ../../Makefile.settings
 
 # [SH] Program variables
-objects = expat.o hashtable.o jid.o jpacket.o jutil.o log.o pool.o str.o xmlnode.o xmlparse.o xmlrole.o xmltok.o jabber.o
+objects = conference.o io.o iq.o jabber.o jabber_util.o message.o presence.o sasl.o
 
 CFLAGS += -Wall
 LFLAGS += -r
 
 # [SH] Phony targets
 all: jabber_mod.o
+check: all
+lcov: check
+gcov: 
+	gcov *.c
 
 .PHONY: all clean distclean
 

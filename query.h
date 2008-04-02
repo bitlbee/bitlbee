@@ -28,7 +28,7 @@
 
 typedef struct query
 {
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	char *question;
 	void (* yes) ( gpointer w, void *data );
 	void (* no) ( gpointer w, void *data );
@@ -36,9 +36,9 @@ typedef struct query
 	struct query *next;
 } query_t;
 
-query_t *query_add( irc_t *irc, struct gaim_connection *gc, char *question, void *yes, void *no, void *data );
+query_t *query_add( irc_t *irc, struct im_connection *ic, char *question, void *yes, void *no, void *data );
 void query_del( irc_t *irc, query_t *q );
-void query_del_by_gc( irc_t *irc, struct gaim_connection *gc );
+void query_del_by_conn( irc_t *irc, struct im_connection *ic );
 void query_answer( irc_t *irc, query_t *q, int ans );
 
 #endif

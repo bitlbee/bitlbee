@@ -29,34 +29,34 @@
 #include "passport.h"
 #include "md5.h"
 
-static void msn_ns_callback( gpointer data, gint source, GaimInputCondition cond );
+static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond );
 static int msn_ns_command( gpointer data, char **cmd, int num_parts );
 static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
-static void msn_auth_got_passport_id( struct passport_reply *rep );
+static void msn_auth_got_passport_token( struct msn_auth_data *mad );
 
-void msn_ns_connected( gpointer data, gint source, GaimInputCondition cond )
+gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 {
-	struct gaim_connection *gc = data;
+	struct im_connection *ic = data;
 	struct msn_data *md;
 	char s[1024];
 	
-	if( !g_slist_find( msn_connections, gc ) )
-		return;
+	if( !g_slist_find( msn_connections, ic ) )
+		return FALSE;
 	
 	if( source == -1 )
 	{
-		hide_login_progress( gc, "Could not connect to server" );
-		signoff( gc );
-		return;
+		imcb_error( ic, "Could not connect to server" );
+		imc_logout( ic, TRUE );
+		return FALSE;
 	}
 	
-	md = gc->proto_data;
+	md = ic->proto_data;
 	
 	if( !md->handler )
 	{
 		md->handler = g_new0( struct msn_handler_data, 1 );
-		md->handler->data = gc;
+		md->handler->data = ic;
 		md->handler->exec_command = msn_ns_command;
 		md->handler->exec_message = msn_ns_message;
 	}
@@ -72,29 +72,35 @@ void msn_ns_connected( gpointer data, gint source, GaimInputCondition cond )
 	md->handler->rxq = g_new0( char, 1 );
 	
 	g_snprintf( s, sizeof( s ), "VER %d MSNP8 CVR0\r\n", ++md->trId );
-	if( msn_write( gc, s, strlen( s ) ) )
+	if( msn_write( ic, s, strlen( s ) ) )
 	{
-		gc->inpa = gaim_input_add( md->fd, GAIM_INPUT_READ, msn_ns_callback, gc );
-		set_login_progress( gc, 1, "Connected to server, waiting for reply" );
+		ic->inpa = b_input_add( md->fd, GAIM_INPUT_READ, msn_ns_callback, ic );
+		imcb_log( ic, "Connected to server, waiting for reply" );
 	}
+	
+	return FALSE;
 }
 
-void msn_ns_callback( gpointer data, gint source, GaimInputCondition cond )
+static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond )
 {
-	struct gaim_connection *gc = data;
-	struct msn_data *md = gc->proto_data;
+	struct im_connection *ic = data;
+	struct msn_data *md = ic->proto_data;
 	
 	if( msn_handler( md->handler ) == -1 ) /* Don't do this on ret == 0, it's already done then. */
 	{
-		hide_login_progress( gc, "Error while reading from server" );
-		signoff( gc );
+		imcb_error( ic, "Error while reading from server" );
+		imc_logout( ic, TRUE );
+		
+		return FALSE;
 	}
+	else
+		return TRUE;
 }
 
 static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 {
-	struct gaim_connection *gc = data;
-	struct msn_data *md = gc->proto_data;
+	struct im_connection *ic = data;
+	struct msn_data *md = ic->proto_data;
 	char buf[1024];
 	
 	if( num_parts == 0 )
@@ -107,20 +113,20 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	{
 		if( cmd[2] && strncmp( cmd[2], "MSNP8", 5 ) != 0 )
 		{
-			hide_login_progress( gc, "Unsupported protocol" );
-			signoff( gc );
+			imcb_error( ic, "Unsupported protocol" );
+			imc_logout( ic, FALSE );
 			return( 0 );
 		}
 		
 		g_snprintf( buf, sizeof( buf ), "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s\r\n",
-		                                ++md->trId, gc->username );
-		return( msn_write( gc, buf, strlen( buf ) ) );
+		                                ++md->trId, ic->acc->user );
+		return( msn_write( ic, buf, strlen( buf ) ) );
 	}
 	else if( strcmp( cmd[0], "CVR" ) == 0 )
 	{
 		/* We don't give a damn about the information we just received */
-		g_snprintf( buf, sizeof( buf ), "USR %d TWN I %s\r\n", ++md->trId, gc->username );
-		return( msn_write( gc, buf, strlen( buf ) ) );
+		g_snprintf( buf, sizeof( buf ), "USR %d TWN I %s\r\n", ++md->trId, ic->acc->user );
+		return( msn_write( ic, buf, strlen( buf ) ) );
 	}
 	else if( strcmp( cmd[0], "XFR" ) == 0 )
 	{
@@ -129,24 +135,24 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( num_parts == 6 && strcmp( cmd[2], "NS" ) == 0 )
 		{
-			gaim_input_remove( gc->inpa );
-			gc->inpa = 0;
+			b_event_remove( ic->inpa );
+			ic->inpa = 0;
 			closesocket( md->fd );
 			
 			server = strchr( cmd[3], ':' );
 			if( !server )
 			{
-				hide_login_progress_error( gc, "Syntax error" );
-				signoff( gc );
+				imcb_error( ic, "Syntax error" );
+				imc_logout( ic, TRUE );
 				return( 0 );
 			}
 			*server = 0;
 			port = atoi( server + 1 );
 			server = cmd[3];
 			
-			set_login_progress( gc, 1, "Transferring to other server" );
+			imcb_log( ic, "Transferring to other server" );
 			
-			md->fd = proxy_connect( server, port, msn_ns_connected, gc );
+			md->fd = proxy_connect( server, port, msn_ns_connected, ic );
 		}
 		else if( num_parts == 6 && strcmp( cmd[2], "SB" ) == 0 )
 		{
@@ -155,8 +161,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			server = strchr( cmd[3], ':' );
 			if( !server )
 			{
-				hide_login_progress_error( gc, "Syntax error" );
-				signoff( gc );
+				imcb_error( ic, "Syntax error" );
+				imc_logout( ic, TRUE );
 				return( 0 );
 			}
 			*server = 0;
@@ -165,13 +171,13 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			
 			if( strcmp( cmd[4], "CKI" ) != 0 )
 			{
-				hide_login_progress_error( gc, "Unknown authentication method for switchboard" );
-				signoff( gc );
+				imcb_error( ic, "Unknown authentication method for switchboard" );
+				imc_logout( ic, TRUE );
 				return( 0 );
 			}
 			
 			debug( "Connecting to a new switchboard with key %s", cmd[5] );
-			sb = msn_sb_create( gc, server, port, cmd[5], MSN_SB_NEW );
+			sb = msn_sb_create( ic, server, port, cmd[5], MSN_SB_NEW );
 			
 			if( md->msgq )
 			{
@@ -197,8 +203,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		else
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
@@ -207,29 +213,37 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts == 5 && strcmp( cmd[2], "TWN" ) == 0 && strcmp( cmd[3], "S" ) == 0 )
 		{
 			/* Time for some Passport black magic... */
-			if( !passport_get_id( msn_auth_got_passport_id, gc, gc->username, gc->password, cmd[4] ) )
+			if( !passport_get_token( msn_auth_got_passport_token, ic, ic->acc->user, ic->acc->pass, cmd[4] ) )
 			{
-				hide_login_progress_error( gc, "Error while contacting Passport server" );
-				signoff( gc );
+				imcb_error( ic, "Error while contacting Passport server" );
+				imc_logout( ic, TRUE );
 				return( 0 );
 			}
 		}
 		else if( num_parts == 7 && strcmp( cmd[2], "OK" ) == 0 )
 		{
+			set_t *s;
+			
 			http_decode( cmd[4] );
 			
-			strncpy( gc->displayname, cmd[4], sizeof( gc->displayname ) );
-			gc->displayname[sizeof(gc->displayname)-1] = 0;
+			strncpy( ic->displayname, cmd[4], sizeof( ic->displayname ) );
+			ic->displayname[sizeof(ic->displayname)-1] = 0;
 			
-			set_login_progress( gc, 1, "Authenticated, getting buddy list" );
+			if( ( s = set_find( &ic->acc->set, "display_name" ) ) )
+			{
+				g_free( s->value );
+				s->value = g_strdup( cmd[4] );
+			}
+			
+			imcb_log( ic, "Authenticated, getting buddy list" );
 			
 			g_snprintf( buf, sizeof( buf ), "SYN %d 0\r\n", ++md->trId );
-			return( msn_write( gc, buf, strlen( buf ) ) );
+			return( msn_write( ic, buf, strlen( buf ) ) );
 		}
 		else
 		{
-			hide_login_progress( gc, "Unknown authentication type" );
-			signoff( gc );
+			imcb_error( ic, "Unknown authentication type" );
+			imc_logout( ic, FALSE );
 			return( 0 );
 		}
 	}
@@ -237,8 +251,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	{
 		if( num_parts != 4 )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -246,8 +260,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( md->handler->msglen <= 0 )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
@@ -261,14 +275,14 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 				md->grouplist = g_new0( char *, md->groupcount );
 			
 			if( !*cmd[3] || md->buddycount == 0 )
-				msn_logged_in( gc );
+				msn_logged_in( ic );
 		}
 		else
 		{
 			/* Hrrm... This SYN reply doesn't really look like something we expected.
 			   Let's assume everything is okay. */
 			
-			msn_logged_in( gc );
+			msn_logged_in( ic );
 		}
 	}
 	else if( strcmp( cmd[0], "LST" ) == 0 )
@@ -277,8 +291,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( num_parts != 4 && num_parts != 5 )
 		{
-			hide_login_progress( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -290,36 +304,37 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			char *group = NULL;
 			int num;
 			
-			if( cmd[4] != NULL && sscanf( cmd[4], "%d", &num ) == 1 )
+			if( cmd[4] != NULL && sscanf( cmd[4], "%d", &num ) == 1 && num < md->groupcount )
 				group = md->grouplist[num];
 			
-			add_buddy( gc, group, cmd[1], cmd[2] );
+			imcb_add_buddy( ic, cmd[1], group );
+			imcb_rename_buddy( ic, cmd[1], cmd[2] );
 		}
 		if( list & 2 ) /* AL */
 		{
-			gc->permit = g_slist_append( gc->permit, g_strdup( cmd[1] ) );
+			ic->permit = g_slist_append( ic->permit, g_strdup( cmd[1] ) );
 		}
 		if( list & 4 ) /* BL */
 		{
-			gc->deny = g_slist_append( gc->deny, g_strdup( cmd[1] ) );
+			ic->deny = g_slist_append( ic->deny, g_strdup( cmd[1] ) );
 		}
 		if( list & 8 ) /* RL */
 		{
 			if( ( list & 6 ) == 0 )
-				msn_buddy_ask( gc, cmd[1], cmd[2] );
+				msn_buddy_ask( ic, cmd[1], cmd[2] );
 		}
 		
 		if( --md->buddycount == 0 )
 		{
-			if( gc->flags & OPT_LOGGED_IN )
+			if( ic->flags & OPT_LOGGED_IN )
 			{
-				serv_got_crap( gc, "Successfully transferred to different server" );
+				imcb_log( ic, "Successfully transferred to different server" );
 				g_snprintf( buf, sizeof( buf ), "CHG %d %s %d\r\n", ++md->trId, md->away_state->code, 0 );
-				return( msn_write( gc, buf, strlen( buf ) ) );
+				return( msn_write( ic, buf, strlen( buf ) ) );
 			}
 			else
 			{
-				msn_logged_in( gc );
+				msn_logged_in( ic );
 			}
 		}
 	}
@@ -329,8 +344,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( num_parts != 4 )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -348,8 +363,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( num_parts != 3 )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -362,7 +377,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		for( i = 0; i < 16; i ++ )
 			g_snprintf( buf + strlen( buf ), 3, "%02x", digest[i] );
 		
-		return( msn_write( gc, buf, strlen( buf ) ) );
+		return( msn_write( ic, buf, strlen( buf ) ) );
 	}
 	else if( strcmp( cmd[0], "ILN" ) == 0 )
 	{
@@ -370,13 +385,13 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( num_parts != 6 )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
 		http_decode( cmd[4] );
-		serv_buddy_rename( gc, cmd[3], cmd[4] );
+		imcb_rename_buddy( ic, cmd[3], cmd[4] );
 		
 		st = msn_away_state_by_code( cmd[2] );
 		if( !st )
@@ -385,12 +400,13 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			st = msn_away_state_list;
 		}
 		
-		serv_got_update( gc, cmd[3], 1, 0, 0, 0, st->number, 0 );
+		imcb_buddy_status( ic, cmd[3], OPT_LOGGED_IN |
+		                   ( st->number ? OPT_AWAY : 0 ), st->name, NULL );
 	}
 	else if( strcmp( cmd[0], "FLN" ) == 0 )
 	{
 		if( cmd[1] )
-			serv_got_update( gc, cmd[1], 0, 0, 0, 0, 0, 0 );
+			imcb_buddy_status( ic, cmd[1], 0, NULL, NULL );
 	}
 	else if( strcmp( cmd[0], "NLN" ) == 0 )
 	{
@@ -398,13 +414,13 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( num_parts != 5 )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
 		http_decode( cmd[3] );
-		serv_buddy_rename( gc, cmd[2], cmd[3] );
+		imcb_rename_buddy( ic, cmd[2], cmd[3] );
 		
 		st = msn_away_state_by_code( cmd[1] );
 		if( !st )
@@ -413,7 +429,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			st = msn_away_state_list;
 		}
 		
-		serv_got_update( gc, cmd[2], 1, 0, 0, 0, st->number, 0 );
+		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN |
+		                   ( st->number ? OPT_AWAY : 0 ), st->name, NULL );
 	}
 	else if( strcmp( cmd[0], "RNG" ) == 0 )
 	{
@@ -423,8 +440,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( num_parts != 7 )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
@@ -433,8 +450,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		server = strchr( cmd[2], ':' );
 		if( !server )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		*server = 0;
@@ -443,14 +460,14 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( strcmp( cmd[3], "CKI" ) != 0 )
 		{
-			hide_login_progress_error( gc, "Unknown authentication method for switchboard" );
-			signoff( gc );
+			imcb_error( ic, "Unknown authentication method for switchboard" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
 		debug( "Got a call from %s (session %d). Key = %s", cmd[5], session, cmd[4] );
 		
-		sb = msn_sb_create( gc, server, port, cmd[4], session );
+		sb = msn_sb_create( ic, server, port, cmd[4], session );
 		sb->who = g_strdup( cmd[5] );
 	}
 	else if( strcmp( cmd[0], "ADD" ) == 0 )
@@ -463,74 +480,91 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			
 			if( strchr( cmd[4], '@' ) == NULL )
 			{
-				hide_login_progress_error( gc, "Syntax error" );
-				signoff( gc );
-				return( 0 );
+				imcb_error( ic, "Syntax error" );
+				imc_logout( ic, TRUE );
+				return 0;
 			}
 			
-			/* We got added by someone. If we don't have this person in permit/deny yet, inform the user. */
-			for( l = gc->permit; l; l = l->next )
+			/* We got added by someone. If we don't have this
+			   person in permit/deny yet, inform the user. */
+			for( l = ic->permit; l; l = l->next )
 				if( g_strcasecmp( l->data, cmd[4] ) == 0 )
-					return( 1 );
+					return 1;
 			
-			for( l = gc->deny; l; l = l->next )
+			for( l = ic->deny; l; l = l->next )
 				if( g_strcasecmp( l->data, cmd[4] ) == 0 )
-					return( 1 );
+					return 1;
 			
-			msn_buddy_ask( gc, cmd[4], cmd[5] );
+			msn_buddy_ask( ic, cmd[4], cmd[5] );
+		}
+		else if( num_parts >= 6 && strcmp( cmd[2], "FL" ) == 0 )
+		{
+			http_decode( cmd[5] );
+			imcb_add_buddy( ic, cmd[4], NULL );
+			imcb_rename_buddy( ic, cmd[4], cmd[5] );
 		}
 	}
 	else if( strcmp( cmd[0], "OUT" ) == 0 )
 	{
+		int allow_reconnect = TRUE;
+		
 		if( cmd[1] && strcmp( cmd[1], "OTH" ) == 0 )
 		{
-			hide_login_progress_error( gc, "Someone else logged in with your account" );
-			gc->wants_to_die = 1;
+			imcb_error( ic, "Someone else logged in with your account" );
+			allow_reconnect = FALSE;
 		}
 		else if( cmd[1] && strcmp( cmd[1], "SSD" ) == 0 )
 		{
-			hide_login_progress_error( gc, "Terminating session because of server shutdown" );
+			imcb_error( ic, "Terminating session because of server shutdown" );
 		}
 		else
 		{
-			hide_login_progress_error( gc, "Session terminated by remote server (reason unknown)" );
+			imcb_error( ic, "Session terminated by remote server (reason unknown)" );
 		}
 		
-		signoff( gc );
+		imc_logout( ic, allow_reconnect );
 		return( 0 );
 	}
 	else if( strcmp( cmd[0], "REA" ) == 0 )
 	{
 		if( num_parts != 5 )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
-		if( g_strcasecmp( cmd[3], gc->username ) == 0 )
+		if( g_strcasecmp( cmd[3], ic->acc->user ) == 0 )
 		{
+			set_t *s;
+			
 			http_decode( cmd[4] );
-			strncpy( gc->displayname, cmd[4], sizeof( gc->displayname ) );
-			gc->displayname[sizeof(gc->displayname)-1] = 0;
+			strncpy( ic->displayname, cmd[4], sizeof( ic->displayname ) );
+			ic->displayname[sizeof(ic->displayname)-1] = 0;
+			
+			if( ( s = set_find( &ic->acc->set, "display_name" ) ) )
+			{
+				g_free( s->value );
+				s->value = g_strdup( cmd[4] );
+			}
 		}
 		else
 		{
 			/* This is not supposed to happen, but let's handle it anyway... */
 			http_decode( cmd[4] );
-			serv_buddy_rename( gc, cmd[3], cmd[4] );
+			imcb_rename_buddy( ic, cmd[3], cmd[4] );
 		}
 	}
 	else if( strcmp( cmd[0], "IPG" ) == 0 )
 	{
-		do_error_dialog( gc, "Received IPG command, we don't handle them yet.", "MSN" );
+		imcb_error( ic, "Received IPG command, we don't handle them yet." );
 		
 		md->handler->msglen = atoi( cmd[1] );
 		
 		if( md->handler->msglen <= 0 )
 		{
-			hide_login_progress_error( gc, "Syntax error" );
-			signoff( gc );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
@@ -539,18 +573,17 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		int num = atoi( cmd[0] );
 		const struct msn_status_code *err = msn_status_by_number( num );
 		
-		g_snprintf( buf, sizeof( buf ), "Error reported by MSN server: %s", err->text );
-		do_error_dialog( gc, buf, "MSN" );
+		imcb_error( ic, "Error reported by MSN server: %s", err->text );
 		
 		if( err->flags & STATUS_FATAL )
 		{
-			signoff( gc );
+			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
 	else
 	{
-		debug( "Received unknown command from main server: %s", cmd[0] );
+		/* debug( "Received unknown command from main server: %s", cmd[0] ); */
 	}
 	
 	return( 1 );
@@ -558,7 +591,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 
 static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts )
 {
-	struct gaim_connection *gc = data;
+	struct im_connection *ic = data;
 	char *body;
 	int blen = 0;
 	
@@ -594,7 +627,7 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 				if( mtype && strcmp( mtype, "1" ) == 0 )
 				{
 					if( arg1 )
-						serv_got_crap( gc, "The server is going down for maintenance in %s minutes.", arg1 );
+						imcb_log( ic, "The server is going down for maintenance in %s minutes.", arg1 );
 				}
 				
 				if( arg1 ) g_free( arg1 );
@@ -609,9 +642,9 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 				char *inbox = msn_findheader( body, "Inbox-Unread:", blen );
 				char *folders = msn_findheader( body, "Folders-Unread:", blen );
 				
-				if( inbox && folders )
+				if( inbox && folders && set_getbool( &ic->acc->set, "mail_notifications" ) )
 				{
-					serv_got_crap( gc, "INBOX contains %s new messages, plus %s messages in other folders.", inbox, folders );
+					imcb_log( ic, "INBOX contains %s new messages, plus %s messages in other folders.", inbox, folders );
 				}
 			}
 			else if( g_strncasecmp( ct, "text/x-msmsgsemailnotification", 30 ) == 0 )
@@ -619,9 +652,9 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 				char *from = msn_findheader( body, "From-Addr:", blen );
 				char *fromname = msn_findheader( body, "From:", blen );
 				
-				if( from && fromname )
+				if( from && fromname && set_getbool( &ic->acc->set, "mail_notifications" ) )
 				{
-					serv_got_crap( gc, "Received an e-mail message from %s <%s>.", fromname, from );
+					imcb_log( ic, "Received an e-mail message from %s <%s>.", fromname, from );
 				}
 			}
 			else if( g_strncasecmp( ct, "text/x-msmsgsactivemailnotification", 35 ) == 0 )
@@ -640,21 +673,26 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 	return( 1 );
 }
 
-static void msn_auth_got_passport_id( struct passport_reply *rep )
+static void msn_auth_got_passport_token( struct msn_auth_data *mad )
 {
-	struct gaim_connection *gc = rep->data;
-	struct msn_data *md = gc->proto_data;
-	char *key = rep->result;
-	char buf[1024];
+	struct im_connection *ic = mad->data;
+	struct msn_data *md;
 	
-	if( key == NULL )
+	/* Dead connection? */
+	if( g_slist_find( msn_connections, ic ) == NULL )
+		return;
+	
+	md = ic->proto_data;
+	if( mad->token )
 	{
-		hide_login_progress( gc, "Error during Passport authentication" );
-		signoff( gc );
+		char buf[1024];
+		
+		g_snprintf( buf, sizeof( buf ), "USR %d TWN S %s\r\n", ++md->trId, mad->token );
+		msn_write( ic, buf, strlen( buf ) );
 	}
 	else
 	{
-		g_snprintf( buf, sizeof( buf ), "USR %d TWN S %s\r\n", ++md->trId, key );
-		msn_write( gc, buf, strlen( buf ) );
+		imcb_error( ic, "Error during Passport authentication: %s", mad->error );
+		imc_logout( ic, TRUE );
 	}
 }

@@ -30,7 +30,7 @@
 
 #define BUFSIZE 1100
 
-help_t *help_init( help_t **help )
+help_t *help_init( help_t **help, const char *helpfile )
 {
 	int i, buflen = 0;
 	help_t *h;
@@ -40,7 +40,7 @@ help_t *help_init( help_t **help )
 	
 	*help = h = g_new0 ( help_t, 1 );
 	
-	h->fd = open( global.helpfile, O_RDONLY
+	h->fd = open( helpfile, O_RDONLY
 #ifdef _WIN32
 				  | O_BINARY
 #endif
@@ -70,21 +70,20 @@ help_t *help_init( help_t **help )
 		if( !( t = strstr( s, "\n%\n" ) ) || s[0] != '?' )
 		{
 			/* FIXME: Clean up */
-//			help_close( *help );
-			*help = NULL;
+			help_free( help );
 			g_free( s );
-			return( NULL );
+			return NULL;
 		}
 		i = strchr( s, '\n' ) - s;
 		
-		if( h->string )
+		if( h->title )
 		{
 			h = h->next = g_new0( help_t, 1 );
 		}
-		h->string = g_new ( char, i );
+		h->title = g_new ( char, i );
 		
-		strncpy( h->string, s + 1, i - 1 );
-		h->string[i-1] = 0;
+		strncpy( h->title, s + 1, i - 1 );
+		h->title[i-1] = 0;
 		h->fd = (*help)->fd;
 		h->offset.file_offset = lseek( h->fd, 0, SEEK_CUR ) - buflen + i + 1;
 		h->length = t - s - i - 1;
@@ -102,37 +101,61 @@ help_t *help_init( help_t **help )
 	return( *help );
 }
 
-char *help_get( help_t **help, char *string )
+void help_free( help_t **help )
+{
+	help_t *h, *oh;
+	int last_fd = -1; /* Weak de-dupe */
+	
+	if( help == NULL || *help == NULL )
+		return;
+	
+	h = *help;
+	while( h )
+	{
+		if( h->fd != last_fd )
+		{
+			close( h->fd );
+			last_fd = h->fd;
+		}
+		g_free( h->title );
+		h = (oh=h)->next;
+		g_free( oh );
+	}
+	
+	*help = NULL;
+}
+
+char *help_get( help_t **help, char *title )
 {
 	time_t mtime;
 	struct stat stat[1];
 	help_t *h;
 
-	h=*help;	
-
-	while( h )
+	for( h = *help; h; h = h->next )
 	{
-		if( g_strcasecmp( h->string, string ) == 0 ) break;
-		h = h->next;
+		if( h->title != NULL && g_strcasecmp( h->title, title ) == 0 )
+			break;
 	}
 	if( h && h->length > 0 )
 	{
 		char *s = g_new( char, h->length + 1 );
 		
-		if( fstat( h->fd, stat ) != 0 )
-		{
-			g_free( h );
-			*help = NULL;
-			return NULL;
-		}
-		mtime = stat->st_mtime;
-		
-		if( mtime > h->mtime )
-			return NULL;
-		
 		s[h->length] = 0;
 		if( h->fd >= 0 )
 		{
+			if( fstat( h->fd, stat ) != 0 )
+			{
+				g_free( s );
+				return NULL;
+			}
+			mtime = stat->st_mtime;
+		
+			if( mtime > h->mtime )
+			{
+				g_free( s );
+				return NULL;
+			}
+			
 			lseek( h->fd, h->offset.file_offset, SEEK_SET );
 			read( h->fd, s, h->length );
 		}

@@ -13,11 +13,12 @@ etcdir='$prefix/etc/bitlbee/'
 mandir='$prefix/share/man/'
 datadir='$prefix/share/bitlbee/'
 config='/var/lib/bitlbee/'
+plugindir='$prefix/lib/bitlbee/'
+includedir='$prefix/include/bitlbee/'
+libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
-ipcsocket='/var/run/bitlbee'
-plugindir='$prefix/lib/bitlbee'
+ipcsocket='/var/run/bitlbee.sock'
 pcdir='$prefix/lib/pkgconfig'
-includedir='$prefix/include/bitlbee'
 
 msn=1
 jabber=1
@@ -26,11 +27,17 @@ yahoo=1
 
 debug=0
 strip=1
-ipv6=1
+gcov=0
+plugins=1
+
+events=glib
+ldap=0
 ssl=auto
 
 arch=`uname -s`
 cpu=`uname -m`
+
+GLIB_MIN_VERSION=2.4
 
 echo BitlBee configure
 
@@ -60,10 +67,11 @@ Option		Description				Default
 
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
+--gcov=0/1	Disable/enable test coverage reporting	$gcov
+--plugins=0/1	Disable/enable plugins support		$plugins
 
---ipv6=0/1	IPv6 socket support			$ipv6
-
---ssl=...	SSL library to use (gnutls, nss, openssl, sspi, bogus, auto)
+--events=...	Event handler (glib, libevent)		$events
+--ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
 							$ssl
 --arch=...  Override target architecture $arch
 
@@ -81,9 +89,11 @@ mandir=`eval echo "$mandir/" | sed 's/\/\{1,\}/\//g'`
 datadir=`eval echo "$datadir/" | sed 's/\/\{1,\}/\//g'`
 config=`eval echo "$config/" | sed 's/\/\{1,\}/\//g'`
 plugindir=`eval echo "$plugindir/" | sed 's/\/\{1,\}/\//g'`
+includedir=`eval echo "$includedir"/ | sed 's/\/\{1,\}/\//g'`
+libevent=`eval echo "$libevent"/ | sed 's/\/\{1,\}/\//g'`
+
 pidfile=`eval echo "$pidfile" | sed 's/\/\{1,\}/\//g'`
 ipcsocket=`eval echo "$ipcsocket" | sed 's/\/\{1,\}/\//g'`
-includedir=`eval echo "$includedir" | sed 's/\/\{1,\}/\//g'`
 pcdir=`eval echo "$pcdir" | sed 's/\/\{1,\}/\//g'`
 
 cat<<EOF>Makefile.settings
@@ -95,7 +105,6 @@ MANDIR=$mandir
 DATADIR=$datadir
 PLUGINDIR=$plugindir
 CONFIG=$config
-IPCSOCKET=$ipcsocket
 INCLUDEDIR=$includedir
 PCDIR=$pcdir
 
@@ -124,32 +133,31 @@ cat<<EOF>config.h
 #define CPU "$cpu"
 EOF
 
-if [ "$ipv6" = "1" ]; then
-	echo '#define IPV6' >> config.h
-fi
-
 if [ "$debug" = "1" ]; then
-	echo 'CFLAGS=-g' >> Makefile.settings
+	[ -z "$CFLAGS" ] && CFLAGS=-g
 	echo 'DEBUG=1' >> Makefile.settings
-	echo '#define DEBUG' >> config.h
+	CFLAGS="$CFLAGS -DDEBUG"
 else
-	echo 'CFLAGS=-O3' >> Makefile.settings
+	[ -z "$CFLAGS" ] && CFLAGS="-O2 -fno-strict-aliasing"
 fi
 
-echo CFLAGS+=-I`pwd` -I`pwd`/protocols -I. >> Makefile.settings
+echo CFLAGS=$CFLAGS >> Makefile.settings
+echo CFLAGS+=-I`pwd` -I`pwd`/lib -I`pwd`/protocols -I. >> Makefile.settings
 
 echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
 
 if [ -n "$CC" ]; then
-	echo "CC=$CC" >> Makefile.settings;
+	CC=$CC
 elif type gcc > /dev/null 2> /dev/null; then
-	echo "CC=gcc" >> Makefile.settings;
+	CC=gcc
 elif type cc > /dev/null 2> /dev/null; then
-	echo "CC=cc" >> Makefile.settings;
+	CC=cc
 else
 	echo 'Cannot find a C compiler, aborting.'
 	exit 1;
 fi
+
+echo "CC=$CC" >> Makefile.settings;
 
 if [ -n "$LD" ]; then
 	echo "LD=$LD" >> Makefile.settings;
@@ -164,37 +172,45 @@ if [ -z "$PKG_CONFIG" ]; then
 	PKG_CONFIG=pkg-config
 fi
 
-GLIB=0
-
 if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG glib-2.0; then
-	cat<<EOF>>Makefile.settings
+	if $PKG_CONFIG glib-2.0 --atleast-version=$GLIB_MIN_VERSION; then
+		cat<<EOF>>Makefile.settings
 EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0`
 CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0`
 EOF
-	echo '#define GLIB2' >> config.h
-	GLIB=2
-elif type glib-config > /dev/null 2> /dev/null; then
-	cat<<EOF>>Makefile.settings
-EFLAGS+=`glib-config --libs`
-CFLAGS+=`glib-config --cflags`
-EOF
-	echo '#define GLIB1' >> config.h
-	GLIB=1
-else
-	echo 'Cannot find glib development libraries, aborting. (Install libglib-dev?)'
-	exit 1;
-fi
-
-if [ GLIB = 1 -o -r /usr/include/iconv.h ]; then
-	:;
-elif [ -r /usr/local/include/iconv.h ]; then
-	echo CFLAGS+=-I/usr/local/include >> Makefile.settings;
+	else
+		echo
+		echo 'Found glib2 '`$PKG_CONFIG glib-2.0 --modversion`', but version '$GLIB_MIN_VERSION' or newer is required.'
+		exit 1
+	fi
 else
 	echo
-	echo 'Warning: Could not find iconv.h, you might have to install it and/or modify'
-	echo 'Makefile.settings to tell where this file is.';
+	echo 'Cannot find glib2 development libraries, aborting. (Install libglib2-dev?)'
+	exit 1
 fi
 
+if [ "$events" = "libevent" ]; then
+	if ! [ -f "${libevent}include/event.h" ]; then
+		echo
+		echo 'Warning: Could not find event.h, you might have to install it and/or specify'
+		echo 'its location using the --libevent= argument. (Example: If event.h is in'
+		echo '/usr/local/include and binaries are in /usr/local/lib: --libevent=/usr/local)'
+	fi
+	
+	echo '#define EVENTS_LIBEVENT' >> config.h
+	cat <<EOF>>Makefile.settings
+EFLAGS+=-levent -L${libevent}lib
+CFLAGS+=-I${libevent}include
+EOF
+elif [ "$events" = "glib" ]; then
+	## We already use glib anyway, so this is all we need (and in fact not even this, but just to be sure...):
+	echo '#define EVENTS_GLIB' >> config.h
+else
+	echo
+	echo 'ERROR: Unknown event handler specified.'
+	exit 1
+fi
+echo 'EVENT_HANDLER=events_'$events'.o' >> Makefile.settings
 
 detect_gnutls()
 {
@@ -226,67 +242,120 @@ EOF
 	fi;
 }
 
-if [ "$msn" = 1 -o "$jabber" = 1 ]; then
-	if [ "$ssl" = "auto" ]; then
-		detect_gnutls
-		if [ "$ret" = "0" ]; then
-			detect_nss
-		fi;
-	elif [ "$ssl" = "gnutls" ]; then
-		detect_gnutls;
-	elif [ "$ssl" = "nss" ]; then
-		detect_nss;
-	elif [ "$ssl" = "sspi" ]; then
-		echo
-	elif [ "$ssl" = "openssl" ]; then
-		echo
-		echo 'No detection code exists for OpenSSL. Make sure that you have a complete'
-		echo 'install of OpenSSL (including devel/header files) before reporting'
-		echo 'compilation problems.'
-		echo
-		echo 'Also, keep in mind that the OpenSSL is, according to some people, not'
-		echo 'completely GPL-compatible. Using GnuTLS or NSS is recommended and better'
-		echo 'supported by us. However, on many BSD machines, OpenSSL can be considered'
-		echo 'part of the operating system, which makes it GPL-compatible.'
-		echo
-		echo 'For more info, see: http://www.openssl.org/support/faq.html#LEGAL2'
-		echo '                    http://www.gnome.org/~markmc/openssl-and-the-gpl.html'
-		echo
-		echo 'Please note that distributing a BitlBee binary which links to OpenSSL is'
-		echo 'probably illegal. If you want to create and distribute a binary BitlBee'
-		echo 'package, you really should use GnuTLS or NSS instead.'
-		echo
-		echo 'Also, the OpenSSL license requires us to say this:'
-		echo ' *    "This product includes software developed by the OpenSSL Project'
-		echo ' *    for use in the OpenSSL Toolkit. (http://www.openssl.org/)"'
-		
-		echo 'EFLAGS+=-lssl -lcrypto' >> Makefile.settings
-		
-		ret=1;
-	elif [ "$ssl" = "bogus" ]; then
-		echo
-		echo 'Using bogus SSL code. This will not make the MSN module work, but it will'
-		echo 'allow you to use the Jabber module - although without working SSL support.'
-		
-		ret=1;
+detect_ldap()
+{
+	TMPFILE=`mktemp`
+	if $CC -o $TMPFILE -shared -lldap 2>/dev/null >/dev/null; then
+		cat<<EOF>>Makefile.settings
+EFLAGS+=-lldap
+CFLAGS+=
+EOF
+		ldap=1
+		rm -f $TMPFILE
+		ret=1
 	else
+		ldap=0
+		ret=0
+	fi
+}
+
+if [ "$ssl" = "auto" ]; then
+	detect_gnutls
+	if [ "$ret" = "0" ]; then
+		detect_nss
+	fi
+elif [ "$ssl" = "gnutls" ]; then
+	detect_gnutls
+elif [ "$ssl" = "nss" ]; then
+	detect_nss
+elif [ "$ssl" = "sspi" ]; then
+	echo
+elif [ "$ssl" = "openssl" ]; then
+	echo
+	echo 'No detection code exists for OpenSSL. Make sure that you have a complete'
+	echo 'install of OpenSSL (including devel/header files) before reporting'
+	echo 'compilation problems.'
+	echo
+	echo 'Also, keep in mind that the OpenSSL is, according to some people, not'
+	echo 'completely GPL-compatible. Using GnuTLS or NSS is recommended and better'
+	echo 'supported by us. However, on many BSD machines, OpenSSL can be considered'
+	echo 'part of the operating system, which makes it GPL-compatible.'
+	echo
+	echo 'For more info, see: http://www.openssl.org/support/faq.html#LEGAL2'
+	echo '                    http://www.gnome.org/~markmc/openssl-and-the-gpl.html'
+	echo
+	echo 'Please note that distributing a BitlBee binary which links to OpenSSL is'
+	echo 'probably illegal. If you want to create and distribute a binary BitlBee'
+	echo 'package, you really should use GnuTLS or NSS instead.'
+	echo
+	echo 'Also, the OpenSSL license requires us to say this:'
+	echo ' *    "This product includes software developed by the OpenSSL Project'
+	echo ' *    for use in the OpenSSL Toolkit. (http://www.openssl.org/)"'
+	
+	echo 'EFLAGS+=-lssl -lcrypto' >> Makefile.settings
+	
+	ret=1
+elif [ "$ssl" = "bogus" ]; then
+	echo
+	echo 'Using bogus SSL code. This means some features will not work properly.'
+	
+	## Yes, you, at the console! How can you authenticate if you don't have any SSL!?
+	if [ "$msn" = "1" ]; then
 		echo
-		echo 'ERROR: Unknown SSL library specified.'
-		exit 1;
+		echo 'Real SSL support is necessary for MSN authentication, will build without'
+		echo 'MSN protocol support.'
+		msn=0
 	fi
 	
-	if [ "$ret" = "0" ]; then
-		echo
-		echo 'ERROR: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
-		echo '       This is necessary for MSN and full Jabber support. To continue,'
-		echo '       install a suitable SSL library or disable MSN support (--msn=0).'
-		echo '       If you want Jabber without SSL support you can try --ssl=bogus.'
-		
-		exit 1;
-	fi;
-	
-	echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
+	ret=1
+else
+	echo
+	echo 'ERROR: Unknown SSL library specified.'
+	exit 1
 fi
+
+if [ "$ret" = "0" ]; then
+	echo
+	echo 'ERROR: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
+	echo '       Please note that this script doesn'\''t have detection code for OpenSSL,'
+	echo '       so if you want to use that, you have to select it by hand. If you don'\''t'
+	echo '       need SSL support, you can select the "bogus" SSL library. (--ssl=bogus)'
+	
+	exit 1
+fi;
+
+echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
+
+for i in /lib /usr/lib /usr/local/lib; do
+	if [ -f $i/libresolv.a ]; then
+		echo '#define HAVE_RESOLV_A' >> config.h
+		echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
+		break
+	fi
+done
+
+STORAGES="text xml"
+
+if [ "$ldap" = "auto" ]; then
+	detect_ldap
+fi
+
+if [ "$ldap" = 0 ]; then
+	echo "#undef WITH_LDAP" >> config.h
+elif [ "$ldap" = 1 ]; then
+	echo
+	echo 'LDAP support is a work in progress and does NOT work AT ALL right now.'
+	echo
+	exit 1
+	
+	echo "#define WITH_LDAP 1" >> config.h
+	STORAGES="$STORAGES ldap"
+fi
+
+for i in $STORAGES; do
+	STORAGE_OBJS="$STORAGE_OBJS storage_$i.o"
+done
+echo "STORAGE_OBJS="$STORAGE_OBJS >> Makefile.settings
 
 if [ "$strip" = 0 ]; then
 	echo "STRIP=\# skip strip" >> Makefile.settings;
@@ -300,14 +369,23 @@ else
 		echo "STRIP=$STRIP" >> Makefile.settings;
 	elif type strip > /dev/null 2> /dev/null; then
 		echo "STRIP=strip" >> Makefile.settings;
-	elif /bin/test -x /usr/ccs/bin/strip; then
-		echo "STRIP=/usr/ccs/bin/strip" >> Makefile.settings;
 	else
 		echo
 		echo 'No strip utility found, cannot remove unnecessary parts from executable.'
 		echo 'STRIP=\# skip strip' >> Makefile.settings
 		strip=0;
 	fi;
+fi
+
+if [ "$gcov" = "1" ]; then
+	echo "CFLAGS+=--coverage" >> Makefile.settings
+	echo "EFLAGS+=--coverage" >> Makefile.settings
+fi
+
+if [ "$plugins" = 0 ]; then
+	echo '#undef WITH_PLUGINS' >> config.h
+else
+	echo '#define WITH_PLUGINS' >> config.h
 fi
 
 echo
@@ -379,8 +457,8 @@ else
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then
-	echo "WARNING: You haven't selected any communication protocol to compile!"
-	echo "         Bitlbee will run, but you will be unable to connect to IM servers!"
+	echo "Warning: You haven't selected any communication protocol to compile!"
+	echo "         BitlBee will run, but you will be unable to connect to IM servers!"
 fi
 
 echo "PROTOCOLS = $protocols" >> Makefile.settings
@@ -393,17 +471,17 @@ Linux )
 GNU/* )
 ;;
 *BSD )
-	echo 'EFLAGS+=-liconv' >> Makefile.settings;
+;;
+Darwin )
+;;
+IRIX )
 ;;
 SunOS )
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
-	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
-Darwin )
-	echo 'EFLAGS+=-liconv' >> Makefile.settings;
-;;
-IRIX )
+AIX )
+	echo 'EFLAGS+=-Wl,-brtl' >> Makefile.settings
 ;;
 CYGWIN* )
 	echo 'Cygwin is not officially supported.'
@@ -423,29 +501,23 @@ echo
 echo 'Configuration done:'
 
 if [ "$debug" = "1" ]; then
-	echo '  Debugging enabled.';
+	echo '  Debugging enabled.'
 else
-	echo '  Debugging disabled.';
+	echo '  Debugging disabled.'
 fi
 
 if [ "$strip" = "1" ]; then
-	echo '  Binary stripping enabled.';
+	echo '  Binary stripping enabled.'
 else
-	echo '  Binary stripping disabled.';
+	echo '  Binary stripping disabled.'
 fi
 
-if [ "$msn" = "1" ]; then
-	echo '  Using SSL library: '$ssl;
-fi
-
-#if [ "$flood" = "0" ]; then
-#	echo '  Flood protection disabled.';
-#else
-#	echo '  Flood protection enabled.';
-#fi
+echo '  Using event handler: '$events
+echo '  Using SSL library: '$ssl
+echo '  Building with these storage backends: '$STORAGES
 
 if [ -n "$protocols" ]; then
-	echo '  Building with these protocols:' $protocols;
+	echo '  Building with these protocols:' $protocols
 else
-	echo '  Building without IM-protocol support. We wish you a lot of fun...';
+	echo '  Building without IM-protocol support. We wish you a lot of fun...'
 fi

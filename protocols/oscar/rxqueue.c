@@ -391,7 +391,7 @@ int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 
 		aim_bstream_rewind(&flaphdr);
 		start = aimbs_get8(&flaphdr);
-		do_error_dialog(sess->aux_data, "FLAP framing disrupted", "Gaim");
+		imcb_error(sess->aux_data, "FLAP framing disrupted");
 		aim_conn_close(conn);
 		return -1;
 	}	

@@ -33,16 +33,16 @@ To add an account to the account list you will need to use the <emphasis>account
 </para>
 
 <para>
-For instance, suppose you have an ICQ account with UIN <emphasis>72696705</emphasis> with password <emphasis>QuickStart</emphasis>, you would:
+For instance, suppose you have a Jabber account at jabber.org with handle <emphasis>bitlbee@jabber.org</emphasis> with password <emphasis>QuickStart</emphasis>, you would:
 </para>
 
 <ircexample>
-	<ircline nick="you">account add oscar 72696705 QuickStart login.icq.com</ircline>
+	<ircline nick="you">account add jabber bitlbee@jabber.org QuickStart</ircline>
 	<ircline nick="root">Account successfully added</ircline>
 </ircexample>
 
 <para>
-Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth argument (for msn and yahoo there is no fourth argument). For AOL Instant Messenger, the server name is <emphasis>login.oscar.aol.com</emphasis>. For ICQ, the server name is <emphasis>login.icq.com</emphasis>.
+Other available IM protocols are msn, oscar, and yahoo. OSCAR is the protocol used by ICQ and AOL. For more information about the <emphasis>account add</emphasis> command, see <emphasis>help account add</emphasis>.
 </para>
 
 <para>
@@ -60,11 +60,11 @@ When you are finished adding your account(s) use the <emphasis>account on</empha
 </para>
 
 <para>
-For most protocols (currently MSN, Jabber, Yahoo and AOL) BitlBee can download the contact list automatically from the IM server and all the on-line users should appear in the control channel when you log in.
+Now BitlBee logs in and downloads the contact list from the IM server. In a few seconds, all your on-line buddies should show up in the control channel.
 </para>
 
 <para>
-BitlBee will convert names into irc-friendly form (for instance: tux@example.com will be given the nickname tux). If you have more than one person who would have the same name by this logic (for instance: tux@example.com and tux@bitlbee.org) the second one to log on will be tux_. The same is true if you have a tux log on to AOL and a tux log on from Yahoo.
+BitlBee will convert names into IRC-friendly form (for instance: tux@example.com will be given the nickname tux). If you have more than one person who would have the same name by this logic (for instance: tux@example.com and tux@bitlbee.org) the second one to log on will be tux_. The same is true if you have a tux log on to AOL and a tux log on from Yahoo.
 </para>
 
 <para>
@@ -126,11 +126,15 @@ First of all, a person must be on your contact list for you to chat with them (u
 
 <ircexample>
 	<ircline nick="you">tux: hey, how's the weather down there?</ircline>
-	<ircline nick="tux"> you: a bit chilly!</ircline>
+	<ircline nick="tux">you: a bit chilly!</ircline>
 </ircexample>
 
 <para>
-If you'd rather chat with them in a separate window use the <emphasis>/msg</emphasis> or <emphasis>/query</emphasis> command, just like you would for a private message in IRC.  If you want to have messages automatically come up in private messages rather than in the &amp;bitlbee channel, use the <emphasis>set private</emphasis> command: <emphasis>set private true</emphasis> (<emphasis>set private false</emphasis> to change back).
+Note that, although all contacts are in the &amp;bitlbee channel, only tux will actually receive this message. The &amp;bitlbee channel shouldn't be confused with a real IRC channel.
+</para>
+
+<para>
+If you prefer chatting in a separate window, use the <emphasis>/msg</emphasis> or <emphasis>/query</emphasis> command, just like on real IRC. BitlBee will remember how you talk to someone and show his/her responses the same way. If you want to change the default behaviour (for people you haven't talked to yet), see <emphasis>help set private</emphasis>.
 </para>
 
 <para>

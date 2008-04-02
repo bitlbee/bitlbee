@@ -1,3 +1,169 @@
+Version 1.2.1:
+- Fixed proxy support.
+- Fixed stalling issues while connecting to Jabber when using the OpenSSL
+  module.
+- Fixed problem with GLib and ForkDaemon where processes didn't die when
+  the client disconnects.
+- Fixed handling of "set charset none". (Which pretty much breaks the account
+  completely in 1.2.)
+- You can now automatically identify yourself to BitlBee by setting a server
+  password in your IRC client.
+- Compatible with all crazy kinds of line endings that clients can send.
+
+Finished ...
+
+Version 1.2:
+- Added ForkDaemon mode next to the existing Daemon- and inetd modes. With
+  ForkDaemon you can run BitlBee as a stand-alone daemon and every connection
+  will run in its own process. No more need to configure inetd, and still you
+  don't get the stability problems BitlBee unfortunately still has in ordinary
+  (one-process) daemon mode.
+- Added inter-process/connection communication. This made it possible to
+  implement some IRC operator features like WALLOPs, KILL, DIE, REHASH and
+  more.
+- Added hooks for using libevent instead of GLib for event handling. This
+  should improve scalability, although this won't really be useful yet because
+  the one-process daemon mode is not reliable enough.
+- BitlBee now makes the buddy quits when doing "account off" look like a
+  netsplit. Modern IRC clients show this in a different, more compact way.
+  (This can be disabled if your client doesn't support this.)
+- GLib 1.x compatibility was dropped. BitlBee now requires GLib 2.4 or newer.
+  This allows us to use more GLib features (like the XML parser). By now GLib
+  1.x is so old that supporting it really isn't necessary anymore.
+- Many, many, MANY little changes, improvements, fixes. Using non-blocking
+  I/O as much as possible, replaced the Gaim (0.59, IOW heavily outdated)
+  API, fixed lots of little bugs (including bugs that affected daemon mode
+  stability). See the bzr logs for more information.
+- One of the user-visible changes from the API change: You can finally see
+  all away states/messages properly.
+- Added units tests. Test coverage is very minimal for now.
+- Better charset handling: Everything is just converted from/to UTF-8 right
+  in the IRC core, and charset mismatches are detected (if possible) and the
+  user is asked to resolve this before continuing. Also, UTF-8 is the default
+  setting now, since that's how the world seems to work these days.
+- One can now keep hashed passwords in bitlbee.conf instead of the cleartext
+  version.
+- Most important change: New file format for user data (accounts, nicks and
+  settings). Migration to the new format should happen transparently,
+  BitlBee will read the old files and once you quit/save it will save in the
+  new format. It is recommended to delete the old files (BitlBee doesn't do
+  this automatically, it will just ignore them) since they won't be used
+  anymore (and since the old file format is a security risk). Some advantages
+  of this file format switch:
+  * Safer format, since the identify-password is now salted before generating
+    a checksum. This way one can't use MD5 reverse lookup databases to crack
+    passwords. Also, the IM-account passwords are encrypted using RC4 instead
+    of the simple obfuscation scheme which BitlBee used so far.
+  * Easier to extend than the previous format (at least the .nicks format was
+    horribly limited).
+  * Nicknames for buddies are now saved per-account instead of per-protocol.
+    So far having one buddy on multiple accounts of the same protocol was a
+    problem because the nicks generated for the two "instances" of this buddy
+    were very unpredictable.
+    NOTE: This also means that "account del" removes not just the account,
+    BUT ALSO ALL NICKNAMES! If you're changing IM accounts and don't want to
+    lose the nicknames, you can now use "account set" to change the username
+    and password for the existing connection.
+  * Per-account settings (see the new "account set" command).
+- A brand new Jabber module. Besides the major code cleanup, it also has
+  has these new features:
+  * Pretty complete XMPP support: RFC3920, RFC3921 plus a number of XEPs
+    including XEP45, XEP73 and XEP85. (See http://www.xmpp.org/ for what all
+    these things mean exactly.) Privacy lists are not supported for obvious
+    reasons.
+  * This complete support also includes TLS and SASL support and SRV record
+    lookup. This means that specifying a server tag for connections should
+    (almost) never be necessary anymore, BitlBee can find the server and can
+    automatically convert plaintext connections to TLS-encrypted ones.
+  * XEP45: Jabber chatroom support!
+  * XEP85 means typing notifications. The older XEP22 (still used by some
+    clients including Gaim <2.0) is not supported.
+  * Better handling of buddies who have more than one resource on-line. As
+    long as one resource is on-line (and visible), BitlBee will show this. 
+    (The previous module didn't keep track of resources and sent an offline
+    event as soon as any resource disappears.)
+  * You can now set your resource priority.
+  * The info command now gives away state/message information for all
+    resources available for that buddy. (Of course this only works if the
+    buddy is in your contact list.)
+  * An XML console (add xmlconsole to your contact list or see "help set
+    xmlconsole" if you want it permanently).
+- The Yahoo! module now says it supports YMSG protocol version 12, which will
+  hopefully keep the Yahoo module working after 2008-04-02 (when Yahoo! is
+  dropping support for version 6.x of their client).
+- MSN switchboard handling changes. Hopefully less messages will get lost now,
+  although things are still not perfect.
+
+Finished 17 Mar 2008
+
+Version 1.0.4:
+- Removed sethostent(), which causes problems for many people, especially on
+  *BSD. This is basically the reason for this release.
+- "allow" command actually displays the allow list, not the block list.
+- Yahoo away state/msg fix.
+- Don't display "Gender: Male" by default if nothing's filled in (OSCAR
+  "info" command)
+- Fixed account cleanup (possible infinite loop) in irc_free().
+- Fixed configdir error message to not always display the compile-time
+  setting.
+
+Finished 20 Aug 2007
+
+Version 1.0.3:
+- Fixed ugliness in block/allow list commands (still not perfect though, the
+  list is empty or not up-to-date for most protocols).
+- OSCAR module doesn't send the ICQ web-aware flag anymore, which seems to
+  get rid of a lot of ICQ spam.
+- added show_got_added(), BitlBee asks you, after authorizing someone, if you
+  want to add him/her to your list too.
+- add -tmp, mainly convenient if you want to talk to people who are not in
+  your list.
+- Fixed ISON command, should work better with irssi now.
+- Fixed compilation with tcc.
+- Fixed xinetd-file.
+- Misc. (crash)bug fixes, including one in the root command parsing that
+  caused mysterious error messages sometimes.
+
+Finished 24 Jun 2006 (Happy 4th birthday, BitlBee!)
+
+Version 1.0.2:
+- Pieces of code cleanup, fixes for possible problems in error checking.
+- Fixed an auto-reconnect cleanup problem that caused crashes in daemon mode.
+- /AWAY in daemon mode now doesn't set the away state for every connection
+  anymore.
+- Fixed a crash-bug on empty help subjects.
+- Jabber now correctly sets the current away state when connecting.
+- Added Invisible and Hidden to the away state alias list, invisible mode
+  should be pretty usable now.
+- Fixed handling of iconv(): It's now done for everything that goes between
+  BitlBee and the IRC client, instead of doing it (almost) every time
+  something goes to or come from the IM-modules. Should've thought about
+  that before. :-)
+- When cleaning up MSN switchboards with unsent msgs, it now also says which
+  contact those messages were meant for.
+- You can now use the block and allow commands to see your current block/
+  allow list.
+
+Finished 1 Apr 2006
+
+Version 1.0.1:
+- Support for AIM groupchats.
+- Improved typing notification support for at least AIM.
+- BitlBee sends a 005 reply when logging in, this informs modern IRC clients
+  of some of BitlBee's capabilities. This might also solve problems some
+  people were having with the new control channel name.
+- MSN switchboards are now properly reset when talking to a person who is
+  offline. This fixes problems with messages to MSN people that sometimes
+  didn't arrive.
+- Fixed one of the problems that made BitlBee show online Jabber people as
+  offline.
+- Fixed problems with commas in MSN passwords.
+- Added some consts for read-only data, which should make the BitlBee per-
+  process memory footprint a bit smaller.
+- Other bits of code cleanup.
+
+Finished 14 Jan 2006
+
 Version 1.0:
 - Removed some crashy debugging code.
 - QUIT command now works before logging in. (Mainly an RFC-compliancy fix.)

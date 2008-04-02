@@ -33,10 +33,14 @@ typedef struct account
 	char *pass;
 	char *server;
 	
+	int auto_connect;
 	int reconnect;
 	
+	set_t *set;
+	GHashTable *nicks;
+	
 	struct irc *irc;
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	struct account *next;
 } account_t;
 
@@ -45,5 +49,11 @@ account_t *account_get( irc_t *irc, char *id );
 void account_del( irc_t *irc, account_t *acc );
 void account_on( irc_t *irc, account_t *a );
 void account_off( irc_t *irc, account_t *a );
+
+char *set_eval_account( set_t *set, char *value );
+
+#define ACC_SET_NOSAVE		1
+#define ACC_SET_OFFLINE_ONLY	2
+#define ACC_SET_ONLINE_ONLY	4
 
 #endif

@@ -33,56 +33,58 @@
 #include <stdio.h>
 #include <errno.h>
 
-gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data );
+static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition condition );
 
 int bitlbee_daemon_init()
 {
-#ifdef IPV6
-	struct sockaddr_in6 listen_addr;
-#else
-	struct sockaddr_in listen_addr;
-#endif
+	struct addrinfo *res, hints, *addrinfo_bind;
 	int i;
-	GIOChannel *ch;
 	FILE *fp;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
 	
-	global.listen_socket = socket( AF_INETx, SOCK_STREAM, 0 );
-	if( global.listen_socket == -1 )
-	{
-		log_error( "socket" );
-		return( -1 );
-	}
-	
-	/* TIME_WAIT (?) sucks.. */
-	i = 1;
-	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
-	
-#ifdef IPV6
-	listen_addr.sin6_family = AF_INETx;
-	listen_addr.sin6_port = htons( global.conf->port );
-	i = inet_pton( AF_INETx, ipv6_wrap( global.conf->iface ), &listen_addr.sin6_addr );
-#else
-	listen_addr.sin_family = AF_INETx;
-	listen_addr.sin_port = htons( global.conf->port );
-	i = inet_pton( AF_INETx, global.conf->iface, &listen_addr.sin_addr );
+	memset( &hints, 0, sizeof( hints ) );
+	hints.ai_family = PF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE
+#ifdef AI_ADDRCONFIG
+	               | AI_ADDRCONFIG
 #endif
-	
-	if( i != 1 )
+	;
+
+	i = getaddrinfo( global.conf->iface, global.conf->port, &hints, &addrinfo_bind );
+	if( i )
 	{
-		log_message( LOGLVL_ERROR, "Couldn't parse address `%s'", global.conf->iface );
-		return( -1 );
+		log_message( LOGLVL_ERROR, "Couldn't parse address `%s': %s",
+		                           global.conf->iface, gai_strerror(i) );
+		return -1;
 	}
-	
-	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( listen_addr ) );
-	if( i == -1 )
+
+	global.listen_socket = -1;
+
+	for( res = addrinfo_bind; res; res = res->ai_next )
 	{
-		log_error( "bind" );
-		return( -1 );
+		global.listen_socket = socket( res->ai_family, res->ai_socktype, res->ai_protocol );
+		if( global.listen_socket < 0 )
+			continue;
+
+		/* TIME_WAIT (?) sucks.. */
+		i = 1;
+		setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
+
+		i = bind( global.listen_socket, res->ai_addr, res->ai_addrlen );
+		if( i == -1 )
+		{
+			log_error( "bind" );
+			return( -1 );
+		}
+
+		break;
 	}
-	
+
+	freeaddrinfo( addrinfo_bind );
+
 	i = listen( global.listen_socket, 10 );
 	if( i == -1 )
 	{
@@ -90,8 +92,7 @@ int bitlbee_daemon_init()
 		return( -1 );
 	}
 	
-	ch = g_io_channel_unix_new( global.listen_socket );
-	global.listen_watch_source_id = g_io_add_watch( ch, G_IO_IN, bitlbee_io_new_client, NULL );
+	global.listen_watch_source_id = b_input_add( global.listen_socket, GAIM_INPUT_READ, bitlbee_io_new_client, NULL );
 	
 #ifndef _WIN32
 	if( !global.conf->nofork )
@@ -118,8 +119,7 @@ int bitlbee_daemon_init()
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_master_load_state();
 
-	if( global.conf->runmode == RUNMODE_DAEMON || 
-		global.conf->runmode == RUNMODE_FORKDAEMON )
+	if( global.conf->runmode == RUNMODE_DAEMON || global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_master_listen_socket();
 	
 #ifndef _WIN32
@@ -145,17 +145,11 @@ int bitlbee_inetd_init()
 	return( 0 );
 }
 
-gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condition, gpointer data )
+gboolean bitlbee_io_current_client_read( gpointer data, gint fd, b_input_condition cond )
 {
 	irc_t *irc = data;
 	char line[513];
 	int st;
-	
-	if( condition & G_IO_ERR || condition & G_IO_HUP )
-	{
-		irc_abort( irc, 1, "Read error" );
-		return FALSE;
-	}
 	
 	st = read( irc->fd, line, sizeof( line ) - 1 );
 	if( st == 0 )
@@ -192,7 +186,7 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	/* Normally, irc_process() shouldn't call irc_free() but irc_abort(). Just in case: */
 	if( !g_slist_find( irc_connection_list, irc ) )
 	{
-		log_message( LOGLVL_WARNING, "Abnormal termination of connection with fd %d.", irc->fd );
+		log_message( LOGLVL_WARNING, "Abnormal termination of connection with fd %d.", fd );
 		return FALSE;
 	} 
 	
@@ -206,14 +200,14 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	return TRUE;
 }
 
-gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condition, gpointer data )
+gboolean bitlbee_io_current_client_write( gpointer data, gint fd, b_input_condition cond )
 {
 	irc_t *irc = data;
 	int st, size;
 	char *temp;
 
 	if( irc->sendbuffer == NULL )
-		return( FALSE );
+		return FALSE;
 	
 	size = strlen( irc->sendbuffer );
 	st = write( irc->fd, irc->sendbuffer, size );
@@ -234,10 +228,10 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 		irc->sendbuffer = NULL;
 		irc->w_watch_source_id = 0;
 		
-		if( irc->status == USTATUS_SHUTDOWN )
+		if( irc->status & USTATUS_SHUTDOWN )
 			irc_free( irc );
 		
-		return( FALSE );
+		return FALSE;
 	}
 	else
 	{
@@ -245,13 +239,13 @@ gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condi
 		g_free( irc->sendbuffer );
 		irc->sendbuffer = temp;
 		
-		return( TRUE );
+		return TRUE;
 	}
 }
 
-gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
+static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition condition )
 {
-	size_t size = sizeof( struct sockaddr_in );
+	socklen_t size = sizeof( struct sockaddr_in );
 	struct sockaddr_in conn_info;
 	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
 	
@@ -285,10 +279,10 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 			child = g_new0( struct bitlbee_child, 1 );
 			child->pid = client_pid;
 			child->ipc_fd = fds[0];
-			child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+			child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
 			child_list = g_slist_append( child_list, child );
 			
-			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", client_pid );
+			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", (int) client_pid );
 			
 			/* Close some things we don't need in the parent process. */
 			close( new_socket );
@@ -298,16 +292,22 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 		{
 			irc_t *irc;
 			
+			/* Since we're fork()ing here, let's make sure we won't
+			   get the same random numbers as the parent/siblings. */
+			srand( time( NULL ) ^ getpid() );
+			
+			b_main_init();
+			
 			/* Close the listening socket, we're a client. */
 			close( global.listen_socket );
-			g_source_remove( global.listen_watch_source_id );
+			b_event_remove( global.listen_watch_source_id );
 			
 			/* Make the connection. */
 			irc = irc_new( new_socket );
 			
 			/* We can store the IPC fd there now. */
 			global.listen_socket = fds[1];
-			global.listen_watch_source_id = gaim_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
+			global.listen_watch_source_id = b_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
 			
 			close( fds[0] );
 			
@@ -324,12 +324,14 @@ gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpoi
 	return TRUE;
 }
 
-void bitlbee_shutdown( gpointer data )
+gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond )
 {
 	/* Try to save data for all active connections (if desired). */
 	while( irc_connection_list != NULL )
 		irc_free( irc_connection_list->data );
 	
 	/* We'll only reach this point when not running in inetd mode: */
-	g_main_quit( global.loop );
+	b_main_quit();
+	
+	return FALSE;
 }

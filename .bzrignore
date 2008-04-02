@@ -20,3 +20,10 @@ decode
 encode
 bitlbee.pc
 .gdb_history
+tests/check
+*.gcda
+*.gcov
+*.gcno
+*.o
+coverage
+bitlbee.info

@@ -936,7 +936,7 @@ static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	channel = aimbs_get16(bs);
 
 	if (channel != 0x01) {
-		do_error_dialog(sess->aux_data, "icbm: ICBM recieved on unsupported channel.  Ignoring.", "Gaim");
+		imcb_error(sess->aux_data, "icbm: ICBM recieved on unsupported channel.  Ignoring.");
 		return 0;
 	}
 
@@ -1344,7 +1344,7 @@ static int incomingim_ch1(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 			args.extdata = aimbs_getraw(bs, args.extdatalen);
 
 		} else {
-			// do_error_dialog(sess->aux_data, "Unknown TLV encountered", "Gaim");
+			// imcb_error(sess->aux_data, "Unknown TLV encountered");
 		}
 
 		/*
@@ -1416,7 +1416,7 @@ static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod
 	guint8 msgtype, msgflags;
     guint8 *plugin;
     int i = 0, tmp = 0;
-    struct gaim_connection *gc = sess->aux_data;
+    struct im_connection *ic = sess->aux_data;
 
     /* at the moment we just can deal with requests, not with cancel or accept */
     if (args->status != 0) return;
@@ -1468,7 +1468,7 @@ static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod
             case AIM_MTYPE_AUTOFFC:
 	    case 0x9c:	/* ICQ 5 seems to send this */
                 aim_send_im_ch2_statusmessage(sess, userinfo->sn, args->cookie,
-                        gc->away ? gc->away : "", sess->aim_icq_state, dc);
+                        ic->away ? ic->away : "", sess->aim_icq_state, dc);
                 break;
 
         }
@@ -1516,7 +1516,7 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	 */
 	cookie2 = aimbs_getraw(&bbs, 8);
 	if (memcmp(cookie, cookie2, 8) != 0) 
-		do_error_dialog(sess->aux_data, "rend: warning cookies don't match!", "Gaim");
+		imcb_error(sess->aux_data, "rend: warning cookies don't match!");
 	memcpy(args.cookie, cookie2, 8);
 	g_free(cookie2);
 
@@ -1782,7 +1782,7 @@ static int incomingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 	} else {
 
-		do_error_dialog(sess->aux_data, "ICBM received on an unsupported channel.  Ignoring.", "Gaim");
+		imcb_error(sess->aux_data, "ICBM received on an unsupported channel.  Ignoring.");
 
 		return 0;
 	}

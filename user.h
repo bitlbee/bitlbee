@@ -22,6 +22,8 @@
   if not, write to the Free Software Foundation, Inc., 59 Temple Place,
   Suite 330, Boston, MA  02111-1307  USA
 */
+#ifndef __USER_H__
+#define __USER_H__
 
 typedef struct __USER
 {
@@ -37,7 +39,7 @@ typedef struct __USER
 	
 	char *handle;
 	char *group;
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 
  	char *sendbuf;
  	time_t last_typing_notice;
@@ -53,5 +55,7 @@ typedef struct __USER
 user_t *user_add( struct irc *irc, char *nick );
 int user_del( irc_t *irc, char *nick );
 G_MODULE_EXPORT user_t *user_find( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_findhandle( struct gaim_connection *gc, char *handle );
+G_MODULE_EXPORT user_t *user_findhandle( struct im_connection *ic, char *handle );
 void user_rename( irc_t *irc, char *oldnick, char *newnick );
+
+#endif /* __USER_H__ */

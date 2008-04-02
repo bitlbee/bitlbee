@@ -260,6 +260,7 @@ guint32 aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 
 		if (!identified) {
 			/*FIXME*/
+			/*REMOVEME :-)
 			g_strdup_printf("unknown capability: {%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x}\n",
 					cap[0], cap[1], cap[2], cap[3],
 					cap[4], cap[5],
@@ -267,7 +268,7 @@ guint32 aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 					cap[8], cap[9],
 					cap[10], cap[11], cap[12], cap[13],
 					cap[14], cap[15]);
-			
+			*/
 		}
 
 		g_free(cap);
@@ -472,7 +473,7 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 			 *
 			 */
 #ifdef DEBUG
-			// do_error_dialog(sess->aux_data, G_STRLOC, "Unknown TLV encountered");
+			// imcb_error(sess->aux_data, G_STRLOC);
 #endif
 
 		}
@@ -633,7 +634,7 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	origsnac = aim_remsnac(sess, snac->id);
 
 	if (!origsnac || !origsnac->data) {
-		do_error_dialog(sess->aux_data, "major problem: no snac stored!", "Gaim");
+		imcb_error(sess->aux_data, "major problem: no snac stored!");
 		return 0;
 	}
 
@@ -642,7 +643,7 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	if ((inforeq->infotype != AIM_GETINFO_GENERALINFO) &&
 			(inforeq->infotype != AIM_GETINFO_AWAYMESSAGE) &&
 			(inforeq->infotype != AIM_GETINFO_CAPABILITIES)) {
-		do_error_dialog(sess->aux_data, "unknown infotype in request!", "Gaim");
+		imcb_error(sess->aux_data, "unknown infotype in request!");
 		return 0;
 	}
 

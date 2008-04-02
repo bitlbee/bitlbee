@@ -130,21 +130,6 @@ aim_msgcookie_t *aim_checkcookie(aim_session_t *sess, const guint8 *cookie, int 
 	return NULL;
 }
 
-#if 0 /* debugging feature */
-int aim_dumpcookie(aim_msgcookie_t *cookie) 
-{
-
-	if (!cookie)
-		return -EINVAL;
-
-	printf("\tCookie at %p: %d/%s with %p, next %p\n", 
-			cookie, cookie->type, cookie->cookie, 
-			cookie->data, cookie->next);
-
-	return 0;
-}
-#endif
-
 /**
  * aim_cookie_free - free an aim_msgcookie_t struct
  * @sess: session to remove the cookie from

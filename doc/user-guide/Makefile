@@ -27,7 +27,7 @@ help.xml: commands.xml
 %.db.xml: %.xml docbook.xsl
 	xsltproc --xinclude --output $@ docbook.xsl $< 
 
-help.txt: help.xml help.xsl
+help.txt: help.xml help.xsl commands.xml misc.xml quickstart.xml
 	xsltproc --stringparam extraparanewline "$(EXTRAPARANEWLINE)" --xinclude help.xsl $< | perl -0077 -pe 's/\n\n%/\n%/s; s/_b_/\002/g;' > $@
 
 clean: 

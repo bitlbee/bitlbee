@@ -9,9 +9,9 @@
 -include Makefile.settings
 
 # Program variables
-objects = account.o bitlbee.o crypting.o help.o ini.o ipc.o irc.o irc_commands.o nick.o query.o root_commands.o set.o storage.o storage_text.o url.o user.o util.o
-headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ini.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h url.h user.h protocols/http_client.h protocols/md5.h protocols/nogaim.h protocols/proxy.h protocols/sha.h protocols/ssl_client.h
-subdirs = protocols
+objects = account.o bitlbee.o crypting.o help.o ipc.o irc.o irc_commands.o nick.o query.o root_commands.o set.o storage.o $(STORAGE_OBJS) user.o
+headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h user.h lib/events.h lib/http_client.h lib/ini.h lib/md5.h lib/misc.h lib/proxy.h lib/sha1.h lib/ssl_client.h lib/url.h protocols/nogaim.h
+subdirs = lib protocols
 
 ifeq ($(ARCH),Windows)
 objects += win32.o
@@ -45,10 +45,22 @@ Makefile.settings:
 
 clean: $(subdirs)
 	rm -f *.o $(OUTFILE) core utils/bitlbeed encode decode
+	$(MAKE) -C tests clean
 
 distclean: clean $(subdirs)
-	rm -f Makefile.settings config.h
+	rm -f Makefile.settings config.h bitlbee.pc
 	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -exec rm -f {} \;
+	$(MAKE) -C tests distclean
+
+check: all
+	$(MAKE) -C tests
+
+gcov: check
+	gcov *.c
+
+lcov: check
+	lcov --directory . --capture --output-file bitlbee.info
+	genhtml -o coverage bitlbee.info
 
 install-doc:
 	$(MAKE) -C doc install
@@ -108,7 +120,7 @@ ifndef DEBUG
 endif
 
 encode: crypting.c
-	$(CC) crypting.c protocols/md5.c $(CFLAGS) -o encode -DCRYPTING_MAIN $(CFLAGS) $(EFLAGS) $(LFLAGS)
+	$(CC) crypting.c lib/md5.c $(CFLAGS) -o encode -DCRYPTING_MAIN $(CFLAGS) $(EFLAGS) $(LFLAGS)
 
 decode: encode
 	cp encode decode

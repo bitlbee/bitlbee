@@ -33,52 +33,50 @@
 #include "url.h"
 #include "ipc.h"
 
-#include "protocols/proxy.h"
-
-char *CONF_FILE;
+#include "proxy.h"
 
 static int conf_loadini( conf_t *conf, char *file );
 
 conf_t *conf_load( int argc, char *argv[] )
 {
 	conf_t *conf;
-	int opt, i;
+	int opt, i, config_missing = 0;
 	
 	conf = g_new0( conf_t, 1 );
 	
-#ifdef IPV6
-	conf->iface = "::";
-#else
-	conf->iface = "0.0.0.0";
-#endif
-	conf->port = 6667;
+	conf->iface = NULL;
+	conf->port = g_strdup( "6667" );
 	conf->nofork = 0;
 	conf->verbose = 0;
-	conf->primary_storage = "text";
+	conf->primary_storage = g_strdup( "xml" );
+	conf->migrate_storage = g_strsplit( "text", ",", -1 );
 	conf->runmode = RUNMODE_INETD;
 	conf->authmode = AUTHMODE_OPEN;
 	conf->auth_pass = NULL;
 	conf->oper_pass = NULL;
 	conf->configdir = g_strdup( CONFIG );
 	conf->plugindir = g_strdup( PLUGINDIR );
-	conf->pidfile = g_strdup( "/var/run/bitlbee.pid" );
+	conf->pidfile = g_strdup( PIDFILE );
 	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
+	conf->user = NULL;
 	proxytype = 0;
 	
-	i = conf_loadini( conf, CONF_FILE );
+	i = conf_loadini( conf, global.conf_file );
 	if( i == 0 )
 	{
-		fprintf( stderr, "Error: Syntax error in configuration file `%s'.\n", CONF_FILE );
-		return( NULL );
+		fprintf( stderr, "Error: Syntax error in configuration file `%s'.\n", global.conf_file );
+		return NULL;
 	}
 	else if( i == -1 )
 	{
-		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", CONF_FILE );
+		config_missing ++;
+		/* Whine after parsing the options if there was no -c pointing
+		   at a *valid* configuration file. */
 	}
 	
-	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:" ) ) >= 0 )
+	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:u:" ) ) >= 0 )
 	/*     ^^^^ Just to make sure we skip this step from the REHASH handler. */
 	{
 		if( opt == 'i' )
@@ -87,12 +85,8 @@ conf_t *conf_load( int argc, char *argv[] )
 		}
 		else if( opt == 'p' )
 		{
-			if( ( sscanf( optarg, "%d", &i ) != 1 ) || ( i <= 0 ) || ( i > 65535 ) )
-			{
-				fprintf( stderr, "Invalid port number: %s\n", optarg );
-				return( NULL );
-			}
-			conf->port = i;
+			g_free( conf->port );
+			conf->port = g_strdup( optarg );
 		}
 		else if( opt == 'P' )
 		{
@@ -111,16 +105,16 @@ conf_t *conf_load( int argc, char *argv[] )
 			conf->runmode = RUNMODE_FORKDAEMON;
 		else if( opt == 'c' )
 		{
-			if( strcmp( CONF_FILE, optarg ) != 0 )
+			if( strcmp( global.conf_file, optarg ) != 0 )
 			{
-				g_free( CONF_FILE );
-				CONF_FILE = g_strdup( optarg );
+				g_free( global.conf_file );
+				global.conf_file = g_strdup( optarg );
 				g_free( conf );
 				/* Re-evaluate arguments. Don't use this option twice, 
 				   you'll end up in an infinite loop! Hope this trick
 				   works with all libcs BTW.. */
 				optind = 1;
-				return( conf_load( argc, argv ) );
+				return conf_load( argc, argv );
 			}
 		}
 		else if( opt == 'd' )
@@ -130,7 +124,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		}
 		else if( opt == 'h' )
 		{
-			printf( "Usage: bitlbee [-D [-i <interface>] [-p <port>] [-n] [-v]] [-I]\n"
+			printf( "Usage: bitlbee [-D/-F [-i <interface>] [-p <port>] [-n] [-v]] [-I]\n"
 			        "               [-c <file>] [-d <dir>] [-h]\n"
 			        "\n"
 			        "An IRC-to-other-chat-networks gateway\n"
@@ -138,6 +132,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -I  Classic/InetD mode. (Default)\n"
 			        "  -D  Daemon mode. (Still EXPERIMENTAL!)\n"
 			        "  -F  Forking daemon. (one process per client)\n"
+				"  -u  Run daemon as specified user.\n"
 			        "  -P  Specify PID-file (not for inetd mode)\n"
 			        "  -i  Specify the interface (by IP address) to listen on.\n"
 			        "      (Default: 0.0.0.0 (any interface))\n"
@@ -147,7 +142,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -c  Load alternative configuration file\n"
 			        "  -d  Specify alternative user configuration directory\n"
 			        "  -h  Show this help page.\n" );
-			return( NULL );
+			return NULL;
 		}
 		else if( opt == 'R' )
 		{
@@ -156,6 +151,11 @@ conf_t *conf_load( int argc, char *argv[] )
 			   when initializing ForkDaemon. (This option only makes sense in that
 			   mode anyway!) */
 			ipc_master_set_statefile( optarg );
+		}
+		else if( opt == 'u' )
+		{
+			g_free( conf->user );
+			conf->user = g_strdup( optarg );
 		}
 	}
 	
@@ -168,7 +168,10 @@ conf_t *conf_load( int argc, char *argv[] )
 		conf->configdir = s;
 	}
 	
-	return( conf );
+	if( config_missing )
+		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", global.conf_file );
+	
+	return conf;
 }
 
 static int conf_loadini( conf_t *conf, char *file )
@@ -177,7 +180,7 @@ static int conf_loadini( conf_t *conf, char *file )
 	int i;
 	
 	ini = ini_open( file );
-	if( ini == NULL ) return( -1 );
+	if( ini == NULL ) return -1;
 	while( ini_read( ini ) )
 	{
 		if( g_strcasecmp( ini->section, "settings" ) == 0 )
@@ -198,16 +201,13 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else if( g_strcasecmp( ini->key, "daemoninterface" ) == 0 )
 			{
+				g_free( conf->iface );
 				conf->iface = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "daemonport" ) == 0 )
 			{
-				if( ( sscanf( ini->value, "%d", &i ) != 1 ) || ( i <= 0 ) || ( i > 65535 ) )
-				{
-					fprintf( stderr, "Invalid port number: %s\n", ini->value );
-					return( 0 );
-				}
-				conf->port = i;
+				g_free( conf->port );
+				conf->port = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "authmode" ) == 0 )
 			{
@@ -220,14 +220,17 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else if( g_strcasecmp( ini->key, "authpassword" ) == 0 )
 			{
+				g_free( conf->auth_pass );
 				conf->auth_pass = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "operpassword" ) == 0 )
 			{
+				g_free( conf->oper_pass );
 				conf->oper_pass = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "hostname" ) == 0 )
 			{
+				g_free( conf->hostname );
 				conf->hostname = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "configdir" ) == 0 )
@@ -248,14 +251,14 @@ static int conf_loadini( conf_t *conf, char *file )
 			else if( g_strcasecmp( ini->key, "account_storage_migrate" ) == 0 )
 			{
 				g_strfreev( conf->migrate_storage );
-				conf->migrate_storage = g_strsplit( ini->value, " \t,;", -1 );
+				conf->migrate_storage = g_strsplit_set( ini->value, " \t,;", -1 );
 			}
 			else if( g_strcasecmp( ini->key, "pinginterval" ) == 0 )
 			{
 				if( sscanf( ini->value, "%d", &i ) != 1 )
 				{
 					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
-					return( 0 );
+					return 0;
 				}
 				conf->ping_interval = i;
 			}
@@ -264,7 +267,7 @@ static int conf_loadini( conf_t *conf, char *file )
 				if( sscanf( ini->value, "%d", &i ) != 1 )
 				{
 					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
-					return( 0 );
+					return 0;
 				}
 				conf->ping_timeout = i;
 			}
@@ -276,7 +279,7 @@ static int conf_loadini( conf_t *conf, char *file )
 				{
 					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
 					g_free( url );
-					return( 0 );
+					return 0;
 				}
 				
 				strncpy( proxyhost, url->host, sizeof( proxyhost ) );
@@ -292,10 +295,15 @@ static int conf_loadini( conf_t *conf, char *file )
 				
 				g_free( url );
 			}
+			else if( g_strcasecmp( ini->key, "user" ) == 0 )
+			{
+				g_free( conf->user );
+				conf->user = g_strdup( ini->value );
+			}
 			else
 			{
 				fprintf( stderr, "Error: Unknown setting `%s` in configuration file.\n", ini->key );
-				return( 0 );
+				return 0;
 				/* For now just ignore unknown keys... */
 			}
 		}
@@ -303,25 +311,25 @@ static int conf_loadini( conf_t *conf, char *file )
 		{
 			fprintf( stderr, "Error: Unknown section [%s] in configuration file. "
 			                 "BitlBee configuration must be put in a [settings] section!\n", ini->section );
-			return( 0 );
+			return 0;
 		}
 	}
 	ini_close( ini );
 	
-	return( 1 );
+	return 1;
 }
 
 void conf_loaddefaults( irc_t *irc )
 {
 	ini_t *ini;
 	
-	ini = ini_open( CONF_FILE );
+	ini = ini_open( global.conf_file );
 	if( ini == NULL ) return;
 	while( ini_read( ini ) )
 	{
 		if( g_strcasecmp( ini->section, "defaults" ) == 0 )
 		{
-			set_t *s = set_find( irc, ini->key );
+			set_t *s = set_find( &irc->set, ini->key );
 			
 			if( s )
 			{

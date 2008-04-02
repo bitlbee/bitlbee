@@ -9,7 +9,7 @@
 -include ../Makefile.settings
 
 # [SH] Program variables
-objects = http_client.o md5.o nogaim.o proxy.o sha.o $(SSL_CLIENT)
+objects = nogaim.o
 
 # [SH] The next two lines should contain the directory name (in $(subdirs))
 #      and the name of the object file, which should be linked into
@@ -25,6 +25,10 @@ LFLAGS += -r
 
 # [SH] Phony targets
 all: protocols.o
+check: all
+lcov: check
+gcov:
+	gcov *.c
 
 .PHONY: all clean distclean $(subdirs)
 

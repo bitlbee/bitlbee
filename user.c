@@ -66,7 +66,7 @@ user_t *user_add( irc_t *irc, char *nick )
 	}
 	
 	u->user = u->realname = u->host = u->nick = g_strdup( nick );
-	u->is_private = set_getint( irc, "private" );
+	u->is_private = set_getbool( &irc->set, "private" );
 	
 	key = g_strdup( nick );
 	nick_lc( key );
@@ -105,10 +105,11 @@ int user_del( irc_t *irc, char *nick )
 			if( u->nick != u->user ) g_free( u->user );
 			if( u->nick != u->host ) g_free( u->host );
 			if( u->nick != u->realname ) g_free( u->realname );
-			if( u->away ) g_free( u->away );
-			if( u->handle ) g_free( u->handle );
-			if( u->sendbuf ) g_free( u->sendbuf );
-			if( u->sendbuf_timer ) g_source_remove( u->sendbuf_timer );
+			g_free( u->group );
+			g_free( u->away );
+			g_free( u->handle );
+			g_free( u->sendbuf );
+			if( u->sendbuf_timer ) b_event_remove( u->sendbuf_timer );
 			g_free( u );
 			
 			if( !g_hash_table_lookup_extended( irc->userhash, key, &okey, &ovalue ) || ovalue != u )
@@ -139,20 +140,27 @@ user_t *user_find( irc_t *irc, char *nick )
 		return( NULL );
 }
 
-user_t *user_findhandle( struct gaim_connection *gc, char *handle )
+user_t *user_findhandle( struct im_connection *ic, char *handle )
 {
-	user_t *u = gc->irc->users;
+	user_t *u;
+	char *nick;
 	
-	while( u )
-	{
-		if( u->gc == gc && u->handle && gc->prpl->cmp_buddynames ( u->handle, handle ) == 0 )
-			break;
-		u = u->next;
-	}
+	/* First, let's try a hash lookup. If it works, it's probably faster. */
+	if( ( nick = g_hash_table_lookup( ic->acc->nicks, handle ) ) &&
+	    ( u = user_find( ic->irc, nick ) ) &&
+	    ( ic->acc->prpl->handle_cmp( handle, u->handle ) == 0 ) )
+		return u;
 	
-	return( u );
+	/* However, it doesn't always work, so in that case we'll have to dig
+	   through the whole userlist. :-( */
+	for( u = ic->irc->users; u; u = u->next )
+		if( u->ic == ic && u->handle && ic->acc->prpl->handle_cmp( u->handle, handle ) == 0 )
+			return u;
+	
+	return NULL;
 }
 
+/* DO NOT PASS u->nick FOR oldnick !!! */
 void user_rename( irc_t *irc, char *oldnick, char *newnick )
 {
 	user_t *u = user_find( irc, oldnick );

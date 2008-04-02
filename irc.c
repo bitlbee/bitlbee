@@ -28,40 +28,60 @@
 #include "crypting.h"
 #include "ipc.h"
 
-static gboolean irc_userping( gpointer _irc );
+static gboolean irc_userping( gpointer _irc, int fd, b_input_condition cond );
 
 GSList *irc_connection_list = NULL;
 
-static char *passchange (irc_t *irc, void *set, char *value) 
+static char *passchange( set_t *set, char *value )
 {
-	irc_setpass (irc, value);
-	return (NULL);
+	irc_t *irc = set->data;
+	
+	irc_setpass( irc, value );
+	irc_usermsg( irc, "Password successfully changed" );
+	return NULL;
+}
+
+static char *set_eval_charset( set_t *set, char *value )
+{
+	irc_t *irc = set->data;
+	GIConv ic, oc;
+
+	if( g_strcasecmp( value, "none" ) == 0 )
+		value = g_strdup( "utf-8" );
+
+	if( ( ic = g_iconv_open( "utf-8", value ) ) == (GIConv) -1 )
+	{
+		return NULL;
+	}
+	if( ( oc = g_iconv_open( value, "utf-8" ) ) == (GIConv) -1 )
+	{
+		g_iconv_close( ic );
+		return NULL;
+	}
+	
+	if( irc->iconv != (GIConv) -1 )
+		g_iconv_close( irc->iconv );
+	if( irc->oconv != (GIConv) -1 )
+		g_iconv_close( irc->oconv );
+	
+	irc->iconv = ic;
+	irc->oconv = oc;
+
+	return value;
 }
 
 irc_t *irc_new( int fd )
 {
 	irc_t *irc;
-	struct hostent *peer;
-	unsigned int i;
-	char buf[128];
-#ifdef IPV6
-	struct sockaddr_in6 sock[1];
-#else
-	struct sockaddr_in sock[1];
-#endif
+	struct sockaddr_storage sock;
+	socklen_t socklen = sizeof( sock );
 	
 	irc = g_new0( irc_t, 1 );
 	
 	irc->fd = fd;
-	irc->io_channel = g_io_channel_unix_new( fd );
-#ifdef GLIB2
-	g_io_channel_set_encoding (irc->io_channel, NULL, NULL);
-	g_io_channel_set_buffered (irc->io_channel, FALSE);
-	g_io_channel_set_flags( irc->io_channel, G_IO_FLAG_NONBLOCK, NULL );
-#else
-	fcntl( irc->fd, F_SETFL, O_NONBLOCK);
-#endif
-	irc->r_watch_source_id = g_io_add_watch( irc->io_channel, G_IO_IN | G_IO_ERR | G_IO_HUP, bitlbee_io_current_client_read, irc );
+	sock_make_nonblocking( irc->fd );
+	
+	irc->r_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_READ, bitlbee_io_current_client_read, irc );
 	
 	irc->status = USTATUS_OFFLINE;
 	irc->last_pong = gettime();
@@ -73,80 +93,73 @@ irc_t *irc_new( int fd )
 	irc->mynick = g_strdup( ROOT_NICK );
 	irc->channel = g_strdup( ROOT_CHAN );
 	
-	i = sizeof( *sock );
+	irc->iconv = (GIConv) -1;
+	irc->oconv = (GIConv) -1;
 	
 	if( global.conf->hostname )
+	{
 		irc->myhost = g_strdup( global.conf->hostname );
-#ifdef IPV6
-	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin6_family == AF_INETx )
-	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin6_addr, sizeof( sock->sin6_addr ), AF_INETx ) ) )
-			irc->myhost = g_strdup( peer->h_name );
-		else if( inet_ntop( AF_INETx, &sock->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->myhost = g_strdup( ipv6_unwrap( buf ) );
 	}
-#else
-	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INETx )
+	else if( getsockname( irc->fd, (struct sockaddr*) &sock, &socklen ) == 0 ) 
 	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INETx ) ) )
-			irc->myhost = g_strdup( peer->h_name );
-		else if( inet_ntop( AF_INETx, &sock->sin_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->myhost = g_strdup( buf );
-	}
-#endif
-	
-	i = sizeof( *sock );
-#ifdef IPV6
-	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin6_family == AF_INETx )
-	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin6_addr, sizeof( sock->sin6_addr ), AF_INETx ) ) )
-			irc->host = g_strdup( peer->h_name );
-		else if( inet_ntop( AF_INETx, &sock->sin6_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->host = g_strdup( ipv6_unwrap( buf ) );
-	}
-#else
-	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 && sock->sin_family == AF_INETx )
-	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof( sock->sin_addr ), AF_INETx ) ) )
-			irc->host = g_strdup( peer->h_name );
-		else if( inet_ntop( AF_INETx, &sock->sin_addr, buf, sizeof( buf ) - 1 ) != NULL )
-			irc->host = g_strdup( buf );
-	}
-#endif
-	
-	/* Rare, but possible. */
-	if( !irc->host ) irc->host = g_strdup( "localhost." );
-	if( !irc->myhost ) irc->myhost = g_strdup( "localhost." );
+		char buf[NI_MAXHOST+1];
 
+		if( getnameinfo( (struct sockaddr *) &sock, socklen, buf,
+		                 NI_MAXHOST, NULL, 0, 0 ) == 0 )
+		{
+			irc->myhost = g_strdup( ipv6_unwrap( buf ) );
+		}
+	}
+	
+	if( getpeername( irc->fd, (struct sockaddr*) &sock, &socklen ) == 0 )
+	{
+		char buf[NI_MAXHOST+1];
+
+		if( getnameinfo( (struct sockaddr *)&sock, socklen, buf,
+		                 NI_MAXHOST, NULL, 0, 0 ) == 0 )
+		{
+			irc->host = g_strdup( ipv6_unwrap( buf ) );
+		}
+	}
+	
+	if( irc->host == NULL )
+		irc->host = g_strdup( "localhost.localdomain" );
+	if( irc->myhost == NULL )
+		irc->myhost = g_strdup( "localhost.localdomain" );
+	
 	if( global.conf->ping_interval > 0 && global.conf->ping_timeout > 0 )
-		irc->ping_source_id = g_timeout_add( global.conf->ping_interval * 1000, irc_userping, irc );
+		irc->ping_source_id = b_timeout_add( global.conf->ping_interval * 1000, irc_userping, irc );
 	
 	irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost, "BitlBee-IRCd initialized, please go on" );
 
 	irc_connection_list = g_slist_append( irc_connection_list, irc );
 	
-	set_add( irc, "away_devoice", "true",  set_eval_away_devoice );
-	set_add( irc, "auto_connect", "true", set_eval_bool );
-	set_add( irc, "auto_reconnect", "false", set_eval_bool );
-	set_add( irc, "auto_reconnect_delay", "300", set_eval_int );
-	set_add( irc, "buddy_sendbuffer", "false", set_eval_bool );
-	set_add( irc, "buddy_sendbuffer_delay", "200", set_eval_int );
-	set_add( irc, "charset", "iso8859-1", set_eval_charset );
-	set_add( irc, "debug", "false", set_eval_bool );
-	set_add( irc, "default_target", "root", NULL );
-	set_add( irc, "display_namechanges", "false", set_eval_bool );
-	set_add( irc, "handle_unknown", "root", NULL );
-	set_add( irc, "lcnicks", "true", set_eval_bool );
-	set_add( irc, "ops", "both", set_eval_ops );
-	set_add( irc, "private", "true", set_eval_bool );
-	set_add( irc, "query_order", "lifo", NULL );
-	set_add( irc, "save_on_quit", "true", set_eval_bool );
-	set_add( irc, "strip_html", "true", NULL );
-	set_add( irc, "to_char", ": ", set_eval_to_char );
-	set_add( irc, "typing_notice", "false", set_eval_bool );
-	set_add( irc, "password", NULL, passchange);
+	set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
+	set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
+	set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
+	set_add( &irc->set, "auto_reconnect_delay", "300", set_eval_int, irc );
+	set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
+	set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
+	set_add( &irc->set, "charset", "utf-8", set_eval_charset, irc );
+	set_add( &irc->set, "debug", "false", set_eval_bool, irc );
+	set_add( &irc->set, "default_target", "root", NULL, irc );
+	set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
+	set_add( &irc->set, "handle_unknown", "root", NULL, irc );
+	set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
+	set_add( &irc->set, "ops", "both", set_eval_ops, irc );
+	set_add( &irc->set, "password", NULL, passchange, irc );
+	set_add( &irc->set, "private", "true", set_eval_bool, irc );
+	set_add( &irc->set, "query_order", "lifo", NULL, irc );
+	set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
+	set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
+	set_add( &irc->set, "strip_html", "true", NULL, irc );
+	set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
+	set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
 	
 	conf_loaddefaults( irc );
+	
+	/* Evaluator sets the iconv/oconv structures. */
+	set_eval_charset( set_find( &irc->set, "charset" ), set_getstr( &irc->set, "charset" ) );
 	
 	return( irc );
 }
@@ -182,15 +195,15 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 	        	           irc->nick ? irc->nick : "(NONE)", irc->host, "No reason given" );
 	}
 	
-	irc->status = USTATUS_SHUTDOWN;
+	irc->status |= USTATUS_SHUTDOWN;
 	if( irc->sendbuffer && !immed )
 	{
 		/* We won't read from this socket anymore. Instead, we'll connect a timer
 		   to it that should shut down the connection in a second, just in case
 		   bitlbee_.._write doesn't do it first. */
 		
-		g_source_remove( irc->r_watch_source_id );
-		irc->r_watch_source_id = g_timeout_add_full( G_PRIORITY_HIGH, 1000, (GSourceFunc) irc_free, irc, NULL );
+		b_event_remove( irc->r_watch_source_id );
+		irc->r_watch_source_id = b_timeout_add( 1000, (b_event_handler) irc_free, irc );
 	}
 	else
 	{
@@ -206,140 +219,108 @@ static gboolean irc_free_hashkey( gpointer key, gpointer value, gpointer data )
 }
 
 /* Because we have no garbage collection, this is quite annoying */
-void irc_free(irc_t * irc)
+void irc_free( irc_t * irc )
 {
-	account_t *account, *accounttmp;
 	user_t *user, *usertmp;
-	nick_t *nick, *nicktmp;
-	help_t *helpnode, *helpnodetmp;
-	set_t *setnode, *setnodetmp;
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
-	if( irc->status >= USTATUS_IDENTIFIED && set_getint( irc, "save_on_quit" ) ) 
+	if( irc->status & USTATUS_IDENTIFIED && set_getbool( &irc->set, "save_on_quit" ) ) 
 		if( storage_save( irc, TRUE ) != STORAGE_OK )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
-	closesocket( irc->fd );
-	
-	if( irc->ping_source_id > 0 )
-		g_source_remove( irc->ping_source_id );
-	g_source_remove( irc->r_watch_source_id );
-	if( irc->w_watch_source_id > 0 )
-		g_source_remove( irc->w_watch_source_id );
-	
-	g_io_channel_unref( irc->io_channel );
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
-	for (account = irc->accounts; account; account = account->next) {
-		if (account->gc) {
-			account->gc->wants_to_die = TRUE;
-			signoff(account->gc);
-		} else if (account->reconnect) {
-			cancel_auto_reconnect(account);
-		}
+	while( irc->accounts )
+	{
+		if( irc->accounts->ic )
+			imc_logout( irc->accounts->ic, FALSE );
+		else if( irc->accounts->reconnect )
+			cancel_auto_reconnect( irc->accounts );
+		
+		if( irc->accounts->ic == NULL )
+			account_del( irc, irc->accounts );
+		else
+			/* Nasty hack, but account_del() doesn't work in this
+			   case and we don't want infinite loops, do we? ;-) */
+			irc->accounts = irc->accounts->next;
 	}
 	
-	g_free(irc->sendbuffer);
-	g_free(irc->readbuffer);
+	while( irc->queries != NULL )
+		query_del( irc, irc->queries );
 	
-	g_free(irc->nick);
-	g_free(irc->user);
-	g_free(irc->host);
-	g_free(irc->realname);
-	g_free(irc->password);
+	while( irc->set )
+		set_del( &irc->set, irc->set->key );
 	
-	g_free(irc->myhost);
-	g_free(irc->mynick);
-	
-	g_free(irc->channel);
-	
-	while (irc->queries != NULL)
-		query_del(irc, irc->queries);
-	
-	if (irc->accounts != NULL) {
-		account = irc->accounts;
-		while (account != NULL) {
-			g_free(account->user);
-			g_free(account->pass);
-			g_free(account->server);
-			accounttmp = account;
-			account = account->next;
-			g_free(accounttmp);
-		}
-	}
-	
-	if (irc->users != NULL) {
+	if (irc->users != NULL)
+	{
 		user = irc->users;
-		while (user != NULL) {
-			g_free(user->nick);
-			g_free(user->away);
-			g_free(user->handle);
-			if(user->user!=user->nick) g_free(user->user);
-			if(user->host!=user->nick) g_free(user->host);
-			if(user->realname!=user->nick) g_free(user->realname);
-			gaim_input_remove(user->sendbuf_timer);
+		while( user != NULL )
+		{
+			g_free( user->nick );
+			g_free( user->away );
+			g_free( user->handle );
+			if( user->user != user->nick ) g_free( user->user );
+			if( user->host != user->nick ) g_free( user->host );
+			if( user->realname != user->nick ) g_free( user->realname );
+			b_event_remove( user->sendbuf_timer );
 					
 			usertmp = user;
 			user = user->next;
-			g_free(usertmp);
+			g_free( usertmp );
 		}
 	}
 	
-	g_hash_table_foreach_remove(irc->userhash, irc_free_hashkey, NULL);
-	g_hash_table_destroy(irc->userhash);
+	if( irc->ping_source_id > 0 )
+		b_event_remove( irc->ping_source_id );
+	b_event_remove( irc->r_watch_source_id );
+	if( irc->w_watch_source_id > 0 )
+		b_event_remove( irc->w_watch_source_id );
 	
-	g_hash_table_foreach_remove(irc->watches, irc_free_hashkey, NULL);
-	g_hash_table_destroy(irc->watches);
+	closesocket( irc->fd );
+	irc->fd = -1;
 	
-	if (irc->nicks != NULL) {
-		nick = irc->nicks;
-		while (nick != NULL) {
-			g_free(nick->nick);
-			g_free(nick->handle);
-					
-			nicktmp = nick;
-			nick = nick->next;
-			g_free(nicktmp);
-		}
-	}
-	if (irc->help != NULL) {
-		helpnode = irc->help;
-		while (helpnode != NULL) {
-			g_free(helpnode->string);
-			
-			helpnodetmp = helpnode;
-			helpnode = helpnode->next;
-			g_free(helpnodetmp);
-		}
-	}
-	if (irc->set != NULL) {
-		setnode = irc->set;
-		while (setnode != NULL) {
-			g_free(setnode->key);
-			g_free(setnode->def);
-			g_free(setnode->value);
-			
-			setnodetmp = setnode;
-			setnode = setnode->next;
-			g_free(setnodetmp);
-		}
-	}
-	g_free(irc);
+	g_hash_table_foreach_remove( irc->userhash, irc_free_hashkey, NULL );
+	g_hash_table_destroy( irc->userhash );
+	
+	g_hash_table_foreach_remove( irc->watches, irc_free_hashkey, NULL );
+	g_hash_table_destroy( irc->watches );
+	
+	if( irc->iconv != (GIConv) -1 )
+		g_iconv_close( irc->iconv );
+	if( irc->oconv != (GIConv) -1 )
+		g_iconv_close( irc->oconv );
+	
+	g_free( irc->sendbuffer );
+	g_free( irc->readbuffer );
+	
+	g_free( irc->nick );
+	g_free( irc->user );
+	g_free( irc->host );
+	g_free( irc->realname );
+	g_free( irc->password );
+	
+	g_free( irc->myhost );
+	g_free( irc->mynick );
+	
+	g_free( irc->channel );
+	
+	g_free( irc->last_target );
+	
+	g_free( irc );
 	
 	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )
-		g_main_quit( global.loop );
+		b_main_quit();
 }
 
 /* USE WITH CAUTION!
    Sets pass without checking */
 void irc_setpass (irc_t *irc, const char *pass) 
 {
-	if (irc->password) g_free (irc->password);
+	g_free (irc->password);
 	
 	if (pass) {
 		irc->password = g_strdup (pass);
-		irc_usermsg (irc, "Password successfully changed");
 	} else {
 		irc->password = NULL;
 	}
@@ -347,7 +328,7 @@ void irc_setpass (irc_t *irc, const char *pass)
 
 void irc_process( irc_t *irc )
 {
-	char **lines, *temp, **cmd, *cs;
+	char **lines, *temp, **cmd;
 	int i;
 
 	if( irc->readbuffer != NULL )
@@ -356,11 +337,10 @@ void irc_process( irc_t *irc )
 		
 		for( i = 0; *lines[i] != '\0'; i ++ )
 		{
-			char conv[IRC_MAX_LINE+1];
+			char *conv = NULL;
 			
-			/* [WvG] Because irc_tokenize splits at every newline, the lines[] list
-			    should end with an empty string. This is why this actually works.
-			    Took me a while to figure out, Maurits. :-P */
+			/* [WvG] If the last line isn't empty, it's an incomplete line and we
+			   should wait for the rest to come in before processing it. */
 			if( lines[i+1] == NULL )
 			{
 				temp = g_strdup( lines[i] );
@@ -370,18 +350,54 @@ void irc_process( irc_t *irc )
 				break;
 			}
 			
-			if( ( cs = set_getstr( irc, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
+			if( irc->iconv != (GIConv) -1 )
 			{
-				conv[IRC_MAX_LINE] = 0;
-				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) != -1 )
-					lines[i] = conv;
+				gsize bytes_read, bytes_written;
+				
+				conv = g_convert_with_iconv( lines[i], -1, irc->iconv,
+				                             &bytes_read, &bytes_written, NULL );
+				
+				if( conv == NULL || bytes_read != strlen( lines[i] ) )
+				{
+					/* GLib can do strange things if things are not in the expected charset,
+					   so let's be a little bit paranoid here: */
+					if( irc->status & USTATUS_LOGGED_IN )
+					{
+						irc_usermsg( irc, "Error: Charset mismatch detected. The charset "
+						                  "setting is currently set to %s, so please make "
+						                  "sure your IRC client will send and accept text in "
+						                  "that charset, or tell BitlBee which charset to "
+						                  "expect by changing the charset setting. See "
+						                  "`help set charset' for more information. Your "
+						                  "message was ignored.",
+						                  set_getstr( &irc->set, "charset" ) );
+						
+						g_free( conv );
+						conv = NULL;
+					}
+					else
+					{
+						irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost,
+						           "Warning: invalid characters received at login time." );
+						
+						conv = g_strdup( lines[i] );
+						for( temp = conv; *temp; temp ++ )
+							if( *temp & 0x80 )
+								*temp = '?';
+					}
+				}
+				lines[i] = conv;
 			}
 			
-			if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
-				continue;
-			irc_exec( irc, cmd );
+			if( lines[i] )
+			{
+				if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
+					continue;
+				irc_exec( irc, cmd );
+				g_free( cmd );
+			}
 			
-			g_free( cmd );
+			g_free( conv );
 			
 			/* Shouldn't really happen, but just in case... */
 			if( !g_slist_find( irc_connection_list, irc ) )
@@ -405,42 +421,41 @@ void irc_process( irc_t *irc )
    contains an incomplete line at the end, ends with an empty string. */
 char **irc_tokenize( char *buffer )
 {
-	int i, j;
+	int i, j, n = 3;
 	char **lines;
 
-	/* Count the number of elements we're gonna need. */
-	for( i = 0, j = 1; buffer[i] != '\0'; i ++ )
-	{
-		if( buffer[i] == '\n' )
-			if( buffer[i+1] != '\r' && buffer[i+1] != '\n' )
-				j ++;
-	}
-	
-	/* Allocate j+1 elements. */
-	lines = g_new( char *, j + 1 );
-	
-	/* NULL terminate our list. */ 
-	lines[j] = NULL;
+	/* Allocate n+1 elements. */
+	lines = g_new( char *, n + 1 );
 	
 	lines[0] = buffer;
 	
-	/* Split the buffer in several strings, using \r\n as our seperator, where \r is optional.
-	 * Although this is not in the RFC, some braindead ircds (newnet's) use this, so some clients might too. 
-	 */
-	for( i = 0, j = 0; buffer[i] != '\0'; i ++)
+	/* Split the buffer in several strings, and accept any kind of line endings,
+	 * knowing that ERC on Windows may send something interesting like \r\r\n,
+	 * and surely there must be clients that think just \n is enough... */
+	for( i = 0, j = 0; buffer[i] != '\0'; i ++ )
 	{
-		if( buffer[i] == '\n' )
+		if( buffer[i] == '\r' || buffer[i] == '\n' )
 		{
-			buffer[i] = '\0';
+			while( buffer[i] == '\r' || buffer[i] == '\n' )
+				buffer[i++] = '\0';
 			
-			if( i > 0 && buffer[i-1] == '\r' )
-				buffer[i-1] = '\0';
-			if( buffer[i+1] != '\r' && buffer[i+1] != '\n' )
-				lines[++j] = buffer + i + 1;
+			lines[++j] = buffer + i;
+			
+			if( j >= n )
+			{
+				n *= 2;
+				lines = g_renew( char *, lines, n + 1 );
+			}
+
+			if( buffer[i] == '\0' )
+				break;
 		}
 	}
 	
-	return( lines );
+	/* NULL terminate our list. */ 
+	lines[++j] = NULL;
+	
+	return lines;
 }
 
 /* Split an IRC-style line into little parts/arguments. */
@@ -574,42 +589,58 @@ void irc_write( irc_t *irc, char *format, ... )
 	va_end( params );
 
 	return;
-
 }
 
 void irc_vawrite( irc_t *irc, char *format, va_list params )
 {
 	int size;
-	char line[IRC_MAX_LINE+1], *cs;
+	char line[IRC_MAX_LINE+1];
 		
-	if( irc->quit )
+	/* Don't try to write anything new anymore when shutting down. */
+	if( irc->status & USTATUS_SHUTDOWN )
 		return;
 	
-	line[IRC_MAX_LINE] = 0;
+	memset( line, 0, sizeof( line ) );
 	g_vsnprintf( line, IRC_MAX_LINE - 2, format, params );
-	
 	strip_newlines( line );
-	if( ( cs = set_getstr( irc, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
-	{
-		char conv[IRC_MAX_LINE+1];
-		
-		conv[IRC_MAX_LINE] = 0;
-		if( do_iconv( "UTF-8", cs, line, conv, 0, IRC_MAX_LINE - 2 ) != -1 )
-			strcpy( line, conv );
-	}
-	strcat( line, "\r\n" );
 	
-	if( irc->sendbuffer != NULL ) {
+	if( irc->oconv != (GIConv) -1 )
+	{
+		gsize bytes_read, bytes_written;
+		char *conv;
+		
+		conv = g_convert_with_iconv( line, -1, irc->oconv,
+		                             &bytes_read, &bytes_written, NULL );
+
+		if( bytes_read == strlen( line ) )
+			strncpy( line, conv, IRC_MAX_LINE - 2 );
+		
+		g_free( conv );
+	}
+	g_strlcat( line, "\r\n", IRC_MAX_LINE + 1 );
+	
+	if( irc->sendbuffer != NULL )
+	{
 		size = strlen( irc->sendbuffer ) + strlen( line );
 		irc->sendbuffer = g_renew ( char, irc->sendbuffer, size + 1 );
 		strcpy( ( irc->sendbuffer + strlen( irc->sendbuffer ) ), line );
 	}
-	else 
-		irc->sendbuffer = g_strdup(line);	
+	else
+	{
+		irc->sendbuffer = g_strdup(line);
+	}
 	
 	if( irc->w_watch_source_id == 0 )
 	{
-		irc->w_watch_source_id = g_io_add_watch( irc->io_channel, G_IO_OUT, bitlbee_io_current_client_write, irc );
+		/* If the buffer is empty we can probably write, so call the write event handler
+		   immediately. If it returns TRUE, it should be called again, so add the event to
+		   the queue. If it's FALSE, we emptied the buffer and saved ourselves some work
+		   in the event queue. */
+		/* Really can't be done as long as the code doesn't do error checking very well:
+		if( bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE ) ) */
+		
+		/* So just always do it via the event handler. */
+		irc->w_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
 	}
 	
 	return;
@@ -635,7 +666,7 @@ void irc_write_all( int now, char *format, ... )
 		irc_vawrite( temp->data, format, params );
 		if( now )
 		{
-			bitlbee_io_current_client_write( irc->io_channel, G_IO_OUT, irc );
+			bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE );
 		}
 		temp = temp->next;
 	}
@@ -646,56 +677,58 @@ void irc_write_all( int now, char *format, ... )
 
 void irc_names( irc_t *irc, char *channel )
 {
-	user_t *u = irc->users;
-	char *s;
-	int control = ( g_strcasecmp( channel, irc->channel ) == 0 );
-	struct conversation *c = NULL;
+	user_t *u;
+	char namelist[385] = "";
+	struct groupchat *c = NULL;
+	char *ops = set_getstr( &irc->set, "ops" );
 	
-	if( !control )
-		c = conv_findchannel( channel );
-	
-	/* RFC's say there is no error reply allowed on NAMES, so when the
+	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
 	
-	if( control || c ) while( u )
+	if( g_strcasecmp( channel, irc->channel ) == 0 )
 	{
-		if( u->online )
+		for( u = irc->users; u; u = u->next ) if( u->online )
 		{
-			if( u->gc && control )
+			if( strlen( namelist ) + strlen( u->nick ) > sizeof( namelist ) - 4 )
 			{
-				if( set_getint( irc, "away_devoice" ) && !u->away )
-					s = "+";
-				else
-					s = "";
-				
-				irc_reply( irc, 353, "@ %s :%s%s", channel, s, u->nick );
+				irc_reply( irc, 353, "= %s :%s", channel, namelist );
+				*namelist = 0;
 			}
-			else if( !u->gc )
-			{
-				if( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( set_getstr( irc, "ops" ), "root" ) == 0 || strcmp( set_getstr( irc, "ops" ), "both" ) == 0 ) )
-					s = "@";
-				else if( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( set_getstr( irc, "ops" ), "user" ) == 0 || strcmp( set_getstr( irc, "ops" ), "both" ) == 0 ) )
-					s = "@";
-				else
-					s = "";
-				
-				irc_reply( irc, 353, "@ %s :%s%s", channel, s, u->nick );
-			}
+			
+			if( u->ic && !u->away && set_getbool( &irc->set, "away_devoice" ) )
+				strcat( namelist, "+" );
+			else if( ( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) == 0 ) ) ||
+			         ( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) == 0 ) ) )
+				strcat( namelist, "@" );
+			
+			strcat( namelist, u->nick );
+			strcat( namelist, " " );
 		}
-		
-		u = u->next;
 	}
-	
-	/* For non-controlchannel channels (group conversations) only root and
-	   you are listed now. Time to show the channel people: */
-	if( !control && c )
+	else if( ( c = irc_chat_by_channel( irc, channel ) ) )
 	{
 		GList *l;
 		
-		for( l = c->in_room; l; l = l->next )
-			if( ( u = user_findhandle( c->gc, l->data ) ) )
-				irc_reply( irc, 353, "@ %s :%s%s", channel, "", u->nick );
+		/* root and the user aren't in the channel userlist but should
+		   show up in /NAMES, so list them first: */
+		sprintf( namelist, "%s%s %s%s ", strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) ? "@" : "", irc->mynick,
+		                                 strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) ? "@" : "", irc->nick );
+		
+		for( l = c->in_room; l; l = l->next ) if( ( u = user_findhandle( c->ic, l->data ) ) )
+		{
+			if( strlen( namelist ) + strlen( u->nick ) > sizeof( namelist ) - 4 )
+			{
+				irc_reply( irc, 353, "= %s :%s", channel, namelist );
+				*namelist = 0;
+			}
+			
+			strcat( namelist, u->nick );
+			strcat( namelist, " " );
+		}
 	}
+	
+	if( *namelist )
+		irc_reply( irc, 353, "= %s :%s", channel, namelist );
 	
 	irc_reply( irc, 366, "%s :End of /NAMES list", channel );
 }
@@ -704,7 +737,7 @@ int irc_check_login( irc_t *irc )
 {
 	if( irc->user && irc->nick )
 	{
-		if( global.conf->authmode == AUTHMODE_CLOSED && irc->status < USTATUS_AUTHORIZED )
+		if( global.conf->authmode == AUTHMODE_CLOSED && !( irc->status & USTATUS_AUTHORIZED ) )
 		{
 			irc_reply( irc, 464, ":This server is password-protected." );
 			return 0;
@@ -732,6 +765,7 @@ void irc_login( irc_t *irc )
 	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES UMODES_PRIV, CMODES );
 	irc_reply( irc,   5, "PREFIX=(ov)@+ CHANTYPES=#& CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server", CMODES, MAX_NICK_LENGTH - 1 );
 	irc_motd( irc );
+	irc->umode[0] = '\0';
 	irc_umode_set( irc, "+" UMODE, 1 );
 
 	u = user_add( irc, irc->mynick );
@@ -756,12 +790,27 @@ void irc_login( irc_t *irc )
 	u->online = 1;
 	irc_spawn( irc, u );
 	
-	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the \x02help\x02 command. Lots of FAQ's are answered there." );
+	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\n"
+	                  "If you've never used BitlBee before, please do read the help "
+	                  "information using the \x02help\x02 command. Lots of FAQs are "
+	                  "answered there.\n"
+	                  "If you already have an account on this server, just use the "
+	                  "\x02identify\x02 command to identify yourself." );
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON || global.conf->runmode == RUNMODE_DAEMON )
 		ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->host, irc->nick, irc->realname );
 	
-	irc->status = USTATUS_LOGGED_IN;
+	irc->status |= USTATUS_LOGGED_IN;
+	
+	/* This is for bug #209 (use PASS to identify to NickServ). */
+	if( irc->password != NULL )
+	{
+		char *send_cmd[] = { "identify", g_strdup( irc->password ), NULL };
+		
+		irc_setpass( irc, NULL );
+		root_command( irc, send_cmd );
+		g_free( send_cmd[1] );
+	}
 }
 
 void irc_motd( irc_t *irc )
@@ -818,19 +867,14 @@ void irc_motd( irc_t *irc )
 
 void irc_topic( irc_t *irc, char *channel )
 {
-	if( g_strcasecmp( channel, irc->channel ) == 0 )
-	{
+	struct groupchat *c = irc_chat_by_channel( irc, channel );
+	
+	if( c && c->topic )
+		irc_reply( irc, 332, "%s :%s", channel, c->topic );
+	else if( g_strcasecmp( channel, irc->channel ) == 0 )
 		irc_reply( irc, 332, "%s :%s", channel, CONTROL_TOPIC );
-	}
 	else
-	{
-		struct conversation *c = conv_findchannel( channel );
-		
-		if( c )
-			irc_reply( irc, 332, "%s :BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", channel, c->title );
-		else
-			irc_reply( irc, 331, "%s :No topic for this channel", channel );
-	}
+		irc_reply( irc, 331, "%s :No topic for this channel", channel );
 }
 
 void irc_umode_set( irc_t *irc, char *s, int allow_priv )
@@ -839,19 +883,33 @@ void irc_umode_set( irc_t *irc, char *s, int allow_priv )
 	   to set a "privileged" mode (+o, +R, etc). */
 	char m[256], st = 1, *t;
 	int i;
+	char changes[512], *p, st2 = 2;
+	char badflag = 0;
 	
 	memset( m, 0, sizeof( m ) );
 	
 	for( t = irc->umode; *t; t ++ )
 		m[(int)*t] = 1;
-	
+
+	p = changes;
 	for( t = s; *t; t ++ )
 	{
 		if( *t == '+' || *t == '-' )
 			st = *t == '+';
 		else if( st == 0 || ( strchr( UMODES, *t ) || ( allow_priv && strchr( UMODES_PRIV, *t ) ) ) )
+		{
+			if( m[(int)*t] != st)
+			{
+				if( st != st2 )
+					st2 = st, *p++ = st ? '+' : '-';
+				*p++ = *t;
+			}
 			m[(int)*t] = st;
+		}
+		else
+			badflag = 1;
 	}
+	*p = '\0';
 	
 	memset( irc->umode, 0, sizeof( irc->umode ) );
 	
@@ -859,7 +917,11 @@ void irc_umode_set( irc_t *irc, char *s, int allow_priv )
 		if( m[i] )
 			irc->umode[strlen(irc->umode)] = i;
 	
-	irc_reply( irc, 221, "+%s", irc->umode );
+	if( badflag )
+		irc_reply( irc, 501, ":Unknown MODE flag" );
+	/* Deliberately no !user@host on the prefix here */
+	if( *changes )
+		irc_write( irc, ":%s MODE %s %s", irc->nick, irc->nick, changes );
 }
 
 void irc_spawn( irc_t *irc, user_t *u )
@@ -902,9 +964,31 @@ void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker )
 
 void irc_kill( irc_t *irc, user_t *u )
 {
-	char *nick;
+	char *nick, *s;
+	char reason[128];
 	
-	irc_write( irc, ":%s!%s@%s QUIT :%s", u->nick, u->user, u->host, "Leaving..." );
+	if( u->ic && u->ic->flags & OPT_LOGGING_OUT && set_getbool( &irc->set, "simulate_netsplit" ) )
+	{
+		if( u->ic->acc->server )
+			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
+			            u->ic->acc->server );
+		else if( ( s = strchr( u->ic->acc->user, '@' ) ) )
+			g_snprintf( reason, sizeof( reason ), "%s %s", irc->myhost,
+			            s + 1 );
+		else
+			g_snprintf( reason, sizeof( reason ), "%s %s.%s", irc->myhost,
+			            u->ic->acc->prpl->name, irc->myhost );
+		
+		/* proto_opt might contain garbage after the : */
+		if( ( s = strchr( reason, ':' ) ) )
+			*s = 0;
+	}
+	else
+	{
+		strcpy( reason, "Leaving..." );
+	}
+	
+	irc_write( irc, ":%s!%s@%s QUIT :%s", u->nick, u->user, u->host, reason );
 	
 	nick = g_strdup( u->nick );
 	nick_lc( nick );
@@ -917,12 +1001,12 @@ void irc_kill( irc_t *irc, user_t *u )
 
 int irc_send( irc_t *irc, char *nick, char *s, int flags )
 {
-	struct conversation *c = NULL;
+	struct groupchat *c = NULL;
 	user_t *u = NULL;
 	
 	if( *nick == '#' || *nick == '&' )
 	{
-		if( !( c = conv_findchannel( nick ) ) )
+		if( !( c = irc_chat_by_channel( irc, nick ) ) )
 		{
 			irc_reply( irc, 403, "%s :Channel does not exist", nick );
 			return( 0 );
@@ -969,13 +1053,13 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 		}
 		else if( g_strncasecmp( s + 1, "TYPING", 6 ) == 0 )
 		{
-			if( u && u->gc && u->gc->prpl->send_typing && strlen( s ) >= 10 )
+			if( u && u->ic && u->ic->acc->prpl->send_typing && strlen( s ) >= 10 )
 			{
 				time_t current_typing_notice = time( NULL );
 				
 				if( current_typing_notice - u->last_typing_notice >= 5 )
 				{
-					u->gc->prpl->send_typing( u->gc, u->handle, s[8] == '1' );
+					u->ic->acc->prpl->send_typing( u->ic, u->handle, ( s[8] - '0' ) << 8 );
 					u->last_typing_notice = current_typing_notice;
 				}
 			}
@@ -1008,15 +1092,15 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 			return 1;
 		}
 	}
-	else if( c && c->gc && c->gc->prpl )
+	else if( c && c->ic && c->ic->acc && c->ic->acc->prpl )
 	{
-		return( bim_chat_msg( c->gc, c->id, s ) );
+		return( imc_chat_msg( c, s, 0 ) );
 	}
 	
 	return( 0 );
 }
 
-gboolean buddy_send_handler_delayed( gpointer data )
+static gboolean buddy_send_handler_delayed( gpointer data, gint fd, b_input_condition cond )
 {
 	user_t *u = data;
 	
@@ -1025,7 +1109,7 @@ gboolean buddy_send_handler_delayed( gpointer data )
 		return FALSE;
 	
 	u->sendbuf[u->sendbuf_len-2] = 0; /* Cut off the last newline */
-	bim_buddy_msg( u->gc, u->handle, u->sendbuf, u->sendbuf_flags );
+	imc_buddy_msg( u->ic, u->handle, u->sendbuf, u->sendbuf_flags );
 	
 	g_free( u->sendbuf );
 	u->sendbuf = NULL;
@@ -1038,17 +1122,17 @@ gboolean buddy_send_handler_delayed( gpointer data )
 
 void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 {
-	if( !u || !u->gc ) return;
+	if( !u || !u->ic ) return;
 	
-	if( set_getint( irc, "buddy_sendbuffer" ) && set_getint( irc, "buddy_sendbuffer_delay" ) > 0 )
+	if( set_getbool( &irc->set, "buddy_sendbuffer" ) && set_getint( &irc->set, "buddy_sendbuffer_delay" ) > 0 )
 	{
 		int delay;
 		
 		if( u->sendbuf_len > 0 && u->sendbuf_flags != flags)
 		{
 			/* Flush the buffer */
-			g_source_remove( u->sendbuf_timer );
-			buddy_send_handler_delayed( u );
+			b_event_remove( u->sendbuf_timer );
+			buddy_send_handler_delayed( u, -1, 0 );
 		}
 
 		if( u->sendbuf_len == 0 )
@@ -1067,17 +1151,17 @@ void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 		strcat( u->sendbuf, msg );
 		strcat( u->sendbuf, "\n" );
 		
-		delay = set_getint( irc, "buddy_sendbuffer_delay" );
+		delay = set_getint( &irc->set, "buddy_sendbuffer_delay" );
 		if( delay <= 5 )
 			delay *= 1000;
 		
 		if( u->sendbuf_timer > 0 )
-			g_source_remove( u->sendbuf_timer );
-		u->sendbuf_timer = g_timeout_add( delay, buddy_send_handler_delayed, u );
+			b_event_remove( u->sendbuf_timer );
+		u->sendbuf_timer = b_timeout_add( delay, buddy_send_handler_delayed, u );
 	}
 	else
 	{
-		bim_buddy_msg( u->gc, u->handle, msg, flags );
+		imc_buddy_msg( u->ic, u->handle, msg, flags );
 	}
 }
 
@@ -1132,7 +1216,7 @@ int irc_msgfrom( irc_t *irc, char *nick, char *msg )
 	{
 		int len = strlen( irc->nick) + 3;
 		prefix = g_new (char, len );
-		g_snprintf( prefix, len, "%s%s", irc->nick, set_getstr( irc, "to_char" ) );
+		g_snprintf( prefix, len, "%s%s", irc->nick, set_getstr( &irc->set, "to_char" ) );
 		prefix[len-1] = 0;
 	}
 	else
@@ -1157,12 +1241,12 @@ int irc_noticefrom( irc_t *irc, char *nick, char *msg )
    timeout. The number returned is the number of seconds we received no
    pongs from the user. When not connected yet, we don't ping but drop the
    connection when the user fails to connect in IRC_LOGIN_TIMEOUT secs. */
-static gboolean irc_userping( gpointer _irc )
+static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond )
 {
 	irc_t *irc = _irc;
 	int rv = 0;
 	
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 	{
 		if( gettime() > ( irc->last_pong + IRC_LOGIN_TIMEOUT ) )
 			rv = gettime() - irc->last_pong;
@@ -1187,4 +1271,28 @@ static gboolean irc_userping( gpointer _irc )
 	}
 	
 	return TRUE;
+}
+
+struct groupchat *irc_chat_by_channel( irc_t *irc, char *channel )
+{
+	struct groupchat *c;
+	account_t *a;
+	
+	/* This finds the connection which has a conversation which belongs to this channel */
+	for( a = irc->accounts; a; a = a->next )
+	{
+		if( a->ic == NULL )
+			continue;
+		
+		c = a->ic->groupchats;
+		while( c )
+		{
+			if( c->channel && g_strcasecmp( c->channel, channel ) == 0 )
+				return c;
+			
+			c = c->next;
+		}
+	}
+	
+	return NULL;
 }

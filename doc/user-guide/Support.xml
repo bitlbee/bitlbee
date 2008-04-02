@@ -3,12 +3,13 @@
 <title>Support</title>
 
 <sect1>
-<title>BitlBee is beta software</title>
+<title>Disclaimer</title>
 
 <para>
-Although BitlBee has quite some functionality it is still beta. That means it 
-can crash at any time, corrupt your data or whatever. Don't use it in 
-any production environment and don't rely on it.
+BitlBee doesn't come with a warranty and is still (and will probably always
+be) under development. That means it can crash at any time, corrupt your
+data or whatever. Don't use it in any production environment and don't rely
+on it, or at least don't blame us if things blow up. :-)
 </para>
 
 </sect1>

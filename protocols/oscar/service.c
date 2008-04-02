@@ -566,7 +566,7 @@ static int migrate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_
 
 		group = aimbs_get16(bs);
 
-		do_error_dialog(sess->aux_data, "bifurcated migration unsupported", "Gaim");
+		imcb_error(sess->aux_data, "bifurcated migration unsupported");
 	}
 
 	tl = aim_readtlvchain(bs);
@@ -731,8 +731,12 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
 	aim_tlvlist_t *tl = NULL;
 	guint32 data;
 	int tlvlen;
+	struct im_connection *ic = sess ? sess->aux_data : NULL;
 
 	data = AIM_ICQ_STATE_HIDEIP | status; /* yay for error checking ;^) */
+	
+	if (ic && set_getbool(&ic->acc->set, "web_aware"))
+		data |= AIM_ICQ_STATE_WEBAWARE;
 
 	tlvlen = aim_addtlvtochain32(&tl, 0x0006, data);
 
@@ -889,7 +893,7 @@ int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, guint32 offset, guin
 			aimbs_put32(&fr->data, 0xecf8427e);
 */
 		} else
-			do_error_dialog(sess->aux_data, "WARNING: unknown hash request", "Gaim");
+			imcb_error(sess->aux_data, "Warning: unknown hash request");
 
 	}
 

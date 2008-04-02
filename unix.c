@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <pwd.h>
 
 global_t global;	/* Against global namespace pollution */
 
@@ -44,23 +45,18 @@ int main( int argc, char *argv[], char **envp )
 	char *old_cwd = NULL;
 	struct sigaction sig, old;
 	
-	memset( &global, 0, sizeof( global_t ) );
-	
-	global.loop = g_main_new( FALSE );
-	
 	log_init();
-
-	nogaim_init();
-
-	CONF_FILE = g_strdup( CONF_FILE_DEF );
-	
-	global.helpfile = g_strdup( HELP_FILE );
-
+	global.conf_file = g_strdup( CONF_FILE_DEF );
 	global.conf = conf_load( argc, argv );
 	if( global.conf == NULL )
 		return( 1 );
-
-
+	
+	b_main_init();
+	nogaim_init();
+	
+	srand( time( NULL ) ^ getpid() );
+	global.helpfile = g_strdup( HELP_FILE );
+	
 	if( global.conf->runmode == RUNMODE_INETD )
 	{
 		log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
@@ -94,13 +90,27 @@ int main( int argc, char *argv[], char **envp )
 	}
 	if( i != 0 )
 		return( i );
+	
+	if( ( global.conf->user && *global.conf->user ) &&
+	    ( global.conf->runmode == RUNMODE_DAEMON || 
+	      global.conf->runmode == RUNMODE_FORKDAEMON ) &&
+	    ( !getuid() || !geteuid() ) )
+	{
+		struct passwd *pw = NULL;
+		pw = getpwnam( global.conf->user );
+		if( pw )
+		{
+			setgid( pw->pw_gid );
+			setuid( pw->pw_uid );
+		}
+	}
 
 	global.storage = storage_init( global.conf->primary_storage, global.conf->migrate_storage );
-	if ( global.storage == NULL) {
+	if( global.storage == NULL )
+	{
 		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
 		return( 1 );
 	}
-	
  	
 	/* Catch some signals to tell the user what's happening before quitting */
 	memset( &sig, 0, sizeof( sig ) );
@@ -119,10 +129,13 @@ int main( int argc, char *argv[], char **envp )
 	
 	if( !getuid() || !geteuid() )
 		log_message( LOGLVL_WARNING, "BitlBee is running with root privileges. Why?" );
-	if( help_init( &(global.help) ) == NULL )
+	if( help_init( &global.help, global.helpfile ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
-	g_main_run( global.loop );
+	b_main_run();
+	
+	/* Mainly good for restarting, to make sure we close the help.txt fd. */
+	help_free( &global.help );
 	
 	if( global.restart )
 	{
@@ -170,7 +183,7 @@ static void sighandler( int signal )
 			   the user data now (not to mention writing them to disk), so add a timer. */
 			
 			log_message( LOGLVL_ERROR, "SIGTERM received, cleaning up process." );
-			g_timeout_add_full( G_PRIORITY_LOW, 1, (GSourceFunc) bitlbee_shutdown, NULL, NULL );
+			b_timeout_add( 1, (b_event_handler) bitlbee_shutdown, NULL );
 			
 			first = 0;
 		}
@@ -192,9 +205,9 @@ static void sighandler( int signal )
 		while( ( pid = waitpid( 0, &st, WNOHANG ) ) > 0 )
 		{
 			if( WIFSIGNALED( st ) )
-				log_message( LOGLVL_INFO, "Client %d terminated normally. (status = %d)", pid, WEXITSTATUS( st ) );
+				log_message( LOGLVL_INFO, "Client %d terminated normally. (status = %d)", (int) pid, WEXITSTATUS( st ) );
 			else if( WIFEXITED( st ) )
-				log_message( LOGLVL_INFO, "Client %d killed by signal %d.", pid, WTERMSIG( st ) );
+				log_message( LOGLVL_INFO, "Client %d killed by signal %d.", (int) pid, WTERMSIG( st ) );
 		}
 	}
 	else if( signal != SIGPIPE )

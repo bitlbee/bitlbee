@@ -1,0 +1,94 @@
+#!/bin/sh -e
+
+. /usr/share/debconf/confmodule
+
+db_get bitlbee/serveport
+PORT="$RET"
+
+CONFDIR=/var/lib/bitlbee/
+
+update-rc.d bitlbee defaults > /dev/null 2>&1
+
+## Load default option. Don't want to put this in debconf (yet?)
+BITLBEE_OPTS=-F
+BITLBEE_DISABLED=0
+BITLBEE_UPGRADE_DONT_RESTART=0
+[ -r /etc/default/bitlbee ] && . /etc/default/bitlbee
+
+if [ "$BITLBEE_DISABLED" = "0" ] && type update-inetd > /dev/null 2> /dev/null &&
+   ( expr "$2" : '0\..*' > /dev/null || expr "$2" : '1\.0\..*' > /dev/null ); then
+	## Make sure the inetd entry is gone (can still be there from a
+	## previous version.
+	update-inetd --remove '.*/usr/sbin/bitlbee'
+	if grep -q /usr/sbin/bitlbee /etc/inetd.conf 2> /dev/null; then
+		# Thanks for breaking update-inetd! (bugs.debian.org/311111)
+		# I hope that it works at least with xinetd, because this
+		# emergency hack doesn't:
+		perl -pi -e 's:^[^#].*/usr/sbin/bitlbee$:## Now using daemon mode\: # $&:' /etc/inetd.conf
+		killall -HUP inetd || true
+	fi
+fi
+
+cat<<EOF>/etc/default/bitlbee
+## /etc/default/bitlbee: Auto-generated/updated script.
+##
+## Don't edit this line, use dpkg-reconfigure bitlbee
+BITLBEE_PORT="$PORT"
+
+## Use single-process or forking daemon mode? Can't be changed from debconf,
+## but maintainer scripts will save your changes here.
+BITLBEE_OPTS="$BITLBEE_OPTS"
+
+## In case you want to stick with inetd mode (or if you just want to disable
+## the init scripts for some other reason), you can disable the init script
+## here. (Just set it to 1)
+BITLBEE_DISABLED=$BITLBEE_DISABLED
+
+## As a server operator, you can use the RESTART command to restart only the
+## master process while keeping all the child processes and their IPC
+## connections. By enabling this, the maintainer scripts won't restart
+## BitlBee during upgrades so you can restart the master process by hand.
+BITLBEE_UPGRADE_DONT_RESTART=$BITLBEE_UPGRADE_DONT_RESTART
+EOF
+
+## Bye-bye DebConf, we don't need you anymore.
+db_stop
+
+## Restore the helpfile in case we weren't upgrading but just reconfiguring:
+if [ -e /usr/share/bitlbee/help.upgrading ]; then
+	if [ -e /usr/share/bitlbee/help.txt ]; then
+		rm -f /usr/share/bitlbee/help.upgrading
+	else
+		mv /usr/share/bitlbee/help.upgrading /usr/share/bitlbee/help.txt
+	fi
+fi
+
+if [ -n "$2" -a "$BITLBEE_UPGRADE_DONT_RESTART" != "1" ]; then
+	/etc/init.d/bitlbee restart
+fi
+
+## If we're upgrading, we'll probably skip this next part
+if [ -d $CONFDIR ] && chown -R bitlbee $CONFDIR; then
+	echo 'BitlBee (probably) already installed, skipping user/configdir installation'
+	exit 0
+fi
+
+adduser --system --group --disabled-login --disabled-password --home /var/lib/bitlbee/ bitlbee
+chmod 700 /var/lib/bitlbee/
+
+## Can't do this in packaging phase: Don't know the UID yet. Access to
+## the file should be limited, now that it stores passwords. Added
+## --group later for a little more security, but have to see if I can
+## apply this change to existing installations on upgrades. Will think
+## about that later.
+if getent group bitlbee > /dev/null; then
+	chmod 640 /etc/bitlbee/bitlbee.conf
+	chown root:bitlbee /etc/bitlbee/bitlbee.conf
+else
+	chmod 600 /etc/bitlbee/bitlbee.conf
+	chown bitlbee /etc/bitlbee/bitlbee.conf
+fi
+
+if [ -z "$2" ]; then
+	/etc/init.d/bitlbee start
+fi

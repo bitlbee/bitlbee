@@ -239,7 +239,7 @@ static int icqresponse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 
 	if (!(tl = aim_readtlvchain(bs)) || !(datatlv = aim_gettlv(tl, 0x0001, 1))) {
 		aim_freetlvchain(&tl);
-		do_error_dialog(sess->aux_data, "corrupt ICQ response\n", "Gaim");
+		imcb_error(sess->aux_data, "corrupt ICQ response\n");
 		return 0;
 	}
 

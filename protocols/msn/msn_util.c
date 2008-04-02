@@ -27,56 +27,40 @@
 #include "msn.h"
 #include <ctype.h>
 
-int msn_write( struct gaim_connection *gc, char *s, int len )
+int msn_write( struct im_connection *ic, char *s, int len )
 {
-	struct msn_data *md = gc->proto_data;
+	struct msn_data *md = ic->proto_data;
 	int st;
 	
 	st = write( md->fd, s, len );
 	if( st != len )
 	{
-		hide_login_progress_error( gc, "Short write() to main server" );
-		signoff( gc );
+		imcb_error( ic, "Short write() to main server" );
+		imc_logout( ic, TRUE );
 		return( 0 );
 	}
 	
 	return( 1 );
 }
 
-int msn_logged_in( struct gaim_connection *gc )
+int msn_logged_in( struct im_connection *ic )
 {
-	account_online( gc );
+	imcb_connected( ic );
 	
 	return( 0 );
 }
 
-int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char *realname_ )
+int msn_buddy_list_add( struct im_connection *ic, char *list, char *who, char *realname_ )
 {
-	struct msn_data *md = gc->proto_data;
-	GSList *l, **lp = NULL;
+	struct msn_data *md = ic->proto_data;
 	char buf[1024], *realname;
 	
-	if( strcmp( list, "AL" ) == 0 )
-		lp = &gc->permit;
-	else if( strcmp( list, "BL" ) == 0 )
-		lp = &gc->deny;
-	
-	if( lp )
-		for( l = *lp; l; l = l->next )
-			if( g_strcasecmp( l->data, who ) == 0 )
-				return( 1 );
-	
-	realname = g_new0( char, strlen( realname_ ) * 3 + 1 );
-	strcpy( realname, realname_ );
-	http_encode( realname );
+	realname = msn_http_encode( realname_ );
 	
 	g_snprintf( buf, sizeof( buf ), "ADD %d %s %s %s\r\n", ++md->trId, list, who, realname );
-	if( msn_write( gc, buf, strlen( buf ) ) )
+	if( msn_write( ic, buf, strlen( buf ) ) )
 	{
 		g_free( realname );
-		
-		if( lp )
-			*lp = g_slist_append( *lp, g_strdup( who ) );
 		
 		return( 1 );
 	}
@@ -86,52 +70,31 @@ int msn_buddy_list_add( struct gaim_connection *gc, char *list, char *who, char 
 	return( 0 );
 }
 
-int msn_buddy_list_remove( struct gaim_connection *gc, char *list, char *who )
+int msn_buddy_list_remove( struct im_connection *ic, char *list, char *who )
 {
-	struct msn_data *md = gc->proto_data;
-	GSList *l = NULL, **lp = NULL;
+	struct msn_data *md = ic->proto_data;
 	char buf[1024];
 	
-	if( strcmp( list, "AL" ) == 0 )
-		lp = &gc->permit;
-	else if( strcmp( list, "BL" ) == 0 )
-		lp = &gc->deny;
-	
-	if( lp )
-	{
-		for( l = *lp; l; l = l->next )
-			if( g_strcasecmp( l->data, who ) == 0 )
-				break;
-		
-		if( !l )
-			return( 1 );
-	}
-	
 	g_snprintf( buf, sizeof( buf ), "REM %d %s %s\r\n", ++md->trId, list, who );
-	if( msn_write( gc, buf, strlen( buf ) ) )
-	{
-		if( lp )
-			*lp = g_slist_remove( *lp, l->data );
-		
+	if( msn_write( ic, buf, strlen( buf ) ) )
 		return( 1 );
-	}
 	
 	return( 0 );
 }
 
 struct msn_buddy_ask_data
 {
-	struct gaim_connection *gc;
+	struct im_connection *ic;
 	char *handle;
 	char *realname;
 };
 
 static void msn_buddy_ask_yes( gpointer w, struct msn_buddy_ask_data *bla )
 {
-	msn_buddy_list_add( bla->gc, "AL", bla->handle, bla->realname );
+	msn_buddy_list_add( bla->ic, "AL", bla->handle, bla->realname );
 	
-	if( find_buddy( bla->gc, bla->handle ) == NULL )
-		show_got_added( bla->gc, bla->handle, NULL );
+	if( imcb_find_buddy( bla->ic, bla->handle ) == NULL )
+		imcb_ask_add( bla->ic, bla->handle, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla->realname );
@@ -140,26 +103,26 @@ static void msn_buddy_ask_yes( gpointer w, struct msn_buddy_ask_data *bla )
 
 static void msn_buddy_ask_no( gpointer w, struct msn_buddy_ask_data *bla )
 {
-	msn_buddy_list_add( bla->gc, "BL", bla->handle, bla->realname );
+	msn_buddy_list_add( bla->ic, "BL", bla->handle, bla->realname );
 	
 	g_free( bla->handle );
 	g_free( bla->realname );
 	g_free( bla );
 }
 
-void msn_buddy_ask( struct gaim_connection *gc, char *handle, char *realname )
+void msn_buddy_ask( struct im_connection *ic, char *handle, char *realname )
 {
 	struct msn_buddy_ask_data *bla = g_new0( struct msn_buddy_ask_data, 1 );
 	char buf[1024];
 	
-	bla->gc = gc;
+	bla->ic = ic;
 	bla->handle = g_strdup( handle );
 	bla->realname = g_strdup( realname );
 	
 	g_snprintf( buf, sizeof( buf ),
 	            "The user %s (%s) wants to add you to his/her buddy list.",
 	            handle, realname );
-	do_ask_dialog( gc, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
+	imcb_ask( ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
 }
 
 char *msn_findheader( char *text, char *header, int len )
@@ -348,4 +311,64 @@ int msn_handler( struct msn_handler_data *h )
 	}
 	
 	return( 1 );
+}
+
+/* The difference between this function and the normal http_encode() function
+   is that this one escapes every 7-bit ASCII character because this is said
+   to avoid some lame server-side checks when setting a real-name. Also,
+   non-ASCII characters are not escaped because MSN servers don't seem to
+   appreciate that! */
+char *msn_http_encode( const char *input )
+{
+	char *ret, *s;
+	int i;
+	
+	ret = s = g_new0( char, strlen( input ) * 3 + 1 );
+	for( i = 0; input[i]; i ++ )
+		if( input[i] & 128 )
+		{
+			*s = input[i];
+			s ++;
+		}
+		else
+		{
+			g_snprintf( s, 4, "%%%02X", input[i] );
+			s += 3;
+		}
+	
+	return ret;
+}
+
+void msn_msgq_purge( struct im_connection *ic, GSList **list )
+{
+	struct msn_message *m;
+	GString *ret;
+	GSList *l;
+	
+	l = *list;
+	if( l == NULL )
+		return;
+	
+	m = l->data;
+	ret = g_string_sized_new( 1024 );
+	g_string_printf( ret, "Warning: Cleaning up MSN (switchboard) connection with unsent "
+	                      "messages to %s:", m->who ? m->who : "unknown recipient" );
+	
+	while( l )
+	{
+		m = l->data;
+		
+		g_string_append_printf( ret, "\n%s", m->text );
+		
+		g_free( m->who );
+		g_free( m->text );
+		g_free( m );
+		
+		l = l->next;
+	}
+	g_slist_free( *list );
+	*list = NULL;
+	
+	imcb_log( ic, ret->str );
+	g_string_free( ret, TRUE );
 }

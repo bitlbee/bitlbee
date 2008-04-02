@@ -1,13 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
 
-/* To cut down on the ifdef stuff a little bit in other places */
-#ifdef IPV6
-#define AF_INETx AF_INET6
-#else
-#define AF_INETx AF_INET
-#endif
-
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/socket.h>
@@ -17,7 +10,9 @@
 #define sock_make_nonblocking(fd) fcntl(fd, F_SETFL, O_NONBLOCK)
 #define sock_make_blocking(fd) fcntl(fd, F_SETFL, 0)
 #define sockerr_again() (errno == EINPROGRESS || errno == EINTR)
+#ifndef EVENTS_LIBEVENT
 #define closesocket(a) close(a)
+#endif
 #else
 # include <winsock2.h>
 # ifdef IPV6

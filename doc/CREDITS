@@ -49,9 +49,12 @@ The authors thank the following people:
 - Elizabeth Krumbach, for her help on the docs.
 - Frank Thieme, for the info-command enhancements and other patches.
 - Marcus Dennis, for some bitlbeed enhancements.
-- 1nfamus, for security auditing BitlBee code.
+- infamous41md, for security auditing BitlBee code.
 - Tijmen Ruizendaal, for some useful BitlBee-related irssi scripts.
 - Ed Schouten, for reporting bugs.
+- Greg (gropeep.org), for updating the Yahoo! module to fix some issues
+  that were there for quite some time already.
+- misc@mandriva.org for lots of Jabber contributions.
 
 - And all other users who help us by sending useful bug reports, positive
   feedback, nice patches and cool addons. Mentioning you all would make

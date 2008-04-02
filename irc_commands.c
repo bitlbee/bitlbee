@@ -29,14 +29,35 @@
 
 static void irc_cmd_pass( irc_t *irc, char **cmd )
 {
-	if( global.conf->auth_pass && strcmp( cmd[1], global.conf->auth_pass ) == 0 )
+	if( irc->status & USTATUS_LOGGED_IN )
 	{
-		irc->status = USTATUS_AUTHORIZED;
+		char *send_cmd[] = { "identify", cmd[1], NULL };
+		
+		/* We're already logged in, this client seems to send the PASS
+		   command last. (Possibly it won't send it at all if it turns
+		   out we don't require it, which will break this feature.)
+		   Try to identify using the given password. */
+		return root_command( irc, send_cmd );
+	}
+	/* Handling in pre-logged-in state, first see if this server is
+	   password-protected: */
+	else if( global.conf->auth_pass &&
+	    ( strncmp( global.conf->auth_pass, "md5:", 4 ) == 0 ?
+	        md5_verify_password( cmd[1], global.conf->auth_pass + 4 ) == 0 :
+	        strcmp( cmd[1], global.conf->auth_pass ) == 0 ) )
+	{
+		irc->status |= USTATUS_AUTHORIZED;
 		irc_check_login( irc );
+	}
+	else if( global.conf->auth_pass )
+	{
+		irc_reply( irc, 464, ":Incorrect password" );
 	}
 	else
 	{
-		irc_reply( irc, 464, ":Incorrect password" );
+		/* Remember the password and try to identify after USER/NICK. */
+		irc_setpass( irc, cmd[1] );
+		irc_check_login( irc );
 	}
 }
 
@@ -87,7 +108,10 @@ static void irc_cmd_ping( irc_t *irc, char **cmd )
 
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
-	if( global.conf->oper_pass && strcmp( cmd[2], global.conf->oper_pass ) == 0 )
+	if( global.conf->oper_pass &&
+	    ( strncmp( global.conf->oper_pass, "md5:", 4 ) == 0 ?
+	        md5_verify_password( cmd[2], global.conf->oper_pass + 4 ) == 0 :
+	        strcmp( cmd[2], global.conf->oper_pass ) == 0 ) )
 	{
 		irc_umode_set( irc, "+o", 1 );
 		irc_reply( irc, 381, ":Password accepted" );
@@ -118,6 +142,8 @@ static void irc_cmd_mode( irc_t *irc, char **cmd )
 		{
 			if( cmd[2] )
 				irc_umode_set( irc, cmd[2], 0 );
+			else
+				irc_reply( irc, 221, "+%s", irc->umode );
 		}
 		else
 			irc_reply( irc, 502, ":Don't touch their modes" );
@@ -131,7 +157,7 @@ static void irc_cmd_names( irc_t *irc, char **cmd )
 
 static void irc_cmd_part( irc_t *irc, char **cmd )
 {
-	struct conversation *c;
+	struct groupchat *c;
 	
 	if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
 	{
@@ -141,16 +167,16 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 		irc_part( irc, u, irc->channel );
 		irc_join( irc, u, irc->channel );
 	}
-	else if( ( c = conv_findchannel( cmd[1] ) ) )
+	else if( ( c = irc_chat_by_channel( irc, cmd[1] ) ) )
 	{
 		user_t *u = user_find( irc, irc->nick );
 		
 		irc_part( irc, u, c->channel );
 		
-		if( c->gc && c->gc->prpl )
+		if( c->ic )
 		{
 			c->joined = 0;
-			c->gc->prpl->chat_leave( c->gc, c->id );
+			c->ic->acc->prpl->chat_leave( c );
 		}
 	}
 	else
@@ -170,13 +196,13 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		{
 			user_t *u = user_find( irc, cmd[1] + 1 );
 			
-			if( u && u->gc && u->gc->prpl && u->gc->prpl->chat_open )
+			if( u && u->ic && u->ic->acc->prpl->chat_with )
 			{
 				irc_reply( irc, 403, "%s :Initializing groupchat in a different channel", cmd[1] );
 				
-				if( !u->gc->prpl->chat_open( u->gc, u->handle ) )
+				if( !u->ic->acc->prpl->chat_with( u->ic, u->handle ) )
 				{
-					irc_usermsg( irc, "Could not open a groupchat with %s, maybe you don't have a connection to him/her yet?", u->nick );
+					irc_usermsg( irc, "Could not open a groupchat with %s.", u->nick );
 				}
 			}
 			else if( u )
@@ -198,13 +224,13 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 static void irc_cmd_invite( irc_t *irc, char **cmd )
 {
 	char *nick = cmd[1], *channel = cmd[2];
-	struct conversation *c = conv_findchannel( channel );
+	struct groupchat *c = irc_chat_by_channel( irc, channel );
 	user_t *u = user_find( irc, nick );
 	
-	if( u && c && ( u->gc == c->gc ) )
-		if( c->gc && c->gc->prpl && c->gc->prpl->chat_invite )
+	if( u && c && ( u->ic == c->ic ) )
+		if( c->ic && c->ic->acc->prpl->chat_invite )
 		{
-			c->gc->prpl->chat_invite( c->gc, c->id, "", u->handle );
+			c->ic->acc->prpl->chat_invite( c, u->handle, NULL );
 			irc_reply( irc, 341, "%s %s", nick, channel );
 			return;
 		}
@@ -227,7 +253,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 		if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
 		{
 			unsigned int i;
-			char *t = set_getstr( irc, "default_target" );
+			char *t = set_getstr( &irc->set, "default_target" );
 			
 			if( g_strcasecmp( t, "last" ) == 0 && irc->last_target )
 				cmd[1] = irc->last_target;
@@ -251,8 +277,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 			
 			if( cmd[1] != irc->last_target )
 			{
-				if( irc->last_target )
-					g_free( irc->last_target );
+				g_free( irc->last_target );
 				irc->last_target = g_strdup( cmd[1] );
 			}
 		}
@@ -260,7 +285,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 		{
 			irc->is_private = 1;
 		}
-		irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? IM_FLAG_AWAY : 0 );
+		irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? OPT_AWAY : 0 );
 	}
 }
 
@@ -268,7 +293,7 @@ static void irc_cmd_who( irc_t *irc, char **cmd )
 {
 	char *channel = cmd[1];
 	user_t *u = irc->users;
-	struct conversation *c;
+	struct groupchat *c;
 	GList *l;
 	
 	if( !channel || *channel == '0' || *channel == '*' || !*channel )
@@ -284,10 +309,10 @@ static void irc_cmd_who( irc_t *irc, char **cmd )
 				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
 			u = u->next;
 		}
-	else if( ( c = conv_findchannel( channel ) ) )
+	else if( ( c = irc_chat_by_channel( irc, channel ) ) )
 		for( l = c->in_room; l; l = l->next )
 		{
-			if( ( u = user_findhandle( c->gc, l->data ) ) )
+			if( ( u = user_findhandle( c->ic, l->data ) ) )
 				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
 		}
 	else if( ( u = user_find( irc, channel ) ) )
@@ -330,28 +355,41 @@ static void irc_cmd_ison( irc_t *irc, char **cmd )
 	
 	for( i = 1; cmd[i]; i ++ )
 	{
-		if( ( u = user_find( irc, cmd[i] ) ) && u->online )
+		char *this, *next;
+		
+		this = cmd[i];
+		while( *this )
 		{
-			/* [SH] Make sure we don't use too much buffer space. */
-			lenleft -= strlen( u->nick ) + 1;
+			if( ( next = strchr( this, ' ' ) ) )
+				*next = 0;
 			
-			if( lenleft < 0 )
+			if( ( u = user_find( irc, this ) ) && u->online )
 			{
-				break;
+				lenleft -= strlen( u->nick ) + 1;
+				
+				if( lenleft < 0 )
+					break;
+				
+				strcat( buff, u->nick );
+				strcat( buff, " " );
 			}
 			
-			/* [SH] Add the nick to the buffer. Note
-			 * that an extra space is always added. Even
-			 * if it's the last nick in the list. Who
-			 * cares?
-			 */
-			
-			strcat( buff, u->nick );
-			strcat( buff, " " );
+			if( next )
+			{
+				*next = ' ';
+				this = next + 1;
+			}
+			else
+			{
+				break;
+			}    
 		}
+		
+		/* *sigh* */
+		if( lenleft < 0 )
+			break;
 	}
 	
-	/* [WvG] Well, maybe someone cares, so why not remove it? */
 	if( strlen( buff ) > 0 )
 		buff[strlen(buff)-1] = '\0';
 	
@@ -405,10 +443,21 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 
 static void irc_cmd_topic( irc_t *irc, char **cmd )
 {
-	if( cmd[2] )
-		irc_reply( irc, 482, "%s :Cannot change topic", cmd[1] );
+	char *channel = cmd[1];
+	char *topic = cmd[2];
+	
+	if( topic )
+	{
+		/* Send the topic */
+		struct groupchat *c = irc_chat_by_channel( irc, channel );
+		if( c && c->ic && c->ic->acc->prpl->chat_topic )
+			c->ic->acc->prpl->chat_topic( c, topic );
+	}
 	else
-		irc_topic( irc, cmd[1] );
+	{
+		/* Get the topic */
+		irc_topic( irc, channel );
+	}
 }
 
 static void irc_cmd_away( irc_t *irc, char **cmd )
@@ -444,10 +493,10 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 	
 	for( a = irc->accounts; a; a = a->next )
 	{
-		struct gaim_connection *gc = a->gc;
+		struct im_connection *ic = a->ic;
 		
-		if( gc && gc->flags & OPT_LOGGED_IN )
-			bim_set_away( gc, u->away );
+		if( ic && ic->flags & OPT_LOGGED_IN )
+			imc_set_away( ic, u->away );
 	}
 }
 
@@ -460,9 +509,10 @@ static void irc_cmd_whois( irc_t *irc, char **cmd )
 	{
 		irc_reply( irc, 311, "%s %s %s * :%s", u->nick, u->user, u->host, u->realname );
 		
-		if( u->gc )
-			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->gc->user->username,
-			           *u->gc->user->proto_opt[0] ? u->gc->user->proto_opt[0] : "", u->gc->prpl->name );
+		if( u->ic )
+			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->ic->acc->user,
+			           u->ic->acc->server && *u->ic->acc->server ? u->ic->acc->server : "",
+			           u->ic->acc->prpl->name );
 		else
 			irc_reply( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
 		
@@ -528,7 +578,7 @@ static void irc_cmd_completions( irc_t *irc, char **cmd )
 		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS ", commands[i].command );
 	
 	for( h = global.help; h; h = h->next )
-		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS help ", h->string );
+		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS help ", h->title );
 	
 	for( s = irc->set; s; s = s->next )
 		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS set ", s->key );
@@ -543,13 +593,11 @@ static void irc_cmd_rehash( irc_t *irc, char **cmd )
 	else
 		ipc_to_master( cmd );
 	
-#ifndef _WIN32
-	irc_reply( irc, 382, "%s :Rehashing", CONF_FILE );
-#endif
+	irc_reply( irc, 382, "%s :Rehashing", global.conf_file );
 }
 
 static const command_t irc_commands[] = {
-	{ "pass",        1, irc_cmd_pass,        IRC_CMD_PRE_LOGIN },
+	{ "pass",        1, irc_cmd_pass,        0 },
 	{ "user",        4, irc_cmd_user,        IRC_CMD_PRE_LOGIN },
 	{ "nick",        1, irc_cmd_nick,        0 },
 	{ "quit",        0, irc_cmd_quit,        0 },
@@ -578,7 +626,7 @@ static const command_t irc_commands[] = {
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
-	{ "lilo",        1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
+	{ "wall",        1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "rehash",      0, irc_cmd_rehash,      IRC_CMD_OPER_ONLY },
 	{ "restart",     0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "kill",        2, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
@@ -598,11 +646,11 @@ void irc_exec( irc_t *irc, char *cmd[] )
 			/* There should be no typo in the next line: */
 			for( n_arg = 0; cmd[n_arg]; n_arg ++ ); n_arg --;
 			
-			if( irc_commands[i].flags & IRC_CMD_PRE_LOGIN && irc->status >= USTATUS_LOGGED_IN )
+			if( irc_commands[i].flags & IRC_CMD_PRE_LOGIN && irc->status & USTATUS_LOGGED_IN )
 			{
 				irc_reply( irc, 462, ":Only allowed before logging in" );
 			}
-			else if( irc_commands[i].flags & IRC_CMD_LOGGED_IN && irc->status < USTATUS_LOGGED_IN )
+			else if( irc_commands[i].flags & IRC_CMD_LOGGED_IN && !( irc->status & USTATUS_LOGGED_IN ) )
 			{
 				irc_reply( irc, 451, ":Register first" );
 			}
@@ -625,6 +673,9 @@ void irc_exec( irc_t *irc, char *cmd[] )
 				irc_commands[i].execute( irc, cmd );
 			}
 			
-			break;
+			return;
 		}
+	
+	if( irc->status >= USTATUS_LOGGED_IN )
+		irc_reply( irc, 421, "%s :Unknown command", cmd[0] );
 }

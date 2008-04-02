@@ -68,13 +68,15 @@ char ** y_strsplit(char * str, char * sep, int nelem)
 	char *s, *p;
 	int i=0;
 	int l = strlen(sep);
-	if(nelem < 0) {
+	if(nelem <= 0) {
 		char * s;
 		nelem=0;
-		for(s=strstr(str, sep); s; s=strstr(s+l, sep),nelem++)
-			;
-		if(strcmp(str+strlen(str)-l, sep))
-			nelem++;
+		if (*str) {
+			for(s=strstr(str, sep); s; s=strstr(s+l, sep),nelem++)
+				;
+			if(strcmp(str+strlen(str)-l, sep))
+				nelem++;
+		}
 	}
 
 	vector = y_new(char *, nelem + 1);
@@ -86,7 +88,7 @@ char ** y_strsplit(char * str, char * sep, int nelem)
 		vector[i][len] = '\0';
 	}
 
-	if(i<nelem) /* str didn't end with sep */
+	if(i<nelem && *str) /* str didn't end with sep, and str isn't empty */
 		vector[i++] = strdup(p);
 			
 	vector[i] = NULL;

@@ -39,11 +39,14 @@ struct bitlbee_child
 };
 
 
-void ipc_master_read( gpointer data, gint source, GaimInputCondition cond );
-void ipc_child_read( gpointer data, gint source, GaimInputCondition cond );
+gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond );
+gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond );
 
 void ipc_master_free_one( struct bitlbee_child *child );
+void ipc_master_free_fd( int fd );
 void ipc_master_free_all();
+
+void ipc_child_disable();
 
 void ipc_to_master( char **cmd );
 void ipc_to_master_str( char *format, ... ) G_GNUC_PRINTF( 1, 2 );

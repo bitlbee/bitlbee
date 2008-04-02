@@ -51,7 +51,7 @@ static void ipc_master_cmd_client( irc_t *data, char **cmd )
 	
 	if( g_strcasecmp( cmd[0], "CLIENT" ) == 0 )
 		ipc_to_children_str( "OPERMSG :Client connecting (PID=%d): %s@%s (%s)\r\n",
-		                     child ? child->pid : -1, cmd[2], cmd[1], cmd[3] );
+		                     (int) ( child ? child->pid : -1 ), cmd[2], cmd[1], cmd[3] );
 }
 
 static void ipc_master_cmd_die( irc_t *data, char **cmd )
@@ -59,7 +59,7 @@ static void ipc_master_cmd_die( irc_t *data, char **cmd )
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_to_children_str( "DIE\r\n" );
 	
-	bitlbee_shutdown( NULL );
+	bitlbee_shutdown( NULL, -1, 0 );
 }
 
 void ipc_master_cmd_rehash( irc_t *data, char **cmd )
@@ -90,7 +90,7 @@ void ipc_master_cmd_restart( irc_t *data, char **cmd )
 	}
 	
 	global.restart = -1;
-	bitlbee_shutdown( NULL );
+	bitlbee_shutdown( NULL, -1, 0 );
 }
 
 static const command_t ipc_master_commands[] = {
@@ -98,7 +98,7 @@ static const command_t ipc_master_commands[] = {
 	{ "hello",      0, ipc_master_cmd_client,     0 },
 	{ "die",        0, ipc_master_cmd_die,        0 },
 	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
-	{ "lilo",       1, NULL,                      IPC_CMD_TO_CHILDREN },
+	{ "wall",       1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "opermsg",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "rehash",     0, ipc_master_cmd_rehash,     0 },
 	{ "kill",       2, NULL,                      IPC_CMD_TO_CHILDREN },
@@ -114,16 +114,16 @@ static void ipc_child_cmd_die( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_wallops( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
 	if( strchr( irc->umode, 'w' ) )
 		irc_write( irc, ":%s WALLOPS :%s", irc->myhost, cmd[1] );
 }
 
-static void ipc_child_cmd_lilo( irc_t *irc, char **cmd )
+static void ipc_child_cmd_wall( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
 	if( strchr( irc->umode, 's' ) )
@@ -132,7 +132,7 @@ static void ipc_child_cmd_lilo( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_opermsg( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
 	if( strchr( irc->umode, 'o' ) )
@@ -153,7 +153,7 @@ static void ipc_child_cmd_rehash( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_kill( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
 	if( nick_cmp( cmd[1], irc->nick ) != 0 )
@@ -165,7 +165,7 @@ static void ipc_child_cmd_kill( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_hello( irc_t *irc, char **cmd )
 {
-	if( irc->status < USTATUS_LOGGED_IN )
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		ipc_to_master_str( "HELLO\r\n" );
 	else
 		ipc_to_master_str( "HELLO %s %s :%s\r\n", irc->host, irc->nick, irc->realname );
@@ -174,7 +174,7 @@ static void ipc_child_cmd_hello( irc_t *irc, char **cmd )
 static const command_t ipc_child_commands[] = {
 	{ "die",        0, ipc_child_cmd_die,         0 },
 	{ "wallops",    1, ipc_child_cmd_wallops,     0 },
-	{ "lilo",       1, ipc_child_cmd_lilo,        0 },
+	{ "wall",       1, ipc_child_cmd_wall,        0 },
 	{ "opermsg",    1, ipc_child_cmd_opermsg,     0 },
 	{ "rehash",     0, ipc_child_cmd_rehash,      0 },
 	{ "kill",       2, ipc_child_cmd_kill,        0 },
@@ -245,7 +245,7 @@ static char *ipc_readline( int fd )
 	return buf;
 }
 
-void ipc_master_read( gpointer data, gint source, GaimInputCondition cond )
+gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
 {
 	char *buf, **cmd;
 	
@@ -257,23 +257,13 @@ void ipc_master_read( gpointer data, gint source, GaimInputCondition cond )
 	}
 	else
 	{
-		GSList *l;
-		struct bitlbee_child *c;
-		
-		for( l = child_list; l; l = l->next )
-		{
-			c = l->data;
-			if( c->ipc_fd == source )
-			{
-				ipc_master_free_one( c );
-				child_list = g_slist_remove( child_list, c );
-				break;
-			}
-		}
+		ipc_master_free_fd( source );
 	}
+	
+	return TRUE;
 }
 
-void ipc_child_read( gpointer data, gint source, GaimInputCondition cond )
+gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond )
 {
 	char *buf, **cmd;
 	
@@ -285,11 +275,10 @@ void ipc_child_read( gpointer data, gint source, GaimInputCondition cond )
 	}
 	else
 	{
-		gaim_input_remove( global.listen_watch_source_id );
-		close( global.listen_socket );
-		
-		global.listen_socket = -1;
+		ipc_child_disable();
 	}
+	
+	return TRUE;
 }
 
 void ipc_to_master( char **cmd )
@@ -321,7 +310,9 @@ void ipc_to_master_str( char *format, ... )
 	}
 	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
-		write( global.listen_socket, msg_buf, strlen( msg_buf ) );
+		if( global.listen_socket >= 0 )
+			if( write( global.listen_socket, msg_buf, strlen( msg_buf ) ) <= 0 )
+				ipc_child_disable();
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
@@ -371,12 +362,18 @@ void ipc_to_children_str( char *format, ... )
 	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
 		int msg_len = strlen( msg_buf );
-		GSList *l;
+		GSList *l, *next;
 		
-		for( l = child_list; l; l = l->next )
+		for( l = child_list; l; l = next )
 		{
 			struct bitlbee_child *c = l->data;
-			write( c->ipc_fd, msg_buf, msg_len );
+			
+			next = l->next;
+			if( write( c->ipc_fd, msg_buf, msg_len ) <= 0 )
+			{
+				ipc_master_free_one( c );
+				child_list = g_slist_remove( child_list, c );
+			}
 		}
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
@@ -396,13 +393,30 @@ void ipc_to_children_str( char *format, ... )
 
 void ipc_master_free_one( struct bitlbee_child *c )
 {
-	gaim_input_remove( c->ipc_inpa );
+	b_event_remove( c->ipc_inpa );
 	closesocket( c->ipc_fd );
 	
 	g_free( c->host );
 	g_free( c->nick );
 	g_free( c->realname );
 	g_free( c );
+}
+
+void ipc_master_free_fd( int fd )
+{
+	GSList *l;
+	struct bitlbee_child *c;
+	
+	for( l = child_list; l; l = l->next )
+	{
+		c = l->data;
+		if( c->ipc_fd == fd )
+		{
+			ipc_master_free_one( c );
+			child_list = g_slist_remove( child_list, c );
+			break;
+		}
+	}
 }
 
 void ipc_master_free_all()
@@ -414,6 +428,14 @@ void ipc_master_free_all()
 	
 	g_slist_free( child_list );
 	child_list = NULL;
+}
+
+void ipc_child_disable()
+{
+	b_event_remove( global.listen_watch_source_id );
+	close( global.listen_socket );
+	
+	global.listen_socket = -1;
 }
 
 #ifndef _WIN32
@@ -442,7 +464,7 @@ char *ipc_master_save_state()
 	fprintf( fp, "%d\n", i );
 	
 	for( l = child_list; l; l = l->next )
-		fprintf( fp, "%d %d\n", ((struct bitlbee_child*)l->data)->pid,
+		fprintf( fp, "%d %d\n", (int) ((struct bitlbee_child*)l->data)->pid,
 		                        ((struct bitlbee_child*)l->data)->ipc_fd );
 	
 	if( fclose( fp ) == 0 )
@@ -463,24 +485,22 @@ void ipc_master_set_statefile( char *fn )
 }
 
 
-static gboolean new_ipc_client (GIOChannel *gio, GIOCondition cond, gpointer data)
+static gboolean new_ipc_client( gpointer data, gint serversock, b_input_condition cond )
 {
 	struct bitlbee_child *child = g_new0( struct bitlbee_child, 1 );
-	int serversock;
-
-	serversock = g_io_channel_unix_get_fd(gio);
-
-	child->ipc_fd = accept(serversock, NULL, 0);
-
-	if (child->ipc_fd == -1) {
+	
+	child->ipc_fd = accept( serversock, NULL, 0 );
+	
+	if( child->ipc_fd == -1 )
+	{
 		log_message( LOGLVL_WARNING, "Unable to accept connection on UNIX domain socket: %s", strerror(errno) );
 		return TRUE;
 	}
 		
-	child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
-		
+	child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+	
 	child_list = g_slist_append( child_list, child );
-
+	
 	return TRUE;
 }
 
@@ -488,7 +508,6 @@ int ipc_master_listen_socket()
 {
 	struct sockaddr_un un_addr;
 	int serversock;
-	GIOChannel *gio;
 
 	/* Clean up old socket files that were hanging around.. */
 	if (unlink(IPCSOCKET) == -1 && errno != ENOENT) {
@@ -516,14 +535,8 @@ int ipc_master_listen_socket()
 		return 0;
 	}
 	
-	gio = g_io_channel_unix_new(serversock);
+	b_input_add( serversock, GAIM_INPUT_READ, new_ipc_client, NULL );
 	
-	if (gio == NULL) {
-		log_message( LOGLVL_WARNING, "Unable to create IO channel for unix socket" );
-		return 0;
-	}
-
-	g_io_add_watch(gio, G_IO_IN, new_ipc_client, NULL);
 	return 1;
 }
 #else
@@ -559,14 +572,14 @@ int ipc_master_load_state()
 	{
 		child = g_new0( struct bitlbee_child, 1 );
 		
-		if( fscanf( fp, "%d %d", &child->pid, &child->ipc_fd ) != 2 )
+		if( fscanf( fp, "%d %d", (int *) &child->pid, &child->ipc_fd ) != 2 )
 		{
 			log_message( LOGLVL_WARNING, "Unexpected end of file: Only processed %d clients.", i );
 			g_free( child );
 			fclose( fp );
 			return 0;
 		}
-		child->ipc_inpa = gaim_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+		child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
 		
 		child_list = g_slist_append( child_list, child );
 	}
