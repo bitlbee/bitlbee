@@ -998,13 +998,8 @@ static char *skype_set_call( set_t *set, char *value )
 	{
 		user_t *u = user_find(acc->irc, value);
 		/* We are starting a call */
-		if(!u && strcmp(value, "echo123"))
-		{
-			imcb_error(ic, "%s - no such nick", value);
-			return(value);
-		}
-		if(!strcmp(value, "echo123"))
-			nick = g_strdup("echo123");
+		if(!u)
+			nick = g_strdup(value);
 		else
 			nick = g_strdup(u->handle);
 		ptr = strchr(nick, '@');
