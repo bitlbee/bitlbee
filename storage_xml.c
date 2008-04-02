@@ -28,6 +28,7 @@
 #include "base64.h"
 #include "arc.h"
 #include "md5.h"
+#include <glib/gstdio.h>
 
 typedef enum
 {
@@ -242,9 +243,9 @@ GMarkupParser xml_parser =
 
 static void xml_init( void )
 {
-	if( access( global.conf->configdir, F_OK ) != 0 )
+	if( ! g_file_test( global.conf->configdir, G_FILE_TEST_EXISTS ) )
 		log_message( LOGLVL_WARNING, "The configuration directory `%s' does not exist. Configuration won't be saved.", global.conf->configdir );
-	else if( access( global.conf->configdir, R_OK ) != 0 || access( global.conf->configdir, W_OK ) != 0 )
+	else if( ! g_file_test( global.conf->configdir, G_FILE_TEST_EXISTS ) || g_access( global.conf->configdir, W_OK ) != 0 )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to `%s'.", global.conf->configdir );
 }
 
@@ -371,7 +372,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, path2, ".xml" );
 	g_free( path2 );
 	
-	if( !overwrite && access( path, F_OK ) != -1 )
+	if( !overwrite && g_file_test( path, G_FILE_TEST_EXISTS ) )
 		return STORAGE_ALREADY_EXISTS;
 	
 	strcat( path, "~" );
