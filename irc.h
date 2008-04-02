@@ -60,6 +60,7 @@ typedef struct irc
 	int pinging;
 	char *sendbuffer;
 	char *readbuffer;
+	GIConv iconv, oconv;
 
 	int sentbytes;
 	time_t oldtime;
@@ -68,7 +69,9 @@ typedef struct irc
 	char *user;
 	char *host;
 	char *realname;
-	char *password;
+	char *password; /* HACK: Used to save the user's password, but before
+	                   logging in, this may contain a password we should
+	                   send to identify after USER/NICK are received. */
 
 	char umode[8];
 	

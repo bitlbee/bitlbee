@@ -96,6 +96,5 @@ char *set_eval_bool( set_t *set, char *value );
 /* Some not very generic evaluators that really shouldn't be here... */
 char *set_eval_to_char( set_t *set, char *value );
 char *set_eval_ops( set_t *set, char *value );
-char *set_eval_charset( set_t *set, char *value );
 
 #endif /* __SET_H__ */

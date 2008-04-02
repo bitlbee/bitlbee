@@ -17,7 +17,7 @@ char *sasl_get_part( char *data, char *field );
 
 struct
 {
-	const char *challenge;
+	char *challenge;
 	char *key;
 	char *value;
 } get_part_tests[] = {

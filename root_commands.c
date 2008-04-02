@@ -203,6 +203,26 @@ static void cmd_drop( irc_t *irc, char **cmd )
 	}
 }
 
+void cmd_account_del_yes( gpointer w, void *data )
+{
+	account_t *a = data;
+	irc_t *irc = a->irc;
+	
+	if( a->ic )
+	{
+		irc_usermsg( irc, "Account is still logged in, can't delete" );
+	}
+	else
+	{
+		account_del( irc, a );
+		irc_usermsg( irc, "Account deleted" );
+	}
+}
+
+void cmd_account_del_no( gpointer w, void *data )
+{
+}
+
 static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
@@ -257,8 +277,15 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			account_del( irc, a );
-			irc_usermsg( irc, "Account deleted" );
+			char *msg;
+			
+			msg = g_strdup_printf( "If you remove this account (%s(%s)), BitlBee will "
+			                       "also forget all your saved nicknames. If you want "
+			                       "to change your username/password, use the `account "
+			                       "set' command. Are you sure you want to delete this "
+			                       "account?", a->prpl->name, a->user );
+			query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, a );
+			g_free( msg );
 		}
 	}
 	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
@@ -768,6 +795,9 @@ static void cmd_set( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "%s = `%s'", set_name, s );
 		else
 			irc_usermsg( irc, "%s is empty", set_name );
+
+		if( strchr( set_name, '/' ) )
+			irc_usermsg( irc, "Warning: / found in setting name, you're probably looking for the `account set' command." );
 	}
 	else
 	{

@@ -66,4 +66,6 @@ G_MODULE_EXPORT char *word_wrap( char *msg, int line_len );
 
 G_MODULE_EXPORT gboolean ssl_sockerr_again( void *ssl );
 
+G_MODULE_EXPORT int md5_verify_password( char *password, char *hash );
+
 #endif

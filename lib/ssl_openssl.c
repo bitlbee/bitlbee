@@ -61,15 +61,15 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	struct scd *conn = g_new0( struct scd, 1 );
 	
 	conn->fd = proxy_connect( host, port, ssl_connected, conn );
-	conn->func = func;
-	conn->data = data;
-	conn->inpa = -1;
-	
 	if( conn->fd < 0 )
 	{
 		g_free( conn );
 		return NULL;
 	}
+	
+	conn->func = func;
+	conn->data = data;
+	conn->inpa = -1;
 	
 	return conn;
 }
@@ -228,6 +228,21 @@ int ssl_write( void *conn, const char *buf, int len )
 	}
 	
 	return st;
+}
+
+/* Only OpenSSL *really* needs this (and well, maybe NSS). See for more info:
+   http://www.gnu.org/software/gnutls/manual/gnutls.html#index-gnutls_005frecord_005fcheck_005fpending-209
+   http://www.openssl.org/docs/ssl/SSL_pending.html
+   
+   Required because OpenSSL empties the TCP buffer completely but doesn't
+   necessarily give us all the unencrypted data.
+   
+   Returns 0 if there's nothing left or if we don't have to care (GnuTLS),
+   1 if there's more data. */
+int ssl_pending( void *conn )
+{
+	return ( ((struct scd*)conn) && ((struct scd*)conn)->established ) ?
+	       SSL_pending( ((struct scd*)conn)->ssl ) > 0 : 0;
 }
 
 void ssl_disconnect( void *conn_ )

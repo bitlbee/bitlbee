@@ -257,19 +257,7 @@ gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
 	}
 	else
 	{
-		GSList *l;
-		struct bitlbee_child *c;
-		
-		for( l = child_list; l; l = l->next )
-		{
-			c = l->data;
-			if( c->ipc_fd == source )
-			{
-				ipc_master_free_one( c );
-				child_list = g_slist_remove( child_list, c );
-				break;
-			}
-		}
+		ipc_master_free_fd( source );
 	}
 	
 	return TRUE;
@@ -287,10 +275,7 @@ gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond )
 	}
 	else
 	{
-		b_event_remove( global.listen_watch_source_id );
-		close( global.listen_socket );
-		
-		global.listen_socket = -1;
+		ipc_child_disable();
 	}
 	
 	return TRUE;
@@ -325,7 +310,9 @@ void ipc_to_master_str( char *format, ... )
 	}
 	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
-		write( global.listen_socket, msg_buf, strlen( msg_buf ) );
+		if( global.listen_socket >= 0 )
+			if( write( global.listen_socket, msg_buf, strlen( msg_buf ) ) <= 0 )
+				ipc_child_disable();
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
@@ -375,12 +362,18 @@ void ipc_to_children_str( char *format, ... )
 	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
 		int msg_len = strlen( msg_buf );
-		GSList *l;
+		GSList *l, *next;
 		
-		for( l = child_list; l; l = l->next )
+		for( l = child_list; l; l = next )
 		{
 			struct bitlbee_child *c = l->data;
-			write( c->ipc_fd, msg_buf, msg_len );
+			
+			next = l->next;
+			if( write( c->ipc_fd, msg_buf, msg_len ) <= 0 )
+			{
+				ipc_master_free_one( c );
+				child_list = g_slist_remove( child_list, c );
+			}
 		}
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
@@ -409,6 +402,23 @@ void ipc_master_free_one( struct bitlbee_child *c )
 	g_free( c );
 }
 
+void ipc_master_free_fd( int fd )
+{
+	GSList *l;
+	struct bitlbee_child *c;
+	
+	for( l = child_list; l; l = l->next )
+	{
+		c = l->data;
+		if( c->ipc_fd == fd )
+		{
+			ipc_master_free_one( c );
+			child_list = g_slist_remove( child_list, c );
+			break;
+		}
+	}
+}
+
 void ipc_master_free_all()
 {
 	GSList *l;
@@ -418,6 +428,14 @@ void ipc_master_free_all()
 	
 	g_slist_free( child_list );
 	child_list = NULL;
+}
+
+void ipc_child_disable()
+{
+	b_event_remove( global.listen_watch_source_id );
+	close( global.listen_socket );
+	
+	global.listen_socket = -1;
 }
 
 char *ipc_master_save_state()

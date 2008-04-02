@@ -736,7 +736,7 @@ static void yahoo_send_packet(struct yahoo_input_data *yid, struct yahoo_packet 
 	data = y_new0(unsigned char, len + 1);
 
 	memcpy(data + pos, "YMSG", 4); pos += 4;
-	pos += yahoo_put16(data + pos, 0x0a00);
+	pos += yahoo_put16(data + pos, 0x000c);
 	pos += yahoo_put16(data + pos, 0x0000);
 	pos += yahoo_put16(data + pos, pktlen + extra_pad);
 	pos += yahoo_put16(data + pos, pkt->service);
@@ -3350,7 +3350,7 @@ static void yahoo_process_search_connection(struct yahoo_input_data *yid, int ov
 					yct->age = atoi(cp);
 					break;
 				case 5: 
-					if(cp != "\005")
+					if(strcmp(cp, "5") != 0)
 						yct->location = cp;
 					k = 0;
 					break;

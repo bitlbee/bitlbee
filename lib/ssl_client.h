@@ -59,6 +59,9 @@ G_MODULE_EXPORT void *ssl_starttls( int fd, ssl_input_function func, gpointer da
 G_MODULE_EXPORT int ssl_read( void *conn, char *buf, int len );
 G_MODULE_EXPORT int ssl_write( void *conn, const char *buf, int len );
 
+/* See ssl_openssl.c for an explanation. */
+G_MODULE_EXPORT int ssl_pending( void *conn );
+
 /* Abort the SSL connection and disconnect the socket. Do not use close()
    directly, both the SSL library and the peer will be unhappy! */
 G_MODULE_EXPORT void ssl_disconnect( void *conn_ );

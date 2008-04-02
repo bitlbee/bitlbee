@@ -130,17 +130,39 @@ unsigned char arc_getbyte( struct arc_state *st )
    don't need it anymore.
    
    Both functions return the number of bytes in the result string.
+   
+   Note that if you use the pad_to argument, you will need zero-termi-
+   nation to find back the original string length after decryption. So
+   it shouldn't be used if your string contains \0s by itself!
 */
 
-int arc_encode( char *clear, int clear_len, unsigned char **crypt, char *password )
+int arc_encode( char *clear, int clear_len, unsigned char **crypt, char *password, int pad_to )
 {
 	struct arc_state *st;
 	unsigned char *key;
-	int key_len, i;
+	char *padded = NULL;
+	int key_len, i, padded_len;
 	
 	key_len = strlen( password ) + ARC_IV_LEN;
 	if( clear_len <= 0 )
 		clear_len = strlen( clear );
+	
+	/* Pad the string to the closest multiple of pad_to. This makes it
+	   impossible to see the exact length of the password. */
+	if( pad_to > 0 && ( clear_len % pad_to ) > 0 )
+	{
+		padded_len = clear_len + pad_to - ( clear_len % pad_to );
+		padded = g_malloc( padded_len );
+		memcpy( padded, clear, clear_len );
+		
+		/* First a \0 and then random data, so we don't have to do
+		   anything special when decrypting. */
+		padded[clear_len] = 0;
+		random_bytes( (unsigned char*) padded + clear_len + 1, padded_len - clear_len - 1 );
+		
+		clear = padded;
+		clear_len = padded_len;
+	}
 	
 	/* Prepare buffers and the key + IV */
 	*crypt = g_malloc( clear_len + ARC_IV_LEN );
@@ -160,6 +182,7 @@ int arc_encode( char *clear, int clear_len, unsigned char **crypt, char *passwor
 		crypt[0][i+ARC_IV_LEN] = clear[i] ^ arc_getbyte( st );
 	
 	g_free( st );
+	g_free( padded );
 	
 	return clear_len + ARC_IV_LEN;
 }

@@ -240,8 +240,13 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 		return FALSE;
 	}
 	
-	/* EAGAIN/etc or a successful read. */
-	return TRUE;
+	if( ssl_pending( jd->ssl ) )
+		/* OpenSSL empties the TCP buffers completely but may keep some
+		   data in its internap buffers. select() won't see that, but
+		   ssl_pending() does. */
+		return jabber_read_callback( data, fd, cond );
+	else
+		return TRUE;
 }
 
 gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond )
@@ -520,8 +525,7 @@ gboolean jabber_start_stream( struct im_connection *ic )
 	/* We'll start our stream now, so prepare everything to receive one
 	   from the server too. */
 	xt_free( jd->xt );	/* In case we're RE-starting. */
-	jd->xt = xt_new( ic );
-	jd->xt->handlers = (struct xt_handler_entry*) jabber_handlers;
+	jd->xt = xt_new( jabber_handlers, ic );
 	
 	if( jd->r_inpa <= 0 )
 		jd->r_inpa = b_input_add( jd->fd, GAIM_INPUT_READ, jabber_read_callback, ic );

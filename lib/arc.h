@@ -30,7 +30,7 @@ struct arc_state
 	unsigned char i, j;
 };
 
-struct arc_state *arc_keymaker( unsigned char *key, int kl, int cycles );
+G_GNUC_MALLOC struct arc_state *arc_keymaker( unsigned char *key, int kl, int cycles );
 unsigned char arc_getbyte( struct arc_state *st );
-int arc_encode( char *clear, int clear_len, unsigned char **crypt, char *password );
+int arc_encode( char *clear, int clear_len, unsigned char **crypt, char *password, int pad_to );
 int arc_decode( unsigned char *crypt, int crypt_len, char **clear, char *password );

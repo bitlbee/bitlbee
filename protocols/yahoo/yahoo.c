@@ -314,7 +314,7 @@ static void byahoo_chat_invite( struct groupchat *c, char *who, char *msg )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) c->ic->proto_data;
 	
-	yahoo_conference_invite( yd->y2_id, NULL, c->data, c->title, msg );
+	yahoo_conference_invite( yd->y2_id, NULL, c->data, c->title, msg ? msg : "" );
 }
 
 static void byahoo_chat_leave( struct groupchat *c )
