@@ -1029,6 +1029,18 @@ static char *skype_set_display_name( set_t *set, char *value )
 	return(value);
 }
 
+static char *skype_set_balance( set_t *set, char *value )
+{
+	account_t *acc = set->data;
+	struct im_connection *ic = acc->ic;
+	char *buf;
+
+	buf = g_strdup_printf("GET PROFILE PSTN_BALANCE");
+	skype_write( ic, buf, strlen( buf ) );
+	g_free(buf);
+	return(value);
+}
+
 static char *skype_set_call( set_t *set, char *value )
 {
 	account_t *acc = set->data;
@@ -1233,6 +1245,9 @@ static void skype_init( account_t *acc )
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add( &acc->set, "call", NULL, skype_set_call, acc );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+
+	s = set_add( &acc->set, "balance", NULL, skype_set_balance, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 }
 
