@@ -230,13 +230,18 @@ your VNC server regularly. (How ugly.)
 - Running Skype on a machine different to BitlBee is possible, the
   communication is encrypted.
 
-- Managing outgoing calls (with call duration at the end):
+- Managing outgoing calls (with call duration at the end, including
+  SkypeOut calls if you use a phone number instead of a nick):
 
   * `account set skype/call nick`
   * `account set -del skype/call`
 
 - Managing incoming calls via questions, just like when you add / remove
   contacts.
+
+- Querying the current SkypeOut balance:
+
+  * `account set skype/balance query`
 
 == What needs to be done (aka. TODO)
 
