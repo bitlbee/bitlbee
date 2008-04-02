@@ -15,9 +15,7 @@
 #endif
 #else
 # include <winsock2.h>
-# ifdef IPV6
-#  include <ws2tcpip.h>
-# endif
+# include <ws2tcpip.h>
 # if !defined(BITLBEE_CORE) && defined(_MSC_VER)
 #   pragma comment(lib,"bitlbee.lib")
 # endif
