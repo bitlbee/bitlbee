@@ -95,10 +95,6 @@
 #undef g_main_quit
 #define g_main_quit		__PLEASE_USE_B_MAIN_QUIT__
 
-#ifndef F_OK
-#define F_OK 0
-#endif
-
 #ifndef G_GNUC_MALLOC
 /* Doesn't exist in GLib <=2.4 while everything else in BitlBee should
    work with it, so let's fake this one. */
