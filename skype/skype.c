@@ -108,6 +108,9 @@ struct skype_data
 	char *info_city;
 	char *info_homepage;
 	char *info_about;
+	/* When a call fails, we get the reason and later we get the failure
+	 * event, so store the failure code here till then */
+	int failurereason;
 };
 
 struct skype_away_state
@@ -233,6 +236,38 @@ struct groupchat *skype_chat_by_name( struct im_connection *ic, char *name )
 	}
 
 	return ret;
+}
+
+static char *skype_call_strerror(int err)
+{
+	switch(err) {
+		case 1:
+			return "Miscellaneous error";
+		case 2:
+			return "User or phone number does not exist.";
+		case 3:
+			return "User is offline";
+		case 4:
+			return "No proxy found";
+		case 5:
+			return "Session terminated.";
+		case 6:
+			return "No common codec found.";
+		case 7:
+			return "Sound I/O error.";
+		case 8:
+			return "Problem with remote sound device.";
+		case 9:
+			return "Call blocked by recipient.";
+		case 10:
+			return "Recipient not a friend.";
+		case 11:
+			return "Current user not authorized by recipient.";
+		case 12:
+			return "Sound recording error.";
+		default:
+			return "Unknown error";
+	}
 }
 
 static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition cond )
@@ -592,7 +627,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					char *info = strchr(id, ' ');
 					*info = '\0';
 					info++;
-					if(!strcmp(info, "STATUS RINGING"))
+					if(!strncmp(info, "FAILUREREASON ", 14))
+						sd->failurereason = atoi(strchr(info, ' '));
+					else if(!strcmp(info, "STATUS RINGING"))
 					{
 						if(sd->call_id)
 							g_free(sd->call_id);
@@ -632,6 +669,10 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						/* Save the ID for later usage (Cancel/Finish). */
 						sd->call_id = g_strdup(id);
 						sd->call_out = TRUE;
+					}
+					else if(!strcmp(info, "STATUS FAILED"))
+					{
+						imcb_error(ic, "Call failed: %s", skype_call_strerror(sd->failurereason));
 					}
 					else if(!strncmp(info, "DURATION ", 9))
 					{
