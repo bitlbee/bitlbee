@@ -871,6 +871,10 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					imc_logout( ic, TRUE );
 				}
 			}
+			else if(!strncmp(line, "PROFILE PSTN_BALANCE ", 21))
+			{
+				imcb_log(ic, "SkypeOut balance value is '%s'.", line+21);
+			}
 			lineptr++;
 		}
 		g_strfreev(lines);
