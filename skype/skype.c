@@ -673,6 +673,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					else if(!strcmp(info, "STATUS FAILED"))
 					{
 						imcb_error(ic, "Call failed: %s", skype_call_strerror(sd->failurereason));
+						sd->call_id = NULL;
 					}
 					else if(!strncmp(info, "DURATION ", 9))
 					{
