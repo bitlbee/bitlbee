@@ -392,8 +392,8 @@ else
 fi
 
 if [ "$gcov" = "1" ]; then
-	echo "CFLAGS+=-ftest-coverage -fprofile-arcs" >> Makefile.settings
-	echo "EFLAGS+=-lgcov" >> Makefile.settings
+	echo "CFLAGS+=--coverage" >> Makefile.settings
+	echo "EFLAGS+=--coverage" >> Makefile.settings
 fi
 
 if [ "$plugins" = 0 ]; then
