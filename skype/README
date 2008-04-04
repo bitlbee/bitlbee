@@ -135,6 +135,19 @@ If you are running skyped on a custom port:
 account set skype/port <port>
 ----
 
+If you want to set your full name (optional):
+
+----
+account set skype/display_name "John Smith"
+----
+
+If you want to see your skypeout contacts online as well (they are
+offline by default):
+
+----
+account set skype/skypeout_offline false
+----
+
 == Setting up Skype in a VNC server (optional)
 
 Optionally, if you want to run Skype on a server, you might want to setup up
