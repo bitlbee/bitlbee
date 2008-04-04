@@ -322,7 +322,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				{
 					ptr = g_strdup_printf("%s@skype.com", user);
 					imcb_add_buddy(ic, ptr, NULL);
-					if(strcmp(status, "OFFLINE") != 0 && strcmp(status, "SKYPEOUT") != 0)
+					if(strcmp(status, "OFFLINE") && (strcmp(status, "SKYPEOUT") || !set_getbool(&ic->acc->set, "skypeout_offline")))
 						flags |= OPT_LOGGED_IN;
 					if(strcmp(status, "ONLINE") != 0 && strcmp(status, "SKYPEME") != 0)
 						flags |= OPT_AWAY;
@@ -1253,6 +1253,8 @@ static void skype_init( account_t *acc )
 
 	s = set_add( &acc->set, "balance", NULL, skype_set_balance, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+
+	s = set_add( &acc->set, "skypeout_offline", "true", set_eval_bool, acc );
 }
 
 void init_plugin(void)
