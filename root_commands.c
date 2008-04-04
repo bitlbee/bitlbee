@@ -205,22 +205,24 @@ static void cmd_drop( irc_t *irc, char **cmd )
 
 void cmd_account_del_yes( gpointer w, void *data )
 {
-	account_t *a = data;
-	irc_t *irc = a->irc;
+	account_t **aptr = data;
+	irc_t *irc = (*aptr)->irc;
 	
-	if( a->ic )
+	if( (*aptr)->ic )
 	{
 		irc_usermsg( irc, "Account is still logged in, can't delete" );
 	}
 	else
 	{
-		account_del( irc, a );
+		account_del( irc, (*aptr) );
 		irc_usermsg( irc, "Account deleted" );
 	}
+	g_free( aptr );
 }
 
 void cmd_account_del_no( gpointer w, void *data )
 {
+	g_free( data );
 }
 
 static void cmd_account( irc_t *irc, char **cmd )
@@ -277,14 +279,18 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 		else
 		{
+			account_t **aptr;
 			char *msg;
+			
+			aptr = g_malloc( sizeof( aptr ) );
+			*aptr = a;
 			
 			msg = g_strdup_printf( "If you remove this account (%s(%s)), BitlBee will "
 			                       "also forget all your saved nicknames. If you want "
 			                       "to change your username/password, use the `account "
 			                       "set' command. Are you sure you want to delete this "
 			                       "account?", a->prpl->name, a->user );
-			query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, a );
+			query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, aptr );
 			g_free( msg );
 		}
 	}
