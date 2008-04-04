@@ -129,6 +129,12 @@ account set skype/server localhost
 in `skyped.conf`. If you want to run skyped on a remote machine, replace
 `localhost` with the name of the machine.
 
+If you are running skyped on a custom port:
+
+----
+account set skype/port <port>
+----
+
 == Setting up Skype in a VNC server (optional)
 
 Optionally, if you want to run Skype on a server, you might want to setup up
