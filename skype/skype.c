@@ -322,7 +322,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				{
 					ptr = g_strdup_printf("%s@skype.com", user);
 					imcb_add_buddy(ic, ptr, NULL);
-					if(strcmp(status, "OFFLINE") != 0)
+					if(strcmp(status, "OFFLINE") != 0 && strcmp(status, "SKYPEOUT") != 0)
 						flags |= OPT_LOGGED_IN;
 					if(strcmp(status, "ONLINE") != 0 && strcmp(status, "SKYPEME") != 0)
 						flags |= OPT_AWAY;
