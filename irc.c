@@ -150,6 +150,7 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "password", NULL, passchange, irc );
 	set_add( &irc->set, "private", "true", set_eval_bool, irc );
 	set_add( &irc->set, "query_order", "lifo", NULL, irc );
+	set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
 	set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
 	set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	set_add( &irc->set, "strip_html", "true", NULL, irc );

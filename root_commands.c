@@ -602,6 +602,9 @@ static void cmd_rename( irc_t *irc, char **cmd )
 		{
 			g_free( irc->mynick );
 			irc->mynick = g_strdup( cmd[2] );
+			
+			if( strcmp( cmd[0], "set_rename" ) != 0 )
+				set_setstr( &irc->set, "root_nick", cmd[2] );
 		}
 		else if( u->send_handler == buddy_send_handler )
 		{
@@ -610,6 +613,20 @@ static void cmd_rename( irc_t *irc, char **cmd )
 		
 		irc_usermsg( irc, "Nick successfully changed" );
 	}
+}
+
+char *set_eval_root_nick( set_t *set, char *new_nick )
+{
+	irc_t *irc = set->data;
+	
+	if( strcmp( irc->mynick, new_nick ) != 0 )
+	{
+		char *cmd[] = { "set_rename", irc->mynick, new_nick, NULL };
+		
+		cmd_rename( irc, cmd );
+	}
+	
+	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : NULL;
 }
 
 static void cmd_remove( irc_t *irc, char **cmd )
