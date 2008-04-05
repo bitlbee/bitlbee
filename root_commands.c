@@ -203,24 +203,36 @@ static void cmd_drop( irc_t *irc, char **cmd )
 	}
 }
 
-void cmd_account_del_yes( gpointer w, void *data )
+struct cmd_account_del_data
 {
-	account_t **aptr = data;
-	irc_t *irc = (*aptr)->irc;
+	account_t *a;
+	irc_t *irc;
+};
+
+void cmd_account_del_yes( void *data )
+{
+	struct cmd_account_del_data *cad = data;
+	account_t *a;
 	
-	if( (*aptr)->ic )
+	for( a = cad->irc->accounts; a && a != cad->a; a = a->next );
+	
+	if( a == NULL )
 	{
-		irc_usermsg( irc, "Account is still logged in, can't delete" );
+		irc_usermsg( cad->irc, "Account already deleted" );
+	}
+	else if( a->ic )
+	{
+		irc_usermsg( cad->irc, "Account is still logged in, can't delete" );
 	}
 	else
 	{
-		account_del( irc, (*aptr) );
-		irc_usermsg( irc, "Account deleted" );
+		account_del( cad->irc, a );
+		irc_usermsg( cad->irc, "Account deleted" );
 	}
-	g_free( aptr );
+	g_free( data );
 }
 
-void cmd_account_del_no( gpointer w, void *data )
+void cmd_account_del_no( void *data )
 {
 	g_free( data );
 }
@@ -279,18 +291,19 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			account_t **aptr;
+			struct cmd_account_del_data *cad;
 			char *msg;
 			
-			aptr = g_malloc( sizeof( aptr ) );
-			*aptr = a;
+			cad = g_malloc( sizeof( struct cmd_account_del_data ) );
+			cad->a = a;
+			cad->irc = irc;
 			
 			msg = g_strdup_printf( "If you remove this account (%s(%s)), BitlBee will "
 			                       "also forget all your saved nicknames. If you want "
 			                       "to change your username/password, use the `account "
 			                       "set' command. Are you sure you want to delete this "
 			                       "account?", a->prpl->name, a->user );
-			query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, aptr );
+			query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, cad );
 			g_free( msg );
 		}
 	}
