@@ -1083,8 +1083,8 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 	return 1;
 }
 
-void oscar_accept_chat(gpointer w, struct aim_chat_invitation * inv);
-void oscar_reject_chat(gpointer w, struct aim_chat_invitation * inv);
+void oscar_accept_chat(void *data);
+void oscar_reject_chat(void *data);
 	
 static int incomingim_chan2(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args) {
 	struct im_connection *ic = sess->aux_data;
@@ -1118,7 +1118,8 @@ static int incomingim_chan2(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 	return 1;
 }
 
-static void gaim_icq_authgrant(gpointer w, struct icq_auth *data) {
+static void gaim_icq_authgrant(void *data_) {
+	struct icq_auth *data = data_;
 	char *uin, message;
 	struct oscar_data *od = (struct oscar_data *)data->ic->proto_data;
 	
@@ -1133,7 +1134,8 @@ static void gaim_icq_authgrant(gpointer w, struct icq_auth *data) {
 	g_free(data);
 }
 
-static void gaim_icq_authdeny(gpointer w, struct icq_auth *data) {
+static void gaim_icq_authdeny(void *data_) {
+	struct icq_auth *data = data_;
 	char *uin, *message;
 	struct oscar_data *od = (struct oscar_data *)data->ic->proto_data;
 	
@@ -2587,15 +2589,19 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	return NULL;
 }
 
-void oscar_accept_chat(gpointer w, struct aim_chat_invitation * inv)
+void oscar_accept_chat(void *data)
 {
+	struct aim_chat_invitation * inv = data;
+	
 	oscar_chat_join(inv->ic, inv->name, NULL, NULL);
 	g_free(inv->name);
 	g_free(inv);
 }
 
-void oscar_reject_chat(gpointer w, struct aim_chat_invitation * inv)
+void oscar_reject_chat(void *data)
 {
+	struct aim_chat_invitation * inv = data;
+	
 	g_free(inv->name);
 	g_free(inv);
 }
