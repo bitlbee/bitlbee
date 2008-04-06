@@ -44,7 +44,8 @@ conf_t *conf_load( int argc, char *argv[] )
 	
 	conf = g_new0( conf_t, 1 );
 	
-	conf->iface = NULL;
+	conf->iface_in = NULL;
+	conf->iface_out = NULL;
 	conf->port = g_strdup( "6667" );
 	conf->nofork = 0;
 	conf->verbose = 0;
@@ -81,7 +82,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	{
 		if( opt == 'i' )
 		{
-			conf->iface = g_strdup( optarg );
+			conf->iface_in = g_strdup( optarg );
 		}
 		else if( opt == 'p' )
 		{
@@ -201,13 +202,18 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else if( g_strcasecmp( ini->key, "daemoninterface" ) == 0 )
 			{
-				g_free( conf->iface );
-				conf->iface = g_strdup( ini->value );
+				g_free( conf->iface_in );
+				conf->iface_in = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "daemonport" ) == 0 )
 			{
 				g_free( conf->port );
 				conf->port = g_strdup( ini->value );
+			}
+			else if( g_strcasecmp( ini->key, "clientinterface" ) == 0 )
+			{
+				g_free( conf->iface_out );
+				conf->iface_out = g_strdup( ini->value );
 			}
 			else if( g_strcasecmp( ini->key, "authmode" ) == 0 )
 			{

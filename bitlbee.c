@@ -53,11 +53,11 @@ int bitlbee_daemon_init()
 #endif
 	;
 
-	i = getaddrinfo( global.conf->iface, global.conf->port, &hints, &addrinfo_bind );
+	i = getaddrinfo( global.conf->iface_in, global.conf->port, &hints, &addrinfo_bind );
 	if( i )
 	{
 		log_message( LOGLVL_ERROR, "Couldn't parse address `%s': %s",
-		                           global.conf->iface, gai_strerror(i) );
+		                           global.conf->iface_in, gai_strerror(i) );
 		return -1;
 	}
 
