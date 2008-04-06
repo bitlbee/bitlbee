@@ -110,7 +110,7 @@ def dprint(msg):
 	if options.debug:
 		print msg
 
-class SkypeApi():
+class SkypeApi:
 	def __init__(self):
 		self.skype = Skype4Py.Skype()
 		self.skype.OnNotify = self.recv
