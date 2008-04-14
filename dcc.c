@@ -583,11 +583,17 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 	regex_t re;
 	file_transfer_t *ft;
 	dcc_file_transfer_t *df;
+	char errbuf[256];
+	int regerrcode, gret;
 
-	if( regcomp( &re, pattern, REG_EXTENDED ) )
+	if( ( regerrcode = regcomp( &re, pattern, REG_EXTENDED ) ) ||
+	    ( regerrcode = regexec( &re, line, 9, pmatch, 0 ) ) ) {
+		regerror( regerrcode,&re,errbuf,sizeof( errbuf ) );
+		imcb_log( ic, 
+			  "DCC: error parsing 'DCC SEND': %s, line: %s", 
+			  errbuf, line );
 		return NULL;
-	if( regexec( &re, line, 9, pmatch, 0 ) )
-		return NULL;
+	}
 
 	if( ( pmatch[1].rm_so > 0 ) &&
 	    ( pmatch[4].rm_so > 0 ) &&
@@ -615,7 +621,7 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 		/* number means ipv4, something else means ipv6 */
 		if ( pmatch[5].rm_so > 0 )
 		{
-			struct in_addr ipaddr = { htonl( atoi( input + pmatch[5].rm_so ) ) };
+			struct in_addr ipaddr = { .s_addr = htonl( atoi( input + pmatch[5].rm_so ) ) };
 			host = inet_ntoa( ipaddr );
 		} else
 		{
@@ -630,9 +636,13 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 		filesize = atoll( input + pmatch[8].rm_so );
 
 		memset( &hints, 0, sizeof ( struct addrinfo ) );
-		if ( getaddrinfo( host, port, &hints, &rp ) )
+		if ( ( gret = getaddrinfo( host, port, &hints, &rp ) ) )
 		{
 			g_free( input );
+			imcb_log( ic, "DCC: getaddrinfo() failed with %s "
+				  "when parsing incoming 'DCC SEND': "
+				  "host %s, port %s", 
+				  gai_strerror( gret ), host, port );
 			return NULL;
 		}
 
@@ -648,6 +658,8 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 
 		return ft;
 	}
+
+	imcb_log( ic, "DCC: couldnt parse 'DCC SEND' line: %s", line );
 
 	return NULL;
 }

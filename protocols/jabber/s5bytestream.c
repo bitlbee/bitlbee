@@ -352,6 +352,7 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 
 	struct bs_transfer *bt = data;
 	short revents;
+	int gret;
 
 	if ( ( fd != 0 ) && !jabber_bs_poll( bt, fd, &revents ) )
 		return FALSE;
@@ -365,8 +366,8 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 			memset( &hints, 0, sizeof( struct addrinfo ) );
 			hints.ai_socktype = SOCK_STREAM;
 
-			if ( getaddrinfo( bt->sh->host, bt->sh->port, &hints, &rp ) != 0 )
-				return jabber_bs_abort( bt, "getaddrinfo() failed: %s", strerror( errno ) );
+			if ( ( gret = getaddrinfo( bt->sh->host, bt->sh->port, &hints, &rp ) ) != 0 )
+				return jabber_bs_abort( bt, "getaddrinfo() failed: %s", gai_strerror( gret ) );
 
 			ASSERTSOCKOP( bt->tf->fd = fd = socket( rp->ai_family, rp->ai_socktype, 0 ), "Opening socket" );
 
@@ -922,7 +923,7 @@ gboolean jabber_bs_send_handshake_abort(struct bs_transfer *bt, char *error )
 gboolean jabber_bs_send_listen( struct bs_transfer *bt, struct sockaddr_storage *saddr, char *host, char *port )
 {
 	struct jabber_transfer *tf = bt->tf;
-	int fd;
+	int fd,gret;
 	char hostname[ HOST_NAME_MAX + 1 ];
 	struct addrinfo hints, *rp;
 	socklen_t ssize = sizeof( struct sockaddr_storage );
@@ -935,8 +936,8 @@ gboolean jabber_bs_send_listen( struct bs_transfer *bt, struct sockaddr_storage 
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_NUMERICSERV;
 
-	if ( getaddrinfo( hostname, "0", &hints, &rp ) != 0 )
-		return jabber_bs_abort( bt, "getaddrinfo()" );
+	if ( ( gret = getaddrinfo( hostname, "0", &hints, &rp ) ) != 0 )
+		return jabber_bs_abort( bt, "getaddrinfo() failed: %s", gai_strerror( gret ) );
 
 	memcpy( saddr, rp->ai_addr, rp->ai_addrlen );
 
