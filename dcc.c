@@ -217,7 +217,7 @@ gboolean dcc_listen( dcc_file_transfer_t *df, struct sockaddr_storage **saddr_pt
 {
 	file_transfer_t *file = df->ft;
 	struct sockaddr_storage *saddr;
-	int fd;
+	int fd,gret;
 	char hostname[ HOST_NAME_MAX + 1 ];
 	struct addrinfo hints, *rp;
 	socklen_t ssize = sizeof( struct sockaddr_storage );
@@ -230,8 +230,8 @@ gboolean dcc_listen( dcc_file_transfer_t *df, struct sockaddr_storage **saddr_pt
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_NUMERICSERV;
 
-	if ( getaddrinfo( hostname, "0", &hints, &rp ) != 0 )
-		return dcc_abort( df, "getaddrinfo()" );
+	if ( ( gret = getaddrinfo( hostname, "0", &hints, &rp ) != 0 ) )
+		return dcc_abort( df, "getaddrinfo(): %s", gai_strerror( gret ) );
 
 	saddr = g_new( struct sockaddr_storage, 1 );
 
@@ -389,11 +389,12 @@ gboolean dccs_recv_start( file_transfer_t *ft )
 	dcc_file_transfer_t *df = ft->priv;
 	struct sockaddr_storage *saddr = &df->saddr;
 	int fd;
+	char ipaddr[INET6_ADDRSTRLEN]; 
 	socklen_t sa_len = saddr->ss_family == AF_INET ? 
 		sizeof( struct sockaddr_in ) : sizeof( struct sockaddr_in6 );
 	
 	if( !ft->write )
-		return dcc_abort( df, "Protocol didn't register write()" );
+		return dcc_abort( df, "BUG: protocol didn't register write()" );
 	
 	ASSERTSOCKOP( fd = df->fd = socket( saddr->ss_family, SOCK_STREAM, 0 ) , "Opening Socket" );
 
@@ -401,7 +402,17 @@ gboolean dccs_recv_start( file_transfer_t *ft )
 
 	if( ( connect( fd, (struct sockaddr *)saddr, sa_len ) == -1 ) &&
 	    ( errno != EINPROGRESS ) )
-		return dcc_abort( df, "Connecting" );
+		return dcc_abort( df, "Connecting to %s:%d : %s", 
+			inet_ntop( saddr->ss_family, 
+				saddr->ss_family == AF_INET ? 
+				    ( void* ) &( ( struct sockaddr_in *) saddr )->sin_addr.s_addr :
+				    ( void* ) &( ( struct sockaddr_in6 *) saddr )->sin6_addr.s6_addr,
+				ipaddr, 
+				sizeof( ipaddr ) ),
+			ntohs( saddr->ss_family == AF_INET ?
+			    ( ( struct sockaddr_in *) saddr )->sin_port :
+			    ( ( struct sockaddr_in6 *) saddr )->sin6_port ),
+			strerror( errno ) );
 
 	ft->status = FT_STATUS_CONNECTING;
 
