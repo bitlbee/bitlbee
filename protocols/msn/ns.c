@@ -33,7 +33,7 @@ static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition c
 static int msn_ns_command( gpointer data, char **cmd, int num_parts );
 static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
-static void msn_auth_got_passport_id( struct passport_reply *rep );
+static void msn_auth_got_passport_token( struct msn_auth_data *mad );
 
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 {
@@ -213,7 +213,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts == 5 && strcmp( cmd[2], "TWN" ) == 0 && strcmp( cmd[3], "S" ) == 0 )
 		{
 			/* Time for some Passport black magic... */
-			if( !passport_get_id( msn_auth_got_passport_id, ic, ic->acc->user, ic->acc->pass, cmd[4] ) )
+			if( !passport_get_token( msn_auth_got_passport_token, ic, ic->acc->user, ic->acc->pass, cmd[4] ) )
 			{
 				imcb_error( ic, "Error while contacting Passport server" );
 				imc_logout( ic, TRUE );
@@ -673,22 +673,26 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 	return( 1 );
 }
 
-static void msn_auth_got_passport_id( struct passport_reply *rep )
+static void msn_auth_got_passport_token( struct msn_auth_data *mad )
 {
-	struct im_connection *ic = rep->data;
-	struct msn_data *md = ic->proto_data;
-	char *key = rep->result;
-	char buf[1024];
+	struct im_connection *ic = mad->data;
+	struct msn_data *md;
 	
-	if( key == NULL )
+	/* Dead connection? */
+	if( g_slist_find( msn_connections, ic ) == NULL )
+		return;
+	
+	md = ic->proto_data;
+	if( mad->token )
 	{
-		imcb_error( ic, "Error during Passport authentication (%s)",
-		               rep->error_string ? rep->error_string : "Unknown error" );
-		imc_logout( ic, TRUE );
+		char buf[1024];
+		
+		g_snprintf( buf, sizeof( buf ), "USR %d TWN S %s\r\n", ++md->trId, mad->token );
+		msn_write( ic, buf, strlen( buf ) );
 	}
 	else
 	{
-		g_snprintf( buf, sizeof( buf ), "USR %d TWN S %s\r\n", ++md->trId, key );
-		msn_write( ic, buf, strlen( buf ) );
+		imcb_error( ic, "Error during Passport authentication: %s", mad->error );
+		imc_logout( ic, TRUE );
 	}
 }

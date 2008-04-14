@@ -249,8 +249,10 @@ struct jabber_buddy_ask_data
 	char *realname;
 };
 
-static void jabber_buddy_ask_yes( gpointer w, struct jabber_buddy_ask_data *bla )
+static void jabber_buddy_ask_yes( void *data )
 {
+	struct jabber_buddy_ask_data *bla = data;
+	
 	presence_send_request( bla->ic, bla->handle, "subscribed" );
 	
 	if( imcb_find_buddy( bla->ic, bla->handle ) == NULL )
@@ -260,8 +262,10 @@ static void jabber_buddy_ask_yes( gpointer w, struct jabber_buddy_ask_data *bla 
 	g_free( bla );
 }
 
-static void jabber_buddy_ask_no( gpointer w, struct jabber_buddy_ask_data *bla )
+static void jabber_buddy_ask_no( void *data )
 {
+	struct jabber_buddy_ask_data *bla = data;
+	
 	presence_send_request( bla->ic, bla->handle, "subscribed" );
 	
 	g_free( bla->handle );

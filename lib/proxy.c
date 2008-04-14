@@ -529,7 +529,7 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 {
 	struct PHB *phb;
 	
-	if (!host || !port || (port == -1) || !func || strlen(host) > 128) {
+	if (!host || port <= 0 || !func || strlen(host) > 128) {
 		return -1;
 	}
 	
@@ -537,7 +537,7 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 	phb->func = func;
 	phb->data = data;
 	
-	if ((proxytype == PROXY_NONE) || strlen(proxyhost) > 0 || !proxyport || (proxyport == -1))
+	if (proxytype == PROXY_NONE || !proxyhost[0] || proxyport <= 0)
 		return proxy_connect_none(host, port, phb);
 	else if (proxytype == PROXY_HTTP)
 		return proxy_connect_http(host, port, phb);

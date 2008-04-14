@@ -41,6 +41,7 @@
 #include "bitlbee.h"
 #include "account.h"
 #include "proxy.h"
+#include "query.h"
 #include "md5.h"
 #include "ft.h"
 
@@ -264,7 +265,7 @@ G_MODULE_EXPORT void imcb_error( struct im_connection *ic, char *format, ... ) G
  * - 'data' can be your custom struct - it will be passed to the callbacks.
  * - 'doit' or 'dont' will be called depending of the answer of the user.
  */
-G_MODULE_EXPORT void imcb_ask( struct im_connection *ic, char *msg, void *data, void *doit, void *dont );
+G_MODULE_EXPORT void imcb_ask( struct im_connection *ic, char *msg, void *data, query_callback doit, query_callback dont );
 G_MODULE_EXPORT void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname );
 
 /* Buddy management */

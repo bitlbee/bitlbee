@@ -225,12 +225,16 @@ gboolean bitlbee_io_current_client_write( gpointer data, gint fd, b_input_condit
 	
 	if( st == size )
 	{
-		g_free( irc->sendbuffer );
-		irc->sendbuffer = NULL;
-		irc->w_watch_source_id = 0;
-		
 		if( irc->status & USTATUS_SHUTDOWN )
+		{
 			irc_free( irc );
+		}
+		else
+		{
+			g_free( irc->sendbuffer );
+			irc->sendbuffer = NULL;
+			irc->w_watch_source_id = 0;
+		}
 		
 		return FALSE;
 	}

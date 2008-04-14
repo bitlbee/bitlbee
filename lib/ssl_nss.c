@@ -168,6 +168,12 @@ int ssl_write( void *conn, const char *buf, int len )
 	return( PR_Write ( ((struct scd*)conn)->prfd, buf, len ) );
 }
 
+/* See ssl_openssl.c for an explanation. */
+int ssl_pending( void *conn )
+{
+	return 0;
+}
+
 void ssl_disconnect( void *conn_ )
 {
 	struct scd *conn = conn_;

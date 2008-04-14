@@ -533,6 +533,8 @@ static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_no
 	return XT_HANDLED;
 }
 
+static xt_status jabber_add_to_roster_callback( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+
 int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name )
 {
 	struct xt_node *node;
@@ -548,11 +550,34 @@ int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name )
 	node = xt_new_node( "query", NULL, node );
 	xt_add_attr( node, "xmlns", XMLNS_ROSTER );
 	node = jabber_make_packet( "iq", "set", NULL, node );
+	jabber_cache_add( ic, node, jabber_add_to_roster_callback );
 	
 	st = jabber_write_packet( ic, node );
 	
-	xt_free_node( node );
 	return st;
+}
+
+static xt_status jabber_add_to_roster_callback( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
+{
+	char *s, *jid = NULL;
+	struct xt_node *c;
+	
+	if( ( c = xt_find_node( orig->children, "query" ) ) &&
+	    ( c = xt_find_node( c->children, "item" ) ) &&
+	    ( jid = xt_find_attr( c, "jid" ) ) &&
+	    ( s = xt_find_attr( node, "type" ) ) &&
+	    strcmp( s, "result" ) == 0 )
+	{
+		if( imcb_find_buddy( ic, jid ) == NULL )
+			imcb_add_buddy( ic, jid, NULL );
+	}
+	else
+	{
+		imcb_log( ic, "Error while adding `%s' to your contact list.",
+		          jid ? jid : "(unknown handle)" );
+	}
+	
+	return XT_HANDLED;
 }
 
 int jabber_remove_from_roster( struct im_connection *ic, char *handle )

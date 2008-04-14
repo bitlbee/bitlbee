@@ -229,18 +229,3 @@ char *set_eval_ops( set_t *set, char *value )
 	
 	return value;
 }
-
-char *set_eval_charset( set_t *set, char *value )
-{
-	GIConv cd;
-
-	if ( g_strncasecmp( value, "none", 4 ) == 0 )
-		return value;
-
-	cd = g_iconv_open( "UTF-8", value );
-	if( cd == (GIConv) -1 )
-		return NULL;
-
-	g_iconv_close( cd );
-	return value;
-}

@@ -46,16 +46,12 @@ All MSN smileys (except one) are case insensitive and work without the nose too.
 	<varlistentry><term>(O)</term><listitem><para>Clock</para></listitem></varlistentry>
 </variablelist>
 
-<para>
-This list was extracted from <ulink url="http://help.msn.com/!data/en_us/data/messengerv50.its51/$content$/EMOTICONS.HTM?H_APP=">http://help.msn.com/!data/en_us/data/messengerv50.its51/$content$/EMOTICONS.HTM?H_APP=</ulink>.
-</para>
-
 </sect1>
 
 <sect1 id="groupchats">
 <title>Groupchats</title>
 <para>
-Since version 0.8x, BitlBee supports groupchats on the MSN and Yahoo! networks. This text will try to explain you how they work.
+BitlBee now supports groupchats on all IM networks. This text will try to explain you how they work.
 </para>
 
 <para>
@@ -72,7 +68,7 @@ Of course you can also create your own groupchats. Type <emphasis>help groupchat
 <title>Creating groupchats</title>
 
 <para>
-If you want to start a groupchat with the person <emphasis>jim_msn</emphasis> in it, just join the channel <emphasis>#jim_msn</emphasis>. BitlBee will refuse to join you to the channel with that name, but it will create a new virtual channel with root, you and jim_msn in it.
+If you want to start a groupchat with the person <emphasis>lisa_msn</emphasis> in it, just join the channel <emphasis>#lisa_msn</emphasis>. BitlBee will refuse to join you to the channel with that name, but it will create a new virtual channel with root, you and lisa_msn in it.
 </para>
 
 <para>
@@ -81,23 +77,6 @@ Of course a channel with only two people isn't really exciting yet. So the next 
 
 <para>
 Some protocols (like Jabber) also support named groupchats. BitlBee now supports these too. You can use the <emphasis>join_chat</emphasis> command to join them. See <emphasis>help join_chat</emphasis> for more information.
-</para>
-
-<para>
-This is all you'll probably need to know. If you have any problems, please read <emphasis>help groupchats3</emphasis>.
-</para>
-
-</sect1>
-
-<sect1 id="groupchats3">
-<title>Groupchat channel names</title>
-
-<para>
-Obviously the (numbered) channel names don't make a lot of sense. Problem is that groupchats usually don't have names at all in the IM-world, while IRC insists on a name. So BitlBee just generates something random, just don't pay attention to it. :-)
-</para>
-
-<para>
-Please also note that BitlBee doesn't support groupchats for all protocols yet. BitlBee will tell you so. Support for other protocols will hopefully come later.
 </para>
 
 </sect1>
@@ -120,6 +99,7 @@ Not all away states are supported by all protocols, and some protocols have diff
 	<member>Be right back, BRB</member>
 	<member>On the phone, Phone, On phone</member>
 	<member>Out to lunch, Lunch, Food</member>
+	<member>Invisible, Hidden</member>
 </simplelist>
 
 <para>
@@ -127,7 +107,7 @@ So <emphasis>/away Food</emphasis> will set your state to "Out to lunch" on your
 </para>
 
 <para>
-You can also add more information to your away message. Setting it to "Busy - Fixing BitlBee bugs" will set your IM-away-states to Busy, but your away message will be more descriptive for people on IRC. Protocols like Yahoo! and Jabber will also show this complete away message to your buddies.
+You can also add more information to your away message. Setting it to "Busy - Fixing BitlBee bugs" will set your IM-away-states to Busy, but your away message will be more descriptive for people on IRC. Most IM-protocols can also show this additional information to your buddies.
 </para>
 
 </sect1>

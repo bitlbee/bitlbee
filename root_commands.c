@@ -203,6 +203,40 @@ static void cmd_drop( irc_t *irc, char **cmd )
 	}
 }
 
+struct cmd_account_del_data
+{
+	account_t *a;
+	irc_t *irc;
+};
+
+void cmd_account_del_yes( void *data )
+{
+	struct cmd_account_del_data *cad = data;
+	account_t *a;
+	
+	for( a = cad->irc->accounts; a && a != cad->a; a = a->next );
+	
+	if( a == NULL )
+	{
+		irc_usermsg( cad->irc, "Account already deleted" );
+	}
+	else if( a->ic )
+	{
+		irc_usermsg( cad->irc, "Account is still logged in, can't delete" );
+	}
+	else
+	{
+		account_del( cad->irc, a );
+		irc_usermsg( cad->irc, "Account deleted" );
+	}
+	g_free( data );
+}
+
+void cmd_account_del_no( void *data )
+{
+	g_free( data );
+}
+
 static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
@@ -257,8 +291,20 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			account_del( irc, a );
-			irc_usermsg( irc, "Account deleted" );
+			struct cmd_account_del_data *cad;
+			char *msg;
+			
+			cad = g_malloc( sizeof( struct cmd_account_del_data ) );
+			cad->a = a;
+			cad->irc = irc;
+			
+			msg = g_strdup_printf( "If you remove this account (%s(%s)), BitlBee will "
+			                       "also forget all your saved nicknames. If you want "
+			                       "to change your username/password, use the `account "
+			                       "set' command. Are you sure you want to delete this "
+			                       "account?", a->prpl->name, a->user );
+			query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, cad );
+			g_free( msg );
 		}
 	}
 	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
@@ -556,6 +602,9 @@ static void cmd_rename( irc_t *irc, char **cmd )
 		{
 			g_free( irc->mynick );
 			irc->mynick = g_strdup( cmd[2] );
+			
+			if( strcmp( cmd[0], "set_rename" ) != 0 )
+				set_setstr( &irc->set, "root_nick", cmd[2] );
 		}
 		else if( u->send_handler == buddy_send_handler )
 		{
@@ -564,6 +613,20 @@ static void cmd_rename( irc_t *irc, char **cmd )
 		
 		irc_usermsg( irc, "Nick successfully changed" );
 	}
+}
+
+char *set_eval_root_nick( set_t *set, char *new_nick )
+{
+	irc_t *irc = set->data;
+	
+	if( strcmp( irc->mynick, new_nick ) != 0 )
+	{
+		char *cmd[] = { "set_rename", irc->mynick, new_nick, NULL };
+		
+		cmd_rename( irc, cmd );
+	}
+	
+	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : NULL;
 }
 
 static void cmd_remove( irc_t *irc, char **cmd )
@@ -768,6 +831,9 @@ static void cmd_set( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "%s = `%s'", set_name, s );
 		else
 			irc_usermsg( irc, "%s is empty", set_name );
+
+		if( strchr( set_name, '/' ) )
+			irc_usermsg( irc, "Warning: / found in setting name, you're probably looking for the `account set' command." );
 	}
 	else
 	{

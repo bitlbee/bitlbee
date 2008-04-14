@@ -36,8 +36,8 @@ START_TEST(test_login)
 
 	irc = irc_new(g_io_channel_unix_get_fd(ch1));
 
-	fail_unless(g_io_channel_write_chars(ch2, "NICK bla\r\n"
-			"USER a a a a\r\n", -1, NULL, NULL) == G_IO_STATUS_NORMAL);
+	fail_unless(g_io_channel_write_chars(ch2, "NICK bla\r\r\n"
+			"USER a a a a\n", -1, NULL, NULL) == G_IO_STATUS_NORMAL);
 	fail_unless(g_io_channel_flush(ch2, NULL) == G_IO_STATUS_NORMAL);
 
 	g_main_iteration(FALSE);

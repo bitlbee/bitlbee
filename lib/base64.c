@@ -117,7 +117,7 @@ int base64_decode_real(const unsigned char *in, unsigned char *out, char *b64rev
 {
 	int i, outlen = 0;
 	
-	for( i = 0; in[i]; i += 4 )
+	for( i = 0; in[i] && in[i+1] && in[i+2] && in[i+3]; i += 4 )
 	{
 		int sx;
 		

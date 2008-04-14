@@ -29,7 +29,8 @@
 static void query_display( irc_t *irc, query_t *q );
 static query_t *query_default( irc_t *irc );
 
-query_t *query_add( irc_t *irc, struct im_connection *ic, char *question, void *yes, void *no, void *data )
+query_t *query_add( irc_t *irc, struct im_connection *ic, char *question,
+                    query_callback yes, query_callback no, void *data )
 {
 	query_t *q = g_new0( query_t, 1 );
 	
@@ -139,13 +140,19 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 	}
 	if( ans )
 	{
-		imcb_log( q->ic, "Accepted: %s", q->question );
-		q->yes( NULL, q->data );
+		if( q->ic )
+			imcb_log( q->ic, "Accepted: %s", q->question );
+		else
+			irc_usermsg( irc, "Accepted: %s", q->question );
+		q->yes( q->data );
 	}
 	else
 	{
-		imcb_log( q->ic, "Rejected: %s", q->question );
-		q->no( NULL, q->data );
+		if( q->ic )
+			imcb_log( q->ic, "Rejected: %s", q->question );
+		else
+			irc_usermsg( irc, "Rejected: %s", q->question );
+		q->no( q->data );
 	}
 	q->data = NULL;
 	

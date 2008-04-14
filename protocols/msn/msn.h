@@ -28,7 +28,7 @@
 #define TYPING_NOTIFICATION_MESSAGE "\r\r\rBEWARE, ME R TYPINK MESSAGE!!!!\r\r\r"
 #define GROUPCHAT_SWITCHBOARD_MESSAGE "\r\r\rME WANT TALK TO MANY PEOPLE\r\r\r"
 
-#ifdef DEBUG
+#ifdef DEBUG_MSN
 #define debug( text... ) imcb_log( ic, text );
 #else
 #define debug( text... )
