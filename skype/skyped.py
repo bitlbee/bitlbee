@@ -69,7 +69,6 @@ def idle_handler(skype):
 		skype.skype.SendCommand(c)
 	except Skype4Py.SkypeAPIError, s:
 		dprint("Warning, pinging Skype failed (%s)." % (s))
-		time.sleep(2)
 	return True
 
 def server(host, port):
@@ -243,5 +242,5 @@ if __name__=='__main__':
 		skype = SkypeApi()
 	except Skype4Py.SkypeAPIError, s:
 		sys.exit("%s. Are you sure you have started Skype?" % s)
-	gobject.idle_add(idle_handler, skype)
+	gobject.timeout_add(2000, idle_handler, skype)
 	gobject.MainLoop().run()
