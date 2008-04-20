@@ -1,5 +1,6 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.4.2         - skyped should be now more responsive
               - new skypeout_offline setting for hiding/showing SkypeOut
                 contacts
               - support for SkypeOut calls
