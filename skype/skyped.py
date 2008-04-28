@@ -140,7 +140,7 @@ class SkypeApi:
 			if options.conn:
 				try:
 					options.conn.send(e + "\n")
-				except IOError, s:
+				except Exception, s:
 					dprint("Warning, sending '%s' failed (%s)." % (e, s))
 
 	def send(self, msg_text):
