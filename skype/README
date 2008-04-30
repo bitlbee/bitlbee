@@ -34,6 +34,7 @@ not..)
 * Python >= 2.5. Skype4Py does not work with 2.4.
 * PyGObject >= 2.8.0. Older versions are part of PyGTK. (And you don't want to
   install GTK for nothing, right?)
+* pyopenssl or python-gnutls.
 
 `bitlbee-skype` has been tested under Linux and Mac OS X. Skype and Skype4py is
 available under Windows, too, so it probably works, but this has not been tested.
@@ -111,6 +112,13 @@ if you used the `--sysconfdir` switch when running bitlbee-skype's `configure`.
 
 NOTE: Maybe you want to adjust the permissions in the `/usr/local/etc/skyped`
 dir. For example make it readable by just your user.
+
+- If both pyopenssl and python-gnutls are available, then python-gnutls
+  will be used. This behaviour can be overwritten by:
+
+----
+$ export SKYPED_NO_GNUTLS=1
+----
 
 - Start `skyped` (the tcp server):
 

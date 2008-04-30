@@ -73,13 +73,21 @@ def idle_handler(skype):
 
 def server(host, port):
 	global options
-
-	from OpenSSL import SSL
-	ctx = SSL.Context(SSL.TLSv1_METHOD)
-	ctx.use_privatekey_file(options.config.sslkey)
-	ctx.use_certificate_file(options.config.sslcert)
-	sock = SSL.Connection(ctx, socket.socket())
-
+	try:
+		if "SKYPED_NO_GNUTLS" in os.environ.keys():
+			dprint("Warning, using OpenSSL instead of gnutls as requested (not recommended).")
+			raise ImportError
+		from gnutls import crypto, connection
+		cert = crypto.X509Certificate(open(options.config.sslcert).read())
+		key = crypto.X509PrivateKey(open(options.config.sslkey).read())
+		cred = connection.X509Credentials(cert, key)
+		sock = connection.ServerSessionFactory(socket.socket(), cred)
+	except ImportError:
+		from OpenSSL import SSL
+		ctx = SSL.Context(SSL.TLSv1_METHOD)
+		ctx.use_privatekey_file(options.config.sslkey)
+		ctx.use_certificate_file(options.config.sslcert)
+		sock = SSL.Connection(ctx, socket.socket())
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((host, port))
 	sock.listen(1)
@@ -88,6 +96,8 @@ def server(host, port):
 def listener(sock, *args):
 	global options
 	options.conn, addr = sock.accept()
+	if hasattr(options.conn, 'handshake'):
+		options.conn.handshake()
 	ret = 0
 	line = options.conn.recv(1024)
 	if line.startswith("USERNAME") and line.split(' ')[1].strip() == options.config.username:
