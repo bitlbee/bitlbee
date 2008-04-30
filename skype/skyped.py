@@ -31,7 +31,6 @@ import getopt
 import Skype4Py
 import sha
 from ConfigParser import ConfigParser
-from OpenSSL import SSL
 from traceback import print_exception
 
 __version__ = "0.1.1"
@@ -75,10 +74,12 @@ def idle_handler(skype):
 def server(host, port):
 	global options
 
+	from OpenSSL import SSL
 	ctx = SSL.Context(SSL.TLSv1_METHOD)
 	ctx.use_privatekey_file(options.config.sslkey)
 	ctx.use_certificate_file(options.config.sslcert)
 	sock = SSL.Connection(ctx, socket.socket())
+
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((host, port))
 	sock.listen(1)
