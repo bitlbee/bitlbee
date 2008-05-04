@@ -29,6 +29,20 @@
 #include <netinet/tcp.h>
 #include <regex.h>
 
+/* Some ifdefs for ulibc (Thanks to Whoopie) */
+#ifndef HOST_NAME_MAX
+#include <sys/param.h>
+#ifdef MAXHOSTNAMELEN
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#else
+#define HOST_NAME_MAX 255
+#endif
+#endif
+
+#ifndef AI_NUMERICSERV
+#define AI_NUMERICSERV 0x0400   /* Don't use name resolution.  */
+#endif
+
 /* 
  * Since that might be confusing a note on naming:
  *

@@ -29,9 +29,6 @@
 #include "ipc.h"
 #include "dcc.h"
 
-#include <regex.h>
-#include <netinet/in.h>
-
 static gboolean irc_userping( gpointer _irc, int fd, b_input_condition cond );
 
 GSList *irc_connection_list = NULL;

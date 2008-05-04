@@ -25,6 +25,16 @@
 #include "sha1.h"
 #include <poll.h>
 
+/* Some ifdefs for ulibc (Thanks to Whoopie) */
+#ifndef HOST_NAME_MAX
+#include <sys/param.h>
+#ifdef MAXHOSTNAMELEN
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#else
+#define HOST_NAME_MAX 255
+#endif
+#endif
+
 struct bs_transfer {
 
 	struct jabber_transfer *tf;
@@ -1047,9 +1057,13 @@ gboolean jabber_bs_send_handshake( gpointer data, gint fd, b_input_condition con
 		{
 			struct socks5_message socks5_connect;
 			int msgsize = sizeof( struct socks5_message );
+			int ret;
 
-			if( !jabber_bs_peek( bt, &socks5_connect, msgsize ) )
+			if( !( ret = jabber_bs_peek( bt, &socks5_connect, msgsize ) ) )
 				return FALSE;
+
+			if( ret < msgsize )
+				return TRUE;
 
 			if( !( socks5_connect.ver == 5) ||
 			    !( socks5_connect.cmdrep.cmd == 1 ) ||

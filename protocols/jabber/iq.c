@@ -611,7 +611,7 @@ xt_status jabber_iq_query_features( struct im_connection *ic, char *bare_jid )
 	if( ( bud = jabber_buddy_by_jid( ic, bare_jid , 0 ) ) == NULL )
 	{
 		/* Who cares about the unknown... */
-		imcb_log( ic, "Couldnt find the man: %s", bare_jid);
+		imcb_log( ic, "Couldn't find buddy: %s", bare_jid);
 		return 0;
 	}
 	
@@ -625,6 +625,7 @@ xt_status jabber_iq_query_features( struct im_connection *ic, char *bare_jid )
 	{
 		imcb_log( ic, "WARNING: Couldn't generate feature query" );
 		xt_free_node( node );
+		return 0;
 	}
 
 	jabber_cache_add( ic, query, jabber_iq_parse_features );
@@ -647,7 +648,7 @@ xt_status jabber_iq_parse_features( struct im_connection *ic, struct xt_node *no
 	if( ( bud = jabber_buddy_by_jid( ic, xt_find_attr( node, "from") , 0 ) ) == NULL )
 	{
 		/* Who cares about the unknown... */
-		imcb_log( ic, "Couldnt find the man: %s", xt_find_attr( node, "from"));
+		imcb_log( ic, "Couldn't find buddy: %s", xt_find_attr( node, "from"));
 		return 0;
 	}
 	
