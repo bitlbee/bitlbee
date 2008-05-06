@@ -84,6 +84,7 @@ int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct soc
 gboolean dccs_recv_start( file_transfer_t *ft );
 gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond);
 gboolean dccs_recv_write_request( file_transfer_t *ft );
+gboolean dcc_progress( gpointer data, gint fd, b_input_condition cond );
 
 /* As defined in ft.h */
 file_transfer_t *imcb_file_send_start( struct im_connection *ic, char *handle, char *file_name, size_t file_size )
@@ -151,6 +152,8 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 
 	df->ic->irc->file_transfers = g_slist_prepend( df->ic->irc->file_transfers, file );
 
+	df->progress_timeout = b_timeout_add( DCC_MAX_STALL * 1000, dcc_progress, df );
+
 	return file;
 }
 
@@ -167,14 +170,33 @@ gboolean dcc_abort( dcc_file_transfer_t *df, char *reason, ... )
 	
 	if( file->canceled )
 		file->canceled( file, msg );
-	else 
-		imcb_log( df->ic, "DCC transfer aborted: %s", msg );
+
+	imcb_log( df->ic, "File %s: DCC transfer aborted: %s", file->file_name, msg );
 
 	g_free( msg );
 
 	dcc_close( df->ft );
 
 	return FALSE;
+}
+
+gboolean dcc_progress( gpointer data, gint fd, b_input_condition cond )
+{
+	struct dcc_file_transfer *df = data;
+
+	if( df->ft->bytes_transferred == df->progress_bytes_last )
+	{
+		/* no progress. cancel */
+		if( df->bytes_sent == 0 )
+			return dcc_abort( df, "Couldnt establish transfer within %d seconds", DCC_MAX_STALL );
+		else 
+			return dcc_abort( df, "Transfer stalled for %d seconds at %d kb", DCC_MAX_STALL, df->ft->bytes_transferred / 1024 );
+
+	}
+
+	df->progress_bytes_last = df->ft->bytes_transferred;
+
+	return TRUE;
 }
 
 /* used extensively for socket operations */
@@ -434,6 +456,8 @@ gboolean dccs_recv_start( file_transfer_t *ft )
 	df->watch_out = b_input_add( df->fd, GAIM_INPUT_WRITE, dccs_recv_proto, df );
 	ft->write_request = dccs_recv_write_request;
 
+	df->progress_timeout = b_timeout_add( DCC_MAX_STALL * 1000, dcc_progress, df );
+
 	return TRUE;
 }
 
@@ -572,6 +596,9 @@ static void dcc_close( file_transfer_t *file )
 
 	if( df->watch_out )
 		b_event_remove( df->watch_out );
+	
+	if( df->progress_timeout )
+		b_event_remove( df->progress_timeout );
 	
 	df->ic->irc->file_transfers = g_slist_remove( df->ic->irc->file_transfers, file );
 	

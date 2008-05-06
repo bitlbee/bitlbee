@@ -46,6 +46,10 @@
 /* Send an ACK after receiving this amount of data */
 #define DCC_PACKET_SIZE 1024
 
+/* Time in seconds that a DCC transfer can be stalled before being aborted.
+ * By handling this here individual protocols don't have to think about this. */
+#define DCC_MAX_STALL 120
+
 typedef struct dcc_file_transfer {
 
 	struct im_connection *ic;
@@ -63,6 +67,10 @@ typedef struct dcc_file_transfer {
 	gint watch_in;   /* readable */
 	gint watch_out;  /* writable */
 	
+	/* the progress watcher cancels any file transfer if nothing happens within DCC_MAX_STALL */
+	gint progress_timeout;
+	size_t progress_bytes_last;
+
 	/*
 	 * The total amount of bytes that have been sent to the irc client.
 	 */
