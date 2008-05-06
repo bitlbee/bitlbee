@@ -54,7 +54,7 @@ void jabber_si_free_transfer( file_transfer_t *ft)
 void jabber_si_finished( file_transfer_t *ft )
 {
 	struct jabber_transfer *tf = ft->data;
-	time_t diff = time( NULL ) - ft->started;
+	time_t diff = time( NULL ) - ft->started ? : 1;
 
 	imcb_log( tf->ic, "File %s transferred successfully at %d kb/s!" , ft->file_name, (int) ( ft->bytes_transferred / 1024 / diff ) );
 }

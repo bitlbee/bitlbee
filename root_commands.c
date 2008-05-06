@@ -1075,7 +1075,7 @@ static void cmd_transfers( irc_t *irc, char **cmd )
 			else 
 			{
 				int kb_per_s = 0;
-				time_t diff = time( NULL ) - file->started;
+				time_t diff = time( NULL ) - file->started ? : 1;
 				if ( ( file->started > 0 ) && ( file->bytes_transferred > 0 ) )
 					kb_per_s = file->bytes_transferred / 1024 / diff;
 					
