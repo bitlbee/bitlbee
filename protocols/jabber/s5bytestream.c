@@ -465,18 +465,28 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 			if ( !( ret = jabber_bs_peek( bt, &socks5_reply, sizeof( struct socks5_message ) ) ) )
 				return FALSE;
 
-			if ( ret < sizeof( socks5_reply ) )
+			if ( ret < 5 ) /* header up to address length */
 				return TRUE;
+			else if( ret < sizeof( struct socks5_message ) )
+			{
+				/* Either a buggy proxy or just one that doesnt regard the SHOULD in XEP-0065
+				 * saying the reply SHOULD contain the address */
+
+				ASSERTSOCKOP( ret = recv( fd, &socks5_reply, ret, 0 ), "Dequeuing after MSG_PEEK" );
+			}
 
 			if( !( socks5_reply.ver == 5 ) ||
-			    !( socks5_reply.cmdrep.rep == 0 ) ||
-			    !( socks5_reply.atyp == 3 ) ||
-			    !( socks5_reply.addrlen == 40 ) )
+			    !( socks5_reply.cmdrep.rep == 0 ) )
 				return jabber_bs_abort( bt, "SOCKS5 CONNECT failed (reply: ver=%d, rep=%d, atyp=%d, addrlen=%d", 
 					socks5_reply.ver,
 					socks5_reply.cmdrep.rep,
 					socks5_reply.atyp,
 					socks5_reply.addrlen);
+			
+			/* usually a proxy sends back the 40 bytes address but I encountered at least one (of jabber.cz) 
+			 * that sends atyp=0 addrlen=0 and only 6 bytes (one less than one would expect).
+			 * Therefore I removed the wait for more bytes. Since we don't care about what else the proxy
+			 * is sending, it shouldnt matter */
 
 			if( bt->tf->ft->sending )
 				jabber_bs_send_activate( bt );
@@ -742,6 +752,12 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 	{
 		/* using a proxy, abort listen */
 
+		if ( tf->watch_in )
+		{
+			b_event_remove( tf->watch_in );
+			tf->watch_in = 0;
+		}
+		
 		closesocket( tf->fd );
 		tf->fd = 0;
 
@@ -823,6 +839,8 @@ static xt_status jabber_bs_send_handle_activate( struct im_connection *ic, struc
 		imcb_log( ic, "WARNING: Received SOCKS5 bytestream activation for unknown stream" );
 		return XT_HANDLED;
 	}
+
+	imcb_log( tf->ic, "File %s: SOCKS5 handshake and activation successful! Transfer about to start...", tf->ft->file_name );
 
 	/* handshake went through, let's start transferring */
 	tf->ft->write_request( tf->ft );
