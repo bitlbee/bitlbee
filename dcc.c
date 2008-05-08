@@ -184,17 +184,17 @@ gboolean dcc_progress( gpointer data, gint fd, b_input_condition cond )
 {
 	struct dcc_file_transfer *df = data;
 
-	if( df->ft->bytes_transferred == df->progress_bytes_last )
+	if( df->bytes_sent == df->progress_bytes_last )
 	{
 		/* no progress. cancel */
 		if( df->bytes_sent == 0 )
 			return dcc_abort( df, "Couldnt establish transfer within %d seconds", DCC_MAX_STALL );
 		else 
-			return dcc_abort( df, "Transfer stalled for %d seconds at %d kb", DCC_MAX_STALL, df->ft->bytes_transferred / 1024 );
+			return dcc_abort( df, "Transfer stalled for %d seconds at %d kb", DCC_MAX_STALL, df->bytes_sent / 1024 );
 
 	}
 
-	df->progress_bytes_last = df->ft->bytes_transferred;
+	df->progress_bytes_last = df->bytes_sent;
 
 	return TRUE;
 }
