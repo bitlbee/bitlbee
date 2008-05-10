@@ -44,6 +44,9 @@ void jabber_si_free_transfer( file_transfer_t *ft)
 		tf->fd = 0;
 	}
 
+	if( tf->disco_timeout )
+		b_event_remove( tf->disco_timeout );
+	
 	g_free( tf->ini_jid );
 	g_free( tf->tgt_jid );
 	g_free( tf->iq_id );
@@ -79,12 +82,90 @@ void jabber_si_canceled( file_transfer_t *ft, char *reason )
 
 }
 
+int jabber_si_check_features( struct jabber_transfer *tf, GSList *features ) {
+	int foundft = FALSE, foundbt = FALSE, foundsi = FALSE;
+
+	while ( features )
+	{
+		if( !strcmp( features->data, XMLNS_FILETRANSFER ) )
+			foundft = TRUE;
+		if( !strcmp( features->data, XMLNS_BYTESTREAMS ) )
+			foundbt = TRUE;
+		if( !strcmp( features->data, XMLNS_SI ) )
+			foundsi = TRUE;
+
+		features = g_slist_next(features);
+	}
+
+	if( !foundft )
+		imcb_file_canceled( tf->ft, "Buddy's client doesn't feature file transfers" );
+	else if( !foundbt )
+		imcb_file_canceled( tf->ft, "Buddy's client doesn't feature byte streams (required)" );
+	else if( !foundsi )
+		imcb_file_canceled( tf->ft, "Buddy's client doesn't feature stream initiation (required)" );
+		
+	return foundft && foundbt && foundsi;
+}
+
+void jabber_si_transfer_start( struct jabber_transfer *tf ) {
+
+	if( !jabber_si_check_features( tf, tf->bud->features ) )
+		return;
+		
+	/* send the request to our buddy */
+	jabber_si_send_request( tf->ic, tf->bud->full_jid, tf );
+
+	/* and start the receive logic */
+	imcb_file_recv_start( tf->ft );
+
+}
+
+gboolean jabber_si_waitfor_disco( gpointer data, gint fd, b_input_condition cond )
+{
+	struct jabber_transfer *tf = data;
+	struct jabber_data *jd = tf->ic->proto_data;
+
+	tf->disco_timeout_fired++;
+
+	if( tf->bud->features && jd->have_streamhosts==1 ) {
+		jabber_si_transfer_start( tf );
+		tf->disco_timeout = 0;
+		return FALSE;
+	}
+
+	/* 8 seconds should be enough for server and buddy to respond */
+	if ( tf->disco_timeout_fired < 16 )
+		return TRUE;
+	
+	if( !tf->bud->features && jd->have_streamhosts!=1 )
+		imcb_file_canceled( tf->ft, "Couldn't get buddy's features or the server's" );
+	else if( !tf->bud->features )
+		imcb_file_canceled( tf->ft, "Couldn't get buddy's features" );
+	else
+		imcb_file_canceled( tf->ft, "Couldn't get server's features" );
+	
+	tf->disco_timeout = 0;
+	return FALSE;
+}
+
 void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *who ) 
 {
 	struct jabber_transfer *tf;
 	struct jabber_data *jd = ic->proto_data;
-	char *server  = jd->server;
+	struct jabber_buddy *bud;
+	char *server = jd->server, *s;
 
+	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_jid( ic, s + 1 ) )
+		bud = jabber_buddy_by_ext_jid( ic, who, 0 );
+	else
+		bud = jabber_buddy_by_jid( ic, who, 0 );
+
+	if( bud == NULL )
+	{
+		imcb_file_canceled( tf->ft, "Couldn't find buddy (BUG?)" );
+		return;
+	}
+		
 	imcb_log( ic, "Trying to send %s(%zd bytes) to %s", ft->file_name, ft->file_size, who );
 
 	tf = g_new0( struct jabber_transfer, 1 );
@@ -94,22 +175,27 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 	tf->ft->data = tf;
 	tf->ft->free = jabber_si_free_transfer;
 	tf->ft->finished = jabber_si_finished;
+	tf->bud = bud;
 	ft->write = jabber_bs_send_write;
 
 	jd->filetransfers = g_slist_prepend( jd->filetransfers, tf );
 
-	/* query the buddy's features */
-	jabber_iq_query_features( ic, who );
+	/* query buddy's features and server's streaming proxies if neccessary */
 
-	/* query proxies from the server */
-	if( !jd->have_streamhosts )
+	if( !tf->bud->features )
+		jabber_iq_query_features( ic, bud->full_jid );
+
+	if( jd->have_streamhosts!=1 ) {
+		jd->have_streamhosts = 0;
 		jabber_iq_query_server( ic, server, XMLNS_DISCO_ITEMS );
+	}
 
-	/* send the request to our buddy */
-	jabber_si_send_request( ic, who, tf );
-
-	/* and start the receive logic */
-	imcb_file_recv_start( ft );
+	/* if we had to do a query, wait for the result. 
+	 * Otherwise fire away. */
+	if( !tf->bud->features || jd->have_streamhosts!=1 )
+		tf->disco_timeout = b_timeout_add( 500, jabber_si_waitfor_disco, tf );
+	else
+		jabber_si_transfer_start( tf );
 }
 
 /*

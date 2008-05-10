@@ -153,7 +153,13 @@ struct jabber_transfer
 	/* the stream's private handle */
 	gpointer streamhandle;
 
+	/* timeout for discover queries */
+	gint disco_timeout;
+	gint disco_timeout_fired;
+
 	struct im_connection *ic;
+
+	struct jabber_buddy *bud;
 
 	int watch_in;
 	int watch_out;
