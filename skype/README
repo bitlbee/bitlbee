@@ -55,7 +55,17 @@ connect to Skype, finally BitlBee can connect to `skyped`.
 # pacman-g2 -S bitlbee-skype
 ----
 
-- You need the latest stable BitlBee release:
+and you don't have to compile anything manually.
+
+- If you use Debian:
+
+----
+# apt-get install bitlbee-dev
+----
+
+and you have to install `bitlbee-skype` from source.
+
+- Otherwise, you need the latest stable BitlBee release:
 
 ----
 $ wget http://get.bitlbee.org/src/bitlbee-1.2.tar.gz
