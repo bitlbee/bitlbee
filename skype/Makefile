@@ -51,10 +51,8 @@ release:
 doc: HEADER.html Changelog
 
 HEADER.html: README Makefile
-	ln -s README HEADER.txt
-	asciidoc -a toc -a numbered -a sectids HEADER.txt
+	asciidoc -a toc -a numbered -a sectids -o HEADER.html README
 	sed -i 's|@VERSION@|$(VERSION)|g' HEADER.html
-	rm HEADER.txt
 
 Changelog: .git/refs/heads/master
 	git log --no-merges |git name-rev --tags --stdin >Changelog
