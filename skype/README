@@ -52,7 +52,7 @@ connect to Skype, finally BitlBee can connect to `skyped`.
 - If you happen to be a happy Frugalware user:
 
 ----
-# pacman-g2 -S bitlbee-skype
+# pacman-g2 -S bitlbee-skype skype4py
 ----
 
 and you don't have to compile anything manually.
@@ -63,7 +63,7 @@ and you don't have to compile anything manually.
 # apt-get install bitlbee-dev
 ----
 
-and you have to install `bitlbee-skype` from source.
+and you have to install `bitlbee-skype` and `skype4py` from source.
 
 - Otherwise, you need the latest stable BitlBee release:
 
@@ -102,7 +102,13 @@ $ make
 # make install
 ----
 
-- Install http://skype4py.sourceforge.net/[Skype4Py].
+- To install http://skype4py.sourceforge.net/[Skype4Py] from source:
+
+----
+$ tar -zxvf Skype4Py-x.x.x.x.tar.gz
+$ cd Skype4Py-x.x.x.x
+# python setup.py install
+----
 
 - Edit `/usr/local/etc/skyped/skyped.conf`: adjust `username` and `password`. The
   `username` should be your Skype login and the `password` can be whatever you
