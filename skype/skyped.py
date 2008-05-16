@@ -58,7 +58,8 @@ def input_handler(fd, io_condition):
 			input = fd.recv(1024)
 		except Exception, s:
 			dprint("Warning, receiving 1024 bytes failed (%s)." % s)
-			return True
+			fd.close()
+			return False
 		for i in input.split("\n"):
 			skype.send(i.strip())
 		return True
@@ -154,6 +155,7 @@ class SkypeApi:
 					options.conn.send(e + "\n")
 				except Exception, s:
 					dprint("Warning, sending '%s' failed (%s)." % (e, s))
+					options.conn.close()
 
 	def send(self, msg_text):
 		if not len(msg_text):
