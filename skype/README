@@ -46,10 +46,16 @@ Skype servers (the company's ones). It needs a running Skype client to do so.
 In fact BitlBee will connect to `skyped` (a tcp server, provided in this
 package) and `skyped` will connect to to your Skype client.
 
-NOTE: The order is important. First `skyped` starts Skype. Then `skyped` can
-connect to Skype, finally BitlBee can connect to `skyped`.
+The benefit of this architecture is that you can run Skype and `skyped`
+on a machine different to the one where you run BitlBee (it can be even
+a public server) and/or your IRC client.
 
-- If you happen to be a happy Frugalware user:
+NOTE: The order is important. First `skyped` starts Skype. Then `skyped`
+connects to Skype, finally BitlBee can connect to `skyped`.
+
+=== Installing under Frugalware
+
+- Install the necessary packages:
 
 ----
 # pacman-g2 -S bitlbee-skype skype4py
@@ -57,7 +63,9 @@ connect to Skype, finally BitlBee can connect to `skyped`.
 
 and you don't have to compile anything manually.
 
-- If you use Debian:
+=== Installing under Debian
+
+- Install the necessary development package:
 
 ----
 # apt-get install bitlbee-dev
@@ -65,7 +73,9 @@ and you don't have to compile anything manually.
 
 and you have to install `bitlbee-skype` and `skype4py` from source.
 
-- Otherwise, you need the latest stable BitlBee release:
+=== Installing from source
+
+- You need the latest stable BitlBee release:
 
 ----
 $ wget http://get.bitlbee.org/src/bitlbee-1.2.tar.gz
@@ -109,6 +119,8 @@ $ tar -zxvf Skype4Py-x.x.x.x.tar.gz
 $ cd Skype4Py-x.x.x.x
 # python setup.py install
 ----
+
+=== Configuring
 
 - Edit `/usr/local/etc/skyped/skyped.conf`: adjust `username` and `password`. The
   `username` should be your Skype login and the `password` can be whatever you
