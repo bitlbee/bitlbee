@@ -98,7 +98,11 @@ def listener(sock, *args):
 	global options
 	options.conn, addr = sock.accept()
 	if hasattr(options.conn, 'handshake'):
-		options.conn.handshake()
+		try:
+			options.conn.handshake()
+		except Exception:
+			dprint("Warning, handshake failed, closing connection.")
+			return False
 	ret = 0
 	line = options.conn.recv(1024)
 	if line.startswith("USERNAME") and line.split(' ')[1].strip() == options.config.username:
