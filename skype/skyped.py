@@ -30,7 +30,7 @@ import socket
 import getopt
 import Skype4Py
 import sha
-from ConfigParser import ConfigParser
+from ConfigParser import ConfigParser, NoOptionError
 from traceback import print_exception
 
 __version__ = "0.1.1"
@@ -182,7 +182,7 @@ class Options:
 		self.debug = False
 		self.help = False
 		self.host = "0.0.0.0"
-		self.port = 2727
+		self.port = None
 		self.version = False
 		# well, this is a bit hackish. we store the socket of the last connected client
 		# here and notify it. maybe later notify all connected clients?
@@ -224,7 +224,7 @@ if __name__=='__main__':
 		elif opt in ("-n", "--nofork"):
 			options.daemon = False
 		elif opt in ("-p", "--port"):
-			options.port = arg
+			options.port = int(arg)
 		elif opt in ("-v", "--version"):
 			options.version = True
 	if options.help:
@@ -243,6 +243,17 @@ if __name__=='__main__':
 	options.config.password = options.config.get('skyped', 'password').split('#')[0]
 	options.config.sslkey = options.config.get('skyped', 'key').split('#')[0]
 	options.config.sslcert = options.config.get('skyped', 'cert').split('#')[0]
+	# hack: we have to parse the parameters first to locate the
+	# config file but the -p option should overwrite the value from
+	# the config file
+	try:
+		options.config.port = int(options.config.get('skyped', 'port').split('#')[0])
+		if not options.port:
+			options.port = options.config.port
+	except NoOptionError:
+		pass
+	if not options.port:
+		options.port = 2727
 	dprint("Parsing config file '%s' done, username is '%s'." % (options.cfgpath, options.config.username))
 	if options.daemon:
 		pid = os.fork()
@@ -255,6 +266,8 @@ if __name__=='__main__':
 		else:
 			print 'skyped is started on port %s, pid: %d' % (options.port, pid)
 			sys.exit(0)
+	else:
+		dprint('skyped is started on port %s' % options.port)
 	server(options.host, options.port)
 	try:
 		skype = SkypeApi()
