@@ -12,21 +12,21 @@ endif
 
 build-arch: build-arch-stamp
 build-arch-stamp:
-	if [ ! -d debian ]; then exit 1; fi
+	[ -d debian ]
 	./configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent
 	$(MAKE)
 #	$(MAKE) -C doc/ all
 	touch build-arch-stamp
 
 clean:
-	if [ "`whoami`" != "root" -o ! -d debian ]; then exit 1; fi
-	rm -rf build-arch-stamp debian/bitlbee debian/*.substvars debian/files
+	[ "`whoami`" = "root" -a -d debian ]
+	rm -rf build-arch-stamp debian/bitlbee debian/*.substvars debian/files debian/bitlbee-dev
 	-$(MAKE) distclean
 #	-$(MAKE) -C doc/ clean
 				
 
 install-arch: build-arch
-	if [ "`whoami`" != "root" -o ! -d debian ]; then exit 1; fi
+	[ "`whoami`" = "root" -a -d debian ]
 	mkdir -p debian/bitlbee/DEBIAN/
 	$(MAKE) install install-etc DESTDIR=`pwd`/debian/bitlbee
 
@@ -34,8 +34,15 @@ install-arch: build-arch
 	cp doc/user-guide/user-guide.txt debian/bitlbee/usr/share/doc/bitlbee/
 	cp doc/user-guide/user-guide.html debian/bitlbee/usr/share/doc/bitlbee/
 
+install-indep: install-arch
+	[ "`whoami`" = "root" -a -d debian ]
+	mkdir -p debian/bitlbee-dev/DEBIAN/
+	$(MAKE) install-dev DESTDIR=`pwd`/debian/bitlbee-dev
+
+	mkdir -p debian/bitlbee-dev/usr/share/doc/bitlbee-dev/
+
 binary-arch: build-arch install-arch
-	if [ "`whoami`" != "root" -o ! -d debian ]; then exit 1; fi
+	[ "`whoami`" = "root" -a -d debian ]
 
 	chmod 755 debian/post* debian/pre* debian/config debian/bitlbee.init
 
@@ -51,7 +58,7 @@ binary-arch: build-arch install-arch
 		gzip -9 doc/bitlbee/changelog.Debian doc/bitlbee/changelog doc/bitlbee/user-guide.txt \
 		        doc/bitlbee/examples/* man/man8/bitlbee.8 man/man5/bitlbee.conf.5
 	
-	chown -R root.root debian/bitlbee/
+	chown -R root:root debian/bitlbee/
 	find debian/bitlbee/usr/share/ -type d -exec chmod 755 {} \;
 	find debian/bitlbee/usr/share/ -type f -exec chmod 644 {} \;
 	
@@ -76,11 +83,26 @@ endif
 
 	dpkg --build debian/bitlbee ..
 
-debug-build:
-	BITLBEE_VERSION=\"`date +%Y%m%d`-`hostname`-debug\" debian/rules clean binary DEBUG=1
+binary-indep: install-indep
+	[ "`whoami`" = "root" -a -d debian ]
 
-binary: binary-arch
+	chown -R root.root debian/bitlbee-dev/
+	find debian/bitlbee-dev/usr/share/ -type d -exec chmod 755 {} \;
+	find debian/bitlbee-dev/usr/share/ -type f -exec chmod 644 {} \;
+
+	cp debian/changelog debian/bitlbee-dev/usr/share/doc/bitlbee-dev/changelog.Debian
+	gzip -9 debian/bitlbee-dev/usr/share/doc/bitlbee-dev/changelog.Debian
+	cp debian/copyright debian/bitlbee-dev/usr/share/doc/bitlbee-dev/copyright
+
+	cd debian/bitlbee-dev; \
+		find usr -type f -exec md5sum {} \; > DEBIAN/md5sums
+
+	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee-dev -Pdebian/bitlbee-dev
+
+	dpkg --build debian/bitlbee-dev ..
+
+binary: binary-arch binary-indep
 build: build-arch
-install: install-arch
+install: install-arch install-indep
 
-.PHONY: build-arch build clean binary-arch binary install-arch install
+.PHONY: build-arch build clean binary-arch binary install-arch install binary-indep install-indep
