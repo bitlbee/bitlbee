@@ -177,7 +177,15 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			}
 			
 			debug( "Connecting to a new switchboard with key %s", cmd[5] );
-			sb = msn_sb_create( ic, server, port, cmd[5], MSN_SB_NEW );
+
+			if( ( sb = msn_sb_create( ic, server, port, cmd[5], MSN_SB_NEW ) ) == NULL )
+			{
+				/* Although this isn't strictly fatal for the NS connection, it's
+				   definitely something serious (we ran out of file descriptors?). */
+				imcb_error( ic, "Could not create new switchboard" );
+				imc_logout( ic, TRUE );
+				return( 0 );
+			}
 			
 			if( md->msgq )
 			{
@@ -467,8 +475,18 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		debug( "Got a call from %s (session %d). Key = %s", cmd[5], session, cmd[4] );
 		
-		sb = msn_sb_create( ic, server, port, cmd[4], session );
-		sb->who = g_strdup( cmd[5] );
+		if( ( sb = msn_sb_create( ic, server, port, cmd[4], session ) ) == NULL )
+		{
+			/* Although this isn't strictly fatal for the NS connection, it's
+			   definitely something serious (we ran out of file descriptors?). */
+			imcb_error( ic, "Could not create new switchboard" );
+			imc_logout( ic, TRUE );
+			return( 0 );
+		}
+		else
+		{
+			sb->who = g_strdup( cmd[5] );
+		}
 	}
 	else if( strcmp( cmd[0], "ADD" ) == 0 )
 	{

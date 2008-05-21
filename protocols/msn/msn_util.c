@@ -89,8 +89,10 @@ struct msn_buddy_ask_data
 	char *realname;
 };
 
-static void msn_buddy_ask_yes( gpointer w, struct msn_buddy_ask_data *bla )
+static void msn_buddy_ask_yes( void *data )
 {
+	struct msn_buddy_ask_data *bla = data;
+	
 	msn_buddy_list_add( bla->ic, "AL", bla->handle, bla->realname );
 	
 	if( imcb_find_buddy( bla->ic, bla->handle ) == NULL )
@@ -101,8 +103,10 @@ static void msn_buddy_ask_yes( gpointer w, struct msn_buddy_ask_data *bla )
 	g_free( bla );
 }
 
-static void msn_buddy_ask_no( gpointer w, struct msn_buddy_ask_data *bla )
+static void msn_buddy_ask_no( void *data )
 {
+	struct msn_buddy_ask_data *bla = data;
+	
 	msn_buddy_list_add( bla->ic, "BL", bla->handle, bla->realname );
 	
 	g_free( bla->handle );

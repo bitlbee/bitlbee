@@ -13,3 +13,12 @@ Depends: ${shlibs:Depends}, adduser, net-tools, ${debconf-depends}, debianutils 
 Description: An IRC to other chat networks gateway
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
+
+Package: bitlbee-dev
+Architecture: all
+Depends: bitlbee (= ${binary:Version})
+Description: An IRC to other chat networks gateway
+ This program can be used as an IRC server which forwards everything you
+ say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
+ .
+ This package holds development stuff for compiling plug-ins.

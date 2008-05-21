@@ -150,6 +150,7 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "password", NULL, passchange, irc );
 	set_add( &irc->set, "private", "true", set_eval_bool, irc );
 	set_add( &irc->set, "query_order", "lifo", NULL, irc );
+	set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
 	set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
 	set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	set_add( &irc->set, "strip_html", "true", NULL, irc );
@@ -198,12 +199,14 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 	irc->status |= USTATUS_SHUTDOWN;
 	if( irc->sendbuffer && !immed )
 	{
-		/* We won't read from this socket anymore. Instead, we'll connect a timer
-		   to it that should shut down the connection in a second, just in case
-		   bitlbee_.._write doesn't do it first. */
+		/* Set up a timeout event that should shut down the connection
+		   in a second, just in case ..._write doesn't do it first. */
 		
 		b_event_remove( irc->r_watch_source_id );
-		irc->r_watch_source_id = b_timeout_add( 1000, (b_event_handler) irc_free, irc );
+		irc->r_watch_source_id = 0;
+		
+		b_event_remove( irc->ping_source_id );
+		irc->ping_source_id = b_timeout_add( 1000, (b_event_handler) irc_free, irc );
 	}
 	else
 	{
@@ -273,7 +276,8 @@ void irc_free( irc_t * irc )
 	
 	if( irc->ping_source_id > 0 )
 		b_event_remove( irc->ping_source_id );
-	b_event_remove( irc->r_watch_source_id );
+	if( irc->r_watch_source_id > 0 )
+		b_event_remove( irc->r_watch_source_id );
 	if( irc->w_watch_source_id > 0 )
 		b_event_remove( irc->w_watch_source_id );
 	

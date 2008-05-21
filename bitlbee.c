@@ -53,11 +53,11 @@ int bitlbee_daemon_init()
 #endif
 	;
 
-	i = getaddrinfo( global.conf->iface, global.conf->port, &hints, &addrinfo_bind );
+	i = getaddrinfo( global.conf->iface_in, global.conf->port, &hints, &addrinfo_bind );
 	if( i )
 	{
 		log_message( LOGLVL_ERROR, "Couldn't parse address `%s': %s",
-		                           global.conf->iface, gai_strerror(i) );
+		                           global.conf->iface_in, gai_strerror(i) );
 		return -1;
 	}
 
@@ -225,12 +225,16 @@ gboolean bitlbee_io_current_client_write( gpointer data, gint fd, b_input_condit
 	
 	if( st == size )
 	{
-		g_free( irc->sendbuffer );
-		irc->sendbuffer = NULL;
-		irc->w_watch_source_id = 0;
-		
 		if( irc->status & USTATUS_SHUTDOWN )
+		{
 			irc_free( irc );
+		}
+		else
+		{
+			g_free( irc->sendbuffer );
+			irc->sendbuffer = NULL;
+			irc->w_watch_source_id = 0;
+		}
 		
 		return FALSE;
 	}

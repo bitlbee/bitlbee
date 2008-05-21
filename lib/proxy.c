@@ -113,6 +113,7 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 static int proxy_connect_none(const char *host, unsigned short port, struct PHB *phb)
 {
 	struct sockaddr_in *sin;
+	struct sockaddr_in me;
 	int fd = -1;
 
 	if (!(sin = gaim_gethostbyname(host, port))) {
@@ -126,6 +127,16 @@ static int proxy_connect_none(const char *host, unsigned short port, struct PHB 
 	}
 
 	sock_make_nonblocking(fd);
+	
+	if( global.conf->iface_out )
+	{
+		me.sin_family = AF_INET;
+		me.sin_port = 0;
+		me.sin_addr.s_addr = inet_addr( global.conf->iface_out );
+		
+		if( bind( fd, (struct sockaddr *) &me, sizeof( me ) ) != 0 )
+			event_debug( "bind( %d, \"%s\" ) failure\n", fd, global.conf->iface_out );
+	}
 	
 	event_debug("proxy_connect_none( \"%s\", %d ) = %d\n", host, port, fd);
 	

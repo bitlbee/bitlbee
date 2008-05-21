@@ -796,16 +796,20 @@ int ext_yahoo_connect(const char *host, int port)
 	return -1;
 }
 
-static void byahoo_accept_conf( gpointer w, struct byahoo_conf_invitation *inv )
+static void byahoo_accept_conf( void *data )
 {
+	struct byahoo_conf_invitation *inv = data;
+	
 	yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
 	imcb_chat_add_buddy( inv->c, inv->ic->acc->user );
 	g_free( inv->name );
 	g_free( inv );
 }
 
-static void byahoo_reject_conf( gpointer w, struct byahoo_conf_invitation *inv )
+static void byahoo_reject_conf( void *data )
 {
+	struct byahoo_conf_invitation *inv = data;
+	
 	yahoo_conference_decline( inv->yid, NULL, inv->members, inv->name, "User rejected groupchat" );
 	imcb_chat_free( inv->c );
 	g_free( inv->name );

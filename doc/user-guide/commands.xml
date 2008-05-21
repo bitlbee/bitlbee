@@ -588,6 +588,16 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="root_nick" type="string" scope="global">
+		<default>root</default>
+
+		<description>
+			<para>
+				Normally the "bot" that takes all your BitlBee commands is called "root". If you don't like this name, you can rename it to anything else using the <emphasis>rename</emphasis> command, or by changing this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="save_on_quit" type="boolean" scope="global">
 		<default>true</default>
 
