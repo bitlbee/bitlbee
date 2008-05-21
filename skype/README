@@ -218,13 +218,14 @@ Then start the server:
 $ vncserver
 ----
 
-Then connect to it, and set up Skype (username, password, enable
-auto-login, start skyped and allow the `SkypeApiPythonShell` client when
-Skype asks about it).
+Then connect to it, start an `xterm`, set up Skype (username, password,
+enable X11 API and allow the `Skype4Py` client), quit from Skype, and
+start `skyped`. If you want to watch its traffic, enable debug messages
+and foreground mode:
 
-Please be aware about that Skype has serious memory leak issues. After running
-with for a few weeks it may eat >300 MB of memory. Just don't forget to restart
-your VNC server regularly. (How ugly.)
+----
+$ skyped -n -d
+----
 
 == Features
 
