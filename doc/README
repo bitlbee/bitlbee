@@ -55,6 +55,11 @@ it in bitlbee.conf. You probably want to write an init script to start
 BitlBee automatically after a reboot. (This is where you realise using
 a package from your distro would've been a better idea. :-P)
 
+Note that the BitlBee code is getting stable enough for daemon mode to be
+useful. Some public servers use it, and it saves a lot of memory by serving
+tens of users from a single process. One crash affects all users, but these
+are becoming quite rare.
+
 
 DEPENDENCIES
 ============
@@ -97,34 +102,6 @@ most BSD systems)
 If someone can tell us how to write Makefiles that work with both/all
 versions of make, we'd love to hear it, but it seems this just isn't
 possible.
-
-
-RUNNING ON SERVERS WITH MANY USERS
-==================================
-
-BitlBee is not yet bug-free. Sometimes a bug causes the program to get into
-an infinite loop. Something you really don't want on a public server,
-especially when that machine is also used for other (mission-critical) things.
-For now we can't do much about it. We haven't seen that happen for a long
-time already on our own machines, but some people still manage to get
-themselves in nasty situations we haven't seen before.
-
-For now the best we can offer against this problem is bitlbeed, which allows
-you to setrlimit() the child processes to use no more than a specified
-number of CPU seconds. Not the best solution (not really a solution anyway),
-but certainly trashing one busy daemon process is better than trashing your
-whole machine.
-
-We don't believe adding a limit for bitlbee to /etc/security/limits.conf will
-work, because that file is only read by PAM (ie just for real login users,
-not daemons).
-
-See utils/bitlbeed.c for more information about the program.
-
-Just a little note: Now that we reach version 1.0, this shouldn't be that
-much of an issue anymore. However, on a public server, especially if you
-also use it for other things, it can't hurt to protect yourself against
-possible problems.
 
 
 USAGE

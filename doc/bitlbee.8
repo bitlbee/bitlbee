@@ -43,13 +43,8 @@ protocol plugins. BitlBee currently supports Oscar (aim and icq),
 MSN, Jabber and Yahoo.
 
 \fBbitlbee\fP should be called by
-.BR inetd (8).
-(Or \fBbitlbeed\fP,
-if you can't run and/or configure \fBinetd\fP.) There is an experimental
-daemon mode too, in which BitlBee will serve all clients in one process
-(and does not require inetd), but this mode is still experimental.
-There are still some bugs left in BitlBee, and if they cause a crash,
-that would terminate the BitlBee connection for all clients.
+.BR inetd (8),
+or you can run it as a stand-alone daemon.
 .PP
 .SH OPTIONS
 .PP
@@ -61,10 +56,9 @@ option.
 .IP "-D"
 Run in daemon mode. In this mode, BitlBee forks to the background and
 waits for new connections. All clients will be served from one process.
-This is still experimental. See the note above for more information.
 .IP "-F"
 Run in ForkDaemon mode. This is similar to ordinary daemon mode, but every
-client gets its own process. Easier to set up than inetd mode, but without
+client gets its own process. Easier to set up than inetd mode, and without
 the possible stability issues.
 .IP "-i \fIaddress\fP"
 Only useful when running in daemon mode, to specify the network interface

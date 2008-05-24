@@ -131,7 +131,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "An IRC-to-other-chat-networks gateway\n"
 			        "\n"
 			        "  -I  Classic/InetD mode. (Default)\n"
-			        "  -D  Daemon mode. (Still EXPERIMENTAL!)\n"
+			        "  -D  Daemon mode. (one process serves all)\n"
 			        "  -F  Forking daemon. (one process per client)\n"
 				"  -u  Run daemon as specified user.\n"
 			        "  -P  Specify PID-file (not for inetd mode)\n"
