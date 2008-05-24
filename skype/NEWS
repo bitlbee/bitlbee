@@ -1,5 +1,13 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.5.0         - skyped now uses gnutls if possible, which seem to be
+                more stable, compared to openssl.
+              - skyped now tries to handle all read/write errors from/to
+                clients, and always just warn about failures, never exit.
+              - installation for Debian users should be more simple
+              - improved documentation
+              - this .0 release should be quite stable, only about 100
+                lines of new code
 0.4.2         - skyped should be now more responsive
               - new skypeout_offline setting for hiding/showing SkypeOut
                 contacts
