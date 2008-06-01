@@ -303,9 +303,10 @@ $ skyped -n -d
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
 
-- Public chats. See link:http://forum.skype.com/index.php?showtopic=98872[this
-  forum thread], it is still unclear how could it be done for you to be able to
-  `/join` to a public chat..
+- Public chats. See
+  link:https://developer.skype.com/jira/browse/SCL-381[this feature
+  request], this is because it is still not possible (under Linux) to
+  `join_chat` to a public chat..
 
 - Add `--disable-skyped` and `--disable-plugin` switches in case one wants to
   build `bitlbee-skype` only for a public server or only for use with a public
