@@ -71,6 +71,18 @@ struct socks5_message
 	in_port_t port;
 } __attribute__ ((packed)); 
 
+char *socks5_reply_code[] = {
+	"succeeded",
+	"general SOCKS server failure",
+	"connection not allowed by ruleset",
+	"Network unreachable",
+	"Host unreachable",
+	"Connection refused",
+	"TTL expired",
+	"Command not supported",
+	"Address type not supported",
+	"unassigned"};
+
 /* connect() timeout in seconds. */
 #define JABBER_BS_CONTIMEOUT 15
 /* listen timeout */
@@ -476,12 +488,19 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 			}
 
 			if( !( socks5_reply.ver == 5 ) ||
-			    !( socks5_reply.cmdrep.rep == 0 ) )
-				return jabber_bs_abort( bt, "SOCKS5 CONNECT failed (reply: ver=%d, rep=%d, atyp=%d, addrlen=%d", 
+			    !( socks5_reply.cmdrep.rep == 0 ) ) {
+			    	char errstr[128] = "";
+				if( ( socks5_reply.ver == 5 ) && ( socks5_reply.cmdrep.rep < 
+				    ( sizeof( socks5_reply_code ) / sizeof( socks5_reply_code[0] ) ) ) ) {
+					sprintf( errstr, "with \"%s\" ", socks5_reply_code[ socks5_reply.cmdrep.rep ] );
+				}
+				return jabber_bs_abort( bt, "SOCKS5 CONNECT failed %s(reply: ver=%d, rep=%d, atyp=%d, addrlen=%d)", 
+					errstr,
 					socks5_reply.ver,
 					socks5_reply.cmdrep.rep,
 					socks5_reply.atyp,
 					socks5_reply.addrlen);
+			}
 			
 			/* usually a proxy sends back the 40 bytes address but I encountered at least one (of jabber.cz) 
 			 * that sends atyp=0 addrlen=0 and only 6 bytes (one less than one would expect).
