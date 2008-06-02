@@ -422,6 +422,12 @@ static void cmd_account( irc_t *irc, char **cmd )
 		else
 			acc_handle = g_strdup( cmd[2] );
 		
+		if( !acc_handle )
+		{
+			irc_usermsg( irc, "Not enough parameters given (need %d)", 3 );
+			return;
+		}
+		
 		if( ( tmp = strchr( acc_handle, '/' ) ) )
 		{
 			*tmp = 0;
