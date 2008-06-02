@@ -35,6 +35,10 @@
 #endif
 #endif
 
+#ifndef AI_NUMERICSERV
+#define AI_NUMERICSERV 0x0400   /* Don't use name resolution.  */
+#endif
+
 struct bs_transfer {
 
 	struct jabber_transfer *tf;
