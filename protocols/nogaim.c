@@ -342,7 +342,8 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 
 /* dialogs.c */
 
-void imcb_ask( struct im_connection *ic, char *msg, void *data, void *doit, void *dont )
+void imcb_ask( struct im_connection *ic, char *msg, void *data,
+               query_callback doit, query_callback dont )
 {
 	query_add( ic->irc, ic, msg, doit, dont, data );
 }
@@ -494,18 +495,20 @@ struct show_got_added_data
 	char *handle;
 };
 
-void show_got_added_no( gpointer w, struct show_got_added_data *data )
+void show_got_added_no( void *data )
 {
-	g_free( data->handle );
+	g_free( ((struct show_got_added_data*)data)->handle );
 	g_free( data );
 }
 
-void show_got_added_yes( gpointer w, struct show_got_added_data *data )
+void show_got_added_yes( void *data )
 {
-	data->ic->acc->prpl->add_buddy( data->ic, data->handle, NULL );
-	/* imcb_add_buddy( data->ic, NULL, data->handle, data->handle ); */
+	struct show_got_added_data *sga = data;
 	
-	return show_got_added_no( w, data );
+	sga->ic->acc->prpl->add_buddy( sga->ic, sga->handle, NULL );
+	/* imcb_add_buddy( sga->ic, NULL, sga->handle, sga->handle ); */
+	
+	return show_got_added_no( data );
 }
 
 void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname )

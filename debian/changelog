@@ -1,11 +1,18 @@
+bitlbee (1.2-5) UNRELEASED; urgency=low
+
+  * Add Homepage and Vcs-Bzr fields.
+
+ -- Jelmer Vernooij <jelmer@samba.org>  Sun, 11 May 2008 14:18:16 +0200
+
 bitlbee (1.2-4) unstable; urgency=low
 
-  * Not a real release, just a placeholder for the changelog.
   * Fixed init script to use the BITLBEE_OPTS variable, not an undefined
-    DAEMON_OPT.
+    DAEMON_OPT. (Closes: #474583)
   * Added dependency information to the init script. (Closes: #472567)
+  * Added bitlbee-dev package. Patch from RISKO Gergely <risko@debian.org>
+    with some small modifications. (Closes: #473480)
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 29 Mar 2008 21:10:33 +0000
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Wed, 07 May 2008 22:40:40 -0700
 
 bitlbee (1.2-3) unstable; urgency=low
 

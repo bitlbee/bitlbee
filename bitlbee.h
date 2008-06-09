@@ -156,6 +156,8 @@ void root_command_string( irc_t *irc, user_t *u, char *command, int flags );
 void root_command( irc_t *irc, char *command[] );
 gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond );
 
+char *set_eval_root_nick( set_t *set, char *new_nick );
+
 extern global_t global;
 
 #endif
