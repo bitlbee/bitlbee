@@ -19,6 +19,7 @@ libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
 ipcsocket='/var/run/bitlbee.sock'
 pcdir='$prefix/lib/pkgconfig'
+systemlibdirs="/lib /usr/lib /usr/local/lib"
 
 msn=1
 jabber=1
@@ -108,6 +109,7 @@ CONFIG=$config
 INCLUDEDIR=$includedir
 PCDIR=$pcdir
 
+TARGET=$target
 ARCH=$arch
 CPU=$cpu
 OUTFILE=bitlbee
@@ -133,12 +135,17 @@ cat<<EOF>config.h
 #define CPU "$cpu"
 EOF
 
+
+
 if [ -n "$target" ]; then
-	PKG_CONFIG_PATH=/usr/$target/lib/pkgconfig
+	PKG_CONFIG_LIBDIR=/usr/$target/lib/pkgconfig
+	export PKG_CONFIG_LIBDIR
 	PATH=/usr/$target/bin:$PATH
 	CC=$target-cc
 	LD=$target-ld
+	systemlibdirs="/usr/$target/lib"
 fi
+
 
 if [ "$debug" = "1" ]; then
 	[ -z "$CFLAGS" ] && CFLAGS=-g
@@ -342,7 +349,7 @@ fi;
 
 echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 
-for i in /lib /usr/lib /usr/local/lib; do
+for i in $systemlibdirs; do
 	if [ -f $i/libresolv.a ]; then
 		echo '#define HAVE_RESOLV_A' >> config.h
 		echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
