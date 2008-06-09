@@ -199,7 +199,8 @@ conf_t *conf_load( int argc, char *argv[] )
 
 	conf = g_new0( conf_t,1 );
 	global.conf = conf;
-	conf_get_string(key_main, "interface", "0.0.0.0", &global.conf->iface);
+	conf_get_string(key_main, "interface_in", "0.0.0.0", &global.conf->iface_in);
+	conf_get_string(key_main, "interface_out", "0.0.0.0", &global.conf->iface_out);
 	conf_get_string(key_main, "port", "6667", &global.conf->port);
 	conf_get_int(key_main, "verbose", 0, &global.conf->verbose);
 	conf_get_string(key_main, "auth_pass", "", &global.conf->auth_pass);
@@ -210,7 +211,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf_get_string(key_main, "motdfile", NULL, &global.conf->motdfile);
 	conf_get_string(key_main, "helpfile", NULL, &global.helpfile);
 	global.conf->runmode = RUNMODE_DAEMON;
-	conf_get_int(key_main, "AuthMode", AUTHMODE_OPEN, &global.conf->authmode);
+	conf_get_int(key_main, "AuthMode", AUTHMODE_OPEN, (int *)&global.conf->authmode);
 	conf_get_string(key_proxy, "host", "", &tmp); strcpy(proxyhost, tmp);
 	conf_get_string(key_proxy, "user", "", &tmp); strcpy(proxyuser, tmp);
 	conf_get_string(key_proxy, "password", "", &tmp); strcpy(proxypass, tmp);
