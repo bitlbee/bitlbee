@@ -112,7 +112,6 @@ PCDIR=$pcdir
 TARGET=$target
 ARCH=$arch
 CPU=$cpu
-OUTFILE=bitlbee
 
 DESTDIR=
 LFLAGS=
@@ -510,7 +509,6 @@ CYGWIN* )
 	echo 'Cygwin is not officially supported.'
 ;;
 Windows )
-	echo OUTFILE=bitlbee.exe >> Makefile.settings
 ;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'

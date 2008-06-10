@@ -17,8 +17,10 @@ ifeq ($(TARGET),i586-mingw32msvc)
 objects += win32.o
 LFLAGS+=-lws2_32
 EFLAGS+=-lsecur32
+OUTFILE=bitlbee.exe
 else
 objects += unix.o conf.o log.o
+OUTFILE=bitlbee
 endif
 
 # Expansion of variables
