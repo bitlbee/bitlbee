@@ -317,3 +317,16 @@ void log_message(int level, char *message, ...)
 }
 
 void log_link(int level, int output) { /* FIXME */ }
+
+struct tm *
+gmtime_r (const time_t *timer, struct tm *result)
+{
+	struct tm *local_result;
+	local_result = gmtime (timer);
+
+	if (local_result == NULL || result == NULL)
+		return NULL;
+
+	memcpy (result, local_result, sizeof (result));
+	return result;
+} 
