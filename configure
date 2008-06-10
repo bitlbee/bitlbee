@@ -511,8 +511,6 @@ CYGWIN* )
 ;;
 Windows )
 	echo OUTFILE=bitlbee.exe >> Makefile.settings
-	echo LFLAGS+=-lws2_32 >> Makefile.settings
-	echo EFLAGS+=-lsecur32 >> Makefile.settings
 ;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'

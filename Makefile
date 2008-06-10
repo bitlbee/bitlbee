@@ -15,6 +15,8 @@ subdirs = lib protocols
 
 ifeq ($(TARGET),i586-mingw32msvc)
 objects += win32.o
+LFLAGS+=-lws2_32
+EFLAGS+=-lsecur32
 else
 objects += unix.o conf.o log.o
 endif

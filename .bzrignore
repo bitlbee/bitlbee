@@ -1,15 +1,6 @@
 Makefile.settings
 config.h
 bitlbee
-Debug
-Debugx
-deps
-admin/Debug
-admin/admin.plg
-bitlbee.plg
-*.plg
-*.aps
-*.clw
 user-guide.txt
 user-guide.html
 help.txt

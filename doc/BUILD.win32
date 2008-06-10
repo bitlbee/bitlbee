@@ -1,35 +1,10 @@
-Instructions for building BitlBee on Windows 
-================================================
+Instructions for building BitlBee for Windows
+=============================================
 
-1. Download the latest version using bzr (http://www.bazaar-ng.org/):
+1) Install the mingw32 compiler
 
-   H:\> bzr branch http://win32.bitlbee.org/bzr bitlbee-win32
-   ...
+2) Compile GLib2 for the target i586-mingw32msvc
 
-2. Download and install the required development files: 
-    from ftp://ftp.gtk.org/pub/gtk/v2.8/win32/
-    - glib
-    - glib-dev
-    - libiconv (in dependencies/)
-    - gettext (in dependencies/)
-    from http://ftp.mozilla.org/pub/mozilla.org/
-    - nss (in security/nss/)
-    - nspr (in nspr/)
+3) Cross-compile BitlBee:
 
-  glib and gettext are only required for actually running BitlBee - building
-  should work fine without them.
-
-3. Set the following variables in Makefile.settings, if you don't have the 
-   libraries above installed in the default directories searched by MSVC:
-
-   - GLIB_DIR
-   - NSS_DIR
-   - NSPR_DIR
-
-4. Build:
-
-	H:\BitlBee> nmake /f win32.mk
-	...
-
-5. To build setup files, compile the bitlbee.iss file using the Inno Setup 
-   program (available from www.jrsoftware.org).
+$ ./configure --target=i586-mingw32msvc --ssl=bogus --arch=Windows
