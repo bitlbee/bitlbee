@@ -28,6 +28,9 @@
 
 #define _GNU_SOURCE /* Stupid GNU :-P */
 
+/* Depend on Windows 2000 for now since we need getaddrinfo() */
+#define _WIN32_WINNT 0x0501
+
 #define PACKAGE "BitlBee"
 #define BITLBEE_VERSION "1.2"
 #define VERSION BITLBEE_VERSION
@@ -47,9 +50,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <errno.h>
+
 #ifndef _WIN32
 #include <syslog.h>
-#include <errno.h>
 #endif
 
 #include <glib.h>

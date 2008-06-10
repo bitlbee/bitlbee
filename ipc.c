@@ -438,6 +438,7 @@ void ipc_child_disable()
 	global.listen_socket = -1;
 }
 
+#ifndef _WIN32
 char *ipc_master_save_state()
 {
 	char *fn = g_strdup( "/tmp/bee-restart.XXXXXX" );
@@ -503,7 +504,6 @@ static gboolean new_ipc_client( gpointer data, gint serversock, b_input_conditio
 	return TRUE;
 }
 
-#ifndef _WIN32
 int ipc_master_listen_socket()
 {
 	struct sockaddr_un un_addr;
@@ -540,7 +540,11 @@ int ipc_master_listen_socket()
 	return 1;
 }
 #else
+int ipc_master_listen_socket()
+{
 	/* FIXME: Open named pipe \\.\BITLBEE */
+	return 0;
+}
 #endif
 
 int ipc_master_load_state()

@@ -397,6 +397,7 @@ signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t si
    lack of entropy won't halt BitlBee. */
 void random_bytes( unsigned char *buf, int count )
 {
+#ifndef _WIN32
 	static int use_dev = -1;
 	
 	/* Actually this probing code isn't really necessary, is it? */
@@ -446,6 +447,7 @@ void random_bytes( unsigned char *buf, int count )
 	}
 	
 	if( !use_dev )
+#endif
 	{
 		int i;
 		

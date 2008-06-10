@@ -59,12 +59,18 @@ int main( int argc, char *argv[], char **envp )
 	
 	if( global.conf->runmode == RUNMODE_INETD )
 	{
+		log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
+	
 		i = bitlbee_inetd_init();
 		log_message( LOGLVL_INFO, "Bitlbee %s starting in inetd mode.", BITLBEE_VERSION );
 
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
+		log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
+
 		i = bitlbee_daemon_init();
 		log_message( LOGLVL_INFO, "Bitlbee %s starting in daemon mode.", BITLBEE_VERSION );
 	}
@@ -218,3 +224,5 @@ double gettime()
 	gettimeofday( time, 0 );
 	return( (double) time->tv_sec + (double) time->tv_usec / 1000000 );
 }
+
+
