@@ -27,3 +27,4 @@ tests/check
 *.o
 coverage
 bitlbee.info
+bitlbee.exe
