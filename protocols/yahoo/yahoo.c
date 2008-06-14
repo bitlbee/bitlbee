@@ -453,10 +453,6 @@ gboolean byahoo_write_ready_callback( gpointer data, gint source, b_input_condit
 {
 	struct byahoo_write_ready_data *d = data;
 	
-	if( !byahoo_get_ic_by_id( d->id ) )
-		/* WTF doesn't libyahoo clean this up? */
-		return FALSE;
-	
 	yahoo_write_ready( d->id, d->fd, d->data );
 	
 	return FALSE;
