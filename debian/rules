@@ -21,7 +21,7 @@ build-arch-stamp:
 clean:
 	[ "`whoami`" = "root" -a -d debian ]
 	rm -rf build-arch-stamp debian/bitlbee debian/*.substvars debian/files debian/bitlbee-dev
-	-$(MAKE) distclean
+	$(MAKE) distclean
 #	-$(MAKE) -C doc/ clean
 				
 
