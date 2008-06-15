@@ -134,10 +134,6 @@ struct jabber_chat
 
 #define JABBER_XMLCONSOLE_HANDLE "xmlconsole"
 
-#define JABBER_PORT_DEFAULT "5222"
-#define JABBER_PORT_MIN 5220
-#define JABBER_PORT_MAX 5229
-
 /* Prefixes to use for packet IDs (mainly for IQ packets ATM). Usually the
    first one should be used, but when storing a packet in the cache, a
    "special" kind of ID is assigned to make it easier later to figure out

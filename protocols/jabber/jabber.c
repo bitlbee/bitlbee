@@ -36,11 +36,30 @@
 
 GSList *jabber_connections;
 
+/* First enty is the default */
+static const int jabber_port_list[] = {
+	5222,
+	5223,
+	5220,
+	5221,
+	5224,
+	5225,
+	5226,
+	5227,
+	5228,
+	5229,
+	80,
+	443,
+	0
+};
+
 static void jabber_init( account_t *acc )
 {
 	set_t *s;
+	char str[16];
 	
-	s = set_add( &acc->set, "port", JABBER_PORT_DEFAULT, set_eval_int, acc );
+	g_snprintf( str, sizeof( str ), "%d", jabber_port_list[0] );
+	s = set_add( &acc->set, "port", str, set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
 	s = set_add( &acc->set, "priority", "0", set_eval_priority, acc );
@@ -71,6 +90,7 @@ static void jabber_login( account_t *acc )
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
 	struct ns_srv_reply *srv = NULL;
 	char *connect_to, *s;
+	int i;
 	
 	/* For now this is needed in the _connected() handlers if using
 	   GLib event handling, to make sure we're not handling events
@@ -176,11 +196,13 @@ static void jabber_login( account_t *acc )
 	
 	imcb_log( ic, "Connecting" );
 	
-	if( set_getint( &acc->set, "port" ) < JABBER_PORT_MIN ||
-	    set_getint( &acc->set, "port" ) > JABBER_PORT_MAX )
+	for( i = 0; jabber_port_list[i] > 0; i ++ )
+		if( set_getint( &acc->set, "port" ) == jabber_port_list[i] )
+			break;
+
+	if( jabber_port_list[i] == 0 )
 	{
-		imcb_log( ic, "Incorrect port number, must be in the %d-%d range",
-		               JABBER_PORT_MIN, JABBER_PORT_MAX );
+		imcb_log( ic, "Illegal port number" );
 		imc_logout( ic, FALSE );
 		return;
 	}
