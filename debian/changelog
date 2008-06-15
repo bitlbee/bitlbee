@@ -2,8 +2,9 @@ bitlbee (1.2-5) unstable; urgency=low
 
   * Add myself to uploaders.
   * Bump standards version to 3.8.0.
+  * Fix FSF address.
 
- -- Jelmer Vernooij <jelmer@samba.org>  Sun, 15 Jun 2008 23:19:14 +0200
+ -- Jelmer Vernooij <jelmer@samba.org>  Sun, 15 Jun 2008 23:48:54 +0200
 
 bitlbee (1.2-4) unstable; urgency=low
 
