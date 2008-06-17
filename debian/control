@@ -2,10 +2,12 @@ Source: bitlbee
 Section: net
 Priority: optional
 Maintainer: Wilmer van der Gaast <wilmer@gaast.net>
-Standards-Version: 3.5.9
+Uploaders: Jelmer Vernooij <jelmer@samba.org>
+Standards-Version: 3.8.0
 Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | libnss-dev (>= 1.6), debconf-2.0, po-debconf
 Homepage: http://www.bitlbee.org/
 Vcs-Bzr: http://code.bitlbee.org/bitlbee/
+DM-Upload-Allowed: yes
 
 Package: bitlbee
 Architecture: any

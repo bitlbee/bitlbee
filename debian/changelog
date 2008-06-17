@@ -1,8 +1,17 @@
-bitlbee (1.2-5) UNRELEASED; urgency=low
+bitlbee (1.2-6) UNRELEASED; urgency=low
 
   * Add Homepage and Vcs-Bzr fields.
 
  -- Jelmer Vernooij <jelmer@samba.org>  Sun, 11 May 2008 14:18:16 +0200
+
+bitlbee (1.2-5) unstable; urgency=low
+
+  * Add myself to uploaders.
+  * Bump standards version to 3.8.0.
+  * Fix FSF address.
+  * Avoid changing uid from init script. (Closes: #474589)
+
+ -- Jelmer Vernooij <jelmer@samba.org>  Mon, 16 Jun 2008 00:53:20 +0200
 
 bitlbee (1.2-4) unstable; urgency=low
 
