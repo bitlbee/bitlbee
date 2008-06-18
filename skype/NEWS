@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.5.1         - configure now automatically detects the right prefix to
+                match witl BitlBee's one
+              - minor documentation improvements (public chats, bug
+                reporting address)
 0.5.0         - skyped now uses gnutls if possible, which seem to be
                 more stable, compared to openssl.
               - skyped now tries to handle all read/write errors from/to
