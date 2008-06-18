@@ -31,6 +31,7 @@ dnl Check for bitlbee
 PKG_CHECK_MODULES(BITLBEE, bitlbee)
 CFLAGS="$CFLAGS $BITLBEE_CFLAGS"
 LDFLAGS="$LDFLAGS $BITLBEE_LIBS"
+prefix=`$PKG_CONFIG --variable=prefix bitlbee`
 AC_OUTPUT(config.mak)
 AC_OUTPUT(skyped.conf.dist)
 
