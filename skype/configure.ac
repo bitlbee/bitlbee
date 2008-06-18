@@ -33,3 +33,13 @@ CFLAGS="$CFLAGS $BITLBEE_CFLAGS"
 LDFLAGS="$LDFLAGS $BITLBEE_LIBS"
 AC_OUTPUT(config.mak)
 AC_OUTPUT(skyped.conf.dist)
+
+echo "
+	compiler flags:			$CFLAGS
+	linker flags:			$LDFLAGS
+	shared object flags:		$SHARED_FLAGS
+	shared object extension:	$SHARED_EXT
+	install program:		$INSTALL
+	prefix:				$prefix
+	sysconfig dir:			$sysconfdir/skyped
+"
