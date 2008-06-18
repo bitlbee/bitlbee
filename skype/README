@@ -93,16 +93,14 @@ $ make
 # make install install-dev
 ----
 
-- Get the plugin code:
+- Get the plugin code (in an empty dir, or whereever you want, it does
+  not matter):
 
 ----
 $ wget http://vmiklos.hu/project/bitlbee-skype/bitlbee-skype-@VERSION@.tar.gz
 $ tar xf bitlbee-skype-@VERSION@.tar.gz
 $ cd bitlbee-skype-@VERSION@
 ----
-
-It doesn't matter where do you get it, it'll install the plugin to `/usr/local`
-by default (that's the location where BitlBee searches for plugins by default).
 
 - Compile and install it:
 
@@ -111,6 +109,9 @@ $ ./configure
 $ make
 # make install
 ----
+
+This will install the plugin to where BitlBee expects them, which is
+`/usr/local/lib/bitlbee` if you installed BitlBee from source.
 
 - To install http://skype4py.sourceforge.net/[Skype4Py] from source:
 
