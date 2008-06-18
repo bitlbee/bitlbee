@@ -1,4 +1,4 @@
-AC_INIT([Skype plugin for BitlBee], 1.0, [vmiklos@frugalware.org], bitlbee-skype)
+AC_INIT([Skype plugin for BitlBee], 1.0, [vmiklos@vmiklos.hu], bitlbee-skype)
 AC_PROG_CC
 AC_PROG_INSTALL
 
