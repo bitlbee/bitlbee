@@ -524,7 +524,9 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 		/* If there's only one item in the list (and if the resource
 		   matches), removing it is simple. (And the hash reference
 		   should be removed too!) */
-		if( bud->next == NULL && ( ( s == NULL || bud->resource == NULL ) || g_strcasecmp( bud->resource, s + 1 ) == 0 ) )
+		if( bud->next == NULL &&
+		    ( ( s == NULL && bud->resource == NULL ) ||
+		      ( bud->resource && s && g_strcasecmp( bud->resource, s + 1 ) == 0 ) ) )
 		{
 			g_hash_table_remove( jd->buddies, bud->bare_jid );
 			g_free( bud->bare_jid );

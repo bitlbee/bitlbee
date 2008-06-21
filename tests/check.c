@@ -68,6 +68,9 @@ Suite *set_suite(void);
 /* From check_jabber_sasl.c */
 Suite *jabber_sasl_suite(void);
 
+/* From check_jabber_sasl.c */
+Suite *jabber_util_suite(void);
+
 int main (int argc, char **argv)
 {
 	int nf;
@@ -114,6 +117,7 @@ int main (int argc, char **argv)
 	srunner_add_suite(sr, crypting_suite());
 	srunner_add_suite(sr, set_suite());
 	srunner_add_suite(sr, jabber_sasl_suite());
+	srunner_add_suite(sr, jabber_util_suite());
 	if (no_fork)
 		srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all (sr, verbose?CK_VERBOSE:CK_NORMAL);
