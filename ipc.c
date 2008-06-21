@@ -247,7 +247,11 @@ gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
 	{
 		cmd = irc_parse_line( buf );
 		if( cmd )
+		{
 			ipc_command_exec( data, cmd, ipc_master_commands );
+			g_free( cmd );
+		}
+		g_free( buf );
 	}
 	else
 	{
@@ -265,7 +269,11 @@ gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond )
 	{
 		cmd = irc_parse_line( buf );
 		if( cmd )
+		{
 			ipc_command_exec( data, cmd, ipc_child_commands );
+			g_free( cmd );
+		}
+		g_free( buf );
 	}
 	else
 	{
