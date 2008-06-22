@@ -2050,7 +2050,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	/* Add from server list to local list */
 	tmp = 0;
 	for (curitem=sess->ssi.items; curitem; curitem=curitem->next) {
-		nrm = normalize(curitem->name);
+		nrm = curitem->name ? normalize(curitem->name) : NULL;
 		
 		switch (curitem->type) {
 			case 0x0000: /* Buddy */
