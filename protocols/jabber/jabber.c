@@ -32,7 +32,6 @@
 #include "bitlbee.h"
 #include "jabber.h"
 #include "md5.h"
-#include "base64.h"
 
 GSList *jabber_connections;
 
@@ -240,24 +239,20 @@ static void jabber_login( account_t *acc )
 	jabber_generate_id_hash( jd );
 }
 
+/* This generates an unfinished md5_state_t variable. Every time we generate
+   an ID, we finish the state by adding a sequence number and take the hash. */
 static void jabber_generate_id_hash( struct jabber_data *jd )
 {
-	md5_state_t id_hash;
-	md5_byte_t binbuf[16];
+	md5_byte_t binbuf[4];
 	char *s;
 	
-	md5_init( &id_hash );
-	md5_append( &id_hash, (unsigned char *) jd->username, strlen( jd->username ) );
-	md5_append( &id_hash, (unsigned char *) jd->server, strlen( jd->server ) );
+	md5_init( &jd->cached_id_prefix );
+	md5_append( &jd->cached_id_prefix, (unsigned char *) jd->username, strlen( jd->username ) );
+	md5_append( &jd->cached_id_prefix, (unsigned char *) jd->server, strlen( jd->server ) );
 	s = set_getstr( &jd->ic->acc->set, "resource" );
-	md5_append( &id_hash, (unsigned char *) s, strlen( s ) );
-	random_bytes( binbuf, 16 );
-	md5_append( &id_hash, binbuf, 16 );
-	md5_finish( &id_hash, binbuf );
-	
-	s = base64_encode( binbuf, 9 );
-	jd->cached_id_prefix = g_strdup_printf( "%s%s", JABBER_CACHED_ID, s );
-	g_free( s );
+	md5_append( &jd->cached_id_prefix, (unsigned char *) s, strlen( s ) );
+	random_bytes( binbuf, 4 );
+	md5_append( &jd->cached_id_prefix, binbuf, 4 );
 }
 
 static void jabber_logout( struct im_connection *ic )
@@ -288,7 +283,6 @@ static void jabber_logout( struct im_connection *ic )
 	
 	xt_free( jd->xt );
 	
-	g_free( jd->cached_id_prefix );
 	g_free( jd->away_message );
 	g_free( jd->username );
 	g_free( jd );

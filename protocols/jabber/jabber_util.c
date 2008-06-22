@@ -22,6 +22,8 @@
 \***************************************************************************/
 
 #include "jabber.h"
+#include "md5.h"
+#include "base64.h"
 
 static unsigned int next_id = 1;
 
@@ -133,11 +135,21 @@ void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_ca
 {
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_cache_entry *entry = g_new0( struct jabber_cache_entry, 1 );
-	char *id;
+	md5_state_t id_hash;
+	md5_byte_t id_sum[16];
+	char *id, *asc_hash;
 	
-	id = g_strdup_printf( "%s%05x", jd->cached_id_prefix, ( next_id++ ) & 0xfffff );
+	next_id ++;
+	
+	id_hash = jd->cached_id_prefix;
+	md5_append( &id_hash, (md5_byte_t*) &next_id, sizeof( next_id ) );
+	md5_finish( &id_hash, id_sum );
+	asc_hash = base64_encode( id_sum, 12 );
+	
+	id = g_strdup_printf( "%s%s", JABBER_CACHED_ID, asc_hash );
 	xt_add_attr( node, "id", id );
 	g_free( id );
+	g_free( asc_hash );
 	
 	entry->node = node;
 	entry->func = func;
@@ -183,7 +195,7 @@ xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *
 	char *s;
 	
 	if( ( s = xt_find_attr( node, "id" ) ) == NULL ||
-	    strncmp( s, jd->cached_id_prefix, strlen( jd->cached_id_prefix ) ) != 0 )
+	    strncmp( s, JABBER_CACHED_ID, strlen( JABBER_CACHED_ID ) ) != 0 )
 	{
 		/* Silently ignore it, without an ID (or a non-cache
 		   ID) we don't know how to handle the packet and we
@@ -195,8 +207,14 @@ xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *
 	
 	if( entry == NULL )
 	{
+		/*
+		There's no longer an easy way to see if we generated this
+		one or someone else, and there's a ten-minute timeout anyway,
+		so meh.
+		
 		imcb_log( ic, "Warning: Received %s-%s packet with unknown/expired ID %s!",
 		              node->name, xt_find_attr( node, "type" ) ? : "(no type)", s );
+		*/
 	}
 	else if( entry->func )
 	{

@@ -85,7 +85,7 @@ struct jabber_data
 	struct jabber_away_state *away_state;
 	char *away_message;
 	
-	char *cached_id_prefix;
+	md5_state_t cached_id_prefix;
 	GHashTable *node_cache;
 	GHashTable *buddies;
 };
