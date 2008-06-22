@@ -1030,7 +1030,7 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 			g_hash_table_insert(od->ips, uin, (gpointer) (long) info->icqinfo.ipaddr);
 	}
 
-	if (!aim_sncmp(tmp, normalize(info->sn)))
+	if (!aim_sncmp(ic->acc->user, info->sn))
 		g_snprintf(ic->displayname, sizeof(ic->displayname), "%s", info->sn);
 
 	tmp = normalize(info->sn);
