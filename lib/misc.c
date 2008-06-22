@@ -61,31 +61,6 @@ void strip_linefeed(gchar *text)
 	g_free(text2);
 }
 
-char *normalize(const char *s)
-{
-	static char buf[BUF_LEN];
-	char *t, *u;
-	int x = 0;
-
-	g_return_val_if_fail((s != NULL), NULL);
-
-	u = t = g_strdup(s);
-
-	strcpy(t, s);
-	g_strdown(t);
-
-	while (*t && (x < BUF_LEN - 1)) {
-		if (*t != ' ') {
-			buf[x] = *t;
-			x++;
-		}
-		t++;
-	}
-	buf[x] = '\0';
-	g_free(u);
-	return buf;
-}
-
 time_t get_time(int year, int month, int day, int hour, int min, int sec)
 {
 	struct tm tm;
