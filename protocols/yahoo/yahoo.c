@@ -162,10 +162,7 @@ static void byahoo_logout( struct im_connection *ic )
 	}
 	g_slist_free( yd->buddygroups );
 	
-	if( yd->logged_in )
-		yahoo_logoff( yd->y2_id );
-	else
-		yahoo_close( yd->y2_id );
+	yahoo_logoff( yd->y2_id );
 	
 	g_free( yd );
 }
