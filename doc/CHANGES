@@ -29,7 +29,7 @@ Version 1.2.1:
 - Fixed GLib <2.6 compatibility issue.
 - Misc. memory leak/crash fixes.
 
-Finished ...
+Finished 24 Jun 2008
 
 Version 1.2:
 - Added ForkDaemon mode next to the existing Daemon- and inetd modes. With
