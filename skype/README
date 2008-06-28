@@ -62,7 +62,7 @@ connects to Skype, finally BitlBee can connect to `skyped`.
 - Install the necessary packages:
 
 ----
-# pacman-g2 -S bitlbee-skype skype4py
+# pacman-g2 -S bitlbee-skype
 ----
 
 and you don't have to compile anything manually.
