@@ -45,8 +45,8 @@ dist:
 release:
 	git tag $(VERSION)
 	$(MAKE) dist
-	gpg --comment "See http://ftp.frugalware.org/pub/README.GPG for info" \
-		-ba -u 20F55619 bitlbee-skype-$(VERSION).tar.gz
+	gpg --comment "See http://vmiklos.hu/gpg/ for info" \
+		-ba bitlbee-skype-$(VERSION).tar.gz
 
 doc: HEADER.html Changelog
 
