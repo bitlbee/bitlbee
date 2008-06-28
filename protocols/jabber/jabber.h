@@ -85,7 +85,7 @@ struct jabber_data
 	struct jabber_away_state *away_state;
 	char *away_message;
 	
-	char *cached_id_prefix;
+	md5_state_t cached_id_prefix;
 	GHashTable *node_cache;
 	GHashTable *buddies;
 };
@@ -133,10 +133,6 @@ struct jabber_chat
 };
 
 #define JABBER_XMLCONSOLE_HANDLE "xmlconsole"
-
-#define JABBER_PORT_DEFAULT "5222"
-#define JABBER_PORT_MIN 5220
-#define JABBER_PORT_MAX 5229
 
 /* Prefixes to use for packet IDs (mainly for IQ packets ATM). Usually the
    first one should be used, but when storing a packet in the cache, a

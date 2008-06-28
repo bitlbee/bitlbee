@@ -4,7 +4,6 @@
 #include <check.h>
 #include <string.h>
 #include <stdio.h>
-#include "arc.h"
 
 char *sasl_get_part( char *data, char *field );
 

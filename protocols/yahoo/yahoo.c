@@ -162,10 +162,7 @@ static void byahoo_logout( struct im_connection *ic )
 	}
 	g_slist_free( yd->buddygroups );
 	
-	if( yd->logged_in )
-		yahoo_logoff( yd->y2_id );
-	else
-		yahoo_close( yd->y2_id );
+	yahoo_logoff( yd->y2_id );
 	
 	g_free( yd );
 }
@@ -452,10 +449,6 @@ struct byahoo_write_ready_data
 gboolean byahoo_write_ready_callback( gpointer data, gint source, b_input_condition cond )
 {
 	struct byahoo_write_ready_data *d = data;
-	
-	if( !byahoo_get_ic_by_id( d->id ) )
-		/* WTF doesn't libyahoo clean this up? */
-		return FALSE;
 	
 	yahoo_write_ready( d->id, d->fd, d->data );
 	

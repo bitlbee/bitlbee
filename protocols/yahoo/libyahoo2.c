@@ -378,7 +378,6 @@ static void del_from_list(struct yahoo_data *yd)
 }
 
 /* call repeatedly to get the next one */
-/*
 static struct yahoo_input_data * find_input_by_id(int id)
 {
 	YList *l;
@@ -389,7 +388,6 @@ static struct yahoo_input_data * find_input_by_id(int id)
 	}
 	return NULL;
 }
-*/
 
 static struct yahoo_input_data * find_input_by_id_and_webcam_user(int id, const char * who)
 {
@@ -794,6 +792,7 @@ static int yahoo_send_data(int fd, void *data, int len)
 void yahoo_close(int id) 
 {
 	struct yahoo_data *yd = find_conn_by_id(id);
+	
 	if(!yd)
 		return;
 
@@ -3163,7 +3162,7 @@ int yahoo_write_ready(int id, int fd, void *data)
 	struct data_queue *tx;
 
 	LOG(("write callback: id=%d fd=%d data=%p", id, fd, data));
-	if(!yid || !yid->txqueues)
+	if(!yid || !yid->txqueues || !find_conn_by_id(id))
 		return -2;
 	
 	tx = yid->txqueues->data;
@@ -3839,11 +3838,9 @@ void yahoo_logoff(int id)
 		}
 	}
 
-	
-/*	do {
+	do {
 		yahoo_input_close(yid);
-	} while((yid = find_input_by_id(id)));*/
-	
+	} while((yid = find_input_by_id(id)));
 }
 
 void yahoo_get_list(int id)

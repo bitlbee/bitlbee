@@ -46,6 +46,7 @@ void nick_set( account_t *acc, const char *handle, const char *nick )
 	char *store_handle, *store_nick = g_malloc( MAX_NICK_LENGTH + 1 );
 	
 	store_handle = clean_handle( handle );
+	store_nick[MAX_NICK_LENGTH] = 0;
 	strncpy( store_nick, nick, MAX_NICK_LENGTH );
 	nick_strip( store_nick );
 	

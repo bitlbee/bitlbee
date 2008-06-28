@@ -208,19 +208,19 @@ static void ipc_command_exec( void *data, char **cmd, const command_t *commands 
 		}
 }
 
+/* Return just one line. Returns NULL if something broke, an empty string
+   on temporary "errors" (EAGAIN and friends). */
 static char *ipc_readline( int fd )
 {
-	char *buf, *eol;
+	char buf[513], *eol;
 	int size;
-	
-	buf = g_new0( char, 513 );
 	
 	/* Because this is internal communication, it should be pretty safe
 	   to just peek at the message, find its length (by searching for the
 	   end-of-line) and then just read that message. With internal
 	   sockets and limites message length, messages should always be
 	   complete. Saves us quite a lot of code and buffering. */
-	size = recv( fd, buf, 512, MSG_PEEK );
+	size = recv( fd, buf, sizeof( buf ) - 1, MSG_PEEK );
 	if( size == 0 || ( size < 0 && !sockerr_again() ) )
 		return NULL;
 	else if( size < 0 ) /* && sockerr_again() */
@@ -228,21 +228,15 @@ static char *ipc_readline( int fd )
 	else
 		buf[size] = 0;
 	
-	eol = strstr( buf, "\r\n" );
-	if( eol == NULL )
+	if( ( eol = strstr( buf, "\r\n" ) ) == NULL )
 		return NULL;
 	else
 		size = eol - buf + 2;
 	
-	g_free( buf );
-	buf = g_new0( char, size + 1 );
-	
 	if( recv( fd, buf, size, 0 ) != size )
 		return NULL;
 	else
-		buf[size-2] = 0;
-	
-	return buf;
+		return g_strndup( buf, size - 2 );
 }
 
 gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
@@ -253,7 +247,11 @@ gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
 	{
 		cmd = irc_parse_line( buf );
 		if( cmd )
+		{
 			ipc_command_exec( data, cmd, ipc_master_commands );
+			g_free( cmd );
+		}
+		g_free( buf );
 	}
 	else
 	{
@@ -271,7 +269,11 @@ gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond )
 	{
 		cmd = irc_parse_line( buf );
 		if( cmd )
+		{
 			ipc_command_exec( data, cmd, ipc_child_commands );
+			g_free( cmd );
+		}
+		g_free( buf );
 	}
 	else
 	{

@@ -22,6 +22,8 @@
 \***************************************************************************/
 
 #include "jabber.h"
+#include "md5.h"
+#include "base64.h"
 
 static unsigned int next_id = 1;
 
@@ -133,11 +135,21 @@ void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_ca
 {
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_cache_entry *entry = g_new0( struct jabber_cache_entry, 1 );
-	char *id;
+	md5_state_t id_hash;
+	md5_byte_t id_sum[16];
+	char *id, *asc_hash;
 	
-	id = g_strdup_printf( "%s%05x", jd->cached_id_prefix, ( next_id++ ) & 0xfffff );
+	next_id ++;
+	
+	id_hash = jd->cached_id_prefix;
+	md5_append( &id_hash, (md5_byte_t*) &next_id, sizeof( next_id ) );
+	md5_finish( &id_hash, id_sum );
+	asc_hash = base64_encode( id_sum, 12 );
+	
+	id = g_strdup_printf( "%s%s", JABBER_CACHED_ID, asc_hash );
 	xt_add_attr( node, "id", id );
 	g_free( id );
+	g_free( asc_hash );
 	
 	entry->node = node;
 	entry->func = func;
@@ -183,7 +195,7 @@ xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *
 	char *s;
 	
 	if( ( s = xt_find_attr( node, "id" ) ) == NULL ||
-	    strncmp( s, jd->cached_id_prefix, strlen( jd->cached_id_prefix ) ) != 0 )
+	    strncmp( s, JABBER_CACHED_ID, strlen( JABBER_CACHED_ID ) ) != 0 )
 	{
 		/* Silently ignore it, without an ID (or a non-cache
 		   ID) we don't know how to handle the packet and we
@@ -195,8 +207,14 @@ xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *
 	
 	if( entry == NULL )
 	{
+		/*
+		There's no longer an easy way to see if we generated this
+		one or someone else, and there's a ten-minute timeout anyway,
+		so meh.
+		
 		imcb_log( ic, "Warning: Received %s-%s packet with unknown/expired ID %s!",
 		              node->name, xt_find_attr( node, "type" ) ? : "(no type)", s );
+		*/
 	}
 	else if( entry->func )
 	{
@@ -289,8 +307,13 @@ char *jabber_normalize( const char *orig )
 	
 	len = strlen( orig );
 	new = g_new( char, len + 1 );
-	for( i = 0; i < len; i ++ )
+	
+	/* So it turns out the /resource part is case sensitive. Yeah, and
+	   it's Unicode but feck Unicode. :-P So stop once we see a slash. */
+	for( i = 0; i < len && orig[i] != '/' ; i ++ )
 		new[i] = tolower( orig[i] );
+	for( ; orig[i]; i ++ )
+		new[i] = orig[i];
 	
 	new[i] = 0;
 	return new;
@@ -333,7 +356,7 @@ struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid_
 		for( bi = bud; bi; bi = bi->next )
 		{
 			/* Check for dupes. */
-			if( g_strcasecmp( bi->resource, s + 1 ) == 0 )
+			if( strcmp( bi->resource, s + 1 ) == 0 )
 			{
 				*s = '/';
 				g_free( new );
@@ -386,7 +409,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 	
 	if( ( s = strchr( jid, '/' ) ) )
 	{
-		int none_found = 0;
+		int bare_exists = 0;
 		
 		*s = 0;
 		if( ( bud = g_hash_table_lookup( jd->buddies, jid ) ) )
@@ -409,21 +432,19 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 			
 			/* See if there's an exact match. */
 			for( ; bud; bud = bud->next )
-				if( g_strcasecmp( bud->resource, s + 1 ) == 0 )
+				if( strcmp( bud->resource, s + 1 ) == 0 )
 					break;
 		}
 		else
 		{
-			/* This hack is there to make sure that O_CREAT will
-			   work if there's already another resouce present
-			   for this JID, even if it's an unknown buddy. This
-			   is done to handle conferences properly. */
-			none_found = 1;
-			/* TODO(wilmer): Find out what I was thinking when I
-			   wrote this??? And then fix it. This makes me sad... */
+			/* This variable tells the if down here that the bare
+			   JID already exists and we should feel free to add
+			   more resources, if the caller asked for that. */
+			bare_exists = 1;
 		}
 		
-		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && ( imcb_find_buddy( ic, jid ) || !none_found ) )
+		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) &&
+		    ( !bare_exists || imcb_find_buddy( ic, jid ) ) )
 		{
 			*s = '/';
 			bud = jabber_buddy_add( ic, jid );
@@ -448,7 +469,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		else if( bud->resource && ( flags & GET_BUDDY_EXACT ) )
 			/* We want an exact match, so in thise case there shouldn't be a /resource. */
 			return NULL;
-		else if( ( bud->resource == NULL || bud->next == NULL ) )
+		else if( bud->resource == NULL || bud->next == NULL )
 			/* No need for selection if there's only one option. */
 			return bud;
 		else if( flags & GET_BUDDY_FIRST )
@@ -524,7 +545,9 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 		/* If there's only one item in the list (and if the resource
 		   matches), removing it is simple. (And the hash reference
 		   should be removed too!) */
-		if( bud->next == NULL && ( ( s == NULL || bud->resource == NULL ) || g_strcasecmp( bud->resource, s + 1 ) == 0 ) )
+		if( bud->next == NULL &&
+		    ( ( s == NULL && bud->resource == NULL ) ||
+		      ( bud->resource && s && strcmp( bud->resource, s + 1 ) == 0 ) ) )
 		{
 			g_hash_table_remove( jd->buddies, bud->bare_jid );
 			g_free( bud->bare_jid );
@@ -547,7 +570,7 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 		else
 		{
 			for( bi = bud, prev = NULL; bi; bi = (prev=bi)->next )
-				if( g_strcasecmp( bi->resource, s + 1 ) == 0 )
+				if( strcmp( bi->resource, s + 1 ) == 0 )
 					break;
 			
 			g_free( full_jid );

@@ -480,14 +480,18 @@ static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data )
 
 static storage_status_t xml_remove( const char *nick, const char *password )
 {
-	char s[512];
+	char s[512], *lc;
 	storage_status_t status;
 
 	status = xml_check_pass( nick, password );
 	if( status != STORAGE_OK )
 		return status;
 
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".xml" );
+	lc = g_strdup( nick );
+	nick_lc( lc );
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, lc, ".xml" );
+	g_free( lc );
+	
 	if( unlink( s ) == -1 )
 		return STORAGE_OTHER_ERROR;
 	
