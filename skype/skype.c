@@ -167,8 +167,9 @@ int skype_write( struct im_connection *ic, char *buf, int len )
 	return TRUE;
 }
 
-static void skype_buddy_ask_yes( gpointer w, struct skype_buddy_ask_data *bla )
+static void skype_buddy_ask_yes( void *data )
 {
+	struct skype_buddy_ask_data *bla = data;
 	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED TRUE", bla->handle);
 	skype_write( bla->ic, buf, strlen( buf ) );
 	g_free(buf);
@@ -176,8 +177,9 @@ static void skype_buddy_ask_yes( gpointer w, struct skype_buddy_ask_data *bla )
 	g_free(bla);
 }
 
-static void skype_buddy_ask_no( gpointer w, struct skype_buddy_ask_data *bla )
+static void skype_buddy_ask_no( void *data )
 {
+	struct skype_buddy_ask_data *bla = data;
 	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED FALSE", bla->handle);
 	skype_write( bla->ic, buf, strlen( buf ) );
 	g_free(buf);
@@ -198,8 +200,9 @@ void skype_buddy_ask( struct im_connection *ic, char *handle, char *message)
 	g_free( buf );
 }
 
-static void skype_call_ask_yes( gpointer w, struct skype_buddy_ask_data *bla )
+static void skype_call_ask_yes( void *data )
 {
+	struct skype_buddy_ask_data *bla = data;
 	char *buf = g_strdup_printf("SET CALL %s STATUS INPROGRESS", bla->handle);
 	skype_write( bla->ic, buf, strlen( buf ) );
 	g_free(buf);
@@ -207,8 +210,9 @@ static void skype_call_ask_yes( gpointer w, struct skype_buddy_ask_data *bla )
 	g_free(bla);
 }
 
-static void skype_call_ask_no( gpointer w, struct skype_buddy_ask_data *bla )
+static void skype_call_ask_no( void *data )
 {
+	struct skype_buddy_ask_data *bla = data;
 	char *buf = g_strdup_printf("SET CALL %s STATUS FINISHED", bla->handle);
 	skype_write( bla->ic, buf, strlen( buf ) );
 	g_free(buf);
