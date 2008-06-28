@@ -1,5 +1,6 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.6.0         - works with BitlBee 1.2.1
 0.5.1         - configure now automatically detects the right prefix to
                 match witl BitlBee's one
               - minor documentation improvements (public chats, bug
