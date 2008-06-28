@@ -1,10 +1,10 @@
   /********************************************************************\
-  * BitlBee -- An IRC to other IM-networks gateway                     *
-  *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * BitlBee -- An IRC to other IM-networks gateway					 *
+  *																	*
+  * Copyright 2002-2004 Wilmer van der Gaast and others				*
   \********************************************************************/
 
-/* Main file (Windows specific part)                                   */
+/* Main file (Windows specific part)								   */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -38,17 +38,17 @@ static void WINAPI service_ctrl (DWORD dwControl)
 {
 	switch (dwControl)
 	{
-        case SERVICE_CONTROL_STOP:
+		case SERVICE_CONTROL_STOP:
 			/* FIXME */
-            break;
+			break;
 
-        case SERVICE_CONTROL_INTERROGATE:
-            break;
+		case SERVICE_CONTROL_INTERROGATE:
+			break;
 
-        default:
-            break;
+		default:
+			break;
 
-    }
+	}
 }
 
 static void bitlbee_init(int argc, char **argv)
@@ -94,13 +94,13 @@ void service_main (DWORD argc, LPTSTR *argv)
 	SERVICE_STATUS_HANDLE handle;
 	SERVICE_STATUS status;
 
-    handle = RegisterServiceCtrlHandler("bitlbee", service_ctrl);
+	handle = RegisterServiceCtrlHandler("bitlbee", service_ctrl);
 
-    if (!handle)
+	if (!handle)
 		return;
 
-    status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
-    status.dwServiceSpecificExitCode = 0;
+	status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+	status.dwServiceSpecificExitCode = 0;
 
 	bitlbee_init(argc, argv);
 
@@ -125,7 +125,7 @@ static void usage()
 }
 
 int main( int argc, char **argv)
-{    
+{	
 	int i;
 	WSADATA WSAData;
 
@@ -139,7 +139,7 @@ int main( int argc, char **argv)
 		}
 	}
 
-    WSAStartup(MAKEWORD(1,1), &WSAData);
+	WSAStartup(MAKEWORD(1,1), &WSAData);
 
 	if (!debug) {
 		if (!StartServiceCtrlDispatcher(dispatch_table))
@@ -270,12 +270,12 @@ void log_error(char *msg)
 
 void log_message(int level, char *message, ...)
 {
-    HANDLE  hEventSource;
-    LPTSTR  lpszStrings[2];
+	HANDLE  hEventSource;
+	LPTSTR  lpszStrings[2];
 	WORD elevel;
-    va_list ap;
+	va_list ap;
 
-    va_start(ap, message);
+	va_start(ap, message);
 
 	if (debug) {
 		vprintf(message, ap);
@@ -284,11 +284,11 @@ void log_message(int level, char *message, ...)
 		return;
 	}
 
-    hEventSource = RegisterEventSource(NULL, TEXT("bitlbee"));
+	hEventSource = RegisterEventSource(NULL, TEXT("bitlbee"));
 
-    lpszStrings[0] = TEXT("bitlbee");
-    lpszStrings[1] = g_strdup_vprintf(message, ap);
-    va_end(ap);
+	lpszStrings[0] = TEXT("bitlbee");
+	lpszStrings[1] = g_strdup_vprintf(message, ap);
+	va_end(ap);
 
 	switch (level) {
 	case LOGLVL_ERROR: elevel = EVENTLOG_ERROR_TYPE; break;
@@ -299,19 +299,19 @@ void log_message(int level, char *message, ...)
 #endif
 	}
 
-    if (hEventSource != NULL) {
-        ReportEvent(hEventSource, 
-        elevel,
-        0,                    
-        0,                    
-        NULL,                 
-        2,                    
-        0,                    
-        lpszStrings,          
-        NULL);                
+	if (hEventSource != NULL) {
+		ReportEvent(hEventSource, 
+		elevel,
+		0,					
+		0,					
+		NULL,				 
+		2,					
+		0,					
+		lpszStrings,		  
+		NULL);				
 
-        DeregisterEventSource(hEventSource);
-    }
+		DeregisterEventSource(hEventSource);
+	}
 
 	g_free(lpszStrings[1]);
 }
