@@ -25,6 +25,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
+#include "sock.h"
 #include "crypting.h"
 #include "ipc.h"
 

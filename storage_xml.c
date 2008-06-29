@@ -30,6 +30,11 @@
 #include "md5.h"
 #include <glib/gstdio.h>
 
+#if !GLIB_CHECK_VERSION(2,8,0)
+/* GLib < 2.8.0 doesn't have g_access, so just use the system access(). */
+#define g_access access
+#endif
+
 typedef enum
 {
 	XML_PASS_CHECK_ONLY = -1,
@@ -245,7 +250,8 @@ static void xml_init( void )
 {
 	if( ! g_file_test( global.conf->configdir, G_FILE_TEST_EXISTS ) )
 		log_message( LOGLVL_WARNING, "The configuration directory `%s' does not exist. Configuration won't be saved.", global.conf->configdir );
-	else if( ! g_file_test( global.conf->configdir, G_FILE_TEST_EXISTS ) || g_access( global.conf->configdir, W_OK ) != 0 )
+	else if( ! g_file_test( global.conf->configdir, G_FILE_TEST_EXISTS ) || 
+			 g_access( global.conf->configdir, W_OK ) != 0 )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to `%s'.", global.conf->configdir );
 }
 
