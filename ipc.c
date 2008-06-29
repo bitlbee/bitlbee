@@ -32,7 +32,6 @@
 #endif
 
 GSList *child_list = NULL;
-static char *statefile = NULL;
 
 static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
@@ -500,11 +499,6 @@ char *ipc_master_save_state()
 	}
 }
 
-void ipc_master_set_statefile( char *fn )
-{
-	statefile = g_strdup( fn );
-}
-
 
 static gboolean new_ipc_client( gpointer data, gint serversock, b_input_condition cond )
 {
@@ -565,7 +559,7 @@ int ipc_master_listen_socket()
 	/* FIXME: Open named pipe \\.\BITLBEE */
 #endif
 
-int ipc_master_load_state()
+int ipc_master_load_state( char *statefile )
 {
 	struct bitlbee_child *child;
 	FILE *fp;
@@ -573,6 +567,7 @@ int ipc_master_load_state()
 	
 	if( statefile == NULL )
 		return 0;
+	
 	fp = fopen( statefile, "r" );
 	unlink( statefile );	/* Why do it later? :-) */
 	if( fp == NULL )

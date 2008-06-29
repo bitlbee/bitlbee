@@ -39,7 +39,7 @@ global_t global;	/* Against global namespace pollution */
 
 static void sighandler( int signal );
 
-int main( int argc, char *argv[], char **envp )
+int main( int argc, char *argv[] )
 {
 	int i = 0;
 	char *old_cwd = NULL;
@@ -134,30 +134,19 @@ int main( int argc, char *argv[], char **envp )
 	if( global.restart )
 	{
 		char *fn = ipc_master_save_state();
-		char **args;
-		int n, i;
 		
 		chdir( old_cwd );
 		
-		n = 0;
-		args = g_new0( char *, argc + 3 );
-		args[n++] = argv[0];
-		if( fn )
-		{
-			args[n++] = "-R";
-			args[n++] = fn;
-		}
-		for( i = 1; argv[i] && i < argc; i ++ )
-		{
-			if( strcmp( argv[i], "-R" ) == 0 )
-				i += 2;
-			
-			args[n++] = argv[i];
-		}
+		setenv( "_BITLBEE_RESTART_STATE", fn, 1 );
+		g_free( fn );
 		
 		close( global.listen_socket );
 		
-		execve( args[0], args, envp );
+		if( execv( argv[0], argv ) == -1 )
+			/* Apparently the execve() failed, so let's just
+			   jump back into our own/current main(). */
+			/* Need more cleanup code to make this work. */
+			return 1; /* main( argc, argv ); */
 	}
 	
 	return( 0 );

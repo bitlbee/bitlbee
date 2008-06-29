@@ -117,7 +117,7 @@ int bitlbee_daemon_init()
 #endif
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
-		ipc_master_load_state();
+		ipc_master_load_state( getenv( "_BITLBEE_RESTART_STATE" ) );
 
 	if( global.conf->runmode == RUNMODE_DAEMON || global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_master_listen_socket();
