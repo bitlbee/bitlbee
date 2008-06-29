@@ -62,6 +62,25 @@ static void ipc_master_cmd_die( irc_t *data, char **cmd )
 	bitlbee_shutdown( NULL, -1, 0 );
 }
 
+static void ipc_master_cmd_deaf( irc_t *data, char **cmd )
+{
+	if( global.conf->runmode == RUNMODE_DAEMON )
+	{
+		b_event_remove( global.listen_watch_source_id );
+		close( global.listen_socket );
+		
+		global.listen_socket = global.listen_watch_source_id = -1;
+	
+		ipc_to_children_str( "OPERMSG :Closed listening socket, waiting "
+		                     "for all users to disconnect." );
+	}
+	else
+	{
+		ipc_to_children_str( "OPERMSG :The DEAF command only works in "
+		                     "normal daemon mode. Try DIE instead." );
+	}
+}
+
 void ipc_master_cmd_rehash( irc_t *data, char **cmd )
 {
 	runmode_t oldmode;
@@ -97,6 +116,7 @@ static const command_t ipc_master_commands[] = {
 	{ "client",     3, ipc_master_cmd_client,     0 },
 	{ "hello",      0, ipc_master_cmd_client,     0 },
 	{ "die",        0, ipc_master_cmd_die,        0 },
+	{ "deaf",       0, ipc_master_cmd_deaf,       0 },
 	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "wall",       1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "opermsg",    1, NULL,                      IPC_CMD_TO_CHILDREN },
