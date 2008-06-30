@@ -583,13 +583,9 @@ int md5_verify_password( char *password, char *hash )
 	md5_byte_t *pass_dec = NULL;
 	md5_byte_t pass_md5[16];
 	md5_state_t md5_state;
-	int ret, i;
+	int ret = -1, i;
 	
-	if( base64_decode( hash, &pass_dec ) != 21 )
-	{
-		ret = -1;
-	}
-	else
+	if( base64_decode( hash, &pass_dec ) == 21 )
 	{
 		md5_init( &md5_state );
 		md5_append( &md5_state, (md5_byte_t*) password, strlen( password ) );
