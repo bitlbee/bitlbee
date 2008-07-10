@@ -317,6 +317,9 @@ $ skyped -n -d
   build `bitlbee-skype` only for a public server or only for use with a public
   server.
 
+- Add some keep-alive traffic so that bitlbee won't disconnect from
+  skyped when nothing happens for a long time.
+
 == I would like to have support for ...
 
 If something does not work and it's not in the TODO section, then please
