@@ -63,12 +63,22 @@ def input_handler(fd, io_condition):
 			skype.send(i.strip())
 		return True
 
-def idle_handler(skype):
+def skype_idle_handler(skype):
 	try:
 		c = skype.skype.Command("PING", Block=True)
 		skype.skype.SendCommand(c)
 	except Skype4Py.SkypeAPIError, s:
 		dprint("Warning, pinging Skype failed (%s)." % (s))
+	return True
+
+def bitlbee_idle_handler(skype):
+	if options.conn:
+		try:
+			e = "PING"
+			options.conn.send("%s\n" % e)
+		except Exception, s:
+			dprint("Warning, sending '%s' failed (%s)." % (e, s))
+			options.conn.close()
 	return True
 
 def server(host, port):
@@ -161,7 +171,7 @@ class SkypeApi:
 					options.conn.close()
 
 	def send(self, msg_text):
-		if not len(msg_text):
+		if not len(msg_text) or msg_text == "PONG":
 			return
 		e = msg_text.decode(locale.getdefaultlocale()[1])
 		dprint('>> ' + e)
@@ -272,5 +282,6 @@ if __name__=='__main__':
 		skype = SkypeApi()
 	except Skype4Py.SkypeAPIError, s:
 		sys.exit("%s. Are you sure you have started Skype?" % s)
-	gobject.timeout_add(2000, idle_handler, skype)
+	gobject.timeout_add(2000, skype_idle_handler, skype)
+	gobject.timeout_add(60000, bitlbee_idle_handler, skype)
 	gobject.MainLoop().run()
