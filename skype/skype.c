@@ -879,6 +879,11 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 			{
 				imcb_log(ic, "SkypeOut balance value is '%s'.", line+21);
 			}
+			else if(!strncmp(line, "PING", 4))
+			{
+				g_snprintf(buf, 1024, "PONG\n");
+				skype_write(ic, buf, strlen(buf));
+			}
 			lineptr++;
 		}
 		g_strfreev(lines);
