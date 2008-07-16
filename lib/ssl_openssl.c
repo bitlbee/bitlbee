@@ -56,7 +56,7 @@ static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition
 static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
 
 
-void ssl_init( void );
+void ssl_init( void )
 {
 	initialized = TRUE;
 	SSLeay_add_ssl_algorithms();
