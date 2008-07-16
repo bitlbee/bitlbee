@@ -25,6 +25,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
+#include "sock.h"
 #include "crypting.h"
 #include "ipc.h"
 #include <sys/types.h>
@@ -42,6 +43,35 @@ static char *passchange( set_t *set, char *value )
 	irc_setpass( irc, value );
 	irc_usermsg( irc, "Password successfully changed" );
 	return NULL;
+}
+
+static char *set_eval_charset( set_t *set, char *value )
+{
+	irc_t *irc = set->data;
+	GIConv ic, oc;
+
+	if( g_strcasecmp( value, "none" ) == 0 )
+		value = g_strdup( "utf-8" );
+
+	if( ( ic = g_iconv_open( "utf-8", value ) ) == (GIConv) -1 )
+	{
+		return NULL;
+	}
+	if( ( oc = g_iconv_open( value, "utf-8" ) ) == (GIConv) -1 )
+	{
+		g_iconv_close( ic );
+		return NULL;
+	}
+	
+	if( irc->iconv != (GIConv) -1 )
+		g_iconv_close( irc->iconv );
+	if( irc->oconv != (GIConv) -1 )
+		g_iconv_close( irc->oconv );
+	
+	irc->iconv = ic;
+	irc->oconv = oc;
+
+	return value;
 }
 
 irc_t *irc_new( int fd )
@@ -66,6 +96,9 @@ irc_t *irc_new( int fd )
 	strcpy( irc->umode, UMODE );
 	irc->mynick = g_strdup( ROOT_NICK );
 	irc->channel = g_strdup( ROOT_CHAN );
+	
+	irc->iconv = (GIConv) -1;
+	irc->oconv = (GIConv) -1;
 	
 	if( global.conf->hostname )
 	{
@@ -125,6 +158,7 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "password", NULL, passchange, irc );
 	set_add( &irc->set, "private", "true", set_eval_bool, irc );
 	set_add( &irc->set, "query_order", "lifo", NULL, irc );
+	set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
 	set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
 	set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	set_add( &irc->set, "strip_html", "true", NULL, irc );
@@ -135,6 +169,9 @@ irc_t *irc_new( int fd )
 	conf_loaddefaults( irc );
 
 	irc->otr = otr_new();
+	
+	/* Evaluator sets the iconv/oconv structures. */
+	set_eval_charset( set_find( &irc->set, "charset" ), set_getstr( &irc->set, "charset" ) );
 	
 	return( irc );
 }
@@ -173,12 +210,14 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 	irc->status |= USTATUS_SHUTDOWN;
 	if( irc->sendbuffer && !immed )
 	{
-		/* We won't read from this socket anymore. Instead, we'll connect a timer
-		   to it that should shut down the connection in a second, just in case
-		   bitlbee_.._write doesn't do it first. */
+		/* Set up a timeout event that should shut down the connection
+		   in a second, just in case ..._write doesn't do it first. */
 		
 		b_event_remove( irc->r_watch_source_id );
-		irc->r_watch_source_id = b_timeout_add( 1000, (b_event_handler) irc_free, irc );
+		irc->r_watch_source_id = 0;
+		
+		b_event_remove( irc->ping_source_id );
+		irc->ping_source_id = b_timeout_add( 1000, (b_event_handler) irc_free, irc );
 	}
 	else
 	{
@@ -194,9 +233,8 @@ static gboolean irc_free_hashkey( gpointer key, gpointer value, gpointer data )
 }
 
 /* Because we have no garbage collection, this is quite annoying */
-void irc_free(irc_t * irc)
+void irc_free( irc_t * irc )
 {
-	account_t *account;
 	user_t *user, *usertmp;
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
@@ -205,80 +243,94 @@ void irc_free(irc_t * irc)
 		if( storage_save( irc, TRUE ) != STORAGE_OK )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
-	closesocket( irc->fd );
-	
-	if( irc->ping_source_id > 0 )
-		b_event_remove( irc->ping_source_id );
-	b_event_remove( irc->r_watch_source_id );
-	if( irc->w_watch_source_id > 0 )
-		b_event_remove( irc->w_watch_source_id );
-	
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
-	for (account = irc->accounts; account; account = account->next) {
-		if (account->ic) {
-			imc_logout(account->ic, TRUE);
-		} else if (account->reconnect) {
-			cancel_auto_reconnect(account);
-		}
-	}
-	
-	g_free(irc->sendbuffer);
-	g_free(irc->readbuffer);
-	
-	g_free(irc->nick);
-	g_free(irc->user);
-	g_free(irc->host);
-	g_free(irc->realname);
-	g_free(irc->password);
-	
-	g_free(irc->myhost);
-	g_free(irc->mynick);
-	
-	g_free(irc->channel);
-	
-	while (irc->queries != NULL)
-		query_del(irc, irc->queries);
-	
-	while (irc->accounts)
-		if (irc->accounts->ic == NULL)
-			account_del(irc, irc->accounts);
+	while( irc->accounts )
+	{
+		if( irc->accounts->ic )
+			imc_logout( irc->accounts->ic, FALSE );
+		else if( irc->accounts->reconnect )
+			cancel_auto_reconnect( irc->accounts );
+		
+		if( irc->accounts->ic == NULL )
+			account_del( irc, irc->accounts );
 		else
 			/* Nasty hack, but account_del() doesn't work in this
 			   case and we don't want infinite loops, do we? ;-) */
 			irc->accounts = irc->accounts->next;
+	}
 	
-	while (irc->set)
-		set_del(&irc->set, irc->set->key);
+	while( irc->queries != NULL )
+		query_del( irc, irc->queries );
 	
-	if (irc->users != NULL) {
+	while( irc->set )
+		set_del( &irc->set, irc->set->key );
+	
+	if (irc->users != NULL)
+	{
 		user = irc->users;
-		while (user != NULL) {
-			g_free(user->nick);
-			g_free(user->away);
-			g_free(user->handle);
-			if(user->user!=user->nick) g_free(user->user);
-			if(user->host!=user->nick) g_free(user->host);
-			if(user->realname!=user->nick) g_free(user->realname);
-			b_event_remove(user->sendbuf_timer);
+		while( user != NULL )
+		{
+			g_free( user->nick );
+			g_free( user->away );
+			g_free( user->handle );
+			if( user->user != user->nick ) g_free( user->user );
+			if( user->host != user->nick ) g_free( user->host );
+			if( user->realname != user->nick ) g_free( user->realname );
+			b_event_remove( user->sendbuf_timer );
 					
 			usertmp = user;
 			user = user->next;
-			g_free(usertmp);
+			g_free( usertmp );
 		}
 	}
 	
-	g_hash_table_foreach_remove(irc->userhash, irc_free_hashkey, NULL);
-	g_hash_table_destroy(irc->userhash);
+	if( irc->ping_source_id > 0 )
+		b_event_remove( irc->ping_source_id );
+	if( irc->r_watch_source_id > 0 )
+		b_event_remove( irc->r_watch_source_id );
+	if( irc->w_watch_source_id > 0 )
+		b_event_remove( irc->w_watch_source_id );
 	
-	g_hash_table_foreach_remove(irc->watches, irc_free_hashkey, NULL);
-	g_hash_table_destroy(irc->watches);
+	closesocket( irc->fd );
+	irc->fd = -1;
+	
+	g_hash_table_foreach_remove( irc->userhash, irc_free_hashkey, NULL );
+	g_hash_table_destroy( irc->userhash );
+	
+	g_hash_table_foreach_remove( irc->watches, irc_free_hashkey, NULL );
+	g_hash_table_destroy( irc->watches );
+	
+	if( irc->iconv != (GIConv) -1 )
+		g_iconv_close( irc->iconv );
+	if( irc->oconv != (GIConv) -1 )
+		g_iconv_close( irc->oconv );
+	
+	g_free( irc->sendbuffer );
+	g_free( irc->readbuffer );
+	
+	g_free( irc->nick );
+	g_free( irc->user );
+	g_free( irc->host );
+	g_free( irc->realname );
+	g_free( irc->password );
+	
+	g_free( irc->myhost );
+	g_free( irc->mynick );
+	
+	g_free( irc->channel );
+	
+	g_free( irc->last_target );
 	
 	otr_free(irc->otr);
 	
-	g_free(irc);
+	g_free( irc );
 	
-	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )
+	if( global.conf->runmode == RUNMODE_INETD ||
+	    global.conf->runmode == RUNMODE_FORKDAEMON ||
+	    ( global.conf->runmode == RUNMODE_DAEMON &&
+	      global.listen_socket == -1 &&
+	      irc_connection_list == NULL ) )
 		b_main_quit();
 }
 
@@ -297,7 +349,7 @@ void irc_setpass (irc_t *irc, const char *pass)
 
 void irc_process( irc_t *irc )
 {
-	char **lines, *temp, **cmd, *cs;
+	char **lines, *temp, **cmd;
 	int i;
 
 	if( irc->readbuffer != NULL )
@@ -306,11 +358,10 @@ void irc_process( irc_t *irc )
 		
 		for( i = 0; *lines[i] != '\0'; i ++ )
 		{
-			char conv[IRC_MAX_LINE+1];
+			char *conv = NULL;
 			
-			/* [WvG] Because irc_tokenize splits at every newline, the lines[] list
-			    should end with an empty string. This is why this actually works.
-			    Took me a while to figure out, Maurits. :-P */
+			/* [WvG] If the last line isn't empty, it's an incomplete line and we
+			   should wait for the rest to come in before processing it. */
 			if( lines[i+1] == NULL )
 			{
 				temp = g_strdup( lines[i] );
@@ -320,10 +371,14 @@ void irc_process( irc_t *irc )
 				break;
 			}
 			
-			if( ( cs = set_getstr( &irc->set, "charset" ) ) )
+			if( irc->iconv != (GIConv) -1 )
 			{
-				conv[IRC_MAX_LINE] = 0;
-				if( do_iconv( cs, "UTF-8", lines[i], conv, 0, IRC_MAX_LINE - 2 ) == -1 )
+				gsize bytes_read, bytes_written;
+				
+				conv = g_convert_with_iconv( lines[i], -1, irc->iconv,
+				                             &bytes_read, &bytes_written, NULL );
+				
+				if( conv == NULL || bytes_read != strlen( lines[i] ) )
 				{
 					/* GLib can do strange things if things are not in the expected charset,
 					   so let's be a little bit paranoid here: */
@@ -335,15 +390,18 @@ void irc_process( irc_t *irc )
 						                  "that charset, or tell BitlBee which charset to "
 						                  "expect by changing the charset setting. See "
 						                  "`help set charset' for more information. Your "
-						                  "message was ignored.", cs );
-						*conv = 0;
+						                  "message was ignored.",
+						                  set_getstr( &irc->set, "charset" ) );
+						
+						g_free( conv );
+						conv = NULL;
 					}
 					else
 					{
 						irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost,
-						           "Warning: invalid (non-UTF8) characters received at login time." );
+						           "Warning: invalid characters received at login time." );
 						
-						strncpy( conv, lines[i], IRC_MAX_LINE );
+						conv = g_strdup( lines[i] );
 						for( temp = conv; *temp; temp ++ )
 							if( *temp & 0x80 )
 								*temp = '?';
@@ -352,11 +410,15 @@ void irc_process( irc_t *irc )
 				lines[i] = conv;
 			}
 			
-			if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
-				continue;
-			irc_exec( irc, cmd );
+			if( lines[i] )
+			{
+				if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
+					continue;
+				irc_exec( irc, cmd );
+				g_free( cmd );
+			}
 			
-			g_free( cmd );
+			g_free( conv );
 			
 			/* Shouldn't really happen, but just in case... */
 			if( !g_slist_find( irc_connection_list, irc ) )
@@ -380,42 +442,41 @@ void irc_process( irc_t *irc )
    contains an incomplete line at the end, ends with an empty string. */
 char **irc_tokenize( char *buffer )
 {
-	int i, j;
+	int i, j, n = 3;
 	char **lines;
 
-	/* Count the number of elements we're gonna need. */
-	for( i = 0, j = 1; buffer[i] != '\0'; i ++ )
-	{
-		if( buffer[i] == '\n' )
-			if( buffer[i+1] != '\r' && buffer[i+1] != '\n' )
-				j ++;
-	}
-	
-	/* Allocate j+1 elements. */
-	lines = g_new( char *, j + 1 );
-	
-	/* NULL terminate our list. */ 
-	lines[j] = NULL;
+	/* Allocate n+1 elements. */
+	lines = g_new( char *, n + 1 );
 	
 	lines[0] = buffer;
 	
-	/* Split the buffer in several strings, using \r\n as our seperator, where \r is optional.
-	 * Although this is not in the RFC, some braindead ircds (newnet's) use this, so some clients might too. 
-	 */
-	for( i = 0, j = 0; buffer[i] != '\0'; i ++)
+	/* Split the buffer in several strings, and accept any kind of line endings,
+	 * knowing that ERC on Windows may send something interesting like \r\r\n,
+	 * and surely there must be clients that think just \n is enough... */
+	for( i = 0, j = 0; buffer[i] != '\0'; i ++ )
 	{
-		if( buffer[i] == '\n' )
+		if( buffer[i] == '\r' || buffer[i] == '\n' )
 		{
-			buffer[i] = '\0';
+			while( buffer[i] == '\r' || buffer[i] == '\n' )
+				buffer[i++] = '\0';
 			
-			if( i > 0 && buffer[i-1] == '\r' )
-				buffer[i-1] = '\0';
-			if( buffer[i+1] != '\r' && buffer[i+1] != '\n' )
-				lines[++j] = buffer + i + 1;
+			lines[++j] = buffer + i;
+			
+			if( j >= n )
+			{
+				n *= 2;
+				lines = g_renew( char *, lines, n + 1 );
+			}
+
+			if( buffer[i] == '\0' )
+				break;
 		}
 	}
 	
-	return( lines );
+	/* NULL terminate our list. */ 
+	lines[++j] = NULL;
+	
+	return lines;
 }
 
 /* Split an IRC-style line into little parts/arguments. */
@@ -549,31 +610,35 @@ void irc_write( irc_t *irc, char *format, ... )
 	va_end( params );
 
 	return;
-
 }
 
 void irc_vawrite( irc_t *irc, char *format, va_list params )
 {
 	int size;
-	char line[IRC_MAX_LINE+1], *cs;
+	char line[IRC_MAX_LINE+1];
 		
 	/* Don't try to write anything new anymore when shutting down. */
 	if( irc->status & USTATUS_SHUTDOWN )
 		return;
 	
-	line[IRC_MAX_LINE] = 0;
+	memset( line, 0, sizeof( line ) );
 	g_vsnprintf( line, IRC_MAX_LINE - 2, format, params );
-	
 	strip_newlines( line );
-	if( ( cs = set_getstr( &irc->set, "charset" ) ) && ( g_strcasecmp( cs, "utf-8" ) != 0 ) )
+	
+	if( irc->oconv != (GIConv) -1 )
 	{
-		char conv[IRC_MAX_LINE+1];
+		gsize bytes_read, bytes_written;
+		char *conv;
 		
-		conv[IRC_MAX_LINE] = 0;
-		if( do_iconv( "UTF-8", cs, line, conv, 0, IRC_MAX_LINE - 2 ) != -1 )
-			strcpy( line, conv );
+		conv = g_convert_with_iconv( line, -1, irc->oconv,
+		                             &bytes_read, &bytes_written, NULL );
+
+		if( bytes_read == strlen( line ) )
+			strncpy( line, conv, IRC_MAX_LINE - 2 );
+		
+		g_free( conv );
 	}
-	strcat( line, "\r\n" );
+	g_strlcat( line, "\r\n", IRC_MAX_LINE + 1 );
 	
 	if( irc->sendbuffer != NULL )
 	{
@@ -752,8 +817,7 @@ void irc_login( irc_t *irc )
 	irc_motd( irc );
 	irc->umode[0] = '\0';
 	irc_umode_set( irc, "+" UMODE, 1 );
-
-	u = user_add( irc, irc->mynick );
+u = user_add( irc, irc->mynick );
 	u->host = g_strdup( irc->myhost );
 	u->realname = g_strdup( ROOT_FN );
 	u->online = 1;
@@ -781,6 +845,16 @@ void irc_login( irc_t *irc )
 		ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->host, irc->nick, irc->realname );
 	
 	irc->status |= USTATUS_LOGGED_IN;
+	
+	/* This is for bug #209 (use PASS to identify to NickServ). */
+	if( irc->password != NULL )
+	{
+		char *send_cmd[] = { "identify", g_strdup( irc->password ), NULL };
+		
+		irc_setpass( irc, NULL );
+		root_command( irc, send_cmd );
+		g_free( send_cmd[1] );
+	}
 }
 
 static void irc_welcome( irc_t *irc )
@@ -790,7 +864,14 @@ static void irc_welcome( irc_t *irc )
 	f = fopen( global.conf->welcomefile, "r" );
 	if( !f )
 	{
-		irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the \x02help\x02 command. Lots of FAQs are answered there.\n\nOTR users please note: Private key files are owned by the user BitlBee is running as." );
+		irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\n"
+	        	          "If you've never used BitlBee before, please do read the help "
+		                  "information using the \x02help\x02 command. Lots of FAQs are "
+		                  "answered there.\n"
+				  "OTR users please note: Private key files are owned by the user "
+				  "BitlBee is running as.\n"
+		                  "If you already have an account on this server, just use the "
+		                  "\x02identify\x02 command to identify yourself." );
 	}
 	else
 	{

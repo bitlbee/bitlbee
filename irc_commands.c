@@ -29,14 +29,35 @@
 
 static void irc_cmd_pass( irc_t *irc, char **cmd )
 {
-	if( global.conf->auth_pass && strcmp( cmd[1], global.conf->auth_pass ) == 0 )
+	if( irc->status & USTATUS_LOGGED_IN )
+	{
+		char *send_cmd[] = { "identify", cmd[1], NULL };
+		
+		/* We're already logged in, this client seems to send the PASS
+		   command last. (Possibly it won't send it at all if it turns
+		   out we don't require it, which will break this feature.)
+		   Try to identify using the given password. */
+		return root_command( irc, send_cmd );
+	}
+	/* Handling in pre-logged-in state, first see if this server is
+	   password-protected: */
+	else if( global.conf->auth_pass &&
+	    ( strncmp( global.conf->auth_pass, "md5:", 4 ) == 0 ?
+	        md5_verify_password( cmd[1], global.conf->auth_pass + 4 ) == 0 :
+	        strcmp( cmd[1], global.conf->auth_pass ) == 0 ) )
 	{
 		irc->status |= USTATUS_AUTHORIZED;
 		irc_check_login( irc );
 	}
-	else
+	else if( global.conf->auth_pass )
 	{
 		irc_reply( irc, 464, ":Incorrect password" );
+	}
+	else
+	{
+		/* Remember the password and try to identify after USER/NICK. */
+		irc_setpass( irc, cmd[1] );
+		irc_check_login( irc );
 	}
 }
 
@@ -87,7 +108,10 @@ static void irc_cmd_ping( irc_t *irc, char **cmd )
 
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
-	if( global.conf->oper_pass && strcmp( cmd[2], global.conf->oper_pass ) == 0 )
+	if( global.conf->oper_pass &&
+	    ( strncmp( global.conf->oper_pass, "md5:", 4 ) == 0 ?
+	        md5_verify_password( cmd[2], global.conf->oper_pass + 4 ) == 0 :
+	        strcmp( cmd[2], global.conf->oper_pass ) == 0 ) )
 	{
 		irc_umode_set( irc, "+o", 1 );
 		irc_reply( irc, 381, ":Password accepted" );
@@ -253,8 +277,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 			
 			if( cmd[1] != irc->last_target )
 			{
-				if( irc->last_target )
-					g_free( irc->last_target );
+				g_free( irc->last_target );
 				irc->last_target = g_strdup( cmd[1] );
 			}
 		}
@@ -574,7 +597,7 @@ static void irc_cmd_rehash( irc_t *irc, char **cmd )
 }
 
 static const command_t irc_commands[] = {
-	{ "pass",        1, irc_cmd_pass,        IRC_CMD_PRE_LOGIN },
+	{ "pass",        1, irc_cmd_pass,        0 },
 	{ "user",        4, irc_cmd_user,        IRC_CMD_PRE_LOGIN },
 	{ "nick",        1, irc_cmd_nick,        0 },
 	{ "quit",        0, irc_cmd_quit,        0 },
@@ -602,6 +625,7 @@ static const command_t irc_commands[] = {
 	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
+	{ "deaf",        0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wall",        1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "rehash",      0, irc_cmd_rehash,      IRC_CMD_OPER_ONLY },

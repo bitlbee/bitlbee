@@ -19,6 +19,7 @@ libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
 ipcsocket='/var/run/bitlbee.sock'
 pcdir='$prefix/lib/pkgconfig'
+systemlibdirs="/lib /usr/lib /usr/local/lib"
 
 msn=1
 jabber=1
@@ -75,6 +76,8 @@ Option		Description				Default
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
 							$ssl
+
+--target=...	Cross compilation target 		same as host
 EOF
 		exit;
 	fi
@@ -108,9 +111,9 @@ CONFIG=$config
 INCLUDEDIR=$includedir
 PCDIR=$pcdir
 
+TARGET=$target
 ARCH=$arch
 CPU=$cpu
-OUTFILE=bitlbee
 
 DESTDIR=
 LFLAGS=
@@ -132,6 +135,18 @@ cat<<EOF>config.h
 #define ARCH "$arch"
 #define CPU "$cpu"
 EOF
+
+
+
+if [ -n "$target" ]; then
+	PKG_CONFIG_LIBDIR=/usr/$target/lib/pkgconfig
+	export PKG_CONFIG_LIBDIR
+	PATH=/usr/$target/bin:$PATH
+	CC=$target-cc
+	LD=$target-ld
+	systemlibdirs="/usr/$target/lib"
+fi
+
 
 if [ "$debug" = "1" ]; then
 	[ -z "$CFLAGS" ] && CFLAGS=-g
@@ -159,14 +174,16 @@ fi
 
 echo "CC=$CC" >> Makefile.settings;
 
-if [ -n "$LD" ]; then
-	echo "LD=$LD" >> Makefile.settings;
-elif type ld > /dev/null 2> /dev/null; then
-	echo "LD=ld" >> Makefile.settings;
-else
-	echo 'Cannot find ld, aborting.'
-	exit 1;
+if [ -z "$LD" ]; then
+	if type ld > /dev/null 2> /dev/null; then
+		LD=ld
+	else
+		echo 'Cannot find ld, aborting.'
+		exit 1;
+	fi
 fi
+
+echo "LD=$LD" >> Makefile.settings
 
 if [ -z "$PKG_CONFIG" ]; then
 	PKG_CONFIG=pkg-config
@@ -214,7 +231,14 @@ echo 'EVENT_HANDLER=events_'$events'.o' >> Makefile.settings
 
 detect_gnutls()
 {
-	if libgnutls-config --version > /dev/null 2> /dev/null; then
+	if $PKG_CONFIG --exists gnutls; then
+		cat <<EOF>>Makefile.settings
+EFLAGS+=`$PKG_CONFIG --libs gnutls`
+CFLAGS+=`$PKG_CONFIG --cflags gnutls`
+EOF
+		ssl=gnutls
+		ret=1
+	elif libgnutls-config --version > /dev/null 2> /dev/null; then
 		cat <<EOF>>Makefile.settings
 EFLAGS+=`libgnutls-config --libs`
 CFLAGS+=`libgnutls-config --cflags`
@@ -268,6 +292,8 @@ elif [ "$ssl" = "gnutls" ]; then
 	detect_gnutls
 elif [ "$ssl" = "nss" ]; then
 	detect_nss
+elif [ "$ssl" = "sspi" ]; then
+	echo
 elif [ "$ssl" = "openssl" ]; then
 	echo
 	echo 'No detection code exists for OpenSSL. Make sure that you have a complete'
@@ -324,7 +350,7 @@ fi;
 
 echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 
-for i in /lib /usr/lib /usr/local/lib; do
+for i in $systemlibdirs; do
 	if [ -f $i/libresolv.a ]; then
 		echo '#define HAVE_RESOLV_A' >> config.h
 		echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
@@ -376,8 +402,8 @@ else
 fi
 
 if [ "$gcov" = "1" ]; then
-	echo "CFLAGS+=-ftest-coverage -fprofile-arcs" >> Makefile.settings
-	echo "EFLAGS+=-lgcov" >> Makefile.settings
+	echo "CFLAGS+=--coverage" >> Makefile.settings
+	echo "EFLAGS+=--coverage" >> Makefile.settings
 fi
 
 if [ "$plugins" = 0 ]; then
@@ -386,19 +412,26 @@ else
 	echo '#define WITH_PLUGINS' >> config.h
 fi
 
+otrprefix=""
+for i in / /usr /usr/local; do
+	if [ -f ${i}/lib/libotr.a ]; then
+		otrprefix=${i}
+		break
+	fi
+done
 if [ "$otr" = "auto" ]; then
-	for i in /lib /usr/lib /usr/local/lib; do
-		if [ -f $i/libotr.a ]; then
-			otr=1
-			break
-		fi
-	done
+	if [ -n "$otrprefix" ]; then
+		otr=1
+	else
+		otr=0
+	fi
 fi
-if [ "$otr" = 0 ]; then
-	echo '#undef WITH_OTR' >> config.h
-else
+if [ "$otr" = 1 ]; then
 	echo '#define WITH_OTR' >> config.h
-	echo "EFLAGS+=-lotr" >> Makefile.settings
+	echo "EFLAGS+=-L${otrprefix}/lib -lotr" >> Makefile.settings
+	echo "CFLAGS+=-I${otrprefix}/include" >> Makefile.settings
+else
+	echo '#undef WITH_OTR' >> config.h
 fi
 
 echo
@@ -499,11 +532,17 @@ AIX )
 CYGWIN* )
 	echo 'Cygwin is not officially supported.'
 ;;
+Windows )
+;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'
 	echo 'Please report any problems at http://bugs.bitlbee.org/.'
 ;;
 esac
+
+if [ -n "$target" ]; then
+	echo "Cross-compiling for: $target"
+fi
 
 echo
 echo 'Configuration done:'

@@ -25,13 +25,16 @@
 
 #include "url.h"
 
-/* Convert an URL to a url_t structure					*/
+/* Convert an URL to a url_t structure */
 int url_set( url_t *url, char *set_url )
 {
-	char s[MAX_STRING];
+	char s[MAX_STRING+1];
 	char *i;
 	
-	/* protocol://							*/
+	memset( url, 0, sizeof( url_t ) );
+	memset( s, 0, sizeof( s ) );
+	
+	/* protocol:// */
 	if( ( i = strstr( set_url, "://" ) ) == NULL )
 	{
 		url->proto = PROTO_DEFAULT;
@@ -48,13 +51,12 @@ int url_set( url_t *url, char *set_url )
 		else if( g_strncasecmp( set_url, "socks5", i - set_url ) == 0 )
 			url->proto = PROTO_SOCKS5;
 		else
-		{
-			return( 0 );
-		}
+			return 0;
+		
 		strncpy( s, i + 3, MAX_STRING );
 	}
 	
-	/* Split							*/
+	/* Split */
 	if( ( i = strchr( s, '/' ) ) == NULL )
 	{
 		strcpy( url->file, "/" );
@@ -66,7 +68,7 @@ int url_set( url_t *url, char *set_url )
 	}
 	strncpy( url->host, s, MAX_STRING );
 	
-	/* Check for username in host field				*/
+	/* Check for username in host field */
 	if( strrchr( url->host, '@' ) != NULL )
 	{
 		strncpy( url->user, url->host, MAX_STRING );
@@ -75,19 +77,19 @@ int url_set( url_t *url, char *set_url )
 		strcpy( url->host, i + 1 );
 		*url->pass = 0;
 	}
-	/* If not: Fill in defaults					*/
+	/* If not: Fill in defaults */
 	else
 	{
 		*url->user = *url->pass = 0;
 	}
 	
-	/* Password?							*/
+	/* Password? */
 	if( ( i = strchr( url->user, ':' ) ) != NULL )
 	{
 		*i = 0;
 		strcpy( url->pass, i + 1 );
 	}
-	/* Port number?							*/
+	/* Port number? */
 	if( ( i = strchr( url->host, ':' ) ) != NULL )
 	{
 		*i = 0;

@@ -32,15 +32,33 @@
 #include "bitlbee.h"
 #include "jabber.h"
 #include "md5.h"
-#include "base64.h"
 
 GSList *jabber_connections;
+
+/* First enty is the default */
+static const int jabber_port_list[] = {
+	5222,
+	5223,
+	5220,
+	5221,
+	5224,
+	5225,
+	5226,
+	5227,
+	5228,
+	5229,
+	80,
+	443,
+	0
+};
 
 static void jabber_init( account_t *acc )
 {
 	set_t *s;
+	char str[16];
 	
-	s = set_add( &acc->set, "port", JABBER_PORT_DEFAULT, set_eval_int, acc );
+	g_snprintf( str, sizeof( str ), "%d", jabber_port_list[0] );
+	s = set_add( &acc->set, "port", str, set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
 	s = set_add( &acc->set, "priority", "0", set_eval_priority, acc );
@@ -71,6 +89,7 @@ static void jabber_login( account_t *acc )
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
 	struct ns_srv_reply *srv = NULL;
 	char *connect_to, *s;
+	int i;
 	
 	/* For now this is needed in the _connected() handlers if using
 	   GLib event handling, to make sure we're not handling events
@@ -176,11 +195,13 @@ static void jabber_login( account_t *acc )
 	
 	imcb_log( ic, "Connecting" );
 	
-	if( set_getint( &acc->set, "port" ) < JABBER_PORT_MIN ||
-	    set_getint( &acc->set, "port" ) > JABBER_PORT_MAX )
+	for( i = 0; jabber_port_list[i] > 0; i ++ )
+		if( set_getint( &acc->set, "port" ) == jabber_port_list[i] )
+			break;
+
+	if( jabber_port_list[i] == 0 )
 	{
-		imcb_log( ic, "Incorrect port number, must be in the %d-%d range",
-		               JABBER_PORT_MIN, JABBER_PORT_MAX );
+		imcb_log( ic, "Illegal port number" );
 		imc_logout( ic, FALSE );
 		return;
 	}
@@ -218,24 +239,20 @@ static void jabber_login( account_t *acc )
 	jabber_generate_id_hash( jd );
 }
 
+/* This generates an unfinished md5_state_t variable. Every time we generate
+   an ID, we finish the state by adding a sequence number and take the hash. */
 static void jabber_generate_id_hash( struct jabber_data *jd )
 {
-	md5_state_t id_hash;
-	md5_byte_t binbuf[16];
+	md5_byte_t binbuf[4];
 	char *s;
 	
-	md5_init( &id_hash );
-	md5_append( &id_hash, (unsigned char *) jd->username, strlen( jd->username ) );
-	md5_append( &id_hash, (unsigned char *) jd->server, strlen( jd->server ) );
+	md5_init( &jd->cached_id_prefix );
+	md5_append( &jd->cached_id_prefix, (unsigned char *) jd->username, strlen( jd->username ) );
+	md5_append( &jd->cached_id_prefix, (unsigned char *) jd->server, strlen( jd->server ) );
 	s = set_getstr( &jd->ic->acc->set, "resource" );
-	md5_append( &id_hash, (unsigned char *) s, strlen( s ) );
-	random_bytes( binbuf, 16 );
-	md5_append( &id_hash, binbuf, 16 );
-	md5_finish( &id_hash, binbuf );
-	
-	s = base64_encode( binbuf, 9 );
-	jd->cached_id_prefix = g_strdup_printf( "%s%s", JABBER_CACHED_ID, s );
-	g_free( s );
+	md5_append( &jd->cached_id_prefix, (unsigned char *) s, strlen( s ) );
+	random_bytes( binbuf, 4 );
+	md5_append( &jd->cached_id_prefix, binbuf, 4 );
 }
 
 static void jabber_logout( struct im_connection *ic )

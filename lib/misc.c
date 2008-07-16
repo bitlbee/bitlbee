@@ -32,6 +32,7 @@
 
 #define BITLBEE_CORE
 #include "nogaim.h"
+#include "base64.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,31 +59,6 @@ void strip_linefeed(gchar *text)
 
 	strcpy(text, text2);
 	g_free(text2);
-}
-
-char *normalize(const char *s)
-{
-	static char buf[BUF_LEN];
-	char *t, *u;
-	int x = 0;
-
-	g_return_val_if_fail((s != NULL), NULL);
-
-	u = t = g_strdup(s);
-
-	strcpy(t, s);
-	g_strdown(t);
-
-	while (*t && (x < BUF_LEN - 1)) {
-		if (*t != ' ') {
-			buf[x] = *t;
-			x++;
-		}
-		t++;
-	}
-	buf[x] = '\0';
-	g_free(u);
-	return buf;
 }
 
 time_t get_time(int year, int month, int day, int hour, int min, int sec)
@@ -407,6 +383,7 @@ signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t si
    lack of entropy won't halt BitlBee. */
 void random_bytes( unsigned char *buf, int count )
 {
+#ifndef _WIN32
 	static int use_dev = -1;
 	
 	/* Actually this probing code isn't really necessary, is it? */
@@ -456,6 +433,7 @@ void random_bytes( unsigned char *buf, int count )
 	}
 	
 	if( !use_dev )
+#endif
 	{
 		int i;
 		
@@ -606,4 +584,40 @@ gboolean ssl_sockerr_again( void *ssl )
 		return ssl_errno == SSL_AGAIN;
 	else
 		return sockerr_again();
+}
+
+/* Returns values: -1 == Failure (base64-decoded to something unexpected)
+                    0 == Okay
+                    1 == Password doesn't match the hash. */
+int md5_verify_password( char *password, char *hash )
+{
+	md5_byte_t *pass_dec = NULL;
+	md5_byte_t pass_md5[16];
+	md5_state_t md5_state;
+	int ret = -1, i;
+	
+	if( base64_decode( hash, &pass_dec ) == 21 )
+	{
+		md5_init( &md5_state );
+		md5_append( &md5_state, (md5_byte_t*) password, strlen( password ) );
+		md5_append( &md5_state, (md5_byte_t*) pass_dec + 16, 5 ); /* Hmmm, salt! */
+		md5_finish( &md5_state, pass_md5 );
+		
+		for( i = 0; i < 16; i ++ )
+		{
+			if( pass_dec[i] != pass_md5[i] )
+			{
+				ret = 1;
+				break;
+			}
+		}
+		
+		/* If we reached the end of the loop, it was a match! */
+		if( i == 16 )
+			ret = 0;
+	}
+	
+	g_free( pass_dec );
+
+	return ret;
 }

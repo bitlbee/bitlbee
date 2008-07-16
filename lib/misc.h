@@ -40,7 +40,6 @@ struct ns_srv_reply
 G_MODULE_EXPORT void strip_linefeed( gchar *text );
 G_MODULE_EXPORT char *add_cr( char *text );
 G_MODULE_EXPORT char *strip_newlines(char *source);
-G_MODULE_EXPORT char *normalize( const char *s );
 
 G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min, int sec );
 double gettime( void );
@@ -65,5 +64,7 @@ G_MODULE_EXPORT struct ns_srv_reply *srv_lookup( char *service, char *protocol, 
 G_MODULE_EXPORT char *word_wrap( char *msg, int line_len );
 
 G_MODULE_EXPORT gboolean ssl_sockerr_again( void *ssl );
+
+G_MODULE_EXPORT int md5_verify_password( char *password, char *hash );
 
 #endif

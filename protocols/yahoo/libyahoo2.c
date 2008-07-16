@@ -68,8 +68,6 @@ char *strchr (), *strrchr ();
 
 #ifdef __MINGW32__
 # include <winsock2.h>
-# define write(a,b,c) send(a,b,c,0)
-# define read(a,b,c)  recv(a,b,c,0)
 #endif
 
 #include <stdlib.h>
@@ -380,7 +378,6 @@ static void del_from_list(struct yahoo_data *yd)
 }
 
 /* call repeatedly to get the next one */
-/*
 static struct yahoo_input_data * find_input_by_id(int id)
 {
 	YList *l;
@@ -391,7 +388,6 @@ static struct yahoo_input_data * find_input_by_id(int id)
 	}
 	return NULL;
 }
-*/
 
 static struct yahoo_input_data * find_input_by_id_and_webcam_user(int id, const char * who)
 {
@@ -736,7 +732,7 @@ static void yahoo_send_packet(struct yahoo_input_data *yid, struct yahoo_packet 
 	data = y_new0(unsigned char, len + 1);
 
 	memcpy(data + pos, "YMSG", 4); pos += 4;
-	pos += yahoo_put16(data + pos, 0x0a00);
+	pos += yahoo_put16(data + pos, 0x000c);
 	pos += yahoo_put16(data + pos, 0x0000);
 	pos += yahoo_put16(data + pos, pktlen + extra_pad);
 	pos += yahoo_put16(data + pos, pkt->service);
@@ -796,6 +792,7 @@ static int yahoo_send_data(int fd, void *data, int len)
 void yahoo_close(int id) 
 {
 	struct yahoo_data *yd = find_conn_by_id(id);
+	
 	if(!yd)
 		return;
 
@@ -3165,7 +3162,7 @@ int yahoo_write_ready(int id, int fd, void *data)
 	struct data_queue *tx;
 
 	LOG(("write callback: id=%d fd=%d data=%p", id, fd, data));
-	if(!yid || !yid->txqueues)
+	if(!yid || !yid->txqueues || !find_conn_by_id(id))
 		return -2;
 	
 	tx = yid->txqueues->data;
@@ -3350,7 +3347,7 @@ static void yahoo_process_search_connection(struct yahoo_input_data *yid, int ov
 					yct->age = atoi(cp);
 					break;
 				case 5: 
-					if(cp != "\005")
+					if(strcmp(cp, "5") != 0)
 						yct->location = cp;
 					k = 0;
 					break;
@@ -3841,11 +3838,9 @@ void yahoo_logoff(int id)
 		}
 	}
 
-	
-/*	do {
+	do {
 		yahoo_input_close(yid);
-	} while((yid = find_input_by_id(id)));*/
-	
+	} while((yid = find_input_by_id(id)));
 }
 
 void yahoo_get_list(int id)

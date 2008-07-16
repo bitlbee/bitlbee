@@ -2,8 +2,12 @@ Source: bitlbee
 Section: net
 Priority: optional
 Maintainer: Wilmer van der Gaast <wilmer@gaast.net>
-Standards-Version: 3.5.9
-Build-Depends: libglib2.0-dev | libglib-dev, libgnutls-dev | libnss-dev (>= 1.6), debconf-2.0, po-debconf
+Uploaders: Jelmer Vernooij <jelmer@samba.org>
+Standards-Version: 3.8.0
+Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | libnss-dev (>= 1.6), debconf-2.0, po-debconf
+Homepage: http://www.bitlbee.org/
+Vcs-Bzr: http://code.bitlbee.org/bitlbee/
+DM-Upload-Allowed: yes
 
 Package: bitlbee
 Architecture: any
@@ -11,3 +15,12 @@ Depends: ${shlibs:Depends}, adduser, net-tools, ${debconf-depends}, debianutils 
 Description: An IRC to other chat networks gateway
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
+
+Package: bitlbee-dev
+Architecture: all
+Depends: bitlbee (= ${binary:Version})
+Description: An IRC to other chat networks gateway
+ This program can be used as an IRC server which forwards everything you
+ say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
+ .
+ This package holds development stuff for compiling plug-ins.

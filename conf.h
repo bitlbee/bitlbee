@@ -31,7 +31,7 @@ typedef enum authmode { AUTHMODE_OPEN, AUTHMODE_CLOSED, AUTHMODE_REGISTERED } au
 
 typedef struct conf
 {
-	char *iface;
+	char *iface_in, *iface_out;
 	char *port;
 	int nofork;
 	int verbose;

@@ -64,3 +64,8 @@ b_input_condition ssl_getdirection( void *conn )
 {
 	return GAIM_INPUT_READ;
 }
+
+int ssl_pending( void *conn )
+{
+	return 0;
+}

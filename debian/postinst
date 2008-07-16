@@ -13,11 +13,20 @@ update-rc.d bitlbee defaults > /dev/null 2>&1
 BITLBEE_OPTS=-F
 BITLBEE_DISABLED=0
 BITLBEE_UPGRADE_DONT_RESTART=0
-[ -r /etc/default/bitlbee ] && source /etc/default/bitlbee
+[ -r /etc/default/bitlbee ] && . /etc/default/bitlbee
 
-if [ "$BITLBEE_DISABLED" = "0" ]; then
-	## In case it's still there (if we're upgrading right now)
+if [ "$BITLBEE_DISABLED" = "0" ] && type update-inetd > /dev/null 2> /dev/null &&
+   ( expr "$2" : '0\..*' > /dev/null || expr "$2" : '1\.0\..*' > /dev/null ); then
+	## Make sure the inetd entry is gone (can still be there from a
+	## previous version.
 	update-inetd --remove '.*/usr/sbin/bitlbee'
+	if grep -q /usr/sbin/bitlbee /etc/inetd.conf 2> /dev/null; then
+		# Thanks for breaking update-inetd! (bugs.debian.org/311111)
+		# I hope that it works at least with xinetd, because this
+		# emergency hack doesn't:
+		perl -pi -e 's:^[^#].*/usr/sbin/bitlbee$:## Now using daemon mode\: # $&:' /etc/inetd.conf
+		killall -HUP inetd || true
+	fi
 fi
 
 cat<<EOF>/etc/default/bitlbee
@@ -64,13 +73,21 @@ if [ -d $CONFDIR ] && chown -R bitlbee $CONFDIR; then
 	exit 0
 fi
 
-adduser --system --home /var/lib/bitlbee/ --disabled-login --disabled-password bitlbee
+adduser --system --group --disabled-login --disabled-password --home /var/lib/bitlbee/ bitlbee
 chmod 700 /var/lib/bitlbee/
 
 ## Can't do this in packaging phase: Don't know the UID yet. Access to
-## the file should be limited, now that it stores passwords.
-chmod 600 /etc/bitlbee/bitlbee.conf
-chown bitlbee /etc/bitlbee/bitlbee.conf
+## the file should be limited, now that it stores passwords. Added
+## --group later for a little more security, but have to see if I can
+## apply this change to existing installations on upgrades. Will think
+## about that later.
+if getent group bitlbee > /dev/null; then
+	chmod 640 /etc/bitlbee/bitlbee.conf
+	chown root:bitlbee /etc/bitlbee/bitlbee.conf
+else
+	chmod 600 /etc/bitlbee/bitlbee.conf
+	chown bitlbee /etc/bitlbee/bitlbee.conf
+fi
 
 if [ -z "$2" ]; then
 	/etc/init.d/bitlbee start

@@ -25,20 +25,20 @@
 
 #include "bitlbee.h"
 
-#define PROTO_HTTP		2
-#define PROTO_HTTPS		5
-#define PROTO_SOCKS4	3
-#define PROTO_SOCKS5	4
-#define PROTO_DEFAULT	PROTO_HTTP
+#define PROTO_HTTP      2
+#define PROTO_HTTPS     5
+#define PROTO_SOCKS4    3
+#define PROTO_SOCKS5    4
+#define PROTO_DEFAULT   PROTO_HTTP
 
 typedef struct url
 {
 	int proto;
 	int port;
-	char host[MAX_STRING];
-	char file[MAX_STRING];
-	char user[MAX_STRING];
-	char pass[MAX_STRING];
+	char host[MAX_STRING+1];
+	char file[MAX_STRING+1];
+	char user[MAX_STRING+1];
+	char pass[MAX_STRING+1];
 } url_t;
 
 int url_set( url_t *url, char *set_url );

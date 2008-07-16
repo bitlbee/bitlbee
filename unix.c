@@ -41,7 +41,7 @@ global_t global;	/* Against global namespace pollution */
 
 static void sighandler( int signal );
 
-int main( int argc, char *argv[], char **envp )
+int main( int argc, char *argv[] )
 {
 	int i = 0;
 	char *old_cwd = NULL;
@@ -68,12 +68,18 @@ int main( int argc, char *argv[], char **envp )
 	
 	if( global.conf->runmode == RUNMODE_INETD )
 	{
+		log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
+	
 		i = bitlbee_inetd_init();
 		log_message( LOGLVL_INFO, "Bitlbee %s starting in inetd mode.", BITLBEE_VERSION );
 
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
+		log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
+
 		i = bitlbee_daemon_init();
 		log_message( LOGLVL_INFO, "Bitlbee %s starting in daemon mode.", BITLBEE_VERSION );
 	}
@@ -143,30 +149,19 @@ int main( int argc, char *argv[], char **envp )
 	if( global.restart )
 	{
 		char *fn = ipc_master_save_state();
-		char **args;
-		int n, i;
 		
 		chdir( old_cwd );
 		
-		n = 0;
-		args = g_new0( char *, argc + 3 );
-		args[n++] = argv[0];
-		if( fn )
-		{
-			args[n++] = "-R";
-			args[n++] = fn;
-		}
-		for( i = 1; argv[i] && i < argc; i ++ )
-		{
-			if( strcmp( argv[i], "-R" ) == 0 )
-				i += 2;
-			
-			args[n++] = argv[i];
-		}
+		setenv( "_BITLBEE_RESTART_STATE", fn, 1 );
+		g_free( fn );
 		
 		close( global.listen_socket );
 		
-		execve( args[0], args, envp );
+		if( execv( argv[0], argv ) == -1 )
+			/* Apparently the execve() failed, so let's just
+			   jump back into our own/current main(). */
+			/* Need more cleanup code to make this work. */
+			return 1; /* main( argc, argv ); */
 	}
 	
 	return( 0 );
@@ -227,3 +222,5 @@ double gettime()
 	gettimeofday( time, 0 );
 	return( (double) time->tv_sec + (double) time->tv_usec / 1000000 );
 }
+
+

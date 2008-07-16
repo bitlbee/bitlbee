@@ -28,11 +28,14 @@
 
 #define _GNU_SOURCE /* Stupid GNU :-P */
 
+/* Depend on Windows 2000 for now since we need getaddrinfo() */
+#define _WIN32_WINNT 0x0501
+
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "1.1.1dev"
+#define BITLBEE_VERSION "1.2.1"
 #define VERSION BITLBEE_VERSION
 
-#define MAX_STRING 128
+#define MAX_STRING 511
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -47,9 +50,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <errno.h>
+
 #ifndef _WIN32
 #include <syslog.h>
-#include <errno.h>
 #endif
 
 #include <glib.h>
@@ -93,10 +97,6 @@
 #define g_main_run		__PLEASE_USE_B_MAIN_RUN__
 #undef g_main_quit
 #define g_main_quit		__PLEASE_USE_B_MAIN_QUIT__
-
-#ifndef F_OK
-#define F_OK 0
-#endif
 
 #ifndef G_GNUC_MALLOC
 /* Doesn't exist in GLib <=2.4 while everything else in BitlBee should
@@ -160,6 +160,8 @@ gboolean bitlbee_io_current_client_write( gpointer data, gint source, b_input_co
 void root_command_string( irc_t *irc, user_t *u, char *command, int flags );
 void root_command( irc_t *irc, char *command[] );
 gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond );
+
+char *set_eval_root_nick( set_t *set, char *new_nick );
 
 extern global_t global;
 

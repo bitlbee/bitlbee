@@ -162,10 +162,7 @@ static void byahoo_logout( struct im_connection *ic )
 	}
 	g_slist_free( yd->buddygroups );
 	
-	if( yd->logged_in )
-		yahoo_logoff( yd->y2_id );
-	else
-		yahoo_close( yd->y2_id );
+	yahoo_logoff( yd->y2_id );
 	
 	g_free( yd );
 }
@@ -314,7 +311,7 @@ static void byahoo_chat_invite( struct groupchat *c, char *who, char *msg )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) c->ic->proto_data;
 	
-	yahoo_conference_invite( yd->y2_id, NULL, c->data, c->title, msg );
+	yahoo_conference_invite( yd->y2_id, NULL, c->data, c->title, msg ? msg : "" );
 }
 
 static void byahoo_chat_leave( struct groupchat *c )
@@ -453,10 +450,6 @@ struct byahoo_write_ready_data
 gboolean byahoo_write_ready_callback( gpointer data, gint source, b_input_condition cond )
 {
 	struct byahoo_write_ready_data *d = data;
-	
-	if( !byahoo_get_ic_by_id( d->id ) )
-		/* WTF doesn't libyahoo clean this up? */
-		return FALSE;
 	
 	yahoo_write_ready( d->id, d->fd, d->data );
 	
@@ -797,16 +790,20 @@ int ext_yahoo_connect(const char *host, int port)
 	return -1;
 }
 
-static void byahoo_accept_conf( gpointer w, struct byahoo_conf_invitation *inv )
+static void byahoo_accept_conf( void *data )
 {
+	struct byahoo_conf_invitation *inv = data;
+	
 	yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
 	imcb_chat_add_buddy( inv->c, inv->ic->acc->user );
 	g_free( inv->name );
 	g_free( inv );
 }
 
-static void byahoo_reject_conf( gpointer w, struct byahoo_conf_invitation *inv )
+static void byahoo_reject_conf( void *data )
 {
+	struct byahoo_conf_invitation *inv = data;
+	
 	yahoo_conference_decline( inv->yid, NULL, inv->members, inv->name, "User rejected groupchat" );
 	imcb_chat_free( inv->c );
 	g_free( inv->name );

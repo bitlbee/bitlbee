@@ -53,11 +53,11 @@ int bitlbee_daemon_init()
 #endif
 	;
 
-	i = getaddrinfo( global.conf->iface, global.conf->port, &hints, &addrinfo_bind );
+	i = getaddrinfo( global.conf->iface_in, global.conf->port, &hints, &addrinfo_bind );
 	if( i )
 	{
 		log_message( LOGLVL_ERROR, "Couldn't parse address `%s': %s",
-		                           global.conf->iface, gai_strerror(i) );
+		                           global.conf->iface_in, gai_strerror(i) );
 		return -1;
 	}
 
@@ -117,11 +117,12 @@ int bitlbee_daemon_init()
 #endif
 	
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
-		ipc_master_load_state();
+		ipc_master_load_state( getenv( "_BITLBEE_RESTART_STATE" ) );
 
 	if( global.conf->runmode == RUNMODE_DAEMON || global.conf->runmode == RUNMODE_FORKDAEMON )
 		ipc_master_listen_socket();
 	
+#ifndef _WIN32
 	if( ( fp = fopen( global.conf->pidfile, "w" ) ) )
 	{
 		fprintf( fp, "%d\n", (int) getpid() );
@@ -131,6 +132,7 @@ int bitlbee_daemon_init()
 	{
 		log_message( LOGLVL_WARNING, "Warning: Couldn't write PID to `%s'", global.conf->pidfile );
 	}
+#endif
 	
 	return( 0 );
 }
@@ -139,9 +141,6 @@ int bitlbee_inetd_init()
 {
 	if( !irc_new( 0 ) )
 		return( 1 );
-	
-	log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
-	log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
 	
 	return( 0 );
 }
@@ -225,12 +224,16 @@ gboolean bitlbee_io_current_client_write( gpointer data, gint fd, b_input_condit
 	
 	if( st == size )
 	{
-		g_free( irc->sendbuffer );
-		irc->sendbuffer = NULL;
-		irc->w_watch_source_id = 0;
-		
 		if( irc->status & USTATUS_SHUTDOWN )
+		{
 			irc_free( irc );
+		}
+		else
+		{
+			g_free( irc->sendbuffer );
+			irc->sendbuffer = NULL;
+			irc->w_watch_source_id = 0;
+		}
 		
 		return FALSE;
 	}
@@ -249,7 +252,6 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 	socklen_t size = sizeof( struct sockaddr_in );
 	struct sockaddr_in conn_info;
 	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, &size );
-	pid_t client_pid = 0;
 	
 	if( new_socket == -1 )
 	{
@@ -257,8 +259,10 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 		return TRUE;
 	}
 	
+#ifndef _WIN32
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
+		pid_t client_pid = 0;
 		int fds[2];
 		
 		if( socketpair( AF_UNIX, SOCK_STREAM, 0, fds ) == -1 )
@@ -315,6 +319,7 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 		}
 	}
 	else
+#endif
 	{
 		log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
 		irc_new( new_socket );

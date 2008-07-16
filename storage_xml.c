@@ -28,6 +28,12 @@
 #include "base64.h"
 #include "arc.h"
 #include "md5.h"
+#include <glib/gstdio.h>
+
+#if !GLIB_CHECK_VERSION(2,8,0)
+/* GLib < 2.8.0 doesn't have g_access, so just use the system access(). */
+#define g_access access
+#endif
 
 typedef enum
 {
@@ -79,49 +85,30 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	{
 		char *nick = xml_attr( attr_names, attr_values, "nick" );
 		char *pass = xml_attr( attr_names, attr_values, "password" );
-		md5_byte_t *pass_dec = NULL;
+		int st;
 		
 		if( !nick || !pass )
 		{
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Missing attributes for %s element", element_name );
 		}
-		else if( base64_decode( pass, &pass_dec ) != 21 )
+		else if( ( st = md5_verify_password( xd->given_pass, pass ) ) == -1 )
 		{
+			xd->pass_st = XML_PASS_WRONG;
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Error while decoding password attribute" );
 		}
+		else if( st == 0 )
+		{
+			if( xd->pass_st != XML_PASS_CHECK_ONLY )
+				xd->pass_st = XML_PASS_OK;
+		}
 		else
 		{
-			md5_byte_t pass_md5[16];
-			md5_state_t md5_state;
-			int i;
-			
-			md5_init( &md5_state );
-			md5_append( &md5_state, (md5_byte_t*) xd->given_pass, strlen( xd->given_pass ) );
-			md5_append( &md5_state, (md5_byte_t*) pass_dec + 16, 5 ); /* Hmmm, salt! */
-			md5_finish( &md5_state, pass_md5 );
-			
-			for( i = 0; i < 16; i ++ )
-			{
-				if( pass_dec[i] != pass_md5[i] )
-				{
-					xd->pass_st = XML_PASS_WRONG;
-					g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-					             "Password mismatch" );
-					break;
-				}
-			}
-			
-			/* If we reached the end of the loop, it was a match! */
-			if( i == 16 )
-			{
-				if( xd->pass_st != XML_PASS_CHECK_ONLY )
-					xd->pass_st = XML_PASS_OK;
-			}
+			xd->pass_st = XML_PASS_WRONG;
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Password mismatch" );
 		}
-		
-		g_free( pass_dec );
 	}
 	else if( xd->pass_st < XML_PASS_OK )
 	{
@@ -261,9 +248,10 @@ GMarkupParser xml_parser =
 
 static void xml_init( void )
 {
-	if( access( global.conf->configdir, F_OK ) != 0 )
+	if( g_access( global.conf->configdir, F_OK ) != 0 )
 		log_message( LOGLVL_WARNING, "The configuration directory `%s' does not exist. Configuration won't be saved.", global.conf->configdir );
-	else if( access( global.conf->configdir, R_OK ) != 0 || access( global.conf->configdir, W_OK ) != 0 )
+	else if( g_access( global.conf->configdir, F_OK ) != 0 || 
+	         g_access( global.conf->configdir, W_OK ) != 0 )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to `%s'.", global.conf->configdir );
 }
 
@@ -390,7 +378,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, path2, ".xml" );
 	g_free( path2 );
 	
-	if( !overwrite && access( path, F_OK ) != -1 )
+	if( !overwrite && g_access( path, F_OK ) == 0 )
 		return STORAGE_ALREADY_EXISTS;
 	
 	strcat( path, "~" );
@@ -427,7 +415,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		char *pass_b64;
 		int pass_len;
 		
-		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password );
+		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password, 12 );
 		pass_b64 = base64_encode( pass_cr, pass_len );
 		g_free( pass_cr );
 		
@@ -498,14 +486,18 @@ static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data )
 
 static storage_status_t xml_remove( const char *nick, const char *password )
 {
-	char s[512];
+	char s[512], *lc;
 	storage_status_t status;
 
 	status = xml_check_pass( nick, password );
 	if( status != STORAGE_OK )
 		return status;
 
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".xml" );
+	lc = g_strdup( nick );
+	nick_lc( lc );
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, lc, ".xml" );
+	g_free( lc );
+	
 	if( unlink( s ) == -1 )
 		return STORAGE_OTHER_ERROR;
 	

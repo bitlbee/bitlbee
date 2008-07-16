@@ -1,4 +1,11 @@
 #! /bin/sh
+### BEGIN INIT INFO
+# Provides:          bitlbee
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      1
+### END INIT INFO
 #
 # Init script for BitlBee Debian package. Based on skeleton init script:
 #
@@ -17,7 +24,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 
 # Default value
 BITLBEE_PORT=6667
-DAEMON_OPT=-F
+BITLBEE_OPTS=-F
 
 # Read config file if it is present.
 if [ -r /etc/default/$NAME ]; then
@@ -36,8 +43,7 @@ d_start() {
 	chown bitlbee /var/run/bitlbee.pid
 	
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
-		-c bitlbee -g nogroup \
-		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $DAEMON_OPT
+		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $BITLBEE_OPTS
 }
 
 #

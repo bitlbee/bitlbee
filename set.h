@@ -100,7 +100,6 @@ char *set_eval_op_user( set_t *set, char *value );
 char *set_eval_op_buddies( set_t *set, char *value );
 char *set_eval_halfop_buddies( set_t *set, char *value );
 char *set_eval_voice_buddies( set_t *set, char *value );
-char *set_eval_charset( set_t *set, char *value );
 char *set_eval_otr_policy( set_t *set, char *value );
 
 #endif /* __SET_H__ */

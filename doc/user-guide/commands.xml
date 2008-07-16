@@ -162,11 +162,7 @@
 			</para>
 
 			<para>
-				If you want, you can also tell BitlBee what nick to give the new contact. Of course you can also use the <emphasis>rename</emphasis> command for that, but sometimes this might be more convenient.
-			</para>
-			
-			<para>
-				Adding -tmp adds the buddy to the internal BitlBee structures only, not to the real contact list (like done by <emphasis>set handle_unknown add</emphasis>). This allows you to talk to people who are not in your contact list.
+				If you want, you can also tell BitlBee what nick to give the new contact. The -tmp option adds the buddy to the internal BitlBee structures only, not to the real contact list (like done by <emphasis>set handle_unknown add</emphasis>). This allows you to talk to people who are not in your contact list. This normally won't show you any presence notifications.
 			</para>
 		</description>
 
@@ -531,16 +527,16 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="charset" type="string" scope="global">
-		<default>iso8859-1</default>
+		<default>utf-8</default>
 		<possible-values>you can get a list of all possible values by doing 'iconv -l' in a shell</possible-values>
 
 		<description>
 			<para>
-				The charset setting enables you to use different character sets in BitlBee. These get converted to UTF-8 before sending and from UTF-8 when receiving.
+				This setting tells BitlBee what your IRC client sends and expects. It should be equal to the charset setting of your IRC client if you want to be able to send and receive non-ASCII text properly.
 			</para>
 
 			<para>
-				If you don't know what's the best value for this, at least iso8859-1 is the best choice for most Western countries. You can try to find what works best for you on http://czyborra.com/charsets/iso8859.html
+				Most systems use UTF-8 these days. On older systems, an iso8859 charset may work better. For example, iso8859-1 is the best choice for most Western countries. You can try to find what works best for you on http://www.unicodecharacter.com/charsets/iso8859.html
 			</para>
 		</description>
 
@@ -803,6 +799,16 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="root_nick" type="string" scope="global">
+		<default>root</default>
+
+		<description>
+			<para>
+				Normally the "bot" that takes all your BitlBee commands is called "root". If you don't like this name, you can rename it to anything else using the <emphasis>rename</emphasis> command, or by changing this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="save_on_quit" type="boolean" scope="global">
 		<default>true</default>
 
@@ -887,7 +893,7 @@
 
 		<description>
 			<para>
-				Sends you a /notice when a user starts typing a message (if the protocol supports it, MSN for example). This is a bug, not a feature. (But please don't report it.. ;-) You don't want to use it. Really. In fact the typing-notification is just one of the least useful 'innovations' ever. It's just there because some guy will probably ask me about it anyway. ;-)
+				Sends you a /notice when a user starts typing a message (if supported by the IM protocol and the user's client). To use this, you most likely want to use a script in your IRC client to show this information in a more sensible way.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1056,21 +1062,17 @@
 	<bitlbee-command name="nick">
 		<short-description>Change friendly name, nick</short-description>
 		<syntax>nick &lt;connection&gt; [&lt;new nick&gt;]</syntax>
-		<syntax>nick</syntax>
+		<syntax>nick &lt;connection&gt;</syntax>
 
 		<description>
 			<para>
-				This command allows to set the friendly name of an im account. If no new name is specified the command will report the current name. When the name contains spaces, don't forget to quote the whole nick in double quotes. Currently this command is only supported by the MSN protocol.
-			</para>
-
-			<para>
-				It is recommended to use the per-account <emphasis>display_name</emphasis> setting to read and change this information. The <emphasis>nick</emphasis> command is deprecated.
+				Deprecated: Use the per-account <emphasis>display_name</emphasis> setting to read and change this information.
 			</para>
 		</description>
 
 		<ircexample>
-			<ircline nick="wouter">nick 1 "Wouter Paesen"</ircline>
-			<ircline nick="root">Setting your name on connection 1 to `Wouter Paesen'</ircline>
+			<ircline nick="wouter">account set 1/display_name "The majestik møøse"</ircline>
+			<ircline nick="root">display_name = `The majestik møøse'</ircline>
 		</ircexample>
 
 	</bitlbee-command>

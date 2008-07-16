@@ -1,5 +1,5 @@
 Welcome to the BitlBee gateway!
 
 If you've never used BitlBee before, please do read the help information using the help command. Lots of FAQs are answered there.
-
 OTR users please note: Private key files are owned by the user BitlBee is running as.
+If you already have an account on this server, just use the identify command to identify yourself.

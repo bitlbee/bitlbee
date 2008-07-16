@@ -45,6 +45,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <assert.h>
+#include <signal.h>
 
 
 /** OTR interface routines for the OtrlMessageAppOps struct: **/
@@ -101,6 +102,11 @@ const command_t otr_commands[] = {
 	{ NULL }
 };
 
+typedef struct {
+	void *fst;
+	void *snd;
+} pair_t;	
+
 
 /** misc. helpers/subroutines: **/
 
@@ -123,10 +129,10 @@ void copyfile(const char *a, const char *b);
 void myfgets(char *s, int size, FILE *stream);
 
 /* some yes/no handlers */
-void yes_keygen(gpointer w, void *data);
-void yes_forget_fingerprint(gpointer w, void *data);
-void yes_forget_context(gpointer w, void *data);
-void yes_forget_key(gpointer w, void *data);
+void yes_keygen(void *data);
+void yes_forget_fingerprint(void *data);
+void yes_forget_context(void *data);
+void yes_forget_key(void *data);
 
 /* helper to make sure accountname and protocol match the incoming "opdata" */
 struct im_connection *check_imc(void *opdata, const char *accountname,
@@ -840,10 +846,13 @@ void cmd_otr_keygen(irc_t *irc, char **args)
 	}
 }
 
-void yes_forget_fingerprint(gpointer w, void *data)
+void yes_forget_fingerprint(void *data)
 {
-	irc_t *irc = (irc_t *)w;
-	Fingerprint *fp = (Fingerprint *)data;
+	pair_t *p = (pair_t *)data;
+	irc_t *irc = (irc_t *)p->fst;
+	Fingerprint *fp = (Fingerprint *)p->snd;
+
+	g_free(p);
 	
 	if(fp == fp->context->active_fingerprint) {
 		irc_usermsg(irc, "that fingerprint is active, terminate otr connection first");
@@ -853,10 +862,13 @@ void yes_forget_fingerprint(gpointer w, void *data)
 	otrl_context_forget_fingerprint(fp, 0);
 }
 
-void yes_forget_context(gpointer w, void *data)
+void yes_forget_context(void *data)
 {
-	irc_t *irc = (irc_t *)w;
-	ConnContext *ctx = (ConnContext *)data;
+	pair_t *p = (pair_t *)data;
+	irc_t *irc = (irc_t *)p->fst;
+	ConnContext *ctx = (ConnContext *)p->snd;
+
+	g_free(p);
 	
 	if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
 		irc_usermsg(irc, "active otr connection with %s, terminate it first",
@@ -869,7 +881,7 @@ void yes_forget_context(gpointer w, void *data)
 	otrl_context_forget(ctx);
 }
 
-void yes_forget_key(gpointer w, void *data)
+void yes_forget_key(void *data)
 {
 	OtrlPrivKey *key = (OtrlPrivKey *)data;
 	
@@ -888,6 +900,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		Fingerprint *fp;
 		char human[54];
 		char *s;
+		pair_t *p;
 		
 		if(!args[3]) {
 			irc_usermsg(irc, "otr %s %s: not enough arguments (2 req.)", args[0], args[1]);
@@ -921,7 +934,12 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		
 		otrl_privkey_hash_to_human(human, fp->fingerprint);
 		s = g_strdup_printf("about to forget fingerprint %s, are you sure?", human);
-		query_add(irc, NULL, s, yes_forget_fingerprint, NULL, fp);
+		p = g_malloc(sizeof(pair_t));
+		if(!p)
+			return;
+		p->fst = irc;
+		p->snd = fp;
+		query_add(irc, NULL, s, yes_forget_fingerprint, NULL, p);
 		g_free(s);
 	}
 	
@@ -930,6 +948,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		user_t *u;
 		ConnContext *ctx;
 		char *s;
+		pair_t *p;
 		
 		/* TODO: allow context specs ("user/proto/account") in 'otr forget contex'? */
 		u = user_find(irc, args[2]);
@@ -951,7 +970,12 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		}
 		
 		s = g_strdup_printf("about to forget otr data about %s, are you sure?", args[2]);
-		query_add(irc, NULL, s, yes_forget_context, NULL, ctx);
+		p = g_malloc(sizeof(pair_t));
+		if(!p)
+			return;
+		p->fst = irc;
+		p->snd = ctx;
+		query_add(irc, NULL, s, yes_forget_context, NULL, p);
 		g_free(s);
 	}
 	
@@ -1659,7 +1683,7 @@ void myfgets(char *s, int size, FILE *stream)
 	}
 }
 
-void yes_keygen(gpointer w, void *data)
+void yes_keygen(void *data)
 {
 	account_t *acc = (account_t *)data;
 	

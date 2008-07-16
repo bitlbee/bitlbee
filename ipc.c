@@ -32,7 +32,6 @@
 #endif
 
 GSList *child_list = NULL;
-static char *statefile = NULL;
 
 static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
@@ -60,6 +59,25 @@ static void ipc_master_cmd_die( irc_t *data, char **cmd )
 		ipc_to_children_str( "DIE\r\n" );
 	
 	bitlbee_shutdown( NULL, -1, 0 );
+}
+
+static void ipc_master_cmd_deaf( irc_t *data, char **cmd )
+{
+	if( global.conf->runmode == RUNMODE_DAEMON )
+	{
+		b_event_remove( global.listen_watch_source_id );
+		close( global.listen_socket );
+		
+		global.listen_socket = global.listen_watch_source_id = -1;
+	
+		ipc_to_children_str( "OPERMSG :Closed listening socket, waiting "
+		                     "for all users to disconnect." );
+	}
+	else
+	{
+		ipc_to_children_str( "OPERMSG :The DEAF command only works in "
+		                     "normal daemon mode. Try DIE instead." );
+	}
 }
 
 void ipc_master_cmd_rehash( irc_t *data, char **cmd )
@@ -97,6 +115,7 @@ static const command_t ipc_master_commands[] = {
 	{ "client",     3, ipc_master_cmd_client,     0 },
 	{ "hello",      0, ipc_master_cmd_client,     0 },
 	{ "die",        0, ipc_master_cmd_die,        0 },
+	{ "deaf",       0, ipc_master_cmd_deaf,       0 },
 	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "wall",       1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "opermsg",    1, NULL,                      IPC_CMD_TO_CHILDREN },
@@ -208,19 +227,19 @@ static void ipc_command_exec( void *data, char **cmd, const command_t *commands 
 		}
 }
 
+/* Return just one line. Returns NULL if something broke, an empty string
+   on temporary "errors" (EAGAIN and friends). */
 static char *ipc_readline( int fd )
 {
-	char *buf, *eol;
+	char buf[513], *eol;
 	int size;
-	
-	buf = g_new0( char, 513 );
 	
 	/* Because this is internal communication, it should be pretty safe
 	   to just peek at the message, find its length (by searching for the
 	   end-of-line) and then just read that message. With internal
 	   sockets and limites message length, messages should always be
 	   complete. Saves us quite a lot of code and buffering. */
-	size = recv( fd, buf, 512, MSG_PEEK );
+	size = recv( fd, buf, sizeof( buf ) - 1, MSG_PEEK );
 	if( size == 0 || ( size < 0 && !sockerr_again() ) )
 		return NULL;
 	else if( size < 0 ) /* && sockerr_again() */
@@ -228,21 +247,15 @@ static char *ipc_readline( int fd )
 	else
 		buf[size] = 0;
 	
-	eol = strstr( buf, "\r\n" );
-	if( eol == NULL )
+	if( ( eol = strstr( buf, "\r\n" ) ) == NULL )
 		return NULL;
 	else
 		size = eol - buf + 2;
 	
-	g_free( buf );
-	buf = g_new0( char, size + 1 );
-	
 	if( recv( fd, buf, size, 0 ) != size )
 		return NULL;
 	else
-		buf[size-2] = 0;
-	
-	return buf;
+		return g_strndup( buf, size - 2 );
 }
 
 gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
@@ -253,23 +266,15 @@ gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
 	{
 		cmd = irc_parse_line( buf );
 		if( cmd )
+		{
 			ipc_command_exec( data, cmd, ipc_master_commands );
+			g_free( cmd );
+		}
+		g_free( buf );
 	}
 	else
 	{
-		GSList *l;
-		struct bitlbee_child *c;
-		
-		for( l = child_list; l; l = l->next )
-		{
-			c = l->data;
-			if( c->ipc_fd == source )
-			{
-				ipc_master_free_one( c );
-				child_list = g_slist_remove( child_list, c );
-				break;
-			}
-		}
+		ipc_master_free_fd( source );
 	}
 	
 	return TRUE;
@@ -283,14 +288,15 @@ gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond )
 	{
 		cmd = irc_parse_line( buf );
 		if( cmd )
+		{
 			ipc_command_exec( data, cmd, ipc_child_commands );
+			g_free( cmd );
+		}
+		g_free( buf );
 	}
 	else
 	{
-		b_event_remove( global.listen_watch_source_id );
-		close( global.listen_socket );
-		
-		global.listen_socket = -1;
+		ipc_child_disable();
 	}
 	
 	return TRUE;
@@ -325,7 +331,9 @@ void ipc_to_master_str( char *format, ... )
 	}
 	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
-		write( global.listen_socket, msg_buf, strlen( msg_buf ) );
+		if( global.listen_socket >= 0 )
+			if( write( global.listen_socket, msg_buf, strlen( msg_buf ) ) <= 0 )
+				ipc_child_disable();
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
@@ -375,12 +383,18 @@ void ipc_to_children_str( char *format, ... )
 	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
 		int msg_len = strlen( msg_buf );
-		GSList *l;
+		GSList *l, *next;
 		
-		for( l = child_list; l; l = l->next )
+		for( l = child_list; l; l = next )
 		{
 			struct bitlbee_child *c = l->data;
-			write( c->ipc_fd, msg_buf, msg_len );
+			
+			next = l->next;
+			if( write( c->ipc_fd, msg_buf, msg_len ) <= 0 )
+			{
+				ipc_master_free_one( c );
+				child_list = g_slist_remove( child_list, c );
+			}
 		}
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
@@ -409,6 +423,23 @@ void ipc_master_free_one( struct bitlbee_child *c )
 	g_free( c );
 }
 
+void ipc_master_free_fd( int fd )
+{
+	GSList *l;
+	struct bitlbee_child *c;
+	
+	for( l = child_list; l; l = l->next )
+	{
+		c = l->data;
+		if( c->ipc_fd == fd )
+		{
+			ipc_master_free_one( c );
+			child_list = g_slist_remove( child_list, c );
+			break;
+		}
+	}
+}
+
 void ipc_master_free_all()
 {
 	GSList *l;
@@ -420,6 +451,15 @@ void ipc_master_free_all()
 	child_list = NULL;
 }
 
+void ipc_child_disable()
+{
+	b_event_remove( global.listen_watch_source_id );
+	close( global.listen_socket );
+	
+	global.listen_socket = -1;
+}
+
+#ifndef _WIN32
 char *ipc_master_save_state()
 {
 	char *fn = g_strdup( "/tmp/bee-restart.XXXXXX" );
@@ -460,11 +500,6 @@ char *ipc_master_save_state()
 	}
 }
 
-void ipc_master_set_statefile( char *fn )
-{
-	statefile = g_strdup( fn );
-}
-
 
 static gboolean new_ipc_client( gpointer data, gint serversock, b_input_condition cond )
 {
@@ -485,7 +520,6 @@ static gboolean new_ipc_client( gpointer data, gint serversock, b_input_conditio
 	return TRUE;
 }
 
-#ifndef _WIN32
 int ipc_master_listen_socket()
 {
 	struct sockaddr_un un_addr;
@@ -522,10 +556,14 @@ int ipc_master_listen_socket()
 	return 1;
 }
 #else
+int ipc_master_listen_socket()
+{
 	/* FIXME: Open named pipe \\.\BITLBEE */
+	return 0;
+}
 #endif
 
-int ipc_master_load_state()
+int ipc_master_load_state( char *statefile )
 {
 	struct bitlbee_child *child;
 	FILE *fp;
@@ -533,6 +571,7 @@ int ipc_master_load_state()
 	
 	if( statefile == NULL )
 		return 0;
+	
 	fp = fopen( statefile, "r" );
 	unlink( statefile );	/* Why do it later? :-) */
 	if( fp == NULL )

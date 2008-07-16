@@ -1,12 +1,26 @@
-                   *** NEWS (Version 1.1 and later) ***
+                   *** NEWS (Version 1.2 and later) ***
 
-Starting from version 1.1, BitlBee has a forking daemon mode. The Debian
+Starting from version 1.2, BitlBee has a forking daemon mode. The Debian
 package now uses this mode by default, instead of inetd mode. If you don't
 want to use this, you can disable the init scripts (best way to do this is
 by editing /etc/default/bitlbee) and restore the inetd.conf entry. This
 should be necessary only once, it won't be touched during upgrades.
 
---------------------------------------------------------------------------
+Another important change in BitlBee 1.2 is the file format used for your
+personal settings. Everything's now saved in a single .xml (per account,
+of course) file instead of $nick.accounts and $nick.nicks. One advantage
+of this new format is that the passwords are actually encrypted instead of
+just vaguely obfuscated. BitlBee can still read the old files, and will
+save things in the new format when you save/disconnect. After that, you
+can safely remove the old-style files (this is recommended).
+
+I tried making this transition (the new file format but especially, in this
+case, the inetd->forkdaemon mode change) as smooth as possible, but I'm
+aware that many BitlBee users will have their own hacks already to run the
+program. I hope the package won't break any of this for anyone. 1.2-2
+should fix at least some of the issues.
+
+---------------------------------------------------------------------------
 
 Debconf should have asked you on what port you want BitlBee to run. If it
 did not, the port number should be 6667 or 6668. (6668 if you already got
