@@ -38,10 +38,10 @@ void jabber_si_free_transfer( file_transfer_t *ft)
 
 	jd->filetransfers = g_slist_remove( jd->filetransfers, tf );
 
-	if( tf->fd )
+	if( tf->fd != -1 )
 	{
 		close( tf->fd );
-		tf->fd = 0;
+		tf->fd = -1;
 	}
 
 	if( tf->disco_timeout )
@@ -128,8 +128,8 @@ gboolean jabber_si_waitfor_disco( gpointer data, gint fd, b_input_condition cond
 	tf->disco_timeout_fired++;
 
 	if( tf->bud->features && jd->have_streamhosts==1 ) {
-		jabber_si_transfer_start( tf );
 		tf->disco_timeout = 0;
+		jabber_si_transfer_start( tf );
 		return FALSE;
 	}
 
@@ -138,13 +138,14 @@ gboolean jabber_si_waitfor_disco( gpointer data, gint fd, b_input_condition cond
 		return TRUE;
 	
 	if( !tf->bud->features && jd->have_streamhosts!=1 )
-		imcb_file_canceled( tf->ft, "Couldn't get buddy's features or the server's" );
+		imcb_log( tf->ic, "Couldn't get buddy's features nor discover all services of the server" );
 	else if( !tf->bud->features )
-		imcb_file_canceled( tf->ft, "Couldn't get buddy's features" );
+		imcb_log( tf->ic, "Couldn't get buddy's features" );
 	else
-		imcb_file_canceled( tf->ft, "Couldn't get server's features" );
+		imcb_log( tf->ic, "Couldn't discover some of the server's services" );
 	
 	tf->disco_timeout = 0;
+	jabber_si_transfer_start( tf );
 	return FALSE;
 }
 
@@ -172,6 +173,7 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 
 	tf->ic = ic;
 	tf->ft = ft;
+	tf->fd = -1;
 	tf->ft->data = tf;
 	tf->ft->free = jabber_si_free_transfer;
 	tf->ft->finished = jabber_si_finished;
@@ -185,10 +187,13 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 	if( !tf->bud->features )
 		jabber_iq_query_features( ic, bud->full_jid );
 
-	if( jd->have_streamhosts!=1 ) {
+	/* If <auto> is not set don't check for proxies */
+	if( ( jd->have_streamhosts!=1 ) && ( jd->streamhosts==NULL ) &&
+	    ( strstr( set_getstr( &ic->acc->set, "proxy" ), "<auto>" ) != NULL ) ) {
 		jd->have_streamhosts = 0;
 		jabber_iq_query_server( ic, server, XMLNS_DISCO_ITEMS );
-	}
+	} else if ( jd->streamhosts!=NULL )
+		jd->have_streamhosts = 1;
 
 	/* if we had to do a query, wait for the result. 
 	 * Otherwise fire away. */
@@ -308,6 +313,7 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 	tf->sid = g_strdup( sid );
 	tf->ic = ic;
 	tf->ft = ft;
+	tf->fd = -1;
 	tf->ft->data = tf;
 	tf->ft->accept = jabber_si_answer_request;
 	tf->ft->free = jabber_si_free_transfer;

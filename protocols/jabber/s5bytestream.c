@@ -361,7 +361,7 @@ int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, stru
 	tf->streamhandle = bt;
 	tf->ft->free = jabber_bs_free_transfer;
 
-	jabber_bs_recv_handshake( bt, 0, 0 ); 
+	jabber_bs_recv_handshake( bt, -1, 0 ); 
 
 	return XT_HANDLED;
 }
@@ -380,7 +380,7 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 	short revents;
 	int gret;
 
-	if ( ( fd != 0 ) && !jabber_bs_poll( bt, fd, &revents ) )
+	if ( ( fd != -1 ) && !jabber_bs_poll( bt, fd, &revents ) )
 		return FALSE;
 	
 	switch( bt->phase ) 
@@ -553,7 +553,7 @@ gboolean jabber_bs_recv_handshake_abort( struct bs_transfer *bt, char *error )
 	if( shlist && shlist->next )
 	{
 		bt->sh = shlist->next->data;
-		return jabber_bs_recv_handshake( bt, 0, 0 );
+		return jabber_bs_recv_handshake( bt, -1, 0 );
 	}
 
 
@@ -619,7 +619,7 @@ gboolean jabber_bs_recv_read( gpointer data, gint fd, b_input_condition cond )
 	struct bs_transfer *bt = data;
 	struct jabber_transfer *tf = bt->tf;
 
-	if( fd != 0 ) /* called via event thread */
+	if( fd != -1 ) /* called via event thread */
 	{
 		tf->watch_in = 0;
 		ASSERTSOCKOP( ret = recv( fd, tf->ft->buffer, sizeof( tf->ft->buffer ), 0 ) , "Receiving" );
@@ -665,7 +665,7 @@ gboolean jabber_bs_recv_write_request( file_transfer_t *ft )
 		return FALSE;
 	}
 	
-	jabber_bs_recv_read( tf->streamhandle, 0 , 0 );
+	jabber_bs_recv_read( tf->streamhandle, -1 , 0 );
 
 	return TRUE;
 }
@@ -775,14 +775,16 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 	{
 		/* using a proxy, abort listen */
 
-		if ( tf->watch_in )
+		if( tf->watch_in )
 		{
 			b_event_remove( tf->watch_in );
 			tf->watch_in = 0;
 		}
 		
-		closesocket( tf->fd );
-		tf->fd = 0;
+		if( tf->fd != -1 ) {
+			closesocket( tf->fd );
+			tf->fd = -1;
+		}
 
 		if ( bt->connect_timeout )
 		{
@@ -797,7 +799,7 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 			if( strcmp( sh->jid, jid ) == 0 )
 			{
 				bt->sh = sh;
-				jabber_bs_recv_handshake( bt, 0, 0 );
+				jabber_bs_recv_handshake( bt, -1, 0 );
 				return XT_HANDLED;
 			}
 		}
@@ -871,20 +873,80 @@ static xt_status jabber_bs_send_handle_activate( struct im_connection *ic, struc
 	return XT_HANDLED;
 }
 
+jabber_streamhost_t *jabber_si_parse_proxy( struct im_connection *ic, char *proxy )
+{
+	char *host, *port, *jid;
+	jabber_streamhost_t *sh;
+
+	if( ( ( host = strchr( proxy, ',' ) ) == 0 ) ||
+	     ( ( port = strchr( host+1, ',' ) ) == 0 ) ) {
+		imcb_log( ic, "Error parsing proxy setting: \"%s\" (ignored)", proxy );
+		return NULL;
+	}
+	
+	jid = proxy;
+	*host++ = '\0';
+	*port++ = '\0';
+
+	sh = g_new0( jabber_streamhost_t, 1 );
+	sh->jid = g_strdup( jid );
+	sh->host = g_strdup( host );
+	strcpy( sh->port, port );
+
+	return sh;
+}
+
+void jabber_si_set_proxies( struct bs_transfer *bt )
+{
+	struct jabber_transfer *tf = bt->tf;
+	struct jabber_data *jd = tf->ic->proto_data;
+	char *proxysetting = g_strdup ( set_getstr( &tf->ic->acc->set, "proxy" ) );
+	char *proxy,*next;
+	char port[6];
+	char host[INET6_ADDRSTRLEN];
+	jabber_streamhost_t *sh, *sh2;
+	GSList *streamhosts = jd->streamhosts;
+
+	proxy = proxysetting;
+	while ( proxy && ( *proxy!='\0' ) ) {
+		if( ( next = strchr( proxy, ';' ) ) )
+			*next++ = '\0';	
+		
+		if( ( strcmp( proxy, "<local>" ) == 0 ) && jabber_bs_send_listen( bt, &tf->saddr, host, port ) ) {
+			sh = g_new0( jabber_streamhost_t, 1 );
+			sh->jid = g_strdup( tf->ini_jid );
+			sh->host = g_strdup( host );
+			strcpy( sh->port, port );
+			bt->streamhosts = g_slist_append( bt->streamhosts, sh );
+
+			bt->tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_send_handshake, bt );
+			bt->connect_timeout = b_timeout_add( JABBER_BS_LISTEN_TIMEOUT * 1000, jabber_bs_connect_timeout, bt );
+		} else if( strcmp( proxy, "<auto>" ) == 0 ) {
+			while ( streamhosts ) {
+				sh = g_new0( jabber_streamhost_t, 1 );
+				sh2 = streamhosts->data;
+				sh->jid = g_strdup( sh2->jid );
+				sh->host = g_strdup( sh2->host );
+				strcpy( sh->port, sh2->port );
+				bt->streamhosts = g_slist_append( bt->streamhosts, sh );
+				streamhosts = g_slist_next( streamhosts );
+			}
+		} else if( ( sh = jabber_si_parse_proxy( tf->ic, proxy ) ) )
+			bt->streamhosts = g_slist_append( bt->streamhosts, sh );
+		proxy = next;
+	}
+}
+
 /*
  * Starts a bytestream.
  */
 gboolean jabber_bs_send_start( struct jabber_transfer *tf )
 {
-	char host[INET6_ADDRSTRLEN];
 	struct bs_transfer *bt;
 	sha1_state_t sha;
 	char hash_hex[41];
 	unsigned char hash[20];
 	int i,ret;
-	struct jabber_data *jd = tf->ic->proto_data;
-	jabber_streamhost_t sh;
-	GSList *streamhosts = jd->streamhosts;
 
 	/* SHA1( SID + Initiator JID + Target JID ) is given to the streamhost which it will match against the initiator's value */
 	sha1_init( &sha );
@@ -904,18 +966,9 @@ gboolean jabber_bs_send_start( struct jabber_transfer *tf )
 	tf->ft->free = jabber_bs_free_transfer;
 	tf->ft->canceled = jabber_bs_canceled;
 
-	if ( !jabber_bs_send_listen( bt, &tf->saddr, sh.host = host, sh.port ) )
-		return FALSE;
+	jabber_si_set_proxies( bt );
 
-	bt->tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_send_handshake, bt );
-	bt->connect_timeout = b_timeout_add( JABBER_BS_LISTEN_TIMEOUT * 1000, jabber_bs_connect_timeout, bt );
-
-	sh.jid = tf->ini_jid;
-
-	/* temporarily add listen address to streamhosts, send the request and remove it */
-	streamhosts = g_slist_prepend( streamhosts, &sh );
-	ret = jabber_bs_send_request( tf, streamhosts);
-	streamhosts = g_slist_remove( streamhosts, &sh );
+	ret = jabber_bs_send_request( tf, bt->streamhosts);
 
 	return ret;
 }
