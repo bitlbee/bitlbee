@@ -627,11 +627,11 @@ void dcc_finish( file_transfer_t *file )
 file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 {
 	char *pattern = "SEND"
-		" (([^\"][^ ]*)|\"([^\"]|\\\")*\")"
+		" (([^\"][^ ]*)|\"(([^\"]|\\\")*)\")"
 		" (([0-9]*)|([^ ]*))"
 		" ([0-9]*)"
 		" ([0-9]*)\001";
-	regmatch_t pmatch[9];
+	regmatch_t pmatch[10];
 	regex_t re;
 	file_transfer_t *ft;
 	dcc_file_transfer_t *df;
@@ -639,7 +639,7 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 	int regerrcode, gret;
 
 	if( ( regerrcode = regcomp( &re, pattern, REG_EXTENDED ) ) ||
-	    ( regerrcode = regexec( &re, line, 9, pmatch, 0 ) ) ) {
+	    ( regerrcode = regexec( &re, line, 10, pmatch, 0 ) ) ) {
 		regerror( regerrcode,&re,errbuf,sizeof( errbuf ) );
 		imcb_log( ic, 
 			  "DCC: error parsing 'DCC SEND': %s, line: %s", 
@@ -648,9 +648,9 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 	}
 
 	if( ( pmatch[1].rm_so > 0 ) &&
-	    ( pmatch[4].rm_so > 0 ) &&
-	    ( pmatch[7].rm_so > 0 ) &&
-	    ( pmatch[8].rm_so > 0 ) )
+	    ( pmatch[5].rm_so > 0 ) &&
+	    ( pmatch[8].rm_so > 0 ) &&
+	    ( pmatch[9].rm_so > 0 ) )
 	{
 		char *input = g_strdup( line );
 		char *filename, *host, *port;
@@ -668,24 +668,24 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 			filename = input + pmatch[3].rm_so;
 		}
 			
-		input[pmatch[4].rm_eo] = '\0';
+		input[pmatch[5].rm_eo] = '\0';
 
 		/* number means ipv4, something else means ipv6 */
-		if ( pmatch[5].rm_so > 0 )
+		if ( pmatch[6].rm_so > 0 )
 		{
 			struct in_addr ipaddr = { .s_addr = htonl( atoi( input + pmatch[5].rm_so ) ) };
 			host = inet_ntoa( ipaddr );
 		} else
 		{
 			/* Contains non-numbers, hopefully an IPV6 address */
-			host = input + pmatch[6].rm_so;
+			host = input + pmatch[7].rm_so;
 		}
 
-		input[pmatch[7].rm_eo] = '\0';
 		input[pmatch[8].rm_eo] = '\0';
+		input[pmatch[9].rm_eo] = '\0';
 
-		port = input + pmatch[7].rm_so;
-		filesize = atoll( input + pmatch[8].rm_so );
+		port = input + pmatch[8].rm_so;
+		filesize = atoll( input + pmatch[9].rm_so );
 
 		memset( &hints, 0, sizeof ( struct addrinfo ) );
 		if ( ( gret = getaddrinfo( host, port, &hints, &rp ) ) )
