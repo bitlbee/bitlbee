@@ -33,7 +33,8 @@ not..)
   1.1.1dev installed.
 * Skype4Py >= 0.9.28.7. Previous versions won't work due to API changes.
 
-NOTE: I had not had time to add support for 1.x yet.
+NOTE: 1.x just does not work for me. I mailed the author but did not
+receive any answer so far.
 
 * Python >= 2.5. Skype4Py does not work with 2.4.
 * PyGObject >= 2.8.0. Older versions are part of PyGTK. (And you don't want to
