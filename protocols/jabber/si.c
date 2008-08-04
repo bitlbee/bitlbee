@@ -53,15 +53,6 @@ void jabber_si_free_transfer( file_transfer_t *ft)
 	g_free( tf->sid );
 }
 
-/* file_transfer finished() callback */
-void jabber_si_finished( file_transfer_t *ft )
-{
-	struct jabber_transfer *tf = ft->data;
-	time_t diff = time( NULL ) - ft->started ? : 1;
-
-	imcb_log( tf->ic, "File %s transferred successfully at %d kb/s!" , ft->file_name, (int) ( ft->bytes_transferred / 1024 / diff ) );
-}
-
 /* file_transfer canceled() callback */
 void jabber_si_canceled( file_transfer_t *ft, char *reason )
 {
@@ -176,7 +167,6 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 	tf->fd = -1;
 	tf->ft->data = tf;
 	tf->ft->free = jabber_si_free_transfer;
-	tf->ft->finished = jabber_si_finished;
 	tf->bud = bud;
 	ft->write = jabber_bs_send_write;
 
@@ -301,10 +291,6 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 
 	/* Request is fine. */
 
-	imcb_log( ic, "File transfer request from %s for %s (%zd kb). ", xt_find_attr( node, "from" ), name, size/1024 );
-
-	imcb_log( ic, "Accept the file transfer if you'd like the file. If you don't, issue the 'transfers reject' command.");
-
 	tf = g_new0( struct jabber_transfer, 1 );
 
 	tf->ini_jid = g_strdup( ini_jid );
@@ -317,7 +303,6 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 	tf->ft->data = tf;
 	tf->ft->accept = jabber_si_answer_request;
 	tf->ft->free = jabber_si_free_transfer;
-	tf->ft->finished = jabber_si_finished;
 	tf->ft->canceled = jabber_si_canceled;
 
 	jd->filetransfers = g_slist_prepend( jd->filetransfers, tf );

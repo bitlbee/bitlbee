@@ -113,6 +113,17 @@ gboolean imcb_file_recv_start( file_transfer_t *ft )
 	return dccs_recv_start( ft );
 }
 
+/* As defined in ft.h */
+void imcb_file_finished( file_transfer_t *file )
+{
+	dcc_file_transfer_t *df = file->priv;
+
+	if( file->bytes_transferred >= file->file_size )
+		dcc_finish( file );
+	else
+		df->proto_finished = TRUE;
+}
+
 dcc_file_transfer_t *dcc_alloc_transfer( char *file_name, size_t file_size, struct im_connection *ic )
 {
 	file_transfer_t *file = g_new0( file_transfer_t, 1 );
@@ -153,6 +164,10 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 	df->ic->irc->file_transfers = g_slist_prepend( df->ic->irc->file_transfers, file );
 
 	df->progress_timeout = b_timeout_add( DCC_MAX_STALL * 1000, dcc_progress, df );
+
+	imcb_log( ic, "File transfer request from %s for %s (%zd kb). ", user_nick, file_name, file_size/1024 );
+
+	imcb_log( ic, "Accept the file transfer if you'd like the file. If you don't, issue the 'transfers reject' command.");
 
 	return file;
 }
@@ -410,7 +425,8 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 		file->bytes_transferred = bytes_received;
 	
 		if( file->bytes_transferred >= file->file_size ) {
-			dcc_finish( file );
+			if( df->proto_finished )
+				dcc_finish( file );
 			return FALSE;
 		}
 	
@@ -492,6 +508,9 @@ gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond)
 		if( ret == 0 )
 			return dcc_abort( df, "Remote end closed connection" );
 
+		if( !ft->write( df->ft, ft->buffer, ret ) )
+			return FALSE;
+
 		df->bytes_sent += ret;
 
 		done = df->bytes_sent >= ft->file_size;
@@ -508,13 +527,16 @@ gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond)
 				return dcc_abort( df, "Error sending DCC ACK, sent %d instead of 4 bytes", ackret );
 		}
 		
-		if( !ft->write( df->ft, ft->buffer, ret ) )
-			return FALSE;
+		if( df->bytes_sent == ret )
+			ft->started = time( NULL );
 
 		if( done )
 		{
-			closesocket( fd );
-			dcc_finish( ft );
+			if( df->watch_out )
+				b_event_remove( df->watch_out );
+
+			if( df->proto_finished )
+				dcc_finish( ft );
 
 			df->watch_in = 0;
 			return FALSE;
@@ -571,6 +593,9 @@ gboolean dccs_send_write( file_transfer_t *file, char *data, unsigned int data_l
 	if( ret < data_len )
 		return dcc_abort( df, "send() sent %d instead of %d", ret, data_len );
 
+	if( df->bytes_sent == 0 )
+		file->started = time( NULL );
+
 	df->bytes_sent += ret;
 
 	if( df->bytes_sent < df->ft->file_size )
@@ -609,11 +634,15 @@ static void dcc_close( file_transfer_t *file )
 
 void dcc_finish( file_transfer_t *file )
 {
+	dcc_file_transfer_t *df = file->priv;
+	time_t diff = time( NULL ) - file->started ? : 1;
+
 	file->status |= FT_STATUS_FINISHED;
 	
 	if( file->finished )
 		file->finished( file );
 
+	imcb_log( df->ic, "File %s transferred successfully at %d kb/s!" , file->file_name, (int) ( file->bytes_transferred / 1024 / diff ) );
 	dcc_close( file );
 }
 

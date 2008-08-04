@@ -642,10 +642,10 @@ gboolean jabber_bs_recv_read( gpointer data, gint fd, b_input_condition cond )
 	if( ret == 0 )
 		return jabber_bs_abort( bt, "Remote end closed connection" );
 	
-	if( tf->bytesread == 0 )
-		tf->ft->started = time( NULL );
-
 	tf->bytesread += ret;
+
+	if( tf->bytesread >= tf->ft->file_size )
+		imcb_file_finished( tf->ft );
 
 	tf->ft->write( tf->ft, tf->ft->buffer, ret );	
 
@@ -700,16 +700,16 @@ gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, unsigned int l
 	/* TODO: catch broken pipe */
 	ASSERTSOCKOP( ret = send( tf->fd, buffer, len, 0 ), "Sending" );
 
-	if( tf->byteswritten == 0 )
-		tf->ft->started = time( NULL );
-
 	tf->byteswritten += ret;
 	
 	/* TODO: this should really not be fatal */
 	if( ret < len )
 		return jabber_bs_abort( bt, "send() sent %d instead of %d (send buffer too big!)", ret, len );
 
-	bt->tf->watch_out = b_input_add( tf->fd, GAIM_INPUT_WRITE, jabber_bs_send_can_write, bt );
+	if( tf->byteswritten >= ft->file_size )
+		imcb_file_finished( ft );
+	else
+		bt->tf->watch_out = b_input_add( tf->fd, GAIM_INPUT_WRITE, jabber_bs_send_can_write, bt );
 		
 	return TRUE;
 }

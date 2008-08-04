@@ -170,4 +170,6 @@ file_transfer_t *imcb_file_send_start( struct im_connection *ic, char *user_nick
 void imcb_file_canceled( file_transfer_t *file, char *reason );
 
 gboolean imcb_file_recv_start( file_transfer_t *ft );
+
+void imcb_file_finished( file_transfer_t *file );
 #endif

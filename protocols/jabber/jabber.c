@@ -244,6 +244,18 @@ static void jabber_logout( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
 	
+	while( jd->filetransfers )
+		imcb_file_canceled( ( ( struct jabber_transfer *) jd->filetransfers->data )->ft, "Logging out" );
+
+	while( jd->streamhosts )
+	{
+		jabber_streamhost_t *sh = jd->streamhosts->data;
+		jd->streamhosts = g_slist_remove( jd->streamhosts, sh );
+		g_free( sh->jid );
+		g_free( sh->host );
+		g_free( sh );
+	}
+
 	if( jd->fd >= 0 )
 		jabber_end_stream( ic );
 	

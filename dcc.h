@@ -82,6 +82,10 @@ typedef struct dcc_file_transfer {
 	/* if we're receiving, this is the sender's socket address */
 	struct sockaddr_storage saddr;
 
+	/* set to true if the protocol has finished 
+	 * (i.e. called imcb_file_finished)
+	 */
+	int proto_finished;
 } dcc_file_transfer_t;
 
 file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, char *file_name, size_t file_size );
