@@ -16,3 +16,6 @@ tests/check
 *.gcov
 *.gcno
 *.o
+coverage
+bitlbee.info
+bitlbee.exe

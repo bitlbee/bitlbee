@@ -28,6 +28,12 @@
 #include "base64.h"
 #include "arc.h"
 #include "md5.h"
+#include <glib/gstdio.h>
+
+#if !GLIB_CHECK_VERSION(2,8,0)
+/* GLib < 2.8.0 doesn't have g_access, so just use the system access(). */
+#define g_access access
+#endif
 
 typedef enum
 {
@@ -242,9 +248,10 @@ GMarkupParser xml_parser =
 
 static void xml_init( void )
 {
-	if( access( global.conf->configdir, F_OK ) != 0 )
+	if( g_access( global.conf->configdir, F_OK ) != 0 )
 		log_message( LOGLVL_WARNING, "The configuration directory `%s' does not exist. Configuration won't be saved.", global.conf->configdir );
-	else if( access( global.conf->configdir, R_OK ) != 0 || access( global.conf->configdir, W_OK ) != 0 )
+	else if( g_access( global.conf->configdir, F_OK ) != 0 || 
+	         g_access( global.conf->configdir, W_OK ) != 0 )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to `%s'.", global.conf->configdir );
 }
 
@@ -371,7 +378,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, path2, ".xml" );
 	g_free( path2 );
 	
-	if( !overwrite && access( path, F_OK ) != -1 )
+	if( !overwrite && g_access( path, F_OK ) == 0 )
 		return STORAGE_ALREADY_EXISTS;
 	
 	strcat( path, "~" );
@@ -479,14 +486,18 @@ static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data )
 
 static storage_status_t xml_remove( const char *nick, const char *password )
 {
-	char s[512];
+	char s[512], *lc;
 	storage_status_t status;
 
 	status = xml_check_pass( nick, password );
 	if( status != STORAGE_OK )
 		return status;
 
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, nick, ".xml" );
+	lc = g_strdup( nick );
+	nick_lc( lc );
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, lc, ".xml" );
+	g_free( lc );
+	
 	if( unlink( s ) == -1 )
 		return STORAGE_OTHER_ERROR;
 	

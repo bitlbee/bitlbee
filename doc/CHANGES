@@ -1,3 +1,8 @@
+This ChangeLog mostly lists changes relevant to users. A full log can be
+found in the bzr commit logs, for example you can try:
+
+http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
+
 Version 1.2.1:
 - Fixed proxy support.
 - Fixed stalling issues while connecting to Jabber when using the OpenSSL
@@ -9,8 +14,22 @@ Version 1.2.1:
 - You can now automatically identify yourself to BitlBee by setting a server
   password in your IRC client.
 - Compatible with all crazy kinds of line endings that clients can send.
+- Changed root nicknames are now saved.
+- Added ClientInterface setting to bind() outgoing connections to a specific
+  network interface.
+- Support for receiving Jabber chatroom invitations.
+- Relaxed port restriction of the Jabber module: added ports 80 and 443.
+- Preserving case in Jabber resources of buddies, since these should
+  officially be treated as case sensitive.
+- Fully stripping spaces from AIM screennames, this didn't happen completely
+  which severly breaks the IRC protocol.
+- Removed all the yellow tape around daemon mode, it's pretty mature by now:
+  testing.bitlbee.org serves all (~30) SSL users from one daemon mode
+  process without any serious stability issues.
+- Fixed GLib <2.6 compatibility issue.
+- Misc. memory leak/crash fixes.
 
-Finished ...
+Finished 24 Jun 2008
 
 Version 1.2:
 - Added ForkDaemon mode next to the existing Daemon- and inetd modes. With

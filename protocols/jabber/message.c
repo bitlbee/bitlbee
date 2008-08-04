@@ -48,6 +48,23 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 	else /* "chat", "normal", "headline", no-type or whatever. Should all be pretty similar. */
 	{
 		GString *fullmsg = g_string_new( "" );
+
+		for( c = node->children; ( c = xt_find_node( c, "x" ) ); c = c->next )
+		{
+			char *ns = xt_find_attr( c, "xmlns" ), *room;
+			struct xt_node *inv, *reason;
+			
+			if( strcmp( ns, XMLNS_MUC_USER ) == 0 &&
+			    ( inv = xt_find_node( c->children, "invite" ) ) )
+			{
+				room = from;
+				from = xt_find_attr( inv, "from" ) ? : from;
+
+				g_string_append_printf( fullmsg, "<< \002BitlBee\002 - Invitation to chatroom %s >>\n", room );
+				if( ( reason = xt_find_node( inv->children, "reason" ) ) && reason->text_len > 0 )
+					g_string_append( fullmsg, reason->text );
+			}
+		}
 		
 		if( ( s = strchr( from, '/' ) ) )
 		{

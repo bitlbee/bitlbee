@@ -61,31 +61,6 @@ void strip_linefeed(gchar *text)
 	g_free(text2);
 }
 
-char *normalize(const char *s)
-{
-	static char buf[BUF_LEN];
-	char *t, *u;
-	int x = 0;
-
-	g_return_val_if_fail((s != NULL), NULL);
-
-	u = t = g_strdup(s);
-
-	strcpy(t, s);
-	g_strdown(t);
-
-	while (*t && (x < BUF_LEN - 1)) {
-		if (*t != ' ') {
-			buf[x] = *t;
-			x++;
-		}
-		t++;
-	}
-	buf[x] = '\0';
-	g_free(u);
-	return buf;
-}
-
 time_t get_time(int year, int month, int day, int hour, int min, int sec)
 {
 	struct tm tm;
@@ -397,6 +372,7 @@ signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t si
    lack of entropy won't halt BitlBee. */
 void random_bytes( unsigned char *buf, int count )
 {
+#ifndef _WIN32
 	static int use_dev = -1;
 	
 	/* Actually this probing code isn't really necessary, is it? */
@@ -446,6 +422,7 @@ void random_bytes( unsigned char *buf, int count )
 	}
 	
 	if( !use_dev )
+#endif
 	{
 		int i;
 		
@@ -606,13 +583,9 @@ int md5_verify_password( char *password, char *hash )
 	md5_byte_t *pass_dec = NULL;
 	md5_byte_t pass_md5[16];
 	md5_state_t md5_state;
-	int ret, i;
+	int ret = -1, i;
 	
-	if( base64_decode( hash, &pass_dec ) != 21 )
-	{
-		ret = -1;
-	}
-	else
+	if( base64_decode( hash, &pass_dec ) == 21 )
 	{
 		md5_init( &md5_state );
 		md5_append( &md5_state, (md5_byte_t*) password, strlen( password ) );

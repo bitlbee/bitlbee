@@ -25,6 +25,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
+#include "sock.h"
 #include "crypting.h"
 #include "ipc.h"
 #include "dcc.h"
@@ -314,7 +315,11 @@ void irc_free( irc_t * irc )
 	
 	g_free( irc );
 	
-	if( global.conf->runmode == RUNMODE_INETD || global.conf->runmode == RUNMODE_FORKDAEMON )
+	if( global.conf->runmode == RUNMODE_INETD ||
+	    global.conf->runmode == RUNMODE_FORKDAEMON ||
+	    ( global.conf->runmode == RUNMODE_DAEMON &&
+	      global.listen_socket == -1 &&
+	      irc_connection_list == NULL ) )
 		b_main_quit();
 }
 

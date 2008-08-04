@@ -60,6 +60,9 @@
 
 #define OSCAR_GROUP "Friends"
 
+#define BUF_LEN 2048
+#define BUF_LONG ( BUF_LEN * 2 )
+
 /* Don't know if support for UTF8 is really working. For now it's UTF16 here.
    static int gaim_caps = AIM_CAPS_UTF8; */
 
@@ -239,6 +242,32 @@ static char *msgerrreason[] = {
 	"Not while on AOL"
 };
 static int msgerrreasonlen = 25;
+
+/* Hurray, this function is NOT thread-safe \o/ */
+static char *normalize(const char *s)
+{
+	static char buf[BUF_LEN];
+	char *t, *u;
+	int x = 0;
+
+	g_return_val_if_fail((s != NULL), NULL);
+
+	u = t = g_strdup(s);
+
+	strcpy(t, s);
+	g_strdown(t);
+
+	while (*t && (x < BUF_LEN - 1)) {
+		if (*t != ' ' && *t != '!') {
+			buf[x] = *t;
+			x++;
+		}
+		t++;
+	}
+	buf[x] = '\0';
+	g_free(u);
+	return buf;
+}
 
 static gboolean oscar_callback(gpointer data, gint source,
 				b_input_condition condition) {
@@ -1001,13 +1030,13 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 			g_hash_table_insert(od->ips, uin, (gpointer) (long) info->icqinfo.ipaddr);
 	}
 
-	tmp = g_strdup(normalize(ic->acc->user));
-	if (!strcmp(tmp, normalize(info->sn)))
+	if (!aim_sncmp(ic->acc->user, info->sn))
 		g_snprintf(ic->displayname, sizeof(ic->displayname), "%s", info->sn);
-	g_free(tmp);
 
-	imcb_buddy_status(ic, info->sn, flags, state_string, NULL);
-	/* imcb_buddy_times(ic, info->sn, signon, time_idle); */
+	tmp = normalize(info->sn);
+	imcb_buddy_status(ic, tmp, flags, state_string, NULL);
+	/* imcb_buddy_times(ic, tmp, signon, time_idle); */
+
 
 	return 1;
 }
@@ -1021,7 +1050,7 @@ static int gaim_parse_offgoing(aim_session_t *sess, aim_frame_t *fr, ...) {
 	info = va_arg(ap, aim_userinfo_t *);
 	va_end(ap);
 
-	imcb_buddy_status(ic, info->sn, 0, NULL, NULL );
+	imcb_buddy_status(ic, normalize(info->sn), 0, NULL, NULL );
 
 	return 1;
 }
@@ -1077,7 +1106,7 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 	}
 	
 	strip_linefeed(tmp);
-	imcb_buddy_msg(ic, userinfo->sn, tmp, flags, 0);
+	imcb_buddy_msg(ic, normalize(userinfo->sn), tmp, flags, 0);
 	g_free(tmp);
 	
 	return 1;
@@ -1176,7 +1205,7 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 			uin = g_strdup_printf("%u", args->uin);
 			message = g_strdup(args->msg);
 			strip_linefeed(message);
-			imcb_buddy_msg(ic, uin, message, 0, 0);
+			imcb_buddy_msg(ic, normalize(uin), message, 0, 0);
 			g_free(uin);
 			g_free(message);
 		} break;
@@ -1195,7 +1224,7 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 			}
 
 			strip_linefeed(message);
-			imcb_buddy_msg(ic, uin, message, 0, 0);
+			imcb_buddy_msg(ic, normalize(uin), message, 0, 0);
 			g_free(uin);
 			g_free(m);
 			g_free(message);
@@ -1470,7 +1499,7 @@ static int gaim_chat_join(aim_session_t *sess, aim_frame_t *fr, ...) {
 		return 1;
 
 	for (i = 0; i < count; i++)
-		imcb_chat_add_buddy(c->cnv, info[i].sn);
+		imcb_chat_add_buddy(c->cnv, normalize(info[i].sn));
 
 	return 1;
 }
@@ -1493,7 +1522,7 @@ static int gaim_chat_leave(aim_session_t *sess, aim_frame_t *fr, ...) {
 		return 1;
 
 	for (i = 0; i < count; i++)
-		imcb_chat_remove_buddy(c->cnv, info[i].sn, NULL);
+		imcb_chat_remove_buddy(c->cnv, normalize(info[i].sn), NULL);
 
 	return 1;
 }
@@ -1544,7 +1573,7 @@ static int gaim_chat_incoming_msg(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	tmp = g_malloc(BUF_LONG);
 	g_snprintf(tmp, BUF_LONG, "%s", msg);
-	imcb_chat_msg(ccon->cnv, info->sn, tmp, 0, 0);
+	imcb_chat_msg(ccon->cnv, normalize(info->sn), tmp, 0, 0);
 	g_free(tmp);
 
 	return 1;
@@ -1757,7 +1786,7 @@ static int gaim_offlinemsg(aim_session_t *sess, aim_frame_t *fr, ...) {
 			time_t t = get_time(msg->year, msg->month, msg->day, msg->hour, msg->minute, 0);
 			g_snprintf(sender, sizeof(sender), "%u", msg->sender);
 			strip_linefeed(dialog_msg);
-			imcb_buddy_msg(ic, sender, dialog_msg, 0, t);
+			imcb_buddy_msg(ic, normalize(sender), dialog_msg, 0, t);
 			g_free(dialog_msg);
 		} break;
 
@@ -1778,7 +1807,7 @@ static int gaim_offlinemsg(aim_session_t *sess, aim_frame_t *fr, ...) {
 			}
 
 			strip_linefeed(dialog_msg);
-			imcb_buddy_msg(ic, sender, dialog_msg, 0, t);
+			imcb_buddy_msg(ic, normalize(sender), dialog_msg, 0, t);
 			g_free(dialog_msg);
 			g_free(m);
 		} break;
@@ -2016,23 +2045,26 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	struct im_connection *ic = sess->aux_data;
 	struct aim_ssi_item *curitem;
 	int tmp;
+	char *nrm;
 
 	/* Add from server list to local list */
 	tmp = 0;
 	for (curitem=sess->ssi.items; curitem; curitem=curitem->next) {
+		nrm = curitem->name ? normalize(curitem->name) : NULL;
+		
 		switch (curitem->type) {
 			case 0x0000: /* Buddy */
-				if ((curitem->name) && (!imcb_find_buddy(ic, curitem->name))) {
+				if ((curitem->name) && (!imcb_find_buddy(ic, nrm))) {
 					char *realname = NULL;
 
 					if (curitem->data && aim_gettlv(curitem->data, 0x0131, 1))
 						    realname = aim_gettlv_str(curitem->data, 0x0131, 1);
 						
-					imcb_add_buddy(ic, curitem->name, NULL);
+					imcb_add_buddy(ic, nrm, NULL);
 					
 					if (realname) {
-						imcb_buddy_nick_hint(ic, curitem->name, realname);
-						imcb_rename_buddy(ic, curitem->name, realname);
+						imcb_buddy_nick_hint(ic, nrm, realname);
+						imcb_rename_buddy(ic, nrm, realname);
 						g_free(realname);
 					}
 				}
@@ -2044,7 +2076,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 					for (list=ic->permit; (list && aim_sncmp(curitem->name, list->data)); list=list->next);
 					if (!list) {
 						char *name;
-						name = g_strdup(normalize(curitem->name));
+						name = g_strdup(nrm);
 						ic->permit = g_slist_append(ic->permit, name);
 						tmp++;
 					}
@@ -2057,7 +2089,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 					for (list=ic->deny; (list && aim_sncmp(curitem->name, list->data)); list=list->next);
 					if (!list) {
 						char *name;
-						name = g_strdup(normalize(curitem->name));
+						name = g_strdup(nrm);
 						ic->deny = g_slist_append(ic->deny, name);
 						tmp++;
 					}
@@ -2119,7 +2151,7 @@ static int gaim_ssi_parseack( aim_session_t *sess, aim_frame_t *fr, ... )
 			st = aimbs_get16( &fr->data );
 			if( st == 0x00 )
 			{
-				imcb_add_buddy( sess->aux_data, list, NULL );
+				imcb_add_buddy( sess->aux_data, normalize(list), NULL );
 			}
 			else if( st == 0x0E )
 			{
@@ -2449,15 +2481,15 @@ int gaim_parsemtn(aim_session_t *sess, aim_frame_t *fr, ...)
     
 	if(type2 == 0x0002) {
 		/* User is typing */
-		imcb_buddy_typing(ic, sn, OPT_TYPING);
+		imcb_buddy_typing(ic, normalize(sn), OPT_TYPING);
 	} 
 	else if (type2 == 0x0001) {
 		/* User has typed something, but is not actively typing (stale) */
-		imcb_buddy_typing(ic, sn, OPT_THINKING);
+		imcb_buddy_typing(ic, normalize(sn), OPT_THINKING);
 	}
 	else {
 		/* User has stopped typing */
-		imcb_buddy_typing(ic, sn, 0);
+		imcb_buddy_typing(ic, normalize(sn), 0);
 	}
 	
 	return 1;

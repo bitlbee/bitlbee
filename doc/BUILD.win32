@@ -1,0 +1,10 @@
+Instructions for building BitlBee for Windows
+=============================================
+
+1) Install the mingw32 compiler
+
+2) Compile GLib2 for the target i586-mingw32msvc
+
+3) Cross-compile BitlBee:
+
+$ ./configure --target=i586-mingw32msvc --ssl=bogus --arch=Windows

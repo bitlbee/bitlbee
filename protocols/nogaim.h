@@ -45,11 +45,6 @@
 #include "md5.h"
 #include "ft.h"
 
-#define BUF_LEN MSG_LEN
-#define BUF_LONG ( BUF_LEN * 2 )
-#define MSG_LEN 2048
-#define BUF_LEN MSG_LEN
-
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
 #define WEBSITE "http://www.bitlbee.org/"

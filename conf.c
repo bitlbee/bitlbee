@@ -78,7 +78,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		   at a *valid* configuration file. */
 	}
 	
-	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:u:" ) ) >= 0 )
+	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hu:" ) ) >= 0 )
 	/*     ^^^^ Just to make sure we skip this step from the REHASH handler. */
 	{
 		if( opt == 'i' )
@@ -145,14 +145,6 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -d  Specify alternative user configuration directory\n"
 			        "  -h  Show this help page.\n" );
 			return NULL;
-		}
-		else if( opt == 'R' )
-		{
-			/* We can't load the statefile yet (and should make very sure we do this
-			   only once), so set the filename here and load the state information
-			   when initializing ForkDaemon. (This option only makes sense in that
-			   mode anyway!) */
-			ipc_master_set_statefile( optarg );
 		}
 		else if( opt == 'u' )
 		{
