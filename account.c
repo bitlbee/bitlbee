@@ -233,3 +233,39 @@ void account_off( irc_t *irc, account_t *a )
 		cancel_auto_reconnect( a );
 	}
 }
+
+char *set_eval_account_reconnect_delay( set_t *set, char *value )
+{
+	int start;
+	char op;
+	int step;
+	
+	if( sscanf( value, "%d%c%d", &start, &op, &step ) == 3 &&
+	    step > 0 && ( op == '+' || op == '*' ) )
+		return value;
+	else
+		return set_eval_int( set, value );
+}
+
+int account_reconnect_delay( account_t *a )
+{
+	char *setting = set_getstr( &a->irc->set, "auto_reconnect_delay" );
+	int start, step;
+	char op;
+	
+	if( sscanf( setting, "%d%c%d", &start, &op, &step ) == 3 && step > 0 )
+	{
+		if( a->auto_reconnect_delay == 0 )
+			return a->auto_reconnect_delay = start;
+		else if( op == '+' )
+			return a->auto_reconnect_delay += step;
+		else if( op == '*' )
+			return a->auto_reconnect_delay *= step;
+	}
+	else if( sscanf( setting, "%d", &start ) == 1 )
+	{
+		return a->auto_reconnect_delay = start;
+	}
+	
+	return 0;
+}
