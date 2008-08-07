@@ -18,7 +18,7 @@ case "`$CC -dumpmachine`" in
 		;;
 	*apple-darwin*)
 		SHARED_FLAGS="-dynamiclib -Wl,-headerpad_max_install_names,-undefined,dynamic_lookup"
-		SHARED_EXT="dynlib"
+		SHARED_EXT="dylib"
 		;;
 	*)
 		AC_MSG_ERROR([Your machine is not yet supported])
