@@ -138,7 +138,7 @@ irc_t *irc_new( int fd )
 	set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
 	set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
 	set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
-	set_add( &irc->set, "auto_reconnect_delay", "300", set_eval_account_reconnect_delay, irc );
+	set_add( &irc->set, "auto_reconnect_delay", "5*3<900", set_eval_account_reconnect_delay, irc );
 	set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
 	set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
 	set_add( &irc->set, "charset", "utf-8", set_eval_charset, irc );
