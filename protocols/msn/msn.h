@@ -23,6 +23,9 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#ifndef _MSN_H
+#define _MSN_H
+
 /* Some hackish magicstrings to make special-purpose messages/switchboards.
  */
 #define TYPING_NOTIFICATION_MESSAGE "\r\r\rBEWARE, ME R TYPINK MESSAGE!!!!\r\r\r"
@@ -175,3 +178,6 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text );
 struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb );
 void msn_sb_destroy( struct msn_switchboard *sb );
 gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond );
+int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m );
+
+#endif //_MSN_H

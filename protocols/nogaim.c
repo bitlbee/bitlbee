@@ -266,6 +266,10 @@ void imcb_connected( struct im_connection *ic )
 	/* Also necessary when we're not away, at least for some of the
 	   protocols. */
 	imc_set_away( ic, u->away );
+	
+	/* Apparently we're connected successfully, so reset the
+	   exponential backoff timer. */
+	ic->acc->auto_reconnect_delay = 0;
 }
 
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
@@ -289,6 +293,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	irc_t *irc = ic->irc;
 	user_t *t, *u;
 	account_t *a;
+	int delay;
 	
 	/* Nested calls might happen sometimes, this is probably the best
 	   place to catch them. */
@@ -328,10 +333,9 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 		/* Uhm... This is very sick. */
 	}
 	else if( allow_reconnect && set_getbool( &irc->set, "auto_reconnect" ) &&
-	         set_getbool( &a->set, "auto_reconnect" ) )
+	         set_getbool( &a->set, "auto_reconnect" ) &&
+	         ( delay = account_reconnect_delay( a ) ) > 0 )
 	{
-		int delay = set_getint( &irc->set, "auto_reconnect_delay" );
-		
 		imcb_log( ic, "Reconnecting in %d seconds..", delay );
 		a->reconnect = b_timeout_add( delay * 1000, auto_reconnect, a );
 	}

@@ -320,12 +320,16 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="auto_reconnect_delay" type="integer" scope="global">
-		<default>300</default>
+	<bitlbee-setting name="auto_reconnect_delay" type="string" scope="global">
+		<default>5*3&lt;900</default>
 
 		<description>
 			<para>
-				Tell BitlBee after how many seconds it should attempt to bring an IM-connection back up after a crash. It's not a good idea to set this value very low, it will cause too much useless traffic when an IM-server is down for a few hours.
+				Tell BitlBee after how many seconds it should attempt to bring a broken IM-connection back up.
+			</para>
+
+			<para>
+				This can be one integer, for a constant delay. One can also set it to something like &quot;10*10&quot;, which means wait for ten seconds on the first reconnect, multiply it by ten on every failure. Once successfully connected, this delay is re-set to the initial value. With &lt; you can give a maximum delay.
 			</para>
 
 			<para>

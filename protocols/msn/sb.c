@@ -47,6 +47,48 @@ int msn_sb_write( struct msn_switchboard *sb, char *s, int len )
 	return( 1 );
 }
 
+int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m )
+{
+	struct msn_data *md = ic->proto_data;
+	struct msn_switchboard *sb;
+	char buf[1024];
+
+	/* FIXME: *CHECK* the reliability of using spare sb's! */
+	if( ( sb = msn_sb_spare( ic ) ) )
+	{
+		debug( "Trying to use a spare switchboard to message %s", m->who );
+		
+		sb->who = g_strdup( m->who );
+		g_snprintf( buf, sizeof( buf ), "CAL %d %s\r\n", ++sb->trId, m->who );
+		if( msn_sb_write( sb, buf, strlen( buf ) ) )
+		{
+			/* He/She should join the switchboard soon, let's queue the message. */
+			sb->msgq = g_slist_append( sb->msgq, m );
+			return( 1 );
+		}
+	}
+	
+	debug( "Creating a new switchboard to message %s", m->who );
+	
+	/* If we reach this line, there was no spare switchboard, so let's make one. */
+	g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
+	if( !msn_write( ic, buf, strlen( buf ) ) )
+	{
+		g_free( m->who );
+		g_free( m->text );
+		g_free( m );
+		
+		return( 0 );
+	}
+	
+	/* And queue the message to md. We'll pick it up when the switchboard comes up. */
+	md->msgq = g_slist_append( md->msgq, m );
+	
+	/* FIXME: If the switchboard creation fails, the message will not be sent. */
+	
+	return( 1 );
+}
+
 struct msn_switchboard *msn_sb_create( struct im_connection *ic, char *host, int port, char *key, int session )
 {
 	struct msn_data *md = ic->proto_data;

@@ -233,3 +233,83 @@ void account_off( irc_t *irc, account_t *a )
 		cancel_auto_reconnect( a );
 	}
 }
+
+struct account_reconnect_delay
+{
+	int start;
+	char op;
+	int step;
+	int max;
+};
+
+int account_reconnect_delay_parse( char *value, struct account_reconnect_delay *p )
+{
+	memset( p, 0, sizeof( *p ) );
+	/* A whole day seems like a sane "maximum maximum". */
+	p->max = 86400;
+	
+	/* Format: /[0-9]+([*+][0-9]+(<[0-9+]))/ */
+	while( *value && isdigit( *value ) )
+		p->start = p->start * 10 + *value++ - '0';
+	
+	/* Sure, call me evil for implementing my own fscanf here, but it's
+	   dead simple and I'm immediately at the next part to parse. */
+	
+	if( *value == 0 )
+		/* If the string ends now, the delay is constant. */
+		return 1;
+	else if( *value != '+' && *value != '*' )
+		/* Otherwise allow either a + or a * */
+		return 0;
+	
+	p->op = *value++;
+	
+	/* + or * the delay by this number every time. */
+	while( *value && isdigit( *value ) )
+		p->step = p->step * 10 + *value++ - '0';
+	
+	if( *value == 0 )
+		/* Use the default maximum (one day). */
+		return 1;
+	else if( *value != '<' )
+		return 0;
+	
+	p->max = 0;
+	value ++;
+	while( *value && isdigit( *value ) )
+		p->max = p->max * 10 + *value++ - '0';
+	
+	return p->max > 0;
+}
+
+char *set_eval_account_reconnect_delay( set_t *set, char *value )
+{
+	struct account_reconnect_delay p;
+	
+	return account_reconnect_delay_parse( value, &p ) ? value : NULL;
+}
+
+int account_reconnect_delay( account_t *a )
+{
+	char *setting = set_getstr( &a->irc->set, "auto_reconnect_delay" );
+	struct account_reconnect_delay p;
+	
+	if( account_reconnect_delay_parse( setting, &p ) )
+	{
+		if( a->auto_reconnect_delay == 0 )
+			a->auto_reconnect_delay = p.start;
+		else if( p.op == '+' )
+			a->auto_reconnect_delay += p.step;
+		else if( p.op == '*' )
+			a->auto_reconnect_delay *= p.step;
+		
+		if( a->auto_reconnect_delay > p.max )
+			a->auto_reconnect_delay = p.max;
+	}
+	else
+	{
+		a->auto_reconnect_delay = 0;
+	}
+	
+	return a->auto_reconnect_delay;
+}
