@@ -28,6 +28,7 @@
 #include "msn.h"
 #include "passport.h"
 #include "md5.h"
+#include "invitation.h"
 
 static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition cond );
 static int msn_sb_command( gpointer data, char **cmd, int num_parts );
@@ -167,7 +168,16 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 		int i, j;
 		
 		/* Build the message. Convert LF to CR-LF for normal messages. */
-		if( strcmp( text, TYPING_NOTIFICATION_MESSAGE ) != 0 )
+		if( strcmp( text, TYPING_NOTIFICATION_MESSAGE ) == 0 )
+		{
+			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->acc->user );
+			buf = g_new0( char, i );
+			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->acc->user );
+		} else if( strncmp( text, MSN_INVITE_HEADERS, sizeof( MSN_INVITE_HEADERS ) - 1 ) == 0 ) 
+		{
+			buf = g_strdup( text );
+			i = strlen( buf );
+		} else
 		{
 			buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 + 1 );
 			i = strlen( MSN_MESSAGE_HEADERS );
@@ -180,12 +190,6 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 				
 				buf[i++] = text[j];
 			}
-		}
-		else
-		{
-			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->acc->user );
-			buf = g_new0( char, i );
-			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->acc->user );
 		}
 		
 		/* Build the final packet (MSG command + the message). */
@@ -686,62 +690,41 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 		}
 		else if( g_strncasecmp( ct, "text/x-msmsgsinvite", 19 ) == 0 )
 		{
-			char *itype = msn_findheader( body, "Application-GUID:", blen );
-			char buf[1024];
+			char *command = msn_findheader( body, "Invitation-Command:", blen );
+			char *cookie = msn_findheader( body, "Invitation-Cookie:", blen );
+			unsigned int icookie;
 			
 			g_free( ct );
 			
-			*buf = 0;
-			
-			if( !itype )
-				return( 1 );
-			
-			/* File transfer. */
-			if( strcmp( itype, "{5D3E02AB-6190-11d3-BBBB-00C04F795683}" ) == 0 )
-			{
-				char *name = msn_findheader( body, "Application-File:", blen );
-				char *size = msn_findheader( body, "Application-FileSize:", blen );
-				
-				if( name && size )
-				{
-					g_snprintf( buf, sizeof( buf ), "<< \x02""BitlBee\x02"" - Filetransfer: `%s', %s bytes >>\n"
-					            "Filetransfers are not supported by BitlBee for now...", name, size );
-				}
-				else
-				{
-					strcpy( buf, "<< \x02""BitlBee\x02"" - Corrupted MSN filetransfer invitation message >>" );
-				}
-				
-				if( name ) g_free( name );
-				if( size ) g_free( size );
-			}
-			else
-			{
-				char *iname = msn_findheader( body, "Application-Name:", blen );
-				
-				g_snprintf( buf, sizeof( buf ), "<< \x02""BitlBee\x02"" - Unknown MSN invitation - %s (%s) >>",
-				                                itype, iname ? iname : "no name" );
-				
-				if( iname ) g_free( iname );
+			/* Every invite should have both a Command and Cookie header */
+			if( !command || !cookie ) {
+				g_free( command );
+				g_free( cookie );
+				imcb_log( ic, "Warning: No command or cookie from %s", sb->who );
+				return 1;
 			}
 			
-			g_free( itype );
+			icookie = strtoul( cookie, NULL, 10 );
+			g_free( cookie );
 			
-			if( !*buf )
-				return( 1 );
+			if( g_strncasecmp( command, "INVITE", 6 ) == 0 ) {
+				msn_invitation_invite( sb, cmd[1], icookie, body, blen );
+			} else if( g_strncasecmp( command, "ACCEPT", 6 ) == 0 ) {
+				msn_invitation_accept( sb, cmd[1], icookie, body, blen );
+			} else if( g_strncasecmp( command, "CANCEL", 6 ) == 0 ) {
+				msn_invitation_cancel( sb, cmd[1], icookie, body, blen );
+			} else {
+				imcb_log( ic, "Warning: Received invalid invitation with "
+						"command %s from %s", command, sb->who );
+			}
 			
-			if( sb->who )
-			{
-				imcb_buddy_msg( ic, cmd[1], buf, 0, 0 );
-			}
-			else if( sb->chat )
-			{
-				imcb_chat_msg( sb->chat, cmd[1], buf, 0, 0 );
-			}
-			else
-			{
-				/* PANIC! */
-			}
+			g_free( command );
+		}
+		else if( g_strncasecmp( ct, "application/x-msnmsgrp2p", 24 ) == 0 ) 
+		{
+			imcb_error( sb->ic, "Cannot receive file from %s: BitlBee does not "
+					"support msnmsgrp2p yet.", sb->who );
+			g_free( ct );
 		}
 		else if( g_strncasecmp( ct, "text/x-msmsgscontrol", 20 ) == 0 )
 		{

@@ -76,6 +76,10 @@ static void msn_logout( struct im_connection *ic )
 	
 	if( md )
 	{
+		while( md->filetransfers ) {
+			imcb_file_canceled( md->filetransfers->data, "Closing msn connection" );
+		}
+		
 		if( md->fd >= 0 )
 			closesocket( md->fd );
 		
@@ -337,6 +341,7 @@ void msn_initmodule()
 	ret->rem_deny = msn_rem_deny;
 	ret->send_typing = msn_send_typing;
 	ret->handle_cmp = g_strcasecmp;
+	ret->transfer_request = msn_ftp_transfer_request;
 
 	register_protocol(ret);
 }
