@@ -702,7 +702,7 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 		/* number means ipv4, something else means ipv6 */
 		if ( pmatch[6].rm_so > 0 )
 		{
-			struct in_addr ipaddr = { .s_addr = htonl( atoi( input + pmatch[5].rm_so ) ) };
+			struct in_addr ipaddr = { .s_addr = htonl( strtoul( input + pmatch[5].rm_so, NULL, 10 ) ) };
 			host = inet_ntoa( ipaddr );
 		} else
 		{
