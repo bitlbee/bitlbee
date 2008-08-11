@@ -28,6 +28,20 @@
 #include "invitation.h"
 #include "msn.h"
 
+/* Some ifdefs for ulibc and apparently also BSD (Thanks to Whoopie) */
+#ifndef HOST_NAME_MAX
+#include <sys/param.h>
+#ifdef MAXHOSTNAMELEN
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#else
+#define HOST_NAME_MAX 255
+#endif
+#endif
+
+#ifndef AI_NUMERICSERV
+#define AI_NUMERICSERV 0x0400   /* Don't use name resolution.  */
+#endif
+
 #ifdef debug
 #undef debug
 #endif
