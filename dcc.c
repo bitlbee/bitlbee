@@ -28,20 +28,7 @@
 #include <poll.h>
 #include <netinet/tcp.h>
 #include <regex.h>
-
-/* Some ifdefs for ulibc (Thanks to Whoopie) */
-#ifndef HOST_NAME_MAX
-#include <sys/param.h>
-#ifdef MAXHOSTNAMELEN
-#define HOST_NAME_MAX MAXHOSTNAMELEN
-#else
-#define HOST_NAME_MAX 255
-#endif
-#endif
-
-#ifndef AI_NUMERICSERV
-#define AI_NUMERICSERV 0x0400   /* Don't use name resolution.  */
-#endif
+#include "lib/ftutil.h"
 
 /* 
  * Since that might be confusing a note on naming:
@@ -79,12 +66,12 @@ int max_packet_size = 0;
 static void dcc_finish( file_transfer_t *file );
 static void dcc_close( file_transfer_t *file );
 gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond );
-gboolean dcc_listen( dcc_file_transfer_t *df, struct sockaddr_storage **saddr_ptr );
 int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct sockaddr_storage *saddr );
 gboolean dccs_recv_start( file_transfer_t *ft );
 gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond);
 gboolean dccs_recv_write_request( file_transfer_t *ft );
 gboolean dcc_progress( gpointer data, gint fd, b_input_condition cond );
+gboolean dcc_abort( dcc_file_transfer_t *df, char *reason, ... );
 
 /* As defined in ft.h */
 file_transfer_t *imcb_file_send_start( struct im_connection *ic, char *handle, char *file_name, size_t file_size )
@@ -142,9 +129,12 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 {
 	file_transfer_t *file;
 	dcc_file_transfer_t *df;
-	struct sockaddr_storage *saddr;
+	struct sockaddr_storage saddr;
+	char *errmsg;
+	char host[INET6_ADDRSTRLEN];
+	char port[6];
 
-	if( file_size > global.conf->max_filetransfer_size )
+	if( file_size > global.conf->ft_max_size )
 		return NULL;
 	
 	df = dcc_alloc_transfer( file_name, file_size, ic );
@@ -152,11 +142,16 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 	file->write = dccs_send_write;
 
 	/* listen and request */
-	if( !dcc_listen( df, &saddr ) ||
-	    !dccs_send_request( df, user_nick, saddr ) )
-		return NULL;
 
-	g_free( saddr );
+	if( ( df->fd = ft_listen( &saddr, host, port, TRUE, &errmsg ) ) == -1 ) {
+		dcc_abort( df, "Failed to listen locally, check your ft_listen setting in bitlbee.conf: %s", errmsg );
+		return NULL;
+	}
+
+	file->status = FT_STATUS_LISTENING;
+
+	if( !dccs_send_request( df, user_nick, &saddr ) )
+		return NULL;
 
 	/* watch */
 	df->watch_in = b_input_add( df->fd, GAIM_INPUT_READ, dccs_send_proto, df );
@@ -257,50 +252,6 @@ int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct soc
 		return dcc_abort( df, "couldn't send 'DCC SEND' message to %s", user_nick );
 
 	g_free( cmd );
-
-	return TRUE;
-}
-
-/*
- * Creates a listening socket and returns it in saddr_ptr.
- */
-gboolean dcc_listen( dcc_file_transfer_t *df, struct sockaddr_storage **saddr_ptr )
-{
-	file_transfer_t *file = df->ft;
-	struct sockaddr_storage *saddr;
-	int fd,gret;
-	char hostname[ HOST_NAME_MAX + 1 ];
-	struct addrinfo hints, *rp;
-	socklen_t ssize = sizeof( struct sockaddr_storage );
-
-	/* won't be long till someone asks for this to be configurable :) */
-
-	ASSERTSOCKOP( gethostname( hostname, sizeof( hostname ) ), "gethostname()" );
-
-	memset( &hints, 0, sizeof( struct addrinfo ) );
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_NUMERICSERV;
-
-	if ( ( gret = getaddrinfo( hostname, "0", &hints, &rp ) != 0 ) )
-		return dcc_abort( df, "getaddrinfo(): %s", gai_strerror( gret ) );
-
-	saddr = g_new( struct sockaddr_storage, 1 );
-
-	*saddr_ptr = saddr;
-
-	memcpy( saddr, rp->ai_addr, rp->ai_addrlen );
-
-	ASSERTSOCKOP( fd = df->fd = socket( saddr->ss_family, SOCK_STREAM, 0 ), "Opening socket" );
-
-	ASSERTSOCKOP( bind( fd, ( struct sockaddr *)saddr, rp->ai_addrlen ), "Binding socket" );
-	
-	freeaddrinfo( rp );
-
-	ASSERTSOCKOP( getsockname( fd, ( struct sockaddr *)saddr, &ssize ), "Getting socket name" );
-
-	ASSERTSOCKOP( listen( fd, 1 ), "Making socket listen" );
-
-	file->status = FT_STATUS_LISTENING;
 
 	return TRUE;
 }

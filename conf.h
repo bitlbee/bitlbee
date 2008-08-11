@@ -49,7 +49,9 @@ typedef struct conf
 	int ping_interval;
 	int ping_timeout;
 	char *user;
-	size_t max_filetransfer_size;
+	size_t ft_max_size;
+	int ft_max_kbps;
+	char *ft_listen;
 } conf_t;
 
 G_GNUC_MALLOC conf_t *conf_load( int argc, char *argv[] );

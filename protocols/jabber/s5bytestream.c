@@ -23,21 +23,8 @@
 
 #include "jabber.h"
 #include "sha1.h"
+#include "lib/ftutil.h"
 #include <poll.h>
-
-/* Some ifdefs for ulibc (Thanks to Whoopie) */
-#ifndef HOST_NAME_MAX
-#include <sys/param.h>
-#ifdef MAXHOSTNAMELEN
-#define HOST_NAME_MAX MAXHOSTNAMELEN
-#else
-#define HOST_NAME_MAX 255
-#endif
-#endif
-
-#ifndef AI_NUMERICSERV
-#define AI_NUMERICSERV 0x0400   /* Don't use name resolution.  */
-#endif
 
 struct bs_transfer {
 
@@ -114,7 +101,6 @@ int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, stru
 gboolean jabber_bs_send_handshake_abort( struct bs_transfer *bt, char *error );
 gboolean jabber_bs_send_request( struct jabber_transfer *tf, GSList *streamhosts );
 gboolean jabber_bs_send_handshake( gpointer data, gint fd, b_input_condition cond );
-gboolean jabber_bs_send_listen( struct bs_transfer *bt, struct sockaddr_storage *saddr, char *host, char *port );
 static xt_status jabber_bs_send_handle_activate( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 void jabber_bs_send_activate( struct bs_transfer *bt );
 
@@ -901,7 +887,7 @@ void jabber_si_set_proxies( struct bs_transfer *bt )
 	struct jabber_transfer *tf = bt->tf;
 	struct jabber_data *jd = tf->ic->proto_data;
 	char *proxysetting = g_strdup ( set_getstr( &tf->ic->acc->set, "proxy" ) );
-	char *proxy,*next;
+	char *proxy, *next, *errmsg = NULL;
 	char port[6];
 	char host[INET6_ADDRSTRLEN];
 	jabber_streamhost_t *sh, *sh2;
@@ -912,15 +898,21 @@ void jabber_si_set_proxies( struct bs_transfer *bt )
 		if( ( next = strchr( proxy, ';' ) ) )
 			*next++ = '\0';	
 		
-		if( ( strcmp( proxy, "<local>" ) == 0 ) && jabber_bs_send_listen( bt, &tf->saddr, host, port ) ) {
-			sh = g_new0( jabber_streamhost_t, 1 );
-			sh->jid = g_strdup( tf->ini_jid );
-			sh->host = g_strdup( host );
-			strcpy( sh->port, port );
-			bt->streamhosts = g_slist_append( bt->streamhosts, sh );
+		if( strcmp( proxy, "<local>" ) == 0 ) {
+			if( ( tf->fd = ft_listen( &tf->saddr, host, port, FALSE, &errmsg ) ) != -1 ) {
+				sh = g_new0( jabber_streamhost_t, 1 );
+				sh->jid = g_strdup( tf->ini_jid );
+				sh->host = g_strdup( host );
+				strcpy( sh->port, port );
+				bt->streamhosts = g_slist_append( bt->streamhosts, sh );
 
-			bt->tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_send_handshake, bt );
-			bt->connect_timeout = b_timeout_add( JABBER_BS_LISTEN_TIMEOUT * 1000, jabber_bs_connect_timeout, bt );
+				bt->tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_send_handshake, bt );
+				bt->connect_timeout = b_timeout_add( JABBER_BS_LISTEN_TIMEOUT * 1000, jabber_bs_connect_timeout, bt );
+			} else {
+				imcb_log( tf->ic, "Transferring file %s: couldn't listen locally(non fatal, check your ft_listen setting in bitlbee.conf): %s",
+					  tf->ft->file_name,
+					  errmsg );
+			}
 		} else if( strcmp( proxy, "<auto>" ) == 0 ) {
 			while ( streamhosts ) {
 				sh = g_new0( jabber_streamhost_t, 1 );
@@ -1019,53 +1011,6 @@ gboolean jabber_bs_send_handshake_abort(struct bs_transfer *bt, char *error )
 		imcb_file_canceled( tf->ft, error );
 
 	return FALSE;
-}
-
-/*
- * Creates a listening socket and returns it in saddr_ptr.
- */
-gboolean jabber_bs_send_listen( struct bs_transfer *bt, struct sockaddr_storage *saddr, char *host, char *port )
-{
-	struct jabber_transfer *tf = bt->tf;
-	int fd,gret;
-	char hostname[ HOST_NAME_MAX + 1 ];
-	struct addrinfo hints, *rp;
-	socklen_t ssize = sizeof( struct sockaddr_storage );
-
-	/* won't be long till someone asks for this to be configurable :) */
-
-	ASSERTSOCKOP( gethostname( hostname, sizeof( hostname ) ), "gethostname()" );
-
-	memset( &hints, 0, sizeof( struct addrinfo ) );
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_NUMERICSERV;
-
-	if ( ( gret = getaddrinfo( hostname, "0", &hints, &rp ) ) != 0 )
-		return jabber_bs_abort( bt, "getaddrinfo() failed: %s", gai_strerror( gret ) );
-
-	memcpy( saddr, rp->ai_addr, rp->ai_addrlen );
-
-	ASSERTSOCKOP( fd = tf->fd = socket( saddr->ss_family, SOCK_STREAM, 0 ), "Opening socket" );
-
-	ASSERTSOCKOP( bind( fd, ( struct sockaddr *)saddr, rp->ai_addrlen ), "Binding socket" );
-	
-	freeaddrinfo( rp );
-
-	ASSERTSOCKOP( listen( fd, 1 ), "Making socket listen" );
-
-	if ( !inet_ntop( saddr->ss_family, saddr->ss_family == AF_INET ?
-			( void * )&( ( struct sockaddr_in * ) saddr )->sin_addr.s_addr : ( void * )&( ( struct sockaddr_in6 * ) saddr )->sin6_addr.s6_addr
-			, host, INET6_ADDRSTRLEN ) )
-		return jabber_bs_abort( bt, "inet_ntop failed on listening socket" );
-
-	ASSERTSOCKOP( getsockname( fd, ( struct sockaddr *)saddr, &ssize ), "Getting socket name" );
-
-	if( saddr->ss_family == AF_INET )
-		sprintf( port, "%d", ntohs( ( ( struct sockaddr_in *) saddr )->sin_port ) );
-	else
-		sprintf( port, "%d", ntohs( ( ( struct sockaddr_in6 *) saddr )->sin6_port ) );
-
-	return TRUE;
 }
 
 /*

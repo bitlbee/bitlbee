@@ -27,20 +27,7 @@
 #include "bitlbee.h"
 #include "invitation.h"
 #include "msn.h"
-
-/* Some ifdefs for ulibc and apparently also BSD (Thanks to Whoopie) */
-#ifndef HOST_NAME_MAX
-#include <sys/param.h>
-#ifdef MAXHOSTNAMELEN
-#define HOST_NAME_MAX MAXHOSTNAMELEN
-#else
-#define HOST_NAME_MAX 255
-#endif
-#endif
-
-#ifndef AI_NUMERICSERV
-#define AI_NUMERICSERV 0x0400   /* Don't use name resolution.  */
-#endif
+#include "lib/ftutil.h"
 
 #ifdef debug
 #undef debug
@@ -77,54 +64,6 @@ gboolean msn_ftp_abort( file_transfer_t *file, char *format, ... )
 #define ASSERTSOCKOP(op, msg) \
 	if( (op) == -1 ) \
 		return msn_ftp_abort( file , msg ": %s", strerror( errno ) );
-
-/*
- * Creates a listening socket and returns its address in host, port.
- */
-gboolean msn_ftp_listen( msn_filetransfer_t *msn_file, char *host, char *port )
-{
-	file_transfer_t *file = msn_file->dcc;
-        int fd,gret;
-        char hostname[ HOST_NAME_MAX + 1 ];
-        struct addrinfo hints, *rp;
-	struct sockaddr_storage saddrst, *saddr = &saddrst;
-        socklen_t ssize = sizeof( struct sockaddr_storage );
-
-        /* won't be long till someone asks for this to be configurable :) */
-
-        ASSERTSOCKOP( gethostname( hostname, sizeof( hostname ) ), "gethostname()" );
-
-        memset( &hints, 0, sizeof( struct addrinfo ) );
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_flags = AI_NUMERICSERV;
-
-        if ( ( gret = getaddrinfo( hostname, "0", &hints, &rp ) ) != 0 )
-                return msn_ftp_abort( file, "getaddrinfo() failed: %s", gai_strerror( gret ) );
-
-        memcpy( saddr, rp->ai_addr, rp->ai_addrlen );
-
-        ASSERTSOCKOP( fd = msn_file->fd = socket( saddr->ss_family, SOCK_STREAM, 0 ), "Opening socket" );
-
-        ASSERTSOCKOP( bind( fd, ( struct sockaddr *)saddr, rp->ai_addrlen ), "Binding socket" );
-
-        freeaddrinfo( rp );
-
-        ASSERTSOCKOP( listen( fd, 1 ), "Making socket listen" );
-
-        if ( !inet_ntop( saddr->ss_family, saddr->ss_family == AF_INET ?
-                        ( void * )&( ( struct sockaddr_in * ) saddr )->sin_addr.s_addr : ( void * )&( ( struct sockaddr_in6 * ) saddr )->sin6_addr.s6_addr
-                        , host, INET6_ADDRSTRLEN ) )
-                return msn_ftp_abort( file, "inet_ntop failed on listening socket" );
-
-        ASSERTSOCKOP( getsockname( fd, ( struct sockaddr *)saddr, &ssize ), "Getting socket name" );
-
-        if( saddr->ss_family == AF_INET )
-                sprintf( port, "%d", ntohs( ( ( struct sockaddr_in *) saddr )->sin_port ) );
-        else
-                sprintf( port, "%d", ntohs( ( ( struct sockaddr_in6 *) saddr )->sin6_port ) );
-
-        return TRUE;
-}
 
 void msn_ftp_invitation_cmd( struct im_connection *ic, char *who, int cookie, char *icmd,
 			     char *trailer )
@@ -281,11 +220,14 @@ void msn_invitations_accept( msn_filetransfer_t *msn_file, struct msn_switchboar
 	unsigned int acookie = time ( NULL );
 	char host[INET6_ADDRSTRLEN];
 	char port[6];
+	char *errmsg;
 
 	msn_file->auth_cookie = acookie;
 
-	if( !msn_ftp_listen( msn_file, host, port ) )
-	    return;
+	if( ( msn_file->fd = ft_listen( NULL, host, port, FALSE, &errmsg ) ) == -1 ) {
+		msn_ftp_abort( file, "Failed to listen locally, check your ft_listen setting in bitlbee.conf: %s", errmsg );
+		return;
+	}
 
 	msn_file->r_event_id = b_input_add( msn_file->fd, GAIM_INPUT_READ, msn_ftps_connected, file );
 

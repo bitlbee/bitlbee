@@ -10,7 +10,7 @@
 
 # Program variables
 objects = account.o bitlbee.o crypting.o help.o ipc.o irc.o irc_commands.o nick.o query.o root_commands.o set.o storage.o $(STORAGE_OBJS) user.o dcc.o
-headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h user.h lib/events.h lib/http_client.h lib/ini.h lib/md5.h lib/misc.h lib/proxy.h lib/sha1.h lib/ssl_client.h lib/url.h protocols/nogaim.h protocols/ft.h
+headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h user.h lib/events.h lib/http_client.h lib/ini.h lib/md5.h lib/misc.h lib/proxy.h lib/sha1.h lib/ssl_client.h lib/url.h protocols/nogaim.h protocols/ft.h lib/ftutil.h
 subdirs = lib protocols
 
 ifeq ($(TARGET),i586-mingw32msvc)
