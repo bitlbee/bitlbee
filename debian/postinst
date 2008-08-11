@@ -63,6 +63,13 @@ if [ -e /usr/share/bitlbee/help.upgrading ]; then
 	fi
 fi
 
+if ! grep -qi '^User *= *' /etc/bitlbee/bitlbee.conf; then
+	echo 'Updating configuration file, enabling User-setting...'
+	if ! sed -i -e 's/# *User *= *.*/User = bitlbee/i' /etc/bitlbee/bitlbee.conf; then
+		echo 'Failed! BitlBee may run as root now, please check your configs.'
+	fi
+fi
+
 if [ -n "$2" -a "$BITLBEE_UPGRADE_DONT_RESTART" != "1" ]; then
 	if which invoke-rc.d >/dev/null 2>&1; then
 		invoke-rc.d bitlbee restart

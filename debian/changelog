@@ -1,8 +1,15 @@
+bitlbee (1.2.1-2) unstable; urgency=low
+
+  * Properly set the User= line to something sensible so BitlBee won't
+    run as root anymore. 1.2-5 was a bad upload. :-( (Closes: #494656)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Tue, 12 Aug 2008 00:36:03 +0100
+
 bitlbee (1.2.1-1.1) unstable; urgency=low
 
   * Non-Maintainer Upload
   * Use invoke-rc.d as per policy. (Closes: #492637) [Thanks to Matt
-    Kraii]
+    Kraai]
 
  -- Don Armstrong <don@debian.org>  Wed, 06 Aug 2008 06:57:18 -0700
 
