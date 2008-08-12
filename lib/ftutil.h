@@ -21,4 +21,8 @@
 *                                                                           *
 \***************************************************************************/
 
+#ifndef AI_NUMERICSERV
+#define AI_NUMERICSERV 0x0400   /* Don't use name resolution.  */
+#endif
+
 int ft_listen( struct sockaddr_storage *saddr_ptr, char *host, char *port, int for_bitlbee_client, char **errptr );

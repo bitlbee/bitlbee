@@ -37,10 +37,6 @@
 #endif
 #endif
 
-#ifndef AI_NUMERICSERV
-#define AI_NUMERICSERV 0x0400   /* Don't use name resolution.  */
-#endif
-
 #define ASSERTSOCKOP(op, msg) \
 	if( (op) == -1 ) {\
 		sprintf( errmsg , msg ": %s", strerror( errno ) ); \

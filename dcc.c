@@ -668,6 +668,9 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 		filesize = atoll( input + pmatch[9].rm_so );
 
 		memset( &hints, 0, sizeof ( struct addrinfo ) );
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_NUMERICSERV;
+
 		if ( ( gret = getaddrinfo( host, port, &hints, &rp ) ) )
 		{
 			g_free( input );
