@@ -1,6 +1,8 @@
 -include config.mak
 
 VERSION = 0.6.0
+# oldest supported one
+BITLBEE_VERSION = 1.2.1
 
 AMVERSION = $(shell automake --version|sed 's/.* //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
 
@@ -53,6 +55,7 @@ doc: HEADER.html Changelog
 HEADER.html: README Makefile
 	asciidoc -a toc -a numbered -a sectids -o HEADER.html README
 	sed -i 's|@VERSION@|$(VERSION)|g' HEADER.html
+	sed -i 's|@BITLBEE_VERSION@|$(BITLBEE_VERSION)|g' HEADER.html
 
 Changelog: .git/refs/heads/master
 	git log --no-merges |git name-rev --tags --stdin >Changelog

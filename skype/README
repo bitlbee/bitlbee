@@ -29,8 +29,8 @@ not..)
 == Requirements
 
 * Skype >= 1.4.0.99. The latest version I've tested is 2.0.0.72.
-* BitlBee >= 1.2.1. Use old versions (<=0.5.1) if you have 1.2 or
-  1.1.1dev installed.
+* BitlBee >= @BITLBEE_VERSION@. Use old versions (0.5.1 or earlier) if
+  you have older BitlBee installed.
 * Skype4Py >= 0.9.28.7. Previous versions won't work due to API changes.
 
 NOTE: 1.x just does not work for me. I mailed the author but did not
@@ -83,12 +83,10 @@ and you have to install `bitlbee-skype` and `skype4py` from source.
 - You need the latest stable BitlBee release:
 
 ----
-$ wget http://get.bitlbee.org/src/bitlbee-1.2.tar.gz
-$ tar xf bitlbee-1.2.tar.gz
-$ cd bitlbee-1.2
+$ wget http://get.bitlbee.org/src/bitlbee-@BITLBEE_VERSION@.tar.gz
+$ tar xf bitlbee-@BITLBEE_VERSION@.tar.gz
+$ cd bitlbee-@BITLBEE_VERSION@
 ----
-
-NOTE: You no longer need additional patches, as of version 1.1.1dev.
 
 - Now compile and install it:
 
