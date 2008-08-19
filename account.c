@@ -78,7 +78,25 @@ char *set_eval_account( set_t *set, char *value )
 	if( set->flags & ACC_SET_OFFLINE_ONLY && acc->ic )
 		return NULL;
 	
-	if( strcmp( set->key, "username" ) == 0 )
+	if( strcmp( set->key, "server" ) == 0 )
+	{
+		g_free( acc->server );
+		if( value && *value )
+		{
+			acc->server = g_strdup( value );
+			return value;
+		}
+		else
+		{
+			acc->server = NULL;
+			return g_strdup( set->def );
+		}
+	}
+	else if( value == NULL )
+	{
+		/* Noop, the other three can't be NULL. */
+	}
+	else if( strcmp( set->key, "username" ) == 0 )
 	{
 		g_free( acc->user );
 		acc->user = g_strdup( value );
@@ -89,20 +107,6 @@ char *set_eval_account( set_t *set, char *value )
 		g_free( acc->pass );
 		acc->pass = g_strdup( value );
 		return NULL;	/* password shouldn't be visible in plaintext! */
-	}
-	else if( strcmp( set->key, "server" ) == 0 )
-	{
-		g_free( acc->server );
-		if( *value )
-		{
-			acc->server = g_strdup( value );
-			return value;
-		}
-		else
-		{
-			acc->server = NULL;
-			return g_strdup( set->def );
-		}
 	}
 	else if( strcmp( set->key, "auto_connect" ) == 0 )
 	{
