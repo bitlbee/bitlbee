@@ -609,6 +609,8 @@ static void cmd_rename( irc_t *irc, char **cmd )
 			g_free( irc->mynick );
 			irc->mynick = g_strdup( cmd[2] );
 			
+			/* If we're called internally (user did "set root_nick"),
+			   let's not go O(INF). :-) */
 			if( strcmp( cmd[0], "set_rename" ) != 0 )
 				set_setstr( &irc->set, "root_nick", cmd[2] );
 		}
@@ -632,7 +634,7 @@ char *set_eval_root_nick( set_t *set, char *new_nick )
 		cmd_rename( irc, cmd );
 	}
 	
-	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : NULL;
+	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : SET_INVALID;
 }
 
 static void cmd_remove( irc_t *irc, char **cmd )

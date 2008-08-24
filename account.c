@@ -76,7 +76,7 @@ char *set_eval_account( set_t *set, char *value )
 	
 	/* Double-check: We refuse to edit on-line accounts. */
 	if( set->flags & ACC_SET_OFFLINE_ONLY && acc->ic )
-		return NULL;
+		return SET_INVALID;
 	
 	if( strcmp( set->key, "server" ) == 0 )
 	{
@@ -88,13 +88,9 @@ char *set_eval_account( set_t *set, char *value )
 		}
 		else
 		{
-			acc->server = NULL;
+			acc->server = g_strdup( set->def );
 			return g_strdup( set->def );
 		}
-	}
-	else if( value == NULL )
-	{
-		/* Noop, the other three can't be NULL. */
 	}
 	else if( strcmp( set->key, "username" ) == 0 )
 	{
@@ -104,20 +100,29 @@ char *set_eval_account( set_t *set, char *value )
 	}
 	else if( strcmp( set->key, "password" ) == 0 )
 	{
-		g_free( acc->pass );
-		acc->pass = g_strdup( value );
-		return NULL;	/* password shouldn't be visible in plaintext! */
+		if( value )
+		{
+			g_free( acc->pass );
+			acc->pass = g_strdup( value );
+			return NULL;	/* password shouldn't be visible in plaintext! */
+		}
+		else
+		{
+			/* NULL can (should) be stored in the set_t
+			   variable, but is otherwise not correct. */
+			return SET_INVALID;
+		}
 	}
 	else if( strcmp( set->key, "auto_connect" ) == 0 )
 	{
 		if( !is_bool( value ) )
-			return NULL;
+			return SET_INVALID;
 		
 		acc->auto_connect = bool2int( value );
 		return value;
 	}
 	
-	return NULL;
+	return SET_INVALID;
 }
 
 account_t *account_get( irc_t *irc, char *id )
@@ -257,7 +262,7 @@ int account_reconnect_delay_parse( char *value, struct account_reconnect_delay *
 		p->start = p->start * 10 + *value++ - '0';
 	
 	/* Sure, call me evil for implementing my own fscanf here, but it's
-	   dead simple and I'm immediately at the next part to parse. */
+	   dead simple and I immediately know where to continue parsing. */
 	
 	if( *value == 0 )
 		/* If the string ends now, the delay is constant. */
@@ -290,7 +295,7 @@ char *set_eval_account_reconnect_delay( set_t *set, char *value )
 {
 	struct account_reconnect_delay p;
 	
-	return account_reconnect_delay_parse( value, &p ) ? value : NULL;
+	return account_reconnect_delay_parse( value, &p ) ? value : SET_INVALID;
 }
 
 int account_reconnect_delay( account_t *a )

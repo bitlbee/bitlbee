@@ -76,6 +76,7 @@ irc_t *irc_new( int fd )
 	irc_t *irc;
 	struct sockaddr_storage sock;
 	socklen_t socklen = sizeof( sock );
+	set_t *s;
 	
 	irc = g_new0( irc_t, 1 );
 	
@@ -135,28 +136,29 @@ irc_t *irc_new( int fd )
 
 	irc_connection_list = g_slist_append( irc_connection_list, irc );
 	
-	set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
-	set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
-	set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
-	set_add( &irc->set, "auto_reconnect_delay", "5*3<900", set_eval_account_reconnect_delay, irc );
-	set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
-	set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
-	set_add( &irc->set, "charset", "utf-8", set_eval_charset, irc );
-	set_add( &irc->set, "debug", "false", set_eval_bool, irc );
-	set_add( &irc->set, "default_target", "root", NULL, irc );
-	set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
-	set_add( &irc->set, "handle_unknown", "root", NULL, irc );
-	set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
-	set_add( &irc->set, "ops", "both", set_eval_ops, irc );
-	set_add( &irc->set, "password", NULL, passchange, irc );
-	set_add( &irc->set, "private", "true", set_eval_bool, irc );
-	set_add( &irc->set, "query_order", "lifo", NULL, irc );
-	set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
-	set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
-	set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
-	set_add( &irc->set, "strip_html", "true", NULL, irc );
-	set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
-	set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
+	s = set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "auto_reconnect_delay", "5*3<900", set_eval_account_reconnect_delay, irc );
+	s = set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
+	s = set_add( &irc->set, "charset", "utf-8", set_eval_charset, irc );
+	s = set_add( &irc->set, "debug", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "default_target", "root", NULL, irc );
+	s = set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "handle_unknown", "root", NULL, irc );
+	s = set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "ops", "both", set_eval_ops, irc );
+	s = set_add( &irc->set, "password", NULL, passchange, irc );
+	s->flags |= SET_NULL_OK;
+	s = set_add( &irc->set, "private", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "query_order", "lifo", NULL, irc );
+	s = set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
+	s = set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "strip_html", "true", NULL, irc );
+	s = set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
+	s = set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
 	
 	conf_loaddefaults( irc );
 	

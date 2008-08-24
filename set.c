@@ -25,6 +25,9 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
+/* Used to use NULL for this, but NULL is actually a "valid" value. */
+char *SET_INVALID = "nee";
+
 set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data )
 {
 	set_t *s = set_find( head, key );
@@ -113,9 +116,20 @@ int set_setstr( set_t **head, char *key, char *value )
 	char *nv = value;
 	
 	if( !s )
+		/*
+		Used to do this, but it never really made sense.
 		s = set_add( head, key, NULL, NULL, NULL );
+		*/
+		return 0;
 	
-	if( s->eval && !( nv = s->eval( s, value ) ) )
+	if( value == NULL && ( s->flags & SET_NULL_OK ) == 0 )
+		return 0;
+	
+	/* Call the evaluator. For invalid values, evaluators should now
+	   return SET_INVALID, but previously this was NULL. Try to handle
+	   that too if NULL is not an allowed value for this setting. */
+	if( s->eval && ( ( nv = s->eval( s, value ) ) == SET_INVALID ||
+	                 ( ( s->flags & SET_NULL_OK ) == 0 && nv == NULL ) ) )
 		return 0;
 	
 	if( s->value )
@@ -186,14 +200,14 @@ char *set_eval_int( set_t *set, char *value )
 	
 	for( ; *s; s ++ )
 		if( !isdigit( *s ) )
-			return NULL;
+			return SET_INVALID;
 	
 	return value;
 }
 
 char *set_eval_bool( set_t *set, char *value )
 {
-	return is_bool( value ) ? value : NULL;
+	return is_bool( value ) ? value : SET_INVALID;
 }
 
 char *set_eval_to_char( set_t *set, char *value )
@@ -225,7 +239,7 @@ char *set_eval_ops( set_t *set, char *value )
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "-oo", irc->nick, irc->mynick );
 	else
-		return NULL;
+		return SET_INVALID;
 	
 	return value;
 }

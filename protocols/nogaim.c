@@ -927,14 +927,10 @@ char *set_eval_away_devoice( set_t *set, char *value )
 	irc_t *irc = set->data;
 	int st;
 	
-	if( ( g_strcasecmp( value, "true" ) == 0 ) || ( g_strcasecmp( value, "yes" ) == 0 ) || ( g_strcasecmp( value, "on" ) == 0 ) )
-		st = 1;
-	else if( ( g_strcasecmp( value, "false" ) == 0 ) || ( g_strcasecmp( value, "no" ) == 0 ) || ( g_strcasecmp( value, "off" ) == 0 ) )
-		st = 0;
-	else if( sscanf( value, "%d", &st ) != 1 )
-		return( NULL );
+	if( !is_bool( value ) )
+		return SET_INVALID;
 	
-	st = st != 0;
+	st = bool2int( value );
 	
 	/* Horror.... */
 	
@@ -978,7 +974,7 @@ char *set_eval_away_devoice( set_t *set, char *value )
 		                                            irc->channel, pm, v, list );
 	}
 	
-	return( set_eval_bool( set, value ) );
+	return value;
 }
 
 
