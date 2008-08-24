@@ -91,7 +91,7 @@ G_MODULE_EXPORT int set_getbool( set_t **head, char *key );
 int set_setstr( set_t **head, char *key, char *value );
 int set_setint( set_t **head, char *key, int value );
 void set_del( set_t **head, char *key );
-void set_reset( set_t **head, char *key );
+int set_reset( set_t **head, char *key );
 
 /* Two very useful generic evaluators. */
 char *set_eval_int( set_t *set, char *value );

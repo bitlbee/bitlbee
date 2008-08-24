@@ -33,13 +33,19 @@ static gboolean irc_userping( gpointer _irc, int fd, b_input_condition cond );
 
 GSList *irc_connection_list = NULL;
 
-static char *passchange( set_t *set, char *value )
+static char *set_eval_password( set_t *set, char *value )
 {
 	irc_t *irc = set->data;
 	
-	irc_setpass( irc, value );
-	irc_usermsg( irc, "Password successfully changed" );
-	return NULL;
+	if( irc->status & USTATUS_IDENTIFIED )
+	{
+		irc_setpass( irc, value );
+		return NULL;
+	}
+	else
+	{
+		return SET_INVALID;
+	}
 }
 
 static char *set_eval_charset( set_t *set, char *value )
@@ -149,7 +155,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "handle_unknown", "root", NULL, irc );
 	s = set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "ops", "both", set_eval_ops, irc );
-	s = set_add( &irc->set, "password", NULL, passchange, irc );
+	s = set_add( &irc->set, "password", NULL, set_eval_password, irc );
 	s->flags |= SET_NULL_OK;
 	s = set_add( &irc->set, "private", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "query_order", "lifo", NULL, irc );

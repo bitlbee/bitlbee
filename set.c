@@ -181,13 +181,15 @@ void set_del( set_t **head, char *key )
 	}
 }
 
-void set_reset( set_t **head, char *key )
+int set_reset( set_t **head, char *key )
 {
 	set_t *s;
 	
 	s = set_find( head, key );
 	if( s )
-		set_setstr( head, key, s->def );
+		return set_setstr( head, key, s->def );
+	
+	return 0;
 }
 
 char *set_eval_int( set_t *set, char *value )

@@ -237,6 +237,16 @@ void cmd_account_del_no( void *data )
 	g_free( data );
 }
 
+static void cmd_showset( irc_t *irc, set_t *set )
+{
+	char *s;
+	
+	if( set && ( s = set_getstr( &set, set->key ) ) ) /* HACK! */
+		irc_usermsg( irc, "%s = `%s'", set->key, s );
+	else
+		irc_usermsg( irc, "%s is empty", set->key );
+}
+
 static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
@@ -444,6 +454,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 		if( cmd[3] && set_name )
 		{
 			set_t *s = set_find( &a->set, set_name );
+			int st;
 			
 			if( a->ic && s && s->flags & ACC_SET_OFFLINE_ONLY )
 			{
@@ -459,27 +470,32 @@ static void cmd_account( irc_t *irc, char **cmd )
 			}
 			
 			if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
-				set_reset( &a->set, set_name );
+				st = set_reset( &a->set, set_name );
 			else
-				set_setstr( &a->set, set_name, cmd[3] );
+				st = set_setstr( &a->set, set_name, cmd[3] );
+			
+			if( set_getstr( &a->set, set_name ) == NULL )
+			{
+				if( st )
+					irc_usermsg( irc, "Setting changed successfully" );
+				else
+					irc_usermsg( irc, "Failed to change setting" );
+			}
+			else
+			{
+				cmd_showset( irc, set_find( &a->set, set_name ) );
+			}
 		}
-		if( set_name ) /* else 'forgotten' on purpose.. Must show new value after changing */
+		else if( set_name )
 		{
-			char *s = set_getstr( &a->set, set_name );
-			if( s )
-				irc_usermsg( irc, "%s = `%s'", set_name, s );
-			else
-				irc_usermsg( irc, "%s is empty", set_name );
+			cmd_showset( irc, set_find( &a->set, set_name ) );
 		}
 		else
 		{
 			set_t *s = a->set;
 			while( s )
 			{
-				if( s->value || s->def )
-					irc_usermsg( irc, "%s = `%s'", s->key, s->value ? s->value : s->def );
-				else
-					irc_usermsg( irc, "%s is empty", s->key );
+				cmd_showset( irc, s );
 				s = s->next;
 			}
 		}
@@ -822,23 +838,37 @@ static void cmd_set( irc_t *irc, char **cmd )
 	
 	if( cmd[1] && cmd[2] )
 	{
+		int st;
+		
 		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
 		{
-			set_reset( &irc->set, cmd[2] );
+			st = set_reset( &irc->set, cmd[2] );
 			set_name = cmd[2];
 		}
 		else
 		{
-			set_setstr( &irc->set, cmd[1], cmd[2] );
+			st = set_setstr( &irc->set, cmd[1], cmd[2] );
+		}
+		
+		/* Normally we just show the variable's new/unchanged
+		   value as feedback to the user, but this has always
+		   caused confusion when changing the password. Give
+		   other feedback instead: */
+		if( set_getstr( &irc->set, set_name ) == NULL )
+		{
+			if( st )
+				irc_usermsg( irc, "Setting changed successfully" );
+			else
+				irc_usermsg( irc, "Failed to change setting" );
+		}
+		else
+		{
+			cmd_showset( irc, set_find( &irc->set, set_name ) );
 		}
 	}
-	if( set_name ) /* else 'forgotten' on purpose.. Must show new value after changing */
+	else if( set_name )
 	{
-		char *s = set_getstr( &irc->set, set_name );
- 		if( s )
-			irc_usermsg( irc, "%s = `%s'", set_name, s );
-		else
-			irc_usermsg( irc, "%s is empty", set_name );
+		cmd_showset( irc, set_find( &irc->set, set_name ) );
 
 		if( strchr( set_name, '/' ) )
 			irc_usermsg( irc, "Warning: / found in setting name, you're probably looking for the `account set' command." );
@@ -848,10 +878,7 @@ static void cmd_set( irc_t *irc, char **cmd )
 		set_t *s = irc->set;
 		while( s )
 		{
-			if( s->value || s->def )
-				irc_usermsg( irc, "%s = `%s'", s->key, s->value ? s->value : s->def );
-			else
-				irc_usermsg( irc, "%s is empty", s->key );
+			cmd_showset( irc, s );
 			s = s->next;
 		}
 	}
