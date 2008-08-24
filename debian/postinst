@@ -79,7 +79,7 @@ if [ -n "$2" -a "$BITLBEE_UPGRADE_DONT_RESTART" != "1" ]; then
 fi
 
 ## If we're upgrading, we'll probably skip this next part
-if [ -d $CONFDIR ] && chown -R bitlbee $CONFDIR; then
+if [ -d $CONFDIR ] && chown -R bitlbee: $CONFDIR; then
 	echo 'BitlBee (probably) already installed, skipping user/configdir installation'
 	exit 0
 fi
