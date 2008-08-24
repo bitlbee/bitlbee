@@ -30,8 +30,11 @@
 #include "md5.h"
 #include <glib/gstdio.h>
 
-#if !GLIB_CHECK_VERSION(2,8,0)
+#if GLIB_CHECK_VERSION(2,8,0)
+#include <glib/gstdio.h>
+#else
 /* GLib < 2.8.0 doesn't have g_access, so just use the system access(). */
+#include <unistd.h>
 #define g_access access
 #endif
 
