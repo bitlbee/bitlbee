@@ -237,14 +237,14 @@ void cmd_account_del_no( void *data )
 	g_free( data );
 }
 
-static void cmd_showset( irc_t *irc, set_t *set )
+static void cmd_showset( irc_t *irc, set_t **head, char *key )
 {
-	char *s;
+	char *val;
 	
-	if( set && ( s = set_getstr( &set, set->key ) ) ) /* HACK! */
-		irc_usermsg( irc, "%s = `%s'", set->key, s );
+	if( ( val = set_getstr( head, key ) ) )
+		irc_usermsg( irc, "%s = `%s'", key, val );
 	else
-		irc_usermsg( irc, "%s is empty", set->key );
+		irc_usermsg( irc, "%s is empty", key );
 }
 
 static void cmd_account( irc_t *irc, char **cmd )
@@ -483,19 +483,19 @@ static void cmd_account( irc_t *irc, char **cmd )
 			}
 			else
 			{
-				cmd_showset( irc, set_find( &a->set, set_name ) );
+				cmd_showset( irc, &a->set, set_name );
 			}
 		}
 		else if( set_name )
 		{
-			cmd_showset( irc, set_find( &a->set, set_name ) );
+			cmd_showset( irc, &a->set, set_name );
 		}
 		else
 		{
 			set_t *s = a->set;
 			while( s )
 			{
-				cmd_showset( irc, s );
+				cmd_showset( irc, &s, s->key );
 				s = s->next;
 			}
 		}
@@ -863,12 +863,12 @@ static void cmd_set( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			cmd_showset( irc, set_find( &irc->set, set_name ) );
+			cmd_showset( irc, &irc->set, set_name );
 		}
 	}
 	else if( set_name )
 	{
-		cmd_showset( irc, set_find( &irc->set, set_name ) );
+		cmd_showset( irc, &irc->set, set_name );
 
 		if( strchr( set_name, '/' ) )
 			irc_usermsg( irc, "Warning: / found in setting name, you're probably looking for the `account set' command." );
@@ -878,7 +878,7 @@ static void cmd_set( irc_t *irc, char **cmd )
 		set_t *s = irc->set;
 		while( s )
 		{
-			cmd_showset( irc, s );
+			cmd_showset( irc, &s, s->key );
 			s = s->next;
 		}
 	}
