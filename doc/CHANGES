@@ -3,6 +3,20 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 1.2.2:
+- Security bugfix: It was possible to hijack accounts (without gaining access
+  to the old account, it's simply an overwrite)
+- Some more stability improvements.
+- Fixed bug where people with non-lowercase nicks couldn't drop their account.
+- Easier upgrades of non-forking daemon mode servers (using the DEAF
+  command).
+- Can be cross-compiled for Win32 now! (No support for SSL yet though, which
+  makes it less useful for now.)
+- Exponential backoff on auto-reconnect.
+- Changing passwords gives less confusing feedback ("password is empty") now.
+
+Finished 26 Aug 2008
+
 Version 1.2.1:
 - Fixed proxy support.
 - Fixed stalling issues while connecting to Jabber when using the OpenSSL
