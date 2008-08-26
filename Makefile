@@ -104,7 +104,7 @@ tar:
 	fakeroot debian/rules clean || make distclean
 	x=$$(basename $$(pwd)); \
 	cd ..; \
-	tar czf $$x.tar.gz --exclude=debian --exclude=.bzr $$x
+	tar czf $$x.tar.gz --exclude=debian --exclude=.bzr* $$x
 
 $(subdirs):
 	@$(MAKE) -C $@ $(MAKECMDGOALS)
