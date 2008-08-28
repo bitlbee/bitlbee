@@ -1,0 +1,13 @@
+=== modified file 'bitlbee.conf'
+--- debian/bitlbee/etc/bitlbee/bitlbee.conf	2008-08-26 22:33:54 +0000
++++ debian/bitlbee/etc/bitlbee/bitlbee.conf	2008-08-27 23:18:13 +0000
+@@ -23,7 +23,7 @@
+ ## If BitlBee is started by root as a daemon, it can drop root privileges,
+ ## and change to the specified user.
+ ##
+-# User = bitlbee
++User = bitlbee
+ 
+ ## DaemonPort/DaemonInterface:
+ ##
+
