@@ -267,7 +267,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 			return;
 		}
 		
-		prpl = find_protocol(cmd[2]);
+		prpl = find_protocol( cmd[2] );
 		
 		if( prpl == NULL )
 		{
@@ -504,7 +504,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		irc_usermsg( irc, "Unknown command: account %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[1] );
+		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "account", cmd[1] );
 	}
 }
 
@@ -1002,6 +1002,58 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 
 static void cmd_join_chat( irc_t *irc, char **cmd )
 {
+	irc_usermsg( irc, "This command is now obsolete. "
+	                  "Please try the `chat' command instead." );
+}
+
+static void cmd_chat( irc_t *irc, char **cmd )
+{
+	account_t *acc;
+	struct chat *c;
+	
+	if( g_strcasecmp( cmd[1], "add" ) == 0 )
+	{
+		if( !( cmd[2] && cmd[3] && cmd[4] ) )
+		{
+			irc_usermsg( irc, "Not enough parameters given (need %d)", 4 );
+			return;
+		}
+		
+		if( !( acc = account_get( irc, cmd[2] ) ) )
+		{
+			irc_usermsg( irc, "Invalid account" );
+			return;
+		}
+		
+		if( ( c = chat_add( irc, acc, cmd[3], cmd[4] ) ) )
+			irc_usermsg( irc, "Chatroom added successfully." );
+		else
+			irc_usermsg( irc, "Could not add chatroom." );
+	}
+	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
+	{
+		int i = 0;
+		
+		if( strchr( irc->umode, 'b' ) )
+			irc_usermsg( irc, "Chatroom list:" );
+		
+		for( c = irc->chatrooms; c; c = c->next )
+		{
+			irc_usermsg( irc, "%2d. %s(%s) %s, %s", i, c->acc->prpl->name,
+			                  c->acc->user, c->handle, c->channel );
+			
+			i ++;
+		}
+		irc_usermsg( irc, "End of chatroom list" );
+	}
+	else
+	{
+		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat", cmd[1] );
+	}
+
+
+
+#if 0
 	account_t *a;
 	struct im_connection *ic;
 	char *chat, *channel, *nick = NULL, *password = NULL;
@@ -1070,6 +1122,7 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Tried to join chat, not sure if this was successful" );
 		g_free( channel );
 	}
+#endif
 }
 
 const command_t commands[] = {
@@ -1092,5 +1145,6 @@ const command_t commands[] = {
 	{ "nick",           1, cmd_nick,           0 },
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "join_chat",      2, cmd_join_chat,      0 },
+	{ "chat",           1, cmd_chat,           0 },
 	{ NULL }
 };
