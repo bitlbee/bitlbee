@@ -85,6 +85,41 @@ struct chat *chat_bychannel( irc_t *irc, char *channel )
 	return c;
 }
 
+struct chat *chat_get( irc_t *irc, char *id )
+{
+	struct chat *c, *ret = NULL;
+	int nr;
+	
+	if( sscanf( id, "%d", &nr ) == 1 && nr < 1000 )
+	{
+		for( c = irc->chatrooms; c; c = c->next )
+			if( ( nr-- ) == 0 )
+				return c;
+		
+		return NULL;
+	}
+	
+	for( c = irc->chatrooms; c; c = c->next )
+	{
+		if( strstr( c->handle, id ) )
+		{
+			if( !ret )
+				ret = c;
+			else
+				return NULL;
+		}
+		else if( strstr( c->channel, id ) )
+		{
+			if( !ret )
+				ret = c;
+			else
+				return NULL;
+		}
+	}
+	
+	return ret;
+}
+
 int chat_chancmp( char *a, char *b )
 {
 	if( !chat_chanok( a ) || !chat_chanok( b ) )
