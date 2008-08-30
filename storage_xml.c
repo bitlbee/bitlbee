@@ -28,7 +28,6 @@
 #include "base64.h"
 #include "arc.h"
 #include "md5.h"
-#include <glib/gstdio.h>
 
 #if GLIB_CHECK_VERSION(2,8,0)
 #include <glib/gstdio.h>
@@ -54,6 +53,8 @@ struct xml_parsedata
 	irc_t *irc;
 	char *current_setting;
 	account_t *current_account;
+	struct chat *current_chat;
+	set_t **current_set_head;
 	char *given_nick;
 	char *given_pass;
 	xml_pass_st pass_st;
@@ -172,7 +173,16 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		}
 		
 		if( ( setting = xml_attr( attr_names, attr_values, "name" ) ) )
+		{
+			if( xd->current_chat != NULL )
+				xd->current_set_head = &xd->current_chat->set;
+			else if( xd->current_account != NULL )
+				xd->current_set_head = &xd->current_account->set;
+			else
+				xd->current_set_head = &xd->irc->set;
+			
 			xd->current_setting = g_strdup( setting );
+		}
 		else
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Missing attributes for %s element", element_name );
@@ -187,6 +197,23 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		if( xd->current_account && handle && nick )
 		{
 			nick_set( xd->current_account, handle, nick );
+		}
+		else
+		{
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Missing attributes for %s element", element_name );
+		}
+	}
+	else if( g_strcasecmp( element_name, "chat" ) == 0 )
+	{
+		char *handle, *channel;
+		
+		handle = xml_attr( attr_names, attr_values, "handle" );
+		channel = xml_attr( attr_names, attr_values, "channel" );
+		
+		if( xd->current_account && handle && channel )
+		{
+			xd->current_chat = chat_add( xd->irc, xd->current_account, handle, channel );
 		}
 		else
 		{
@@ -214,13 +241,16 @@ static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name
 	{
 		xd->current_account = NULL;
 	}
+	else if( g_strcasecmp( element_name, "chat" ) == 0 )
+	{
+		xd->current_chat = NULL;
+	}
 }
 
 static void xml_text( GMarkupParseContext *ctx, const gchar *text_orig, gsize text_len, gpointer data, GError **error )
 {
 	char text[text_len+1];
 	struct xml_parsedata *xd = data;
-	irc_t *irc = xd->irc;
 	
 	strncpy( text, text_orig, text_len );
 	text[text_len] = 0;
@@ -233,8 +263,7 @@ static void xml_text( GMarkupParseContext *ctx, const gchar *text_orig, gsize te
 	}
 	else if( g_strcasecmp( g_markup_parse_context_get_element( ctx ), "setting" ) == 0 && xd->current_setting )
 	{
-		set_setstr( xd->current_account ? &xd->current_account->set : &irc->set,
-		            xd->current_setting, (char*) text );
+		set_setstr( xd->current_set_head, xd->current_setting, (char*) text );
 		g_free( xd->current_setting );
 		xd->current_setting = NULL;
 	}
