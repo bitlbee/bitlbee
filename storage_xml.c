@@ -437,7 +437,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	g_free( pass_buf );
 	
 	for( set = irc->set; set; set = set->next )
-		if( set->value && set->def )
+		if( set->value )
 			if( !xml_printf( fd, 1, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
 				goto write_error;
 	
@@ -446,6 +446,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		unsigned char *pass_cr;
 		char *pass_b64;
 		int pass_len;
+		struct chat *c;
 		
 		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password, 12 );
 		pass_b64 = base64_encode( pass_cr, pass_len );
@@ -464,7 +465,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 			goto write_error;
 		
 		for( set = acc->set; set; set = set->next )
-			if( set->value && set->def && !( set->flags & ACC_SET_NOSAVE ) )
+			if( set->value && !( set->flags & ACC_SET_NOSAVE ) )
 				if( !xml_printf( fd, 2, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
 					goto write_error;
 		
@@ -477,6 +478,25 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		   something, there was an error. :-) */
 		if( g_hash_table_find( acc->nicks, xml_save_nick, & fd ) )
 			goto write_error;
+		
+		for( c = irc->chatrooms; c; c = c->next )
+		{
+			if( c->acc != acc )
+				continue;
+			
+			if( !xml_printf( fd, 2, "<chat handle=\"%s\" channel=\"%s\" type=\"%s\">\n",
+			                        c->handle, c->channel, "room" ) )
+				goto write_error;
+			
+			for( set = c->set; set; set = set->next )
+				if( set->value && !( set->flags & ACC_SET_NOSAVE ) )
+					if( !xml_printf( fd, 3, "<setting name=\"%s\">%s</setting>\n",
+					                        set->key, set->value ) )
+						goto write_error;
+
+			if( !xml_printf( fd, 2, "</chat>\n" ) )
+				goto write_error;
+		}
 		
 		if( !xml_printf( fd, 1, "</account>\n" ) )
 			goto write_error;
