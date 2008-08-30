@@ -128,6 +128,7 @@
 #include "commands.h"
 #include "account.h"
 #include "nick.h"
+#include "chat.h"
 #include "conf.h"
 #include "log.h"
 #include "ini.h"

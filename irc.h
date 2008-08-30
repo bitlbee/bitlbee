@@ -47,11 +47,6 @@ typedef enum
 	USTATUS_SHUTDOWN = 8
 } irc_status_t;
 
-typedef struct channel
-{
-	char *name;
-} channel_t;
-
 typedef struct irc
 {
 	int fd;
@@ -86,6 +81,7 @@ typedef struct irc
 	
 	struct query *queries;
 	struct account *accounts;
+	struct chat *chatrooms;
 	
 	struct __USER *users;
 	GHashTable *userhash;
