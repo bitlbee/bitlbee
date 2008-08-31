@@ -80,9 +80,9 @@ void root_command_string( irc_t *irc, user_t *u, char *command, int flags )
 #define MIN_ARGS( x, y... )                                                    \
 	do                                                                     \
 	{                                                                      \
-		int i;                                                         \
-		for( i = 1; i <= x; i ++ )                                     \
-			if( cmd[i] == NULL )                                   \
+		int blaat;                                                     \
+		for( blaat = 0; blaat <= x; blaat ++ )                         \
+			if( cmd[blaat] == NULL )                               \
 			{                                                      \
 				irc_usermsg( irc, "Not enough parameters given (need %d).", x ); \
 				return y;                                      \
@@ -1007,7 +1007,9 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	
 	if( g_strcasecmp( cmd[1], "add" ) == 0 )
 	{
-		MIN_ARGS( 4 );
+		char *channel, *s;
+		
+		MIN_ARGS( 3 );
 		
 		if( !( acc = account_get( irc, cmd[2] ) ) )
 		{
@@ -1015,10 +1017,30 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			return;
 		}
 		
-		if( ( c = chat_add( irc, acc, cmd[3], cmd[4] ) ) )
+		if( cmd[4] == NULL )
+		{
+			channel = g_strdup( cmd[3] );
+			if( ( s = strchr( channel, '@' ) ) )
+				*s = 0;
+		}
+		else
+		{
+			channel = g_strdup( cmd[4] );
+		}
+		
+		if( strchr( CTYPES, channel[0] ) == NULL )
+		{
+			s = g_strdup_printf( "%c%s", CTYPES[0], channel );
+			g_free( channel );
+			channel = s;
+		}
+		
+		if( ( c = chat_add( irc, acc, cmd[3], channel ) ) )
 			irc_usermsg( irc, "Chatroom added successfully." );
 		else
 			irc_usermsg( irc, "Could not add chatroom." );
+		
+		g_free( channel );
 	}
 	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
 	{
