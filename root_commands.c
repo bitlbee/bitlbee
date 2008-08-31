@@ -301,6 +301,8 @@ static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead )
 		int st;
 		
 		/*
+		FIXME: Make these work again. Probably a gross hack.
+		
 		if( a->ic && s && s->flags & ACC_SET_OFFLINE_ONLY )
 		{
 			irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );

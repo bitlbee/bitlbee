@@ -33,6 +33,9 @@ struct chat *chat_add( irc_t *irc, account_t *acc, char *handle, char *channel )
 	if( !chat_chanok( channel ) )
 		return NULL;
 	
+	if( chat_chancmp( channel, irc->channel ) == 0 )
+		return NULL;
+	
 	for( c = irc->chatrooms; c; c = c->next )
 	{
 		if( chat_chancmp( channel, c->channel ) == 0 )
