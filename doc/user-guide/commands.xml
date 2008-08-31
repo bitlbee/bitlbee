@@ -955,28 +955,4 @@
 		</ircexample>
 
 	</bitlbee-command>
-
-	<bitlbee-command name="join_chat">
-		<short-description>Join a named groupchat/conference room</short-description>
-		<syntax>join_chat &lt;connection&gt; &lt;room name&gt; [&lt;channel name&gt;] [&lt;room nickname&gt;] [&lt;password&gt;]</syntax>
-
-		<description>
-			<para>
-				On most IM-networks groupchats can be started using the /join command. (<emphasis>/join #foo</emphasis> to start a chatroom with you and <emphasis>foo</emphasis>) This doesn't work with names groupchats though (which exist on Jabber networks and AIM, for example), instead you can use this command.
-			</para>
-
-			<para>
-				The first two arguments are required. <emphasis>room name</emphasis> is the name of the chatroom on the IM-network. <emphasis>channel name</emphasis> is the IRC channel name BitlBee should map this to. <emphasis>room nickname</emphasis> is the nickname you want to have in this channel. If you don't give these options, BitlBee will do the right guesses.
-			</para>
-
-			<para>
-				The following command will join you to the chatroom called <emphasis>bitlbee@conference.bitlbee.org</emphasis>. The channel will be called <emphasis>&amp;bitlbee-help</emphasis> because <emphasis>&amp;bitlbee</emphasis> will already be in use. Your nickname will be <emphasis>help-me</emphasis>.
-			</para>
-		</description>
-
-		<ircexample>
-			<ircline nick="wilmer">join_chat jabber bitlbee@conference.bitlbee.org &amp;bitlbee-help help-me</ircline>
-		</ircexample>
-
-	</bitlbee-command>
 </chapter>
