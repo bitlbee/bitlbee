@@ -124,7 +124,7 @@
 
 			<description>
 				<para>
-					This command gives you a list of all the accounts known by BitlBee, including the numbers you'll need for most account commands.
+					This command gives you a list of all the accounts known by BitlBee.
 				</para>
 			</description>
 		</bitlbee-command>
@@ -137,15 +137,98 @@
 
 			<description>
 				<para>
-					This account can be used to change various settings for IM accounts. For all protocols, this command can be used to change the handle or the password BitlBee uses to log in and if it should be logged in automatically. Some protocols have additional settings. You can see the settings available for a connection by typing <emphasis>account set &lt;account id&gt;</emphasis>.
+					This command can be used to change various settings for IM accounts. For all protocols, this command can be used to change the handle or the password BitlBee uses to log in and if it should be logged in automatically. Some protocols have additional settings. You can see the settings available for a connection by typing <emphasis>account set &lt;account id&gt;</emphasis>.
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>. For details about the syntax of this command, see <emphasis>help set</emphasis>.
+					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
 				
 				<para>
 					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
+				</para>
+			</description>
+		</bitlbee-command>
+	</bitlbee-command>
+
+	<bitlbee-command name="chat">
+		<short-description>Chatroom list maintenance</short-description>
+		<syntax>chat &lt;action&gt; [&lt;arguments&gt;]</syntax>
+
+		<description>
+
+			<para>
+				Available actions: add, del, list, with and set. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
+			</para>
+
+		</description>
+
+		<bitlbee-command name="add">
+			<syntax>chat add &lt;account&gt; &lt;room&gt; [&lt;channel&gt;]</syntax>
+
+			<description>
+				<para>
+					Add a chatroom to the list of chatrooms you're interested in. BitlBee needs this list to map room names to a proper IRC channel name.
+				</para>
+
+				<para>
+					After adding a room to your list, you can simply use the IRC /join command to enter the room. Also, you can tell BitlBee to automatically join the room when you log in. (See <emphasis>chat set</emphasis>)
+				</para>
+			</description>
+
+		</bitlbee-command>
+
+		<bitlbee-command name="del">
+			<syntax>chat del &lt;chat id&gt;</syntax>
+
+			<description>
+				<para>
+					This commands deletes an chatroom from your list.
+				</para>
+
+				<para>
+					The room ID can be a number (see <emphasis>chat list</emphasis>), or (part of) the name of the room/channel.
+				</para>
+			</description>
+		</bitlbee-command>
+
+		<bitlbee-command name="list">
+			<syntax>chat list</syntax>
+
+			<description>
+				<para>
+					This command gives you a list of all the chatrooms known by BitlBee.
+				</para>
+			</description>
+		</bitlbee-command>
+
+		<bitlbee-command name="with">
+			<syntax>chat with &lt;nickname&gt;</syntax>
+
+			<description>
+				<para>
+					While most <emphasis>chat</emphasis> subcommands are about named chatrooms, this command can be used to open an unnamed groupchat with one or more persons. This command is what <emphasis>/join #nickname</emphasis> used to do in older BitlBee versions.
+				</para>
+			</description>
+		</bitlbee-command>
+
+		<bitlbee-command name="set">
+			<syntax>chat set &lt;chat id&gt;</syntax>
+			<syntax>chat set &lt;chat id&gt;/&lt;setting&gt;</syntax>
+			<syntax>chat set &lt;chat id&gt;/&lt;setting&gt; &lt;value&gt;</syntax>
+			<syntax>chat set -del &lt;chat id&gt;/&lt;setting&gt;</syntax>
+
+			<description>
+				<para>
+					This command can be used to change various settings for chatrooms.
+				</para>
+				
+				<para>
+					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+				</para>
+				
+				<para>
+					The room ID can be a number (see <emphasis>chat list</emphasis>), or (part of) the name of the room/channel.
 				</para>
 			</description>
 		</bitlbee-command>
@@ -298,6 +381,16 @@
 			
 			<para>
 				This setting can also be changed for specific accounts using the <emphasis>account set</emphasis> command. (However, these values will be ignored if the global <emphasis>auto_connect</emphasis> setting is disabled!)
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="auto_join" type="boolean" scope="chat">
+		<default>false</default>
+
+		<description>
+			<para>
+				With this option enabled, BitlBee will automatically join this chatroom when you log in.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -483,6 +576,15 @@
 			</para>
 		</description>
 
+	</bitlbee-setting>
+
+	<bitlbee-setting name="nick" type="string" scope="chat">
+
+		<description>
+			<para>
+				You can use this option to set your nickname in a chatroom. You won't see this nickname yourself, but other people in the room will. By default, BitlBee will use your username as the chatroom nickname.
+			</para>
+		</description>
 	</bitlbee-setting>
 
 	<bitlbee-setting name="ops" type="string" scope="global">
