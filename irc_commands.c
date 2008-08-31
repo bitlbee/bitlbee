@@ -124,7 +124,7 @@ static void irc_cmd_oper( irc_t *irc, char **cmd )
 
 static void irc_cmd_mode( irc_t *irc, char **cmd )
 {
-	if( *cmd[1] == '#' || *cmd[1] == '&' )
+	if( strchr( CTYPES, *cmd[1] ) )
 	{
 		if( cmd[2] )
 		{
@@ -192,26 +192,27 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		     RFC doesn't have any reply for that though? */
 	else if( cmd[1] )
 	{
-		if( ( cmd[1][0] == '#' || cmd[1][0] == '&' ) && cmd[1][1] )
+		struct groupchat *gc;
+		struct chat *c;
+		user_t *u;
+		
+		if( strchr( CTYPES, cmd[1][0] ) == NULL || cmd[1][1] == 0 )
 		{
-			user_t *u = user_find( irc, cmd[1] + 1 );
+			irc_reply( irc, 403, "%s :No such channel", cmd[1] );
+			return;
+		}
+		
+		if( ( c = chat_bychannel( irc, cmd[1] ) ) )
+		{
+			char *nick = set_getstr( &c->set, "nick" );
 			
-			if( u && u->ic && u->ic->acc->prpl->chat_with )
+			if( nick == NULL )
+				nick = irc->nick;
+			
+			if( ( gc = c->acc->prpl->chat_join( c->acc->ic, c->handle, nick, NULL ) ) )
 			{
-				irc_reply( irc, 403, "%s :Initializing groupchat in a different channel", cmd[1] );
-				
-				if( !u->ic->acc->prpl->chat_with( u->ic, u->handle ) )
-				{
-					irc_usermsg( irc, "Could not open a groupchat with %s.", u->nick );
-				}
-			}
-			else if( u )
-			{
-				irc_reply( irc, 403, "%s :Groupchats are not possible with %s", cmd[1], cmd[1]+1 );
-			}
-			else
-			{
-				irc_reply( irc, 403, "%s :No such nick", cmd[1] );
+				g_free( gc->channel );
+				gc->channel = g_strdup( c->channel );
 			}
 		}
 		else

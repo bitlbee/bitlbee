@@ -1050,6 +1050,29 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	{
 		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead );
 	}
+	else if( g_strcasecmp( cmd[1], "with" ) == 0 )
+	{
+		user_t *u;
+
+		if( !cmd[2] )
+		{
+			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
+			return;
+		}
+		
+		if( ( u = user_find( irc, cmd[2] ) ) && u->ic && u->ic->acc->prpl->chat_with )
+		{
+			if( !u->ic->acc->prpl->chat_with( u->ic, u->handle ) )
+			{
+				irc_usermsg( irc, "(Possible) failure while trying to open "
+				                  "a groupchat with %s.", u->nick );
+			}
+		}
+		else
+		{
+			irc_usermsg( irc, "Can't open a groupchat with %s.", cmd[2] );
+		}
+	}
 	else
 	{
 		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat", cmd[1] );
@@ -1083,7 +1106,7 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	chat = cmd[2];
 	if( cmd[3] )
 	{
-		if( cmd[3][0] != '#' && cmd[3][0] != '&' )
+		if( strchr( CTYPES, cmd[3][0] ) == NULL )
 			channel = g_strdup_printf( "&%s", cmd[3] );
 		else
 			channel = g_strdup( cmd[3] );

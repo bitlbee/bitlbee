@@ -37,6 +37,7 @@
 #define CMODES "nt"
 #define CMODE "t"
 #define UMODE "s"
+#define CTYPES "&#"
 
 typedef enum
 {
@@ -95,7 +96,6 @@ typedef struct irc
 } irc_t;
 
 #include "user.h"
-// #include "nick.h"
 
 extern GSList *irc_connection_list;
 

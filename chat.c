@@ -138,7 +138,7 @@ int chat_chancmp( char *a, char *b )
 
 int chat_chanok( char *a )
 {
-	if( strchr( "&#", a[0] ) != NULL )
+	if( strchr( CTYPES, a[0] ) != NULL )
 		return nick_ok( a + 1 );
 	else
 		return 0;
