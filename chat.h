@@ -38,6 +38,7 @@ struct chat *chat_add( irc_t *irc, account_t *acc, char *handle, char *channel )
 struct chat *chat_byhandle( irc_t *irc, account_t *acc, char *handle );
 struct chat *chat_bychannel( irc_t *irc, char *channel );
 struct chat *chat_get( irc_t *irc, char *id );
+int chat_del( irc_t *irc, struct chat *chat );
 
 int chat_chancmp( char *a, char *b );
 int chat_chanok( char *a );

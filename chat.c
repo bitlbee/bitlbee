@@ -125,6 +125,31 @@ struct chat *chat_get( irc_t *irc, char *id )
 	return ret;
 }
 
+int chat_del( irc_t *irc, struct chat *chat )
+{
+	struct chat *c, *l = NULL;
+	
+	for( c = irc->chatrooms; c; c = (l=c)->next )
+		if( c == chat )
+			break;
+	
+	if( c == NULL )
+		return 0;
+	else if( l == NULL )
+		irc->chatrooms = c->next;
+	else
+		l->next = c->next;
+	
+	while( c->set )
+		set_del( &c->set, c->set->key );
+	
+	g_free( c->handle );
+	g_free( c->channel );
+	g_free( c );
+	
+	return 1;
+}
+
 int chat_chancmp( char *a, char *b )
 {
 	if( !chat_chanok( a ) || !chat_chanok( b ) )

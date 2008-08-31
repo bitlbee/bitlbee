@@ -1050,6 +1050,23 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	{
 		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead );
 	}
+	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
+	{
+		if( !cmd[2] )
+		{
+			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
+			return;
+		}
+		
+		if( ( c = chat_get( irc, cmd[2] ) ) )
+		{
+			chat_del( irc, c );
+		}
+		else
+		{
+			irc_usermsg( irc, "Could not remove chat." );
+		}
+	}
 	else if( g_strcasecmp( cmd[1], "with" ) == 0 )
 	{
 		user_t *u;
