@@ -77,6 +77,18 @@ void root_command_string( irc_t *irc, user_t *u, char *command, int flags )
 	root_command( irc, cmd );
 }
 
+#define MIN_ARGS( x, y... )                                                    \
+	do                                                                     \
+	{                                                                      \
+		int i;                                                         \
+		for( i = 1; i <= x; i ++ )                                     \
+			if( cmd[i] == NULL )                                   \
+			{                                                      \
+				irc_usermsg( irc, "Not enough parameters given (need %d).", x ); \
+				return y;                                      \
+			}                                                      \
+	} while( 0 )
+
 void root_command( irc_t *irc, char *cmd[] )
 {	
 	int i;
@@ -87,11 +99,8 @@ void root_command( irc_t *irc, char *cmd[] )
 	for( i = 0; commands[i].command; i++ )
 		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
 		{
-			if( !cmd[commands[i].required_parameters] )
-			{
-				irc_usermsg( irc, "Not enough parameters given (need %d)", commands[i].required_parameters );
-				return;
-			}
+			MIN_ARGS( commands[i].required_parameters );
+			
 			commands[i].execute( irc, cmd );
 			return;
 		}
@@ -269,12 +278,7 @@ static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead )
 	{
 		char *id;
 		
-		if( !set_full )
-		{
-			/* FIXME: Broken # */
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 3 );
-			return 0;
-		}
+		MIN_ARGS( 3, 0 );
 	
 		if( ( tmp = strchr( set_full, '/' ) ) )
 		{
@@ -373,11 +377,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		struct prpl *prpl;
 		
-		if( cmd[2] == NULL || cmd[3] == NULL || cmd[4] == NULL )
-		{
-			irc_usermsg( irc, "Not enough parameters" );
-			return;
-		}
+		MIN_ARGS( 4 );
 		
 		prpl = find_protocol( cmd[2] );
 		
@@ -399,11 +399,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
 	{
-		if( !cmd[2] )
-		{
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
-		}
-		else if( !( a = account_get( irc, cmd[2] ) ) )
+		MIN_ARGS( 2 );
+
+		if( !( a = account_get( irc, cmd[2] ) ) )
 		{
 			irc_usermsg( irc, "Invalid account" );
 		}
@@ -531,11 +529,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
 	{
-		if( !cmd[2] )
-		{
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
-			return;
-		}
+		MIN_ARGS( 2 );
 		
 		cmd_set_real( irc, cmd + 1, cmd_account_set_findhead );
 	}
@@ -1013,11 +1007,7 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	
 	if( g_strcasecmp( cmd[1], "add" ) == 0 )
 	{
-		if( !( cmd[2] && cmd[3] && cmd[4] ) )
-		{
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 4 );
-			return;
-		}
+		MIN_ARGS( 4 );
 		
 		if( !( acc = account_get( irc, cmd[2] ) ) )
 		{
@@ -1052,11 +1042,7 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
 	{
-		if( !cmd[2] )
-		{
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
-			return;
-		}
+		MIN_ARGS( 2 );
 		
 		if( ( c = chat_get( irc, cmd[2] ) ) )
 		{
@@ -1070,12 +1056,8 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	else if( g_strcasecmp( cmd[1], "with" ) == 0 )
 	{
 		user_t *u;
-
-		if( !cmd[2] )
-		{
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
-			return;
-		}
+		
+		MIN_ARGS( 2 );
 		
 		if( ( u = user_find( irc, cmd[2] ) ) && u->ic && u->ic->acc->prpl->chat_with )
 		{
