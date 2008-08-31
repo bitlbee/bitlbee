@@ -57,7 +57,7 @@ struct chat *chat_add( irc_t *irc, account_t *acc, char *handle, char *channel )
 	c->channel = g_strdup( channel );
 	
 	s = set_add( &c->set, "auto_join", "false", set_eval_bool, c );
-	s = set_add( &c->set, "auto_rejoin", "false", set_eval_bool, c );
+	/* s = set_add( &c->set, "auto_rejoin", "false", set_eval_bool, c ); */
 	s = set_add( &c->set, "nick", NULL, NULL, c );
 	s->flags |= SET_NULL_OK;
 	
@@ -167,4 +167,22 @@ int chat_chanok( char *a )
 		return nick_ok( a + 1 );
 	else
 		return 0;
+}
+
+int chat_join( irc_t *irc, struct chat *c )
+{
+	struct groupchat *gc;
+	char *nick = set_getstr( &c->set, "nick" );
+	
+	if( nick == NULL )
+		nick = irc->nick;
+	
+	if( ( gc = c->acc->prpl->chat_join( c->acc->ic, c->handle, nick, NULL ) ) )
+	{
+		g_free( gc->channel );
+		gc->channel = g_strdup( c->channel );
+		return 1;
+	}
+	
+	return 0;
 }

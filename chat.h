@@ -42,3 +42,5 @@ int chat_del( irc_t *irc, struct chat *chat );
 
 int chat_chancmp( char *a, char *b );
 int chat_chanok( char *a );
+
+int chat_join( irc_t *irc, struct chat *c );

@@ -192,7 +192,6 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		     RFC doesn't have any reply for that though? */
 	else if( cmd[1] )
 	{
-		struct groupchat *gc;
 		struct chat *c;
 		user_t *u;
 		
@@ -204,16 +203,7 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		
 		if( ( c = chat_bychannel( irc, cmd[1] ) ) )
 		{
-			char *nick = set_getstr( &c->set, "nick" );
-			
-			if( nick == NULL )
-				nick = irc->nick;
-			
-			if( ( gc = c->acc->prpl->chat_join( c->acc->ic, c->handle, nick, NULL ) ) )
-			{
-				g_free( gc->channel );
-				gc->channel = g_strdup( c->channel );
-			}
+			chat_join( irc, c );
 		}
 		else
 		{
