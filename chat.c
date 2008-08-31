@@ -28,6 +28,7 @@
 struct chat *chat_add( irc_t *irc, account_t *acc, char *handle, char *channel )
 {
 	struct chat *c, *l;
+	set_t *s;
 	
 	if( !chat_chanok( channel ) )
 		return NULL;
@@ -52,9 +53,10 @@ struct chat *chat_add( irc_t *irc, account_t *acc, char *handle, char *channel )
 	c->handle = g_strdup( handle );
 	c->channel = g_strdup( channel );
 	
-	set_add( &c->set, "auto_join", "false", set_eval_bool, c );
-	set_add( &c->set, "auto_rejoin", "false", set_eval_bool, c );
-	set_add( &c->set, "nick", NULL, NULL, c );
+	s = set_add( &c->set, "auto_join", "false", set_eval_bool, c );
+	s = set_add( &c->set, "auto_rejoin", "false", set_eval_bool, c );
+	s = set_add( &c->set, "nick", NULL, NULL, c );
+	s->flags |= SET_NULL_OK;
 	
 	return c;
 }

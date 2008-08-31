@@ -247,6 +247,116 @@ static void cmd_showset( irc_t *irc, set_t **head, char *key )
 		irc_usermsg( irc, "%s is empty", key );
 }
 
+typedef set_t** (*cmd_set_findhead)( irc_t*, char* );
+
+static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead )
+{
+	char *set_full = NULL, *set_name = NULL, *tmp;
+	set_t **head;
+	
+	if( cmd[1] && g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
+		set_full = cmd[2];
+	else
+		set_full = cmd[1];
+	
+	if( findhead == NULL )
+	{
+		set_name = set_full;
+		
+		head = &irc->set;
+	}
+	else 
+	{
+		char *id;
+		
+		if( !set_full )
+		{
+			/* FIXME: Broken # */
+			irc_usermsg( irc, "Not enough parameters given (need %d)", 3 );
+			return 0;
+		}
+	
+		if( ( tmp = strchr( set_full, '/' ) ) )
+		{
+			id = g_strndup( set_full, ( tmp - set_full ) );
+			set_name = tmp + 1;
+		}
+		else
+		{
+			id = g_strdup( set_full );
+		}
+		
+		if( ( head = findhead( irc, id ) ) == NULL )
+		{
+			g_free( id );
+			irc_usermsg( irc, "Could not find setting." );
+			return 0;
+		}
+		g_free( id );
+	}
+	
+	if( cmd[1] && cmd[2] && set_name )
+	{
+		set_t *s = set_find( head, set_name );
+		int st;
+		
+		/*
+		if( a->ic && s && s->flags & ACC_SET_OFFLINE_ONLY )
+		{
+			irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );
+			return 0;
+		}
+		else if( !a->ic && s && s->flags & ACC_SET_ONLINE_ONLY )
+		{
+			irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "on" );
+			return 0;
+		}
+		*/
+		
+		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
+			st = set_reset( head, set_name );
+		else
+			st = set_setstr( head, set_name, cmd[2] );
+		
+		if( set_getstr( head, set_name ) == NULL )
+		{
+			if( st )
+				irc_usermsg( irc, "Setting changed successfully" );
+			else
+				irc_usermsg( irc, "Failed to change setting" );
+		}
+		else
+		{
+			cmd_showset( irc, head, set_name );
+		}
+	}
+	else if( set_name )
+	{
+		cmd_showset( irc, head, set_name );
+	}
+	else
+	{
+		set_t *s = *head;
+		while( s )
+		{
+			cmd_showset( irc, &s, s->key );
+			s = s->next;
+		}
+	}
+	
+	return 1;
+}
+
+static set_t **cmd_account_set_findhead( irc_t *irc, char *id )
+{
+	account_t *a;
+	
+	if( ( a = account_get( irc, id ) ) )
+		return &a->set;
+	else
+		return NULL;
+}
+
 static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
@@ -419,88 +529,13 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
 	{
-		char *acc_handle, *set_name = NULL, *tmp;
-		
 		if( !cmd[2] )
 		{
 			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
 			return;
 		}
 		
-		if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
-			acc_handle = g_strdup( cmd[3] );
-		else
-			acc_handle = g_strdup( cmd[2] );
-		
-		if( !acc_handle )
-		{
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 3 );
-			return;
-		}
-		
-		if( ( tmp = strchr( acc_handle, '/' ) ) )
-		{
-			*tmp = 0;
-			set_name = tmp + 1;
-		}
-		
-		if( ( a = account_get( irc, acc_handle ) ) == NULL )
-		{
-			g_free( acc_handle );
-			irc_usermsg( irc, "Invalid account" );
-			return;
-		}
-		
-		if( cmd[3] && set_name )
-		{
-			set_t *s = set_find( &a->set, set_name );
-			int st;
-			
-			if( a->ic && s && s->flags & ACC_SET_OFFLINE_ONLY )
-			{
-				g_free( acc_handle );
-				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );
-				return;
-			}
-			else if( !a->ic && s && s->flags & ACC_SET_ONLINE_ONLY )
-			{
-				g_free( acc_handle );
-				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "on" );
-				return;
-			}
-			
-			if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
-				st = set_reset( &a->set, set_name );
-			else
-				st = set_setstr( &a->set, set_name, cmd[3] );
-			
-			if( set_getstr( &a->set, set_name ) == NULL )
-			{
-				if( st )
-					irc_usermsg( irc, "Setting changed successfully" );
-				else
-					irc_usermsg( irc, "Failed to change setting" );
-			}
-			else
-			{
-				cmd_showset( irc, &a->set, set_name );
-			}
-		}
-		else if( set_name )
-		{
-			cmd_showset( irc, &a->set, set_name );
-		}
-		else
-		{
-			set_t *s = a->set;
-			while( s )
-			{
-				cmd_showset( irc, &s, s->key );
-				s = s->next;
-			}
-		}
-		
-		g_free( acc_handle );
+		cmd_set_real( irc, cmd + 1, cmd_account_set_findhead );
 	}
 	else
 	{
@@ -834,54 +869,7 @@ static void cmd_yesno( irc_t *irc, char **cmd )
 
 static void cmd_set( irc_t *irc, char **cmd )
 {
-	char *set_name = cmd[1];
-	
-	if( cmd[1] && cmd[2] )
-	{
-		int st;
-		
-		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
-		{
-			st = set_reset( &irc->set, cmd[2] );
-			set_name = cmd[2];
-		}
-		else
-		{
-			st = set_setstr( &irc->set, cmd[1], cmd[2] );
-		}
-		
-		/* Normally we just show the variable's new/unchanged
-		   value as feedback to the user, but this has always
-		   caused confusion when changing the password. Give
-		   other feedback instead: */
-		if( set_getstr( &irc->set, set_name ) == NULL )
-		{
-			if( st )
-				irc_usermsg( irc, "Setting changed successfully" );
-			else
-				irc_usermsg( irc, "Failed to change setting" );
-		}
-		else
-		{
-			cmd_showset( irc, &irc->set, set_name );
-		}
-	}
-	else if( set_name )
-	{
-		cmd_showset( irc, &irc->set, set_name );
-
-		if( strchr( set_name, '/' ) )
-			irc_usermsg( irc, "Warning: / found in setting name, you're probably looking for the `account set' command." );
-	}
-	else
-	{
-		set_t *s = irc->set;
-		while( s )
-		{
-			cmd_showset( irc, &s, s->key );
-			s = s->next;
-		}
-	}
+	cmd_set_real( irc, cmd, NULL );
 }
 
 static void cmd_save( irc_t *irc, char **cmd )
@@ -1006,6 +994,16 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 	                  "Please try the `chat' command instead." );
 }
 
+static set_t **cmd_chat_set_findhead( irc_t *irc, char *id )
+{
+	struct chat *c;
+	
+	if( ( c = chat_get( irc, id ) ) )
+		return &c->set;
+	else
+		return NULL;
+}
+
 static void cmd_chat( irc_t *irc, char **cmd )
 {
 	account_t *acc;
@@ -1045,6 +1043,10 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			i ++;
 		}
 		irc_usermsg( irc, "End of chatroom list" );
+	}
+	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
+	{
+		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead );
 	}
 	else
 	{
