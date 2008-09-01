@@ -204,11 +204,11 @@ void account_del( irc_t *irc, account_t *acc )
 				irc->accounts = a->next;
 			
 			for( c = irc->chatrooms; c; c = nc )
+			{
+				nc = c->next;
 				if( acc == c->acc )
-				{
-					nc = c->next;
 					chat_del( irc, c );
-				}
+			}
 			
 			while( a->set )
 				set_del( &a->set, a->set->key );
