@@ -264,7 +264,10 @@ static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead )
 	set_t **head;
 	
 	if( cmd[1] && g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
+	{
+		MIN_ARGS( 2, 0 );
 		set_full = cmd[2];
+	}
 	else
 		set_full = cmd[1];
 	
@@ -278,8 +281,6 @@ static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead )
 	{
 		char *id;
 		
-		MIN_ARGS( 3, 0 );
-	
 		if( ( tmp = strchr( set_full, '/' ) ) )
 		{
 			id = g_strndup( set_full, ( tmp - set_full ) );
