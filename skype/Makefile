@@ -2,7 +2,7 @@
 
 VERSION = 0.6.0
 # oldest supported one
-BITLBEE_VERSION = 1.2.1
+BITLBEE_VERSION = 1.2.2
 
 AMVERSION = $(shell automake --version|sed 's/.* //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
 
