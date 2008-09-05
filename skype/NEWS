@@ -1,5 +1,11 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.6.1         - added keepalive traffic to avoid disconnects in bitlbee
+                when there is no traffic for a long time
+              - now the plugin or skyped is automatically disabled if
+		the dependencies are not available; useful in case the
+		plugin is to be installed on a public server, or the
+		skyped is to be used with a public server only
 0.6.0         - works with BitlBee 1.2.1
 0.5.1         - configure now automatically detects the right prefix to
                 match witl BitlBee's one
