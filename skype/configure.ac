@@ -35,7 +35,7 @@ prefix=`$PKG_CONFIG --variable=prefix bitlbee`
 
 dnl Check for Skype4Py
 AC_MSG_CHECKING(for Python module Skype4Py)
-python -c "import Skype4Py"
+python -c "import Skype4Py" 2>&AS_MESSAGE_LOG_FD
 if test "$?" != "0"; then
 	AC_MSG_RESULT(no)
 	SKYPE4PY="no"
