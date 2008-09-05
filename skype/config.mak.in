@@ -2,6 +2,7 @@ CFLAGS = @CFLAGS@
 LDFLAGS = @LDFLAGS@
 SHARED_FLAGS = @SHARED_FLAGS@
 SHARED_EXT = @SHARED_EXT@
+SKYPE4PY = @SKYPE4PY@
 INSTALL = @INSTALL@
 prefix = @prefix@
 sysconfdir = @sysconfdir@/skyped

@@ -32,6 +32,19 @@ PKG_CHECK_MODULES(BITLBEE, bitlbee)
 CFLAGS="$CFLAGS $BITLBEE_CFLAGS"
 LDFLAGS="$LDFLAGS $BITLBEE_LIBS"
 prefix=`$PKG_CONFIG --variable=prefix bitlbee`
+
+dnl Check for Skype4Py
+AC_MSG_CHECKING(for Python module Skype4Py)
+python -c "import Skype4Py"
+if test "$?" != "0"; then
+	AC_MSG_RESULT(no)
+	SKYPE4PY="no"
+else
+	AC_MSG_RESULT(yes)
+	SKYPE4PY="yes"
+fi
+AC_SUBST(SKYPE4PY)
+
 AC_OUTPUT(config.mak)
 AC_OUTPUT(skyped.conf.dist)
 
@@ -40,6 +53,7 @@ echo "
 	linker flags:			$LDFLAGS
 	shared object flags:		$SHARED_FLAGS
 	shared object extension:	$SHARED_EXT
+	skyped:                         $SKYPE4PY
 	install program:		$INSTALL
 	prefix:				$prefix
 	sysconfig dir:			$sysconfdir/skyped

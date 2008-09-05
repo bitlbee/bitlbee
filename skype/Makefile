@@ -11,14 +11,16 @@ skype.$(SHARED_EXT): skype.c config.mak
 
 install: skype.$(SHARED_EXT) skyped.py
 	$(INSTALL) -d $(DESTDIR)$(plugindir)
+	$(INSTALL) skype.$(SHARED_EXT) $(DESTDIR)$(plugindir)
+ifeq ($(SKYPED),yes)
 	$(INSTALL) -d $(DESTDIR)$(bindir)
 	$(INSTALL) -d $(DESTDIR)$(sysconfdir)
-	$(INSTALL) skype.$(SHARED_EXT) $(DESTDIR)$(plugindir)
 	$(INSTALL) skyped.py $(DESTDIR)$(bindir)/skyped
 	sed -i 's|/usr/local/etc/skyped|$(sysconfdir)|' $(DESTDIR)$(bindir)/skyped
 	$(INSTALL) -m644 skyped.conf.dist $(DESTDIR)$(sysconfdir)/skyped.conf
 	sed -i 's|$${prefix}|$(prefix)|' $(DESTDIR)$(sysconfdir)/skyped.conf
 	$(INSTALL) -m644 skyped.cnf $(DESTDIR)$(sysconfdir)
+endif
 
 client: client.c
 
