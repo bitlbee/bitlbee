@@ -6,12 +6,18 @@ BITLBEE_VERSION = 1.2.2
 
 AMVERSION = $(shell automake --version|sed 's/.* //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
 
+ifeq ($(BITLBEE),yes)
+all: skype.$(SHARED_EXT)
+else
+all:
+endif
+
 skype.$(SHARED_EXT): skype.c config.mak
 ifeq ($(BITLBEE),yes)
 	$(CC) $(CFLAGS) $(SHARED_FLAGS) -o skype.$(SHARED_EXT) skype.c $(LDFLAGS)
 endif
 
-install: skype.$(SHARED_EXT) skyped.py
+install: all
 ifeq ($(BITLBEE),yes)
 	$(INSTALL) -d $(DESTDIR)$(plugindir)
 	$(INSTALL) skype.$(SHARED_EXT) $(DESTDIR)$(plugindir)
