@@ -1,5 +1,7 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.6.2         - bugfix: make install required the plugin even in case
+                its build was disabled
 0.6.1         - added keepalive traffic to avoid disconnects in bitlbee
                 when there is no traffic for a long time
               - now the plugin or skyped is automatically disabled if
