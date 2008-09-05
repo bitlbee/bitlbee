@@ -16,7 +16,7 @@ ifeq ($(BITLBEE),yes)
 	$(INSTALL) -d $(DESTDIR)$(plugindir)
 	$(INSTALL) skype.$(SHARED_EXT) $(DESTDIR)$(plugindir)
 endif
-ifeq ($(SKYPED),yes)
+ifeq ($(SKYPE4PY),yes)
 	$(INSTALL) -d $(DESTDIR)$(bindir)
 	$(INSTALL) -d $(DESTDIR)$(sysconfdir)
 	$(INSTALL) skyped.py $(DESTDIR)$(bindir)/skyped
