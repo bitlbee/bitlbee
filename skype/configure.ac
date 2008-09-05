@@ -28,10 +28,27 @@ AC_SUBST(SHARED_FLAGS)
 AC_SUBST(SHARED_EXT)
 
 dnl Check for bitlbee
-PKG_CHECK_MODULES(BITLBEE, bitlbee)
-CFLAGS="$CFLAGS $BITLBEE_CFLAGS"
-LDFLAGS="$LDFLAGS $BITLBEE_LIBS"
-prefix=`$PKG_CONFIG --variable=prefix bitlbee`
+AC_MSG_CHECKING(for BitlBee)
+pkg-config --exists bitlbee
+if test "$?" != "0"; then
+	AC_MSG_RESULT(no)
+	BITLBEE="no"
+else
+	AC_MSG_RESULT(yes)
+	BITLBEE="yes"
+	if test -z "$CFLAGS"; then
+		CFLAGS="`pkg-config --cflags bitlbee`"
+	else
+		CFLAGS="$CFLAGS `pkg-config --cflags bitlbee`"
+	fi
+	if test -z "$LDFLAGS"; then
+		LDFLAGS="`pkg-config --libs bitlbee`"
+	else
+		LDFLAGS="$LDFLAGS `pkg-config --libs bitlbee`"
+	fi
+	prefix=`pkg-config --variable=prefix bitlbee`
+fi
+AC_SUBST(BITLBEE)
 
 dnl Check for Skype4Py
 AC_MSG_CHECKING(for Python module Skype4Py)
@@ -45,16 +62,25 @@ else
 fi
 AC_SUBST(SKYPE4PY)
 
+if test "$BITLBEE" = "no" -a "$SKYPE4PY" = "no"; then
+	AC_ERROR([In order to use bitlbee-skype you need at least BitlBee or Skype4Py installed.])
+fi
+
 AC_OUTPUT(config.mak)
 AC_OUTPUT(skyped.conf.dist)
 
 echo "
-	compiler flags:			$CFLAGS
+	BitlBee plugin:                 $BITLBEE
+	skyped:                         $SKYPE4PY
+	prefix:				$prefix
+	install program:		$INSTALL"
+if test "$BITLBEE" = "yes"; then
+	echo "	compiler flags:			$CFLAGS
 	linker flags:			$LDFLAGS
 	shared object flags:		$SHARED_FLAGS
-	shared object extension:	$SHARED_EXT
-	skyped:                         $SKYPE4PY
-	install program:		$INSTALL
-	prefix:				$prefix
-	sysconfig dir:			$sysconfdir/skyped
-"
+	shared object extension:	$SHARED_EXT"
+fi
+if test "$SKYPE4PY" = "yes"; then
+	echo "	sysconfig dir:			$sysconfdir/skyped"
+fi
+echo

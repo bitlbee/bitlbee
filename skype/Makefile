@@ -7,11 +7,15 @@ BITLBEE_VERSION = 1.2.2
 AMVERSION = $(shell automake --version|sed 's/.* //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
 
 skype.$(SHARED_EXT): skype.c config.mak
+ifeq ($(BITLBEE),yes)
 	$(CC) $(CFLAGS) $(SHARED_FLAGS) -o skype.$(SHARED_EXT) skype.c $(LDFLAGS)
+endif
 
 install: skype.$(SHARED_EXT) skyped.py
+ifeq ($(BITLBEE),yes)
 	$(INSTALL) -d $(DESTDIR)$(plugindir)
 	$(INSTALL) skype.$(SHARED_EXT) $(DESTDIR)$(plugindir)
+endif
 ifeq ($(SKYPED),yes)
 	$(INSTALL) -d $(DESTDIR)$(bindir)
 	$(INSTALL) -d $(DESTDIR)$(sysconfdir)
@@ -26,7 +30,6 @@ client: client.c
 
 autogen: configure.ac
 	cp /usr/share/automake-$(AMVERSION)/install-sh ./
-	cp /usr/share/aclocal/pkg.m4 aclocal.m4
 	autoconf
 
 clean:
