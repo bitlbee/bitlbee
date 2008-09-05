@@ -82,7 +82,12 @@ and you have to install `bitlbee-skype` and `skype4py` from source.
 
 === Installing from source
 
-- You need the latest stable BitlBee release:
+NOTE: bitlbee-skype by default builds and installs skyped and the
+plugin. In case you just want to install the plugin for a public server
+or you want to use skyped with a public server, you don't need both.
+
+- You need the latest stable BitlBee release (unless you want to use a
+  public server):
 
 ----
 $ wget http://get.bitlbee.org/src/bitlbee-@BITLBEE_VERSION@.tar.gz
@@ -96,6 +101,15 @@ $ cd bitlbee-@BITLBEE_VERSION@
 $ ./configure
 $ make
 # make install install-dev
+----
+
+- To install http://skype4py.sourceforge.net/[Skype4Py] from source
+  (unless you want to install the plugin for a public server):
+
+----
+$ tar -zxvf Skype4Py-x.x.x.x.tar.gz
+$ cd Skype4Py-x.x.x.x
+# python setup.py install
 ----
 
 - Get the plugin code (in an empty dir, or whereever you want, it does
@@ -117,14 +131,6 @@ $ make
 
 This will install the plugin to where BitlBee expects them, which is
 `/usr/local/lib/bitlbee` if you installed BitlBee from source.
-
-- To install http://skype4py.sourceforge.net/[Skype4Py] from source:
-
-----
-$ tar -zxvf Skype4Py-x.x.x.x.tar.gz
-$ cd Skype4Py-x.x.x.x
-# python setup.py install
-----
 
 === Configuring
 
@@ -313,10 +319,6 @@ $ skyped -n -d
   link:https://developer.skype.com/jira/browse/SCL-381[this feature
   request], this is because it is still not possible (under Linux) to
   `join_chat` to a public chat..
-
-- Add `--disable-skyped` and `--disable-plugin` switches in case one wants to
-  build `bitlbee-skype` only for a public server or only for use with a public
-  server.
 
 == I would like to have support for ...
 
