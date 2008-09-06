@@ -17,7 +17,7 @@ case "`$CC -dumpmachine`" in
 		SHARED_EXT="so"
 		;;
 	*apple-darwin*)
-		SHARED_FLAGS="-dynamiclib -Wl,-headerpad_max_install_names,-undefined,dynamic_lookup"
+		SHARED_FLAGS="-dynamiclib -undefined dynamic_lookup"
 		SHARED_EXT="dylib"
 		;;
 	*)
