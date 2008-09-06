@@ -75,7 +75,7 @@ and you don't have to compile anything manually.
 - Install the necessary development package:
 
 ----
-# apt-get install bitlbee-dev
+# apt-get install bitlbee-dev python-gnutls
 ----
 
 and you have to install `bitlbee-skype` and `skype4py` from source.
@@ -109,6 +109,15 @@ $ make
 ----
 $ tar -zxvf Skype4Py-x.x.x.x.tar.gz
 $ cd Skype4Py-x.x.x.x
+# python setup.py install
+----
+
+- To install http://pypi.python.org/pypi/python-gnutls[python-gnutls] from source
+  (unless you want to install the plugin for a public server):
+
+----
+$ tar -zxvf python-gnutls-x.x.x.tar.gz
+$ cd python-gnutls-x.x.x
 # python setup.py install
 ----
 
