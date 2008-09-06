@@ -41,7 +41,11 @@ def eh(type, value, tb):
 	if type != KeyboardInterrupt:
 		print_exception(type, value, tb)
 	gobject.MainLoop().quit()
-	skype.skype.Client.Shutdown()
+	# shut down client if it's running
+	try:
+		skype.skype.Client.Shutdown()
+	except NameError:
+		pass
 	sys.exit("Exiting.")
 
 sys.excepthook = eh
