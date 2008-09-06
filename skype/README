@@ -80,6 +80,21 @@ and you don't have to compile anything manually.
 
 and you have to install `bitlbee-skype` and `skype4py` from source.
 
+=== Installing under OS X
+
+- Install the necessary packages from ports:
+
+NOTE: You have to edit the Portfile manually to include the install-dev target,
+just append install-dev after install-etc.
+
+----
+# port -v install bitlbee
+# port -v install py25-gobject
+----
+
+and you have to install `bitlbee-skype`, `skype4py` and `python-gnutls` from
+source.
+
 === Installing from source
 
 NOTE: bitlbee-skype by default builds and installs skyped and the
@@ -119,6 +134,14 @@ $ cd Skype4Py-x.x.x.x
 $ tar -zxvf python-gnutls-x.x.x.tar.gz
 $ cd python-gnutls-x.x.x
 # python setup.py install
+----
+
+NOTE: On OS X you will need the following hacks first:
+
+----
+$ export LD_LIBRARY_PATH=/opt/local/lib
+$ export CFLAGS="-I/opt/local/include"
+$ export LDFLAGS="-L/opt/local/lib"
 ----
 
 - Get the plugin code (in an empty dir, or whereever you want, it does
