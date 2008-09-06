@@ -102,20 +102,21 @@ storage_status_t storage_check_pass (const char *nick, const char *password)
 	return STORAGE_NO_SUCH_USER;
 }
 
-storage_status_t storage_load (const char *nick, const char *password, irc_t * irc)
+storage_status_t storage_load (irc_t * irc, const char *password)
 {
 	GList *gl;
+	
+	if (irc && irc->status & USTATUS_IDENTIFIED)
+		return STORAGE_OTHER_ERROR;
 	
 	/* Loop until we don't get NO_SUCH_USER */
 	for (gl = global.storage; gl; gl = gl->next) {
 		storage_t *st = gl->data;
 		storage_status_t status;
 
-		status = st->load(nick, password, irc);
-		if (status == STORAGE_OK) {
-			irc_setpass(irc, password);
+		status = st->load(irc, password);
+		if (status == STORAGE_OK)
 			return status;
-		}
 		
 		if (status != STORAGE_NO_SUCH_USER) 
 			return status;
@@ -124,9 +125,27 @@ storage_status_t storage_load (const char *nick, const char *password, irc_t * i
 	return STORAGE_NO_SUCH_USER;
 }
 
-storage_status_t storage_save (irc_t *irc, int overwrite)
+storage_status_t storage_save (irc_t *irc, char *password, int overwrite)
 {
-	return ((storage_t *)global.storage->data)->save(irc, overwrite);
+	storage_status_t st;
+	
+	if (password != NULL) {
+		/* Should only use this in the "register" command. */
+		if (irc->password || overwrite)
+			return STORAGE_OTHER_ERROR;
+		
+		irc_setpass(irc, password);
+	} else if ((irc->status & USTATUS_IDENTIFIED) == 0) {
+		return STORAGE_NO_SUCH_USER;
+	}
+	
+	st = ((storage_t *)global.storage->data)->save(irc, overwrite);
+	
+	if (password != NULL) {
+		irc_setpass(irc, NULL);
+	}
+	
+	return st;
 }
 
 storage_status_t storage_remove (const char *nick, const char *password)
@@ -142,13 +161,15 @@ storage_status_t storage_remove (const char *nick, const char *password)
 		storage_status_t status;
 
 		status = st->remove(nick, password);
-		if (status != STORAGE_NO_SUCH_USER && 
-			status != STORAGE_OK)
+		if (status != STORAGE_NO_SUCH_USER && status != STORAGE_OK)
 			ret = status;
 	}
 	
 	return ret;
 }
+
+#if 0
+Not using this yet. Test thoroughly before adding UI hooks to this function.
 
 storage_status_t storage_rename (const char *onick, const char *nnick, const char *password)
 {
@@ -188,3 +209,4 @@ storage_status_t storage_rename (const char *onick, const char *nnick, const cha
 
 	return STORAGE_OK;
 }
+#endif

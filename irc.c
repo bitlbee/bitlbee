@@ -37,7 +37,7 @@ static char *set_eval_password( set_t *set, char *value )
 {
 	irc_t *irc = set->data;
 	
-	if( irc->status & USTATUS_IDENTIFIED )
+	if( irc->status & USTATUS_IDENTIFIED && value )
 	{
 		irc_setpass( irc, value );
 		return NULL;
@@ -238,7 +238,7 @@ void irc_free( irc_t * irc )
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
 	if( irc->status & USTATUS_IDENTIFIED && set_getbool( &irc->set, "save_on_quit" ) ) 
-		if( storage_save( irc, TRUE ) != STORAGE_OK )
+		if( storage_save( irc, NULL, TRUE ) != STORAGE_OK )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );

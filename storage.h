@@ -44,7 +44,7 @@ typedef struct {
 
 	storage_status_t (*check_pass) (const char *nick, const char *password);
 
-	storage_status_t (*load) (const char *nick, const char *password, irc_t * irc);
+	storage_status_t (*load) (irc_t *irc, const char *password);
 	storage_status_t (*save) (irc_t *irc, int overwrite);
 	storage_status_t (*remove) (const char *nick, const char *password);
 
@@ -54,11 +54,11 @@ typedef struct {
 
 storage_status_t storage_check_pass (const char *nick, const char *password);
 
-storage_status_t storage_load (const char *nick, const char *password, irc_t * irc);
-storage_status_t storage_save (irc_t *irc, int overwrite);
+storage_status_t storage_load (irc_t * irc, const char *password);
+storage_status_t storage_save (irc_t *irc, char *password, int overwrite);
 storage_status_t storage_remove (const char *nick, const char *password);
 
-storage_status_t storage_rename (const char *onick, const char *nnick, const char *password);
+/* storage_status_t storage_rename (const char *onick, const char *nnick, const char *password); */
 
 void register_storage_backend(storage_t *);
 G_GNUC_MALLOC GList *storage_init(const char *primary, char **migrate);

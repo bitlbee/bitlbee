@@ -130,7 +130,7 @@ static void cmd_account( irc_t *irc, char **cmd );
 
 static void cmd_identify( irc_t *irc, char **cmd )
 {
-	storage_status_t status = storage_load( irc->nick, cmd[1], irc );
+	storage_status_t status = storage_load( irc, cmd[1] );
 	char *account_on[] = { "account", "on", NULL };
 	
 	switch (status) {
@@ -142,6 +142,8 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		break;
 	case STORAGE_OK:
 		irc_usermsg( irc, "Password accepted, settings and accounts loaded" );
+		irc_setpass( irc, cmd[1] );
+		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "+R", 1 );
 		if( set_getbool( &irc->set, "auto_connect" ) )
 			cmd_account( irc, account_on );
@@ -161,14 +163,14 @@ static void cmd_register( irc_t *irc, char **cmd )
 		return;
 	}
 
-	irc_setpass( irc, cmd[1] );
-	switch( storage_save( irc, FALSE )) {
+	switch( storage_save( irc, cmd[1], FALSE ) ) {
 		case STORAGE_ALREADY_EXISTS:
 			irc_usermsg( irc, "Nick is already registered" );
 			break;
 			
 		case STORAGE_OK:
 			irc_usermsg( irc, "Account successfully created" );
+			irc_setpass( irc, cmd[1] );
 			irc->status |= USTATUS_IDENTIFIED;
 			irc_umode_set( irc, "+R", 1 );
 			break;
@@ -886,7 +888,9 @@ static void cmd_set( irc_t *irc, char **cmd )
 
 static void cmd_save( irc_t *irc, char **cmd )
 {
-	if( storage_save( irc, TRUE ) == STORAGE_OK )
+	if( ( irc->status & USTATUS_IDENTIFIED ) == 0 )
+		irc_usermsg( irc, "Please create an account first" );
+	else if( storage_save( irc, NULL, TRUE ) == STORAGE_OK )
 		irc_usermsg( irc, "Configuration saved" );
 	else
 		irc_usermsg( irc, "Configuration could not be saved!" );
