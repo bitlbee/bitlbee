@@ -26,9 +26,9 @@ ifeq ($(SKYPE4PY),yes)
 	$(INSTALL) -d $(DESTDIR)$(bindir)
 	$(INSTALL) -d $(DESTDIR)$(sysconfdir)
 	$(INSTALL) skyped.py $(DESTDIR)$(bindir)/skyped
-	sed -i 's|/usr/local/etc/skyped|$(sysconfdir)|' $(DESTDIR)$(bindir)/skyped
+	perl -p -i -e 's|/usr/local/etc/skyped|$(sysconfdir)|' $(DESTDIR)$(bindir)/skyped
 	$(INSTALL) -m644 skyped.conf.dist $(DESTDIR)$(sysconfdir)/skyped.conf
-	sed -i 's|$${prefix}|$(prefix)|' $(DESTDIR)$(sysconfdir)/skyped.conf
+	perl -p -i -e 's|\$${prefix}|$(prefix)|' $(DESTDIR)$(sysconfdir)/skyped.conf
 	$(INSTALL) -m644 skyped.cnf $(DESTDIR)$(sysconfdir)
 endif
 
