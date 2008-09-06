@@ -28,7 +28,6 @@
 #include "base64.h"
 #include "arc.h"
 #include "md5.h"
-#include <glib/gstdio.h>
 
 #if GLIB_CHECK_VERSION(2,8,0)
 #include <glib/gstdio.h>
