@@ -3,6 +3,13 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 1.2.3:
+- Fixed one more flaw similar to the previous hijacking bug, caused by incon-
+  sistent handling of the USTATUS_IDENTIFIED state. All code touching these
+  variables was reviewed and should be correct now.
+
+Finished 7 Sep 2008 
+
 Version 1.2.2:
 - Security bugfix: It was possible to hijack accounts (without gaining access
   to the old account, it's simply an overwrite)

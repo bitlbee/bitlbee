@@ -12,7 +12,7 @@ all: user-guide.txt user-guide.html help.txt # user-guide.pdf user-guide.ps user
 	mv $*.db.txt $@
 
 %.html: %.db.xml
-	xsltproc --output $@ http://docbook.sourceforge.net/release/xsl/current/html/docbook.xsl $<
+	xsltproc --output $@ http://docbook.sourceforge.net/release/xsl/current/xhtml/docbook.xsl $<
 
 %.pdf: %.db.xml
 	xmlto --skip-validation pdf $<
