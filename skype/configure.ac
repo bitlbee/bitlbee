@@ -29,6 +29,10 @@ AC_SUBST(SHARED_EXT)
 
 dnl Check for bitlbee
 AC_MSG_CHECKING(for BitlBee)
+if test -d /usr/local/lib/pkgconfig; then
+	PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig
+	export PKG_CONFIG_PATH
+fi
 pkg-config --exists bitlbee
 if test "$?" != "0"; then
 	AC_MSG_RESULT(no)
