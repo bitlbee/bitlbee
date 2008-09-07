@@ -99,7 +99,8 @@ source.
 
 NOTE: bitlbee-skype by default builds and installs skyped and the
 plugin. In case you just want to install the plugin for a public server
-or you want to use skyped with a public server, you don't need both.
+or you want to use skyped with a public server (like
+`bitlbee1.asnetinc.net`), you don't need both.
 
 - You need the latest stable BitlBee release (unless you want to use a
   public server):
