@@ -287,16 +287,13 @@ static void xml_init( void )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to `%s'.", global.conf->configdir );
 }
 
-static storage_status_t xml_load_real( const char *my_nick, const char *password, irc_t *irc, xml_pass_st action )
+static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const char *password, xml_pass_st action )
 {
 	GMarkupParseContext *ctx;
 	struct xml_parsedata *xd;
 	char *fn, buf[512];
 	GError *gerr = NULL;
 	int fd, st;
-	
-	if( irc && irc->status & USTATUS_IDENTIFIED )
-		return( 1 );
 	
 	xd = g_new0( struct xml_parsedata, 1 );
 	xd->irc = irc;
@@ -349,21 +346,19 @@ static storage_status_t xml_load_real( const char *my_nick, const char *password
 	if( action == XML_PASS_CHECK_ONLY )
 		return STORAGE_OK;
 	
-	irc->status |= USTATUS_IDENTIFIED;
-	
 	return STORAGE_OK;
 }
 
-static storage_status_t xml_load( const char *my_nick, const char *password, irc_t *irc )
+static storage_status_t xml_load( irc_t *irc, const char *password )
 {
-	return xml_load_real( my_nick, password, irc, XML_PASS_UNKNOWN );
+	return xml_load_real( irc, irc->nick, password, XML_PASS_UNKNOWN );
 }
 
 static storage_status_t xml_check_pass( const char *my_nick, const char *password )
 {
 	/* This is a little bit risky because we have to pass NULL for the
 	   irc_t argument. This *should* be fine, if I didn't miss anything... */
-	return xml_load_real( my_nick, password, NULL, XML_PASS_CHECK_ONLY );
+	return xml_load_real( NULL, my_nick, password, XML_PASS_CHECK_ONLY );
 }
 
 static int xml_printf( int fd, int indent, char *fmt, ... )
@@ -398,12 +393,6 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	int fd;
 	md5_byte_t pass_md5[21];
 	md5_state_t md5_state;
-	
-	if( irc->password == NULL )
-	{
-		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
-		return STORAGE_OTHER_ERROR;
-	}
 	
 	path2 = g_strdup( irc->nick );
 	nick_lc( path2 );
