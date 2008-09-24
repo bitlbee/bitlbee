@@ -352,6 +352,9 @@ $ skyped -n -d
   request], this is because it is still not possible (under Linux) to
   `join_chat` to a public chat..
 
+- Add yasrd (Yet Another Skype-Related Daemon) to allow using a public
+  server for users who are behind NAT.
+
 == I would like to have support for ...
 
 If something does not work and it's not in the TODO section, then please
