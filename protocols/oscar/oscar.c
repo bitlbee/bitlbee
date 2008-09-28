@@ -2580,7 +2580,7 @@ void oscar_chat_leave(struct groupchat *c)
 	oscar_chat_kill(c->ic, c->data);
 }
 
-struct groupchat *oscar_chat_join(struct im_connection * ic, char * room, char * nick, char * password )
+struct groupchat *oscar_chat_join(struct im_connection * ic, const char * room, const char * nick, const char * password )
 {
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
 	aim_conn_t * cur;

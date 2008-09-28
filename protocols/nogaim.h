@@ -208,7 +208,7 @@ struct prpl {
 	 * your protocol does not support publicly named group chats, then do
 	 * not implement this. */
 	struct groupchat *
-	     (* chat_join)	(struct im_connection *, char *room, char *nick, char *password);
+	     (* chat_join)	(struct im_connection *, const char *room, const char *nick, const char *password);
 	/* Change the topic, if supported. Note that BitlBee expects the IM
 	   server to confirm the topic change with a regular topic change
 	   event. If it doesn't do that, you have to fake it to make it
@@ -289,7 +289,7 @@ G_MODULE_EXPORT void imcb_chat_invited( struct im_connection *ic, char *handle, 
  * - After you have a groupchat pointer, you should add the handles, finally
  *   the user her/himself. At that point the group chat will be visible to the
  *   user, too. */
-G_MODULE_EXPORT struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle );
+G_MODULE_EXPORT struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle );
 G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, char *handle );
 /* To remove a handle from a group chat. Reason can be NULL. */
 G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason );

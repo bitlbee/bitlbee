@@ -169,7 +169,7 @@ int chat_chanok( char *a )
 		return 0;
 }
 
-int chat_join( irc_t *irc, struct chat *c )
+int chat_join( irc_t *irc, struct chat *c, const char *password )
 {
 	struct groupchat *gc;
 	char *nick = set_getstr( &c->set, "nick" );
@@ -177,7 +177,7 @@ int chat_join( irc_t *irc, struct chat *c )
 	if( nick == NULL )
 		nick = irc->nick;
 	
-	if( ( gc = c->acc->prpl->chat_join( c->acc->ic, c->handle, nick, NULL ) ) )
+	if( ( gc = c->acc->prpl->chat_join( c->acc->ic, c->handle, nick, password ) ) )
 	{
 		g_free( gc->channel );
 		gc->channel = g_strdup( c->channel );

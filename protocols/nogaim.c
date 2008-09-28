@@ -279,7 +279,7 @@ void imcb_connected( struct im_connection *ic )
 			continue;
 		
 		if( set_getbool( &c->set, "auto_join" ) )
-			chat_join( irc, c );
+			chat_join( irc, c, NULL );
 	}
 }
 
@@ -709,7 +709,7 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
 	}
 }
 
-struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
+struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 {
 	struct groupchat *c;
 	

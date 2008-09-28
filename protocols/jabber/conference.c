@@ -25,7 +25,7 @@
 
 static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 
-struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *nick, char *password )
+struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password )
 {
 	struct jabber_chat *jc;
 	struct xt_node *node;
