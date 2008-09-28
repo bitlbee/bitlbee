@@ -789,9 +789,22 @@ int ext_yahoo_connect(const char *host, int port)
 static void byahoo_accept_conf( void *data )
 {
 	struct byahoo_conf_invitation *inv = data;
+	struct groupchat *b;
 	
-	yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
-	imcb_chat_add_buddy( inv->c, inv->ic->acc->user );
+	for( b = inv->ic->groupchats; b; b = b->next )
+		if( b == inv->c )
+			break;
+	
+	if( b != NULL )
+	{
+		yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
+		imcb_chat_add_buddy( inv->c, inv->ic->acc->user );
+	}
+	else
+	{
+		imcb_log( inv->ic, "Duplicate/corrupted invitation to `%s'.", inv->name );
+	}
+	
 	g_free( inv->name );
 	g_free( inv );
 }
