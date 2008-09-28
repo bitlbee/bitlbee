@@ -196,19 +196,11 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		user_t *u;
 		
 		if( strchr( CTYPES, cmd[1][0] ) == NULL || cmd[1][1] == 0 )
-		{
-			irc_reply( irc, 403, "%s :No such channel", cmd[1] );
-			return;
-		}
-		
-		if( ( c = chat_bychannel( irc, cmd[1] ) ) )
-		{
+			irc_reply( irc, 479, "%s :Invalid channel name", cmd[1] );
+		else if( ( c = chat_bychannel( irc, cmd[1] ) ) && c->acc && c->acc->ic )
 			chat_join( irc, c );
-		}
 		else
-		{
 			irc_reply( irc, 403, "%s :No such channel", cmd[1] );
-		}
 	}
 }
 
