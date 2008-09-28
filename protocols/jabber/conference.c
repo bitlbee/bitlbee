@@ -35,9 +35,9 @@ struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, 
 	roomjid = g_strdup_printf( "%s/%s", room, nick );
 	node = xt_new_node( "x", NULL, NULL );
 	xt_add_attr( node, "xmlns", XMLNS_MUC );
-	node = jabber_make_packet( "presence", NULL, roomjid, node );
 	if( password )
 		xt_add_child( node, xt_new_node( "password", password, NULL ) );
+	node = jabber_make_packet( "presence", NULL, roomjid, node );
 	jabber_cache_add( ic, node, jabber_chat_join_failed );
 	
 	if( !jabber_write_packet( ic, node ) )
