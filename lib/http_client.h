@@ -80,3 +80,5 @@ struct http_request
    are also supported (using ssl_client). */
 void *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data );
 void *http_dorequest_url( char *url_string, http_input_function func, gpointer data );
+
+void http_free( struct http_request *req );
