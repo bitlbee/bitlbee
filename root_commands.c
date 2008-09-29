@@ -259,8 +259,9 @@ static void cmd_showset( irc_t *irc, set_t **head, char *key )
 }
 
 typedef set_t** (*cmd_set_findhead)( irc_t*, char* );
+typedef int (*cmd_set_checkflags)( irc_t*, set_t *set );
 
-static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead )
+static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead, cmd_set_checkflags checkflags )
 {
 	char *set_full = NULL, *set_name = NULL, *tmp;
 	set_t **head;
@@ -307,20 +308,8 @@ static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead )
 		set_t *s = set_find( head, set_name );
 		int st;
 		
-		/*
-		FIXME: Make these work again. Probably a gross hack.
-		
-		if( a->ic && s && s->flags & ACC_SET_OFFLINE_ONLY )
-		{
-			irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );
+		if( checkflags && checkflags( irc, s ) == 0 )
 			return 0;
-		}
-		else if( !a->ic && s && s->flags & ACC_SET_ONLINE_ONLY )
-		{
-			irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "on" );
-			return 0;
-		}
-		*/
 		
 		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
 			st = set_reset( head, set_name );
@@ -364,6 +353,24 @@ static set_t **cmd_account_set_findhead( irc_t *irc, char *id )
 		return &a->set;
 	else
 		return NULL;
+}
+
+static int cmd_account_set_checkflags( irc_t *irc, set_t *s )
+{
+	account_t *a = s->data;
+	
+	if( a->ic && s && s->flags & ACC_SET_OFFLINE_ONLY )
+	{
+		irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );
+		return 0;
+	}
+	else if( !a->ic && s && s->flags & ACC_SET_ONLINE_ONLY )
+	{
+		irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "on" );
+		return 0;
+	}
+	
+	return 1;
 }
 
 static void cmd_account( irc_t *irc, char **cmd )
@@ -534,7 +541,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		MIN_ARGS( 2 );
 		
-		cmd_set_real( irc, cmd + 1, cmd_account_set_findhead );
+		cmd_set_real( irc, cmd + 1, cmd_account_set_findhead, cmd_account_set_checkflags );
 	}
 	else
 	{
@@ -868,7 +875,7 @@ static void cmd_yesno( irc_t *irc, char **cmd )
 
 static void cmd_set( irc_t *irc, char **cmd )
 {
-	cmd_set_real( irc, cmd, NULL );
+	cmd_set_real( irc, cmd, NULL, NULL );
 }
 
 static void cmd_save( irc_t *irc, char **cmd )
@@ -1065,7 +1072,7 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
 	{
-		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead );
+		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead, NULL );
 	}
 	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
 	{
