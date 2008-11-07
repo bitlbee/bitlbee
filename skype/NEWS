@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.6.3         - various osx-specific improvements (see the new screenshot!)
+              - added python-gnutls install instructions
+              - bitlbee.pc is now searched under
+                /usr/local/lib/pkgconfig by default to help LFS monkeys ;)
 0.6.2         - bugfix: make install required the plugin even in case
                 its build was disabled
 0.6.1         - added keepalive traffic to avoid disconnects in bitlbee

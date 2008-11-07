@@ -177,7 +177,10 @@ class SkypeApi:
 	def send(self, msg_text):
 		if not len(msg_text) or msg_text == "PONG":
 			return
-		e = msg_text.decode(locale.getdefaultlocale()[1])
+		try:
+			e = msg_text.decode(locale.getdefaultlocale()[1])
+		except ValueError:
+			e = msg_text.decode('UTF-8')
 		dprint('>> ' + e)
 		try:
 			c = self.skype.Command(e, Block=True)

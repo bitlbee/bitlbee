@@ -1,8 +1,8 @@
 -include config.mak
 
-VERSION = 0.6.2
-# oldest supported one
-BITLBEE_VERSION = 1.2.2
+VERSION = 0.6.3
+# latest stable
+BITLBEE_VERSION = 1.2.3
 
 AMVERSION = $(shell automake --version|sed 's/.* //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
 
