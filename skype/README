@@ -34,9 +34,7 @@ not..)
 * BitlBee >= @BITLBEE_VERSION@. Use old versions (0.5.1 or earlier) if
   you have older BitlBee installed.
 * Skype4Py >= 0.9.28.7. Previous versions won't work due to API changes.
-
-NOTE: 1.x just does not work for me. I mailed the author but did not
-receive any answer so far.
+  The latest version I've tested is 1.0.31.0.
 
 * Python >= 2.5. Skype4Py does not work with 2.4.
 * PyGObject >= 2.8.0. Older versions are part of PyGTK. (And you don't want to
