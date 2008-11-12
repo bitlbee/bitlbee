@@ -4,7 +4,7 @@ VERSION = 0.6.3
 # latest stable
 BITLBEE_VERSION = 1.2.3
 
-AMVERSION = $(shell automake --version|sed 's/.* //;s/\([0-9]\+\.[0-9]\+\)\.[0-9]\+/\1/;q')
+AMPATH = $(shell grep automake- $(shell which automake)|sed "s|.*'\(.*\)';|\1|")
 
 ifeq ($(BITLBEE),yes)
 all: skype.$(SHARED_EXT)
@@ -35,7 +35,7 @@ endif
 client: client.c
 
 autogen: configure.ac
-	cp /usr/share/automake-$(AMVERSION)/install-sh ./
+	cp $(AMPATH)/install-sh ./
 	autoconf
 
 clean:
