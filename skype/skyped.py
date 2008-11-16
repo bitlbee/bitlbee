@@ -117,12 +117,17 @@ def listener(sock, *args):
 			dprint("Warning, handshake failed, closing connection.")
 			return False
 	ret = 0
-	line = options.conn.recv(1024)
-	if line.startswith("USERNAME") and line.split(' ')[1].strip() == options.config.username:
-		ret += 1
-	line = options.conn.recv(1024)
-	if line.startswith("PASSWORD") and sha.sha(line.split(' ')[1].strip()).hexdigest() == options.config.password:
-		ret += 1
+	try:
+		line = options.conn.recv(1024)
+		if line.startswith("USERNAME") and line.split(' ')[1].strip() == options.config.username:
+			ret += 1
+		line = options.conn.recv(1024)
+		if line.startswith("PASSWORD") and sha.sha(line.split(' ')[1].strip()).hexdigest() == options.config.password:
+			ret += 1
+	except Exception, s:
+		dprint("Warning, receiving 1024 bytes failed (%s)." % s)
+		options.conn.close()
+		return False
 	if ret == 2:
 		dprint("Username and password OK.")
 		options.conn.send("PASSWORD OK\n")
