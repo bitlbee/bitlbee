@@ -556,6 +556,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 	
 	if( g_strcasecmp( cmd[1], "-tmp" ) == 0 )
 	{
+		MIN_ARGS( 3 );
 		add_on_server = 0;
 		cmd ++;
 	}
