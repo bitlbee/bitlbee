@@ -29,6 +29,9 @@ struct chat *chat_add( irc_t *irc, account_t *acc, char *handle, char *channel )
 {
 	struct chat *c, *l;
 	set_t *s;
+
+	if( acc->prpl->chat_join == NULL )
+		return NULL;
 	
 	if( !chat_chanok( channel ) )
 		return NULL;
@@ -177,7 +180,8 @@ int chat_join( irc_t *irc, struct chat *c, const char *password )
 	if( nick == NULL )
 		nick = irc->nick;
 	
-	if( ( gc = c->acc->prpl->chat_join( c->acc->ic, c->handle, nick, password ) ) )
+	if( c->acc->prpl->chat_join &&
+	    ( gc = c->acc->prpl->chat_join( c->acc->ic, c->handle, nick, password ) ) )
 	{
 		g_free( gc->channel );
 		gc->channel = g_strdup( c->channel );
