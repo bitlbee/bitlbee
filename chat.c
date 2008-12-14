@@ -30,14 +30,11 @@ struct chat *chat_add( irc_t *irc, account_t *acc, char *handle, char *channel )
 	struct chat *c, *l;
 	set_t *s;
 
-	if( acc->prpl->chat_join == NULL )
+	if( acc->prpl->chat_join == NULL || !chat_chanok( channel ) ||
+	    chat_chancmp( channel, irc->channel ) == 0 )
+	{
 		return NULL;
-	
-	if( !chat_chanok( channel ) )
-		return NULL;
-	
-	if( chat_chancmp( channel, irc->channel ) == 0 )
-		return NULL;
+	}
 	
 	for( c = irc->chatrooms; c; c = c->next )
 	{
@@ -176,12 +173,14 @@ int chat_join( irc_t *irc, struct chat *c, const char *password )
 {
 	struct groupchat *gc;
 	char *nick = set_getstr( &c->set, "nick" );
+
+	if( c->acc->ic == NULL || c->acc->prpl->chat_join == NULL )
+		return 0;
 	
 	if( nick == NULL )
 		nick = irc->nick;
 	
-	if( c->acc->prpl->chat_join &&
-	    ( gc = c->acc->prpl->chat_join( c->acc->ic, c->handle, nick, password ) ) )
+	if( ( gc = c->acc->prpl->chat_join( c->acc->ic, c->handle, nick, password ) ) )
 	{
 		g_free( gc->channel );
 		gc->channel = g_strdup( c->channel );
