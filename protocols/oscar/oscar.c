@@ -90,7 +90,7 @@ struct oscar_data {
 
 	GSList *oscar_chats;
 
-	gboolean killme;
+	gboolean killme, no_reconnect;
 	gboolean icq;
 	GSList *evilhack;
 	
@@ -180,6 +180,7 @@ static struct chat_connection *find_oscar_chat_by_conn(struct im_connection *ic,
 
 static int gaim_parse_auth_resp  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_login      (aim_session_t *, aim_frame_t *, ...);
+static int gaim_parse_logout     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_handle_redirect  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_oncoming   (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_offgoing   (aim_session_t *, aim_frame_t *, ...);
@@ -293,7 +294,7 @@ static gboolean oscar_callback(gpointer data, gint source,
 		if (aim_get_command(odata->sess, conn) >= 0) {
 			aim_rxdispatch(odata->sess);
                                if (odata->killme)
-                                       imc_logout(ic, TRUE);
+                                       imc_logout(ic, !odata->no_reconnect);
 		} else {
 			if ((conn->type == AIM_CONN_TYPE_BOS) ||
 				   !(aim_getconn_type(odata->sess, AIM_CONN_TYPE_BOS))) {
@@ -519,6 +520,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 			break;
 		case 0x18:
 			/* connecting too frequently */
+			od->no_reconnect = TRUE;
 			imcb_error(ic, _("You have been connecting and disconnecting too frequently. Wait ten minutes and try again. If you continue to try, you will need to wait even longer."));
 			break;
 		case 0x1c:
@@ -571,6 +573,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_SRVACK, gaim_ssi_parseack, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOC, AIM_CB_LOC_USERINFO, gaim_parseaiminfo, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_MSG, AIM_CB_MSG_MTN, gaim_parsemtn, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SPECIAL, AIM_CB_SPECIAL_CONNERR, gaim_parse_logout, 0);
 
 	((struct oscar_data *)ic->proto_data)->conn = bosconn;
 	for (i = 0; i < (int)strlen(info->bosip); i++) {
@@ -746,6 +749,30 @@ static int gaim_parse_login(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_end(ap);
 
 	aim_send_login(sess, fr->conn, ic->acc->user, ic->acc->pass, &info, key);
+
+	return 1;
+}
+
+static int gaim_parse_logout(aim_session_t *sess, aim_frame_t *fr, ...) {
+	struct im_connection *ic = sess->aux_data;
+	struct oscar_data *odata = ic->proto_data;
+	int code;
+	va_list ap;
+
+	va_start(ap, fr);
+	code = va_arg(ap, int);
+	va_end(ap);
+	
+	imcb_error( ic, "Connection aborted by server: %s", code == 1 ?
+	                "someone else logged in with your account" :
+	                "unknown reason" );
+	
+	/* Tell BitlBee to disable auto_reconnect if code == 1, since that
+	   means a concurrent login somewhere else. */
+	odata->no_reconnect = code == 1;
+	
+	/* DO NOT log out here! Just tell the callback to do it. */
+	odata->killme = TRUE;
 
 	return 1;
 }
