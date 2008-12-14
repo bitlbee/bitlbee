@@ -238,7 +238,7 @@ G_MODULE_EXPORT void register_protocol( struct prpl * );
 /* You will need this function in prpl->login() to get an im_connection from
  * the account_t parameter. */
 G_MODULE_EXPORT struct im_connection *imcb_new( account_t *acc );
-G_MODULE_EXPORT void imcb_free( struct im_connection *ic );
+G_MODULE_EXPORT void imc_free( struct im_connection *ic );
 /* Once you're connected, you should call this function, so that the user will
  * see the success. */
 G_MODULE_EXPORT void imcb_connected( struct im_connection *ic );

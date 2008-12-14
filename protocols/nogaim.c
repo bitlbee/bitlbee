@@ -320,6 +320,9 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	ic->acc->prpl->logout( ic );
 	b_event_remove( ic->inpa );
 	
+	g_free( ic->away );
+	ic->away = NULL;
+	
 	u = irc->users;
 	while( u )
 	{

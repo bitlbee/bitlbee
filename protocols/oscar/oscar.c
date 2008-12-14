@@ -1938,8 +1938,7 @@ static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, 
 
 	aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 
-	if (ic->away)
-		g_free(ic->away);
+	g_free(ic->away);
 	ic->away = NULL;
 
 	if (!message) {
@@ -1959,55 +1958,53 @@ static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, 
 
 static void oscar_set_away_icq(struct im_connection *ic, struct oscar_data *od, const char *state, const char *message)
 {
-    const char *msg = NULL;
+	const char *msg = NULL;
 	gboolean no_message = FALSE;
 
 	/* clean old states */
-    if (ic->away) {
-		g_free(ic->away);
-		ic->away = NULL;
-    }
+	g_free(ic->away);
+	ic->away = NULL;
 	od->sess->aim_icq_state = 0;
 
 	/* if no message, then use an empty message */
-    if (message) {
-        msg = message;
-    } else {
-        msg = "";
+	if (message) {
+		msg = message;
+	} else {
+		msg = "";
 		no_message = TRUE;
-    }
+	}
 
 	if (!g_strcasecmp(state, "Online")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 	} else if (!g_strcasecmp(state, "Away")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTOAWAY;
 	} else if (!g_strcasecmp(state, "Do Not Disturb")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_DND | AIM_ICQ_STATE_BUSY);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTODND;
 	} else if (!g_strcasecmp(state, "Not Available")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTONA;
 	} else if (!g_strcasecmp(state, "Occupied")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_BUSY);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTOBUSY;
 	} else if (!g_strcasecmp(state, "Free For Chat")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_CHAT);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTOFFC;
 	} else if (!g_strcasecmp(state, "Invisible")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 	} else if (!g_strcasecmp(state, GAIM_AWAY_CUSTOM)) {
 	 	if (no_message) {
 			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 		} else {
 			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
-            ic->away = g_strdup(msg);
+			ic->away = g_strdup(msg);
 			od->sess->aim_icq_state = AIM_MTYPE_AUTOAWAY;
 		}
 	}
@@ -2019,7 +2016,7 @@ static void oscar_set_away(struct im_connection *ic, char *state, char *message)
 {
 	struct oscar_data *od = (struct oscar_data *)ic->proto_data;
 
-    oscar_set_away_aim(ic, od, state, message);
+	oscar_set_away_aim(ic, od, state, message);
 	if (od->icq)
 		oscar_set_away_icq(ic, od, state, message);
 
