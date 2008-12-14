@@ -406,10 +406,8 @@ void irc_process( irc_t *irc )
 				lines[i] = conv;
 			}
 			
-			if( lines[i] )
+			if( lines[i] && ( cmd = irc_parse_line( lines[i] ) ) )
 			{
-				if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
-					continue;
 				irc_exec( irc, cmd );
 				g_free( cmd );
 			}
@@ -484,7 +482,7 @@ char **irc_parse_line( char *line )
 	/* Move the line pointer to the start of the command, skipping spaces and the optional prefix. */
 	if( line[0] == ':' )
 	{
-		for( i = 0; line[i] != ' '; i ++ );
+		for( i = 0; line[i] && line[i] != ' '; i ++ );
 		line = line + i;
 	}
 	for( i = 0; line[i] == ' '; i ++ );
