@@ -958,6 +958,9 @@ static void skype_login( account_t *acc )
 	sd->username = g_strdup( acc->user );
 
 	sd->ic = ic;
+
+	if (set_getbool(&acc->set, "skypeconsole"))
+		imcb_add_buddy(ic, "skypeconsole", NULL);
 }
 
 static void skype_logout( struct im_connection *ic )
@@ -985,7 +988,10 @@ static int skype_buddy_msg( struct im_connection *ic, char *who, char *message, 
 	if(ptr)
 		*ptr = '\0';
 
-	buf = g_strdup_printf("MESSAGE %s %s\n", nick, message);
+	if (!strncmp(who, "skypeconsole", 12))
+		buf = g_strdup_printf("%s\n", message);
+	else
+		buf = g_strdup_printf("MESSAGE %s %s\n", nick, message);
 	g_free(nick);
 	st = skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
@@ -1264,6 +1270,9 @@ static void skype_init( account_t *acc )
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add( &acc->set, "skypeout_offline", "true", set_eval_bool, acc );
+
+	s = set_add( &acc->set, "skypeconsole", "false", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
 }
 
 void init_plugin(void)

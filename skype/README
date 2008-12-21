@@ -342,6 +342,14 @@ $ skyped -n -d
 
   * `account set skype/balance query`
 
+- For debug purposes, it's possible to send any command to `skyped`. To
+  achieve this, you need to:
+
+  * `account set skype/skypeconsole true`
+
+  * then writing `skypeconsole: <command>` will work in the control
+    channel.
+
 == What needs to be done (aka. TODO)
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
