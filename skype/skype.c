@@ -146,10 +146,11 @@ const struct skype_away_state skype_away_state_list[] =
  * Functions
  */
 
-int skype_write( struct im_connection *ic, char *buf, int len )
+int skype_write( struct im_connection *ic, char *buf )
 {
 	struct skype_data *sd = ic->proto_data;
 	struct pollfd pfd[1];
+	int len = strlen(buf);
 
 	pfd[0].fd = sd->fd;
 	pfd[0].events = POLLOUT;
@@ -171,7 +172,7 @@ static void skype_buddy_ask_yes( void *data )
 {
 	struct skype_buddy_ask_data *bla = data;
 	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED TRUE", bla->handle);
-	skype_write( bla->ic, buf, strlen( buf ) );
+	skype_write( bla->ic, buf );
 	g_free(buf);
 	g_free(bla->handle);
 	g_free(bla);
@@ -181,7 +182,7 @@ static void skype_buddy_ask_no( void *data )
 {
 	struct skype_buddy_ask_data *bla = data;
 	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED FALSE", bla->handle);
-	skype_write( bla->ic, buf, strlen( buf ) );
+	skype_write( bla->ic, buf );
 	g_free(buf);
 	g_free(bla->handle);
 	g_free(bla);
@@ -204,7 +205,7 @@ static void skype_call_ask_yes( void *data )
 {
 	struct skype_buddy_ask_data *bla = data;
 	char *buf = g_strdup_printf("SET CALL %s STATUS INPROGRESS", bla->handle);
-	skype_write( bla->ic, buf, strlen( buf ) );
+	skype_write( bla->ic, buf );
 	g_free(buf);
 	g_free(bla->handle);
 	g_free(bla);
@@ -214,7 +215,7 @@ static void skype_call_ask_no( void *data )
 {
 	struct skype_buddy_ask_data *bla = data;
 	char *buf = g_strdup_printf("SET CALL %s STATUS FINISHED", bla->handle);
-	skype_write( bla->ic, buf, strlen( buf ) );
+	skype_write( bla->ic, buf );
 	g_free(buf);
 	g_free(bla->handle);
 	g_free(bla);
@@ -306,7 +307,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				while(*i)
 				{
 					g_snprintf(buf, 1024, "GET USER %s ONLINESTATUS\n", *i);
-					skype_write( ic, buf, strlen( buf ) );
+					skype_write( ic, buf );
 					i++;
 				}
 				g_strfreev(nicks);
@@ -539,13 +540,13 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						 * (4) Query chatname
 						 */
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s TYPE\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 						g_snprintf(buf, 1024, "GET CHATMESSAGE %s CHATNAME\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 					}
 					else if(!strncmp(info, "FROM_HANDLE ", 12))
 					{
@@ -639,31 +640,31 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 							g_free(sd->call_id);
 						sd->call_id = g_strdup(id);
 						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 						sd->call_status = SKYPE_CALL_RINGING;
 					}
 					else if(!strcmp(info, "STATUS MISSED"))
 					{
 						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 						sd->call_status = SKYPE_CALL_MISSED;
 					}
 					else if(!strcmp(info, "STATUS CANCELLED"))
 					{
 							g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-							skype_write( ic, buf, strlen( buf ) );
+							skype_write( ic, buf );
 							sd->call_status = SKYPE_CALL_CANCELLED;
 					}
 					else if(!strcmp(info, "STATUS FINISHED"))
 					{
 						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 						sd->call_status = SKYPE_CALL_FINISHED;
 					}
 					else if(!strcmp(info, "STATUS REFUSED"))
 					{
 						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 						sd->call_status = SKYPE_CALL_REFUSED;
 					}
 					else if(!strcmp(info, "STATUS UNPLACED"))
@@ -742,13 +743,13 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					if(!strcmp(info, "STATUS NEW"))
 					{
 						g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 						sd->filetransfer_status = SKYPE_FILETRANSFER_NEW;
 					}
 					else if(!strcmp(info, "STATUS FAILED"))
 					{
 						g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
-						skype_write( ic, buf, strlen( buf ) );
+						skype_write( ic, buf );
 						sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
 					}
 					else if(!strncmp(info, "PARTNER_HANDLE ", 15))
@@ -786,9 +787,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 					{
 						imcb_chat_new( ic, id );
 						g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
-						skype_write(ic, buf, strlen(buf));
+						skype_write(ic, buf);
 						g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
-						skype_write(ic, buf, strlen(buf));
+						skype_write(ic, buf);
 					}
 					else if(!strcmp(info, "STATUS DIALOG") && sd->groupchat_with)
 					{
@@ -800,16 +801,16 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 						 * window on our client, so
 						 * just leave it out. */
 						/*g_snprintf(buf, 1024, "OPEN CHAT %s\n", id);
-						skype_write(ic, buf, strlen(buf));*/
+						skype_write(ic, buf);*/
 						g_snprintf(buf, 1024, "%s@skype.com", sd->groupchat_with);
 						imcb_chat_add_buddy(gc, buf);
 						imcb_chat_add_buddy(gc, sd->username);
 						g_free(sd->groupchat_with);
 						sd->groupchat_with = NULL;
 						g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
-						skype_write(ic, buf, strlen(buf));
+						skype_write(ic, buf);
 						g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
-						skype_write(ic, buf, strlen(buf));
+						skype_write(ic, buf);
 					}
 					else if(!strcmp(info, "STATUS UNSUBSCRIBED"))
 					{
@@ -882,7 +883,7 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 			else if(!strncmp(line, "PING", 4))
 			{
 				g_snprintf(buf, 1024, "PONG\n");
-				skype_write(ic, buf, strlen(buf));
+				skype_write(ic, buf);
 			}
 			else if(!strncmp(line, "CHATS ", 6))
 			{
@@ -893,9 +894,9 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				while (*i)
 				{
 					g_snprintf(buf, 1024, "GET CHAT %s STATUS\n", *i);
-					skype_write( ic, buf, strlen( buf ) );
+					skype_write( ic, buf );
 					g_snprintf(buf, 1024, "GET CHAT %s ACTIVEMEMBERS\n", *i);
-					skype_write( ic, buf, strlen( buf ) );
+					skype_write( ic, buf );
 					i++;
 				}
 				g_strfreev(chats);
@@ -930,24 +931,24 @@ gboolean skype_start_stream( struct im_connection *ic )
 
 	/* Log in */
 	buf = g_strdup_printf("USERNAME %s\n", ic->acc->user);
-	st = skype_write( ic, buf, strlen( buf ) );
+	st = skype_write( ic, buf );
 	g_free(buf);
 	buf = g_strdup_printf("PASSWORD %s\n", ic->acc->pass);
-	st = skype_write( ic, buf, strlen( buf ) );
+	st = skype_write( ic, buf );
 	g_free(buf);
 
 	/* This will download all buddies. */
 	buf = g_strdup_printf("SEARCH FRIENDS\n");
-	st = skype_write( ic, buf, strlen( buf ) );
+	st = skype_write( ic, buf );
 	g_free(buf);
 	buf = g_strdup_printf("SET USERSTATUS ONLINE\n");
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(buf);
 
 	/* Auto join to bookmarked chats if requested.*/
 	if (set_getbool(&ic->acc->set, "auto_join")) {
 		buf = g_strdup_printf("SEARCH BOOKMARKEDCHATS\n");
-		skype_write( ic, buf, strlen( buf ) );
+		skype_write( ic, buf );
 		g_free(buf);
 	}
 	return st;
@@ -992,7 +993,7 @@ static void skype_logout( struct im_connection *ic )
 	char *buf;
 
 	buf = g_strdup_printf("SET USERSTATUS OFFLINE\n");
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(buf);
 
 	g_free(sd->username);
@@ -1016,7 +1017,7 @@ static int skype_buddy_msg( struct im_connection *ic, char *who, char *message, 
 	else
 		buf = g_strdup_printf("MESSAGE %s %s\n", nick, message);
 	g_free(nick);
-	st = skype_write( ic, buf, strlen( buf ) );
+	st = skype_write( ic, buf );
 	g_free(buf);
 
 	return st;
@@ -1043,7 +1044,7 @@ static void skype_set_away( struct im_connection *ic, char *state_txt, char *mes
 	else
 		state = skype_away_state_by_name( state_txt );
 	buf = g_strdup_printf("SET USERSTATUS %s\n", state->code);
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(buf);
 }
 
@@ -1066,7 +1067,7 @@ static char *skype_set_display_name( set_t *set, char *value )
 	char *buf;
 
 	buf = g_strdup_printf("SET PROFILE FULLNAME %s", value);
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(buf);
 	return(value);
 }
@@ -1078,7 +1079,7 @@ static char *skype_set_balance( set_t *set, char *value )
 	char *buf;
 
 	buf = g_strdup_printf("GET PROFILE PSTN_BALANCE");
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(buf);
 	return(value);
 }
@@ -1103,7 +1104,7 @@ static char *skype_set_call( set_t *set, char *value )
 			*ptr = '\0';
 
 		buf = g_strdup_printf("CALL %s", nick);
-		skype_write( ic, buf, strlen( buf ) );
+		skype_write( ic, buf );
 		g_free(buf);
 		g_free(nick);
 	}
@@ -1113,7 +1114,7 @@ static char *skype_set_call( set_t *set, char *value )
 		if(sd->call_id)
 		{
 			buf = g_strdup_printf("SET CALL %s STATUS FINISHED", sd->call_id);
-			skype_write( ic, buf, strlen( buf ) );
+			skype_write( ic, buf );
 			g_free(buf);
 			g_free(sd->call_id);
 			sd->call_id = NULL;
@@ -1135,7 +1136,7 @@ static void skype_add_buddy( struct im_connection *ic, char *who, char *group )
 	if(ptr)
 		*ptr = '\0';
 	buf = g_strdup_printf("SET USER %s BUDDYSTATUS 2 Please authorize me\n", nick);
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(nick);
 }
 
@@ -1148,7 +1149,7 @@ static void skype_remove_buddy( struct im_connection *ic, char *who, char *group
 	if(ptr)
 		*ptr = '\0';
 	buf = g_strdup_printf("SET USER %s BUDDYSTATUS 1\n", nick);
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(nick);
 }
 
@@ -1157,7 +1158,7 @@ void skype_chat_msg( struct groupchat *gc, char *message, int flags )
 	struct im_connection *ic = gc->ic;
 	char *buf;
 	buf = g_strdup_printf("CHATMESSAGE %s %s\n", gc->title, message);
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(buf);
 }
 
@@ -1166,7 +1167,7 @@ void skype_chat_leave( struct groupchat *gc )
 	struct im_connection *ic = gc->ic;
 	char *buf;
 	buf = g_strdup_printf("ALTER CHAT %s LEAVE\n", gc->title);
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(buf);
 	gc->data = (void*)TRUE;
 }
@@ -1180,7 +1181,7 @@ void skype_chat_invite(struct groupchat *gc, char *who, char *message)
 	if(ptr)
 		*ptr = '\0';
 	buf = g_strdup_printf("ALTER CHAT %s ADDMEMBERS %s\n", gc->title, nick);
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(buf);
 	g_free(nick);
 }
@@ -1191,7 +1192,7 @@ void skype_chat_topic(struct groupchat *gc, char *message)
 	struct skype_data *sd = ic->proto_data;
 	char *buf;
 	buf = g_strdup_printf("ALTER CHAT %s SETTOPIC %s\n", gc->title, message);
-	skype_write( ic, buf, strlen( buf ) );
+	skype_write( ic, buf );
 	g_free(buf);
 	sd->topic_wait = 1;
 }
@@ -1205,7 +1206,7 @@ struct groupchat *skype_chat_with(struct im_connection *ic, char *who)
 	if(ptr)
 		*ptr = '\0';
 	buf = g_strdup_printf("CHAT CREATE %s\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	sd->groupchat_with = g_strdup(nick);
 	g_free(nick);
@@ -1222,49 +1223,49 @@ static void skype_get_info(struct im_connection *ic, char *who)
 	if(ptr)
 		*ptr = '\0';
 	buf = g_strdup_printf("GET USER %s FULLNAME\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s PHONE_HOME\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s PHONE_OFFICE\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s PHONE_MOBILE\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s NROF_AUTHED_BUDDIES\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s TIMEZONE\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s LASTONLINETIMESTAMP\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s BIRTHDAY\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s SEX\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s LANGUAGE\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s COUNTRY\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s PROVINCE\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s CITY\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s HOMEPAGE\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 	buf = g_strdup_printf("GET USER %s ABOUT\n", nick);
-	skype_write(ic, buf, strlen(buf));
+	skype_write(ic, buf);
 	g_free(buf);
 }
 
