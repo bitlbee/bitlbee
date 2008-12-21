@@ -884,6 +884,22 @@ static gboolean skype_read_callback( gpointer data, gint fd, b_input_condition c
 				g_snprintf(buf, 1024, "PONG\n");
 				skype_write(ic, buf, strlen(buf));
 			}
+			else if(!strncmp(line, "CHATS ", 6))
+			{
+				char **i;
+				char **chats = g_strsplit(line + 6, ", ", 0);
+
+				i = chats;
+				while (*i)
+				{
+					g_snprintf(buf, 1024, "GET CHAT %s STATUS\n", *i);
+					skype_write( ic, buf, strlen( buf ) );
+					g_snprintf(buf, 1024, "GET CHAT %s ACTIVEMEMBERS\n", *i);
+					skype_write( ic, buf, strlen( buf ) );
+					i++;
+				}
+				g_strfreev(chats);
+			}
 			lineptr++;
 		}
 		g_strfreev(lines);
@@ -927,6 +943,13 @@ gboolean skype_start_stream( struct im_connection *ic )
 	buf = g_strdup_printf("SET USERSTATUS ONLINE\n");
 	skype_write( ic, buf, strlen( buf ) );
 	g_free(buf);
+
+	/* Auto join to bookmarked chats if requested.*/
+	if (set_getbool(&ic->acc->set, "auto_join")) {
+		buf = g_strdup_printf("SEARCH BOOKMARKEDCHATS\n");
+		skype_write( ic, buf, strlen( buf ) );
+		g_free(buf);
+	}
 	return st;
 }
 
@@ -1272,6 +1295,9 @@ static void skype_init( account_t *acc )
 	s = set_add( &acc->set, "skypeout_offline", "true", set_eval_bool, acc );
 
 	s = set_add( &acc->set, "skypeconsole", "false", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add( &acc->set, "auto_join", "false", set_eval_bool, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 }
 

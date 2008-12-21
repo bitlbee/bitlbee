@@ -350,6 +350,11 @@ $ skyped -n -d
   * then writing `skypeconsole: <command>` will work in the control
     channel.
 
+- If you want to automatically join bookmarked groupchats right after
+  you logged in, do:
+
+  * `account set skype/auto_join true`
+
 == What needs to be done (aka. TODO)
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
