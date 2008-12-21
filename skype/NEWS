@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+              - made 'make config' more portable
+              - add 'skypeconsole' buddy for debugging purposes
+              - support autojoin for bookmarked groupchats
+              - make hardwired '/dev/null' in skyped portable
 0.6.3         - various osx-specific improvements (see the new screenshot!)
               - added python-gnutls install instructions
               - bitlbee.pc is now searched under
