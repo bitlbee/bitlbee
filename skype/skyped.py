@@ -223,7 +223,7 @@ Options:
 	-h	--help		this help
 	-H	--host		set the tcp host (default: %s)
 	-n	--nofork	don't run as daemon in the background
-	-p	--port		set the tcp port (default: %d)
+	-p	--port		set the tcp port (default: %s)
 	-v	--version	display version information""" % (self.cfgpath, self.host, self.port)
 		sys.exit(ret)
 
