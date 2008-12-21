@@ -279,8 +279,8 @@ if __name__=='__main__':
 	if options.daemon:
 		pid = os.fork()
 		if pid == 0:
-			nullin = file('/dev/null', 'r')
-			nullout = file('/dev/null', 'w')
+			nullin = file(os.devnull, 'r')
+			nullout = file(os.devnull, 'w')
 			os.dup2(nullin.fileno(), sys.stdin.fileno())
 			os.dup2(nullout.fileno(), sys.stdout.fileno())
 			os.dup2(nullout.fileno(), sys.stderr.fileno())
