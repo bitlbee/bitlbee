@@ -28,12 +28,14 @@
 
 typedef struct
 {
-	FILE *fp;
 	int line;
-	char c_section[MAX_STRING];
-	char section[MAX_STRING];
-	char key[MAX_STRING];
-	char value[MAX_STRING];
+	char *c_section;
+	char *section;
+	char *key;
+	char *value;
+	int size;
+	char *cur, *tok;
+	char file[];
 } ini_t;
 
 ini_t *ini_open( char *file );
