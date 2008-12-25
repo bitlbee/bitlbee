@@ -52,6 +52,23 @@ ini_t *ini_open( char *file )
 	return NULL;
 }
 
+/* Strips leading and trailing whitespace and returns a pointer to the first
+   non-ws character of the given string. */
+static char *ini_strip_whitespace( char *in )
+{
+	char *e;
+
+	while( isspace( *in ) )
+		in++;
+
+	e = in + strlen( in ) - 1;
+	while( e > in && isspace( *e ) )
+		e--;
+	e[1] = 0;
+	
+	return in;
+}
+
 int ini_read( ini_t *file )
 {
 	char *s;
@@ -61,33 +78,25 @@ int ini_read( ini_t *file )
 		char *e, *next;
 		
 		file->line++;
-		
-		/* Leading whitespace */
-		while( *file->cur == ' ' || *file->cur == '\t' )
-			file->cur++;
 
 		/* Find the end of line */
 		if( ( e = strchr( file->cur, '\n' ) ) != NULL )
 		{
+			*e = 0;
 			next = e + 1;
 		}
 		else
 		{
 			/* No more lines. */
-			e = file->cur + strlen( file->cur ) - 1;
+			e = file->cur + strlen( file->cur );
 			next = NULL;
 		}
 		
 		/* Comment? */
 		if( ( s = strchr( file->cur, '#' ) ) != NULL )
-			e = s - 1;
+			*s = 0;
 		
-		/* And kill trailing whitespace. */
-		while( isspace( *e ) && e > file->cur )
-			e--;
-		e[1] = 0;
-		
-		printf( "Stripped line: '%s'\n", file->cur );
+		file->cur = ini_strip_whitespace( file->cur );
 		
 		if( *file->cur == '[' )
 		{
@@ -96,22 +105,13 @@ int ini_read( ini_t *file )
 			{
 				*s = 0;
 				file->c_section = file->cur;
-				
-				printf( "Section started: %s\n", file->c_section );
 			}
 		}
 		else if( ( s = strchr( file->cur, '=' ) ) != NULL )
 		{
 			*s = 0;
-			file->value = s + 1;
-			while( isspace( *file->value ) )
-				file->value++;
-			
-			s--;
-			while( isspace( *s ) && s > file->cur )
-				s--;
-			s[1] = 0;
-			file->key = file->cur;
+			file->key = ini_strip_whitespace( file->cur );
+			file->value = ini_strip_whitespace( s + 1 );
 			
 			if( ( s = strchr( file->key, '.' ) ) != NULL )
 			{
@@ -125,12 +125,9 @@ int ini_read( ini_t *file )
 			}
 			
 			file->cur = next;
-			
-			printf( "%s.%s = '%s'\n", file->section, file->key, file->value );
-			
 			return 1;
 		}
-		/* else: noise, but let's just ignore it. */
+		/* else: noise/comment/etc, let's just ignore it. */
 
 		file->cur = next;
 	}
