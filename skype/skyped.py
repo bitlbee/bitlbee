@@ -29,7 +29,7 @@ import gobject
 import socket
 import getopt
 import Skype4Py
-import sha
+import hashlib
 from ConfigParser import ConfigParser, NoOptionError
 from traceback import print_exception
 
@@ -122,7 +122,7 @@ def listener(sock, *args):
 		if line.startswith("USERNAME") and line.split(' ')[1].strip() == options.config.username:
 			ret += 1
 		line = options.conn.recv(1024)
-		if line.startswith("PASSWORD") and sha.sha(line.split(' ')[1].strip()).hexdigest() == options.config.password:
+		if line.startswith("PASSWORD") and hashlib.sha1(line.split(' ')[1].strip()).hexdigest() == options.config.password:
 			ret += 1
 	except Exception, s:
 		dprint("Warning, receiving 1024 bytes failed (%s)." % s)
