@@ -481,81 +481,81 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 	char buf[1024];
 	char *id = strchr(line, ' ');
 
-	if (++id) {
-		char *info = strchr(id, ' ');
+	if (!++id)
+		return;
+	char *info = strchr(id, ' ');
 
-		if (!info)
-			return;
-		*info = '\0';
-		info++;
-		if (!strcmp(info, "STATUS RECEIVED")) {
-			/* New message ID:
-			 * (1) Request its from field
-			 * (2) Request its body
-			 * (3) Request its type
-			 * (4) Query chatname
-			 */
-			g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
-			skype_write(ic, buf);
-			g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
-			skype_write(ic, buf);
-			g_snprintf(buf, 1024, "GET CHATMESSAGE %s TYPE\n", id);
-			skype_write(ic, buf);
-			g_snprintf(buf, 1024, "GET CHATMESSAGE %s CHATNAME\n", id);
-			skype_write(ic, buf);
-		} else if (!strncmp(info, "FROM_HANDLE ", 12)) {
-			info += 12;
-			/* New from field value. Store
-			 * it, then we can later use it
-			 * when we got the message's
-			 * body. */
-			g_free(sd->handle);
-			sd->handle = g_strdup_printf("%s@skype.com", info);
-		} else if (!strncmp(info, "EDITED_BY ", 10)) {
-			info += 10;
-			/* This is the same as
-			 * FROM_HANDLE, except that we
-			 * never request these lines
-			 * from Skype, we just get
-			 * them. */
-			g_free(sd->handle);
-			sd->handle = g_strdup_printf("%s@skype.com", info);
-		} else if (!strncmp(info, "BODY ", 5)) {
-			info += 5;
-			sd->body = g_list_append(sd->body, g_strdup(info));
-		}	else if (!strncmp(info, "TYPE ", 5)) {
-			info += 5;
-			g_free(sd->type);
-			sd->type = g_strdup(info);
-		} else if (!strncmp(info, "CHATNAME ", 9)) {
-			info += 9;
-			if (sd->handle && sd->body && sd->type) {
-				struct groupchat *gc = skype_chat_by_name(ic, info);
-				int i;
-				for (i = 0; i < g_list_length(sd->body); i++) {
-					char *body = g_list_nth_data(sd->body, i);
-					if (!strcmp(sd->type, "SAID") || !strcmp(sd->type, "EMOTED")) {
-						if (!strcmp(sd->type, "SAID"))
-							g_snprintf(buf, 1024, "%s", body);
-						else
-							g_snprintf(buf, 1024, "/me %s", body);
-						if (!gc)
-							/* Private message */
-							imcb_buddy_msg(ic, sd->handle, buf, 0, 0);
-						else
-							/* Groupchat message */
-							imcb_chat_msg(gc, sd->handle, buf, 0, 0);
-					} else if (!strcmp(sd->type, "SETTOPIC")) {
-						if (gc)
-							imcb_chat_topic(gc, sd->handle, body, 0);
-					} else if (!strcmp(sd->type, "LEFT")) {
-						if (gc)
-							imcb_chat_remove_buddy(gc, sd->handle, NULL);
-					}
+	if (!info)
+		return;
+	*info = '\0';
+	info++;
+	if (!strcmp(info, "STATUS RECEIVED")) {
+		/* New message ID:
+		 * (1) Request its from field
+		 * (2) Request its body
+		 * (3) Request its type
+		 * (4) Query chatname
+		 */
+		g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
+		skype_write(ic, buf);
+		g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
+		skype_write(ic, buf);
+		g_snprintf(buf, 1024, "GET CHATMESSAGE %s TYPE\n", id);
+		skype_write(ic, buf);
+		g_snprintf(buf, 1024, "GET CHATMESSAGE %s CHATNAME\n", id);
+		skype_write(ic, buf);
+	} else if (!strncmp(info, "FROM_HANDLE ", 12)) {
+		info += 12;
+		/* New from field value. Store
+		 * it, then we can later use it
+		 * when we got the message's
+		 * body. */
+		g_free(sd->handle);
+		sd->handle = g_strdup_printf("%s@skype.com", info);
+	} else if (!strncmp(info, "EDITED_BY ", 10)) {
+		info += 10;
+		/* This is the same as
+		 * FROM_HANDLE, except that we
+		 * never request these lines
+		 * from Skype, we just get
+		 * them. */
+		g_free(sd->handle);
+		sd->handle = g_strdup_printf("%s@skype.com", info);
+	} else if (!strncmp(info, "BODY ", 5)) {
+		info += 5;
+		sd->body = g_list_append(sd->body, g_strdup(info));
+	}	else if (!strncmp(info, "TYPE ", 5)) {
+		info += 5;
+		g_free(sd->type);
+		sd->type = g_strdup(info);
+	} else if (!strncmp(info, "CHATNAME ", 9)) {
+		info += 9;
+		if (sd->handle && sd->body && sd->type) {
+			struct groupchat *gc = skype_chat_by_name(ic, info);
+			int i;
+			for (i = 0; i < g_list_length(sd->body); i++) {
+				char *body = g_list_nth_data(sd->body, i);
+				if (!strcmp(sd->type, "SAID") || !strcmp(sd->type, "EMOTED")) {
+					if (!strcmp(sd->type, "SAID"))
+						g_snprintf(buf, 1024, "%s", body);
+					else
+						g_snprintf(buf, 1024, "/me %s", body);
+					if (!gc)
+						/* Private message */
+						imcb_buddy_msg(ic, sd->handle, buf, 0, 0);
+					else
+						/* Groupchat message */
+						imcb_chat_msg(gc, sd->handle, buf, 0, 0);
+				} else if (!strcmp(sd->type, "SETTOPIC")) {
+					if (gc)
+						imcb_chat_topic(gc, sd->handle, body, 0);
+				} else if (!strcmp(sd->type, "LEFT")) {
+					if (gc)
+						imcb_chat_remove_buddy(gc, sd->handle, NULL);
 				}
-				g_list_free(sd->body);
-				sd->body = NULL;
 			}
+			g_list_free(sd->body);
+			sd->body = NULL;
 		}
 	}
 }
@@ -566,91 +566,91 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 	char *id = strchr(line, ' ');
 	char buf[1024];
 
-	if (++id) {
-		char *info = strchr(id, ' ');
+	if (!++id)
+		return;
+	char *info = strchr(id, ' ');
 
-		if (!info)
-			return;
-		*info = '\0';
-		info++;
-		if (!strncmp(info, "FAILUREREASON ", 14))
-			sd->failurereason = atoi(strchr(info, ' '));
-		else if (!strcmp(info, "STATUS RINGING")) {
-			if (sd->call_id)
-				g_free(sd->call_id);
-			sd->call_id = g_strdup(id);
-			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-			skype_write(ic, buf);
-			sd->call_status = SKYPE_CALL_RINGING;
-		} else if (!strcmp(info, "STATUS MISSED")) {
-			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-			skype_write(ic, buf);
-			sd->call_status = SKYPE_CALL_MISSED;
-		} else if (!strcmp(info, "STATUS CANCELLED")) {
-			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-			skype_write(ic, buf);
-			sd->call_status = SKYPE_CALL_CANCELLED;
-		} else if (!strcmp(info, "STATUS FINISHED")) {
-			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-			skype_write(ic, buf);
-			sd->call_status = SKYPE_CALL_FINISHED;
-		} else if (!strcmp(info, "STATUS REFUSED")) {
-			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-			skype_write(ic, buf);
-			sd->call_status = SKYPE_CALL_REFUSED;
-		} else if (!strcmp(info, "STATUS UNPLACED")) {
-			if (sd->call_id)
-				g_free(sd->call_id);
-			/* Save the ID for later usage (Cancel/Finish). */
-			sd->call_id = g_strdup(id);
-			sd->call_out = TRUE;
-		} else if (!strcmp(info, "STATUS FAILED")) {
-			imcb_error(ic, "Call failed: %s", skype_call_strerror(sd->failurereason));
-			sd->call_id = NULL;
-		} else if (!strncmp(info, "DURATION ", 9)) {
-			if (sd->call_duration)
-				g_free(sd->call_duration);
-			sd->call_duration = g_strdup(info+9);
-		} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
-			info += 15;
-			if (sd->call_status) {
-				switch (sd->call_status) {
-				case SKYPE_CALL_RINGING:
-					if (sd->call_out)
-						imcb_log(ic, "You are currently ringing the user %s.", info);
-					else {
-						g_snprintf(buf, 1024, "The user %s is currently ringing you.", info);
-						skype_call_ask(ic, sd->call_id, buf);
-					}
-					break;
-				case SKYPE_CALL_MISSED:
-					imcb_log(ic, "You have missed a call from user %s.", info);
-					break;
-				case SKYPE_CALL_CANCELLED:
-					imcb_log(ic, "You cancelled the call to the user %s.", info);
-					sd->call_status = 0;
-					sd->call_out = FALSE;
-					break;
-				case SKYPE_CALL_REFUSED:
-					if (sd->call_out)
-						imcb_log(ic, "The user %s refused the call.", info);
-					else
-						imcb_log(ic, "You refused the call from user %s.", info);
-					sd->call_out = FALSE;
-					break;
-				case SKYPE_CALL_FINISHED:
-					if (sd->call_duration)
-						imcb_log(ic, "You finished the call to the user %s (duration: %s seconds).", info, sd->call_duration);
-					else
-						imcb_log(ic, "You finished the call to the user %s.", info);
-					sd->call_out = FALSE;
-					break;
-				default:
-					/* Don't be noisy, ignore other statuses for now. */
-					break;
+	if (!info)
+		return;
+	*info = '\0';
+	info++;
+	if (!strncmp(info, "FAILUREREASON ", 14))
+		sd->failurereason = atoi(strchr(info, ' '));
+	else if (!strcmp(info, "STATUS RINGING")) {
+		if (sd->call_id)
+			g_free(sd->call_id);
+		sd->call_id = g_strdup(id);
+		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		skype_write(ic, buf);
+		sd->call_status = SKYPE_CALL_RINGING;
+	} else if (!strcmp(info, "STATUS MISSED")) {
+		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		skype_write(ic, buf);
+		sd->call_status = SKYPE_CALL_MISSED;
+	} else if (!strcmp(info, "STATUS CANCELLED")) {
+		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		skype_write(ic, buf);
+		sd->call_status = SKYPE_CALL_CANCELLED;
+	} else if (!strcmp(info, "STATUS FINISHED")) {
+		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		skype_write(ic, buf);
+		sd->call_status = SKYPE_CALL_FINISHED;
+	} else if (!strcmp(info, "STATUS REFUSED")) {
+		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		skype_write(ic, buf);
+		sd->call_status = SKYPE_CALL_REFUSED;
+	} else if (!strcmp(info, "STATUS UNPLACED")) {
+		if (sd->call_id)
+			g_free(sd->call_id);
+		/* Save the ID for later usage (Cancel/Finish). */
+		sd->call_id = g_strdup(id);
+		sd->call_out = TRUE;
+	} else if (!strcmp(info, "STATUS FAILED")) {
+		imcb_error(ic, "Call failed: %s", skype_call_strerror(sd->failurereason));
+		sd->call_id = NULL;
+	} else if (!strncmp(info, "DURATION ", 9)) {
+		if (sd->call_duration)
+			g_free(sd->call_duration);
+		sd->call_duration = g_strdup(info+9);
+	} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
+		info += 15;
+		if (sd->call_status) {
+			switch (sd->call_status) {
+			case SKYPE_CALL_RINGING:
+				if (sd->call_out)
+					imcb_log(ic, "You are currently ringing the user %s.", info);
+				else {
+					g_snprintf(buf, 1024, "The user %s is currently ringing you.", info);
+					skype_call_ask(ic, sd->call_id, buf);
 				}
+				break;
+			case SKYPE_CALL_MISSED:
+				imcb_log(ic, "You have missed a call from user %s.", info);
+				break;
+			case SKYPE_CALL_CANCELLED:
+				imcb_log(ic, "You cancelled the call to the user %s.", info);
 				sd->call_status = 0;
+				sd->call_out = FALSE;
+				break;
+			case SKYPE_CALL_REFUSED:
+				if (sd->call_out)
+					imcb_log(ic, "The user %s refused the call.", info);
+				else
+					imcb_log(ic, "You refused the call from user %s.", info);
+				sd->call_out = FALSE;
+				break;
+			case SKYPE_CALL_FINISHED:
+				if (sd->call_duration)
+					imcb_log(ic, "You finished the call to the user %s (duration: %s seconds).", info, sd->call_duration);
+				else
+					imcb_log(ic, "You finished the call to the user %s.", info);
+				sd->call_out = FALSE;
+				break;
+			default:
+				/* Don't be noisy, ignore other statuses for now. */
+				break;
 			}
+			sd->call_status = 0;
 		}
 	}
 }
@@ -661,34 +661,34 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 	char buf[1024];
 	char *id = strchr(line, ' ');
 
-	if (++id) {
-		char *info = strchr(id, ' ');
+	if (!++id)
+		return;
+	char *info = strchr(id, ' ');
 
-		if (!info)
-			return;
-		*info = '\0';
-		info++;
-		if (!strcmp(info, "STATUS NEW")) {
-			g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
-			skype_write(ic, buf);
-			sd->filetransfer_status = SKYPE_FILETRANSFER_NEW;
-		} else if (!strcmp(info, "STATUS FAILED")) {
-			g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
-			skype_write(ic, buf);
-			sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
-		} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
-			info += 15;
-			if (sd->filetransfer_status) {
-				switch (sd->filetransfer_status) {
-				case SKYPE_FILETRANSFER_NEW:
-					imcb_log(ic, "The user %s offered a new file for you.", info);
-					break;
-				case SKYPE_FILETRANSFER_FAILED:
-					imcb_log(ic, "Failed to transfer file from user %s.", info);
-					break;
-				}
-				sd->filetransfer_status = 0;
+	if (!info)
+		return;
+	*info = '\0';
+	info++;
+	if (!strcmp(info, "STATUS NEW")) {
+		g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+		skype_write(ic, buf);
+		sd->filetransfer_status = SKYPE_FILETRANSFER_NEW;
+	} else if (!strcmp(info, "STATUS FAILED")) {
+		g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+		skype_write(ic, buf);
+		sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
+	} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
+		info += 15;
+		if (sd->filetransfer_status) {
+			switch (sd->filetransfer_status) {
+			case SKYPE_FILETRANSFER_NEW:
+				imcb_log(ic, "The user %s offered a new file for you.", info);
+				break;
+			case SKYPE_FILETRANSFER_FAILED:
+				imcb_log(ic, "Failed to transfer file from user %s.", info);
+				break;
 			}
+			sd->filetransfer_status = 0;
 		}
 	}
 }
@@ -699,83 +699,83 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 	char buf[1024];
 	char *id = strchr(line, ' ');
 
-	if (++id) {
-		struct groupchat *gc;
-		char *info = strchr(id, ' ');
+	if (!++id)
+		return;
+	struct groupchat *gc;
+	char *info = strchr(id, ' ');
 
-		if (!info)
-			return;
-		*info = '\0';
-		info++;
-		/* Remove fake chat if we created one in skype_chat_with() */
-		gc = skype_chat_by_name(ic, "");
+	if (!info)
+		return;
+	*info = '\0';
+	info++;
+	/* Remove fake chat if we created one in skype_chat_with() */
+	gc = skype_chat_by_name(ic, "");
+	if (gc)
+		imcb_chat_free(gc);
+	if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
+		imcb_chat_new(ic, id);
+		g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
+		skype_write(ic, buf);
+		g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
+		skype_write(ic, buf);
+	} else if (!strcmp(info, "STATUS DIALOG") && sd->groupchat_with) {
+		gc = imcb_chat_new(ic, id);
+		/* According to the docs this
+		 * is necessary. However it
+		 * does not seem the situation
+		 * and it would open an extra
+		 * window on our client, so
+		 * just leave it out. */
+		/*g_snprintf(buf, 1024, "OPEN CHAT %s\n", id);
+		  skype_write(ic, buf);*/
+		g_snprintf(buf, 1024, "%s@skype.com", sd->groupchat_with);
+		imcb_chat_add_buddy(gc, buf);
+		imcb_chat_add_buddy(gc, sd->username);
+		g_free(sd->groupchat_with);
+		sd->groupchat_with = NULL;
+		g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
+		skype_write(ic, buf);
+		g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
+		skype_write(ic, buf);
+	} else if (!strcmp(info, "STATUS UNSUBSCRIBED")) {
+		gc = skype_chat_by_name(ic, id);
 		if (gc)
-			imcb_chat_free(gc);
-		if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
-			imcb_chat_new(ic, id);
-			g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
-			skype_write(ic, buf);
-			g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
-			skype_write(ic, buf);
-		} else if (!strcmp(info, "STATUS DIALOG") && sd->groupchat_with) {
-			gc = imcb_chat_new(ic, id);
-			/* According to the docs this
-			 * is necessary. However it
-			 * does not seem the situation
-			 * and it would open an extra
-			 * window on our client, so
-			 * just leave it out. */
-			/*g_snprintf(buf, 1024, "OPEN CHAT %s\n", id);
-			  skype_write(ic, buf);*/
-			g_snprintf(buf, 1024, "%s@skype.com", sd->groupchat_with);
-			imcb_chat_add_buddy(gc, buf);
-			imcb_chat_add_buddy(gc, sd->username);
-			g_free(sd->groupchat_with);
-			sd->groupchat_with = NULL;
-			g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
-			skype_write(ic, buf);
-			g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
-			skype_write(ic, buf);
-		} else if (!strcmp(info, "STATUS UNSUBSCRIBED")) {
-			gc = skype_chat_by_name(ic, id);
-			if (gc)
-				gc->data = (void *)FALSE;
-		} else if (!strncmp(info, "ADDER ", 6)) {
-			info += 6;
+			gc->data = (void *)FALSE;
+	} else if (!strncmp(info, "ADDER ", 6)) {
+		info += 6;
+		g_free(sd->adder);
+		sd->adder = g_strdup_printf("%s@skype.com", info);
+	} else if (!strncmp(info, "TOPIC ", 6)) {
+		info += 6;
+		gc = skype_chat_by_name(ic, id);
+		if (gc && (sd->adder || sd->topic_wait)) {
+			if (sd->topic_wait) {
+				sd->adder = g_strdup(sd->username);
+				sd->topic_wait = 0;
+			}
+			imcb_chat_topic(gc, sd->adder, info, 0);
 			g_free(sd->adder);
-			sd->adder = g_strdup_printf("%s@skype.com", info);
-		} else if (!strncmp(info, "TOPIC ", 6)) {
-			info += 6;
-			gc = skype_chat_by_name(ic, id);
-			if (gc && (sd->adder || sd->topic_wait)) {
-				if (sd->topic_wait) {
-					sd->adder = g_strdup(sd->username);
-					sd->topic_wait = 0;
-				}
-				imcb_chat_topic(gc, sd->adder, info, 0);
-				g_free(sd->adder);
-				sd->adder = NULL;
+			sd->adder = NULL;
+		}
+	} else if (!strncmp(info, "ACTIVEMEMBERS ", 14)) {
+		info += 14;
+		gc = skype_chat_by_name(ic, id);
+		/* Hack! We set ->data to TRUE
+		 * while we're on the channel
+		 * so that we won't rejoin
+		 * after a /part. */
+		if (gc && !gc->data) {
+			char **members = g_strsplit(info, " ", 0);
+			int i;
+			for (i = 0; members[i]; i++) {
+				if (!strcmp(members[i], sd->username))
+					continue;
+				g_snprintf(buf, 1024, "%s@skype.com", members[i]);
+				if (!g_list_find_custom(gc->in_room, buf, (GCompareFunc)strcmp))
+					imcb_chat_add_buddy(gc, buf);
 			}
-		} else if (!strncmp(info, "ACTIVEMEMBERS ", 14)) {
-			info += 14;
-			gc = skype_chat_by_name(ic, id);
-			/* Hack! We set ->data to TRUE
-			 * while we're on the channel
-			 * so that we won't rejoin
-			 * after a /part. */
-			if (gc && !gc->data) {
-				char **members = g_strsplit(info, " ", 0);
-				int i;
-				for (i = 0; members[i]; i++) {
-					if (!strcmp(members[i], sd->username))
-						continue;
-					g_snprintf(buf, 1024, "%s@skype.com", members[i]);
-					if (!g_list_find_custom(gc->in_room, buf, (GCompareFunc)strcmp))
-						imcb_chat_add_buddy(gc, buf);
-				}
-				imcb_chat_add_buddy(gc, sd->username);
-				g_strfreev(members);
-			}
+			imcb_chat_add_buddy(gc, sd->username);
+			g_strfreev(members);
 		}
 	}
 }
@@ -857,12 +857,12 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 				break;
 			if (set_getbool(&ic->acc->set, "skypeconsole_receive"))
 				imcb_buddy_msg(ic, "skypeconsole", line, 0, 0);
-			for (i = 0; i < ARRAY_SIZE(parsers); i++) {
-				if (!strncmp(line, parsers[i].k, strlen(parsers[i].k))) {
+			for (i = 0; i < ARRAY_SIZE(parsers); i++)
+				if (!strncmp(line, parsers[i].k,
+					strlen(parsers[i].k))) {
 					parsers[i].v(ic, line);
 					break;
 				}
-			}
 			lineptr++;
 		}
 		g_strfreev(lines);
