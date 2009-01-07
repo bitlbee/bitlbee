@@ -127,13 +127,13 @@ struct skype_buddy_ask_data {
  */
 
 const struct skype_away_state skype_away_state_list[] = {
-	{ "ONLINE",  "Online" },
-	{ "SKYPEME",  "Skype Me" },
-	{ "AWAY",   "Away" },
-	{ "NA",    "Not available" },
-	{ "DND",      "Do Not Disturb" },
-	{ "INVISIBLE",      "Invisible" },
-	{ "OFFLINE",      "Offline" },
+	{ "ONLINE", "Online" },
+	{ "SKYPEME", "Skype Me" },
+	{ "AWAY", "Away" },
+	{ "NA", "Not available" },
+	{ "DND", "Do Not Disturb" },
+	{ "INVISIBLE", "Invisible" },
+	{ "OFFLINE", "Offline" },
 	{ NULL, NULL}
 };
 
