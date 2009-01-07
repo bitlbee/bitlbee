@@ -654,6 +654,44 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 	}
 }
 
+static void skype_parse_filetransfer(struct im_connection *ic, char *line)
+{
+	struct skype_data *sd = ic->proto_data;
+	char buf[1024];
+	char *id = strchr(line, ' ');
+
+	if (++id) {
+		char *info = strchr(id, ' ');
+
+		if (!info)
+			return;
+		*info = '\0';
+		info++;
+		if (!strcmp(info, "STATUS NEW")) {
+			g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+			skype_write(ic, buf);
+			sd->filetransfer_status = SKYPE_FILETRANSFER_NEW;
+		} else if (!strcmp(info, "STATUS FAILED")) {
+			g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+			skype_write(ic, buf);
+			sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
+		} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
+			info += 15;
+			if (sd->filetransfer_status) {
+				switch (sd->filetransfer_status) {
+					case SKYPE_FILETRANSFER_NEW:
+						imcb_log(ic, "The user %s offered a new file for you.", info);
+						break;
+					case SKYPE_FILETRANSFER_FAILED:
+						imcb_log(ic, "Failed to transfer file from user %s.", info);
+						break;
+				}
+				sd->filetransfer_status = 0;
+			}
+		}
+	}
+}
+
 static gboolean skype_read_callback(gpointer data, gint fd,
 				    b_input_condition cond)
 {
@@ -685,36 +723,9 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 				skype_parse_chatmessage(ic, line);
 			else if (!strncmp(line, "CALL ", 5))
 				skype_parse_call(ic, line);
-			else if (!strncmp(line, "FILETRANSFER ", 13)) {
-				char *id = strchr(line, ' ');
-				if (++id) {
-					char *info = strchr(id, ' ');
-					*info = '\0';
-					info++;
-					if (!strcmp(info, "STATUS NEW")) {
-						g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
-						skype_write(ic, buf);
-						sd->filetransfer_status = SKYPE_FILETRANSFER_NEW;
-					} else if (!strcmp(info, "STATUS FAILED")) {
-						g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
-						skype_write(ic, buf);
-						sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
-					} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
-						info += 15;
-						if (sd->filetransfer_status) {
-							switch (sd->filetransfer_status) {
-							case SKYPE_FILETRANSFER_NEW:
-								imcb_log(ic, "The user %s offered a new file for you.", info);
-								break;
-							case SKYPE_FILETRANSFER_FAILED:
-								imcb_log(ic, "Failed to transfer file from user %s.", info);
-								break;
-							}
-							sd->filetransfer_status = 0;
-						}
-					}
-				}
-			} else if (!strncmp(line, "CHAT ", 5)) {
+			else if (!strncmp(line, "FILETRANSFER ", 13))
+				skype_parse_filetransfer(ic, line);
+			else if (!strncmp(line, "CHAT ", 5)) {
 				char *id = strchr(line, ' ');
 				if (++id) {
 					char *info = strchr(id, ' ');
