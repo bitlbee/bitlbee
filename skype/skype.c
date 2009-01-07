@@ -3,10 +3,6 @@
  *
  *  Copyright (c) 2007, 2008, 2009 by Miklos Vajna <vmiklos@frugalware.org>
  *
- *  Several ideas are used from the BitlBee Jabber plugin, which is
- *
- *  Copyright (c) 2006 by Wilmer van der Gaast <wilmer@gaast.net>
- *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
@@ -44,12 +40,12 @@ enum {
 	SKYPE_CALL_CANCELLED,
 	SKYPE_CALL_FINISHED,
 	SKYPE_CALL_REFUSED
-} skype_call_status;
+};
 
 enum {
 	SKYPE_FILETRANSFER_NEW = 1,
 	SKYPE_FILETRANSFER_FAILED
-} skype_filetransfer_status;
+};
 
 /*
  * Structures
