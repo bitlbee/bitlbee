@@ -47,6 +47,10 @@ distclean: clean
 autoclean: distclean
 	rm -rf aclocal.m4 autom4te.cache configure install-sh
 
+# take this from the kernel
+check:
+	perl checkpatch.pl --no-tree --file skype.c
+
 dist:
 	git archive --format=tar --prefix=bitlbee-skype-$(VERSION)/ HEAD | tar xf -
 	mkdir -p bitlbee-skype-$(VERSION)
