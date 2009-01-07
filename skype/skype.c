@@ -779,6 +779,16 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 	}
 }
 
+static void skype_parse_password(struct im_connection *ic, char *line)
+{
+	if (!strncmp(line+9, "OK", 2))
+		imcb_connected(ic);
+	else {
+		imcb_error(ic, "Authentication Failed");
+		imc_logout(ic, TRUE);
+	}
+}
+
 static gboolean skype_read_callback(gpointer data, gint fd,
 				    b_input_condition cond)
 {
@@ -815,12 +825,7 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 			else if (!strncmp(line, "CHAT ", 5))
 				skype_parse_chat(ic, line);
 			else if (!strncmp(line, "PASSWORD ", 9)) {
-				if (!strncmp(line+9, "OK", 2))
-					imcb_connected(ic);
-				else {
-					imcb_error(ic, "Authentication Failed");
-					imc_logout(ic, TRUE);
-				}
+				skype_parse_password(ic, line);
 			} else if (!strncmp(line, "PROFILE PSTN_BALANCE ", 21))
 				imcb_log(ic, "SkypeOut balance value is '%s'.", line+21);
 			else if (!strncmp(line, "PING", 4)) {
