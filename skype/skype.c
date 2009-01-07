@@ -37,7 +37,7 @@
  * Enumerations
  */
 
-typedef enum {
+enum {
 	SKYPE_CALL_RINGING = 1,
 	SKYPE_CALL_MISSED,
 	SKYPE_CALL_CANCELLED,
@@ -45,7 +45,7 @@ typedef enum {
 	SKYPE_CALL_REFUSED
 } skype_call_status;
 
-typedef enum {
+enum {
 	SKYPE_FILETRANSFER_NEW = 1,
 	SKYPE_FILETRANSFER_FAILED
 } skype_filetransfer_status;
@@ -75,13 +75,13 @@ struct skype_data {
 	/* This is necessary because we send a notification when we get the
 	 * handle. So we store the state here and then we can send a
 	 * notification about the handle is in a given status. */
-	skype_call_status call_status;
+	int call_status;
 	char *call_id;
 	char *call_duration;
 	/* If the call is outgoing or not */
 	int call_out;
 	/* Same for file transfers. */
-	skype_filetransfer_status filetransfer_status;
+	int filetransfer_status;
 	/* Using /j #nick we want to have a groupchat with two people. Usually
 	 * not (default). */
 	char *groupchat_with;
