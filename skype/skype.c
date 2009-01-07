@@ -559,6 +559,101 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 	}
 }
 
+static void skype_parse_call(struct im_connection *ic, char *line)
+{
+	struct skype_data *sd = ic->proto_data;
+	char *id = strchr(line, ' ');
+	char buf[1024];
+
+	if (++id) {
+		char *info = strchr(id, ' ');
+
+		if (!info)
+			return;
+		*info = '\0';
+		info++;
+		if (!strncmp(info, "FAILUREREASON ", 14))
+			sd->failurereason = atoi(strchr(info, ' '));
+		else if (!strcmp(info, "STATUS RINGING")) {
+			if (sd->call_id)
+				g_free(sd->call_id);
+			sd->call_id = g_strdup(id);
+			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+			skype_write(ic, buf);
+			sd->call_status = SKYPE_CALL_RINGING;
+		} else if (!strcmp(info, "STATUS MISSED")) {
+			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+			skype_write(ic, buf);
+			sd->call_status = SKYPE_CALL_MISSED;
+		} else if (!strcmp(info, "STATUS CANCELLED")) {
+			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+			skype_write(ic, buf);
+			sd->call_status = SKYPE_CALL_CANCELLED;
+		} else if (!strcmp(info, "STATUS FINISHED")) {
+			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+			skype_write(ic, buf);
+			sd->call_status = SKYPE_CALL_FINISHED;
+		} else if (!strcmp(info, "STATUS REFUSED")) {
+			g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+			skype_write(ic, buf);
+			sd->call_status = SKYPE_CALL_REFUSED;
+		} else if (!strcmp(info, "STATUS UNPLACED")) {
+			if (sd->call_id)
+				g_free(sd->call_id);
+			/* Save the ID for later usage (Cancel/Finish). */
+			sd->call_id = g_strdup(id);
+			sd->call_out = TRUE;
+		} else if (!strcmp(info, "STATUS FAILED")) {
+			imcb_error(ic, "Call failed: %s", skype_call_strerror(sd->failurereason));
+			sd->call_id = NULL;
+		} else if (!strncmp(info, "DURATION ", 9)) {
+			if (sd->call_duration)
+				g_free(sd->call_duration);
+			sd->call_duration = g_strdup(info+9);
+		} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
+			info += 15;
+			if (sd->call_status) {
+				switch (sd->call_status) {
+					case SKYPE_CALL_RINGING:
+						if (sd->call_out)
+							imcb_log(ic, "You are currently ringing the user %s.", info);
+						else {
+							g_snprintf(buf, 1024, "The user %s is currently ringing you.", info);
+							skype_call_ask(ic, sd->call_id, buf);
+						}
+						break;
+					case SKYPE_CALL_MISSED:
+						imcb_log(ic, "You have missed a call from user %s.", info);
+						break;
+					case SKYPE_CALL_CANCELLED:
+						imcb_log(ic, "You cancelled the call to the user %s.", info);
+						sd->call_status = 0;
+						sd->call_out = FALSE;
+						break;
+					case SKYPE_CALL_REFUSED:
+						if (sd->call_out)
+							imcb_log(ic, "The user %s refused the call.", info);
+						else
+							imcb_log(ic, "You refused the call from user %s.", info);
+						sd->call_out = FALSE;
+						break;
+					case SKYPE_CALL_FINISHED:
+						if (sd->call_duration)
+							imcb_log(ic, "You finished the call to the user %s (duration: %s seconds).", info, sd->call_duration);
+						else
+							imcb_log(ic, "You finished the call to the user %s.", info);
+						sd->call_out = FALSE;
+						break;
+					default:
+						/* Don't be noisy, ignore other statuses for now. */
+						break;
+				}
+				sd->call_status = 0;
+			}
+		}
+	}
+}
+
 static gboolean skype_read_callback(gpointer data, gint fd,
 				    b_input_condition cond)
 {
@@ -584,97 +679,13 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 				imcb_buddy_msg(ic, "skypeconsole", line, 0, 0);
 			if (!strncmp(line, "USERS ", 6))
 				skype_parse_users(ic, line);
-			else if (!strncmp(line, "USER ", 5)) {
+			else if (!strncmp(line, "USER ", 5))
 				skype_parse_user(ic, line);
-			} else if (!strncmp(line, "CHATMESSAGE ", 12)) {
+			else if (!strncmp(line, "CHATMESSAGE ", 12))
 				skype_parse_chatmessage(ic, line);
-			} else if (!strncmp(line, "CALL ", 5)) {
-				char *id = strchr(line, ' ');
-				if (++id) {
-					char *info = strchr(id, ' ');
-					*info = '\0';
-					info++;
-					if (!strncmp(info, "FAILUREREASON ", 14))
-						sd->failurereason = atoi(strchr(info, ' '));
-					else if (!strcmp(info, "STATUS RINGING")) {
-						if (sd->call_id)
-							g_free(sd->call_id);
-						sd->call_id = g_strdup(id);
-						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-						skype_write(ic, buf);
-						sd->call_status = SKYPE_CALL_RINGING;
-					} else if (!strcmp(info, "STATUS MISSED")) {
-						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-						skype_write(ic, buf);
-						sd->call_status = SKYPE_CALL_MISSED;
-					} else if (!strcmp(info, "STATUS CANCELLED")) {
-							g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-							skype_write(ic, buf);
-							sd->call_status = SKYPE_CALL_CANCELLED;
-					} else if (!strcmp(info, "STATUS FINISHED")) {
-						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-						skype_write(ic, buf);
-						sd->call_status = SKYPE_CALL_FINISHED;
-					} else if (!strcmp(info, "STATUS REFUSED")) {
-						g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
-						skype_write(ic, buf);
-						sd->call_status = SKYPE_CALL_REFUSED;
-					} else if (!strcmp(info, "STATUS UNPLACED")) {
-						if (sd->call_id)
-							g_free(sd->call_id);
-						/* Save the ID for later usage (Cancel/Finish). */
-						sd->call_id = g_strdup(id);
-						sd->call_out = TRUE;
-					} else if (!strcmp(info, "STATUS FAILED")) {
-						imcb_error(ic, "Call failed: %s", skype_call_strerror(sd->failurereason));
-						sd->call_id = NULL;
-					} else if (!strncmp(info, "DURATION ", 9)) {
-						if (sd->call_duration)
-							g_free(sd->call_duration);
-						sd->call_duration = g_strdup(info+9);
-					} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
-						info += 15;
-						if (sd->call_status) {
-							switch (sd->call_status) {
-							case SKYPE_CALL_RINGING:
-								if (sd->call_out)
-									imcb_log(ic, "You are currently ringing the user %s.", info);
-								else {
-									g_snprintf(buf, 1024, "The user %s is currently ringing you.", info);
-									skype_call_ask(ic, sd->call_id, buf);
-								}
-								break;
-							case SKYPE_CALL_MISSED:
-								imcb_log(ic, "You have missed a call from user %s.", info);
-								break;
-							case SKYPE_CALL_CANCELLED:
-								imcb_log(ic, "You cancelled the call to the user %s.", info);
-								sd->call_status = 0;
-								sd->call_out = FALSE;
-								break;
-							case SKYPE_CALL_REFUSED:
-								if (sd->call_out)
-									imcb_log(ic, "The user %s refused the call.", info);
-								else
-									imcb_log(ic, "You refused the call from user %s.", info);
-								sd->call_out = FALSE;
-								break;
-							case SKYPE_CALL_FINISHED:
-								if (sd->call_duration)
-									imcb_log(ic, "You finished the call to the user %s (duration: %s seconds).", info, sd->call_duration);
-								else
-									imcb_log(ic, "You finished the call to the user %s.", info);
-								sd->call_out = FALSE;
-								break;
-							default:
-								/* Don't be noisy, ignore other statuses for now. */
-								break;
-							}
-							sd->call_status = 0;
-						}
-					}
-				}
-			} else if (!strncmp(line, "FILETRANSFER ", 13)) {
+			else if (!strncmp(line, "CALL ", 5))
+				skype_parse_call(ic, line);
+			else if (!strncmp(line, "FILETRANSFER ", 13)) {
 				char *id = strchr(line, ' ');
 				if (++id) {
 					char *info = strchr(id, ' ');
