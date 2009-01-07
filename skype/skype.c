@@ -278,12 +278,10 @@ static void skype_parse_users(struct im_connection *ic, char *line)
 	char **i, **nicks, *ptr;
 
 	nicks = g_strsplit(line + 6, ", ", 0);
-	i = nicks;
-	while (*i) {
+	for (i = nicks; *i; i++) {
 		ptr = g_strdup_printf("GET USER %s ONLINESTATUS\n", *i);
 		skype_write(ic, ptr);
 		g_free(ptr);
-		i++;
 	}
 	g_strfreev(nicks);
 }
