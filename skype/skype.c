@@ -615,39 +615,39 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 			info += 15;
 			if (sd->call_status) {
 				switch (sd->call_status) {
-					case SKYPE_CALL_RINGING:
-						if (sd->call_out)
-							imcb_log(ic, "You are currently ringing the user %s.", info);
-						else {
-							g_snprintf(buf, 1024, "The user %s is currently ringing you.", info);
-							skype_call_ask(ic, sd->call_id, buf);
-						}
-						break;
-					case SKYPE_CALL_MISSED:
-						imcb_log(ic, "You have missed a call from user %s.", info);
-						break;
-					case SKYPE_CALL_CANCELLED:
-						imcb_log(ic, "You cancelled the call to the user %s.", info);
-						sd->call_status = 0;
-						sd->call_out = FALSE;
-						break;
-					case SKYPE_CALL_REFUSED:
-						if (sd->call_out)
-							imcb_log(ic, "The user %s refused the call.", info);
-						else
-							imcb_log(ic, "You refused the call from user %s.", info);
-						sd->call_out = FALSE;
-						break;
-					case SKYPE_CALL_FINISHED:
-						if (sd->call_duration)
-							imcb_log(ic, "You finished the call to the user %s (duration: %s seconds).", info, sd->call_duration);
-						else
-							imcb_log(ic, "You finished the call to the user %s.", info);
-						sd->call_out = FALSE;
-						break;
-					default:
-						/* Don't be noisy, ignore other statuses for now. */
-						break;
+				case SKYPE_CALL_RINGING:
+					if (sd->call_out)
+						imcb_log(ic, "You are currently ringing the user %s.", info);
+					else {
+						g_snprintf(buf, 1024, "The user %s is currently ringing you.", info);
+						skype_call_ask(ic, sd->call_id, buf);
+					}
+					break;
+				case SKYPE_CALL_MISSED:
+					imcb_log(ic, "You have missed a call from user %s.", info);
+					break;
+				case SKYPE_CALL_CANCELLED:
+					imcb_log(ic, "You cancelled the call to the user %s.", info);
+					sd->call_status = 0;
+					sd->call_out = FALSE;
+					break;
+				case SKYPE_CALL_REFUSED:
+					if (sd->call_out)
+						imcb_log(ic, "The user %s refused the call.", info);
+					else
+						imcb_log(ic, "You refused the call from user %s.", info);
+					sd->call_out = FALSE;
+					break;
+				case SKYPE_CALL_FINISHED:
+					if (sd->call_duration)
+						imcb_log(ic, "You finished the call to the user %s (duration: %s seconds).", info, sd->call_duration);
+					else
+						imcb_log(ic, "You finished the call to the user %s.", info);
+					sd->call_out = FALSE;
+					break;
+				default:
+					/* Don't be noisy, ignore other statuses for now. */
+					break;
 				}
 				sd->call_status = 0;
 			}
@@ -680,12 +680,12 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 			info += 15;
 			if (sd->filetransfer_status) {
 				switch (sd->filetransfer_status) {
-					case SKYPE_FILETRANSFER_NEW:
-						imcb_log(ic, "The user %s offered a new file for you.", info);
-						break;
-					case SKYPE_FILETRANSFER_FAILED:
-						imcb_log(ic, "Failed to transfer file from user %s.", info);
-						break;
+				case SKYPE_FILETRANSFER_NEW:
+					imcb_log(ic, "The user %s offered a new file for you.", info);
+					break;
+				case SKYPE_FILETRANSFER_FAILED:
+					imcb_log(ic, "Failed to transfer file from user %s.", info);
+					break;
 				}
 				sd->filetransfer_status = 0;
 			}
