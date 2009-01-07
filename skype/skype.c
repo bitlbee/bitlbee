@@ -789,6 +789,33 @@ static void skype_parse_password(struct im_connection *ic, char *line)
 	}
 }
 
+static void skype_parse_profile(struct im_connection *ic, char *line)
+{
+	imcb_log(ic, "SkypeOut balance value is '%s'.", line+21);
+}
+
+static void skype_parse_ping(struct im_connection *ic, char *line)
+{
+	skype_write(ic, "PONG\n");
+}
+
+static void skype_parse_chats(struct im_connection *ic, char *line)
+{
+	char buf[1024];
+	char **i;
+	char **chats = g_strsplit(line + 6, ", ", 0);
+
+	i = chats;
+	while (*i) {
+		g_snprintf(buf, 1024, "GET CHAT %s STATUS\n", *i);
+		skype_write(ic, buf);
+		g_snprintf(buf, 1024, "GET CHAT %s ACTIVEMEMBERS\n", *i);
+		skype_write(ic, buf);
+		i++;
+	}
+	g_strfreev(chats);
+}
+
 static gboolean skype_read_callback(gpointer data, gint fd,
 				    b_input_condition cond)
 {
@@ -824,27 +851,14 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 				skype_parse_filetransfer(ic, line);
 			else if (!strncmp(line, "CHAT ", 5))
 				skype_parse_chat(ic, line);
-			else if (!strncmp(line, "PASSWORD ", 9)) {
+			else if (!strncmp(line, "PASSWORD ", 9))
 				skype_parse_password(ic, line);
-			} else if (!strncmp(line, "PROFILE PSTN_BALANCE ", 21))
-				imcb_log(ic, "SkypeOut balance value is '%s'.", line+21);
-			else if (!strncmp(line, "PING", 4)) {
-				g_snprintf(buf, 1024, "PONG\n");
-				skype_write(ic, buf);
-			} else if (!strncmp(line, "CHATS ", 6)) {
-				char **i;
-				char **chats = g_strsplit(line + 6, ", ", 0);
-
-				i = chats;
-				while (*i) {
-					g_snprintf(buf, 1024, "GET CHAT %s STATUS\n", *i);
-					skype_write(ic, buf);
-					g_snprintf(buf, 1024, "GET CHAT %s ACTIVEMEMBERS\n", *i);
-					skype_write(ic, buf);
-					i++;
-				}
-				g_strfreev(chats);
-			}
+			else if (!strncmp(line, "PROFILE PSTN_BALANCE ", 21))
+				skype_parse_profile(ic, line);
+			else if (!strncmp(line, "PING", 4))
+				skype_parse_ping(ic, line);
+			else if (!strncmp(line, "CHATS ", 6))
+				skype_parse_chats(ic, line);
 			lineptr++;
 		}
 		g_strfreev(lines);
