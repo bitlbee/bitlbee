@@ -8,8 +8,8 @@ vim, make, etc.
 
 2) bitlbee:
 
-gdb ./bitlbee
-run -v -n -D
+gdb --args ./bitlbee -v -n -D
+run
 
 3) skyped:
 
