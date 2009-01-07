@@ -164,7 +164,8 @@ int skype_write(struct im_connection *ic, char *buf)
 static void skype_buddy_ask_yes(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
-	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED TRUE", bla->handle);
+	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED TRUE",
+		bla->handle);
 	skype_write(bla->ic, buf);
 	g_free(buf);
 	g_free(bla->handle);
@@ -174,7 +175,8 @@ static void skype_buddy_ask_yes(void *data)
 static void skype_buddy_ask_no(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
-	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED FALSE", bla->handle);
+	char *buf = g_strdup_printf("SET USER %s ISAUTHORIZED FALSE",
+		bla->handle);
 	skype_write(bla->ic, buf);
 	g_free(buf);
 	g_free(bla->handle);
@@ -183,13 +185,15 @@ static void skype_buddy_ask_no(void *data)
 
 void skype_buddy_ask(struct im_connection *ic, char *handle, char *message)
 {
-	struct skype_buddy_ask_data *bla = g_new0(struct skype_buddy_ask_data, 1);
+	struct skype_buddy_ask_data *bla = g_new0(struct skype_buddy_ask_data,
+		1);
 	char *buf;
 
 	bla->ic = ic;
 	bla->handle = g_strdup(handle);
 
-	buf = g_strdup_printf("The user %s wants to add you to his/her buddy list, saying: '%s'.", handle, message);
+	buf = g_strdup_printf("The user %s wants to add you to "
+		"his/her buddy list, saying: '%s'.", handle, message);
 	imcb_ask(ic, buf, bla, skype_buddy_ask_yes, skype_buddy_ask_no);
 	g_free(buf);
 }
@@ -197,7 +201,8 @@ void skype_buddy_ask(struct im_connection *ic, char *handle, char *message)
 static void skype_call_ask_yes(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
-	char *buf = g_strdup_printf("SET CALL %s STATUS INPROGRESS", bla->handle);
+	char *buf = g_strdup_printf("SET CALL %s STATUS INPROGRESS",
+		bla->handle);
 	skype_write(bla->ic, buf);
 	g_free(buf);
 	g_free(bla->handle);
@@ -207,7 +212,8 @@ static void skype_call_ask_yes(void *data)
 static void skype_call_ask_no(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
-	char *buf = g_strdup_printf("SET CALL %s STATUS FINISHED", bla->handle);
+	char *buf = g_strdup_printf("SET CALL %s STATUS FINISHED",
+		bla->handle);
 	skype_write(bla->ic, buf);
 	g_free(buf);
 	g_free(bla->handle);
@@ -216,7 +222,8 @@ static void skype_call_ask_no(void *data)
 
 void skype_call_ask(struct im_connection *ic, char *call_id, char *message)
 {
-	struct skype_buddy_ask_data *bla = g_new0(struct skype_buddy_ask_data, 1);
+	struct skype_buddy_ask_data *bla = g_new0(struct skype_buddy_ask_data,
+		1);
 
 	bla->ic = ic;
 	bla->handle = g_strdup(call_id);
@@ -266,7 +273,8 @@ static char *skype_call_strerror(int err)
 	}
 }
 
-static gboolean skype_read_callback(gpointer data, gint fd, b_input_condition cond)
+static gboolean skype_read_callback(gpointer data, gint fd,
+				    b_input_condition cond)
 {
 	struct im_connection *ic = data;
 	struct skype_data *sd = ic->proto_data;
@@ -801,7 +809,8 @@ gboolean skype_start_stream(struct im_connection *ic)
 		return FALSE;
 
 	if (sd->bfd <= 0)
-		sd->bfd = b_input_add(sd->fd, GAIM_INPUT_READ, skype_read_callback, ic);
+		sd->bfd = b_input_add(sd->fd, GAIM_INPUT_READ,
+			skype_read_callback, ic);
 
 	/* Log in */
 	buf = g_strdup_printf("USERNAME %s\n", ic->acc->user);
@@ -850,7 +859,8 @@ static void skype_login(account_t *acc)
 	ic->proto_data = sd;
 
 	imcb_log(ic, "Connecting");
-	sd->ssl = ssl_connect(set_getstr(&acc->set, "server"), set_getint(&acc->set, "port"), skype_connected, ic);
+	sd->ssl = ssl_connect(set_getstr(&acc->set, "server"),
+		set_getint(&acc->set, "port"), skype_connected, ic);
 	sd->fd = sd->ssl ? ssl_getfd(sd->ssl) : -1;
 	sd->username = g_strdup(acc->user);
 
@@ -875,7 +885,8 @@ static void skype_logout(struct im_connection *ic)
 	ic->proto_data = NULL;
 }
 
-static int skype_buddy_msg(struct im_connection *ic, char *who, char *message, int flags)
+static int skype_buddy_msg(struct im_connection *ic, char *who, char *message,
+			   int flags)
 {
 	char *buf, *ptr, *nick;
 	int st;
@@ -907,7 +918,8 @@ const struct skype_away_state *skype_away_state_by_name(char *name)
 	return NULL;
 }
 
-static void skype_set_away(struct im_connection *ic, char *state_txt, char *message)
+static void skype_set_away(struct im_connection *ic, char *state_txt,
+			   char *message)
 {
 	const struct skype_away_state *state;
 	char *buf;
@@ -928,7 +940,8 @@ static GList *skype_away_states(struct im_connection *ic)
 
 	if (l == NULL)
 		for (i = 0; skype_away_state_list[i].full_name; i++)
-			l = g_list_append(l, (void *)skype_away_state_list[i].full_name);
+			l = g_list_append(l,
+				(void *)skype_away_state_list[i].full_name);
 
 	return l;
 }
@@ -982,7 +995,8 @@ static char *skype_set_call(set_t *set, char *value)
 	} else {
 		/* We are ending a call */
 		if (sd->call_id) {
-			buf = g_strdup_printf("SET CALL %s STATUS FINISHED", sd->call_id);
+			buf = g_strdup_printf("SET CALL %s STATUS FINISHED",
+				sd->call_id);
 			skype_write(ic, buf);
 			g_free(buf);
 			g_free(sd->call_id);
@@ -1001,7 +1015,8 @@ static void skype_add_buddy(struct im_connection *ic, char *who, char *group)
 	ptr = strchr(nick, '@');
 	if (ptr)
 		*ptr = '\0';
-	buf = g_strdup_printf("SET USER %s BUDDYSTATUS 2 Please authorize me\n", nick);
+	buf = g_strdup_printf("SET USER %s BUDDYSTATUS 2 Please authorize me\n",
+		nick);
 	skype_write(ic, buf);
 	g_free(nick);
 }
@@ -1057,7 +1072,8 @@ void skype_chat_topic(struct groupchat *gc, char *message)
 	struct im_connection *ic = gc->ic;
 	struct skype_data *sd = ic->proto_data;
 	char *buf;
-	buf = g_strdup_printf("ALTER CHAT %s SETTOPIC %s\n", gc->title, message);
+	buf = g_strdup_printf("ALTER CHAT %s SETTOPIC %s\n",
+		gc->title, message);
 	skype_write(ic, buf);
 	g_free(buf);
 	sd->topic_wait = 1;
@@ -1144,13 +1160,15 @@ static void skype_init(account_t *acc)
 {
 	set_t *s;
 
-	s = set_add(&acc->set, "server", SKYPE_DEFAULT_SERVER, set_eval_account, acc);
+	s = set_add(&acc->set, "server", SKYPE_DEFAULT_SERVER, set_eval_account,
+		acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "port", SKYPE_DEFAULT_PORT, set_eval_int, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add(&acc->set, "display_name", NULL, skype_set_display_name, acc);
+	s = set_add(&acc->set, "display_name", NULL, skype_set_display_name,
+		acc);
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "call", NULL, skype_set_call, acc);
@@ -1164,7 +1182,8 @@ static void skype_init(account_t *acc)
 	s = set_add(&acc->set, "skypeconsole", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add(&acc->set, "skypeconsole_receive", "false", set_eval_bool, acc);
+	s = set_add(&acc->set, "skypeconsole_receive", "false", set_eval_bool,
+		acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "auto_join", "false", set_eval_bool, acc);
@@ -1194,5 +1213,3 @@ void init_plugin(void)
 	ret->chat_topic = skype_chat_topic;
 	register_protocol(ret);
 }
-
-/* vim: set ts=2 sw=2 noet: */
