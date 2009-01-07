@@ -273,6 +273,21 @@ static char *skype_call_strerror(int err)
 	}
 }
 
+static void skype_parse_users(struct im_connection *ic, char *line)
+{
+	char **i, **nicks, *ptr;
+
+	nicks = g_strsplit(line + 6, ", ", 0);
+	i = nicks;
+	while (*i) {
+		ptr = g_strdup_printf("GET USER %s ONLINESTATUS\n", *i);
+		skype_write(ic, ptr);
+		g_free(ptr);
+		i++;
+	}
+	g_strfreev(nicks);
+}
+
 static gboolean skype_read_callback(gpointer data, gint fd,
 				    b_input_condition cond)
 {
@@ -296,19 +311,9 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 				break;
 			if (set_getbool(&ic->acc->set, "skypeconsole_receive"))
 				imcb_buddy_msg(ic, "skypeconsole", line, 0, 0);
-			if (!strncmp(line, "USERS ", 6)) {
-				char **i;
-				char **nicks;
-
-				nicks = g_strsplit(line + 6, ", ", 0);
-				i = nicks;
-				while (*i) {
-					g_snprintf(buf, 1024, "GET USER %s ONLINESTATUS\n", *i);
-					skype_write(ic, buf);
-					i++;
-				}
-				g_strfreev(nicks);
-			} else if (!strncmp(line, "USER ", 5)) {
+			if (!strncmp(line, "USERS ", 6))
+				skype_parse_users(ic, line);
+			else if (!strncmp(line, "USER ", 5)) {
 				int flags = 0;
 				char *status = strrchr(line, ' ');
 				char *user = strchr(line, ' ');
