@@ -32,6 +32,7 @@
 
 #define SKYPE_DEFAULT_SERVER "localhost"
 #define SKYPE_DEFAULT_PORT "2727"
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 /*
  * Enumerations
@@ -816,14 +817,31 @@ static void skype_parse_chats(struct im_connection *ic, char *line)
 	g_strfreev(chats);
 }
 
+typedef void (*skype_parser)(struct im_connection *ic, char *line);
+
 static gboolean skype_read_callback(gpointer data, gint fd,
 				    b_input_condition cond)
 {
 	struct im_connection *ic = data;
 	struct skype_data *sd = ic->proto_data;
 	char buf[1024];
-	int st;
+	int st, i;
 	char **lines, **lineptr, *line;
+	static struct parse_map {
+		char *k;
+		skype_parser v;
+	} parsers[] = {
+		{ "USERS ", skype_parse_users },
+		{ "USER ", skype_parse_user },
+		{ "CHATMESSAGE ", skype_parse_chatmessage },
+		{ "CALL ", skype_parse_call },
+		{ "FILETRANSFER ", skype_parse_filetransfer },
+		{ "CHAT ", skype_parse_chat },
+		{ "PASSWORD ", skype_parse_password },
+		{ "PROFILE PSTN_BALANCE ", skype_parse_profile },
+		{ "PING", skype_parse_ping },
+		{ "CHATS ", skype_parse_chats },
+	};
 
 	if (!sd || sd->fd == -1)
 		return FALSE;
@@ -839,26 +857,12 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 				break;
 			if (set_getbool(&ic->acc->set, "skypeconsole_receive"))
 				imcb_buddy_msg(ic, "skypeconsole", line, 0, 0);
-			if (!strncmp(line, "USERS ", 6))
-				skype_parse_users(ic, line);
-			else if (!strncmp(line, "USER ", 5))
-				skype_parse_user(ic, line);
-			else if (!strncmp(line, "CHATMESSAGE ", 12))
-				skype_parse_chatmessage(ic, line);
-			else if (!strncmp(line, "CALL ", 5))
-				skype_parse_call(ic, line);
-			else if (!strncmp(line, "FILETRANSFER ", 13))
-				skype_parse_filetransfer(ic, line);
-			else if (!strncmp(line, "CHAT ", 5))
-				skype_parse_chat(ic, line);
-			else if (!strncmp(line, "PASSWORD ", 9))
-				skype_parse_password(ic, line);
-			else if (!strncmp(line, "PROFILE PSTN_BALANCE ", 21))
-				skype_parse_profile(ic, line);
-			else if (!strncmp(line, "PING", 4))
-				skype_parse_ping(ic, line);
-			else if (!strncmp(line, "CHATS ", 6))
-				skype_parse_chats(ic, line);
+			for (i = 0; i < ARRAY_SIZE(parsers); i++) {
+				if (!strncmp(line, parsers[i].k, strlen(parsers[i].k))) {
+					parsers[i].v(ic, line);
+					break;
+				}
+			}
 			lineptr++;
 		}
 		g_strfreev(lines);
