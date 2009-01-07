@@ -1,6 +1,6 @@
 -include config.mak
 
-VERSION = 0.6.3
+VERSION = 0.7.0
 # latest stable
 BITLBEE_VERSION = 1.2.3
 
