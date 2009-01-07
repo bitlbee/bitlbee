@@ -286,6 +286,279 @@ static void skype_parse_users(struct im_connection *ic, char *line)
 	g_strfreev(nicks);
 }
 
+static void skype_parse_user(struct im_connection *ic, char *line)
+{
+	int flags = 0;
+	char *ptr;
+	struct skype_data *sd = ic->proto_data;
+	char *user = strchr(line, ' ');
+	char *status = strrchr(line, ' ');
+
+	status++;
+	ptr = strchr(++user, ' ');
+	if (!ptr)
+		return;
+	*ptr = '\0';
+	ptr++;
+	if (!strncmp(ptr, "ONLINESTATUS ", 13) &&
+			strcmp(user, sd->username) != 0
+			&& strcmp(user, "echo123") != 0) {
+		ptr = g_strdup_printf("%s@skype.com", user);
+		imcb_add_buddy(ic, ptr, NULL);
+		if (strcmp(status, "OFFLINE") && (strcmp(status, "SKYPEOUT") || !set_getbool(&ic->acc->set, "skypeout_offline")))
+			flags |= OPT_LOGGED_IN;
+		if (strcmp(status, "ONLINE") != 0 && strcmp(status, "SKYPEME") != 0)
+			flags |= OPT_AWAY;
+		imcb_buddy_status(ic, ptr, flags, NULL, NULL);
+		g_free(ptr);
+	} else if (!strncmp(ptr, "RECEIVEDAUTHREQUEST ", 20)) {
+		char *message = ptr + 20;
+		if (strlen(message))
+			skype_buddy_ask(ic, user, message);
+	} else if (!strncmp(ptr, "BUDDYSTATUS ", 12)) {
+		char *st = ptr + 12;
+		if (!strcmp(st, "3")) {
+			char *buf = g_strdup_printf("%s@skype.com", user);
+			imcb_add_buddy(ic, buf, NULL);
+			g_free(buf);
+		}
+	} else if (!strncmp(ptr, "FULLNAME ", 9))
+		sd->info_fullname = g_strdup_printf("%s", ptr + 9);
+	else if (!strncmp(ptr, "PHONE_HOME ", 11))
+		sd->info_phonehome = g_strdup_printf("%s", ptr + 11);
+	else if (!strncmp(ptr, "PHONE_OFFICE ", 13))
+		sd->info_phoneoffice = g_strdup_printf("%s", ptr + 13);
+	else if (!strncmp(ptr, "PHONE_MOBILE ", 13))
+		sd->info_phonemobile = g_strdup_printf("%s", ptr + 13);
+	else if (!strncmp(ptr, "NROF_AUTHED_BUDDIES ", 20))
+		sd->info_nrbuddies = g_strdup_printf("%s", ptr + 20);
+	else if (!strncmp(ptr, "TIMEZONE ", 9))
+		sd->info_tz = g_strdup_printf("%s", ptr + 9);
+	else if (!strncmp(ptr, "LASTONLINETIMESTAMP ", 20))
+		sd->info_seen = g_strdup_printf("%s", ptr + 20);
+	else if (!strncmp(ptr, "BIRTHDAY ", 9))
+		sd->info_birthday = g_strdup_printf("%s", ptr + 9);
+	else if (!strncmp(ptr, "SEX ", 4))
+		sd->info_sex = g_strdup_printf("%s", ptr + 4);
+	else if (!strncmp(ptr, "LANGUAGE ", 9))
+		sd->info_language = g_strdup_printf("%s", ptr + 9);
+	else if (!strncmp(ptr, "COUNTRY ", 8))
+		sd->info_country = g_strdup_printf("%s", ptr + 8);
+	else if (!strncmp(ptr, "PROVINCE ", 9))
+		sd->info_province = g_strdup_printf("%s", ptr + 9);
+	else if (!strncmp(ptr, "CITY ", 5))
+		sd->info_city = g_strdup_printf("%s", ptr + 5);
+	else if (!strncmp(ptr, "HOMEPAGE ", 9))
+		sd->info_homepage = g_strdup_printf("%s", ptr + 9);
+	else if (!strncmp(ptr, "ABOUT ", 6)) {
+		sd->info_about = g_strdup_printf("%s", ptr + 6);
+
+		GString *st = g_string_new("Contact Information\n");
+		g_string_append_printf(st, "Skype Name: %s\n", user);
+		if (sd->info_fullname) {
+			if (strlen(sd->info_fullname))
+				g_string_append_printf(st, "Full Name: %s\n", sd->info_fullname);
+			g_free(sd->info_fullname);
+		}
+		if (sd->info_phonehome) {
+			if (strlen(sd->info_phonehome))
+				g_string_append_printf(st, "Home Phone: %s\n", sd->info_phonehome);
+			g_free(sd->info_phonehome);
+		}
+		if (sd->info_phoneoffice) {
+			if (strlen(sd->info_phoneoffice))
+				g_string_append_printf(st, "Office Phone: %s\n", sd->info_phoneoffice);
+			g_free(sd->info_phoneoffice);
+		}
+		if (sd->info_phonemobile) {
+			if (strlen(sd->info_phonemobile))
+				g_string_append_printf(st, "Mobile Phone: %s\n", sd->info_phonemobile);
+			g_free(sd->info_phonemobile);
+		}
+		g_string_append_printf(st, "Personal Information\n");
+		if (sd->info_nrbuddies) {
+			if (strlen(sd->info_nrbuddies))
+				g_string_append_printf(st, "Contacts: %s\n", sd->info_nrbuddies);
+			g_free(sd->info_nrbuddies);
+		}
+		if (sd->info_tz) {
+			if (strlen(sd->info_tz)) {
+				char ib[256];
+				time_t t = time(NULL);
+				t += atoi(sd->info_tz)-(60*60*24);
+				struct tm *gt = gmtime(&t);
+				strftime(ib, 256, "%H:%M:%S", gt);
+				g_string_append_printf(st, "Local Time: %s\n", ib);
+			}
+			g_free(sd->info_tz);
+		}
+		if (sd->info_seen) {
+			if (strlen(sd->info_seen)) {
+				char ib[256];
+				time_t it = atoi(sd->info_seen);
+				struct tm *tm = localtime(&it);
+				strftime(ib, 256, ("%Y. %m. %d. %H:%M"), tm);
+				g_string_append_printf(st, "Last Seen: %s\n", ib);
+			}
+			g_free(sd->info_seen);
+		}
+		if (sd->info_birthday) {
+			if (strlen(sd->info_birthday) && strcmp(sd->info_birthday, "0")) {
+				char ib[256];
+				struct tm tm;
+				strptime(sd->info_birthday, "%Y%m%d", &tm);
+				strftime(ib, 256, "%B %d, %Y", &tm);
+				g_string_append_printf(st, "Birthday: %s\n", ib);
+
+				strftime(ib, 256, "%Y", &tm);
+				int year = atoi(ib);
+				time_t t = time(NULL);
+				struct tm *lt = localtime(&t);
+				g_string_append_printf(st, "Age: %d\n", lt->tm_year+1900-year);
+			}
+			g_free(sd->info_birthday);
+		}
+		if (sd->info_sex) {
+			if (strlen(sd->info_sex)) {
+				char *iptr = sd->info_sex;
+				while (*iptr++)
+					*iptr = tolower(*iptr);
+				g_string_append_printf(st, "Gender: %s\n", sd->info_sex);
+			}
+			g_free(sd->info_sex);
+		}
+		if (sd->info_language) {
+			if (strlen(sd->info_language)) {
+				char *iptr = strchr(sd->info_language, ' ');
+				if (iptr)
+					iptr++;
+				else
+					iptr = sd->info_language;
+				g_string_append_printf(st, "Language: %s\n", iptr);
+			}
+			g_free(sd->info_language);
+		}
+		if (sd->info_country) {
+			if (strlen(sd->info_country)) {
+				char *iptr = strchr(sd->info_country, ' ');
+				if (iptr)
+					iptr++;
+				else
+					iptr = sd->info_country;
+				g_string_append_printf(st, "Country: %s\n", iptr);
+			}
+			g_free(sd->info_country);
+		}
+		if (sd->info_province) {
+			if (strlen(sd->info_province))
+				g_string_append_printf(st, "Region: %s\n", sd->info_province);
+			g_free(sd->info_province);
+		}
+		if (sd->info_city) {
+			if (strlen(sd->info_city))
+				g_string_append_printf(st, "City: %s\n", sd->info_city);
+			g_free(sd->info_city);
+		}
+		if (sd->info_homepage) {
+			if (strlen(sd->info_homepage))
+				g_string_append_printf(st, "Homepage: %s\n", sd->info_homepage);
+			g_free(sd->info_homepage);
+		}
+		if (sd->info_about) {
+			if (strlen(sd->info_about))
+				g_string_append_printf(st, "%s\n", sd->info_about);
+			g_free(sd->info_about);
+		}
+		imcb_log(ic, "%s", st->str);
+		g_string_free(st, TRUE);
+	}
+}
+
+static void skype_parse_chatmessage(struct im_connection *ic, char *line)
+{
+	struct skype_data *sd = ic->proto_data;
+	char buf[1024];
+	char *id = strchr(line, ' ');
+
+	if (++id) {
+		char *info = strchr(id, ' ');
+
+		if (!info)
+			return;
+		*info = '\0';
+		info++;
+		if (!strcmp(info, "STATUS RECEIVED")) {
+			/* New message ID:
+			 * (1) Request its from field
+			 * (2) Request its body
+			 * (3) Request its type
+			 * (4) Query chatname
+			 */
+			g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
+			skype_write(ic, buf);
+			g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
+			skype_write(ic, buf);
+			g_snprintf(buf, 1024, "GET CHATMESSAGE %s TYPE\n", id);
+			skype_write(ic, buf);
+			g_snprintf(buf, 1024, "GET CHATMESSAGE %s CHATNAME\n", id);
+			skype_write(ic, buf);
+		} else if (!strncmp(info, "FROM_HANDLE ", 12)) {
+			info += 12;
+			/* New from field value. Store
+			 * it, then we can later use it
+			 * when we got the message's
+			 * body. */
+			g_free(sd->handle);
+			sd->handle = g_strdup_printf("%s@skype.com", info);
+		} else if (!strncmp(info, "EDITED_BY ", 10)) {
+			info += 10;
+			/* This is the same as
+			 * FROM_HANDLE, except that we
+			 * never request these lines
+			 * from Skype, we just get
+			 * them. */
+			g_free(sd->handle);
+			sd->handle = g_strdup_printf("%s@skype.com", info);
+		} else if (!strncmp(info, "BODY ", 5)) {
+			info += 5;
+			sd->body = g_list_append(sd->body, g_strdup(info));
+		}	else if (!strncmp(info, "TYPE ", 5)) {
+			info += 5;
+			g_free(sd->type);
+			sd->type = g_strdup(info);
+		} else if (!strncmp(info, "CHATNAME ", 9)) {
+			info += 9;
+			if (sd->handle && sd->body && sd->type) {
+				struct groupchat *gc = skype_chat_by_name(ic, info);
+				int i;
+				for (i = 0; i < g_list_length(sd->body); i++) {
+					char *body = g_list_nth_data(sd->body, i);
+					if (!strcmp(sd->type, "SAID") || !strcmp(sd->type, "EMOTED")) {
+						if (!strcmp(sd->type, "SAID"))
+							g_snprintf(buf, 1024, "%s", body);
+						else
+							g_snprintf(buf, 1024, "/me %s", body);
+						if (!gc)
+							/* Private message */
+							imcb_buddy_msg(ic, sd->handle, buf, 0, 0);
+						else
+							/* Groupchat message */
+							imcb_chat_msg(gc, sd->handle, buf, 0, 0);
+					} else if (!strcmp(sd->type, "SETTOPIC")) {
+						if (gc)
+							imcb_chat_topic(gc, sd->handle, body, 0);
+					} else if (!strcmp(sd->type, "LEFT")) {
+						if (gc)
+							imcb_chat_remove_buddy(gc, sd->handle, NULL);
+					}
+				}
+				g_list_free(sd->body);
+				sd->body = NULL;
+			}
+		}
+	}
+}
+
 static gboolean skype_read_callback(gpointer data, gint fd,
 				    b_input_condition cond)
 {
@@ -293,7 +566,7 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 	struct skype_data *sd = ic->proto_data;
 	char buf[1024];
 	int st;
-	char **lines, **lineptr, *line, *ptr;
+	char **lines, **lineptr, *line;
 
 	if (!sd || sd->fd == -1)
 		return FALSE;
@@ -312,263 +585,9 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 			if (!strncmp(line, "USERS ", 6))
 				skype_parse_users(ic, line);
 			else if (!strncmp(line, "USER ", 5)) {
-				int flags = 0;
-				char *status = strrchr(line, ' ');
-				char *user = strchr(line, ' ');
-				status++;
-				ptr = strchr(++user, ' ');
-				*ptr = '\0';
-				ptr++;
-				if (!strncmp(ptr, "ONLINESTATUS ", 13) &&
-						strcmp(user, sd->username) != 0
-						&& strcmp(user, "echo123") != 0) {
-					ptr = g_strdup_printf("%s@skype.com", user);
-					imcb_add_buddy(ic, ptr, NULL);
-					if (strcmp(status, "OFFLINE") && (strcmp(status, "SKYPEOUT") || !set_getbool(&ic->acc->set, "skypeout_offline")))
-						flags |= OPT_LOGGED_IN;
-					if (strcmp(status, "ONLINE") != 0 && strcmp(status, "SKYPEME") != 0)
-						flags |= OPT_AWAY;
-					imcb_buddy_status(ic, ptr, flags, NULL, NULL);
-					g_free(ptr);
-				} else if (!strncmp(ptr, "RECEIVEDAUTHREQUEST ", 20)) {
-					char *message = ptr + 20;
-					if (strlen(message))
-						skype_buddy_ask(ic, user, message);
-				} else if (!strncmp(ptr, "BUDDYSTATUS ", 12)) {
-					char *st = ptr + 12;
-					if (!strcmp(st, "3")) {
-						char *buf = g_strdup_printf("%s@skype.com", user);
-						imcb_add_buddy(ic, buf, NULL);
-						g_free(buf);
-					}
-				} else if (!strncmp(ptr, "FULLNAME ", 9))
-					sd->info_fullname = g_strdup_printf("%s", ptr + 9);
-				else if (!strncmp(ptr, "PHONE_HOME ", 11))
-					sd->info_phonehome = g_strdup_printf("%s", ptr + 11);
-				else if (!strncmp(ptr, "PHONE_OFFICE ", 13))
-					sd->info_phoneoffice = g_strdup_printf("%s", ptr + 13);
-				else if (!strncmp(ptr, "PHONE_MOBILE ", 13))
-					sd->info_phonemobile = g_strdup_printf("%s", ptr + 13);
-				else if (!strncmp(ptr, "NROF_AUTHED_BUDDIES ", 20))
-					sd->info_nrbuddies = g_strdup_printf("%s", ptr + 20);
-				else if (!strncmp(ptr, "TIMEZONE ", 9))
-					sd->info_tz = g_strdup_printf("%s", ptr + 9);
-				else if (!strncmp(ptr, "LASTONLINETIMESTAMP ", 20))
-					sd->info_seen = g_strdup_printf("%s", ptr + 20);
-				else if (!strncmp(ptr, "BIRTHDAY ", 9))
-					sd->info_birthday = g_strdup_printf("%s", ptr + 9);
-				else if (!strncmp(ptr, "SEX ", 4))
-					sd->info_sex = g_strdup_printf("%s", ptr + 4);
-				else if (!strncmp(ptr, "LANGUAGE ", 9))
-					sd->info_language = g_strdup_printf("%s", ptr + 9);
-				else if (!strncmp(ptr, "COUNTRY ", 8))
-					sd->info_country = g_strdup_printf("%s", ptr + 8);
-				else if (!strncmp(ptr, "PROVINCE ", 9))
-					sd->info_province = g_strdup_printf("%s", ptr + 9);
-				else if (!strncmp(ptr, "CITY ", 5))
-					sd->info_city = g_strdup_printf("%s", ptr + 5);
-				else if (!strncmp(ptr, "HOMEPAGE ", 9))
-					sd->info_homepage = g_strdup_printf("%s", ptr + 9);
-				else if (!strncmp(ptr, "ABOUT ", 6)) {
-					sd->info_about = g_strdup_printf("%s", ptr + 6);
-
-					GString *st = g_string_new("Contact Information\n");
-					g_string_append_printf(st, "Skype Name: %s\n", user);
-					if (sd->info_fullname) {
-						if (strlen(sd->info_fullname))
-							g_string_append_printf(st, "Full Name: %s\n", sd->info_fullname);
-						g_free(sd->info_fullname);
-					}
-					if (sd->info_phonehome) {
-						if (strlen(sd->info_phonehome))
-							g_string_append_printf(st, "Home Phone: %s\n", sd->info_phonehome);
-						g_free(sd->info_phonehome);
-					}
-					if (sd->info_phoneoffice) {
-						if (strlen(sd->info_phoneoffice))
-							g_string_append_printf(st, "Office Phone: %s\n", sd->info_phoneoffice);
-						g_free(sd->info_phoneoffice);
-					}
-					if (sd->info_phonemobile) {
-						if (strlen(sd->info_phonemobile))
-							g_string_append_printf(st, "Mobile Phone: %s\n", sd->info_phonemobile);
-						g_free(sd->info_phonemobile);
-					}
-					g_string_append_printf(st, "Personal Information\n");
-					if (sd->info_nrbuddies) {
-						if (strlen(sd->info_nrbuddies))
-							g_string_append_printf(st, "Contacts: %s\n", sd->info_nrbuddies);
-						g_free(sd->info_nrbuddies);
-					}
-					if (sd->info_tz) {
-						if (strlen(sd->info_tz)) {
-							char ib[256];
-							time_t t = time(NULL);
-							t += atoi(sd->info_tz)-(60*60*24);
-							struct tm *gt = gmtime(&t);
-							strftime(ib, 256, "%H:%M:%S", gt);
-							g_string_append_printf(st, "Local Time: %s\n", ib);
-						}
-						g_free(sd->info_tz);
-					}
-					if (sd->info_seen) {
-						if (strlen(sd->info_seen)) {
-							char ib[256];
-							time_t it = atoi(sd->info_seen);
-							struct tm *tm = localtime(&it);
-							strftime(ib, 256, ("%Y. %m. %d. %H:%M"), tm);
-							g_string_append_printf(st, "Last Seen: %s\n", ib);
-						}
-						g_free(sd->info_seen);
-					}
-					if (sd->info_birthday) {
-						if (strlen(sd->info_birthday) && strcmp(sd->info_birthday, "0")) {
-							char ib[256];
-							struct tm tm;
-							strptime(sd->info_birthday, "%Y%m%d", &tm);
-							strftime(ib, 256, "%B %d, %Y", &tm);
-							g_string_append_printf(st, "Birthday: %s\n", ib);
-
-							strftime(ib, 256, "%Y", &tm);
-							int year = atoi(ib);
-							time_t t = time(NULL);
-							struct tm *lt = localtime(&t);
-							g_string_append_printf(st, "Age: %d\n", lt->tm_year+1900-year);
-						}
-						g_free(sd->info_birthday);
-					}
-					if (sd->info_sex) {
-						if (strlen(sd->info_sex)) {
-							char *iptr = sd->info_sex;
-							while (*iptr++)
-								*iptr = tolower(*iptr);
-							g_string_append_printf(st, "Gender: %s\n", sd->info_sex);
-						}
-						g_free(sd->info_sex);
-					}
-					if (sd->info_language) {
-						if (strlen(sd->info_language)) {
-							char *iptr = strchr(sd->info_language, ' ');
-							if (iptr)
-								iptr++;
-							else
-								iptr = sd->info_language;
-							g_string_append_printf(st, "Language: %s\n", iptr);
-						}
-						g_free(sd->info_language);
-					}
-					if (sd->info_country) {
-						if (strlen(sd->info_country)) {
-							char *iptr = strchr(sd->info_country, ' ');
-							if (iptr)
-								iptr++;
-							else
-								iptr = sd->info_country;
-							g_string_append_printf(st, "Country: %s\n", iptr);
-						}
-						g_free(sd->info_country);
-					}
-					if (sd->info_province) {
-						if (strlen(sd->info_province))
-							g_string_append_printf(st, "Region: %s\n", sd->info_province);
-						g_free(sd->info_province);
-					}
-					if (sd->info_city) {
-						if (strlen(sd->info_city))
-							g_string_append_printf(st, "City: %s\n", sd->info_city);
-						g_free(sd->info_city);
-					}
-					if (sd->info_homepage) {
-						if (strlen(sd->info_homepage))
-							g_string_append_printf(st, "Homepage: %s\n", sd->info_homepage);
-						g_free(sd->info_homepage);
-					}
-					if (sd->info_about) {
-						if (strlen(sd->info_about))
-							g_string_append_printf(st, "%s\n", sd->info_about);
-						g_free(sd->info_about);
-					}
-					imcb_log(ic, "%s", st->str);
-					g_string_free(st, TRUE);
-				}
+				skype_parse_user(ic, line);
 			} else if (!strncmp(line, "CHATMESSAGE ", 12)) {
-				char *id = strchr(line, ' ');
-				if (++id) {
-					char *info = strchr(id, ' ');
-					*info = '\0';
-					info++;
-					if (!strcmp(info, "STATUS RECEIVED")) {
-						/* New message ID:
-						 * (1) Request its from field
-						 * (2) Request its body
-						 * (3) Request its type
-						 * (4) Query chatname
-						 */
-						g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
-						skype_write(ic, buf);
-						g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
-						skype_write(ic, buf);
-						g_snprintf(buf, 1024, "GET CHATMESSAGE %s TYPE\n", id);
-						skype_write(ic, buf);
-						g_snprintf(buf, 1024, "GET CHATMESSAGE %s CHATNAME\n", id);
-						skype_write(ic, buf);
-					} else if (!strncmp(info, "FROM_HANDLE ", 12)) {
-						info += 12;
-						/* New from field value. Store
-						 * it, then we can later use it
-						 * when we got the message's
-						 * body. */
-						g_free(sd->handle);
-						sd->handle = g_strdup_printf("%s@skype.com", info);
-					} else if (!strncmp(info, "EDITED_BY ", 10)) {
-						info += 10;
-						/* This is the same as
-						 * FROM_HANDLE, except that we
-						 * never request these lines
-						 * from Skype, we just get
-						 * them. */
-						g_free(sd->handle);
-						sd->handle = g_strdup_printf("%s@skype.com", info);
-					} else if (!strncmp(info, "BODY ", 5)) {
-						info += 5;
-						sd->body = g_list_append(sd->body, g_strdup(info));
-					}	else if (!strncmp(info, "TYPE ", 5)) {
-						info += 5;
-						g_free(sd->type);
-						sd->type = g_strdup(info);
-					} else if (!strncmp(info, "CHATNAME ", 9)) {
-						info += 9;
-						if (sd->handle && sd->body && sd->type) {
-							struct groupchat *gc = skype_chat_by_name(ic, info);
-							int i;
-							for (i = 0; i < g_list_length(sd->body); i++) {
-								char *body = g_list_nth_data(sd->body, i);
-								if (!strcmp(sd->type, "SAID") || !strcmp(sd->type, "EMOTED")) {
-									char *st;
-									if (!strcmp(sd->type, "SAID"))
-										st = g_strdup(body);
-									else
-										st = g_strdup_printf("/me %s", body);
-									if (!gc)
-										/* Private message */
-										imcb_buddy_msg(ic, sd->handle, st, 0, 0);
-									else
-										/* Groupchat message */
-										imcb_chat_msg(gc, sd->handle, st, 0, 0);
-									g_free(st);
-								} else if (!strcmp(sd->type, "SETTOPIC")) {
-									if (gc)
-										imcb_chat_topic(gc, sd->handle, body, 0);
-								} else if (!strcmp(sd->type, "LEFT")) {
-									if (gc)
-										imcb_chat_remove_buddy(gc, sd->handle, NULL);
-								}
-							}
-							g_list_free(sd->body);
-							sd->body = NULL;
-						}
-					}
-				}
+				skype_parse_chatmessage(ic, line);
 			} else if (!strncmp(line, "CALL ", 5)) {
 				char *id = strchr(line, ' ');
 				if (++id) {
