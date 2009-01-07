@@ -306,9 +306,10 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			&& strcmp(user, "echo123") != 0) {
 		ptr = g_strdup_printf("%s@skype.com", user);
 		imcb_add_buddy(ic, ptr, NULL);
-		if (strcmp(status, "OFFLINE") && (strcmp(status, "SKYPEOUT") || !set_getbool(&ic->acc->set, "skypeout_offline")))
+		if (strcmp(status, "OFFLINE") && (strcmp(status, "SKYPEOUT") ||
+			!set_getbool(&ic->acc->set, "skypeout_offline")))
 			flags |= OPT_LOGGED_IN;
-		if (strcmp(status, "ONLINE") != 0 && strcmp(status, "SKYPEME") != 0)
+		if (strcmp(status, "ONLINE") && strcmp(status, "SKYPEME"))
 			flags |= OPT_AWAY;
 		imcb_buddy_status(ic, ptr, flags, NULL, NULL);
 		g_free(ptr);
@@ -358,28 +359,33 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		g_string_append_printf(st, "Skype Name: %s\n", user);
 		if (sd->info_fullname) {
 			if (strlen(sd->info_fullname))
-				g_string_append_printf(st, "Full Name: %s\n", sd->info_fullname);
+				g_string_append_printf(st, "Full Name: %s\n",
+					sd->info_fullname);
 			g_free(sd->info_fullname);
 		}
 		if (sd->info_phonehome) {
 			if (strlen(sd->info_phonehome))
-				g_string_append_printf(st, "Home Phone: %s\n", sd->info_phonehome);
+				g_string_append_printf(st, "Home Phone: %s\n",
+					sd->info_phonehome);
 			g_free(sd->info_phonehome);
 		}
 		if (sd->info_phoneoffice) {
 			if (strlen(sd->info_phoneoffice))
-				g_string_append_printf(st, "Office Phone: %s\n", sd->info_phoneoffice);
+				g_string_append_printf(st, "Office Phone: %s\n",
+					sd->info_phoneoffice);
 			g_free(sd->info_phoneoffice);
 		}
 		if (sd->info_phonemobile) {
 			if (strlen(sd->info_phonemobile))
-				g_string_append_printf(st, "Mobile Phone: %s\n", sd->info_phonemobile);
+				g_string_append_printf(st, "Mobile Phone: %s\n",
+					sd->info_phonemobile);
 			g_free(sd->info_phonemobile);
 		}
 		g_string_append_printf(st, "Personal Information\n");
 		if (sd->info_nrbuddies) {
 			if (strlen(sd->info_nrbuddies))
-				g_string_append_printf(st, "Contacts: %s\n", sd->info_nrbuddies);
+				g_string_append_printf(st,
+					"Contacts: %s\n", sd->info_nrbuddies);
 			g_free(sd->info_nrbuddies);
 		}
 		if (sd->info_tz) {
@@ -389,7 +395,8 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 				t += atoi(sd->info_tz)-(60*60*24);
 				struct tm *gt = gmtime(&t);
 				strftime(ib, 256, "%H:%M:%S", gt);
-				g_string_append_printf(st, "Local Time: %s\n", ib);
+				g_string_append_printf(st,
+					"Local Time: %s\n", ib);
 			}
 			g_free(sd->info_tz);
 		}
@@ -399,23 +406,27 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 				time_t it = atoi(sd->info_seen);
 				struct tm *tm = localtime(&it);
 				strftime(ib, 256, ("%Y. %m. %d. %H:%M"), tm);
-				g_string_append_printf(st, "Last Seen: %s\n", ib);
+				g_string_append_printf(st,
+					"Last Seen: %s\n", ib);
 			}
 			g_free(sd->info_seen);
 		}
 		if (sd->info_birthday) {
-			if (strlen(sd->info_birthday) && strcmp(sd->info_birthday, "0")) {
+			if (strlen(sd->info_birthday) &&
+				strcmp(sd->info_birthday, "0")) {
 				char ib[256];
 				struct tm tm;
 				strptime(sd->info_birthday, "%Y%m%d", &tm);
 				strftime(ib, 256, "%B %d, %Y", &tm);
-				g_string_append_printf(st, "Birthday: %s\n", ib);
+				g_string_append_printf(st,
+					"Birthday: %s\n", ib);
 
 				strftime(ib, 256, "%Y", &tm);
 				int year = atoi(ib);
 				time_t t = time(NULL);
 				struct tm *lt = localtime(&t);
-				g_string_append_printf(st, "Age: %d\n", lt->tm_year+1900-year);
+				g_string_append_printf(st,
+					"Age: %d\n", lt->tm_year+1900-year);
 			}
 			g_free(sd->info_birthday);
 		}
@@ -424,7 +435,8 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 				char *iptr = sd->info_sex;
 				while (*iptr++)
 					*iptr = tolower(*iptr);
-				g_string_append_printf(st, "Gender: %s\n", sd->info_sex);
+				g_string_append_printf(st,
+					"Gender: %s\n", sd->info_sex);
 			}
 			g_free(sd->info_sex);
 		}
@@ -435,7 +447,8 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					iptr++;
 				else
 					iptr = sd->info_language;
-				g_string_append_printf(st, "Language: %s\n", iptr);
+				g_string_append_printf(st,
+					"Language: %s\n", iptr);
 			}
 			g_free(sd->info_language);
 		}
@@ -446,28 +459,33 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					iptr++;
 				else
 					iptr = sd->info_country;
-				g_string_append_printf(st, "Country: %s\n", iptr);
+				g_string_append_printf(st,
+					"Country: %s\n", iptr);
 			}
 			g_free(sd->info_country);
 		}
 		if (sd->info_province) {
 			if (strlen(sd->info_province))
-				g_string_append_printf(st, "Region: %s\n", sd->info_province);
+				g_string_append_printf(st,
+					"Region: %s\n", sd->info_province);
 			g_free(sd->info_province);
 		}
 		if (sd->info_city) {
 			if (strlen(sd->info_city))
-				g_string_append_printf(st, "City: %s\n", sd->info_city);
+				g_string_append_printf(st,
+					"City: %s\n", sd->info_city);
 			g_free(sd->info_city);
 		}
 		if (sd->info_homepage) {
 			if (strlen(sd->info_homepage))
-				g_string_append_printf(st, "Homepage: %s\n", sd->info_homepage);
+				g_string_append_printf(st,
+					"Homepage: %s\n", sd->info_homepage);
 			g_free(sd->info_homepage);
 		}
 		if (sd->info_about) {
 			if (strlen(sd->info_about))
-				g_string_append_printf(st, "%s\n", sd->info_about);
+				g_string_append_printf(st, "%s\n",
+					sd->info_about);
 			g_free(sd->info_about);
 		}
 		imcb_log(ic, "%s", st->str);
@@ -535,24 +553,28 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 			int i;
 			for (i = 0; i < g_list_length(sd->body); i++) {
 				char *body = g_list_nth_data(sd->body, i);
-				if (!strcmp(sd->type, "SAID") || !strcmp(sd->type, "EMOTED")) {
+				if (!strcmp(sd->type, "SAID") ||
+					!strcmp(sd->type, "EMOTED")) {
 					if (!strcmp(sd->type, "SAID"))
-						g_snprintf(buf, 1024, "%s", body);
+						g_snprintf(buf, 1024, "%s",
+							body);
 					else
-						g_snprintf(buf, 1024, "/me %s", body);
+						g_snprintf(buf, 1024, "/me %s",
+							body);
 					if (!gc)
 						/* Private message */
-						imcb_buddy_msg(ic, sd->handle, buf, 0, 0);
+						imcb_buddy_msg(ic,
+							sd->handle, buf, 0, 0);
 					else
 						/* Groupchat message */
-						imcb_chat_msg(gc, sd->handle, buf, 0, 0);
-				} else if (!strcmp(sd->type, "SETTOPIC")) {
-					if (gc)
-						imcb_chat_topic(gc, sd->handle, body, 0);
-				} else if (!strcmp(sd->type, "LEFT")) {
-					if (gc)
-						imcb_chat_remove_buddy(gc, sd->handle, NULL);
-				}
+						imcb_chat_msg(gc,
+							sd->handle, buf, 0, 0);
+				} else if (!strcmp(sd->type, "SETTOPIC") && gc)
+					imcb_chat_topic(gc,
+						sd->handle, body, 0);
+				else if (!strcmp(sd->type, "LEFT") && gc)
+					imcb_chat_remove_buddy(gc,
+						sd->handle, NULL);
 			}
 			g_list_free(sd->body);
 			sd->body = NULL;
@@ -606,7 +628,8 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 		sd->call_id = g_strdup(id);
 		sd->call_out = TRUE;
 	} else if (!strcmp(info, "STATUS FAILED")) {
-		imcb_error(ic, "Call failed: %s", skype_call_strerror(sd->failurereason));
+		imcb_error(ic, "Call failed: %s",
+			skype_call_strerror(sd->failurereason));
 		sd->call_id = NULL;
 	} else if (!strncmp(info, "DURATION ", 9)) {
 		if (sd->call_duration)
@@ -614,44 +637,57 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 		sd->call_duration = g_strdup(info+9);
 	} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
 		info += 15;
-		if (sd->call_status) {
-			switch (sd->call_status) {
-			case SKYPE_CALL_RINGING:
-				if (sd->call_out)
-					imcb_log(ic, "You are currently ringing the user %s.", info);
-				else {
-					g_snprintf(buf, 1024, "The user %s is currently ringing you.", info);
-					skype_call_ask(ic, sd->call_id, buf);
-				}
-				break;
-			case SKYPE_CALL_MISSED:
-				imcb_log(ic, "You have missed a call from user %s.", info);
-				break;
-			case SKYPE_CALL_CANCELLED:
-				imcb_log(ic, "You cancelled the call to the user %s.", info);
-				sd->call_status = 0;
-				sd->call_out = FALSE;
-				break;
-			case SKYPE_CALL_REFUSED:
-				if (sd->call_out)
-					imcb_log(ic, "The user %s refused the call.", info);
-				else
-					imcb_log(ic, "You refused the call from user %s.", info);
-				sd->call_out = FALSE;
-				break;
-			case SKYPE_CALL_FINISHED:
-				if (sd->call_duration)
-					imcb_log(ic, "You finished the call to the user %s (duration: %s seconds).", info, sd->call_duration);
-				else
-					imcb_log(ic, "You finished the call to the user %s.", info);
-				sd->call_out = FALSE;
-				break;
-			default:
-				/* Don't be noisy, ignore other statuses for now. */
-				break;
+		if (!sd->call_status)
+			return;
+		switch (sd->call_status) {
+		case SKYPE_CALL_RINGING:
+			if (sd->call_out)
+				imcb_log(ic, "You are currently ringing "
+					"the user %s.", info);
+			else {
+				g_snprintf(buf, 1024,
+					"The user %s is currently ringing you.",
+					info);
+				skype_call_ask(ic, sd->call_id, buf);
 			}
+			break;
+		case SKYPE_CALL_MISSED:
+			imcb_log(ic, "You have missed a call from user %s.",
+				info);
+			break;
+		case SKYPE_CALL_CANCELLED:
+			imcb_log(ic, "You cancelled the call to the user %s.",
+				info);
 			sd->call_status = 0;
+			sd->call_out = FALSE;
+			break;
+		case SKYPE_CALL_REFUSED:
+			if (sd->call_out)
+				imcb_log(ic, "The user %s refused the call.",
+					info);
+			else
+				imcb_log(ic,
+					"You refused the call from user %s.",
+					info);
+			sd->call_out = FALSE;
+			break;
+		case SKYPE_CALL_FINISHED:
+			if (sd->call_duration)
+				imcb_log(ic,
+					"You finished the call to the user %s "
+					"(duration: %s seconds).",
+					info, sd->call_duration);
+			else
+				imcb_log(ic,
+					"You finished the call to the user %s.",
+					info);
+			sd->call_out = FALSE;
+			break;
+		default:
+			/* Don't be noisy, ignore other statuses for now. */
+			break;
 		}
+		sd->call_status = 0;
 	}
 }
 
@@ -670,26 +706,30 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 	*info = '\0';
 	info++;
 	if (!strcmp(info, "STATUS NEW")) {
-		g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+		g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n",
+			id);
 		skype_write(ic, buf);
 		sd->filetransfer_status = SKYPE_FILETRANSFER_NEW;
 	} else if (!strcmp(info, "STATUS FAILED")) {
-		g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+		g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n",
+			id);
 		skype_write(ic, buf);
 		sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
 	} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
 		info += 15;
-		if (sd->filetransfer_status) {
-			switch (sd->filetransfer_status) {
-			case SKYPE_FILETRANSFER_NEW:
-				imcb_log(ic, "The user %s offered a new file for you.", info);
-				break;
-			case SKYPE_FILETRANSFER_FAILED:
-				imcb_log(ic, "Failed to transfer file from user %s.", info);
-				break;
-			}
-			sd->filetransfer_status = 0;
+		if (!sd->filetransfer_status)
+			return;
+		switch (sd->filetransfer_status) {
+		case SKYPE_FILETRANSFER_NEW:
+			imcb_log(ic, "The user %s offered a new file for you.",
+				info);
+			break;
+		case SKYPE_FILETRANSFER_FAILED:
+			imcb_log(ic, "Failed to transfer file from user %s.",
+				info);
+			break;
 		}
+		sd->filetransfer_status = 0;
 	}
 }
 
@@ -764,19 +804,20 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		 * while we're on the channel
 		 * so that we won't rejoin
 		 * after a /part. */
-		if (gc && !gc->data) {
-			char **members = g_strsplit(info, " ", 0);
-			int i;
-			for (i = 0; members[i]; i++) {
-				if (!strcmp(members[i], sd->username))
-					continue;
-				g_snprintf(buf, 1024, "%s@skype.com", members[i]);
-				if (!g_list_find_custom(gc->in_room, buf, (GCompareFunc)strcmp))
-					imcb_chat_add_buddy(gc, buf);
-			}
-			imcb_chat_add_buddy(gc, sd->username);
-			g_strfreev(members);
+		if (!gc || gc->data)
+			return;
+		char **members = g_strsplit(info, " ", 0);
+		int i;
+		for (i = 0; members[i]; i++) {
+			if (!strcmp(members[i], sd->username))
+				continue;
+			g_snprintf(buf, 1024, "%s@skype.com", members[i]);
+			if (!g_list_find_custom(gc->in_room, buf,
+				(GCompareFunc)strcmp))
+				imcb_chat_add_buddy(gc, buf);
 		}
+		imcb_chat_add_buddy(gc, sd->username);
+		g_strfreev(members);
 	}
 }
 
