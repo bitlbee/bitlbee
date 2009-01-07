@@ -692,6 +692,93 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 	}
 }
 
+static void skype_parse_chat(struct im_connection *ic, char *line)
+{
+	struct skype_data *sd = ic->proto_data;
+	char buf[1024];
+	char *id = strchr(line, ' ');
+
+	if (++id) {
+		struct groupchat *gc;
+		char *info = strchr(id, ' ');
+
+		if (!info)
+			return;
+		*info = '\0';
+		info++;
+		/* Remove fake chat if we created one in skype_chat_with() */
+		gc = skype_chat_by_name(ic, "");
+		if (gc)
+			imcb_chat_free(gc);
+		if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
+			imcb_chat_new(ic, id);
+			g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
+			skype_write(ic, buf);
+			g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
+			skype_write(ic, buf);
+		} else if (!strcmp(info, "STATUS DIALOG") && sd->groupchat_with) {
+			gc = imcb_chat_new(ic, id);
+			/* According to the docs this
+			 * is necessary. However it
+			 * does not seem the situation
+			 * and it would open an extra
+			 * window on our client, so
+			 * just leave it out. */
+			/*g_snprintf(buf, 1024, "OPEN CHAT %s\n", id);
+			  skype_write(ic, buf);*/
+			g_snprintf(buf, 1024, "%s@skype.com", sd->groupchat_with);
+			imcb_chat_add_buddy(gc, buf);
+			imcb_chat_add_buddy(gc, sd->username);
+			g_free(sd->groupchat_with);
+			sd->groupchat_with = NULL;
+			g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
+			skype_write(ic, buf);
+			g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
+			skype_write(ic, buf);
+		} else if (!strcmp(info, "STATUS UNSUBSCRIBED")) {
+			gc = skype_chat_by_name(ic, id);
+			if (gc)
+				gc->data = (void *)FALSE;
+		} else if (!strncmp(info, "ADDER ", 6)) {
+			info += 6;
+			g_free(sd->adder);
+			sd->adder = g_strdup_printf("%s@skype.com", info);
+		} else if (!strncmp(info, "TOPIC ", 6)) {
+			info += 6;
+			gc = skype_chat_by_name(ic, id);
+			if (gc && (sd->adder || sd->topic_wait)) {
+				if (sd->topic_wait) {
+					sd->adder = g_strdup(sd->username);
+					sd->topic_wait = 0;
+				}
+				imcb_chat_topic(gc, sd->adder, info, 0);
+				g_free(sd->adder);
+				sd->adder = NULL;
+			}
+		} else if (!strncmp(info, "ACTIVEMEMBERS ", 14)) {
+			info += 14;
+			gc = skype_chat_by_name(ic, id);
+			/* Hack! We set ->data to TRUE
+			 * while we're on the channel
+			 * so that we won't rejoin
+			 * after a /part. */
+			if (gc && !gc->data) {
+				char **members = g_strsplit(info, " ", 0);
+				int i;
+				for (i = 0; members[i]; i++) {
+					if (!strcmp(members[i], sd->username))
+						continue;
+					g_snprintf(buf, 1024, "%s@skype.com", members[i]);
+					if (!g_list_find_custom(gc->in_room, buf, (GCompareFunc)strcmp))
+						imcb_chat_add_buddy(gc, buf);
+				}
+				imcb_chat_add_buddy(gc, sd->username);
+				g_strfreev(members);
+			}
+		}
+	}
+}
+
 static gboolean skype_read_callback(gpointer data, gint fd,
 				    b_input_condition cond)
 {
@@ -725,85 +812,9 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 				skype_parse_call(ic, line);
 			else if (!strncmp(line, "FILETRANSFER ", 13))
 				skype_parse_filetransfer(ic, line);
-			else if (!strncmp(line, "CHAT ", 5)) {
-				char *id = strchr(line, ' ');
-				if (++id) {
-					char *info = strchr(id, ' ');
-					if (info)
-						*info = '\0';
-					info++;
-					/* Remove fake chat if we created one in skype_chat_with() */
-					struct groupchat *gc = skype_chat_by_name(ic, "");
-					if (gc)
-						imcb_chat_free(gc);
-					if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
-						imcb_chat_new(ic, id);
-						g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
-						skype_write(ic, buf);
-						g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
-						skype_write(ic, buf);
-					} else if (!strcmp(info, "STATUS DIALOG") && sd->groupchat_with) {
-						gc = imcb_chat_new(ic, id);
-						/* According to the docs this
-						 * is necessary. However it
-						 * does not seem the situation
-						 * and it would open an extra
-						 * window on our client, so
-						 * just leave it out. */
-						/*g_snprintf(buf, 1024, "OPEN CHAT %s\n", id);
-						skype_write(ic, buf);*/
-						g_snprintf(buf, 1024, "%s@skype.com", sd->groupchat_with);
-						imcb_chat_add_buddy(gc, buf);
-						imcb_chat_add_buddy(gc, sd->username);
-						g_free(sd->groupchat_with);
-						sd->groupchat_with = NULL;
-						g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
-						skype_write(ic, buf);
-						g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
-						skype_write(ic, buf);
-					} else if (!strcmp(info, "STATUS UNSUBSCRIBED")) {
-						gc = skype_chat_by_name(ic, id);
-						if (gc)
-							gc->data = (void *)FALSE;
-					} else if (!strncmp(info, "ADDER ", 6)) {
-						info += 6;
-						g_free(sd->adder);
-						sd->adder = g_strdup_printf("%s@skype.com", info);
-					} else if (!strncmp(info, "TOPIC ", 6)) {
-						info += 6;
-						gc = skype_chat_by_name(ic, id);
-						if (gc && (sd->adder || sd->topic_wait)) {
-							if (sd->topic_wait) {
-								sd->adder = g_strdup(sd->username);
-								sd->topic_wait = 0;
-							}
-							imcb_chat_topic(gc, sd->adder, info, 0);
-							g_free(sd->adder);
-							sd->adder = NULL;
-						}
-					} else if (!strncmp(info, "ACTIVEMEMBERS ", 14)) {
-						info += 14;
-						gc = skype_chat_by_name(ic, id);
-						/* Hack! We set ->data to TRUE
-						 * while we're on the channel
-						 * so that we won't rejoin
-						 * after a /part. */
-						if (gc && !gc->data) {
-							char **members = g_strsplit(info, " ", 0);
-							int i;
-							for (i = 0; members[i]; i++) {
-								if (!strcmp(members[i], sd->username))
-									continue;
-								g_snprintf(buf, 1024, "%s@skype.com", members[i]);
-								if (!g_list_find_custom(gc->in_room, buf, (GCompareFunc)strcmp))
-									imcb_chat_add_buddy(gc, buf);
-							}
-							imcb_chat_add_buddy(gc, sd->username);
-							g_strfreev(members);
-						}
-					}
-				}
-			} else if (!strncmp(line, "PASSWORD ", 9)) {
+			else if (!strncmp(line, "CHAT ", 5))
+				skype_parse_chat(ic, line);
+			else if (!strncmp(line, "PASSWORD ", 9)) {
 				if (!strncmp(line+9, "OK", 2))
 					imcb_connected(ic);
 				else {
