@@ -286,6 +286,8 @@ static gboolean skype_read_callback(gpointer data, gint fd, b_input_condition co
 		while ((line = *lineptr)) {
 			if (!strlen(line))
 				break;
+			if (set_getbool(&ic->acc->set, "skypeconsole_receive"))
+				imcb_buddy_msg(ic, "skypeconsole", line, 0, 0);
 			if (!strncmp(line, "USERS ", 6)) {
 				char **i;
 				char **nicks;
@@ -1160,6 +1162,9 @@ static void skype_init(account_t *acc)
 	s = set_add(&acc->set, "skypeout_offline", "true", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "skypeconsole", "false", set_eval_bool, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "skypeconsole_receive", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "auto_join", "false", set_eval_bool, acc);
