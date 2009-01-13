@@ -681,7 +681,7 @@
 
 	<bitlbee-setting name="resource_select" type="string" scope="account">
 		<default>priority</default>
-		<possible-values>priority, time</possible-values>
+		<possible-values>priority, activity</possible-values>
 
 		<description>
 			<para>
@@ -689,7 +689,7 @@
 			</para>
 
 			<para>
-				Normally it's set to <emphasis>priority</emphasis> which means messages will always be delivered to the buddy's resource with the highest priority. If the setting is set to <emphasis>time</emphasis>, messages will be delivered to the resource that was last used to send you a message (or the resource that most recently connected).
+				Normally it's set to <emphasis>priority</emphasis> which means messages will always be delivered to the buddy's resource with the highest priority. If the setting is set to <emphasis>activity</emphasis>, messages will be delivered to the resource that was last used to send you a message (or the resource that most recently connected).
 			</para>
 		</description>
 	</bitlbee-setting>
