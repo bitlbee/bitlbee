@@ -20,11 +20,9 @@
  */
 
 #define _XOPEN_SOURCE
-#include <stdio.h>
 #include <poll.h>
 #include <bitlbee.h>
 #include <bitlbee/ssl_client.h>
-#include <glib.h>
 
 #define SKYPE_DEFAULT_SERVER "localhost"
 #define SKYPE_DEFAULT_PORT "2727"
