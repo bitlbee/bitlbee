@@ -319,35 +319,35 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			g_free(buf);
 		}
 	} else if (!strncmp(ptr, "FULLNAME ", 9))
-		sd->info_fullname = g_strdup_printf("%s", ptr + 9);
+		sd->info_fullname = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "PHONE_HOME ", 11))
-		sd->info_phonehome = g_strdup_printf("%s", ptr + 11);
+		sd->info_phonehome = g_strdup(ptr + 11);
 	else if (!strncmp(ptr, "PHONE_OFFICE ", 13))
-		sd->info_phoneoffice = g_strdup_printf("%s", ptr + 13);
+		sd->info_phoneoffice = g_strdup(ptr + 13);
 	else if (!strncmp(ptr, "PHONE_MOBILE ", 13))
-		sd->info_phonemobile = g_strdup_printf("%s", ptr + 13);
+		sd->info_phonemobile = g_strdup(ptr + 13);
 	else if (!strncmp(ptr, "NROF_AUTHED_BUDDIES ", 20))
-		sd->info_nrbuddies = g_strdup_printf("%s", ptr + 20);
+		sd->info_nrbuddies = g_strdup(ptr + 20);
 	else if (!strncmp(ptr, "TIMEZONE ", 9))
-		sd->info_tz = g_strdup_printf("%s", ptr + 9);
+		sd->info_tz = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "LASTONLINETIMESTAMP ", 20))
-		sd->info_seen = g_strdup_printf("%s", ptr + 20);
+		sd->info_seen = g_strdup(ptr + 20);
 	else if (!strncmp(ptr, "BIRTHDAY ", 9))
-		sd->info_birthday = g_strdup_printf("%s", ptr + 9);
+		sd->info_birthday = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "SEX ", 4))
-		sd->info_sex = g_strdup_printf("%s", ptr + 4);
+		sd->info_sex = g_strdup(ptr + 4);
 	else if (!strncmp(ptr, "LANGUAGE ", 9))
-		sd->info_language = g_strdup_printf("%s", ptr + 9);
+		sd->info_language = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "COUNTRY ", 8))
-		sd->info_country = g_strdup_printf("%s", ptr + 8);
+		sd->info_country = g_strdup(ptr + 8);
 	else if (!strncmp(ptr, "PROVINCE ", 9))
-		sd->info_province = g_strdup_printf("%s", ptr + 9);
+		sd->info_province = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "CITY ", 5))
-		sd->info_city = g_strdup_printf("%s", ptr + 5);
+		sd->info_city = g_strdup(ptr + 5);
 	else if (!strncmp(ptr, "HOMEPAGE ", 9))
-		sd->info_homepage = g_strdup_printf("%s", ptr + 9);
+		sd->info_homepage = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "ABOUT ", 6)) {
-		sd->info_about = g_strdup_printf("%s", ptr + 6);
+		sd->info_about = g_strdup(ptr + 6);
 
 		GString *st = g_string_new("Contact Information\n");
 		g_string_append_printf(st, "Skype Name: %s\n", user);
