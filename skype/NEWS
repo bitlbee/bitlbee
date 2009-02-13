@@ -1,5 +1,7 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.7.1         - mostly internal changes, the monster read callback is
+                now replaced by tiny parser functions
 0.7.0         - made 'make config' more portable
               - add 'skypeconsole' buddy for debugging purposes
               - support autojoin for bookmarked groupchats
