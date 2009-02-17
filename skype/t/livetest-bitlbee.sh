@@ -16,8 +16,23 @@ $VALGRIND $BITLBEE -n -c bitlbee.conf -d livetest/ -D -P bitlbeetest.pid -p $POR
 # Check if it's really running
 kill -0 `cat bitlbeetest.pid 2>/dev/null ` 2>/dev/null || { echo Failed to run bitlbee daemon on port $PORT; exit 1; }
 
+# Set up skyped
+
+rm -rf etc
+mkdir etc
+cd etc
+cp ../../skyped.cnf .
+yes ""|openssl req -new -x509 -days 365 -nodes -config skyped.cnf -out skyped.cert.pem -keyout skyped.key.pem 2> openssl.log
+cd ..
+echo "[skyped]" > skyped.conf
+echo "username = $TEST_SKYPE_ID" >> skyped.conf
+echo "password = $(echo -n $TEST_SKYPE_PASSWORD|sha1sum|sed 's/ *-$//')" >> skyped.conf
+echo "cert = $(pwd)/etc/skyped.cert.pem" >> skyped.conf
+echo "key = $(pwd)/etc/skyped.key.pem" >> skyped.conf
+echo "port = 2727" >> skyped.conf
+
 # Run skyped
-python ../skyped.py -c ../skyped.conf > skypedtest.pid
+python ../skyped.py -c skyped.conf > skypedtest.pid
 sleep 2
 
 # Run the test
