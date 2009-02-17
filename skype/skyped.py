@@ -183,7 +183,10 @@ class SkypeApi:
 		if not len(msg_text) or msg_text == "PONG":
 			return
 		try:
-			e = msg_text.decode(locale.getdefaultlocale()[1])
+			encoding = locale.getdefaultlocale()[1]
+			if not encoding:
+				raise ValueError
+			e = msg_text.decode(encoding)
 		except ValueError:
 			e = msg_text.decode('UTF-8')
 		dprint('>> ' + e)
