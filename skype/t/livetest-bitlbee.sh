@@ -32,7 +32,7 @@ echo "key = $(pwd)/etc/skyped.key.pem" >> skyped.conf
 echo "port = 2727" >> skyped.conf
 
 # Run skyped
-python ../skyped.py -c skyped.conf > skypedtest.pid
+python ../skyped.py -c skyped.conf -l skypedtest.log > skypedtest.pid
 sleep 2
 
 # Run the test

@@ -2,7 +2,7 @@
 # 
 #   skyped.py
 #  
-#   Copyright (c) 2007, 2008 by Miklos Vajna <vmiklos@frugalware.org>
+#   Copyright (c) 2007, 2008, 2009 by Miklos Vajna <vmiklos@frugalware.org>
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -143,6 +143,10 @@ def dprint(msg):
 
 	if options.debug:
 		print msg
+	if options.log:
+		sock = open(options.log, "a")
+		sock.write("%s\n" % msg)
+		sock.close()
 
 class SkypeApi:
 	def __init__(self):
@@ -206,6 +210,7 @@ class Options:
 		self.debug = False
 		self.help = False
 		self.host = "0.0.0.0"
+		self.log = None
 		self.port = None
 		self.version = False
 		# well, this is a bit hackish. we store the socket of the last connected client
@@ -225,6 +230,7 @@ Options:
 	-d	--debug		enable debug messages
 	-h	--help		this help
 	-H	--host		set the tcp host (default: %s)
+	-l      --log           set the log file in background mode (default: none)
 	-n	--nofork	don't run as daemon in the background
 	-p	--port		set the tcp port (default: %s)
 	-v	--version	display version information""" % (self.cfgpath, self.host, self.port)
@@ -233,7 +239,7 @@ Options:
 if __name__=='__main__':
 	options = Options()
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "c:dhH:np:v", ["config=", "daemon", "help", "host=", "nofork", "port=", "version"])
+		opts, args = getopt.getopt(sys.argv[1:], "c:dhH:l:np:v", ["config=", "daemon", "help", "host=", "log=", "nofork", "port=", "version"])
 	except getopt.GetoptError:
 		options.usage(1)
 	for opt, arg in opts:
@@ -245,6 +251,8 @@ if __name__=='__main__':
 			options.help = True
 		elif opt in ("-H", "--host"):
 			options.host = arg
+		elif opt in ("-l", "--log"):
+			options.log = arg
 		elif opt in ("-n", "--nofork"):
 			options.daemon = False
 		elif opt in ("-p", "--port"):
