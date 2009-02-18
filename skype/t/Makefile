@@ -10,6 +10,7 @@ tests := $(patsubst %.test,%,$(testfiles))
 .PHONY: checkvars $(tests)
 
 default: $(tests)
+	@echo "passed $$(echo $(testfiles)|wc -w) tests."
 
 checkvars:
 	@for test in irssi/*.test; do NVAR="$$NVAR `irssi/livetest-irssi.sh $$test checkvars`";done;\
