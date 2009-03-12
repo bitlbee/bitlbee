@@ -78,7 +78,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		   at a *valid* configuration file. */
 	}
 	
-	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hu:" ) ) >= 0 )
+	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:u:" ) ) >= 0 )
 	/*     ^^^^ Just to make sure we skip this step from the REHASH handler. */
 	{
 		if( opt == 'i' )
@@ -313,15 +313,15 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else
 			{
-				fprintf( stderr, "Error: Unknown setting `%s` in configuration file.\n", ini->key );
+				fprintf( stderr, "Error: Unknown setting `%s` in configuration file (line %d).\n", ini->key, ini->line );
 				return 0;
 				/* For now just ignore unknown keys... */
 			}
 		}
 		else if( g_strcasecmp( ini->section, "defaults" ) != 0 )
 		{
-			fprintf( stderr, "Error: Unknown section [%s] in configuration file. "
-			                 "BitlBee configuration must be put in a [settings] section!\n", ini->section );
+			fprintf( stderr, "Error: Unknown section [%s] in configuration file (line %d). "
+			                 "BitlBee configuration must be put in a [settings] section!\n", ini->section, ini->line );
 			return 0;
 		}
 	}

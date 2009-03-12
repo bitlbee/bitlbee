@@ -196,13 +196,14 @@ static int byahoo_send_typing( struct im_connection *ic, char *who, int typing )
 static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
+	char *away;
 	
-	ic->away = NULL;
+	away = NULL;
 	
 	if( state && msg && g_strcasecmp( state, msg ) != 0 )
 	{
 		yd->current_status = YAHOO_STATUS_CUSTOM;
-		ic->away = "";
+		away = "";
 	}
 	else if( state )
 	{
@@ -211,11 +212,11 @@ static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 		   away state. */
 		msg = NULL;
 		
-		ic->away = "";
+		away = "";
 		if( g_strcasecmp( state, "Available" ) == 0 )
 		{
 			yd->current_status = YAHOO_STATUS_AVAILABLE;
-			ic->away = NULL;
+			away = NULL;
 		}
 		else if( g_strcasecmp( state, "Be Right Back" ) == 0 )
 			yd->current_status = YAHOO_STATUS_BRB;
@@ -241,13 +242,13 @@ static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 		{
 			yd->current_status = YAHOO_STATUS_AVAILABLE;
 			
-			ic->away = NULL;
+			away = NULL;
 		}
 	}
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
-	yahoo_set_away( yd->y2_id, yd->current_status, msg, ic->away != NULL ? 2 : 0 );
+	yahoo_set_away( yd->y2_id, yd->current_status, msg, away != NULL ? 2 : 0 );
 }
 
 static GList *byahoo_away_states( struct im_connection *ic )
@@ -790,9 +791,22 @@ int ext_yahoo_connect(const char *host, int port)
 static void byahoo_accept_conf( void *data )
 {
 	struct byahoo_conf_invitation *inv = data;
+	struct groupchat *b;
 	
-	yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
-	imcb_chat_add_buddy( inv->c, inv->ic->acc->user );
+	for( b = inv->ic->groupchats; b; b = b->next )
+		if( b == inv->c )
+			break;
+	
+	if( b != NULL )
+	{
+		yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
+		imcb_chat_add_buddy( inv->c, inv->ic->acc->user );
+	}
+	else
+	{
+		imcb_log( inv->ic, "Duplicate/corrupted invitation to `%s'.", inv->name );
+	}
+	
 	g_free( inv->name );
 	g_free( inv );
 }

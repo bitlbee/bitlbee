@@ -1,10 +1,10 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2008 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* INI file reading code						*/
+/* Keep track of chatrooms the user is interested in                    */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,23 +23,24 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef _INI_H
-#define _INI_H
-
-typedef struct
+struct chat
 {
-	int line;
-	char *c_section;
-	char *section;
-	char *key;
-	char *value;
-	int size;
-	char *cur, *tok;
-	char file[];
-} ini_t;
+	account_t *acc;
+	
+	char *handle;
+	char *channel;
+	set_t *set;
+	
+	struct chat *next;
+};
 
-ini_t *ini_open( char *file );
-int ini_read( ini_t *file );
-void ini_close( ini_t *file );
+struct chat *chat_add( irc_t *irc, account_t *acc, char *handle, char *channel );
+struct chat *chat_byhandle( irc_t *irc, account_t *acc, char *handle );
+struct chat *chat_bychannel( irc_t *irc, char *channel );
+struct chat *chat_get( irc_t *irc, char *id );
+int chat_del( irc_t *irc, struct chat *chat );
 
-#endif
+int chat_chancmp( char *a, char *b );
+int chat_chanok( char *a );
+
+int chat_join( irc_t *irc, struct chat *c, const char *password );

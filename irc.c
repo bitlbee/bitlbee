@@ -145,6 +145,7 @@ irc_t *irc_new( int fd )
 
 	irc_connection_list = g_slist_append( irc_connection_list, irc );
 
+	
 	s = set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "auto_reconnect_delay", "5*3<900", set_eval_account_reconnect_delay, irc );
@@ -417,10 +418,8 @@ void irc_process( irc_t *irc )
 				lines[i] = conv;
 			}
 			
-			if( lines[i] )
+			if( lines[i] && ( cmd = irc_parse_line( lines[i] ) ) )
 			{
-				if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
-					continue;
 				irc_exec( irc, cmd );
 				g_free( cmd );
 			}
@@ -495,7 +494,7 @@ char **irc_parse_line( char *line )
 	/* Move the line pointer to the start of the command, skipping spaces and the optional prefix. */
 	if( line[0] == ':' )
 	{
-		for( i = 0; line[i] != ' '; i ++ );
+		for( i = 0; line[i] && line[i] != ' '; i ++ );
 		line = line + i;
 	}
 	for( i = 0; line[i] == ' '; i ++ );
@@ -820,7 +819,9 @@ void irc_login( irc_t *irc )
 	irc_reply( irc,   2, ":Host %s is running BitlBee " BITLBEE_VERSION " " ARCH "/" CPU ".", irc->myhost );
 	irc_reply( irc,   3, ":%s", IRCD_INFO );
 	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES UMODES_PRIV, CMODES );
-	irc_reply( irc,   5, "PREFIX=(ohv)@%%+ CHANTYPES=#& CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server", CMODES, MAX_NICK_LENGTH - 1 );
+	irc_reply( irc,   5, "PREFIX=(ohv)@%%+ CHANTYPES=%s CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee "
+	                     "CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server",
+	                     CTYPES, CMODES, MAX_NICK_LENGTH - 1 );
 	irc_motd( irc );
 	irc->umode[0] = '\0';
 	irc_umode_set( irc, "+" UMODE, 1 );
@@ -1084,7 +1085,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	struct groupchat *c = NULL;
 	user_t *u = NULL;
 	
-	if( *nick == '#' || *nick == '&' )
+	if( strchr( CTYPES, *nick ) )
 	{
 		if( !( c = irc_chat_by_channel( irc, nick ) ) )
 		{

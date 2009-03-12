@@ -58,8 +58,8 @@ void *http_dorequest( char *host, int port, int ssl, char *request, http_input_f
 	
 	if( error )
 	{
-		g_free( req );
-		return( NULL );
+		http_free( req );
+		return NULL;
 	}
 	
 	req->func = func;
@@ -159,10 +159,7 @@ error:
 	req->status_string = g_strdup( "Error while writing HTTP request" );
 	
 	req->func( req );
-	
-	g_free( req->request );
-	g_free( req );
-	
+	http_free( req );
 	return FALSE;
 }
 
@@ -443,11 +440,15 @@ cleanup:
 		closesocket( req->fd );
 	
 	req->func( req );
-	
+	http_free( req );
+	return FALSE;
+}
+
+void http_free( struct http_request *req )
+{
 	g_free( req->request );
 	g_free( req->reply_headers );
 	g_free( req->status_string );
 	g_free( req );
-	
-	return FALSE;
 }
+

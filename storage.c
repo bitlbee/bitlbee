@@ -120,7 +120,6 @@ storage_status_t storage_load (irc_t * irc, const char *password)
 			otr_load(irc);
 			return status;
 		}
-		
 		if (status != STORAGE_NO_SUCH_USER) 
 			return status;
 	}

@@ -266,7 +266,7 @@ char *set_eval_mode_buddies( set_t *set, char *value, char modeflag )
 	else if(!strcmp(value, "notaway"))
 		mode=3;
 	else
-		return NULL;
+		return SET_INVALID;
 
 	/* sorry for calling them op/deop - too lazy for search+replace :P */
 	op[0]='\0';

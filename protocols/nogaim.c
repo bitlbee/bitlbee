@@ -248,6 +248,8 @@ static gboolean send_keepalive( gpointer d, gint fd, b_input_condition cond )
 
 void imcb_connected( struct im_connection *ic )
 {
+	irc_t *irc = ic->irc;
+	struct chat *c;
 	user_t *u;
 	
 	/* MSN servers sometimes redirect you to a different server and do
@@ -270,6 +272,15 @@ void imcb_connected( struct im_connection *ic )
 	/* Apparently we're connected successfully, so reset the
 	   exponential backoff timer. */
 	ic->acc->auto_reconnect_delay = 0;
+	
+	for( c = irc->chatrooms; c; c = c->next )
+	{
+		if( c->acc != ic->acc )
+			continue;
+		
+		if( set_getbool( &c->set, "auto_join" ) )
+			chat_join( irc, c, NULL );
+	}
 }
 
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
@@ -308,6 +319,9 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	ic->keepalive = 0;
 	ic->acc->prpl->logout( ic );
 	b_event_remove( ic->inpa );
+	
+	g_free( ic->away );
+	ic->away = NULL;
 	
 	u = irc->users;
 	while( u )
@@ -715,7 +729,7 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
 	}
 }
 
-struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
+struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 {
 	struct groupchat *c;
 	

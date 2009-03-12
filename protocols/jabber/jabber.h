@@ -239,7 +239,7 @@ xt_status sasl_pkt_result( struct xt_node *node, gpointer data );
 gboolean sasl_supported( struct im_connection *ic );
 
 /* conference.c */
-struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *nick, char *password );
+struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password );
 struct groupchat *jabber_chat_by_jid( struct im_connection *ic, const char *name );
 void jabber_chat_free( struct groupchat *c );
 int jabber_chat_msg( struct groupchat *ic, char *message, int flags );

@@ -78,6 +78,18 @@ void root_command_string( irc_t *irc, user_t *u, char *command, int flags )
 	root_command( irc, cmd );
 }
 
+#define MIN_ARGS( x, y... )                                                    \
+	do                                                                     \
+	{                                                                      \
+		int blaat;                                                     \
+		for( blaat = 0; blaat <= x; blaat ++ )                         \
+			if( cmd[blaat] == NULL )                               \
+			{                                                      \
+				irc_usermsg( irc, "Not enough parameters given (need %d).", x ); \
+				return y;                                      \
+			}                                                      \
+	} while( 0 )
+
 void root_command( irc_t *irc, char *cmd[] )
 {	
 	int i;
@@ -88,11 +100,8 @@ void root_command( irc_t *irc, char *cmd[] )
 	for( i = 0; commands[i].command; i++ )
 		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
 		{
-			if( !cmd[commands[i].required_parameters] )
-			{
-				irc_usermsg( irc, "Not enough parameters given (need %d)", commands[i].required_parameters );
-				return;
-			}
+			MIN_ARGS( commands[i].required_parameters );
+			
 			commands[i].execute( irc, cmd );
 			return;
 		}
@@ -250,6 +259,121 @@ static void cmd_showset( irc_t *irc, set_t **head, char *key )
 		irc_usermsg( irc, "%s is empty", key );
 }
 
+typedef set_t** (*cmd_set_findhead)( irc_t*, char* );
+typedef int (*cmd_set_checkflags)( irc_t*, set_t *set );
+
+static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead, cmd_set_checkflags checkflags )
+{
+	char *set_full = NULL, *set_name = NULL, *tmp;
+	set_t **head;
+	
+	if( cmd[1] && g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
+	{
+		MIN_ARGS( 2, 0 );
+		set_full = cmd[2];
+	}
+	else
+		set_full = cmd[1];
+	
+	if( findhead == NULL )
+	{
+		set_name = set_full;
+		
+		head = &irc->set;
+	}
+	else 
+	{
+		char *id;
+		
+		if( ( tmp = strchr( set_full, '/' ) ) )
+		{
+			id = g_strndup( set_full, ( tmp - set_full ) );
+			set_name = tmp + 1;
+		}
+		else
+		{
+			id = g_strdup( set_full );
+		}
+		
+		if( ( head = findhead( irc, id ) ) == NULL )
+		{
+			g_free( id );
+			irc_usermsg( irc, "Could not find setting." );
+			return 0;
+		}
+		g_free( id );
+	}
+	
+	if( cmd[1] && cmd[2] && set_name )
+	{
+		set_t *s = set_find( head, set_name );
+		int st;
+		
+		if( checkflags && checkflags( irc, s ) == 0 )
+			return 0;
+		
+		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
+			st = set_reset( head, set_name );
+		else
+			st = set_setstr( head, set_name, cmd[2] );
+		
+		if( set_getstr( head, set_name ) == NULL )
+		{
+			if( st )
+				irc_usermsg( irc, "Setting changed successfully" );
+			else
+				irc_usermsg( irc, "Failed to change setting" );
+		}
+		else
+		{
+			cmd_showset( irc, head, set_name );
+		}
+	}
+	else if( set_name )
+	{
+		cmd_showset( irc, head, set_name );
+	}
+	else
+	{
+		set_t *s = *head;
+		while( s )
+		{
+			cmd_showset( irc, &s, s->key );
+			s = s->next;
+		}
+	}
+	
+	return 1;
+}
+
+static set_t **cmd_account_set_findhead( irc_t *irc, char *id )
+{
+	account_t *a;
+	
+	if( ( a = account_get( irc, id ) ) )
+		return &a->set;
+	else
+		return NULL;
+}
+
+static int cmd_account_set_checkflags( irc_t *irc, set_t *s )
+{
+	account_t *a = s->data;
+	
+	if( a->ic && s && s->flags & ACC_SET_OFFLINE_ONLY )
+	{
+		irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );
+		return 0;
+	}
+	else if( !a->ic && s && s->flags & ACC_SET_ONLINE_ONLY )
+	{
+		irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "on" );
+		return 0;
+	}
+	
+	return 1;
+}
+
 static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
@@ -264,13 +388,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		struct prpl *prpl;
 		
-		if( cmd[2] == NULL || cmd[3] == NULL || cmd[4] == NULL )
-		{
-			irc_usermsg( irc, "Not enough parameters" );
-			return;
-		}
+		MIN_ARGS( 4 );
 		
-		prpl = find_protocol(cmd[2]);
+		prpl = find_protocol( cmd[2] );
 		
 		if( prpl == NULL )
 		{
@@ -294,11 +414,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
 	{
-		if( !cmd[2] )
-		{
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
-		}
-		else if( !( a = account_get( irc, cmd[2] ) ) )
+		MIN_ARGS( 2 );
+
+		if( !( a = account_get( irc, cmd[2] ) ) )
 		{
 			irc_usermsg( irc, "Invalid account" );
 		}
@@ -426,92 +544,13 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
 	{
-		char *acc_handle, *set_name = NULL, *tmp;
+		MIN_ARGS( 2 );
 		
-		if( !cmd[2] )
-		{
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 2 );
-			return;
-		}
-		
-		if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
-			acc_handle = g_strdup( cmd[3] );
-		else
-			acc_handle = g_strdup( cmd[2] );
-		
-		if( !acc_handle )
-		{
-			irc_usermsg( irc, "Not enough parameters given (need %d)", 3 );
-			return;
-		}
-		
-		if( ( tmp = strchr( acc_handle, '/' ) ) )
-		{
-			*tmp = 0;
-			set_name = tmp + 1;
-		}
-		
-		if( ( a = account_get( irc, acc_handle ) ) == NULL )
-		{
-			g_free( acc_handle );
-			irc_usermsg( irc, "Invalid account" );
-			return;
-		}
-		
-		if( cmd[3] && set_name )
-		{
-			set_t *s = set_find( &a->set, set_name );
-			int st;
-			
-			if( a->ic && s && s->flags & ACC_SET_OFFLINE_ONLY )
-			{
-				g_free( acc_handle );
-				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "off" );
-				return;
-			}
-			else if( !a->ic && s && s->flags & ACC_SET_ONLINE_ONLY )
-			{
-				g_free( acc_handle );
-				irc_usermsg( irc, "This setting can only be changed when the account is %s-line", "on" );
-				return;
-			}
-			
-			if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
-				st = set_reset( &a->set, set_name );
-			else
-				st = set_setstr( &a->set, set_name, cmd[3] );
-			
-			if( set_getstr( &a->set, set_name ) == NULL )
-			{
-				if( st )
-					irc_usermsg( irc, "Setting changed successfully" );
-				else
-					irc_usermsg( irc, "Failed to change setting" );
-			}
-			else
-			{
-				cmd_showset( irc, &a->set, set_name );
-			}
-		}
-		else if( set_name )
-		{
-			cmd_showset( irc, &a->set, set_name );
-		}
-		else
-		{
-			set_t *s = a->set;
-			while( s )
-			{
-				cmd_showset( irc, &s, s->key );
-				s = s->next;
-			}
-		}
-		
-		g_free( acc_handle );
+		cmd_set_real( irc, cmd + 1, cmd_account_set_findhead, cmd_account_set_checkflags );
 	}
 	else
 	{
-		irc_usermsg( irc, "Unknown command: account %s. Please use \x02help commands\x02 to get a list of available commands.", cmd[1] );
+		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "account", cmd[1] );
 	}
 }
 
@@ -522,6 +561,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 	
 	if( g_strcasecmp( cmd[1], "-tmp" ) == 0 )
 	{
+		MIN_ARGS( 3 );
 		add_on_server = 0;
 		cmd ++;
 	}
@@ -841,54 +881,7 @@ static void cmd_yesno( irc_t *irc, char **cmd )
 
 static void cmd_set( irc_t *irc, char **cmd )
 {
-	char *set_name = cmd[1];
-	
-	if( cmd[1] && cmd[2] )
-	{
-		int st;
-		
-		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
-		{
-			st = set_reset( &irc->set, cmd[2] );
-			set_name = cmd[2];
-		}
-		else
-		{
-			st = set_setstr( &irc->set, cmd[1], cmd[2] );
-		}
-		
-		/* Normally we just show the variable's new/unchanged
-		   value as feedback to the user, but this has always
-		   caused confusion when changing the password. Give
-		   other feedback instead: */
-		if( set_getstr( &irc->set, set_name ) == NULL )
-		{
-			if( st )
-				irc_usermsg( irc, "Setting changed successfully" );
-			else
-				irc_usermsg( irc, "Failed to change setting" );
-		}
-		else
-		{
-			cmd_showset( irc, &irc->set, set_name );
-		}
-	}
-	else if( set_name )
-	{
-		cmd_showset( irc, &irc->set, set_name );
-
-		if( strchr( set_name, '/' ) )
-			irc_usermsg( irc, "Warning: / found in setting name, you're probably looking for the `account set' command." );
-	}
-	else
-	{
-		set_t *s = irc->set;
-		while( s )
-		{
-			cmd_showset( irc, &s, s->key );
-			s = s->next;
-		}
-	}
+	cmd_set_real( irc, cmd, NULL, NULL );
 }
 
 static void cmd_save( irc_t *irc, char **cmd )
@@ -1011,6 +1004,122 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 
 static void cmd_join_chat( irc_t *irc, char **cmd )
 {
+	irc_usermsg( irc, "This command is now obsolete. "
+	                  "Please try the `chat' command instead." );
+}
+
+static set_t **cmd_chat_set_findhead( irc_t *irc, char *id )
+{
+	struct chat *c;
+	
+	if( ( c = chat_get( irc, id ) ) )
+		return &c->set;
+	else
+		return NULL;
+}
+
+static void cmd_chat( irc_t *irc, char **cmd )
+{
+	account_t *acc;
+	struct chat *c;
+	
+	if( g_strcasecmp( cmd[1], "add" ) == 0 )
+	{
+		char *channel, *s;
+		
+		MIN_ARGS( 3 );
+		
+		if( !( acc = account_get( irc, cmd[2] ) ) )
+		{
+			irc_usermsg( irc, "Invalid account" );
+			return;
+		}
+		
+		if( cmd[4] == NULL )
+		{
+			channel = g_strdup( cmd[3] );
+			if( ( s = strchr( channel, '@' ) ) )
+				*s = 0;
+		}
+		else
+		{
+			channel = g_strdup( cmd[4] );
+		}
+		
+		if( strchr( CTYPES, channel[0] ) == NULL )
+		{
+			s = g_strdup_printf( "%c%s", CTYPES[0], channel );
+			g_free( channel );
+			channel = s;
+		}
+		
+		if( ( c = chat_add( irc, acc, cmd[3], channel ) ) )
+			irc_usermsg( irc, "Chatroom added successfully." );
+		else
+			irc_usermsg( irc, "Could not add chatroom." );
+		
+		g_free( channel );
+	}
+	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
+	{
+		int i = 0;
+		
+		if( strchr( irc->umode, 'b' ) )
+			irc_usermsg( irc, "Chatroom list:" );
+		
+		for( c = irc->chatrooms; c; c = c->next )
+		{
+			irc_usermsg( irc, "%2d. %s(%s) %s, %s", i, c->acc->prpl->name,
+			                  c->acc->user, c->handle, c->channel );
+			
+			i ++;
+		}
+		irc_usermsg( irc, "End of chatroom list" );
+	}
+	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
+	{
+		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead, NULL );
+	}
+	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
+	{
+		MIN_ARGS( 2 );
+		
+		if( ( c = chat_get( irc, cmd[2] ) ) )
+		{
+			chat_del( irc, c );
+		}
+		else
+		{
+			irc_usermsg( irc, "Could not remove chat." );
+		}
+	}
+	else if( g_strcasecmp( cmd[1], "with" ) == 0 )
+	{
+		user_t *u;
+		
+		MIN_ARGS( 2 );
+		
+		if( ( u = user_find( irc, cmd[2] ) ) && u->ic && u->ic->acc->prpl->chat_with )
+		{
+			if( !u->ic->acc->prpl->chat_with( u->ic, u->handle ) )
+			{
+				irc_usermsg( irc, "(Possible) failure while trying to open "
+				                  "a groupchat with %s.", u->nick );
+			}
+		}
+		else
+		{
+			irc_usermsg( irc, "Can't open a groupchat with %s.", cmd[2] );
+		}
+	}
+	else
+	{
+		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat", cmd[1] );
+	}
+
+
+
+#if 0
 	account_t *a;
 	struct im_connection *ic;
 	char *chat, *channel, *nick = NULL, *password = NULL;
@@ -1036,7 +1145,7 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 	chat = cmd[2];
 	if( cmd[3] )
 	{
-		if( cmd[3][0] != '#' && cmd[3][0] != '&' )
+		if( strchr( CTYPES, cmd[3][0] ) == NULL )
 			channel = g_strdup_printf( "&%s", cmd[3] );
 		else
 			channel = g_strdup( cmd[3] );
@@ -1079,6 +1188,7 @@ static void cmd_join_chat( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Tried to join chat, not sure if this was successful" );
 		g_free( channel );
 	}
+#endif
 }
 
 const command_t commands[] = {
@@ -1102,5 +1212,6 @@ const command_t commands[] = {
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "join_chat",      2, cmd_join_chat,      0 },
 	{ "otr",            1, cmd_otr,            0 },	
+	{ "chat",           1, cmd_chat,           0 },
 	{ NULL }
 };

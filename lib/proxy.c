@@ -557,7 +557,6 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 	else if (proxytype == PROXY_SOCKS5)
 		return proxy_connect_socks5(host, port, phb);
 	
-	if (phb->host) g_free(phb);
 	g_free(phb);
 	return -1;
 }

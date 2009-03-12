@@ -1,8 +1,42 @@
-bitlbee (1.2-6) UNRELEASED; urgency=low
+bitlbee (1.2.2-1) unstable; urgency=critical
 
-  * Add Homepage and Vcs-Bzr fields.
+  * New upstream version.
+  * Fixes a security issue (account hijacking), hence the high priority.
+  * Using a patch to set the User setting in bitlbee.conf properly to keep
+    upstream and Debian properly separated in my bzr tree.
 
- -- Jelmer Vernooij <jelmer@samba.org>  Sun, 11 May 2008 14:18:16 +0200
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Wed, 27 Aug 2008 23:59:50 +0100
+
+bitlbee (1.2.1-3) unstable; urgency=high
+
+  * chown /var/lib/bitlbee/*.xml to bitlbee:bitlbee to clean up after
+    1.2-5 and the bugfix in 1.2.1-2. (Closes: #495877)
+  * Moved BITLBEE_DISABLED check to only check when trying to *start*
+    the daemon. (Closes: #488611)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 23 Aug 2008 18:53:54 +0100
+
+bitlbee (1.2.1-2) unstable; urgency=low
+
+  * Properly set the User= line to something sensible so BitlBee won't
+    run as root anymore. 1.2-5 was a bad upload. :-( (Closes: #494656)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Tue, 12 Aug 2008 00:36:03 +0100
+
+bitlbee (1.2.1-1.1) unstable; urgency=low
+
+  * Non-Maintainer Upload
+  * Use invoke-rc.d as per policy. (Closes: #492637) [Thanks to Matt
+    Kraai]
+
+ -- Don Armstrong <don@debian.org>  Wed, 06 Aug 2008 06:57:18 -0700
+
+bitlbee (1.2.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * Add Homepage and Vcs-Bzr fields. (From Jelmer.)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Thu, 26 Jun 2008 00:07:50 +0100
 
 bitlbee (1.2-5) unstable; urgency=low
 
