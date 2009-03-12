@@ -71,7 +71,7 @@ Option		Description				Default
 --strip=0/1	Disable/enable binary stripping		$strip
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
 --plugins=0/1	Disable/enable plugins support		$plugins
---otr=0/1/auto	Disable/enable OTR encryption support	$otr
+--otr=0/1	Disable/enable OTR encryption support	$otr
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)

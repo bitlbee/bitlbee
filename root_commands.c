@@ -131,7 +131,7 @@ static void cmd_account( irc_t *irc, char **cmd );
 
 static void cmd_identify( irc_t *irc, char **cmd )
 {
-	storage_status_t status = storage_load( irc->nick, cmd[1], irc );
+	storage_status_t status = storage_load( irc, cmd[1] );
 	char *account_on[] = { "account", "on", NULL };
 	
 	switch (status) {
@@ -143,6 +143,8 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		break;
 	case STORAGE_OK:
 		irc_usermsg( irc, "Password accepted, settings and accounts loaded" );
+		irc_setpass( irc, cmd[1] );
+		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "+R", 1 );
 		if( set_getbool( &irc->set, "auto_connect" ) )
 			cmd_account( irc, account_on );
@@ -162,14 +164,14 @@ static void cmd_register( irc_t *irc, char **cmd )
 		return;
 	}
 
-	irc_setpass( irc, cmd[1] );
-	switch( storage_save( irc, FALSE )) {
+	switch( storage_save( irc, cmd[1], FALSE ) ) {
 		case STORAGE_ALREADY_EXISTS:
 			irc_usermsg( irc, "Nick is already registered" );
 			break;
 			
 		case STORAGE_OK:
 			irc_usermsg( irc, "Account successfully created" );
+			irc_setpass( irc, cmd[1] );
 			irc->status |= USTATUS_IDENTIFIED;
 			irc_umode_set( irc, "+R", 1 );
 			break;
@@ -236,6 +238,16 @@ void cmd_account_del_yes( void *data )
 void cmd_account_del_no( void *data )
 {
 	g_free( data );
+}
+
+static void cmd_showset( irc_t *irc, set_t **head, char *key )
+{
+	char *val;
+	
+	if( ( val = set_getstr( head, key ) ) )
+		irc_usermsg( irc, "%s = `%s'", key, val );
+	else
+		irc_usermsg( irc, "%s is empty", key );
 }
 
 static void cmd_account( irc_t *irc, char **cmd )
@@ -449,6 +461,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 		if( cmd[3] && set_name )
 		{
 			set_t *s = set_find( &a->set, set_name );
+			int st;
 			
 			if( a->ic && s && s->flags & ACC_SET_OFFLINE_ONLY )
 			{
@@ -464,27 +477,32 @@ static void cmd_account( irc_t *irc, char **cmd )
 			}
 			
 			if( g_strncasecmp( cmd[2], "-del", 4 ) == 0 )
-				set_reset( &a->set, set_name );
+				st = set_reset( &a->set, set_name );
 			else
-				set_setstr( &a->set, set_name, cmd[3] );
+				st = set_setstr( &a->set, set_name, cmd[3] );
+			
+			if( set_getstr( &a->set, set_name ) == NULL )
+			{
+				if( st )
+					irc_usermsg( irc, "Setting changed successfully" );
+				else
+					irc_usermsg( irc, "Failed to change setting" );
+			}
+			else
+			{
+				cmd_showset( irc, &a->set, set_name );
+			}
 		}
-		if( set_name ) /* else 'forgotten' on purpose.. Must show new value after changing */
+		else if( set_name )
 		{
-			char *s = set_getstr( &a->set, set_name );
-			if( s )
-				irc_usermsg( irc, "%s = `%s'", set_name, s );
-			else
-				irc_usermsg( irc, "%s is empty", set_name );
+			cmd_showset( irc, &a->set, set_name );
 		}
 		else
 		{
 			set_t *s = a->set;
 			while( s )
 			{
-				if( s->value || s->def )
-					irc_usermsg( irc, "%s = `%s'", s->key, s->value ? s->value : s->def );
-				else
-					irc_usermsg( irc, "%s is empty", s->key );
+				cmd_showset( irc, &s, s->key );
 				s = s->next;
 			}
 		}
@@ -614,6 +632,8 @@ static void cmd_rename( irc_t *irc, char **cmd )
 			g_free( irc->mynick );
 			irc->mynick = g_strdup( cmd[2] );
 			
+			/* If we're called internally (user did "set root_nick"),
+			   let's not go O(INF). :-) */
 			if( strcmp( cmd[0], "set_rename" ) != 0 )
 				set_setstr( &irc->set, "root_nick", cmd[2] );
 		}
@@ -637,7 +657,7 @@ char *set_eval_root_nick( set_t *set, char *new_nick )
 		cmd_rename( irc, cmd );
 	}
 	
-	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : NULL;
+	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : SET_INVALID;
 }
 
 static void cmd_remove( irc_t *irc, char **cmd )
@@ -825,23 +845,37 @@ static void cmd_set( irc_t *irc, char **cmd )
 	
 	if( cmd[1] && cmd[2] )
 	{
+		int st;
+		
 		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
 		{
-			set_reset( &irc->set, cmd[2] );
+			st = set_reset( &irc->set, cmd[2] );
 			set_name = cmd[2];
 		}
 		else
 		{
-			set_setstr( &irc->set, cmd[1], cmd[2] );
+			st = set_setstr( &irc->set, cmd[1], cmd[2] );
+		}
+		
+		/* Normally we just show the variable's new/unchanged
+		   value as feedback to the user, but this has always
+		   caused confusion when changing the password. Give
+		   other feedback instead: */
+		if( set_getstr( &irc->set, set_name ) == NULL )
+		{
+			if( st )
+				irc_usermsg( irc, "Setting changed successfully" );
+			else
+				irc_usermsg( irc, "Failed to change setting" );
+		}
+		else
+		{
+			cmd_showset( irc, &irc->set, set_name );
 		}
 	}
-	if( set_name ) /* else 'forgotten' on purpose.. Must show new value after changing */
+	else if( set_name )
 	{
-		char *s = set_getstr( &irc->set, set_name );
- 		if( s )
-			irc_usermsg( irc, "%s = `%s'", set_name, s );
-		else
-			irc_usermsg( irc, "%s is empty", set_name );
+		cmd_showset( irc, &irc->set, set_name );
 
 		if( strchr( set_name, '/' ) )
 			irc_usermsg( irc, "Warning: / found in setting name, you're probably looking for the `account set' command." );
@@ -851,10 +885,7 @@ static void cmd_set( irc_t *irc, char **cmd )
 		set_t *s = irc->set;
 		while( s )
 		{
-			if( s->value || s->def )
-				irc_usermsg( irc, "%s = `%s'", s->key, s->value ? s->value : s->def );
-			else
-				irc_usermsg( irc, "%s is empty", s->key );
+			cmd_showset( irc, &s, s->key );
 			s = s->next;
 		}
 	}
@@ -862,7 +893,9 @@ static void cmd_set( irc_t *irc, char **cmd )
 
 static void cmd_save( irc_t *irc, char **cmd )
 {
-	if( storage_save( irc, TRUE ) == STORAGE_OK )
+	if( ( irc->status & USTATUS_IDENTIFIED ) == 0 )
+		irc_usermsg( irc, "Please create an account first" );
+	else if( storage_save( irc, NULL, TRUE ) == STORAGE_OK )
 		irc_usermsg( irc, "Configuration saved" );
 	else
 		irc_usermsg( irc, "Configuration could not be saved!" );

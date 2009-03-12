@@ -665,9 +665,6 @@ void ext_yahoo_error( int id, const char *err, int fatal, int num )
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
 	imcb_error( ic, "%s", err );
-	
-	if( fatal )
-		imc_logout( ic, TRUE );
 }
 
 /* TODO: Clear up the mess of inp and d structures */

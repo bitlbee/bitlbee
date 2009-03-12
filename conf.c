@@ -146,6 +146,13 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -h  Show this help page.\n" );
 			return NULL;
 		}
+		else if( opt == 'R' )
+		{
+			/* Backward compatibility; older BitlBees passed this
+			   info using a command-line flag. Allow people to
+			   upgrade from such a version for now. */
+			setenv( "_BITLBEE_RESTART_STATE", optarg, 0 );
+		}
 		else if( opt == 'u' )
 		{
 			g_free( conf->user );

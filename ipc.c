@@ -32,6 +32,7 @@
 #endif
 
 GSList *child_list = NULL;
+static char *statefile = NULL;
 
 static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
@@ -59,25 +60,6 @@ static void ipc_master_cmd_die( irc_t *data, char **cmd )
 		ipc_to_children_str( "DIE\r\n" );
 	
 	bitlbee_shutdown( NULL, -1, 0 );
-}
-
-static void ipc_master_cmd_deaf( irc_t *data, char **cmd )
-{
-	if( global.conf->runmode == RUNMODE_DAEMON )
-	{
-		b_event_remove( global.listen_watch_source_id );
-		close( global.listen_socket );
-		
-		global.listen_socket = global.listen_watch_source_id = -1;
-	
-		ipc_to_children_str( "OPERMSG :Closed listening socket, waiting "
-		                     "for all users to disconnect." );
-	}
-	else
-	{
-		ipc_to_children_str( "OPERMSG :The DEAF command only works in "
-		                     "normal daemon mode. Try DIE instead." );
-	}
 }
 
 void ipc_master_cmd_rehash( irc_t *data, char **cmd )
@@ -115,7 +97,6 @@ static const command_t ipc_master_commands[] = {
 	{ "client",     3, ipc_master_cmd_client,     0 },
 	{ "hello",      0, ipc_master_cmd_client,     0 },
 	{ "die",        0, ipc_master_cmd_die,        0 },
-	{ "deaf",       0, ipc_master_cmd_deaf,       0 },
 	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "wall",       1, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "opermsg",    1, NULL,                      IPC_CMD_TO_CHILDREN },
@@ -459,7 +440,6 @@ void ipc_child_disable()
 	global.listen_socket = -1;
 }
 
-#ifndef _WIN32
 char *ipc_master_save_state()
 {
 	char *fn = g_strdup( "/tmp/bee-restart.XXXXXX" );
@@ -500,6 +480,11 @@ char *ipc_master_save_state()
 	}
 }
 
+void ipc_master_set_statefile( char *fn )
+{
+	statefile = g_strdup( fn );
+}
+
 
 static gboolean new_ipc_client( gpointer data, gint serversock, b_input_condition cond )
 {
@@ -520,6 +505,7 @@ static gboolean new_ipc_client( gpointer data, gint serversock, b_input_conditio
 	return TRUE;
 }
 
+#ifndef _WIN32
 int ipc_master_listen_socket()
 {
 	struct sockaddr_un un_addr;
@@ -556,14 +542,10 @@ int ipc_master_listen_socket()
 	return 1;
 }
 #else
-int ipc_master_listen_socket()
-{
 	/* FIXME: Open named pipe \\.\BITLBEE */
-	return 0;
-}
 #endif
 
-int ipc_master_load_state( char *statefile )
+int ipc_master_load_state()
 {
 	struct bitlbee_child *child;
 	FILE *fp;
@@ -571,7 +553,6 @@ int ipc_master_load_state( char *statefile )
 	
 	if( statefile == NULL )
 		return 0;
-	
 	fp = fopen( statefile, "r" );
 	unlink( statefile );	/* Why do it later? :-) */
 	if( fp == NULL )

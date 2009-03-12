@@ -25,6 +25,9 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
+/* Used to use NULL for this, but NULL is actually a "valid" value. */
+char *SET_INVALID = "nee";
+
 set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data )
 {
 	set_t *s = set_find( head, key );
@@ -113,9 +116,20 @@ int set_setstr( set_t **head, char *key, char *value )
 	char *nv = value;
 	
 	if( !s )
+		/*
+		Used to do this, but it never really made sense.
 		s = set_add( head, key, NULL, NULL, NULL );
+		*/
+		return 0;
 	
-	if( s->eval && !( nv = s->eval( s, value ) ) )
+	if( value == NULL && ( s->flags & SET_NULL_OK ) == 0 )
+		return 0;
+	
+	/* Call the evaluator. For invalid values, evaluators should now
+	   return SET_INVALID, but previously this was NULL. Try to handle
+	   that too if NULL is not an allowed value for this setting. */
+	if( s->eval && ( ( nv = s->eval( s, value ) ) == SET_INVALID ||
+	                 ( ( s->flags & SET_NULL_OK ) == 0 && nv == NULL ) ) )
 		return 0;
 	
 	if( s->value )
@@ -167,13 +181,15 @@ void set_del( set_t **head, char *key )
 	}
 }
 
-void set_reset( set_t **head, char *key )
+int set_reset( set_t **head, char *key )
 {
 	set_t *s;
 	
 	s = set_find( head, key );
 	if( s )
-		set_setstr( head, key, s->def );
+		return set_setstr( head, key, s->def );
+	
+	return 0;
 }
 
 char *set_eval_int( set_t *set, char *value )
@@ -186,14 +202,14 @@ char *set_eval_int( set_t *set, char *value )
 	
 	for( ; *s; s ++ )
 		if( !isdigit( *s ) )
-			return NULL;
+			return SET_INVALID;
 	
 	return value;
 }
 
 char *set_eval_bool( set_t *set, char *value )
 {
-	return is_bool( value ) ? value : NULL;
+	return is_bool( value ) ? value : SET_INVALID;
 }
 
 char *set_eval_to_char( set_t *set, char *value )
@@ -208,25 +224,27 @@ char *set_eval_to_char( set_t *set, char *value )
 	return s;
 }
 
-char *set_eval_op_root( set_t *set, char *value )
+char* set_eval_op_root( set_t *set, char* value )
 {
 	irc_t *irc = set->data;
-	char *ret = set_eval_bool(set, value);
+	char* ret = set_eval_bool(set, value);
 	int b = bool2int(ret);
-	
+
 	irc_write( irc, ":%s!%s@%s MODE %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-	                                           irc->channel, b?"+o":"-o", irc->mynick );
+                                               irc->channel, b?"+o":"-o", irc->mynick);
+
 	return ret;
 }
 
-char *set_eval_op_user( set_t *set, char *value )
+char* set_eval_op_user( set_t *set, char* value )
 {
 	irc_t *irc = set->data;
-	char *ret = set_eval_bool(set, value);
+	char* ret = set_eval_bool(set, value);
 	int b = bool2int(ret);
-	
+
 	irc_write( irc, ":%s!%s@%s MODE %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-	                                           irc->channel, b?"+o":"-o", irc->nick );
+                                               irc->channel, b?"+o":"-o", irc->nick);
+
 	return ret;
 }
 
@@ -249,7 +267,7 @@ char *set_eval_mode_buddies( set_t *set, char *value, char modeflag )
 		mode=3;
 	else
 		return NULL;
-	
+
 	/* sorry for calling them op/deop - too lazy for search+replace :P */
 	op[0]='\0';
 	deop[0]='\0';
@@ -334,10 +352,10 @@ char *set_eval_mode_buddies( set_t *set, char *value, char modeflag )
 	if(*deop) {
 		char *flags = g_strnfill(ndeop, modeflag);
 		irc_write( irc, ":%s!%s@%s MODE %s -%s%s", irc->mynick, irc->mynick, irc->myhost,
-	                                               irc->channel, flags, deop );
-		g_free(flags);
-	}
-	
+                                                   irc->channel, flags, deop );
+        g_free(flags);
+    }
+
 	return value;
 }
 
@@ -369,3 +387,4 @@ char *set_eval_otr_policy( set_t *set, char *value )
 		return value;
 	return NULL;
 }
+

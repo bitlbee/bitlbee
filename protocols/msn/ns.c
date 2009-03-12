@@ -277,25 +277,11 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	{
 		if( num_parts == 5 )
 		{
-			int i, groupcount;
-			
-			groupcount = atoi( cmd[4] );
-			if( groupcount > 0 )
-			{
-				/* valgrind says this is leaking memory, I'm guessing
-				   that this happens during server redirects. */
-				if( md->grouplist )
-				{
-					for( i = 0; i < md->groupcount; i ++ )
-						g_free( md->grouplist[i] );
-					g_free( md->grouplist );
-				}
-				
-				md->groupcount = groupcount;
-				md->grouplist = g_new0( char *, md->groupcount );
-			}
-			
 			md->buddycount = atoi( cmd[3] );
+			md->groupcount = atoi( cmd[4] );
+			if( md->groupcount > 0 )
+				md->grouplist = g_new0( char *, md->groupcount );
+			
 			if( !*cmd[3] || md->buddycount == 0 )
 				msn_logged_in( ic );
 		}
@@ -678,9 +664,6 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 				{
 					imcb_log( ic, "INBOX contains %s new messages, plus %s messages in other folders.", inbox, folders );
 				}
-				
-				g_free( inbox );
-				g_free( folders );
 			}
 			else if( g_strncasecmp( ct, "text/x-msmsgsemailnotification", 30 ) == 0 )
 			{

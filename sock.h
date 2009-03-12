@@ -15,11 +15,17 @@
 #endif
 #else
 # include <winsock2.h>
-# include <ws2tcpip.h>
+# ifndef _MSC_VER
+#  include <ws2tcpip.h>
+# endif
 # if !defined(BITLBEE_CORE) && defined(_MSC_VER)
 #   pragma comment(lib,"bitlbee.lib")
 # endif
 # include <io.h>
+# define read(a,b,c) recv(a,b,c,0)
+# define write(a,b,c) send(a,b,c,0)
+# define umask _umask
+# define mode_t int
 # define sock_make_nonblocking(fd) { int non_block = 1; ioctlsocket(fd, FIONBIO, &non_block); }
 # define sock_make_blocking(fd) { int non_block = 0; ioctlsocket(fd, FIONBIO, &non_block); }
 # define sockerr_again() (WSAGetLastError() == WSAEINTR || WSAGetLastError() == WSAEINPROGRESS || WSAGetLastError() == WSAEWOULDBLOCK)

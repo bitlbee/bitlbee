@@ -55,13 +55,13 @@ int main( int argc, char *argv[] )
 	
 	b_main_init();
 	nogaim_init();
-	/* Ugly Note: libotr and gnutls both use libgcrypt. libgcrypt
-	   has a process-global config state whose initialization happpens
-	   twice if libotr and gnutls are used together. libotr installs custom
-	   memory management functions for libgcrypt while our gnutls module
-	   uses the defaults. Therefore we initialize OTR after SSL. *sigh* */
-	ssl_init();
-	otr_init();
+ 	/* Ugly Note: libotr and gnutls both use libgcrypt. libgcrypt
+ 	   has a process-global config state whose initialization happpens
+ 	   twice if libotr and gnutls are used together. libotr installs custom
+ 	   memory management functions for libgcrypt while our gnutls module
+ 	   uses the defaults. Therefore we initialize OTR after SSL. *sigh* */
+ 	ssl_init();
+ 	otr_init();
 	
 	srand( time( NULL ) ^ getpid() );
 	global.helpfile = g_strdup( HELP_FILE );
@@ -222,5 +222,3 @@ double gettime()
 	gettimeofday( time, 0 );
 	return( (double) time->tv_sec + (double) time->tv_usec / 1000000 );
 }
-
-

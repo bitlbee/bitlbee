@@ -112,7 +112,6 @@ static void msn_logout( struct im_connection *ic )
 static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, int away )
 {
 	struct msn_switchboard *sb;
-	struct msn_data *md = ic->proto_data;
 	
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
@@ -121,47 +120,13 @@ static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, in
 	else
 	{
 		struct msn_message *m;
-		char buf[1024];
 		
 		/* Create a message. We have to arrange a usable switchboard, and send the message later. */
 		m = g_new0( struct msn_message, 1 );
 		m->who = g_strdup( who );
 		m->text = g_strdup( message );
 		
-		/* FIXME: *CHECK* the reliability of using spare sb's! */
-		if( ( sb = msn_sb_spare( ic ) ) )
-		{
-			debug( "Trying to use a spare switchboard to message %s", who );
-			
-			sb->who = g_strdup( who );
-			g_snprintf( buf, sizeof( buf ), "CAL %d %s\r\n", ++sb->trId, who );
-			if( msn_sb_write( sb, buf, strlen( buf ) ) )
-			{
-				/* He/She should join the switchboard soon, let's queue the message. */
-				sb->msgq = g_slist_append( sb->msgq, m );
-				return( 1 );
-			}
-		}
-		
-		debug( "Creating a new switchboard to message %s", who );
-		
-		/* If we reach this line, there was no spare switchboard, so let's make one. */
-		g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
-		if( !msn_write( ic, buf, strlen( buf ) ) )
-		{
-			g_free( m->who );
-			g_free( m->text );
-			g_free( m );
-			
-			return( 0 );
-		}
-		
-		/* And queue the message to md. We'll pick it up when the switchboard comes up. */
-		md->msgq = g_slist_append( md->msgq, m );
-		
-		/* FIXME: If the switchboard creation fails, the message will not be sent. */
-		
-		return( 1 );
+		return msn_sb_write_msg( ic, m );
 	}
 	
 	return( 0 );
@@ -251,8 +216,6 @@ static void msn_chat_leave( struct groupchat *c )
 static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
 {
 	struct msn_switchboard *sb;
-	struct msn_data *md = ic->proto_data;
-	char buf[1024];
 	
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
@@ -263,31 +226,13 @@ static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
 	{
 		struct msn_message *m;
 		
-		if( ( sb = msn_sb_spare( ic ) ) )
-		{
-			debug( "Trying to reuse an existing switchboard as a groupchat with %s", who );
-			g_snprintf( buf, sizeof( buf ), "CAL %d %s\r\n", ++sb->trId, who );
-			if( msn_sb_write( sb, buf, strlen( buf ) ) )
-				return msn_sb_to_chat( sb );
-		}
-		
-		/* If the stuff above failed for some reason: */
-		debug( "Creating a new switchboard to groupchat with %s", who );
-		
-		/* Request a new switchboard. */
-		g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
-		if( !msn_write( ic, buf, strlen( buf ) ) )
-			return( 0 );
-		
 		/* Create a magic message. This is quite hackish, but who cares? :-P */
 		m = g_new0( struct msn_message, 1 );
 		m->who = g_strdup( who );
 		m->text = g_strdup( GROUPCHAT_SWITCHBOARD_MESSAGE );
 		
-		/* Queue the magic message and cross your fingers. */
-		md->msgq = g_slist_append( md->msgq, m );
-		
-		/* FIXME: Can I try to return something here already? */
+		msn_sb_write_msg( ic, m );
+
 		return NULL;
 	}
 	

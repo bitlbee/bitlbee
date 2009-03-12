@@ -26,14 +26,6 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "crypting.h"
-#ifdef _WIN32
-# define umask _umask
-# define mode_t int
-#endif
-
-#ifndef F_OK
-#define F_OK 0
-#endif
 
 static void text_init (void)
 {
@@ -43,7 +35,7 @@ static void text_init (void)
 	   it's read only! */
 }
 
-static storage_status_t text_load ( const char *my_nick, const char* password, irc_t *irc )
+static storage_status_t text_load( irc_t *irc, const char* password )
 {
 	char s[512];
 	char *line;
@@ -53,10 +45,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 	user_t *ru = user_find( irc, ROOT_NICK );
 	account_t *acc, *acc_lookup[9];
 	
-	if( irc->status & USTATUS_IDENTIFIED )
-		return( 1 );
-	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".accounts" );
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
    	fp = fopen( s, "r" );
    	if( !fp ) return STORAGE_NO_SUCH_USER;
 	
@@ -67,10 +56,6 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 		fclose( fp );
 		return STORAGE_INVALID_PASSWORD;
 	}
-	
-	/* Do this now. If the user runs with AuthMode = Registered, the
-	   account command will not work otherwise. */
-	irc->status |= USTATUS_IDENTIFIED;
 	
 	while( fscanf( fp, "%511[^\n]s", s ) > 0 )
 	{
@@ -100,7 +85,7 @@ static storage_status_t text_load ( const char *my_nick, const char* password, i
 			acc_lookup[8] = acc;
 	}
 	
-	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, my_nick, ".nicks" );
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
 	fp = fopen( s, "r" );
 	if( !fp ) return STORAGE_NO_SUCH_USER;
 	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )

@@ -50,6 +50,8 @@ char *strchr (), *strrchr ();
 #include "yahoo_debug.h"
 #ifdef __MINGW32__
 # include <winsock2.h>
+# define write(a,b,c) send(a,b,c,0)
+# define read(a,b,c)  recv(a,b,c,0)
 # define snprintf _snprintf
 #endif
 

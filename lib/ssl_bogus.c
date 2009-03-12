@@ -69,3 +69,8 @@ int ssl_pending( void *conn )
 {
 	return 0;
 }
+
+int ssl_pending( void *conn )
+{
+	return 0;
+}
