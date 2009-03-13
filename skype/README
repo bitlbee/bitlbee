@@ -445,6 +445,17 @@ Lukas
 22:16 < ecraven> vmiklos: thanks a lot for the skype plugin for bitlbee!
 ----
 
+----
+I'm blind and so I have to use a screen reader, in my case Gnome-Orca.
+But since Skype is written in QT, while Orca uses gtk+, I have no direct
+access to the Skype interface. That's why I desided to use Skyped and
+Erc.
+The text console is fully accessible.
+Thank you very much.
+
+Hermann
+----
+
 == Thanks
 
 for the following people:
