@@ -73,7 +73,7 @@ and you don't have to compile anything manually.
 - Install the necessary development package:
 
 ----
-# apt-get install bitlbee-dev python-gnutls
+# apt-get install bitlbee-dev python-gobject-dev python-gnutls
 ----
 
 and you have to install `bitlbee-skype` and `skype4py` from source.
