@@ -165,10 +165,12 @@ This will install the plugin to where BitlBee expects them, which is
 
 === Configuring
 
-- Edit `/usr/local/etc/skyped/skyped.conf`: adjust `username` and `password`. The
-  `username` should be your Skype login and the `password` can be whatever you
-  want, but you will have to specify that one when adding the Skype account to
-  BitlBee (see later).
+- Set up `~/.skyped/skyped.conf`: Create the `~/.skyped` directory, copy
+  `skyped.conf` and `skyped.cnf` from
+  `/usr/local/etc/skyped/skyped.conf` to `~/.skyped`, adjust `username`
+  and `password`. The `username` should be your Skype login and the
+  `password` can be whatever you want, but you will have to specify that
+  one when adding the Skype account to BitlBee (see later).
 
 NOTE: Here, and later - `/usr/local/etc` can be different on your installation
 if you used the `--sysconfdir` switch when running bitlbee-skype's `configure`.
@@ -176,12 +178,12 @@ if you used the `--sysconfdir` switch when running bitlbee-skype's `configure`.
 - Generate the SSL pem files:
 
 ----
-# cd /usr/local/etc/skyped
+# cd ~/.skyped
 # openssl req -new -x509 -days 365 -nodes -config skyped.cnf -out skyped.cert.pem \
 	-keyout skyped.key.pem
 ----
 
-NOTE: Maybe you want to adjust the permissions in the `/usr/local/etc/skyped`
+NOTE: Maybe you want to adjust the permissions in the `~/.skyped`
 dir. For example make it readable by just your user.
 
 - If both pyopenssl and python-gnutls are available, then python-gnutls
