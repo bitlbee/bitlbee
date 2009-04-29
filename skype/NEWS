@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.7.2         - add --log option to skyped to allow logging while it the
+                daemon is in the background.
+              - prefer config files from ~/.skyped over /etc/skyped
+              - handle the case when LANG and LC_ALL env vars are empty
 0.7.1         - mostly internal changes, the monster read callback is
                 now replaced by tiny parser functions
 0.7.0         - made 'make config' more portable
