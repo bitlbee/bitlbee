@@ -384,7 +384,10 @@ then it would be nice to include them here.
 
 == Known bugs
 
-- None at this time.
+- File transfers are view-only from BitlBee. Quoting the
+  https://developer.skype.com/Docs/ApiDoc/FILETRANSFER_object[relevant
+  documentation]: 'File transfers cannot be initiated nor accepted via
+  API commands.' So it's not something I can add support for, sadly.
 
 == Screenshots
 
