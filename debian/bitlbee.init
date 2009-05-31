@@ -48,7 +48,7 @@ d_start() {
 	# TODO: Remove this after a few revisions.
 	find /var/lib/bitlbee -uid 0 -name '*.xml' -exec chown bitlbee: {} \;
 
-	start-stop-daemon --start --quiet \
+	start-stop-daemon --start --quiet --pidfile $PIDFILE \
 		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $BITLBEE_OPTS
 }
 

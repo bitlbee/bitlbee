@@ -1,3 +1,12 @@
+bitlbee (1.2.3-1) unstable; urgency=critical
+
+  * New upstream version.
+  * Fixes another account hijacking issue. (Closes: #498159)
+  * Restored --pidfile argument to start-stop-daemon, otherwise the init
+    script fails to restart BitlBee when users are connected.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 07 Sep 2008 18:53:04 +0100
+
 bitlbee (1.2.2-1) unstable; urgency=critical
 
   * New upstream version.
