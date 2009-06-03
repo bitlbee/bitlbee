@@ -233,8 +233,10 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 			if( ( s = xt_find_attr( c, "xmlns" ) ) &&
 			    ( strcmp( s, XMLNS_MUC_USER ) == 0 ) )
 			{
-				c = xt_find_node( c->children, "item" );
-				if( ( s = xt_find_attr( c, "jid" ) ) )
+				struct xt_node *item;
+				
+				item = xt_find_node( c->children, "item" );
+				if( ( s = xt_find_attr( item, "jid" ) ) )
 				{
 					/* Yay, found what we need. :-) */
 					bud->ext_jid = jabber_normalize( s );
