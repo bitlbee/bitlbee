@@ -58,7 +58,7 @@ a public server) and/or your IRC client.
 NOTE: The order is important. First `skyped` starts Skype. Then `skyped`
 connects to Skype, finally BitlBee can connect to `skyped`.
 
-=== Installing under Frugalware
+=== Installing under Frugalware or Debian
 
 - Install the necessary packages:
 
@@ -66,17 +66,13 @@ connects to Skype, finally BitlBee can connect to `skyped`.
 # pacman-g2 -S bitlbee-skype
 ----
 
+or
+
+----
+# apt-get install skyped bitlbee-plugin-skype
+----
+
 and you don't have to compile anything manually.
-
-=== Installing under Debian
-
-- Install the necessary development package:
-
-----
-# apt-get install bitlbee-dev python-skype python-gobject-dev python-gnutls
-----
-
-and you have to install `bitlbee-skype` from source.
 
 === Installing under OS X
 
