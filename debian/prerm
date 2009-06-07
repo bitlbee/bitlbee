@@ -10,7 +10,7 @@ if [ "$1" = "upgrade" ]; then
 	fi
 else
 	if which invoke-rc.d >/dev/null 2>&1; then
-		invoke-rc.d bitblee stop || exit 0
+		invoke-rc.d bitlbee stop || exit 0
 	else
 		/etc/init.d/bitlbee stop || exit 0
 	fi

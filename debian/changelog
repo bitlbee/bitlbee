@@ -1,3 +1,10 @@
+bitlbee (1.2.3-2) unstable; urgency=low
+
+  * Fixed bitblee typo in prerm (introduced by NMU 1.2.1-1.1).
+    (Closes: #531287)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Mon, 01 Jun 2009 00:56:41 +0100
+
 bitlbee (1.2.3-1) unstable; urgency=critical
 
   * New upstream version.
