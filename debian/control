@@ -18,7 +18,7 @@ Description: An IRC to other chat networks gateway
 
 Package: bitlbee-dev
 Architecture: all
-Depends: bitlbee (= ${binary:Version})
+Depends: bitlbee (>= ${source:Version}), bitlbee (<< ${source:Version}.1~)
 Description: An IRC to other chat networks gateway
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
