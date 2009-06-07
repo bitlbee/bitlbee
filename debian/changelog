@@ -4,8 +4,10 @@ bitlbee (1.2.3-2) unstable; urgency=low
     (Closes: #531287)
   * Fixed bitlbee.deb dep in bitlbee-dev to deal with binary NMUs.
     (Closes: #531219)
+  * Fixed free port detection code in debian/config which was a bit limited
+    and also buggy.
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 07 Jun 2009 20:04:45 +0100
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 07 Jun 2009 20:40:00 +0100
 
 bitlbee (1.2.3-1) unstable; urgency=critical
 

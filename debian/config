@@ -6,11 +6,12 @@ db_title BitlBee
 
 db_get bitlbee/serveport
 if [ "$RET" = "stillhavetoask" ]; then
-	if netstat -ltn | grep ':6667' 2> /dev/null > /dev/null; then
-		port=6668;
-	else
-		port=6667;
-	fi
+	listens=$(netstat -ltn | awk '{print $4}')
+	for port in 6667 6666 6668 6669; do
+		if [ $(expr "$listens " : ".*:$port\s") = "0" ]; then
+			break
+		fi
+	done
 	db_set bitlbee/serveport $port;
 fi
 
