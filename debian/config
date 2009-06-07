@@ -1,18 +1,23 @@
 #!/bin/sh -e
 
 . /usr/share/debconf/confmodule
+[ -f /etc/default/bitlbee ] && . /etc/default/bitlbee
 
 db_title BitlBee
 
-db_get bitlbee/serveport
-if [ "$RET" = "stillhavetoask" ]; then
-	listens=$(netstat -ltn | awk '{print $4}')
-	for port in 6667 6666 6668 6669; do
-		if [ $(expr "$listens " : ".*:$port\s") = "0" ]; then
-			break
-		fi
-	done
-	db_set bitlbee/serveport $port;
+if [ -n "$BITLBEE_PORT" ]; then
+	db_set bitlbee/serveport "$BITLBEE_PORT"
+else
+	db_get bitlbee/serveport
+	if [ "$RET" = "stillhavetoask" ]; then
+		listens=$(netstat -ltn | awk '{print $4}')
+		for port in 6667 6666 6668 6669; do
+			if [ $(expr "$listens " : ".*:$port\s") = "0" ]; then
+				break
+			fi
+		done
+		db_set bitlbee/serveport $port;
+	fi
 fi
 
 if db_input medium bitlbee/serveport; then

@@ -6,8 +6,15 @@ bitlbee (1.2.3-2) unstable; urgency=low
     (Closes: #531219)
   * Fixed free port detection code in debian/config which was a bit limited
     and also buggy.
+  * Removing code that edits bitlbee.conf from postinst (and chown code in
+    the init script), it's not really necessary anymore; bitlbee may only
+    still run as root if the admin doesn't read conffile diffs.
+    (Closes: #514572)
+  * No longer overwriting port number info in /etc/default/bitlbee with
+    what's in debconf. (Closes: #514148)
+  * Added notes about the above two changes to bitlbee.conf.
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 07 Jun 2009 20:40:00 +0100
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 07 Jun 2009 21:17:39 +0100
 
 bitlbee (1.2.3-1) unstable; urgency=critical
 

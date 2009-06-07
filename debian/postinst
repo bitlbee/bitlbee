@@ -32,7 +32,7 @@ fi
 cat<<EOF>/etc/default/bitlbee
 ## /etc/default/bitlbee: Auto-generated/updated script.
 ##
-## Don't edit this line, use dpkg-reconfigure bitlbee
+## If running in (fork)daemon mode, listen on this TCP port.
 BITLBEE_PORT="$PORT"
 
 ## Use single-process or forking daemon mode? Can't be changed from debconf,
@@ -60,13 +60,6 @@ if [ -e /usr/share/bitlbee/help.upgrading ]; then
 		rm -f /usr/share/bitlbee/help.upgrading
 	else
 		mv /usr/share/bitlbee/help.upgrading /usr/share/bitlbee/help.txt
-	fi
-fi
-
-if ! grep -qi '^User *= *' /etc/bitlbee/bitlbee.conf; then
-	echo 'Updating configuration file, enabling User-setting...'
-	if ! sed -i -e 's/# *User *= *.*/User = bitlbee/i' /etc/bitlbee/bitlbee.conf; then
-		echo 'Failed! BitlBee may run as root now, please check your configs.'
 	fi
 fi
 
