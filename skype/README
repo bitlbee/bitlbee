@@ -244,7 +244,7 @@ Now create `~/.vnc/xstartup` with the following contents:
 ----
 #!/bin/sh
 
-twm
+blackbox
 ----
 
 Adjust the permissions:
