@@ -1073,6 +1073,8 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
 	{
+		MIN_ARGS( 2 );
+		
 		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead, NULL );
 	}
 	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
