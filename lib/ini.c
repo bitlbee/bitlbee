@@ -42,12 +42,16 @@ ini_t *ini_open( char *file )
 		ini->file[ini->size] = 0;
 		ini->cur = ini->file;
 		ini->c_section = "";
+		
+		close( fd );
+		
 		return ini;
 	}
-	
-	g_free( ini );
+
 	if( fd >= 0 )
 		close( fd );
+	
+	ini_close( ini );
 
 	return NULL;
 }
