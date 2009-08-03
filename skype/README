@@ -72,6 +72,8 @@ or
 # apt-get install skyped bitlbee-plugin-skype
 ----
 
+(the later from the experimental repo)
+
 and you don't have to compile anything manually.
 
 === Installing under OS X
