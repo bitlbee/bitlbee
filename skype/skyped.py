@@ -139,13 +139,16 @@ def listener(sock, *args):
 		return False
 
 def dprint(msg):
+	from time import strftime
 	global options
 
+	now = strftime("%Y-%m-%d %H:%M:%S")
+
 	if options.debug:
-		print msg
+		print now + ": " + msg
 	if options.log:
 		sock = open(options.log, "a")
-		sock.write("%s\n" % msg)
+		sock.write("%s: %s\n" % now, msg)
 		sock.close()
 
 class SkypeApi:
