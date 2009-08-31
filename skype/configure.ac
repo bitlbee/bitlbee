@@ -13,7 +13,7 @@ fi
 
 case "`$CC -dumpmachine`" in
 	*linux*)
-		SHARED_FLAGS="-shared"
+		SHARED_FLAGS="-fPIC -shared"
 		SHARED_EXT="so"
 		;;
 	*apple-darwin*)
