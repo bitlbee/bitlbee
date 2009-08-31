@@ -13,7 +13,7 @@ run
 
 3) skyped:
 
-python skyped.py -n -d -c ./skyped.conf
+python skyped.py -n -d
 
 4) irssi
 
