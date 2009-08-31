@@ -209,8 +209,10 @@ class SkypeApi:
 class Options:
 	def __init__(self):
 		self.cfgpath = os.path.join(os.environ['HOME'], ".skyped", "skyped.conf")
-		if not os.path.exists(self.cfgpath):
-			self.cfgpath = "/usr/local/etc/skyped/skyped.conf"
+		# for backwards compatibility
+		self.syscfgpath = "/usr/local/etc/skyped/skyped.conf"
+		if os.path.exists(self.syscfgpath):
+			self.cfgpath = self.syscfgpath
 		self.daemon = True
 		self.debug = False
 		self.help = False
