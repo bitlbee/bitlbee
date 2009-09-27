@@ -1,15 +1,16 @@
 -include config.mak
 
 VERSION = 0.7.2
+DATE := $(shell date +%Y-%m-%d)
 # latest stable
 BITLBEE_VERSION = 1.2.3
 
 AMPATH = $(shell grep automake- $(shell which automake)|sed "s|.*'\(.*\)';|\1|")
 
 ifeq ($(BITLBEE),yes)
-all: skype.$(SHARED_EXT)
+all: skype.$(SHARED_EXT) skyped.1
 else
-all:
+all: skyped.1
 endif
 
 skype.$(SHARED_EXT): skype.c config.mak
@@ -74,3 +75,7 @@ HEADER.html: README Makefile
 
 Changelog: .git/refs/heads/master
 	git log --no-merges |git name-rev --tags --stdin >Changelog
+
+%.1: %.txt asciidoc.conf
+	a2x --asciidoc-opts="-f asciidoc.conf" \
+		-a bs_version=$(VERSION) -a bs_date=$(DATE) -f manpage $<
