@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.8.0         - fix build on x86_64 (-fPIC usage)
+              - debug messages now have a timestamp
+              - more work on having the default config under ~/.skyped
+              - added a manual page for skyped
 0.7.2         - add --log option to skyped to allow logging while it the
                 daemon is in the background.
               - prefer config files from ~/.skyped over /etc/skyped

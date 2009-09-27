@@ -1,6 +1,6 @@
 -include config.mak
 
-VERSION = 0.7.2
+VERSION = 0.8.0
 DATE := $(shell date +%Y-%m-%d)
 # latest stable
 BITLBEE_VERSION = 1.2.3
