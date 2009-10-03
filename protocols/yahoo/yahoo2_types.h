@@ -84,7 +84,7 @@ enum yahoo_log_level {
 	YAHOO_LOG_DEBUG
 };
 
-#define YAHOO_PROTO_VER 0x000b
+#define YAHOO_PROTO_VER 0x0010
 
 /* Yahoo style/color directives */
 #define YAHOO_COLOR_BLACK "\033[30m"
@@ -114,7 +114,8 @@ enum yahoo_connection_type {
 	YAHOO_CONNECTION_WEBCAM_MASTER,
 	YAHOO_CONNECTION_WEBCAM,
 	YAHOO_CONNECTION_CHATCAT,
-	YAHOO_CONNECTION_SEARCH
+	YAHOO_CONNECTION_SEARCH,
+	YAHOO_CONNECTION_AUTH,
 };
 
 enum yahoo_webcam_direction_type {
