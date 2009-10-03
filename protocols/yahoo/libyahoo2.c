@@ -92,9 +92,6 @@ char *strchr (), *strrchr ();
 
 static void yahoo_process_auth_response(struct http_request *req);
 
-/* What's this used for actually? */
-static void _yahoo_http_connected(int id, int fd, int error, void *data);
-
 #ifdef USE_STRUCT_CALLBACKS
 struct yahoo_callbacks *yc=NULL;
 
@@ -1532,6 +1529,7 @@ static void yahoo_process_buddy_list(struct yahoo_input_data *yid, struct yahoo_
 				last_packet = 1;
 			break;
 		case 65:
+			g_free(cur_group);
 			cur_group = strdup(pair->value);
 			break;
 		case 7:
@@ -1550,13 +1548,14 @@ static void yahoo_process_buddy_list(struct yahoo_input_data *yid, struct yahoo_
 			break;
 		}
 	}
+	
+	g_free(cur_group);
 
 	/* we could be getting multiple packets here */
 	if (last_packet)
 		return;
 
 	YAHOO_CALLBACK(ext_yahoo_got_buddies)(yd->client_id, yd->buddies);
-
 
 	/*** We login at the very end of the packet communication */
 	if (!yd->logged_in) {
@@ -1636,7 +1635,6 @@ static void yahoo_process_list(struct yahoo_input_data *yid, struct yahoo_packet
 				yd->cookie_c = getcookie(pair->value);
 			} 
 
-			// if(yd->cookie_y && yd->cookie_t && yd->cookie_c)
 			if(yd->cookie_y && yd->cookie_t)
 				YAHOO_CALLBACK(ext_yahoo_got_cookies)(yd->client_id);
 
@@ -3644,7 +3642,7 @@ static void yahoo_process_webcam_connection(struct yahoo_input_data *yid, int ov
 			&& yahoo_get_webcam_data(yid) == 1);
 }
 
-//#define LOG(x...) printf x
+/* #define LOG(x...) printf x */
 
 static void yahoo_process_auth_response(struct http_request *req)
 {
@@ -3655,15 +3653,22 @@ static void yahoo_process_auth_response(struct http_request *req)
 	int error_code = 0;
 	int is_ymsgr = 0;
 
-	struct yahoo_data *yd = NULL;
 	struct yahoo_input_data *yid = req->data;
 
-	unsigned char crypt_hash[25];
+	char crypt_hash[25];
 
 	md5_byte_t result[16];
 	md5_state_t ctx;
 
-	struct yahoo_packet *packet =NULL;
+	struct yahoo_packet *packet = NULL;
+	
+	if (y_list_find(inputs, yid) == NULL)
+		return;
+	
+	if (req->status_code != 200) {
+		error_code = 3000 + req->status_code;
+		goto FAIL;
+	}
 
 	token = req->reply_body;
 	line_end = strstr(token, "\r\n");
@@ -3671,54 +3676,46 @@ static void yahoo_process_auth_response(struct http_request *req)
 	if (line_end) {
 		*line_end = '\0';
 
-		line_end+=2;
+		line_end += 2;
 	}
-
-	error_code = atoi((char *)token);
+	
+	if (sscanf(token, "%d", &error_code) != 1) {
+		error_code = 3000;
+		goto FAIL;
+	}
 
 	switch(error_code) {
 		case 0:
 			/* successful */
-			LOG(("successful\n"));
 			break;
+
 		case 1212:
-			/* Incorrect ID or password */
 			LOG(("Incorrect ID or password\n"));
+			error_code = YAHOO_LOGIN_PASSWD;
+			goto FAIL;
 
-			return;
 		case 1213:
-			/* Security lock from too many failed login attempts */
 			LOG(("Security lock from too many failed login attempts\n"));
-
-			return;
+			error_code = YAHOO_LOGIN_LOCK;
+			goto FAIL;
 
 		case 1214:
-			/* Security lock */
 			LOG(("Security lock\n"));
-
-			return;
+			goto FAIL;
 
 		case 1235:
-			/* User ID not taken yet */
 			LOG(("User ID not taken yet\n"));
-
-			return;
+			error_code = YAHOO_LOGIN_UNAME;
+			goto FAIL;
 
 		case 1216:
-			/* Seems to be a lock, but shows the same generic User ID/Password failure */
 			LOG(("Seems to be a lock, but shows the same generic User ID/Password failure\n"));
+			goto FAIL;
 
-			return;
-		case 100:
-			/* Username and password cannot be blank */
-			LOG(("Username and password cannot be blank\n"));
-
-			return;
 		default:
 			/* Unknown error code */
 			LOG(("Unknown Error\n"));
-
-			return;
+			goto FAIL;
 	}
 
 	if ( !strncmp(line_end, "ymsgr=", 6) ) {
@@ -3727,8 +3724,8 @@ static void yahoo_process_auth_response(struct http_request *req)
 	else if ( strncmp(line_end, "crumb=", 6) ) {
 		LOG(("Oops! There was no ymsgr=. Where do I get my token from now :("));
 		LOG(("I got this:\n\n%s\n",line_end));
-		return;
-		/* Error */
+		error_code = 2201;
+		goto FAIL;
 	}
 
 	token = line_end+6;
@@ -3737,7 +3734,7 @@ static void yahoo_process_auth_response(struct http_request *req)
 
 	if(line_end) {
 		*line_end = '\0';
-		line_end+=2;
+		line_end += 2;
 	}
 
 	/* Go for the crumb */
@@ -3747,8 +3744,9 @@ static void yahoo_process_auth_response(struct http_request *req)
 		url = g_strdup_printf(
 			"https://login.yahoo.com/config/pwtoken_login?"
 			"src=ymsgr&ts=&token=%s", token);
-        	
+
 		http_dorequest_url(url, yahoo_process_auth_response, yid);
+
         	g_free(url);
 
 		return;
@@ -3760,59 +3758,45 @@ static void yahoo_process_auth_response(struct http_request *req)
 		/* We did not get our cookies. Cry. */
 	}
 
-	cookie = strstr(req->reply_headers, "Set-Cookie: Y=");
-
-	if(!cookie) {
+	if((cookie = strstr(req->reply_headers, "Set-Cookie: Y=")) &&
+	   (line_end = strstr(cookie + 14, "\r\n"))) {
+		*line_end = '\0';
+		yid->yd->cookie_y = strdup(cookie + 14);
+		*line_end = ';';
+	} else {
 		/* Cry. */
 		LOG(("NO Y Cookie!"));
-		return;
+		error_code = 2202;
+		goto FAIL;
 	}
 
-	cookie+=14;
-
-	line_end = strstr(cookie, "\r\n");
-	*line_end = '\0';
-
-	LOG(("Cookie length: %d", strlen(cookie)));
-
-	yid->yd->cookie_y = strdup(cookie);
-	*line_end = ';';
-
-	cookie = strstr(req->reply_headers, "Set-Cookie: T=");
-	if(!cookie) {
-		LOG(("NO T Cookie!"));
+	if((cookie = strstr(req->reply_headers, "Set-Cookie: T=")) &&
+	   (line_end = strstr(cookie + 14, "\r\n"))) {
+		*line_end = '\0';
+		yid->yd->cookie_t = strdup(cookie + 14);
+		*line_end = ';';
+	} else {
 		/* Cry. */
-		return;
+		LOG(("NO T Cookie!"));
+		error_code = 2203;
+		goto FAIL;
 	}
-
-	cookie+=14;
-
-	line_end = strstr(cookie, "\r\n");
-	*line_end = '\0';
-
-	yid->yd->cookie_t = strdup(cookie);
-
-	LOG(("My Cookies ::\n Y: %s\nT: %s\n\n", yid->yd->cookie_y, yid->yd->cookie_t));
 
 	md5_init(&ctx);
 	md5_append(&ctx, (md5_byte_t *)token, strlen(token));
 	md5_append(&ctx, (md5_byte_t *)yid->yd->login_cookie, strlen(yid->yd->login_cookie));
 	md5_finish(&ctx, result);
 
-	to_y64(crypt_hash, result, 16);
+	to_y64((unsigned char*)crypt_hash, result, 16);
 
-	yd = yid->yd;
-
-	//yid = find_input_by_id_and_type(yd->client_id, YAHOO_CONNECTION_PAGER);
-
-	packet = yahoo_packet_new(YAHOO_SERVICE_AUTHRESP, yd->initial_status, yd->session_id);
-	yahoo_packet_hash(packet, 1, yd->user);
-	yahoo_packet_hash(packet, 0, yd->user);
-	yahoo_packet_hash(packet, 277, yd->cookie_y);
-	yahoo_packet_hash(packet, 278, yd->cookie_t);
+	packet = yahoo_packet_new(YAHOO_SERVICE_AUTHRESP, yid->yd->initial_status, yid->yd->session_id);
+	yahoo_packet_hash(packet, 1, yid->yd->user);
+	yahoo_packet_hash(packet, 0, yid->yd->user);
+	yahoo_packet_hash(packet, 277, yid->yd->cookie_y);
+	yahoo_packet_hash(packet, 278, yid->yd->cookie_t);
 	yahoo_packet_hash(packet, 307, crypt_hash);
 	yahoo_packet_hash(packet, 244, "2097087");	/* Rekkanoryo says this is the build number */
-	yahoo_packet_hash(packet, 2, yd->user);
+	yahoo_packet_hash(packet, 2, yid->yd->user);
 	yahoo_packet_hash(packet, 2, "1");
 	yahoo_packet_hash(packet, 98, "us");		/* TODO Put country code */
 	yahoo_packet_hash(packet, 135, "9.0.0.1389");
@@ -3822,8 +3806,13 @@ static void yahoo_process_auth_response(struct http_request *req)
 	yahoo_packet_free(packet);
 
 	/* We don't need this anymore */
-	free(yd->login_cookie);
-	yd->login_cookie = NULL;
+	free(yid->yd->login_cookie);
+	yid->yd->login_cookie = NULL;
+	
+	return;
+
+FAIL:
+	YAHOO_CALLBACK(ext_yahoo_login_response)(yid->yd->client_id, error_code, NULL);
 }
 
 
