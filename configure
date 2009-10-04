@@ -25,6 +25,7 @@ msn=1
 jabber=1
 oscar=1
 yahoo=1
+purple=0
 
 debug=0
 strip=1
@@ -65,6 +66,8 @@ Option		Description				Default
 --jabber=0/1	Disable/enable Jabber part		$jabber
 --oscar=0/1	Disable/enable Oscar part (ICQ, AIM)	$oscar
 --yahoo=0/1	Disable/enable Yahoo part		$yahoo
+
+--purple=0/1	Disable/enable libpurple support	$purple
 
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
@@ -476,6 +479,15 @@ else
 	echo '#define WITH_YAHOO' >> config.h
 	protocols=$protocols'yahoo '
 	protoobjs=$protoobjs'yahoo_mod.o '
+fi
+
+if [ "$purple" = 0 ]; then
+	echo '#undef WITH_PURPLE' >> config.h
+else
+	echo '#define WITH_PURPLE' >> config.h
+	echo 'EFLAGS += $$(pkg-config purple --libs)' >> Makefile.settings
+	protocols=$protocols'purple '
+	protoobjs=$protoobjs'purple_mod.o '
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then
