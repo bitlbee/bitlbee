@@ -46,6 +46,18 @@ typedef struct _PurpleGLibIOClosure {
 	gpointer data;
 } PurpleGLibIOClosure;
 
+static struct im_connection *purple_ic_by_gc( PurpleConnection *gc )
+{
+	PurpleAccount *pa = purple_connection_get_account( gc );
+	GSList *i;
+	
+	for( i = purple_connections; i; i = i->next )
+		if( ((struct im_connection *)i->data)->proto_data == pa )
+			return i->data;
+	
+	return NULL;
+}
+
 static void purple_glib_io_destroy(gpointer data)
 {
 	g_free(data);
@@ -109,11 +121,74 @@ static PurpleEventLoopUiOps glib_eventloops =
 	NULL
 };
 
+static void purple_init( account_t *acc )
+{
+	/* TODO: Figure out variables to export via set. */
+}
+
+static void purple_login( account_t *acc )
+{
+	struct im_connection *ic = imcb_new( acc );
+	PurpleAccount *pa;
+	PurpleSavedStatus *ps;
+	
+	/* For now this is needed in the _connected() handlers if using
+	   GLib event handling, to make sure we're not handling events
+	   on dead connections. */
+	purple_connections = g_slist_prepend( purple_connections, ic );
+	
+	pa = purple_account_new( acc->user, acc->prpl->name );
+	purple_account_set_password( pa, acc->pass );
+	
+	ic->proto_data = pa;
+	
+	purple_account_set_enabled( pa, "BitlBee", TRUE );
+	
+	//ps = purple_savedstatus_new( NULL, PURPLE_STATUS_AVAILABLE );
+	//purple_savedstatus_activate_for_account( ps, pa );
+}
+
+static void purple_logout( struct im_connection *ic )
+{
+	purple_connections = g_slist_remove( purple_connections, ic );
+}
+
+static int purple_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
+{
+}
+
+static GList *purple_away_states( struct im_connection *ic )
+{
+	return NULL;
+}
+
+static void purple_set_away( struct im_connection *ic, char *state_txt, char *message )
+{
+}
+
+static void purple_add_buddy( struct im_connection *ic, char *who, char *group )
+{
+}
+
+static void purple_remove_buddy( struct im_connection *ic, char *who, char *group )
+{
+}
+
+static void purple_keepalive( struct im_connection *ic )
+{
+}
+
+static int purple_send_typing( struct im_connection *ic, char *who, int typing )
+{
+}
+
+static void purple_ui_init();
+
 static PurpleCoreUiOps bee_core_uiops = 
 {
 	NULL,
 	NULL,
-	NULL, //null_ui_init,
+	purple_ui_init,
 	NULL,
 
 	/* padding */
@@ -121,6 +196,45 @@ static PurpleCoreUiOps bee_core_uiops =
 	NULL,
 	NULL,
 	NULL
+};
+
+static void prplcb_conn_progress( PurpleConnection *gc, const char *text, size_t step, size_t step_count )
+{
+	imcb_log( purple_ic_by_gc( gc ), "%s", text );
+}
+
+static void prplcb_conn_connected( PurpleConnection *gc )
+{
+	imcb_connected( purple_ic_by_gc( gc ) );
+}
+
+static void prplcb_conn_disconnected( PurpleConnection *gc )
+{
+	imc_logout( purple_ic_by_gc( gc ), TRUE );
+}
+
+static void prplcb_conn_notice( PurpleConnection *gc, const char *text )
+{
+	imcb_log( purple_ic_by_gc( gc ), "%s", text );
+}
+
+static void prplcb_conn_report_disconnect_reason( PurpleConnection *gc, PurpleConnectionError reason, const char *text )
+{
+	/* PURPLE_CONNECTION_ERROR_NAME_IN_USE means concurrent login,
+	   should probably handle that. */
+	imcb_error( purple_ic_by_gc( gc ), "%s", text );
+}
+
+static PurpleConnectionUiOps bee_conn_uiops =
+{
+	prplcb_conn_progress,
+	prplcb_conn_connected,
+	prplcb_conn_disconnected,
+	prplcb_conn_notice,
+	NULL,
+	NULL,
+	NULL,
+	prplcb_conn_report_disconnect_reason,
 };
 
 static PurpleConversationUiOps bee_conv_uiops = 
@@ -146,58 +260,10 @@ static PurpleConversationUiOps bee_conv_uiops =
 	NULL
 };
 
-static void purple_init( account_t *acc )
+static void purple_ui_init()
 {
-	set_t *s;
-	char str[16];
-	
-}
-
-static void purple_login( account_t *acc )
-{
-	struct im_connection *ic = imcb_new( acc );
-	struct ns_srv_reply *srv = NULL;
-	char *connect_to, *s;
-	int i;
-	
-	/* For now this is needed in the _connected() handlers if using
-	   GLib event handling, to make sure we're not handling events
-	   on dead connections. */
-	purple_connections = g_slist_prepend( purple_connections, ic );
-	
-}
-
-static void purple_logout( struct im_connection *ic )
-{
-	purple_connections = g_slist_remove( purple_connections, ic );
-}
-
-static int purple_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
-{
-}
-
-static GList *purple_away_states( struct im_connection *ic )
-{
-}
-
-static void purple_set_away( struct im_connection *ic, char *state_txt, char *message )
-{
-}
-
-static void purple_add_buddy( struct im_connection *ic, char *who, char *group )
-{
-}
-
-static void purple_remove_buddy( struct im_connection *ic, char *who, char *group )
-{
-}
-
-static void purple_keepalive( struct im_connection *ic )
-{
-}
-
-static int purple_send_typing( struct im_connection *ic, char *who, int typing )
-{
+	purple_connections_set_ui_ops( &bee_conn_uiops );
+	purple_conversations_set_ui_ops( &bee_conv_uiops );
 }
 
 void purple_initmodule()
