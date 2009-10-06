@@ -209,7 +209,12 @@ static void prplcb_conn_progress( PurpleConnection *gc, const char *text, size_t
 
 static void prplcb_conn_connected( PurpleConnection *gc )
 {
-	imcb_connected( purple_ic_by_gc( gc ) );
+	struct im_connection *ic = purple_ic_by_gc( gc );
+	
+	imcb_connected( ic );
+	
+	if( gc->flags & PURPLE_CONNECTION_HTML )
+		ic->flags |= OPT_DOES_HTML;
 }
 
 static void prplcb_conn_disconnected( PurpleConnection *gc )
@@ -283,12 +288,19 @@ static PurpleBlistUiOps bee_blist_uiops =
 	prplcb_blist_remove,
 };
 
+static void prplcb_conv_im( PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime )
+{
+	struct im_connection *ic = purple_ic_by_pa( conv->account );
+	
+	imcb_buddy_msg( ic, (char*) who, (char*) message, 0, mtime );
+}
+
 static PurpleConversationUiOps bee_conv_uiops = 
 {
 	NULL,                      /* create_conversation  */
 	NULL,                      /* destroy_conversation */
 	NULL,                      /* write_chat           */
-	NULL,                      /* write_im             */
+	prplcb_conv_im,            /* write_im             */
 	NULL, //null_write_conv,           /* write_conv           */
 	NULL,                      /* chat_add_users       */
 	NULL,                      /* chat_rename_user     */
