@@ -159,6 +159,16 @@ static void purple_logout( struct im_connection *ic )
 
 static int purple_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
 {
+	PurpleConversation *conv;
+	
+	if( ( conv = purple_find_conversation_with_account( PURPLE_CONV_TYPE_IM,
+	                                                    who, ic->proto_data ) ) == NULL )
+	{
+		conv = purple_conversation_new( PURPLE_CONV_TYPE_IM,
+		                                ic->proto_data, who );
+	}
+	
+	purple_conv_im_send( purple_conversation_get_im_data( conv ), message );
 }
 
 static GList *purple_away_states( struct im_connection *ic )
@@ -292,7 +302,9 @@ static void prplcb_conv_im( PurpleConversation *conv, const char *who, const cha
 {
 	struct im_connection *ic = purple_ic_by_pa( conv->account );
 	
-	imcb_buddy_msg( ic, (char*) who, (char*) message, 0, mtime );
+	/* ..._SEND means it's an outgoing message, no need to echo those. */
+	if( !( flags & PURPLE_MESSAGE_SEND ) )
+		imcb_buddy_msg( ic, (char*) who, (char*) message, 0, mtime );
 }
 
 static PurpleConversationUiOps bee_conv_uiops = 
