@@ -46,9 +46,8 @@ typedef struct _PurpleGLibIOClosure {
 	gpointer data;
 } PurpleGLibIOClosure;
 
-static struct im_connection *purple_ic_by_gc( PurpleConnection *gc )
+static struct im_connection *purple_ic_by_pa( PurpleAccount *pa )
 {
-	PurpleAccount *pa = purple_connection_get_account( gc );
 	GSList *i;
 	
 	for( i = purple_connections; i; i = i->next )
@@ -56,6 +55,11 @@ static struct im_connection *purple_ic_by_gc( PurpleConnection *gc )
 			return i->data;
 	
 	return NULL;
+}
+
+static struct im_connection *purple_ic_by_gc( PurpleConnection *gc )
+{
+	return purple_ic_by_pa( purple_connection_get_account( gc ) );
 }
 
 static void purple_glib_io_destroy(gpointer data)
@@ -237,6 +241,48 @@ static PurpleConnectionUiOps bee_conn_uiops =
 	prplcb_conn_report_disconnect_reason,
 };
 
+static void prplcb_blist_new( PurpleBlistNode *node )
+{
+	PurpleBuddy *bud = (PurpleBuddy*) node;
+	struct im_connection *ic = purple_ic_by_pa( bud->account );
+	
+	if( node->type == PURPLE_BLIST_BUDDY_NODE )
+	{
+		imcb_add_buddy( ic, bud->name, NULL );
+		if( bud->server_alias )
+			imcb_buddy_nick_hint( ic, bud->name, bud->server_alias );
+	}
+}
+
+static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
+{
+	PurpleBuddy *bud = (PurpleBuddy*) node;
+	
+	if( node->type == PURPLE_BLIST_BUDDY_NODE )
+	{
+		imcb_buddy_status( purple_ic_by_pa( bud->account ), bud->name,
+		                   purple_presence_is_online( bud->presence ) ? OPT_LOGGED_IN : 0,
+		                   NULL, NULL );
+	}
+}
+
+static void prplcb_blist_remove( PurpleBuddyList *list, PurpleBlistNode *node )
+{
+	PurpleBuddy *bud = (PurpleBuddy*) node;
+	
+	if( node->type == PURPLE_BLIST_BUDDY_NODE )
+		imcb_remove_buddy( purple_ic_by_pa( bud->account ), bud->name, NULL );
+}
+
+static PurpleBlistUiOps bee_blist_uiops =
+{
+	NULL,
+	prplcb_blist_new,
+	NULL,
+	prplcb_blist_update,
+	prplcb_blist_remove,
+};
+
 static PurpleConversationUiOps bee_conv_uiops = 
 {
 	NULL,                      /* create_conversation  */
@@ -262,6 +308,7 @@ static PurpleConversationUiOps bee_conv_uiops =
 
 static void purple_ui_init()
 {
+	purple_blist_set_ui_ops( &bee_blist_uiops );
 	purple_connections_set_ui_ops( &bee_conn_uiops );
 	purple_conversations_set_ui_ops( &bee_conv_uiops );
 }
