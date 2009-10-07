@@ -128,13 +128,15 @@ static PurpleEventLoopUiOps glib_eventloops =
 static void purple_init( account_t *acc )
 {
 	/* TODO: Figure out variables to export via set. */
+	
 }
 
 static void purple_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
 	PurpleAccount *pa;
-	PurpleSavedStatus *ps;
+	//PurpleSavedStatus *ps;
+	GList *i;
 	
 	/* For now this is needed in the _connected() handlers if using
 	   GLib event handling, to make sure we're not handling events
@@ -147,6 +149,15 @@ static void purple_login( account_t *acc )
 	ic->proto_data = pa;
 	
 	purple_account_set_enabled( pa, "BitlBee", TRUE );
+	
+	/*
+	for( i = ((PurplePluginProtocolInfo *)pa->gc->prpl->info->extra_info)->protocol_options; i; i = i->next )
+	{
+		PurpleAccountOption *o = i->data;
+		
+		printf( "%s\n", o->pref_name );
+	}
+	*/
 	
 	//ps = purple_savedstatus_new( NULL, PURPLE_STATUS_AVAILABLE );
 	//purple_savedstatus_activate_for_account( ps, pa );
@@ -169,6 +180,8 @@ static int purple_buddy_msg( struct im_connection *ic, char *who, char *message,
 	}
 	
 	purple_conv_im_send( purple_conversation_get_im_data( conv ), message );
+	
+	return 1;
 }
 
 static GList *purple_away_states( struct im_connection *ic )
@@ -194,6 +207,7 @@ static void purple_keepalive( struct im_connection *ic )
 
 static int purple_send_typing( struct im_connection *ic, char *who, int typing )
 {
+	return 1;
 }
 
 static void purple_ui_init();
@@ -214,7 +228,9 @@ static PurpleCoreUiOps bee_core_uiops =
 
 static void prplcb_conn_progress( PurpleConnection *gc, const char *text, size_t step, size_t step_count )
 {
-	imcb_log( purple_ic_by_gc( gc ), "%s", text );
+	struct im_connection *ic = purple_ic_by_gc( gc );
+	
+	imcb_log( ic, "%s", text );
 }
 
 static void prplcb_conn_connected( PurpleConnection *gc )
@@ -229,19 +245,28 @@ static void prplcb_conn_connected( PurpleConnection *gc )
 
 static void prplcb_conn_disconnected( PurpleConnection *gc )
 {
-	imc_logout( purple_ic_by_gc( gc ), TRUE );
+	struct im_connection *ic = purple_ic_by_gc( gc );
+	
+	if( ic != NULL )
+		imc_logout( ic, TRUE );
 }
 
 static void prplcb_conn_notice( PurpleConnection *gc, const char *text )
 {
-	imcb_log( purple_ic_by_gc( gc ), "%s", text );
+	struct im_connection *ic = purple_ic_by_gc( gc );
+	
+	if( ic != NULL )
+		imcb_log( ic, "%s", text );
 }
 
 static void prplcb_conn_report_disconnect_reason( PurpleConnection *gc, PurpleConnectionError reason, const char *text )
 {
+	struct im_connection *ic = purple_ic_by_gc( gc );
+	
 	/* PURPLE_CONNECTION_ERROR_NAME_IN_USE means concurrent login,
 	   should probably handle that. */
-	imcb_error( purple_ic_by_gc( gc ), "%s", text );
+	if( ic != NULL )
+		imcb_error( ic, "%s", text );
 }
 
 static PurpleConnectionUiOps bee_conn_uiops =
@@ -261,7 +286,7 @@ static void prplcb_blist_new( PurpleBlistNode *node )
 	PurpleBuddy *bud = (PurpleBuddy*) node;
 	struct im_connection *ic = purple_ic_by_pa( bud->account );
 	
-	if( node->type == PURPLE_BLIST_BUDDY_NODE )
+	if( node->type == PURPLE_BLIST_BUDDY_NODE && ic != NULL )
 	{
 		imcb_add_buddy( ic, bud->name, NULL );
 		if( bud->server_alias )
@@ -272,10 +297,11 @@ static void prplcb_blist_new( PurpleBlistNode *node )
 static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 {
 	PurpleBuddy *bud = (PurpleBuddy*) node;
+	struct im_connection *ic = purple_ic_by_pa( bud->account );
 	
-	if( node->type == PURPLE_BLIST_BUDDY_NODE )
+	if( node->type == PURPLE_BLIST_BUDDY_NODE && ic != NULL  )
 	{
-		imcb_buddy_status( purple_ic_by_pa( bud->account ), bud->name,
+		imcb_buddy_status( ic, bud->name,
 		                   purple_presence_is_online( bud->presence ) ? OPT_LOGGED_IN : 0,
 		                   NULL, NULL );
 	}
@@ -284,9 +310,12 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 static void prplcb_blist_remove( PurpleBuddyList *list, PurpleBlistNode *node )
 {
 	PurpleBuddy *bud = (PurpleBuddy*) node;
+	struct im_connection *ic = purple_ic_by_pa( bud->account );
 	
-	if( node->type == PURPLE_BLIST_BUDDY_NODE )
-		imcb_remove_buddy( purple_ic_by_pa( bud->account ), bud->name, NULL );
+	if( node->type == PURPLE_BLIST_BUDDY_NODE && ic != NULL  )
+	{
+		imcb_remove_buddy( ic, bud->name, NULL );
+	}
 }
 
 static PurpleBlistUiOps bee_blist_uiops =
@@ -330,11 +359,22 @@ static PurpleConversationUiOps bee_conv_uiops =
 	NULL
 };
 
+static void prplcb_debug_print( PurpleDebugLevel level, const char *category, const char *arg_s )
+{
+	printf( "DEBUG %s: %s", category, arg_s );
+}
+
+static PurpleDebugUiOps bee_debug_uiops =
+{
+	prplcb_debug_print,
+};
+
 static void purple_ui_init()
 {
 	purple_blist_set_ui_ops( &bee_blist_uiops );
 	purple_connections_set_ui_ops( &bee_conn_uiops );
 	purple_conversations_set_ui_ops( &bee_conv_uiops );
+	//purple_debug_set_ui_ops( &bee_debug_uiops );
 }
 
 void purple_initmodule()
