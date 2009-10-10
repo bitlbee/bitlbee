@@ -468,9 +468,7 @@ gboolean byahoo_write_ready_callback( gpointer data, gint source, b_input_condit
 {
 	struct byahoo_write_ready_data *d = data;
 	
-	yahoo_write_ready( d->id, d->fd, d->data );
-	
-	return FALSE;
+	return yahoo_write_ready( d->id, d->fd, d->data );
 }
 
 void ext_yahoo_login_response( int id, int succ, const char *url )
