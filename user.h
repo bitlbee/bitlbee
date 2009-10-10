@@ -55,7 +55,7 @@ typedef struct __USER
 user_t *user_add( struct irc *irc, char *nick );
 int user_del( irc_t *irc, char *nick );
 G_MODULE_EXPORT user_t *user_find( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_findhandle( struct im_connection *ic, char *handle );
+G_MODULE_EXPORT user_t *user_findhandle( struct im_connection *ic, const char *handle );
 void user_rename( irc_t *irc, char *oldnick, char *newnick );
 
 #endif /* __USER_H__ */
