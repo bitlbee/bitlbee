@@ -4079,7 +4079,7 @@ void yahoo_set_away(int id, enum yahoo_status state, const char *msg, int away)
 	struct yahoo_input_data *yid = find_input_by_id_and_type(id, YAHOO_CONNECTION_PAGER);
 	struct yahoo_data *yd;
 	struct yahoo_packet *pkt = NULL;
-	int service;
+	int old_status;
 	char s[4];
 
 	if(!yid)
@@ -4087,38 +4087,45 @@ void yahoo_set_away(int id, enum yahoo_status state, const char *msg, int away)
 
 	yd = yid->yd;
 
-	if (msg) {
+	old_status = yd->current_status;
+
+	if (msg && strncmp(msg,"Invisible",9)) {
 		yd->current_status = YAHOO_STATUS_CUSTOM;
 	} else {
 		yd->current_status = state;
 	}
 
-	if (yd->current_status == YAHOO_STATUS_AVAILABLE)
-		service = YAHOO_SERVICE_ISBACK;
-	else
-		service = YAHOO_SERVICE_ISAWAY;
-	 
-	if ((away == 2) && (yd->current_status == YAHOO_STATUS_AVAILABLE)) {
-		pkt = yahoo_packet_new(YAHOO_SERVICE_ISAWAY, YAHOO_STATUS_BRB, yd->session_id);
-		yahoo_packet_hash(pkt, 10, "999");
-		yahoo_packet_hash(pkt, 47, "2");
-	}else {
-		pkt = yahoo_packet_new(service, YAHOO_STATUS_AVAILABLE, yd->session_id);
-		snprintf(s, sizeof(s), "%d", yd->current_status);
-		yahoo_packet_hash(pkt, 10, s);
-		if (yd->current_status == YAHOO_STATUS_CUSTOM) {
-			yahoo_packet_hash(pkt, 19, msg);
-			yahoo_packet_hash(pkt, 47, (away == 2)? "2": (away) ?"1":"0");
-		} else {
-			yahoo_packet_hash(pkt, 47, (away == 2)? "2": (away) ?"1":"0");
-		}
-		
-		
-		
+	/* Thank you libpurple :) */
+	if (yd->current_status == YAHOO_STATUS_INVISIBLE) {
+		pkt = yahoo_packet_new(YAHOO_SERVICE_Y6_VISIBILITY, YAHOO_STATUS_AVAILABLE, 0);
+		yahoo_packet_hash(pkt, 13, "2");
+		yahoo_send_packet(yid, pkt, 0);
+		yahoo_packet_free(pkt);
+
+		return;
 	}
+
+	pkt = yahoo_packet_new(YAHOO_SERVICE_Y6_STATUS_UPDATE, yd->current_status, yd->session_id);
+	snprintf(s, sizeof(s), "%d", yd->current_status);
+	yahoo_packet_hash(pkt, 10, s);
+	 
+	if (yd->current_status == YAHOO_STATUS_CUSTOM) {
+		yahoo_packet_hash(pkt, 19, msg);
+	} else {
+		yahoo_packet_hash(pkt, 19, "");
+	}
+	
+	yahoo_packet_hash(pkt, 47, (away == 2)? "2": (away) ?"1":"0");
 
 	yahoo_send_packet(yid, pkt, 0);
 	yahoo_packet_free(pkt);
+
+	if(old_status == YAHOO_STATUS_INVISIBLE) {
+		pkt = yahoo_packet_new(YAHOO_SERVICE_Y6_VISIBILITY, YAHOO_STATUS_AVAILABLE, 0);
+		yahoo_packet_hash(pkt, 13, "1");
+		yahoo_send_packet(yid, pkt, 0);
+		yahoo_packet_free(pkt);
+	}
 }
 
 void yahoo_logoff(int id)
