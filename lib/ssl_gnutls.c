@@ -105,7 +105,7 @@ static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition
 {
 	struct scd *conn = data;
 	
-	return ssl_connected( conn, conn->fd, GAIM_INPUT_WRITE );
+	return ssl_connected( conn, conn->fd, B_EV_IO_WRITE );
 }
 
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
@@ -243,5 +243,5 @@ int ssl_getfd( void *conn )
 b_input_condition ssl_getdirection( void *conn )
 {
 	return( gnutls_record_get_direction( ((struct scd*)conn)->session ) ?
-	        GAIM_INPUT_WRITE : GAIM_INPUT_READ );
+	        B_EV_IO_WRITE : B_EV_IO_READ );
 }

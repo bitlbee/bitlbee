@@ -63,7 +63,7 @@ int jabber_write( struct im_connection *ic, char *buf, int len )
 		   it via the event handler. If not, add the handler. (In
 		   most cases it probably won't be necessary.) */
 		if( ( ret = jabber_write_queue( ic ) ) && jd->tx_len > 0 )
-			jd->w_inpa = b_input_add( jd->fd, GAIM_INPUT_WRITE, jabber_write_callback, ic );
+			jd->w_inpa = b_input_add( jd->fd, B_EV_IO_WRITE, jabber_write_callback, ic );
 	}
 	else
 	{
@@ -528,7 +528,7 @@ gboolean jabber_start_stream( struct im_connection *ic )
 	jd->xt = xt_new( jabber_handlers, ic );
 	
 	if( jd->r_inpa <= 0 )
-		jd->r_inpa = b_input_add( jd->fd, GAIM_INPUT_READ, jabber_read_callback, ic );
+		jd->r_inpa = b_input_add( jd->fd, B_EV_IO_READ, jabber_read_callback, ic );
 	
 	greet = g_strdup_printf( "<?xml version='1.0' ?>"
 	                         "<stream:stream to=\"%s\" xmlns=\"jabber:client\" "

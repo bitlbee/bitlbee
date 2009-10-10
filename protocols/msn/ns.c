@@ -74,7 +74,7 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 	g_snprintf( s, sizeof( s ), "VER %d MSNP8 CVR0\r\n", ++md->trId );
 	if( msn_write( ic, s, strlen( s ) ) )
 	{
-		ic->inpa = b_input_add( md->fd, GAIM_INPUT_READ, msn_ns_callback, ic );
+		ic->inpa = b_input_add( md->fd, B_EV_IO_READ, msn_ns_callback, ic );
 		imcb_log( ic, "Connected to server, waiting for reply" );
 	}
 	

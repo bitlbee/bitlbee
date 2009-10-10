@@ -75,9 +75,9 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 	gboolean st;
 
 	if (condition & GAIM_READ_COND)
-		gaim_cond |= GAIM_INPUT_READ;
+		gaim_cond |= B_EV_IO_READ;
 	if (condition & GAIM_WRITE_COND)
-		gaim_cond |= GAIM_INPUT_WRITE;
+		gaim_cond |= B_EV_IO_WRITE;
 	
 	event_debug( "gaim_io_invoke( %d, %d, 0x%x )\n", g_io_channel_unix_get_fd(source), condition, data );
 
@@ -105,9 +105,9 @@ gint b_input_add(gint source, b_input_condition condition, b_event_handler funct
 	closure->function = function;
 	closure->data = data;
 	
-	if (condition & GAIM_INPUT_READ)
+	if (condition & B_EV_IO_READ)
 		cond |= GAIM_READ_COND;
-	if (condition & GAIM_INPUT_WRITE)
+	if (condition & B_EV_IO_WRITE)
 		cond |= GAIM_WRITE_COND;
 	
 	channel = g_io_channel_unix_new(source);

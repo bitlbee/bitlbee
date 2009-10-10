@@ -62,67 +62,22 @@ static struct im_connection *purple_ic_by_gc( PurpleConnection *gc )
 	return purple_ic_by_pa( purple_connection_get_account( gc ) );
 }
 
-static void purple_glib_io_destroy(gpointer data)
+static guint prplcb_ev_timeout_add( guint interval, GSourceFunc func, gpointer udata )
 {
-	g_free(data);
+	return b_timeout_add( interval, (b_event_handler) func, udata );
 }
 
-static gboolean purple_glib_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
+static guint prplcb_ev_input_add( int fd, PurpleInputCondition cond, PurpleInputFunction func, gpointer udata )
 {
-	PurpleGLibIOClosure *closure = data;
-	PurpleInputCondition purple_cond = 0;
-
-	if (condition & PURPLE_GLIB_READ_COND)
-		purple_cond |= PURPLE_INPUT_READ;
-	if (condition & PURPLE_GLIB_WRITE_COND)
-		purple_cond |= PURPLE_INPUT_WRITE;
-
-	closure->function(closure->data, g_io_channel_unix_get_fd(source),
-			  purple_cond);
-
-	return TRUE;
-}
-
-static guint glib_input_add(gint fd, PurpleInputCondition condition, PurpleInputFunction function,
-							   gpointer data)
-{
-	PurpleGLibIOClosure *closure = g_new0(PurpleGLibIOClosure, 1);
-	GIOChannel *channel;
-	GIOCondition cond = 0;
-
-	closure->function = function;
-	closure->data = data;
-
-	if (condition & PURPLE_INPUT_READ)
-		cond |= PURPLE_GLIB_READ_COND;
-	if (condition & PURPLE_INPUT_WRITE)
-		cond |= PURPLE_GLIB_WRITE_COND;
-
-	channel = g_io_channel_unix_new(fd);
-	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
-					      purple_glib_io_invoke, closure, purple_glib_io_destroy);
-
-	g_io_channel_unref(channel);
-	return closure->result;
+	return (guint) b_input_add( fd, cond, (b_event_handler) func, udata );
 }
 
 static PurpleEventLoopUiOps glib_eventloops = 
 {
-	g_timeout_add,
-	g_source_remove,
-	glib_input_add,
-	g_source_remove,
-	NULL,
-#if GLIB_CHECK_VERSION(2,14,0)
-	g_timeout_add_seconds,
-#else
-	NULL,
-#endif
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL
+	prplcb_ev_timeout_add,
+	b_event_remove,
+	prplcb_ev_input_add,
+	b_event_remove,
 };
 
 static void purple_init( account_t *acc )
@@ -136,7 +91,7 @@ static void purple_login( account_t *acc )
 	struct im_connection *ic = imcb_new( acc );
 	PurpleAccount *pa;
 	//PurpleSavedStatus *ps;
-	GList *i;
+	//GList *i;
 	
 	/* For now this is needed in the _connected() handlers if using
 	   GLib event handling, to make sure we're not handling events
@@ -342,7 +297,7 @@ static PurpleConversationUiOps bee_conv_uiops =
 	NULL,                      /* destroy_conversation */
 	NULL,                      /* write_chat           */
 	prplcb_conv_im,            /* write_im             */
-	NULL, //null_write_conv,           /* write_conv           */
+	NULL,                      /* write_conv           */
 	NULL,                      /* chat_add_users       */
 	NULL,                      /* chat_rename_user     */
 	NULL,                      /* chat_remove_users    */
@@ -380,6 +335,13 @@ static void purple_ui_init()
 void purple_initmodule()
 {
 	GList *prots;
+	
+	if( B_EV_IO_READ != PURPLE_INPUT_READ ||
+	    B_EV_IO_WRITE != PURPLE_INPUT_WRITE )
+	{
+		/* FIXME FIXME FIXME FIXME FIXME :-) */
+		exit( 1 );
+	}
 	
 	purple_util_set_user_dir("/tmp");
 	purple_debug_set_enabled(FALSE);
