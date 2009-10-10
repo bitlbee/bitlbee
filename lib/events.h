@@ -48,7 +48,9 @@
    the given callback function. */
 typedef enum {
 	B_EV_IO_READ = 1 << 0,
-	B_EV_IO_WRITE = 1 << 1
+	B_EV_IO_WRITE = 1 << 1,
+	B_EV_FLAG_FORCE_ONCE = 1 << 16,
+	B_EV_FLAG_FORCE_REPEAT = 1 << 17,
 } b_input_condition;
 typedef gboolean (*b_event_handler)(gpointer data, gint fd, b_input_condition cond);
 

@@ -48,6 +48,7 @@
 typedef struct _GaimIOClosure {
 	b_event_handler function;
 	gpointer data;
+	guint flags;
 } GaimIOClosure;
 
 static GMainLoop *loop = NULL;
@@ -86,7 +87,12 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 	if( !st )
 		event_debug( "Returned FALSE, cancelling.\n" );
 	
-	return st;
+	if (closure->flags & B_EV_FLAG_FORCE_ONCE)
+		return FALSE;
+	else if (closure->flags & B_EV_FLAG_FORCE_REPEAT)
+		return TRUE;
+	else
+		return st;
 }
 
 static void gaim_io_destroy(gpointer data)
@@ -104,6 +110,7 @@ gint b_input_add(gint source, b_input_condition condition, b_event_handler funct
 	
 	closure->function = function;
 	closure->data = data;
+	closure->flags = condition;
 	
 	if (condition & B_EV_IO_READ)
 		cond |= GAIM_READ_COND;

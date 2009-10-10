@@ -59,6 +59,7 @@ struct b_event_data
 	gint timeout;
 	b_event_handler function;
 	void *data;
+	guint flags;
 };
 
 void b_main_init()
@@ -149,7 +150,7 @@ static void b_event_passthrough( int fd, short event, void *data )
 		/* This event was killed already, don't touch it! */
 		return;
 	}
-	else if( !st )
+	else if( !st && !( b_ev->flags & B_EV_FLAG_FORCE_REPEAT ) )
 	{
 		event_debug( "Handler returned FALSE: " );
 		b_event_remove( id_cur );
@@ -211,6 +212,7 @@ gint b_input_add( gint fd, b_input_condition condition, b_event_handler function
 			g_hash_table_insert( write_hash, &b_ev->evinfo.ev_fd, b_ev );
 	}
 	
+	b_ev->flags = condition;
 	g_hash_table_insert( id_hash, &b_ev->id, b_ev );
 	return b_ev->id;
 }
