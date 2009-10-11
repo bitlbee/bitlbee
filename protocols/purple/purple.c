@@ -92,6 +92,43 @@ static void purple_init( account_t *acc )
 	}
 }
 
+static void purple_sync_settings( account_t *acc, PurpleAccount *pa )
+{
+	PurplePlugin *prpl = purple_plugins_find_with_id( pa->protocol_id );
+	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
+	GList *i;
+	
+	for( i = pi->protocol_options; i; i = i->next )
+	{
+		PurpleAccountOption *o = i->data;
+		const char *name;
+		set_t *s;
+		
+		name = purple_account_option_get_setting( o );
+		s = set_find( &acc->set, name );
+		if( s->value == NULL )
+			continue;
+		
+		switch( purple_account_option_get_type( o ) )
+		{
+		case PURPLE_PREF_STRING:
+			purple_account_set_string( pa, name, set_getstr( &acc->set, name ) );
+			break;
+		
+		case PURPLE_PREF_INT:
+			purple_account_set_int( pa, name, set_getint( &acc->set, name ) );
+			break;
+		
+		case PURPLE_PREF_BOOLEAN:
+			purple_account_set_bool( pa, name, set_getbool( &acc->set, name ) );
+			break;
+		
+		default:
+			break;
+		}
+	}
+}
+
 static void purple_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
@@ -102,10 +139,9 @@ static void purple_login( account_t *acc )
 	   on dead connections. */
 	purple_connections = g_slist_prepend( purple_connections, ic );
 	
-	pa = purple_account_new( acc->user, acc->prpl->name );
+	ic->proto_data = pa = purple_account_new( acc->user, acc->prpl->name );
 	purple_account_set_password( pa, acc->pass );
-	
-	ic->proto_data = pa;
+	purple_sync_settings( acc, pa );
 	
 	purple_account_set_enabled( pa, "BitlBee", TRUE );
 }
@@ -116,7 +152,7 @@ static void purple_logout( struct im_connection *ic )
 	
 	purple_account_set_enabled( pa, "BitlBee", FALSE );
 	purple_connections = g_slist_remove( purple_connections, ic );
-	purple_account_destroy( pa );
+	purple_accounts_remove( pa );
 }
 
 static int purple_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
@@ -193,7 +229,9 @@ static void prplcb_conn_disconnected( PurpleConnection *gc )
 	struct im_connection *ic = purple_ic_by_gc( gc );
 	
 	if( ic != NULL )
+	{
 		imc_logout( ic, TRUE );
+	}
 }
 
 static void prplcb_conn_notice( PurpleConnection *gc, const char *text )
