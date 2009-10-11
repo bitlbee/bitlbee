@@ -28,24 +28,6 @@
 
 GSList *purple_connections;
 
-#undef g_io_add_watch
-#undef g_io_add_watch_full
-#undef g_timeout_add
-#undef g_source_remove
-
-/**
- * The following eventloop functions are used in both pidgin and purple-text. If your
- * application uses glib mainloop, you can safely use this verbatim.
- */
-#define PURPLE_GLIB_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
-#define PURPLE_GLIB_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
-
-typedef struct _PurpleGLibIOClosure {
-	PurpleInputFunction function;
-	guint result;
-	gpointer data;
-} PurpleGLibIOClosure;
-
 static struct im_connection *purple_ic_by_pa( PurpleAccount *pa )
 {
 	GSList *i;
@@ -61,24 +43,6 @@ static struct im_connection *purple_ic_by_gc( PurpleConnection *gc )
 {
 	return purple_ic_by_pa( purple_connection_get_account( gc ) );
 }
-
-static guint prplcb_ev_timeout_add( guint interval, GSourceFunc func, gpointer udata )
-{
-	return b_timeout_add( interval, (b_event_handler) func, udata );
-}
-
-static guint prplcb_ev_input_add( int fd, PurpleInputCondition cond, PurpleInputFunction func, gpointer udata )
-{
-	return (guint) b_input_add( fd, cond | B_EV_FLAG_FORCE_REPEAT, (b_event_handler) func, udata );
-}
-
-static PurpleEventLoopUiOps glib_eventloops = 
-{
-	prplcb_ev_timeout_add,
-	b_event_remove,
-	prplcb_ev_input_add,
-	b_event_remove,
-};
 
 static void purple_init( account_t *acc )
 {
@@ -322,6 +286,30 @@ static void prplcb_debug_print( PurpleDebugLevel level, const char *category, co
 static PurpleDebugUiOps bee_debug_uiops =
 {
 	prplcb_debug_print,
+};
+
+static guint prplcb_ev_timeout_add( guint interval, GSourceFunc func, gpointer udata )
+{
+	return b_timeout_add( interval, (b_event_handler) func, udata );
+}
+
+static guint prplcb_ev_input_add( int fd, PurpleInputCondition cond, PurpleInputFunction func, gpointer udata )
+{
+	return b_input_add( fd, cond | B_EV_FLAG_FORCE_REPEAT, (b_event_handler) func, udata );
+}
+
+static gboolean prplcb_ev_remove( guint id )
+{
+	b_event_remove( (gint) id );
+	return TRUE;
+}
+
+static PurpleEventLoopUiOps glib_eventloops = 
+{
+	prplcb_ev_timeout_add,
+	prplcb_ev_remove,
+	prplcb_ev_input_add,
+	prplcb_ev_remove,
 };
 
 static void purple_ui_init()
