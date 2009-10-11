@@ -137,12 +137,6 @@ static PurpleCoreUiOps bee_core_uiops =
 	NULL,
 	purple_ui_init,
 	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
 };
 
 static void prplcb_conn_progress( PurpleConnection *gc, const char *text, size_t step, size_t step_count )
@@ -220,9 +214,16 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 	
 	if( node->type == PURPLE_BLIST_BUDDY_NODE && ic != NULL  )
 	{
-		imcb_buddy_status( ic, bud->name,
-		                   purple_presence_is_online( bud->presence ) ? OPT_LOGGED_IN : 0,
-		                   NULL, NULL );
+		PurpleStatus *as;
+		int flags = 0;
+		
+		flags |= purple_presence_is_online( bud->presence ) ? OPT_LOGGED_IN : 0;
+		flags |= purple_presence_is_available( bud->presence ) ? 0 : OPT_AWAY;
+		
+		as = purple_presence_get_active_status( bud->presence );
+		
+		imcb_buddy_status( ic, bud->name, flags, purple_status_get_name( as ),
+		                   purple_status_get_attr_string( as, "message" ) );
 	}
 }
 
