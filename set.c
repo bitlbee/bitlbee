@@ -28,7 +28,7 @@
 /* Used to use NULL for this, but NULL is actually a "valid" value. */
 char *SET_INVALID = "nee";
 
-set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data )
+set_t *set_add( set_t **head, const char *key, const char *def, set_eval eval, void *data )
 {
 	set_t *s = set_find( head, key );
 	

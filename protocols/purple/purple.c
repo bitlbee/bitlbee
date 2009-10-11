@@ -46,16 +46,56 @@ static struct im_connection *purple_ic_by_gc( PurpleConnection *gc )
 
 static void purple_init( account_t *acc )
 {
-	/* TODO: Figure out variables to export via set. */
+	PurplePlugin *prpl = purple_plugins_find_with_id( acc->prpl->name );
+	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
+	GList *i;
 	
+	for( i = pi->protocol_options; i; i = i->next )
+	{
+		PurpleAccountOption *o = i->data;
+		const char *name;
+		char *def = NULL;
+		set_eval eval = NULL;
+		set_t *s;
+		
+		name = purple_account_option_get_setting( o );
+		
+		switch( purple_account_option_get_type( o ) )
+		{
+		case PURPLE_PREF_STRING:
+			def = g_strdup( purple_account_option_get_default_string( o ) );
+			break;
+		
+		case PURPLE_PREF_INT:
+			def = g_strdup_printf( "%d", purple_account_option_get_default_int( o ) );
+			eval = set_eval_int;
+			break;
+		
+		case PURPLE_PREF_BOOLEAN:
+			if( purple_account_option_get_default_bool( o ) )
+				def = g_strdup( "true" );
+			else
+				def = g_strdup( "false" );
+			eval = set_eval_bool;
+			break;
+		
+		default:
+			fprintf( stderr, "Setting with unknown type: %s (%d)\n", name, purple_account_option_get_type( o ) );
+		}
+		
+		if( def != NULL )
+		{
+			s = set_add( &acc->set, name, def, eval, acc );
+			s->flags |= ACC_SET_OFFLINE_ONLY;
+			g_free( def );
+		}
+	}
 }
 
 static void purple_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
 	PurpleAccount *pa;
-	//PurpleSavedStatus *ps;
-	//GList *i;
 	
 	/* For now this is needed in the _connected() handlers if using
 	   GLib event handling, to make sure we're not handling events
@@ -68,18 +108,6 @@ static void purple_login( account_t *acc )
 	ic->proto_data = pa;
 	
 	purple_account_set_enabled( pa, "BitlBee", TRUE );
-	
-	/*
-	for( i = ((PurplePluginProtocolInfo *)pa->gc->prpl->info->extra_info)->protocol_options; i; i = i->next )
-	{
-		PurpleAccountOption *o = i->data;
-		
-		printf( "%s\n", o->pref_name );
-	}
-	*/
-	
-	//ps = purple_savedstatus_new( NULL, PURPLE_STATUS_AVAILABLE );
-	//purple_savedstatus_activate_for_account( ps, pa );
 }
 
 static void purple_logout( struct im_connection *ic )

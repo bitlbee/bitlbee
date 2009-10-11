@@ -72,7 +72,7 @@ typedef struct set
 } set_t;
 
 /* Should be pretty clear. */
-set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data );
+set_t *set_add( set_t **head, const char *key, const char *def, set_eval eval, void *data );
 
 /* Returns the raw set_t. Might be useful sometimes. */
 set_t *set_find( set_t **head, char *key );
