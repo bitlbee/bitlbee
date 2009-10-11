@@ -84,7 +84,11 @@ static void purple_login( account_t *acc )
 
 static void purple_logout( struct im_connection *ic )
 {
+	PurpleAccount *pa = ic->proto_data;
+	
+	purple_account_set_enabled( pa, "BitlBee", FALSE );
 	purple_connections = g_slist_remove( purple_connections, ic );
+	purple_account_destroy( pa );
 }
 
 static int purple_buddy_msg( struct im_connection *ic, char *who, char *message, int flags )
@@ -197,10 +201,14 @@ static PurpleConnectionUiOps bee_conn_uiops =
 static void prplcb_blist_new( PurpleBlistNode *node )
 {
 	PurpleBuddy *bud = (PurpleBuddy*) node;
-	struct im_connection *ic = purple_ic_by_pa( bud->account );
 	
-	if( node->type == PURPLE_BLIST_BUDDY_NODE && ic != NULL )
+	if( node->type == PURPLE_BLIST_BUDDY_NODE )
 	{
+		struct im_connection *ic = purple_ic_by_pa( bud->account );
+		
+		if( ic == NULL )
+			return;
+		
 		imcb_add_buddy( ic, bud->name, NULL );
 		if( bud->server_alias )
 			imcb_buddy_nick_hint( ic, bud->name, bud->server_alias );
@@ -210,12 +218,15 @@ static void prplcb_blist_new( PurpleBlistNode *node )
 static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 {
 	PurpleBuddy *bud = (PurpleBuddy*) node;
-	struct im_connection *ic = purple_ic_by_pa( bud->account );
 	
-	if( node->type == PURPLE_BLIST_BUDDY_NODE && ic != NULL  )
+	if( node->type == PURPLE_BLIST_BUDDY_NODE )
 	{
+		struct im_connection *ic = purple_ic_by_pa( bud->account );
 		PurpleStatus *as;
 		int flags = 0;
+		
+		if( ic == NULL )
+			return;
 		
 		flags |= purple_presence_is_online( bud->presence ) ? OPT_LOGGED_IN : 0;
 		flags |= purple_presence_is_available( bud->presence ) ? 0 : OPT_AWAY;
@@ -230,10 +241,14 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 static void prplcb_blist_remove( PurpleBuddyList *list, PurpleBlistNode *node )
 {
 	PurpleBuddy *bud = (PurpleBuddy*) node;
-	struct im_connection *ic = purple_ic_by_pa( bud->account );
 	
-	if( node->type == PURPLE_BLIST_BUDDY_NODE && ic != NULL  )
+	if( node->type == PURPLE_BLIST_BUDDY_NODE )
 	{
+		struct im_connection *ic = purple_ic_by_pa( bud->account );
+		
+		if( ic == NULL )
+			return;
+		
 		imcb_remove_buddy( ic, bud->name, NULL );
 	}
 }
