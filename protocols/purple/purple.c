@@ -177,10 +177,7 @@ static GList *purple_away_states( struct im_connection *ic )
 	GList *st, *ret = NULL;
 	
 	for( st = purple_account_get_status_types( pa ); st; st = st->next )
-	{
-		printf( "%s\n", purple_status_type_get_name( st->data ) );
 		ret = g_list_append( ret, (void*) purple_status_type_get_name( st->data ) );
-	}
 	
 	return ret;
 }
