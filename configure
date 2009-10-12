@@ -449,6 +449,22 @@ EOF
 protocols=''
 protoobjs=''
 
+if [ "$purple" = 0 ]; then
+	echo '#undef WITH_PURPLE' >> config.h
+else
+	echo '#define WITH_PURPLE' >> config.h
+	echo 'EFLAGS += $$(pkg-config purple --libs)' >> Makefile.settings
+	protocols=$protocols'purple '
+	protoobjs=$protoobjs'purple_mod.o '
+
+	# Having both libpurple and native IM modules in one binary may
+	# do strange things. Let's not do that.
+	msn=0
+	jabber=0
+	oscar=0
+	yahoo=0
+fi
+
 if [ "$msn" = 0 ]; then
 	echo '#undef WITH_MSN' >> config.h
 else
@@ -479,15 +495,6 @@ else
 	echo '#define WITH_YAHOO' >> config.h
 	protocols=$protocols'yahoo '
 	protoobjs=$protoobjs'yahoo_mod.o '
-fi
-
-if [ "$purple" = 0 ]; then
-	echo '#undef WITH_PURPLE' >> config.h
-else
-	echo '#define WITH_PURPLE' >> config.h
-	echo 'EFLAGS += $$(pkg-config purple --libs)' >> Makefile.settings
-	protocols=$protocols'purple '
-	protoobjs=$protoobjs'purple_mod.o '
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then
