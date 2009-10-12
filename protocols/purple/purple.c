@@ -173,11 +173,34 @@ static int purple_buddy_msg( struct im_connection *ic, char *who, char *message,
 
 static GList *purple_away_states( struct im_connection *ic )
 {
-	return NULL;
+	PurpleAccount *pa = ic->proto_data;
+	GList *st, *ret = NULL;
+	
+	for( st = purple_account_get_status_types( pa ); st; st = st->next )
+	{
+		printf( "%s\n", purple_status_type_get_name( st->data ) );
+		ret = g_list_append( ret, (void*) purple_status_type_get_name( st->data ) );
+	}
+	
+	return ret;
 }
 
 static void purple_set_away( struct im_connection *ic, char *state_txt, char *message )
 {
+	PurpleAccount *pa = ic->proto_data;
+	GList *status_types = purple_account_get_status_types( pa ), *st;
+	PurpleStatusType *pst = NULL;
+	
+	for( st = status_types; st; st = st->next )
+	{
+		pst = st->data;
+		
+		if( g_strcasecmp( state_txt, purple_status_type_get_name( pst ) ) == 0 )
+			break;
+	}
+	
+	purple_account_set_status( pa, st ? purple_status_type_get_id( pst ) : "away",
+	                           TRUE, "message", message, NULL );
 }
 
 static void purple_add_buddy( struct im_connection *ic, char *who, char *group )
@@ -354,10 +377,6 @@ static PurpleConversationUiOps bee_conv_uiops =
 	NULL,                      /* custom_smiley_write  */
 	NULL,                      /* custom_smiley_close  */
 	NULL,                      /* send_confirm         */
-	NULL,
-	NULL,
-	NULL,
-	NULL
 };
 
 static void prplcb_debug_print( PurpleDebugLevel level, const char *category, const char *arg_s )
