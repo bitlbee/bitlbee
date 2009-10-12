@@ -297,7 +297,10 @@ static void prplcb_blist_new( PurpleBlistNode *node )
 		
 		imcb_add_buddy( ic, bud->name, NULL );
 		if( bud->server_alias )
+		{
+			imcb_rename_buddy( ic, bud->name, bud->server_alias );
 			imcb_buddy_nick_hint( ic, bud->name, bud->server_alias );
+		}
 	}
 }
 
@@ -313,6 +316,9 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 		
 		if( ic == NULL )
 			return;
+		
+		if( bud->server_alias )
+			imcb_rename_buddy( ic, bud->name, bud->server_alias );
 		
 		flags |= purple_presence_is_online( bud->presence ) ? OPT_LOGGED_IN : 0;
 		flags |= purple_presence_is_available( bud->presence ) ? 0 : OPT_AWAY;
