@@ -132,7 +132,15 @@ static void purple_sync_settings( account_t *acc, PurpleAccount *pa )
 static void purple_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
+	static void *irc_check = NULL;
 	PurpleAccount *pa;
+	
+	if( irc_check != NULL && irc_check != acc->irc )
+	{
+		irc_usermsg( acc->irc, "Daemon mode detected. Do *not* try to use libpurple in daemon mode! Please use inetd or ForkDaemon mode instead." );
+		return;
+	}
+	irc_check = acc->irc;
 	
 	/* For now this is needed in the _connected() handlers if using
 	   GLib event handling, to make sure we're not handling events
@@ -384,7 +392,7 @@ static PurpleConversationUiOps bee_conv_uiops =
 
 static void prplcb_debug_print( PurpleDebugLevel level, const char *category, const char *arg_s )
 {
-	printf( "DEBUG %s: %s", category, arg_s );
+	fprintf( stderr, "DEBUG %s: %s", category, arg_s );
 }
 
 static PurpleDebugUiOps bee_debug_uiops =
