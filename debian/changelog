@@ -1,3 +1,10 @@
+bitlbee (1.2.4-1) unstable; urgency=low
+
+  * New upstream version.
+  * Fixed issues with Yahoo! (Closes: #536178)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 17 Oct 2009 18:12:45 +0100
+
 bitlbee (1.2.3-2) unstable; urgency=low
 
   * Fixed bitblee typo in prerm (introduced by NMU 1.2.1-1.1).
