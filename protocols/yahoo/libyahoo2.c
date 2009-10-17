@@ -2485,9 +2485,8 @@ static void yahoo_https_auth_finish(struct http_request *req)
 		
 	yahoo_packet_free(pack);
 	
-	return;
-	
 fail:
+	g_free(crumb);
 	g_free(had->token);
 	g_free(had->chal);
 	g_free(had);
@@ -4134,7 +4133,10 @@ void yahoo_logoff(int id)
 
 	LOG(("yahoo_logoff: current status: %d", yd->current_status));
 
-	if(yd->current_status != -1) {
+	if(yd->current_status != -1 && 0) {
+		/* Meh. Don't send this. The event handlers are not going to
+		   get to do this so it'll just leak memory. And the TCP
+		   connection reset will hopefully be clear enough. */
 		pkt = yahoo_packet_new(YAHOO_SERVICE_LOGOFF, YAHOO_STATUS_AVAILABLE, yd->session_id);
 		yd->current_status = -1;
 

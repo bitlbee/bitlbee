@@ -253,20 +253,23 @@ static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 
 static GList *byahoo_away_states( struct im_connection *ic )
 {
-	GList *m = NULL;
+	static GList *m = NULL;
 
-	m = g_list_append( m, "Available" );
-	m = g_list_append( m, "Be Right Back" );
-	m = g_list_append( m, "Busy" );
-	m = g_list_append( m, "Not At Home" );
-	m = g_list_append( m, "Not At Desk" );
-	m = g_list_append( m, "Not In Office" );
-	m = g_list_append( m, "On Phone" );
-	m = g_list_append( m, "On Vacation" );
-	m = g_list_append( m, "Out To Lunch" );
-	m = g_list_append( m, "Stepped Out" );
-	m = g_list_append( m, "Invisible" );
-	m = g_list_append( m, GAIM_AWAY_CUSTOM );
+	if( m == NULL )
+	{
+		m = g_list_append( m, "Available" );
+		m = g_list_append( m, "Be Right Back" );
+		m = g_list_append( m, "Busy" );
+		m = g_list_append( m, "Not At Home" );
+		m = g_list_append( m, "Not At Desk" );
+		m = g_list_append( m, "Not In Office" );
+		m = g_list_append( m, "On Phone" );
+		m = g_list_append( m, "On Vacation" );
+		m = g_list_append( m, "Out To Lunch" );
+		m = g_list_append( m, "Stepped Out" );
+		m = g_list_append( m, "Invisible" );
+		m = g_list_append( m, GAIM_AWAY_CUSTOM );
+	}
 	
 	return m;
 }
