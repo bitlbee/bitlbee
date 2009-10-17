@@ -37,6 +37,7 @@
 #define CMODES "nt"
 #define CMODE "t"
 #define UMODE "s"
+#define CTYPES "&#"
 
 typedef enum
 {
@@ -46,11 +47,6 @@ typedef enum
 	USTATUS_IDENTIFIED = 4,
 	USTATUS_SHUTDOWN = 8
 } irc_status_t;
-
-typedef struct channel
-{
-	char *name;
-} channel_t;
 
 typedef struct irc
 {
@@ -86,6 +82,7 @@ typedef struct irc
 	
 	struct query *queries;
 	struct account *accounts;
+	struct chat *chatrooms;
 	
 	struct __USER *users;
 	GHashTable *userhash;
@@ -99,7 +96,6 @@ typedef struct irc
 } irc_t;
 
 #include "user.h"
-// #include "nick.h"
 
 extern GSList *irc_connection_list;
 

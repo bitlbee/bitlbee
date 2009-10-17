@@ -189,6 +189,7 @@ account_t *account_get( irc_t *irc, char *id )
 void account_del( irc_t *irc, account_t *acc )
 {
 	account_t *a, *l = NULL;
+	struct chat *c, *nc;
 	
 	if( acc->ic )
 		/* Caller should have checked, accounts still in use can't be deleted. */
@@ -201,6 +202,13 @@ void account_del( irc_t *irc, account_t *acc )
 				l->next = a->next;
 			else
 				irc->accounts = a->next;
+			
+			for( c = irc->chatrooms; c; c = nc )
+			{
+				nc = c->next;
+				if( acc == c->acc )
+					chat_del( irc, c );
+			}
 			
 			while( a->set )
 				set_del( &a->set, a->set->key );

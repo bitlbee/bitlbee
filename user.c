@@ -140,7 +140,7 @@ user_t *user_find( irc_t *irc, char *nick )
 		return( NULL );
 }
 
-user_t *user_findhandle( struct im_connection *ic, char *handle )
+user_t *user_findhandle( struct im_connection *ic, const char *handle )
 {
 	user_t *u;
 	char *nick;

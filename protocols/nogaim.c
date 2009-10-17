@@ -248,6 +248,8 @@ static gboolean send_keepalive( gpointer d, gint fd, b_input_condition cond )
 
 void imcb_connected( struct im_connection *ic )
 {
+	irc_t *irc = ic->irc;
+	struct chat *c;
 	user_t *u;
 	
 	/* MSN servers sometimes redirect you to a different server and do
@@ -270,6 +272,15 @@ void imcb_connected( struct im_connection *ic )
 	/* Apparently we're connected successfully, so reset the
 	   exponential backoff timer. */
 	ic->acc->auto_reconnect_delay = 0;
+	
+	for( c = irc->chatrooms; c; c = c->next )
+	{
+		if( c->acc != ic->acc )
+			continue;
+		
+		if( set_getbool( &c->set, "auto_join" ) )
+			chat_join( irc, c, NULL );
+	}
 }
 
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
@@ -308,6 +319,9 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	ic->keepalive = 0;
 	ic->acc->prpl->logout( ic );
 	b_event_remove( ic->inpa );
+	
+	g_free( ic->away );
+	ic->away = NULL;
 	
 	u = irc->users;
 	while( u )
@@ -491,33 +505,70 @@ void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
 	}
 }
 
-/* prpl.c */
 
-struct show_got_added_data
+struct imcb_ask_cb_data
 {
 	struct im_connection *ic;
 	char *handle;
 };
 
-void show_got_added_no( void *data )
+static void imcb_ask_auth_cb_no( void *data )
 {
-	g_free( ((struct show_got_added_data*)data)->handle );
+	struct imcb_ask_cb_data *cbd = data;
+	
+	cbd->ic->acc->prpl->auth_deny( cbd->ic, cbd->handle );
+	
+	g_free( cbd->handle );
+	g_free( cbd );
+}
+
+static void imcb_ask_auth_cb_yes( void *data )
+{
+	struct imcb_ask_cb_data *cbd = data;
+	
+	cbd->ic->acc->prpl->auth_allow( cbd->ic, cbd->handle );
+	
+	g_free( cbd->handle );
+	g_free( cbd );
+}
+
+void imcb_ask_auth( struct im_connection *ic, const char *handle, const char *realname )
+{
+	struct imcb_ask_cb_data *data = g_new0( struct imcb_ask_cb_data, 1 );
+	char *s, *realname_ = NULL;
+	
+	if( realname != NULL )
+		realname_ = g_strdup_printf( " (%s)", realname );
+	
+	s = g_strdup_printf( "The user %s%s wants to add you to his/her buddy list.",
+	                     handle, realname_ ?: "" );
+	
+	g_free( realname_ );
+	
+	data->ic = ic;
+	data->handle = g_strdup( handle );
+	query_add( ic->irc, ic, s, imcb_ask_auth_cb_yes, imcb_ask_auth_cb_no, data );
+}
+
+
+static void imcb_ask_add_cb_no( void *data )
+{
+	g_free( ((struct imcb_ask_cb_data*)data)->handle );
 	g_free( data );
 }
 
-void show_got_added_yes( void *data )
+static void imcb_ask_add_cb_yes( void *data )
 {
-	struct show_got_added_data *sga = data;
+	struct imcb_ask_cb_data *cbd = data;
 	
-	sga->ic->acc->prpl->add_buddy( sga->ic, sga->handle, NULL );
-	/* imcb_add_buddy( sga->ic, NULL, sga->handle, sga->handle ); */
+	cbd->ic->acc->prpl->add_buddy( cbd->ic, cbd->handle, NULL );
 	
-	return show_got_added_no( data );
+	return imcb_ask_add_cb_no( data );
 }
 
-void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname )
+void imcb_ask_add( struct im_connection *ic, const char *handle, const char *realname )
 {
-	struct show_got_added_data *data = g_new0( struct show_got_added_data, 1 );
+	struct imcb_ask_cb_data *data = g_new0( struct imcb_ask_cb_data, 1 );
 	char *s;
 	
 	/* TODO: Make a setting for this! */
@@ -528,7 +579,7 @@ void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname 
 	
 	data->ic = ic;
 	data->handle = g_strdup( handle );
-	query_add( ic->irc, ic, s, show_got_added_yes, show_got_added_no, data );
+	query_add( ic->irc, ic, s, imcb_ask_add_cb_yes, imcb_ask_add_cb_no, data );
 }
 
 
@@ -698,7 +749,7 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
 	}
 }
 
-struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
+struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 {
 	struct groupchat *c;
 	

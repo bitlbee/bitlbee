@@ -196,13 +196,14 @@ static int byahoo_send_typing( struct im_connection *ic, char *who, int typing )
 static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
+	char *away;
 	
-	ic->away = NULL;
+	away = NULL;
 	
 	if( state && msg && g_strcasecmp( state, msg ) != 0 )
 	{
 		yd->current_status = YAHOO_STATUS_CUSTOM;
-		ic->away = "";
+		away = "";
 	}
 	else if( state )
 	{
@@ -211,11 +212,11 @@ static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 		   away state. */
 		msg = NULL;
 		
-		ic->away = "";
+		away = "";
 		if( g_strcasecmp( state, "Available" ) == 0 )
 		{
 			yd->current_status = YAHOO_STATUS_AVAILABLE;
-			ic->away = NULL;
+			away = NULL;
 		}
 		else if( g_strcasecmp( state, "Be Right Back" ) == 0 )
 			yd->current_status = YAHOO_STATUS_BRB;
@@ -241,31 +242,34 @@ static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 		{
 			yd->current_status = YAHOO_STATUS_AVAILABLE;
 			
-			ic->away = NULL;
+			away = NULL;
 		}
 	}
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
-	yahoo_set_away( yd->y2_id, yd->current_status, msg, ic->away != NULL ? 2 : 0 );
+	yahoo_set_away( yd->y2_id, yd->current_status, msg, away != NULL ? 2 : 0 );
 }
 
 static GList *byahoo_away_states( struct im_connection *ic )
 {
-	GList *m = NULL;
+	static GList *m = NULL;
 
-	m = g_list_append( m, "Available" );
-	m = g_list_append( m, "Be Right Back" );
-	m = g_list_append( m, "Busy" );
-	m = g_list_append( m, "Not At Home" );
-	m = g_list_append( m, "Not At Desk" );
-	m = g_list_append( m, "Not In Office" );
-	m = g_list_append( m, "On Phone" );
-	m = g_list_append( m, "On Vacation" );
-	m = g_list_append( m, "Out To Lunch" );
-	m = g_list_append( m, "Stepped Out" );
-	m = g_list_append( m, "Invisible" );
-	m = g_list_append( m, GAIM_AWAY_CUSTOM );
+	if( m == NULL )
+	{
+		m = g_list_append( m, "Available" );
+		m = g_list_append( m, "Be Right Back" );
+		m = g_list_append( m, "Busy" );
+		m = g_list_append( m, "Not At Home" );
+		m = g_list_append( m, "Not At Desk" );
+		m = g_list_append( m, "Not In Office" );
+		m = g_list_append( m, "On Phone" );
+		m = g_list_append( m, "On Vacation" );
+		m = g_list_append( m, "Out To Lunch" );
+		m = g_list_append( m, "Stepped Out" );
+		m = g_list_append( m, "Invisible" );
+		m = g_list_append( m, GAIM_AWAY_CUSTOM );
+	}
 	
 	return m;
 }
@@ -346,6 +350,20 @@ static struct groupchat *byahoo_chat_with( struct im_connection *ic, char *who )
 	return c;
 }
 
+static void byahoo_auth_allow( struct im_connection *ic, const char *who )
+{
+	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
+	
+	yahoo_accept_buddy_ymsg13( yd->y2_id, NULL, who );
+}
+
+static void byahoo_auth_deny( struct im_connection *ic, const char *who )
+{
+	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
+	
+	yahoo_reject_buddy_ymsg13( yd->y2_id, NULL, who, NULL );
+}
+
 void byahoo_initmodule( )
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
@@ -370,6 +388,9 @@ void byahoo_initmodule( )
 	ret->chat_with = byahoo_chat_with;
 
 	ret->handle_cmp = g_strcasecmp;
+	
+	ret->auth_allow = byahoo_auth_allow;
+	ret->auth_deny = byahoo_auth_deny;
 	
 	register_protocol(ret);
 }
@@ -450,9 +471,7 @@ gboolean byahoo_write_ready_callback( gpointer data, gint source, b_input_condit
 {
 	struct byahoo_write_ready_data *d = data;
 	
-	yahoo_write_ready( d->id, d->fd, d->data );
-	
-	return FALSE;
+	return yahoo_write_ready( d->id, d->fd, d->data );
 }
 
 void ext_yahoo_login_response( int id, int succ, const char *url )
@@ -789,9 +808,22 @@ int ext_yahoo_connect(const char *host, int port)
 static void byahoo_accept_conf( void *data )
 {
 	struct byahoo_conf_invitation *inv = data;
+	struct groupchat *b;
 	
-	yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
-	imcb_chat_add_buddy( inv->c, inv->ic->acc->user );
+	for( b = inv->ic->groupchats; b; b = b->next )
+		if( b == inv->c )
+			break;
+	
+	if( b != NULL )
+	{
+		yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
+		imcb_chat_add_buddy( inv->c, inv->ic->acc->user );
+	}
+	else
+	{
+		imcb_log( inv->ic, "Duplicate/corrupted invitation to `%s'.", inv->name );
+	}
+	
 	g_free( inv->name );
 	g_free( inv );
 }
@@ -907,11 +939,18 @@ void ext_yahoo_chat_yahooerror( int id, const char *me )
 {
 }
 
+void ext_yahoo_contact_auth_request( int id, const char *myid, const char *who, const char *msg )
+{
+	struct im_connection *ic = byahoo_get_ic_by_id( id );
+	
+	imcb_ask_auth( ic, who, NULL );
+}
+
 void ext_yahoo_contact_added( int id, const char *myid, const char *who, const char *msg )
 {
-	/* Groups schmoups. If I want to handle groups properly I can get the
-	   buddy data from some internal libyahoo2 structure. */
-	imcb_add_buddy( byahoo_get_ic_by_id( id ), (char*) who, NULL );
+	struct im_connection *ic = byahoo_get_ic_by_id( id );
+	
+	imcb_add_buddy( ic, (char*) who, NULL );
 }
 
 void ext_yahoo_rejected( int id, const char *who, const char *msg )

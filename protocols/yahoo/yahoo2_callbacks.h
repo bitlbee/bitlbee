@@ -360,6 +360,18 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_file)(int id, const char *me, const char 
 
 
 /*
+ * Name: ext_yahoo_contact_auth_request
+ * 	Called when a contact wants to add you to his/her contact list
+ * Params:
+ * 	id   - the id that identifies the server connection
+ * 	myid - the identity s/he added
+ * 	who  - who did it
+ * 	msg  - any message sent
+ */
+void YAHOO_CALLBACK_TYPE(ext_yahoo_contact_auth_request)(int id, const char *myid, const char *who, const char *msg);
+
+
+/*
  * Name: ext_yahoo_contact_added
  * 	Called when a contact is added to your list
  * Params:

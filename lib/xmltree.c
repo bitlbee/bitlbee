@@ -471,7 +471,7 @@ char *xt_find_attr( struct xt_node *node, const char *key )
 	return node->attr[i].value;
 }
 
-struct xt_node *xt_new_node( char *name, char *text, struct xt_node *children )
+struct xt_node *xt_new_node( char *name, const char *text, struct xt_node *children )
 {
 	struct xt_node *node, *c;
 	

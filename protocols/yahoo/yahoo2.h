@@ -216,6 +216,9 @@ const char  * yahoo_get_profile_url( void );
 
 void yahoo_buddyicon_request(int id, const char *who);
 
+void yahoo_accept_buddy_ymsg13(int,const char*,const char*);
+void yahoo_reject_buddy_ymsg13(int,const char*,const char*,const char*);
+
 #include "yahoo_httplib.h"
 
 #ifdef __cplusplus

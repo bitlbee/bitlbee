@@ -32,7 +32,7 @@
 #define _WIN32_WINNT 0x0501
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "1.2.3"
+#define BITLBEE_VERSION "1.2.4"
 #define VERSION BITLBEE_VERSION
 
 #define MAX_STRING 511
@@ -128,6 +128,7 @@
 #include "commands.h"
 #include "account.h"
 #include "nick.h"
+#include "chat.h"
 #include "conf.h"
 #include "log.h"
 #include "ini.h"

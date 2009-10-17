@@ -36,9 +36,11 @@
 #include "proxy.h"
 
 static void b_main_restart();
-static guint id_next = 1;
+static guint id_next = 1; /* Next ID to be allocated to an event handler. */
+static guint id_cur = 0; /* Event ID that we're currently handling. */
+static guint id_dead; /* Set to 1 if b_event_remove removes id_cur. */
 static GHashTable *id_hash;
-static int quitting = 0;
+static int quitting = 0; /* Prepare to quit, stop handling events. */
 
 /* Since libevent doesn't handle two event handlers for one fd-condition
    very well (which happens sometimes when BitlBee changes event handlers
@@ -118,7 +120,7 @@ static void b_event_passthrough( int fd, short event, void *data )
 {
 	struct b_event_data *b_ev = data;
 	b_input_condition cond = 0;
-	int id;
+	gboolean st;
 	
 	if( fd >= 0 )
 	{
@@ -132,21 +134,30 @@ static void b_event_passthrough( int fd, short event, void *data )
 	
 	/* Since the called function might cancel this handler already
 	   (which free()s b_ev), we have to remember the ID here. */
-	id = b_ev->id;
+	id_cur = b_ev->id;
+	id_dead = 0;
 	
 	if( quitting )
 	{
-		b_event_remove( id );
+		b_event_remove( id_cur );
 		return;
 	}
 	
-	if( !b_ev->function( b_ev->data, fd, cond ) )
+	st = b_ev->function( b_ev->data, fd, cond );
+	if( id_dead )
+	{
+		/* This event was killed already, don't touch it! */
+		return;
+	}
+	else if( !st )
 	{
 		event_debug( "Handler returned FALSE: " );
-		b_event_remove( id );
+		b_event_remove( id_cur );
 	}
 	else if( fd == -1 )
 	{
+		/* fd == -1 means it was a timer. These can't be auto-repeated
+		   so it has to be recreated every time. */
 		struct timeval tv;
 		
 		tv.tv_sec = b_ev->timeout / 1000;
@@ -235,6 +246,9 @@ void b_event_remove( gint id )
 	event_debug( "b_event_remove( %d )\n", id );
 	if( b_ev )
 	{
+		if( id == id_cur )
+			id_dead = TRUE;
+		
 		g_hash_table_remove( id_hash, &b_ev->id );
 		if( b_ev->evinfo.ev_fd >= 0 )
 		{

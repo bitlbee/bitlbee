@@ -307,15 +307,15 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else
 			{
-				fprintf( stderr, "Error: Unknown setting `%s` in configuration file.\n", ini->key );
+				fprintf( stderr, "Error: Unknown setting `%s` in configuration file (line %d).\n", ini->key, ini->line );
 				return 0;
 				/* For now just ignore unknown keys... */
 			}
 		}
 		else if( g_strcasecmp( ini->section, "defaults" ) != 0 )
 		{
-			fprintf( stderr, "Error: Unknown section [%s] in configuration file. "
-			                 "BitlBee configuration must be put in a [settings] section!\n", ini->section );
+			fprintf( stderr, "Error: Unknown section [%s] in configuration file (line %d). "
+			                 "BitlBee configuration must be put in a [settings] section!\n", ini->section, ini->line );
 			return 0;
 		}
 	}

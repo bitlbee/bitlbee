@@ -95,13 +95,6 @@ START_TEST(test_setstr)
 	fail_unless(strcmp(set_getstr(&s, "name"), "bloe") == 0);
 END_TEST
 
-START_TEST(test_setstr_implicit)
-	void *data = "data";
-	set_t *s = NULL, *t;
-	set_setstr(&s, "name", "bloe");
-	fail_unless(set_find(&s, "name") != NULL);
-END_TEST
-
 START_TEST(test_set_get_int_unknown)
 	set_t *s = NULL;
 	fail_unless(set_getint(&s, "foo") == 0);
@@ -125,6 +118,5 @@ Suite *set_suite (void)
 	tcase_add_test (tc_core, test_set_get_int_unknown);
 	tcase_add_test (tc_core, test_setint);
 	tcase_add_test (tc_core, test_setstr);
-	tcase_add_test (tc_core, test_setstr_implicit);
 	return s;
 }
