@@ -24,6 +24,7 @@
 */
 
 #include "bitlbee.h"
+#include "chat.h"
 
 struct chat *chat_add( irc_t *irc, account_t *acc, char *handle, char *channel )
 {

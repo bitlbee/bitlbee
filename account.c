@@ -26,6 +26,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "account.h"
+#include "chat.h"
 
 account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 {
