@@ -76,7 +76,7 @@ Then, just use the ordinary IRC <emphasis>/invite</emphasis> command to invite m
 </para>
 
 <para>
-Some protocols (like Jabber) also support named groupchats. BitlBee now supports these too. You can use the <emphasis>chat add</emphasis> command to join them. See <emphasis>help chat_add</emphasis> for more information.
+Some protocols (like Jabber) also support named groupchats. BitlBee now supports these too. You can use the <emphasis>chat add</emphasis> command to join them. See <emphasis>help chat add</emphasis> for more information.
 </para>
 
 </sect1>
