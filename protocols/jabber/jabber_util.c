@@ -419,9 +419,13 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 	
 	if( ( s = strchr( jid, '/' ) ) )
 	{
+		int bare_exists = 0;
+		
 		*s = 0;
 		if( ( bud = g_hash_table_lookup( jd->buddies, jid ) ) )
 		{
+			bare_exists = 1;
+			
 			if( bud->next )
 				bud = bud->next;
 			
@@ -447,7 +451,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 					break;
 		}
 		
-		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && imcb_find_buddy( ic, jid ) )
+		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) &&
+		    ( imcb_find_buddy( ic, jid ) || bare_exists ) )
 		{
 			*s = '/';
 			bud = jabber_buddy_add( ic, jid );
