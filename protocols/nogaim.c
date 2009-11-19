@@ -32,8 +32,10 @@
 */
 
 #define BITLBEE_CORE
-#include "nogaim.h"
 #include <ctype.h>
+
+#include "nogaim.h"
+#include "chat.h"
 
 static int remove_chat_buddy_silent( struct groupchat *b, const char *handle );
 

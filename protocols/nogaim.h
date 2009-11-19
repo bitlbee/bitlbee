@@ -38,11 +38,12 @@
 #ifndef _NOGAIM_H
 #define _NOGAIM_H
 
+#include <stdint.h>
+
 #include "bitlbee.h"
 #include "account.h"
 #include "proxy.h"
 #include "query.h"
-#include "md5.h"
 
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 

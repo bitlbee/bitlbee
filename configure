@@ -266,7 +266,7 @@ EOF
 
 detect_ldap()
 {
-	TMPFILE=`mktemp`
+	TMPFILE=$(mktemp)
 	if $CC -o $TMPFILE -shared -lldap 2>/dev/null >/dev/null; then
 		cat<<EOF>>Makefile.settings
 EFLAGS+=-lldap
@@ -279,6 +279,43 @@ EOF
 		ldap=0
 		ret=0
 	fi
+}
+
+RESOLV_TESTCODE='
+#include <arpa/nameser.h>
+#include <resolv.h> 
+
+int main()
+{
+	ns_initparse( NULL, 0, NULL );
+	ns_parserr( NULL, ns_s_an, 0, NULL );
+}
+'
+
+detect_resolv_dynamic()
+{
+	echo "$RESOLV_TESTCODE" | $CC -o /dev/null -x c - -lresolv >/dev/null 2>/dev/null
+	if [ "$?" = "0" ]; then
+		echo 'EFLAGS+=-lresolv' >> Makefile.settings
+		return 0
+	fi
+
+	return 1
+}
+
+detect_resolv_static()
+{
+	for i in $systemlibdirs; do
+		if [ -f $i/libresolv.a ]; then
+			echo "$RESOLV_TESTCODE" | $CC -o /dev/null -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
+			if [ "$?" = "0" ]; then
+				echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
+				return 0
+			fi
+		fi
+	done
+
+	return 1
 }
 
 if [ "$ssl" = "auto" ]; then
@@ -348,13 +385,9 @@ fi;
 
 echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 
-for i in $systemlibdirs; do
-	if [ -f $i/libresolv.a ]; then
-		echo '#define HAVE_RESOLV_A' >> config.h
-		echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
-		break
-	fi
-done
+if detect_resolv_dynamic || detect_resolv_static; then
+	echo '#define HAVE_RESOLV_A' >> config.h
+fi
 
 STORAGES="text xml"
 
