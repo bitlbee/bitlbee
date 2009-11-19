@@ -462,7 +462,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		char *set;
 		
 		head = g_hash_table_lookup( jd->buddies, jid );
-		bud = head->next ? head->next : head;
+		bud = ( head && head->next ) ? head->next : head;
 		
 		g_free( jid );
 		
@@ -545,7 +545,7 @@ struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *ji
 int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct jabber_buddy *head, *bud, *prev, *bi;
+	struct jabber_buddy *bud, *prev, *bi;
 	char *s, *full_jid;
 	
 	full_jid = jabber_normalize( full_jid_ );
@@ -553,9 +553,10 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 	if( ( s = strchr( full_jid, '/' ) ) )
 		*s = 0;
 	
-	if( ( head = g_hash_table_lookup( jd->buddies, full_jid ) ) )
+	if( ( bud = g_hash_table_lookup( jd->buddies, full_jid ) ) )
 	{
-		bud = head->next ? head->next : head;
+		if( bud->next )
+			bud = bud->next;
 		
 		/* If there's only one item in the list (and if the resource
 		   matches), removing it is simple. (And the hash reference
