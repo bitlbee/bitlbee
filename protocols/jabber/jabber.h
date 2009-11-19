@@ -106,6 +106,13 @@ struct jabber_cache_entry
 	jabber_cache_event func;
 };
 
+/* Somewhat messy data structure: We have a hash table with the bare JID as
+   the key and the head of a struct jabber_buddy list as the value. The head
+   is always a bare JID. If the JID has other resources (often the case,
+   except for some transports that don't support multiple resources), those
+   follow. In that case, the bare JID at the beginning doesn't actually
+   refer to a real session and should only be used for operations that
+   support incomplete JIDs. */
 struct jabber_buddy
 {
 	char *bare_jid;
@@ -119,7 +126,7 @@ struct jabber_buddy
 	struct jabber_away_state *away_state;
 	char *away_message;
 	
-	time_t last_act;
+	time_t last_msg;
 	jabber_buddy_flags_t flags;
 	
 	struct jabber_buddy *next;
@@ -207,6 +214,8 @@ typedef enum
 	GET_BUDDY_CREAT = 1,	/* Try to create it, if necessary. */
 	GET_BUDDY_EXACT = 2,	/* Get an exact match (only makes sense with bare JIDs). */
 	GET_BUDDY_FIRST = 4,	/* No selection, simply get the first resource for this JID. */
+	GET_BUDDY_BARE = 8,	/* Get the bare version of the JID (possibly inexistent). */
+	GET_BUDDY_BARE_OK = 16,	/* Allow returning a bare JID if that seems better. */
 } get_buddy_flags_t;
 
 struct jabber_error

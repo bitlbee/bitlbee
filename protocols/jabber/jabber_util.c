@@ -339,6 +339,11 @@ struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid_
 	
 	if( ( bud = g_hash_table_lookup( jd->buddies, full_jid ) ) )
 	{
+		/* The first entry is always a bare JID. If there are more, we
+		   should ignore the first one here. */
+		if( bud->next )
+			bud = bud->next;
+		
 		/* If this is a transport buddy or whatever, it can't have more
 		   than one instance, so this is always wrong: */
 		if( s == NULL || bud->resource == NULL )
@@ -373,10 +378,15 @@ struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid_
 	}
 	else
 	{
-		/* Keep in mind that full_jid currently isn't really
-		   a full JID... */
-		new->bare_jid = g_strdup( full_jid );
+		new->full_jid = new->bare_jid = g_strdup( full_jid );
 		g_hash_table_insert( jd->buddies, new->bare_jid, new );
+		
+		if( s )
+		{
+			new->next = g_new0( struct jabber_buddy, 1 );
+			new->next->bare_jid = new->bare_jid;
+			new = new->next;
+		}
 	}
 	
 	if( s )
@@ -402,18 +412,19 @@ struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid_
 struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, get_buddy_flags_t flags )
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct jabber_buddy *bud;
+	struct jabber_buddy *bud, *head;
 	char *s, *jid;
 	
 	jid = jabber_normalize( jid_ );
 	
 	if( ( s = strchr( jid, '/' ) ) )
 	{
-		int bare_exists = 0;
-		
 		*s = 0;
 		if( ( bud = g_hash_table_lookup( jd->buddies, jid ) ) )
 		{
+			if( bud->next )
+				bud = bud->next;
+			
 			/* Just return the first one for this bare JID. */
 			if( flags & GET_BUDDY_FIRST )
 			{
@@ -435,16 +446,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 				if( strcmp( bud->resource, s + 1 ) == 0 )
 					break;
 		}
-		else
-		{
-			/* This variable tells the if down here that the bare
-			   JID already exists and we should feel free to add
-			   more resources, if the caller asked for that. */
-			bare_exists = 1;
-		}
 		
-		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) &&
-		    ( !bare_exists || imcb_find_buddy( ic, jid ) ) )
+		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) && imcb_find_buddy( ic, jid ) )
 		{
 			*s = '/';
 			bud = jabber_buddy_add( ic, jid );
@@ -458,7 +461,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		struct jabber_buddy *best_prio, *best_time;
 		char *set;
 		
-		bud = g_hash_table_lookup( jd->buddies, jid );
+		head = g_hash_table_lookup( jd->buddies, jid );
+		bud = head->next ? head->next : head;
 		
 		g_free( jid );
 		
@@ -475,22 +479,31 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		else if( flags & GET_BUDDY_FIRST )
 			/* Looks like the caller doesn't care about details. */
 			return bud;
+		else if( flags & GET_BUDDY_BARE )
+			return head;
 		
 		best_prio = best_time = bud;
 		for( ; bud; bud = bud->next )
 		{
 			if( bud->priority > best_prio->priority )
 				best_prio = bud;
-			if( bud->last_act > best_time->last_act )
+			if( bud->last_msg > best_time->last_msg )
 				best_time = bud;
 		}
 		
 		if( ( set = set_getstr( &ic->acc->set, "resource_select" ) ) == NULL )
 			return NULL;
-		else if( strcmp( set, "activity" ) == 0 )
-			return best_time;
-		else /* if( strcmp( set, "priority" ) == 0 ) */
+		else if( strcmp( set, "priority" ) == 0 )
 			return best_prio;
+		else if( flags & GET_BUDDY_BARE_OK ) /* && strcmp( set, "activity" ) == 0 */
+		{
+			if( best_time->last_msg + set_getint( &ic->acc->set, "activity_timeout" ) >= time( NULL ) )
+				return best_time;
+			else
+				return head;
+		}
+		else
+			return best_time;
 	}
 }
 
@@ -532,7 +545,7 @@ struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *ji
 int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct jabber_buddy *bud, *prev, *bi;
+	struct jabber_buddy *head, *bud, *prev, *bi;
 	char *s, *full_jid;
 	
 	full_jid = jabber_normalize( full_jid_ );
@@ -540,8 +553,10 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 	if( ( s = strchr( full_jid, '/' ) ) )
 		*s = 0;
 	
-	if( ( bud = g_hash_table_lookup( jd->buddies, full_jid ) ) )
+	if( ( head = g_hash_table_lookup( jd->buddies, full_jid ) ) )
 	{
+		bud = head->next ? head->next : head;
+		
 		/* If there's only one item in the list (and if the resource
 		   matches), removing it is simple. (And the hash reference
 		   should be removed too!) */
@@ -549,16 +564,7 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 		    ( ( s == NULL && bud->resource == NULL ) ||
 		      ( bud->resource && s && strcmp( bud->resource, s + 1 ) == 0 ) ) )
 		{
-			g_hash_table_remove( jd->buddies, bud->bare_jid );
-			g_free( bud->bare_jid );
-			g_free( bud->ext_jid );
-			g_free( bud->full_jid );
-			g_free( bud->away_message );
-			g_free( bud );
-			
-			g_free( full_jid );
-			
-			return 1;
+			return jabber_buddy_remove_bare( ic, full_jid );
 		}
 		else if( s == NULL || bud->resource == NULL )
 		{

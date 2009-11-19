@@ -57,6 +57,8 @@ static void jabber_init( account_t *acc )
 	set_t *s;
 	char str[16];
 	
+	s = set_add( &acc->set, "activity_timeout", "600", set_eval_int, acc );
+	
 	g_snprintf( str, sizeof( str ), "%d", jabber_port_list[0] );
 	s = set_add( &acc->set, "port", str, set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -66,7 +68,7 @@ static void jabber_init( account_t *acc )
 	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
-	s = set_add( &acc->set, "resource_select", "priority", NULL, acc );
+	s = set_add( &acc->set, "resource_select", "activity", NULL, acc );
 	
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
@@ -304,7 +306,7 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_jid( ic, s + 1 ) )
 		bud = jabber_buddy_by_ext_jid( ic, who, 0 );
 	else
-		bud = jabber_buddy_by_jid( ic, who, 0 );
+		bud = jabber_buddy_by_jid( ic, who, GET_BUDDY_BARE_OK );
 	
 	node = xt_new_node( "body", message, NULL );
 	node = jabber_make_packet( "message", "chat", bud ? bud->full_jid : who, node );
@@ -349,17 +351,9 @@ static GList *jabber_away_states( struct im_connection *ic )
 
 static void jabber_get_info( struct im_connection *ic, char *who )
 {
-	struct jabber_data *jd = ic->proto_data;
 	struct jabber_buddy *bud;
 	
-	if( strchr( who, '/' ) )
-		bud = jabber_buddy_by_jid( ic, who, 0 );
-	else
-	{
-		char *s = jabber_normalize( who );
-		bud = g_hash_table_lookup( jd->buddies, s );
-		g_free( s );
-	}
+	bud = jabber_buddy_by_jid( ic, who, GET_BUDDY_FIRST );
 	
 	while( bud )
 	{
