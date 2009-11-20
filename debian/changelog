@@ -1,3 +1,11 @@
+bitlbee (1.2.4-2) unstable; urgency=low
+
+  * Merging in some changes from bzr-head:
+  * Use libresolv.so where possible. (Closes: #551775)
+  * Some include file changes that make the bitlbee-dev package useful again.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Thu, 19 Nov 2009 23:02:43 +0000
+
 bitlbee (1.2.4-1) unstable; urgency=low
 
   * New upstream version.
