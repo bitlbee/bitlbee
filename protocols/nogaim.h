@@ -132,6 +132,7 @@ struct prpl {
 	/* You should set this to the name of your protocol.
 	 * - The user sees this name ie. when imcb_log() is used. */
 	const char *name;
+	void *data;
 
 	/* Added this one to be able to add per-account settings, don't think
 	 * it should be used for anything else. You are supposed to use the

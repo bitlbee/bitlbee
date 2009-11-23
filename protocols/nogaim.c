@@ -110,14 +110,6 @@ struct prpl *find_protocol(const char *name)
  		
  		if( g_strcasecmp( proto->name, name ) == 0 )
 			return proto;
-
-#ifdef WITH_PURPLE
-		/* I know, hardcoding is evil, but that doesn't make it
-		   impossible. :-) */
-		if( g_strncasecmp( proto->name, "prpl-", 5 ) == 0 &&
-		    g_strcasecmp( proto->name + 5, name ) == 0 )
-			return proto;
-#endif
  	}
  	
  	return NULL;

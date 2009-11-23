@@ -148,7 +148,7 @@ static void purple_login( account_t *acc )
 	   on dead connections. */
 	purple_connections = g_slist_prepend( purple_connections, ic );
 	
-	ic->proto_data = pa = purple_account_new( acc->user, acc->prpl->name );
+	ic->proto_data = pa = purple_account_new( acc->user, (char*) acc->prpl->data );
 	purple_account_set_password( pa, acc->pass );
 	purple_sync_settings( acc, pa );
 	
@@ -450,6 +450,7 @@ static void purple_ui_init()
 
 void purple_initmodule()
 {
+	struct prpl funcs;
 	GList *prots;
 	
 	if( B_EV_IO_READ != PURPLE_INPUT_READ ||
@@ -477,24 +478,36 @@ void purple_initmodule()
 	/* Meh? */
 	purple_prefs_load();
 	
+	memset( &funcs, 0, sizeof( funcs ) );
+	funcs.login = purple_login;
+	funcs.init = purple_init;
+	funcs.logout = purple_logout;
+	funcs.buddy_msg = purple_buddy_msg;
+	funcs.away_states = purple_away_states;
+	funcs.set_away = purple_set_away;
+	funcs.add_buddy = purple_add_buddy;
+	funcs.remove_buddy = purple_remove_buddy;
+	funcs.keepalive = purple_keepalive;
+	funcs.send_typing = purple_send_typing;
+	funcs.handle_cmp = g_strcasecmp;
+	
 	for( prots = purple_plugins_get_protocols(); prots; prots = prots->next )
 	{
-		struct prpl *ret = g_new0( struct prpl, 1 );
 		PurplePlugin *prot = prots->data;
+		struct prpl *ret;
 		
-		ret->name = prot->info->id;
-		ret->login = purple_login;
-		ret->init = purple_init;
-		ret->logout = purple_logout;
-		ret->buddy_msg = purple_buddy_msg;
-		ret->away_states = purple_away_states;
-		ret->set_away = purple_set_away;
-		ret->add_buddy = purple_add_buddy;
-		ret->remove_buddy = purple_remove_buddy;
-		ret->keepalive = purple_keepalive;
-		ret->send_typing = purple_send_typing;
-		ret->handle_cmp = g_strcasecmp;
-		
+		ret = g_memdup( &funcs, sizeof( funcs ) );
+		ret->name = ret->data = prot->info->id;
+		if( strncmp( ret->name, "prpl-", 5 ) == 0 )
+			ret->name += 5;
 		register_protocol( ret );
+		
+		if( g_strcasecmp( prot->info->id, "prpl-aim" ) == 0 )
+		{
+			ret = g_memdup( &funcs, sizeof( funcs ) );
+			ret->name = "oscar";
+			ret->data = prot->info->id;
+			register_protocol( ret );
+		}
 	}
 }
