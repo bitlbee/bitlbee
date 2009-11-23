@@ -46,7 +46,7 @@ static struct im_connection *purple_ic_by_gc( PurpleConnection *gc )
 
 static void purple_init( account_t *acc )
 {
-	PurplePlugin *prpl = purple_plugins_find_with_id( acc->prpl->name );
+	PurplePlugin *prpl = purple_plugins_find_with_id( (char*) acc->prpl->data );
 	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
 	GList *i;
 	
