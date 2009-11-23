@@ -23,6 +23,9 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#ifndef _CHAT_H
+#define _CHAT_H
+
 struct chat
 {
 	account_t *acc;
@@ -44,3 +47,5 @@ int chat_chancmp( char *a, char *b );
 int chat_chanok( char *a );
 
 int chat_join( irc_t *irc, struct chat *c, const char *password );
+
+#endif

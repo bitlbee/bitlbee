@@ -3,6 +3,23 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 1.2.4:
+- Most important change (and main reason for releasing now): Upgraded Yahoo!
+  module to a newer version to get it working again.
+- join_chat command replaced with the much better chat command:
+  * Similar to how account replaced login/slist/logout. Add a chatroom once,
+    then just /join it like any other room. Also automatic joining at login
+    time is now possible.
+  * Note that the old way of starting groupchats (/join #nickname) is now
+    also deprecated, use "chat with" instead.
+  * See "help chat" and "help chat add" for more information.
+- Rewrote bitlbee.conf parser to be less dumb.
+- Fixed compatibility (hopefully) with AIM mobile messages, certain kinds
+  of Google Talk chatrooms.
+- Fixed numerous stability/reliability bugs over the last year.
+
+Finished 17 Oct 2009
+
 Version 1.2.3:
 - Fixed one more flaw similar to the previous hijacking bug, caused by incon-
   sistent handling of the USTATUS_IDENTIFIED state. All code touching these

@@ -38,11 +38,12 @@
 #ifndef _NOGAIM_H
 #define _NOGAIM_H
 
+#include <stdint.h>
+
 #include "bitlbee.h"
 #include "account.h"
 #include "proxy.h"
 #include "query.h"
-#include "md5.h"
 
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
@@ -223,6 +224,10 @@ struct prpl {
 	/* Mainly for AOL, since they think "Bung hole" == "Bu ngho le". *sigh*
 	 * - Most protocols will just want to set this to g_strcasecmp().*/
 	int (* handle_cmp) (const char *who1, const char *who2);
+
+	/* Implement these callbacks if you want to use imcb_ask_auth() */
+	void (* auth_allow)	(struct im_connection *, const char *who);
+	void (* auth_deny)	(struct im_connection *, const char *who);
 };
 
 /* im_api core stuff. */
@@ -251,13 +256,20 @@ G_MODULE_EXPORT void imc_logout( struct im_connection *ic, int allow_reconnect )
 G_MODULE_EXPORT void imcb_log( struct im_connection *ic, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 /* To tell the user an error, ie. before logging out when an error occurs. */
 G_MODULE_EXPORT void imcb_error( struct im_connection *ic, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
+
 /* To ask a your about something.
  * - 'msg' is the question.
  * - 'data' can be your custom struct - it will be passed to the callbacks.
  * - 'doit' or 'dont' will be called depending of the answer of the user.
  */
 G_MODULE_EXPORT void imcb_ask( struct im_connection *ic, char *msg, void *data, query_callback doit, query_callback dont );
-G_MODULE_EXPORT void imcb_ask_add( struct im_connection *ic, char *handle, const char *realname );
+
+/* Two common questions you may want to ask:
+ * - X added you to his contact list, allow?
+ * - X is not in your contact list, want to add?
+ */
+G_MODULE_EXPORT void imcb_ask_auth( struct im_connection *ic, const char *handle, const char *realname );
+G_MODULE_EXPORT void imcb_ask_add( struct im_connection *ic, const char *handle, const char *realname );
 
 /* Buddy management */
 /* This function should be called for each handle which are visible to the
