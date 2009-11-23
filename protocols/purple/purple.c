@@ -21,10 +21,10 @@
 *                                                                           *
 \***************************************************************************/
 
+#include "bitlbee.h"
+
 #include <glib.h>
 #include <purple.h>
-
-#include "bitlbee.h"
 
 GSList *purple_connections;
 
@@ -81,9 +81,10 @@ static void purple_init( account_t *acc )
 		
 		default:
 			fprintf( stderr, "Setting with unknown type: %s (%d)\n", name, purple_account_option_get_type( o ) );
+			name = NULL;
 		}
 		
-		if( def != NULL )
+		if( name != NULL )
 		{
 			s = set_add( &acc->set, name, def, eval, acc );
 			s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -210,10 +211,23 @@ static void purple_set_away( struct im_connection *ic, char *state_txt, char *me
 
 static void purple_add_buddy( struct im_connection *ic, char *who, char *group )
 {
+	PurpleBuddy *pb;
+	
+	pb = purple_buddy_new( (PurpleAccount*) ic->proto_data, who, NULL );
+	purple_blist_add_buddy( pb, NULL, NULL, NULL );
+	purple_account_add_buddy( (PurpleAccount*) ic->proto_data, pb );
 }
 
 static void purple_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
+	PurpleBuddy *pb;
+	
+	pb = purple_find_buddy( (PurpleAccount*) ic->proto_data, who );
+	if( pb != NULL )
+	{
+		purple_account_remove_buddy( (PurpleAccount*) ic->proto_data, pb, NULL );
+		purple_blist_remove_buddy( pb );
+	}
 }
 
 static void purple_keepalive( struct im_connection *ic )
@@ -342,6 +356,7 @@ static void prplcb_blist_remove( PurpleBuddyList *list, PurpleBlistNode *node )
 {
 	PurpleBuddy *bud = (PurpleBuddy*) node;
 	
+	/*
 	if( node->type == PURPLE_BLIST_BUDDY_NODE )
 	{
 		struct im_connection *ic = purple_ic_by_pa( bud->account );
@@ -351,6 +366,7 @@ static void prplcb_blist_remove( PurpleBuddyList *list, PurpleBlistNode *node )
 		
 		imcb_remove_buddy( ic, bud->name, NULL );
 	}
+	*/
 }
 
 static PurpleBlistUiOps bee_blist_uiops =
