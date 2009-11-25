@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2005 Wilmer van der Gaast and others                *
+  * Copyright 2002-2009 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Help file control                                                    */
@@ -167,4 +167,28 @@ char *help_get( help_t **help, char *title )
 	}
 	
 	return NULL;
+}
+
+int help_add_mem( help_t **help, const char *title, const char *content )
+{
+	help_t *h, *l = NULL;
+	
+	for( h = *help; h; h = h->next )
+	{
+		if( g_strcasecmp( h->title, title ) == 0 )
+			return 0;
+		
+		l = h;
+	}
+	
+	if( l )
+		h = l->next = g_new0( struct help, 1 );
+	else
+		*help = h = g_new0( struct help, 1 );
+	h->fd = -1;
+	h->title = g_strdup( title );
+	h->length = strlen( content );
+	h->offset.mem_offset = g_strdup( content );
+	
+	return 1;
 }

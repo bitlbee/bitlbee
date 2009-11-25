@@ -22,6 +22,7 @@
 \***************************************************************************/
 
 #include "bitlbee.h"
+#include "help.h"
 
 #include <stdarg.h>
 
@@ -474,6 +475,8 @@ static void *prplcb_request_action( const char *title, const char *primary, cons
 		prplcb_request_action_yes, prplcb_request_action_no, pqad );
 	
 	g_free( q );
+	
+	return pqad;
 }
 
 static PurpleRequestUiOps bee_request_uiops =
@@ -534,6 +537,7 @@ void purple_initmodule()
 {
 	struct prpl funcs;
 	GList *prots;
+	GString *help;
 	
 	if( B_EV_IO_READ != PURPLE_INPUT_READ ||
 	    B_EV_IO_WRITE != PURPLE_INPUT_WRITE )
@@ -573,6 +577,8 @@ void purple_initmodule()
 	funcs.send_typing = purple_send_typing;
 	funcs.handle_cmp = g_strcasecmp;
 	
+	help = g_string_new("BitlBee libpurple module supports the following IM protocols:\n");
+	
 	for( prots = purple_plugins_get_protocols(); prots; prots = prots->next )
 	{
 		PurplePlugin *prot = prots->data;
@@ -584,6 +590,8 @@ void purple_initmodule()
 			ret->name += 5;
 		register_protocol( ret );
 		
+		g_string_append_printf( help, "\n* %s (%s)", ret->name, prot->info->name );
+		
 		if( g_strcasecmp( prot->info->id, "prpl-aim" ) == 0 )
 		{
 			ret = g_memdup( &funcs, sizeof( funcs ) );
@@ -592,4 +600,7 @@ void purple_initmodule()
 			register_protocol( ret );
 		}
 	}
+	
+	help_add_mem( &global.help, "purple", help->str );
+	g_string_free( help, TRUE );
 }
