@@ -23,10 +23,17 @@
 
 #include "bitlbee.h"
 
+#include <stdarg.h>
+
 #include <glib.h>
 #include <purple.h>
 
 GSList *purple_connections;
+
+/* This makes me VERY sad... :-( But some libpurple callbacks come in without
+   any context so this is the only way to get that. Don't want to support
+   libpurple in daemon mode anyway. */
+static irc_t *local_irc;
 
 static struct im_connection *purple_ic_by_pa( PurpleAccount *pa )
 {
@@ -133,15 +140,15 @@ static void purple_sync_settings( account_t *acc, PurpleAccount *pa )
 static void purple_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
-	static void *irc_check = NULL;
 	PurpleAccount *pa;
 	
-	if( irc_check != NULL && irc_check != acc->irc )
+	if( local_irc != NULL && local_irc != acc->irc )
 	{
-		irc_usermsg( acc->irc, "Daemon mode detected. Do *not* try to use libpurple in daemon mode! Please use inetd or ForkDaemon mode instead." );
+		irc_usermsg( acc->irc, "Daemon mode detected. Do *not* try to use libpurple in daemon mode! "
+		                       "Please use inetd or ForkDaemon mode instead." );
 		return;
 	}
-	irc_check = acc->irc;
+	local_irc = acc->irc;
 	
 	/* For now this is needed in the _connected() handlers if using
 	   GLib event handling, to make sure we're not handling events
@@ -406,6 +413,80 @@ static PurpleConversationUiOps bee_conv_uiops =
 	NULL,                      /* send_confirm         */
 };
 
+struct prplcb_request_action_data
+{
+	void *user_data, *bee_data;
+	PurpleRequestActionCb yes, no;
+	int yes_i, no_i;
+};
+
+static void prplcb_request_action_yes( void *data )
+{
+	struct prplcb_request_action_data *pqad = data;
+	
+	pqad->yes( pqad->user_data, pqad->yes_i );
+	g_free( pqad );
+}
+
+static void prplcb_request_action_no( void *data )
+{
+	struct prplcb_request_action_data *pqad = data;
+	
+	pqad->no( pqad->user_data, pqad->no_i );
+	g_free( pqad );
+}
+
+static void *prplcb_request_action( const char *title, const char *primary, const char *secondary,
+                                    int default_action, PurpleAccount *account, const char *who,
+                                    PurpleConversation *conv, void *user_data, size_t action_count,
+                                    va_list actions )
+{
+	struct prplcb_request_action_data *pqad; 
+	int i;
+	char *q;
+	
+	pqad = g_new0( struct prplcb_request_action_data, 1 );
+	
+	for( i = 0; i < action_count; i ++ )
+	{
+		char *caption;
+		void *fn;
+		
+		caption = va_arg( actions, char* );
+		fn = va_arg( actions, void* );
+		
+		if( strcmp( caption, "Accept" ) == 0 )
+		{
+			pqad->yes = fn;
+			pqad->yes_i = i;
+		}
+		else if( strcmp( caption, "Reject" ) == 0 )
+		{
+			pqad->no = fn;
+			pqad->no_i = i;
+		}
+	}
+	
+	pqad->user_data = user_data;
+	
+	q = g_strdup_printf( "Request: %s\n\n%s\n\n%s", title, primary, secondary );
+	pqad->bee_data = query_add( local_irc, purple_ic_by_pa( account ), q,
+		prplcb_request_action_yes, prplcb_request_action_no, pqad );
+	
+	g_free( q );
+}
+
+static PurpleRequestUiOps bee_request_uiops =
+{
+	NULL,
+	NULL,
+	prplcb_request_action,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+};
+
 static void prplcb_debug_print( PurpleDebugLevel level, const char *category, const char *arg_s )
 {
 	fprintf( stderr, "DEBUG %s: %s", category, arg_s );
@@ -445,6 +526,7 @@ static void purple_ui_init()
 	purple_blist_set_ui_ops( &bee_blist_uiops );
 	purple_connections_set_ui_ops( &bee_conn_uiops );
 	purple_conversations_set_ui_ops( &bee_conv_uiops );
+	purple_request_set_ui_ops( &bee_request_uiops );
 	//purple_debug_set_ui_ops( &bee_debug_uiops );
 }
 
