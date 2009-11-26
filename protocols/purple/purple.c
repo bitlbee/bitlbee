@@ -242,9 +242,26 @@ static void purple_keepalive( struct im_connection *ic )
 {
 }
 
-static int purple_send_typing( struct im_connection *ic, char *who, int typing )
+static int purple_send_typing( struct im_connection *ic, char *who, int flags )
 {
-	return 1;
+	PurpleTypingState state = PURPLE_NOT_TYPING;
+	PurpleConversation *conv;
+	
+	if( flags & OPT_TYPING )
+		state = PURPLE_TYPING;
+	else if( flags & OPT_THINKING )
+		state = PURPLE_TYPED;
+	
+	if( ( conv = purple_find_conversation_with_account( PURPLE_CONV_TYPE_IM,
+	                                                    who, ic->proto_data ) ) == NULL )
+	{
+		purple_conv_im_set_typing_state( purple_conversation_get_im_data( conv ), state );
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 static void purple_ui_init();
