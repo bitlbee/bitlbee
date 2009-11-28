@@ -379,9 +379,9 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 
 static void prplcb_blist_remove( PurpleBuddyList *list, PurpleBlistNode *node )
 {
+	/*
 	PurpleBuddy *bud = (PurpleBuddy*) node;
 	
-	/*
 	if( node->type == PURPLE_BLIST_BUDDY_NODE )
 	{
 		struct im_connection *ic = purple_ic_by_pa( bud->account );
@@ -406,10 +406,17 @@ static PurpleBlistUiOps bee_blist_uiops =
 static void prplcb_conv_im( PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime )
 {
 	struct im_connection *ic = purple_ic_by_pa( conv->account );
+	PurpleBuddy *buddy;
 	
 	/* ..._SEND means it's an outgoing message, no need to echo those. */
-	if( !( flags & PURPLE_MESSAGE_SEND ) )
-		imcb_buddy_msg( ic, (char*) who, (char*) message, 0, mtime );
+	if( flags & PURPLE_MESSAGE_SEND )
+		return;
+	
+	buddy = purple_find_buddy( conv->account, who );
+	if( buddy != NULL )
+		who = purple_buddy_get_contact_alias( buddy );
+	
+	imcb_buddy_msg( ic, (char*) who, (char*) message, 0, mtime );
 }
 
 static PurpleConversationUiOps bee_conv_uiops = 
