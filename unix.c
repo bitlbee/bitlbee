@@ -46,16 +46,26 @@ int main( int argc, char *argv[] )
 	struct sigaction sig, old;
 	
 	log_init();
+	
 	global.conf_file = g_strdup( CONF_FILE_DEF );
 	global.conf = conf_load( argc, argv );
 	if( global.conf == NULL )
 		return( 1 );
 	
 	b_main_init();
-	nogaim_init();
 	
 	srand( time( NULL ) ^ getpid() );
+	
 	global.helpfile = g_strdup( HELP_FILE );
+	if( help_init( &global.help, global.helpfile ) == NULL )
+		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
+
+	global.storage = storage_init( global.conf->primary_storage, global.conf->migrate_storage );
+	if( global.storage == NULL )
+	{
+		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
+		return( 1 );
+	}
 	
 	if( global.conf->runmode == RUNMODE_INETD )
 	{
@@ -104,13 +114,6 @@ int main( int argc, char *argv[] )
 			setuid( pw->pw_uid );
 		}
 	}
-
-	global.storage = storage_init( global.conf->primary_storage, global.conf->migrate_storage );
-	if( global.storage == NULL )
-	{
-		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
-		return( 1 );
-	}
  	
 	/* Catch some signals to tell the user what's happening before quitting */
 	memset( &sig, 0, sizeof( sig ) );
@@ -129,8 +132,6 @@ int main( int argc, char *argv[] )
 	
 	if( !getuid() || !geteuid() )
 		log_message( LOGLVL_WARNING, "BitlBee is running with root privileges. Why?" );
-	if( help_init( &global.help, global.helpfile ) == NULL )
-		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
 	b_main_run();
 	

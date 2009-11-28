@@ -171,6 +171,8 @@ irc_t *irc_new( int fd )
 	/* Evaluator sets the iconv/oconv structures. */
 	set_eval_charset( set_find( &irc->set, "charset" ), set_getstr( &irc->set, "charset" ) );
 	
+	nogaim_init();
+	
 	return( irc );
 }
 
