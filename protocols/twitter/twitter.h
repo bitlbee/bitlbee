@@ -37,6 +37,7 @@ struct twitter_data
 	char* user;
 	char* pass;
 	guint64 home_timeline_id;
+	struct groupchat *home_timeline_gc;
 };
 
 #endif //_TWITTER_H

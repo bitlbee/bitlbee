@@ -271,6 +271,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	struct xt_parser *parser;
 	struct twitter_xml_list *txl;
 	struct twitter_data *td = ic->proto_data;
+	struct groupchat *gc;
 
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
@@ -292,13 +293,43 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	GSList *l;
 	struct twitter_xml_status *status;
 
-	imcb_add_buddy( ic, "home_timeline", NULL );
-	imcb_buddy_status( ic, "home_timeline", OPT_LOGGED_IN, NULL, NULL );
+	// Create a new groupchat if it does not exsist.
+	if (!td->home_timeline_gc)
+	{
+		td->home_timeline_gc = gc = imcb_chat_new( ic, "home/timeline" );
+		// Add the current user to the chat...
+		imcb_chat_add_buddy( gc, ic->acc->user );
+	}
+	else
+	{
+		gc = td->home_timeline_gc;
+	}
 
 	for ( l = txl->list; l ; l = g_slist_next(l) )
 	{
 		status = l->data;
-		imcb_buddy_msg( ic, "home_timeline", status->text, 0, 0 );
+		// TODO Put the next part in a new function....
+
+		// Ugly hack, to show current user in chat...
+		if ( g_strcasecmp(status->user->screen_name, ic->acc->user) == 0)
+		{
+			char *tmp = g_strdup_printf ("_%s_", status->user->screen_name);
+			g_free(status->user->screen_name);
+			status->user->screen_name = tmp;
+		}
+
+		// Check if the buddy is allready in the buddy list.
+		if (!user_findhandle( ic, status->user->screen_name ))
+		{
+			// The buddy is not in the list, add the buddy...
+			imcb_add_buddy( ic, status->user->screen_name, NULL );
+			imcb_buddy_status( ic, status->user->screen_name, OPT_LOGGED_IN, NULL, NULL );
+		}
+
+		// Say it!
+		imcb_chat_msg (gc, status->user->screen_name, status->text, 0, 0 );
+		// Update the home_timeline_id to hold the highest id, so that by the next request
+		// we won't pick up the updates allready in the list.
 		td->home_timeline_id = td->home_timeline_id < status->id ? status->id : td->home_timeline_id;
 	}
 
