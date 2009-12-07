@@ -662,8 +662,8 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 						imcb_log( ic, "The server is going down for maintenance in %s minutes.", arg1 );
 				}
 				
-				if( arg1 ) g_free( arg1 );
-				if( mtype ) g_free( mtype );
+				g_free( arg1 );
+				g_free( mtype );
 			}
 			else if( g_strncasecmp( ct, "text/x-msmsgsprofile", 20 ) == 0 )
 			{
@@ -671,25 +671,30 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 			}
 			else if( g_strncasecmp( ct, "text/x-msmsgsinitialemailnotification", 37 ) == 0 )
 			{
-				char *inbox = msn_findheader( body, "Inbox-Unread:", blen );
-				char *folders = msn_findheader( body, "Folders-Unread:", blen );
-				
-				if( inbox && folders && set_getbool( &ic->acc->set, "mail_notifications" ) )
+				if( set_getbool( &ic->acc->set, "mail_notifications" ) )
 				{
-					imcb_log( ic, "INBOX contains %s new messages, plus %s messages in other folders.", inbox, folders );
+					char *inbox = msn_findheader( body, "Inbox-Unread:", blen );
+					char *folders = msn_findheader( body, "Folders-Unread:", blen );
+
+					if( inbox && folders )
+						imcb_log( ic, "INBOX contains %s new messages, plus %s messages in other folders.", inbox, folders );
+					
+					g_free( inbox );
+					g_free( folders );
 				}
-				
-				g_free( inbox );
-				g_free( folders );
 			}
 			else if( g_strncasecmp( ct, "text/x-msmsgsemailnotification", 30 ) == 0 )
 			{
-				char *from = msn_findheader( body, "From-Addr:", blen );
-				char *fromname = msn_findheader( body, "From:", blen );
-				
-				if( from && fromname && set_getbool( &ic->acc->set, "mail_notifications" ) )
+				if( set_getbool( &ic->acc->set, "mail_notifications" ) )
 				{
-					imcb_log( ic, "Received an e-mail message from %s <%s>.", fromname, from );
+					char *from = msn_findheader( body, "From-Addr:", blen );
+					char *fromname = msn_findheader( body, "From:", blen );
+					
+					if( from && fromname )
+						imcb_log( ic, "Received an e-mail message from %s <%s>.", fromname, from );
+
+					g_free( from );
+					g_free( fromname );
 				}
 			}
 			else if( g_strncasecmp( ct, "text/x-msmsgsactivemailnotification", 35 ) == 0 )
