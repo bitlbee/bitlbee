@@ -34,13 +34,19 @@ static gboolean irc_userping( gpointer _irc, int fd, b_input_condition cond );
 
 GSList *irc_connection_list = NULL;
 
-static char *passchange( set_t *set, char *value )
+static char *set_eval_password( set_t *set, char *value )
 {
 	irc_t *irc = set->data;
 	
-	irc_setpass( irc, value );
-	irc_usermsg( irc, "Password successfully changed" );
-	return NULL;
+	if( irc->status & USTATUS_IDENTIFIED && value )
+	{
+		irc_setpass( irc, value );
+		return NULL;
+	}
+	else
+	{
+		return SET_INVALID;
+	}
 }
 
 static char *set_eval_charset( set_t *set, char *value )
@@ -77,6 +83,7 @@ irc_t *irc_new( int fd )
 	irc_t *irc;
 	struct sockaddr_storage sock;
 	socklen_t socklen = sizeof( sock );
+	set_t *s;
 	
 	irc = g_new0( irc_t, 1 );
 	
@@ -136,28 +143,29 @@ irc_t *irc_new( int fd )
 
 	irc_connection_list = g_slist_append( irc_connection_list, irc );
 	
-	set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
-	set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
-	set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
-	set_add( &irc->set, "auto_reconnect_delay", "5*3<900", set_eval_account_reconnect_delay, irc );
-	set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
-	set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
-	set_add( &irc->set, "charset", "utf-8", set_eval_charset, irc );
-	set_add( &irc->set, "debug", "false", set_eval_bool, irc );
-	set_add( &irc->set, "default_target", "root", NULL, irc );
-	set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
-	set_add( &irc->set, "handle_unknown", "root", NULL, irc );
-	set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
-	set_add( &irc->set, "ops", "both", set_eval_ops, irc );
-	set_add( &irc->set, "password", NULL, passchange, irc );
-	set_add( &irc->set, "private", "true", set_eval_bool, irc );
-	set_add( &irc->set, "query_order", "lifo", NULL, irc );
-	set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
-	set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
-	set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
-	set_add( &irc->set, "strip_html", "true", NULL, irc );
-	set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
-	set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
+	s = set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "auto_reconnect_delay", "5*3<900", set_eval_account_reconnect_delay, irc );
+	s = set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
+	s = set_add( &irc->set, "charset", "utf-8", set_eval_charset, irc );
+	s = set_add( &irc->set, "debug", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "default_target", "root", NULL, irc );
+	s = set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "handle_unknown", "root", NULL, irc );
+	s = set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "ops", "both", set_eval_ops, irc );
+	s = set_add( &irc->set, "password", NULL, set_eval_password, irc );
+	s->flags |= SET_NULL_OK;
+	s = set_add( &irc->set, "private", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "query_order", "lifo", NULL, irc );
+	s = set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
+	s = set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "strip_html", "true", NULL, irc );
+	s = set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
+	s = set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
 	
 	conf_loaddefaults( irc );
 	
@@ -231,7 +239,7 @@ void irc_free( irc_t * irc )
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
 	if( irc->status & USTATUS_IDENTIFIED && set_getbool( &irc->set, "save_on_quit" ) ) 
-		if( storage_save( irc, TRUE ) != STORAGE_OK )
+		if( storage_save( irc, NULL, TRUE ) != STORAGE_OK )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
@@ -399,10 +407,8 @@ void irc_process( irc_t *irc )
 				lines[i] = conv;
 			}
 			
-			if( lines[i] )
+			if( lines[i] && ( cmd = irc_parse_line( lines[i] ) ) )
 			{
-				if( ( cmd = irc_parse_line( lines[i] ) ) == NULL )
-					continue;
 				irc_exec( irc, cmd );
 				g_free( cmd );
 			}
@@ -477,7 +483,7 @@ char **irc_parse_line( char *line )
 	/* Move the line pointer to the start of the command, skipping spaces and the optional prefix. */
 	if( line[0] == ':' )
 	{
-		for( i = 0; line[i] != ' '; i ++ );
+		for( i = 0; line[i] && line[i] != ' '; i ++ );
 		line = line + i;
 	}
 	for( i = 0; line[i] == ' '; i ++ );
@@ -773,7 +779,9 @@ void irc_login( irc_t *irc )
 	irc_reply( irc,   2, ":Host %s is running BitlBee " BITLBEE_VERSION " " ARCH "/" CPU ".", irc->myhost );
 	irc_reply( irc,   3, ":%s", IRCD_INFO );
 	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES UMODES_PRIV, CMODES );
-	irc_reply( irc,   5, "PREFIX=(ov)@+ CHANTYPES=#& CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server", CMODES, MAX_NICK_LENGTH - 1 );
+	irc_reply( irc,   5, "PREFIX=(ov)@+ CHANTYPES=%s CHANMODES=,,,%s NICKLEN=%d NETWORK=BitlBee "
+	                     "CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server",
+	                     CTYPES, CMODES, MAX_NICK_LENGTH - 1 );
 	irc_motd( irc );
 	irc->umode[0] = '\0';
 	irc_umode_set( irc, "+" UMODE, 1 );
@@ -1014,7 +1022,7 @@ int irc_send( irc_t *irc, char *nick, char *s, int flags )
 	struct groupchat *c = NULL;
 	user_t *u = NULL;
 	
-	if( *nick == '#' || *nick == '&' )
+	if( strchr( CTYPES, *nick ) )
 	{
 		if( !( c = irc_chat_by_channel( irc, nick ) ) )
 		{

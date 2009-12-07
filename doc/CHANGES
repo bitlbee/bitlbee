@@ -3,6 +3,44 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 1.2.4:
+- Most important change (and main reason for releasing now): Upgraded Yahoo!
+  module to a newer version to get it working again.
+- join_chat command replaced with the much better chat command:
+  * Similar to how account replaced login/slist/logout. Add a chatroom once,
+    then just /join it like any other room. Also automatic joining at login
+    time is now possible.
+  * Note that the old way of starting groupchats (/join #nickname) is now
+    also deprecated, use "chat with" instead.
+  * See "help chat" and "help chat add" for more information.
+- Rewrote bitlbee.conf parser to be less dumb.
+- Fixed compatibility (hopefully) with AIM mobile messages, certain kinds
+  of Google Talk chatrooms.
+- Fixed numerous stability/reliability bugs over the last year.
+
+Finished 17 Oct 2009
+
+Version 1.2.3:
+- Fixed one more flaw similar to the previous hijacking bug, caused by incon-
+  sistent handling of the USTATUS_IDENTIFIED state. All code touching these
+  variables was reviewed and should be correct now.
+
+Finished 7 Sep 2008 
+
+Version 1.2.2:
+- Security bugfix: It was possible to hijack accounts (without gaining access
+  to the old account, it's simply an overwrite)
+- Some more stability improvements.
+- Fixed bug where people with non-lowercase nicks couldn't drop their account.
+- Easier upgrades of non-forking daemon mode servers (using the DEAF
+  command).
+- Can be cross-compiled for Win32 now! (No support for SSL yet though, which
+  makes it less useful for now.)
+- Exponential backoff on auto-reconnect.
+- Changing passwords gives less confusing feedback ("password is empty") now.
+
+Finished 26 Aug 2008
+
 Version 1.2.1:
 - Fixed proxy support.
 - Fixed stalling issues while connecting to Jabber when using the OpenSSL

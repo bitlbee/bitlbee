@@ -50,10 +50,11 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	else if( strcmp( type, "get" ) == 0 )
 	{
 		if( !( ( c = xt_find_node( node->children, "query" ) ) ||
-		       ( c = xt_find_node( node->children, "ping" ) ) ) || /* O_o WHAT is wrong with just <query/> ????? */
+		       ( c = xt_find_node( node->children, "ping" ) ) ) ||
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
-			imcb_log( ic, "Warning: Received incomplete IQ-%s packet", type );
+			/* Sigh. Who decided to suddenly invent new elements
+			   instead of just sticking with <query/>? */
 			return XT_HANDLED;
 		}
 		

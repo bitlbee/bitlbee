@@ -68,15 +68,15 @@ Of course you can also create your own groupchats. Type <emphasis>help groupchat
 <title>Creating groupchats</title>
 
 <para>
-If you want to start a groupchat with the person <emphasis>lisa_msn</emphasis> in it, just join the channel <emphasis>#lisa_msn</emphasis>. BitlBee will refuse to join you to the channel with that name, but it will create a new virtual channel with root, you and lisa_msn in it.
+To open a groupchat, use the <emphasis>chat with</emphasis> command. For example,  to start a groupchat with the person <emphasis>lisa_msn</emphasis> in it, just type <emphasis>chat with lisa_msn</emphasis>. BitlBee will create a new virtual channel with root, you and lisa_msn in it.
 </para>
 
 <para>
-Of course a channel with only two people isn't really exciting yet. So the next step is to invite some other people to the channel. For this, you can use the <emphasis>/invite</emphasis> command of your IRC client. Please do keep in mind that all the people have to be on the same network and contact list! You can't invite Yahoo! buddies into an MSN groupchat.
+Then, just use the ordinary IRC <emphasis>/invite</emphasis> command to invite more people. Please do keep in mind that all the people have to be on the same network and contact list! You can't invite Yahoo! buddies into an MSN groupchat.
 </para>
 
 <para>
-Some protocols (like Jabber) also support named groupchats. BitlBee now supports these too. You can use the <emphasis>join_chat</emphasis> command to join them. See <emphasis>help join_chat</emphasis> for more information.
+Some protocols (like Jabber) also support named groupchats. BitlBee now supports these too. You can use the <emphasis>chat add</emphasis> command to join them. See <emphasis>help chat add</emphasis> for more information.
 </para>
 
 </sect1>

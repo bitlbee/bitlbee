@@ -69,7 +69,7 @@ static void jabber_init( account_t *acc )
 	s = set_add( &acc->set, "resource_select", "priority", NULL, acc );
 	
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 	
 	s = set_add( &acc->set, "ssl", "false", set_eval_bool, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -438,7 +438,7 @@ static void jabber_remove_buddy( struct im_connection *ic, char *who, char *grou
 		presence_send_request( ic, who, "unsubscribe" );
 }
 
-static struct groupchat *jabber_chat_join_( struct im_connection *ic, char *room, char *nick, char *password )
+static struct groupchat *jabber_chat_join_( struct im_connection *ic, const char *room, const char *nick, const char *password )
 {
 	if( strchr( room, '@' ) == NULL )
 		imcb_error( ic, "Invalid room name: %s", room );

@@ -54,6 +54,7 @@ binary-arch: build-arch install-arch
 	cp doc/CHANGES debian/bitlbee/usr/share/doc/bitlbee/changelog
 	cp utils/* debian/bitlbee/usr/share/doc/bitlbee/examples/
 	cp debian/bitlbee.init debian/bitlbee/etc/init.d/bitlbee
+	patch -p0 < debian/patches/bitlbee.conf.diff
 	cd debian/bitlbee/usr/share/; \
 		gzip -9 doc/bitlbee/changelog.Debian doc/bitlbee/changelog doc/bitlbee/user-guide.txt \
 		        doc/bitlbee/examples/* man/man8/bitlbee.8 man/man5/bitlbee.conf.5

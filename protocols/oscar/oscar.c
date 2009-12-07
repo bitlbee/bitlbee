@@ -90,7 +90,7 @@ struct oscar_data {
 
 	GSList *oscar_chats;
 
-	gboolean killme;
+	gboolean killme, no_reconnect;
 	gboolean icq;
 	GSList *evilhack;
 	
@@ -180,6 +180,7 @@ static struct chat_connection *find_oscar_chat_by_conn(struct im_connection *ic,
 
 static int gaim_parse_auth_resp  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_login      (aim_session_t *, aim_frame_t *, ...);
+static int gaim_parse_logout     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_handle_redirect  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_oncoming   (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_offgoing   (aim_session_t *, aim_frame_t *, ...);
@@ -293,7 +294,7 @@ static gboolean oscar_callback(gpointer data, gint source,
 		if (aim_get_command(odata->sess, conn) >= 0) {
 			aim_rxdispatch(odata->sess);
                                if (odata->killme)
-                                       imc_logout(ic, TRUE);
+                                       imc_logout(ic, !odata->no_reconnect);
 		} else {
 			if ((conn->type == AIM_CONN_TYPE_BOS) ||
 				   !(aim_getconn_type(odata->sess, AIM_CONN_TYPE_BOS))) {
@@ -519,6 +520,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 			break;
 		case 0x18:
 			/* connecting too frequently */
+			od->no_reconnect = TRUE;
 			imcb_error(ic, _("You have been connecting and disconnecting too frequently. Wait ten minutes and try again. If you continue to try, you will need to wait even longer."));
 			break;
 		case 0x1c:
@@ -571,6 +573,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_SRVACK, gaim_ssi_parseack, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOC, AIM_CB_LOC_USERINFO, gaim_parseaiminfo, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_MSG, AIM_CB_MSG_MTN, gaim_parsemtn, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SPECIAL, AIM_CB_SPECIAL_CONNERR, gaim_parse_logout, 0);
 
 	((struct oscar_data *)ic->proto_data)->conn = bosconn;
 	for (i = 0; i < (int)strlen(info->bosip); i++) {
@@ -746,6 +749,30 @@ static int gaim_parse_login(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_end(ap);
 
 	aim_send_login(sess, fr->conn, ic->acc->user, ic->acc->pass, &info, key);
+
+	return 1;
+}
+
+static int gaim_parse_logout(aim_session_t *sess, aim_frame_t *fr, ...) {
+	struct im_connection *ic = sess->aux_data;
+	struct oscar_data *odata = ic->proto_data;
+	int code;
+	va_list ap;
+
+	va_start(ap, fr);
+	code = va_arg(ap, int);
+	va_end(ap);
+	
+	imcb_error( ic, "Connection aborted by server: %s", code == 1 ?
+	                "someone else logged in with your account" :
+	                "unknown reason" );
+	
+	/* Tell BitlBee to disable auto_reconnect if code == 1, since that
+	   means a concurrent login somewhere else. */
+	odata->no_reconnect = code == 1;
+	
+	/* DO NOT log out here! Just tell the callback to do it. */
+	odata->killme = TRUE;
 
 	return 1;
 }
@@ -1938,8 +1965,7 @@ static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, 
 
 	aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 
-	if (ic->away)
-		g_free(ic->away);
+	g_free(ic->away);
 	ic->away = NULL;
 
 	if (!message) {
@@ -1959,55 +1985,53 @@ static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, 
 
 static void oscar_set_away_icq(struct im_connection *ic, struct oscar_data *od, const char *state, const char *message)
 {
-    const char *msg = NULL;
+	const char *msg = NULL;
 	gboolean no_message = FALSE;
 
 	/* clean old states */
-    if (ic->away) {
-		g_free(ic->away);
-		ic->away = NULL;
-    }
+	g_free(ic->away);
+	ic->away = NULL;
 	od->sess->aim_icq_state = 0;
 
 	/* if no message, then use an empty message */
-    if (message) {
-        msg = message;
-    } else {
-        msg = "";
+	if (message) {
+		msg = message;
+	} else {
+		msg = "";
 		no_message = TRUE;
-    }
+	}
 
 	if (!g_strcasecmp(state, "Online")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 	} else if (!g_strcasecmp(state, "Away")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTOAWAY;
 	} else if (!g_strcasecmp(state, "Do Not Disturb")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_DND | AIM_ICQ_STATE_BUSY);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTODND;
 	} else if (!g_strcasecmp(state, "Not Available")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTONA;
 	} else if (!g_strcasecmp(state, "Occupied")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_BUSY);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTOBUSY;
 	} else if (!g_strcasecmp(state, "Free For Chat")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_CHAT);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 		od->sess->aim_icq_state = AIM_MTYPE_AUTOFFC;
 	} else if (!g_strcasecmp(state, "Invisible")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE);
-        ic->away = g_strdup(msg);
+		ic->away = g_strdup(msg);
 	} else if (!g_strcasecmp(state, GAIM_AWAY_CUSTOM)) {
 	 	if (no_message) {
 			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 		} else {
 			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
-            ic->away = g_strdup(msg);
+			ic->away = g_strdup(msg);
 			od->sess->aim_icq_state = AIM_MTYPE_AUTOAWAY;
 		}
 	}
@@ -2019,7 +2043,7 @@ static void oscar_set_away(struct im_connection *ic, char *state, char *message)
 {
 	struct oscar_data *od = (struct oscar_data *)ic->proto_data;
 
-    oscar_set_away_aim(ic, od, state, message);
+	oscar_set_away_aim(ic, od, state, message);
 	if (od->icq)
 		oscar_set_away_icq(ic, od, state, message);
 
@@ -2580,7 +2604,7 @@ void oscar_chat_leave(struct groupchat *c)
 	oscar_chat_kill(c->ic, c->data);
 }
 
-struct groupchat *oscar_chat_join(struct im_connection * ic, char * room, char * nick, char * password )
+struct groupchat *oscar_chat_join(struct im_connection * ic, const char * room, const char * nick, const char * password )
 {
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
 	aim_conn_t * cur;

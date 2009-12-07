@@ -26,6 +26,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "ipc.h"
+#include "chat.h"
 
 static void irc_cmd_pass( irc_t *irc, char **cmd )
 {
@@ -124,7 +125,7 @@ static void irc_cmd_oper( irc_t *irc, char **cmd )
 
 static void irc_cmd_mode( irc_t *irc, char **cmd )
 {
-	if( *cmd[1] == '#' || *cmd[1] == '&' )
+	if( strchr( CTYPES, *cmd[1] ) )
 	{
 		if( cmd[2] )
 		{
@@ -192,32 +193,14 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		     RFC doesn't have any reply for that though? */
 	else if( cmd[1] )
 	{
-		if( ( cmd[1][0] == '#' || cmd[1][0] == '&' ) && cmd[1][1] )
-		{
-			user_t *u = user_find( irc, cmd[1] + 1 );
-			
-			if( u && u->ic && u->ic->acc->prpl->chat_with )
-			{
-				irc_reply( irc, 403, "%s :Initializing groupchat in a different channel", cmd[1] );
-				
-				if( !u->ic->acc->prpl->chat_with( u->ic, u->handle ) )
-				{
-					irc_usermsg( irc, "Could not open a groupchat with %s.", u->nick );
-				}
-			}
-			else if( u )
-			{
-				irc_reply( irc, 403, "%s :Groupchats are not possible with %s", cmd[1], cmd[1]+1 );
-			}
-			else
-			{
-				irc_reply( irc, 403, "%s :No such nick", cmd[1] );
-			}
-		}
+		struct chat *c;
+		
+		if( strchr( CTYPES, cmd[1][0] ) == NULL || cmd[1][1] == 0 )
+			irc_reply( irc, 479, "%s :Invalid channel name", cmd[1] );
+		else if( ( c = chat_bychannel( irc, cmd[1] ) ) && c->acc && c->acc->ic )
+			chat_join( irc, c, cmd[2] );
 		else
-		{
 			irc_reply( irc, 403, "%s :No such channel", cmd[1] );
-		}
 	}
 }
 
@@ -432,8 +415,8 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 			
 			if( g_hash_table_lookup_extended( irc->watches, nick, &okey, &ovalue ) )
 			{
-				g_free( okey );
 				g_hash_table_remove( irc->watches, okey );
+				g_free( okey );
 				
 				irc_reply( irc, 602, "%s %s %s %d :%s", nick, "*", "*", 0, "Stopped watching" );
 			}

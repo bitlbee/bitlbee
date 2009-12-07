@@ -55,8 +55,8 @@ char *set_eval_account( set_t *set, char *value );
 char *set_eval_account_reconnect_delay( set_t *set, char *value );
 int account_reconnect_delay( account_t *a );
 
-#define ACC_SET_NOSAVE		1
-#define ACC_SET_OFFLINE_ONLY	2
-#define ACC_SET_ONLINE_ONLY	4
+#define ACC_SET_NOSAVE		0x01
+#define ACC_SET_OFFLINE_ONLY	0x02
+#define ACC_SET_ONLINE_ONLY	0x04
 
 #endif

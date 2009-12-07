@@ -25,7 +25,7 @@
 
 static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 
-struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *nick, char *password )
+struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password )
 {
 	struct jabber_chat *jc;
 	struct xt_node *node;
@@ -35,9 +35,9 @@ struct groupchat *jabber_chat_join( struct im_connection *ic, char *room, char *
 	roomjid = g_strdup_printf( "%s/%s", room, nick );
 	node = xt_new_node( "x", NULL, NULL );
 	xt_add_attr( node, "xmlns", XMLNS_MUC );
-	node = jabber_make_packet( "presence", NULL, roomjid, node );
 	if( password )
 		xt_add_child( node, xt_new_node( "password", password, NULL ) );
+	node = jabber_make_packet( "presence", NULL, roomjid, node );
 	jabber_cache_add( ic, node, jabber_chat_join_failed );
 	
 	if( !jabber_write_packet( ic, node ) )
@@ -233,8 +233,10 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 			if( ( s = xt_find_attr( c, "xmlns" ) ) &&
 			    ( strcmp( s, XMLNS_MUC_USER ) == 0 ) )
 			{
-				c = xt_find_node( c->children, "item" );
-				if( ( s = xt_find_attr( c, "jid" ) ) )
+				struct xt_node *item;
+				
+				item = xt_find_node( c->children, "item" );
+				if( ( s = xt_find_attr( item, "jid" ) ) )
 				{
 					/* Yay, found what we need. :-) */
 					bud->ext_jid = jabber_normalize( s );
@@ -282,12 +284,15 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 	}
 	else if( type ) /* type can only be NULL or "unavailable" in this function */
 	{
-		s = strchr( bud->ext_jid, '/' );
-		if( s ) *s = 0;
-		imcb_chat_remove_buddy( chat, bud->ext_jid, NULL );
-		if( bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS )
-			imcb_remove_buddy( ic, bud->ext_jid, NULL );
-		if( s ) *s = '/';
+		if( ( bud->flags & JBFLAG_IS_CHATROOM ) && bud->ext_jid )
+		{
+			s = strchr( bud->ext_jid, '/' );
+			if( s ) *s = 0;
+			imcb_chat_remove_buddy( chat, bud->ext_jid, NULL );
+			if( bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS )
+				imcb_remove_buddy( ic, bud->ext_jid, NULL );
+			if( s ) *s = '/';
+		}
 		
 		if( bud == jc->me )
 			jabber_chat_free( chat );

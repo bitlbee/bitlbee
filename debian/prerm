@@ -9,5 +9,9 @@ if [ "$1" = "upgrade" ]; then
 		mv /usr/share/bitlbee/help.txt /usr/share/bitlbee/help.upgrading
 	fi
 else
-	/etc/init.d/bitlbee stop || exit 0
+	if which invoke-rc.d >/dev/null 2>&1; then
+		invoke-rc.d bitblee stop || exit 0
+	else
+		/etc/init.d/bitlbee stop || exit 0
+	fi
 fi

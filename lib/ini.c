@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2005 Wilmer van der Gaast and others                *
+  * Copyright 2002-2008 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* INI file reading code						*/
@@ -27,64 +27,119 @@
 
 ini_t *ini_open( char *file )
 {
-	ini_t *ini = g_new0( ini_t, 1 );
+	int fd;
+	ini_t *ini = NULL;
+	struct stat fi;
 	
-	if( ( ini->fp = fopen( file, "r" ) ) == NULL )
+	if( ( fd = open( file, O_RDONLY ) ) != -1 &&
+	    fstat( fd, &fi ) == 0 &&
+	    fi.st_size <= 16384 &&
+	    ( ini = g_malloc( sizeof( ini_t ) + fi.st_size + 1 ) ) &&
+	    read( fd, ini->file, fi.st_size ) == fi.st_size )
 	{
-		g_free( ini );
-		return( NULL );
+		memset( ini, 0, sizeof( ini_t ) );
+		ini->size = fi.st_size;
+		ini->file[ini->size] = 0;
+		ini->cur = ini->file;
+		ini->c_section = "";
+		
+		close( fd );
+		
+		return ini;
 	}
+
+	if( fd >= 0 )
+		close( fd );
 	
-	return( ini );
+	ini_close( ini );
+
+	return NULL;
+}
+
+/* Strips leading and trailing whitespace and returns a pointer to the first
+   non-ws character of the given string. */
+static char *ini_strip_whitespace( char *in )
+{
+	char *e;
+
+	while( isspace( *in ) )
+		in++;
+
+	e = in + strlen( in ) - 1;
+	while( e > in && isspace( *e ) )
+		e--;
+	e[1] = 0;
+	
+	return in;
 }
 
 int ini_read( ini_t *file )
 {
-	char key[MAX_STRING], s[MAX_STRING], *t;
-	int i;
+	char *s;
 	
-	while( !feof( file->fp ) )
+	while( file->cur && file->cur < file->file + file->size )
 	{
-		*s = 0;
-		fscanf( file->fp, "%127[^\n#]s", s );
-		fscanf( file->fp, "%*[^\n]s" );
-		fgetc( file->fp );		/* Skip newline		*/
-		file->line ++;
-		if( strchr( s, '=' ) )
+		char *e, *next;
+		
+		file->line++;
+
+		/* Find the end of line */
+		if( ( e = strchr( file->cur, '\n' ) ) != NULL )
 		{
-			sscanf( s, "%[^ =]s", key );
-			if( ( t = strchr( key, '.' ) ) )
+			*e = 0;
+			next = e + 1;
+		}
+		else
+		{
+			/* No more lines. */
+			e = file->cur + strlen( file->cur );
+			next = NULL;
+		}
+		
+		/* Comment? */
+		if( ( s = strchr( file->cur, '#' ) ) != NULL )
+			*s = 0;
+		
+		file->cur = ini_strip_whitespace( file->cur );
+		
+		if( *file->cur == '[' )
+		{
+			file->cur++;
+			if( ( s = strchr( file->cur, ']' ) ) != NULL )
 			{
-				*t = 0;
-				strcpy( file->section, key );
-				t ++;
+				*s = 0;
+				file->c_section = file->cur;
+			}
+		}
+		else if( ( s = strchr( file->cur, '=' ) ) != NULL )
+		{
+			*s = 0;
+			file->key = ini_strip_whitespace( file->cur );
+			file->value = ini_strip_whitespace( s + 1 );
+			
+			if( ( s = strchr( file->key, '.' ) ) != NULL )
+			{
+				*s = 0;
+				file->section = file->key;
+				file->key = s + 1;
 			}
 			else
 			{
-				strcpy( file->section, file->c_section );
-				t = key;
+				file->section = file->c_section;
 			}
-			sscanf( t, "%s", file->key );
-			t = strchr( s, '=' ) + 1;
-			for( i = 0; t[i] == ' '; i ++ );
-			strcpy( file->value, &t[i] );
-			for( i = strlen( file->value ) - 1; file->value[i] == 32; i -- )
-				file->value[i] = 0;
 			
-			return( 1 );
+			file->cur = next;
+			return 1;
 		}
-		else if( ( t = strchr( s, '[' ) ) )
-		{
-			strcpy( file->c_section, t + 1 );
-			t = strchr( file->c_section, ']' );
-			*t = 0;
-		}
+		/* else: noise/comment/etc, let's just ignore it. */
+
+		file->cur = next;
 	}
-	return( 0 );
+	
+	return 0;
 }
 
 void ini_close( ini_t *file )
 {
-	fclose( file->fp );
 	g_free( file );
 }

@@ -43,6 +43,10 @@ struct set;
 
 typedef char *(*set_eval) ( struct set *set, char *value );
 
+extern char *SET_INVALID;
+
+#define SET_NULL_OK        0x0100
+
 typedef struct set
 {
 	void *data;     /* Here you can save a pointer to the
@@ -60,8 +64,8 @@ typedef struct set
 	int flags;      /* See account.h, for example. set.c doesn't use
 	                   this (yet?). */
 	
-	/* Eval: Returns NULL if the value is incorrect or exactly the
-	   passed value variable. When returning a corrected value,
+	/* Eval: Returns SET_INVALID if the value is incorrect or exactly
+	   the passed value variable. When returning a corrected value,
 	   set_setstr() should be able to free() the returned string! */
 	set_eval eval;
 	struct set *next;
@@ -87,7 +91,7 @@ G_MODULE_EXPORT int set_getbool( set_t **head, char *key );
 int set_setstr( set_t **head, char *key, char *value );
 int set_setint( set_t **head, char *key, int value );
 void set_del( set_t **head, char *key );
-void set_reset( set_t **head, char *key );
+int set_reset( set_t **head, char *key );
 
 /* Two very useful generic evaluators. */
 char *set_eval_int( set_t *set, char *value );

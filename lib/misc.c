@@ -45,6 +45,7 @@
 #include <resolv.h>
 #endif
 
+#include "md5.h"
 #include "ssl_client.h"
 
 void strip_linefeed(gchar *text)

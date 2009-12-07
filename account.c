@@ -26,6 +26,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "account.h"
+#include "chat.h"
 
 account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 {
@@ -54,7 +55,7 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	s = set_add( &a->set, "auto_reconnect", "true", set_eval_bool, a );
 	
 	s = set_add( &a->set, "password", NULL, set_eval_account, a );
-	s->flags |= ACC_SET_NOSAVE;
+	s->flags |= ACC_SET_NOSAVE | SET_NULL_OK;
 	
 	s = set_add( &a->set, "username", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
@@ -76,9 +77,23 @@ char *set_eval_account( set_t *set, char *value )
 	
 	/* Double-check: We refuse to edit on-line accounts. */
 	if( set->flags & ACC_SET_OFFLINE_ONLY && acc->ic )
-		return NULL;
+		return SET_INVALID;
 	
-	if( strcmp( set->key, "username" ) == 0 )
+	if( strcmp( set->key, "server" ) == 0 )
+	{
+		g_free( acc->server );
+		if( value && *value )
+		{
+			acc->server = g_strdup( value );
+			return value;
+		}
+		else
+		{
+			acc->server = g_strdup( set->def );
+			return g_strdup( set->def );
+		}
+	}
+	else if( strcmp( set->key, "username" ) == 0 )
 	{
 		g_free( acc->user );
 		acc->user = g_strdup( value );
@@ -86,34 +101,29 @@ char *set_eval_account( set_t *set, char *value )
 	}
 	else if( strcmp( set->key, "password" ) == 0 )
 	{
-		g_free( acc->pass );
-		acc->pass = g_strdup( value );
-		return NULL;	/* password shouldn't be visible in plaintext! */
-	}
-	else if( strcmp( set->key, "server" ) == 0 )
-	{
-		g_free( acc->server );
-		if( *value )
+		if( value )
 		{
-			acc->server = g_strdup( value );
-			return value;
+			g_free( acc->pass );
+			acc->pass = g_strdup( value );
+			return NULL;	/* password shouldn't be visible in plaintext! */
 		}
 		else
 		{
-			acc->server = NULL;
-			return g_strdup( set->def );
+			/* NULL can (should) be stored in the set_t
+			   variable, but is otherwise not correct. */
+			return SET_INVALID;
 		}
 	}
 	else if( strcmp( set->key, "auto_connect" ) == 0 )
 	{
 		if( !is_bool( value ) )
-			return NULL;
+			return SET_INVALID;
 		
 		acc->auto_connect = bool2int( value );
 		return value;
 	}
 	
-	return NULL;
+	return SET_INVALID;
 }
 
 account_t *account_get( irc_t *irc, char *id )
@@ -180,6 +190,7 @@ account_t *account_get( irc_t *irc, char *id )
 void account_del( irc_t *irc, account_t *acc )
 {
 	account_t *a, *l = NULL;
+	struct chat *c, *nc;
 	
 	if( acc->ic )
 		/* Caller should have checked, accounts still in use can't be deleted. */
@@ -192,6 +203,13 @@ void account_del( irc_t *irc, account_t *acc )
 				l->next = a->next;
 			else
 				irc->accounts = a->next;
+			
+			for( c = irc->chatrooms; c; c = nc )
+			{
+				nc = c->next;
+				if( acc == c->acc )
+					chat_del( irc, c );
+			}
 			
 			while( a->set )
 				set_del( &a->set, a->set->key );
@@ -253,7 +271,7 @@ int account_reconnect_delay_parse( char *value, struct account_reconnect_delay *
 		p->start = p->start * 10 + *value++ - '0';
 	
 	/* Sure, call me evil for implementing my own fscanf here, but it's
-	   dead simple and I'm immediately at the next part to parse. */
+	   dead simple and I immediately know where to continue parsing. */
 	
 	if( *value == 0 )
 		/* If the string ends now, the delay is constant. */
@@ -286,7 +304,7 @@ char *set_eval_account_reconnect_delay( set_t *set, char *value )
 {
 	struct account_reconnect_delay p;
 	
-	return account_reconnect_delay_parse( value, &p ) ? value : NULL;
+	return account_reconnect_delay_parse( value, &p ) ? value : SET_INVALID;
 }
 
 int account_reconnect_delay( account_t *a )

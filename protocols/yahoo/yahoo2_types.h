@@ -56,7 +56,20 @@ enum yahoo_login_status {
 	YAHOO_LOGIN_PASSWD = 13,
 	YAHOO_LOGIN_LOCK = 14,
 	YAHOO_LOGIN_DUPL = 99,
-	YAHOO_LOGIN_SOCK = -1
+	YAHOO_LOGIN_SOCK = -1,
+};
+
+enum ypacket_status {
+	YPACKET_STATUS_DISCONNECTED = -1,
+	YPACKET_STATUS_DEFAULT = 0,
+	YPACKET_STATUS_SERVERACK = 1,
+	YPACKET_STATUS_GAME     = 0x2,
+	YPACKET_STATUS_AWAY     = 0x4,
+	YPACKET_STATUS_CONTINUED = 0x5,
+	YPACKET_STATUS_INVISIBLE = 12,
+	YPACKET_STATUS_NOTIFY = 0x16, /* TYPING */
+	YPACKET_STATUS_WEBLOGIN = 0x5a55aa55,
+	YPACKET_STATUS_OFFLINE = 0x5a55aa56
 };
 
 enum yahoo_error {
@@ -84,7 +97,7 @@ enum yahoo_log_level {
 	YAHOO_LOG_DEBUG
 };
 
-#define YAHOO_PROTO_VER 0x000b
+#define YAHOO_PROTO_VER 0x0010
 
 /* Yahoo style/color directives */
 #define YAHOO_COLOR_BLACK "\033[30m"
@@ -114,7 +127,8 @@ enum yahoo_connection_type {
 	YAHOO_CONNECTION_WEBCAM_MASTER,
 	YAHOO_CONNECTION_WEBCAM,
 	YAHOO_CONNECTION_CHATCAT,
-	YAHOO_CONNECTION_SEARCH
+	YAHOO_CONNECTION_SEARCH,
+	YAHOO_CONNECTION_AUTH,
 };
 
 enum yahoo_webcam_direction_type {
@@ -130,7 +144,6 @@ enum yahoo_stealth_visibility_type {
 
 /* chat member attribs */
 #define YAHOO_CHAT_MALE 0x8000
-#define YAHOO_CHAT_FEMALE 0x10000
 #define YAHOO_CHAT_FEMALE 0x10000
 #define YAHOO_CHAT_DUNNO 0x400
 #define YAHOO_CHAT_WEBCAM 0x10

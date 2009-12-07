@@ -28,10 +28,13 @@
 #include "base64.h"
 #include "arc.h"
 #include "md5.h"
-#include <glib/gstdio.h>
+#include "chat.h"
 
-#if !GLIB_CHECK_VERSION(2,8,0)
+#if GLIB_CHECK_VERSION(2,8,0)
+#include <glib/gstdio.h>
+#else
 /* GLib < 2.8.0 doesn't have g_access, so just use the system access(). */
+#include <unistd.h>
 #define g_access access
 #endif
 
@@ -51,6 +54,8 @@ struct xml_parsedata
 	irc_t *irc;
 	char *current_setting;
 	account_t *current_account;
+	struct chat *current_chat;
+	set_t **current_set_head;
 	char *given_nick;
 	char *given_pass;
 	xml_pass_st pass_st;
@@ -169,7 +174,16 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		}
 		
 		if( ( setting = xml_attr( attr_names, attr_values, "name" ) ) )
+		{
+			if( xd->current_chat != NULL )
+				xd->current_set_head = &xd->current_chat->set;
+			else if( xd->current_account != NULL )
+				xd->current_set_head = &xd->current_account->set;
+			else
+				xd->current_set_head = &xd->irc->set;
+			
 			xd->current_setting = g_strdup( setting );
+		}
 		else
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Missing attributes for %s element", element_name );
@@ -184,6 +198,23 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		if( xd->current_account && handle && nick )
 		{
 			nick_set( xd->current_account, handle, nick );
+		}
+		else
+		{
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Missing attributes for %s element", element_name );
+		}
+	}
+	else if( g_strcasecmp( element_name, "chat" ) == 0 )
+	{
+		char *handle, *channel;
+		
+		handle = xml_attr( attr_names, attr_values, "handle" );
+		channel = xml_attr( attr_names, attr_values, "channel" );
+		
+		if( xd->current_account && handle && channel )
+		{
+			xd->current_chat = chat_add( xd->irc, xd->current_account, handle, channel );
 		}
 		else
 		{
@@ -211,13 +242,16 @@ static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name
 	{
 		xd->current_account = NULL;
 	}
+	else if( g_strcasecmp( element_name, "chat" ) == 0 )
+	{
+		xd->current_chat = NULL;
+	}
 }
 
 static void xml_text( GMarkupParseContext *ctx, const gchar *text_orig, gsize text_len, gpointer data, GError **error )
 {
 	char text[text_len+1];
 	struct xml_parsedata *xd = data;
-	irc_t *irc = xd->irc;
 	
 	strncpy( text, text_orig, text_len );
 	text[text_len] = 0;
@@ -230,8 +264,7 @@ static void xml_text( GMarkupParseContext *ctx, const gchar *text_orig, gsize te
 	}
 	else if( g_strcasecmp( g_markup_parse_context_get_element( ctx ), "setting" ) == 0 && xd->current_setting )
 	{
-		set_setstr( xd->current_account ? &xd->current_account->set : &irc->set,
-		            xd->current_setting, (char*) text );
+		set_setstr( xd->current_set_head, xd->current_setting, (char*) text );
 		g_free( xd->current_setting );
 		xd->current_setting = NULL;
 	}
@@ -255,16 +288,13 @@ static void xml_init( void )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to `%s'.", global.conf->configdir );
 }
 
-static storage_status_t xml_load_real( const char *my_nick, const char *password, irc_t *irc, xml_pass_st action )
+static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const char *password, xml_pass_st action )
 {
 	GMarkupParseContext *ctx;
 	struct xml_parsedata *xd;
 	char *fn, buf[512];
 	GError *gerr = NULL;
 	int fd, st;
-	
-	if( irc && irc->status & USTATUS_IDENTIFIED )
-		return( 1 );
 	
 	xd = g_new0( struct xml_parsedata, 1 );
 	xd->irc = irc;
@@ -317,21 +347,19 @@ static storage_status_t xml_load_real( const char *my_nick, const char *password
 	if( action == XML_PASS_CHECK_ONLY )
 		return STORAGE_OK;
 	
-	irc->status |= USTATUS_IDENTIFIED;
-	
 	return STORAGE_OK;
 }
 
-static storage_status_t xml_load( const char *my_nick, const char *password, irc_t *irc )
+static storage_status_t xml_load( irc_t *irc, const char *password )
 {
-	return xml_load_real( my_nick, password, irc, XML_PASS_UNKNOWN );
+	return xml_load_real( irc, irc->nick, password, XML_PASS_UNKNOWN );
 }
 
 static storage_status_t xml_check_pass( const char *my_nick, const char *password )
 {
 	/* This is a little bit risky because we have to pass NULL for the
 	   irc_t argument. This *should* be fine, if I didn't miss anything... */
-	return xml_load_real( my_nick, password, NULL, XML_PASS_CHECK_ONLY );
+	return xml_load_real( NULL, my_nick, password, XML_PASS_CHECK_ONLY );
 }
 
 static int xml_printf( int fd, int indent, char *fmt, ... )
@@ -367,12 +395,6 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	md5_byte_t pass_md5[21];
 	md5_state_t md5_state;
 	
-	if( irc->password == NULL )
-	{
-		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
-		return STORAGE_OTHER_ERROR;
-	}
-	
 	path2 = g_strdup( irc->nick );
 	nick_lc( path2 );
 	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, path2, ".xml" );
@@ -405,7 +427,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	g_free( pass_buf );
 	
 	for( set = irc->set; set; set = set->next )
-		if( set->value && set->def )
+		if( set->value )
 			if( !xml_printf( fd, 1, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
 				goto write_error;
 	
@@ -414,6 +436,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		unsigned char *pass_cr;
 		char *pass_b64;
 		int pass_len;
+		struct chat *c;
 		
 		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password, 12 );
 		pass_b64 = base64_encode( pass_cr, pass_len );
@@ -432,7 +455,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 			goto write_error;
 		
 		for( set = acc->set; set; set = set->next )
-			if( set->value && set->def && !( set->flags & ACC_SET_NOSAVE ) )
+			if( set->value && !( set->flags & ACC_SET_NOSAVE ) )
 				if( !xml_printf( fd, 2, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
 					goto write_error;
 		
@@ -445,6 +468,25 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		   something, there was an error. :-) */
 		if( g_hash_table_find( acc->nicks, xml_save_nick, & fd ) )
 			goto write_error;
+		
+		for( c = irc->chatrooms; c; c = c->next )
+		{
+			if( c->acc != acc )
+				continue;
+			
+			if( !xml_printf( fd, 2, "<chat handle=\"%s\" channel=\"%s\" type=\"%s\">\n",
+			                        c->handle, c->channel, "room" ) )
+				goto write_error;
+			
+			for( set = c->set; set; set = set->next )
+				if( set->value && !( set->flags & ACC_SET_NOSAVE ) )
+					if( !xml_printf( fd, 3, "<setting name=\"%s\">%s</setting>\n",
+					                        set->key, set->value ) )
+						goto write_error;
+
+			if( !xml_printf( fd, 2, "</chat>\n" ) )
+				goto write_error;
+		}
 		
 		if( !xml_printf( fd, 1, "</account>\n" ) )
 			goto write_error;

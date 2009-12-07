@@ -36,10 +36,10 @@ char *set_eval_priority( set_t *set, char *value )
 	{
 		/* Priority is a signed 8-bit integer, according to RFC 3921. */
 		if( i < -128 || i > 127 )
-			return NULL;
+			return SET_INVALID;
 	}
 	else
-		return NULL;
+		return SET_INVALID;
 	
 	/* Only run this stuff if the account is online ATM,
 	   and if the setting seems to be acceptable. */
