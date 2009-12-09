@@ -35,8 +35,6 @@ from traceback import print_exception
 
 __version__ = "0.1.1"
 
-SKYPE_SERVICE = 'com.Skype.API'
-
 def eh(type, value, tb):
 	if type != KeyboardInterrupt:
 		print_exception(type, value, tb)
