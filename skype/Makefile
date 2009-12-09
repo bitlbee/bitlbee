@@ -7,6 +7,11 @@ BITLBEE_VERSION = 1.2.3
 
 AMPATH = $(shell grep automake- $(shell which automake)|sed "s|.*'\(.*\)';|\1|")
 
+ifeq ($(AMPATH),)
+# Gentoo, it has some crappy wrapper
+AMPATH = $(shell find /usr/share/ -maxdepth 1 -name 'automake-*'|tail -n 1)
+endif
+
 ifeq ($(BITLBEE),yes)
 all: skype.$(SHARED_EXT) skyped.1
 else
