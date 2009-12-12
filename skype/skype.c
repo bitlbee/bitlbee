@@ -26,6 +26,7 @@
 
 #define SKYPE_DEFAULT_SERVER "localhost"
 #define SKYPE_DEFAULT_PORT "2727"
+#define IRC_LINE_SIZE 1024
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 /*
@@ -490,7 +491,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 {
 	struct skype_data *sd = ic->proto_data;
-	char buf[1024];
+	char buf[IRC_LINE_SIZE];
 	char *id = strchr(line, ' ');
 
 	if (!++id)
@@ -508,13 +509,13 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 		 * (3) Request its type
 		 * (4) Query chatname
 		 */
-		g_snprintf(buf, 1024, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
 		skype_write(ic, buf);
-		g_snprintf(buf, 1024, "GET CHATMESSAGE %s BODY\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHATMESSAGE %s BODY\n", id);
 		skype_write(ic, buf);
-		g_snprintf(buf, 1024, "GET CHATMESSAGE %s TYPE\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHATMESSAGE %s TYPE\n", id);
 		skype_write(ic, buf);
-		g_snprintf(buf, 1024, "GET CHATMESSAGE %s CHATNAME\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHATMESSAGE %s CHATNAME\n", id);
 		skype_write(ic, buf);
 	} else if (!strncmp(info, "FROM_HANDLE ", 12)) {
 		info += 12;
@@ -550,10 +551,10 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 				if (!strcmp(sd->type, "SAID") ||
 					!strcmp(sd->type, "EMOTED")) {
 					if (!strcmp(sd->type, "SAID"))
-						g_snprintf(buf, 1024, "%s",
+						g_snprintf(buf, IRC_LINE_SIZE, "%s",
 							body);
 					else
-						g_snprintf(buf, 1024, "/me %s",
+						g_snprintf(buf, IRC_LINE_SIZE, "/me %s",
 							body);
 					if (!gc)
 						/* Private message */
@@ -580,7 +581,7 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 {
 	struct skype_data *sd = ic->proto_data;
 	char *id = strchr(line, ' ');
-	char buf[1024];
+	char buf[IRC_LINE_SIZE];
 
 	if (!++id)
 		return;
@@ -596,23 +597,23 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 		if (sd->call_id)
 			g_free(sd->call_id);
 		sd->call_id = g_strdup(id);
-		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CALL %s PARTNER_HANDLE\n", id);
 		skype_write(ic, buf);
 		sd->call_status = SKYPE_CALL_RINGING;
 	} else if (!strcmp(info, "STATUS MISSED")) {
-		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CALL %s PARTNER_HANDLE\n", id);
 		skype_write(ic, buf);
 		sd->call_status = SKYPE_CALL_MISSED;
 	} else if (!strcmp(info, "STATUS CANCELLED")) {
-		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CALL %s PARTNER_HANDLE\n", id);
 		skype_write(ic, buf);
 		sd->call_status = SKYPE_CALL_CANCELLED;
 	} else if (!strcmp(info, "STATUS FINISHED")) {
-		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CALL %s PARTNER_HANDLE\n", id);
 		skype_write(ic, buf);
 		sd->call_status = SKYPE_CALL_FINISHED;
 	} else if (!strcmp(info, "STATUS REFUSED")) {
-		g_snprintf(buf, 1024, "GET CALL %s PARTNER_HANDLE\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CALL %s PARTNER_HANDLE\n", id);
 		skype_write(ic, buf);
 		sd->call_status = SKYPE_CALL_REFUSED;
 	} else if (!strcmp(info, "STATUS UNPLACED")) {
@@ -639,7 +640,7 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 				imcb_log(ic, "You are currently ringing "
 					"the user %s.", info);
 			else {
-				g_snprintf(buf, 1024,
+				g_snprintf(buf, IRC_LINE_SIZE,
 					"The user %s is currently ringing you.",
 					info);
 				skype_call_ask(ic, sd->call_id, buf);
@@ -688,7 +689,7 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 {
 	struct skype_data *sd = ic->proto_data;
-	char buf[1024];
+	char buf[IRC_LINE_SIZE];
 	char *id = strchr(line, ' ');
 
 	if (!++id)
@@ -700,12 +701,12 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 	*info = '\0';
 	info++;
 	if (!strcmp(info, "STATUS NEW")) {
-		g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n",
+		g_snprintf(buf, IRC_LINE_SIZE, "GET FILETRANSFER %s PARTNER_HANDLE\n",
 			id);
 		skype_write(ic, buf);
 		sd->filetransfer_status = SKYPE_FILETRANSFER_NEW;
 	} else if (!strcmp(info, "STATUS FAILED")) {
-		g_snprintf(buf, 1024, "GET FILETRANSFER %s PARTNER_HANDLE\n",
+		g_snprintf(buf, IRC_LINE_SIZE, "GET FILETRANSFER %s PARTNER_HANDLE\n",
 			id);
 		skype_write(ic, buf);
 		sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
@@ -730,7 +731,7 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 static void skype_parse_chat(struct im_connection *ic, char *line)
 {
 	struct skype_data *sd = ic->proto_data;
-	char buf[1024];
+	char buf[IRC_LINE_SIZE];
 	char *id = strchr(line, ' ');
 
 	if (!++id)
@@ -748,9 +749,9 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		imcb_chat_free(gc);
 	if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
 		imcb_chat_new(ic, id);
-		g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHAT %s ADDER\n", id);
 		skype_write(ic, buf);
-		g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHAT %s TOPIC\n", id);
 		skype_write(ic, buf);
 	} else if (!strcmp(info, "STATUS DIALOG") && sd->groupchat_with) {
 		gc = imcb_chat_new(ic, id);
@@ -760,16 +761,16 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		 * and it would open an extra
 		 * window on our client, so
 		 * just leave it out. */
-		/*g_snprintf(buf, 1024, "OPEN CHAT %s\n", id);
+		/*g_snprintf(buf, IRC_LINE_SIZE, "OPEN CHAT %s\n", id);
 		  skype_write(ic, buf);*/
-		g_snprintf(buf, 1024, "%s@skype.com", sd->groupchat_with);
+		g_snprintf(buf, IRC_LINE_SIZE, "%s@skype.com", sd->groupchat_with);
 		imcb_chat_add_buddy(gc, buf);
 		imcb_chat_add_buddy(gc, sd->username);
 		g_free(sd->groupchat_with);
 		sd->groupchat_with = NULL;
-		g_snprintf(buf, 1024, "GET CHAT %s ADDER\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHAT %s ADDER\n", id);
 		skype_write(ic, buf);
-		g_snprintf(buf, 1024, "GET CHAT %s TOPIC\n", id);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHAT %s TOPIC\n", id);
 		skype_write(ic, buf);
 	} else if (!strcmp(info, "STATUS UNSUBSCRIBED")) {
 		gc = skype_chat_by_name(ic, id);
@@ -805,7 +806,7 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		for (i = 0; members[i]; i++) {
 			if (!strcmp(members[i], sd->username))
 				continue;
-			g_snprintf(buf, 1024, "%s@skype.com", members[i]);
+			g_snprintf(buf, IRC_LINE_SIZE, "%s@skype.com", members[i]);
 			if (!g_list_find_custom(gc->in_room, buf,
 				(GCompareFunc)strcmp))
 				imcb_chat_add_buddy(gc, buf);
@@ -837,15 +838,15 @@ static void skype_parse_ping(struct im_connection *ic, char *line)
 
 static void skype_parse_chats(struct im_connection *ic, char *line)
 {
-	char buf[1024];
+	char buf[IRC_LINE_SIZE];
 	char **i;
 	char **chats = g_strsplit(line + 6, ", ", 0);
 
 	i = chats;
 	while (*i) {
-		g_snprintf(buf, 1024, "GET CHAT %s STATUS\n", *i);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHAT %s STATUS\n", *i);
 		skype_write(ic, buf);
-		g_snprintf(buf, 1024, "GET CHAT %s ACTIVEMEMBERS\n", *i);
+		g_snprintf(buf, IRC_LINE_SIZE, "GET CHAT %s ACTIVEMEMBERS\n", *i);
 		skype_write(ic, buf);
 		i++;
 	}
@@ -859,7 +860,7 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 {
 	struct im_connection *ic = data;
 	struct skype_data *sd = ic->proto_data;
-	char buf[1024];
+	char buf[IRC_LINE_SIZE];
 	int st, i;
 	char **lines, **lineptr, *line;
 	static struct parse_map {
