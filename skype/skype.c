@@ -137,11 +137,10 @@ const struct skype_away_state skype_away_state_list[] = {
  * Functions
  */
 
-int skype_write(struct im_connection *ic, char *buf)
+int skype_write(struct im_connection *ic, char *buf, int len)
 {
 	struct skype_data *sd = ic->proto_data;
 	struct pollfd pfd[1];
-	int len = strlen(buf);
 
 	pfd[0].fd = sd->fd;
 	pfd[0].events = POLLOUT;
@@ -167,7 +166,7 @@ int skype_printf(struct im_connection *ic, char *fmt, ...)
 	vsnprintf(str, IRC_LINE_SIZE, fmt, args);
 	va_end(args);
 
-	return skype_write(ic, str);
+	return skype_write(ic, str, strlen(str));
 }
 
 static void skype_buddy_ask_yes(void *data)
