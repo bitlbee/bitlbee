@@ -12,7 +12,7 @@ else
 fi
 
 case "`$CC -dumpmachine`" in
-	*linux*)
+	*linux*|*freebsd*)
 		SHARED_FLAGS="-fPIC -shared"
 		SHARED_EXT="so"
 		;;
