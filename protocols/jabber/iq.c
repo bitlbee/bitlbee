@@ -98,9 +98,9 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			                           XMLNS_CHATSTATES,
 			                           XMLNS_MUC,
 			                           XMLNS_PING,
-						   XMLNS_SI,
-						   XMLNS_BYTESTREAMS,
-						   XMLNS_FILETRANSFER,
+			                           XMLNS_SI,
+			                           XMLNS_BYTESTREAMS,
+			                           XMLNS_FILETRANSFER,
 			                           NULL };
 			const char **f;
 			
@@ -126,16 +126,18 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	}
 	else if( strcmp( type, "set" ) == 0 )
 	{
-		if(  ( c = xt_find_node( node->children, "si" ) ) &&
-		     ( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_SI ) == 0 ) )
+		if( ( c = xt_find_node( node->children, "si" ) ) &&
+		    ( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_SI ) == 0 ) )
 		{
 			return jabber_si_handle_request( ic, node, c );
-		} else if( !( c = xt_find_node( node->children, "query" ) ) ||
-		    !( s = xt_find_attr( c, "xmlns" ) ) )
+		}
+		else if( !( c = xt_find_node( node->children, "query" ) ) ||
+		         !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
 			imcb_log( ic, "Warning: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
-		} else if( strcmp( s, XMLNS_ROSTER ) == 0 )
+		}
+		else if( strcmp( s, XMLNS_ROSTER ) == 0 )
 		{
 		/* This is a roster push. XMPP servers send this when someone
 		   was added to (or removed from) the buddy list. AFAIK they're
@@ -159,11 +161,13 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 				reply = jabber_make_error_packet( node, "not-allowed", "cancel", NULL );
 				pack = 0;
 			}
-		} else if( strcmp( s, XMLNS_BYTESTREAMS ) == 0 )
+		}
+		else if( strcmp( s, XMLNS_BYTESTREAMS ) == 0 )
 		{
-		     	/* Bytestream Request (stage 2 of file transfer) */
+			/* Bytestream Request (stage 2 of file transfer) */
 			return jabber_bs_recv_request( ic, node, c );
-		} else
+		}
+		else
 		{
 			xt_free_node( reply );
 			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel", NULL );
@@ -654,9 +658,10 @@ xt_status jabber_iq_parse_features( struct im_connection *ic, struct xt_node *no
 	}
 	
 	c = c->children;
-	while( ( c = xt_find_node( c, "feature" ) ) ) {
+	while( ( c = xt_find_node( c, "feature" ) ) )
+	{
 		feature = xt_find_attr( c, "var" );
-		bud->features = g_slist_append(bud->features, g_strdup(feature) );
+		bud->features = g_slist_append( bud->features, g_strdup( feature ) );
 		c = c->next;
 	}
 
@@ -718,7 +723,8 @@ xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_n
 
 			c = c->next;
 		}
-	} else if( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_DISCO_INFO ) == 0 )
+	}
+	else if( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_DISCO_INFO ) == 0 )
 	{
 		char *category, *type;
 
@@ -736,7 +742,8 @@ xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_n
 
 			c = c->next;
 		}
-	} else if( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_BYTESTREAMS ) == 0 )
+	}
+	else if( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_BYTESTREAMS ) == 0 )
 	{
 		char *host, *jid;
 		int port;
@@ -760,5 +767,6 @@ xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_n
 
 	if( jd->have_streamhosts == 0 )
 		jd->have_streamhosts++;
+
 	return XT_HANDLED;
 }

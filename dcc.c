@@ -114,7 +114,8 @@ void imcb_file_finished( file_transfer_t *file )
 dcc_file_transfer_t *dcc_alloc_transfer( char *file_name, size_t file_size, struct im_connection *ic )
 {
 	file_transfer_t *file = g_new0( file_transfer_t, 1 );
-	dcc_file_transfer_t *df = file->priv = g_new0( dcc_file_transfer_t, 1);
+	dcc_file_transfer_t *df = file->priv = g_new0( dcc_file_transfer_t, 1 );
+	
 	file->file_size = file_size;
 	file->file_name = g_strdup( file_name );
 	file->local_id = local_transfer_id++;
@@ -143,7 +144,8 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 
 	/* listen and request */
 
-	if( ( df->fd = ft_listen( &saddr, host, port, TRUE, &errmsg ) ) == -1 ) {
+	if( ( df->fd = ft_listen( &saddr, host, port, TRUE, &errmsg ) ) == -1 )
+	{
 		dcc_abort( df, "Failed to listen locally, check your ft_listen setting in bitlbee.conf: %s", errmsg );
 		return NULL;
 	}
@@ -160,9 +162,10 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 
 	df->progress_timeout = b_timeout_add( DCC_MAX_STALL * 1000, dcc_progress, df );
 
-	imcb_log( ic, "File transfer request from %s for %s (%zd kb). ", user_nick, file_name, file_size/1024 );
-
-	imcb_log( ic, "Accept the file transfer if you'd like the file. If you don't, issue the 'transfers reject' command.");
+	imcb_log( ic, "File transfer request from %s for %s (%zd kb).\n"
+	              "Accept the file transfer if you'd like the file. If you don't, "
+	              "issue the 'transfers reject' command.",
+	              user_nick, file_name, file_size / 1024 );
 
 	return file;
 }
@@ -198,7 +201,7 @@ gboolean dcc_progress( gpointer data, gint fd, b_input_condition cond )
 	{
 		/* no progress. cancel */
 		if( df->bytes_sent == 0 )
-			return dcc_abort( df, "Couldnt establish transfer within %d seconds", DCC_MAX_STALL );
+			return dcc_abort( df, "Couldn't establish transfer within %d seconds", DCC_MAX_STALL );
 		else 
 			return dcc_abort( df, "Transfer stalled for %d seconds at %d kb", DCC_MAX_STALL, df->bytes_sent / 1024 );
 
@@ -229,7 +232,8 @@ int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct soc
 		sprintf( ipaddr, "%d", 
 			 ntohl( saddr_ipv4->sin_addr.s_addr ) );
 		port = saddr_ipv4->sin_port;
-	} else 
+	}
+	else 
 	{
 		struct sockaddr_in6 *saddr_ipv6 = ( struct sockaddr_in6 *) saddr;
 
@@ -249,7 +253,7 @@ int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct soc
 				df->ft->file_name, ipaddr, port, df->ft->file_size );
 	
 	if ( !irc_msgfrom( df->ic->irc, user_nick, cmd ) )
-		return dcc_abort( df, "couldn't send 'DCC SEND' message to %s", user_nick );
+		return dcc_abort( df, "Couldn't send `DCC SEND' message to %s.", user_nick );
 
 	g_free( cmd );
 
@@ -312,7 +316,7 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 	file_transfer_t *file = df->ft;
 	short revents;
 	
-	if( !dcc_poll( df, fd, &revents) )
+	if( !dcc_poll( df, fd, &revents ) )
 		return FALSE;
 
 	if( ( revents & POLLIN ) &&
@@ -348,18 +352,18 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 		int bytes_received;
 		int ret;
 		
-		ASSERTSOCKOP( ret = recv( fd, &bytes_received, sizeof( bytes_received  ), MSG_PEEK ), "Receiving" );
+		ASSERTSOCKOP( ret = recv( fd, &bytes_received, sizeof( bytes_received ), MSG_PEEK ), "Receiving" );
 
 		if( ret == 0 )
 			return dcc_abort( df, "Remote end closed connection" );
 			
 		if( ret < 4 )
 		{
-			imcb_log( df->ic, "WARNING: DCC SEND: receiver sent only 2 bytes instead of 4, shouldn't happen too often!" );
+			imcb_log( df->ic, "WARNING: DCC SEND: receiver sent only %d bytes instead of 4, shouldn't happen too often!", ret );
 			return TRUE;
 		}
 
-		ASSERTSOCKOP( ret = recv( fd, &bytes_received, sizeof( bytes_received  ), 0 ), "Receiving" );
+		ASSERTSOCKOP( ret = recv( fd, &bytes_received, sizeof( bytes_received ), 0 ), "Receiving" );
 		if( ret != 4 )
 			return dcc_abort( df, "MSG_PEEK'ed 4, but can only dequeue %d bytes", ret );
 
@@ -399,7 +403,7 @@ gboolean dccs_recv_start( file_transfer_t *ft )
 	if( !ft->write )
 		return dcc_abort( df, "BUG: protocol didn't register write()" );
 	
-	ASSERTSOCKOP( fd = df->fd = socket( saddr->ss_family, SOCK_STREAM, 0 ) , "Opening Socket" );
+	ASSERTSOCKOP( fd = df->fd = socket( saddr->ss_family, SOCK_STREAM, 0 ), "Opening Socket" );
 
 	sock_make_nonblocking( fd );
 
@@ -428,7 +432,7 @@ gboolean dccs_recv_start( file_transfer_t *ft )
 	return TRUE;
 }
 
-gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond)
+gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond )
 {
 	dcc_file_transfer_t *df = data;
 	file_transfer_t *ft = df->ft;

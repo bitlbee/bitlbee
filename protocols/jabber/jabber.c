@@ -62,6 +62,8 @@ static void jabber_init( account_t *acc )
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
 	s = set_add( &acc->set, "priority", "0", set_eval_priority, acc );
+
+	s = set_add( &acc->set, "proxy", "<local>;<auto>", NULL, acc );
 	
 	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -79,8 +81,6 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "xmlconsole", "false", set_eval_bool, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
-
-	s = set_add( &acc->set, "proxy", "<local>;<auto>", NULL, acc );
 }
 
 static void jabber_generate_id_hash( struct jabber_data *jd );

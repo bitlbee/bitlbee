@@ -173,11 +173,13 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->acc->user );
 			buf = g_new0( char, i );
 			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->acc->user );
-		} else if( strncmp( text, MSN_INVITE_HEADERS, sizeof( MSN_INVITE_HEADERS ) - 1 ) == 0 ) 
+		}
+		else if( strncmp( text, MSN_INVITE_HEADERS, sizeof( MSN_INVITE_HEADERS ) - 1 ) == 0 ) 
 		{
 			buf = g_strdup( text );
 			i = strlen( buf );
-		} else
+		}
+		else
 		{
 			buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 + 1 );
 			i = strlen( MSN_MESSAGE_HEADERS );

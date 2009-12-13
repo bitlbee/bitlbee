@@ -77,7 +77,7 @@ static void msn_logout( struct im_connection *ic )
 	if( md )
 	{
 		while( md->filetransfers ) {
-			imcb_file_canceled( md->filetransfers->data, "Closing msn connection" );
+			imcb_file_canceled( md->filetransfers->data, "Closing connection" );
 		}
 		
 		if( md->fd >= 0 )

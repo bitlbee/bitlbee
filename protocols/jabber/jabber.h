@@ -59,7 +59,7 @@ typedef enum
 	                                   have a real JID. */
 } jabber_buddy_flags_t;
 
-/* Stores a streamhost's(a.k.a. proxy) data */
+/* Stores a streamhost's (a.k.a. proxy) data */
 typedef struct
 {
 	char *jid;
