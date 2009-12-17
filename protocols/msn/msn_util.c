@@ -373,6 +373,6 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list )
 	g_slist_free( *list );
 	*list = NULL;
 	
-	imcb_log( ic, ret->str );
+	imcb_log( ic, "%s", ret->str );
 	g_string_free( ret, TRUE );
 }

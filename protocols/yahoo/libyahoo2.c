@@ -1529,12 +1529,19 @@ static void yahoo_process_buddy_list(struct yahoo_input_data *yid, struct yahoo_
 		case 7:
 			newbud = y_new0(struct yahoo_buddy, 1);
 			newbud->id = strdup(pair->value);
-			if(cur_group)
+			if (cur_group) {
 				newbud->group = strdup(cur_group);
-			else {
-				struct yahoo_buddy *lastbud = (struct yahoo_buddy *)y_list_nth(
-								yd->buddies, y_list_length(yd->buddies)-1)->data;
-				newbud->group = strdup(lastbud->group);
+			} else {
+				YList *last;
+				struct yahoo_buddy *lastbud;
+				
+				for (last = yd->buddies; last && last->next; last = last->next);
+				if (last) {
+					lastbud = last->data;
+					newbud->group = strdup(lastbud->group);
+				} else {
+					newbud->group = strdup("Buddies");
+				}
 			}
 
 			yd->buddies = y_list_append(yd->buddies, newbud);
@@ -2392,9 +2399,15 @@ static void yahoo_https_auth_token_init(struct yahoo_https_auth_data *had)
 static void yahoo_https_auth_token_finish(struct http_request *req)
 {
 	struct yahoo_https_auth_data *had = req->data;
-	struct yahoo_input_data *yid = had->yid;
-	struct yahoo_data *yd = yid->yd;
+	struct yahoo_input_data *yid;
+	struct yahoo_data *yd;
 	int st;
+	
+	if (y_list_find(inputs, had->yid) == NULL)
+		return;
+	
+	yid = had->yid;
+	yd = yid->yd;
 	
 	if (req->status_code != 200) {
 		YAHOO_CALLBACK(ext_yahoo_login_response)(yd->client_id, 2000 + req->status_code, NULL);
@@ -2435,11 +2448,17 @@ static void yahoo_https_auth_init(struct yahoo_https_auth_data *had)
 static void yahoo_https_auth_finish(struct http_request *req)
 {
 	struct yahoo_https_auth_data *had = req->data;
-	struct yahoo_input_data *yid = had->yid;
-	struct yahoo_data *yd = yid->yd;
+	struct yahoo_input_data *yid;
+	struct yahoo_data *yd;
 	struct yahoo_packet *pack;
-	char *crumb;
+	char *crumb = NULL;
 	int st;
+	
+	if (y_list_find(inputs, had->yid) == NULL)
+		return;
+	
+	yid = had->yid;
+	yd = yid->yd;
 	
 	md5_byte_t result[16];
 	md5_state_t ctx;
