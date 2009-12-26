@@ -414,7 +414,7 @@ static void prplcb_conv_im( PurpleConversation *conv, const char *who, const cha
 	
 	buddy = purple_find_buddy( conv->account, who );
 	if( buddy != NULL )
-		who = purple_buddy_get_contact_alias( buddy );
+		who = purple_buddy_get_name( buddy );
 	
 	imcb_buddy_msg( ic, (char*) who, (char*) message, 0, mtime );
 }
