@@ -11,7 +11,7 @@
 # [SH] Program variables
 objects = purple.o
 
-CFLAGS += -Wall $$(pkg-config purple --cflags)
+CFLAGS += -Wall $(PURPLE_CFLAGS)
 LFLAGS += -r
 
 # [SH] Phony targets

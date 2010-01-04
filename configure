@@ -452,8 +452,16 @@ protoobjs=''
 if [ "$purple" = 0 ]; then
 	echo '#undef WITH_PURPLE' >> config.h
 else
+	if ! $PKG_CONFIG purple; then
+		echo
+		echo 'Cannot find libpurple development libraries, aborting. (Install libpurple-dev?)'
+		exit 1
+	fi
 	echo '#define WITH_PURPLE' >> config.h
-	echo 'EFLAGS += $$(pkg-config purple --libs)' >> Makefile.settings
+	cat<<EOF>>Makefile.settings
+EFLAGS += $($PKG_CONFIG purple --libs)
+PURPLE_CFLAGS += $($PKG_CONFIG purple --cflags)
+EOF
 	protocols=$protocols'purple '
 	protoobjs=$protoobjs'purple_mod.o '
 
