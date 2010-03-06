@@ -199,8 +199,10 @@ static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
 	
-	if( state )
+	if( state && msg == NULL )
 	{
+		/* Use these states only if msg doesn't contain additional
+		   info since away messages are only supported with CUSTOM. */
 		if( g_strcasecmp( state, "Be Right Back" ) == 0 )
 			yd->current_status = YAHOO_STATUS_BRB;
 		else if( g_strcasecmp( state, "Busy" ) == 0 )
@@ -224,6 +226,8 @@ static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 		else
 			yd->current_status = YAHOO_STATUS_CUSTOM;
 	}
+	else if( state )
+		yd->current_status = YAHOO_STATUS_CUSTOM;
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
 	

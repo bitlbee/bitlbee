@@ -4086,9 +4086,6 @@ void yahoo_send_typing(int id, const char *from, const char *who, int typ)
 	yahoo_packet_free(pkt);
 }
 
-/* TODO(wilmer): See if this this function still works since I got rid of a
-                 lot of things that seemed illogical. Some things may have
-                 been intentional. */
 void yahoo_set_away(int id, enum yahoo_status state, const char *msg, int away)
 {
 	struct yahoo_input_data *yid = find_input_by_id_and_type(id, YAHOO_CONNECTION_PAGER);
@@ -4117,7 +4114,7 @@ void yahoo_set_away(int id, enum yahoo_status state, const char *msg, int away)
 	pkt = yahoo_packet_new(YAHOO_SERVICE_Y6_STATUS_UPDATE, yd->current_status, yd->session_id);
 	snprintf(s, sizeof(s), "%d", yd->current_status);
 	yahoo_packet_hash(pkt, 10, s);
-	yahoo_packet_hash(pkt, 19, msg);
+	yahoo_packet_hash(pkt, 19, msg && state == YAHOO_STATUS_CUSTOM ? msg : "");
 	yahoo_packet_hash(pkt, 47, (away == 2)? "2": (away) ?"1":"0");
 	yahoo_send_packet(yid, pkt, 0);
 	yahoo_packet_free(pkt);
