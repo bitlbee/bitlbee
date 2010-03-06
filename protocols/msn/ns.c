@@ -419,11 +419,12 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( !st )
 		{
 			/* FIXME: Warn/Bomb about unknown away state? */
-			st = msn_away_state_list;
+			st = msn_away_state_list + 1;
 		}
 		
-		imcb_buddy_status( ic, cmd[3], OPT_LOGGED_IN |
-		                   ( st->number ? OPT_AWAY : 0 ), st->name, NULL );
+		imcb_buddy_status( ic, cmd[3], OPT_LOGGED_IN | 
+		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ),
+		                   st->name, NULL );
 	}
 	else if( strcmp( cmd[0], "FLN" ) == 0 )
 	{
@@ -448,11 +449,12 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( !st )
 		{
 			/* FIXME: Warn/Bomb about unknown away state? */
-			st = msn_away_state_list;
+			st = msn_away_state_list + 1;
 		}
 		
-		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN |
-		                   ( st->number ? OPT_AWAY : 0 ), st->name, NULL );
+		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN | 
+		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ),
+		                   st->name, NULL );
 	}
 	else if( strcmp( cmd[0], "RNG" ) == 0 )
 	{

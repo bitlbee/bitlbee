@@ -138,8 +138,9 @@ static GList *msn_away_states( struct im_connection *ic )
 	int i;
 	
 	if( l == NULL )
-		for( i = 0; msn_away_state_list[i].number > -1; i ++ )
-			l = g_list_append( l, (void*) msn_away_state_list[i].name );
+		for( i = 0; *msn_away_state_list[i].code; i ++ )
+			if( *msn_away_state_list[i].name )
+				l = g_list_append( l, (void*) msn_away_state_list[i].name );
 	
 	return l;
 }
@@ -148,17 +149,14 @@ static void msn_set_away( struct im_connection *ic, char *state, char *message )
 {
 	char buf[1024];
 	struct msn_data *md = ic->proto_data;
-	const struct msn_away_state *st;
 	
-	if( strcmp( state, GAIM_AWAY_CUSTOM ) == 0 )
-		st = msn_away_state_by_name( "Away" );
+	if( state )
+		md->away_state = msn_away_state_by_name( state ) ? :
+		                 msn_away_state_list + 1;
 	else
-		st = msn_away_state_by_name( state );
+		md->away_state = msn_away_state_list;
 	
-	if( !st ) st = msn_away_state_list;
-	md->away_state = st;
-	
-	g_snprintf( buf, sizeof( buf ), "CHG %d %s\r\n", ++md->trId, st->code );
+	g_snprintf( buf, sizeof( buf ), "CHG %d %s\r\n", ++md->trId, md->away_state->code );
 	msn_write( ic, buf, strlen( buf ) );
 }
 

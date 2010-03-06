@@ -28,48 +28,37 @@
 
 const struct msn_away_state msn_away_state_list[] =
 {
-	{  0, "NLN", "Available" },
-	{  1, "BSY", "Busy" },
-	{  3, "IDL", "Idle" },
-	{  5, "BRB", "Be Right Back" },
-	{  7, "AWY", "Away" },
-	{  9, "PHN", "On the Phone" },
-	{ 11, "LUN", "Out to Lunch" },
-	{ 13, "HDN", "Hidden" },
-	{ -1, "",    "" }
+	{ "NLN", "" },
+	{ "BSY", "Busy" },
+	{ "IDL", "Idle" },
+	{ "BRB", "Be Right Back" },
+	{ "AWY", "Away" },
+	{ "PHN", "On the Phone" },
+	{ "LUN", "Out to Lunch" },
+	{ "HDN", "Hidden" },
+	{ "",    "" }
 };
-
-const struct msn_away_state *msn_away_state_by_number( int number )
-{
-	int i;
-	
-	for( i = 0; msn_away_state_list[i].number > -1; i ++ )
-		if( msn_away_state_list[i].number == number )
-			return( msn_away_state_list + i );
-	
-	return( NULL );
-}
 
 const struct msn_away_state *msn_away_state_by_code( char *code )
 {
 	int i;
 	
-	for( i = 0; msn_away_state_list[i].number > -1; i ++ )
+	for( i = 0; *msn_away_state_list[i].code; i ++ )
 		if( g_strcasecmp( msn_away_state_list[i].code, code ) == 0 )
 			return( msn_away_state_list + i );
 	
-	return( NULL );
+	return NULL;
 }
 
 const struct msn_away_state *msn_away_state_by_name( char *name )
 {
 	int i;
 	
-	for( i = 0; msn_away_state_list[i].number > -1; i ++ )
+	for( i = 0; *msn_away_state_list[i].code; i ++ )
 		if( g_strcasecmp( msn_away_state_list[i].name, name ) == 0 )
 			return( msn_away_state_list + i );
 	
-	return( NULL );
+	return NULL;
 }
 
 const struct msn_status_code msn_status_code_list[] =
