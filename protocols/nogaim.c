@@ -1069,51 +1069,24 @@ int imc_chat_msg( struct groupchat *c, char *msg, int flags )
 	return 1;
 }
 
-static char *imc_away_alias_find( GList *gcm, char *away );
+static char *imc_away_state_find( GList *gcm, char *away, char **message );
 
 int imc_set_away( struct im_connection *ic, char *away )
 {
-	GList *m, *ms;
-	char *s;
+	char *s = NULL, *msg = away;
 	
-	if( !away ) away = "";
-	ms = m = ic->acc->prpl->away_states( ic );
-	
-	while( m )
+	if( away && *away )
 	{
-		if( *away )
-		{
-			if( g_strncasecmp( m->data, away, strlen( m->data ) ) == 0 )
-				break;
-		}
-		else
-		{
-			if( g_strcasecmp( m->data, "Available" ) == 0 )
-				break;
-			if( g_strcasecmp( m->data, "Online" ) == 0 )
-				break;
-		}
-		m = m->next;
+		GList *m = ic->acc->prpl->away_states( ic );
+		s = imc_away_state_find( m, away, &msg ) ? : m->data;
 	}
 	
-	if( m )
-	{
-		ic->acc->prpl->set_away( ic, m->data, *away ? away : NULL );
-	}
-	else
-	{
-		s = imc_away_alias_find( ms, away );
-		if( s )
-		{
-			ic->acc->prpl->set_away( ic, s, away );
-			if( set_getbool( &ic->irc->set, "debug" ) )
-				imcb_log( ic, "Setting away state to %s", s );
-		}
-		else
-			ic->acc->prpl->set_away( ic, GAIM_AWAY_CUSTOM, away );
-	}
+	if( set_getbool( &ic->irc->set, "debug" ) )
+		imcb_log( ic, "Setting away state to %s", s );
 	
-	return( 1 );
+	ic->acc->prpl->set_away( ic, s, ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? msg : NULL );
+	
+	return 1;
 }
 
 static char *imc_away_alias_list[8][5] =
@@ -1128,16 +1101,33 @@ static char *imc_away_alias_list[8][5] =
 	{ NULL }
 };
 
-static char *imc_away_alias_find( GList *gcm, char *away )
+static char *imc_away_state_find( GList *gcm, char *away, char **message )
 {
 	GList *m;
 	int i, j;
 	
+	for( m = gcm; m; m = m->next )
+		if( g_strncasecmp( m->data, away, strlen( m->data ) ) == 0 )
+		{
+			/* At least the Yahoo! module works better if message
+			   contains no data unless it adds something to what
+			   we have in state already. */
+			if( strlen( m->data ) == strlen( away ) )
+				*message = NULL;
+			
+			return m->data;
+		}
+	
 	for( i = 0; *imc_away_alias_list[i]; i ++ )
 	{
+		int keep_message;
+		
 		for( j = 0; imc_away_alias_list[i][j]; j ++ )
 			if( g_strncasecmp( away, imc_away_alias_list[i][j], strlen( imc_away_alias_list[i][j] ) ) == 0 )
+			{
+				keep_message = strlen( away ) != strlen( imc_away_alias_list[i][j] );
 				break;
+			}
 		
 		if( !imc_away_alias_list[i][j] )	/* If we reach the end, this row */
 			continue;			/* is not what we want. Next!    */
@@ -1145,17 +1135,22 @@ static char *imc_away_alias_find( GList *gcm, char *away )
 		/* Now find an entry in this row which exists in gcm */
 		for( j = 0; imc_away_alias_list[i][j]; j ++ )
 		{
-			m = gcm;
-			while( m )
-			{
+			for( m = gcm; m; m = m->next )
 				if( g_strcasecmp( imc_away_alias_list[i][j], m->data ) == 0 )
-					return( imc_away_alias_list[i][j] );
-				m = m->next;
-			}
+				{
+					if( !keep_message )
+						*message = NULL;
+					
+					return imc_away_alias_list[i][j];
+				}
 		}
+		
+		/* No need to look further, apparently this state doesn't
+		   have any good alias for this protocol. */
+		break;
 	}
 	
-	return( NULL );
+	return NULL;
 }
 
 void imc_add_allow( struct im_connection *ic, char *handle )
