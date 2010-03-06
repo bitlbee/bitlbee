@@ -29,10 +29,10 @@
 const struct msn_away_state msn_away_state_list[] =
 {
 	{ "NLN", "" },
+	{ "AWY", "Away" },
 	{ "BSY", "Busy" },
 	{ "IDL", "Idle" },
 	{ "BRB", "Be Right Back" },
-	{ "AWY", "Away" },
 	{ "PHN", "On the Phone" },
 	{ "LUN", "Out to Lunch" },
 	{ "HDN", "Hidden" },
