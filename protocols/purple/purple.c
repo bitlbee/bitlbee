@@ -194,7 +194,11 @@ static GList *purple_away_states( struct im_connection *ic )
 	GList *st, *ret = NULL;
 	
 	for( st = purple_account_get_status_types( pa ); st; st = st->next )
-		ret = g_list_append( ret, (void*) purple_status_type_get_name( st->data ) );
+	{
+		PurpleStatusPrimitive prim = purple_status_type_get_primitive( st->data );
+		if( prim != PURPLE_STATUS_AVAILABLE && prim != PURPLE_STATUS_OFFLINE )
+			ret = g_list_append( ret, (void*) purple_status_type_get_name( st->data ) );
+	}
 	
 	return ret;
 }
@@ -204,17 +208,31 @@ static void purple_set_away( struct im_connection *ic, char *state_txt, char *me
 	PurpleAccount *pa = ic->proto_data;
 	GList *status_types = purple_account_get_status_types( pa ), *st;
 	PurpleStatusType *pst = NULL;
+	GList *args = NULL;
 	
 	for( st = status_types; st; st = st->next )
 	{
 		pst = st->data;
 		
-		if( g_strcasecmp( state_txt, purple_status_type_get_name( pst ) ) == 0 )
+		if( state_txt == NULL &&
+		    purple_status_type_get_primitive( st->data ) == PURPLE_STATUS_AVAILABLE )
+			break;
+
+		if( state_txt != NULL &&
+		    g_strcasecmp( state_txt, purple_status_type_get_name( pst ) ) == 0 )
 			break;
 	}
 	
-	purple_account_set_status( pa, st ? purple_status_type_get_id( pst ) : "away",
-	                           TRUE, "message", message, NULL );
+	if( message )
+	{
+		args = g_list_append( args, "message" );
+		args = g_list_append( args, message );
+	}
+	
+	purple_account_set_status_list( pa, st ? purple_status_type_get_id( pst ) : "away",
+		                        TRUE, args );
+
+	g_list_free( args );
 }
 
 static void purple_add_buddy( struct im_connection *ic, char *who, char *group )
