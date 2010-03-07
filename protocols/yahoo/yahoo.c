@@ -129,6 +129,8 @@ static char *byahoo_strip( const char *in )
 static void byahoo_init( account_t *acc )
 {
 	set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
+	
+	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE;
 }
 
 static void byahoo_login( account_t *acc )
@@ -196,29 +198,12 @@ static int byahoo_send_typing( struct im_connection *ic, char *who, int typing )
 static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
-	char *away;
 	
-	away = NULL;
-	
-	if( state && msg && g_strcasecmp( state, msg ) != 0 )
+	if( state && msg == NULL )
 	{
-		yd->current_status = YAHOO_STATUS_CUSTOM;
-		away = "";
-	}
-	else if( state )
-	{
-		/* Set msg to NULL since (if it isn't NULL already) it's equal
-		   to state. msg must be empty if we want to use an existing
-		   away state. */
-		msg = NULL;
-		
-		away = "";
-		if( g_strcasecmp( state, "Available" ) == 0 )
-		{
-			yd->current_status = YAHOO_STATUS_AVAILABLE;
-			away = NULL;
-		}
-		else if( g_strcasecmp( state, "Be Right Back" ) == 0 )
+		/* Use these states only if msg doesn't contain additional
+		   info since away messages are only supported with CUSTOM. */
+		if( g_strcasecmp( state, "Be Right Back" ) == 0 )
 			yd->current_status = YAHOO_STATUS_BRB;
 		else if( g_strcasecmp( state, "Busy" ) == 0 )
 			yd->current_status = YAHOO_STATUS_BUSY;
@@ -238,17 +223,15 @@ static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 			yd->current_status = YAHOO_STATUS_STEPPEDOUT;
 		else if( g_strcasecmp( state, "Invisible" ) == 0 )
 			yd->current_status = YAHOO_STATUS_INVISIBLE;
-		else if( g_strcasecmp( state, GAIM_AWAY_CUSTOM ) == 0 )
-		{
-			yd->current_status = YAHOO_STATUS_AVAILABLE;
-			
-			away = NULL;
-		}
+		else
+			yd->current_status = YAHOO_STATUS_CUSTOM;
 	}
+	else if( state )
+		yd->current_status = YAHOO_STATUS_CUSTOM;
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
 	
-	yahoo_set_away( yd->y2_id, yd->current_status, msg, away != NULL ? 2 : 0 );
+	yahoo_set_away( yd->y2_id, yd->current_status, msg, state ? 2 : 0 );
 }
 
 static GList *byahoo_away_states( struct im_connection *ic )
@@ -257,7 +240,6 @@ static GList *byahoo_away_states( struct im_connection *ic )
 
 	if( m == NULL )
 	{
-		m = g_list_append( m, "Available" );
 		m = g_list_append( m, "Be Right Back" );
 		m = g_list_append( m, "Busy" );
 		m = g_list_append( m, "Not At Home" );
@@ -268,7 +250,6 @@ static GList *byahoo_away_states( struct im_connection *ic )
 		m = g_list_append( m, "Out To Lunch" );
 		m = g_list_append( m, "Stepped Out" );
 		m = g_list_append( m, "Invisible" );
-		m = g_list_append( m, GAIM_AWAY_CUSTOM );
 	}
 	
 	return m;
