@@ -365,10 +365,11 @@ static void jabber_get_info( struct im_connection *ic, char *who )
 	
 	while( bud )
 	{
-		imcb_log( ic, "Buddy %s (%d) information:\nAway state: %s\nAway message: %s",
-		                   bud->full_jid, bud->priority,
-		                   bud->away_state ? bud->away_state->full_name : "(none)",
-		                   bud->away_message ? : "(none)" );
+		imcb_log( ic, "Buddy %s (%d) information:", bud->full_jid, bud->priority );
+		if( bud->away_state )
+			imcb_log( ic, "Away state: %s", bud->away_state->full_name );
+		imcb_log( ic, "Status message: %s", bud->away_message ? : "(none)" );
+		
 		bud = bud->next;
 	}
 	

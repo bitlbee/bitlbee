@@ -447,7 +447,6 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 {
 	user_t *u = user_find( irc, irc->nick );
 	char *away = cmd[1];
-	account_t *a;
 	
 	if( !u ) return;
 	
