@@ -163,7 +163,7 @@ int skype_printf(struct im_connection *ic, char *fmt, ...)
 {
 	va_list args;
 	char str[IRC_LINE_SIZE];
-	
+
 	va_start(args, fmt);
 	vsnprintf(str, IRC_LINE_SIZE, fmt, args);
 	va_end(args);
@@ -558,11 +558,11 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 								body);
 						else {
 							g_snprintf(buf, IRC_LINE_SIZE, "%s %s",
-								set_getstr(&ic->acc->set, "edit_prefix"), body);
+								set_getstr(&ic->acc->set, "edit_prefix"),
+								body);
 							sd->is_edit = 0;
 						}
-					}
-					else
+					} else
 						g_snprintf(buf, IRC_LINE_SIZE, "/me %s",
 							body);
 					if (!gc)
@@ -761,7 +761,8 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		 * window on our client, so
 		 * just leave it out. */
 		/*skype_printf(ic, "OPEN CHAT %s\n", id);*/
-		g_snprintf(buf, IRC_LINE_SIZE, "%s@skype.com", sd->groupchat_with);
+		g_snprintf(buf, IRC_LINE_SIZE, "%s@skype.com",
+				sd->groupchat_with);
 		imcb_chat_add_buddy(gc, buf);
 		imcb_chat_add_buddy(gc, sd->username);
 		g_free(sd->groupchat_with);
@@ -802,7 +803,8 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		for (i = 0; members[i]; i++) {
 			if (!strcmp(members[i], sd->username))
 				continue;
-			g_snprintf(buf, IRC_LINE_SIZE, "%s@skype.com", members[i]);
+			g_snprintf(buf, IRC_LINE_SIZE, "%s@skype.com",
+					members[i]);
 			if (!g_list_find_custom(gc->in_room, buf,
 				(GCompareFunc)strcmp))
 				imcb_chat_add_buddy(gc, buf);
