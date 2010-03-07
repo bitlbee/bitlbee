@@ -3,7 +3,7 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  libpurple module - Main file                                             *
 *                                                                           *
-*  Copyright 2009 Wilmer van der Gaast <wilmer@gaast.net>                   *
+*  Copyright 2010 Wilmer van der Gaast <wilmer@gaast.net>                   *
 *                                                                           *
 *  This program is free software; you can redistribute it and/or modify     *
 *  it under the terms of the GNU General Public License as published by     *
@@ -56,8 +56,10 @@ static void purple_init( account_t *acc )
 {
 	PurplePlugin *prpl = purple_plugins_find_with_id( (char*) acc->prpl->data );
 	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
-	GList *i;
+	PurpleAccount *pa;
+	GList *i, *st;
 	
+	/* Convert all protocol_options into per-account setting variables. */
 	for( i = pi->protocol_options; i; i = i->next )
 	{
 		PurpleAccountOption *o = i->data;
@@ -99,6 +101,26 @@ static void purple_init( account_t *acc )
 			g_free( def );
 		}
 	}
+	
+	/* Go through all away states to figure out if away/status messages
+	   are possible. */
+	pa = purple_account_new( acc->user, (char*) acc->prpl->data );
+	for( st = purple_account_get_status_types( pa ); st; st = st->next )
+	{
+		PurpleStatusPrimitive prim = purple_status_type_get_primitive( st->data );
+		
+		if( prim == PURPLE_STATUS_AVAILABLE )
+		{
+			if( purple_status_type_get_attr( st->data, "message" ) )
+				acc->flags |= ACC_FLAG_STATUS_MESSAGE;
+		}
+		else if( prim != PURPLE_STATUS_OFFLINE )
+		{
+			if( purple_status_type_get_attr( st->data, "message" ) )
+				acc->flags |= ACC_FLAG_AWAY_MESSAGE;
+		}
+	}
+	purple_accounts_remove( pa );
 }
 
 static void purple_sync_settings( account_t *acc, PurpleAccount *pa )
@@ -223,7 +245,7 @@ static void purple_set_away( struct im_connection *ic, char *state_txt, char *me
 			break;
 	}
 	
-	if( message )
+	if( message && purple_status_type_get_attr( st, "message" ) )
 	{
 		args = g_list_append( args, "message" );
 		args = g_list_append( args, message );
