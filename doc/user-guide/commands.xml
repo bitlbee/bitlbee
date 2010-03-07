@@ -435,6 +435,22 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="away" type="string" scope="both">
+		<description>
+			<para>
+				To mark yourself as away, it is recommended to just use <emphasis>/away</emphasis>, like on normal IRC networks. If you want to mark yourself as away on only one IM network, you can use this per-account setting.
+			</para>
+
+			<para>
+				You can set it to any value and BitlBee will try to map it to the most appropriate away state for every open IM connection, or set it as a free-form away message where possible.
+			</para>
+
+			<para>
+				Any per-account away setting will override globally set away states. To un-set the setting, use <emphasis>set -del away</emphasis>.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="away_devoice" type="boolean" scope="global">
 		<default>true</default>
 
@@ -742,6 +758,22 @@
 		<description>
 			<para>
 				Currently only available for Jabber connections. Set this to true if the server accepts SSL connections.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="status" type="string" scope="both">
+		<description>
+			<para>
+				Certain protocols (like Jabber/XMPP) support status messages, similar to away messages. They can be used to indicate things like your location or activity, without showing up as away/busy.
+			</para>
+
+			<para>
+				This setting can be used to set such a message. It will be available as a per-account setting for protocols that support it, and also as a global setting (which will then automatically be used for all protocols that support it).
+			</para>
+
+			<para>
+				Away states set using <emphasis>/away</emphasis> or the <emphasis>away</emphasis> setting will override this setting. To un-set the setting, use <emphasis>set -del status</emphasis>.
 			</para>
 		</description>
 	</bitlbee-setting>

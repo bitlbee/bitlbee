@@ -85,29 +85,33 @@ Some protocols (like Jabber) also support named groupchats. BitlBee now supports
 <title>Away states</title>
 
 <para>
-As you might've expected, you can just use the <emphasis>/away</emphasis> command in your IRC client to set an away-state. BitlBee supports most away-states supported by the protocols.
+To mark yourself as away, you can just use the <emphasis>/away</emphasis> command in your IRC client. BitlBee supports most away-states supported by the protocols.
 </para>
 
 <para>
-Not all away states are supported by all protocols, and some protocols have different names for them. BitlBee will try to pick the best available alias from this list for every connection:
+Away states have different names accross different protocols. BitlBee will try to pick the best available option for every connection:
 </para>
 
 <simplelist>
-	<member>Away from computer, Away, Extended away</member>
-	<member>NA, N/A, Not available</member>
-	<member>Busy, Do not disturb, DND, Occupied</member>
-	<member>Be right back, BRB</member>
-	<member>On the phone, Phone, On phone</member>
-	<member>Out to lunch, Lunch, Food</member>
+	<member>Away</member>
+	<member>NA</member>
+	<member>Busy, DND</member>
+	<member>BRB</member>
+	<member>Phone</member>
+	<member>Lunch, Food</member>
 	<member>Invisible, Hidden</member>
 </simplelist>
 
 <para>
-So <emphasis>/away Food</emphasis> will set your state to "Out to lunch" on your MSN connection, and for most other connections the default, "Away" or "Away from computer" will be chosen.
+So <emphasis>/away Food</emphasis> will set your state to "Out to lunch" on your MSN connection, and for most other connections the default, "Away" will be chosen.
 </para>
 
 <para>
 You can also add more information to your away message. Setting it to "Busy - Fixing BitlBee bugs" will set your IM-away-states to Busy, but your away message will be more descriptive for people on IRC. Most IM-protocols can also show this additional information to your buddies.
+</para>
+
+<para>
+If you want to set an away state for only one of your connections, you can use the per-account <emphasis>away</emphasis> setting. See <emphasis>help set away</emphasis>.
 </para>
 
 </sect1>
