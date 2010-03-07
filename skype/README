@@ -362,6 +362,11 @@ $ skyped -n -d
 
   * `account set skype/auto_join true`
 
+- Edited messages are shown with the `EDIT:` prefix. If you don't like
+  this, you can set your own prefix using:
+
+  * `account set skype/edit_prefix "updated message:"`
+
 == What needs to be done (aka. TODO)
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
