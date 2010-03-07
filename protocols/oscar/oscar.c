@@ -1953,6 +1953,8 @@ static void oscar_get_away(struct im_connection *g, char *who) {
 
 static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, const char *state, const char *message)
 {
+	if (state == NULL)
+		state = "";
 
 	if (!g_strcasecmp(state, _("Visible"))) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
@@ -2005,7 +2007,7 @@ static void oscar_set_away_icq(struct im_connection *ic, struct oscar_data *od, 
 		no_message = TRUE;
 	}
 
-	if (!g_strcasecmp(state, "Online")) {
+	if (state == NULL) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 	} else if (!g_strcasecmp(state, "Away")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
