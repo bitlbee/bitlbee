@@ -503,7 +503,7 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 		return;
 	*info = '\0';
 	info++;
-	if (!strcmp(info, "STATUS RECEIVED")) {
+	if (!strcmp(info, "STATUS RECEIVED") || !strncmp(info, "EDITED_TIMESTAMP", 16)) {
 		/* New message ID:
 		 * (1) Request its from field
 		 * (2) Request its body
@@ -511,7 +511,8 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 		 * (4) Query chatname
 		 */
 		skype_printf(ic, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
-		skype_printf(ic, "GET CHATMESSAGE %s BODY\n", id);
+		if (!strcmp(info, "STATUS RECEIVED"))
+			skype_printf(ic, "GET CHATMESSAGE %s BODY\n", id);
 		skype_printf(ic, "GET CHATMESSAGE %s TYPE\n", id);
 		skype_printf(ic, "GET CHATMESSAGE %s CHATNAME\n", id);
 	} else if (!strncmp(info, "FROM_HANDLE ", 12)) {
