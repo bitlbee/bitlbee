@@ -4098,14 +4098,8 @@ void yahoo_set_away(int id, enum yahoo_status state, const char *msg, int away)
 		return;
 
 	yd = yid->yd;
-
 	old_status = yd->current_status;
-
-	if (msg && strncmp(msg,"Invisible",9)) {
-		yd->current_status = YAHOO_STATUS_CUSTOM;
-	} else {
-		yd->current_status = state;
-	}
+	yd->current_status = state;
 
 	/* Thank you libpurple :) */
 	if (yd->current_status == YAHOO_STATUS_INVISIBLE) {
@@ -4120,15 +4114,8 @@ void yahoo_set_away(int id, enum yahoo_status state, const char *msg, int away)
 	pkt = yahoo_packet_new(YAHOO_SERVICE_Y6_STATUS_UPDATE, yd->current_status, yd->session_id);
 	snprintf(s, sizeof(s), "%d", yd->current_status);
 	yahoo_packet_hash(pkt, 10, s);
-	 
-	if (yd->current_status == YAHOO_STATUS_CUSTOM) {
-		yahoo_packet_hash(pkt, 19, msg);
-	} else {
-		yahoo_packet_hash(pkt, 19, "");
-	}
-	
+	yahoo_packet_hash(pkt, 19, msg && state == YAHOO_STATUS_CUSTOM ? msg : "");
 	yahoo_packet_hash(pkt, 47, (away == 2)? "2": (away) ?"1":"0");
-
 	yahoo_send_packet(yid, pkt, 0);
 	yahoo_packet_free(pkt);
 

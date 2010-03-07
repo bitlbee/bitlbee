@@ -96,7 +96,6 @@ struct msn_switchboard
 
 struct msn_away_state
 {
-	int number;
 	char code[4];
 	char name[16];
 };
