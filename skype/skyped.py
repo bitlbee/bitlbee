@@ -146,7 +146,7 @@ def dprint(msg):
 		print now + ": " + msg
 	if options.log:
 		sock = open(options.log, "a")
-		sock.write("%s: %s\n" % now, msg)
+		sock.write("%s: %s\n" % (now, msg))
 		sock.close()
 
 class SkypeApi:
