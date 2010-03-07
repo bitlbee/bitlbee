@@ -105,6 +105,8 @@ struct skype_data {
 	/* When a call fails, we get the reason and later we get the failure
 	 * event, so store the failure code here till then */
 	int failurereason;
+	/* If this is just an update of an already received message. */
+	int is_edit;
 };
 
 struct skype_away_state {
@@ -513,6 +515,8 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 		skype_printf(ic, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
 		if (!strcmp(info, "STATUS RECEIVED"))
 			skype_printf(ic, "GET CHATMESSAGE %s BODY\n", id);
+		else
+			sd->is_edit = 1;
 		skype_printf(ic, "GET CHATMESSAGE %s TYPE\n", id);
 		skype_printf(ic, "GET CHATMESSAGE %s CHATNAME\n", id);
 	} else if (!strncmp(info, "FROM_HANDLE ", 12)) {
@@ -548,9 +552,16 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 				char *body = g_list_nth_data(sd->body, i);
 				if (!strcmp(sd->type, "SAID") ||
 					!strcmp(sd->type, "EMOTED")) {
-					if (!strcmp(sd->type, "SAID"))
-						g_snprintf(buf, IRC_LINE_SIZE, "%s",
-							body);
+					if (!strcmp(sd->type, "SAID")) {
+						if (!sd->is_edit)
+							g_snprintf(buf, IRC_LINE_SIZE, "%s",
+								body);
+						else {
+							g_snprintf(buf, IRC_LINE_SIZE, "EDIT: %s",
+								body);
+							sd->is_edit = 0;
+						}
+					}
 					else
 						g_snprintf(buf, IRC_LINE_SIZE, "/me %s",
 							body);
