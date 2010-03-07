@@ -1042,11 +1042,6 @@ static char *skype_set_display_name(set_t *set, char *value)
 	return value;
 }
 
-static char *skype_set_edit_prefix(set_t *set, char *value)
-{
-	return value;
-}
-
 static char *skype_set_balance(set_t *set, char *value)
 {
 	account_t *acc = set->data;
@@ -1227,7 +1222,7 @@ static void skype_init(account_t *acc)
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "edit_prefix", "EDIT:",
-			skype_set_edit_prefix, acc);
+			NULL, acc);
 }
 
 void init_plugin(void)
