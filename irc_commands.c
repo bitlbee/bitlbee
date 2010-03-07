@@ -474,13 +474,7 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 		irc_reply( irc, 305, ":Welcome back" );
 	}
 	
-	for( a = irc->accounts; a; a = a->next )
-	{
-		struct im_connection *ic = a->ic;
-		
-		if( ic && ic->flags & OPT_LOGGED_IN )
-			imc_set_away( ic, u->away );
-	}
+	set_setstr( &irc->set, "away", u->away );
 }
 
 static void irc_cmd_whois( irc_t *irc, char **cmd )

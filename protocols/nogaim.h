@@ -313,7 +313,7 @@ G_MODULE_EXPORT void imcb_chat_topic( struct groupchat *c, char *who, char *topi
 G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
 
 /* Actions, or whatever. */
-int imc_set_away( struct im_connection *ic, char *away );
+int imc_away_send_update( struct im_connection *ic );
 int imc_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags );
 int imc_chat_msg( struct groupchat *c, char *msg, int flags );
 

@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2006 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -267,9 +267,8 @@ void imcb_connected( struct im_connection *ic )
 	ic->keepalive = b_timeout_add( 60000, send_keepalive, ic );
 	ic->flags |= OPT_LOGGED_IN;
 	
-	/* Also necessary when we're not away, at least for some of the
-	   protocols. */
-	imc_set_away( ic, u->away );
+	/* Necessary to send initial presence status, even if we're not away. */
+	imc_away_send_update( ic );
 	
 	/* Apparently we're connected successfully, so reset the
 	   exponential backoff timer. */
@@ -1071,20 +1070,26 @@ int imc_chat_msg( struct groupchat *c, char *msg, int flags )
 
 static char *imc_away_state_find( GList *gcm, char *away, char **message );
 
-int imc_set_away( struct im_connection *ic, char *away )
+int imc_away_send_update( struct im_connection *ic )
 {
-	char *s = NULL, *msg = away;
+	char *away, *msg;
 	
+	away = set_getstr( &ic->acc->set, "away" ) ?
+	     : set_getstr( &ic->irc->set, "away" );
 	if( away && *away )
 	{
 		GList *m = ic->acc->prpl->away_states( ic );
-		s = imc_away_state_find( m, away, &msg ) ? : m->data;
+		msg = ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? away : NULL;
+		away = imc_away_state_find( m, away, &msg ) ? : m->data;
+	}
+	else if( ic->acc->flags & ACC_FLAG_STATUS_MESSAGE )
+	{
+		away = NULL;
+		msg = set_getstr( &ic->acc->set, "status" ) ?
+		    : set_getstr( &ic->irc->set, "status" );
 	}
 	
-	if( set_getbool( &ic->irc->set, "debug" ) )
-		imcb_log( ic, "Setting away state to %s", s );
-	
-	ic->acc->prpl->set_away( ic, s, ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? msg : NULL );
+	ic->acc->prpl->set_away( ic, away, msg );
 	
 	return 1;
 }
