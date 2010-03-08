@@ -3,7 +3,7 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  libpurple module - Main file                                             *
 *                                                                           *
-*  Copyright 2010 Wilmer van der Gaast <wilmer@gaast.net>                   *
+*  Copyright 2009-2010 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This program is free software; you can redistribute it and/or modify     *
 *  it under the terms of the GNU General Public License as published by     *
@@ -58,6 +58,7 @@ static void purple_init( account_t *acc )
 	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
 	PurpleAccount *pa;
 	GList *i, *st;
+	set_t *s;
 	
 	/* Convert all protocol_options into per-account setting variables. */
 	for( i = pi->protocol_options; i; i = i->next )
@@ -66,7 +67,6 @@ static void purple_init( account_t *acc )
 		const char *name;
 		char *def = NULL;
 		set_eval eval = NULL;
-		set_t *s;
 		
 		name = purple_account_option_get_setting( o );
 		
@@ -100,6 +100,12 @@ static void purple_init( account_t *acc )
 			s->flags |= ACC_SET_OFFLINE_ONLY;
 			g_free( def );
 		}
+	}
+	
+	if( pi->options & OPT_PROTO_MAIL_CHECK )
+	{
+		s = set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
+		s->flags |= ACC_SET_OFFLINE_ONLY;
 	}
 	
 	/* Go through all away states to figure out if away/status messages
@@ -158,6 +164,9 @@ static void purple_sync_settings( account_t *acc, PurpleAccount *pa )
 			break;
 		}
 	}
+	
+	if( pi->options & OPT_PROTO_MAIL_CHECK )
+		purple_account_set_check_mail( pa, set_getbool( &acc->set, "mail_notifications" ) );
 }
 
 static void purple_login( account_t *acc )
@@ -237,7 +246,7 @@ static void purple_set_away( struct im_connection *ic, char *state_txt, char *me
 		pst = st->data;
 		
 		if( state_txt == NULL &&
-		    purple_status_type_get_primitive( st->data ) == PURPLE_STATUS_AVAILABLE )
+		    purple_status_type_get_primitive( pst ) == PURPLE_STATUS_AVAILABLE )
 			break;
 
 		if( state_txt != NULL &&
@@ -245,7 +254,7 @@ static void purple_set_away( struct im_connection *ic, char *state_txt, char *me
 			break;
 	}
 	
-	if( message && purple_status_type_get_attr( st, "message" ) )
+	if( message && purple_status_type_get_attr( pst, "message" ) )
 	{
 		args = g_list_append( args, "message" );
 		args = g_list_append( args, message );
@@ -588,12 +597,29 @@ static PurpleEventLoopUiOps glib_eventloops =
 	prplcb_ev_remove,
 };
 
+static void *prplcb_notify_email( PurpleConnection *gc, const char *subject, const char *from,
+                                  const char *to, const char *url )
+{
+	struct im_connection *ic = purple_ic_by_gc( gc );
+	
+	imcb_log( ic, "Received e-mail from %s for %s: %s <%s>", from, to, subject, url );
+	
+	return NULL;
+}
+
+static	PurpleNotifyUiOps bee_notify_uiops =
+{
+        NULL,
+        prplcb_notify_email,
+};
+
 static void purple_ui_init()
 {
 	purple_blist_set_ui_ops( &bee_blist_uiops );
 	purple_connections_set_ui_ops( &bee_conn_uiops );
 	purple_conversations_set_ui_ops( &bee_conv_uiops );
 	purple_request_set_ui_ops( &bee_request_uiops );
+	purple_notify_set_ui_ops(&bee_notify_uiops);
 	//purple_debug_set_ui_ops( &bee_debug_uiops );
 }
 
@@ -643,6 +669,8 @@ void purple_initmodule()
 	
 	help = g_string_new("BitlBee libpurple module supports the following IM protocols:\n");
 	
+	/* Add a protocol entry to BitlBee's structures for every protocol
+	   supported by this libpurple instance. */	
 	for( prots = purple_plugins_get_protocols(); prots; prots = prots->next )
 	{
 		PurplePlugin *prot = prots->data;
@@ -656,6 +684,8 @@ void purple_initmodule()
 		
 		g_string_append_printf( help, "\n* %s (%s)", ret->name, prot->info->name );
 		
+		/* libpurple doesn't define a protocol called OSCAR, but we
+		   need it to be compatible with normal BitlBee. */
 		if( g_strcasecmp( prot->info->id, "prpl-aim" ) == 0 )
 		{
 			ret = g_memdup( &funcs, sizeof( funcs ) );
@@ -665,6 +695,8 @@ void purple_initmodule()
 		}
 	}
 	
+	/* Add a simple dynamically-generated help item listing all
+	   the supported protocols. */
 	help_add_mem( &global.help, "purple", help->str );
 	g_string_free( help, TRUE );
 }
