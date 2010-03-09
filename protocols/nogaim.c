@@ -1072,7 +1072,7 @@ static char *imc_away_state_find( GList *gcm, char *away, char **message );
 
 int imc_away_send_update( struct im_connection *ic )
 {
-	char *away, *msg;
+	char *away, *msg = NULL;
 	
 	away = set_getstr( &ic->acc->set, "away" ) ?
 	     : set_getstr( &ic->irc->set, "away" );
