@@ -172,7 +172,8 @@ static int crypt_main( int argc, char *argv[] )
 	int pass_len;
 	unsigned char *pass_cr, *pass_cl;
 	
-	if( argc < 3 )
+	if( argc < 4 || ( strcmp( argv[2], "hash" ) != 0 &&
+	                  strcmp( argv[2], "unhash" ) != 0 && argc < 5 ) )
 	{
 		printf( "Supported:\n"
 		        "  %s -x enc <key> <cleartext password>\n"
@@ -213,7 +214,8 @@ static int crypt_main( int argc, char *argv[] )
 	}
 	else if( strcmp( argv[2], "chkhash" ) == 0 )
 	{
-		int st = md5_verify_password( argv[4], argv[3] );
+		char *hash = strncmp( argv[3], "md5:", 4 ) == 0 ? argv[3] + 4 : argv[3];
+		int st = md5_verify_password( argv[4], hash );
 		
 		printf( "Hash %s given password.\n", st == 0 ? "matches" : "does not match" );
 		
