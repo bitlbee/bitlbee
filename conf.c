@@ -126,7 +126,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		else if( opt == 'h' )
 		{
 			printf( "Usage: bitlbee [-D/-F [-i <interface>] [-p <port>] [-n] [-v]] [-I]\n"
-			        "               [-c <file>] [-d <dir>] [-h]\n"
+			        "               [-c <file>] [-d <dir>] [-x] [-h]\n"
 			        "\n"
 			        "An IRC-to-other-chat-networks gateway\n"
 			        "\n"
@@ -142,6 +142,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -v  Be verbose (only works in combination with -n)\n"
 			        "  -c  Load alternative configuration file\n"
 			        "  -d  Specify alternative user configuration directory\n"
+			        "  -x  Command-line interface to password encryption/hashing\n"
 			        "  -h  Show this help page.\n" );
 			return NULL;
 		}

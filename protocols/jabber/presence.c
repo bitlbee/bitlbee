@@ -186,13 +186,12 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 	{
 		int is_away = 0;
 
-		if( send_presence->away_state && !( *send_presence->away_state->code == 0 ||
-		    strcmp( send_presence->away_state->code, "chat" ) == 0 ) )
+		if( send_presence->away_state &&
+		    strcmp( send_presence->away_state->code, "chat" ) != 0 )
 			is_away = OPT_AWAY;
 
 		imcb_buddy_status( ic, send_presence->bare_jid, OPT_LOGGED_IN | is_away,
-		                   ( is_away && send_presence->away_state ) ?
-		                   send_presence->away_state->full_name : NULL,
+		                   is_away ? send_presence->away_state->full_name : NULL,
 		                   send_presence->away_message );
 	}
 	
@@ -205,17 +204,15 @@ int presence_send_update( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *node, *cap;
-	char *show = jd->away_state->code;
-	char *status = jd->away_message;
 	struct groupchat *c;
 	int st;
 	
 	node = jabber_make_packet( "presence", NULL, NULL, NULL );
 	xt_add_child( node, xt_new_node( "priority", set_getstr( &ic->acc->set, "priority" ), NULL ) );
-	if( show && *show )
-		xt_add_child( node, xt_new_node( "show", show, NULL ) );
-	if( status )
-		xt_add_child( node, xt_new_node( "status", status, NULL ) );
+	if( jd->away_state )
+		xt_add_child( node, xt_new_node( "show", jd->away_state->code, NULL ) );
+	if( jd->away_message )
+		xt_add_child( node, xt_new_node( "status", jd->away_message, NULL ) );
 	
 	/* This makes the packet slightly bigger, but clients interested in
 	   capabilities can now cache the discovery info. This reduces the

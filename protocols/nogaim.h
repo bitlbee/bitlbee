@@ -48,7 +48,6 @@
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
 #define WEBSITE "http://www.bitlbee.org/"
-#define GAIM_AWAY_CUSTOM "Custom"
 
 /* Sharing flags between all kinds of things. I just hope I won't hit any
    limits before 32-bit machines become extinct. ;-) */
@@ -217,8 +216,8 @@ struct prpl {
 	void (* chat_topic)	(struct groupchat *, char *topic);
 	
 	/* You can tell what away states your protocol supports, so that
-	 * BitlBee will try to map the IRC away reasons to them, or use
-	 * GAIM_AWAY_CUSTOM when calling skype_set_away(). */
+	 * BitlBee will try to map the IRC away reasons to them. If your
+	 * protocol doesn't have any, just return one generic "Away". */
 	GList *(* away_states)(struct im_connection *ic);
 	
 	/* Mainly for AOL, since they think "Bung hole" == "Bu ngho le". *sigh*
@@ -314,7 +313,7 @@ G_MODULE_EXPORT void imcb_chat_topic( struct groupchat *c, char *who, char *topi
 G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
 
 /* Actions, or whatever. */
-int imc_set_away( struct im_connection *ic, char *away );
+int imc_away_send_update( struct im_connection *ic );
 int imc_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags );
 int imc_chat_msg( struct groupchat *c, char *msg, int flags );
 

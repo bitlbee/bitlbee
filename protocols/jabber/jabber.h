@@ -83,7 +83,7 @@ struct jabber_data
 	
 	/* After changing one of these two (or the priority setting), call
 	   presence_send_update() to inform the server about the changes. */
-	struct jabber_away_state *away_state;
+	const struct jabber_away_state *away_state;
 	char *away_message;
 	
 	md5_state_t cached_id_prefix;
