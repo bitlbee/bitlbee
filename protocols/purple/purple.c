@@ -67,6 +67,9 @@ static void purple_init( account_t *acc )
 		const char *name;
 		char *def = NULL;
 		set_eval eval = NULL;
+		void *eval_data = NULL;
+		GList *io = NULL;
+		GSList *opts = NULL;
 		
 		name = purple_account_option_get_setting( o );
 		
@@ -89,8 +92,20 @@ static void purple_init( account_t *acc )
 			eval = set_eval_bool;
 			break;
 		
+		case PURPLE_PREF_STRING_LIST:
+			def = g_strdup( purple_account_option_get_default_list_value( o ) );
+			for( io = purple_account_option_get_list( o ); io; io = io->next )
+			{
+				PurpleKeyValuePair *kv = io->data;
+				opts = g_slist_append( opts, kv->key );
+			}
+			eval = set_eval_list;
+			eval_data = opts;
+			break;
+			
 		default:
-			fprintf( stderr, "Setting with unknown type: %s (%d)\n", name, purple_account_option_get_type( o ) );
+			irc_usermsg( acc->irc, "Setting with unknown type: %s (%d) Expect stuff to break..\n",
+			             name, purple_account_option_get_type( o ) );
 			name = NULL;
 		}
 		
@@ -98,6 +113,7 @@ static void purple_init( account_t *acc )
 		{
 			s = set_add( &acc->set, name, def, eval, acc );
 			s->flags |= ACC_SET_OFFLINE_ONLY;
+			s->eval_data = eval_data;
 			g_free( def );
 		}
 	}
@@ -149,6 +165,7 @@ static void purple_sync_settings( account_t *acc, PurpleAccount *pa )
 		switch( purple_account_option_get_type( o ) )
 		{
 		case PURPLE_PREF_STRING:
+		case PURPLE_PREF_STRING_LIST:
 			purple_account_set_string( pa, name, set_getstr( &acc->set, name ) );
 			break;
 		
