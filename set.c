@@ -212,6 +212,21 @@ char *set_eval_bool( set_t *set, char *value )
 	return is_bool( value ) ? value : SET_INVALID;
 }
 
+char *set_eval_list( set_t *set, char *value )
+{
+	GSList *options = set->eval_data, *opt;
+	
+	for( opt = options; opt; opt = opt->next )
+		if( strcmp( value, opt->data ) == 0 )
+			return value;
+	
+	/* TODO: It'd be nice to show the user a list of allowed values,
+	         but we don't have enough context here to do that. May
+	         want to fix that. */
+	
+	return NULL;
+}
+
 char *set_eval_to_char( set_t *set, char *value )
 {
 	char *s = g_new( char, 3 );

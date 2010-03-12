@@ -68,6 +68,7 @@ typedef struct set
 	   the passed value variable. When returning a corrected value,
 	   set_setstr() should be able to free() the returned string! */
 	set_eval eval;
+	void *eval_data;
 	struct set *next;
 } set_t;
 
@@ -96,6 +97,9 @@ int set_reset( set_t **head, const char *key );
 /* Two very useful generic evaluators. */
 char *set_eval_int( set_t *set, char *value );
 char *set_eval_bool( set_t *set, char *value );
+
+/* Another more complicated one. */
+char *set_eval_list( set_t *set, char *value );
 
 /* Some not very generic evaluators that really shouldn't be here... */
 char *set_eval_to_char( set_t *set, char *value );
