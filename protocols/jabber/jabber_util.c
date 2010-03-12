@@ -457,7 +457,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		}
 		
 		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) &&
-		    ( imcb_find_buddy( ic, jid ) || bare_exists ) )
+		    ( bare_exists || imcb_find_buddy( ic, jid ) ) )
 		{
 			*s = '/';
 			bud = jabber_buddy_add( ic, jid );

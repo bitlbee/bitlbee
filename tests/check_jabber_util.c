@@ -13,12 +13,12 @@ static void check_buddy_add(int l)
 	struct jabber_buddy *budw1, *budw2, *budw3, *budn, *bud;
 	
 	budw1 = jabber_buddy_add( ic, "wilmer@gaast.net/BitlBee" );
-	budw1->last_act = time( NULL ) - 100;
+	budw1->last_msg = time( NULL ) - 100;
 	budw2 = jabber_buddy_add( ic, "WILMER@gaast.net/Telepathy" );
 	budw2->priority = 2;
-	budw2->last_act = time( NULL );
+	budw2->last_msg = time( NULL );
 	budw3 = jabber_buddy_add( ic, "wilmer@GAAST.NET/bitlbee" );
-	budw3->last_act = time( NULL ) - 200;
+	budw3->last_msg = time( NULL ) - 200;
 	budw3->priority = 4;
 	/* TODO(wilmer): Shouldn't this just return budw3? */
 	fail_if( jabber_buddy_add( ic, "wilmer@gaast.net/Telepathy" ) != NULL );
