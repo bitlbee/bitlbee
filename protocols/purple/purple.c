@@ -59,6 +59,12 @@ static void purple_init( account_t *acc )
 	PurpleAccount *pa;
 	GList *i, *st;
 	set_t *s;
+	char help_title[64];
+	GString *help;
+	
+	help = g_string_new( "" );
+	g_string_printf( help, "BitlBee libpurple module %s (%s).\n\nSupported settings:",
+	                        (char*) acc->prpl->name, prpl->info->name );
 	
 	/* Convert all protocol_options into per-account setting variables. */
 	for( i = pi->protocol_options; i; i = i->next )
@@ -77,11 +83,21 @@ static void purple_init( account_t *acc )
 		{
 		case PURPLE_PREF_STRING:
 			def = g_strdup( purple_account_option_get_default_string( o ) );
+			
+			g_string_append_printf( help, "\n* %s (%s), %s, default: %s",
+			                        name, purple_account_option_get_text( o ),
+			                        "string", def );
+			
 			break;
 		
 		case PURPLE_PREF_INT:
 			def = g_strdup_printf( "%d", purple_account_option_get_default_int( o ) );
 			eval = set_eval_int;
+			
+			g_string_append_printf( help, "\n* %s (%s), %s, default: %s",
+			                        name, purple_account_option_get_text( o ),
+			                        "integer", def );
+			
 			break;
 		
 		case PURPLE_PREF_BOOLEAN:
@@ -90,17 +106,31 @@ static void purple_init( account_t *acc )
 			else
 				def = g_strdup( "false" );
 			eval = set_eval_bool;
+			
+			g_string_append_printf( help, "\n* %s (%s), %s, default: %s",
+			                        name, purple_account_option_get_text( o ),
+			                        "boolean", def );
+			
 			break;
 		
 		case PURPLE_PREF_STRING_LIST:
 			def = g_strdup( purple_account_option_get_default_list_value( o ) );
+			
+			g_string_append_printf( help, "\n* %s (%s), %s, default: %s",
+			                        name, purple_account_option_get_text( o ),
+			                        "list", def );
+			g_string_append( help, "\n  Possible values: " );
+			
 			for( io = purple_account_option_get_list( o ); io; io = io->next )
 			{
 				PurpleKeyValuePair *kv = io->data;
 				opts = g_slist_append( opts, kv->key );
+				g_string_append_printf( help, "%s, ", kv->key );
 			}
+			g_string_truncate( help, help->len - 2 );
 			eval = set_eval_list;
 			eval_data = opts;
+			
 			break;
 			
 		default:
@@ -117,6 +147,10 @@ static void purple_init( account_t *acc )
 			g_free( def );
 		}
 	}
+	
+	g_snprintf( help_title, sizeof( help_title ), "purple %s", (char*) acc->prpl->name );
+	help_add_mem( &global.help, help_title, help->str );
+	g_string_free( help, TRUE );
 	
 	if( pi->options & OPT_PROTO_MAIL_CHECK )
 	{
@@ -711,6 +745,9 @@ void purple_initmodule()
 			register_protocol( ret );
 		}
 	}
+	
+	g_string_append( help, "\n\nFor used protocols, more information about available "
+	                 "settings can be found using \x02help purple <protocol name>\x02" );
 	
 	/* Add a simple dynamically-generated help item listing all
 	   the supported protocols. */
