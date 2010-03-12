@@ -1316,26 +1316,7 @@ static void yahoo_process_status(struct yahoo_input_data *yid,
 	YList *l;
 	struct yahoo_data *yd = yid->yd;
 
-	struct user {
-		char *name;	/* 7      name */
-		int state;	/* 10     state */
-		int flags;	/* 13     flags, bit 0 = pager, bit 1 = chat, bit 2 = game */
-		int mobile;	/* 60     mobile */
-		char *msg;	/* 19     custom status message */
-		int away;	/* 47     away (or invisible) */
-		int buddy_session; /* 11  state */
-		int f17;	/* 17     in chat? then what about flags? */
-		int idle;	/* 137    seconds idle */
-		int f138;	/* 138    state */
-		char *f184;	/* 184    state */
-		int f192;	/* 192    state */
-		int f10001;	/* 10001  state */
-		int f10002;	/* 10002  state */
-		int f198;	/* 198    state */
-		char *f197;	/* 197    state */
-		char *f205;	/* 205    state */
-		int f213;	/* 213    state */
-	} *u;
+	struct yahoo_process_status_entry *u;
 
 	YList *users = 0;
 
@@ -1345,7 +1326,11 @@ static void yahoo_process_status(struct yahoo_input_data *yid,
 		return;
 	}
 
-	u = NULL;
+	/* Status updates may be spread accross multiple packets and not
+	   even on buddy boundaries, so keeping some state is important.
+	   So, continue where we left off, and only add a user entry to
+	   the list once it's complete (301-315 End buddy). */
+	u = yd->half_user;
 
 	for (l = pkt->hash; l; l = l->next) {
 		struct yahoo_pair *pair = l->data;
@@ -1353,13 +1338,13 @@ static void yahoo_process_status(struct yahoo_input_data *yid,
 		switch (pair->key) {
 		case 300:	/* Begin buddy */
 			if (!strcmp(pair->value, "315") && !u) {
-				u = y_new0(struct user, 1);
+				u = yd->half_user = y_new0(struct yahoo_process_status_entry, 1);
 			}
 			break;
 		case 301:	/* End buddy */
 			if (!strcmp(pair->value, "315") && u) {
 				users = y_list_prepend(users, u);
-				u = NULL;
+				u = yd->half_user = NULL;
 			}
 			break;
 		case 0:	/* we won't actually do anything with this */
@@ -1380,7 +1365,7 @@ static void yahoo_process_status(struct yahoo_input_data *yid,
 		case 7:	/* the current buddy */
 			if (!u) {
 				/* This will only happen in case of a single level message */
-				u = y_new0(struct user, 1);
+				u = y_new0(struct yahoo_process_status_entry, 1);
 				users = y_list_prepend(users, u);
 			}
 			u->name = pair->value;
@@ -1450,7 +1435,7 @@ static void yahoo_process_status(struct yahoo_input_data *yid,
 
 	while (users) {
 		YList *t = users;
-		struct user *u = users->data;
+		struct yahoo_process_status_entry *u = users->data;
 
 		if (u->name != NULL) {
 			if (pkt->service ==
