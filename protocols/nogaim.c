@@ -447,6 +447,7 @@ struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle )
 void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 {
 	user_t *u = user_findhandle( ic, handle );
+	char *set;
 	
 	if( !u || !realname ) return;
 	
@@ -458,6 +459,23 @@ void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 		
 		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->irc->set, "display_namechanges" ) )
 			imcb_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
+	}
+	
+	set = set_getstr( &ic->acc->set, "nick_source" );
+	if( strcmp( set, "handle" ) != 0 )
+	{
+		char *name = g_strdup( realname );
+		
+		if( strcmp( set, "first_name" ) == 0 )
+		{
+			int i;
+			for( i = 0; name[i] && !isspace( name[i] ); i ++ ) {}
+			name[i] = '\0';
+		}
+		
+		imcb_buddy_nick_hint( ic, handle, name );
+		
+		g_free( name );
 	}
 }
 
