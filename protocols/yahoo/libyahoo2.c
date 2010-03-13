@@ -1493,13 +1493,14 @@ static void yahoo_process_buddy_list(struct yahoo_input_data *yid,
 			newbud->id = strdup(pair->value);
 			if (cur_group)
 				newbud->group = strdup(cur_group);
-			else {
+			else if (yd->buddies) {
 				struct yahoo_buddy *lastbud =
 					(struct yahoo_buddy *)y_list_nth(yd->
 					buddies,
 					y_list_length(yd->buddies) - 1)->data;
 				newbud->group = strdup(lastbud->group);
-			}
+			} else
+				newbud->group = strdup("Buddies");
 
 			yd->buddies = y_list_append(yd->buddies, newbud);
 
