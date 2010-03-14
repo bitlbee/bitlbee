@@ -45,6 +45,7 @@ typedef enum
 	JFLAG_WANT_TYPING = 32,         /* Set if we ever sent a typing notification, this
 	                                   activates all XEP-85 related code. */
 	JFLAG_XMLCONSOLE = 64,          /* If the user added an xmlconsole buddy. */
+	JFLAG_STARTTLS_DONE = 128,      /* If a plaintext session was converted to TLS. */
 } jabber_flags_t;
 
 typedef enum

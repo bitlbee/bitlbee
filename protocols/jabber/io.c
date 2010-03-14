@@ -440,6 +440,7 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 	
 	imcb_log( ic, "Converting stream to TLS" );
 	
+	jd->flags |= JFLAG_STARTTLS_DONE;
 	jd->ssl = ssl_starttls( jd->fd, jabber_connected_ssl, ic );
 	
 	return XT_HANDLED;
@@ -530,9 +531,10 @@ gboolean jabber_start_stream( struct im_connection *ic )
 	if( jd->r_inpa <= 0 )
 		jd->r_inpa = b_input_add( jd->fd, GAIM_INPUT_READ, jabber_read_callback, ic );
 	
-	greet = g_strdup_printf( "<?xml version='1.0' ?>"
-	                         "<stream:stream to=\"%s\" xmlns=\"jabber:client\" "
-	                          "xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\">", jd->server );
+	greet = g_strdup_printf( "%s<stream:stream to=\"%s\" xmlns=\"jabber:client\" "
+	                          "xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\">", 
+	                          ( jd->flags & JFLAG_STARTTLS_DONE ) ? "" : "<?xml version='1.0' ?>",
+	                          jd->server );
 	
 	st = jabber_write( ic, greet, strlen( greet ) );
 	
