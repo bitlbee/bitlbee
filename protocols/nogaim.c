@@ -351,7 +351,7 @@ void imcb_ask( struct im_connection *ic, char *msg, void *data,
 
 /* list.c */
 
-void imcb_add_buddy( struct im_connection *ic, char *handle, char *group )
+void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *group )
 {
 	user_t *u;
 	char nick[MAX_NICK_LENGTH+1], *s;
@@ -425,7 +425,7 @@ struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle )
 	return( b );
 }
 
-void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
+void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *realname )
 {
 	user_t *u = user_findhandle( ic, handle );
 	
@@ -442,7 +442,7 @@ void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 	}
 }
 
-void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group )
+void imcb_remove_buddy( struct im_connection *ic, const char *handle, char *group )
 {
 	user_t *u;
 	
@@ -627,7 +627,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	}
 }
 
-void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, uint32_t flags, time_t sent_at )
+void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at )
 {
 	irc_t *irc = ic->irc;
 	char *wrapped;
@@ -694,7 +694,7 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
 	}
 }
 
-struct groupchat *imcb_chat_new( struct im_connection *ic, char *handle )
+struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 {
 	struct groupchat *c;
 	
@@ -760,7 +760,7 @@ void imcb_chat_free( struct groupchat *c )
 	}
 }
 
-void imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, time_t sent_at )
+void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t flags, time_t sent_at )
 {
 	struct im_connection *ic = c->ic;
 	char *wrapped;
@@ -832,7 +832,7 @@ void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at
 
 /* buddy_chat.c */
 
-void imcb_chat_add_buddy( struct groupchat *b, char *handle )
+void imcb_chat_add_buddy( struct groupchat *b, const char *handle )
 {
 	user_t *u = user_findhandle( b->ic, handle );
 	int me = 0;
@@ -867,7 +867,7 @@ void imcb_chat_add_buddy( struct groupchat *b, char *handle )
 }
 
 /* This function is one BIG hack... :-( EREWRITE */
-void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
+void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char *reason )
 {
 	user_t *u;
 	int me = 0;

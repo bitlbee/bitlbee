@@ -28,6 +28,7 @@
 
 #include "xmltree.h"
 #include "bitlbee.h"
+#include "md5.h"
 
 extern GSList *jabber_connections;
 

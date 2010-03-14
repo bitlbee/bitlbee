@@ -155,7 +155,7 @@ else
 fi
 
 echo CFLAGS=$CFLAGS >> Makefile.settings
-echo CFLAGS+=-I`pwd` -I`pwd`/lib -I`pwd`/protocols -I. >> Makefile.settings
+echo CFLAGS+=-I`pwd` -iquote`pwd`/lib -iquote`pwd`/protocols -I. >> Makefile.settings
 
 echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
 

@@ -132,7 +132,7 @@ struct msn_handler_data
 #define STATUS_SB_IM_SPARE	4	/* Make one-to-one conversation switchboard available again, invite failed. */
 #define STATUS_SB_CHAT_SPARE	8	/* Same, but also for groupchats (not used yet). */
 
-int msn_chat_id;
+extern int msn_chat_id;
 extern const struct msn_away_state msn_away_state_list[];
 extern const struct msn_status_code msn_status_code_list[];
 
@@ -141,8 +141,8 @@ extern const struct msn_status_code msn_status_code_list[];
    is down already (for example, when an impatient user disabled the
    connection), the callback should check whether it's still listed here
    before doing *anything* else. */
-GSList *msn_connections;
-GSList *msn_switchboards;
+extern GSList *msn_connections;
+extern GSList *msn_switchboards;
 
 /* ns.c */
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );

@@ -26,6 +26,10 @@
 #include "nogaim.h"
 #include "msn.h"
 
+int msn_chat_id;
+GSList *msn_connections;
+GSList *msn_switchboards;
+
 static char *msn_set_display_name( set_t *set, char *value );
 
 static void msn_init( account_t *acc )
