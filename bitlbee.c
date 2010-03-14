@@ -108,11 +108,17 @@ int bitlbee_daemon_init()
 		
 		chdir( "/" );
 		
-		/* Sometimes std* are already closed (for example when we're in a RESTARTed
-		   BitlBee process. So let's only close TTY-fds. */
-		if( isatty( 0 ) ) close( 0 );
-		if( isatty( 1 ) ) close( 1 );
-		if( isatty( 2 ) ) close( 2 );
+		i = close( 0 ) == 0;
+		i += close( 1 ) == 0;
+		i += close( 2 ) == 0;
+		/* To avoid that something important ends up on one of those
+		   fd's, open them for something bogus. Otherwise RESTART
+		   may cause troubles. */
+		while( i > 0 )
+		{
+			open( "/dev/null", O_WRONLY );
+			i --;
+		}
 	}
 #endif
 	
