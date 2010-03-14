@@ -62,6 +62,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
 	conf->user = NULL;
+	conf->protocols = NULL;
 	proxytype = 0;
 	
 	i = conf_loadini( conf, global.conf_file );
@@ -305,6 +306,11 @@ static int conf_loadini( conf_t *conf, char *file )
 			{
 				g_free( conf->user );
 				conf->user = g_strdup( ini->value );
+			}
+			else if( g_strcasecmp( ini->key, "protocols" ) == 0 )
+			{
+				g_strfreev( conf->protocols );
+				conf->protocols = g_strsplit_set( ini->value, " \t,;", -1 );
 			}
 			else
 			{

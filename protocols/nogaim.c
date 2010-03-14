@@ -97,7 +97,19 @@ GList *protocols = NULL;
   
 void register_protocol (struct prpl *p)
 {
-	protocols = g_list_append(protocols, p);
+	int i;
+	gboolean refused = global.conf->protocols != NULL;
+ 
+	for (i = 0; global.conf->protocols && global.conf->protocols[i]; i++)
+ 	{
+ 		if (g_strcasecmp(p->name, global.conf->protocols[i]) == 0)
+			refused = FALSE;
+ 	}
+
+	if (refused)
+		log_message(LOGLVL_WARNING, "Protocol %s disabled\n", p->name);
+	else
+		protocols = g_list_append(protocols, p);
 }
 
 struct prpl *find_protocol(const char *name)
