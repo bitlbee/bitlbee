@@ -443,6 +443,12 @@ else
 	echo '#define WITH_PLUGINS' >> config.h
 fi
 
+if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; then
+	echo
+	echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
+	echo 'Install xmlto if you want online help to work.'
+fi
+
 echo
 if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; then
 	nick=`bzr nick`
