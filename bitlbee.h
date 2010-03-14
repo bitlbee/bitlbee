@@ -34,7 +34,7 @@
 #define _WIN32_WINNT 0x0501
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "1.2.4"
+#define BITLBEE_VERSION "1.2.5"
 #define VERSION BITLBEE_VERSION
 
 #define MAX_STRING 511
