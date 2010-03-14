@@ -165,7 +165,7 @@ irc_t *irc_new( int fd )
 	s->flags |= SET_NULL_OK;
 	s = set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
 	s = set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
-	s = set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "auto_reconnect", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "auto_reconnect_delay", "5*3<900", set_eval_account_reconnect_delay, irc );
 	s = set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );

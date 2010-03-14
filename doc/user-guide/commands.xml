@@ -607,6 +607,21 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="nick_source" type="string" scope="account">
+		<default>handle</default>
+		<possible-values>handle, full_name, first_name</possible-values>
+
+		<description>
+			<para>
+				By default, BitlBee generates a nickname for every contact by taking its handle and chopping off everything after the @. In some cases, this gives very inconvenient nicknames. The Facebook XMPP server is a good example, as all Facebook XMPP handles are numeric.
+			</para>
+
+			<para>
+				With this setting set to <emphasis>full_name</emphasis>, the person's full name is used to generate a nickname. Or if you don't like long nicknames, set this setting to <emphasis>first_name</emphasis> instead and only the first word will be used. Note that the full name can be full of non-ASCII characters which will be stripped off.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="ops" type="string" scope="global">
 		<default>both</default>
 		<possible-values>both, root, user, none</possible-values>

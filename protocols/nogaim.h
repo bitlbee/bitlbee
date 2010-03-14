@@ -275,11 +275,11 @@ G_MODULE_EXPORT void imcb_ask_add( struct im_connection *ic, const char *handle,
 /* This function should be called for each handle which are visible to the
  * user, usually after a login, or if the user added a buddy and the IM
  * server confirms that the add was successful. Don't forget to do this! */
-G_MODULE_EXPORT void imcb_add_buddy( struct im_connection *ic, char *handle, char *group );
-G_MODULE_EXPORT void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group );
+G_MODULE_EXPORT void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *group );
+G_MODULE_EXPORT void imcb_remove_buddy( struct im_connection *ic, const char *handle, char *group );
 G_MODULE_EXPORT struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle );
-G_MODULE_EXPORT void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname );
-G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick );
+G_MODULE_EXPORT void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *realname );
+G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const char *nick );
 
 /* Buddy activity */
 /* To manipulate the status of a handle.
@@ -289,7 +289,7 @@ G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, char *handl
 G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message );
 /* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
 /* Call when a handle says something. 'flags' and 'sent_at may be just 0. */
-G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, uint32_t flags, time_t sent_at );
+G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at );
 G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags );
 G_MODULE_EXPORT void imcb_clean_handle( struct im_connection *ic, char *handle );
 
@@ -302,11 +302,11 @@ G_MODULE_EXPORT void imcb_chat_invited( struct im_connection *ic, char *handle, 
  *   the user her/himself. At that point the group chat will be visible to the
  *   user, too. */
 G_MODULE_EXPORT struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle );
-G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, char *handle );
+G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, const char *handle );
 /* To remove a handle from a group chat. Reason can be NULL. */
-G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason );
+G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char *reason );
 /* To tell BitlBee 'who' said 'msg' in 'c'. 'flags' and 'sent_at' can be 0. */
-G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, time_t sent_at );
+G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t flags, time_t sent_at );
 /* System messages specific to a groupchat, so they can be displayed in the right context. */
 G_MODULE_EXPORT void imcb_chat_log( struct groupchat *c, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 /* To tell BitlBee 'who' changed the topic of 'c' to 'topic'. */

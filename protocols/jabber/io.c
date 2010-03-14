@@ -374,38 +374,22 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	}
 	
 	if( ( c = xt_find_node( node->children, "bind" ) ) )
-	{
-		reply = xt_new_node( "bind", NULL, xt_new_node( "resource", set_getstr( &ic->acc->set, "resource" ), NULL ) );
-		xt_add_attr( reply, "xmlns", XMLNS_BIND );
-		reply = jabber_make_packet( "iq", "set", NULL, reply );
-		jabber_cache_add( ic, reply, jabber_pkt_bind_sess );
-		
-		if( !jabber_write_packet( ic, reply ) )
-			return XT_ABORT;
-		
-		jd->flags |= JFLAG_WAIT_BIND;
-	}
+		jd->flags |= JFLAG_WANT_BIND;
 	
 	if( ( c = xt_find_node( node->children, "session" ) ) )
-	{
-		reply = xt_new_node( "session", NULL, NULL );
-		xt_add_attr( reply, "xmlns", XMLNS_SESSION );
-		reply = jabber_make_packet( "iq", "set", NULL, reply );
-		jabber_cache_add( ic, reply, jabber_pkt_bind_sess );
-		
-		if( !jabber_write_packet( ic, reply ) )
-			return XT_ABORT;
-		
-		jd->flags |= JFLAG_WAIT_SESSION;
-	}
+		jd->flags |= JFLAG_WANT_SESSION;
 	
 	/* This flag is already set if we authenticated via SASL, so now
 	   we can resume the session in the new stream, if we don't have
 	   to bind/initialize the session. */
-	if( jd->flags & JFLAG_AUTHENTICATED && ( jd->flags & ( JFLAG_WAIT_BIND | JFLAG_WAIT_SESSION ) ) == 0 )
+	if( jd->flags & JFLAG_AUTHENTICATED && ( jd->flags & ( JFLAG_WANT_BIND | JFLAG_WANT_SESSION ) ) == 0 )
 	{
 		if( !jabber_get_roster( ic ) )
 			return XT_ABORT;
+	}
+	else if( jd->flags & JFLAG_AUTHENTICATED )
+	{
+		return jabber_pkt_bind_sess( ic, NULL, NULL );
 	}
 	
 	return XT_HANDLED;
@@ -440,6 +424,7 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 	
 	imcb_log( ic, "Converting stream to TLS" );
 	
+	jd->flags |= JFLAG_STARTTLS_DONE;
 	jd->ssl = ssl_starttls( jd->fd, jabber_connected_ssl, ic );
 	
 	return XT_HANDLED;
@@ -530,9 +515,10 @@ gboolean jabber_start_stream( struct im_connection *ic )
 	if( jd->r_inpa <= 0 )
 		jd->r_inpa = b_input_add( jd->fd, B_EV_IO_READ, jabber_read_callback, ic );
 	
-	greet = g_strdup_printf( "<?xml version='1.0' ?>"
-	                         "<stream:stream to=\"%s\" xmlns=\"jabber:client\" "
-	                          "xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\">", jd->server );
+	greet = g_strdup_printf( "%s<stream:stream to=\"%s\" xmlns=\"jabber:client\" "
+	                          "xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\">", 
+	                          ( jd->flags & JFLAG_STARTTLS_DONE ) ? "" : "<?xml version='1.0' ?>",
+	                          jd->server );
 	
 	st = jabber_write( ic, greet, strlen( greet ) );
 	

@@ -26,13 +26,15 @@
 #ifndef _BITLBEE_H
 #define _BITLBEE_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* Stupid GNU :-P */
+#endif
 
 /* Depend on Windows 2000 for now since we need getaddrinfo() */
 #define _WIN32_WINNT 0x0501
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "1.2.4"
+#define BITLBEE_VERSION "1.2.5"
 #define VERSION BITLBEE_VERSION
 
 #define MAX_STRING 511

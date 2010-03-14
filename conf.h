@@ -49,6 +49,7 @@ typedef struct conf
 	int ping_interval;
 	int ping_timeout;
 	char *user;
+	char **protocols;
 } conf_t;
 
 G_GNUC_MALLOC conf_t *conf_load( int argc, char *argv[] );

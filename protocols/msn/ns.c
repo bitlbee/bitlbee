@@ -228,19 +228,26 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 				return( 0 );
 			}
 		}
-		else if( num_parts == 7 && strcmp( cmd[2], "OK" ) == 0 )
+		else if( num_parts >= 7 && strcmp( cmd[2], "OK" ) == 0 )
 		{
 			set_t *s;
 			
-			http_decode( cmd[4] );
-			
-			strncpy( ic->displayname, cmd[4], sizeof( ic->displayname ) );
-			ic->displayname[sizeof(ic->displayname)-1] = 0;
-			
-			if( ( s = set_find( &ic->acc->set, "display_name" ) ) )
+			if( num_parts == 7 )
 			{
-				g_free( s->value );
-				s->value = g_strdup( cmd[4] );
+				http_decode( cmd[4] );
+				
+				strncpy( ic->displayname, cmd[4], sizeof( ic->displayname ) );
+				ic->displayname[sizeof(ic->displayname)-1] = 0;
+				
+				if( ( s = set_find( &ic->acc->set, "display_name" ) ) )
+				{
+					g_free( s->value );
+					s->value = g_strdup( cmd[4] );
+				}
+			}
+			else
+			{
+				imcb_log( ic, "Warning: Friendly name in server response was corrupted" );
 			}
 			
 			imcb_log( ic, "Authenticated, getting buddy list" );

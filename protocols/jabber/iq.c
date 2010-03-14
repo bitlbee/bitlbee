@@ -297,24 +297,43 @@ static xt_status jabber_finish_iq_auth( struct im_connection *ic, struct xt_node
 xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct xt_node *c;
+	struct xt_node *c, *reply = NULL;
 	char *s;
 	
-	if( ( c = xt_find_node( node->children, "bind" ) ) )
+	if( node && ( c = xt_find_node( node->children, "bind" ) ) )
 	{
 		c = xt_find_node( c->children, "jid" );
 		if( c && c->text_len && ( s = strchr( c->text, '/' ) ) &&
 		    strcmp( s + 1, set_getstr( &ic->acc->set, "resource" ) ) != 0 )
 			imcb_log( ic, "Server changed session resource string to `%s'", s + 1 );
 		
-		jd->flags &= ~JFLAG_WAIT_BIND;
+		jd->flags &= ~JFLAG_WANT_BIND;
 	}
-	else
+	else if( node && ( c = xt_find_node( node->children, "session" ) ) )
 	{
-		jd->flags &= ~JFLAG_WAIT_SESSION;
+		jd->flags &= ~JFLAG_WANT_SESSION;
 	}
 	
-	if( ( jd->flags & ( JFLAG_WAIT_BIND | JFLAG_WAIT_SESSION ) ) == 0 )
+	if( jd->flags & JFLAG_WANT_BIND )
+	{
+		reply = xt_new_node( "bind", NULL, xt_new_node( "resource", set_getstr( &ic->acc->set, "resource" ), NULL ) );
+		xt_add_attr( reply, "xmlns", XMLNS_BIND );
+	}
+	else if( jd->flags & JFLAG_WANT_SESSION )
+	{
+		reply = xt_new_node( "session", NULL, NULL );
+		xt_add_attr( reply, "xmlns", XMLNS_SESSION );
+	}
+	
+	if( reply != NULL )
+	{
+		reply = jabber_make_packet( "iq", "set", NULL, reply );
+		jabber_cache_add( ic, reply, jabber_pkt_bind_sess );
+		
+		if( !jabber_write_packet( ic, reply ) )
+			return XT_ABORT;
+	}
+	else if( ( jd->flags & ( JFLAG_WANT_BIND | JFLAG_WANT_SESSION ) ) == 0 )
 	{
 		if( !jabber_get_roster( ic ) )
 			return XT_ABORT;

@@ -143,6 +143,12 @@ static void cmd_identify( irc_t *irc, char **cmd )
 	storage_status_t status = storage_load( irc, cmd[1] );
 	char *account_on[] = { "account", "on", NULL };
 	
+	if( strchr( irc->umode, 'R' ) != NULL )
+	{
+		irc_usermsg( irc, "You're already logged in." );
+		return;
+	}
+	
 	switch (status) {
 	case STORAGE_INVALID_PASSWORD:
 		irc_usermsg( irc, "Incorrect password" );
@@ -1114,79 +1120,6 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	{
 		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat", cmd[1] );
 	}
-
-
-
-#if 0
-	account_t *a;
-	struct im_connection *ic;
-	char *chat, *channel, *nick = NULL, *password = NULL;
-	struct groupchat *c;
-	
-	if( !( a = account_get( irc, cmd[1] ) ) )
-	{
-		irc_usermsg( irc, "Invalid account" );
-		return;
-	}
-	else if( !( a->ic && ( a->ic->flags & OPT_LOGGED_IN ) ) )
-	{
-		irc_usermsg( irc, "That account is not on-line" );
-		return;
-	}
-	else if( a->prpl->chat_join == NULL )
-	{
-		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
-		return;
-	}
-	ic = a->ic;
-	
-	chat = cmd[2];
-	if( cmd[3] )
-	{
-		if( strchr( CTYPES, cmd[3][0] ) == NULL )
-			channel = g_strdup_printf( "&%s", cmd[3] );
-		else
-			channel = g_strdup( cmd[3] );
-	}
-	else
-	{
-		char *s;
-		
-		channel = g_strdup_printf( "&%s", chat );
-		if( ( s = strchr( channel, '@' ) ) )
-			*s = 0;
-	}
-	if( cmd[3] && cmd[4] )
-		nick = cmd[4];
-	else
-		nick = irc->nick;
-	if( cmd[3] && cmd[4] && cmd[5] )
-		password = cmd[5];
-	
-	if( !nick_ok( channel + 1 ) )
-	{
-		irc_usermsg( irc, "Invalid channel name: %s", channel );
-		g_free( channel );
-		return;
-	}
-	else if( g_strcasecmp( channel, irc->channel ) == 0 || irc_chat_by_channel( irc, channel ) )
-	{
-		irc_usermsg( irc, "Channel already exists: %s", channel );
-		g_free( channel );
-		return;
-	}
-	
-	if( ( c = a->prpl->chat_join( ic, chat, nick, password ) ) )
-	{
-		g_free( c->channel );
-		c->channel = channel;
-	}
-	else
-	{
-		irc_usermsg( irc, "Tried to join chat, not sure if this was successful" );
-		g_free( channel );
-	}
-#endif
 }
 
 const command_t commands[] = {

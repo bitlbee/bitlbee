@@ -158,7 +158,7 @@ else
 fi
 
 echo CFLAGS=$CFLAGS >> Makefile.settings
-echo CFLAGS+=-I`pwd` -I`pwd`/lib -I`pwd`/protocols -I. >> Makefile.settings
+echo CFLAGS+=-I`pwd` -iquote`pwd`/lib -iquote`pwd`/protocols -I. >> Makefile.settings
 
 echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
 
@@ -446,6 +446,12 @@ else
 	echo '#define WITH_PLUGINS' >> config.h
 fi
 
+if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; then
+	echo
+	echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
+	echo 'Install xmlto if you want online help to work.'
+fi
+
 echo
 if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; then
 	nick=`bzr nick`
@@ -555,6 +561,7 @@ GNU/* )
 *BSD )
 ;;
 Darwin )
+	echo 'STRIP=\# skip strip' >> Makefile.settings
 ;;
 IRIX )
 ;;
