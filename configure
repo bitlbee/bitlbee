@@ -528,6 +528,7 @@ GNU/* )
 *BSD )
 ;;
 Darwin )
+	echo 'STRIP=\# skip strip' >> Makefile.settings
 ;;
 IRIX )
 ;;
