@@ -143,6 +143,12 @@ static void cmd_identify( irc_t *irc, char **cmd )
 	storage_status_t status = storage_load( irc, cmd[1] );
 	char *account_on[] = { "account", "on", NULL };
 	
+	if( strchr( irc->umode, 'R' ) != NULL )
+	{
+		irc_usermsg( irc, "You're already logged in." );
+		return;
+	}
+	
 	switch (status) {
 	case STORAGE_INVALID_PASSWORD:
 		irc_usermsg( irc, "Incorrect password" );
