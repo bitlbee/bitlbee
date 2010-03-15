@@ -1343,7 +1343,11 @@ static void yahoo_process_status(struct yahoo_input_data *yid,
 			break;
 		case 301:	/* End buddy */
 			if (!strcmp(pair->value, "315") && u) {
-				users = y_list_prepend(users, u);
+				/* Sometimes user info comes in an odd format with no
+				   "begin buddy" but *with* an "end buddy". Don't add
+				   it twice. */
+				if (!y_list_find(users, u))
+					users = y_list_prepend(users, u);
 				u = yd->half_user = NULL;
 			}
 			break;
