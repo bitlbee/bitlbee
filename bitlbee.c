@@ -108,17 +108,13 @@ int bitlbee_daemon_init()
 		
 		chdir( "/" );
 		
-		i = close( 0 ) == 0;
-		i += close( 1 ) == 0;
-		i += close( 2 ) == 0;
-		/* To avoid that something important ends up on one of those
-		   fd's, open them for something bogus. Otherwise RESTART
-		   may cause troubles. */
-		while( i > 0 )
-		{
-			open( "/dev/null", O_WRONLY );
-			i --;
-		}
+		if( getenv( "_BITLBEE_RESTART_STATE" ) == NULL )
+			for( i = 0; i < 3; i ++ )
+				if( close( i ) == 0 )
+				{
+					/* Keep something bogus on those fd's just in case. */
+					open( "/dev/null", O_WRONLY );
+				}
 	}
 #endif
 	
