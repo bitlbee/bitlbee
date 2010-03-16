@@ -226,7 +226,7 @@ static void byahoo_set_away( struct im_connection *ic, char *state, char *msg )
 		else
 			yd->current_status = YAHOO_STATUS_CUSTOM;
 	}
-	else if( state )
+	else if( msg )
 		yd->current_status = YAHOO_STATUS_CUSTOM;
 	else
 		yd->current_status = YAHOO_STATUS_AVAILABLE;
