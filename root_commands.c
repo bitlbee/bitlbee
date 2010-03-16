@@ -913,7 +913,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	else if( cmd[1] && g_strcasecmp( cmd[1], "online" ) == 0 )
 		online = 1;
 	else
-		online =  away = 1;
+		online = away = 1;
 	
 	if( strchr( irc->umode, 'b' ) != NULL )
 		format = "%s\t%s\t%s";
@@ -926,8 +926,13 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( online == 1 )
 		{
+			char st[256] = "Online";
+			
+			if( u->status_msg )
+				g_snprintf( st, sizeof( st ) - 1, "Online (%s)", u->status_msg );
+			
 			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
-			irc_usermsg( irc, format, u->nick, s, "Online" );
+			irc_usermsg( irc, format, u->nick, s, st );
 		}
 		
 		n_online ++;

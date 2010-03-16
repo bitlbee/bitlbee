@@ -646,11 +646,9 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	oa = u->away != NULL;
 	oo = u->online;
 	
-	if( u->away )
-	{
-		g_free( u->away );
-		u->away = NULL;
-	}
+	g_free( u->away );
+	g_free( u->status_msg );
+	u->away = u->status_msg = NULL;
 	
 	if( ( flags & OPT_LOGGED_IN ) && !u->online )
 	{
@@ -688,7 +686,10 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 			u->away = g_strdup( "Away" );
 		}
 	}
-	/* else waste_any_state_information_for_now(); */
+	else
+	{
+		u->status_msg = g_strdup( message );
+	}
 	
 	/* LISPy... */
 	if( ( set_getbool( &ic->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
