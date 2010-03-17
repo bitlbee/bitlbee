@@ -218,7 +218,7 @@ void msn_invitations_accept( msn_filetransfer_t *msn_file, struct msn_switchboar
 	file_transfer_t *file = msn_file->dcc;
 	char buf[1024];
 	unsigned int acookie = time ( NULL );
-	char host[INET6_ADDRSTRLEN];
+	char host[HOST_NAME_MAX+1];
 	char port[6];
 	char *errmsg;
 

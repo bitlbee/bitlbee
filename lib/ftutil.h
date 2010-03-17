@@ -25,4 +25,16 @@
 #define AI_NUMERICSERV 0x0400   /* Don't use name resolution.  */
 #endif
 
+/* Some ifdefs for ulibc and apparently also BSD (Thanks to Whoopie) */
+#ifndef HOST_NAME_MAX
+#include <sys/param.h>
+#ifdef MAXHOSTNAMELEN
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#else
+#define HOST_NAME_MAX 255
+#endif
+#endif
+
+/* This function should be used with care. host should be AT LEAST a
+   char[HOST_NAME_MAX+1] and port AT LEAST a char[6]. */
 int ft_listen( struct sockaddr_storage *saddr_ptr, char *host, char *port, int for_bitlbee_client, char **errptr );

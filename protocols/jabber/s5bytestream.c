@@ -889,7 +889,7 @@ void jabber_si_set_proxies( struct bs_transfer *bt )
 	char *proxysetting = g_strdup ( set_getstr( &tf->ic->acc->set, "proxy" ) );
 	char *proxy, *next, *errmsg = NULL;
 	char port[6];
-	char host[INET6_ADDRSTRLEN];
+	char host[HOST_NAME_MAX+1];
 	jabber_streamhost_t *sh, *sh2;
 	GSList *streamhosts = jd->streamhosts;
 

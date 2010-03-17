@@ -61,8 +61,6 @@ unsigned int local_transfer_id=1;
  */
 unsigned int receivedchunks=0, receiveddata=0;
 
-int max_packet_size = 0;
-
 static void dcc_finish( file_transfer_t *file );
 static void dcc_close( file_transfer_t *file );
 gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond );
@@ -132,7 +130,7 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 	dcc_file_transfer_t *df;
 	struct sockaddr_storage saddr;
 	char *errmsg;
-	char host[INET6_ADDRSTRLEN];
+	char host[HOST_NAME_MAX];
 	char port[6];
 
 	if( file_size > global.conf->ft_max_size )
@@ -289,24 +287,6 @@ gboolean dcc_poll( dcc_file_transfer_t *df, int fd, short *revents )
 }
 
 /*
- * fills max_packet_size with twice the TCP maximum segment size
- */
-gboolean  dcc_check_maxseg( dcc_file_transfer_t *df, int fd )
-{
-	/* 
-	 * use twice the maximum segment size as a maximum for calls to send().
-	 */
-	if( max_packet_size == 0 )
-	{
-		unsigned int mpslen = sizeof( max_packet_size );
-		if( getsockopt( fd, IPPROTO_TCP, TCP_MAXSEG, &max_packet_size, &mpslen ) )
-			return dcc_abort( df, "getsockopt() failed" );
-		max_packet_size *= 2;
-	}
-	return TRUE;
-}
-
-/*
  * After setup, the transfer itself is handled entirely by this function.
  * There are basically four things to handle: connect, receive, send, and error.
  */
@@ -333,9 +313,6 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 		fd = df->fd;
 		file->status = FT_STATUS_TRANSFERRING;
 		sock_make_nonblocking( fd );
-
-		if ( !dcc_check_maxseg( df, fd ) )
-			return FALSE;
 
 		/* IM protocol callback */
 		if( file->accept )
@@ -445,8 +422,6 @@ gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond )
 	    ( ft->status & FT_STATUS_CONNECTING ) )
 	{
 		ft->status = FT_STATUS_TRANSFERRING;
-		if ( !dcc_check_maxseg( df, fd ) )
-			return FALSE;
 
 		//df->watch_in = b_input_add( df->fd, GAIM_INPUT_READ, dccs_recv_proto, df );
 
