@@ -66,7 +66,7 @@ static void jabber_init( account_t *acc )
 	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
-	s = set_add( &acc->set, "resource_select", "priority", NULL, acc );
+	s = set_add( &acc->set, "resource_select", "activity", NULL, acc );
 	
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;

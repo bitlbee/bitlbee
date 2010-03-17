@@ -715,7 +715,7 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="resource_select" type="string" scope="account">
-		<default>priority</default>
+		<default>activity</default>
 		<possible-values>priority, activity</possible-values>
 
 		<description>

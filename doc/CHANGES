@@ -18,6 +18,9 @@ Version 1.2.5:
 - Auto reconnect is now enabled by default since all protocols can properly
   detect cases where auto reconnect should be avoided (i.e. concurrent
   logins).
+- Changed the default resource_select setting which should reduce message
+  routing issues on Jabber (i.e. messages going someone's phone instead of
+  the main client).
 
 Fixed 17 Mar 2010
 
