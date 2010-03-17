@@ -1,3 +1,11 @@
+bitlbee (1.2.5-1) unstable; urgency=low
+
+  * New upstream version.
+  * Fixed issues with server-side MSN nickname corruption. (Closes: #538756)
+  * Debconf translation fixes/additions. (Closes: #541754, #563504)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Wed, 17 Mar 2010 14:59:27 +0000
+
 bitlbee (1.2.4-2) unstable; urgency=low
 
   * Merging in some changes from bzr-head:
