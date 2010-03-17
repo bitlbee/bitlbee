@@ -68,7 +68,7 @@ static void jabber_init( account_t *acc )
 	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
-	s = set_add( &acc->set, "resource_select", "priority", NULL, acc );
+	s = set_add( &acc->set, "resource_select", "activity", NULL, acc );
 	
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
@@ -81,6 +81,8 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "xmlconsole", "false", set_eval_bool, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
+	
+	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE;
 }
 
 static void jabber_generate_id_hash( struct jabber_data *jd );
@@ -377,10 +379,11 @@ static void jabber_get_info( struct im_connection *ic, char *who )
 	
 	while( bud )
 	{
-		imcb_log( ic, "Buddy %s (%d) information:\nAway state: %s\nAway message: %s",
-		                   bud->full_jid, bud->priority,
-		                   bud->away_state ? bud->away_state->full_name : "(none)",
-		                   bud->away_message ? : "(none)" );
+		imcb_log( ic, "Buddy %s (%d) information:", bud->full_jid, bud->priority );
+		if( bud->away_state )
+			imcb_log( ic, "Away state: %s", bud->away_state->full_name );
+		imcb_log( ic, "Status message: %s", bud->away_message ? : "(none)" );
+		
 		bud = bud->next;
 	}
 	
@@ -390,11 +393,12 @@ static void jabber_get_info( struct im_connection *ic, char *who )
 static void jabber_set_away( struct im_connection *ic, char *state_txt, char *message )
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct jabber_away_state *state;
 	
-	/* Save all this info. We need it, for example, when changing the priority setting. */
-	state = (void *) jabber_away_state_by_name( state_txt );
-	jd->away_state = state ? state : (void *) jabber_away_state_list; /* Fall back to "Away" if necessary. */
+	/* state_txt == NULL -> Not away.
+	   Unknown state -> fall back to the first defined away state. */
+	jd->away_state = state_txt ? jabber_away_state_by_name( state_txt )
+	                 ? : jabber_away_state_list : NULL;
+	
 	g_free( jd->away_message );
 	jd->away_message = ( message && *message ) ? g_strdup( message ) : NULL;
 	

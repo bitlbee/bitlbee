@@ -65,6 +65,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->ft_max_size = SIZE_MAX;
 	conf->ft_max_kbps = G_MAXUINT;
 	conf->ft_listen = NULL;
+	conf->protocols = NULL;
 	proxytype = 0;
 	
 	i = conf_loadini( conf, global.conf_file );
@@ -129,7 +130,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		else if( opt == 'h' )
 		{
 			printf( "Usage: bitlbee [-D/-F [-i <interface>] [-p <port>] [-n] [-v]] [-I]\n"
-			        "               [-c <file>] [-d <dir>] [-h]\n"
+			        "               [-c <file>] [-d <dir>] [-x] [-h]\n"
 			        "\n"
 			        "An IRC-to-other-chat-networks gateway\n"
 			        "\n"
@@ -145,6 +146,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -v  Be verbose (only works in combination with -n)\n"
 			        "  -c  Load alternative configuration file\n"
 			        "  -d  Specify alternative user configuration directory\n"
+			        "  -x  Command-line interface to password encryption/hashing\n"
 			        "  -h  Show this help page.\n" );
 			return NULL;
 		}
@@ -331,6 +333,11 @@ static int conf_loadini( conf_t *conf, char *file )
 			{
 				g_free( conf->ft_listen );
 				conf->ft_listen = g_strdup( ini->value );
+			}
+			else if( g_strcasecmp( ini->key, "protocols" ) == 0 )
+			{
+				g_strfreev( conf->protocols );
+				conf->protocols = g_strsplit_set( ini->value, " \t,;", -1 );
 			}
 			else
 			{

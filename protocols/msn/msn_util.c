@@ -170,9 +170,9 @@ char *msn_findheader( char *text, char *header, int len )
 		while( i < len && ( text[i] == '\r' || text[i] == '\n' ) ) i ++;
 		
 		/* End of headers? */
-		if( strncmp( text + i - 2, "\n\n", 2 ) == 0 ||
-		    strncmp( text + i - 4, "\r\n\r\n", 4 ) == 0 ||
-		    strncmp( text + i - 2, "\r\r", 2 ) == 0 )
+		if( ( i >= 4 && strncmp( text + i - 4, "\r\n\r\n", 4 ) == 0 ) ||
+		    ( i >= 2 && ( strncmp( text + i - 2, "\n\n", 2 ) == 0 ||   
+		                  strncmp( text + i - 2, "\r\r", 2 ) == 0 ) ) )
 		{
 			break;
 		}
@@ -373,6 +373,6 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list )
 	g_slist_free( *list );
 	*list = NULL;
 	
-	imcb_log( ic, ret->str );
+	imcb_log( ic, "%s", ret->str );
 	g_string_free( ret, TRUE );
 }

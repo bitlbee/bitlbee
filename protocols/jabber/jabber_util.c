@@ -231,16 +231,18 @@ xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *
 const struct jabber_away_state jabber_away_state_list[] =
 {
 	{ "away",  "Away" },
-	{ "chat",  "Free for Chat" },
+	{ "chat",  "Free for Chat" },   /* WTF actually uses this? */
 	{ "dnd",   "Do not Disturb" },
 	{ "xa",    "Extended Away" },
-	{ "",      "Online" },
 	{ "",      NULL }
 };
 
 const struct jabber_away_state *jabber_away_state_by_code( char *code )
 {
 	int i;
+	
+	if( code == NULL )
+		return NULL;
 	
 	for( i = 0; jabber_away_state_list[i].full_name; i ++ )
 		if( g_strcasecmp( jabber_away_state_list[i].code, code ) == 0 )
@@ -252,6 +254,9 @@ const struct jabber_away_state *jabber_away_state_by_code( char *code )
 const struct jabber_away_state *jabber_away_state_by_name( char *name )
 {
 	int i;
+	
+	if( name == NULL )
+		return NULL;
 	
 	for( i = 0; jabber_away_state_list[i].full_name; i ++ )
 		if( g_strcasecmp( jabber_away_state_list[i].full_name, name ) == 0 )

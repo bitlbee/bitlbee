@@ -78,6 +78,25 @@ static char *set_eval_charset( set_t *set, char *value )
 	return value;
 }
 
+static char *set_eval_away_status( set_t *set, char *value )
+{
+	irc_t *irc = set->data;
+	account_t *a;
+	
+	g_free( set->value );
+	set->value = g_strdup( value );
+	
+	for( a = irc->accounts; a; a = a->next )
+	{
+		struct im_connection *ic = a->ic;
+		
+		if( ic && ic->flags & OPT_LOGGED_IN )
+			imc_away_send_update( ic );
+	}
+	
+	return value;
+}
+
 irc_t *irc_new( int fd )
 {
 	irc_t *irc;
@@ -143,9 +162,11 @@ irc_t *irc_new( int fd )
 
 	irc_connection_list = g_slist_append( irc_connection_list, irc );
 	
+	s = set_add( &irc->set, "away", NULL,  set_eval_away_status, irc );
+	s->flags |= SET_NULL_OK;
 	s = set_add( &irc->set, "away_devoice", "true",  set_eval_away_devoice, irc );
 	s = set_add( &irc->set, "auto_connect", "true", set_eval_bool, irc );
-	s = set_add( &irc->set, "auto_reconnect", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "auto_reconnect", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "auto_reconnect_delay", "5*3<900", set_eval_account_reconnect_delay, irc );
 	s = set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
@@ -163,6 +184,8 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
 	s = set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "status", NULL,  set_eval_away_status, irc );
+	s->flags |= SET_NULL_OK;
 	s = set_add( &irc->set, "strip_html", "true", NULL, irc );
 	s = set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
 	s = set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );

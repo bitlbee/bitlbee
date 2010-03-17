@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2006 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -97,7 +97,19 @@ GList *protocols = NULL;
   
 void register_protocol (struct prpl *p)
 {
-	protocols = g_list_append(protocols, p);
+	int i;
+	gboolean refused = global.conf->protocols != NULL;
+ 
+	for (i = 0; global.conf->protocols && global.conf->protocols[i]; i++)
+ 	{
+ 		if (g_strcasecmp(p->name, global.conf->protocols[i]) == 0)
+			refused = FALSE;
+ 	}
+
+	if (refused)
+		log_message(LOGLVL_WARNING, "Protocol %s disabled\n", p->name);
+	else
+		protocols = g_list_append(protocols, p);
 }
 
 struct prpl *find_protocol(const char *name)
@@ -267,9 +279,8 @@ void imcb_connected( struct im_connection *ic )
 	ic->keepalive = b_timeout_add( 60000, send_keepalive, ic );
 	ic->flags |= OPT_LOGGED_IN;
 	
-	/* Also necessary when we're not away, at least for some of the
-	   protocols. */
-	imc_set_away( ic, u->away );
+	/* Necessary to send initial presence status, even if we're not away. */
+	imc_away_send_update( ic );
 	
 	/* Apparently we're connected successfully, so reset the
 	   exponential backoff timer. */
@@ -371,7 +382,7 @@ void imcb_ask( struct im_connection *ic, char *msg, void *data,
 
 /* list.c */
 
-void imcb_add_buddy( struct im_connection *ic, char *handle, char *group )
+void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *group )
 {
 	user_t *u;
 	char nick[MAX_NICK_LENGTH+1], *s;
@@ -445,9 +456,10 @@ struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle )
 	return( b );
 }
 
-void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
+void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *realname )
 {
 	user_t *u = user_findhandle( ic, handle );
+	char *set;
 	
 	if( !u || !realname ) return;
 	
@@ -460,9 +472,26 @@ void imcb_rename_buddy( struct im_connection *ic, char *handle, char *realname )
 		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->irc->set, "display_namechanges" ) )
 			imcb_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
 	}
+	
+	set = set_getstr( &ic->acc->set, "nick_source" );
+	if( strcmp( set, "handle" ) != 0 )
+	{
+		char *name = g_strdup( realname );
+		
+		if( strcmp( set, "first_name" ) == 0 )
+		{
+			int i;
+			for( i = 0; name[i] && !isspace( name[i] ); i ++ ) {}
+			name[i] = '\0';
+		}
+		
+		imcb_buddy_nick_hint( ic, handle, name );
+		
+		g_free( name );
+	}
 }
 
-void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group )
+void imcb_remove_buddy( struct im_connection *ic, const char *handle, char *group )
 {
 	user_t *u;
 	
@@ -472,7 +501,7 @@ void imcb_remove_buddy( struct im_connection *ic, char *handle, char *group )
 
 /* Mainly meant for ICQ (and now also for Jabber conferences) to allow IM
    modules to suggest a nickname for a handle. */
-void imcb_buddy_nick_hint( struct im_connection *ic, char *handle, char *nick )
+void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const char *nick )
 {
 	user_t *u = user_findhandle( ic, handle );
 	char newnick[MAX_NICK_LENGTH+1], *orig_nick;
@@ -617,11 +646,9 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	oa = u->away != NULL;
 	oo = u->online;
 	
-	if( u->away )
-	{
-		g_free( u->away );
-		u->away = NULL;
-	}
+	g_free( u->away );
+	g_free( u->status_msg );
+	u->away = u->status_msg = NULL;
 	
 	if( ( flags & OPT_LOGGED_IN ) && !u->online )
 	{
@@ -659,7 +686,10 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 			u->away = g_strdup( "Away" );
 		}
 	}
-	/* else waste_any_state_information_for_now(); */
+	else
+	{
+		u->status_msg = g_strdup( message );
+	}
 	
 	/* LISPy... */
 	if( ( set_getbool( &ic->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
@@ -684,7 +714,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	}
 }
 
-void imcb_buddy_msg( struct im_connection *ic, char *handle, char *msg, uint32_t flags, time_t sent_at )
+void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at )
 {
 	irc_t *irc = ic->irc;
 	char *wrapped;
@@ -817,7 +847,7 @@ void imcb_chat_free( struct groupchat *c )
 	}
 }
 
-void imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, time_t sent_at )
+void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t flags, time_t sent_at )
 {
 	struct im_connection *ic = c->ic;
 	char *wrapped;
@@ -889,7 +919,7 @@ void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at
 
 /* buddy_chat.c */
 
-void imcb_chat_add_buddy( struct groupchat *b, char *handle )
+void imcb_chat_add_buddy( struct groupchat *b, const char *handle )
 {
 	user_t *u = user_findhandle( b->ic, handle );
 	int me = 0;
@@ -924,7 +954,7 @@ void imcb_chat_add_buddy( struct groupchat *b, char *handle )
 }
 
 /* This function is one BIG hack... :-( EREWRITE */
-void imcb_chat_remove_buddy( struct groupchat *b, char *handle, char *reason )
+void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char *reason )
 {
 	user_t *u;
 	int me = 0;
@@ -1069,51 +1099,30 @@ int imc_chat_msg( struct groupchat *c, char *msg, int flags )
 	return 1;
 }
 
-static char *imc_away_alias_find( GList *gcm, char *away );
+static char *imc_away_state_find( GList *gcm, char *away, char **message );
 
-int imc_set_away( struct im_connection *ic, char *away )
+int imc_away_send_update( struct im_connection *ic )
 {
-	GList *m, *ms;
-	char *s;
+	char *away, *msg = NULL;
 	
-	if( !away ) away = "";
-	ms = m = ic->acc->prpl->away_states( ic );
-	
-	while( m )
+	away = set_getstr( &ic->acc->set, "away" ) ?
+	     : set_getstr( &ic->irc->set, "away" );
+	if( away && *away )
 	{
-		if( *away )
-		{
-			if( g_strncasecmp( m->data, away, strlen( m->data ) ) == 0 )
-				break;
-		}
-		else
-		{
-			if( g_strcasecmp( m->data, "Available" ) == 0 )
-				break;
-			if( g_strcasecmp( m->data, "Online" ) == 0 )
-				break;
-		}
-		m = m->next;
+		GList *m = ic->acc->prpl->away_states( ic );
+		msg = ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? away : NULL;
+		away = imc_away_state_find( m, away, &msg ) ? : m->data;
+	}
+	else if( ic->acc->flags & ACC_FLAG_STATUS_MESSAGE )
+	{
+		away = NULL;
+		msg = set_getstr( &ic->acc->set, "status" ) ?
+		    : set_getstr( &ic->irc->set, "status" );
 	}
 	
-	if( m )
-	{
-		ic->acc->prpl->set_away( ic, m->data, *away ? away : NULL );
-	}
-	else
-	{
-		s = imc_away_alias_find( ms, away );
-		if( s )
-		{
-			ic->acc->prpl->set_away( ic, s, away );
-			if( set_getbool( &ic->irc->set, "debug" ) )
-				imcb_log( ic, "Setting away state to %s", s );
-		}
-		else
-			ic->acc->prpl->set_away( ic, GAIM_AWAY_CUSTOM, away );
-	}
+	ic->acc->prpl->set_away( ic, away, msg );
 	
-	return( 1 );
+	return 1;
 }
 
 static char *imc_away_alias_list[8][5] =
@@ -1128,16 +1137,33 @@ static char *imc_away_alias_list[8][5] =
 	{ NULL }
 };
 
-static char *imc_away_alias_find( GList *gcm, char *away )
+static char *imc_away_state_find( GList *gcm, char *away, char **message )
 {
 	GList *m;
 	int i, j;
 	
+	for( m = gcm; m; m = m->next )
+		if( g_strncasecmp( m->data, away, strlen( m->data ) ) == 0 )
+		{
+			/* At least the Yahoo! module works better if message
+			   contains no data unless it adds something to what
+			   we have in state already. */
+			if( strlen( m->data ) == strlen( away ) )
+				*message = NULL;
+			
+			return m->data;
+		}
+	
 	for( i = 0; *imc_away_alias_list[i]; i ++ )
 	{
+		int keep_message;
+		
 		for( j = 0; imc_away_alias_list[i][j]; j ++ )
 			if( g_strncasecmp( away, imc_away_alias_list[i][j], strlen( imc_away_alias_list[i][j] ) ) == 0 )
+			{
+				keep_message = strlen( away ) != strlen( imc_away_alias_list[i][j] );
 				break;
+			}
 		
 		if( !imc_away_alias_list[i][j] )	/* If we reach the end, this row */
 			continue;			/* is not what we want. Next!    */
@@ -1145,17 +1171,22 @@ static char *imc_away_alias_find( GList *gcm, char *away )
 		/* Now find an entry in this row which exists in gcm */
 		for( j = 0; imc_away_alias_list[i][j]; j ++ )
 		{
-			m = gcm;
-			while( m )
-			{
+			for( m = gcm; m; m = m->next )
 				if( g_strcasecmp( imc_away_alias_list[i][j], m->data ) == 0 )
-					return( imc_away_alias_list[i][j] );
-				m = m->next;
-			}
+				{
+					if( !keep_message )
+						*message = NULL;
+					
+					return imc_away_alias_list[i][j];
+				}
 		}
+		
+		/* No need to look further, apparently this state doesn't
+		   have any good alias for this protocol. */
+		break;
 	}
 	
-	return( NULL );
+	return NULL;
 }
 
 void imc_add_allow( struct im_connection *ic, char *handle )
