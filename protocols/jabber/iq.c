@@ -744,7 +744,7 @@ xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_n
 			c = c->next;
 		}
 	}
-	else if( xmlns, XMLNS_DISCO_INFO ) == 0 )
+	else if( strcmp( xmlns, XMLNS_DISCO_INFO ) == 0 )
 	{
 		char *category, *type;
 
@@ -763,7 +763,7 @@ xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_n
 			c = c->next;
 		}
 	}
-	else if( xmlns, XMLNS_BYTESTREAMS ) == 0 )
+	else if( strcmp( xmlns, XMLNS_BYTESTREAMS ) == 0 )
 	{
 		char *host, *jid, *port_s;
 		int port;
