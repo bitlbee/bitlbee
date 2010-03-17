@@ -9,7 +9,8 @@ Version 1.2.5:
 - Avoid linking in a static version of libresolv now that glibc has all
   relevant functions available in the dynamic version.
 - Improved away state code and added the ability to set (non-away) status
-  messages using "set status" (also possible per account).
+  messages using "set status" (also possible per account) and see them in
+  blist and /whois output.
 - Added a post-1.2 equivalent of encode/decode to quickly encrypt/decrypt
   passwords in a way that BitlBee can read them.
 - Allow using the full name for generating nicknames, instead of just the
@@ -17,6 +18,8 @@ Version 1.2.5:
 - Auto reconnect is now enabled by default since all protocols can properly
   detect cases where auto reconnect should be avoided (i.e. concurrent
   logins).
+
+Fixed 17 Mar 2010
 
 Version 1.2.4:
 - Most important change (and main reason for releasing now): Upgraded Yahoo!
