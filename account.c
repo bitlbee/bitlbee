@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Account management functions                                         */
@@ -54,6 +54,8 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	
 	s = set_add( &a->set, "auto_reconnect", "true", set_eval_bool, a );
 	
+	s = set_add( &a->set, "nick_source", "handle", NULL, a );
+	
 	s = set_add( &a->set, "password", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE | SET_NULL_OK;
 	
@@ -68,7 +70,16 @@ account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
 	if( prpl->init )
 		prpl->init( a );
 	
-	return( a );
+	s = set_add( &a->set, "away", NULL, set_eval_account, a );
+	s->flags |= SET_NULL_OK;
+	
+	if( a->flags & ACC_FLAG_STATUS_MESSAGE )
+	{
+		s = set_add( &a->set, "status", NULL, set_eval_account, a );
+		s->flags |= SET_NULL_OK;
+	}
+	
+	return a;
 }
 
 char *set_eval_account( set_t *set, char *value )
@@ -120,6 +131,21 @@ char *set_eval_account( set_t *set, char *value )
 			return SET_INVALID;
 		
 		acc->auto_connect = bool2int( value );
+		return value;
+	}
+	else if( strcmp( set->key, "away" ) == 0 ||
+	         strcmp( set->key, "status" ) == 0 )
+	{
+		if( acc->ic && acc->ic->flags & OPT_LOGGED_IN )
+		{
+			/* If we're currently on-line, set the var now already
+			   (bit of a hack) and send an update. */
+			g_free( set->value );
+			set->value = g_strdup( value );
+			
+			imc_away_send_update( acc->ic );
+		}
+		
 		return value;
 	}
 	
@@ -266,7 +292,7 @@ int account_reconnect_delay_parse( char *value, struct account_reconnect_delay *
 	/* A whole day seems like a sane "maximum maximum". */
 	p->max = 86400;
 	
-	/* Format: /[0-9]+([*+][0-9]+(<[0-9+]))/ */
+	/* Format: /[0-9]+([*+][0-9]+(<[0-9+])?)?/ */
 	while( *value && isdigit( *value ) )
 		p->start = p->start * 10 + *value++ - '0';
 	

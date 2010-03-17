@@ -36,6 +36,7 @@ typedef struct account
 	int auto_connect;
 	int auto_reconnect_delay;
 	int reconnect;
+	int flags;
 	
 	set_t *set;
 	GHashTable *nicks;
@@ -55,8 +56,17 @@ char *set_eval_account( set_t *set, char *value );
 char *set_eval_account_reconnect_delay( set_t *set, char *value );
 int account_reconnect_delay( account_t *a );
 
-#define ACC_SET_NOSAVE		0x01
-#define ACC_SET_OFFLINE_ONLY	0x02
-#define ACC_SET_ONLINE_ONLY	0x04
+typedef enum
+{
+	ACC_SET_NOSAVE = 0x01,          /* Don't save this setting (i.e. stored elsewhere). */
+	ACC_SET_OFFLINE_ONLY = 0x02,    /* Allow changes only if the acct is offline. */
+	ACC_SET_ONLINE_ONLY = 0x04,     /* Allow changes only if the acct is online. */
+} account_set_flag_t;
+
+typedef enum
+{
+	ACC_FLAG_AWAY_MESSAGE = 0x01,   /* Supports away messages instead of just states. */
+	ACC_FLAG_STATUS_MESSAGE = 0x02, /* Supports status messages (without being away). */
+} account_flag_t;
 
 #endif
