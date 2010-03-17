@@ -125,13 +125,13 @@ struct skype_buddy_ask_data {
  */
 
 const struct skype_away_state skype_away_state_list[] = {
-	{ "ONLINE", "Online" },
-	{ "SKYPEME", "Skype Me" },
 	{ "AWAY", "Away" },
 	{ "NA", "Not available" },
 	{ "DND", "Do Not Disturb" },
 	{ "INVISIBLE", "Invisible" },
 	{ "OFFLINE", "Offline" },
+	{ "SKYPEME", "Skype Me" },
+	{ "ONLINE", "Online" },
 	{ NULL, NULL}
 };
 
@@ -1015,8 +1015,8 @@ static void skype_set_away(struct im_connection *ic, char *state_txt,
 {
 	const struct skype_away_state *state;
 
-	if (strcmp(state_txt, GAIM_AWAY_CUSTOM) == 0)
-		state = skype_away_state_by_name("Away");
+	if (state_txt == NULL)
+		state = skype_away_state_by_name("Online");
 	else
 		state = skype_away_state_by_name(state_txt);
 	skype_printf(ic, "SET USERSTATUS %s\n", state->code);
