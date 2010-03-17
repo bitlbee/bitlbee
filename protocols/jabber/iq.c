@@ -657,18 +657,20 @@ xt_status jabber_iq_parse_features( struct im_connection *ic, struct xt_node *no
 {
 	struct xt_node *c;
 	struct jabber_buddy *bud;
-	char *feature;
+	char *feature, *xmlns, *from;
 
 	if( !( c = xt_find_node( node->children, "query" ) ) ||
-	    !( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_DISCO_INFO ) == 0 ) )
+	    !( from = xt_find_attr( c, "from" ) ) ||
+	    !( xmlns = xt_find_attr( c, "xmlns" ) ) ||
+	    !( strcmp( xmlns, XMLNS_DISCO_INFO ) == 0 ) )
 	{
 		imcb_log( ic, "WARNING: Received incomplete IQ-result packet for discover" );
 		return XT_HANDLED;
 	}
-	if( ( bud = jabber_buddy_by_jid( ic, xt_find_attr( node, "from") , 0 ) ) == NULL )
+	if( ( bud = jabber_buddy_by_jid( ic, from, 0 ) ) == NULL )
 	{
 		/* Who cares about the unknown... */
-		imcb_log( ic, "Couldn't find buddy: %s", xt_find_attr( node, "from"));
+		imcb_log( ic, "Couldn't find buddy: %s", from );
 		return 0;
 	}
 	
@@ -676,7 +678,8 @@ xt_status jabber_iq_parse_features( struct im_connection *ic, struct xt_node *no
 	while( ( c = xt_find_node( c, "feature" ) ) )
 	{
 		feature = xt_find_attr( c, "var" );
-		bud->features = g_slist_append( bud->features, g_strdup( feature ) );
+		if( feature )
+			bud->features = g_slist_append( bud->features, g_strdup( feature ) );
 		c = c->next;
 	}
 
@@ -712,9 +715,11 @@ xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_n
 {
 	struct xt_node *c;
 	struct jabber_data *jd = ic->proto_data;
+	char *xmlns, *from;
 
 	if( !( c = xt_find_node( node->children, "query" ) ) ||
-	    !xt_find_attr( node, "from" ) )
+	    !( from = xt_find_attr( node, "from" ) ) ||
+	    !( xmlns = xt_find_attr( c, "xmlns" ) ) )
 	{
 		imcb_log( ic, "WARNING: Received incomplete IQ-result packet for discover" );
 		return XT_HANDLED;
@@ -722,24 +727,24 @@ xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_n
 
 	jd->have_streamhosts++;
 
-	if( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_DISCO_ITEMS ) == 0 )
+	if( strcmp( xmlns, XMLNS_DISCO_ITEMS ) == 0 )
 	{
-		char *item, *itemjid;
+		char *itemjid;
 
 		/* answer from server */
 	
 		c = c->children;
 		while( ( c = xt_find_node( c, "item" ) ) )
 		{
-			item = xt_find_attr( c, "name" );
 			itemjid = xt_find_attr( c, "jid" );
-
-			jabber_iq_query_server( ic, itemjid, XMLNS_DISCO_INFO );
+			
+			if( itemjid )
+				jabber_iq_query_server( ic, itemjid, XMLNS_DISCO_INFO );
 
 			c = c->next;
 		}
 	}
-	else if( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_DISCO_INFO ) == 0 )
+	else if( xmlns, XMLNS_DISCO_INFO ) == 0 )
 	{
 		char *category, *type;
 
@@ -753,27 +758,29 @@ xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_n
 
 			if( type && ( strcmp( type, "bytestreams" ) == 0 ) &&
 			    category && ( strcmp( category, "proxy" ) == 0 ) )
-				jabber_iq_query_server( ic, xt_find_attr( node, "from" ), XMLNS_BYTESTREAMS );
+				jabber_iq_query_server( ic, from, XMLNS_BYTESTREAMS );
 
 			c = c->next;
 		}
 	}
-	else if( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_BYTESTREAMS ) == 0 )
+	else if( xmlns, XMLNS_BYTESTREAMS ) == 0 )
 	{
-		char *host, *jid;
+		char *host, *jid, *port_s;
 		int port;
 
 		/* answer from proxy */
 
 		if( ( c = xt_find_node( c->children, "streamhost" ) ) &&
 		    ( host = xt_find_attr( c, "host" ) ) &&
-		    ( port = atoi( xt_find_attr( c, "port" ) ) ) &&
+		    ( port_s = xt_find_attr( c, "port" ) ) &&
+		    ( sscanf( port_s, "%d", &port ) == 1 ) &&
 		    ( jid = xt_find_attr( c, "jid" ) ) )
 		{
 			jabber_streamhost_t *sh = g_new0( jabber_streamhost_t, 1 );
+			
 			sh->jid = g_strdup( jid );
 			sh->host = g_strdup( host );
-			sprintf( sh->port, "%u", port );
+			g_snprintf( sh->port, sizeof( sh->port ), "%u", port );
 
 			imcb_log( ic, "Proxy found: jid %s host %s port %u", jid, host, port );
 			jd->streamhosts = g_slist_append( jd->streamhosts, sh );
