@@ -107,10 +107,6 @@ $ tar xf bitlbee-@BITLBEE_VERSION@.tar.gz
 $ cd bitlbee-@BITLBEE_VERSION@
 ----
 
-- Backport r482 and r483 from bzr, to fix plugin support. If you don't
-  want to use bzr, you can find the patches
-  http://ftp.frugalware.org/pub/frugalware/frugalware-current/source/network-extra/bitlbee/[here].
-
 - Now compile and install it:
 
 ----

@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.8.1         - support for BitlBee 1.2.5
+              - support for Skype 2.1.0.81 and Skype4Py 1.0.32.0
+              - the plugin part now supports FreeBSD
+              - fix for edited messages, the prefix can now be configured
 0.8.0         - fix build on x86_64 (-fPIC usage)
               - debug messages now have a timestamp
               - more work on having the default config under ~/.skyped

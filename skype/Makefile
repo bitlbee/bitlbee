@@ -1,9 +1,9 @@
 -include config.mak
 
-VERSION = 0.8.0
+VERSION = 0.8.1
 DATE := $(shell date +%Y-%m-%d)
 # latest stable
-BITLBEE_VERSION = 1.2.4
+BITLBEE_VERSION = 1.2.5
 
 AMPATH = $(shell grep automake- $(shell which automake)|sed "s|.*'\(.*\)';|\1|")
 
