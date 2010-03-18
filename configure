@@ -19,7 +19,7 @@ libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
 ipcsocket='/var/run/bitlbee.sock'
 pcdir='$prefix/lib/pkgconfig'
-systemlibdirs="/lib /usr/lib /usr/local/lib"
+systemlibdirs="/lib /lib64 /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64
 
 msn=1
 jabber=1
