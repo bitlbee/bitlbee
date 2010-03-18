@@ -281,11 +281,12 @@ int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, stru
 	shnode = qnode->children;
 	while( ( shnode = xt_find_node( shnode, "streamhost" ) ) )
 	{
-		char *jid, *host;
+		char *jid, *host, *port_s;
 		int port;
 		if( ( jid = xt_find_attr( shnode, "jid" ) ) &&
 		    ( host = xt_find_attr( shnode, "host" ) ) &&
-		    ( ( port = atoi( xt_find_attr( shnode, "port" ) ) ) ) )
+		    ( port_s = xt_find_attr( shnode, "port" ) ) &&
+		    ( sscanf( port_s, "%d", &port ) == 1 ) )
 		{
 			jabber_streamhost_t *sh = g_new0( jabber_streamhost_t, 1 );
 			sh->jid = g_strdup(jid);

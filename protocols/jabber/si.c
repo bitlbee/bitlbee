@@ -40,7 +40,7 @@ void jabber_si_free_transfer( file_transfer_t *ft)
 
 	if( tf->fd != -1 )
 	{
-		close( tf->fd );
+		disconnect( tf->fd );
 		tf->fd = -1;
 	}
 
@@ -51,6 +51,7 @@ void jabber_si_free_transfer( file_transfer_t *ft)
 	g_free( tf->tgt_jid );
 	g_free( tf->iq_id );
 	g_free( tf->sid );
+	g_free( tf );
 }
 
 /* file_transfer canceled() callback */
@@ -203,7 +204,7 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, struct xt_node *sinode)
 {
 	struct xt_node *c, *d, *reply;
-	char *sid, *ini_jid, *tgt_jid, *iq_id, *s, *ext_jid;
+	char *sid, *ini_jid, *tgt_jid, *iq_id, *s, *ext_jid, *size_s;
 	struct jabber_buddy *bud;
 	int requestok = FALSE;
 	char *name;
@@ -229,7 +230,8 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 	    !( d 		= xt_find_node( sinode->children, "file" ) 		) ||
 	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FILETRANSFER ) == 0 		) ||
 	    !( name 		= xt_find_attr( d, "name" ) 				) ||
-	    !( size 		= (size_t) atoll( xt_find_attr( d, "size" ) ) 		) ||
+	    !( size_s           = xt_find_attr( d, "size" )                             ) ||
+	    !( 1               == sscanf( size_s, "%lld", &size )                       ) ||
 	    !( d 		= xt_find_node( sinode->children, "feature" ) 		) ||
 	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FEATURE ) == 0 		) ||
 	    !( d 		= xt_find_node( d->children, "x" ) 			) ||
