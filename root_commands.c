@@ -1127,7 +1127,7 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	}
 }
 
-static void cmd_transfers( irc_t *irc, char **cmd )
+static void cmd_transfer( irc_t *irc, char **cmd )
 {
 	GSList *files = irc->file_transfers;
 	enum { LIST, REJECT, CANCEL };
@@ -1140,15 +1140,12 @@ static void cmd_transfers( irc_t *irc, char **cmd )
 		return;
 	}
 
-	if( cmd[1] && 
-	    ( strcmp( cmd[1], "reject" ) == 0 ) )
+	if( cmd[1] && ( strcmp( cmd[1], "reject" ) == 0 ) )
 	{
 		subcmd = REJECT;
 	}
-	else if( cmd[1] && 
-		 ( strcmp( cmd[1], "cancel" ) == 0 ) && 
-		 cmd[2] &&
-		 ( fid = atoi( cmd[2] ) ) )
+	else if( cmd[1] && ( strcmp( cmd[1], "cancel" ) == 0 ) && 
+		 cmd[2] && ( sscanf( cmd[2], "%d", &fid ) == 1 ) )
 	{
 		subcmd = CANCEL;
 	}
@@ -1213,6 +1210,6 @@ const command_t commands[] = {
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "join_chat",      2, cmd_join_chat,      0 },
 	{ "chat",           1, cmd_chat,           0 },
-	{ "transfers",      0, cmd_transfers,      0 },
+	{ "transfer",       0, cmd_transfer,       0 },
 	{ NULL }
 };

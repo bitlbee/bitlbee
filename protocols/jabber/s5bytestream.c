@@ -829,7 +829,7 @@ static xt_status jabber_bs_send_handle_activate( struct im_connection *ic, struc
 {
 	char *sid;
 	GSList *tflist;
-	struct jabber_transfer *tf;
+	struct jabber_transfer *tf = NULL;
 	struct xt_node *query;
 	struct jabber_data *jd = ic->proto_data;
 

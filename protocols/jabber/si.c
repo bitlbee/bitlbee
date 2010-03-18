@@ -40,7 +40,7 @@ void jabber_si_free_transfer( file_transfer_t *ft)
 
 	if( tf->fd != -1 )
 	{
-		disconnect( tf->fd );
+		closesocket( tf->fd );
 		tf->fd = -1;
 	}
 
@@ -155,10 +155,10 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 
 	if( bud == NULL )
 	{
-		imcb_file_canceled( tf->ft, "Couldn't find buddy (BUG?)" );
+		imcb_file_canceled( ft, "Couldn't find buddy (BUG?)" );
 		return;
 	}
-		
+	
 	imcb_log( ic, "Trying to send %s(%zd bytes) to %s", ft->file_name, ft->file_size, who );
 
 	tf = g_new0( struct jabber_transfer, 1 );
@@ -231,7 +231,7 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FILETRANSFER ) == 0 		) ||
 	    !( name 		= xt_find_attr( d, "name" ) 				) ||
 	    !( size_s           = xt_find_attr( d, "size" )                             ) ||
-	    !( 1               == sscanf( size_s, "%lld", &size )                       ) ||
+	    !( 1               == sscanf( size_s, "%zd", &size )                        ) ||
 	    !( d 		= xt_find_node( sinode->children, "feature" ) 		) ||
 	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FEATURE ) == 0 		) ||
 	    !( d 		= xt_find_node( d->children, "x" ) 			) ||
@@ -241,14 +241,15 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 	    !( strcmp( xt_find_attr( d, "var" ), "stream-method" ) == 0 		) )
 	{
 		imcb_log( ic, "WARNING: Received incomplete Stream Initiation request" );
-	} else
+	}
+	else
 	{
 		/* Check if we support one of the options */
 
 		c = d->children;
 		while( ( c = xt_find_node( c, "option" ) ) )
-			if( 	( d = xt_find_node( c->children, "value" ) ) &&
-				( strcmp( d->text, XMLNS_BYTESTREAMS ) == 0 ) )
+			if( ( d = xt_find_node( c->children, "value" ) ) &&
+			    ( strcmp( d->text, XMLNS_BYTESTREAMS ) == 0 ) )
 			{
 				requestok = TRUE;
 				break;
@@ -258,10 +259,11 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 			imcb_log( ic, "WARNING: Unsupported file transfer request from %s", ini_jid);
 	}
 	
-	if ( requestok )
+	if( requestok )
 	{
 		/* Figure out who the transfer should come frome... */
 
+		ext_jid = ini_jid;
 		if( ( s = strchr( ini_jid, '/' ) ) )
 		{
 			if( ( bud = jabber_buddy_by_jid( ic, ini_jid, GET_BUDDY_EXACT ) ) )
@@ -281,8 +283,7 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 
 		*s = '/';
 	}
-
-	if ( !requestok )
+	else
 	{ 
 		reply = jabber_make_error_packet( node, "item-not-found", "cancel", NULL );
 		if (!jabber_write_packet( ic, reply ))
