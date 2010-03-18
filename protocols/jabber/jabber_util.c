@@ -3,7 +3,7 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  Jabber module - Misc. stuff                                              *
 *                                                                           *
-*  Copyright 2006 Wilmer van der Gaast <wilmer@gaast.net>                   *
+*  Copyright 2006-2010 Wilmer van der Gaast <wilmer@gaast.net>              
 *                                                                           *
 *  This program is free software; you can redistribute it and/or modify     *
 *  it under the terms of the GNU General Public License as published by     *
@@ -555,7 +555,7 @@ struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *ji
 int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct jabber_buddy *bud, *prev, *bi;
+	struct jabber_buddy *bud, *prev = NULL, *bi;
 	char *s, *full_jid;
 	
 	full_jid = jabber_normalize( full_jid_ );
@@ -566,7 +566,7 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 	if( ( bud = g_hash_table_lookup( jd->buddies, full_jid ) ) )
 	{
 		if( bud->next )
-			bud = bud->next;
+			bud = (prev=bud)->next;
 		
 		/* If there's only one item in the list (and if the resource
 		   matches), removing it is simple. (And the hash reference
@@ -586,7 +586,7 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 		}
 		else
 		{
-			for( bi = bud, prev = NULL; bi; bi = (prev=bi)->next )
+			for( bi = bud; bi; bi = (prev=bi)->next )
 				if( strcmp( bi->resource, s + 1 ) == 0 )
 					break;
 			
@@ -597,8 +597,7 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 				if( prev )
 					prev->next = bi->next;
 				else
-					/* The hash table should point at the second
-					   item, because we're removing the first. */
+					/* Don't think this should ever happen anymore. */
 					g_hash_table_replace( jd->buddies, bi->bare_jid, bi->next );
 				
 				g_free( bi->ext_jid );

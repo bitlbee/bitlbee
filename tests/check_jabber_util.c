@@ -83,6 +83,15 @@ static void check_buddy_add(int l)
 	fail_if( jabber_buddy_remove( ic, "nekkid@lamejab.net/Illegal" ) );
 	fail_unless( jabber_buddy_remove( ic, "nekkid@lamejab.net" ) );
 	fail_if( jabber_buddy_by_jid( ic, "nekkid@lamejab.net", 0 ) );
+	
+	/* Fixing a bug in this branch that caused information to get lost when
+	   removing the first full JID from a list. */
+	jabber_buddy_add( ic, "bugtest@google.com/A" );
+	jabber_buddy_add( ic, "bugtest@google.com/B" );
+	jabber_buddy_add( ic, "bugtest@google.com/C" );
+	fail_unless( jabber_buddy_remove( ic, "bugtest@google.com/A" ) );
+	fail_unless( jabber_buddy_remove( ic, "bugtest@google.com/B" ) );
+	fail_unless( jabber_buddy_remove( ic, "bugtest@google.com/C" ) );
 }
 
 Suite *jabber_util_suite (void)
