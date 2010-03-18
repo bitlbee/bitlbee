@@ -1,3 +1,53 @@
+bitlbee (1.2.5-1) unstable; urgency=low
+
+  * New upstream version.
+  * Fixed issues with server-side MSN nickname corruption. (Closes: #538756)
+  * Debconf translation fixes/additions. (Closes: #541754, #563504)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Wed, 17 Mar 2010 14:59:27 +0000
+
+bitlbee (1.2.4-2) unstable; urgency=low
+
+  * Merging in some changes from bzr-head:
+  * Use libresolv.so where possible. (Closes: #551775)
+  * Some include file changes that make the bitlbee-dev package useful again.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Thu, 19 Nov 2009 23:02:43 +0000
+
+bitlbee (1.2.4-1) unstable; urgency=low
+
+  * New upstream version.
+  * Fixed issues with Yahoo! (Closes: #536178)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 17 Oct 2009 18:12:45 +0100
+
+bitlbee (1.2.3-2) unstable; urgency=low
+
+  * Fixed bitblee typo in prerm (introduced by NMU 1.2.1-1.1).
+    (Closes: #531287)
+  * Fixed bitlbee.deb dep in bitlbee-dev to deal with binary NMUs.
+    (Closes: #531219)
+  * Fixed free port detection code in debian/config which was a bit limited
+    and also buggy.
+  * Removing code that edits bitlbee.conf from postinst (and chown code in
+    the init script), it's not really necessary anymore; bitlbee may only
+    still run as root if the admin doesn't read conffile diffs.
+    (Closes: #514572)
+  * No longer overwriting port number info in /etc/default/bitlbee with
+    what's in debconf. (Closes: #514148)
+  * Added notes about the above two changes to bitlbee.conf.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 07 Jun 2009 21:17:39 +0100
+
+bitlbee (1.2.3-1) unstable; urgency=critical
+
+  * New upstream version.
+  * Fixes another account hijacking issue. (Closes: #498159)
+  * Restored --pidfile argument to start-stop-daemon, otherwise the init
+    script fails to restart BitlBee when users are connected.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 07 Sep 2008 18:53:04 +0100
+
 bitlbee (1.2.2-1) unstable; urgency=critical
 
   * New upstream version.
