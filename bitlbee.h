@@ -162,6 +162,7 @@ void root_command( irc_t *irc, char *command[] );
 gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond );
 
 char *set_eval_root_nick( set_t *set, char *new_nick );
+char *set_eval_control_channel( set_t *set, char *new_name );
 
 extern global_t global;
 

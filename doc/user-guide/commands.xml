@@ -510,6 +510,16 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="control_channel" type="string" scope="global">
+		<default>&amp;bitlbee</default>
+
+		<description>
+			<para>
+				Normally the control channel where you can see all your contacts is called "&amp;bitlbee". If you don't like this name, you can rename it to anything else using the <emphasis>rename</emphasis> command, or by changing this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="debug" type="boolean" scope="global">
 		<default>false</default>
 
