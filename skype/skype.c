@@ -505,7 +505,8 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 		return;
 	*info = '\0';
 	info++;
-	if (!strcmp(info, "STATUS RECEIVED") || !strncmp(info, "EDITED_TIMESTAMP", 16)) {
+	if (!strcmp(info, "STATUS RECEIVED") ||
+		!strncmp(info, "EDITED_TIMESTAMP", 16)) {
 		/* New message ID:
 		 * (1) Request its from field
 		 * (2) Request its body
@@ -543,47 +544,49 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 		info += 5;
 		g_free(sd->type);
 		sd->type = g_strdup(info);
-	} else if (!strncmp(info, "CHATNAME ", 9)) {
-		info += 9;
-		if (sd->handle && sd->body && sd->type) {
-			struct groupchat *gc = skype_chat_by_name(ic, info);
-			int i;
-			for (i = 0; i < g_list_length(sd->body); i++) {
-				char *body = g_list_nth_data(sd->body, i);
-				if (!strcmp(sd->type, "SAID") ||
-					!strcmp(sd->type, "EMOTED")) {
-					if (!strcmp(sd->type, "SAID")) {
-						if (!sd->is_edit)
-							g_snprintf(buf, IRC_LINE_SIZE, "%s",
-								body);
-						else {
-							g_snprintf(buf, IRC_LINE_SIZE, "%s %s",
-								set_getstr(&ic->acc->set, "edit_prefix"),
-								body);
-							sd->is_edit = 0;
-						}
-					} else
-						g_snprintf(buf, IRC_LINE_SIZE, "/me %s",
-							body);
-					if (!gc)
-						/* Private message */
-						imcb_buddy_msg(ic,
-							sd->handle, buf, 0, 0);
-					else
-						/* Groupchat message */
-						imcb_chat_msg(gc,
-							sd->handle, buf, 0, 0);
-				} else if (!strcmp(sd->type, "SETTOPIC") && gc)
-					imcb_chat_topic(gc,
-						sd->handle, body, 0);
-				else if (!strcmp(sd->type, "LEFT") && gc)
-					imcb_chat_remove_buddy(gc,
-						sd->handle, NULL);
+	} else if (strncmp(info, "CHATNAME ", 9))
+		return;
+	if (!sd->handle || !sd->body || !sd->type)
+		return;
+	info += 9;
+	struct groupchat *gc = skype_chat_by_name(ic, info);
+	int i;
+	for (i = 0; i < g_list_length(sd->body); i++) {
+		char *body = g_list_nth_data(sd->body, i);
+		if (!strcmp(sd->type, "SETTOPIC") && gc)
+			imcb_chat_topic(gc,
+				sd->handle, body, 0);
+		else if (!strcmp(sd->type, "LEFT") && gc)
+			imcb_chat_remove_buddy(gc,
+				sd->handle, NULL);
+		if (strcmp(sd->type, "SAID") &&
+			strcmp(sd->type, "EMOTED"))
+			continue;
+		if (!strcmp(sd->type, "SAID")) {
+			if (!sd->is_edit)
+				g_snprintf(buf, IRC_LINE_SIZE, "%s",
+					body);
+			else {
+				account_t *acc = ic->acc;
+				g_snprintf(buf, IRC_LINE_SIZE, "%s %s",
+					set_getstr(&acc->set, "edit_prefix"),
+					body);
+				sd->is_edit = 0;
 			}
-			g_list_free(sd->body);
-			sd->body = NULL;
-		}
+		} else
+			g_snprintf(buf, IRC_LINE_SIZE, "/me %s",
+				body);
+		if (!gc)
+			/* Private message */
+			imcb_buddy_msg(ic,
+				sd->handle, buf, 0, 0);
+		else
+			/* Groupchat message */
+			imcb_chat_msg(gc,
+				sd->handle, buf, 0, 0);
 	}
+	g_list_free(sd->body);
+	sd->body = NULL;
 }
 
 static void skype_parse_call(struct im_connection *ic, char *line)
