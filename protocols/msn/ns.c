@@ -736,6 +736,8 @@ static void msn_auth_got_passport_token( struct msn_auth_data *mad )
 	{
 		char buf[1024];
 		
+		md->passport_token = g_strdup( mad->token );
+		
 		g_snprintf( buf, sizeof( buf ), "USR %d TWN S %s\r\n", ++md->trId, mad->token );
 		msn_write( ic, buf, strlen( buf ) );
 	}

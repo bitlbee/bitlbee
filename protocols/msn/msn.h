@@ -41,8 +41,11 @@
 #define QRY_CODE "Q1P7W2E4J9R8U3S5"
 
 /* This should be MSN Messenger 7.0.0813 */
-#define MSNP11_PROD_KEY "CFHUR$52U_{VIX5T"
-#define MSNP11_PROD_ID  "PROD0101{0RM?UBW"
+//#define MSNP11_PROD_KEY "CFHUR$52U_{VIX5T"
+//#define MSNP11_PROD_ID  "PROD0101{0RM?UBW"
+
+#define MSNP11_PROD_KEY "O4BG@C7BWLYQX?5G"
+#define MSNP11_PROD_ID  "PROD01065C%ZFN6F"
 
 #define MSN_SB_NEW         -24062002
 
@@ -67,6 +70,8 @@ struct msn_data
 	struct msn_handler_data *handler;
 	
 	int trId;
+	char *passport_token;
+	char *lock_key;
 	
 	GSList *msgq;
 	GSList *switchboards;

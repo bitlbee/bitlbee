@@ -28,6 +28,7 @@
 #include "msn.h"
 #include "passport.h"
 #include "md5.h"
+#include "soap.h"
 
 static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition cond );
 static int msn_sb_command( gpointer data, char **cmd, int num_parts );
@@ -604,6 +605,17 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	{
 		int num = atoi( cmd[0] );
 		const struct msn_status_code *err = msn_status_by_number( num );
+		
+		if( num == 217 )
+		{
+			GSList *l;
+			
+			for( l = sb->msgq; l; l = l->next )
+			{
+				struct msn_message *m = l->data;
+				msn_soap_oim_send( ic, m->who, m->text );
+			}
+		}
 		
 		imcb_error( ic, "Error reported by switchboard server: %s", err->text );
 		
