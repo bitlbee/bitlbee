@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Miscellaneous utilities                                 */
@@ -25,6 +25,7 @@
 
 #include "nogaim.h"
 #include "msn.h"
+#include "md5.h"
 #include <ctype.h>
 
 int msn_write( struct im_connection *ic, char *s, int len )
@@ -375,4 +376,97 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list )
 	
 	imcb_log( ic, "%s", ret->str );
 	g_string_free( ret, TRUE );
+}
+
+unsigned int little_endian( unsigned int dw )
+{
+#if defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN
+	return dw;
+#else
+	/* We're still not sure if this machine is big endian since the
+	   constants above are not that portable. Don't swap bytes, just
+	   force-compose a 32-bit little endian integer. */
+	unsigned int ret = 0, i;
+	char *dst = (char*) (&ret + 1);
+	
+	for (i = 0; i < 4; i ++)
+	{
+		*(--dst) = dw >> 24;
+		dw <<= 8;
+	}
+	
+	return ret;
+#endif
+}
+
+/* Copied and heavily modified from http://tmsnc.sourceforge.net/chl.c */
+
+char *msn_p11_challenge( char *challenge )
+{
+	char *output, buf[256];
+	md5_state_t md5c;
+	unsigned char md5Hash[16], *newHash;
+	unsigned int *md5Parts, *chlStringParts, newHashParts[5];
+	long long nHigh = 0, nLow = 0;
+	int i, n;
+
+	/* Create the MD5 hash */
+	md5_init(&md5c);
+	md5_append(&md5c, (unsigned char*) challenge, strlen(challenge));
+	md5_append(&md5c, (unsigned char*) MSNP11_PROD_KEY, strlen(MSNP11_PROD_KEY));
+	md5_finish(&md5c, md5Hash);
+
+	/* Split it into four integers */
+	md5Parts = (unsigned int *)md5Hash;
+	for (i = 0; i < 4; i ++)
+	{  
+		md5Parts[i] = little_endian(md5Parts[i]);
+		
+		/* & each integer with 0x7FFFFFFF */
+		/* and save one unmodified array for later */
+		newHashParts[i] = md5Parts[i];
+		md5Parts[i] &= 0x7FFFFFFF;
+	}
+	
+	/* make a new string and pad with '0' */
+	n = g_snprintf(buf, sizeof(buf)-5, "%s%s00000000", challenge, MSNP11_PROD_ID);
+	/* truncate at an 8-byte boundary */
+	buf[n&=~7] = '\0';
+	
+	/* split into integers */
+	chlStringParts = (unsigned int *)buf;
+	
+	/* this is magic */
+	for (i = 0; i < (n / 4) - 1; i += 2)
+	{
+		long long temp;
+
+		chlStringParts[i]   = little_endian(chlStringParts[i]);
+		chlStringParts[i+1] = little_endian(chlStringParts[i+1]);
+
+		temp  = (md5Parts[0] * (((0x0E79A9C1 * (long long)chlStringParts[i]) % 0x7FFFFFFF)+nHigh) + md5Parts[1])%0x7FFFFFFF;
+		nHigh = (md5Parts[2] * (((long long)chlStringParts[i+1]+temp) % 0x7FFFFFFF) + md5Parts[3]) % 0x7FFFFFFF;
+		nLow  = nLow + nHigh + temp;
+	}
+	nHigh = (nHigh+md5Parts[1]) % 0x7FFFFFFF;
+	nLow = (nLow+md5Parts[3]) % 0x7FFFFFFF;
+	
+	newHashParts[0] ^= nHigh;
+	newHashParts[1] ^= nLow;
+	newHashParts[2] ^= nHigh;
+	newHashParts[3] ^= nLow;
+	
+	/* swap more bytes if big endian */
+	for (i = 0; i < 4; i ++)
+		newHashParts[i] = little_endian(newHashParts[i]); 
+	
+	/* make a string of the parts */
+	newHash = (unsigned char *)newHashParts;
+	
+	/* convert to hexadecimal */
+	output = g_new(char, 33);
+	for (i = 0; i < 16; i ++)
+		sprintf(output + i * 2, "%02x", newHash[i]);
+	
+	return output;
 }
