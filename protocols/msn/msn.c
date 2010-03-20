@@ -100,6 +100,7 @@ static void msn_logout( struct im_connection *ic )
 		g_free( md->grouplist );
 		
 		g_free( md->passport_token );
+		g_free( md->lock_key );
 		
 		g_free( md );
 	}

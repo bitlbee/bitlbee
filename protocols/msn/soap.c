@@ -102,6 +102,8 @@ static int msn_soap_send_request( struct msn_soap_req_data *soap_req )
 	soap_req->http_req = http_dorequest( url.host, url.port, url.proto == PROTO_HTTPS,
 		http_req, msn_soap_handle_response, soap_req );
 	
+	g_free( http_req );
+	
 	return soap_req->http_req != NULL;
 }
 
@@ -122,14 +124,16 @@ static void msn_soap_handle_response( struct http_request *http_req )
 	
 	st = soap_req->handle_response( soap_req );
 	
+	g_free( soap_req->url );
+	g_free( soap_req->action );
+	g_free( soap_req->payload );
+	soap_req->url = soap_req->action = soap_req->payload = NULL;
+	
 	if( st == MSN_SOAP_RETRY && --soap_req->ttl )
 		msn_soap_send_request( soap_req );
 	else
 	{
 		soap_req->free_data( soap_req );
-		g_free( soap_req->url );
-		g_free( soap_req->action );
-		g_free( soap_req->payload );
 		g_free( soap_req );
 	}
 }

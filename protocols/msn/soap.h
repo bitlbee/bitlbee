@@ -68,7 +68,8 @@
 "</soap:Header>" \
 "<soap:Body>" \
   "<MessageType xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\">text</MessageType>" \
-  "<Content xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\">MIME-Version: 1.0\r\n" \
+  "<Content xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\">" \
+    "MIME-Version: 1.0\r\n" \
     "Content-Type: text/plain; charset=UTF-8\r\n" \
     "Content-Transfer-Encoding: base64\r\n" \
     "X-OIM-Message-Type: OfflineMessage\r\n" \
