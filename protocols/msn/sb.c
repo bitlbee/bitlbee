@@ -606,18 +606,12 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		int num = atoi( cmd[0] );
 		const struct msn_status_code *err = msn_status_by_number( num );
 		
+		/* If the person is offline, send an offline message instead,
+		   and don't report an error. */
 		if( num == 217 )
-		{
-			GSList *l;
-			
-			for( l = sb->msgq; l; l = l->next )
-			{
-				struct msn_message *m = l->data;
-				msn_soap_oim_send( ic, m->who, m->text );
-			}
-		}
-		
-		imcb_error( ic, "Error reported by switchboard server: %s", err->text );
+			msn_soap_oim_send_queue( ic, &sb->msgq );
+		else
+			imcb_error( ic, "Error reported by switchboard server: %s", err->text );
 		
 		if( err->flags & STATUS_SB_FATAL )
 		{

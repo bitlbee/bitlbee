@@ -56,14 +56,6 @@ struct msn_soap_req_data
 	msn_soap_func build_request, handle_response, free_data;
 };
 
-struct msn_soap_oim_send_data
-{
-	char *to;
-	char *msg;
-	int number;
-	int need_retry;
-};
-
 static int msn_soap_send_request( struct msn_soap_req_data *req );
 
 static int msn_soap_start( struct im_connection *ic,
@@ -138,6 +130,17 @@ static void msn_soap_handle_response( struct http_request *http_req )
 	}
 }
 
+
+/* oim_send: Sending offline messages */
+
+struct msn_soap_oim_send_data
+{
+	char *to;
+	char *msg;
+	int number;
+	int need_retry;
+};
+
 static int msn_soap_oim_build_request( struct msn_soap_req_data *soap_req )
 {
 	struct msn_soap_oim_send_data *oim = soap_req->data;
@@ -182,15 +185,21 @@ static int msn_soap_oim_handle_response( struct msn_soap_req_data *soap_req )
 {
 	struct msn_soap_oim_send_data *oim = soap_req->data;
 	
-	if( soap_req->http_req->status_code == 500 && oim->need_retry )
+	if( soap_req->http_req->status_code == 500 && oim->need_retry && soap_req->ttl > 0 )
 	{
 		oim->need_retry = 0;
 		return MSN_SOAP_RETRY;
 	}
 	else if( soap_req->http_req->status_code == 200 )
+	{
+		imcb_log( soap_req->ic, "Offline message successfully delivered to %s", oim->to );
 		return MSN_SOAP_OK;
+	}
 	else
+	{
+		imcb_log( soap_req->ic, "Failed to deliver offline message to %s:\n%s", oim->to, oim->msg );
 		return MSN_SOAP_ABORT;
+	}
 }
 
 static int msn_soap_oim_free_data( struct msn_soap_req_data *soap_req )
@@ -217,4 +226,31 @@ int msn_soap_oim_send( struct im_connection *ic, const char *to, const char *msg
 	                                 msn_soap_oim_send_parser,
 	                                 msn_soap_oim_handle_response,
 	                                 msn_soap_oim_free_data );
+}
+
+int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq )
+{
+	GSList *l;
+	char *n = NULL;
+	
+	for( l = *msgq; l; l = l->next )
+	{
+		struct msn_message *m = l->data;
+		
+		if( n == NULL )
+			n = m->who;
+		if( strcmp( n, m->who ) == 0 )
+			msn_soap_oim_send( ic, m->who, m->text );
+	}
+	
+	while( *msgq != NULL )
+	{
+		struct msn_message *m = (*msgq)->data;
+		
+		g_free( m->who );
+		g_free( m->text );
+		g_free( m );
+		
+		*msgq = g_slist_remove( *msgq, m );
+	}
 }

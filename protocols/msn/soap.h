@@ -82,5 +82,6 @@
 "</soap:Envelope>"
 
 int msn_soap_oim_send( struct im_connection *ic, const char *to, const char *msg );
+int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq );
 
 #endif /* __SOAP_H__ */
