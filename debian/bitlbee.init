@@ -40,15 +40,7 @@ d_start() {
 	touch /var/run/bitlbee.pid
 	chown bitlbee: /var/run/bitlbee.pid
 	
-	# Clean up after the bug between 1.2-5 and 1.2.1-2 where BitlBee ran
-	# as root. (#494656 and #495877) Fixing this in the postinst script
-	# is not enough since the user will restart his BitlBee after up-
-	# grading the package, and the BitlBee running as root will then
-	# save its settings, re-setting ownership of the file to root.
-	# TODO: Remove this after a few revisions.
-	find /var/lib/bitlbee -uid 0 -name '*.xml' -exec chown bitlbee: {} \;
-
-	start-stop-daemon --start --quiet \
+	start-stop-daemon --start --quiet --pidfile $PIDFILE \
 		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $BITLBEE_OPTS
 }
 

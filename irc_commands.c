@@ -496,6 +496,8 @@ static void irc_cmd_whois( irc_t *irc, char **cmd )
 			irc_reply( irc, 301, "%s :%s", u->nick, "User is offline" );
 		else if( u->away )
 			irc_reply( irc, 301, "%s :%s", u->nick, u->away );
+		if( u->status_msg )
+			irc_reply( irc, 333, "%s :Status: %s", u->nick, u->status_msg );
 		
 		irc_reply( irc, 318, "%s :End of /WHOIS list", nick );
 	}

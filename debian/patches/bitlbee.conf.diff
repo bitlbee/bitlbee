@@ -1,13 +1,22 @@
-=== modified file 'bitlbee.conf'
---- debian/bitlbee/etc/bitlbee/bitlbee.conf	2008-08-26 22:33:54 +0000
-+++ debian/bitlbee/etc/bitlbee/bitlbee.conf	2008-08-27 23:18:13 +0000
-@@ -23,7 +23,7 @@
+--- debian/bitlbee/etc/bitlbee/bitlbee.conf	2009-06-01 00:20:24.000000000 +0100
++++ debian/bitlbee/etc/bitlbee/bitlbee.conf	2009-06-07 21:16:19.000000000 +0100
+@@ -23,13 +23,18 @@
  ## If BitlBee is started by root as a daemon, it can drop root privileges,
  ## and change to the specified user.
  ##
 -# User = bitlbee
++## DEBIAN NOTE: Without this, BitlBee will run as root!
++##
 +User = bitlbee
  
  ## DaemonPort/DaemonInterface:
  ##
-
+ ## For daemon mode, you can specify on what interface and port the daemon
+ ## should be listening for connections.
+ ##
++## DEBIAN NOTE: The init script passes the -p flag to use the port number
++## set using debconf, this overrides the DaemonPort setting here.
++##
+ # DaemonInterface = 0.0.0.0
+ # DaemonPort = 6667
+ 

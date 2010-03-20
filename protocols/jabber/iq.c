@@ -306,23 +306,19 @@ xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, 
 		if( c && c->text_len && ( s = strchr( c->text, '/' ) ) &&
 		    strcmp( s + 1, set_getstr( &ic->acc->set, "resource" ) ) != 0 )
 			imcb_log( ic, "Server changed session resource string to `%s'", s + 1 );
-		
-		jd->flags &= ~JFLAG_WANT_BIND;
-	}
-	else if( node && ( c = xt_find_node( node->children, "session" ) ) )
-	{
-		jd->flags &= ~JFLAG_WANT_SESSION;
 	}
 	
 	if( jd->flags & JFLAG_WANT_BIND )
 	{
 		reply = xt_new_node( "bind", NULL, xt_new_node( "resource", set_getstr( &ic->acc->set, "resource" ), NULL ) );
 		xt_add_attr( reply, "xmlns", XMLNS_BIND );
+		jd->flags &= ~JFLAG_WANT_BIND;
 	}
 	else if( jd->flags & JFLAG_WANT_SESSION )
 	{
 		reply = xt_new_node( "session", NULL, NULL );
 		xt_add_attr( reply, "xmlns", XMLNS_SESSION );
+		jd->flags &= ~JFLAG_WANT_SESSION;
 	}
 	
 	if( reply != NULL )

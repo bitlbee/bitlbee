@@ -19,7 +19,7 @@ libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
 ipcsocket='/var/run/bitlbee.sock'
 pcdir='$prefix/lib/pkgconfig'
-systemlibdirs="/lib /usr/lib /usr/local/lib"
+systemlibdirs="/lib /lib64 /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64"
 
 msn=1
 jabber=1
@@ -158,7 +158,7 @@ else
 fi
 
 echo CFLAGS=$CFLAGS >> Makefile.settings
-echo CFLAGS+=-I`pwd` -iquote`pwd`/lib -iquote`pwd`/protocols -I. >> Makefile.settings
+echo CFLAGS+=-I`pwd` -I`pwd`/lib -I`pwd`/protocols -I. >> Makefile.settings
 
 echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
 
@@ -297,28 +297,34 @@ int main()
 
 detect_resolv_dynamic()
 {
-	echo "$RESOLV_TESTCODE" | $CC -o /dev/null -x c - -lresolv >/dev/null 2>/dev/null
+	TMPFILE=$(mktemp)
+	ret=1
+	echo "$RESOLV_TESTCODE" | $CC -o $TMPFILE -x c - -lresolv >/dev/null 2>/dev/null
 	if [ "$?" = "0" ]; then
 		echo 'EFLAGS+=-lresolv' >> Makefile.settings
-		return 0
+		ret=0
 	fi
 
-	return 1
+	rm -f $TMPFILE
+	return $ret
 }
 
 detect_resolv_static()
 {
+	TMPFILE=$(mktemp)
+	ret=1
 	for i in $systemlibdirs; do
 		if [ -f $i/libresolv.a ]; then
-			echo "$RESOLV_TESTCODE" | $CC -o /dev/null -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
+			echo "$RESOLV_TESTCODE" | $CC -o $TMPFILE -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
 			if [ "$?" = "0" ]; then
 				echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
-				return 0
+				ret=0
 			fi
 		fi
 	done
 
-	return 1
+	rm -f $TMPFILE
+	return $ret
 }
 
 if [ "$ssl" = "auto" ]; then

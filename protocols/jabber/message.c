@@ -70,7 +70,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 		{
 			if( bud )
 			{
-				bud->last_act = time( NULL );
+				bud->last_msg = time( NULL );
 				from = bud->ext_jid ? : bud->bare_jid;
 			}
 			else

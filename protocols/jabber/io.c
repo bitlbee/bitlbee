@@ -379,18 +379,8 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	if( ( c = xt_find_node( node->children, "session" ) ) )
 		jd->flags |= JFLAG_WANT_SESSION;
 	
-	/* This flag is already set if we authenticated via SASL, so now
-	   we can resume the session in the new stream, if we don't have
-	   to bind/initialize the session. */
-	if( jd->flags & JFLAG_AUTHENTICATED && ( jd->flags & ( JFLAG_WANT_BIND | JFLAG_WANT_SESSION ) ) == 0 )
-	{
-		if( !jabber_get_roster( ic ) )
-			return XT_ABORT;
-	}
-	else if( jd->flags & JFLAG_AUTHENTICATED )
-	{
+	if( jd->flags & JFLAG_AUTHENTICATED )
 		return jabber_pkt_bind_sess( ic, NULL, NULL );
-	}
 	
 	return XT_HANDLED;
 }

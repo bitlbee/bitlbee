@@ -170,6 +170,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
 	s = set_add( &irc->set, "charset", "utf-8", set_eval_charset, irc );
+	s = set_add( &irc->set, "control_channel", irc->channel, set_eval_control_channel, irc );
 	s = set_add( &irc->set, "debug", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "default_target", "root", NULL, irc );
 	s = set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );

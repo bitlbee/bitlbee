@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* User manager (root) commands                                         */
@@ -653,6 +653,21 @@ static void cmd_rename( irc_t *irc, char **cmd )
 	{
 		irc_usermsg( irc, "Nick `%s' can't be changed", cmd[1] );
 	}
+	else if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
+	{
+		if( strchr( CTYPES, cmd[2][0] ) && nick_ok( cmd[2] + 1 ) )
+		{
+			u = user_find( irc, irc->nick );
+			
+			irc_part( irc, u, irc->channel );
+			g_free( irc->channel );
+			irc->channel = g_strdup( cmd[2] );
+			irc_join( irc, u, irc->channel );
+			
+			if( strcmp( cmd[0], "set_rename" ) != 0 )
+				set_setstr( &irc->set, "control_channel", cmd[2] );
+		}
+	}
 	else if( user_find( irc, cmd[2] ) && ( nick_cmp( cmd[1], cmd[2] ) != 0 ) )
 	{
 		irc_usermsg( irc, "Nick `%s' already exists", cmd[2] );
@@ -700,6 +715,20 @@ char *set_eval_root_nick( set_t *set, char *new_nick )
 	}
 	
 	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : SET_INVALID;
+}
+
+char *set_eval_control_channel( set_t *set, char *new_name )
+{
+	irc_t *irc = set->data;
+	
+	if( strcmp( irc->channel, new_name ) != 0 )
+	{
+		char *cmd[] = { "set_rename", irc->channel, new_name, NULL };
+		
+		cmd_rename( irc, cmd );
+	}
+	
+	return strcmp( irc->channel, new_name ) == 0 ? new_name : SET_INVALID;
 }
 
 static void cmd_remove( irc_t *irc, char **cmd )
@@ -913,7 +942,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	else if( cmd[1] && g_strcasecmp( cmd[1], "online" ) == 0 )
 		online = 1;
 	else
-		online =  away = 1;
+		online = away = 1;
 	
 	if( strchr( irc->umode, 'b' ) != NULL )
 		format = "%s\t%s\t%s";
@@ -926,8 +955,13 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	{
 		if( online == 1 )
 		{
+			char st[256] = "Online";
+			
+			if( u->status_msg )
+				g_snprintf( st, sizeof( st ) - 1, "Online (%s)", u->status_msg );
+			
 			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
-			irc_usermsg( irc, format, u->nick, s, "Online" );
+			irc_usermsg( irc, format, u->nick, s, st );
 		}
 		
 		n_online ++;
