@@ -45,6 +45,9 @@ struct bs_transfer {
 	char *pseudoadr;
 
 	gint connect_timeout;
+	
+	char peek_buf[64];
+	int peek_buf_len;
 };
 
 struct socks5_message
@@ -149,20 +152,26 @@ gboolean jabber_bs_peek( struct bs_transfer *bt, void *buffer, int buflen )
 	int ret;
 	int fd = bt->tf->fd;
 
-	ASSERTSOCKOP( ret = recv( fd, buffer, buflen, MSG_PEEK ), "MSG_PEEK'ing" );
+	if( buflen > sizeof( bt->peek_buf ) )
+		return jabber_bs_abort( bt, "BUG: %d > sizeof(peek_buf)", buflen );
+
+	ASSERTSOCKOP( ret = recv( fd, bt->peek_buf + bt->peek_buf_len,
+		buflen - bt->peek_buf_len, 0 ), "recv() on SOCKS5 connection" );
 
 	if( ret == 0 )
 		return jabber_bs_abort( bt, "Remote end closed connection" );
-		
-	if( ret < buflen )
-		return ret;
-
-	ASSERTSOCKOP( ret = recv( fd, buffer, buflen, 0 ), "Dequeuing after MSG_PEEK" );
-
-	if( ret != buflen )
-		return jabber_bs_abort( bt, "recv returned less than previous recv with MSG_PEEK" );
 	
-	return ret;
+	bt->peek_buf_len += ret;
+	memcpy( buffer, bt->peek_buf, bt->peek_buf_len );
+	
+	if( bt->peek_buf_len == buflen )
+	{
+		/* If we have everything the caller wanted, reset the peek buffer. */
+		bt->peek_buf_len = 0;
+		return buflen;
+	}
+	else
+		return bt->peek_buf_len;
 }
 
 
@@ -559,6 +568,7 @@ gboolean jabber_bs_recv_handshake_abort( struct bs_transfer *bt, char *error )
 	imcb_file_canceled( tf->ft, "couldn't connect to any streamhosts" );
 
 	bt->tf->watch_in = 0;
+	/* MUST always return FALSE! */
 	return FALSE;
 }
 
@@ -1011,6 +1021,7 @@ gboolean jabber_bs_send_handshake_abort(struct bs_transfer *bt, char *error )
 	if( jd->streamhosts==NULL ) /* we're done here unless we have a proxy to try */
 		imcb_file_canceled( tf->ft, error );
 
+	/* MUST always return FALSE! */
 	return FALSE;
 }
 
