@@ -1156,6 +1156,68 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	}
 }
 
+static void cmd_transfer( irc_t *irc, char **cmd )
+{
+	GSList *files = irc->file_transfers;
+	enum { LIST, REJECT, CANCEL };
+	int subcmd = LIST;
+	int fid;
+
+	if( !files )
+	{
+		irc_usermsg( irc, "No pending transfers" );
+		return;
+	}
+
+	if( cmd[1] && ( strcmp( cmd[1], "reject" ) == 0 ) )
+	{
+		subcmd = REJECT;
+	}
+	else if( cmd[1] && ( strcmp( cmd[1], "cancel" ) == 0 ) && 
+		 cmd[2] && ( sscanf( cmd[2], "%d", &fid ) == 1 ) )
+	{
+		subcmd = CANCEL;
+	}
+
+	for( ; files; files = g_slist_next( files ) )
+	{
+		file_transfer_t *file = files->data;
+		
+		switch( subcmd ) {
+		case LIST:
+			if ( file->status == FT_STATUS_LISTENING )
+				irc_usermsg( irc, 
+					"Pending file(id %d): %s (Listening...)", file->local_id, file->file_name);
+			else 
+			{
+				int kb_per_s = 0;
+				time_t diff = time( NULL ) - file->started ? : 1;
+				if ( ( file->started > 0 ) && ( file->bytes_transferred > 0 ) )
+					kb_per_s = file->bytes_transferred / 1024 / diff;
+					
+				irc_usermsg( irc, 
+					"Pending file(id %d): %s (%10zd/%zd kb, %d kb/s)", file->local_id, file->file_name, 
+					file->bytes_transferred/1024, file->file_size/1024, kb_per_s);
+			}
+			break;
+		case REJECT:
+			if( file->status == FT_STATUS_LISTENING )
+			{
+				irc_usermsg( irc, "Rejecting file transfer for %s", file->file_name );
+				imcb_file_canceled( file, "Denied by user" );
+			}
+			break;
+		case CANCEL:
+			if( file->local_id == fid )
+			{
+				irc_usermsg( irc, "Canceling file transfer for %s", file->file_name );
+				imcb_file_canceled( file, "Canceled by user" );
+			}
+			break;
+		}
+	}
+}
+
 const command_t commands[] = {
 	{ "help",           0, cmd_help,           0 }, 
 	{ "identify",       1, cmd_identify,       0 },
@@ -1177,5 +1239,6 @@ const command_t commands[] = {
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "join_chat",      2, cmd_join_chat,      0 },
 	{ "chat",           1, cmd_chat,           0 },
+	{ "transfer",       0, cmd_transfer,       0 },
 	{ NULL }
 };

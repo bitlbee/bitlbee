@@ -44,6 +44,8 @@
 #include "account.h"
 #include "proxy.h"
 #include "query.h"
+#include "md5.h"
+#include "ft.h"
 
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
@@ -228,6 +230,9 @@ struct prpl {
 	/* Implement these callbacks if you want to use imcb_ask_auth() */
 	void (* auth_allow)	(struct im_connection *, const char *who);
 	void (* auth_deny)	(struct im_connection *, const char *who);
+
+	/* Incoming transfer request */
+	void (* transfer_request) (struct im_connection *, file_transfer_t *ft, char *handle );
 };
 
 /* im_api core stuff. */

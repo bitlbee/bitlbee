@@ -372,11 +372,15 @@ static void oscar_init(account_t *acc)
 {
 	set_t *s;
 	
-	s = set_add( &acc->set, "server", AIM_DEFAULT_LOGIN_SERVER, set_eval_account, acc );
+	if (isdigit(acc->user[0])) {
+		set_add(&acc->set, "ignore_auth_requests", "false", set_eval_bool, acc);
+	}
+	
+	s = set_add(&acc->set, "server", AIM_DEFAULT_LOGIN_SERVER, set_eval_account, acc);
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	
-	if (isdigit(acc->user[0])) {
-		s = set_add( &acc->set, "web_aware", "false", set_eval_bool, acc );
+	if(isdigit(acc->user[0])) {
+		s = set_add(&acc->set, "web_aware", "false", set_eval_bool, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY;
 	}
 	
@@ -1211,10 +1215,15 @@ static void gaim_icq_authdeny(void *data_) {
  * For when other people ask you for authorization
  */
 static void gaim_icq_authask(struct im_connection *ic, guint32 uin, char *msg) {
-	struct icq_auth *data = g_new(struct icq_auth, 1);
+	struct icq_auth *data;
 	char *reason = NULL;
 	char *dialog_msg;
+
+	if (set_getbool(&ic->acc->set, "ignore_auth_requests"))
+		return;
 	
+	data = g_new(struct icq_auth, 1);
+
 	if (strlen(msg) > 6)
 		reason = msg + 6;
 	

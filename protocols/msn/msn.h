@@ -68,6 +68,7 @@ struct msn_data
 	GSList *switchboards;
 	int sb_failures;
 	time_t first_sb_failure;
+	GSList *filetransfers;
 	
 	const struct msn_away_state *away_state;
 	int buddycount;
@@ -178,5 +179,8 @@ struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb );
 void msn_sb_destroy( struct msn_switchboard *sb );
 gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond );
 int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m );
+
+/* invitation.c */
+void msn_ftp_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *who );
 
 #endif //_MSN_H
