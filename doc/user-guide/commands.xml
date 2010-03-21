@@ -586,6 +586,17 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="ignore_auth_requests" type="boolean" scope="account">
+		<default>true</default>
+
+		<description>
+			<para>
+				Only supported by OSCAR so far, you can use this setting to ignore ICQ authorization requests, which are hardly used for legitimate (i.e. non-spam) reasons anymore.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="lcnicks" type="boolean" scope="global">
 		<default>true</default>
 
