@@ -293,35 +293,30 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 
 	if( cond & GAIM_INPUT_READ ) 
 	{
-		int bytes_received;
 		int ret;
 		
-		ASSERTSOCKOP( ret = recv( fd, &bytes_received, sizeof( bytes_received ), MSG_PEEK ), "Receiving" );
+		ASSERTSOCKOP( ret = recv( fd, ( (char*) &df->acked ) + df->acked_len,
+			sizeof( df->acked ) - df->acked_len, 0 ), "Receiving" );
 
 		if( ret == 0 )
 			return dcc_abort( df, "Remote end closed connection" );
-			
-		if( ret < 4 )
-		{
-			imcb_log( df->ic, "WARNING: DCC SEND: receiver sent only %d bytes instead of 4, shouldn't happen too often!", ret );
+		
+		/* How likely is it that a 32-bit integer gets split accross
+		   packet boundaries? Chances are rarely 0 so let's be sure. */
+		if( ( df->acked_len = ( df->acked_len + ret ) % 4 ) > 0 )
 			return TRUE;
-		}
 
-		ASSERTSOCKOP( ret = recv( fd, &bytes_received, sizeof( bytes_received ), 0 ), "Receiving" );
-		if( ret != 4 )
-			return dcc_abort( df, "MSG_PEEK'ed 4, but can only dequeue %d bytes", ret );
-
-		bytes_received = ntohl( bytes_received );
+		df->acked = ntohl( df->acked );
 
 		/* If any of this is actually happening, the receiver should buy a new IRC client */
 
-		if ( bytes_received > df->bytes_sent )
-			return dcc_abort( df, "Receiver magically received more bytes than sent ( %d > %d ) (BUG at receiver?)", bytes_received, df->bytes_sent );
+		if ( df->acked > df->bytes_sent )
+			return dcc_abort( df, "Receiver magically received more bytes than sent ( %d > %d ) (BUG at receiver?)", df->acked, df->bytes_sent );
 
-		if ( bytes_received < file->bytes_transferred )
-			return dcc_abort( df, "Receiver lost bytes? ( has %d, had %d ) (BUG at receiver?)", bytes_received, file->bytes_transferred );
+		if ( df->acked < file->bytes_transferred )
+			return dcc_abort( df, "Receiver lost bytes? ( has %d, had %d ) (BUG at receiver?)", df->acked, file->bytes_transferred );
 		
-		file->bytes_transferred = bytes_received;
+		file->bytes_transferred = df->acked;
 	
 		if( file->bytes_transferred >= file->file_size ) {
 			if( df->proto_finished )
@@ -411,8 +406,8 @@ gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond )
 		if( ( ( df->bytes_sent - ft->bytes_transferred ) > DCC_PACKET_SIZE ) ||
 		    done )
 		{
-			int ack, ackret;
-			ack = htonl( ft->bytes_transferred = df->bytes_sent );
+			guint32 ack = htonl( ft->bytes_transferred = df->bytes_sent );
+			int ackret;
 
 			ASSERTSOCKOP( ackret = send( fd, &ack, 4, 0 ), "Sending DCC ACK" );
 			

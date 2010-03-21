@@ -76,6 +76,12 @@ typedef struct dcc_file_transfer {
 	 */
 	size_t bytes_sent;
 	
+	/*
+	 * Handle the wonderful sadly-not-deprecated ACKs.
+	 */
+	guint32 acked;
+	int acked_len;
+	
 	/* imc's handle */
 	file_transfer_t *ft;
 
