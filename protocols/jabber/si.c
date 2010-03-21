@@ -275,7 +275,7 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 		{
 			if( ( bud = jabber_buddy_by_jid( ic, ini_jid, GET_BUDDY_EXACT ) ) )
 			{
-				bud->last_act = time( NULL );
+				bud->last_msg = time( NULL );
 				ext_jid = bud->ext_jid ? : bud->bare_jid;
 			}
 			else
