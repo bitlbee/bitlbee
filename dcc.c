@@ -25,7 +25,6 @@
 #include "bitlbee.h"
 #include "ft.h"
 #include "dcc.h"
-#include <poll.h>
 #include <netinet/tcp.h>
 #include <regex.h>
 #include "lib/ftutil.h"
@@ -259,34 +258,6 @@ int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct soc
 }
 
 /*
- * Checks poll(), same for receiving and sending
- */
-gboolean dcc_poll( dcc_file_transfer_t *df, int fd, short *revents )
-{
-	struct pollfd pfd = { .fd = fd, .events = POLLHUP|POLLERR|POLLIN|POLLOUT };
-
-	ASSERTSOCKOP( poll( &pfd, 1, 0 ), "poll()" )
-
-	if( pfd.revents & POLLERR )
-	{
-		int sockerror;
-		socklen_t errlen = sizeof( sockerror );
-
-		if ( getsockopt( fd, SOL_SOCKET, SO_ERROR, &sockerror, &errlen ) )
-			return dcc_abort( df, "getsockopt() failed, unknown socket error (weird!)" );
-
-		return dcc_abort( df, "Socket error: %s", strerror( sockerror ) );
-	}
-	
-	if( pfd.revents & POLLHUP ) 
-		return dcc_abort( df, "Remote end closed connection" );
-	
-	*revents = pfd.revents;
-
-	return TRUE;
-}
-
-/*
  * After setup, the transfer itself is handled entirely by this function.
  * There are basically four things to handle: connect, receive, send, and error.
  */
@@ -294,12 +265,8 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 {
 	dcc_file_transfer_t *df = data;
 	file_transfer_t *file = df->ft;
-	short revents;
 	
-	if( !dcc_poll( df, fd, &revents ) )
-		return FALSE;
-
-	if( ( revents & POLLIN ) &&
+	if( ( cond & GAIM_INPUT_READ ) &&
 	    ( file->status & FT_STATUS_LISTENING ) )
 	{ 	
 		struct sockaddr *clt_addr;
@@ -324,7 +291,7 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 		return FALSE;
 	}
 
-	if( revents & POLLIN ) 
+	if( cond & GAIM_INPUT_READ ) 
 	{
 		int bytes_received;
 		int ret;
@@ -413,12 +380,8 @@ gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond )
 {
 	dcc_file_transfer_t *df = data;
 	file_transfer_t *ft = df->ft;
-	short revents;
 
-	if( !dcc_poll( df, fd, &revents ) )
-		return FALSE;
-	
-	if( ( revents & POLLOUT ) &&
+	if( ( cond & GAIM_INPUT_WRITE ) &&
 	    ( ft->status & FT_STATUS_CONNECTING ) )
 	{
 		ft->status = FT_STATUS_TRANSFERRING;
@@ -429,7 +392,7 @@ gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond )
 		return FALSE;
 	}
 
-	if( revents & POLLIN )
+	if( cond & GAIM_INPUT_READ )
 	{
 		int ret, done;
 
