@@ -580,12 +580,12 @@ static void *prplcb_request_action( const char *title, const char *primary, cons
 		caption = va_arg( actions, char* );
 		fn = va_arg( actions, void* );
 		
-		if( strcmp( caption, "Accept" ) == 0 )
+		if( strstr( caption, "Accept" ) )
 		{
 			pqad->yes = fn;
 			pqad->yes_i = i;
 		}
-		else if( strcmp( caption, "Reject" ) == 0 )
+		else if( strstr( caption, "Reject" ) || strstr( caption, "Cancel" ) )
 		{
 			pqad->no = fn;
 			pqad->no_i = i;
@@ -658,10 +658,64 @@ static void *prplcb_notify_email( PurpleConnection *gc, const char *subject, con
 	return NULL;
 }
 
-static	PurpleNotifyUiOps bee_notify_uiops =
+static PurpleNotifyUiOps bee_notify_uiops =
 {
         NULL,
         prplcb_notify_email,
+};
+
+static void prplcb_xfer( PurpleXfer *xfer )
+{
+	fprintf( stderr, "ft bla: 0x%p\n", xfer );
+}
+
+static void prpl_xfer_accept( struct file_transfer *ft )
+{
+	purple_xfer_request_accepted( ft->data, NULL );
+	purple_xfer_ui_ready( ft->data );
+}
+
+static void prpl_xfer_reject( struct file_transfer *ft )
+{
+	purple_xfer_request_denied( ft->data );
+}
+
+static gboolean prplcb_xfer_new_cb( gpointer data, gint fd, b_input_condition cond )
+{
+	PurpleXfer *xfer = data;
+	struct im_connection *ic = purple_ic_by_pa( xfer->account );
+	file_transfer_t *ft;
+	
+	ft = imcb_file_send_start( ic, xfer->who, xfer->filename, xfer->size );
+	ft->data = xfer;
+	xfer->ui_data = ft;
+	
+	ft->accept = prpl_xfer_accept;
+	
+	return FALSE;
+}
+
+static void prplcb_xfer_new( PurpleXfer *xfer )
+{
+	purple_xfer_set_local_filename( xfer, "/tmp/wtf123" );
+	
+	fprintf( stderr, "ft_new bla: 0x%p\n", xfer );
+	
+	b_timeout_add( 0, prplcb_xfer_new_cb, xfer );
+}
+
+static PurpleXferUiOps bee_xfer_uiops =
+{
+	prplcb_xfer_new,
+	prplcb_xfer,
+	prplcb_xfer,
+	prplcb_xfer,
+	prplcb_xfer,
+	prplcb_xfer,
+	prplcb_xfer,
+	prplcb_xfer,
+	prplcb_xfer,
+	prplcb_xfer,
 };
 
 static void purple_ui_init()
@@ -670,8 +724,9 @@ static void purple_ui_init()
 	purple_connections_set_ui_ops( &bee_conn_uiops );
 	purple_conversations_set_ui_ops( &bee_conv_uiops );
 	purple_request_set_ui_ops( &bee_request_uiops );
-	purple_notify_set_ui_ops(&bee_notify_uiops);
-	//purple_debug_set_ui_ops( &bee_debug_uiops );
+	purple_notify_set_ui_ops( &bee_notify_uiops );
+	purple_xfers_set_ui_ops( &bee_xfer_uiops );
+	purple_debug_set_ui_ops( &bee_debug_uiops );
 }
 
 void purple_initmodule()
