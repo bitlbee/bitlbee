@@ -659,8 +659,8 @@ xt_status jabber_iq_parse_features( struct im_connection *ic, struct xt_node *no
 	struct jabber_buddy *bud;
 	char *feature, *xmlns, *from;
 
-	if( !( c = xt_find_node( node->children, "query" ) ) ||
-	    !( from = xt_find_attr( c, "from" ) ) ||
+	if( !( from = xt_find_attr( node, "from" ) ) ||
+	    !( c = xt_find_node( node->children, "query" ) ) ||
 	    !( xmlns = xt_find_attr( c, "xmlns" ) ) ||
 	    !( strcmp( xmlns, XMLNS_DISCO_INFO ) == 0 ) )
 	{

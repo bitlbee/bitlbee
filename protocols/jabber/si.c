@@ -249,6 +249,7 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 		c = d->children;
 		while( ( c = xt_find_node( c, "option" ) ) )
 			if( ( d = xt_find_node( c->children, "value" ) ) &&
+			    ( d->text != NULL ) &&
 			    ( strcmp( d->text, XMLNS_BYTESTREAMS ) == 0 ) )
 			{
 				requestok = TRUE;
