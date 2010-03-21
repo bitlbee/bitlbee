@@ -60,6 +60,14 @@ typedef enum
 	                                   have a real JID. */
 } jabber_buddy_flags_t;
 
+/* Stores a streamhost's (a.k.a. proxy) data */
+typedef struct
+{
+	char *jid;
+	char *host;
+	char port[6];
+} jabber_streamhost_t;
+
 typedef enum
 {
 	JCFLAG_MESSAGE_SENT = 1,        /* Set this after sending the first message, so
@@ -90,6 +98,10 @@ struct jabber_data
 	md5_state_t cached_id_prefix;
 	GHashTable *node_cache;
 	GHashTable *buddies;
+
+	GSList *filetransfers;
+	GSList *streamhosts;
+	int have_streamhosts;
 };
 
 struct jabber_away_state
@@ -126,6 +138,7 @@ struct jabber_buddy
 	int priority;
 	struct jabber_away_state *away_state;
 	char *away_message;
+	GSList *features;
 	
 	time_t last_msg;
 	jabber_buddy_flags_t flags;
@@ -139,6 +152,36 @@ struct jabber_chat
 	char *name;
 	char *my_full_jid; /* Separate copy because of case sensitivity. */
 	struct jabber_buddy *me;
+};
+
+struct jabber_transfer
+{
+	/* bitlbee's handle for this transfer */
+	file_transfer_t *ft;
+
+	/* the stream's private handle */
+	gpointer streamhandle;
+
+	/* timeout for discover queries */
+	gint disco_timeout;
+	gint disco_timeout_fired;
+
+	struct im_connection *ic;
+
+	struct jabber_buddy *bud;
+
+	int watch_in;
+	int watch_out;
+
+	char *ini_jid;
+	char *tgt_jid;
+	char *iq_id;
+	char *sid;
+	int accepted;
+
+	size_t bytesread, byteswritten;
+	int fd;
+	struct sockaddr_storage saddr;
 };
 
 #define JABBER_XMLCONSOLE_HANDLE "xmlconsole"
@@ -166,17 +209,24 @@ struct jabber_chat
 #define XMLNS_ROSTER       "jabber:iq:roster"
 
 /* Some supported extensions/legacy stuff */
-#define XMLNS_AUTH         "jabber:iq:auth"                     /* XEP-0078 */
-#define XMLNS_VERSION      "jabber:iq:version"                  /* XEP-0092 */
-#define XMLNS_TIME         "jabber:iq:time"                     /* XEP-0090 */
-#define XMLNS_PING         "urn:xmpp:ping"                      /* XEP-0199 */
-#define XMLNS_VCARD        "vcard-temp"                         /* XEP-0054 */
-#define XMLNS_DELAY        "jabber:x:delay"                     /* XEP-0091 */
-#define XMLNS_CHATSTATES   "http://jabber.org/protocol/chatstates"  /* 0085 */
-#define XMLNS_DISCOVER     "http://jabber.org/protocol/disco#info"  /* 0030 */
-#define XMLNS_MUC          "http://jabber.org/protocol/muc"     /* XEP-0045 */
-#define XMLNS_MUC_USER     "http://jabber.org/protocol/muc#user"/* XEP-0045 */
-#define XMLNS_CAPS         "http://jabber.org/protocol/caps"    /* XEP-0115 */
+#define XMLNS_AUTH         "jabber:iq:auth"                                      /* XEP-0078 */
+#define XMLNS_VERSION      "jabber:iq:version"                                   /* XEP-0092 */
+#define XMLNS_TIME         "jabber:iq:time"                                      /* XEP-0090 */
+#define XMLNS_PING         "urn:xmpp:ping"                                       /* XEP-0199 */
+#define XMLNS_VCARD        "vcard-temp"                                          /* XEP-0054 */
+#define XMLNS_DELAY        "jabber:x:delay"                                      /* XEP-0091 */
+#define XMLNS_XDATA        "jabber:x:data"                                       /* XEP-0004 */
+#define XMLNS_CHATSTATES   "http://jabber.org/protocol/chatstates"               /* XEP-0085 */
+#define XMLNS_DISCO_INFO   "http://jabber.org/protocol/disco#info"               /* XEP-0030 */
+#define XMLNS_DISCO_ITEMS  "http://jabber.org/protocol/disco#items"              /* XEP-0030 */
+#define XMLNS_MUC          "http://jabber.org/protocol/muc"                      /* XEP-0045 */
+#define XMLNS_MUC_USER     "http://jabber.org/protocol/muc#user"                 /* XEP-0045 */
+#define XMLNS_CAPS         "http://jabber.org/protocol/caps"                     /* XEP-0115 */
+#define XMLNS_FEATURE      "http://jabber.org/protocol/feature-neg"              /* XEP-0020 */
+#define XMLNS_SI           "http://jabber.org/protocol/si"                       /* XEP-0095 */
+#define XMLNS_FILETRANSFER "http://jabber.org/protocol/si/profile/file-transfer" /* XEP-0096 */
+#define XMLNS_BYTESTREAMS  "http://jabber.org/protocol/bytestreams"              /* XEP-0065 */
+#define XMLNS_IBB          "http://jabber.org/protocol/ibb"                      /* XEP-0047 */
 
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
@@ -186,6 +236,18 @@ int jabber_get_roster( struct im_connection *ic );
 int jabber_get_vcard( struct im_connection *ic, char *bare_jid );
 int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name );
 int jabber_remove_from_roster( struct im_connection *ic, char *handle );
+xt_status jabber_iq_query_features( struct im_connection *ic, char *bare_jid );
+xt_status jabber_iq_query_server( struct im_connection *ic, char *jid, char *xmlns );
+
+/* si.c */
+int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, struct xt_node *sinode );
+void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *who );
+void jabber_si_free_transfer( file_transfer_t *ft);
+
+/* s5bytestream.c */
+int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, struct xt_node *qnode);
+gboolean jabber_bs_send_start( struct jabber_transfer *tf );
+gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, unsigned int len );
 
 /* message.c */
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
@@ -199,7 +261,7 @@ int presence_send_request( struct im_connection *ic, char *handle, char *request
 char *set_eval_priority( set_t *set, char *value );
 char *set_eval_tls( set_t *set, char *value );
 struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
-struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type );
+struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type, char *err_code );
 void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_cache_event func );
 struct xt_node *jabber_cache_get( struct im_connection *ic, char *id );
 void jabber_cache_entry_free( gpointer entry );

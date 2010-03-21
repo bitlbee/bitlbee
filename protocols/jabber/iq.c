@@ -90,14 +90,17 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 				xt_add_attr( reply, "id", s );
 			pack = 0;
 		}
-		else if( strcmp( s, XMLNS_DISCOVER ) == 0 )
+		else if( strcmp( s, XMLNS_DISCO_INFO ) == 0 )
 		{
-			const char *features[] = { XMLNS_DISCOVER,
+			const char *features[] = { XMLNS_DISCO_INFO,
 			                           XMLNS_VERSION,
 			                           XMLNS_TIME,
 			                           XMLNS_CHATSTATES,
 			                           XMLNS_MUC,
 			                           XMLNS_PING,
+			                           XMLNS_SI,
+			                           XMLNS_BYTESTREAMS,
+			                           XMLNS_FILETRANSFER,
 			                           NULL };
 			const char **f;
 			
@@ -117,24 +120,29 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		else
 		{
 			xt_free_node( reply );
-			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel" );
+			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel", NULL );
 			pack = 0;
 		}
 	}
 	else if( strcmp( type, "set" ) == 0 )
 	{
-		if( !( c = xt_find_node( node->children, "query" ) ) ||
-		    !( s = xt_find_attr( c, "xmlns" ) ) )
+		if( ( c = xt_find_node( node->children, "si" ) ) &&
+		    ( s = xt_find_attr( c, "xmlns" ) ) &&
+		    ( strcmp( s, XMLNS_SI ) == 0 ) )
+		{
+			return jabber_si_handle_request( ic, node, c );
+		}
+		else if( !( c = xt_find_node( node->children, "query" ) ) ||
+		         !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
 			imcb_log( ic, "Warning: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
 		}
-		
+		else if( strcmp( s, XMLNS_ROSTER ) == 0 )
+		{
 		/* This is a roster push. XMPP servers send this when someone
 		   was added to (or removed from) the buddy list. AFAIK they're
 		   sent even if we added this buddy in our own session. */
-		if( strcmp( s, XMLNS_ROSTER ) == 0 )
-		{
 			int bare_len = strlen( ic->acc->user );
 			
 			if( ( s = xt_find_attr( node, "from" ) ) == NULL ||
@@ -151,14 +159,19 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 				imcb_log( ic, "Warning: %s tried to fake a roster push!", s ? s : "(unknown)" );
 				
 				xt_free_node( reply );
-				reply = jabber_make_error_packet( node, "not-allowed", "cancel" );
+				reply = jabber_make_error_packet( node, "not-allowed", "cancel", NULL );
 				pack = 0;
 			}
+		}
+		else if( strcmp( s, XMLNS_BYTESTREAMS ) == 0 )
+		{
+			/* Bytestream Request (stage 2 of file transfer) */
+			return jabber_bs_recv_request( ic, node, c );
 		}
 		else
 		{
 			xt_free_node( reply );
-			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel" );
+			reply = jabber_make_error_packet( node, "feature-not-implemented", "cancel", NULL );
 			pack = 0;
 		}
 	}
@@ -607,4 +620,176 @@ int jabber_remove_from_roster( struct im_connection *ic, char *handle )
 	
 	xt_free_node( node );
 	return st;
+}
+
+xt_status jabber_iq_parse_features( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+
+xt_status jabber_iq_query_features( struct im_connection *ic, char *bare_jid )
+{
+	struct xt_node *node, *query;
+	struct jabber_buddy *bud;
+	
+	if( ( bud = jabber_buddy_by_jid( ic, bare_jid , 0 ) ) == NULL )
+	{
+		/* Who cares about the unknown... */
+		imcb_log( ic, "Couldn't find buddy: %s", bare_jid);
+		return XT_HANDLED;
+	}
+	
+	if( bud->features ) /* been here already */
+		return XT_HANDLED;
+	
+	node = xt_new_node( "query", NULL, NULL );
+	xt_add_attr( node, "xmlns", XMLNS_DISCO_INFO );
+	
+	if( !( query = jabber_make_packet( "iq", "get", bare_jid, node ) ) )
+	{
+		imcb_log( ic, "WARNING: Couldn't generate feature query" );
+		xt_free_node( node );
+		return XT_HANDLED;
+	}
+
+	jabber_cache_add( ic, query, jabber_iq_parse_features );
+
+	return jabber_write_packet( ic, query ) ? XT_HANDLED : XT_ABORT;
+}
+
+xt_status jabber_iq_parse_features( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
+{
+	struct xt_node *c;
+	struct jabber_buddy *bud;
+	char *feature, *xmlns, *from;
+
+	if( !( from = xt_find_attr( node, "from" ) ) ||
+	    !( c = xt_find_node( node->children, "query" ) ) ||
+	    !( xmlns = xt_find_attr( c, "xmlns" ) ) ||
+	    !( strcmp( xmlns, XMLNS_DISCO_INFO ) == 0 ) )
+	{
+		imcb_log( ic, "WARNING: Received incomplete IQ-result packet for discover" );
+		return XT_HANDLED;
+	}
+	if( ( bud = jabber_buddy_by_jid( ic, from, 0 ) ) == NULL )
+	{
+		/* Who cares about the unknown... */
+		imcb_log( ic, "Couldn't find buddy: %s", from );
+		return XT_HANDLED;
+	}
+	
+	c = c->children;
+	while( ( c = xt_find_node( c, "feature" ) ) )
+	{
+		feature = xt_find_attr( c, "var" );
+		if( feature )
+			bud->features = g_slist_append( bud->features, g_strdup( feature ) );
+		c = c->next;
+	}
+
+	return XT_HANDLED;
+}
+
+xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+
+xt_status jabber_iq_query_server( struct im_connection *ic, char *jid, char *xmlns )
+{
+	struct xt_node *node, *query;
+	struct jabber_data *jd = ic->proto_data;
+	
+	node = xt_new_node( "query", NULL, NULL );
+	xt_add_attr( node, "xmlns", xmlns );
+	
+	if( !( query = jabber_make_packet( "iq", "get", jid, node ) ) )
+	{
+		imcb_log( ic, "WARNING: Couldn't generate server query" );
+		xt_free_node( node );
+	}
+
+	jd->have_streamhosts--;
+	jabber_cache_add( ic, query, jabber_iq_parse_server_features );
+
+	return jabber_write_packet( ic, query ) ? XT_HANDLED : XT_ABORT;
+}
+
+/*
+ * Query the server for "items", query each "item" for identities, query each "item" that's a proxy for it's bytestream info
+ */
+xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
+{
+	struct xt_node *c;
+	struct jabber_data *jd = ic->proto_data;
+	char *xmlns, *from;
+
+	if( !( c = xt_find_node( node->children, "query" ) ) ||
+	    !( from = xt_find_attr( node, "from" ) ) ||
+	    !( xmlns = xt_find_attr( c, "xmlns" ) ) )
+	{
+		imcb_log( ic, "WARNING: Received incomplete IQ-result packet for discover" );
+		return XT_HANDLED;
+	}
+
+	jd->have_streamhosts++;
+
+	if( strcmp( xmlns, XMLNS_DISCO_ITEMS ) == 0 )
+	{
+		char *itemjid;
+
+		/* answer from server */
+	
+		c = c->children;
+		while( ( c = xt_find_node( c, "item" ) ) )
+		{
+			itemjid = xt_find_attr( c, "jid" );
+			
+			if( itemjid )
+				jabber_iq_query_server( ic, itemjid, XMLNS_DISCO_INFO );
+
+			c = c->next;
+		}
+	}
+	else if( strcmp( xmlns, XMLNS_DISCO_INFO ) == 0 )
+	{
+		char *category, *type;
+
+		/* answer from potential proxy */
+
+		c = c->children;
+		while( ( c = xt_find_node( c, "identity" ) ) )
+		{
+			category = xt_find_attr( c, "category" );
+			type = xt_find_attr( c, "type" );
+
+			if( type && ( strcmp( type, "bytestreams" ) == 0 ) &&
+			    category && ( strcmp( category, "proxy" ) == 0 ) )
+				jabber_iq_query_server( ic, from, XMLNS_BYTESTREAMS );
+
+			c = c->next;
+		}
+	}
+	else if( strcmp( xmlns, XMLNS_BYTESTREAMS ) == 0 )
+	{
+		char *host, *jid, *port_s;
+		int port;
+
+		/* answer from proxy */
+
+		if( ( c = xt_find_node( c->children, "streamhost" ) ) &&
+		    ( host = xt_find_attr( c, "host" ) ) &&
+		    ( port_s = xt_find_attr( c, "port" ) ) &&
+		    ( sscanf( port_s, "%d", &port ) == 1 ) &&
+		    ( jid = xt_find_attr( c, "jid" ) ) )
+		{
+			jabber_streamhost_t *sh = g_new0( jabber_streamhost_t, 1 );
+			
+			sh->jid = g_strdup( jid );
+			sh->host = g_strdup( host );
+			g_snprintf( sh->port, sizeof( sh->port ), "%u", port );
+
+			imcb_log( ic, "Proxy found: jid %s host %s port %u", jid, host, port );
+			jd->streamhosts = g_slist_append( jd->streamhosts, sh );
+		}
+	}
+
+	if( jd->have_streamhosts == 0 )
+		jd->have_streamhosts++;
+
+	return XT_HANDLED;
 }

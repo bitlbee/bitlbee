@@ -82,6 +82,7 @@ typedef struct irc
 	
 	struct query *queries;
 	struct account *accounts;
+	GSList *file_transfers;
 	struct chat *chatrooms;
 	
 	struct __USER *users;
