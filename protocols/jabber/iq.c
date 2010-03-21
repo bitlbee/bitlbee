@@ -127,7 +127,8 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	else if( strcmp( type, "set" ) == 0 )
 	{
 		if( ( c = xt_find_node( node->children, "si" ) ) &&
-		    ( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_SI ) == 0 ) )
+		    ( s = xt_find_attr( c, "xmlns" ) ) &&
+		    ( strcmp( s, XMLNS_SI ) == 0 ) )
 		{
 			return jabber_si_handle_request( ic, node, c );
 		}

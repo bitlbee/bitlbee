@@ -207,7 +207,7 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 	char *sid, *ini_jid, *tgt_jid, *iq_id, *s, *ext_jid, *size_s;
 	struct jabber_buddy *bud;
 	int requestok = FALSE;
-	char *name;
+	char *name, *cmp;
 	size_t size;
 	struct jabber_transfer *tf;
 	struct jabber_data *jd = ic->proto_data;
@@ -226,19 +226,25 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 	    !( tgt_jid 		= xt_find_attr(   node, "to" ) 				) ||
 	    !( iq_id 		= xt_find_attr(   node, "id" ) 				) ||
 	    !( sid 		= xt_find_attr( sinode, "id" ) 				) ||
-	    !( strcmp( xt_find_attr( sinode, "profile" ), XMLNS_FILETRANSFER ) == 0	) ||
+	    !( cmp              = xt_find_attr( sinode, "profile" )                     ) ||
+	    !( 0               == strcmp( cmp, XMLNS_FILETRANSFER )			) ||
 	    !( d 		= xt_find_node( sinode->children, "file" ) 		) ||
-	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FILETRANSFER ) == 0 		) ||
+	    !( cmp = xt_find_attr( d, "xmlns" )						) ||
+	    !( 0               == strcmp( cmp, XMLNS_FILETRANSFER )			) ||
 	    !( name 		= xt_find_attr( d, "name" ) 				) ||
 	    !( size_s           = xt_find_attr( d, "size" )                             ) ||
 	    !( 1               == sscanf( size_s, "%zd", &size )                        ) ||
 	    !( d 		= xt_find_node( sinode->children, "feature" ) 		) ||
-	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FEATURE ) == 0 		) ||
+	    !( cmp              = xt_find_attr( d, "xmlns" )				) ||
+	    !( 0               == strcmp( cmp, XMLNS_FEATURE )				) ||
 	    !( d 		= xt_find_node( d->children, "x" ) 			) ||
-	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_XDATA ) == 0 			) ||
-	    !( strcmp( xt_find_attr( d, "type" ), "form" ) == 0 			) ||
+	    !( cmp              = xt_find_attr( d, "xmlns" )				) ||
+	    !( 0               == strcmp( cmp, XMLNS_XDATA )				) ||
+	    !( cmp              = xt_find_attr( d, "type" )				) ||
+	    !( 0               == strcmp( cmp, "form" )					) ||
 	    !( d 		= xt_find_node( d->children, "field" ) 			) ||
-	    !( strcmp( xt_find_attr( d, "var" ), "stream-method" ) == 0 		) )
+	    !( cmp              = xt_find_attr( d, "var" )				) ||
+	    !( 0               == strcmp( cmp, "stream-method" )			) )
 	{
 		imcb_log( ic, "WARNING: Received incomplete Stream Initiation request" );
 	}
@@ -366,7 +372,7 @@ void jabber_si_answer_request( file_transfer_t *ft ) {
 static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
 {
 	struct xt_node *c, *d;
-	char *ini_jid, *tgt_jid, *iq_id;
+	char *ini_jid, *tgt_jid, *iq_id, *cmp;
 	GSList *tflist;
 	struct jabber_transfer *tf=NULL;
 	struct jabber_data *jd = ic->proto_data;
@@ -391,16 +397,19 @@ static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_n
 	    !( ini_jid = xt_find_attr( node, "to" ) ) ||
 	    !( iq_id   = xt_find_attr( node, "id" ) ) ||
 	    !( c = xt_find_node( node->children, "si" ) ) ||
-	    !( strcmp( xt_find_attr( c, "xmlns" ), XMLNS_SI ) == 0 ) ||
-/*	    !( d = xt_find_node( c->children, "file" ) ) ||
-	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FILETRANSFER ) == 0 ) || */
+	    !( cmp = xt_find_attr( c, "xmlns" ) ) ||
+	    !( strcmp( cmp, XMLNS_SI ) == 0 ) ||
 	    !( d = xt_find_node( c->children, "feature" ) ) ||
-	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_FEATURE ) == 0 ) ||
+	    !( cmp = xt_find_attr( d, "xmlns" ) ) ||
+	    !( strcmp( cmp, XMLNS_FEATURE ) == 0 ) ||
 	    !( d = xt_find_node( d->children, "x" ) ) ||
-	    !( strcmp( xt_find_attr( d, "xmlns" ), XMLNS_XDATA ) == 0 ) ||
-	    !( strcmp( xt_find_attr( d, "type" ), "submit" ) == 0 ) ||
+	    !( cmp = xt_find_attr( d, "xmlns" ) ) ||
+	    !( strcmp( cmp, XMLNS_XDATA ) == 0 ) ||
+	    !( cmp = xt_find_attr( d, "type" ) ) ||
+	    !( strcmp( cmp, "submit" ) == 0 ) ||
 	    !( d = xt_find_node( d->children, "field" ) ) ||
-	    !( strcmp( xt_find_attr( d, "var" ), "stream-method" ) == 0 ) ||
+	    !( cmp = xt_find_attr( d, "var" ) ) ||
+	    !( strcmp( cmp, "stream-method" ) == 0 ) ||
 	    !( d = xt_find_node( d->children, "value" ) ) )
 	{
 		imcb_log( ic, "WARNING: Received incomplete Stream Initiation response" );
