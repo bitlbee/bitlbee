@@ -632,7 +632,7 @@ xt_status jabber_iq_query_features( struct im_connection *ic, char *bare_jid )
 	{
 		/* Who cares about the unknown... */
 		imcb_log( ic, "Couldn't find buddy: %s", bare_jid);
-		return 0;
+		return XT_HANDLED;
 	}
 	
 	if( bud->features ) /* been here already */
@@ -645,12 +645,12 @@ xt_status jabber_iq_query_features( struct im_connection *ic, char *bare_jid )
 	{
 		imcb_log( ic, "WARNING: Couldn't generate feature query" );
 		xt_free_node( node );
-		return 0;
+		return XT_HANDLED;
 	}
 
 	jabber_cache_add( ic, query, jabber_iq_parse_features );
 
-	return jabber_write_packet( ic, query );
+	return jabber_write_packet( ic, query ) ? XT_HANDLED : XT_ABORT;
 }
 
 xt_status jabber_iq_parse_features( struct im_connection *ic, struct xt_node *node, struct xt_node *orig )
@@ -671,7 +671,7 @@ xt_status jabber_iq_parse_features( struct im_connection *ic, struct xt_node *no
 	{
 		/* Who cares about the unknown... */
 		imcb_log( ic, "Couldn't find buddy: %s", from );
-		return 0;
+		return XT_HANDLED;
 	}
 	
 	c = c->children;
@@ -705,7 +705,7 @@ xt_status jabber_iq_query_server( struct im_connection *ic, char *jid, char *xml
 	jd->have_streamhosts--;
 	jabber_cache_add( ic, query, jabber_iq_parse_server_features );
 
-	return jabber_write_packet( ic, query );
+	return jabber_write_packet( ic, query ) ? XT_HANDLED : XT_ABORT;
 }
 
 /*
