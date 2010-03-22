@@ -664,58 +664,102 @@ static PurpleNotifyUiOps bee_notify_uiops =
         prplcb_notify_email,
 };
 
-static void prplcb_xfer( PurpleXfer *xfer )
+struct prpl_xfer_data
 {
-	fprintf( stderr, "ft bla: 0x%p\n", xfer );
+	PurpleXfer *xfer;
+	file_transfer_t *ft;
+	gint ready_timer;
+};
+
+/* Glorious hack: We seem to have to remind at least some libpurple plugins
+   that we're ready because this info may get lost if we give it too early.
+   So just do it ten times a second. :-/ */
+static gboolean prplcb_xfer_write_request_cb( gpointer data, gint fd, b_input_condition cond )
+{
+	purple_xfer_ui_ready( data );
+	return TRUE;
+}
+
+static gboolean prpl_xfer_write_request( struct file_transfer *ft )
+{
+	struct prpl_xfer_data *px = ft->data;
+	px->ready_timer = b_timeout_add( 100, prplcb_xfer_write_request_cb, px->xfer );
+	return TRUE;
+}
+
+static gssize prplcb_xfer_write( PurpleXfer *xfer, const guchar *buffer, gssize size )
+{
+	struct prpl_xfer_data *px = xfer->ui_data;
+	gboolean st;
+	
+	b_event_remove( px->ready_timer );
+	px->ready_timer = 0;
+	
+	st = px->ft->write( px->ft, (char*) buffer, size );
+	
+	if( st && xfer->bytes_remaining == size )
+		imcb_file_finished( px->ft );
+	
+	return st ? size : 0;
 }
 
 static void prpl_xfer_accept( struct file_transfer *ft )
 {
-	purple_xfer_request_accepted( ft->data, NULL );
-	purple_xfer_ui_ready( ft->data );
+	struct prpl_xfer_data *px = ft->data;
+	purple_xfer_request_accepted( px->xfer, NULL );
+	prpl_xfer_write_request( ft );
 }
 
-static void prpl_xfer_reject( struct file_transfer *ft )
+static void prpl_xfer_canceled( struct file_transfer *ft, char *reason )
 {
-	purple_xfer_request_denied( ft->data );
+	struct prpl_xfer_data *px = ft->data;
+	purple_xfer_request_denied( px->xfer );
 }
 
 static gboolean prplcb_xfer_new_cb( gpointer data, gint fd, b_input_condition cond )
 {
 	PurpleXfer *xfer = data;
 	struct im_connection *ic = purple_ic_by_pa( xfer->account );
-	file_transfer_t *ft;
+	struct prpl_xfer_data *px = g_new0( struct prpl_xfer_data, 1 );
+	PurpleBuddy *buddy;
+	const char *who;
 	
-	ft = imcb_file_send_start( ic, xfer->who, xfer->filename, xfer->size );
-	ft->data = xfer;
-	xfer->ui_data = ft;
+	buddy = purple_find_buddy( xfer->account, xfer->who );
+	who = buddy ? purple_buddy_get_name( buddy ) : xfer->who;
 	
-	ft->accept = prpl_xfer_accept;
+	/* TODO(wilmer): After spreading some more const goodness in BitlBee,
+	   remove the evil cast below. */
+	px->ft = imcb_file_send_start( ic, (char*) who, xfer->filename, xfer->size );
+	px->ft->data = px;
+	px->xfer = data;
+	px->xfer->ui_data = px;
+	
+	px->ft->accept = prpl_xfer_accept;
+	px->ft->canceled = prpl_xfer_canceled;
+	px->ft->write_request = prpl_xfer_write_request;
 	
 	return FALSE;
 }
 
 static void prplcb_xfer_new( PurpleXfer *xfer )
 {
+	/* This should suppress the stupid file dialog. */
 	purple_xfer_set_local_filename( xfer, "/tmp/wtf123" );
 	
-	fprintf( stderr, "ft_new bla: 0x%p\n", xfer );
-	
+	/* Sadly the xfer struct is still empty ATM so come back after
+	   the caller is done. */
 	b_timeout_add( 0, prplcb_xfer_new_cb, xfer );
 }
 
 static PurpleXferUiOps bee_xfer_uiops =
 {
 	prplcb_xfer_new,
-	prplcb_xfer,
-	prplcb_xfer,
-	prplcb_xfer,
-	prplcb_xfer,
-	prplcb_xfer,
-	prplcb_xfer,
-	prplcb_xfer,
-	prplcb_xfer,
-	prplcb_xfer,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	prplcb_xfer_write,
 };
 
 static void purple_ui_init()
@@ -726,7 +770,7 @@ static void purple_ui_init()
 	purple_request_set_ui_ops( &bee_request_uiops );
 	purple_notify_set_ui_ops( &bee_notify_uiops );
 	purple_xfers_set_ui_ops( &bee_xfer_uiops );
-	purple_debug_set_ui_ops( &bee_debug_uiops );
+	//purple_debug_set_ui_ops( &bee_debug_uiops );
 }
 
 void purple_initmodule()
