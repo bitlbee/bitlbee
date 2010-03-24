@@ -27,7 +27,6 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
-#include "crypting.h"
 
 extern storage_t storage_text;
 extern storage_t storage_xml;
@@ -65,7 +64,6 @@ GList *storage_init(const char *primary, char **migrate)
 	int i;
 	storage_t *storage;
 	
-	register_storage_backend(&storage_text);
 	register_storage_backend(&storage_xml);
 	
 	storage = storage_init_single(primary);
