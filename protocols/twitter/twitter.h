@@ -40,4 +40,11 @@ struct twitter_data
 	struct groupchat *home_timeline_gc;
 };
 
+/**
+ * This has the same function as the msn_connections GSList. We use this to 
+ * make sure the connection is still alive in callbacks before we do anything
+ * else.
+ */
+GSList *twitter_connections;
+
 #endif //_TWITTER_H

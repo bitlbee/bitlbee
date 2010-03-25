@@ -50,9 +50,9 @@
 
 /* Direct messages URLs */
 #define TWITTER_DIRECT_MESSAGES_URL TWITTER_API_URL "/direct_messages.xml"
-#define TWITTER_DIRECT_MESSAGENEW_URL TWITTER_API_URL "/direct_messages/new.xml"
-#define TWITTER_DIRECT_MESSAGESSENT_URL TWITTER_API_URL "/direct_messages/sent.xml"
-#define TWITTER_DIRECT_MESSAGEDESTROY_URL TWITTER_API_URL "/direct_messages/destroy/"
+#define TWITTER_DIRECT_MESSAGES_NEW_URL TWITTER_API_URL "/direct_messages/new.xml"
+#define TWITTER_DIRECT_MESSAGES_SENT_URL TWITTER_API_URL "/direct_messages/sent.xml"
+#define TWITTER_DIRECT_MESSAGES_DESTROY_URL TWITTER_API_URL "/direct_messages/destroy/"
 
 /* Friendships URLs */
 #define TWITTER_FRIENDSHIPS_CREATE_URL TWITTER_API_URL "/friendships/create.xml"
@@ -77,8 +77,10 @@
 
 void twitter_get_friends_ids(struct im_connection *ic, int next_cursor);
 void twitter_get_home_timeline(struct im_connection *ic, int next_cursor);
+void twitter_get_statuses_friends(struct im_connection *ic, int next_cursor);
 
-void twitter_post_status(struct im_connection *ic, char* msg);
+void twitter_post_status(struct im_connection *ic, char *msg);
+void twitter_direct_messages_new(struct im_connection *ic, char *who, char *message);
 
 #endif //_TWITTER_LIB_H
 

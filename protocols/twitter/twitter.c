@@ -28,14 +28,19 @@
 
 
 /**
- *  * Main loop function
- *   */
+ * Main loop function
+ */
 gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 {
 	struct im_connection *ic = data;
 	// Check if we are still logged in...
 	if ((ic->flags & OPT_LOGGED_IN) != OPT_LOGGED_IN)
 		return 0;
+
+	// If the user uses multiple private message windows we need to get the 
+	// users buddies.
+	if (!set_getbool( &ic->acc->set, "use_groupchat" ))
+		twitter_get_statuses_friends(ic, -1);
 
 	// Do stuff..
 	twitter_get_home_timeline(ic, -1);
@@ -47,6 +52,8 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 
 static void twitter_init( account_t *acc )
 {
+	set_t *s;
+	s = set_add( &acc->set, "use_groupchat", "false", set_eval_bool, acc );
 }
 
 /**
@@ -57,7 +64,7 @@ static void twitter_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
 	struct twitter_data *td = g_new0( struct twitter_data, 1 );
-	
+
 	td->user = acc->user;
 	td->pass = acc->pass;
 	td->home_timeline_id = 0;
@@ -67,11 +74,6 @@ static void twitter_login( account_t *acc )
 	// Set the status to logged in.
 	ic->flags = OPT_LOGGED_IN;
 
-	// Try to get the buddies...
-	//twitter_get_friends_ids(ic, -1);
-
-	//twitter_get_home_timeline(ic, -1);
-
 	// Run this once. After this queue the main loop function.
 	twitter_main_loop(ic, -1, 0);
 
@@ -80,6 +82,8 @@ static void twitter_login( account_t *acc )
 
 	imcb_log( ic, "Connecting to twitter" );
 	imcb_connected(ic);
+
+	twitter_connections = g_slist_append( twitter_connections, ic );
 }
 
 /**
@@ -96,6 +100,8 @@ static void twitter_logout( struct im_connection *ic )
 	{
 		g_free( td );
 	}
+
+	twitter_connections = g_slist_remove( twitter_connections, ic );
 }
 
 /**
@@ -103,8 +109,11 @@ static void twitter_logout( struct im_connection *ic )
  */
 static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message, int away )
 {
-	imcb_log( ic, "In twitter_buddy_msg...");
-	twitter_post_status(ic, message);
+	// Let's just update the status.
+//	if ( g_strcasecmp(who, ic->acc->user) == 0 )
+		twitter_post_status(ic, message);
+//	else
+//		twitter_direct_messages_new(ic, who, message);
 	return( 0 );
 }
 
@@ -123,11 +132,6 @@ static void twitter_set_away( struct im_connection *ic, char *state, char *messa
 
 static void twitter_set_my_name( struct im_connection *ic, char *info )
 {
-	imcb_log( ic, "In twitter_set_my_name..." );
-//	char * aap = twitter_http("http://gertje.org", NULL, ic, 1, "geert", "poep", NULL, 0);
-
-//	imcb_log( ic, aap );
-//	g_free(aap);
 }
 
 static void twitter_get_info(struct im_connection *ic, char *who) 
@@ -217,5 +221,8 @@ void twitter_initmodule()
 	ret->handle_cmp = g_strcasecmp;
 
 	register_protocol(ret);
+
+	// Initialise the twitter_connections GSList.
+	twitter_connections = NULL;
 }
 
