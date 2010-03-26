@@ -9,7 +9,9 @@
 -include ../Makefile.settings
 
 # [SH] Program variables
-objects = nogaim.o
+#objects = account.o nogaim.o user.o
+objects = bee.o
+
 
 # [SH] The next two lines should contain the directory name (in $(subdirs))
 #      and the name of the object file, which should be linked into

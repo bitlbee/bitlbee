@@ -224,6 +224,7 @@ char *set_eval_to_char( set_t *set, char *value )
 	return s;
 }
 
+/*
 char *set_eval_ops( set_t *set, char *value )
 {
 	irc_t *irc = set->data;
@@ -245,3 +246,4 @@ char *set_eval_ops( set_t *set, char *value )
 	
 	return value;
 }
+*/

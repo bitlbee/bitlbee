@@ -37,41 +37,6 @@ user_t *user_add( irc_t *irc, char *nick )
 	if( user_find( irc, nick ) != NULL )
 		return( NULL );
 	
-	if( ( u = irc->users ) )
-	{
-		while( u )
-		{
-			if( nick_cmp( nick, u->nick ) < 0 )
-				break;
-			
-			lu = u;
-			u = u->next;
-		}
-		
-		u = g_new0( user_t, 1 );
-		if( lu )
-		{
-			u->next = lu->next;
-			lu->next = u;
-		}
-		else
-		{
-			u->next = irc->users;
-			irc->users = u;
-		}
-	}
-	else
-	{
-		irc->users = u = g_new0( user_t, 1 );
-	}
-	
-	u->user = u->realname = u->host = u->nick = g_strdup( nick );
-	u->is_private = set_getbool( &irc->set, "private" );
-	
-	key = g_strdup( nick );
-	nick_lc( key );
-	g_hash_table_insert( irc->userhash, key, u );
-	
 	return( u );
 }
 
@@ -112,32 +77,12 @@ int user_del( irc_t *irc, char *nick )
 			if( u->sendbuf_timer ) b_event_remove( u->sendbuf_timer );
 			g_free( u );
 			
-			if( !g_hash_table_lookup_extended( irc->userhash, key, &okey, &ovalue ) || ovalue != u )
-			{
-				g_free( key );
-				return( 1 );	/* Although this is a severe error, the user is removed from the list... */
-			}
-			g_hash_table_remove( irc->userhash, key );
-			g_free( key );
-			g_free( okey );
-			
 			return( 1 );
 		}
 		u = (t=u)->next;
 	}
 	
 	return( 0 );
-}
-
-user_t *user_find( irc_t *irc, char *nick )
-{
-	char key[512] = "";
-	
-	strncpy( key, nick, sizeof( key ) - 1 );
-	if( nick_lc( key ) )
-		return( g_hash_table_lookup( irc->userhash, key ) );
-	else
-		return( NULL );
 }
 
 user_t *user_findhandle( struct im_connection *ic, const char *handle )
@@ -158,74 +103,4 @@ user_t *user_findhandle( struct im_connection *ic, const char *handle )
 			return u;
 	
 	return NULL;
-}
-
-/* DO NOT PASS u->nick FOR oldnick !!! */
-void user_rename( irc_t *irc, char *oldnick, char *newnick )
-{
-	user_t *u = user_find( irc, oldnick );
-	gpointer okey, ovalue;
-	char *key;
-	
-	if( !u ) return;	/* Should've been checked by the caller... */
-	
-	g_free( u->nick );
-	if( u->nick == u->user ) u->user = NULL;
-	if( u->nick == u->host ) u->host = NULL;
-	if( u->nick == u->realname ) u->realname = NULL;
-	u->nick = g_strdup( newnick );
-	if( !u->user ) u->user = u->nick;
-	if( !u->host ) u->host = u->nick;
-	if( !u->realname ) u->realname = u->nick;
-	
-	/* Remove the old reference to this user from the hash and create a
-	   new one with the new nick. This is indeed a bit messy. */
-	key = g_strdup( oldnick );
-	nick_lc( key );
-	if( !g_hash_table_lookup_extended( irc->userhash, key, &okey, &ovalue ) || ovalue != u )
-	{
-		g_free( key );
-		return;		/* This really shouldn't happen! */	
-	}
-	g_hash_table_remove( irc->userhash, key );
-	g_free( key );
-	g_free( okey );
-	
-	key = g_strdup( newnick );
-	nick_lc( key );
-	g_hash_table_insert( irc->userhash, key, u );
-	
-	/* Also, let's try to keep the linked list nicely sorted. Fear this
-	   code. If my teacher would see this, she would cry. ;-) */
-	{
-		user_t *u1, *lu1;
-		
-		/* Remove the user from the old position in the chain. */
-		if( u == irc->users )
-		{
-			irc->users = u->next;
-		}
-		else
-		{
-			u1 = u;
-			for( lu1 = irc->users; lu1->next != u1; lu1 = lu1->next );
-			lu1->next = u1->next;
-		}
-		
-		/* Search for the new position. */
-		for( lu1 = NULL, u1 = irc->users; u1; u1 = u1->next )
-		{
-			if( nick_cmp( newnick, u1->nick ) < 0 )
-				break;
-			
-			lu1 = u1;
-		}
-		
-		/* Insert it at this new position. */
-		u->next = u1;
-		if( lu1 )
-			lu1->next = u;
-		else
-			irc->users = u;
-	}
 }

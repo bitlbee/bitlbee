@@ -137,7 +137,7 @@ static void ipc_child_cmd_wallops( irc_t *irc, char **cmd )
 		return;
 	
 	if( strchr( irc->umode, 'w' ) )
-		irc_write( irc, ":%s WALLOPS :%s", irc->myhost, cmd[1] );
+		irc_write( irc, ":%s WALLOPS :%s", irc->root->host, cmd[1] );
 }
 
 static void ipc_child_cmd_wall( irc_t *irc, char **cmd )
@@ -146,7 +146,7 @@ static void ipc_child_cmd_wall( irc_t *irc, char **cmd )
 		return;
 	
 	if( strchr( irc->umode, 's' ) )
-		irc_write( irc, ":%s NOTICE %s :%s", irc->myhost, irc->nick, cmd[1] );
+		irc_write( irc, ":%s NOTICE %s :%s", irc->root->host, irc->user->nick, cmd[1] );
 }
 
 static void ipc_child_cmd_opermsg( irc_t *irc, char **cmd )
@@ -155,7 +155,7 @@ static void ipc_child_cmd_opermsg( irc_t *irc, char **cmd )
 		return;
 	
 	if( strchr( irc->umode, 'o' ) )
-		irc_write( irc, ":%s NOTICE %s :*** OperMsg *** %s", irc->myhost, irc->nick, cmd[1] );
+		irc_write( irc, ":%s NOTICE %s :*** OperMsg *** %s", irc->root->host, irc->user->nick, cmd[1] );
 }
 
 static void ipc_child_cmd_rehash( irc_t *irc, char **cmd )
@@ -175,10 +175,10 @@ static void ipc_child_cmd_kill( irc_t *irc, char **cmd )
 	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
-	if( nick_cmp( cmd[1], irc->nick ) != 0 )
+	if( nick_cmp( cmd[1], irc->user->nick ) != 0 )
 		return;		/* It's not for us. */
 	
-	irc_write( irc, ":%s!%s@%s KILL %s :%s", irc->mynick, irc->mynick, irc->myhost, irc->nick, cmd[2] );
+	irc_write( irc, ":%s!%s@%s KILL %s :%s", irc->root->nick, irc->root->nick, irc->root->host, irc->user->nick, cmd[2] );
 	irc_abort( irc, 0, "Killed by operator: %s", cmd[2] );
 }
 
@@ -187,7 +187,7 @@ static void ipc_child_cmd_hello( irc_t *irc, char **cmd )
 	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		ipc_to_master_str( "HELLO\r\n" );
 	else
-		ipc_to_master_str( "HELLO %s %s :%s\r\n", irc->host, irc->nick, irc->realname );
+		ipc_to_master_str( "HELLO %s %s :%s\r\n", irc->user->host, irc->user->nick, irc->user->fullname );
 }
 
 static const command_t ipc_child_commands[] = {

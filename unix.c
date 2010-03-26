@@ -61,7 +61,7 @@ int main( int argc, char *argv[] )
 		return( 1 );
 	
 	b_main_init();
-	nogaim_init();
+	//nogaim_init();
 	
 	srand( time( NULL ) ^ getpid() );
 	global.helpfile = g_strdup( HELP_FILE );
@@ -114,12 +114,14 @@ int main( int argc, char *argv[] )
 		}
 	}
 
+	/*
 	global.storage = storage_init( global.conf->primary_storage, global.conf->migrate_storage );
 	if( global.storage == NULL )
 	{
 		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
 		return( 1 );
 	}
+	*/
  	
 	/* Catch some signals to tell the user what's happening before quitting */
 	memset( &sig, 0, sizeof( sig ) );

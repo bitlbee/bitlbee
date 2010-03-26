@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* The big hairy IRCd part of the project                               */
+/* The IRC-based UI (for now the only one)                              */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -48,6 +48,8 @@ typedef enum
 	USTATUS_SHUTDOWN = 8
 } irc_status_t;
 
+struct irc_user;
+
 typedef struct irc
 {
 	int fd;
@@ -58,86 +60,83 @@ typedef struct irc
 	char *readbuffer;
 	GIConv iconv, oconv;
 
-	int sentbytes;
-	time_t oldtime;
+	struct irc_user *root;
+	struct irc_user *user;
 
-	char *nick;
-	char *user;
-	char *host;
-	char *realname;
 	char *password; /* HACK: Used to save the user's password, but before
 	                   logging in, this may contain a password we should
 	                   send to identify after USER/NICK are received. */
 
 	char umode[8];
 	
-	char *myhost;
-	char *mynick;
-
-	char *channel;
-	int c_id;
-
-	char is_private;		/* Not too nice... */
-	char *last_target;
-	
 	struct query *queries;
 	struct account *accounts;
 	GSList *file_transfers;
 	struct chat *chatrooms;
 	
-	struct __USER *users;
-	GHashTable *userhash;
+	GSList *users;
+	GHashTable *nick_user_hash;
 	GHashTable *watches;
-	struct __NICK *nicks;
-	struct set *set;
 
 	gint r_watch_source_id;
 	gint w_watch_source_id;
 	gint ping_source_id;
+	
+	struct bee *b;
 } irc_t;
+
+typedef struct irc_user
+{
+	char *nick;
+	char *user;
+	char *host;
+	char *fullname;
+	
+	/* Nickname in lowercase for case sensitive searches */
+	char *key;
+	
+	char is_private;
+	
+	char *sendbuf;
+	int sendbuf_len;
+	guint sendbuf_timer;
+	int sendbuf_flags;
+	
+	//struct user *b;
+} irc_user_t;
 
 #include "user.h"
 
+/* irc.c */
 extern GSList *irc_connection_list;
 
 irc_t *irc_new( int fd );
 void irc_abort( irc_t *irc, int immed, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
 void irc_free( irc_t *irc );
 
-void irc_exec( irc_t *irc, char **cmd );
 void irc_process( irc_t *irc );
 char **irc_parse_line( char *line );
 char *irc_build_line( char **cmd );
 
-void irc_vawrite( irc_t *irc, char *format, va_list params );
 void irc_write( irc_t *irc, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 void irc_write_all( int now, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
-void irc_reply( irc_t *irc, int code, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
-G_MODULE_EXPORT int irc_usermsg( irc_t *irc, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
-char **irc_tokenize( char *buffer );
+void irc_vawrite( irc_t *irc, char *format, va_list params );
 
-void irc_login( irc_t *irc );
 int irc_check_login( irc_t *irc );
-void irc_motd( irc_t *irc );
-void irc_names( irc_t *irc, char *channel );
-void irc_topic( irc_t *irc, char *channel );
-void irc_umode_set( irc_t *irc, char *s, int allow_priv );
-void irc_who( irc_t *irc, char *channel );
-void irc_spawn( irc_t *irc, user_t *u );
-void irc_join( irc_t *irc, user_t *u, char *channel );
-void irc_part( irc_t *irc, user_t *u, char *channel );
-void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker );
-void irc_kill( irc_t *irc, user_t *u );
-void irc_invite( irc_t *irc, char *nick, char *channel );
-void irc_whois( irc_t *irc, char *nick );
-void irc_setpass( irc_t *irc, const char *pass ); /* USE WITH CAUTION! */
 
-int irc_send( irc_t *irc, char *nick, char *s, int flags );
-int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char *msg );
-int irc_msgfrom( irc_t *irc, char *nick, char *msg );
-int irc_noticefrom( irc_t *irc, char *nick, char *msg );
+/* irc_commands.c */
+void irc_exec( irc_t *irc, char **cmd );
 
-void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags );
-struct groupchat *irc_chat_by_channel( irc_t *irc, char *channel );
+/* irc_send.c */
+void irc_send_num( irc_t *irc, int code, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
+void irc_send_login( irc_t *irc );
+void irc_send_motd( irc_t *irc );
+int irc_usermsg( irc_t *irc, char *format, ... );
+
+/* irc_user.c */
+irc_user_t *irc_user_new( irc_t *irc, const char *nick );
+int irc_user_free( irc_t *irc, const char *nick );
+irc_user_t *irc_user_find( irc_t *irc, const char *nick );
+int irc_user_rename( irc_t *irc, const char *old, const char *new );
 
 #endif

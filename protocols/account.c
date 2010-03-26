@@ -335,7 +335,7 @@ char *set_eval_account_reconnect_delay( set_t *set, char *value )
 
 int account_reconnect_delay( account_t *a )
 {
-	char *setting = set_getstr( &a->irc->set, "auto_reconnect_delay" );
+	char *setting = set_getstr( &a->irc->b->set, "auto_reconnect_delay" );
 	struct account_reconnect_delay p;
 	
 	if( account_reconnect_delay_parse( setting, &p ) )

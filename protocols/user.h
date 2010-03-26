@@ -22,41 +22,19 @@
   if not, write to the Free Software Foundation, Inc., 59 Temple Place,
   Suite 330, Boston, MA  02111-1307  USA
 */
+
 #ifndef __USER_H__
 #define __USER_H__
 
-typedef struct __USER
+struct __USER
 {
-	char *nick;
-	char *user;
-	char *host;
-	char *realname;
-	
-	char *away;
-	char *status_msg; /* Non-IRC extension, but nice on IM. */
-	
-	char is_private;
-	char online;
-	
-	char *handle;
-	char *group;
 	struct im_connection *ic;
+	char *handle;
+	char *fullname;
+	char *group;
 
- 	char *sendbuf;
- 	time_t last_typing_notice;
- 	int sendbuf_len;
- 	guint sendbuf_timer;
-    	int sendbuf_flags;
-	
-	void (*send_handler) ( irc_t *irc, struct __USER *u, char *msg, int flags );
-	
-	struct __USER *next;
+	char *away;
+	char *status_msg;
 } user_t;
-
-user_t *user_add( struct irc *irc, char *nick );
-int user_del( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_find( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_findhandle( struct im_connection *ic, const char *handle );
-void user_rename( irc_t *irc, char *oldnick, char *newnick );
 
 #endif /* __USER_H__ */
