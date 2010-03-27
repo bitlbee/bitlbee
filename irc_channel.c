@@ -44,6 +44,21 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 	return ic;
 }
 
+irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name )
+{
+	GSList *l;
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		
+		if( name[0] == ic->name[0] && nick_cmp( name + 1, ic->name + 1 ) == 0 )
+			return ic;
+	}
+	
+	return NULL;
+}
+
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 {
 	if( g_slist_find( ic->users, iu ) != NULL )

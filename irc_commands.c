@@ -107,7 +107,57 @@ static void irc_cmd_ping( irc_t *irc, char **cmd )
 	           irc->root->host, cmd[1]?cmd[1]:irc->root->host );
 }
 
+static void irc_cmd_join( irc_t *irc, char **cmd )
+{
+	irc_channel_t *ic;
+	
+	if( ( ic = irc_channel_by_name( irc, cmd[1] ) ) == NULL )
+		ic = irc_channel_new( irc, cmd[1] );
+	
+	if( ic == NULL )
+		irc_send_num( irc, 479, "%s :Invalid channel name", cmd[1] );
+	
+	if( ic->flags & IRC_CHANNEL_JOINED )
+		return; /* Dude, you're already there...
+		           RFC doesn't have any reply for that though? */
+	
+	irc_channel_add_user( ic, irc->user );
+}
+
+static void irc_cmd_names( irc_t *irc, char **cmd )
+{
+	irc_channel_t *ic;
+	
+	if( cmd[1] && ( ic = irc_channel_by_name( irc, cmd[1] ) ) )
+		irc_send_names( ic );
+	/* With no args, we should show /names of all chans. Make the code
+	   below work well if necessary.
+	else
+	{
+		GSList *l;
+		
+		for( l = irc->channels; l; l = l->next )
+			irc_send_names( l->data );
+	}
+	*/
+}
+
+static void irc_cmd_part( irc_t *irc, char **cmd )
+{
+	irc_channel_t *ic;
+	
+	if( ( ic = irc_channel_by_name( irc, cmd[1] ) ) == NULL )
+	{
+		irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
+	}
+	else if( !irc_channel_del_user( ic, irc->user ) )
+	{
+		irc_send_num( irc, 442, "%s :You're not on that channel", cmd[1] );
+	}
+}
+
 #if 0
+//#if 0
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
 	if( global.conf->oper_pass &&
@@ -149,59 +199,6 @@ static void irc_cmd_mode( irc_t *irc, char **cmd )
 		}
 		else
 			irc_send_num( irc, 502, ":Don't touch their modes" );
-	}
-}
-
-static void irc_cmd_names( irc_t *irc, char **cmd )
-{
-	irc_names( irc, cmd[1]?cmd[1]:irc->channel );
-}
-
-static void irc_cmd_part( irc_t *irc, char **cmd )
-{
-	struct groupchat *c;
-	
-	if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
-	{
-		user_t *u = user_find( irc, irc->nick );
-		
-		/* Not allowed to leave control channel */
-		irc_part( irc, u, irc->channel );
-		irc_join( irc, u, irc->channel );
-	}
-	else if( ( c = irc_chat_by_channel( irc, cmd[1] ) ) )
-	{
-		user_t *u = user_find( irc, irc->nick );
-		
-		irc_part( irc, u, c->channel );
-		
-		if( c->ic )
-		{
-			c->joined = 0;
-			c->ic->acc->prpl->chat_leave( c );
-		}
-	}
-	else
-	{
-		irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
-	}
-}
-
-static void irc_cmd_join( irc_t *irc, char **cmd )
-{
-	if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
-		; /* Dude, you're already there...
-		     RFC doesn't have any reply for that though? */
-	else if( cmd[1] )
-	{
-		struct chat *c;
-		
-		if( strchr( CTYPES, cmd[1][0] ) == NULL || cmd[1][1] == 0 )
-			irc_send_num( irc, 479, "%s :Invalid channel name", cmd[1] );
-		else if( ( c = chat_bychannel( irc, cmd[1] ) ) && c->acc && c->acc->ic )
-			chat_join( irc, c, cmd[2] );
-		else
-			irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
 	}
 }
 
@@ -582,12 +579,12 @@ static const command_t irc_commands[] = {
 	{ "nick",        1, irc_cmd_nick,        0 },
 	{ "quit",        0, irc_cmd_quit,        0 },
 	{ "ping",        0, irc_cmd_ping,        0 },
+	{ "join",        1, irc_cmd_join,        IRC_CMD_LOGGED_IN },
+	{ "names",       1, irc_cmd_names,       IRC_CMD_LOGGED_IN },
+	{ "part",        1, irc_cmd_part,        IRC_CMD_LOGGED_IN },
 #if 0
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
-	{ "names",       0, irc_cmd_names,       IRC_CMD_LOGGED_IN },
-	{ "part",        1, irc_cmd_part,        IRC_CMD_LOGGED_IN },
-	{ "join",        1, irc_cmd_join,        IRC_CMD_LOGGED_IN },
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
 	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },

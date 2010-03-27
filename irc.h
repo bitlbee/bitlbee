@@ -141,6 +141,7 @@ int irc_check_login( irc_t *irc );
 
 /* irc_channel.c */
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name );
+irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name );
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic );
