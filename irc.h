@@ -106,7 +106,17 @@ typedef struct irc_user
 	int sendbuf_flags;
 	
 	//struct user *b;
+	
+	const struct irc_user_funcs *f;
 } irc_user_t;
+
+struct irc_user_funcs
+{
+	gboolean (*privmsg)( irc_user_t *iu, const char *msg );
+};
+
+extern const struct irc_user_funcs irc_user_root_funcs;
+extern const struct irc_user_funcs irc_user_self_funcs;
 
 typedef enum
 {
@@ -116,15 +126,24 @@ typedef enum
 typedef struct irc_channel
 {
 	irc_t *irc;
-	int flags;
 	char *name;
+	char mode[8];
+	int flags;
+	
 	char *topic;
 	char *topic_who;
 	time_t topic_time;
-	char mode[8];
+	
 	GSList *users;
 	struct set *set;
+	
+	const struct irc_channel_funcs *f;
 } irc_channel_t;
+
+struct irc_channel_funcs
+{
+	gboolean (*privmsg)( irc_channel_t *iu, const char *msg );
+};
 
 #include "user.h"
 
@@ -174,7 +193,7 @@ void irc_send_who( irc_t *irc, GSList *l, const char *channel );
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );
 int irc_user_free( irc_t *irc, const char *nick );
-irc_user_t *irc_user_find( irc_t *irc, const char *nick );
+irc_user_t *irc_user_by_name( irc_t *irc, const char *nick );
 int irc_user_rename( irc_t *irc, const char *old, const char *new );
 gint irc_user_cmp( gconstpointer a_, gconstpointer b_ );
 

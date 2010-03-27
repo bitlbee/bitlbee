@@ -113,10 +113,12 @@ irc_t *irc_new( int fd )
 	irc->root = iu = irc_user_new( irc, ROOT_NICK );
 	iu->host = g_strdup( myhost );
 	iu->fullname = g_strdup( ROOT_FN );
+	iu->f = &irc_user_root_funcs;
 	
 	iu = irc_user_new( irc, NS_NICK );
 	iu->host = g_strdup( myhost );
 	iu->fullname = g_strdup( ROOT_FN );
+	iu->f = &irc_user_root_funcs;
 	
 	irc->user = g_new0( irc_user_t, 1 );
 	irc->user->host = g_strdup( host );
@@ -593,6 +595,7 @@ int irc_check_login( irc_t *irc )
 			irc->user->user = iu->user;
 			irc->user->host = iu->host;
 			irc->user->fullname = iu->fullname;
+			irc->user->f = &irc_user_self_funcs;
 			g_free( iu->nick );
 			g_free( iu );
 			

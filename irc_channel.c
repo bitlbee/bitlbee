@@ -25,6 +25,8 @@
 
 #include "bitlbee.h"
 
+static const struct irc_channel_funcs control_channel_funcs;
+
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 {
 	irc_channel_t *ic;
@@ -33,6 +35,7 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 		return NULL;
 	
 	ic = g_new0( irc_channel_t, 1 );
+	ic->f = &control_channel_funcs;
 	ic->irc = irc;
 	ic->name = g_strdup( name );
 	strcpy( ic->mode, CMODE );
@@ -131,3 +134,15 @@ gboolean irc_channel_name_ok( const char *name )
 {
 	return strchr( CTYPES, name[0] ) != NULL && nick_ok( name + 1 );
 }
+
+/* Channel-type dependent functions, for control channels: */
+static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
+{
+	root_command_string( ic->irc, msg );
+	
+	return TRUE;
+}
+
+static const struct irc_channel_funcs control_channel_funcs = {
+	control_channel_privmsg,
+};

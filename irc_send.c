@@ -146,10 +146,8 @@ void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason )
 void irc_send_names( irc_channel_t *ic )
 {
 	GSList *l;
-	irc_user_t *iu;
 	char namelist[385] = "";
-	struct groupchat *c = NULL;
-	char *ops = set_getstr( &ic->irc->b->set, "ops" );
+	//char *ops = set_getstr( &ic->irc->b->set, "ops" );
 	
 	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
@@ -238,4 +236,10 @@ void irc_send_who( irc_t *irc, GSList *l, const char *channel )
 	}
 	
 	irc_send_num( irc, 315, "%s :End of /WHO list", channel );
+}
+
+void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg )
+{
+	irc_write( iu->irc, ":%s!%s@%s %s %s :%s",
+	           iu->nick, iu->user, iu->host, type, dst, msg );
 }

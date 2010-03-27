@@ -95,7 +95,7 @@ void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+
 	
 	/* Now, find out if the nick is already in use at the moment, and make
 	   subtle changes to make it unique. */
-	while( !nick_ok( nick ) || irc_user_find( acc->irc, nick ) )
+	while( !nick_ok( nick ) || irc_user_by_name( acc->irc, nick ) )
 	{
 		if( strlen( nick ) < ( MAX_NICK_LENGTH - 1 ) )
 		{

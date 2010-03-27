@@ -50,7 +50,7 @@ int irc_user_free( irc_t *irc, const char *nick )
 {
 	irc_user_t *iu;
 	
-	if( !( iu = irc_user_find( irc, nick ) ) )
+	if( !( iu = irc_user_by_name( irc, nick ) ) )
 		return 0;
 	
 	irc->users = g_slist_remove( irc->users, iu );
@@ -67,7 +67,7 @@ int irc_user_free( irc_t *irc, const char *nick )
 	return 1;
 }
 
-irc_user_t *irc_user_find( irc_t *irc, const char *nick )
+irc_user_t *irc_user_by_name( irc_t *irc, const char *nick )
 {
 	char key[strlen(nick)+1];
 	
@@ -80,11 +80,11 @@ irc_user_t *irc_user_find( irc_t *irc, const char *nick )
 
 int irc_user_rename( irc_t *irc, const char *old, const char *new )
 {
-	irc_user_t *iu = irc_user_find( irc, old );
+	irc_user_t *iu = irc_user_by_name( irc, old );
 	char key[strlen(new)+1];
 	
 	strcpy( key, new );
-	if( iu == NULL || !nick_lc( key ) || irc_user_find( irc, new ) )
+	if( iu == NULL || !nick_lc( key ) || irc_user_by_name( irc, new ) )
 		return 0;
 	
 	irc->users = g_slist_remove( irc->users, iu );
@@ -112,3 +112,27 @@ gint irc_user_cmp( gconstpointer a_, gconstpointer b_ )
 	
 	return strcmp( a->key, b->key );
 }
+
+/* User-type dependent functions, for root/NickServ: */
+static gboolean root_privmsg( irc_user_t *iu, const char *msg )
+{
+	root_command_string( iu->irc, msg );
+	
+	return TRUE;
+}
+
+const struct irc_user_funcs irc_user_root_funcs = {
+	root_privmsg,
+};
+
+/* Echo to yourself: */
+static gboolean self_privmsg( irc_user_t *iu, const char *msg )
+{
+	irc_send_msg( iu, "PRIVMSG", iu->nick, msg );
+	
+	return TRUE;
+}
+
+const struct irc_user_funcs irc_user_self_funcs = {
+	self_privmsg,
+};

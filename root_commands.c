@@ -31,7 +31,7 @@
 
 #include <string.h>
 
-void root_command_string( irc_t *irc, user_t *u, char *command, int flags )
+void root_command_string( irc_t *irc, char *command )
 {
 	char *cmd[IRC_MAX_ARGS];
 	char *s;
@@ -135,6 +135,7 @@ static void cmd_help( irc_t *irc, char **cmd )
 	}
 }
 
+#if 0
 static void cmd_account( irc_t *irc, char **cmd );
 
 static void cmd_identify( irc_t *irc, char **cmd )
@@ -1216,9 +1217,11 @@ static void cmd_transfer( irc_t *irc, char **cmd )
 		}
 	}
 }
+#endif
 
 const command_t commands[] = {
 	{ "help",           0, cmd_help,           0 }, 
+#if 0
 	{ "identify",       1, cmd_identify,       0 },
 	{ "register",       1, cmd_register,       0 },
 	{ "drop",           1, cmd_drop,           0 },
@@ -1239,5 +1242,6 @@ const command_t commands[] = {
 	{ "join_chat",      2, cmd_join_chat,      0 },
 	{ "chat",           1, cmd_chat,           0 },
 	{ "transfer",       0, cmd_transfer,       0 },
+#endif
 	{ NULL }
 };

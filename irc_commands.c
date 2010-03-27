@@ -76,7 +76,7 @@ static void irc_cmd_nick( irc_t *irc, char **cmd )
 	{
 		irc_send_num( irc, 438, ":The hand of the deity is upon thee, thy nick may not change" );
 	}
-	else if( irc_user_find( irc, cmd[1] ) )
+	else if( irc_user_by_name( irc, cmd[1] ) )
 	{
 		irc_send_num( irc, 433, ":This nick is already in use" );
 	}
@@ -159,7 +159,7 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 static void irc_cmd_whois( irc_t *irc, char **cmd )
 {
 	char *nick = cmd[1];
-	irc_user_t *iu = irc_user_find( irc, nick );
+	irc_user_t *iu = irc_user_by_name( irc, nick );
 	
 	if( iu )
 		irc_send_whois( iu );
@@ -219,8 +219,6 @@ static void irc_cmd_who( irc_t *irc, char **cmd )
 {
 	char *channel = cmd[1];
 	irc_channel_t *ic;
-	struct groupchat *c;
-	GList *l;
 	
 	if( !channel || *channel == '0' || *channel == '*' || !*channel )
 		irc_send_who( irc, irc->users, "**" );
@@ -230,50 +228,35 @@ static void irc_cmd_who( irc_t *irc, char **cmd )
 		irc_send_num( irc, 403, "%s :No such channel", channel );
 }
 
-#if 0
-//#if 0
-static void irc_cmd_oper( irc_t *irc, char **cmd )
-{
-	if( global.conf->oper_pass &&
-	    ( strncmp( global.conf->oper_pass, "md5:", 4 ) == 0 ?
-	        md5_verify_password( cmd[2], global.conf->oper_pass + 4 ) == 0 :
-	        strcmp( cmd[2], global.conf->oper_pass ) == 0 ) )
-	{
-		irc_umode_set( irc, "+o", 1 );
-		irc_send_num( irc, 381, ":Password accepted" );
-	}
-	else
-	{
-		irc_send_num( irc, 432, ":Incorrect password" );
-	}
-}
-
-static void irc_cmd_invite( irc_t *irc, char **cmd )
-{
-	char *nick = cmd[1], *channel = cmd[2];
-	struct groupchat *c = irc_chat_by_channel( irc, channel );
-	user_t *u = user_find( irc, nick );
-	
-	if( u && c && ( u->ic == c->ic ) )
-		if( c->ic && c->ic->acc->prpl->chat_invite )
-		{
-			c->ic->acc->prpl->chat_invite( c, u->handle, NULL );
-			irc_send_num( irc, 341, "%s %s", nick, channel );
-			return;
-		}
-	
-	irc_send_num( irc, 482, "%s :Invite impossible; User/Channel non-existent or incompatible", channel );
-}
-
 static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 {
+	irc_channel_t *ic;
+	irc_user_t *iu;
+	
 	if( !cmd[2] ) 
 	{
 		irc_send_num( irc, 412, ":No text to send" );
 	}
+	else if( irc_channel_name_ok( cmd[1] ) &&
+	         ( ic = irc_channel_by_name( irc, cmd[1] ) ) )
+	{
+		if( ic->f->privmsg )
+			ic->f->privmsg( ic, cmd[2] );
+	}
+	else if( ( iu = irc_user_by_name( irc, cmd[1] ) ) )
+	{
+		if( iu->f->privmsg )
+			iu->f->privmsg( iu, cmd[2] );
+	}
+	else
+	{
+		irc_send_num( irc, 401, "%s :No such nick/channel", cmd[1] );
+	}
+
+
+#if 0
 	else if( irc->nick && g_strcasecmp( cmd[1], irc->nick ) == 0 ) 
 	{
-		irc_write( irc, ":%s!%s@%s %s %s :%s", irc->nick, irc->user, irc->host, cmd[0], cmd[1], cmd[2] ); 
 	}
 	else 
 	{
@@ -314,6 +297,44 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 		}
 		irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? OPT_AWAY : 0 );
 	}
+#endif
+}
+
+
+
+#if 0
+//#if 0
+static void irc_cmd_oper( irc_t *irc, char **cmd )
+{
+	if( global.conf->oper_pass &&
+	    ( strncmp( global.conf->oper_pass, "md5:", 4 ) == 0 ?
+	        md5_verify_password( cmd[2], global.conf->oper_pass + 4 ) == 0 :
+	        strcmp( cmd[2], global.conf->oper_pass ) == 0 ) )
+	{
+		irc_umode_set( irc, "+o", 1 );
+		irc_send_num( irc, 381, ":Password accepted" );
+	}
+	else
+	{
+		irc_send_num( irc, 432, ":Incorrect password" );
+	}
+}
+
+static void irc_cmd_invite( irc_t *irc, char **cmd )
+{
+	char *nick = cmd[1], *channel = cmd[2];
+	struct groupchat *c = irc_chat_by_channel( irc, channel );
+	user_t *u = user_find( irc, nick );
+	
+	if( u && c && ( u->ic == c->ic ) )
+		if( c->ic && c->ic->acc->prpl->chat_invite )
+		{
+			c->ic->acc->prpl->chat_invite( c, u->handle, NULL );
+			irc_send_num( irc, 341, "%s %s", nick, channel );
+			return;
+		}
+	
+	irc_send_num( irc, 482, "%s :Invite impossible; User/Channel non-existent or incompatible", channel );
 }
 
 static void irc_cmd_userhost( irc_t *irc, char **cmd )
@@ -554,10 +575,10 @@ static const command_t irc_commands[] = {
 	{ "motd",        0, irc_cmd_motd,        IRC_CMD_LOGGED_IN },
 	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
 	{ "who",         0, irc_cmd_who,         IRC_CMD_LOGGED_IN },
+	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 #if 0
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
-	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "userhost",    1, irc_cmd_userhost,    IRC_CMD_LOGGED_IN },
 	{ "ison",        1, irc_cmd_ison,        IRC_CMD_LOGGED_IN },
