@@ -210,6 +210,9 @@ void irc_free( irc_t * irc )
 		irc_user_free( irc, iu->nick );
 	}
 	
+	while( irc->channels )
+		irc_channel_free( irc->channels->data );
+	
 	if( irc->ping_source_id > 0 )
 		b_event_remove( irc->ping_source_id );
 	if( irc->r_watch_source_id > 0 )
@@ -591,7 +594,9 @@ int irc_check_login( irc_t *irc )
 			irc->user = irc_user_new( irc, iu->nick );
 			irc->user->user = iu->user;
 			irc->user->fullname = iu->fullname;
+			g_free( iu->fullname );
 			g_free( iu->nick );
+			g_free( iu->host );
 			g_free( iu );
 			
 			irc->umode[0] = '\0';

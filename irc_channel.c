@@ -59,6 +59,23 @@ irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name )
 	return NULL;
 }
 
+int irc_channel_free( irc_channel_t *ic )
+{
+	irc_t *irc = ic->irc;
+	
+	if( ic->flags & IRC_CHANNEL_JOINED )
+		irc_channel_del_user( ic, irc->user );
+	
+	irc->channels = g_slist_remove( irc->channels, ic );
+	g_slist_free( ic->users );
+	
+	g_free( ic->name );
+	g_free( ic->topic );
+	g_free( ic );
+	
+	return 1;
+}
+
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 {
 	if( g_slist_find( ic->users, iu ) != NULL )
