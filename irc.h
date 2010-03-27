@@ -86,6 +86,8 @@ typedef struct irc
 
 typedef struct irc_user
 {
+	irc_t *irc;
+	
 	char *nick;
 	char *user;
 	char *host;
@@ -158,6 +160,7 @@ void irc_send_join( irc_channel_t *ic, irc_user_t *iu );
 void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason );
 void irc_send_names( irc_channel_t *ic );
 void irc_send_topic( irc_channel_t *ic );
+void irc_send_whois( irc_user_t *iu );
 
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );

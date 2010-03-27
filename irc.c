@@ -593,10 +593,9 @@ int irc_check_login( irc_t *irc )
 			
 			irc->user = irc_user_new( irc, iu->nick );
 			irc->user->user = iu->user;
+			irc->user->host = iu->host;
 			irc->user->fullname = iu->fullname;
-			g_free( iu->fullname );
 			g_free( iu->nick );
-			g_free( iu->host );
 			g_free( iu );
 			
 			irc->umode[0] = '\0';

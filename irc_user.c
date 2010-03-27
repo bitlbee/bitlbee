@@ -29,6 +29,7 @@ irc_user_t *irc_user_new( irc_t *irc, const char *nick )
 {
 	irc_user_t *iu = g_new0( irc_user_t, 1 );
 	
+	iu->irc = irc;
 	iu->nick = g_strdup( nick );
 	iu->user = iu->host = iu->fullname = iu->nick;
 	

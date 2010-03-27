@@ -156,6 +156,28 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 	}
 }
 
+static void irc_cmd_whois( irc_t *irc, char **cmd )
+{
+	char *nick = cmd[1];
+	irc_user_t *iu = irc_user_find( irc, nick );
+	
+	if( iu )
+		irc_send_whois( iu );
+	else
+		irc_send_num( irc, 401, "%s :Nick does not exist", nick );
+}
+
+static void irc_cmd_whowas( irc_t *irc, char **cmd )
+{
+	/* For some reason irssi tries a whowas when whois fails. We can
+	   ignore this, but then the user never gets a "user not found"
+	   message from irssi which is a bit annoying. So just respond
+	   with not-found and irssi users will get better error messages */
+	
+	irc_send_num( irc, 406, "%s :Nick does not exist", cmd[1] );
+	irc_send_num( irc, 369, "%s :End of WHOWAS", cmd[1] );
+}
+
 #if 0
 //#if 0
 static void irc_cmd_oper( irc_t *irc, char **cmd )
@@ -474,48 +496,6 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 	set_setstr( &irc->set, "away", u->away );
 }
 
-static void irc_cmd_whois( irc_t *irc, char **cmd )
-{
-	char *nick = cmd[1];
-	user_t *u = user_find( irc, nick );
-	
-	if( u )
-	{
-		irc_send_num( irc, 311, "%s %s %s * :%s", u->nick, u->user, u->host, u->realname );
-		
-		if( u->ic )
-			irc_send_num( irc, 312, "%s %s.%s :%s network", u->nick, u->ic->acc->user,
-			           u->ic->acc->server && *u->ic->acc->server ? u->ic->acc->server : "",
-			           u->ic->acc->prpl->name );
-		else
-			irc_send_num( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
-		
-		if( !u->online )
-			irc_send_num( irc, 301, "%s :%s", u->nick, "User is offline" );
-		else if( u->away )
-			irc_send_num( irc, 301, "%s :%s", u->nick, u->away );
-		if( u->status_msg )
-			irc_send_num( irc, 333, "%s :Status: %s", u->nick, u->status_msg );
-		
-		irc_send_num( irc, 318, "%s :End of /WHOIS list", nick );
-	}
-	else
-	{
-		irc_send_num( irc, 401, "%s :Nick does not exist", nick );
-	}
-}
-
-static void irc_cmd_whowas( irc_t *irc, char **cmd )
-{
-	/* For some reason irssi tries a whowas when whois fails. We can
-	   ignore this, but then the user never gets a "user not found"
-	   message from irssi which is a bit annoying. So just respond
-	   with not-found and irssi users will get better error messages */
-	
-	irc_send_num( irc, 406, "%s :Nick does not exist", cmd[1] );
-	irc_send_num( irc, 369, "%s :End of WHOWAS", cmd[1] );
-}
-
 static void irc_cmd_nickserv( irc_t *irc, char **cmd )
 {
 	/* [SH] This aliases the NickServ command to PRIVMSG root */
@@ -582,6 +562,8 @@ static const command_t irc_commands[] = {
 	{ "join",        1, irc_cmd_join,        IRC_CMD_LOGGED_IN },
 	{ "names",       1, irc_cmd_names,       IRC_CMD_LOGGED_IN },
 	{ "part",        1, irc_cmd_part,        IRC_CMD_LOGGED_IN },
+	{ "whois",       1, irc_cmd_whois,       IRC_CMD_LOGGED_IN },
+	{ "whowas",      1, irc_cmd_whowas,      IRC_CMD_LOGGED_IN },
 #if 0
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
@@ -594,8 +576,6 @@ static const command_t irc_commands[] = {
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
 	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
-	{ "whois",       1, irc_cmd_whois,       IRC_CMD_LOGGED_IN },
-	{ "whowas",      1, irc_cmd_whowas,      IRC_CMD_LOGGED_IN },
 	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "motd",        0, irc_cmd_motd,        IRC_CMD_LOGGED_IN },

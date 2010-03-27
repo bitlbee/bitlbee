@@ -188,3 +188,29 @@ void irc_send_topic( irc_channel_t *ic )
 	else
 		irc_send_num( ic->irc, 331, "%s :No topic for this channel", ic->name );
 }
+
+void irc_send_whois( irc_user_t *iu )
+{
+	irc_t *irc = iu->irc;
+	
+	irc_send_num( irc, 311, "%s %s %s * :%s",
+	              iu->nick, iu->user, iu->host, iu->fullname );
+	
+	/*
+	if( u->ic )
+		irc_send_num( irc, 312, "%s %s.%s :%s network", u->nick, u->ic->acc->user,
+		           u->ic->acc->server && *u->ic->acc->server ? u->ic->acc->server : "",
+		           u->ic->acc->prpl->name );
+	else
+		irc_send_num( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
+	*/
+	
+	/*
+	if( u->away )
+		irc_send_num( irc, 301, "%s :%s", u->nick, u->away );
+	if( u->status_msg )
+		irc_send_num( irc, 333, "%s :Status: %s", u->nick, u->status_msg );
+	*/
+	
+	irc_send_num( irc, 318, "%s :End of /WHOIS list", iu->nick );
+}
