@@ -93,7 +93,6 @@ static void irc_cmd_nick( irc_t *irc, char **cmd )
 	}
 }
 
-#if 0
 static void irc_cmd_quit( irc_t *irc, char **cmd )
 {
 	if( cmd[1] && *cmd[1] )
@@ -104,9 +103,11 @@ static void irc_cmd_quit( irc_t *irc, char **cmd )
 
 static void irc_cmd_ping( irc_t *irc, char **cmd )
 {
-	irc_write( irc, ":%s PONG %s :%s", irc->myhost, irc->myhost, cmd[1]?cmd[1]:irc->myhost );
+	irc_write( irc, ":%s PONG %s :%s", irc->root->host,
+	           irc->root->host, cmd[1]?cmd[1]:irc->root->host );
 }
 
+#if 0
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
 	if( global.conf->oper_pass &&
@@ -579,9 +580,9 @@ static const command_t irc_commands[] = {
 	{ "pass",        1, irc_cmd_pass,        0 },
 	{ "user",        4, irc_cmd_user,        IRC_CMD_PRE_LOGIN },
 	{ "nick",        1, irc_cmd_nick,        0 },
-#if 0
 	{ "quit",        0, irc_cmd_quit,        0 },
 	{ "ping",        0, irc_cmd_ping,        0 },
+#if 0
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
 	{ "names",       0, irc_cmd_names,       IRC_CMD_LOGGED_IN },

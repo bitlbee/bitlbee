@@ -123,12 +123,15 @@ irc_t *irc_new( int fd )
 	irc->user = g_new0( irc_user_t, 1 );
 	irc->user->host = g_strdup( host );
 	
-	conf_loaddefaults( b );
+	conf_loaddefaults( irc );
 	
 	/* Evaluator sets the iconv/oconv structures. */
 	set_eval_charset( set_find( &b->set, "charset" ), set_getstr( &b->set, "charset" ) );
 	
 	irc_write( irc, ":%s NOTICE AUTH :%s", irc->root->host, "BitlBee-IRCd initialized, please go on" );
+	
+	g_free( myhost );
+	g_free( host );
 	
 	return irc;
 }
@@ -202,7 +205,10 @@ void irc_free( irc_t * irc )
 	*/
 	
 	while( irc->users )
-		irc_user_free( irc, irc->users->data );
+	{
+		irc_user_t *iu = irc->users->data;
+		irc_user_free( irc, iu->nick );
+	}
 	
 	if( irc->ping_source_id > 0 )
 		b_event_remove( irc->ping_source_id );

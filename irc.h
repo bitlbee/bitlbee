@@ -138,5 +138,6 @@ irc_user_t *irc_user_new( irc_t *irc, const char *nick );
 int irc_user_free( irc_t *irc, const char *nick );
 irc_user_t *irc_user_find( irc_t *irc, const char *nick );
 int irc_user_rename( irc_t *irc, const char *old, const char *new );
+gint irc_user_cmp( gconstpointer a_, gconstpointer b_ );
 
 #endif
