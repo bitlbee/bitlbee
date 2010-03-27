@@ -33,7 +33,7 @@ irc_user_t *irc_user_new( irc_t *irc, const char *nick )
 	iu->nick = g_strdup( nick );
 	iu->user = iu->host = iu->fullname = iu->nick;
 	
-	iu->is_private = set_getbool( &irc->b->set, "private" );
+	iu->flags = set_getbool( &irc->b->set, "private" ) ? IRC_USER_PRIVATE : 0;
 	
 	iu->key = g_strdup( nick );
 	nick_lc( iu->key );
@@ -116,6 +116,9 @@ gint irc_user_cmp( gconstpointer a_, gconstpointer b_ )
 /* User-type dependent functions, for root/NickServ: */
 static gboolean root_privmsg( irc_user_t *iu, const char *msg )
 {
+	g_free( iu->irc->last_root_cmd );
+	iu->irc->last_root_cmd = g_strdup( iu->nick );
+	
 	root_command_string( iu->irc, msg );
 	
 	return TRUE;

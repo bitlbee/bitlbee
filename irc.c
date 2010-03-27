@@ -623,6 +623,8 @@ int irc_check_login( irc_t *irc )
 			irc_channel_set_topic( ic, CONTROL_TOPIC, irc->root );
 			irc_channel_add_user( ic, irc->user );
 			
+			irc->last_root_cmd = g_strdup( ROOT_CHAN );
+			
 			return 1;
 		}
 	}

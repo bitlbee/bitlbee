@@ -108,18 +108,33 @@ void irc_send_motd( irc_t *irc )
 	}
 }
 
-/* FIXME/REPLACEME */
 void irc_usermsg( irc_t *irc, char *format, ... )
 {
+	irc_channel_t *ic;
+	irc_user_t *iu;
 	char text[1024];
 	va_list params;
-	//irc_user_t *iu;
 	
 	va_start( params, format );
 	g_vsnprintf( text, sizeof( text ), format, params );
 	va_end( params );
 	
-	fprintf( stderr, "%s\n", text );
+	if( irc->last_root_cmd &&
+	    irc_channel_name_ok( irc->last_root_cmd ) && 
+	    ( ic = irc_channel_by_name( irc, irc->last_root_cmd ) ) &&
+	    ic->flags & IRC_CHANNEL_JOINED )
+		irc_send_msg( irc->root, "PRIVMSG", irc->last_root_cmd, text );
+	else if( irc->last_root_cmd &&
+	         ( iu = irc_user_by_name( irc, irc->last_root_cmd ) ) &&
+	         iu->f == &irc_user_root_funcs )
+		irc_send_msg( iu, "PRIVMSG", irc->user->nick, text );
+	else
+	{
+		g_free( irc->last_root_cmd );
+		irc->last_root_cmd = NULL;
+		
+		irc_send_msg( irc->root, "PRIVMSG", irc->user->nick, text );
+	}
 	
 	/*return( irc_msgfrom( irc, u->nick, text ) );*/
 }

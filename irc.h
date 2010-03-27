@@ -64,6 +64,8 @@ typedef struct irc
 
 	struct irc_user *root;
 	struct irc_user *user;
+	
+	char *last_root_cmd;
 
 	char *password; /* HACK: Used to save the user's password, but before
 	                   logging in, this may contain a password we should
@@ -86,6 +88,11 @@ typedef struct irc
 	struct bee *b;
 } irc_t;
 
+typedef enum
+{
+	IRC_USER_PRIVATE = 1,
+} irc_user_flags_t;
+
 typedef struct irc_user
 {
 	irc_t *irc;
@@ -98,12 +105,12 @@ typedef struct irc_user
 	/* Nickname in lowercase for case sensitive searches */
 	char *key;
 	
-	char is_private;
+	irc_user_flags_t flags;
 	
 	char *sendbuf;
 	int sendbuf_len;
 	guint sendbuf_timer;
-	int sendbuf_flags;
+	//int sendbuf_flags;
 	
 	//struct user *b;
 	
@@ -189,6 +196,7 @@ void irc_send_names( irc_channel_t *ic );
 void irc_send_topic( irc_channel_t *ic, gboolean topic_change );
 void irc_send_whois( irc_user_t *iu );
 void irc_send_who( irc_t *irc, GSList *l, const char *channel );
+void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg );
 
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );
