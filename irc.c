@@ -619,7 +619,7 @@ int irc_check_login( irc_t *irc )
 			irc_send_login( irc );
 			
 			ic = irc_channel_new( irc, ROOT_CHAN );
-			irc_channel_set_topic( ic, CONTROL_TOPIC );
+			irc_channel_set_topic( ic, CONTROL_TOPIC, irc->root );
 			irc_channel_add_user( ic, irc->user );
 			
 			return 1;

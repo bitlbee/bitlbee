@@ -134,7 +134,7 @@ void irc_send_join( irc_channel_t *ic, irc_user_t *iu )
 	{
 		irc_write( irc, ":%s MODE %s +%s", irc->root->host, ic->name, ic->mode );
 		irc_send_names( ic );
-		irc_send_topic( ic );
+		irc_send_topic( ic, FALSE );
 	}
 }
 
@@ -181,10 +181,20 @@ void irc_send_names( irc_channel_t *ic )
 	irc_send_num( ic->irc, 366, "%s :End of /NAMES list", ic->name );
 }
 
-void irc_send_topic( irc_channel_t *ic )
+void irc_send_topic( irc_channel_t *ic, gboolean topic_change )
 {
-	if( ic->topic )
+	if( topic_change && ic->topic_who )
+	{
+		irc_write( ic->irc, ":%s TOPIC %s :%s", ic->topic_who, 
+		           ic->name, ic->topic && *ic->topic ? ic->topic : "" );
+	}
+	else if( ic->topic )
+	{
 		irc_send_num( ic->irc, 332, "%s :%s", ic->name, ic->topic );
+		if( ic->topic_who )
+			irc_send_num( ic->irc, 333, "%s %s %d",
+			              ic->name, ic->topic_who, (int) ic->topic_time );
+	}
 	else
 		irc_send_num( ic->irc, 331, "%s :No topic for this channel", ic->name );
 }

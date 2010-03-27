@@ -117,6 +117,8 @@ typedef struct irc_channel
 	int flags;
 	char *name;
 	char *topic;
+	char *topic_who;
+	time_t topic_time;
 	char mode[8];
 	GSList *users;
 	struct set *set;
@@ -144,9 +146,10 @@ int irc_check_login( irc_t *irc );
 /* irc_channel.c */
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name );
 irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name );
+int irc_channel_free( irc_channel_t *ic );
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu );
-int irc_channel_set_topic( irc_channel_t *ic, const char *topic );
+int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
 
 /* irc_commands.c */
 void irc_exec( irc_t *irc, char **cmd );
@@ -159,7 +162,7 @@ void irc_usermsg( irc_t *irc, char *format, ... );
 void irc_send_join( irc_channel_t *ic, irc_user_t *iu );
 void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason );
 void irc_send_names( irc_channel_t *ic );
-void irc_send_topic( irc_channel_t *ic );
+void irc_send_topic( irc_channel_t *ic, gboolean topic_change );
 void irc_send_whois( irc_user_t *iu );
 
 /* irc_user.c */

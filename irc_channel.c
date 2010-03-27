@@ -108,13 +108,21 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu )
 	return 1;
 }
 
-int irc_channel_set_topic( irc_channel_t *ic, const char *topic )
+int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *iu )
 {
 	g_free( ic->topic );
 	ic->topic = g_strdup( topic );
 	
+	g_free( ic->topic_who );
+	if( iu )
+		ic->topic_who = g_strdup_printf( "%s!%s@%s", iu->nick, iu->user, iu->host );
+	else
+		ic->topic_who = NULL;
+	
+	ic->topic_time = time( NULL );
+	
 	if( ic->flags & IRC_CHANNEL_JOINED )
-		irc_send_topic( ic );
+		irc_send_topic( ic, TRUE );
 	
 	return 1;
 }
