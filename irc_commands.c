@@ -178,6 +178,11 @@ static void irc_cmd_whowas( irc_t *irc, char **cmd )
 	irc_send_num( irc, 369, "%s :End of WHOWAS", cmd[1] );
 }
 
+static void irc_cmd_motd( irc_t *irc, char **cmd )
+{
+	irc_send_motd( irc );
+}
+
 #if 0
 //#if 0
 static void irc_cmd_oper( irc_t *irc, char **cmd )
@@ -243,11 +248,11 @@ static void irc_cmd_invite( irc_t *irc, char **cmd )
 
 static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 {
-	if ( !cmd[2] ) 
+	if( !cmd[2] ) 
 	{
 		irc_send_num( irc, 412, ":No text to send" );
 	}
-	else if ( irc->nick && g_strcasecmp( cmd[1], irc->nick ) == 0 ) 
+	else if( irc->nick && g_strcasecmp( cmd[1], irc->nick ) == 0 ) 
 	{
 		irc_write( irc, ":%s!%s@%s %s %s :%s", irc->nick, irc->user, irc->host, cmd[0], cmd[1], cmd[2] ); 
 	}
@@ -503,11 +508,6 @@ static void irc_cmd_nickserv( irc_t *irc, char **cmd )
 	root_command( irc, cmd + 1 );
 }
 
-static void irc_cmd_motd( irc_t *irc, char **cmd )
-{
-	irc_motd( irc );
-}
-
 static void irc_cmd_pong( irc_t *irc, char **cmd )
 {
 	/* We could check the value we get back from the user, but in
@@ -564,6 +564,7 @@ static const command_t irc_commands[] = {
 	{ "part",        1, irc_cmd_part,        IRC_CMD_LOGGED_IN },
 	{ "whois",       1, irc_cmd_whois,       IRC_CMD_LOGGED_IN },
 	{ "whowas",      1, irc_cmd_whowas,      IRC_CMD_LOGGED_IN },
+	{ "motd",        0, irc_cmd_motd,        IRC_CMD_LOGGED_IN },
 #if 0
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
@@ -578,7 +579,6 @@ static const command_t irc_commands[] = {
 	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
 	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
-	{ "motd",        0, irc_cmd_motd,        IRC_CMD_LOGGED_IN },
 	{ "pong",        0, irc_cmd_pong,        IRC_CMD_LOGGED_IN },
 	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
