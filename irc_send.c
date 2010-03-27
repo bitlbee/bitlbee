@@ -245,7 +245,7 @@ void irc_send_who( irc_t *irc, GSList *l, const char *channel )
 		irc_user_t *iu = l->data;
 		/* TODO(wilmer): Restore away/channel information here */
 		irc_send_num( irc, 352, "%s %s %s %s %s %c :0 %s",
-		              "*", iu->user, iu->host, irc->root->host,
+		              channel ? : "*", iu->user, iu->host, irc->root->host,
 		              iu->nick, 'H', iu->fullname );
 		l = l->next;
 	}
