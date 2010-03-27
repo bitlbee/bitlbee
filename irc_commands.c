@@ -215,6 +215,21 @@ static void irc_cmd_mode( irc_t *irc, char **cmd )
 	}
 }
 
+static void irc_cmd_who( irc_t *irc, char **cmd )
+{
+	char *channel = cmd[1];
+	irc_channel_t *ic;
+	struct groupchat *c;
+	GList *l;
+	
+	if( !channel || *channel == '0' || *channel == '*' || !*channel )
+		irc_send_who( irc, irc->users, "**" );
+	else if( ( ic = irc_channel_by_name( irc, channel ) ) )
+		irc_send_who( irc, ic->users, channel );
+	else
+		irc_send_num( irc, 403, "%s :No such channel", channel );
+}
+
 #if 0
 //#if 0
 static void irc_cmd_oper( irc_t *irc, char **cmd )
@@ -299,38 +314,6 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 		}
 		irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? OPT_AWAY : 0 );
 	}
-}
-
-static void irc_cmd_who( irc_t *irc, char **cmd )
-{
-	char *channel = cmd[1];
-	user_t *u = irc->users;
-	struct groupchat *c;
-	GList *l;
-	
-	if( !channel || *channel == '0' || *channel == '*' || !*channel )
-		while( u )
-		{
-			irc_send_num( irc, 352, "%s %s %s %s %s %c :0 %s", u->online ? irc->channel : "*", u->user, u->host, irc->myhost, u->nick, u->online ? ( u->away ? 'G' : 'H' ) : 'G', u->realname );
-			u = u->next;
-		}
-	else if( g_strcasecmp( channel, irc->channel ) == 0 )
-		while( u )
-		{
-			if( u->online )
-				irc_send_num( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
-			u = u->next;
-		}
-	else if( ( c = irc_chat_by_channel( irc, channel ) ) )
-		for( l = c->in_room; l; l = l->next )
-		{
-			if( ( u = user_findhandle( c->ic, l->data ) ) )
-				irc_send_num( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
-		}
-	else if( ( u = user_find( irc, channel ) ) )
-		irc_send_num( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->online ? ( u->away ? 'G' : 'H' ) : 'G', u->realname );
-	
-	irc_send_num( irc, 315, "%s :End of /WHO list", channel?channel:"**" );
 }
 
 static void irc_cmd_userhost( irc_t *irc, char **cmd )
@@ -570,12 +553,12 @@ static const command_t irc_commands[] = {
 	{ "whowas",      1, irc_cmd_whowas,      IRC_CMD_LOGGED_IN },
 	{ "motd",        0, irc_cmd_motd,        IRC_CMD_LOGGED_IN },
 	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
+	{ "who",         0, irc_cmd_who,         IRC_CMD_LOGGED_IN },
 #if 0
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
 	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
-	{ "who",         0, irc_cmd_who,         IRC_CMD_LOGGED_IN },
 	{ "userhost",    1, irc_cmd_userhost,    IRC_CMD_LOGGED_IN },
 	{ "ison",        1, irc_cmd_ison,        IRC_CMD_LOGGED_IN },
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
