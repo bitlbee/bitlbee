@@ -52,8 +52,6 @@ irc_t *irc_new( int fd )
 	irc->nick_user_hash = g_hash_table_new( g_str_hash, g_str_equal );
 	irc->watches = g_hash_table_new( g_str_hash, g_str_equal );
 	
-	strcpy( irc->umode, UMODE );
-	
 	irc->iconv = (GIConv) -1;
 	irc->oconv = (GIConv) -1;
 	
@@ -598,9 +596,6 @@ int irc_check_login( irc_t *irc )
 			g_free( iu->nick );
 			g_free( iu );
 			
-			irc->umode[0] = '\0';
-			/*irc_umode_set( irc, "+" UMODE, 1 );*/
-			
 			if( global.conf->runmode == RUNMODE_FORKDAEMON || global.conf->runmode == RUNMODE_DAEMON )
 				ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->user->host, irc->user->nick, irc->user->fullname );
 			
@@ -618,6 +613,9 @@ int irc_check_login( irc_t *irc )
 			
 			irc_send_login( irc );
 			
+			irc->umode[0] = '\0';
+			irc_umode_set( irc, "+" UMODE, TRUE );
+			
 			ic = irc_channel_new( irc, ROOT_CHAN );
 			irc_channel_set_topic( ic, CONTROL_TOPIC, irc->root );
 			irc_channel_add_user( ic, irc->user );
@@ -630,6 +628,58 @@ int irc_check_login( irc_t *irc )
 		/* More information needed. */
 		return 0;
 	}
+}
+
+void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv )
+{
+	/* allow_priv: Set to 0 if s contains user input, 1 if you want
+	   to set a "privileged" mode (+o, +R, etc). */
+	char m[128], st = 1;
+	const char *t;
+	int i;
+	char changes[512], *p, st2 = 2;
+	char badflag = 0;
+	
+	memset( m, 0, sizeof( m ) );
+	
+	for( t = irc->umode; *t; t ++ )
+		if( *t < sizeof( m ) )
+			m[(int)*t] = 1;
+	
+	p = changes;
+	for( t = s; *t; t ++ )
+	{
+		if( *t == '+' || *t == '-' )
+			st = *t == '+';
+		else if( ( st == 0 && ( !strchr( UMODES_KEEP, *t ) || allow_priv ) ) ||
+		         ( st == 1 && strchr( UMODES, *t ) ) ||
+		         ( st == 1 && allow_priv && strchr( UMODES_PRIV, *t ) ) )
+		{
+			if( m[(int)*t] != st)
+			{
+				if( st != st2 )
+					st2 = st, *p++ = st ? '+' : '-';
+				*p++ = *t;
+			}
+			m[(int)*t] = st;
+		}
+		else
+			badflag = 1;
+	}
+	*p = '\0';
+	
+	memset( irc->umode, 0, sizeof( irc->umode ) );
+	
+	for( i = 'A'; i <= 'z' && strlen( irc->umode ) < ( sizeof( irc->umode ) - 1 ); i ++ )
+		if( m[i] )
+			irc->umode[strlen(irc->umode)] = i;
+	
+	if( badflag )
+		irc_send_num( irc, 501, ":Unknown MODE flag" );
+	if( *changes )
+		irc_write( irc, ":%s!%s@%s MODE %s :%s", irc->user->nick,
+		           irc->user->user, irc->user->host, irc->user->nick,
+		           changes );
 }
 
 

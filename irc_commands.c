@@ -183,6 +183,38 @@ static void irc_cmd_motd( irc_t *irc, char **cmd )
 	irc_send_motd( irc );
 }
 
+static void irc_cmd_mode( irc_t *irc, char **cmd )
+{
+	if( irc_channel_name_ok( cmd[1] ) )
+	{
+		irc_channel_t *ic;
+		
+		if( ( ic = irc_channel_by_name( irc, cmd[1] ) ) == NULL )
+			irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
+		else if( cmd[2] )
+		{
+			if( *cmd[2] == '+' || *cmd[2] == '-' )
+				irc_send_num( irc, 477, "%s :Can't change channel modes", cmd[1] );
+			else if( *cmd[2] == 'b' )
+				irc_send_num( irc, 368, "%s :No bans possible", cmd[1] );
+		}
+		else
+			irc_send_num( irc, 324, "%s +%s", cmd[1], ic->mode );
+	}
+	else
+	{
+		if( nick_cmp( cmd[1], irc->user->nick ) == 0 )
+		{
+			if( cmd[2] )
+				irc_umode_set( irc, cmd[2], 0 );
+			else
+				irc_send_num( irc, 221, "+%s", irc->umode );
+		}
+		else
+			irc_send_num( irc, 502, ":Don't touch their modes" );
+	}
+}
+
 #if 0
 //#if 0
 static void irc_cmd_oper( irc_t *irc, char **cmd )
@@ -198,34 +230,6 @@ static void irc_cmd_oper( irc_t *irc, char **cmd )
 	else
 	{
 		irc_send_num( irc, 432, ":Incorrect password" );
-	}
-}
-
-static void irc_cmd_mode( irc_t *irc, char **cmd )
-{
-	if( strchr( CTYPES, *cmd[1] ) )
-	{
-		if( cmd[2] )
-		{
-			if( *cmd[2] == '+' || *cmd[2] == '-' )
-				irc_send_num( irc, 477, "%s :Can't change channel modes", cmd[1] );
-			else if( *cmd[2] == 'b' )
-				irc_send_num( irc, 368, "%s :No bans possible", cmd[1] );
-		}
-		else
-			irc_send_num( irc, 324, "%s +%s", cmd[1], CMODE );
-	}
-	else
-	{
-		if( nick_cmp( cmd[1], irc->nick ) == 0 )
-		{
-			if( cmd[2] )
-				irc_umode_set( irc, cmd[2], 0 );
-			else
-				irc_send_num( irc, 221, "+%s", irc->umode );
-		}
-		else
-			irc_send_num( irc, 502, ":Don't touch their modes" );
 	}
 }
 
@@ -565,9 +569,9 @@ static const command_t irc_commands[] = {
 	{ "whois",       1, irc_cmd_whois,       IRC_CMD_LOGGED_IN },
 	{ "whowas",      1, irc_cmd_whowas,      IRC_CMD_LOGGED_IN },
 	{ "motd",        0, irc_cmd_motd,        IRC_CMD_LOGGED_IN },
+	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
 #if 0
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
-	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
 	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },

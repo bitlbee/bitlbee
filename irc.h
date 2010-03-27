@@ -32,12 +32,14 @@
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"
 
-#define UMODES "abisw"
-#define UMODES_PRIV "Ro"
-#define CMODES "nt"
-#define CMODE "t"
-#define UMODE "s"
-#define CTYPES "&#"
+#define UMODES "abisw"     /* Allowed umodes (although they mostly do nothing) */
+#define UMODES_PRIV "Ro"   /* Allowed, but not by user directly */
+#define UMODES_KEEP "R"    /* Don't allow unsetting using /MODE */
+#define CMODES "nt"        /* Allowed modes */
+#define CMODE "t"          /* Default mode */
+#define UMODE "s"          /* Default mode */
+
+#define CTYPES "&#"        /* Valid channel name prefixes */
 
 typedef enum
 {
@@ -143,6 +145,8 @@ void irc_vawrite( irc_t *irc, char *format, va_list params );
 
 int irc_check_login( irc_t *irc );
 
+void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv );
+
 /* irc_channel.c */
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name );
 irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name );
@@ -150,6 +154,7 @@ int irc_channel_free( irc_channel_t *ic );
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
+gboolean irc_channel_name_ok( const char *name );
 
 /* irc_commands.c */
 void irc_exec( irc_t *irc, char **cmd );

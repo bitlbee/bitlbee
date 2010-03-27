@@ -126,3 +126,8 @@ int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_
 	
 	return 1;
 }
+
+gboolean irc_channel_name_ok( const char *name )
+{
+	return strchr( CTYPES, name[0] ) != NULL && nick_ok( name + 1 );
+}
