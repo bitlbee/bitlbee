@@ -72,9 +72,8 @@ typedef struct irc
 	struct query *queries;
 	struct account *accounts;
 	GSList *file_transfers;
-	struct chat *chatrooms;
 	
-	GSList *users;
+	GSList *users, *channels;
 	GHashTable *nick_user_hash;
 	GHashTable *watches;
 
@@ -105,6 +104,22 @@ typedef struct irc_user
 	//struct user *b;
 } irc_user_t;
 
+typedef enum
+{
+	IRC_CHANNEL_JOINED = 1,
+} irc_channel_flags_t;
+
+typedef struct irc_channel
+{
+	irc_t *irc;
+	int flags;
+	char *name;
+	char *topic;
+	char mode[8];
+	GSList *users;
+	struct set *set;
+} irc_channel_t;
+
 #include "user.h"
 
 /* irc.c */
@@ -124,6 +139,12 @@ void irc_vawrite( irc_t *irc, char *format, va_list params );
 
 int irc_check_login( irc_t *irc );
 
+/* irc_channel.c */
+irc_channel_t *irc_channel_new( irc_t *irc, const char *name );
+int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
+int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu );
+int irc_channel_set_topic( irc_channel_t *ic, const char *topic );
+
 /* irc_commands.c */
 void irc_exec( irc_t *irc, char **cmd );
 
@@ -131,7 +152,11 @@ void irc_exec( irc_t *irc, char **cmd );
 void irc_send_num( irc_t *irc, int code, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
 void irc_send_login( irc_t *irc );
 void irc_send_motd( irc_t *irc );
-int irc_usermsg( irc_t *irc, char *format, ... );
+void irc_usermsg( irc_t *irc, char *format, ... );
+void irc_send_join( irc_channel_t *ic, irc_user_t *iu );
+void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason );
+void irc_send_names( irc_channel_t *ic );
+void irc_send_topic( irc_channel_t *ic );
 
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );

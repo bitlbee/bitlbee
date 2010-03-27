@@ -33,21 +33,12 @@ void irc_send_num( irc_t *irc, int code, char *format, ... )
 	va_start( params, format );
 	g_vsnprintf( text, IRC_MAX_LINE, format, params );
 	va_end( params );
-	irc_write( irc, ":%s %03d %s %s", irc->root->host, code, irc->user->nick ? : "*", text );
 	
-	return;
+	irc_write( irc, ":%s %03d %s %s", irc->root->host, code, irc->user->nick ? : "*", text );
 }
 
 void irc_send_login( irc_t *irc )
 {
-	irc_user_t *iu = irc->user;
-	
-	irc->user = irc_user_new( irc, iu->nick );
-	irc->user->user = iu->user;
-	irc->user->fullname = iu->fullname;
-	g_free( iu->nick );
-	g_free( iu );
-	
 	irc_send_num( irc,   1, ":Welcome to the BitlBee gateway, %s", irc->user->nick );
 	irc_send_num( irc,   2, ":Host %s is running BitlBee " BITLBEE_VERSION " " ARCH "/" CPU ".", irc->root->host );
 	irc_send_num( irc,   3, ":%s", IRCD_INFO );
@@ -56,8 +47,6 @@ void irc_send_login( irc_t *irc )
 	                        "CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server",
 	                        CTYPES, CMODES, MAX_NICK_LENGTH - 1 );
 	irc_send_motd( irc );
-	irc->umode[0] = '\0';
-	/*irc_umode_set( irc, "+" UMODE, 1 );*/
 	
 	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\n"
 	                  "If you've never used BitlBee before, please do read the help "
@@ -65,21 +54,6 @@ void irc_send_login( irc_t *irc )
 	                  "answered there.\n"
 	                  "If you already have an account on this server, just use the "
 	                  "\x02identify\x02 command to identify yourself." );
-	
-	if( global.conf->runmode == RUNMODE_FORKDAEMON || global.conf->runmode == RUNMODE_DAEMON )
-		ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->user->host, irc->user->nick, irc->user->fullname );
-	
-	irc->status |= USTATUS_LOGGED_IN;
-	
-	/* This is for bug #209 (use PASS to identify to NickServ). */
-	if( irc->password != NULL )
-	{
-		char *send_cmd[] = { "identify", g_strdup( irc->password ), NULL };
-		
-		/*irc_setpass( irc, NULL );*/
-		/*root_command( irc, send_cmd );*/
-		g_free( send_cmd[1] );
-	}
 }
 
 void irc_send_motd( irc_t *irc )
@@ -135,7 +109,7 @@ void irc_send_motd( irc_t *irc )
 }
 
 /* FIXME/REPLACEME */
-int irc_usermsg( irc_t *irc, char *format, ... )
+void irc_usermsg( irc_t *irc, char *format, ... )
 {
 	char text[1024];
 	va_list params;
@@ -147,7 +121,70 @@ int irc_usermsg( irc_t *irc, char *format, ... )
 	
 	fprintf( stderr, "%s\n", text );
 	
-	return 1;
-	
 	/*return( irc_msgfrom( irc, u->nick, text ) );*/
+}
+
+void irc_send_join( irc_channel_t *ic, irc_user_t *iu )
+{
+	irc_t *irc = ic->irc;
+	
+	irc_write( irc, ":%s!%s@%s JOIN :%s", iu->nick, iu->user, iu->host, ic->name );
+	
+	if( iu == irc->user )
+	{
+		irc_write( irc, ":%s MODE %s +%s", irc->root->host, ic->name, ic->mode );
+		irc_send_names( ic );
+		irc_send_topic( ic );
+	}
+}
+
+void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason )
+{
+	irc_write( ic->irc, ":%s!%s@%s PART %s :%s", iu->nick, iu->user, iu->host, ic->name, reason );
+}
+
+void irc_send_names( irc_channel_t *ic )
+{
+	GSList *l;
+	irc_user_t *iu;
+	char namelist[385] = "";
+	struct groupchat *c = NULL;
+	char *ops = set_getstr( &ic->irc->b->set, "ops" );
+	
+	/* RFCs say there is no error reply allowed on NAMES, so when the
+	   channel is invalid, just give an empty reply. */
+	for( l = ic->users; l; l = l->next )
+	{
+		irc_user_t *iu = l->data;
+		
+		if( strlen( namelist ) + strlen( iu->nick ) > sizeof( namelist ) - 4 )
+		{
+			irc_send_num( ic->irc, 353, "= %s :%s", ic->name, namelist );
+			*namelist = 0;
+		}
+		
+		/*
+		if( u->ic && !u->away && set_getbool( &irc->set, "away_devoice" ) )
+			strcat( namelist, "+" );
+		else if( ( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) == 0 ) ) ||
+		         ( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) == 0 ) ) )
+			strcat( namelist, "@" );
+		*/
+		
+		strcat( namelist, iu->nick );
+		strcat( namelist, " " );
+	}
+	
+	if( *namelist )
+		irc_send_num( ic->irc, 353, "= %s :%s", ic->name, namelist );
+	
+	irc_send_num( ic->irc, 366, "%s :End of /NAMES list", ic->name );
+}
+
+void irc_send_topic( irc_channel_t *ic )
+{
+	if( ic->topic )
+		irc_send_num( ic->irc, 332, "%s :%s", ic->name, ic->topic );
+	else
+		irc_send_num( ic->irc, 331, "%s :No topic for this channel", ic->name );
 }

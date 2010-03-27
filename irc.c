@@ -585,7 +585,39 @@ int irc_check_login( irc_t *irc )
 		}
 		else
 		{
+			irc_channel_t *ic;
+			irc_user_t *iu = irc->user;
+			
+			irc->user = irc_user_new( irc, iu->nick );
+			irc->user->user = iu->user;
+			irc->user->fullname = iu->fullname;
+			g_free( iu->nick );
+			g_free( iu );
+			
+			irc->umode[0] = '\0';
+			/*irc_umode_set( irc, "+" UMODE, 1 );*/
+			
+			if( global.conf->runmode == RUNMODE_FORKDAEMON || global.conf->runmode == RUNMODE_DAEMON )
+				ipc_to_master_str( "CLIENT %s %s :%s\r\n", irc->user->host, irc->user->nick, irc->user->fullname );
+			
+			irc->status |= USTATUS_LOGGED_IN;
+			
+			/* This is for bug #209 (use PASS to identify to NickServ). */
+			if( irc->password != NULL )
+			{
+				char *send_cmd[] = { "identify", g_strdup( irc->password ), NULL };
+				
+				/*irc_setpass( irc, NULL );*/
+				/*root_command( irc, send_cmd );*/
+				g_free( send_cmd[1] );
+			}
+			
 			irc_send_login( irc );
+			
+			ic = irc_channel_new( irc, ROOT_CHAN );
+			irc_channel_set_topic( ic, CONTROL_TOPIC );
+			irc_channel_add_user( ic, irc->user );
+			
 			return 1;
 		}
 	}
