@@ -107,6 +107,14 @@ static void irc_cmd_ping( irc_t *irc, char **cmd )
 	           irc->root->host, cmd[1]?cmd[1]:irc->root->host );
 }
 
+static void irc_cmd_pong( irc_t *irc, char **cmd )
+{
+	/* We could check the value we get back from the user, but in
+	   fact we don't care, we're just happy s/he's still alive. */
+	irc->last_pong = gettime();
+	irc->pinging = 0;
+}
+
 static void irc_cmd_join( irc_t *irc, char **cmd )
 {
 	irc_channel_t *ic;
@@ -516,14 +524,6 @@ static void irc_cmd_nickserv( irc_t *irc, char **cmd )
 	root_command( irc, cmd + 1 );
 }
 
-static void irc_cmd_pong( irc_t *irc, char **cmd )
-{
-	/* We could check the value we get back from the user, but in
-	   fact we don't care, we're just happy he's still alive. */
-	irc->last_pong = gettime();
-	irc->pinging = 0;
-}
-
 static void irc_cmd_version( irc_t *irc, char **cmd )
 {
 	irc_send_num( irc, 351, "bitlbee-%s. %s :%s/%s ", BITLBEE_VERSION, irc->myhost, ARCH, CPU );
@@ -567,6 +567,7 @@ static const command_t irc_commands[] = {
 	{ "nick",        1, irc_cmd_nick,        0 },
 	{ "quit",        0, irc_cmd_quit,        0 },
 	{ "ping",        0, irc_cmd_ping,        0 },
+	{ "pong",        0, irc_cmd_pong,        IRC_CMD_LOGGED_IN },
 	{ "join",        1, irc_cmd_join,        IRC_CMD_LOGGED_IN },
 	{ "names",       1, irc_cmd_names,       IRC_CMD_LOGGED_IN },
 	{ "part",        1, irc_cmd_part,        IRC_CMD_LOGGED_IN },
@@ -587,7 +588,6 @@ static const command_t irc_commands[] = {
 	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
 	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
-	{ "pong",        0, irc_cmd_pong,        IRC_CMD_LOGGED_IN },
 	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },

@@ -27,6 +27,7 @@
 
 GSList *irc_connection_list;
 
+static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond );
 static char *set_eval_charset( set_t *set, char *value );
 
 irc_t *irc_new( int fd )
@@ -86,8 +87,8 @@ irc_t *irc_new( int fd )
 	if( myhost == NULL )
 		myhost = g_strdup( "localhost.localdomain" );
 	
-	//if( global.conf->ping_interval > 0 && global.conf->ping_timeout > 0 )
-	//	irc->ping_source_id = b_timeout_add( global.conf->ping_interval * 1000, irc_userping, irc );
+	if( global.conf->ping_interval > 0 && global.conf->ping_timeout > 0 )
+		irc->ping_source_id = b_timeout_add( global.conf->ping_interval * 1000, irc_userping, irc );
 
 	irc_connection_list = g_slist_append( irc_connection_list, irc );
 	
@@ -687,6 +688,42 @@ void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv )
 		           changes );
 }
 
+
+/* Returns 0 if everything seems to be okay, a number >0 when there was a
+   timeout. The number returned is the number of seconds we received no
+   pongs from the user. When not connected yet, we don't ping but drop the
+   connection when the user fails to connect in IRC_LOGIN_TIMEOUT secs. */
+static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond )
+{
+	irc_t *irc = _irc;
+	int rv = 0;
+	
+	if( !( irc->status & USTATUS_LOGGED_IN ) )
+	{
+		if( gettime() > ( irc->last_pong + IRC_LOGIN_TIMEOUT ) )
+			rv = gettime() - irc->last_pong;
+	}
+	else
+	{
+		if( ( gettime() > ( irc->last_pong + global.conf->ping_interval ) ) && !irc->pinging )
+		{
+			irc_write( irc, "PING :%s", IRC_PING_STRING );
+			irc->pinging = 1;
+		}
+		else if( gettime() > ( irc->last_pong + global.conf->ping_timeout ) )
+		{
+			rv = gettime() - irc->last_pong;
+		}
+	}
+	
+	if( rv > 0 )
+	{
+		irc_abort( irc, 0, "Ping Timeout: %d seconds", rv );
+		return FALSE;
+	}
+	
+	return TRUE;
+}
 
 
 static char *set_eval_charset( set_t *set, char *value )
