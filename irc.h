@@ -196,7 +196,8 @@ void irc_send_names( irc_channel_t *ic );
 void irc_send_topic( irc_channel_t *ic, gboolean topic_change );
 void irc_send_whois( irc_user_t *iu );
 void irc_send_who( irc_t *irc, GSList *l, const char *channel );
-void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg );
+void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix );
+void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const char *msg );
 
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );

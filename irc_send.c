@@ -123,17 +123,17 @@ void irc_usermsg( irc_t *irc, char *format, ... )
 	    irc_channel_name_ok( irc->last_root_cmd ) && 
 	    ( ic = irc_channel_by_name( irc, irc->last_root_cmd ) ) &&
 	    ic->flags & IRC_CHANNEL_JOINED )
-		irc_send_msg( irc->root, "PRIVMSG", irc->last_root_cmd, text );
+		irc_send_msg( irc->root, "PRIVMSG", irc->last_root_cmd, text, NULL );
 	else if( irc->last_root_cmd &&
 	         ( iu = irc_user_by_name( irc, irc->last_root_cmd ) ) &&
 	         iu->f == &irc_user_root_funcs )
-		irc_send_msg( iu, "PRIVMSG", irc->user->nick, text );
+		irc_send_msg( iu, "PRIVMSG", irc->user->nick, text, NULL );
 	else
 	{
 		g_free( irc->last_root_cmd );
 		irc->last_root_cmd = NULL;
 		
-		irc_send_msg( irc->root, "PRIVMSG", irc->user->nick, text );
+		irc_send_msg( irc->root, "PRIVMSG", irc->user->nick, text, NULL );
 	}
 	
 	/*return( irc_msgfrom( irc, u->nick, text ) );*/
@@ -253,7 +253,49 @@ void irc_send_who( irc_t *irc, GSList *l, const char *channel )
 	irc_send_num( irc, 315, "%s :End of /WHO list", channel );
 }
 
-void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg )
+void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix )
+{
+	char last = 0;
+	const char *s = msg, *line = msg;
+	char raw_msg[strlen(msg)+1024];
+	
+	while( !last )
+	{
+		if( *s == '\r' && *(s+1) == '\n' )
+			s++;
+		if( *s == '\n' )
+		{
+			last = s[1] == 0;
+		}
+		else
+		{
+			last = s[0] == 0;
+		}
+		if( *s == 0 || *s == '\n' )
+		{
+			if( g_strncasecmp( line, "/me ", 4 ) == 0 && ( !prefix || !*prefix ) &&
+			    g_strcasecmp( type, "PRIVMSG" ) == 0 )
+			{
+				strcpy( raw_msg, "\001ACTION " );
+				strncat( raw_msg, line + 4, s - line - 4 );
+				strcat( raw_msg, "\001" );
+				irc_send_msg_raw( iu, type, dst, raw_msg );
+			}
+			else
+			{
+				*raw_msg = '\0';
+				if( prefix && *prefix )
+					strcpy( raw_msg, prefix );
+				strncat( raw_msg, line, s - line );
+				irc_send_msg_raw( iu, type, dst, raw_msg );
+			}
+			line = s + 1;
+		}
+		s ++;
+	}
+}
+
+void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const char *msg )
 {
 	irc_write( iu->irc, ":%s!%s@%s %s %s :%s",
 	           iu->nick, iu->user, iu->host, type, dst, msg );
