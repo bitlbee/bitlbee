@@ -49,12 +49,16 @@ irc_user_t *irc_user_new( irc_t *irc, const char *nick )
 int irc_user_free( irc_t *irc, const char *nick )
 {
 	irc_user_t *iu;
+	GSList *l;
 	
 	if( !( iu = irc_user_by_name( irc, nick ) ) )
 		return 0;
 	
 	irc->users = g_slist_remove( irc->users, iu );
 	g_hash_table_remove( irc->nick_user_hash, iu->key );
+	
+	for( l = irc->channels; l; l = l->next )
+		irc_channel_del_user( (irc_channel_t*) l->data, iu );
 	
 	g_free( iu->nick );
 	if( iu->nick != iu->user ) g_free( iu->user );
