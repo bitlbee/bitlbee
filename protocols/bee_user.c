@@ -23,59 +23,60 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef __BEE_H__
-#define __BEE_H__
+#define BITLBEE_CORE
+#include "bitlbee.h"
 
-struct bee_ui_funcs;
-
-typedef struct bee
+bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *handle )
 {
-	struct set *set;
+	bee_user_t *bu;
 	
-	GSList *users;
-	GSList *accounts;
+	if( bee_user_by_handle( bee, ic, handle ) != NULL )
+		return NULL;
 	
-	const struct bee_ui_funcs *ui;
-	void *ui_data;
-} bee_t;
-
-bee_t *bee_new();
-void bee_free( bee_t *b );
-
-typedef enum
-{
-	BEE_USER_ONLINE = 1,
-	BEE_USER_AWAY = 2,
-} bee_user_flags_t;
-
-typedef struct bee_user
-{
-	struct im_connection *ic;
-	char *handle;
-	char *fullname;
-	char *group;
-
-	char *away;
-	char *status_msg;
+	bu = g_new0( bee_user_t, 1 );
+	bu->bee = bee;
+	bu->ic = ic;
+	bu->handle = g_strdup( handle );
+	bee->users = g_slist_prepend( bee->users, bu );
 	
-	bee_t *bee;
-	void *ui_data;
-} bee_user_t;
+	if( bee->ui->user_new )
+		bee->ui->user_new( bee, bu );
+	
+	return bu;
+}
 
-typedef struct bee_ui_funcs
+int bee_user_free( bee_t *bee, struct im_connection *ic, const char *handle )
 {
-	gboolean (*user_new)( bee_t *bee, struct bee_user *bu );
-	gboolean (*user_free)( bee_t *bee, struct bee_user *bu );
-} bee_ui_funcs_t;
+	bee_user_t *bu;
+	
+	if( ( bu = bee_user_by_handle( bee, ic, handle ) ) == NULL )
+		return 0;
+	
+	if( bee->ui->user_free )
+		bee->ui->user_free( bee, bu );
+	
+	g_free( bu->handle );
+	g_free( bu->fullname );
+	g_free( bu->group );
+	g_free( bu->away );
+	g_free( bu->status_msg );
+	
+	bee->users = g_slist_remove( bee->users, bu );
+	
+	return 1;
+}
 
-
-/* bee.c */
-bee_t *bee_new();
-void bee_free( bee_t *b );
-
-/* bee_user.c */
-bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *handle );
-int bee_user_free( bee_t *bee, struct im_connection *ic, const char *handle );
-bee_user_t *bee_user_by_handle( bee_t *bee, struct im_connection *ic, const char *handle );
-
-#endif /* __BEE_H__ */
+bee_user_t *bee_user_by_handle( bee_t *bee, struct im_connection *ic, const char *handle )
+{
+	GSList *l;
+	
+	for( l = bee->users; l; l = l->next )
+	{
+		bee_user_t *bu = l->data;
+		
+		if( bu->ic == ic && ic->acc->prpl->handle_cmp( bu->handle, handle ) )
+			return bu;
+	}
+	
+	return NULL;
+}

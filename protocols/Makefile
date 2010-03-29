@@ -10,7 +10,7 @@
 
 # [SH] Program variables
 #objects = account.o nogaim.o user.o
-objects = bee.o
+objects = bee.o bee_user.o nogaim.o
 
 
 # [SH] The next two lines should contain the directory name (in $(subdirs))

@@ -198,8 +198,8 @@ static void serv_got_crap( struct im_connection *ic, char *format, ... )
 	text = g_strdup_vprintf( format, params );
 	va_end( params );
 
-	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
+	if( ( g_strcasecmp( set_getstr( &ic->irc->b->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->b->set, "strip_html" ) ) )
 		strip_html( text );
 	
 	/* Try to find a different connection on the same protocol. */
@@ -264,15 +264,12 @@ void imcb_connected( struct im_connection *ic )
 {
 	irc_t *irc = ic->irc;
 	struct chat *c;
-	user_t *u;
 	
 	/* MSN servers sometimes redirect you to a different server and do
 	   the whole login sequence again, so these "late" calls to this
 	   function should be handled correctly. (IOW, ignored) */
 	if( ic->flags & OPT_LOGGED_IN )
 		return;
-	
-	u = user_find( ic->irc, ic->irc->nick );
 	
 	imcb_log( ic, "Logged in" );
 	
@@ -286,6 +283,7 @@ void imcb_connected( struct im_connection *ic )
 	   exponential backoff timer. */
 	ic->acc->auto_reconnect_delay = 0;
 	
+	/*
 	for( c = irc->chatrooms; c; c = c->next )
 	{
 		if( c->acc != ic->acc )
@@ -294,6 +292,7 @@ void imcb_connected( struct im_connection *ic )
 		if( set_getbool( &c->set, "auto_join" ) )
 			chat_join( irc, c, NULL );
 	}
+	*/
 }
 
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
@@ -359,7 +358,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	{
 		/* Uhm... This is very sick. */
 	}
-	else if( allow_reconnect && set_getbool( &irc->set, "auto_reconnect" ) &&
+	else if( allow_reconnect && set_getbool( &irc->b->set, "auto_reconnect" ) &&
 	         set_getbool( &a->set, "auto_reconnect" ) &&
 	         ( delay = account_reconnect_delay( a ) ) > 0 )
 	{
@@ -390,7 +389,7 @@ void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *g
 	
 	if( user_findhandle( ic, handle ) )
 	{
-		if( set_getbool( &irc->set, "debug" ) )
+		if( set_getbool( &irc->b->set, "debug" ) )
 			imcb_log( ic, "User already exists, ignoring add request: %s", handle );
 		
 		return;
@@ -469,7 +468,7 @@ void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char
 		
 		u->realname = g_strdup( realname );
 		
-		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->irc->set, "display_namechanges" ) )
+		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->irc->b->set, "display_namechanges" ) )
 			imcb_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
 	}
 	
@@ -517,7 +516,7 @@ void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const c
 		
 		/* Some processing to make sure this string is a valid IRC nickname. */
 		nick_strip( newnick );
-		if( set_getbool( &ic->irc->set, "lcnicks" ) )
+		if( set_getbool( &ic->irc->b->set, "lcnicks" ) )
 			nick_lc( newnick );
 		
 		if( strcmp( u->nick, newnick ) != 0 )
@@ -625,14 +624,14 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	
 	if( !u )
 	{
-		if( g_strcasecmp( set_getstr( &ic->irc->set, "handle_unknown" ), "add" ) == 0 )
+		if( g_strcasecmp( set_getstr( &ic->irc->b->set, "handle_unknown" ), "add" ) == 0 )
 		{
 			imcb_add_buddy( ic, (char*) handle, NULL );
 			u = user_findhandle( ic, (char*) handle );
 		}
 		else
 		{
-			if( set_getbool( &ic->irc->set, "debug" ) || g_strcasecmp( set_getstr( &ic->irc->set, "handle_unknown" ), "ignore" ) != 0 )
+			if( set_getbool( &ic->irc->b->set, "debug" ) || g_strcasecmp( set_getstr( &ic->irc->b->set, "handle_unknown" ), "ignore" ) != 0 )
 			{
 				imcb_log( ic, "imcb_buddy_status() for unknown handle %s:", handle );
 				imcb_log( ic, "flags = %d, state = %s, message = %s", flags,
@@ -692,14 +691,14 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	}
 	
 	/* LISPy... */
-	if( ( set_getbool( &ic->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
+	if( ( set_getbool( &ic->irc->b->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
 	    ( u->online ) &&						/* Don't touch offline people */
 	    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
 	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
 	{
 		char *from;
 		
-		if( set_getbool( &ic->irc->set, "simulate_netsplit" ) )
+		if( set_getbool( &ic->irc->b->set, "simulate_netsplit" ) )
 		{
 			from = g_strdup( ic->irc->myhost );
 		}
@@ -724,18 +723,18 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 	
 	if( !u )
 	{
-		char *h = set_getstr( &irc->set, "handle_unknown" );
+		char *h = set_getstr( &irc->b->set, "handle_unknown" );
 		
 		if( g_strcasecmp( h, "ignore" ) == 0 )
 		{
-			if( set_getbool( &irc->set, "debug" ) )
+			if( set_getbool( &irc->b->set, "debug" ) )
 				imcb_log( ic, "Ignoring message from unknown handle %s", handle );
 			
 			return;
 		}
 		else if( g_strncasecmp( h, "add", 3 ) == 0 )
 		{
-			int private = set_getbool( &irc->set, "private" );
+			int private = set_getbool( &irc->b->set, "private" );
 			
 			if( h[3] )
 			{
@@ -756,8 +755,8 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 		}
 	}
 	
-	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
+	if( ( g_strcasecmp( set_getstr( &ic->irc->b->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->b->set, "strip_html" ) ) )
 		strip_html( msg );
 
 	wrapped = word_wrap( msg, 425 );
@@ -769,7 +768,7 @@ void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
 {
 	user_t *u;
 	
-	if( !set_getbool( &ic->irc->set, "typing_notice" ) )
+	if( !set_getbool( &ic->irc->b->set, "typing_notice" ) )
 		return;
 	
 	if( ( u = user_findhandle( ic, handle ) ) )
@@ -800,7 +799,7 @@ struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 	c->channel = g_strdup_printf( "&chat_%03d", ic->irc->c_id++ );
 	c->topic = g_strdup_printf( "BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->title );
 	
-	if( set_getbool( &ic->irc->set, "debug" ) )
+	if( set_getbool( &ic->irc->b->set, "debug" ) )
 		imcb_log( ic, "Creating new conversation: (id=%p,handle=%s)", c, handle );
 	
 	return c;
@@ -812,7 +811,7 @@ void imcb_chat_free( struct groupchat *c )
 	struct groupchat *l;
 	GList *ir;
 	
-	if( set_getbool( &ic->irc->set, "debug" ) )
+	if( set_getbool( &ic->irc->b->set, "debug" ) )
 		imcb_log( ic, "You were removed from conversation %p", c );
 	
 	if( c )
@@ -859,8 +858,8 @@ void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t fl
 	
 	u = user_findhandle( ic, who );
 	
-	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
+	if( ( g_strcasecmp( set_getstr( &ic->irc->b->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->b->set, "strip_html" ) ) )
 		strip_html( msg );
 	
 	wrapped = word_wrap( msg, 425 );
@@ -905,8 +904,8 @@ void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at
 	else
 		u = user_findhandle( ic, who );
 	
-	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
+	if( ( g_strcasecmp( set_getstr( &ic->irc->b->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->b->set, "strip_html" ) ) )
 		strip_html( topic );
 	
 	g_free( c->topic );
@@ -924,7 +923,7 @@ void imcb_chat_add_buddy( struct groupchat *b, const char *handle )
 	user_t *u = user_findhandle( b->ic, handle );
 	int me = 0;
 	
-	if( set_getbool( &b->ic->irc->set, "debug" ) )
+	if( set_getbool( &b->ic->irc->b->set, "debug" ) )
 		imcb_log( b->ic, "User %s added to conversation %p", handle, b );
 	
 	/* It might be yourself! */
@@ -959,7 +958,7 @@ void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char
 	user_t *u;
 	int me = 0;
 	
-	if( set_getbool( &b->ic->irc->set, "debug" ) )
+	if( set_getbool( &b->ic->irc->b->set, "debug" ) )
 		imcb_log( b->ic, "User %s removed from conversation %p (%s)", handle, b, reason ? reason : "" );
 	
 	/* It might be yourself! */
@@ -1017,7 +1016,7 @@ char *set_eval_away_devoice( set_t *set, char *value )
 	
 	/* Horror.... */
 	
-	if( st != set_getbool( &irc->set, "away_devoice" ) )
+	if( st != set_getbool( &irc->b->set, "away_devoice" ) )
 	{
 		char list[80] = "";
 		user_t *u = irc->users;
@@ -1106,7 +1105,7 @@ int imc_away_send_update( struct im_connection *ic )
 	char *away, *msg = NULL;
 	
 	away = set_getstr( &ic->acc->set, "away" ) ?
-	     : set_getstr( &ic->irc->set, "away" );
+	     : set_getstr( &ic->irc->b->set, "away" );
 	if( away && *away )
 	{
 		GList *m = ic->acc->prpl->away_states( ic );
@@ -1117,7 +1116,7 @@ int imc_away_send_update( struct im_connection *ic )
 	{
 		away = NULL;
 		msg = set_getstr( &ic->acc->set, "status" ) ?
-		    : set_getstr( &ic->irc->set, "status" );
+		    : set_getstr( &ic->irc->b->set, "status" );
 	}
 	
 	ic->acc->prpl->set_away( ic, away, msg );
