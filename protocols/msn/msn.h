@@ -160,6 +160,7 @@ char **msn_linesplit( char *line );
 int msn_handler( struct msn_handler_data *h );
 char *msn_http_encode( const char *input );
 void msn_msgq_purge( struct im_connection *ic, GSList **list );
+gboolean msn_set_display_name( struct im_connection *ic, const char *rawname );
 
 /* tables.c */
 const struct msn_away_state *msn_away_state_by_number( int number );

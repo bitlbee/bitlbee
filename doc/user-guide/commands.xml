@@ -608,6 +608,17 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="local_display_name" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				Mostly meant to work around a bug in MSN servers (forgetting the display name set by the user), this setting tells BitlBee to store your display name locally and set this name on the MSN servers when connecting.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="mail_notifications" type="boolean" scope="account">
 		<default>false</default>
 

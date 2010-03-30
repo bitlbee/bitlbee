@@ -37,10 +37,10 @@ int msn_write( struct im_connection *ic, char *s, int len )
 	{
 		imcb_error( ic, "Short write() to main server" );
 		imc_logout( ic, TRUE );
-		return( 0 );
+		return 0;
 	}
 	
-	return( 1 );
+	return 1;
 }
 
 int msn_logged_in( struct im_connection *ic )
@@ -375,4 +375,16 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list )
 	
 	imcb_log( ic, "%s", ret->str );
 	g_string_free( ret, TRUE );
+}
+
+gboolean msn_set_display_name( struct im_connection *ic, const char *rawname )
+{
+	char *fn = msn_http_encode( rawname );
+	struct msn_data *md = ic->proto_data;
+	char buf[1024];
+	
+	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, ic->acc->user, fn );
+	g_free( fn );
+	
+	return msn_write( ic, buf, strlen( buf ) ) != 0;
 }
