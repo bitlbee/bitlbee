@@ -61,7 +61,7 @@ int main( int argc, char *argv[] )
 		return( 1 );
 	
 	b_main_init();
-	//nogaim_init();
+	nogaim_init();
 	
 	srand( time( NULL ) ^ getpid() );
 	global.helpfile = g_strdup( HELP_FILE );

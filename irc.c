@@ -93,6 +93,8 @@ irc_t *irc_new( int fd )
 	irc_connection_list = g_slist_append( irc_connection_list, irc );
 	
 	b = irc->b = bee_new();
+	b->ui_data = irc;
+	b->ui = &irc_ui_funcs;
 	
 	s = set_add( &b->set, "away_devoice", "true", NULL/*set_eval_away_devoice*/, irc );
 	s = set_add( &b->set, "buddy_sendbuffer", "false", set_eval_bool, irc );

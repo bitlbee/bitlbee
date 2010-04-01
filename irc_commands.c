@@ -308,6 +308,13 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 #endif
 }
 
+static void irc_cmd_nickserv( irc_t *irc, char **cmd )
+{
+	/* [SH] This aliases the NickServ command to PRIVMSG root */
+	/* [TV] This aliases the NS command to PRIVMSG root as well */
+	root_command( irc, cmd + 1 );
+}
+
 
 
 #if 0
@@ -517,13 +524,6 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 	set_setstr( &irc->set, "away", u->away );
 }
 
-static void irc_cmd_nickserv( irc_t *irc, char **cmd )
-{
-	/* [SH] This aliases the NickServ command to PRIVMSG root */
-	/* [TV] This aliases the NS command to PRIVMSG root as well */
-	root_command( irc, cmd + 1 );
-}
-
 static void irc_cmd_version( irc_t *irc, char **cmd )
 {
 	irc_send_num( irc, 351, "bitlbee-%s. %s :%s/%s ", BITLBEE_VERSION, irc->myhost, ARCH, CPU );
@@ -577,6 +577,8 @@ static const command_t irc_commands[] = {
 	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
 	{ "who",         0, irc_cmd_who,         IRC_CMD_LOGGED_IN },
 	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
+	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
+	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 #if 0
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
@@ -586,8 +588,6 @@ static const command_t irc_commands[] = {
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
 	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
-	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
-	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },

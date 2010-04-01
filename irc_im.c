@@ -25,8 +25,10 @@
 
 #include "bitlbee.h"
 
+
+/* IM->IRC callbacks */
+
 static const struct irc_user_funcs irc_user_im_funcs;
-static const struct bee_ui_funcs irc_ui_funcs;
 
 static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 {
@@ -36,7 +38,8 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	strcpy( nick, nick_get( bu->ic->acc, bu->handle ) );
 	
-	iu = irc_user_new( (irc_t*) bee->ui_data, nick );
+	bu->ui_data = iu = irc_user_new( (irc_t*) bee->ui_data, nick );
+	iu->bu = bu;
 	
 	if( ( s = strchr( bu->handle, '@' ) ) )
 	{
@@ -65,11 +68,33 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 	return TRUE;
 }
 
+static gboolean bee_irc_user_free( bee_t *bee, bee_user_t *bu )
+{
+	return irc_user_free( bee->ui_data, bu->ui_data );
+}
 
+static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old )
+{
+	return TRUE;
+}
 
-static const struct bee_ui_funcs irc_ui_funcs = {
+const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_user_new,
+	bee_irc_user_free,
+	bee_irc_user_status,
 };
 
+
+/* IRC->IM calls */
+
+static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
+{
+	if( iu->bu )
+		return bee_user_msg( iu->irc->b, iu->bu, msg, 0 );
+	else
+		return FALSE;
+}
+
 static const struct irc_user_funcs irc_user_im_funcs = {
+	bee_irc_user_privmsg,
 };

@@ -220,6 +220,7 @@ static void cmd_drop( irc_t *irc, char **cmd )
 		break;
 	}
 }
+#endif
 
 struct cmd_account_del_data
 {
@@ -232,7 +233,7 @@ void cmd_account_del_yes( void *data )
 	struct cmd_account_del_data *cad = data;
 	account_t *a;
 	
-	for( a = cad->irc->accounts; a && a != cad->a; a = a->next );
+	for( a = cad->irc->b->accounts; a && a != cad->a; a = a->next );
 	
 	if( a == NULL )
 	{
@@ -244,7 +245,7 @@ void cmd_account_del_yes( void *data )
 	}
 	else
 	{
-		account_del( cad->irc, a );
+		account_del( cad->irc->b, a );
 		irc_usermsg( cad->irc, "Account deleted" );
 	}
 	g_free( data );
@@ -285,7 +286,7 @@ static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead, cmd_
 	{
 		set_name = set_full;
 		
-		head = &irc->set;
+		head = &irc->b->set;
 	}
 	else 
 	{
@@ -356,7 +357,7 @@ static set_t **cmd_account_set_findhead( irc_t *irc, char *id )
 {
 	account_t *a;
 	
-	if( ( a = account_get( irc, id ) ) )
+	if( ( a = account_get( irc->b, id ) ) )
 		return &a->set;
 	else
 		return NULL;
@@ -404,7 +405,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 			return;
 		}
 
-		a = account_add( irc, prpl, cmd[3], cmd[4] );
+		a = account_add( irc->b, prpl, cmd[3], cmd[4] );
 		if( cmd[5] )
 		{
 			irc_usermsg( irc, "Warning: Passing a servername/other flags to `account add' "
@@ -418,7 +419,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		MIN_ARGS( 2 );
 
-		if( !( a = account_get( irc, cmd[2] ) ) )
+		if( !( a = account_get( irc->b, cmd[2] ) ) )
 		{
 			irc_usermsg( irc, "Invalid account" );
 		}
@@ -440,7 +441,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 			                       "to change your username/password, use the `account "
 			                       "set' command. Are you sure you want to delete this "
 			                       "account?", a->prpl->name, a->user );
-			query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, cad );
+			//query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, cad );
 			g_free( msg );
 		}
 	}
@@ -451,7 +452,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 		if( strchr( irc->umode, 'b' ) )
 			irc_usermsg( irc, "Account list:" );
 		
-		for( a = irc->accounts; a; a = a->next )
+		for( a = irc->b->accounts; a; a = a->next )
 		{
 			char *con;
 			
@@ -474,7 +475,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		if( cmd[2] )
 		{
-			if( ( a = account_get( irc, cmd[2] ) ) )
+			if( ( a = account_get( irc->b, cmd[2] ) ) )
 			{
 				if( a->ic )
 				{
@@ -483,7 +484,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 				}
 				else
 				{
-					account_on( irc, a );
+					account_on( irc->b, a );
 				}
 			}
 			else
@@ -494,12 +495,13 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			if ( irc->accounts ) {
+			if ( irc->b->accounts )
+			{
 				irc_usermsg( irc, "Trying to get all accounts connected..." );
 			
-				for( a = irc->accounts; a; a = a->next )
+				for( a = irc->b->accounts; a; a = a->next )
 					if( !a->ic && a->auto_connect )
-						account_on( irc, a );
+						account_on( irc->b, a );
 			} 
 			else
 			{
@@ -513,19 +515,19 @@ static void cmd_account( irc_t *irc, char **cmd )
 		{
 			irc_usermsg( irc, "Deactivating all active (re)connections..." );
 			
-			for( a = irc->accounts; a; a = a->next )
+			for( a = irc->b->accounts; a; a = a->next )
 			{
 				if( a->ic )
-					account_off( irc, a );
+					account_off( irc->b, a );
 				else if( a->reconnect )
 					cancel_auto_reconnect( a );
 			}
 		}
-		else if( ( a = account_get( irc, cmd[2] ) ) )
+		else if( ( a = account_get( irc->b, cmd[2] ) ) )
 		{
 			if( a->ic )
 			{
-				account_off( irc, a );
+				account_off( irc->b, a );
 			}
 			else if( a->reconnect )
 			{
@@ -556,6 +558,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 }
 
+#if 0
 static void cmd_add( irc_t *irc, char **cmd )
 {
 	account_t *a;
@@ -1221,11 +1224,11 @@ static void cmd_transfer( irc_t *irc, char **cmd )
 
 const command_t commands[] = {
 	{ "help",           0, cmd_help,           0 }, 
+	{ "account",        1, cmd_account,        0 },
 #if 0
 	{ "identify",       1, cmd_identify,       0 },
 	{ "register",       1, cmd_register,       0 },
 	{ "drop",           1, cmd_drop,           0 },
-	{ "account",        1, cmd_account,        0 },
 	{ "add",            2, cmd_add,            0 },
 	{ "info",           1, cmd_info,           0 },
 	{ "rename",         2, cmd_rename,         0 },

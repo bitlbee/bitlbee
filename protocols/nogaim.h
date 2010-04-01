@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -285,16 +285,8 @@ G_MODULE_EXPORT struct buddy *imcb_find_buddy( struct im_connection *ic, char *h
 G_MODULE_EXPORT void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *realname );
 G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const char *nick );
 
-/* Buddy activity */
-/* To manipulate the status of a handle.
- * - flags can be |='d with OPT_* constants. You will need at least:
- *   OPT_LOGGED_IN and OPT_AWAY.
- * - 'state' and 'message' can be NULL */
-G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message );
-/* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
-/* Call when a handle says something. 'flags' and 'sent_at may be just 0. */
-G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at );
 G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags );
+G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle( struct im_connection *ic, const char *handle );
 G_MODULE_EXPORT void imcb_clean_handle( struct im_connection *ic, char *handle );
 
 /* Groupchats */
@@ -319,7 +311,6 @@ G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
 
 /* Actions, or whatever. */
 int imc_away_send_update( struct im_connection *ic );
-int imc_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags );
 int imc_chat_msg( struct groupchat *c, char *msg, int flags );
 
 void imc_add_allow( struct im_connection *ic, char *handle );

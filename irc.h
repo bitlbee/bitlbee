@@ -74,7 +74,6 @@ typedef struct irc
 	char umode[8];
 	
 	struct query *queries;
-	struct account *accounts;
 	GSList *file_transfers;
 	
 	GSList *users, *channels;
@@ -112,7 +111,7 @@ typedef struct irc_user
 	guint sendbuf_timer;
 	//int sendbuf_flags;
 	
-	//struct user *b;
+	struct bee_user *bu;
 	
 	const struct irc_user_funcs *f;
 } irc_user_t;
@@ -151,6 +150,8 @@ struct irc_channel_funcs
 {
 	gboolean (*privmsg)( irc_channel_t *iu, const char *msg );
 };
+
+extern const struct bee_ui_funcs irc_ui_funcs;
 
 /* irc.c */
 extern GSList *irc_connection_list;
