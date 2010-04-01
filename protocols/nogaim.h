@@ -86,7 +86,7 @@ struct im_connection
 	int evil;
 	
 	/* BitlBee */
-	irc_t *irc;
+	bee_t *bee;
 	
 	struct groupchat *groupchats;
 };

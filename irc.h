@@ -152,8 +152,6 @@ struct irc_channel_funcs
 	gboolean (*privmsg)( irc_channel_t *iu, const char *msg );
 };
 
-#include "user.h"
-
 /* irc.c */
 extern GSList *irc_connection_list;
 

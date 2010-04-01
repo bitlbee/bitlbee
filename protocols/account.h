@@ -41,16 +41,16 @@ typedef struct account
 	set_t *set;
 	GHashTable *nicks;
 	
-	struct irc *irc;
+	struct bee *bee;
 	struct im_connection *ic;
 	struct account *next;
 } account_t;
 
-account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass );
-account_t *account_get( irc_t *irc, char *id );
-void account_del( irc_t *irc, account_t *acc );
-void account_on( irc_t *irc, account_t *a );
-void account_off( irc_t *irc, account_t *a );
+account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass );
+account_t *account_get( bee_t *bee, char *id );
+void account_del( bee_t *bee, account_t *acc );
+void account_on( bee_t *bee, account_t *a );
+void account_off( bee_t *bee, account_t *a );
 
 char *set_eval_account( set_t *set, char *value );
 char *set_eval_account_reconnect_delay( set_t *set, char *value );

@@ -23,25 +23,25 @@ bee_t *bee_new()
 
 void bee_free( bee_t *b )
 {
-	while( b->accounts )
+	account_t *acc = b->accounts;
+	
+	while( acc )
 	{
-		account_t *acc = b->accounts->data;
-		
-		/*
 		if( acc->ic )
 			imc_logout( acc->ic, FALSE );
 		else if( acc->reconnect )
 			cancel_auto_reconnect( acc );
-		*/
 		
 		if( acc->ic == NULL )
-			{} //account_del( b, acc );
+			account_del( b, acc );
 		else
 			/* Nasty hack, but account_del() doesn't work in this
 			   case and we don't want infinite loops, do we? ;-) */
-			b->accounts = g_slist_remove( b->accounts, acc );
+			acc = acc->next;
 	}
 	
 	while( b->set )
 		set_del( &b->set, b->set->key );
+	
+	g_free( b );
 }

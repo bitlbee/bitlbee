@@ -1,0 +1,75 @@
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
+/* Some glue to put the IRC and the IM stuff together.                  */
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
+
+#include "bitlbee.h"
+
+static const struct irc_user_funcs irc_user_im_funcs;
+static const struct bee_ui_funcs irc_ui_funcs;
+
+static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
+{
+	irc_user_t *iu;
+	char nick[MAX_NICK_LENGTH+1], *s;
+	
+	memset( nick, 0, MAX_NICK_LENGTH + 1 );
+	strcpy( nick, nick_get( bu->ic->acc, bu->handle ) );
+	
+	iu = irc_user_new( (irc_t*) bee->ui_data, nick );
+	
+	if( ( s = strchr( bu->handle, '@' ) ) )
+	{
+		iu->host = g_strdup( s + 1 );
+		iu->user = g_strndup( bu->handle, s - bu->handle );
+	}
+	else if( bu->ic->acc->server )
+	{
+		iu->host = g_strdup( bu->ic->acc->server );
+		iu->user = g_strdup( bu->handle );
+		
+		/* s/ /_/ ... important for AOL screennames */
+		for( s = iu->user; *s; s ++ )
+			if( *s == ' ' )
+				*s = '_';
+	}
+	else
+	{
+		iu->host = g_strdup( bu->ic->acc->prpl->name );
+		iu->user = g_strdup( bu->handle );
+	}
+	
+	iu->f = &irc_user_im_funcs;
+	//iu->last_typing_notice = 0;
+	
+	return TRUE;
+}
+
+
+
+static const struct bee_ui_funcs irc_ui_funcs = {
+	bee_irc_user_new,
+};
+
+static const struct irc_user_funcs irc_user_im_funcs = {
+};

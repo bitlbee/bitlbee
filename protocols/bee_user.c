@@ -58,7 +58,7 @@ int bee_user_free( bee_t *bee, struct im_connection *ic, const char *handle )
 	g_free( bu->handle );
 	g_free( bu->fullname );
 	g_free( bu->group );
-	g_free( bu->away );
+	g_free( bu->status );
 	g_free( bu->status_msg );
 	
 	bee->users = g_slist_remove( bee->users, bu );

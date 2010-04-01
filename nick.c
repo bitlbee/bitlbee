@@ -77,7 +77,7 @@ char *nick_get( account_t *acc, const char *handle )
 				*(s++) = 0;
 		
 		nick_strip( nick );
-		if( set_getbool( &acc->irc->b->set, "lcnicks" ) )
+		if( set_getbool( &acc->bee->set, "lcnicks" ) )
 			nick_lc( nick );
 	}
 	g_free( store_handle );
@@ -91,11 +91,12 @@ char *nick_get( account_t *acc, const char *handle )
 
 void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+1] )
 {
+	irc_t *irc = (irc_t*) acc->bee->ui_data;
 	int inf_protection = 256;
 	
 	/* Now, find out if the nick is already in use at the moment, and make
 	   subtle changes to make it unique. */
-	while( !nick_ok( nick ) || irc_user_by_name( acc->irc, nick ) )
+	while( !nick_ok( nick ) || irc_user_by_name( irc, nick ) )
 	{
 		if( strlen( nick ) < ( MAX_NICK_LENGTH - 1 ) )
 		{
@@ -111,19 +112,19 @@ void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+
 		{
 			int i;
 			
-			irc_usermsg( acc->irc, "Warning: Almost had an infinite loop in nick_get()! "
-			                       "This used to be a fatal BitlBee bug, but we tried to fix it. "
-			                       "This message should *never* appear anymore. "
-			                       "If it does, please *do* send us a bug report! "
-			                       "Please send all the following lines in your report:" );
+			irc_usermsg( irc, "Warning: Almost had an infinite loop in nick_get()! "
+			                  "This used to be a fatal BitlBee bug, but we tried to fix it. "
+			                  "This message should *never* appear anymore. "
+			                  "If it does, please *do* send us a bug report! "
+			                  "Please send all the following lines in your report:" );
 			
-			irc_usermsg( acc->irc, "Trying to get a sane nick for handle %s", handle );
+			irc_usermsg( irc, "Trying to get a sane nick for handle %s", handle );
 			for( i = 0; i < MAX_NICK_LENGTH; i ++ )
-				irc_usermsg( acc->irc, "Char %d: %c/%d", i, nick[i], nick[i] );
+				irc_usermsg( irc, "Char %d: %c/%d", i, nick[i], nick[i] );
 			
-			irc_usermsg( acc->irc, "FAILED. Returning an insane nick now. Things might break. "
-			                       "Good luck, and please don't forget to paste the lines up here "
-			                       "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
+			irc_usermsg( irc, "FAILED. Returning an insane nick now. Things might break. "
+			                  "Good luck, and please don't forget to paste the lines up here "
+			                  "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
 			
 			g_snprintf( nick, MAX_NICK_LENGTH + 1, "xx%x", rand() );
 			

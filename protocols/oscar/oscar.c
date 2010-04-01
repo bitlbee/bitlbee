@@ -1189,8 +1189,7 @@ static void gaim_icq_authgrant(void *data_) {
 	message = 0;
 	aim_ssi_auth_reply(od->sess, od->conn, uin, 1, "");
 	// aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHGRANTED, &message);
-	if(imcb_find_buddy(data->ic, uin) == NULL)
-		imcb_ask_add(data->ic, uin, NULL);
+	imcb_ask_add(data->ic, uin, NULL);
 	
 	g_free(uin);
 	g_free(data);
@@ -1951,11 +1950,13 @@ static void oscar_get_info(struct im_connection *g, char *name) {
 static void oscar_get_away(struct im_connection *g, char *who) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
 	if (odata->icq) {
+		/** FIXME(wilmer): Hmm, lost the ability to get away msgs here, do we care to get that back?
 		struct buddy *budlight = imcb_find_buddy(g, who);
 		if (budlight)
 			if ((budlight->uc & 0xff80) >> 7)
 				if (budlight->caps & AIM_CAPS_ICQSERVERRELAY)
 					aim_send_im_ch2_geticqmessage(odata->sess, who, (budlight->uc & 0xff80) >> 7);
+		*/
 	} else
 		aim_getinfo(odata->sess, odata->conn, who, AIM_GETINFO_AWAYMESSAGE);
 }
@@ -2093,7 +2094,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 		
 		switch (curitem->type) {
 			case 0x0000: /* Buddy */
-				if ((curitem->name) && (!imcb_find_buddy(ic, nrm))) {
+				if ((curitem->name) && (!imcb_buddy_by_handle(ic, nrm))) {
 					char *realname = NULL;
 
 					if (curitem->data && aim_gettlv(curitem->data, 0x0131, 1))

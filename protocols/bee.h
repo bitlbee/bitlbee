@@ -33,7 +33,7 @@ typedef struct bee
 	struct set *set;
 	
 	GSList *users;
-	GSList *accounts;
+	struct account *accounts; /* TODO(wilmer): Use GSList here too? */
 	
 	const struct bee_ui_funcs *ui;
 	void *ui_data;
@@ -55,7 +55,8 @@ typedef struct bee_user
 	char *fullname;
 	char *group;
 
-	char *away;
+	bee_user_flags_t flags;
+	char *status;
 	char *status_msg;
 	
 	bee_t *bee;
@@ -66,6 +67,7 @@ typedef struct bee_ui_funcs
 {
 	gboolean (*user_new)( bee_t *bee, struct bee_user *bu );
 	gboolean (*user_free)( bee_t *bee, struct bee_user *bu );
+	gboolean (*user_status)( bee_t *bee, struct bee_user *bu, struct bee_user *old );
 } bee_ui_funcs_t;
 
 

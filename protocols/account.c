@@ -28,26 +28,26 @@
 #include "account.h"
 #include "chat.h"
 
-account_t *account_add( irc_t *irc, struct prpl *prpl, char *user, char *pass )
+account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 {
 	account_t *a;
 	set_t *s;
 	
-	if( irc->accounts )
+	if( bee->accounts )
 	{
-		for( a = irc->accounts; a->next; a = a->next );
+		for( a = bee->accounts; a->next; a = a->next );
 		a = a->next = g_new0( account_t, 1 );
 	}
 	else
 	{
-		irc->accounts = a = g_new0 ( account_t, 1 );
+		bee->accounts = a = g_new0 ( account_t, 1 );
 	}
 	
 	a->prpl = prpl;
 	a->user = g_strdup( user );
 	a->pass = g_strdup( pass );
 	a->auto_connect = 1;
-	a->irc = irc;
+	a->bee = bee;
 	
 	s = set_add( &a->set, "auto_connect", "true", set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE;
@@ -152,7 +152,7 @@ char *set_eval_account( set_t *set, char *value )
 	return SET_INVALID;
 }
 
-account_t *account_get( irc_t *irc, char *id )
+account_t *account_get( bee_t *bee, char *id )
 {
 	account_t *a, *ret = NULL;
 	char *handle, *s;
@@ -168,7 +168,7 @@ account_t *account_get( irc_t *irc, char *id )
 		
 		if( ( proto = find_protocol( id ) ) )
 		{
-			for( a = irc->accounts; a; a = a->next )
+			for( a = bee->accounts; a; a = a->next )
 				if( a->prpl == proto &&
 				    a->prpl->handle_cmp( handle, a->user ) == 0 )
 					ret = a;
@@ -185,14 +185,14 @@ account_t *account_get( irc_t *irc, char *id )
 	
 	if( sscanf( id, "%d", &nr ) == 1 && nr < 1000 )
 	{
-		for( a = irc->accounts; a; a = a->next )
+		for( a = bee->accounts; a; a = a->next )
 			if( ( nr-- ) == 0 )
 				return( a );
 		
 		return( NULL );
 	}
 	
-	for( a = irc->accounts; a; a = a->next )
+	for( a = bee->accounts; a; a = a->next )
 	{
 		if( g_strcasecmp( id, a->prpl->name ) == 0 )
 		{
@@ -213,7 +213,7 @@ account_t *account_get( irc_t *irc, char *id )
 	return( ret );
 }
 
-void account_del( irc_t *irc, account_t *acc )
+void account_del( bee_t *bee, account_t *acc )
 {
 	account_t *a, *l = NULL;
 	struct chat *c, *nc;
@@ -222,20 +222,22 @@ void account_del( irc_t *irc, account_t *acc )
 		/* Caller should have checked, accounts still in use can't be deleted. */
 		return;
 	
-	for( a = irc->accounts; a; a = (l=a)->next )
+	for( a = bee->accounts; a; a = (l=a)->next )
 		if( a == acc )
 		{
 			if( l )
 				l->next = a->next;
 			else
-				irc->accounts = a->next;
+				bee->accounts = a->next;
 			
-			for( c = irc->chatrooms; c; c = nc )
+			/** FIXME
+			for( c = bee->chatrooms; c; c = nc )
 			{
 				nc = c->next;
 				if( acc == c->acc )
-					chat_del( irc, c );
+					chat_del( bee, c );
 			}
+			*/
 			
 			while( a->set )
 				set_del( &a->set, a->set->key );
@@ -253,7 +255,7 @@ void account_del( irc_t *irc, account_t *acc )
 		}
 }
 
-void account_on( irc_t *irc, account_t *a )
+void account_on( bee_t *bee, account_t *a )
 {
 	if( a->ic )
 	{
@@ -267,7 +269,7 @@ void account_on( irc_t *irc, account_t *a )
 	a->prpl->login( a );
 }
 
-void account_off( irc_t *irc, account_t *a )
+void account_off( bee_t *bee, account_t *a )
 {
 	imc_logout( a->ic, FALSE );
 	a->ic = NULL;
@@ -335,7 +337,7 @@ char *set_eval_account_reconnect_delay( set_t *set, char *value )
 
 int account_reconnect_delay( account_t *a )
 {
-	char *setting = set_getstr( &a->irc->b->set, "auto_reconnect_delay" );
+	char *setting = set_getstr( &a->bee->set, "auto_reconnect_delay" );
 	struct account_reconnect_delay p;
 	
 	if( account_reconnect_delay_parse( setting, &p ) )
