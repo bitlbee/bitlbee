@@ -62,6 +62,9 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 		iu->user = g_strdup( bu->handle );
 	}
 	
+	if( set_getbool( &bee->set, "private" ) )
+		iu->flags |= IRC_USER_PRIVATE;
+	
 	iu->f = &irc_user_im_funcs;
 	//iu->last_typing_notice = 0;
 	
@@ -89,10 +92,38 @@ static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old
 	return TRUE;
 }
 
+static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at )
+{
+	irc_t *irc = bee->ui_data;
+	irc_channel_t *ic = irc->channels->data;
+	irc_user_t *iu = (irc_user_t *) bu->ui_data;
+	char *dst, *prefix = NULL;
+	char *wrapped;
+	
+	if( iu->flags & IRC_USER_PRIVATE )
+	{
+		dst = irc->user->nick;
+	}
+	else
+	{
+		dst = ic->name;
+		prefix = g_strdup_printf( "%s%s", irc->user->nick, set_getstr( &bee->set, "to_char" ) );
+	}
+	
+	wrapped = word_wrap( msg, 425 );
+	irc_send_msg( iu, "PRIVMSG", dst, wrapped, prefix );
+	
+	g_free( wrapped );
+	g_free( prefix );
+	
+	return TRUE;
+}
+
 const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_user_new,
 	bee_irc_user_free,
 	bee_irc_user_status,
+	bee_irc_user_msg,
 };
 
 
