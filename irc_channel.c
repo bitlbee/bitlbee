@@ -138,10 +138,13 @@ gboolean irc_channel_name_ok( const char *name )
 /* Channel-type dependent functions, for control channels: */
 static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 {
+	char cmd[strlen(msg)+1];
+	
 	g_free( ic->irc->last_root_cmd );
 	ic->irc->last_root_cmd = g_strdup( ic->name );
 	
-	root_command_string( ic->irc, msg );
+	strcpy( cmd, msg );
+	root_command_string( ic->irc, cmd );
 	
 	return TRUE;
 }

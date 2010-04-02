@@ -120,10 +120,13 @@ gint irc_user_cmp( gconstpointer a_, gconstpointer b_ )
 /* User-type dependent functions, for root/NickServ: */
 static gboolean root_privmsg( irc_user_t *iu, const char *msg )
 {
+	char cmd[strlen(msg)+1];
+	
 	g_free( iu->irc->last_root_cmd );
 	iu->irc->last_root_cmd = g_strdup( iu->nick );
 	
-	root_command_string( iu->irc, msg );
+	strcpy( cmd, msg );
+	root_command_string( iu->irc, cmd );
 	
 	return TRUE;
 }

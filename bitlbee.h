@@ -158,7 +158,7 @@ int bitlbee_inetd_init( void );
 gboolean bitlbee_io_current_client_read( gpointer data, gint source, b_input_condition cond );
 gboolean bitlbee_io_current_client_write( gpointer data, gint source, b_input_condition cond );
 
-//void root_command_string( irc_t *irc, user_t *u, char *command, int flags );
+void root_command_string( irc_t *irc, char *command );
 void root_command( irc_t *irc, char *command[] );
 gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond );
 

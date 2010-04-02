@@ -216,7 +216,6 @@ account_t *account_get( bee_t *bee, char *id )
 void account_del( bee_t *bee, account_t *acc )
 {
 	account_t *a, *l = NULL;
-	struct chat *c, *nc;
 	
 	if( acc->ic )
 		/* Caller should have checked, accounts still in use can't be deleted. */

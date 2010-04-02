@@ -91,8 +91,10 @@ int bee_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, int flags )
 		buf = escape_html( msg );
 		msg = buf;
 	}
+	else
+		buf = g_strdup( msg );
 	
-	st = bu->ic->acc->prpl->buddy_msg( bu->ic, bu->handle, msg, flags );
+	st = bu->ic->acc->prpl->buddy_msg( bu->ic, bu->handle, buf, flags );
 	g_free( buf );
 	
 	return st;

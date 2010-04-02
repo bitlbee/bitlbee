@@ -24,6 +24,7 @@
 */
 
 #include "bitlbee.h"
+#include "ipc.h"
 
 GSList *irc_connection_list;
 

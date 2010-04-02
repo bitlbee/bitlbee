@@ -37,8 +37,6 @@
 #include "nogaim.h"
 #include "chat.h"
 
-static int remove_chat_buddy_silent( struct groupchat *b, const char *handle );
-
 GSList *connections;
 
 #ifdef WITH_PLUGINS
@@ -474,6 +472,7 @@ struct imcb_ask_cb_data
 	char *handle;
 };
 
+#if 0
 static void imcb_ask_auth_cb_no( void *data )
 {
 	struct imcb_ask_cb_data *cbd = data;
@@ -493,6 +492,7 @@ static void imcb_ask_auth_cb_yes( void *data )
 	g_free( cbd->handle );
 	g_free( cbd );
 }
+#endif
 
 void imcb_ask_auth( struct im_connection *ic, const char *handle, const char *realname )
 {
@@ -515,6 +515,7 @@ void imcb_ask_auth( struct im_connection *ic, const char *handle, const char *re
 }
 
 
+#if 0
 static void imcb_ask_add_cb_no( void *data )
 {
 	g_free( ((struct imcb_ask_cb_data*)data)->handle );
@@ -529,6 +530,7 @@ static void imcb_ask_add_cb_yes( void *data )
 	
 	return imcb_ask_add_cb_no( data );
 }
+#endif
 
 void imcb_ask_add( struct im_connection *ic, const char *handle, const char *realname )
 {
@@ -596,6 +598,7 @@ struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 	
 	return c;
 #endif
+	return NULL;
 }
 
 void imcb_chat_free( struct groupchat *c )
@@ -782,9 +785,9 @@ void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char
 #endif
 }
 
+#if 0
 static int remove_chat_buddy_silent( struct groupchat *b, const char *handle )
 {
-#if 0
 	GList *i;
 	
 	/* Find the handle in the room userlist and shoot it */
@@ -800,10 +803,10 @@ static int remove_chat_buddy_silent( struct groupchat *b, const char *handle )
 		
 		i = i->next;
 	}
-#endif
 	
 	return 0;
 }
+#endif
 
 
 /* Misc. BitlBee stuff which shouldn't really be here */
