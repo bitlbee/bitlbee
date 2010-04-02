@@ -75,6 +75,17 @@ static gboolean bee_irc_user_free( bee_t *bee, bee_user_t *bu )
 
 static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old )
 {
+	irc_t *irc = bee->ui_data;
+	irc_channel_t *ic = irc->channels->data; /* For now, just pick the first channel. */
+	
+	if( ( bu->flags & BEE_USER_ONLINE ) != ( old->flags & BEE_USER_ONLINE ) )
+	{
+		if( bu->flags & BEE_USER_ONLINE )
+			irc_channel_add_user( ic, (irc_user_t*) bu->ui_data );
+		else
+			irc_channel_del_user( ic, (irc_user_t*) bu->ui_data );
+	}
+	
 	return TRUE;
 }
 

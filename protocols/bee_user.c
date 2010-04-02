@@ -74,7 +74,7 @@ bee_user_t *bee_user_by_handle( bee_t *bee, struct im_connection *ic, const char
 	{
 		bee_user_t *bu = l->data;
 		
-		if( bu->ic == ic && ic->acc->prpl->handle_cmp( bu->handle, handle ) )
+		if( bu->ic == ic && ic->acc->prpl->handle_cmp( bu->handle, handle ) == 0 )
 			return bu;
 	}
 	
