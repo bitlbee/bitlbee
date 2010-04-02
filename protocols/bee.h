@@ -44,8 +44,8 @@ void bee_free( bee_t *b );
 
 typedef enum
 {
-	BEE_USER_ONLINE = 1,
-	BEE_USER_AWAY = 2,
+	BEE_USER_ONLINE = 1,    /* Compatibility with old OPT_LOGGED_IN flag */
+	BEE_USER_AWAY = 4,      /* Compatibility with old OPT_AWAY flag */
 } bee_user_flags_t;
 
 typedef struct bee_user

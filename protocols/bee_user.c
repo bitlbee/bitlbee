@@ -128,8 +128,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	old = g_memdup( bu, sizeof( bee_user_t ) );
 	
 	/* TODO(wilmer): OPT_AWAY, or just state == NULL ? */
-	bu->flags = ( flags & OPT_LOGGED_IN ? BEE_USER_ONLINE : 0 ) |
-	            ( flags & OPT_AWAY ? BEE_USER_AWAY : 0 );
+	bu->flags = flags;
 	bu->status = g_strdup( ( flags & OPT_AWAY ) && state == NULL ? "Away" : state );
 	bu->status_msg = g_strdup( message );
 	
