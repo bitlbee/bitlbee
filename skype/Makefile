@@ -12,11 +12,19 @@ ifeq ($(AMPATH),)
 AMPATH = $(shell find /usr/share/ -maxdepth 1 -name 'automake-*'|tail -n 1)
 endif
 
-ifeq ($(BITLBEE),yes)
-all: skype.$(SHARED_EXT) skyped.1
+ifeq ($(ASCIIDOC),yes)
+MANPAGES = skyped.1
 else
-all: skyped.1
+MANPAGES =
 endif
+
+ifeq ($(BITLBEE),yes)
+LIBS = skype.$(SHARED_EXT)
+else
+LIBS =
+endif
+
+all: $(LIBS) $(MANPAGES)
 
 skype.$(SHARED_EXT): skype.c config.mak
 ifeq ($(BITLBEE),yes)

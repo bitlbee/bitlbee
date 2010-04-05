@@ -4,6 +4,7 @@ SHARED_FLAGS = @SHARED_FLAGS@
 SHARED_EXT = @SHARED_EXT@
 SKYPE4PY = @SKYPE4PY@
 BITLBEE = @BITLBEE@
+ASCIIDOC = @ASCIIDOC@
 INSTALL = @INSTALL@
 prefix = @prefix@
 sysconfdir = @sysconfdir@/skyped

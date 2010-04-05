@@ -54,6 +54,12 @@ else
 fi
 AC_SUBST(BITLBEE)
 
+dnl Check for a2x
+AC_ARG_ENABLE([asciidoc], AS_HELP_STRING([--disable-asciidoc], [Disable asciidoc support (default: test)]))
+if test "$enable_asciidoc" != "no"; then
+	AC_CHECK_PROG(ASCIIDOC, asciidoc, yes, [])
+fi
+
 dnl Check for Skype4Py
 AC_MSG_CHECKING(for Python module Skype4Py)
 python -c "import Skype4Py" 2>&AS_MESSAGE_LOG_FD
