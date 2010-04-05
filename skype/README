@@ -72,7 +72,7 @@ or
 # apt-get install skyped bitlbee-plugin-skype
 ----
 
-(the later from the experimental repo)
+(the later from the unstable repo)
 
 and you don't have to compile anything manually.
 
