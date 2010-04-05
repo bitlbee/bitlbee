@@ -178,6 +178,7 @@ irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name );
 int irc_channel_free( irc_channel_t *ic );
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu );
+gboolean irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
 gboolean irc_channel_name_ok( const char *name );
 
@@ -197,12 +198,13 @@ void irc_send_whois( irc_user_t *iu );
 void irc_send_who( irc_t *irc, GSList *l, const char *channel );
 void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix );
 void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const char *msg );
+void irc_send_nick( irc_user_t *iu, const char *new );
 
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );
 int irc_user_free( irc_t *irc, const char *nick );
 irc_user_t *irc_user_by_name( irc_t *irc, const char *nick );
-int irc_user_rename( irc_t *irc, const char *old, const char *new );
+int irc_user_set_nick( irc_t *irc, const char *old, const char *new );
 gint irc_user_cmp( gconstpointer a_, gconstpointer b_ );
 
 #endif

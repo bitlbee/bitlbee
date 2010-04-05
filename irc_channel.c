@@ -81,7 +81,7 @@ int irc_channel_free( irc_channel_t *ic )
 
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 {
-	if( g_slist_find( ic->users, iu ) != NULL )
+	if( !irc_channel_has_user( ic, iu ) )
 		return 0;
 	
 	ic->users = g_slist_insert_sorted( ic->users, iu, irc_user_cmp );
@@ -97,7 +97,7 @@ int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 
 int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu )
 {
-	if( g_slist_find( ic->users, iu ) == NULL )
+	if( !irc_channel_has_user( ic, iu ) )
 		return 0;
 	
 	ic->users = g_slist_remove( ic->users, iu );
@@ -109,6 +109,12 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu )
 		ic->flags &= ~IRC_CHANNEL_JOINED;
 	
 	return 1;
+}
+
+/* Currently a fairly stupid one-liner but I fear it's going to get worse. :-) */
+gboolean irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu )
+{
+	return g_slist_find( ic->users, iu ) != NULL;
 }
 
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *iu )

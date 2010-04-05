@@ -310,3 +310,9 @@ void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const 
 	irc_write( iu->irc, ":%s!%s@%s %s %s :%s",
 	           iu->nick, iu->user, iu->host, type, dst, msg );
 }
+
+void irc_send_nick( irc_user_t *iu, const char *new )
+{
+	irc_write( iu->irc, ":%s!%s@%s NICK %s",
+	           iu->nick, iu->user, iu->host, new );
+}
