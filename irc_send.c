@@ -219,21 +219,31 @@ void irc_send_whois( irc_user_t *iu )
 	irc_send_num( irc, 311, "%s %s %s * :%s",
 	              iu->nick, iu->user, iu->host, iu->fullname );
 	
-	/*
-	if( u->ic )
-		irc_send_num( irc, 312, "%s %s.%s :%s network", u->nick, u->ic->acc->user,
-		           u->ic->acc->server && *u->ic->acc->server ? u->ic->acc->server : "",
-		           u->ic->acc->prpl->name );
+	if( iu->bu )
+	{
+		bee_user_t *bu = iu->bu;
+		
+		irc_send_num( irc, 312, "%s %s.%s :%s network", iu->nick, bu->ic->acc->user,
+		           bu->ic->acc->server && *bu->ic->acc->server ? bu->ic->acc->server : "",
+		           bu->ic->acc->prpl->name );
+		
+		if( bu->status )
+		{
+			if( bu->status_msg )
+				irc_send_num( irc, 301, "%s :%s (%s)", iu->nick, bu->status, bu->status_msg );
+			else
+				irc_send_num( irc, 301, "%s :%s", iu->nick, bu->status );
+		}
+		
+		/*
+		if( u->status_msg )
+			irc_send_num( irc, 333, "%s :Status: %s", u->nick, u->status_msg );
+		*/
+	}
 	else
-		irc_send_num( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
-	*/
-	
-	/*
-	if( u->away )
-		irc_send_num( irc, 301, "%s :%s", u->nick, u->away );
-	if( u->status_msg )
-		irc_send_num( irc, 333, "%s :Status: %s", u->nick, u->status_msg );
-	*/
+	{
+		irc_send_num( irc, 312, "%s %s :%s", iu->nick, irc->root->host, IRCD_INFO " " BITLBEE_VERSION );
+	}
 	
 	irc_send_num( irc, 318, "%s :End of /WHOIS list", iu->nick );
 }

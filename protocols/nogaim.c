@@ -364,7 +364,6 @@ void imcb_ask( struct im_connection *ic, char *msg, void *data,
 void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *group )
 {
 	bee_user_t *bu;
-	//char nick[MAX_NICK_LENGTH+1], *s;
 	bee_t *bee = ic->bee;
 	
 	if( bee_user_by_handle( bee, ic, handle ) )
@@ -384,41 +383,21 @@ void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *g
 	bu->group = g_strdup( group );
 }
 
-void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *realname )
+void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *fullname )
 {
-#if 0
-	user_t *u = user_findhandle( ic, handle );
-	char *set;
+	bee_t *bee = ic->bee;
+	bee_user_t *bu = bee_user_by_handle( bee, ic, handle );
 	
-	if( !u || !realname ) return;
+	if( !bu || !fullname ) return;
 	
-	if( g_strcasecmp( u->realname, realname ) != 0 )
+	if( strcmp( bu->fullname, fullname ) != 0 )
 	{
-		if( u->realname != u->nick ) g_free( u->realname );
+		g_free( bu->fullname );
+		bu->fullname = g_strdup( fullname );
 		
-		u->realname = g_strdup( realname );
-		
-		if( ( ic->flags & OPT_LOGGED_IN ) && set_getbool( &ic->bee->set, "display_namechanges" ) )
-			imcb_log( ic, "User `%s' changed name to `%s'", u->nick, u->realname );
+		if( bee->ui->user_fullname )
+			bee->ui->user_fullname( bee, bu );
 	}
-	
-	set = set_getstr( &ic->acc->set, "nick_source" );
-	if( strcmp( set, "handle" ) != 0 )
-	{
-		char *name = g_strdup( realname );
-		
-		if( strcmp( set, "first_name" ) == 0 )
-		{
-			int i;
-			for( i = 0; name[i] && !isspace( name[i] ); i ++ ) {}
-			name[i] = '\0';
-		}
-		
-		imcb_buddy_nick_hint( ic, handle, name );
-		
-		g_free( name );
-	}
-#endif
 }
 
 void imcb_remove_buddy( struct im_connection *ic, const char *handle, char *group )

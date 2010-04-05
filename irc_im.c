@@ -119,9 +119,51 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, t
 	return TRUE;
 }
 
+static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
+{
+	irc_user_t *iu = (irc_user_t *) bu->ui_data;
+	irc_t *irc = (irc_t *) bee->ui_data;
+	char *s;
+	
+	if( iu->fullname != iu->nick )
+		g_free( iu->fullname );
+	iu->fullname = g_strdup( bu->fullname );
+	
+	/* Strip newlines (unlikely, but IRC-unfriendly so they must go)
+	   TODO(wilmer): Do the same with away msgs again! */
+	for( s = iu->fullname; *s; s ++ )
+		if( isspace( *s ) ) *s = ' ';
+	
+	if( ( bu->ic->flags & OPT_LOGGED_IN ) && set_getbool( &bee->set, "display_namechanges" ) )
+	{
+		char *msg = g_strdup_printf( "<< \002BitlBee\002 - Changed name to `%s' >>", iu->fullname );
+		irc_send_msg( iu, "NOTICE", irc->user->nick, msg, NULL );
+	}
+	
+	s = set_getstr( &bu->ic->acc->set, "nick_source" );
+	if( strcmp( s, "handle" ) != 0 )
+	{
+		char *name = g_strdup( bu->fullname );
+		
+		if( strcmp( s, "first_name" ) == 0 )
+		{
+			int i;
+			for( i = 0; name[i] && !isspace( name[i] ); i ++ ) {}
+			name[i] = '\0';
+		}
+		
+		imcb_buddy_nick_hint( bu->ic, bu->handle, name );
+		
+		g_free( name );
+	}
+	
+	return TRUE;
+}
+
 const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_user_new,
 	bee_irc_user_free,
+	bee_irc_user_fullname,
 	bee_irc_user_status,
 	bee_irc_user_msg,
 };

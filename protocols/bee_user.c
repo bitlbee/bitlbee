@@ -168,7 +168,6 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at )
 {
 	bee_t *bee = ic->bee;
-	char *wrapped;
 	bee_user_t *bu;
 	
 	bu = bee_user_by_handle( bee, ic, handle );
