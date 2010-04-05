@@ -299,9 +299,12 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		return;
 	*ptr = '\0';
 	ptr++;
-	if (!strncmp(ptr, "ONLINESTATUS ", 13) &&
-			strcmp(user, sd->username) != 0
-			&& strcmp(user, "echo123") != 0) {
+	if (!strncmp(ptr, "ONLINESTATUS ", 13)) {
+			if (!strcmp(user, sd->username))
+				return;
+			if (!set_getbool(&ic->acc->set, "test_join")
+				&& !strcmp(user, "echo123"))
+				return;
 		ptr = g_strdup_printf("%s@skype.com", user);
 		imcb_add_buddy(ic, ptr, NULL);
 		if (strcmp(status, "OFFLINE") && (strcmp(status, "SKYPEOUT") ||
@@ -1224,6 +1227,9 @@ static void skype_init(account_t *acc)
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "auto_join", "false", set_eval_bool, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "test_join", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "edit_prefix", "EDIT:",

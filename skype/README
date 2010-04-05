@@ -363,6 +363,10 @@ $ skyped -n -d
 
   * `account set skype/edit_prefix "updated message:"`
 
+- The `echo123` test account is hidden by default. If you want to see it:
+
+  * `account set skype/test_join true`
+
 == What needs to be done (aka. TODO)
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
