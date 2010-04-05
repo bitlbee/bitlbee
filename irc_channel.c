@@ -81,7 +81,7 @@ int irc_channel_free( irc_channel_t *ic )
 
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 {
-	if( !irc_channel_has_user( ic, iu ) )
+	if( irc_channel_has_user( ic, iu ) )
 		return 0;
 	
 	ic->users = g_slist_insert_sorted( ic->users, iu, irc_user_cmp );

@@ -82,9 +82,9 @@ irc_user_t *irc_user_by_name( irc_t *irc, const char *nick )
 		return NULL;
 }
 
-int irc_user_set_nick( irc_t *irc, const char *old, const char *new )
+int irc_user_set_nick( irc_user_t *iu, const char *new )
 {
-	irc_user_t *iu = irc_user_by_name( irc, old );
+	irc_t *irc = iu->irc;
 	char key[strlen(new)+1];
 	GSList *cl;
 	
@@ -99,7 +99,7 @@ int irc_user_set_nick( irc_t *irc, const char *old, const char *new )
 		/* Send a NICK update if we're renaming our user, or someone
 		   who's in the same channel like our user. */
 		if( iu == irc->user ||
-		    ( irc_channel_has_user( ic, irc->user ) &&
+		    ( ( ic->flags & IRC_CHANNEL_JOINED ) &&
 		      irc_channel_has_user( ic, iu ) ) )
 		{
 			irc_send_nick( iu, new );

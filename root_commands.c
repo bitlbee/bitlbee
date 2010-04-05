@@ -647,65 +647,55 @@ static void cmd_info( irc_t *irc, char **cmd )
 		ic->acc->prpl->get_info( ic, cmd[2] );
 	}
 }
+#endif
 
 static void cmd_rename( irc_t *irc, char **cmd )
 {
-	user_t *u;
+	irc_user_t *iu;
 	
-	if( g_strcasecmp( cmd[1], irc->nick ) == 0 )
+	iu = irc_user_by_name( irc, cmd[1] );
+	
+	if( iu == NULL )
+	{
+		irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
+	}
+	else if( iu == irc->user )
 	{
 		irc_usermsg( irc, "Nick `%s' can't be changed", cmd[1] );
-	}
-	else if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
-	{
-		if( strchr( CTYPES, cmd[2][0] ) && nick_ok( cmd[2] + 1 ) )
-		{
-			u = user_find( irc, irc->nick );
-			
-			irc_part( irc, u, irc->channel );
-			g_free( irc->channel );
-			irc->channel = g_strdup( cmd[2] );
-			irc_join( irc, u, irc->channel );
-			
-			if( strcmp( cmd[0], "set_rename" ) != 0 )
-				set_setstr( &irc->set, "control_channel", cmd[2] );
-		}
-	}
-	else if( user_find( irc, cmd[2] ) && ( nick_cmp( cmd[1], cmd[2] ) != 0 ) )
-	{
-		irc_usermsg( irc, "Nick `%s' already exists", cmd[2] );
 	}
 	else if( !nick_ok( cmd[2] ) )
 	{
 		irc_usermsg( irc, "Nick `%s' is invalid", cmd[2] );
 	}
-	else if( !( u = user_find( irc, cmd[1] ) ) )
+	else if( irc_user_by_name( irc, cmd[2] ) )
 	{
-		irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
+		irc_usermsg( irc, "Nick `%s' already exists", cmd[2] );
 	}
 	else
 	{
-		user_rename( irc, cmd[1], cmd[2] );
-		irc_write( irc, ":%s!%s@%s NICK %s", cmd[1], u->user, u->host, cmd[2] );
-		if( g_strcasecmp( cmd[1], irc->mynick ) == 0 )
+		if( !irc_user_set_nick( iu, cmd[2] ) )
 		{
-			g_free( irc->mynick );
-			irc->mynick = g_strdup( cmd[2] );
-			
+			irc_usermsg( irc, "Error while changing nick" );
+			return;
+		}
+		
+		if( iu == irc->root )
+		{
 			/* If we're called internally (user did "set root_nick"),
 			   let's not go O(INF). :-) */
 			if( strcmp( cmd[0], "set_rename" ) != 0 )
-				set_setstr( &irc->set, "root_nick", cmd[2] );
+				set_setstr( &irc->b->set, "root_nick", cmd[2] );
 		}
-		else if( u->send_handler == buddy_send_handler )
+		else if( iu->bu )
 		{
-			nick_set( u->ic->acc, u->handle, cmd[2] );
+			nick_set( iu->bu->ic->acc, iu->bu->handle, cmd[2] );
 		}
 		
 		irc_usermsg( irc, "Nick successfully changed" );
 	}
 }
 
+#if 0
 char *set_eval_root_nick( set_t *set, char *new_nick )
 {
 	irc_t *irc = set->data;
@@ -1231,7 +1221,9 @@ const command_t commands[] = {
 	{ "drop",           1, cmd_drop,           0 },
 	{ "add",            2, cmd_add,            0 },
 	{ "info",           1, cmd_info,           0 },
+#endif
 	{ "rename",         2, cmd_rename,         0 },
+#if 0
 	{ "remove",         1, cmd_remove,         0 },
 	{ "block",          1, cmd_block,          0 },
 	{ "allow",          1, cmd_allow,          0 },
