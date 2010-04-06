@@ -120,7 +120,7 @@ void *twitter_http(char *url_string, http_input_function func, gpointer data, in
 	if (is_post)
 	{
 		// Append the Content-Type and url-encoded arguments.
-		tmp = g_strdup_printf("%sContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %i\r\n\r\n%s", 
+		tmp = g_strdup_printf("%sContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %zd\r\n\r\n%s", 
 								request, strlen(url_arguments), url_arguments);
 		g_free(request);
 		request = tmp;
@@ -159,44 +159,3 @@ char *twitter_url_append(char *url, char *key, char* value)
 
 	return retval;
 }
-
-char *twitter_urldecode(const char *instr)
-{
-	int ipos=0, bpos=0;
-	char *str = NULL;
-	char entity[3]={0,0,0};
-	unsigned dec;
-	int len = strlen(instr);
-
-	if(!(str = g_new(char, len+1) ))
-		return "";
-
-	while(instr[ipos]) {
-		while(instr[ipos] && instr[ipos]!='%')
-			if(instr[ipos]=='+') {
-				str[bpos++]=' ';
-				ipos++;
-			} else
-				str[bpos++] = instr[ipos++];
-			if(!instr[ipos])
-				break;
-
-			if(instr[ipos+1] && instr[ipos+2]) {
-				ipos++;
-				entity[0]=instr[ipos++];
-				entity[1]=instr[ipos++];
-				sscanf(entity, "%2x", &dec);
-				str[bpos++] = (char)dec;
-			} else {
-				str[bpos++] = instr[ipos++];
-			}
-		}
-	str[bpos]='\0';
-
-	/* free extra alloc'ed mem. */
-	len = strlen(str);
-	str = g_renew(char, str, len+1);
-
-	return (str);
-}
-

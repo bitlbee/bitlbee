@@ -371,7 +371,7 @@ void twitter_get_home_timeline(struct im_connection *ic, int next_cursor)
 	args[1] = g_strdup_printf ("%d", next_cursor);
 	if (td->home_timeline_id) {
 		args[2] = "since_id";
-		args[3] = g_strdup_printf ("%llu", td->home_timeline_id);
+		args[3] = g_strdup_printf ("%llu", (long long unsigned int) td->home_timeline_id);
 	}
 
 	twitter_http(TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, td->user, td->pass, args, td->home_timeline_id ? 4 : 2);
