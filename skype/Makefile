@@ -32,6 +32,10 @@ ifeq ($(BITLBEE),yes)
 endif
 
 install: all
+ifeq ($(ASCIIDOC),yes)
+	$(INSTALL) -d $(DESTDIR)$(mandir)/man1
+	$(INSTALL) -m644 $(MANPAGES) $(DESTDIR)$(mandir)/man1
+endif
 ifeq ($(BITLBEE),yes)
 	$(INSTALL) -d $(DESTDIR)$(plugindir)
 	$(INSTALL) skype.$(SHARED_EXT) $(DESTDIR)$(plugindir)

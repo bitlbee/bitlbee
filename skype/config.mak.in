@@ -12,3 +12,5 @@ exec_prefix = @exec_prefix@
 bindir = @bindir@
 libdir = @libdir@
 plugindir = ${libdir}/bitlbee
+datarootdir = @datarootdir@
+mandir = @mandir@
