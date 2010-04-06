@@ -38,9 +38,7 @@
 #include <errno.h>
 
 
-char *twitter_urlencode(const char *instr);
 char *twitter_url_append(char *url, char *key, char* value);
-static int isurlchar(unsigned char c);
 
 /**
  * Do a request.
@@ -106,9 +104,9 @@ void *twitter_http(char *url_string, http_input_function func, gpointer data, in
 
 	// Make the request.
 	request = g_strdup_printf(  "%s %s HTTP/1.0\r\n"
-								"Host: %s\r\n"
-								"User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n",
-								is_post ? "POST" : "GET", url->file, url->host );
+	                            "Host: %s\r\n"
+	                            "User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n",
+	                            is_post ? "POST" : "GET", url->file, url->host );
 
 	// If a pass and user are given we append them to the request.
 	if (userpass_base64)
@@ -145,8 +143,11 @@ void *twitter_http(char *url_string, http_input_function func, gpointer data, in
 
 char *twitter_url_append(char *url, char *key, char* value)
 {
-	char *key_encoded = twitter_urlencode(key);
-	char *value_encoded = twitter_urlencode(value);
+	char *key_encoded = g_strndup(key, 3 * strlen(key));
+	http_encode(key_encoded);
+	char *value_encoded = g_strndup(value, 3 * strlen(value));
+	http_encode(value_encoded);
+
 	char *retval;
 	if (strlen(url) != 0)
 		retval = g_strdup_printf("%s&%s=%s", url, key_encoded, value_encoded);
@@ -158,35 +159,6 @@ char *twitter_url_append(char *url, char *key, char* value)
 
 	return retval;
 }
-
-char *twitter_urlencode(const char *instr)
-{
-	int ipos=0, bpos=0;
-	char *str = NULL;
-	int len = strlen(instr);
-
-	if(!(str = g_new(char, 3*len + 1) ))
-		return "";
-
-	while(instr[ipos]) {
-		while(isurlchar(instr[ipos]))
-			str[bpos++] = instr[ipos++];
-		if(!instr[ipos])
-			break;
-
-		g_snprintf(&str[bpos], 4, "%%%.2x", instr[ipos]);
-		bpos+=3;
-		ipos++;
-	}
-	str[bpos]='\0';
-
-	/* free extra alloc'ed mem. */
-	len = strlen(str);
-	str = g_renew(char, str, len+1);
-
-	return (str);
-}
-
 
 char *twitter_urldecode(const char *instr)
 {
@@ -226,10 +198,5 @@ char *twitter_urldecode(const char *instr)
 	str = g_renew(char, str, len+1);
 
 	return (str);
-}
-
-static int isurlchar(unsigned char c)
-{
-	return (isalnum(c) || '-' == c || '_' == c);
 }
 

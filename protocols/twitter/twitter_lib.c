@@ -64,6 +64,7 @@ static void txu_free(struct twitter_xml_user *txu)
 {
 	g_free(txu->name);
 	g_free(txu->screen_name);
+	g_free(txu);
 }
 
 
@@ -75,6 +76,7 @@ static void txs_free(struct twitter_xml_status *txs)
 	g_free(txs->created_at);
 	g_free(txs->text);
 	txu_free(txs->user);
+	g_free(txs);
 }
 
 /**
@@ -130,7 +132,7 @@ void twitter_get_friends_ids(struct im_connection *ic, int next_cursor)
 static xt_status twitter_xt_next_cursor( struct xt_node *node, struct twitter_xml_list *txl )
 {
 	// Do something with the cursor.
-	txl->next_cursor = atoi(node->text);
+	txl->next_cursor = node->text != NULL ? atoi(node->text) : -1;
 
 	return XT_HANDLED;
 }
@@ -152,7 +154,7 @@ static xt_status twitter_xt_get_friends_id_list( struct xt_node *node, struct tw
 		if ( g_strcasecmp( "id", child->name ) == 0)
 		{
 			// Add the item to the list.
-			txl->list = g_slist_append (txl->list, g_memdup( node->text, node->text_len + 1 ));
+			txl->list = g_slist_append (txl->list, g_memdup( child->text, child->text_len + 1 ));
 		}
 		else if ( g_strcasecmp( "next_cursor", child->name ) == 0)
 		{
@@ -186,7 +188,6 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	}
 
 	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = NULL;
 
 	// Parse the data.
 	parser = xt_new( NULL, txl );
@@ -450,7 +451,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not retrieve home/timeline. HTTP STATUS: %d", req->status_code);
+		imcb_error(ic, "Could not retrieve " TWITTER_HOME_TIMELINE_URL ". HTTP STATUS: %d", req->status_code);
 		return;
 	}
 
@@ -487,6 +488,8 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	struct im_connection *ic = req->data;
 	struct xt_parser *parser;
 	struct twitter_xml_list *txl;
+	GSList *l = NULL;
+	struct twitter_xml_user *user;
 
 	// Check if the connection is still active.
 	if( !g_slist_find( twitter_connections, ic ) )
@@ -495,7 +498,7 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not retrieve home/timeline. HTTP STATUS: %d", req->status_code);
+		imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL " HTTP STATUS: %d", req->status_code);
 		return;
 	}
 
@@ -510,8 +513,6 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	twitter_xt_get_user_list(parser->root, txl);
 	xt_free( parser );
 
-	GSList *l = NULL;
-	struct twitter_xml_user *user;
 	// Add the users as buddies.
 	for ( l = txl->list; l ; l = g_slist_next(l) )
 	{
@@ -558,8 +559,7 @@ static void twitter_http_post_status(struct http_request *req)
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not post tweed... HTTP STATUS: %d", req->status_code);
-		imcb_error(ic, req->reply_body);
+		imcb_error(ic, "Could not post tweet... HTTP STATUS: %d", req->status_code);
 		return;
 	}
 }

@@ -34,7 +34,9 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 {
 	struct im_connection *ic = data;
 	// Check if we are still logged in...
-	if ((ic->flags & OPT_LOGGED_IN) != OPT_LOGGED_IN)
+	// We are logged in if the flag says so and the connection is still in the connections list.
+	if ((ic->flags & OPT_LOGGED_IN) != OPT_LOGGED_IN 
+			&& !g_slist_find( twitter_connections, ic ))
 		return 0;
 
 	// If the user uses multiple private message windows we need to get the 
@@ -54,6 +56,7 @@ static void twitter_init( account_t *acc )
 {
 	set_t *s;
 	s = set_add( &acc->set, "use_groupchat", "false", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
 }
 
 /**
@@ -71,17 +74,15 @@ static void twitter_login( account_t *acc )
 
 	ic->proto_data = td;
 
-	// Set the status to logged in.
-	ic->flags = OPT_LOGGED_IN;
+	imcb_log( ic, "Connecting to twitter" );
+	imcb_connected(ic);
 
 	// Run this once. After this queue the main loop function.
 	twitter_main_loop(ic, -1, 0);
 
 	// Queue the main_loop
-	b_timeout_add(60000, twitter_main_loop, ic);
-
-	imcb_log( ic, "Connecting to twitter" );
-	imcb_connected(ic);
+	// Save the return value, so we can remove the timeout on logout.
+	td->main_loop_id = b_timeout_add(60000, twitter_main_loop, ic);
 
 	twitter_connections = g_slist_append( twitter_connections, ic );
 }
@@ -95,6 +96,9 @@ static void twitter_logout( struct im_connection *ic )
 	
 	// Set the status to logged out.
 	ic->flags = 0;
+
+	// Remove the main_loop function from the function queue.
+	b_event_remove(td->main_loop_id);
 
 	if( td )
 	{
@@ -148,6 +152,8 @@ static void twitter_remove_buddy( struct im_connection *ic, char *who, char *gro
 
 static void twitter_chat_msg( struct groupchat *c, char *message, int flags )
 {
+	if( c && message )
+		twitter_post_status(c->ic, message);
 }
 
 static void twitter_chat_invite( struct groupchat *c, char *who, char *message )
