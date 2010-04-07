@@ -767,8 +767,16 @@ static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name )
 			              "server's name. Set local_display_name to true "
 			              "to use the local name.", s->value, name );
 		
-		g_free( s->value );
-		s->value = g_strdup( name );
+		if( g_utf8_validate( name, -1, NULL ) )
+		{
+			g_free( s->value );
+			s->value = g_strdup( name );
+		}
+		else
+		{
+			imcb_log( ic, "Warning: Friendly name in server response was corrupted" );
+		}
+		
 		return TRUE;
 	}
 }
