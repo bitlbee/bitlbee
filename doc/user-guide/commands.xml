@@ -838,6 +838,21 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="timezone" type="string" scope="global">
+		<default>local</default>
+		<possible-values>local, utc, gmt, timezone-spec</possible-values>
+
+		<description>
+			<para>
+				If message timestamps are available for offline messages or chatroom backlogs, BitlBee will display them as part of the message. By default it will use the local timezone. If you're not in the same timezone as the BitlBee server, you can adjust the timestamps using this setting.
+			</para>
+
+			<para>
+				Values local/utc/gmt should be self-explanatory. timezone-spec is a time offset in hours:minutes, for example: -8 for Pacific Standard Time, +2 for Central European Summer Time, +5:30 for Indian Standard Time.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="tls" type="boolean" scope="account">
 		<default>try</default>
 

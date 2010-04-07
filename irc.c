@@ -198,6 +198,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "status", NULL,  set_eval_away_status, irc );
 	s->flags |= SET_NULL_OK;
 	s = set_add( &irc->set, "strip_html", "true", NULL, irc );
+	s = set_add( &irc->set, "timezone", "local", set_eval_timezone, irc );
 	s = set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
 	s = set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
 	
