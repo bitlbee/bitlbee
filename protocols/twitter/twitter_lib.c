@@ -97,12 +97,17 @@ static void txl_free(struct twitter_xml_list *txl)
  */
 static void twitter_add_buddy(struct im_connection *ic, char *name)
 {
+	struct twitter_data *td = ic->proto_data;
+
 	// Check if the buddy is allready in the buddy list.
 	if (!imcb_find_buddy( ic, name ))
 	{
 		// The buddy is not in the list, add the buddy and set the status to logged in.
 		imcb_add_buddy( ic, name, NULL );
-		imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
+		if (set_getbool( &ic->acc->set, "use_groupchat" ))
+			imcb_chat_add_buddy( td->home_timeline_gc, name );
+		else
+			imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
 	}
 }
 
