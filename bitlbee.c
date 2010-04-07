@@ -69,6 +69,15 @@ int bitlbee_daemon_init()
 		if( global.listen_socket < 0 )
 			continue;
 
+#ifdef IPV6_V6ONLY		
+		if( res->ai_family == AF_INET6 )
+		{
+			i = 0;
+			setsockopt( global.listen_socket, IPPROTO_IPV6, IPV6_V6ONLY,
+			            (char *) &i, sizeof( i ) );
+		}
+#endif
+
 		/* TIME_WAIT (?) sucks.. */
 		i = 1;
 		setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
@@ -79,7 +88,6 @@ int bitlbee_daemon_init()
 			log_error( "bind" );
 			return( -1 );
 		}
-
 		break;
 	}
 
