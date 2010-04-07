@@ -126,16 +126,6 @@ static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message
 /**
  *
  */
-static GList *twitter_away_states( struct im_connection *ic )
-{
-	static GList *l = NULL;
-	return l;
-}
-
-static void twitter_set_away( struct im_connection *ic, char *state, char *message )
-{
-}
-
 static void twitter_set_my_name( struct im_connection *ic, char *info )
 {
 }
@@ -210,8 +200,6 @@ void twitter_initmodule()
 	ret->init = twitter_init;
 	ret->logout = twitter_logout;
 	ret->buddy_msg = twitter_buddy_msg;
-	ret->away_states = twitter_away_states;
-	ret->set_away = twitter_set_away;
 	ret->get_info = twitter_get_info;
 	ret->set_my_name = twitter_set_my_name;
 	ret->add_buddy = twitter_add_buddy;

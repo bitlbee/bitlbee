@@ -1207,6 +1207,10 @@ int imc_away_send_update( struct im_connection *ic )
 {
 	char *away, *msg = NULL;
 	
+	if( ic->acc->prpl->away_states == NULL ||
+	    ic->acc->prpl->set_away == NULL )
+		return 0;
+	
 	away = set_getstr( &ic->acc->set, "away" ) ?
 	     : set_getstr( &ic->irc->set, "away" );
 	if( away && *away )
