@@ -57,7 +57,7 @@ autogen: configure.ac
 	autoconf
 
 clean:
-	rm -f skype.$(SHARED_EXT)
+	rm -f $(LIBS) $(MANPAGES)
 
 distclean: clean
 	rm -f config.log config.mak config.status
