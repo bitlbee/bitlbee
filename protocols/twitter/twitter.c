@@ -35,8 +35,8 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 	struct im_connection *ic = data;
 	// Check if we are still logged in...
 	// We are logged in if the flag says so and the connection is still in the connections list.
-	if ((ic->flags & OPT_LOGGED_IN) != OPT_LOGGED_IN 
-			&& !g_slist_find( twitter_connections, ic ))
+	if (!g_slist_find( twitter_connections, ic ) ||
+	    (ic->flags & OPT_LOGGED_IN) != OPT_LOGGED_IN) 
 		return 0;
 
 	// If the user uses multiple private message windows we need to get the 
@@ -68,13 +68,15 @@ static void twitter_login( account_t *acc )
 	struct im_connection *ic = imcb_new( acc );
 	struct twitter_data *td = g_new0( struct twitter_data, 1 );
 
+	twitter_connections = g_slist_append( twitter_connections, ic );
+
 	td->user = acc->user;
 	td->pass = acc->pass;
 	td->home_timeline_id = 0;
 
 	ic->proto_data = td;
 
-	imcb_log( ic, "Connecting to twitter" );
+	imcb_log( ic, "Connecting to Twitter" );
 	imcb_connected(ic);
 
 	// Run this once. After this queue the main loop function.
@@ -83,8 +85,6 @@ static void twitter_login( account_t *acc )
 	// Queue the main_loop
 	// Save the return value, so we can remove the timeout on logout.
 	td->main_loop_id = b_timeout_add(60000, twitter_main_loop, ic);
-
-	twitter_connections = g_slist_append( twitter_connections, ic );
 }
 
 /**

@@ -36,8 +36,6 @@
 #define TXL_USER 2
 #define TXL_ID 3
 
-static void twitter_imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, time_t sent_at );
-
 struct twitter_xml_list {
 	int type;
 	int next_cursor;
@@ -100,7 +98,7 @@ static void txl_free(struct twitter_xml_list *txl)
 static void twitter_add_buddy(struct im_connection *ic, char *name)
 {
 	// Check if the buddy is allready in the buddy list.
-	if (!user_findhandle( ic, name ))
+	if (!imcb_find_buddy( ic, name ))
 	{
 		// The buddy is not in the list, add the buddy and set the status to logged in.
 		imcb_add_buddy( ic, name, NULL );
@@ -408,8 +406,13 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 	{
 		status = l->data;
 		twitter_add_buddy(ic, status->user->screen_name);
+		
 		// Say it!
-		twitter_imcb_chat_msg (gc, status->user->screen_name, status->text, 0, 0 );
+		if (g_strcasecmp(td->user, status->user->screen_name) == 0)
+			imcb_chat_log (gc, "Your Tweet: %s", status->text);
+		else
+			imcb_chat_msg (gc, status->user->screen_name, status->text, 0, 0 );
+		
 		// Update the home_timeline_id to hold the highest id, so that by the next request
 		// we won't pick up the updates allready in the list.
 		td->home_timeline_id = td->home_timeline_id < status->id ? status->id : td->home_timeline_id;
@@ -596,31 +599,3 @@ void twitter_direct_messages_new(struct im_connection *ic, char *who, char *msg)
 //	g_free(args[1]);
 //	g_free(args[3]);
 }
-
-
-/**
- * This function "overwrites" the imcb_chat_msg function. Because in the original the logged in user is filtered out.
- */
-static void twitter_imcb_chat_msg( struct groupchat *c, char *who, char *msg, uint32_t flags, time_t sent_at )
-{
-	struct im_connection *ic = c->ic;
-	char *wrapped;
-	user_t *u;
-
-	u = user_findhandle( ic, who );
-	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) 
-			|| ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
-		strip_html( msg );
-
-	wrapped = word_wrap( msg, 425 );
-	if( c && u )
-	{   
-		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, "", wrapped );
-	}
-	else
-	{   
-		imcb_log( ic, "Message from/to conversation %s@%p (unknown conv/user): %s", who, c, wrapped );
-	}
-	g_free( wrapped );
-}
-
