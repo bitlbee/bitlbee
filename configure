@@ -25,6 +25,7 @@ msn=1
 jabber=1
 oscar=1
 yahoo=1
+twitter=1
 
 debug=0
 strip=1
@@ -65,6 +66,7 @@ Option		Description				Default
 --jabber=0/1	Disable/enable Jabber part		$jabber
 --oscar=0/1	Disable/enable Oscar part (ICQ, AIM)	$oscar
 --yahoo=0/1	Disable/enable Yahoo part		$yahoo
+--twitter=0/1 Disable/enable Twitter part		$twitter
 
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
@@ -521,6 +523,14 @@ else
 	echo '#define WITH_YAHOO' >> config.h
 	protocols=$protocols'yahoo '
 	protoobjs=$protoobjs'yahoo_mod.o '
+fi
+
+if [ "$twitter" = 0 ]; then
+	echo '#undef WITH_TWITTER' >> config.h
+else
+	echo '#define WITH_TWITTER' >> config.h
+	protocols=$protocols'twitter '
+	protoobjs=$protoobjs'twitter_mod.o '
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then

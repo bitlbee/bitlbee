@@ -132,6 +132,7 @@ void nogaim_init()
 	extern void oscar_initmodule();
 	extern void byahoo_initmodule();
 	extern void jabber_initmodule();
+	extern void twitter_initmodule();
 
 #ifdef WITH_MSN
 	msn_initmodule();
@@ -147,6 +148,10 @@ void nogaim_init()
 	
 #ifdef WITH_JABBER
 	jabber_initmodule();
+#endif
+
+#ifdef WITH_TWITTER
+	twitter_initmodule();
 #endif
 
 #ifdef WITH_PLUGINS
