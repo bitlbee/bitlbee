@@ -62,6 +62,9 @@ static char *set_eval_charset( set_t *set, char *value )
 	{
 		return NULL;
 	}
+	
+	/* Do a test iconv to see if the user picked an IRC-compatible
+	   charset (for example utf-16 goes *horribly* wrong). */
 	if( ( test = g_convert_with_iconv( " ", 1, oc, NULL, &test_bytes, NULL ) ) == NULL ||
 	    test_bytes > 1 )
 	{
@@ -71,6 +74,8 @@ static char *set_eval_charset( set_t *set, char *value )
 		                  "only supports 8-bit character sets." );
 		return NULL;
 	}
+	g_free( test );
+	
 	if( ( ic = g_iconv_open( "utf-8", value ) ) == (GIConv) -1 )
 	{
 		g_iconv_close( oc );
