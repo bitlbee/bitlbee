@@ -62,6 +62,24 @@
 					<ircline nick="root">Account successfully added</ircline>
 				</ircexample>
 			</bitlbee-command>
+			
+			<bitlbee-command name="twitter">
+				<syntax>account add twitter &lt;handle&gt; &lt;password&gt;</syntax>
+
+				<description>
+					<para>
+						This module gives you simple access to Twitter. Although it uses the Twitter API, only Twitter itself is supported at the moment.
+					</para>
+					
+					<para>
+						By default all your Twitter contacts will show up in your contact list and their tweets will show up as private messages or in &amp;bitlbee depending on your settings. If you want them in a separate channel, use the use_groupchat setting (see <emphasis>help set use_groupchat</emphasis>).
+					</para>
+					
+					<para>
+						To send tweets yourself, send them to any of your Twitter contacts via /query (doesn't matter who), or just write in the groupchat channel if you enabled that option.
+					</para>
+				</description>
+			</bitlbee-command>
 
 			<bitlbee-command name="yahoo">
 				<syntax>account add yahoo &lt;handle&gt; &lt;password&gt;</syntax>
@@ -400,7 +418,7 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="auto_reconnect" type="boolean" scope="both">
-		<default>false</default>
+		<default>true</default>
 
 		<description>
 			<para>
@@ -897,6 +915,16 @@
 		<description>
 			<para>
 				Sends you a /notice when a user starts typing a message (if supported by the IM protocol and the user's client). To use this, you most likely want to use a script in your IRC client to show this information in a more sensible way.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="use_groupchat" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				By default the Twitter module shows all Twitter contacts and their Tweet in &amp;bitlbee and/or private messages. With this setting enabled the module will show all contacts and their Tweets in a separate channel.
 			</para>
 		</description>
 	</bitlbee-setting>
