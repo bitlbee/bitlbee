@@ -723,7 +723,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at )
 {
 	irc_t *irc = ic->irc;
-	char *wrapped, *ts;
+	char *wrapped, *ts = NULL;
 	user_t *u;
 	
 	u = user_findhandle( ic, handle );
@@ -766,7 +766,8 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
 		strip_html( msg );
 	
-	if( ( ts = format_timestamp( irc, sent_at ) ) )
+	if( set_getbool( &ic->irc->set, "display_timestamps" ) &&
+	    ( ts = format_timestamp( irc, sent_at ) ) )
 	{
 		char *new = g_strconcat( ts, msg, NULL );
 		g_free( ts );
@@ -880,7 +881,9 @@ void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t fl
 	wrapped = word_wrap( msg, 425 );
 	if( c && u )
 	{
-		char *ts = format_timestamp( ic->irc, sent_at );
+		char *ts = NULL;
+		if( set_getbool( &ic->irc->set, "display_timestamps" ) )
+			ts = format_timestamp( ic->irc, sent_at );
 		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, ts ? : "", wrapped );
 		g_free( ts );
 	}

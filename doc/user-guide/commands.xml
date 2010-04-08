@@ -559,6 +559,16 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="display_timestamps" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				When incoming messages are old (i.e. offline messages and channel backlogs), BitlBee will prepend them with a timestamp. If you find them ugly or useless, you can use this setting to hide them.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="handle_unknown" type="string" scope="global">
 		<default>root</default>
 		<possible-values>root, add, add_private, add_channel, ignore</possible-values>

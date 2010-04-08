@@ -185,6 +185,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "debug", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "default_target", "root", NULL, irc );
 	s = set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "display_timestamps", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "handle_unknown", "root", NULL, irc );
 	s = set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "ops", "both", set_eval_ops, irc );
