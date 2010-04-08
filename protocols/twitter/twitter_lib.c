@@ -21,6 +21,9 @@
 *                                                                           *
 ****************************************************************************/
 
+/* For strptime(): */
+#define _XOPEN_SOURCE
+
 #include "twitter_http.h"
 #include "twitter.h"
 #include "bitlbee.h"
@@ -49,7 +52,7 @@ struct twitter_xml_user {
 };
 
 struct twitter_xml_status {
-	char *created_at;
+	time_t created_at;
 	char *text;
 	struct twitter_xml_user *user;
 	guint64 id;
@@ -71,7 +74,6 @@ static void txu_free(struct twitter_xml_user *txu)
  */
 static void txs_free(struct twitter_xml_status *txs)
 {
-	g_free(txs->created_at);
 	g_free(txs->text);
 	txu_free(txs->user);
 	g_free(txs);
@@ -311,7 +313,13 @@ static xt_status twitter_xt_get_status( struct xt_node *node, struct twitter_xml
 		}
 		else if (g_strcasecmp( "created_at", child->name ) == 0)
 		{
-			txs->created_at = g_memdup( child->text, child->text_len + 1 );
+			struct tm parsed;
+			
+			/* Very sensitive to changes to the formatting of
+			   this field. :-( Also assumes the timezone used
+			   is UTC since C time handling functions suck. */
+			if( strptime( child->text, "%a %b %d %H:%M:%S %z %Y", &parsed ) != NULL )
+				txs->created_at = mktime_utc( &parsed );
 		}
 		else if (g_strcasecmp( "user", child->name ) == 0)
 		{
@@ -416,7 +424,7 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 		if (g_strcasecmp(td->user, status->user->screen_name) == 0)
 			imcb_chat_log (gc, "Your Tweet: %s", status->text);
 		else
-			imcb_chat_msg (gc, status->user->screen_name, status->text, 0, 0 );
+			imcb_chat_msg (gc, status->user->screen_name, status->text, 0, status->created_at );
 		
 		// Update the home_timeline_id to hold the highest id, so that by the next request
 		// we won't pick up the updates allready in the list.
@@ -436,7 +444,7 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList *list)
 	for ( l = list; l ; l = g_slist_next(l) )
 	{
 		status = l->data;
-		imcb_buddy_msg( ic, status->user->screen_name, status->text, 0, 0 );
+		imcb_buddy_msg( ic, status->user->screen_name, status->text, 0, status->created_at );
 		// Update the home_timeline_id to hold the highest id, so that by the next request
 		// we won't pick up the updates allready in the list.
 		td->home_timeline_id = td->home_timeline_id < status->id ? status->id : td->home_timeline_id;
