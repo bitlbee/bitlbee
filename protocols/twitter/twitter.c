@@ -100,7 +100,8 @@ static void twitter_logout( struct im_connection *ic )
 	// Remove the main_loop function from the function queue.
 	b_event_remove(td->main_loop_id);
 
-	imcb_chat_free(td->home_timeline_gc);
+	if(td->home_timeline_gc)
+		imcb_chat_free(td->home_timeline_gc);
 
 	if( td )
 	{
