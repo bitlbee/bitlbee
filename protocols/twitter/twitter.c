@@ -155,6 +155,15 @@ static void twitter_chat_invite( struct groupchat *c, char *who, char *message )
 
 static void twitter_chat_leave( struct groupchat *c )
 {
+	struct twitter_data *td = c->ic->proto_data;
+	
+	if( c != td->home_timeline_gc )
+		return; /* WTF? */
+	
+	/* If the user leaves the channel: Fine. Rejoin him/her once new
+	   tweets come in. */
+	imcb_chat_free(td->home_timeline_gc);
+	td->home_timeline_gc = NULL;
 }
 
 static struct groupchat *twitter_chat_with( struct im_connection *ic, char *who )
