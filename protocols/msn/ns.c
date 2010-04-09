@@ -435,12 +435,25 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "FLN" ) == 0 )
 	{
-		if( cmd[1] )
-			imcb_buddy_status( ic, cmd[1], 0, NULL, NULL );
+		struct msn_switchboard *sb;
+		
+		if( cmd[1] == NULL )
+			return 1;
+		
+		imcb_buddy_status( ic, cmd[1], 0, NULL, NULL );
+		
+		if( ( sb = msn_sb_by_handle( ic, cmd[1] ) ) &&
+		    set_getbool( &ic->acc->set, "switchboard_keepalives" ) &&
+		    sb->keepalive == 0 )
+		{
+			msn_sb_keepalive( sb, 0, 0 );
+			sb->keepalive = b_timeout_add( 20000, msn_sb_keepalive, sb );
+		}
 	}
 	else if( strcmp( cmd[0], "NLN" ) == 0 )
 	{
 		const struct msn_away_state *st;
+		struct msn_switchboard *sb;
 		
 		if( num_parts != 5 )
 		{
@@ -462,6 +475,12 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN | 
 		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ),
 		                   st->name, NULL );
+		
+		if( ( sb = msn_sb_by_handle( ic, cmd[1] ) ) && sb->keepalive > 0 )
+		{
+			b_event_remove( sb->keepalive );
+			sb->keepalive = 0;
+		}
 	}
 	else if( strcmp( cmd[0], "RNG" ) == 0 )
 	{

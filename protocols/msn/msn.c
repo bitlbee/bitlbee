@@ -40,6 +40,8 @@ static void msn_init( account_t *acc )
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
+	
+	s = set_add( &acc->set, "switchboard_keepalives", "false", set_eval_bool, acc );
 }
 
 static void msn_login( account_t *acc )

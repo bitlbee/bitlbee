@@ -167,7 +167,18 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 		int i, j;
 		
 		/* Build the message. Convert LF to CR-LF for normal messages. */
-		if( strcmp( text, TYPING_NOTIFICATION_MESSAGE ) != 0 )
+		if( strcmp( text, TYPING_NOTIFICATION_MESSAGE ) == 0 )
+		{
+			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->acc->user );
+			buf = g_new0( char, i );
+			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->acc->user );
+		}
+		else if( strcmp( text, SB_KEEPALIVE_MESSAGE ) == 0 )
+		{
+			buf = g_strdup( SB_KEEPALIVE_HEADERS );
+			i = strlen( buf );
+		}
+		else
 		{
 			buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 + 1 );
 			i = strlen( MSN_MESSAGE_HEADERS );
@@ -180,12 +191,6 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 				
 				buf[i++] = text[j];
 			}
-		}
-		else
-		{
-			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->acc->user );
-			buf = g_new0( char, i );
-			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->acc->user );
 		}
 		
 		/* Build the final packet (MSG command + the message). */
@@ -762,4 +767,10 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 	}
 	
 	return( 1 );
+}
+
+gboolean msn_sb_keepalive( gpointer data, gint source, b_input_condition cond )
+{
+	struct msn_switchboard *sb = data;
+	return sb->ready && msn_sb_sendmessage( sb, SB_KEEPALIVE_MESSAGE );
 }
