@@ -406,7 +406,10 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 	// Create a new groupchat if it does not exsist.
 	if (!td->home_timeline_gc)
 	{   
+		char *name_hint = g_strdup_printf( "Twitter_%s", ic->acc->user );
 		td->home_timeline_gc = gc = imcb_chat_new( ic, "home/timeline" );
+		imcb_chat_name_hint( gc, name_hint );
+		g_free( name_hint );
 		// Add the current user to the chat...
 		imcb_chat_add_buddy( gc, ic->acc->user );
 	}

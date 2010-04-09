@@ -821,6 +821,35 @@ struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 	return c;
 }
 
+void imcb_chat_name_hint( struct groupchat *c, const char *name )
+{
+	if( !c->joined )
+	{
+		struct im_connection *ic = c->ic;
+		char stripped[MAX_NICK_LENGTH+1], *full_name;
+		
+		strncpy( stripped, name, MAX_NICK_LENGTH );
+		stripped[MAX_NICK_LENGTH] = '\0';
+		nick_strip( stripped );
+		if( set_getbool( &ic->irc->set, "lcnicks" ) )
+			nick_lc( stripped );
+		
+		full_name = g_strdup_printf( "&%s", stripped );
+		
+		if( stripped[0] &&
+		    nick_cmp( stripped, ic->irc->channel + 1 ) != 0 &&
+		    irc_chat_by_channel( ic->irc, full_name ) == NULL )
+		{
+			g_free( c->channel );
+			c->channel = full_name;
+		}
+		else
+		{
+			g_free( full_name );
+		}
+	}
+}
+
 void imcb_chat_free( struct groupchat *c )
 {
 	struct im_connection *ic = c->ic;
