@@ -260,6 +260,19 @@ static gboolean irc_free_hashkey( gpointer key, gpointer value, gpointer data )
 	return( TRUE );
 }
 
+/* USE WITH CAUTION!
+   Sets pass without checking */
+void irc_setpass (irc_t *irc, const char *pass)
+{
+	g_free (irc->password);
+	
+	if (pass) {
+		irc->password = g_strdup (pass);
+	} else {
+		irc->password = NULL;
+	}
+}
+
 static char **irc_splitlines( char *buffer );
 
 void irc_process( irc_t *irc )

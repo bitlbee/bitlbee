@@ -159,6 +159,7 @@ extern GSList *irc_connection_list;
 irc_t *irc_new( int fd );
 void irc_abort( irc_t *irc, int immed, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
 void irc_free( irc_t *irc );
+void irc_setpass (irc_t *irc, const char *pass);
 
 void irc_process( irc_t *irc );
 char **irc_parse_line( char *line );

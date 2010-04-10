@@ -146,7 +146,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		else if( ( pass_len = base64_decode( pass_b64, (unsigned char**) &pass_cr ) ) &&
 		                         arc_decode( pass_cr, pass_len, &password, xd->given_pass ) )
 		{
-			xd->current_account = account_add( irc, prpl, handle, password );
+			xd->current_account = account_add( irc->b, prpl, handle, password );
 			if( server )
 				set_setstr( &xd->current_account->set, "server", server );
 			if( autoconnect )
@@ -180,7 +180,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			else if( xd->current_account != NULL )
 				xd->current_set_head = &xd->current_account->set;
 			else
-				xd->current_set_head = &xd->irc->set;
+				xd->current_set_head = &xd->irc->b->set;
 			
 			xd->current_setting = g_strdup( setting );
 		}
@@ -214,7 +214,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		
 		if( xd->current_account && handle && channel )
 		{
-			xd->current_chat = chat_add( xd->irc, xd->current_account, handle, channel );
+			//xd->current_chat = chat_add( xd->irc, xd->current_account, handle, channel );
 		}
 		else
 		{
@@ -352,7 +352,7 @@ static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const ch
 
 static storage_status_t xml_load( irc_t *irc, const char *password )
 {
-	return xml_load_real( irc, irc->nick, password, XML_PASS_UNKNOWN );
+	return xml_load_real( irc, irc->user->nick, password, XML_PASS_UNKNOWN );
 }
 
 static storage_status_t xml_check_pass( const char *my_nick, const char *password )
@@ -395,7 +395,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	md5_byte_t pass_md5[21];
 	md5_state_t md5_state;
 	
-	path2 = g_strdup( irc->nick );
+	path2 = g_strdup( irc->user->nick );
 	nick_lc( path2 );
 	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, path2, ".xml" );
 	g_free( path2 );
@@ -421,17 +421,17 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	/* Save the hash in base64-encoded form. */
 	pass_buf = base64_encode( pass_md5, 21 );
 	
-	if( !xml_printf( fd, 0, "<user nick=\"%s\" password=\"%s\" version=\"%d\">\n", irc->nick, pass_buf, XML_FORMAT_VERSION ) )
+	if( !xml_printf( fd, 0, "<user nick=\"%s\" password=\"%s\" version=\"%d\">\n", irc->user->nick, pass_buf, XML_FORMAT_VERSION ) )
 		goto write_error;
 	
 	g_free( pass_buf );
 	
-	for( set = irc->set; set; set = set->next )
+	for( set = irc->b->set; set; set = set->next )
 		if( set->value )
 			if( !xml_printf( fd, 1, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
 				goto write_error;
 	
-	for( acc = irc->accounts; acc; acc = acc->next )
+	for( acc = irc->b->accounts; acc; acc = acc->next )
 	{
 		unsigned char *pass_cr;
 		char *pass_b64;
@@ -469,6 +469,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		if( g_hash_table_find( acc->nicks, xml_save_nick, & fd ) )
 			goto write_error;
 		
+#if 0
 		for( c = irc->chatrooms; c; c = c->next )
 		{
 			if( c->acc != acc )
@@ -487,6 +488,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 			if( !xml_printf( fd, 2, "</chat>\n" ) )
 				goto write_error;
 		}
+#endif
 		
 		if( !xml_printf( fd, 1, "</account>\n" ) )
 			goto write_error;

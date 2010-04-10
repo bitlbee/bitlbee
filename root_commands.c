@@ -135,7 +135,6 @@ static void cmd_help( irc_t *irc, char **cmd )
 	}
 }
 
-#if 0
 static void cmd_account( irc_t *irc, char **cmd );
 
 static void cmd_identify( irc_t *irc, char **cmd )
@@ -161,7 +160,7 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc_setpass( irc, cmd[1] );
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "+R", 1 );
-		if( set_getbool( &irc->set, "auto_connect" ) )
+		if( set_getbool( &irc->b->set, "auto_connect" ) )
 			cmd_account( irc, account_on );
 		break;
 	case STORAGE_OTHER_ERROR:
@@ -201,7 +200,7 @@ static void cmd_drop( irc_t *irc, char **cmd )
 {
 	storage_status_t status;
 	
-	status = storage_remove (irc->nick, cmd[1]);
+	status = storage_remove (irc->user->nick, cmd[1]);
 	switch (status) {
 	case STORAGE_NO_SUCH_USER:
 		irc_usermsg( irc, "That account does not exist" );
@@ -213,14 +212,23 @@ static void cmd_drop( irc_t *irc, char **cmd )
 		irc_setpass( irc, NULL );
 		irc->status &= ~USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "-R", 1 );
-		irc_usermsg( irc, "Account `%s' removed", irc->nick );
+		irc_usermsg( irc, "Account `%s' removed", irc->user->nick );
 		break;
 	default:
 		irc_usermsg( irc, "Error: `%d'", status );
 		break;
 	}
 }
-#endif
+
+static void cmd_save( irc_t *irc, char **cmd )
+{
+	if( ( irc->status & USTATUS_IDENTIFIED ) == 0 )
+		irc_usermsg( irc, "Please create an account first" );
+	else if( storage_save( irc, NULL, TRUE ) == STORAGE_OK )
+		irc_usermsg( irc, "Configuration saved" );
+	else
+		irc_usermsg( irc, "Configuration could not be saved!" );
+}
 
 struct cmd_account_del_data
 {
@@ -908,16 +916,6 @@ static void cmd_set( irc_t *irc, char **cmd )
 	cmd_set_real( irc, cmd, NULL, NULL );
 }
 
-static void cmd_save( irc_t *irc, char **cmd )
-{
-	if( ( irc->status & USTATUS_IDENTIFIED ) == 0 )
-		irc_usermsg( irc, "Please create an account first" );
-	else if( storage_save( irc, NULL, TRUE ) == STORAGE_OK )
-		irc_usermsg( irc, "Configuration saved" );
-	else
-		irc_usermsg( irc, "Configuration could not be saved!" );
-}
-
 static void cmd_blist( irc_t *irc, char **cmd )
 {
 	int online = 0, away = 0, offline = 0;
@@ -983,34 +981,6 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	irc_usermsg( irc, "%d buddies (%d available, %d away, %d offline)", n_online + n_away + n_offline, n_online, n_away, n_offline );
 }
 
-static void cmd_nick( irc_t *irc, char **cmd ) 
-{
-	account_t *a;
-
-	if( !cmd[1] || !( a = account_get( irc, cmd[1] ) ) )
-	{
-		irc_usermsg( irc, "Invalid account");
-	}
-	else if( !( a->ic && ( a->ic->flags & OPT_LOGGED_IN ) ) )
-	{
-		irc_usermsg( irc, "That account is not on-line" );
-	}
-	else if ( !cmd[2] ) 
-	{
-		irc_usermsg( irc, "Your name is `%s'" , a->ic->displayname ? a->ic->displayname : "NULL" );
-	}
-	else if ( !a->prpl->set_my_name ) 
-	{
-		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
-	}
-	else
-	{
-		irc_usermsg( irc, "Setting your name to `%s'", cmd[2] );
-		
-		a->prpl->set_my_name( a->ic, cmd[2] );
-	}
-}
-
 static void cmd_qlist( irc_t *irc, char **cmd )
 {
 	query_t *q = irc->queries;
@@ -1029,12 +999,6 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "%d, %s(%s): %s", num, q->ic->acc->prpl->name, q->ic->acc->user, q->question );
 		else
 			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
-}
-
-static void cmd_join_chat( irc_t *irc, char **cmd )
-{
-	irc_usermsg( irc, "This command is now obsolete. "
-	                  "Please try the `chat' command instead." );
 }
 
 static set_t **cmd_chat_set_findhead( irc_t *irc, char *id )
@@ -1215,10 +1179,11 @@ static void cmd_transfer( irc_t *irc, char **cmd )
 const command_t commands[] = {
 	{ "help",           0, cmd_help,           0 }, 
 	{ "account",        1, cmd_account,        0 },
-#if 0
 	{ "identify",       1, cmd_identify,       0 },
 	{ "register",       1, cmd_register,       0 },
 	{ "drop",           1, cmd_drop,           0 },
+	{ "save",           0, cmd_save,           0 },
+#if 0
 	{ "add",            2, cmd_add,            0 },
 	{ "info",           1, cmd_info,           0 },
 #endif
@@ -1227,7 +1192,6 @@ const command_t commands[] = {
 	{ "remove",         1, cmd_remove,         0 },
 	{ "block",          1, cmd_block,          0 },
 	{ "allow",          1, cmd_allow,          0 },
-	{ "save",           0, cmd_save,           0 },
 	{ "set",            0, cmd_set,            0 },
 	{ "yes",            0, cmd_yesno,          0 },
 	{ "no",             0, cmd_yesno,          0 },
