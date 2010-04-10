@@ -125,3 +125,8 @@ endif
 
 ctags: 
 	ctags `find . -name "*.c"` `find . -name "*.h"`
+
+# Using this as a bogus Make target to test if a GNU-compatible version of
+# make is available.
+helloworld:
+	@echo Hello World
