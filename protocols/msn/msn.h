@@ -184,6 +184,7 @@ struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb );
 void msn_sb_destroy( struct msn_switchboard *sb );
 gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond );
 int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m );
-gboolean msn_sb_keepalive( gpointer data, gint source, b_input_condition cond );
+void msn_sb_start_keepalives( struct msn_switchboard *sb, gboolean initial );
+void msn_sb_stop_keepalives( struct msn_switchboard *sb );
 
 #endif //_MSN_H
