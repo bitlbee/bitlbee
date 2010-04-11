@@ -228,18 +228,15 @@ void irc_send_whois( irc_user_t *iu )
 		           bu->ic->acc->server && *bu->ic->acc->server ? bu->ic->acc->server : "",
 		           bu->ic->acc->prpl->name );
 		
-		if( bu->status )
+		if( bu->status || bu->status_msg )
 		{
-			if( bu->status_msg )
-				irc_send_num( irc, 301, "%s :%s (%s)", iu->nick, bu->status, bu->status_msg );
+			int num = bu->flags & BEE_USER_AWAY ? 301 : 320;
+			
+			if( bu->status && bu->status_msg )
+				irc_send_num( irc, num, "%s :%s (%s)", iu->nick, bu->status, bu->status_msg );
 			else
-				irc_send_num( irc, 301, "%s :%s", iu->nick, bu->status );
+				irc_send_num( irc, num, "%s :%s", iu->nick, bu->status ? : bu->status_msg );
 		}
-		
-		/*
-		if( u->status_msg )
-			irc_send_num( irc, 333, "%s :Status: %s", u->nick, u->status_msg );
-		*/
 	}
 	else
 	{
