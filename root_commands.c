@@ -646,7 +646,6 @@ static void cmd_remove( irc_t *irc, char **cmd )
 	return;
 }
 
-#if 0
 static void cmd_info( irc_t *irc, char **cmd )
 {
 	struct im_connection *ic;
@@ -654,16 +653,16 @@ static void cmd_info( irc_t *irc, char **cmd )
 	
 	if( !cmd[2] )
 	{
-		user_t *u = user_find( irc, cmd[1] );
-		if( !u || !u->ic )
+		irc_user_t *iu = irc_user_by_name( irc, cmd[1] );
+		if( !iu || !iu->bu )
 		{
 			irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 			return;
 		}
-		ic = u->ic;
-		cmd[2] = u->handle;
+		ic = iu->bu->ic;
+		cmd[2] = iu->bu->handle;
 	}
-	else if( !( a = account_get( irc, cmd[1] ) ) )
+	else if( !( a = account_get( irc->b, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
 		return;
@@ -683,7 +682,6 @@ static void cmd_info( irc_t *irc, char **cmd )
 		ic->acc->prpl->get_info( ic, cmd[2] );
 	}
 }
-#endif
 
 static void cmd_rename( irc_t *irc, char **cmd )
 {
@@ -1191,6 +1189,7 @@ const command_t commands[] = {
 	{ "drop",           1, cmd_drop,           0 },
 	{ "help",           0, cmd_help,           0 }, 
 	{ "identify",       1, cmd_identify,       0 },
+	{ "info",           1, cmd_info,           0 },
 	{ "no",             0, cmd_yesno,          0 },
 	{ "register",       1, cmd_register,       0 },
 	{ "remove",         1, cmd_remove,         0 },
@@ -1204,9 +1203,7 @@ const command_t commands[] = {
 	{ "block",          1, cmd_block,          0 },
 	{ "chat",           1, cmd_chat,           0 },
 	{ "ft",             0, cmd_transfer,       0 },
-	{ "info",           1, cmd_info,           0 },
 	{ "join_chat",      2, cmd_join_chat,      0 },
-	{ "nick",           1, cmd_nick,           0 },
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "transfer",       0, cmd_transfer,       0 },
 #endif
