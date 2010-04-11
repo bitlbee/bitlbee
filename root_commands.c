@@ -91,14 +91,20 @@ void root_command_string( irc_t *irc, char *command )
 
 void root_command( irc_t *irc, char *cmd[] )
 {	
-	int i;
+	int i, len;
 	
 	if( !cmd[0] )
 		return;
 	
+	len = strlen( cmd[0] );
 	for( i = 0; commands[i].command; i++ )
-		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
+		if( g_strncasecmp( commands[i].command, cmd[0], len ) == 0 )
 		{
+			if( commands[i+1].command &&
+		            g_strncasecmp( commands[i+1].command, cmd[0], len ) == 0 )
+		        	/* Only match on the first letters if the match is unique. */
+		        	break;
+		        
 			MIN_ARGS( commands[i].required_parameters );
 			
 			commands[i].execute( irc, cmd );
@@ -1178,32 +1184,30 @@ static void cmd_transfer( irc_t *irc, char **cmd )
 }
 #endif
 
+/* IMPORTANT: Keep this list sorted! The short command logic needs that. */
 const command_t commands[] = {
-	{ "help",           0, cmd_help,           0 }, 
 	{ "account",        1, cmd_account,        0 },
-	{ "identify",       1, cmd_identify,       0 },
-	{ "register",       1, cmd_register,       0 },
-	{ "drop",           1, cmd_drop,           0 },
-	{ "save",           0, cmd_save,           0 },
 	{ "add",            2, cmd_add,            0 },
+	{ "drop",           1, cmd_drop,           0 },
+	{ "help",           0, cmd_help,           0 }, 
+	{ "identify",       1, cmd_identify,       0 },
+	{ "no",             0, cmd_yesno,          0 },
+	{ "register",       1, cmd_register,       0 },
 	{ "remove",         1, cmd_remove,         0 },
-#if 0
-	{ "info",           1, cmd_info,           0 },
-#endif
 	{ "rename",         2, cmd_rename,         0 },
-#if 0
-	{ "block",          1, cmd_block,          0 },
-	{ "allow",          1, cmd_allow,          0 },
-#endif
+	{ "save",           0, cmd_save,           0 },
 	{ "set",            0, cmd_set,            0 },
 	{ "yes",            0, cmd_yesno,          0 },
-	{ "no",             0, cmd_yesno,          0 },
 #if 0
+	{ "allow",          1, cmd_allow,          0 },
 	{ "blist",          0, cmd_blist,          0 },
+	{ "block",          1, cmd_block,          0 },
+	{ "chat",           1, cmd_chat,           0 },
+	{ "ft",             0, cmd_transfer,       0 },
+	{ "info",           1, cmd_info,           0 },
+	{ "join_chat",      2, cmd_join_chat,      0 },
 	{ "nick",           1, cmd_nick,           0 },
 	{ "qlist",          0, cmd_qlist,          0 },
-	{ "join_chat",      2, cmd_join_chat,      0 },
-	{ "chat",           1, cmd_chat,           0 },
 	{ "transfer",       0, cmd_transfer,       0 },
 #endif
 	{ NULL }
