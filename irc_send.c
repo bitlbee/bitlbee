@@ -149,7 +149,8 @@ void irc_send_join( irc_channel_t *ic, irc_user_t *iu )
 	{
 		irc_write( irc, ":%s MODE %s +%s", irc->root->host, ic->name, ic->mode );
 		irc_send_names( ic );
-		irc_send_topic( ic, FALSE );
+		if( ic->topic && *ic->topic )
+			irc_send_topic( ic, FALSE );
 	}
 }
 
