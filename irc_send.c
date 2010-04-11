@@ -47,13 +47,6 @@ void irc_send_login( irc_t *irc )
 	                        "CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 :are supported by this server",
 	                        CTYPES, CMODES, MAX_NICK_LENGTH - 1 );
 	irc_send_motd( irc );
-	
-	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\n"
-	                  "If you've never used BitlBee before, please do read the help "
-	                  "information using the \x02help\x02 command. Lots of FAQs are "
-	                  "answered there.\n"
-	                  "If you already have an account on this server, just use the "
-	                  "\x02identify\x02 command to identify yourself." );
 }
 
 void irc_send_motd( irc_t *irc )

@@ -639,6 +639,14 @@ int irc_check_login( irc_t *irc )
 			
 			irc->last_root_cmd = g_strdup( ROOT_CHAN );
 			
+			irc_send_msg( irc->root, "PRIVMSG", ROOT_CHAN,
+			              "Welcome to the BitlBee gateway!\n\n"
+			              "If you've never used BitlBee before, please do read the help "
+			              "information using the \x02help\x02 command. Lots of FAQs are "
+			              "answered there.\n"
+			              "If you already have an account on this server, just use the "
+			              "\x02identify\x02 command to identify yourself.", NULL );
+			
 			return 1;
 		}
 	}
