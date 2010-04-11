@@ -481,10 +481,11 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 				return TRUE;
 			else if( ret < sizeof( struct socks5_message ) )
 			{
-				/* Either a buggy proxy or just one that doesnt regard the SHOULD in XEP-0065
-				 * saying the reply SHOULD contain the address */
-
-				ASSERTSOCKOP( ret = recv( fd, &socks5_reply, ret, 0 ), "Dequeuing after MSG_PEEK" );
+				/* Either a buggy proxy or just one that doesnt regard
+				 * the SHOULD in XEP-0065 saying the reply SHOULD
+				 * contain the address. We'll take it, so make sure the
+				 * next jabber_bs_peek starts with an empty buffer. */
+				bt->peek_buf_len = 0;
 			}
 
 			if( !( socks5_reply.ver == 5 ) ||
