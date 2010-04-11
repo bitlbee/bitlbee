@@ -45,11 +45,9 @@ bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *hand
 	return bu;
 }
 
-int bee_user_free( bee_t *bee, struct im_connection *ic, const char *handle )
+int bee_user_free( bee_t *bee, bee_user_t *bu )
 {
-	bee_user_t *bu;
-	
-	if( ( bu = bee_user_by_handle( bee, ic, handle ) ) == NULL )
+	if( !bu )
 		return 0;
 	
 	if( bee->ui->user_free )

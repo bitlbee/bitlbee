@@ -73,7 +73,7 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 
 static gboolean bee_irc_user_free( bee_t *bee, bee_user_t *bu )
 {
-	return irc_user_free( bee->ui_data, bu->ui_data );
+	return irc_user_free( bee->ui_data, (irc_user_t *) bu->ui_data );
 }
 
 static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old )

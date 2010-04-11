@@ -209,10 +209,7 @@ void irc_free( irc_t * irc )
 	*/
 	
 	while( irc->users )
-	{
-		irc_user_t *iu = irc->users->data;
-		irc_user_free( irc, iu->nick );
-	}
+		irc_user_free( irc, (irc_user_t *) irc->users->data );
 	
 	while( irc->channels )
 		irc_channel_free( irc->channels->data );

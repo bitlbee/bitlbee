@@ -84,7 +84,7 @@ void bee_free( bee_t *b );
 
 /* bee_user.c */
 bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *handle );
-int bee_user_free( bee_t *bee, struct im_connection *ic, const char *handle );
+int bee_user_free( bee_t *bee, bee_user_t *bu );
 bee_user_t *bee_user_by_handle( bee_t *bee, struct im_connection *ic, const char *handle );
 int bee_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, int flags );
 

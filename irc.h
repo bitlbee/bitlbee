@@ -203,7 +203,7 @@ void irc_send_nick( irc_user_t *iu, const char *new );
 
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );
-int irc_user_free( irc_t *irc, const char *nick );
+int irc_user_free( irc_t *irc, irc_user_t *iu );
 irc_user_t *irc_user_by_name( irc_t *irc, const char *nick );
 int irc_user_set_nick( irc_user_t *iu, const char *new );
 gint irc_user_cmp( gconstpointer a_, gconstpointer b_ );

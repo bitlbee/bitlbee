@@ -46,12 +46,11 @@ irc_user_t *irc_user_new( irc_t *irc, const char *nick )
 	return iu;
 }
 
-int irc_user_free( irc_t *irc, const char *nick )
+int irc_user_free( irc_t *irc, irc_user_t *iu )
 {
-	irc_user_t *iu;
 	GSList *l;
 	
-	if( !( iu = irc_user_by_name( irc, nick ) ) )
+	if( !iu )
 		return 0;
 	
 	irc->users = g_slist_remove( irc->users, iu );

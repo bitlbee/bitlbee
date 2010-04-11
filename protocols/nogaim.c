@@ -326,12 +326,15 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	g_free( ic->away );
 	ic->away = NULL;
 	
-	for( l = bee->users; l; l = l->next )
+	for( l = bee->users; l; )
 	{
 		bee_user_t *bu = l->data;
+		GSList *next = l->next;
 		
 		if( bu->ic == ic )
-			bee_user_free( bee, ic, bu->handle );
+			bee_user_free( bee, bu );
+		
+		l = next;
 	}
 	
 	//query_del_by_conn( ic->irc, ic );
@@ -402,7 +405,7 @@ void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char
 
 void imcb_remove_buddy( struct im_connection *ic, const char *handle, char *group )
 {
-	bee_user_free( ic->bee, ic, handle );
+	bee_user_free( ic->bee, bee_user_by_handle( ic->bee, ic, handle ) );
 }
 
 /* Mainly meant for ICQ (and now also for Jabber conferences) to allow IM
