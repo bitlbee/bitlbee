@@ -63,7 +63,7 @@ query_t *query_add( irc_t *irc, struct im_connection *ic, char *question,
 		irc->queries = q;
 	}
 	
-	if( g_strcasecmp( set_getstr( &irc->set, "query_order" ), "lifo" ) == 0 || irc->queries == q )
+	if( g_strcasecmp( set_getstr( &irc->b->set, "query_order" ), "lifo" ) == 0 || irc->queries == q )
 		query_display( irc, q );
 	
 	return( q );
@@ -178,7 +178,7 @@ static query_t *query_default( irc_t *irc )
 {
 	query_t *q;
 	
-	if( g_strcasecmp( set_getstr( &irc->set, "query_order" ), "fifo" ) == 0 )
+	if( g_strcasecmp( set_getstr( &irc->b->set, "query_order" ), "fifo" ) == 0 )
 		q = irc->queries;
 	else
 		for( q = irc->queries; q && q->next; q = q->next );

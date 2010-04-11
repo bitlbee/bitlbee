@@ -358,7 +358,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 void imcb_ask( struct im_connection *ic, char *msg, void *data,
                query_callback doit, query_callback dont )
 {
-	//query_add( ic->irc, ic, msg, doit, dont, data );
+	query_add( (irc_t *) ic->bee->ui_data, ic, msg, doit, dont, data );
 }
 
 void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *group )
@@ -451,7 +451,6 @@ struct imcb_ask_cb_data
 	char *handle;
 };
 
-#if 0
 static void imcb_ask_auth_cb_no( void *data )
 {
 	struct imcb_ask_cb_data *cbd = data;
@@ -471,11 +470,9 @@ static void imcb_ask_auth_cb_yes( void *data )
 	g_free( cbd->handle );
 	g_free( cbd );
 }
-#endif
 
 void imcb_ask_auth( struct im_connection *ic, const char *handle, const char *realname )
 {
-#if 0
 	struct imcb_ask_cb_data *data = g_new0( struct imcb_ask_cb_data, 1 );
 	char *s, *realname_ = NULL;
 	
@@ -489,12 +486,11 @@ void imcb_ask_auth( struct im_connection *ic, const char *handle, const char *re
 	
 	data->ic = ic;
 	data->handle = g_strdup( handle );
-	query_add( ic->irc, ic, s, imcb_ask_auth_cb_yes, imcb_ask_auth_cb_no, data );
-#endif
+	query_add( (irc_t *) ic->bee->ui_data, ic, s,
+	           imcb_ask_auth_cb_yes, imcb_ask_auth_cb_no, data );
 }
 
 
-#if 0
 static void imcb_ask_add_cb_no( void *data )
 {
 	g_free( ((struct imcb_ask_cb_data*)data)->handle );
@@ -509,24 +505,22 @@ static void imcb_ask_add_cb_yes( void *data )
 	
 	return imcb_ask_add_cb_no( data );
 }
-#endif
 
 void imcb_ask_add( struct im_connection *ic, const char *handle, const char *realname )
 {
-#if 0
 	struct imcb_ask_cb_data *data = g_new0( struct imcb_ask_cb_data, 1 );
 	char *s;
 	
 	/* TODO: Make a setting for this! */
-	if( user_findhandle( ic, handle ) != NULL )
+	if( bee_user_by_handle( ic->bee, ic, handle ) != NULL )
 		return;
 	
 	s = g_strdup_printf( "The user %s is not in your buddy list yet. Do you want to add him/her now?", handle );
 	
 	data->ic = ic;
 	data->handle = g_strdup( handle );
-	query_add( ic->irc, ic, s, imcb_ask_add_cb_yes, imcb_ask_add_cb_no, data );
-#endif
+	query_add( (irc_t *) ic->bee->ui_data, ic, s,
+	           imcb_ask_add_cb_yes, imcb_ask_add_cb_no, data );
 }
 
 void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
