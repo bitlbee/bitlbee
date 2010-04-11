@@ -9,7 +9,7 @@
 -include ../Makefile.settings
 
 # [SH] Program variables
-objects = account.o bee.o bee_user.o nogaim.o
+objects = account.o bee.o bee_ft.o bee_user.o nogaim.o
 
 
 # [SH] The next two lines should contain the directory name (in $(subdirs))

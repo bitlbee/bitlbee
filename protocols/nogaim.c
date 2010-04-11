@@ -390,7 +390,7 @@ void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char
 	
 	if( !bu || !fullname ) return;
 	
-	if( strcmp( bu->fullname, fullname ) != 0 )
+	if( !bu->fullname || strcmp( bu->fullname, fullname ) != 0 )
 	{
 		g_free( bu->fullname );
 		bu->fullname = g_strdup( fullname );

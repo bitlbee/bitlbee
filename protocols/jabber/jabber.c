@@ -266,7 +266,7 @@ static void jabber_logout( struct im_connection *ic )
 	struct jabber_data *jd = ic->proto_data;
 	
 	while( jd->filetransfers )
-		imcb_file_canceled( ( ( struct jabber_transfer *) jd->filetransfers->data )->ft, "Logging out" );
+		imcb_file_canceled( ic, ( ( struct jabber_transfer *) jd->filetransfers->data )->ft, "Logging out" );
 
 	while( jd->streamhosts )
 	{

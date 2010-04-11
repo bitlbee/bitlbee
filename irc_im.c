@@ -24,7 +24,7 @@
 */
 
 #include "bitlbee.h"
-
+#include "dcc.h"
 
 /* IM->IRC callbacks */
 
@@ -160,12 +160,43 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 	return TRUE;
 }
 
+/* File transfers */
+static file_transfer_t *bee_irc_ft_in_start( bee_t *bee, bee_user_t *bu, const char *file_name, size_t file_size )
+{
+	return dccs_send_start( bu->ic, (irc_user_t *) bu->ui_data, file_name, file_size );
+}
+
+gboolean bee_irc_ft_out_start( struct im_connection *ic, file_transfer_t *ft )
+{
+	return dccs_recv_start( ft );
+}
+
+void bee_irc_ft_close( struct im_connection *ic, file_transfer_t *ft )
+{
+	return dcc_close( ft );
+}
+
+void bee_irc_ft_finished( struct im_connection *ic, file_transfer_t *file )
+{
+	dcc_file_transfer_t *df = file->priv;
+
+	if( file->bytes_transferred >= file->file_size )
+		dcc_finish( file );
+	else
+		df->proto_finished = TRUE;
+}
+
 const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_user_new,
 	bee_irc_user_free,
 	bee_irc_user_fullname,
 	bee_irc_user_status,
 	bee_irc_user_msg,
+	
+	bee_irc_ft_in_start,
+	bee_irc_ft_out_start,
+	bee_irc_ft_close,
+	bee_irc_ft_finished,
 };
 
 

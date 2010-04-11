@@ -60,55 +60,16 @@ unsigned int local_transfer_id=1;
  */
 unsigned int receivedchunks=0, receiveddata=0;
 
-static void dcc_finish( file_transfer_t *file );
-static void dcc_close( file_transfer_t *file );
+void dcc_finish( file_transfer_t *file );
+void dcc_close( file_transfer_t *file );
 gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond );
-int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct sockaddr_storage *saddr );
-gboolean dccs_recv_start( file_transfer_t *ft );
+int dccs_send_request( struct dcc_file_transfer *df, irc_user_t *iu, struct sockaddr_storage *saddr );
 gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond);
 gboolean dccs_recv_write_request( file_transfer_t *ft );
 gboolean dcc_progress( gpointer data, gint fd, b_input_condition cond );
 gboolean dcc_abort( dcc_file_transfer_t *df, char *reason, ... );
 
-/* As defined in ft.h */
-file_transfer_t *imcb_file_send_start( struct im_connection *ic, char *handle, char *file_name, size_t file_size )
-{
-	user_t *u = user_findhandle( ic, handle );
-	/* one could handle this more intelligent like imcb_buddy_msg.
-	 * can't call it directly though cause it does some wrapping.
-	 * Maybe give imcb_buddy_msg a parameter NO_WRAPPING? */
-	if (!u) return NULL;
-
-	return dccs_send_start( ic, u->nick, file_name, file_size );
-};
-
-/* As defined in ft.h */
-void imcb_file_canceled( file_transfer_t *file, char *reason )
-{
-	if( file->canceled )
-		file->canceled( file, reason );
-
-	dcc_close( file );
-}
-
-/* As defined in ft.h */
-gboolean imcb_file_recv_start( file_transfer_t *ft )
-{
-	return dccs_recv_start( ft );
-}
-
-/* As defined in ft.h */
-void imcb_file_finished( file_transfer_t *file )
-{
-	dcc_file_transfer_t *df = file->priv;
-
-	if( file->bytes_transferred >= file->file_size )
-		dcc_finish( file );
-	else
-		df->proto_finished = TRUE;
-}
-
-dcc_file_transfer_t *dcc_alloc_transfer( char *file_name, size_t file_size, struct im_connection *ic )
+dcc_file_transfer_t *dcc_alloc_transfer( const char *file_name, size_t file_size, struct im_connection *ic )
 {
 	file_transfer_t *file = g_new0( file_transfer_t, 1 );
 	dcc_file_transfer_t *df = file->priv = g_new0( dcc_file_transfer_t, 1 );
@@ -123,10 +84,11 @@ dcc_file_transfer_t *dcc_alloc_transfer( char *file_name, size_t file_size, stru
 }
 
 /* This is where the sending magic starts... */
-file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, char *file_name, size_t file_size )
+file_transfer_t *dccs_send_start( struct im_connection *ic, irc_user_t *iu, const char *file_name, size_t file_size )
 {
 	file_transfer_t *file;
 	dcc_file_transfer_t *df;
+	irc_t *irc = (irc_t *) ic->bee->ui_data;
 	struct sockaddr_storage saddr;
 	char *errmsg;
 	char host[HOST_NAME_MAX];
@@ -149,20 +111,20 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 
 	file->status = FT_STATUS_LISTENING;
 
-	if( !dccs_send_request( df, user_nick, &saddr ) )
+	if( !dccs_send_request( df, iu, &saddr ) )
 		return NULL;
 
 	/* watch */
 	df->watch_in = b_input_add( df->fd, GAIM_INPUT_READ, dccs_send_proto, df );
 
-	df->ic->irc->file_transfers = g_slist_prepend( df->ic->irc->file_transfers, file );
+	irc->file_transfers = g_slist_prepend( irc->file_transfers, file );
 
 	df->progress_timeout = b_timeout_add( DCC_MAX_STALL * 1000, dcc_progress, df );
 
 	imcb_log( ic, "File transfer request from %s for %s (%zd kb).\n"
 	              "Accept the file transfer if you'd like the file. If you don't, "
 	              "issue the 'transfers reject' command.",
-	              user_nick, file_name, file_size / 1024 );
+	              iu->nick, file_name, file_size / 1024 );
 
 	return file;
 }
@@ -215,7 +177,7 @@ gboolean dcc_progress( gpointer data, gint fd, b_input_condition cond )
 		return dcc_abort( df , msg ": %s", strerror( errno ) );
 
 /* Creates the "DCC SEND" line and sends it to the server */
-int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct sockaddr_storage *saddr )
+int dccs_send_request( struct dcc_file_transfer *df, irc_user_t *iu, struct sockaddr_storage *saddr )
 {
 	char ipaddr[INET6_ADDRSTRLEN]; 
 	const void *netaddr;
@@ -249,8 +211,7 @@ int dccs_send_request( struct dcc_file_transfer *df, char *user_nick, struct soc
 	cmd = g_strdup_printf( "\001DCC SEND %s %s %u %zu\001",
 				df->ft->file_name, ipaddr, port, df->ft->file_size );
 	
-	if ( !irc_msgfrom( df->ic->irc, user_nick, cmd ) )
-		return dcc_abort( df, "Couldn't send `DCC SEND' message to %s.", user_nick );
+	irc_send_msg_raw( iu, "PRIVMSG", iu->irc->user->nick, cmd );
 
 	g_free( cmd );
 
@@ -495,9 +456,10 @@ gboolean dccs_send_write( file_transfer_t *file, char *data, unsigned int data_l
 /*
  * Cleans up after a transfer.
  */
-static void dcc_close( file_transfer_t *file )
+void dcc_close( file_transfer_t *file )
 {
 	dcc_file_transfer_t *df = file->priv;
+	irc_t *irc = (irc_t *) df->ic->bee->ui_data;
 
 	if( file->free )
 		file->free( file );
@@ -513,7 +475,7 @@ static void dcc_close( file_transfer_t *file )
 	if( df->progress_timeout )
 		b_event_remove( df->progress_timeout );
 	
-	df->ic->irc->file_transfers = g_slist_remove( df->ic->irc->file_transfers, file );
+	irc->file_transfers = g_slist_remove( irc->file_transfers, file );
 	
 	g_free( df );
 	g_free( file->file_name );
@@ -543,6 +505,7 @@ void dcc_finish( file_transfer_t *file )
  */
 file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 {
+	irc_t *irc = (irc_t *) ic->bee->ui_data;
 	char *pattern = "SEND"
 		" (([^\"][^ ]*)|\"(([^\"]|\\\")*)\")"
 		" (([0-9]*)|([^ ]*))"
@@ -626,7 +589,7 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 		freeaddrinfo( rp );
 		g_free( input );
 
-		df->ic->irc->file_transfers = g_slist_prepend( df->ic->irc->file_transfers, ft );
+		irc->file_transfers = g_slist_prepend( irc->file_transfers, ft );
 
 		return ft;
 	}

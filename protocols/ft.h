@@ -167,9 +167,9 @@ file_transfer_t *imcb_file_send_start( struct im_connection *ic, char *user_nick
  * This should be called by a protocol when the transfer is canceled. Note that
  * the canceled() and free() callbacks given in file will be called by this function.
  */
-void imcb_file_canceled( file_transfer_t *file, char *reason );
+void imcb_file_canceled( struct im_connection *ic, file_transfer_t *file, char *reason );
 
-gboolean imcb_file_recv_start( file_transfer_t *ft );
+gboolean imcb_file_recv_start( struct im_connection *ic, file_transfer_t *ft );
 
-void imcb_file_finished( file_transfer_t *file );
+void imcb_file_finished( struct im_connection *ic, file_transfer_t *file );
 #endif

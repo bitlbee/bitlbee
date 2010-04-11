@@ -90,11 +90,11 @@ int jabber_si_check_features( struct jabber_transfer *tf, GSList *features ) {
 	}
 
 	if( !foundft )
-		imcb_file_canceled( tf->ft, "Buddy's client doesn't feature file transfers" );
+		imcb_file_canceled( tf->ic, tf->ft, "Buddy's client doesn't feature file transfers" );
 	else if( !foundbt )
-		imcb_file_canceled( tf->ft, "Buddy's client doesn't feature byte streams (required)" );
+		imcb_file_canceled( tf->ic, tf->ft, "Buddy's client doesn't feature byte streams (required)" );
 	else if( !foundsi )
-		imcb_file_canceled( tf->ft, "Buddy's client doesn't feature stream initiation (required)" );
+		imcb_file_canceled( tf->ic, tf->ft, "Buddy's client doesn't feature stream initiation (required)" );
 		
 	return foundft && foundbt && foundsi;
 }
@@ -108,7 +108,7 @@ void jabber_si_transfer_start( struct jabber_transfer *tf ) {
 	jabber_si_send_request( tf->ic, tf->bud->full_jid, tf );
 
 	/* and start the receive logic */
-	imcb_file_recv_start( tf->ft );
+	imcb_file_recv_start( tf->ic, tf->ft );
 
 }
 
@@ -155,7 +155,7 @@ void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, 
 
 	if( bud == NULL )
 	{
-		imcb_file_canceled( ft, "Couldn't find buddy (BUG?)" );
+		imcb_file_canceled( ic, ft, "Couldn't find buddy (BUG?)" );
 		return;
 	}
 	

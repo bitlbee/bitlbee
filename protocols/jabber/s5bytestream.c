@@ -565,7 +565,7 @@ gboolean jabber_bs_recv_handshake_abort( struct bs_transfer *bt, char *error )
 		imcb_log( tf->ic, "WARNING: Error transmitting bytestream response" );
 	xt_free_node( reply );
 
-	imcb_file_canceled( tf->ft, "couldn't connect to any streamhosts" );
+	imcb_file_canceled( tf->ic, tf->ft, "couldn't connect to any streamhosts" );
 
 	bt->tf->watch_in = 0;
 	/* MUST always return FALSE! */
@@ -602,7 +602,7 @@ void jabber_bs_recv_answer_request( struct bs_transfer *bt )
 	xt_add_attr( reply, "id", tf->iq_id );
 		
 	if( !jabber_write_packet( tf->ic, reply ) )
-		imcb_file_canceled( tf->ft, "Error transmitting bytestream response" );
+		imcb_file_canceled( tf->ic, tf->ft, "Error transmitting bytestream response" );
 	xt_free_node( reply );
 }
 
@@ -642,7 +642,7 @@ gboolean jabber_bs_recv_read( gpointer data, gint fd, b_input_condition cond )
 	tf->bytesread += ret;
 
 	if( tf->bytesread >= tf->ft->file_size )
-		imcb_file_finished( tf->ft );
+		imcb_file_finished( tf->ic, tf->ft );
 
 	tf->ft->write( tf->ft, tf->ft->buffer, ret );	
 
@@ -658,7 +658,7 @@ gboolean jabber_bs_recv_write_request( file_transfer_t *ft )
 
 	if( tf->watch_in )
 	{
-		imcb_file_canceled( ft, "BUG in jabber file transfer: write_request called when already watching for input" );
+		imcb_file_canceled( tf->ic, ft, "BUG in jabber file transfer: write_request called when already watching for input" );
 		return FALSE;
 	}
 	
@@ -704,7 +704,7 @@ gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, unsigned int l
 		return jabber_bs_abort( bt, "send() sent %d instead of %d (send buffer too big!)", ret, len );
 
 	if( tf->byteswritten >= ft->file_size )
-		imcb_file_finished( ft );
+		imcb_file_finished( tf->ic, ft );
 	else
 		bt->tf->watch_out = b_input_add( tf->fd, GAIM_INPUT_WRITE, jabber_bs_send_can_write, bt );
 		
@@ -1004,7 +1004,7 @@ gboolean jabber_bs_send_request( struct jabber_transfer *tf, GSList *streamhosts
 	jabber_cache_add( tf->ic, iq, jabber_bs_send_handle_reply );
 
 	if( !jabber_write_packet( tf->ic, iq ) )
-		imcb_file_canceled( tf->ft, "Error transmitting bytestream request" );
+		imcb_file_canceled( tf->ic, tf->ft, "Error transmitting bytestream request" );
 	return TRUE;
 }
 
@@ -1019,7 +1019,7 @@ gboolean jabber_bs_send_handshake_abort(struct bs_transfer *bt, char *error )
 		  error );
 
 	if( jd->streamhosts==NULL ) /* we're done here unless we have a proxy to try */
-		imcb_file_canceled( tf->ft, error );
+		imcb_file_canceled( tf->ic, tf->ft, error );
 
 	/* MUST always return FALSE! */
 	return FALSE;

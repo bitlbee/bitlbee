@@ -391,7 +391,7 @@ static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *
 		{
 			if( ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
 			{
-				if( initial || imcb_find_buddy( ic, jid ) == NULL )
+				if( initial || bee_user_by_handle( ic->bee, ic, jid ) == NULL )
 					imcb_add_buddy( ic, jid, ( group && group->text_len ) ?
 					                           group->text : NULL );
 				
@@ -589,7 +589,7 @@ static xt_status jabber_add_to_roster_callback( struct im_connection *ic, struct
 	    ( s = xt_find_attr( node, "type" ) ) &&
 	    strcmp( s, "result" ) == 0 )
 	{
-		if( imcb_find_buddy( ic, jid ) == NULL )
+		if( bee_user_by_handle( ic->bee, ic, jid ) == NULL )
 			imcb_add_buddy( ic, jid, NULL );
 	}
 	else

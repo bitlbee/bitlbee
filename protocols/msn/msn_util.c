@@ -95,8 +95,7 @@ static void msn_buddy_ask_yes( void *data )
 	
 	msn_buddy_list_add( bla->ic, "AL", bla->handle, bla->realname );
 	
-	if( imcb_find_buddy( bla->ic, bla->handle ) == NULL )
-		imcb_ask_add( bla->ic, bla->handle, NULL );
+	imcb_ask_add( bla->ic, bla->handle, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla->realname );

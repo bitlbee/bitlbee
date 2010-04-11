@@ -690,6 +690,8 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 				/* PANIC! */
 			}
 		}
+#if 0
+		// Disable MSN ft support for now.
 		else if( g_strncasecmp( ct, "text/x-msmsgsinvite", 19 ) == 0 )
 		{
 			char *command = msn_findheader( body, "Invitation-Command:", blen );
@@ -722,6 +724,7 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 			
 			g_free( command );
 		}
+#endif
 		else if( g_strncasecmp( ct, "application/x-msnmsgrp2p", 24 ) == 0 ) 
 		{
 			imcb_error( sb->ic, "Cannot receive file from %s: BitlBee does not "
