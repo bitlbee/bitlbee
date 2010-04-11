@@ -566,7 +566,6 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 }
 
-#if 0
 static void cmd_add( irc_t *irc, char **cmd )
 {
 	account_t *a;
@@ -579,7 +578,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 		cmd ++;
 	}
 	
-	if( !( a = account_get( irc, cmd[1] ) ) )
+	if( !( a = account_get( irc->b, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
 		return;
@@ -597,7 +596,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "The requested nick `%s' is invalid", cmd[3] );
 			return;
 		}
-		else if( user_find( irc, cmd[3] ) )
+		else if( irc_user_by_name( irc, cmd[3] ) )
 		{
 			irc_usermsg( irc, "The requested nick `%s' already exists", cmd[3] );
 			return;
@@ -611,14 +610,37 @@ static void cmd_add( irc_t *irc, char **cmd )
 	if( add_on_server )
 		a->ic->acc->prpl->add_buddy( a->ic, cmd[2], NULL );
 	else
-		/* Yeah, officially this is a call-*back*... So if we just
-		   called add_buddy, we'll wait for the IM server to respond
-		   before we do this. */
-		imcb_add_buddy( a->ic, cmd[2], NULL );
+		/* Only for add -tmp. For regular adds, this callback will
+		   be called once the IM server confirms. */
+		bee_user_new( irc->b, a->ic, cmd[2] );
 	
 	irc_usermsg( irc, "Adding `%s' to your contact list", cmd[2]  );
 }
 
+static void cmd_remove( irc_t *irc, char **cmd )
+{
+	irc_user_t *iu;
+	bee_user_t *bu;
+	char *s;
+	
+	if( !( iu = irc_user_by_name( irc, cmd[1] ) ) || !( bu = iu->bu ) )
+	{
+		irc_usermsg( irc, "Buddy `%s' not found", cmd[1] );
+		return;
+	}
+	s = g_strdup( bu->handle );
+	
+	bu->ic->acc->prpl->remove_buddy( bu->ic, bu->handle, NULL );
+	nick_del( bu->ic->acc, bu->handle );
+	irc_user_free( irc, cmd[1] );
+	
+	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
+	g_free( s );
+	
+	return;
+}
+
+#if 0
 static void cmd_info( irc_t *irc, char **cmd )
 {
 	struct im_connection *ic;
@@ -730,28 +752,6 @@ char *set_eval_control_channel( set_t *set, char *new_name )
 	}
 	
 	return strcmp( irc->channel, new_name ) == 0 ? new_name : SET_INVALID;
-}
-
-static void cmd_remove( irc_t *irc, char **cmd )
-{
-	user_t *u;
-	char *s;
-	
-	if( !( u = user_find( irc, cmd[1] ) ) || !u->ic )
-	{
-		irc_usermsg( irc, "Buddy `%s' not found", cmd[1] );
-		return;
-	}
-	s = g_strdup( u->handle );
-	
-	u->ic->acc->prpl->remove_buddy( u->ic, u->handle, NULL );
-	nick_del( u->ic->acc, u->handle );
-	user_del( irc, cmd[1] );
-	
-	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
-	g_free( s );
-	
-	return;
 }
 
 static void cmd_block( irc_t *irc, char **cmd )
@@ -872,6 +872,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Buddy `%s' moved from your block- to your allow-list", cmd[2] );
 	}
 }
+#endif
 
 static void cmd_yesno( irc_t *irc, char **cmd )
 {
@@ -916,6 +917,7 @@ static void cmd_set( irc_t *irc, char **cmd )
 	cmd_set_real( irc, cmd, NULL, NULL );
 }
 
+#if 0
 static void cmd_blist( irc_t *irc, char **cmd )
 {
 	int online = 0, away = 0, offline = 0;
@@ -1183,18 +1185,20 @@ const command_t commands[] = {
 	{ "register",       1, cmd_register,       0 },
 	{ "drop",           1, cmd_drop,           0 },
 	{ "save",           0, cmd_save,           0 },
-#if 0
 	{ "add",            2, cmd_add,            0 },
+	{ "remove",         1, cmd_remove,         0 },
+#if 0
 	{ "info",           1, cmd_info,           0 },
 #endif
 	{ "rename",         2, cmd_rename,         0 },
 #if 0
-	{ "remove",         1, cmd_remove,         0 },
 	{ "block",          1, cmd_block,          0 },
 	{ "allow",          1, cmd_allow,          0 },
+#endif
 	{ "set",            0, cmd_set,            0 },
 	{ "yes",            0, cmd_yesno,          0 },
 	{ "no",             0, cmd_yesno,          0 },
+#if 0
 	{ "blist",          0, cmd_blist,          0 },
 	{ "nick",           1, cmd_nick,           0 },
 	{ "qlist",          0, cmd_qlist,          0 },
