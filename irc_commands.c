@@ -130,7 +130,10 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		ic = irc_channel_new( irc, cmd[1] );
 	
 	if( ic == NULL )
+	{
 		irc_send_num( irc, 479, "%s :Invalid channel name", cmd[1] );
+		return;
+	}
 	
 	if( ic->flags & IRC_CHANNEL_JOINED )
 		return; /* Dude, you're already there...
