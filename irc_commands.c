@@ -72,11 +72,7 @@ static void irc_cmd_user( irc_t *irc, char **cmd )
 
 static void irc_cmd_nick( irc_t *irc, char **cmd )
 {
-	if( irc->user->nick )
-	{
-		irc_send_num( irc, 438, ":The hand of the deity is upon thee, thy nick may not change" );
-	}
-	else if( irc_user_by_name( irc, cmd[1] ) )
+	if( irc_user_by_name( irc, cmd[1] ) )
 	{
 		irc_send_num( irc, 433, ":This nick is already in use" );
 	}
@@ -84,6 +80,17 @@ static void irc_cmd_nick( irc_t *irc, char **cmd )
 	{
 		/* [SH] Invalid characters. */
 		irc_send_num( irc, 432, ":This nick contains invalid characters" );
+	}
+	else if( irc->user->nick )
+	{
+		if( irc->status & USTATUS_IDENTIFIED )
+		{
+			irc_setpass( irc, NULL );
+			irc->status &= ~USTATUS_IDENTIFIED;
+			irc_umode_set( irc, "-R", 1 );
+		}
+		
+		irc_user_set_nick( irc->user, cmd[1] );
 	}
 	else
 	{
