@@ -503,69 +503,37 @@ void dcc_finish( file_transfer_t *file )
  * IP can be an unsigned int (IPV4) or something else (IPV6)
  * 
  */
-file_transfer_t *dcc_request( struct im_connection *ic, char *line )
+file_transfer_t *dcc_request( struct im_connection *ic, char* const* ctcp )
 {
 	irc_t *irc = (irc_t *) ic->bee->ui_data;
-	char *pattern = "SEND"
-		" (([^\"][^ ]*)|\"(([^\"]|\\\")*)\")"
-		" (([0-9]*)|([^ ]*))"
-		" ([0-9]*)"
-		" ([0-9]*)\001";
-	regmatch_t pmatch[10];
-	regex_t re;
 	file_transfer_t *ft;
 	dcc_file_transfer_t *df;
-	char errbuf[256];
-	int regerrcode, gret;
-
-	if( ( regerrcode = regcomp( &re, pattern, REG_EXTENDED ) ) ||
-	    ( regerrcode = regexec( &re, line, 10, pmatch, 0 ) ) ) {
-		regerror( regerrcode,&re,errbuf,sizeof( errbuf ) );
-		imcb_log( ic, 
-			  "DCC: error parsing 'DCC SEND': %s, line: %s", 
-			  errbuf, line );
-		return NULL;
-	}
-
-	if( ( pmatch[1].rm_so > 0 ) &&
-	    ( pmatch[5].rm_so > 0 ) &&
-	    ( pmatch[8].rm_so > 0 ) &&
-	    ( pmatch[9].rm_so > 0 ) )
+	int gret;
+	size_t filesize;
+	
+	if( ctcp[5] != NULL &&
+	    sscanf( ctcp[4], "%zd", &filesize ) == 1 && /* Just int. validation. */
+	    sscanf( ctcp[5], "%zd", &filesize ) == 1 )
 	{
-		char *input = g_strdup( line );
 		char *filename, *host, *port;
-		size_t filesize;
 		struct addrinfo hints, *rp;
-
-		/* "filename" or filename */
-		if ( pmatch[2].rm_so > 0 )
+		
+		filename = ctcp[2];
+		
+		host = ctcp[3];
+		while( *host && isdigit( *host ) ) host++; /* Just digits? */
+		if( *host == '\0' )
 		{
-			input[pmatch[2].rm_eo] = '\0';
-			filename = input + pmatch[2].rm_so;
-		} else
-		{
-			input[pmatch[3].rm_eo] = '\0';
-			filename = input + pmatch[3].rm_so;
-		}
-			
-		input[pmatch[5].rm_eo] = '\0';
-
-		/* number means ipv4, something else means ipv6 */
-		if ( pmatch[6].rm_so > 0 )
-		{
-			struct in_addr ipaddr = { .s_addr = htonl( strtoul( input + pmatch[5].rm_so, NULL, 10 ) ) };
+			struct in_addr ipaddr = { .s_addr = htonl( atoll( ctcp[3] ) ) };
 			host = inet_ntoa( ipaddr );
 		} else
 		{
 			/* Contains non-numbers, hopefully an IPV6 address */
-			host = input + pmatch[7].rm_so;
+			host = ctcp[3];
 		}
 
-		input[pmatch[8].rm_eo] = '\0';
-		input[pmatch[9].rm_eo] = '\0';
-
-		port = input + pmatch[8].rm_so;
-		filesize = atoll( input + pmatch[9].rm_so );
+		port = ctcp[4];
+		filesize = atoll( ctcp[5] );
 
 		memset( &hints, 0, sizeof ( struct addrinfo ) );
 		hints.ai_socktype = SOCK_STREAM;
@@ -573,7 +541,6 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 
 		if ( ( gret = getaddrinfo( host, port, &hints, &rp ) ) )
 		{
-			g_free( input );
 			imcb_log( ic, "DCC: getaddrinfo() failed with %s "
 				  "when parsing incoming 'DCC SEND': "
 				  "host %s, port %s", 
@@ -587,14 +554,13 @@ file_transfer_t *dcc_request( struct im_connection *ic, char *line )
 		memcpy( &df->saddr, rp->ai_addr, rp->ai_addrlen );
 
 		freeaddrinfo( rp );
-		g_free( input );
 
 		irc->file_transfers = g_slist_prepend( irc->file_transfers, ft );
 
 		return ft;
 	}
-
-	imcb_log( ic, "DCC: couldnt parse 'DCC SEND' line: %s", line );
+	else
+		imcb_log( ic, "DCC: couldnt parse `DCC SEND' line" );
 
 	return NULL;
 }

@@ -654,7 +654,10 @@ char **split_command_parts( char *command )
 		{
 			q = *s = 0;
 		}
-	cmd[k] = NULL;
+	
+	/* Full zero-padding for easier argc checking. */
+	while( k <= IRC_MAX_ARGS )
+		cmd[k++] = NULL;
 	
 	return cmd;
 }

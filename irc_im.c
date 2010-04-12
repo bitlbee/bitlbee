@@ -210,6 +210,25 @@ static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
 		return FALSE;
 }
 
+static gboolean bee_irc_user_ctcp( irc_user_t *iu, char *const *ctcp )
+{
+	if( ctcp[1] && g_strcasecmp( ctcp[0], "DCC" ) == 0
+	            && g_strcasecmp( ctcp[1], "SEND" ) == 0 )
+	{
+		if( iu->bu && iu->bu->ic && iu->bu->ic->acc->prpl->transfer_request )
+		{
+			file_transfer_t *ft = dcc_request( iu->bu->ic, ctcp );
+			if ( ft )
+				iu->bu->ic->acc->prpl->transfer_request( iu->bu->ic, ft, iu->bu->handle );
+			
+			return TRUE;
+		}
+	}
+	
+	return FALSE;
+}
+
 static const struct irc_user_funcs irc_user_im_funcs = {
 	bee_irc_user_privmsg,
+	bee_irc_user_ctcp,
 };

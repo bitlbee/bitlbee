@@ -97,7 +97,7 @@ typedef struct dcc_file_transfer {
 file_transfer_t *dccs_send_start( struct im_connection *ic, irc_user_t *iu, const char *file_name, size_t file_size );
 void dcc_canceled( file_transfer_t *file, char *reason );
 gboolean dccs_send_write( file_transfer_t *file, char *data, unsigned int data_size );
-file_transfer_t *dcc_request( struct im_connection *ic, char *line );
+file_transfer_t *dcc_request( struct im_connection *ic, char* const* ctcp );
 void dcc_finish( file_transfer_t *file );
 void dcc_close( file_transfer_t *file );
 gboolean dccs_recv_start( file_transfer_t *ft );
