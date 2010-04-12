@@ -1,8 +1,8 @@
 PORT=9876
 BITLBEE=/usr/sbin/bitlbee
 
-export TEST_SKYPE_ID=bitlbee-skype
-export TEST_SKYPE_PASSWORD=:9eQBgoh8
+export TEST_SKYPE_ID=user
+export TEST_SKYPE_PASSWORD=pass
 
 testfiles := $(wildcard irssi/*.test)
 tests := $(patsubst %.test,%,$(testfiles))
