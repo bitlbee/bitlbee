@@ -27,8 +27,9 @@ cd ..
 echo "[skyped]" > skyped.conf
 echo "username = $TEST_SKYPE_ID" >> skyped.conf
 echo "password = $(echo -n $TEST_SKYPE_PASSWORD|sha1sum|sed 's/ *-$//')" >> skyped.conf
-echo "cert = $(pwd)/etc/skyped.cert.pem" >> skyped.conf
-echo "key = $(pwd)/etc/skyped.key.pem" >> skyped.conf
+# we use ~ here to test that resolve that syntax works
+echo "cert = $(pwd|sed "s|$HOME|~|")/etc/skyped.cert.pem" >> skyped.conf
+echo "key = $(pwd|sed "s|$HOME|~|")/etc/skyped.key.pem" >> skyped.conf
 echo "port = 2727" >> skyped.conf
 
 # Run skyped

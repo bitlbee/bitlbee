@@ -278,8 +278,8 @@ if __name__=='__main__':
 	options.config.read(options.cfgpath)
 	options.config.username = options.config.get('skyped', 'username').split('#')[0]
 	options.config.password = options.config.get('skyped', 'password').split('#')[0]
-	options.config.sslkey = options.config.get('skyped', 'key').split('#')[0]
-	options.config.sslcert = options.config.get('skyped', 'cert').split('#')[0]
+	options.config.sslkey = os.path.expanduser(options.config.get('skyped', 'key').split('#')[0])
+	options.config.sslcert = os.path.expanduser(options.config.get('skyped', 'cert').split('#')[0])
 	# hack: we have to parse the parameters first to locate the
 	# config file but the -p option should overwrite the value from
 	# the config file
