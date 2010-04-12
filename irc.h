@@ -119,6 +119,7 @@ typedef struct irc_user
 struct irc_user_funcs
 {
 	gboolean (*privmsg)( irc_user_t *iu, const char *msg );
+	gboolean (*ctcp)( irc_user_t *iu, char * const* ctcp );
 };
 
 extern const struct irc_user_funcs irc_user_root_funcs;

@@ -254,16 +254,39 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 	if( !cmd[2] ) 
 	{
 		irc_send_num( irc, 412, ":No text to send" );
+		return;
 	}
-	else if( irc_channel_name_ok( cmd[1] ) &&
-	         ( ic = irc_channel_by_name( irc, cmd[1] ) ) )
+	
+	/* Don't treat CTCP actions as real CTCPs, just convert them right now. */
+	if( g_strncasecmp( cmd[2], "\001ACTION", 7 ) == 0 )
+	{
+		cmd[2] += 4;
+		strcpy( cmd[2], "/me" );
+		if( cmd[2][strlen(cmd[2])-1] == '\001' )
+			cmd[2][strlen(cmd[2])-1] = '\0';
+	}
+	
+	if( irc_channel_name_ok( cmd[1] ) &&
+	    ( ic = irc_channel_by_name( irc, cmd[1] ) ) )
 	{
 		if( ic->f->privmsg )
 			ic->f->privmsg( ic, cmd[2] );
 	}
 	else if( ( iu = irc_user_by_name( irc, cmd[1] ) ) )
 	{
-		if( iu->f->privmsg )
+		if( cmd[2][0] == '\001' )
+		{
+			char **ctcp;
+			
+			if( iu->f->ctcp == NULL )
+				return;
+			if( cmd[2][strlen(cmd[2])-1] == '\001' )
+				cmd[2][strlen(cmd[2])-1] = '\0';
+			
+			ctcp = split_command_parts( cmd[2] + 1 );
+			iu->f->ctcp( iu, ctcp );
+		}
+		else if( iu->f->privmsg )
 			iu->f->privmsg( iu, cmd[2] );
 	}
 	else

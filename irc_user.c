@@ -146,8 +146,18 @@ static gboolean root_privmsg( irc_user_t *iu, const char *msg )
 	return TRUE;
 }
 
+static gboolean root_ctcp( irc_user_t *iu, char * const *ctcp )
+{
+	if( g_strcasecmp( ctcp[0], "VERSION" ) == 0 )
+	{
+	}
+	
+	return TRUE;
+}
+
 const struct irc_user_funcs irc_user_root_funcs = {
 	root_privmsg,
+	root_ctcp,
 };
 
 /* Echo to yourself: */

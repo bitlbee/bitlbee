@@ -67,4 +67,6 @@ G_MODULE_EXPORT gboolean ssl_sockerr_again( void *ssl );
 
 G_MODULE_EXPORT int md5_verify_password( char *password, char *hash );
 
+G_MODULE_EXPORT char **split_command_parts( char *command );
+
 #endif
