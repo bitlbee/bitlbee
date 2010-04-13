@@ -41,8 +41,8 @@ int bitlbee_daemon_init()
 	int i;
 	FILE *fp;
 	
-	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
-	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
+	log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
+	log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
 	
 	memset( &hints, 0, sizeof( hints ) );
 	hints.ai_family = PF_UNSPEC;
@@ -144,6 +144,12 @@ int bitlbee_daemon_init()
 		log_message( LOGLVL_WARNING, "Warning: Couldn't write PID to `%s'", global.conf->pidfile );
 	}
 #endif
+	
+	if( !global.conf->nofork )
+	{
+		log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
+	}
 	
 	return( 0 );
 }
