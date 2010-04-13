@@ -1,11 +1,39 @@
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
+/* Some IM-core stuff                                                   */
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
+
+#define BITLBEE_CORE
 #include "bitlbee.h"
+
+static char *set_eval_away_status( set_t *set, char *value );
 
 bee_t *bee_new()
 {
 	bee_t *b = g_new0( bee_t, 1 );
 	set_t *s;
 	
-	s = set_add( &b->set, "away", NULL, NULL/*set_eval_away_status*/, b );
+	s = set_add( &b->set, "away", NULL, set_eval_away_status, b );
 	s->flags |= SET_NULL_OK;
 	s = set_add( &b->set, "auto_connect", "true", set_eval_bool, b );
 	s = set_add( &b->set, "auto_reconnect", "true", set_eval_bool, b );
@@ -14,7 +42,7 @@ bee_t *bee_new()
 	s = set_add( &b->set, "password", NULL, NULL/*set_eval_password*/, b );
 	s->flags |= SET_NULL_OK;
 	s = set_add( &b->set, "save_on_quit", "true", set_eval_bool, b );
-	s = set_add( &b->set, "status", NULL, NULL/*set_eval_away_status*/, b );
+	s = set_add( &b->set, "status", NULL, set_eval_away_status, b );
 	s->flags |= SET_NULL_OK;
 	s = set_add( &b->set, "strip_html", "true", NULL, b );
 	
@@ -44,4 +72,23 @@ void bee_free( bee_t *b )
 		set_del( &b->set, b->set->key );
 	
 	g_free( b );
+}
+
+static char *set_eval_away_status( set_t *set, char *value )
+{
+	bee_t *bee = set->data;
+	account_t *a;
+	
+	g_free( set->value );
+	set->value = g_strdup( value );
+	
+	for( a = bee->accounts; a; a = a->next )
+	{
+		struct im_connection *ic = a->ic;
+		
+		if( ic && ic->flags & OPT_LOGGED_IN )
+			imc_away_send_update( ic );
+	}
+	
+	return value;
 }

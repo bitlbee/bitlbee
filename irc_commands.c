@@ -351,7 +351,6 @@ static void irc_cmd_nickserv( irc_t *irc, char **cmd )
 
 
 #if 0
-//#if 0
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
 	if( global.conf->oper_pass &&
@@ -523,40 +522,37 @@ static void irc_cmd_topic( irc_t *irc, char **cmd )
 		irc_topic( irc, channel );
 	}
 }
+#endif
 
 static void irc_cmd_away( irc_t *irc, char **cmd )
 {
-	user_t *u = user_find( irc, irc->nick );
-	char *away = cmd[1];
+	char *set;
 	
-	if( !u ) return;
-	
-	if( away && *away )
+	if( cmd[1] && *cmd[1] )
 	{
+		char away[strlen(cmd[1])+1];
 		int i, j;
 		
 		/* Copy away string, but skip control chars. Mainly because
 		   Jabber really doesn't like them. */
-		u->away = g_malloc( strlen( away ) + 1 );
-		for( i = j = 0; away[i]; i ++ )
-			if( ( u->away[j] = away[i] ) >= ' ' )
+		for( i = j = 0; cmd[1][i]; i ++ )
+			if( ( away[j] = cmd[1][i] ) >= ' ' )
 				j ++;
-		u->away[j] = 0;
+		away[j] = '\0';
 		
-		irc_send_num( irc, 306, ":You're now away: %s", u->away );
-		/* irc_umode_set( irc, irc->myhost, "+a" ); */
+		irc_send_num( irc, 306, ":You're now away: %s", away );
+		set = away;
 	}
 	else
 	{
-		if( u->away ) g_free( u->away );
-		u->away = NULL;
-		/* irc_umode_set( irc, irc->myhost, "-a" ); */
 		irc_send_num( irc, 305, ":Welcome back" );
+		set = NULL;
 	}
 	
-	set_setstr( &irc->set, "away", u->away );
+	set_setstr( &irc->b->set, "away", set );
 }
 
+#if 0
 static void irc_cmd_version( irc_t *irc, char **cmd )
 {
 	irc_send_num( irc, 351, "bitlbee-%s. %s :%s/%s ", BITLBEE_VERSION, irc->myhost, ARCH, CPU );
@@ -612,6 +608,7 @@ static const command_t irc_commands[] = {
 	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
+	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
 #if 0
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
@@ -620,7 +617,6 @@ static const command_t irc_commands[] = {
 	{ "ison",        1, irc_cmd_ison,        IRC_CMD_LOGGED_IN },
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
-	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
 	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
