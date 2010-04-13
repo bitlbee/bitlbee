@@ -78,7 +78,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		   at a *valid* configuration file. */
 	}
 	
-	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:u:" ) ) >= 0 )
+	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:u:V" ) ) >= 0 )
 	/*     ^^^^ Just to make sure we skip this step from the REHASH handler. */
 	{
 		if( opt == 'i' )
@@ -144,7 +144,14 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "  -c  Load alternative configuration file\n"
 			        "  -d  Specify alternative user configuration directory\n"
 			        "  -x  Command-line interface to password encryption/hashing\n"
-			        "  -h  Show this help page.\n" );
+			        "  -h  Show this help page.\n"
+			        "  -V  Show version info.\n" );
+			return NULL;
+		}
+		else if( opt == 'V' )
+		{
+			printf( "BitlBee %s\nAPI version %06x\n",
+			        BITLBEE_VERSION, BITLBEE_VERSION_CODE );
 			return NULL;
 		}
 		else if( opt == 'R' )
