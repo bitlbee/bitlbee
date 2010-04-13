@@ -325,7 +325,9 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			imcb_add_buddy(ic, buf, NULL);
 			g_free(buf);
 		}
-	} else if (!strncmp(ptr, "FULLNAME ", 9))
+	} else if (!strncmp(ptr, "MOOD_TEXT ", 10) && set_getbool(&ic->acc->set, "show_moods"))
+		imcb_log(ic, "User `%s' changed mood text to `%s'", user, ptr + 10);
+	else if (!strncmp(ptr, "FULLNAME ", 9))
 		sd->info_fullname = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "PHONE_HOME ", 11))
 		sd->info_phonehome = g_strdup(ptr + 11);
@@ -1234,6 +1236,8 @@ static void skype_init(account_t *acc)
 
 	s = set_add(&acc->set, "test_join", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "show_moods", "false", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "edit_prefix", "EDIT:",
 			NULL, acc);
