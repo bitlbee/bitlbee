@@ -182,11 +182,12 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	struct twitter_data *td;
 
 	ic = req->data;
-	td = ic->proto_data;
 
 	// Check if the connection is still active.
 	if( !g_slist_find( twitter_connections, ic ) )
 		return;
+	
+	td = ic->proto_data;
 
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
@@ -467,13 +468,15 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList *list)
 static void twitter_http_get_home_timeline(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct twitter_data *td = ic->proto_data;
+	struct twitter_data *td;
 	struct xt_parser *parser;
 	struct twitter_xml_list *txl;
 
 	// Check if the connection is still active.
 	if( !g_slist_find( twitter_connections, ic ) )
 		return;
+	
+	td = ic->proto_data;
 
 	// Check if the HTTP request went well.
 	if (req->status_code == 200)
@@ -528,7 +531,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 static void twitter_http_get_statuses_friends(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct twitter_data *td = ic->proto_data;
+	struct twitter_data *td;
 	struct xt_parser *parser;
 	struct twitter_xml_list *txl;
 	GSList *l = NULL;
@@ -537,7 +540,9 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	// Check if the connection is still active.
 	if( !g_slist_find( twitter_connections, ic ) )
 		return;
-
+	
+	td = ic->proto_data;
+	
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
