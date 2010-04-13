@@ -119,6 +119,19 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, t
 	return TRUE;
 }
 
+static gboolean bee_irc_user_typing( bee_t *bee, bee_user_t *bu, uint32_t flags )
+{
+	irc_t *irc = (irc_t *) bee->ui_data;
+	
+	if( set_getbool( &bee->set, "typing_notice" ) )
+		irc_send_msg_f( (irc_user_t *) bu->ui_data, "PRIVMSG", irc->user->nick,
+		                "\001TYPING %d\001", ( flags >> 8 ) & 3 );
+	else
+		return FALSE;
+	
+	return TRUE;
+}
+
 static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 {
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
@@ -192,6 +205,7 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_user_fullname,
 	bee_irc_user_status,
 	bee_irc_user_msg,
+	bee_irc_user_typing,
 	
 	bee_irc_ft_in_start,
 	bee_irc_ft_out_start,

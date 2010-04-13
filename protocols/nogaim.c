@@ -526,24 +526,6 @@ void imcb_ask_add( struct im_connection *ic, const char *handle, const char *rea
 	           imcb_ask_add_cb_yes, imcb_ask_add_cb_no, data );
 }
 
-void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
-{
-#if 0
-	user_t *u;
-	
-	if( !set_getbool( &ic->bee->set, "typing_notice" ) )
-		return;
-	
-	if( ( u = user_findhandle( ic, handle ) ) )
-	{
-		char buf[256]; 
-		
-		g_snprintf( buf, 256, "\1TYPING %d\1", ( flags >> 8 ) & 3 );
-		irc_privmsg( ic->irc, u, "PRIVMSG", ic->irc->nick, NULL, buf );
-	}
-#endif
-}
-
 struct bee_user *imcb_buddy_by_handle( struct im_connection *ic, const char *handle )
 {
 	return bee_user_by_handle( ic->bee, ic, handle );

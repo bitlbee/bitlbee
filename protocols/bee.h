@@ -70,6 +70,7 @@ typedef struct bee_ui_funcs
 	gboolean (*user_fullname)( bee_t *bee, bee_user_t *bu );
 	gboolean (*user_status)( bee_t *bee, struct bee_user *bu, struct bee_user *old );
 	gboolean (*user_msg)( bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at );
+	gboolean (*user_typing)( bee_t *bee, bee_user_t *bu, guint32 flags );
 	
 	struct file_transfer* (*ft_in_start)( bee_t *bee, bee_user_t *bu, const char *file_name, size_t file_size );
 	gboolean (*ft_out_start)( struct im_connection *ic, struct file_transfer *ft );
