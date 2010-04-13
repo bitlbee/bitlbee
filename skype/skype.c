@@ -325,8 +325,21 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			imcb_add_buddy(ic, buf, NULL);
 			g_free(buf);
 		}
-	} else if (!strncmp(ptr, "MOOD_TEXT ", 10) && set_getbool(&ic->acc->set, "show_moods"))
-		imcb_log(ic, "User `%s' changed mood text to `%s'", user, ptr + 10);
+	} else if (!strncmp(ptr, "MOOD_TEXT ", 10) && set_getbool(&ic->acc->set, "show_moods")) {
+		char *buf = g_strdup_printf("%s@skype.com", user);
+		user_t *u = user_findhandle(ic, buf);
+		g_free(buf);
+		buf = ptr + 10;
+		if (u) {
+			if (u->status_msg)
+				g_free(u->status_msg);
+			if (strlen(buf))
+				u->status_msg = g_strdup(buf);
+			else
+				u->status_msg = NULL;
+		}
+		imcb_log(ic, "User `%s' changed mood text to `%s'", user, buf);
+	}
 	else if (!strncmp(ptr, "FULLNAME ", 9))
 		sd->info_fullname = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "PHONE_HOME ", 11))
