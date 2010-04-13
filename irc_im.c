@@ -224,6 +224,20 @@ static gboolean bee_irc_user_ctcp( irc_user_t *iu, char *const *ctcp )
 			return TRUE;
 		}
 	}
+	else if( g_strcasecmp( ctcp[0], "TYPING" ) == 0 )
+	{
+		if( iu->bu && iu->bu->ic && iu->bu->ic->acc->prpl->send_typing && ctcp[1] )
+		{
+			int st = ctcp[1][0];
+			if( st >= '0' && st <= '2' )
+			{
+				st <<= 8;
+				iu->bu->ic->acc->prpl->send_typing( iu->bu->ic, iu->bu->handle, st );
+			}
+			
+			return TRUE;
+		}
+	}
 	
 	return FALSE;
 }
