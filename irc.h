@@ -200,6 +200,7 @@ void irc_send_whois( irc_user_t *iu );
 void irc_send_who( irc_t *irc, GSList *l, const char *channel );
 void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix );
 void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const char *msg );
+void irc_send_msg_f( irc_user_t *iu, const char *type, const char *dst, const char *format, ... ) G_GNUC_PRINTF( 4, 5 );
 void irc_send_nick( irc_user_t *iu, const char *new );
 
 /* irc_user.c */

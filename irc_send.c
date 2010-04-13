@@ -302,6 +302,19 @@ void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const 
 	           iu->nick, iu->user, iu->host, type, dst, msg );
 }
 
+void irc_send_msg_f( irc_user_t *iu, const char *type, const char *dst, const char *format, ... )
+{
+	char text[IRC_MAX_LINE];
+	va_list params;
+	
+	va_start( params, format );
+	g_vsnprintf( text, IRC_MAX_LINE, format, params );
+	va_end( params );
+	
+	irc_write( iu->irc, ":%s!%s@%s %s %s :%s",
+	           iu->nick, iu->user, iu->host, type, dst, text );
+}
+
 void irc_send_nick( irc_user_t *iu, const char *new )
 {
 	irc_write( iu->irc, ":%s!%s@%s NICK %s",
