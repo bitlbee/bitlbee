@@ -495,6 +495,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	if( !xml_printf( fd, 0, "</user>\n" ) )
 		goto write_error;
 	
+	fsync( fd );
 	close( fd );
 	
 	path2 = g_strndup( path, strlen( path ) - 1 );
