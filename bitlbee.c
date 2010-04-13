@@ -114,6 +114,7 @@ int bitlbee_daemon_init()
 		else if( i != 0 ) 
 			exit( 0 );
 		
+		setsid();
 		chdir( "/" );
 		
 		if( getenv( "_BITLBEE_RESTART_STATE" ) == NULL )
