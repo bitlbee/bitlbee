@@ -33,6 +33,7 @@
 gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 {
 	struct im_connection *ic = data;
+	
 	// Check if we are still logged in...
 	// We are logged in if the flag says so and the connection is still in the connections list.
 	if (!g_slist_find( twitter_connections, ic ) ||

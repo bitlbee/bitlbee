@@ -97,7 +97,7 @@ static void txl_free(struct twitter_xml_list *txl)
 /**
  * Add a buddy if it is not allready added, set the status to logged in.
  */
-static void twitter_add_buddy(struct im_connection *ic, char *name)
+static void twitter_add_buddy(struct im_connection *ic, char *name, const char *fullname)
 {
 	struct twitter_data *td = ic->proto_data;
 
@@ -106,6 +106,7 @@ static void twitter_add_buddy(struct im_connection *ic, char *name)
 	{
 		// The buddy is not in the list, add the buddy and set the status to logged in.
 		imcb_add_buddy( ic, name, NULL );
+		imcb_rename_buddy( ic, name, fullname );
 		if (set_getbool( &ic->acc->set, "use_groupchat" ))
 			imcb_chat_add_buddy( td->home_timeline_gc, name );
 		else
@@ -421,7 +422,7 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 	for ( l = list; l ; l = g_slist_next(l) )
 	{
 		status = l->data;
-		twitter_add_buddy(ic, status->user->screen_name);
+		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
 		
 		// Say it!
 		if (g_strcasecmp(td->user, status->user->screen_name) == 0)
@@ -536,7 +537,7 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	for ( l = txl->list; l ; l = g_slist_next(l) )
 	{
 		user = l->data;
-		twitter_add_buddy(ic, user->screen_name);
+		twitter_add_buddy(ic, user->screen_name, user->name);
 	}
 
 	// if the next_cursor is set to something bigger then 0 there are more friends to gather.
