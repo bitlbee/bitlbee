@@ -39,6 +39,7 @@ struct twitter_data
 	guint64 home_timeline_id;
 	gint main_loop_id;
 	struct groupchat *home_timeline_gc;
+	gint http_fails;
 };
 
 /**

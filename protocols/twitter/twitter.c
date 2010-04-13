@@ -35,9 +35,7 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 	struct im_connection *ic = data;
 	
 	// Check if we are still logged in...
-	// We are logged in if the flag says so and the connection is still in the connections list.
-	if (!g_slist_find( twitter_connections, ic ) ||
-	    (ic->flags & OPT_LOGGED_IN) != OPT_LOGGED_IN) 
+	if (!g_slist_find( twitter_connections, ic ))
 		return 0;
 
 	// If the user uses multiple private message windows we need to get the 
@@ -78,7 +76,6 @@ static void twitter_login( account_t *acc )
 	ic->proto_data = td;
 
 	imcb_log( ic, "Connecting to Twitter" );
-	imcb_connected(ic);
 
 	// Run this once. After this queue the main loop function.
 	twitter_main_loop(ic, -1, 0);

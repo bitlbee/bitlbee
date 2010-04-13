@@ -179,8 +179,10 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	struct im_connection *ic;
 	struct xt_parser *parser;
 	struct twitter_xml_list *txl;
+	struct twitter_data *td;
 
 	ic = req->data;
+	td = ic->proto_data;
 
 	// Check if the connection is still active.
 	if( !g_slist_find( twitter_connections, ic ) )
@@ -189,8 +191,12 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not retrieve friends. HTTP STATUS: %d", req->status_code);
+		if (++td->http_fails >= 5)
+			imcb_error(ic, "Could not retrieve friends. HTTP STATUS: %d", req->status_code);
+		
 		return;
+	} else {
+		td->http_fails = 0;
 	}
 
 	txl = g_new0(struct twitter_xml_list, 1);
@@ -461,6 +467,7 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList *list)
 static void twitter_http_get_home_timeline(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
+	struct twitter_data *td = ic->proto_data;
 	struct xt_parser *parser;
 	struct twitter_xml_list *txl;
 
@@ -469,9 +476,24 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 		return;
 
 	// Check if the HTTP request went well.
-	if (req->status_code != 200) {
+	if (req->status_code == 200)
+	{
+		td->http_fails = 0;
+		if (!ic->flags & OPT_LOGGED_IN)
+			imcb_connected(ic);
+	}
+	else if (req->status_code == 401)
+	{
+		imcb_error( ic, "Authentication failure" );
+		imc_logout( ic, FALSE );
+		return;
+	}
+	else
+	{
 		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not retrieve " TWITTER_HOME_TIMELINE_URL ". HTTP STATUS: %d", req->status_code);
+		if (++td->http_fails >= 5)
+			imcb_error(ic, "Could not retrieve " TWITTER_HOME_TIMELINE_URL ". HTTP STATUS: %d", req->status_code);
+		
 		return;
 	}
 
@@ -506,6 +528,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 static void twitter_http_get_statuses_friends(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
+	struct twitter_data *td = ic->proto_data;
 	struct xt_parser *parser;
 	struct twitter_xml_list *txl;
 	GSList *l = NULL;
@@ -518,8 +541,12 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL " HTTP STATUS: %d", req->status_code);
+		if (++td->http_fails >= 5)
+			imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL " HTTP STATUS: %d", req->status_code);
+		
 		return;
+	} else {
+		td->http_fails = 0;
 	}
 
 	txl = g_new0(struct twitter_xml_list, 1);
