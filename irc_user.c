@@ -144,8 +144,17 @@ const char *irc_user_get_away( irc_user_t *iu )
 		if( !bu->flags & BEE_USER_ONLINE )
 			return "Offline";
 		else if( bu->flags & BEE_USER_AWAY )
-			/* TODO: status msgs, etc. */
-			return bu->status;
+		{
+			if( bu->status_msg )
+			{
+				static char ret[MAX_STRING];
+				g_snprintf( ret, MAX_STRING - 1, "%s (%s)",
+				            bu->status ? : "Away", bu->status_msg );
+				return ret;
+			}
+			else
+				return bu->status ? : "Away";
+		}
 	}
 	
 	return NULL;

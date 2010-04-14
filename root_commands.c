@@ -880,11 +880,10 @@ static void cmd_set( irc_t *irc, char **cmd )
 	cmd_set_real( irc, cmd, NULL, NULL );
 }
 
-#if 0
 static void cmd_blist( irc_t *irc, char **cmd )
 {
 	int online = 0, away = 0, offline = 0;
-	user_t *u;
+	GSList *l;
 	char s[256];
 	char *format;
 	int n_online = 0, n_away = 0, n_offline = 0;
@@ -905,40 +904,58 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	else
 		format = "%-16.16s  %-40.40s  %s";
 	
-	irc_usermsg( irc, format, "Nick", "User/Host/Network", "Status" );
+	irc_usermsg( irc, format, "Nick", "Handle/Account", "Status" );
 	
-	for( u = irc->users; u; u = u->next ) if( u->ic && u->online && !u->away )
+	for( l = irc->users; l; l = l->next )
 	{
+		irc_user_t *iu = l->data;
+		bee_user_t *bu = iu->bu;
+		
+		if( !bu || ( bu->flags & ( BEE_USER_ONLINE | BEE_USER_AWAY ) ) != BEE_USER_ONLINE )
+			continue;
+		
 		if( online == 1 )
 		{
 			char st[256] = "Online";
 			
-			if( u->status_msg )
-				g_snprintf( st, sizeof( st ) - 1, "Online (%s)", u->status_msg );
+			if( bu->status_msg )
+				g_snprintf( st, sizeof( st ) - 1, "Online (%s)", bu->status_msg );
 			
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
-			irc_usermsg( irc, format, u->nick, s, st );
+			g_snprintf( s, sizeof( s ) - 1, "%s %s(%s)", bu->handle, bu->ic->acc->prpl->name, bu->ic->acc->user );
+			irc_usermsg( irc, format, iu->nick, s, st );
 		}
 		
 		n_online ++;
 	}
 
-	for( u = irc->users; u; u = u->next ) if( u->ic && u->online && u->away )
+	for( l = irc->users; l; l = l->next )
 	{
+		irc_user_t *iu = l->data;
+		bee_user_t *bu = iu->bu;
+		
+		if( !bu || !( bu->flags & BEE_USER_ONLINE ) || !( bu->flags & BEE_USER_AWAY ) )
+			continue;
+		
 		if( away == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
-			irc_usermsg( irc, format, u->nick, s, u->away );
+			g_snprintf( s, sizeof( s ) - 1, "%s %s(%s)", bu->handle, bu->ic->acc->prpl->name, bu->ic->acc->user );
+			irc_usermsg( irc, format, iu->nick, s, irc_user_get_away( iu ) );
 		}
 		n_away ++;
 	}
 	
-	for( u = irc->users; u; u = u->next ) if( u->ic && !u->online )
+	for( l = irc->users; l; l = l->next )
 	{
+		irc_user_t *iu = l->data;
+		bee_user_t *bu = iu->bu;
+		
+		if( !bu || bu->flags & BEE_USER_ONLINE )
+			continue;
+		
 		if( offline == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
-			irc_usermsg( irc, format, u->nick, s, "Offline" );
+			g_snprintf( s, sizeof( s ) - 1, "%s %s(%s)", bu->handle, bu->ic->acc->prpl->name, bu->ic->acc->user );
+			irc_usermsg( irc, format, iu->nick, s, "Offline" );
 		}
 		n_offline ++;
 	}
@@ -946,6 +963,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	irc_usermsg( irc, "%d buddies (%d available, %d away, %d offline)", n_online + n_away + n_offline, n_online, n_away, n_offline );
 }
 
+#if 0
 static void cmd_qlist( irc_t *irc, char **cmd )
 {
 	query_t *q = irc->queries;
@@ -1145,6 +1163,7 @@ static void cmd_transfer( irc_t *irc, char **cmd )
 const command_t commands[] = {
 	{ "account",        1, cmd_account,        0 },
 	{ "add",            2, cmd_add,            0 },
+	{ "blist",          0, cmd_blist,          0 },
 	{ "drop",           1, cmd_drop,           0 },
 	{ "help",           0, cmd_help,           0 }, 
 	{ "identify",       1, cmd_identify,       0 },
@@ -1158,11 +1177,9 @@ const command_t commands[] = {
 	{ "yes",            0, cmd_yesno,          0 },
 #if 0
 	{ "allow",          1, cmd_allow,          0 },
-	{ "blist",          0, cmd_blist,          0 },
 	{ "block",          1, cmd_block,          0 },
 	{ "chat",           1, cmd_chat,           0 },
 	{ "ft",             0, cmd_transfer,       0 },
-	{ "join_chat",      2, cmd_join_chat,      0 },
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "transfer",       0, cmd_transfer,       0 },
 #endif
