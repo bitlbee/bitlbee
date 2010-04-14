@@ -209,6 +209,7 @@ int irc_user_free( irc_t *irc, irc_user_t *iu );
 irc_user_t *irc_user_by_name( irc_t *irc, const char *nick );
 int irc_user_set_nick( irc_user_t *iu, const char *new );
 gint irc_user_cmp( gconstpointer a_, gconstpointer b_ );
+const char *irc_user_get_away( irc_user_t *iu );
 
 /* irc_util.c */
 char *set_eval_timezone( struct set *set, char *value );

@@ -132,6 +132,25 @@ gint irc_user_cmp( gconstpointer a_, gconstpointer b_ )
 	return strcmp( a->key, b->key );
 }
 
+const char *irc_user_get_away( irc_user_t *iu )
+{
+	irc_t *irc = iu->irc;
+	bee_user_t *bu = iu->bu;
+	
+	if( iu == irc->user )
+		return set_getstr( &irc->b->set, "away" );
+	else if( bu )
+	{
+		if( !bu->flags & BEE_USER_ONLINE )
+			return "Offline";
+		else if( bu->flags & BEE_USER_AWAY )
+			/* TODO: status msgs, etc. */
+			return bu->status;
+	}
+	
+	return NULL;
+}
+
 /* User-type dependent functions, for root/NickServ: */
 static gboolean root_privmsg( irc_user_t *iu, const char *msg )
 {

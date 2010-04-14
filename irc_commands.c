@@ -383,10 +383,10 @@ static void irc_cmd_invite( irc_t *irc, char **cmd )
 	
 	irc_send_num( irc, 482, "%s :Invite impossible; User/Channel non-existent or incompatible", channel );
 }
+#endif
 
 static void irc_cmd_userhost( irc_t *irc, char **cmd )
 {
-	user_t *u;
 	int i;
 	
 	/* [TV] Usable USERHOST-implementation according to
@@ -396,18 +396,18 @@ static void irc_cmd_userhost( irc_t *irc, char **cmd )
 	*/
 	
 	for( i = 1; cmd[i]; i ++ )
-		if( ( u = user_find( irc, cmd[i] ) ) )
-		{
-			if( u->online && u->away )
-				irc_send_num( irc, 302, ":%s=-%s@%s", u->nick, u->user, u->host );
-			else
-				irc_send_num( irc, 302, ":%s=+%s@%s", u->nick, u->user, u->host );
-		}
+	{
+		irc_user_t *iu = irc_user_by_name( irc, cmd[i] );
+		
+		if( iu )
+			irc_send_num( irc, 302, ":%s=%c%s@%s", iu->nick,
+			              irc_user_get_away( iu ) ? '-' : '+',
+			              iu->user, iu->host );
+	}
 }
 
 static void irc_cmd_ison( irc_t *irc, char **cmd )
 {
-	user_t *u;
 	char buff[IRC_MAX_LINE];
 	int lenleft, i;
 	
@@ -423,17 +423,20 @@ static void irc_cmd_ison( irc_t *irc, char **cmd )
 		this = cmd[i];
 		while( *this )
 		{
+			irc_user_t *iu;
+			
 			if( ( next = strchr( this, ' ' ) ) )
 				*next = 0;
 			
-			if( ( u = user_find( irc, this ) ) && u->online )
+			if( ( iu = irc_user_by_name( irc, this ) ) &&
+			    iu->bu && iu->bu->flags & BEE_USER_ONLINE )
 			{
-				lenleft -= strlen( u->nick ) + 1;
+				lenleft -= strlen( iu->nick ) + 1;
 				
 				if( lenleft < 0 )
 					break;
 				
-				strcat( buff, u->nick );
+				strcat( buff, iu->nick );
 				strcat( buff, " " );
 			}
 			
@@ -469,7 +472,7 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 	for( i = 1; cmd[i]; i ++ )
 	{
 		char *nick;
-		user_t *u;
+		irc_user_t *iu;
 		
 		if( !cmd[i][0] || !cmd[i][1] )
 			break;
@@ -477,17 +480,19 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 		nick = g_strdup( cmd[i] + 1 );
 		nick_lc( nick );
 		
-		u = user_find( irc, nick );
+		iu = irc_user_by_name( irc, nick );
 		
 		if( cmd[i][0] == '+' )
 		{
 			if( !g_hash_table_lookup( irc->watches, nick ) )
 				g_hash_table_insert( irc->watches, nick, nick );
 			
-			if( u && u->online )
-				irc_send_num( irc, 604, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "is online" );
+			if( iu && iu->bu && iu->bu->flags & BEE_USER_ONLINE )
+				irc_send_num( irc, 604, "%s %s %s %d :%s", iu->nick, iu->user,
+				              iu->host, (int) time( NULL ), "is online" );
 			else
-				irc_send_num( irc, 605, "%s %s %s %d :%s", nick, "*", "*", (int) time( NULL ), "is offline" );
+				irc_send_num( irc, 605, "%s %s %s %d :%s", nick, "*", "*",
+				              (int) time( NULL ), "is offline" );
 		}
 		else if( cmd[i][0] == '-' )
 		{
@@ -504,6 +509,7 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 	}
 }
 
+#if 0
 static void irc_cmd_topic( irc_t *irc, char **cmd )
 {
 	char *channel = cmd[1];
@@ -609,15 +615,15 @@ static const command_t irc_commands[] = {
 	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
 	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
 	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
-	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
-#if 0
-	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
-	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "userhost",    1, irc_cmd_userhost,    IRC_CMD_LOGGED_IN },
 	{ "ison",        1, irc_cmd_ison,        IRC_CMD_LOGGED_IN },
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
+#if 0
+	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
+	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
 #endif
+	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "deaf",        0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },

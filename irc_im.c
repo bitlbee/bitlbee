@@ -79,14 +79,27 @@ static gboolean bee_irc_user_free( bee_t *bee, bee_user_t *bu )
 static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old )
 {
 	irc_t *irc = bee->ui_data;
+	irc_user_t *iu = bu->ui_data;
 	irc_channel_t *ic = irc->channels->data; /* For now, just pick the first channel. */
 	
 	if( ( bu->flags & BEE_USER_ONLINE ) != ( old->flags & BEE_USER_ONLINE ) )
 	{
 		if( bu->flags & BEE_USER_ONLINE )
-			irc_channel_add_user( ic, (irc_user_t*) bu->ui_data );
+		{
+			if( g_hash_table_lookup( irc->watches, iu->key ) )
+				irc_send_num( irc, 600, "%s %s %s %d :%s", iu->nick, iu->user,
+				              iu->host, (int) time( NULL ), "logged online" );
+			
+			irc_channel_add_user( ic, iu );
+		}
 		else
-			irc_channel_del_user( ic, (irc_user_t*) bu->ui_data );
+		{
+			if( g_hash_table_lookup( irc->watches, iu->key ) )
+				irc_send_num( irc, 601, "%s %s %s %d :%s", iu->nick, iu->user,
+				              iu->host, (int) time( NULL ), "logged offline" );
+			
+			irc_channel_del_user( ic, iu );
+		}
 	}
 	
 	return TRUE;
