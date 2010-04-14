@@ -221,7 +221,8 @@ void irc_send_whois( irc_user_t *iu )
 		           bu->ic->acc->server && *bu->ic->acc->server ? bu->ic->acc->server : "",
 		           bu->ic->acc->prpl->name );
 		
-		if( bu->status || bu->status_msg )
+		if( ( bu->status && *bu->status ) ||
+		    ( bu->status_msg && *bu->status_msg ) )
 		{
 			int num = bu->flags & BEE_USER_AWAY ? 301 : 320;
 			
@@ -233,7 +234,7 @@ void irc_send_whois( irc_user_t *iu )
 	}
 	else
 	{
-		irc_send_num( irc, 312, "%s %s :%s", iu->nick, irc->root->host, IRCD_INFO " " BITLBEE_VERSION );
+		irc_send_num( irc, 312, "%s %s :%s", iu->nick, irc->root->host, IRCD_INFO );
 	}
 	
 	irc_send_num( irc, 318, "%s :End of /WHOIS list", iu->nick );
