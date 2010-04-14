@@ -197,18 +197,19 @@ void irc_free( irc_t * irc )
 {
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
-	/*
 	if( irc->status & USTATUS_IDENTIFIED && set_getbool( &irc->b->set, "save_on_quit" ) ) 
 		if( storage_save( irc, NULL, TRUE ) != STORAGE_OK )
-			irc_usermsg( irc, "Error while saving settings!" );
-	*/
+			log_message( LOGLVL_WARNING, "Error while saving settings for user %s", irc->user->nick );
 	
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
-	/*
 	while( irc->queries != NULL )
 		query_del( irc, irc->queries );
-	*/
+	
+	/* This is a little bit messy: bee_free() frees all b->users which
+	   calls us back to free the corresponding irc->users. So do this
+	   before we clear the remaining ones ourselves. */
+	bee_free( irc->b );
 	
 	while( irc->users )
 		irc_user_free( irc, (irc_user_t *) irc->users->data );
@@ -239,7 +240,6 @@ void irc_free( irc_t * irc )
 	
 	g_free( irc->sendbuffer );
 	g_free( irc->readbuffer );
-	
 	g_free( irc->password );
 	
 	g_free( irc );

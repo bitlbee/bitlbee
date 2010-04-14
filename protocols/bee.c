@@ -51,21 +51,19 @@ bee_t *bee_new()
 
 void bee_free( bee_t *b )
 {
-	account_t *acc = b->accounts;
-	
-	while( acc )
+	while( b->accounts )
 	{
-		if( acc->ic )
-			imc_logout( acc->ic, FALSE );
-		else if( acc->reconnect )
-			cancel_auto_reconnect( acc );
+		if( b->accounts->ic )
+			imc_logout( b->accounts->ic, FALSE );
+		else if( b->accounts->reconnect )
+			cancel_auto_reconnect( b->accounts );
 		
-		if( acc->ic == NULL )
-			account_del( b, acc );
+		if( b->accounts->ic == NULL )
+			account_del( b, b->accounts );
 		else
 			/* Nasty hack, but account_del() doesn't work in this
 			   case and we don't want infinite loops, do we? ;-) */
-			acc = acc->next;
+			b->accounts = b->accounts->next;
 	}
 	
 	while( b->set )
