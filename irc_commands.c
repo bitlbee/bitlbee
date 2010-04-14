@@ -350,7 +350,6 @@ static void irc_cmd_nickserv( irc_t *irc, char **cmd )
 
 
 
-#if 0
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
 	if( global.conf->oper_pass &&
@@ -367,6 +366,7 @@ static void irc_cmd_oper( irc_t *irc, char **cmd )
 	}
 }
 
+#if 0
 static void irc_cmd_invite( irc_t *irc, char **cmd )
 {
 	char *nick = cmd[1], *channel = cmd[2];
@@ -552,31 +552,30 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 	set_setstr( &irc->b->set, "away", set );
 }
 
-#if 0
 static void irc_cmd_version( irc_t *irc, char **cmd )
 {
-	irc_send_num( irc, 351, "bitlbee-%s. %s :%s/%s ", BITLBEE_VERSION, irc->myhost, ARCH, CPU );
+	irc_send_num( irc, 351, "bitlbee-%s. %s :%s/%s ",
+	              BITLBEE_VERSION, irc->root->host, ARCH, CPU );
 }
 
 static void irc_cmd_completions( irc_t *irc, char **cmd )
 {
-	user_t *u = user_find( irc, irc->mynick );
 	help_t *h;
 	set_t *s;
 	int i;
 	
-	irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS ", "OK" );
+	irc_send_msg_raw( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS OK" );
 	
 	for( i = 0; commands[i].command; i ++ )
-		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS ", commands[i].command );
+		irc_send_msg_f( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS %s", commands[i].command );
 	
 	for( h = global.help; h; h = h->next )
-		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS help ", h->title );
+		irc_send_msg_f( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS help %s", h->title );
 	
-	for( s = irc->set; s; s = s->next )
-		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS set ", s->key );
+	for( s = irc->b->set; s; s = s->next )
+		irc_send_msg_f( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS set %s", s->key );
 	
-	irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS ", "END" );
+	irc_send_msg_raw( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS END" );
 }
 
 static void irc_cmd_rehash( irc_t *irc, char **cmd )
@@ -588,7 +587,6 @@ static void irc_cmd_rehash( irc_t *irc, char **cmd )
 	
 	irc_send_num( irc, 382, "%s :Rehashing", global.conf_file );
 }
-#endif
 
 static const command_t irc_commands[] = {
 	{ "pass",        1, irc_cmd_pass,        0 },
@@ -609,16 +607,17 @@ static const command_t irc_commands[] = {
 	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
-#if 0
+	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
+	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
+#if 0
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
 	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "userhost",    1, irc_cmd_userhost,    IRC_CMD_LOGGED_IN },
 	{ "ison",        1, irc_cmd_ison,        IRC_CMD_LOGGED_IN },
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
-	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
-	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
+#endif
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "deaf",        0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
@@ -626,7 +625,6 @@ static const command_t irc_commands[] = {
 	{ "rehash",      0, irc_cmd_rehash,      IRC_CMD_OPER_ONLY },
 	{ "restart",     0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "kill",        2, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
-#endif
 	{ NULL }
 };
 
