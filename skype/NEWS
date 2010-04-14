@@ -1,5 +1,10 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.8.2         - building documentation is now optional
+              - new settings: test_join and show_moods
+              - '~' in skyped.conf is now expanded to the user's home directory
+	      - groupchat channel names are now persistent (requires
+	        BitlBee-1.2.6)
 0.8.1         - support for BitlBee 1.2.5
               - support for Skype 2.1.0.81 and Skype4Py 1.0.32.0
               - the plugin part now supports FreeBSD
