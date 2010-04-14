@@ -72,19 +72,22 @@ int main( int argc, char *argv[] )
 		log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
 	
 		i = bitlbee_inetd_init();
-		log_message( LOGLVL_INFO, "Bitlbee %s starting in inetd mode.", BITLBEE_VERSION );
+		log_message( LOGLVL_INFO, "BitlBee %s starting in inetd mode.", BITLBEE_VERSION );
 
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
-		log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
-		log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
+		log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
 
 		i = bitlbee_daemon_init();
-		log_message( LOGLVL_INFO, "Bitlbee %s starting in daemon mode.", BITLBEE_VERSION );
+		log_message( LOGLVL_INFO, "BitlBee %s starting in daemon mode.", BITLBEE_VERSION );
 	}
 	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
+		log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
+
 		/* In case the operator requests a restart, we need this. */
 		old_cwd = g_malloc( 256 );
 		if( getcwd( old_cwd, 255 ) == NULL )
@@ -95,7 +98,7 @@ int main( int argc, char *argv[] )
 		}
 		
 		i = bitlbee_daemon_init();
-		log_message( LOGLVL_INFO, "Bitlbee %s starting in forking daemon mode.", BITLBEE_VERSION );
+		log_message( LOGLVL_INFO, "BitlBee %s starting in forking daemon mode.", BITLBEE_VERSION );
 	}
 	if( i != 0 )
 		return( i );

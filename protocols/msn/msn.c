@@ -30,16 +30,13 @@ int msn_chat_id;
 GSList *msn_connections;
 GSList *msn_switchboards;
 
-static char *msn_set_display_name( set_t *set, char *value );
+static char *set_eval_display_name( set_t *set, char *value );
 
 static void msn_init( account_t *acc )
 {
-	set_t *s;
-	
-	s = set_add( &acc->set, "display_name", NULL, msn_set_display_name, acc );
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
-
-	s = set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
+	set_add( &acc->set, "display_name", NULL, set_eval_display_name, acc );
+	set_add( &acc->set, "local_display_name", "false", set_eval_bool, acc );
+	set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
 }
 
 static void msn_login( account_t *acc )
@@ -172,7 +169,7 @@ static void msn_set_away( struct im_connection *ic, char *state, char *message )
 
 static void msn_set_my_name( struct im_connection *ic, char *info )
 {
-	msn_set_display_name( set_find( &ic->acc->set, "display_name" ), info );
+	msn_set_display_name( ic, info );
 }
 
 static void msn_get_info(struct im_connection *ic, char *who) 
@@ -288,18 +285,14 @@ static int msn_send_typing( struct im_connection *ic, char *who, int typing )
 		return( 1 );
 }
 
-static char *msn_set_display_name( set_t *set, char *value )
+static char *set_eval_display_name( set_t *set, char *value )
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
-	struct msn_data *md;
-	char buf[1024], *fn;
 	
-	/* Double-check. */
+	/* Allow any name if we're offline. */
 	if( ic == NULL )
-		return NULL;
-	
-	md = ic->proto_data;
+		return value;
 	
 	if( strlen( value ) > 129 )
 	{
@@ -307,16 +300,10 @@ static char *msn_set_display_name( set_t *set, char *value )
 		return NULL;
 	}
 	
-	fn = msn_http_encode( value );
-	
-	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, ic->acc->user, fn );
-	msn_write( ic, buf, strlen( buf ) );
-	g_free( fn );
-	
 	/* Returning NULL would be better, because the server still has to
 	   confirm the name change. However, it looks a bit confusing to the
 	   user. */
-	return value;
+	return msn_set_display_name( ic, value ) ? value : NULL;
 }
 
 void msn_initmodule()

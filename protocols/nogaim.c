@@ -126,6 +126,7 @@ void nogaim_init()
 	extern void oscar_initmodule();
 	extern void byahoo_initmodule();
 	extern void jabber_initmodule();
+	extern void twitter_initmodule();
 
 #ifdef WITH_MSN
 	msn_initmodule();
@@ -141,6 +142,10 @@ void nogaim_init()
 	
 #ifdef WITH_JABBER
 	jabber_initmodule();
+#endif
+
+#ifdef WITH_TWITTER
+	twitter_initmodule();
 #endif
 
 #ifdef WITH_PLUGINS
@@ -559,6 +564,37 @@ struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 	return NULL;
 }
 
+void imcb_chat_name_hint( struct groupchat *c, const char *name )
+{
+#if 0
+	if( !c->joined )
+	{
+		struct im_connection *ic = c->ic;
+		char stripped[MAX_NICK_LENGTH+1], *full_name;
+		
+		strncpy( stripped, name, MAX_NICK_LENGTH );
+		stripped[MAX_NICK_LENGTH] = '\0';
+		nick_strip( stripped );
+		if( set_getbool( &ic->irc->set, "lcnicks" ) )
+			nick_lc( stripped );
+		
+		full_name = g_strdup_printf( "&%s", stripped );
+		
+		if( stripped[0] &&
+		    nick_cmp( stripped, ic->irc->channel + 1 ) != 0 &&
+		    irc_chat_by_channel( ic->irc, full_name ) == NULL )
+		{
+			g_free( c->channel );
+			c->channel = full_name;
+		}
+		else
+		{
+			g_free( full_name );
+		}
+	}
+#endif
+}
+
 void imcb_chat_free( struct groupchat *c )
 {
 #if 0
@@ -622,7 +658,11 @@ void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t fl
 	wrapped = word_wrap( msg, 425 );
 	if( c && u )
 	{
-		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, "", wrapped );
+		char *ts = NULL;
+		if( set_getbool( &ic->irc->set, "display_timestamps" ) )
+			ts = format_timestamp( ic->irc, sent_at );
+		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, ts ? : "", wrapped );
+		g_free( ts );
 	}
 	else
 	{
@@ -825,8 +865,6 @@ char *set_eval_away_devoice( set_t *set, char *value )
 }
 #endif
 
-
-
 /* The plan is to not allow straight calls to prpl functions anymore, but do
    them all from some wrappers. We'll start to define some down here: */
 
@@ -851,6 +889,10 @@ static char *imc_away_state_find( GList *gcm, char *away, char **message );
 int imc_away_send_update( struct im_connection *ic )
 {
 	char *away, *msg = NULL;
+	
+	if( ic->acc->prpl->away_states == NULL ||
+	    ic->acc->prpl->set_away == NULL )
+		return 0;
 	
 	away = set_getstr( &ic->acc->set, "away" ) ?
 	     : set_getstr( &ic->bee->set, "away" );

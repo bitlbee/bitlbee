@@ -98,16 +98,21 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, t
 	irc_channel_t *ic = irc->channels->data;
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
 	char *dst, *prefix = NULL;
-	char *wrapped;
+	char *wrapped, *ts = NULL;
+	
+	if( sent_at > 0 && set_getbool( &irc->b->set, "display_timestamps" ) )
+		ts = irc_format_timestamp( irc, sent_at );
 	
 	if( iu->flags & IRC_USER_PRIVATE )
 	{
 		dst = irc->user->nick;
+		prefix = ts;
+		ts = NULL;
 	}
 	else
 	{
 		dst = ic->name;
-		prefix = g_strdup_printf( "%s%s", irc->user->nick, set_getstr( &bee->set, "to_char" ) );
+		prefix = g_strdup_printf( "%s%s%s", irc->user->nick, set_getstr( &bee->set, "to_char" ), ts );
 	}
 	
 	wrapped = word_wrap( msg, 425 );
@@ -115,6 +120,7 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, t
 	
 	g_free( wrapped );
 	g_free( prefix );
+	g_free( ts );
 	
 	return TRUE;
 }
