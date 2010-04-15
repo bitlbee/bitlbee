@@ -40,7 +40,7 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 
 	// If the user uses multiple private message windows we need to get the 
 	// users buddies.
-	if (!set_getbool( &ic->acc->set, "use_groupchat" ))
+	if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "many") == 0)
 		twitter_get_statuses_friends(ic, -1);
 
 	// Do stuff..
@@ -50,11 +50,21 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 	return (ic->flags & OPT_LOGGED_IN) == OPT_LOGGED_IN;
 }
 
+static char *set_eval_mode( set_t *set, char *value )
+{
+	if( g_strcasecmp( value, "one" ) == 0 ||
+	    g_strcasecmp( value, "many" ) == 0 ||
+	    g_strcasecmp( value, "char" ) == 0 )
+		return value;
+	else
+		return NULL;
+}
 
 static void twitter_init( account_t *acc )
 {
 	set_t *s;
-	s = set_add( &acc->set, "use_groupchat", "false", set_eval_bool, acc );
+	
+	s = set_add( &acc->set, "mode", "one", set_eval_mode, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 }
 
@@ -66,6 +76,7 @@ static void twitter_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
 	struct twitter_data *td = g_new0( struct twitter_data, 1 );
+	char name[strlen(acc->user)+9];
 
 	twitter_connections = g_slist_append( twitter_connections, ic );
 
@@ -83,6 +94,10 @@ static void twitter_login( account_t *acc )
 	// Queue the main_loop
 	// Save the return value, so we can remove the timeout on logout.
 	td->main_loop_id = b_timeout_add(60000, twitter_main_loop, ic);
+	
+	sprintf( name, "twitter_%s", acc->user );
+	imcb_add_buddy( ic, name, NULL );
+	imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
 }
 
 /**
@@ -114,11 +129,12 @@ static void twitter_logout( struct im_connection *ic )
  */
 static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message, int away )
 {
-	// Let's just update the status.
-//	if ( g_strcasecmp(who, ic->acc->user) == 0 )
+	if (g_strncasecmp(who, "twitter_", 8) == 0 &&
+	    g_strcasecmp(who + 8, ic->acc->user) == 0)
 		twitter_post_status(ic, message);
-//	else
-//		twitter_direct_messages_new(ic, who, message);
+	else
+		twitter_direct_messages_new(ic, who, message);
+	
 	return( 0 );
 }
 

@@ -20,7 +20,7 @@
 
 			<description>
 				<para>
-					Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ) and Yahoo. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
+					Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ), Yahoo and Twitter. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
 				</para>
 			</description>
 			
@@ -72,11 +72,11 @@
 					</para>
 					
 					<para>
-						By default all your Twitter contacts will show up in your contact list and their tweets will show up as private messages or in &amp;bitlbee depending on your settings. If you want them in a separate channel, use the use_groupchat setting (see <emphasis>help set use_groupchat</emphasis>).
+						By default all your Twitter contacts will come from a contact called twitter_(yourusername). You can change this behaviour using the <emphasis>mode</emphasis> setting (see <emphasis>help set mode</emphasis>).
 					</para>
 					
 					<para>
-						To send tweets yourself, send them to any of your Twitter contacts via /query (doesn't matter who), or just write in the groupchat channel if you enabled that option.
+						To send tweets yourself, send them to the twitter_(yourusername) contact, or just write in the groupchat channel if you enabled that option.
 					</para>
 				</description>
 			</bitlbee-command>
@@ -658,6 +658,26 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="mode" type="string" scope="account">
+		<possible-values>one, many, chat</possible-values>
+		<default>one</default>
+
+		<description>
+			<para>
+				By default, everything from the Twitter module will come from one nick, twitter_(yourusername). If you prefer to have individual nicks for everyone, you can set this setting to "many" instead.
+			</para>
+			
+			<para>
+				If you prefer to have all your Twitter things in a separate channel, you can set this setting to "chat".
+			</para>
+			
+			<para>
+				In the last two modes, you can send direct messages by /msg'ing your contacts directly. Note, however, that incoming DMs are not fetched yet.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="nick" type="string" scope="chat">
 
 		<description>
@@ -915,16 +935,6 @@
 		<description>
 			<para>
 				Sends you a /notice when a user starts typing a message (if supported by the IM protocol and the user's client). To use this, you most likely want to use a script in your IRC client to show this information in a more sensible way.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="use_groupchat" type="boolean" scope="account">
-		<default>false</default>
-
-		<description>
-			<para>
-				By default the Twitter module shows all Twitter contacts and their Tweet in &amp;bitlbee and/or private messages. With this setting enabled the module will show all contacts and their Tweets in a separate channel.
 			</para>
 		</description>
 	</bitlbee-setting>
