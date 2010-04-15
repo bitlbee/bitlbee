@@ -473,6 +473,8 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList *list)
 		if( mode_one )
 			text = g_strdup_printf( "\002<\002%s\002>\002 %s",
 			                        status->user->screen_name, status->text );
+		else
+			twitter_add_buddy(ic, status->user->screen_name, status->user->name);
 		
 		imcb_buddy_msg( ic,
 		                mode_one ? from : status->user->screen_name,
