@@ -4,7 +4,9 @@ found in the bzr commit logs, for example you can try:
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
 Version 1.2.6:
-- Native (very basic) support for Twitter.
+- Native (very basic) support for Twitter, implemented by Geert Mulders.
+  Currently supported are posting tweets, reading the ones of people you
+  follow, and sending (not yet receiving!) direct messages.
 - Fixed format of status messages in /WHOIS to improve IRC client
   compatibility.
 - Show timestamps of offline messages/channel backlogs.
