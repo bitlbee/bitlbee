@@ -37,6 +37,7 @@ static void msn_init( account_t *acc )
 	set_add( &acc->set, "display_name", NULL, set_eval_display_name, acc );
 	set_add( &acc->set, "local_display_name", "false", set_eval_bool, acc );
 	set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
+	set_add( &acc->set, "switchboard_keepalives", "false", set_eval_bool, acc );
 }
 
 static void msn_login( account_t *acc )

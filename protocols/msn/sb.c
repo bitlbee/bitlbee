@@ -167,7 +167,18 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 		int i, j;
 		
 		/* Build the message. Convert LF to CR-LF for normal messages. */
-		if( strcmp( text, TYPING_NOTIFICATION_MESSAGE ) != 0 )
+		if( strcmp( text, TYPING_NOTIFICATION_MESSAGE ) == 0 )
+		{
+			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->acc->user );
+			buf = g_new0( char, i );
+			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->acc->user );
+		}
+		else if( strcmp( text, SB_KEEPALIVE_MESSAGE ) == 0 )
+		{
+			buf = g_strdup( SB_KEEPALIVE_HEADERS );
+			i = strlen( buf );
+		}
+		else
 		{
 			buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 + 1 );
 			i = strlen( MSN_MESSAGE_HEADERS );
@@ -180,12 +191,6 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 				
 				buf[i++] = text[j];
 			}
-		}
-		else
-		{
-			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->ic->acc->user );
-			buf = g_new0( char, i );
-			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->acc->user );
 		}
 		
 		/* Build the final packet (MSG command + the message). */
@@ -249,6 +254,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 	debug( "Destroying switchboard: %s", sb->who ? sb->who : sb->key ? sb->key : "" );
 	
 	msn_msgq_purge( ic, &sb->msgq );
+	msn_sb_stop_keepalives( sb );
 	
 	if( sb->key ) g_free( sb->key );
 	if( sb->who ) g_free( sb->who );
@@ -470,6 +476,8 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		sb->ready = 1;
+		
+		msn_sb_start_keepalives( sb, FALSE );
 	}
 	else if( strcmp( cmd[0], "CAL" ) == 0 )
 	{
@@ -518,6 +526,8 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 				
 				sb->msgq = g_slist_remove( sb->msgq, m );
 			}
+			
+			msn_sb_start_keepalives( sb, FALSE );
 			
 			return( st );
 		}
@@ -580,6 +590,8 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		
 		if( sb->who )
 		{
+			msn_sb_stop_keepalives( sb );
+			
 			/* This is a single-person chat, and the other person is leaving. */
 			g_free( sb->who );
 			sb->who = NULL;
@@ -762,4 +774,34 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 	}
 	
 	return( 1 );
+}
+
+static gboolean msn_sb_keepalive( gpointer data, gint source, b_input_condition cond )
+{
+	struct msn_switchboard *sb = data;
+	return sb->ready && msn_sb_sendmessage( sb, SB_KEEPALIVE_MESSAGE );
+}
+
+void msn_sb_start_keepalives( struct msn_switchboard *sb, gboolean initial )
+{
+	struct buddy *b;
+	
+	if( sb && sb->who && sb->keepalive == 0 &&
+	    ( b = imcb_find_buddy( sb->ic, sb->who ) ) && !b->present &&
+	    set_getbool( &sb->ic->acc->set, "switchboard_keepalives" ) )
+	{
+		if( initial )
+			msn_sb_keepalive( sb, 0, 0 );
+		
+		sb->keepalive = b_timeout_add( 20000, msn_sb_keepalive, sb );
+	}
+}
+
+void msn_sb_stop_keepalives( struct msn_switchboard *sb )
+{
+	if( sb && sb->keepalive > 0 )
+	{
+		b_event_remove( sb->keepalive );
+		sb->keepalive = 0;
+	}
 }
