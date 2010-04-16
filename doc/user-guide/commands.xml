@@ -886,6 +886,24 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="switchboard_keepalives" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				Turn on this flag if you have difficulties talking to offline/invisible contacts.
+			</para>
+			
+			<para>
+				With this setting enabled, BitlBee will send keepalives to MSN switchboards with offline/invisible contacts every twenty seconds. This should keep the server and client on the other side from shutting it down.
+			</para>
+			
+			<para>
+				This is useful because BitlBee doesn't support MSN offline messages yet and the MSN servers won't let the user reopen switchboards to offline users. Once offline messaging is supported, this flag might be removed.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="timezone" type="string" scope="global">
 		<default>local</default>
 		<possible-values>local, utc, gmt, timezone-spec</possible-values>
