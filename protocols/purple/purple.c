@@ -871,7 +871,7 @@ static void purple_ui_init()
 	purple_request_set_ui_ops( &bee_request_uiops );
 	purple_notify_set_ui_ops( &bee_notify_uiops );
 	purple_xfers_set_ui_ops( &bee_xfer_uiops );
-	purple_debug_set_ui_ops( &bee_debug_uiops );
+	//purple_debug_set_ui_ops( &bee_debug_uiops );
 }
 
 void purple_initmodule()
