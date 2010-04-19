@@ -3,7 +3,7 @@
 VERSION = 0.8.2
 DATE := $(shell date +%Y-%m-%d)
 # latest stable
-BITLBEE_VERSION = 1.2.5
+BITLBEE_VERSION = 1.2.6
 
 AMPATH = $(shell grep automake- $(shell which automake)|sed "s|.*'\(.*\)';|\1|")
 

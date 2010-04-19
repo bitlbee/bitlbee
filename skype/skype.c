@@ -768,19 +768,15 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		imcb_chat_free(gc);
 	if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
 		gc = imcb_chat_new(ic, id);
-#ifdef BITLBEE_VERSION_CODE
 #if BITLBEE_VERSION_CODE >= BITLBEE_VER(1, 2, 6)
 		imcb_chat_name_hint(gc, id);
-#endif
 #endif
 		skype_printf(ic, "GET CHAT %s ADDER\n", id);
 		skype_printf(ic, "GET CHAT %s TOPIC\n", id);
 	} else if (!strcmp(info, "STATUS DIALOG") && sd->groupchat_with) {
 		gc = imcb_chat_new(ic, id);
-#ifdef BITLBEE_VERSION_CODE
 #if BITLBEE_VERSION_CODE >= BITLBEE_VER(1, 2, 6)
 		imcb_chat_name_hint(gc, id);
-#endif
 #endif
 		/* According to the docs this
 		 * is necessary. However it
