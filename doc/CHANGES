@@ -17,9 +17,12 @@ Version 1.2.6:
 - Better handling of XMPP contacts with multiple resources on-line. Default
   behaviour now is to write to wherever the last message came from, or to
   the bare JID (usually becomes a broadcast) if there wasn't any recent msg.
+- Added a switchboard_keepalives setting which should solve some issues with
+  talking to offline MSN contacts. (Although full support for offline
+  messages is not ready yet!)
 - The usual misc. bug fixes.
 
-Finished ...
+Finished 19 Apr 2010
 
 Version 1.2.5:
 - Many bug fixes, including a fix for MSN login issues, Jabber login timing
