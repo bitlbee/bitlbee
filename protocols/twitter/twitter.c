@@ -54,7 +54,7 @@ static char *set_eval_mode( set_t *set, char *value )
 {
 	if( g_strcasecmp( value, "one" ) == 0 ||
 	    g_strcasecmp( value, "many" ) == 0 ||
-	    g_strcasecmp( value, "char" ) == 0 )
+	    g_strcasecmp( value, "chat" ) == 0 )
 		return value;
 	else
 		return NULL;

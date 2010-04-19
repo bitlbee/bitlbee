@@ -34,7 +34,7 @@
 #define _WIN32_WINNT 0x0501
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "1.2.6"
+#define BITLBEE_VERSION "1.2.6a"
 #define VERSION BITLBEE_VERSION
 #define BITLBEE_VER(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 #define BITLBEE_VERSION_CODE BITLBEE_VER(1, 2, 6)

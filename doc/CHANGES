@@ -3,6 +3,12 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 1.2.6a:
+- Fixed a typo that renders the Twitter groupchat mode unusable. A last-
+  minute change that came a few minutes late.
+
+Finished 19 Apr 2010
+
 Version 1.2.6:
 - Native (very basic) support for Twitter, implemented by Geert Mulders.
   Currently supported are posting tweets, reading the ones of people you
