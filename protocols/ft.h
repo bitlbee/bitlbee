@@ -106,6 +106,7 @@ typedef struct file_transfer {
 	 * IM-protocol specific data associated with this file transfer.
 	 */
 	gpointer data;
+	struct im_connection *ic;
 	
 	/*
 	 * Private data.

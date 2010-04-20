@@ -77,7 +77,7 @@ dcc_file_transfer_t *dcc_alloc_transfer( const char *file_name, size_t file_size
 	file->file_size = file_size;
 	file->file_name = g_strdup( file_name );
 	file->local_id = local_transfer_id++;
-	df->ic = ic;
+	file->ic = df->ic = ic;
 	df->ft = file;
 	
 	return df;

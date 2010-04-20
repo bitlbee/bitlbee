@@ -963,7 +963,6 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	irc_usermsg( irc, "%d buddies (%d available, %d away, %d offline)", n_online + n_away + n_offline, n_online, n_away, n_offline );
 }
 
-#if 0
 static void cmd_qlist( irc_t *irc, char **cmd )
 {
 	query_t *q = irc->queries;
@@ -984,6 +983,7 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
 }
 
+#if 0
 static set_t **cmd_chat_set_findhead( irc_t *irc, char *id )
 {
 	struct chat *c;
@@ -1095,6 +1095,7 @@ static void cmd_chat( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat", cmd[1] );
 	}
 }
+#endif
 
 static void cmd_transfer( irc_t *irc, char **cmd )
 {
@@ -1144,20 +1145,19 @@ static void cmd_transfer( irc_t *irc, char **cmd )
 			if( file->status == FT_STATUS_LISTENING )
 			{
 				irc_usermsg( irc, "Rejecting file transfer for %s", file->file_name );
-				imcb_file_canceled( file, "Denied by user" );
+				imcb_file_canceled( file->ic, file, "Denied by user" );
 			}
 			break;
 		case CANCEL:
 			if( file->local_id == fid )
 			{
 				irc_usermsg( irc, "Canceling file transfer for %s", file->file_name );
-				imcb_file_canceled( file, "Canceled by user" );
+				imcb_file_canceled( file->ic, file, "Canceled by user" );
 			}
 			break;
 		}
 	}
 }
-#endif
 
 /* IMPORTANT: Keep this list sorted! The short command logic needs that. */
 const command_t commands[] = {
@@ -1165,23 +1165,23 @@ const command_t commands[] = {
 	{ "add",            2, cmd_add,            0 },
 	{ "blist",          0, cmd_blist,          0 },
 	{ "drop",           1, cmd_drop,           0 },
+	{ "ft",             0, cmd_transfer,       0 },
 	{ "help",           0, cmd_help,           0 }, 
 	{ "identify",       1, cmd_identify,       0 },
 	{ "info",           1, cmd_info,           0 },
 	{ "no",             0, cmd_yesno,          0 },
+	{ "qlist",          0, cmd_qlist,          0 },
 	{ "register",       1, cmd_register,       0 },
 	{ "remove",         1, cmd_remove,         0 },
 	{ "rename",         2, cmd_rename,         0 },
 	{ "save",           0, cmd_save,           0 },
 	{ "set",            0, cmd_set,            0 },
+	{ "transfer",       0, cmd_transfer,       0 },
 	{ "yes",            0, cmd_yesno,          0 },
 #if 0
 	{ "allow",          1, cmd_allow,          0 },
 	{ "block",          1, cmd_block,          0 },
 	{ "chat",           1, cmd_chat,           0 },
-	{ "ft",             0, cmd_transfer,       0 },
-	{ "qlist",          0, cmd_qlist,          0 },
-	{ "transfer",       0, cmd_transfer,       0 },
 #endif
 	{ NULL }
 };
