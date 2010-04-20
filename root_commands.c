@@ -716,13 +716,14 @@ char *set_eval_control_channel( set_t *set, char *new_name )
 	
 	return strcmp( irc->channel, new_name ) == 0 ? new_name : SET_INVALID;
 }
+#endif
 
 static void cmd_block( irc_t *irc, char **cmd )
 {
 	struct im_connection *ic;
 	account_t *a;
 	
-	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->ic )
+	if( !cmd[2] && ( a = account_get( irc->b, cmd[1] ) ) && a->ic )
 	{
 		char *format;
 		GSList *l;
@@ -735,8 +736,9 @@ static void cmd_block( irc_t *irc, char **cmd )
 		irc_usermsg( irc, format, "Handle", "Nickname" );
 		for( l = a->ic->deny; l; l = l->next )
 		{
-			user_t *u = user_findhandle( a->ic, l->data );
-			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+			bee_user_t *bu = bee_user_by_handle( irc->b, a->ic, l->data );
+			irc_user_t *iu = bu ? bu->ui_data : NULL;
+			irc_usermsg( irc, format, l->data, iu ? iu->nick : "(none)" );
 		}
 		irc_usermsg( irc, "End of list." );
 		
@@ -744,16 +746,16 @@ static void cmd_block( irc_t *irc, char **cmd )
 	}
 	else if( !cmd[2] )
 	{
-		user_t *u = user_find( irc, cmd[1] );
-		if( !u || !u->ic )
+		irc_user_t *iu = irc_user_by_name( irc, cmd[1] );
+		if( !iu || !iu->bu )
 		{
 			irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 			return;
 		}
-		ic = u->ic;
-		cmd[2] = u->handle;
+		ic = iu->bu->ic;
+		cmd[2] = iu->bu->handle;
 	}
-	else if( !( a = account_get( irc, cmd[1] ) ) )
+	else if( !( a = account_get( irc->b, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
 		return;
@@ -781,7 +783,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	struct im_connection *ic;
 	account_t *a;
 	
-	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->ic )
+	if( !cmd[2] && ( a = account_get( irc->b, cmd[1] ) ) && a->ic )
 	{
 		char *format;
 		GSList *l;
@@ -794,8 +796,9 @@ static void cmd_allow( irc_t *irc, char **cmd )
 		irc_usermsg( irc, format, "Handle", "Nickname" );
 		for( l = a->ic->permit; l; l = l->next )
 		{
-			user_t *u = user_findhandle( a->ic, l->data );
-			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+			bee_user_t *bu = bee_user_by_handle( irc->b, a->ic, l->data );
+			irc_user_t *iu = bu ? bu->ui_data : NULL;
+			irc_usermsg( irc, format, l->data, iu ? iu->nick : "(none)" );
 		}
 		irc_usermsg( irc, "End of list." );
 		
@@ -803,16 +806,16 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	}
 	else if( !cmd[2] )
 	{
-		user_t *u = user_find( irc, cmd[1] );
-		if( !u || !u->ic )
+		irc_user_t *iu = irc_user_by_name( irc, cmd[1] );
+		if( !iu || !iu->bu )
 		{
 			irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 			return;
 		}
-		ic = u->ic;
-		cmd[2] = u->handle;
+		ic = iu->bu->ic;
+		cmd[2] = iu->bu->handle;
 	}
-	else if( !( a = account_get( irc, cmd[1] ) ) )
+	else if( !( a = account_get( irc->b, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
 		return;
@@ -835,7 +838,6 @@ static void cmd_allow( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Buddy `%s' moved from your block- to your allow-list", cmd[2] );
 	}
 }
-#endif
 
 static void cmd_yesno( irc_t *irc, char **cmd )
 {
@@ -1163,7 +1165,9 @@ static void cmd_transfer( irc_t *irc, char **cmd )
 const command_t commands[] = {
 	{ "account",        1, cmd_account,        0 },
 	{ "add",            2, cmd_add,            0 },
+	{ "allow",          1, cmd_allow,          0 },
 	{ "blist",          0, cmd_blist,          0 },
+	{ "block",          1, cmd_block,          0 },
 	{ "drop",           1, cmd_drop,           0 },
 	{ "ft",             0, cmd_transfer,       0 },
 	{ "help",           0, cmd_help,           0 }, 
@@ -1179,8 +1183,6 @@ const command_t commands[] = {
 	{ "transfer",       0, cmd_transfer,       0 },
 	{ "yes",            0, cmd_yesno,          0 },
 #if 0
-	{ "allow",          1, cmd_allow,          0 },
-	{ "block",          1, cmd_block,          0 },
 	{ "chat",           1, cmd_chat,           0 },
 #endif
 	{ NULL }
