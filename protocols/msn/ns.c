@@ -34,6 +34,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts );
 static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
 static void msn_auth_got_passport_token( struct msn_auth_data *mad );
+static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name );
 
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 {
@@ -230,25 +231,10 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		else if( num_parts >= 7 && strcmp( cmd[2], "OK" ) == 0 )
 		{
-			set_t *s;
-			
 			if( num_parts == 7 )
-			{
-				http_decode( cmd[4] );
-				
-				strncpy( ic->displayname, cmd[4], sizeof( ic->displayname ) );
-				ic->displayname[sizeof(ic->displayname)-1] = 0;
-				
-				if( ( s = set_find( &ic->acc->set, "display_name" ) ) )
-				{
-					g_free( s->value );
-					s->value = g_strdup( cmd[4] );
-				}
-			}
+				msn_ns_got_display_name( ic, cmd[4] );
 			else
-			{
 				imcb_log( ic, "Warning: Friendly name in server response was corrupted" );
-			}
 			
 			imcb_log( ic, "Authenticated, getting buddy list" );
 			
@@ -435,8 +421,12 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "FLN" ) == 0 )
 	{
-		if( cmd[1] )
-			imcb_buddy_status( ic, cmd[1], 0, NULL, NULL );
+		if( cmd[1] == NULL )
+			return 1;
+		
+		imcb_buddy_status( ic, cmd[1], 0, NULL, NULL );
+		
+		msn_sb_start_keepalives( msn_sb_by_handle( ic, cmd[1] ), TRUE );
 	}
 	else if( strcmp( cmd[0], "NLN" ) == 0 )
 	{
@@ -462,6 +452,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN | 
 		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ),
 		                   st->name, NULL );
+		
+		msn_sb_stop_keepalives( msn_sb_by_handle( ic, cmd[2] ) );
 	}
 	else if( strcmp( cmd[0], "RNG" ) == 0 )
 	{
@@ -566,6 +558,9 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		imc_logout( ic, allow_reconnect );
 		return( 0 );
 	}
+#if 0
+	/* Discard this one completely for now since I don't care about the ack
+	   and since MSN servers can apparently screw up the formatting. */
 	else if( strcmp( cmd[0], "REA" ) == 0 )
 	{
 		if( num_parts != 5 )
@@ -596,6 +591,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			imcb_rename_buddy( ic, cmd[3], cmd[4] );
 		}
 	}
+#endif
 	else if( strcmp( cmd[0], "IPG" ) == 0 )
 	{
 		imcb_error( ic, "Received IPG command, we don't handle them yet." );
@@ -743,5 +739,50 @@ static void msn_auth_got_passport_token( struct msn_auth_data *mad )
 	{
 		imcb_error( ic, "Error during Passport authentication: %s", mad->error );
 		imc_logout( ic, TRUE );
+	}
+}
+
+static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name )
+{
+	set_t *s;
+	
+	if( ( s = set_find( &ic->acc->set, "display_name" ) ) == NULL )
+		return FALSE; /* Shouldn't happen.. */
+	
+	http_decode( name );
+	
+	if( s->value && strcmp( s->value, name ) == 0 )
+	{
+		return TRUE;
+		/* The names match, nothing to worry about. */
+	}
+	else if( s->value != NULL &&
+	         ( strcmp( name, ic->acc->user ) == 0 ||
+	           set_getbool( &ic->acc->set, "local_display_name" ) ) )
+	{
+		/* The server thinks our display name is our e-mail address
+		   which is probably wrong, or the user *wants* us to do this:
+		   Always use the locally set display_name. */
+		return msn_set_display_name( ic, s->value );
+	}
+	else
+	{
+		if( s->value && *s->value )
+			imcb_log( ic, "BitlBee thinks your display name is `%s' but "
+			              "the MSN server says it's `%s'. Using the MSN "
+			              "server's name. Set local_display_name to true "
+			              "to use the local name.", s->value, name );
+		
+		if( g_utf8_validate( name, -1, NULL ) )
+		{
+			g_free( s->value );
+			s->value = g_strdup( name );
+		}
+		else
+		{
+			imcb_log( ic, "Warning: Friendly name in server response was corrupted" );
+		}
+		
+		return TRUE;
 	}
 }

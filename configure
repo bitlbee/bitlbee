@@ -25,6 +25,7 @@ msn=1
 jabber=1
 oscar=1
 yahoo=1
+twitter=1
 purple=0
 
 debug=0
@@ -66,6 +67,7 @@ Option		Description				Default
 --jabber=0/1	Disable/enable Jabber part		$jabber
 --oscar=0/1	Disable/enable Oscar part (ICQ, AIM)	$oscar
 --yahoo=0/1	Disable/enable Yahoo part		$yahoo
+--twitter=0/1 Disable/enable Twitter part		$twitter
 
 --purple=0/1	Disable/enable libpurple support	$purple
 
@@ -269,7 +271,7 @@ EOF
 
 detect_ldap()
 {
-	TMPFILE=$(mktemp)
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	if $CC -o $TMPFILE -shared -lldap 2>/dev/null >/dev/null; then
 		cat<<EOF>>Makefile.settings
 EFLAGS+=-lldap
@@ -297,7 +299,7 @@ int main()
 
 detect_resolv_dynamic()
 {
-	TMPFILE=$(mktemp)
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
 	echo "$RESOLV_TESTCODE" | $CC -o $TMPFILE -x c - -lresolv >/dev/null 2>/dev/null
 	if [ "$?" = "0" ]; then
@@ -311,7 +313,7 @@ detect_resolv_dynamic()
 
 detect_resolv_static()
 {
-	TMPFILE=$(mktemp)
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
 	for i in $systemlibdirs; do
 		if [ -f $i/libresolv.a ]; then
@@ -478,6 +480,20 @@ if [ -n "$BITLBEE_VERSION" ]; then
 	echo
 fi
 
+if ! make helloworld > /dev/null 2>&1; then
+	echo "WARNING: Your version of make (BSD make?) does not support BitlBee's makefiles."
+	echo "BitlBee needs GNU make to build properly. On most systems GNU make is available"
+	echo "under the name 'gmake'."
+	echo
+	if gmake helloworld > /dev/null 2>&1; then
+		echo "gmake seems to be available on your machine, great."
+		echo
+	else
+		echo "gmake is not installed (or not working). Please try to install it."
+		echo
+	fi
+fi
+
 cat <<EOF>bitlbee.pc
 prefix=$prefix
 includedir=$includedir
@@ -548,6 +564,14 @@ else
 	echo '#define WITH_YAHOO' >> config.h
 	protocols=$protocols'yahoo '
 	protoobjs=$protoobjs'yahoo_mod.o '
+fi
+
+if [ "$twitter" = 0 ]; then
+	echo '#undef WITH_TWITTER' >> config.h
+else
+	echo '#define WITH_TWITTER' >> config.h
+	protocols=$protocols'twitter '
+	protoobjs=$protoobjs'twitter_mod.o '
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then

@@ -20,7 +20,7 @@
 
 			<description>
 				<para>
-					Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ) and Yahoo. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
+					Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ), Yahoo and Twitter. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
 				</para>
 			</description>
 			
@@ -61,6 +61,24 @@
 					<ircline nick="wilmer">account add oscar 72696705 hobbelmeeuw</ircline>
 					<ircline nick="root">Account successfully added</ircline>
 				</ircexample>
+			</bitlbee-command>
+			
+			<bitlbee-command name="twitter">
+				<syntax>account add twitter &lt;handle&gt; &lt;password&gt;</syntax>
+
+				<description>
+					<para>
+						This module gives you simple access to Twitter. Although it uses the Twitter API, only Twitter itself is supported at the moment.
+					</para>
+					
+					<para>
+						By default all your Twitter contacts will come from a contact called twitter_(yourusername). You can change this behaviour using the <emphasis>mode</emphasis> setting (see <emphasis>help set mode</emphasis>).
+					</para>
+					
+					<para>
+						To send tweets yourself, send them to the twitter_(yourusername) contact, or just write in the groupchat channel if you enabled that option.
+					</para>
+				</description>
 			</bitlbee-command>
 
 			<bitlbee-command name="yahoo">
@@ -400,7 +418,7 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="auto_reconnect" type="boolean" scope="both">
-		<default>false</default>
+		<default>true</default>
 
 		<description>
 			<para>
@@ -559,6 +577,16 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="display_timestamps" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				When incoming messages are old (i.e. offline messages and channel backlogs), BitlBee will prepend them with a timestamp. If you find them ugly or useless, you can use this setting to hide them.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="handle_unknown" type="string" scope="global">
 		<default>root</default>
 		<possible-values>root, add, add_private, add_channel, ignore</possible-values>
@@ -608,12 +636,43 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="local_display_name" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				Mostly meant to work around a bug in MSN servers (forgetting the display name set by the user), this setting tells BitlBee to store your display name locally and set this name on the MSN servers when connecting.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="mail_notifications" type="boolean" scope="account">
 		<default>false</default>
 
 		<description>
 			<para>
 				Some protocols (MSN, Yahoo!) can notify via IM about new e-mail. Since most people use their Hotmail/Yahoo! addresses as a spam-box, this is disabled default. If you want these notifications, you can enable this setting.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="mode" type="string" scope="account">
+		<possible-values>one, many, chat</possible-values>
+		<default>one</default>
+
+		<description>
+			<para>
+				By default, everything from the Twitter module will come from one nick, twitter_(yourusername). If you prefer to have individual nicks for everyone, you can set this setting to "many" instead.
+			</para>
+			
+			<para>
+				If you prefer to have all your Twitter things in a separate channel, you can set this setting to "chat".
+			</para>
+			
+			<para>
+				In the last two modes, you can send direct messages by /msg'ing your contacts directly. Note, however, that incoming DMs are not fetched yet.
 			</para>
 		</description>
 
@@ -823,6 +882,39 @@
 			</para>
 			<para>
 				If BitlBee fails to detect this sometimes (most likely in AIM messages over an ICQ connection), you can set this setting to <emphasis>always</emphasis>, but this might sometimes accidentally strip non-HTML things too.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="switchboard_keepalives" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				Turn on this flag if you have difficulties talking to offline/invisible contacts.
+			</para>
+			
+			<para>
+				With this setting enabled, BitlBee will send keepalives to MSN switchboards with offline/invisible contacts every twenty seconds. This should keep the server and client on the other side from shutting it down.
+			</para>
+			
+			<para>
+				This is useful because BitlBee doesn't support MSN offline messages yet and the MSN servers won't let the user reopen switchboards to offline users. Once offline messaging is supported, this flag might be removed.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="timezone" type="string" scope="global">
+		<default>local</default>
+		<possible-values>local, utc, gmt, timezone-spec</possible-values>
+
+		<description>
+			<para>
+				If message timestamps are available for offline messages or chatroom backlogs, BitlBee will display them as part of the message. By default it will use the local timezone. If you're not in the same timezone as the BitlBee server, you can adjust the timestamps using this setting.
+			</para>
+
+			<para>
+				Values local/utc/gmt should be self-explanatory. timezone-spec is a time offset in hours:minutes, for example: -8 for Pacific Standard Time, +2 for Central European Summer Time, +5:30 for Indian Standard Time.
 			</para>
 		</description>
 	</bitlbee-setting>

@@ -3,6 +3,33 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 1.2.6a:
+- Fixed a typo that renders the Twitter groupchat mode unusable. A last-
+  minute change that came a few minutes late.
+
+Finished 19 Apr 2010
+
+Version 1.2.6:
+- Native (very basic) support for Twitter, implemented by Geert Mulders.
+  Currently supported are posting tweets, reading the ones of people you
+  follow, and sending (not yet receiving!) direct messages.
+- Fixed format of status messages in /WHOIS to improve IRC client
+  compatibility.
+- Show timestamps of offline messages/channel backlogs.
+- Allow saving MSN display names locally since sometimes this stuff breaks
+  server-side. (Use the local_display_name per-account setting.)
+- Suppress empty "Headline:" messages for certain new XMPP broadcast 
+  messages.
+- Better handling of XMPP contacts with multiple resources on-line. Default
+  behaviour now is to write to wherever the last message came from, or to
+  the bare JID (usually becomes a broadcast) if there wasn't any recent msg.
+- Added a switchboard_keepalives setting which should solve some issues with
+  talking to offline MSN contacts. (Although full support for offline
+  messages is not ready yet!)
+- The usual misc. bug fixes.
+
+Finished 19 Apr 2010
+
 Version 1.2.5:
 - Many bug fixes, including a fix for MSN login issues, Jabber login timing
   issues, Yahoo! crashes at login time with huge contact lists,
@@ -22,7 +49,7 @@ Version 1.2.5:
   routing issues on Jabber (i.e. messages going someone's phone instead of
   the main client).
 
-Fixed 17 Mar 2010
+Finished 17 Mar 2010
 
 Version 1.2.4:
 - Most important change (and main reason for releasing now): Upgraded Yahoo!

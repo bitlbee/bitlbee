@@ -307,6 +307,7 @@ G_MODULE_EXPORT void imcb_chat_invited( struct im_connection *ic, char *handle, 
  *   the user her/himself. At that point the group chat will be visible to the
  *   user, too. */
 G_MODULE_EXPORT struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle );
+G_MODULE_EXPORT void imcb_chat_name_hint( struct groupchat *c, const char *name );
 G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, const char *handle );
 /* To remove a handle from a group chat. Reason can be NULL. */
 G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char *reason );
@@ -329,6 +330,7 @@ void imc_add_block( struct im_connection *ic, char *handle );
 void imc_rem_block( struct im_connection *ic, char *handle );
 
 /* Misc. stuff */
+char *set_eval_timezone( set_t *set, char *value );
 char *set_eval_away_devoice( set_t *set, char *value );
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond );
 void cancel_auto_reconnect( struct account *a );
