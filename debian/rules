@@ -1,5 +1,6 @@
 #!/usr/bin/make -f
 
+BITLBEE_CONFIGURE_FLAGS ?=
 DEBUG ?= 0
 
 ifdef BITLBEE_VERSION
@@ -13,7 +14,7 @@ endif
 build-arch: build-arch-stamp
 build-arch-stamp:
 	[ -d debian ]
-	./configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent
+	./configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent $(BITLBEE_CONFIGURE_FLAGS)
 	$(MAKE)
 #	$(MAKE) -C doc/ all
 	touch build-arch-stamp
