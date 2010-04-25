@@ -25,9 +25,11 @@
 #include <gmodule.h>
 #include <stdlib.h>
 #include <string.h>
+#include "http_client.h"
 #include "base64.h"
 #include "misc.h"
 #include "sha1.h"
+#include "url.h"
 
 #define CONSUMER_KEY "xsDNKJuNZYkZyMcu914uEA"
 #define CONSUMER_SECRET "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo"
@@ -35,8 +37,18 @@
 
 #define HMAC_BLOCK_SIZE 64
 
-struct oauth_state
+struct oauth_info;
+typedef void (*oauth_cb)( struct oauth_info * );
+
+struct oauth_info
 {
+	oauth_cb func;
+	void *data;
+	
+	struct http_request *http;
+	
+	char *auth_params;
+	char *token;
 };
 
 static char *oauth_sign( const char *method, const char *url,
@@ -51,19 +63,19 @@ static char *oauth_sign( const char *method, const char *url,
 	/* Create K. If our current key is >64 chars we have to hash it,
 	   otherwise just pad. */
 	memset( key, 0, HMAC_BLOCK_SIZE );
-	i = strlen( CONSUMER_SECRET ) + 1 + token_secret ? strlen( token_secret ) : 0;
+	i = strlen( CONSUMER_SECRET ) + 1 + ( token_secret ? strlen( token_secret ) : 0 );
 	if( i > HMAC_BLOCK_SIZE )
 	{
 		sha1_init( &sha1 );
-		sha1_append( &sha1, CONSUMER_SECRET, strlen( CONSUMER_SECRET ) );
-		sha1_append( &sha1, "&", 1 );
+		sha1_append( &sha1, (uint8_t*) CONSUMER_SECRET, strlen( CONSUMER_SECRET ) );
+		sha1_append( &sha1, (uint8_t*) "&", 1 );
 		if( token_secret )
-			sha1_append( &sha1, token_secret, strlen( token_secret ) );
+			sha1_append( &sha1, (uint8_t*) token_secret, strlen( token_secret ) );
 		sha1_finish( &sha1, key );
 	}
 	else
 	{
-		g_snprintf( key, HMAC_BLOCK_SIZE + 1, "%s&%s",
+		g_snprintf( (gchar*) key, HMAC_BLOCK_SIZE + 1, "%s&%s",
 		            CONSUMER_SECRET, token_secret ? : "" );
 	}
 	
@@ -103,4 +115,198 @@ static char *oauth_sign( const char *method, const char *url,
 	
 	/* base64_encode it and we're done. */
 	return base64_encode( hash, sha1_hash_size );
+}
+
+static char *oauth_nonce()
+{
+	unsigned char bytes[9];
+	
+	random_bytes( bytes, sizeof( bytes ) );
+	return base64_encode( bytes, sizeof( bytes ) );
+}
+
+void oauth_params_add( GSList **params, const char *key, const char *value )
+{
+	char *item;
+	
+	item = g_strdup_printf( "%s=%s", key, value );
+	*params = g_slist_insert_sorted( *params, item, (GCompareFunc) strcmp );
+}
+
+void oauth_params_del( GSList **params, const char *key )
+{
+	int key_len = strlen( key );
+	GSList *l, *n;
+	
+	for( l = *params; l; l = n )
+	{
+		n = l->next;
+		
+		if( strncmp( (char*) l->data, key, key_len ) == 0 &&
+		    ((char*)l->data)[key_len] == '=' )
+		{
+			g_free( l->data );
+			*params = g_slist_remove( *params, l );
+		}
+	}
+}
+
+void oauth_params_set( GSList **params, const char *key, const char *value )
+{
+	oauth_params_del( params, key );
+	oauth_params_add( params, key, value );
+}
+
+const char *oauth_params_get( GSList **params, const char *key )
+{
+	int key_len = strlen( key );
+	GSList *l;
+	
+	for( l = *params; l; l = l->next )
+	{
+		if( strncmp( (char*) l->data, key, key_len ) == 0 &&
+		    ((char*)l->data)[key_len] == '=' )
+			return (const char*) l->data + key_len + 1;
+	}
+	
+	return NULL;
+}
+
+GSList *oauth_params_parse( char *in )
+{
+	GSList *ret = NULL;
+	char *amp, *eq;
+	
+	while( in && *in )
+	{
+		eq = strchr( in, '=' );
+		if( !eq )
+			break;
+		
+		*eq = '\0';
+		if( ( amp = strchr( eq + 1, '&' ) ) )
+			*amp = '\0';
+		
+		oauth_params_add( &ret, in, eq + 1 );
+		
+		*eq = '=';
+		if( amp == NULL )
+			break;
+		
+		*amp = '&';
+		in = amp + 1;
+	}
+	
+	return ret;
+}
+
+void oauth_params_free( GSList **params )
+{
+	while( params && *params )
+	{
+		g_free( (*params)->data );
+		*params = g_slist_remove( *params, (*params)->data );
+	}
+}
+
+char *oauth_params_string( GSList *params )
+{
+	GSList *l;
+	GString *str = g_string_new( "" );
+	
+	for( l = params; l; l = l->next )
+	{
+		g_string_append( str, l->data );
+		if( l->next )
+			g_string_append_c( str, '&' );
+	}
+	
+	return g_string_free( str, FALSE );
+}
+
+static void *oauth_post_request( const char *url, GSList **params_, http_input_function func, void *data )
+{
+	GSList *params = NULL;
+	char *s, *params_s, *post;
+	void *req;
+	url_t url_p;
+	
+	if( !url_set( &url_p, url ) )
+	{
+		oauth_params_free( params_ );
+		return NULL;
+	}
+	
+	if( params_ )
+		params = *params_;
+	
+	oauth_params_set( &params, "oauth_consumer_key", CONSUMER_KEY );
+	oauth_params_set( &params, "oauth_signature_method", "HMAC-SHA1" );
+	
+	s = g_strdup_printf( "%d", (int) time( NULL ) );
+	oauth_params_set( &params, "oauth_timestamp", s );
+	g_free( s );
+	
+	s = oauth_nonce();
+	oauth_params_set( &params, "oauth_nonce", s );
+	g_free( s );
+	
+	oauth_params_set( &params, "oauth_version", "1.0" );
+	oauth_params_set( &params, "oauth_callback", "oob" );
+	
+	params_s = oauth_params_string( params );
+	oauth_params_free( params_ );
+	
+	s = oauth_sign( "POST", url, params_s, NULL );
+	s = g_realloc( s, strlen( s ) * 3 + 1 );
+	http_encode( s );
+	
+	post = g_strdup_printf( "%s&oauth_signature=%s", params_s, s );
+	g_free( params_s );
+	g_free( s );
+	
+	s = g_strdup_printf( "POST %s HTTP/1.0\r\n"
+	                     "Host: %s\r\n"
+	                     "Content-Type: application/x-www-form-urlencoded\r\n"
+	                     "Content-Length: %zd\r\n"
+	                     "\r\n"
+	                     "%s", url_p.file, url_p.host, strlen( post ), post );
+	g_free( post );
+	
+	req = http_dorequest( url_p.host, url_p.port, url_p.proto == PROTO_HTTPS,
+	                      s, func, data );
+	g_free( s );
+	
+	return req;
+}
+
+void oauth_request_token_done( struct http_request *req );
+
+void *oauth_request_token( const char *url, oauth_cb func, void *data )
+{
+	struct oauth_info *st = g_new0( struct oauth_info, 1 );
+	
+	st->func = func;
+	st->data = data;
+	
+	return oauth_post_request( url, NULL, oauth_request_token_done, st );
+}
+
+void oauth_request_token_done( struct http_request *req )
+{
+	struct oauth_info *st = req->data;
+	
+	st->http = req;
+	
+	if( req->status_code == 200 )
+	{
+		GSList *params;
+		
+		st->auth_params = g_strdup( req->reply_body );
+		params = oauth_params_parse( st->auth_params );
+		st->token = g_strdup( oauth_params_get( &params, "oauth_token" ) );
+		oauth_params_free( &params );
+	}
+	
+	st->func( st );
 }
