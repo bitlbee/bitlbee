@@ -9,7 +9,7 @@
 -include ../Makefile.settings
 
 # [SH] Program variables
-objects = arc.o base64.o $(EVENT_HANDLER) http_client.o ini.o md5.o misc.o proxy.o sha1.o $(SSL_CLIENT) url.o xmltree.o
+objects = arc.o base64.o $(EVENT_HANDLER) http_client.o ini.o md5.o misc.o oauth.o proxy.o sha1.o $(SSL_CLIENT) url.o xmltree.o
 
 CFLAGS += -Wall
 LFLAGS += -r
