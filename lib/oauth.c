@@ -252,7 +252,6 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 	g_free( s );
 	
 	oauth_params_set( &params, "oauth_version", "1.0" );
-	oauth_params_set( &params, "oauth_callback", "oob" );
 	
 	params_s = oauth_params_string( params );
 	oauth_params_free( params_ );
@@ -280,19 +279,22 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 	return req;
 }
 
-void oauth_request_token_done( struct http_request *req );
+static void oauth_request_token_done( struct http_request *req );
 
 void *oauth_request_token( const char *url, oauth_cb func, void *data )
 {
 	struct oauth_info *st = g_new0( struct oauth_info, 1 );
+	GSList *params = NULL;
 	
 	st->func = func;
 	st->data = data;
 	
+	oauth_params_add( &params, "oauth_callback", "oob" );
+	
 	return oauth_post_request( url, NULL, oauth_request_token_done, st );
 }
 
-void oauth_request_token_done( struct http_request *req )
+static void oauth_request_token_done( struct http_request *req )
 {
 	struct oauth_info *st = req->data;
 	
@@ -308,5 +310,21 @@ void oauth_request_token_done( struct http_request *req )
 		oauth_params_free( &params );
 	}
 	
-	st->func( st );
+	//st->func( st );
+}
+
+static void oauth_access_token_done( struct http_request *req );
+
+void *oauth_access_token( const char *url, const char *pin, struct oauth_info *st )
+{
+	GSList *params = NULL;
+	
+	oauth_params_add( &params, "oauth_token", st->token );
+	oauth_params_add( &params, "oauth_verifier", pin );
+	
+	return oauth_post_request( url, &params, oauth_access_token_done, st );
+}
+
+static void oauth_access_token_done( struct http_request *req )
+{
 }
