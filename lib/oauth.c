@@ -49,6 +49,8 @@ struct oauth_info
 	
 	char *auth_params;
 	char *token;
+	
+	char *access_token;
 };
 
 static char *oauth_sign( const char *method, const char *url,
@@ -146,7 +148,7 @@ void oauth_params_del( GSList **params, const char *key )
 		    ((char*)l->data)[key_len] == '=' )
 		{
 			g_free( l->data );
-			*params = g_slist_remove( *params, l );
+			*params = g_slist_remove( *params, l->data );
 		}
 	}
 }
@@ -224,6 +226,24 @@ char *oauth_params_string( GSList *params )
 	return g_string_free( str, FALSE );
 }
 
+static void oauth_add_default_params( GSList **params )
+{
+	char *s;
+	
+	oauth_params_set( params, "oauth_consumer_key", CONSUMER_KEY );
+	oauth_params_set( params, "oauth_signature_method", "HMAC-SHA1" );
+	
+	s = g_strdup_printf( "%d", (int) time( NULL ) );
+	oauth_params_set( params, "oauth_timestamp", s );
+	g_free( s );
+	
+	s = oauth_nonce();
+	oauth_params_set( params, "oauth_nonce", s );
+	g_free( s );
+	
+	oauth_params_set( params, "oauth_version", "1.0" );
+}
+
 static void *oauth_post_request( const char *url, GSList **params_, http_input_function func, void *data )
 {
 	GSList *params = NULL;
@@ -240,18 +260,7 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 	if( params_ )
 		params = *params_;
 	
-	oauth_params_set( &params, "oauth_consumer_key", CONSUMER_KEY );
-	oauth_params_set( &params, "oauth_signature_method", "HMAC-SHA1" );
-	
-	s = g_strdup_printf( "%d", (int) time( NULL ) );
-	oauth_params_set( &params, "oauth_timestamp", s );
-	g_free( s );
-	
-	s = oauth_nonce();
-	oauth_params_set( &params, "oauth_nonce", s );
-	g_free( s );
-	
-	oauth_params_set( &params, "oauth_version", "1.0" );
+	oauth_add_default_params( &params );
 	
 	params_s = oauth_params_string( params );
 	oauth_params_free( params_ );
@@ -327,4 +336,61 @@ void *oauth_access_token( const char *url, const char *pin, struct oauth_info *s
 
 static void oauth_access_token_done( struct http_request *req )
 {
+	struct oauth_info *st = req->data;
+	
+	if( req->status_code == 200 )
+		st->access_token = g_strdup( req->reply_body );
+	
+	//st->func( st );
+}
+
+char *oauth_http_header( char *access_token, const char *method, const char *url )
+{
+	GSList *params, *l;
+	char *token_secret, *sig, *params_s;
+	GString *ret = NULL;
+	
+	params = oauth_params_parse( access_token );
+	if( params == NULL )
+		goto err;
+	token_secret = g_strdup( oauth_params_get( &params, "oauth_token_secret" ) );
+	if( token_secret == NULL )
+		goto err;
+	oauth_params_del( &params, "oauth_token_secret" );
+	
+	oauth_add_default_params( &params );
+	
+	params_s = oauth_params_string( params );
+	sig = oauth_sign( method, url, params_s, token_secret );
+	g_free( params_s );
+	sig = g_realloc( sig, strlen( sig ) * 3 + 1 );
+	http_encode( sig );
+	
+	ret = g_string_new( "OAuth " );
+	for( l = params; l; l = l->next )
+	{
+		char *kv = l->data;
+		char *eq = strchr( kv, '=' );
+		char esc[strlen(kv)*3+1];
+		
+		if( eq == NULL )
+			break; /* WTF */
+		
+		strcpy( esc, eq + 1 );
+		http_encode( esc );
+		
+		g_string_append_len( ret, kv, eq - kv + 1 );
+		g_string_append_c( ret, '"' );
+		g_string_append( ret, esc );
+		g_string_append( ret, "\", " );
+	}
+	
+	g_string_append_printf( ret, "oauth_signature=\"%s\"", sig );
+	
+err:
+	oauth_params_free( &params );
+	g_free( sig );
+	g_free( token_secret );
+	
+	return ret ? g_string_free( ret, FALSE ) : NULL;
 }
