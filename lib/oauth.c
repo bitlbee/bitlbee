@@ -301,6 +301,7 @@ static void oauth_request_token_done( struct http_request *req )
 		oauth_params_free( &params );
 	}
 	
+	st->stage = OAUTH_REQUEST_TOKEN;
 	st->func( st );
 }
 
@@ -321,8 +322,19 @@ static void oauth_access_token_done( struct http_request *req )
 	struct oauth_info *st = req->data;
 	
 	if( req->status_code == 200 )
-		st->access_token = g_strdup( req->reply_body );
+	{
+		GSList *params;
+		const char *token, *token_secret;
+		
+		oauth_params_parse( &params, req->reply_body );
+		token = oauth_params_get( &params, "oauth_token" );
+		token_secret = oauth_params_get( &params, "oauth_token_secret" );
+		st->access_token = g_strdup_printf(
+			"oauth_token=%s&oauth_token_secret=%s", token, token_secret );
+		oauth_params_free( &params );
+	}
 	
+	st->stage = OAUTH_ACCESS_TOKEN;
 	st->func( st );
 }
 

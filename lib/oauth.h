@@ -26,8 +26,17 @@
 struct oauth_info;
 typedef void (*oauth_cb)( struct oauth_info * );
 
+typedef enum
+{
+	OAUTH_INIT,
+	OAUTH_REQUEST_TOKEN,
+	OAUTH_ACCESS_TOKEN,
+} oauth_stage_t;
+
 struct oauth_info
 {
+	oauth_stage_t stage;
+	
 	oauth_cb func;
 	void *data;
 	

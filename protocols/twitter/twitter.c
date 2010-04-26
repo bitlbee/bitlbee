@@ -69,16 +69,28 @@ static void twitter_oauth_callback( struct oauth_info *info );
 
 static void twitter_oauth_start( struct im_connection *ic )
 {
+	imcb_log( ic, "Requesting OAuth request token" );
+
 	oauth_request_token( TWITTER_OAUTH_REQUEST_TOKEN, twitter_oauth_callback, ic );
 }
 
 static void twitter_oauth_callback( struct oauth_info *info )
 {
 	struct im_connection *ic = info->data;
+	struct twitter_data *td = ic->proto_data;
 	
-	if( info->request_token && info->access_token == NULL )
+	if( info->stage == OAUTH_REQUEST_TOKEN )
 	{
 		char name[strlen(ic->acc->user)+9], *msg;
+		
+		if( info->request_token == NULL )
+		{
+			imcb_error( ic, "OAuth error: %s", info->http->status_string );
+			imc_logout( ic, TRUE );
+			return;
+		}
+		
+		td->oauth_info = info;
 		
 		sprintf( name, "twitter_%s", ic->acc->user );
 		msg = g_strdup_printf( "To finish OAuth authentication, please visit "
@@ -86,6 +98,19 @@ static void twitter_oauth_callback( struct oauth_info *info )
 		                       TWITTER_OAUTH_AUTHORIZE, info->auth_params );
 		imcb_buddy_msg( ic, name, msg, 0, 0 );
 		g_free( msg );
+	}
+	else if( info->stage == OAUTH_ACCESS_TOKEN )
+	{
+		if( info->access_token == NULL )
+		{
+			imcb_error( ic, "OAuth error: %s", info->http->status_string );
+			imc_logout( ic, TRUE );
+			return;
+		}
+		
+		td->oauth = g_strdup( info->access_token );
+		
+		twitter_main_loop_start( ic );
 	}
 }
 
@@ -170,12 +195,20 @@ static void twitter_logout( struct im_connection *ic )
  */
 static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message, int away )
 {
+	struct twitter_data *td = ic->proto_data;
+	
 	if (g_strncasecmp(who, "twitter_", 8) == 0 &&
 	    g_strcasecmp(who + 8, ic->acc->user) == 0)
-		twitter_post_status(ic, message);
+	{
+		if( set_getbool( &ic->acc->set, "oauth" ) && td->oauth == NULL )
+			oauth_access_token( TWITTER_OAUTH_ACCESS_TOKEN, message, td->oauth_info );
+		else
+			twitter_post_status(ic, message);
+	}
 	else
+	{
 		twitter_direct_messages_new(ic, who, message);
-	
+	}
 	return( 0 );
 }
 
