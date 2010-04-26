@@ -297,11 +297,11 @@ static void oauth_request_token_done( struct http_request *req )
 		
 		st->auth_params = g_strdup( req->reply_body );
 		oauth_params_parse( &params, st->auth_params );
-		st->token = g_strdup( oauth_params_get( &params, "oauth_token" ) );
+		st->request_token = g_strdup( oauth_params_get( &params, "oauth_token" ) );
 		oauth_params_free( &params );
 	}
 	
-	//st->func( st );
+	st->func( st );
 }
 
 static void oauth_access_token_done( struct http_request *req );
@@ -310,7 +310,7 @@ void *oauth_access_token( const char *url, const char *pin, struct oauth_info *s
 {
 	GSList *params = NULL;
 	
-	oauth_params_add( &params, "oauth_token", st->token );
+	oauth_params_add( &params, "oauth_token", st->request_token );
 	oauth_params_add( &params, "oauth_verifier", pin );
 	
 	return oauth_post_request( url, &params, oauth_access_token_done, st );
@@ -323,7 +323,7 @@ static void oauth_access_token_done( struct http_request *req )
 	if( req->status_code == 200 )
 		st->access_token = g_strdup( req->reply_body );
 	
-	//st->func( st );
+	st->func( st );
 }
 
 char *oauth_http_header( char *access_token, const char *method, const char *url, char *args )

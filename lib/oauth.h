@@ -34,7 +34,7 @@ struct oauth_info
 	struct http_request *http;
 	
 	char *auth_params;
-	char *token;
+	char *request_token;
 	
 	char *access_token;
 };

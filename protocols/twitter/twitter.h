@@ -50,4 +50,8 @@ struct twitter_data
  */
 GSList *twitter_connections;
 
+#define TWITTER_OAUTH_REQUEST_TOKEN "http://api.twitter.com/oauth/request_token"
+#define TWITTER_OAUTH_ACCESS_TOKEN  "http://api.twitter.com/oauth/access_token"
+#define TWITTER_OAUTH_AUTHORIZE     "http://api.twitter.com/oauth/authorize"
+
 #endif //_TWITTER_H
