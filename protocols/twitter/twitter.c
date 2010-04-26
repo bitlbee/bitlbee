@@ -81,7 +81,10 @@ static void twitter_login( account_t *acc )
 	twitter_connections = g_slist_append( twitter_connections, ic );
 
 	td->user = acc->user;
-	td->pass = acc->pass;
+	if( strstr( acc->pass, "oauth_token=" ) == NULL )
+		td->pass = g_strdup( acc->pass );
+	else
+		td->oauth = g_strdup( acc->pass );
 	td->home_timeline_id = 0;
 
 	ic->proto_data = td;
@@ -118,6 +121,8 @@ static void twitter_logout( struct im_connection *ic )
 
 	if( td )
 	{
+		g_free( td->pass );
+		g_free( td->oauth );
 		g_free( td );
 	}
 

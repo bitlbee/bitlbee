@@ -20,3 +20,5 @@
 *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.              *
 *                                                                           *
 \***************************************************************************/
+
+char *oauth_http_header( char *access_token, const char *method, const char *url, char *args );

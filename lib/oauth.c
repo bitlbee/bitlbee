@@ -174,9 +174,8 @@ const char *oauth_params_get( GSList **params, const char *key )
 	return NULL;
 }
 
-GSList *oauth_params_parse( char *in )
+static void oauth_params_parse( GSList **params, char *in )
 {
-	GSList *ret = NULL;
 	char *amp, *eq;
 	
 	while( in && *in )
@@ -189,7 +188,7 @@ GSList *oauth_params_parse( char *in )
 		if( ( amp = strchr( eq + 1, '&' ) ) )
 			*amp = '\0';
 		
-		oauth_params_add( &ret, in, eq + 1 );
+		oauth_params_add( params, in, eq + 1 );
 		
 		*eq = '=';
 		if( amp == NULL )
@@ -198,8 +197,6 @@ GSList *oauth_params_parse( char *in )
 		*amp = '&';
 		in = amp + 1;
 	}
-	
-	return ret;
 }
 
 void oauth_params_free( GSList **params )
@@ -311,10 +308,10 @@ static void oauth_request_token_done( struct http_request *req )
 	
 	if( req->status_code == 200 )
 	{
-		GSList *params;
+		GSList *params = NULL;
 		
 		st->auth_params = g_strdup( req->reply_body );
-		params = oauth_params_parse( st->auth_params );
+		oauth_params_parse( &params, st->auth_params );
 		st->token = g_strdup( oauth_params_get( &params, "oauth_token" ) );
 		oauth_params_free( &params );
 	}
@@ -344,13 +341,13 @@ static void oauth_access_token_done( struct http_request *req )
 	//st->func( st );
 }
 
-char *oauth_http_header( char *access_token, const char *method, const char *url )
+char *oauth_http_header( char *access_token, const char *method, const char *url, char *args )
 {
-	GSList *params, *l;
-	char *token_secret, *sig, *params_s;
+	GSList *params = NULL, *l;
+	char *token_secret, *sig, *params_s, *s;
 	GString *ret = NULL;
 	
-	params = oauth_params_parse( access_token );
+	oauth_params_parse( &params, access_token );
 	if( params == NULL )
 		goto err;
 	token_secret = g_strdup( oauth_params_get( &params, "oauth_token_secret" ) );
@@ -359,12 +356,6 @@ char *oauth_http_header( char *access_token, const char *method, const char *url
 	oauth_params_del( &params, "oauth_token_secret" );
 	
 	oauth_add_default_params( &params );
-	
-	params_s = oauth_params_string( params );
-	sig = oauth_sign( method, url, params_s, token_secret );
-	g_free( params_s );
-	sig = g_realloc( sig, strlen( sig ) * 3 + 1 );
-	http_encode( sig );
 	
 	ret = g_string_new( "OAuth " );
 	for( l = params; l; l = l->next )
@@ -384,6 +375,21 @@ char *oauth_http_header( char *access_token, const char *method, const char *url
 		g_string_append( ret, esc );
 		g_string_append( ret, "\", " );
 	}
+	
+	if( args )
+		oauth_params_parse( &params, args );
+	if( ( s = strchr( url, '?' ) ) )
+	{
+		s = g_strdup( s + 1 );
+		oauth_params_parse( &params, s + 1 );
+		g_free( s );
+	}
+	
+	params_s = oauth_params_string( params );
+	sig = oauth_sign( method, url, params_s, token_secret );
+	g_free( params_s );
+	sig = g_realloc( sig, strlen( sig ) * 3 + 1 );
+	http_encode( sig );
 	
 	g_string_append_printf( ret, "oauth_signature=\"%s\"", sig );
 	
