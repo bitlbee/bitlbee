@@ -110,6 +110,11 @@ static void twitter_oauth_callback( struct oauth_info *info )
 		
 		td->oauth = g_strdup( info->access_token );
 		
+		/* IM mods didn't do this so far and it's ugly but I should
+		   be able to get away with it... */
+		g_free( ic->acc->pass );
+		ic->acc->pass = g_strdup( info->access_token );
+		
 		twitter_main_loop_start( ic );
 	}
 }
