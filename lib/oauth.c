@@ -107,9 +107,14 @@ static char *oauth_sign( const char *method, const char *url,
 static char *oauth_nonce()
 {
 	unsigned char bytes[9];
+	char *ret;
 	
 	random_bytes( bytes, sizeof( bytes ) );
-	return base64_encode( bytes, sizeof( bytes ) );
+	ret = base64_encode( bytes, sizeof( bytes ) );
+	ret = g_realloc( ret, strlen( ret ) * 3 + 1 );
+	http_encode( ret );
+	
+	return ret;
 }
 
 void oauth_params_add( GSList **params, const char *key, const char *value )
