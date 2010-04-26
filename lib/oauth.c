@@ -30,28 +30,13 @@
 #include "misc.h"
 #include "sha1.h"
 #include "url.h"
+#include "oauth.h"
 
 #define CONSUMER_KEY "xsDNKJuNZYkZyMcu914uEA"
 #define CONSUMER_SECRET "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo"
 /* How can it be a secret if it's right here in the source code? No clue... */
 
 #define HMAC_BLOCK_SIZE 64
-
-struct oauth_info;
-typedef void (*oauth_cb)( struct oauth_info * );
-
-struct oauth_info
-{
-	oauth_cb func;
-	void *data;
-	
-	struct http_request *http;
-	
-	char *auth_params;
-	char *token;
-	
-	char *access_token;
-};
 
 static char *oauth_sign( const char *method, const char *url,
                          const char *params, const char *token_secret )
