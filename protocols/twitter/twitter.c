@@ -65,20 +65,27 @@ static void twitter_main_loop_start( struct im_connection *ic )
 	td->main_loop_id = b_timeout_add(60000, twitter_main_loop, ic);
 }
 
-static void twitter_oauth_callback( struct oauth_info *info );
+static gboolean twitter_oauth_callback( struct oauth_info *info );
 
 static void twitter_oauth_start( struct im_connection *ic )
 {
-	imcb_log( ic, "Requesting OAuth request token" );
-
-	oauth_request_token( TWITTER_OAUTH_REQUEST_TOKEN, twitter_oauth_callback, ic );
-}
-
-static void twitter_oauth_callback( struct oauth_info *info )
-{
-	struct im_connection *ic = info->data;
 	struct twitter_data *td = ic->proto_data;
 	
+	imcb_log( ic, "Requesting OAuth request token" );
+
+	td->oauth_info = oauth_request_token(
+		TWITTER_OAUTH_REQUEST_TOKEN, twitter_oauth_callback, ic );
+}
+
+static gboolean twitter_oauth_callback( struct oauth_info *info )
+{
+	struct im_connection *ic = info->data;
+	struct twitter_data *td;
+	
+	if( !g_slist_find( twitter_connections, ic ) )
+		return FALSE;
+	
+	td = ic->proto_data;
 	if( info->stage == OAUTH_REQUEST_TOKEN )
 	{
 		char name[strlen(ic->acc->user)+9], *msg;
@@ -87,10 +94,8 @@ static void twitter_oauth_callback( struct oauth_info *info )
 		{
 			imcb_error( ic, "OAuth error: %s", info->http->status_string );
 			imc_logout( ic, TRUE );
-			return;
+			return FALSE;
 		}
-		
-		td->oauth_info = info;
 		
 		sprintf( name, "twitter_%s", ic->acc->user );
 		msg = g_strdup_printf( "To finish OAuth authentication, please visit "
@@ -105,7 +110,7 @@ static void twitter_oauth_callback( struct oauth_info *info )
 		{
 			imcb_error( ic, "OAuth error: %s", info->http->status_string );
 			imc_logout( ic, TRUE );
-			return;
+			return FALSE;
 		}
 		
 		td->oauth = g_strdup( info->access_token );
@@ -117,6 +122,8 @@ static void twitter_oauth_callback( struct oauth_info *info )
 		
 		twitter_main_loop_start( ic );
 	}
+	
+	return TRUE;
 }
 
 static char *set_eval_mode( set_t *set, char *value )
@@ -187,6 +194,8 @@ static void twitter_logout( struct im_connection *ic )
 
 	if( td )
 	{
+		oauth_info_free( td->oauth_info );
+		
 		g_free( td->pass );
 		g_free( td->oauth );
 		g_free( td );
@@ -205,8 +214,11 @@ static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message
 	if (g_strncasecmp(who, "twitter_", 8) == 0 &&
 	    g_strcasecmp(who + 8, ic->acc->user) == 0)
 	{
-		if( set_getbool( &ic->acc->set, "oauth" ) && td->oauth == NULL )
+		if( set_getbool( &ic->acc->set, "oauth" ) && td->oauth_info )
+		{
 			oauth_access_token( TWITTER_OAUTH_ACCESS_TOKEN, message, td->oauth_info );
+			td->oauth_info = NULL;
+		}
 		else
 			twitter_post_status(ic, message);
 	}

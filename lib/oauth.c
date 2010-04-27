@@ -224,6 +224,17 @@ char *oauth_params_string( GSList *params )
 	return g_string_free( str, FALSE );
 }
 
+void oauth_info_free( struct oauth_info *info )
+{
+	if( info )
+	{
+		g_free( info->auth_params );
+		g_free( info->request_token );
+		g_free( info->access_token );
+		g_free( info );
+	}
+}
+
 static void oauth_add_default_params( GSList **params )
 {
 	char *s;
@@ -285,7 +296,7 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 
 static void oauth_request_token_done( struct http_request *req );
 
-void *oauth_request_token( const char *url, oauth_cb func, void *data )
+struct oauth_info *oauth_request_token( const char *url, oauth_cb func, void *data )
 {
 	struct oauth_info *st = g_new0( struct oauth_info, 1 );
 	GSList *params = NULL;
@@ -295,7 +306,13 @@ void *oauth_request_token( const char *url, oauth_cb func, void *data )
 	
 	oauth_params_add( &params, "oauth_callback", "oob" );
 	
-	return oauth_post_request( url, NULL, oauth_request_token_done, st );
+	if( !oauth_post_request( url, &params, oauth_request_token_done, st ) )
+	{
+		oauth_info_free( st );
+		return NULL;
+	}
+	
+	return st;
 }
 
 static void oauth_request_token_done( struct http_request *req )
@@ -315,19 +332,21 @@ static void oauth_request_token_done( struct http_request *req )
 	}
 	
 	st->stage = OAUTH_REQUEST_TOKEN;
-	st->func( st );
+	if( !st->func( st ) )
+		oauth_info_free( st );
 }
 
 static void oauth_access_token_done( struct http_request *req );
 
-void *oauth_access_token( const char *url, const char *pin, struct oauth_info *st )
+void oauth_access_token( const char *url, const char *pin, struct oauth_info *st )
 {
 	GSList *params = NULL;
 	
 	oauth_params_add( &params, "oauth_token", st->request_token );
 	oauth_params_add( &params, "oauth_verifier", pin );
 	
-	return oauth_post_request( url, &params, oauth_access_token_done, st );
+	if( !oauth_post_request( url, &params, oauth_access_token_done, st ) )
+		oauth_info_free( st );
 }
 
 static void oauth_access_token_done( struct http_request *req )
@@ -336,7 +355,7 @@ static void oauth_access_token_done( struct http_request *req )
 	
 	if( req->status_code == 200 )
 	{
-		GSList *params;
+		GSList *params = NULL;
 		const char *token, *token_secret;
 		
 		oauth_params_parse( &params, req->reply_body );
@@ -349,6 +368,7 @@ static void oauth_access_token_done( struct http_request *req )
 	
 	st->stage = OAUTH_ACCESS_TOKEN;
 	st->func( st );
+	oauth_info_free( st );
 }
 
 char *oauth_http_header( char *access_token, const char *method, const char *url, char *args )
@@ -357,9 +377,12 @@ char *oauth_http_header( char *access_token, const char *method, const char *url
 	char *token_secret, *sig, *params_s, *s;
 	GString *ret = NULL;
 	
+	/* First, get the two pieces of info from the access token that we need. */
 	oauth_params_parse( &params, access_token );
 	if( params == NULL )
 		goto err;
+	
+	/* Pick out the token secret, we shouldn't include it but use it for signing. */
 	token_secret = g_strdup( oauth_params_get( &params, "oauth_token_secret" ) );
 	if( token_secret == NULL )
 		goto err;
@@ -367,6 +390,7 @@ char *oauth_http_header( char *access_token, const char *method, const char *url
 	
 	oauth_add_default_params( &params );
 	
+	/* Start building the OAuth header. 'key="value", '... */
 	ret = g_string_new( "OAuth " );
 	for( l = params; l; l = l->next )
 	{
@@ -386,6 +410,9 @@ char *oauth_http_header( char *access_token, const char *method, const char *url
 		g_string_append( ret, "\", " );
 	}
 	
+	/* Now, before generating the signature, add GET/POST arguments to params
+	   since they should be included in the base signature string (but not in
+	   the HTTP header). */
 	if( args )
 		oauth_params_parse( &params, args );
 	if( ( s = strchr( url, '?' ) ) )
@@ -395,6 +422,7 @@ char *oauth_http_header( char *access_token, const char *method, const char *url
 		g_free( s );
 	}
 	
+	/* Append the signature and we're done! */
 	params_s = oauth_params_string( params );
 	sig = oauth_sign( method, url, params_s, token_secret );
 	g_string_append_printf( ret, "oauth_signature=\"%s\"", sig );
