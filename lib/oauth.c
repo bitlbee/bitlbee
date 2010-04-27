@@ -100,21 +100,21 @@ static char *oauth_sign( const char *method, const char *url,
 	sha1_append( &sha1, hash, sha1_hash_size );
 	sha1_finish( &sha1, hash );
 	
-	/* base64_encode it and we're done. */
-	return base64_encode( hash, sha1_hash_size );
+	/* base64_encode + HTTP escape it (both consumers 
+	   need it that away) and we're done. */
+	s = base64_encode( hash, sha1_hash_size );
+	s = g_realloc( s, strlen( s ) * 3 + 1 );
+	http_encode( s );
+	
+	return s;
 }
 
 static char *oauth_nonce()
 {
 	unsigned char bytes[9];
-	char *ret;
 	
 	random_bytes( bytes, sizeof( bytes ) );
-	ret = base64_encode( bytes, sizeof( bytes ) );
-	ret = g_realloc( ret, strlen( ret ) * 3 + 1 );
-	http_encode( ret );
-	
-	return ret;
+	return base64_encode( bytes, sizeof( bytes ) );
 }
 
 void oauth_params_add( GSList **params, const char *key, const char *value )
@@ -166,7 +166,7 @@ const char *oauth_params_get( GSList **params, const char *key )
 
 static void oauth_params_parse( GSList **params, char *in )
 {
-	char *amp, *eq;
+	char *amp, *eq, *s;
 	
 	while( in && *in )
 	{
@@ -178,7 +178,10 @@ static void oauth_params_parse( GSList **params, char *in )
 		if( ( amp = strchr( eq + 1, '&' ) ) )
 			*amp = '\0';
 		
-		oauth_params_add( params, in, eq + 1 );
+		s = g_strdup( eq + 1 );
+		http_decode( s );
+		oauth_params_add( params, in, s );
+		g_free( s );
 		
 		*eq = '=';
 		if( amp == NULL )
@@ -205,7 +208,15 @@ char *oauth_params_string( GSList *params )
 	
 	for( l = params; l; l = l->next )
 	{
-		g_string_append( str, l->data );
+		char *s, *eq;
+		
+		s = g_malloc( strlen( l->data ) * 3 + 1 );
+		strcpy( s, l->data );
+		if( ( eq = strchr( s, '=' ) ) )
+			http_encode( eq + 1 );
+		g_string_append( str, s );
+		g_free( s );
+		
 		if( l->next )
 			g_string_append_c( str, '&' );
 	}
@@ -253,9 +264,6 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 	oauth_params_free( params_ );
 	
 	s = oauth_sign( "POST", url, params_s, NULL );
-	s = g_realloc( s, strlen( s ) * 3 + 1 );
-	http_encode( s );
-	
 	post = g_strdup_printf( "%s&oauth_signature=%s", params_s, s );
 	g_free( params_s );
 	g_free( s );
@@ -389,11 +397,8 @@ char *oauth_http_header( char *access_token, const char *method, const char *url
 	
 	params_s = oauth_params_string( params );
 	sig = oauth_sign( method, url, params_s, token_secret );
-	g_free( params_s );
-	sig = g_realloc( sig, strlen( sig ) * 3 + 1 );
-	http_encode( sig );
-	
 	g_string_append_printf( ret, "oauth_signature=\"%s\"", sig );
+	g_free( params_s );
 	
 err:
 	oauth_params_free( &params );
