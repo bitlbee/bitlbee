@@ -272,7 +272,7 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 	oauth_add_default_params( &params );
 	
 	params_s = oauth_params_string( params );
-	oauth_params_free( params_ );
+	oauth_params_free( &params );
 	
 	s = oauth_sign( "POST", url, params_s, NULL );
 	post = g_strdup_printf( "%s&oauth_signature=%s", params_s, s );
@@ -352,6 +352,8 @@ void oauth_access_token( const char *url, const char *pin, struct oauth_info *st
 static void oauth_access_token_done( struct http_request *req )
 {
 	struct oauth_info *st = req->data;
+	
+	st->http = req;
 	
 	if( req->status_code == 200 )
 	{
