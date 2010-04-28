@@ -129,7 +129,7 @@ void twitter_get_friends_ids(struct im_connection *ic, int next_cursor)
 	char* args[2];
 	args[0] = "cursor";
 	args[1] = g_strdup_printf ("%d", next_cursor);
-	twitter_http(TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, td->user, td->pass, args, 2);
+	twitter_http(TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, td->user, td->pass, td->oauth, args, 2);
 
 	g_free(args[1]);
 }
@@ -395,7 +395,7 @@ void twitter_get_home_timeline(struct im_connection *ic, int next_cursor)
 		args[3] = g_strdup_printf ("%llu", (long long unsigned int) td->home_timeline_id);
 	}
 
-	twitter_http(TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, td->user, td->pass, args, td->home_timeline_id ? 4 : 2);
+	twitter_http(TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, td->user, td->pass, td->oauth, args, td->home_timeline_id ? 4 : 2);
 
 	g_free(args[1]);
 	if (td->home_timeline_id) {
@@ -619,7 +619,7 @@ void twitter_get_statuses_friends(struct im_connection *ic, int next_cursor)
 	args[0] = "cursor";
 	args[1] = g_strdup_printf ("%d", next_cursor);
 
-	twitter_http(TWITTER_SHOW_FRIENDS_URL, twitter_http_get_statuses_friends, ic, 0, td->user, td->pass, args, 2);
+	twitter_http(TWITTER_SHOW_FRIENDS_URL, twitter_http_get_statuses_friends, ic, 0, td->user, td->pass, td->oauth, args, 2);
 
 	g_free(args[1]);
 }
@@ -653,7 +653,7 @@ void twitter_post_status(struct im_connection *ic, char* msg)
 	char* args[2];
 	args[0] = "status";
 	args[1] = msg;
-	twitter_http(TWITTER_STATUS_UPDATE_URL, twitter_http_post_status, ic, 1, td->user, td->pass, args, 2);
+	twitter_http(TWITTER_STATUS_UPDATE_URL, twitter_http_post_status, ic, 1, td->user, td->pass, td->oauth, args, 2);
 //	g_free(args[1]);
 }
 
@@ -671,7 +671,7 @@ void twitter_direct_messages_new(struct im_connection *ic, char *who, char *msg)
 	args[2] = "text";
 	args[3] = msg;
 	// Use the same callback as for twitter_post_status, since it does basically the same.
-	twitter_http(TWITTER_DIRECT_MESSAGES_NEW_URL, twitter_http_post_status, ic, 1, td->user, td->pass, args, 4);
+	twitter_http(TWITTER_DIRECT_MESSAGES_NEW_URL, twitter_http_post_status, ic, 1, td->user, td->pass, td->oauth, args, 4);
 //	g_free(args[1]);
 //	g_free(args[3]);
 }

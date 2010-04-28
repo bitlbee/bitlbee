@@ -78,6 +78,10 @@
 					<para>
 						To send tweets yourself, send them to the twitter_(yourusername) contact, or just write in the groupchat channel if you enabled that option.
 					</para>
+
+					<para>
+						Since Twitter now requires OAuth authentication, you should not enter your Twitter password into BitlBee. Just type a bogus password. The first time you log in, BitlBee will start OAuth authentication. (See <emphasis>help set oauth</emphasis>.)
+					</para>
 				</description>
 			</bitlbee-command>
 
@@ -700,6 +704,25 @@
 				With this setting set to <emphasis>full_name</emphasis>, the person's full name is used to generate a nickname. Or if you don't like long nicknames, set this setting to <emphasis>first_name</emphasis> instead and only the first word will be used. Note that the full name can be full of non-ASCII characters which will be stripped off.
 			</para>
 		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="oauth" type="boolean" scope="account">
+		<default>true</default>
+
+		<description>
+			<para>
+				This enables OAuth authentication for Twitter accounts. From June 2010 this will be mandatory.
+			</para>
+
+			<para>
+				With OAuth enabled, you shouldn't tell BitlBee your Twitter password. Just add your account with a bogus password and type <emphasis>account on</emphasis>. BitlBee will then give you a URL to authenticate with Twitter. If this succeeds, Twitter will return a PIN code which you can give back to BitlBee to finish the process.
+			</para>
+
+			<para>
+				The resulting access token will be saved permanently, so you have to do this only once.
+			</para>
+		</description>
+
 	</bitlbee-setting>
 
 	<bitlbee-setting name="ops" type="string" scope="global">

@@ -28,7 +28,7 @@
 #include "http_client.h"
 
 void *twitter_http(char *url_string, http_input_function func, gpointer data, int is_post, 
-					char* user, char* pass, char** arguments, int arguments_len);
+                   char* user, char* pass, char *oauth_token, char** arguments, int arguments_len);
 
 #endif //_TWITTER_HTTP_H
 
