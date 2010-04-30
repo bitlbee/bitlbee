@@ -376,7 +376,7 @@ static void oauth_access_token_done( struct http_request *req )
 char *oauth_http_header( char *access_token, const char *method, const char *url, char *args )
 {
 	GSList *params = NULL, *l;
-	char *token_secret, *sig, *params_s, *s;
+	char *token_secret = NULL, *sig = NULL, *params_s, *s;
 	GString *ret = NULL;
 	
 	/* First, get the two pieces of info from the access token that we need. */
