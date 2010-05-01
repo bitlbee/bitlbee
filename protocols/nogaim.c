@@ -1193,7 +1193,7 @@ static char *format_timestamp( irc_t *irc, time_t msg_ts )
 	else
 		return g_strdup_printf( "\x02[\x02\x02\x02%04d-%02d-%02d "
 		                        "%02d:%02d:%02d\x02]\x02 ",
-		                        msg.tm_year + 1900, msg.tm_mon, msg.tm_mday,
+		                        msg.tm_year + 1900, msg.tm_mon + 1, msg.tm_mday,
 		                        msg.tm_hour, msg.tm_min, msg.tm_sec );
 }
 
