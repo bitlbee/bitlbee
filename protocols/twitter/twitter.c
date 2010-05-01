@@ -123,8 +123,8 @@ static gboolean twitter_oauth_callback( struct oauth_info *info )
 		
 		/* IM mods didn't do this so far and it's ugly but I should
 		   be able to get away with it... */
-		//g_free( ic->acc->pass );
-		//ic->acc->pass = g_strdup( info->access_token );
+		g_free( ic->acc->pass );
+		ic->acc->pass = oauth_to_string( info );
 		
 		twitter_main_loop_start( ic );
 	}
@@ -170,8 +170,8 @@ static void twitter_login( account_t *acc )
 	td->user = acc->user;
 	if( !set_getbool( &acc->set, "oauth" ) )
 		td->pass = g_strdup( acc->pass );
-	//else if( strstr( acc->pass, "oauth_token=" ) )
-	//	td->oauth = g_strdup( acc->pass );
+	else if( strstr( acc->pass, "oauth_token=" ) )
+		td->oauth_info = oauth_from_string( acc->pass, &twitter_oauth );
 	td->home_timeline_id = 0;
 	
 	sprintf( name, "twitter_%s", acc->user );

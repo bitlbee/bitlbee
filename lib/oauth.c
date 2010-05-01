@@ -424,3 +424,30 @@ char *oauth_http_header( struct oauth_info *oi, const char *method, const char *
 	
 	return ret ? g_string_free( ret, FALSE ) : NULL;
 }
+
+char *oauth_to_string( struct oauth_info *oi )
+{
+	GSList *params = NULL;
+	char *ret;
+	
+	oauth_params_add( &params, "oauth_token", oi->token );
+	oauth_params_add( &params, "oauth_token_secret", oi->token_secret );
+	ret = oauth_params_string( params );
+	oauth_params_free( &params );
+	
+	return ret;
+}
+
+struct oauth_info *oauth_from_string( char *in, struct oauth_service *sp )
+{
+	struct oauth_info *oi = g_new0( struct oauth_info, 1 );
+	GSList *params = NULL;
+	
+	oauth_params_parse( &params, in );
+	oi->token = g_strdup( oauth_params_get( &params, "oauth_token" ) );
+	oi->token_secret = g_strdup( oauth_params_get( &params, "oauth_token_secret" ) );
+	oauth_params_free( &params );
+	oi->sp = sp;
+	
+	return oi;
+}

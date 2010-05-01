@@ -84,3 +84,7 @@ char *oauth_http_header( struct oauth_info *oi, const char *method, const char *
 
 /* Shouldn't normally be required unless the process is aborted by the user. */
 void oauth_info_free( struct oauth_info *info );
+
+/* Convert to and back from strings, for easier saving. */
+char *oauth_to_string( struct oauth_info *oi );
+struct oauth_info *oauth_from_string( char *in, struct oauth_service *sp );
