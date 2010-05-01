@@ -32,14 +32,10 @@
 #include "url.h"
 #include "oauth.h"
 
-#define CONSUMER_KEY "xsDNKJuNZYkZyMcu914uEA"
-#define CONSUMER_SECRET "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo"
-/* How can it be a secret if it's right here in the source code? No clue... */
-
 #define HMAC_BLOCK_SIZE 64
 
 static char *oauth_sign( const char *method, const char *url,
-                         const char *params, const char *token_secret )
+                         const char *params, struct oauth_info *oi )
 {
 	sha1_state_t sha1;
 	uint8_t hash[sha1_hash_size];
@@ -50,20 +46,20 @@ static char *oauth_sign( const char *method, const char *url,
 	/* Create K. If our current key is >64 chars we have to hash it,
 	   otherwise just pad. */
 	memset( key, 0, HMAC_BLOCK_SIZE );
-	i = strlen( CONSUMER_SECRET ) + 1 + ( token_secret ? strlen( token_secret ) : 0 );
+	i = strlen( oi->sp->consumer_secret ) + 1 + ( oi->token_secret ? strlen( oi->token_secret ) : 0 );
 	if( i > HMAC_BLOCK_SIZE )
 	{
 		sha1_init( &sha1 );
-		sha1_append( &sha1, (uint8_t*) CONSUMER_SECRET, strlen( CONSUMER_SECRET ) );
+		sha1_append( &sha1, (uint8_t*) oi->sp->consumer_secret, strlen( oi->sp->consumer_secret ) );
 		sha1_append( &sha1, (uint8_t*) "&", 1 );
-		if( token_secret )
-			sha1_append( &sha1, (uint8_t*) token_secret, strlen( token_secret ) );
+		if( oi->token_secret )
+			sha1_append( &sha1, (uint8_t*) oi->token_secret, strlen( oi->token_secret ) );
 		sha1_finish( &sha1, key );
 	}
 	else
 	{
 		g_snprintf( (gchar*) key, HMAC_BLOCK_SIZE + 1, "%s&%s",
-		            CONSUMER_SECRET, token_secret ? : "" );
+		            oi->sp->consumer_secret, oi->token_secret ? : "" );
 	}
 	
 	/* Inner part: H(K XOR 0x36, text) */
@@ -228,18 +224,19 @@ void oauth_info_free( struct oauth_info *info )
 {
 	if( info )
 	{
-		g_free( info->auth_params );
+		g_free( info->auth_url );
 		g_free( info->request_token );
-		g_free( info->access_token );
+		g_free( info->token );
+		g_free( info->token_secret );
 		g_free( info );
 	}
 }
 
-static void oauth_add_default_params( GSList **params )
+static void oauth_add_default_params( GSList **params, struct oauth_service *sp )
 {
 	char *s;
 	
-	oauth_params_set( params, "oauth_consumer_key", CONSUMER_KEY );
+	oauth_params_set( params, "oauth_consumer_key", sp->consumer_key );
 	oauth_params_set( params, "oauth_signature_method", "HMAC-SHA1" );
 	
 	s = g_strdup_printf( "%d", (int) time( NULL ) );
@@ -253,7 +250,7 @@ static void oauth_add_default_params( GSList **params )
 	oauth_params_set( params, "oauth_version", "1.0" );
 }
 
-static void *oauth_post_request( const char *url, GSList **params_, http_input_function func, void *data )
+static void *oauth_post_request( const char *url, GSList **params_, http_input_function func, struct oauth_info *oi )
 {
 	GSList *params = NULL;
 	char *s, *params_s, *post;
@@ -269,12 +266,12 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 	if( params_ )
 		params = *params_;
 	
-	oauth_add_default_params( &params );
+	oauth_add_default_params( &params, oi->sp );
 	
 	params_s = oauth_params_string( params );
 	oauth_params_free( &params );
 	
-	s = oauth_sign( "POST", url, params_s, NULL );
+	s = oauth_sign( "POST", url, params_s, oi );
 	post = g_strdup_printf( "%s&oauth_signature=%s", params_s, s );
 	g_free( params_s );
 	g_free( s );
@@ -288,7 +285,7 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 	g_free( post );
 	
 	req = http_dorequest( url_p.host, url_p.port, url_p.proto == PROTO_HTTPS,
-	                      s, func, data );
+	                      s, func, oi );
 	g_free( s );
 	
 	return req;
@@ -296,17 +293,18 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 
 static void oauth_request_token_done( struct http_request *req );
 
-struct oauth_info *oauth_request_token( const char *url, oauth_cb func, void *data )
+struct oauth_info *oauth_request_token( struct oauth_service *sp, oauth_cb func, void *data )
 {
 	struct oauth_info *st = g_new0( struct oauth_info, 1 );
 	GSList *params = NULL;
 	
 	st->func = func;
 	st->data = data;
+	st->sp = sp;
 	
 	oauth_params_add( &params, "oauth_callback", "oob" );
 	
-	if( !oauth_post_request( url, &params, oauth_request_token_done, st ) )
+	if( !oauth_post_request( sp->url_request_token, &params, oauth_request_token_done, st ) )
 	{
 		oauth_info_free( st );
 		return NULL;
@@ -325,28 +323,26 @@ static void oauth_request_token_done( struct http_request *req )
 	{
 		GSList *params = NULL;
 		
-		st->auth_params = g_strdup( req->reply_body );
-		oauth_params_parse( &params, st->auth_params );
+		st->auth_url = g_strdup_printf( "%s?%s", st->sp->url_authorize, req->reply_body );
+		oauth_params_parse( &params, req->reply_body );
 		st->request_token = g_strdup( oauth_params_get( &params, "oauth_token" ) );
 		oauth_params_free( &params );
 	}
 	
 	st->stage = OAUTH_REQUEST_TOKEN;
-	if( !st->func( st ) )
-		oauth_info_free( st );
+	st->func( st );
 }
 
 static void oauth_access_token_done( struct http_request *req );
 
-void oauth_access_token( const char *url, const char *pin, struct oauth_info *st )
+gboolean oauth_access_token( const char *pin, struct oauth_info *st )
 {
 	GSList *params = NULL;
 	
 	oauth_params_add( &params, "oauth_token", st->request_token );
 	oauth_params_add( &params, "oauth_verifier", pin );
 	
-	if( !oauth_post_request( url, &params, oauth_access_token_done, st ) )
-		oauth_info_free( st );
+	return oauth_post_request( st->sp->url_access_token, &params, oauth_access_token_done, st ) != NULL;
 }
 
 static void oauth_access_token_done( struct http_request *req )
@@ -358,39 +354,32 @@ static void oauth_access_token_done( struct http_request *req )
 	if( req->status_code == 200 )
 	{
 		GSList *params = NULL;
-		const char *token, *token_secret;
 		
 		oauth_params_parse( &params, req->reply_body );
-		token = oauth_params_get( &params, "oauth_token" );
-		token_secret = oauth_params_get( &params, "oauth_token_secret" );
-		st->access_token = g_strdup_printf(
-			"oauth_token=%s&oauth_token_secret=%s", token, token_secret );
+		st->token = g_strdup( oauth_params_get( &params, "oauth_token" ) );
+		st->token_secret = g_strdup( oauth_params_get( &params, "oauth_token_secret" ) );
 		oauth_params_free( &params );
 	}
 	
 	st->stage = OAUTH_ACCESS_TOKEN;
-	st->func( st );
-	oauth_info_free( st );
+	if( st->func( st ) )
+	{
+		/* Don't need these anymore, but keep the rest. */
+		g_free( st->auth_url );
+		st->auth_url = NULL;
+		g_free( st->request_token );
+		st->request_token = NULL;
+	}
 }
 
-char *oauth_http_header( char *access_token, const char *method, const char *url, char *args )
+char *oauth_http_header( struct oauth_info *oi, const char *method, const char *url, char *args )
 {
 	GSList *params = NULL, *l;
-	char *token_secret = NULL, *sig = NULL, *params_s, *s;
+	char *sig = NULL, *params_s, *s;
 	GString *ret = NULL;
 	
-	/* First, get the two pieces of info from the access token that we need. */
-	oauth_params_parse( &params, access_token );
-	if( params == NULL )
-		goto err;
-	
-	/* Pick out the token secret, we shouldn't include it but use it for signing. */
-	token_secret = g_strdup( oauth_params_get( &params, "oauth_token_secret" ) );
-	if( token_secret == NULL )
-		goto err;
-	oauth_params_del( &params, "oauth_token_secret" );
-	
-	oauth_add_default_params( &params );
+	oauth_params_add( &params, "oauth_token", oi->token );
+	oauth_add_default_params( &params, oi->sp );
 	
 	/* Start building the OAuth header. 'key="value", '... */
 	ret = g_string_new( "OAuth " );
@@ -420,20 +409,18 @@ char *oauth_http_header( char *access_token, const char *method, const char *url
 	if( ( s = strchr( url, '?' ) ) )
 	{
 		s = g_strdup( s + 1 );
-		oauth_params_parse( &params, s + 1 );
+		oauth_params_parse( &params, s );
 		g_free( s );
 	}
 	
 	/* Append the signature and we're done! */
 	params_s = oauth_params_string( params );
-	sig = oauth_sign( method, url, params_s, token_secret );
+	sig = oauth_sign( method, url, params_s, oi );
 	g_string_append_printf( ret, "oauth_signature=\"%s\"", sig );
 	g_free( params_s );
 	
-err:
 	oauth_params_free( &params );
 	g_free( sig );
-	g_free( token_secret );
 	
 	return ret ? g_string_free( ret, FALSE ) : NULL;
 }
