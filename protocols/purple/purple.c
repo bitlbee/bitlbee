@@ -364,6 +364,13 @@ static int purple_send_typing( struct im_connection *ic, char *who, int flags )
 	}
 }
 
+static void purple_chat_msg( struct groupchat *gc, char *message, int flags )
+{
+	PurpleConversation *pc = gc->data;
+	
+	purple_conv_chat_send( purple_conversation_get_chat_data( pc ), message );
+}
+
 void purple_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *handle );
 
 static void purple_ui_init();
@@ -505,6 +512,64 @@ static PurpleBlistUiOps bee_blist_uiops =
 	prplcb_blist_remove,
 };
 
+void prplcb_conv_new( PurpleConversation *conv )
+{
+	if( conv->type == PURPLE_CONV_TYPE_CHAT )
+	{
+		struct im_connection *ic = purple_ic_by_pa( conv->account );
+		struct groupchat *gc;
+		
+		gc = imcb_chat_new( ic, conv->name );
+		conv->ui_data = gc;
+		gc->data = conv;
+	}
+}
+
+void prplcb_conv_free( PurpleConversation *conv )
+{
+	struct groupchat *gc = conv->ui_data;
+	
+	imcb_chat_free( gc );
+}
+
+void prplcb_conv_add_users( PurpleConversation *conv, GList *cbuddies, gboolean new_arrivals )
+{
+	struct groupchat *gc = conv->ui_data;
+	GList *b;
+	
+	for( b = cbuddies; b; b = b->next )
+	{
+		PurpleConvChatBuddy *pcb = b->data;
+		
+		imcb_chat_add_buddy( gc, pcb->name );
+	}
+}
+
+void prplcb_conv_del_users( PurpleConversation *conv, GList *cbuddies )
+{
+	struct groupchat *gc = conv->ui_data;
+	GList *b;
+	
+	for( b = cbuddies; b; b = b->next )
+		imcb_chat_remove_buddy( gc, b->data, "" );
+}
+
+void prplcb_conv_chat_msg( PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime )
+{
+	struct groupchat *gc = conv->ui_data;
+	PurpleBuddy *buddy;
+	
+	/* ..._SEND means it's an outgoing message, no need to echo those. */
+	if( flags & PURPLE_MESSAGE_SEND )
+		return;
+	
+	buddy = purple_find_buddy( conv->account, who );
+	if( buddy != NULL )
+		who = purple_buddy_get_name( buddy );
+	
+	imcb_chat_msg( gc, who, (char*) message, 0, mtime );
+}
+
 static void prplcb_conv_im( PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime )
 {
 	struct im_connection *ic = purple_ic_by_pa( conv->account );
@@ -523,14 +588,14 @@ static void prplcb_conv_im( PurpleConversation *conv, const char *who, const cha
 
 static PurpleConversationUiOps bee_conv_uiops = 
 {
-	NULL,                      /* create_conversation  */
-	NULL,                      /* destroy_conversation */
-	NULL,                      /* write_chat           */
+	prplcb_conv_new,           /* create_conversation  */
+	prplcb_conv_free,          /* destroy_conversation */
+	prplcb_conv_chat_msg,      /* write_chat           */
 	prplcb_conv_im,            /* write_im             */
 	NULL,                      /* write_conv           */
-	NULL,                      /* chat_add_users       */
+	prplcb_conv_add_users,     /* chat_add_users       */
 	NULL,                      /* chat_rename_user     */
-	NULL,                      /* chat_remove_users    */
+	prplcb_conv_del_users,     /* chat_remove_users    */
 	NULL,                      /* chat_update_user     */
 	NULL,                      /* present              */
 	NULL,                      /* has_focus            */
@@ -917,7 +982,8 @@ void purple_initmodule()
 	funcs.keepalive = purple_keepalive;
 	funcs.send_typing = purple_send_typing;
 	funcs.handle_cmp = g_strcasecmp;
-	/* TODO(wilmer): Set this one only for protocols that support it? */
+	/* TODO(wilmer): Set these only for protocols that support them? */
+	funcs.chat_msg = purple_chat_msg;
 	funcs.transfer_request = purple_transfer_request;
 	
 	help = g_string_new("BitlBee libpurple module supports the following IM protocols:\n");
