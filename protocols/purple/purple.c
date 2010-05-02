@@ -52,6 +52,22 @@ static struct im_connection *purple_ic_by_gc( PurpleConnection *gc )
 	return purple_ic_by_pa( purple_connection_get_account( gc ) );
 }
 
+static gboolean purple_menu_cmp( const char *a, const char *b )
+{
+	while( *a && *b )
+	{
+		while( *a == '_' ) a ++;
+		while( *b == '_' ) b ++;
+		if( tolower( *a ) != tolower( *b ) )
+			return FALSE;
+		
+		a ++;
+		b ++;
+	}
+	
+	return ( *a == '\0' && *b == '\0' );
+}
+
 static void purple_init( account_t *acc )
 {
 	PurplePlugin *prpl = purple_plugins_find_with_id( (char*) acc->prpl->data );
@@ -371,6 +387,67 @@ static void purple_chat_msg( struct groupchat *gc, char *message, int flags )
 	purple_conv_chat_send( purple_conversation_get_chat_data( pc ), message );
 }
 
+struct groupchat *purple_chat_with( struct im_connection *ic, char *who )
+{
+	/* No, "of course" this won't work this way. Or in fact, it almost
+	   does, but it only lets you send msgs to it, you won't receive
+	   any. Instead, we have to click the virtual menu item.
+	PurpleAccount *pa = ic->proto_data;
+	PurpleConversation *pc;
+	PurpleConvChat *pcc;
+	struct groupchat *gc;
+	
+	gc = imcb_chat_new( ic, "BitlBee-libpurple groupchat" );
+	gc->data = pc = purple_conversation_new( PURPLE_CONV_TYPE_CHAT, pa, "BitlBee-libpurple groupchat" );
+	pc->ui_data = gc;
+	
+	pcc = PURPLE_CONV_CHAT( pc );
+	purple_conv_chat_add_user( pcc, ic->acc->user, "", 0, TRUE );
+	purple_conv_chat_invite_user( pcc, who, "Please join my chat", FALSE );
+	//purple_conv_chat_add_user( pcc, who, "", 0, TRUE );
+	*/
+	
+	/* There went my nice afternoon. :-( */
+	
+	PurpleAccount *pa = ic->proto_data;
+	PurplePlugin *prpl = purple_plugins_find_with_id( pa->protocol_id );
+	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
+	PurpleBuddy *pb = purple_find_buddy( (PurpleAccount*) ic->proto_data, who );
+	PurpleMenuAction *mi;
+	GList *menu;
+	void (*callback)(PurpleBlistNode *, gpointer); /* FFFFFFFFFFFFFUUUUUUUUUUUUUU */
+	
+	if( !pb || !pi || !pi->blist_node_menu )
+		return NULL;
+	
+	menu = pi->blist_node_menu( &pb->node );
+	while( menu )
+	{
+		mi = menu->data;
+		if( purple_menu_cmp( mi->label, "initiate chat" ) ||
+		    purple_menu_cmp( mi->label, "initiate conference" ) )
+			break;
+		menu = menu->next;
+	}
+	
+	if( menu == NULL )
+		return NULL;
+	
+	/* Call the fucker. */
+	callback = (void*) mi->callback;
+	callback( &pb->node, menu->data );
+	
+	return NULL;
+}
+
+void purple_chat_invite( struct groupchat *gc, char *who, char *message )
+{
+	PurpleConversation *pc = gc->data;
+	PurpleConvChat *pcc = PURPLE_CONV_CHAT( pc );
+	
+	purple_conv_chat_invite_user( pcc, who, message && *message ? message : "Please join my chat", FALSE );
+}
+
 void purple_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *handle );
 
 static void purple_ui_init();
@@ -536,6 +613,14 @@ void prplcb_conv_add_users( PurpleConversation *conv, GList *cbuddies, gboolean 
 {
 	struct groupchat *gc = conv->ui_data;
 	GList *b;
+	
+	if( !gc->joined && strcmp( conv->account->protocol_id, "prpl-msn" ) == 0 )
+	{
+		/* Work around the broken MSN module which fucks up the user's
+		   handle completely when informing him/her that he just
+		   successfully joined the room s/he just created (v2.6.6). */
+		imcb_chat_add_buddy( gc, gc->ic->acc->user );
+	}
 	
 	for( b = cbuddies; b; b = b->next )
 	{
@@ -984,6 +1069,8 @@ void purple_initmodule()
 	funcs.handle_cmp = g_strcasecmp;
 	/* TODO(wilmer): Set these only for protocols that support them? */
 	funcs.chat_msg = purple_chat_msg;
+	funcs.chat_with = purple_chat_with;
+	funcs.chat_invite = purple_chat_invite;
 	funcs.transfer_request = purple_transfer_request;
 	
 	help = g_string_new("BitlBee libpurple module supports the following IM protocols:\n");
