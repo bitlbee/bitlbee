@@ -125,7 +125,7 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, t
 	else
 	{
 		dst = ic->name;
-		prefix = g_strdup_printf( "%s%s%s", irc->user->nick, set_getstr( &bee->set, "to_char" ), ts );
+		prefix = g_strdup_printf( "%s%s%s", irc->user->nick, set_getstr( &bee->set, "to_char" ), ts ? : "" );
 	}
 	
 	wrapped = word_wrap( msg, 425 );

@@ -144,13 +144,38 @@ gboolean irc_channel_name_ok( const char *name )
 /* Channel-type dependent functions, for control channels: */
 static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 {
-	char cmd[strlen(msg)+1];
+	irc_t *irc = ic->irc;
+	const char *s;
 	
-	g_free( ic->irc->last_root_cmd );
-	ic->irc->last_root_cmd = g_strdup( ic->name );
+	/* Scan for non-whitespace chars followed by a colon: */
+	for( s = msg; *s && !isspace( *s ) && *s != ':'; s ++ ) {}
 	
-	strcpy( cmd, msg );
-	root_command_string( ic->irc, cmd );
+	if( *s == ':' )
+	{
+		char to[s-msg+1];
+		irc_user_t *iu;
+		
+		strncpy( to, msg, s - msg );
+		while( *(++s) && isspace( *s ) ) {}
+		
+		iu = irc_user_by_name( irc, to );
+		if( iu && iu->f->privmsg )
+		{
+			iu->flags &= ~IRC_USER_PRIVATE;
+			iu->f->privmsg( iu, s );
+		}
+	}
+	else
+	{
+		/* TODO: Maybe just use root->privmsg here now? */
+		char cmd[strlen(msg)+1];
+		
+		g_free( ic->irc->last_root_cmd );
+		ic->irc->last_root_cmd = g_strdup( ic->name );
+		
+		strcpy( cmd, msg );
+		root_command_string( ic->irc, cmd );
+	}
 	
 	return TRUE;
 }

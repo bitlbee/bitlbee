@@ -287,7 +287,10 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 			iu->f->ctcp( iu, ctcp );
 		}
 		else if( iu->f->privmsg )
+		{
+			iu->flags |= IRC_USER_PRIVATE;
 			iu->f->privmsg( iu, cmd[2] );
+		}
 	}
 	else
 	{
