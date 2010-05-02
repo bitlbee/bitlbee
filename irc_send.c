@@ -162,7 +162,8 @@ void irc_send_names( irc_channel_t *ic )
 	   channel is invalid, just give an empty reply. */
 	for( l = ic->users; l; l = l->next )
 	{
-		irc_user_t *iu = l->data;
+		irc_channel_user_t *icu = l->data;
+		irc_user_t *iu = icu->iu;
 		
 		if( strlen( namelist ) + strlen( iu->nick ) > sizeof( namelist ) - 4 )
 		{
@@ -242,9 +243,13 @@ void irc_send_whois( irc_user_t *iu )
 
 void irc_send_who( irc_t *irc, GSList *l, const char *channel )
 {
+	gboolean is_channel = strcmp( channel, "**" ) != 0;
+	
 	while( l )
 	{
 		irc_user_t *iu = l->data;
+		if( is_channel )
+			iu = ((irc_channel_user_t*)iu)->iu;
 		/* TODO(wilmer): Restore away/channel information here */
 		irc_send_num( irc, 352, "%s %s %s %s %s %c :0 %s",
 		              channel ? : "*", iu->user, iu->host, irc->root->host,

@@ -25,6 +25,7 @@
 
 #include "bitlbee.h"
 
+static gint irc_channel_user_cmp( gconstpointer a_, gconstpointer b_ );
 static const struct irc_channel_funcs control_channel_funcs;
 
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
@@ -70,7 +71,11 @@ int irc_channel_free( irc_channel_t *ic )
 		irc_channel_del_user( ic, irc->user );
 	
 	irc->channels = g_slist_remove( irc->channels, ic );
-	g_slist_free( ic->users );
+	while( ic->users )
+	{
+		g_free( ic->users->data );
+		ic->users = g_slist_remove( ic->users, ic->users->data );
+	}
 	
 	g_free( ic->name );
 	g_free( ic->topic );
@@ -81,10 +86,15 @@ int irc_channel_free( irc_channel_t *ic )
 
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 {
+	irc_channel_user_t *icu;
+	
 	if( irc_channel_has_user( ic, iu ) )
 		return 0;
 	
-	ic->users = g_slist_insert_sorted( ic->users, iu, irc_user_cmp );
+	icu = g_new0( irc_channel_user_t, 1 );
+	icu->iu = iu;
+	
+	ic->users = g_slist_insert_sorted( ic->users, icu, irc_channel_user_cmp );
 	
 	if( iu == ic->irc->user || ic->flags & IRC_CHANNEL_JOINED )
 	{
@@ -97,10 +107,13 @@ int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 
 int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu )
 {
-	if( !irc_channel_has_user( ic, iu ) )
+	irc_channel_user_t *icu;
+	
+	if( !( icu = irc_channel_has_user( ic, iu ) ) )
 		return 0;
 	
-	ic->users = g_slist_remove( ic->users, iu );
+	ic->users = g_slist_remove( ic->users, icu );
+	g_free( icu );
 	
 	if( ic->flags & IRC_CHANNEL_JOINED )
 		irc_send_part( ic, iu, "" );
@@ -111,10 +124,19 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu )
 	return 1;
 }
 
-/* Currently a fairly stupid one-liner but I fear it's going to get worse. :-) */
-gboolean irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu )
+irc_channel_user_t *irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu )
 {
-	return g_slist_find( ic->users, iu ) != NULL;
+	GSList *l;
+	
+	for( l = ic->users; l; l = l->next )
+	{
+		irc_channel_user_t *icu = l->data;
+		
+		if( icu->iu == iu )
+			return icu;
+	}
+	
+	return NULL;
 }
 
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *iu )
@@ -139,6 +161,13 @@ int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_
 gboolean irc_channel_name_ok( const char *name )
 {
 	return strchr( CTYPES, name[0] ) != NULL && nick_ok( name + 1 );
+}
+
+static gint irc_channel_user_cmp( gconstpointer a_, gconstpointer b_ )
+{
+	const irc_channel_user_t *a = a_, *b = b_;
+	
+	return irc_user_cmp( a->iu, b->iu );
 }
 
 /* Channel-type dependent functions, for control channels: */

@@ -152,6 +152,19 @@ struct irc_channel_funcs
 	gboolean (*privmsg)( irc_channel_t *iu, const char *msg );
 };
 
+typedef enum
+{
+	IRC_CHANNEL_USER_OP = 1,
+	IRC_CHANNEL_USER_HALFOP = 2,
+	IRC_CHANNEL_USER_VOICE = 4,
+} irc_channel_user_flags_t;
+
+typedef struct irc_channel_user
+{
+	irc_user_t *iu;
+	int flags;
+} irc_channel_user_t;
+
 extern const struct bee_ui_funcs irc_ui_funcs;
 
 /* irc.c */
@@ -180,7 +193,7 @@ irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name );
 int irc_channel_free( irc_channel_t *ic );
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu );
-gboolean irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu );
+irc_channel_user_t *irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
 gboolean irc_channel_name_ok( const char *name );
 
