@@ -860,6 +860,16 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="show_offline" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				If enabled causes BitlBee to also show offline users in Channel. Online-users will get op, away-users voice and offline users none of both. This option takes effect as soon as you reconnect.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="simulate_netsplit" type="boolean" scope="global">
 		<default>true</default>
 

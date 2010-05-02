@@ -200,6 +200,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "query_order", "lifo", NULL, irc );
 	s = set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
 	s = set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "show_offline", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "status", NULL,  set_eval_away_status, irc );
 	s->flags |= SET_NULL_OK;
