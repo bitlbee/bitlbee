@@ -532,6 +532,7 @@ EOF
 	jabber=0
 	oscar=0
 	yahoo=0
+	twitter=0
 fi
 
 if [ "$msn" = 0 ]; then
