@@ -861,7 +861,7 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="show_offline" type="boolean" scope="global">
-		<default>true</default>
+		<default>false</default>
 
 		<description>
 			<para>
