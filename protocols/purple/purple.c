@@ -448,6 +448,13 @@ void purple_chat_invite( struct groupchat *gc, char *who, char *message )
 	purple_conv_chat_invite_user( pcc, who, message && *message ? message : "Please join my chat", FALSE );
 }
 
+void purple_chat_leave( struct groupchat *gc, char *who )
+{
+	PurpleConversation *pc = gc->data;
+	
+	purple_conversation_destroy( pc );
+}
+
 void purple_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *handle );
 
 static void purple_ui_init();
@@ -1071,6 +1078,7 @@ void purple_initmodule()
 	funcs.chat_msg = purple_chat_msg;
 	funcs.chat_with = purple_chat_with;
 	funcs.chat_invite = purple_chat_invite;
+	funcs.chat_leave = purple_chat_leave;
 	funcs.transfer_request = purple_transfer_request;
 	
 	help = g_string_new("BitlBee libpurple module supports the following IM protocols:\n");
