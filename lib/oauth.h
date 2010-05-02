@@ -39,36 +39,52 @@ typedef enum
 struct oauth_info
 {
 	oauth_stage_t stage;
+	const struct oauth_service *sp;
 	
 	oauth_cb func;
 	void *data;
 	
 	struct http_request *http;
 	
-	char *auth_params;
+	char *auth_url;
 	char *request_token;
 	
-	char *access_token;
+	char *token;
+	char *token_secret;
+};
+
+struct oauth_service
+{
+	char *url_request_token;
+	char *url_access_token;
+	char *url_authorize;
+	
+	char *consumer_key;
+	char *consumer_secret;
 };
 
 /* http://oauth.net/core/1.0a/#auth_step1 (section 6.1) 
    Request an initial anonymous token which can be used to construct an
    authorization URL for the user. This is passed to the callback function
    in a struct oauth_info. */
-struct oauth_info *oauth_request_token( const char *url, oauth_cb func, void *data );
+struct oauth_info *oauth_request_token( const struct oauth_service *sp, oauth_cb func, void *data );
 
 /* http://oauth.net/core/1.0a/#auth_step3 (section 6.3)
    The user gets a PIN or so which we now exchange for the final access
    token. This is passed to the callback function in the same
    struct oauth_info. */
-void oauth_access_token( const char *url, const char *pin, struct oauth_info *st );
+gboolean oauth_access_token( const char *pin, struct oauth_info *st );
 
 /* http://oauth.net/core/1.0a/#anchor12 (section 7)
    Generate an OAuth Authorization: HTTP header. access_token should be
    saved/fetched using the functions above. args can be a string with
    whatever's going to be in the POST body of the request. GET args will
    automatically be grabbed from url. */
-char *oauth_http_header( char *access_token, const char *method, const char *url, char *args );
+char *oauth_http_header( struct oauth_info *oi, const char *method, const char *url, char *args );
 
 /* Shouldn't normally be required unless the process is aborted by the user. */
 void oauth_info_free( struct oauth_info *info );
+
+/* Convert to and back from strings, for easier saving. */
+char *oauth_to_string( struct oauth_info *oi );
+struct oauth_info *oauth_from_string( char *in, const struct oauth_service *sp );

@@ -36,7 +36,6 @@ struct twitter_data
 {
 	char* user;
 	char* pass;
-	char* oauth;
 	struct oauth_info *oauth_info;
 	guint64 home_timeline_id;
 	gint main_loop_id;
@@ -50,9 +49,5 @@ struct twitter_data
  * else.
  */
 GSList *twitter_connections;
-
-#define TWITTER_OAUTH_REQUEST_TOKEN "http://api.twitter.com/oauth/request_token"
-#define TWITTER_OAUTH_ACCESS_TOKEN  "http://api.twitter.com/oauth/access_token"
-#define TWITTER_OAUTH_AUTHORIZE     "http://api.twitter.com/oauth/authorize"
 
 #endif //_TWITTER_H
