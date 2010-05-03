@@ -174,6 +174,19 @@ void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_u
 	icu->flags = flags;
 }
 
+void irc_channel_printf( irc_channel_t *ic, char *format, ... )
+{
+	va_list params;
+	char *text;
+	
+	va_start( params, format );
+	text = g_strdup_vprintf( format, params );
+	va_end( params );
+	
+	irc_send_msg( ic->irc->root, "PRIVMSG", ic->name, text, NULL );
+	g_free( text );
+}
+
 gboolean irc_channel_name_ok( const char *name )
 {
 	return strchr( CTYPES, name[0] ) != NULL && nick_ok( name + 1 );
@@ -212,8 +225,7 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 		}
 		else
 		{
-			irc_send_msg_f( irc->root, "PRIVMSG", ic->name,
-			                "User does not exist: %s", to );
+			irc_channel_printf( ic, "User does not exist: %s", to );
 		}
 	}
 	else
