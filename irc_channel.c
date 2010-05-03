@@ -200,6 +200,7 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 		char to[s-msg+1];
 		irc_user_t *iu;
 		
+		memset( to, 0, sizeof( to ) );
 		strncpy( to, msg, s - msg );
 		while( *(++s) && isspace( *s ) ) {}
 		
@@ -208,6 +209,11 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 		{
 			iu->flags &= ~IRC_USER_PRIVATE;
 			iu->f->privmsg( iu, s );
+		}
+		else
+		{
+			irc_send_msg_f( irc->root, "PRIVMSG", ic->name,
+			                "User does not exist: %s", to );
 		}
 	}
 	else
