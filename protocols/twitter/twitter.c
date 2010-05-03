@@ -143,9 +143,23 @@ static char *set_eval_mode( set_t *set, char *value )
 		return NULL;
 }
 
+static gboolean twitter_length_check( struct im_connection *ic, gchar *msg )
+{
+	int max = set_getint( &ic->acc->set, "message_length" ), len;
+	
+	if( max == 0 || ( len = g_utf8_strlen( msg, -1 ) ) <= max )
+		return TRUE;
+	
+	imcb_error( ic, "Maximum message length exceeded: %d > %d", len, max );
+	
+	return FALSE;
+}
+
 static void twitter_init( account_t *acc )
 {
 	set_t *s;
+	
+	s = set_add( &acc->set, "message_length", "140", set_eval_int, acc );
 	
 	s = set_add( &acc->set, "mode", "one", set_eval_mode, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -230,7 +244,7 @@ static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message
 				return FALSE;
 			}
 		}
-		else
+		else if( twitter_length_check(ic, message) )
 			twitter_post_status(ic, message);
 	}
 	else
@@ -261,7 +275,7 @@ static void twitter_remove_buddy( struct im_connection *ic, char *who, char *gro
 
 static void twitter_chat_msg( struct groupchat *c, char *message, int flags )
 {
-	if( c && message )
+	if( c && message && twitter_length_check(c->ic, message))
 		twitter_post_status(c->ic, message);
 }
 
