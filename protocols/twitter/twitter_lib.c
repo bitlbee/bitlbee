@@ -104,12 +104,14 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 	// Check if the buddy is allready in the buddy list.
 	if (!bee_user_by_handle( ic->bee, ic, name ))
 	{
+		char *mode = set_getstr(&ic->acc->set, "mode");
+		
 		// The buddy is not in the list, add the buddy and set the status to logged in.
 		imcb_add_buddy( ic, name, NULL );
 		imcb_rename_buddy( ic, name, fullname );
-		if (set_getbool( &ic->acc->set, "use_groupchat" ))
+		if (g_strcasecmp(mode, "chat") == 0)
 			imcb_chat_add_buddy( td->home_timeline_gc, name );
-		else
+		else if (g_strcasecmp(mode, "many") == 0)
 			imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
 	}
 }
@@ -127,7 +129,7 @@ void twitter_get_friends_ids(struct im_connection *ic, int next_cursor)
 	char* args[2];
 	args[0] = "cursor";
 	args[1] = g_strdup_printf ("%d", next_cursor);
-	twitter_http(TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, td->user, td->pass, args, 2);
+	twitter_http(TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, td->user, td->pass, td->oauth_info, args, 2);
 
 	g_free(args[1]);
 }
@@ -393,7 +395,7 @@ void twitter_get_home_timeline(struct im_connection *ic, int next_cursor)
 		args[3] = g_strdup_printf ("%llu", (long long unsigned int) td->home_timeline_id);
 	}
 
-	twitter_http(TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, td->user, td->pass, args, td->home_timeline_id ? 4 : 2);
+	twitter_http(TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, td->user, td->pass, td->oauth_info, args, td->home_timeline_id ? 4 : 2);
 
 	g_free(args[1]);
 	if (td->home_timeline_id) {
@@ -451,14 +453,39 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList *list)
 	struct twitter_data *td = ic->proto_data;
 	GSList *l = NULL;
 	struct twitter_xml_status *status;
+	char from[MAX_STRING];
+	gboolean mode_one;
+	
+	mode_one = g_strcasecmp( set_getstr( &ic->acc->set, "mode" ), "one" ) == 0;
 
+	if( mode_one )
+	{
+		g_snprintf( from, sizeof( from ) - 1, "twitter_%s", ic->acc->user );
+		from[MAX_STRING-1] = '\0';
+	}
+	
 	for ( l = list; l ; l = g_slist_next(l) )
 	{
+		char *text = NULL;
+		
 		status = l->data;
-		imcb_buddy_msg( ic, status->user->screen_name, status->text, 0, status->created_at );
+		
+		if( mode_one )
+			text = g_strdup_printf( "\002<\002%s\002>\002 %s",
+			                        status->user->screen_name, status->text );
+		else
+			twitter_add_buddy(ic, status->user->screen_name, status->user->name);
+		
+		imcb_buddy_msg( ic,
+		                mode_one ? from : status->user->screen_name,
+		                mode_one ? text : status->text,
+		                0, status->created_at );
+		
 		// Update the home_timeline_id to hold the highest id, so that by the next request
 		// we won't pick up the updates allready in the list.
 		td->home_timeline_id = td->home_timeline_id < status->id ? status->id : td->home_timeline_id;
+		
+		g_free( text );
 	}
 }
 
@@ -482,7 +509,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	if (req->status_code == 200)
 	{
 		td->http_fails = 0;
-		if (!ic->flags & OPT_LOGGED_IN)
+		if (!(ic->flags & OPT_LOGGED_IN))
 			imcb_connected(ic);
 	}
 	else if (req->status_code == 401)
@@ -511,7 +538,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	xt_free( parser );
 
 	// See if the user wants to see the messages in a groupchat window or as private messages.
-	if (set_getbool( &ic->acc->set, "use_groupchat" ))
+	if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
 		twitter_groupchat(ic, txl->list);
 	else
 		twitter_private_message_chat(ic, txl->list);
@@ -592,7 +619,7 @@ void twitter_get_statuses_friends(struct im_connection *ic, int next_cursor)
 	args[0] = "cursor";
 	args[1] = g_strdup_printf ("%d", next_cursor);
 
-	twitter_http(TWITTER_SHOW_FRIENDS_URL, twitter_http_get_statuses_friends, ic, 0, td->user, td->pass, args, 2);
+	twitter_http(TWITTER_SHOW_FRIENDS_URL, twitter_http_get_statuses_friends, ic, 0, td->user, td->pass, td->oauth_info, args, 2);
 
 	g_free(args[1]);
 }
@@ -611,7 +638,7 @@ static void twitter_http_post_status(struct http_request *req)
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not post tweet... HTTP STATUS: %d", req->status_code);
+		imcb_error(ic, "Could not post message... HTTP STATUS: %d", req->status_code);
 		return;
 	}
 }
@@ -626,7 +653,7 @@ void twitter_post_status(struct im_connection *ic, char* msg)
 	char* args[2];
 	args[0] = "status";
 	args[1] = msg;
-	twitter_http(TWITTER_STATUS_UPDATE_URL, twitter_http_post_status, ic, 1, td->user, td->pass, args, 2);
+	twitter_http(TWITTER_STATUS_UPDATE_URL, twitter_http_post_status, ic, 1, td->user, td->pass, td->oauth_info, args, 2);
 //	g_free(args[1]);
 }
 
@@ -644,7 +671,7 @@ void twitter_direct_messages_new(struct im_connection *ic, char *who, char *msg)
 	args[2] = "text";
 	args[3] = msg;
 	// Use the same callback as for twitter_post_status, since it does basically the same.
-	twitter_http(TWITTER_DIRECT_MESSAGES_NEW_URL, twitter_http_post_status, ic, 1, td->user, td->pass, args, 4);
+	twitter_http(TWITTER_DIRECT_MESSAGES_NEW_URL, twitter_http_post_status, ic, 1, td->user, td->pass, td->oauth_info, args, 4);
 //	g_free(args[1]);
 //	g_free(args[3]);
 }

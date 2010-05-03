@@ -421,8 +421,12 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "FLN" ) == 0 )
 	{
-		if( cmd[1] )
-			imcb_buddy_status( ic, cmd[1], 0, NULL, NULL );
+		if( cmd[1] == NULL )
+			return 1;
+		
+		imcb_buddy_status( ic, cmd[1], 0, NULL, NULL );
+		
+		msn_sb_start_keepalives( msn_sb_by_handle( ic, cmd[1] ), TRUE );
 	}
 	else if( strcmp( cmd[0], "NLN" ) == 0 )
 	{
@@ -448,6 +452,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN | 
 		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ),
 		                   st->name, NULL );
+		
+		msn_sb_stop_keepalives( msn_sb_by_handle( ic, cmd[2] ) );
 	}
 	else if( strcmp( cmd[0], "RNG" ) == 0 )
 	{

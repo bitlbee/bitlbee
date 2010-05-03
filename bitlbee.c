@@ -35,6 +35,43 @@
 
 static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition condition );
 
+static gboolean try_listen( struct addrinfo *res )
+{
+	int i;
+	
+	global.listen_socket = socket( res->ai_family, res->ai_socktype, res->ai_protocol );
+	if( global.listen_socket < 0 )
+	{
+		log_error( "socket" );
+		return FALSE;
+	}
+
+#ifdef IPV6_V6ONLY		
+	if( res->ai_family == AF_INET6 )
+	{
+		i = 0;
+		setsockopt( global.listen_socket, IPPROTO_IPV6, IPV6_V6ONLY,
+		            (char *) &i, sizeof( i ) );
+	}
+#endif
+
+	/* TIME_WAIT (?) sucks.. */
+	i = 1;
+	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
+
+	i = bind( global.listen_socket, res->ai_addr, res->ai_addrlen );
+	if( i == -1 )
+	{
+		closesocket( global.listen_socket );
+		global.listen_socket = -1;
+		
+		log_error( "bind" );
+		return FALSE;
+	}
+	
+	return TRUE;
+}
+
 int bitlbee_daemon_init()
 {
 	struct addrinfo *res, hints, *addrinfo_bind;
@@ -62,35 +99,18 @@ int bitlbee_daemon_init()
 	}
 
 	global.listen_socket = -1;
-
+	
+	/* Try IPv6 first (which will become an IPv6+IPv4 socket). */
 	for( res = addrinfo_bind; res; res = res->ai_next )
-	{
-		global.listen_socket = socket( res->ai_family, res->ai_socktype, res->ai_protocol );
-		if( global.listen_socket < 0 )
-			continue;
-
-#ifdef IPV6_V6ONLY		
-		if( res->ai_family == AF_INET6 )
-		{
-			i = 0;
-			setsockopt( global.listen_socket, IPPROTO_IPV6, IPV6_V6ONLY,
-			            (char *) &i, sizeof( i ) );
-		}
-#endif
-
-		/* TIME_WAIT (?) sucks.. */
-		i = 1;
-		setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
-
-		i = bind( global.listen_socket, res->ai_addr, res->ai_addrlen );
-		if( i == -1 )
-		{
-			log_error( "bind" );
-			return( -1 );
-		}
-		break;
-	}
-
+		if( res->ai_family == AF_INET6 && try_listen( res ) )
+			break;
+	
+	/* The rest (so IPv4, I guess). */
+	if( res == NULL )
+		for( res = addrinfo_bind; res; res = res->ai_next )
+			if( res->ai_family != AF_INET6 && try_listen( res ) )
+				break;
+	
 	freeaddrinfo( addrinfo_bind );
 
 	i = listen( global.listen_socket, 10 );

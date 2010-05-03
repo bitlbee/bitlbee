@@ -30,6 +30,7 @@
  */
 #define TYPING_NOTIFICATION_MESSAGE "\r\r\rBEWARE, ME R TYPINK MESSAGE!!!!\r\r\r"
 #define GROUPCHAT_SWITCHBOARD_MESSAGE "\r\r\rME WANT TALK TO MANY PEOPLE\r\r\r"
+#define SB_KEEPALIVE_MESSAGE "\r\r\rDONT HANG UP ON ME!\r\r\r"
 
 #ifdef DEBUG_MSN
 #define debug( text... ) imcb_log( ic, text );
@@ -52,6 +53,10 @@
                            "Content-Type: text/x-msmsgscontrol\r\n" \
                            "TypingUser: %s\r\n" \
                            "\r\n\r\n"
+
+#define SB_KEEPALIVE_HEADERS "MIME-Version: 1.0\r\n" \
+                             "Content-Type: text/x-ping\r\n" \
+                             "\r\n\r\n"
 
 #define PROFILE_URL "http://members.msn.com/"
 
@@ -83,6 +88,7 @@ struct msn_switchboard
 	int fd;
 	gint inp;
 	struct msn_handler_data *handler;
+	gint keepalive;
 	
 	int trId;
 	int ready;
@@ -180,6 +186,8 @@ struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb );
 void msn_sb_destroy( struct msn_switchboard *sb );
 gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond );
 int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m );
+void msn_sb_start_keepalives( struct msn_switchboard *sb, gboolean initial );
+void msn_sb_stop_keepalives( struct msn_switchboard *sb );
 
 /* invitation.c */
 void msn_ftp_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *who );

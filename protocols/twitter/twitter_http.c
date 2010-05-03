@@ -28,14 +28,16 @@
 *                                                                           *
 ****************************************************************************/ 
 
-#include "twitter_http.h"
 #include "twitter.h"
 #include "bitlbee.h"
 #include "url.h"
 #include "misc.h"
 #include "base64.h"
+#include "oauth.h"
 #include <ctype.h>
 #include <errno.h>
+
+#include "twitter_http.h"
 
 
 char *twitter_url_append(char *url, char *key, char* value);
@@ -44,7 +46,7 @@ char *twitter_url_append(char *url, char *key, char* value);
  * Do a request.
  * This is actually pretty generic function... Perhaps it should move to the lib/http_client.c
  */
-void *twitter_http(char *url_string, http_input_function func, gpointer data, int is_post, char* user, char* pass, char** arguments, int arguments_len)
+void *twitter_http(char *url_string, http_input_function func, gpointer data, int is_post, char* user, char* pass, struct oauth_info* oi, char** arguments, int arguments_len)
 {
 	url_t *url = g_new0( url_t, 1 );
 	char *tmp;
@@ -109,7 +111,19 @@ void *twitter_http(char *url_string, http_input_function func, gpointer data, in
 	                            is_post ? "POST" : "GET", url->file, url->host );
 
 	// If a pass and user are given we append them to the request.
-	if (userpass_base64)
+	if (oi)
+	{
+		char *full_header;
+		
+		full_header = oauth_http_header(oi, is_post ? "POST" : "GET",
+		                                url_string, url_arguments);
+		
+		tmp = g_strdup_printf("%sAuthorization: %s\r\n", request, full_header);
+		g_free(request);
+		g_free(full_header);
+		request = tmp;
+	}
+	else if (userpass_base64)
 	{
 		tmp = g_strdup_printf("%sAuthorization: Basic %s\r\n", request, userpass_base64);
 		g_free(request);

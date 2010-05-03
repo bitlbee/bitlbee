@@ -37,8 +37,8 @@ fi
 #
 d_start() {
 	# Make sure BitlBee can actually write its PID...
-	touch /var/run/bitlbee.pid
-	chown bitlbee: /var/run/bitlbee.pid
+	touch $PIDFILE
+	chown bitlbee: $PIDFILE
 	
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
 		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $BITLBEE_OPTS
