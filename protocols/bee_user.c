@@ -138,29 +138,6 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	g_free( old->status_msg );
 	g_free( old->status );
 	g_free( old );
-#if 0	
-	/* LISPy... */
-	if( ( set_getbool( &ic->bee->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
-	    ( u->online ) &&						/* Don't touch offline people */
-	    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
-	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
-	{
-		char *from;
-		
-		if( set_getbool( &ic->bee->set, "simulate_netsplit" ) )
-		{
-			from = g_strdup( ic->irc->myhost );
-		}
-		else
-		{
-			from = g_strdup_printf( "%s!%s@%s", ic->irc->mynick, ic->irc->mynick,
-			                                    ic->irc->myhost );
-		}
-		irc_write( ic->irc, ":%s MODE %s %cv %s", from, ic->irc->channel,
-		                                          u->away?'-':'+', u->nick );
-		g_free( from );
-	}
-#endif
 }
 
 void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at )
