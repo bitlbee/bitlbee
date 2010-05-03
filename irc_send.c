@@ -156,7 +156,6 @@ void irc_send_names( irc_channel_t *ic )
 {
 	GSList *l;
 	char namelist[385] = "";
-	//char *ops = set_getstr( &ic->irc->b->set, "ops" );
 	
 	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
@@ -171,13 +170,12 @@ void irc_send_names( irc_channel_t *ic )
 			*namelist = 0;
 		}
 		
-		/*
-		if( u->ic && !u->away && set_getbool( &irc->set, "away_devoice" ) )
-			strcat( namelist, "+" );
-		else if( ( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( ops, "root" ) == 0 || strcmp( ops, "both" ) == 0 ) ) ||
-		         ( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( ops, "user" ) == 0 || strcmp( ops, "both" ) == 0 ) ) )
+		if( icu->flags & IRC_CHANNEL_USER_OP )
 			strcat( namelist, "@" );
-		*/
+		else if( icu->flags & IRC_CHANNEL_USER_HALFOP )
+			strcat( namelist, "%" );
+		else if( icu->flags & IRC_CHANNEL_USER_VOICE )
+			strcat( namelist, "+" );
 		
 		strcat( namelist, iu->nick );
 		strcat( namelist, " " );
@@ -325,4 +323,53 @@ void irc_send_nick( irc_user_t *iu, const char *new )
 {
 	irc_write( iu->irc, ":%s!%s@%s NICK %s",
 	           iu->nick, iu->user, iu->host, new );
+}
+
+/* Send an update of a user's mode inside a channel, compared to what it was. */
+void irc_send_channel_user_mode_diff( irc_channel_t *ic, irc_user_t *iu,
+	irc_channel_user_flags_t old, irc_channel_user_flags_t new )
+{
+	char changes[3*(5+strlen(iu->nick))];
+	char from[strlen(ic->irc->root->nick)+strlen(ic->irc->root->user)+strlen(ic->irc->root->host)+3];
+	int n;
+	
+	*changes = '\0'; n = 0;
+	if( ( old & IRC_CHANNEL_USER_OP ) != ( new & IRC_CHANNEL_USER_OP ) )
+	{
+		n ++;
+		if( new & IRC_CHANNEL_USER_OP )
+			strcat( changes, "+o" );
+		else
+			strcat( changes, "-o" );
+	}
+	if( ( old & IRC_CHANNEL_USER_HALFOP ) != ( new & IRC_CHANNEL_USER_HALFOP ) )
+	{
+		n ++;
+		if( new & IRC_CHANNEL_USER_HALFOP )
+			strcat( changes, "+h" );
+		else
+			strcat( changes, "-h" );
+	}
+	if( ( old & IRC_CHANNEL_USER_VOICE ) != ( new & IRC_CHANNEL_USER_VOICE ) )
+	{
+		n ++;
+		if( new & IRC_CHANNEL_USER_VOICE )
+			strcat( changes, "+v" );
+		else
+			strcat( changes, "-v" );
+	}
+	while( n )
+	{
+		strcat( changes, " " );
+		strcat( changes, iu->nick );
+		n --;
+	}
+	
+	if( set_getbool( &ic->irc->b->set, "simulate_netsplit" ) )
+		g_snprintf( from, sizeof( from ), "%s", ic->irc->root->host );
+	else
+		g_snprintf( from, sizeof( from ), "%s!%s@%s", ic->irc->root->nick,
+		            ic->irc->root->user, ic->irc->root->host );
+	
+	irc_write( ic->irc, ":%s MODE %s %s", from, ic->name, changes );
 }

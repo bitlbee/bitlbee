@@ -195,6 +195,7 @@ int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu );
 irc_channel_user_t *irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
+void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_user_flags_t flags );
 gboolean irc_channel_name_ok( const char *name );
 
 /* irc_commands.c */
@@ -215,6 +216,8 @@ void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char
 void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const char *msg );
 void irc_send_msg_f( irc_user_t *iu, const char *type, const char *dst, const char *format, ... ) G_GNUC_PRINTF( 4, 5 );
 void irc_send_nick( irc_user_t *iu, const char *new );
+void irc_send_channel_user_mode_diff( irc_channel_t *ic, irc_user_t *iu,
+                                      irc_channel_user_flags_t old, irc_channel_user_flags_t new );
 
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );

@@ -42,6 +42,9 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 	strcpy( ic->mode, CMODE );
 	
 	irc_channel_add_user( ic, irc->root );
+	if( strcmp( set_getstr( &irc->b->set, "ops" ), "both" ) == 0 ||
+	    strcmp( set_getstr( &irc->b->set, "ops" ), "root" ) == 0 )
+		irc_channel_user_set_mode( ic, irc->root, IRC_CHANNEL_USER_OP );
 	
 	irc->channels = g_slist_prepend( irc->channels, ic );
 	
@@ -156,6 +159,19 @@ int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_
 		irc_send_topic( ic, TRUE );
 	
 	return 1;
+}
+
+void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_user_flags_t flags )
+{
+	irc_channel_user_t *icu = irc_channel_has_user( ic, iu );
+	
+	if( icu->flags == flags )
+		return;
+	
+	if( ic->flags & IRC_CHANNEL_JOINED )
+		irc_send_channel_user_mode_diff( ic, iu, icu->flags, flags );
+	
+	icu->flags = flags;
 }
 
 gboolean irc_channel_name_ok( const char *name )

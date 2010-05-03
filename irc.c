@@ -639,6 +639,10 @@ int irc_check_login( irc_t *irc )
 			irc_channel_set_topic( ic, CONTROL_TOPIC, irc->root );
 			irc_channel_add_user( ic, irc->user );
 			
+			if( strcmp( set_getstr( &irc->b->set, "ops" ), "both" ) == 0 ||
+			    strcmp( set_getstr( &irc->b->set, "ops" ), "user" ) == 0 )
+				irc_channel_user_set_mode( ic, irc->user, IRC_CHANNEL_USER_OP );
+			
 			irc->last_root_cmd = g_strdup( ROOT_CHAN );
 			
 			irc_send_msg( irc->root, "PRIVMSG", ROOT_CHAN,

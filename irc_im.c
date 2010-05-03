@@ -91,6 +91,10 @@ static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old
 				              iu->host, (int) time( NULL ), "logged online" );
 			
 			irc_channel_add_user( ic, iu );
+			
+			if( set_getbool( &bee->set, "away_devoice" ) )
+				irc_channel_user_set_mode( ic, iu, ( bu->flags & BEE_USER_AWAY ) ?
+				                           0 : IRC_CHANNEL_USER_VOICE );
 		}
 		else
 		{
