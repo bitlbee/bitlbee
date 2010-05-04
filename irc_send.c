@@ -230,6 +230,10 @@ void irc_send_whois( irc_user_t *iu )
 			else
 				irc_send_num( irc, num, "%s :%s", iu->nick, bu->status ? : bu->status_msg );
 		}
+		else if( !( bu->flags & BEE_USER_ONLINE ) )
+		{
+			irc_send_num( irc, 301, "%s :%s", iu->nick, "User is offline" );
+		}
 	}
 	else
 	{
@@ -251,7 +255,8 @@ void irc_send_who( irc_t *irc, GSList *l, const char *channel )
 		/* TODO(wilmer): Restore away/channel information here */
 		irc_send_num( irc, 352, "%s %s %s %s %s %c :0 %s",
 		              channel ? : "*", iu->user, iu->host, irc->root->host,
-		              iu->nick, 'H', iu->fullname );
+		              iu->nick, iu->flags & IRC_USER_AWAY ? 'G' : 'H',
+		              iu->fullname );
 		l = l->next;
 	}
 	

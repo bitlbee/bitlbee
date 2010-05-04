@@ -90,6 +90,7 @@ typedef struct irc
 typedef enum
 {
 	IRC_USER_PRIVATE = 1,
+	IRC_USER_AWAY = 2,
 } irc_user_flags_t;
 
 typedef struct irc_user
