@@ -32,7 +32,7 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 {
 	irc_channel_t *ic;
 	
-	if( strchr( CTYPES, name[0] ) == NULL || !nick_ok( name + 1 ) )
+	if( !irc_channel_name_ok( name ) || irc_channel_by_name( irc, name ) )
 		return NULL;
 	
 	ic = g_new0( irc_channel_t, 1 );
