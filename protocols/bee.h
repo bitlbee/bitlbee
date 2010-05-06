@@ -27,6 +27,7 @@
 #define __BEE_H__
 
 struct bee_ui_funcs;
+struct groupchat;
 
 typedef struct bee
 {
@@ -34,6 +35,11 @@ typedef struct bee
 	
 	GSList *users;
 	struct account *accounts; /* TODO(wilmer): Use GSList here too? */
+	
+	/* Symbolic, to refer to the local user (who has no real bee_user
+	   object). Not to be used by anything except so far imcb_chat_add/
+	   remove_buddy(). This seems slightly cleaner than abusing NULL. */
+	struct bee_user *user;
 	
 	const struct bee_ui_funcs *ui;
 	void *ui_data;
@@ -72,6 +78,13 @@ typedef struct bee_ui_funcs
 	gboolean (*user_msg)( bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at );
 	gboolean (*user_typing)( bee_t *bee, bee_user_t *bu, guint32 flags );
 	
+	gboolean (*chat_new)( bee_t *bee, struct groupchat *c );
+	gboolean (*chat_free)( bee_t *bee, struct groupchat *c );
+	gboolean (*chat_log)( bee_t *bee, struct groupchat *c, const char *format, ... );
+	gboolean (*chat_msg)( bee_t *bee, struct groupchat *c, const char *who, const char *msg, time_t sent_at );
+	gboolean (*chat_add_user)( bee_t *bee, struct groupchat *c, bee_user_t *bu );
+	gboolean (*chat_remove_user)( bee_t *bee, struct groupchat *c, bee_user_t *bu );
+	
 	struct file_transfer* (*ft_in_start)( bee_t *bee, bee_user_t *bu, const char *file_name, size_t file_size );
 	gboolean (*ft_out_start)( struct im_connection *ic, struct file_transfer *ft );
 	void (*ft_close)( struct im_connection *ic, struct file_transfer *ft );
@@ -99,5 +112,18 @@ G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *ha
 /* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
 /* Call when a handle says something. 'flags' and 'sent_at may be just 0. */
 G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, guint32 flags, time_t sent_at );
+
+/* bee_chat.c */
+#if 0
+struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle );
+void imcb_chat_name_hint( struct groupchat *c, const char *name );
+void imcb_chat_free( struct groupchat *c );
+void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t flags, time_t sent_at );
+void imcb_chat_log( struct groupchat *c, char *format, ... );
+void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at );
+void imcb_chat_add_buddy( struct groupchat *b, const char *handle );
+void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char *reason );
+static int remove_chat_buddy_silent( struct groupchat *b, const char *handle );
+#endif
 
 #endif /* __BEE_H__ */

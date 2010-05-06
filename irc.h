@@ -146,6 +146,7 @@ typedef struct irc_channel
 	struct set *set;
 	
 	const struct irc_channel_funcs *f;
+	void *data;
 } irc_channel_t;
 
 struct irc_channel_funcs

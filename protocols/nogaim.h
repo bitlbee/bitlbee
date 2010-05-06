@@ -88,7 +88,7 @@ struct im_connection
 	/* BitlBee */
 	bee_t *bee;
 	
-	struct groupchat *groupchats;
+	GSList *groupchats;
 };
 
 struct groupchat {
@@ -99,10 +99,9 @@ struct groupchat {
 	 * "nick list". This is how you can check who is in the group chat
 	 * already, for example to avoid adding somebody two times. */
 	GList *in_room;
-	GList *ignored;
+	//GList *ignored;
 	
-	struct groupchat *next;
-	char *channel;
+	//struct groupchat *next;
 	/* The title variable contains the ID you gave when you created the
 	 * chat using imcb_chat_new(). */
 	char *title;
@@ -113,6 +112,7 @@ struct groupchat {
 	/* This is for you, you can add your own structure here to extend this
 	 * structure for your protocol's needs. */
 	void *data;
+	void *ui_data;
 };
 
 struct buddy {

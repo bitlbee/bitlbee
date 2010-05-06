@@ -46,6 +46,8 @@ bee_t *bee_new()
 	s->flags |= SET_NULL_OK;
 	s = set_add( &b->set, "strip_html", "true", NULL, b );
 	
+	b->user = g_malloc( 1 );
+	
 	return b;
 }
 
@@ -69,6 +71,7 @@ void bee_free( bee_t *b )
 	while( b->set )
 		set_del( &b->set, b->set->key );
 	
+	g_free( b->user );
 	g_free( b );
 }
 

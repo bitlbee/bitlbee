@@ -202,6 +202,68 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 	return TRUE;
 }
 
+
+/* Groupchats */
+gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
+{
+	irc_t *irc = bee->ui_data;
+	irc_channel_t *ic;
+	char *topic;
+	int i;
+	
+	for( i = 0; i <= 999; i ++ )
+	{
+		char name[16];
+		sprintf( name, "&chat_%03d", i );
+		if( ( ic = irc_channel_new( irc, name ) ) )
+			break;
+	}
+	
+	if( ic == NULL )
+		return FALSE;
+	
+	c->ui_data = ic;
+	ic->data = c;
+	
+	topic = g_strdup_printf( "BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->title );
+	irc_channel_set_topic( ic, topic, irc->root );
+	g_free( topic );
+	
+	return TRUE;
+}
+
+gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
+{
+	irc_channel_t *ic = c->ui_data;
+	
+	if( ic->flags & IRC_CHANNEL_JOINED )
+		irc_channel_printf( ic, "Cleaning up channel, bye!" );
+	
+	irc_channel_free( ic );
+	
+	return TRUE;
+}
+
+gboolean bee_irc_chat_log( bee_t *bee, struct groupchat *c, const char *format, ... )
+{
+}
+
+gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, const char *who, const char *msg, time_t sent_at )
+{
+}
+
+gboolean bee_irc_chat_add_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
+{
+	irc_t *irc = bee->ui_data;
+	
+	irc_channel_add_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data );
+}
+
+gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
+{
+}
+
+
 /* File transfers */
 static file_transfer_t *bee_irc_ft_in_start( bee_t *bee, bee_user_t *bu, const char *file_name, size_t file_size )
 {
@@ -235,6 +297,13 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_user_status,
 	bee_irc_user_msg,
 	bee_irc_user_typing,
+	
+	bee_irc_chat_new,
+	bee_irc_chat_free,
+	NULL,
+	NULL,
+	bee_irc_chat_add_user,
+	NULL,
 	
 	bee_irc_ft_in_start,
 	bee_irc_ft_out_start,

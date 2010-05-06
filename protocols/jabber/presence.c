@@ -205,6 +205,7 @@ int presence_send_update( struct im_connection *ic )
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *node, *cap;
 	struct groupchat *c;
+	GSList *l;
 	int st;
 	
 	node = jabber_make_packet( "presence", NULL, NULL, NULL );
@@ -228,8 +229,9 @@ int presence_send_update( struct im_connection *ic )
 	
 	/* Have to send this update to all groupchats too, the server won't
 	   do this automatically. */
-	for( c = ic->groupchats; c && st; c = c->next )
+	for( l = ic->groupchats; l && st; l = l->next )
 	{
+		struct groupchat *c = l->data;
 		struct jabber_chat *jc = c->data;
 		
 		xt_add_attr( node, "to", jc->my_full_jid );
