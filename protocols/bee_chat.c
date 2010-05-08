@@ -246,3 +246,23 @@ static int remove_chat_buddy_silent( struct groupchat *b, const char *handle )
 	return 0;
 }
 #endif
+
+int bee_chat_msg( bee_t *bee, struct groupchat *c, const char *msg, int flags )
+{
+	struct im_connection *ic = c->ic;
+	char *buf = NULL;
+	int st;
+	
+	if( ( ic->flags & OPT_DOES_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
+	{
+		buf = escape_html( msg );
+		msg = buf;
+	}
+	else
+		buf = g_strdup( msg );
+	
+	ic->acc->prpl->chat_msg( c, buf, flags );
+	g_free( buf );
+	
+	return 1;
+}

@@ -151,7 +151,7 @@ typedef struct irc_channel
 
 struct irc_channel_funcs
 {
-	gboolean (*privmsg)( irc_channel_t *iu, const char *msg );
+	gboolean (*privmsg)( irc_channel_t *ic, const char *msg );
 };
 
 typedef enum

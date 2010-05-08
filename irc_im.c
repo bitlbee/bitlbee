@@ -251,7 +251,9 @@ static const struct irc_user_funcs irc_user_im_funcs = {
 
 
 /* IM->IRC: Groupchats */
-gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
+static const struct irc_channel_funcs irc_channel_im_chat_funcs;
+
+static gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
 {
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ic;
@@ -271,6 +273,7 @@ gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
 	
 	c->ui_data = ic;
 	ic->data = c;
+	ic->f = &irc_channel_im_chat_funcs;
 	
 	topic = g_strdup_printf( "BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->title );
 	irc_channel_set_topic( ic, topic, irc->root );
@@ -279,7 +282,7 @@ gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
 	return TRUE;
 }
 
-gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
+static gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
 {
 	irc_channel_t *ic = c->ui_data;
 	
@@ -291,7 +294,7 @@ gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
 	return TRUE;
 }
 
-gboolean bee_irc_chat_log( bee_t *bee, struct groupchat *c, const char *text )
+static gboolean bee_irc_chat_log( bee_t *bee, struct groupchat *c, const char *text )
 {
 	irc_channel_t *ic = c->ui_data;
 	
@@ -300,7 +303,7 @@ gboolean bee_irc_chat_log( bee_t *bee, struct groupchat *c, const char *text )
 	return TRUE;
 }
 
-gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, time_t sent_at )
+static gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, time_t sent_at )
 {
 	irc_t *irc = bee->ui_data;
 	irc_user_t *iu = bu->ui_data;
@@ -316,7 +319,7 @@ gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *bu, cons
 	return TRUE;
 }
 
-gboolean bee_irc_chat_add_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
+static gboolean bee_irc_chat_add_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
 {
 	irc_t *irc = bee->ui_data;
 	
@@ -325,7 +328,7 @@ gboolean bee_irc_chat_add_user( bee_t *bee, struct groupchat *c, bee_user_t *bu 
 	return TRUE;
 }
 
-gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
+static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
 {
 	irc_t *irc = bee->ui_data;
 	
@@ -334,6 +337,22 @@ gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_user_t *
 	return TRUE;
 }
 
+/* IRC->IM */
+
+static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg )
+{
+	struct groupchat *c = ic->data;
+	
+	bee_chat_msg( ic->irc->b, c, msg, 0 );
+	
+	return TRUE;
+	
+}
+
+static const struct irc_channel_funcs irc_channel_im_chat_funcs = {
+	bee_irc_channel_chat_privmsg,
+};
+
 
 /* IM->IRC: File transfers */
 static file_transfer_t *bee_irc_ft_in_start( bee_t *bee, bee_user_t *bu, const char *file_name, size_t file_size )
@@ -341,17 +360,17 @@ static file_transfer_t *bee_irc_ft_in_start( bee_t *bee, bee_user_t *bu, const c
 	return dccs_send_start( bu->ic, (irc_user_t *) bu->ui_data, file_name, file_size );
 }
 
-gboolean bee_irc_ft_out_start( struct im_connection *ic, file_transfer_t *ft )
+static gboolean bee_irc_ft_out_start( struct im_connection *ic, file_transfer_t *ft )
 {
 	return dccs_recv_start( ft );
 }
 
-void bee_irc_ft_close( struct im_connection *ic, file_transfer_t *ft )
+static void bee_irc_ft_close( struct im_connection *ic, file_transfer_t *ft )
 {
 	return dcc_close( ft );
 }
 
-void bee_irc_ft_finished( struct im_connection *ic, file_transfer_t *file )
+static void bee_irc_ft_finished( struct im_connection *ic, file_transfer_t *file )
 {
 	dcc_file_transfer_t *df = file->priv;
 
