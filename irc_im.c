@@ -249,6 +249,8 @@ gboolean bee_irc_chat_log( bee_t *bee, struct groupchat *c, const char *text )
 	irc_channel_t *ic = c->ui_data;
 	
 	irc_channel_printf( ic, "%s", text );
+	
+	return TRUE;
 }
 
 gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, time_t sent_at )
@@ -272,10 +274,17 @@ gboolean bee_irc_chat_add_user( bee_t *bee, struct groupchat *c, bee_user_t *bu 
 	irc_t *irc = bee->ui_data;
 	
 	irc_channel_add_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data );
+	
+	return TRUE;
 }
 
 gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
 {
+	irc_t *irc = bee->ui_data;
+	
+	irc_channel_del_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data );
+	
+	return TRUE;
 }
 
 
@@ -318,7 +327,7 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_chat_log,
 	bee_irc_chat_msg,
 	bee_irc_chat_add_user,
-	NULL,
+	bee_irc_chat_remove_user,
 	
 	bee_irc_ft_in_start,
 	bee_irc_ft_out_start,

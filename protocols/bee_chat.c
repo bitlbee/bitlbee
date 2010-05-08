@@ -197,34 +197,31 @@ void imcb_chat_add_buddy( struct groupchat *c, const char *handle )
 		c->joined = 1;
 }
 
-/* This function is one BIG hack... :-( EREWRITE */
-void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char *reason )
+void imcb_chat_remove_buddy( struct groupchat *c, const char *handle, const char *reason )
 {
-#if 0
-	user_t *u;
-	int me = 0;
+	struct im_connection *ic = c->ic;
+	bee_t *bee = ic->bee;
+	bee_user_t *bu = NULL;
 	
-	if( set_getbool( &b->ic->bee->set, "debug" ) )
-		imcb_log( b->ic, "User %s removed from conversation %p (%s)", handle, b, reason ? reason : "" );
+	if( set_getbool( &bee->set, "debug" ) )
+		imcb_log( ic, "User %s removed from conversation %p (%s)", handle, c, reason ? reason : "" );
 	
 	/* It might be yourself! */
-	if( g_strcasecmp( handle, b->ic->acc->user ) == 0 )
+	if( g_strcasecmp( handle, ic->acc->user ) == 0 )
 	{
-		if( b->joined == 0 )
+		if( c->joined == 0 )
 			return;
 		
-		u = user_find( b->ic->irc, b->ic->irc->nick );
-		b->joined = 0;
-		me = 1;
+		bu = bee->user;
+		c->joined = 0;
 	}
 	else
 	{
-		u = user_findhandle( b->ic, handle );
+		bu = bee_user_by_handle( bee, ic, handle );
 	}
 	
-	if( me || ( remove_chat_buddy_silent( b, handle ) && b->joined && u ) )
-		irc_part( b->ic->irc, u, b->channel );
-#endif
+	if( bee->ui->chat_remove_user )
+		bee->ui->chat_remove_user( bee, c, bu );
 }
 
 #if 0
