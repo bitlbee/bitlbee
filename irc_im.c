@@ -337,6 +337,23 @@ static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_u
 	return TRUE;
 }
 
+static gboolean bee_irc_chat_topic( bee_t *bee, struct groupchat *c, const char *new, bee_user_t *bu )
+{
+	irc_t *irc = bee->ui_data;
+	irc_user_t *iu;
+	
+	if( bu == NULL )
+		iu = irc->root;
+	else if( bu == bee->user )
+		iu = irc->user;
+	else
+		iu = bu->ui_data;
+	
+	irc_channel_set_topic( c->ui_data, new, iu );
+	
+	return TRUE;
+}
+
 static gboolean bee_irc_chat_name_hint( bee_t *bee, struct groupchat *c, const char *name )
 {
 	irc_t *irc = bee->ui_data;
@@ -390,11 +407,15 @@ static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
 	
 }
 
+static gboolean bee_irc_channel_chat_topic( irc_channel_t *ic, const char *new )
+{
+}
+
 static const struct irc_channel_funcs irc_channel_im_chat_funcs = {
 	bee_irc_channel_chat_privmsg,
 	NULL, /* join */
 	bee_irc_channel_chat_part,
-	NULL, /* topic */
+	bee_irc_channel_chat_topic,
 };
 
 
@@ -438,6 +459,7 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_chat_msg,
 	bee_irc_chat_add_user,
 	bee_irc_chat_remove_user,
+	bee_irc_chat_topic,
 	bee_irc_chat_name_hint,
 	
 	bee_irc_ft_in_start,

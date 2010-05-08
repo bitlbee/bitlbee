@@ -123,27 +123,25 @@ void imcb_chat_log( struct groupchat *c, char *format, ... )
 
 void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at )
 {
-#if 0
 	struct im_connection *ic = c->ic;
-	user_t *u = NULL;
+	bee_t *bee = ic->bee;
+	bee_user_t *bu;
+	
+	if( !bee->ui->chat_topic )
+		return;
 	
 	if( who == NULL)
-		u = user_find( ic->irc, ic->irc->mynick );
+		bu = NULL;
 	else if( g_strcasecmp( who, ic->acc->user ) == 0 )
-		u = user_find( ic->irc, ic->irc->nick );
+		bu = bee->user;
 	else
-		u = user_findhandle( ic, who );
+		bu = bee_user_by_handle( bee, ic, who );
 	
 	if( ( g_strcasecmp( set_getstr( &ic->bee->set, "strip_html" ), "always" ) == 0 ) ||
 	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->bee->set, "strip_html" ) ) )
 		strip_html( topic );
 	
-	g_free( c->topic );
-	c->topic = g_strdup( topic );
-	
-	if( c->joined && u )
-		irc_write( ic->irc, ":%s!%s@%s TOPIC %s :%s", u->nick, u->user, u->host, c->channel, topic );
-#endif
+	bee->ui->chat_topic( bee, c, topic, bu );
 }
 
 void imcb_chat_add_buddy( struct groupchat *c, const char *handle )
@@ -205,7 +203,6 @@ int bee_chat_msg( bee_t *bee, struct groupchat *c, const char *msg, int flags )
 {
 	struct im_connection *ic = c->ic;
 	char *buf = NULL;
-	int st;
 	
 	if( ( ic->flags & OPT_DOES_HTML ) && ( g_strncasecmp( msg, "<html>", 6 ) != 0 ) )
 	{

@@ -84,6 +84,7 @@ typedef struct bee_ui_funcs
 	gboolean (*chat_msg)( bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, time_t sent_at );
 	gboolean (*chat_add_user)( bee_t *bee, struct groupchat *c, bee_user_t *bu );
 	gboolean (*chat_remove_user)( bee_t *bee, struct groupchat *c, bee_user_t *bu );
+	gboolean (*chat_topic)( bee_t *bee, struct groupchat *c, const char *new, bee_user_t *bu );
 	gboolean (*chat_name_hint)( bee_t *bee, struct groupchat *c, const char *name );
 	
 	struct file_transfer* (*ft_in_start)( bee_t *bee, bee_user_t *bu, const char *file_name, size_t file_size );
