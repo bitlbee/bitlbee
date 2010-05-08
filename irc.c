@@ -635,7 +635,7 @@ int irc_check_login( irc_t *irc )
 			irc->umode[0] = '\0';
 			irc_umode_set( irc, "+" UMODE, TRUE );
 			
-			ic = irc_channel_new( irc, ROOT_CHAN );
+			ic = irc->default_channel = irc_channel_new( irc, ROOT_CHAN );
 			irc_channel_set_topic( ic, CONTROL_TOPIC, irc->root );
 			irc_channel_add_user( ic, irc->user );
 			

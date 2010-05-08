@@ -80,7 +80,7 @@ static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old
 {
 	irc_t *irc = bee->ui_data;
 	irc_user_t *iu = bu->ui_data;
-	irc_channel_t *ic = irc->channels->data; /* For now, just pick the first channel. */
+	irc_channel_t *ic = irc->default_channel;
 	
 	/* Do this outside the if below since away state can change without
 	   the online state changing. */
@@ -118,7 +118,7 @@ static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old
 static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at )
 {
 	irc_t *irc = bee->ui_data;
-	irc_channel_t *ic = irc->channels->data;
+	irc_channel_t *ic = irc->default_channel;
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
 	char *dst, *prefix = NULL;
 	char *wrapped, *ts = NULL;
@@ -409,6 +409,7 @@ static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
 
 static gboolean bee_irc_channel_chat_topic( irc_channel_t *ic, const char *new )
 {
+	return TRUE;
 }
 
 static const struct irc_channel_funcs irc_channel_im_chat_funcs = {

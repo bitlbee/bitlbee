@@ -77,6 +77,7 @@ typedef struct irc
 	GSList *file_transfers;
 	
 	GSList *users, *channels;
+	struct irc_channel *default_channel;
 	GHashTable *nick_user_hash;
 	GHashTable *watches;
 
@@ -129,6 +130,7 @@ extern const struct irc_user_funcs irc_user_self_funcs;
 typedef enum
 {
 	IRC_CHANNEL_JOINED = 1,
+	IRC_CHANNEL_CONTACTS = 256,
 } irc_channel_flags_t;
 
 typedef struct irc_channel
