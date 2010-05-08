@@ -210,9 +210,9 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 	const char *s;
 	
 	/* Scan for non-whitespace chars followed by a colon: */
-	for( s = msg; *s && !isspace( *s ) && *s != ':'; s ++ ) {}
+	for( s = msg; *s && !isspace( *s ) && *s != ':' && *s != ','; s ++ ) {}
 	
-	if( *s == ':' )
+	if( *s == ':' || *s == ',' )
 	{
 		char to[s-msg+1];
 		irc_user_t *iu;
