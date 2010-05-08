@@ -27,6 +27,7 @@
 
 static gint irc_channel_user_cmp( gconstpointer a_, gconstpointer b_ );
 static const struct irc_channel_funcs control_channel_funcs;
+static const struct irc_channel_funcs groupchat_stub_funcs;
 
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 {
@@ -36,7 +37,6 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 		return NULL;
 	
 	ic = g_new0( irc_channel_t, 1 );
-	ic->f = &control_channel_funcs;
 	ic->irc = irc;
 	ic->name = g_strdup( name );
 	strcpy( ic->mode, CMODE );
@@ -47,6 +47,11 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 		irc_channel_user_set_mode( ic, irc->root, IRC_CHANNEL_USER_OP );
 	
 	irc->channels = g_slist_prepend( irc->channels, ic );
+	
+	if( name[0] == '&' )
+		ic->f = &control_channel_funcs;
+	else /* if( name[0] == '#' ) */
+		ic->f = &groupchat_stub_funcs;
 	
 	return ic;
 }
@@ -249,4 +254,31 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 
 static const struct irc_channel_funcs control_channel_funcs = {
 	control_channel_privmsg,
+};
+
+/* Groupchat stub: Only handles /INVITE at least for now. */
+static gboolean groupchat_stub_invite( irc_channel_t *ic, irc_user_t *iu )
+{
+	bee_user_t *bu = iu->bu;
+	
+	if( iu->bu->ic->acc->prpl->chat_with )
+	{
+		ic->flags |= IRC_CHANNEL_CHAT_PICKME;
+		iu->bu->ic->acc->prpl->chat_with( bu->ic, bu->handle );
+		ic->flags &= ~IRC_CHANNEL_CHAT_PICKME;
+		return TRUE;
+	}
+	else
+	{
+		irc_send_num( ic->irc, 482, "%s :IM protocol does not support room invitations", ic->name );
+		return FALSE;
+	}
+}
+
+static const struct irc_channel_funcs groupchat_stub_funcs = {
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	groupchat_stub_invite,
 };

@@ -130,7 +130,10 @@ extern const struct irc_user_funcs irc_user_self_funcs;
 typedef enum
 {
 	IRC_CHANNEL_JOINED = 1,
-	IRC_CHANNEL_CONTACTS = 256,
+	
+	/* Hack: Set this flag right before jumping into IM when we expect
+	   a call to imcb_chat_new(). */
+	IRC_CHANNEL_CHAT_PICKME = 0x10000,
 } irc_channel_flags_t;
 
 typedef struct irc_channel

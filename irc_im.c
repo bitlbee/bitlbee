@@ -258,9 +258,20 @@ static gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ic;
 	char *topic;
+	GSList *l;
 	int i;
 	
-	for( i = 0; i <= 999; i ++ )
+	/* Try to find a channel that expects to receive a groupchat.
+	   This flag is set by groupchat_stub_invite(). */
+	for( l = irc->channels; l; l = l->next )
+	{
+		ic = l->data;
+		if( ic->flags & IRC_CHANNEL_CHAT_PICKME )
+			break;
+	}
+	
+	/* If we found none, just generate some stupid name. */
+	if( l == NULL ) for( i = 0; i <= 999; i ++ )
 	{
 		char name[16];
 		sprintf( name, "&chat_%03d", i );
