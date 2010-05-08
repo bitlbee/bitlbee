@@ -26,7 +26,7 @@
 #include "bitlbee.h"
 #include "dcc.h"
 
-/* IM->IRC callbacks */
+/* IM->IRC callbacks: Simple IM/buddy-related stuff. */
 
 static const struct irc_user_funcs irc_user_im_funcs;
 
@@ -202,8 +202,55 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 	return TRUE;
 }
 
+/* IRC->IM calls */
 
-/* Groupchats */
+static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
+{
+	if( iu->bu )
+		return bee_user_msg( iu->irc->b, iu->bu, msg, 0 );
+	else
+		return FALSE;
+}
+
+static gboolean bee_irc_user_ctcp( irc_user_t *iu, char *const *ctcp )
+{
+	if( ctcp[1] && g_strcasecmp( ctcp[0], "DCC" ) == 0
+	            && g_strcasecmp( ctcp[1], "SEND" ) == 0 )
+	{
+		if( iu->bu && iu->bu->ic && iu->bu->ic->acc->prpl->transfer_request )
+		{
+			file_transfer_t *ft = dcc_request( iu->bu->ic, ctcp );
+			if ( ft )
+				iu->bu->ic->acc->prpl->transfer_request( iu->bu->ic, ft, iu->bu->handle );
+			
+			return TRUE;
+		}
+	}
+	else if( g_strcasecmp( ctcp[0], "TYPING" ) == 0 )
+	{
+		if( iu->bu && iu->bu->ic && iu->bu->ic->acc->prpl->send_typing && ctcp[1] )
+		{
+			int st = ctcp[1][0];
+			if( st >= '0' && st <= '2' )
+			{
+				st <<= 8;
+				iu->bu->ic->acc->prpl->send_typing( iu->bu->ic, iu->bu->handle, st );
+			}
+			
+			return TRUE;
+		}
+	}
+	
+	return FALSE;
+}
+
+static const struct irc_user_funcs irc_user_im_funcs = {
+	bee_irc_user_privmsg,
+	bee_irc_user_ctcp,
+};
+
+
+/* IM->IRC: Groupchats */
 gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
 {
 	irc_t *irc = bee->ui_data;
@@ -288,7 +335,7 @@ gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_user_t *
 }
 
 
-/* File transfers */
+/* IM->IRC: File transfers */
 static file_transfer_t *bee_irc_ft_in_start( bee_t *bee, bee_user_t *bu, const char *file_name, size_t file_size )
 {
 	return dccs_send_start( bu->ic, (irc_user_t *) bu->ui_data, file_name, file_size );
@@ -333,52 +380,4 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_ft_out_start,
 	bee_irc_ft_close,
 	bee_irc_ft_finished,
-};
-
-
-/* IRC->IM calls */
-
-static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
-{
-	if( iu->bu )
-		return bee_user_msg( iu->irc->b, iu->bu, msg, 0 );
-	else
-		return FALSE;
-}
-
-static gboolean bee_irc_user_ctcp( irc_user_t *iu, char *const *ctcp )
-{
-	if( ctcp[1] && g_strcasecmp( ctcp[0], "DCC" ) == 0
-	            && g_strcasecmp( ctcp[1], "SEND" ) == 0 )
-	{
-		if( iu->bu && iu->bu->ic && iu->bu->ic->acc->prpl->transfer_request )
-		{
-			file_transfer_t *ft = dcc_request( iu->bu->ic, ctcp );
-			if ( ft )
-				iu->bu->ic->acc->prpl->transfer_request( iu->bu->ic, ft, iu->bu->handle );
-			
-			return TRUE;
-		}
-	}
-	else if( g_strcasecmp( ctcp[0], "TYPING" ) == 0 )
-	{
-		if( iu->bu && iu->bu->ic && iu->bu->ic->acc->prpl->send_typing && ctcp[1] )
-		{
-			int st = ctcp[1][0];
-			if( st >= '0' && st <= '2' )
-			{
-				st <<= 8;
-				iu->bu->ic->acc->prpl->send_typing( iu->bu->ic, iu->bu->handle, st );
-			}
-			
-			return TRUE;
-		}
-	}
-	
-	return FALSE;
-}
-
-static const struct irc_user_funcs irc_user_im_funcs = {
-	bee_irc_user_privmsg,
-	bee_irc_user_ctcp,
 };
