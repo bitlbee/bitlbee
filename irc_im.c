@@ -412,11 +412,26 @@ static gboolean bee_irc_channel_chat_topic( irc_channel_t *ic, const char *new )
 	return TRUE;
 }
 
+static gboolean bee_irc_channel_chat_invite( irc_channel_t *ic, irc_user_t *iu )
+{
+	struct groupchat *c = ic->data;
+	
+	if( iu->bu->ic != c->ic )
+		irc_send_num( ic->irc, 482, "%s :Can't mix different IM networks in one groupchat", ic->name );
+	else if( c->ic->acc->prpl->chat_invite )
+		c->ic->acc->prpl->chat_invite( c, iu->bu->handle, NULL );
+	else
+		irc_send_num( ic->irc, 482, "%s :IM protocol does not support room invitations", ic->name );
+	
+	return TRUE;
+}
+
 static const struct irc_channel_funcs irc_channel_im_chat_funcs = {
 	bee_irc_channel_chat_privmsg,
 	NULL, /* join */
 	bee_irc_channel_chat_part,
 	bee_irc_channel_chat_topic,
+	bee_irc_channel_chat_invite,
 };
 
 

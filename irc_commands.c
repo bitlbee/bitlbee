@@ -369,24 +369,27 @@ static void irc_cmd_oper( irc_t *irc, char **cmd )
 	}
 }
 
-#if 0
 static void irc_cmd_invite( irc_t *irc, char **cmd )
 {
-	char *nick = cmd[1], *channel = cmd[2];
-	struct groupchat *c = irc_chat_by_channel( irc, channel );
-	user_t *u = user_find( irc, nick );
+	irc_channel_t *ic;
+	irc_user_t *iu;
 	
-	if( u && c && ( u->ic == c->ic ) )
-		if( c->ic && c->ic->acc->prpl->chat_invite )
-		{
-			c->ic->acc->prpl->chat_invite( c, u->handle, NULL );
-			irc_send_num( irc, 341, "%s %s", nick, channel );
-			return;
-		}
+	if( ( iu = irc_user_by_name( irc, cmd[1] ) ) == NULL )
+	{
+		irc_send_num( irc, 401, "%s :No such nick", cmd[1] );
+		return;
+	}
+	else if( ( ic = irc_channel_by_name( irc, cmd[2] ) ) == NULL )
+	{
+		irc_send_num( irc, 403, "%s :No such channel", cmd[2] );
+		return;
+	}
 	
-	irc_send_num( irc, 482, "%s :Invite impossible; User/Channel non-existent or incompatible", channel );
+	if( ic->f->invite )
+		ic->f->invite( ic, iu );
+	else
+		irc_send_num( irc, 482, "%s :Can't invite people here", cmd[2] );
 }
-#endif
 
 static void irc_cmd_userhost( irc_t *irc, char **cmd )
 {
@@ -617,8 +620,8 @@ static const command_t irc_commands[] = {
 	{ "userhost",    1, irc_cmd_userhost,    IRC_CMD_LOGGED_IN },
 	{ "ison",        1, irc_cmd_ison,        IRC_CMD_LOGGED_IN },
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
-#if 0
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
+#if 0
 	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
 #endif
