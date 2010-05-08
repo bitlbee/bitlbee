@@ -337,6 +337,37 @@ static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_u
 	return TRUE;
 }
 
+static gboolean bee_irc_chat_name_hint( bee_t *bee, struct groupchat *c, const char *name )
+{
+	irc_t *irc = bee->ui_data;
+	irc_channel_t *ic = c->ui_data;
+	char stripped[MAX_NICK_LENGTH+1], *full_name;
+	
+	/* Don't rename a channel if the user's in it already. */
+	if( ic->flags & IRC_CHANNEL_JOINED )
+		return FALSE;
+	
+	strncpy( stripped, name, MAX_NICK_LENGTH );
+	stripped[MAX_NICK_LENGTH] = '\0';
+	nick_strip( stripped );
+	if( set_getbool( &bee->set, "lcnicks" ) )
+		nick_lc( stripped );
+	
+	full_name = g_strdup_printf( "&%s", stripped );
+	
+	if( stripped[0] && irc_channel_by_name( irc, full_name ) == NULL )
+	{
+		g_free( ic->name );
+		ic->name = full_name;
+	}
+	else
+	{
+		g_free( full_name );
+	}
+	
+	return TRUE;
+}
+
 /* IRC->IM */
 static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg )
 {
@@ -361,8 +392,9 @@ static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
 
 static const struct irc_channel_funcs irc_channel_im_chat_funcs = {
 	bee_irc_channel_chat_privmsg,
-	NULL,
+	NULL, /* join */
 	bee_irc_channel_chat_part,
+	NULL, /* topic */
 };
 
 
@@ -406,6 +438,7 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_chat_msg,
 	bee_irc_chat_add_user,
 	bee_irc_chat_remove_user,
+	bee_irc_chat_name_hint,
 	
 	bee_irc_ft_in_start,
 	bee_irc_ft_out_start,

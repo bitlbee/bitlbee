@@ -51,33 +51,10 @@ struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 
 void imcb_chat_name_hint( struct groupchat *c, const char *name )
 {
-#if 0
-	if( !c->joined )
-	{
-		struct im_connection *ic = c->ic;
-		char stripped[MAX_NICK_LENGTH+1], *full_name;
-		
-		strncpy( stripped, name, MAX_NICK_LENGTH );
-		stripped[MAX_NICK_LENGTH] = '\0';
-		nick_strip( stripped );
-		if( set_getbool( &ic->irc->set, "lcnicks" ) )
-			nick_lc( stripped );
-		
-		full_name = g_strdup_printf( "&%s", stripped );
-		
-		if( stripped[0] &&
-		    nick_cmp( stripped, ic->irc->channel + 1 ) != 0 &&
-		    irc_chat_by_channel( ic->irc, full_name ) == NULL )
-		{
-			g_free( c->channel );
-			c->channel = full_name;
-		}
-		else
-		{
-			g_free( full_name );
-		}
-	}
-#endif
+	bee_t *bee = c->ic->bee;
+	
+	if( bee->ui->chat_name_hint )
+		bee->ui->chat_name_hint( bee, c, name );
 }
 
 void imcb_chat_free( struct groupchat *c )
@@ -223,29 +200,6 @@ void imcb_chat_remove_buddy( struct groupchat *c, const char *handle, const char
 	if( bee->ui->chat_remove_user )
 		bee->ui->chat_remove_user( bee, c, bu );
 }
-
-#if 0
-static int remove_chat_buddy_silent( struct groupchat *b, const char *handle )
-{
-	GList *i;
-	
-	/* Find the handle in the room userlist and shoot it */
-	i = b->in_room;
-	while( i )
-	{
-		if( g_strcasecmp( handle, i->data ) == 0 )
-		{
-			g_free( i->data );
-			b->in_room = g_list_remove( b->in_room, i->data );
-			return( 1 );
-		}
-		
-		i = i->next;
-	}
-	
-	return 0;
-}
-#endif
 
 int bee_chat_msg( bee_t *bee, struct groupchat *c, const char *msg, int flags )
 {
