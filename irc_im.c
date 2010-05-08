@@ -338,7 +338,6 @@ static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_u
 }
 
 /* IRC->IM */
-
 static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg )
 {
 	struct groupchat *c = ic->data;
@@ -349,8 +348,21 @@ static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg
 	
 }
 
+static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
+{
+	struct groupchat *c = ic->data;
+	
+	if( c->ic->acc->prpl->chat_leave )
+		c->ic->acc->prpl->chat_leave( c );
+	
+	return TRUE;
+	
+}
+
 static const struct irc_channel_funcs irc_channel_im_chat_funcs = {
 	bee_irc_channel_chat_privmsg,
+	NULL,
+	bee_irc_channel_chat_part,
 };
 
 

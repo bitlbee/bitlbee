@@ -122,7 +122,11 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu )
 		irc_send_part( ic, iu, "" );
 	
 	if( iu == ic->irc->user )
+	{
 		ic->flags &= ~IRC_CHANNEL_JOINED;
+		if( ic->f->part )
+			ic->f->part( ic, NULL );
+	}
 	
 	return 1;
 }
