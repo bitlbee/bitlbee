@@ -204,7 +204,6 @@ int presence_send_update( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *node, *cap;
-	struct groupchat *c;
 	GSList *l;
 	int st;
 	

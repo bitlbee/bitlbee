@@ -128,5 +128,6 @@ void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char
 static int remove_chat_buddy_silent( struct groupchat *b, const char *handle );
 #endif
 int bee_chat_msg( bee_t *bee, struct groupchat *c, const char *msg, int flags );
+struct groupchat *bee_chat_by_title( bee_t *bee, struct im_connection *ic, const char *title );
 
 #endif /* __BEE_H__ */

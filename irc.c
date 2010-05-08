@@ -241,6 +241,7 @@ void irc_free( irc_t * irc )
 	g_free( irc->sendbuffer );
 	g_free( irc->readbuffer );
 	g_free( irc->password );
+	g_free( irc->last_root_cmd );
 	
 	g_free( irc );
 	

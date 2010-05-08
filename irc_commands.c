@@ -535,8 +535,6 @@ static void irc_cmd_topic( irc_t *irc, char **cmd )
 
 static void irc_cmd_away( irc_t *irc, char **cmd )
 {
-	char *set;
-	
 	if( cmd[1] && *cmd[1] )
 	{
 		char away[strlen(cmd[1])+1];

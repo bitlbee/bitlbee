@@ -152,7 +152,7 @@ static void byahoo_logout( struct im_connection *ic )
 	GSList *l;
 	
 	while( ic->groupchats )
-		imcb_chat_free( ic->groupchats );
+		imcb_chat_free( ic->groupchats->data );
 	
 	for( l = yd->buddygroups; l; l = l->next )
 	{
@@ -790,10 +790,14 @@ static void byahoo_accept_conf( void *data )
 {
 	struct byahoo_conf_invitation *inv = data;
 	struct groupchat *b;
+	GSList *l;
 	
-	for( b = inv->ic->groupchats; b; b = b->next )
+	for( l = inv->ic->groupchats; l; l = l->next )
+	{
+		b = l->data;
 		if( b == inv->c )
 			break;
+	}
 	
 	if( b != NULL )
 	{
@@ -855,9 +859,7 @@ void ext_yahoo_conf_userdecline( int id, const char *ignored, const char *who, c
 void ext_yahoo_conf_userjoin( int id, const char *ignored, const char *who, const char *room )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
-	struct groupchat *c;
-	
-	for( c = ic->groupchats; c && strcmp( c->title, room ) != 0; c = c->next );
+	struct groupchat *c = bee_chat_by_title( ic->bee, ic, room );
 	
 	if( c )
 		imcb_chat_add_buddy( c, (char*) who );
@@ -867,9 +869,7 @@ void ext_yahoo_conf_userleave( int id, const char *ignored, const char *who, con
 
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
-	struct groupchat *c;
-	
-	for( c = ic->groupchats; c && strcmp( c->title, room ) != 0; c = c->next );
+	struct groupchat *c = bee_chat_by_title( ic->bee, ic, room );
 	
 	if( c )
 		imcb_chat_remove_buddy( c, (char*) who, "" );
@@ -879,9 +879,7 @@ void ext_yahoo_conf_message( int id, const char *ignored, const char *who, const
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	char *m = byahoo_strip( msg );
-	struct groupchat *c;
-	
-	for( c = ic->groupchats; c && strcmp( c->title, room ) != 0; c = c->next );
+	struct groupchat *c = bee_chat_by_title( ic->bee, ic, room );
 	
 	if( c )
 		imcb_chat_msg( c, (char*) who, (char*) m, 0, 0 );

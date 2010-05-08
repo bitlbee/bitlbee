@@ -217,3 +217,18 @@ int bee_chat_msg( bee_t *bee, struct groupchat *c, const char *msg, int flags )
 	
 	return 1;
 }
+
+struct groupchat *bee_chat_by_title( bee_t *bee, struct im_connection *ic, const char *title )
+{
+	struct groupchat *c;
+	GSList *l;
+	
+	for( l = ic->groupchats; l; l = l->next )
+	{
+		c = l->data;
+		if( strcmp( c->title, title ) == 0 )
+			return c;
+	}
+	
+	return NULL;
+}
