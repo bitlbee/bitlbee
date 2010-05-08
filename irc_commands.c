@@ -550,15 +550,13 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 		away[j] = '\0';
 		
 		irc_send_num( irc, 306, ":You're now away: %s", away );
-		set = away;
+		set_setstr( &irc->b->set, "away", away );
 	}
 	else
 	{
 		irc_send_num( irc, 305, ":Welcome back" );
-		set = NULL;
+		set_setstr( &irc->b->set, "away", NULL );
 	}
-	
-	set_setstr( &irc->b->set, "away", set );
 }
 
 static void irc_cmd_version( irc_t *irc, char **cmd )
