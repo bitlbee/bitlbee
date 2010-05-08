@@ -244,12 +244,27 @@ gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
 	return TRUE;
 }
 
-gboolean bee_irc_chat_log( bee_t *bee, struct groupchat *c, const char *format, ... )
+gboolean bee_irc_chat_log( bee_t *bee, struct groupchat *c, const char *text )
 {
+	irc_channel_t *ic = c->ui_data;
+	
+	irc_channel_printf( ic, "%s", text );
 }
 
-gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, const char *who, const char *msg, time_t sent_at )
+gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, time_t sent_at )
 {
+	irc_t *irc = bee->ui_data;
+	irc_user_t *iu = bu->ui_data;
+	irc_channel_t *ic = c->ui_data;
+	char *ts = NULL;
+	
+	if( sent_at > 0 && set_getbool( &bee->set, "display_timestamps" ) )
+		ts = irc_format_timestamp( irc, sent_at );
+	
+	irc_send_msg( iu, "PRIVMSG", ic->name, msg, ts );
+	g_free( ts );
+	
+	return TRUE;
 }
 
 gboolean bee_irc_chat_add_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
@@ -300,8 +315,8 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	
 	bee_irc_chat_new,
 	bee_irc_chat_free,
-	NULL,
-	NULL,
+	bee_irc_chat_log,
+	bee_irc_chat_msg,
 	bee_irc_chat_add_user,
 	NULL,
 	

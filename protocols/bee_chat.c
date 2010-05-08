@@ -104,56 +104,44 @@ void imcb_chat_free( struct groupchat *c )
 
 void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t flags, time_t sent_at )
 {
-#if 0
 	struct im_connection *ic = c->ic;
-	char *wrapped;
-	user_t *u;
+	bee_t *bee = ic->bee;
+	bee_user_t *bu;
+	char *s;
 	
 	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
 	if( g_strcasecmp( who, ic->acc->user ) == 0 )
 		return;
 	
-	u = user_findhandle( ic, who );
+	bu = bee_user_by_handle( bee, ic, who );
 	
-	if( ( g_strcasecmp( set_getstr( &ic->bee->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->bee->set, "strip_html" ) ) )
+	s = set_getstr( &ic->bee->set, "strip_html" );
+	if( ( g_strcasecmp( s, "always" ) == 0 ) ||
+	    ( ( ic->flags & OPT_DOES_HTML ) && s ) )
 		strip_html( msg );
 	
-	wrapped = word_wrap( msg, 425 );
-	if( c && u )
-	{
-		char *ts = NULL;
-		if( set_getbool( &ic->irc->set, "display_timestamps" ) )
-			ts = format_timestamp( ic->irc, sent_at );
-		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, ts ? : "", wrapped );
-		g_free( ts );
-	}
+	if( bu && bee->ui->chat_msg )
+		bee->ui->chat_msg( bee, c, bu, msg, sent_at );
 	else
-	{
-		imcb_log( ic, "Message from/to conversation %s@%p (unknown conv/user): %s", who, c, wrapped );
-	}
-	g_free( wrapped );
-#endif
+		imcb_chat_log( c, "Message from unknown participant %s: %s", who, msg );
 }
 
 void imcb_chat_log( struct groupchat *c, char *format, ... )
 {
-#if 0
-	irc_t *irc = c->ic->irc;
+	struct im_connection *ic = c->ic;
+	bee_t *bee = ic->bee;
 	va_list params;
 	char *text;
-	user_t *u;
+	
+	if( !bee->ui->chat_log )
+		return;
 	
 	va_start( params, format );
 	text = g_strdup_vprintf( format, params );
 	va_end( params );
 	
-	u = user_find( irc, irc->mynick );
-	
-	irc_privmsg( irc, u, "PRIVMSG", c->channel, "System message: ", text );
-	
+	bee->ui->chat_log( bee, c, text );
 	g_free( text );
-#endif
 }
 
 void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at )
