@@ -254,8 +254,6 @@ static char *normalize(const char *s)
 	g_return_val_if_fail((s != NULL), NULL);
 
 	u = t = g_strdup(s);
-
-	strcpy(t, s);
 	g_strdown(t);
 
 	while (*t && (x < BUF_LEN - 1)) {
@@ -2089,7 +2087,7 @@ static int gaim_ssi_parserights(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	struct im_connection *ic = sess->aux_data;
-	struct aim_ssi_item *curitem;
+	struct aim_ssi_item *curitem, *curgroup;
 	int tmp;
 	char *nrm;
 
@@ -2105,8 +2103,8 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 					if (curitem->data && aim_gettlv(curitem->data, 0x0131, 1))
 						    realname = aim_gettlv_str(curitem->data, 0x0131, 1);
-						
-					imcb_add_buddy(ic, nrm, NULL);
+					
+					imcb_add_buddy(ic, nrm, curgroup->gid == curitem->gid ? curgroup->name : NULL);
 					
 					if (realname) {
 						imcb_buddy_nick_hint(ic, nrm, realname);
@@ -2114,6 +2112,10 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 						g_free(realname);
 					}
 				}
+				break;
+
+			case 0x0001: /* Group */
+				curgroup = curitem;
 				break;
 
 			case 0x0002: /* Permit buddy */
