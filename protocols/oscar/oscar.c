@@ -2658,9 +2658,7 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	                           ic->acc->user, chat_id++);
 	
 	c = imcb_chat_new(ic, chatname);
-
 	ret = oscar_chat_join(ic, chatname, NULL, NULL);
-
 	aim_chat_invite(od->sess, od->conn, who, "", 4, chatname, 0x0);
 
 	g_free(chatname);
