@@ -53,6 +53,13 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 	else /* if( name[0] == '#' ) */
 		ic->f = &groupchat_stub_funcs;
 	
+	if( ic->f->_init )
+		if( !ic->f->_init( ic ) )
+		{
+			irc_channel_free( ic );
+			return NULL;
+		}
+	
 	return ic;
 }
 
@@ -248,8 +255,24 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 	return TRUE;
 }
 
+static gboolean control_channel_init( irc_channel_t *ic )
+{
+	struct irc_control_channel *icc;
+	
+	ic->data = icc = g_new0( struct irc_control_channel, 1 );
+	icc->type = IRC_CC_TYPE_DEFAULT;
+	
+	return TRUE;
+}
+
 static const struct irc_channel_funcs control_channel_funcs = {
 	control_channel_privmsg,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	
+	control_channel_init,
 };
 
 /* Groupchat stub: Only handles /INVITE at least for now. */

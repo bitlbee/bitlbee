@@ -161,6 +161,9 @@ struct irc_channel_funcs
 	gboolean (*part)( irc_channel_t *ic, const char *msg );
 	gboolean (*topic)( irc_channel_t *ic, const char *new );
 	gboolean (*invite)( irc_channel_t *ic, irc_user_t *iu );
+	
+	gboolean (*_init)( irc_channel_t *ic );
+	gboolean (*_free)( irc_channel_t *ic );
 };
 
 typedef enum
@@ -175,6 +178,20 @@ typedef struct irc_channel_user
 	irc_user_t *iu;
 	int flags;
 } irc_channel_user_t;
+
+typedef enum
+{
+	IRC_CC_TYPE_DEFAULT,
+	IRC_CC_TYPE_REST,
+	IRC_CC_TYPE_GROUP,
+	IRC_CC_TYPE_ACCOUNT,
+} irc_control_channel_type_t;
+
+struct irc_control_channel
+{
+	irc_control_channel_type_t type;
+	struct bee_group *group;
+};
 
 extern const struct bee_ui_funcs irc_ui_funcs;
 
