@@ -2650,7 +2650,8 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	static int chat_id = 0;
 	char * chatname;
 	
-	chatname = g_strdup_printf("%s%d", ic->acc->user, chat_id++);
+	chatname = g_strdup_printf("%s%s_%d", isdigit(*ic->acc->user) ? "icq_" : "",
+	                           ic->acc->user, chat_id++);
   
 	ret = oscar_chat_join(ic, chatname, NULL, NULL);
 
