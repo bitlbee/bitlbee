@@ -102,6 +102,54 @@ int bee_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, int flags )
 }
 
 
+/* Groups */
+static bee_group_t *bee_group_new( bee_t *bee, const char *name )
+{
+	bee_group_t *bg = g_new0( bee_group_t, 1 );
+	
+	bg->name = g_strdup( name );
+	bg->key = g_utf8_casefold( name, -1 );
+	bee->groups = g_slist_prepend( bee->groups, bg );
+	
+	return bg;
+}
+
+bee_group_t *bee_group_by_name( bee_t *bee, const char *name, gboolean creat )
+{
+	GSList *l;
+	char *key;
+	
+	if( name == NULL )
+		return NULL;
+	
+	key = g_utf8_casefold( name, -1 );
+	for( l = bee->groups; l; l = l->next )
+	{
+		bee_group_t *bg = l->data;
+		if( strcmp( bg->key, key ) == 0 )
+			break;
+	}
+	g_free( key );
+	
+	if( !l )
+		return creat ? bee_group_new( bee, name ) : NULL;
+	else
+		return l->data;
+}
+
+void bee_group_free( bee_t *bee )
+{
+	while( bee->groups )
+	{
+		bee_group_t *bg = bee->groups->data;
+		g_free( bg->name );
+		g_free( bg->key );
+		g_free( bg );
+		bee->groups = g_slist_remove( bee->groups, bee->groups->data );
+	}
+}
+
+
 /* IM->UI callbacks */
 void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message )
 {

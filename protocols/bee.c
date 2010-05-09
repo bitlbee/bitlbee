@@ -71,6 +71,8 @@ void bee_free( bee_t *b )
 	while( b->set )
 		set_del( &b->set, b->set->key );
 	
+	bee_group_free( b );
+	
 	g_free( b->user );
 	g_free( b );
 }

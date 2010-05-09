@@ -388,7 +388,7 @@ void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *g
 	}
 	
 	bu = bee_user_new( bee, ic, handle );
-	bu->group = g_strdup( group );
+	bu->group = bee_group_by_name( bee, group, TRUE );
 }
 
 void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *fullname )

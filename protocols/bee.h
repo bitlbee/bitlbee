@@ -34,6 +34,7 @@ typedef struct bee
 	struct set *set;
 	
 	GSList *users;
+	GSList *groups;
 	struct account *accounts; /* TODO(wilmer): Use GSList here too? */
 	
 	/* Symbolic, to refer to the local user (who has no real bee_user
@@ -59,7 +60,7 @@ typedef struct bee_user
 	struct im_connection *ic;
 	char *handle;
 	char *fullname;
-	char *group;
+	struct bee_group *group;
 
 	bee_user_flags_t flags;
 	char *status;
@@ -68,6 +69,12 @@ typedef struct bee_user
 	bee_t *bee;
 	void *ui_data;
 } bee_user_t;
+
+typedef struct bee_group
+{
+	char *key;
+	char *name;
+} bee_group_t;
 
 typedef struct bee_ui_funcs
 {
@@ -103,6 +110,8 @@ bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *hand
 int bee_user_free( bee_t *bee, bee_user_t *bu );
 bee_user_t *bee_user_by_handle( bee_t *bee, struct im_connection *ic, const char *handle );
 int bee_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, int flags );
+bee_group_t *bee_group_by_name( bee_t *bee, const char *name, gboolean creat );
+void bee_group_free( bee_t *bee );
 
 /* Callbacks from IM modules to core: */
 /* Buddy activity */
