@@ -232,13 +232,16 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb )
 {
 	struct im_connection *ic = sb->ic;
+	struct groupchat *c = NULL;
 	char buf[1024];
 	
 	/* Create the groupchat structure. */
 	g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
 	if( sb->who )
-		sb->chat = bee_chat_by_title( ic->bee, ic, sb->who );
-	if( sb->chat == NULL )
+		c = bee_chat_by_title( ic->bee, ic, sb->who );
+	if( c && !msn_sb_by_chat( c ) )
+		sb->chat = c;
+	else
 		sb->chat = imcb_chat_new( ic, buf );
 	
 	/* Populate the channel. */
