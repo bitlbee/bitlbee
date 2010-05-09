@@ -236,7 +236,10 @@ struct groupchat *msn_sb_to_chat( struct msn_switchboard *sb )
 	
 	/* Create the groupchat structure. */
 	g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
-	sb->chat = imcb_chat_new( ic, buf );
+	if( sb->who )
+		sb->chat = bee_chat_by_title( ic->bee, ic, sb->who );
+	if( sb->chat == NULL )
+		sb->chat = imcb_chat_new( ic, buf );
 	
 	/* Populate the channel. */
 	if( sb->who ) imcb_chat_add_buddy( sb->chat, sb->who );

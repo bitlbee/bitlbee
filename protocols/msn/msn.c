@@ -222,6 +222,7 @@ static void msn_chat_leave( struct groupchat *c )
 static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
 {
 	struct msn_switchboard *sb;
+	struct groupchat *c = imcb_chat_new( ic, who );
 	
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
@@ -239,10 +240,8 @@ static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
 		
 		msn_sb_write_msg( ic, m );
 
-		return NULL;
+		return c;
 	}
-	
-	return NULL;
 }
 
 static void msn_keepalive( struct im_connection *ic )
