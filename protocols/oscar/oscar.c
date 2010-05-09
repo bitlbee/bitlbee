@@ -798,7 +798,9 @@ static int conninitdone_chat(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	chatcon = find_oscar_chat_by_conn(ic, fr->conn);
 	chatcon->id = id;
-	chatcon->cnv = imcb_chat_new(ic, chatcon->show);
+	chatcon->cnv = bee_chat_by_title(ic->bee, ic, chatcon->show);
+	if (chatcon->cnv == NULL)
+		chatcon->cnv = imcb_chat_new(ic, chatcon->show);
 	chatcon->cnv->data = chatcon;
 
 	return 1;
@@ -2650,9 +2652,13 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	struct groupchat *ret;
 	static int chat_id = 0;
 	char * chatname;
+	struct groupchat *c;
 	
-	chatname = g_strdup_printf("%s%d", ic->acc->user, chat_id++);
-  
+	chatname = g_strdup_printf("%s%s_%d", isdigit(*ic->acc->user) ? "icq_" : "",
+	                           ic->acc->user, chat_id++);
+	
+	c = imcb_chat_new(ic, chatname);
+
 	ret = oscar_chat_join(ic, chatname, NULL, NULL);
 
 	aim_chat_invite(od->sess, od->conn, who, "", 4, chatname, 0x0);
