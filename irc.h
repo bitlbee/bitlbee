@@ -191,6 +191,7 @@ struct irc_control_channel
 {
 	irc_control_channel_type_t type;
 	struct bee_group *group;
+	struct account *account;
 };
 
 extern const struct bee_ui_funcs irc_ui_funcs;

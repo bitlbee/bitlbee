@@ -264,6 +264,8 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	
 	if( ( icc->group = bee_group_by_name( ic->irc->b, ic->name + 1, FALSE ) ) )
 		icc->type = IRC_CC_TYPE_GROUP;
+	else if( ( icc->account = account_get( ic->irc->b, ic->name + 1 ) ) )
+		icc->type = IRC_CC_TYPE_ACCOUNT;
 	
 	bee_irc_channel_update( ic->irc, ic, NULL );
 	
