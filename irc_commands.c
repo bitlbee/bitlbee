@@ -168,7 +168,12 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 	{
 		irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
 	}
-	else if( !irc_channel_del_user( ic, irc->user ) )
+	else if( irc_channel_del_user( ic, irc->user ) )
+	{
+		if( ic->f->part )
+			ic->f->part( ic, NULL );
+	}
+	else
 	{
 		irc_send_num( irc, 442, "%s :You're not on that channel", cmd[1] );
 	}
