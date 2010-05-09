@@ -140,8 +140,11 @@ static void purple_init( account_t *acc )
 			for( io = purple_account_option_get_list( o ); io; io = io->next )
 			{
 				PurpleKeyValuePair *kv = io->data;
-				opts = g_slist_append( opts, kv->key );
-				g_string_append_printf( help, "%s, ", kv->key );
+				opts = g_slist_append( opts, kv->value );
+				if( strcmp( kv->value, kv->key ) != 0 )
+					g_string_append_printf( help, "%s (%s), ", kv->value, kv->key );
+				else
+					g_string_append_printf( help, "%s, ", kv->value );
 			}
 			g_string_truncate( help, help->len - 2 );
 			eval = set_eval_list;
