@@ -80,7 +80,6 @@ static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old
 {
 	irc_t *irc = bee->ui_data;
 	irc_user_t *iu = bu->ui_data;
-	irc_channel_t *ic = irc->default_channel;
 	
 	/* Do this outside the if below since away state can change without
 	   the online state changing. */
@@ -95,24 +94,69 @@ static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old
 			if( g_hash_table_lookup( irc->watches, iu->key ) )
 				irc_send_num( irc, 600, "%s %s %s %d :%s", iu->nick, iu->user,
 				              iu->host, (int) time( NULL ), "logged online" );
-			
-			irc_channel_add_user( ic, iu );
-			
-			if( set_getbool( &bee->set, "away_devoice" ) )
-				irc_channel_user_set_mode( ic, iu, ( bu->flags & BEE_USER_AWAY ) ?
-				                           0 : IRC_CHANNEL_USER_VOICE );
 		}
 		else
 		{
 			if( g_hash_table_lookup( irc->watches, iu->key ) )
 				irc_send_num( irc, 601, "%s %s %s %d :%s", iu->nick, iu->user,
 				              iu->host, (int) time( NULL ), "logged offline" );
-			
-			irc_channel_del_user( ic, iu );
 		}
 	}
 	
+	bee_irc_channel_update( irc, NULL, iu );
+	
 	return TRUE;
+}
+
+void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
+{
+	struct irc_control_channel *icc;
+	GSList *l;
+	gboolean show;
+	
+	if( ic == NULL )
+	{
+		for( l = irc->channels; l; l = l->next )
+		{
+			ic = l->data;
+			/* TODO: Just add a type flag or so.. */
+			if( ic->f == irc->default_channel->f )
+				bee_irc_channel_update( irc, ic, iu );
+		}
+		return;
+	}
+	if( iu == NULL )
+	{
+		for( l = irc->users; l; l = l->next )
+		{
+			iu = l->data;
+			if( iu->bu )
+				bee_irc_channel_update( irc, ic, l->data );
+		}
+		return;
+	}
+	
+	icc = ic->data;
+	
+	if( !( iu->bu->flags & BEE_USER_ONLINE ) )
+		show = FALSE;
+	else if( icc->type == IRC_CC_TYPE_DEFAULT )
+		show = TRUE;
+	else if( icc->type == IRC_CC_TYPE_GROUP )
+		show = iu->bu->group == icc->group;
+	
+	if( !show )
+	{
+		irc_channel_del_user( ic, iu );
+	}
+	else
+	{
+		irc_channel_add_user( ic, iu );
+		
+		if( set_getbool( &irc->b->set, "away_devoice" ) )
+			irc_channel_user_set_mode( ic, iu, ( iu->bu->flags & BEE_USER_AWAY ) ?
+			                           0 : IRC_CHANNEL_USER_VOICE );
+	}
 }
 
 static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at )

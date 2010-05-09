@@ -262,6 +262,11 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	ic->data = icc = g_new0( struct irc_control_channel, 1 );
 	icc->type = IRC_CC_TYPE_DEFAULT;
 	
+	if( ( icc->group = bee_group_by_name( ic->irc->b, ic->name + 1, FALSE ) ) )
+		icc->type = IRC_CC_TYPE_GROUP;
+	
+	bee_irc_channel_update( ic->irc, ic, NULL );
+	
 	return TRUE;
 }
 

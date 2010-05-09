@@ -260,4 +260,7 @@ const char *irc_user_get_away( irc_user_t *iu );
 char *set_eval_timezone( struct set *set, char *value );
 char *irc_format_timestamp( irc_t *irc, time_t msg_ts );
 
+/* irc_im.c */
+void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu );
+
 #endif
