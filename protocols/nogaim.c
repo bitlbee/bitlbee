@@ -374,20 +374,9 @@ void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *g
 	bee_user_t *bu;
 	bee_t *bee = ic->bee;
 	
-	if( bee_user_by_handle( bee, ic, handle ) )
-	{
-		if( set_getbool( &bee->set, "debug" ) )
-			imcb_log( ic, "User already exists, ignoring add request: %s", handle );
-		
-		return;
-		
-		/* Buddy seems to exist already. Let's ignore this request then...
-		   Eventually subsequent calls to this function *should* be possible
-		   when a buddy is in multiple groups. But for now BitlBee doesn't
-		   even support groups so let's silently ignore this for now. */
-	}
+	if( !( bu = bee_user_by_handle( bee, ic, handle ) ) )
+		bu = bee_user_new( bee, ic, handle );
 	
-	bu = bee_user_new( bee, ic, handle );
 	bu->group = bee_group_by_name( bee, group, TRUE );
 }
 
