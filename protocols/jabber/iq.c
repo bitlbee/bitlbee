@@ -382,7 +382,7 @@ static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *
 	c = query->children;
 	while( ( c = xt_find_node( c, "item" ) ) )
 	{
-		struct xt_node *group = xt_find_node( node->children, "group" );
+		struct xt_node *group = xt_find_node( c->children, "group" );
 		char *jid = xt_find_attr( c, "jid" );
 		char *name = xt_find_attr( c, "name" );
 		char *sub = xt_find_attr( c, "subscription" );
