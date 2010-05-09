@@ -58,7 +58,6 @@ int bee_user_free( bee_t *bee, bee_user_t *bu )
 	
 	g_free( bu->handle );
 	g_free( bu->fullname );
-	g_free( bu->group );
 	g_free( bu->status );
 	g_free( bu->status_msg );
 	
