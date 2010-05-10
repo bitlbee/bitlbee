@@ -201,7 +201,18 @@ void irc_channel_printf( irc_channel_t *ic, char *format, ... )
 
 gboolean irc_channel_name_ok( const char *name )
 {
-	return strchr( CTYPES, name[0] ) != NULL && nick_ok( name + 1 );
+	char name_[strlen(name)+1];
+	
+	/* Check if the first character is in CTYPES (#&) */
+	if( strchr( CTYPES, name[0] ) == NULL )
+		return FALSE;
+	
+	/* Check the rest of the name. Just checking name + 1 doesn't work
+	   since it will fail if the first character is a number, or if
+	   it's a one-char channel name - both of which are legal. */
+	name_[0] = '_';
+	strcpy( name_ + 1, name + 1 );
+	return nick_ok( name_ );
 }
 
 static gint irc_channel_user_cmp( gconstpointer a_, gconstpointer b_ )
