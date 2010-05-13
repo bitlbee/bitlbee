@@ -342,7 +342,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 		l = next;
 	}
 	
-	//query_del_by_conn( ic->irc, ic );
+	query_del_by_conn( (irc_t*) ic->bee->ui_data, ic );
 	
 	for( a = bee->accounts; a; a = a->next )
 		if( a->ic == ic )
