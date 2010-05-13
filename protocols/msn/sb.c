@@ -339,9 +339,13 @@ static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition c
 	struct im_connection *ic = sb->ic;
 	struct msn_data *md = ic->proto_data;
 	
-	if( msn_handler( sb->handler ) == -1 )
+	if( msn_handler( sb->handler ) != -1 )
+		return TRUE;
+	
+	if( sb->msgq != NULL )
 	{
 		time_t now = time( NULL );
+		char buf[1024];
 		
 		if( now - md->first_sb_failure > 600 )
 		{
@@ -358,37 +362,28 @@ static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition c
 			imcb_log( ic, "Warning: Many switchboard failures on MSN connection. "
 			              "There might be problems delivering your messages." );
 		
-		if( sb->msgq != NULL )
+		if( md->msgq == NULL )
 		{
-			char buf[1024];
-			
-			if( md->msgq == NULL )
-			{
-				md->msgq = sb->msgq;
-			}
-			else
-			{
-				GSList *l;
-				
-				for( l = md->msgq; l->next; l = l->next );
-				l->next = sb->msgq;
-			}
-			sb->msgq = NULL;
-			
-			debug( "Moved queued messages back to the main queue, creating a new switchboard to retry." );
-			g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
-			if( !msn_write( ic, buf, strlen( buf ) ) )
-				return FALSE;
+			md->msgq = sb->msgq;
 		}
+		else
+		{
+			GSList *l;
+			
+			for( l = md->msgq; l->next; l = l->next );
+			l->next = sb->msgq;
+		}
+		sb->msgq = NULL;
 		
-		msn_sb_destroy( sb );
-		
-		return FALSE;
+		debug( "Moved queued messages back to the main queue, "
+		       "creating a new switchboard to retry." );
+		g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
+		if( !msn_write( ic, buf, strlen( buf ) ) )
+			return FALSE;
 	}
-	else
-	{
-		return TRUE;
-	}
+	
+	msn_sb_destroy( sb );
+	return FALSE;
 }
 
 static int msn_sb_command( gpointer data, char **cmd, int num_parts )
