@@ -194,6 +194,12 @@ struct irc_control_channel
 	struct account *account;
 };
 
+struct irc_groupchat_stub
+{
+	struct account *acc;
+	char *room;
+};
+
 extern const struct bee_ui_funcs irc_ui_funcs;
 
 /* irc.c */

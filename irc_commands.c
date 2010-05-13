@@ -139,6 +139,14 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		return; /* Dude, you're already there...
 		           RFC doesn't have any reply for that though? */
 	
+	if( ic->f->join && !ic->f->join( ic ) )
+		/* The story is: FALSE either means the handler showed an error
+		   message, or is doing some work before the join should be
+		   confirmed. (In the latter case, the caller should take care
+		   of that confirmation.)
+		   TRUE means all's good, let the user join the channel right away. */
+		return;
+	
 	irc_channel_add_user( ic, irc->user );
 }
 

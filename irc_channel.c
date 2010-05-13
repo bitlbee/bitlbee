@@ -312,9 +312,27 @@ static gboolean groupchat_stub_invite( irc_channel_t *ic, irc_user_t *iu )
 	}
 }
 
+static gboolean groupchat_stub_join( irc_channel_t *ic )
+{
+	struct irc_groupchat_stub *igs = ic->data;
+	
+	if( igs && igs->acc->ic && igs->acc->prpl->chat_join )
+	{
+		ic->flags |= IRC_CHANNEL_CHAT_PICKME;
+		igs->acc->prpl->chat_join( igs->acc->ic, igs->room, ic->irc->user->nick, NULL );
+		ic->flags &= ~IRC_CHANNEL_CHAT_PICKME;
+		return FALSE;
+	}
+	else
+	{
+		irc_send_num( ic->irc, 403, "%s :Can't join channel, account offline?", ic->name );
+		return FALSE;
+	}
+}
+
 static const struct irc_channel_funcs groupchat_stub_funcs = {
 	NULL,
-	NULL,
+	groupchat_stub_join,
 	NULL,
 	NULL,
 	groupchat_stub_invite,

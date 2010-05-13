@@ -939,17 +939,6 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
 }
 
-#if 0
-static set_t **cmd_chat_set_findhead( irc_t *irc, char *id )
-{
-	struct chat *c;
-	
-	if( ( c = chat_get( irc, id ) ) )
-		return &c->set;
-	else
-		return NULL;
-}
-
 static void cmd_chat( irc_t *irc, char **cmd )
 {
 	account_t *acc;
@@ -958,10 +947,11 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	if( g_strcasecmp( cmd[1], "add" ) == 0 )
 	{
 		char *channel, *s;
+		struct irc_channel *ic;
 		
 		MIN_ARGS( 3 );
 		
-		if( !( acc = account_get( irc, cmd[2] ) ) )
+		if( !( acc = account_get( irc->b, cmd[2] ) ) )
 		{
 			irc_usermsg( irc, "Invalid account" );
 			return;
@@ -980,53 +970,21 @@ static void cmd_chat( irc_t *irc, char **cmd )
 		
 		if( strchr( CTYPES, channel[0] ) == NULL )
 		{
-			s = g_strdup_printf( "%c%s", CTYPES[0], channel );
+			s = g_strdup_printf( "#%s", channel );
 			g_free( channel );
 			channel = s;
 		}
 		
-		if( ( c = chat_add( irc, acc, cmd[3], channel ) ) )
-			irc_usermsg( irc, "Chatroom added successfully." );
-		else
-			irc_usermsg( irc, "Could not add chatroom." );
-		
-		g_free( channel );
-	}
-	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
-	{
-		int i = 0;
-		
-		if( strchr( irc->umode, 'b' ) )
-			irc_usermsg( irc, "Chatroom list:" );
-		
-		for( c = irc->chatrooms; c; c = c->next )
+		if( ( ic = irc_channel_new( irc, channel ) ) )
 		{
-			irc_usermsg( irc, "%2d. %s(%s) %s, %s", i, c->acc->prpl->name,
-			                  c->acc->user, c->handle, c->channel );
+			struct irc_groupchat_stub *igs;
 			
-			i ++;
-		}
-		irc_usermsg( irc, "End of chatroom list" );
-	}
-	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
-	{
-		MIN_ARGS( 2 );
-		
-		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead, NULL );
-	}
-	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
-	{
-		MIN_ARGS( 2 );
-		
-		if( ( c = chat_get( irc, cmd[2] ) ) )
-		{
-			chat_del( irc, c );
-		}
-		else
-		{
-			irc_usermsg( irc, "Could not remove chat." );
+			ic->data = igs = g_new0( struct irc_groupchat_stub, 1 );
+			igs->acc = acc;
+			igs->room = g_strdup( cmd[3] );
 		}
 	}
+	/*
 	else if( g_strcasecmp( cmd[1], "with" ) == 0 )
 	{
 		user_t *u;
@@ -1046,12 +1004,12 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Can't open a groupchat with %s.", cmd[2] );
 		}
 	}
+	*/
 	else
 	{
 		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat", cmd[1] );
 	}
 }
-#endif
 
 static void cmd_transfer( irc_t *irc, char **cmd )
 {
@@ -1136,8 +1094,6 @@ const command_t commands[] = {
 	{ "set",            0, cmd_set,            0 },
 	{ "transfer",       0, cmd_transfer,       0 },
 	{ "yes",            0, cmd_yesno,          0 },
-#if 0
 	{ "chat",           1, cmd_chat,           0 },
-#endif
 	{ NULL }
 };
