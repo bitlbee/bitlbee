@@ -26,7 +26,7 @@ jabber=1
 oscar=1
 yahoo=1
 twitter=1
-purple=0
+purple=1
 
 debug=0
 strip=1
