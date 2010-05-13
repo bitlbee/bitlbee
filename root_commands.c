@@ -195,40 +195,6 @@ static void cmd_save( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Configuration could not be saved!" );
 }
 
-struct cmd_account_del_data
-{
-	account_t *a;
-	irc_t *irc;
-};
-
-void cmd_account_del_yes( void *data )
-{
-	struct cmd_account_del_data *cad = data;
-	account_t *a;
-	
-	for( a = cad->irc->b->accounts; a && a != cad->a; a = a->next );
-	
-	if( a == NULL )
-	{
-		irc_usermsg( cad->irc, "Account already deleted" );
-	}
-	else if( a->ic )
-	{
-		irc_usermsg( cad->irc, "Account is still logged in, can't delete" );
-	}
-	else
-	{
-		account_del( cad->irc->b, a );
-		irc_usermsg( cad->irc, "Account deleted" );
-	}
-	g_free( data );
-}
-
-void cmd_account_del_no( void *data )
-{
-	g_free( data );
-}
-
 static void cmd_showset( irc_t *irc, set_t **head, char *key )
 {
 	char *val;
@@ -402,20 +368,8 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			struct cmd_account_del_data *cad;
-			char *msg;
-			
-			cad = g_malloc( sizeof( struct cmd_account_del_data ) );
-			cad->a = a;
-			cad->irc = irc;
-			
-			msg = g_strdup_printf( "If you remove this account (%s(%s)), BitlBee will "
-			                       "also forget all your saved nicknames. If you want "
-			                       "to change your username/password, use the `account "
-			                       "set' command. Are you sure you want to delete this "
-			                       "account?", a->prpl->name, a->user );
-			//query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, cad );
-			g_free( msg );
+			account_del( irc->b, a );
+			irc_usermsg( irc, "Account deleted" );
 		}
 	}
 	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
