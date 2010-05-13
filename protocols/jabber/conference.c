@@ -104,7 +104,7 @@ struct groupchat *jabber_chat_by_jid( struct im_connection *ic, const char *name
 	}
 	g_free( normalized );
 	
-	return l && ret;
+	return l ? ret : NULL;
 }
 
 void jabber_chat_free( struct groupchat *c )
