@@ -271,8 +271,10 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 			bud->flags |= JBFLAG_IS_ANONYMOUS;
 		}
 		
-		if( bud != jc->me )
+		if( bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS )
 		{
+			/* If JIDs are anonymized, add them to the local
+			   list for the duration of this chat. */
 			imcb_add_buddy( ic, bud->ext_jid, NULL );
 			imcb_buddy_nick_hint( ic, bud->ext_jid, bud->resource );
 		}

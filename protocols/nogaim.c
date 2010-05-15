@@ -664,7 +664,18 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	g_free( u->status_msg );
 	u->away = u->status_msg = NULL;
 	
-	if( ( flags & OPT_LOGGED_IN ) && !u->online )
+	if( set_getbool( &ic->irc->set, "show_offline" ) && !u->online )
+	{
+		/* always set users as online */
+		irc_spawn( ic->irc, u );
+		u->online = 1;
+		if( !( flags & OPT_LOGGED_IN ) )
+		{
+			/* set away message if user isn't really online */
+			u->away = g_strdup( "User is offline" );
+		}
+	}
+	else if( ( flags & OPT_LOGGED_IN ) && !u->online )
 	{
 		irc_spawn( ic->irc, u );
 		u->online = 1;
@@ -673,14 +684,30 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	{
 		struct groupchat *c;
 		
-		irc_kill( ic->irc, u );
-		u->online = 0;
-		
-		/* Remove him/her from the groupchats to prevent PART messages after he/she QUIT already */
-		for( c = ic->groupchats; c; c = c->next )
-			remove_chat_buddy_silent( c, handle );
+		if( set_getbool( &ic->irc->set, "show_offline" ) )
+		{
+			/* keep offline users in channel and set away message to "offline" */
+			u->away = g_strdup( "User is offline" );
+
+			/* Keep showing him/her in the control channel but not in groupchats. */
+			for( c = ic->groupchats; c; c = c->next )
+			{
+				if( remove_chat_buddy_silent( c, handle ) && c->joined )
+					irc_part( c->ic->irc, u, c->channel );
+			}
+		}
+		else
+		{
+			/* kill offline users */
+			irc_kill( ic->irc, u );
+			u->online = 0;
+
+			/* Remove him/her from the groupchats to prevent PART messages after he/she QUIT already */
+			for( c = ic->groupchats; c; c = c->next )
+				remove_chat_buddy_silent( c, handle );
+		}
 	}
-	
+
 	if( flags & OPT_AWAY )
 	{
 		if( state && message )
@@ -705,11 +732,8 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 		u->status_msg = g_strdup( message );
 	}
 	
-	/* LISPy... */
-	if( ( set_getbool( &ic->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
-	    ( u->online ) &&						/* Don't touch offline people */
-	    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
-	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
+	/* early if-clause for show_offline even if there is some redundant code here because this isn't LISP but C ;) */
+	if( set_getbool( &ic->irc->set, "show_offline" ) && set_getbool( &ic->irc->set, "away_devoice" ) )
 	{
 		char *from;
 		
@@ -722,9 +746,43 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 			from = g_strdup_printf( "%s!%s@%s", ic->irc->mynick, ic->irc->mynick,
 			                                    ic->irc->myhost );
 		}
-		irc_write( ic->irc, ":%s MODE %s %cv %s", from, ic->irc->channel,
-		                                          u->away?'-':'+', u->nick );
-		g_free( from );
+
+		/* if we use show_offline, we op online users, voice away users, and devoice/deop offline users */
+		if( flags & OPT_LOGGED_IN )
+		{
+			/* user is "online" (either really online or away) */
+			irc_write( ic->irc, ":%s MODE %s %cv%co %s %s", from, ic->irc->channel,
+			                                          u->away?'+':'-', u->away?'-':'+', u->nick, u->nick );
+		}
+		else
+		{
+			/* user is offline */
+			irc_write( ic->irc, ":%s MODE %s -vo %s %s", from, ic->irc->channel, u->nick, u->nick );
+		}
+	}
+	else
+	{ 
+		/* LISPy... */
+		if( ( set_getbool( &ic->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
+		    ( u->online ) &&						/* Don't touch offline people */
+		    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
+		      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
+		{
+			char *from;
+
+			if( set_getbool( &ic->irc->set, "simulate_netsplit" ) )
+			{
+				from = g_strdup( ic->irc->myhost );
+			}
+			else
+			{
+				from = g_strdup_printf( "%s!%s@%s", ic->irc->mynick, ic->irc->mynick,
+				                                    ic->irc->myhost );
+			}
+			irc_write( ic->irc, ":%s MODE %s %cv %s", from, ic->irc->channel,
+			                                          u->away?'-':'+', u->nick );
+			g_free( from );
+		}
 	}
 }
 
@@ -1201,7 +1259,7 @@ static char *format_timestamp( irc_t *irc, time_t msg_ts )
 	else
 		return g_strdup_printf( "\x02[\x02\x02\x02%04d-%02d-%02d "
 		                        "%02d:%02d:%02d\x02]\x02 ",
-		                        msg.tm_year + 1900, msg.tm_mon, msg.tm_mday,
+		                        msg.tm_year + 1900, msg.tm_mon + 1, msg.tm_mday,
 		                        msg.tm_hour, msg.tm_min, msg.tm_sec );
 }
 

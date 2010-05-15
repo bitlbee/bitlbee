@@ -22,10 +22,10 @@
 ****************************************************************************/
 
 #include "nogaim.h"
+#include "oauth.h"
 #include "twitter.h"
 #include "twitter_http.h"
 #include "twitter_lib.h"
-
 
 /**
  * Main loop function
@@ -50,6 +50,89 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 	return (ic->flags & OPT_LOGGED_IN) == OPT_LOGGED_IN;
 }
 
+static void twitter_main_loop_start( struct im_connection *ic )
+{
+	struct twitter_data *td = ic->proto_data;
+	
+	imcb_log( ic, "Connecting to Twitter" );
+
+	// Run this once. After this queue the main loop function.
+	twitter_main_loop(ic, -1, 0);
+
+	// Queue the main_loop
+	// Save the return value, so we can remove the timeout on logout.
+	td->main_loop_id = b_timeout_add(60000, twitter_main_loop, ic);
+}
+
+
+static const struct oauth_service twitter_oauth =
+{
+	"http://api.twitter.com/oauth/request_token",
+	"http://api.twitter.com/oauth/access_token",
+	"http://api.twitter.com/oauth/authorize",
+	.consumer_key = "xsDNKJuNZYkZyMcu914uEA",
+	.consumer_secret = "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo",
+};
+
+static gboolean twitter_oauth_callback( struct oauth_info *info );
+
+static void twitter_oauth_start( struct im_connection *ic )
+{
+	struct twitter_data *td = ic->proto_data;
+	
+	imcb_log( ic, "Requesting OAuth request token" );
+
+	td->oauth_info = oauth_request_token( &twitter_oauth, twitter_oauth_callback, ic );
+}
+
+static gboolean twitter_oauth_callback( struct oauth_info *info )
+{
+	struct im_connection *ic = info->data;
+	struct twitter_data *td;
+	
+	if( !g_slist_find( twitter_connections, ic ) )
+		return FALSE;
+	
+	td = ic->proto_data;
+	if( info->stage == OAUTH_REQUEST_TOKEN )
+	{
+		char name[strlen(ic->acc->user)+9], *msg;
+		
+		if( info->request_token == NULL )
+		{
+			imcb_error( ic, "OAuth error: %s", info->http->status_string );
+			imc_logout( ic, TRUE );
+			return FALSE;
+		}
+		
+		sprintf( name, "twitter_%s", ic->acc->user );
+		msg = g_strdup_printf( "To finish OAuth authentication, please visit "
+		                       "%s and respond with the resulting PIN code.",
+		                       info->auth_url );
+		imcb_buddy_msg( ic, name, msg, 0, 0 );
+		g_free( msg );
+	}
+	else if( info->stage == OAUTH_ACCESS_TOKEN )
+	{
+		if( info->token == NULL || info->token_secret == NULL )
+		{
+			imcb_error( ic, "OAuth error: %s", info->http->status_string );
+			imc_logout( ic, TRUE );
+			return FALSE;
+		}
+		
+		/* IM mods didn't do this so far and it's ugly but I should
+		   be able to get away with it... */
+		g_free( ic->acc->pass );
+		ic->acc->pass = oauth_to_string( info );
+		
+		twitter_main_loop_start( ic );
+	}
+	
+	return TRUE;
+}
+
+
 static char *set_eval_mode( set_t *set, char *value )
 {
 	if( g_strcasecmp( value, "one" ) == 0 ||
@@ -60,12 +143,28 @@ static char *set_eval_mode( set_t *set, char *value )
 		return NULL;
 }
 
+static gboolean twitter_length_check( struct im_connection *ic, gchar *msg )
+{
+	int max = set_getint( &ic->acc->set, "message_length" ), len;
+	
+	if( max == 0 || ( len = g_utf8_strlen( msg, -1 ) ) <= max )
+		return TRUE;
+	
+	imcb_error( ic, "Maximum message length exceeded: %d > %d", len, max );
+	
+	return FALSE;
+}
+
 static void twitter_init( account_t *acc )
 {
 	set_t *s;
 	
+	s = set_add( &acc->set, "message_length", "140", set_eval_int, acc );
+	
 	s = set_add( &acc->set, "mode", "one", set_eval_mode, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
+	
+	s = set_add( &acc->set, "oauth", "true", set_eval_bool, acc );
 }
 
 /**
@@ -79,25 +178,24 @@ static void twitter_login( account_t *acc )
 	char name[strlen(acc->user)+9];
 
 	twitter_connections = g_slist_append( twitter_connections, ic );
-
-	td->user = acc->user;
-	td->pass = acc->pass;
-	td->home_timeline_id = 0;
-
 	ic->proto_data = td;
-
-	imcb_log( ic, "Connecting to Twitter" );
-
-	// Run this once. After this queue the main loop function.
-	twitter_main_loop(ic, -1, 0);
-
-	// Queue the main_loop
-	// Save the return value, so we can remove the timeout on logout.
-	td->main_loop_id = b_timeout_add(60000, twitter_main_loop, ic);
+	ic->flags |= OPT_DOES_HTML;
+	
+	td->user = acc->user;
+	if( !set_getbool( &acc->set, "oauth" ) )
+		td->pass = g_strdup( acc->pass );
+	else if( strstr( acc->pass, "oauth_token=" ) )
+		td->oauth_info = oauth_from_string( acc->pass, &twitter_oauth );
+	td->home_timeline_id = 0;
 	
 	sprintf( name, "twitter_%s", acc->user );
 	imcb_add_buddy( ic, name, NULL );
 	imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
+	
+	if( td->pass || td->oauth_info )
+		twitter_main_loop_start( ic );
+	else
+		twitter_oauth_start( ic );
 }
 
 /**
@@ -118,6 +216,8 @@ static void twitter_logout( struct im_connection *ic )
 
 	if( td )
 	{
+		oauth_info_free( td->oauth_info );
+		g_free( td->pass );
 		g_free( td );
 	}
 
@@ -129,12 +229,28 @@ static void twitter_logout( struct im_connection *ic )
  */
 static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message, int away )
 {
+	struct twitter_data *td = ic->proto_data;
+	
 	if (g_strncasecmp(who, "twitter_", 8) == 0 &&
 	    g_strcasecmp(who + 8, ic->acc->user) == 0)
-		twitter_post_status(ic, message);
+	{
+		if( set_getbool( &ic->acc->set, "oauth" ) &&
+		    td->oauth_info && td->oauth_info->token == NULL )
+		{
+			if( !oauth_access_token( message, td->oauth_info ) )
+			{
+				imcb_error( ic, "OAuth error: %s", "Failed to send access token request" );
+				imc_logout( ic, TRUE );
+				return FALSE;
+			}
+		}
+		else if( twitter_length_check(ic, message) )
+			twitter_post_status(ic, message);
+	}
 	else
+	{
 		twitter_direct_messages_new(ic, who, message);
-	
+	}
 	return( 0 );
 }
 
@@ -159,7 +275,7 @@ static void twitter_remove_buddy( struct im_connection *ic, char *who, char *gro
 
 static void twitter_chat_msg( struct groupchat *c, char *message, int flags )
 {
-	if( c && message )
+	if( c && message && twitter_length_check(c->ic, message))
 		twitter_post_status(c->ic, message);
 }
 

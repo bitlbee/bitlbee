@@ -27,8 +27,10 @@
 #include "nogaim.h"
 #include "http_client.h"
 
+struct oauth_info;
+
 void *twitter_http(char *url_string, http_input_function func, gpointer data, int is_post, 
-					char* user, char* pass, char** arguments, int arguments_len);
+                   char* user, char* pass, struct oauth_info *oi, char** arguments, int arguments_len);
 
 #endif //_TWITTER_HTTP_H
 

@@ -26,7 +26,7 @@
 #include "url.h"
 
 /* Convert an URL to a url_t structure */
-int url_set( url_t *url, char *set_url )
+int url_set( url_t *url, const char *set_url )
 {
 	char s[MAX_STRING+1];
 	char *i;
