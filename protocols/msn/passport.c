@@ -144,7 +144,9 @@ static xt_status passport_xt_extract_token( struct xt_node *node, gpointer data 
 	struct msn_auth_data *mad = data;
 	char *s;
 	
-	if( ( s = xt_find_attr( node, "Id" ) ) && strcmp( s, "PPToken1" ) == 0 )
+	if( ( s = xt_find_attr( node, "Id" ) ) &&
+	    ( strncmp( s, "Compact", 7 ) == 0 ||
+	      strncmp( s, "PPToken", 7 ) == 0 ) )
 		mad->token = g_memdup( node->text, node->text_len + 1 );
 	
 	return XT_HANDLED;
