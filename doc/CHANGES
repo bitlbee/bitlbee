@@ -3,6 +3,20 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 1.2.7:
+- Fixed problems with MSN Messenger authentication. ("Could not parse
+  Passport server response")
+- Fixed broken typing notifications when talking to GTalk contacts.
+- Fixed an issue with non-anonymous Jabber chatrooms polluting the nick
+  namespace, sometimes generating odd warning messages.
+- Restored ability to start groupchats on ICQ.
+- Added show_offline setting that will also show offline contacts in the
+  control channel.
+- OAuth support for Twitter: This means the module will keep working after
+  June (this also changes "via API" under your tweets into "via BitlBee").
+
+Finished 15 May 2010
+
 Version 1.2.6a:
 - Fixed a typo that renders the Twitter groupchat mode unusable. A last-
   minute change that came a few minutes late.
