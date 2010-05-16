@@ -1041,7 +1041,8 @@ static int incomingim_chan2(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 			g_free(name);
 	} else if (args->reqclass & AIM_CAPS_ICQRTF) {
 		// TODO: constify
-		char *text = g_strdup(args->info.rtfmsg.rtfmsg);
+		char text[strlen(args->info.rtfmsg.rtfmsg)+1];
+		strncpy(text, args->info.rtfmsg.rtfmsg, sizeof(text));
 		imcb_buddy_msg(ic, normalize(userinfo->sn), text, 0, 0);
 	}
 
