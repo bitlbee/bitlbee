@@ -9,7 +9,7 @@
 -include ../../Makefile.settings
 
 # [SH] Program variables
-objects = purple.o
+objects = ft.o purple.o
 
 CFLAGS += -Wall $(PURPLE_CFLAGS)
 LFLAGS += -r
