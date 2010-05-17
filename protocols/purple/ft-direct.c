@@ -21,10 +21,10 @@
 *                                                                           *
 \***************************************************************************/
 
-/* Do file transfers via disk for now, since libpurple was really designed
-   for straight-to/from disk fts and is only just learning how to pass the
-   file contents the the UI instead (2.6.0 and higher it seems, and with
-   varying levels of success). */
+/* This code tries to do direct file transfers, i.e. without caching the file
+   locally on disk first. Since libpurple can only do this since version 2.6.0
+   and even then very unreliably (and not with all IM modules), I'm canning
+   this code for now. */
 
 #include "bitlbee.h"
 
@@ -46,16 +46,36 @@ static file_transfer_t *next_ft;
 
 struct im_connection *purple_ic_by_pa( PurpleAccount *pa );
 
+/* Glorious hack: We seem to have to remind at least some libpurple plugins
+   that we're ready because this info may get lost if we give it too early.
+   So just do it ten times a second. :-/ */
+static gboolean prplcb_xfer_write_request_cb( gpointer data, gint fd, b_input_condition cond )
+{
+	struct prpl_xfer_data *px = data;
+	
+	purple_xfer_ui_ready( px->xfer );
+	
+	return purple_xfer_get_type( px->xfer ) == PURPLE_XFER_RECEIVE;
+}
+
 static gboolean prpl_xfer_write_request( struct file_transfer *ft )
 {
-	return FALSE;
+	struct prpl_xfer_data *px = ft->data;
+	px->ready_timer = b_timeout_add( 100, prplcb_xfer_write_request_cb, px );
+	return TRUE;
 }
 
 static gboolean prpl_xfer_write( struct file_transfer *ft, char *buffer, unsigned int len )
 {
 	struct prpl_xfer_data *px = ft->data;
 	
-	return FALSE;
+	px->buf = g_memdup( buffer, len );
+	px->buf_len = len;
+
+	//purple_xfer_ui_ready( px->xfer );
+	px->ready_timer = b_timeout_add( 0, prplcb_xfer_write_request_cb, px );
+	
+	return TRUE;
 }
 
 static void prpl_xfer_accept( struct file_transfer *ft )
@@ -69,37 +89,6 @@ static void prpl_xfer_canceled( struct file_transfer *ft, char *reason )
 {
 	struct prpl_xfer_data *px = ft->data;
 	purple_xfer_request_denied( px->xfer );
-}
-
-static gboolean prplcb_xfer_new_send_cb( gpointer data, gint fd, b_input_condition cond );
-
-static void prplcb_xfer_new( PurpleXfer *xfer )
-{
-	if( purple_xfer_get_type( xfer ) == PURPLE_XFER_RECEIVE )
-	{
-		/* This should suppress the stupid file dialog. */
-		purple_xfer_set_local_filename( xfer, "/tmp/wtf123" );
-		
-		/* Sadly the xfer struct is still empty ATM so come back after
-		   the caller is done. */
-		b_timeout_add( 0, prplcb_xfer_new_send_cb, xfer );
-	}
-	else
-	{
-		/*
-		struct prpl_xfer_data *px = g_new0( struct prpl_xfer_data, 1 );
-		
-		px->ft = next_ft;
-		px->ft->data = px;
-		px->xfer = xfer;
-		px->xfer->ui_data = px;
-		
-		purple_xfer_set_filename( xfer, px->ft->file_name );
-		purple_xfer_set_size( xfer, px->ft->file_size );
-		
-		next_ft = NULL;
-		*/
-	}
 }
 
 static gboolean prplcb_xfer_new_send_cb( gpointer data, gint fd, b_input_condition cond )
@@ -127,6 +116,33 @@ static gboolean prplcb_xfer_new_send_cb( gpointer data, gint fd, b_input_conditi
 	return FALSE;
 }
 
+static void prplcb_xfer_new( PurpleXfer *xfer )
+{
+	if( purple_xfer_get_type( xfer ) == PURPLE_XFER_RECEIVE )
+	{
+		/* This should suppress the stupid file dialog. */
+		purple_xfer_set_local_filename( xfer, "/tmp/wtf123" );
+		
+		/* Sadly the xfer struct is still empty ATM so come back after
+		   the caller is done. */
+		b_timeout_add( 0, prplcb_xfer_new_send_cb, xfer );
+	}
+	else
+	{
+		struct prpl_xfer_data *px = g_new0( struct prpl_xfer_data, 1 );
+		
+		px->ft = next_ft;
+		px->ft->data = px;
+		px->xfer = xfer;
+		px->xfer->ui_data = px;
+		
+		purple_xfer_set_filename( xfer, px->ft->file_name );
+		purple_xfer_set_size( xfer, px->ft->file_size );
+		
+		next_ft = NULL;
+	}
+}
+
 static void prplcb_xfer_progress( PurpleXfer *xfer, double percent )
 {
 	fprintf( stderr, "prplcb_xfer_dbg 0x%p %f\n", xfer, percent );
@@ -137,6 +153,43 @@ static void prplcb_xfer_dbg( PurpleXfer *xfer )
 	fprintf( stderr, "prplcb_xfer_dbg 0x%p\n", xfer );
 }
 
+static gssize prplcb_xfer_write( PurpleXfer *xfer, const guchar *buffer, gssize size )
+{
+	struct prpl_xfer_data *px = xfer->ui_data;
+	gboolean st;
+	
+	fprintf( stderr, "xfer_write %d %d\n", size, px->buf_len );
+	
+	b_event_remove( px->ready_timer );
+	px->ready_timer = 0;
+	
+	st = px->ft->write( px->ft, (char*) buffer, size );
+	
+	if( st && xfer->bytes_remaining == size )
+		imcb_file_finished( px->ft );
+	
+	return st ? size : 0;
+}
+
+gssize prplcb_xfer_read( PurpleXfer *xfer, guchar **buffer, gssize size )
+{
+	struct prpl_xfer_data *px = xfer->ui_data;
+	
+	fprintf( stderr, "xfer_read %d %d\n", size, px->buf_len );
+
+	if( px->buf )
+	{
+		*buffer = px->buf;
+		px->buf = NULL;
+		
+		px->ft->write_request( px->ft );
+		
+		return px->buf_len;
+	}
+	
+	return 0;
+}
+
 PurpleXferUiOps bee_xfer_uiops =
 {
 	prplcb_xfer_new,
@@ -145,8 +198,8 @@ PurpleXferUiOps bee_xfer_uiops =
 	prplcb_xfer_progress,
 	prplcb_xfer_dbg,
 	prplcb_xfer_dbg,
-	NULL,
-	NULL,
+	prplcb_xfer_write,
+	prplcb_xfer_read,
 	prplcb_xfer_dbg,
 };
 
@@ -166,4 +219,21 @@ void purple_transfer_request( struct im_connection *ic, file_transfer_t *ft, cha
 	
 	px = ft->data;
 	imcb_file_recv_start( ft );
+	
+	px->ready_timer = b_timeout_add( 100, prplcb_xfer_send_cb, px );
+}
+
+static gboolean prplcb_xfer_send_cb( gpointer data, gint fd, b_input_condition cond )
+{
+	struct prpl_xfer_data *px = data;
+	
+	if( px->ft->status & FT_STATUS_TRANSFERRING )
+	{
+		fprintf( stderr, "The ft, it is ready...\n" );
+		px->ft->write_request( px->ft );
+		
+		return FALSE;
+	}
+	
+	return TRUE;
 }
