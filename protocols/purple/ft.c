@@ -37,24 +37,74 @@ struct prpl_xfer_data
 {
 	PurpleXfer *xfer;
 	file_transfer_t *ft;
-	gint ready_timer;
-	char *buf;
-	int buf_len;
+	int fd;
+	char *fn;
+	gboolean ui_wants_data;
 };
 
 static file_transfer_t *next_ft;
 
 struct im_connection *purple_ic_by_pa( PurpleAccount *pa );
 
+gboolean try_write_to_ui( gpointer data, gint fd, b_input_condition cond )
+{
+	struct file_transfer *ft = data;
+	struct prpl_xfer_data *px = ft->data;
+	struct stat fs;
+	off_t tx_bytes;
+	
+	fprintf( stderr, "write_to_ui\n" );
+	
+	/* If we don't have the file opened yet, there's no data so wait. */
+	if( px->fd < 0 || !px->ui_wants_data )
+		return FALSE;
+	
+	tx_bytes = lseek( px->fd, 0, SEEK_CUR );
+	fstat( px->fd, &fs );
+	
+	fprintf( stderr, "write_to_ui %zd %zd %zd\n", fs.st_size, tx_bytes, px->xfer->size );
+	
+	if( fs.st_size > tx_bytes )
+	{
+		char buf[1024];
+		size_t n = MIN( fs.st_size - tx_bytes, sizeof( buf ) );
+		
+		if( read( px->fd, buf, n ) == n && ft->write( ft, buf, n ) )
+		{
+			fprintf( stderr, "Wrote %zd bytes\n", n );
+			px->ui_wants_data = FALSE;
+		}
+		else
+		{
+			purple_xfer_cancel_local( px->xfer );
+			imcb_file_canceled( ft, "Read error" );
+		}
+	}
+	
+	if( lseek( px->fd, 0, SEEK_CUR ) == px->xfer->size )
+	{
+		purple_xfer_end( px->xfer );
+		imcb_file_finished( ft );
+	}
+	
+	return FALSE;
+}
+
+/* UI calls this when its buffer is empty and wants more data to send to the user. */
 static gboolean prpl_xfer_write_request( struct file_transfer *ft )
 {
+	struct prpl_xfer_data *px = ft->data;
+	
+	fprintf( stderr, "wrq\n" );
+	
+	px->ui_wants_data = TRUE;
+	try_write_to_ui( ft, 0, 0 );
+	
 	return FALSE;
 }
 
 static gboolean prpl_xfer_write( struct file_transfer *ft, char *buffer, unsigned int len )
 {
-	struct prpl_xfer_data *px = ft->data;
-	
 	return FALSE;
 }
 
@@ -77,8 +127,14 @@ static void prplcb_xfer_new( PurpleXfer *xfer )
 {
 	if( purple_xfer_get_type( xfer ) == PURPLE_XFER_RECEIVE )
 	{
-		/* This should suppress the stupid file dialog. */
-		purple_xfer_set_local_filename( xfer, "/tmp/wtf123" );
+		struct prpl_xfer_data *px = g_new0( struct prpl_xfer_data, 1 );
+		
+		xfer->ui_data = px;
+		px->xfer = xfer;
+		px->fn = mktemp( g_strdup( "/tmp/bitlbee-purple-ft.XXXXXX" ) );
+		px->fd = -1;
+		
+		purple_xfer_set_local_filename( xfer, px->fn );
 		
 		/* Sadly the xfer struct is still empty ATM so come back after
 		   the caller is done. */
@@ -89,6 +145,7 @@ static void prplcb_xfer_new( PurpleXfer *xfer )
 		/*
 		struct prpl_xfer_data *px = g_new0( struct prpl_xfer_data, 1 );
 		
+		px->fd = -1;
 		px->ft = next_ft;
 		px->ft->data = px;
 		px->xfer = xfer;
@@ -106,7 +163,7 @@ static gboolean prplcb_xfer_new_send_cb( gpointer data, gint fd, b_input_conditi
 {
 	PurpleXfer *xfer = data;
 	struct im_connection *ic = purple_ic_by_pa( xfer->account );
-	struct prpl_xfer_data *px = g_new0( struct prpl_xfer_data, 1 );
+	struct prpl_xfer_data *px = xfer->ui_data;
 	PurpleBuddy *buddy;
 	const char *who;
 	
@@ -117,8 +174,6 @@ static gboolean prplcb_xfer_new_send_cb( gpointer data, gint fd, b_input_conditi
 	   remove the evil cast below. */
 	px->ft = imcb_file_send_start( ic, (char*) who, xfer->filename, xfer->size );
 	px->ft->data = px;
-	px->xfer = data;
-	px->xfer->ui_data = px;
 	
 	px->ft->accept = prpl_xfer_accept;
 	px->ft->canceled = prpl_xfer_canceled;
@@ -127,9 +182,43 @@ static gboolean prplcb_xfer_new_send_cb( gpointer data, gint fd, b_input_conditi
 	return FALSE;
 }
 
+static void prplcb_xfer_destroy( PurpleXfer *xfer )
+{
+	struct prpl_xfer_data *px = xfer->ui_data;
+	
+	g_free( px->fn );
+	if( px->fd >= 0 )
+		close( px->fd );
+	g_free( px );
+}
+
 static void prplcb_xfer_progress( PurpleXfer *xfer, double percent )
 {
-	fprintf( stderr, "prplcb_xfer_dbg 0x%p %f\n", xfer, percent );
+	struct prpl_xfer_data *px = xfer->ui_data;
+	
+	fprintf( stderr, "prplcb_xfer_progress 0x%p %f\n", xfer, percent );
+	
+	if( px->fd == -1 && percent > 0 )
+	{
+		/* Weeeeeeeee, we're getting data! That means the file exists
+		   by now so open it and start sending to the UI. */
+		px->fd = open( px->fn, O_RDONLY );
+		
+		/* Unlink it now, because we don't need it after this. */
+		//unlink( px->fn );
+	}
+	
+	if( percent < 1 )
+		try_write_to_ui( px->ft, 0, 0 );
+	else
+		b_timeout_add( 0, try_write_to_ui, px->ft );
+}
+
+static void prplcb_xfer_cancel_remote( PurpleXfer *xfer )
+{
+	struct prpl_xfer_data *px = xfer->ui_data;
+	
+	imcb_file_canceled( px->ft, "Canceled by remote end" );
 }
 
 static void prplcb_xfer_dbg( PurpleXfer *xfer )
@@ -140,17 +229,15 @@ static void prplcb_xfer_dbg( PurpleXfer *xfer )
 PurpleXferUiOps bee_xfer_uiops =
 {
 	prplcb_xfer_new,
-	prplcb_xfer_dbg,
+	prplcb_xfer_destroy,
 	prplcb_xfer_dbg,
 	prplcb_xfer_progress,
 	prplcb_xfer_dbg,
-	prplcb_xfer_dbg,
+	prplcb_xfer_cancel_remote,
 	NULL,
 	NULL,
 	prplcb_xfer_dbg,
 };
-
-static gboolean prplcb_xfer_send_cb( gpointer data, gint fd, b_input_condition cond );
 
 void purple_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *handle )
 {
