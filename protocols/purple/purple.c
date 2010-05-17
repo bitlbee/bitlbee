@@ -448,7 +448,10 @@ void purple_chat_invite( struct groupchat *gc, char *who, char *message )
 	PurpleConversation *pc = gc->data;
 	PurpleConvChat *pcc = PURPLE_CONV_CHAT( pc );
 	
-	purple_conv_chat_invite_user( pcc, who, message && *message ? message : "Please join my chat", FALSE );
+	serv_chat_invite( purple_account_get_connection( gc->ic->proto_data ),
+	                  purple_conv_chat_get_id( pcc ), 
+	                  message && *message ? message : "Please join my chat",
+	                  who );
 }
 
 void purple_chat_leave( struct groupchat *gc, char *who )
