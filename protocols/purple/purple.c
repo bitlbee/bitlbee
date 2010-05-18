@@ -141,10 +141,11 @@ static void purple_init( account_t *acc )
 			{
 				PurpleKeyValuePair *kv = io->data;
 				opts = g_slist_append( opts, kv->value );
+				/* TODO: kv->value is not a char*, WTF? */
 				if( strcmp( kv->value, kv->key ) != 0 )
-					g_string_append_printf( help, "%s (%s), ", kv->value, kv->key );
+					g_string_append_printf( help, "%s (%s), ", (char*) kv->value, kv->key );
 				else
-					g_string_append_printf( help, "%s, ", kv->value );
+					g_string_append_printf( help, "%s, ", (char*) kv->value );
 			}
 			g_string_truncate( help, help->len - 2 );
 			eval = set_eval_list;
@@ -454,7 +455,7 @@ void purple_chat_invite( struct groupchat *gc, char *who, char *message )
 	                  who );
 }
 
-void purple_chat_leave( struct groupchat *gc, char *who )
+void purple_chat_leave( struct groupchat *gc )
 {
 	PurpleConversation *pc = gc->data;
 	
