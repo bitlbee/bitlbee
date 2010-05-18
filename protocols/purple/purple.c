@@ -497,7 +497,7 @@ static void prplcb_conn_disconnected( PurpleConnection *gc )
 	
 	if( ic != NULL )
 	{
-		imc_logout( ic, TRUE );
+		imc_logout( ic, !gc->wants_to_die );
 	}
 }
 
