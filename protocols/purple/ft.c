@@ -37,8 +37,9 @@ struct prpl_xfer_data
 {
 	PurpleXfer *xfer;
 	file_transfer_t *ft;
+	struct im_connection *ic;
 	int fd;
-	char *fn;
+	char *fn, *orig_fn, *handle;
 	gboolean ui_wants_data;
 };
 
@@ -82,20 +83,16 @@ static void prplcb_xfer_new( PurpleXfer *xfer )
 	}
 	else
 	{
-		/*
-		struct prpl_xfer_data *px = g_new0( struct prpl_xfer_data, 1 );
+		struct file_transfer *ft = next_ft;
+		struct prpl_xfer_data *px = ft->data;
 		
-		px->fd = -1;
-		px->ft = next_ft;
-		px->ft->data = px;
+		xfer->ui_data = px;
 		px->xfer = xfer;
-		px->xfer->ui_data = px;
 		
-		purple_xfer_set_filename( xfer, px->ft->file_name );
-		purple_xfer_set_size( xfer, px->ft->file_size );
+		purple_xfer_set_filename( xfer, px->orig_fn );
+		purple_xfer_set_local_filename( xfer, px->fn );
 		
 		next_ft = NULL;
-		*/
 	}
 }
 
@@ -179,6 +176,8 @@ static void prplcb_xfer_destroy( PurpleXfer *xfer )
 	struct prpl_xfer_data *px = xfer->ui_data;
 	
 	g_free( px->fn );
+	g_free( px->orig_fn );
+	g_free( px->handle );
 	if( px->fd >= 0 )
 		close( px->fd );
 	g_free( px );
@@ -187,6 +186,20 @@ static void prplcb_xfer_destroy( PurpleXfer *xfer )
 static void prplcb_xfer_progress( PurpleXfer *xfer, double percent )
 {
 	struct prpl_xfer_data *px = xfer->ui_data;
+	
+	if( px == NULL )
+		return;
+	
+	if( purple_xfer_get_type( xfer ) == PURPLE_XFER_SEND )
+	{
+		if( *px->fn )
+		{
+			//unlink( px->fn );
+			*px->fn = '\0';
+		}
+		
+		return;
+	}
 	
 	if( px->fd == -1 && percent > 0 )
 	{
@@ -215,6 +228,16 @@ static void prplcb_xfer_cancel_remote( PurpleXfer *xfer )
 	imcb_file_canceled( px->ft, "Canceled by remote end" );
 }
 
+static void prplcb_xfer_add( PurpleXfer *xfer )
+{
+	if( purple_xfer_get_type( xfer ) == PURPLE_XFER_SEND )
+	{
+		struct prpl_xfer_data *px = xfer->ui_data;
+		
+		purple_xfer_set_filename( xfer, px->orig_fn );
+	}
+}
+
 static void prplcb_xfer_dbg( PurpleXfer *xfer )
 {
 	fprintf( stderr, "prplcb_xfer_dbg 0x%p\n", xfer );
@@ -222,27 +245,77 @@ static void prplcb_xfer_dbg( PurpleXfer *xfer )
 
 
 /* Sending files (UI->IM): */
-static gboolean prpl_xfer_write( struct file_transfer *ft, char *buffer, unsigned int len )
-{
-	return FALSE;
-}
+static gboolean prpl_xfer_write( struct file_transfer *ft, char *buffer, unsigned int len );
+static gboolean purple_transfer_request_cb( gpointer data, gint fd, b_input_condition cond );
 
 void purple_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *handle )
 {
-	PurpleAccount *pa = ic->proto_data;
-	struct prpl_xfer_data *px;
+	struct prpl_xfer_data *px = g_new0( struct prpl_xfer_data, 1 );
+	
+	ft->data = px;
+	px->ft = ft;
+	px->fn = g_strdup( "/tmp/bitlbee-purple-ft.XXXXXX" );
+	px->fd = mkstemp( px->fn );
+	
+	px->ic = ic;
+	px->handle = g_strdup( handle );
+	px->orig_fn = g_strdup( ft->file_name );
+	
+	imcb_log( ic, "Due to libpurple limitations, the file has to be cached locally before proceeding with the actual file transfer. Please wait..." );
+	
+	b_timeout_add( 0, purple_transfer_request_cb, ft );
+}
+
+static void purple_transfer_forward( struct file_transfer *ft )
+{
+	struct prpl_xfer_data *px = ft->data;
+	PurpleAccount *pa = px->ic->proto_data;
 	
 	/* xfer_new() will pick up this variable. It's a hack but we're not
 	   multi-threaded anyway. */
 	next_ft = ft;
-	serv_send_file( purple_account_get_connection( pa ), handle, ft->file_name );
-	
-	ft->write = prpl_xfer_write;
-	
-	px = ft->data;
-	imcb_file_recv_start( ft );
+	serv_send_file( purple_account_get_connection( pa ), px->handle, px->fn );
 }
 
+static gboolean purple_transfer_request_cb( gpointer data, gint fd, b_input_condition cond )
+{
+	file_transfer_t *ft = data;
+	
+	if( ft->write == NULL )
+	{
+		ft->write = prpl_xfer_write;
+		imcb_file_recv_start( ft );
+	}
+	
+	ft->write_request( ft );
+	
+	return FALSE;
+}
+
+static gboolean prpl_xfer_write( struct file_transfer *ft, char *buffer, unsigned int len )
+{
+	struct prpl_xfer_data *px = ft->data;
+	
+	if( write( px->fd, buffer, len ) != len )
+	{
+		imcb_file_canceled( ft, "Error while writing temporary file" );
+		return FALSE;
+	}
+	
+	if( lseek( px->fd, 0, SEEK_CUR ) >= ft->file_size )
+	{
+		close( px->fd );
+		px->fd = -1;
+		
+		purple_transfer_forward( ft );
+		imcb_file_finished( ft );
+		px->ft = NULL;
+	}
+	else
+		b_timeout_add( 0, purple_transfer_request_cb, ft );
+	
+	return TRUE;
+}
 
 
 
@@ -250,7 +323,7 @@ PurpleXferUiOps bee_xfer_uiops =
 {
 	prplcb_xfer_new,
 	prplcb_xfer_destroy,
-	prplcb_xfer_dbg,
+	prplcb_xfer_add,
 	prplcb_xfer_progress,
 	prplcb_xfer_dbg,
 	prplcb_xfer_cancel_remote,
