@@ -433,6 +433,8 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 		status = l->data;
 		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
 		
+		strip_html(status->text);
+		
 		// Say it!
 		if (g_strcasecmp(td->user, status->user->screen_name) == 0)
 			imcb_chat_log (gc, "Your Tweet: %s", status->text);
@@ -470,6 +472,7 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList *list)
 		
 		status = l->data;
 		
+		strip_html( status->text );
 		if( mode_one )
 			text = g_strdup_printf( "\002<\002%s\002>\002 %s",
 			                        status->user->screen_name, status->text );

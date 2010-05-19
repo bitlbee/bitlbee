@@ -179,7 +179,6 @@ static void twitter_login( account_t *acc )
 
 	twitter_connections = g_slist_append( twitter_connections, ic );
 	ic->proto_data = td;
-	ic->flags |= OPT_DOES_HTML;
 	
 	td->user = acc->user;
 	if( !set_getbool( &acc->set, "oauth" ) )
