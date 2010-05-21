@@ -39,7 +39,7 @@ struct prpl_xfer_data
 	file_transfer_t *ft;
 	struct im_connection *ic;
 	int fd;
-	char *fn, *orig_fn, *handle;
+	char *fn, *handle;
 	gboolean ui_wants_data;
 };
 
@@ -88,9 +88,6 @@ static void prplcb_xfer_new( PurpleXfer *xfer )
 		
 		xfer->ui_data = px;
 		px->xfer = xfer;
-		
-		purple_xfer_set_filename( xfer, px->orig_fn );
-		purple_xfer_set_local_filename( xfer, px->fn );
 		
 		next_ft = NULL;
 	}
@@ -151,7 +148,7 @@ gboolean try_write_to_ui( gpointer data, gint fd, b_input_condition cond )
 	
 	if( lseek( px->fd, 0, SEEK_CUR ) == px->xfer->size )
 	{
-		purple_xfer_end( px->xfer );
+		/*purple_xfer_end( px->xfer );*/
 		imcb_file_finished( ft );
 	}
 	
@@ -176,7 +173,6 @@ static void prplcb_xfer_destroy( PurpleXfer *xfer )
 	struct prpl_xfer_data *px = xfer->ui_data;
 	
 	g_free( px->fn );
-	g_free( px->orig_fn );
 	g_free( px->handle );
 	if( px->fd >= 0 )
 		close( px->fd );
@@ -194,7 +190,14 @@ static void prplcb_xfer_progress( PurpleXfer *xfer, double percent )
 	{
 		if( *px->fn )
 		{
-			//unlink( px->fn );
+			char *slash;
+			
+			unlink( px->fn );
+			if( ( slash = strrchr( px->fn, '/' ) ) )
+			{
+				*slash = '\0';
+				rmdir( px->fn );
+			}
 			*px->fn = '\0';
 		}
 		
@@ -225,17 +228,11 @@ static void prplcb_xfer_cancel_remote( PurpleXfer *xfer )
 {
 	struct prpl_xfer_data *px = xfer->ui_data;
 	
-	imcb_file_canceled( px->ft, "Canceled by remote end" );
-}
-
-static void prplcb_xfer_add( PurpleXfer *xfer )
-{
-	if( purple_xfer_get_type( xfer ) == PURPLE_XFER_SEND )
-	{
-		struct prpl_xfer_data *px = xfer->ui_data;
-		
-		purple_xfer_set_filename( xfer, px->orig_fn );
-	}
+	if( px->ft )
+		imcb_file_canceled( px->ft, "Canceled by remote end" );
+	else
+		/* px->ft == NULL for sends, because of the two stages. :-/ */
+		imcb_error( px->ic, "File transfer cancelled by remote end" );
 }
 
 static void prplcb_xfer_dbg( PurpleXfer *xfer )
@@ -251,15 +248,38 @@ static gboolean purple_transfer_request_cb( gpointer data, gint fd, b_input_cond
 void purple_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *handle )
 {
 	struct prpl_xfer_data *px = g_new0( struct prpl_xfer_data, 1 );
+	char *dir, *basename;
 	
 	ft->data = px;
 	px->ft = ft;
-	px->fn = g_strdup( "/tmp/bitlbee-purple-ft.XXXXXX" );
-	px->fd = mkstemp( px->fn );
+	
+	dir = g_strdup( "/tmp/bitlbee-purple-ft.XXXXXX" );
+	if( !mkdtemp( dir ) )
+	{
+		imcb_error( ic, "Could not create temporary file for file transfer" );
+		g_free( px );
+		g_free( dir );
+		return;
+	}
+	
+	if( ( basename = strrchr( ft->file_name, '/' ) ) )
+		basename++;
+	else
+		basename = ft->file_name;
+	px->fn = g_strdup_printf( "%s/%s", dir, basename );
+	px->fd = open( px->fn, O_WRONLY | O_CREAT, 0600 );
+	g_free( dir );
+	
+	if( px->fd < 0 )
+	{
+		imcb_error( ic, "Could not create temporary file for file transfer" );
+		g_free( px );
+		g_free( px->fn );
+		return;
+	}
 	
 	px->ic = ic;
 	px->handle = g_strdup( handle );
-	px->orig_fn = g_strdup( ft->file_name );
 	
 	imcb_log( ic, "Due to libpurple limitations, the file has to be cached locally before proceeding with the actual file transfer. Please wait..." );
 	
@@ -323,7 +343,7 @@ PurpleXferUiOps bee_xfer_uiops =
 {
 	prplcb_xfer_new,
 	prplcb_xfer_destroy,
-	prplcb_xfer_add,
+	NULL, /* prplcb_xfer_add, */
 	prplcb_xfer_progress,
 	prplcb_xfer_dbg,
 	prplcb_xfer_cancel_remote,
