@@ -358,6 +358,11 @@ static void purple_remove_buddy( struct im_connection *ic, char *who, char *grou
 	}
 }
 
+static void purple_get_info( struct im_connection *ic, char *who )
+{
+	serv_get_info( purple_account_get_connection( ic->proto_data ), who );
+}
+
 static void purple_keepalive( struct im_connection *ic )
 {
 }
@@ -824,10 +829,66 @@ static void *prplcb_notify_email( PurpleConnection *gc, const char *subject, con
 	return NULL;
 }
 
+static void *prplcb_notify_userinfo( PurpleConnection *gc, const char *who, PurpleNotifyUserInfo *user_info )
+{
+	struct im_connection *ic = purple_ic_by_gc( gc );
+	GString *info = g_string_new( "" );
+	GList *l = purple_notify_user_info_get_entries( user_info );
+	char *key;
+	const char *value;
+	int n;
+	
+	while( l )
+	{
+		PurpleNotifyUserInfoEntry *e = l->data;
+		
+		switch( purple_notify_user_info_entry_get_type( e ) )
+		{
+		case PURPLE_NOTIFY_USER_INFO_ENTRY_PAIR:
+		case PURPLE_NOTIFY_USER_INFO_ENTRY_SECTION_HEADER:
+			key = g_strdup( purple_notify_user_info_entry_get_label( e ) );
+			value = purple_notify_user_info_entry_get_value( e );
+			
+			if( key )
+			{
+				strip_html( key );
+				g_string_append_printf( info, "%s: ", key );
+				
+				if( value )
+				{
+					n = strlen( value ) - 1;
+					while( isspace( value[n] ) )
+						n --;
+					g_string_append_len( info, value, n + 1 );
+				}
+				g_string_append_c( info, '\n' );
+				g_free( key );
+			}
+			
+			break;
+		case PURPLE_NOTIFY_USER_INFO_ENTRY_SECTION_BREAK:
+			g_string_append( info, "------------------------\n" );
+			break;
+		}
+		
+		l = l->next;
+	}
+	
+	imcb_log( ic, "User %s info:\n%s", who, info->str );
+	g_string_free( info, TRUE );
+	
+	return NULL;
+}
+
 static PurpleNotifyUiOps bee_notify_uiops =
 {
         NULL,
         prplcb_notify_email,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        prplcb_notify_userinfo,
 };
 
 extern PurpleXferUiOps bee_xfer_uiops;
@@ -885,6 +946,7 @@ void purple_initmodule()
 	funcs.set_away = purple_set_away;
 	funcs.add_buddy = purple_add_buddy;
 	funcs.remove_buddy = purple_remove_buddy;
+	funcs.get_info = purple_get_info;
 	funcs.keepalive = purple_keepalive;
 	funcs.send_typing = purple_send_typing;
 	funcs.handle_cmp = g_strcasecmp;
