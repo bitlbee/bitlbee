@@ -471,12 +471,27 @@ void purple_transfer_request( struct im_connection *ic, file_transfer_t *ft, cha
 
 static void purple_ui_init();
 
+GHashTable *prplcb_ui_info()
+{
+	static GHashTable *ret;
+	
+	if( ret == NULL )
+	{
+		ret = g_hash_table_new(g_str_hash, g_str_equal);
+		g_hash_table_insert( ret, "name", "BitlBee" );
+		g_hash_table_insert( ret, "version", BITLBEE_VERSION );
+	}
+	
+	return ret;
+}
+
 static PurpleCoreUiOps bee_core_uiops = 
 {
 	NULL,
 	NULL,
 	purple_ui_init,
 	NULL,
+	prplcb_ui_info,
 };
 
 static void prplcb_conn_progress( PurpleConnection *gc, const char *text, size_t step, size_t step_count )
