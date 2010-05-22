@@ -358,6 +358,34 @@ static void purple_remove_buddy( struct im_connection *ic, char *who, char *grou
 	}
 }
 
+static void purple_add_permit( struct im_connection *ic, char *who )
+{
+	PurpleAccount *pa = ic->proto_data;
+	
+	purple_privacy_permit_add( pa, who, FALSE );
+}
+
+static void purple_add_deny( struct im_connection *ic, char *who )
+{
+	PurpleAccount *pa = ic->proto_data;
+	
+	purple_privacy_deny_add( pa, who, FALSE );
+}
+
+static void purple_rem_permit( struct im_connection *ic, char *who )
+{
+	PurpleAccount *pa = ic->proto_data;
+	
+	purple_privacy_permit_remove( pa, who, FALSE );
+}
+
+static void purple_rem_deny( struct im_connection *ic, char *who )
+{
+	PurpleAccount *pa = ic->proto_data;
+	
+	purple_privacy_deny_remove( pa, who, FALSE );
+}
+
 static void purple_get_info( struct im_connection *ic, char *who )
 {
 	serv_get_info( purple_account_get_connection( ic->proto_data ), who );
@@ -800,6 +828,48 @@ static PurpleRequestUiOps bee_request_uiops =
 	NULL,
 };
 
+static void prplcb_privacy_permit_added( PurpleAccount *account, const char *name )
+{
+	struct im_connection *ic = purple_ic_by_pa( account );
+	
+	if( !g_slist_find_custom( ic->permit, name, (GCompareFunc) ic->acc->prpl->handle_cmp ) )
+		ic->permit = g_slist_prepend( ic->permit, g_strdup( name ) );
+}
+
+static void prplcb_privacy_permit_removed( PurpleAccount *account, const char *name )
+{
+	struct im_connection *ic = purple_ic_by_pa( account );
+	void *n;
+	
+	n = g_slist_find_custom( ic->permit, name, (GCompareFunc) ic->acc->prpl->handle_cmp );
+	ic->permit = g_slist_remove( ic->permit, n );
+}
+
+static void prplcb_privacy_deny_added( PurpleAccount *account, const char *name )
+{
+	struct im_connection *ic = purple_ic_by_pa( account );
+	
+	if( !g_slist_find_custom( ic->deny, name, (GCompareFunc) ic->acc->prpl->handle_cmp ) )
+		ic->deny = g_slist_prepend( ic->deny, g_strdup( name ) );
+}
+
+static void prplcb_privacy_deny_removed( PurpleAccount *account, const char *name )
+{
+	struct im_connection *ic = purple_ic_by_pa( account );
+	void *n;
+	
+	n = g_slist_find_custom( ic->deny, name, (GCompareFunc) ic->acc->prpl->handle_cmp );
+	ic->deny = g_slist_remove( ic->deny, n );
+}
+
+static PurplePrivacyUiOps bee_privacy_uiops =
+{
+	prplcb_privacy_permit_added,
+	prplcb_privacy_permit_removed,
+	prplcb_privacy_deny_added,
+	prplcb_privacy_deny_removed,
+};
+
 static void prplcb_debug_print( PurpleDebugLevel level, const char *category, const char *arg_s )
 {
 	fprintf( stderr, "DEBUG %s: %s", category, arg_s );
@@ -916,6 +986,7 @@ static void purple_ui_init()
 	purple_request_set_ui_ops( &bee_request_uiops );
 	purple_notify_set_ui_ops( &bee_notify_uiops );
 	purple_xfers_set_ui_ops( &bee_xfer_uiops );
+	purple_privacy_set_ui_ops( &bee_privacy_uiops );
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
 		purple_debug_set_ui_ops( &bee_debug_uiops );
@@ -961,6 +1032,10 @@ void purple_initmodule()
 	funcs.set_away = purple_set_away;
 	funcs.add_buddy = purple_add_buddy;
 	funcs.remove_buddy = purple_remove_buddy;
+	funcs.add_permit = purple_add_permit;
+	funcs.add_deny = purple_add_deny;
+	funcs.rem_permit = purple_rem_permit;
+	funcs.rem_deny = purple_rem_deny;
 	funcs.get_info = purple_get_info;
 	funcs.keepalive = purple_keepalive;
 	funcs.send_typing = purple_send_typing;
