@@ -495,6 +495,44 @@ void purple_chat_leave( struct groupchat *gc )
 	purple_conversation_destroy( pc );
 }
 
+struct groupchat *purple_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password )
+{
+	PurpleAccount *pa = ic->proto_data;
+	PurplePlugin *prpl = purple_plugins_find_with_id( pa->protocol_id );
+	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
+	GHashTable *chat_hash;
+	PurpleConversation *conv;
+	GList *info, *l;
+	
+	if( !pi->chat_info || !pi->chat_info_defaults ||
+	    !( info = pi->chat_info( purple_account_get_connection( pa ) ) ) )
+	{
+		imcb_error( ic, "Joining chatrooms not supported by this protocol" );
+		return NULL;
+	}
+	
+	if( ( conv = purple_find_conversation_with_account( PURPLE_CONV_TYPE_CHAT, room, pa ) ) )
+		purple_conversation_destroy( conv );
+	
+	chat_hash = pi->chat_info_defaults( purple_account_get_connection( pa ), room );
+	
+	for( l = info; l; l = l->next )
+	{
+		struct proto_chat_entry *pce = l->data;
+		
+		if( strcmp( pce->identifier, "handle" ) == 0 )
+			g_hash_table_replace( chat_hash, "handle", g_strdup( nick ) );
+		else if( strcmp( pce->identifier, "password" ) == 0 )
+			g_hash_table_replace( chat_hash, "password", g_strdup( password ) );
+		else if( strcmp( pce->identifier, "passwd" ) == 0 )
+			g_hash_table_replace( chat_hash, "passwd", g_strdup( password ) );
+	}
+	
+	serv_join_chat( purple_account_get_connection( pa ), chat_hash );
+	
+	return NULL;
+}
+
 void purple_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *handle );
 
 static void purple_ui_init();
@@ -661,6 +699,11 @@ void prplcb_conv_new( PurpleConversation *conv )
 		gc = imcb_chat_new( ic, conv->name );
 		conv->ui_data = gc;
 		gc->data = conv;
+		
+		/* libpurple brokenness: Whatever. Show that we join right away,
+		   there's no clear "This is you!" signaling in _add_users so
+		   don't even try. */
+		imcb_chat_add_buddy( gc, gc->ic->acc->user );
 	}
 }
 
@@ -675,14 +718,6 @@ void prplcb_conv_add_users( PurpleConversation *conv, GList *cbuddies, gboolean 
 {
 	struct groupchat *gc = conv->ui_data;
 	GList *b;
-	
-	if( !gc->joined && strcmp( conv->account->protocol_id, "prpl-msn" ) == 0 )
-	{
-		/* Work around the broken MSN module which fucks up the user's
-		   handle completely when informing him/her that he just
-		   successfully joined the room s/he just created (v2.6.6). */
-		imcb_chat_add_buddy( gc, gc->ic->acc->user );
-	}
 	
 	for( b = cbuddies; b; b = b->next )
 	{
@@ -1045,6 +1080,7 @@ void purple_initmodule()
 	funcs.chat_with = purple_chat_with;
 	funcs.chat_invite = purple_chat_invite;
 	funcs.chat_leave = purple_chat_leave;
+	funcs.chat_join = purple_chat_join;
 	funcs.transfer_request = purple_transfer_request;
 	
 	help = g_string_new("BitlBee libpurple module supports the following IM protocols:\n");
