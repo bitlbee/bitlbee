@@ -69,7 +69,7 @@ static const struct oauth_service twitter_oauth =
 {
 	"http://api.twitter.com/oauth/request_token",
 	"http://api.twitter.com/oauth/access_token",
-	"http://api.twitter.com/oauth/authorize",
+	"https://api.twitter.com/oauth/authorize",
 	.consumer_key = "xsDNKJuNZYkZyMcu914uEA",
 	.consumer_secret = "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo",
 };
