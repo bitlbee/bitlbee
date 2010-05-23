@@ -121,31 +121,30 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 static char *twitter_parse_error(struct http_request *req)
 {
 	static char *ret = NULL;
-	struct xt_parser *xp;
+	struct xt_parser *xp = NULL;
 	struct xt_node *node;
-	char *err_s = NULL;
 	
 	g_free(ret);
 	ret = NULL;
 	
-	xp = xt_new(NULL, NULL);
-	xt_feed(xp, req->reply_body, req->body_size);
-	
-	if ((node = xt_find_node(xp->root, "hash")) &&
-	    (node = xt_find_node(node->children, "error")) &&
-	    node->text_len > 0)
-		err_s = node->text;
-	
-	if (err_s)
+	if (req->body_size > 0)
 	{
-		ret = g_strdup_printf("%s (%s)", req->status_string, err_s);
+		xp = xt_new(NULL, NULL);
+		xt_feed(xp, req->reply_body, req->body_size);
+		
+		if ((node = xt_find_node(xp->root, "hash")) &&
+		    (node = xt_find_node(node->children, "error")) &&
+		    node->text_len > 0)
+		{
+			ret = g_strdup_printf("%s (%s)", req->status_string, node->text);
+			xt_free(xp);
+			return ret;
+		}
+		
 		xt_free(xp);
-		return ret;
 	}
-	else
-	{
-		return req->status_string;
-	}
+	
+	return req->status_string;
 }
 
 static void twitter_http_get_friends_ids(struct http_request *req);
