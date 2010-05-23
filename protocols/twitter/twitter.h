@@ -41,6 +41,11 @@ struct twitter_data
 	gint main_loop_id;
 	struct groupchat *home_timeline_gc;
 	gint http_fails;
+	
+	gboolean url_ssl;
+	int url_port;
+	char *url_host;
+	char *url_path;
 };
 
 /**
