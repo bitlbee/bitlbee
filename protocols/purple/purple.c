@@ -36,6 +36,8 @@ GSList *purple_connections;
    libpurple in daemon mode anyway. */
 static irc_t *local_irc;
 
+static char *set_eval_display_name( set_t *set, char *value );
+
 struct im_connection *purple_ic_by_pa( PurpleAccount *pa )
 {
 	GSList *i;
@@ -171,6 +173,9 @@ static void purple_init( account_t *acc )
 	g_snprintf( help_title, sizeof( help_title ), "purple %s", (char*) acc->prpl->name );
 	help_add_mem( &global.help, help_title, help->str );
 	g_string_free( help, TRUE );
+	
+	s = set_add( &acc->set, "display_name", NULL, set_eval_display_name, acc );
+	s->flags |= ACC_SET_ONLINE_ONLY;
 	
 	if( pi->options & OPT_PROTO_MAIL_CHECK )
 	{
@@ -335,6 +340,14 @@ static void purple_set_away( struct im_connection *ic, char *state_txt, char *me
 		                        TRUE, args );
 
 	g_list_free( args );
+}
+
+static char *set_eval_display_name( set_t *set, char *value )
+{
+	account_t *acc = set->data;
+	struct im_connection *ic = acc->ic;
+	
+	return NULL;
 }
 
 static void purple_add_buddy( struct im_connection *ic, char *who, char *group )
@@ -570,8 +583,17 @@ static void prplcb_conn_progress( PurpleConnection *gc, const char *text, size_t
 static void prplcb_conn_connected( PurpleConnection *gc )
 {
 	struct im_connection *ic = purple_ic_by_gc( gc );
+	const char *dn;
+	set_t *s;
 	
 	imcb_connected( ic );
+	
+	if( ( dn = purple_connection_get_display_name( gc ) ) &&
+	    ( s = set_find( &ic->acc->set, "display_name" ) ) )
+	{
+		g_free( s->value );
+		s->value = g_strdup( dn );
+	}
 	
 	if( gc->flags & PURPLE_CONNECTION_HTML )
 		ic->flags |= OPT_DOES_HTML;
