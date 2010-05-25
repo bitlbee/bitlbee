@@ -25,7 +25,6 @@
 
 #define BITLBEE_CORE
 #include "commands.h"
-#include "crypting.h"
 #include "bitlbee.h"
 #include "help.h"
 #include "chat.h"
