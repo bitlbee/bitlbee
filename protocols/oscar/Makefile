@@ -7,6 +7,10 @@
 ### DEFINITIONS
 
 -include ../../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)protocols/oscar/
+CFLAGS += -I$(SRCDIR)
+endif
 
 # [SH] Program variables
 objects = admin.o auth.o bos.o buddylist.o chat.o chatnav.o conn.o icq.o im.o info.o misc.o msgcookie.o rxhandlers.o rxqueue.o search.o service.o snac.o ssi.o stats.o tlv.o txqueue.o oscar_util.o oscar.o
@@ -32,7 +36,7 @@ distclean: clean
 
 $(objects): ../../Makefile.settings Makefile
 
-$(objects): %.o: %.c
+$(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 

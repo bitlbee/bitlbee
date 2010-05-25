@@ -1,4 +1,8 @@
 -include ../../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)doc/user-guide/
+endif
+
 EXTRAPARANEWLINE = 1
 # EXTRAPARANEWLINE = 0
 

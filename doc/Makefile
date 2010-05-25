@@ -1,4 +1,7 @@
 -include ../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)doc/
+endif
 
 all:
 	# Only build the docs if this is a bzr checkout

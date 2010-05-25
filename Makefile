@@ -109,7 +109,7 @@ tar:
 $(subdirs):
 	@$(MAKE) -C $@ $(MAKECMDGOALS)
 
-$(objects): %.o: %.c
+$(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 

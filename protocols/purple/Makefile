@@ -7,6 +7,9 @@
 ### DEFINITIONS
 
 -include ../../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)protocols/purple/
+endif
 
 # [SH] Program variables
 objects = ft.o purple.o
@@ -32,7 +35,7 @@ distclean: clean
 
 $(objects): ../../Makefile.settings Makefile
 
-$(objects): %.o: %.c
+$(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
