@@ -41,7 +41,7 @@ install:
 	mkdir -p $(DESTDIR)$(DATADIR)
 	chmod 0755 $(DESTDIR)$(DATADIR)
 	rm -f $(DESTDIR)$(DATADIR)/help.txt # Prevent help function from breaking in running sessions
-	install -m 0644 help.txt $(DESTDIR)$(DATADIR)/help.txt
+	install -m 0644 $(SRCDIR)help.txt $(DESTDIR)$(DATADIR)/help.txt
 
 uninstall:
 	rm -f $(DESTDIR)$(DATADIR)/help.txt
