@@ -267,10 +267,12 @@ static void twitter_get_info(struct im_connection *ic, char *who)
 
 static void twitter_add_buddy( struct im_connection *ic, char *who, char *group )
 {
+	twitter_friendships_create_destroy(ic, who, 1);
 }
 
 static void twitter_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
+	twitter_friendships_create_destroy(ic, who, 0);
 }
 
 static void twitter_chat_msg( struct groupchat *c, char *message, int flags )
