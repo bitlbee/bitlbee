@@ -655,9 +655,9 @@ void twitter_get_statuses_friends(struct im_connection *ic, int next_cursor)
 }
 
 /**
- * Callback after sending a new update to twitter.
+ * Callback to use after sending a post request to twitter.
  */
-static void twitter_http_post_status(struct http_request *req)
+static void twitter_http_post(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 
@@ -668,7 +668,7 @@ static void twitter_http_post_status(struct http_request *req)
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not post message: %s", twitter_parse_error(req));
+		imcb_error(ic, "HTTP error: %s", twitter_parse_error(req));
 		return;
 	}
 }
@@ -681,7 +681,7 @@ void twitter_post_status(struct im_connection *ic, char* msg)
 	char* args[2];
 	args[0] = "status";
 	args[1] = msg;
-	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post_status, ic, 1, args, 2);
+	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post, ic, 1, args, 2);
 //	g_free(args[1]);
 }
 
@@ -697,7 +697,15 @@ void twitter_direct_messages_new(struct im_connection *ic, char *who, char *msg)
 	args[2] = "text";
 	args[3] = msg;
 	// Use the same callback as for twitter_post_status, since it does basically the same.
-	twitter_http(ic, TWITTER_DIRECT_MESSAGES_NEW_URL, twitter_http_post_status, ic, 1, args, 4);
+	twitter_http(ic, TWITTER_DIRECT_MESSAGES_NEW_URL, twitter_http_post, ic, 1, args, 4);
 //	g_free(args[1]);
 //	g_free(args[3]);
+}
+
+void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int create)
+{
+	char* args[2];
+	args[0] = "screen_name";
+	args[1] = who;
+	twitter_http(ic, create ? TWITTER_FRIENDSHIPS_CREATE_URL : TWITTER_FRIENDSHIPS_DESTROY_URL, twitter_http_post, ic, 1, args, 2);
 }
