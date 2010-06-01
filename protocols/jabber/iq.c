@@ -135,7 +135,6 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		else if( !( c = xt_find_node( node->children, "query" ) ) ||
 		         !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
-			imcb_log( ic, "Warning: Received incomplete IQ-%s packet", type );
 			return XT_HANDLED;
 		}
 		else if( strcmp( s, XMLNS_ROSTER ) == 0 )

@@ -1033,16 +1033,21 @@ static int incomingim_chan2(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 		*exch = args->info.chat.roominfo.exchange;
 		m = g_list_append(m, exch);
 
-		g_snprintf( txt, 1024, "Got an invitation to chatroom %s from %s: %s", name, userinfo->sn, args->msg );
+		g_snprintf(txt, 1024, "Got an invitation to chatroom %s from %s: %s", name, userinfo->sn, args->msg);
 
 		inv->ic = ic;
 		inv->exchange = *exch;
 		inv->name = g_strdup(name);
 		
-		imcb_ask( ic, txt, inv, oscar_accept_chat, oscar_reject_chat);
+		imcb_ask(ic, txt, inv, oscar_accept_chat, oscar_reject_chat);
 	
 		if (name)
 			g_free(name);
+	} else if (args->reqclass & AIM_CAPS_ICQRTF) {
+		// TODO: constify
+		char text[strlen(args->info.rtfmsg.rtfmsg)+1];
+		strncpy(text, args->info.rtfmsg.rtfmsg, sizeof(text));
+		imcb_buddy_msg(ic, normalize(userinfo->sn), text, 0, 0);
 	}
 
 	return 1;

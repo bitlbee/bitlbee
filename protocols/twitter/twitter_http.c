@@ -40,45 +40,21 @@
 #include "twitter_http.h"
 
 
-char *twitter_url_append(char *url, char *key, char* value);
+static char *twitter_url_append(char *url, char *key, char* value);
 
 /**
  * Do a request.
  * This is actually pretty generic function... Perhaps it should move to the lib/http_client.c
  */
-void *twitter_http(char *url_string, http_input_function func, gpointer data, int is_post, char* user, char* pass, struct oauth_info* oi, char** arguments, int arguments_len)
+void *twitter_http(struct im_connection *ic, char *url_string, http_input_function func, gpointer data, int is_post, char** arguments, int arguments_len)
 {
-	url_t *url = g_new0( url_t, 1 );
+	struct twitter_data *td = ic->proto_data;
 	char *tmp;
-	char *request;
+	GString *request = g_string_new("");
 	void *ret;
-	char *userpass = NULL;
-	char *userpass_base64;
 	char *url_arguments;
 
-	// Fill the url structure.
-	if( !url_set( url, url_string ) )
-	{
-		g_free( url );
-		return NULL;
-	}
-
-	if( url->proto != PROTO_HTTP && url->proto != PROTO_HTTPS )
-	{
-		g_free( url );
-		return NULL;
-	}
-
-	// Concatenate user and pass
-	if (user && pass) {
-		userpass = g_strdup_printf("%s:%s", user, pass);
-		userpass_base64 = base64_encode((unsigned char*)userpass, strlen(userpass));
-	} else {
-		userpass_base64 = NULL;
-	}
-
-	url_arguments = g_malloc(1);
-	url_arguments[0] = '\0';
+	url_arguments = g_strdup("");
 
 	// Construct the url arguments.
 	if (arguments_len != 0)
@@ -92,70 +68,61 @@ void *twitter_http(char *url_string, http_input_function func, gpointer data, in
 		}
 	}
 
-	// Do GET stuff...
-	if (!is_post)
-	{
-		// Find the char-pointer of the end of the string.
-		tmp = url->file + strlen(url->file);
-		tmp[0] = '?';
-		// append the url_arguments to the end of the url->file.
-		// TODO GM: Check the length?
-		g_stpcpy (tmp+1, url_arguments);
-	}
-
-
 	// Make the request.
-	request = g_strdup_printf(  "%s %s HTTP/1.0\r\n"
-	                            "Host: %s\r\n"
-	                            "User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n",
-	                            is_post ? "POST" : "GET", url->file, url->host );
+	g_string_printf(request, "%s %s%s%s%s HTTP/1.0\r\n"
+	                         "Host: %s\r\n"
+	                         "User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n",
+	                         is_post ? "POST" : "GET",
+	                         td->url_path, url_string,
+	                         is_post ? "" : "?", is_post ? "" : url_arguments,
+	                         td->url_host);
 
 	// If a pass and user are given we append them to the request.
-	if (oi)
+	if (td->oauth_info)
 	{
 		char *full_header;
+		char *full_url;
 		
-		full_header = oauth_http_header(oi, is_post ? "POST" : "GET",
-		                                url_string, url_arguments);
+		full_url = g_strconcat(set_getstr(&ic->acc->set, "base_url" ), url_string, NULL);
+		full_header = oauth_http_header(td->oauth_info, is_post ? "POST" : "GET",
+		                                full_url, url_arguments);
 		
-		tmp = g_strdup_printf("%sAuthorization: %s\r\n", request, full_header);
-		g_free(request);
+		g_string_append_printf(request, "Authorization: %s\r\n", full_header);
 		g_free(full_header);
-		request = tmp;
+		g_free(full_url);
 	}
-	else if (userpass_base64)
+	else
 	{
-		tmp = g_strdup_printf("%sAuthorization: Basic %s\r\n", request, userpass_base64);
-		g_free(request);
-		request = tmp;
+		char userpass[strlen(ic->acc->user)+2+strlen(ic->acc->pass)];
+		char *userpass_base64;
+		
+		g_snprintf(userpass, sizeof(userpass), "%s:%s", ic->acc->user, ic->acc->pass);
+		userpass_base64 = base64_encode((unsigned char*)userpass, strlen(userpass));
+		g_string_append_printf(request, "Authorization: Basic %s\r\n", userpass_base64);
+		g_free( userpass_base64 );
 	}
 
 	// Do POST stuff..
 	if (is_post)
 	{
 		// Append the Content-Type and url-encoded arguments.
-		tmp = g_strdup_printf("%sContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %zd\r\n\r\n%s", 
-								request, strlen(url_arguments), url_arguments);
-		g_free(request);
-		request = tmp;
+		g_string_append_printf(request,
+		                       "Content-Type: application/x-www-form-urlencoded\r\n"
+		                       "Content-Length: %zd\r\n\r\n%s",
+		                       strlen(url_arguments), url_arguments);
 	} else {
 		// Append an extra \r\n to end the request...
-		tmp = g_strdup_printf("%s\r\n", request);
-		g_free(request);
-		request = tmp;
+		g_string_append(request, "\r\n");
 	}
 
-	ret = http_dorequest( url->host, url->port,	url->proto == PROTO_HTTPS, request, func, data );
+	ret = http_dorequest(td->url_host, td->url_port, td->url_ssl, request->str, func, data);
 
-	g_free( url );
-	g_free( userpass );
-	g_free( userpass_base64 );
 	g_free( url_arguments );
-	g_free( request );
+	g_string_free( request, TRUE );
 	return ret;
 }
 
-char *twitter_url_append(char *url, char *key, char* value)
+static char *twitter_url_append(char *url, char *key, char* value)
 {
 	char *key_encoded = g_strndup(key, 3 * strlen(key));
 	http_encode(key_encoded);

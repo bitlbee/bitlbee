@@ -137,9 +137,14 @@ static void byahoo_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
 	struct byahoo_data *yd = ic->proto_data = g_new0( struct byahoo_data, 1 );
+	char *s;
 	
 	yd->logged_in = FALSE;
 	yd->current_status = YAHOO_STATUS_AVAILABLE;
+	
+	if( ( s = strchr( acc->user, '@' ) ) && g_strcasecmp( s, "@yahoo.com" ) == 0 )
+		imcb_error( ic, "Your Yahoo! username should just be a username. "
+		                "Do not include any @domain part." );
 	
 	imcb_log( ic, "Connecting" );
 	yd->y2_id = yahoo_init( acc->user, acc->pass );

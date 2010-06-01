@@ -116,6 +116,37 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 	}
 }
 
+/* Warning: May return a malloc()ed value, which will be free()d on the next
+   call. Only for short-term use. */
+static char *twitter_parse_error(struct http_request *req)
+{
+	static char *ret = NULL;
+	struct xt_parser *xp = NULL;
+	struct xt_node *node;
+	
+	g_free(ret);
+	ret = NULL;
+	
+	if (req->body_size > 0)
+	{
+		xp = xt_new(NULL, NULL);
+		xt_feed(xp, req->reply_body, req->body_size);
+		
+		if ((node = xt_find_node(xp->root, "hash")) &&
+		    (node = xt_find_node(node->children, "error")) &&
+		    node->text_len > 0)
+		{
+			ret = g_strdup_printf("%s (%s)", req->status_string, node->text);
+			xt_free(xp);
+			return ret;
+		}
+		
+		xt_free(xp);
+	}
+	
+	return req->status_string;
+}
+
 static void twitter_http_get_friends_ids(struct http_request *req);
 
 /**
@@ -123,13 +154,11 @@ static void twitter_http_get_friends_ids(struct http_request *req);
  */
 void twitter_get_friends_ids(struct im_connection *ic, int next_cursor)
 {
-	struct twitter_data *td = ic->proto_data;
-
 	// Primitive, but hey! It works...	
 	char* args[2];
 	args[0] = "cursor";
 	args[1] = g_strdup_printf ("%d", next_cursor);
-	twitter_http(TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, td->user, td->pass, td->oauth_info, args, 2);
+	twitter_http(ic, TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, args, 2);
 
 	g_free(args[1]);
 }
@@ -195,7 +224,7 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
 		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve friends. HTTP STATUS: %d", req->status_code);
+			imcb_error(ic, "Could not retrieve friends: %s", twitter_parse_error(req));
 		
 		return;
 	} else {
@@ -395,7 +424,7 @@ void twitter_get_home_timeline(struct im_connection *ic, int next_cursor)
 		args[3] = g_strdup_printf ("%llu", (long long unsigned int) td->home_timeline_id);
 	}
 
-	twitter_http(TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, td->user, td->pass, td->oauth_info, args, td->home_timeline_id ? 4 : 2);
+	twitter_http(ic, TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, args, td->home_timeline_id ? 4 : 2);
 
 	g_free(args[1]);
 	if (td->home_timeline_id) {
@@ -432,6 +461,8 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 	{
 		status = l->data;
 		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
+		
+		strip_html(status->text);
 		
 		// Say it!
 		if (g_strcasecmp(td->user, status->user->screen_name) == 0)
@@ -470,6 +501,7 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList *list)
 		
 		status = l->data;
 		
+		strip_html( status->text );
 		if( mode_one )
 			text = g_strdup_printf( "\002<\002%s\002>\002 %s",
 			                        status->user->screen_name, status->text );
@@ -522,7 +554,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	{
 		// It didn't go well, output the error and return.
 		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve " TWITTER_HOME_TIMELINE_URL ". HTTP STATUS: %d", req->status_code);
+			imcb_error(ic, "Could not retrieve " TWITTER_HOME_TIMELINE_URL ": %s", twitter_parse_error(req));
 		
 		return;
 	}
@@ -574,7 +606,7 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
 		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL " HTTP STATUS: %d", req->status_code);
+			imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL ": %s", twitter_parse_error(req));
 		
 		return;
 	} else {
@@ -613,21 +645,19 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
  */
 void twitter_get_statuses_friends(struct im_connection *ic, int next_cursor)
 {
-	struct twitter_data *td = ic->proto_data;
-
 	char* args[2];
 	args[0] = "cursor";
 	args[1] = g_strdup_printf ("%d", next_cursor);
 
-	twitter_http(TWITTER_SHOW_FRIENDS_URL, twitter_http_get_statuses_friends, ic, 0, td->user, td->pass, td->oauth_info, args, 2);
+	twitter_http(ic, TWITTER_SHOW_FRIENDS_URL, twitter_http_get_statuses_friends, ic, 0, args, 2);
 
 	g_free(args[1]);
 }
 
 /**
- * Callback after sending a new update to twitter.
+ * Callback to use after sending a post request to twitter.
  */
-static void twitter_http_post_status(struct http_request *req)
+static void twitter_http_post(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 
@@ -638,7 +668,7 @@ static void twitter_http_post_status(struct http_request *req)
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not post message... HTTP STATUS: %d", req->status_code);
+		imcb_error(ic, "HTTP error: %s", twitter_parse_error(req));
 		return;
 	}
 }
@@ -648,12 +678,10 @@ static void twitter_http_post_status(struct http_request *req)
  */ 
 void twitter_post_status(struct im_connection *ic, char* msg)
 {
-	struct twitter_data *td = ic->proto_data;
-
 	char* args[2];
 	args[0] = "status";
 	args[1] = msg;
-	twitter_http(TWITTER_STATUS_UPDATE_URL, twitter_http_post_status, ic, 1, td->user, td->pass, td->oauth_info, args, 2);
+	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post, ic, 1, args, 2);
 //	g_free(args[1]);
 }
 
@@ -663,15 +691,21 @@ void twitter_post_status(struct im_connection *ic, char* msg)
  */
 void twitter_direct_messages_new(struct im_connection *ic, char *who, char *msg)
 {
-	struct twitter_data *td = ic->proto_data;
-
 	char* args[4];
 	args[0] = "screen_name";
 	args[1] = who;
 	args[2] = "text";
 	args[3] = msg;
 	// Use the same callback as for twitter_post_status, since it does basically the same.
-	twitter_http(TWITTER_DIRECT_MESSAGES_NEW_URL, twitter_http_post_status, ic, 1, td->user, td->pass, td->oauth_info, args, 4);
+	twitter_http(ic, TWITTER_DIRECT_MESSAGES_NEW_URL, twitter_http_post, ic, 1, args, 4);
 //	g_free(args[1]);
 //	g_free(args[3]);
+}
+
+void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int create)
+{
+	char* args[2];
+	args[0] = "screen_name";
+	args[1] = who;
+	twitter_http(ic, create ? TWITTER_FRIENDSHIPS_CREATE_URL : TWITTER_FRIENDSHIPS_DESTROY_URL, twitter_http_post, ic, 1, args, 2);
 }
