@@ -528,26 +528,27 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 	}
 }
 
-#if 0
 static void irc_cmd_topic( irc_t *irc, char **cmd )
 {
-	char *channel = cmd[1];
-	char *topic = cmd[2];
+	irc_channel_t *ic = irc_channel_by_name( irc, cmd[1] );
+	const char *new = cmd[2];
 	
-	if( topic )
+	if( ic == NULL )
 	{
-		/* Send the topic */
-		struct groupchat *c = irc_chat_by_channel( irc, channel );
-		if( c && c->ic && c->ic->acc->prpl->chat_topic )
-			c->ic->acc->prpl->chat_topic( c, topic );
+		irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
+	}
+	else if( new )
+	{
+		if( ic->f->topic == NULL )
+			irc_send_num( irc, 482, "%s :Can't change this channel's topic", ic->name );
+		else if( ic->f->topic( ic, new ) )
+			irc_send_topic( ic, TRUE );
 	}
 	else
 	{
-		/* Get the topic */
-		irc_topic( irc, channel );
+		irc_send_topic( ic, FALSE );
 	}
 }
-#endif
 
 static void irc_cmd_away( irc_t *irc, char **cmd )
 {
@@ -636,8 +637,8 @@ static const command_t irc_commands[] = {
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
 #if 0
 	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
-	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
 #endif
+	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "deaf",        0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },

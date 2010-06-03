@@ -476,7 +476,18 @@ static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
 
 static gboolean bee_irc_channel_chat_topic( irc_channel_t *ic, const char *new )
 {
-	return TRUE;
+	struct groupchat *c = ic->data;
+	char *topic = g_strdup( new ); /* TODO: Need more const goodness here, sigh */
+	
+	if( c->ic->acc->prpl->chat_topic == NULL )
+		irc_send_num( ic->irc, 482, "%s :IM network does not support channel topics", ic->name );
+	else
+	{
+		c->ic->acc->prpl->chat_topic( c, topic );
+		return TRUE;
+	}
+		
+	return FALSE;
 }
 
 static gboolean bee_irc_channel_chat_invite( irc_channel_t *ic, irc_user_t *iu )
