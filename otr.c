@@ -303,6 +303,11 @@ int otr_check_for_key(account_t *a)
 	irc_t *irc = a->irc;
 	OtrlPrivKey *k;
 	
+	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
+	if(a->prpl->options & OPT_NOOTR) {
+		return 0;
+	}
+	
 	k = otrl_privkey_find(irc->otr->us, a->user, a->prpl->name);
 	if(k) {
 		irc_usermsg(irc, "otr: %s/%s ready", a->user, a->prpl->name);
@@ -323,6 +328,11 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	char *newmsg = NULL;
 	OtrlTLV *tlvs = NULL;
 	char *colormsg;
+	
+	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
+	if(ic->acc->prpl->options & OPT_NOOTR) {
+		return (g_strdup(msg));
+	}
 	
 	ignore_msg = otrl_message_receiving(ic->irc->otr->us, &global.otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, handle, msg, &newmsg,
@@ -370,6 +380,11 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	int st;
 	char *otrmsg = NULL;
 	ConnContext *ctx = NULL;
+
+	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
+	if(ic->acc->prpl->options & OPT_NOOTR) {
+		return (ic->acc->prpl->buddy_msg(ic, handle, msg, flags));
+	}
 	
 	st = otrl_message_sending(ic->irc->otr->us, &global.otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, handle,

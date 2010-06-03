@@ -335,6 +335,7 @@ void twitter_initmodule()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
 	
+	ret->options = OPT_NOOTR;
 	ret->name = "twitter";
 	ret->login = twitter_login;
 	ret->init = twitter_init;
