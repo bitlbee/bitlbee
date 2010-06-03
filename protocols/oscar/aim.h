@@ -143,6 +143,17 @@ struct client_info_s {
 	  "en", \
 }
 
+#define AIM_CLIENTINFO_KNOWNGOOD_5_1_3036 { \
+	"AOL Instant Messenger, version 5.1.3036/WIN32", \
+	0x0109, \
+	0x0005, \
+	0x0001, \
+	0x0000, \
+	0x0bdc, \
+	"us", \
+	"en", \
+}
+
 /*
  * I would make 4.1.2010 the default, but they seem to have found
  * an alternate way of breaking that one. 
@@ -151,7 +162,7 @@ struct client_info_s {
  * memory test, which may require you to have a WinAIM binary laying 
  * around. (see login.c::memrequest())
  */
-#define AIM_CLIENTINFO_KNOWNGOOD AIM_CLIENTINFO_KNOWNGOOD_3_5_1670
+#define AIM_CLIENTINFO_KNOWNGOOD AIM_CLIENTINFO_KNOWNGOOD_5_1_3036
 
 #ifndef TRUE
 #define TRUE 1

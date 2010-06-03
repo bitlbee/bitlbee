@@ -414,8 +414,8 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 			
 			if( g_hash_table_lookup_extended( irc->watches, nick, &okey, &ovalue ) )
 			{
-				g_free( okey );
 				g_hash_table_remove( irc->watches, okey );
+				g_free( okey );
 				
 				irc_reply( irc, 602, "%s %s %s %d :%s", nick, "*", "*", 0, "Stopped watching" );
 			}

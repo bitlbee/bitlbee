@@ -309,7 +309,7 @@ static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead, cmd_
 		set_t *s = set_find( head, set_name );
 		int st;
 		
-		if( checkflags && checkflags( irc, s ) == 0 )
+		if( s && checkflags && checkflags( irc, s ) == 0 )
 			return 0;
 		
 		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
@@ -1078,6 +1078,8 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
 	{
+		MIN_ARGS( 2 );
+		
 		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead, NULL );
 	}
 	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
