@@ -786,8 +786,8 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 	    ( ts = format_timestamp( irc, sent_at ) ) )
 	{
 		char *new = g_strconcat( ts, msg, NULL );
-		g_free( ts );
-		ts = msg = new;
+		g_free( msg );
+		msg = new;
 	}
 	
 	wrapped = word_wrap( msg, 425 );
