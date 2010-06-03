@@ -195,6 +195,8 @@ struct yahoo_data {
 	char  *ignorelist;
 
 	void  *server_settings;
+	
+	struct yahoo_process_status_entry *half_user;
 };
 
 struct yab {
@@ -258,6 +260,27 @@ struct yahoo_chat_member {
 	int  attribs;
 	char *alias;
 	char *location;
+};
+
+struct yahoo_process_status_entry {
+	char *name;	/* 7      name */
+	int state;	/* 10     state */
+	int flags;	/* 13     flags, bit 0 = pager, bit 1 = chat, bit 2 = game */
+	int mobile;	/* 60     mobile */
+	char *msg;	/* 19     custom status message */
+	int away;	/* 47     away (or invisible) */
+	int buddy_session; /* 11  state */
+	int f17;	/* 17     in chat? then what about flags? */
+	int idle;	/* 137    seconds idle */
+	int f138;	/* 138    state */
+	char *f184;	/* 184    state */
+	int f192;	/* 192    state */
+	int f10001;	/* 10001  state */
+	int f10002;	/* 10002  state */
+	int f198;	/* 198    state */
+	char *f197;	/* 197    state */
+	char *f205;	/* 205    state */
+	int f213;	/* 213    state */
 };
 
 #ifdef __cplusplus

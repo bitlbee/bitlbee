@@ -26,8 +26,9 @@
 
 #include <glib.h>
 
-#include "xmltree.h"
 #include "bitlbee.h"
+#include "md5.h"
+#include "xmltree.h"
 
 extern GSList *jabber_connections;
 
@@ -38,12 +39,13 @@ typedef enum
 	JFLAG_AUTHENTICATED = 2,        /* Set when we're successfully authenticatd. */
 	JFLAG_STREAM_RESTART = 4,       /* Set when we want to restart the stream (after
 	                                   SASL or TLS). */
-	JFLAG_WAIT_SESSION = 8,	        /* Set if we sent a <session> tag and need a reply
+	JFLAG_WANT_SESSION = 8,	        /* Set if the server wants a <session/> tag
 	                                   before we continue. */
-	JFLAG_WAIT_BIND = 16,           /* ... for <bind> tag. */
+	JFLAG_WANT_BIND = 16,           /* ... for <bind> tag. */
 	JFLAG_WANT_TYPING = 32,         /* Set if we ever sent a typing notification, this
 	                                   activates all XEP-85 related code. */
 	JFLAG_XMLCONSOLE = 64,          /* If the user added an xmlconsole buddy. */
+	JFLAG_STARTTLS_DONE = 128,      /* If a plaintext session was converted to TLS. */
 } jabber_flags_t;
 
 typedef enum
@@ -82,7 +84,7 @@ struct jabber_data
 	
 	/* After changing one of these two (or the priority setting), call
 	   presence_send_update() to inform the server about the changes. */
-	struct jabber_away_state *away_state;
+	const struct jabber_away_state *away_state;
 	char *away_message;
 	
 	md5_state_t cached_id_prefix;

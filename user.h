@@ -33,6 +33,7 @@ typedef struct __USER
 	char *realname;
 	
 	char *away;
+	char *status_msg; /* Non-IRC extension, but nice on IM. */
 	
 	char is_private;
 	char online;

@@ -24,6 +24,9 @@
 */
 
 #include "bitlbee.h"
+
+#include "arc.h"
+#include "base64.h"
 #include "commands.h"
 #include "crypting.h"
 #include "otr.h"
@@ -31,6 +34,8 @@
 #include "help.h"
 #include "ipc.h"
 #include "lib/ssl_client.h"
+#include "md5.h"
+#include "misc.h"
 #include <signal.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -41,11 +46,16 @@ global_t global;	/* Against global namespace pollution */
 
 static void sighandler( int signal );
 
+static int crypt_main( int argc, char *argv[] );
+
 int main( int argc, char *argv[] )
 {
 	int i = 0;
 	char *old_cwd = NULL;
 	struct sigaction sig, old;
+	
+	if( argc > 1 && strcmp( argv[1], "-x" ) == 0 )
+		return crypt_main( argc, argv );
 	
 	log_init();
 	global.conf_file = g_strdup( CONF_FILE_DEF );
@@ -165,6 +175,64 @@ int main( int argc, char *argv[] )
 	}
 	
 	return( 0 );
+}
+
+static int crypt_main( int argc, char *argv[] )
+{
+	int pass_len;
+	unsigned char *pass_cr, *pass_cl;
+	
+	if( argc < 4 || ( strcmp( argv[2], "hash" ) != 0 &&
+	                  strcmp( argv[2], "unhash" ) != 0 && argc < 5 ) )
+	{
+		printf( "Supported:\n"
+		        "  %s -x enc <key> <cleartext password>\n"
+		        "  %s -x dec <key> <encrypted password>\n"
+		        "  %s -x hash <cleartext password>\n"
+		        "  %s -x unhash <hashed password>\n"
+		        "  %s -x chkhash <hashed password> <cleartext password>\n",
+		        argv[0], argv[0], argv[0], argv[0], argv[0] );
+	}
+	else if( strcmp( argv[2], "enc" ) == 0 )
+	{
+		pass_len = arc_encode( argv[4], strlen( argv[4] ), (unsigned char**) &pass_cr, argv[3], 12 );
+		printf( "%s\n", base64_encode( pass_cr, pass_len ) );
+	}
+	else if( strcmp( argv[2], "dec" ) == 0 )
+	{
+		pass_len = base64_decode( argv[4], (unsigned char**) &pass_cr );
+		arc_decode( pass_cr, pass_len, (char**) &pass_cl, argv[3] );
+		printf( "%s\n", pass_cl );
+	}
+	else if( strcmp( argv[2], "hash" ) == 0 )
+	{
+		md5_byte_t pass_md5[21];
+		md5_state_t md5_state;
+		
+		random_bytes( pass_md5 + 16, 5 );
+		md5_init( &md5_state );
+		md5_append( &md5_state, (md5_byte_t*) argv[3], strlen( argv[3] ) );
+		md5_append( &md5_state, pass_md5 + 16, 5 ); /* Add the salt. */
+		md5_finish( &md5_state, pass_md5 );
+		
+		printf( "%s\n", base64_encode( pass_md5, 21 ) );
+	}
+	else if( strcmp( argv[2], "unhash" ) == 0 )
+	{
+		printf( "Hash %s submitted to a massive Beowulf cluster of\n"
+		        "overclocked 486s. Expect your answer next year somewhere around this time. :-)\n", argv[3] );
+	}
+	else if( strcmp( argv[2], "chkhash" ) == 0 )
+	{
+		char *hash = strncmp( argv[3], "md5:", 4 ) == 0 ? argv[3] + 4 : argv[3];
+		int st = md5_verify_password( argv[4], hash );
+		
+		printf( "Hash %s given password.\n", st == 0 ? "matches" : "does not match" );
+		
+		return st;
+	}
+	
+	return 0;
 }
 
 static void sighandler( int signal )

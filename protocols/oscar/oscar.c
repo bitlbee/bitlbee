@@ -379,6 +379,8 @@ static void oscar_init(account_t *acc)
 		s = set_add( &acc->set, "web_aware", "false", set_eval_bool, acc );
 		s->flags |= ACC_SET_OFFLINE_ONLY;
 	}
+	
+	acc->flags |= ACC_FLAG_AWAY_MESSAGE;
 }
 
 static void oscar_login(account_t *acc) {
@@ -1951,6 +1953,8 @@ static void oscar_get_away(struct im_connection *g, char *who) {
 
 static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, const char *state, const char *message)
 {
+	if (state == NULL)
+		state = "";
 
 	if (!g_strcasecmp(state, _("Visible"))) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
@@ -1958,7 +1962,9 @@ static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, 
 	} else if (!g_strcasecmp(state, _("Invisible"))) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE);
 		return;
-	} /* else... */
+	} else if (message == NULL) {
+		message = state;
+	}
 
 	if (od->rights.maxawaymsglen == 0)
 		imcb_error(ic, "oscar_set_away_aim called before locate rights received");
@@ -2001,7 +2007,7 @@ static void oscar_set_away_icq(struct im_connection *ic, struct oscar_data *od, 
 		no_message = TRUE;
 	}
 
-	if (!g_strcasecmp(state, "Online")) {
+	if (state == NULL) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 	} else if (!g_strcasecmp(state, "Away")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
@@ -2026,7 +2032,7 @@ static void oscar_set_away_icq(struct im_connection *ic, struct oscar_data *od, 
 	} else if (!g_strcasecmp(state, "Invisible")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE);
 		ic->away = g_strdup(msg);
-	} else if (!g_strcasecmp(state, GAIM_AWAY_CUSTOM)) {
+	} else {
 	 	if (no_message) {
 			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 		} else {
@@ -2275,20 +2281,21 @@ static void oscar_rem_deny(struct im_connection *ic, char *who) {
 static GList *oscar_away_states(struct im_connection *ic)
 {
 	struct oscar_data *od = ic->proto_data;
-	GList *m = NULL;
 
-	if (!od->icq)
-		return g_list_append(m, GAIM_AWAY_CUSTOM);
-
-	m = g_list_append(m, "Online");
-	m = g_list_append(m, "Away");
-	m = g_list_append(m, "Do Not Disturb");
-	m = g_list_append(m, "Not Available");
-	m = g_list_append(m, "Occupied");
-	m = g_list_append(m, "Free For Chat");
-	m = g_list_append(m, "Invisible");
-
-	return m;
+	if (od->icq) {
+		static GList *m = NULL;
+		m = g_list_append(m, "Away");
+		m = g_list_append(m, "Do Not Disturb");
+		m = g_list_append(m, "Not Available");
+		m = g_list_append(m, "Occupied");
+		m = g_list_append(m, "Free For Chat");
+		m = g_list_append(m, "Invisible");
+		return m;
+	} else {
+		static GList *m = NULL;
+		m = g_list_append(m, "Away");
+		return m;
+	}
 }
 
 static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)

@@ -33,6 +33,7 @@
 #define BITLBEE_CORE
 #include "nogaim.h"
 #include "base64.h"
+#include "md5.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +46,7 @@
 #include <resolv.h>
 #endif
 
+#include "md5.h"
 #include "ssl_client.h"
 
 void strip_linefeed(gchar *text)
@@ -531,7 +533,7 @@ struct ns_srv_reply *srv_lookup( char *service, char *protocol, char *domain )
 }
 
 /* Word wrapping. Yes, I know this isn't UTF-8 clean. I'm willing to take the risk. */
-char *word_wrap( char *msg, int line_len )
+char *word_wrap( const char *msg, int line_len )
 {
 	GString *ret = g_string_sized_new( strlen( msg ) + 16 );
 	
