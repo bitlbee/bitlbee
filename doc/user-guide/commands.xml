@@ -793,7 +793,7 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="ignore_auth_requests" type="boolean" scope="account">
-		<default>true</default>
+		<default>false</default>
 
 		<description>
 			<para>

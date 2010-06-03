@@ -72,19 +72,29 @@ static void irc_cmd_user( irc_t *irc, char **cmd )
 
 static void irc_cmd_nick( irc_t *irc, char **cmd )
 {
-	if( irc->nick )
+	if( irc->status & USTATUS_IDENTIFIED && irc->nick )
 	{
-		irc_reply( irc, 438, ":The hand of the deity is upon thee, thy nick may not change" );
+		irc_reply( irc, 438, "%s %s :You can only change your nick if you're not "
+		           "logged in (i.e. pre-identify)", irc->nick, cmd[1] );
 	}
 	/* This is not clean, but for now it'll have to be like this... */
-	else if( ( nick_cmp( cmd[1], irc->mynick ) == 0 ) || ( nick_cmp( cmd[1], NS_NICK ) == 0 ) )
+	else if( ( nick_cmp( cmd[1], irc->mynick ) == 0 ) || ( nick_cmp( cmd[1], NS_NICK ) == 0 ) || ( user_find( irc, cmd[1] ) != NULL ) )
 	{
-		irc_reply( irc, 433, ":This nick is already in use" );
+		irc_reply( irc, 433, "%s :This nick is already in use", cmd[1] );
 	}
 	else if( !nick_ok( cmd[1] ) )
 	{
 		/* [SH] Invalid characters. */
-		irc_reply( irc, 432, ":This nick contains invalid characters" );
+		irc_reply( irc, 432, "%s :This nick contains invalid characters", cmd[1] );
+	}
+	else if(irc->nick) 
+	{
+		if( user_find( irc, irc->nick ) )
+			user_rename(irc, irc->nick, cmd[1]);
+
+		irc_write( irc, ":%s!%s@%s NICK %s", irc->nick, irc->user, irc->host, cmd[1] );
+		g_free(irc->nick);
+		irc->nick = g_strdup( cmd[1] );
 	}
 	else
 	{

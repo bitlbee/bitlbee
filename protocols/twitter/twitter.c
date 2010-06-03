@@ -26,6 +26,7 @@
 #include "twitter.h"
 #include "twitter_http.h"
 #include "twitter_lib.h"
+#include "url.h"
 
 /**
  * Main loop function
@@ -69,7 +70,7 @@ static const struct oauth_service twitter_oauth =
 {
 	"http://api.twitter.com/oauth/request_token",
 	"http://api.twitter.com/oauth/access_token",
-	"http://api.twitter.com/oauth/authorize",
+	"https://api.twitter.com/oauth/authorize",
 	.consumer_key = "xsDNKJuNZYkZyMcu914uEA",
 	.consumer_secret = "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo",
 };
@@ -159,6 +160,9 @@ static void twitter_init( account_t *acc )
 {
 	set_t *s;
 	
+	s = set_add( &acc->set, "base_url", TWITTER_API_URL, NULL, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+	
 	s = set_add( &acc->set, "message_length", "140", set_eval_int, acc );
 	
 	s = set_add( &acc->set, "mode", "one", set_eval_mode, acc );
@@ -174,25 +178,39 @@ static void twitter_init( account_t *acc )
 static void twitter_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
-	struct twitter_data *td = g_new0( struct twitter_data, 1 );
+	struct twitter_data *td;
 	char name[strlen(acc->user)+9];
+	url_t url;
 
+	if( !url_set( &url, set_getstr( &ic->acc->set, "base_url" ) ) ||
+	    ( url.proto != PROTO_HTTP && url.proto != PROTO_HTTPS ) )
+	{
+		imcb_error( ic, "Incorrect API base URL: %s", set_getstr( &ic->acc->set, "base_url" ) );
+		imc_logout( ic, FALSE );
+		return;
+	}
+	
 	twitter_connections = g_slist_append( twitter_connections, ic );
+	td = g_new0( struct twitter_data, 1 );
 	ic->proto_data = td;
-	ic->flags |= OPT_DOES_HTML;
+	
+	td->url_ssl = url.proto == PROTO_HTTPS;
+	td->url_port = url.port;
+	td->url_host = g_strdup( url.host );
+	if( strcmp( url.file, "/" ) != 0 )
+		td->url_path = g_strdup( url.file );
+	else
+		td->url_path = g_strdup( "" );
 	
 	td->user = acc->user;
-	if( !set_getbool( &acc->set, "oauth" ) )
-		td->pass = g_strdup( acc->pass );
-	else if( strstr( acc->pass, "oauth_token=" ) )
+	if( strstr( acc->pass, "oauth_token=" ) )
 		td->oauth_info = oauth_from_string( acc->pass, &twitter_oauth );
-	td->home_timeline_id = 0;
 	
 	sprintf( name, "twitter_%s", acc->user );
 	imcb_add_buddy( ic, name, NULL );
 	imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
 	
-	if( td->pass || td->oauth_info )
+	if( td->oauth_info || !set_getbool( &acc->set, "oauth" ) )
 		twitter_main_loop_start( ic );
 	else
 		twitter_oauth_start( ic );
@@ -267,10 +285,12 @@ static void twitter_get_info(struct im_connection *ic, char *who)
 
 static void twitter_add_buddy( struct im_connection *ic, char *who, char *group )
 {
+	twitter_friendships_create_destroy(ic, who, 1);
 }
 
 static void twitter_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
+	twitter_friendships_create_destroy(ic, who, 0);
 }
 
 static void twitter_chat_msg( struct groupchat *c, char *message, int flags )

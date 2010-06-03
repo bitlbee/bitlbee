@@ -14,13 +14,15 @@ Architecture: any
 Depends: ${shlibs:Depends}, adduser, net-tools, ${debconf-depends}, debianutils (>= 1.16)
 Description: An IRC to other chat networks gateway
  This program can be used as an IRC server which forwards everything you
- say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
+ say to people on other chat networks: Jabber, ICQ, AIM, MSN, Yahoo! and
+ Twitter.
 
 Package: bitlbee-dev
 Architecture: all
 Depends: bitlbee (>= ${source:Version}), bitlbee (<< ${source:Version}.1~)
 Description: An IRC to other chat networks gateway
  This program can be used as an IRC server which forwards everything you
- say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
+ say to people on other chat networks: Jabber, ICQ, AIM, MSN, Yahoo! and
+ Twitter.
  .
  This package holds development stuff for compiling plug-ins.

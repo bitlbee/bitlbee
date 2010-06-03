@@ -119,11 +119,12 @@ int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 	aim_tlvlist_t *tl = NULL;
+	struct im_connection *ic = sess->aux_data;
 	
 	if (!sess || !conn || !sn)
 		return -EINVAL;
 
-	if ((sn[0] >= '0') && (sn[0] <= '9'))
+	if (isdigit(sn[0]) && set_getbool(&ic->acc->set, "old_icq_auth"))
 		return goddamnicq(sess, conn, sn);
 
 	sess->flags |= AIM_SESS_FLAGS_SNACLOGIN;

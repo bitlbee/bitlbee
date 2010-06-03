@@ -153,12 +153,12 @@ static const htmlentity_t ent[] =
 void strip_html( char *in )
 {
 	char *start = in;
-	char *out = g_malloc( strlen( in ) + 1 );
+	char out[strlen(in)+1];
 	char *s = out, *cs;
 	int i, matched;
 	int taglen;
 	
-	memset( out, 0, strlen( in ) + 1 );
+	memset( out, 0, sizeof( out ) );
 	
 	while( *in )
 	{
@@ -229,7 +229,6 @@ void strip_html( char *in )
 	}
 	
 	strcpy( start, out );
-	g_free( out );
 }
 
 char *escape_html( const char *html )
