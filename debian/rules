@@ -98,7 +98,7 @@ binary-indep: install-indep
 	cd debian/bitlbee-dev; \
 		find usr -type f -exec md5sum {} \; > DEBIAN/md5sums
 
-	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee-dev -Pdebian/bitlbee-dev
+	dpkg-gencontrol -ldebian/changelog -isp -pbitlbee-dev -Pdebian/bitlbee-dev -v1:$(BITLBEE_VERSION)-0
 
 	dpkg --build debian/bitlbee-dev ..
 

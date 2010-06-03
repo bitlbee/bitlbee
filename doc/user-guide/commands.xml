@@ -78,6 +78,10 @@
 					<para>
 						To send tweets yourself, send them to the twitter_(yourusername) contact, or just write in the groupchat channel if you enabled that option.
 					</para>
+
+					<para>
+						Since Twitter now requires OAuth authentication, you should not enter your Twitter password into BitlBee. Just type a bogus password. The first time you log in, BitlBee will start OAuth authentication. (See <emphasis>help set oauth</emphasis>.)
+					</para>
 				</description>
 			</bitlbee-command>
 
@@ -775,7 +779,7 @@
 
 	<bitlbee-setting name="halfop_buddies" type="string" scope="global">
 		<default>encrypted</default>
-		<possible-values>encrypted, trusted, notaway, false</possible-values>
+		<possible-values>encrypted, trusted, notaway, online, false</possible-values>
 
 		<description>
 			<para>
@@ -783,7 +787,7 @@
 			</para>
 			
 			<para>
-				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key.
+				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key. On "online", the flag is set whenever the user is online; only meaningful in conjunction with "show_offline".
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -833,7 +837,7 @@
 
 	<bitlbee-setting name="op_buddies" type="string" scope="global">
 		<default>trusted</default>
-		<possible-values>encrypted, trusted, notaway, false</possible-values>
+		<possible-values>encrypted, trusted, notaway, online, false</possible-values>
 
 		<description>
 			<para>
@@ -841,7 +845,7 @@
 			</para>
 			
 			<para>
-				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key.
+				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key. On "online", the flag is set whenever the user is online; only meaningful in conjunction with "show_offline".
 			</para>
 		</description>
 
@@ -879,6 +883,21 @@
 				A value of "never" effectively disables the OTR subsystem. In "opportunistic" mode, a magic whitespace pattern will be appended to the first message sent to any user. If the peer is also running opportunistic OTR, an encrypted connection will be set up automatically. On "manual", on the other hand, OTR connections must be established explicitly using <emphasis>otr connect</emphasis>. Finally, the setting "always" enforces encrypted communication by causing BitlBee to refuse to send any cleartext messages at all.
 			</para>
 		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="message_length" type="integer" scope="account">
+		<default>140</default>
+
+		<description>
+			<para>
+				Since Twitter rejects messages longer than 140 characters, BitlBee can count message length and emit a warning instead of waiting for Twitter to reject it.
+			</para>
+
+			<para>
+				You can change this limit here but this won't disable length checks on Twitter's side. You can also set it to 0 to disable the check in case you believe BitlBee doesn't count the characters correctly.
+			</para>
+		</description>
+
 	</bitlbee-setting>
 
 	<bitlbee-setting name="mode" type="string" scope="account">
@@ -922,6 +941,25 @@
 				With this setting set to <emphasis>full_name</emphasis>, the person's full name is used to generate a nickname. Or if you don't like long nicknames, set this setting to <emphasis>first_name</emphasis> instead and only the first word will be used. Note that the full name can be full of non-ASCII characters which will be stripped off.
 			</para>
 		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="oauth" type="boolean" scope="account">
+		<default>true</default>
+
+		<description>
+			<para>
+				This enables OAuth authentication for Twitter accounts. From June 2010 this will be mandatory.
+			</para>
+
+			<para>
+				With OAuth enabled, you shouldn't tell BitlBee your Twitter password. Just add your account with a bogus password and type <emphasis>account on</emphasis>. BitlBee will then give you a URL to authenticate with Twitter. If this succeeds, Twitter will return a PIN code which you can give back to BitlBee to finish the process.
+			</para>
+
+			<para>
+				The resulting access token will be saved permanently, so you have to do this only once.
+			</para>
+		</description>
+
 	</bitlbee-setting>
 
 	<bitlbee-setting name="ops" type="string" scope="global">
@@ -1059,6 +1097,19 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="show_offline" type="boolean" scope="global">
+		<default>false</default>
+
+		<description>
+			<para>
+				If enabled causes BitlBee to also show offline users in Channel. You may want to adjust the settings "voice_buddies", "halfop_buddies" and "op_buddies" according to your liking. A reasonable candidate is "voice_buddies=online", "halfop_buddies=false", "op_buddies=notaway".
+			</para>
+			<para>
+				This option takes effect as soon as you reconnect.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="simulate_netsplit" type="boolean" scope="global">
 		<default>true</default>
 
@@ -1180,8 +1231,8 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="voice_buddies" type="string" scope="global">
-		<default>trusted</default>
-		<possible-values>encrypted, trusted, notaway, false</possible-values>
+		<default>notaway</default>
+		<possible-values>encrypted, trusted, notaway, online, false</possible-values>
 
 		<description>
 			<para>
@@ -1189,7 +1240,7 @@
 			</para>
 			
 			<para>
-				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key.
+				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key. On "online", the flag is set whenever the user is online; only meaningful in conjunction with "show_offline".
 			</para>
 		</description>
 

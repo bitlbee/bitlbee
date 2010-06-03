@@ -315,8 +315,7 @@ void http_encode( char *s )
 	
 	for( i = j = 0; t[i]; i ++, j ++ )
 	{
-		/* if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' ) */
-		if( !isalnum( t[i] ) )
+		if( !isalnum( t[i] ) && !strchr( "._-~", t[i] ) )
 		{
 			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
 			j += 2;

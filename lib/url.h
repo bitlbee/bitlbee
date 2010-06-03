@@ -41,4 +41,4 @@ typedef struct url
 	char pass[MAX_STRING+1];
 } url_t;
 
-int url_set( url_t *url, char *set_url );
+int url_set( url_t *url, const char *set_url );

@@ -1,3 +1,12 @@
+bitlbee (1.2.6a-1) unstable; urgency=low
+
+  * New upstream version.
+  * Native support for Twitter.
+  * Fixed /WHOIS response format. (Closes: #576120)
+  * Problems with bitlbee-skype are solved by now. (Closes: #575572)
+
+ -- Wilmer van der Gaast <wilmer@peer.gaast.net>  Tue, 20 Apr 2010 00:34:51 +0200
+
 bitlbee (1.2.5-1) unstable; urgency=low
 
   * New upstream version.
