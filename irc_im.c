@@ -65,6 +65,16 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 	if( set_getbool( &bee->set, "private" ) )
 		iu->flags |= IRC_USER_PRIVATE;
 	
+	if( bu->flags & BEE_USER_LOCAL )
+	{
+		char *s = set_getstr( &bee->set, "handle_unknown" );
+		
+		if( strcmp( s, "add_private" ) == 0 )
+			iu->flags |= IRC_USER_PRIVATE;
+		else if( strcmp( s, "add_channel" ) == 0 )
+			iu->flags &= ~IRC_USER_PRIVATE;
+	}
+	
 	iu->f = &irc_user_im_funcs;
 	//iu->last_typing_notice = 0;
 	

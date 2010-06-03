@@ -53,6 +53,7 @@ typedef enum
 {
 	BEE_USER_ONLINE = 1,    /* Compatibility with old OPT_LOGGED_IN flag */
 	BEE_USER_AWAY = 4,      /* Compatibility with old OPT_AWAY flag */
+	BEE_USER_LOCAL = 256,   /* Locally-added contacts (not in real contact list) */
 } bee_user_flags_t;
 
 typedef struct bee_user
@@ -106,7 +107,7 @@ bee_t *bee_new();
 void bee_free( bee_t *b );
 
 /* bee_user.c */
-bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *handle );
+bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *handle, bee_user_flags_t flags );
 int bee_user_free( bee_t *bee, bee_user_t *bu );
 bee_user_t *bee_user_by_handle( bee_t *bee, struct im_connection *ic, const char *handle );
 int bee_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, int flags );

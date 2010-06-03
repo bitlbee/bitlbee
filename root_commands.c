@@ -531,7 +531,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 	else
 		/* Only for add -tmp. For regular adds, this callback will
 		   be called once the IM server confirms. */
-		bee_user_new( irc->b, a->ic, cmd[2] );
+		bee_user_new( irc->b, a->ic, cmd[2], BEE_USER_LOCAL );
 	
 	irc_usermsg( irc, "Adding `%s' to your contact list", cmd[2]  );
 }

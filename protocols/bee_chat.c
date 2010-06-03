@@ -159,7 +159,7 @@ void imcb_chat_add_buddy( struct groupchat *c, const char *handle )
 	/* Most protocols allow people to join, even when they're not in
 	   your contact list. Try to handle that here */
 	if( !me && !bu )
-		bu = bee_user_new( bee, ic, handle );
+		bu = bee_user_new( bee, ic, handle, BEE_USER_LOCAL );
 	
 	/* Add the handle to the room userlist */
 	/* TODO: Use bu instead of a string */

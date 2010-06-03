@@ -26,7 +26,7 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
-bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *handle )
+bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *handle, bee_user_flags_t flags )
 {
 	bee_user_t *bu;
 	
@@ -36,6 +36,7 @@ bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *hand
 	bu = g_new0( bee_user_t, 1 );
 	bu->bee = bee;
 	bu->ic = ic;
+	bu->flags = flags;
 	bu->handle = g_strdup( handle );
 	bee->users = g_slist_prepend( bee->users, bu );
 	
@@ -159,7 +160,7 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	{
 		if( g_strcasecmp( set_getstr( &ic->bee->set, "handle_unknown" ), "add" ) == 0 )
 		{
-			bu = bee_user_new( bee, ic, handle );
+			bu = bee_user_new( bee, ic, handle, BEE_USER_LOCAL );
 		}
 		else
 		{
@@ -207,7 +208,7 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 		}
 		else if( g_strncasecmp( h, "add", 3 ) == 0 )
 		{
-			bu = bee_user_new( bee, ic, handle );
+			bu = bee_user_new( bee, ic, handle, BEE_USER_LOCAL );
 		}
 	}
 	
