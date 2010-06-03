@@ -37,8 +37,10 @@
 #define _WIN32_WINNT 0x0501
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "1.2.5"
+#define BITLBEE_VERSION "1.2.6"
 #define VERSION BITLBEE_VERSION
+#define BITLBEE_VER(a,b,c) (((a) << 16) + ((b) << 8) + (c))
+#define BITLBEE_VERSION_CODE BITLBEE_VER(1, 2, 6)
 
 #define MAX_STRING 511
 
@@ -167,6 +169,7 @@ void root_command( irc_t *irc, char *command[] );
 gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond );
 
 char *set_eval_root_nick( set_t *set, char *new_nick );
+char *set_eval_control_channel( set_t *set, char *new_name );
 
 extern global_t global;
 

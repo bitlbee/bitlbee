@@ -67,9 +67,6 @@ xt_status jabber_pkt_presence( struct xt_node *node, gpointer data )
 		else
 		{
 			bud->away_state = NULL;
-			/* Let's only set last_act if there's *no* away state,
-			   since it could be some auto-away thingy. */
-			bud->last_act = time( NULL );
 		}
 		
 		if( ( c = xt_find_node( node->children, "priority" ) ) && c->text_len > 0 )

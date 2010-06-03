@@ -171,5 +171,7 @@ static void log_console(int level, const char *message) {
 	if(level == LOGLVL_DEBUG)
 		fprintf(stdout, "Debug: %s\n", message);
 #endif
+	/* Always log stuff in syslogs too. */
+	log_syslog(level, message);
 	return;
 }

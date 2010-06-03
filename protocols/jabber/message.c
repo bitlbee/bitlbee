@@ -70,7 +70,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 		{
 			if( bud )
 			{
-				bud->last_act = time( NULL );
+				bud->last_msg = time( NULL );
 				from = bud->ext_jid ? : bud->bare_jid;
 			}
 			else
@@ -79,8 +79,8 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 		
 		if( type && strcmp( type, "headline" ) == 0 )
 		{
-			c = xt_find_node( node->children, "subject" );
-			g_string_append_printf( fullmsg, "Headline: %s\n", c && c->text_len > 0 ? c->text : "" );
+			if( ( c = xt_find_node( node->children, "subject" ) ) && c->text_len > 0 )
+				g_string_append_printf( fullmsg, "Headline: %s\n", c->text );
 			
 			/* <x xmlns="jabber:x:oob"><url>http://....</url></x> can contain a URL, it seems. */
 			for( c = node->children; c; c = c->next )

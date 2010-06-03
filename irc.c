@@ -54,18 +54,34 @@ static char *set_eval_password( set_t *set, char *value )
 static char *set_eval_charset( set_t *set, char *value )
 {
 	irc_t *irc = set->data;
+	char *test;
+	gsize test_bytes = 0;
 	GIConv ic, oc;
 
 	if( g_strcasecmp( value, "none" ) == 0 )
 		value = g_strdup( "utf-8" );
 
-	if( ( ic = g_iconv_open( "utf-8", value ) ) == (GIConv) -1 )
+	if( ( oc = g_iconv_open( value, "utf-8" ) ) == (GIConv) -1 )
 	{
 		return NULL;
 	}
-	if( ( oc = g_iconv_open( value, "utf-8" ) ) == (GIConv) -1 )
+	
+	/* Do a test iconv to see if the user picked an IRC-compatible
+	   charset (for example utf-16 goes *horribly* wrong). */
+	if( ( test = g_convert_with_iconv( " ", 1, oc, NULL, &test_bytes, NULL ) ) == NULL ||
+	    test_bytes > 1 )
 	{
-		g_iconv_close( ic );
+		g_free( test );
+		g_iconv_close( oc );
+		irc_usermsg( irc, "Unsupported character set: The IRC protocol "
+		                  "only supports 8-bit character sets." );
+		return NULL;
+	}
+	g_free( test );
+	
+	if( ( ic = g_iconv_open( "utf-8", value ) ) == (GIConv) -1 )
+	{
+		g_iconv_close( oc );
 		return NULL;
 	}
 	
@@ -174,9 +190,11 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
 	s = set_add( &irc->set, "charset", "utf-8", set_eval_charset, irc );
 	s = set_add( &irc->set, "color_encrypted", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "control_channel", irc->channel, set_eval_control_channel, irc );
 	s = set_add( &irc->set, "debug", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "default_target", "root", NULL, irc );
 	s = set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "display_timestamps", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "handle_unknown", "root", NULL, irc );
 	s = set_add( &irc->set, "halfop_buddies", "encrypted", set_eval_halfop_buddies, irc );
 	s = set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
@@ -191,6 +209,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "strip_html", "true", NULL, irc );
+	s = set_add( &irc->set, "timezone", "local", set_eval_timezone, irc );
 	s = set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
 	s = set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "voice_buddies", "notaway", set_eval_voice_buddies, irc);
