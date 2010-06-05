@@ -29,8 +29,8 @@
 
 struct oauth_info;
 
-void *twitter_http(char *url_string, http_input_function func, gpointer data, int is_post, 
-                   char* user, char* pass, struct oauth_info *oi, char** arguments, int arguments_len);
+void *twitter_http(struct im_connection *ic, char *url_string, http_input_function func,
+                   gpointer data, int is_post, char** arguments, int arguments_len);
 
 #endif //_TWITTER_HTTP_H
 

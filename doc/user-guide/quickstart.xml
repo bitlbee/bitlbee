@@ -2,7 +2,7 @@
 <title>Quickstart</title>
 
 <para>
-Welcome to BitlBee, your IRC gateway to ICQ, MSN, AOL, Jabber and Yahoo Instant Messaging Systems.
+Welcome to BitlBee, your IRC gateway to ICQ, MSN, AOL, Jabber, Yahoo! and Twitter.
 </para>
 
 <para>
@@ -42,7 +42,7 @@ For instance, suppose you have a Jabber account at jabber.org with handle <empha
 </ircexample>
 
 <para>
-Other available IM protocols are msn, oscar, and yahoo. OSCAR is the protocol used by ICQ and AOL. For more information about the <emphasis>account add</emphasis> command, see <emphasis>help account add</emphasis>.
+Other available IM protocols are msn, oscar, yahoo and twitter. OSCAR is the protocol used by ICQ and AOL. For more information about the <emphasis>account add</emphasis> command, see <emphasis>help account add</emphasis>.
 </para>
 
 <para>
