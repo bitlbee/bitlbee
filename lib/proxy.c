@@ -90,9 +90,9 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 		closesocket(source);
 		b_event_remove(phb->inpa);
 		if( phb->proxy_func )
-			phb->proxy_func(phb->proxy_data, -1, GAIM_INPUT_READ);
+			phb->proxy_func(phb->proxy_data, -1, B_EV_IO_READ);
 		else {
-			phb->func(phb->data, -1, GAIM_INPUT_READ);
+			phb->func(phb->data, -1, B_EV_IO_READ);
 			g_free(phb);
 		}
 		return FALSE;
@@ -101,9 +101,9 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 	sock_make_blocking(source);
 	b_event_remove(phb->inpa);
 	if( phb->proxy_func )
-		phb->proxy_func(phb->proxy_data, source, GAIM_INPUT_READ);
+		phb->proxy_func(phb->proxy_data, source, B_EV_IO_READ);
 	else {
-		phb->func(phb->data, source, GAIM_INPUT_READ);
+		phb->func(phb->data, source, B_EV_IO_READ);
 		g_free(phb);
 	}
 	
@@ -146,7 +146,7 @@ static int proxy_connect_none(const char *host, unsigned short port, struct PHB 
 		
 		return -1;
 	} else {
-		phb->inpa = b_input_add(fd, GAIM_INPUT_WRITE, gaim_io_connected, phb);
+		phb->inpa = b_input_add(fd, B_EV_IO_WRITE, gaim_io_connected, phb);
 		phb->fd = fd;
 		
 		return fd;
@@ -178,14 +178,14 @@ static gboolean http_canread(gpointer data, gint source, b_input_condition cond)
 
 	if ((memcmp(HTTP_GOODSTRING, inputline, strlen(HTTP_GOODSTRING)) == 0) ||
 	    (memcmp(HTTP_GOODSTRING2, inputline, strlen(HTTP_GOODSTRING2)) == 0)) {
-		phb->func(phb->data, source, GAIM_INPUT_READ);
+		phb->func(phb->data, source, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
 	}
 
 	close(source);
-	phb->func(phb->data, -1, GAIM_INPUT_READ);
+	phb->func(phb->data, -1, B_EV_IO_READ);
 	g_free(phb->host);
 	g_free(phb);
 	
@@ -203,7 +203,7 @@ static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond
 	len = sizeof(error);
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
@@ -214,7 +214,7 @@ static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond
 		   phb->host, phb->port);
 	if (send(source, cmd, strlen(cmd), 0) < 0) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
@@ -229,7 +229,7 @@ static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond
 		g_free(t2);
 		if (send(source, cmd, strlen(cmd), 0) < 0) {
 			close(source);
-			phb->func(phb->data, -1, GAIM_INPUT_READ);
+			phb->func(phb->data, -1, B_EV_IO_READ);
 			g_free(phb->host);
 			g_free(phb);
 			return FALSE;
@@ -239,13 +239,13 @@ static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond
 	g_snprintf(cmd, sizeof(cmd), "\r\n");
 	if (send(source, cmd, strlen(cmd), 0) < 0) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
 	}
 
-	phb->inpa = b_input_add(source, GAIM_INPUT_READ, http_canread, phb);
+	phb->inpa = b_input_add(source, B_EV_IO_READ, http_canread, phb);
 	
 	return FALSE;
 }
@@ -272,14 +272,14 @@ static gboolean s4_canread(gpointer data, gint source, b_input_condition cond)
 
 	memset(packet, 0, sizeof(packet));
 	if (read(source, packet, 9) >= 4 && packet[1] == 90) {
-		phb->func(phb->data, source, GAIM_INPUT_READ);
+		phb->func(phb->data, source, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
 	}
 
 	close(source);
-	phb->func(phb->data, -1, GAIM_INPUT_READ);
+	phb->func(phb->data, -1, B_EV_IO_READ);
 	g_free(phb->host);
 	g_free(phb);
 	
@@ -298,7 +298,7 @@ static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
 	len = sizeof(error);
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
@@ -308,7 +308,7 @@ static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
 	/* XXX does socks4 not support host name lookups by the proxy? */
 	if (!(hp = gethostbyname(phb->host))) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
@@ -325,13 +325,13 @@ static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
 	packet[8] = 0;
 	if (write(source, packet, 9) != 9) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
 	}
 
-	phb->inpa = b_input_add(source, GAIM_INPUT_READ, s4_canread, phb);
+	phb->inpa = b_input_add(source, B_EV_IO_READ, s4_canread, phb);
 	
 	return FALSE;
 }
@@ -358,20 +358,20 @@ static gboolean s5_canread_again(gpointer data, gint source, b_input_condition c
 
 	if (read(source, buf, 10) < 10) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
 	}
 	if ((buf[0] != 0x05) || (buf[1] != 0x00)) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
 	}
 
-	phb->func(phb->data, source, GAIM_INPUT_READ);
+	phb->func(phb->data, source, B_EV_IO_READ);
 	g_free(phb->host);
 	g_free(phb);
 	
@@ -395,13 +395,13 @@ static void s5_sendconnect(gpointer data, gint source)
 
 	if (write(source, buf, (5 + strlen(phb->host) + 2)) < (5 + strlen(phb->host) + 2)) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return;
 	}
 
-	phb->inpa = b_input_add(source, GAIM_INPUT_READ, s5_canread_again, phb);
+	phb->inpa = b_input_add(source, B_EV_IO_READ, s5_canread_again, phb);
 }
 
 static gboolean s5_readauth(gpointer data, gint source, b_input_condition cond)
@@ -413,7 +413,7 @@ static gboolean s5_readauth(gpointer data, gint source, b_input_condition cond)
 
 	if (read(source, buf, 2) < 2) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
@@ -421,7 +421,7 @@ static gboolean s5_readauth(gpointer data, gint source, b_input_condition cond)
 
 	if ((buf[0] != 0x01) || (buf[1] != 0x00)) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
@@ -441,7 +441,7 @@ static gboolean s5_canread(gpointer data, gint source, b_input_condition cond)
 
 	if (read(source, buf, 2) < 2) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
@@ -449,7 +449,7 @@ static gboolean s5_canread(gpointer data, gint source, b_input_condition cond)
 
 	if ((buf[0] != 0x05) || (buf[1] == 0xff)) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
@@ -464,13 +464,13 @@ static gboolean s5_canread(gpointer data, gint source, b_input_condition cond)
 		memcpy(buf + 2 + i + 1, proxypass, j);
 		if (write(source, buf, 3 + i + j) < 3 + i + j) {
 			close(source);
-			phb->func(phb->data, -1, GAIM_INPUT_READ);
+			phb->func(phb->data, -1, B_EV_IO_READ);
 			g_free(phb->host);
 			g_free(phb);
 			return FALSE;
 		}
 
-		phb->inpa = b_input_add(source, GAIM_INPUT_READ, s5_readauth, phb);
+		phb->inpa = b_input_add(source, B_EV_IO_READ, s5_readauth, phb);
 	} else {
 		s5_sendconnect(phb, source);
 	}
@@ -490,7 +490,7 @@ static gboolean s5_canwrite(gpointer data, gint source, b_input_condition cond)
 	len = sizeof(error);
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
@@ -512,13 +512,13 @@ static gboolean s5_canwrite(gpointer data, gint source, b_input_condition cond)
 
 	if (write(source, buf, i) < i) {
 		close(source);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
+		phb->func(phb->data, -1, B_EV_IO_READ);
 		g_free(phb->host);
 		g_free(phb);
 		return FALSE;
 	}
 
-	phb->inpa = b_input_add(source, GAIM_INPUT_READ, s5_canread, phb);
+	phb->inpa = b_input_add(source, B_EV_IO_READ, s5_canread, phb);
 	
 	return FALSE;
 }

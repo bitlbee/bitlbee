@@ -28,7 +28,7 @@
 /* Used to use NULL for this, but NULL is actually a "valid" value. */
 char *SET_INVALID = "nee";
 
-set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data )
+set_t *set_add( set_t **head, const char *key, const char *def, set_eval eval, void *data )
 {
 	set_t *s = set_find( head, key );
 	
@@ -62,7 +62,7 @@ set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data )
 	return s;
 }
 
-set_t *set_find( set_t **head, char *key )
+set_t *set_find( set_t **head, const char *key )
 {
 	set_t *s = *head;
 	
@@ -76,7 +76,7 @@ set_t *set_find( set_t **head, char *key )
 	return s;
 }
 
-char *set_getstr( set_t **head, char *key )
+char *set_getstr( set_t **head, const char *key )
 {
 	set_t *s = set_find( head, key );
 	
@@ -86,7 +86,7 @@ char *set_getstr( set_t **head, char *key )
 	return s->value ? s->value : s->def;
 }
 
-int set_getint( set_t **head, char *key )
+int set_getint( set_t **head, const char *key )
 {
 	char *s = set_getstr( head, key );
 	int i = 0;
@@ -100,7 +100,7 @@ int set_getint( set_t **head, char *key )
 	return i;
 }
 
-int set_getbool( set_t **head, char *key )
+int set_getbool( set_t **head, const char *key )
 {
 	char *s = set_getstr( head, key );
 	
@@ -110,7 +110,7 @@ int set_getbool( set_t **head, char *key )
 	return bool2int( s );
 }
 
-int set_setstr( set_t **head, char *key, char *value )
+int set_setstr( set_t **head, const char *key, char *value )
 {
 	set_t *s = set_find( head, key );
 	char *nv = value;
@@ -149,7 +149,7 @@ int set_setstr( set_t **head, char *key, char *value )
 	return 1;
 }
 
-int set_setint( set_t **head, char *key, int value )
+int set_setint( set_t **head, const char *key, int value )
 {
 	char s[24];	/* Not quite 128-bit clean eh? ;-) */
 	
@@ -157,7 +157,7 @@ int set_setint( set_t **head, char *key, int value )
 	return set_setstr( head, key, s );
 }
 
-void set_del( set_t **head, char *key )
+void set_del( set_t **head, const char *key )
 {
 	set_t *s = *head, *t = NULL;
 	
@@ -181,7 +181,7 @@ void set_del( set_t **head, char *key )
 	}
 }
 
-int set_reset( set_t **head, char *key )
+int set_reset( set_t **head, const char *key )
 {
 	set_t *s;
 	
@@ -210,6 +210,21 @@ char *set_eval_int( set_t *set, char *value )
 char *set_eval_bool( set_t *set, char *value )
 {
 	return is_bool( value ) ? value : SET_INVALID;
+}
+
+char *set_eval_list( set_t *set, char *value )
+{
+	GSList *options = set->eval_data, *opt;
+	
+	for( opt = options; opt; opt = opt->next )
+		if( strcmp( value, opt->data ) == 0 )
+			return value;
+	
+	/* TODO: It'd be nice to show the user a list of allowed values,
+	         but we don't have enough context here to do that. May
+	         want to fix that. */
+	
+	return NULL;
 }
 
 char *set_eval_to_char( set_t *set, char *value )

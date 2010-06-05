@@ -204,7 +204,6 @@ static int gaim_parse_buddyrights(aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_locerr     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_icbm_param_info  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_genericerr (aim_session_t *, aim_frame_t *, ...);
-static int gaim_memrequest       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_selfinfo         (aim_session_t *, aim_frame_t *, ...);
 static int gaim_offlinemsg       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_offlinemsgdone   (aim_session_t *, aim_frame_t *, ...);
@@ -290,7 +289,7 @@ static gboolean oscar_callback(gpointer data, gint source,
 
 	odata = (struct oscar_data *)ic->proto_data;
 
-	if (condition & GAIM_INPUT_READ) {
+	if (condition & B_EV_IO_READ) {
 		if (aim_get_command(odata->sess, conn) >= 0) {
 			aim_rxdispatch(odata->sess);
                                if (odata->killme)
@@ -362,7 +361,7 @@ static gboolean oscar_login_connect(gpointer data, gint source, b_input_conditio
 	}
 
 	aim_conn_completeconnect(sess, conn);
-	ic->inpa = b_input_add(conn->fd, GAIM_INPUT_READ,
+	ic->inpa = b_input_add(conn->fd, B_EV_IO_READ,
 			oscar_callback, conn);
 	
 	return FALSE;
@@ -492,7 +491,7 @@ static gboolean oscar_bos_connect(gpointer data, gint source, b_input_condition 
 	}
 
 	aim_conn_completeconnect(sess, bosconn);
-	ic->inpa = b_input_add(bosconn->fd, GAIM_INPUT_READ,
+	ic->inpa = b_input_add(bosconn->fd, B_EV_IO_READ,
 			oscar_callback, bosconn);
 	imcb_log(ic, _("Connection established, cookie sent"));
 	
@@ -569,7 +568,6 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, AIM_CB_GEN_ERROR, gaim_parse_genericerr, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_BUD, AIM_CB_BUD_ERROR, gaim_parse_genericerr, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_BOS, AIM_CB_BOS_ERROR, gaim_parse_genericerr, 0);
-	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, 0x1f, gaim_memrequest, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, AIM_CB_GEN_SELFINFO, gaim_selfinfo, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_OFFLINEMSG, gaim_offlinemsg, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_OFFLINEMSGCOMPLETE, gaim_offlinemsgdone, 0);
@@ -603,142 +601,8 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	return 1;
 }
 
-struct pieceofcrap {
-	struct im_connection *ic;
-	unsigned long offset;
-	unsigned long len;
-	char *modname;
-	int fd;
-	aim_conn_t *conn;
-	unsigned int inpa;
-};
-
-static gboolean damn_you(gpointer data, gint source, b_input_condition c)
-{
-	struct pieceofcrap *pos = data;
-	struct oscar_data *od = pos->ic->proto_data;
-	char in = '\0';
-	int x = 0;
-	unsigned char m[17];
-
-	while (read(pos->fd, &in, 1) == 1) {
-		if (in == '\n')
-			x++;
-		else if (in != '\r')
-			x = 0;
-		if (x == 2)
-			break;
-		in = '\0';
-	}
-	if (in != '\n') {
-		imcb_error(pos->ic, "Gaim was unable to get a valid hash for logging into AIM."
-				" You may be disconnected shortly.");
-		b_event_remove(pos->inpa);
-		closesocket(pos->fd);
-		g_free(pos);
-		return FALSE;
-	}
-	/* [WvG] Wheeeee! Who needs error checking anyway? ;-) */
-	read(pos->fd, m, 16);
-	m[16] = '\0';
-	b_event_remove(pos->inpa);
-	closesocket(pos->fd);
-	aim_sendmemblock(od->sess, pos->conn, 0, 16, m, AIM_SENDMEMBLOCK_FLAG_ISHASH);
-	g_free(pos);
-	
-	return FALSE;
-}
-
-static gboolean straight_to_hell(gpointer data, gint source, b_input_condition cond) {
-	struct pieceofcrap *pos = data;
-	char buf[BUF_LONG];
-
-	if (source < 0) {
-		imcb_error(pos->ic, "Gaim was unable to get a valid hash for logging into AIM."
-				" You may be disconnected shortly.");
-		if (pos->modname)
-			g_free(pos->modname);
-		g_free(pos);
-		return FALSE;
-	}
-
-	g_snprintf(buf, sizeof(buf), "GET " AIMHASHDATA
-			"?offset=%ld&len=%ld&modname=%s HTTP/1.0\n\n",
-			pos->offset, pos->len, pos->modname ? pos->modname : "");
-	write(pos->fd, buf, strlen(buf));
-	if (pos->modname)
-		g_free(pos->modname);
-	pos->inpa = b_input_add(pos->fd, GAIM_INPUT_READ, damn_you, pos);
-	return FALSE;
-}
-
 /* size of icbmui.ocm, the largest module in AIM 3.5 */
 #define AIM_MAX_FILE_SIZE 98304
-
-int gaim_memrequest(aim_session_t *sess, aim_frame_t *fr, ...) {
-	va_list ap;
-	struct pieceofcrap *pos;
-	guint32 offset, len;
-	char *modname;
-	int fd;
-
-	va_start(ap, fr);
-	offset = (guint32)va_arg(ap, unsigned long);
-	len = (guint32)va_arg(ap, unsigned long);
-	modname = va_arg(ap, char *);
-	va_end(ap);
-
-	if (len == 0) {
-		aim_sendmemblock(sess, fr->conn, offset, len, NULL,
-				AIM_SENDMEMBLOCK_FLAG_ISREQUEST);
-		return 1;
-	}
-	/* uncomment this when you're convinced it's right. remember, it's been wrong before.
-	if (offset > AIM_MAX_FILE_SIZE || len > AIM_MAX_FILE_SIZE) {
-		char *buf;
-		int i = 8;
-		if (modname)
-			i += strlen(modname);
-		buf = g_malloc(i);
-		i = 0;
-		if (modname) {
-			memcpy(buf, modname, strlen(modname));
-			i += strlen(modname);
-		}
-		buf[i++] = offset & 0xff;
-		buf[i++] = (offset >> 8) & 0xff;
-		buf[i++] = (offset >> 16) & 0xff;
-		buf[i++] = (offset >> 24) & 0xff;
-		buf[i++] = len & 0xff;
-		buf[i++] = (len >> 8) & 0xff;
-		buf[i++] = (len >> 16) & 0xff;
-		buf[i++] = (len >> 24) & 0xff;
-		aim_sendmemblock(sess, command->conn, offset, i, buf, AIM_SENDMEMBLOCK_FLAG_ISREQUEST);
-		g_free(buf);
-		return 1;
-	}
-	*/
-
-	pos = g_new0(struct pieceofcrap, 1);
-	pos->ic = sess->aux_data;
-	pos->conn = fr->conn;
-
-	pos->offset = offset;
-	pos->len = len;
-	pos->modname = modname ? g_strdup(modname) : NULL;
-
-	fd = proxy_connect("gaim.sourceforge.net", 80, straight_to_hell, pos);
-	if (fd < 0) {
-		if (pos->modname)
-			g_free(pos->modname);
-		g_free(pos);
-		imcb_error(sess->aux_data, "Gaim was unable to get a valid hash for logging into AIM."
-				" You may be disconnected shortly.");
-	}
-	pos->fd = fd;
-
-	return 1;
-}
 
 static int gaim_parse_login(aim_session_t *sess, aim_frame_t *fr, ...) {
 #if 0
@@ -837,7 +701,7 @@ static gboolean oscar_chatnav_connect(gpointer data, gint source, b_input_condit
 	}
 
 	aim_conn_completeconnect(sess, tstconn);
-	odata->cnpa = b_input_add(tstconn->fd, GAIM_INPUT_READ,
+	odata->cnpa = b_input_add(tstconn->fd, B_EV_IO_READ,
 					oscar_callback, tstconn);
 	
 	return FALSE;
@@ -865,7 +729,7 @@ static gboolean oscar_auth_connect(gpointer data, gint source, b_input_condition
 	}
 
 	aim_conn_completeconnect(sess, tstconn);
-	odata->paspa = b_input_add(tstconn->fd, GAIM_INPUT_READ,
+	odata->paspa = b_input_add(tstconn->fd, B_EV_IO_READ,
 				oscar_callback, tstconn);
 	
 	return FALSE;
@@ -901,7 +765,7 @@ static gboolean oscar_chat_connect(gpointer data, gint source, b_input_condition
 
 	aim_conn_completeconnect(sess, ccon->conn);
 	ccon->inpa = b_input_add(tstconn->fd,
-			GAIM_INPUT_READ,
+			B_EV_IO_READ,
 			oscar_callback, tstconn);
 	odata->oscar_chats = g_slist_append(odata->oscar_chats, ccon);
 	
@@ -2650,7 +2514,8 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	static int chat_id = 0;
 	char * chatname;
 	
-	chatname = g_strdup_printf("%s%d", ic->acc->user, chat_id++);
+	chatname = g_strdup_printf("%s%s_%d", isdigit(*ic->acc->user) ? "icq_" : "",
+	                           ic->acc->user, chat_id++);
   
 	ret = oscar_chat_join(ic, chatname, NULL, NULL);
 

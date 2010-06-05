@@ -153,7 +153,7 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, char *user_nick, cha
 		return NULL;
 
 	/* watch */
-	df->watch_in = b_input_add( df->fd, GAIM_INPUT_READ, dccs_send_proto, df );
+	df->watch_in = b_input_add( df->fd, B_EV_IO_READ, dccs_send_proto, df );
 
 	df->ic->irc->file_transfers = g_slist_prepend( df->ic->irc->file_transfers, file );
 
@@ -266,7 +266,7 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 	dcc_file_transfer_t *df = data;
 	file_transfer_t *file = df->ft;
 	
-	if( ( cond & GAIM_INPUT_READ ) &&
+	if( ( cond & B_EV_IO_READ ) &&
 	    ( file->status & FT_STATUS_LISTENING ) )
 	{ 	
 		struct sockaddr *clt_addr;
@@ -286,12 +286,12 @@ gboolean dccs_send_proto( gpointer data, gint fd, b_input_condition cond )
 			file->accept( file );
 
 		/* reschedule for reading on new fd */
-		df->watch_in = b_input_add( fd, GAIM_INPUT_READ, dccs_send_proto, df );
+		df->watch_in = b_input_add( fd, B_EV_IO_READ, dccs_send_proto, df );
 
 		return FALSE;
 	}
 
-	if( cond & GAIM_INPUT_READ ) 
+	if( cond & B_EV_IO_READ ) 
 	{
 		int ret;
 		
@@ -363,7 +363,7 @@ gboolean dccs_recv_start( file_transfer_t *ft )
 	ft->status = FT_STATUS_CONNECTING;
 
 	/* watch */
-	df->watch_out = b_input_add( df->fd, GAIM_INPUT_WRITE, dccs_recv_proto, df );
+	df->watch_out = b_input_add( df->fd, B_EV_IO_WRITE, dccs_recv_proto, df );
 	ft->write_request = dccs_recv_write_request;
 
 	df->progress_timeout = b_timeout_add( DCC_MAX_STALL * 1000, dcc_progress, df );
@@ -376,18 +376,18 @@ gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond )
 	dcc_file_transfer_t *df = data;
 	file_transfer_t *ft = df->ft;
 
-	if( ( cond & GAIM_INPUT_WRITE ) &&
+	if( ( cond & B_EV_IO_WRITE ) &&
 	    ( ft->status & FT_STATUS_CONNECTING ) )
 	{
 		ft->status = FT_STATUS_TRANSFERRING;
 
-		//df->watch_in = b_input_add( df->fd, GAIM_INPUT_READ, dccs_recv_proto, df );
+		//df->watch_in = b_input_add( df->fd, B_EV_IO_READ, dccs_recv_proto, df );
 
 		df->watch_out = 0;
 		return FALSE;
 	}
 
-	if( cond & GAIM_INPUT_READ )
+	if( cond & B_EV_IO_READ )
 	{
 		int ret, done;
 
@@ -444,7 +444,7 @@ gboolean dccs_recv_write_request( file_transfer_t *ft )
 	if( df->watch_in )
 		return dcc_abort( df, "BUG: write_request() called while watching" );
 
-	df->watch_in = b_input_add( df->fd, GAIM_INPUT_READ, dccs_recv_proto, df );
+	df->watch_in = b_input_add( df->fd, B_EV_IO_READ, dccs_recv_proto, df );
 
 	return TRUE;
 }
@@ -487,7 +487,7 @@ gboolean dccs_send_write( file_transfer_t *file, char *data, unsigned int data_l
 	df->bytes_sent += ret;
 
 	if( df->bytes_sent < df->ft->file_size )
-		df->watch_out = b_input_add( df->fd, GAIM_INPUT_WRITE, dccs_send_can_write, df );
+		df->watch_out = b_input_add( df->fd, B_EV_IO_WRITE, dccs_send_can_write, df );
 
 	return TRUE;
 }

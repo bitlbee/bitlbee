@@ -35,14 +35,51 @@
 
 static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition condition );
 
+static gboolean try_listen( struct addrinfo *res )
+{
+	int i;
+	
+	global.listen_socket = socket( res->ai_family, res->ai_socktype, res->ai_protocol );
+	if( global.listen_socket < 0 )
+	{
+		log_error( "socket" );
+		return FALSE;
+	}
+
+#ifdef IPV6_V6ONLY		
+	if( res->ai_family == AF_INET6 )
+	{
+		i = 0;
+		setsockopt( global.listen_socket, IPPROTO_IPV6, IPV6_V6ONLY,
+		            (char *) &i, sizeof( i ) );
+	}
+#endif
+
+	/* TIME_WAIT (?) sucks.. */
+	i = 1;
+	setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
+
+	i = bind( global.listen_socket, res->ai_addr, res->ai_addrlen );
+	if( i == -1 )
+	{
+		closesocket( global.listen_socket );
+		global.listen_socket = -1;
+		
+		log_error( "bind" );
+		return FALSE;
+	}
+	
+	return TRUE;
+}
+
 int bitlbee_daemon_init()
 {
 	struct addrinfo *res, hints, *addrinfo_bind;
 	int i;
 	FILE *fp;
 	
-	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
-	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
+	log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
+	log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
 	
 	memset( &hints, 0, sizeof( hints ) );
 	hints.ai_family = PF_UNSPEC;
@@ -62,27 +99,18 @@ int bitlbee_daemon_init()
 	}
 
 	global.listen_socket = -1;
-
+	
+	/* Try IPv6 first (which will become an IPv6+IPv4 socket). */
 	for( res = addrinfo_bind; res; res = res->ai_next )
-	{
-		global.listen_socket = socket( res->ai_family, res->ai_socktype, res->ai_protocol );
-		if( global.listen_socket < 0 )
-			continue;
-
-		/* TIME_WAIT (?) sucks.. */
-		i = 1;
-		setsockopt( global.listen_socket, SOL_SOCKET, SO_REUSEADDR, &i, sizeof( i ) );
-
-		i = bind( global.listen_socket, res->ai_addr, res->ai_addrlen );
-		if( i == -1 )
-		{
-			log_error( "bind" );
-			return( -1 );
-		}
-
-		break;
-	}
-
+		if( res->ai_family == AF_INET6 && try_listen( res ) )
+			break;
+	
+	/* The rest (so IPv4, I guess). */
+	if( res == NULL )
+		for( res = addrinfo_bind; res; res = res->ai_next )
+			if( res->ai_family != AF_INET6 && try_listen( res ) )
+				break;
+	
 	freeaddrinfo( addrinfo_bind );
 
 	i = listen( global.listen_socket, 10 );
@@ -92,7 +120,7 @@ int bitlbee_daemon_init()
 		return( -1 );
 	}
 	
-	global.listen_watch_source_id = b_input_add( global.listen_socket, GAIM_INPUT_READ, bitlbee_io_new_client, NULL );
+	global.listen_watch_source_id = b_input_add( global.listen_socket, B_EV_IO_READ, bitlbee_io_new_client, NULL );
 	
 #ifndef _WIN32
 	if( !global.conf->nofork )
@@ -106,6 +134,7 @@ int bitlbee_daemon_init()
 		else if( i != 0 ) 
 			exit( 0 );
 		
+		setsid();
 		chdir( "/" );
 		
 		if( getenv( "_BITLBEE_RESTART_STATE" ) == NULL )
@@ -135,6 +164,12 @@ int bitlbee_daemon_init()
 		log_message( LOGLVL_WARNING, "Warning: Couldn't write PID to `%s'", global.conf->pidfile );
 	}
 #endif
+	
+	if( !global.conf->nofork )
+	{
+		log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
+		log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
+	}
 	
 	return( 0 );
 }
@@ -285,7 +320,7 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 			child = g_new0( struct bitlbee_child, 1 );
 			child->pid = client_pid;
 			child->ipc_fd = fds[0];
-			child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+			child->ipc_inpa = b_input_add( child->ipc_fd, B_EV_IO_READ, ipc_master_read, child );
 			child_list = g_slist_append( child_list, child );
 			
 			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", (int) client_pid );
@@ -313,7 +348,7 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 			
 			/* We can store the IPC fd there now. */
 			global.listen_socket = fds[1];
-			global.listen_watch_source_id = b_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
+			global.listen_watch_source_id = b_input_add( fds[1], B_EV_IO_READ, ipc_child_read, irc );
 			
 			close( fds[0] );
 			

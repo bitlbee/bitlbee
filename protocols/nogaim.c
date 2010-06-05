@@ -38,6 +38,7 @@
 #include "chat.h"
 
 static int remove_chat_buddy_silent( struct groupchat *b, const char *handle );
+static char *format_timestamp( irc_t *irc, time_t msg_ts );
 
 GSList *connections;
 
@@ -115,12 +116,15 @@ void register_protocol (struct prpl *p)
 struct prpl *find_protocol(const char *name)
 {
 	GList *gl;
-	for (gl = protocols; gl; gl = gl->next) 
+	
+	for( gl = protocols; gl; gl = gl->next )
  	{
  		struct prpl *proto = gl->data;
- 		if(!g_strcasecmp(proto->name, name)) 
+ 		
+ 		if( g_strcasecmp( proto->name, name ) == 0 )
 			return proto;
  	}
+ 	
  	return NULL;
 }
 
@@ -131,6 +135,8 @@ void nogaim_init()
 	extern void oscar_initmodule();
 	extern void byahoo_initmodule();
 	extern void jabber_initmodule();
+	extern void twitter_initmodule();
+	extern void purple_initmodule();
 
 #ifdef WITH_MSN
 	msn_initmodule();
@@ -146,6 +152,14 @@ void nogaim_init()
 	
 #ifdef WITH_JABBER
 	jabber_initmodule();
+#endif
+
+#ifdef WITH_TWITTER
+	twitter_initmodule();
+#endif
+	
+#ifdef WITH_PURPLE
+	purple_initmodule();
 #endif
 
 #ifdef WITH_PLUGINS
@@ -650,7 +664,18 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	g_free( u->status_msg );
 	u->away = u->status_msg = NULL;
 	
-	if( ( flags & OPT_LOGGED_IN ) && !u->online )
+	if( set_getbool( &ic->irc->set, "show_offline" ) && !u->online )
+	{
+		/* always set users as online */
+		irc_spawn( ic->irc, u );
+		u->online = 1;
+		if( !( flags & OPT_LOGGED_IN ) )
+		{
+			/* set away message if user isn't really online */
+			u->away = g_strdup( "User is offline" );
+		}
+	}
+	else if( ( flags & OPT_LOGGED_IN ) && !u->online )
 	{
 		irc_spawn( ic->irc, u );
 		u->online = 1;
@@ -659,14 +684,30 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	{
 		struct groupchat *c;
 		
-		irc_kill( ic->irc, u );
-		u->online = 0;
-		
-		/* Remove him/her from the groupchats to prevent PART messages after he/she QUIT already */
-		for( c = ic->groupchats; c; c = c->next )
-			remove_chat_buddy_silent( c, handle );
+		if( set_getbool( &ic->irc->set, "show_offline" ) )
+		{
+			/* keep offline users in channel and set away message to "offline" */
+			u->away = g_strdup( "User is offline" );
+
+			/* Keep showing him/her in the control channel but not in groupchats. */
+			for( c = ic->groupchats; c; c = c->next )
+			{
+				if( remove_chat_buddy_silent( c, handle ) && c->joined )
+					irc_part( c->ic->irc, u, c->channel );
+			}
+		}
+		else
+		{
+			/* kill offline users */
+			irc_kill( ic->irc, u );
+			u->online = 0;
+
+			/* Remove him/her from the groupchats to prevent PART messages after he/she QUIT already */
+			for( c = ic->groupchats; c; c = c->next )
+				remove_chat_buddy_silent( c, handle );
+		}
 	}
-	
+
 	if( flags & OPT_AWAY )
 	{
 		if( state && message )
@@ -691,11 +732,8 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 		u->status_msg = g_strdup( message );
 	}
 	
-	/* LISPy... */
-	if( ( set_getbool( &ic->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
-	    ( u->online ) &&						/* Don't touch offline people */
-	    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
-	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
+	/* early if-clause for show_offline even if there is some redundant code here because this isn't LISP but C ;) */
+	if( set_getbool( &ic->irc->set, "show_offline" ) && set_getbool( &ic->irc->set, "away_devoice" ) )
 	{
 		char *from;
 		
@@ -708,16 +746,50 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 			from = g_strdup_printf( "%s!%s@%s", ic->irc->mynick, ic->irc->mynick,
 			                                    ic->irc->myhost );
 		}
-		irc_write( ic->irc, ":%s MODE %s %cv %s", from, ic->irc->channel,
-		                                          u->away?'-':'+', u->nick );
-		g_free( from );
+
+		/* if we use show_offline, we op online users, voice away users, and devoice/deop offline users */
+		if( flags & OPT_LOGGED_IN )
+		{
+			/* user is "online" (either really online or away) */
+			irc_write( ic->irc, ":%s MODE %s %cv%co %s %s", from, ic->irc->channel,
+			                                          u->away?'+':'-', u->away?'-':'+', u->nick, u->nick );
+		}
+		else
+		{
+			/* user is offline */
+			irc_write( ic->irc, ":%s MODE %s -vo %s %s", from, ic->irc->channel, u->nick, u->nick );
+		}
+	}
+	else
+	{ 
+		/* LISPy... */
+		if( ( set_getbool( &ic->irc->set, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
+		    ( u->online ) &&						/* Don't touch offline people */
+		    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
+		      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
+		{
+			char *from;
+
+			if( set_getbool( &ic->irc->set, "simulate_netsplit" ) )
+			{
+				from = g_strdup( ic->irc->myhost );
+			}
+			else
+			{
+				from = g_strdup_printf( "%s!%s@%s", ic->irc->mynick, ic->irc->mynick,
+				                                    ic->irc->myhost );
+			}
+			irc_write( ic->irc, ":%s MODE %s %cv %s", from, ic->irc->channel,
+			                                          u->away?'-':'+', u->nick );
+			g_free( from );
+		}
 	}
 }
 
 void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at )
 {
 	irc_t *irc = ic->irc;
-	char *wrapped;
+	char *wrapped, *ts = NULL;
 	user_t *u;
 	
 	u = user_findhandle( ic, handle );
@@ -759,10 +831,19 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 	if( ( g_strcasecmp( set_getstr( &ic->irc->set, "strip_html" ), "always" ) == 0 ) ||
 	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->irc->set, "strip_html" ) ) )
 		strip_html( msg );
-
+	
+	if( set_getbool( &ic->irc->set, "display_timestamps" ) &&
+	    ( ts = format_timestamp( irc, sent_at ) ) )
+	{
+		char *new = g_strconcat( ts, msg, NULL );
+		g_free( ts );
+		ts = msg = new;
+	}
+	
 	wrapped = word_wrap( msg, 425 );
 	irc_msgfrom( irc, u->nick, wrapped );
 	g_free( wrapped );
+	g_free( ts );
 }
 
 void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
@@ -804,6 +885,35 @@ struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle )
 		imcb_log( ic, "Creating new conversation: (id=%p,handle=%s)", c, handle );
 	
 	return c;
+}
+
+void imcb_chat_name_hint( struct groupchat *c, const char *name )
+{
+	if( !c->joined )
+	{
+		struct im_connection *ic = c->ic;
+		char stripped[MAX_NICK_LENGTH+1], *full_name;
+		
+		strncpy( stripped, name, MAX_NICK_LENGTH );
+		stripped[MAX_NICK_LENGTH] = '\0';
+		nick_strip( stripped );
+		if( set_getbool( &ic->irc->set, "lcnicks" ) )
+			nick_lc( stripped );
+		
+		full_name = g_strdup_printf( "&%s", stripped );
+		
+		if( stripped[0] &&
+		    nick_cmp( stripped, ic->irc->channel + 1 ) != 0 &&
+		    irc_chat_by_channel( ic->irc, full_name ) == NULL )
+		{
+			g_free( c->channel );
+			c->channel = full_name;
+		}
+		else
+		{
+			g_free( full_name );
+		}
+	}
 }
 
 void imcb_chat_free( struct groupchat *c )
@@ -866,7 +976,11 @@ void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t fl
 	wrapped = word_wrap( msg, 425 );
 	if( c && u )
 	{
-		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, "", wrapped );
+		char *ts = NULL;
+		if( set_getbool( &ic->irc->set, "display_timestamps" ) )
+			ts = format_timestamp( ic->irc, sent_at );
+		irc_privmsg( ic->irc, u, "PRIVMSG", c->channel, ts ? : "", wrapped );
+		g_free( ts );
 	}
 	else
 	{
@@ -1060,8 +1174,94 @@ char *set_eval_away_devoice( set_t *set, char *value )
 	return value;
 }
 
+char *set_eval_timezone( set_t *set, char *value )
+{
+	char *s;
+	
+	if( strcmp( value, "local" ) == 0 ||
+	    strcmp( value, "gmt" ) == 0 || strcmp( value, "utc" ) == 0 )
+		return value;
+	
+	/* Otherwise: +/- at the beginning optional, then one or more numbers,
+	   possibly followed by a colon and more numbers. Don't bother bound-
+	   checking them since users are free to shoot themselves in the foot. */
+	s = value;
+	if( *s == '+' || *s == '-' )
+		s ++;
+	
+	/* \d+ */
+	if( !isdigit( *s ) )
+		return SET_INVALID;
+	while( *s && isdigit( *s ) ) s ++;
+	
+	/* EOS? */
+	if( *s == '\0' )
+		return value;
+	
+	/* Otherwise, colon */
+	if( *s != ':' )
+		return SET_INVALID;
+	s ++;
+	
+	/* \d+ */
+	if( !isdigit( *s ) )
+		return SET_INVALID;
+	while( *s && isdigit( *s ) ) s ++;
+	
+	/* EOS */
+	return *s == '\0' ? value : SET_INVALID;
+}
 
-
+static char *format_timestamp( irc_t *irc, time_t msg_ts )
+{
+	time_t now_ts = time( NULL );
+	struct tm now, msg;
+	char *set;
+	
+	/* If the timestamp is <= 0 or less than a minute ago, discard it as
+	   it doesn't seem to add to much useful info and/or might be noise. */
+	if( msg_ts <= 0 || msg_ts > now_ts - 60 )
+		return NULL;
+	
+	set = set_getstr( &irc->set, "timezone" );
+	if( strcmp( set, "local" ) == 0 )
+	{
+		localtime_r( &now_ts, &now );
+		localtime_r( &msg_ts, &msg );
+	}
+	else
+	{
+		int hr, min = 0, sign = 60;
+		
+		if( set[0] == '-' )
+		{
+			sign *= -1;
+			set ++;
+		}
+		else if( set[0] == '+' )
+		{
+			set ++;
+		}
+		
+		if( sscanf( set, "%d:%d", &hr, &min ) >= 1 )
+		{
+			msg_ts += sign * ( hr * 60 + min );
+			now_ts += sign * ( hr * 60 + min );
+		}
+		
+		gmtime_r( &now_ts, &now );
+		gmtime_r( &msg_ts, &msg );
+	}
+	
+	if( msg.tm_year == now.tm_year && msg.tm_yday == now.tm_yday )
+		return g_strdup_printf( "\x02[\x02\x02\x02%02d:%02d:%02d\x02]\x02 ",
+		                        msg.tm_hour, msg.tm_min, msg.tm_sec );
+	else
+		return g_strdup_printf( "\x02[\x02\x02\x02%04d-%02d-%02d "
+		                        "%02d:%02d:%02d\x02]\x02 ",
+		                        msg.tm_year + 1900, msg.tm_mon + 1, msg.tm_mday,
+		                        msg.tm_hour, msg.tm_min, msg.tm_sec );
+}
 
 /* The plan is to not allow straight calls to prpl functions anymore, but do
    them all from some wrappers. We'll start to define some down here: */
@@ -1104,6 +1304,10 @@ static char *imc_away_state_find( GList *gcm, char *away, char **message );
 int imc_away_send_update( struct im_connection *ic )
 {
 	char *away, *msg = NULL;
+	
+	if( ic->acc->prpl->away_states == NULL ||
+	    ic->acc->prpl->set_away == NULL )
+		return 0;
 	
 	away = set_getstr( &ic->acc->set, "away" ) ?
 	     : set_getstr( &ic->irc->set, "away" );

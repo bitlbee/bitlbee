@@ -405,7 +405,7 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 
 			bt->phase = BS_PHASE_CONNECTED;
 			
-			bt->tf->watch_out = b_input_add( fd, GAIM_INPUT_WRITE, jabber_bs_recv_handshake, bt );
+			bt->tf->watch_out = b_input_add( fd, B_EV_IO_WRITE, jabber_bs_recv_handshake, bt );
 
 			/* since it takes forever(3mins?) till connect() fails on itself we schedule a timeout */
 			bt->connect_timeout = b_timeout_add( JABBER_BS_CONTIMEOUT * 1000, jabber_bs_connect_timeout, bt );
@@ -432,7 +432,7 @@ gboolean jabber_bs_recv_handshake( gpointer data, gint fd, b_input_condition con
 
 			bt->phase = BS_PHASE_REQUEST;
 
-			bt->tf->watch_in = b_input_add( fd, GAIM_INPUT_READ, jabber_bs_recv_handshake, bt );
+			bt->tf->watch_in = b_input_add( fd, B_EV_IO_READ, jabber_bs_recv_handshake, bt );
 
 			bt->tf->watch_out = 0;
 			return FALSE;
@@ -589,7 +589,7 @@ void jabber_bs_recv_answer_request( struct bs_transfer *bt )
 		  bt->sh->port );
 
 	tf->ft->data = tf;
-	tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_recv_read, bt );
+	tf->watch_in = b_input_add( tf->fd, B_EV_IO_READ, jabber_bs_recv_read, bt );
 	tf->ft->write_request = jabber_bs_recv_write_request;
 
 	reply = xt_new_node( "streamhost-used", NULL, NULL );
@@ -631,7 +631,7 @@ gboolean jabber_bs_recv_read( gpointer data, gint fd, b_input_condition cond )
 
 		if( ( ret == -1 ) && ( errno == EAGAIN ) )
 		{
-			tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_recv_read, bt );
+			tf->watch_in = b_input_add( tf->fd, B_EV_IO_READ, jabber_bs_recv_read, bt );
 			return FALSE;
 		}
 	}
@@ -707,7 +707,7 @@ gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, unsigned int l
 	if( tf->byteswritten >= ft->file_size )
 		imcb_file_finished( ft );
 	else
-		bt->tf->watch_out = b_input_add( tf->fd, GAIM_INPUT_WRITE, jabber_bs_send_can_write, bt );
+		bt->tf->watch_out = b_input_add( tf->fd, B_EV_IO_WRITE, jabber_bs_send_can_write, bt );
 		
 	return TRUE;
 }
@@ -918,7 +918,7 @@ void jabber_si_set_proxies( struct bs_transfer *bt )
 				strcpy( sh->port, port );
 				bt->streamhosts = g_slist_append( bt->streamhosts, sh );
 
-				bt->tf->watch_in = b_input_add( tf->fd, GAIM_INPUT_READ, jabber_bs_send_handshake, bt );
+				bt->tf->watch_in = b_input_add( tf->fd, B_EV_IO_READ, jabber_bs_send_handshake, bt );
 				bt->connect_timeout = b_timeout_add( JABBER_BS_LISTEN_TIMEOUT * 1000, jabber_bs_connect_timeout, bt );
 			} else {
 				imcb_log( tf->ic, "Transferring file %s: couldn't listen locally(non fatal, check your ft_listen setting in bitlbee.conf): %s",
@@ -1055,7 +1055,7 @@ gboolean jabber_bs_send_handshake( gpointer data, gint fd, b_input_condition con
 			
 			bt->phase = BS_PHASE_CONNECTED;
 
-			bt->tf->watch_in = b_input_add( fd, GAIM_INPUT_READ, jabber_bs_send_handshake, bt );
+			bt->tf->watch_in = b_input_add( fd, B_EV_IO_READ, jabber_bs_send_handshake, bt );
 			return FALSE;
 		}
 	case BS_PHASE_CONNECTED:

@@ -179,6 +179,11 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 			buf = g_strdup( text );
 			i = strlen( buf );
 		}
+		else if( strcmp( text, SB_KEEPALIVE_MESSAGE ) == 0 )
+		{
+			buf = g_strdup( SB_KEEPALIVE_HEADERS );
+			i = strlen( buf );
+		}
 		else
 		{
 			buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 + 1 );
@@ -255,6 +260,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 	debug( "Destroying switchboard: %s", sb->who ? sb->who : sb->key ? sb->key : "" );
 	
 	msn_msgq_purge( ic, &sb->msgq );
+	msn_sb_stop_keepalives( sb );
 	
 	if( sb->key ) g_free( sb->key );
 	if( sb->who ) g_free( sb->who );
@@ -314,7 +320,7 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, ic->acc->user, sb->key, sb->session );
 	
 	if( msn_sb_write( sb, buf, strlen( buf ) ) )
-		sb->inp = b_input_add( sb->fd, GAIM_INPUT_READ, msn_sb_callback, sb );
+		sb->inp = b_input_add( sb->fd, B_EV_IO_READ, msn_sb_callback, sb );
 	else
 		debug( "Error %d while connecting to switchboard server", 2 );
 	
@@ -327,9 +333,13 @@ static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition c
 	struct im_connection *ic = sb->ic;
 	struct msn_data *md = ic->proto_data;
 	
-	if( msn_handler( sb->handler ) == -1 )
+	if( msn_handler( sb->handler ) != -1 )
+		return TRUE;
+	
+	if( sb->msgq != NULL )
 	{
 		time_t now = time( NULL );
+		char buf[1024];
 		
 		if( now - md->first_sb_failure > 600 )
 		{
@@ -346,37 +356,28 @@ static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition c
 			imcb_log( ic, "Warning: Many switchboard failures on MSN connection. "
 			              "There might be problems delivering your messages." );
 		
-		if( sb->msgq != NULL )
+		if( md->msgq == NULL )
 		{
-			char buf[1024];
-			
-			if( md->msgq == NULL )
-			{
-				md->msgq = sb->msgq;
-			}
-			else
-			{
-				GSList *l;
-				
-				for( l = md->msgq; l->next; l = l->next );
-				l->next = sb->msgq;
-			}
-			sb->msgq = NULL;
-			
-			debug( "Moved queued messages back to the main queue, creating a new switchboard to retry." );
-			g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
-			if( !msn_write( ic, buf, strlen( buf ) ) )
-				return FALSE;
+			md->msgq = sb->msgq;
 		}
+		else
+		{
+			GSList *l;
+			
+			for( l = md->msgq; l->next; l = l->next );
+			l->next = sb->msgq;
+		}
+		sb->msgq = NULL;
 		
-		msn_sb_destroy( sb );
-		
-		return FALSE;
+		debug( "Moved queued messages back to the main queue, "
+		       "creating a new switchboard to retry." );
+		g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
+		if( !msn_write( ic, buf, strlen( buf ) ) )
+			return FALSE;
 	}
-	else
-	{
-		return TRUE;
-	}
+	
+	msn_sb_destroy( sb );
+	return FALSE;
 }
 
 static int msn_sb_command( gpointer data, char **cmd, int num_parts )
@@ -476,6 +477,8 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		sb->ready = 1;
+		
+		msn_sb_start_keepalives( sb, FALSE );
 	}
 	else if( strcmp( cmd[0], "CAL" ) == 0 )
 	{
@@ -524,6 +527,8 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 				
 				sb->msgq = g_slist_remove( sb->msgq, m );
 			}
+			
+			msn_sb_start_keepalives( sb, FALSE );
 			
 			return( st );
 		}
@@ -586,6 +591,8 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		
 		if( sb->who )
 		{
+			msn_sb_stop_keepalives( sb );
+			
 			/* This is a single-person chat, and the other person is leaving. */
 			g_free( sb->who );
 			sb->who = NULL;
@@ -747,4 +754,34 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 	}
 	
 	return( 1 );
+}
+
+static gboolean msn_sb_keepalive( gpointer data, gint source, b_input_condition cond )
+{
+	struct msn_switchboard *sb = data;
+	return sb->ready && msn_sb_sendmessage( sb, SB_KEEPALIVE_MESSAGE );
+}
+
+void msn_sb_start_keepalives( struct msn_switchboard *sb, gboolean initial )
+{
+	struct buddy *b;
+	
+	if( sb && sb->who && sb->keepalive == 0 &&
+	    ( b = imcb_find_buddy( sb->ic, sb->who ) ) && !b->present &&
+	    set_getbool( &sb->ic->acc->set, "switchboard_keepalives" ) )
+	{
+		if( initial )
+			msn_sb_keepalive( sb, 0, 0 );
+		
+		sb->keepalive = b_timeout_add( 20000, msn_sb_keepalive, sb );
+	}
+}
+
+void msn_sb_stop_keepalives( struct msn_switchboard *sb )
+{
+	if( sb && sb->keepalive > 0 )
+	{
+		b_event_remove( sb->keepalive );
+		sb->keepalive = 0;
+	}
 }

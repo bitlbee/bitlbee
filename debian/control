@@ -3,23 +3,53 @@ Section: net
 Priority: optional
 Maintainer: Wilmer van der Gaast <wilmer@gaast.net>
 Uploaders: Jelmer Vernooij <jelmer@samba.org>
-Standards-Version: 3.8.0
-Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | libnss-dev (>= 1.6), debconf-2.0, po-debconf
+Standards-Version: 3.8.4
+Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | libnss-dev (>= 1.6), po-debconf, libpurple-dev, debhelper (>= 7)
 Homepage: http://www.bitlbee.org/
 Vcs-Bzr: http://code.bitlbee.org/bitlbee/
 DM-Upload-Allowed: yes
 
 Package: bitlbee
 Architecture: any
-Depends: ${shlibs:Depends}, adduser, net-tools, ${debconf-depends}, debianutils (>= 1.16)
-Description: An IRC to other chat networks gateway
+Depends: ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Conflicts: bitlbee-libpurple
+Replaces: bitlbee-libpurple
+Description: An IRC to other chat networks gateway (default version)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
 
+Package: bitlbee-libpurple
+Architecture: any
+Depends: ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Conflicts: bitlbee
+Replaces: bitlbee
+Description: An IRC to other chat networks gateway (using libpurple)
+ This program can be used as an IRC server which forwards everything you
+ say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
+ .
+ This package contains a version of BitlBee that uses the libpurple instant
+ messaging library instead of built-in code, which adds support for more IM
+ protocols (all protocols supported by Pidgin/Finch) and features (like file
+ transfers), at the price of being less lightweight.
+ .
+ This variant may not be very suitable for BitlBee instances used by many
+ (tens or hundreds) of clients.
+
+Package: bitlbee-common
+Architecture: all
+Depends: ${misc:Depends}, net-tools
+Replaces: bitlbee
+Description: An IRC to other chat networks gateway (common files/docs)
+ This program can be used as an IRC server which forwards everything you
+ say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
+ .
+ This package contains common files (mostly documentation) for bitlbee and
+ bitlbee-libpurple.
+
 Package: bitlbee-dev
 Architecture: all
-Depends: bitlbee (>= ${source:Version}), bitlbee (<< ${source:Version}.1~)
-Description: An IRC to other chat networks gateway
+Depends: ${misc:Depends}, bitlbee (>= ${bee:Version}), bitlbee (<< ${bee:Version}.1~)
+Description: An IRC to other chat networks gateway (dev files)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber, ICQ, AIM, MSN and Yahoo.
  .

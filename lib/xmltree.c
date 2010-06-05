@@ -448,7 +448,11 @@ struct xt_node *xt_find_node( struct xt_node *node, const char *name )
 {
 	while( node )
 	{
-		if( g_strcasecmp( node->name, name ) == 0 )
+		char *colon;
+		
+		if( g_strcasecmp( node->name, name ) == 0 ||
+		    ( ( colon = strchr( node->name, ':' ) ) &&
+		      g_strcasecmp( colon + 1, name ) == 0 ) )
 			break;
 		
 		node = node->next;
@@ -460,6 +464,7 @@ struct xt_node *xt_find_node( struct xt_node *node, const char *name )
 char *xt_find_attr( struct xt_node *node, const char *key )
 {
 	int i;
+	char *colon;
 	
 	if( !node )
 		return NULL;
@@ -467,6 +472,21 @@ char *xt_find_attr( struct xt_node *node, const char *key )
 	for( i = 0; node->attr[i].key; i ++ )
 		if( g_strcasecmp( node->attr[i].key, key ) == 0 )
 			break;
+	
+	/* This is an awful hack that only takes care of namespace prefixes
+	   inside a tag. Since IMHO excessive namespace usage in XMPP is
+	   massive overkill anyway (this code exists for almost four years
+	   now and never really missed it): Meh. */
+	if( !node->attr[i].key && strcmp( key, "xmlns" ) == 0 &&
+	    ( colon = strchr( node->name, ':' ) ) )
+	{
+		*colon = '\0';
+		for( i = 0; node->attr[i].key; i ++ )
+			if( strncmp( node->attr[i].key, "xmlns:", 6 ) == 0 &&
+			    strcmp( node->attr[i].key + 6, node->name ) == 0 )
+				break;
+		*colon = ':';
+	}
 	
 	return node->attr[i].value;
 }

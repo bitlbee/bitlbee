@@ -58,7 +58,7 @@ void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
 
 b_input_condition ssl_getdirection( void *conn )
 {
-	return GAIM_INPUT_READ;
+	return B_EV_IO_READ;
 }
 
 int ssl_pending( void *conn )

@@ -7,9 +7,12 @@
 ### DEFINITIONS
 
 -include ../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)lib/
+endif
 
 # [SH] Program variables
-objects = arc.o base64.o $(EVENT_HANDLER) http_client.o ini.o md5.o misc.o proxy.o sha1.o $(SSL_CLIENT) url.o xmltree.o ftutil.o
+objects = arc.o base64.o $(EVENT_HANDLER) ftutil.o http_client.o ini.o md5.o misc.o oauth.o proxy.o sha1.o $(SSL_CLIENT) url.o xmltree.o
 
 CFLAGS += -Wall
 LFLAGS += -r
@@ -36,6 +39,6 @@ lib.o: $(objects) $(subdirs)
 
 $(objects): ../Makefile.settings Makefile
 
-$(objects): %.o: %.c
+$(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@

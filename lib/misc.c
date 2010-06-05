@@ -78,6 +78,41 @@ time_t get_time(int year, int month, int day, int hour, int min, int sec)
 	return mktime(&tm);
 }
 
+time_t mktime_utc( struct tm *tp )
+{
+	struct tm utc;
+	time_t res, tres;
+	
+	tp->tm_isdst = -1;
+	res = mktime( tp );
+	/* Problem is, mktime() just gave us the GMT timestamp for the
+	   given local time... While the given time WAS NOT local. So
+	   we should fix this now.
+	   
+	   Now I could choose between messing with environment variables
+	   (kludgy) or using timegm() (not portable)... Or doing the
+	   following, which I actually prefer...
+	   
+	   tzset() may also work but in other places I actually want to
+	   use local time.
+	   
+	   FFFFFFFFFFFFFFFFFFFFFUUUUUUUUUUUUUUUUUUUU!! */
+	gmtime_r( &res, &utc );
+	utc.tm_isdst = -1;
+	if( utc.tm_hour == tp->tm_hour && utc.tm_min == tp->tm_min )
+		/* Sweet! We're in UTC right now... */
+		return res;
+	
+	tres = mktime( &utc );
+	res += res - tres;
+	
+	/* Yes, this is a hack. And it will go wrong around DST changes.
+	   BUT this is more likely to be threadsafe than messing with
+	   environment variables, and possibly more portable... */
+	
+	return res;
+}
+
 typedef struct htmlentity
 {
 	char code[7];
@@ -270,8 +305,7 @@ void http_encode( char *s )
 	
 	for( i = j = 0; t[i]; i ++, j ++ )
 	{
-		/* if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' ) */
-		if( !isalnum( t[i] ) )
+		if( !isalnum( t[i] ) && !strchr( "._-~", t[i] ) )
 		{
 			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
 			j += 2;

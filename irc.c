@@ -51,18 +51,34 @@ static char *set_eval_password( set_t *set, char *value )
 static char *set_eval_charset( set_t *set, char *value )
 {
 	irc_t *irc = set->data;
+	char *test;
+	gsize test_bytes = 0;
 	GIConv ic, oc;
 
 	if( g_strcasecmp( value, "none" ) == 0 )
 		value = g_strdup( "utf-8" );
 
-	if( ( ic = g_iconv_open( "utf-8", value ) ) == (GIConv) -1 )
+	if( ( oc = g_iconv_open( value, "utf-8" ) ) == (GIConv) -1 )
 	{
 		return NULL;
 	}
-	if( ( oc = g_iconv_open( value, "utf-8" ) ) == (GIConv) -1 )
+	
+	/* Do a test iconv to see if the user picked an IRC-compatible
+	   charset (for example utf-16 goes *horribly* wrong). */
+	if( ( test = g_convert_with_iconv( " ", 1, oc, NULL, &test_bytes, NULL ) ) == NULL ||
+	    test_bytes > 1 )
 	{
-		g_iconv_close( ic );
+		g_free( test );
+		g_iconv_close( oc );
+		irc_usermsg( irc, "Unsupported character set: The IRC protocol "
+		                  "only supports 8-bit character sets." );
+		return NULL;
+	}
+	g_free( test );
+	
+	if( ( ic = g_iconv_open( "utf-8", value ) ) == (GIConv) -1 )
+	{
+		g_iconv_close( oc );
 		return NULL;
 	}
 	
@@ -108,7 +124,7 @@ irc_t *irc_new( int fd )
 	irc->fd = fd;
 	sock_make_nonblocking( irc->fd );
 	
-	irc->r_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_READ, bitlbee_io_current_client_read, irc );
+	irc->r_watch_source_id = b_input_add( irc->fd, B_EV_IO_READ, bitlbee_io_current_client_read, irc );
 	
 	irc->status = USTATUS_OFFLINE;
 	irc->last_pong = gettime();
@@ -174,6 +190,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "debug", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "default_target", "root", NULL, irc );
 	s = set_add( &irc->set, "display_namechanges", "false", set_eval_bool, irc );
+	s = set_add( &irc->set, "display_timestamps", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "handle_unknown", "root", NULL, irc );
 	s = set_add( &irc->set, "lcnicks", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "ops", "both", set_eval_ops, irc );
@@ -183,10 +200,12 @@ irc_t *irc_new( int fd )
 	s = set_add( &irc->set, "query_order", "lifo", NULL, irc );
 	s = set_add( &irc->set, "root_nick", irc->mynick, set_eval_root_nick, irc );
 	s = set_add( &irc->set, "save_on_quit", "true", set_eval_bool, irc );
+	s = set_add( &irc->set, "show_offline", "false", set_eval_bool, irc );
 	s = set_add( &irc->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	s = set_add( &irc->set, "status", NULL,  set_eval_away_status, irc );
 	s->flags |= SET_NULL_OK;
 	s = set_add( &irc->set, "strip_html", "true", NULL, irc );
+	s = set_add( &irc->set, "timezone", "local", set_eval_timezone, irc );
 	s = set_add( &irc->set, "to_char", ": ", set_eval_to_char, irc );
 	s = set_add( &irc->set, "typing_notice", "false", set_eval_bool, irc );
 	
@@ -194,6 +213,8 @@ irc_t *irc_new( int fd )
 	
 	/* Evaluator sets the iconv/oconv structures. */
 	set_eval_charset( set_find( &irc->set, "charset" ), set_getstr( &irc->set, "charset" ) );
+	
+	nogaim_init();
 	
 	return( irc );
 }
@@ -676,10 +697,10 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 		   the queue. If it's FALSE, we emptied the buffer and saved ourselves some work
 		   in the event queue. */
 		/* Really can't be done as long as the code doesn't do error checking very well:
-		if( bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE ) ) */
+		if( bitlbee_io_current_client_write( irc, irc->fd, B_EV_IO_WRITE ) ) */
 		
 		/* So just always do it via the event handler. */
-		irc->w_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
+		irc->w_watch_source_id = b_input_add( irc->fd, B_EV_IO_WRITE, bitlbee_io_current_client_write, irc );
 	}
 	
 	return;
@@ -705,7 +726,7 @@ void irc_write_all( int now, char *format, ... )
 		irc_vawrite( temp->data, format, params );
 		if( now )
 		{
-			bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE );
+			bitlbee_io_current_client_write( irc, irc->fd, B_EV_IO_WRITE );
 		}
 		temp = temp->next;
 	}

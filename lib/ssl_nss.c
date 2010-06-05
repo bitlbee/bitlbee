@@ -192,5 +192,5 @@ int ssl_getfd( void *conn )
 b_input_condition ssl_getdirection( void *conn )
 {
 	/* Just in case someone calls us, let's return the most likely case: */
-	return GAIM_INPUT_READ;
+	return B_EV_IO_READ;
 }
