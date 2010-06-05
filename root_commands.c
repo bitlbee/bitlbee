@@ -979,6 +979,11 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Invalid account" );
 			return;
 		}
+		else if( !acc->prpl->chat_join )
+		{
+			irc_usermsg( irc, "Named chatrooms not supported on that account." );
+			return;
+		}
 		
 		if( cmd[4] == NULL )
 		{
@@ -998,13 +1003,19 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			channel = s;
 		}
 		
-		if( ( ic = irc_channel_new( irc, channel ) ) )
+		if( ( ic = irc_channel_new( irc, channel ) ) &&
+		    set_setstr( &ic->set, "chat_type", "room" ) &&
+		    set_setstr( &ic->set, "account", cmd[2] ) &&
+		    set_setstr( &ic->set, "room", cmd[3] ) )
 		{
-			struct irc_groupchat_stub *igs;
+			irc_usermsg( irc, "Chatroom successfully added." );
+		}
+		else
+		{
+			if( ic )
+				irc_channel_free( ic );
 			
-			ic->data = igs = g_new0( struct irc_groupchat_stub, 1 );
-			igs->acc = acc;
-			igs->room = g_strdup( cmd[3] );
+			irc_usermsg( irc, "Could not add chatroom." );
 		}
 	}
 	/*

@@ -28,7 +28,8 @@
 static char *set_eval_channel_type( set_t *set, char *value );
 static gint irc_channel_user_cmp( gconstpointer a_, gconstpointer b_ );
 static const struct irc_channel_funcs control_channel_funcs;
-static const struct irc_channel_funcs groupchat_stub_funcs;
+
+extern const struct irc_channel_funcs irc_channel_im_chat_funcs;
 
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 {
@@ -103,7 +104,7 @@ static char *set_eval_channel_type( set_t *set, char *value )
 	if( strcmp( value, "control" ) == 0 )
 		new = &control_channel_funcs;
 	else if( strcmp( value, "chat" ) == 0 )
-		new = &groupchat_stub_funcs;
+		new = &irc_channel_im_chat_funcs;
 	else
 		return SET_INVALID;
 	
@@ -387,49 +388,4 @@ static const struct irc_channel_funcs control_channel_funcs = {
 	
 	control_channel_init,
 	control_channel_free,
-};
-
-/* Groupchat stub: Only handles /INVITE at least for now. */
-static gboolean groupchat_stub_invite( irc_channel_t *ic, irc_user_t *iu )
-{
-	bee_user_t *bu = iu->bu;
-	
-	if( iu->bu->ic->acc->prpl->chat_with )
-	{
-		ic->flags |= IRC_CHANNEL_CHAT_PICKME;
-		iu->bu->ic->acc->prpl->chat_with( bu->ic, bu->handle );
-		ic->flags &= ~IRC_CHANNEL_CHAT_PICKME;
-		return TRUE;
-	}
-	else
-	{
-		irc_send_num( ic->irc, 482, "%s :IM protocol does not support room invitations", ic->name );
-		return FALSE;
-	}
-}
-
-static gboolean groupchat_stub_join( irc_channel_t *ic )
-{
-	struct irc_groupchat_stub *igs = ic->data;
-	
-	if( igs && igs->acc->ic && igs->acc->prpl->chat_join )
-	{
-		ic->flags |= IRC_CHANNEL_CHAT_PICKME;
-		igs->acc->prpl->chat_join( igs->acc->ic, igs->room, ic->irc->user->nick, NULL );
-		ic->flags &= ~IRC_CHANNEL_CHAT_PICKME;
-		return FALSE;
-	}
-	else
-	{
-		irc_send_num( ic->irc, 403, "%s :Can't join channel, account offline?", ic->name );
-		return FALSE;
-	}
-}
-
-static const struct irc_channel_funcs groupchat_stub_funcs = {
-	NULL,
-	groupchat_stub_join,
-	NULL,
-	NULL,
-	groupchat_stub_invite,
 };

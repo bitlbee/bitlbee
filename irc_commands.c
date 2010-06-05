@@ -398,9 +398,7 @@ static void irc_cmd_invite( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( ic->f->invite )
-		ic->f->invite( ic, iu );
-	else
+	if( !ic->f->invite || !ic->f->invite( ic, iu ) )
 		irc_send_num( irc, 482, "%s :Can't invite people here", cmd[2] );
 }
 

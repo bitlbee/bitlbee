@@ -317,7 +317,7 @@ static const struct irc_user_funcs irc_user_im_funcs = {
 
 
 /* IM->IRC: Groupchats */
-static const struct irc_channel_funcs irc_channel_im_chat_funcs;
+const struct irc_channel_funcs irc_channel_im_chat_funcs;
 
 static gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
 {
@@ -340,7 +340,7 @@ static gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
 	if( l == NULL ) for( i = 0; i <= 999; i ++ )
 	{
 		char name[16];
-		sprintf( name, "&chat_%03d", i );
+		sprintf( name, "#chat_%03d", i );
 		if( ( ic = irc_channel_new( irc, name ) ) )
 			break;
 	}
@@ -350,7 +350,6 @@ static gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
 	
 	c->ui_data = ic;
 	ic->data = c;
-	ic->f = &irc_channel_im_chat_funcs;
 	
 	topic = g_strdup_printf( "BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!", c->title );
 	irc_channel_set_topic( ic, topic, irc->root );
@@ -366,7 +365,10 @@ static gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
 	if( ic->flags & IRC_CHANNEL_JOINED )
 		irc_channel_printf( ic, "Cleaning up channel, bye!" );
 	
-	irc_channel_free( ic );
+	/* irc_channel_free( ic ); */
+	
+	irc_channel_del_user( ic, ic->irc->user );
+	ic->data = NULL;
 	
 	return TRUE;
 }
@@ -467,33 +469,70 @@ static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg
 {
 	struct groupchat *c = ic->data;
 	
+	if( c == NULL )
+		return FALSE;
+	
 	bee_chat_msg( ic->irc->b, c, msg, 0 );
 	
 	return TRUE;
+}
+
+static gboolean bee_irc_channel_chat_join( irc_channel_t *ic )
+{
+	char *acc_s, *room;
+	account_t *acc;
 	
+	if( strcmp( set_getstr( &ic->set, "chat_type" ), "room" ) != 0 )
+		return TRUE;
+	
+	if( ( acc_s = set_getstr( &ic->set, "account" ) ) &&
+	    ( room = set_getstr( &ic->set, "room" ) ) &&
+	    ( acc = account_get( ic->irc->b, acc_s ) ) &&
+	    acc->ic && acc->prpl->chat_join )
+	{
+		char *nick;
+		
+		if( !( nick = set_getstr( &ic->set, "nick" ) ) )
+			nick = ic->irc->user->nick;
+		
+		ic->flags |= IRC_CHANNEL_CHAT_PICKME;
+		acc->prpl->chat_join( acc->ic, room, nick, NULL );
+		ic->flags &= ~IRC_CHANNEL_CHAT_PICKME;
+		
+		return FALSE;
+	}
+	else
+	{
+		irc_send_num( ic->irc, 403, "%s :Can't join channel, account offline?", ic->name );
+		return FALSE;
+	}
 }
 
 static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
 {
 	struct groupchat *c = ic->data;
 	
-	if( c->ic->acc->prpl->chat_leave )
+	if( c && c->ic->acc->prpl->chat_leave )
 		c->ic->acc->prpl->chat_leave( c );
 	
 	return TRUE;
-	
 }
 
 static gboolean bee_irc_channel_chat_topic( irc_channel_t *ic, const char *new )
 {
 	struct groupchat *c = ic->data;
-	char *topic = g_strdup( new ); /* TODO: Need more const goodness here, sigh */
+	
+	if( c == NULL )
+		return FALSE;
 	
 	if( c->ic->acc->prpl->chat_topic == NULL )
 		irc_send_num( ic->irc, 482, "%s :IM network does not support channel topics", ic->name );
 	else
 	{
+		/* TODO: Need more const goodness here, sigh */
+		char *topic = g_strdup( new );
 		c->ic->acc->prpl->chat_topic( c, topic );
+		g_free( topic );
 		return TRUE;
 	}
 		
@@ -503,23 +542,82 @@ static gboolean bee_irc_channel_chat_topic( irc_channel_t *ic, const char *new )
 static gboolean bee_irc_channel_chat_invite( irc_channel_t *ic, irc_user_t *iu )
 {
 	struct groupchat *c = ic->data;
+	bee_user_t *bu = iu->bu;
 	
-	if( iu->bu->ic != c->ic )
-		irc_send_num( ic->irc, 482, "%s :Can't mix different IM networks in one groupchat", ic->name );
-	else if( c->ic->acc->prpl->chat_invite )
-		c->ic->acc->prpl->chat_invite( c, iu->bu->handle, NULL );
+	if( bu == NULL )
+		return FALSE;
+	
+	if( c )
+	{
+		if( iu->bu->ic != c->ic )
+			irc_send_num( ic->irc, 482, "%s :Can't mix different IM networks in one groupchat", ic->name );
+		else if( c->ic->acc->prpl->chat_invite )
+			c->ic->acc->prpl->chat_invite( c, iu->bu->handle, NULL );
+		else
+			irc_send_num( ic->irc, 482, "%s :IM protocol does not support room invitations", ic->name );
+	}
+	else if( bu->ic->acc->prpl->chat_with &&
+	         strcmp( set_getstr( &ic->set, "chat_type" ), "groupchat" ) == 0 )
+	{
+		ic->flags |= IRC_CHANNEL_CHAT_PICKME;
+		iu->bu->ic->acc->prpl->chat_with( bu->ic, bu->handle );
+		ic->flags &= ~IRC_CHANNEL_CHAT_PICKME;
+	}
 	else
+	{
 		irc_send_num( ic->irc, 482, "%s :IM protocol does not support room invitations", ic->name );
+	}
 	
 	return TRUE;
 }
 
-static const struct irc_channel_funcs irc_channel_im_chat_funcs = {
+static char *set_eval_room_account( set_t *set, char *value );
+
+static gboolean bee_irc_channel_init( irc_channel_t *ic )
+{
+	set_add( &ic->set, "account", NULL, set_eval_room_account, ic );
+	set_add( &ic->set, "chat_type", "groupchat", NULL, ic );
+	set_add( &ic->set, "nick", NULL, NULL, ic );
+	set_add( &ic->set, "room", NULL, NULL, ic );
+	
+	return TRUE;
+}
+
+static char *set_eval_room_account( set_t *set, char *value )
+{
+	struct irc_channel *ic = set->data;
+	account_t *acc;
+	
+	if( !( acc = account_get( ic->irc->b, value ) ) )
+		return SET_INVALID;
+	else if( !acc->prpl->chat_join )
+	{
+		irc_usermsg( ic->irc, "Named chatrooms not supported on that account." );
+		return SET_INVALID;
+	}
+	
+	return g_strdup_printf( "%s(%s)", acc->prpl->name, acc->user );
+}
+
+static gboolean bee_irc_channel_free( irc_channel_t *ic )
+{
+	set_del( &ic->set, "account" );
+	set_del( &ic->set, "chat_type" );
+	set_del( &ic->set, "nick" );
+	set_del( &ic->set, "room" );
+	
+	return TRUE;
+}
+
+const struct irc_channel_funcs irc_channel_im_chat_funcs = {
 	bee_irc_channel_chat_privmsg,
-	NULL, /* join */
+	bee_irc_channel_chat_join,
 	bee_irc_channel_chat_part,
 	bee_irc_channel_chat_topic,
 	bee_irc_channel_chat_invite,
+
+	bee_irc_channel_init,
+	bee_irc_channel_free,
 };
 
 
