@@ -258,6 +258,16 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 	return TRUE;
 }
 
+static gboolean bee_irc_user_group( bee_t *bee, bee_user_t *bu )
+{
+	irc_user_t *iu = (irc_user_t *) bu->ui_data;
+	irc_t *irc = (irc_t *) bee->ui_data;
+	
+	bee_irc_channel_update( irc, NULL, iu );
+	
+	return TRUE;
+}
+
 /* IRC->IM calls */
 
 static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
@@ -543,6 +553,7 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_user_new,
 	bee_irc_user_free,
 	bee_irc_user_fullname,
+	bee_irc_user_group,
 	bee_irc_user_status,
 	bee_irc_user_msg,
 	bee_irc_user_typing,
