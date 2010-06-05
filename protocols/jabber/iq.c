@@ -390,9 +390,8 @@ static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *
 		{
 			if( ( strcmp( sub, "both" ) == 0 || strcmp( sub, "to" ) == 0 ) )
 			{
-				if( initial || bee_user_by_handle( ic->bee, ic, jid ) == NULL )
-					imcb_add_buddy( ic, jid, ( group && group->text_len ) ?
-					                           group->text : NULL );
+				imcb_add_buddy( ic, jid, ( group && group->text_len ) ?
+				                           group->text : NULL );
 				
 				if( name )
 					imcb_rename_buddy( ic, jid, name );
