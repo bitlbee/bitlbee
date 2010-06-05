@@ -1018,19 +1018,19 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Could not add chatroom." );
 		}
 	}
-	/*
 	else if( g_strcasecmp( cmd[1], "with" ) == 0 )
 	{
-		user_t *u;
+		irc_user_t *iu;
 		
 		MIN_ARGS( 2 );
 		
-		if( ( u = user_find( irc, cmd[2] ) ) && u->ic && u->ic->acc->prpl->chat_with )
+		if( ( iu = irc_user_by_name( irc, cmd[2] ) ) &&
+		    iu->bu && iu->bu->ic->acc->prpl->chat_with )
 		{
-			if( !u->ic->acc->prpl->chat_with( u->ic, u->handle ) )
+			if( !iu->bu->ic->acc->prpl->chat_with( iu->bu->ic, iu->bu->handle ) )
 			{
 				irc_usermsg( irc, "(Possible) failure while trying to open "
-				                  "a groupchat with %s.", u->nick );
+				                  "a groupchat with %s.", iu->nick );
 			}
 		}
 		else
@@ -1038,7 +1038,6 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Can't open a groupchat with %s.", cmd[2] );
 		}
 	}
-	*/
 	else
 	{
 		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat", cmd[1] );
