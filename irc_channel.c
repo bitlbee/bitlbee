@@ -25,6 +25,7 @@
 
 #include "bitlbee.h"
 
+static char *set_eval_channel_type( set_t *set, char *value );
 static gint irc_channel_user_cmp( gconstpointer a_, gconstpointer b_ );
 static const struct irc_channel_funcs control_channel_funcs;
 static const struct irc_channel_funcs groupchat_stub_funcs;
@@ -48,17 +49,12 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 	
 	irc->channels = g_slist_prepend( irc->channels, ic );
 	
-	if( name[0] == '&' )
-		ic->f = &control_channel_funcs;
-	else /* if( name[0] == '#' ) */
-		ic->f = &groupchat_stub_funcs;
+	set_add( &ic->set, "type", "control", set_eval_channel_type, ic );
 	
-	if( ic->f->_init )
-		if( !ic->f->_init( ic ) )
-		{
-			irc_channel_free( ic );
-			return NULL;
-		}
+	if( name[0] == '&' )
+		set_setstr( &ic->set, "type", "control" );
+	else /* if( name[0] == '#' ) */
+		set_setstr( &ic->set, "type", "chat" );
 	
 	return ic;
 }
@@ -97,6 +93,30 @@ int irc_channel_free( irc_channel_t *ic )
 	g_free( ic );
 	
 	return 1;
+}
+
+static char *set_eval_channel_type( set_t *set, char *value )
+{
+	struct irc_channel *ic = set->data;
+	const struct irc_channel_funcs *new;
+	
+	if( strcmp( value, "control" ) == 0 )
+		new = &control_channel_funcs;
+	else if( strcmp( value, "chat" ) == 0 )
+		new = &groupchat_stub_funcs;
+	else
+		return SET_INVALID;
+	
+	/* TODO: Return values. */
+	if( ic->f && ic->f->_free )
+		ic->f->_free( ic );
+	
+	ic->f = new;
+	
+	if( ic->f && ic->f->_init )
+		ic->f->_init( ic );
+	
+	return value;
 }
 
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
@@ -266,19 +286,87 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 	return TRUE;
 }
 
+static char *set_eval_by_account( set_t *set, char *value );
+static char *set_eval_fill_by( set_t *set, char *value );
+static char *set_eval_by_group( set_t *set, char *value );
+
 static gboolean control_channel_init( irc_channel_t *ic )
 {
 	struct irc_control_channel *icc;
 	
+	set_add( &ic->set, "account", NULL, set_eval_by_account, ic );
+	set_add( &ic->set, "fill_by", "all", set_eval_fill_by, ic );
+	set_add( &ic->set, "group", NULL, set_eval_by_group, ic );
+	
 	ic->data = icc = g_new0( struct irc_control_channel, 1 );
 	icc->type = IRC_CC_TYPE_DEFAULT;
 	
-	if( ( icc->group = bee_group_by_name( ic->irc->b, ic->name + 1, FALSE ) ) )
-		icc->type = IRC_CC_TYPE_GROUP;
-	else if( ( icc->account = account_get( ic->irc->b, ic->name + 1 ) ) )
-		icc->type = IRC_CC_TYPE_ACCOUNT;
+	if( bee_group_by_name( ic->irc->b, ic->name + 1, FALSE ) )
+	{
+		set_setstr( &ic->set, "group", ic->name + 1 );
+		set_setstr( &ic->set, "fill_by", "group" );
+	}
+	else if( set_setstr( &ic->set, "account", ic->name + 1 ) )
+	{
+		set_setstr( &ic->set, "fill_by", "account" );
+	}
 	
+	return TRUE;
+}
+
+static char *set_eval_by_account( set_t *set, char *value )
+{
+	struct irc_channel *ic = set->data;
+	struct irc_control_channel *icc = ic->data;
+	account_t *acc;
+	
+	if( !( acc = account_get( ic->irc->b, value ) ) )
+		return SET_INVALID;
+	
+	icc->account = acc;
 	bee_irc_channel_update( ic->irc, ic, NULL );
+	return g_strdup_printf( "%s(%s)", acc->prpl->name, acc->user );
+}
+
+static char *set_eval_fill_by( set_t *set, char *value )
+{
+	struct irc_channel *ic = set->data;
+	struct irc_control_channel *icc = ic->data;
+	
+	if( strcmp( value, "all" ) == 0 )
+		icc->type = IRC_CC_TYPE_DEFAULT;
+	else if( strcmp( value, "rest" ) == 0 )
+		icc->type = IRC_CC_TYPE_REST;
+	else if( strcmp( value, "group" ) == 0 )
+		icc->type = IRC_CC_TYPE_GROUP;
+	else if( strcmp( value, "account" ) == 0 )
+		icc->type = IRC_CC_TYPE_ACCOUNT;
+	else
+		return SET_INVALID;
+	
+	return value;
+}
+
+static char *set_eval_by_group( set_t *set, char *value )
+{
+	struct irc_channel *ic = set->data;
+	struct irc_control_channel *icc = ic->data;
+	
+	icc->group = bee_group_by_name( ic->irc->b, value, TRUE );
+	bee_irc_channel_update( ic->irc, ic, NULL );
+	return g_strdup( icc->group->name );
+}
+
+static gboolean control_channel_free( irc_channel_t *ic )
+{
+	struct irc_control_channel *icc = ic->data;
+	
+	set_del( &ic->set, "account" );
+	set_del( &ic->set, "fill_by" );
+	set_del( &ic->set, "group" );
+	
+	g_free( icc );
+	ic->data = NULL;
 	
 	return TRUE;
 }
@@ -291,6 +379,7 @@ static const struct irc_channel_funcs control_channel_funcs = {
 	NULL,
 	
 	control_channel_init,
+	control_channel_free,
 };
 
 /* Groupchat stub: Only handles /INVITE at least for now. */
