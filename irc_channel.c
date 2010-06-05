@@ -310,6 +310,10 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	{
 		set_setstr( &ic->set, "fill_by", "account" );
 	}
+	else
+	{
+		bee_irc_channel_update( ic->irc, ic, NULL );
+	}
 	
 	return TRUE;
 }
@@ -324,7 +328,8 @@ static char *set_eval_by_account( set_t *set, char *value )
 		return SET_INVALID;
 	
 	icc->account = acc;
-	bee_irc_channel_update( ic->irc, ic, NULL );
+	if( icc->type == IRC_CC_TYPE_ACCOUNT )
+		bee_irc_channel_update( ic->irc, ic, NULL );
 	return g_strdup_printf( "%s(%s)", acc->prpl->name, acc->user );
 }
 
@@ -344,6 +349,7 @@ static char *set_eval_fill_by( set_t *set, char *value )
 	else
 		return SET_INVALID;
 	
+	bee_irc_channel_update( ic->irc, ic, NULL );
 	return value;
 }
 
@@ -353,7 +359,8 @@ static char *set_eval_by_group( set_t *set, char *value )
 	struct irc_control_channel *icc = ic->data;
 	
 	icc->group = bee_group_by_name( ic->irc->b, value, TRUE );
-	bee_irc_channel_update( ic->irc, ic, NULL );
+	if( icc->type == IRC_CC_TYPE_GROUP )
+		bee_irc_channel_update( ic->irc, ic, NULL );
 	return g_strdup( icc->group->name );
 }
 
