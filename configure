@@ -26,7 +26,7 @@ jabber=1
 oscar=1
 yahoo=1
 twitter=1
-purple=1
+purple=0
 
 debug=0
 strip=1
@@ -128,11 +128,12 @@ if [ "$srcdir" != "." ]; then
 	echo
 	echo "configure script run from a different directory. Will create some symlinks..."
 	if [ ! -e Makefile -o -L Makefile ]; then
-		mkdir -p $(cd "$srcdir"; find . -type d)
+		COPYDIRS="doc lib protocols tests utils"
+		mkdir -p $(cd "$srcdir"; find $COPYDIRS -type d)
 		find . -name Makefile -type l -print0 | xargs -0 rm 2> /dev/null
 		dst="$PWD"
 		cd "$srcdir"
-		for i in $(find . -name Makefile); do
+		for i in $(find . -name Makefile -type f); do
 			ln -s "$PWD${i#.}" "$dst/$i";
 		done
 		cd "$dst"
