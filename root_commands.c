@@ -485,6 +485,30 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 }
 
+static set_t **cmd_channel_set_findhead( irc_t *irc, char *id )
+{
+	irc_channel_t *ic;
+	
+	if( ( ic = irc_channel_by_name( irc, id ) ) )
+		return &ic->set;
+	else
+		return NULL;
+}
+
+static void cmd_channel( irc_t *irc, char **cmd )
+{
+	if( g_strcasecmp( cmd[1], "set" ) == 0 )
+	{
+		MIN_ARGS( 2 );
+		
+		cmd_set_real( irc, cmd + 1, cmd_channel_set_findhead, NULL );
+	}
+	else
+	{
+		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "channel", cmd[1] );
+	}
+}
+
 static void cmd_add( irc_t *irc, char **cmd )
 {
 	account_t *a;
@@ -942,7 +966,6 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 static void cmd_chat( irc_t *irc, char **cmd )
 {
 	account_t *acc;
-	struct chat *c;
 	
 	if( g_strcasecmp( cmd[1], "add" ) == 0 )
 	{
@@ -1080,6 +1103,8 @@ const command_t commands[] = {
 	{ "allow",          1, cmd_allow,          0 },
 	{ "blist",          0, cmd_blist,          0 },
 	{ "block",          1, cmd_block,          0 },
+	{ "channel",        1, cmd_channel,        0 },
+	{ "chat",           1, cmd_chat,           0 },
 	{ "drop",           1, cmd_drop,           0 },
 	{ "ft",             0, cmd_transfer,       0 },
 	{ "help",           0, cmd_help,           0 }, 
@@ -1094,6 +1119,5 @@ const command_t commands[] = {
 	{ "set",            0, cmd_set,            0 },
 	{ "transfer",       0, cmd_transfer,       0 },
 	{ "yes",            0, cmd_yesno,          0 },
-	{ "chat",           1, cmd_chat,           0 },
 	{ NULL }
 };
