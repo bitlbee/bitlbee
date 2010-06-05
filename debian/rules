@@ -10,9 +10,7 @@
 BITLBEE_CONFIGURE_FLAGS ?=
 DEBUG ?= 0
 
-ifdef BITLBEE_VERSION
-BITLBEE_FORCE_VERSION=1
-else
+ifndef BITLBEE_VERSION
 # Want to use the full package version number instead of just the release.
 BITLBEE_CONFIGURE_VERSION ?= BITLBEE_VERSION=\"$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}')\"
 endif
@@ -67,14 +65,20 @@ binary-common:
 	dh_installexamples
 	dh_installdebconf
 	dh_installinit
+ifeq ($(DH_OPTIONS),-a)
+	cp -a debian/bitlbee/etc debian/bitlbee-libpurple
+endif
 	dh_installman
 	dh_strip
 	dh_link
 	dh_compress
 	dh_fixperms
 	dh_installdeb
+ifeq ($(DH_OPTIONS),-a)
+	cp -a debian/bitlbee/DEBIAN/{post,pre}* debian/bitlbee-libpurple/DEBIAN
+endif
 	dh_shlibdeps
-ifdef BITLBEE_FORCE_VERSION
+ifdef BITLBEE_VERSION
 	dh_gencontrol -- -v1:$(BITLBEE_VERSION)-0
 else
 	dh_gencontrol
