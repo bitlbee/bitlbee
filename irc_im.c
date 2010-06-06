@@ -159,7 +159,7 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 	
 	if( !show )
 	{
-		irc_channel_del_user( ic, iu );
+		irc_channel_del_user( ic, iu, FALSE, NULL );
 	}
 	else
 	{
@@ -367,7 +367,7 @@ static gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
 	
 	/* irc_channel_free( ic ); */
 	
-	irc_channel_del_user( ic, ic->irc->user );
+	irc_channel_del_user( ic, ic->irc->user, FALSE, "Chatroom closed by server" );
 	ic->data = NULL;
 	
 	return TRUE;
@@ -411,7 +411,7 @@ static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_u
 {
 	irc_t *irc = bee->ui_data;
 	
-	irc_channel_del_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data );
+	irc_channel_del_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data, FALSE, NULL );
 	
 	return TRUE;
 }

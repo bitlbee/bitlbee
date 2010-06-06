@@ -149,7 +149,7 @@ void irc_send_join( irc_channel_t *ic, irc_user_t *iu )
 
 void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason )
 {
-	irc_write( ic->irc, ":%s!%s@%s PART %s :%s", iu->nick, iu->user, iu->host, ic->name, reason );
+	irc_write( ic->irc, ":%s!%s@%s PART %s :%s", iu->nick, iu->user, iu->host, ic->name, reason ? : "" );
 }
 
 void irc_send_names( irc_channel_t *ic )

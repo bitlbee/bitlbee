@@ -221,7 +221,7 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name );
 irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name );
 int irc_channel_free( irc_channel_t *ic );
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
-int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu );
+int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, gboolean silent, const char *msg );
 irc_channel_user_t *irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
 void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_user_flags_t flags );

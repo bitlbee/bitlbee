@@ -57,7 +57,7 @@ int irc_user_free( irc_t *irc, irc_user_t *iu )
 	g_hash_table_remove( irc->nick_user_hash, iu->key );
 	
 	for( l = irc->channels; l; l = l->next )
-		irc_channel_del_user( (irc_channel_t*) l->data, iu );
+		irc_channel_del_user( (irc_channel_t*) l->data, iu, FALSE, NULL );
 	
 	g_free( iu->nick );
 	if( iu->nick != iu->user ) g_free( iu->user );

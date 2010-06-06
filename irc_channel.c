@@ -80,7 +80,7 @@ int irc_channel_free( irc_channel_t *ic )
 	irc_t *irc = ic->irc;
 	
 	if( ic->flags & IRC_CHANNEL_JOINED )
-		irc_channel_del_user( ic, irc->user );
+		irc_channel_del_user( ic, irc->user, FALSE, "Cleaning up channel" );
 	
 	irc->channels = g_slist_remove( irc->channels, ic );
 	while( ic->users )
@@ -141,7 +141,7 @@ int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 	return 1;
 }
 
-int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu )
+int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, gboolean silent, const char *msg )
 {
 	irc_channel_user_t *icu;
 	
@@ -151,8 +151,8 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu )
 	ic->users = g_slist_remove( ic->users, icu );
 	g_free( icu );
 	
-	if( ic->flags & IRC_CHANNEL_JOINED )
-		irc_send_part( ic, iu, "" );
+	if( ic->flags & IRC_CHANNEL_JOINED && !silent )
+		irc_send_part( ic, iu, msg );
 	
 	if( iu == ic->irc->user )
 		ic->flags &= ~IRC_CHANNEL_JOINED;
