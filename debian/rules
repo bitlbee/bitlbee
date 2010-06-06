@@ -27,6 +27,8 @@ build-stamp:
 	ROOT=$$PWD; cd debian/build-libpurple; $(BITLBEE_CONFIGURE_VERSION) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --purple=1 $(BITLBEE_CONFIGURE_FLAGS)
 	$(MAKE) -C debian/build-libpurple
 
+	$(MAKE) -C doc
+
 	touch build-stamp
 
 clean:
@@ -75,7 +77,7 @@ endif
 	dh_fixperms
 	dh_installdeb
 ifeq ($(DH_OPTIONS),-a)
-	cp -a debian/bitlbee/DEBIAN/{post,pre}* debian/bitlbee-libpurple/DEBIAN
+	cp -a debian/bitlbee/DEBIAN/post* debian/bitlbee/DEBIAN/pre* debian/bitlbee-libpurple/DEBIAN
 endif
 	dh_shlibdeps
 ifdef BITLBEE_VERSION
