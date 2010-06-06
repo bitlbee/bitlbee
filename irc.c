@@ -98,8 +98,6 @@ irc_t *irc_new( int fd )
 	b->ui = &irc_ui_funcs;
 	
 	s = set_add( &b->set, "away_devoice", "true", NULL/*set_eval_away_devoice*/, irc );
-	s = set_add( &b->set, "buddy_sendbuffer", "false", set_eval_bool, irc );
-	s = set_add( &b->set, "buddy_sendbuffer_delay", "200", set_eval_int, irc );
 	s = set_add( &b->set, "charset", "utf-8", set_eval_charset, irc );
 	//s = set_add( &b->set, "control_channel", irc->channel, NULL/*set_eval_control_channel*/, irc );
 	s = set_add( &b->set, "default_target", "root", NULL, irc );
@@ -108,6 +106,10 @@ irc_t *irc_new( int fd )
 	s = set_add( &b->set, "handle_unknown", "root", NULL, irc );
 	s = set_add( &b->set, "lcnicks", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "ops", "both", NULL/*set_eval_ops*/, irc );
+	s = set_add( &b->set, "paste_buffer", "false", set_eval_bool, irc );
+	s->old_key = g_strdup( "buddy_sendbuffer" );
+	s = set_add( &b->set, "paste_buffer_delay", "200", set_eval_int, irc );
+	s->old_key = g_strdup( "buddy_sendbuffer_delay" );
 	s = set_add( &b->set, "private", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "query_order", "lifo", NULL, irc );
 	s = set_add( &b->set, "root_nick", ROOT_NICK, NULL/*set_eval_root_nick*/, irc );

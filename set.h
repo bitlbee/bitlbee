@@ -53,6 +53,7 @@ typedef struct set
 	                   object this settings belongs to. */
 	
 	char *key;
+	char *old_key;  /* Previously known as; for smooth upgrades. */
 	char *value;
 	char *def;      /* Default value. If the set_setstr() function
 	                   notices a new value is exactly the same as

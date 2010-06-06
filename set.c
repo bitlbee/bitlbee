@@ -68,7 +68,8 @@ set_t *set_find( set_t **head, char *key )
 	
 	while( s )
 	{
-		if( g_strcasecmp( s->key, key ) == 0 )
+		if( g_strcasecmp( s->key, key ) == 0 ||
+		    ( s->old_key && g_strcasecmp( s->old_key, key ) == 0 ) )
 			break;
 		s = s->next;
 	}
@@ -175,8 +176,9 @@ void set_del( set_t **head, char *key )
 			*head = s->next;
 		
 		g_free( s->key );
-		if( s->value ) g_free( s->value );
-		if( s->def ) g_free( s->def );
+		g_free( s->old_key );
+		g_free( s->value );
+		g_free( s->def );
 		g_free( s );
 	}
 }
