@@ -104,14 +104,45 @@ static void cmd_account( irc_t *irc, char **cmd );
 
 static void cmd_identify( irc_t *irc, char **cmd )
 {
-	storage_status_t status = storage_load( irc, cmd[1] );
+	storage_status_t status;
 	char *account_on[] = { "account", "on", NULL };
+	gboolean load = TRUE;
+	char *password = cmd[1];
 	
-	if( strchr( irc->umode, 'R' ) != NULL )
+	if( irc->status & USTATUS_IDENTIFIED )
 	{
 		irc_usermsg( irc, "You're already logged in." );
 		return;
 	}
+	
+	if( strncmp( cmd[1], "-no", 3 ) == 0 )
+	{
+		load = FALSE;
+		password = cmd[2];
+	}
+	else if( strncmp( cmd[1], "-force", 6 ) == 0 )
+	{
+		password = cmd[2];
+	}
+	else if( irc->b->accounts != NULL )
+	{
+		irc_usermsg( irc,
+		             "You're trying to identify yourself, but already have "
+		             "at least one IM account set up. "
+		             "Use \x02identify -noload\x02 or \x02identify -force\x02 "
+		             "instead (see \x02help identify\x02)." );
+		return;
+	}
+	
+	if( password == NULL )
+	{
+		MIN_ARGS( 2 );
+	}
+	
+	if( load )
+		status = storage_load( irc, password );
+	else
+		status = storage_check_pass( irc->user->nick, password );
 	
 	switch (status) {
 	case STORAGE_INVALID_PASSWORD:
@@ -121,11 +152,12 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "The nick is (probably) not registered" );
 		break;
 	case STORAGE_OK:
-		irc_usermsg( irc, "Password accepted, settings and accounts loaded" );
-		irc_setpass( irc, cmd[1] );
+		irc_usermsg( irc, "Password accepted%s",
+		             load ? ", settings and accounts loaded" : "" );
+		irc_setpass( irc, password );
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "+R", 1 );
-		if( set_getbool( &irc->b->set, "auto_connect" ) )
+		if( load && set_getbool( &irc->b->set, "auto_connect" ) )
 			cmd_account( irc, account_on );
 		break;
 	case STORAGE_OTHER_ERROR:

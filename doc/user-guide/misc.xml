@@ -116,4 +116,21 @@ If you want to set an away state for only one of your connections, you can use t
 
 </sect1>
 
+<sect1 id="nick_changes">
+<title>Changing your nickname</title>
+
+<para>
+BitlBee now allows you to change your nickname. So far this was not possible because it made managing saved accounts more complicated.
+</para>
+
+<para>
+The restriction no longer exists now though. When you change your nick (just using the <emphasis>/nick</emphasis> command), your logged-in status will be reset, which means any changes made to your settings/accounts will not be saved.
+</para>
+
+<para>
+To restore your logged-in status, you need to either use the <emphasis>register</emphasis> command to create an account under the new nickname, or use <emphasis>identify -noload</emphasis> to re-identify yourself under the new nickname. The <emphasis>-noload</emphasis> flag tells the command to verify your password and log you in, but not load any new settings. See <emphasis>help identify</emphasis> for more information.
+</para>
+
+</sect1>
+
 </chapter>

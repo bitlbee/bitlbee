@@ -1113,7 +1113,7 @@
 	</bitlbee-command>
 
 	<bitlbee-command name="identify">
-		<syntax>identify &lt;password&gt;</syntax>
+		<syntax>identify [-noload|-force] &lt;password&gt;</syntax>
 		<short-description>Identify yourself with your password</short-description>
 
 		<description>
@@ -1123,6 +1123,14 @@
 
 			<para>
 				Once you're registered, you can change your password using <emphasis>set password &lt;password&gt;</emphasis>.
+			</para>
+
+			<para>
+				The <emphasis>-noload</emphasis> and <emphasis>-force</emphasis> flags can be used to identify when you're logged into some IM accounts already. <emphasis>-force</emphasis> will let you identify yourself and load all saved accounts (and keep the accounts you're logged into already).
+			</para>
+			
+			<para>
+				<emphasis>-noload</emphasis> will log you in but not load any accounts and settings saved under your current nickname. These will be overwritten once you save your settings (i.e. when you disconnect).
 			</para>
 		</description>
 	</bitlbee-command>

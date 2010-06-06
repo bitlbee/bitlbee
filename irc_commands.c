@@ -88,6 +88,10 @@ static void irc_cmd_nick( irc_t *irc, char **cmd )
 			irc_setpass( irc, NULL );
 			irc->status &= ~USTATUS_IDENTIFIED;
 			irc_umode_set( irc, "-R", 1 );
+			irc_usermsg( irc, "Changing nicks resets your identify status. "
+			             "Re-identify or register a new account if you want "
+			             "your configuration to be saved. See \x02help "
+			             "nick_changes\x02." );
 		}
 		
 		irc_user_set_nick( irc->user, cmd[1] );
