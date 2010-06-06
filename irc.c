@@ -99,11 +99,10 @@ irc_t *irc_new( int fd )
 	
 	s = set_add( &b->set, "away_devoice", "true", NULL/*set_eval_away_devoice*/, irc );
 	s = set_add( &b->set, "charset", "utf-8", set_eval_charset, irc );
-	//s = set_add( &b->set, "control_channel", irc->channel, NULL/*set_eval_control_channel*/, irc );
 	s = set_add( &b->set, "default_target", "root", NULL, irc );
 	s = set_add( &b->set, "display_namechanges", "false", set_eval_bool, irc );
 	s = set_add( &b->set, "display_timestamps", "true", set_eval_bool, irc );
-	s = set_add( &b->set, "handle_unknown", "root", NULL, irc );
+	s = set_add( &b->set, "handle_unknown", "add_channel", NULL, irc );
 	s = set_add( &b->set, "lcnicks", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "ops", "both", NULL/*set_eval_ops*/, irc );
 	s = set_add( &b->set, "paste_buffer", "false", set_eval_bool, irc );

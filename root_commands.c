@@ -680,20 +680,6 @@ char *set_eval_root_nick( set_t *set, char *new_nick )
 	
 	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : SET_INVALID;
 }
-
-char *set_eval_control_channel( set_t *set, char *new_name )
-{
-	irc_t *irc = set->data;
-	
-	if( strcmp( irc->channel, new_name ) != 0 )
-	{
-		char *cmd[] = { "set_rename", irc->channel, new_name, NULL };
-		
-		cmd_rename( irc, cmd );
-	}
-	
-	return strcmp( irc->channel, new_name ) == 0 ? new_name : SET_INVALID;
-}
 #endif
 
 static void cmd_block( irc_t *irc, char **cmd )

@@ -592,7 +592,7 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="handle_unknown" type="string" scope="global">
-		<default>root</default>
+		<default>add_channel</default>
 		<possible-values>root, add, add_private, add_channel, ignore</possible-values>
 
 		<description>
