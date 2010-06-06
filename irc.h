@@ -238,6 +238,7 @@ void irc_send_motd( irc_t *irc );
 void irc_usermsg( irc_t *irc, char *format, ... );
 void irc_send_join( irc_channel_t *ic, irc_user_t *iu );
 void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason );
+void irc_send_quit( irc_user_t *iu, const char *reason );
 void irc_send_names( irc_channel_t *ic );
 void irc_send_topic( irc_channel_t *ic, gboolean topic_change );
 void irc_send_whois( irc_user_t *iu );
