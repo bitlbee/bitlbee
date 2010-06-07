@@ -287,7 +287,7 @@ static gboolean oscar_callback(gpointer data, gint source,
 
 	odata = (struct oscar_data *)ic->proto_data;
 
-	if (condition & GAIM_INPUT_READ) {
+	if (condition & B_EV_IO_READ) {
 		if (aim_get_command(odata->sess, conn) >= 0) {
 			aim_rxdispatch(odata->sess);
                                if (odata->killme)
@@ -359,7 +359,7 @@ static gboolean oscar_login_connect(gpointer data, gint source, b_input_conditio
 	}
 
 	aim_conn_completeconnect(sess, conn);
-	ic->inpa = b_input_add(conn->fd, GAIM_INPUT_READ,
+	ic->inpa = b_input_add(conn->fd, B_EV_IO_READ,
 			oscar_callback, conn);
 	
 	return FALSE;
@@ -371,6 +371,7 @@ static void oscar_init(account_t *acc)
 	
 	if (isdigit(acc->user[0])) {
 		set_add(&acc->set, "ignore_auth_requests", "false", set_eval_bool, acc);
+		set_add(&acc->set, "old_icq_auth", "false", set_eval_bool, acc);
 	}
 	
 	s = set_add(&acc->set, "server", AIM_DEFAULT_LOGIN_SERVER, set_eval_account, acc);
@@ -489,7 +490,7 @@ static gboolean oscar_bos_connect(gpointer data, gint source, b_input_condition 
 	}
 
 	aim_conn_completeconnect(sess, bosconn);
-	ic->inpa = b_input_add(bosconn->fd, GAIM_INPUT_READ,
+	ic->inpa = b_input_add(bosconn->fd, B_EV_IO_READ,
 			oscar_callback, bosconn);
 	imcb_log(ic, _("Connection established, cookie sent"));
 	
@@ -705,7 +706,7 @@ static gboolean oscar_chatnav_connect(gpointer data, gint source, b_input_condit
 	}
 
 	aim_conn_completeconnect(sess, tstconn);
-	odata->cnpa = b_input_add(tstconn->fd, GAIM_INPUT_READ,
+	odata->cnpa = b_input_add(tstconn->fd, B_EV_IO_READ,
 					oscar_callback, tstconn);
 	
 	return FALSE;
@@ -733,7 +734,7 @@ static gboolean oscar_auth_connect(gpointer data, gint source, b_input_condition
 	}
 
 	aim_conn_completeconnect(sess, tstconn);
-	odata->paspa = b_input_add(tstconn->fd, GAIM_INPUT_READ,
+	odata->paspa = b_input_add(tstconn->fd, B_EV_IO_READ,
 				oscar_callback, tstconn);
 	
 	return FALSE;
@@ -769,7 +770,7 @@ static gboolean oscar_chat_connect(gpointer data, gint source, b_input_condition
 
 	aim_conn_completeconnect(sess, ccon->conn);
 	ccon->inpa = b_input_add(tstconn->fd,
-			GAIM_INPUT_READ,
+			B_EV_IO_READ,
 			oscar_callback, tstconn);
 	odata->oscar_chats = g_slist_append(odata->oscar_chats, ccon);
 	

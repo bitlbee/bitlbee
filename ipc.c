@@ -513,7 +513,7 @@ static gboolean new_ipc_client( gpointer data, gint serversock, b_input_conditio
 		return TRUE;
 	}
 		
-	child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+	child->ipc_inpa = b_input_add( child->ipc_fd, B_EV_IO_READ, ipc_master_read, child );
 	
 	child_list = g_slist_append( child_list, child );
 	
@@ -551,7 +551,7 @@ int ipc_master_listen_socket()
 		return 0;
 	}
 	
-	b_input_add( serversock, GAIM_INPUT_READ, new_ipc_client, NULL );
+	b_input_add( serversock, B_EV_IO_READ, new_ipc_client, NULL );
 	
 	return 1;
 }
@@ -596,7 +596,7 @@ int ipc_master_load_state( char *statefile )
 			fclose( fp );
 			return 0;
 		}
-		child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+		child->ipc_inpa = b_input_add( child->ipc_fd, B_EV_IO_READ, ipc_master_read, child );
 		
 		child_list = g_slist_append( child_list, child );
 	}

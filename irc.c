@@ -25,6 +25,7 @@
 
 #include "bitlbee.h"
 #include "ipc.h"
+#include "dcc.h"
 
 GSList *irc_connection_list;
 
@@ -47,7 +48,7 @@ irc_t *irc_new( int fd )
 	irc->fd = fd;
 	sock_make_nonblocking( irc->fd );
 	
-	irc->r_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_READ, bitlbee_io_current_client_read, irc );
+	irc->r_watch_source_id = b_input_add( irc->fd, B_EV_IO_READ, bitlbee_io_current_client_read, irc );
 	
 	irc->status = USTATUS_OFFLINE;
 	irc->last_pong = gettime();
@@ -142,6 +143,8 @@ irc_t *irc_new( int fd )
 	
 	g_free( myhost );
 	g_free( host );
+	
+	nogaim_init();
 	
 	return irc;
 }
@@ -549,7 +552,7 @@ void irc_write_all( int now, char *format, ... )
 		irc_vawrite( temp->data, format, params );
 		if( now )
 		{
-			bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE );
+			bitlbee_io_current_client_write( irc, irc->fd, B_EV_IO_WRITE );
 		}
 		temp = temp->next;
 	}
@@ -604,10 +607,10 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 		   the queue. If it's FALSE, we emptied the buffer and saved ourselves some work
 		   in the event queue. */
 		/* Really can't be done as long as the code doesn't do error checking very well:
-		if( bitlbee_io_current_client_write( irc, irc->fd, GAIM_INPUT_WRITE ) ) */
+		if( bitlbee_io_current_client_write( irc, irc->fd, B_EV_IO_WRITE ) ) */
 		
 		/* So just always do it via the event handler. */
-		irc->w_watch_source_id = b_input_add( irc->fd, GAIM_INPUT_WRITE, bitlbee_io_current_client_write, irc );
+		irc->w_watch_source_id = b_input_add( irc->fd, B_EV_IO_WRITE, bitlbee_io_current_client_write, irc );
 	}
 	
 	return;
@@ -734,7 +737,6 @@ void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv )
 		           irc->user->user, irc->user->host, irc->user->nick,
 		           changes );
 }
-
 
 /* Returns 0 if everything seems to be okay, a number >0 when there was a
    timeout. The number returned is the number of seconds we received no

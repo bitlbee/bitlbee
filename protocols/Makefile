@@ -7,6 +7,9 @@
 ### DEFINITIONS
 
 -include ../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)protocols/
+endif
 
 # [SH] Program variables
 objects = account.o bee.o bee_chat.o bee_ft.o bee_user.o nogaim.o
@@ -49,6 +52,6 @@ protocols.o: $(objects) $(subdirs)
 
 $(objects): ../Makefile.settings Makefile
 
-$(objects): %.o: %.c
+$(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@

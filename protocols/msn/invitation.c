@@ -208,7 +208,7 @@ gboolean msn_ftps_connected( gpointer data, gint fd, b_input_condition cond )
 	fd = msn_file->fd;
 	sock_make_nonblocking( fd );
 
-	msn_file->r_event_id = b_input_add( fd, GAIM_INPUT_READ, msn_ftp_read, file );
+	msn_file->r_event_id = b_input_add( fd, B_EV_IO_READ, msn_ftp_read, file );
 
 	return FALSE;
 }
@@ -229,7 +229,7 @@ void msn_invitations_accept( msn_filetransfer_t *msn_file, struct msn_switchboar
 		return;
 	}
 
-	msn_file->r_event_id = b_input_add( msn_file->fd, GAIM_INPUT_READ, msn_ftps_connected, file );
+	msn_file->r_event_id = b_input_add( msn_file->fd, B_EV_IO_READ, msn_ftps_connected, file );
 
 	g_snprintf( buf, sizeof( buf ),
 		    "IP-Address: %s\r\n"
@@ -317,7 +317,7 @@ gboolean msn_ftp_connected( gpointer data, gint fd, b_input_condition cond )
 		return FALSE;
 	
 	sock_make_nonblocking( msn_file->fd );
-	msn_file->r_event_id = b_input_add( msn_file->fd, GAIM_INPUT_READ, msn_ftp_read, file );
+	msn_file->r_event_id = b_input_add( msn_file->fd, B_EV_IO_READ, msn_ftp_read, file );
 	
 	return FALSE;
 }
@@ -414,7 +414,7 @@ gboolean msn_ftps_write( file_transfer_t *file, char *buffer, unsigned int len )
 	if( ( msn_file->sbufpos < MSNFTP_PSIZE ) && 
 	    ( msn_file->data_sent + msn_file->sbufpos - 3 < file->file_size ) ) {
 		if( !msn_file->w_event_id )
-			msn_file->w_event_id = b_input_add( msn_file->fd, GAIM_INPUT_WRITE, msn_ftp_send, file );
+			msn_file->w_event_id = b_input_add( msn_file->fd, B_EV_IO_WRITE, msn_ftp_send, file );
 		return TRUE;
 	}
 
@@ -451,7 +451,7 @@ gboolean msn_ftps_write( file_transfer_t *file, char *buffer, unsigned int len )
 	} else {
 		/* we might already be listening if this is data from an overflow */
 		if( !msn_file->w_event_id )
-			msn_file->w_event_id = b_input_add( msn_file->fd, GAIM_INPUT_WRITE, msn_ftp_send, file );
+			msn_file->w_event_id = b_input_add( msn_file->fd, B_EV_IO_WRITE, msn_ftp_send, file );
 	}
 
         return TRUE;
@@ -616,7 +616,7 @@ gboolean msn_ftpr_write_request( file_transfer_t *file )
 	}
 
 	msn_file->r_event_id = 
-		b_input_add( msn_file->fd, GAIM_INPUT_READ, msn_ftp_read, file );
+		b_input_add( msn_file->fd, B_EV_IO_READ, msn_ftp_read, file );
 
 	return TRUE;
 }

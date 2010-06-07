@@ -1,4 +1,7 @@
 -include ../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)tests/
+endif
 
 LFLAGS +=-lcheck
 
@@ -18,6 +21,6 @@ check: $(test_objs) $(addprefix ../, $(main_objs)) ../protocols/protocols.o ../l
 	@echo '*' Linking $@
 	@$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS) $(EFLAGS)
 
-%.o: %.c
+%.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@

@@ -133,6 +133,7 @@ struct prpl {
 	/* You should set this to the name of your protocol.
 	 * - The user sees this name ie. when imcb_log() is used. */
 	const char *name;
+	void *data;
 
 	/* Added this one to be able to add per-account settings, don't think
 	 * it should be used for anything else. You are supposed to use the
@@ -320,6 +321,7 @@ void imc_add_block( struct im_connection *ic, char *handle );
 void imc_rem_block( struct im_connection *ic, char *handle );
 
 /* Misc. stuff */
+char *set_eval_timezone( set_t *set, char *value );
 char *set_eval_away_devoice( set_t *set, char *value );
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond );
 void cancel_auto_reconnect( struct account *a );

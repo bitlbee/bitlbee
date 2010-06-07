@@ -8,21 +8,20 @@
 
 -include ../../Makefile.settings
 ifdef SRCDIR
-SRCDIR := $(SRCDIR)protocols/oscar/
-CFLAGS += -I$(SRCDIR)
+SRCDIR := $(SRCDIR)protocols/purple/
 endif
 
 # [SH] Program variables
-objects = admin.o auth.o bos.o buddylist.o chat.o chatnav.o conn.o icq.o im.o info.o misc.o msgcookie.o rxhandlers.o rxqueue.o search.o service.o snac.o ssi.o stats.o tlv.o txqueue.o oscar_util.o oscar.o
+objects = ft.o purple.o
 
-CFLAGS += -Wall
+CFLAGS += -Wall $(PURPLE_CFLAGS)
 LFLAGS += -r
 
 # [SH] Phony targets
-all: oscar_mod.o
+all: purple_mod.o
 check: all
 lcov: check
-gcov:
+gcov: 
 	gcov *.c
 
 .PHONY: all clean distclean
@@ -40,6 +39,6 @@ $(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
-oscar_mod.o: $(objects)
-	@echo '*' Linking oscar_mod.o
-	@$(LD) $(LFLAGS) $(objects) -o oscar_mod.o
+purple_mod.o: $(objects)
+	@echo '*' Linking purple_mod.o
+	$(LD) $(LFLAGS) $(objects) -o purple_mod.o

@@ -685,7 +685,7 @@ int ext_yahoo_add_handler( int id, int fd, yahoo_input_condition cond, void *dat
 		d->data = data;
 		
 		inp->d = d;
-		d->tag = inp->h = b_input_add( fd, GAIM_INPUT_READ, (b_event_handler) byahoo_read_ready_callback, (gpointer) d );
+		d->tag = inp->h = b_input_add( fd, B_EV_IO_READ, (b_event_handler) byahoo_read_ready_callback, (gpointer) d );
 	}
 	else if( cond == YAHOO_INPUT_WRITE )
 	{
@@ -696,7 +696,7 @@ int ext_yahoo_add_handler( int id, int fd, yahoo_input_condition cond, void *dat
 		d->data = data;
 		
 		inp->d = d;
-		d->tag = inp->h = b_input_add( fd, GAIM_INPUT_WRITE, (b_event_handler) byahoo_write_ready_callback, (gpointer) d );
+		d->tag = inp->h = b_input_add( fd, B_EV_IO_WRITE, (b_event_handler) byahoo_write_ready_callback, (gpointer) d );
 	}
 	else
 	{

@@ -111,12 +111,15 @@ void register_protocol (struct prpl *p)
 struct prpl *find_protocol(const char *name)
 {
 	GList *gl;
-	for (gl = protocols; gl; gl = gl->next) 
+	
+	for( gl = protocols; gl; gl = gl->next )
  	{
  		struct prpl *proto = gl->data;
- 		if(!g_strcasecmp(proto->name, name)) 
+ 		
+ 		if( g_strcasecmp( proto->name, name ) == 0 )
 			return proto;
  	}
+ 	
  	return NULL;
 }
 
@@ -127,6 +130,7 @@ void nogaim_init()
 	extern void byahoo_initmodule();
 	extern void jabber_initmodule();
 	extern void twitter_initmodule();
+	extern void purple_initmodule();
 
 #ifdef WITH_MSN
 	msn_initmodule();
@@ -146,6 +150,10 @@ void nogaim_init()
 
 #ifdef WITH_TWITTER
 	twitter_initmodule();
+#endif
+
+#ifdef WITH_PURPLE
+	purple_initmodule();
 #endif
 
 #ifdef WITH_PLUGINS

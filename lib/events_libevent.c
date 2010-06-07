@@ -59,6 +59,7 @@ struct b_event_data
 	gint timeout;
 	b_event_handler function;
 	void *data;
+	guint flags;
 };
 
 void b_main_init()
@@ -125,9 +126,9 @@ static void b_event_passthrough( int fd, short event, void *data )
 	if( fd >= 0 )
 	{
 		if( event & EV_READ )
-			cond |= GAIM_INPUT_READ;
+			cond |= B_EV_IO_READ;
 		if( event & EV_WRITE )
-			cond |= GAIM_INPUT_WRITE;
+			cond |= B_EV_IO_WRITE;
 	}
 	
 	event_debug( "b_event_passthrough( %d, %d, 0x%x ) (%d)\n", fd, event, (int) data, b_ev->id );
@@ -149,7 +150,7 @@ static void b_event_passthrough( int fd, short event, void *data )
 		/* This event was killed already, don't touch it! */
 		return;
 	}
-	else if( !st )
+	else if( !st && !( b_ev->flags & B_EV_FLAG_FORCE_REPEAT ) )
 	{
 		event_debug( "Handler returned FALSE: " );
 		b_event_remove( id_cur );
@@ -173,8 +174,8 @@ gint b_input_add( gint fd, b_input_condition condition, b_event_handler function
 	
 	event_debug( "b_input_add( %d, %d, 0x%x, 0x%x ) ", fd, condition, function, data );
 	
-	if( ( condition & GAIM_INPUT_READ  && ( b_ev = g_hash_table_lookup( read_hash,  &fd ) ) ) ||
-	    ( condition & GAIM_INPUT_WRITE && ( b_ev = g_hash_table_lookup( write_hash, &fd ) ) ) )
+	if( ( condition & B_EV_IO_READ  && ( b_ev = g_hash_table_lookup( read_hash,  &fd ) ) ) ||
+	    ( condition & B_EV_IO_WRITE && ( b_ev = g_hash_table_lookup( write_hash, &fd ) ) ) )
 	{
 		/* We'll stick with this libevent entry, but give it a new BitlBee id. */
 		g_hash_table_remove( id_hash, &b_ev->id );
@@ -197,9 +198,9 @@ gint b_input_add( gint fd, b_input_condition condition, b_event_handler function
 		b_ev->data = data;
 		
 		out_cond = EV_PERSIST;
-		if( condition & GAIM_INPUT_READ )
+		if( condition & B_EV_IO_READ )
 			out_cond |= EV_READ;
-		if( condition & GAIM_INPUT_WRITE )
+		if( condition & B_EV_IO_WRITE )
 			out_cond |= EV_WRITE;
 		
 		event_set( &b_ev->evinfo, fd, out_cond, b_event_passthrough, b_ev );
@@ -211,6 +212,7 @@ gint b_input_add( gint fd, b_input_condition condition, b_event_handler function
 			g_hash_table_insert( write_hash, &b_ev->evinfo.ev_fd, b_ev );
 	}
 	
+	b_ev->flags = condition;
 	g_hash_table_insert( id_hash, &b_ev->id, b_ev );
 	return b_ev->id;
 }

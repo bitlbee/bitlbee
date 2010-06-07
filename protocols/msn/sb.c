@@ -326,7 +326,7 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, ic->acc->user, sb->key, sb->session );
 	
 	if( msn_sb_write( sb, buf, strlen( buf ) ) )
-		sb->inp = b_input_add( sb->fd, GAIM_INPUT_READ, msn_sb_callback, sb );
+		sb->inp = b_input_add( sb->fd, B_EV_IO_READ, msn_sb_callback, sb );
 	else
 		debug( "Error %d while connecting to switchboard server", 2 );
 	

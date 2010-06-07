@@ -120,7 +120,7 @@ int bitlbee_daemon_init()
 		return( -1 );
 	}
 	
-	global.listen_watch_source_id = b_input_add( global.listen_socket, GAIM_INPUT_READ, bitlbee_io_new_client, NULL );
+	global.listen_watch_source_id = b_input_add( global.listen_socket, B_EV_IO_READ, bitlbee_io_new_client, NULL );
 	
 #ifndef _WIN32
 	if( !global.conf->nofork )
@@ -320,7 +320,7 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 			child = g_new0( struct bitlbee_child, 1 );
 			child->pid = client_pid;
 			child->ipc_fd = fds[0];
-			child->ipc_inpa = b_input_add( child->ipc_fd, GAIM_INPUT_READ, ipc_master_read, child );
+			child->ipc_inpa = b_input_add( child->ipc_fd, B_EV_IO_READ, ipc_master_read, child );
 			child_list = g_slist_append( child_list, child );
 			
 			log_message( LOGLVL_INFO, "Creating new subprocess with pid %d.", (int) client_pid );
@@ -348,7 +348,7 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 			
 			/* We can store the IPC fd there now. */
 			global.listen_socket = fds[1];
-			global.listen_watch_source_id = b_input_add( fds[1], GAIM_INPUT_READ, ipc_child_read, irc );
+			global.listen_watch_source_id = b_input_add( fds[1], B_EV_IO_READ, ipc_child_read, irc );
 			
 			close( fds[0] );
 			
