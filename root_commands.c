@@ -521,7 +521,7 @@ static set_t **cmd_channel_set_findhead( irc_t *irc, char *id )
 {
 	irc_channel_t *ic;
 	
-	if( ( ic = irc_channel_by_name( irc, id ) ) )
+	if( ( ic = irc_channel_get( irc, id ) ) )
 		return &ic->set;
 	else
 		return NULL;
@@ -534,6 +534,26 @@ static void cmd_channel( irc_t *irc, char **cmd )
 		MIN_ARGS( 2 );
 		
 		cmd_set_real( irc, cmd + 1, cmd_channel_set_findhead, NULL );
+	}
+	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
+	{
+		GSList *l;
+		int i = 0;
+		
+		if( strchr( irc->umode, 'b' ) )
+			irc_usermsg( irc, "Channel list:" );
+		
+		for( l = irc->channels; l; l = l->next )
+		{
+			irc_channel_t *ic = l->data;
+			
+			irc_usermsg( irc, "%2d. %s, %s channel%s", i, ic->name,
+			             set_getstr( &ic->set, "type" ),
+			             ic->flags & IRC_CHANNEL_JOINED ? " (joined)" : "" );
+			
+			i ++;
+		}
+		irc_usermsg( irc, "End of channel list" );
 	}
 	else
 	{

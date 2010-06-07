@@ -48,7 +48,7 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 	    strcmp( set_getstr( &irc->b->set, "ops" ), "root" ) == 0 )
 		irc_channel_user_set_mode( ic, irc->root, IRC_CHANNEL_USER_OP );
 	
-	irc->channels = g_slist_prepend( irc->channels, ic );
+	irc->channels = g_slist_append( irc->channels, ic );
 	
 	set_add( &ic->set, "type", "control", set_eval_channel_type, ic );
 	
@@ -68,11 +68,51 @@ irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name )
 	{
 		irc_channel_t *ic = l->data;
 		
-		if( name[0] == ic->name[0] && nick_cmp( name + 1, ic->name + 1 ) == 0 )
+		if( g_strcasecmp( name, ic->name ) == 0 )
 			return ic;
 	}
 	
 	return NULL;
+}
+
+irc_channel_t *irc_channel_get( irc_t *irc, char *id )
+{
+	irc_channel_t *ic, *ret = NULL;
+	GSList *l;
+	int nr;
+	
+	if( sscanf( id, "%d", &nr ) == 1 && nr < 1000 )
+	{
+		for( l = irc->channels; l; l = l->next )
+		{
+			ic = l->data;
+			if( ( nr-- ) == 0 ) 
+				return ic;
+		}
+		
+		return NULL;
+	}
+	
+	/* Exact match first: Partial match only sucks if there's a channel
+	   #aa and #aabb */
+	if( ( ret = irc_channel_by_name( irc, id ) ) )
+		return ret;
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		ic = l->data;
+		
+		if( strstr( ic->name, id ) )
+		{
+			/* Make sure it's a unique match. */
+			if( !ret )
+				ret = ic;
+			else
+				return NULL;
+		}
+	}
+	
+	return ret;
 }
 
 int irc_channel_free( irc_channel_t *ic )
