@@ -37,10 +37,8 @@ bee_t *bee_new()
 	s->flags |= SET_NULL_OK;
 	s = set_add( &b->set, "auto_connect", "true", set_eval_bool, b );
 	s = set_add( &b->set, "auto_reconnect", "true", set_eval_bool, b );
-	s = set_add( &b->set, "auto_reconnect_delay", "5*3<900", NULL/*set_eval_account_reconnect_delay*/, b );
+	s = set_add( &b->set, "auto_reconnect_delay", "5*3<900", set_eval_account_reconnect_delay, b );
 	s = set_add( &b->set, "debug", "false", set_eval_bool, b );
-	s = set_add( &b->set, "password", NULL, NULL/*set_eval_password*/, b );
-	s->flags |= SET_NULL_OK;
 	s = set_add( &b->set, "save_on_quit", "true", set_eval_bool, b );
 	s = set_add( &b->set, "status", NULL, set_eval_away_status, b );
 	s->flags |= SET_NULL_OK;

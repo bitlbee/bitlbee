@@ -30,6 +30,7 @@ GSList *irc_connection_list;
 
 static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond );
 static char *set_eval_charset( set_t *set, char *value );
+static char *set_eval_password( set_t *set, char *value );
 
 irc_t *irc_new( int fd )
 {
@@ -109,6 +110,8 @@ irc_t *irc_new( int fd )
 	s->old_key = g_strdup( "buddy_sendbuffer" );
 	s = set_add( &b->set, "paste_buffer_delay", "200", set_eval_int, irc );
 	s->old_key = g_strdup( "buddy_sendbuffer_delay" );
+	s = set_add( &b->set, "password", NULL, set_eval_password, irc );
+	s->flags |= SET_NULL_OK;
 	s = set_add( &b->set, "private", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "query_order", "lifo", NULL, irc );
 	s = set_add( &b->set, "root_nick", ROOT_NICK, NULL/*set_eval_root_nick*/, irc );
@@ -271,6 +274,21 @@ void irc_setpass (irc_t *irc, const char *pass)
 		irc->password = g_strdup (pass);
 	} else {
 		irc->password = NULL;
+	}
+}
+
+static char *set_eval_password( set_t *set, char *value )
+{
+	irc_t *irc = set->data;
+	
+	if( irc->status & USTATUS_IDENTIFIED && value )
+	{
+		irc_setpass( irc, value );
+		return NULL;
+	}
+	else
+	{
+		return SET_INVALID;
 	}
 }
 
