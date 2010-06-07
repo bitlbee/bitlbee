@@ -239,6 +239,14 @@ void irc_send_whois( irc_user_t *iu )
 		{
 			irc_send_num( irc, 301, "%s :%s", iu->nick, "User is offline" );
 		}
+		
+		if( bu->idle_time || bu->login_time )
+		{
+			irc_send_num( irc, 317, "%s %d %d :seconds idle, signon time",
+			              iu->nick,
+			              bu->idle_time ? (int) ( time( NULL ) - bu->idle_time ) : 0,
+			              (int) bu->login_time );
+		}
 	}
 	else
 	{

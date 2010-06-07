@@ -612,10 +612,8 @@ void ext_yahoo_status_changed( int id, const char *who, int stat, const char *ms
 	
 	imcb_buddy_status( ic, who, flags, state_string, msg );
 	
-	/* Not implemented yet...
 	if( stat == YAHOO_STATUS_IDLE )
-		imcb_buddy_times( ic, who, 0, away );
-	*/
+		imcb_buddy_times( ic, who, 0, idle );
 }
 
 void ext_yahoo_got_im( int id, const char *me, const char *who, const char *msg, long tm, int stat, int utf8 )

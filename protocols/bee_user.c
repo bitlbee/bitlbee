@@ -191,6 +191,18 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	g_free( old );
 }
 
+void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle )
+{
+	bee_t *bee = ic->bee;
+	bee_user_t *bu;
+	
+	if( !( bu = bee_user_by_handle( bee, ic, handle ) ) )
+		return;
+	
+	bu->login_time = login;
+	bu->idle_time = idle;
+}
+
 void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at )
 {
 	bee_t *bee = ic->bee;

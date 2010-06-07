@@ -67,6 +67,8 @@ typedef struct bee_user
 	char *status;
 	char *status_msg;
 	
+	time_t login_time, idle_time;
+	
 	bee_t *bee;
 	void *ui_data;
 } bee_user_t;
@@ -122,7 +124,7 @@ void bee_group_free( bee_t *bee );
  *   OPT_LOGGED_IN and OPT_AWAY.
  * - 'state' and 'message' can be NULL */
 G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message );
-/* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
+G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
 /* Call when a handle says something. 'flags' and 'sent_at may be just 0. */
 G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, guint32 flags, time_t sent_at );
 

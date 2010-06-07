@@ -686,6 +686,10 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 		
 		imcb_buddy_status( ic, bud->name, flags, purple_status_get_name( as ),
 		                   purple_status_get_attr_string( as, "message" ) );
+		
+		imcb_buddy_times( ic, bud->name,
+		                  purple_presence_get_login_time( bud->presence ),
+		                  purple_presence_get_idle_time( bud->presence ) );
 	}
 }
 

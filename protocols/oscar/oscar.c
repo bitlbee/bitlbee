@@ -937,7 +937,7 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	tmp = normalize(info->sn);
 	imcb_buddy_status(ic, tmp, flags, state_string, NULL);
-	/* imcb_buddy_times(ic, tmp, signon, time_idle); */
+	imcb_buddy_times(ic, tmp, signon, time_idle);
 
 
 	return 1;
