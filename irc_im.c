@@ -219,6 +219,8 @@ static gboolean bee_irc_user_typing( bee_t *bee, bee_user_t *bu, uint32_t flags 
 	return TRUE;
 }
 
+static gboolean bee_irc_user_nick_hint( bee_t *bee, bee_user_t *bu, const char *hint );
+
 static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 {
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
@@ -252,9 +254,50 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 			name[i] = '\0';
 		}
 		
-		imcb_buddy_nick_hint( bu->ic, bu->handle, name );
+		bee_irc_user_nick_hint( bee, bu, name );
 		
 		g_free( name );
+	}
+	
+	return TRUE;
+}
+
+static gboolean bee_irc_user_nick_hint( bee_t *bee, bee_user_t *bu, const char *hint )
+{
+	irc_user_t *iu = bu->ui_data;
+	char newnick[MAX_NICK_LENGTH+1], *translit;
+	
+	if( bu->flags & BEE_USER_ONLINE )
+		/* Ignore if the user is visible already. */
+		return TRUE;
+	
+	if( nick_saved( bu->ic->acc, bu->handle ) )
+		/* The user already assigned a nickname to this person. */
+		return TRUE;
+	
+	/* Credits to Josay_ in #bitlbee for this idea. //TRANSLIT should
+	   do lossy/approximate conversions, so letters with accents don't
+	   just get stripped. Note that it depends on LC_CTYPE being set to
+	   something other than C/POSIX. */
+	translit = g_convert( hint, -1, "ASCII//TRANSLIT//IGNORE", "UTF-8",
+	                      NULL, NULL, NULL );
+	
+	strncpy( newnick, translit ? : hint, MAX_NICK_LENGTH );
+	newnick[MAX_NICK_LENGTH] = 0;
+	g_free( translit );
+	
+	/* Some processing to make sure this string is a valid IRC nickname. */
+	nick_strip( newnick );
+	if( set_getbool( &bee->set, "lcnicks" ) )
+		nick_lc( newnick );
+	
+	if( strcmp( iu->nick, newnick ) != 0 )
+	{
+		/* Only do this if newnick is different from the current one.
+		   If rejoining a channel, maybe we got this nick already
+		   (and dedupe would only add an underscore. */
+		nick_dedupe( bu->ic->acc, bu->handle, newnick );
+		irc_user_set_nick( iu, newnick );
 	}
 	
 	return TRUE;
@@ -721,6 +764,7 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_user_new,
 	bee_irc_user_free,
 	bee_irc_user_fullname,
+	bee_irc_user_nick_hint,
 	bee_irc_user_group,
 	bee_irc_user_status,
 	bee_irc_user_msg,

@@ -417,39 +417,13 @@ void imcb_remove_buddy( struct im_connection *ic, const char *handle, char *grou
    modules to suggest a nickname for a handle. */
 void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const char *nick )
 {
-#if 0
-	user_t *u = user_findhandle( ic, handle );
-	char newnick[MAX_NICK_LENGTH+1], *orig_nick;
+	bee_t *bee = ic->bee;
+	bee_user_t *bu = bee_user_by_handle( bee, ic, handle );
 	
-	if( u && !u->online && !nick_saved( ic->acc, handle ) )
-	{
-		/* Only do this if the person isn't online yet (which should
-		   be the case if we just added it) and if the user hasn't
-		   assigned a nickname to this buddy already. */
-		
-		strncpy( newnick, nick, MAX_NICK_LENGTH );
-		newnick[MAX_NICK_LENGTH] = 0;
-		
-		/* Some processing to make sure this string is a valid IRC nickname. */
-		nick_strip( newnick );
-		if( set_getbool( &ic->bee->set, "lcnicks" ) )
-			nick_lc( newnick );
-		
-		if( strcmp( u->nick, newnick ) != 0 )
-		{
-			/* Only do this if newnick is different from the current one.
-			   If rejoining a channel, maybe we got this nick already
-			   (and dedupe would only add an underscore. */
-			nick_dedupe( ic->acc, handle, newnick );
-			
-			/* u->nick will be freed halfway the process, so it can't be
-			   passed as an argument. */
-			orig_nick = g_strdup( u->nick );
-			user_rename( ic->irc, orig_nick, newnick );
-			g_free( orig_nick );
-		}
-	}
-#endif
+	if( !bu || !nick ) return;
+	
+	if( bee->ui->user_nick_hint )
+		bee->ui->user_nick_hint( bee, bu, nick );
 }
 
 
