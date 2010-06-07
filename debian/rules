@@ -27,6 +27,8 @@ build-stamp:
 	ROOT=$$PWD; cd debian/build-libpurple; $(BITLBEE_CONFIGURE_VERSION) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --purple=1 $(BITLBEE_CONFIGURE_FLAGS)
 	$(MAKE) -C debian/build-libpurple
 
+	$(MAKE) -C doc
+
 	touch build-stamp
 
 clean:
@@ -42,7 +44,7 @@ clean:
 install: build
 	dh_testdir
 	dh_testroot
-	dh_prep
+	dh_clean -k
 	dh_installdirs
 
 	$(MAKE) -C debian/build-native install install-etc DESTDIR=`pwd`/debian/bitlbee
@@ -60,9 +62,12 @@ binary-common:
 	dh_testdir
 	dh_testroot
 
-	dh_installdocs --link-doc=bitlbee-common
 	dh_installchangelogs doc/CHANGES
 	dh_installexamples
+	dh_installdocs #--link-doc=bitlbee-common
+	# TODO: Restore --link-doc up here and remove the hack below once
+	# Hardy and Lenny are deprecated.
+	for p in bitlbee bitlbee-libpurple bitlbee-dev; do rm -rf debian/$$p/usr/share/doc/$$p; ln -s bitlbee-common debian/$$p/usr/share/doc/$$p; done
 	dh_installdebconf
 	dh_installinit
 ifeq ($(DH_OPTIONS),-a)
@@ -75,11 +80,10 @@ endif
 	dh_fixperms
 	dh_installdeb
 ifeq ($(DH_OPTIONS),-a)
-	cp -a debian/bitlbee/DEBIAN/{post,pre}* debian/bitlbee-libpurple/DEBIAN
+	cp -a debian/bitlbee/DEBIAN/post* debian/bitlbee/DEBIAN/pre* debian/bitlbee-libpurple/DEBIAN
 endif
 	dh_shlibdeps
 ifdef BITLBEE_VERSION
-	echo source:Version=1:$(BITLBEE_VERSION)-0 > debian/substvars
 	dh_gencontrol -- -v1:$(BITLBEE_VERSION)-0  -Vbee:Version=1:$(BITLBEE_VERSION)-0
 else
 	dh_gencontrol -- -Vbee:Version=$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}' | sed -e 's/+[^+]*$$//')
