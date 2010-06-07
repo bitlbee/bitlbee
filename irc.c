@@ -106,7 +106,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &b->set, "display_timestamps", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "handle_unknown", "add_channel", NULL, irc );
 	s = set_add( &b->set, "lcnicks", "true", set_eval_bool, irc );
-	s = set_add( &b->set, "ops", "both", NULL/*set_eval_ops*/, irc );
+	s = set_add( &b->set, "ops", "both", set_eval_irc_channel_ops, irc );
 	s = set_add( &b->set, "paste_buffer", "false", set_eval_bool, irc );
 	s->old_key = g_strdup( "buddy_sendbuffer" );
 	s = set_add( &b->set, "paste_buffer_delay", "200", set_eval_int, irc );
@@ -661,10 +661,6 @@ int irc_check_login( irc_t *irc )
 			ic = irc->default_channel = irc_channel_new( irc, ROOT_CHAN );
 			irc_channel_set_topic( ic, CONTROL_TOPIC, irc->root );
 			irc_channel_add_user( ic, irc->user );
-			
-			if( strcmp( set_getstr( &irc->b->set, "ops" ), "both" ) == 0 ||
-			    strcmp( set_getstr( &irc->b->set, "ops" ), "user" ) == 0 )
-				irc_channel_user_set_mode( ic, irc->user, IRC_CHANNEL_USER_OP );
 			
 			irc->last_root_cmd = g_strdup( ROOT_CHAN );
 			

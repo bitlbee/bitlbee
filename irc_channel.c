@@ -44,9 +44,6 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 	strcpy( ic->mode, CMODE );
 	
 	irc_channel_add_user( ic, irc->root );
-	if( strcmp( set_getstr( &irc->b->set, "ops" ), "both" ) == 0 ||
-	    strcmp( set_getstr( &irc->b->set, "ops" ), "root" ) == 0 )
-		irc_channel_user_set_mode( ic, irc->root, IRC_CHANNEL_USER_OP );
 	
 	irc->channels = g_slist_append( irc->channels, ic );
 	
@@ -172,6 +169,8 @@ int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 	
 	ic->users = g_slist_insert_sorted( ic->users, icu, irc_channel_user_cmp );
 	
+	irc_channel_update_ops( ic, set_getstr( &ic->irc->b->set, "ops" ) );
+	
 	if( iu == ic->irc->user || ic->flags & IRC_CHANNEL_JOINED )
 	{
 		ic->flags |= IRC_CHANNEL_JOINED;
@@ -238,7 +237,7 @@ void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_u
 {
 	irc_channel_user_t *icu = irc_channel_has_user( ic, iu );
 	
-	if( icu->flags == flags )
+	if( !icu || icu->flags == flags )
 		return;
 	
 	if( ic->flags & IRC_CHANNEL_JOINED )
@@ -281,6 +280,31 @@ static gint irc_channel_user_cmp( gconstpointer a_, gconstpointer b_ )
 	const irc_channel_user_t *a = a_, *b = b_;
 	
 	return irc_user_cmp( a->iu, b->iu );
+}
+
+void irc_channel_update_ops( irc_channel_t *ic, char *value )
+{
+	irc_channel_user_set_mode( ic, ic->irc->root,
+		( strcmp( value, "both" ) == 0 ||
+		  strcmp( value, "root" ) == 0 ) ? IRC_CHANNEL_USER_OP : 0 );
+	irc_channel_user_set_mode( ic, ic->irc->user,
+		( strcmp( value, "both" ) == 0 ||
+		  strcmp( value, "user" ) == 0 ) ? IRC_CHANNEL_USER_OP : 0 );
+}
+
+char *set_eval_irc_channel_ops( set_t *set, char *value )
+{
+	irc_t *irc = set->data;
+	GSList *l;
+	
+	if( strcmp( value, "both" ) != 0 && strcmp( value, "none" ) != 0 && 
+	    strcmp( value, "user" ) != 0 && strcmp( value, "root" ) != 0 )
+		return SET_INVALID;
+	
+	for( l = irc->channels; l; l = l->next )
+		irc_channel_update_ops( l->data, value );
+	
+	return value;
 }
 
 /* Channel-type dependent functions, for control channels: */
