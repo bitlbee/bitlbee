@@ -103,8 +103,8 @@ int irc_user_free( irc_t *irc, irc_user_t *iu )
 	if( iu->nick != iu->user ) g_free( iu->user );
 	if( iu->nick != iu->host ) g_free( iu->host );
 	if( iu->nick != iu->fullname ) g_free( iu->fullname );
-	g_free( iu->sendbuf );
-	if( iu->sendbuf_timer ) b_event_remove( iu->sendbuf_timer );
+	g_free( iu->pastebuf );
+	if( iu->pastebuf_timer ) b_event_remove( iu->pastebuf_timer );
 	g_free( iu->key );
 	
 	return 1;

@@ -108,10 +108,8 @@ typedef struct irc_user
 	
 	irc_user_flags_t flags;
 	
-	char *sendbuf;
-	int sendbuf_len;
-	guint sendbuf_timer;
-	//int sendbuf_flags;
+	GString *pastebuf;
+	guint pastebuf_timer;
 	
 	struct bee_user *bu;
 	
@@ -149,6 +147,9 @@ typedef struct irc_channel
 	
 	GSList *users;
 	struct set *set;
+	
+	GString *pastebuf;
+	guint pastebuf_timer;
 	
 	const struct irc_channel_funcs *f;
 	void *data;

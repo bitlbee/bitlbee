@@ -272,12 +272,46 @@ static gboolean bee_irc_user_group( bee_t *bee, bee_user_t *bu )
 
 /* IRC->IM calls */
 
+static gboolean bee_irc_user_privmsg_cb( gpointer data, gint fd, b_input_condition cond );
+
 static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
 {
-	if( iu->bu )
-		return bee_user_msg( iu->irc->b, iu->bu, msg, 0 );
-	else
+	if( iu->bu == NULL )
 		return FALSE;
+	else if( set_getbool( &iu->irc->b->set, "paste_buffer" ) )
+	{
+		int delay;
+		
+		if( iu->pastebuf == NULL )
+			iu->pastebuf = g_string_new( msg );
+		else
+		{
+			b_event_remove( iu->pastebuf_timer );
+			g_string_append_printf( iu->pastebuf, "\n%s", msg );
+		}
+		
+		if( ( delay = set_getint( &iu->irc->b->set, "paste_buffer_delay" ) ) <= 5 )
+			delay *= 1000;
+		
+		iu->pastebuf_timer = b_timeout_add( delay, bee_irc_user_privmsg_cb, iu );
+		
+		return TRUE;
+	}
+	else
+		return bee_user_msg( iu->irc->b, iu->bu, msg, 0 );
+}
+
+static gboolean bee_irc_user_privmsg_cb( gpointer data, gint fd, b_input_condition cond )
+{
+	irc_user_t *iu = data;
+	
+	bee_user_msg( iu->irc->b, iu->bu, iu->pastebuf->str, 0 );
+	
+	g_string_free( iu->pastebuf, TRUE );
+	iu->pastebuf = 0;
+	iu->pastebuf_timer = 0;
+	
+	return FALSE;
 }
 
 static gboolean bee_irc_user_ctcp( irc_user_t *iu, char *const *ctcp )
@@ -467,16 +501,50 @@ static gboolean bee_irc_chat_name_hint( bee_t *bee, struct groupchat *c, const c
 }
 
 /* IRC->IM */
+static gboolean bee_irc_channel_chat_privmsg_cb( gpointer data, gint fd, b_input_condition cond );
+
 static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg )
 {
 	struct groupchat *c = ic->data;
 	
 	if( c == NULL )
 		return FALSE;
-	
-	bee_chat_msg( ic->irc->b, c, msg, 0 );
+	else if( set_getbool( &ic->irc->b->set, "paste_buffer" ) )
+	{
+		int delay;
+		
+		if( ic->pastebuf == NULL )
+			ic->pastebuf = g_string_new( msg );
+		else
+		{
+			b_event_remove( ic->pastebuf_timer );
+			g_string_append_printf( ic->pastebuf, "\n%s", msg );
+		}
+		
+		if( ( delay = set_getint( &ic->irc->b->set, "paste_buffer_delay" ) ) <= 5 )
+			delay *= 1000;
+		
+		ic->pastebuf_timer = b_timeout_add( delay, bee_irc_channel_chat_privmsg_cb, ic );
+		
+		return TRUE;
+	}
+	else
+		bee_chat_msg( ic->irc->b, c, msg, 0 );
 	
 	return TRUE;
+}
+
+static gboolean bee_irc_channel_chat_privmsg_cb( gpointer data, gint fd, b_input_condition cond )
+{
+	irc_channel_t *ic = data;
+	
+	bee_chat_msg( ic->irc->b, ic->data, ic->pastebuf->str, 0 );
+	
+	g_string_free( ic->pastebuf, TRUE );
+	ic->pastebuf = 0;
+	ic->pastebuf_timer = 0;
+	
+	return FALSE;
 }
 
 static gboolean bee_irc_channel_chat_join( irc_channel_t *ic )
