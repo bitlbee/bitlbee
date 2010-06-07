@@ -235,6 +235,8 @@ static void twitter_logout( struct im_connection *ic )
 	if( td )
 	{
 		oauth_info_free( td->oauth_info );
+		g_free( td->url_host );
+		g_free( td->url_path );
 		g_free( td->pass );
 		g_free( td );
 	}
