@@ -168,6 +168,8 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 		if( set_getbool( &irc->b->set, "away_devoice" ) )
 			irc_channel_user_set_mode( ic, iu, ( iu->bu->flags & BEE_USER_AWAY ) ?
 			                           0 : IRC_CHANNEL_USER_VOICE );
+		else
+			irc_channel_user_set_mode( ic, iu, 0 );
 	}
 }
 

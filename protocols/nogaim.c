@@ -536,65 +536,6 @@ struct bee_user *imcb_buddy_by_handle( struct im_connection *ic, const char *han
 	return bee_user_by_handle( ic->bee, ic, handle );
 }
 
-
-/* Misc. BitlBee stuff which shouldn't really be here */
-#if 0
-char *set_eval_away_devoice( set_t *set, char *value )
-{
-	irc_t *irc = set->data;
-	int st;
-	
-	if( !is_bool( value ) )
-		return SET_INVALID;
-	
-	st = bool2int( value );
-	
-	/* Horror.... */
-	
-	if( st != set_getbool( &irc->b->set, "away_devoice" ) )
-	{
-		char list[80] = "";
-		user_t *u = irc->users;
-		int i = 0, count = 0;
-		char pm;
-		char v[80];
-		
-		if( st )
-			pm = '+';
-		else
-			pm = '-';
-		
-		while( u )
-		{
-			if( u->ic && u->online && !u->away )
-			{
-				if( ( strlen( list ) + strlen( u->nick ) ) >= 79 )
-				{
-					for( i = 0; i < count; v[i++] = 'v' ); v[i] = 0;
-					irc_write( irc, ":%s MODE %s %c%s%s",
-					           irc->myhost,
-		        			   irc->channel, pm, v, list );
-					
-					*list = 0;
-					count = 0;
-				}
-				
-				sprintf( list + strlen( list ), " %s", u->nick );
-				count ++;
-			}
-			u = u->next;
-		}
-		
-		/* $v = 'v' x $i */
-		for( i = 0; i < count; v[i++] = 'v' ); v[i] = 0;
-		irc_write( irc, ":%s MODE %s %c%s%s", irc->myhost,
-		                                            irc->channel, pm, v, list );
-	}
-	
-	return value;
-}
-#endif
-
 /* The plan is to not allow straight calls to prpl functions anymore, but do
    them all from some wrappers. We'll start to define some down here: */
 

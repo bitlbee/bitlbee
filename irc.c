@@ -99,7 +99,7 @@ irc_t *irc_new( int fd )
 	b->ui_data = irc;
 	b->ui = &irc_ui_funcs;
 	
-	s = set_add( &b->set, "away_devoice", "true", NULL/*set_eval_away_devoice*/, irc );
+	s = set_add( &b->set, "away_devoice", "true", set_eval_away_devoice, irc );
 	s = set_add( &b->set, "charset", "utf-8", set_eval_charset, irc );
 	s = set_add( &b->set, "default_target", "root", NULL, irc );
 	s = set_add( &b->set, "display_namechanges", "false", set_eval_bool, irc );
@@ -816,5 +816,22 @@ static char *set_eval_charset( set_t *set, char *value )
 	irc->iconv = ic;
 	irc->oconv = oc;
 
+	return value;
+}
+
+char *set_eval_away_devoice( set_t *set, char *value )
+{
+	irc_t *irc = set->data;
+	
+	if( !is_bool( value ) )
+		return SET_INVALID;
+	
+	/* The usual problem: The setting isn't actually changed at this
+	   point and we need it to be, so do it by hand. */
+	g_free( set->value );
+	set->value = g_strdup( value );
+	
+	bee_irc_channel_update( irc, NULL, NULL );
+	
 	return value;
 }
