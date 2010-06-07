@@ -555,6 +555,24 @@ static void cmd_channel( irc_t *irc, char **cmd )
 		}
 		irc_usermsg( irc, "End of channel list" );
 	}
+	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
+	{
+		irc_channel_t *ic;
+		
+		MIN_ARGS( 2 );
+		
+		if( ( ic = irc_channel_get( irc, cmd[2] ) ) &&
+		   !( ic->flags & IRC_CHANNEL_JOINED ) &&
+		    ic != ic->irc->default_channel )
+		{
+			irc_usermsg( irc, "Channel %s deleted.", ic->name );
+			irc_channel_free( ic );
+		}
+		else
+			irc_usermsg( irc, "Couldn't remove channel (main channel %s or "
+			                  "channels you're still in cannot be deleted).",
+			                  ic->irc->default_channel->name );
+	}
 	else
 	{
 		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "channel", cmd[1] );
