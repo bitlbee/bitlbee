@@ -57,7 +57,7 @@ static void irc_cmd_pass( irc_t *irc, char **cmd )
 	else
 	{
 		/* Remember the password and try to identify after USER/NICK. */
-		/*irc_setpass( irc, cmd[1] ); */
+		irc_setpass( irc, cmd[1] );
 		irc_check_login( irc );
 	}
 }

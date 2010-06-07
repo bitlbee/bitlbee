@@ -643,16 +643,6 @@ int irc_check_login( irc_t *irc )
 			
 			irc->status |= USTATUS_LOGGED_IN;
 			
-			/* This is for bug #209 (use PASS to identify to NickServ). */
-			if( irc->password != NULL )
-			{
-				char *send_cmd[] = { "identify", g_strdup( irc->password ), NULL };
-				
-				/*irc_setpass( irc, NULL );*/
-				/*root_command( irc, send_cmd );*/
-				g_free( send_cmd[1] );
-			}
-			
 			irc_send_login( irc );
 			
 			irc->umode[0] = '\0';
@@ -671,6 +661,16 @@ int irc_check_login( irc_t *irc )
 			              "answered there.\n"
 			              "If you already have an account on this server, just use the "
 			              "\x02identify\x02 command to identify yourself.", NULL );
+			
+			/* This is for bug #209 (use PASS to identify to NickServ). */
+			if( irc->password != NULL )
+			{
+				char *send_cmd[] = { "identify", g_strdup( irc->password ), NULL };
+				
+				irc_setpass( irc, NULL );
+				root_command( irc, send_cmd );
+				g_free( send_cmd[1] );
+			}
 			
 			return 1;
 		}
