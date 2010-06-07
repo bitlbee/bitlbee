@@ -718,21 +718,19 @@ static void cmd_rename( irc_t *irc, char **cmd )
 	}
 }
 
-#if 0
 char *set_eval_root_nick( set_t *set, char *new_nick )
 {
 	irc_t *irc = set->data;
 	
-	if( strcmp( irc->mynick, new_nick ) != 0 )
+	if( strcmp( irc->root->nick, new_nick ) != 0 )
 	{
-		char *cmd[] = { "set_rename", irc->mynick, new_nick, NULL };
+		char *cmd[] = { "set_rename", irc->root->nick, new_nick, NULL };
 		
 		cmd_rename( irc, cmd );
 	}
 	
-	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : SET_INVALID;
+	return strcmp( irc->root->nick, new_nick ) == 0 ? new_nick : SET_INVALID;
 }
-#endif
 
 static void cmd_block( irc_t *irc, char **cmd )
 {

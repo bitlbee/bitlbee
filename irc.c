@@ -115,7 +115,7 @@ irc_t *irc_new( int fd )
 	s->flags |= SET_NULL_OK;
 	s = set_add( &b->set, "private", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "query_order", "lifo", NULL, irc );
-	s = set_add( &b->set, "root_nick", ROOT_NICK, NULL/*set_eval_root_nick*/, irc );
+	s = set_add( &b->set, "root_nick", ROOT_NICK, set_eval_root_nick, irc );
 	s = set_add( &b->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "timezone", "local", set_eval_timezone, irc );
 	s = set_add( &b->set, "to_char", ": ", set_eval_to_char, irc );
