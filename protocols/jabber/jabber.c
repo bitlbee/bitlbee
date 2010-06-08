@@ -299,6 +299,8 @@ static void jabber_logout( struct im_connection *ic )
 	if( jd->node_cache )
 		g_hash_table_destroy( jd->node_cache );
 	
+	jabber_buddy_remove_all( ic );
+	
 	xt_free( jd->xt );
 	
 	g_free( jd->away_message );

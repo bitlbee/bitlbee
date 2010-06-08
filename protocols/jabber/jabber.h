@@ -291,6 +291,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid, g
 struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
 int jabber_buddy_remove( struct im_connection *ic, char *full_jid );
 int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid );
+void jabber_buddy_remove_all( struct im_connection *ic );
 time_t jabber_get_timestamp( struct xt_node *xt );
 struct jabber_error *jabber_error_parse( struct xt_node *node, char *xmlns );
 void jabber_error_free( struct jabber_error *err );

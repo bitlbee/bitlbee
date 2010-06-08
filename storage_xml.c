@@ -403,8 +403,8 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	if( !overwrite && g_access( path, F_OK ) == 0 )
 		return STORAGE_ALREADY_EXISTS;
 	
-	strcat( path, "~" );
-	if( ( fd = open( path, O_WRONLY | O_CREAT | O_TRUNC, 0600 ) ) < 0 )
+	strcat( path, ".XXXXXX" );
+	if( ( fd = mkstemp( path ) ) < 0 )
 	{
 		irc_usermsg( irc, "Error while opening configuration file." );
 		return STORAGE_OTHER_ERROR;
@@ -500,7 +500,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	fsync( fd );
 	close( fd );
 	
-	path2 = g_strndup( path, strlen( path ) - 1 );
+	path2 = g_strndup( path, strlen( path ) - 7 );
 	if( rename( path, path2 ) != 0 )
 	{
 		irc_usermsg( irc, "Error while renaming temporary configuration file." );

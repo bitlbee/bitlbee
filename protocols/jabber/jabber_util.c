@@ -668,6 +668,32 @@ int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid )
 	}
 }
 
+static gboolean jabber_buddy_remove_all_cb( gpointer key, gpointer value, gpointer data )
+{
+	struct jabber_buddy *bud, *next;
+	
+	bud = value;
+	while( bud )
+	{
+		next = bud->next;
+		g_free( bud->ext_jid );
+		g_free( bud->full_jid );
+		g_free( bud->away_message );
+		g_free( bud );
+		bud = next;
+	}
+	
+	return TRUE;
+}
+
+void jabber_buddy_remove_all( struct im_connection *ic )
+{
+	struct jabber_data *jd = ic->proto_data;
+	
+	g_hash_table_foreach_remove( jd->buddies, jabber_buddy_remove_all_cb, NULL );
+	g_hash_table_destroy( jd->buddies );
+}
+
 time_t jabber_get_timestamp( struct xt_node *xt )
 {
 	struct xt_node *c;
