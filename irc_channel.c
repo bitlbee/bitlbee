@@ -119,6 +119,12 @@ int irc_channel_free( irc_channel_t *ic )
 	if( ic->flags & IRC_CHANNEL_JOINED )
 		irc_channel_del_user( ic, irc->user, FALSE, "Cleaning up channel" );
 	
+	if( ic->f->_free )
+		ic->f->_free( ic );
+	
+	while( ic->set )
+		set_del( &ic->set, ic->set->key );
+	
 	irc->channels = g_slist_remove( irc->channels, ic );
 	while( ic->users )
 	{
@@ -128,6 +134,7 @@ int irc_channel_free( irc_channel_t *ic )
 	
 	g_free( ic->name );
 	g_free( ic->topic );
+	g_free( ic->topic_who );
 	g_free( ic );
 	
 	return 1;

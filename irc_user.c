@@ -106,6 +106,7 @@ int irc_user_free( irc_t *irc, irc_user_t *iu )
 	g_free( iu->pastebuf );
 	if( iu->pastebuf_timer ) b_event_remove( iu->pastebuf_timer );
 	g_free( iu->key );
+	g_free( iu );
 	
 	return 1;
 }

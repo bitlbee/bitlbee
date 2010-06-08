@@ -1071,6 +1071,7 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			
 			irc_usermsg( irc, "Could not add chatroom." );
 		}
+		g_free( channel );
 	}
 	else if( g_strcasecmp( cmd[1], "with" ) == 0 )
 	{
