@@ -234,7 +234,7 @@ int jabber_init_iq_auth( struct im_connection *ic );
 xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 int jabber_get_roster( struct im_connection *ic );
 int jabber_get_vcard( struct im_connection *ic, char *bare_jid );
-int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name );
+int jabber_add_to_roster( struct im_connection *ic, const char *handle, const char *name, const char *group );
 int jabber_remove_from_roster( struct im_connection *ic, char *handle );
 xt_status jabber_iq_query_features( struct im_connection *ic, char *bare_jid );
 xt_status jabber_iq_query_server( struct im_connection *ic, char *jid, char *xmlns );

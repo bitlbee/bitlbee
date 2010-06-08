@@ -554,7 +554,7 @@ static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_no
 
 static xt_status jabber_add_to_roster_callback( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 
-int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name )
+int jabber_add_to_roster( struct im_connection *ic, const char *handle, const char *name, const char *group )
 {
 	struct xt_node *node;
 	int st;
@@ -564,6 +564,8 @@ int jabber_add_to_roster( struct im_connection *ic, char *handle, char *name )
 	xt_add_attr( node, "jid", handle );
 	if( name )
 		xt_add_attr( node, "name", name );
+	if( group )
+		xt_add_child( node, xt_new_node( "group", group, NULL ) );
 	
 	/* And pack it into a roster-add packet */
 	node = xt_new_node( "query", NULL, node );

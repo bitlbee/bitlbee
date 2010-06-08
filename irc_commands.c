@@ -402,8 +402,10 @@ static void irc_cmd_invite( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( !ic->f->invite || !ic->f->invite( ic, iu ) )
+	if( !ic->f->invite )
 		irc_send_num( irc, 482, "%s :Can't invite people here", cmd[2] );
+	else if( ic->f->invite( ic, iu ) )
+		irc_send_num( irc, 341, "%s %s", iu->nick, ic->name );
 }
 
 static void irc_cmd_userhost( irc_t *irc, char **cmd )

@@ -358,6 +358,26 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 	return TRUE;
 }
 
+static gboolean control_channel_invite( irc_channel_t *ic, irc_user_t *iu )
+{
+	struct irc_control_channel *icc = ic->data;
+	bee_user_t *bu = iu->bu;
+	
+	if( bu == NULL )
+		return FALSE;
+	
+	if( icc->type != IRC_CC_TYPE_GROUP )
+	{
+		irc_send_num( ic->irc, 482, "%s :Invitations are only possible to fill_by=group channels", ic->name );
+		return FALSE;
+	}
+	
+	bu->ic->acc->prpl->add_buddy( bu->ic, bu->handle,
+	                              icc->group ? icc->group->name : NULL );
+	
+	return TRUE;
+}
+
 static char *set_eval_by_account( set_t *set, char *value );
 static char *set_eval_fill_by( set_t *set, char *value );
 static char *set_eval_by_group( set_t *set, char *value );
@@ -455,7 +475,7 @@ static const struct irc_channel_funcs control_channel_funcs = {
 	NULL,
 	NULL,
 	NULL,
-	NULL,
+	control_channel_invite,
 	
 	control_channel_init,
 	control_channel_free,

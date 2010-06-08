@@ -412,7 +412,7 @@ static void jabber_add_buddy( struct im_connection *ic, char *who, char *group )
 		return;
 	}
 	
-	if( jabber_add_to_roster( ic, who, NULL ) )
+	if( jabber_add_to_roster( ic, who, NULL, group ) )
 		presence_send_request( ic, who, "subscribe" );
 }
 

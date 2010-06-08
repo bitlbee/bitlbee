@@ -621,7 +621,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 	}
 	
 	if( add_on_server )
-		a->ic->acc->prpl->add_buddy( a->ic, cmd[2], NULL );
+		a->prpl->add_buddy( a->ic, cmd[2], NULL );
 	else
 		/* Only for add -tmp. For regular adds, this callback will
 		   be called once the IM server confirms. */
