@@ -181,7 +181,7 @@ static void msn_get_info(struct im_connection *ic, char *who)
 
 static void msn_add_buddy( struct im_connection *ic, char *who, char *group )
 {
-	msn_buddy_list_add( ic, "FL", who, who );
+	msn_buddy_list_add( ic, "FL", who, who, group );
 }
 
 static void msn_remove_buddy( struct im_connection *ic, char *who, char *group )
@@ -251,7 +251,7 @@ static void msn_keepalive( struct im_connection *ic )
 
 static void msn_add_permit( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_add( ic, "AL", who, who );
+	msn_buddy_list_add( ic, "AL", who, who, NULL );
 }
 
 static void msn_rem_permit( struct im_connection *ic, char *who )
@@ -263,7 +263,7 @@ static void msn_add_deny( struct im_connection *ic, char *who )
 {
 	struct msn_switchboard *sb;
 	
-	msn_buddy_list_add( ic, "BL", who, who );
+	msn_buddy_list_add( ic, "BL", who, who, NULL );
 	
 	/* If there's still a conversation with this person, close it. */
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )

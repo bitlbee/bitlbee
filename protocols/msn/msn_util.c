@@ -50,14 +50,26 @@ int msn_logged_in( struct im_connection *ic )
 	return( 0 );
 }
 
-int msn_buddy_list_add( struct im_connection *ic, char *list, char *who, char *realname_ )
+int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *who, const char *realname_, const char *group )
 {
 	struct msn_data *md = ic->proto_data;
-	char buf[1024], *realname;
+	char buf[1024], *realname, groupid[8];
 	
 	realname = msn_http_encode( realname_ );
 	
-	g_snprintf( buf, sizeof( buf ), "ADD %d %s %s %s\r\n", ++md->trId, list, who, realname );
+	*groupid = '\0';
+	if( group )
+	{
+		int i;
+		for( i = 0; i < md->groupcount; i ++ )
+			if( g_strcasecmp( md->grouplist[i], group ) == 0 )
+			{
+				g_snprintf( groupid, sizeof( groupid ), " %d", i );
+				break;
+			}
+	}
+	
+	g_snprintf( buf, sizeof( buf ), "ADD %d %s %s %s%s\r\n", ++md->trId, list, who, realname, groupid );
 	if( msn_write( ic, buf, strlen( buf ) ) )
 	{
 		g_free( realname );
@@ -93,7 +105,7 @@ static void msn_buddy_ask_yes( void *data )
 {
 	struct msn_buddy_ask_data *bla = data;
 	
-	msn_buddy_list_add( bla->ic, "AL", bla->handle, bla->realname );
+	msn_buddy_list_add( bla->ic, "AL", bla->handle, bla->realname, NULL );
 	
 	imcb_ask_add( bla->ic, bla->handle, NULL );
 	
@@ -106,7 +118,7 @@ static void msn_buddy_ask_no( void *data )
 {
 	struct msn_buddy_ask_data *bla = data;
 	
-	msn_buddy_list_add( bla->ic, "BL", bla->handle, bla->realname );
+	msn_buddy_list_add( bla->ic, "BL", bla->handle, bla->realname, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla->realname );

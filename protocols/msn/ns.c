@@ -532,8 +532,14 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		else if( num_parts >= 6 && strcmp( cmd[2], "FL" ) == 0 )
 		{
+			const char *group = NULL;
+			int num;
+			
+			if( cmd[6] != NULL && sscanf( cmd[6], "%d", &num ) == 1 && num < md->groupcount )
+				group = md->grouplist[num];
+			
 			http_decode( cmd[5] );
-			imcb_add_buddy( ic, cmd[4], NULL );
+			imcb_add_buddy( ic, cmd[4], group );
 			imcb_rename_buddy( ic, cmd[4], cmd[5] );
 		}
 	}
