@@ -571,7 +571,7 @@ static void cmd_channel( irc_t *irc, char **cmd )
 		else
 			irc_usermsg( irc, "Couldn't remove channel (main channel %s or "
 			                  "channels you're still in cannot be deleted).",
-			                  ic->irc->default_channel->name );
+			                  irc->default_channel->name );
 	}
 	else
 	{
