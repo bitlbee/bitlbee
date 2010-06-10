@@ -167,7 +167,7 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 			irc_write( irc, "ERROR :Closing link: %s", reason );
 		
 		ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
-	                           irc->user->nick ? irc->user->nick : "(NONE)", irc->root->host, reason );
+	                           irc->user->nick ? irc->user->nick : "(NONE)", irc->user->host, reason );
 	     	
 		g_free( reason );
 	}
@@ -177,7 +177,7 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 			irc_write( irc, "ERROR :Closing link" );
 		
 		ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
-	        	           irc->user->nick ? irc->user->nick : "(NONE)", irc->root->host, "No reason given" );
+	        	           irc->user->nick ? irc->user->nick : "(NONE)", irc->user->host, "No reason given" );
 	}
 	
 	irc->status |= USTATUS_SHUTDOWN;
