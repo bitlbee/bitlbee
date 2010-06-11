@@ -113,6 +113,9 @@ static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old
 		}
 	}
 	
+	/* Reset this one since the info may have changed. */
+	iu->away_reply_timeout = 0;
+	
 	bee_irc_channel_update( irc, NULL, iu );
 	
 	return TRUE;
@@ -319,9 +322,20 @@ static gboolean bee_irc_user_privmsg_cb( gpointer data, gint fd, b_input_conditi
 
 static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
 {
+	const char *away;
+	
 	if( iu->bu == NULL )
 		return FALSE;
-	else if( set_getbool( &iu->irc->b->set, "paste_buffer" ) )
+	
+	if( ( away = irc_user_get_away( iu ) ) &&
+	    time( NULL ) >= iu->away_reply_timeout )
+	{
+		irc_send_num( iu->irc, 301, "%s :%s", iu->nick, away );
+		iu->away_reply_timeout = time( NULL ) +
+			set_getint( &iu->irc->b->set, "away_reply_timeout" );
+	}
+	
+	if( set_getbool( &iu->irc->b->set, "paste_buffer" ) )
 	{
 		int delay;
 		

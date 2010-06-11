@@ -108,8 +108,9 @@ typedef struct irc_user
 	
 	irc_user_flags_t flags;
 	
-	GString *pastebuf;
+	GString *pastebuf; /* Paste buffer (combine lines into a multiline msg). */
 	guint pastebuf_timer;
+	time_t away_reply_timeout; /* Only send a 301 if this time passed. */
 	
 	struct bee_user *bu;
 	
@@ -145,10 +146,10 @@ typedef struct irc_channel
 	char *topic_who;
 	time_t topic_time;
 	
-	GSList *users;
+	GSList *users; /* struct irc_channel_user */
 	struct set *set;
 	
-	GString *pastebuf;
+	GString *pastebuf; /* Paste buffer (combine lines into a multiline msg). */
 	guint pastebuf_timer;
 	
 	const struct irc_channel_funcs *f;

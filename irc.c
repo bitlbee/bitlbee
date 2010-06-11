@@ -100,6 +100,7 @@ irc_t *irc_new( int fd )
 	b->ui = &irc_ui_funcs;
 	
 	s = set_add( &b->set, "away_devoice", "true", set_eval_away_devoice, irc );
+	s = set_add( &b->set, "away_reply_timeout", "3600", set_eval_int, irc );
 	s = set_add( &b->set, "charset", "utf-8", set_eval_charset, irc );
 	s = set_add( &b->set, "default_target", "root", NULL, irc );
 	s = set_add( &b->set, "display_namechanges", "false", set_eval_bool, irc );

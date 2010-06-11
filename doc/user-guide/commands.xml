@@ -483,6 +483,20 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="away_reply_timeout" type="integer" scope="global">
+		<default>3600</default>
+
+		<description>
+			<para>
+				Most IRC servers send a user's away message every time s/he gets a private message, to inform the sender that they may not get a response immediately. With this setting set to 0, BitlBee will also behave like this.
+			</para>
+
+			<para>
+				Since not all IRC clients do an excellent job at suppressing these messages, this setting lets BitlBee do it instead. BitlBee will wait this many seconds (or until the away state/message changes) before re-informing you that the person's away.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="buddy_sendbuffer" type="boolean" scope="global">
 		<default>false</default>
 
