@@ -611,6 +611,50 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			return( 0 );
 		}
 	}
+	else if( strcmp( cmd[0], "ADG" ) == 0 )
+	{
+		char *group = g_strdup( cmd[3] );
+		int groupnum, i;
+		GSList *l, *next;
+		
+		http_decode( group );
+		if( sscanf( cmd[4], "%d", &groupnum ) == 1 )
+		{
+			if( groupnum >= md->groupcount )
+			{
+				md->grouplist = g_renew( char *, md->grouplist, groupnum + 1 );
+				for( i = md->groupcount; i <= groupnum; i ++ )
+					md->grouplist[i] = NULL;
+				md->groupcount = groupnum + 1;
+			}
+			g_free( md->grouplist[groupnum] );
+			md->grouplist[groupnum] = group;
+		}
+		else
+		{
+			/* Shouldn't happen, but if it does, give up on the group. */
+			g_free( group );
+			imcb_error( ic, "Syntax error" );
+			imc_logout( ic, TRUE );
+			return 0;
+		}
+		
+		for( l = md->grpq; l; l = next )
+		{
+			struct msn_groupadd *ga = l->data;
+			next = l->next;
+			if( g_strcasecmp( ga->group, group ) == 0 )
+			{
+				if( !msn_buddy_list_add( ic, "FL", ga->who, ga->who, group ) )
+					return 0;
+				
+				g_free( ga->group );
+				g_free( ga->who );
+				g_free( ga );
+				md->grpq = g_slist_remove( md->grpq, ga );
+			}
+		}
+	}
 	else if( isdigit( cmd[0][0] ) )
 	{
 		int num = atoi( cmd[0] );

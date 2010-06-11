@@ -103,6 +103,15 @@ static void msn_logout( struct im_connection *ic )
 			g_free( md->grouplist[--md->groupcount] );
 		g_free( md->grouplist );
 		
+		while( md->grpq )
+		{
+			struct msn_groupadd *ga = md->grpq->data;
+			g_free( ga->group );
+			g_free( ga->who );
+			g_free( ga );
+			md->grpq = g_slist_remove( md->grpq, ga );
+		}
+		
 		g_free( md );
 	}
 	
@@ -121,6 +130,14 @@ static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, in
 {
 	struct msn_switchboard *sb;
 	
+#ifdef DEBUG
+	if( strcmp( who, "raw" ) == 0 )
+	{
+		msn_write( ic, message, strlen( message ) );
+		msn_write( ic, "\r\n", 2 );
+	}
+	else
+#endif
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
 		return( msn_sb_sendmessage( sb, message ) );

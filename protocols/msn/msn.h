@@ -69,7 +69,7 @@ struct msn_data
 	
 	int trId;
 	
-	GSList *msgq;
+	GSList *msgq, *grpq;
 	GSList *switchboards;
 	int sb_failures;
 	time_t first_sb_failure;
@@ -118,6 +118,12 @@ struct msn_message
 {
 	char *who;
 	char *text;
+};
+
+struct msn_groupadd
+{
+	char *who;
+	char *group;
 };
 
 struct msn_handler_data

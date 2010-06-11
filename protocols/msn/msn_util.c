@@ -55,8 +55,6 @@ int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *
 	struct msn_data *md = ic->proto_data;
 	char buf[1024], *realname, groupid[8];
 	
-	realname = msn_http_encode( realname_ );
-	
 	*groupid = '\0';
 	if( group )
 	{
@@ -67,19 +65,47 @@ int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *
 				g_snprintf( groupid, sizeof( groupid ), " %d", i );
 				break;
 			}
-	}
-	
-	g_snprintf( buf, sizeof( buf ), "ADD %d %s %s %s%s\r\n", ++md->trId, list, who, realname, groupid );
-	if( msn_write( ic, buf, strlen( buf ) ) )
-	{
-		g_free( realname );
 		
-		return( 1 );
+		if( *groupid == '\0' )
+		{
+			/* Have to create this group, it doesn't exist yet. */
+			struct msn_groupadd *ga;
+			GSList *l;
+			
+			for( l = md->grpq; l; l = l->next )
+			{
+				ga = l->data;
+				if( g_strcasecmp( ga->group, group ) == 0 )
+					break;
+			}
+			
+			ga = g_new0( struct msn_groupadd, 1 );
+			ga->who = g_strdup( who );
+			ga->group = g_strdup( group );
+			md->grpq = g_slist_prepend( md->grpq, ga );
+			
+			if( l == NULL )
+			{
+				char *groupname = msn_http_encode( group );
+				g_snprintf( buf, sizeof( buf ), "ADG %d %s %d\r\n", ++md->trId, groupname, 0 );
+				g_free( groupname );
+				return msn_write( ic, buf, strlen( buf ) );
+			}
+			else
+			{
+				/* This can happen if the user's doing lots of adds to a
+				   new group at once; we're still waiting for the server
+				   to confirm group creation. */
+				return 1;
+			}
+		}
 	}
 	
+	realname = msn_http_encode( realname_ );
+	g_snprintf( buf, sizeof( buf ), "ADD %d %s %s %s%s\r\n", ++md->trId, list, who, realname, groupid );
 	g_free( realname );
 	
-	return( 0 );
+	return msn_write( ic, buf, strlen( buf ) );
 }
 
 int msn_buddy_list_remove( struct im_connection *ic, char *list, char *who )
