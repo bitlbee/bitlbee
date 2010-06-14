@@ -497,39 +497,6 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="buddy_sendbuffer" type="boolean" scope="global">
-		<default>false</default>
-
-		<description>
-			<para>
-				By default, when you send a message to someone, BitlBee forwards this message to the user immediately. When you paste a large number of lines, the lines will be sent in separate messages, which might not be very nice to read. If you enable this setting, BitlBee will buffer your messages and wait for more data.
-			</para>
-
-			<para>
-				Using the <emphasis>buddy_sendbuffer_delay</emphasis> setting you can specify the number of seconds BitlBee should wait for more data before the complete message is sent.
-			</para>
-
-			<para>
-				Please note that if you remove a buddy from your list (or if the connection to that user drops) and there's still data in the buffer, this data will be lost. BitlBee will not try to send the message to the user in those cases.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="buddy_sendbuffer_delay" type="integer" scope="global">
-		<default>200</default>
-
-		<description>
-
-			<para>
-				Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
-			</para>
-
-			<para>
-				See also the <emphasis>buddy_sendbuffer</emphasis> setting.
-			</para>
-		</description>
-	</bitlbee-setting>
-
 	<bitlbee-setting name="charset" type="string" scope="global">
 		<default>utf-8</default>
 		<possible-values>you can get a list of all possible values by doing 'iconv -l' in a shell</possible-values>
@@ -781,6 +748,39 @@
 			
 			<para>
 				Note that BitlBee will always say this setting is empty. This doesn't mean there is no password, it just means that, for security reasons, BitlBee stores passwords somewhere else so they can't just be retrieved in plain text.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="paste_buffer" type="boolean" scope="global">
+		<default>false</default>
+
+		<description>
+			<para>
+				By default, when you send a message to someone, BitlBee forwards this message to the user immediately. When you paste a large number of lines, the lines will be sent in separate messages, which might not be very nice to read. If you enable this setting, BitlBee will buffer your messages and wait for more data.
+			</para>
+
+			<para>
+				Using the <emphasis>paste_buffer_delay</emphasis> setting you can specify the number of seconds BitlBee should wait for more data before the complete message is sent.
+			</para>
+
+			<para>
+				Please note that if you remove a buddy from your list (or if the connection to that user drops) and there's still data in the buffer, this data will be lost. BitlBee will not try to send the message to the user in those cases.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="paste_buffer_delay" type="integer" scope="global">
+		<default>200</default>
+
+		<description>
+
+			<para>
+				Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
+			</para>
+
+			<para>
+				See also the <emphasis>paste_buffer</emphasis> setting.
 			</para>
 		</description>
 	</bitlbee-setting>
