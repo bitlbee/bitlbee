@@ -313,52 +313,6 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 	{
 		irc_send_num( irc, 401, "%s :No such nick/channel", cmd[1] );
 	}
-
-
-#if 0
-	else if( irc->nick && g_strcasecmp( cmd[1], irc->nick ) == 0 ) 
-	{
-	}
-	else 
-	{
-		if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
-		{
-			unsigned int i;
-			char *t = set_getstr( &irc->set, "default_target" );
-			
-			if( g_strcasecmp( t, "last" ) == 0 && irc->last_target )
-				cmd[1] = irc->last_target;
-			else if( g_strcasecmp( t, "root" ) == 0 )
-				cmd[1] = irc->mynick;
-			
-			for( i = 0; i < strlen( cmd[2] ); i ++ )
-			{
-				if( cmd[2][i] == ' ' ) break;
-				if( cmd[2][i] == ':' || cmd[2][i] == ',' )
-				{
-					cmd[1] = cmd[2];
-					cmd[2] += i;
-					*cmd[2] = 0;
-					while( *(++cmd[2]) == ' ' );
-					break;
-				}
-			}
-			
-			irc->is_private = 0;
-			
-			if( cmd[1] != irc->last_target )
-			{
-				g_free( irc->last_target );
-				irc->last_target = g_strdup( cmd[1] );
-			}
-		}
-		else
-		{
-			irc->is_private = 1;
-		}
-		irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? OPT_AWAY : 0 );
-	}
-#endif
 }
 
 static void irc_cmd_nickserv( irc_t *irc, char **cmd )

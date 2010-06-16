@@ -65,7 +65,7 @@ irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name )
 	{
 		irc_channel_t *ic = l->data;
 		
-		if( g_strcasecmp( name, ic->name ) == 0 )
+		if( irc_channel_name_cmp( name, ic->name ) == 0 )
 			return ic;
 	}
 	
@@ -266,20 +266,59 @@ void irc_channel_printf( irc_channel_t *ic, char *format, ... )
 	g_free( text );
 }
 
-gboolean irc_channel_name_ok( const char *name )
+gboolean irc_channel_name_ok( const char *name_ )
 {
-	char name_[strlen(name)+1];
+	const unsigned char *name = (unsigned char*) name_;
+	int i;
 	
 	/* Check if the first character is in CTYPES (#&) */
-	if( strchr( CTYPES, name[0] ) == NULL )
+	if( strchr( CTYPES, name_[0] ) == NULL )
 		return FALSE;
 	
-	/* Check the rest of the name. Just checking name + 1 doesn't work
-	   since it will fail if the first character is a number, or if
-	   it's a one-char channel name - both of which are legal. */
-	name_[0] = '_';
-	strcpy( name_ + 1, name + 1 );
-	return nick_ok( name_ );
+	/* RFC 1459 keeps amazing me: While only a "few" chars are allowed
+	   in nicknames, channel names can be pretty much anything as long
+	   as they start with # or &. I'll be a little bit more strict and
+	   disallow all non-printable characters. */
+	for( i = 1; name[i]; i ++ )
+		if( name[i] <= ' ' || name[i] == ',' )
+			return FALSE;
+	
+	return TRUE;
+}
+
+int irc_channel_name_cmp( const char *a_, const char *b_ )
+{
+	static unsigned char case_map[256];
+	const unsigned char *a = (unsigned char*) a_, *b = (unsigned char*) b_;
+	int i;
+	
+	if( case_map['A'] == '\0' )
+	{
+		for( i = 33; i < 256; i ++ )
+			if( i != ',' )
+				case_map[i] = i;
+		
+		for( i = 0; i < 26; i ++ )
+			case_map['A'+i] = 'a' + i;
+		
+		case_map['['] = '{';
+		case_map[']'] = '}';
+		case_map['~'] = '`';
+		case_map['\\'] = '|';
+	}
+	
+	if( !irc_channel_name_ok( a_ ) || !irc_channel_name_ok( b_ ) )
+		return -1;
+	
+	for( i = 0; a[i] && b[i] && case_map[a[i]] && case_map[b[i]]; i ++ )
+	{
+		if( case_map[a[i]] == case_map[b[i]] )
+			continue;
+		else
+			return case_map[a[i]] - case_map[b[i]];
+	}
+	
+	return case_map[a[i]] - case_map[b[i]];
 }
 
 static gint irc_channel_user_cmp( gconstpointer a_, gconstpointer b_ )
