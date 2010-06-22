@@ -1093,6 +1093,13 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Can't open a groupchat with %s.", cmd[2] );
 		}
 	}
+	else if( g_strcasecmp( cmd[1], "list" ) == 0 ||
+	         g_strcasecmp( cmd[1], "set" ) == 0 ||
+	         g_strcasecmp( cmd[1], "del" ) == 0 )
+	{
+		irc_usermsg( irc, "Warning: The \002chat\002 command was mostly replaced with the \002channel\002 command." );
+		cmd_channel( irc, cmd );
+	}
 	else
 	{
 		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat", cmd[1] );
