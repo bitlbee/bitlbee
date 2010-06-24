@@ -39,11 +39,6 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 	if (!g_slist_find( twitter_connections, ic ))
 		return 0;
 
-	// If the user uses multiple private message windows we need to get the 
-	// users buddies.
-	if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "many") == 0)
-		twitter_get_statuses_friends(ic, -1);
-
 	// Do stuff..
 	twitter_get_home_timeline(ic, -1);
 
@@ -55,7 +50,7 @@ static void twitter_main_loop_start( struct im_connection *ic )
 {
 	struct twitter_data *td = ic->proto_data;
 	
-	imcb_log( ic, "Connecting to Twitter" );
+	imcb_log( ic, "Getting initial statuses" );
 
 	// Run this once. After this queue the main loop function.
 	twitter_main_loop(ic, -1, 0);
@@ -65,6 +60,23 @@ static void twitter_main_loop_start( struct im_connection *ic )
 	td->main_loop_id = b_timeout_add(60000, twitter_main_loop, ic);
 }
 
+static void twitter_oauth_start( struct im_connection *ic );
+
+void twitter_login_finish( struct im_connection *ic )
+{
+	struct twitter_data *td = ic->proto_data;
+	
+	if( set_getbool( &ic->acc->set, "oauth" ) && !td->oauth_info )
+		twitter_oauth_start( ic );
+	else if( g_strcasecmp( set_getstr( &ic->acc->set, "mode" ), "one" ) != 0 &&
+	         !( td->flags & TWITTER_HAVE_FRIENDS ) )
+	{
+		imcb_log( ic, "Getting contact list" );
+		twitter_get_statuses_friends( ic, -1 );
+	}
+	else
+		twitter_main_loop_start( ic );
+}
 
 static const struct oauth_service twitter_oauth =
 {
@@ -127,7 +139,7 @@ static gboolean twitter_oauth_callback( struct oauth_info *info )
 		g_free( ic->acc->pass );
 		ic->acc->pass = oauth_to_string( info );
 		
-		twitter_main_loop_start( ic );
+		twitter_login_finish( ic );
 	}
 	
 	return TRUE;
@@ -210,10 +222,9 @@ static void twitter_login( account_t *acc )
 	imcb_add_buddy( ic, name, NULL );
 	imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
 	
-	if( td->oauth_info || !set_getbool( &acc->set, "oauth" ) )
-		twitter_main_loop_start( ic );
-	else
-		twitter_oauth_start( ic );
+	imcb_log( ic, "Connecting" );
+	
+	twitter_login_finish( ic );
 }
 
 /**

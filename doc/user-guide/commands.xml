@@ -1019,6 +1019,20 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="user_agent" type="string" scope="account">
+		<default>BitlBee</default>
+
+		<description>
+			<para>
+				Some Jabber servers are configured to only allow a few (or even just one) kinds of XMPP clients to connect to them.
+			</para>
+			
+			<para>
+				You can change this setting to make BitlBee present itself as a different client, so that you can still connect to these servers.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="web_aware" type="string" scope="account">
 		<default>false</default>
 

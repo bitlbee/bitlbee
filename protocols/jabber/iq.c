@@ -64,7 +64,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		/* Of course this is a very essential query to support. ;-) */
 		if( strcmp( s, XMLNS_VERSION ) == 0 )
 		{
-			xt_add_child( reply, xt_new_node( "name", "BitlBee", NULL ) );
+			xt_add_child( reply, xt_new_node( "name", set_getstr( &ic->acc->set, "user_agent" ), NULL ) );
 			xt_add_child( reply, xt_new_node( "version", BITLBEE_VERSION, NULL ) );
 			xt_add_child( reply, xt_new_node( "os", ARCH, NULL ) );
 		}
@@ -107,7 +107,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			c = xt_new_node( "identity", NULL, NULL );
 			xt_add_attr( c, "category", "client" );
 			xt_add_attr( c, "type", "pc" );
-			xt_add_attr( c, "name", "BitlBee" );
+			xt_add_attr( c, "name", set_getstr( &ic->acc->set, "user_agent" ) );
 			xt_add_child( reply, c );
 			
 			for( f = features; *f; f ++ )

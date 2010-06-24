@@ -81,6 +81,8 @@ static void jabber_init( account_t *acc )
 	s = set_add( &acc->set, "tls", "try", set_eval_tls, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
+	s = set_add( &acc->set, "user_agent", "BitlBee", NULL, acc );
+	
 	s = set_add( &acc->set, "xmlconsole", "false", set_eval_bool, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
@@ -485,7 +487,8 @@ static void jabber_chat_invite_( struct groupchat *c, char *who, char *msg )
 static void jabber_keepalive( struct im_connection *ic )
 {
 	/* Just any whitespace character is enough as a keepalive for XMPP sessions. */
-	jabber_write( ic, "\n", 1 );
+	if( !jabber_write( ic, "\n", 1 ) )
+		return;
 	
 	/* This runs the garbage collection every minute, which means every packet
 	   is in the cache for about a minute (which should be enough AFAIK). */

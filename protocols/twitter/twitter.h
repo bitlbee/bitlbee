@@ -32,6 +32,11 @@
 #define debug( text... )
 #endif
 
+typedef enum
+{
+	TWITTER_HAVE_FRIENDS = 1,
+} twitter_flags_t;
+
 struct twitter_data
 {
 	char* user;
@@ -41,6 +46,7 @@ struct twitter_data
 	gint main_loop_id;
 	struct groupchat *home_timeline_gc;
 	gint http_fails;
+	twitter_flags_t flags;
 	
 	gboolean url_ssl;
 	int url_port;
@@ -54,5 +60,7 @@ struct twitter_data
  * else.
  */
 GSList *twitter_connections;
+
+void twitter_login_finish( struct im_connection *ic );
 
 #endif //_TWITTER_H

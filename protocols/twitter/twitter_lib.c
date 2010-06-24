@@ -58,6 +58,8 @@ struct twitter_xml_status {
 	guint64 id;
 };
 
+static void twitter_groupchat_init(struct im_connection *ic);
+
 /**
  * Frees a twitter_xml_user struct.
  */
@@ -432,6 +434,19 @@ void twitter_get_home_timeline(struct im_connection *ic, int next_cursor)
 	}
 }
 
+static void twitter_groupchat_init(struct im_connection *ic)
+{
+	char *name_hint;
+	struct groupchat *gc;
+	struct twitter_data *td = ic->proto_data;
+	
+	td->home_timeline_gc = gc = imcb_chat_new( ic, "home/timeline" );
+	
+	name_hint = g_strdup_printf( "Twitter_%s", ic->acc->user );
+	imcb_chat_name_hint( gc, name_hint );
+	g_free( name_hint );
+}
+
 /**
  * Function that is called to see the statuses in a groupchat window.
  */
@@ -444,18 +459,11 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 
 	// Create a new groupchat if it does not exsist.
 	if (!td->home_timeline_gc)
-	{   
-		char *name_hint = g_strdup_printf( "Twitter_%s", ic->acc->user );
-		td->home_timeline_gc = gc = imcb_chat_new( ic, "home/timeline" );
-		imcb_chat_name_hint( gc, name_hint );
-		g_free( name_hint );
-		// Add the current user to the chat...
+		twitter_groupchat_init(ic);
+	
+	gc = td->home_timeline_gc;
+	if (!gc->joined)
 		imcb_chat_add_buddy( gc, ic->acc->user );
-	}
-	else
-	{   
-		gc = td->home_timeline_gc;
-	}
 
 	for ( l = list; l ; l = g_slist_next(l) )
 	{
@@ -603,15 +611,23 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	td = ic->proto_data;
 	
 	// Check if the HTTP request went well.
-	if (req->status_code != 200) {
+	if (req->status_code == 401)
+	{
+		imcb_error( ic, "Authentication failure" );
+		imc_logout( ic, FALSE );
+		return;
+	} else if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL ": %s", twitter_parse_error(req));
-		
+		imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL ": %s", twitter_parse_error(req));
+		imc_logout( ic, TRUE );
 		return;
 	} else {
 		td->http_fails = 0;
 	}
+	
+	if( !td->home_timeline_gc &&
+	    g_strcasecmp( set_getstr( &ic->acc->set, "mode" ), "chat" ) == 0 )
+		twitter_groupchat_init( ic );
 
 	txl = g_new0(struct twitter_xml_list, 1);
 	txl->list = NULL;
@@ -638,6 +654,9 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	// Free the structure.
 	txl_free(txl);
 	g_free(txl);
+	
+	td->flags |= TWITTER_HAVE_FRIENDS;
+	twitter_login_finish(ic);
 }
 
 /**
