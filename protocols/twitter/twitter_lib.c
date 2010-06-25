@@ -649,14 +649,18 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 
 	// if the next_cursor is set to something bigger then 0 there are more friends to gather.
 	if (txl->next_cursor > 0)
+	{
 		twitter_get_statuses_friends(ic, txl->next_cursor);
-
+	}
+	else
+	{
+		td->flags |= TWITTER_HAVE_FRIENDS;
+		twitter_login_finish(ic);
+	}
+	
 	// Free the structure.
 	txl_free(txl);
 	g_free(txl);
-	
-	td->flags |= TWITTER_HAVE_FRIENDS;
-	twitter_login_finish(ic);
 }
 
 /**
