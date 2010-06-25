@@ -244,7 +244,7 @@ Options:
 if __name__=='__main__':
 	options = Options()
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "c:dhH:l:np:v", ["config=", "daemon", "help", "host=", "log=", "nofork", "port=", "version"])
+		opts, args = getopt.getopt(sys.argv[1:], "c:dhH:l:np:v", ["config=", "debug", "help", "host=", "log=", "nofork", "port=", "version"])
 	except getopt.GetoptError:
 		options.usage(1)
 	for opt, arg in opts:
