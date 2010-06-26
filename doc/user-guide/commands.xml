@@ -5,7 +5,7 @@
 
 	<bitlbee-command name="account">
 		<short-description>IM-account list maintenance</short-description>
-		<syntax>account &lt;action&gt; [&lt;arguments&gt;]</syntax>
+		<syntax>account [&lt;account id&gt;] &lt;action&gt; [&lt;arguments&gt;]</syntax>
 
 		<description>
 
@@ -98,7 +98,7 @@
 		</bitlbee-command>
 
 		<bitlbee-command name="del">
-			<syntax>account del &lt;account id&gt;</syntax>
+			<syntax>account &lt;account id&gt; del</syntax>
 
 			<description>
 				<para>
@@ -113,7 +113,7 @@
 		</bitlbee-command>
 
 		<bitlbee-command name="on">
-			<syntax>account on [&lt;account id&gt;]</syntax>
+			<syntax>account [&lt;account id&gt;] on</syntax>
 
 			<description>
 				<para>
@@ -128,7 +128,7 @@
 		</bitlbee-command>
 
 		<bitlbee-command name="off">
-			<syntax>account off [&lt;account id&gt;]</syntax>
+			<syntax>account [&lt;account id&gt;] off</syntax>
 
 			<description>
 				<para>
@@ -152,10 +152,10 @@
 		</bitlbee-command>
 
 		<bitlbee-command name="set">
-			<syntax>account set &lt;account id&gt;</syntax>
-			<syntax>account set &lt;account id&gt;/&lt;setting&gt;</syntax>
-			<syntax>account set &lt;account id&gt;/&lt;setting&gt; &lt;value&gt;</syntax>
-			<syntax>account set -del &lt;account id&gt;/&lt;setting&gt;</syntax>
+			<syntax>account &lt;account id&gt; set</syntax>
+			<syntax>account &lt;account id&gt; set &lt;setting&gt;</syntax>
+			<syntax>account &lt;account id&gt; set &lt;setting&gt; &lt;value&gt;</syntax>
+			<syntax>account &lt;account id&gt; set -del &lt;setting&gt;</syntax>
 
 			<description>
 				<para>
@@ -180,7 +180,7 @@
 		<description>
 
 			<para>
-				Available actions: add, del, list, with and set. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
+				Available actions: add, with. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
 			</para>
 
 		</description>
@@ -204,57 +204,12 @@
 
 		</bitlbee-command>
 
-		<bitlbee-command name="del">
-			<syntax>chat del &lt;chat id&gt;</syntax>
-
-			<description>
-				<para>
-					This commands deletes an chatroom from your list.
-				</para>
-
-				<para>
-					The room ID can be a number (see <emphasis>chat list</emphasis>), or (part of) the name of the room/channel.
-				</para>
-			</description>
-		</bitlbee-command>
-
-		<bitlbee-command name="list">
-			<syntax>chat list</syntax>
-
-			<description>
-				<para>
-					This command gives you a list of all the chatrooms known by BitlBee.
-				</para>
-			</description>
-		</bitlbee-command>
-
 		<bitlbee-command name="with">
 			<syntax>chat with &lt;nickname&gt;</syntax>
 
 			<description>
 				<para>
 					While most <emphasis>chat</emphasis> subcommands are about named chatrooms, this command can be used to open an unnamed groupchat with one or more persons. This command is what <emphasis>/join #nickname</emphasis> used to do in older BitlBee versions.
-				</para>
-			</description>
-		</bitlbee-command>
-
-		<bitlbee-command name="set">
-			<syntax>chat set &lt;chat id&gt;</syntax>
-			<syntax>chat set &lt;chat id&gt;/&lt;setting&gt;</syntax>
-			<syntax>chat set &lt;chat id&gt;/&lt;setting&gt; &lt;value&gt;</syntax>
-			<syntax>chat set -del &lt;chat id&gt;/&lt;setting&gt;</syntax>
-
-			<description>
-				<para>
-					This command can be used to change various settings for chatrooms.
-				</para>
-				
-				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
-				</para>
-				
-				<para>
-					The room ID can be a number (see <emphasis>chat list</emphasis>), or (part of) the name of the room/channel.
 				</para>
 			</description>
 		</bitlbee-command>
