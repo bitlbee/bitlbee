@@ -305,7 +305,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 		}
 		else if( iu->f->privmsg )
 		{
-			iu->flags |= IRC_USER_PRIVATE;
+			iu->last_channel = NULL;
 			iu->f->privmsg( iu, cmd[2] );
 		}
 	}

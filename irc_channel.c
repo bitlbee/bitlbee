@@ -374,7 +374,7 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 		iu = irc_user_by_name( irc, to );
 		if( iu && iu->f->privmsg )
 		{
-			iu->flags &= ~IRC_USER_PRIVATE;
+			iu->last_channel = ic;
 			iu->f->privmsg( iu, s );
 		}
 		else

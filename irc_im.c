@@ -33,12 +33,13 @@ static const struct irc_user_funcs irc_user_im_funcs;
 static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 {
 	irc_user_t *iu;
+	irc_t *irc = (irc_t*) bee->ui_data;
 	char nick[MAX_NICK_LENGTH+1], *s;
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	strcpy( nick, nick_get( bu->ic->acc, bu->handle ) );
 	
-	bu->ui_data = iu = irc_user_new( (irc_t*) bee->ui_data, nick );
+	bu->ui_data = iu = irc_user_new( irc, nick );
 	iu->bu = bu;
 	
 	if( ( s = strchr( bu->handle, '@' ) ) )
@@ -62,21 +63,17 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 		iu->user = g_strdup( bu->handle );
 	}
 	
-	if( set_getbool( &bee->set, "private" ) )
-		iu->flags |= IRC_USER_PRIVATE;
-	
 	if( bu->flags & BEE_USER_LOCAL )
 	{
 		char *s = set_getstr( &bee->set, "handle_unknown" );
 		
 		if( strcmp( s, "add_private" ) == 0 )
-			iu->flags |= IRC_USER_PRIVATE;
+			iu->last_channel = NULL;
 		else if( strcmp( s, "add_channel" ) == 0 )
-			iu->flags &= ~IRC_USER_PRIVATE;
+			iu->last_channel = irc->default_channel;
 	}
 	
 	iu->f = &irc_user_im_funcs;
-	//iu->last_typing_notice = 0;
 	
 	return TRUE;
 }
@@ -179,7 +176,6 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at )
 {
 	irc_t *irc = bee->ui_data;
-	irc_channel_t *ic = irc->default_channel;
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
 	char *dst, *prefix = NULL;
 	char *wrapped, *ts = NULL;
@@ -187,16 +183,16 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, t
 	if( sent_at > 0 && set_getbool( &irc->b->set, "display_timestamps" ) )
 		ts = irc_format_timestamp( irc, sent_at );
 	
-	if( iu->flags & IRC_USER_PRIVATE )
+	if( iu->last_channel )
+	{
+		dst = iu->last_channel->name;
+		prefix = g_strdup_printf( "%s%s%s", irc->user->nick, set_getstr( &bee->set, "to_char" ), ts ? : "" );
+	}
+	else
 	{
 		dst = irc->user->nick;
 		prefix = ts;
 		ts = NULL;
-	}
-	else
-	{
-		dst = ic->name;
-		prefix = g_strdup_printf( "%s%s%s", irc->user->nick, set_getstr( &bee->set, "to_char" ), ts ? : "" );
 	}
 	
 	wrapped = word_wrap( msg, 425 );

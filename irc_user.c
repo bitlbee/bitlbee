@@ -33,7 +33,10 @@ irc_user_t *irc_user_new( irc_t *irc, const char *nick )
 	iu->nick = g_strdup( nick );
 	iu->user = iu->host = iu->fullname = iu->nick;
 	
-	iu->flags = set_getbool( &irc->b->set, "private" ) ? IRC_USER_PRIVATE : 0;
+	if( set_getbool( &irc->b->set, "private" ) )
+		iu->last_channel = NULL;
+	else
+		iu->last_channel = irc->default_channel;
 	
 	iu->key = g_strdup( nick );
 	nick_lc( iu->key );

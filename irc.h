@@ -65,7 +65,9 @@ typedef struct irc
 	struct irc_user *root;
 	struct irc_user *user;
 	
-	char *last_root_cmd;
+	char *last_root_cmd; /* Either the nickname from which the last root
+	                        msg came, or the last channel root was talked
+	                        to. */
 
 	char *password; /* HACK: Used to save the user's password, but before
 	                   logging in, this may contain a password we should
@@ -79,7 +81,7 @@ typedef struct irc
 	GSList *users, *channels;
 	struct irc_channel *default_channel;
 	GHashTable *nick_user_hash;
-	GHashTable *watches;
+	GHashTable *watches; /* See irc_cmd_watch() */
 
 	gint r_watch_source_id;
 	gint w_watch_source_id;
@@ -90,7 +92,7 @@ typedef struct irc
 
 typedef enum
 {
-	IRC_USER_PRIVATE = 1,
+	/* Replaced with iu->last_channel IRC_USER_PRIVATE = 1, */
 	IRC_USER_AWAY = 2,
 } irc_user_flags_t;
 
@@ -107,6 +109,7 @@ typedef struct irc_user
 	char *key;
 	
 	irc_user_flags_t flags;
+	struct irc_channel *last_channel;
 	
 	GString *pastebuf; /* Paste buffer (combine lines into a multiline msg). */
 	guint pastebuf_timer;
