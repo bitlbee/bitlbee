@@ -1018,6 +1018,7 @@ static void cmd_chat( irc_t *irc, char **cmd )
 		}
 		
 		if( ( ic = irc_channel_new( irc, channel ) ) &&
+		    set_setstr( &ic->set, "type", "chat" ) &&
 		    set_setstr( &ic->set, "chat_type", "room" ) &&
 		    set_setstr( &ic->set, "account", cmd[2] ) &&
 		    set_setstr( &ic->set, "room", cmd[3] ) )

@@ -174,12 +174,9 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		
 		if( ( setting = xml_attr( attr_names, attr_values, "name" ) ) )
 		{
-			/*
-			if( xd->current_chat != NULL )
-				xd->current_set_head = &xd->current_chat->set;
-			else
-			*/
-			if( xd->current_account != NULL )
+			if( xd->current_channel != NULL )
+				xd->current_set_head = &xd->current_channel->set;
+			else if( xd->current_account != NULL )
 				xd->current_set_head = &xd->current_account->set;
 			else
 				xd->current_set_head = &xd->irc->b->set;
@@ -207,6 +204,26 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			             "Missing attributes for %s element", element_name );
 		}
 	}
+	else if( g_strcasecmp( element_name, "channel" ) == 0 )
+	{
+		char *name, *type;
+		
+		name = xml_attr( attr_names, attr_values, "name" );
+		type = xml_attr( attr_names, attr_values, "type" );
+		
+		if( !name || !type )
+		{
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Missing attributes for %s element", element_name );
+			return;
+		}
+		
+		if( ( xd->current_channel = irc_channel_by_name( irc, name ) ) ||
+		    ( xd->current_channel = irc_channel_new( irc, name ) ) )
+			set_setstr( &xd->current_channel->set, "type", type );
+	}
+	/* Backward compatibility: Keep this around for a while for people
+	   switching from BitlBee 1.2.4+. */
 	else if( g_strcasecmp( element_name, "chat" ) == 0 )
 	{
 		char *handle, *channel;
@@ -224,11 +241,13 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			                       xd->current_account->user );
 			
 			if( ( ic = irc_channel_new( irc, channel ) ) &&
+			    set_setstr( &ic->set, "type", "chat" ) &&
 			    set_setstr( &ic->set, "chat_type", "room" ) &&
 			    set_setstr( &ic->set, "account", acc ) &&
 			    set_setstr( &ic->set, "room", handle ) )
 			{
-				/* Nothing else to do for now, really. */
+				/* Try to pick up some settings where possible. */
+				xd->current_channel = ic;
 			}
 			else if( ic )
 				irc_channel_free( ic );
@@ -261,9 +280,10 @@ static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name
 	{
 		xd->current_account = NULL;
 	}
-	else if( g_strcasecmp( element_name, "chat" ) == 0 )
+	else if( g_strcasecmp( element_name, "channel" ) == 0 ||
+	         g_strcasecmp( element_name, "chat" ) == 0 )
 	{
-		/* xd->current_chat = NULL; */
+		xd->current_channel = NULL;
 	}
 }
 
@@ -413,6 +433,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	int fd;
 	md5_byte_t pass_md5[21];
 	md5_state_t md5_state;
+	GSList *l;
 	
 	path2 = g_strdup( irc->user->nick );
 	nick_lc( path2 );
@@ -488,6 +509,23 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 			goto write_error;
 		
 		if( !xml_printf( fd, 1, "</account>\n" ) )
+			goto write_error;
+	}
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		
+		if( !xml_printf( fd, 1, "<channel name=\"%s\" type=\"%s\">\n",
+		                 ic->name, set_getstr( &ic->set, "type" ) ) )
+			goto write_error;
+		
+		for( set = ic->set; set; set = set->next )
+			if( set->value && strcmp( set->key, "type" ) != 0 )
+				if( !xml_printf( fd, 2, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
+					goto write_error;
+		
+		if( !xml_printf( fd, 1, "</channel>\n" ) )
 			goto write_error;
 	}
 	
