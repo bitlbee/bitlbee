@@ -233,6 +233,7 @@ int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_
 void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_user_flags_t flags );
 void irc_channel_printf( irc_channel_t *ic, char *format, ... );
 gboolean irc_channel_name_ok( const char *name );
+void irc_channel_name_strip( char *name );
 int irc_channel_name_cmp( const char *a_, const char *b_ );
 void irc_channel_update_ops( irc_channel_t *ic, char *value );
 char *set_eval_irc_channel_ops( struct set *set, char *value );

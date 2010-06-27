@@ -1015,6 +1015,8 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			s = g_strdup_printf( "#%s", channel );
 			g_free( channel );
 			channel = s;
+			
+			irc_channel_name_strip( channel );
 		}
 		
 		if( ( ic = irc_channel_new( irc, channel ) ) &&

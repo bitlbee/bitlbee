@@ -534,11 +534,11 @@ static gboolean bee_irc_chat_name_hint( bee_t *bee, struct groupchat *c, const c
 	
 	strncpy( stripped, name, MAX_NICK_LENGTH );
 	stripped[MAX_NICK_LENGTH] = '\0';
-	nick_strip( stripped );
+	irc_channel_name_strip( stripped );
 	if( set_getbool( &bee->set, "lcnicks" ) )
 		nick_lc( stripped );
 	
-	full_name = g_strdup_printf( "&%s", stripped );
+	full_name = g_strdup_printf( "#%s", stripped );
 	
 	if( stripped[0] && irc_channel_by_name( irc, full_name ) == NULL )
 	{

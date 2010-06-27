@@ -286,6 +286,17 @@ gboolean irc_channel_name_ok( const char *name_ )
 	return TRUE;
 }
 
+void irc_channel_name_strip( char *name )
+{
+	int i, j;
+	
+	for( i = j = 0; name[i]; i ++ )
+		if( name[i] > ' ' && name[i] != ',' )
+			name[j++] = name[i];
+	
+	name[j] = '\0';
+}
+
 int irc_channel_name_cmp( const char *a_, const char *b_ )
 {
 	static unsigned char case_map[256];
