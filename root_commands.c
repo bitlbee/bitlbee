@@ -27,7 +27,6 @@
 #include "commands.h"
 #include "bitlbee.h"
 #include "help.h"
-#include "chat.h"
 
 #include <string.h>
 

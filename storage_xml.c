@@ -28,7 +28,6 @@
 #include "base64.h"
 #include "arc.h"
 #include "md5.h"
-#include "chat.h"
 
 #if GLIB_CHECK_VERSION(2,8,0)
 #include <glib/gstdio.h>
@@ -54,7 +53,7 @@ struct xml_parsedata
 	irc_t *irc;
 	char *current_setting;
 	account_t *current_account;
-	struct chat *current_chat;
+	irc_channel_t *current_channel;
 	set_t **current_set_head;
 	char *given_nick;
 	char *given_pass;
@@ -175,9 +174,12 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		
 		if( ( setting = xml_attr( attr_names, attr_values, "name" ) ) )
 		{
+			/*
 			if( xd->current_chat != NULL )
 				xd->current_set_head = &xd->current_chat->set;
-			else if( xd->current_account != NULL )
+			else
+			*/
+			if( xd->current_account != NULL )
 				xd->current_set_head = &xd->current_account->set;
 			else
 				xd->current_set_head = &xd->irc->b->set;
@@ -214,7 +216,24 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		
 		if( xd->current_account && handle && channel )
 		{
-			//xd->current_chat = chat_add( xd->irc, xd->current_account, handle, channel );
+			irc_channel_t *ic;
+			char *acc;
+			
+			acc = g_strdup_printf( "%s(%s)",
+			                       xd->current_account->prpl->name,
+			                       xd->current_account->user );
+			
+			if( ( ic = irc_channel_new( irc, channel ) ) &&
+			    set_setstr( &ic->set, "chat_type", "room" ) &&
+			    set_setstr( &ic->set, "account", acc ) &&
+			    set_setstr( &ic->set, "room", handle ) )
+			{
+				/* Nothing else to do for now, really. */
+			}
+			else if( ic )
+				irc_channel_free( ic );
+			
+			g_free( acc );
 		}
 		else
 		{
@@ -244,7 +263,7 @@ static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name
 	}
 	else if( g_strcasecmp( element_name, "chat" ) == 0 )
 	{
-		xd->current_chat = NULL;
+		/* xd->current_chat = NULL; */
 	}
 }
 
@@ -436,7 +455,6 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		unsigned char *pass_cr;
 		char *pass_b64;
 		int pass_len;
-		struct chat *c;
 		
 		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password, 12 );
 		pass_b64 = base64_encode( pass_cr, pass_len );
@@ -468,27 +486,6 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		   something, there was an error. :-) */
 		if( g_hash_table_find( acc->nicks, xml_save_nick, & fd ) )
 			goto write_error;
-		
-#if 0
-		for( c = irc->chatrooms; c; c = c->next )
-		{
-			if( c->acc != acc )
-				continue;
-			
-			if( !xml_printf( fd, 2, "<chat handle=\"%s\" channel=\"%s\" type=\"%s\">\n",
-			                        c->handle, c->channel, "room" ) )
-				goto write_error;
-			
-			for( set = c->set; set; set = set->next )
-				if( set->value && !( set->flags & ACC_SET_NOSAVE ) )
-					if( !xml_printf( fd, 3, "<setting name=\"%s\">%s</setting>\n",
-					                        set->key, set->value ) )
-						goto write_error;
-
-			if( !xml_printf( fd, 2, "</chat>\n" ) )
-				goto write_error;
-		}
-#endif
 		
 		if( !xml_printf( fd, 1, "</account>\n" ) )
 			goto write_error;

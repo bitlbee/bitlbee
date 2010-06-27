@@ -35,7 +35,6 @@
 #include <ctype.h>
 
 #include "nogaim.h"
-#include "chat.h"
 
 GSList *connections;
 
