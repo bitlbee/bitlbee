@@ -322,6 +322,7 @@ static int cmd_account_set_checkflags( irc_t *irc, set_t *s )
 static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
+	int len;
 	
 	if( global.conf->authmode == AUTHMODE_REGISTERED && !( irc->status & USTATUS_IDENTIFIED ) )
 	{
@@ -329,7 +330,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( g_strcasecmp( cmd[1], "add" ) == 0 )
+	len = strlen( cmd[1] );
+	
+	if( len >= 1 && g_strncasecmp( cmd[1], "add", len ) == 0 )
 	{
 		struct prpl *prpl;
 		
@@ -355,7 +358,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 		
 		return;
 	}
-	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
+	else if( len >= 1 && g_strncasecmp( cmd[1], "list", len ) == 0 )
 	{
 		int i = 0;
 		
@@ -387,7 +390,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		/* Try the following two only if cmd[2] == NULL */
 	}
-	else if( g_strcasecmp( cmd[1], "on" ) == 0 )
+	else if( len >= 2 && g_strncasecmp( cmd[1], "on", len ) == 0 )
 	{
 		if ( irc->b->accounts )
 		{
@@ -404,7 +407,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 		
 		return;
 	}
-	else if( g_strcasecmp( cmd[1], "off" ) == 0 )
+	else if( len >= 2 && g_strncasecmp( cmd[1], "off", len ) == 0 )
 	{
 		irc_usermsg( irc, "Deactivating all active (re)connections..." );
 		
@@ -420,6 +423,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	}
 	
 	MIN_ARGS( 2 );
+	len = strlen( cmd[2] );
 	
 	/* At least right now, don't accept on/off/set/del as account IDs even
 	   if they're a proper match, since people not familiar with the new
@@ -436,7 +440,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( g_strcasecmp( cmd[2], "del" ) == 0 )
+	if( len >= 1 && g_strncasecmp( cmd[2], "del", len ) == 0 )
 	{
 		if( a->ic )
 		{
@@ -448,14 +452,14 @@ static void cmd_account( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Account deleted" );
 		}
 	}
-	else if( g_strcasecmp( cmd[2], "on" ) == 0 )
+	else if( len >= 2 && g_strncasecmp( cmd[2], "on", len ) == 0 )
 	{
 		if( a->ic )
 			irc_usermsg( irc, "Account already online" );
 		else
 			account_on( irc->b, a );
 	}
-	else if( g_strcasecmp( cmd[2], "off" ) == 0 )
+	else if( len >= 2 && g_strncasecmp( cmd[2], "off", len ) == 0 )
 	{
 		if( a->ic )
 		{
@@ -471,7 +475,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Account already offline" );
 		}
 	}
-	else if( g_strcasecmp( cmd[2], "set" ) == 0 )
+	else if( len >= 1 && g_strncasecmp( cmd[2], "set", len ) == 0 )
 	{
 		cmd_set_real( irc, cmd + 2, &a->set, cmd_account_set_checkflags );
 	}
@@ -484,8 +488,11 @@ static void cmd_account( irc_t *irc, char **cmd )
 static void cmd_channel( irc_t *irc, char **cmd )
 {
 	irc_channel_t *ic;
+	int len;
 	
-	if( g_strcasecmp( cmd[1], "list" ) == 0 )
+	len = strlen( cmd[1] );
+	
+	if( len >= 1 && g_strncasecmp( cmd[1], "list", len ) == 0 )
 	{
 		GSList *l;
 		int i = 0;
@@ -509,6 +516,7 @@ static void cmd_channel( irc_t *irc, char **cmd )
 	}
 	
 	MIN_ARGS( 2 );
+	len = strlen( cmd[2] );
 	
 	if( ( ic = irc_channel_get( irc, cmd[1] ) ) == NULL )
 	{
@@ -516,11 +524,11 @@ static void cmd_channel( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( g_strcasecmp( cmd[2], "set" ) == 0 )
+	if( len >= 1 && g_strncasecmp( cmd[2], "set", len ) == 0 )
 	{
 		cmd_set_real( irc, cmd + 2, &ic->set, NULL );
 	}
-	else if( g_strcasecmp( cmd[2], "del" ) == 0 )
+	else if( len >= 1 && g_strncasecmp( cmd[2], "del", len ) == 0 )
 	{
 		if( !( ic->flags & IRC_CHANNEL_JOINED ) &&
 		    ic != ic->irc->default_channel )
