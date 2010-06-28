@@ -140,6 +140,40 @@ int irc_channel_free( irc_channel_t *ic )
 	return 1;
 }
 
+struct irc_channel_free_data
+{
+	irc_t *irc;
+	irc_channel_t *ic;
+	char *name;
+};
+
+static gboolean irc_channel_free_callback( gpointer data, gint fd, b_input_condition cond )
+{
+	struct irc_channel_free_data *d = data;
+	
+	if( g_slist_find( irc_connection_list, d->irc ) &&
+	    irc_channel_by_name( d->irc, d->name ) == d->ic &&
+	    !( d->ic->flags & IRC_CHANNEL_JOINED ) )
+		irc_channel_free( d->ic );
+
+	g_free( d->name );
+	g_free( d );
+	return FALSE;
+}
+
+/* Free the channel, but via the event loop, so after finishing whatever event
+   we're currently handling. */
+void irc_channel_free_soon( irc_channel_t *ic )
+{
+	struct irc_channel_free_data *d = g_new0( struct irc_channel_free_data, 1 );
+	
+	d->irc = ic->irc;
+	d->ic = ic;
+	d->name = g_strdup( ic->name );
+	
+	b_timeout_add( 0, irc_channel_free_callback, d );
+}
+
 static char *set_eval_channel_type( set_t *set, char *value )
 {
 	struct irc_channel *ic = set->data;
@@ -205,7 +239,7 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, gboolean silent, co
 		ic->flags &= ~IRC_CHANNEL_JOINED;
 		
 		if( ic->flags & IRC_CHANNEL_TEMP )
-			irc_channel_free( ic );
+			irc_channel_free_soon( ic );
 	}
 	
 	return 1;
