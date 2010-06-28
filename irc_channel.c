@@ -201,7 +201,12 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, gboolean silent, co
 		irc_send_part( ic, iu, msg );
 	
 	if( iu == ic->irc->user )
+	{
 		ic->flags &= ~IRC_CHANNEL_JOINED;
+		
+		if( ic->flags & IRC_CHANNEL_TEMP )
+			irc_channel_free( ic );
+	}
 	
 	return 1;
 }

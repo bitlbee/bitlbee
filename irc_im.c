@@ -454,10 +454,8 @@ static gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
 	if( ic->flags & IRC_CHANNEL_JOINED )
 		irc_channel_printf( ic, "Cleaning up channel, bye!" );
 	
-	/* irc_channel_free( ic ); */
-	
-	irc_channel_del_user( ic, ic->irc->user, FALSE, "Chatroom closed by server" );
 	ic->data = NULL;
+	irc_channel_del_user( ic, ic->irc->user, FALSE, "Chatroom closed by server" );
 	
 	return TRUE;
 }
@@ -500,6 +498,9 @@ static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_u
 {
 	irc_t *irc = bee->ui_data;
 	
+	/* TODO: Possible bug here: If a module removes $user here instead of just
+	   using imcb_chat_free() and the channel was IRC_CHANNEL_TEMP, we get into
+	   a broken state around here. */
 	irc_channel_del_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data, FALSE, NULL );
 	
 	return TRUE;
@@ -695,13 +696,17 @@ static gboolean bee_irc_channel_chat_invite( irc_channel_t *ic, irc_user_t *iu )
 }
 
 static char *set_eval_room_account( set_t *set, char *value );
+static char *set_eval_chat_type( set_t *set, char *value );
 
 static gboolean bee_irc_channel_init( irc_channel_t *ic )
 {
 	set_add( &ic->set, "account", NULL, set_eval_room_account, ic );
-	set_add( &ic->set, "chat_type", "groupchat", NULL, ic );
+	set_add( &ic->set, "chat_type", "groupchat", set_eval_chat_type, ic );
 	set_add( &ic->set, "nick", NULL, NULL, ic );
 	set_add( &ic->set, "room", NULL, NULL, ic );
+	
+	/* chat_type == groupchat */
+	ic->flags |= IRC_CHANNEL_TEMP;
 	
 	return TRUE;
 }
@@ -722,12 +727,28 @@ static char *set_eval_room_account( set_t *set, char *value )
 	return g_strdup_printf( "%s(%s)", acc->prpl->name, acc->user );
 }
 
+static char *set_eval_chat_type( set_t *set, char *value )
+{
+	struct irc_channel *ic = set->data;
+	
+	if( strcmp( value, "groupchat" ) == 0 )
+		ic->flags |= IRC_CHANNEL_TEMP;
+	else if( strcmp( value, "room" ) == 0 )
+		ic->flags &= ~IRC_CHANNEL_TEMP;
+	else
+		return NULL;
+	
+	return value;
+}
+
 static gboolean bee_irc_channel_free( irc_channel_t *ic )
 {
 	set_del( &ic->set, "account" );
 	set_del( &ic->set, "chat_type" );
 	set_del( &ic->set, "nick" );
 	set_del( &ic->set, "room" );
+	
+	ic->flags &= ~IRC_CHANNEL_TEMP;
 	
 	return TRUE;
 }

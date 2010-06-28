@@ -516,6 +516,9 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	{
 		irc_channel_t *ic = l->data;
 		
+		if( ic->flags & IRC_CHANNEL_TEMP )
+			continue;
+		
 		if( !xml_printf( fd, 1, "<channel name=\"%s\" type=\"%s\">\n",
 		                 ic->name, set_getstr( &ic->set, "type" ) ) )
 			goto write_error;

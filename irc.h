@@ -131,7 +131,9 @@ extern const struct irc_user_funcs irc_user_self_funcs;
 
 typedef enum
 {
-	IRC_CHANNEL_JOINED = 1,
+	IRC_CHANNEL_JOINED = 1, /* The user is currently in the channel. */
+	IRC_CHANNEL_TEMP = 2,   /* Erase the channel when the user leaves,
+	                           and don't save it. */
 	
 	/* Hack: Set this flag right before jumping into IM when we expect
 	   a call to imcb_chat_new(). */
