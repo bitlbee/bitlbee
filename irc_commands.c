@@ -127,30 +127,49 @@ static void irc_cmd_pong( irc_t *irc, char **cmd )
 
 static void irc_cmd_join( irc_t *irc, char **cmd )
 {
-	irc_channel_t *ic;
+	char *comma, *s = cmd[1];
 	
-	if( ( ic = irc_channel_by_name( irc, cmd[1] ) ) == NULL )
-		ic = irc_channel_new( irc, cmd[1] );
-	
-	if( ic == NULL )
+	while( s )
 	{
-		irc_send_num( irc, 479, "%s :Invalid channel name", cmd[1] );
-		return;
+		irc_channel_t *ic;
+		
+		if( ( comma = strchr( s, ',' ) ) )
+			*comma = '\0';
+		
+		if( ( ic = irc_channel_by_name( irc, s ) ) == NULL )
+			ic = irc_channel_new( irc, s );
+		
+		if( ic == NULL )
+		{
+			irc_send_num( irc, 479, "%s :Invalid channel name", s );
+			goto next;
+		}
+		
+		if( ic->flags & IRC_CHANNEL_JOINED )
+			/* Dude, you're already there...
+			   RFC doesn't have any reply for that though? */
+			goto next;
+		
+		if( ic->f->join && !ic->f->join( ic ) )
+			/* The story is: FALSE either means the handler
+			   showed an error message, or is doing some work
+			   before the join should be confirmed. (In the
+			   latter case, the caller should take care of that
+			   confirmation.) TRUE means all's good, let the
+			   user join the channel right away. */
+			goto next;
+		
+		irc_channel_add_user( ic, irc->user );
+		
+next:
+		if( comma )
+		{
+			s = comma + 1;
+			*comma = ',';
+		}
+		else
+			break;
 	}
-	
-	if( ic->flags & IRC_CHANNEL_JOINED )
-		return; /* Dude, you're already there...
-		           RFC doesn't have any reply for that though? */
-	
-	if( ic->f->join && !ic->f->join( ic ) )
-		/* The story is: FALSE either means the handler showed an error
-		   message, or is doing some work before the join should be
-		   confirmed. (In the latter case, the caller should take care
-		   of that confirmation.)
-		   TRUE means all's good, let the user join the channel right away. */
-		return;
-	
-	irc_channel_add_user( ic, irc->user );
 }
 
 static void irc_cmd_names( irc_t *irc, char **cmd )
