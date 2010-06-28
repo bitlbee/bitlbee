@@ -310,6 +310,9 @@ gboolean irc_channel_name_ok( const char *name_ )
 	const unsigned char *name = (unsigned char*) name_;
 	int i;
 	
+	if( name_[0] == '\0' )
+		return FALSE;
+	
 	/* Check if the first character is in CTYPES (#&) */
 	if( strchr( CTYPES, name_[0] ) == NULL )
 		return FALSE;
