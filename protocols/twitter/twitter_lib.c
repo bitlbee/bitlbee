@@ -41,7 +41,7 @@
 
 struct twitter_xml_list {
 	int type;
-	int next_cursor;
+	int64_t next_cursor;
 	GSList *list;
 	gpointer data;
 };
@@ -170,8 +170,12 @@ void twitter_get_friends_ids(struct im_connection *ic, int next_cursor)
  */
 static xt_status twitter_xt_next_cursor( struct xt_node *node, struct twitter_xml_list *txl )
 {
-	// Do something with the cursor.
-	txl->next_cursor = node->text != NULL ? atoi(node->text) : -1;
+	char *end = NULL;
+	
+	if( node->text )
+		txl->next_cursor = g_ascii_strtoll( node->text, &end, 10 );
+	if( end == NULL )
+		txl->next_cursor = -1;
 
 	return XT_HANDLED;
 }
