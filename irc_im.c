@@ -156,6 +156,8 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 		show = iu->bu->group == icc->group;
 	else if( icc->type == IRC_CC_TYPE_ACCOUNT )
 		show = iu->bu->ic->acc == icc->account;
+	else if( icc->type == IRC_CC_TYPE_PROTOCOL )
+		show = iu->bu->ic->acc->prpl == icc->protocol;
 	
 	if( !show )
 	{

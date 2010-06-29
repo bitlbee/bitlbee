@@ -473,6 +473,7 @@ static gboolean control_channel_invite( irc_channel_t *ic, irc_user_t *iu )
 static char *set_eval_by_account( set_t *set, char *value );
 static char *set_eval_fill_by( set_t *set, char *value );
 static char *set_eval_by_group( set_t *set, char *value );
+static char *set_eval_by_protocol( set_t *set, char *value );
 
 static gboolean control_channel_init( irc_channel_t *ic )
 {
@@ -481,6 +482,7 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	set_add( &ic->set, "account", NULL, set_eval_by_account, ic );
 	set_add( &ic->set, "fill_by", "all", set_eval_fill_by, ic );
 	set_add( &ic->set, "group", NULL, set_eval_by_group, ic );
+	set_add( &ic->set, "protocol", NULL, set_eval_by_protocol, ic );
 	
 	ic->data = icc = g_new0( struct irc_control_channel, 1 );
 	icc->type = IRC_CC_TYPE_DEFAULT;
@@ -514,6 +516,7 @@ static char *set_eval_by_account( set_t *set, char *value )
 	icc->account = acc;
 	if( icc->type == IRC_CC_TYPE_ACCOUNT )
 		bee_irc_channel_update( ic->irc, ic, NULL );
+	
 	return g_strdup_printf( "%s(%s)", acc->prpl->name, acc->user );
 }
 
@@ -530,6 +533,8 @@ static char *set_eval_fill_by( set_t *set, char *value )
 		icc->type = IRC_CC_TYPE_GROUP;
 	else if( strcmp( value, "account" ) == 0 )
 		icc->type = IRC_CC_TYPE_ACCOUNT;
+	else if( strcmp( value, "protocol" ) == 0 )
+		icc->type = IRC_CC_TYPE_PROTOCOL;
 	else
 		return SET_INVALID;
 	
@@ -545,7 +550,24 @@ static char *set_eval_by_group( set_t *set, char *value )
 	icc->group = bee_group_by_name( ic->irc->b, value, TRUE );
 	if( icc->type == IRC_CC_TYPE_GROUP )
 		bee_irc_channel_update( ic->irc, ic, NULL );
+	
 	return g_strdup( icc->group->name );
+}
+
+static char *set_eval_by_protocol( set_t *set, char *value )
+{
+	struct irc_channel *ic = set->data;
+	struct irc_control_channel *icc = ic->data;
+	struct prpl *prpl;
+	
+	if( !( prpl = find_protocol( value ) ) )
+		return SET_INVALID;
+	
+	icc->protocol = prpl;
+	if( icc->type == IRC_CC_TYPE_PROTOCOL )
+		bee_irc_channel_update( ic->irc, ic, NULL );
+	
+	return value;
 }
 
 static gboolean control_channel_free( irc_channel_t *ic )

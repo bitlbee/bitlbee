@@ -192,6 +192,7 @@ typedef enum
 	IRC_CC_TYPE_REST,
 	IRC_CC_TYPE_GROUP,
 	IRC_CC_TYPE_ACCOUNT,
+	IRC_CC_TYPE_PROTOCOL,
 } irc_control_channel_type_t;
 
 struct irc_control_channel
@@ -199,6 +200,7 @@ struct irc_control_channel
 	irc_control_channel_type_t type;
 	struct bee_group *group;
 	struct account *account;
+	struct prpl *protocol;
 };
 
 extern const struct bee_ui_funcs irc_ui_funcs;

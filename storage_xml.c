@@ -218,6 +218,10 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			return;
 		}
 		
+		/* The channel may exist already, for example if it's &bitlbee.
+		   Also, it's possible that the user just reconnected and the
+		   IRC client already rejoined all channels it was in. They
+		   should still get the right settings. */
 		if( ( xd->current_channel = irc_channel_by_name( irc, name ) ) ||
 		    ( xd->current_channel = irc_channel_new( irc, name ) ) )
 			set_setstr( &xd->current_channel->set, "type", type );
