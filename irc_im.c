@@ -420,7 +420,7 @@ static gboolean bee_irc_chat_new( bee_t *bee, struct groupchat *c )
 	int i;
 	
 	/* Try to find a channel that expects to receive a groupchat.
-	   This flag is set by groupchat_stub_invite(). */
+	   This flag is set earlier in our current call trace. */
 	for( l = irc->channels; l; l = l->next )
 	{
 		ic = l->data;
@@ -529,7 +529,7 @@ static gboolean bee_irc_chat_topic( bee_t *bee, struct groupchat *c, const char 
 static gboolean bee_irc_chat_name_hint( bee_t *bee, struct groupchat *c, const char *name )
 {
 	irc_t *irc = bee->ui_data;
-	irc_channel_t *ic = c->ui_data;
+	irc_channel_t *ic = c->ui_data, *oic;
 	char stripped[MAX_NICK_LENGTH+1], *full_name;
 	
 	/* Don't rename a channel if the user's in it already. */
@@ -542,17 +542,36 @@ static gboolean bee_irc_chat_name_hint( bee_t *bee, struct groupchat *c, const c
 	if( set_getbool( &bee->set, "lcnicks" ) )
 		nick_lc( stripped );
 	
-	full_name = g_strdup_printf( "#%s", stripped );
+	if( stripped[0] == '\0' )
+		return FALSE;
 	
-	if( stripped[0] && irc_channel_by_name( irc, full_name ) == NULL )
+	full_name = g_strdup_printf( "#%s", stripped );
+	if( ( oic = irc_channel_by_name( irc, full_name ) ) )
 	{
-		g_free( ic->name );
-		ic->name = full_name;
+		char *type, *chat_type;
+		
+		type = set_getstr( &oic->set, "type" );
+		chat_type = set_getstr( &oic->set, "chat_type" );
+		
+		if( type && chat_type && oic->data == FALSE &&
+		    strcmp( type, "chat" ) == 0 &&
+		    strcmp( chat_type, "groupchat" ) == 0 )
+		{
+			/* There's a channel with this name already, but it looks
+			   like it's not in use yet. Most likely the IRC client
+			   rejoined the channel after a reconnect. Remove it so
+			   we can reuse its name. */
+			irc_channel_free( oic );
+		}
+		else
+		{
+			g_free( full_name );
+			return FALSE;
+		}
 	}
-	else
-	{
-		g_free( full_name );
-	}
+	
+	g_free( ic->name );
+	ic->name = full_name;
 	
 	return TRUE;
 }
