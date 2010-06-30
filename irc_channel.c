@@ -240,6 +240,16 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, gboolean silent, co
 		
 		if( ic->flags & IRC_CHANNEL_TEMP )
 			irc_channel_free_soon( ic );
+		else
+		{
+			/* Flush userlist now. The user won't see it anyway. */
+			while( ic->users )
+			{
+				g_free( ic->users->data );
+				ic->users = g_slist_remove( ic->users, ic->users->data );
+			}
+			irc_channel_add_user( ic, ic->irc->root );
+		}
 	}
 	
 	return 1;
@@ -581,6 +591,7 @@ static gboolean control_channel_free( irc_channel_t *ic )
 	set_del( &ic->set, "account" );
 	set_del( &ic->set, "fill_by" );
 	set_del( &ic->set, "group" );
+	set_del( &ic->set, "protocol" );
 	
 	g_free( icc );
 	ic->data = NULL;

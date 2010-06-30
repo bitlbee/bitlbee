@@ -130,7 +130,8 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 		{
 			ic = l->data;
 			/* TODO: Just add a type flag or so.. */
-			if( ic->f == irc->default_channel->f )
+			if( ic->f == irc->default_channel->f &&
+			    ( ic->flags & IRC_CHANNEL_JOINED ) )
 				bee_irc_channel_update( irc, ic, iu );
 		}
 		return;
