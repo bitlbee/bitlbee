@@ -268,7 +268,14 @@ static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message
 		if( set_getbool( &ic->acc->set, "oauth" ) &&
 		    td->oauth_info && td->oauth_info->token == NULL )
 		{
-			if( !oauth_access_token( message, td->oauth_info ) )
+			char pin[strlen(message)+1], *s;
+			
+			strcpy( pin, message );
+			for( s = pin + sizeof( pin ) - 2; s > pin && isspace( *s ); s -- )
+				*s = '\0';
+			for( s = pin; *s && isspace( *s ); s ++ ) {}
+			
+			if( !oauth_access_token( s, td->oauth_info ) )
 			{
 				imcb_error( ic, "OAuth error: %s", "Failed to send access token request" );
 				imc_logout( ic, TRUE );
