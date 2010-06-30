@@ -333,6 +333,20 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 	}
 }
 
+static void irc_cmd_notice( irc_t *irc, char **cmd )
+{
+	if( !cmd[2] ) 
+	{
+		irc_send_num( irc, 412, ":No text to send" );
+		return;
+	}
+	
+	/* At least for now just echo. IIRC some IRC clients use self-notices
+	   for lag checks, so try to support that. */
+	if( nick_cmp( cmd[1], irc->user->nick ) == 0 )
+		irc_send_msg( irc->user, "NOTICE", irc->user->nick, cmd[2], NULL );
+}
+
 static void irc_cmd_nickserv( irc_t *irc, char **cmd )
 {
 	/* [SH] This aliases the NickServ command to PRIVMSG root */
@@ -602,6 +616,7 @@ static const command_t irc_commands[] = {
 	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
 	{ "who",         0, irc_cmd_who,         IRC_CMD_LOGGED_IN },
 	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
+	{ "notice",      1, irc_cmd_notice,      IRC_CMD_LOGGED_IN },
 	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
 	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
@@ -611,9 +626,6 @@ static const command_t irc_commands[] = {
 	{ "ison",        1, irc_cmd_ison,        IRC_CMD_LOGGED_IN },
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
-#if 0
-	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
-#endif
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
