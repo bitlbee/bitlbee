@@ -238,8 +238,14 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, gboolean silent, co
 	{
 		ic->flags &= ~IRC_CHANNEL_JOINED;
 		
-		if( ic->flags & IRC_CHANNEL_TEMP )
+		if( ic->irc->status & USTATUS_SHUTDOWN )
+		{
+			/* Don't do anything fancy when we're shutting down anyway. */
+		}
+		else if( ic->flags & IRC_CHANNEL_TEMP )
+		{
 			irc_channel_free_soon( ic );
+		}
 		else
 		{
 			/* Flush userlist now. The user won't see it anyway. */
