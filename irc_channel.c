@@ -492,6 +492,10 @@ static gboolean control_channel_init( irc_channel_t *ic )
 		set_setstr( &ic->set, "group", ic->name + 1 );
 		set_setstr( &ic->set, "fill_by", "group" );
 	}
+	else if( set_setstr( &ic->set, "protocol", ic->name + 1 ) )
+	{
+		set_setstr( &ic->set, "fill_by", "protocol" );
+	}
 	else if( set_setstr( &ic->set, "account", ic->name + 1 ) )
 	{
 		set_setstr( &ic->set, "fill_by", "account" );
