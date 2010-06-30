@@ -41,7 +41,7 @@
 
 struct twitter_xml_list {
 	int type;
-	int64_t next_cursor;
+	gint64 next_cursor;
 	GSList *list;
 	gpointer data;
 };
@@ -154,12 +154,12 @@ static void twitter_http_get_friends_ids(struct http_request *req);
 /**
  * Get the friends ids.
  */
-void twitter_get_friends_ids(struct im_connection *ic, int next_cursor)
+void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor)
 {
 	// Primitive, but hey! It works...	
 	char* args[2];
 	args[0] = "cursor";
-	args[1] = g_strdup_printf ("%d", next_cursor);
+	args[1] = g_strdup_printf ("%lld", (long long) next_cursor);
 	twitter_http(ic, TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, args, 2);
 
 	g_free(args[1]);
@@ -418,13 +418,13 @@ static void twitter_http_get_home_timeline(struct http_request *req);
 /**
  * Get the timeline.
  */
-void twitter_get_home_timeline(struct im_connection *ic, int next_cursor)
+void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
 {
 	struct twitter_data *td = ic->proto_data;
 
 	char* args[4];
 	args[0] = "cursor";
-	args[1] = g_strdup_printf ("%d", next_cursor);
+	args[1] = g_strdup_printf ("%lld", (long long) next_cursor);
 	if (td->home_timeline_id) {
 		args[2] = "since_id";
 		args[3] = g_strdup_printf ("%llu", (long long unsigned int) td->home_timeline_id);
@@ -670,11 +670,11 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 /**
  * Get the friends.
  */
-void twitter_get_statuses_friends(struct im_connection *ic, int next_cursor)
+void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor)
 {
 	char* args[2];
 	args[0] = "cursor";
-	args[1] = g_strdup_printf ("%d", next_cursor);
+	args[1] = g_strdup_printf ("%lld", (long long) next_cursor);
 
 	twitter_http(ic, TWITTER_SHOW_FRIENDS_URL, twitter_http_get_statuses_friends, ic, 0, args, 2);
 
