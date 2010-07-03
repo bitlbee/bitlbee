@@ -296,7 +296,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 	if( g_strncasecmp( cmd[2], "\001ACTION", 7 ) == 0 )
 	{
 		cmd[2] += 4;
-		strcpy( cmd[2], "/me" );
+		memcpy( cmd[2], "/me", 3 );
 		if( cmd[2][strlen(cmd[2])-1] == '\001' )
 			cmd[2][strlen(cmd[2])-1] = '\0';
 	}
