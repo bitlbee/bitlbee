@@ -107,6 +107,14 @@ static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old
 			if( g_hash_table_lookup( irc->watches, iu->key ) )
 				irc_send_num( irc, 601, "%s %s %s %d :%s", iu->nick, iu->user,
 				              iu->host, (int) time( NULL ), "logged offline" );
+			
+			/* Send a QUIT since those will also show up in any
+			   query windows the user may have, plus it's only
+			   one QUIT instead of possibly many (in case of
+			   multiple control chans). If there's a channel that
+			   shows offline people, a JOIN will follow. */
+			if( set_getbool( &bee->set, "offline_user_quits" ) )
+				irc_user_quit( iu, "Leaving..." );
 		}
 	}
 	

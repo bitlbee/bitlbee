@@ -51,56 +51,47 @@ irc_user_t *irc_user_new( irc_t *irc, const char *nick )
 
 int irc_user_free( irc_t *irc, irc_user_t *iu )
 {
-	GSList *l;
-	gboolean send_quit = FALSE;
+	static struct im_connection *last_ic;
+	static char *msg;
 	
 	if( !iu )
 		return 0;
 	
+	if( iu->bu &&
+	    ( iu->bu->ic->flags & OPT_LOGGING_OUT ) &&
+	    iu->bu->ic != last_ic )
+	{
+		char host_prefix[] = "bitlbee.";
+		char *s;
+		
+		/* Irssi recognises netsplits by quitmsgs with two
+		   hostnames, where a hostname is a "word" with one
+		   of more dots. Mangle no-dot hostnames a bit. */
+		if( strchr( irc->root->host, '.' ) )
+			*host_prefix = '\0';
+		
+		last_ic = iu->bu->ic;
+		g_free( msg );
+		if( !set_getbool( &irc->b->set, "simulate_netsplit" ) )
+			msg = g_strdup( "Account off-line" );
+		else if( ( s = strchr( iu->bu->ic->acc->user, '@' ) ) )
+			msg = g_strdup_printf( "%s%s %s", host_prefix,
+			        irc->root->host, s + 1 );
+		else
+			msg = g_strdup_printf( "%s%s %s.%s",
+				host_prefix, irc->root->host,
+				iu->bu->ic->acc->prpl->name, irc->root->host );
+	}
+	else if( !iu->bu || !( iu->bu->ic->flags & OPT_LOGGING_OUT ) )
+	{
+		g_free( msg );
+		msg = g_strdup( "Removed" );
+		last_ic = NULL;
+	}
+	irc_user_quit( iu, msg );
+	
 	irc->users = g_slist_remove( irc->users, iu );
 	g_hash_table_remove( irc->nick_user_hash, iu->key );
-	
-	for( l = irc->channels; l; l = l->next )
-		send_quit |= irc_channel_del_user( (irc_channel_t*) l->data, iu, TRUE, NULL );
-	
-	if( send_quit )
-	{
-		static struct im_connection *last_ic;
-		static char *msg;
-		
-		if( iu->bu &&
-		    ( iu->bu->ic->flags & OPT_LOGGING_OUT ) &&
-		    iu->bu->ic != last_ic )
-		{
-			char host_prefix[] = "bitlbee.";
-			char *s;
-			
-			/* Irssi recognises netsplits by quitmsgs with two
-			   hostnames, where a hostname is a "word" with one
-			   of more dots. Mangle no-dot hostnames a bit. */
-			if( strchr( irc->root->host, '.' ) )
-				*host_prefix = '\0';
-			
-			last_ic = iu->bu->ic;
-			g_free( msg );
-			if( !set_getbool( &irc->b->set, "simulate_netsplit" ) )
-				msg = g_strdup( "Account off-line" );
-			else if( ( s = strchr( iu->bu->ic->acc->user, '@' ) ) )
-				msg = g_strdup_printf( "%s%s %s", host_prefix,
-				        irc->root->host, s + 1 );
-			else
-				msg = g_strdup_printf( "%s%s %s.%s",
-					host_prefix, irc->root->host,
-					iu->bu->ic->acc->prpl->name, irc->root->host );
-		}
-		else if( !iu->bu || !( iu->bu->ic->flags & OPT_LOGGING_OUT ) )
-		{
-			g_free( msg );
-			msg = g_strdup( "Removed" );
-			last_ic = NULL;
-		}
-		irc_send_quit( iu, msg );
-	}
 	
 	g_free( iu->nick );
 	if( iu->nick != iu->user ) g_free( iu->user );
@@ -202,6 +193,21 @@ const char *irc_user_get_away( irc_user_t *iu )
 	}
 	
 	return NULL;
+}
+
+void irc_user_quit( irc_user_t *iu, const char *msg )
+{
+	GSList *l;
+	gboolean send_quit = FALSE;
+	
+	if( !iu )
+		return;
+	
+	for( l = iu->irc->channels; l; l = l->next )
+		send_quit |= irc_channel_del_user( (irc_channel_t*) l->data, iu, TRUE, NULL );
+	
+	if( send_quit )
+		irc_send_quit( iu, msg );
 }
 
 /* User-type dependent functions, for root/NickServ: */
