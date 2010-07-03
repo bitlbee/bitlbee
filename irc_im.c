@@ -122,7 +122,7 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 {
 	struct irc_control_channel *icc;
 	GSList *l;
-	gboolean show;
+	gboolean show = FALSE;
 	
 	if( ic == NULL )
 	{
