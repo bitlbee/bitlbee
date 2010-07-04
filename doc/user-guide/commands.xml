@@ -483,6 +483,24 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="base_url" type="string" scope="account">
+		<default>http://twitter.com</default>
+
+		<description>
+			<para>
+				There are more services that understand the Twitter API than just Twitter.com. BitlBee can connect to all Twitter API implementations.
+			</para>
+
+			<para>
+				For example, set this setting to <emphasis>http://identi.ca/api</emphasis> to use Identi.ca.
+			</para>
+
+			<para>
+				Keep two things in mind: When not using Twitter, you <emphasis>must</emphasis> also disable the <emphasis>oauth</emphasis> setting as it currently only works with Twitter. If you're still having issues, make sure there is <emphasis>no</emphasis> slash at the end of the URL you enter here.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="buddy_sendbuffer" type="boolean" scope="global">
 		<default>false</default>
 
