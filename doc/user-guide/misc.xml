@@ -166,7 +166,7 @@ When you create a new channel, BitlBee will try to guess from its name which con
 </para>
 
 <para>
-Any valid account ID (so a number, protocol name or part of screenname, as long as it's unique) can also be used as a channel name. So if you just join &amp;msn, it will contain all your MSN contacts (as long as you have only one MSN account set up). And if you have a Facebook account set up, you can see its contacts by just joining &amp;facebook.
+Any valid account ID (so a number, protocol name or part of screenname, as long as it's unique) can also be used as a channel name. So if you just join &amp;msn, it will contain all your MSN contacts. And if you have a Facebook account set up, you can see its contacts by just joining &amp;facebook.
 </para>
 
 <para>

@@ -15,8 +15,9 @@ These are the available help subjects:
   <varlistentry><term>commands</term><listitem><para>All available commands and settings</para></listitem></varlistentry>
   <varlistentry><term>channels</term><listitem><para>About creating and customizing channels</para></listitem></varlistentry>
   <varlistentry><term>away</term><listitem><para>About setting away states</para></listitem></varlistentry>
-  <varlistentry><term>smileys</term><listitem><para>A summary of some non-standard smileys you might find and fail to understand</para></listitem></varlistentry>
   <varlistentry><term>groupchats</term><listitem><para>How to work with groupchats on BitlBee</para></listitem></varlistentry>
+  <varlistentry><term>nick_changes</term><listitem><para>Changing your nickname without losing any settings</para></listitem></varlistentry>
+  <varlistentry><term>smileys</term><listitem><para>A summary of some non-standard smileys you might find and fail to understand</para></listitem></varlistentry>
 </variablelist>
 
 <para>
@@ -43,9 +44,11 @@ These are the available help subjects:
 <variablelist>
   <varlistentry><term>quickstart</term><listitem><para>A short introduction into BitlBee</para></listitem></varlistentry>
   <varlistentry><term>commands</term><listitem><para>All available commands and settings</para></listitem></varlistentry>
+  <varlistentry><term>channels</term><listitem><para>About creating and customizing channels</para></listitem></varlistentry>
   <varlistentry><term>away</term><listitem><para>About setting away states</para></listitem></varlistentry>
-  <varlistentry><term>smileys</term><listitem><para>A summary of some non-standard smileys you might find and fail to understand</para></listitem></varlistentry>
   <varlistentry><term>groupchats</term><listitem><para>How to work with groupchats on BitlBee</para></listitem></varlistentry>
+  <varlistentry><term>nick_changes</term><listitem><para>Changing your nickname without losing any settings</para></listitem></varlistentry>
+  <varlistentry><term>smileys</term><listitem><para>A summary of some non-standard smileys you might find and fail to understand</para></listitem></varlistentry>
 </variablelist>
 
 <para>

@@ -159,7 +159,7 @@
 
 			<description>
 				<para>
-					This command can be used to change various settings for IM accounts. For all protocols, this command can be used to change the handle or the password BitlBee uses to log in and if it should be logged in automatically. Some protocols have additional settings. You can see the settings available for a connection by typing <emphasis>account set &lt;account id&gt;</emphasis>.
+					This command can be used to change various settings for IM accounts. For all protocols, this command can be used to change the handle or the password BitlBee uses to log in and if it should be logged in automatically. Some protocols have additional settings. You can see the settings available for a connection by typing <emphasis>account &lt;account id&gt; set</emphasis>.
 				</para>
 				
 				<para>
@@ -171,6 +171,65 @@
 				</para>
 			</description>
 		</bitlbee-command>
+	</bitlbee-command>
+
+	<bitlbee-command name="channel">
+		<short-description>Channel list maintenance</short-description>
+		<syntax>channel [&lt;account id&gt;] &lt;action&gt; [&lt;arguments&gt;]</syntax>
+
+		<description>
+			<para>
+				Available actions: del, list, set. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
+			</para>
+			
+			<para>
+				There is no <emphasis>channel add</emphasis> command. To create a new channel, just use the IRC <emphasis>/join</emphasis> command. See also <emphasis>help channels</emphasis> and <emphasis>help groupchats</emphasis>.
+			</para>
+		</description>
+
+		<bitlbee-command name="del">
+			<syntax>channel &lt;channel id&gt; del</syntax>
+
+			<description>
+				<para>
+					Remove a channel and forget all its settings. You can only remove channels you're not currently in, and can't remove the main control channel. (You can, however, leave it.)
+				</para>
+			</description>
+
+		</bitlbee-command>
+
+		<bitlbee-command name="list">
+			<syntax>channel list</syntax>
+
+			<description>
+				<para>
+					This command gives you a list of all the channels you configured.
+				</para>
+			</description>
+
+		</bitlbee-command>
+
+		<bitlbee-command name="set">
+			<syntax>channel &lt;channel id&gt; set</syntax>
+			<syntax>channel &lt;channel id&gt; set &lt;setting&gt;</syntax>
+			<syntax>channel &lt;channel id&gt; set &lt;setting&gt; &lt;value&gt;</syntax>
+			<syntax>channel &lt;channel id&gt; set -del &lt;setting&gt;</syntax>
+
+			<description>
+				<para>
+					This command can be used to change various settings for channels. Different channel types support different settings. You can see the settings available for a channel by typing <emphasis>channel &lt;channel id&gt; set</emphasis>.
+				</para>
+				
+				<para>
+					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+				</para>
+				
+				<para>
+					The channel ID can be a number (see <emphasis>channel list</emphasis>), or (part of) its name, as long as it matches only one channel.
+				</para>
+			</description>
+		</bitlbee-command>
+
 	</bitlbee-command>
 
 	<bitlbee-command name="chat">
@@ -352,6 +411,15 @@
 		</description>
 	</bitlbee-command>
 
+	<bitlbee-setting name="account" type="string" scope="channel">
+
+		<description>
+			<para>
+				For control channels with <emphasis>fill_by</emphasis> set to <emphasis>account</emphasis>: Set this setting to the account id (numeric, or part of the username) of the account containing the contacts you want to see in this channel.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="auto_connect" type="boolean" scope="both">
 		<default>true</default>
 
@@ -366,12 +434,12 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="auto_join" type="boolean" scope="chat">
+	<bitlbee-setting name="auto_join" type="boolean" scope="channel">
 		<default>false</default>
 
 		<description>
 			<para>
-				With this option enabled, BitlBee will automatically join this chatroom when you log in.
+				With this option enabled, BitlBee will automatically join this channel when you log in.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -478,6 +546,25 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="chat_type" type="string" scope="channel">
+		<default>groupchat</default>
+		<possible-values>groupchat, room</possible-values>
+
+		<description>
+			<para>
+				There are two kinds of chat channels: simple groupchats (basically normal IM chats with more than two participants) and names chatrooms, more similar to IRC channels.
+			</para>
+			
+			<para>
+				BitlBee supports both types. With this setting set to <emphasis>groupchat</emphasis> (the default), you can just invite people into the room and start talking.
+			</para>
+			
+			<para>
+				For setting up named chatrooms, it's currently easier to just use the <emphasis>chat add</emphasis> command.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="debug" type="boolean" scope="global">
 		<default>false</default>
 
@@ -523,6 +610,38 @@
 		<description>
 			<para>
 				When incoming messages are old (i.e. offline messages and channel backlogs), BitlBee will prepend them with a timestamp. If you find them ugly or useless, you can use this setting to hide them.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="fill_by" type="string" scope="channel">
+		<default>all</default>
+		<possible-values>all, group, account, protocol</possible-values>
+
+		<description>
+			<para>
+				For control channels only: This setting determines which contacts the channel gets populated with.
+			</para>
+
+			<para>
+				By default, control channels will contain all your contacts. You instead select contacts by buddy group, IM account or IM protocol.
+			</para>
+			
+			<para>
+				Change this setting and the corresponding <emphasis>account</emphasis>/<emphasis>group</emphasis>/<emphasis>protocol</emphasis> setting to set up this selection.
+			</para>
+			
+			<para>
+				Note that, when creating a new channel, BitlBee will try to preconfigure the channel for you, based on the channel name. See <emphasis>help channels</emphasis>.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="group" type="string" scope="channel">
+
+		<description>
+			<para>
+				For control channels with <emphasis>fill_by</emphasis> set to <emphasis>group</emphasis>: Set this setting to the name of the group containing the contacts you want to see in this channel.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -776,6 +895,15 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="protocol" type="string" scope="channel">
+
+		<description>
+			<para>
+				For control channels with <emphasis>fill_by</emphasis> set to <emphasis>protocol</emphasis>: Set this setting to the name of the IM protocol of all contacts you want to see in this channel.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="query_order" type="string" scope="global">
 		<default>lifo</default>
 		<possible-values>lifo, fifo</possible-values>
@@ -960,6 +1088,21 @@
 
 			<para>
 				Please note that this setting is only used for incoming messages. For outgoing messages you can use ':' (colon) or ',' to separate the destination nick from the message, and this is not configurable.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="type" type="string" scope="channel">
+		<default>control</default>
+		<possible-values>control, chat</possible-values>
+
+		<description>
+			<para>
+				BitlBee supports two kinds of channels: control channels (usually with a name starting with a &amp;) and chatroom channels (name usually starts with a #).
+			</para>
+
+			<para>
+				See <emphasis>help channels</emphasis> for a full description of channel types in BitlBee.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1153,7 +1296,7 @@
 		</description>
 
 		<ircexample>
-			<ircline nick="wouter">account set 1/display_name "The majestik møøse"</ircline>
+			<ircline nick="wouter">account 1 set display_name "The majestik møøse"</ircline>
 			<ircline nick="root">display_name = `The majestik møøse'</ircline>
 		</ircexample>
 
