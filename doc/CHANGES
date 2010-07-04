@@ -3,6 +3,25 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 1.2.8:
+- Now always using the AIM-style authentication method for OSCAR connections,
+  even when connecting to ICQ. This solves login issues some people were
+  having. (If you have problems, try changing the old_icq_auth setting.)
+- Twitter:
+  * Allow changing the Twitter API base URL so the module can also be used
+    for identi.ca or any other compatible network.
+  * Fetch the full list of Twitter contacts instead of slowly adding all
+    contacts as they post a message.
+  * Fixed message length counting.
+  * Allow following/unfollowing people using the usual add/remove commands.
+  * Better error reporting.
+- Added a user_agent setting to the Jabber module to get around artificial
+  client restrictions.
+- Allow nick changes (although only before register/identify).
+- Some more minor bugfixes/etc.
+
+Finished 4 Jul 2010
+
 Version 1.2.7:
 - Fixed problems with MSN Messenger authentication. ("Could not parse
   Passport server response")
