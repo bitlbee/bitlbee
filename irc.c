@@ -652,7 +652,8 @@ int irc_check_login( irc_t *irc )
 			
 			ic = irc->default_channel = irc_channel_new( irc, ROOT_CHAN );
 			irc_channel_set_topic( ic, CONTROL_TOPIC, irc->root );
-			irc_channel_add_user( ic, irc->user );
+			set_setstr( &ic->set, "auto_join", "true" );
+			irc_channel_auto_joins( irc, NULL );
 			
 			irc->last_root_cmd = g_strdup( ROOT_CHAN );
 			

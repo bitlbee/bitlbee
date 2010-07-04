@@ -47,6 +47,7 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 	
 	irc->channels = g_slist_append( irc->channels, ic );
 	
+	set_add( &ic->set, "auto_join", "false", set_eval_bool, ic );
 	set_add( &ic->set, "type", "control", set_eval_channel_type, ic );
 	
 	if( name[0] == '&' )
@@ -308,6 +309,45 @@ void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_u
 	icu->flags = flags;
 }
 
+void irc_channel_auto_joins( irc_t *irc, account_t *acc )
+{
+	GSList *l;
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		gboolean aj = set_getbool( &ic->set, "auto_join" );
+		char *type;
+		
+		if( acc &&
+		    ( type = set_getstr( &ic->set, "chat_type" ) ) &&
+		    strcmp( type, "room" ) == 0 )
+		{
+			/* Bit of an ugly special case: Handle chatrooms here, we
+			   can only auto-join them if their account is online. */
+			char *acc_s;
+			
+			if( !aj && !( ic->flags & IRC_CHANNEL_JOINED ) )
+				/* Only continue if this one's marked as auto_join
+				   or if we're in it already. (Possible if the
+				   client auto-rejoined it before identyfing.) */
+				continue;
+			else if( !( acc_s = set_getstr( &ic->set, "account" ) ) )
+				continue;
+			else if( account_get( irc->b, acc_s ) != acc )
+				continue;
+			else if( acc->ic == NULL || !( acc->ic->flags & OPT_LOGGED_IN ) )
+				continue;
+			else
+				ic->f->join( ic );
+		}
+		else if( aj )
+		{
+			irc_channel_add_user( ic, irc->user );
+		}
+	}
+}
+
 void irc_channel_printf( irc_channel_t *ic, char *format, ... )
 {
 	va_list params;
@@ -524,6 +564,13 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	return TRUE;
 }
 
+static gboolean control_channel_join( irc_channel_t *ic )
+{
+	bee_irc_channel_update( ic->irc, ic, NULL );
+	
+	return TRUE;
+}
+
 static char *set_eval_by_account( set_t *set, char *value )
 {
 	struct irc_channel *ic = set->data;
@@ -607,7 +654,7 @@ static gboolean control_channel_free( irc_channel_t *ic )
 
 static const struct irc_channel_funcs control_channel_funcs = {
 	control_channel_privmsg,
-	NULL,
+	control_channel_join,
 	NULL,
 	NULL,
 	control_channel_invite,

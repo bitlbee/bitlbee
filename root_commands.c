@@ -156,6 +156,7 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc_setpass( irc, password );
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "+R", 1 );
+		irc_channel_auto_joins( irc, NULL );
 		if( load && set_getbool( &irc->b->set, "auto_connect" ) )
 			cmd_account( irc, account_on );
 		break;
