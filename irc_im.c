@@ -182,7 +182,7 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 	
 	if( !show )
 	{
-		irc_channel_del_user( ic, iu, FALSE, NULL );
+		irc_channel_del_user( ic, iu, IRC_CDU_PART, NULL );
 	}
 	else
 	{
@@ -478,7 +478,7 @@ static gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
 		irc_channel_printf( ic, "Cleaning up channel, bye!" );
 	
 	ic->data = NULL;
-	irc_channel_del_user( ic, ic->irc->user, FALSE, "Chatroom closed by server" );
+	irc_channel_del_user( ic, ic->irc->user, IRC_CDU_KICK, "Chatroom closed by server" );
 	
 	return TRUE;
 }
@@ -524,7 +524,7 @@ static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_u
 	/* TODO: Possible bug here: If a module removes $user here instead of just
 	   using imcb_chat_free() and the channel was IRC_CHANNEL_TEMP, we get into
 	   a broken state around here. */
-	irc_channel_del_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data, FALSE, NULL );
+	irc_channel_del_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data, IRC_CDU_PART, NULL );
 	
 	return TRUE;
 }

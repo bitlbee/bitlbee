@@ -205,6 +205,13 @@ struct irc_control_channel
 
 extern const struct bee_ui_funcs irc_ui_funcs;
 
+typedef enum
+{
+	IRC_CDU_SILENT,
+	IRC_CDU_PART,
+	IRC_CDU_KICK,
+} irc_channel_del_user_type_t;
+
 /* irc.c */
 extern GSList *irc_connection_list;
 
@@ -232,7 +239,7 @@ irc_channel_t *irc_channel_get( irc_t *irc, char *id );
 int irc_channel_free( irc_channel_t *ic );
 void irc_channel_free_soon( irc_channel_t *ic );
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
-int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, gboolean silent, const char *msg );
+int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, irc_channel_del_user_type_t type, const char *msg );
 irc_channel_user_t *irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
 void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_user_flags_t flags );
@@ -255,6 +262,7 @@ void irc_usermsg( irc_t *irc, char *format, ... );
 void irc_send_join( irc_channel_t *ic, irc_user_t *iu );
 void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason );
 void irc_send_quit( irc_user_t *iu, const char *reason );
+void irc_send_kick( irc_channel_t *ic, irc_user_t *iu, irc_user_t *kicker, const char *reason );
 void irc_send_names( irc_channel_t *ic );
 void irc_send_topic( irc_channel_t *ic, gboolean topic_change );
 void irc_send_whois( irc_user_t *iu );

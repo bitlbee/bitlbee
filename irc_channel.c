@@ -118,7 +118,7 @@ int irc_channel_free( irc_channel_t *ic )
 	irc_t *irc = ic->irc;
 	
 	if( ic->flags & IRC_CHANNEL_JOINED )
-		irc_channel_del_user( ic, irc->user, FALSE, "Cleaning up channel" );
+		irc_channel_del_user( ic, irc->user, IRC_CDU_KICK, "Cleaning up channel" );
 	
 	if( ic->f->_free )
 		ic->f->_free( ic );
@@ -222,7 +222,7 @@ int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu )
 	return 1;
 }
 
-int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, gboolean silent, const char *msg )
+int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, irc_channel_del_user_type_t type, const char *msg )
 {
 	irc_channel_user_t *icu;
 	
@@ -232,8 +232,13 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, gboolean silent, co
 	ic->users = g_slist_remove( ic->users, icu );
 	g_free( icu );
 	
-	if( ic->flags & IRC_CHANNEL_JOINED && !silent )
+	if( !( ic->flags & IRC_CHANNEL_JOINED ) || type == IRC_CDU_SILENT ) {}
+		/* Do nothing. The caller should promise it won't screw
+		   up state of the IRC client. :-) */
+	else if( type == IRC_CDU_PART )
 		irc_send_part( ic, iu, msg );
+	else if( type == IRC_CDU_KICK )
+		irc_send_kick( ic, iu, ic->irc->root, msg );
 	
 	if( iu == ic->irc->user )
 	{

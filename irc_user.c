@@ -204,7 +204,7 @@ void irc_user_quit( irc_user_t *iu, const char *msg )
 		return;
 	
 	for( l = iu->irc->channels; l; l = l->next )
-		send_quit |= irc_channel_del_user( (irc_channel_t*) l->data, iu, TRUE, NULL );
+		send_quit |= irc_channel_del_user( (irc_channel_t*) l->data, iu, IRC_CDU_SILENT, NULL );
 	
 	if( send_quit )
 		irc_send_quit( iu, msg );
