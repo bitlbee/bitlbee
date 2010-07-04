@@ -81,6 +81,9 @@ typedef struct bee_group
 
 typedef struct bee_ui_funcs
 {
+	void (*imc_connected)( struct im_connection *ic );
+	void (*imc_disconnected)( struct im_connection *ic );
+	
 	gboolean (*user_new)( bee_t *bee, struct bee_user *bu );
 	gboolean (*user_free)( bee_t *bee, struct bee_user *bu );
 	gboolean (*user_fullname)( bee_t *bee, bee_user_t *bu );

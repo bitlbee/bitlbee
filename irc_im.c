@@ -30,6 +30,18 @@
 
 static const struct irc_user_funcs irc_user_im_funcs;
 
+static void bee_irc_imc_connected( struct im_connection *ic )
+{
+	irc_t *irc = (irc_t*) ic->bee->ui_data;
+	
+	irc_channel_auto_joins( irc, ic->acc );
+}
+
+static void bee_irc_imc_disconnected( struct im_connection *ic )
+{
+	/* Maybe try to send /QUITs here instead of later on. */
+}
+
 static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 {
 	irc_user_t *iu;
@@ -822,6 +834,9 @@ static void bee_irc_ft_finished( struct im_connection *ic, file_transfer_t *file
 }
 
 const struct bee_ui_funcs irc_ui_funcs = {
+	bee_irc_imc_connected,
+	bee_irc_imc_disconnected,
+	
 	bee_irc_user_new,
 	bee_irc_user_free,
 	bee_irc_user_fullname,

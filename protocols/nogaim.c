@@ -286,6 +286,9 @@ void imcb_connected( struct im_connection *ic )
 	   exponential backoff timer. */
 	ic->acc->auto_reconnect_delay = 0;
 	
+	if( ic->bee->ui->imc_connected )
+		ic->bee->ui->imc_connected( ic );
+	
 	/*
 	for( c = irc->chatrooms; c; c = c->next )
 	{
@@ -327,6 +330,9 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 		return;
 	else
 		ic->flags |= OPT_LOGGING_OUT;
+	
+	if( ic->bee->ui->imc_disconnected )
+		ic->bee->ui->imc_disconnected( ic );
 	
 	imcb_log( ic, "Signing off.." );
 	
