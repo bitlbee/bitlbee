@@ -61,6 +61,7 @@ typedef struct bee_user
 	struct im_connection *ic;
 	char *handle;
 	char *fullname;
+	char *nick;
 	struct bee_group *group;
 
 	bee_user_flags_t flags;

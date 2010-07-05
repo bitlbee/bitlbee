@@ -1092,6 +1092,20 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="translate_to_nicks" type="boolean" scope="channel">
+		<default>true</default>
+
+		<description>
+			<para>
+				IRC's nickname namespace is quite limited compared to most IM protocols. Not any non-ASCII characters are allowed, in fact nicknames have to be mostly alpha-numeric. Also, BitlBee has to add underscores sometimes to avoid nickname collisions.
+			</para>
+
+			<para>
+				While normally the BitlBee user is the only one seeing these names, they may be exposed to other chatroom participants for example when addressing someone in the channel (with or without tab completion). By default BitlBee will translate these stripped nicknames back to the original nick. If you don't want this, disable this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="type" type="string" scope="channel">
 		<default>control</default>
 		<possible-values>control, chat</possible-values>

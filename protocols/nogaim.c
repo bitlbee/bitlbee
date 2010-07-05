@@ -427,6 +427,9 @@ void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const c
 	
 	if( !bu || !nick ) return;
 	
+	g_free( bu->nick );
+	bu->nick = g_strdup( nick );
+	
 	if( bee->ui->user_nick_hint )
 		bee->ui->user_nick_hint( bee, bu, nick );
 }
