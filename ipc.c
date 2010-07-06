@@ -32,6 +32,7 @@
 #endif
 
 GSList *child_list = NULL;
+static int ipc_child_recv_fd = -1;
 
 static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
@@ -114,6 +115,7 @@ void ipc_master_cmd_restart( irc_t *data, char **cmd )
 void ipc_master_cmd_identify( irc_t *data, char **cmd )
 {
 	struct bitlbee_child *child = (void*) data, *old = NULL;
+	char *resp;
 	GSList *l;
 	
 	if( strcmp( child->nick, cmd[1] ) != 0 )
@@ -126,14 +128,61 @@ void ipc_master_cmd_identify( irc_t *data, char **cmd )
 	{
 		old = l->data;
 		if( nick_cmp( old->nick, child->nick ) == 0 && child != old &&
-		    old->password && strcmp( old->password, child->password ) )
+		    old->password && strcmp( old->password, child->password ) == 0 )
 			break;
 	}
 	
-	if( old == NULL )
-		return;
-	
 	child->to_child = old;
+	
+	if( l )
+	{
+		resp = "TAKEOVER INIT\r\n";
+	}
+	else
+	{
+		/* Won't need the fd since we can't send it anywhere. */
+		close( child->to_fd );
+		child->to_fd = -1;
+		resp = "TAKEOVER NO\r\n";
+	}
+	
+	if( write( child->ipc_fd, resp, strlen( resp ) ) != strlen( resp ) )
+	{
+		ipc_master_free_one( child );
+		child_list = g_slist_remove( child_list, child );
+	}
+}
+
+static gboolean ipc_send_fd( int fd, int send_fd );
+
+void ipc_master_cmd_takeover( irc_t *data, char **cmd )
+{
+	struct bitlbee_child *child = (void*) data;
+	
+	/* TODO: Check if child->to_child is still valid, etc. */
+	if( strcmp( cmd[1], "AUTH" ) == 0 )
+	{
+		if( child->to_child &&
+		    child->nick && child->to_child->nick && cmd[2] &&
+		    child->password && child->to_child->password && cmd[3] &&
+		    strcmp( child->nick, child->to_child->nick ) == 0 &&
+		    strcmp( child->nick, cmd[2] ) == 0 &&
+		    strcmp( child->password, child->to_child->password ) == 0 &&
+		    strcmp( child->password, cmd[3] ) == 0 )
+		{
+			char *s;
+			
+			ipc_send_fd( child->to_child->ipc_fd, child->to_fd );
+			
+			s = irc_build_line( cmd );
+			if( write( child->to_child->ipc_fd, s, strlen( s ) ) != strlen( s ) )
+			{
+				ipc_master_free_one( child );
+				child_list = g_slist_remove( child_list, child );
+			}
+			g_free( s );
+		}
+	}
 }
 
 static const command_t ipc_master_commands[] = {
@@ -148,6 +197,7 @@ static const command_t ipc_master_commands[] = {
 	{ "kill",       2, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "restart",    0, ipc_master_cmd_restart,    0 },
 	{ "identify",   2, ipc_master_cmd_identify,   0 },
+	{ "takeover",   1, ipc_master_cmd_takeover,   0 },
 	{ NULL }
 };
 
@@ -216,6 +266,46 @@ static void ipc_child_cmd_hello( irc_t *irc, char **cmd )
 		ipc_to_master_str( "HELLO %s %s :%s\r\n", irc->user->host, irc->user->nick, irc->user->fullname );
 }
 
+static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
+{
+	if( strcmp( cmd[1], "NO" ) == 0 )
+	{
+		/* No takeover, finish the login. */
+	}
+	else if( strcmp( cmd[1], "INIT" ) == 0 )
+	{
+		ipc_to_master_str( "TAKEOVER AUTH %s :%s\r\n",
+		                   irc->user->nick, irc->password );
+		
+		/* Drop credentials, we'll shut down soon and shouldn't overwrite
+		   any settings. */
+		/* TODO: irc_setpass() should do all of this. */
+		irc_usermsg( irc, "Trying to take over existing session" );
+		/** NOT YET
+		irc_setpass( irc, NULL );
+		irc->status &= ~USTATUS_IDENTIFIED;
+		irc_umode_set( irc, "-R", 1 );
+		*/
+	}
+	else if( strcmp( cmd[1], "AUTH" ) == 0 )
+	{
+		if( irc->password && cmd[2] && cmd[3] &&
+		    ipc_child_recv_fd != -1 &&
+		    strcmp( irc->user->nick, cmd[2] ) == 0 &&
+		    strcmp( irc->password, cmd[3] ) == 0 )
+		{
+			fprintf( stderr, "TO\n" );
+			b_event_remove( irc->r_watch_source_id );
+			closesocket( irc->fd );
+			irc->fd = ipc_child_recv_fd;
+			irc->r_watch_source_id = b_input_add( irc->fd, B_EV_IO_READ, bitlbee_io_current_client_read, irc );
+			ipc_child_recv_fd = -1;
+		}
+		fprintf( stderr, "%s %s %s\n", irc->password, cmd[2], cmd[3] );
+		fprintf( stderr, "%d %s %s\n", ipc_child_recv_fd, irc->user->nick, irc->password );
+	}
+}
+
 static const command_t ipc_child_commands[] = {
 	{ "die",        0, ipc_child_cmd_die,         0 },
 	{ "wallops",    1, ipc_child_cmd_wallops,     0 },
@@ -224,10 +314,9 @@ static const command_t ipc_child_commands[] = {
 	{ "rehash",     0, ipc_child_cmd_rehash,      0 },
 	{ "kill",       2, ipc_child_cmd_kill,        0 },
 	{ "hello",      0, ipc_child_cmd_hello,       0 },
+	{ "takeover",   1, ipc_child_cmd_takeover,    0 },
 	{ NULL }
 };
-
-static gboolean ipc_send_fd( int fd, int send_fd );
 
 gboolean ipc_child_identify( irc_t *irc )
 {
@@ -320,8 +409,10 @@ static char *ipc_readline( int fd, int *recv_fd )
 					close( *recv_fd );
 				
 				*recv_fd = *(int*) CMSG_DATA( cmsg );
+				fprintf( stderr, "pid %d received fd %d\n", (int) getpid(), *recv_fd );
 			}
 	
+	fprintf( stderr, "pid %d received: %s", (int) getpid(), buf );
 	return g_strndup( buf, size - 2 );
 }
 
@@ -351,9 +442,8 @@ gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
 gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond )
 {
 	char *buf, **cmd;
-	int recv_fd = -1;
 	
-	if( ( buf = ipc_readline( source, &recv_fd ) ) )
+	if( ( buf = ipc_readline( source, &ipc_child_recv_fd ) ) )
 	{
 		cmd = irc_parse_line( buf );
 		if( cmd )
