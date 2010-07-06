@@ -162,6 +162,7 @@ gboolean bitlbee_io_current_client_write( gpointer data, gint source, b_input_co
 
 void root_command_string( irc_t *irc, char *command );
 void root_command( irc_t *irc, char *command[] );
+gboolean cmd_identify_finish( gpointer data, gint fd, b_input_condition cond );
 gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond );
 
 char *set_eval_root_nick( set_t *set, char *new_nick );

@@ -36,6 +36,12 @@ struct bitlbee_child
 	char *host;
 	char *nick;
 	char *realname;
+	
+	char *password;
+	
+	/* For takeovers: */
+	struct bitlbee_child *to_child;
+	int to_fd;
 };
 
 

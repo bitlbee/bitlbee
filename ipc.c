@@ -111,6 +111,31 @@ void ipc_master_cmd_restart( irc_t *data, char **cmd )
 	bitlbee_shutdown( NULL, -1, 0 );
 }
 
+void ipc_master_cmd_identify( irc_t *data, char **cmd )
+{
+	struct bitlbee_child *child = (void*) data, *old = NULL;
+	GSList *l;
+	
+	if( strcmp( child->nick, cmd[1] ) != 0 )
+		return;
+	
+	g_free( child->password );
+	child->password = g_strdup( cmd[2] );
+	
+	for( l = child_list; l; l = l->next )
+	{
+		old = l->data;
+		if( nick_cmp( old->nick, child->nick ) == 0 && child != old &&
+		    old->password && strcmp( old->password, child->password ) )
+			break;
+	}
+	
+	if( old == NULL )
+		return;
+	
+	child->to_child = old;
+}
+
 static const command_t ipc_master_commands[] = {
 	{ "client",     3, ipc_master_cmd_client,     0 },
 	{ "hello",      0, ipc_master_cmd_client,     0 },
@@ -122,6 +147,7 @@ static const command_t ipc_master_commands[] = {
 	{ "rehash",     0, ipc_master_cmd_rehash,     0 },
 	{ "kill",       2, NULL,                      IPC_CMD_TO_CHILDREN },
 	{ "restart",    0, ipc_master_cmd_restart,    0 },
+	{ "identify",   2, ipc_master_cmd_identify,   0 },
 	{ NULL }
 };
 
@@ -201,6 +227,22 @@ static const command_t ipc_child_commands[] = {
 	{ NULL }
 };
 
+static gboolean ipc_send_fd( int fd, int send_fd );
+
+gboolean ipc_child_identify( irc_t *irc )
+{
+	if( global.conf->runmode == RUNMODE_FORKDAEMON )
+	{
+		if( !ipc_send_fd( global.listen_socket, irc->fd ) )
+			ipc_child_disable();
+	
+		ipc_to_master_str( "IDENTIFY %s :%s\r\n", irc->user->nick, irc->password );
+		
+		return TRUE;
+	}
+	else
+		return FALSE;
+}
 
 static void ipc_command_exec( void *data, char **cmd, const command_t *commands )
 {
@@ -229,8 +271,12 @@ static void ipc_command_exec( void *data, char **cmd, const command_t *commands 
 
 /* Return just one line. Returns NULL if something broke, an empty string
    on temporary "errors" (EAGAIN and friends). */
-static char *ipc_readline( int fd )
+static char *ipc_readline( int fd, int *recv_fd )
 {
+	struct msghdr msg;
+	struct iovec iov;
+	char ccmsg[CMSG_SPACE(sizeof(recv_fd))];
+	struct cmsghdr *cmsg;
 	char buf[513], *eol;
 	int size;
 	
@@ -252,22 +298,44 @@ static char *ipc_readline( int fd )
 	else
 		size = eol - buf + 2;
 	
-	if( recv( fd, buf, size, 0 ) != size )
+	iov.iov_base = buf;
+	iov.iov_len = size;
+	
+	memset( &msg, 0, sizeof( msg ) );
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = ccmsg;
+	msg.msg_controllen = sizeof( ccmsg );
+	
+	if( recvmsg( fd, &msg, 0 ) != size )
 		return NULL;
-	else
-		return g_strndup( buf, size - 2 );
+	
+	if( recv_fd )
+		for( cmsg = CMSG_FIRSTHDR( &msg ); cmsg; cmsg = CMSG_NXTHDR( &msg, cmsg ) )
+			if( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS )
+			{
+				/* Getting more than one shouldn't happen but if it does,
+				   make sure we don't leave them around. */
+				if( *recv_fd != -1 )
+					close( *recv_fd );
+				
+				*recv_fd = *(int*) CMSG_DATA( cmsg );
+			}
+	
+	return g_strndup( buf, size - 2 );
 }
 
 gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
 {
+	struct bitlbee_child *child = data;
 	char *buf, **cmd;
 	
-	if( ( buf = ipc_readline( source ) ) )
+	if( ( buf = ipc_readline( source, &child->to_fd ) ) )
 	{
 		cmd = irc_parse_line( buf );
 		if( cmd )
 		{
-			ipc_command_exec( data, cmd, ipc_master_commands );
+			ipc_command_exec( child, cmd, ipc_master_commands );
 			g_free( cmd );
 		}
 		g_free( buf );
@@ -283,8 +351,9 @@ gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond )
 gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond )
 {
 	char *buf, **cmd;
+	int recv_fd = -1;
 	
-	if( ( buf = ipc_readline( source ) ) )
+	if( ( buf = ipc_readline( source, &recv_fd ) ) )
 	{
 		cmd = irc_parse_line( buf );
 		if( cmd )
@@ -412,14 +481,43 @@ void ipc_to_children_str( char *format, ... )
 	g_free( msg_buf );
 }
 
+static gboolean ipc_send_fd( int fd, int send_fd )
+{
+	struct msghdr msg;
+	struct iovec iov;
+	char ccmsg[CMSG_SPACE(sizeof(fd))];
+	struct cmsghdr *cmsg;
+	
+	memset( &msg, 0, sizeof( msg ) );
+	iov.iov_base = "0x90\r\n";
+	iov.iov_len = 6;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	
+	msg.msg_control = ccmsg;
+	msg.msg_controllen = sizeof( ccmsg );
+	cmsg = CMSG_FIRSTHDR( &msg );
+	cmsg->cmsg_level = SOL_SOCKET;
+	cmsg->cmsg_type = SCM_RIGHTS;
+	cmsg->cmsg_len = CMSG_LEN( sizeof( send_fd ) );
+	*(int*)CMSG_DATA( cmsg ) = send_fd;
+	msg.msg_controllen = cmsg->cmsg_len;
+	
+	return sendmsg( fd, &msg, 0 ) == 6;
+}
+
 void ipc_master_free_one( struct bitlbee_child *c )
 {
 	b_event_remove( c->ipc_inpa );
 	closesocket( c->ipc_fd );
 	
+	if( c->to_fd != -1 )
+		close( c->to_fd );
+	
 	g_free( c->host );
 	g_free( c->nick );
 	g_free( c->realname );
+	g_free( c->password );
 	g_free( c );
 }
 
@@ -505,8 +603,8 @@ static gboolean new_ipc_client( gpointer data, gint serversock, b_input_conditio
 {
 	struct bitlbee_child *child = g_new0( struct bitlbee_child, 1 );
 	
+	child->to_fd = -1;
 	child->ipc_fd = accept( serversock, NULL, 0 );
-	
 	if( child->ipc_fd == -1 )
 	{
 		log_message( LOGLVL_WARNING, "Unable to accept connection on UNIX domain socket: %s", strerror(errno) );
@@ -515,7 +613,7 @@ static gboolean new_ipc_client( gpointer data, gint serversock, b_input_conditio
 		
 	child->ipc_inpa = b_input_add( child->ipc_fd, B_EV_IO_READ, ipc_master_read, child );
 	
-	child_list = g_slist_append( child_list, child );
+	child_list = g_slist_prepend( child_list, child );
 	
 	return TRUE;
 }
@@ -597,8 +695,9 @@ int ipc_master_load_state( char *statefile )
 			return 0;
 		}
 		child->ipc_inpa = b_input_add( child->ipc_fd, B_EV_IO_READ, ipc_master_read, child );
+		child->to_fd = -1;
 		
-		child_list = g_slist_append( child_list, child );
+		child_list = g_slist_prepend( child_list, child );
 	}
 	
 	ipc_to_children_str( "HELLO\r\n" );
