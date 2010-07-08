@@ -181,6 +181,7 @@ gboolean cmd_identify_finish( gpointer data, gint fd, b_input_condition cond )
 	
 	cmd_account( irc, account_on );
 	
+	irc->login_source_id = -1;
 	return FALSE;
 }
 

@@ -132,11 +132,11 @@ void ipc_master_cmd_identify( irc_t *data, char **cmd )
 			break;
 	}
 	
-	child->to_child = old;
-	
-	if( l )
+	if( l && !child->to_child && !old->to_child )
 	{
 		resp = "TAKEOVER INIT\r\n";
+		child->to_child = old;
+		old->to_child = child;
 	}
 	else
 	{
@@ -158,6 +158,7 @@ static gboolean ipc_send_fd( int fd, int send_fd );
 void ipc_master_cmd_takeover( irc_t *data, char **cmd )
 {
 	struct bitlbee_child *child = (void*) data;
+	char *fwd = NULL;
 	
 	/* TODO: Check if child->to_child is still valid, etc. */
 	if( strcmp( cmd[1], "AUTH" ) == 0 )
@@ -170,18 +171,36 @@ void ipc_master_cmd_takeover( irc_t *data, char **cmd )
 		    strcmp( child->password, child->to_child->password ) == 0 &&
 		    strcmp( child->password, cmd[3] ) == 0 )
 		{
-			char *s;
-			
 			ipc_send_fd( child->to_child->ipc_fd, child->to_fd );
 			
-			s = irc_build_line( cmd );
-			if( write( child->to_child->ipc_fd, s, strlen( s ) ) != strlen( s ) )
+			fwd = irc_build_line( cmd );
+			if( write( child->to_child->ipc_fd, fwd, strlen( fwd ) ) != strlen( fwd ) )
 			{
 				ipc_master_free_one( child );
 				child_list = g_slist_remove( child_list, child );
 			}
-			g_free( s );
+			g_free( fwd );
 		}
+	}
+	else if( strcmp( cmd[1], "DONE" ) == 0 || strcmp( cmd[1], "FAIL" ) == 0 )
+	{
+		int fd;
+		
+		/* The copy was successful (or not), we don't need it anymore. */
+		close( child->to_fd );
+		child->to_fd = -1;
+		
+		/* Pass it through to the other party, and flush all state. */
+		fwd = irc_build_line( cmd );
+		fd = child->to_child->ipc_fd;
+		child->to_child->to_child = NULL;
+		child->to_child = NULL;
+		if( write( fd, fwd, strlen( fwd ) ) != strlen( fwd ) )
+		{
+			ipc_master_free_one( child );
+			child_list = g_slist_remove( child_list, child );
+		}
+		g_free( fwd );
 	}
 }
 
@@ -266,44 +285,102 @@ static void ipc_child_cmd_hello( irc_t *irc, char **cmd )
 		ipc_to_master_str( "HELLO %s %s :%s\r\n", irc->user->host, irc->user->nick, irc->user->fullname );
 }
 
+static void ipc_child_cmd_takeover_yes( void *data );
+static void ipc_child_cmd_takeover_no( void *data );
+
 static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 {
 	if( strcmp( cmd[1], "NO" ) == 0 )
 	{
+		/* Master->New connection */
 		/* No takeover, finish the login. */
 	}
 	else if( strcmp( cmd[1], "INIT" ) == 0 )
 	{
-		ipc_to_master_str( "TAKEOVER AUTH %s :%s\r\n",
-		                   irc->user->nick, irc->password );
+		/* Master->New connection */
+		/* Offer to take over the old session, unless for some reason
+		   we're already logging into IM connections. */
+		if( irc->login_source_id != -1 )
+			query_add( irc, NULL,
+			           "You're already connected to this server. "
+			           "Would you like to take over this session?",
+			           ipc_child_cmd_takeover_yes,
+		        	   ipc_child_cmd_takeover_no, irc );
 		
-		/* Drop credentials, we'll shut down soon and shouldn't overwrite
-		   any settings. */
-		/* TODO: irc_setpass() should do all of this. */
-		irc_usermsg( irc, "Trying to take over existing session" );
-		/** NOT YET
-		irc_setpass( irc, NULL );
-		irc->status &= ~USTATUS_IDENTIFIED;
-		irc_umode_set( irc, "-R", 1 );
-		*/
+		/* This one's going to connect to accounts, avoid that. */
+		b_event_remove( irc->login_source_id );
+		irc->login_source_id = -1;
 	}
 	else if( strcmp( cmd[1], "AUTH" ) == 0 )
 	{
+		/* Master->Old connection */
 		if( irc->password && cmd[2] && cmd[3] &&
 		    ipc_child_recv_fd != -1 &&
 		    strcmp( irc->user->nick, cmd[2] ) == 0 &&
 		    strcmp( irc->password, cmd[3] ) == 0 )
 		{
-			fprintf( stderr, "TO\n" );
+			GSList *l;
+			
 			b_event_remove( irc->r_watch_source_id );
 			closesocket( irc->fd );
 			irc->fd = ipc_child_recv_fd;
 			irc->r_watch_source_id = b_input_add( irc->fd, B_EV_IO_READ, bitlbee_io_current_client_read, irc );
 			ipc_child_recv_fd = -1;
+			
+			for( l = irc->channels; l; l = l->next )
+			{
+				irc_channel_t *ic = l->data;
+				if( ic->flags & IRC_CHANNEL_JOINED )
+					irc_send_join( ic, irc->user );
+			}
+			irc_usermsg( irc, "You've successfully taken over your old session" );
+			
+			ipc_to_master_str( "TAKEOVER DONE\r\n" );
 		}
-		fprintf( stderr, "%s %s %s\n", irc->password, cmd[2], cmd[3] );
-		fprintf( stderr, "%d %s %s\n", ipc_child_recv_fd, irc->user->nick, irc->password );
+		else
+		{
+			ipc_to_master_str( "TAKEOVER FAIL\r\n" );
+		}
 	}
+	else if( strcmp( cmd[1], "DONE" ) == 0 ) 
+	{
+		/* Master->New connection (now taken over by old process) */
+		irc_free( irc );
+	}
+	else if( strcmp( cmd[1], "FAIL" ) == 0 ) 
+	{
+		/* Master->New connection */
+		irc_usermsg( irc, "Could not take over old session" );
+	}
+}
+
+static void ipc_child_cmd_takeover_yes( void *data )
+{
+	irc_t *irc = data;
+	GSList *l;
+	
+	/* Master->New connection */
+	ipc_to_master_str( "TAKEOVER AUTH %s :%s\r\n",
+	                   irc->user->nick, irc->password );
+	
+	/* Drop credentials, we'll shut down soon and shouldn't overwrite
+	   any settings. */
+	irc_usermsg( irc, "Trying to take over existing session" );
+	
+	/* TODO: irc_setpass() should do all of this. */
+	irc_setpass( irc, NULL );
+	irc->status &= ~USTATUS_IDENTIFIED;
+	irc_umode_set( irc, "-R", 1 );
+	
+	for( l = irc->channels; l; l = l->next )
+		irc_channel_del_user( l->data, irc->user, IRC_CDU_KICK,
+		                      "Switching to old session" );
+}
+
+static void ipc_child_cmd_takeover_no( void *data )
+{
+	ipc_to_master_str( "TAKEOVER NO\r\n" );
+	cmd_identify_finish( data, 0, 0 );
 }
 
 static const command_t ipc_child_commands[] = {
