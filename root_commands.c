@@ -661,7 +661,7 @@ static void cmd_info( irc_t *irc, char **cmd )
 
 static void cmd_rename( irc_t *irc, char **cmd )
 {
-	irc_user_t *iu;
+	irc_user_t *iu, *old;
 	
 	iu = irc_user_by_name( irc, cmd[1] );
 	
@@ -677,7 +677,7 @@ static void cmd_rename( irc_t *irc, char **cmd )
 	{
 		irc_usermsg( irc, "Nick `%s' is invalid", cmd[2] );
 	}
-	else if( irc_user_by_name( irc, cmd[2] ) )
+	else if( ( old = irc_user_by_name( irc, cmd[2] ) ) && old != iu )
 	{
 		irc_usermsg( irc, "Nick `%s' already exists", cmd[2] );
 	}
