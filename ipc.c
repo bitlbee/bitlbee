@@ -49,9 +49,21 @@ static void ipc_master_cmd_client( irc_t *data, char **cmd )
 		child->realname = g_strdup( cmd[3] );
 	}
 	
+	/* CLIENT == On initial connects, HELLO is after /RESTARTs. */
 	if( g_strcasecmp( cmd[0], "CLIENT" ) == 0 )
 		ipc_to_children_str( "OPERMSG :Client connecting (PID=%d): %s@%s (%s)\r\n",
 		                     (int) ( child ? child->pid : -1 ), cmd[2], cmd[1], cmd[3] );
+}
+
+static void ipc_master_cmd_nick( irc_t *data, char **cmd )
+{
+	struct bitlbee_child *child = (void*) data;
+	
+	if( child && cmd[1] )
+	{
+		g_free( child->nick );
+		child->nick = g_strdup( cmd[1] );
+	}
 }
 
 static void ipc_master_cmd_die( irc_t *data, char **cmd )
@@ -207,6 +219,7 @@ void ipc_master_cmd_takeover( irc_t *data, char **cmd )
 static const command_t ipc_master_commands[] = {
 	{ "client",     3, ipc_master_cmd_client,     0 },
 	{ "hello",      0, ipc_master_cmd_client,     0 },
+	{ "nick",       1, ipc_master_cmd_nick,       0 },
 	{ "die",        0, ipc_master_cmd_die,        0 },
 	{ "deaf",       0, ipc_master_cmd_deaf,       0 },
 	{ "wallops",    1, NULL,                      IPC_CMD_TO_CHILDREN },
