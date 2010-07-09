@@ -104,7 +104,6 @@ static void cmd_account( irc_t *irc, char **cmd );
 static void cmd_identify( irc_t *irc, char **cmd )
 {
 	storage_status_t status;
-	char *account_on[] = { "account", "on", NULL };
 	gboolean load = TRUE;
 	char *password = cmd[1];
 	
@@ -157,14 +156,33 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "+R", 1 );
 		irc_channel_auto_joins( irc, NULL );
-		if( load && set_getbool( &irc->b->set, "auto_connect" ) )
-			cmd_account( irc, account_on );
+		
+		if( ipc_child_identify( irc ) )
+		{
+			if( load && set_getbool( &irc->b->set, "auto_connect" ) )
+				irc->login_source_id = b_timeout_add( 200,
+					cmd_identify_finish, irc );
+		}
+		else if( load && set_getbool( &irc->b->set, "auto_connect" ) )
+			cmd_identify_finish( irc, 0, 0 );
+		
 		break;
 	case STORAGE_OTHER_ERROR:
 	default:
 		irc_usermsg( irc, "Unknown error while loading configuration" );
 		break;
 	}
+}
+
+gboolean cmd_identify_finish( gpointer data, gint fd, b_input_condition cond )
+{
+	char *account_on[] = { "account", "on", NULL };
+	irc_t *irc = data;
+	
+	cmd_account( irc, account_on );
+	
+	irc->login_source_id = -1;
+	return FALSE;
 }
 
 static void cmd_register( irc_t *irc, char **cmd )
@@ -671,7 +689,7 @@ static void cmd_rename( irc_t *irc, char **cmd )
 	}
 	else if( iu == irc->user )
 	{
-		irc_usermsg( irc, "Nick `%s' can't be changed", cmd[1] );
+		irc_usermsg( irc, "Use /nick to change your own nickname" );
 	}
 	else if( !nick_ok( cmd[2] ) )
 	{

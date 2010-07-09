@@ -24,6 +24,7 @@
 */
 
 #include "bitlbee.h"
+#include "ipc.h"
 
 irc_user_t *irc_user_new( irc_t *irc, const char *nick )
 {
@@ -158,6 +159,9 @@ int irc_user_set_nick( irc_user_t *iu, const char *new )
 	iu->key = g_strdup( key );
 	g_hash_table_insert( irc->nick_user_hash, iu->key, iu );
 	irc->users = g_slist_insert_sorted( irc->users, iu, irc_user_cmp );
+	
+	if( iu == irc->user )
+		ipc_to_master_str( "NICK :%s\r\n", new );
 	
 	return 1;
 }

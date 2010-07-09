@@ -86,6 +86,7 @@ typedef struct irc
 	gint r_watch_source_id;
 	gint w_watch_source_id;
 	gint ping_source_id;
+	gint login_source_id; /* To slightly delay some events at login time. */
 	
 	struct bee *b;
 } irc_t;
