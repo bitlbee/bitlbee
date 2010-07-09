@@ -34,6 +34,9 @@
 GSList *child_list = NULL;
 static int ipc_child_recv_fd = -1;
 
+static void ipc_master_takeover_fail( struct bitlbee_child *child, gboolean both );
+static gboolean ipc_send_fd( int fd, int send_fd );
+
 static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
 	/* Normally data points at an irc_t block, but for the IPC master
@@ -153,28 +156,28 @@ void ipc_master_cmd_identify( irc_t *data, char **cmd )
 	else
 	{
 		/* Won't need the fd since we can't send it anywhere. */
-		close( child->to_fd );
+		closesocket( child->to_fd );
 		child->to_fd = -1;
 		resp = "TAKEOVER NO\r\n";
 	}
 	
 	if( write( child->ipc_fd, resp, strlen( resp ) ) != strlen( resp ) )
-	{
 		ipc_master_free_one( child );
-		child_list = g_slist_remove( child_list, child );
-	}
 }
 
-static gboolean ipc_send_fd( int fd, int send_fd );
 
 void ipc_master_cmd_takeover( irc_t *data, char **cmd )
 {
 	struct bitlbee_child *child = (void*) data;
 	char *fwd = NULL;
 	
-	/* TODO: Check if child->to_child is still valid, etc. */
+	if( child->to_child == NULL ||
+	    g_slist_find( child_list, child->to_child ) == NULL )
+		return ipc_master_takeover_fail( child, FALSE );
+	
 	if( strcmp( cmd[1], "AUTH" ) == 0 )
 	{
+		/* New connection -> Master */
 		if( child->to_child &&
 		    child->nick && child->to_child->nick && cmd[2] &&
 		    child->password && child->to_child->password && cmd[3] &&
@@ -187,19 +190,19 @@ void ipc_master_cmd_takeover( irc_t *data, char **cmd )
 			
 			fwd = irc_build_line( cmd );
 			if( write( child->to_child->ipc_fd, fwd, strlen( fwd ) ) != strlen( fwd ) )
-			{
 				ipc_master_free_one( child );
-				child_list = g_slist_remove( child_list, child );
-			}
 			g_free( fwd );
 		}
+		else
+			return ipc_master_takeover_fail( child, TRUE );
 	}
 	else if( strcmp( cmd[1], "DONE" ) == 0 || strcmp( cmd[1], "FAIL" ) == 0 )
 	{
+		/* Old connection -> Master */
 		int fd;
 		
 		/* The copy was successful (or not), we don't need it anymore. */
-		close( child->to_fd );
+		closesocket( child->to_fd );
 		child->to_fd = -1;
 		
 		/* Pass it through to the other party, and flush all state. */
@@ -208,10 +211,7 @@ void ipc_master_cmd_takeover( irc_t *data, char **cmd )
 		child->to_child->to_child = NULL;
 		child->to_child = NULL;
 		if( write( fd, fwd, strlen( fwd ) ) != strlen( fwd ) )
-		{
 			ipc_master_free_one( child );
-			child_list = g_slist_remove( child_list, child );
-		}
 		g_free( fwd );
 	}
 }
@@ -342,7 +342,7 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 			irc->r_watch_source_id = b_input_add( irc->fd, B_EV_IO_READ, bitlbee_io_current_client_read, irc );
 			ipc_child_recv_fd = -1;
 			
-			irc_write( irc, ":%s!%s@%s MODE %s :%s", irc->user->nick,
+			irc_write( irc, ":%s!%s@%s MODE %s :+%s", irc->user->nick,
 			           irc->user->user, irc->user->host, irc->user->nick,
 			           irc->umode );
 			
@@ -431,6 +431,29 @@ gboolean ipc_child_identify( irc_t *irc )
 	}
 	else
 		return FALSE;
+}
+
+static void ipc_master_takeover_fail( struct bitlbee_child *child, gboolean both )
+{
+	if( child == NULL || g_slist_find( child_list, child ) == NULL )
+		return;
+	
+	if( both && child->to_child != NULL )
+		ipc_master_takeover_fail( child->to_child, FALSE );
+	
+	if( child->to_fd > -1 )
+	{
+		/* Send this error only to the new connection, which can be
+		   recognised by to_fd being set. */
+		if( write( child->ipc_fd, "TAKEOVER FAIL\r\n", 15 ) != 15 )
+		{
+			ipc_master_free_one( child );
+			return;
+		}
+		close( child->to_fd );
+		child->to_fd = -1;
+	}
+	child->to_child = NULL;
 }
 
 static void ipc_command_exec( void *data, char **cmd, const command_t *commands )
@@ -650,10 +673,7 @@ void ipc_to_children_str( char *format, ... )
 			
 			next = l->next;
 			if( write( c->ipc_fd, msg_buf, msg_len ) <= 0 )
-			{
 				ipc_master_free_one( c );
-				child_list = g_slist_remove( child_list, c );
-			}
 		}
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
@@ -679,7 +699,7 @@ static gboolean ipc_send_fd( int fd, int send_fd )
 	struct cmsghdr *cmsg;
 	
 	memset( &msg, 0, sizeof( msg ) );
-	iov.iov_base = "0x90\r\n";
+	iov.iov_base = "0x90\r\n";         /* Ja, noppes */
 	iov.iov_len = 6;
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
@@ -698,6 +718,8 @@ static gboolean ipc_send_fd( int fd, int send_fd )
 
 void ipc_master_free_one( struct bitlbee_child *c )
 {
+	GSList *l;
+	
 	b_event_remove( c->ipc_inpa );
 	closesocket( c->ipc_fd );
 	
@@ -709,6 +731,17 @@ void ipc_master_free_one( struct bitlbee_child *c )
 	g_free( c->realname );
 	g_free( c->password );
 	g_free( c );
+	
+	child_list = g_slist_remove( child_list, c );
+	
+	/* Also, if any child has a reference to this one, remove it. */
+	for( l = child_list; l; l = l->next )
+	{
+		struct bitlbee_child *oc = l->data;
+		
+		if( oc->to_child == c )
+			ipc_master_takeover_fail( oc, FALSE );
+	}
 }
 
 void ipc_master_free_fd( int fd )
@@ -722,7 +755,6 @@ void ipc_master_free_fd( int fd )
 		if( c->ipc_fd == fd )
 		{
 			ipc_master_free_one( c );
-			child_list = g_slist_remove( child_list, c );
 			break;
 		}
 	}
@@ -730,13 +762,8 @@ void ipc_master_free_fd( int fd )
 
 void ipc_master_free_all()
 {
-	GSList *l;
-	
-	for( l = child_list; l; l = l->next )
-		ipc_master_free_one( l->data );
-	
-	g_slist_free( child_list );
-	child_list = NULL;
+	while( child_list )
+		ipc_master_free_one( child_list->data );
 }
 
 void ipc_child_disable()
