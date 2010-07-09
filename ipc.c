@@ -321,11 +321,17 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 		{
 			GSList *l;
 			
+			/* TODO: Move this all into irc_switch_fd() or so and
+			   irc_sync() */
 			b_event_remove( irc->r_watch_source_id );
 			closesocket( irc->fd );
 			irc->fd = ipc_child_recv_fd;
 			irc->r_watch_source_id = b_input_add( irc->fd, B_EV_IO_READ, bitlbee_io_current_client_read, irc );
 			ipc_child_recv_fd = -1;
+			
+			irc_write( irc, ":%s!%s@%s MODE %s :%s", irc->user->nick,
+			           irc->user->user, irc->user->host, irc->user->nick,
+			           irc->umode );
 			
 			for( l = irc->channels; l; l = l->next )
 			{
@@ -375,6 +381,10 @@ static void ipc_child_cmd_takeover_yes( void *data )
 	for( l = irc->channels; l; l = l->next )
 		irc_channel_del_user( l->data, irc->user, IRC_CDU_KICK,
 		                      "Switching to old session" );
+	
+	irc_write( irc, ":%s!%s@%s MODE %s :-%s", irc->user->nick,
+	           irc->user->user, irc->user->host, irc->user->nick,
+	           irc->umode );
 }
 
 static void ipc_child_cmd_takeover_no( void *data )
