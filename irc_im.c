@@ -602,10 +602,31 @@ static gboolean bee_irc_channel_chat_privmsg_cb( gpointer data, gint fd, b_input
 static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg )
 {
 	struct groupchat *c = ic->data;
+	char *trans = NULL, *s;
 	
 	if( c == NULL )
 		return FALSE;
-	else if( set_getbool( &ic->irc->b->set, "paste_buffer" ) )
+	
+	if( set_getbool( &ic->set, "translate_to_nicks" ) )
+	{
+		char nick[MAX_NICK_LENGTH+1];
+		irc_user_t *iu;
+		
+		strncpy( nick, msg, MAX_NICK_LENGTH );
+		nick[MAX_NICK_LENGTH] = '\0';
+		if( ( s = strchr( nick, ':' ) ) || ( s = strchr( nick, ',' ) ) )
+		{
+			*s = '\0';
+			if( ( iu = irc_user_by_name( ic->irc, nick ) ) &&
+			    iu->bu->nick && irc_channel_has_user( ic, iu ) )
+			{
+				trans = g_strconcat( iu->bu->nick, msg + ( s - nick ), NULL );
+				msg = trans;
+			}
+		}
+	}
+	
+	if( set_getbool( &ic->irc->b->set, "paste_buffer" ) )
 	{
 		int delay;
 		
@@ -622,11 +643,13 @@ static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg
 		
 		ic->pastebuf_timer = b_timeout_add( delay, bee_irc_channel_chat_privmsg_cb, ic );
 		
+		g_free( trans );
 		return TRUE;
 	}
 	else
 		bee_chat_msg( ic->irc->b, c, msg, 0 );
 	
+	g_free( trans );
 	return TRUE;
 }
 
@@ -746,6 +769,7 @@ static gboolean bee_irc_channel_init( irc_channel_t *ic )
 	set_add( &ic->set, "chat_type", "groupchat", set_eval_chat_type, ic );
 	set_add( &ic->set, "nick", NULL, NULL, ic );
 	set_add( &ic->set, "room", NULL, NULL, ic );
+	set_add( &ic->set, "translate_to_nicks", "true", set_eval_bool, ic );
 	
 	/* chat_type == groupchat */
 	ic->flags |= IRC_CHANNEL_TEMP;
@@ -789,6 +813,7 @@ static gboolean bee_irc_channel_free( irc_channel_t *ic )
 	set_del( &ic->set, "chat_type" );
 	set_del( &ic->set, "nick" );
 	set_del( &ic->set, "room" );
+	set_del( &ic->set, "translate_to_nicks" );
 	
 	ic->flags &= ~IRC_CHANNEL_TEMP;
 	

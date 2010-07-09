@@ -71,16 +71,18 @@ static void irc_cmd_user( irc_t *irc, char **cmd )
 
 static void irc_cmd_nick( irc_t *irc, char **cmd )
 {
-	if( irc_user_by_name( irc, cmd[1] ) )
+	irc_user_t *iu;
+	
+	if( ( iu = irc_user_by_name( irc, cmd[1] ) ) && iu != irc->user )
 	{
-		irc_send_num( irc, 433, ":This nick is already in use" );
+		irc_send_num( irc, 433, "%s :This nick is already in use", cmd[1] );
 	}
 	else if( !nick_ok( cmd[1] ) )
 	{
 		/* [SH] Invalid characters. */
-		irc_send_num( irc, 432, ":This nick contains invalid characters" );
+		irc_send_num( irc, 432, "%s :This nick contains invalid characters", cmd[1] );
 	}
-	else if( irc->user->nick )
+	else if( irc->status & USTATUS_LOGGED_IN )
 	{
 		if( irc->status & USTATUS_IDENTIFIED )
 		{
@@ -97,6 +99,7 @@ static void irc_cmd_nick( irc_t *irc, char **cmd )
 	}
 	else
 	{
+		g_free( irc->user->nick );
 		irc->user->nick = g_strdup( cmd[1] );
 		
 		irc_check_login( irc );

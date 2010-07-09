@@ -371,7 +371,8 @@ gboolean bitlbee_shutdown( gpointer data, gint fd, b_input_condition cond )
 {
 	/* Try to save data for all active connections (if desired). */
 	while( irc_connection_list != NULL )
-		irc_free( irc_connection_list->data );
+		irc_abort( irc_connection_list->data, FALSE,
+		           "BitlBee server shutting down" );
 	
 	/* We'll only reach this point when not running in inetd mode: */
 	b_main_quit();

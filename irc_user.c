@@ -120,11 +120,13 @@ irc_user_t *irc_user_by_name( irc_t *irc, const char *nick )
 int irc_user_set_nick( irc_user_t *iu, const char *new )
 {
 	irc_t *irc = iu->irc;
+	irc_user_t *new_iu;
 	char key[strlen(new)+1];
 	GSList *cl;
 	
 	strcpy( key, new );
-	if( iu == NULL || !nick_lc( key ) || irc_user_by_name( irc, new ) )
+	if( iu == NULL || !nick_lc( key ) ||
+	    ( ( new_iu = irc_user_by_name( irc, new ) ) && new_iu != iu ) )
 		return 0;
 	
 	for( cl = irc->channels; cl; cl = cl->next )
