@@ -315,8 +315,28 @@ static void twitter_remove_buddy( struct im_connection *ic, char *who, char *gro
 
 static void twitter_chat_msg( struct groupchat *c, char *message, int flags )
 {
-	if( c && message && twitter_length_check(c->ic, message))
-		twitter_post_status(c->ic, message);
+	if( c && message && twitter_length_check( c->ic, message ) )
+	{
+		char *s, *new = NULL;
+		
+		if( ( s = strchr( message, ':' ) ) ||
+		    ( s = strchr( message, ',' ) ) )
+		{
+			bee_user_t *bu;
+			
+			new = g_strdup( message );
+			new[s-message] = '\0';
+			if( ( bu = bee_user_by_handle( c->ic->bee, c->ic, new ) ) )
+			{
+				sprintf( new, "@%s", bu->handle );
+				new[s-message+1] = ' ';
+				message = new;
+			}
+		}
+		
+		twitter_post_status( c->ic, message );
+		g_free( new );
+	}
 }
 
 static void twitter_chat_invite( struct groupchat *c, char *who, char *message )
