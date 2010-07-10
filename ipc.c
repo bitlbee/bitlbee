@@ -332,27 +332,10 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 		    strcmp( irc->user->nick, cmd[2] ) == 0 &&
 		    strcmp( irc->password, cmd[3] ) == 0 )
 		{
-			GSList *l;
-			
-			/* TODO: Move this all into irc_switch_fd() or so and
-			   irc_sync() */
-			b_event_remove( irc->r_watch_source_id );
-			closesocket( irc->fd );
-			irc->fd = ipc_child_recv_fd;
-			irc->r_watch_source_id = b_input_add( irc->fd, B_EV_IO_READ, bitlbee_io_current_client_read, irc );
-			ipc_child_recv_fd = -1;
-			
-			irc_write( irc, ":%s!%s@%s MODE %s :+%s", irc->user->nick,
-			           irc->user->user, irc->user->host, irc->user->nick,
-			           irc->umode );
-			
-			for( l = irc->channels; l; l = l->next )
-			{
-				irc_channel_t *ic = l->data;
-				if( ic->flags & IRC_CHANNEL_JOINED )
-					irc_send_join( ic, irc->user );
-			}
+			irc_switch_fd( irc, ipc_child_recv_fd );
+			irc_sync( irc );
 			irc_usermsg( irc, "You've successfully taken over your old session" );
+			ipc_child_recv_fd = -1;
 			
 			ipc_to_master_str( "TAKEOVER DONE\r\n" );
 		}
@@ -376,7 +359,6 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 static void ipc_child_cmd_takeover_yes( void *data )
 {
 	irc_t *irc = data;
-	GSList *l;
 	
 	/* Master->New connection */
 	ipc_to_master_str( "TAKEOVER AUTH %s :%s\r\n",
@@ -391,13 +373,7 @@ static void ipc_child_cmd_takeover_yes( void *data )
 	irc->status &= ~USTATUS_IDENTIFIED;
 	irc_umode_set( irc, "-R", 1 );
 	
-	for( l = irc->channels; l; l = l->next )
-		irc_channel_del_user( l->data, irc->user, IRC_CDU_KICK,
-		                      "Switching to old session" );
-	
-	irc_write( irc, ":%s!%s@%s MODE %s :-%s", irc->user->nick,
-	           irc->user->user, irc->user->host, irc->user->nick,
-	           irc->umode );
+	irc_desync( irc );
 }
 
 static void ipc_child_cmd_takeover_no( void *data )

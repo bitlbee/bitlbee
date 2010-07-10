@@ -54,6 +54,8 @@ void ipc_master_free_all();
 
 void ipc_child_disable();
 
+gboolean ipc_child_identify( irc_t *irc );
+
 void ipc_to_master( char **cmd );
 void ipc_to_master_str( char *format, ... ) G_GNUC_PRINTF( 1, 2 );
 void ipc_to_children( char **cmd );

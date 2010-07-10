@@ -229,6 +229,11 @@ void irc_write( irc_t *irc, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 void irc_write_all( int now, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 void irc_vawrite( irc_t *irc, char *format, va_list params );
 
+void irc_flush( irc_t *irc );
+void irc_switch_fd( irc_t *irc, int fd );
+void irc_sync( irc_t *irc );
+void irc_desync( irc_t *irc );
+
 int irc_check_login( irc_t *irc );
 
 void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv );

@@ -618,6 +618,85 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 	return;
 }
 
+/* Flush sendbuffer if you can. If it fails, fail silently and let some
+   I/O event handler clean up. */
+void irc_flush( irc_t *irc )
+{
+	ssize_t n;
+	size_t len;
+	
+	if( irc->sendbuffer == NULL )
+		return;
+	
+	len = strlen( irc->sendbuffer );
+	if( ( n = send( irc->fd, irc->sendbuffer, len, 0 ) ) == len )
+	{
+		g_free( irc->sendbuffer );
+		irc->sendbuffer = NULL;
+		
+		b_event_remove( irc->w_watch_source_id );
+		irc->w_watch_source_id = 0;
+	}
+	else if( n > 0 )
+	{
+		char *s = g_strdup( irc->sendbuffer + n );
+		g_free( irc->sendbuffer );
+		irc->sendbuffer = s;
+	}
+	/* Otherwise something went wrong and we don't currently care
+	   what the error was. We may or may not succeed later, we
+	   were just trying to flush the buffer immediately. */
+}
+
+/* Meant for takeover functionality. Transfer an IRC connection to a different
+   socket. */
+void irc_switch_fd( irc_t *irc, int fd )
+{
+	irc_write( irc, "ERROR :Transferring session to a new connection" );
+	irc_flush( irc ); /* Write it now or forget about it forever. */
+	
+	if( irc->sendbuffer )
+	{
+		b_event_remove( irc->w_watch_source_id );
+		g_free( irc->sendbuffer );
+		irc->sendbuffer = irc->w_watch_source_id = 0;
+	}
+	
+	b_event_remove( irc->r_watch_source_id );
+	closesocket( irc->fd );
+	irc->fd = fd;
+	irc->r_watch_source_id = b_input_add( irc->fd, B_EV_IO_READ, bitlbee_io_current_client_read, irc );
+}
+
+void irc_sync( irc_t *irc )
+{
+	GSList *l;
+	
+	irc_write( irc, ":%s!%s@%s MODE %s :+%s", irc->user->nick,
+	           irc->user->user, irc->user->host, irc->user->nick,
+	           irc->umode );
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		if( ic->flags & IRC_CHANNEL_JOINED )
+			irc_send_join( ic, irc->user );
+	}
+}
+
+void irc_desync( irc_t *irc )
+{
+	GSList *l;
+	
+	for( l = irc->channels; l; l = l->next )
+		irc_channel_del_user( l->data, irc->user, IRC_CDU_KICK,
+		                      "Switching to old session" );
+	
+	irc_write( irc, ":%s!%s@%s MODE %s :-%s", irc->user->nick,
+	           irc->user->user, irc->user->host, irc->user->nick,
+	           irc->umode );
+}
+
 int irc_check_login( irc_t *irc )
 {
 	if( irc->user->user && irc->user->nick )

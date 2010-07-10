@@ -27,8 +27,7 @@
 #include "commands.h"
 #include "bitlbee.h"
 #include "help.h"
-
-#include <string.h>
+#include "ipc.h"
 
 void root_command_string( irc_t *irc, char *command )
 {
