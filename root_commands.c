@@ -614,7 +614,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			nick_set( a, cmd[2], cmd[3] );
+			nick_set_raw( a, cmd[2], cmd[3] );
 		}
 	}
 	
@@ -642,7 +642,7 @@ static void cmd_remove( irc_t *irc, char **cmd )
 	s = g_strdup( bu->handle );
 	
 	bu->ic->acc->prpl->remove_buddy( bu->ic, bu->handle, NULL );
-	nick_del( bu->ic->acc, bu->handle );
+	nick_del( bu );
 	//TODO(wilmer): bee_user_free() and/or let the IM mod do it? irc_user_free( irc, cmd[1] );
 	
 	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
@@ -727,7 +727,7 @@ static void cmd_rename( irc_t *irc, char **cmd )
 		}
 		else if( iu->bu )
 		{
-			nick_set( iu->bu->ic->acc, iu->bu->handle, cmd[2] );
+			nick_set( iu->bu, cmd[2] );
 		}
 		
 		irc_usermsg( irc, "Nick successfully changed" );

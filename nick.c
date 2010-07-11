@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2007 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Some stuff to fetch, save and handle nicknames for your buddies      */
@@ -41,29 +41,34 @@ static char *clean_handle( const char *orig )
 	return new;
 }
 
-void nick_set( account_t *acc, const char *handle, const char *nick )
+void nick_set_raw( account_t *acc, const char *handle, const char *nick )
 {
 	char *store_handle, *store_nick = g_malloc( MAX_NICK_LENGTH + 1 );
 	
 	store_handle = clean_handle( handle );
-	store_nick[MAX_NICK_LENGTH] = 0;
+	store_nick[MAX_NICK_LENGTH] = '\0';
 	strncpy( store_nick, nick, MAX_NICK_LENGTH );
 	nick_strip( store_nick );
 	
 	g_hash_table_replace( acc->nicks, store_handle, store_nick );
 }
 
-char *nick_get( account_t *acc, const char *handle )
+void nick_set( bee_user_t *bu, const char *nick )
+{
+	nick_set_raw( bu->ic->acc, bu->handle, nick );
+}
+
+char *nick_get( bee_user_t *bu )
 {
 	static char nick[MAX_NICK_LENGTH+1];
 	char *store_handle, *found_nick;
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	
-	store_handle = clean_handle( handle );
+	store_handle = clean_handle( bu->handle );
 	/* Find out if we stored a nick for this person already. If not, try
 	   to generate a sane nick automatically. */
-	if( ( found_nick = g_hash_table_lookup( acc->nicks, store_handle ) ) )
+	if( ( found_nick = g_hash_table_lookup( bu->ic->acc->nicks, store_handle ) ) )
 	{
 		strncpy( nick, found_nick, MAX_NICK_LENGTH );
 	}
@@ -71,27 +76,32 @@ char *nick_get( account_t *acc, const char *handle )
 	{
 		char *s;
 		
-		g_snprintf( nick, MAX_NICK_LENGTH, "%s", handle );
+		g_snprintf( nick, MAX_NICK_LENGTH, "%s", bu->handle );
 		if( ( s = strchr( nick, '@' ) ) )
 			while( *s )
 				*(s++) = 0;
 		
 		nick_strip( nick );
-		if( set_getbool( &acc->bee->set, "lcnicks" ) )
+		if( set_getbool( &bu->bee->set, "lcnicks" ) )
 			nick_lc( nick );
 	}
 	g_free( store_handle );
 	
 	/* Make sure the nick doesn't collide with an existing one by adding
 	   underscores and that kind of stuff, if necessary. */
-	nick_dedupe( acc, handle, nick );
+	nick_dedupe( bu, nick );
 	
 	return nick;
 }
 
-void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+1] )
+char *nick_gen( bee_user_t *bu )
 {
-	irc_t *irc = (irc_t*) acc->bee->ui_data;
+	return NULL;
+}
+
+void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] )
+{
+	irc_t *irc = (irc_t*) bu->bee->ui_data;
 	int inf_protection = 256;
 	
 	/* Now, find out if the nick is already in use at the moment, and make
@@ -118,7 +128,7 @@ void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+
 			                  "If it does, please *do* send us a bug report! "
 			                  "Please send all the following lines in your report:" );
 			
-			irc_usermsg( irc, "Trying to get a sane nick for handle %s", handle );
+			irc_usermsg( irc, "Trying to get a sane nick for handle %s", bu->handle );
 			for( i = 0; i < MAX_NICK_LENGTH; i ++ )
 				irc_usermsg( irc, "Char %d: %c/%d", i, nick[i], nick[i] );
 			
@@ -135,20 +145,20 @@ void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+
 
 /* Just check if there is a nickname set for this buddy or if we'd have to
    generate one. */
-int nick_saved( account_t *acc, const char *handle )
+int nick_saved( bee_user_t *bu )
 {
 	char *store_handle, *found;
 	
-	store_handle = clean_handle( handle );
-	found = g_hash_table_lookup( acc->nicks, store_handle );
+	store_handle = clean_handle( bu->handle );
+	found = g_hash_table_lookup( bu->ic->acc->nicks, store_handle );
 	g_free( store_handle );
 	
 	return found != NULL;
 }
 
-void nick_del( account_t *acc, const char *handle )
+void nick_del( bee_user_t *bu )
 {
-	g_hash_table_remove( acc->nicks, handle );
+	g_hash_table_remove( bu->ic->acc->nicks, bu->handle );
 }
 
 

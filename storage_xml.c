@@ -196,7 +196,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		
 		if( xd->current_account && handle && nick )
 		{
-			nick_set( xd->current_account, handle, nick );
+			nick_set_raw( xd->current_account, handle, nick );
 		}
 		else
 		{

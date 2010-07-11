@@ -49,7 +49,7 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 	char nick[MAX_NICK_LENGTH+1], *s;
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
-	strcpy( nick, nick_get( bu->ic->acc, bu->handle ) );
+	strcpy( nick, nick_get( bu ) );
 	
 	bu->ui_data = iu = irc_user_new( irc, nick );
 	iu->bu = bu;
@@ -293,7 +293,7 @@ static gboolean bee_irc_user_nick_hint( bee_t *bee, bee_user_t *bu, const char *
 		/* Ignore if the user is visible already. */
 		return TRUE;
 	
-	if( nick_saved( bu->ic->acc, bu->handle ) )
+	if( nick_saved( bu ) )
 		/* The user already assigned a nickname to this person. */
 		return TRUE;
 	
@@ -318,7 +318,7 @@ static gboolean bee_irc_user_nick_hint( bee_t *bee, bee_user_t *bu, const char *
 		/* Only do this if newnick is different from the current one.
 		   If rejoining a channel, maybe we got this nick already
 		   (and dedupe would only add an underscore. */
-		nick_dedupe( bu->ic->acc, bu->handle, newnick );
+		nick_dedupe( bu, newnick );
 		irc_user_set_nick( iu, newnick );
 	}
 	
