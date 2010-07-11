@@ -174,11 +174,7 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		   immediately. */
 		if( !ipc_child_identify( irc ) && load &&
 		    set_getbool( &irc->b->set, "auto_connect" ) )
-		{
-			b_event_remove( irc->login_source_id );
-			irc->login_source_id = -1;
 			cmd_identify_finish( irc, 0, 0 );
-		}
 		
 		break;
 	case STORAGE_OTHER_ERROR:
@@ -195,6 +191,7 @@ gboolean cmd_identify_finish( gpointer data, gint fd, b_input_condition cond )
 	
 	cmd_account( irc, account_on );
 	
+	b_event_remove( irc->login_source_id );
 	irc->login_source_id = -1;
 	return FALSE;
 }

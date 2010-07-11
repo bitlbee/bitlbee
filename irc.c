@@ -99,6 +99,7 @@ irc_t *irc_new( int fd )
 	b->ui_data = irc;
 	b->ui = &irc_ui_funcs;
 	
+	s = set_add( &b->set, "allow_takeover", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "away_devoice", "true", set_eval_away_devoice, irc );
 	s = set_add( &b->set, "away_reply_timeout", "3600", set_eval_int, irc );
 	s = set_add( &b->set, "charset", "utf-8", set_eval_charset, irc );
@@ -658,8 +659,9 @@ void irc_switch_fd( irc_t *irc, int fd )
 	if( irc->sendbuffer )
 	{
 		b_event_remove( irc->w_watch_source_id );
+		irc->w_watch_source_id = 0;
 		g_free( irc->sendbuffer );
-		irc->sendbuffer = irc->w_watch_source_id = 0;
+		irc->sendbuffer = NULL;
 	}
 	
 	b_event_remove( irc->r_watch_source_id );

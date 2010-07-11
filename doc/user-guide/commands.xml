@@ -420,6 +420,16 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="allow_takeover" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				When you're already connected to a BitlBee server and you connect (and identify) again, BitlBee will offer to migrate your existing session to the new connection. If for whatever reason you don't want this, you can disable this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="auto_connect" type="boolean" scope="both">
 		<default>true</default>
 

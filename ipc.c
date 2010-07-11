@@ -316,6 +316,12 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 	else if( strcmp( cmd[1], "INIT" ) == 0 )
 	{
 		/* Master->New connection */
+		if( !set_getbool( &irc->b->set, "allow_takeover" ) )
+		{
+			ipc_child_cmd_takeover_no( irc );
+			return;
+		}
+		
 		/* Offer to take over the old session, unless for some reason
 		   we're already logging into IM connections. */
 		if( irc->login_source_id != -1 )
@@ -335,7 +341,8 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 		if( irc->password && cmd[2] && cmd[3] &&
 		    ipc_child_recv_fd != -1 &&
 		    strcmp( irc->user->nick, cmd[2] ) == 0 &&
-		    strcmp( irc->password, cmd[3] ) == 0 )
+		    strcmp( irc->password, cmd[3] ) == 0 &&
+		    set_getbool( &irc->b->set, "allow_takeover" ) )
 		{
 			irc_switch_fd( irc, ipc_child_recv_fd );
 			irc_sync( irc );
@@ -463,7 +470,9 @@ gboolean ipc_child_identify( irc_t *irc )
 			    strcmp( irc->password, old->password ) == 0 )
 				break;
 		}
-		if( l == NULL )
+		if( l == NULL ||
+		    !set_getbool( &irc->b->set, "allow_takeover" ) ||
+		    !set_getbool( &old->b->set, "allow_takeover" ) )
 			return FALSE;
 		
 		ipc_child_cmd_takeover( irc, to_init );
