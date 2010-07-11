@@ -133,7 +133,7 @@ void ipc_master_cmd_identify( irc_t *data, char **cmd )
 	char *resp;
 	GSList *l;
 	
-	if( strcmp( child->nick, cmd[1] ) != 0 )
+	if( !child || !child->nick || strcmp( child->nick, cmd[1] ) != 0 )
 		return;
 	
 	g_free( child->password );
@@ -142,7 +142,8 @@ void ipc_master_cmd_identify( irc_t *data, char **cmd )
 	for( l = child_list; l; l = l->next )
 	{
 		old = l->data;
-		if( nick_cmp( old->nick, child->nick ) == 0 && child != old &&
+		if( child != old &&
+		    old->nick && nick_cmp( old->nick, child->nick ) == 0 &&
 		    old->password && strcmp( old->password, child->password ) == 0 )
 			break;
 	}
