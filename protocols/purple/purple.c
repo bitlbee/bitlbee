@@ -876,7 +876,7 @@ static void *prplcb_request_action( const char *title, const char *primary, cons
 	/* TODO: IRC stuff here :-( */
 	q = g_strdup_printf( "Request: %s\n\n%s\n\n%s", title, primary, secondary );
 	pqad->bee_data = query_add( local_bee->ui_data, purple_ic_by_pa( account ), q,
-		prplcb_request_action_yes, prplcb_request_action_no, pqad );
+		prplcb_request_action_yes, prplcb_request_action_no, g_free, pqad );
 	
 	g_free( q );
 	

@@ -379,7 +379,7 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 void imcb_ask( struct im_connection *ic, char *msg, void *data,
                query_callback doit, query_callback dont )
 {
-	query_add( (irc_t *) ic->bee->ui_data, ic, msg, doit, dont, data );
+	query_add( (irc_t *) ic->bee->ui_data, ic, msg, doit, dont, g_free, data );
 }
 
 void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *group )
@@ -477,7 +477,7 @@ void imcb_ask_auth( struct im_connection *ic, const char *handle, const char *re
 	data->ic = ic;
 	data->handle = g_strdup( handle );
 	query_add( (irc_t *) ic->bee->ui_data, ic, s,
-	           imcb_ask_auth_cb_yes, imcb_ask_auth_cb_no, data );
+	           imcb_ask_auth_cb_yes, imcb_ask_auth_cb_no, g_free, data );
 }
 
 
@@ -510,7 +510,7 @@ void imcb_ask_add( struct im_connection *ic, const char *handle, const char *rea
 	data->ic = ic;
 	data->handle = g_strdup( handle );
 	query_add( (irc_t *) ic->bee->ui_data, ic, s,
-	           imcb_ask_add_cb_yes, imcb_ask_add_cb_no, data );
+	           imcb_ask_add_cb_yes, imcb_ask_add_cb_no, g_free, data );
 }
 
 struct bee_user *imcb_buddy_by_handle( struct im_connection *ic, const char *handle )

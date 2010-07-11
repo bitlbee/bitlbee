@@ -32,13 +32,14 @@ typedef struct query
 {
 	struct im_connection *ic;
 	char *question;
-	query_callback yes, no;
+	query_callback yes, no, free;
 	void *data;
 	struct query *next;
 } query_t;
 
 query_t *query_add( irc_t *irc, struct im_connection *ic, char *question,
-                    query_callback yes, query_callback no, void *data );
+                    query_callback yes, query_callback no, query_callback free,
+                    void *data );
 void query_del( irc_t *irc, query_t *q );
 void query_del_by_conn( irc_t *irc, struct im_connection *ic );
 void query_answer( irc_t *irc, query_t *q, int ans );

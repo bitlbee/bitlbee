@@ -323,7 +323,7 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 			           "You're already connected to this server. "
 			           "Would you like to take over this session?",
 			           ipc_child_cmd_takeover_yes,
-		        	   ipc_child_cmd_takeover_no, irc );
+		        	   ipc_child_cmd_takeover_no, NULL, irc );
 		
 		/* This one's going to connect to accounts, avoid that. */
 		b_event_remove( irc->login_source_id );

@@ -30,7 +30,8 @@ static void query_display( irc_t *irc, query_t *q );
 static query_t *query_default( irc_t *irc );
 
 query_t *query_add( irc_t *irc, struct im_connection *ic, char *question,
-                    query_callback yes, query_callback no, void *data )
+                    query_callback yes, query_callback no, query_callback free,
+                    void *data )
 {
 	query_t *q = g_new0( query_t, 1 );
 	
@@ -38,6 +39,7 @@ query_t *query_add( irc_t *irc, struct im_connection *ic, char *question,
 	q->question = g_strdup( question );
 	q->yes = yes;
 	q->no = no;
+	q->free = free;
 	q->data = data;
 	
 	if( strchr( irc->umode, 'b' ) != NULL )
@@ -93,7 +95,8 @@ void query_del( irc_t *irc, query_t *q )
 	}
 	
 	g_free( q->question );
-	if( q->data ) g_free( q->data ); /* Memory leak... */
+	if( q->free && q->data )
+		q->free( q->data );
 	g_free( q );
 }
 
