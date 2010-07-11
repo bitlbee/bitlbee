@@ -41,7 +41,7 @@
 
 struct twitter_xml_list {
 	int type;
-	int next_cursor;
+	gint64 next_cursor;
 	GSList *list;
 	gpointer data;
 };
@@ -57,6 +57,8 @@ struct twitter_xml_status {
 	struct twitter_xml_user *user;
 	guint64 id;
 };
+
+static void twitter_groupchat_init(struct im_connection *ic);
 
 /**
  * Frees a twitter_xml_user struct.
@@ -152,12 +154,12 @@ static void twitter_http_get_friends_ids(struct http_request *req);
 /**
  * Get the friends ids.
  */
-void twitter_get_friends_ids(struct im_connection *ic, int next_cursor)
+void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor)
 {
 	// Primitive, but hey! It works...	
 	char* args[2];
 	args[0] = "cursor";
-	args[1] = g_strdup_printf ("%d", next_cursor);
+	args[1] = g_strdup_printf ("%lld", (long long) next_cursor);
 	twitter_http(ic, TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, args, 2);
 
 	g_free(args[1]);
@@ -168,8 +170,12 @@ void twitter_get_friends_ids(struct im_connection *ic, int next_cursor)
  */
 static xt_status twitter_xt_next_cursor( struct xt_node *node, struct twitter_xml_list *txl )
 {
-	// Do something with the cursor.
-	txl->next_cursor = node->text != NULL ? atoi(node->text) : -1;
+	char *end = NULL;
+	
+	if( node->text )
+		txl->next_cursor = g_ascii_strtoll( node->text, &end, 10 );
+	if( end == NULL )
+		txl->next_cursor = -1;
 
 	return XT_HANDLED;
 }
@@ -412,13 +418,13 @@ static void twitter_http_get_home_timeline(struct http_request *req);
 /**
  * Get the timeline.
  */
-void twitter_get_home_timeline(struct im_connection *ic, int next_cursor)
+void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
 {
 	struct twitter_data *td = ic->proto_data;
 
 	char* args[4];
 	args[0] = "cursor";
-	args[1] = g_strdup_printf ("%d", next_cursor);
+	args[1] = g_strdup_printf ("%lld", (long long) next_cursor);
 	if (td->home_timeline_id) {
 		args[2] = "since_id";
 		args[3] = g_strdup_printf ("%llu", (long long unsigned int) td->home_timeline_id);
@@ -430,6 +436,19 @@ void twitter_get_home_timeline(struct im_connection *ic, int next_cursor)
 	if (td->home_timeline_id) {
 		g_free(args[3]);
 	}
+}
+
+static void twitter_groupchat_init(struct im_connection *ic)
+{
+	char *name_hint;
+	struct groupchat *gc;
+	struct twitter_data *td = ic->proto_data;
+	
+	td->home_timeline_gc = gc = imcb_chat_new( ic, "home/timeline" );
+	
+	name_hint = g_strdup_printf( "Twitter_%s", ic->acc->user );
+	imcb_chat_name_hint( gc, name_hint );
+	g_free( name_hint );
 }
 
 /**
@@ -444,18 +463,11 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 
 	// Create a new groupchat if it does not exsist.
 	if (!td->home_timeline_gc)
-	{   
-		char *name_hint = g_strdup_printf( "Twitter_%s", ic->acc->user );
-		td->home_timeline_gc = gc = imcb_chat_new( ic, "home/timeline" );
-		imcb_chat_name_hint( gc, name_hint );
-		g_free( name_hint );
-		// Add the current user to the chat...
+		twitter_groupchat_init(ic);
+	
+	gc = td->home_timeline_gc;
+	if (!gc->joined)
 		imcb_chat_add_buddy( gc, ic->acc->user );
-	}
-	else
-	{   
-		gc = td->home_timeline_gc;
-	}
 
 	for ( l = list; l ; l = g_slist_next(l) )
 	{
@@ -603,15 +615,23 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	td = ic->proto_data;
 	
 	// Check if the HTTP request went well.
-	if (req->status_code != 200) {
+	if (req->status_code == 401)
+	{
+		imcb_error( ic, "Authentication failure" );
+		imc_logout( ic, FALSE );
+		return;
+	} else if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL ": %s", twitter_parse_error(req));
-		
+		imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL ": %s", twitter_parse_error(req));
+		imc_logout( ic, TRUE );
 		return;
 	} else {
 		td->http_fails = 0;
 	}
+	
+	if( !td->home_timeline_gc &&
+	    g_strcasecmp( set_getstr( &ic->acc->set, "mode" ), "chat" ) == 0 )
+		twitter_groupchat_init( ic );
 
 	txl = g_new0(struct twitter_xml_list, 1);
 	txl->list = NULL;
@@ -633,8 +653,15 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 
 	// if the next_cursor is set to something bigger then 0 there are more friends to gather.
 	if (txl->next_cursor > 0)
+	{
 		twitter_get_statuses_friends(ic, txl->next_cursor);
-
+	}
+	else
+	{
+		td->flags |= TWITTER_HAVE_FRIENDS;
+		twitter_login_finish(ic);
+	}
+	
 	// Free the structure.
 	txl_free(txl);
 	g_free(txl);
@@ -643,11 +670,11 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 /**
  * Get the friends.
  */
-void twitter_get_statuses_friends(struct im_connection *ic, int next_cursor)
+void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor)
 {
 	char* args[2];
 	args[0] = "cursor";
-	args[1] = g_strdup_printf ("%d", next_cursor);
+	args[1] = g_strdup_printf ("%lld", (long long) next_cursor);
 
 	twitter_http(ic, TWITTER_SHOW_FRIENDS_URL, twitter_http_get_statuses_friends, ic, 0, args, 2);
 

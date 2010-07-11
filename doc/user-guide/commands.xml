@@ -632,6 +632,24 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="base_url" type="string" scope="account">
+		<default>http://twitter.com</default>
+
+		<description>
+			<para>
+				There are more services that understand the Twitter API than just Twitter.com. BitlBee can connect to all Twitter API implementations.
+			</para>
+
+			<para>
+				For example, set this setting to <emphasis>http://identi.ca/api</emphasis> to use Identi.ca.
+			</para>
+
+			<para>
+				Keep two things in mind: When not using Twitter, you <emphasis>must</emphasis> also disable the <emphasis>oauth</emphasis> setting as it currently only works with Twitter. If you're still having issues, make sure there is <emphasis>no</emphasis> slash at the end of the URL you enter here.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="buddy_sendbuffer" type="boolean" scope="global">
 		<default>false</default>
 
@@ -1230,6 +1248,20 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="user_agent" type="string" scope="account">
+		<default>BitlBee</default>
+
+		<description>
+			<para>
+				Some Jabber servers are configured to only allow a few (or even just one) kinds of XMPP clients to connect to them.
+			</para>
+			
+			<para>
+				You can change this setting to make BitlBee present itself as a different client, so that you can still connect to these servers.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="voice_buddies" type="string" scope="global">
 		<default>notaway</default>
 		<possible-values>encrypted, trusted, notaway, online, false</possible-values>
@@ -1243,7 +1275,6 @@
 				If "false", the flag is never set. On "notaway", the flag is removed for users marked as "away" and set for all others. On "encrypted", the flag is set for users with whom we have an encrypted connection. On "trusted", it is set only for encrypted connections using a trusted key. On "online", the flag is set whenever the user is online; only meaningful in conjunction with "show_offline".
 			</para>
 		</description>
-
 	</bitlbee-setting>
 
 	<bitlbee-setting name="web_aware" type="string" scope="account">

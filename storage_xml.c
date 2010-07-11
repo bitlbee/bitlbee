@@ -59,6 +59,7 @@ struct xml_parsedata
 	char *given_nick;
 	char *given_pass;
 	xml_pass_st pass_st;
+	int unknown_tag;
 };
 
 static char *xml_attr( const gchar **attr_names, const gchar **attr_values, const gchar *key )
@@ -86,7 +87,11 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	struct xml_parsedata *xd = data;
 	irc_t *irc = xd->irc;
 	
-	if( g_strcasecmp( element_name, "user" ) == 0 )
+	if( xd->unknown_tag > 0 )
+	{
+		xd->unknown_tag ++;
+	}
+	else if( g_strcasecmp( element_name, "user" ) == 0 )
 	{
 		char *nick = xml_attr( attr_names, attr_values, "nick" );
 		char *pass = xml_attr( attr_names, attr_values, "password" );
@@ -224,8 +229,15 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	}
 	else
 	{
+		xd->unknown_tag ++;
+		irc_usermsg( irc, "Warning: Unknown XML tag found in configuration file (%s). "
+		                  "This may happen when downgrading BitlBee versions. "
+		                  "This tag will be skipped and the information will be lost "
+		                  "once you save your settings.", element_name );
+		/*
 		g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_UNKNOWN_ELEMENT,
 		             "Unkown element: %s", element_name );
+		*/
 	}
 }
 
@@ -233,7 +245,11 @@ static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name
 {
 	struct xml_parsedata *xd = data;
 	
-	if( g_strcasecmp( element_name, "setting" ) == 0 && xd->current_setting )
+	if( xd->unknown_tag > 0 )
+	{
+		xd->unknown_tag --;
+	}
+	else if( g_strcasecmp( element_name, "setting" ) == 0 && xd->current_setting )
 	{
 		g_free( xd->current_setting );
 		xd->current_setting = NULL;
@@ -403,8 +419,8 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	if( !overwrite && g_access( path, F_OK ) == 0 )
 		return STORAGE_ALREADY_EXISTS;
 	
-	strcat( path, "~" );
-	if( ( fd = open( path, O_WRONLY | O_CREAT | O_TRUNC, 0600 ) ) < 0 )
+	strcat( path, ".XXXXXX" );
+	if( ( fd = mkstemp( path ) ) < 0 )
 	{
 		irc_usermsg( irc, "Error while opening configuration file." );
 		return STORAGE_OTHER_ERROR;
@@ -498,7 +514,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	fsync( fd );
 	close( fd );
 	
-	path2 = g_strndup( path, strlen( path ) - 1 );
+	path2 = g_strndup( path, strlen( path ) - 7 );
 	if( rename( path, path2 ) != 0 )
 	{
 		irc_usermsg( irc, "Error while renaming temporary configuration file." );

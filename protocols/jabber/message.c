@@ -54,7 +54,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 			char *ns = xt_find_attr( c, "xmlns" ), *room;
 			struct xt_node *inv, *reason;
 			
-			if( strcmp( ns, XMLNS_MUC_USER ) == 0 &&
+			if( ns && strcmp( ns, XMLNS_MUC_USER ) == 0 &&
 			    ( inv = xt_find_node( c->children, "invite" ) ) )
 			{
 				room = from;
