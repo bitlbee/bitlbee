@@ -53,6 +53,8 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 	
 	s = set_add( &a->set, "auto_reconnect", "true", set_eval_bool, a );
 	
+	s = set_add( &a->set, "nick_format", NULL, NULL, a );
+	
 	s = set_add( &a->set, "nick_source", "handle", NULL, a );
 	
 	s = set_add( &a->set, "password", NULL, set_eval_account, a );

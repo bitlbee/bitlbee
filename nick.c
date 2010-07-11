@@ -26,6 +26,12 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
+/* Character maps, _lc_[x] == _uc_[x] (but uppercase), according to the RFC's.
+   With one difference, we allow dashes. These are used to do uc/lc conversions
+   and strip invalid chars. */
+static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^`-_|";
+static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~`-_\\";
+
 /* Store handles in lower case and strip spaces, because AIM is braindead. */
 static char *clean_handle( const char *orig )
 {
@@ -72,8 +78,14 @@ char *nick_get( bee_user_t *bu )
 	{
 		strncpy( nick, found_nick, MAX_NICK_LENGTH );
 	}
+	else if( ( found_nick = nick_gen( bu ) ) )
+	{
+		strncpy( nick, found_nick, MAX_NICK_LENGTH );
+		g_free( found_nick );
+	}
 	else
 	{
+		/* Keep this fallback since nick_gen() can return NULL in some cases. */
 		char *s;
 		
 		g_snprintf( nick, MAX_NICK_LENGTH, "%s", bu->handle );
@@ -96,7 +108,73 @@ char *nick_get( bee_user_t *bu )
 
 char *nick_gen( bee_user_t *bu )
 {
-	return NULL;
+	gboolean ok = FALSE; /* Set to true once the nick contains something unique. */
+	GString *ret = g_string_new( "" );
+	char *fmt = set_getstr( &bu->ic->acc->set, "nick_format" ) ? :
+	            set_getstr( &bu->bee->set, "nick_format" );
+	
+	while( fmt && *fmt && ret->len < MAX_NICK_LENGTH )
+	{
+		char *part, chop = '\0';
+		
+		if( *fmt != '%' )
+		{
+			g_string_append_c( ret, *fmt );
+			fmt ++;
+			continue;
+		}
+		
+		fmt ++;
+		while( *fmt )
+		{
+			/* -char means chop off everything from char */
+			if( *fmt == '-' )
+			{
+				chop = fmt[1];
+				if( chop == '\0' )
+					return NULL;
+				fmt += 2;
+			}
+			else if( g_strncasecmp( fmt, "handle", 6 ) == 0 )
+			{
+				part = bu->handle;
+				fmt += 6;
+				ok |= TRUE;
+				break;
+			}
+			else if( g_strncasecmp( fmt, "full_name", 9 ) == 0 )
+			{
+				part = bu->fullname;
+				fmt += 9;
+				ok |= part && *part;
+				break;
+			}
+			else if( g_strncasecmp( fmt, "first_name", 10 ) == 0 )
+			{
+				part = bu->fullname;
+				fmt += 10;
+				ok |= part && *part;
+				chop = ' ';
+				break;
+			}
+			else
+			{
+				return NULL;
+			}
+		}
+		
+		while( part && *part && *part != chop )
+		{
+			if( strchr( nick_lc_chars, *part ) ||
+			    strchr( nick_uc_chars, *part ) )
+				g_string_append_c( ret, *part );
+			
+			part ++;
+		}
+	}
+	
+	/* This returns NULL if the nick is empty or otherwise not ok. */
+	return g_string_free( ret, ret->len == 0 || !ok );
 }
 
 void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] )
@@ -161,12 +239,6 @@ void nick_del( bee_user_t *bu )
 	g_hash_table_remove( bu->ic->acc->nicks, bu->handle );
 }
 
-
-/* Character maps, _lc_[x] == _uc_[x] (but uppercase), according to the RFC's.
-   With one difference, we allow dashes. */
-
-static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^`-_|";
-static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~`-_\\";
 
 void nick_strip( char *nick )
 {
