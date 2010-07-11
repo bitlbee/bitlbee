@@ -154,16 +154,31 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc_setpass( irc, password );
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "+R", 1 );
-		irc_channel_auto_joins( irc, NULL );
 		
-		if( ipc_child_identify( irc ) )
+		/* The following code is a bit hairy now. With takeover
+		   support, we shouldn't immediately auto_connect in case
+		   we're going to offer taking over an existing session.
+		   Do it in 200ms since that should give the parent process
+		   enough time to come back to us. */
+		if( load )
 		{
-			if( load && set_getbool( &irc->b->set, "auto_connect" ) )
+			irc_channel_auto_joins( irc, NULL );
+			if( set_getbool( &irc->b->set, "auto_connect" ) )
 				irc->login_source_id = b_timeout_add( 200,
 					cmd_identify_finish, irc );
 		}
-		else if( load && set_getbool( &irc->b->set, "auto_connect" ) )
+		
+		/* If ipc_child_identify() returns FALSE, it means we're
+		   already sure that there's no takeover target (only
+		   possible in 1-process daemon mode). Start auto_connect
+		   immediately. */
+		if( !ipc_child_identify( irc ) && load &&
+		    set_getbool( &irc->b->set, "auto_connect" ) )
+		{
+			b_event_remove( irc->login_source_id );
+			irc->login_source_id = -1;
 			cmd_identify_finish( irc, 0, 0 );
+		}
 		
 		break;
 	case STORAGE_OTHER_ERROR:

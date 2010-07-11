@@ -171,6 +171,11 @@ void ipc_master_cmd_takeover( irc_t *data, char **cmd )
 	struct bitlbee_child *child = (void*) data;
 	char *fwd = NULL;
 	
+	/* Normal daemon mode doesn't keep these and has simplified code for
+	   takeovers. */
+	if( child == NULL )
+		return;
+	
 	if( child->to_child == NULL ||
 	    g_slist_find( child_list, child->to_child ) == NULL )
 		return ipc_master_takeover_fail( child, FALSE );
@@ -358,22 +363,58 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 
 static void ipc_child_cmd_takeover_yes( void *data )
 {
-	irc_t *irc = data;
+	irc_t *irc = data, *old = NULL;
+	char *to_auth[] = { "TAKEOVER", "AUTH", irc->user->nick, irc->password, NULL };
 	
 	/* Master->New connection */
 	ipc_to_master_str( "TAKEOVER AUTH %s :%s\r\n",
 	                   irc->user->nick, irc->password );
 	
+	if( global.conf->runmode == RUNMODE_DAEMON )
+	{
+		GSList *l;
+		
+		for( l = irc_connection_list; l; l = l->next )
+		{
+			old = l->data;
+			
+			if( irc != old &&
+			    irc->user->nick && old->user->nick &&
+			    irc->password && old->password &&
+			    strcmp( irc->user->nick, old->user->nick ) == 0 &&
+			    strcmp( irc->password, old->password ) == 0 )
+				break;
+		}
+		if( l == NULL )
+		{
+			to_auth[1] = "FAIL";
+			ipc_child_cmd_takeover( irc, to_auth );
+			return;
+		}
+	}
+	
 	/* Drop credentials, we'll shut down soon and shouldn't overwrite
 	   any settings. */
 	irc_usermsg( irc, "Trying to take over existing session" );
+	
+	irc_desync( irc );
+	
+	if( old )
+	{
+		ipc_child_recv_fd = dup( irc->fd );
+		ipc_child_cmd_takeover( old, to_auth );
+	}
 	
 	/* TODO: irc_setpass() should do all of this. */
 	irc_setpass( irc, NULL );
 	irc->status &= ~USTATUS_IDENTIFIED;
 	irc_umode_set( irc, "-R", 1 );
 	
-	irc_desync( irc );
+	if( old )
+	{
+		irc->status |= USTATUS_SHUTDOWN;
+		irc_abort( irc, FALSE, NULL );
+	}
 }
 
 static void ipc_child_cmd_takeover_no( void *data )
@@ -402,6 +443,30 @@ gboolean ipc_child_identify( irc_t *irc )
 			ipc_child_disable();
 	
 		ipc_to_master_str( "IDENTIFY %s :%s\r\n", irc->user->nick, irc->password );
+		
+		return TRUE;
+	}
+	else if( global.conf->runmode == RUNMODE_DAEMON )
+	{
+		GSList *l;
+		irc_t *old;
+		char *to_init[] = { "TAKEOVER", "INIT", NULL };
+		
+		for( l = irc_connection_list; l; l = l->next )
+		{
+			old = l->data;
+			
+			if( irc != old &&
+			    irc->user->nick && old->user->nick &&
+			    irc->password && old->password &&
+			    strcmp( irc->user->nick, old->user->nick ) == 0 &&
+			    strcmp( irc->password, old->password ) == 0 )
+				break;
+		}
+		if( l == NULL )
+			return FALSE;
+		
+		ipc_child_cmd_takeover( irc, to_init );
 		
 		return TRUE;
 	}
@@ -508,10 +573,14 @@ static char *ipc_readline( int fd, int *recv_fd )
 					close( *recv_fd );
 				
 				*recv_fd = *(int*) CMSG_DATA( cmsg );
+				/*
 				fprintf( stderr, "pid %d received fd %d\n", (int) getpid(), *recv_fd );
+				*/
 			}
 	
+	/*
 	fprintf( stderr, "pid %d received: %s", (int) getpid(), buf );
+	*/
 	return g_strndup( buf, size - 2 );
 }
 
