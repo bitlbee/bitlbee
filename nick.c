@@ -135,6 +135,13 @@ char *nick_gen( bee_user_t *bu )
 					return NULL;
 				fmt += 2;
 			}
+			else if( g_strncasecmp( fmt, "nick", 4 ) == 0 )
+			{
+				part = bu->nick ? : bu->handle;
+				fmt += 4;
+				ok |= TRUE;
+				break;
+			}
 			else if( g_strncasecmp( fmt, "handle", 6 ) == 0 )
 			{
 				part = bu->handle;
@@ -155,6 +162,12 @@ char *nick_gen( bee_user_t *bu )
 				fmt += 10;
 				ok |= part && *part;
 				chop = ' ';
+				break;
+			}
+			else if( g_strncasecmp( fmt, "group", 5 ) == 0 )
+			{
+				part = bu->group ? bu->group->name : NULL;
+				fmt += 5;
 				break;
 			}
 			else
