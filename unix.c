@@ -38,6 +38,7 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <pwd.h>
+#include <locale.h>
 
 global_t global;	/* Against global namespace pollution */
 
@@ -50,6 +51,10 @@ int main( int argc, char *argv[] )
 	int i = 0;
 	char *old_cwd = NULL;
 	struct sigaction sig, old;
+	
+	/* Required to make iconv to ASCII//TRANSLIT work. This makes BitlBee
+	   system-locale-sensitive. :-( */
+	setlocale( LC_CTYPE, "" );
 	
 	if( argc > 1 && strcmp( argv[1], "-x" ) == 0 )
 		return crypt_main( argc, argv );

@@ -241,7 +241,7 @@ static gboolean bee_irc_user_typing( bee_t *bee, bee_user_t *bu, uint32_t flags 
 	return TRUE;
 }
 
-static gboolean bee_irc_user_nick_hint( bee_t *bee, bee_user_t *bu, const char *hint );
+static gboolean bee_irc_user_nick_update( irc_user_t *iu );
 
 static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 {
@@ -264,63 +264,14 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 		irc_send_msg( iu, "NOTICE", irc->user->nick, msg, NULL );
 	}
 	
-	s = set_getstr( &bu->ic->acc->set, "nick_source" );
-	if( strcmp( s, "handle" ) != 0 )
-	{
-		char *name = g_strdup( bu->fullname );
-		
-		if( strcmp( s, "first_name" ) == 0 )
-		{
-			int i;
-			for( i = 0; name[i] && !isspace( name[i] ); i ++ ) {}
-			name[i] = '\0';
-		}
-		
-		bee_irc_user_nick_hint( bee, bu, name );
-		
-		g_free( name );
-	}
+	bee_irc_user_nick_update( iu );
 	
 	return TRUE;
 }
 
 static gboolean bee_irc_user_nick_hint( bee_t *bee, bee_user_t *bu, const char *hint )
 {
-	irc_user_t *iu = bu->ui_data;
-	char newnick[MAX_NICK_LENGTH+1], *translit;
-	
-	if( bu->flags & BEE_USER_ONLINE )
-		/* Ignore if the user is visible already. */
-		return TRUE;
-	
-	if( nick_saved( bu ) )
-		/* The user already assigned a nickname to this person. */
-		return TRUE;
-	
-	/* Credits to Josay_ in #bitlbee for this idea. //TRANSLIT should
-	   do lossy/approximate conversions, so letters with accents don't
-	   just get stripped. Note that it depends on LC_CTYPE being set to
-	   something other than C/POSIX. */
-	translit = g_convert( hint, -1, "ASCII//TRANSLIT//IGNORE", "UTF-8",
-	                      NULL, NULL, NULL );
-	
-	strncpy( newnick, translit ? : hint, MAX_NICK_LENGTH );
-	newnick[MAX_NICK_LENGTH] = 0;
-	g_free( translit );
-	
-	/* Some processing to make sure this string is a valid IRC nickname. */
-	nick_strip( newnick );
-	if( set_getbool( &bee->set, "lcnicks" ) )
-		nick_lc( newnick );
-	
-	if( strcmp( iu->nick, newnick ) != 0 )
-	{
-		/* Only do this if newnick is different from the current one.
-		   If rejoining a channel, maybe we got this nick already
-		   (and dedupe would only add an underscore. */
-		nick_dedupe( bu, newnick );
-		irc_user_set_nick( iu, newnick );
-	}
+	bee_irc_user_nick_update( (irc_user_t*) bu->ui_data );
 	
 	return TRUE;
 }
@@ -331,6 +282,31 @@ static gboolean bee_irc_user_group( bee_t *bee, bee_user_t *bu )
 	irc_t *irc = (irc_t *) bee->ui_data;
 	
 	bee_irc_channel_update( irc, NULL, iu );
+	bee_irc_user_nick_update( iu );
+	
+	return TRUE;
+}
+
+static gboolean bee_irc_user_nick_update( irc_user_t *iu )
+{
+	bee_user_t *bu = iu->bu;
+	char *newnick;
+	
+	if( bu->flags & BEE_USER_ONLINE )
+		/* Ignore if the user is visible already. */
+		return TRUE;
+	
+	if( nick_saved( bu ) )
+		/* The user already assigned a nickname to this person. */
+		return TRUE;
+	
+	newnick = nick_get( bu );
+	
+	if( strcmp( iu->nick, newnick ) != 0 )
+	{
+		nick_dedupe( bu, newnick );
+		irc_user_set_nick( iu, newnick );
+	}
 	
 	return TRUE;
 }

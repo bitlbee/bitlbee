@@ -115,7 +115,7 @@ char *nick_gen( bee_user_t *bu )
 	
 	while( fmt && *fmt && ret->len < MAX_NICK_LENGTH )
 	{
-		char *part, chop = '\0';
+		char *part, chop = '\0', *asc = NULL;
 		
 		if( *fmt != '%' )
 		{
@@ -176,6 +176,14 @@ char *nick_gen( bee_user_t *bu )
 			}
 		}
 		
+		/* Credits to Josay_ in #bitlbee for this idea. //TRANSLIT
+		   should do lossy/approximate conversions, so letters with
+		   accents don't just get stripped. Note that it depends on
+		   LC_CTYPE being set to something other than C/POSIX. */
+		if( part )
+			part = asc = g_convert( part, -1, "ASCII//TRANSLIT//IGNORE",
+			                        "UTF-8", NULL, NULL, NULL );
+		
 		while( part && *part && *part != chop )
 		{
 			if( strchr( nick_lc_chars, *part ) ||
@@ -184,6 +192,7 @@ char *nick_gen( bee_user_t *bu )
 			
 			part ++;
 		}
+		g_free( asc );
 	}
 	
 	/* This returns NULL if the nick is empty or otherwise not ok. */
@@ -194,10 +203,12 @@ void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] )
 {
 	irc_t *irc = (irc_t*) bu->bee->ui_data;
 	int inf_protection = 256;
+	irc_user_t *iu;
 	
 	/* Now, find out if the nick is already in use at the moment, and make
 	   subtle changes to make it unique. */
-	while( !nick_ok( nick ) || irc_user_by_name( irc, nick ) )
+	while( !nick_ok( nick ) ||
+	       ( ( iu = irc_user_by_name( irc, nick ) ) && iu->bu != bu ) )
 	{
 		if( strlen( nick ) < ( MAX_NICK_LENGTH - 1 ) )
 		{
