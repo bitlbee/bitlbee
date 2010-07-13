@@ -65,6 +65,8 @@ static void twitter_groupchat_init(struct im_connection *ic);
  */
 static void txu_free(struct twitter_xml_user *txu)
 {
+	if (txu == NULL)
+		return;
 	g_free(txu->name);
 	g_free(txu->screen_name);
 	g_free(txu);
@@ -88,6 +90,8 @@ static void txs_free(struct twitter_xml_status *txs)
 static void txl_free(struct twitter_xml_list *txl)
 {
 	GSList *l;
+	if (txl == NULL)
+		return;
 	for ( l = txl->list; l ; l = g_slist_next(l) )
 		if (txl->type == TXL_STATUS)
 			txs_free((struct twitter_xml_status *)l->data);
@@ -472,6 +476,9 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 	for ( l = list; l ; l = g_slist_next(l) )
 	{
 		status = l->data;
+		if (status->user == NULL || status->text == NULL)
+			continue;
+
 		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
 		
 		strip_html(status->text);
