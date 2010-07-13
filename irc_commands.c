@@ -140,7 +140,31 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 			*comma = '\0';
 		
 		if( ( ic = irc_channel_by_name( irc, s ) ) == NULL )
+		{
 			ic = irc_channel_new( irc, s );
+			
+			if( strcmp( set_getstr( &ic->set, "type" ), "control" ) != 0 )
+			{
+				/* Autoconfiguration is for control channels only ATM. */
+			}
+			else if( bee_group_by_name( ic->irc->b, ic->name + 1, FALSE ) )
+			{
+				set_setstr( &ic->set, "group", ic->name + 1 );
+				set_setstr( &ic->set, "fill_by", "group" );
+			}
+			else if( set_setstr( &ic->set, "protocol", ic->name + 1 ) )
+			{
+				set_setstr( &ic->set, "fill_by", "protocol" );
+			}
+			else if( set_setstr( &ic->set, "account", ic->name + 1 ) )
+			{
+				set_setstr( &ic->set, "fill_by", "account" );
+			}
+			else
+			{
+				bee_irc_channel_update( ic->irc, ic, NULL );
+			}
+		}
 		
 		if( ic == NULL )
 		{

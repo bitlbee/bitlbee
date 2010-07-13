@@ -548,24 +548,6 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	ic->data = icc = g_new0( struct irc_control_channel, 1 );
 	icc->type = IRC_CC_TYPE_DEFAULT;
 	
-	if( bee_group_by_name( ic->irc->b, ic->name + 1, FALSE ) )
-	{
-		set_setstr( &ic->set, "group", ic->name + 1 );
-		set_setstr( &ic->set, "fill_by", "group" );
-	}
-	else if( set_setstr( &ic->set, "protocol", ic->name + 1 ) )
-	{
-		set_setstr( &ic->set, "fill_by", "protocol" );
-	}
-	else if( set_setstr( &ic->set, "account", ic->name + 1 ) )
-	{
-		set_setstr( &ic->set, "fill_by", "account" );
-	}
-	else
-	{
-		bee_irc_channel_update( ic->irc, ic, NULL );
-	}
-	
 	return TRUE;
 }
 
