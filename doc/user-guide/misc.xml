@@ -179,4 +179,38 @@ If you want to configure your own channels, you can use the <emphasis>channel se
 
 </sect1>
 
+<sect1 id="nick_format">
+<title>Nickname formatting</title>
+
+<para>
+The <emphasis>nick_format</emphasis> setting can be set globally using the 
+<emphasis>set</emphasis> command, or per account using <emphasis>account 
+set</emphasis> (so that you can set a per-account suffix/prefix or have 
+nicknames generated from full names for certain accounts).
+</para>
+
+<para>
+The setting is basically some kind of format string. It can contain normal
+text that will be copied to the nick, combined with several variables:
+</para>
+
+<variablelist>
+	<varlistentry><term>%nick</term><listitem><para>Nickname suggested for this contact by the IM protocol, or just the handle if no nickname was suggested.</para></listitem></varlistentry>
+	<varlistentry><term>%handle</term><listitem><para>The handle/screenname of the contact.</para></listitem></varlistentry>
+	<varlistentry><term>%full_name</term><listitem><para>The full name of the contact.</para></listitem></varlistentry>
+	<varlistentry><term>%first_name</term><listitem><para>The first name of the contact (the full name up to the first space).</para></listitem></varlistentry>
+	<varlistentry><term>%group</term><listitem><para>The name of the group this contact is a member of</para></listitem></varlistentry>
+</variablelist>
+
+<para>
+One modifier is currently available: %-@variable will remove all characters from the first @ in the string.
+</para>
+
+<para>
+In all cases, invalid characters (like spaces) will be stripped. Depending
+on your locale settings, characters with accents will be converted to ASCII.
+</para>
+
+</sect1>
+
 </chapter>

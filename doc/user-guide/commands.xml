@@ -763,10 +763,39 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="nick" type="string" scope="chat">
-
 		<description>
 			<para>
 				You can use this option to set your nickname in a chatroom. You won't see this nickname yourself, but other people in the room will. By default, BitlBee will use your username as the chatroom nickname.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="nick_format" type="string" scope="both">
+		<default>%-@nick</default>
+
+		<description>
+			<para>
+				By default, BitlBee tries to derive sensible nicknames for all your contacts from their IM handles. In some cases, IM modules (ICQ for example) will provide a nickname suggestion, which will then be used instead. This setting lets you change this behaviour.
+			</para>
+
+			<para>
+				Whenever this setting is set for an account, it will be used for all its contacts. If it's not set, the global value will be used.
+			</para>
+
+			<para>
+				It's easier to describe this setting using a few examples:
+			</para>
+
+			<para>
+				FB-%full_name will make all nicknames start with "FB-", followed by the person's full name. For example you can set this format for your Facebook account so all Facebook contacts are clearly marked.
+			</para>
+
+			<para>
+				[%group]%-@nick will make all nicknames start with the group the contact is in between square brackets, followed by the nickname suggestions from the IM module if available, or otherwise the handle. Because of the "-@" part, everything from the first @ will be stripped.
+			</para>
+
+			<para>
+				See <emphasis>help nick_format</emphasis> for more information.
 			</para>
 		</description>
 	</bitlbee-setting>
