@@ -201,7 +201,7 @@ static void irc_cmd_part( irc_t *irc, char **cmd )
 	{
 		irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
 	}
-	else if( irc_channel_del_user( ic, irc->user, FALSE, cmd[2] ) )
+	else if( irc_channel_del_user( ic, irc->user, IRC_CDU_PART, cmd[2] ) )
 	{
 		if( ic->f->part )
 			ic->f->part( ic, NULL );

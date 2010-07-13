@@ -450,6 +450,9 @@ static gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
 {
 	irc_channel_t *ic = c->ui_data;
 	
+	if( ic == NULL )
+		return FALSE;
+	
 	if( ic->flags & IRC_CHANNEL_JOINED )
 		irc_channel_printf( ic, "Cleaning up channel, bye!" );
 	
@@ -463,6 +466,9 @@ static gboolean bee_irc_chat_log( bee_t *bee, struct groupchat *c, const char *t
 {
 	irc_channel_t *ic = c->ui_data;
 	
+	if( ic == NULL )
+		return FALSE;
+	
 	irc_channel_printf( ic, "%s", text );
 	
 	return TRUE;
@@ -474,6 +480,9 @@ static gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *b
 	irc_user_t *iu = bu->ui_data;
 	irc_channel_t *ic = c->ui_data;
 	char *ts = NULL;
+	
+	if( ic == NULL )
+		return FALSE;
 	
 	if( sent_at > 0 && set_getbool( &bee->set, "display_timestamps" ) )
 		ts = irc_format_timestamp( irc, sent_at );
@@ -487,8 +496,12 @@ static gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *b
 static gboolean bee_irc_chat_add_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
 {
 	irc_t *irc = bee->ui_data;
+	irc_channel_t *ic = c->ui_data;
 	
-	irc_channel_add_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data );
+	if( ic == NULL )
+		return FALSE;
+	
+	irc_channel_add_user( ic, bu == bee->user ? irc->user : bu->ui_data );
 	
 	return TRUE;
 }
@@ -496,19 +509,27 @@ static gboolean bee_irc_chat_add_user( bee_t *bee, struct groupchat *c, bee_user
 static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_user_t *bu )
 {
 	irc_t *irc = bee->ui_data;
+	irc_channel_t *ic = c->ui_data;
+	
+	if( ic == NULL )
+		return FALSE;
 	
 	/* TODO: Possible bug here: If a module removes $user here instead of just
 	   using imcb_chat_free() and the channel was IRC_CHANNEL_TEMP, we get into
 	   a broken state around here. */
-	irc_channel_del_user( c->ui_data, bu == bee->user ? irc->user : bu->ui_data, IRC_CDU_PART, NULL );
+	irc_channel_del_user( ic, bu == bee->user ? irc->user : bu->ui_data, IRC_CDU_PART, NULL );
 	
 	return TRUE;
 }
 
 static gboolean bee_irc_chat_topic( bee_t *bee, struct groupchat *c, const char *new, bee_user_t *bu )
 {
+	irc_channel_t *ic = c->ui_data;
 	irc_t *irc = bee->ui_data;
 	irc_user_t *iu;
+	
+	if( ic == NULL )
+		return FALSE;
 	
 	if( bu == NULL )
 		iu = irc->root;
@@ -517,7 +538,7 @@ static gboolean bee_irc_chat_topic( bee_t *bee, struct groupchat *c, const char 
 	else
 		iu = bu->ui_data;
 	
-	irc_channel_set_topic( c->ui_data, new, iu );
+	irc_channel_set_topic( ic, new, iu );
 	
 	return TRUE;
 }
@@ -527,6 +548,9 @@ static gboolean bee_irc_chat_name_hint( bee_t *bee, struct groupchat *c, const c
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ic = c->ui_data, *oic;
 	char stripped[MAX_NICK_LENGTH+1], *full_name;
+	
+	if( ic == NULL )
+		return FALSE;
 	
 	/* Don't rename a channel if the user's in it already. */
 	if( ic->flags & IRC_CHANNEL_JOINED )
@@ -785,6 +809,8 @@ static char *set_eval_chat_type( set_t *set, char *value )
 
 static gboolean bee_irc_channel_free( irc_channel_t *ic )
 {
+	struct groupchat *c = ic->data;
+	
 	set_del( &ic->set, "account" );
 	set_del( &ic->set, "chat_type" );
 	set_del( &ic->set, "nick" );
@@ -792,6 +818,10 @@ static gboolean bee_irc_channel_free( irc_channel_t *ic )
 	set_del( &ic->set, "translate_to_nicks" );
 	
 	ic->flags &= ~IRC_CHANNEL_TEMP;
+	
+	/* That one still points at this channel. Don't. */
+	if( c )
+		c->ui_data = NULL;
 	
 	return TRUE;
 }
