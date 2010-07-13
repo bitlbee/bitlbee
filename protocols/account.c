@@ -27,6 +27,8 @@
 #include "bitlbee.h"
 #include "account.h"
 
+static char *set_eval_nick_source( set_t *set, char *value );
+
 account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 {
 	account_t *a;
@@ -56,7 +58,8 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 	s = set_add( &a->set, "nick_format", NULL, NULL, a );
 	s->flags |= SET_NULL_OK;
 	
-	s = set_add( &a->set, "nick_source", "handle", NULL, a );
+	s = set_add( &a->set, "nick_source", "handle", set_eval_nick_source, a );
+	s->flags |= ACC_SET_NOSAVE; /* Just for bw compatibility! */
 	
 	s = set_add( &a->set, "password", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE | SET_NULL_OK;
@@ -152,6 +155,21 @@ char *set_eval_account( set_t *set, char *value )
 	}
 	
 	return SET_INVALID;
+}
+
+/* For bw compatibility, have this write-only setting. */
+static char *set_eval_nick_source( set_t *set, char *value )
+{
+	account_t *a = set->data;
+	
+	if( strcmp( value, "full_name" ) == 0 )
+		set_setstr( &a->set, "nick_format", "%full_name" );
+	else if( strcmp( value, "first_name" ) == 0 )
+		set_setstr( &a->set, "nick_format", "%first_name" );
+	else
+		set_setstr( &a->set, "nick_format", "%-@nick" );
+	
+	return value;
 }
 
 account_t *account_get( bee_t *bee, char *id )
