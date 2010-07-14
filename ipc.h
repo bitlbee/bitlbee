@@ -25,6 +25,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
+#include <sys/uio.h>
 
 
 struct bitlbee_child
