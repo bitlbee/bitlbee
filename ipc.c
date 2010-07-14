@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2006 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* IPC - communication between BitlBee processes                        */
@@ -28,6 +28,7 @@
 #include "ipc.h"
 #include "commands.h"
 #ifndef _WIN32
+#include <sys/uio.h>
 #include <sys/un.h>
 #endif
 
