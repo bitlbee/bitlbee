@@ -35,6 +35,14 @@
 #include <ctype.h>
 #include <errno.h>
 
+/* GLib < 2.12.0 doesn't have g_ascii_strtoll(), work around using system strtoll(). */
+/* GLib < 2.12.4 can be buggy: http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=488013 */
+#if !GLIB_CHECK_VERSION(2,12,5)
+#include <stdlib.h>
+#include <limits.h>
+#define g_ascii_strtoll strtoll
+#endif
+
 #define TXL_STATUS 1
 #define TXL_USER 2
 #define TXL_ID 3
