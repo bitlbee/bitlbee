@@ -1,3 +1,9 @@
+bitlbee (1.2.8-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 10 Jul 2010 13:54:55 +0100
+
 bitlbee (1.2.7-1) unstable; urgency=high
 
   * New upstream version.
