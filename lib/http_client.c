@@ -66,6 +66,7 @@ void *http_dorequest( char *host, int port, int ssl, char *request, http_input_f
 	req->data = data;
 	req->request = g_strdup( request );
 	req->request_length = strlen( request );
+	req->redir_ttl = 3;
 	
 	return( req );
 }
@@ -310,7 +311,7 @@ got_reply:
 		req->status_code = -1;
 	}
 	
-	if( req->status_code == 301 || req->status_code == 302 )
+	if( ( req->status_code == 301 || req->status_code == 302 ) && req->redir_ttl-- > 0 )
 	{
 		char *loc, *new_request, *new_host;
 		int error = 0, new_port, new_proto;
