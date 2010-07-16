@@ -2430,7 +2430,8 @@ void oscar_chat_msg(struct groupchat *c, char *message, int msgflags)
 	guint16 flags;
 	char *s;
 	
-	ccon = c->data;
+	if (!(ccon = c->data))
+		return;
 	  	
 	for (s = message; *s; s++)
 		if (*s & 128)
@@ -2471,7 +2472,10 @@ void oscar_chat_invite(struct groupchat *c, char *who, char *message)
 {
 	struct im_connection *ic = c->ic;
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
-	struct chat_connection *ccon = c->data;
+	struct chat_connection *ccon;
+	
+	if (!(ccon = c->data))
+		return;
 	
 	aim_chat_invite(od->sess, od->conn, who, message ? message : "",
 					ccon->exchange, ccon->name, 0x0);
@@ -2496,6 +2500,8 @@ void oscar_chat_kill(struct im_connection *ic, struct chat_connection *cc)
 
 void oscar_chat_leave(struct groupchat *c)
 {
+	if (!c->data)
+		return;
 	oscar_chat_kill(c->ic, c->data);
 }
 
@@ -2527,11 +2533,15 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
 	struct groupchat *ret;
 	static int chat_id = 0;
-	char * chatname;
+	char * chatname, *s;
 	struct groupchat *c;
 	
 	chatname = g_strdup_printf("%s%s%d", isdigit(*ic->acc->user) ? "icq" : "",
 	                           ic->acc->user, chat_id++);
+	
+	for (s = chatname; *s; s ++)
+		if (!isalnum(*s))
+			*s = '0';
 	
 	c = imcb_chat_new(ic, chatname);
 	ret = oscar_chat_join(ic, chatname, NULL, NULL);
