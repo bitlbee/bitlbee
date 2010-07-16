@@ -80,7 +80,5 @@ struct http_request
    version is probably only useful if you want to do POST requests or if
    you want to add some extra headers. As you can see, HTTPS connections
    are also supported (using ssl_client). */
-void *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data );
-void *http_dorequest_url( char *url_string, http_input_function func, gpointer data );
-
-void http_free( struct http_request *req );
+struct http_request *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data );
+struct http_request *http_dorequest_url( char *url_string, http_input_function func, gpointer data );
