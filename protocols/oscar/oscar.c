@@ -2530,7 +2530,7 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	char * chatname;
 	struct groupchat *c;
 	
-	chatname = g_strdup_printf("%s%s_%d", isdigit(*ic->acc->user) ? "icq_" : "",
+	chatname = g_strdup_printf("%s%s%d", isdigit(*ic->acc->user) ? "icq" : "",
 	                           ic->acc->user, chat_id++);
 	
 	c = imcb_chat_new(ic, chatname);

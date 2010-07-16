@@ -34,9 +34,10 @@
 static gboolean http_connected( gpointer data, int source, b_input_condition cond );
 static gboolean http_ssl_connected( gpointer data, void *source, b_input_condition cond );
 static gboolean http_incoming_data( gpointer data, int source, b_input_condition cond );
+static void http_free( struct http_request *req );
 
 
-void *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data )
+struct http_request *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data )
 {
 	struct http_request *req;
 	int error = 0;
@@ -66,11 +67,12 @@ void *http_dorequest( char *host, int port, int ssl, char *request, http_input_f
 	req->data = data;
 	req->request = g_strdup( request );
 	req->request_length = strlen( request );
+	req->redir_ttl = 3;
 	
 	return( req );
 }
 
-void *http_dorequest_url( char *url_string, http_input_function func, gpointer data )
+struct http_request *http_dorequest_url( char *url_string, http_input_function func, gpointer data )
 {
 	url_t *url = g_new0( url_t, 1 );
 	char *request;
@@ -310,7 +312,7 @@ got_reply:
 		req->status_code = -1;
 	}
 	
-	if( req->status_code == 301 || req->status_code == 302 )
+	if( ( req->status_code == 301 || req->status_code == 302 ) && req->redir_ttl-- > 0 )
 	{
 		char *loc, *new_request, *new_host;
 		int error = 0, new_port, new_proto;
@@ -444,7 +446,7 @@ cleanup:
 	return FALSE;
 }
 
-void http_free( struct http_request *req )
+static void http_free( struct http_request *req )
 {
 	g_free( req->request );
 	g_free( req->reply_headers );
