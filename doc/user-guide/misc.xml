@@ -203,12 +203,31 @@ text that will be copied to the nick, combined with several variables:
 </variablelist>
 
 <para>
-One modifier is currently available: %-@variable will remove all characters from the first @ in the string.
+Invalid characters (like spaces) will always be stripped. Depending on your
+locale settings, characters with accents will be converted to ASCII.
 </para>
 
 <para>
-In all cases, invalid characters (like spaces) will be stripped. Depending
-on your locale settings, characters with accents will be converted to ASCII.
+See <emphasis>set nick_format2</emphasis> for some more information.
+</para>
+
+</sect1>
+
+<sect1 id="nick_format2">
+<title>Nickname formatting - modifiers</title>
+
+<para>
+Two modifiers ares currently available: You can include only the first few
+characters of a variable by putting a number right after the %. For example,
+<emphasis>[%3group]%-@nick</emphasis> will include only the first three
+characters of the group name in the nick.
+</para>
+
+<para>
+Also, you can truncate variables from a certain character using
+the <emphasis>-</emphasis>modifier. For example, you may want to leave out
+everything after the @. <emphasis>%-@handle</emphasis> will expand to
+everything in the handle up to the first @.
 </para>
 
 </sect1>

@@ -116,6 +116,7 @@ char *nick_gen( bee_user_t *bu )
 	while( fmt && *fmt && ret->len < MAX_NICK_LENGTH )
 	{
 		char *part, chop = '\0', *asc = NULL;
+		int len = MAX_NICK_LENGTH;
 		
 		if( *fmt != '%' )
 		{
@@ -134,6 +135,13 @@ char *nick_gen( bee_user_t *bu )
 				if( chop == '\0' )
 					return NULL;
 				fmt += 2;
+			}
+			else if( isdigit( *fmt ) )
+			{
+				len = 0;
+				/* Grab a number. */
+				while( isdigit( *fmt ) )
+					len = len * 10 + ( *(fmt++) - '0' );
 			}
 			else if( g_strncasecmp( fmt, "nick", 4 ) == 0 )
 			{
@@ -187,13 +195,14 @@ char *nick_gen( bee_user_t *bu )
 		if( ret->len == 0 && part && isdigit( *part ) )
 			g_string_append_c( ret, '_' );
 		
-		while( part && *part && *part != chop )
+		while( part && *part && *part != chop && len > 0 )
 		{
 			if( strchr( nick_lc_chars, *part ) ||
 			    strchr( nick_uc_chars, *part ) )
 				g_string_append_c( ret, *part );
 			
 			part ++;
+			len --;
 		}
 		g_free( asc );
 	}
