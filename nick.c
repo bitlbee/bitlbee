@@ -184,6 +184,9 @@ char *nick_gen( bee_user_t *bu )
 			part = asc = g_convert( part, -1, "ASCII//TRANSLIT//IGNORE",
 			                        "UTF-8", NULL, NULL, NULL );
 		
+		if( ret->len == 0 && *part && isdigit( *part ) )
+			g_string_append_c( ret, '_' );
+		
 		while( part && *part && *part != chop )
 		{
 			if( strchr( nick_lc_chars, *part ) ||

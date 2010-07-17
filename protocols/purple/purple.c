@@ -883,15 +883,20 @@ static void *prplcb_request_action( const char *title, const char *primary, cons
 	return pqad;
 }
 
+static void prplcb_request_test()
+{
+	fprintf( stderr, "bla\n" );
+}
+
 static PurpleRequestUiOps bee_request_uiops =
 {
-	NULL,
-	NULL,
+	prplcb_request_test,
+	prplcb_request_test,
 	prplcb_request_action,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
+	prplcb_request_test,
+	prplcb_request_test,
+	prplcb_request_test,
+	prplcb_request_test,
 };
 
 static void prplcb_privacy_permit_added( PurpleAccount *account, const char *name )
