@@ -458,7 +458,7 @@ static void twitter_groupchat_init(struct im_connection *ic)
 	
 	td->home_timeline_gc = gc = imcb_chat_new( ic, "home/timeline" );
 	
-	name_hint = g_strdup_printf( "Twitter_%s", ic->acc->user );
+	name_hint = g_strdup_printf( "%s_%s", td->prefix, ic->acc->user );
 	imcb_chat_name_hint( gc, name_hint );
 	g_free( name_hint );
 }
@@ -518,7 +518,7 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList *list)
 
 	if( mode_one )
 	{
-		g_snprintf( from, sizeof( from ) - 1, "twitter_%s", ic->acc->user );
+		g_snprintf( from, sizeof( from ) - 1, "%s_%s", td->prefix, ic->acc->user );
 		from[MAX_STRING-1] = '\0';
 	}
 	
