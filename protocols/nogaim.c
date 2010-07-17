@@ -382,6 +382,12 @@ void imcb_ask( struct im_connection *ic, char *msg, void *data,
 	query_add( (irc_t *) ic->bee->ui_data, ic, msg, doit, dont, g_free, data );
 }
 
+void imcb_ask_with_free( struct im_connection *ic, char *msg, void *data,
+                         query_callback doit, query_callback dont, query_callback myfree )
+{
+	query_add( (irc_t *) ic->bee->ui_data, ic, msg, doit, dont, myfree, data );
+}
+
 void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *group )
 {
 	bee_user_t *bu;

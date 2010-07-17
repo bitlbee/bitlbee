@@ -268,6 +268,7 @@ G_MODULE_EXPORT void imcb_error( struct im_connection *ic, char *format, ... ) G
  * - 'doit' or 'dont' will be called depending of the answer of the user.
  */
 G_MODULE_EXPORT void imcb_ask( struct im_connection *ic, char *msg, void *data, query_callback doit, query_callback dont );
+G_MODULE_EXPORT void imcb_ask_with_free( struct im_connection *ic, char *msg, void *data, query_callback doit, query_callback dont, query_callback myfree );
 
 /* Two common questions you may want to ask:
  * - X added you to his contact list, allow?

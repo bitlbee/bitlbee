@@ -883,20 +883,22 @@ static void *prplcb_request_action( const char *title, const char *primary, cons
 	return pqad;
 }
 
+/*
 static void prplcb_request_test()
 {
 	fprintf( stderr, "bla\n" );
 }
+*/
 
 static PurpleRequestUiOps bee_request_uiops =
 {
-	prplcb_request_test,
-	prplcb_request_test,
+	NULL,
+	NULL,
 	prplcb_request_action,
-	prplcb_request_test,
-	prplcb_request_test,
-	prplcb_request_test,
-	prplcb_request_test,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 };
 
 static void prplcb_privacy_permit_added( PurpleAccount *account, const char *name )
@@ -1047,17 +1049,45 @@ static PurpleNotifyUiOps bee_notify_uiops =
         prplcb_notify_userinfo,
 };
 
+static void *prplcb_account_request_authorize( PurpleAccount *account, const char *remote_user,
+	const char *id, const char *alias, const char *message, gboolean on_list,
+	PurpleAccountRequestAuthorizationCb authorize_cb, PurpleAccountRequestAuthorizationCb deny_cb, void *user_data )
+{
+	struct im_connection *ic = purple_ic_by_pa( account );
+	char *q;
+	
+	if( alias )
+		q = g_strdup_printf( "%s (%s) wants to add you to his/her contact "
+		                     "list. (%s)", alias, remote_user, message );
+	else
+		q = g_strdup_printf( "%s wants to add you to his/her contact "
+		                     "list. (%s)", remote_user, message );
+	
+	imcb_ask_with_free( ic, q, user_data, authorize_cb, deny_cb, NULL );
+	g_free( q );
+}
+
+static PurpleAccountUiOps bee_account_uiops =
+{
+	NULL,
+	NULL,
+	NULL,
+	prplcb_account_request_authorize,
+	NULL,
+};
+
 extern PurpleXferUiOps bee_xfer_uiops;
 
 static void purple_ui_init()
 {
-	purple_blist_set_ui_ops( &bee_blist_uiops );
 	purple_connections_set_ui_ops( &bee_conn_uiops );
+	purple_blist_set_ui_ops( &bee_blist_uiops );
 	purple_conversations_set_ui_ops( &bee_conv_uiops );
 	purple_request_set_ui_ops( &bee_request_uiops );
-	purple_notify_set_ui_ops( &bee_notify_uiops );
-	purple_xfers_set_ui_ops( &bee_xfer_uiops );
 	purple_privacy_set_ui_ops( &bee_privacy_uiops );
+	purple_notify_set_ui_ops( &bee_notify_uiops );
+	purple_accounts_set_ui_ops( &bee_account_uiops );
+	purple_xfers_set_ui_ops( &bee_xfer_uiops );
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
 		purple_debug_set_ui_ops( &bee_debug_uiops );
@@ -1076,10 +1106,10 @@ void purple_initmodule()
 		exit( 1 );
 	}
 	
-	purple_util_set_user_dir("/tmp");
-	purple_debug_set_enabled(FALSE);
-	purple_core_set_ui_ops(&bee_core_uiops);
-	purple_eventloop_set_ui_ops(&glib_eventloops);
+	purple_util_set_user_dir( "/tmp" );
+	purple_debug_set_enabled( FALSE );
+	purple_core_set_ui_ops( &bee_core_uiops );
+	purple_eventloop_set_ui_ops( &glib_eventloops );
 	if( !purple_core_init( "BitlBee") )
 	{
 		/* Initializing the core failed. Terminate. */
@@ -1088,7 +1118,7 @@ void purple_initmodule()
 	}
 	
 	/* This seems like stateful shit we don't want... */
-	purple_set_blist(purple_blist_new());
+	purple_set_blist( purple_blist_new() );
 	purple_blist_load();
 	
 	/* Meh? */
@@ -1119,7 +1149,7 @@ void purple_initmodule()
 	funcs.chat_join = purple_chat_join;
 	funcs.transfer_request = purple_transfer_request;
 	
-	help = g_string_new("BitlBee libpurple module supports the following IM protocols:\n");
+	help = g_string_new( "BitlBee libpurple module supports the following IM protocols:\n" );
 	
 	/* Add a protocol entry to BitlBee's structures for every protocol
 	   supported by this libpurple instance. */	
