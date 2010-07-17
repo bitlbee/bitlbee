@@ -370,7 +370,11 @@ static void purple_remove_buddy( struct im_connection *ic, char *who, char *grou
 	pb = purple_find_buddy( (PurpleAccount*) ic->proto_data, who );
 	if( pb != NULL )
 	{
-		purple_account_remove_buddy( (PurpleAccount*) ic->proto_data, pb, NULL );
+		PurpleGroup *group;
+		
+		group = purple_buddy_get_group( pb );
+		purple_account_remove_buddy( (PurpleAccount*) ic->proto_data, pb, group );
+		
 		purple_blist_remove_buddy( pb );
 	}
 }
@@ -694,7 +698,7 @@ static void prplcb_blist_new( PurpleBlistNode *node )
 
 static void prplcb_blist_remove( PurpleBuddyList *list, PurpleBlistNode *node )
 {
-	/*
+/*
 	PurpleBuddy *bud = (PurpleBuddy*) node;
 	
 	if( node->type == PURPLE_BLIST_BUDDY_NODE )
@@ -706,7 +710,7 @@ static void prplcb_blist_remove( PurpleBuddyList *list, PurpleBlistNode *node )
 		
 		imcb_remove_buddy( ic, bud->name, NULL );
 	}
-	*/
+*/
 }
 
 static PurpleBlistUiOps bee_blist_uiops =
@@ -827,7 +831,8 @@ static void prplcb_request_action_yes( void *data )
 {
 	struct prplcb_request_action_data *pqad = data;
 	
-	pqad->yes( pqad->user_data, pqad->yes_i );
+	if( pqad->yes )
+		pqad->yes( pqad->user_data, pqad->yes_i );
 	g_free( pqad );
 }
 
@@ -835,7 +840,8 @@ static void prplcb_request_action_no( void *data )
 {
 	struct prplcb_request_action_data *pqad = data;
 	
-	pqad->no( pqad->user_data, pqad->no_i );
+	if( pqad->no )
+		pqad->no( pqad->user_data, pqad->no_i );
 	g_free( pqad );
 }
 
@@ -858,7 +864,7 @@ static void *prplcb_request_action( const char *title, const char *primary, cons
 		caption = va_arg( actions, char* );
 		fn = va_arg( actions, void* );
 		
-		if( strstr( caption, "Accept" ) )
+		if( strstr( caption, "Accept" ) || strstr( caption, "OK" ) )
 		{
 			pqad->yes = fn;
 			pqad->yes_i = i;
