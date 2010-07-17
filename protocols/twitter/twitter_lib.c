@@ -124,7 +124,12 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 		imcb_add_buddy( ic, name, NULL );
 		imcb_rename_buddy( ic, name, fullname );
 		if (g_strcasecmp(mode, "chat") == 0)
+		{
+			/* Necessary so that nicks always get translated to the
+			   exact Twitter username. */
+			imcb_buddy_nick_hint( ic, name, name );
 			imcb_chat_add_buddy( td->home_timeline_gc, name );
+		}
 		else if (g_strcasecmp(mode, "many") == 0)
 			imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
 	}
