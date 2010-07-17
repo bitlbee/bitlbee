@@ -163,6 +163,10 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		if( load )
 		{
 			irc_channel_auto_joins( irc, NULL );
+			if( !set_getbool( &irc->default_channel->set, "auto_join" ) )
+				irc_channel_del_user( irc->default_channel, irc->user,
+				                      IRC_CDU_PART, "auto_join disabled "
+				                      "for this channel." );
 			if( set_getbool( &irc->b->set, "auto_connect" ) )
 				irc->login_source_id = b_timeout_add( 200,
 					cmd_identify_finish, irc );
