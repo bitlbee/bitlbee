@@ -643,7 +643,8 @@ static void cmd_remove( irc_t *irc, char **cmd )
 	
 	bu->ic->acc->prpl->remove_buddy( bu->ic, bu->handle, NULL );
 	nick_del( bu );
-	//TODO(wilmer): bee_user_free() and/or let the IM mod do it? irc_user_free( irc, cmd[1] );
+	if( g_slist_find( irc->users, iu ) )
+		bee_user_free( irc->b, bu );
 	
 	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
 	g_free( s );
