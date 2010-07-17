@@ -643,32 +643,12 @@ static PurpleConnectionUiOps bee_conn_uiops =
 	prplcb_conn_report_disconnect_reason,
 };
 
-static void prplcb_blist_new( PurpleBlistNode *node )
-{
-	PurpleBuddy *bud = (PurpleBuddy*) node;
-	
-	if( node->type == PURPLE_BLIST_BUDDY_NODE )
-	{
-		struct im_connection *ic = purple_ic_by_pa( bud->account );
-		
-		if( ic == NULL )
-			return;
-		
-		imcb_add_buddy( ic, bud->name, NULL );
-		if( bud->server_alias )
-		{
-			imcb_rename_buddy( ic, bud->name, bud->server_alias );
-			imcb_buddy_nick_hint( ic, bud->name, bud->server_alias );
-		}
-	}
-}
-
 static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 {
-	PurpleBuddy *bud = (PurpleBuddy*) node;
-	
 	if( node->type == PURPLE_BLIST_BUDDY_NODE )
 	{
+		PurpleBuddy *bud = (PurpleBuddy*) node;
+		PurpleGroup *group = purple_buddy_get_group( bud );
 		struct im_connection *ic = purple_ic_by_pa( bud->account );
 		PurpleStatus *as;
 		int flags = 0;
@@ -678,6 +658,9 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 		
 		if( bud->server_alias )
 			imcb_rename_buddy( ic, bud->name, bud->server_alias );
+		
+		if( group )
+			imcb_add_buddy( ic, bud->name, purple_group_get_name( group ) );
 		
 		flags |= purple_presence_is_online( bud->presence ) ? OPT_LOGGED_IN : 0;
 		flags |= purple_presence_is_available( bud->presence ) ? 0 : OPT_AWAY;
@@ -690,6 +673,22 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 		imcb_buddy_times( ic, bud->name,
 		                  purple_presence_get_login_time( bud->presence ),
 		                  purple_presence_get_idle_time( bud->presence ) );
+	}
+}
+
+static void prplcb_blist_new( PurpleBlistNode *node )
+{
+	if( node->type == PURPLE_BLIST_BUDDY_NODE )
+	{
+		PurpleBuddy *bud = (PurpleBuddy*) node;
+		struct im_connection *ic = purple_ic_by_pa( bud->account );
+		
+		if( ic == NULL )
+			return;
+		
+		imcb_add_buddy( ic, bud->name, NULL );
+		
+		prplcb_blist_update( NULL, node );
 	}
 }
 
