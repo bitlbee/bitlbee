@@ -357,9 +357,16 @@ static char *set_eval_display_name( set_t *set, char *value )
 static void purple_add_buddy( struct im_connection *ic, char *who, char *group )
 {
 	PurpleBuddy *pb;
+	PurpleGroup *pg = NULL;
+	
+	if( group && !( pg = purple_find_group( group ) ) )
+	{
+		pg = purple_group_new( group );
+		purple_blist_add_group( pg, NULL );
+	}
 	
 	pb = purple_buddy_new( (PurpleAccount*) ic->proto_data, who, NULL );
-	purple_blist_add_buddy( pb, NULL, NULL, NULL );
+	purple_blist_add_buddy( pb, NULL, pg, NULL );
 	purple_account_add_buddy( (PurpleAccount*) ic->proto_data, pb );
 }
 
@@ -1070,6 +1077,8 @@ static void *prplcb_account_request_authorize( PurpleAccount *account, const cha
 	
 	imcb_ask_with_free( ic, q, user_data, authorize_cb, deny_cb, NULL );
 	g_free( q );
+	
+	return NULL;
 }
 
 static PurpleAccountUiOps bee_account_uiops =
