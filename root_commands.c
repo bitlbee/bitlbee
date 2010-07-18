@@ -623,13 +623,34 @@ static void cmd_add( irc_t *irc, char **cmd )
 	}
 	
 	if( add_on_server )
-		a->prpl->add_buddy( a->ic, cmd[2], NULL );
+	{
+		irc_channel_t *ic;
+		char *s, *group = NULL;;
+		
+		if( ( ic = irc_channel_by_name( irc, irc->last_root_cmd ) ) &&
+		    ( s = set_getstr( &ic->set, "fill_by" ) ) &&
+		    strcmp( s, "group" ) == 0 &&
+		    ( group = set_getstr( &ic->set, "group" ) ) )
+			irc_usermsg( irc, "Adding `%s' to contact list (group %s)",
+			             cmd[2], group );
+		else
+			irc_usermsg( irc, "Adding `%s' to contact list", cmd[2] );
+		
+		a->prpl->add_buddy( a->ic, cmd[2], group );
+	}
 	else
+	{
+		bee_user_t *bu;
+		irc_user_t *iu;
+		
 		/* Only for add -tmp. For regular adds, this callback will
 		   be called once the IM server confirms. */
-		bee_user_new( irc->b, a->ic, cmd[2], BEE_USER_LOCAL );
+		if( ( bu = bee_user_new( irc->b, a->ic, cmd[2], BEE_USER_LOCAL ) ) &&
+		    ( iu = bu->ui_data ) )
+			irc_usermsg( irc, "Temporarily assigned nickname `%s' "
+			             "to contact `%s'", iu->nick, cmd[2] );
+	}
 	
-	irc_usermsg( irc, "Adding `%s' to your contact list", cmd[2]  );
 }
 
 static void cmd_remove( irc_t *irc, char **cmd )
@@ -809,7 +830,7 @@ static void cmd_block( irc_t *irc, char **cmd )
 	{
 		imc_rem_allow( ic, cmd[2] );
 		imc_add_block( ic, cmd[2] );
-		irc_usermsg( irc, "Buddy `%s' moved from your allow- to your block-list", cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from allow- to block-list", cmd[2] );
 	}
 }
 
@@ -870,7 +891,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 		imc_rem_block( ic, cmd[2] );
 		imc_add_allow( ic, cmd[2] );
 		
-		irc_usermsg( irc, "Buddy `%s' moved from your block- to your allow-list", cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from block- to allow-list", cmd[2] );
 	}
 }
 
@@ -1112,6 +1133,32 @@ static void cmd_chat( irc_t *irc, char **cmd )
 	}
 }
 
+static void cmd_group( irc_t *irc, char **cmd )
+{
+	GSList *l;
+	int len;
+	
+	len = strlen( cmd[1] );
+	if( g_strncasecmp( cmd[1], "list", len ) == 0 )
+	{
+		int n = 0;
+		
+		if( strchr( irc->umode, 'b' ) )
+			irc_usermsg( irc, "Group list:" );
+		
+		for( l = irc->b->groups; l; l = l->next )
+		{
+			bee_group_t *bg = l->data;
+			irc_usermsg( irc, "%d. %s", n ++, bg->name );
+		}
+		irc_usermsg( irc, "End of group list" );
+	}
+	else
+	{
+		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "group", cmd[1] );
+	}
+}
+
 static void cmd_transfer( irc_t *irc, char **cmd )
 {
 	GSList *files = irc->file_transfers;
@@ -1185,6 +1232,7 @@ const command_t commands[] = {
 	{ "chat",           1, cmd_chat,           0 },
 	{ "drop",           1, cmd_drop,           0 },
 	{ "ft",             0, cmd_transfer,       0 },
+	{ "group",          1, cmd_group,          0 },
 	{ "help",           0, cmd_help,           0 }, 
 	{ "identify",       1, cmd_identify,       0 },
 	{ "info",           1, cmd_info,           0 },
