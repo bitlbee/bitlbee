@@ -245,7 +245,7 @@
 		</description>
 
 		<bitlbee-command name="add">
-			<syntax>chat add &lt;account&gt; &lt;room&gt; [&lt;channel&gt;]</syntax>
+			<syntax>chat add &lt;account id&gt; &lt;room&gt; [&lt;channel&gt;]</syntax>
 
 			<description>
 				<para>
@@ -276,8 +276,8 @@
 
 	<bitlbee-command name="add">
 		<short-description>Add a buddy to your contact list</short-description>
-		<syntax>add &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
-		<syntax>add -tmp &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
+		<syntax>add &lt;account id&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
+		<syntax>add -tmp &lt;account id&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
 
 		<description>
 			<para>
@@ -286,6 +286,10 @@
 
 			<para>
 				If you want, you can also tell BitlBee what nick to give the new contact. The -tmp option adds the buddy to the internal BitlBee structures only, not to the real contact list (like done by <emphasis>set handle_unknown add</emphasis>). This allows you to talk to people who are not in your contact list. This normally won't show you any presence notifications.
+			</para>
+
+			<para>
+				If you use this command in a control channel containing people from only one group, the new contact will be added to that group automatically.
 			</para>
 		</description>
 
@@ -1355,22 +1359,15 @@
 
 	</bitlbee-command>
 
-	<bitlbee-command name="nick">
-		<short-description>Change friendly name, nick</short-description>
-		<syntax>nick &lt;connection&gt; [&lt;new nick&gt;]</syntax>
-		<syntax>nick &lt;connection&gt;</syntax>
+	<bitlbee-command name="group">
+		<short-description>Contact group management</short-description>
+		<syntax>group list</syntax>
 
 		<description>
 			<para>
-				Deprecated: Use the per-account <emphasis>display_name</emphasis> setting to read and change this information.
+				Only the <emphasis>group list</emphasis> command is supported at the moment, which shows a list of all groups defined so far.
 			</para>
 		</description>
-
-		<ircexample>
-			<ircline nick="wouter">account 1 set display_name "The majestik møøse"</ircline>
-			<ircline nick="root">display_name = `The majestik møøse'</ircline>
-		</ircexample>
-
 	</bitlbee-command>
 	
 	<bitlbee-command name="transfers">
