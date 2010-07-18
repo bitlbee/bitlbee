@@ -210,10 +210,10 @@
 		</bitlbee-command>
 
 		<bitlbee-command name="set">
-			<syntax>channel &lt;channel id&gt; set</syntax>
-			<syntax>channel &lt;channel id&gt; set &lt;setting&gt;</syntax>
-			<syntax>channel &lt;channel id&gt; set &lt;setting&gt; &lt;value&gt;</syntax>
-			<syntax>channel &lt;channel id&gt; set -del &lt;setting&gt;</syntax>
+			<syntax>channel [&lt;channel id&gt;] set</syntax>
+			<syntax>channel [&lt;channel id&gt;] set &lt;setting&gt;</syntax>
+			<syntax>channel [&lt;channel id&gt;] set &lt;setting&gt; &lt;value&gt;</syntax>
+			<syntax>channel [&lt;channel id&gt;] set -del &lt;setting&gt;</syntax>
 
 			<description>
 				<para>
@@ -225,7 +225,7 @@
 				</para>
 				
 				<para>
-					The channel ID can be a number (see <emphasis>channel list</emphasis>), or (part of) its name, as long as it matches only one channel.
+					The channel ID can be a number (see <emphasis>channel list</emphasis>), or (part of) its name, as long as it matches only one channel. If you want to change settings of the current channel, you can omit the channel ID.
 				</para>
 			</description>
 		</bitlbee-command>

@@ -549,14 +549,22 @@ static void cmd_channel( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	MIN_ARGS( 2 );
-	len = strlen( cmd[2] );
-	
 	if( ( ic = irc_channel_get( irc, cmd[1] ) ) == NULL )
 	{
-		irc_usermsg( irc, "Could not find channel `%s'", cmd[1] );
+		/* If this doesn't match any channel, maybe this is the short
+		   syntax (only works when used inside a channel). */
+		if( ( len = strlen( cmd[1] ) ) &&
+		    g_strncasecmp( cmd[1], "set", len ) == 0 &&
+		    ( ic = irc_channel_by_name( irc, irc->last_root_cmd ) ) )
+			cmd_set_real( irc, cmd + 1, &ic->set, NULL );
+		else
+			irc_usermsg( irc, "Could not find channel `%s'", cmd[1] );
+		
 		return;
 	}
+	
+	MIN_ARGS( 2 );
+	len = strlen( cmd[2] );
 	
 	if( len >= 1 && g_strncasecmp( cmd[2], "set", len ) == 0 )
 	{
