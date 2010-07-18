@@ -517,6 +517,10 @@
 			<para>
 				With this option enabled, the root user devoices people when they go away (just away, not offline) and gives the voice back when they come back. You might dislike the voice-floods you'll get if your contact list is huge, so this option can be disabled.
 			</para>
+			
+			<para>
+				Replaced with the <emphasis>show_users</emphasis> setting. See <emphasis>help show_users</emphasis>.
+			</para>
 		</description>
 	</bitlbee-setting>
 
@@ -1039,6 +1043,32 @@
 		<description>
 			<para>
 				If enabled causes BitlBee to also show offline users in Channel. Online-users will get op, away-users voice and offline users none of both. This option takes effect as soon as you reconnect.
+			</para>
+			
+			<para>
+				Replaced with the <emphasis>show_users</emphasis> setting. See <emphasis>help show_users</emphasis>.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="show_users" type="string" scope="channel">
+		<default>online+,away</default>
+
+		<description>
+			<para>
+				Comma-separated list of statuses of users you want in the channel,
+				and any modes they should have. The following statuses are currently
+				recognised: <emphasis>online</emphasis> (i.e. available, not
+				away), <emphasis>away</emphasis>, and <emphasis>offline</emphasis>.
+			</para>
+			
+			<para>
+				If a status is followed by a valid channel mode character
+				(@, % or +), it will be given to users with that status.
+				For example, <emphasis>online@,away+,offline</emphasis> will
+				show all users in the channel. Online people will
+				have +o, people who are online but away will have +v,
+				and others will have no special modes.
 			</para>
 		</description>
 	</bitlbee-setting>

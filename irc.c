@@ -32,6 +32,7 @@ GSList *irc_connection_list;
 static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond );
 static char *set_eval_charset( set_t *set, char *value );
 static char *set_eval_password( set_t *set, char *value );
+static char *set_eval_bw_compat( set_t *set, char *value );
 
 irc_t *irc_new( int fd )
 {
@@ -100,7 +101,7 @@ irc_t *irc_new( int fd )
 	b->ui = &irc_ui_funcs;
 	
 	s = set_add( &b->set, "allow_takeover", "true", set_eval_bool, irc );
-	s = set_add( &b->set, "away_devoice", "true", set_eval_away_devoice, irc );
+	s = set_add( &b->set, "away_devoice", "true", set_eval_bw_compat, irc );
 	s = set_add( &b->set, "away_reply_timeout", "3600", set_eval_int, irc );
 	s = set_add( &b->set, "charset", "utf-8", set_eval_charset, irc );
 	s = set_add( &b->set, "default_target", "root", NULL, irc );
@@ -120,6 +121,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &b->set, "private", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "query_order", "lifo", NULL, irc );
 	s = set_add( &b->set, "root_nick", ROOT_NICK, set_eval_root_nick, irc );
+	s = set_add( &b->set, "show_offline", "false", set_eval_bw_compat, irc );
 	s = set_add( &b->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "timezone", "local", set_eval_timezone, irc );
 	s = set_add( &b->set, "to_char", ": ", set_eval_to_char, irc );
@@ -900,19 +902,31 @@ static char *set_eval_charset( set_t *set, char *value )
 	return value;
 }
 
-char *set_eval_away_devoice( set_t *set, char *value )
+/* Mostly meant for upgrades. If one of these is set to the non-default,
+   set show_users of all channels to something with the same effect. */
+static char *set_eval_bw_compat( set_t *set, char *value )
 {
 	irc_t *irc = set->data;
+	char *val;
+	GSList *l;
 	
-	if( !is_bool( value ) )
+	irc_usermsg( irc, "Setting `%s' is obsolete, use the `show_users' "
+	             "channel setting instead.", set->key );
+	
+	if( strcmp( set->key, "away_devoice" ) == 0 && !bool2int( value ) )
+		val = "online,away";
+	else if( strcmp( set->key, "show_offline" ) == 0 && bool2int( value ) )
+		val = "online@,away+,offline";
+	else
 		return SET_INVALID;
 	
-	/* The usual problem: The setting isn't actually changed at this
-	   point and we need it to be, so do it by hand. */
-	g_free( set->value );
-	set->value = g_strdup( value );
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		/* No need to check channel type, if the setting doesn't exist it
+		   will just be ignored. */
+		set_setstr( &ic->set, "show_users", val );
+	}
 	
-	bee_irc_channel_update( irc, NULL, NULL );
-	
-	return value;
+	return SET_INVALID;
 }
