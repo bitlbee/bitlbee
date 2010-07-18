@@ -179,6 +179,7 @@ typedef enum
 	IRC_CHANNEL_USER_OP = 1,
 	IRC_CHANNEL_USER_HALFOP = 2,
 	IRC_CHANNEL_USER_VOICE = 4,
+	IRC_CHANNEL_USER_NONE = 8,
 } irc_channel_user_flags_t;
 
 typedef struct irc_channel_user
@@ -202,6 +203,7 @@ struct irc_control_channel
 	struct bee_group *group;
 	struct account *account;
 	struct prpl *protocol;
+	char modes[4];
 };
 
 extern const struct bee_ui_funcs irc_ui_funcs;

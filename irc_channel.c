@@ -535,6 +535,7 @@ static char *set_eval_by_account( set_t *set, char *value );
 static char *set_eval_fill_by( set_t *set, char *value );
 static char *set_eval_by_group( set_t *set, char *value );
 static char *set_eval_by_protocol( set_t *set, char *value );
+static char *set_eval_show_users( set_t *set, char *value );
 
 static gboolean control_channel_init( irc_channel_t *ic )
 {
@@ -544,9 +545,13 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	set_add( &ic->set, "fill_by", "all", set_eval_fill_by, ic );
 	set_add( &ic->set, "group", NULL, set_eval_by_group, ic );
 	set_add( &ic->set, "protocol", NULL, set_eval_by_protocol, ic );
+	set_add( &ic->set, "show_users", "online+,away", set_eval_show_users, ic );
 	
 	ic->data = icc = g_new0( struct irc_control_channel, 1 );
 	icc->type = IRC_CC_TYPE_DEFAULT;
+	
+	/* Have to run the evaluator to initialize icc->modes. */
+	set_setstr( &ic->set, "show_users", set_getstr( &ic->set, "show_users" ) );
 	
 	return TRUE;
 }
@@ -622,6 +627,49 @@ static char *set_eval_by_protocol( set_t *set, char *value )
 		bee_irc_channel_update( ic->irc, ic, NULL );
 	
 	return value;
+}
+
+static char *set_eval_show_users( set_t *set, char *value )
+{
+	struct irc_channel *ic = set->data;
+	struct irc_control_channel *icc = ic->data;
+	char **parts = g_strsplit( value, ",", 0 ), **part;
+	char modes[4];
+	
+	memset( modes, 0, 4 );
+	for( part = parts; *part; part ++ )
+	{
+		char last, modechar = IRC_CHANNEL_USER_NONE;
+		
+		if( **part == '\0' )
+			goto fail;
+		
+		last = (*part)[strlen(*part+1)];
+		if( last == '+' )
+			modechar = IRC_CHANNEL_USER_VOICE;
+		else if( last == '%' )
+			modechar = IRC_CHANNEL_USER_HALFOP;
+		else if( last == '@' )
+			modechar = IRC_CHANNEL_USER_OP;
+		
+		if( strncmp( *part, "offline", 7 ) == 0 )
+			modes[0] = modechar;
+		else if( strncmp( *part, "away", 4 ) == 0 )
+			modes[1] = modechar;
+		else if( strncmp( *part, "online", 6 ) == 0 )
+			modes[2] = modechar;
+		else
+			goto fail;
+	}
+	memcpy( icc->modes, modes, 4 );
+	bee_irc_channel_update( ic->irc, ic, NULL );
+	
+	g_strfreev( parts );
+	return value;
+	
+fail:
+	g_strfreev( parts );
+	return SET_INVALID;	
 }
 
 static gboolean control_channel_free( irc_channel_t *ic )

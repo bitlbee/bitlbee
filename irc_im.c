@@ -142,7 +142,7 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 {
 	struct irc_control_channel *icc;
 	GSList *l;
-	gboolean show = FALSE;
+	gboolean match = FALSE;
 	
 	if( ic == NULL )
 	{
@@ -169,30 +169,37 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 	
 	icc = ic->data;
 	
-	if( !( iu->bu->flags & BEE_USER_ONLINE ) )
-		show = FALSE;
-	else if( icc->type == IRC_CC_TYPE_DEFAULT )
-		show = TRUE;
+	if( icc->type == IRC_CC_TYPE_DEFAULT )
+		match = TRUE;
 	else if( icc->type == IRC_CC_TYPE_GROUP )
-		show = iu->bu->group == icc->group;
+		match = iu->bu->group == icc->group;
 	else if( icc->type == IRC_CC_TYPE_ACCOUNT )
-		show = iu->bu->ic->acc == icc->account;
+		match = iu->bu->ic->acc == icc->account;
 	else if( icc->type == IRC_CC_TYPE_PROTOCOL )
-		show = iu->bu->ic->acc->prpl == icc->protocol;
+		match = iu->bu->ic->acc->prpl == icc->protocol;
 	
-	if( !show )
+	if( !match )
 	{
 		irc_channel_del_user( ic, iu, IRC_CDU_PART, NULL );
 	}
 	else
 	{
-		irc_channel_add_user( ic, iu );
+		int mode = 0;
 		
-		if( set_getbool( &irc->b->set, "away_devoice" ) )
-			irc_channel_user_set_mode( ic, iu, ( iu->bu->flags & BEE_USER_AWAY ) ?
-			                           0 : IRC_CHANNEL_USER_VOICE );
+		if( !( iu->bu->flags & BEE_USER_ONLINE ) )
+			mode = icc->modes[0];
+		else if( iu->bu->flags & BEE_USER_AWAY )
+			mode = icc->modes[1];
 		else
-			irc_channel_user_set_mode( ic, iu, 0 );
+			mode = icc->modes[2];
+		
+		if( !mode )
+			irc_channel_del_user( ic, iu, IRC_CDU_PART, NULL );
+		else
+		{
+			irc_channel_add_user( ic, iu );
+			irc_channel_user_set_mode( ic, iu, mode );
+		}
 	}
 }
 
