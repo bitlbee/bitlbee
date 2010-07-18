@@ -123,7 +123,7 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, irc_user_t *iu, cons
 
 	imcb_log( ic, "File transfer request from %s for %s (%zd kb).\n"
 	              "Accept the file transfer if you'd like the file. If you don't, "
-	              "issue the 'transfers reject' command.",
+	              "issue the 'transfer reject' command.",
 	              iu->nick, file_name, file_size / 1024 );
 
 	return file;
