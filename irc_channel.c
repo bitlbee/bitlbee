@@ -545,13 +545,15 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	set_add( &ic->set, "fill_by", "all", set_eval_fill_by, ic );
 	set_add( &ic->set, "group", NULL, set_eval_by_group, ic );
 	set_add( &ic->set, "protocol", NULL, set_eval_by_protocol, ic );
+	
+	/* When changing the default, also change it below. */
 	set_add( &ic->set, "show_users", "online+,away", set_eval_show_users, ic );
 	
 	ic->data = icc = g_new0( struct irc_control_channel, 1 );
 	icc->type = IRC_CC_TYPE_DEFAULT;
 	
 	/* Have to run the evaluator to initialize icc->modes. */
-	set_setstr( &ic->set, "show_users", set_getstr( &ic->set, "show_users" ) );
+	set_setstr( &ic->set, "show_users", "online+,away" );
 	
 	return TRUE;
 }
