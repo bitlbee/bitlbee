@@ -3,6 +3,53 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 1.3dev:
+- Loads of new stuff, mostly ready for a new major release, but starting with
+  a dev snapshot. A few changes that were planned for a long time already:
+- Rewrote the IRC core, which brings:
+  * Support for multiple (control) channels, so you can have one channel per
+    buddy group, per IM account/protocol, or for example a &offline with all
+    offline contacts. See "help channels" for information on how to use this.
+  * You can also leave and rejoin all channels. Being in &bitlbee is no
+    longer required.
+  * Now you can start groupchats by just joining a new channel and inviting
+    contacts. (The "chat with" command still works as well.)
+  * You can change your nickname, whenever you want.
+  * Root commands:
+    + To hopefully resolve confusion about the "account set" syntax, the
+      ordering was changed slightly: "account set acc/setting value"
+      becomes "account acc set setting value". Obviously the same order
+      should now be used for other account subcommands.
+    + Shortcuts: Instead of "account list" you can say "acc li".
+  * /whois shows idle/login times of your contacts when available.
+  * paste_buffer (previously known as buddy_sendbuffer) now works for chats
+    as well.
+  * The nick_source setting was replaced with a nick_format setting, which
+    looks more or less like a format string, and lets you tweak how nicknames
+    for contacts are generated in more detail.
+  * A per-channel show_users setting lets you configure exactly which kinds
+    of contacts (online/away/offline) should show up in a channel and what
+    modes (none/voice/etc) they should have.
+  * If you connect (and identify) to a BitlBee server you're already
+    connected to, you can take over the existing session instead of starting
+    a new one.
+  * More correct validation of channel names: They can contain pretty much
+    any character, unlike nicknames.
+- Support for using libpurple instead of BitlBee's built-in IM protocol
+  modules. This can be enabled by passing --purple=1 to the configure script.
+  * This adds support for many more IM protocols to BitlBee.
+  * And new functionality to existing protocols.
+  * This is and will always be optional and using it on public servers is
+    *not* recommended. It should be pretty stable, but costs more RAM/etc.
+  * When using this variant, type "help purple" to get a list of supported
+    protocols.
+- Support for file transfers, in and out. /DCC SEND a file to a contact and
+  it becomes a file transfer, and incoming file transfers become /DCC SENDs
+  to you. Note that this is mostly useful when combined with libpurple, as
+  only the Jabber native protocol module currently supports file transfers.
+
+Finished ... 2010
+
 Version 1.2.8:
 - Now always using the AIM-style authentication method for OSCAR connections,
   even when connecting to ICQ. This solves login issues some people were
