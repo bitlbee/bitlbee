@@ -568,7 +568,6 @@ gboolean jabber_bs_recv_handshake_abort( struct bs_transfer *bt, char *error )
 
 	imcb_file_canceled( tf->ic, tf->ft, "couldn't connect to any streamhosts" );
 
-	bt->tf->watch_in = 0;
 	/* MUST always return FALSE! */
 	return FALSE;
 }
