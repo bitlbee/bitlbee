@@ -29,7 +29,6 @@
  * declared in this file and defined in libyahoo2.c
  */
 
-
 #ifndef YAHOO2_CALLBACKS_H
 #define YAHOO2_CALLBACKS_H
 
@@ -45,11 +44,11 @@ extern "C" {
  * Callback interface for libyahoo2
  */
 
-typedef enum {
-	YAHOO_INPUT_READ = 1 << 0,
-	YAHOO_INPUT_WRITE = 1 << 1,
-	YAHOO_INPUT_EXCEPTION = 1 << 2
-} yahoo_input_condition;
+	typedef enum {
+		YAHOO_INPUT_READ = 1 << 0,
+		YAHOO_INPUT_WRITE = 1 << 1,
+		YAHOO_INPUT_EXCEPTION = 1 << 2
+	} yahoo_input_condition;
 
 /*
  * A callback function called when an asynchronous connect completes.
@@ -93,8 +92,8 @@ struct yahoo_callbacks {
  * 	succ - enum yahoo_login_status
  * 	url  - url to reactivate account if locked
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_login_response)(int id, int succ, const char *url);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_login_response) (int id, int succ,
+		const char *url);
 
 /*
  * Name: ext_yahoo_got_buddies
@@ -103,8 +102,7 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_login_response)(int id, int succ, const char 
  * 	id   - the id that identifies the server connection
  * 	buds - the buddy list
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddies)(int id, YList * buds);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddies) (int id, YList *buds);
 
 /*
  * Name: ext_yahoo_got_ignore
@@ -113,8 +111,7 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddies)(int id, YList * buds);
  * 	id   - the id that identifies the server connection
  * 	igns - the ignore list
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_ignore)(int id, YList * igns);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_ignore) (int id, YList *igns);
 
 /*
  * Name: ext_yahoo_got_identities
@@ -123,8 +120,7 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_ignore)(int id, YList * igns);
  * 	id   - the id that identifies the server connection
  * 	ids  - the identity list
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_identities)(int id, YList * ids);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_identities) (int id, YList *ids);
 
 /*
  * Name: ext_yahoo_got_cookies
@@ -132,8 +128,7 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_identities)(int id, YList * ids);
  * Params:
  * 	id   - the id that identifies the server connection
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_cookies)(int id);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_cookies) (int id);
 
 /*
  * Name: ext_yahoo_got_ping
@@ -142,8 +137,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_cookies)(int id);
  * 	id   - the id that identifies the server connection
  *  errormsg - optional error message
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_ping)(int id, const char *errormsg);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_ping) (int id,
+		const char *errormsg);
 
 /*
  * Name: ext_yahoo_status_changed
@@ -158,8 +153,21 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_ping)(int id, const char *errormsg);
  *	mobile - this is set for mobile users/buddies
  *	TODO: add support for pager, chat, and game states
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_status_changed)(int id, const char *who, int stat, const char *msg, int away, int idle, int mobile);
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_status_changed) (int id,
+		const char *who, int stat, const char *msg, int away, int idle,
+		int mobile);
 
+/*
+ * Name: ext_yahoo_got_buzz
+ * 	Called when remote user sends you a buzz.
+ * Params:
+ * 	id   - the id that identifies the server connection
+ * 	me   - the identity the message was sent to
+ * 	who  - the handle of the remote user
+ * 	tm   - timestamp of message if offline
+ */
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buzz) (int id, const char *me,
+		const char *who, long tm);
 
 /*
  * Name: ext_yahoo_got_im
@@ -176,8 +184,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_status_changed)(int id, const char *who, int 
  * 				5
  * 	utf8 - whether the message is encoded as utf8 or not
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_im)(int id, const char *me, const char *who, const char *msg, long tm, int stat, int utf8);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_im) (int id, const char *me,
+		const char *who, const char *msg, long tm, int stat, int utf8);
 
 /*
  * Name: ext_yahoo_got_conf_invite
@@ -190,8 +198,9 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_im)(int id, const char *me, const char *w
  * 	msg  - the message
  *	members - the initial members of the conference (null terminated list)
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_conf_invite)(int id, const char *me, const char *who, const char *room, const char *msg, YList *members);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_conf_invite) (int id,
+		const char *me, const char *who, const char *room,
+		const char *msg, YList *members);
 
 /*
  * Name: ext_yahoo_conf_userdecline
@@ -203,8 +212,9 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_conf_invite)(int id, const char *me, cons
  * 	room - the room
  * 	msg  - the declining message
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_userdecline)(int id, const char *me, const char *who, const char *room, const char *msg);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_userdecline) (int id,
+		const char *me, const char *who, const char *room,
+		const char *msg);
 
 /*
  * Name: ext_yahoo_conf_userjoin
@@ -215,8 +225,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_userdecline)(int id, const char *me, con
  * 	who  - the user who has joined
  * 	room - the room joined
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_userjoin)(int id, const char *me, const char *who, const char *room);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_userjoin) (int id,
+		const char *me, const char *who, const char *room);
 
 /*
  * Name: ext_yahoo_conf_userleave
@@ -227,8 +237,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_userjoin)(int id, const char *me, const 
  * 	who  - the user who has left
  * 	room - the room left
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_userleave)(int id, const char *me, const char *who, const char *room);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_userleave) (int id,
+		const char *me, const char *who, const char *room);
 
 /*
  * Name: ext_yahoo_chat_cat_xml
@@ -237,8 +247,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_userleave)(int id, const char *me, const
  * 	id      - the id that identifies the server connection
  * 	xml     - ?
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_cat_xml)(int id, const char *xml);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_cat_xml) (int id,
+		const char *xml);
 
 /*
  * Name: ext_yahoo_chat_join
@@ -253,8 +263,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_cat_xml)(int id, const char *xml);
  *	          of yahoo_chat_member's) Must be freed by the client
  *	fd	- the socket where the connection is coming from (for tracking)
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_join)(int id, const char *me, const char *room, const char *topic, YList *members, int fd);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_join) (int id, const char *me,
+		const char *room, const char *topic, YList *members, int fd);
 
 /*
  * Name: ext_yahoo_chat_userjoin
@@ -265,8 +275,9 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_join)(int id, const char *me, const char
  * 	room - the room joined
  * 	who  - the user who has joined, Must be freed by the client
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_userjoin)(int id, const char *me, const char *room, struct yahoo_chat_member *who);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_userjoin) (int id,
+		const char *me, const char *room,
+		struct yahoo_chat_member *who);
 
 /*
  * Name: ext_yahoo_chat_userleave
@@ -277,8 +288,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_userjoin)(int id, const char *me, const 
  * 	room - the room left
  * 	who  - the user who has left (Just the User ID)
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_userleave)(int id, const char *me, const char *room, const char *who);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_userleave) (int id,
+		const char *me, const char *room, const char *who);
 
 /*
  * Name: ext_yahoo_chat_message
@@ -293,8 +304,9 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_userleave)(int id, const char *me, const
  * 		   2 = /me type message
  * 	utf8 - whether the message is utf8 encoded or not
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_message)(int id, const char *me, const char *who, const char *room, const char *msg, int msgtype, int utf8);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_message) (int id,
+		const char *me, const char *who, const char *room,
+		const char *msg, int msgtype, int utf8);
 
 /*
  *
@@ -309,8 +321,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_message)(int id, const char *me, const c
  * Returns:
  *	nothing.
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_yahoologout)(int id, const char *me);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_yahoologout) (int id,
+		const char *me);
 
 /*
  *
@@ -326,8 +338,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_yahoologout)(int id, const char *me);
  * Returns:
  *	nothing.
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_yahooerror)(int id, const char *me);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_yahooerror) (int id,
+		const char *me);
 
 /*
  * Name: ext_yahoo_conf_message
@@ -340,8 +352,9 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_chat_yahooerror)(int id, const char *me);
  * 	msg  - the message
  * 	utf8 - whether the message is utf8 encoded or not
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_message)(int id, const char *me, const char *who, const char *room, const char *msg, int utf8);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_conf_message) (int id,
+		const char *me, const char *who, const char *room,
+		const char *msg, int utf8);
 
 /*
  * Name: ext_yahoo_got_file
@@ -380,8 +393,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_contact_auth_request)(int id, const char *myi
  * 	who  - who was added
  * 	msg  - any message sent
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_contact_added)(int id, const char *myid, const char *who, const char *msg);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_contact_added) (int id,
+		const char *myid, const char *who, const char *msg);
 
 /*
  * Name: ext_yahoo_rejected
@@ -391,8 +404,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_contact_added)(int id, const char *myid, cons
  * 	who  - who rejected you
  * 	msg  - any message sent
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_rejected)(int id, const char *who, const char *msg);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_rejected) (int id, const char *who,
+		const char *msg);
 
 /*
  * Name: ext_yahoo_typing_notify
@@ -403,8 +416,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_rejected)(int id, const char *who, const char
  * 	who  - the handle of the remote user
  * 	stat - 1 if typing, 0 if stopped typing
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_typing_notify)(int id, const char *me, const char *who, int stat);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_typing_notify) (int id,
+		const char *me, const char *who, int stat);
 
 /*
  * Name: ext_yahoo_game_notify
@@ -427,8 +440,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_game_notify)(int id, const char *me, const ch
  * 	subj - the subject of the mail - NULL if only mail count
  * 	cnt  - mail count - 0 if new mail notification
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_mail_notify)(int id, const char *from, const char *subj, int cnt);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_mail_notify) (int id,
+		const char *from, const char *subj, int cnt);
 
 /*
  * Name: ext_yahoo_system_message
@@ -449,7 +462,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_system_message)(int id, const char *msg);
  * 	url - the url to use to load the icon
  * 	checksum - the checksum of the icon content
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddyicon)(int id, const char *me, const char *who, const char *url, int checksum);
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddyicon) (int id,
+		const char *me, const char *who, const char *url, int checksum);
 
 /*
  * Name: ext_yahoo_got_buddyicon_checksum
@@ -460,7 +474,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddyicon)(int id, const char *me, const 
  * 	who - the yahoo id of the buddy icon checksum is for
  * 	checksum - the checksum of the icon content
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddyicon_checksum)(int id, const char *me,const char *who, int checksum);
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddyicon_checksum) (int id,
+		const char *me, const char *who, int checksum);
 
 /*
  * Name: ext_yahoo_got_buddyicon_request
@@ -470,7 +485,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddyicon_checksum)(int id, const char *m
  * 	me - the handle of the identity the notification is sent to
  * 	who - the yahoo id of the buddy that requested the buddy icon
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddyicon_request)(int id, const char *me, const char *who);
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddyicon_request) (int id,
+		const char *me, const char *who);
 
 /*
  * Name: ext_yahoo_got_buddyicon_request
@@ -479,7 +495,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_buddyicon_request)(int id, const char *me
  * 	id - the id that identifies the server connection
  * 	url - remote url, the uploaded buddy icon can be fetched from
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_buddyicon_uploaded)(int id, const char *url);
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_buddyicon_uploaded) (int id,
+		const char *url);
 
 /*
  * Name: ext_yahoo_got_webcam_image
@@ -504,10 +521,10 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_buddyicon_uploaded)(int id, const char *url);
  *	to transport then others. When image_size is 0 we can still receive
  *	a timestamp to stay in sync
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_webcam_image)(int id, const char * who,
-		const unsigned char *image, unsigned int image_size, unsigned int real_size,
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_webcam_image) (int id,
+		const char *who, const unsigned char *image,
+		unsigned int image_size, unsigned int real_size,
 		unsigned int timestamp);
-
 
 /*
  * Name: ext_yahoo_webcam_invite
@@ -517,8 +534,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_webcam_image)(int id, const char * who,
  * 	me   - identity the invitation is to
  * 	from - who the invitation is from
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_invite)(int id, const char *me, const char *from);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_invite) (int id,
+		const char *me, const char *from);
 
 /*
  * Name: ext_yahoo_webcam_invite_reply
@@ -529,8 +546,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_invite)(int id, const char *me, const 
  * 	from - who the invitation response is from
  *	accept - 0 (decline), 1 (accept)
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_invite_reply)(int id, const char *me, const char *from, int accept);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_invite_reply) (int id,
+		const char *me, const char *from, int accept);
 
 /*
  * Name: ext_yahoo_webcam_closed
@@ -544,8 +561,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_invite_reply)(int id, const char *me, 
  *	         3 = user declines permission
  *	         4 = user does not have webcam online
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_closed)(int id, const char *who, int reason);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_closed) (int id,
+		const char *who, int reason);
 
 /*
  * Name: ext_yahoo_got_search_result
@@ -559,8 +576,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_closed)(int id, const char *who, int r
  * 		   these will be freed after this function returns, so
  * 		   if you need to use the information, make a copy
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_got_search_result)(int id, int found, int start, int total, YList *contacts);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_search_result) (int id,
+		int found, int start, int total, YList *contacts);
 
 /*
  * Name: ext_yahoo_error
@@ -571,8 +588,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_got_search_result)(int id, int found, int sta
  * 	fatal- whether this error is fatal to the connection or not
  * 	num  - Which error is this
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_error)(int id, const char *err, int fatal, int num);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_error) (int id, const char *err,
+		int fatal, int num);
 
 /*
  * Name: ext_yahoo_webcam_viewer
@@ -582,8 +599,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_error)(int id, const char *err, int fatal, in
  *	who - the viewer
  *	connect - 0=disconnect 1=connect 2=request
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_viewer)(int id, const char *who, int connect);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_viewer) (int id,
+		const char *who, int connect);
 
 /*
  * Name: ext_yahoo_webcam_data_request
@@ -592,8 +609,8 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_viewer)(int id, const char *who, int c
  *	id   - the id that identifies the server connection
  *	send - whether to send images or not
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_data_request)(int id, int send);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_data_request) (int id,
+		int send);
 
 /*
  * Name: ext_yahoo_log
@@ -603,8 +620,7 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_webcam_data_request)(int id, int send);
  * Returns:
  * 	0
  */
-int YAHOO_CALLBACK_TYPE(ext_yahoo_log)(const char *fmt, ...);
-
+	int YAHOO_CALLBACK_TYPE(ext_yahoo_log) (const char *fmt, ...);
 
 /*
  * Name: ext_yahoo_add_handler
@@ -619,8 +635,8 @@ int YAHOO_CALLBACK_TYPE(ext_yahoo_log)(const char *fmt, ...);
  * 	
  * Returns: a tag to be used when removing the handler
  */
-int YAHOO_CALLBACK_TYPE(ext_yahoo_add_handler)(int id, int fd, yahoo_input_condition cond, void *data);
-
+	int YAHOO_CALLBACK_TYPE(ext_yahoo_add_handler) (int id, int fd,
+		yahoo_input_condition cond, void *data);
 
 /*
  * Name: ext_yahoo_remove_handler
@@ -629,8 +645,7 @@ int YAHOO_CALLBACK_TYPE(ext_yahoo_add_handler)(int id, int fd, yahoo_input_condi
  * 	id   - the id that identifies the connection
  * 	tag  - the handler tag to remove
  */
-void YAHOO_CALLBACK_TYPE(ext_yahoo_remove_handler)(int id, int tag);
-
+	void YAHOO_CALLBACK_TYPE(ext_yahoo_remove_handler) (int id, int tag);
 
 /*
  * Name: ext_yahoo_connect
@@ -641,12 +656,11 @@ void YAHOO_CALLBACK_TYPE(ext_yahoo_remove_handler)(int id, int tag);
  * Returns:
  * 	a unix file descriptor to the socket
  */
-int YAHOO_CALLBACK_TYPE(ext_yahoo_connect)(const char *host, int port);
-
+	int YAHOO_CALLBACK_TYPE(ext_yahoo_connect) (const char *host, int port);
 
 /*
  * Name: ext_yahoo_connect_async
- * 	Connect to a host:port asynchronously.  This function should return
+ * 	Connect to a host:port asynchronously. This function should return
  * 	immediately returing a tag used to identify the connection handler,
  * 	or a pre-connect error (eg: host name lookup failure).
  * 	Once the connect completes (successfully or unsuccessfully), callback
@@ -662,8 +676,9 @@ int YAHOO_CALLBACK_TYPE(ext_yahoo_connect)(const char *host, int port);
  * Returns:
  * 	a unix file descriptor to the socket
  */
-int YAHOO_CALLBACK_TYPE(ext_yahoo_connect_async)(int id, const char *host, int port, 
-		yahoo_connect_callback callback, void *callback_data);
+	int YAHOO_CALLBACK_TYPE(ext_yahoo_connect_async) (int id,
+		const char *host, int port, yahoo_connect_callback callback,
+		void *callback_data);
 
 #ifdef USE_STRUCT_CALLBACKS
 };
@@ -672,7 +687,7 @@ int YAHOO_CALLBACK_TYPE(ext_yahoo_connect_async)(int id, const char *host, int p
  * if using a callback structure, call yahoo_register_callbacks
  * before doing anything else
  */
-void yahoo_register_callbacks(struct yahoo_callbacks * tyc);
+void yahoo_register_callbacks(struct yahoo_callbacks *tyc);
 
 #undef YAHOO_CALLBACK_TYPE
 

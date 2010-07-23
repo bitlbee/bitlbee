@@ -200,6 +200,7 @@ struct yahoo_data {
 };
 
 struct yab {
+	int yid;
 	char *id;
 	char *fname;
 	char *lname;

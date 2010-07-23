@@ -18,16 +18,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define IDENT  1 /* identify function */
-#define XOR    2 /* xor with arg1 */
-#define MULADD 3 /* multipy by arg1 then add arg2 */
-#define LOOKUP 4 /* lookup each byte in the table pointed to by arg1 */
-#define BITFLD 5 /* reorder bits according to table pointed to by arg1 */
+#define IDENT  1		/* identify function */
+#define XOR    2		/* xor with arg1 */
+#define MULADD 3		/* multipy by arg1 then add arg2 */
+#define LOOKUP 4		/* lookup each byte in the table pointed to by arg1 */
+#define BITFLD 5		/* reorder bits according to table pointed to by arg1 */
 
-struct yahoo_fn
-{
-	int type; 
+struct yahoo_fn {
+	int type;
 	long arg1, arg2;
 };
 
-int yahoo_xfrm( int table, int depth, int seed );
+int yahoo_xfrm(int table, int depth, int seed);
