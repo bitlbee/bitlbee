@@ -66,6 +66,7 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 	s->flags |= ACC_SET_NOSAVE | SET_NULL_OK;
 	
 	s = set_add( &a->set, "tag", NULL, set_eval_account, a );
+	s->flags |= ACC_SET_NOSAVE;
 	
 	s = set_add( &a->set, "username", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;

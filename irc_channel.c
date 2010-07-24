@@ -578,7 +578,7 @@ static char *set_eval_by_account( set_t *set, char *value )
 	if( icc->type == IRC_CC_TYPE_ACCOUNT )
 		bee_irc_channel_update( ic->irc, ic, NULL );
 	
-	return g_strdup_printf( "%s(%s)", acc->prpl->name, acc->user );
+	return g_strdup( acc->tag );
 }
 
 static char *set_eval_fill_by( set_t *set, char *value )

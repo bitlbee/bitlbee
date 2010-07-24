@@ -126,7 +126,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	}
 	else if( g_strcasecmp( element_name, "account" ) == 0 )
 	{
-		char *protocol, *handle, *server, *password = NULL, *autoconnect;
+		char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag;
 		char *pass_b64 = NULL;
 		unsigned char *pass_cr = NULL;
 		int pass_len;
@@ -136,6 +136,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		pass_b64 = xml_attr( attr_names, attr_values, "password" );
 		server = xml_attr( attr_names, attr_values, "server" );
 		autoconnect = xml_attr( attr_names, attr_values, "autoconnect" );
+		tag = xml_attr( attr_names, attr_values, "tag" );
 		
 		protocol = xml_attr( attr_names, attr_values, "protocol" );
 		if( protocol )
@@ -155,6 +156,8 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 				set_setstr( &xd->current_account->set, "server", server );
 			if( autoconnect )
 				set_setstr( &xd->current_account->set, "auto_connect", autoconnect );
+			if( tag )
+				set_setstr( &xd->current_account->set, "tag", tag );
 		}
 		else
 		{
@@ -243,16 +246,11 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		if( xd->current_account && handle && channel )
 		{
 			irc_channel_t *ic;
-			char *acc;
-			
-			acc = g_strdup_printf( "%s(%s)",
-			                       xd->current_account->prpl->name,
-			                       xd->current_account->user );
 			
 			if( ( ic = irc_channel_new( irc, channel ) ) &&
 			    set_setstr( &ic->set, "type", "chat" ) &&
 			    set_setstr( &ic->set, "chat_type", "room" ) &&
-			    set_setstr( &ic->set, "account", acc ) &&
+			    set_setstr( &ic->set, "account", xd->current_account->tag ) &&
 			    set_setstr( &ic->set, "room", handle ) )
 			{
 				/* Try to pick up some settings where possible. */
@@ -260,8 +258,6 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			}
 			else if( ic )
 				irc_channel_free( ic );
-			
-			g_free( acc );
 		}
 		else
 		{
@@ -501,7 +497,9 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		pass_b64 = base64_encode( pass_cr, pass_len );
 		g_free( pass_cr );
 		
-		if( !xml_printf( fd, 1, "<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%d\"", acc->prpl->name, acc->user, pass_b64, acc->auto_connect ) )
+		if( !xml_printf( fd, 1, "<account protocol=\"%s\" handle=\"%s\" password=\"%s\" "
+		                        "autoconnect=\"%d\" tag=\"%s\"", acc->prpl->name, acc->user,
+		                        pass_b64, acc->auto_connect, acc->tag ) )
 		{
 			g_free( pass_b64 );
 			goto write_error;

@@ -804,7 +804,7 @@ static char *set_eval_room_account( set_t *set, char *value )
 	if( acc->prpl->chat_add_settings )
 		acc->prpl->chat_add_settings( acc, &ic->set );
 	
-	return g_strdup_printf( "%s(%s)", acc->prpl->name, acc->user );
+	return g_strdup( acc->tag );
 }
 
 static char *set_eval_chat_type( set_t *set, char *value )
