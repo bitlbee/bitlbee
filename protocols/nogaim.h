@@ -211,12 +211,18 @@ struct prpl {
 	 * your protocol does not support publicly named group chats, then do
 	 * not implement this. */
 	struct groupchat *
-	     (* chat_join)	(struct im_connection *, const char *room, const char *nick, const char *password);
+	     (* chat_join)	(struct im_connection *, const char *room,
+	                         const char *nick, const char *password, set_t **sets);
 	/* Change the topic, if supported. Note that BitlBee expects the IM
 	   server to confirm the topic change with a regular topic change
 	   event. If it doesn't do that, you have to fake it to make it
 	   visible to the user. */
 	void (* chat_topic)	(struct groupchat *, char *topic);
+	
+	/* If your protocol module needs any special info for joining chatrooms
+	   other than a roomname + nickname, add them here. */
+	void (* chat_add_settings)	(account_t *acc, set_t **head);
+	void (* chat_free_settings)	(account_t *acc, set_t **head);
 	
 	/* You can tell what away states your protocol supports, so that
 	 * BitlBee will try to map the IRC away reasons to them. If your
@@ -233,6 +239,13 @@ struct prpl {
 
 	/* Incoming transfer request */
 	void (* transfer_request) (struct im_connection *, file_transfer_t *ft, char *handle );
+	
+	/* Some placeholders so eventually older plugins may cooperate with newer BitlBees. */
+	void *resv1;
+	void *resv2;
+	void *resv3;
+	void *resv4;
+	void *resv5;
 };
 
 /* im_api core stuff. */

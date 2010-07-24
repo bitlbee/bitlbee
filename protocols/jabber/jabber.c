@@ -440,7 +440,7 @@ static void jabber_remove_buddy( struct im_connection *ic, char *who, char *grou
 		presence_send_request( ic, who, "unsubscribe" );
 }
 
-static struct groupchat *jabber_chat_join_( struct im_connection *ic, const char *room, const char *nick, const char *password )
+static struct groupchat *jabber_chat_join_( struct im_connection *ic, const char *room, const char *nick, const char *password, set_t **sets )
 {
 	if( strchr( room, '@' ) == NULL )
 		imcb_error( ic, "Invalid room name: %s", room );

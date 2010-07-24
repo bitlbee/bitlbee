@@ -692,7 +692,7 @@ static gboolean bee_irc_channel_chat_join( irc_channel_t *ic )
 			nick = ic->irc->user->nick;
 		
 		ic->flags |= IRC_CHANNEL_CHAT_PICKME;
-		acc->prpl->chat_join( acc->ic, room, nick, NULL );
+		acc->prpl->chat_join( acc->ic, room, nick, NULL, &ic->set );
 		ic->flags &= ~IRC_CHANNEL_CHAT_PICKME;
 		
 		return FALSE;
@@ -787,7 +787,7 @@ static gboolean bee_irc_channel_init( irc_channel_t *ic )
 static char *set_eval_room_account( set_t *set, char *value )
 {
 	struct irc_channel *ic = set->data;
-	account_t *acc;
+	account_t *acc, *oa;
 	
 	if( !( acc = account_get( ic->irc->b, value ) ) )
 		return SET_INVALID;
@@ -796,6 +796,13 @@ static char *set_eval_room_account( set_t *set, char *value )
 		irc_usermsg( ic->irc, "Named chatrooms not supported on that account." );
 		return SET_INVALID;
 	}
+	
+	if( set->value && ( oa = account_get( ic->irc->b, set->value ) ) &&
+	    oa->prpl->chat_free_settings )
+		oa->prpl->chat_free_settings( oa, &ic->set );
+	
+	if( acc->prpl->chat_add_settings )
+		acc->prpl->chat_add_settings( acc, &ic->set );
 	
 	return g_strdup_printf( "%s(%s)", acc->prpl->name, acc->user );
 }

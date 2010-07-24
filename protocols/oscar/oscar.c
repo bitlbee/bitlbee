@@ -2505,7 +2505,8 @@ void oscar_chat_leave(struct groupchat *c)
 	oscar_chat_kill(c->ic, c->data);
 }
 
-struct groupchat *oscar_chat_join(struct im_connection * ic, const char * room, const char * nick, const char * password )
+struct groupchat *oscar_chat_join_internal(struct im_connection *ic, const char *room,
+	const char *nick, const char *password, int exchange_number)
 {
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
 	aim_conn_t * cur;
@@ -2513,19 +2514,25 @@ struct groupchat *oscar_chat_join(struct im_connection * ic, const char * room, 
 	if((cur = aim_getconn_type(od->sess, AIM_CONN_TYPE_CHATNAV))) {
 		int st;
 		
-		st = aim_chatnav_createroom(od->sess, cur, room, 4);
+		st = aim_chatnav_createroom(od->sess, cur, room, exchange_number);
 		
 		return NULL;
 	} else {
 		struct create_room * cr = g_new0(struct create_room, 1);
 		
-		cr->exchange = 4;
+		cr->exchange = exchange_number;
 		cr->name = g_strdup(room);
 		od->create_rooms = g_slist_append(od->create_rooms, cr);
 		aim_reqservice(od->sess, od->conn, AIM_CONN_TYPE_CHATNAV);
 		
 		return NULL;
 	}
+}
+
+struct groupchat *oscar_chat_join(struct im_connection *ic, const char *room,
+	const char *nick, const char *password, set_t **sets)
+{
+	return oscar_chat_join_internal(ic, room, nick, password, set_getint(sets, "exchange_number"));
 }
 
 struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
@@ -2544,7 +2551,7 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 			*s = '0';
 	
 	c = imcb_chat_new(ic, chatname);
-	ret = oscar_chat_join(ic, chatname, NULL, NULL);
+	ret = oscar_chat_join_internal(ic, chatname, NULL, NULL, 4);
 	aim_chat_invite(od->sess, od->conn, who, "", 4, chatname, 0x0);
 
 	g_free(chatname);
@@ -2556,7 +2563,7 @@ void oscar_accept_chat(void *data)
 {
 	struct aim_chat_invitation * inv = data;
 	
-	oscar_chat_join(inv->ic, inv->name, NULL, NULL);
+	oscar_chat_join_internal(inv->ic, inv->name, NULL, NULL, 4);
 	g_free(inv->name);
 	g_free(inv);
 }
@@ -2567,6 +2574,16 @@ void oscar_reject_chat(void *data)
 	
 	g_free(inv->name);
 	g_free(inv);
+}
+
+void oscar_chat_add_settings(account_t *acc, set_t **head)
+{
+	set_add(head, "exchange_number", "4", set_eval_int, NULL);
+}
+
+void oscar_chat_free_settings(account_t *acc, set_t **head)
+{
+	set_del(head, "exchange_number");
 }
 
 void oscar_initmodule() 
@@ -2589,6 +2606,8 @@ void oscar_initmodule()
 	ret->chat_leave = oscar_chat_leave;
 	ret->chat_with = oscar_chat_with;
 	ret->chat_join = oscar_chat_join;
+	ret->chat_add_settings = oscar_chat_add_settings;
+	ret->chat_free_settings = oscar_chat_free_settings;
 	ret->add_permit = oscar_add_permit;
 	ret->add_deny = oscar_add_deny;
 	ret->rem_permit = oscar_rem_permit;
