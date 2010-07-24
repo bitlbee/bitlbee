@@ -2509,6 +2509,7 @@ struct groupchat *oscar_chat_join_internal(struct im_connection *ic, const char 
 	const char *nick, const char *password, int exchange_number)
 {
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
+	struct groupchat *ret = imcb_chat_new(ic, room);
 	aim_conn_t * cur;
 
 	if((cur = aim_getconn_type(od->sess, AIM_CONN_TYPE_CHATNAV))) {
@@ -2516,7 +2517,7 @@ struct groupchat *oscar_chat_join_internal(struct im_connection *ic, const char 
 		
 		st = aim_chatnav_createroom(od->sess, cur, room, exchange_number);
 		
-		return NULL;
+		return ret;
 	} else {
 		struct create_room * cr = g_new0(struct create_room, 1);
 		
@@ -2525,7 +2526,7 @@ struct groupchat *oscar_chat_join_internal(struct im_connection *ic, const char 
 		od->create_rooms = g_slist_append(od->create_rooms, cr);
 		aim_reqservice(od->sess, od->conn, AIM_CONN_TYPE_CHATNAV);
 		
-		return NULL;
+		return ret;
 	}
 }
 
