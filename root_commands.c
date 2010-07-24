@@ -379,7 +379,13 @@ static void cmd_account( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Unknown protocol" );
 			return;
 		}
-
+		
+		for( a = irc->b->accounts; a; a = a->next )
+			if( a->prpl == prpl && prpl->handle_cmp( a->user, cmd[3] ) == 0 )
+				irc_usermsg( irc, "Warning: You already have an account with "
+				             "protocol `%s' and username `%s'. Are you accidentally "
+				             "trying to add it twice?", prpl->name, cmd[3] );
+		
 		a = account_add( irc->b, prpl, cmd[3], cmd[4] );
 		if( cmd[5] )
 		{
