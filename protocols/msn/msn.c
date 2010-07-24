@@ -198,12 +198,16 @@ static void msn_get_info(struct im_connection *ic, char *who)
 
 static void msn_add_buddy( struct im_connection *ic, char *who, char *group )
 {
+	struct bee_user *bu = bee_user_by_handle( ic->bee, ic, who );
+	
 	msn_buddy_list_add( ic, "FL", who, who, group );
+	if( bu && bu->group )
+		msn_buddy_list_remove( ic, "FL", who, bu->group->name );
 }
 
 static void msn_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
-	msn_buddy_list_remove( ic, "FL", who );
+	msn_buddy_list_remove( ic, "FL", who, NULL );
 }
 
 static void msn_chat_msg( struct groupchat *c, char *message, int flags )
@@ -273,7 +277,7 @@ static void msn_add_permit( struct im_connection *ic, char *who )
 
 static void msn_rem_permit( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_remove( ic, "AL", who );
+	msn_buddy_list_remove( ic, "AL", who, NULL );
 }
 
 static void msn_add_deny( struct im_connection *ic, char *who )
@@ -291,7 +295,7 @@ static void msn_add_deny( struct im_connection *ic, char *who )
 
 static void msn_rem_deny( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_remove( ic, "BL", who );
+	msn_buddy_list_remove( ic, "BL", who, NULL );
 }
 
 static int msn_send_typing( struct im_connection *ic, char *who, int typing )

@@ -108,12 +108,24 @@ int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *
 	return msn_write( ic, buf, strlen( buf ) );
 }
 
-int msn_buddy_list_remove( struct im_connection *ic, char *list, char *who )
+int msn_buddy_list_remove( struct im_connection *ic, char *list, const char *who, const char *group )
 {
 	struct msn_data *md = ic->proto_data;
-	char buf[1024];
+	char buf[1024], groupid[8];
 	
-	g_snprintf( buf, sizeof( buf ), "REM %d %s %s\r\n", ++md->trId, list, who );
+	*groupid = '\0';
+	if( group )
+	{
+		int i;
+		for( i = 0; i < md->groupcount; i ++ )
+			if( g_strcasecmp( md->grouplist[i], group ) == 0 )
+			{
+				g_snprintf( groupid, sizeof( groupid ), " %d", i );
+				break;
+			}
+	}
+	
+	g_snprintf( buf, sizeof( buf ), "REM %d %s %s%s\r\n", ++md->trId, list, who, groupid );
 	if( msn_write( ic, buf, strlen( buf ) ) )
 		return( 1 );
 	

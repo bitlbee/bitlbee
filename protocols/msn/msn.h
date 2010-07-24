@@ -166,7 +166,7 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
 int msn_write( struct im_connection *ic, char *s, int len );
 int msn_logged_in( struct im_connection *ic );
 int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *who, const char *realname_, const char *group );
-int msn_buddy_list_remove( struct im_connection *ic, char *list, char *who );
+int msn_buddy_list_remove( struct im_connection *ic, char *list, const char *who, const char *group );
 void msn_buddy_ask( struct im_connection *ic, char *handle, char *realname );
 char *msn_findheader( char *text, char *header, int len );
 char **msn_linesplit( char *line );
