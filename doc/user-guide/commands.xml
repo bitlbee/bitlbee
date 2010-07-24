@@ -107,7 +107,7 @@
 
 
 				<para>
-					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
+					The account ID can be a number/tag (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 		</bitlbee-command>
@@ -121,7 +121,7 @@
 				</para>
 
 				<para>
-					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
+					The account ID can be a number/tag (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 
@@ -136,7 +136,7 @@
 				</para>
 
 				<para>
-					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
+					The account ID can be a number/tag (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 		</bitlbee-command>
@@ -167,7 +167,7 @@
 				</para>
 				
 				<para>
-					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
+					The account ID can be a number/tag (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 		</bitlbee-command>
@@ -1136,6 +1136,18 @@
 			
 			<para>
 				This is useful because BitlBee doesn't support MSN offline messages yet and the MSN servers won't let the user reopen switchboards to offline users. Once offline messaging is supported, this flag might be removed.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="tag" type="string" scope="account">
+		<description>
+			<para>
+				For every account you have, you can set a tag you can use to uniquely identify that account. This tag can be used instead of the account number (or protocol name, or part of the screenname) when using commands like <emphasis>account</emphasis>, <emphasis>add</emphasis>, etc. You can't have two accounts with one and the same account tag.
+			</para>
+
+			<para>
+				By default, it will be set to the name of the IM protocol. Once you add a second account on an IM network, a numeric suffix will be added, starting with 2.
 			</para>
 		</description>
 	</bitlbee-setting>
