@@ -116,4 +116,120 @@ If you want to set an away state for only one of your connections, you can use t
 
 </sect1>
 
+<sect1 id="nick_changes">
+<title>Changing your nickname</title>
+
+<para>
+BitlBee now allows you to change your nickname. So far this was not possible because it made managing saved accounts more complicated.
+</para>
+
+<para>
+The restriction no longer exists now though. When you change your nick (just using the <emphasis>/nick</emphasis> command), your logged-in status will be reset, which means any changes made to your settings/accounts will not be saved.
+</para>
+
+<para>
+To restore your logged-in status, you need to either use the <emphasis>register</emphasis> command to create an account under the new nickname, or use <emphasis>identify -noload</emphasis> to re-identify yourself under the new nickname. The <emphasis>-noload</emphasis> flag tells the command to verify your password and log you in, but not load any new settings. See <emphasis>help identify</emphasis> for more information.
+</para>
+
+</sect1>
+
+<sect1 id="channels">
+<title>Dealing with channels</title>
+
+<para>
+You can have as many channels in BitlBee as you want. You maintain your channel list using the <emphasis>channel</emphasis> command. You can create new channels by just joining them, like on regular IRC networks.
+</para>
+
+<para>
+You can create two kinds of channels. Control channels, and groupchat channels. By default, BitlBee will set up new channels as control channels if their name starts with an &amp;, and as chat channels if it starts with a #.
+</para>
+
+<para>
+Control channels are where you see your contacts. By default, you will have one control channel called &amp;bitlbee, containing all your contacts. But you can create more, if you want, and divide your contact list accross several channels.
+</para>
+
+<para>
+For example, you can have one channel with all contacts from your MSN Messenger account in it. Or all contacts from the group called "Work".
+</para>
+
+<para>
+Type <emphasis>help channels2</emphasis> to read more.
+</para>
+
+</sect1>
+
+<sect1 id="channels2">
+<title>Creating a channel</title>
+
+<para>
+When you create a new channel, BitlBee will try to guess from its name which contacts to fill it with. For example, if the channel name (excluding the &amp;) matches the name of a group in which you have one or more contacts, the channel will contain all those contacts.
+</para>
+
+<para>
+Any valid account ID (so a number, protocol name or part of screenname, as long as it's unique) can also be used as a channel name. So if you just join &amp;msn, it will contain all your MSN contacts. And if you have a Facebook account set up, you can see its contacts by just joining &amp;facebook.
+</para>
+
+<para>
+To start a simple group chat, you simply join a channel which a name starting with #, and invite people into it. All people you invite have to be on the same IM network and contact list.
+</para>
+
+<para>
+If you want to configure your own channels, you can use the <emphasis>channel set</emphasis>.
+</para>
+
+</sect1>
+
+<sect1 id="nick_format">
+<title>Nickname formatting</title>
+
+<para>
+The <emphasis>nick_format</emphasis> setting can be set globally using
+the <emphasis>set</emphasis> command, or per account using <emphasis>account
+set</emphasis> (so that you can set a per-account suffix/prefix or have 
+nicknames generated from full names for certain accounts).
+</para>
+
+<para>
+The setting is basically some kind of format string. It can contain normal
+text that will be copied to the nick, combined with several variables:
+</para>
+
+<variablelist>
+	<varlistentry><term>%nick</term><listitem><para>Nickname suggested for this contact by the IM protocol, or just the handle if no nickname was suggested.</para></listitem></varlistentry>
+	<varlistentry><term>%handle</term><listitem><para>The handle/screenname of the contact.</para></listitem></varlistentry>
+	<varlistentry><term>%full_name</term><listitem><para>The full name of the contact.</para></listitem></varlistentry>
+	<varlistentry><term>%first_name</term><listitem><para>The first name of the contact (the full name up to the first space).</para></listitem></varlistentry>
+	<varlistentry><term>%group</term><listitem><para>The name of the group this contact is a member of</para></listitem></varlistentry>
+</variablelist>
+
+<para>
+Invalid characters (like spaces) will always be stripped. Depending on your
+locale settings, characters with accents will be converted to ASCII.
+</para>
+
+<para>
+See <emphasis>set nick_format2</emphasis> for some more information.
+</para>
+
+</sect1>
+
+<sect1 id="nick_format2">
+<title>Nickname formatting - modifiers</title>
+
+<para>
+Two modifiers ares currently available: You can include only the first few
+characters of a variable by putting a number right after the %. For
+example, <emphasis>[%3group]%-@nick</emphasis> will include only the first
+three characters of the group name in the nick.
+</para>
+
+<para>
+Also, you can truncate variables from a certain character using
+the <emphasis>-</emphasis> modifier. For example, you may want to leave out
+everything after the @. <emphasis>%-@handle</emphasis> will expand to
+everything in the handle up to the first @.
+</para>
+
+</sect1>
+
 </chapter>

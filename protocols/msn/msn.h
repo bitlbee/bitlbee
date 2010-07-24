@@ -69,10 +69,11 @@ struct msn_data
 	
 	int trId;
 	
-	GSList *msgq;
+	GSList *msgq, *grpq;
 	GSList *switchboards;
 	int sb_failures;
 	time_t first_sb_failure;
+	GSList *filetransfers;
 	
 	const struct msn_away_state *away_state;
 	int buddycount;
@@ -119,6 +120,12 @@ struct msn_message
 	char *text;
 };
 
+struct msn_groupadd
+{
+	char *who;
+	char *group;
+};
+
 struct msn_handler_data
 {
 	int fd;
@@ -158,7 +165,7 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
 /* msn_util.c */
 int msn_write( struct im_connection *ic, char *s, int len );
 int msn_logged_in( struct im_connection *ic );
-int msn_buddy_list_add( struct im_connection *ic, char *list, char *who, char *realname );
+int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *who, const char *realname_, const char *group );
 int msn_buddy_list_remove( struct im_connection *ic, char *list, char *who );
 void msn_buddy_ask( struct im_connection *ic, char *handle, char *realname );
 char *msn_findheader( char *text, char *header, int len );
@@ -187,5 +194,8 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond );
 int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m );
 void msn_sb_start_keepalives( struct msn_switchboard *sb, gboolean initial );
 void msn_sb_stop_keepalives( struct msn_switchboard *sb );
+
+/* invitation.c */
+void msn_ftp_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *who );
 
 #endif //_MSN_H

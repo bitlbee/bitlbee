@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -44,6 +44,8 @@
 #include "account.h"
 #include "proxy.h"
 #include "query.h"
+#include "md5.h"
+#include "ft.h"
 
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
@@ -84,9 +86,9 @@ struct im_connection
 	int evil;
 	
 	/* BitlBee */
-	irc_t *irc;
+	bee_t *bee;
 	
-	struct groupchat *groupchats;
+	GSList *groupchats;
 };
 
 struct groupchat {
@@ -97,10 +99,9 @@ struct groupchat {
 	 * "nick list". This is how you can check who is in the group chat
 	 * already, for example to avoid adding somebody two times. */
 	GList *in_room;
-	GList *ignored;
+	//GList *ignored;
 	
-	struct groupchat *next;
-	char *channel;
+	//struct groupchat *next;
 	/* The title variable contains the ID you gave when you created the
 	 * chat using imcb_chat_new(). */
 	char *title;
@@ -111,6 +112,7 @@ struct groupchat {
 	/* This is for you, you can add your own structure here to extend this
 	 * structure for your protocol's needs. */
 	void *data;
+	void *ui_data;
 };
 
 struct buddy {
@@ -131,6 +133,7 @@ struct prpl {
 	/* You should set this to the name of your protocol.
 	 * - The user sees this name ie. when imcb_log() is used. */
 	const char *name;
+	void *data;
 
 	/* Added this one to be able to add per-account settings, don't think
 	 * it should be used for anything else. You are supposed to use the
@@ -208,12 +211,18 @@ struct prpl {
 	 * your protocol does not support publicly named group chats, then do
 	 * not implement this. */
 	struct groupchat *
-	     (* chat_join)	(struct im_connection *, const char *room, const char *nick, const char *password);
+	     (* chat_join)	(struct im_connection *, const char *room,
+	                         const char *nick, const char *password, set_t **sets);
 	/* Change the topic, if supported. Note that BitlBee expects the IM
 	   server to confirm the topic change with a regular topic change
 	   event. If it doesn't do that, you have to fake it to make it
 	   visible to the user. */
 	void (* chat_topic)	(struct groupchat *, char *topic);
+	
+	/* If your protocol module needs any special info for joining chatrooms
+	   other than a roomname + nickname, add them here. */
+	void (* chat_add_settings)	(account_t *acc, set_t **head);
+	void (* chat_free_settings)	(account_t *acc, set_t **head);
 	
 	/* You can tell what away states your protocol supports, so that
 	 * BitlBee will try to map the IRC away reasons to them. If your
@@ -227,6 +236,16 @@ struct prpl {
 	/* Implement these callbacks if you want to use imcb_ask_auth() */
 	void (* auth_allow)	(struct im_connection *, const char *who);
 	void (* auth_deny)	(struct im_connection *, const char *who);
+
+	/* Incoming transfer request */
+	void (* transfer_request) (struct im_connection *, file_transfer_t *ft, char *handle );
+	
+	/* Some placeholders so eventually older plugins may cooperate with newer BitlBees. */
+	void *resv1;
+	void *resv2;
+	void *resv3;
+	void *resv4;
+	void *resv5;
 };
 
 /* im_api core stuff. */
@@ -262,6 +281,7 @@ G_MODULE_EXPORT void imcb_error( struct im_connection *ic, char *format, ... ) G
  * - 'doit' or 'dont' will be called depending of the answer of the user.
  */
 G_MODULE_EXPORT void imcb_ask( struct im_connection *ic, char *msg, void *data, query_callback doit, query_callback dont );
+G_MODULE_EXPORT void imcb_ask_with_free( struct im_connection *ic, char *msg, void *data, query_callback doit, query_callback dont, query_callback myfree );
 
 /* Two common questions you may want to ask:
  * - X added you to his contact list, allow?
@@ -280,16 +300,8 @@ G_MODULE_EXPORT struct buddy *imcb_find_buddy( struct im_connection *ic, char *h
 G_MODULE_EXPORT void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *realname );
 G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const char *nick );
 
-/* Buddy activity */
-/* To manipulate the status of a handle.
- * - flags can be |='d with OPT_* constants. You will need at least:
- *   OPT_LOGGED_IN and OPT_AWAY.
- * - 'state' and 'message' can be NULL */
-G_MODULE_EXPORT void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags, const char *state, const char *message );
-/* Not implemented yet! */ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *handle, time_t login, time_t idle );
-/* Call when a handle says something. 'flags' and 'sent_at may be just 0. */
-G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at );
 G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags );
+G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle( struct im_connection *ic, const char *handle );
 G_MODULE_EXPORT void imcb_clean_handle( struct im_connection *ic, char *handle );
 
 /* Groupchats */
@@ -315,7 +327,6 @@ G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
 
 /* Actions, or whatever. */
 int imc_away_send_update( struct im_connection *ic );
-int imc_buddy_msg( struct im_connection *ic, char *handle, char *msg, int flags );
 int imc_chat_msg( struct groupchat *c, char *msg, int flags );
 
 void imc_add_allow( struct im_connection *ic, char *handle );
@@ -325,7 +336,6 @@ void imc_rem_block( struct im_connection *ic, char *handle );
 
 /* Misc. stuff */
 char *set_eval_timezone( set_t *set, char *value );
-char *set_eval_away_devoice( set_t *set, char *value );
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond );
 void cancel_auto_reconnect( struct account *a );
 

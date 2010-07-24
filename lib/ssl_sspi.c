@@ -274,5 +274,5 @@ int ssl_getfd(void *conn)
 
 GaimInputCondition ssl_getdirection( void *conn )
 {
-	return GAIM_INPUT_WRITE; /* FIXME: or GAIM_INPUT_READ */
+	return B_EV_IO_WRITE; /* FIXME: or B_EV_IO_READ */
 }

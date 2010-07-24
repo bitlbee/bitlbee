@@ -5,7 +5,7 @@
 
 	<bitlbee-command name="account">
 		<short-description>IM-account list maintenance</short-description>
-		<syntax>account &lt;action&gt; [&lt;arguments&gt;]</syntax>
+		<syntax>account [&lt;account id&gt;] &lt;action&gt; [&lt;arguments&gt;]</syntax>
 
 		<description>
 
@@ -98,7 +98,7 @@
 		</bitlbee-command>
 
 		<bitlbee-command name="del">
-			<syntax>account del &lt;account id&gt;</syntax>
+			<syntax>account &lt;account id&gt; del</syntax>
 
 			<description>
 				<para>
@@ -107,13 +107,13 @@
 
 
 				<para>
-					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
+					The account ID can be a number/tag (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 		</bitlbee-command>
 
 		<bitlbee-command name="on">
-			<syntax>account on [&lt;account id&gt;]</syntax>
+			<syntax>account [&lt;account id&gt;] on</syntax>
 
 			<description>
 				<para>
@@ -121,14 +121,14 @@
 				</para>
 
 				<para>
-					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
+					The account ID can be a number/tag (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 
 		</bitlbee-command>
 
 		<bitlbee-command name="off">
-			<syntax>account off [&lt;account id&gt;]</syntax>
+			<syntax>account [&lt;account id&gt;] off</syntax>
 
 			<description>
 				<para>
@@ -136,7 +136,7 @@
 				</para>
 
 				<para>
-					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
+					The account ID can be a number/tag (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 		</bitlbee-command>
@@ -152,14 +152,14 @@
 		</bitlbee-command>
 
 		<bitlbee-command name="set">
-			<syntax>account set &lt;account id&gt;</syntax>
-			<syntax>account set &lt;account id&gt;/&lt;setting&gt;</syntax>
-			<syntax>account set &lt;account id&gt;/&lt;setting&gt; &lt;value&gt;</syntax>
-			<syntax>account set -del &lt;account id&gt;/&lt;setting&gt;</syntax>
+			<syntax>account &lt;account id&gt; set</syntax>
+			<syntax>account &lt;account id&gt; set &lt;setting&gt;</syntax>
+			<syntax>account &lt;account id&gt; set &lt;setting&gt; &lt;value&gt;</syntax>
+			<syntax>account &lt;account id&gt; set -del &lt;setting&gt;</syntax>
 
 			<description>
 				<para>
-					This command can be used to change various settings for IM accounts. For all protocols, this command can be used to change the handle or the password BitlBee uses to log in and if it should be logged in automatically. Some protocols have additional settings. You can see the settings available for a connection by typing <emphasis>account set &lt;account id&gt;</emphasis>.
+					This command can be used to change various settings for IM accounts. For all protocols, this command can be used to change the handle or the password BitlBee uses to log in and if it should be logged in automatically. Some protocols have additional settings. You can see the settings available for a connection by typing <emphasis>account &lt;account id&gt; set</emphasis>.
 				</para>
 				
 				<para>
@@ -167,10 +167,69 @@
 				</para>
 				
 				<para>
-					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
+					The account ID can be a number/tag (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 		</bitlbee-command>
+	</bitlbee-command>
+
+	<bitlbee-command name="channel">
+		<short-description>Channel list maintenance</short-description>
+		<syntax>channel [&lt;account id&gt;] &lt;action&gt; [&lt;arguments&gt;]</syntax>
+
+		<description>
+			<para>
+				Available actions: del, list, set. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
+			</para>
+			
+			<para>
+				There is no <emphasis>channel add</emphasis> command. To create a new channel, just use the IRC <emphasis>/join</emphasis> command. See also <emphasis>help channels</emphasis> and <emphasis>help groupchats</emphasis>.
+			</para>
+		</description>
+
+		<bitlbee-command name="del">
+			<syntax>channel &lt;channel id&gt; del</syntax>
+
+			<description>
+				<para>
+					Remove a channel and forget all its settings. You can only remove channels you're not currently in, and can't remove the main control channel. (You can, however, leave it.)
+				</para>
+			</description>
+
+		</bitlbee-command>
+
+		<bitlbee-command name="list">
+			<syntax>channel list</syntax>
+
+			<description>
+				<para>
+					This command gives you a list of all the channels you configured.
+				</para>
+			</description>
+
+		</bitlbee-command>
+
+		<bitlbee-command name="set">
+			<syntax>channel [&lt;channel id&gt;] set</syntax>
+			<syntax>channel [&lt;channel id&gt;] set &lt;setting&gt;</syntax>
+			<syntax>channel [&lt;channel id&gt;] set &lt;setting&gt; &lt;value&gt;</syntax>
+			<syntax>channel [&lt;channel id&gt;] set -del &lt;setting&gt;</syntax>
+
+			<description>
+				<para>
+					This command can be used to change various settings for channels. Different channel types support different settings. You can see the settings available for a channel by typing <emphasis>channel &lt;channel id&gt; set</emphasis>.
+				</para>
+				
+				<para>
+					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+				</para>
+				
+				<para>
+					The channel ID can be a number (see <emphasis>channel list</emphasis>), or (part of) its name, as long as it matches only one channel. If you want to change settings of the current channel, you can omit the channel ID.
+				</para>
+			</description>
+		</bitlbee-command>
+
 	</bitlbee-command>
 
 	<bitlbee-command name="chat">
@@ -180,13 +239,13 @@
 		<description>
 
 			<para>
-				Available actions: add, del, list, with and set. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
+				Available actions: add, with. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
 			</para>
 
 		</description>
 
 		<bitlbee-command name="add">
-			<syntax>chat add &lt;account&gt; &lt;room&gt; [&lt;channel&gt;]</syntax>
+			<syntax>chat add &lt;account id&gt; &lt;room&gt; [&lt;channel&gt;]</syntax>
 
 			<description>
 				<para>
@@ -204,30 +263,6 @@
 
 		</bitlbee-command>
 
-		<bitlbee-command name="del">
-			<syntax>chat del &lt;chat id&gt;</syntax>
-
-			<description>
-				<para>
-					This commands deletes an chatroom from your list.
-				</para>
-
-				<para>
-					The room ID can be a number (see <emphasis>chat list</emphasis>), or (part of) the name of the room/channel.
-				</para>
-			</description>
-		</bitlbee-command>
-
-		<bitlbee-command name="list">
-			<syntax>chat list</syntax>
-
-			<description>
-				<para>
-					This command gives you a list of all the chatrooms known by BitlBee.
-				</para>
-			</description>
-		</bitlbee-command>
-
 		<bitlbee-command name="with">
 			<syntax>chat with &lt;nickname&gt;</syntax>
 
@@ -237,33 +272,12 @@
 				</para>
 			</description>
 		</bitlbee-command>
-
-		<bitlbee-command name="set">
-			<syntax>chat set &lt;chat id&gt;</syntax>
-			<syntax>chat set &lt;chat id&gt;/&lt;setting&gt;</syntax>
-			<syntax>chat set &lt;chat id&gt;/&lt;setting&gt; &lt;value&gt;</syntax>
-			<syntax>chat set -del &lt;chat id&gt;/&lt;setting&gt;</syntax>
-
-			<description>
-				<para>
-					This command can be used to change various settings for chatrooms.
-				</para>
-				
-				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
-				</para>
-				
-				<para>
-					The room ID can be a number (see <emphasis>chat list</emphasis>), or (part of) the name of the room/channel.
-				</para>
-			</description>
-		</bitlbee-command>
 	</bitlbee-command>
 
 	<bitlbee-command name="add">
 		<short-description>Add a buddy to your contact list</short-description>
-		<syntax>add &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
-		<syntax>add -tmp &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
+		<syntax>add &lt;account id&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
+		<syntax>add -tmp &lt;account id&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
 
 		<description>
 			<para>
@@ -272,6 +286,10 @@
 
 			<para>
 				If you want, you can also tell BitlBee what nick to give the new contact. The -tmp option adds the buddy to the internal BitlBee structures only, not to the real contact list (like done by <emphasis>set handle_unknown add</emphasis>). This allows you to talk to people who are not in your contact list. This normally won't show you any presence notifications.
+			</para>
+
+			<para>
+				If you use this command in a control channel containing people from only one group, the new contact will be added to that group automatically.
 			</para>
 		</description>
 
@@ -397,6 +415,25 @@
 		</description>
 	</bitlbee-command>
 
+	<bitlbee-setting name="account" type="string" scope="channel">
+
+		<description>
+			<para>
+				For control channels with <emphasis>fill_by</emphasis> set to <emphasis>account</emphasis>: Set this setting to the account id (numeric, or part of the username) of the account containing the contacts you want to see in this channel.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="allow_takeover" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				When you're already connected to a BitlBee server and you connect (and identify) again, BitlBee will offer to migrate your existing session to the new connection. If for whatever reason you don't want this, you can disable this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="auto_connect" type="boolean" scope="both">
 		<default>true</default>
 
@@ -411,12 +448,12 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="auto_join" type="boolean" scope="chat">
+	<bitlbee-setting name="auto_join" type="boolean" scope="channel">
 		<default>false</default>
 
 		<description>
 			<para>
-				With this option enabled, BitlBee will automatically join this chatroom when you log in.
+				With this option enabled, BitlBee will automatically join this channel when you log in.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -480,6 +517,24 @@
 			<para>
 				With this option enabled, the root user devoices people when they go away (just away, not offline) and gives the voice back when they come back. You might dislike the voice-floods you'll get if your contact list is huge, so this option can be disabled.
 			</para>
+			
+			<para>
+				Replaced with the <emphasis>show_users</emphasis> setting. See <emphasis>help show_users</emphasis>.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="away_reply_timeout" type="integer" scope="global">
+		<default>3600</default>
+
+		<description>
+			<para>
+				Most IRC servers send a user's away message every time s/he gets a private message, to inform the sender that they may not get a response immediately. With this setting set to 0, BitlBee will also behave like this.
+			</para>
+
+			<para>
+				Since not all IRC clients do an excellent job at suppressing these messages, this setting lets BitlBee do it instead. BitlBee will wait this many seconds (or until the away state/message changes) before re-informing you that the person's away.
+			</para>
 		</description>
 	</bitlbee-setting>
 
@@ -497,39 +552,6 @@
 
 			<para>
 				Keep two things in mind: When not using Twitter, you <emphasis>must</emphasis> also disable the <emphasis>oauth</emphasis> setting as it currently only works with Twitter. If you're still having issues, make sure there is <emphasis>no</emphasis> slash at the end of the URL you enter here.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="buddy_sendbuffer" type="boolean" scope="global">
-		<default>false</default>
-
-		<description>
-			<para>
-				By default, when you send a message to someone, BitlBee forwards this message to the user immediately. When you paste a large number of lines, the lines will be sent in separate messages, which might not be very nice to read. If you enable this setting, BitlBee will buffer your messages and wait for more data.
-			</para>
-
-			<para>
-				Using the <emphasis>buddy_sendbuffer_delay</emphasis> setting you can specify the number of seconds BitlBee should wait for more data before the complete message is sent.
-			</para>
-
-			<para>
-				Please note that if you remove a buddy from your list (or if the connection to that user drops) and there's still data in the buffer, this data will be lost. BitlBee will not try to send the message to the user in those cases.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="buddy_sendbuffer_delay" type="integer" scope="global">
-		<default>200</default>
-
-		<description>
-
-			<para>
-				Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
-			</para>
-
-			<para>
-				See also the <emphasis>buddy_sendbuffer</emphasis> setting.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -556,6 +578,25 @@
 		<description>
 			<para>
 				Normally the control channel where you can see all your contacts is called "&amp;bitlbee". If you don't like this name, you can rename it to anything else using the <emphasis>rename</emphasis> command, or by changing this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="chat_type" type="string" scope="channel">
+		<default>groupchat</default>
+		<possible-values>groupchat, room</possible-values>
+
+		<description>
+			<para>
+				There are two kinds of chat channels: simple groupchats (basically normal IM chats with more than two participants) and names chatrooms, more similar to IRC channels.
+			</para>
+			
+			<para>
+				BitlBee supports both types. With this setting set to <emphasis>groupchat</emphasis> (the default), you can just invite people into the room and start talking.
+			</para>
+			
+			<para>
+				For setting up named chatrooms, it's currently easier to just use the <emphasis>chat add</emphasis> command.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -609,8 +650,40 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="fill_by" type="string" scope="channel">
+		<default>all</default>
+		<possible-values>all, group, account, protocol</possible-values>
+
+		<description>
+			<para>
+				For control channels only: This setting determines which contacts the channel gets populated with.
+			</para>
+
+			<para>
+				By default, control channels will contain all your contacts. You instead select contacts by buddy group, IM account or IM protocol.
+			</para>
+			
+			<para>
+				Change this setting and the corresponding <emphasis>account</emphasis>/<emphasis>group</emphasis>/<emphasis>protocol</emphasis> setting to set up this selection.
+			</para>
+			
+			<para>
+				Note that, when creating a new channel, BitlBee will try to preconfigure the channel for you, based on the channel name. See <emphasis>help channels</emphasis>.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="group" type="string" scope="channel">
+
+		<description>
+			<para>
+				For control channels with <emphasis>fill_by</emphasis> set to <emphasis>group</emphasis>: Set this setting to the name of the group containing the contacts you want to see in this channel.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="handle_unknown" type="string" scope="global">
-		<default>root</default>
+		<default>add_channel</default>
 		<possible-values>root, add, add_private, add_channel, ignore</possible-values>
 
 		<description>
@@ -716,10 +789,39 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="nick" type="string" scope="chat">
-
 		<description>
 			<para>
 				You can use this option to set your nickname in a chatroom. You won't see this nickname yourself, but other people in the room will. By default, BitlBee will use your username as the chatroom nickname.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="nick_format" type="string" scope="both">
+		<default>%-@nick</default>
+
+		<description>
+			<para>
+				By default, BitlBee tries to derive sensible nicknames for all your contacts from their IM handles. In some cases, IM modules (ICQ for example) will provide a nickname suggestion, which will then be used instead. This setting lets you change this behaviour.
+			</para>
+
+			<para>
+				Whenever this setting is set for an account, it will be used for all its contacts. If it's not set, the global value will be used.
+			</para>
+
+			<para>
+				It's easier to describe this setting using a few examples:
+			</para>
+
+			<para>
+				FB-%full_name will make all nicknames start with "FB-", followed by the person's full name. For example you can set this format for your Facebook account so all Facebook contacts are clearly marked.
+			</para>
+
+			<para>
+				[%group]%-@nick will make all nicknames start with the group the contact is in between square brackets, followed by the nickname suggestions from the IM module if available, or otherwise the handle. Because of the "-@" part, everything from the first @ will be stripped.
+			</para>
+
+			<para>
+				See <emphasis>help nick_format</emphasis> for more information.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -788,6 +890,39 @@
 			</para>
 		</description>
 	</bitlbee-setting>
+
+	<bitlbee-setting name="paste_buffer" type="boolean" scope="global">
+		<default>false</default>
+
+		<description>
+			<para>
+				By default, when you send a message to someone, BitlBee forwards this message to the user immediately. When you paste a large number of lines, the lines will be sent in separate messages, which might not be very nice to read. If you enable this setting, BitlBee will buffer your messages and wait for more data.
+			</para>
+
+			<para>
+				Using the <emphasis>paste_buffer_delay</emphasis> setting you can specify the number of seconds BitlBee should wait for more data before the complete message is sent.
+			</para>
+
+			<para>
+				Please note that if you remove a buddy from your list (or if the connection to that user drops) and there's still data in the buffer, this data will be lost. BitlBee will not try to send the message to the user in those cases.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="paste_buffer_delay" type="integer" scope="global">
+		<default>200</default>
+
+		<description>
+
+			<para>
+				Tell BitlBee after how many (mili)seconds a buffered message should be sent. Values greater than 5 will be interpreted as miliseconds, 5 and lower as seconds.
+			</para>
+
+			<para>
+				See also the <emphasis>paste_buffer</emphasis> setting.
+			</para>
+		</description>
+	</bitlbee-setting>
 	
 	<bitlbee-setting name="port" type="integer" scope="account">
 		<description>
@@ -821,6 +956,15 @@
 
 			<para>
 				This setting is remembered (during one session) per-user, this setting only changes the default state. This option takes effect as soon as you reconnect.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="protocol" type="string" scope="channel">
+
+		<description>
+			<para>
+				For control channels with <emphasis>fill_by</emphasis> set to <emphasis>protocol</emphasis>: Set this setting to the name of the IM protocol of all contacts you want to see in this channel.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -900,6 +1044,32 @@
 			<para>
 				If enabled causes BitlBee to also show offline users in Channel. Online-users will get op, away-users voice and offline users none of both. This option takes effect as soon as you reconnect.
 			</para>
+			
+			<para>
+				Replaced with the <emphasis>show_users</emphasis> setting. See <emphasis>help show_users</emphasis>.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="show_users" type="string" scope="channel">
+		<default>online+,away</default>
+
+		<description>
+			<para>
+				Comma-separated list of statuses of users you want in the channel,
+				and any modes they should have. The following statuses are currently
+				recognised: <emphasis>online</emphasis> (i.e. available, not
+				away), <emphasis>away</emphasis>, and <emphasis>offline</emphasis>.
+			</para>
+			
+			<para>
+				If a status is followed by a valid channel mode character
+				(@, % or +), it will be given to users with that status.
+				For example, <emphasis>online@,away+,offline</emphasis> will
+				show all users in the channel. Online people will
+				have +o, people who are online but away will have +v,
+				and others will have no special modes.
+			</para>
 		</description>
 	</bitlbee-setting>
 
@@ -970,6 +1140,18 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="tag" type="string" scope="account">
+		<description>
+			<para>
+				For every account you have, you can set a tag you can use to uniquely identify that account. This tag can be used instead of the account number (or protocol name, or part of the screenname) when using commands like <emphasis>account</emphasis>, <emphasis>add</emphasis>, etc. You can't have two accounts with one and the same account tag.
+			</para>
+
+			<para>
+				By default, it will be set to the name of the IM protocol. Once you add a second account on an IM network, a numeric suffix will be added, starting with 2.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="timezone" type="string" scope="global">
 		<default>local</default>
 		<possible-values>local, utc, gmt, timezone-spec</possible-values>
@@ -1009,6 +1191,35 @@
 
 			<para>
 				Please note that this setting is only used for incoming messages. For outgoing messages you can use ':' (colon) or ',' to separate the destination nick from the message, and this is not configurable.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="translate_to_nicks" type="boolean" scope="channel">
+		<default>true</default>
+
+		<description>
+			<para>
+				IRC's nickname namespace is quite limited compared to most IM protocols. Not any non-ASCII characters are allowed, in fact nicknames have to be mostly alpha-numeric. Also, BitlBee has to add underscores sometimes to avoid nickname collisions.
+			</para>
+
+			<para>
+				While normally the BitlBee user is the only one seeing these names, they may be exposed to other chatroom participants for example when addressing someone in the channel (with or without tab completion). By default BitlBee will translate these stripped nicknames back to the original nick. If you don't want this, disable this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="type" type="string" scope="channel">
+		<default>control</default>
+		<possible-values>control, chat</possible-values>
+
+		<description>
+			<para>
+				BitlBee supports two kinds of channels: control channels (usually with a name starting with a &amp;) and chatroom channels (name usually starts with a #).
+			</para>
+
+			<para>
+				See <emphasis>help channels</emphasis> for a full description of channel types in BitlBee.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1145,7 +1356,7 @@
 	</bitlbee-command>
 
 	<bitlbee-command name="identify">
-		<syntax>identify &lt;password&gt;</syntax>
+		<syntax>identify [-noload|-force] &lt;password&gt;</syntax>
 		<short-description>Identify yourself with your password</short-description>
 
 		<description>
@@ -1155,6 +1366,14 @@
 
 			<para>
 				Once you're registered, you can change your password using <emphasis>set password &lt;password&gt;</emphasis>.
+			</para>
+
+			<para>
+				The <emphasis>-noload</emphasis> and <emphasis>-force</emphasis> flags can be used to identify when you're logged into some IM accounts already. <emphasis>-force</emphasis> will let you identify yourself and load all saved accounts (and keep the accounts you're logged into already).
+			</para>
+			
+			<para>
+				<emphasis>-noload</emphasis> will log you in but not load any accounts and settings saved under your current nickname. These will be overwritten once you save your settings (i.e. when you disconnect).
 			</para>
 		</description>
 	</bitlbee-command>
@@ -1182,21 +1401,57 @@
 
 	</bitlbee-command>
 
-	<bitlbee-command name="nick">
-		<short-description>Change friendly name, nick</short-description>
-		<syntax>nick &lt;connection&gt; [&lt;new nick&gt;]</syntax>
-		<syntax>nick &lt;connection&gt;</syntax>
+	<bitlbee-command name="group">
+		<short-description>Contact group management</short-description>
+		<syntax>group list</syntax>
 
 		<description>
 			<para>
-				Deprecated: Use the per-account <emphasis>display_name</emphasis> setting to read and change this information.
+				Only the <emphasis>group list</emphasis> command is supported at the moment, which shows a list of all groups defined so far.
 			</para>
 		</description>
-
-		<ircexample>
-			<ircline nick="wouter">account set 1/display_name "The majestik møøse"</ircline>
-			<ircline nick="root">display_name = `The majestik møøse'</ircline>
-		</ircexample>
-
 	</bitlbee-command>
+	
+	<bitlbee-command name="transfers">
+		<short-description>Monitor, cancel, or reject file transfers</short-description>
+		<syntax>transfers [&lt;cancel&gt; id | &lt;reject&gt;]</syntax>
+		
+		<description>
+			<para>
+				Without parameters the currently pending file transfers and their status will be listed. Available actions are <emphasis>cancel</emphasis> and <emphasis>reject</emphasis>. See <emphasis>help transfers &lt;action&gt;</emphasis> for more information.
+			</para>
+
+			<ircexample>
+				<ircline nick="ulim">transfers</ircline>
+			</ircexample>
+		</description>
+		
+		<bitlbee-command name="cancel">
+			<short-description>Cancels the file transfer with the given id</short-description>
+			<syntax>transfers &lt;cancel&gt; id</syntax>
+
+			<description>
+				<para>Cancels the file transfer with the given id</para>
+			</description>
+
+			<ircexample>
+				<ircline nick="ulim">transfers cancel 1</ircline>
+				<ircline nick="root">Canceling file transfer for test</ircline>
+			</ircexample>
+		</bitlbee-command>
+
+		<bitlbee-command name="reject">
+			<short-description>Rejects all incoming transfers</short-description>
+			<syntax>transfers &lt;reject&gt;</syntax>
+
+			<description>
+				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is neccessary. Or is it?</para>
+			</description>
+
+			<ircexample>
+				<ircline nick="ulim">transfers reject</ircline>
+			</ircexample>
+		</bitlbee-command>
+	</bitlbee-command>
+	
 </chapter>

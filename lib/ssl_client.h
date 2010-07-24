@@ -70,7 +70,7 @@ G_MODULE_EXPORT void ssl_disconnect( void *conn_ );
    handling. */
 G_MODULE_EXPORT int ssl_getfd( void *conn );
 
-/* This function returns GAIM_INPUT_READ/WRITE. With SSL connections it's
+/* This function returns B_EV_IO_READ/WRITE. With SSL connections it's
    possible that something has to be read while actually were trying to
    write something (think about key exchange/refresh/etc). So when an
    SSL operation returned SSL_AGAIN, *always* use this function when

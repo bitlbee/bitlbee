@@ -118,7 +118,7 @@ static gboolean twitter_oauth_callback( struct oauth_info *info )
 			return FALSE;
 		}
 		
-		sprintf( name, "twitter_%s", ic->acc->user );
+		sprintf( name, "%s_%s", td->prefix, ic->acc->user );
 		msg = g_strdup_printf( "To finish OAuth authentication, please visit "
 		                       "%s and respond with the resulting PIN code.",
 		                       info->auth_url );
@@ -171,8 +171,21 @@ static gboolean twitter_length_check( struct im_connection *ic, gchar *msg )
 static void twitter_init( account_t *acc )
 {
 	set_t *s;
+	char *def_url;
+	char *def_oauth;
 	
-	s = set_add( &acc->set, "base_url", TWITTER_API_URL, NULL, acc );
+	if( strcmp( acc->prpl->name, "twitter" ) == 0 )
+	{
+		def_url = TWITTER_API_URL;
+		def_oauth = "true";
+	}
+	else /* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
+	{
+		def_url = IDENTICA_API_URL;
+		def_oauth = "false";
+	}
+	
+	s = set_add( &acc->set, "base_url", def_url, NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
 	s = set_add( &acc->set, "message_length", "140", set_eval_int, acc );
@@ -180,7 +193,7 @@ static void twitter_init( account_t *acc )
 	s = set_add( &acc->set, "mode", "one", set_eval_mode, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
-	s = set_add( &acc->set, "oauth", "true", set_eval_bool, acc );
+	s = set_add( &acc->set, "oauth", def_oauth, set_eval_bool, acc );
 }
 
 /**
@@ -213,12 +226,16 @@ static void twitter_login( account_t *acc )
 		td->url_path = g_strdup( url.file );
 	else
 		td->url_path = g_strdup( "" );
+	if( g_str_has_suffix( url.host, ".com" ) )
+		td->prefix = g_strndup( url.host, strlen( url.host ) - 4 );
+	else
+		td->prefix = g_strdup( url.host );
 	
 	td->user = acc->user;
 	if( strstr( acc->pass, "oauth_token=" ) )
 		td->oauth_info = oauth_from_string( acc->pass, &twitter_oauth );
 	
-	sprintf( name, "twitter_%s", acc->user );
+	sprintf( name, "%s_%s", td->prefix, acc->user );
 	imcb_add_buddy( ic, name, NULL );
 	imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
 	
@@ -246,6 +263,7 @@ static void twitter_logout( struct im_connection *ic )
 	if( td )
 	{
 		oauth_info_free( td->oauth_info );
+		g_free( td->prefix );
 		g_free( td->url_host );
 		g_free( td->url_path );
 		g_free( td->pass );
@@ -261,9 +279,10 @@ static void twitter_logout( struct im_connection *ic )
 static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message, int away )
 {
 	struct twitter_data *td = ic->proto_data;
+	int plen = strlen( td->prefix );
 	
-	if (g_strncasecmp(who, "twitter_", 8) == 0 &&
-	    g_strcasecmp(who + 8, ic->acc->user) == 0)
+	if (g_strncasecmp(who, td->prefix, plen) == 0 && who[plen] == '_' &&
+	    g_strcasecmp(who + plen + 1, ic->acc->user) == 0)
 	{
 		if( set_getbool( &ic->acc->set, "oauth" ) &&
 		    td->oauth_info && td->oauth_info->token == NULL )
@@ -315,8 +334,28 @@ static void twitter_remove_buddy( struct im_connection *ic, char *who, char *gro
 
 static void twitter_chat_msg( struct groupchat *c, char *message, int flags )
 {
-	if( c && message && twitter_length_check(c->ic, message))
-		twitter_post_status(c->ic, message);
+	if( c && message && twitter_length_check( c->ic, message ) )
+	{
+		char *s, *new = NULL;
+		
+		if( ( s = strchr( message, ':' ) ) ||
+		    ( s = strchr( message, ',' ) ) )
+		{
+			bee_user_t *bu;
+			
+			new = g_strdup( message );
+			new[s-message] = '\0';
+			if( ( bu = bee_user_by_handle( c->ic->bee, c->ic, new ) ) )
+			{
+				sprintf( new, "@%s", bu->handle );
+				new[s-message+1] = ' ';
+				message = new;
+			}
+		}
+		
+		twitter_post_status( c->ic, message );
+		g_free( new );
+	}
 }
 
 static void twitter_chat_invite( struct groupchat *c, char *who, char *message )
@@ -395,10 +434,14 @@ void twitter_initmodule()
 	ret->rem_deny = twitter_rem_deny;
 	ret->send_typing = twitter_send_typing;
 	ret->handle_cmp = g_strcasecmp;
+	
+	register_protocol(ret);
 
+	/* And an identi.ca variant: */
+	ret = g_memdup(ret, sizeof(struct prpl));
+	ret->name = "identica";
 	register_protocol(ret);
 
 	// Initialise the twitter_connections GSList.
 	twitter_connections = NULL;
 }
-

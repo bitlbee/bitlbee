@@ -9,8 +9,8 @@
 -include Makefile.settings
 
 # Program variables
-objects = account.o bitlbee.o chat.o crypting.o help.o ipc.o irc.o irc_commands.o nick.o query.o root_commands.o set.o storage.o $(STORAGE_OBJS) user.o
-headers = account.h bitlbee.h commands.h conf.h config.h crypting.h help.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h user.h lib/events.h lib/http_client.h lib/ini.h lib/md5.h lib/misc.h lib/proxy.h lib/sha1.h lib/ssl_client.h lib/url.h protocols/nogaim.h
+objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o query.o root_commands.o set.o storage.o $(STORAGE_OBJS)
+headers = account.h bitlbee.h commands.h conf.h config.h help.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h user.h lib/events.h lib/ftutil.h lib/http_client.h lib/ini.h lib/md5.h lib/misc.h lib/proxy.h lib/sha1.h lib/ssl_client.h lib/url.h protocols/ft.h protocols/nogaim.h
 subdirs = lib protocols
 
 ifeq ($(TARGET),i586-mingw32msvc)
@@ -81,7 +81,8 @@ uninstall-bin:
 
 install-dev:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
-	install -m 0644 $(headers) $(DESTDIR)$(INCLUDEDIR)
+	install -m 0644 config.h $(DESTDIR)$(INCLUDEDIR)
+	for i in $(headers); do install -m 0644 $(SRCDIR)$$i $(DESTDIR)$(INCLUDEDIR); done
 	mkdir -p $(DESTDIR)$(PCDIR)
 	install -m 0644 bitlbee.pc $(DESTDIR)$(PCDIR)
 
@@ -92,8 +93,8 @@ uninstall-dev:
 
 install-etc:
 	mkdir -p $(DESTDIR)$(ETCDIR)
-	install -m 0644 motd.txt $(DESTDIR)$(ETCDIR)/motd.txt
-	install -m 0644 bitlbee.conf $(DESTDIR)$(ETCDIR)/bitlbee.conf
+	install -m 0644 $(SRCDIR)motd.txt $(DESTDIR)$(ETCDIR)/motd.txt
+	install -m 0644 $(SRCDIR)bitlbee.conf $(DESTDIR)$(ETCDIR)/bitlbee.conf
 
 uninstall-etc:
 	rm -f $(DESTDIR)$(ETCDIR)/motd.txt
@@ -109,7 +110,7 @@ tar:
 $(subdirs):
 	@$(MAKE) -C $@ $(MAKECMDGOALS)
 
-$(objects): %.o: %.c
+$(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 

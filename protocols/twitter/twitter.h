@@ -52,6 +52,8 @@ struct twitter_data
 	int url_port;
 	char *url_host;
 	char *url_path;
+
+	char *prefix; /* Used to generate contact + channel name. */
 };
 
 /**

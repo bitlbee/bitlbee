@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* The big hairy IRCd part of the project                               */
+/* The IRC-based UI (for now the only one)                              */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -32,12 +32,14 @@
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"
 
-#define UMODES "abisw"
-#define UMODES_PRIV "Ro"
-#define CMODES "nt"
-#define CMODE "t"
-#define UMODE "s"
-#define CTYPES "&#"
+#define UMODES "abisw"     /* Allowed umodes (although they mostly do nothing) */
+#define UMODES_PRIV "Ro"   /* Allowed, but not by user directly */
+#define UMODES_KEEP "R"    /* Don't allow unsetting using /MODE */
+#define CMODES "nt"        /* Allowed modes */
+#define CMODE "t"          /* Default mode */
+#define UMODE "s"          /* Default mode */
+
+#define CTYPES "&#"        /* Valid channel name prefixes */
 
 typedef enum
 {
@@ -47,6 +49,8 @@ typedef enum
 	USTATUS_IDENTIFIED = 4,
 	USTATUS_SHUTDOWN = 8
 } irc_status_t;
+
+struct irc_user;
 
 typedef struct irc
 {
@@ -58,85 +62,240 @@ typedef struct irc
 	char *readbuffer;
 	GIConv iconv, oconv;
 
-	int sentbytes;
-	time_t oldtime;
+	struct irc_user *root;
+	struct irc_user *user;
+	
+	char *last_root_cmd; /* Either the nickname from which the last root
+	                        msg came, or the last channel root was talked
+	                        to. */
 
-	char *nick;
-	char *user;
-	char *host;
-	char *realname;
 	char *password; /* HACK: Used to save the user's password, but before
 	                   logging in, this may contain a password we should
 	                   send to identify after USER/NICK are received. */
 
 	char umode[8];
 	
-	char *myhost;
-	char *mynick;
-
-	char *channel;
-	int c_id;
-
-	char is_private;		/* Not too nice... */
-	char *last_target;
-	
 	struct query *queries;
-	struct account *accounts;
-	struct chat *chatrooms;
+	GSList *file_transfers;
 	
-	struct __USER *users;
-	GHashTable *userhash;
-	GHashTable *watches;
-	struct __NICK *nicks;
-	struct set *set;
+	GSList *users, *channels;
+	struct irc_channel *default_channel;
+	GHashTable *nick_user_hash;
+	GHashTable *watches; /* See irc_cmd_watch() */
 
 	gint r_watch_source_id;
 	gint w_watch_source_id;
 	gint ping_source_id;
+	gint login_source_id; /* To slightly delay some events at login time. */
+	
+	struct bee *b;
 } irc_t;
 
-#include "user.h"
+typedef enum
+{
+	/* Replaced with iu->last_channel IRC_USER_PRIVATE = 1, */
+	IRC_USER_AWAY = 2,
+} irc_user_flags_t;
 
+typedef struct irc_user
+{
+	irc_t *irc;
+	
+	char *nick;
+	char *user;
+	char *host;
+	char *fullname;
+	
+	/* Nickname in lowercase for case sensitive searches */
+	char *key;
+	
+	irc_user_flags_t flags;
+	struct irc_channel *last_channel;
+	
+	GString *pastebuf; /* Paste buffer (combine lines into a multiline msg). */
+	guint pastebuf_timer;
+	time_t away_reply_timeout; /* Only send a 301 if this time passed. */
+	
+	struct bee_user *bu;
+	
+	const struct irc_user_funcs *f;
+} irc_user_t;
+
+struct irc_user_funcs
+{
+	gboolean (*privmsg)( irc_user_t *iu, const char *msg );
+	gboolean (*ctcp)( irc_user_t *iu, char * const* ctcp );
+};
+
+extern const struct irc_user_funcs irc_user_root_funcs;
+extern const struct irc_user_funcs irc_user_self_funcs;
+
+typedef enum
+{
+	IRC_CHANNEL_JOINED = 1, /* The user is currently in the channel. */
+	IRC_CHANNEL_TEMP = 2,   /* Erase the channel when the user leaves,
+	                           and don't save it. */
+	
+	/* Hack: Set this flag right before jumping into IM when we expect
+	   a call to imcb_chat_new(). */
+	IRC_CHANNEL_CHAT_PICKME = 0x10000,
+} irc_channel_flags_t;
+
+typedef struct irc_channel
+{
+	irc_t *irc;
+	char *name;
+	char mode[8];
+	int flags;
+	
+	char *topic;
+	char *topic_who;
+	time_t topic_time;
+	
+	GSList *users; /* struct irc_channel_user */
+	struct set *set;
+	
+	GString *pastebuf; /* Paste buffer (combine lines into a multiline msg). */
+	guint pastebuf_timer;
+	
+	const struct irc_channel_funcs *f;
+	void *data;
+} irc_channel_t;
+
+struct irc_channel_funcs
+{
+	gboolean (*privmsg)( irc_channel_t *ic, const char *msg );
+	gboolean (*join)( irc_channel_t *ic );
+	gboolean (*part)( irc_channel_t *ic, const char *msg );
+	gboolean (*topic)( irc_channel_t *ic, const char *new );
+	gboolean (*invite)( irc_channel_t *ic, irc_user_t *iu );
+	
+	gboolean (*_init)( irc_channel_t *ic );
+	gboolean (*_free)( irc_channel_t *ic );
+};
+
+typedef enum
+{
+	IRC_CHANNEL_USER_OP = 1,
+	IRC_CHANNEL_USER_HALFOP = 2,
+	IRC_CHANNEL_USER_VOICE = 4,
+	IRC_CHANNEL_USER_NONE = 8,
+} irc_channel_user_flags_t;
+
+typedef struct irc_channel_user
+{
+	irc_user_t *iu;
+	int flags;
+} irc_channel_user_t;
+
+typedef enum
+{
+	IRC_CC_TYPE_DEFAULT,
+	IRC_CC_TYPE_REST,
+	IRC_CC_TYPE_GROUP,
+	IRC_CC_TYPE_ACCOUNT,
+	IRC_CC_TYPE_PROTOCOL,
+} irc_control_channel_type_t;
+
+struct irc_control_channel
+{
+	irc_control_channel_type_t type;
+	struct bee_group *group;
+	struct account *account;
+	struct prpl *protocol;
+	char modes[4];
+};
+
+extern const struct bee_ui_funcs irc_ui_funcs;
+
+typedef enum
+{
+	IRC_CDU_SILENT,
+	IRC_CDU_PART,
+	IRC_CDU_KICK,
+} irc_channel_del_user_type_t;
+
+/* irc.c */
 extern GSList *irc_connection_list;
 
 irc_t *irc_new( int fd );
 void irc_abort( irc_t *irc, int immed, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
 void irc_free( irc_t *irc );
+void irc_setpass (irc_t *irc, const char *pass);
 
-void irc_exec( irc_t *irc, char **cmd );
 void irc_process( irc_t *irc );
 char **irc_parse_line( char *line );
 char *irc_build_line( char **cmd );
 
-void irc_vawrite( irc_t *irc, char *format, va_list params );
 void irc_write( irc_t *irc, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
 void irc_write_all( int now, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
-void irc_reply( irc_t *irc, int code, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
-G_MODULE_EXPORT int irc_usermsg( irc_t *irc, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
-char **irc_tokenize( char *buffer );
+void irc_vawrite( irc_t *irc, char *format, va_list params );
 
-void irc_login( irc_t *irc );
+void irc_flush( irc_t *irc );
+void irc_switch_fd( irc_t *irc, int fd );
+void irc_sync( irc_t *irc );
+void irc_desync( irc_t *irc );
+
 int irc_check_login( irc_t *irc );
-void irc_motd( irc_t *irc );
-void irc_names( irc_t *irc, char *channel );
-void irc_topic( irc_t *irc, char *channel );
-void irc_umode_set( irc_t *irc, char *s, int allow_priv );
-void irc_who( irc_t *irc, char *channel );
-void irc_spawn( irc_t *irc, user_t *u );
-void irc_join( irc_t *irc, user_t *u, char *channel );
-void irc_part( irc_t *irc, user_t *u, char *channel );
-void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker );
-void irc_kill( irc_t *irc, user_t *u );
-void irc_invite( irc_t *irc, char *nick, char *channel );
-void irc_whois( irc_t *irc, char *nick );
-void irc_setpass( irc_t *irc, const char *pass ); /* USE WITH CAUTION! */
 
-int irc_send( irc_t *irc, char *nick, char *s, int flags );
-int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char *msg );
-int irc_msgfrom( irc_t *irc, char *nick, char *msg );
-int irc_noticefrom( irc_t *irc, char *nick, char *msg );
+void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv );
 
-void buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags );
-struct groupchat *irc_chat_by_channel( irc_t *irc, char *channel );
+/* irc_channel.c */
+irc_channel_t *irc_channel_new( irc_t *irc, const char *name );
+irc_channel_t *irc_channel_by_name( irc_t *irc, const char *name );
+irc_channel_t *irc_channel_get( irc_t *irc, char *id );
+int irc_channel_free( irc_channel_t *ic );
+void irc_channel_free_soon( irc_channel_t *ic );
+int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
+int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, irc_channel_del_user_type_t type, const char *msg );
+irc_channel_user_t *irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu );
+int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
+void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_user_flags_t flags );
+void irc_channel_auto_joins( irc_t *irc, struct account *acc );
+void irc_channel_printf( irc_channel_t *ic, char *format, ... );
+gboolean irc_channel_name_ok( const char *name );
+void irc_channel_name_strip( char *name );
+int irc_channel_name_cmp( const char *a_, const char *b_ );
+void irc_channel_update_ops( irc_channel_t *ic, char *value );
+char *set_eval_irc_channel_ops( struct set *set, char *value );
+
+/* irc_commands.c */
+void irc_exec( irc_t *irc, char **cmd );
+
+/* irc_send.c */
+void irc_send_num( irc_t *irc, int code, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
+void irc_send_login( irc_t *irc );
+void irc_send_motd( irc_t *irc );
+void irc_usermsg( irc_t *irc, char *format, ... );
+void irc_send_join( irc_channel_t *ic, irc_user_t *iu );
+void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason );
+void irc_send_quit( irc_user_t *iu, const char *reason );
+void irc_send_kick( irc_channel_t *ic, irc_user_t *iu, irc_user_t *kicker, const char *reason );
+void irc_send_names( irc_channel_t *ic );
+void irc_send_topic( irc_channel_t *ic, gboolean topic_change );
+void irc_send_whois( irc_user_t *iu );
+void irc_send_who( irc_t *irc, GSList *l, const char *channel );
+void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix );
+void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const char *msg );
+void irc_send_msg_f( irc_user_t *iu, const char *type, const char *dst, const char *format, ... ) G_GNUC_PRINTF( 4, 5 );
+void irc_send_nick( irc_user_t *iu, const char *new );
+void irc_send_channel_user_mode_diff( irc_channel_t *ic, irc_user_t *iu,
+                                      irc_channel_user_flags_t old, irc_channel_user_flags_t new );
+
+/* irc_user.c */
+irc_user_t *irc_user_new( irc_t *irc, const char *nick );
+int irc_user_free( irc_t *irc, irc_user_t *iu );
+irc_user_t *irc_user_by_name( irc_t *irc, const char *nick );
+int irc_user_set_nick( irc_user_t *iu, const char *new );
+gint irc_user_cmp( gconstpointer a_, gconstpointer b_ );
+const char *irc_user_get_away( irc_user_t *iu );
+void irc_user_quit( irc_user_t *iu, const char *msg );
+
+/* irc_util.c */
+char *set_eval_timezone( struct set *set, char *value );
+char *irc_format_timestamp( irc_t *irc, time_t msg_ts );
+
+/* irc_im.c */
+void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu );
 
 #endif

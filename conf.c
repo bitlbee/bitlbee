@@ -62,6 +62,9 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
 	conf->user = NULL;
+	conf->ft_max_size = SIZE_MAX;
+	conf->ft_max_kbps = G_MAXUINT;
+	conf->ft_listen = NULL;
 	conf->protocols = NULL;
 	proxytype = 0;
 	
@@ -314,6 +317,30 @@ static int conf_loadini( conf_t *conf, char *file )
 				g_free( conf->user );
 				conf->user = g_strdup( ini->value );
 			}
+			else if( g_strcasecmp( ini->key, "ft_max_size" ) == 0 )
+			{
+				size_t ft_max_size;
+				if( sscanf( ini->value, "%zu", &ft_max_size ) != 1 )
+				{
+					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
+					return 0;
+				}
+				conf->ft_max_size = ft_max_size;
+			}
+			else if( g_strcasecmp( ini->key, "ft_max_kbps" ) == 0 )
+			{
+				if( sscanf( ini->value, "%d", &i ) != 1 )
+				{
+					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
+					return 0;
+				}
+				conf->ft_max_kbps = i;
+			}
+			else if( g_strcasecmp( ini->key, "ft_listen" ) == 0 )
+			{
+				g_free( conf->ft_listen );
+				conf->ft_listen = g_strdup( ini->value );
+			}
 			else if( g_strcasecmp( ini->key, "protocols" ) == 0 )
 			{
 				g_strfreev( conf->protocols );
@@ -348,7 +375,7 @@ void conf_loaddefaults( irc_t *irc )
 	{
 		if( g_strcasecmp( ini->section, "defaults" ) == 0 )
 		{
-			set_t *s = set_find( &irc->set, ini->key );
+			set_t *s = set_find( &irc->b->set, ini->key );
 			
 			if( s )
 			{

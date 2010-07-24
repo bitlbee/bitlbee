@@ -53,6 +53,7 @@ typedef struct set
 	                   object this settings belongs to. */
 	
 	char *key;
+	char *old_key;  /* Previously known as; for smooth upgrades. */
 	char *value;
 	char *def;      /* Default value. If the set_setstr() function
 	                   notices a new value is exactly the same as
@@ -68,34 +69,38 @@ typedef struct set
 	   the passed value variable. When returning a corrected value,
 	   set_setstr() should be able to free() the returned string! */
 	set_eval eval;
+	void *eval_data;
 	struct set *next;
 } set_t;
 
 /* Should be pretty clear. */
-set_t *set_add( set_t **head, char *key, char *def, set_eval eval, void *data );
+set_t *set_add( set_t **head, const char *key, const char *def, set_eval eval, void *data );
 
 /* Returns the raw set_t. Might be useful sometimes. */
-set_t *set_find( set_t **head, char *key );
+set_t *set_find( set_t **head, const char *key );
 
 /* Returns a pointer to the string value of this setting. Don't modify the
    returned string, and don't free() it! */
-G_MODULE_EXPORT char *set_getstr( set_t **head, char *key );
+G_MODULE_EXPORT char *set_getstr( set_t **head, const char *key );
 
 /* Get an integer. In previous versions set_getint() was also used to read
    boolean values, but this SHOULD be done with set_getbool() now! */
-G_MODULE_EXPORT int set_getint( set_t **head, char *key );
-G_MODULE_EXPORT int set_getbool( set_t **head, char *key );
+G_MODULE_EXPORT int set_getint( set_t **head, const char *key );
+G_MODULE_EXPORT int set_getbool( set_t **head, const char *key );
 
 /* set_setstr() strdup()s the given value, so after using this function
    you can free() it, if you want. */
-int set_setstr( set_t **head, char *key, char *value );
-int set_setint( set_t **head, char *key, int value );
-void set_del( set_t **head, char *key );
-int set_reset( set_t **head, char *key );
+int set_setstr( set_t **head, const char *key, char *value );
+int set_setint( set_t **head, const char *key, int value );
+void set_del( set_t **head, const char *key );
+int set_reset( set_t **head, const char *key );
 
 /* Two very useful generic evaluators. */
 char *set_eval_int( set_t *set, char *value );
 char *set_eval_bool( set_t *set, char *value );
+
+/* Another more complicated one. */
+char *set_eval_list( set_t *set, char *value );
 
 /* Some not very generic evaluators that really shouldn't be here... */
 char *set_eval_to_char( set_t *set, char *value );

@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* IPC - communication between BitlBee processes                        */
@@ -36,6 +36,12 @@ struct bitlbee_child
 	char *host;
 	char *nick;
 	char *realname;
+	
+	char *password;
+	
+	/* For takeovers: */
+	struct bitlbee_child *to_child;
+	int to_fd;
 };
 
 
@@ -47,6 +53,8 @@ void ipc_master_free_fd( int fd );
 void ipc_master_free_all();
 
 void ipc_child_disable();
+
+gboolean ipc_child_identify( irc_t *irc );
 
 void ipc_to_master( char **cmd );
 void ipc_to_master_str( char *format, ... ) G_GNUC_PRINTF( 1, 2 );

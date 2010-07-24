@@ -23,11 +23,13 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-void nick_set( account_t *acc, const char *handle, const char *nick );
-char *nick_get( account_t *acc, const char *handle );
-void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+1] );
-int nick_saved( account_t *acc, const char *handle );
-void nick_del( account_t *acc, const char *handle );
+void nick_set_raw( account_t *acc, const char *handle, const char *nick );
+void nick_set( bee_user_t *bu, const char *nick );
+char *nick_get( bee_user_t *bu );
+char *nick_gen( bee_user_t *bu );
+void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] );
+int nick_saved( bee_user_t *bu );
+void nick_del( bee_user_t *bu );
 void nick_strip( char *nick );
 
 int nick_ok( const char *nick );

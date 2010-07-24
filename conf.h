@@ -49,6 +49,9 @@ typedef struct conf
 	int ping_interval;
 	int ping_timeout;
 	char *user;
+	size_t ft_max_size;
+	int ft_max_kbps;
+	char *ft_listen;
 	char **protocols;
 } conf_t;
 

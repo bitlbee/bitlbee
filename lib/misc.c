@@ -646,3 +646,51 @@ int md5_verify_password( char *password, char *hash )
 
 	return ret;
 }
+
+char **split_command_parts( char *command )
+{
+	static char *cmd[IRC_MAX_ARGS+1];
+	char *s, q = 0;
+	int k;
+	
+	memset( cmd, 0, sizeof( cmd ) );
+	cmd[0] = command;
+	k = 1;
+	for( s = command; *s && k < IRC_MAX_ARGS; s ++ )
+		if( *s == ' ' && !q )
+		{
+			*s = 0;
+			while( *++s == ' ' );
+			if( *s == '"' || *s == '\'' )
+			{
+				q = *s;
+				s ++;
+			}
+			if( *s )
+			{
+				cmd[k++] = s;
+				s --;
+			}
+			else
+			{
+				break;
+			}
+		}
+		else if( *s == '\\' && ( ( !q && s[1] ) || ( q && q == s[1] ) ) )
+		{
+			char *cpy;
+			
+			for( cpy = s; *cpy; cpy ++ )
+				cpy[0] = cpy[1];
+		}
+		else if( *s == q )
+		{
+			q = *s = 0;
+		}
+	
+	/* Full zero-padding for easier argc checking. */
+	while( k <= IRC_MAX_ARGS )
+		cmd[k++] = NULL;
+	
+	return cmd;
+}

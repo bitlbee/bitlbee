@@ -7,9 +7,12 @@
 ### DEFINITIONS
 
 -include ../../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)protocols/jabber/
+endif
 
 # [SH] Program variables
-objects = conference.o io.o iq.o jabber.o jabber_util.o message.o presence.o sasl.o
+objects = conference.o io.o iq.o jabber.o jabber_util.o message.o presence.o s5bytestream.o sasl.o si.o
 
 CFLAGS += -Wall
 LFLAGS += -r
@@ -32,7 +35,7 @@ distclean: clean
 
 $(objects): ../../Makefile.settings Makefile
 
-$(objects): %.o: %.c
+$(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 

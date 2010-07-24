@@ -7,9 +7,13 @@
 ### DEFINITIONS
 
 -include ../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)protocols/
+endif
 
 # [SH] Program variables
-objects = nogaim.o
+objects = account.o bee.o bee_chat.o bee_ft.o bee_user.o nogaim.o
+
 
 # [SH] The next two lines should contain the directory name (in $(subdirs))
 #      and the name of the object file, which should be linked into
@@ -48,6 +52,6 @@ protocols.o: $(objects) $(subdirs)
 
 $(objects): ../Makefile.settings Makefile
 
-$(objects): %.o: %.c
+$(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@

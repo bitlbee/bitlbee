@@ -253,8 +253,6 @@ static char *normalize(const char *s)
 	g_return_val_if_fail((s != NULL), NULL);
 
 	u = t = g_strdup(s);
-
-	strcpy(t, s);
 	g_strdown(t);
 
 	while (*t && (x < BUF_LEN - 1)) {
@@ -289,7 +287,7 @@ static gboolean oscar_callback(gpointer data, gint source,
 
 	odata = (struct oscar_data *)ic->proto_data;
 
-	if (condition & GAIM_INPUT_READ) {
+	if (condition & B_EV_IO_READ) {
 		if (aim_get_command(odata->sess, conn) >= 0) {
 			aim_rxdispatch(odata->sess);
                                if (odata->killme)
@@ -361,7 +359,7 @@ static gboolean oscar_login_connect(gpointer data, gint source, b_input_conditio
 	}
 
 	aim_conn_completeconnect(sess, conn);
-	ic->inpa = b_input_add(conn->fd, GAIM_INPUT_READ,
+	ic->inpa = b_input_add(conn->fd, B_EV_IO_READ,
 			oscar_callback, conn);
 	
 	return FALSE;
@@ -492,7 +490,7 @@ static gboolean oscar_bos_connect(gpointer data, gint source, b_input_condition 
 	}
 
 	aim_conn_completeconnect(sess, bosconn);
-	ic->inpa = b_input_add(bosconn->fd, GAIM_INPUT_READ,
+	ic->inpa = b_input_add(bosconn->fd, B_EV_IO_READ,
 			oscar_callback, bosconn);
 	imcb_log(ic, _("Connection established, cookie sent"));
 	
@@ -651,6 +649,7 @@ static int gaim_parse_logout(aim_session_t *sess, aim_frame_t *fr, ...) {
 static int conninitdone_chat(aim_session_t *sess, aim_frame_t *fr, ...) {
 	struct im_connection *ic = sess->aux_data;
 	struct chat_connection *chatcon;
+	struct groupchat *c = NULL;
 	static int id = 1;
 
 	aim_conn_addhandler(sess, fr->conn, 0x000e, 0x0001, gaim_parse_genericerr, 0);
@@ -663,7 +662,12 @@ static int conninitdone_chat(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	chatcon = find_oscar_chat_by_conn(ic, fr->conn);
 	chatcon->id = id;
-	chatcon->cnv = imcb_chat_new(ic, chatcon->show);
+	
+	c = bee_chat_by_title(ic->bee, ic, chatcon->show);
+	if (c && !c->data)
+		chatcon->cnv = c;
+	else
+		chatcon->cnv = imcb_chat_new(ic, chatcon->show);
 	chatcon->cnv->data = chatcon;
 
 	return 1;
@@ -702,7 +706,7 @@ static gboolean oscar_chatnav_connect(gpointer data, gint source, b_input_condit
 	}
 
 	aim_conn_completeconnect(sess, tstconn);
-	odata->cnpa = b_input_add(tstconn->fd, GAIM_INPUT_READ,
+	odata->cnpa = b_input_add(tstconn->fd, B_EV_IO_READ,
 					oscar_callback, tstconn);
 	
 	return FALSE;
@@ -730,7 +734,7 @@ static gboolean oscar_auth_connect(gpointer data, gint source, b_input_condition
 	}
 
 	aim_conn_completeconnect(sess, tstconn);
-	odata->paspa = b_input_add(tstconn->fd, GAIM_INPUT_READ,
+	odata->paspa = b_input_add(tstconn->fd, B_EV_IO_READ,
 				oscar_callback, tstconn);
 	
 	return FALSE;
@@ -766,7 +770,7 @@ static gboolean oscar_chat_connect(gpointer data, gint source, b_input_condition
 
 	aim_conn_completeconnect(sess, ccon->conn);
 	ccon->inpa = b_input_add(tstconn->fd,
-			GAIM_INPUT_READ,
+			B_EV_IO_READ,
 			oscar_callback, tstconn);
 	odata->oscar_chats = g_slist_append(odata->oscar_chats, ccon);
 	
@@ -933,7 +937,7 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	tmp = normalize(info->sn);
 	imcb_buddy_status(ic, tmp, flags, state_string, NULL);
-	/* imcb_buddy_times(ic, tmp, signon, time_idle); */
+	imcb_buddy_times(ic, tmp, signon, time_idle);
 
 
 	return 1;
@@ -1059,8 +1063,7 @@ static void gaim_icq_authgrant(void *data_) {
 	message = 0;
 	aim_ssi_auth_reply(od->sess, od->conn, uin, 1, "");
 	// aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHGRANTED, &message);
-	if(imcb_find_buddy(data->ic, uin) == NULL)
-		imcb_ask_add(data->ic, uin, NULL);
+	imcb_ask_add(data->ic, uin, NULL);
 	
 	g_free(uin);
 	g_free(data);
@@ -1821,11 +1824,13 @@ static void oscar_get_info(struct im_connection *g, char *name) {
 static void oscar_get_away(struct im_connection *g, char *who) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
 	if (odata->icq) {
+		/** FIXME(wilmer): Hmm, lost the ability to get away msgs here, do we care to get that back?
 		struct buddy *budlight = imcb_find_buddy(g, who);
 		if (budlight)
 			if ((budlight->uc & 0xff80) >> 7)
 				if (budlight->caps & AIM_CAPS_ICQSERVERRELAY)
 					aim_send_im_ch2_geticqmessage(odata->sess, who, (budlight->uc & 0xff80) >> 7);
+		*/
 	} else
 		aim_getinfo(odata->sess, odata->conn, who, AIM_GETINFO_AWAYMESSAGE);
 }
@@ -1952,7 +1957,7 @@ static int gaim_ssi_parserights(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	struct im_connection *ic = sess->aux_data;
-	struct aim_ssi_item *curitem;
+	struct aim_ssi_item *curitem, *curgroup;
 	int tmp;
 	char *nrm;
 
@@ -1963,13 +1968,13 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 		
 		switch (curitem->type) {
 			case 0x0000: /* Buddy */
-				if ((curitem->name) && (!imcb_find_buddy(ic, nrm))) {
+				if ((curitem->name) && (!imcb_buddy_by_handle(ic, nrm))) {
 					char *realname = NULL;
 
 					if (curitem->data && aim_gettlv(curitem->data, 0x0131, 1))
 						    realname = aim_gettlv_str(curitem->data, 0x0131, 1);
-						
-					imcb_add_buddy(ic, nrm, NULL);
+					
+					imcb_add_buddy(ic, nrm, curgroup->gid == curitem->gid ? curgroup->name : NULL);
 					
 					if (realname) {
 						imcb_buddy_nick_hint(ic, nrm, realname);
@@ -1977,6 +1982,10 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 						g_free(realname);
 					}
 				}
+				break;
+
+			case 0x0001: /* Group */
+				curgroup = curitem;
 				break;
 
 			case 0x0002: /* Permit buddy */
@@ -2421,7 +2430,8 @@ void oscar_chat_msg(struct groupchat *c, char *message, int msgflags)
 	guint16 flags;
 	char *s;
 	
-	ccon = c->data;
+	if (!(ccon = c->data))
+		return;
 	  	
 	for (s = message; *s; s++)
 		if (*s & 128)
@@ -2462,7 +2472,10 @@ void oscar_chat_invite(struct groupchat *c, char *who, char *message)
 {
 	struct im_connection *ic = c->ic;
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
-	struct chat_connection *ccon = c->data;
+	struct chat_connection *ccon;
+	
+	if (!(ccon = c->data))
+		return;
 	
 	aim_chat_invite(od->sess, od->conn, who, message ? message : "",
 					ccon->exchange, ccon->name, 0x0);
@@ -2487,30 +2500,40 @@ void oscar_chat_kill(struct im_connection *ic, struct chat_connection *cc)
 
 void oscar_chat_leave(struct groupchat *c)
 {
+	if (!c->data)
+		return;
 	oscar_chat_kill(c->ic, c->data);
 }
 
-struct groupchat *oscar_chat_join(struct im_connection * ic, const char * room, const char * nick, const char * password )
+struct groupchat *oscar_chat_join_internal(struct im_connection *ic, const char *room,
+	const char *nick, const char *password, int exchange_number)
 {
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
+	struct groupchat *ret = imcb_chat_new(ic, room);
 	aim_conn_t * cur;
 
 	if((cur = aim_getconn_type(od->sess, AIM_CONN_TYPE_CHATNAV))) {
 		int st;
 		
-		st = aim_chatnav_createroom(od->sess, cur, room, 4);
+		st = aim_chatnav_createroom(od->sess, cur, room, exchange_number);
 		
-		return NULL;
+		return ret;
 	} else {
 		struct create_room * cr = g_new0(struct create_room, 1);
 		
-		cr->exchange = 4;
+		cr->exchange = exchange_number;
 		cr->name = g_strdup(room);
 		od->create_rooms = g_slist_append(od->create_rooms, cr);
 		aim_reqservice(od->sess, od->conn, AIM_CONN_TYPE_CHATNAV);
 		
-		return NULL;
+		return ret;
 	}
+}
+
+struct groupchat *oscar_chat_join(struct im_connection *ic, const char *room,
+	const char *nick, const char *password, set_t **sets)
+{
+	return oscar_chat_join_internal(ic, room, nick, password, set_getint(sets, "exchange_number"));
 }
 
 struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
@@ -2518,13 +2541,18 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	struct oscar_data * od = (struct oscar_data *)ic->proto_data;
 	struct groupchat *ret;
 	static int chat_id = 0;
-	char * chatname;
+	char * chatname, *s;
+	struct groupchat *c;
 	
 	chatname = g_strdup_printf("%s%s%d", isdigit(*ic->acc->user) ? "icq" : "",
 	                           ic->acc->user, chat_id++);
-  
-	ret = oscar_chat_join(ic, chatname, NULL, NULL);
-
+	
+	for (s = chatname; *s; s ++)
+		if (!isalnum(*s))
+			*s = '0';
+	
+	c = imcb_chat_new(ic, chatname);
+	ret = oscar_chat_join_internal(ic, chatname, NULL, NULL, 4);
 	aim_chat_invite(od->sess, od->conn, who, "", 4, chatname, 0x0);
 
 	g_free(chatname);
@@ -2536,7 +2564,7 @@ void oscar_accept_chat(void *data)
 {
 	struct aim_chat_invitation * inv = data;
 	
-	oscar_chat_join(inv->ic, inv->name, NULL, NULL);
+	oscar_chat_join_internal(inv->ic, inv->name, NULL, NULL, 4);
 	g_free(inv->name);
 	g_free(inv);
 }
@@ -2547,6 +2575,16 @@ void oscar_reject_chat(void *data)
 	
 	g_free(inv->name);
 	g_free(inv);
+}
+
+void oscar_chat_add_settings(account_t *acc, set_t **head)
+{
+	set_add(head, "exchange_number", "4", set_eval_int, NULL);
+}
+
+void oscar_chat_free_settings(account_t *acc, set_t **head)
+{
+	set_del(head, "exchange_number");
 }
 
 void oscar_initmodule() 
@@ -2569,6 +2607,8 @@ void oscar_initmodule()
 	ret->chat_leave = oscar_chat_leave;
 	ret->chat_with = oscar_chat_with;
 	ret->chat_join = oscar_chat_join;
+	ret->chat_add_settings = oscar_chat_add_settings;
+	ret->chat_free_settings = oscar_chat_free_settings;
 	ret->add_permit = oscar_add_permit;
 	ret->add_deny = oscar_add_deny;
 	ret->rem_permit = oscar_rem_permit;

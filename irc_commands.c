@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2006 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* IRC commands                                                         */
@@ -26,7 +26,6 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "ipc.h"
-#include "chat.h"
 
 static void irc_cmd_pass( irc_t *irc, char **cmd )
 {
@@ -52,7 +51,7 @@ static void irc_cmd_pass( irc_t *irc, char **cmd )
 	}
 	else if( global.conf->auth_pass )
 	{
-		irc_reply( irc, 464, ":Incorrect password" );
+		irc_send_num( irc, 464, ":Incorrect password" );
 	}
 	else
 	{
@@ -64,41 +63,44 @@ static void irc_cmd_pass( irc_t *irc, char **cmd )
 
 static void irc_cmd_user( irc_t *irc, char **cmd )
 {
-	irc->user = g_strdup( cmd[1] );
-	irc->realname = g_strdup( cmd[4] );
+	irc->user->user = g_strdup( cmd[1] );
+	irc->user->fullname = g_strdup( cmd[4] );
 	
 	irc_check_login( irc );
 }
 
 static void irc_cmd_nick( irc_t *irc, char **cmd )
 {
-	if( irc->status & USTATUS_IDENTIFIED && irc->nick )
+	irc_user_t *iu;
+	
+	if( ( iu = irc_user_by_name( irc, cmd[1] ) ) && iu != irc->user )
 	{
-		irc_reply( irc, 438, "%s %s :You can only change your nick if you're not "
-		           "logged in (i.e. pre-identify)", irc->nick, cmd[1] );
-	}
-	/* This is not clean, but for now it'll have to be like this... */
-	else if( ( nick_cmp( cmd[1], irc->mynick ) == 0 ) || ( nick_cmp( cmd[1], NS_NICK ) == 0 ) || ( user_find( irc, cmd[1] ) != NULL ) )
-	{
-		irc_reply( irc, 433, "%s :This nick is already in use", cmd[1] );
+		irc_send_num( irc, 433, "%s :This nick is already in use", cmd[1] );
 	}
 	else if( !nick_ok( cmd[1] ) )
 	{
 		/* [SH] Invalid characters. */
-		irc_reply( irc, 432, "%s :This nick contains invalid characters", cmd[1] );
+		irc_send_num( irc, 432, "%s :This nick contains invalid characters", cmd[1] );
 	}
-	else if(irc->nick) 
+	else if( irc->status & USTATUS_LOGGED_IN )
 	{
-		if( user_find( irc, irc->nick ) )
-			user_rename(irc, irc->nick, cmd[1]);
-
-		irc_write( irc, ":%s!%s@%s NICK %s", irc->nick, irc->user, irc->host, cmd[1] );
-		g_free(irc->nick);
-		irc->nick = g_strdup( cmd[1] );
+		if( irc->status & USTATUS_IDENTIFIED )
+		{
+			irc_setpass( irc, NULL );
+			irc->status &= ~USTATUS_IDENTIFIED;
+			irc_umode_set( irc, "-R", 1 );
+			irc_usermsg( irc, "Changing nicks resets your identify status. "
+			             "Re-identify or register a new account if you want "
+			             "your configuration to be saved. See \x02help "
+			             "nick_changes\x02." );
+		}
+		
+		irc_user_set_nick( irc->user, cmd[1] );
 	}
 	else
 	{
-		irc->nick = g_strdup( cmd[1] );
+		g_free( irc->user->nick );
+		irc->user->nick = g_strdup( cmd[1] );
 		
 		irc_check_login( irc );
 	}
@@ -114,8 +116,272 @@ static void irc_cmd_quit( irc_t *irc, char **cmd )
 
 static void irc_cmd_ping( irc_t *irc, char **cmd )
 {
-	irc_write( irc, ":%s PONG %s :%s", irc->myhost, irc->myhost, cmd[1]?cmd[1]:irc->myhost );
+	irc_write( irc, ":%s PONG %s :%s", irc->root->host,
+	           irc->root->host, cmd[1]?cmd[1]:irc->root->host );
 }
+
+static void irc_cmd_pong( irc_t *irc, char **cmd )
+{
+	/* We could check the value we get back from the user, but in
+	   fact we don't care, we're just happy s/he's still alive. */
+	irc->last_pong = gettime();
+	irc->pinging = 0;
+}
+
+static void irc_cmd_join( irc_t *irc, char **cmd )
+{
+	char *comma, *s = cmd[1];
+	
+	while( s )
+	{
+		irc_channel_t *ic;
+		
+		if( ( comma = strchr( s, ',' ) ) )
+			*comma = '\0';
+		
+		if( ( ic = irc_channel_by_name( irc, s ) ) == NULL )
+		{
+			ic = irc_channel_new( irc, s );
+			
+			if( strcmp( set_getstr( &ic->set, "type" ), "control" ) != 0 )
+			{
+				/* Autoconfiguration is for control channels only ATM. */
+			}
+			else if( bee_group_by_name( ic->irc->b, ic->name + 1, FALSE ) )
+			{
+				set_setstr( &ic->set, "group", ic->name + 1 );
+				set_setstr( &ic->set, "fill_by", "group" );
+			}
+			else if( set_setstr( &ic->set, "protocol", ic->name + 1 ) )
+			{
+				set_setstr( &ic->set, "fill_by", "protocol" );
+			}
+			else if( set_setstr( &ic->set, "account", ic->name + 1 ) )
+			{
+				set_setstr( &ic->set, "fill_by", "account" );
+			}
+			else
+			{
+				bee_irc_channel_update( ic->irc, ic, NULL );
+			}
+		}
+		
+		if( ic == NULL )
+		{
+			irc_send_num( irc, 479, "%s :Invalid channel name", s );
+			goto next;
+		}
+		
+		if( ic->flags & IRC_CHANNEL_JOINED )
+			/* Dude, you're already there...
+			   RFC doesn't have any reply for that though? */
+			goto next;
+		
+		if( ic->f->join && !ic->f->join( ic ) )
+			/* The story is: FALSE either means the handler
+			   showed an error message, or is doing some work
+			   before the join should be confirmed. (In the
+			   latter case, the caller should take care of that
+			   confirmation.) TRUE means all's good, let the
+			   user join the channel right away. */
+			goto next;
+		
+		irc_channel_add_user( ic, irc->user );
+		
+next:
+		if( comma )
+		{
+			s = comma + 1;
+			*comma = ',';
+		}
+		else
+			break;
+	}
+}
+
+static void irc_cmd_names( irc_t *irc, char **cmd )
+{
+	irc_channel_t *ic;
+	
+	if( cmd[1] && ( ic = irc_channel_by_name( irc, cmd[1] ) ) )
+		irc_send_names( ic );
+	/* With no args, we should show /names of all chans. Make the code
+	   below work well if necessary.
+	else
+	{
+		GSList *l;
+		
+		for( l = irc->channels; l; l = l->next )
+			irc_send_names( l->data );
+	}
+	*/
+}
+
+static void irc_cmd_part( irc_t *irc, char **cmd )
+{
+	irc_channel_t *ic;
+	
+	if( ( ic = irc_channel_by_name( irc, cmd[1] ) ) == NULL )
+	{
+		irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
+	}
+	else if( irc_channel_del_user( ic, irc->user, IRC_CDU_PART, cmd[2] ) )
+	{
+		if( ic->f->part )
+			ic->f->part( ic, NULL );
+	}
+	else
+	{
+		irc_send_num( irc, 442, "%s :You're not on that channel", cmd[1] );
+	}
+}
+
+static void irc_cmd_whois( irc_t *irc, char **cmd )
+{
+	char *nick = cmd[1];
+	irc_user_t *iu = irc_user_by_name( irc, nick );
+	
+	if( iu )
+		irc_send_whois( iu );
+	else
+		irc_send_num( irc, 401, "%s :Nick does not exist", nick );
+}
+
+static void irc_cmd_whowas( irc_t *irc, char **cmd )
+{
+	/* For some reason irssi tries a whowas when whois fails. We can
+	   ignore this, but then the user never gets a "user not found"
+	   message from irssi which is a bit annoying. So just respond
+	   with not-found and irssi users will get better error messages */
+	
+	irc_send_num( irc, 406, "%s :Nick does not exist", cmd[1] );
+	irc_send_num( irc, 369, "%s :End of WHOWAS", cmd[1] );
+}
+
+static void irc_cmd_motd( irc_t *irc, char **cmd )
+{
+	irc_send_motd( irc );
+}
+
+static void irc_cmd_mode( irc_t *irc, char **cmd )
+{
+	if( irc_channel_name_ok( cmd[1] ) )
+	{
+		irc_channel_t *ic;
+		
+		if( ( ic = irc_channel_by_name( irc, cmd[1] ) ) == NULL )
+			irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
+		else if( cmd[2] )
+		{
+			if( *cmd[2] == '+' || *cmd[2] == '-' )
+				irc_send_num( irc, 477, "%s :Can't change channel modes", cmd[1] );
+			else if( *cmd[2] == 'b' )
+				irc_send_num( irc, 368, "%s :No bans possible", cmd[1] );
+		}
+		else
+			irc_send_num( irc, 324, "%s +%s", cmd[1], ic->mode );
+	}
+	else
+	{
+		if( nick_cmp( cmd[1], irc->user->nick ) == 0 )
+		{
+			if( cmd[2] )
+				irc_umode_set( irc, cmd[2], 0 );
+			else
+				irc_send_num( irc, 221, "+%s", irc->umode );
+		}
+		else
+			irc_send_num( irc, 502, ":Don't touch their modes" );
+	}
+}
+
+static void irc_cmd_who( irc_t *irc, char **cmd )
+{
+	char *channel = cmd[1];
+	irc_channel_t *ic;
+	
+	if( !channel || *channel == '0' || *channel == '*' || !*channel )
+		irc_send_who( irc, irc->users, "**" );
+	else if( ( ic = irc_channel_by_name( irc, channel ) ) )
+		irc_send_who( irc, ic->users, channel );
+	else
+		irc_send_num( irc, 403, "%s :No such channel", channel );
+}
+
+static void irc_cmd_privmsg( irc_t *irc, char **cmd )
+{
+	irc_channel_t *ic;
+	irc_user_t *iu;
+	
+	if( !cmd[2] ) 
+	{
+		irc_send_num( irc, 412, ":No text to send" );
+		return;
+	}
+	
+	/* Don't treat CTCP actions as real CTCPs, just convert them right now. */
+	if( g_strncasecmp( cmd[2], "\001ACTION", 7 ) == 0 )
+	{
+		cmd[2] += 4;
+		memcpy( cmd[2], "/me", 3 );
+		if( cmd[2][strlen(cmd[2])-1] == '\001' )
+			cmd[2][strlen(cmd[2])-1] = '\0';
+	}
+	
+	if( irc_channel_name_ok( cmd[1] ) &&
+	    ( ic = irc_channel_by_name( irc, cmd[1] ) ) )
+	{
+		if( ic->f->privmsg )
+			ic->f->privmsg( ic, cmd[2] );
+	}
+	else if( ( iu = irc_user_by_name( irc, cmd[1] ) ) )
+	{
+		if( cmd[2][0] == '\001' )
+		{
+			char **ctcp;
+			
+			if( iu->f->ctcp == NULL )
+				return;
+			if( cmd[2][strlen(cmd[2])-1] == '\001' )
+				cmd[2][strlen(cmd[2])-1] = '\0';
+			
+			ctcp = split_command_parts( cmd[2] + 1 );
+			iu->f->ctcp( iu, ctcp );
+		}
+		else if( iu->f->privmsg )
+		{
+			iu->last_channel = NULL;
+			iu->f->privmsg( iu, cmd[2] );
+		}
+	}
+	else
+	{
+		irc_send_num( irc, 401, "%s :No such nick/channel", cmd[1] );
+	}
+}
+
+static void irc_cmd_notice( irc_t *irc, char **cmd )
+{
+	if( !cmd[2] ) 
+	{
+		irc_send_num( irc, 412, ":No text to send" );
+		return;
+	}
+	
+	/* At least for now just echo. IIRC some IRC clients use self-notices
+	   for lag checks, so try to support that. */
+	if( nick_cmp( cmd[1], irc->user->nick ) == 0 )
+		irc_send_msg( irc->user, "NOTICE", irc->user->nick, cmd[2], NULL );
+}
+
+static void irc_cmd_nickserv( irc_t *irc, char **cmd )
+{
+	/* [SH] This aliases the NickServ command to PRIVMSG root */
+	/* [TV] This aliases the NS command to PRIVMSG root as well */
+	root_command( irc, cmd + 1 );
+}
+
+
 
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
@@ -125,198 +391,38 @@ static void irc_cmd_oper( irc_t *irc, char **cmd )
 	        strcmp( cmd[2], global.conf->oper_pass ) == 0 ) )
 	{
 		irc_umode_set( irc, "+o", 1 );
-		irc_reply( irc, 381, ":Password accepted" );
+		irc_send_num( irc, 381, ":Password accepted" );
 	}
 	else
 	{
-		irc_reply( irc, 432, ":Incorrect password" );
-	}
-}
-
-static void irc_cmd_mode( irc_t *irc, char **cmd )
-{
-	if( strchr( CTYPES, *cmd[1] ) )
-	{
-		if( cmd[2] )
-		{
-			if( *cmd[2] == '+' || *cmd[2] == '-' )
-				irc_reply( irc, 477, "%s :Can't change channel modes", cmd[1] );
-			else if( *cmd[2] == 'b' )
-				irc_reply( irc, 368, "%s :No bans possible", cmd[1] );
-		}
-		else
-			irc_reply( irc, 324, "%s +%s", cmd[1], CMODE );
-	}
-	else
-	{
-		if( nick_cmp( cmd[1], irc->nick ) == 0 )
-		{
-			if( cmd[2] )
-				irc_umode_set( irc, cmd[2], 0 );
-			else
-				irc_reply( irc, 221, "+%s", irc->umode );
-		}
-		else
-			irc_reply( irc, 502, ":Don't touch their modes" );
-	}
-}
-
-static void irc_cmd_names( irc_t *irc, char **cmd )
-{
-	irc_names( irc, cmd[1]?cmd[1]:irc->channel );
-}
-
-static void irc_cmd_part( irc_t *irc, char **cmd )
-{
-	struct groupchat *c;
-	
-	if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
-	{
-		user_t *u = user_find( irc, irc->nick );
-		
-		/* Not allowed to leave control channel */
-		irc_part( irc, u, irc->channel );
-		irc_join( irc, u, irc->channel );
-	}
-	else if( ( c = irc_chat_by_channel( irc, cmd[1] ) ) )
-	{
-		user_t *u = user_find( irc, irc->nick );
-		
-		irc_part( irc, u, c->channel );
-		
-		if( c->ic )
-		{
-			c->joined = 0;
-			c->ic->acc->prpl->chat_leave( c );
-		}
-	}
-	else
-	{
-		irc_reply( irc, 403, "%s :No such channel", cmd[1] );
-	}
-}
-
-static void irc_cmd_join( irc_t *irc, char **cmd )
-{
-	if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
-		; /* Dude, you're already there...
-		     RFC doesn't have any reply for that though? */
-	else if( cmd[1] )
-	{
-		struct chat *c;
-		
-		if( strchr( CTYPES, cmd[1][0] ) == NULL || cmd[1][1] == 0 )
-			irc_reply( irc, 479, "%s :Invalid channel name", cmd[1] );
-		else if( ( c = chat_bychannel( irc, cmd[1] ) ) && c->acc && c->acc->ic )
-			chat_join( irc, c, cmd[2] );
-		else
-			irc_reply( irc, 403, "%s :No such channel", cmd[1] );
+		irc_send_num( irc, 432, ":Incorrect password" );
 	}
 }
 
 static void irc_cmd_invite( irc_t *irc, char **cmd )
 {
-	char *nick = cmd[1], *channel = cmd[2];
-	struct groupchat *c = irc_chat_by_channel( irc, channel );
-	user_t *u = user_find( irc, nick );
+	irc_channel_t *ic;
+	irc_user_t *iu;
 	
-	if( u && c && ( u->ic == c->ic ) )
-		if( c->ic && c->ic->acc->prpl->chat_invite )
-		{
-			c->ic->acc->prpl->chat_invite( c, u->handle, NULL );
-			irc_reply( irc, 341, "%s %s", nick, channel );
-			return;
-		}
-	
-	irc_reply( irc, 482, "%s :Invite impossible; User/Channel non-existent or incompatible", channel );
-}
-
-static void irc_cmd_privmsg( irc_t *irc, char **cmd )
-{
-	if ( !cmd[2] ) 
+	if( ( iu = irc_user_by_name( irc, cmd[1] ) ) == NULL )
 	{
-		irc_reply( irc, 412, ":No text to send" );
+		irc_send_num( irc, 401, "%s :No such nick", cmd[1] );
+		return;
 	}
-	else if ( irc->nick && g_strcasecmp( cmd[1], irc->nick ) == 0 ) 
+	else if( ( ic = irc_channel_by_name( irc, cmd[2] ) ) == NULL )
 	{
-		irc_write( irc, ":%s!%s@%s %s %s :%s", irc->nick, irc->user, irc->host, cmd[0], cmd[1], cmd[2] ); 
+		irc_send_num( irc, 403, "%s :No such channel", cmd[2] );
+		return;
 	}
-	else 
-	{
-		if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
-		{
-			unsigned int i;
-			char *t = set_getstr( &irc->set, "default_target" );
-			
-			if( g_strcasecmp( t, "last" ) == 0 && irc->last_target )
-				cmd[1] = irc->last_target;
-			else if( g_strcasecmp( t, "root" ) == 0 )
-				cmd[1] = irc->mynick;
-			
-			for( i = 0; i < strlen( cmd[2] ); i ++ )
-			{
-				if( cmd[2][i] == ' ' ) break;
-				if( cmd[2][i] == ':' || cmd[2][i] == ',' )
-				{
-					cmd[1] = cmd[2];
-					cmd[2] += i;
-					*cmd[2] = 0;
-					while( *(++cmd[2]) == ' ' );
-					break;
-				}
-			}
-			
-			irc->is_private = 0;
-			
-			if( cmd[1] != irc->last_target )
-			{
-				g_free( irc->last_target );
-				irc->last_target = g_strdup( cmd[1] );
-			}
-		}
-		else
-		{
-			irc->is_private = 1;
-		}
-		irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? OPT_AWAY : 0 );
-	}
-}
-
-static void irc_cmd_who( irc_t *irc, char **cmd )
-{
-	char *channel = cmd[1];
-	user_t *u = irc->users;
-	struct groupchat *c;
-	GList *l;
 	
-	if( !channel || *channel == '0' || *channel == '*' || !*channel )
-		while( u )
-		{
-			irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", u->online ? irc->channel : "*", u->user, u->host, irc->myhost, u->nick, u->online ? ( u->away ? 'G' : 'H' ) : 'G', u->realname );
-			u = u->next;
-		}
-	else if( g_strcasecmp( channel, irc->channel ) == 0 )
-		while( u )
-		{
-			if( u->online )
-				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
-			u = u->next;
-		}
-	else if( ( c = irc_chat_by_channel( irc, channel ) ) )
-		for( l = c->in_room; l; l = l->next )
-		{
-			if( ( u = user_findhandle( c->ic, l->data ) ) )
-				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
-		}
-	else if( ( u = user_find( irc, channel ) ) )
-		irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->online ? ( u->away ? 'G' : 'H' ) : 'G', u->realname );
-	
-	irc_reply( irc, 315, "%s :End of /WHO list", channel?channel:"**" );
+	if( !ic->f->invite )
+		irc_send_num( irc, 482, "%s :Can't invite people here", cmd[2] );
+	else if( ic->f->invite( ic, iu ) )
+		irc_send_num( irc, 341, "%s %s", iu->nick, ic->name );
 }
 
 static void irc_cmd_userhost( irc_t *irc, char **cmd )
 {
-	user_t *u;
 	int i;
 	
 	/* [TV] Usable USERHOST-implementation according to
@@ -326,18 +432,18 @@ static void irc_cmd_userhost( irc_t *irc, char **cmd )
 	*/
 	
 	for( i = 1; cmd[i]; i ++ )
-		if( ( u = user_find( irc, cmd[i] ) ) )
-		{
-			if( u->online && u->away )
-				irc_reply( irc, 302, ":%s=-%s@%s", u->nick, u->user, u->host );
-			else
-				irc_reply( irc, 302, ":%s=+%s@%s", u->nick, u->user, u->host );
-		}
+	{
+		irc_user_t *iu = irc_user_by_name( irc, cmd[i] );
+		
+		if( iu )
+			irc_send_num( irc, 302, ":%s=%c%s@%s", iu->nick,
+			              irc_user_get_away( iu ) ? '-' : '+',
+			              iu->user, iu->host );
+	}
 }
 
 static void irc_cmd_ison( irc_t *irc, char **cmd )
 {
-	user_t *u;
 	char buff[IRC_MAX_LINE];
 	int lenleft, i;
 	
@@ -353,17 +459,20 @@ static void irc_cmd_ison( irc_t *irc, char **cmd )
 		this = cmd[i];
 		while( *this )
 		{
+			irc_user_t *iu;
+			
 			if( ( next = strchr( this, ' ' ) ) )
 				*next = 0;
 			
-			if( ( u = user_find( irc, this ) ) && u->online )
+			if( ( iu = irc_user_by_name( irc, this ) ) &&
+			    iu->bu && iu->bu->flags & BEE_USER_ONLINE )
 			{
-				lenleft -= strlen( u->nick ) + 1;
+				lenleft -= strlen( iu->nick ) + 1;
 				
 				if( lenleft < 0 )
 					break;
 				
-				strcat( buff, u->nick );
+				strcat( buff, iu->nick );
 				strcat( buff, " " );
 			}
 			
@@ -386,7 +495,7 @@ static void irc_cmd_ison( irc_t *irc, char **cmd )
 	if( strlen( buff ) > 0 )
 		buff[strlen(buff)-1] = '\0';
 	
-	irc_reply( irc, 303, ":%s", buff );
+	irc_send_num( irc, 303, ":%s", buff );
 }
 
 static void irc_cmd_watch( irc_t *irc, char **cmd )
@@ -399,7 +508,7 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 	for( i = 1; cmd[i]; i ++ )
 	{
 		char *nick;
-		user_t *u;
+		irc_user_t *iu;
 		
 		if( !cmd[i][0] || !cmd[i][1] )
 			break;
@@ -407,17 +516,19 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 		nick = g_strdup( cmd[i] + 1 );
 		nick_lc( nick );
 		
-		u = user_find( irc, nick );
+		iu = irc_user_by_name( irc, nick );
 		
 		if( cmd[i][0] == '+' )
 		{
 			if( !g_hash_table_lookup( irc->watches, nick ) )
 				g_hash_table_insert( irc->watches, nick, nick );
 			
-			if( u && u->online )
-				irc_reply( irc, 604, "%s %s %s %d :%s", u->nick, u->user, u->host, (int) time( NULL ), "is online" );
+			if( iu && iu->bu && iu->bu->flags & BEE_USER_ONLINE )
+				irc_send_num( irc, 604, "%s %s %s %d :%s", iu->nick, iu->user,
+				              iu->host, (int) time( NULL ), "is online" );
 			else
-				irc_reply( irc, 605, "%s %s %s %d :%s", nick, "*", "*", (int) time( NULL ), "is offline" );
+				irc_send_num( irc, 605, "%s %s %s %d :%s", nick, "*", "*",
+				              (int) time( NULL ), "is offline" );
 		}
 		else if( cmd[i][0] == '-' )
 		{
@@ -428,7 +539,7 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 				g_hash_table_remove( irc->watches, okey );
 				g_free( okey );
 				
-				irc_reply( irc, 602, "%s %s %s %d :%s", nick, "*", "*", 0, "Stopped watching" );
+				irc_send_num( irc, 602, "%s %s %s %d :%s", nick, "*", "*", 0, "Stopped watching" );
 			}
 		}
 	}
@@ -436,142 +547,74 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 
 static void irc_cmd_topic( irc_t *irc, char **cmd )
 {
-	char *channel = cmd[1];
-	char *topic = cmd[2];
+	irc_channel_t *ic = irc_channel_by_name( irc, cmd[1] );
+	const char *new = cmd[2];
 	
-	if( topic )
+	if( ic == NULL )
 	{
-		/* Send the topic */
-		struct groupchat *c = irc_chat_by_channel( irc, channel );
-		if( c && c->ic && c->ic->acc->prpl->chat_topic )
-			c->ic->acc->prpl->chat_topic( c, topic );
+		irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
+	}
+	else if( new )
+	{
+		if( ic->f->topic == NULL )
+			irc_send_num( irc, 482, "%s :Can't change this channel's topic", ic->name );
+		else if( ic->f->topic( ic, new ) )
+			irc_send_topic( ic, TRUE );
 	}
 	else
 	{
-		/* Get the topic */
-		irc_topic( irc, channel );
+		irc_send_topic( ic, FALSE );
 	}
 }
 
 static void irc_cmd_away( irc_t *irc, char **cmd )
 {
-	user_t *u = user_find( irc, irc->nick );
-	char *away = cmd[1];
-	
-	if( !u ) return;
-	
-	if( away && *away )
+	if( cmd[1] && *cmd[1] )
 	{
+		char away[strlen(cmd[1])+1];
 		int i, j;
 		
 		/* Copy away string, but skip control chars. Mainly because
 		   Jabber really doesn't like them. */
-		u->away = g_malloc( strlen( away ) + 1 );
-		for( i = j = 0; away[i]; i ++ )
-			if( ( u->away[j] = away[i] ) >= ' ' )
+		for( i = j = 0; cmd[1][i]; i ++ )
+			if( ( away[j] = cmd[1][i] ) >= ' ' )
 				j ++;
-		u->away[j] = 0;
+		away[j] = '\0';
 		
-		irc_reply( irc, 306, ":You're now away: %s", u->away );
-		/* irc_umode_set( irc, irc->myhost, "+a" ); */
+		irc_send_num( irc, 306, ":You're now away: %s", away );
+		set_setstr( &irc->b->set, "away", away );
 	}
 	else
 	{
-		if( u->away ) g_free( u->away );
-		u->away = NULL;
-		/* irc_umode_set( irc, irc->myhost, "-a" ); */
-		irc_reply( irc, 305, ":Welcome back" );
+		irc_send_num( irc, 305, ":Welcome back" );
+		set_setstr( &irc->b->set, "away", NULL );
 	}
-	
-	set_setstr( &irc->set, "away", u->away );
-}
-
-static void irc_cmd_whois( irc_t *irc, char **cmd )
-{
-	char *nick = cmd[1];
-	user_t *u = user_find( irc, nick );
-	
-	if( u )
-	{
-		irc_reply( irc, 311, "%s %s %s * :%s", u->nick, u->user, u->host, u->realname );
-		
-		if( u->ic )
-			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->ic->acc->user,
-			           u->ic->acc->server && *u->ic->acc->server ? u->ic->acc->server : "",
-			           u->ic->acc->prpl->name );
-		else
-			irc_reply( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
-		
-		if( !u->online )
-			irc_reply( irc, 301, "%s :%s", u->nick, "User is offline" );
-		else if( u->away )
-			irc_reply( irc, 301, "%s :%s", u->nick, u->away );
-		if( u->status_msg )
-			irc_reply( irc, 320, "%s :%s", u->nick, u->status_msg );
-		
-		irc_reply( irc, 318, "%s :End of /WHOIS list", nick );
-	}
-	else
-	{
-		irc_reply( irc, 401, "%s :Nick does not exist", nick );
-	}
-}
-
-static void irc_cmd_whowas( irc_t *irc, char **cmd )
-{
-	/* For some reason irssi tries a whowas when whois fails. We can
-	   ignore this, but then the user never gets a "user not found"
-	   message from irssi which is a bit annoying. So just respond
-	   with not-found and irssi users will get better error messages */
-	
-	irc_reply( irc, 406, "%s :Nick does not exist", cmd[1] );
-	irc_reply( irc, 369, "%s :End of WHOWAS", cmd[1] );
-}
-
-static void irc_cmd_nickserv( irc_t *irc, char **cmd )
-{
-	/* [SH] This aliases the NickServ command to PRIVMSG root */
-	/* [TV] This aliases the NS command to PRIVMSG root as well */
-	root_command( irc, cmd + 1 );
-}
-
-static void irc_cmd_motd( irc_t *irc, char **cmd )
-{
-	irc_motd( irc );
-}
-
-static void irc_cmd_pong( irc_t *irc, char **cmd )
-{
-	/* We could check the value we get back from the user, but in
-	   fact we don't care, we're just happy he's still alive. */
-	irc->last_pong = gettime();
-	irc->pinging = 0;
 }
 
 static void irc_cmd_version( irc_t *irc, char **cmd )
 {
-	irc_reply( irc, 351, "bitlbee-%s. %s :%s/%s ", BITLBEE_VERSION, irc->myhost, ARCH, CPU );
+	irc_send_num( irc, 351, "bitlbee-%s. %s :%s/%s ",
+	              BITLBEE_VERSION, irc->root->host, ARCH, CPU );
 }
 
 static void irc_cmd_completions( irc_t *irc, char **cmd )
 {
-	user_t *u = user_find( irc, irc->mynick );
 	help_t *h;
 	set_t *s;
 	int i;
 	
-	irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS ", "OK" );
+	irc_send_msg_raw( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS OK" );
 	
 	for( i = 0; commands[i].command; i ++ )
-		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS ", commands[i].command );
+		irc_send_msg_f( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS %s", commands[i].command );
 	
 	for( h = global.help; h; h = h->next )
-		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS help ", h->title );
+		irc_send_msg_f( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS help %s", h->title );
 	
-	for( s = irc->set; s; s = s->next )
-		irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS set ", s->key );
+	for( s = irc->b->set; s; s = s->next )
+		irc_send_msg_f( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS set %s", s->key );
 	
-	irc_privmsg( irc, u, "NOTICE", irc->nick, "COMPLETIONS ", "END" );
+	irc_send_msg_raw( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS END" );
 }
 
 static void irc_cmd_rehash( irc_t *irc, char **cmd )
@@ -581,7 +624,7 @@ static void irc_cmd_rehash( irc_t *irc, char **cmd )
 	else
 		ipc_to_master( cmd );
 	
-	irc_reply( irc, 382, "%s :Rehashing", global.conf_file );
+	irc_send_num( irc, 382, "%s :Rehashing", global.conf_file );
 }
 
 static const command_t irc_commands[] = {
@@ -590,28 +633,28 @@ static const command_t irc_commands[] = {
 	{ "nick",        1, irc_cmd_nick,        0 },
 	{ "quit",        0, irc_cmd_quit,        0 },
 	{ "ping",        0, irc_cmd_ping,        0 },
-	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
-	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
-	{ "names",       0, irc_cmd_names,       IRC_CMD_LOGGED_IN },
-	{ "part",        1, irc_cmd_part,        IRC_CMD_LOGGED_IN },
+	{ "pong",        0, irc_cmd_pong,        IRC_CMD_LOGGED_IN },
 	{ "join",        1, irc_cmd_join,        IRC_CMD_LOGGED_IN },
-	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
-	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
-	{ "notice",      1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
+	{ "names",       1, irc_cmd_names,       IRC_CMD_LOGGED_IN },
+	{ "part",        1, irc_cmd_part,        IRC_CMD_LOGGED_IN },
+	{ "whois",       1, irc_cmd_whois,       IRC_CMD_LOGGED_IN },
+	{ "whowas",      1, irc_cmd_whowas,      IRC_CMD_LOGGED_IN },
+	{ "motd",        0, irc_cmd_motd,        IRC_CMD_LOGGED_IN },
+	{ "mode",        1, irc_cmd_mode,        IRC_CMD_LOGGED_IN },
 	{ "who",         0, irc_cmd_who,         IRC_CMD_LOGGED_IN },
+	{ "privmsg",     1, irc_cmd_privmsg,     IRC_CMD_LOGGED_IN },
+	{ "notice",      1, irc_cmd_notice,      IRC_CMD_LOGGED_IN },
+	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
+	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
+	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
+	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
+	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
 	{ "userhost",    1, irc_cmd_userhost,    IRC_CMD_LOGGED_IN },
 	{ "ison",        1, irc_cmd_ison,        IRC_CMD_LOGGED_IN },
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
+	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
-	{ "away",        0, irc_cmd_away,        IRC_CMD_LOGGED_IN },
-	{ "whois",       1, irc_cmd_whois,       IRC_CMD_LOGGED_IN },
-	{ "whowas",      1, irc_cmd_whowas,      IRC_CMD_LOGGED_IN },
-	{ "nickserv",    1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
-	{ "ns",          1, irc_cmd_nickserv,    IRC_CMD_LOGGED_IN },
-	{ "motd",        0, irc_cmd_motd,        IRC_CMD_LOGGED_IN },
-	{ "pong",        0, irc_cmd_pong,        IRC_CMD_LOGGED_IN },
-	{ "version",     0, irc_cmd_version,     IRC_CMD_LOGGED_IN },
-	{ "completions", 0, irc_cmd_completions, IRC_CMD_LOGGED_IN },
+	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "deaf",        0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
@@ -637,19 +680,19 @@ void irc_exec( irc_t *irc, char *cmd[] )
 			
 			if( irc_commands[i].flags & IRC_CMD_PRE_LOGIN && irc->status & USTATUS_LOGGED_IN )
 			{
-				irc_reply( irc, 462, ":Only allowed before logging in" );
+				irc_send_num( irc, 462, ":Only allowed before logging in" );
 			}
 			else if( irc_commands[i].flags & IRC_CMD_LOGGED_IN && !( irc->status & USTATUS_LOGGED_IN ) )
 			{
-				irc_reply( irc, 451, ":Register first" );
+				irc_send_num( irc, 451, ":Register first" );
 			}
 			else if( irc_commands[i].flags & IRC_CMD_OPER_ONLY && !strchr( irc->umode, 'o' ) )
 			{
-				irc_reply( irc, 481, ":Permission denied - You're not an IRC operator" );
+				irc_send_num( irc, 481, ":Permission denied - You're not an IRC operator" );
 			}
 			else if( n_arg < irc_commands[i].required_parameters )
 			{
-				irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
+				irc_send_num( irc, 461, "%s :Need more parameters", cmd[0] );
 			}
 			else if( irc_commands[i].flags & IRC_CMD_TO_MASTER )
 			{
@@ -666,5 +709,5 @@ void irc_exec( irc_t *irc, char *cmd[] )
 		}
 	
 	if( irc->status >= USTATUS_LOGGED_IN )
-		irc_reply( irc, 421, "%s :Unknown command", cmd[0] );
+		irc_send_num( irc, 421, "%s :Unknown command", cmd[0] );
 }

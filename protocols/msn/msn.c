@@ -78,6 +78,12 @@ static void msn_logout( struct im_connection *ic )
 	
 	if( md )
 	{
+		/** Disabling MSN ft support for now.
+		while( md->filetransfers ) {
+			imcb_file_canceled( md->filetransfers->data, "Closing connection" );
+		}
+		*/
+		
 		if( md->fd >= 0 )
 			closesocket( md->fd );
 		
@@ -97,6 +103,15 @@ static void msn_logout( struct im_connection *ic )
 			g_free( md->grouplist[--md->groupcount] );
 		g_free( md->grouplist );
 		
+		while( md->grpq )
+		{
+			struct msn_groupadd *ga = md->grpq->data;
+			g_free( ga->group );
+			g_free( ga->who );
+			g_free( ga );
+			md->grpq = g_slist_remove( md->grpq, ga );
+		}
+		
 		g_free( md );
 	}
 	
@@ -115,6 +130,14 @@ static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, in
 {
 	struct msn_switchboard *sb;
 	
+#ifdef DEBUG
+	if( strcmp( who, "raw" ) == 0 )
+	{
+		msn_write( ic, message, strlen( message ) );
+		msn_write( ic, "\r\n", 2 );
+	}
+	else
+#endif
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
 		return( msn_sb_sendmessage( sb, message ) );
@@ -175,7 +198,7 @@ static void msn_get_info(struct im_connection *ic, char *who)
 
 static void msn_add_buddy( struct im_connection *ic, char *who, char *group )
 {
-	msn_buddy_list_add( ic, "FL", who, who );
+	msn_buddy_list_add( ic, "FL", who, who, group );
 }
 
 static void msn_remove_buddy( struct im_connection *ic, char *who, char *group )
@@ -216,6 +239,7 @@ static void msn_chat_leave( struct groupchat *c )
 static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
 {
 	struct msn_switchboard *sb;
+	struct groupchat *c = imcb_chat_new( ic, who );
 	
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
@@ -233,10 +257,8 @@ static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
 		
 		msn_sb_write_msg( ic, m );
 
-		return NULL;
+		return c;
 	}
-	
-	return NULL;
 }
 
 static void msn_keepalive( struct im_connection *ic )
@@ -246,7 +268,7 @@ static void msn_keepalive( struct im_connection *ic )
 
 static void msn_add_permit( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_add( ic, "AL", who, who );
+	msn_buddy_list_add( ic, "AL", who, who, NULL );
 }
 
 static void msn_rem_permit( struct im_connection *ic, char *who )
@@ -258,7 +280,7 @@ static void msn_add_deny( struct im_connection *ic, char *who )
 {
 	struct msn_switchboard *sb;
 	
-	msn_buddy_list_add( ic, "BL", who, who );
+	msn_buddy_list_add( ic, "BL", who, who, NULL );
 	
 	/* If there's still a conversation with this person, close it. */
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )
@@ -327,6 +349,7 @@ void msn_initmodule()
 	ret->rem_deny = msn_rem_deny;
 	ret->send_typing = msn_send_typing;
 	ret->handle_cmp = g_strcasecmp;
+	//ret->transfer_request = msn_ftp_transfer_request;
 
 	register_protocol(ret);
 }

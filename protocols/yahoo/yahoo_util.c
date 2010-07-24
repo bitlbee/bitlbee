@@ -35,12 +35,12 @@ char *strchr (), *strrchr ();
 
 #include "yahoo_util.h"
 
-char * y_string_append(char * string, char * append)
+char *y_string_append(char *string, char *append)
 {
 	int size = strlen(string) + strlen(append) + 1;
-	char * new_string = y_renew(char, string, size);
+	char *new_string = y_renew(char, string, size);
 
-	if(new_string == NULL) {
+	if (new_string == NULL) {
 		new_string = y_new(char, size);
 		strcpy(new_string, string);
 		FREE(string);

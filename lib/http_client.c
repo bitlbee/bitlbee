@@ -150,10 +150,10 @@ static gboolean http_connected( gpointer data, int source, b_input_condition con
 	
 	if( req->bytes_written < req->request_length )
 		req->inpa = b_input_add( source,
-		                         req->ssl ? ssl_getdirection( req->ssl ) : GAIM_INPUT_WRITE,
+		                         req->ssl ? ssl_getdirection( req->ssl ) : B_EV_IO_WRITE,
 	        	                 http_connected, req );
 	else
-		req->inpa = b_input_add( source, GAIM_INPUT_READ, http_incoming_data, req );
+		req->inpa = b_input_add( source, B_EV_IO_READ, http_incoming_data, req );
 	
 	return FALSE;
 	
@@ -235,7 +235,7 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 	
 	/* There will be more! */
 	req->inpa = b_input_add( req->fd,
-	                         req->ssl ? ssl_getdirection( req->ssl ) : GAIM_INPUT_READ,
+	                         req->ssl ? ssl_getdirection( req->ssl ) : B_EV_IO_READ,
 	                         http_incoming_data, req );
 	
 	return FALSE;

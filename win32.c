@@ -26,7 +26,6 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 #include "commands.h"
-#include "crypting.h"
 #include "protocols/nogaim.h"
 #include "help.h"
 #include <signal.h>

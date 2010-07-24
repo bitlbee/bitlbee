@@ -45,5 +45,6 @@ typedef struct help
 G_GNUC_MALLOC help_t *help_init( help_t **help, const char *helpfile );
 void help_free( help_t **help );
 char *help_get( help_t **help, char *title );
+int help_add_mem( help_t **help, const char *title, const char *content_ );
 
 #endif

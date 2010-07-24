@@ -28,7 +28,6 @@
 #include "base64.h"
 #include "arc.h"
 #include "md5.h"
-#include "chat.h"
 
 #if GLIB_CHECK_VERSION(2,8,0)
 #include <glib/gstdio.h>
@@ -54,7 +53,7 @@ struct xml_parsedata
 	irc_t *irc;
 	char *current_setting;
 	account_t *current_account;
-	struct chat *current_chat;
+	irc_channel_t *current_channel;
 	set_t **current_set_head;
 	char *given_nick;
 	char *given_pass;
@@ -127,7 +126,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	}
 	else if( g_strcasecmp( element_name, "account" ) == 0 )
 	{
-		char *protocol, *handle, *server, *password = NULL, *autoconnect;
+		char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag;
 		char *pass_b64 = NULL;
 		unsigned char *pass_cr = NULL;
 		int pass_len;
@@ -137,6 +136,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		pass_b64 = xml_attr( attr_names, attr_values, "password" );
 		server = xml_attr( attr_names, attr_values, "server" );
 		autoconnect = xml_attr( attr_names, attr_values, "autoconnect" );
+		tag = xml_attr( attr_names, attr_values, "tag" );
 		
 		protocol = xml_attr( attr_names, attr_values, "protocol" );
 		if( protocol )
@@ -151,11 +151,13 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		else if( ( pass_len = base64_decode( pass_b64, (unsigned char**) &pass_cr ) ) &&
 		                         arc_decode( pass_cr, pass_len, &password, xd->given_pass ) )
 		{
-			xd->current_account = account_add( irc, prpl, handle, password );
+			xd->current_account = account_add( irc->b, prpl, handle, password );
 			if( server )
 				set_setstr( &xd->current_account->set, "server", server );
 			if( autoconnect )
 				set_setstr( &xd->current_account->set, "auto_connect", autoconnect );
+			if( tag )
+				set_setstr( &xd->current_account->set, "tag", tag );
 		}
 		else
 		{
@@ -180,12 +182,12 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		
 		if( ( setting = xml_attr( attr_names, attr_values, "name" ) ) )
 		{
-			if( xd->current_chat != NULL )
-				xd->current_set_head = &xd->current_chat->set;
+			if( xd->current_channel != NULL )
+				xd->current_set_head = &xd->current_channel->set;
 			else if( xd->current_account != NULL )
 				xd->current_set_head = &xd->current_account->set;
 			else
-				xd->current_set_head = &xd->irc->set;
+				xd->current_set_head = &xd->irc->b->set;
 			
 			xd->current_setting = g_strdup( setting );
 		}
@@ -202,7 +204,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		
 		if( xd->current_account && handle && nick )
 		{
-			nick_set( xd->current_account, handle, nick );
+			nick_set_raw( xd->current_account, handle, nick );
 		}
 		else
 		{
@@ -210,6 +212,30 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			             "Missing attributes for %s element", element_name );
 		}
 	}
+	else if( g_strcasecmp( element_name, "channel" ) == 0 )
+	{
+		char *name, *type;
+		
+		name = xml_attr( attr_names, attr_values, "name" );
+		type = xml_attr( attr_names, attr_values, "type" );
+		
+		if( !name || !type )
+		{
+			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+			             "Missing attributes for %s element", element_name );
+			return;
+		}
+		
+		/* The channel may exist already, for example if it's &bitlbee.
+		   Also, it's possible that the user just reconnected and the
+		   IRC client already rejoined all channels it was in. They
+		   should still get the right settings. */
+		if( ( xd->current_channel = irc_channel_by_name( irc, name ) ) ||
+		    ( xd->current_channel = irc_channel_new( irc, name ) ) )
+			set_setstr( &xd->current_channel->set, "type", type );
+	}
+	/* Backward compatibility: Keep this around for a while for people
+	   switching from BitlBee 1.2.4+. */
 	else if( g_strcasecmp( element_name, "chat" ) == 0 )
 	{
 		char *handle, *channel;
@@ -219,7 +245,19 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 		
 		if( xd->current_account && handle && channel )
 		{
-			xd->current_chat = chat_add( xd->irc, xd->current_account, handle, channel );
+			irc_channel_t *ic;
+			
+			if( ( ic = irc_channel_new( irc, channel ) ) &&
+			    set_setstr( &ic->set, "type", "chat" ) &&
+			    set_setstr( &ic->set, "chat_type", "room" ) &&
+			    set_setstr( &ic->set, "account", xd->current_account->tag ) &&
+			    set_setstr( &ic->set, "room", handle ) )
+			{
+				/* Try to pick up some settings where possible. */
+				xd->current_channel = ic;
+			}
+			else if( ic )
+				irc_channel_free( ic );
 		}
 		else
 		{
@@ -258,9 +296,10 @@ static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name
 	{
 		xd->current_account = NULL;
 	}
-	else if( g_strcasecmp( element_name, "chat" ) == 0 )
+	else if( g_strcasecmp( element_name, "channel" ) == 0 ||
+	         g_strcasecmp( element_name, "chat" ) == 0 )
 	{
-		xd->current_chat = NULL;
+		xd->current_channel = NULL;
 	}
 }
 
@@ -368,7 +407,7 @@ static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const ch
 
 static storage_status_t xml_load( irc_t *irc, const char *password )
 {
-	return xml_load_real( irc, irc->nick, password, XML_PASS_UNKNOWN );
+	return xml_load_real( irc, irc->user->nick, password, XML_PASS_UNKNOWN );
 }
 
 static storage_status_t xml_check_pass( const char *my_nick, const char *password )
@@ -410,8 +449,9 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	int fd;
 	md5_byte_t pass_md5[21];
 	md5_state_t md5_state;
+	GSList *l;
 	
-	path2 = g_strdup( irc->nick );
+	path2 = g_strdup( irc->user->nick );
 	nick_lc( path2 );
 	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, path2, ".xml" );
 	g_free( path2 );
@@ -437,28 +477,29 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	/* Save the hash in base64-encoded form. */
 	pass_buf = base64_encode( pass_md5, 21 );
 	
-	if( !xml_printf( fd, 0, "<user nick=\"%s\" password=\"%s\" version=\"%d\">\n", irc->nick, pass_buf, XML_FORMAT_VERSION ) )
+	if( !xml_printf( fd, 0, "<user nick=\"%s\" password=\"%s\" version=\"%d\">\n", irc->user->nick, pass_buf, XML_FORMAT_VERSION ) )
 		goto write_error;
 	
 	g_free( pass_buf );
 	
-	for( set = irc->set; set; set = set->next )
+	for( set = irc->b->set; set; set = set->next )
 		if( set->value )
 			if( !xml_printf( fd, 1, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
 				goto write_error;
 	
-	for( acc = irc->accounts; acc; acc = acc->next )
+	for( acc = irc->b->accounts; acc; acc = acc->next )
 	{
 		unsigned char *pass_cr;
 		char *pass_b64;
 		int pass_len;
-		struct chat *c;
 		
 		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password, 12 );
 		pass_b64 = base64_encode( pass_cr, pass_len );
 		g_free( pass_cr );
 		
-		if( !xml_printf( fd, 1, "<account protocol=\"%s\" handle=\"%s\" password=\"%s\" autoconnect=\"%d\"", acc->prpl->name, acc->user, pass_b64, acc->auto_connect ) )
+		if( !xml_printf( fd, 1, "<account protocol=\"%s\" handle=\"%s\" password=\"%s\" "
+		                        "autoconnect=\"%d\" tag=\"%s\"", acc->prpl->name, acc->user,
+		                        pass_b64, acc->auto_connect, acc->tag ) )
 		{
 			g_free( pass_b64 );
 			goto write_error;
@@ -485,26 +526,27 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		if( g_hash_table_find( acc->nicks, xml_save_nick, & fd ) )
 			goto write_error;
 		
-		for( c = irc->chatrooms; c; c = c->next )
-		{
-			if( c->acc != acc )
-				continue;
-			
-			if( !xml_printf( fd, 2, "<chat handle=\"%s\" channel=\"%s\" type=\"%s\">\n",
-			                        c->handle, c->channel, "room" ) )
-				goto write_error;
-			
-			for( set = c->set; set; set = set->next )
-				if( set->value && !( set->flags & ACC_SET_NOSAVE ) )
-					if( !xml_printf( fd, 3, "<setting name=\"%s\">%s</setting>\n",
-					                        set->key, set->value ) )
-						goto write_error;
-
-			if( !xml_printf( fd, 2, "</chat>\n" ) )
-				goto write_error;
-		}
-		
 		if( !xml_printf( fd, 1, "</account>\n" ) )
+			goto write_error;
+	}
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		
+		if( ic->flags & IRC_CHANNEL_TEMP )
+			continue;
+		
+		if( !xml_printf( fd, 1, "<channel name=\"%s\" type=\"%s\">\n",
+		                 ic->name, set_getstr( &ic->set, "type" ) ) )
+			goto write_error;
+		
+		for( set = ic->set; set; set = set->next )
+			if( set->value && strcmp( set->key, "type" ) != 0 )
+				if( !xml_printf( fd, 2, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
+					goto write_error;
+		
+		if( !xml_printf( fd, 1, "</channel>\n" ) )
 			goto write_error;
 	}
 	

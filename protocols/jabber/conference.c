@@ -91,18 +91,20 @@ static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_no
 struct groupchat *jabber_chat_by_jid( struct im_connection *ic, const char *name )
 {
 	char *normalized = jabber_normalize( name );
+	GSList *l;
 	struct groupchat *ret;
 	struct jabber_chat *jc;
 	
-	for( ret = ic->groupchats; ret; ret = ret->next )
+	for( l = ic->groupchats; l; l = l->next )
 	{
+		ret = l->data;
 		jc = ret->data;
 		if( strcmp( normalized, jc->name ) == 0 )
 			break;
 	}
 	g_free( normalized );
 	
-	return ret;
+	return l ? ret : NULL;
 }
 
 void jabber_chat_free( struct groupchat *c )

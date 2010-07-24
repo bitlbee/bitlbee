@@ -25,57 +25,13 @@
 
 #define BITLBEE_CORE
 #include "commands.h"
-#include "crypting.h"
 #include "bitlbee.h"
 #include "help.h"
-#include "chat.h"
+#include "ipc.h"
 
-#include <string.h>
-
-void root_command_string( irc_t *irc, user_t *u, char *command, int flags )
+void root_command_string( irc_t *irc, char *command )
 {
-	char *cmd[IRC_MAX_ARGS];
-	char *s;
-	int k;
-	char q = 0;
-	
-	memset( cmd, 0, sizeof( cmd ) );
-	cmd[0] = command;
-	k = 1;
-	for( s = command; *s && k < ( IRC_MAX_ARGS - 1 ); s ++ )
-		if( *s == ' ' && !q )
-		{
-			*s = 0;
-			while( *++s == ' ' );
-			if( *s == '"' || *s == '\'' )
-			{
-				q = *s;
-				s ++;
-			}
-			if( *s )
-			{
-				cmd[k++] = s;
-				s --;
-			}
-			else
-			{
-				break;
-			}
-		}
-		else if( *s == '\\' && ( ( !q && s[1] ) || ( q && q == s[1] ) ) )
-		{
-			char *cpy;
-			
-			for( cpy = s; *cpy; cpy ++ )
-				cpy[0] = cpy[1];
-		}
-		else if( *s == q )
-		{
-			q = *s = 0;
-		}
-	cmd[k] = NULL;
-	
-	root_command( irc, cmd );
+	root_command( irc, split_command_parts( command ) );
 }
 
 #define MIN_ARGS( x, y... )                                                    \
@@ -92,14 +48,20 @@ void root_command_string( irc_t *irc, user_t *u, char *command, int flags )
 
 void root_command( irc_t *irc, char *cmd[] )
 {	
-	int i;
+	int i, len;
 	
 	if( !cmd[0] )
 		return;
 	
+	len = strlen( cmd[0] );
 	for( i = 0; commands[i].command; i++ )
-		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
+		if( g_strncasecmp( commands[i].command, cmd[0], len ) == 0 )
 		{
+			if( commands[i+1].command &&
+		            g_strncasecmp( commands[i+1].command, cmd[0], len ) == 0 )
+		        	/* Only match on the first letters if the match is unique. */
+		        	break;
+		        
 			MIN_ARGS( commands[i].required_parameters );
 			
 			commands[i].execute( irc, cmd );
@@ -140,14 +102,44 @@ static void cmd_account( irc_t *irc, char **cmd );
 
 static void cmd_identify( irc_t *irc, char **cmd )
 {
-	storage_status_t status = storage_load( irc, cmd[1] );
-	char *account_on[] = { "account", "on", NULL };
+	storage_status_t status;
+	gboolean load = TRUE;
+	char *password = cmd[1];
 	
-	if( strchr( irc->umode, 'R' ) != NULL )
+	if( irc->status & USTATUS_IDENTIFIED )
 	{
 		irc_usermsg( irc, "You're already logged in." );
 		return;
 	}
+	
+	if( strncmp( cmd[1], "-no", 3 ) == 0 )
+	{
+		load = FALSE;
+		password = cmd[2];
+	}
+	else if( strncmp( cmd[1], "-force", 6 ) == 0 )
+	{
+		password = cmd[2];
+	}
+	else if( irc->b->accounts != NULL )
+	{
+		irc_usermsg( irc,
+		             "You're trying to identify yourself, but already have "
+		             "at least one IM account set up. "
+		             "Use \x02identify -noload\x02 or \x02identify -force\x02 "
+		             "instead (see \x02help identify\x02)." );
+		return;
+	}
+	
+	if( password == NULL )
+	{
+		MIN_ARGS( 2 );
+	}
+	
+	if( load )
+		status = storage_load( irc, password );
+	else
+		status = storage_check_pass( irc->user->nick, password );
 	
 	switch (status) {
 	case STORAGE_INVALID_PASSWORD:
@@ -157,18 +149,55 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "The nick is (probably) not registered" );
 		break;
 	case STORAGE_OK:
-		irc_usermsg( irc, "Password accepted, settings and accounts loaded" );
-		irc_setpass( irc, cmd[1] );
+		irc_usermsg( irc, "Password accepted%s",
+		             load ? ", settings and accounts loaded" : "" );
+		irc_setpass( irc, password );
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "+R", 1 );
-		if( set_getbool( &irc->set, "auto_connect" ) )
-			cmd_account( irc, account_on );
+		
+		/* The following code is a bit hairy now. With takeover
+		   support, we shouldn't immediately auto_connect in case
+		   we're going to offer taking over an existing session.
+		   Do it in 200ms since that should give the parent process
+		   enough time to come back to us. */
+		if( load )
+		{
+			irc_channel_auto_joins( irc, NULL );
+			if( !set_getbool( &irc->default_channel->set, "auto_join" ) )
+				irc_channel_del_user( irc->default_channel, irc->user,
+				                      IRC_CDU_PART, "auto_join disabled "
+				                      "for this channel." );
+			if( set_getbool( &irc->b->set, "auto_connect" ) )
+				irc->login_source_id = b_timeout_add( 200,
+					cmd_identify_finish, irc );
+		}
+		
+		/* If ipc_child_identify() returns FALSE, it means we're
+		   already sure that there's no takeover target (only
+		   possible in 1-process daemon mode). Start auto_connect
+		   immediately. */
+		if( !ipc_child_identify( irc ) && load &&
+		    set_getbool( &irc->b->set, "auto_connect" ) )
+			cmd_identify_finish( irc, 0, 0 );
+		
 		break;
 	case STORAGE_OTHER_ERROR:
 	default:
 		irc_usermsg( irc, "Unknown error while loading configuration" );
 		break;
 	}
+}
+
+gboolean cmd_identify_finish( gpointer data, gint fd, b_input_condition cond )
+{
+	char *account_on[] = { "account", "on", NULL };
+	irc_t *irc = data;
+	
+	cmd_account( irc, account_on );
+	
+	b_event_remove( irc->login_source_id );
+	irc->login_source_id = -1;
+	return FALSE;
 }
 
 static void cmd_register( irc_t *irc, char **cmd )
@@ -201,7 +230,7 @@ static void cmd_drop( irc_t *irc, char **cmd )
 {
 	storage_status_t status;
 	
-	status = storage_remove (irc->nick, cmd[1]);
+	status = storage_remove (irc->user->nick, cmd[1]);
 	switch (status) {
 	case STORAGE_NO_SUCH_USER:
 		irc_usermsg( irc, "That account does not exist" );
@@ -213,7 +242,7 @@ static void cmd_drop( irc_t *irc, char **cmd )
 		irc_setpass( irc, NULL );
 		irc->status &= ~USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "-R", 1 );
-		irc_usermsg( irc, "Account `%s' removed", irc->nick );
+		irc_usermsg( irc, "Account `%s' removed", irc->user->nick );
 		break;
 	default:
 		irc_usermsg( irc, "Error: `%d'", status );
@@ -221,38 +250,14 @@ static void cmd_drop( irc_t *irc, char **cmd )
 	}
 }
 
-struct cmd_account_del_data
+static void cmd_save( irc_t *irc, char **cmd )
 {
-	account_t *a;
-	irc_t *irc;
-};
-
-void cmd_account_del_yes( void *data )
-{
-	struct cmd_account_del_data *cad = data;
-	account_t *a;
-	
-	for( a = cad->irc->accounts; a && a != cad->a; a = a->next );
-	
-	if( a == NULL )
-	{
-		irc_usermsg( cad->irc, "Account already deleted" );
-	}
-	else if( a->ic )
-	{
-		irc_usermsg( cad->irc, "Account is still logged in, can't delete" );
-	}
+	if( ( irc->status & USTATUS_IDENTIFIED ) == 0 )
+		irc_usermsg( irc, "Please create an account first" );
+	else if( storage_save( irc, NULL, TRUE ) == STORAGE_OK )
+		irc_usermsg( irc, "Configuration saved" );
 	else
-	{
-		account_del( cad->irc, a );
-		irc_usermsg( cad->irc, "Account deleted" );
-	}
-	g_free( data );
-}
-
-void cmd_account_del_no( void *data )
-{
-	g_free( data );
+		irc_usermsg( irc, "Configuration could not be saved!" );
 }
 
 static void cmd_showset( irc_t *irc, set_t **head, char *key )
@@ -268,49 +273,24 @@ static void cmd_showset( irc_t *irc, set_t **head, char *key )
 typedef set_t** (*cmd_set_findhead)( irc_t*, char* );
 typedef int (*cmd_set_checkflags)( irc_t*, set_t *set );
 
-static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead, cmd_set_checkflags checkflags )
+static int cmd_set_real( irc_t *irc, char **cmd, set_t **head, cmd_set_checkflags checkflags )
 {
-	char *set_full = NULL, *set_name = NULL, *tmp;
-	set_t **head;
+	char *set_name = NULL, *value = NULL;
+	gboolean del = FALSE;
 	
 	if( cmd[1] && g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
 	{
 		MIN_ARGS( 2, 0 );
-		set_full = cmd[2];
+		set_name = cmd[2];
+		del = TRUE;
 	}
 	else
-		set_full = cmd[1];
-	
-	if( findhead == NULL )
 	{
-		set_name = set_full;
-		
-		head = &irc->set;
-	}
-	else 
-	{
-		char *id;
-		
-		if( ( tmp = strchr( set_full, '/' ) ) )
-		{
-			id = g_strndup( set_full, ( tmp - set_full ) );
-			set_name = tmp + 1;
-		}
-		else
-		{
-			id = g_strdup( set_full );
-		}
-		
-		if( ( head = findhead( irc, id ) ) == NULL )
-		{
-			g_free( id );
-			irc_usermsg( irc, "Could not find setting." );
-			return 0;
-		}
-		g_free( id );
+		set_name = cmd[1];
+		value = cmd[2];
 	}
 	
-	if( cmd[1] && cmd[2] && set_name )
+	if( set_name && ( value || del ) )
 	{
 		set_t *s = set_find( head, set_name );
 		int st;
@@ -318,13 +298,16 @@ static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead, cmd_
 		if( s && checkflags && checkflags( irc, s ) == 0 )
 			return 0;
 		
-		if( g_strncasecmp( cmd[1], "-del", 4 ) == 0 )
+		if( del )
 			st = set_reset( head, set_name );
 		else
-			st = set_setstr( head, set_name, cmd[2] );
+			st = set_setstr( head, set_name, value );
 		
 		if( set_getstr( head, set_name ) == NULL )
 		{
+			/* This happens when changing the passwd, for example.
+			   Showing these msgs instead gives slightly clearer
+			   feedback. */
 			if( st )
 				irc_usermsg( irc, "Setting changed successfully" );
 			else
@@ -352,16 +335,6 @@ static int cmd_set_real( irc_t *irc, char **cmd, cmd_set_findhead findhead, cmd_
 	return 1;
 }
 
-static set_t **cmd_account_set_findhead( irc_t *irc, char *id )
-{
-	account_t *a;
-	
-	if( ( a = account_get( irc, id ) ) )
-		return &a->set;
-	else
-		return NULL;
-}
-
 static int cmd_account_set_checkflags( irc_t *irc, set_t *s )
 {
 	account_t *a = s->data;
@@ -383,6 +356,7 @@ static int cmd_account_set_checkflags( irc_t *irc, set_t *s )
 static void cmd_account( irc_t *irc, char **cmd )
 {
 	account_t *a;
+	int len;
 	
 	if( global.conf->authmode == AUTHMODE_REGISTERED && !( irc->status & USTATUS_IDENTIFIED ) )
 	{
@@ -390,7 +364,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( g_strcasecmp( cmd[1], "add" ) == 0 )
+	len = strlen( cmd[1] );
+	
+	if( len >= 1 && g_strncasecmp( cmd[1], "add", len ) == 0 )
 	{
 		struct prpl *prpl;
 		
@@ -403,8 +379,14 @@ static void cmd_account( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Unknown protocol" );
 			return;
 		}
-
-		a = account_add( irc, prpl, cmd[3], cmd[4] );
+		
+		for( a = irc->b->accounts; a; a = a->next )
+			if( a->prpl == prpl && prpl->handle_cmp( a->user, cmd[3] ) == 0 )
+				irc_usermsg( irc, "Warning: You already have an account with "
+				             "protocol `%s' and username `%s'. Are you accidentally "
+				             "trying to add it twice?", prpl->name, cmd[3] );
+		
+		a = account_add( irc->b, prpl, cmd[3], cmd[4] );
 		if( cmd[5] )
 		{
 			irc_usermsg( irc, "Warning: Passing a servername/other flags to `account add' "
@@ -413,45 +395,17 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 		
 		irc_usermsg( irc, "Account successfully added" );
+		
+		return;
 	}
-	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
-	{
-		MIN_ARGS( 2 );
-
-		if( !( a = account_get( irc, cmd[2] ) ) )
-		{
-			irc_usermsg( irc, "Invalid account" );
-		}
-		else if( a->ic )
-		{
-			irc_usermsg( irc, "Account is still logged in, can't delete" );
-		}
-		else
-		{
-			struct cmd_account_del_data *cad;
-			char *msg;
-			
-			cad = g_malloc( sizeof( struct cmd_account_del_data ) );
-			cad->a = a;
-			cad->irc = irc;
-			
-			msg = g_strdup_printf( "If you remove this account (%s(%s)), BitlBee will "
-			                       "also forget all your saved nicknames. If you want "
-			                       "to change your username/password, use the `account "
-			                       "set' command. Are you sure you want to delete this "
-			                       "account?", a->prpl->name, a->user );
-			query_add( irc, NULL, msg, cmd_account_del_yes, cmd_account_del_no, cad );
-			g_free( msg );
-		}
-	}
-	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
+	else if( len >= 1 && g_strncasecmp( cmd[1], "list", len ) == 0 )
 	{
 		int i = 0;
 		
 		if( strchr( irc->umode, 'b' ) )
 			irc_usermsg( irc, "Account list:" );
 		
-		for( a = irc->accounts; a; a = a->next )
+		for( a = irc->b->accounts; a; a = a->next )
 		{
 			char *con;
 			
@@ -464,95 +418,180 @@ static void cmd_account( irc_t *irc, char **cmd )
 			else
 				con = "";
 			
-			irc_usermsg( irc, "%2d. %s, %s%s", i, a->prpl->name, a->user, con );
+			irc_usermsg( irc, "%2d (%s): %s, %s%s", i, a->tag, a->prpl->name, a->user, con );
 			
 			i ++;
 		}
 		irc_usermsg( irc, "End of account list" );
+		
+		return;
 	}
-	else if( g_strcasecmp( cmd[1], "on" ) == 0 )
+	else if( cmd[2] )
 	{
-		if( cmd[2] )
+		/* Try the following two only if cmd[2] == NULL */
+	}
+	else if( len >= 2 && g_strncasecmp( cmd[1], "on", len ) == 0 )
+	{
+		if ( irc->b->accounts )
 		{
-			if( ( a = account_get( irc, cmd[2] ) ) )
-			{
-				if( a->ic )
-				{
-					irc_usermsg( irc, "Account already online" );
-					return;
-				}
-				else
-				{
-					account_on( irc, a );
-				}
-			}
-			else
-			{
-				irc_usermsg( irc, "Invalid account" );
-				return;
-			}
-		}
+			irc_usermsg( irc, "Trying to get all accounts connected..." );
+		
+			for( a = irc->b->accounts; a; a = a->next )
+				if( !a->ic && a->auto_connect )
+					account_on( irc->b, a );
+		} 
 		else
 		{
-			if ( irc->accounts ) {
-				irc_usermsg( irc, "Trying to get all accounts connected..." );
-			
-				for( a = irc->accounts; a; a = a->next )
-					if( !a->ic && a->auto_connect )
-						account_on( irc, a );
-			} 
-			else
-			{
-				irc_usermsg( irc, "No accounts known. Use `account add' to add one." );
-			}
+			irc_usermsg( irc, "No accounts known. Use `account add' to add one." );
 		}
+		
+		return;
 	}
-	else if( g_strcasecmp( cmd[1], "off" ) == 0 )
+	else if( len >= 2 && g_strncasecmp( cmd[1], "off", len ) == 0 )
 	{
-		if( !cmd[2] )
-		{
-			irc_usermsg( irc, "Deactivating all active (re)connections..." );
-			
-			for( a = irc->accounts; a; a = a->next )
-			{
-				if( a->ic )
-					account_off( irc, a );
-				else if( a->reconnect )
-					cancel_auto_reconnect( a );
-			}
-		}
-		else if( ( a = account_get( irc, cmd[2] ) ) )
+		irc_usermsg( irc, "Deactivating all active (re)connections..." );
+		
+		for( a = irc->b->accounts; a; a = a->next )
 		{
 			if( a->ic )
-			{
-				account_off( irc, a );
-			}
+				account_off( irc->b, a );
 			else if( a->reconnect )
-			{
 				cancel_auto_reconnect( a );
-				irc_usermsg( irc, "Reconnect cancelled" );
-			}
-			else
-			{
-				irc_usermsg( irc, "Account already offline" );
-				return;
-			}
+		}
+		
+		return;
+	}
+	
+	MIN_ARGS( 2 );
+	len = strlen( cmd[2] );
+	
+	/* At least right now, don't accept on/off/set/del as account IDs even
+	   if they're a proper match, since people not familiar with the new
+	   syntax yet may get a confusing/nasty surprise. */
+	if( g_strcasecmp( cmd[1], "on" ) == 0 ||
+	    g_strcasecmp( cmd[1], "off" ) == 0 ||
+	    g_strcasecmp( cmd[1], "set" ) == 0 ||
+	    g_strcasecmp( cmd[1], "del" ) == 0 ||
+	    ( a = account_get( irc->b, cmd[1] ) ) == NULL )
+	{
+		irc_usermsg( irc, "Could not find account `%s'. Note that the syntax "
+		             "of the account command changed, see \x02help account\x02.", cmd[1] );
+		
+		return;
+	}
+	
+	if( len >= 1 && g_strncasecmp( cmd[2], "del", len ) == 0 )
+	{
+		if( a->ic )
+		{
+			irc_usermsg( irc, "Account is still logged in, can't delete" );
 		}
 		else
 		{
-			irc_usermsg( irc, "Invalid account" );
-			return;
+			account_del( irc->b, a );
+			irc_usermsg( irc, "Account deleted" );
 		}
 	}
-	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
+	else if( len >= 2 && g_strncasecmp( cmd[2], "on", len ) == 0 )
 	{
-		MIN_ARGS( 2 );
-		
-		cmd_set_real( irc, cmd + 1, cmd_account_set_findhead, cmd_account_set_checkflags );
+		if( a->ic )
+			irc_usermsg( irc, "Account already online" );
+		else
+			account_on( irc->b, a );
+	}
+	else if( len >= 2 && g_strncasecmp( cmd[2], "off", len ) == 0 )
+	{
+		if( a->ic )
+		{
+			account_off( irc->b, a );
+		}
+		else if( a->reconnect )
+		{
+			cancel_auto_reconnect( a );
+			irc_usermsg( irc, "Reconnect cancelled" );
+		}
+		else
+		{
+			irc_usermsg( irc, "Account already offline" );
+		}
+	}
+	else if( len >= 1 && g_strncasecmp( cmd[2], "set", len ) == 0 )
+	{
+		cmd_set_real( irc, cmd + 2, &a->set, cmd_account_set_checkflags );
 	}
 	else
 	{
-		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "account", cmd[1] );
+		irc_usermsg( irc, "Unknown command: %s [...] %s. Please use \x02help commands\x02 to get a list of available commands.", "account", cmd[2] );
+	}
+}
+
+static void cmd_channel( irc_t *irc, char **cmd )
+{
+	irc_channel_t *ic;
+	int len;
+	
+	len = strlen( cmd[1] );
+	
+	if( len >= 1 && g_strncasecmp( cmd[1], "list", len ) == 0 )
+	{
+		GSList *l;
+		int i = 0;
+		
+		if( strchr( irc->umode, 'b' ) )
+			irc_usermsg( irc, "Channel list:" );
+		
+		for( l = irc->channels; l; l = l->next )
+		{
+			irc_channel_t *ic = l->data;
+			
+			irc_usermsg( irc, "%2d. %s, %s channel%s", i, ic->name,
+			             set_getstr( &ic->set, "type" ),
+			             ic->flags & IRC_CHANNEL_JOINED ? " (joined)" : "" );
+			
+			i ++;
+		}
+		irc_usermsg( irc, "End of channel list" );
+		
+		return;
+	}
+	
+	if( ( ic = irc_channel_get( irc, cmd[1] ) ) == NULL )
+	{
+		/* If this doesn't match any channel, maybe this is the short
+		   syntax (only works when used inside a channel). */
+		if( ( len = strlen( cmd[1] ) ) &&
+		    g_strncasecmp( cmd[1], "set", len ) == 0 &&
+		    ( ic = irc_channel_by_name( irc, irc->last_root_cmd ) ) )
+			cmd_set_real( irc, cmd + 1, &ic->set, NULL );
+		else
+			irc_usermsg( irc, "Could not find channel `%s'", cmd[1] );
+		
+		return;
+	}
+	
+	MIN_ARGS( 2 );
+	len = strlen( cmd[2] );
+	
+	if( len >= 1 && g_strncasecmp( cmd[2], "set", len ) == 0 )
+	{
+		cmd_set_real( irc, cmd + 2, &ic->set, NULL );
+	}
+	else if( len >= 1 && g_strncasecmp( cmd[2], "del", len ) == 0 )
+	{
+		if( !( ic->flags & IRC_CHANNEL_JOINED ) &&
+		    ic != ic->irc->default_channel )
+		{
+			irc_usermsg( irc, "Channel %s deleted.", ic->name );
+			irc_channel_free( ic );
+		}
+		else
+			irc_usermsg( irc, "Couldn't remove channel (main channel %s or "
+			                  "channels you're still in cannot be deleted).",
+			                  irc->default_channel->name );
+	}
+	else
+	{
+		irc_usermsg( irc, "Unknown command: %s [...] %s. Please use \x02help commands\x02 to get a list of available commands.", "channel", cmd[1] );
 	}
 }
 
@@ -568,7 +607,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 		cmd ++;
 	}
 	
-	if( !( a = account_get( irc, cmd[1] ) ) )
+	if( !( a = account_get( irc->b, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
 		return;
@@ -586,26 +625,70 @@ static void cmd_add( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "The requested nick `%s' is invalid", cmd[3] );
 			return;
 		}
-		else if( user_find( irc, cmd[3] ) )
+		else if( irc_user_by_name( irc, cmd[3] ) )
 		{
 			irc_usermsg( irc, "The requested nick `%s' already exists", cmd[3] );
 			return;
 		}
 		else
 		{
-			nick_set( a, cmd[2], cmd[3] );
+			nick_set_raw( a, cmd[2], cmd[3] );
 		}
 	}
 	
 	if( add_on_server )
-		a->ic->acc->prpl->add_buddy( a->ic, cmd[2], NULL );
+	{
+		irc_channel_t *ic;
+		char *s, *group = NULL;;
+		
+		if( ( ic = irc_channel_by_name( irc, irc->last_root_cmd ) ) &&
+		    ( s = set_getstr( &ic->set, "fill_by" ) ) &&
+		    strcmp( s, "group" ) == 0 &&
+		    ( group = set_getstr( &ic->set, "group" ) ) )
+			irc_usermsg( irc, "Adding `%s' to contact list (group %s)",
+			             cmd[2], group );
+		else
+			irc_usermsg( irc, "Adding `%s' to contact list", cmd[2] );
+		
+		a->prpl->add_buddy( a->ic, cmd[2], group );
+	}
 	else
-		/* Yeah, officially this is a call-*back*... So if we just
-		   called add_buddy, we'll wait for the IM server to respond
-		   before we do this. */
-		imcb_add_buddy( a->ic, cmd[2], NULL );
+	{
+		bee_user_t *bu;
+		irc_user_t *iu;
+		
+		/* Only for add -tmp. For regular adds, this callback will
+		   be called once the IM server confirms. */
+		if( ( bu = bee_user_new( irc->b, a->ic, cmd[2], BEE_USER_LOCAL ) ) &&
+		    ( iu = bu->ui_data ) )
+			irc_usermsg( irc, "Temporarily assigned nickname `%s' "
+			             "to contact `%s'", iu->nick, cmd[2] );
+	}
 	
-	irc_usermsg( irc, "Adding `%s' to your contact list", cmd[2]  );
+}
+
+static void cmd_remove( irc_t *irc, char **cmd )
+{
+	irc_user_t *iu;
+	bee_user_t *bu;
+	char *s;
+	
+	if( !( iu = irc_user_by_name( irc, cmd[1] ) ) || !( bu = iu->bu ) )
+	{
+		irc_usermsg( irc, "Buddy `%s' not found", cmd[1] );
+		return;
+	}
+	s = g_strdup( bu->handle );
+	
+	bu->ic->acc->prpl->remove_buddy( bu->ic, bu->handle, NULL );
+	nick_del( bu );
+	if( g_slist_find( irc->users, iu ) )
+		bee_user_free( irc->b, bu );
+	
+	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
+	g_free( s );
+	
+	return;
 }
 
 static void cmd_info( irc_t *irc, char **cmd )
@@ -615,16 +698,16 @@ static void cmd_info( irc_t *irc, char **cmd )
 	
 	if( !cmd[2] )
 	{
-		user_t *u = user_find( irc, cmd[1] );
-		if( !u || !u->ic )
+		irc_user_t *iu = irc_user_by_name( irc, cmd[1] );
+		if( !iu || !iu->bu )
 		{
 			irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 			return;
 		}
-		ic = u->ic;
-		cmd[2] = u->handle;
+		ic = iu->bu->ic;
+		cmd[2] = iu->bu->handle;
 	}
-	else if( !( a = account_get( irc, cmd[1] ) ) )
+	else if( !( a = account_get( irc->b, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
 		return;
@@ -647,56 +730,44 @@ static void cmd_info( irc_t *irc, char **cmd )
 
 static void cmd_rename( irc_t *irc, char **cmd )
 {
-	user_t *u;
+	irc_user_t *iu, *old;
 	
-	if( g_strcasecmp( cmd[1], irc->nick ) == 0 )
+	iu = irc_user_by_name( irc, cmd[1] );
+	
+	if( iu == NULL )
 	{
-		irc_usermsg( irc, "Nick `%s' can't be changed", cmd[1] );
+		irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 	}
-	else if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
+	else if( iu == irc->user )
 	{
-		if( strchr( CTYPES, cmd[2][0] ) && nick_ok( cmd[2] + 1 ) )
-		{
-			u = user_find( irc, irc->nick );
-			
-			irc_part( irc, u, irc->channel );
-			g_free( irc->channel );
-			irc->channel = g_strdup( cmd[2] );
-			irc_join( irc, u, irc->channel );
-			
-			if( strcmp( cmd[0], "set_rename" ) != 0 )
-				set_setstr( &irc->set, "control_channel", cmd[2] );
-		}
-	}
-	else if( user_find( irc, cmd[2] ) && ( nick_cmp( cmd[1], cmd[2] ) != 0 ) )
-	{
-		irc_usermsg( irc, "Nick `%s' already exists", cmd[2] );
+		irc_usermsg( irc, "Use /nick to change your own nickname" );
 	}
 	else if( !nick_ok( cmd[2] ) )
 	{
 		irc_usermsg( irc, "Nick `%s' is invalid", cmd[2] );
 	}
-	else if( !( u = user_find( irc, cmd[1] ) ) )
+	else if( ( old = irc_user_by_name( irc, cmd[2] ) ) && old != iu )
 	{
-		irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
+		irc_usermsg( irc, "Nick `%s' already exists", cmd[2] );
 	}
 	else
 	{
-		user_rename( irc, cmd[1], cmd[2] );
-		irc_write( irc, ":%s!%s@%s NICK %s", cmd[1], u->user, u->host, cmd[2] );
-		if( g_strcasecmp( cmd[1], irc->mynick ) == 0 )
+		if( !irc_user_set_nick( iu, cmd[2] ) )
 		{
-			g_free( irc->mynick );
-			irc->mynick = g_strdup( cmd[2] );
-			
+			irc_usermsg( irc, "Error while changing nick" );
+			return;
+		}
+		
+		if( iu == irc->root )
+		{
 			/* If we're called internally (user did "set root_nick"),
 			   let's not go O(INF). :-) */
 			if( strcmp( cmd[0], "set_rename" ) != 0 )
-				set_setstr( &irc->set, "root_nick", cmd[2] );
+				set_setstr( &irc->b->set, "root_nick", cmd[2] );
 		}
-		else if( u->send_handler == buddy_send_handler )
+		else if( iu->bu )
 		{
-			nick_set( u->ic->acc, u->handle, cmd[2] );
+			nick_set( iu->bu, cmd[2] );
 		}
 		
 		irc_usermsg( irc, "Nick successfully changed" );
@@ -707,50 +778,14 @@ char *set_eval_root_nick( set_t *set, char *new_nick )
 {
 	irc_t *irc = set->data;
 	
-	if( strcmp( irc->mynick, new_nick ) != 0 )
+	if( strcmp( irc->root->nick, new_nick ) != 0 )
 	{
-		char *cmd[] = { "set_rename", irc->mynick, new_nick, NULL };
+		char *cmd[] = { "set_rename", irc->root->nick, new_nick, NULL };
 		
 		cmd_rename( irc, cmd );
 	}
 	
-	return strcmp( irc->mynick, new_nick ) == 0 ? new_nick : SET_INVALID;
-}
-
-char *set_eval_control_channel( set_t *set, char *new_name )
-{
-	irc_t *irc = set->data;
-	
-	if( strcmp( irc->channel, new_name ) != 0 )
-	{
-		char *cmd[] = { "set_rename", irc->channel, new_name, NULL };
-		
-		cmd_rename( irc, cmd );
-	}
-	
-	return strcmp( irc->channel, new_name ) == 0 ? new_name : SET_INVALID;
-}
-
-static void cmd_remove( irc_t *irc, char **cmd )
-{
-	user_t *u;
-	char *s;
-	
-	if( !( u = user_find( irc, cmd[1] ) ) || !u->ic )
-	{
-		irc_usermsg( irc, "Buddy `%s' not found", cmd[1] );
-		return;
-	}
-	s = g_strdup( u->handle );
-	
-	u->ic->acc->prpl->remove_buddy( u->ic, u->handle, NULL );
-	nick_del( u->ic->acc, u->handle );
-	user_del( irc, cmd[1] );
-	
-	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
-	g_free( s );
-	
-	return;
+	return strcmp( irc->root->nick, new_nick ) == 0 ? new_nick : SET_INVALID;
 }
 
 static void cmd_block( irc_t *irc, char **cmd )
@@ -758,7 +793,7 @@ static void cmd_block( irc_t *irc, char **cmd )
 	struct im_connection *ic;
 	account_t *a;
 	
-	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->ic )
+	if( !cmd[2] && ( a = account_get( irc->b, cmd[1] ) ) && a->ic )
 	{
 		char *format;
 		GSList *l;
@@ -771,8 +806,9 @@ static void cmd_block( irc_t *irc, char **cmd )
 		irc_usermsg( irc, format, "Handle", "Nickname" );
 		for( l = a->ic->deny; l; l = l->next )
 		{
-			user_t *u = user_findhandle( a->ic, l->data );
-			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+			bee_user_t *bu = bee_user_by_handle( irc->b, a->ic, l->data );
+			irc_user_t *iu = bu ? bu->ui_data : NULL;
+			irc_usermsg( irc, format, l->data, iu ? iu->nick : "(none)" );
 		}
 		irc_usermsg( irc, "End of list." );
 		
@@ -780,16 +816,16 @@ static void cmd_block( irc_t *irc, char **cmd )
 	}
 	else if( !cmd[2] )
 	{
-		user_t *u = user_find( irc, cmd[1] );
-		if( !u || !u->ic )
+		irc_user_t *iu = irc_user_by_name( irc, cmd[1] );
+		if( !iu || !iu->bu )
 		{
 			irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 			return;
 		}
-		ic = u->ic;
-		cmd[2] = u->handle;
+		ic = iu->bu->ic;
+		cmd[2] = iu->bu->handle;
 	}
-	else if( !( a = account_get( irc, cmd[1] ) ) )
+	else if( !( a = account_get( irc->b, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
 		return;
@@ -808,7 +844,7 @@ static void cmd_block( irc_t *irc, char **cmd )
 	{
 		imc_rem_allow( ic, cmd[2] );
 		imc_add_block( ic, cmd[2] );
-		irc_usermsg( irc, "Buddy `%s' moved from your allow- to your block-list", cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from allow- to block-list", cmd[2] );
 	}
 }
 
@@ -817,7 +853,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	struct im_connection *ic;
 	account_t *a;
 	
-	if( !cmd[2] && ( a = account_get( irc, cmd[1] ) ) && a->ic )
+	if( !cmd[2] && ( a = account_get( irc->b, cmd[1] ) ) && a->ic )
 	{
 		char *format;
 		GSList *l;
@@ -830,8 +866,9 @@ static void cmd_allow( irc_t *irc, char **cmd )
 		irc_usermsg( irc, format, "Handle", "Nickname" );
 		for( l = a->ic->permit; l; l = l->next )
 		{
-			user_t *u = user_findhandle( a->ic, l->data );
-			irc_usermsg( irc, format, l->data, u ? u->nick : "(none)" );
+			bee_user_t *bu = bee_user_by_handle( irc->b, a->ic, l->data );
+			irc_user_t *iu = bu ? bu->ui_data : NULL;
+			irc_usermsg( irc, format, l->data, iu ? iu->nick : "(none)" );
 		}
 		irc_usermsg( irc, "End of list." );
 		
@@ -839,16 +876,16 @@ static void cmd_allow( irc_t *irc, char **cmd )
 	}
 	else if( !cmd[2] )
 	{
-		user_t *u = user_find( irc, cmd[1] );
-		if( !u || !u->ic )
+		irc_user_t *iu = irc_user_by_name( irc, cmd[1] );
+		if( !iu || !iu->bu )
 		{
 			irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 			return;
 		}
-		ic = u->ic;
-		cmd[2] = u->handle;
+		ic = iu->bu->ic;
+		cmd[2] = iu->bu->handle;
 	}
-	else if( !( a = account_get( irc, cmd[1] ) ) )
+	else if( !( a = account_get( irc->b, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
 		return;
@@ -868,7 +905,7 @@ static void cmd_allow( irc_t *irc, char **cmd )
 		imc_rem_block( ic, cmd[2] );
 		imc_add_allow( ic, cmd[2] );
 		
-		irc_usermsg( irc, "Buddy `%s' moved from your block- to your allow-list", cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from block- to allow-list", cmd[2] );
 	}
 }
 
@@ -912,23 +949,13 @@ static void cmd_yesno( irc_t *irc, char **cmd )
 
 static void cmd_set( irc_t *irc, char **cmd )
 {
-	cmd_set_real( irc, cmd, NULL, NULL );
-}
-
-static void cmd_save( irc_t *irc, char **cmd )
-{
-	if( ( irc->status & USTATUS_IDENTIFIED ) == 0 )
-		irc_usermsg( irc, "Please create an account first" );
-	else if( storage_save( irc, NULL, TRUE ) == STORAGE_OK )
-		irc_usermsg( irc, "Configuration saved" );
-	else
-		irc_usermsg( irc, "Configuration could not be saved!" );
+	cmd_set_real( irc, cmd, &irc->b->set, NULL );
 }
 
 static void cmd_blist( irc_t *irc, char **cmd )
 {
 	int online = 0, away = 0, offline = 0;
-	user_t *u;
+	GSList *l;
 	char s[256];
 	char *format;
 	int n_online = 0, n_away = 0, n_offline = 0;
@@ -949,73 +976,63 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	else
 		format = "%-16.16s  %-40.40s  %s";
 	
-	irc_usermsg( irc, format, "Nick", "User/Host/Network", "Status" );
+	irc_usermsg( irc, format, "Nick", "Handle/Account", "Status" );
 	
-	for( u = irc->users; u; u = u->next ) if( u->ic && u->online && !u->away )
+	for( l = irc->users; l; l = l->next )
 	{
+		irc_user_t *iu = l->data;
+		bee_user_t *bu = iu->bu;
+		
+		if( !bu || ( bu->flags & ( BEE_USER_ONLINE | BEE_USER_AWAY ) ) != BEE_USER_ONLINE )
+			continue;
+		
 		if( online == 1 )
 		{
 			char st[256] = "Online";
 			
-			if( u->status_msg )
-				g_snprintf( st, sizeof( st ) - 1, "Online (%s)", u->status_msg );
+			if( bu->status_msg )
+				g_snprintf( st, sizeof( st ) - 1, "Online (%s)", bu->status_msg );
 			
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
-			irc_usermsg( irc, format, u->nick, s, st );
+			g_snprintf( s, sizeof( s ) - 1, "%s %s(%s)", bu->handle, bu->ic->acc->prpl->name, bu->ic->acc->user );
+			irc_usermsg( irc, format, iu->nick, s, st );
 		}
 		
 		n_online ++;
 	}
 
-	for( u = irc->users; u; u = u->next ) if( u->ic && u->online && u->away )
+	for( l = irc->users; l; l = l->next )
 	{
+		irc_user_t *iu = l->data;
+		bee_user_t *bu = iu->bu;
+		
+		if( !bu || !( bu->flags & BEE_USER_ONLINE ) || !( bu->flags & BEE_USER_AWAY ) )
+			continue;
+		
 		if( away == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
-			irc_usermsg( irc, format, u->nick, s, u->away );
+			g_snprintf( s, sizeof( s ) - 1, "%s %s(%s)", bu->handle, bu->ic->acc->prpl->name, bu->ic->acc->user );
+			irc_usermsg( irc, format, iu->nick, s, irc_user_get_away( iu ) );
 		}
 		n_away ++;
 	}
 	
-	for( u = irc->users; u; u = u->next ) if( u->ic && !u->online )
+	for( l = irc->users; l; l = l->next )
 	{
+		irc_user_t *iu = l->data;
+		bee_user_t *bu = iu->bu;
+		
+		if( !bu || bu->flags & BEE_USER_ONLINE )
+			continue;
+		
 		if( offline == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s@%s %s(%s)", u->user, u->host, u->ic->acc->prpl->name, u->ic->acc->user );
-			irc_usermsg( irc, format, u->nick, s, "Offline" );
+			g_snprintf( s, sizeof( s ) - 1, "%s %s(%s)", bu->handle, bu->ic->acc->prpl->name, bu->ic->acc->user );
+			irc_usermsg( irc, format, iu->nick, s, "Offline" );
 		}
 		n_offline ++;
 	}
 	
 	irc_usermsg( irc, "%d buddies (%d available, %d away, %d offline)", n_online + n_away + n_offline, n_online, n_away, n_offline );
-}
-
-static void cmd_nick( irc_t *irc, char **cmd ) 
-{
-	account_t *a;
-
-	if( !cmd[1] || !( a = account_get( irc, cmd[1] ) ) )
-	{
-		irc_usermsg( irc, "Invalid account");
-	}
-	else if( !( a->ic && ( a->ic->flags & OPT_LOGGED_IN ) ) )
-	{
-		irc_usermsg( irc, "That account is not on-line" );
-	}
-	else if ( !cmd[2] ) 
-	{
-		irc_usermsg( irc, "Your name is `%s'" , a->ic->displayname ? a->ic->displayname : "NULL" );
-	}
-	else if ( !a->prpl->set_my_name ) 
-	{
-		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
-	}
-	else
-	{
-		irc_usermsg( irc, "Setting your name to `%s'", cmd[2] );
-		
-		a->prpl->set_my_name( a->ic, cmd[2] );
-	}
 }
 
 static void cmd_qlist( irc_t *irc, char **cmd )
@@ -1038,36 +1055,25 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "%d, BitlBee: %s", num, q->question );
 }
 
-static void cmd_join_chat( irc_t *irc, char **cmd )
-{
-	irc_usermsg( irc, "This command is now obsolete. "
-	                  "Please try the `chat' command instead." );
-}
-
-static set_t **cmd_chat_set_findhead( irc_t *irc, char *id )
-{
-	struct chat *c;
-	
-	if( ( c = chat_get( irc, id ) ) )
-		return &c->set;
-	else
-		return NULL;
-}
-
 static void cmd_chat( irc_t *irc, char **cmd )
 {
 	account_t *acc;
-	struct chat *c;
 	
 	if( g_strcasecmp( cmd[1], "add" ) == 0 )
 	{
 		char *channel, *s;
+		struct irc_channel *ic;
 		
 		MIN_ARGS( 3 );
 		
-		if( !( acc = account_get( irc, cmd[2] ) ) )
+		if( !( acc = account_get( irc->b, cmd[2] ) ) )
 		{
 			irc_usermsg( irc, "Invalid account" );
+			return;
+		}
+		else if( !acc->prpl->chat_join )
+		{
+			irc_usermsg( irc, "Named chatrooms not supported on that account." );
 			return;
 		}
 		
@@ -1084,65 +1090,43 @@ static void cmd_chat( irc_t *irc, char **cmd )
 		
 		if( strchr( CTYPES, channel[0] ) == NULL )
 		{
-			s = g_strdup_printf( "%c%s", CTYPES[0], channel );
+			s = g_strdup_printf( "#%s", channel );
 			g_free( channel );
 			channel = s;
-		}
-		
-		if( ( c = chat_add( irc, acc, cmd[3], channel ) ) )
-			irc_usermsg( irc, "Chatroom added successfully." );
-		else
-			irc_usermsg( irc, "Could not add chatroom." );
-		
-		g_free( channel );
-	}
-	else if( g_strcasecmp( cmd[1], "list" ) == 0 )
-	{
-		int i = 0;
-		
-		if( strchr( irc->umode, 'b' ) )
-			irc_usermsg( irc, "Chatroom list:" );
-		
-		for( c = irc->chatrooms; c; c = c->next )
-		{
-			irc_usermsg( irc, "%2d. %s(%s) %s, %s", i, c->acc->prpl->name,
-			                  c->acc->user, c->handle, c->channel );
 			
-			i ++;
+			irc_channel_name_strip( channel );
 		}
-		irc_usermsg( irc, "End of chatroom list" );
-	}
-	else if( g_strcasecmp( cmd[1], "set" ) == 0 )
-	{
-		MIN_ARGS( 2 );
 		
-		cmd_set_real( irc, cmd + 1, cmd_chat_set_findhead, NULL );
-	}
-	else if( g_strcasecmp( cmd[1], "del" ) == 0 )
-	{
-		MIN_ARGS( 2 );
-		
-		if( ( c = chat_get( irc, cmd[2] ) ) )
+		if( ( ic = irc_channel_new( irc, channel ) ) &&
+		    set_setstr( &ic->set, "type", "chat" ) &&
+		    set_setstr( &ic->set, "chat_type", "room" ) &&
+		    set_setstr( &ic->set, "account", cmd[2] ) &&
+		    set_setstr( &ic->set, "room", cmd[3] ) )
 		{
-			chat_del( irc, c );
+			irc_usermsg( irc, "Chatroom successfully added." );
 		}
 		else
 		{
-			irc_usermsg( irc, "Could not remove chat." );
+			if( ic )
+				irc_channel_free( ic );
+			
+			irc_usermsg( irc, "Could not add chatroom." );
 		}
+		g_free( channel );
 	}
 	else if( g_strcasecmp( cmd[1], "with" ) == 0 )
 	{
-		user_t *u;
+		irc_user_t *iu;
 		
 		MIN_ARGS( 2 );
 		
-		if( ( u = user_find( irc, cmd[2] ) ) && u->ic && u->ic->acc->prpl->chat_with )
+		if( ( iu = irc_user_by_name( irc, cmd[2] ) ) &&
+		    iu->bu && iu->bu->ic->acc->prpl->chat_with )
 		{
-			if( !u->ic->acc->prpl->chat_with( u->ic, u->handle ) )
+			if( !iu->bu->ic->acc->prpl->chat_with( iu->bu->ic, iu->bu->handle ) )
 			{
 				irc_usermsg( irc, "(Possible) failure while trying to open "
-				                  "a groupchat with %s.", u->nick );
+				                  "a groupchat with %s.", iu->nick );
 			}
 		}
 		else
@@ -1150,32 +1134,130 @@ static void cmd_chat( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Can't open a groupchat with %s.", cmd[2] );
 		}
 	}
+	else if( g_strcasecmp( cmd[1], "list" ) == 0 ||
+	         g_strcasecmp( cmd[1], "set" ) == 0 ||
+	         g_strcasecmp( cmd[1], "del" ) == 0 )
+	{
+		irc_usermsg( irc, "Warning: The \002chat\002 command was mostly replaced with the \002channel\002 command." );
+		cmd_channel( irc, cmd );
+	}
 	else
 	{
 		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat", cmd[1] );
 	}
 }
 
+static void cmd_group( irc_t *irc, char **cmd )
+{
+	GSList *l;
+	int len;
+	
+	len = strlen( cmd[1] );
+	if( g_strncasecmp( cmd[1], "list", len ) == 0 )
+	{
+		int n = 0;
+		
+		if( strchr( irc->umode, 'b' ) )
+			irc_usermsg( irc, "Group list:" );
+		
+		for( l = irc->b->groups; l; l = l->next )
+		{
+			bee_group_t *bg = l->data;
+			irc_usermsg( irc, "%d. %s", n ++, bg->name );
+		}
+		irc_usermsg( irc, "End of group list" );
+	}
+	else
+	{
+		irc_usermsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "group", cmd[1] );
+	}
+}
+
+static void cmd_transfer( irc_t *irc, char **cmd )
+{
+	GSList *files = irc->file_transfers;
+	enum { LIST, REJECT, CANCEL };
+	int subcmd = LIST;
+	int fid;
+
+	if( !files )
+	{
+		irc_usermsg( irc, "No pending transfers" );
+		return;
+	}
+
+	if( cmd[1] && ( strcmp( cmd[1], "reject" ) == 0 ) )
+	{
+		subcmd = REJECT;
+	}
+	else if( cmd[1] && ( strcmp( cmd[1], "cancel" ) == 0 ) && 
+		 cmd[2] && ( sscanf( cmd[2], "%d", &fid ) == 1 ) )
+	{
+		subcmd = CANCEL;
+	}
+
+	for( ; files; files = g_slist_next( files ) )
+	{
+		file_transfer_t *file = files->data;
+		
+		switch( subcmd ) {
+		case LIST:
+			if ( file->status == FT_STATUS_LISTENING )
+				irc_usermsg( irc, 
+					"Pending file(id %d): %s (Listening...)", file->local_id, file->file_name);
+			else 
+			{
+				int kb_per_s = 0;
+				time_t diff = time( NULL ) - file->started ? : 1;
+				if ( ( file->started > 0 ) && ( file->bytes_transferred > 0 ) )
+					kb_per_s = file->bytes_transferred / 1024 / diff;
+					
+				irc_usermsg( irc, 
+					"Pending file(id %d): %s (%10zd/%zd kb, %d kb/s)", file->local_id, file->file_name, 
+					file->bytes_transferred/1024, file->file_size/1024, kb_per_s);
+			}
+			break;
+		case REJECT:
+			if( file->status == FT_STATUS_LISTENING )
+			{
+				irc_usermsg( irc, "Rejecting file transfer for %s", file->file_name );
+				imcb_file_canceled( file->ic, file, "Denied by user" );
+			}
+			break;
+		case CANCEL:
+			if( file->local_id == fid )
+			{
+				irc_usermsg( irc, "Canceling file transfer for %s", file->file_name );
+				imcb_file_canceled( file->ic, file, "Canceled by user" );
+			}
+			break;
+		}
+	}
+}
+
+/* IMPORTANT: Keep this list sorted! The short command logic needs that. */
 const command_t commands[] = {
-	{ "help",           0, cmd_help,           0 }, 
-	{ "identify",       1, cmd_identify,       0 },
-	{ "register",       1, cmd_register,       0 },
-	{ "drop",           1, cmd_drop,           0 },
 	{ "account",        1, cmd_account,        0 },
 	{ "add",            2, cmd_add,            0 },
-	{ "info",           1, cmd_info,           0 },
-	{ "rename",         2, cmd_rename,         0 },
-	{ "remove",         1, cmd_remove,         0 },
-	{ "block",          1, cmd_block,          0 },
 	{ "allow",          1, cmd_allow,          0 },
+	{ "blist",          0, cmd_blist,          0 },
+	{ "block",          1, cmd_block,          0 },
+	{ "channel",        1, cmd_channel,        0 },
+	{ "chat",           1, cmd_chat,           0 },
+	{ "drop",           1, cmd_drop,           0 },
+	{ "ft",             0, cmd_transfer,       0 },
+	{ "group",          1, cmd_group,          0 },
+	{ "help",           0, cmd_help,           0 }, 
+	{ "identify",       1, cmd_identify,       0 },
+	{ "info",           1, cmd_info,           0 },
+	{ "no",             0, cmd_yesno,          0 },
+	{ "qlist",          0, cmd_qlist,          0 },
+	{ "register",       1, cmd_register,       0 },
+	{ "remove",         1, cmd_remove,         0 },
+	{ "rename",         2, cmd_rename,         0 },
 	{ "save",           0, cmd_save,           0 },
 	{ "set",            0, cmd_set,            0 },
+	{ "transfer",       0, cmd_transfer,       0 },
 	{ "yes",            0, cmd_yesno,          0 },
-	{ "no",             0, cmd_yesno,          0 },
-	{ "blist",          0, cmd_blist,          0 },
-	{ "nick",           1, cmd_nick,           0 },
-	{ "qlist",          0, cmd_qlist,          0 },
-	{ "join_chat",      2, cmd_join_chat,      0 },
-	{ "chat",           1, cmd_chat,           0 },
 	{ NULL }
 };

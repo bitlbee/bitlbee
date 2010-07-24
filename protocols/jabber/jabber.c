@@ -64,6 +64,8 @@ static void jabber_init( account_t *acc )
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
 	s = set_add( &acc->set, "priority", "0", set_eval_priority, acc );
+
+	s = set_add( &acc->set, "proxy", "<local>;<auto>", NULL, acc );
 	
 	s = set_add( &acc->set, "resource", "BitlBee", NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -265,11 +267,23 @@ static void jabber_logout( struct im_connection *ic )
 {
 	struct jabber_data *jd = ic->proto_data;
 	
+	while( jd->filetransfers )
+		imcb_file_canceled( ic, ( ( struct jabber_transfer *) jd->filetransfers->data )->ft, "Logging out" );
+
+	while( jd->streamhosts )
+	{
+		jabber_streamhost_t *sh = jd->streamhosts->data;
+		jd->streamhosts = g_slist_remove( jd->streamhosts, sh );
+		g_free( sh->jid );
+		g_free( sh->host );
+		g_free( sh );
+	}
+
 	if( jd->fd >= 0 )
 		jabber_end_stream( ic );
 	
 	while( ic->groupchats )
-		jabber_chat_free( ic->groupchats );
+		jabber_chat_free( ic->groupchats->data );
 	
 	if( jd->r_inpa >= 0 )
 		b_event_remove( jd->r_inpa );
@@ -400,7 +414,7 @@ static void jabber_add_buddy( struct im_connection *ic, char *who, char *group )
 		return;
 	}
 	
-	if( jabber_add_to_roster( ic, who, NULL ) )
+	if( jabber_add_to_roster( ic, who, NULL, group ) )
 		presence_send_request( ic, who, "subscribe" );
 }
 
@@ -426,7 +440,7 @@ static void jabber_remove_buddy( struct im_connection *ic, char *who, char *grou
 		presence_send_request( ic, who, "unsubscribe" );
 }
 
-static struct groupchat *jabber_chat_join_( struct im_connection *ic, const char *room, const char *nick, const char *password )
+static struct groupchat *jabber_chat_join_( struct im_connection *ic, const char *room, const char *nick, const char *password, set_t **sets )
 {
 	if( strchr( room, '@' ) == NULL )
 		imcb_error( ic, "Invalid room name: %s", room );
@@ -548,6 +562,7 @@ void jabber_initmodule()
 	ret->keepalive = jabber_keepalive;
 	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;
+	ret->transfer_request = jabber_si_transfer_request;
 
 	register_protocol( ret );
 }

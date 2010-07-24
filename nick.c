@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2007 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Some stuff to fetch, save and handle nicknames for your buddies      */
@@ -26,6 +26,12 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
+/* Character maps, _lc_[x] == _uc_[x] (but uppercase), according to the RFC's.
+   With one difference, we allow dashes. These are used to do uc/lc conversions
+   and strip invalid chars. */
+static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^`-_|";
+static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~`-_\\";
+
 /* Store handles in lower case and strip spaces, because AIM is braindead. */
 static char *clean_handle( const char *orig )
 {
@@ -41,61 +47,180 @@ static char *clean_handle( const char *orig )
 	return new;
 }
 
-void nick_set( account_t *acc, const char *handle, const char *nick )
+void nick_set_raw( account_t *acc, const char *handle, const char *nick )
 {
 	char *store_handle, *store_nick = g_malloc( MAX_NICK_LENGTH + 1 );
 	
 	store_handle = clean_handle( handle );
-	store_nick[MAX_NICK_LENGTH] = 0;
+	store_nick[MAX_NICK_LENGTH] = '\0';
 	strncpy( store_nick, nick, MAX_NICK_LENGTH );
 	nick_strip( store_nick );
 	
 	g_hash_table_replace( acc->nicks, store_handle, store_nick );
 }
 
-char *nick_get( account_t *acc, const char *handle )
+void nick_set( bee_user_t *bu, const char *nick )
+{
+	nick_set_raw( bu->ic->acc, bu->handle, nick );
+}
+
+char *nick_get( bee_user_t *bu )
 {
 	static char nick[MAX_NICK_LENGTH+1];
 	char *store_handle, *found_nick;
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	
-	store_handle = clean_handle( handle );
+	store_handle = clean_handle( bu->handle );
 	/* Find out if we stored a nick for this person already. If not, try
 	   to generate a sane nick automatically. */
-	if( ( found_nick = g_hash_table_lookup( acc->nicks, store_handle ) ) )
+	if( ( found_nick = g_hash_table_lookup( bu->ic->acc->nicks, store_handle ) ) )
 	{
 		strncpy( nick, found_nick, MAX_NICK_LENGTH );
 	}
+	else if( ( found_nick = nick_gen( bu ) ) )
+	{
+		strncpy( nick, found_nick, MAX_NICK_LENGTH );
+		g_free( found_nick );
+	}
 	else
 	{
+		/* Keep this fallback since nick_gen() can return NULL in some cases. */
 		char *s;
 		
-		g_snprintf( nick, MAX_NICK_LENGTH, "%s", handle );
+		g_snprintf( nick, MAX_NICK_LENGTH, "%s", bu->handle );
 		if( ( s = strchr( nick, '@' ) ) )
 			while( *s )
 				*(s++) = 0;
 		
 		nick_strip( nick );
-		if( set_getbool( &acc->irc->set, "lcnicks" ) )
+		if( set_getbool( &bu->bee->set, "lcnicks" ) )
 			nick_lc( nick );
 	}
 	g_free( store_handle );
 	
 	/* Make sure the nick doesn't collide with an existing one by adding
 	   underscores and that kind of stuff, if necessary. */
-	nick_dedupe( acc, handle, nick );
+	nick_dedupe( bu, nick );
 	
 	return nick;
 }
 
-void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+1] )
+char *nick_gen( bee_user_t *bu )
 {
+	gboolean ok = FALSE; /* Set to true once the nick contains something unique. */
+	GString *ret = g_string_new( "" );
+	char *fmt = set_getstr( &bu->ic->acc->set, "nick_format" ) ? :
+	            set_getstr( &bu->bee->set, "nick_format" );
+	
+	while( fmt && *fmt && ret->len < MAX_NICK_LENGTH )
+	{
+		char *part, chop = '\0', *asc = NULL;
+		int len = MAX_NICK_LENGTH;
+		
+		if( *fmt != '%' )
+		{
+			g_string_append_c( ret, *fmt );
+			fmt ++;
+			continue;
+		}
+		
+		fmt ++;
+		while( *fmt )
+		{
+			/* -char means chop off everything from char */
+			if( *fmt == '-' )
+			{
+				chop = fmt[1];
+				if( chop == '\0' )
+					return NULL;
+				fmt += 2;
+			}
+			else if( isdigit( *fmt ) )
+			{
+				len = 0;
+				/* Grab a number. */
+				while( isdigit( *fmt ) )
+					len = len * 10 + ( *(fmt++) - '0' );
+			}
+			else if( g_strncasecmp( fmt, "nick", 4 ) == 0 )
+			{
+				part = bu->nick ? : bu->handle;
+				fmt += 4;
+				ok |= TRUE;
+				break;
+			}
+			else if( g_strncasecmp( fmt, "handle", 6 ) == 0 )
+			{
+				part = bu->handle;
+				fmt += 6;
+				ok |= TRUE;
+				break;
+			}
+			else if( g_strncasecmp( fmt, "full_name", 9 ) == 0 )
+			{
+				part = bu->fullname;
+				fmt += 9;
+				ok |= part && *part;
+				break;
+			}
+			else if( g_strncasecmp( fmt, "first_name", 10 ) == 0 )
+			{
+				part = bu->fullname;
+				fmt += 10;
+				ok |= part && *part;
+				chop = ' ';
+				break;
+			}
+			else if( g_strncasecmp( fmt, "group", 5 ) == 0 )
+			{
+				part = bu->group ? bu->group->name : NULL;
+				fmt += 5;
+				break;
+			}
+			else
+			{
+				return NULL;
+			}
+		}
+		
+		/* Credits to Josay_ in #bitlbee for this idea. //TRANSLIT
+		   should do lossy/approximate conversions, so letters with
+		   accents don't just get stripped. Note that it depends on
+		   LC_CTYPE being set to something other than C/POSIX. */
+		if( part )
+			part = asc = g_convert( part, -1, "ASCII//TRANSLIT//IGNORE",
+			                        "UTF-8", NULL, NULL, NULL );
+		
+		if( ret->len == 0 && part && isdigit( *part ) )
+			g_string_append_c( ret, '_' );
+		
+		while( part && *part && *part != chop && len > 0 )
+		{
+			if( strchr( nick_lc_chars, *part ) ||
+			    strchr( nick_uc_chars, *part ) )
+				g_string_append_c( ret, *part );
+			
+			part ++;
+			len --;
+		}
+		g_free( asc );
+	}
+	
+	/* This returns NULL if the nick is empty or otherwise not ok. */
+	return g_string_free( ret, ret->len == 0 || !ok );
+}
+
+void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] )
+{
+	irc_t *irc = (irc_t*) bu->bee->ui_data;
 	int inf_protection = 256;
+	irc_user_t *iu;
 	
 	/* Now, find out if the nick is already in use at the moment, and make
 	   subtle changes to make it unique. */
-	while( !nick_ok( nick ) || user_find( acc->irc, nick ) )
+	while( !nick_ok( nick ) ||
+	       ( ( iu = irc_user_by_name( irc, nick ) ) && iu->bu != bu ) )
 	{
 		if( strlen( nick ) < ( MAX_NICK_LENGTH - 1 ) )
 		{
@@ -111,19 +236,19 @@ void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+
 		{
 			int i;
 			
-			irc_usermsg( acc->irc, "Warning: Almost had an infinite loop in nick_get()! "
-			                       "This used to be a fatal BitlBee bug, but we tried to fix it. "
-			                       "This message should *never* appear anymore. "
-			                       "If it does, please *do* send us a bug report! "
-			                       "Please send all the following lines in your report:" );
+			irc_usermsg( irc, "Warning: Almost had an infinite loop in nick_get()! "
+			                  "This used to be a fatal BitlBee bug, but we tried to fix it. "
+			                  "This message should *never* appear anymore. "
+			                  "If it does, please *do* send us a bug report! "
+			                  "Please send all the following lines in your report:" );
 			
-			irc_usermsg( acc->irc, "Trying to get a sane nick for handle %s", handle );
+			irc_usermsg( irc, "Trying to get a sane nick for handle %s", bu->handle );
 			for( i = 0; i < MAX_NICK_LENGTH; i ++ )
-				irc_usermsg( acc->irc, "Char %d: %c/%d", i, nick[i], nick[i] );
+				irc_usermsg( irc, "Char %d: %c/%d", i, nick[i], nick[i] );
 			
-			irc_usermsg( acc->irc, "FAILED. Returning an insane nick now. Things might break. "
-			                       "Good luck, and please don't forget to paste the lines up here "
-			                       "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
+			irc_usermsg( irc, "FAILED. Returning an insane nick now. Things might break. "
+			                  "Good luck, and please don't forget to paste the lines up here "
+			                  "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
 			
 			g_snprintf( nick, MAX_NICK_LENGTH + 1, "xx%x", rand() );
 			
@@ -134,28 +259,22 @@ void nick_dedupe( account_t *acc, const char *handle, char nick[MAX_NICK_LENGTH+
 
 /* Just check if there is a nickname set for this buddy or if we'd have to
    generate one. */
-int nick_saved( account_t *acc, const char *handle )
+int nick_saved( bee_user_t *bu )
 {
 	char *store_handle, *found;
 	
-	store_handle = clean_handle( handle );
-	found = g_hash_table_lookup( acc->nicks, store_handle );
+	store_handle = clean_handle( bu->handle );
+	found = g_hash_table_lookup( bu->ic->acc->nicks, store_handle );
 	g_free( store_handle );
 	
 	return found != NULL;
 }
 
-void nick_del( account_t *acc, const char *handle )
+void nick_del( bee_user_t *bu )
 {
-	g_hash_table_remove( acc->nicks, handle );
+	g_hash_table_remove( bu->ic->acc->nicks, bu->handle );
 }
 
-
-/* Character maps, _lc_[x] == _uc_[x] (but uppercase), according to the RFC's.
-   With one difference, we allow dashes. */
-
-static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^`-_|";
-static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~`-_\\";
 
 void nick_strip( char *nick )
 {

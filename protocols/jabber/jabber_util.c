@@ -98,7 +98,7 @@ struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_
 	return node;
 }
 
-struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type )
+struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type, char *err_code )
 {
 	struct xt_node *node, *c;
 	char *to;
@@ -110,6 +110,10 @@ struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, 
 	/* Put it in an <error> tag. */
 	c = xt_new_node( "error", NULL, c );
 	xt_add_attr( c, "type", err_type );
+	
+	/* Add the error code, if present */
+	if (err_code)
+		xt_add_attr( c, "code", err_code );
 	
 	/* To make the actual error packet, we copy the original packet and
 	   add our <error>/type="error" tag. Including the original packet
@@ -274,8 +278,7 @@ static void jabber_buddy_ask_yes( void *data )
 	
 	presence_send_request( bla->ic, bla->handle, "subscribed" );
 	
-	if( imcb_find_buddy( bla->ic, bla->handle ) == NULL )
-		imcb_ask_add( bla->ic, bla->handle, NULL );
+	imcb_ask_add( bla->ic, bla->handle, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla );
@@ -457,7 +460,7 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		}
 		
 		if( bud == NULL && ( flags & GET_BUDDY_CREAT ) &&
-		    ( bare_exists || imcb_find_buddy( ic, jid ) ) )
+		    ( bare_exists || bee_user_by_handle( ic->bee, ic, jid ) ) )
 		{
 			*s = '/';
 			bud = jabber_buddy_add( ic, jid );
@@ -478,7 +481,8 @@ struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid_, 
 		
 		if( bud == NULL )
 			/* No match. Create it now? */
-			return ( ( flags & GET_BUDDY_CREAT ) && imcb_find_buddy( ic, jid_ ) ) ?
+			return ( ( flags & GET_BUDDY_CREAT ) &&
+			         bee_user_by_handle( ic->bee, ic, jid_ ) ) ?
 			           jabber_buddy_add( ic, jid_ ) : NULL;
 		else if( bud->resource && ( flags & GET_BUDDY_EXACT ) )
 			/* We want an exact match, so in thise case there shouldn't be a /resource. */
