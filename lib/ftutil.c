@@ -35,7 +35,7 @@
 /*
  * Creates a listening socket and returns it in saddr_ptr.
  */
-int ft_listen( struct sockaddr_storage *saddr_ptr, char *host, char *port, int for_bitlbee_client, char **errptr )
+int ft_listen( struct sockaddr_storage *saddr_ptr, char *host, char *port, int copy_fd, int for_bitlbee_client, char **errptr )
 {
 	int fd, gret, saddrlen;
 	struct addrinfo hints, *rp;
@@ -82,6 +82,15 @@ int ft_listen( struct sockaddr_storage *saddr_ptr, char *host, char *port, int f
 			strncpy( port, colon + 1, 5 );
 		}
 	}
+	else if( copy_fd >= 0 && getsockname( copy_fd, (struct sockaddr*) &saddrs, &ssize ) == 0 &&
+	         ( saddrs.ss_family == AF_INET || saddrs.ss_family == AF_INET6 ) &&
+	         getnameinfo( (struct sockaddr*) &saddrs, ssize, host, HOST_NAME_MAX,
+	                      NULL, 0, NI_NUMERICHOST ) == 0 )
+	{
+		/* We just took our local address on copy_fd, which is likely to be a
+		   sensible address from which we can do a file transfer now - the
+		   most sensible we can get easily. */
+	}
 	else
 	{
 		ASSERTSOCKOP( gethostname( host, HOST_NAME_MAX + 1 ), "gethostname()" );
@@ -116,6 +125,7 @@ int ft_listen( struct sockaddr_storage *saddr_ptr, char *host, char *port, int f
 		return -1;
 	}
 
+	ssize = sizeof( struct sockaddr_storage );
 	ASSERTSOCKOP( getsockname( fd, ( struct sockaddr *)saddr, &ssize ), "Getting socket name" );
 
 	if( saddr->ss_family == AF_INET )

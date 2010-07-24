@@ -103,7 +103,7 @@ file_transfer_t *dccs_send_start( struct im_connection *ic, irc_user_t *iu, cons
 
 	/* listen and request */
 
-	if( ( df->fd = ft_listen( &saddr, host, port, TRUE, &errmsg ) ) == -1 )
+	if( ( df->fd = ft_listen( &saddr, host, port, irc->fd, TRUE, &errmsg ) ) == -1 )
 	{
 		dcc_abort( df, "Failed to listen locally, check your ft_listen setting in bitlbee.conf: %s", errmsg );
 		return NULL;

@@ -910,7 +910,7 @@ void jabber_si_set_proxies( struct bs_transfer *bt )
 			*next++ = '\0';	
 		
 		if( strcmp( proxy, "<local>" ) == 0 ) {
-			if( ( tf->fd = ft_listen( &tf->saddr, host, port, FALSE, &errmsg ) ) != -1 ) {
+			if( ( tf->fd = ft_listen( &tf->saddr, host, port, jd->fd, FALSE, &errmsg ) ) != -1 ) {
 				sh = g_new0( jabber_streamhost_t, 1 );
 				sh->jid = g_strdup( tf->ini_jid );
 				sh->host = g_strdup( host );

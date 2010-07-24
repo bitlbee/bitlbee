@@ -37,4 +37,4 @@
 
 /* This function should be used with care. host should be AT LEAST a
    char[HOST_NAME_MAX+1] and port AT LEAST a char[6]. */
-int ft_listen( struct sockaddr_storage *saddr_ptr, char *host, char *port, int for_bitlbee_client, char **errptr );
+int ft_listen( struct sockaddr_storage *saddr_ptr, char *host, char *port, int copy_fd, int for_bitlbee_client, char **errptr );
