@@ -23,7 +23,7 @@
 #ifndef __YLIST_H__
 #define __YLIST_H__
 
-/* GLib has linked list already, so I don't see why libyahoo2 has to copy this... */
+/* BitlBee already uses GLib so use it. */
 
 typedef GList YList;
 

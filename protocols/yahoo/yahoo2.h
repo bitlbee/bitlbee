@@ -50,13 +50,13 @@ extern "C" {
 
 #include "yahoo2_types.h"
 
-/* returns the socket descriptor for a given pager connection. shouldn't be needed */
-int  yahoo_get_fd(int id);
+/* returns the socket descriptor object for a given pager connection. shouldn't be needed */
+	void *yahoo_get_fd(int id);
 
 /* says how much logging to do */
 /* see yahoo2_types.h for the different values */
-int  yahoo_set_log_level(enum yahoo_log_level level);
-enum yahoo_log_level  yahoo_get_log_level( void );
+	int yahoo_set_log_level(enum yahoo_log_level level);
+	enum yahoo_log_level yahoo_get_log_level(void);
 
 /* these functions should be self explanatory */
 /* who always means the buddy you're acting on */
@@ -221,8 +221,8 @@ enum yahoo_log_level  yahoo_get_log_level( void );
 /* these should be called when input is available on a fd */
 /* registered by ext_yahoo_add_handler */
 /* if these return negative values, errno may be set */
-int  yahoo_read_ready(int id, int fd, void *data);
-int  yahoo_write_ready(int id, int fd, void *data);
+	int yahoo_read_ready(int id, void *fd, void *data);
+	int yahoo_write_ready(int id, void *fd, void *data);
 
 /* utility functions. these do not hit the server */
 	enum yahoo_status yahoo_current_status(int id);
@@ -238,9 +238,6 @@ int  yahoo_write_ready(int id, int fd, void *data);
 	const char *yahoo_get_profile_url(void);
 
 	void yahoo_buddyicon_request(int id, const char *who);
-
-	void yahoo_accept_buddy_ymsg13(int,const char*, const char*);
-	void yahoo_reject_buddy_ymsg13(int,const char*, const char*, const char*);
 
 #include "yahoo_httplib.h"
 
