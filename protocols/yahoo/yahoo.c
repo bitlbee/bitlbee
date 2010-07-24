@@ -270,8 +270,32 @@ static void byahoo_keepalive( struct im_connection *ic )
 static void byahoo_add_buddy( struct im_connection *ic, char *who, char *group )
 {
 	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
+	bee_user_t *bu;
 	
-	yahoo_add_buddy( yd->y2_id, who, group ? group : BYAHOO_DEFAULT_GROUP, NULL );
+	if( group && ( bu = bee_user_by_handle( ic->bee, ic, who ) ) && bu->group )
+	{
+		GSList *bgl;
+		
+		/* If the person is in our list already, this is a group change. */
+		yahoo_change_buddy_group( yd->y2_id, who, bu->group->name, group );
+		
+		/* No idea how often people have people in multiple groups and
+		   BitlBee doesn't currently support this anyway .. but keep
+		   this struct up-to-date for now. */
+		for( bgl = yd->buddygroups; bgl; bgl = bgl->next )
+		{
+			struct byahoo_buddygroups *bg = bgl->data;
+			
+			if( g_strcasecmp( bg->buddy, who ) == 0 &&
+			    g_strcasecmp( bg->group, bu->group->name ) == 0 )
+			{
+				g_free( bg->group );
+				bg->group = g_strdup( group );
+			}
+		}
+	}
+	else
+		yahoo_add_buddy( yd->y2_id, who, group ? group : BYAHOO_DEFAULT_GROUP, NULL );
 }
 
 static void byahoo_remove_buddy( struct im_connection *ic, char *who, char *group )
@@ -779,7 +803,10 @@ void ext_yahoo_close( void *fd )
 void ext_yahoo_got_buddy_change_group( int id, const char *me, const char *who,
                                        const char *old_group, const char *new_group )
 {
-}                                
+	struct im_connection *ic = byahoo_get_ic_by_id( id );
+	
+	imcb_add_buddy( ic, who, new_group );
+}
 
 /* Because we don't want asynchronous connects in BitlBee, and because
    libyahoo doesn't seem to use this one anyway, this one is now defunct. */
@@ -980,7 +1007,7 @@ void ext_yahoo_got_webcam_image( int id, const char * who, const unsigned char *
 {
 }
 
-void ext_yahoo_got_ping( int id, const char *msg)
+void ext_yahoo_got_ping( int id, const char *msg )
 {
 }
 
