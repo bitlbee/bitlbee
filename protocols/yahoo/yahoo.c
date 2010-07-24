@@ -510,7 +510,7 @@ void ext_yahoo_login_response( int id, int succ, const char *url )
 	else
 	{
 		char *errstr;
-		int allow_reconnect = TRUE;
+		int allow_reconnect = FALSE;
 		
 		yd->logged_in = FALSE;
 		
@@ -520,13 +520,15 @@ void ext_yahoo_login_response( int id, int succ, const char *url )
 			errstr = "Incorrect Yahoo! password";
 		else if( succ == YAHOO_LOGIN_LOCK )
 			errstr = "Yahoo! account locked";
+		else if( succ == 1236 )
+			errstr = "Yahoo! account locked or machine temporarily banned";
 		else if( succ == YAHOO_LOGIN_DUPL )
-		{
 			errstr = "Logged in on a different machine or device";
-			allow_reconnect = FALSE;
-		}
 		else if( succ == YAHOO_LOGIN_SOCK )
+		{
 			errstr = "Socket problem";
+			allow_reconnect = TRUE;
+		}
 		else
 			errstr = "Unknown error";
 		
