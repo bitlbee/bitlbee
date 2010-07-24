@@ -412,7 +412,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 			else
 				con = "";
 			
-			irc_usermsg( irc, "%2d. %s, %s%s", i, a->prpl->name, a->user, con );
+			irc_usermsg( irc, "%2d (%s): %s, %s%s", i, a->tag, a->prpl->name, a->user, con );
 			
 			i ++;
 		}

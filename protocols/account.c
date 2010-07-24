@@ -33,6 +33,7 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 {
 	account_t *a;
 	set_t *s;
+	char tag[strlen(prpl->name)+10];
 	
 	if( bee->accounts )
 	{
@@ -64,9 +65,28 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 	s = set_add( &a->set, "password", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE | SET_NULL_OK;
 	
+	s = set_add( &a->set, "tag", NULL, set_eval_account, a );
+	
 	s = set_add( &a->set, "username", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	set_setstr( &a->set, "username", user );
+	
+	if( account_by_tag( bee, prpl->name ) )
+	{
+		int i;
+
+		for( i = 2; i < 10000; i ++ )
+		{
+			sprintf( tag, "%s%d", prpl->name, i );
+			if( !account_by_tag( bee, tag ) )
+				break;
+		}
+	}
+	else
+	{
+		strcpy( tag, prpl->name );
+	}
+	set_setstr( &a->set, "tag", tag );
 	
 	a->nicks = g_hash_table_new_full( g_str_hash, g_str_equal, g_free, g_free );
 	
@@ -130,6 +150,18 @@ char *set_eval_account( set_t *set, char *value )
 			return SET_INVALID;
 		}
 	}
+	else if( strcmp( set->key, "tag" ) == 0 )
+	{
+		account_t *oa;
+		
+		/* Enforce uniqueness. */
+		if( ( oa = account_by_tag( acc->bee, value ) ) && oa != acc )
+			return SET_INVALID;
+		
+		g_free( acc->tag );
+		acc->tag = g_strdup( value );
+		return value;
+	}
 	else if( strcmp( set->key, "auto_connect" ) == 0 )
 	{
 		if( !is_bool( value ) )
@@ -172,11 +204,15 @@ static char *set_eval_nick_source( set_t *set, char *value )
 	return value;
 }
 
-account_t *account_get( bee_t *bee, char *id )
+account_t *account_get( bee_t *bee, const char *id )
 {
 	account_t *a, *ret = NULL;
 	char *handle, *s;
 	int nr;
+	
+	/* Tags get priority above anything else. */
+	if( ( a = account_by_tag( bee, id ) ) )
+		return a;
 	
 	/* This checks if the id string ends with (...) */
 	if( ( handle = strchr( id, '(' ) ) && ( s = strchr( handle, ')' ) ) && s[1] == 0 )
@@ -233,6 +269,17 @@ account_t *account_get( bee_t *bee, char *id )
 	return( ret );
 }
 
+account_t *account_by_tag( bee_t *bee, const char *tag )
+{
+	account_t *a;
+	
+	for( a = bee->accounts; a; a = a->next )
+		if( a->tag && g_strcasecmp( tag, a->tag ) == 0 )
+			return a;
+	
+	return NULL;
+}
+
 void account_del( bee_t *bee, account_t *acc )
 {
 	account_t *a, *l = NULL;
@@ -263,6 +310,7 @@ void account_del( bee_t *bee, account_t *acc )
 			
 			g_hash_table_destroy( a->nicks );
 			
+			g_free( a->tag );
 			g_free( a->user );
 			g_free( a->pass );
 			g_free( a->server );

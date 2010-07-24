@@ -32,6 +32,7 @@ typedef struct account
 	char *user;
 	char *pass;
 	char *server;
+	char *tag;
 	
 	int auto_connect;
 	int auto_reconnect_delay;
@@ -47,7 +48,8 @@ typedef struct account
 } account_t;
 
 account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass );
-account_t *account_get( bee_t *bee, char *id );
+account_t *account_get( bee_t *bee, const char *id );
+account_t *account_by_tag( bee_t *bee, const char *tag );
 void account_del( bee_t *bee, account_t *acc );
 void account_on( bee_t *bee, account_t *a );
 void account_off( bee_t *bee, account_t *a );
