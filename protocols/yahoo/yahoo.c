@@ -338,20 +338,16 @@ static struct groupchat *byahoo_chat_with( struct im_connection *ic, char *who )
 
 static void byahoo_auth_allow( struct im_connection *ic, const char *who )
 {
-	/*
 	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
 	
-	yahoo_accept_buddy_ymsg13( yd->y2_id, NULL, who );
-	*/
+	yahoo_confirm_buddy( yd->y2_id, who, 0, "" );
 }
 
 static void byahoo_auth_deny( struct im_connection *ic, const char *who )
 {
-	/*
 	struct byahoo_data *yd = (struct byahoo_data *) ic->proto_data;
 	
-	yahoo_reject_buddy_ymsg13( yd->y2_id, NULL, who, NULL );
-	*/
+	yahoo_confirm_buddy( yd->y2_id, who, 1, "" );
 }
 
 void byahoo_initmodule( )
@@ -928,16 +924,11 @@ void ext_yahoo_chat_yahooerror( int id, const char *me )
 {
 }
 
-void ext_yahoo_contact_auth_request( int id, const char *myid, const char *who, const char *msg )
-{
-	/* Apparently no longer implemented.. */
-}
-
 void ext_yahoo_contact_added( int id, const char *myid, const char *who, const char *msg )
 {
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
-	imcb_add_buddy( ic, (char*) who, NULL );
+	imcb_ask_auth( ic, who, msg );
 }
 
 void ext_yahoo_rejected( int id, const char *who, const char *msg )
