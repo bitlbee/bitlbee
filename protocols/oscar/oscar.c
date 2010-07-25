@@ -1942,7 +1942,12 @@ static void oscar_set_away(struct im_connection *ic, char *state, char *message)
 
 static void oscar_add_buddy(struct im_connection *g, char *name, char *group) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
-	aim_ssi_addbuddies(odata->sess, odata->conn, OSCAR_GROUP, &name, 1, 0);
+	bee_user_t *bu;
+	
+	if (group && (bu = bee_user_by_handle(g->bee, g, name)) && bu->group)
+		aim_ssi_movebuddy(odata->sess, odata->conn, bu->group->name, group, name);
+	else
+		aim_ssi_addbuddies(odata->sess, odata->conn, group ? : OSCAR_GROUP, &name, 1, 0);
 }
 
 static void oscar_remove_buddy(struct im_connection *g, char *name, char *group) {
@@ -2066,10 +2071,13 @@ static int gaim_ssi_parseack( aim_session_t *sess, aim_frame_t *fr, ... )
 		list = (char *) origsnac->data;
 		for( i = 0; i < count; i ++ )
 		{
+			struct aim_ssi_item *ssigroup = aim_ssi_itemlist_findparent( sess->ssi.items, list );
+			char *group = ssigroup ? ssigroup->name : NULL;
+			
 			st = aimbs_get16( &fr->data );
 			if( st == 0x00 )
 			{
-				imcb_add_buddy( sess->aux_data, normalize(list), NULL );
+				imcb_add_buddy( sess->aux_data, normalize(list), group );
 			}
 			else if( st == 0x0E )
 			{
