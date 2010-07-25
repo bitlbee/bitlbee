@@ -4829,6 +4829,9 @@ static void yahoo_add_active_transfer(struct send_file_data *sfd)
 
 static void yahoo_remove_active_transfer(struct send_file_data *sfd)
 {
+	if (sfd == NULL)
+		return;
+	
 	active_file_transfers = y_list_remove(active_file_transfers, sfd);
 	free(sfd->id);
 	free(sfd->who);
@@ -4989,7 +4992,7 @@ static void yahoo_process_filetransferaccept(struct yahoo_input_data *yid,
 	else {
 		YAHOO_CALLBACK(ext_yahoo_file_transfer_done)
 			(yid->yd->client_id, YAHOO_FILE_TRANSFER_UNKNOWN,
-			sfd->data);
+			sfd ? sfd->data : NULL);
 
 		yahoo_remove_active_transfer(sfd);
 	}
@@ -5045,7 +5048,7 @@ static void yahoo_process_filetransferinfo(struct yahoo_input_data *yid,
 	else {
 		YAHOO_CALLBACK(ext_yahoo_file_transfer_done)
 			(yid->yd->client_id, YAHOO_FILE_TRANSFER_UNKNOWN,
-			sfd->data);
+			sfd ? sfd->data : NULL);
 
 		yahoo_remove_active_transfer(sfd);
 	}
@@ -5160,7 +5163,7 @@ static void yahoo_process_filetransfer(struct yahoo_input_data *yid,
 		else if (!sfd || action == YAHOO_FILE_TRANSFER_REJECT) {
 			YAHOO_CALLBACK(ext_yahoo_file_transfer_done)
 				(yd->client_id, YAHOO_FILE_TRANSFER_REJECT,
-				sfd->data);
+				sfd ? sfd->data : NULL);
 
 			yahoo_remove_active_transfer(sfd);
 		}
