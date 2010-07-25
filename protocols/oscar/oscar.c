@@ -2225,7 +2225,7 @@ static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)
 			g_string_append_printf(str, "\n%s: %s", _("Email Address"), info->email2[i]);
 		}
 	}
-	if ((ip = (long) g_hash_table_lookup(od->ips, &info->uin)) != 0) {
+	if (od->ips && (ip = (long) g_hash_table_lookup(od->ips, &info->uin)) != 0) {
 		g_string_append_printf(str, "\n%s: %d.%d.%d.%d", _("Last used IP address"),
 		                       (ip >> 24), (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff);
 	}
