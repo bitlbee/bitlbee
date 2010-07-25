@@ -395,5 +395,6 @@ void irc_send_channel_user_mode_diff( irc_channel_t *ic, irc_user_t *iu,
 		g_snprintf( from, sizeof( from ), "%s!%s@%s", ic->irc->root->nick,
 		            ic->irc->root->user, ic->irc->root->host );
 	
-	irc_write( ic->irc, ":%s MODE %s %s", from, ic->name, changes );
+	if( *changes )
+		irc_write( ic->irc, ":%s MODE %s %s", from, ic->name, changes );
 }

@@ -287,9 +287,20 @@ static gboolean bee_irc_user_group( bee_t *bee, bee_user_t *bu )
 {
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
 	irc_t *irc = (irc_t *) bee->ui_data;
+	bee_user_flags_t online;
+	
+	/* Take the user offline temporarily so we can change the nick (if necessary). */
+	if( ( online = bu->flags & BEE_USER_ONLINE ) )
+		bu->flags &= ~BEE_USER_ONLINE;
 	
 	bee_irc_channel_update( irc, NULL, iu );
 	bee_irc_user_nick_update( iu );
+	
+	if( online )
+	{
+		bu->flags |= online;
+		bee_irc_channel_update( irc, NULL, iu );
+	}
 	
 	return TRUE;
 }
