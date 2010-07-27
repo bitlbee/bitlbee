@@ -331,7 +331,11 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 	if( irc_channel_name_ok( cmd[1] ) &&
 	    ( ic = irc_channel_by_name( irc, cmd[1] ) ) )
 	{
-		if( ic->f->privmsg )
+		if( cmd[2][0] == '\001' )
+		{
+			/* CTCPs to channels? Nah. Maybe later. */
+		}
+		else if( ic->f->privmsg )
 			ic->f->privmsg( ic, cmd[2] );
 	}
 	else if( ( iu = irc_user_by_name( irc, cmd[1] ) ) )
