@@ -420,10 +420,7 @@ static void ipc_child_cmd_takeover_yes( void *data )
 	irc_umode_set( irc, "-R", 1 );
 	
 	if( old )
-	{
-		irc->status |= USTATUS_SHUTDOWN;
 		irc_abort( irc, FALSE, NULL );
-	}
 }
 
 static void ipc_child_cmd_takeover_no( void *data )

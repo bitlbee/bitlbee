@@ -160,47 +160,34 @@ irc_t *irc_new( int fd )
    shouldn't try to write to it. */
 void irc_abort( irc_t *irc, int immed, char *format, ... )
 {
+	char *reason = NULL;
+	
 	if( format != NULL )
 	{
 		va_list params;
-		char *reason;
 		
 		va_start( params, format );
 		reason = g_strdup_vprintf( format, params );
 		va_end( params );
-		
-		if( !immed )
-			irc_write( irc, "ERROR :Closing link: %s", reason );
-		
-		ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
-	                           irc->user->nick ? irc->user->nick : "(NONE)", irc->user->host, reason );
-	     	
-		g_free( reason );
-	}
-	else
-	{
-		if( !immed )
-			irc_write( irc, "ERROR :Closing link" );
-		
-		ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
-	        	           irc->user->nick ? irc->user->nick : "(NONE)", irc->user->host, "No reason given" );
 	}
 	
-	irc->status |= USTATUS_SHUTDOWN;
-	if( irc->sendbuffer && !immed )
+	irc_write( irc, "ERROR :Closing link: %s", reason ? : "" );
+	
+	ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
+	                   irc->user->nick ? irc->user->nick : "(NONE)",
+	                   irc->user->host, reason ? : "" );
+	
+	g_free( reason );
+	
+	irc_flush( irc );
+	if( immed )
 	{
-		/* Set up a timeout event that should shut down the connection
-		   in a second, just in case ..._write doesn't do it first. */
-		
-		b_event_remove( irc->r_watch_source_id );
-		irc->r_watch_source_id = 0;
-		
-		b_event_remove( irc->ping_source_id );
-		irc->ping_source_id = b_timeout_add( 1000, (b_event_handler) irc_free, irc );
+		irc_free( irc );
 	}
 	else
 	{
-		irc_free( irc );
+		b_event_remove( irc->ping_source_id );
+		irc->ping_source_id = b_timeout_add( 1, (b_event_handler) irc_free, irc );
 	}
 }
 
@@ -208,6 +195,8 @@ static gboolean irc_free_hashkey( gpointer key, gpointer value, gpointer data );
 
 void irc_free( irc_t * irc )
 {
+	irc->status |= USTATUS_SHUTDOWN;
+	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
 	if( irc->status & USTATUS_IDENTIFIED && set_getbool( &irc->b->set, "save_on_quit" ) ) 

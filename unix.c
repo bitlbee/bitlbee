@@ -238,7 +238,7 @@ static void sighandler( int signal )
 {
 	/* FIXME: Calling log_message() here is not a very good idea! */
 	
-	if( signal == SIGTERM )
+	if( signal == SIGTERM || signal == SIGQUIT || signal == SIGINT )
 	{
 		static int first = 1;
 		
