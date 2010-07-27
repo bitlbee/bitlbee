@@ -139,10 +139,9 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 		if( ( comma = strchr( s, ',' ) ) )
 			*comma = '\0';
 		
-		if( ( ic = irc_channel_by_name( irc, s ) ) == NULL )
+		if( ( ic = irc_channel_by_name( irc, s ) ) == NULL &&
+		    ( ic = irc_channel_new( irc, s ) ) )
 		{
-			ic = irc_channel_new( irc, s );
-			
 			if( strcmp( set_getstr( &ic->set, "type" ), "control" ) != 0 )
 			{
 				/* Autoconfiguration is for control channels only ATM. */
@@ -162,11 +161,13 @@ static void irc_cmd_join( irc_t *irc, char **cmd )
 			}
 			else
 			{
+				/* The set commands above will run this already,
+				   but if we didn't hit any, we have to fill the
+				   channel with the default population. */
 				bee_irc_channel_update( ic->irc, ic, NULL );
 			}
 		}
-		
-		if( ic == NULL )
+		else if( ic == NULL )
 		{
 			irc_send_num( irc, 479, "%s :Invalid channel name", s );
 			goto next;
