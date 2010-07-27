@@ -300,10 +300,14 @@ static void msn_rem_deny( struct im_connection *ic, char *who )
 
 static int msn_send_typing( struct im_connection *ic, char *who, int typing )
 {
-	if( typing & OPT_TYPING )
+	struct bee_user *bu = bee_user_by_handle( ic->bee, ic, who );
+	
+	if( !( bu->flags & BEE_USER_ONLINE ) )
+		return 0;
+	else if( typing & OPT_TYPING )
 		return( msn_buddy_msg( ic, who, TYPING_NOTIFICATION_MESSAGE, 0 ) );
 	else
-		return( 1 );
+		return 1;
 }
 
 static char *set_eval_display_name( set_t *set, char *value )

@@ -397,6 +397,7 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list )
 	struct msn_message *m;
 	GString *ret;
 	GSList *l;
+	int n = 0;
 	
 	l = *list;
 	if( l == NULL )
@@ -411,7 +412,11 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list )
 	{
 		m = l->data;
 		
-		g_string_append_printf( ret, "\n%s", m->text );
+		if( strncmp( m->text, "\r\r\r", 3 ) != 0 )
+		{
+			g_string_append_printf( ret, "\n%s", m->text );
+			n ++;
+		}
 		
 		g_free( m->who );
 		g_free( m->text );
@@ -422,7 +427,8 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list )
 	g_slist_free( *list );
 	*list = NULL;
 	
-	imcb_log( ic, "%s", ret->str );
+	if( n > 0 )
+		imcb_log( ic, "%s", ret->str );
 	g_string_free( ret, TRUE );
 }
 
