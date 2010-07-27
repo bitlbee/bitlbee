@@ -217,7 +217,7 @@ See <emphasis>set nick_format2</emphasis> for some more information.
 <title>Nickname formatting - modifiers</title>
 
 <para>
-Two modifiers ares currently available: You can include only the first few
+Two modifiers are currently available: You can include only the first few
 characters of a variable by putting a number right after the %. For
 example, <emphasis>[%3group]%-@nick</emphasis> will include only the first
 three characters of the group name in the nick.

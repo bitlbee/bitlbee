@@ -31,18 +31,24 @@ struct groupchat;
 
 typedef struct bee
 {
+	/* Settings. See set.h for how these work. The UI can add its
+	   own settings here. */
 	struct set *set;
 	
-	GSList *users;
-	GSList *groups;
+	GSList *users;  /* struct bee_user */
+	GSList *groups; /* struct bee_group */
 	struct account *accounts; /* TODO(wilmer): Use GSList here too? */
 	
 	/* Symbolic, to refer to the local user (who has no real bee_user
 	   object). Not to be used by anything except so far imcb_chat_add/
-	   remove_buddy(). This seems slightly cleaner than abusing NULL. */
+	   remove_buddy(). */
 	struct bee_user *user;
 	
+	/* Fill in the callbacks for events you care about. */
 	const struct bee_ui_funcs *ui;
+	
+	/* And this one will be passed to every callback for any state the
+	   UI may want to keep. */
 	void *ui_data;
 } bee_t;
 
@@ -65,18 +71,21 @@ typedef struct bee_user
 	struct bee_group *group;
 
 	bee_user_flags_t flags;
-	char *status;
-	char *status_msg;
+	char *status;     /* NULL means available, anything else is an away state. */
+	char *status_msg; /* Status and/or away message. */
 	
+	/* Set using imcb_buddy_times(). */
 	time_t login_time, idle_time;
 	
 	bee_t *bee;
 	void *ui_data;
 } bee_user_t;
 
+/* This one's mostly used so save space and make it easier (cheaper) to
+   compare groups of contacts, etc. */
 typedef struct bee_group
 {
-	char *key;
+	char *key;  /* Lower case version of the name. */
 	char *name;
 } bee_group_t;
 
@@ -87,15 +96,23 @@ typedef struct bee_ui_funcs
 	
 	gboolean (*user_new)( bee_t *bee, struct bee_user *bu );
 	gboolean (*user_free)( bee_t *bee, struct bee_user *bu );
+	/* Set the fullname first, then call this one to notify the UI. */
 	gboolean (*user_fullname)( bee_t *bee, bee_user_t *bu );
 	gboolean (*user_nick_hint)( bee_t *bee, bee_user_t *bu, const char *hint );
+	/* Notify the UI when an existing user is moved between groups. */
 	gboolean (*user_group)( bee_t *bee, bee_user_t *bu );
+	/* State info is already updated, old is provided in case the UI needs a diff. */
 	gboolean (*user_status)( bee_t *bee, struct bee_user *bu, struct bee_user *old );
+	/* On every incoming message. sent_at = 0 means unknown. */
 	gboolean (*user_msg)( bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at );
+	/* Flags currently defined (OPT_TYPING/THINKING) in nogaim.h. */
 	gboolean (*user_typing)( bee_t *bee, bee_user_t *bu, guint32 flags );
 	
+	/* Called at creation time. Don't show to the user until s/he is
+	   added using chat_add_user().  UI state can be stored via c->data. */
 	gboolean (*chat_new)( bee_t *bee, struct groupchat *c );
 	gboolean (*chat_free)( bee_t *bee, struct groupchat *c );
+	/* System messages of any kind. */
 	gboolean (*chat_log)( bee_t *bee, struct groupchat *c, const char *text );
 	gboolean (*chat_msg)( bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, time_t sent_at );
 	gboolean (*chat_add_user)( bee_t *bee, struct groupchat *c, bee_user_t *bu );
@@ -134,18 +151,25 @@ G_MODULE_EXPORT void imcb_buddy_times( struct im_connection *ic, const char *han
 G_MODULE_EXPORT void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, guint32 flags, time_t sent_at );
 
 /* bee_chat.c */
-#if 0
-struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle );
-void imcb_chat_name_hint( struct groupchat *c, const char *name );
-void imcb_chat_free( struct groupchat *c );
-void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t flags, time_t sent_at );
-void imcb_chat_log( struct groupchat *c, char *format, ... );
-void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at );
-void imcb_chat_add_buddy( struct groupchat *b, const char *handle );
-void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char *reason );
-static int remove_chat_buddy_silent( struct groupchat *b, const char *handle );
-#endif
-int bee_chat_msg( bee_t *bee, struct groupchat *c, const char *msg, int flags );
-struct groupchat *bee_chat_by_title( bee_t *bee, struct im_connection *ic, const char *title );
+/* These two functions are to create a group chat.
+ * - imcb_chat_new(): the 'handle' parameter identifies the chat, like the
+ *   channel name on IRC.
+ * - After you have a groupchat pointer, you should add the handles, finally  
+ *   the user her/himself. At that point the group chat will be visible to the
+ *   user, too. */
+G_MODULE_EXPORT struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle );
+G_MODULE_EXPORT void imcb_chat_name_hint( struct groupchat *c, const char *name );
+G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
+/* To tell BitlBee 'who' said 'msg' in 'c'. 'flags' and 'sent_at' can be 0. */
+G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, guint32 flags, time_t sent_at );
+/* System messages specific to a groupchat, so they can be displayed in the right context. */
+G_MODULE_EXPORT void imcb_chat_log( struct groupchat *c, char *format, ... );
+/* To tell BitlBee 'who' changed the topic of 'c' to 'topic'. */
+G_MODULE_EXPORT void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at );
+G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *c, const char *handle );
+/* To remove a handle from a group chat. Reason can be NULL. */
+G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *c, const char *handle, const char *reason );
+G_MODULE_EXPORT int bee_chat_msg( bee_t *bee, struct groupchat *c, const char *msg, int flags );
+G_MODULE_EXPORT struct groupchat *bee_chat_by_title( bee_t *bee, struct im_connection *ic, const char *title );
 
 #endif /* __BEE_H__ */

@@ -44,10 +44,11 @@
 typedef enum
 {
 	USTATUS_OFFLINE = 0,
-	USTATUS_AUTHORIZED = 1,
-	USTATUS_LOGGED_IN = 2,
-	USTATUS_IDENTIFIED = 4,
-	USTATUS_SHUTDOWN = 8
+	USTATUS_AUTHORIZED = 1, /* Gave the correct server password (PASS). */
+	USTATUS_LOGGED_IN = 2,  /* USER+NICK(+PASS) finished. */
+	USTATUS_IDENTIFIED = 4, /* To NickServ (root). */
+	USTATUS_SHUTDOWN = 8,   /* Now used to indicate we're shutting down.
+	                           Currently just blocks irc_vawrite(). */
 } irc_status_t;
 
 struct irc_user;

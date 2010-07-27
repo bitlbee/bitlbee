@@ -304,27 +304,6 @@ G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, 
 G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle( struct im_connection *ic, const char *handle );
 G_MODULE_EXPORT void imcb_clean_handle( struct im_connection *ic, char *handle );
 
-/* Groupchats */
-G_MODULE_EXPORT void imcb_chat_invited( struct im_connection *ic, char *handle, char *who, char *msg, GList *data );
-/* These two functions are to create a group chat.
- * - imcb_chat_new(): the 'handle' parameter identifies the chat, like the
- *   channel name on IRC.
- * - After you have a groupchat pointer, you should add the handles, finally
- *   the user her/himself. At that point the group chat will be visible to the
- *   user, too. */
-G_MODULE_EXPORT struct groupchat *imcb_chat_new( struct im_connection *ic, const char *handle );
-G_MODULE_EXPORT void imcb_chat_name_hint( struct groupchat *c, const char *name );
-G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *b, const char *handle );
-/* To remove a handle from a group chat. Reason can be NULL. */
-G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *b, const char *handle, const char *reason );
-/* To tell BitlBee 'who' said 'msg' in 'c'. 'flags' and 'sent_at' can be 0. */
-G_MODULE_EXPORT void imcb_chat_msg( struct groupchat *c, const char *who, char *msg, uint32_t flags, time_t sent_at );
-/* System messages specific to a groupchat, so they can be displayed in the right context. */
-G_MODULE_EXPORT void imcb_chat_log( struct groupchat *c, char *format, ... ) G_GNUC_PRINTF( 2, 3 );
-/* To tell BitlBee 'who' changed the topic of 'c' to 'topic'. */
-G_MODULE_EXPORT void imcb_chat_topic( struct groupchat *c, char *who, char *topic, time_t set_at );
-G_MODULE_EXPORT void imcb_chat_free( struct groupchat *c );
-
 /* Actions, or whatever. */
 int imc_away_send_update( struct im_connection *ic );
 int imc_chat_msg( struct groupchat *c, char *msg, int flags );

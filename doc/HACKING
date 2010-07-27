@@ -1,0 +1,125 @@
+BitlBee post-1.x "architecture"
+
+DISCLAIMER: The messy architecture is being cleaned up. Although lots of
+progress was made already, this is still a work in progress, and possibly
+parts of this document aren't entirely accurate anymore by the time you
+read this.
+
+It's been a while since BitlBee started, as a semi-fork of Gaim (version
+0.58 at the time). Some people believe nothing changed, but fortunately,
+many things have.
+
+The API is gone for a while already - which wasn't incredibly intrusive,
+just a few functions renamed for slightly better consistency, added some
+calls and arguments where that seemed useful, etc.
+
+However, up to late in the 1.2 series, the IRC core was still spread accross
+several files, mostly irc.c + irc_commands.c and pieces and bits in
+nogaim.c. If you're looking for a textbook example of layer violation, start
+there.
+
+This was all finally redone. Most of the IRC protocol code was rewritten,
+as was most of the glue between that and the IM modules.
+
+The core of BitlBee is now protocols/bee*. Some pieces are still left in
+protocols/nogaim*. Most stuff in the "root" directory belongs to the IRC
+UI, which should be considered "a" frontend (although currently, and
+possibly forever, the only one). Every subdirectory of protocols/ is another
+IM protocol backend (including purple/ which uses libpurple to define
+many different protocols).
+
+
+/
+
+The IRC core has code to show an IRC interface to a user, with contacts,
+channels, etc. To make channels and contacts do something, you add event
+handlers (that translate a message sent to a nick into an instant message
+to an IM contact, or translates joining a channel into joining an IM
+chatroom).
+
+To get events back from the BitlBee core, the bee_t object has a bunch of
+functions (struct bee_ui_funcs) that catch them and convert them back to
+IRC.
+
+Short description of what all irc*.c files (and some related ones) do:
+
+bitlbee.c: BitlBee bootstrap code, doing bits of I/O as well.
+ipc.c: For inter-process communication - communication between BitlBee
+    sessions. Also used in daemon mode (in which it's not so much inter-
+    process).
+irc.c: The main core, with bits of I/O handling, parsing, etc.
+irc_channel.c: Most things related to standard channels (also defines some
+    of the control channel behaviour).
+irc_commands.c: Defines all IRC commands (JOIN, NICK, PRIVMSG, etc.).
+irc_im.c: Most of the glue between IRC and the IM core live here. This is
+    where instant messages are converted to IRC and vice versa, contacts
+    coming online is translated to one or more joins and/or mode changes.
+irc_send.c: Simple functions that send pieces of IRC output. Somewhat
+    random, but if an IRC response is slightly more complicated than just a
+    simple line, make it a function here.
+irc_user.c: Defines all IRC user details. Mostly defines the user "object".
+irc_util.c: Misc. stuff. Not much ATM.
+nick.c: Handling of nicknames: compare, ucase/lcase, generating and storing
+    nicks for IM contacts.
+set.c: Settings management, used for user-changeable global/account/channel
+    settings. Should really be considered part of the core.
+storage*.c: Storing user accounts. (The stuff you normally find in
+    /var/lib/bitlbee)
+
+
+/protocols
+
+The IM core lives in protocols/. Whenever you write code there, try to avoid
+using any IRCisms there.
+
+Most header files in there have some of their details explained in comments.
+bee*.c and nogaim.c are the layer between the IM modules and the IRC
+frontend. They keep track of IM accounts, contacts and their status,
+groupchats, etc.
+
+You can control them by calling functions in there if available, and
+otherwise by just calling the functions exported via the prpl struct. Most
+of these functions are briefly explained in the header files, otherwise the
+best documentation is sadly in irc_im.c and root_commands.c.
+
+Events from the IM module go back to the core + frontend via imcb_*
+functions defined in bee*.c and nogaim.c. They're all described in the
+header files.
+
+
+/lib
+
+BitlBee uses GLib, which is a pretty nifty library adding a bunch of things
+that make life of a C coder better. Please try to not use features from
+recent GLib versions as whenever this happens, some people get cranky. :>
+
+There's also a whole bunch of nice stuff in lib/ that you can use:
+
+arc.c: ARC4 encryption, mostly used for encrypting IM passwords in the XML
+    storage module.
+base64.c
+events_*.c: Event handling, using either GLib (default) or libevent (may
+    make non-forking daemon mode with many users a little bit more efficient).
+ftutil.c: Some small utility functions currently just used for file transfers.
+http_client.c: A simple (but asynchronous) HTTP(S) client, used by the MSN,
+    Yahoo! and Twitter module by now.
+ini.c: Simple INI file parser, used to parse bitlbee.conf.
+md5.c
+misc.c: What the name says, really.
+oauth.c: What the name says. If you don't know what OAuth is, ask Google.
+    Currently only used by the Twitter module. Implements just version 1a ATM.
+proxy.c: Used together with events_*.c for asynchronous I/O directly or via
+    proxies.
+sha1.c
+ssl_*.c: SSL client stuff, using GnuTLS (preferred) or OpenSSL. Other modules
+    aren't working well ATM.
+url.c: URL parser.
+xmltree.c: Uses the GLib stream parser to build XML parse trees from a stream
+    and convert the same structs back into XML. Good enough to do Jabber but
+    not very aware of stuff like XML namespaces. Used for Jabber and Twitter.
+
+This, together with the headerfile comments, is most of the documentation we
+have right now. If you're trying to make some changes to BitlBee, do feel
+free to join #bitlbee on irc.oftc.net to ask any question you have. 
+Suggestions for specific parts to document a little bit more are also
+welcome.

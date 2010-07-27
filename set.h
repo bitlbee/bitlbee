@@ -36,10 +36,7 @@ struct set;
    remembers a default value for every setting. And to prevent the user
    from setting invalid values, you can write an evaluator function for
    every setting, which can check a new value and block it by returning
-   NULL, or replace it by returning a new value. See struct set.eval.
-   One thing that is really missing here is additional data for the
-   evaluator. This could be useful to add minimum and maximum values for
-   integers, for example. */
+   NULL, or replace it by returning a new value. See struct set.eval. */
 
 typedef char *(*set_eval) ( struct set *set, char *value );
 
@@ -65,9 +62,9 @@ typedef struct set
 	int flags;      /* See account.h, for example. set.c doesn't use
 	                   this (yet?). */
 	
-	/* Eval: Returns SET_INVALID if the value is incorrect or exactly
-	   the passed value variable. When returning a corrected value,
-	   set_setstr() should be able to free() the returned string! */
+	/* Eval: Returns SET_INVALID if the value is incorrect, exactly
+	   the passed value variable, or a corrected value. In case of
+	   the latter, set_setstr() will free() the returned string! */
 	set_eval eval;
 	void *eval_data;
 	struct set *next;

@@ -288,17 +288,6 @@ void imcb_connected( struct im_connection *ic )
 	
 	if( ic->bee->ui->imc_connected )
 		ic->bee->ui->imc_connected( ic );
-	
-	/*
-	for( c = irc->chatrooms; c; c = c->next )
-	{
-		if( c->acc != ic->acc )
-			continue;
-		
-		if( set_getbool( &c->set, "auto_join" ) )
-			chat_join( irc, c, NULL );
-	}
-	*/
 }
 
 gboolean auto_reconnect( gpointer data, gint fd, b_input_condition cond )
