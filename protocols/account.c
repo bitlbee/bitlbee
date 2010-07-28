@@ -72,20 +72,35 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	set_setstr( &a->set, "username", user );
 	
-	if( account_by_tag( bee, prpl->name ) )
+	/* Hardcode some more clever tag guesses. */
+	strcpy( tag, prpl->name );
+	if( strcmp( prpl->name, "oscar" ) == 0 )
 	{
+		if( isdigit( a->user[0] ) )
+			strcpy( tag, "icq" );
+		else
+			strcpy( tag, "aim" );
+	}
+	else if( strcmp( prpl->name, "jabber" ) == 0 )
+	{
+		if( strstr( a->user, "@gmail.com" ) ||
+		    strstr( a->user, "@googlemail.com" ) )
+			strcpy( tag, "gtalk" );
+		else if( strstr( a->user, "@chat.facebook.com" ) )
+			strcpy( tag, "fb" );
+	}
+	
+	if( account_by_tag( bee, tag ) )
+	{
+		char *numpos = tag + strlen( tag );
 		int i;
 
 		for( i = 2; i < 10000; i ++ )
 		{
-			sprintf( tag, "%s%d", prpl->name, i );
+			sprintf( numpos, "%d", i );
 			if( !account_by_tag( bee, tag ) )
 				break;
 		}
-	}
-	else
-	{
-		strcpy( tag, prpl->name );
 	}
 	set_setstr( &a->set, "tag", tag );
 	

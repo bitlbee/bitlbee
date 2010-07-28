@@ -200,6 +200,7 @@ text that will be copied to the nick, combined with several variables:
 	<varlistentry><term>%full_name</term><listitem><para>The full name of the contact.</para></listitem></varlistentry>
 	<varlistentry><term>%first_name</term><listitem><para>The first name of the contact (the full name up to the first space).</para></listitem></varlistentry>
 	<varlistentry><term>%group</term><listitem><para>The name of the group this contact is a member of</para></listitem></varlistentry>
+	<varlistentry><term>%account</term><listitem><para>Account tag of the contact</para></listitem></varlistentry>
 </variablelist>
 
 <para>

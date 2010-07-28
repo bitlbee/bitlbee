@@ -178,6 +178,12 @@ char *nick_gen( bee_user_t *bu )
 				fmt += 5;
 				break;
 			}
+			else if( g_strncasecmp( fmt, "account", 7 ) == 0 )
+			{
+				part = bu->ic->acc->tag;
+				fmt += 7;
+				break;
+			}
 			else
 			{
 				return NULL;
