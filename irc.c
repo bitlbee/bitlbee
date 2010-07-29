@@ -146,6 +146,12 @@ irc_t *irc_new( int fd )
 	set_eval_charset( set_find( &b->set, "charset" ), set_getstr( &b->set, "charset" ) );
 	
 	irc_write( irc, ":%s NOTICE AUTH :%s", irc->root->host, "BitlBee-IRCd initialized, please go on" );
+	if( isatty( irc->fd ) )
+		irc_write( irc, ":%s NOTICE AUTH :%s", irc->root->host,
+		           "If you read this, you most likely accidentally "
+		           "started BitlBee in inetd mode on the command line. "
+		           "You probably want to run it in (Fork)Daemon mode. "
+		           "See doc/README for more information." );
 	
 	g_free( myhost );
 	g_free( host );

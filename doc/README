@@ -8,7 +8,25 @@ If you want to compile BitlBee yourself, that's fine. Just run ./configure
 to set up the build system. If configure succeeds, run make to build BitlBee.
 make install will move all the files to the right places.
 
---- inetd installation
+--- (Fork)Daemon mode
+
+These days ForkDaemon mode is the recommended way of running BitlBee. The
+difference between Daemon and ForkDaemon mode is that in the latter, a
+separate process is spawned for every user. This costs a little bit more
+memory, but means that if one user hits a bug in the code, not all other
+users get disconnected with him/her.
+
+To use BitlBee in any daemon mode, just start it with the right flags or
+enable it in bitlbee.conf (see the RunMode option). You probably want to
+write an init script to start BitlBee automatically after a reboot. (This
+is where you realise using a package from your distro would've been a better
+idea. :-P)
+
+Please do make sure that the user BitlBee runs as (not root, please!) is
+able to read from and write to the /var/lib/bitlbee directory to save your
+settings!
+
+--- inetd installation (more or less deprecated)
 
 After installation you have to set up inetd (you got that one running,
 right? If not, just take a look at utils/bitlbeed.c) to start BitlBee. You
@@ -26,7 +44,7 @@ you have to put a service name there (one that is also mentioned in
 /etc/services). So if there's no line in /services for 6667/tcp (or whatever
 you choose), add it and use that name in the inetd.conf entry.
 
--- xinetd installation
+-- xinetd installation (equally deprecated)
 
 Most machines use xinetd instead of inetd these days. If your machine runs
 xinetd, you can copy the bitlbee.xinetd file from the doc/ directory to your
@@ -40,25 +58,6 @@ something's wrong.
 Also, don't forget to create the configuration directory (/var/lib/bitlbee/
 by default) and chown it to the UID BitlBee is running as. Make sure this
 directory is read-/writable by this user only.
-
---- (Fork)Daemon mode
-
-If you don't want to run any inetd daemon, you can run BitlBee in Daemon
-mode. Right now, daemon mode may be a bad idea on servers with multiple
-users, since possible fatal BitlBee bugs will crash the BitlBee process and
-disconnect all connected users at once. Instead, you can use ForkDaemon
-mode, which serves every user from a separate process, without depending on
-an inetd daemon.
-
-To use BitlBee in daemon mode, just start it with the right flags or enable
-it in bitlbee.conf. You probably want to write an init script to start
-BitlBee automatically after a reboot. (This is where you realise using
-a package from your distro would've been a better idea. :-P)
-
-Note that the BitlBee code is getting stable enough for daemon mode to be
-useful. Some public servers use it, and it saves a lot of memory by serving
-tens of users from a single process. One crash affects all users, but these
-are becoming quite rare.
 
 
 DEPENDENCIES
@@ -138,8 +137,11 @@ http://www.bitlbee.org/
 The bug tracking system:
 http://bugs.bitlbee.org/
 
-Our version control system is Bazaar-NG. Our repository is at:
+Our version control system is Bazaar. Our repository is at:
 http://code.bitlbee.org/
+
+More documentation on the Wiki:
+http://wiki.bitlbee.org/
 
 
 A NOTE ON ENCRYPTION
@@ -185,5 +187,5 @@ also licensed under the GPL.
 
 	BitlBee - An IRC to other chat networks gateway 
 	          <http://www.bitlbee.org/>
-	Copyright (C) 2002-2007  Wilmer van der Gaast <wilmer@gaast.net>
+	Copyright (C) 2002-2010  Wilmer van der Gaast <wilmer@gaast.net>
 	                         and others
