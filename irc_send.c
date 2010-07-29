@@ -103,33 +103,31 @@ void irc_send_motd( irc_t *irc )
 
 void irc_usermsg( irc_t *irc, char *format, ... )
 {
-	irc_channel_t *ic;
-	irc_user_t *iu;
+	irc_channel_t *ic = NULL;
+	irc_user_t *iu = irc->root;
 	char text[1024];
 	va_list params;
+	char *dst;
 	
 	va_start( params, format );
 	g_vsnprintf( text, sizeof( text ), format, params );
 	va_end( params );
 	
-	if( irc->last_root_cmd &&
-	    irc_channel_name_ok( irc->last_root_cmd ) && 
-	    ( ic = irc_channel_by_name( irc, irc->last_root_cmd ) ) &&
-	    ic->flags & IRC_CHANNEL_JOINED )
-		irc_send_msg( irc->root, "PRIVMSG", irc->last_root_cmd, text, NULL );
-	else if( irc->last_root_cmd &&
-	         ( iu = irc_user_by_name( irc, irc->last_root_cmd ) ) &&
-	         iu->f == &irc_user_root_funcs )
-		irc_send_msg( iu, "PRIVMSG", irc->user->nick, text, NULL );
-	else
+	/* Too similar to bee_irc_user_msg()... */
+	if( iu->last_channel )
 	{
-		g_free( irc->last_root_cmd );
-		irc->last_root_cmd = NULL;
-		
-		irc_send_msg( irc->root, "PRIVMSG", irc->user->nick, text, NULL );
+		if( iu->last_channel->flags & IRC_CHANNEL_JOINED )
+			ic = iu->last_channel;
+		else if( irc->default_channel->flags & IRC_CHANNEL_JOINED )
+			ic = irc->default_channel;
 	}
 	
-	/*return( irc_msgfrom( irc, u->nick, text ) );*/
+	if( ic )
+		dst = ic->name;
+	else
+		dst = irc->user->nick;
+	
+	irc_send_msg( irc->root, "PRIVMSG", dst, text, NULL );
 }
 
 void irc_send_join( irc_channel_t *ic, irc_user_t *iu )

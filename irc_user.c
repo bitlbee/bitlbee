@@ -221,9 +221,6 @@ static gboolean root_privmsg( irc_user_t *iu, const char *msg )
 {
 	char cmd[strlen(msg)+1];
 	
-	g_free( iu->irc->last_root_cmd );
-	iu->irc->last_root_cmd = g_strdup( iu->nick );
-	
 	strcpy( cmd, msg );
 	root_command_string( iu->irc, cmd );
 	

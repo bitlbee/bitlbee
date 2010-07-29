@@ -480,6 +480,7 @@ char *set_eval_irc_channel_ops( set_t *set, char *value )
 static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 {
 	irc_t *irc = ic->irc;
+	irc_user_t *iu;
 	const char *s;
 	
 	/* Scan for non-whitespace chars followed by a colon: */
@@ -488,33 +489,27 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 	if( *s == ':' || *s == ',' )
 	{
 		char to[s-msg+1];
-		irc_user_t *iu;
 		
 		memset( to, 0, sizeof( to ) );
 		strncpy( to, msg, s - msg );
 		while( *(++s) && isspace( *s ) ) {}
+		msg = s;
 		
-		iu = irc_user_by_name( irc, to );
-		if( iu && iu->f->privmsg )
-		{
-			iu->last_channel = ic;
-			iu->f->privmsg( iu, s );
-		}
-		else
-		{
+		if( !( iu = irc_user_by_name( irc, to ) ) )
 			irc_channel_printf( ic, "User does not exist: %s", to );
-		}
+		else
+			ic->last_target = iu;
 	}
+	else if( g_strcasecmp( set_getstr( &irc->b->set, "default_target" ), "last" ) == 0 &&
+	         ic->last_target && g_slist_find( irc->users, ic->last_target ) )
+		iu = ic->last_target;
 	else
+		iu = irc->root;
+	
+	if( iu && iu->f->privmsg )
 	{
-		/* TODO: Maybe just use root->privmsg here now? */
-		char cmd[strlen(msg)+1];
-		
-		g_free( ic->irc->last_root_cmd );
-		ic->irc->last_root_cmd = g_strdup( ic->name );
-		
-		strcpy( cmd, msg );
-		root_command_string( ic->irc, cmd );
+		iu->last_channel = ic;
+		iu->f->privmsg( iu, msg );
 	}
 	
 	return TRUE;

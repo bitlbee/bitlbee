@@ -559,9 +559,9 @@ static void cmd_channel( irc_t *irc, char **cmd )
 	{
 		/* If this doesn't match any channel, maybe this is the short
 		   syntax (only works when used inside a channel). */
-		if( ( len = strlen( cmd[1] ) ) &&
-		    g_strncasecmp( cmd[1], "set", len ) == 0 &&
-		    ( ic = irc_channel_by_name( irc, irc->last_root_cmd ) ) )
+		if( ( ic = irc->root->last_channel ) &&
+		    ( len = strlen( cmd[1] ) ) &&
+		    g_strncasecmp( cmd[1], "set", len ) == 0 )
 			cmd_set_real( irc, cmd + 1, &ic->set, NULL );
 		else
 			irc_usermsg( irc, "Could not find channel `%s'", cmd[1] );
@@ -641,7 +641,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 		irc_channel_t *ic;
 		char *s, *group = NULL;;
 		
-		if( ( ic = irc_channel_by_name( irc, irc->last_root_cmd ) ) &&
+		if( ( ic = irc->root->last_channel ) &&
 		    ( s = set_getstr( &ic->set, "fill_by" ) ) &&
 		    strcmp( s, "group" ) == 0 &&
 		    ( group = set_getstr( &ic->set, "group" ) ) )

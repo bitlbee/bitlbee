@@ -243,7 +243,6 @@ void irc_free( irc_t * irc )
 	g_free( irc->sendbuffer );
 	g_free( irc->readbuffer );
 	g_free( irc->password );
-	g_free( irc->last_root_cmd );
 	
 	g_free( irc );
 	
@@ -728,15 +727,15 @@ int irc_check_login( irc_t *irc )
 			set_setstr( &ic->set, "auto_join", "true" );
 			irc_channel_auto_joins( irc, NULL );
 			
-			irc->last_root_cmd = g_strdup( ROOT_CHAN );
+			irc->root->last_channel = irc->default_channel;
 			
-			irc_send_msg( irc->root, "PRIVMSG", ROOT_CHAN,
-			              "Welcome to the BitlBee gateway!\n\n"
-			              "If you've never used BitlBee before, please do read the help "
-			              "information using the \x02help\x02 command. Lots of FAQs are "
-			              "answered there.\n"
-			              "If you already have an account on this server, just use the "
-			              "\x02identify\x02 command to identify yourself.", NULL );
+			irc_usermsg( irc,
+			             "Welcome to the BitlBee gateway!\n\n"
+			             "If you've never used BitlBee before, please do read the help "
+			             "information using the \x02help\x02 command. Lots of FAQs are "
+			             "answered there.\n"
+			             "If you already have an account on this server, just use the "
+			             "\x02identify\x02 command to identify yourself." );
 			
 			/* This is for bug #209 (use PASS to identify to NickServ). */
 			if( irc->password != NULL )

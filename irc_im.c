@@ -214,6 +214,7 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, t
 	if( sent_at > 0 && set_getbool( &irc->b->set, "display_timestamps" ) )
 		ts = irc_format_timestamp( irc, sent_at );
 	
+	/* Too similar to irc_usermsg()... */
 	if( iu->last_channel )
 	{
 		if( iu->last_channel->flags & IRC_CHANNEL_JOINED )

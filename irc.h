@@ -66,10 +66,6 @@ typedef struct irc
 	struct irc_user *root;
 	struct irc_user *user;
 	
-	char *last_root_cmd; /* Either the nickname from which the last root
-	                        msg came, or the last channel root was talked
-	                        to. */
-
 	char *password; /* HACK: Used to save the user's password, but before
 	                   logging in, this may contain a password we should
 	                   send to identify after USER/NICK are received. */
@@ -154,6 +150,7 @@ typedef struct irc_channel
 	time_t topic_time;
 	
 	GSList *users; /* struct irc_channel_user */
+	struct irc_user *last_target;
 	struct set *set;
 	
 	GString *pastebuf; /* Paste buffer (combine lines into a multiline msg). */
