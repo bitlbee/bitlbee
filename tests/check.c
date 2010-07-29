@@ -59,9 +59,6 @@ Suite *help_suite(void);
 /* From check_user.c */
 Suite *user_suite(void);
 
-/* From check_crypting.c */
-Suite *crypting_suite(void);
-
 /* From check_set.c */
 Suite *set_suite(void);
 
@@ -114,7 +111,6 @@ int main (int argc, char **argv)
 	srunner_add_suite(sr, irc_suite());
 	srunner_add_suite(sr, help_suite());
 	srunner_add_suite(sr, user_suite());
-	srunner_add_suite(sr, crypting_suite());
 	srunner_add_suite(sr, set_suite());
 	srunner_add_suite(sr, jabber_sasl_suite());
 	srunner_add_suite(sr, jabber_util_suite());
