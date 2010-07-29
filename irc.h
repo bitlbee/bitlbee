@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* The IRC-based UI (for now the only one)                              */
@@ -107,7 +107,7 @@ typedef struct irc_user
 	char *host;
 	char *fullname;
 	
-	/* Nickname in lowercase for case sensitive searches */
+	/* Nickname in lowercase for case insensitive searches */
 	char *key;
 	
 	irc_user_flags_t flags;

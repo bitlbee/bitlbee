@@ -116,6 +116,7 @@ irc_channel_t *irc_channel_get( irc_t *irc, char *id )
 int irc_channel_free( irc_channel_t *ic )
 {
 	irc_t *irc = ic->irc;
+	GSList *l;
 	
 	if( ic->flags & IRC_CHANNEL_JOINED )
 		irc_channel_del_user( ic, irc->user, IRC_CDU_KICK, "Cleaning up channel" );
@@ -131,6 +132,14 @@ int irc_channel_free( irc_channel_t *ic )
 	{
 		g_free( ic->users->data );
 		ic->users = g_slist_remove( ic->users, ic->users->data );
+	}
+	
+	for( l = irc->users; l; l = l->next )
+	{
+		irc_user_t *iu = l->data;
+		
+		if( iu->last_channel == ic )
+			iu->last_channel = irc->default_channel;
 	}
 	
 	g_free( ic->name );

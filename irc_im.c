@@ -209,13 +209,22 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, t
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
 	char *dst, *prefix = NULL;
 	char *wrapped, *ts = NULL;
+	irc_channel_t *ic = NULL;
 	
 	if( sent_at > 0 && set_getbool( &irc->b->set, "display_timestamps" ) )
 		ts = irc_format_timestamp( irc, sent_at );
 	
 	if( iu->last_channel )
 	{
-		dst = iu->last_channel->name;
+		if( iu->last_channel->flags & IRC_CHANNEL_JOINED )
+			ic = iu->last_channel;
+		else if( irc->default_channel->flags & IRC_CHANNEL_JOINED )
+			ic = irc->default_channel;
+	}
+	
+	if( ic )
+	{
+		dst = ic->name;
 		prefix = g_strdup_printf( "%s%s%s", irc->user->nick, set_getstr( &bee->set, "to_char" ), ts ? : "" );
 	}
 	else
