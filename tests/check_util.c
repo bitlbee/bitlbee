@@ -160,6 +160,14 @@ START_TEST(test_word_wrap)
 	}
 END_TEST
 
+START_TEST(test_http_encode)
+	char s[80];
+	
+	strcpy( s, "ee\xc3""\xab""ee!!..." );
+	http_encode( s );
+	fail_unless( strcmp( s, "ee%C3%ABee%21%21..." ) == 0 );
+END_TEST
+
 Suite *util_suite (void)
 {
 	Suite *s = suite_create("Util");
@@ -173,5 +181,6 @@ Suite *util_suite (void)
 	tcase_add_test (tc_core, test_set_url_username);
 	tcase_add_test (tc_core, test_set_url_username_pwd);
 	tcase_add_test (tc_core, test_word_wrap);
+	tcase_add_test (tc_core, test_http_encode);
 	return s;
 }

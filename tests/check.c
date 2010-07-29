@@ -2,6 +2,7 @@
 #include <glib.h>
 #include <gmodule.h>
 #include <check.h>
+#include <locale.h>
 #include "bitlbee.h"
 #include "testsuite.h"
 
@@ -91,6 +92,7 @@ int main (int argc, char **argv)
 	g_option_context_free(pc);
 
 	log_init();
+	setlocale(LC_CTYPE, "");
 
 	if (verbose) {
 		log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );

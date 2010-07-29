@@ -304,14 +304,18 @@ void http_encode( char *s )
 	
 	for( i = j = 0; t[i]; i ++, j ++ )
 	{
-		if( !isalnum( t[i] ) && !strchr( "._-~", t[i] ) )
+		/* Warning: isalnum() is locale-aware, so don't use it here! */
+		if( ( t[i] >= 'A' && t[i] <= 'Z' ) ||
+		    ( t[i] >= 'a' && t[i] <= 'z' ) ||
+		    ( t[i] >= '0' && t[i] <= '9' ) ||
+		    strchr( "._-~", t[i] ) )
 		{
-			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
-			j += 2;
+			s[j] = t[i];
 		}
 		else
 		{
-			s[j] = t[i];
+			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
+			j += 2;
 		}
 	}
 	s[j] = 0;
