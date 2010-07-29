@@ -92,6 +92,7 @@ int main (int argc, char **argv)
 	g_option_context_free(pc);
 
 	log_init();
+	b_main_init();
 	setlocale(LC_CTYPE, "");
 
 	if (verbose) {
