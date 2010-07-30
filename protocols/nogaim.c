@@ -381,13 +381,15 @@ void imcb_add_buddy( struct im_connection *ic, const char *handle, const char *g
 {
 	bee_user_t *bu;
 	bee_t *bee = ic->bee;
+	bee_group_t *oldg;
 	
 	if( !( bu = bee_user_by_handle( bee, ic, handle ) ) )
 		bu = bee_user_new( bee, ic, handle, 0 );
 	
+	oldg = bu->group;
 	bu->group = bee_group_by_name( bee, group, TRUE );
 	
-	if( bee->ui->user_group )
+	if( bee->ui->user_group && bu->group != oldg )
 		bee->ui->user_group( bee, bu );
 }
 
