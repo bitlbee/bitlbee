@@ -86,7 +86,7 @@ endif
 ifdef BITLBEE_VERSION
 	dh_gencontrol -- -v1:$(BITLBEE_VERSION)-0  -Vbee:Version=1:$(BITLBEE_VERSION)-0
 else
-	dh_gencontrol -- -Vbee:Version=$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}' | sed -e 's/+[^+]*$$//')
+	dh_gencontrol -- -Vbee:Version=$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}' | sed -e 's/+b[0-9]\+$$//')
 endif
 	dh_md5sums
 	dh_builddeb
