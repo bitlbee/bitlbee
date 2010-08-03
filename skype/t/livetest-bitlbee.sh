@@ -22,7 +22,12 @@ rm -rf etc
 mkdir etc
 cd etc
 cp ../../skyped.cnf .
-yes ""|openssl req -new -x509 -days 365 -nodes -config skyped.cnf -out skyped.cert.pem -keyout skyped.key.pem 2> openssl.log
+if [ ! -e ~/.skyped/skyped.cert.pem -o ! -e ~/.skyped/skyped.key.pem ]; then
+	yes ""|openssl req -new -x509 -days 365 -nodes -config skyped.cnf -out skyped.cert.pem -keyout skyped.key.pem 2> openssl.log
+else
+	cp ~/.skyped/skyped.cert.pem .
+	cp ~/.skyped/skyped.key.pem .
+fi
 cd ..
 echo "[skyped]" > skyped.conf
 echo "username = $TEST_SKYPE_ID" >> skyped.conf
