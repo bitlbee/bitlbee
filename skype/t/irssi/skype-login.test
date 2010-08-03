@@ -6,5 +6,5 @@ TESTPASSWORD="$TEST_SKYPE_PASSWORD"
 ### Test login
 /expectbee 'Welcome to the BitlBee' -command 'msg $$C register testing'
 /expectbee 'Account successfully created' -command 'msg $$C account add skype @LOGIN@ @PASSWORD@'
-/expectbee 'Account successfully added' -command 'msg $$C account on 0'
+/expectbee 'Account successfully added' -command 'msg $$C account 0 on'
 /expectbee 'Logged in' -command 'quit Test Passed'
