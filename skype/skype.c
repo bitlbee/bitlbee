@@ -33,8 +33,8 @@
 /*
  * Compatibility with BitlBee 1.3+
  */
-#ifndef GAIM_INPUT_READ
-#define GAIM_INPUT_READ B_EV_IO_READ
+#if BITLBEE_VERSION_CODE < BITLBEE_VER(1, 3, 0)
+#define B_EV_IO_READ GAIM_INPUT_READ
 #endif
 
 /*
@@ -958,7 +958,7 @@ gboolean skype_start_stream(struct im_connection *ic)
 		return FALSE;
 
 	if (sd->bfd <= 0)
-		sd->bfd = b_input_add(sd->fd, GAIM_INPUT_READ,
+		sd->bfd = b_input_add(sd->fd, B_EV_IO_READ,
 			skype_read_callback, ic);
 
 	/* Log in */
