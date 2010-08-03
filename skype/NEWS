@@ -1,5 +1,8 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.8.3         - support for BitlBee 1.3dev
+              - fixed --debug switch (-d was fine)
+              - documentation fixes
 0.8.2         - building documentation is now optional
               - new settings: test_join and show_moods
               - '~' in skyped.conf is now expanded to the user's home directory
