@@ -11,7 +11,8 @@ mkdir livetest 2>/dev/null || rm livetest/bitlbeetest*.xml bitlbeetest.pid 2>/de
 
 # Run the bee
 echo Running bitlbee...
-$VALGRIND $BITLBEE -n -c bitlbee.conf -d livetest/ -D -P bitlbeetest.pid -p $PORT & sleep 2
+$VALGRIND $BITLBEE -n -c bitlbee.conf -d livetest/ -D -P bitlbeetest.pid -p $PORT 2>bitlbee.log &
+sleep 2
 
 # Check if it's really running
 kill -0 `cat bitlbeetest.pid 2>/dev/null ` 2>/dev/null || { echo Failed to run bitlbee daemon on port $PORT; exit 1; }
