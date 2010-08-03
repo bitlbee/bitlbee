@@ -356,7 +356,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		buf = ptr + 10;
 		if (bu) {
 			imcb_buddy_status(ic, bu->handle, bu->flags, NULL,
-			                  *buf ? buf : NULL);
+					*buf ? buf : NULL);
 		}
 #endif
 		if (set_getbool(&ic->acc->set, "show_moods"))
