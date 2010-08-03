@@ -31,6 +31,13 @@
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 /*
+ * Compatibility with BitlBee 1.3+
+ */
+#ifndef GAIM_INPUT_READ
+#define GAIM_INPUT_READ B_EV_IO_READ
+#endif
+
+/*
  * Enumerations
  */
 
@@ -234,6 +241,7 @@ void skype_call_ask(struct im_connection *ic, char *call_id, char *message)
 }
 struct groupchat *skype_chat_by_name(struct im_connection *ic, char *name)
 {
+#if BITLBEE_VERSION_CODE < BITLBEE_VER(1, 3, 0)
 	struct groupchat *ret;
 
 	for (ret = ic->groupchats; ret; ret = ret->next)
@@ -241,6 +249,9 @@ struct groupchat *skype_chat_by_name(struct im_connection *ic, char *name)
 			break;
 
 	return ret;
+#else
+	return bee_chat_by_title(ic->bee, ic, name);
+#endif
 }
 
 static char *skype_call_strerror(int err)
@@ -325,8 +336,9 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			imcb_add_buddy(ic, buf, NULL);
 			g_free(buf);
 		}
-	} else if (!strncmp(ptr, "MOOD_TEXT ", 10) && set_getbool(&ic->acc->set, "show_moods")) {
+	} else if (!strncmp(ptr, "MOOD_TEXT ", 10)) {
 		char *buf = g_strdup_printf("%s@skype.com", user);
+#if BITLBEE_VERSION_CODE < BITLBEE_VER(1, 3, 0)
 		user_t *u = user_findhandle(ic, buf);
 		g_free(buf);
 		buf = ptr + 10;
@@ -338,7 +350,17 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			else
 				u->status_msg = NULL;
 		}
-		imcb_log(ic, "User `%s' changed mood text to `%s'", user, buf);
+#else
+		bee_user_t *bu = bee_user_by_handle(ic->bee, ic, buf);
+		g_free(buf);
+		buf = ptr + 10;
+		if (bu) {
+			imcb_buddy_status(ic, bu->handle, bu->flags, NULL,
+			                  *buf ? buf : NULL);
+		}
+#endif
+		if (set_getbool(&ic->acc->set, "show_moods"))
+			imcb_log(ic, "User `%s' changed mood text to `%s'", user, buf);
 	} else if (!strncmp(ptr, "FULLNAME ", 9))
 		sd->info_fullname = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "PHONE_HOME ", 11))
@@ -1084,12 +1106,15 @@ static char *skype_set_call(set_t *set, char *value)
 	char *nick, *ptr;
 
 	if (value) {
+#if BITLBEE_VERSION_CODE < BITLBEE_VER(1, 3, 0)
+		/* IRC stuff shouldn't be touched from inside IM modules. */
 		user_t *u = user_find(acc->irc, value);
 		/* We are starting a call */
-		if (!u)
-			nick = g_strdup(value);
-		else
+		if (u)
 			nick = g_strdup(u->handle);
+		else
+#endif
+			nick = g_strdup(value);
 		ptr = strchr(nick, '@');
 		if (ptr)
 			*ptr = '\0';
