@@ -916,6 +916,35 @@ static void cmd_yesno( irc_t *irc, char **cmd )
 	
 	if( irc->queries == NULL )
 	{
+		/* Alright, alright, let's add a tiny easter egg here. */
+		static irc_t *last_irc = NULL;
+		static time_t last_time = 0;
+		static int times = 0;
+		static const char *msg[] = {
+			"Oh yeah, that's right.",
+			"Alright, alright. Now go back to work.",
+			"Buuuuuuuuuuuuuuuurp... Excuse me!",
+			"Yes?",
+			"No?",
+		};
+		
+		if( last_irc == irc && time( NULL ) - last_time < 15 )
+		{
+			if( ( ++times >= 3 ) )
+			{
+				irc_usermsg( irc, "%s", msg[rand()%(sizeof(msg)/sizeof(char*))] );
+				last_irc = NULL;
+				times = 0;
+				return;
+			}
+		}
+		else
+		{
+			last_time = time( NULL );
+			last_irc = irc;
+			times = 0;
+		}
+		
 		irc_usermsg( irc, "Did I ask you something?" );
 		return;
 	}
