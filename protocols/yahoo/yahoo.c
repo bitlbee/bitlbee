@@ -707,7 +707,7 @@ void ext_yahoo_error( int id, const char *err, int fatal, int num )
 int ext_yahoo_add_handler( int id, void *fd_, yahoo_input_condition cond, void *data )
 {
 	struct byahoo_input_data *inp = g_new0( struct byahoo_input_data, 1 );
-	int fd = (int) fd_;
+	int fd = (long) fd_;
 	
 	if( cond == YAHOO_INPUT_READ )
 	{
@@ -789,17 +789,17 @@ char *ext_yahoo_get_ip_addr( const char *domain )
 
 int ext_yahoo_write( void *fd, char *buf, int len )
 {
-	return write( (int) fd, buf, len );
+	return write( (long) fd, buf, len );
 }
 
 int ext_yahoo_read( void *fd, char *buf, int len )
 {
-	return read( (int) fd, buf, len );
+	return read( (long) fd, buf, len );
 }
 
 void ext_yahoo_close( void *fd )
 {
-	close( (int) fd );
+	close( (long) fd );
 }
 
 void ext_yahoo_got_buddy_change_group( int id, const char *me, const char *who,
