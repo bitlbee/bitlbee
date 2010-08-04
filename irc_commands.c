@@ -596,6 +596,20 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 	}
 }
 
+static void irc_cmd_list( irc_t *irc, char **cmd )
+{
+	GSList *l;
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		
+		irc_send_num( irc, 322, "%s %d :%s",
+		              ic->name, g_slist_length( ic->users ), ic->topic ? : "" );
+	}
+	irc_send_num( irc, 323, ":%s", "End of /LIST" );
+}
+
 static void irc_cmd_version( irc_t *irc, char **cmd )
 {
 	irc_send_num( irc, 351, "bitlbee-%s. %s :%s/%s ",
@@ -660,6 +674,7 @@ static const command_t irc_commands[] = {
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
+	{ "list",        0, irc_cmd_list,        IRC_CMD_LOGGED_IN },
 	{ "die",         0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "deaf",        0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "wallops",     1, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
