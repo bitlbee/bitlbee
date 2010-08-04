@@ -763,6 +763,8 @@ int irc_check_login( irc_t *irc )
 	}
 }
 
+/* TODO: This is a mess, but this function is a bit too complicated to be
+   converted to something more generic. */
 void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv )
 {
 	/* allow_priv: Set to 0 if s contains user input, 1 if you want

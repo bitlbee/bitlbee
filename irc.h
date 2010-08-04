@@ -35,7 +35,7 @@
 #define UMODES "abisw"     /* Allowed umodes (although they mostly do nothing) */
 #define UMODES_PRIV "Ro"   /* Allowed, but not by user directly */
 #define UMODES_KEEP "R"    /* Don't allow unsetting using /MODE */
-#define CMODES "nt"        /* Allowed modes */
+#define CMODES "ntC"       /* Allowed modes */
 #define CMODE "t"          /* Default mode */
 #define UMODE "s"          /* Default mode */
 
@@ -249,6 +249,7 @@ int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, irc_channel_del_use
 irc_channel_user_t *irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
 void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_user_flags_t flags );
+void irc_channel_set_mode( irc_channel_t *ic, const char *s );
 void irc_channel_auto_joins( irc_t *irc, struct account *acc );
 void irc_channel_printf( irc_channel_t *ic, char *format, ... );
 gboolean irc_channel_name_ok( const char *name );

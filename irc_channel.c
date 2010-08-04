@@ -323,6 +323,50 @@ void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_u
 	icu->flags = flags;
 }
 
+void irc_channel_set_mode( irc_channel_t *ic, const char *s )
+{
+	irc_t *irc = ic->irc;
+	char m[128], st = 1;
+	const char *t;
+	int i;
+	char changes[512], *p, st2 = 2;
+	
+	memset( m, 0, sizeof( m ) );
+	
+	for( t = ic->mode; *t; t ++ )
+		if( *t < sizeof( m ) )
+			m[(int)*t] = 1;
+	
+	p = changes;
+	for( t = s; *t; t ++ )
+	{
+		if( *t == '+' || *t == '-' )
+			st = *t == '+';
+		else if( strchr( CMODES, *t ) )
+		{
+			if( m[(int)*t] != st)
+			{
+				if( st != st2 )
+					st2 = st, *p++ = st ? '+' : '-';
+				*p++ = *t;
+			}
+			m[(int)*t] = st;
+		}
+	}
+	*p = '\0';
+	
+	memset( ic->mode, 0, sizeof( ic->mode ) );
+	
+	for( i = 'A'; i <= 'z' && strlen( ic->mode ) < ( sizeof( ic->mode ) - 1 ); i ++ )
+		if( m[i] )
+			ic->mode[strlen(ic->mode)] = i;
+	
+	if( *changes && ( ic->flags & IRC_CHANNEL_JOINED ) )
+		irc_write( irc, ":%s!%s@%s MODE %s :%s", irc->root->nick,
+		           irc->root->user, irc->root->host, ic->name,
+		           changes );
+}
+
 void irc_channel_auto_joins( irc_t *irc, account_t *acc )
 {
 	GSList *l;
@@ -559,6 +603,9 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	/* Have to run the evaluator to initialize icc->modes. */
 	set_setstr( &ic->set, "show_users", "online+,away" );
 	
+	/* For scripts that care. */
+	irc_channel_set_mode( ic, "+C" );
+	
 	return TRUE;
 }
 
@@ -689,6 +736,9 @@ static gboolean control_channel_free( irc_channel_t *ic )
 	
 	g_free( icc );
 	ic->data = NULL;
+	
+	/* For scripts that care. */
+	irc_channel_set_mode( ic, "-C" );
 	
 	return TRUE;
 }
