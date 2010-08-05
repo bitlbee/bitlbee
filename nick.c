@@ -115,7 +115,7 @@ char *nick_gen( bee_user_t *bu )
 	
 	while( fmt && *fmt && ret->len < MAX_NICK_LENGTH )
 	{
-		char *part, chop = '\0', *asc = NULL;
+		char *part = NULL, chop = '\0', *asc = NULL;
 		int len = MAX_NICK_LENGTH;
 		
 		if( *fmt != '%' )

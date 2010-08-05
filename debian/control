@@ -16,8 +16,8 @@ Conflicts: bitlbee-libpurple
 Replaces: bitlbee-libpurple
 Description: An IRC to other chat networks gateway (default version)
  This program can be used as an IRC server which forwards everything you
- say to people on other chat networks: Jabber, ICQ, AIM, MSN, Yahoo! and
- Twitter.
+ say to people on other chat networks: Jabber (which includes Google Talk
+ and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
 
 Package: bitlbee-libpurple
 Architecture: any
@@ -26,8 +26,8 @@ Conflicts: bitlbee
 Replaces: bitlbee
 Description: An IRC to other chat networks gateway (using libpurple)
  This program can be used as an IRC server which forwards everything you
- say to people on other chat networks: Jabber, ICQ, AIM, MSN, Yahoo! and
- Twitter.
+ say to people on other chat networks: Jabber (which includes Google Talk
+ and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
  .
  This package contains a version of BitlBee that uses the libpurple instant
  messaging library instead of built-in code, which adds support for more IM
@@ -43,8 +43,8 @@ Depends: ${misc:Depends}, net-tools
 Replaces: bitlbee
 Description: An IRC to other chat networks gateway (common files/docs)
  This program can be used as an IRC server which forwards everything you
- say to people on other chat networks: Jabber, ICQ, AIM, MSN, Yahoo! and
- Twitter.
+ say to people on other chat networks: Jabber (which includes Google Talk
+ and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
  .
  This package contains common files (mostly documentation) for bitlbee and
  bitlbee-libpurple.
@@ -54,7 +54,7 @@ Architecture: all
 Depends: ${misc:Depends}, bitlbee (>= ${bee:Version}), bitlbee (<< ${bee:Version}.1~)
 Description: An IRC to other chat networks gateway (dev files)
  This program can be used as an IRC server which forwards everything you
- say to people on other chat networks: Jabber, ICQ, AIM, MSN, Yahoo! and
- Twitter.
+ say to people on other chat networks: Jabber (which includes Google Talk
+ and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
  .
  This package holds development stuff for compiling plug-ins.

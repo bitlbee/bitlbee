@@ -1962,7 +1962,7 @@ static int gaim_ssi_parserights(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	struct im_connection *ic = sess->aux_data;
-	struct aim_ssi_item *curitem, *curgroup;
+	struct aim_ssi_item *curitem, *curgroup = NULL;
 	int tmp;
 	char *nrm;
 
@@ -1979,7 +1979,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 					if (curitem->data && aim_gettlv(curitem->data, 0x0131, 1))
 						    realname = aim_gettlv_str(curitem->data, 0x0131, 1);
 					
-					imcb_add_buddy(ic, nrm, curgroup->gid == curitem->gid ? curgroup->name : NULL);
+					imcb_add_buddy(ic, nrm, curgroup ? (curgroup->gid == curitem->gid ? curgroup->name : NULL) : NULL);
 					
 					if (realname) {
 						imcb_buddy_nick_hint(ic, nrm, realname);

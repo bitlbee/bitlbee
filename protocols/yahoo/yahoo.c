@@ -820,7 +820,7 @@ int ext_yahoo_connect(const char *host, int port)
 static void byahoo_accept_conf( void *data )
 {
 	struct byahoo_conf_invitation *inv = data;
-	struct groupchat *b;
+	struct groupchat *b = NULL;
 	GSList *l;
 	
 	for( l = inv->ic->groupchats; l; l = l->next )
