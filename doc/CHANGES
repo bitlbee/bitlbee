@@ -4,6 +4,10 @@ found in the bzr commit logs, for example you can try:
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
 Version 1.3dev:
+- For the first time since 2007, a dev snapshot. Like then, this is pretty
+  stable already (running on testing.bitlbee.org for weeks by now), but not
+  all planned features for the next major release are ready yet, and there
+  may be some rough edges in the interface and documentation.
 - Loads of new stuff, mostly ready for a new major release, but starting with
   a dev snapshot. A few changes that were planned for a long time already:
 - Rewrote the IRC core, which brings:
@@ -26,10 +30,13 @@ Version 1.3dev:
     as well.
   * The nick_source setting was replaced with a nick_format setting, which
     looks more or less like a format string, and lets you tweak how nicknames
-    for contacts are generated in more detail.
+    for contacts are generated in more detail. It also tries to convert non-
+    ASCII characters (i.e. accents) properly.
   * A per-channel show_users setting lets you configure exactly which kinds
     of contacts (online/away/offline) should show up in a channel and what
-    modes (none/voice/etc) they should have.
+    modes (none/voice/etc) they should have. Like show_offline, but together
+    with other new features it can for example create an &offline channel
+    with just offline contacts.
   * If you connect (and identify) to a BitlBee server you're already
     connected to, you can take over the existing session instead of starting
     a new one.
@@ -41,14 +48,17 @@ Version 1.3dev:
   * And new functionality to existing protocols.
   * This is and will always be optional and using it on public servers is
     *not* recommended. It should be pretty stable, but costs more RAM/etc.
-  * When using this variant, type "help purple" to get a list of supported
-    protocols.
+  * Switching to libpurple should be pretty transparent. See "help purple"
+    for a list of supported protocols (works only in libpurple-enabled
+    binaries).
 - Support for file transfers, in and out. /DCC SEND a file to a contact and
   it becomes a file transfer, and incoming file transfers become /DCC SENDs
   to you. Note that this is mostly useful when combined with libpurple, as
   only the Jabber native protocol module currently supports file transfers.
+- Updated Yahoo! module to be in sync again with libyahoo2. This mostly
+  fixes issues with authorization requests.
 
-Finished ... 2010
+Finished 6 Aug 2010
 
 Version 1.2.8:
 - Now always using the AIM-style authentication method for OSCAR connections,
