@@ -394,6 +394,16 @@ static int twitter_send_typing( struct im_connection *ic, char *who, int typing 
 //	return value;
 //}
 
+static void twitter_buddy_data_add( struct bee_user *bu )
+{
+	bu->data = g_new0( struct twitter_user_data, 1 );
+}
+
+static void twitter_buddy_data_free( struct bee_user *bu )
+{
+	g_free( bu->data );
+}
+
 static void twitter_handle_command( struct im_connection *ic, char *message )
 {
 	struct twitter_data *td = ic->proto_data;
@@ -407,7 +417,7 @@ static void twitter_handle_command( struct im_connection *ic, char *message )
 		g_free( cmds );
 		return;
 	}
-	else if( !set_getbool( &ic->set, "commands" ) )
+	else if( !set_getbool( &ic->acc->set, "commands" ) )
 	{
 		/* Not supporting commands. */
 	}
@@ -490,6 +500,8 @@ void twitter_initmodule()
 	ret->add_deny = twitter_add_deny;
 	ret->rem_deny = twitter_rem_deny;
 	ret->send_typing = twitter_send_typing;
+	ret->buddy_data_add = twitter_buddy_data_add;
+	ret->buddy_data_free = twitter_buddy_data_free;
 	ret->handle_cmp = g_strcasecmp;
 	
 	register_protocol(ret);

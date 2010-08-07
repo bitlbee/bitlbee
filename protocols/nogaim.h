@@ -246,6 +246,9 @@ struct prpl {
 	/* Incoming transfer request */
 	void (* transfer_request) (struct im_connection *, file_transfer_t *ft, char *handle );
 	
+	void (* buddy_data_add) (struct bee_user *bu);
+	void (* buddy_data_free) (struct bee_user *bu);
+	
 	/* Some placeholders so eventually older plugins may cooperate with newer BitlBees. */
 	void *resv1;
 	void *resv2;

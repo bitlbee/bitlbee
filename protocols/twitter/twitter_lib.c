@@ -430,10 +430,11 @@ static xt_status twitter_xt_get_status( struct xt_node *node, struct twitter_xml
  *  - all <status>es within the <status> element and
  *  - the next_cursor.
  */
-static xt_status twitter_xt_get_status_list( struct xt_node *node, struct twitter_xml_list *txl )
+static xt_status twitter_xt_get_status_list( struct im_connection *ic, struct xt_node *node, struct twitter_xml_list *txl )
 {
 	struct twitter_xml_status *txs;
 	struct xt_node *child;
+	bee_user_t *bu;
 
 	// Set the type of the list.
 	txl->type = TXL_STATUS;
@@ -448,6 +449,18 @@ static xt_status twitter_xt_get_status_list( struct xt_node *node, struct twitte
 			twitter_xt_get_status(child, txs);
 			// Put the item in the front of the list.
 			txl->list = g_slist_prepend (txl->list, txs);
+			
+			if (txs->user && txs->user->screen_name &&
+			    (bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name)))
+			{
+				struct twitter_user_data *tud = bu->data;
+				
+				if (txs->id > tud->last_id)
+				{
+					tud->last_id = txs->id;
+					tud->last_time = txs->created_at;
+				}
+			}
 		}
 		else if ( g_strcasecmp( "next_cursor", child->name ) == 0)
 		{
@@ -626,7 +639,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	parser = xt_new( NULL, txl );
 	xt_feed( parser, req->reply_body, req->body_size );
 	// The root <statuses> node should hold the list of statuses <status>
-	twitter_xt_get_status_list(parser->root, txl);
+	twitter_xt_get_status_list(ic, parser->root, txl);
 	xt_free( parser );
 
 	// See if the user wants to see the messages in a groupchat window or as private messages.

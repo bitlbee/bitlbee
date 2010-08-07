@@ -79,6 +79,7 @@ typedef struct bee_user
 	
 	bee_t *bee;
 	void *ui_data;
+	void *data; /* Can be used by the IM module. */
 } bee_user_t;
 
 /* This one's mostly used so save space and make it easier (cheaper) to

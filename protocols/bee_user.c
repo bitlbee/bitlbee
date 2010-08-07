@@ -42,6 +42,8 @@ bee_user_t *bee_user_new( bee_t *bee, struct im_connection *ic, const char *hand
 	
 	if( bee->ui->user_new )
 		bee->ui->user_new( bee, bu );
+	if( ic->acc->prpl->buddy_data_add )
+		ic->acc->prpl->buddy_data_add( bu );
 	
 	/* Offline by default. This will set the right flags. */
 	imcb_buddy_status( ic, handle, 0, NULL, NULL );
@@ -56,6 +58,8 @@ int bee_user_free( bee_t *bee, bee_user_t *bu )
 	
 	if( bee->ui->user_free )
 		bee->ui->user_free( bee, bu );
+	if( bu->ic->acc->prpl->buddy_data_free )
+		bu->ic->acc->prpl->buddy_data_free( bu );
 	
 	g_free( bu->handle );
 	g_free( bu->fullname );

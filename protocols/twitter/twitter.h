@@ -57,6 +57,12 @@ struct twitter_data
 	char *prefix; /* Used to generate contact + channel name. */
 };
 
+struct twitter_user_data
+{
+	guint64 last_id;
+	time_t last_time;
+};
+
 /**
  * This has the same function as the msn_connections GSList. We use this to 
  * make sure the connection is still alive in callbacks before we do anything
