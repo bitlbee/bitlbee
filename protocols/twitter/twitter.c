@@ -188,6 +188,8 @@ static void twitter_init( account_t *acc )
 	s = set_add( &acc->set, "base_url", def_url, NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
+	s = set_add( &acc->set, "commands", "true", set_eval_bool, acc );
+	
 	s = set_add( &acc->set, "message_length", "140", set_eval_int, acc );
 	
 	s = set_add( &acc->set, "mode", "one", set_eval_mode, acc );
@@ -273,6 +275,8 @@ static void twitter_logout( struct im_connection *ic )
 	twitter_connections = g_slist_remove( twitter_connections, ic );
 }
 
+static void twitter_handle_command( struct im_connection *ic, char *message );
+
 /**
  *
  */
@@ -301,8 +305,8 @@ static int twitter_buddy_msg( struct im_connection *ic, char *who, char *message
 				return FALSE;
 			}
 		}
-		else if( twitter_length_check(ic, message) )
-			twitter_post_status(ic, message);
+		else
+			twitter_handle_command(ic, message);
 	}
 	else
 	{
@@ -334,28 +338,8 @@ static void twitter_remove_buddy( struct im_connection *ic, char *who, char *gro
 
 static void twitter_chat_msg( struct groupchat *c, char *message, int flags )
 {
-	if( c && message && twitter_length_check( c->ic, message ) )
-	{
-		char *s, *new = NULL;
-		
-		if( ( s = strchr( message, ':' ) ) ||
-		    ( s = strchr( message, ',' ) ) )
-		{
-			bee_user_t *bu;
-			
-			new = g_strdup( message );
-			new[s-message] = '\0';
-			if( ( bu = bee_user_by_handle( c->ic->bee, c->ic, new ) ) )
-			{
-				sprintf( new, "@%s", bu->handle );
-				new[s-message+1] = ' ';
-				message = new;
-			}
-		}
-		
-		twitter_post_status( c->ic, message );
-		g_free( new );
-	}
+	if( c && message )
+		twitter_handle_command( c->ic, message );
 }
 
 static void twitter_chat_invite( struct groupchat *c, char *who, char *message )
@@ -409,6 +393,79 @@ static int twitter_send_typing( struct im_connection *ic, char *who, int typing 
 //{
 //	return value;
 //}
+
+static void twitter_handle_command( struct im_connection *ic, char *message )
+{
+	struct twitter_data *td = ic->proto_data;
+	char *cmds, **cmd;
+	
+	cmds = g_strdup( message );
+	cmd = split_command_parts( cmds );
+	
+	if( cmd[0] == NULL )
+	{
+		g_free( cmds );
+		return;
+	}
+	else if( !set_getbool( &ic->set, "commands" ) )
+	{
+		/* Not supporting commands. */
+	}
+	else if( g_strcasecmp( cmd[0], "undo" ) == 0 )
+	{
+		guint64 id;
+		
+		if( cmd[1] )
+		{
+			char *end = NULL;
+			
+			id = g_ascii_strtoull( cmd[1], &end, 10 );
+			if( end == NULL )
+				id = 0;
+		}
+		else
+			id = td->last_status_id;
+		
+		/* TODO: User feedback. */
+		if( id )
+			twitter_status_destroy( ic, id );
+		
+		g_free( cmds );
+		return;
+	}
+	else if( g_strcasecmp( cmd[0], "post" ) == 0 )
+	{
+		message += 5;
+	}
+	
+	{
+		char *s, *new = NULL;
+		bee_user_t *bu;
+		
+		if( !twitter_length_check( ic, message ) )
+		{
+			g_free( cmds );
+		  	return;
+		}
+		
+		s = cmd[0] + strlen( cmd[0] ) - 1;
+		if( s > cmd[0] && ( *s == ':' || *s == ',' ) )
+		{
+			*s = '\0';
+			
+			if( ( bu = bee_user_by_handle( ic->bee, ic, cmd[0] ) ) )
+			{
+				new = g_strdup_printf( "@%s %s", bu->handle,
+				                       message + ( s - cmd[0] ) + 2 );
+				message = new;
+			}
+		}
+		
+		twitter_post_status( ic, message );
+		g_free( new );
+	}
+	g_free( cmds );
+}
 
 void twitter_initmodule()
 {

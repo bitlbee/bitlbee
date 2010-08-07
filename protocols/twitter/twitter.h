@@ -43,6 +43,7 @@ struct twitter_data
 	char* pass;
 	struct oauth_info *oauth_info;
 	guint64 home_timeline_id;
+	guint64 last_status_id; /* For undo */
 	gint main_loop_id;
 	struct groupchat *home_timeline_gc;
 	gint http_fails;

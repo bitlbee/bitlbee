@@ -735,16 +735,35 @@ void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor)
 static void twitter_http_post(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
+	struct twitter_data *td;
 
 	// Check if the connection is still active.
 	if( !g_slist_find( twitter_connections, ic ) )
 		return;
 
+	td = ic->proto_data;
+	td->last_status_id = 0;
+	
 	// Check if the HTTP request went well.
 	if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
 		imcb_error(ic, "HTTP error: %s", twitter_parse_error(req));
 		return;
+	}
+	
+	if (req->body_size > 0)
+	{
+		struct xt_parser *xp = NULL;
+		struct xt_node *node;
+		
+		xp = xt_new(NULL, NULL);
+		xt_feed(xp, req->reply_body, req->body_size);
+		
+		if ((node = xt_find_node(xp->root, "status")) &&
+		    (node = xt_find_node(node->children, "id")) && node->text)
+			td->last_status_id = g_ascii_strtoull( node->text, NULL, 10 );
+		
+		xt_free(xp);
 	}
 }
 
@@ -783,4 +802,12 @@ void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int
 	args[0] = "screen_name";
 	args[1] = who;
 	twitter_http(ic, create ? TWITTER_FRIENDSHIPS_CREATE_URL : TWITTER_FRIENDSHIPS_DESTROY_URL, twitter_http_post, ic, 1, args, 2);
+}
+
+void twitter_status_destroy(struct im_connection *ic, guint64 id)
+{
+	char *url;
+	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_DESTROY_URL, (unsigned long long) id, ".xml");
+	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+	g_free(url);
 }

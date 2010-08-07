@@ -651,6 +651,9 @@ int md5_verify_password( char *password, char *hash )
 	return ret;
 }
 
+/* Split commands (root-style, *not* IRC-style). Handles "quoting of"
+   white\ space in 'various ways'. Returns a NULL-terminated static
+   char** so watch out with nested use! Definitely not thread-safe. */
 char **split_command_parts( char *command )
 {
 	static char *cmd[IRC_MAX_ARGS+1];

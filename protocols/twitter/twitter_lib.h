@@ -83,6 +83,7 @@ void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
 void twitter_post_status(struct im_connection *ic, char *msg);
 void twitter_direct_messages_new(struct im_connection *ic, char *who, char *message);
 void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int create);
+void twitter_status_destroy(struct im_connection *ic, guint64 id);
 
 #endif //_TWITTER_LIB_H
 
