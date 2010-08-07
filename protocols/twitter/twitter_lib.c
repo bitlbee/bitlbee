@@ -364,7 +364,8 @@ static xt_status twitter_xt_get_user_list( struct xt_node *node, struct twitter_
  */
 static xt_status twitter_xt_get_status( struct xt_node *node, struct twitter_xml_status *txs )
 {
-	struct xt_node *child;
+	struct xt_node *child, *rt;
+	gboolean truncated = FALSE;
 
 	// Walk over the nodes children.
 	for( child = node->children ; child ; child = child->next )
@@ -372,6 +373,14 @@ static xt_status twitter_xt_get_status( struct xt_node *node, struct twitter_xml
 		if ( g_strcasecmp( "text", child->name ) == 0)
 		{
 			txs->text = g_memdup( child->text, child->text_len + 1 );
+		}
+		else if (g_strcasecmp( "truncated", child->name ) == 0 && child->text)
+		{
+			truncated = bool2int(child->text);
+		}
+		else if (g_strcasecmp( "retweeted_status", child->name ) == 0)
+		{
+			rt = child;
 		}
 		else if (g_strcasecmp( "created_at", child->name ) == 0)
 		{
@@ -393,6 +402,22 @@ static xt_status twitter_xt_get_status( struct xt_node *node, struct twitter_xml
 			txs->id = g_ascii_strtoull (child->text, NULL, 10);
 		}
 	}
+	
+	/* If it's a truncated retweet, get the original because dots suck. */
+	if (truncated && rt)
+	{
+		struct twitter_xml_status *rtxs = g_new0(struct twitter_xml_status, 1);
+		if (twitter_xt_get_status(rt, rtxs) != XT_HANDLED)
+		{
+			txs_free(rtxs);
+			return XT_HANDLED;
+		}
+		
+		g_free(txs->text);
+		txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
+		txs_free(rtxs);
+	}
+	
 	return XT_HANDLED;
 }
 
