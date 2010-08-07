@@ -26,7 +26,11 @@
 
 #include <sys/types.h>
 #include <gmodule.h>
+#if(__sun)
+#include <inttypes.h>
+#else
 #include <stdint.h>
+#endif
 
 typedef uint8_t md5_byte_t;
 typedef struct MD5Context {

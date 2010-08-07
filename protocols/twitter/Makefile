@@ -14,7 +14,6 @@ endif
 # [SH] Program variables
 objects = twitter.o twitter_http.o twitter_lib.o
 
-CFLAGS += -Wall
 LFLAGS += -r
 
 # [SH] Phony targets

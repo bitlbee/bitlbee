@@ -24,7 +24,6 @@ subdirobjs = $(PROTOOBJS)
 
 # Expansion of variables
 subdirobjs := $(join $(subdirs),$(addprefix /,$(subdirobjs)))
-CFLAGS += -Wall
 LFLAGS += -r
 
 # [SH] Phony targets

@@ -467,7 +467,7 @@ void imcb_ask_auth( struct im_connection *ic, const char *handle, const char *re
 		realname_ = g_strdup_printf( " (%s)", realname );
 	
 	s = g_strdup_printf( "The user %s%s wants to add you to his/her buddy list.",
-	                     handle, realname_ ?: "" );
+	                     handle, realname_ ? realname_ : "" );
 	
 	g_free( realname_ );
 	
@@ -490,7 +490,7 @@ static void imcb_ask_add_cb_yes( void *data )
 	
 	cbd->ic->acc->prpl->add_buddy( cbd->ic, cbd->handle, NULL );
 	
-	return imcb_ask_add_cb_no( data );
+	imcb_ask_add_cb_no( data );
 }
 
 void imcb_ask_add( struct im_connection *ic, const char *handle, const char *realname )

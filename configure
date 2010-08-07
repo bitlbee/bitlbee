@@ -183,7 +183,7 @@ else
 	[ -z "$CFLAGS" ] && CFLAGS="-O2 -fno-strict-aliasing"
 fi
 
-echo CFLAGS=$CFLAGS >> Makefile.settings
+echo CFLAGS=$CFLAGS $CPPFLAGS >> Makefile.settings
 echo CFLAGS+=-I${srcdir} -I${srcdir}/lib -I${srcdir}/protocols -I. >> Makefile.settings
 
 echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
@@ -200,6 +200,10 @@ else
 fi
 
 echo "CC=$CC" >> Makefile.settings;
+if echo $CC | grep -qw gcc; then
+	# Apparently -Wall is gcc-specific?
+	echo CFLAGS+=-Wall >> Makefile.settings
+fi
 
 if [ -z "$LD" ]; then
 	if type ld > /dev/null 2> /dev/null; then

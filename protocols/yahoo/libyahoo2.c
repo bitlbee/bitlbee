@@ -1858,7 +1858,8 @@ static void yahoo_https_auth_token_finish(struct http_request *req)
 		goto fail;
 	}
 	
-	return yahoo_https_auth_init(had);
+	yahoo_https_auth_init(had);
+	return;
 	
 fail:
 	g_free(had->token);

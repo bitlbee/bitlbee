@@ -38,7 +38,13 @@
 #ifndef _NOGAIM_H
 #define _NOGAIM_H
 
+#if(__sun)
+#include <inttypes.h>
+#else
 #include <stdint.h>
+#endif
+
+#include "lib/events.h"
 
 #include "bitlbee.h"
 #include "account.h"

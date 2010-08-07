@@ -175,11 +175,10 @@ static void msn_set_away( struct im_connection *ic, char *state, char *message )
 	char buf[1024];
 	struct msn_data *md = ic->proto_data;
 	
-	if( state )
-		md->away_state = msn_away_state_by_name( state ) ? :
-		                 msn_away_state_list + 1;
-	else
+	if( state == NULL )
 		md->away_state = msn_away_state_list;
+	else if( ( md->away_state = msn_away_state_by_name( state ) ) == NULL )
+		md->away_state = msn_away_state_list + 1;
 	
 	g_snprintf( buf, sizeof( buf ), "CHG %d %s\r\n", ++md->trId, md->away_state->code );
 	msn_write( ic, buf, strlen( buf ) );

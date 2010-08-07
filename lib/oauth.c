@@ -59,7 +59,7 @@ static char *oauth_sign( const char *method, const char *url,
 	else
 	{
 		g_snprintf( (gchar*) key, HMAC_BLOCK_SIZE + 1, "%s&%s",
-		            oi->sp->consumer_secret, oi->token_secret ? : "" );
+		            oi->sp->consumer_secret, oi->token_secret ? oi->token_secret : "" );
 	}
 	
 	/* Inner part: H(K XOR 0x36, text) */

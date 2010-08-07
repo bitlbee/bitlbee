@@ -14,7 +14,6 @@ endif
 # [SH] Program variables
 objects = conference.o io.o iq.o jabber.o jabber_util.o message.o presence.o s5bytestream.o sasl.o si.o
 
-CFLAGS += -Wall
 LFLAGS += -r
 
 # [SH] Phony targets

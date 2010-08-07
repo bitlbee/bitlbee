@@ -158,12 +158,15 @@ int main( int argc, char *argv[] )
 	if( global.restart )
 	{
 		char *fn = ipc_master_save_state();
+		char *env;
+		
+		env = g_strdup_printf( "_BITLBEE_RESTART_STATE=%s", fn );
+		putenv( env );
+		g_free( fn );
+		/* Looks like env should *not* be freed here as putenv
+		   doesn't make a copy. Odd. */
 		
 		chdir( old_cwd );
-		
-		setenv( "_BITLBEE_RESTART_STATE", fn, 1 );
-		g_free( fn );
-		
 		close( global.listen_socket );
 		
 		if( execv( argv[0], argv ) == -1 )

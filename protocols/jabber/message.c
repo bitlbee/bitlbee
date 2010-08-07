@@ -58,7 +58,8 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 			    ( inv = xt_find_node( c->children, "invite" ) ) )
 			{
 				room = from;
-				from = xt_find_attr( inv, "from" ) ? : from;
+				if( ( from = xt_find_attr( inv, "from" ) ) == NULL )
+					from = room;
 
 				g_string_append_printf( fullmsg, "<< \002BitlBee\002 - Invitation to chatroom %s >>\n", room );
 				if( ( reason = xt_find_node( inv->children, "reason" ) ) && reason->text_len > 0 )
@@ -71,7 +72,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 			if( bud )
 			{
 				bud->last_msg = time( NULL );
-				from = bud->ext_jid ? : bud->bare_jid;
+				from = bud->ext_jid ? bud->ext_jid : bud->bare_jid;
 			}
 			else
 				*s = 0; /* We need to generate a bare JID now. */

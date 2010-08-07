@@ -37,7 +37,8 @@ static void irc_cmd_pass( irc_t *irc, char **cmd )
 		   command last. (Possibly it won't send it at all if it turns
 		   out we don't require it, which will break this feature.)
 		   Try to identify using the given password. */
-		return root_command( irc, send_cmd );
+		root_command( irc, send_cmd );
+		return;
 	}
 	/* Handling in pre-logged-in state, first see if this server is
 	   password-protected: */

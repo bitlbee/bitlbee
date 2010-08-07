@@ -81,7 +81,7 @@ conf_t *conf_load( int argc, char *argv[] )
 		   at a *valid* configuration file. */
 	}
 	
-	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hR:u:V" ) ) >= 0 )
+	while( argc > 0 && ( opt = getopt( argc, argv, "i:p:P:nvIDFc:d:hu:V" ) ) >= 0 )
 	/*     ^^^^ Just to make sure we skip this step from the REHASH handler. */
 	{
 		if( opt == 'i' )
@@ -156,13 +156,6 @@ conf_t *conf_load( int argc, char *argv[] )
 			printf( "BitlBee %s\nAPI version %06x\n",
 			        BITLBEE_VERSION, BITLBEE_VERSION_CODE );
 			return NULL;
-		}
-		else if( opt == 'R' )
-		{
-			/* Backward compatibility; older BitlBees passed this
-			   info using a command-line flag. Allow people to
-			   upgrade from such a version for now. */
-			setenv( "_BITLBEE_RESTART_STATE", optarg, 0 );
 		}
 		else if( opt == 'u' )
 		{

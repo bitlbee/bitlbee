@@ -23,7 +23,11 @@
 #ifndef _SHA1_H_
 #define _SHA1_H_
 
+#if(__sun)
+#include <inttypes.h>
+#else
 #include <stdint.h>
+#endif
 #include <gmodule.h>
 
 #ifndef _SHA_enum_

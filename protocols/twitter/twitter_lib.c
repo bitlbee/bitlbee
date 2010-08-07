@@ -22,7 +22,10 @@
 ****************************************************************************/
 
 /* For strptime(): */
+#if(__sun)
+#else
 #define _XOPEN_SOURCE
+#endif
 
 #include "twitter_http.h"
 #include "twitter.h"

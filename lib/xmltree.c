@@ -214,7 +214,10 @@ void xt_cleanup( struct xt_parser *xt, struct xt_node *node, int depth )
 		return;
 	
 	if( node == NULL )
-		return xt_cleanup( xt, xt->root, depth );
+	{
+		xt_cleanup( xt, xt->root, depth );
+		return;
+	}
 	
 	if( node->flags & XT_SEEN && node == xt->root )
 	{

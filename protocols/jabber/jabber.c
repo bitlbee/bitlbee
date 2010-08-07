@@ -380,7 +380,7 @@ static void jabber_get_info( struct im_connection *ic, char *who )
 		imcb_log( ic, "Buddy %s (%d) information:", bud->full_jid, bud->priority );
 		if( bud->away_state )
 			imcb_log( ic, "Away state: %s", bud->away_state->full_name );
-		imcb_log( ic, "Status message: %s", bud->away_message ? : "(none)" );
+		imcb_log( ic, "Status message: %s", bud->away_message ? bud->away_message : "(none)" );
 		
 		bud = bud->next;
 	}
@@ -394,8 +394,10 @@ static void jabber_set_away( struct im_connection *ic, char *state_txt, char *me
 	
 	/* state_txt == NULL -> Not away.
 	   Unknown state -> fall back to the first defined away state. */
-	jd->away_state = state_txt ? jabber_away_state_by_name( state_txt )
-	                 ? : jabber_away_state_list : NULL;
+	if( state_txt == NULL )
+		jd->away_state = NULL;
+	else if( ( jd->away_state = jabber_away_state_by_name( state_txt ) ) == NULL )
+		jd->away_state = jabber_away_state_list;
 	
 	g_free( jd->away_message );
 	jd->away_message = ( message && *message ) ? g_strdup( message ) : NULL;
