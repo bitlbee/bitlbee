@@ -73,7 +73,7 @@
     "Content-Type: text/plain; charset=UTF-8\r\n" \
     "Content-Transfer-Encoding: base64\r\n" \
     "X-OIM-Message-Type: OfflineMessage\r\n" \
-    "X-OIM-Run-Id: {89527393-8723-4F4F-8005-287532973298}\r\n" \
+    "X-OIM-Run-Id: {F9A6C9DD-0D94-4E85-9CC6-F9D118CC1CAF}\r\n" \
     "X-OIM-Sequence-Num: %d\r\n" \
     "\r\n" \
     "%s" \

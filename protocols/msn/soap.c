@@ -154,7 +154,8 @@ static int msn_soap_oim_build_request( struct msn_soap_req_data *soap_req )
 	soap_req->action = g_strdup( SOAP_OIM_ACTION_URL );
 	soap_req->payload = g_markup_printf_escaped( SOAP_OIM_SEND_PAYLOAD,
 		ic->acc->user, display_name_b64, oim->to, md->passport_token,
-		MSNP11_PROD_ID, md->lock_key ? : "", oim->number, oim->number, oim->msg );
+		MSNP11_PROD_ID, md->lock_key ? md->lock_key : "",
+		oim->number, oim->number, oim->msg );
 	
 	g_free( display_name_b64 );
 	

@@ -72,7 +72,7 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 	md->handler->fd = md->fd;
 	md->handler->rxq = g_new0( char, 1 );
 	
-	g_snprintf( s, sizeof( s ), "VER %d MSNP8 CVR0\r\n", ++md->trId );
+	g_snprintf( s, sizeof( s ), "VER %d MSNP14 CVR0\r\n", ++md->trId );
 	if( msn_write( ic, s, strlen( s ) ) )
 	{
 		ic->inpa = b_input_add( md->fd, B_EV_IO_READ, msn_ns_callback, ic );
@@ -112,7 +112,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	
 	if( strcmp( cmd[0], "VER" ) == 0 )
 	{
-		if( cmd[2] && strncmp( cmd[2], "MSNP8", 5 ) != 0 )
+		if( cmd[2] && strncmp( cmd[2], "MSNP14", 5 ) != 0 )
 		{
 			imcb_error( ic, "Unsupported protocol" );
 			imc_logout( ic, FALSE );
@@ -229,7 +229,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 				return( 0 );
 			}
 		}
-		else if( num_parts >= 7 && strcmp( cmd[2], "OK" ) == 0 )
+		else if( strcmp( cmd[2], "OK" ) == 0 )
 		{
 			if( num_parts == 7 )
 				msn_ns_got_display_name( ic, cmd[4] );
@@ -654,6 +654,12 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 				md->grpq = g_slist_remove( md->grpq, ga );
 			}
 		}
+	}
+	else if( strcmp( cmd[0], "GCF" ) == 0 )
+	{
+		/* Coming up is cmd[2] bytes of stuff we're supposed to
+		   censore. Meh. */
+		md->handler->msglen = atoi( cmd[2] );
 	}
 	else if( isdigit( cmd[0][0] ) )
 	{

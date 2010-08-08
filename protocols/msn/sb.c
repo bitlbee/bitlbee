@@ -29,6 +29,7 @@
 #include "passport.h"
 #include "md5.h"
 #include "soap.h"
+#include "invitation.h"
 
 static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition cond );
 static int msn_sb_command( gpointer data, char **cmd, int num_parts );
