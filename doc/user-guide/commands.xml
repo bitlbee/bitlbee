@@ -494,6 +494,24 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="auto_reply_timeout" type="integer" scope="account">
+		<default>10800</default>
+
+		<description>
+			<para>
+				For Twitter accounts: If you respond to Tweets IRC-style (like "nickname: reply"), this will automatically be converted to the usual Twitter format ("@screenname reply").
+			</para>
+
+			<para>
+				By default, BitlBee will then also add a reference to that person's most recent Tweet, unless that message is older than the value of this setting in seconds.
+			</para>
+
+			<para>
+				If you want to disable this feature, just set this to 0. Alternatively, if you want to write a message once that is <emphasis>not</emphasis> a reply, use the Twitter reply syntax (@screenname).
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="away" type="string" scope="both">
 		<description>
 			<para>
@@ -597,6 +615,28 @@
 			
 			<para>
 				For setting up named chatrooms, it's currently easier to just use the <emphasis>chat add</emphasis> command.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="commands" type="boolean" scope="account">
+		<default>true</default>
+
+		<description>
+			<para>
+				With this setting enabled, you can use some commands in your Twitter channel/query. The commands are simple and not documented in too much detail:
+			</para>
+
+			<variablelist>
+				<varlistentry><term>undo [&lt;id&gt;]</term><listitem><para>Delete your last Tweet (or one with the given ID)</para></listitem></varlistentry>
+				<varlistentry><term>rt &lt;screenname|id&gt;</term><listitem><para>Retweet someone's last Tweet (or one with the given ID)</para></listitem></varlistentry>
+				<varlistentry><term>follow &lt;screenname&gt;</term><listitem><para>Start following a person</para></listitem></varlistentry>
+				<varlistentry><term>unfollow &lt;screenname&gt;</term><listitem><para>Stop following a person</para></listitem></varlistentry>
+				<varlistentry><term>post &lt;message&gt;</term><listitem><para>Post a tweet</para></listitem></varlistentry>
+			</variablelist>
+
+			<para>
+				Anything that doesn't look like a command will be treated as a tweet. Watch out for typos! :-)
 			</para>
 		</description>
 	</bitlbee-setting>

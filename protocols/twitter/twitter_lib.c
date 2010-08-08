@@ -783,13 +783,16 @@ static void twitter_http_post(struct http_request *req)
 /**
  * Function to POST a new status to twitter.
  */ 
-void twitter_post_status(struct im_connection *ic, char* msg)
+void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to)
 {
-	char* args[2];
-	args[0] = "status";
-	args[1] = msg;
-	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post, ic, 1, args, 2);
-//	g_free(args[1]);
+	char* args[4] = {
+		"status", msg,
+		"in_reply_to_status_id",
+		g_strdup_printf("%llu", (unsigned long long) in_reply_to)
+	};
+	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post, ic, 1,
+	             args, in_reply_to ? 4 : 2);
+	g_free(args[3]);
 }
 
 
@@ -821,6 +824,14 @@ void twitter_status_destroy(struct im_connection *ic, guint64 id)
 {
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_DESTROY_URL, (unsigned long long) id, ".xml");
+	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+	g_free(url);
+}
+
+void twitter_status_retweet(struct im_connection *ic, guint64 id)
+{
+	char *url;
+	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_RETWEET_URL, (unsigned long long) id, ".xml");
 	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }

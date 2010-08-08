@@ -35,6 +35,7 @@
 #define TWITTER_STATUS_UPDATE_URL "/statuses/update.xml"
 #define TWITTER_STATUS_SHOW_URL "/statuses/show/"
 #define TWITTER_STATUS_DESTROY_URL "/statuses/destroy/"
+#define TWITTER_STATUS_RETWEET_URL "/statuses/retweet/"
 
 /* Timeline URLs */
 #define TWITTER_PUBLIC_TIMELINE_URL "/statuses/public_timeline.xml"
@@ -80,10 +81,11 @@ void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
 
-void twitter_post_status(struct im_connection *ic, char *msg);
+void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to);
 void twitter_direct_messages_new(struct im_connection *ic, char *who, char *message);
 void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int create);
 void twitter_status_destroy(struct im_connection *ic, guint64 id);
+void twitter_status_retweet(struct im_connection *ic, guint64 id);
 
 #endif //_TWITTER_LIB_H
 

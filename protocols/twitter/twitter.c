@@ -185,6 +185,8 @@ static void twitter_init( account_t *acc )
 		def_oauth = "false";
 	}
 	
+	s = set_add( &acc->set, "auto_reply_timeout", "10800", set_eval_int, acc );
+	
 	s = set_add( &acc->set, "base_url", def_url, NULL, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
@@ -426,13 +428,7 @@ static void twitter_handle_command( struct im_connection *ic, char *message )
 		guint64 id;
 		
 		if( cmd[1] )
-		{
-			char *end = NULL;
-			
-			id = g_ascii_strtoull( cmd[1], &end, 10 );
-			if( end == NULL )
-				id = 0;
-		}
+			id = g_ascii_strtoull( cmd[1], NULL, 10 );
 		else
 			id = td->last_status_id;
 		
@@ -443,12 +439,44 @@ static void twitter_handle_command( struct im_connection *ic, char *message )
 		g_free( cmds );
 		return;
 	}
+	else if( g_strcasecmp( cmd[0], "follow" ) == 0 && cmd[1] )
+	{
+		twitter_add_buddy( ic, cmd[1], NULL );
+		g_free( cmds );
+		return;
+	}
+	else if( g_strcasecmp( cmd[0], "unfollow" ) == 0 && cmd[1] )
+	{
+		twitter_remove_buddy( ic, cmd[1], NULL );
+		g_free( cmds );
+		return;
+	}
+	else if( g_strcasecmp( cmd[0], "rt" ) == 0 && cmd[1] )
+	{
+		struct twitter_user_data *tud;
+		bee_user_t *bu;
+		guint64 id;
+		
+		if( ( bu = bee_user_by_handle( ic->bee, ic, cmd[1] ) ) &&
+		    ( tud = bu->data ) && tud->last_id )
+			id = tud->last_id;
+		else
+			id = g_ascii_strtoull( cmd[1], NULL, 10 );
+		
+		td->last_status_id = 0;
+		if( id )
+			twitter_status_retweet( ic, id );
+		
+		g_free( cmds );
+		return;
+	}
 	else if( g_strcasecmp( cmd[0], "post" ) == 0 )
 	{
 		message += 5;
 	}
 	
 	{
+		guint64 in_reply_to = 0;
 		char *s, *new = NULL;
 		bee_user_t *bu;
 		
@@ -465,13 +493,22 @@ static void twitter_handle_command( struct im_connection *ic, char *message )
 			
 			if( ( bu = bee_user_by_handle( ic->bee, ic, cmd[0] ) ) )
 			{
+				struct twitter_user_data *tud = bu->data;
+				
 				new = g_strdup_printf( "@%s %s", bu->handle,
 				                       message + ( s - cmd[0] ) + 2 );
 				message = new;
+				
+				if( time( NULL ) < tud->last_time +
+				    set_getint( &ic->acc->set, "auto_reply_timeout" ) )
+					in_reply_to = tud->last_id;
 			}
 		}
 		
-		twitter_post_status( ic, message );
+		/* If the user runs undo between this request and its response
+		   this would delete the second-last Tweet. Prevent that. */
+		td->last_status_id = 0;
+		twitter_post_status( ic, message, in_reply_to );
 		g_free( new );
 	}
 	g_free( cmds );
