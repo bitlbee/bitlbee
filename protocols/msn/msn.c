@@ -102,6 +102,8 @@ static void msn_logout( struct im_connection *ic )
 		while( md->groupcount > 0 )
 			g_free( md->grouplist[--md->groupcount] );
 		g_free( md->grouplist );
+		g_free( md->passport_token );
+		g_free( md->lock_key );
 		
 		while( md->grpq )
 		{

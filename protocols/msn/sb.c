@@ -28,7 +28,7 @@
 #include "msn.h"
 #include "passport.h"
 #include "md5.h"
-#include "invitation.h"
+#include "soap.h"
 
 static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition cond );
 static int msn_sb_command( gpointer data, char **cmd, int num_parts );
@@ -624,7 +624,12 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		int num = atoi( cmd[0] );
 		const struct msn_status_code *err = msn_status_by_number( num );
 		
-		imcb_error( ic, "Error reported by switchboard server: %s", err->text );
+		/* If the person is offline, send an offline message instead,
+		   and don't report an error. */
+		if( num == 217 )
+			msn_soap_oim_send_queue( ic, &sb->msgq );
+		else
+			imcb_error( ic, "Error reported by switchboard server: %s", err->text );
 		
 		if( err->flags & STATUS_SB_FATAL )
 		{

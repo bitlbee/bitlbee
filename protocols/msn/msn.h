@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module                                                           */
@@ -41,6 +41,13 @@
 #define QRY_NAME "msmsgs@msnmsgr.com"
 #define QRY_CODE "Q1P7W2E4J9R8U3S5"
 
+/* This should be MSN Messenger 7.0.0813 */
+//#define MSNP11_PROD_KEY "CFHUR$52U_{VIX5T"
+//#define MSNP11_PROD_ID  "PROD0101{0RM?UBW"
+
+#define MSNP11_PROD_KEY "O4BG@C7BWLYQX?5G"
+#define MSNP11_PROD_ID  "PROD01065C%ZFN6F"
+
 #define MSN_SB_NEW         -24062002
 
 #define MSN_MESSAGE_HEADERS "MIME-Version: 1.0\r\n" \
@@ -68,6 +75,8 @@ struct msn_data
 	struct msn_handler_data *handler;
 	
 	int trId;
+	char *passport_token;
+	char *lock_key;
 	
 	GSList *msgq, *grpq;
 	GSList *switchboards;
@@ -174,6 +183,7 @@ int msn_handler( struct msn_handler_data *h );
 char *msn_http_encode( const char *input );
 void msn_msgq_purge( struct im_connection *ic, GSList **list );
 gboolean msn_set_display_name( struct im_connection *ic, const char *rawname );
+char *msn_p11_challenge( char *challenge );
 
 /* tables.c */
 const struct msn_away_state *msn_away_state_by_number( int number );
