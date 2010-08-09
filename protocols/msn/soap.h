@@ -45,6 +45,7 @@
 "SOAPAction: \"%s\"\r\n" \
 "User-Agent: BitlBee " BITLBEE_VERSION "\r\n" \
 "Content-Type: text/xml; charset=utf-8\r\n" \
+"Cookie: MSPAuth=%s\r\n" \
 "Content-Length: %d\r\n" \
 "Cache-Control: no-cache\r\n" \
 "\r\n" \
@@ -52,7 +53,7 @@
 
 
 #define SOAP_OIM_SEND_URL "https://ows.messenger.msn.com/OimWS/oim.asmx"
-#define SOAP_OIM_ACTION_URL "http://messenger.msn.com/ws/2004/09/oim/Store"
+#define SOAP_OIM_SEND_ACTION "http://messenger.msn.com/ws/2004/09/oim/Store"
 
 #define SOAP_OIM_SEND_PAYLOAD \
 "<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
@@ -83,5 +84,31 @@
 
 int msn_soap_oim_send( struct im_connection *ic, const char *to, const char *msg );
 int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq );
+
+
+#define SOAP_MEMLIST_URL "https://byrdr.omega.contacts.msn.com/abservice/SharingService.asmx"
+#define SOAP_MEMLIST_ACTION "http://www.msn.com/webservices/AddressBook/FindMembership"
+
+#define SOAP_MEMLIST_PAYLOAD \
+"<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
+"<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+  "<soap:Header xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+    "<ABApplicationHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+      "<ApplicationId xmlns=\"http://www.msn.com/webservices/AddressBook\">CFE80F9D-180F-4399-82AB-413F33A1FA11</ApplicationId>" \
+      "<IsMigration xmlns=\"http://www.msn.com/webservices/AddressBook\">false</IsMigration>" \
+      "<PartnerScenario xmlns=\"http://www.msn.com/webservices/AddressBook\">Initial</PartnerScenario>" \
+    "</ABApplicationHeader>" \
+    "<ABAuthHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+      "<ManagedGroupRequest xmlns=\"http://www.msn.com/webservices/AddressBook\">false</ManagedGroupRequest>" \
+    "</ABAuthHeader>" \
+  "</soap:Header>" \
+  "<soap:Body xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+    "<FindMembership xmlns=\"http://www.msn.com/webservices/AddressBook\"><serviceFilter xmlns=\"http://www.msn.com/webservices/AddressBook\"><Types xmlns=\"http://www.msn.com/webservices/AddressBook\"><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">Messenger</ServiceType><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">Invitation</ServiceType><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">SocialNetwork</ServiceType><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">Space</ServiceType><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">Profile</ServiceType></Types></serviceFilter>" \
+    "</FindMembership>" \
+  "</soap:Body>" \
+"</soap:Envelope>"
+
+int msn_soap_memlist_request( struct im_connection *ic );
+
 
 #endif /* __SOAP_H__ */

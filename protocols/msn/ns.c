@@ -28,6 +28,7 @@
 #include "msn.h"
 #include "passport.h"
 #include "md5.h"
+#include "soap.h"
 
 static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond );
 static int msn_ns_command( gpointer data, char **cmd, int num_parts );
@@ -238,8 +239,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			
 			imcb_log( ic, "Authenticated, getting buddy list" );
 			
-			g_snprintf( buf, sizeof( buf ), "SYN %d 0\r\n", ++md->trId );
-			return( msn_write( ic, buf, strlen( buf ) ) );
+			msn_soap_memlist_request( ic );
 		}
 		else
 		{

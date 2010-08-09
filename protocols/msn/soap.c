@@ -82,14 +82,22 @@ static void msn_soap_handle_response( struct http_request *http_req );
 
 static int msn_soap_send_request( struct msn_soap_req_data *soap_req )
 {
+	struct msn_data *md = soap_req->ic->proto_data;
 	char *http_req;
+	char *pom, *s;
 	url_t url;
 	
 	soap_req->build_request( soap_req );
 	
+	pom = g_new0( char, strlen( md->passport_token ) * 3 );
+	strcpy( pom, md->passport_token + 2 );
+	if( ( s = strchr( pom, '&' ) ) )
+		*s = '\0';
+	
 	url_set( &url, soap_req->url );
 	http_req = g_strdup_printf( SOAP_HTTP_REQUEST, url.file, url.host,
-		soap_req->action, strlen( soap_req->payload ), soap_req->payload );
+		soap_req->action, pom,
+		strlen( soap_req->payload ), soap_req->payload );
 	
 	soap_req->http_req = http_dorequest( url.host, url.port, url.proto == PROTO_HTTPS,
 		http_req, msn_soap_handle_response, soap_req );
@@ -151,7 +159,7 @@ static int msn_soap_oim_build_request( struct msn_soap_req_data *soap_req )
 	display_name_b64 = tobase64( ic->displayname );
 	
 	soap_req->url = g_strdup( SOAP_OIM_SEND_URL );
-	soap_req->action = g_strdup( SOAP_OIM_ACTION_URL );
+	soap_req->action = g_strdup( SOAP_OIM_SEND_ACTION );
 	soap_req->payload = g_markup_printf_escaped( SOAP_OIM_SEND_PAYLOAD,
 		ic->acc->user, display_name_b64, oim->to, md->passport_token,
 		MSNP11_PROD_ID, md->lock_key ? md->lock_key : "",
@@ -254,4 +262,48 @@ int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq )
 		
 		*msgq = g_slist_remove( *msgq, m );
 	}
+}
+
+
+/* memlist: Fetching the membership list (NOT address book) */
+
+#if 0
+struct msn_soap_oim_send_data
+{
+	char *to;
+	char *msg;
+	int number;
+	int need_retry;
+};
+#endif
+
+static int msn_soap_memlist_build_request( struct msn_soap_req_data *soap_req )
+{
+	soap_req->url = g_strdup( SOAP_MEMLIST_URL );
+	soap_req->action = g_strdup( SOAP_MEMLIST_ACTION );
+	soap_req->payload = g_strdup( SOAP_MEMLIST_PAYLOAD );
+	
+	return 1;
+}
+
+static const struct xt_handler_entry msn_soap_memlist_parser[] = {
+	{ NULL,               NULL,     NULL                        }
+};
+
+static int msn_soap_memlist_handle_response( struct msn_soap_req_data *soap_req )
+{
+	return 0;
+}
+
+static int msn_soap_memlist_free_data( struct msn_soap_req_data *soap_req )
+{
+	return 0;
+}
+
+int msn_soap_memlist_request( struct im_connection *ic )
+{
+	return msn_soap_start( ic, NULL, msn_soap_memlist_build_request,
+	                                 msn_soap_memlist_parser,
+	                                 msn_soap_memlist_handle_response,
+	                                 msn_soap_memlist_free_data );
 }
