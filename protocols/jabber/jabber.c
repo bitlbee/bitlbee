@@ -95,7 +95,7 @@ static void jabber_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
-	struct ns_srv_reply *srv = NULL;
+	struct ns_srv_reply **srvl = NULL, *srv;
 	char *connect_to, *s;
 	int i;
 	
@@ -195,9 +195,19 @@ static void jabber_login( account_t *acc )
 	/* Figure out the hostname to connect to. */
 	if( acc->server && *acc->server )
 		connect_to = acc->server;
-	else if( ( srv = srv_lookup( "xmpp-client", "tcp", jd->server ) ) ||
-		 ( srv = srv_lookup( "jabber-client", "tcp", jd->server ) ) )
+	else if( ( srvl = srv_lookup( "xmpp-client", "tcp", jd->server ) ) ||
+	         ( srvl = srv_lookup( "jabber-client", "tcp", jd->server ) ) )
+	{
+		/* Find the lowest-priority one. These usually come
+		   back in random/shuffled order. Not looking at
+		   weights etc for now. */
+		srv = *srvl;
+		for( i = 1; srvl[i]; i ++ )
+			if( srvl[i]->prio < srv->prio )
+				srv = srvl[i];
+		
 		connect_to = srv->name;
+	}
 	else
 		connect_to = jd->server;
 	
@@ -226,7 +236,7 @@ static void jabber_login( account_t *acc )
 	{
 		jd->fd = proxy_connect( connect_to, srv ? srv->port : set_getint( &acc->set, "port" ), jabber_connected_plain, ic );
 	}
-	g_free( srv );
+	srv_free( srvl );
 	
 	if( jd->fd == -1 )
 	{

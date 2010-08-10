@@ -60,7 +60,8 @@ G_MODULE_EXPORT void random_bytes( unsigned char *buf, int count );
 G_MODULE_EXPORT int is_bool( char *value );
 G_MODULE_EXPORT int bool2int( char *value );
 
-G_MODULE_EXPORT struct ns_srv_reply *srv_lookup( char *service, char *protocol, char *domain );
+G_MODULE_EXPORT struct ns_srv_reply **srv_lookup( char *service, char *protocol, char *domain );
+G_MODULE_EXPORT void srv_free( struct ns_srv_reply **srv );
 
 G_MODULE_EXPORT char *word_wrap( const char *msg, int line_len );
 
