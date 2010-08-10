@@ -5,13 +5,6 @@ DATE := $(shell date +%Y-%m-%d)
 # latest stable
 BITLBEE_VERSION = 1.2.7
 
-AMPATH = $(shell grep automake- $(shell which automake)|sed "s|.*'\(.*\)';|\1|")
-
-ifeq ($(AMPATH),)
-# Gentoo, it has some crappy wrapper
-AMPATH = $(shell find /usr/share/ -maxdepth 1 -name 'automake-*'|tail -n 1)
-endif
-
 ifeq ($(ASCIIDOC),yes)
 MANPAGES = skyped.1
 else
@@ -53,7 +46,7 @@ endif
 client: client.c
 
 autogen: configure.ac
-	cp $(AMPATH)/install-sh ./
+	cp $(shell ls /usr/share/automake-*/install-sh | tail -n1) ./
 	autoconf
 
 clean:
