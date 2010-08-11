@@ -95,7 +95,7 @@ static void jabber_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
-	struct ns_srv_reply **srvl = NULL, *srv;
+	struct ns_srv_reply **srvl = NULL, *srv = NULL;
 	char *connect_to, *s;
 	int i;
 	
