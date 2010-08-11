@@ -33,6 +33,12 @@ int msn_write( struct im_connection *ic, char *s, int len )
 	struct msn_data *md = ic->proto_data;
 	int st;
 	
+	if( getenv( "BITLBEE_DEBUG" ) )
+	{
+		write( 2, "->NS:", 5 );
+		write( 2, s, len );
+	}
+	
 	st = write( md->fd, s, len );
 	if( st != len )
 	{
@@ -280,6 +286,12 @@ int msn_handler( struct msn_handler_data *h )
 	if( st <= 0 )
 		return( -1 );
 	
+	if( getenv( "BITLBEE_DEBUG" ) )
+	{
+		write( 2, "->C:", 4 );
+		write( 2, h->rxq + h->rxlen - st, st );
+	}
+	
 	while( st )
 	{
 		int i;
@@ -445,27 +457,6 @@ gboolean msn_set_display_name( struct im_connection *ic, const char *rawname )
 	return msn_write( ic, buf, strlen( buf ) ) != 0;
 }
 
-unsigned int little_endian( unsigned int dw )
-{
-#if defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN
-	return dw;
-#else
-	/* We're still not sure if this machine is big endian since the
-	   constants above are not that portable. Don't swap bytes, just
-	   force-compose a 32-bit little endian integer. */
-	unsigned int ret = 0, i;
-	char *dst = (char*) (&ret + 1);
-	
-	for (i = 0; i < 4; i ++)
-	{
-		*(--dst) = dw >> 24;
-		dw <<= 8;
-	}
-	
-	return ret;
-#endif
-}
-
 /* Copied and heavily modified from http://tmsnc.sourceforge.net/chl.c */
 char *msn_p11_challenge( char *challenge )
 {
@@ -486,7 +477,7 @@ char *msn_p11_challenge( char *challenge )
 	md5Parts = (unsigned int *)md5Hash;
 	for (i = 0; i < 4; i ++)
 	{  
-		md5Parts[i] = little_endian(md5Parts[i]);
+		md5Parts[i] = GUINT32_TO_LE(md5Parts[i]);
 		
 		/* & each integer with 0x7FFFFFFF */
 		/* and save one unmodified array for later */
@@ -507,8 +498,8 @@ char *msn_p11_challenge( char *challenge )
 	{
 		long long temp;
 
-		chlStringParts[i]   = little_endian(chlStringParts[i]);
-		chlStringParts[i+1] = little_endian(chlStringParts[i+1]);
+		chlStringParts[i]   = GUINT32_TO_LE(chlStringParts[i]);
+		chlStringParts[i+1] = GUINT32_TO_LE(chlStringParts[i+1]);
 
 		temp  = (md5Parts[0] * (((0x0E79A9C1 * (long long)chlStringParts[i]) % 0x7FFFFFFF)+nHigh) + md5Parts[1])%0x7FFFFFFF;
 		nHigh = (md5Parts[2] * (((long long)chlStringParts[i+1]+temp) % 0x7FFFFFFF) + md5Parts[3]) % 0x7FFFFFFF;
@@ -524,7 +515,7 @@ char *msn_p11_challenge( char *challenge )
 	
 	/* swap more bytes if big endian */
 	for (i = 0; i < 4; i ++)
-		newHashParts[i] = little_endian(newHashParts[i]); 
+		newHashParts[i] = GUINT32_TO_LE(newHashParts[i]); 
 	
 	/* make a string of the parts */
 	newHash = (unsigned char *)newHashParts;

@@ -34,7 +34,6 @@ static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition c
 static int msn_ns_command( gpointer data, char **cmd, int num_parts );
 static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
-static void msn_auth_got_passport_token( struct msn_auth_data *mad );
 static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name );
 
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
@@ -73,7 +72,7 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 	md->handler->fd = md->fd;
 	md->handler->rxq = g_new0( char, 1 );
 	
-	g_snprintf( s, sizeof( s ), "VER %d MSNP14 CVR0\r\n", ++md->trId );
+	g_snprintf( s, sizeof( s ), "VER %d MSNP15 CVR0\r\n", ++md->trId );
 	if( msn_write( ic, s, strlen( s ) ) )
 	{
 		ic->inpa = b_input_add( md->fd, B_EV_IO_READ, msn_ns_callback, ic );
@@ -113,7 +112,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	
 	if( strcmp( cmd[0], "VER" ) == 0 )
 	{
-		if( cmd[2] && strncmp( cmd[2], "MSNP14", 5 ) != 0 )
+		if( cmd[2] && strncmp( cmd[2], "MSNP15", 5 ) != 0 )
 		{
 			imcb_error( ic, "Unsupported protocol" );
 			imc_logout( ic, FALSE );
@@ -127,7 +126,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	else if( strcmp( cmd[0], "CVR" ) == 0 )
 	{
 		/* We don't give a damn about the information we just received */
-		g_snprintf( buf, sizeof( buf ), "USR %d TWN I %s\r\n", ++md->trId, ic->acc->user );
+		g_snprintf( buf, sizeof( buf ), "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user );
 		return( msn_write( ic, buf, strlen( buf ) ) );
 	}
 	else if( strcmp( cmd[0], "XFR" ) == 0 )
@@ -220,15 +219,10 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "USR" ) == 0 )
 	{
-		if( num_parts == 5 && strcmp( cmd[2], "TWN" ) == 0 && strcmp( cmd[3], "S" ) == 0 )
+		if( num_parts >= 6 && strcmp( cmd[2], "SSO" ) == 0 &&
+		    strcmp( cmd[3], "S" ) == 0 )
 		{
-			/* Time for some Passport black magic... */
-			if( !passport_get_token( msn_auth_got_passport_token, ic, ic->acc->user, ic->acc->pass, cmd[4] ) )
-			{
-				imcb_error( ic, "Error while contacting Passport server" );
-				imc_logout( ic, TRUE );
-				return( 0 );
-			}
+			msn_soap_passport_sso_request( ic, cmd[4], cmd[5] );
 		}
 		else if( strcmp( cmd[2], "OK" ) == 0 )
 		{
@@ -774,9 +768,8 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 	return( 1 );
 }
 
-static void msn_auth_got_passport_token( struct msn_auth_data *mad )
+void msn_auth_got_passport_token( struct im_connection *ic, char *token )
 {
-	struct im_connection *ic = mad->data;
 	struct msn_data *md;
 	
 	/* Dead connection? */
@@ -784,19 +777,12 @@ static void msn_auth_got_passport_token( struct msn_auth_data *mad )
 		return;
 	
 	md = ic->proto_data;
-	if( mad->token )
+	
 	{
 		char buf[1024];
 		
-		md->passport_token = g_strdup( mad->token );
-		
-		g_snprintf( buf, sizeof( buf ), "USR %d TWN S %s\r\n", ++md->trId, mad->token );
+		g_snprintf( buf, sizeof( buf ), "USR %d SSO S %s %s\r\n", ++md->trId, md->tokens[0], token );
 		msn_write( ic, buf, strlen( buf ) );
-	}
-	else
-	{
-		imcb_error( ic, "Error during Passport authentication: %s", mad->error );
-		imc_logout( ic, TRUE );
 	}
 }
 

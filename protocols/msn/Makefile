@@ -42,4 +42,4 @@ msn_mod.o: $(objects)
 	@echo '*' Linking msn_mod.o
 	@$(LD) $(LFLAGS) $(objects) -o msn_mod.o
 	
-
+soap.o: soap.h soap.c

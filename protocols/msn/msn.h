@@ -75,7 +75,7 @@ struct msn_data
 	struct msn_handler_data *handler;
 	
 	int trId;
-	char *passport_token;
+	char *tokens[2];
 	char *lock_key;
 	
 	GSList *msgq, *grpq;
@@ -170,6 +170,7 @@ extern GSList *msn_switchboards;
 
 /* ns.c */
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
+void msn_auth_got_passport_token( struct im_connection *ic, char *token );
 
 /* msn_util.c */
 int msn_write( struct im_connection *ic, char *s, int len );

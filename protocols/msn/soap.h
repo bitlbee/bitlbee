@@ -42,14 +42,79 @@
 "POST %s HTTP/1.0\r\n" \
 "Host: %s\r\n" \
 "Accept: */*\r\n" \
-"SOAPAction: \"%s\"\r\n" \
 "User-Agent: BitlBee " BITLBEE_VERSION "\r\n" \
 "Content-Type: text/xml; charset=utf-8\r\n" \
-"Cookie: MSPAuth=%s\r\n" \
-"Content-Length: %d\r\n" \
+"%s" \
+"Content-Length: %zd\r\n" \
 "Cache-Control: no-cache\r\n" \
 "\r\n" \
 "%s"
+
+
+#define SOAP_PASSPORT_SSO_URL "https://login.live.com/RST.srf"
+#define SOAP_PASSPORT_SSO_URL_MSN "https://msnia.login.live.com/pp550/RST.srf"
+
+#define SOAP_PASSPORT_SSO_PAYLOAD \
+"<Envelope xmlns=\"http://schemas.xmlsoap.org/soap/envelope/\" " \
+   "xmlns:wsse=\"http://schemas.xmlsoap.org/ws/2003/06/secext\" " \
+   "xmlns:saml=\"urn:oasis:names:tc:SAML:1.0:assertion\" " \
+   "xmlns:wsp=\"http://schemas.xmlsoap.org/ws/2002/12/policy\" " \
+   "xmlns:wsu=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd\" " \
+   "xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\" " \
+   "xmlns:wssc=\"http://schemas.xmlsoap.org/ws/2004/04/sc\" " \
+   "xmlns:wst=\"http://schemas.xmlsoap.org/ws/2004/04/trust\">" \
+   "<Header>" \
+       "<ps:AuthInfo " \
+           "xmlns:ps=\"http://schemas.microsoft.com/Passport/SoapServices/PPCRL\" " \
+           "Id=\"PPAuthInfo\">" \
+           "<ps:HostingApp>{7108E71A-9926-4FCB-BCC9-9A9D3F32E423}</ps:HostingApp>" \
+           "<ps:BinaryVersion>4</ps:BinaryVersion>" \
+           "<ps:UIVersion>1</ps:UIVersion>" \
+           "<ps:Cookies></ps:Cookies>" \
+           "<ps:RequestParams>AQAAAAIAAABsYwQAAAAxMDMz</ps:RequestParams>" \
+       "</ps:AuthInfo>" \
+       "<wsse:Security>" \
+           "<wsse:UsernameToken Id=\"user\">" \
+               "<wsse:Username>%s</wsse:Username>" \
+               "<wsse:Password>%s</wsse:Password>" \
+           "</wsse:UsernameToken>" \
+       "</wsse:Security>" \
+   "</Header>" \
+   "<Body>" \
+       "<ps:RequestMultipleSecurityTokens " \
+           "xmlns:ps=\"http://schemas.microsoft.com/Passport/SoapServices/PPCRL\" " \
+           "Id=\"RSTS\">" \
+           "<wst:RequestSecurityToken Id=\"RST0\">" \
+               "<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
+               "<wsp:AppliesTo>" \
+                   "<wsa:EndpointReference>" \
+                       "<wsa:Address>http://Passport.NET/tb</wsa:Address>" \
+                   "</wsa:EndpointReference>" \
+               "</wsp:AppliesTo>" \
+           "</wst:RequestSecurityToken>" \
+           "<wst:RequestSecurityToken Id=\"RST1\">" \
+               "<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
+               "<wsp:AppliesTo>" \
+                   "<wsa:EndpointReference>" \
+                       "<wsa:Address>messengerclear.live.com</wsa:Address>" \
+                   "</wsa:EndpointReference>" \
+               "</wsp:AppliesTo>" \
+               "<wsse:PolicyReference URI=\"%s\"></wsse:PolicyReference>" \
+           "</wst:RequestSecurityToken>" \
+           "<wst:RequestSecurityToken Id=\"RST2\">" \
+               "<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
+               "<wsp:AppliesTo>" \
+                   "<wsa:EndpointReference>" \
+                       "<wsa:Address>contacts.msn.com</wsa:Address>" \
+                   "</wsa:EndpointReference>" \
+               "</wsp:AppliesTo>" \
+               "<wsse:PolicyReference xmlns=\"http://schemas.xmlsoap.org/ws/2003/06/secext\" URI=\"MBI\"></wsse:PolicyReference>" \
+           "</wst:RequestSecurityToken>" \
+       "</ps:RequestMultipleSecurityTokens>" \
+   "</Body>" \
+"</Envelope>"
+
+int msn_soap_passport_sso_request( struct im_connection *ic, const char *policy, const char *nonce );
 
 
 #define SOAP_OIM_SEND_URL "https://ows.messenger.msn.com/OimWS/oim.asmx"

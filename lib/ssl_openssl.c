@@ -271,3 +271,27 @@ b_input_condition ssl_getdirection( void *conn )
 {
 	return( ((struct scd*)conn)->lasterr == SSL_ERROR_WANT_WRITE ? B_EV_IO_WRITE : B_EV_IO_READ );
 }
+
+size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned char *input, size_t input_len, const unsigned char *iv, unsigned char **res)
+{
+	OpenSSL_add_all_algorithms();
+	int output_length = 0;    
+	
+	*res = g_new0(unsigned char, 72);
+	
+	EVP_CIPHER_CTX ctx;
+	/* Don't set key or IV because we will modify the parameters */
+	EVP_CIPHER_CTX_init(&ctx);
+	EVP_CipherInit_ex(&ctx, EVP_des_ede3_cbc(), NULL, NULL, NULL, 1);
+	EVP_CIPHER_CTX_set_key_length(&ctx, key_len);
+	EVP_CIPHER_CTX_set_padding(&ctx, 0);
+	/* We finished modifying parameters so now we can set key and IV */
+	EVP_CipherInit_ex(&ctx, NULL, NULL, key, iv, 1);
+	EVP_CipherUpdate(&ctx, *res, &output_length, input, input_len);
+	EVP_CipherFinal_ex(&ctx, *res, &output_length);
+	
+	EVP_CIPHER_CTX_cleanup(&ctx);   
+	EVP_cleanup();
+	
+	return output_length;
+}
