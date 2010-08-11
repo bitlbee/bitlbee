@@ -333,6 +333,16 @@ static char *set_eval_display_name( set_t *set, char *value )
 	return msn_set_display_name( ic, value ) ? value : NULL;
 }
 
+static void msn_buddy_data_add( bee_user_t *bu )
+{
+	bu->data = g_new0( struct msn_buddy_data, 1 );
+}
+
+static void msn_buddy_data_free( bee_user_t *bu )
+{
+	g_free( bu->data );
+}
+
 void msn_initmodule()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
@@ -359,6 +369,9 @@ void msn_initmodule()
 	ret->rem_deny = msn_rem_deny;
 	ret->send_typing = msn_send_typing;
 	ret->handle_cmp = g_strcasecmp;
+	ret->buddy_data_add = msn_buddy_data_add;
+	ret->buddy_data_free = msn_buddy_data_free;
+	
 	//ret->transfer_request = msn_ftp_transfer_request;
 
 	register_protocol(ret);

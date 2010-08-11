@@ -422,32 +422,61 @@ int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq )
 
 /* memlist: Fetching the membership list (NOT address book) */
 
-#if 0
-struct msn_soap_oim_send_data
-{
-	char *to;
-	char *msg;
-	int number;
-	int need_retry;
-};
-#endif
-
 static int msn_soap_memlist_build_request( struct msn_soap_req_data *soap_req )
 {
+	struct msn_data *md = soap_req->ic->proto_data;
+	
 	soap_req->url = g_strdup( SOAP_MEMLIST_URL );
 	soap_req->action = g_strdup( SOAP_MEMLIST_ACTION );
-	soap_req->payload = g_strdup( SOAP_MEMLIST_PAYLOAD );
+	soap_req->payload = g_markup_printf_escaped( SOAP_MEMLIST_PAYLOAD, md->tokens[1] );
 	
 	return 1;
 }
 
+static xt_status msn_soap_memlist_member( struct xt_node *node, gpointer data )
+{
+	bee_user_t *bu;
+	struct msn_buddy_data *bd;
+	struct xt_node *p;
+	char *role = NULL, *handle = NULL;
+	struct msn_soap_req_data *soap_req = data;
+	struct im_connection *ic = soap_req->ic;
+	
+	if( ( p = node->parent ) && ( p = p->parent ) &&
+	    ( p = xt_find_node( p->children, "MemberRole" ) ) )
+		role = p->text;
+	
+	if( ( p = xt_find_node( node->children, "PassportName" ) ) )
+		handle = p->text;
+	
+	if( !role || !handle || 
+	    !( ( bu = bee_user_by_handle( ic->bee, ic, handle ) ) ||
+	       ( bu = bee_user_new( ic->bee, ic, handle, 0 ) ) ) )
+		return XT_HANDLED;
+	
+	bd = bu->data;
+	if( strcmp( role, "Allow" ) == 0 )
+		bd->flags |= MSN_BUDDY_AL;
+	else if( strcmp( role, "Block" ) == 0 )
+		bd->flags |= MSN_BUDDY_BL;
+	else if( strcmp( role, "Reverse" ) == 0 )
+		bd->flags |= MSN_BUDDY_RL;
+	else if( strcmp( role, "Pending" ) == 0 )
+		bd->flags |= MSN_BUDDY_PL;
+	
+	return XT_HANDLED;
+}
+
 static const struct xt_handler_entry msn_soap_memlist_parser[] = {
+	{ "Member", "Members", msn_soap_memlist_member },
 	{ NULL,               NULL,     NULL                        }
 };
 
 static int msn_soap_memlist_handle_response( struct msn_soap_req_data *soap_req )
 {
-	return 0;
+	msn_soap_addressbook_request( soap_req->ic );
+	
+	return MSN_SOAP_OK;
 }
 
 static int msn_soap_memlist_free_data( struct msn_soap_req_data *soap_req )
@@ -461,4 +490,105 @@ int msn_soap_memlist_request( struct im_connection *ic )
 	                                 msn_soap_memlist_parser,
 	                                 msn_soap_memlist_handle_response,
 	                                 msn_soap_memlist_free_data );
+}
+
+
+/* addressbook: Fetching the membership list (NOT address book) */
+
+static int msn_soap_addressbook_build_request( struct msn_soap_req_data *soap_req )
+{
+	struct msn_data *md = soap_req->ic->proto_data;
+	
+	soap_req->url = g_strdup( SOAP_ADDRESSBOOK_URL );
+	soap_req->action = g_strdup( SOAP_ADDRESSBOOK_ACTION );
+	soap_req->payload = g_markup_printf_escaped( SOAP_ADDRESSBOOK_PAYLOAD, md->tokens[1] );
+	
+	return 1;
+}
+
+static xt_status msn_soap_addressbook_group( struct xt_node *node, gpointer data )
+{
+	struct xt_node *p;
+	char *id = NULL, *name = NULL;
+	struct msn_soap_req_data *soap_req = data;
+	struct im_connection *ic = soap_req->ic;
+	
+	if( ( p = node->parent ) &&
+	    ( p = xt_find_node( p->children, "groupId" ) ) )
+		id = p->text;
+	
+	if( ( p = xt_find_node( node->children, "name" ) ) )
+		name = p->text;
+	
+	printf( "%s %s\n", id, name );
+	
+	return XT_HANDLED;
+}
+
+static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer data )
+{
+	bee_user_t *bu;
+	struct msn_buddy_data *bd;
+	struct xt_node *p;
+	char *id = NULL, *type = NULL, *handle = NULL, *display_name = NULL;
+	struct msn_soap_req_data *soap_req = data;
+	struct im_connection *ic = soap_req->ic;
+	
+	if( ( p = node->parent ) &&
+	    ( p = xt_find_node( p->children, "contactId" ) ) )
+		id = p->text;
+	if( ( p = xt_find_node( node->children, "contactType" ) ) )
+		type = p->text;
+	if( ( p = xt_find_node( node->children, "passportName" ) ) )
+		handle = p->text;
+	if( ( p = xt_find_node( node->children, "displayName" ) ) )
+		display_name = p->text;
+	
+	if( type && g_strcasecmp( type, "me" ) == 0 )
+	{
+		set_t *set = set_find( &ic->acc->set, "display_name" );
+		g_free( set->value );
+		set->value = g_strdup( display_name );
+		
+		return XT_HANDLED;
+	}
+	
+	if( !( bu = bee_user_by_handle( ic->bee, ic, handle ) ) &&
+	    !( bu = bee_user_new( ic->bee, ic, handle, 0 ) ) )
+		return XT_HANDLED;
+	
+	bd = bu->data;
+	bd->flags |= MSN_BUDDY_FL;
+	g_free( bd->cid );
+	bd->cid = g_strdup( id );
+	
+	imcb_rename_buddy( ic, handle, display_name );
+	
+	printf( "%s %s %s %s\n", id, type, handle, display_name );
+	
+	return XT_HANDLED;
+}
+
+static const struct xt_handler_entry msn_soap_addressbook_parser[] = {
+	{ "contactInfo", "Contact", msn_soap_addressbook_contact },
+	{ "groupInfo", "Group", msn_soap_addressbook_group },
+	{ NULL,               NULL,     NULL                        }
+};
+
+static int msn_soap_addressbook_handle_response( struct msn_soap_req_data *soap_req )
+{
+	return MSN_SOAP_OK;
+}
+
+static int msn_soap_addressbook_free_data( struct msn_soap_req_data *soap_req )
+{
+	return 0;
+}
+
+int msn_soap_addressbook_request( struct im_connection *ic )
+{
+	return msn_soap_start( ic, NULL, msn_soap_addressbook_build_request,
+	                                 msn_soap_addressbook_parser,
+	                                 msn_soap_addressbook_handle_response,
+	                                 msn_soap_addressbook_free_data );
 }

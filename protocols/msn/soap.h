@@ -151,7 +151,7 @@ int msn_soap_oim_send( struct im_connection *ic, const char *to, const char *msg
 int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq );
 
 
-#define SOAP_MEMLIST_URL "https://byrdr.omega.contacts.msn.com/abservice/SharingService.asmx"
+#define SOAP_MEMLIST_URL "http://contacts.msn.com/abservice/SharingService.asmx"
 #define SOAP_MEMLIST_ACTION "http://www.msn.com/webservices/AddressBook/FindMembership"
 
 #define SOAP_MEMLIST_PAYLOAD \
@@ -165,6 +165,7 @@ int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq );
     "</ABApplicationHeader>" \
     "<ABAuthHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
       "<ManagedGroupRequest xmlns=\"http://www.msn.com/webservices/AddressBook\">false</ManagedGroupRequest>" \
+      "<TicketToken>%s</TicketToken>" \
     "</ABAuthHeader>" \
   "</soap:Header>" \
   "<soap:Body xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
@@ -174,6 +175,36 @@ int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq );
 "</soap:Envelope>"
 
 int msn_soap_memlist_request( struct im_connection *ic );
+
+
+#define SOAP_ADDRESSBOOK_URL "http://contacts.msn.com/abservice/abservice.asmx"
+#define SOAP_ADDRESSBOOK_ACTION "http://www.msn.com/webservices/AddressBook/ABFindAll"
+
+#define SOAP_ADDRESSBOOK_PAYLOAD \
+"<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
+"<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soapenc=\"http://schemas.xmlsoap.org/soap/encoding/\">" \
+  "<soap:Header>" \
+    "<ABApplicationHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+      "<ApplicationId>CFE80F9D-180F-4399-82AB-413F33A1FA11</ApplicationId>" \
+      "<IsMigration>false</IsMigration>" \
+      "<PartnerScenario>Initial</PartnerScenario>" \
+    "</ABApplicationHeader>" \
+    "<ABAuthHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+      "<ManagedGroupRequest>false</ManagedGroupRequest>" \
+      "<TicketToken>%s</TicketToken>" \
+    "</ABAuthHeader>" \
+  "</soap:Header>" \
+  "<soap:Body>" \
+    "<ABFindAll xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+      "<abId>00000000-0000-0000-0000-000000000000</abId>" \
+      "<abView>Full</abView>" \
+      "<deltasOnly>false</deltasOnly>" \
+      "<lastChange>0001-01-01T00:00:00.0000000-08:00</lastChange>" \
+    "</ABFindAll>" \
+  "</soap:Body>" \
+"</soap:Envelope>"
+
+int msn_soap_addressbook_request( struct im_connection *ic );
 
 
 #endif /* __SOAP_H__ */

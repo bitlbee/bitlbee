@@ -150,6 +150,21 @@ struct msn_handler_data
 	int (*exec_message) ( gpointer data, char *msg, int msglen, char **cmd, int count );
 };
 
+typedef enum
+{
+	MSN_BUDDY_FL = 1,
+	MSN_BUDDY_AL = 2,
+	MSN_BUDDY_BL = 4,
+	MSN_BUDDY_RL = 8,
+	MSN_BUDDY_PL = 16,
+} msn_buddy_flags_t;
+
+struct msn_buddy_data
+{
+	char *cid;
+	msn_buddy_flags_t flags;
+};
+
 /* Bitfield values for msn_status_code.flags */
 #define STATUS_FATAL            1
 #define STATUS_SB_FATAL         2
