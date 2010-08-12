@@ -527,3 +527,15 @@ char *msn_p11_challenge( char *challenge )
 	
 	return output;
 }
+
+gint msn_domaintree_cmp( gconstpointer a_, gconstpointer b_ )
+{
+	const char *a = a_, *b = b_;
+	gint ret;
+	
+	if( !( a = strchr( a, '@' ) ) || !( b = strchr( b, '@' ) ) ||
+	    ( ret = strcmp( a, b ) ) == 0 )
+		ret = strcmp( a_, b_ );
+	
+	return ret;
+}

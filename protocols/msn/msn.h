@@ -88,6 +88,7 @@ struct msn_data
 	int buddycount;
 	int groupcount;
 	char **grouplist;
+	GTree *domaintree;
 };
 
 struct msn_switchboard
@@ -152,7 +153,7 @@ struct msn_handler_data
 
 typedef enum
 {
-	MSN_BUDDY_FL = 1,
+	MSN_BUDDY_FL = 1,   /* Warning: FL,AL,BL *must* be 1,2,4. */
 	MSN_BUDDY_AL = 2,
 	MSN_BUDDY_BL = 4,
 	MSN_BUDDY_RL = 8,
@@ -186,6 +187,7 @@ extern GSList *msn_switchboards;
 /* ns.c */
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
 void msn_auth_got_passport_token( struct im_connection *ic, char *token );
+void msn_auth_got_contact_list( struct im_connection *ic );
 
 /* msn_util.c */
 int msn_write( struct im_connection *ic, char *s, int len );
@@ -200,6 +202,7 @@ char *msn_http_encode( const char *input );
 void msn_msgq_purge( struct im_connection *ic, GSList **list );
 gboolean msn_set_display_name( struct im_connection *ic, const char *rawname );
 char *msn_p11_challenge( char *challenge );
+gint msn_domaintree_cmp( gconstpointer a_, gconstpointer b_ );
 
 /* tables.c */
 const struct msn_away_state *msn_away_state_by_number( int number );

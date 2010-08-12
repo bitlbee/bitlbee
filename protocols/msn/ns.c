@@ -26,15 +26,16 @@
 #include <ctype.h>
 #include "nogaim.h"
 #include "msn.h"
-#include "passport.h"
 #include "md5.h"
 #include "soap.h"
+#include "xmltree.h"
 
 static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond );
 static int msn_ns_command( gpointer data, char **cmd, int num_parts );
 static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
 static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name );
+static void msn_ns_send_adl( struct im_connection *ic );
 
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 {
@@ -134,7 +135,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		char *server;
 		int port;
 		
-		if( num_parts == 6 && strcmp( cmd[2], "NS" ) == 0 )
+		if( num_parts >= 6 && strcmp( cmd[2], "NS" ) == 0 )
 		{
 			b_event_remove( ic->inpa );
 			ic->inpa = 0;
@@ -155,7 +156,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			
 			md->fd = proxy_connect( server, port, msn_ns_connected, ic );
 		}
-		else if( num_parts == 6 && strcmp( cmd[2], "SB" ) == 0 )
+		else if( num_parts >= 6 && strcmp( cmd[2], "SB" ) == 0 )
 		{
 			struct msn_switchboard *sb;
 			
@@ -260,109 +261,34 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			return( 0 );
 		}
 	}
-	else if( strcmp( cmd[0], "SYN" ) == 0 )
+	else if( strcmp( cmd[0], "BLP" ) == 0 )
 	{
-		if( num_parts == 5 )
+		msn_ns_send_adl( ic );
+	}
+	else if( strcmp( cmd[0], "ADL" ) == 0 )
+	{
+		if( num_parts >= 3 && strcmp( cmd[2], "OK" ) == 0 )
 		{
-			int i, groupcount;
+			char buf[1024];
+			char *fn_raw = set_getstr( &ic->acc->set, "display_name" );
+			char *fn;
 			
-			groupcount = atoi( cmd[4] );
-			if( groupcount > 0 )
-			{
-				/* valgrind says this is leaking memory, I'm guessing
-				   that this happens during server redirects. */
-				if( md->grouplist )
-				{
-					for( i = 0; i < md->groupcount; i ++ )
-						g_free( md->grouplist[i] );
-					g_free( md->grouplist );
-				}
-				
-				md->groupcount = groupcount;
-				md->grouplist = g_new0( char *, md->groupcount );
-			}
+			if( fn_raw == NULL )
+				fn_raw = ic->acc->user;
+			fn = g_malloc( strlen( fn_raw ) * 3 + 1 );
+			strcpy( fn, fn_raw );
+			http_encode( fn );
 			
-			md->buddycount = atoi( cmd[3] );
-			if( !*cmd[3] || md->buddycount == 0 )
-				msn_logged_in( ic );
-		}
-		else
-		{
-			/* Hrrm... This SYN reply doesn't really look like something we expected.
-			   Let's assume everything is okay. */
+			g_snprintf( buf, sizeof( buf ), "PRP %d MFN %s\r\n",
+			            ++md->trId, fn );
+			g_free( fn );
 			
-			msn_logged_in( ic );
+			msn_write( ic, buf, strlen( buf ) );
 		}
 	}
-	else if( strcmp( cmd[0], "LST" ) == 0 )
+	else if( strcmp( cmd[0], "PRP" ) == 0 )
 	{
-		int list;
-		
-		if( num_parts != 4 && num_parts != 5 )
-		{
-			imcb_error( ic, "Syntax error" );
-			imc_logout( ic, TRUE );
-			return( 0 );
-		}
-		
-		http_decode( cmd[2] );
-		list = atoi( cmd[3] );
-		
-		if( list & 1 ) /* FL */
-		{
-			char *group = NULL;
-			int num;
-			
-			if( cmd[4] != NULL && sscanf( cmd[4], "%d", &num ) == 1 && num < md->groupcount )
-				group = md->grouplist[num];
-			
-			imcb_add_buddy( ic, cmd[1], group );
-			imcb_rename_buddy( ic, cmd[1], cmd[2] );
-		}
-		if( list & 2 ) /* AL */
-		{
-			ic->permit = g_slist_append( ic->permit, g_strdup( cmd[1] ) );
-		}
-		if( list & 4 ) /* BL */
-		{
-			ic->deny = g_slist_append( ic->deny, g_strdup( cmd[1] ) );
-		}
-		if( list & 8 ) /* RL */
-		{
-			if( ( list & 6 ) == 0 )
-				msn_buddy_ask( ic, cmd[1], cmd[2] );
-		}
-		
-		if( --md->buddycount == 0 )
-		{
-			if( ic->flags & OPT_LOGGED_IN )
-			{
-				imcb_log( ic, "Successfully transferred to different server" );
-				g_snprintf( buf, sizeof( buf ), "CHG %d %s %d\r\n", ++md->trId, md->away_state->code, 0 );
-				return( msn_write( ic, buf, strlen( buf ) ) );
-			}
-			else
-			{
-				msn_logged_in( ic );
-			}
-		}
-	}
-	else if( strcmp( cmd[0], "LSG" ) == 0 )
-	{
-		int num;
-		
-		if( num_parts != 4 )
-		{
-			imcb_error( ic, "Syntax error" );
-			imc_logout( ic, TRUE );
-			return( 0 );
-		}
-		
-		http_decode( cmd[2] );
-		num = atoi( cmd[1] );
-		
-		if( num < md->groupcount )
-			md->grouplist[num] = g_strdup( cmd[2] );
+		imcb_connected( ic );
 	}
 	else if( strcmp( cmd[0], "CHL" ) == 0 )
 	{
@@ -392,15 +318,15 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	{
 		const struct msn_away_state *st;
 		
-		if( num_parts != 6 )
+		if( num_parts < 6 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
-		http_decode( cmd[4] );
-		imcb_rename_buddy( ic, cmd[3], cmd[4] );
+		http_decode( cmd[5] );
+		imcb_rename_buddy( ic, cmd[3], cmd[5] );
 		
 		st = msn_away_state_by_code( cmd[2] );
 		if( !st )
@@ -784,6 +710,80 @@ void msn_auth_got_passport_token( struct im_connection *ic, char *token )
 		g_snprintf( buf, sizeof( buf ), "USR %d SSO S %s %s\r\n", ++md->trId, md->tokens[0], token );
 		msn_write( ic, buf, strlen( buf ) );
 	}
+}
+
+void msn_auth_got_contact_list( struct im_connection *ic )
+{
+	char buf[64];
+	struct msn_data *md;
+	
+	/* Dead connection? */
+	if( g_slist_find( msn_connections, ic ) == NULL )
+		return;
+	
+	md = ic->proto_data;
+	
+	
+	g_snprintf( buf, sizeof( buf ), "BLP %d %s\r\n", ++md->trId, "BL" );
+	msn_write( ic, buf, strlen( buf ) );
+}
+
+static gboolean msn_ns_send_adl_1( gpointer key, gpointer value, gpointer data )
+{
+	struct xt_node *adl = data, *d, *c;
+	struct bee_user *bu = value;
+	struct msn_buddy_data *bd = bu->data;
+	char handle[strlen(bu->handle)];
+	char *domain;
+	char l[4];
+	
+	strcpy( handle, bu->handle );
+	if( ( domain = strchr( handle, '@' ) ) == NULL ) /* WTF */
+		return FALSE; 
+	*domain = '\0';
+	domain ++;
+	
+	if( ( d = adl->children ) == NULL ||
+	    g_strcasecmp( xt_find_attr( d, "n" ), domain ) != 0 )
+	{
+		d = xt_new_node( "d", NULL, NULL );
+		xt_add_attr( d, "n", domain );
+		xt_insert_child( adl, d );
+	}
+	
+	g_snprintf( l, sizeof( l ), "%d", bd->flags & 7 );
+	c = xt_new_node( "c", NULL, NULL );
+	xt_add_attr( c, "n", handle );
+	xt_add_attr( c, "l", l );
+	xt_add_attr( c, "t", "1" ); /* 1 means normal, 4 means mobile? */
+	xt_insert_child( d, c );
+	
+	return FALSE;
+}
+
+static void msn_ns_send_adl( struct im_connection *ic )
+{
+	struct xt_node *adl;
+	struct msn_data *md;
+	char *adls, buf[64];
+	
+	/* Dead connection? */
+	if( g_slist_find( msn_connections, ic ) == NULL )
+		return;
+	
+	md = ic->proto_data;
+	
+	adl = xt_new_node( "ml", NULL, NULL );
+	xt_add_attr( adl, "l", "1" );
+	g_tree_foreach( md->domaintree, msn_ns_send_adl_1, adl );
+	adls = xt_to_string( adl );
+	
+	g_snprintf( buf, sizeof( buf ), "ADL %d %zd\r\n", ++md->trId, strlen( adls ) );
+	if( msn_write( ic, buf, strlen( buf ) ) )
+		msn_write( ic, adls, strlen( adls ) );
+	
+	g_free( adls );
+	xt_free_node( adl );
 }
 
 static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name )

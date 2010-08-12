@@ -67,6 +67,7 @@ static void msn_login( account_t *acc )
 	
 	md->ic = ic;
 	md->away_state = msn_away_state_list;
+	md->domaintree = g_tree_new( msn_domaintree_cmp );
 	
 	msn_connections = g_slist_append( msn_connections, ic );
 }
@@ -105,6 +106,9 @@ static void msn_logout( struct im_connection *ic )
 		g_free( md->tokens[0] );
 		g_free( md->tokens[1] );
 		g_free( md->lock_key );
+		
+		g_tree_destroy( md->domaintree );
+		md->domaintree = NULL;
 		
 		while( md->grpq )
 		{
@@ -335,11 +339,15 @@ static char *set_eval_display_name( set_t *set, char *value )
 
 static void msn_buddy_data_add( bee_user_t *bu )
 {
+	struct msn_data *md = bu->ic->proto_data;
 	bu->data = g_new0( struct msn_buddy_data, 1 );
+	g_tree_insert( md->domaintree, bu->handle, bu );
 }
 
 static void msn_buddy_data_free( bee_user_t *bu )
 {
+	struct msn_data *md = bu->ic->proto_data;
+	g_tree_remove( md->domaintree, bu->handle );
 	g_free( bu->data );
 }
 

@@ -577,6 +577,7 @@ static const struct xt_handler_entry msn_soap_addressbook_parser[] = {
 
 static int msn_soap_addressbook_handle_response( struct msn_soap_req_data *soap_req )
 {
+	msn_auth_got_contact_list( soap_req->ic );
 	return MSN_SOAP_OK;
 }
 
