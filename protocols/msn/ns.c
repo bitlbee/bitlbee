@@ -227,13 +227,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		else if( strcmp( cmd[2], "OK" ) == 0 )
 		{
-			if( num_parts == 7 )
-				msn_ns_got_display_name( ic, cmd[4] );
-			else
-				imcb_log( ic, "Warning: Friendly name in server response was corrupted" );
-			
 			imcb_log( ic, "Authenticated, getting buddy list" );
-			
 			msn_soap_memlist_request( ic );
 		}
 		else
@@ -245,7 +239,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "MSG" ) == 0 )
 	{
-		if( num_parts != 4 )
+		if( num_parts < 4 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
@@ -347,7 +341,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	{
 		const struct msn_away_state *st;
 		
-		if( num_parts != 5 )
+		if( num_parts < 5 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
@@ -376,7 +370,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		char *server;
 		int session, port;
 		
-		if( num_parts != 7 )
+		if( num_parts < 7 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
@@ -420,7 +414,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "ADD" ) == 0 )
 	{
-		if( num_parts == 6 && strcmp( cmd[2], "RL" ) == 0 )
+		if( num_parts >= 6 && strcmp( cmd[2], "RL" ) == 0 )
 		{
 			GSList *l;
 			
@@ -484,7 +478,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	   and since MSN servers can apparently screw up the formatting. */
 	else if( strcmp( cmd[0], "REA" ) == 0 )
 	{
-		if( num_parts != 5 )
+		if( num_parts < 5 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );

@@ -413,7 +413,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "USR" ) == 0 )
 	{
-		if( num_parts != 5 )
+		if( num_parts < 5 )
 		{
 			msn_sb_destroy( sb );
 			return( 0 );
@@ -439,7 +439,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	{
 		int num, tot;
 		
-		if( num_parts != 6 )
+		if( num_parts < 6 )
 		{
 			msn_sb_destroy( sb );
 			return( 0 );
@@ -476,7 +476,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "ANS" ) == 0 )
 	{
-		if( num_parts != 3 )
+		if( num_parts < 3 )
 		{
 			msn_sb_destroy( sb );
 			return( 0 );
@@ -495,7 +495,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "CAL" ) == 0 )
 	{
-		if( num_parts != 4 || !isdigit( cmd[3][0] ) )
+		if( num_parts < 4 || !isdigit( cmd[3][0] ) )
 		{
 			msn_sb_destroy( sb );
 			return( 0 );
@@ -505,7 +505,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "JOI" ) == 0 )
 	{
-		if( num_parts != 3 )
+		if( num_parts < 3 )
 		{
 			msn_sb_destroy( sb );
 			return( 0 );
@@ -566,7 +566,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "MSG" ) == 0 )
 	{
-		if( num_parts != 4 )
+		if( num_parts < 4 )
 		{
 			msn_sb_destroy( sb );
 			return( 0 );

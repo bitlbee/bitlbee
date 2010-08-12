@@ -549,6 +549,26 @@ void xt_add_child( struct xt_node *parent, struct xt_node *child )
 	}
 }
 
+/* Same, but at the beginning. */
+void xt_insert_child( struct xt_node *parent, struct xt_node *child )
+{
+	struct xt_node *node, *last;
+	
+	for( node = child; node; node = node->next )
+	{
+		if( node->parent != NULL )
+		{
+			/* ERROR CONDITION: They seem to have a parent already??? */
+		}
+		
+		node->parent = parent;
+		last = node;
+	}
+	
+	last->next = parent->children;
+	parent->children = child;
+}
+
 void xt_add_attr( struct xt_node *node, const char *key, const char *value )
 {
 	int i;

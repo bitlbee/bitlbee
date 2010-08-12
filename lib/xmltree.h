@@ -91,6 +91,7 @@ char *xt_find_attr( struct xt_node *node, const char *key );
 
 struct xt_node *xt_new_node( char *name, const char *text, struct xt_node *children );
 void xt_add_child( struct xt_node *parent, struct xt_node *child );
+void xt_insert_child( struct xt_node *parent, struct xt_node *child );
 void xt_add_attr( struct xt_node *node, const char *key, const char *value );
 int xt_remove_attr( struct xt_node *node, const char *key );
 
