@@ -292,25 +292,20 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "CHL" ) == 0 )
 	{
-		md5_state_t state;
-		md5_byte_t digest[16];
-		int i;
+		char *resp;
 		
-		if( num_parts != 3 )
+		if( num_parts < 3 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
-		md5_init( &state );
-		md5_append( &state, (const md5_byte_t *) cmd[2], strlen( cmd[2] ) );
-		md5_append( &state, (const md5_byte_t *) QRY_CODE, strlen( QRY_CODE ) );
-		md5_finish( &state, digest );
-		
-		g_snprintf( buf, sizeof( buf ), "QRY %d %s %d\r\n", ++md->trId, QRY_NAME, 32 );
-		for( i = 0; i < 16; i ++ )
-			g_snprintf( buf + strlen( buf ), 3, "%02x", digest[i] );
+		resp = msn_p11_challenge( cmd[2] );
+		g_snprintf( buf, sizeof( buf ), "QRY %d %s %zd\r\n%s",
+		            ++md->trId, MSNP11_PROD_ID,
+		            strlen( resp ), resp );
+		g_free( resp );
 		
 		return( msn_write( ic, buf, strlen( buf ) ) );
 	}
@@ -580,6 +575,12 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		/* Coming up is cmd[2] bytes of stuff we're supposed to
 		   censore. Meh. */
 		md->handler->msglen = atoi( cmd[2] );
+	}
+	else if( strcmp( cmd[0], "UBX" ) == 0 )
+	{
+		/* Status message. Parser coming soon. */
+		if( num_parts >= 4 )
+			md->handler->msglen = atoi( cmd[3] );
 	}
 	else if( isdigit( cmd[0][0] ) )
 	{

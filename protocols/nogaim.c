@@ -325,14 +325,6 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	
 	imcb_log( ic, "Signing off.." );
 	
-	b_event_remove( ic->keepalive );
-	ic->keepalive = 0;
-	ic->acc->prpl->logout( ic );
-	b_event_remove( ic->inpa );
-	
-	g_free( ic->away );
-	ic->away = NULL;
-	
 	for( l = bee->users; l; )
 	{
 		bee_user_t *bu = l->data;
@@ -343,6 +335,14 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 		
 		l = next;
 	}
+	
+	b_event_remove( ic->keepalive );
+	ic->keepalive = 0;
+	ic->acc->prpl->logout( ic );
+	b_event_remove( ic->inpa );
+	
+	g_free( ic->away );
+	ic->away = NULL;
 	
 	query_del_by_conn( (irc_t*) ic->bee->ui_data, ic );
 	
