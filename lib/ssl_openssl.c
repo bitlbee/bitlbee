@@ -115,7 +115,9 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	if( !initialized )
 	{
 		initialized = TRUE;
-		SSLeay_add_ssl_algorithms();
+		SSL_library_init();
+		//SSLeay_add_ssl_algorithms();
+		//OpenSSL_add_all_algorithms();
 	}
 	
 	meth = TLSv1_client_method();
@@ -204,6 +206,8 @@ int ssl_read( void *conn, char *buf, int len )
 			ssl_errno = SSL_AGAIN;
 	}
 	
+	if( getenv( "BITLBEE_DEBUG" ) && st > 0 ) write( 1, buf, st );
+	
 	return st;
 }
 
@@ -218,6 +222,8 @@ int ssl_write( void *conn, const char *buf, int len )
 	}
 	
 	st = SSL_write( ((struct scd*)conn)->ssl, buf, len );
+	
+	if( getenv( "BITLBEE_DEBUG" ) && st > 0 ) write( 1, buf, st );
 	
 	ssl_errno = SSL_OK;
 	if( st <= 0 )
@@ -274,12 +280,11 @@ b_input_condition ssl_getdirection( void *conn )
 
 size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned char *input, size_t input_len, const unsigned char *iv, unsigned char **res)
 {
-	OpenSSL_add_all_algorithms();
 	int output_length = 0;    
+	EVP_CIPHER_CTX ctx;
 	
 	*res = g_new0(unsigned char, 72);
 	
-	EVP_CIPHER_CTX ctx;
 	/* Don't set key or IV because we will modify the parameters */
 	EVP_CIPHER_CTX_init(&ctx);
 	EVP_CipherInit_ex(&ctx, EVP_des_ede3_cbc(), NULL, NULL, NULL, 1);
@@ -289,9 +294,8 @@ size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned
 	EVP_CipherInit_ex(&ctx, NULL, NULL, key, iv, 1);
 	EVP_CipherUpdate(&ctx, *res, &output_length, input, input_len);
 	EVP_CipherFinal_ex(&ctx, *res, &output_length);
-	
 	EVP_CIPHER_CTX_cleanup(&ctx);   
-	EVP_cleanup();
+	//EVP_cleanup();
 	
 	return output_length;
 }
