@@ -48,8 +48,13 @@
 #define MSNP11_PROD_ID  "PROD01065C%ZFN6F"
 */
 
-#define MSNP11_PROD_KEY "RG@XY*28Q5QHS%Q5"
-#define MSNP11_PROD_ID  "PROD0113H11T8$X_"
+#define MSNP11_PROD_KEY "ILTXC!4IXB5FB*PX"
+//PK}_A_0N_K%O?A9S"
+#define MSNP11_PROD_ID  "PROD0119GSJUC$18"
+//PROD0114ES4Z%Q5W"
+#define MSNP_VER        "MSNP15"
+#define MSNP_BUILD      "8.5.1288"
+//"8.1.0178"
 
 #define MSN_SB_NEW         -24062002
 
@@ -78,7 +83,7 @@ struct msn_data
 	struct msn_handler_data *handler;
 	
 	int trId;
-	char *tokens[2];
+	char *tokens[3];
 	char *lock_key;
 	
 	GSList *msgq, *grpq;

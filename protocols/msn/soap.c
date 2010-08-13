@@ -177,10 +177,12 @@ static xt_status msn_soap_passport_sso_token( struct xt_node *node, gpointer dat
 	    p->text )
 	    	sd->secret = g_strdup( p->text );
 	
-	if( *id == '1' )
-		md->tokens[0] = g_strdup( node->text );
-	else if( *id == '2' )
-		md->tokens[1] = g_strdup( node->text );
+	*id -= '1';
+	if( *id >= 0 && *id <= 2 )
+	{
+		g_free( md->tokens[(int)*id] );
+		md->tokens[(int)*id] = g_strdup( node->text );
+	}
 	
 	return XT_HANDLED;
 }
@@ -309,12 +311,13 @@ static int msn_soap_oim_build_request( struct msn_soap_req_data *soap_req )
 	struct msn_data *md = ic->proto_data;
 	char *display_name_b64;
 	
-	display_name_b64 = tobase64( ic->displayname );
+	display_name_b64 = tobase64( set_getstr( &ic->acc->set, "display_name" ) );
 	
 	soap_req->url = g_strdup( SOAP_OIM_SEND_URL );
 	soap_req->action = g_strdup( SOAP_OIM_SEND_ACTION );
 	soap_req->payload = g_markup_printf_escaped( SOAP_OIM_SEND_PAYLOAD,
-		ic->acc->user, display_name_b64, oim->to, "bla", //md->passport_token,
+		ic->acc->user, display_name_b64, MSNP_VER, MSNP_BUILD,
+		oim->to, md->tokens[2],
 		MSNP11_PROD_ID, md->lock_key ? md->lock_key : "",
 		oim->number, oim->number, oim->msg );
 	

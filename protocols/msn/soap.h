@@ -110,6 +110,15 @@
                "</wsp:AppliesTo>" \
                "<wsse:PolicyReference xmlns=\"http://schemas.xmlsoap.org/ws/2003/06/secext\" URI=\"MBI\"></wsse:PolicyReference>" \
            "</wst:RequestSecurityToken>" \
+           "<wst:RequestSecurityToken Id=\"RST3\">" \
+               "<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
+               "<wsp:AppliesTo>" \
+                   "<wsa:EndpointReference>" \
+                       "<wsa:Address>messengersecure.live.com</wsa:Address>" \
+                   "</wsa:EndpointReference>" \
+               "</wsp:AppliesTo>" \
+               "<wsse:PolicyReference xmlns=\"http://schemas.xmlsoap.org/ws/2003/06/secext\" URI=\"MBI_SSL\"></wsse:PolicyReference>" \
+           "</wst:RequestSecurityToken>" \
        "</ps:RequestMultipleSecurityTokens>" \
    "</Body>" \
 "</Envelope>"
@@ -118,13 +127,13 @@ int msn_soap_passport_sso_request( struct im_connection *ic, const char *policy,
 
 
 #define SOAP_OIM_SEND_URL "https://ows.messenger.msn.com/OimWS/oim.asmx"
-#define SOAP_OIM_SEND_ACTION "http://messenger.msn.com/ws/2004/09/oim/Store"
+#define SOAP_OIM_SEND_ACTION "http://messenger.live.com/ws/2006/09/oim/Store2"
 
 #define SOAP_OIM_SEND_PAYLOAD \
 "<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
 "<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
 "<soap:Header>" \
-  "<From memberName=\"%s\" friendlyName=\"=?utf-8?B?%s?=\" xml:lang=\"nl-nl\" proxy=\"MSNMSGR\" xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\" msnpVer=\"MSNP13\" buildVer=\"8.0.0328\"/>" \
+  "<From memberName=\"%s\" friendlyName=\"=?utf-8?B?%s?=\" xml:lang=\"nl-nl\" proxy=\"MSNMSGR\" xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\" msnpVer=\"%s\" buildVer=\"%s\"/>" \
   "<To memberName=\"%s\" xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\"/>" \
   "<Ticket passport=\"%s\" appid=\"%s\" lockkey=\"%s\" xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\"/>" \
   "<Sequence xmlns=\"http://schemas.xmlsoap.org/ws/2003/03/rm\">" \

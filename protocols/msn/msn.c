@@ -105,6 +105,7 @@ static void msn_logout( struct im_connection *ic )
 		g_free( md->grouplist );
 		g_free( md->tokens[0] );
 		g_free( md->tokens[1] );
+		g_free( md->tokens[2] );
 		g_free( md->lock_key );
 		
 		g_tree_destroy( md->domaintree );

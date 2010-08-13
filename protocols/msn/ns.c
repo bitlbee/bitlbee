@@ -73,7 +73,7 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 	md->handler->fd = md->fd;
 	md->handler->rxq = g_new0( char, 1 );
 	
-	g_snprintf( s, sizeof( s ), "VER %d MSNP15 CVR0\r\n", ++md->trId );
+	g_snprintf( s, sizeof( s ), "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER );
 	if( msn_write( ic, s, strlen( s ) ) )
 	{
 		ic->inpa = b_input_add( md->fd, B_EV_IO_READ, msn_ns_callback, ic );
@@ -113,7 +113,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	
 	if( strcmp( cmd[0], "VER" ) == 0 )
 	{
-		if( cmd[2] && strncmp( cmd[2], "MSNP15", 5 ) != 0 )
+		if( cmd[2] && strncmp( cmd[2], MSNP_VER, 5 ) != 0 )
 		{
 			imcb_error( ic, "Unsupported protocol" );
 			imc_logout( ic, FALSE );
