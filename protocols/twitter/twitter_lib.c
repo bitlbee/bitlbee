@@ -356,6 +356,11 @@ static xt_status twitter_xt_get_user_list( struct xt_node *node, struct twitter_
 	return XT_HANDLED;
 }
 
+#ifdef __GLIBC__
+#define TWITTER_TIME_FORMAT "%a %b %d %H:%M:%S %z %Y"
+#else
+#define TWITTER_TIME_FORMAT "%a %b %d %H:%M:%S +0000 %Y"
+#endif
 
 /**
  * Function to fill a twitter_xml_status struct.
@@ -392,7 +397,7 @@ static xt_status twitter_xt_get_status( struct xt_node *node, struct twitter_xml
 			/* Very sensitive to changes to the formatting of
 			   this field. :-( Also assumes the timezone used
 			   is UTC since C time handling functions suck. */
-			if( strptime( child->text, "%a %b %d %H:%M:%S %z %Y", &parsed ) != NULL )
+			if( strptime( child->text, TWITTER_TIME_FORMAT, &parsed ) != NULL )
 				txs->created_at = mktime_utc( &parsed );
 		}
 		else if (g_strcasecmp( "user", child->name ) == 0)

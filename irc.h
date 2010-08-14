@@ -257,6 +257,7 @@ void irc_channel_name_strip( char *name );
 int irc_channel_name_cmp( const char *a_, const char *b_ );
 void irc_channel_update_ops( irc_channel_t *ic, char *value );
 char *set_eval_irc_channel_ops( struct set *set, char *value );
+gboolean irc_channel_wants_user( irc_channel_t *ic, irc_user_t *iu );
 
 /* irc_commands.c */
 void irc_exec( irc_t *irc, char **cmd );

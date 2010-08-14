@@ -725,6 +725,31 @@ fail:
 	return SET_INVALID;	
 }
 
+/* Figure out if a channel is supposed to have the user, assuming s/he is
+   online or otherwise also selected by the show_users setting. Only works
+   for control channels, but does *not* check if this channel is of that
+   type. Beware! */
+gboolean irc_channel_wants_user( irc_channel_t *ic, irc_user_t *iu )
+{
+	struct irc_control_channel *icc = ic->data;
+	
+	if( iu->bu == NULL )
+		return FALSE;
+	
+	switch( icc->type )
+	{
+	case IRC_CC_TYPE_GROUP:
+		return iu->bu->group == icc->group;
+	case IRC_CC_TYPE_ACCOUNT:
+		return iu->bu->ic->acc == icc->account;
+	case IRC_CC_TYPE_PROTOCOL:
+		return iu->bu->ic->acc->prpl == icc->protocol;
+	case IRC_CC_TYPE_DEFAULT:
+	default:
+		return TRUE;
+	}
+}
+
 static gboolean control_channel_free( irc_channel_t *ic )
 {
 	struct irc_control_channel *icc = ic->data;
