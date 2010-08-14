@@ -576,6 +576,13 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts >= 4 )
 			md->handler->msglen = atoi( cmd[3] );
 	}
+	else if( strcmp( cmd[0], "NOT" ) == 0 )
+	{
+		/* Some kind of notification, not sure if it still exists
+		   but we have to skip the payload or stuff breaks. */
+		if( num_parts >= 3 )
+			md->handler->msglen = atoi( cmd[2] );
+	}
 	else if( isdigit( cmd[0][0] ) )
 	{
 		int num = atoi( cmd[0] );
@@ -684,6 +691,19 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 			
 			g_free( ct );
 		}
+	}
+	else if( strcmp( cmd[0], "UBX" ) == 0 )
+	{
+		struct xt_node *psm;
+		char *psm_text = NULL;
+		
+		psm = xt_from_string( msg );
+		if( psm && strcmp( psm->name, "Data" ) == 0 &&
+		    ( psm = xt_find_node( psm->children, "PSM" ) ) )
+			psm_text = psm->text;
+		
+		imcb_buddy_status_msg( ic, cmd[1], psm_text );
+		xt_free_node( psm );
 	}
 	
 	return( 1 );

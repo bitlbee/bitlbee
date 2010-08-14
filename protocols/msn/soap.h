@@ -1,24 +1,30 @@
-/* soap.h
- *
- * SOAP-related functions. Some manager at Microsoft apparently thought
- * MSNP wasn't XMLy enough so someone stepped up and changed that. This
- * is the result.
- *
- * Copyright (C) 2010 Wilmer van der Gaast <wilmer@gaast.net>
- *
- * This program is free software; you can redistribute it and/or modify             
- * it under the terms of the GNU General Public License version 2                   
- * as published by the Free Software Foundation                                     
- *                                                                                   
- * This program is distributed in the hope that is will be useful,                  
- * bit WITHOU ANY WARRANTY; without even the implied warranty of                   
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                    
- * GNU General Public License for more details.                                     
- *                                                                                   
- * You should have received a copy of the GNU General Public License                
- * along with this program; if not, write to the Free Software                      
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA          
- */
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
+/* MSN module - All the SOAPy XML stuff.
+   Some manager at Microsoft apparently thought MSNP wasn't XMLy enough so
+   someone stepped up and changed that. This is the result. Kilobytes and
+   more kilobytes of XML vomit to transfer tiny bits of informaiton. */
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
 
 /* Thanks to http://msnpiki.msnfanatic.com/ for lots of info on this! */
 

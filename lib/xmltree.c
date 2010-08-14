@@ -140,7 +140,7 @@ void xt_reset( struct xt_parser *xt )
 
 /* Feed the parser, don't execute any handler. Returns -1 on errors, 0 on
    end-of-stream and 1 otherwise. */
-int xt_feed( struct xt_parser *xt, char *text, int text_len )
+int xt_feed( struct xt_parser *xt, const char *text, int text_len )
 {
 	if( !g_markup_parse_context_parse( xt->parser, text, text_len, &xt->gerr ) )
 	{
@@ -257,6 +257,20 @@ void xt_cleanup( struct xt_parser *xt, struct xt_node *node, int depth )
 				xt_cleanup( xt, c, depth > 0 ? depth - 1 : depth );
 		}
 	}
+}
+
+struct xt_node *xt_from_string( const char *in )
+{
+	struct xt_parser *parser;
+	struct xt_node *ret;
+	
+	parser = xt_new( NULL, NULL );
+	xt_feed( parser, in, strlen( in ) );
+	ret = parser->root;
+	parser->root = NULL;
+	xt_free( parser );
+	
+	return ret;
 }
 
 static void xt_to_string_real( struct xt_node *node, GString *str )
