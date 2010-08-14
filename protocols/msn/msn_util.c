@@ -26,6 +26,7 @@
 #include "nogaim.h"
 #include "msn.h"
 #include "md5.h"
+#include "soap.h"
 #include <ctype.h>
 
 int msn_write( struct im_connection *ic, char *s, int len )
@@ -57,12 +58,31 @@ int msn_logged_in( struct im_connection *ic )
 	return( 0 );
 }
 
-int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *who, const char *realname_, const char *group )
+static char *adlrml_entry( const char *handle_, msn_buddy_flags_t list )
+{
+	char *domain, handle[strlen(handle_)+1];
+	
+	strcpy( handle, handle_ );
+	if( ( domain = strchr( handle, '@' ) ) )
+		*(domain
+		++) = '\0';
+	else
+		return NULL;
+	
+	return g_markup_printf_escaped( "<ml><d n=\"%s\"><c n=\"%s\" l=\"%d\" t=\"1\"/></d></ml>",
+		domain, handle, list );
+}
+
+int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *realname_, const char *group )
 {
 	struct msn_data *md = ic->proto_data;
-	char buf[1024], realname[strlen(realname_)*3+1], groupid[8];
+	char buf[1024], groupid[8];
+	bee_user_t *bu;
+	struct msn_buddy_data *bd;
+	char *adl;
 	
 	*groupid = '\0';
+#if 0
 	if( group )
 	{
 		int i;
@@ -108,20 +128,36 @@ int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *
 			}
 		}
 	}
+#endif
 	
-	strcpy( realname, realname_ );
-	http_encode( realname );
-	g_snprintf( buf, sizeof( buf ), "ADD %d %s %s %s%s\r\n", ++md->trId, list, who, realname, groupid );
+	if( !( bu = bee_user_by_handle( ic->bee, ic, who ) ) ||
+	    !( bd = bu->data ) || bd->flags & list )
+		return 1;
 	
-	return msn_write( ic, buf, strlen( buf ) );
+	bd->flags |= list;
+	
+	msn_soap_memlist_edit( ic, who, TRUE, list );
+	
+	if( ( adl = adlrml_entry( who, list ) ) )
+	{
+		g_snprintf( buf, sizeof( buf ), "ADL %d %zd\r\n%s",
+		            ++md->trId, strlen( adl ), adl );
+		g_free( adl );
+		
+		return msn_write( ic, buf, strlen( buf ) );
+	}
 }
 
-int msn_buddy_list_remove( struct im_connection *ic, char *list, const char *who, const char *group )
+int msn_buddy_list_remove( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *group )
 {
 	struct msn_data *md = ic->proto_data;
 	char buf[1024], groupid[8];
+	bee_user_t *bu;
+	struct msn_buddy_data *bd;
+	char *adl;
 	
 	*groupid = '\0';
+#if 0
 	if( group )
 	{
 		int i;
@@ -132,10 +168,24 @@ int msn_buddy_list_remove( struct im_connection *ic, char *list, const char *who
 				break;
 			}
 	}
+#endif
 	
-	g_snprintf( buf, sizeof( buf ), "REM %d %s %s%s\r\n", ++md->trId, list, who, groupid );
-	if( msn_write( ic, buf, strlen( buf ) ) )
-		return( 1 );
+	if( !( bu = bee_user_by_handle( ic->bee, ic, who ) ) ||
+	    !( bd = bu->data ) || !( bd->flags & list ) )
+		return 1;
+	
+	bd->flags &= ~list;
+	
+	msn_soap_memlist_edit( ic, who, FALSE, list );
+	
+	if( ( adl = adlrml_entry( who, list ) ) )
+	{
+		g_snprintf( buf, sizeof( buf ), "RML %d %zd\r\n%s",
+		            ++md->trId, strlen( adl ), adl );
+		g_free( adl );
+		
+		return msn_write( ic, buf, strlen( buf ) );
+	}
 	
 	return( 0 );
 }
@@ -151,7 +201,7 @@ static void msn_buddy_ask_yes( void *data )
 {
 	struct msn_buddy_ask_data *bla = data;
 	
-	msn_buddy_list_add( bla->ic, "AL", bla->handle, bla->realname, NULL );
+	msn_buddy_list_add( bla->ic, MSN_BUDDY_AL, bla->handle, bla->realname, NULL );
 	
 	imcb_ask_add( bla->ic, bla->handle, NULL );
 	
@@ -164,7 +214,7 @@ static void msn_buddy_ask_no( void *data )
 {
 	struct msn_buddy_ask_data *bla = data;
 	
-	msn_buddy_list_add( bla->ic, "BL", bla->handle, bla->realname, NULL );
+	msn_buddy_list_add( bla->ic, MSN_BUDDY_BL, bla->handle, bla->realname, NULL );
 	
 	g_free( bla->handle );
 	g_free( bla->realname );

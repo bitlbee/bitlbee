@@ -516,6 +516,87 @@ int msn_soap_memlist_request( struct im_connection *ic )
 	                                 msn_soap_memlist_free_data );
 }
 
+/* Variant: Adding/Removing people */
+struct msn_soap_memlist_edit_data
+{
+	char *handle;
+	gboolean add;
+	msn_buddy_flags_t list;
+};
+
+static int msn_soap_memlist_edit_build_request( struct msn_soap_req_data *soap_req )
+{
+	struct msn_data *md = soap_req->ic->proto_data;
+	struct msn_soap_memlist_edit_data *med = soap_req->data;
+	char *add, *scenario, *list;
+	
+	soap_req->url = g_strdup( SOAP_MEMLIST_URL );
+	if( med->add )
+	{
+		soap_req->action = g_strdup( SOAP_MEMLIST_ADD_ACTION );
+		add = "Add";
+	}
+	else
+	{
+		soap_req->action = g_strdup( SOAP_MEMLIST_DEL_ACTION );
+		add = "Delete";
+	}
+	switch( med->list )
+	{
+	case MSN_BUDDY_AL:
+		scenario = "BlockUnblock";
+		list = "Allow";
+		break;
+	case MSN_BUDDY_BL:
+		scenario = "BlockUnblock";
+		list = "Block";
+		break;
+	case MSN_BUDDY_RL:
+		scenario = "Timer";
+		list = "Reverse";
+		break;
+	case MSN_BUDDY_PL:
+	default:
+		scenario = "Timer";
+		list = "Pending";
+		break;
+	}
+	soap_req->payload = g_markup_printf_escaped( SOAP_MEMLIST_EDIT_PAYLOAD,
+		scenario, md->tokens[1], add, list, med->handle, add );
+	
+	return 1;
+}
+
+static int msn_soap_memlist_edit_handle_response( struct msn_soap_req_data *soap_req )
+{
+	return MSN_SOAP_OK;
+}
+
+static int msn_soap_memlist_edit_free_data( struct msn_soap_req_data *soap_req )
+{
+	struct msn_soap_memlist_edit_data *med = soap_req->data;
+	
+	g_free( med->handle );
+	g_free( med );
+	
+	return 0;
+}
+
+int msn_soap_memlist_edit( struct im_connection *ic, const char *handle, gboolean add, int list )
+{
+	struct msn_soap_memlist_edit_data *med;
+	
+	med = g_new0( struct msn_soap_memlist_edit_data, 1 );
+	med->handle = g_strdup( handle );
+	med->add = add;
+	med->list = list;
+	
+	return msn_soap_start( ic, med, msn_soap_memlist_edit_build_request,
+	                                NULL,
+	                                msn_soap_memlist_edit_handle_response,
+	                                msn_soap_memlist_edit_free_data );
+}
+
 
 /* addressbook: Fetching the membership list (NOT address book) */
 

@@ -263,10 +263,13 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		if( num_parts >= 3 && strcmp( cmd[2], "OK" ) == 0 )
 		{
 			char buf[1024];
-			char *fn_raw = set_getstr( &ic->acc->set, "display_name" );
+			char *fn_raw;
 			char *fn;
 			
-			if( fn_raw == NULL )
+			if( ic->flags & OPT_LOGGED_IN )
+				return 1;
+			
+			if( ( fn_raw = set_getstr( &ic->acc->set, "display_name" ) ) == NULL )
 				fn_raw = ic->acc->user;
 			fn = g_malloc( strlen( fn_raw ) * 3 + 1 );
 			strcpy( fn, fn_raw );

@@ -189,7 +189,48 @@ int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq );
   "</soap:Body>" \
 "</soap:Envelope>"
 
+#define SOAP_MEMLIST_ADD_ACTION "http://www.msn.com/webservices/AddressBook/AddMember"
+#define SOAP_MEMLIST_DEL_ACTION "http://www.msn.com/webservices/AddressBook/DeleteMember"
+
+#define SOAP_MEMLIST_EDIT_PAYLOAD \
+"<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
+"<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+  "<soap:Header xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+    "<ABApplicationHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+      "<ApplicationId xmlns=\"http://www.msn.com/webservices/AddressBook\">CFE80F9D-180F-4399-82AB-413F33A1FA11</ApplicationId>" \
+      "<IsMigration xmlns=\"http://www.msn.com/webservices/AddressBook\">false</IsMigration>" \
+      "<PartnerScenario xmlns=\"http://www.msn.com/webservices/AddressBook\">%s</PartnerScenario>" \
+    "</ABApplicationHeader>" \
+    "<ABAuthHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+      "<ManagedGroupRequest xmlns=\"http://www.msn.com/webservices/AddressBook\">false</ManagedGroupRequest>" \
+      "<TicketToken>%s</TicketToken>" \
+    "</ABAuthHeader>" \
+  "</soap:Header>" \
+  "<soap:Body xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+  "<%sMember xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+   "<serviceHandle>" \
+    "<Id>0</Id>" \
+    "<Type>Messenger</Type>" \
+    "<ForeignId></ForeignId>" \
+   "</serviceHandle>" \
+   "<memberships>" \
+    "<Membership>" \
+     "<MemberRole>%s</MemberRole>" \
+     "<Members>" \
+      "<Member xsi:type=\"PassportMember\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">" \
+       "<Type>Passport</Type>" \
+       "<State>Accepted</State>" \
+       "<PassportName>%s</PassportName>" \
+      "</Member>" \
+     "</Members>" \
+    "</Membership>" \
+   "</memberships>" \
+  "</%sMember>" \
+  "</soap:Body>" \
+"</soap:Envelope>"
+
 int msn_soap_memlist_request( struct im_connection *ic );
+int msn_soap_memlist_edit( struct im_connection *ic, const char *handle, gboolean add, int list );
 
 
 #define SOAP_ADDRESSBOOK_URL "http://contacts.msn.com/abservice/abservice.asmx"

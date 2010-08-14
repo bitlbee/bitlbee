@@ -216,14 +216,14 @@ static void msn_add_buddy( struct im_connection *ic, char *who, char *group )
 {
 	struct bee_user *bu = bee_user_by_handle( ic->bee, ic, who );
 	
-	msn_buddy_list_add( ic, "FL", who, who, group );
+	msn_buddy_list_add( ic, MSN_BUDDY_FL, who, who, group );
 	if( bu && bu->group )
-		msn_buddy_list_remove( ic, "FL", who, bu->group->name );
+		msn_buddy_list_remove( ic, MSN_BUDDY_FL, who, bu->group->name );
 }
 
 static void msn_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
-	msn_buddy_list_remove( ic, "FL", who, NULL );
+	msn_buddy_list_remove( ic, MSN_BUDDY_FL, who, NULL );
 }
 
 static void msn_chat_msg( struct groupchat *c, char *message, int flags )
@@ -288,19 +288,19 @@ static void msn_keepalive( struct im_connection *ic )
 
 static void msn_add_permit( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_add( ic, "AL", who, who, NULL );
+	msn_buddy_list_add( ic, MSN_BUDDY_AL, who, who, NULL );
 }
 
 static void msn_rem_permit( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_remove( ic, "AL", who, NULL );
+	msn_buddy_list_remove( ic, MSN_BUDDY_AL, who, NULL );
 }
 
 static void msn_add_deny( struct im_connection *ic, char *who )
 {
 	struct msn_switchboard *sb;
 	
-	msn_buddy_list_add( ic, "BL", who, who, NULL );
+	msn_buddy_list_add( ic, MSN_BUDDY_BL, who, who, NULL );
 	
 	/* If there's still a conversation with this person, close it. */
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )
@@ -311,7 +311,7 @@ static void msn_add_deny( struct im_connection *ic, char *who )
 
 static void msn_rem_deny( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_remove( ic, "BL", who, NULL );
+	msn_buddy_list_remove( ic, MSN_BUDDY_BL, who, NULL );
 }
 
 static int msn_send_typing( struct im_connection *ic, char *who, int typing )
