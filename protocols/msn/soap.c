@@ -1,25 +1,30 @@
-/** soap.c
- *
- * SOAP-related functions. Some manager at Microsoft apparently thought
- * MSNP wasn't XMLy enough so someone stepped up and changed that. This
- * is the result.
- *
- * Copyright (C) 2010 Wilmer van der Gaast <wilmer@gaast.net>
- *
- * This program is free software; you can redistribute it and/or modify             
- * it under the terms of the GNU General Public License version 2                   
- * as published by the Free Software Foundation                                     
- *                                                                                   
- * This program is distributed in the hope that is will be useful,                  
- * bit WITHOU ANY WARRANTY; without even the implied warranty of                   
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                    
- * GNU General Public License for more details.                                     
- *                                                                                   
- * You should have received a copy of the GNU General Public License                
- * along with this program; if not, write to the Free Software                      
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA          
- *
- */
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
+/* MSN module - All the SOAPy XML stuff.
+   Some manager at Microsoft apparently thought MSNP wasn't XMLy enough so
+   someone stepped up and changed that. This is the result. Kilobytes and
+   more kilobytes of XML vomit to transfer tiny bits of informaiton. */
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
 
 #include "http_client.h"
 #include "soap.h"
@@ -33,16 +38,17 @@
 #include <ctype.h>
 #include <errno.h>
 
+/* This file tries to make SOAP stuff pretty simple to do by letting you just
+   provide a function to build a request, a few functions to parse various
+   parts of the response, and a function to run when the full response was
+   received and parsed. See the various examples below. */
+
 typedef enum
 {
 	MSN_SOAP_OK,
 	MSN_SOAP_RETRY,
 	MSN_SOAP_ABORT,
 } msn_soap_result_t;
-
-struct msn_soap_req_data;
-
-typedef int (*msn_soap_func) ( struct msn_soap_req_data * );
 
 struct msn_soap_req_data
 {
@@ -56,6 +62,8 @@ struct msn_soap_req_data
 	const struct xt_handler_entry *xml_parser;
 	msn_soap_func build_request, handle_response, free_data;
 };
+
+typedef int (*msn_soap_func) ( struct msn_soap_req_data * );
 
 static int msn_soap_send_request( struct msn_soap_req_data *req );
 

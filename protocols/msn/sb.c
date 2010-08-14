@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2005 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Switchboard server callbacks and utilities              */
@@ -26,7 +26,6 @@
 #include <ctype.h>
 #include "nogaim.h"
 #include "msn.h"
-#include "passport.h"
 #include "md5.h"
 #include "soap.h"
 #include "invitation.h"

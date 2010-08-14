@@ -232,7 +232,4 @@ int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m );
 void msn_sb_start_keepalives( struct msn_switchboard *sb, gboolean initial );
 void msn_sb_stop_keepalives( struct msn_switchboard *sb );
 
-/* invitation.c */
-void msn_ftp_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *who );
-
 #endif //_MSN_H
