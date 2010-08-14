@@ -38,6 +38,8 @@ static void msn_init( account_t *acc )
 	set_add( &acc->set, "local_display_name", "false", set_eval_bool, acc );
 	set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
 	set_add( &acc->set, "switchboard_keepalives", "false", set_eval_bool, acc );
+	
+	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE;
 }
 
 static void msn_login( account_t *acc )
@@ -181,6 +183,7 @@ static GList *msn_away_states( struct im_connection *ic )
 static void msn_set_away( struct im_connection *ic, char *state, char *message )
 {
 	char buf[1024];
+	char *uux;
 	struct msn_data *md = ic->proto_data;
 	
 	if( state == NULL )
@@ -189,7 +192,14 @@ static void msn_set_away( struct im_connection *ic, char *state, char *message )
 		md->away_state = msn_away_state_list + 1;
 	
 	g_snprintf( buf, sizeof( buf ), "CHG %d %s\r\n", ++md->trId, md->away_state->code );
-	msn_write( ic, buf, strlen( buf ) );
+	if( !msn_write( ic, buf, strlen( buf ) ) )
+		return;
+	
+	uux = g_markup_printf_escaped( "<Data><PSM>%s</PSM><CurrentMedia></CurrentMedia>"
+	                               "</Data>", message ? message : "" );
+	g_snprintf( buf, sizeof( buf ), "UUX %d %zd\r\n%s", ++md->trId, strlen( uux ), uux );
+	if( !msn_write( ic, buf, strlen( buf ) ) )
+		return;
 }
 
 static void msn_set_my_name( struct im_connection *ic, char *info )

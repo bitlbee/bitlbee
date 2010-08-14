@@ -50,6 +50,9 @@ typedef enum
 	MSN_SOAP_ABORT,
 } msn_soap_result_t;
 
+struct msn_soap_req_data;
+typedef int (*msn_soap_func) ( struct msn_soap_req_data * );
+
 struct msn_soap_req_data
 {
 	void *data;
@@ -62,8 +65,6 @@ struct msn_soap_req_data
 	const struct xt_handler_entry *xml_parser;
 	msn_soap_func build_request, handle_response, free_data;
 };
-
-typedef int (*msn_soap_func) ( struct msn_soap_req_data * );
 
 static int msn_soap_send_request( struct msn_soap_req_data *req );
 
@@ -526,7 +527,6 @@ static xt_status msn_soap_addressbook_group( struct xt_node *node, gpointer data
 	struct xt_node *p;
 	char *id = NULL, *name = NULL;
 	struct msn_soap_req_data *soap_req = data;
-	struct im_connection *ic = soap_req->ic;
 	
 	if( ( p = node->parent ) &&
 	    ( p = xt_find_node( p->children, "groupId" ) ) )
