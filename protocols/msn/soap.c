@@ -160,7 +160,11 @@ static int msn_soap_passport_sso_build_request( struct msn_soap_req_data *soap_r
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
 	
-	soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL );
+	if( g_str_has_suffix( ic->acc->user, "@msn.com" ) )
+		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL_MSN );
+	else
+		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL );
+	
 	soap_req->payload = g_markup_printf_escaped( SOAP_PASSPORT_SSO_PAYLOAD,
 		ic->acc->user, ic->acc->pass, sd->policy );
 	
