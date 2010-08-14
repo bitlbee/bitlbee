@@ -704,7 +704,7 @@ void msn_auth_got_passport_token( struct im_connection *ic, char *token )
 	md = ic->proto_data;
 	
 	{
-		char buf[1024];
+		char buf[1536];
 		
 		g_snprintf( buf, sizeof( buf ), "USR %d SSO S %s %s\r\n", ++md->trId, md->tokens[0], token );
 		msn_write( ic, buf, strlen( buf ) );

@@ -64,8 +64,7 @@ static char *adlrml_entry( const char *handle_, msn_buddy_flags_t list )
 	
 	strcpy( handle, handle_ );
 	if( ( domain = strchr( handle, '@' ) ) )
-		*(domain
-		++) = '\0';
+		*(domain++) = '\0';
 	else
 		return NULL;
 	

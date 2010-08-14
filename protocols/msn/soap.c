@@ -202,9 +202,7 @@ static xt_status msn_soap_passport_sso_token( struct xt_node *node, gpointer dat
 		return XT_HANDLED;
 	id += strlen( id ) - 1;
 	if( *id == '1' &&
-	    ( p = node->parent ) && ( p = p->parent ) &&
-	    ( p = xt_find_node( p->children, "wst:RequestedProofToken" ) ) &&
-	    ( p = xt_find_node( p->children, "wst:BinarySecret" ) ) &&
+	    ( p = xt_find_path( node, "../../wst:RequestedProofToken/wst:BinarySecret" ) ) &&
 	    p->text )
 	    	sd->secret = g_strdup( p->text );
 	
@@ -476,8 +474,7 @@ static xt_status msn_soap_memlist_member( struct xt_node *node, gpointer data )
 	struct msn_soap_req_data *soap_req = data;
 	struct im_connection *ic = soap_req->ic;
 	
-	if( ( p = node->parent ) && ( p = p->parent ) &&
-	    ( p = xt_find_node( p->children, "MemberRole" ) ) )
+	if( ( p = xt_find_path( node, "../../MemberRole" ) ) )
 		role = p->text;
 	
 	if( ( p = xt_find_node( node->children, "PassportName" ) ) )
@@ -635,8 +632,7 @@ static xt_status msn_soap_addressbook_group( struct xt_node *node, gpointer data
 	char *id = NULL, *name = NULL;
 	struct msn_soap_req_data *soap_req = data;
 	
-	if( ( p = node->parent ) &&
-	    ( p = xt_find_node( p->children, "groupId" ) ) )
+	if( ( p = xt_find_path( node, "../groupId" ) ) )
 		id = p->text;
 	
 	if( ( p = xt_find_node( node->children, "name" ) ) )
@@ -656,8 +652,7 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 	struct msn_soap_req_data *soap_req = data;
 	struct im_connection *ic = soap_req->ic;
 	
-	if( ( p = node->parent ) &&
-	    ( p = xt_find_node( p->children, "contactId" ) ) )
+	if( ( p = xt_find_path( node, "../contactId" ) ) )
 		id = p->text;
 	if( ( p = xt_find_node( node->children, "contactType" ) ) )
 		type = p->text;
@@ -674,6 +669,9 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 		
 		return XT_HANDLED;
 	}
+	
+	if( handle == NULL )
+		return XT_HANDLED;
 	
 	if( !( bu = bee_user_by_handle( ic->bee, ic, handle ) ) &&
 	    !( bu = bee_user_new( ic->bee, ic, handle, 0 ) ) )
