@@ -12,6 +12,8 @@
 #define sockerr_again() (errno == EINPROGRESS || errno == EINTR)
 #ifndef EVENTS_LIBEVENT
 #define closesocket(a) close(a)
+#else
+void closesocket( int fd );
 #endif
 #else
 # include <winsock2.h>
