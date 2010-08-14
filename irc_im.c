@@ -140,9 +140,7 @@ static gboolean bee_irc_user_status( bee_t *bee, bee_user_t *bu, bee_user_t *old
 
 void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 {
-	struct irc_control_channel *icc;
 	GSList *l;
-	gboolean match = FALSE;
 	
 	if( ic == NULL )
 	{
@@ -167,23 +165,13 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 		return;
 	}
 	
-	icc = ic->data;
-	
-	if( icc->type == IRC_CC_TYPE_DEFAULT )
-		match = TRUE;
-	else if( icc->type == IRC_CC_TYPE_GROUP )
-		match = iu->bu->group == icc->group;
-	else if( icc->type == IRC_CC_TYPE_ACCOUNT )
-		match = iu->bu->ic->acc == icc->account;
-	else if( icc->type == IRC_CC_TYPE_PROTOCOL )
-		match = iu->bu->ic->acc->prpl == icc->protocol;
-	
-	if( !match )
+	if( !irc_channel_wants_user( ic, iu ) )
 	{
 		irc_channel_del_user( ic, iu, IRC_CDU_PART, NULL );
 	}
 	else
 	{
+		struct irc_control_channel *icc = ic->data;
 		int mode = 0;
 		
 		if( !( iu->bu->flags & BEE_USER_ONLINE ) )

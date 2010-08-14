@@ -1007,12 +1007,16 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	
 	irc_usermsg( irc, format, "Nick", "Handle/Account", "Status" );
 	
+	if( strcmp( set_getstr( &irc->root->last_channel->set, "type" ), "control" ) != 0 )
+		irc->root->last_channel = NULL;
+	
 	for( l = irc->users; l; l = l->next )
 	{
 		irc_user_t *iu = l->data;
 		bee_user_t *bu = iu->bu;
 		
-		if( !bu || ( bu->flags & ( BEE_USER_ONLINE | BEE_USER_AWAY ) ) != BEE_USER_ONLINE )
+		if( !bu || ( irc->root->last_channel && !irc_channel_wants_user( irc->root->last_channel, iu ) ) ||
+		    ( bu->flags & ( BEE_USER_ONLINE | BEE_USER_AWAY ) ) != BEE_USER_ONLINE )
 			continue;
 		
 		if( online == 1 )
@@ -1034,7 +1038,8 @@ static void cmd_blist( irc_t *irc, char **cmd )
 		irc_user_t *iu = l->data;
 		bee_user_t *bu = iu->bu;
 		
-		if( !bu || !( bu->flags & BEE_USER_ONLINE ) || !( bu->flags & BEE_USER_AWAY ) )
+		if( !bu || ( irc->root->last_channel && !irc_channel_wants_user( irc->root->last_channel, iu ) ) ||
+		    !( bu->flags & BEE_USER_ONLINE ) || !( bu->flags & BEE_USER_AWAY ) )
 			continue;
 		
 		if( away == 1 )
@@ -1050,7 +1055,8 @@ static void cmd_blist( irc_t *irc, char **cmd )
 		irc_user_t *iu = l->data;
 		bee_user_t *bu = iu->bu;
 		
-		if( !bu || bu->flags & BEE_USER_ONLINE )
+		if( !bu || ( irc->root->last_channel && !irc_channel_wants_user( irc->root->last_channel, iu ) ) ||
+		    bu->flags & BEE_USER_ONLINE )
 			continue;
 		
 		if( offline == 1 )

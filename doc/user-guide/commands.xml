@@ -1431,11 +1431,11 @@
 
 	<bitlbee-command name="blist">
 		<syntax>blist [all|online|offline|away]</syntax>
-		<short-description>List all the buddies in your contact list</short-description>
+		<short-description>List all the buddies in the current channel</short-description>
 
 		<description>
 			<para>
-				You can get a better readable buddy list using the <emphasis>blist</emphasis> command. If you want a complete list (including the offline users) you can use the <emphasis>all</emphasis> argument.
+				You can get a more readable buddy list using the <emphasis>blist</emphasis> command. If you want a complete list (including the offline users) you can use the <emphasis>all</emphasis> argument.
 			</para>
 		</description>
 
