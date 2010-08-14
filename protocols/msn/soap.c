@@ -146,6 +146,24 @@ static void msn_soap_handle_response( struct http_request *http_req )
 	}
 }
 
+static char *msn_soap_abservice_build( const char *body_fmt, const char *scenario, const char *ticket, ... )
+{
+	va_list params;
+	char *ret, *format, *body;
+	
+	format = g_markup_printf_escaped( SOAP_ABSERVICE_PAYLOAD, scenario, ticket );
+	
+	va_start( params, ticket );
+	body = g_strdup_vprintf( body_fmt, params );
+	va_end( params );
+	
+	ret = g_strdup_printf( format, body );
+	g_free( body );
+	g_free( format );
+	
+	return ret;
+}
+
 
 /* passport_sso: Authentication MSNP15+ */
 
@@ -444,7 +462,7 @@ static int msn_soap_memlist_build_request( struct msn_soap_req_data *soap_req )
 	
 	soap_req->url = g_strdup( SOAP_MEMLIST_URL );
 	soap_req->action = g_strdup( SOAP_MEMLIST_ACTION );
-	soap_req->payload = g_markup_printf_escaped( SOAP_MEMLIST_PAYLOAD, md->tokens[1] );
+	soap_req->payload = msn_soap_abservice_build( SOAP_MEMLIST_PAYLOAD, "Initial", md->tokens[1] );
 	
 	return 1;
 }
@@ -561,7 +579,7 @@ static int msn_soap_memlist_edit_build_request( struct msn_soap_req_data *soap_r
 		list = "Pending";
 		break;
 	}
-	soap_req->payload = g_markup_printf_escaped( SOAP_MEMLIST_EDIT_PAYLOAD,
+	soap_req->payload = msn_soap_abservice_build( SOAP_MEMLIST_EDIT_PAYLOAD,
 		scenario, md->tokens[1], add, list, med->handle, add );
 	
 	return 1;
@@ -606,7 +624,7 @@ static int msn_soap_addressbook_build_request( struct msn_soap_req_data *soap_re
 	
 	soap_req->url = g_strdup( SOAP_ADDRESSBOOK_URL );
 	soap_req->action = g_strdup( SOAP_ADDRESSBOOK_ACTION );
-	soap_req->payload = g_markup_printf_escaped( SOAP_ADDRESSBOOK_PAYLOAD, md->tokens[1] );
+	soap_req->payload = msn_soap_abservice_build( SOAP_ADDRESSBOOK_PAYLOAD, "Initial", md->tokens[1] );
 	
 	return 1;
 }
@@ -705,8 +723,8 @@ static int msn_soap_ab_namechange_build_request( struct msn_soap_req_data *soap_
 	
 	soap_req->url = g_strdup( SOAP_ADDRESSBOOK_URL );
 	soap_req->action = g_strdup( SOAP_AB_NAMECHANGE_ACTION );
-	soap_req->payload = g_markup_printf_escaped( SOAP_AB_NAMECHANGE_PAYLOAD,
-		md->tokens[1], (char *) soap_req->data );
+	soap_req->payload = msn_soap_abservice_build( SOAP_AB_NAMECHANGE_PAYLOAD,
+		"Initial", md->tokens[1], (char *) soap_req->data );
 	
 	return 1;
 }

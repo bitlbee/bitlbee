@@ -146,6 +146,8 @@ int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const 
 		
 		return msn_write( ic, buf, strlen( buf ) );
 	}
+	
+	return 1;
 }
 
 int msn_buddy_list_remove( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *group )
@@ -187,7 +189,7 @@ int msn_buddy_list_remove( struct im_connection *ic, msn_buddy_flags_t list, con
 		return msn_write( ic, buf, strlen( buf ) );
 	}
 	
-	return( 0 );
+	return 1;
 }
 
 struct msn_buddy_ask_data
