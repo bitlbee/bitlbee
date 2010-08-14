@@ -278,6 +278,10 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			
 			msn_write( ic, buf, strlen( buf ) );
 		}
+		else if( num_parts >= 3 )
+		{
+			md->handler->msglen = atoi( cmd[2] );
+		}
 	}
 	else if( strcmp( cmd[0], "PRP" ) == 0 )
 	{
@@ -411,46 +415,6 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			sb->who = g_strdup( cmd[5] );
 		}
 	}
-	else if( strcmp( cmd[0], "ADD" ) == 0 )
-	{
-		if( num_parts >= 6 && strcmp( cmd[2], "RL" ) == 0 )
-		{
-			GSList *l;
-			
-			http_decode( cmd[5] );
-			
-			if( strchr( cmd[4], '@' ) == NULL )
-			{
-				imcb_error( ic, "Syntax error" );
-				imc_logout( ic, TRUE );
-				return 0;
-			}
-			
-			/* We got added by someone. If we don't have this
-			   person in permit/deny yet, inform the user. */
-			for( l = ic->permit; l; l = l->next )
-				if( g_strcasecmp( l->data, cmd[4] ) == 0 )
-					return 1;
-			
-			for( l = ic->deny; l; l = l->next )
-				if( g_strcasecmp( l->data, cmd[4] ) == 0 )
-					return 1;
-			
-			msn_buddy_ask( ic, cmd[4], cmd[5] );
-		}
-		else if( num_parts >= 6 && strcmp( cmd[2], "FL" ) == 0 )
-		{
-			const char *group = NULL;
-			int num;
-			
-			if( cmd[6] != NULL && sscanf( cmd[6], "%d", &num ) == 1 && num < md->groupcount )
-				group = md->grouplist[num];
-			
-			http_decode( cmd[5] );
-			imcb_add_buddy( ic, cmd[4], group );
-			imcb_rename_buddy( ic, cmd[4], cmd[5] );
-		}
-	}
 	else if( strcmp( cmd[0], "OUT" ) == 0 )
 	{
 		int allow_reconnect = TRUE;
@@ -485,6 +449,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			return( 0 );
 		}
 	}
+#if 0
 	else if( strcmp( cmd[0], "ADG" ) == 0 )
 	{
 		char *group = g_strdup( cmd[3] );
@@ -529,6 +494,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			}
 		}
 	}
+#endif
 	else if( strcmp( cmd[0], "GCF" ) == 0 )
 	{
 		/* Coming up is cmd[2] bytes of stuff we're supposed to
@@ -537,16 +503,16 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "UBX" ) == 0 )
 	{
-		/* Status message. Parser coming soon. */
+		/* Status message. */
 		if( num_parts >= 4 )
 			md->handler->msglen = atoi( cmd[3] );
 	}
 	else if( strcmp( cmd[0], "NOT" ) == 0 )
 	{
-		/* Some kind of notification, not sure if it still exists
-		   but we have to skip the payload or stuff breaks. */
-		if( num_parts >= 3 )
-			md->handler->msglen = atoi( cmd[2] );
+		/* Some kind of notification, poorly documented but
+		   apparently used to announce address book changes. */
+		if( num_parts >= 2 )
+			md->handler->msglen = atoi( cmd[1] );
 	}
 	else if( isdigit( cmd[0][0] ) )
 	{
@@ -670,6 +636,56 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 		imcb_buddy_status_msg( ic, cmd[1], psm_text );
 		xt_free_node( psm );
 	}
+	else if( strcmp( cmd[0], "ADL" ) == 0 )
+	{
+		struct xt_node *adl, *d, *c;
+		
+		if( !( adl = xt_from_string( msg ) ) )
+			return 1;
+		
+		for( d = adl->children; d; d = d->next )
+		{
+			char *dn;
+			if( strcmp( d->name, "d" ) != 0 ||
+			    ( dn = xt_find_attr( d, "n" ) ) == NULL )
+				continue;
+			for( c = d->children; c; c = c->next )
+			{
+				bee_user_t *bu;
+				struct msn_buddy_data *bd;
+				char *cn, *handle, *f, *l;
+				int flags;
+				
+				if( strcmp( c->name, "c" ) != 0 ||
+				    ( l = xt_find_attr( c, "l" ) ) == NULL ||
+				    ( cn = xt_find_attr( c, "n" ) ) == NULL )
+					continue;
+				
+				handle = g_strdup_printf( "%s@%s", cn, dn );
+				if( !( ( bu = bee_user_by_handle( ic->bee, ic, handle ) ) ||
+				       ( bu = bee_user_new( ic->bee, ic, handle, 0 ) ) ) )
+				{
+					g_free( handle );
+					continue;
+				}
+				g_free( handle );
+				bd = bu->data;
+				
+				if( ( f = xt_find_attr( c, "f" ) ) )
+				{
+					http_decode( f );
+					imcb_rename_buddy( ic, bu->handle, f );
+				}
+				
+				flags = atoi( l ) & 15;
+				if( bd->flags != flags )
+				{
+					bd->flags = flags;
+					msn_buddy_ask( bu );
+				}
+			}
+		}
+	}
 	
 	return( 1 );
 }
@@ -716,6 +732,9 @@ static gboolean msn_ns_send_adl_1( gpointer key, gpointer value, gpointer data )
 	char handle[strlen(bu->handle)];
 	char *domain;
 	char l[4];
+	
+	if( ( bd->flags & 7 ) == 0 )
+		return FALSE;
 	
 	strcpy( handle, bu->handle );
 	if( ( domain = strchr( handle, '@' ) ) == NULL ) /* WTF */

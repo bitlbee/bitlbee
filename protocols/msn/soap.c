@@ -476,9 +476,17 @@ static xt_status msn_soap_memlist_member( struct xt_node *node, gpointer data )
 	else if( strcmp( role, "Block" ) == 0 )
 		bd->flags |= MSN_BUDDY_BL;
 	else if( strcmp( role, "Reverse" ) == 0 )
+	{
 		bd->flags |= MSN_BUDDY_RL;
+		msn_buddy_ask( bu );
+	}
 	else if( strcmp( role, "Pending" ) == 0 )
+	{
 		bd->flags |= MSN_BUDDY_PL;
+		msn_buddy_ask( bu );
+	}
+	
+	printf( "%s %d\n", handle, bd->flags );
 	
 	return XT_HANDLED;
 }

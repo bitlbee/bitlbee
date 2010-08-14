@@ -171,19 +171,24 @@ static void msn_buddy_ask_no( void *data )
 	g_free( bla );
 }
 
-void msn_buddy_ask( struct im_connection *ic, char *handle, char *realname )
+void msn_buddy_ask( bee_user_t *bu )
 {
-	struct msn_buddy_ask_data *bla = g_new0( struct msn_buddy_ask_data, 1 );
+	struct msn_buddy_ask_data *bla;
+	struct msn_buddy_data *bd = bu->data;
 	char buf[1024];
 	
-	bla->ic = ic;
-	bla->handle = g_strdup( handle );
-	bla->realname = g_strdup( realname );
+	if( ( bd->flags & 30 ) != 8 && ( bd->flags & 30 ) != 16 )
+		return;
+	
+	bla = g_new0( struct msn_buddy_ask_data, 1 );
+	bla->ic = bu->ic;
+	bla->handle = g_strdup( bu->handle );
+	bla->realname = g_strdup( bu->fullname );
 	
 	g_snprintf( buf, sizeof( buf ),
 	            "The user %s (%s) wants to add you to his/her buddy list.",
-	            handle, realname );
-	imcb_ask( ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
+	            bu->handle, bu->fullname );
+	imcb_ask( bu->ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
 }
 
 char *msn_findheader( char *text, char *header, int len )
