@@ -256,7 +256,7 @@ static void twitter_logout( struct im_connection *ic )
 	struct twitter_data *td = ic->proto_data;
 	
 	// Set the status to logged out.
-	ic->flags = 0;
+	ic->flags &= ~ OPT_LOGGED_IN;
 
 	// Remove the main_loop function from the function queue.
 	b_event_remove(td->main_loop_id);
