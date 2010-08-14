@@ -749,3 +749,89 @@ int msn_soap_addressbook_set_display_name( struct im_connection *ic, const char 
 	                       msn_soap_ab_namechange_handle_response,
 	                       msn_soap_ab_namechange_free_data );
 }
+
+/* Add a contact. */
+static int msn_soap_ab_contact_add_build_request( struct msn_soap_req_data *soap_req )
+{
+	struct msn_data *md = soap_req->ic->proto_data;
+	bee_user_t *bu = soap_req->data;
+	
+	soap_req->url = g_strdup( SOAP_ADDRESSBOOK_URL );
+	soap_req->action = g_strdup( SOAP_AB_CONTACT_ADD_ACTION );
+	soap_req->payload = msn_soap_abservice_build( SOAP_AB_CONTACT_ADD_PAYLOAD,
+		"ContactSave", md->tokens[1], bu->handle, bu->fullname ? bu->fullname : bu->handle );
+	
+	return 1;
+}
+
+static xt_status msn_soap_ab_contact_add_cid( struct xt_node *node, gpointer data )
+{
+	struct msn_soap_req_data *soap_req = data;
+	bee_user_t *bu = soap_req->data;
+	struct msn_buddy_data *bd = bu->data;
+	
+	g_free( bd->cid );
+	bd->cid = g_strdup( node->text );
+	
+	return XT_HANDLED;
+}
+
+static const struct xt_handler_entry msn_soap_ab_contact_add_parser[] = {
+	{ "guid", "ABContactAddResult", msn_soap_ab_contact_add_cid },
+	{ NULL,               NULL,     NULL                        }
+};
+
+static int msn_soap_ab_contact_add_handle_response( struct msn_soap_req_data *soap_req )
+{
+	/* TODO: Ack the change? Not sure what the NAKs look like.. */
+	return MSN_SOAP_OK;
+}
+
+static int msn_soap_ab_contact_add_free_data( struct msn_soap_req_data *soap_req )
+{
+	return 0;
+}
+
+int msn_soap_ab_contact_add( struct im_connection *ic, bee_user_t *bu )
+{
+	return msn_soap_start( ic, bu,
+	                       msn_soap_ab_contact_add_build_request,
+	                       msn_soap_ab_contact_add_parser,
+	                       msn_soap_ab_contact_add_handle_response,
+	                       msn_soap_ab_contact_add_free_data );
+}
+
+/* Remove a contact. */
+static int msn_soap_ab_contact_del_build_request( struct msn_soap_req_data *soap_req )
+{
+	struct msn_data *md = soap_req->ic->proto_data;
+	bee_user_t *bu = soap_req->data;
+	struct msn_buddy_data *bd = bu->data;
+	
+	soap_req->url = g_strdup( SOAP_ADDRESSBOOK_URL );
+	soap_req->action = g_strdup( SOAP_AB_CONTACT_DEL_ACTION );
+	soap_req->payload = msn_soap_abservice_build( SOAP_AB_CONTACT_DEL_PAYLOAD,
+		"Timer", md->tokens[1], bd->cid );
+	
+	return 1;
+}
+
+static int msn_soap_ab_contact_del_handle_response( struct msn_soap_req_data *soap_req )
+{
+	/* TODO: Ack the change? Not sure what the NAKs look like.. */
+	return MSN_SOAP_OK;
+}
+
+static int msn_soap_ab_contact_del_free_data( struct msn_soap_req_data *soap_req )
+{
+	return 0;
+}
+
+int msn_soap_ab_contact_del( struct im_connection *ic, bee_user_t *bu )
+{
+	return msn_soap_start( ic, bu,
+	                       msn_soap_ab_contact_del_build_request,
+	                       NULL,
+	                       msn_soap_ab_contact_del_handle_response,
+	                       msn_soap_ab_contact_del_free_data );
+}

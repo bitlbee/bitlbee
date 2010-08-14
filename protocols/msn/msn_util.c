@@ -73,7 +73,7 @@ static char *adlrml_entry( const char *handle_, msn_buddy_flags_t list )
 		domain, handle, list );
 }
 
-int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *realname_, const char *group )
+int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *realname, const char *group )
 {
 	struct msn_data *md = ic->proto_data;
 	char buf[1024], groupid[8];
@@ -130,13 +130,17 @@ int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const 
 	}
 #endif
 	
-	if( !( bu = bee_user_by_handle( ic->bee, ic, who ) ) ||
+	if( !( ( bu = bee_user_by_handle( ic->bee, ic, who ) ) ||
+	       ( bu = bee_user_new( ic->bee, ic, who, 0 ) ) ) ||
 	    !( bd = bu->data ) || bd->flags & list )
 		return 1;
 	
 	bd->flags |= list;
 	
-	msn_soap_memlist_edit( ic, who, TRUE, list );
+	if( list == MSN_BUDDY_FL )
+		msn_soap_ab_contact_add( ic, bu );
+	else
+		msn_soap_memlist_edit( ic, who, TRUE, list );
 	
 	if( ( adl = adlrml_entry( who, list ) ) )
 	{
@@ -178,7 +182,10 @@ int msn_buddy_list_remove( struct im_connection *ic, msn_buddy_flags_t list, con
 	
 	bd->flags &= ~list;
 	
-	msn_soap_memlist_edit( ic, who, FALSE, list );
+	if( list == MSN_BUDDY_FL )
+		msn_soap_ab_contact_del( ic, bu );
+	else
+		msn_soap_memlist_edit( ic, who, FALSE, list );
 	
 	if( ( adl = adlrml_entry( who, list ) ) )
 	{

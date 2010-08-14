@@ -247,8 +247,43 @@ int msn_soap_memlist_edit( struct im_connection *ic, const char *handle, gboolea
             "</contacts>" \
         "</ABContactUpdate>"
 
+#define SOAP_AB_CONTACT_ADD_ACTION "http://www.msn.com/webservices/AddressBook/ABContactAdd"
+
+#define SOAP_AB_CONTACT_ADD_PAYLOAD \
+        "<ABContactAdd xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+            "<abId>00000000-0000-0000-0000-000000000000</abId>" \
+            "<contacts>" \
+                "<Contact xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+                    "<contactInfo>" \
+                        "<contactType>LivePending</contactType>" \
+                        "<passportName>%s</passportName>" \
+                        "<isMessengerUser>true</isMessengerUser>" \
+                        "<MessengerMemberInfo>" \
+                            "<DisplayName>%s</DisplayName>" \
+                        "</MessengerMemberInfo>" \
+                    "</contactInfo>" \
+                "</Contact>" \
+            "</contacts>" \
+            "<options>" \
+                "<EnableAllowListManagement>true</EnableAllowListManagement>" \
+            "</options>" \
+        "</ABContactAdd>"
+
+#define SOAP_AB_CONTACT_DEL_ACTION "http://www.msn.com/webservices/AddressBook/ABContactDelete"
+
+#define SOAP_AB_CONTACT_DEL_PAYLOAD \
+        "<ABContactDelete xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+            "<abId>00000000-0000-0000-0000-000000000000</abId>" \
+            "<contacts>" \
+                "<Contact xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+                    "<contactId>%s</contactId>" \
+                "</Contact>" \
+            "</contacts>" \
+        "</ABContactDelete>"
+
 int msn_soap_addressbook_request( struct im_connection *ic );
 int msn_soap_addressbook_set_display_name( struct im_connection *ic, const char *new );
-
+int msn_soap_ab_contact_add( struct im_connection *ic, bee_user_t *bu );
+int msn_soap_ab_contact_del( struct im_connection *ic, bee_user_t *bu );
 
 #endif /* __SOAP_H__ */
