@@ -193,6 +193,8 @@ struct prpl {
 	/* Request profile info. Free-formatted stuff, the IM module gives back
 	   this info via imcb_log(). Implementing these are optional. */
 	void (* get_info)	(struct im_connection *, char *who);
+	/* set_my_name is *DEPRECATED*, not used by the UI anymore. Use the
+	   display_name setting instead. */
 	void (* set_my_name)	(struct im_connection *, char *name);
 	void (* set_name)	(struct im_connection *, char *who, char *name);
 	

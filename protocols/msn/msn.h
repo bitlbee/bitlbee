@@ -206,7 +206,6 @@ void msn_buddy_ask( struct im_connection *ic, char *handle, char *realname );
 char *msn_findheader( char *text, char *header, int len );
 char **msn_linesplit( char *line );
 int msn_handler( struct msn_handler_data *h );
-char *msn_http_encode( const char *input );
 void msn_msgq_purge( struct im_connection *ic, GSList **list );
 gboolean msn_set_display_name( struct im_connection *ic, const char *rawname );
 char *msn_p11_challenge( char *challenge );

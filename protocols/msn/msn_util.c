@@ -60,7 +60,7 @@ int msn_logged_in( struct im_connection *ic )
 int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *who, const char *realname_, const char *group )
 {
 	struct msn_data *md = ic->proto_data;
-	char buf[1024], *realname, groupid[8];
+	char buf[1024], realname[strlen(realname_)*3+1], groupid[8];
 	
 	*groupid = '\0';
 	if( group )
@@ -93,9 +93,10 @@ int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *
 			
 			if( l == NULL )
 			{
-				char *groupname = msn_http_encode( group );
+				char groupname[strlen(group)+1];
+				strcpy( groupname, group );
+				http_encode( groupname );
 				g_snprintf( buf, sizeof( buf ), "ADG %d %s %d\r\n", ++md->trId, groupname, 0 );
-				g_free( groupname );
 				return msn_write( ic, buf, strlen( buf ) );
 			}
 			else
@@ -108,9 +109,9 @@ int msn_buddy_list_add( struct im_connection *ic, const char *list, const char *
 		}
 	}
 	
-	realname = msn_http_encode( realname_ );
+	strcpy( realname, realname_ );
+	http_encode( realname );
 	g_snprintf( buf, sizeof( buf ), "ADD %d %s %s %s%s\r\n", ++md->trId, list, who, realname, groupid );
-	g_free( realname );
 	
 	return msn_write( ic, buf, strlen( buf ) );
 }
@@ -379,32 +380,6 @@ int msn_handler( struct msn_handler_data *h )
 	return( 1 );
 }
 
-/* The difference between this function and the normal http_encode() function
-   is that this one escapes every 7-bit ASCII character because this is said
-   to avoid some lame server-side checks when setting a real-name. Also,
-   non-ASCII characters are not escaped because MSN servers don't seem to
-   appreciate that! */
-char *msn_http_encode( const char *input )
-{
-	char *ret, *s;
-	int i;
-	
-	ret = s = g_new0( char, strlen( input ) * 3 + 1 );
-	for( i = 0; input[i]; i ++ )
-		if( input[i] & 128 )
-		{
-			*s = input[i];
-			s ++;
-		}
-		else
-		{
-			g_snprintf( s, 4, "%%%02X", input[i] );
-			s += 3;
-		}
-	
-	return ret;
-}
-
 void msn_msgq_purge( struct im_connection *ic, GSList **list )
 {
 	struct msn_message *m;
@@ -443,18 +418,6 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list )
 	if( n > 0 )
 		imcb_log( ic, "%s", ret->str );
 	g_string_free( ret, TRUE );
-}
-
-gboolean msn_set_display_name( struct im_connection *ic, const char *rawname )
-{
-	char *fn = msn_http_encode( rawname );
-	struct msn_data *md = ic->proto_data;
-	char buf[1024];
-	
-	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, ic->acc->user, fn );
-	g_free( fn );
-	
-	return msn_write( ic, buf, strlen( buf ) ) != 0;
 }
 
 /* Copied and heavily modified from http://tmsnc.sourceforge.net/chl.c */

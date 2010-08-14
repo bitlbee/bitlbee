@@ -219,7 +219,40 @@ int msn_soap_memlist_request( struct im_connection *ic );
   "</soap:Body>" \
 "</soap:Envelope>"
 
+#define SOAP_AB_NAMECHANGE_ACTION "http://www.msn.com/webservices/AddressBook/ABContactUpdate"
+
+#define SOAP_AB_NAMECHANGE_PAYLOAD \
+"<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
+"<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soapenc=\"http://schemas.xmlsoap.org/soap/encoding/\">" \
+  "<soap:Header>" \
+    "<ABApplicationHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+      "<ApplicationId>CFE80F9D-180F-4399-82AB-413F33A1FA11</ApplicationId>" \
+      "<IsMigration>false</IsMigration>" \
+      "<PartnerScenario>Initial</PartnerScenario>" \
+    "</ABApplicationHeader>" \
+    "<ABAuthHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+      "<ManagedGroupRequest>false</ManagedGroupRequest>" \
+      "<TicketToken>%s</TicketToken>" \
+    "</ABAuthHeader>" \
+  "</soap:Header>" \
+    "<soap:Body>" \
+        "<ABContactUpdate xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+            "<abId>00000000-0000-0000-0000-000000000000</abId>" \
+            "<contacts>" \
+                "<Contact xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
+                    "<contactInfo>" \
+                        "<contactType>Me</contactType>" \
+                        "<displayName>%s</displayName>" \
+                    "</contactInfo>" \
+                    "<propertiesChanged>DisplayName</propertiesChanged>" \
+                "</Contact>" \
+            "</contacts>" \
+        "</ABContactUpdate>" \
+    "</soap:Body>" \
+"</soap:Envelope>"
+
 int msn_soap_addressbook_request( struct im_connection *ic );
+int msn_soap_addressbook_set_display_name( struct im_connection *ic, const char *new );
 
 
 #endif /* __SOAP_H__ */

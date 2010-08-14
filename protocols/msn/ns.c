@@ -34,7 +34,6 @@ static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition c
 static int msn_ns_command( gpointer data, char **cmd, int num_parts );
 static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
-static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name );
 static void msn_ns_send_adl( struct im_connection *ic );
 
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
@@ -473,40 +472,6 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		imc_logout( ic, allow_reconnect );
 		return( 0 );
 	}
-#if 0
-	/* Discard this one completely for now since I don't care about the ack
-	   and since MSN servers can apparently screw up the formatting. */
-	else if( strcmp( cmd[0], "REA" ) == 0 )
-	{
-		if( num_parts < 5 )
-		{
-			imcb_error( ic, "Syntax error" );
-			imc_logout( ic, TRUE );
-			return( 0 );
-		}
-		
-		if( g_strcasecmp( cmd[3], ic->acc->user ) == 0 )
-		{
-			set_t *s;
-			
-			http_decode( cmd[4] );
-			strncpy( ic->displayname, cmd[4], sizeof( ic->displayname ) );
-			ic->displayname[sizeof(ic->displayname)-1] = 0;
-			
-			if( ( s = set_find( &ic->acc->set, "display_name" ) ) )
-			{
-				g_free( s->value );
-				s->value = g_strdup( cmd[4] );
-			}
-		}
-		else
-		{
-			/* This is not supposed to happen, but let's handle it anyway... */
-			http_decode( cmd[4] );
-			imcb_rename_buddy( ic, cmd[3], cmd[4] );
-		}
-	}
-#endif
 	else if( strcmp( cmd[0], "IPG" ) == 0 )
 	{
 		imcb_error( ic, "Received IPG command, we don't handle them yet." );
@@ -799,49 +764,4 @@ static void msn_ns_send_adl( struct im_connection *ic )
 	
 	g_free( adls );
 	xt_free_node( adl );
-}
-
-static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name )
-{
-	set_t *s;
-	
-	if( ( s = set_find( &ic->acc->set, "display_name" ) ) == NULL )
-		return FALSE; /* Shouldn't happen.. */
-	
-	http_decode( name );
-	
-	if( s->value && strcmp( s->value, name ) == 0 )
-	{
-		return TRUE;
-		/* The names match, nothing to worry about. */
-	}
-	else if( s->value != NULL &&
-	         ( strcmp( name, ic->acc->user ) == 0 ||
-	           set_getbool( &ic->acc->set, "local_display_name" ) ) )
-	{
-		/* The server thinks our display name is our e-mail address
-		   which is probably wrong, or the user *wants* us to do this:
-		   Always use the locally set display_name. */
-		return msn_set_display_name( ic, s->value );
-	}
-	else
-	{
-		if( s->value && *s->value )
-			imcb_log( ic, "BitlBee thinks your display name is `%s' but "
-			              "the MSN server says it's `%s'. Using the MSN "
-			              "server's name. Set local_display_name to true "
-			              "to use the local name.", s->value, name );
-		
-		if( g_utf8_validate( name, -1, NULL ) )
-		{
-			g_free( s->value );
-			s->value = g_strdup( name );
-		}
-		else
-		{
-			imcb_log( ic, "Warning: Friendly name in server response was corrupted" );
-		}
-		
-		return TRUE;
-	}
 }

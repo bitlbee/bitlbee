@@ -608,3 +608,37 @@ int msn_soap_addressbook_request( struct im_connection *ic )
 	                                 msn_soap_addressbook_handle_response,
 	                                 msn_soap_addressbook_free_data );
 }
+
+/* Variant: Change our display name. */
+static int msn_soap_ab_namechange_build_request( struct msn_soap_req_data *soap_req )
+{
+	struct msn_data *md = soap_req->ic->proto_data;
+	
+	soap_req->url = g_strdup( SOAP_ADDRESSBOOK_URL );
+	soap_req->action = g_strdup( SOAP_AB_NAMECHANGE_ACTION );
+	soap_req->payload = g_markup_printf_escaped( SOAP_AB_NAMECHANGE_PAYLOAD,
+		md->tokens[1], (char *) soap_req->data );
+	
+	return 1;
+}
+
+static int msn_soap_ab_namechange_handle_response( struct msn_soap_req_data *soap_req )
+{
+	/* TODO: Ack the change? Not sure what the NAKs look like.. */
+	return MSN_SOAP_OK;
+}
+
+static int msn_soap_ab_namechange_free_data( struct msn_soap_req_data *soap_req )
+{
+	g_free( soap_req->data );
+	return 0;
+}
+
+int msn_soap_addressbook_set_display_name( struct im_connection *ic, const char *new )
+{
+	return msn_soap_start( ic, g_strdup( new ),
+	                       msn_soap_ab_namechange_build_request,
+	                       NULL,
+	                       msn_soap_ab_namechange_handle_response,
+	                       msn_soap_ab_namechange_free_data );
+}

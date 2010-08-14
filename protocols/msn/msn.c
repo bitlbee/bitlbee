@@ -24,6 +24,7 @@
 */
 
 #include "nogaim.h"
+#include "soap.h"
 #include "msn.h"
 
 int msn_chat_id;
@@ -34,8 +35,11 @@ static char *set_eval_display_name( set_t *set, char *value );
 
 static void msn_init( account_t *acc )
 {
-	set_add( &acc->set, "display_name", NULL, set_eval_display_name, acc );
-	set_add( &acc->set, "local_display_name", "false", set_eval_bool, acc );
+	set_t *s;
+	
+	s = set_add( &acc->set, "display_name", NULL, set_eval_display_name, acc );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+	
 	set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
 	set_add( &acc->set, "switchboard_keepalives", "false", set_eval_bool, acc );
 	
@@ -202,11 +206,6 @@ static void msn_set_away( struct im_connection *ic, char *state, char *message )
 		return;
 }
 
-static void msn_set_my_name( struct im_connection *ic, char *info )
-{
-	msn_set_display_name( ic, info );
-}
-
 static void msn_get_info(struct im_connection *ic, char *who) 
 {
 	/* Just make an URL and let the user fetch the info */
@@ -331,10 +330,9 @@ static char *set_eval_display_name( set_t *set, char *value )
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
-	
-	/* Allow any name if we're offline. */
-	if( ic == NULL )
-		return value;
+	struct msn_data *md = ic->proto_data;
+	char buf[512];
+	char *fn;
 	
 	if( strlen( value ) > 129 )
 	{
@@ -342,10 +340,18 @@ static char *set_eval_display_name( set_t *set, char *value )
 		return NULL;
 	}
 	
-	/* Returning NULL would be better, because the server still has to
-	   confirm the name change. However, it looks a bit confusing to the
-	   user. */
-	return msn_set_display_name( ic, value ) ? value : NULL;
+	msn_soap_addressbook_set_display_name( ic, value );
+
+	fn = g_malloc( strlen( value ) * 3 + 1 );
+	strcpy( fn, value );
+	http_encode( fn );
+	g_snprintf( buf, sizeof( buf ), "PRP %d MFN %s\r\n",
+	            ++md->trId, fn );
+	g_free( fn );
+	
+	/* Note: We don't actually know if the server accepted the new name,
+	   and won't give proper feedback yet if it doesn't. */
+	return msn_write( ic, buf, strlen( buf ) ) ? value : NULL;
 }
 
 static void msn_buddy_data_add( bee_user_t *bu )
@@ -374,7 +380,6 @@ void msn_initmodule()
 	ret->away_states = msn_away_states;
 	ret->set_away = msn_set_away;
 	ret->get_info = msn_get_info;
-	ret->set_my_name = msn_set_my_name;
 	ret->add_buddy = msn_add_buddy;
 	ret->remove_buddy = msn_remove_buddy;
 	ret->chat_msg = msn_chat_msg;

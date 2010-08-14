@@ -173,20 +173,20 @@ int xt_handle( struct xt_parser *xt, struct xt_node *node, int depth )
 	
 	if( node->flags & XT_COMPLETE && !( node->flags & XT_SEEN ) )
 	{
-		for( i = 0; xt->handlers[i].func; i ++ )
+		if( xt->handlers ) for( i = 0; xt->handlers[i].func; i ++ )
 		{
 			/* This one is fun! \o/ */
 			
-						/* If handler.name == NULL it means it should always match. */
+			    /* If handler.name == NULL it means it should always match. */
 			if( ( xt->handlers[i].name == NULL || 
-						/* If it's not, compare. There should always be a name. */
+			      /* If it's not, compare. There should always be a name. */
 			      g_strcasecmp( xt->handlers[i].name, node->name ) == 0 ) &&
-						/* If handler.parent == NULL, it's a match. */
+			    /* If handler.parent == NULL, it's a match. */
 			    ( xt->handlers[i].parent == NULL ||
-						/* If there's a parent node, see if the name matches. */
+			      /* If there's a parent node, see if the name matches. */
 			      ( node->parent ? g_strcasecmp( xt->handlers[i].parent, node->parent->name ) == 0 : 
-						/* If there's no parent, the handler should mention <root> as a parent. */
-			                       g_strcasecmp( xt->handlers[i].parent, "<root>" ) == 0 ) ) )
+			      /* If there's no parent, the handler should mention <root> as a parent. */
+			                       strcmp( xt->handlers[i].parent, "<root>" ) == 0 ) ) )
 			{
 				st = xt->handlers[i].func( node, xt->data );
 				
