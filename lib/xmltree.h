@@ -88,6 +88,7 @@ struct xt_node *xt_dup( struct xt_node *node );
 void xt_free_node( struct xt_node *node );
 void xt_free( struct xt_parser *xt );
 struct xt_node *xt_find_node( struct xt_node *node, const char *name );
+struct xt_node *xt_find_path( struct xt_node *node, const char *name );
 char *xt_find_attr( struct xt_node *node, const char *key );
 
 struct xt_node *xt_new_node( char *name, const char *text, struct xt_node *children );

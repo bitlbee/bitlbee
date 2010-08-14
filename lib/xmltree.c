@@ -478,6 +478,46 @@ struct xt_node *xt_find_node( struct xt_node *node, const char *name )
 	return node;
 }
 
+/* More advanced than the one above, understands something like
+   ../foo/bar to find a subnode bar of a node foo which is a child
+   of node's parent. Pass the node directly, not its list of children. */
+struct xt_node *xt_find_path( struct xt_node *node, const char *name )
+{
+	while( name && *name && node )
+	{
+		char *colon, *slash;
+		int n;
+		
+		if( ( slash = strchr( name, '/' ) ) )
+			n = slash - name;
+		else
+			n = strlen( name );
+		
+		if( strncmp( name, "..", n ) == 0 )
+		{
+			node = node->parent;
+		}
+		else
+		{
+			node = node->children;
+			
+			while( node )
+			{
+				if( g_strncasecmp( node->name, name, n ) == 0 ||
+				    ( ( colon = strchr( node->name, ':' ) ) &&
+				      g_strncasecmp( colon + 1, name, n ) == 0 ) )
+					break;
+				
+				node = node->next;
+			}
+		}
+		
+		name = slash ? slash + 1 : NULL;
+	}
+	
+	return node;
+}
+
 char *xt_find_attr( struct xt_node *node, const char *key )
 {
 	int i;
