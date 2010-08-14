@@ -347,8 +347,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			return( 0 );
 		}
 		
-		http_decode( cmd[3] );
-		imcb_rename_buddy( ic, cmd[2], cmd[3] );
+		http_decode( cmd[4] );
+		imcb_rename_buddy( ic, cmd[2], cmd[4] );
 		
 		st = msn_away_state_by_code( cmd[1] );
 		if( !st )
