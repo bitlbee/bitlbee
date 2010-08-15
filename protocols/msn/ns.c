@@ -696,7 +696,7 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 	return( 1 );
 }
 
-void msn_auth_got_passport_token( struct im_connection *ic, char *token )
+void msn_auth_got_passport_token( struct im_connection *ic, const char *token, const char *error )
 {
 	struct msn_data *md;
 	
@@ -706,11 +706,17 @@ void msn_auth_got_passport_token( struct im_connection *ic, char *token )
 	
 	md = ic->proto_data;
 	
+	if( token )
 	{
 		char buf[1536];
 		
 		g_snprintf( buf, sizeof( buf ), "USR %d SSO S %s %s\r\n", ++md->trId, md->tokens[0], token );
 		msn_write( ic, buf, strlen( buf ) );
+	}
+	else
+	{
+		imcb_error( ic, "Error during Passport authentication: %s", error );
+		imc_logout( ic, TRUE );
 	}
 }
 

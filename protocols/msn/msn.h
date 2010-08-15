@@ -203,7 +203,7 @@ extern GSList *msn_switchboards;
 
 /* ns.c */
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
-void msn_auth_got_passport_token( struct im_connection *ic, char *token );
+void msn_auth_got_passport_token( struct im_connection *ic, const char *token, const char *error );
 void msn_auth_got_contact_list( struct im_connection *ic );
 
 /* msn_util.c */

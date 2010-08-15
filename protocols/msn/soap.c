@@ -172,6 +172,7 @@ struct msn_soap_passport_sso_data
 	char *policy;
 	char *nonce;
 	char *secret;
+	char *error;
 };
 
 static int msn_soap_passport_sso_build_request( struct msn_soap_req_data *soap_req )
@@ -216,8 +217,25 @@ static xt_status msn_soap_passport_sso_token( struct xt_node *node, gpointer dat
 	return XT_HANDLED;
 }
 
+static xt_status msn_soap_passport_failure( struct xt_node *node, gpointer data )
+{
+	struct msn_soap_req_data *soap_req = data;
+	struct msn_soap_passport_sso_data *sd = soap_req->data;
+	struct xt_node *code = xt_find_node( node->children, "faultcode" );
+	struct xt_node *string = xt_find_node( node->children, "faultstring" );
+	
+	if( code == NULL || code->text_len == 0 )
+		sd->error = g_strdup( "Unknown error" );
+	else
+		sd->error = g_strdup_printf( "%s (%s)", code->text, string && string->text_len ?
+		                             string->text : "no description available" );
+	
+	return XT_HANDLED;
+}
+
 static const struct xt_handler_entry msn_soap_passport_sso_parser[] = {
 	{ "wsse:BinarySecurityToken", "wst:RequestedSecurityToken", msn_soap_passport_sso_token },
+	{ "S:Fault", "S:Envelope", msn_soap_passport_failure },
 	{ NULL, NULL, NULL }
 };
 
@@ -269,6 +287,12 @@ static int msn_soap_passport_sso_handle_response( struct msn_soap_req_data *soap
 		GUINT32_TO_LE( 20 ),
 		GUINT32_TO_LE( 72 ),
 	};
+	
+	if( sd->secret == NULL )
+	{
+		msn_auth_got_passport_token( ic, NULL, sd->error );
+		return MSN_SOAP_OK;
+	}
 
 	key1_len = base64_decode( sd->secret, (unsigned char**) &key1 );
 	
@@ -286,7 +310,7 @@ static int msn_soap_passport_sso_handle_response( struct msn_soap_req_data *soap
 	memcpy( blurb.cipherbytes, des3res, 72 );
 	
 	blurb64 = base64_encode( (unsigned char*) &blurb, sizeof( blurb ) );
-	msn_auth_got_passport_token( ic, blurb64 );
+	msn_auth_got_passport_token( ic, blurb64, NULL );
 	
 	g_free( padnonce );
 	g_free( blurb64 );
@@ -305,6 +329,7 @@ static int msn_soap_passport_sso_free_data( struct msn_soap_req_data *soap_req )
 	g_free( sd->policy );
 	g_free( sd->nonce );
 	g_free( sd->secret );
+	g_free( sd->error );
 	
 	return MSN_SOAP_OK;
 }
