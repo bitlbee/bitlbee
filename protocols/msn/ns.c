@@ -34,6 +34,7 @@ static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition c
 static int msn_ns_command( gpointer data, char **cmd, int num_parts );
 static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
+static void msn_ns_send_adl_start( struct im_connection *ic );
 static void msn_ns_send_adl( struct im_connection *ic );
 
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
@@ -256,30 +257,32 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "BLP" ) == 0 )
 	{
-		msn_ns_send_adl( ic );
+		msn_ns_send_adl_start( ic );
 	}
 	else if( strcmp( cmd[0], "ADL" ) == 0 )
 	{
 		if( num_parts >= 3 && strcmp( cmd[2], "OK" ) == 0 )
 		{
-			char buf[1024];
-			char *fn_raw;
-			char *fn;
+			msn_ns_send_adl( ic );
 			
-			if( ic->flags & OPT_LOGGED_IN )
-				return 1;
-			
-			if( ( fn_raw = set_getstr( &ic->acc->set, "display_name" ) ) == NULL )
-				fn_raw = ic->acc->user;
-			fn = g_malloc( strlen( fn_raw ) * 3 + 1 );
-			strcpy( fn, fn_raw );
-			http_encode( fn );
-			
-			g_snprintf( buf, sizeof( buf ), "PRP %d MFN %s\r\n",
-			            ++md->trId, fn );
-			g_free( fn );
-			
-			msn_write( ic, buf, strlen( buf ) );
+			if( md->adl_todo < 0 && !( ic->flags & OPT_LOGGED_IN ) )
+			{
+				char buf[1024];
+				char *fn_raw;
+				char *fn;
+				
+				if( ( fn_raw = set_getstr( &ic->acc->set, "display_name" ) ) == NULL )
+					fn_raw = ic->acc->user;
+				fn = g_malloc( strlen( fn_raw ) * 3 + 1 );
+				strcpy( fn, fn_raw );
+				http_encode( fn );
+				
+				g_snprintf( buf, sizeof( buf ), "PRP %d MFN %s\r\n",
+				            ++md->trId, fn );
+				g_free( fn );
+				
+				msn_write( ic, buf, strlen( buf ) );
+			}
 		}
 		else if( num_parts >= 3 )
 		{
@@ -732,11 +735,12 @@ static gboolean msn_ns_send_adl_1( gpointer key, gpointer value, gpointer data )
 	struct xt_node *adl = data, *d, *c;
 	struct bee_user *bu = value;
 	struct msn_buddy_data *bd = bu->data;
+	struct msn_data *md = bu->ic->proto_data;
 	char handle[strlen(bu->handle)];
 	char *domain;
 	char l[4];
 	
-	if( ( bd->flags & 7 ) == 0 )
+	if( ( bd->flags & 7 ) == 0 || ( bd->flags & MSN_BUDDY_ADL_SYNCED ) )
 		return FALSE;
 	
 	strcpy( handle, bu->handle );
@@ -760,24 +764,27 @@ static gboolean msn_ns_send_adl_1( gpointer key, gpointer value, gpointer data )
 	xt_add_attr( c, "t", "1" ); /* 1 means normal, 4 means mobile? */
 	xt_insert_child( d, c );
 	
-	return FALSE;
+	/* Do this in batches of 100. */
+	bd->flags |= MSN_BUDDY_ADL_SYNCED;
+	return (--md->adl_todo % 140) == 0;
 }
 
 static void msn_ns_send_adl( struct im_connection *ic )
 {
 	struct xt_node *adl;
-	struct msn_data *md;
+	struct msn_data *md = ic->proto_data;
 	char *adls, buf[64];
-	
-	/* Dead connection? */
-	if( g_slist_find( msn_connections, ic ) == NULL )
-		return;
-	
-	md = ic->proto_data;
 	
 	adl = xt_new_node( "ml", NULL, NULL );
 	xt_add_attr( adl, "l", "1" );
 	g_tree_foreach( md->domaintree, msn_ns_send_adl_1, adl );
+	if( adl->children == NULL )
+	{
+		/* This tells the caller that we're done now. */
+		md->adl_todo = -1;
+		xt_free_node( adl );
+		return;
+	}
 	adls = xt_to_string( adl );
 	
 	g_snprintf( buf, sizeof( buf ), "ADL %d %zd\r\n", ++md->trId, strlen( adls ) );
@@ -785,5 +792,30 @@ static void msn_ns_send_adl( struct im_connection *ic )
 		msn_write( ic, adls, strlen( adls ) );
 	
 	g_free( adls );
-	xt_free_node( adl );
+}
+
+static void msn_ns_send_adl_start( struct im_connection *ic )
+{
+	struct msn_data *md;
+	GSList *l;
+	
+	/* Dead connection? */
+	if( g_slist_find( msn_connections, ic ) == NULL )
+		return;
+	
+	md = ic->proto_data;
+	md->adl_todo = 0;
+	for( l = ic->bee->users; l; l = l->next )
+	{
+		bee_user_t *bu = l->data;
+		struct msn_buddy_data *bd = bu->data;
+		
+		if( bu->ic != ic || ( bd->flags & 7 ) == 0 )
+			continue;
+		
+		bd->flags &= ~MSN_BUDDY_ADL_SYNCED;
+		md->adl_todo++;
+	}
+	
+	msn_ns_send_adl( ic );
 }

@@ -93,7 +93,12 @@ struct msn_data
 	
 	const struct msn_away_state *away_state;
 	GSList *groups;
+	
+	/* Mostly used for sending the ADL command; since MSNP13 the client
+	   is responsible for downloading the contact list and then sending
+	   it to the MSNP server. */
 	GTree *domaintree;
+	int adl_todo;
 };
 
 struct msn_switchboard
@@ -163,6 +168,7 @@ typedef enum
 	MSN_BUDDY_BL = 4,
 	MSN_BUDDY_RL = 8,
 	MSN_BUDDY_PL = 16,
+	MSN_BUDDY_ADL_SYNCED = 256,
 } msn_buddy_flags_t;
 
 struct msn_buddy_data
