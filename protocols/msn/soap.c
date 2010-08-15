@@ -686,6 +686,7 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 	     *display_name = NULL, *group_id = NULL;
 	struct msn_soap_req_data *soap_req = data;
 	struct im_connection *ic = soap_req->ic;
+	struct msn_data *md = soap_req->ic->proto_data;
 	struct msn_group *group;
 	
 	if( ( p = xt_find_path( node, "../contactId" ) ) )
@@ -703,6 +704,10 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 	
 	if( type && g_strcasecmp( type, "me" ) == 0 )
 	{
+#if 0
+		g_free( md->myid );
+		md->myid = g_strdup( id );
+#endif		
 		set_t *set = set_find( &ic->acc->set, "display_name" );
 		g_free( set->value );
 		set->value = g_strdup( display_name );
@@ -765,7 +770,7 @@ static int msn_soap_ab_namechange_build_request( struct msn_soap_req_data *soap_
 	soap_req->url = g_strdup( SOAP_ADDRESSBOOK_URL );
 	soap_req->action = g_strdup( SOAP_AB_NAMECHANGE_ACTION );
 	soap_req->payload = msn_soap_abservice_build( SOAP_AB_NAMECHANGE_PAYLOAD,
-		"Initial", md->tokens[1], (char *) soap_req->data );
+		"Timer", md->tokens[1], (char *) soap_req->data );
 	
 	return 1;
 }

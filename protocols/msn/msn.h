@@ -216,11 +216,11 @@ char *msn_findheader( char *text, char *header, int len );
 char **msn_linesplit( char *line );
 int msn_handler( struct msn_handler_data *h );
 void msn_msgq_purge( struct im_connection *ic, GSList **list );
-gboolean msn_set_display_name( struct im_connection *ic, const char *rawname );
 char *msn_p11_challenge( char *challenge );
 gint msn_domaintree_cmp( gconstpointer a_, gconstpointer b_ );
 struct msn_group *msn_group_by_name( struct im_connection *ic, const char *name );
 struct msn_group *msn_group_by_id( struct im_connection *ic, const char *id );
+int msn_ns_set_display_name( struct im_connection *ic, const char *value );
 
 /* tables.c */
 const struct msn_away_state *msn_away_state_by_number( int number );

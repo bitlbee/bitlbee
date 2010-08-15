@@ -597,3 +597,19 @@ struct msn_group *msn_group_by_id( struct im_connection *ic, const char *id )
 	
 	return NULL;
 }
+
+int msn_ns_set_display_name( struct im_connection *ic, const char *value )
+{
+	struct msn_data *md = ic->proto_data;
+	char fn[strlen(value)*3+1];
+	char buf[512];
+	
+	strcpy( fn, value );
+	http_encode( fn );
+	g_snprintf( buf, sizeof( buf ), "PRP %d MFN %s\r\n",
+	            ++md->trId, fn );
+	
+	/* Note: We don't actually know if the server accepted the new name,
+	   and won't give proper feedback yet if it doesn't. */
+	return msn_write( ic, buf, strlen( buf ) );
+}

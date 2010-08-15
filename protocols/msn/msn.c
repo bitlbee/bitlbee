@@ -336,9 +336,6 @@ static char *set_eval_display_name( set_t *set, char *value )
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
-	struct msn_data *md = ic->proto_data;
-	char buf[512];
-	char *fn;
 	
 	if( strlen( value ) > 129 )
 	{
@@ -347,17 +344,7 @@ static char *set_eval_display_name( set_t *set, char *value )
 	}
 	
 	msn_soap_addressbook_set_display_name( ic, value );
-
-	fn = g_malloc( strlen( value ) * 3 + 1 );
-	strcpy( fn, value );
-	http_encode( fn );
-	g_snprintf( buf, sizeof( buf ), "PRP %d MFN %s\r\n",
-	            ++md->trId, fn );
-	g_free( fn );
-	
-	/* Note: We don't actually know if the server accepted the new name,
-	   and won't give proper feedback yet if it doesn't. */
-	return msn_write( ic, buf, strlen( buf ) ) ? value : NULL;
+	return msn_ns_set_display_name( ic, value ) ? value : NULL;
 }
 
 static void msn_buddy_data_add( bee_user_t *bu )

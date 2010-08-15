@@ -258,6 +258,9 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	else if( strcmp( cmd[0], "BLP" ) == 0 )
 	{
 		msn_ns_send_adl_start( ic );
+		
+		if( md->adl_todo < 0 && !( ic->flags & OPT_LOGGED_IN ) )
+			return msn_ns_set_display_name( ic, set_getstr( &ic->acc->set, "display_name" ) );
 	}
 	else if( strcmp( cmd[0], "ADL" ) == 0 )
 	{
@@ -267,21 +270,10 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			
 			if( md->adl_todo < 0 && !( ic->flags & OPT_LOGGED_IN ) )
 			{
-				char buf[1024];
-				char *fn_raw;
-				char *fn;
+				msn_ns_send_adl( ic );
 				
-				if( ( fn_raw = set_getstr( &ic->acc->set, "display_name" ) ) == NULL )
-					fn_raw = ic->acc->user;
-				fn = g_malloc( strlen( fn_raw ) * 3 + 1 );
-				strcpy( fn, fn_raw );
-				http_encode( fn );
-				
-				g_snprintf( buf, sizeof( buf ), "PRP %d MFN %s\r\n",
-				            ++md->trId, fn );
-				g_free( fn );
-				
-				msn_write( ic, buf, strlen( buf ) );
+				if( md->adl_todo < 0 && !( ic->flags & OPT_LOGGED_IN ) )
+					return msn_ns_set_display_name( ic, set_getstr( &ic->acc->set, "display_name" ) );
 			}
 		}
 		else if( num_parts >= 3 )
