@@ -106,13 +106,19 @@ static void msn_logout( struct im_connection *ic )
 		
 		msn_msgq_purge( ic, &md->msgq );
 		
-		while( md->groupcount > 0 )
-			g_free( md->grouplist[--md->groupcount] );
-		g_free( md->grouplist );
 		g_free( md->tokens[0] );
 		g_free( md->tokens[1] );
 		g_free( md->tokens[2] );
 		g_free( md->lock_key );
+		
+		while( md->groups )
+		{
+			struct msn_group *mg = md->groups->data;
+			g_free( mg->id );
+			g_free( mg->name );
+			g_free( mg );
+			md->groups = g_slist_remove( md->groups, mg );
+		}
 		
 		g_tree_destroy( md->domaintree );
 		md->domaintree = NULL;

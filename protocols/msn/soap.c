@@ -631,12 +631,21 @@ static xt_status msn_soap_addressbook_group( struct xt_node *node, gpointer data
 	struct xt_node *p;
 	char *id = NULL, *name = NULL;
 	struct msn_soap_req_data *soap_req = data;
+	struct msn_data *md = soap_req->ic->proto_data;
 	
 	if( ( p = xt_find_path( node, "../groupId" ) ) )
 		id = p->text;
 	
 	if( ( p = xt_find_node( node->children, "name" ) ) )
 		name = p->text;
+	
+	if( id && name )
+	{
+		struct msn_group *mg = g_new0( struct msn_group, 1 );
+		mg->id = g_strdup( id );
+		mg->name = g_strdup( name );
+		md->groups = g_slist_prepend( md->groups, mg );
+	}
 	
 	printf( "%s %s\n", id, name );
 	
@@ -648,9 +657,11 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 	bee_user_t *bu;
 	struct msn_buddy_data *bd;
 	struct xt_node *p;
-	char *id = NULL, *type = NULL, *handle = NULL, *display_name = NULL;
+	char *id = NULL, *type = NULL, *handle = NULL,
+	     *display_name = NULL, *group_id = NULL;
 	struct msn_soap_req_data *soap_req = data;
 	struct im_connection *ic = soap_req->ic;
+	struct msn_group *group;
 	
 	if( ( p = xt_find_path( node, "../contactId" ) ) )
 		id = p->text;
@@ -660,6 +671,8 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 		handle = p->text;
 	if( ( p = xt_find_node( node->children, "displayName" ) ) )
 		display_name = p->text;
+	if( ( p = xt_find_path( node, "groupIds/guid" ) ) )
+		group_id = p->text;
 	
 	if( type && g_strcasecmp( type, "me" ) == 0 )
 	{
@@ -683,6 +696,9 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 	bd->cid = g_strdup( id );
 	
 	imcb_rename_buddy( ic, handle, display_name );
+	
+	if( group_id && ( group = msn_group_by_id( ic, group_id ) ) )
+		imcb_add_buddy( ic, handle, group->name );
 	
 	printf( "%s %s %s %s\n", id, type, handle, display_name );
 	

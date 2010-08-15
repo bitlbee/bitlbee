@@ -565,3 +565,35 @@ gint msn_domaintree_cmp( gconstpointer a_, gconstpointer b_ )
 	
 	return ret;
 }
+
+struct msn_group *msn_group_by_name( struct im_connection *ic, const char *name )
+{
+	struct msn_data *md = ic->proto_data;
+	GSList *l;
+	
+	for( l = md->groups; l; l = l->next )
+	{
+		struct msn_group *mg = l->data;
+		
+		if( g_strcasecmp( mg->name, name ) == 0 )
+			return mg;
+	}
+	
+	return NULL;
+}
+
+struct msn_group *msn_group_by_id( struct im_connection *ic, const char *id )
+{
+	struct msn_data *md = ic->proto_data;
+	GSList *l;
+	
+	for( l = md->groups; l; l = l->next )
+	{
+		struct msn_group *mg = l->data;
+		
+		if( g_strcasecmp( mg->id, id ) == 0 )
+			return mg;
+	}
+	
+	return NULL;
+}

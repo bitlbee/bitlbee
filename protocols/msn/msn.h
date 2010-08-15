@@ -90,12 +90,9 @@ struct msn_data
 	GSList *switchboards;
 	int sb_failures;
 	time_t first_sb_failure;
-	GSList *filetransfers;
 	
 	const struct msn_away_state *away_state;
-	int buddycount;
-	int groupcount;
-	char **grouplist;
+	GSList *groups;
 	GTree *domaintree;
 };
 
@@ -174,6 +171,12 @@ struct msn_buddy_data
 	msn_buddy_flags_t flags;
 };
 
+struct msn_group
+{
+	char *name;
+	char *id;
+};
+
 /* Bitfield values for msn_status_code.flags */
 #define STATUS_FATAL            1
 #define STATUS_SB_FATAL         2
@@ -210,6 +213,8 @@ void msn_msgq_purge( struct im_connection *ic, GSList **list );
 gboolean msn_set_display_name( struct im_connection *ic, const char *rawname );
 char *msn_p11_challenge( char *challenge );
 gint msn_domaintree_cmp( gconstpointer a_, gconstpointer b_ );
+struct msn_group *msn_group_by_name( struct im_connection *ic, const char *name );
+struct msn_group *msn_group_by_id( struct im_connection *ic, const char *id );
 
 /* tables.c */
 const struct msn_away_state *msn_away_state_by_number( int number );
