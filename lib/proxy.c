@@ -48,6 +48,11 @@ int proxytype = PROXY_NONE;
 char proxyuser[128] = "";
 char proxypass[128] = "";
 
+/* Some systems don't know this one. It's not essential, so set it to 0 then. */
+#ifndef AI_NUMERICSERV
+#define AI_NUMERICSERV 0
+#endif
+
 struct PHB {
 	b_event_handler func, proxy_func;
 	gpointer data, proxy_data;
@@ -55,7 +60,10 @@ struct PHB {
 	int port;
 	int fd;
 	gint inpa;
+	struct addrinfo *gai, *gai_cur;
 };
+
+static int proxy_connect_none(const char *host, unsigned short port_, struct PHB *phb);
 
 static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition cond)
 {
@@ -65,7 +73,19 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 	len = sizeof(error);
 	
 #ifndef _WIN32
-	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
+	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0 || error) {
+		if ((phb->gai_cur = phb->gai_cur->ai_next)) {
+			int new_fd;
+			b_event_remove(phb->inpa);
+			if ((new_fd = proxy_connect_none(NULL, 0, phb))) {
+				b_event_remove(phb->inpa);
+				closesocket(source);
+				dup2(new_fd, source);
+				phb->inpa = b_input_add(source, B_EV_IO_WRITE, gaim_io_connected, phb);
+				return FALSE;
+			}
+		}
+		freeaddrinfo(phb->gai);
 		closesocket(source);
 		b_event_remove(phb->inpa);
 		if( phb->proxy_func )
@@ -77,6 +97,7 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 		return FALSE;
 	}
 #endif
+	freeaddrinfo(phb->gai);
 	sock_make_blocking(source);
 	b_event_remove(phb->inpa);
 	if( phb->proxy_func )
@@ -93,64 +114,61 @@ static int proxy_connect_none(const char *host, unsigned short port_, struct PHB
 {
 	struct sockaddr_in me;
 	int fd = -1;
-	int ret;
-	char port[6];
-	struct addrinfo hints;
-	struct addrinfo* result;
-
-	g_snprintf(port, sizeof(port), "%d", port_);
-
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
-
-	if (!(ret = getaddrinfo(host, port, &hints, &result)))
-	{
-		struct addrinfo* rp;
-
-		for (rp = result; rp; rp = rp->ai_next)
-		{
-			if ((fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) < 0) {
-				event_debug( "socket failed: %d\n", errno);
-				continue;
-			}
-
-			sock_make_nonblocking(fd);
-
-			if (global.conf->iface_out)
-			{
-				me.sin_family = AF_INET;
-				me.sin_port = 0;
-				me.sin_addr.s_addr = inet_addr( global.conf->iface_out );
-				
-				if (bind(fd, (struct sockaddr *) &me, sizeof(me)) != 0)
-					event_debug("bind( %d, \"%s\" ) failure\n", fd, global.conf->iface_out);
-			}
-
-			event_debug("proxy_connect_none( \"%s\", %d ) = %d\n", host, port, fd);
 	
-			if (connect(fd, rp->ai_addr, rp->ai_addrlen) < 0 && !sockerr_again()) {
-				event_debug( "connect failed: %s\n", strerror(errno));
-				closesocket(fd);
-				fd = -1;
-				continue;
-			} else {
-				phb->inpa = b_input_add(fd, B_EV_IO_WRITE, gaim_io_connected, phb);
-				phb->fd = fd;
-				
-				break;
-			}
+	if (phb->gai_cur == NULL)
+	{
+		int ret;
+		char port[6];
+		struct addrinfo hints;
+	
+		g_snprintf(port, sizeof(port), "%d", port_);
+	
+		memset(&hints, 0, sizeof(struct addrinfo));
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
+	
+		if (!(ret = getaddrinfo(host, port, &hints, &phb->gai)))
+			phb->gai_cur = phb->gai;
+		else
+			event_debug("gai(): %s\n", gai_strerror(ret));
+	}
+	
+	for (; phb->gai_cur; phb->gai_cur = phb->gai_cur->ai_next)
+	{
+		if ((fd = socket(phb->gai_cur->ai_family, phb->gai_cur->ai_socktype, phb->gai_cur->ai_protocol)) < 0) {
+			event_debug( "socket failed: %d\n", errno);
+			continue;
 		}
 
-		freeaddrinfo(result);
-	}
-	else
-	{
-		event_debug("gai(): %s\n", gai_strerror(ret));
+		sock_make_nonblocking(fd);
+
+		if (global.conf->iface_out)
+		{
+			me.sin_family = AF_INET;
+			me.sin_port = 0;
+			me.sin_addr.s_addr = inet_addr( global.conf->iface_out );
+				
+			if (bind(fd, (struct sockaddr *) &me, sizeof(me)) != 0)
+				event_debug("bind( %d, \"%s\" ) failure\n", fd, global.conf->iface_out);
+		}
+
+		event_debug("proxy_connect_none( \"%s\", %d ) = %d\n", host, port, fd);
+	
+		if (connect(fd, phb->gai_cur->ai_addr, phb->gai_cur->ai_addrlen) < 0 && !sockerr_again()) {
+			event_debug( "connect failed: %s\n", strerror(errno));
+			closesocket(fd);
+			fd = -1;
+			continue;
+		} else {
+			phb->inpa = b_input_add(fd, B_EV_IO_WRITE, gaim_io_connected, phb);
+			phb->fd = fd;
+			
+			break;
+		}
 	}
 	
-	if(fd < 0)
+	if(fd < 0 && host)
 		g_free(phb);
 
 	return fd;
