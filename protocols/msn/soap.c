@@ -682,7 +682,7 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 	bee_user_t *bu;
 	struct msn_buddy_data *bd;
 	struct xt_node *p;
-	char *id = NULL, *type = NULL, *handle = NULL,
+	char *id = NULL, *type = NULL, *handle = NULL, *is_msgr = "false",
 	     *display_name = NULL, *group_id = NULL;
 	struct msn_soap_req_data *soap_req = data;
 	struct im_connection *ic = soap_req->ic;
@@ -696,6 +696,8 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 		handle = p->text;
 	if( ( p = xt_find_node( node->children, "displayName" ) ) )
 		display_name = p->text;
+	if( ( p = xt_find_node( node->children, "isMessengerUser" ) ) )
+		is_msgr = p->text;
 	if( ( p = xt_find_path( node, "groupIds/guid" ) ) )
 		group_id = p->text;
 	
@@ -708,7 +710,7 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 		return XT_HANDLED;
 	}
 	
-	if( handle == NULL )
+	if( !bool2int( is_msgr ) || handle == NULL )
 		return XT_HANDLED;
 	
 	if( !( bu = bee_user_by_handle( ic->bee, ic, handle ) ) &&
