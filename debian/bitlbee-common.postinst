@@ -63,8 +63,21 @@ if [ -e /usr/share/bitlbee/help.upgrading ]; then
 	fi
 fi
 
-if [ -n "$2" -a "$BITLBEE_UPGRADE_DONT_RESTART" != "1" ]; then
-	invoke-rc.d bitlbee restart
+# The official way to check if we're upgrading is to check if $2 is
+# non-empty. However, previous versions of BitlBee didn't have a
+# bitlbee-common package so in that case the var will also be empty.
+# Instead, check if the port is in use (if netstat is available). This
+# works since the debconf code will pick a free port on new installs.
+if [ "$BITLBEE_UPGRADE_DONT_RESTART" != "1" ]; then
+	unset IS_UPGRADE
+	if type netstat > /dev/null 2> /dev/null; then
+		netstat -an | grep -q :$PORT\\b.*LISTEN && IS_UPGRADE=1
+	else
+		[ -n "$2" ] && IS_UPGRADE=1
+	fi
+	if [ -n "$IS_UPGRADE" ]; then
+		invoke-rc.d bitlbee restart
+	fi
 fi
 
 ## If we're upgrading, we'll probably skip this next part
