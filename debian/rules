@@ -7,6 +7,8 @@
 # exercise is over now.
 #
 
+# Include the bitlbee-libpurple variant by default
+BITLBEE_LIBPURPLE ?= 1
 BITLBEE_CONFIGURE_FLAGS ?=
 DEBUG ?= 0
 
@@ -23,9 +25,11 @@ build-stamp:
 	ROOT=$$PWD; cd debian/build-native; $(BITLBEE_CONFIGURE_VERSION) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent $(BITLBEE_CONFIGURE_FLAGS)
 	$(MAKE) -C debian/build-native
 
+ifeq ($(BITLBEE_LIBPURPLE),1)
 	mkdir -p debian/build-libpurple
 	ROOT=$$PWD; cd debian/build-libpurple; $(BITLBEE_CONFIGURE_VERSION) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --purple=1 $(BITLBEE_CONFIGURE_FLAGS)
 	$(MAKE) -C debian/build-libpurple
+endif
 
 	$(MAKE) -C doc
 
@@ -48,11 +52,13 @@ install: build
 	dh_installdirs
 
 	$(MAKE) -C debian/build-native install install-etc DESTDIR=`pwd`/debian/bitlbee
-	$(MAKE) -C debian/build-libpurple install install-etc DESTDIR=`pwd`/debian/bitlbee-libpurple
 	$(MAKE) -C debian/build-native install-dev DESTDIR=`pwd`/debian/bitlbee-dev
-
 	patch debian/bitlbee/etc/bitlbee/bitlbee.conf debian/patches/bitlbee.conf.diff
+
+ifeq ($(BITLBEE_LIBPURPLE),1)
+	$(MAKE) -C debian/build-libpurple install install-etc DESTDIR=`pwd`/debian/bitlbee-libpurple
 	patch debian/bitlbee-libpurple/etc/bitlbee/bitlbee.conf debian/patches/bitlbee.conf.diff
+endif
 
 	mkdir -p debian/bitlbee-common/usr
 	mv debian/bitlbee/usr/share debian/bitlbee-common/usr
@@ -67,10 +73,10 @@ binary-common:
 	dh_installdocs #--link-doc=bitlbee-common
 	# TODO: Restore --link-doc up here and remove the hack below once
 	# Hardy and Lenny are deprecated.
-	for p in bitlbee bitlbee-libpurple bitlbee-dev; do rm -rf debian/$$p/usr/share/doc/$$p; ln -s bitlbee-common debian/$$p/usr/share/doc/$$p; done
+	for p in bitlbee bitlbee-libpurple bitlbee-dev; do rm -r debian/$$p/usr/share/doc/$$p && ln -s bitlbee-common debian/$$p/usr/share/doc/$$p; done
 	dh_installdebconf
 	dh_installinit
-ifeq ($(DH_OPTIONS),-a)
+ifeq ($(BITLBEE_LIBPURPLE)$(DH_OPTIONS),1-a)
 	cp -a debian/bitlbee/etc debian/bitlbee-libpurple
 endif
 	dh_installman
@@ -79,7 +85,7 @@ endif
 	dh_compress
 	dh_fixperms
 	dh_installdeb
-ifeq ($(DH_OPTIONS),-a)
+ifeq ($(BITLBEE_LIBPURPLE)$(DH_OPTIONS),1-a)
 	cp -a debian/bitlbee/DEBIAN/post* debian/bitlbee/DEBIAN/pre* debian/bitlbee-libpurple/DEBIAN
 endif
 	dh_shlibdeps
@@ -89,7 +95,11 @@ else
 	dh_gencontrol -- -Vbee:Version=$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}' | sed -e 's/+b[0-9]\+$$//')
 endif
 	dh_md5sums
+ifeq ($(BITLBEE_LIBPURPLE),1)
 	dh_builddeb
+else
+	dh_builddeb -Nbitlbee-libpurple
+endif
 
 binary-indep: build install
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
