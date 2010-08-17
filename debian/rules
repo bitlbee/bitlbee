@@ -40,7 +40,7 @@ clean:
 	dh_testroot
 	rm -f build-stamp
 
-	rm -rf build-arch-stamp debian/build-*
+	rm -rf build-arch-stamp debian/build-* debian/bitlbee-libpurple.prerm
 	$(MAKE) distclean
 
 	dh_clean
@@ -51,13 +51,14 @@ install: build
 	dh_clean -k
 	dh_installdirs
 
-	$(MAKE) -C debian/build-native install install-etc DESTDIR=`pwd`/debian/bitlbee
+	$(MAKE) -C debian/build-native install DESTDIR=`pwd`/debian/bitlbee
+	$(MAKE) -C debian/build-native install-etc DESTDIR=`pwd`/debian/bitlbee-common
 	$(MAKE) -C debian/build-native install-dev DESTDIR=`pwd`/debian/bitlbee-dev
-	patch debian/bitlbee/etc/bitlbee/bitlbee.conf debian/patches/bitlbee.conf.diff
+	patch debian/bitlbee-common/etc/bitlbee/bitlbee.conf debian/patches/bitlbee.conf.diff
 
 ifeq ($(BITLBEE_LIBPURPLE),1)
-	$(MAKE) -C debian/build-libpurple install install-etc DESTDIR=`pwd`/debian/bitlbee-libpurple
-	patch debian/bitlbee-libpurple/etc/bitlbee/bitlbee.conf debian/patches/bitlbee.conf.diff
+	$(MAKE) -C debian/build-libpurple install DESTDIR=`pwd`/debian/bitlbee-libpurple
+	ln -sf debian/bitlbee.prerm debian/bitlbee-libpurple.prerm
 endif
 
 	mkdir -p debian/bitlbee-common/usr
@@ -75,19 +76,13 @@ binary-common:
 	# Hardy and Lenny are deprecated.
 	for p in bitlbee bitlbee-libpurple bitlbee-dev; do rm -r debian/$$p/usr/share/doc/$$p && ln -s bitlbee-common debian/$$p/usr/share/doc/$$p; done
 	dh_installdebconf
-	dh_installinit
-ifeq ($(BITLBEE_LIBPURPLE)$(DH_OPTIONS),1-a)
-	cp -a debian/bitlbee/etc debian/bitlbee-libpurple
-endif
+	dh_installinit --init-script=bitlbee
 	dh_installman
 	dh_strip
 	dh_link
 	dh_compress
 	dh_fixperms
 	dh_installdeb
-ifeq ($(BITLBEE_LIBPURPLE)$(DH_OPTIONS),1-a)
-	cp -a debian/bitlbee/DEBIAN/post* debian/bitlbee/DEBIAN/pre* debian/bitlbee-libpurple/DEBIAN
-endif
 	dh_shlibdeps
 ifdef BITLBEE_VERSION
 	dh_gencontrol -- -v1:$(BITLBEE_VERSION)-0  -Vbee:Version=1:$(BITLBEE_VERSION)-0
