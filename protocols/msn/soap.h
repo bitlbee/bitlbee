@@ -125,6 +125,15 @@
                "</wsp:AppliesTo>" \
                "<wsse:PolicyReference xmlns=\"http://schemas.xmlsoap.org/ws/2003/06/secext\" URI=\"MBI_SSL\"></wsse:PolicyReference>" \
            "</wst:RequestSecurityToken>" \
+           "<wst:RequestSecurityToken Id=\"RST3\">" \
+               "<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
+               "<wsp:AppliesTo>" \
+                   "<wsa:EndpointReference>" \
+                       "<wsa:Address>storage.msn.com</wsa:Address>" \
+                   "</wsa:EndpointReference>" \
+               "</wsp:AppliesTo>" \
+               "<wsse:PolicyReference xmlns=\"http://schemas.xmlsoap.org/ws/2003/06/secext\" URI=\"MBI_SSL\"></wsse:PolicyReference>" \
+           "</wst:RequestSecurityToken>" \
        "</ps:RequestMultipleSecurityTokens>" \
    "</Body>" \
 "</Envelope>"
@@ -285,5 +294,53 @@ int msn_soap_addressbook_request( struct im_connection *ic );
 int msn_soap_addressbook_set_display_name( struct im_connection *ic, const char *new );
 int msn_soap_ab_contact_add( struct im_connection *ic, bee_user_t *bu );
 int msn_soap_ab_contact_del( struct im_connection *ic, bee_user_t *bu );
+
+
+#define SOAP_STORAGE_URL "https://storage.msn.com/storageservice/SchematizedStore.asmx"
+#define SOAP_PROFILE_GET_ACTION "http://www.msn.com/webservices/storage/w10/GetProfile"
+
+#define SOAP_PROFILE_GET_PAYLOAD \
+"<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
+"<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+  "<soap:Header xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+    "<StorageApplicationHeader xmlns=\"http://www.msn.com/webservices/storage/w10\">" \
+      "<ApplicationID>Messenger Client 9.0</ApplicationID>" \
+      "<Scenario>Initial</Scenario>" \
+    "</StorageApplicationHeader>" \
+    "<StorageUserHeader xmlns=\"http://www.msn.com/webservices/storage/w10\">" \
+      "<Puid>0</Puid>" \
+      "<TicketToken>%s</TicketToken>" \
+    "</StorageUserHeader>" \
+  "</soap:Header>" \
+  "<soap:Body xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+    "<GetProfile xmlns=\"http://www.msn.com/webservices/storage/w10\">" \
+      "<profileHandle>" \
+        "<Alias>" \
+          "<Name>%s</Name>" \
+          "<NameSpace>MyCidStuff</NameSpace>" \
+        "</Alias>" \
+        "<RelationshipName>MyProfile</RelationshipName>" \
+      "</profileHandle>" \
+      "<profileAttributes>" \
+        "<ResourceID>true</ResourceID>" \
+        "<DateModified>true</DateModified>" \
+        "<ExpressionProfileAttributes>" \
+          "<ResourceID>true</ResourceID>" \
+          "<DateModified>true</DateModified>" \
+          "<DisplayName>true</DisplayName>" \
+          "<DisplayNameLastModified>true</DisplayNameLastModified>" \
+          "<PersonalStatus>true</PersonalStatus>" \
+          "<PersonalStatusLastModified>true</PersonalStatusLastModified>" \
+          "<StaticUserTilePublicURL>true</StaticUserTilePublicURL>" \
+          "<Photo>true</Photo>" \
+          "<Flags>true</Flags>" \
+        "</ExpressionProfileAttributes>" \
+      "</profileAttributes>" \
+    "</GetProfile>" \
+  "</soap:Body>" \
+"</soap:Envelope>"
+
+int msn_soap_profile_get( struct im_connection *ic, const char *cid );
+
 
 #endif /* __SOAP_H__ */

@@ -82,6 +82,7 @@ static void msn_logout( struct im_connection *ic )
 {
 	struct msn_data *md = ic->proto_data;
 	GSList *l;
+	int i;
 	
 	if( md )
 	{
@@ -106,9 +107,8 @@ static void msn_logout( struct im_connection *ic )
 		
 		msn_msgq_purge( ic, &md->msgq );
 		
-		g_free( md->tokens[0] );
-		g_free( md->tokens[1] );
-		g_free( md->tokens[2] );
+		for( i = 0; i < sizeof( md->tokens ) / sizeof( md->tokens[0] ); i ++ )
+			g_free( md->tokens[i] );
 		g_free( md->lock_key );
 		
 		while( md->groups )
@@ -336,12 +336,17 @@ static char *set_eval_display_name( set_t *set, char *value )
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
+	struct msn_data *md = ic->proto_data;
 	
 	if( strlen( value ) > 129 )
 	{
 		imcb_log( ic, "Maximum name length exceeded" );
 		return NULL;
 	}
+	
+	if( md->flags & MSN_GOT_PROFILE_DN )
+		imcb_log( ic, "Warning: Persistent name changes for this account have to be done "
+		              "in the profile. BitlBee doesn't currently support this." );
 	
 	msn_soap_addressbook_set_display_name( ic, value );
 	return msn_ns_set_display_name( ic, value ) ? value : NULL;

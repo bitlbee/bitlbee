@@ -49,12 +49,9 @@
 */
 
 #define MSNP11_PROD_KEY "ILTXC!4IXB5FB*PX"
-//PK}_A_0N_K%O?A9S"
 #define MSNP11_PROD_ID  "PROD0119GSJUC$18"
-//PROD0114ES4Z%Q5W"
 #define MSNP_VER        "MSNP15"
 #define MSNP_BUILD      "8.5.1288"
-//"8.1.0178"
 
 #define MSN_SB_NEW         -24062002
 
@@ -75,15 +72,23 @@
 
 #define PROFILE_URL "http://members.msn.com/"
 
+typedef enum
+{
+	MSN_GOT_PROFILE = 1,
+	MSN_GOT_PROFILE_DN = 2,
+	MSN_DONE_ADL = 4,
+} msn_flags_t;
+
 struct msn_data
 {
 	struct im_connection *ic;
 	
 	int fd;
 	struct msn_handler_data *handler;
+	msn_flags_t flags;
 	
 	int trId;
-	char *tokens[3];
+	char *tokens[4];
 	char *lock_key;
 	
 	GSList *msgq, *grpq;
@@ -205,6 +210,7 @@ extern GSList *msn_switchboards;
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
 void msn_auth_got_passport_token( struct im_connection *ic, const char *token, const char *error );
 void msn_auth_got_contact_list( struct im_connection *ic );
+int msn_ns_finish_login( struct im_connection *ic );
 
 /* msn_util.c */
 int msn_write( struct im_connection *ic, char *s, int len );

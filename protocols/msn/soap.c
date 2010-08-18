@@ -208,7 +208,7 @@ static xt_status msn_soap_passport_sso_token( struct xt_node *node, gpointer dat
 	    	sd->secret = g_strdup( p->text );
 	
 	*id -= '1';
-	if( *id >= 0 && *id <= 2 )
+	if( *id >= 0 && *id < sizeof( md->tokens ) / sizeof( md->tokens[0] ) )
 	{
 		g_free( md->tokens[(int)*id] );
 		md->tokens[(int)*id] = g_strdup( node->text );
@@ -686,7 +686,6 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 	     *display_name = NULL, *group_id = NULL;
 	struct msn_soap_req_data *soap_req = data;
 	struct im_connection *ic = soap_req->ic;
-	struct msn_data *md = soap_req->ic->proto_data;
 	struct msn_group *group;
 	
 	if( ( p = xt_find_path( node, "../contactId" ) ) )
@@ -704,13 +703,14 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 	
 	if( type && g_strcasecmp( type, "me" ) == 0 )
 	{
-#if 0
-		g_free( md->myid );
-		md->myid = g_strdup( id );
-#endif		
 		set_t *set = set_find( &ic->acc->set, "display_name" );
 		g_free( set->value );
 		set->value = g_strdup( display_name );
+		
+		/* Try to fetch the profile; if the user has one, that's where
+		   we can find the persistent display_name. */
+		if( ( p = xt_find_node( node->children, "CID" ) ) && p->text )
+			msn_soap_profile_get( ic, p->text );
 		
 		return XT_HANDLED;
 	}
@@ -880,4 +880,68 @@ int msn_soap_ab_contact_del( struct im_connection *ic, bee_user_t *bu )
 	                       NULL,
 	                       msn_soap_ab_contact_del_handle_response,
 	                       msn_soap_ab_contact_del_free_data );
+}
+
+
+
+/* Storage stuff: Fetch profile. */
+static int msn_soap_profile_get_build_request( struct msn_soap_req_data *soap_req )
+{
+	struct msn_data *md = soap_req->ic->proto_data;
+	
+	soap_req->url = g_strdup( SOAP_STORAGE_URL );
+	soap_req->action = g_strdup( SOAP_PROFILE_GET_ACTION );
+	soap_req->payload = g_markup_printf_escaped( SOAP_PROFILE_GET_PAYLOAD,
+		md->tokens[3], (char*) soap_req->data );
+	
+	return 1;
+}
+
+static xt_status msn_soap_profile_get_result( struct xt_node *node, gpointer data )
+{
+	struct msn_soap_req_data *soap_req = data;
+	struct im_connection *ic = soap_req->ic;
+	struct msn_data *md = soap_req->ic->proto_data;
+	struct xt_node *dn;
+	
+	if( ( dn = xt_find_node( node->children, "DisplayName" ) ) && dn->text )
+	{
+		set_t *set = set_find( &ic->acc->set, "display_name" );
+		g_free( set->value );
+		set->value = g_strdup( dn->text );
+		
+		md->flags |= MSN_GOT_PROFILE_DN;
+	}
+	
+	return XT_HANDLED;
+}
+
+static const struct xt_handler_entry msn_soap_profile_get_parser[] = {
+	{ "ExpressionProfile", "GetProfileResult", msn_soap_profile_get_result },
+	{ NULL,               NULL,     NULL                        }
+};
+
+static int msn_soap_profile_get_handle_response( struct msn_soap_req_data *soap_req )
+{
+	struct msn_data *md = soap_req->ic->proto_data;
+	
+	md->flags |= MSN_GOT_PROFILE;
+	msn_ns_finish_login( soap_req->ic );
+	
+	return MSN_SOAP_OK;
+}
+
+static int msn_soap_profile_get_free_data( struct msn_soap_req_data *soap_req )
+{
+	g_free( soap_req->data );
+	return 0;
+}
+
+int msn_soap_profile_get( struct im_connection *ic, const char *cid )
+{
+	return msn_soap_start( ic, g_strdup( cid ),
+	                       msn_soap_profile_get_build_request,
+	                       msn_soap_profile_get_parser,
+	                       msn_soap_profile_get_handle_response,
+	                       msn_soap_profile_get_free_data );
 }

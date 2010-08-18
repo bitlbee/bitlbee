@@ -258,23 +258,14 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	else if( strcmp( cmd[0], "BLP" ) == 0 )
 	{
 		msn_ns_send_adl_start( ic );
-		
-		if( md->adl_todo < 0 && !( ic->flags & OPT_LOGGED_IN ) )
-			return msn_ns_set_display_name( ic, set_getstr( &ic->acc->set, "display_name" ) );
+		return msn_ns_finish_login( ic );
 	}
 	else if( strcmp( cmd[0], "ADL" ) == 0 )
 	{
 		if( num_parts >= 3 && strcmp( cmd[2], "OK" ) == 0 )
 		{
 			msn_ns_send_adl( ic );
-			
-			if( md->adl_todo < 0 && !( ic->flags & OPT_LOGGED_IN ) )
-			{
-				msn_ns_send_adl( ic );
-				
-				if( md->adl_todo < 0 && !( ic->flags & OPT_LOGGED_IN ) )
-					return msn_ns_set_display_name( ic, set_getstr( &ic->acc->set, "display_name" ) );
-			}
+			return msn_ns_finish_login( ic );
 		}
 		else if( num_parts >= 3 )
 		{
@@ -816,4 +807,20 @@ static void msn_ns_send_adl_start( struct im_connection *ic )
 	}
 	
 	msn_ns_send_adl( ic );
+}
+
+int msn_ns_finish_login( struct im_connection *ic )
+{
+	struct msn_data *md = ic->proto_data;
+	
+	if( ic->flags & OPT_LOGGED_IN )
+		return 1;
+	
+	if( md->adl_todo < 0 )
+		md->flags |= MSN_DONE_ADL;
+	
+	if( ( md->flags & MSN_DONE_ADL ) && ( md->flags & MSN_GOT_PROFILE ) )
+		return msn_ns_set_display_name( ic, set_getstr( &ic->acc->set, "display_name" ) );
+	else
+		return 1;
 }
