@@ -17,6 +17,10 @@ ifndef BITLBEE_VERSION
 BITLBEE_CONFIGURE_VERSION ?= BITLBEE_VERSION=\"$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}')\"
 endif
 
+ifneq ($(BITLBEE_LIBPURPLE),1)
+DH_OPTIONS += -Nbitlbee-libpurple
+endif
+
 build: build-stamp
 build-stamp:
 	dh_testdir
@@ -90,20 +94,16 @@ else
 	dh_gencontrol -- -Vbee:Version=$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}' | sed -e 's/+b[0-9]\+$$//')
 endif
 	dh_md5sums
-ifeq ($(BITLBEE_LIBPURPLE),1)
 	dh_builddeb
-else
-	dh_builddeb -Nbitlbee-libpurple
-endif
 
 binary-indep: build install
-	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
+	DH_OPTIONS=-i $(MAKE) -f debian/rules binary-common
 
 binary-arch: build install
-	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
+	DH_OPTIONS=-a $(MAKE) -f debian/rules binary-common
 
 binary-%: build install
-	make -f debian/rules binary-common DH_OPTIONS=-p$*
+	DH_OPTIONS=-p$* $(MAKE) -f debian/rules binary-common
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary-common binary install
