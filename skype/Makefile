@@ -79,7 +79,7 @@ release:
 doc: HEADER.html Changelog
 
 HEADER.html: README Makefile
-	asciidoc -a toc -a numbered -a sectids -o HEADER.html README
+	asciidoc -a toc -a numbered -a sectids -o HEADER.html -a icons -a data-uri --attribute iconsdir=./images/icons README
 	sed -i 's|@VERSION@|$(VERSION)|g' HEADER.html
 	sed -i 's|@BITLBEE_VERSION@|$(BITLBEE_VERSION)|g' HEADER.html
 
