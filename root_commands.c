@@ -1007,7 +1007,8 @@ static void cmd_blist( irc_t *irc, char **cmd )
 	
 	irc_usermsg( irc, format, "Nick", "Handle/Account", "Status" );
 	
-	if( strcmp( set_getstr( &irc->root->last_channel->set, "type" ), "control" ) != 0 )
+	if( irc->root->last_channel &&
+	    strcmp( set_getstr( &irc->root->last_channel->set, "type" ), "control" ) != 0 )
 		irc->root->last_channel = NULL;
 	
 	for( l = irc->users; l; l = l->next )
