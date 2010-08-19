@@ -426,23 +426,16 @@ static void purple_keepalive( struct im_connection *ic )
 static int purple_send_typing( struct im_connection *ic, char *who, int flags )
 {
 	PurpleTypingState state = PURPLE_NOT_TYPING;
-	PurpleConversation *conv;
+	PurpleAccount *pa = ic->proto_data;
 	
 	if( flags & OPT_TYPING )
 		state = PURPLE_TYPING;
 	else if( flags & OPT_THINKING )
 		state = PURPLE_TYPED;
 	
-	if( ( conv = purple_find_conversation_with_account( PURPLE_CONV_TYPE_IM,
-	                                                    who, ic->proto_data ) ) == NULL )
-	{
-		purple_conv_im_set_typing_state( purple_conversation_get_im_data( conv ), state );
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
+	serv_send_typing( purple_account_get_connection( pa ), who, state );
+	
+	return 1;
 }
 
 static void purple_chat_msg( struct groupchat *gc, char *message, int flags )
@@ -808,6 +801,32 @@ static void prplcb_conv_im( PurpleConversation *conv, const char *who, const cha
 	imcb_buddy_msg( ic, (char*) who, (char*) message, 0, mtime );
 }
 
+/* No, this is not a ui_op but a signal. */
+static void prplcb_buddy_typing( PurpleAccount *account, const char *who, gpointer null )
+{
+	PurpleConversation *conv;
+	PurpleConvIm *im;
+	int state;
+	
+	if( ( conv = purple_find_conversation_with_account( PURPLE_CONV_TYPE_IM, who, account ) ) == NULL )
+		return;
+	
+	im = PURPLE_CONV_IM(conv);
+	switch( purple_conv_im_get_typing_state( im ) )
+	{
+	case PURPLE_TYPING:
+		state = OPT_TYPING;
+		break;
+	case PURPLE_TYPED:
+		state = OPT_THINKING;
+		break;
+	default:
+		state = 0;
+	}
+	
+	imcb_buddy_typing( purple_ic_by_pa( account ), who, state );
+}
+
 static PurpleConversationUiOps bee_conv_uiops = 
 {
 	prplcb_conv_new,           /* create_conversation  */
@@ -1137,6 +1156,15 @@ void purple_initmodule()
 	
 	/* Meh? */
 	purple_prefs_load();
+	
+	/* No, really. So far there were ui_ops for everything, but now suddenly
+	   one needs to use signals for typing notification stuff. :-( */
+	purple_signal_connect( purple_conversations_get_handle(), "buddy-typing",
+	                       &funcs, PURPLE_CALLBACK(prplcb_buddy_typing), NULL );
+	purple_signal_connect( purple_conversations_get_handle(), "buddy-typed",
+	                       &funcs, PURPLE_CALLBACK(prplcb_buddy_typing), NULL );
+	purple_signal_connect( purple_conversations_get_handle(), "buddy-typing-stopped",
+	                       &funcs, PURPLE_CALLBACK(prplcb_buddy_typing), NULL );
 	
 	memset( &funcs, 0, sizeof( funcs ) );
 	funcs.login = purple_login;

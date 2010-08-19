@@ -309,7 +309,7 @@ G_MODULE_EXPORT struct buddy *imcb_find_buddy( struct im_connection *ic, char *h
 G_MODULE_EXPORT void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *realname );
 G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const char *nick );
 
-G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags );
+G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, const char *handle, uint32_t flags );
 G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle( struct im_connection *ic, const char *handle );
 G_MODULE_EXPORT void imcb_clean_handle( struct im_connection *ic, char *handle );
 

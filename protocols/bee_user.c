@@ -240,7 +240,7 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 		imcb_log( ic, "Message from unknown handle %s:\n%s", handle, msg );
 }
 
-void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
+void imcb_buddy_typing( struct im_connection *ic, const char *handle, uint32_t flags )
 {
 	bee_user_t *bu;
 	
