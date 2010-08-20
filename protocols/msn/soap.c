@@ -67,6 +67,7 @@ struct msn_soap_req_data
 };
 
 static int msn_soap_send_request( struct msn_soap_req_data *req );
+static void msn_soap_debug_print( const char *headers, const char *payload );
 
 static int msn_soap_start( struct im_connection *ic,
                     void *data,
@@ -106,6 +107,8 @@ static int msn_soap_send_request( struct msn_soap_req_data *soap_req )
 		soap_action ? soap_action : "",
 		strlen( soap_req->payload ), soap_req->payload );
 	
+	msn_soap_debug_print( http_req, soap_req->payload );
+	
 	soap_req->http_req = http_dorequest( url.host, url.port, url.proto == PROTO_HTTPS,
 		http_req, msn_soap_handle_response, soap_req );
 	
@@ -129,6 +132,8 @@ static void msn_soap_handle_response( struct http_request *http_req )
 		xt_handle( parser, NULL, -1 );
 		xt_free( parser );
 	}
+	
+	msn_soap_debug_print( http_req->reply_headers, http_req->reply_body );
 	
 	st = soap_req->handle_response( soap_req );
 	
@@ -162,6 +167,28 @@ static char *msn_soap_abservice_build( const char *body_fmt, const char *scenari
 	g_free( format );
 	
 	return ret;
+}
+
+static void msn_soap_debug_print( const char *headers, const char *payload )
+{
+	char *s;
+	
+	if( !getenv( "BITLBEE_DEBUG" ) )
+		return;
+	
+	if( ( s = strstr( headers, "\r\n\r\n" ) ) )
+		write( 1, s, s - headers + 4 );
+	else
+		write( 1, headers, strlen( headers ) );
+	
+#ifdef DEBUG
+	{
+		struct xt_node *xt = xt_from_string( payload );
+		if( xt )
+			xt_print( xt );
+		xt_free_node( xt );
+	}
+#endif
 }
 
 

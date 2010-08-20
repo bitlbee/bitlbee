@@ -330,7 +330,7 @@ void xt_print( struct xt_node *node )
 	
 	/* Indentation */
 	for( c = node; c->parent; c = c->parent )
-		printf( "\t" );
+		printf( "    " );
 	
 	/* Start the tag */
 	printf( "<%s", node->name );
@@ -368,7 +368,7 @@ void xt_print( struct xt_node *node )
 	
 	if( node->children )
 		for( c = node; c->parent; c = c->parent )
-			printf( "\t" );
+			printf( "    " );
 	
 	/* Non-empty tag is now finished. */
 	printf( "</%s>\n", node->name );
