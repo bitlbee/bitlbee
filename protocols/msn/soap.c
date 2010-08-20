@@ -123,6 +123,16 @@ static void msn_soap_handle_response( struct http_request *http_req )
 	struct msn_soap_req_data *soap_req = http_req->data;
 	int st;
 	
+	if( g_slist_find( msn_connections, soap_req->ic ) == NULL )
+	{
+		soap_req->free_data( soap_req );
+		g_free( soap_req->url );
+		g_free( soap_req->action );
+		g_free( soap_req->payload );
+		g_free( soap_req );
+		return;
+	}
+	
 	if( http_req->body_size > 0 )
 	{
 		struct xt_parser *parser;
