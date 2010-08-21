@@ -332,8 +332,9 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	else if( strcmp( cmd[0], "NLN" ) == 0 )
 	{
 		const struct msn_away_state *st;
+		int cap;
 		
-		if( num_parts < 5 )
+		if( num_parts < 6 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
@@ -341,6 +342,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		http_decode( cmd[4] );
+		cap = atoi( cmd[5] );
 		imcb_rename_buddy( ic, cmd[2], cmd[4] );
 		
 		st = msn_away_state_by_code( cmd[1] );
@@ -351,7 +353,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN | 
-		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ),
+		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ) |
+		                   ( cap & 1 ? OPT_MOBILE : 0 ),
 		                   st->name, NULL );
 		
 		msn_sb_stop_keepalives( msn_sb_by_handle( ic, cmd[2] ) );
