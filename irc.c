@@ -102,12 +102,15 @@ irc_t *irc_new( int fd )
 	
 	s = set_add( &b->set, "allow_takeover", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "away_devoice", "true", set_eval_bw_compat, irc );
+	s->flags |= SET_HIDDEN;
 	s = set_add( &b->set, "away_reply_timeout", "3600", set_eval_int, irc );
 	s = set_add( &b->set, "charset", "utf-8", set_eval_charset, irc );
 	s = set_add( &b->set, "default_target", "root", NULL, irc );
 	s = set_add( &b->set, "display_namechanges", "false", set_eval_bool, irc );
 	s = set_add( &b->set, "display_timestamps", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "handle_unknown", "add_channel", NULL, irc );
+	s = set_add( &b->set, "last_version", NULL, NULL, irc );
+	s->flags |= SET_HIDDEN;
 	s = set_add( &b->set, "lcnicks", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "nick_format", "%-@nick", NULL, irc );
 	s = set_add( &b->set, "offline_user_quits", "true", set_eval_bool, irc );
@@ -121,7 +124,9 @@ irc_t *irc_new( int fd )
 	s = set_add( &b->set, "private", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "query_order", "lifo", NULL, irc );
 	s = set_add( &b->set, "root_nick", ROOT_NICK, set_eval_root_nick, irc );
+	s->flags |= SET_HIDDEN;
 	s = set_add( &b->set, "show_offline", "false", set_eval_bw_compat, irc );
+	s->flags |= SET_HIDDEN;
 	s = set_add( &b->set, "simulate_netsplit", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "timezone", "local", set_eval_timezone, irc );
 	s = set_add( &b->set, "to_char", ": ", set_eval_to_char, irc );
@@ -914,7 +919,7 @@ static char *set_eval_bw_compat( set_t *set, char *value )
 	else if( strcmp( set->key, "show_offline" ) == 0 && bool2int( value ) )
 		val = "online@,away+,offline";
 	else
-		return SET_INVALID;
+		val = "online+,away";
 	
 	for( l = irc->channels; l; l = l->next )
 	{

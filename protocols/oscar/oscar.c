@@ -898,6 +898,10 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 			flags |= OPT_AWAY;
 	}
 	
+	/* Maybe this should be done just for AIM contacts, not sure. */
+	if (info->flags & AIM_FLAG_WIRELESS)
+		flags |= OPT_MOBILE;
+	
 	if (info->present & AIM_USERINFO_PRESENT_ICQEXTSTATUS) {
 		if (!(info->icqinfo.status & AIM_ICQ_STATE_CHAT) &&
 		      (info->icqinfo.status != AIM_ICQ_STATE_NORMAL)) {

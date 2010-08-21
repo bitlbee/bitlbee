@@ -194,6 +194,13 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	else
 		bu->status = NULL;
 	
+	if( bu->status == NULL && ( flags & OPT_MOBILE ) &&
+	    set_getbool( &bee->set, "mobile_is_away" ) )
+	{
+		bu->flags |= BEE_USER_AWAY;
+		bu->status = g_strdup( "Mobile" );
+	}
+	
 	if( bee->ui->user_status )
 		bee->ui->user_status( bee, bu, old );
 	
@@ -267,7 +274,7 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 		imcb_log( ic, "Message from unknown handle %s:\n%s", handle, msg );
 }
 
-void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags )
+void imcb_buddy_typing( struct im_connection *ic, const char *handle, uint32_t flags )
 {
 	bee_user_t *bu;
 	

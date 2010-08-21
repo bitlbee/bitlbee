@@ -828,6 +828,17 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="mobile_is_away" type="boolean" scope="global">
+		<default>false</default>
+
+		<description>
+			<para>
+				Most IM networks have a mobile version of their client. People who use these may not be paying that much attention to messages coming in. By enabling this setting, people using mobile clients will always be shown as away.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="nick" type="string" scope="chat">
 		<description>
 			<para>

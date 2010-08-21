@@ -55,10 +55,12 @@ typedef struct bee
 bee_t *bee_new();
 void bee_free( bee_t *b );
 
+/* TODO(wilmer): Kill at least the OPT_ flags that have an equivalent here. */
 typedef enum
 {
 	BEE_USER_ONLINE = 1,    /* Compatibility with old OPT_LOGGED_IN flag */
 	BEE_USER_AWAY = 4,      /* Compatibility with old OPT_AWAY flag */
+	BEE_USER_MOBILE = 8,    /* Compatibility with old OPT_MOBILE flag */
 	BEE_USER_LOCAL = 256,   /* Locally-added contacts (not in real contact list) */
 } bee_user_flags_t;
 

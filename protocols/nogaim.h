@@ -62,6 +62,7 @@
 #define OPT_LOGGED_IN   0x00000001
 #define OPT_LOGGING_OUT 0x00000002
 #define OPT_AWAY        0x00000004
+#define OPT_MOBILE      0x00000008
 #define OPT_DOES_HTML   0x00000010
 #define OPT_LOCALBUDDY  0x00000020 /* For nicks local to one groupchat */
 #define OPT_TYPING      0x00000100 /* Some pieces of code make assumptions */
@@ -311,7 +312,7 @@ G_MODULE_EXPORT struct buddy *imcb_find_buddy( struct im_connection *ic, char *h
 G_MODULE_EXPORT void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *realname );
 G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const char *nick );
 
-G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, char *handle, uint32_t flags );
+G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, const char *handle, uint32_t flags );
 G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle( struct im_connection *ic, const char *handle );
 G_MODULE_EXPORT void imcb_clean_handle( struct im_connection *ic, char *handle );
 
