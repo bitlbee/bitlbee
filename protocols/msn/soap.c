@@ -553,17 +553,11 @@ static xt_status msn_soap_memlist_member( struct xt_node *node, gpointer data )
 	else if( strcmp( role, "Block" ) == 0 )
 		bd->flags |= MSN_BUDDY_BL;
 	else if( strcmp( role, "Reverse" ) == 0 )
-	{
 		bd->flags |= MSN_BUDDY_RL;
-		msn_buddy_ask( bu );
-	}
 	else if( strcmp( role, "Pending" ) == 0 )
-	{
 		bd->flags |= MSN_BUDDY_PL;
-		msn_buddy_ask( bu );
-	}
 	
-	printf( "%s %d\n", handle, bd->flags );
+	printf( "%p %s %d\n", bu, handle, bd->flags );
 	
 	return XT_HANDLED;
 }
@@ -782,7 +776,18 @@ static const struct xt_handler_entry msn_soap_addressbook_parser[] = {
 
 static int msn_soap_addressbook_handle_response( struct msn_soap_req_data *soap_req )
 {
+	GSList *l;
+	
+	for( l = soap_req->ic->bee->users; l; l = l->next )
+	{
+		struct bee_user *bu = l->data;
+		
+		if( bu->ic == soap_req->ic )
+			msn_buddy_ask( bu );
+	}
+	
 	msn_auth_got_contact_list( soap_req->ic );
+	
 	return MSN_SOAP_OK;
 }
 

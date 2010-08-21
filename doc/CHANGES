@@ -3,7 +3,7 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
-Version 1.3dev:
+Version ...
 - For the first time since 2007, a dev snapshot. Like then, this is pretty
   stable already (running on testing.bitlbee.org for weeks by now), but not
   all planned features for the next major release are ready yet, and there
@@ -51,6 +51,11 @@ Version 1.3dev:
   * Switching to libpurple should be pretty transparent. See "help purple"
     for a list of supported protocols (works only in libpurple-enabled
     binaries).
+- Rewritten MSN module, implementing MSNP15 instead of the old MSNP8:
+  * MSNP8 support from MSN was getting pretty unreliable. There were issues
+    with remembering display names and adding contacts/auth requests.
+  * Support for sending offline messages.
+  * Support for setting and reading status messages.
 - Support for file transfers, in and out. /DCC SEND a file to a contact and
   it becomes a file transfer, and incoming file transfers become /DCC SENDs
   to you. Note that this is mostly useful when combined with libpurple, as
@@ -58,7 +63,7 @@ Version 1.3dev:
 - Updated Yahoo! module to be in sync again with libyahoo2. This mostly
   fixes issues with authorization requests.
 
-Finished 6 Aug 2010
+Finished ...
 
 Version 1.2.8:
 - Now always using the AIM-style authentication method for OSCAR connections,

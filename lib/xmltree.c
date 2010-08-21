@@ -337,7 +337,11 @@ void xt_print( struct xt_node *node )
 	
 	/* Print the attributes */
 	for( i = 0; node->attr[i].key; i ++ )
-		printf( " %s=\"%s\"", node->attr[i].key, g_markup_escape_text( node->attr[i].value, -1 ) );
+	{
+		char *v = g_markup_escape_text( node->attr[i].value, -1 );
+		printf( " %s=\"%s\"", node->attr[i].key, v );
+		g_free( v );
+	}
 	
 	/* /> in case there's really *nothing* inside this tag, otherwise
 	   just >. */
@@ -357,7 +361,11 @@ void xt_print( struct xt_node *node )
 	{
 		for( i = 0; node->text[i] && isspace( node->text[i] ); i ++ );
 		if( node->text[i] )
-			printf( "%s", g_markup_escape_text( node->text, -1 ) );
+		{
+			char *v = g_markup_escape_text( node->text, -1 );
+			printf( "%s", v );
+			g_free( v );
+		}
 	}
 	
 	if( node->children )

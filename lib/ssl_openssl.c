@@ -206,7 +206,7 @@ int ssl_read( void *conn, char *buf, int len )
 			ssl_errno = SSL_AGAIN;
 	}
 	
-	if( getenv( "BITLBEE_DEBUG" ) && st > 0 ) write( 1, buf, st );
+	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) write( 1, buf, st );
 	
 	return st;
 }
@@ -223,7 +223,7 @@ int ssl_write( void *conn, const char *buf, int len )
 	
 	st = SSL_write( ((struct scd*)conn)->ssl, buf, len );
 	
-	if( getenv( "BITLBEE_DEBUG" ) && st > 0 ) write( 1, buf, st );
+	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) write( 1, buf, st );
 	
 	ssl_errno = SSL_OK;
 	if( st <= 0 )
