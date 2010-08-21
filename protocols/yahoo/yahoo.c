@@ -588,6 +588,8 @@ void ext_yahoo_status_changed( int id, const char *who, int stat, const char *ms
 	
 	if( away )
 		flags |= OPT_AWAY;
+	if( mobile )
+		flags |= OPT_MOBILE;
 	
 	switch (stat)
 	{
