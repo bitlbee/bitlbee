@@ -266,6 +266,13 @@ static void cmd_showset( irc_t *irc, set_t **head, char *key )
 	
 	if( ( val = set_getstr( head, key ) ) )
 		irc_usermsg( irc, "%s = `%s'", key, val );
+	else if( !set_find( head, key ) )
+	{
+		irc_usermsg( irc, "Setting `%s' does not exist.", key );
+		if( *head == irc->b->set )
+			irc_usermsg( irc, "It might be an account or channel setting. "
+			             "See \x02help account set\x02 and \x02help channel set\x02." );
+	}
 	else
 		irc_usermsg( irc, "%s is empty", key );
 }
@@ -303,7 +310,8 @@ static int cmd_set_real( irc_t *irc, char **cmd, set_t **head, cmd_set_checkflag
 		else
 			st = set_setstr( head, set_name, value );
 		
-		if( set_getstr( head, set_name ) == NULL )
+		if( set_getstr( head, set_name ) == NULL &&
+		    set_find( head, set_name ) )
 		{
 			/* This happens when changing the passwd, for example.
 			   Showing these msgs instead gives slightly clearer
