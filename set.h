@@ -42,7 +42,11 @@ typedef char *(*set_eval) ( struct set *set, char *value );
 
 extern char *SET_INVALID;
 
-#define SET_NULL_OK        0x0100
+typedef enum
+{
+	SET_NULL_OK = 0x0100,
+	SET_HIDDEN = 0x0200,
+} set_flags_t;
 
 typedef struct set
 {
@@ -59,8 +63,7 @@ typedef struct set
 	                   In fact, you should only read values using
 	                   set_getstr/int(). */
 	
-	int flags;      /* See account.h, for example. set.c doesn't use
-	                   this (yet?). */
+	set_flags_t flags; /* Mostly defined per user. */
 	
 	/* Eval: Returns SET_INVALID if the value is incorrect, exactly
 	   the passed value variable, or a corrected value. In case of

@@ -758,6 +758,7 @@ static gboolean control_channel_free( irc_channel_t *ic )
 	set_del( &ic->set, "fill_by" );
 	set_del( &ic->set, "group" );
 	set_del( &ic->set, "protocol" );
+	set_del( &ic->set, "show_users" );
 	
 	g_free( icc );
 	ic->data = NULL;

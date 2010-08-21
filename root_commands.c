@@ -99,6 +99,7 @@ static void cmd_help( irc_t *irc, char **cmd )
 }
 
 static void cmd_account( irc_t *irc, char **cmd );
+static void bitlbee_whatsnew( irc_t *irc );
 
 static void cmd_identify( irc_t *irc, char **cmd )
 {
@@ -154,6 +155,8 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		irc_setpass( irc, password );
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set( irc, "+R", 1 );
+		
+		bitlbee_whatsnew( irc );
 		
 		/* The following code is a bit hairy now. With takeover
 		   support, we shouldn't immediately auto_connect in case
@@ -335,7 +338,8 @@ static int cmd_set_real( irc_t *irc, char **cmd, set_t **head, cmd_set_checkflag
 		set_t *s = *head;
 		while( s )
 		{
-			cmd_showset( irc, &s, s->key );
+			if( !( s->flags & SET_HIDDEN ) )
+				cmd_showset( irc, &s, s->key );
 			s = s->next;
 		}
 	}
@@ -1277,6 +1281,45 @@ static void cmd_transfer( irc_t *irc, char **cmd )
 			break;
 		}
 	}
+}
+
+/* Maybe this should be a stand-alone command as well? */
+static void bitlbee_whatsnew( irc_t *irc )
+{
+	int last = set_getint( &irc->b->set, "last_version" );
+	GString *msg = g_string_new( "" );
+	char s[16];
+	
+	if( last >= BITLBEE_VERSION_CODE )
+		return;
+	
+	if( last < 0x010206 ) /* 1.2.6 */
+	{
+		g_string_append( msg,
+			"Twitter support. See \x02help account add twitter\x02.\n" );
+	}
+	if( last < 0x010300 ) /* 1.3dev */
+	{
+		g_string_append( msg,
+			"Support for multiple configurable control channels, "
+			"each with a subset of your contact list. See "
+			"\x02help channels\x02 for more information.\n"
+			"File transfer support for some protocols (more if "
+			"you use libpurple). Just /DCC SEND stuff. Incoming "
+			"files also become DCC transfers.\n"
+			"Many more things, briefly described in "
+			"\x02help news1.3\x02.\n" );
+	}
+	
+	if( msg->len > 0 )
+		irc_usermsg( irc, "%s: This seems to be your first time using this "
+		                  "this version of BitlBee. Here's a list of new "
+		                  "features you may like to know about:\n\n%s\n",
+		                  irc->user->nick, msg->str );
+	
+	g_string_free( msg, TRUE );
+	g_snprintf( s, sizeof( s ), "%d", BITLBEE_VERSION_CODE );
+	set_setstr( &irc->b->set, "last_version", s );
 }
 
 /* IMPORTANT: Keep this list sorted! The short command logic needs that. */

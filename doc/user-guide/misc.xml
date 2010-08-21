@@ -233,4 +233,46 @@ everything in the handle up to the first @.
 
 </sect1>
 
+<sect1 id="news1.3">
+<title>New stuff in BitlBee 1.3dev</title>
+
+<para>
+Most of the core of BitlBee was rewritten since the last release. This entry
+should sum up the majority of the changes.
+</para>
+
+<para>
+First of all, you can now have as many control channels as you want. Or you
+can have none, it's finally possible to leave &amp;bitlbee and still talk to
+all your contacts. Or you can have a &amp;work with all your work-related
+contacts, or a &amp;msn with all your MSN Messenger contacts. See <emphasis>help
+channels</emphasis> for more information about this.
+</para>
+
+<para>
+Also, you can change how nicknames are generated for your contacts. Like
+automatically adding a [fb] tag to the nicks of all your Facebook contacts.
+See <emphasis>help nick_format</emphasis>.
+</para>
+
+<para>
+When you're already connected to a BitlBee server and you connect from
+elsewhere, you can take over the old session.
+</para>
+
+<para>
+Instead of account numbers, accounts now also get tags. These are
+automatically generated but can be changed (<emphasis>help set
+tag</emphasis>). You can now use them instead of accounts numbers.
+(Example: <emphasis>acc gtalk on</emphasis>)
+</para>
+
+<para>
+Last of all: You can finally change your nickname and
+shorten root commands (try <emphasis>acc li</emphasis> instead
+of <emphasis>account list</emphasis>).
+</para>
+
+</sect1>
+
 </chapter>
