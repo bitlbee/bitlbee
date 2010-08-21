@@ -189,6 +189,13 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	bu->status = g_strdup( ( flags & OPT_AWAY ) && state == NULL ? "Away" : state );
 	bu->status_msg = g_strdup( message );
 	
+	if( bu->status == NULL && ( flags & OPT_MOBILE ) &&
+	    set_getbool( &bee->set, "mobile_is_away" ) )
+	{
+		bu->flags |= BEE_USER_AWAY;
+		bu->status = g_strdup( "Mobile" );
+	}
+	
 	if( bee->ui->user_status )
 		bee->ui->user_status( bee, bu, old );
 	
