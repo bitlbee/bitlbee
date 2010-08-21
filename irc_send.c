@@ -326,7 +326,7 @@ void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char
 void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const char *msg )
 {
 	irc_write( iu->irc, ":%s!%s@%s %s %s :%s",
-	           iu->nick, iu->user, iu->host, type, dst, msg );
+	           iu->nick, iu->user, iu->host, type, dst, msg && *msg ? msg : " " );
 }
 
 void irc_send_msg_f( irc_user_t *iu, const char *type, const char *dst, const char *format, ... )
