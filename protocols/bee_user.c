@@ -222,7 +222,7 @@ void imcb_buddy_status_msg( struct im_connection *ic, const char *handle, const 
 	
 	old = g_memdup( bu, sizeof( bee_user_t ) );
 	
-	bu->status_msg = g_strdup( message );
+	bu->status_msg = message && *message ? g_strdup( message ) : NULL;
 	
 	if( bee->ui->user_status )
 		bee->ui->user_status( bee, bu, old );

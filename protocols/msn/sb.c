@@ -751,8 +751,8 @@ static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int
 #endif
 		else if( g_strncasecmp( ct, "application/x-msnmsgrp2p", 24 ) == 0 ) 
 		{
-			imcb_error( sb->ic, "Cannot receive file from %s: BitlBee does not "
-					"support msnmsgrp2p yet.", sb->who );
+			/* Not currently implemented. Don't warn about it since
+			   this seems to be used for avatars now. */
 			g_free( ct );
 		}
 		else if( g_strncasecmp( ct, "text/x-msmsgscontrol", 20 ) == 0 )
