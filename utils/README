@@ -17,33 +17,10 @@ at once.
 Of course this program can be used for other programs too, not just BitlBee.
 
 
-* create_nicksfile.pl (Christian Friedl <christian.friedl@chello.at>)
+* convert_purple.py
 
-This program reads your ~/.licq/ configuration data and convert it to a
-correct .nicks file. This program can be extended to read other contact
-list file formats as well.
-
-
-* centericq2bitlbee.sh (geno <geno@xenyon.com>)
-
-Converter script for CenterICQ ICQ contact lists. See the documentation
-for more information.
-
-
-* convert_gnomeicu.txt
-
-Not a program, but this one contains a regex which should correctly
-convert GnomeICU configuration files into the BitlBee format.
-
-
-* Dynamic MOTD for BitlBee (Geert Hauwaerts <geert@hauwaerts.be>)
-
-Originally, I wanted to put this program here, but Geert put it online
-on his own server, with docs and stuff, so I guess it's better to put
-a link here. dmotd is a little script which generates a motd with some
-nice statistics, especially nice for servers with many people on it.
-
-See http://dmotd.hauwaerts.be/ for more information.
+Converts libpurple configs into something BitlBee can use, so you don't
+have to re-add all your accounts by hand.
 
 
 * BitlBee-specific Irssi scripts for: tab completion, typing notifica-
