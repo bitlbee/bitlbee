@@ -372,7 +372,7 @@ static xt_status twitter_xt_get_user_list( struct xt_node *node, struct twitter_
  */
 static xt_status twitter_xt_get_status( struct xt_node *node, struct twitter_xml_status *txs )
 {
-	struct xt_node *child, *rt;
+	struct xt_node *child, *rt = NULL;
 	gboolean truncated = FALSE;
 
 	// Walk over the nodes children.
