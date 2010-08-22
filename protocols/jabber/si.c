@@ -261,6 +261,10 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 				requestok = TRUE;
 				break;
 			}
+			else
+			{
+				c = c->next;
+			}
 
 		if ( !requestok )
 			imcb_log( ic, "WARNING: Unsupported file transfer request from %s", ini_jid);
