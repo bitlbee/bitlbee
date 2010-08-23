@@ -66,6 +66,10 @@ DEPENDENCIES
 BitlBee's only real dependency is GLib. This is available on virtually every
 platform. Any recent version of GLib (2.4 or higher) will work.
 
+Off-the-Record encryption support will be included by default if the
+configure script finds libotr in one of the usual places. You can pass
+--otr=1 or --otr=0 to force it on or off, respectively.
+
 These days, MSN Messenger clients have to connect to the MS Passport servers
 through HTTPS. BitlBee can use several SSL libraries for this: GnuTLS, NSS
 (which comes with Mozilla) and OpenSSL. OpenSSL is not GPL-compatible in some
@@ -144,8 +148,8 @@ More documentation on the Wiki:
 http://wiki.bitlbee.org/
 
 
-A NOTE ON ENCRYPTION
-====================
+A NOTE ON PASSWORD ENCRYPTION
+=============================
 
 There used to be a note here about the simple obfuscation method used to
 make the passwords in the configuration files unreadable. However, BitlBee

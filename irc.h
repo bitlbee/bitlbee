@@ -26,8 +26,10 @@
 #ifndef _IRC_H
 #define _IRC_H
 
+#include "otr.h"
+
 #define IRC_MAX_LINE 512
-#define IRC_MAX_ARGS 8
+#define IRC_MAX_ARGS 16
 
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"
@@ -84,6 +86,8 @@ typedef struct irc
 	gint w_watch_source_id;
 	gint ping_source_id;
 	gint login_source_id; /* To slightly delay some events at login time. */
+	
+	otr_t *otr;            /* OTR state and book keeping */
 	
 	struct bee *b;
 } irc_t;

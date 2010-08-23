@@ -29,10 +29,10 @@
 
 static log_t logoutput;
 
-static void log_null(int level, char *logmessage);
-static void log_irc(int level, char *logmessage);
-static void log_syslog(int level, char *logmessage);
-static void log_console(int level, char *logmessage);
+static void log_null(int level, const char *logmessage);
+static void log_irc(int level, const char *logmessage);
+static void log_syslog(int level, const char *logmessage);
+static void log_console(int level, const char *logmessage);
 
 void log_init(void) {
 	openlog("bitlbee", LOG_PID, LOG_DAEMON);	
@@ -96,7 +96,7 @@ void log_link(int level, int output) {
 
 }
 
-void log_message(int level, char *message, ... ) {
+void log_message(int level, const char *message, ... ) {
 
 	va_list ap;
 	char *msgstring;
@@ -121,17 +121,17 @@ void log_message(int level, char *message, ... ) {
 	return;
 }
 
-void log_error(char *functionname) {
+void log_error(const char *functionname) {
 	log_message(LOGLVL_ERROR, "%s: %s", functionname, strerror(errno));
 	
 	return;
 }
 
-static void log_null(int level, char *message) {
+static void log_null(int level, const char *message) {
 	return;
 }
 
-static void log_irc(int level, char *message) {
+static void log_irc(int level, const char *message) {
 	if(level == LOGLVL_ERROR)
 		irc_write_all(1, "ERROR :Error: %s", message);
 	if(level == LOGLVL_WARNING)
@@ -146,7 +146,7 @@ static void log_irc(int level, char *message) {
 	return;
 }
 
-static void log_syslog(int level, char *message) {
+static void log_syslog(int level, const char *message) {
 	if(level == LOGLVL_ERROR)
 		syslog(LOG_ERR, "%s", message);
 	if(level == LOGLVL_WARNING)
@@ -160,7 +160,7 @@ static void log_syslog(int level, char *message) {
 	return;
 }
 
-static void log_console(int level, char *message) {
+static void log_console(int level, const char *message) {
 	if(level == LOGLVL_ERROR)
 		fprintf(stderr, "Error: %s\n", message);
 	if(level == LOGLVL_WARNING)

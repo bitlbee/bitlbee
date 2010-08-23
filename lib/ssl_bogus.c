@@ -27,6 +27,10 @@
 
 int ssl_errno;
 
+void ssl_init( void )
+{
+}
+
 void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
 {
 	return( NULL );
@@ -59,6 +63,11 @@ void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
 b_input_condition ssl_getdirection( void *conn )
 {
 	return B_EV_IO_READ;
+}
+
+int ssl_pending( void *conn )
+{
+	return 0;
 }
 
 int ssl_pending( void *conn )

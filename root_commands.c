@@ -28,6 +28,7 @@
 #include "bitlbee.h"
 #include "help.h"
 #include "ipc.h"
+#include "otr.h"
 
 void root_command_string( irc_t *irc, char *command )
 {
@@ -1338,6 +1339,7 @@ const command_t commands[] = {
 	{ "identify",       1, cmd_identify,       0 },
 	{ "info",           1, cmd_info,           0 },
 	{ "no",             0, cmd_yesno,          0 },
+	{ "otr",            1, cmd_otr,            0 },	
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "register",       1, cmd_register,       0 },
 	{ "remove",         1, cmd_remove,         0 },

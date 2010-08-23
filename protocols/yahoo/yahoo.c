@@ -378,6 +378,7 @@ void byahoo_initmodule( )
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
 	ret->name = "yahoo";
+    ret->mms = 832;           /* this guess taken from libotr UPGRADING file */
 	ret->init = byahoo_init;
 	
 	ret->login = byahoo_login;
