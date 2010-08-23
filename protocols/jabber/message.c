@@ -30,7 +30,7 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 	char *type = xt_find_attr( node, "type" );
 	struct xt_node *body = xt_find_node( node->children, "body" ), *c;
 	struct jabber_buddy *bud = NULL;
-	char *s;
+	char *s, *room = NULL, *reason = NULL;
 	
 	if( !from )
 		return XT_HANDLED; /* Consider this packet corrupted. */
@@ -51,19 +51,19 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 
 		for( c = node->children; ( c = xt_find_node( c, "x" ) ); c = c->next )
 		{
-			char *ns = xt_find_attr( c, "xmlns" ), *room;
-			struct xt_node *inv, *reason;
+			char *ns = xt_find_attr( c, "xmlns" );
+			struct xt_node *inv;
 			
 			if( ns && strcmp( ns, XMLNS_MUC_USER ) == 0 &&
 			    ( inv = xt_find_node( c->children, "invite" ) ) )
 			{
+				/* This is an invitation. Set some vars which
+				   will be passed to imcb_chat_invite() below. */
 				room = from;
 				if( ( from = xt_find_attr( inv, "from" ) ) == NULL )
 					from = room;
-
-				g_string_append_printf( fullmsg, "<< \002BitlBee\002 - Invitation to chatroom %s >>\n", room );
-				if( ( reason = xt_find_node( inv->children, "reason" ) ) && reason->text_len > 0 )
-					g_string_append( fullmsg, reason->text );
+				if( ( inv = xt_find_node( inv->children, "reason" ) ) && inv->text_len > 0 )
+					reason = inv->text;
 			}
 		}
 		
@@ -103,6 +103,8 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 		if( fullmsg->len > 0 )
 			imcb_buddy_msg( ic, from, fullmsg->str,
 			                0, jabber_get_timestamp( node ) );
+		if( room )
+			imcb_chat_invite( ic, room, from, reason );
 		
 		g_string_free( fullmsg, TRUE );
 		

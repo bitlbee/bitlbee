@@ -232,3 +232,11 @@ struct groupchat *bee_chat_by_title( bee_t *bee, struct im_connection *ic, const
 	
 	return NULL;
 }
+
+void imcb_chat_invite( struct im_connection *ic, const char *name, const char *who, const char *msg )
+{
+	bee_user_t *bu = bee_user_by_handle( ic->bee, ic, who );
+	
+	if( bu && ic->bee->ui->chat_invite )
+		ic->bee->ui->chat_invite( ic->bee, bu, name, msg );
+}

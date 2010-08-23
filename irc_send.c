@@ -397,3 +397,11 @@ void irc_send_channel_user_mode_diff( irc_channel_t *ic, irc_user_t *iu,
 	if( *changes )
 		irc_write( ic->irc, ":%s MODE %s %s", from, ic->name, changes );
 }
+
+void irc_send_invite( irc_user_t *iu, irc_channel_t *ic )
+{
+	irc_t *irc = iu->irc;
+	
+	irc_write( iu->irc, ":%s!%s@%s INVITE %s :%s",
+	           iu->nick, iu->user, iu->host, irc->user->nick, ic->name );
+}

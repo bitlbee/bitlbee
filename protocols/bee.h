@@ -122,6 +122,7 @@ typedef struct bee_ui_funcs
 	gboolean (*chat_remove_user)( bee_t *bee, struct groupchat *c, bee_user_t *bu );
 	gboolean (*chat_topic)( bee_t *bee, struct groupchat *c, const char *new, bee_user_t *bu );
 	gboolean (*chat_name_hint)( bee_t *bee, struct groupchat *c, const char *name );
+	gboolean (*chat_invite)( bee_t *bee, bee_user_t *bu, const char *name, const char *msg );
 	
 	struct file_transfer* (*ft_in_start)( bee_t *bee, bee_user_t *bu, const char *file_name, size_t file_size );
 	gboolean (*ft_out_start)( struct im_connection *ic, struct file_transfer *ft );
@@ -174,5 +175,6 @@ G_MODULE_EXPORT void imcb_chat_add_buddy( struct groupchat *c, const char *handl
 G_MODULE_EXPORT void imcb_chat_remove_buddy( struct groupchat *c, const char *handle, const char *reason );
 G_MODULE_EXPORT int bee_chat_msg( bee_t *bee, struct groupchat *c, const char *msg, int flags );
 G_MODULE_EXPORT struct groupchat *bee_chat_by_title( bee_t *bee, struct im_connection *ic, const char *title );
+G_MODULE_EXPORT void imcb_chat_invite( struct im_connection *ic, const char *name, const char *who, const char *msg );
 
 #endif /* __BEE_H__ */
