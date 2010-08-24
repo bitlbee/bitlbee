@@ -1,7 +1,0 @@
-15:03:38        zoo| wilmer: watch this:
-15:03:40        zoo| cat ~/.icq/contacts.xml | sed "s/<\/user>/\n/g" |
-                     sed "s/^.*<uin>//g" | sed "s/<\/nick>//" | sed "s/ /_/g" |
-                     sed "s/<\/uin><nick>/ 3 /g" | grep -v -e "^<"
-15:04:23        zoo| it does output your gnomeicu nicks to stdout
-
-Thanks to Claas Langbehn. Use this at your own risk, it's not tested by us.

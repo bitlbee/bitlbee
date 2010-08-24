@@ -281,6 +281,7 @@ void irc_send_msg_f( irc_user_t *iu, const char *type, const char *dst, const ch
 void irc_send_nick( irc_user_t *iu, const char *new );
 void irc_send_channel_user_mode_diff( irc_channel_t *ic, irc_user_t *iu,
                                       irc_channel_user_flags_t old, irc_channel_user_flags_t new );
+void irc_send_invite( irc_user_t *iu, irc_channel_t *ic );
 
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );
