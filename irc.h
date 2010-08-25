@@ -96,6 +96,9 @@ typedef enum
 {
 	/* Replaced with iu->last_channel IRC_USER_PRIVATE = 1, */
 	IRC_USER_AWAY = 2,
+	
+	IRC_USER_OTR_ENCRYPTED = 0x10000,
+	IRC_USER_OTR_TRUSTED   = 0x20000,
 } irc_user_flags_t;
 
 typedef struct irc_user

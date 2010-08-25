@@ -9,7 +9,7 @@
 -include Makefile.settings
 
 # Program variables
-objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o query.o root_commands.o set.o storage.o $(STORAGE_OBJS)
+objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o otr.o query.o root_commands.o set.o storage.o $(STORAGE_OBJS)
 headers = bitlbee.h commands.h conf.h config.h help.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h lib/events.h lib/ftutil.h lib/http_client.h lib/ini.h lib/md5.h lib/misc.h lib/proxy.h lib/sha1.h lib/ssl_client.h lib/url.h protocols/account.h protocols/bee.h protocols/ft.h protocols/nogaim.h
 subdirs = lib protocols
 
