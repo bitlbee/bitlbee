@@ -1463,44 +1463,44 @@
 		</description>
 	</bitlbee-command>
 	
-	<bitlbee-command name="transfers">
+	<bitlbee-command name="transfer">
 		<short-description>Monitor, cancel, or reject file transfers</short-description>
-		<syntax>transfers [&lt;cancel&gt; id | &lt;reject&gt;]</syntax>
+		<syntax>transfer [&lt;cancel&gt; id | &lt;reject&gt;]</syntax>
 		
 		<description>
 			<para>
-				Without parameters the currently pending file transfers and their status will be listed. Available actions are <emphasis>cancel</emphasis> and <emphasis>reject</emphasis>. See <emphasis>help transfers &lt;action&gt;</emphasis> for more information.
+				Without parameters the currently pending file transfers and their status will be listed. Available actions are <emphasis>cancel</emphasis> and <emphasis>reject</emphasis>. See <emphasis>help transfer &lt;action&gt;</emphasis> for more information.
 			</para>
 
 			<ircexample>
-				<ircline nick="ulim">transfers</ircline>
+				<ircline nick="ulim">transfer</ircline>
 			</ircexample>
 		</description>
 		
 		<bitlbee-command name="cancel">
 			<short-description>Cancels the file transfer with the given id</short-description>
-			<syntax>transfers &lt;cancel&gt; id</syntax>
+			<syntax>transfer &lt;cancel&gt; id</syntax>
 
 			<description>
 				<para>Cancels the file transfer with the given id</para>
 			</description>
 
 			<ircexample>
-				<ircline nick="ulim">transfers cancel 1</ircline>
+				<ircline nick="ulim">transfer cancel 1</ircline>
 				<ircline nick="root">Canceling file transfer for test</ircline>
 			</ircexample>
 		</bitlbee-command>
 
 		<bitlbee-command name="reject">
 			<short-description>Rejects all incoming transfers</short-description>
-			<syntax>transfers &lt;reject&gt;</syntax>
+			<syntax>transfer &lt;reject&gt;</syntax>
 
 			<description>
 				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is neccessary. Or is it?</para>
 			</description>
 
 			<ircexample>
-				<ircline nick="ulim">transfers reject</ircline>
+				<ircline nick="ulim">transfer reject</ircline>
 			</ircexample>
 		</bitlbee-command>
 	</bitlbee-command>
