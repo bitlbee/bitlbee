@@ -29,6 +29,7 @@ clean:
 	rm -f *.o core
 
 distclean: clean
+	rm -rf .depend
 
 ### MAIN PROGRAM
 
@@ -42,4 +43,4 @@ twitter_mod.o: $(objects)
 	@echo '*' Linking twitter_mod.o
 	@$(LD) $(LFLAGS) $(objects) -o twitter_mod.o
 	
-
+-include .depend/*.d

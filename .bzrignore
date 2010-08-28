@@ -19,3 +19,4 @@ tests/check
 coverage
 bitlbee.info
 bitlbee.exe
+.depend

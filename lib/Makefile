@@ -29,6 +29,7 @@ clean: $(subdirs)
 	rm -f *.o $(OUTFILE) core
 
 distclean: clean $(subdirs)
+	rm -rf .depend
 
 ### MAIN PROGRAM
 
@@ -41,3 +42,5 @@ $(objects): ../Makefile.settings Makefile
 $(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
+
+-include .depend/*.d
