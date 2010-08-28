@@ -83,7 +83,7 @@ const struct msn_status_code msn_status_code_list[] =
 	{ 230, "Cannot remove that group",                              0 },
 	{ 231, "Invalid group",                                         0 },
 	{ 240, "ADL/RML command with corrupted payload",                STATUS_FATAL },
-	{ 241, "ADL/RML command with invalid modification",             STATUS_FATAL },
+	{ 241, "ADL/RML command with invalid modification",             0 },
 	{ 280, "Switchboard failed",                                    STATUS_SB_FATAL },
 	{ 281, "Transfer to switchboard failed",                        0 },
 	
