@@ -518,6 +518,10 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
+		
+		/* Oh yes, errors can have payloads too now. Discard them for now. */
+		if( num_parts >= 3 )
+			md->handler->msglen = atoi( cmd[2] );
 	}
 	else
 	{

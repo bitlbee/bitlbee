@@ -251,7 +251,7 @@ void imcb_error( struct im_connection *ic, char *format, ... )
 	if( ic->flags & OPT_LOGGED_IN )
 		serv_got_crap( ic, "Error: %s", text );
 	else
-		serv_got_crap( ic, "Couldn't log in: %s", text );
+		serv_got_crap( ic, "Login error: %s", text );
 	
 	g_free( text );
 }
