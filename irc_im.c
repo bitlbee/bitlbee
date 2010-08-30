@@ -251,7 +251,6 @@ static gboolean bee_irc_user_nick_update( irc_user_t *iu );
 static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 {
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
-	irc_t *irc = (irc_t *) bee->ui_data;
 	char *s;
 	
 	if( iu->fullname != iu->nick )
@@ -265,8 +264,11 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 	
 	if( ( bu->ic->flags & OPT_LOGGED_IN ) && set_getbool( &bee->set, "display_namechanges" ) )
 	{
+		/* People don't like this /NOTICE. Meh, let's go back to the old one.
 		char *msg = g_strdup_printf( "<< \002BitlBee\002 - Changed name to `%s' >>", iu->fullname );
 		irc_send_msg( iu, "NOTICE", irc->user->nick, msg, NULL );
+		*/
+		imcb_log( bu->ic, "User `%s' changed name to `%s'", iu->nick, iu->fullname );
 	}
 	
 	bee_irc_user_nick_update( iu );
