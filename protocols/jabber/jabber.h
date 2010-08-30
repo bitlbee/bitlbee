@@ -58,6 +58,8 @@ typedef enum
 	                                   groupchat state info too. */
 	JBFLAG_IS_ANONYMOUS = 8,        /* For anonymous chatrooms, when we don't have
 	                                   have a real JID. */
+	JBFLAG_HIDE_SUBJECT = 16,       /* Hide the subject field since we probably
+	                                   showed it already. */
 } jabber_buddy_flags_t;
 
 /* Stores a streamhost's (a.k.a. proxy) data */
