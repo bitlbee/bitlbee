@@ -83,6 +83,7 @@ const char *op_account_name(void *opdata, const char *account, const char *proto
 
 /** otr sub-command handlers: **/
 
+static void cmd_otr(irc_t *irc, char **args);
 void cmd_otr_connect(irc_t *irc, char **args);
 void cmd_otr_disconnect(irc_t *irc, char **args);
 void cmd_otr_smp(irc_t *irc, char **args);
@@ -198,6 +199,8 @@ void otr_init(void)
 	global.otr_ops.max_message_size = &op_max_message_size;
 	global.otr_ops.account_name = &op_account_name;
 	global.otr_ops.account_name_free = NULL;
+	
+	root_command_add( "otr", 1, cmd_otr, 0 );
 }
 
 otr_t *otr_new(void)
@@ -417,7 +420,7 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	return st;
 }
 
-void cmd_otr(irc_t *irc, char **args)
+static void cmd_otr(irc_t *irc, char **args)
 {
 	const command_t *cmd;
 	

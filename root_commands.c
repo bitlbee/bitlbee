@@ -28,7 +28,6 @@
 #include "bitlbee.h"
 #include "help.h"
 #include "ipc.h"
-#include "otr.h"
 
 void root_command_string( irc_t *irc, char *command )
 {
@@ -55,17 +54,17 @@ void root_command( irc_t *irc, char *cmd[] )
 		return;
 	
 	len = strlen( cmd[0] );
-	for( i = 0; commands[i].command; i++ )
-		if( g_strncasecmp( commands[i].command, cmd[0], len ) == 0 )
+	for( i = 0; root_commands[i].command; i++ )
+		if( g_strncasecmp( root_commands[i].command, cmd[0], len ) == 0 )
 		{
-			if( commands[i+1].command &&
-		            g_strncasecmp( commands[i+1].command, cmd[0], len ) == 0 )
+			if( root_commands[i+1].command &&
+		            g_strncasecmp( root_commands[i+1].command, cmd[0], len ) == 0 )
 		        	/* Only match on the first letters if the match is unique. */
 		        	break;
 		        
-			MIN_ARGS( commands[i].required_parameters );
+			MIN_ARGS( root_commands[i].required_parameters );
 			
-			commands[i].execute( irc, cmd );
+			root_commands[i].execute( irc, cmd );
 			return;
 		}
 	
@@ -1324,7 +1323,7 @@ static void bitlbee_whatsnew( irc_t *irc )
 }
 
 /* IMPORTANT: Keep this list sorted! The short command logic needs that. */
-const command_t commands[] = {
+command_t root_commands[] = {
 	{ "account",        1, cmd_account,        0 },
 	{ "add",            2, cmd_add,            0 },
 	{ "allow",          1, cmd_allow,          0 },
@@ -1339,7 +1338,6 @@ const command_t commands[] = {
 	{ "identify",       1, cmd_identify,       0 },
 	{ "info",           1, cmd_info,           0 },
 	{ "no",             0, cmd_yesno,          0 },
-	{ "otr",            1, cmd_otr,            0 },	
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "register",       1, cmd_register,       0 },
 	{ "remove",         1, cmd_remove,         0 },
@@ -1348,5 +1346,42 @@ const command_t commands[] = {
 	{ "set",            0, cmd_set,            0 },
 	{ "transfer",       0, cmd_transfer,       0 },
 	{ "yes",            0, cmd_yesno,          0 },
-	{ NULL }
+	/* Not expecting too many plugins adding root commands so just make a
+	   dumb array with some empty entried at the end. */
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
+	{ NULL },
 };
+static const int num_root_commands = sizeof( root_commands ) / sizeof( command_t );
+
+gboolean root_command_add( const char *command, int params, void (*func)(irc_t *, char **args), int flags )
+{
+	int i;
+	
+	if( root_commands[num_root_commands-2].command )
+		/* Planning fail! List is full. */
+		return FALSE;
+	
+	for( i = 0; root_commands[i].command; i++ )
+	{
+		if( g_strcasecmp( root_commands[i].command, command ) == 0 )
+			return FALSE;
+		else if( g_strcasecmp( root_commands[i].command, command ) > 0 )
+			break;
+	}
+	memmove( root_commands + i + 1, root_commands + i,
+	         sizeof( command_t ) * ( num_root_commands - i - 1 ) );
+	
+	root_commands[i].command = g_strdup( command );
+	root_commands[i].required_parameters = params;
+	root_commands[i].execute = func;
+	root_commands[i].flags = flags;
+	
+	return TRUE;
+}

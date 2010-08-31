@@ -39,9 +39,6 @@ struct irc;
 struct im_connection;
 struct account;
 
-// 'otr' root command, hooked up in root_commands.c
-void cmd_otr(struct irc *, char **args);
-
 
 #ifdef WITH_OTR
 #include <libotr/proto.h>
