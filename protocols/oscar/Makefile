@@ -30,6 +30,7 @@ clean:
 	rm -f *.o core
 
 distclean: clean
+	rm -rf .depend
 
 ### MAIN PROGRAM
 
@@ -42,3 +43,5 @@ $(objects): %.o: $(SRCDIR)%.c
 oscar_mod.o: $(objects)
 	@echo '*' Linking oscar_mod.o
 	@$(LD) $(LFLAGS) $(objects) -o oscar_mod.o
+
+-include .depend/*.d

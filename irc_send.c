@@ -263,7 +263,7 @@ void irc_send_whois( irc_user_t *iu )
 
 void irc_send_who( irc_t *irc, GSList *l, const char *channel )
 {
-	gboolean is_channel = strcmp( channel, "**" ) != 0;
+	gboolean is_channel = strchr( CTYPES, channel[0] ) != NULL;
 	
 	while( l )
 	{
@@ -272,7 +272,7 @@ void irc_send_who( irc_t *irc, GSList *l, const char *channel )
 			iu = ((irc_channel_user_t*)iu)->iu;
 		/* TODO(wilmer): Restore away/channel information here */
 		irc_send_num( irc, 352, "%s %s %s %s %s %c :0 %s",
-		              channel ? : "*", iu->user, iu->host, irc->root->host,
+		              is_channel ? channel : "*", iu->user, iu->host, irc->root->host,
 		              iu->nick, iu->flags & IRC_USER_AWAY ? 'G' : 'H',
 		              iu->fullname );
 		l = l->next;
@@ -396,4 +396,12 @@ void irc_send_channel_user_mode_diff( irc_channel_t *ic, irc_user_t *iu,
 	
 	if( *changes )
 		irc_write( ic->irc, ":%s MODE %s %s", from, ic->name, changes );
+}
+
+void irc_send_invite( irc_user_t *iu, irc_channel_t *ic )
+{
+	irc_t *irc = iu->irc;
+	
+	irc_write( iu->irc, ":%s!%s@%s INVITE %s :%s",
+	           iu->nick, iu->user, iu->host, irc->user->nick, ic->name );
 }

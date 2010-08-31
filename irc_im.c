@@ -251,7 +251,6 @@ static gboolean bee_irc_user_nick_update( irc_user_t *iu );
 static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 {
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
-	irc_t *irc = (irc_t *) bee->ui_data;
 	char *s;
 	
 	if( iu->fullname != iu->nick )
@@ -265,8 +264,11 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 	
 	if( ( bu->ic->flags & OPT_LOGGED_IN ) && set_getbool( &bee->set, "display_namechanges" ) )
 	{
+		/* People don't like this /NOTICE. Meh, let's go back to the old one.
 		char *msg = g_strdup_printf( "<< \002BitlBee\002 - Changed name to `%s' >>", iu->fullname );
 		irc_send_msg( iu, "NOTICE", irc->user->nick, msg, NULL );
+		*/
+		imcb_log( bu->ic, "User `%s' changed name to `%s'", iu->nick, iu->fullname );
 	}
 	
 	bee_irc_user_nick_update( iu );
@@ -612,6 +614,63 @@ static gboolean bee_irc_chat_name_hint( bee_t *bee, struct groupchat *c, const c
 	return TRUE;
 }
 
+static gboolean bee_irc_chat_invite( bee_t *bee, bee_user_t *bu, const char *name, const char *msg )
+{
+	char *channel, *s;
+	irc_t *irc = bee->ui_data;
+	irc_user_t *iu = bu->ui_data;
+	irc_channel_t *chan;
+	
+	if( strchr( CTYPES, name[0] ) )
+		channel = g_strdup( name );
+	else
+		channel = g_strdup_printf( "#%s", name );
+	
+	if( ( s = strchr( channel, '@' ) ) )
+		*s = '\0';
+	
+	if( strlen( channel ) > MAX_NICK_LENGTH )
+	{
+		/* If the channel name is very long (like those insane GTalk
+		   UUID names), try if we can use the inviter's nick. */
+		s = g_strdup_printf( "#%s", iu->nick );
+		if( irc_channel_by_name( irc, s ) == NULL )
+		{
+			g_free( channel );
+			channel = s;
+		}
+	}
+	
+	if( ( chan = irc_channel_new( irc, channel ) ) &&
+	    set_setstr( &chan->set, "type", "chat" ) &&
+	    set_setstr( &chan->set, "chat_type", "room" ) &&
+	    set_setstr( &chan->set, "account", bu->ic->acc->tag ) &&
+	    set_setstr( &chan->set, "room", (char*) name ) )
+	{
+		/* I'm assuming that if the user didn't "chat add" the room
+		   himself but got invited, it's temporary, so make this a
+		   temporary mapping that is removed as soon as we /PART. */
+		chan->flags |= IRC_CHANNEL_TEMP;
+	}
+	else
+	{
+		irc_channel_free( chan );
+		chan = NULL;
+	}
+	g_free( channel );
+	
+	irc_send_msg_f( iu, "PRIVMSG", irc->user->nick, "<< \002BitlBee\002 - Invitation to chatroom %s >>", name );
+	if( msg )
+		irc_send_msg( iu, "PRIVMSG", irc->user->nick, msg, NULL );
+	if( chan )
+	{
+		irc_send_msg_f( iu, "PRIVMSG", irc->user->nick, "To join the room, just /join %s", chan->name );
+		irc_send_invite( iu, chan );
+	}
+	
+	return TRUE;
+}
+
 /* IRC->IM */
 static gboolean bee_irc_channel_chat_privmsg_cb( gpointer data, gint fd, b_input_condition cond );
 
@@ -908,6 +967,7 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_chat_remove_user,
 	bee_irc_chat_topic,
 	bee_irc_chat_name_hint,
+	bee_irc_chat_invite,
 	
 	bee_irc_ft_in_start,
 	bee_irc_ft_out_start,

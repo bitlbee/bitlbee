@@ -51,8 +51,11 @@ clean: $(subdirs)
 	$(MAKE) -C tests clean
 
 distclean: clean $(subdirs)
+	rm -rf .depend
 	rm -f Makefile.settings config.h bitlbee.pc
 	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -exec rm -f {} \;
+	@# May still be present in dirs of disabled protocols.
+	find . -name .depend | xargs -r rmdir
 	$(MAKE) -C tests distclean
 
 check: all
@@ -104,7 +107,7 @@ tar:
 	fakeroot debian/rules clean || make distclean
 	x=$$(basename $$(pwd)); \
 	cd ..; \
-	tar czf $$x.tar.gz --exclude=debian --exclude=.bzr* $$x
+	tar czf $$x.tar.gz --exclude=debian --exclude=.bzr* --exclude=.depend $$x
 
 $(subdirs):
 	@$(MAKE) -C $@ $(MAKECMDGOALS)
@@ -130,3 +133,5 @@ ctags:
 # make is available.
 helloworld:
 	@echo Hello World
+
+-include .depend/*.d

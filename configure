@@ -594,6 +594,14 @@ EOF
 	fi
 fi
 
+case "$CC" in
+*gcc* )
+	echo CFLAGS+=-MD -MF .depend/\$@.d >> Makefile.settings
+	for i in . lib protocols protocols/*/; do
+		mkdir -p $i/.depend
+	done
+esac
+
 if [ "$msn" = 0 ]; then
 	echo '#undef WITH_MSN' >> config.h
 else

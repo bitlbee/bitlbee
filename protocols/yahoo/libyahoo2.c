@@ -2168,6 +2168,18 @@ static void yahoo_process_buddyadd(struct yahoo_input_data *yid,
 
 	yd->buddies = y_list_append(yd->buddies, bud);
 
+#if 0
+	/* BitlBee: This seems to be wrong in my experience. I think:
+	   status = 0: Success
+	   status = 2: Already on list
+	   status = 3: Doesn't exist
+	   status = 42: Invalid handle (possibly banned/reserved, I get it for
+	                handles like joe or jjjjjj)
+	   Haven't seen others yet. But whenever the add is successful, there
+	   will be a separate "went online" packet when the auth. request is
+	   accepted. Couldn't find any test account that doesn't require auth.
+	   unfortunately (if there is even such a thing?) */
+	   
 	/* A non-zero status (i've seen 2) seems to mean the buddy is already 
 	 * added and is online */
 	if (status) {
@@ -2175,6 +2187,13 @@ static void yahoo_process_buddyadd(struct yahoo_input_data *yid,
 		yahoo_dump_unhandled(pkt);
 		YAHOO_CALLBACK(ext_yahoo_status_changed) (yd->client_id, who,
 			YAHOO_STATUS_AVAILABLE, NULL, 0, 0, 0);
+	}
+#endif
+	/* BitlBee: Need ACK of added buddy, if it was successful. */
+	if (status == 0) {
+		YList *tmp = y_list_append(NULL, bud);
+		YAHOO_CALLBACK(ext_yahoo_got_buddies) (yd->client_id, tmp);
+		y_list_free(tmp);
 	}
 }
 

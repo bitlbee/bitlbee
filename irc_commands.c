@@ -301,11 +301,19 @@ static void irc_cmd_who( irc_t *irc, char **cmd )
 {
 	char *channel = cmd[1];
 	irc_channel_t *ic;
+	irc_user_t *iu;
 	
 	if( !channel || *channel == '0' || *channel == '*' || !*channel )
 		irc_send_who( irc, irc->users, "**" );
 	else if( ( ic = irc_channel_by_name( irc, channel ) ) )
 		irc_send_who( irc, ic->users, channel );
+	else if( ( iu = irc_user_by_name( irc, channel ) ) )
+	{
+		/* Tiny hack! */
+		GSList *l = g_slist_append( NULL, iu );
+		irc_send_who( irc, l, channel );
+		g_slist_free( l );
+	}
 	else
 		irc_send_num( irc, 403, "%s :No such channel", channel );
 }

@@ -1283,6 +1283,11 @@ static void cmd_transfer( irc_t *irc, char **cmd )
 	}
 }
 
+static void cmd_nick( irc_t *irc, char **cmd )
+{
+	irc_usermsg( irc, "This command is deprecated. Try: account %s set display_name", cmd[1] );
+}
+
 /* Maybe this should be a stand-alone command as well? */
 static void bitlbee_whatsnew( irc_t *irc )
 {
@@ -1337,6 +1342,7 @@ command_t root_commands[] = {
 	{ "help",           0, cmd_help,           0 }, 
 	{ "identify",       1, cmd_identify,       0 },
 	{ "info",           1, cmd_info,           0 },
+	{ "nick",           1, cmd_nick,           0 },
 	{ "no",             0, cmd_yesno,          0 },
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "register",       1, cmd_register,       0 },

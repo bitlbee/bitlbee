@@ -29,6 +29,7 @@ clean:
 	rm -f *.o core
 
 distclean: clean
+	rm -rf .depend
 
 ### MAIN PROGRAM
 
@@ -41,3 +42,5 @@ $(objects): %.o: $(SRCDIR)%.c
 jabber_mod.o: $(objects)
 	@echo '*' Linking jabber_mod.o
 	@$(LD) $(LFLAGS) $(objects) -o jabber_mod.o
+
+-include .depend/*.d
