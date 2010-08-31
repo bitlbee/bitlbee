@@ -71,10 +71,6 @@ typedef struct otr {
 /* called from main() */
 void otr_init(void);
 
-/* called from irc_new()/irc_free() */
-otr_t *otr_new();
-void otr_free(otr_t *otr);
-
 /* called by storage_* functions */
 void otr_load(struct irc *irc);
 void otr_save(struct irc *irc);
@@ -97,8 +93,6 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 typedef void otr_t;
 typedef void *OtrlMessageAppOps;
 
-#define otr_init() {}
-#define otr_new() (NULL)
 #define otr_free(otr) {}
 #define otr_load(irc) {}
 #define otr_save(irc) {}

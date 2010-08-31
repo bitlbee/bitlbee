@@ -26,8 +26,6 @@
 #ifndef _IRC_H
 #define _IRC_H
 
-#include "otr.h"
-
 #define IRC_MAX_LINE 512
 #define IRC_MAX_ARGS 16
 
@@ -87,7 +85,8 @@ typedef struct irc
 	gint ping_source_id;
 	gint login_source_id; /* To slightly delay some events at login time. */
 	
-	otr_t *otr;            /* OTR state and book keeping */
+	struct otr *otr; /* OTR state and book keeping, used by the OTR plugin.
+	                    TODO: Some mechanism for plugindata. */
 	
 	struct bee *b;
 } irc_t;
@@ -220,6 +219,26 @@ typedef enum
 	IRC_CDU_KICK,
 } irc_channel_del_user_type_t;
 
+/* These are a glued a little bit to the core/bee layer and a little bit to
+   IRC. The first user is OTR, and I guess at some point we'll get to shape
+   this a little bit more as other uses come up. */
+typedef struct irc_plugin
+{
+	/* Called at the end of irc_new(). Can be used to add settings, etc. */
+	gboolean (*irc_new)( irc_t *irc );
+	/* At the end of irc_free(). */
+	void (*irc_free)( irc_t *irc );
+	
+	/* Called by bee_irc_user_privmsg_cb(). Return NULL if you want to
+	   abort sending the msg. */
+	char* (*filter_msg_out)( irc_user_t *iu, const char *msg, int flags );
+	/* Called by bee_irc_user_msg(). Return NULL if you swallowed the
+	   message and don't want anything to go to the user. */
+	char* (*filter_msg_in)( irc_user_t *iu, const char *msg, int flags );
+} irc_plugin_t;
+
+extern GSList *irc_plugins; /* struct irc_plugin */
+
 /* irc.c */
 extern GSList *irc_connection_list;
 
@@ -244,6 +263,8 @@ void irc_desync( irc_t *irc );
 int irc_check_login( irc_t *irc );
 
 void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv );
+
+void register_irc_plugin( const struct irc_plugin *p );
 
 /* irc_channel.c */
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name );

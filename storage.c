@@ -27,7 +27,6 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
-#include "otr.h"
 
 extern storage_t storage_text;
 extern storage_t storage_xml;
@@ -114,10 +113,9 @@ storage_status_t storage_load (irc_t * irc, const char *password)
 		storage_status_t status;
 
 		status = st->load(irc, password);
-		if (status == STORAGE_OK) {
-			otr_load(irc);
+		if (status == STORAGE_OK)
 			return status;
-		}
+		
 		if (status != STORAGE_NO_SUCH_USER) 
 			return status;
 	}
@@ -138,8 +136,7 @@ storage_status_t storage_save (irc_t *irc, char *password, int overwrite)
 	} else if ((irc->status & USTATUS_IDENTIFIED) == 0) {
 		return STORAGE_NO_SUCH_USER;
 	}
-
-	otr_save(irc);
+	
 	st = ((storage_t *)global.storage->data)->save(irc, overwrite);
 	
 	if (password != NULL) {
@@ -165,9 +162,6 @@ storage_status_t storage_remove (const char *nick, const char *password)
 		if (status != STORAGE_NO_SUCH_USER && status != STORAGE_OK)
 			ret = status;
 	}
-	if (ret == STORAGE_OK) {
-		otr_remove(nick);
-	}
 	
 	return ret;
 }
@@ -181,14 +175,12 @@ storage_status_t storage_rename (const char *onick, const char *nnick, const cha
 	GList *gl = global.storage;
 	storage_t *primary_storage = gl->data;
 	irc_t *irc;
-	
+
 	/* First, try to rename in the current write backend, assuming onick 
 	 * is stored there */
 	status = primary_storage->rename(onick, nnick, password);
-	if (status != STORAGE_NO_SUCH_USER) {
-		otr_rename(onick, nnick);
+	if (status != STORAGE_NO_SUCH_USER)
 		return status;
-	}
 
 	/* Try to load from a migration backend and save to the current backend. 
 	 * Explicitly remove the account from the migration backend as otherwise 
@@ -212,7 +204,6 @@ storage_status_t storage_rename (const char *onick, const char *nnick, const cha
 	irc_free(irc);
 
 	storage_remove(onick, password);
-	otr_rename(onick, nnick);
 
 	return STORAGE_OK;
 }

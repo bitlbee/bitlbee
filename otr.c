@@ -108,6 +108,8 @@ typedef struct {
 	void *snd;
 } pair_t;	
 
+static OtrlMessageAppOps otr_ops;   /* collects interface functions required by OTR */
+
 
 /** misc. helpers/subroutines: **/
 
@@ -173,6 +175,9 @@ Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args);
 /* find a private key by fingerprint prefix (given as any number of hex strings) */
 OtrlPrivKey *match_privkey(irc_t *irc, const char **args);
 
+/* functions to be called for certain events */
+static const struct irc_plugin otr_plugin;
+
 
 /*** routines declared in otr.h: ***/
 
@@ -181,39 +186,52 @@ void otr_init(void)
 	OTRL_INIT;
 	
 	/* fill global OtrlMessageAppOps */
-	global.otr_ops.policy = &op_policy;
-	global.otr_ops.create_privkey = &op_create_privkey;
-	global.otr_ops.is_logged_in = &op_is_logged_in;
-	global.otr_ops.inject_message = &op_inject_message;
-	global.otr_ops.notify = NULL;
-	global.otr_ops.display_otr_message = &op_display_otr_message;
-	global.otr_ops.update_context_list = NULL;
-	global.otr_ops.protocol_name = NULL;
-	global.otr_ops.protocol_name_free = NULL;
-	global.otr_ops.new_fingerprint = &op_new_fingerprint;
-	global.otr_ops.write_fingerprints = &op_write_fingerprints;
-	global.otr_ops.gone_secure = &op_gone_secure;
-	global.otr_ops.gone_insecure = &op_gone_insecure;
-	global.otr_ops.still_secure = &op_still_secure;
-	global.otr_ops.log_message = &op_log_message;
-	global.otr_ops.max_message_size = &op_max_message_size;
-	global.otr_ops.account_name = &op_account_name;
-	global.otr_ops.account_name_free = NULL;
+	otr_ops.policy = &op_policy;
+	otr_ops.create_privkey = &op_create_privkey;
+	otr_ops.is_logged_in = &op_is_logged_in;
+	otr_ops.inject_message = &op_inject_message;
+	otr_ops.notify = NULL;
+	otr_ops.display_otr_message = &op_display_otr_message;
+	otr_ops.update_context_list = NULL;
+	otr_ops.protocol_name = NULL;
+	otr_ops.protocol_name_free = NULL;
+	otr_ops.new_fingerprint = &op_new_fingerprint;
+	otr_ops.write_fingerprints = &op_write_fingerprints;
+	otr_ops.gone_secure = &op_gone_secure;
+	otr_ops.gone_insecure = &op_gone_insecure;
+	otr_ops.still_secure = &op_still_secure;
+	otr_ops.log_message = &op_log_message;
+	otr_ops.max_message_size = &op_max_message_size;
+	otr_ops.account_name = &op_account_name;
+	otr_ops.account_name_free = NULL;
 	
 	root_command_add( "otr", 1, cmd_otr, 0 );
+	register_irc_plugin( &otr_plugin );
 }
 
-otr_t *otr_new(void)
+gboolean otr_irc_new(irc_t *irc)
 {
-	otr_t *otr = g_new0(otr_t, 1);
-
-	otr->us = otrl_userstate_create();
+	set_t *s;
+	GSList *l;
 	
-	return otr;
+	irc->otr = g_new0(otr_t, 1);
+	irc->otr->us = otrl_userstate_create();
+	
+	s = set_add( &irc->b->set, "otr_color_encrypted", "true", set_eval_bool, irc );
+	
+	s = set_add( &irc->b->set, "otr_policy", "oppurtunistic", set_eval_list, irc );
+	l = g_slist_prepend( NULL, "never" );
+	l = g_slist_prepend( l, "opportunistic" );
+	l = g_slist_prepend( l, "manual" );
+	l = g_slist_prepend( l, "always" );
+	s->eval_data = l;
+	
+	return TRUE;
 }
 
-void otr_free(otr_t *otr)
+void otr_irc_free(irc_t *irc)
 {
+	otr_t *otr = irc->otr;
 	otrl_userstate_free(otr->us);
 	if(otr->keygen) {
 		kill(otr->keygen, SIGTERM);
@@ -338,7 +356,7 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 		return (g_strdup(msg));
 	}
 	
-	ignore_msg = otrl_message_receiving(irc->otr->us, &global.otr_ops, ic,
+	ignore_msg = otrl_message_receiving(irc->otr->us, &otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, handle, msg, &newmsg,
 		&tlvs, NULL, NULL);
 
@@ -392,7 +410,7 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 		return (ic->acc->prpl->buddy_msg(ic, (char*) handle, (char*) msg, flags));
 	}
 	
-	st = otrl_message_sending(irc->otr->us, &global.otr_ops, ic,
+	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, handle,
 		msg, NULL, &otrmsg, NULL, NULL);
 	if(st) {
@@ -408,7 +426,7 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 			otrl_message_free(otrmsg);
 			return 1;
 		}
-		st = otrl_message_fragment_and_send(&global.otr_ops, ic, ctx,
+		st = otrl_message_fragment_and_send(&otr_ops, ic, ctx,
 			otrmsg, OTRL_FRAGMENT_SEND_ALL, NULL);
 		otrl_message_free(otrmsg);
 	} else {
@@ -419,6 +437,12 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	
 	return st;
 }
+
+static const struct irc_plugin otr_plugin =
+{
+	otr_irc_new,
+	otr_irc_free,
+};
 
 static void cmd_otr(irc_t *irc, char **args)
 {
@@ -662,7 +686,7 @@ void cmd_otr_disconnect(irc_t *irc, char **args)
 		return;
 	}
 	
-	otrl_message_disconnect(irc->otr->us, &global.otr_ops,
+	otrl_message_disconnect(irc->otr->us, &otr_ops,
 		u->bu->ic, u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, u->bu->handle);
 	
 	/* for some reason, libotr (3.1.0) doesn't do this itself: */
@@ -720,7 +744,7 @@ void cmd_otr_smp(irc_t *irc, char **args)
 		log_message(LOGLVL_INFO,
 			"SMP already in phase %d, sending abort before reinitiating",
 			ctx->smstate->nextExpected+1);
-		otrl_message_abort_smp(irc->otr->us, &global.otr_ops, u->bu->ic, ctx);
+		otrl_message_abort_smp(irc->otr->us, &otr_ops, u->bu->ic, ctx);
 		otrl_sm_state_free(ctx->smstate);
 	}
 	
@@ -728,14 +752,14 @@ void cmd_otr_smp(irc_t *irc, char **args)
 	   is completed or aborted! */ 
 	if(ctx->smstate->secret == NULL) {
 		irc_usermsg(irc, "smp: initiating with %s...", u->nick);
-		otrl_message_initiate_smp(irc->otr->us, &global.otr_ops,
+		otrl_message_initiate_smp(irc->otr->us, &otr_ops,
 			u->bu->ic, ctx, (unsigned char *)args[2], strlen(args[2]));
 		/* smp is now in EXPECT2 */
 	} else {
 		/* if we're still in EXPECT1 but smstate is initialized, we must have
 		   received the SMP1, so let's issue a response */
 		irc_usermsg(irc, "smp: responding to %s...", u->nick);
-		otrl_message_respond_smp(irc->otr->us, &global.otr_ops,
+		otrl_message_respond_smp(irc->otr->us, &otr_ops,
 			u->bu->ic, ctx, (unsigned char *)args[2], strlen(args[2]));
 		/* smp is now in EXPECT3 */
 	}
@@ -1049,7 +1073,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 {
 	irc_t *irc = ic->bee->ui_data;
 	OtrlUserState us = irc->otr->us;
-	OtrlMessageAppOps *ops = &global.otr_ops;
+	OtrlMessageAppOps *ops = &otr_ops;
 	OtrlTLV *tlv = NULL;
 	ConnContext *context;
 	NextExpectedSMP nextMsg;
