@@ -692,7 +692,7 @@ static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg
 		if( ( s = strchr( nick, ':' ) ) || ( s = strchr( nick, ',' ) ) )
 		{
 			*s = '\0';
-			if( ( iu = irc_user_by_name( ic->irc, nick ) ) &&
+			if( ( iu = irc_user_by_name( ic->irc, nick ) ) && iu->bu &&
 			    iu->bu->nick && irc_channel_has_user( ic, iu ) )
 			{
 				trans = g_strconcat( iu->bu->nick, msg + ( s - nick ), NULL );
