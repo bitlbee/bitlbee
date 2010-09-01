@@ -239,6 +239,13 @@ typedef struct irc_plugin
 	/* Called by bee_irc_user_msg(). Return NULL if you swallowed the
 	   message and don't want anything to go to the user. */
 	char* (*filter_msg_in)( irc_user_t *iu, char *msg, int flags );
+	
+	/* From storage.c functions. Ideally these should not be used
+	   and instead data should be stored in settings which will get
+	   saved automatically. Consider these deprecated! */
+	void (*storage_load)( irc_t *irc );
+	void (*storage_save)( irc_t *irc );
+	void (*storage_remove)( const char *nick );
 } irc_plugin_t;
 
 extern GSList *irc_plugins; /* struct irc_plugin */

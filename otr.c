@@ -447,6 +447,9 @@ static const struct irc_plugin otr_plugin =
 	otr_irc_free,
 	otr_filter_msg_out,
 	otr_filter_msg_in,
+	otr_load,
+	otr_save,
+	otr_remove,
 };
 
 static void cmd_otr(irc_t *irc, char **args)
@@ -1662,6 +1665,7 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 		/* okay, the slave is idle now, so kill him */
 		fclose(irc->otr->from);
 		fclose(irc->otr->to);
+		irc->otr->from = irc->otr->to = NULL;
 		kill(irc->otr->keygen, SIGTERM);
 		waitpid(irc->otr->keygen, NULL, 0);
 		irc->otr->keygen = 0;

@@ -114,7 +114,16 @@ storage_status_t storage_load (irc_t * irc, const char *password)
 
 		status = st->load(irc, password);
 		if (status == STORAGE_OK)
+		{
+			GSList *l;
+			for( l = irc_plugins; l; l = l->next )
+			{
+				irc_plugin_t *p = l->data;
+				if( p->storage_load )
+					p->storage_load( irc );
+			}
 			return status;
+		}
 		
 		if (status != STORAGE_NO_SUCH_USER) 
 			return status;
@@ -126,6 +135,7 @@ storage_status_t storage_load (irc_t * irc, const char *password)
 storage_status_t storage_save (irc_t *irc, char *password, int overwrite)
 {
 	storage_status_t st;
+	GSList *l;
 	
 	if (password != NULL) {
 		/* Should only use this in the "register" command. */
@@ -139,6 +149,13 @@ storage_status_t storage_save (irc_t *irc, char *password, int overwrite)
 	
 	st = ((storage_t *)global.storage->data)->save(irc, overwrite);
 	
+	for( l = irc_plugins; l; l = l->next )
+	{
+		irc_plugin_t *p = l->data;
+		if( p->storage_save )
+			p->storage_save( irc );
+	}
+	
 	if (password != NULL) {
 		irc_setpass(irc, NULL);
 	}
@@ -150,6 +167,8 @@ storage_status_t storage_remove (const char *nick, const char *password)
 {
 	GList *gl;
 	storage_status_t ret = STORAGE_OK;
+	gboolean ok = FALSE;
+	GSList *l;
 	
 	/* Remove this account from all storage backends. If this isn't 
 	 * done, the account will still be usable, it'd just be 
@@ -159,9 +178,19 @@ storage_status_t storage_remove (const char *nick, const char *password)
 		storage_status_t status;
 
 		status = st->remove(nick, password);
+		ok |= status == STORAGE_OK;
 		if (status != STORAGE_NO_SUCH_USER && status != STORAGE_OK)
 			ret = status;
 	}
+	
+	/* If at least one succeeded, remove plugin data. */
+	if( ok )
+		for( l = irc_plugins; l; l = l->next )
+		{
+			irc_plugin_t *p = l->data;
+			if( p->storage_remove )
+				p->storage_remove( nick );
+		}
 	
 	return ret;
 }
