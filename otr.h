@@ -40,7 +40,6 @@ struct im_connection;
 struct account;
 
 
-#ifdef WITH_OTR
 #include <libotr/proto.h>
 #include <libotr/message.h>
 #include <libotr/privkey.h>
@@ -80,29 +79,4 @@ void otr_rename(const char *onick, const char *nnick);
 /* called from account_add() */
 int otr_check_for_key(struct account *a);
 
-/* called from imcb_buddy_msg() */
-char *otr_handle_message(struct im_connection *ic, const char *handle,
-	const char *msg);
-	
-/* called from imc_buddy_msg() */
-int otr_send_message(struct im_connection *ic, const char *handle, const char *msg,
-	int flags);
-
-#else
-
-typedef void otr_t;
-typedef void *OtrlMessageAppOps;
-
-#define otr_free(otr) {}
-#define otr_load(irc) {}
-#define otr_save(irc) {}
-#define otr_remove(nick) {}
-#define otr_rename(onick,nnick) {}
-#define otr_check_for_key(acc) (0)
-#define otr_handle_message(ic,handle,msg) (g_strdup(msg))
-#define otr_send_message(ic,h,m,f) (ic->acc->prpl->buddy_msg(ic,h,m,f))
-
-void cmd_otr_nosupport(void *, char **);
-
-#endif
 #endif

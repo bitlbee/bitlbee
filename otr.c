@@ -343,24 +343,25 @@ int otr_check_for_key(account_t *a)
 	}
 }
 
-char *otr_handle_message(struct im_connection *ic, const char *handle, const char *msg)
+char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 {
 	int ignore_msg;
 	char *newmsg = NULL;
 	OtrlTLV *tlvs = NULL;
 	char *colormsg;
-	irc_t *irc = ic->bee->ui_data;
+	irc_t *irc = iu->irc;
+	struct im_connection *ic = iu->bu->ic;
 	
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
 	if(ic->acc->prpl->options & OPT_NOOTR) {
-		return (g_strdup(msg));
+		return msg;
 	}
 	
 	ignore_msg = otrl_message_receiving(irc->otr->us, &otr_ops, ic,
-		ic->acc->user, ic->acc->prpl->name, handle, msg, &newmsg,
+		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, msg, &newmsg,
 		&tlvs, NULL, NULL);
 
-	otr_handle_smp(ic, handle, tlvs);
+	otr_handle_smp(ic, iu->bu->handle, tlvs);
 	
 	if(ignore_msg) {
 		/* this was an internal OTR protocol message */
@@ -370,10 +371,10 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 		return g_strdup(msg);
 	} else {
 		/* OTR has processed this message */
-		ConnContext *context = otrl_context_find(irc->otr->us, handle,
+		ConnContext *context = otrl_context_find(irc->otr->us, iu->bu->handle,
 			ic->acc->user, ic->acc->prpl->name, 0, NULL, NULL, NULL);
 		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
-		   set_getbool(&ic->bee->set, "color_encrypted")) {
+		   set_getbool(&ic->bee->set, "otr_color_encrypted")) {
 			/* color according to f'print trust */
 			int color;
 			const char *trust = context->active_fingerprint->trust;
@@ -397,34 +398,34 @@ char *otr_handle_message(struct im_connection *ic, const char *handle, const cha
 	}
 }
 
-int otr_send_message(struct im_connection *ic, const char *handle, const char *msg, int flags)
+char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 {	
 	int st;
 	char *otrmsg = NULL;
 	ConnContext *ctx = NULL;
-	irc_t *irc = ic->bee->ui_data;
+	irc_t *irc = iu->irc;
+	struct im_connection *ic = iu->bu->ic;
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
 	if(ic->acc->prpl->options & OPT_NOOTR) {
-		/* TODO(wilmer): const */
-		return (ic->acc->prpl->buddy_msg(ic, (char*) handle, (char*) msg, flags));
+		return msg;
 	}
 	
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
-		ic->acc->user, ic->acc->prpl->name, handle,
+		ic->acc->user, ic->acc->prpl->name, iu->bu->handle,
 		msg, NULL, &otrmsg, NULL, NULL);
 	if(st) {
-		return st;
+		return NULL;
 	}
 
 	ctx = otrl_context_find(irc->otr->us,
-			handle, ic->acc->user, ic->acc->prpl->name,
+			iu->bu->handle, ic->acc->user, ic->acc->prpl->name,
 			1, NULL, NULL, NULL);
 
 	if(otrmsg) {
 		if(!ctx) {
 			otrl_message_free(otrmsg);
-			return 1;
+			return NULL;
 		}
 		st = otrl_message_fragment_and_send(&otr_ops, ic, ctx,
 			otrmsg, OTRL_FRAGMENT_SEND_ALL, NULL);
@@ -432,16 +433,20 @@ int otr_send_message(struct im_connection *ic, const char *handle, const char *m
 	} else {
 		/* note: otrl_message_sending handles policy, so that if REQUIRE_ENCRYPTION is set,
 		   this case does not occur */
-		st = ic->acc->prpl->buddy_msg( ic, (char *)handle, (char *)msg, flags );
+		return msg;
 	}
 	
-	return st;
+	/* TODO: Error reporting should be done here now (if st!=0), probably. */
+	
+	return NULL;
 }
 
 static const struct irc_plugin otr_plugin =
 {
 	otr_irc_new,
 	otr_irc_free,
+	otr_filter_msg_out,
+	otr_filter_msg_in,
 };
 
 static void cmd_otr(irc_t *irc, char **args)
@@ -715,7 +720,7 @@ void cmd_otr_connect(irc_t *irc, char **args)
 		return;
 	}
 	
-	/* TODO(wilmer): imc_buddy_msg(u->bu->ic, u->bu->handle, "?OTR?", 0); */
+	bee_user_msg(irc->b, u->bu, "?OTR?", 0);
 }
 
 void cmd_otr_smp(irc_t *irc, char **args)

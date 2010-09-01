@@ -237,10 +237,6 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 		}
 	}
 	
-	if( ( g_strcasecmp( set_getstr( &ic->bee->set, "strip_html" ), "always" ) == 0 ) ||
-	    ( ( ic->flags & OPT_DOES_HTML ) && set_getbool( &ic->bee->set, "strip_html" ) ) )
-		strip_html( msg );
-	
 	if( bee->ui->user_msg && bu )
 		bee->ui->user_msg( bee, bu, msg, sent_at );
 	else

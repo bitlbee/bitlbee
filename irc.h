@@ -229,12 +229,16 @@ typedef struct irc_plugin
 	/* At the end of irc_free(). */
 	void (*irc_free)( irc_t *irc );
 	
+	/* Problem with the following two functions is ordering if multiple
+	   plugins are handling them. Let's keep fixing that problem for
+	   whenever it becomes important. */
+	
 	/* Called by bee_irc_user_privmsg_cb(). Return NULL if you want to
 	   abort sending the msg. */
-	char* (*filter_msg_out)( irc_user_t *iu, const char *msg, int flags );
+	char* (*filter_msg_out)( irc_user_t *iu, char *msg, int flags );
 	/* Called by bee_irc_user_msg(). Return NULL if you swallowed the
 	   message and don't want anything to go to the user. */
-	char* (*filter_msg_in)( irc_user_t *iu, const char *msg, int flags );
+	char* (*filter_msg_in)( irc_user_t *iu, char *msg, int flags );
 } irc_plugin_t;
 
 extern GSList *irc_plugins; /* struct irc_plugin */
