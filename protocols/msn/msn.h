@@ -207,13 +207,13 @@ extern GSList *msn_connections;
 extern GSList *msn_switchboards;
 
 /* ns.c */
+int msn_ns_write( struct im_connection *ic, int fd, const char *fmt, ... );
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
 void msn_auth_got_passport_token( struct im_connection *ic, const char *token, const char *error );
 void msn_auth_got_contact_list( struct im_connection *ic );
 int msn_ns_finish_login( struct im_connection *ic );
 
 /* msn_util.c */
-int msn_write( struct im_connection *ic, char *s, int len );
 int msn_logged_in( struct im_connection *ic );
 int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *realname_, const char *group );
 int msn_buddy_list_remove( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *group );
@@ -235,7 +235,7 @@ const struct msn_away_state *msn_away_state_by_name( char *name );
 const struct msn_status_code *msn_status_by_number( int number );
 
 /* sb.c */
-int msn_sb_write( struct msn_switchboard *sb, char *s, int len );
+int msn_sb_write( struct msn_switchboard *sb, const char *fmt, ... );
 struct msn_switchboard *msn_sb_create( struct im_connection *ic, char *host, int port, char *key, int session );
 struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, char *handle );
 struct msn_switchboard *msn_sb_by_chat( struct groupchat *c );

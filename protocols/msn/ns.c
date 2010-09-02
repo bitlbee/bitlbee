@@ -37,11 +37,41 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 static void msn_ns_send_adl_start( struct im_connection *ic );
 static void msn_ns_send_adl( struct im_connection *ic );
 
+int msn_ns_write( struct im_connection *ic, int fd, const char *fmt, ... )
+{
+	struct msn_data *md = ic->proto_data;
+	va_list params;
+	char *out;
+	size_t len;
+	int st;
+	
+	va_start( params, fmt );
+	out = g_strdup_vprintf( fmt, params );
+	va_end( params );
+	
+	if( fd < 0 )
+		fd = md->fd;
+	
+	if( getenv( "BITLBEE_DEBUG" ) )
+		fprintf( stderr, "->NS%d:%s", fd, out );
+	
+	len = strlen( out );
+	st = write( fd, out, len );
+	g_free( out );
+	if( st != len )
+	{
+		imcb_error( ic, "Short write() to main server" );
+		imc_logout( ic, TRUE );
+		return 0;
+	}
+	
+	return 1;
+}
+
 gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct im_connection *ic = data;
 	struct msn_data *md;
-	char s[1024];
 	
 	if( !g_slist_find( msn_connections, ic ) )
 		return FALSE;
@@ -73,8 +103,7 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 	md->handler->fd = md->fd;
 	md->handler->rxq = g_new0( char, 1 );
 	
-	g_snprintf( s, sizeof( s ), "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER );
-	if( msn_write( ic, s, strlen( s ) ) )
+	if( msn_ns_write( ic, -1, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER ) )
 	{
 		ic->inpa = b_input_add( md->fd, B_EV_IO_READ, msn_ns_callback, ic );
 		imcb_log( ic, "Connected to server, waiting for reply" );
@@ -103,7 +132,6 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 {
 	struct im_connection *ic = data;
 	struct msn_data *md = ic->proto_data;
-	char buf[1024];
 	
 	if( num_parts == 0 )
 	{
@@ -120,15 +148,13 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			return( 0 );
 		}
 		
-		g_snprintf( buf, sizeof( buf ), "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s\r\n",
-		                                ++md->trId, ic->acc->user );
-		return( msn_write( ic, buf, strlen( buf ) ) );
+		return( msn_ns_write( ic, -1, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s\r\n",
+		                      ++md->trId, ic->acc->user ) );
 	}
 	else if( strcmp( cmd[0], "CVR" ) == 0 )
 	{
 		/* We don't give a damn about the information we just received */
-		g_snprintf( buf, sizeof( buf ), "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user );
-		return( msn_write( ic, buf, strlen( buf ) ) );
+		return msn_ns_write( ic, -1, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user );
 	}
 	else if( strcmp( cmd[0], "XFR" ) == 0 )
 	{
@@ -279,6 +305,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	else if( strcmp( cmd[0], "CHL" ) == 0 )
 	{
 		char *resp;
+		int st;
 		
 		if( num_parts < 3 )
 		{
@@ -288,12 +315,12 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		resp = msn_p11_challenge( cmd[2] );
-		g_snprintf( buf, sizeof( buf ), "QRY %d %s %zd\r\n%s",
-		            ++md->trId, MSNP11_PROD_ID,
-		            strlen( resp ), resp );
-		g_free( resp );
 		
-		return( msn_write( ic, buf, strlen( buf ) ) );
+		st =  msn_ns_write( ic, -1, "QRY %d %s %zd\r\n%s",
+		                    ++md->trId, MSNP11_PROD_ID,
+		                    strlen( resp ), resp );
+		g_free( resp );
+		return st;
 	}
 	else if( strcmp( cmd[0], "ILN" ) == 0 )
 	{
@@ -698,10 +725,7 @@ void msn_auth_got_passport_token( struct im_connection *ic, const char *token, c
 	
 	if( token )
 	{
-		char buf[1536];
-		
-		g_snprintf( buf, sizeof( buf ), "USR %d SSO S %s %s\r\n", ++md->trId, md->tokens[0], token );
-		msn_write( ic, buf, strlen( buf ) );
+		msn_ns_write( ic, -1, "USR %d SSO S %s %s\r\n", ++md->trId, md->tokens[0], token );
 	}
 	else
 	{
@@ -712,7 +736,6 @@ void msn_auth_got_passport_token( struct im_connection *ic, const char *token, c
 
 void msn_auth_got_contact_list( struct im_connection *ic )
 {
-	char buf[64];
 	struct msn_data *md;
 	
 	/* Dead connection? */
@@ -720,10 +743,7 @@ void msn_auth_got_contact_list( struct im_connection *ic )
 		return;
 	
 	md = ic->proto_data;
-	
-	
-	g_snprintf( buf, sizeof( buf ), "BLP %d %s\r\n", ++md->trId, "BL" );
-	msn_write( ic, buf, strlen( buf ) );
+	msn_ns_write( ic, -1, "BLP %d %s\r\n", ++md->trId, "BL" );
 }
 
 static gboolean msn_ns_send_adl_1( gpointer key, gpointer value, gpointer data )
@@ -769,7 +789,7 @@ static void msn_ns_send_adl( struct im_connection *ic )
 {
 	struct xt_node *adl;
 	struct msn_data *md = ic->proto_data;
-	char *adls, buf[64];
+	char *adls;
 	
 	adl = xt_new_node( "ml", NULL, NULL );
 	xt_add_attr( adl, "l", "1" );
@@ -781,12 +801,9 @@ static void msn_ns_send_adl( struct im_connection *ic )
 		xt_free_node( adl );
 		return;
 	}
+	
 	adls = xt_to_string( adl );
-	
-	g_snprintf( buf, sizeof( buf ), "ADL %d %zd\r\n", ++md->trId, strlen( adls ) );
-	if( msn_write( ic, buf, strlen( buf ) ) )
-		msn_write( ic, adls, strlen( adls ) );
-	
+	msn_ns_write( ic, -1, "ADL %d %zd\r\n%s", ++md->trId, strlen( adls ), adls );
 	g_free( adls );
 }
 

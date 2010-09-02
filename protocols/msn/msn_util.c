@@ -29,28 +29,6 @@
 #include "soap.h"
 #include <ctype.h>
 
-int msn_write( struct im_connection *ic, char *s, int len )
-{
-	struct msn_data *md = ic->proto_data;
-	int st;
-	
-	if( getenv( "BITLBEE_DEBUG" ) )
-	{
-		write( 2, "->NS:", 5 );
-		write( 2, s, len );
-	}
-	
-	st = write( md->fd, s, len );
-	if( st != len )
-	{
-		imcb_error( ic, "Short write() to main server" );
-		imc_logout( ic, TRUE );
-		return 0;
-	}
-	
-	return 1;
-}
-
 int msn_logged_in( struct im_connection *ic )
 {
 	imcb_connected( ic );
@@ -75,7 +53,7 @@ static char *adlrml_entry( const char *handle_, msn_buddy_flags_t list )
 int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *realname, const char *group )
 {
 	struct msn_data *md = ic->proto_data;
-	char buf[1024], groupid[8];
+	char groupid[8];
 	bee_user_t *bu;
 	struct msn_buddy_data *bd;
 	char *adl;
@@ -143,11 +121,11 @@ int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const 
 	
 	if( ( adl = adlrml_entry( who, list ) ) )
 	{
-		g_snprintf( buf, sizeof( buf ), "ADL %d %zd\r\n%s",
-		            ++md->trId, strlen( adl ), adl );
+		int st = msn_ns_write( ic, -1, "ADL %d %zd\r\n%s",
+		                       ++md->trId, strlen( adl ), adl );
 		g_free( adl );
 		
-		return msn_write( ic, buf, strlen( buf ) );
+		return st;
 	}
 	
 	return 1;
@@ -156,7 +134,7 @@ int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const 
 int msn_buddy_list_remove( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *group )
 {
 	struct msn_data *md = ic->proto_data;
-	char buf[1024], groupid[8];
+	char groupid[8];
 	bee_user_t *bu;
 	struct msn_buddy_data *bd;
 	char *adl;
@@ -188,11 +166,11 @@ int msn_buddy_list_remove( struct im_connection *ic, msn_buddy_flags_t list, con
 	
 	if( ( adl = adlrml_entry( who, list ) ) )
 	{
-		g_snprintf( buf, sizeof( buf ), "RML %d %zd\r\n%s",
-		            ++md->trId, strlen( adl ), adl );
+		int st = msn_ns_write( ic, -1, "RML %d %zd\r\n%s",
+		                       ++md->trId, strlen( adl ), adl );
 		g_free( adl );
 		
-		return msn_write( ic, buf, strlen( buf ) );
+		return st;
 	}
 	
 	return 1;
@@ -602,14 +580,11 @@ int msn_ns_set_display_name( struct im_connection *ic, const char *value )
 {
 	struct msn_data *md = ic->proto_data;
 	char fn[strlen(value)*3+1];
-	char buf[512];
 	
 	strcpy( fn, value );
 	http_encode( fn );
-	g_snprintf( buf, sizeof( buf ), "PRP %d MFN %s\r\n",
-	            ++md->trId, fn );
 	
 	/* Note: We don't actually know if the server accepted the new name,
 	   and won't give proper feedback yet if it doesn't. */
-	return msn_write( ic, buf, strlen( buf ) );
+	return msn_ns_write( ic, -1, "PRP %d MFN %s\r\n", ++md->trId, fn );
 }

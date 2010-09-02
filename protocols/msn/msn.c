@@ -153,8 +153,7 @@ static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, in
 #ifdef DEBUG
 	if( strcmp( who, "raw" ) == 0 )
 	{
-		msn_write( ic, message, strlen( message ) );
-		msn_write( ic, "\r\n", 2 );
+		msn_ns_write( ic, -1, "%s\r\n", message );
 	}
 	else
 #endif
@@ -192,7 +191,6 @@ static GList *msn_away_states( struct im_connection *ic )
 
 static void msn_set_away( struct im_connection *ic, char *state, char *message )
 {
-	char buf[1024];
 	char *uux;
 	struct msn_data *md = ic->proto_data;
 	
@@ -201,15 +199,13 @@ static void msn_set_away( struct im_connection *ic, char *state, char *message )
 	else if( ( md->away_state = msn_away_state_by_name( state ) ) == NULL )
 		md->away_state = msn_away_state_list + 1;
 	
-	g_snprintf( buf, sizeof( buf ), "CHG %d %s\r\n", ++md->trId, md->away_state->code );
-	if( !msn_write( ic, buf, strlen( buf ) ) )
+	if( !msn_ns_write( ic, -1, "CHG %d %s\r\n", ++md->trId, md->away_state->code ) )
 		return;
 	
 	uux = g_markup_printf_escaped( "<Data><PSM>%s</PSM><CurrentMedia></CurrentMedia>"
 	                               "</Data>", message ? message : "" );
-	g_snprintf( buf, sizeof( buf ), "UUX %d %zd\r\n%s", ++md->trId, strlen( uux ), uux );
-	if( !msn_write( ic, buf, strlen( buf ) ) )
-		return;
+	msn_ns_write( ic, -1, "UUX %d %zd\r\n%s", ++md->trId, strlen( uux ), uux );
+	g_free( uux );
 }
 
 static void msn_get_info(struct im_connection *ic, char *who) 
@@ -289,7 +285,7 @@ static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
 
 static void msn_keepalive( struct im_connection *ic )
 {
-	msn_write( ic, "PNG\r\n", strlen( "PNG\r\n" ) );
+	msn_ns_write( ic, -1, "PNG\r\n" );
 }
 
 static void msn_add_permit( struct im_connection *ic, char *who )

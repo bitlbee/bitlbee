@@ -34,31 +34,36 @@ static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition c
 static int msn_sb_command( gpointer data, char **cmd, int num_parts );
 static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
 
-int msn_sb_write( struct msn_switchboard *sb, char *s, int len )
+int msn_sb_write( struct msn_switchboard *sb, const char *fmt, ... )
 {
+	va_list params;
+	char *out;
+	size_t len;
 	int st;
 	
-	if( getenv( "BITLBEE_DEBUG" ) )
-	{
-		write( 2, "->SB:", 5 );
-		write( 2, s, len );
-	}
+	va_start( params, fmt );
+	out = g_strdup_vprintf( fmt, params );
+	va_end( params );
 	
-	st = write( sb->fd, s, len );
+	if( getenv( "BITLBEE_DEBUG" ) )
+		fprintf( stderr, "->SB%d:%s", sb->fd, out );
+	
+	len = strlen( out );
+	st = write( sb->fd, out, len );
+	g_free( out );
 	if( st != len )
 	{
 		msn_sb_destroy( sb );
-		return( 0 );
+		return 0;
 	}
 	
-	return( 1 );
+	return 1;
 }
 
 int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m )
 {
 	struct msn_data *md = ic->proto_data;
 	struct msn_switchboard *sb;
-	char buf[1024];
 
 	/* FIXME: *CHECK* the reliability of using spare sb's! */
 	if( ( sb = msn_sb_spare( ic ) ) )
@@ -66,8 +71,7 @@ int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m )
 		debug( "Trying to use a spare switchboard to message %s", m->who );
 		
 		sb->who = g_strdup( m->who );
-		g_snprintf( buf, sizeof( buf ), "CAL %d %s\r\n", ++sb->trId, m->who );
-		if( msn_sb_write( sb, buf, strlen( buf ) ) )
+		if( msn_sb_write( sb, "CAL %d %s\r\n", ++sb->trId, m->who ) )
 		{
 			/* He/She should join the switchboard soon, let's queue the message. */
 			sb->msgq = g_slist_append( sb->msgq, m );
@@ -78,8 +82,7 @@ int msn_sb_write_msg( struct im_connection *ic, struct msn_message *m )
 	debug( "Creating a new switchboard to message %s", m->who );
 	
 	/* If we reach this line, there was no spare switchboard, so let's make one. */
-	g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
-	if( !msn_write( ic, buf, strlen( buf ) ) )
+	if( !msn_ns_write( ic, -1, "XFR %d SB\r\n", ++md->trId ) )
 	{
 		g_free( m->who );
 		g_free( m->text );
@@ -170,7 +173,7 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 {
 	if( sb->ready )
 	{
-		char *packet, *buf;
+		char *buf;
 		int i, j;
 		
 		/* Build the message. Convert LF to CR-LF for normal messages. */
@@ -206,17 +209,15 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 		}
 		
 		/* Build the final packet (MSG command + the message). */
-		packet = g_strdup_printf( "MSG %d N %d\r\n%s", ++sb->trId, i, buf );
-		g_free( buf );
-		if( msn_sb_write( sb, packet, strlen( packet ) ) )
+		if( msn_sb_write( sb, "MSG %d N %d\r\n%s", ++sb->trId, i, buf ) )
 		{
-			g_free( packet );
-			return( 1 );
+			g_free( buf );
+			return 1;
 		}
 		else
 		{
-			g_free( packet );
-			return( 0 );
+			g_free( buf );
+			return 0;
 		}
 	}
 	else if( sb->who )
@@ -331,7 +332,7 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 	else
 		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, ic->acc->user, sb->key, sb->session );
 	
-	if( msn_sb_write( sb, buf, strlen( buf ) ) )
+	if( msn_sb_write( sb, "%s", buf ) )
 		sb->inp = b_input_add( sb->fd, B_EV_IO_READ, msn_sb_callback, sb );
 	else
 		debug( "Error %d while connecting to switchboard server", 2 );
@@ -351,7 +352,6 @@ static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition c
 	if( sb->msgq != NULL )
 	{
 		time_t now = time( NULL );
-		char buf[1024];
 		
 		if( now - md->first_sb_failure > 600 )
 		{
@@ -383,8 +383,7 @@ static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition c
 		
 		debug( "Moved queued messages back to the main queue, "
 		       "creating a new switchboard to retry." );
-		g_snprintf( buf, sizeof( buf ), "XFR %d SB\r\n", ++md->trId );
-		if( !msn_write( ic, buf, strlen( buf ) ) )
+		if( !msn_ns_write( ic, -1, "XFR %d SB\r\n", ++md->trId ) )
 			return FALSE;
 	}
 	
@@ -396,7 +395,6 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 {
 	struct msn_switchboard *sb = data;
 	struct im_connection *ic = sb->ic;
-	char buf[1024];
 	
 	if( !num_parts )
 	{
@@ -425,14 +423,9 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		if( sb->who )
-		{
-			g_snprintf( buf, sizeof( buf ), "CAL %d %s\r\n", ++sb->trId, sb->who );
-			return( msn_sb_write( sb, buf, strlen( buf ) ) );
-		}
+			return msn_sb_write( sb, "CAL %d %s\r\n", ++sb->trId, sb->who );
 		else
-		{
 			debug( "Just created a switchboard, but I don't know what to do with it." );
-		}
 	}
 	else if( strcmp( cmd[0], "IRO" ) == 0 )
 	{
