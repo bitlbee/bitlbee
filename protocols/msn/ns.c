@@ -30,9 +30,10 @@
 #include "soap.h"
 #include "xmltree.h"
 
+static gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
 static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond );
-static int msn_ns_command( gpointer data, char **cmd, int num_parts );
-static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
+static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num_parts );
+static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msglen, char **cmd, int num_parts );
 
 static void msn_ns_send_adl_start( struct im_connection *ic );
 static void msn_ns_send_adl( struct im_connection *ic );
@@ -50,7 +51,7 @@ int msn_ns_write( struct im_connection *ic, int fd, const char *fmt, ... )
 	va_end( params );
 	
 	if( fd < 0 )
-		fd = md->fd;
+		fd = md->ns->fd;
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
 		fprintf( stderr, "->NS%d:%s", fd, out );
@@ -68,13 +69,35 @@ int msn_ns_write( struct im_connection *ic, int fd, const char *fmt, ... )
 	return 1;
 }
 
-gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
+gboolean msn_ns_connect( struct im_connection *ic, struct msn_handler_data *handler, const char *host, int port )
 {
-	struct im_connection *ic = data;
+	if( handler->fd >= 0 )
+		closesocket( handler->fd );
+	
+	handler->exec_command = msn_ns_command;
+	handler->exec_message = msn_ns_message;
+	handler->data = ic;
+	handler->fd = proxy_connect( host, port, msn_ns_connected, handler );
+	if( handler->fd < 0 )
+	{
+		imcb_error( ic, "Could not connect to server" );
+		imc_logout( ic, TRUE );
+		return FALSE;
+	}
+	
+	return TRUE;
+}
+
+static gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
+{
+	struct msn_handler_data *handler = data;
+	struct im_connection *ic = handler->data;
 	struct msn_data *md;
 	
 	if( !g_slist_find( msn_connections, ic ) )
 		return FALSE;
+	
+	md = ic->proto_data;
 	
 	if( source == -1 )
 	{
@@ -83,41 +106,42 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 		return FALSE;
 	}
 	
-	md = ic->proto_data;
-	
-	if( !md->handler )
-	{
-		md->handler = g_new0( struct msn_handler_data, 1 );
-		md->handler->data = ic;
-		md->handler->exec_command = msn_ns_command;
-		md->handler->exec_message = msn_ns_message;
-	}
-	else
-	{
-		if( md->handler->rxq )
-			g_free( md->handler->rxq );
-		
-		md->handler->rxlen = 0;
-	}
-	
-	md->handler->fd = md->fd;
-	md->handler->rxq = g_new0( char, 1 );
+	g_free( handler->rxq );
+	handler->rxlen = 0;
+	handler->rxq = g_new0( char, 1 );
 	
 	if( msn_ns_write( ic, -1, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER ) )
 	{
-		ic->inpa = b_input_add( md->fd, B_EV_IO_READ, msn_ns_callback, ic );
+		handler->inpa = b_input_add( handler->fd, B_EV_IO_READ, msn_ns_callback, handler );
 		imcb_log( ic, "Connected to server, waiting for reply" );
 	}
 	
 	return FALSE;
 }
 
+void msn_ns_close( struct msn_handler_data *handler )
+{
+	if( handler->fd >= 0 )
+	{
+		closesocket( handler->fd );
+		b_event_remove( handler->inpa );
+	}
+	
+	handler->fd = handler->inpa = -1;
+	g_free( handler->rxq );
+	g_free( handler->cmd_text );
+	
+	handler->rxlen = 0;
+	handler->rxq = NULL;
+	handler->cmd_text = NULL;
+}
+
 static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond )
 {
-	struct im_connection *ic = data;
-	struct msn_data *md = ic->proto_data;
+	struct msn_handler_data *handler = data;
+	struct im_connection *ic = handler->data;
 	
-	if( msn_handler( md->handler ) == -1 ) /* Don't do this on ret == 0, it's already done then. */
+	if( msn_handler( handler ) == -1 ) /* Don't do this on ret == 0, it's already done then. */
 	{
 		imcb_error( ic, "Error while reading from server" );
 		imc_logout( ic, TRUE );
@@ -128,9 +152,9 @@ static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition c
 		return TRUE;
 }
 
-static int msn_ns_command( gpointer data, char **cmd, int num_parts )
+static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num_parts )
 {
-	struct im_connection *ic = data;
+	struct im_connection *ic = handler->data;
 	struct msn_data *md = ic->proto_data;
 	
 	if( num_parts == 0 )
@@ -163,9 +187,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		if( num_parts >= 6 && strcmp( cmd[2], "NS" ) == 0 )
 		{
-			b_event_remove( ic->inpa );
-			ic->inpa = 0;
-			closesocket( md->fd );
+			b_event_remove( handler->inpa );
+			handler->inpa = -1;
 			
 			server = strchr( cmd[3], ':' );
 			if( !server )
@@ -179,8 +202,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			server = cmd[3];
 			
 			imcb_log( ic, "Transferring to other server" );
-			
-			md->fd = proxy_connect( server, port, msn_ns_connected, ic );
+			return msn_ns_connect( ic, handler, server, port );
 		}
 		else if( num_parts >= 6 && strcmp( cmd[2], "SB" ) == 0 )
 		{
@@ -272,9 +294,9 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			return( 0 );
 		}
 		
-		md->handler->msglen = atoi( cmd[3] );
+		handler->msglen = atoi( cmd[3] );
 		
-		if( md->handler->msglen <= 0 )
+		if( handler->msglen <= 0 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
@@ -295,7 +317,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		else if( num_parts >= 3 )
 		{
-			md->handler->msglen = atoi( cmd[2] );
+			handler->msglen = atoi( cmd[2] );
 		}
 	}
 	else if( strcmp( cmd[0], "PRP" ) == 0 )
@@ -459,9 +481,9 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	{
 		imcb_error( ic, "Received IPG command, we don't handle them yet." );
 		
-		md->handler->msglen = atoi( cmd[1] );
+		handler->msglen = atoi( cmd[1] );
 		
-		if( md->handler->msglen <= 0 )
+		if( handler->msglen <= 0 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
@@ -518,20 +540,20 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	{
 		/* Coming up is cmd[2] bytes of stuff we're supposed to
 		   censore. Meh. */
-		md->handler->msglen = atoi( cmd[2] );
+		handler->msglen = atoi( cmd[2] );
 	}
 	else if( strcmp( cmd[0], "UBX" ) == 0 )
 	{
 		/* Status message. */
 		if( num_parts >= 4 )
-			md->handler->msglen = atoi( cmd[3] );
+			handler->msglen = atoi( cmd[3] );
 	}
 	else if( strcmp( cmd[0], "NOT" ) == 0 )
 	{
 		/* Some kind of notification, poorly documented but
 		   apparently used to announce address book changes. */
 		if( num_parts >= 2 )
-			md->handler->msglen = atoi( cmd[1] );
+			handler->msglen = atoi( cmd[1] );
 	}
 	else if( isdigit( cmd[0][0] ) )
 	{
@@ -548,7 +570,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		
 		/* Oh yes, errors can have payloads too now. Discard them for now. */
 		if( num_parts >= 3 )
-			md->handler->msglen = atoi( cmd[2] );
+			handler->msglen = atoi( cmd[2] );
 	}
 	else
 	{
@@ -558,9 +580,9 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	return( 1 );
 }
 
-static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts )
+static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msglen, char **cmd, int num_parts )
 {
-	struct im_connection *ic = data;
+	struct im_connection *ic = handler->data;
 	char *body;
 	int blen = 0;
 	

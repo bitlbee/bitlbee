@@ -52,7 +52,6 @@ static void msn_login( account_t *acc )
 	struct msn_data *md = g_new0( struct msn_data, 1 );
 	
 	ic->proto_data = md;
-	md->fd = -1;
 	
 	if( strchr( acc->user, '@' ) == NULL )
 	{
@@ -61,21 +60,14 @@ static void msn_login( account_t *acc )
 		return;
 	}
 	
-	imcb_log( ic, "Connecting" );
-	
-	md->fd = proxy_connect( "messenger.hotmail.com", 1863, msn_ns_connected, ic );
-	if( md->fd < 0 )
-	{
-		imcb_error( ic, "Could not connect to server" );
-		imc_logout( ic, TRUE );
-		return;
-	}
-	
 	md->ic = ic;
 	md->away_state = msn_away_state_list;
 	md->domaintree = g_tree_new( msn_domaintree_cmp );
 	
-	msn_connections = g_slist_append( msn_connections, ic );
+	msn_connections = g_slist_prepend( msn_connections, ic );
+	
+	imcb_log( ic, "Connecting" );
+	msn_ns_connect( ic, md->ns, MSN_NS_HOST, MSN_NS_PORT );
 }
 
 static void msn_logout( struct im_connection *ic )
@@ -92,15 +84,8 @@ static void msn_logout( struct im_connection *ic )
 		}
 		*/
 		
-		if( md->fd >= 0 )
-			closesocket( md->fd );
-		
-		if( md->handler )
-		{
-			if( md->handler->rxq ) g_free( md->handler->rxq );
-			if( md->handler->cmd_text ) g_free( md->handler->cmd_text );
-			g_free( md->handler );
-		}
+		msn_ns_close( md->ns );
+		msn_ns_close( md->auth );
 		
 		while( md->switchboards )
 			msn_sb_destroy( md->switchboards->data );

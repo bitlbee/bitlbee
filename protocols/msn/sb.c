@@ -31,8 +31,8 @@
 #include "invitation.h"
 
 static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition cond );
-static int msn_sb_command( gpointer data, char **cmd, int num_parts );
-static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
+static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num_parts );
+static int msn_sb_message( struct msn_handler_data *handler, char *msg, int msglen, char **cmd, int num_parts );
 
 int msn_sb_write( struct msn_switchboard *sb, const char *fmt, ... )
 {
@@ -391,9 +391,9 @@ static gboolean msn_sb_callback( gpointer data, gint source, b_input_condition c
 	return FALSE;
 }
 
-static int msn_sb_command( gpointer data, char **cmd, int num_parts )
+static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num_parts )
 {
-	struct msn_switchboard *sb = data;
+	struct msn_switchboard *sb = handler->data;
 	struct im_connection *ic = sb->ic;
 	
 	if( !num_parts )
@@ -664,9 +664,9 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 	return( 1 );
 }
 
-static int msn_sb_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts )
+static int msn_sb_message( struct msn_handler_data *handler, char *msg, int msglen, char **cmd, int num_parts )
 {
-	struct msn_switchboard *sb = data;
+	struct msn_switchboard *sb = handler->data;
 	struct im_connection *ic = sb->ic;
 	char *body;
 	int blen = 0;

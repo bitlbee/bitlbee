@@ -350,7 +350,7 @@ int msn_handler( struct msn_handler_data *h )
 					cmd_text = g_strndup( h->rxq, i );
 					cmd = msn_linesplit( cmd_text );
 					for( count = 0; cmd[count]; count ++ );
-					st = h->exec_command( h->data, cmd, count );
+					st = h->exec_command( h, cmd, count );
 					g_free( cmd_text );
 					
 					/* If the connection broke, don't continue. We don't even exist anymore. */
@@ -385,7 +385,7 @@ int msn_handler( struct msn_handler_data *h )
 			cmd = msn_linesplit( h->cmd_text );
 			for( count = 0; cmd[count]; count ++ );
 			
-			st = h->exec_message( h->data, msg, h->msglen, cmd, count );
+			st = h->exec_message( h, msg, h->msglen, cmd, count );
 			g_free( msg );
 			g_free( h->cmd_text );
 			h->cmd_text = NULL;

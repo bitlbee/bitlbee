@@ -43,6 +43,9 @@
 #define MSNP11_PROD_ID  "PROD0101{0RM?UBW"
 */
 
+#define MSN_NS_HOST "messenger.hotmail.com"
+#define MSN_NS_PORT 1863
+
 /* Some other version.
 #define MSNP11_PROD_KEY "O4BG@C7BWLYQX?5G"
 #define MSNP11_PROD_ID  "PROD01065C%ZFN6F"
@@ -79,12 +82,27 @@ typedef enum
 	MSN_DONE_ADL = 4,
 } msn_flags_t;
 
+struct msn_handler_data
+{
+	int fd, inpa;
+	int rxlen;
+	char *rxq;
+	
+	int msglen;
+	char *cmd_text;
+	
+	/* Either ic or sb */
+	gpointer data;
+	
+	int (*exec_command) ( struct msn_handler_data *handler, char **cmd, int count );
+	int (*exec_message) ( struct msn_handler_data *handler, char *msg, int msglen, char **cmd, int count );
+};
+
 struct msn_data
 {
 	struct im_connection *ic;
 	
-	int fd;
-	struct msn_handler_data *handler;
+	struct msn_handler_data ns[1], auth[1];
 	msn_flags_t flags;
 	
 	int trId;
@@ -110,6 +128,7 @@ struct msn_switchboard
 {
 	struct im_connection *ic;
 	
+	/* The following two are also in the handler. TODO: Clean up. */
 	int fd;
 	gint inp;
 	struct msn_handler_data *handler;
@@ -149,21 +168,6 @@ struct msn_groupadd
 {
 	char *who;
 	char *group;
-};
-
-struct msn_handler_data
-{
-	int fd;
-	int rxlen;
-	char *rxq;
-	
-	int msglen;
-	char *cmd_text;
-	
-	gpointer data;
-	
-	int (*exec_command) ( gpointer data, char **cmd, int count );
-	int (*exec_message) ( gpointer data, char *msg, int msglen, char **cmd, int count );
 };
 
 typedef enum
@@ -208,7 +212,8 @@ extern GSList *msn_switchboards;
 
 /* ns.c */
 int msn_ns_write( struct im_connection *ic, int fd, const char *fmt, ... );
-gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
+gboolean msn_ns_connect( struct im_connection *ic, struct msn_handler_data *handler, const char *host, int port );
+void msn_ns_close( struct msn_handler_data *handler );
 void msn_auth_got_passport_token( struct im_connection *ic, const char *token, const char *error );
 void msn_auth_got_contact_list( struct im_connection *ic );
 int msn_ns_finish_login( struct im_connection *ic );
