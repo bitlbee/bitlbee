@@ -110,7 +110,7 @@ static gboolean msn_ns_connected( gpointer data, gint source, b_input_condition 
 	handler->rxlen = 0;
 	handler->rxq = g_new0( char, 1 );
 	
-	if( msn_ns_write( ic, -1, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER ) )
+	if( msn_ns_write( ic, source, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER ) )
 	{
 		handler->inpa = b_input_add( handler->fd, B_EV_IO_READ, msn_ns_callback, handler );
 		imcb_log( ic, "Connected to server, waiting for reply" );
@@ -172,13 +172,13 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 			return( 0 );
 		}
 		
-		return( msn_ns_write( ic, -1, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s\r\n",
+		return( msn_ns_write( ic, handler->fd, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s\r\n",
 		                      ++md->trId, ic->acc->user ) );
 	}
 	else if( strcmp( cmd[0], "CVR" ) == 0 )
 	{
 		/* We don't give a damn about the information we just received */
-		return msn_ns_write( ic, -1, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user );
+		return msn_ns_write( ic, handler->fd, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user );
 	}
 	else if( strcmp( cmd[0], "XFR" ) == 0 )
 	{
@@ -271,7 +271,14 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		if( num_parts >= 6 && strcmp( cmd[2], "SSO" ) == 0 &&
 		    strcmp( cmd[3], "S" ) == 0 )
 		{
-			msn_soap_passport_sso_request( ic, cmd[4], cmd[5] );
+			g_free( md->pp_policy );
+			md->pp_policy = g_strdup( cmd[4] );
+			msn_soap_passport_sso_request( ic, cmd[5] );
+			if( handler == md->auth )
+			{
+				msn_ns_close( md->auth );
+				return 0;
+			}
 		}
 		else if( strcmp( cmd[2], "OK" ) == 0 )
 		{

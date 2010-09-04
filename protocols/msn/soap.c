@@ -136,9 +136,24 @@ static void msn_soap_handle_response( struct http_request *http_req )
 	if( http_req->body_size > 0 )
 	{
 		struct xt_parser *parser;
+		struct xt_node *err;
 		
 		parser = xt_new( soap_req->xml_parser, soap_req );
 		xt_feed( parser, http_req->reply_body, http_req->body_size );
+		if( http_req->status_code == 500 &&
+		    ( err = xt_find_path( parser->root, "soap:Body/soap:Fault/detail/errorcode" ) ) &&
+		    err->text_len > 0 && strcmp( err->text, "PassportAuthFail" ) == 0 )
+		{
+			struct msn_data *md = soap_req->ic->proto_data;
+			
+			xt_free( parser );
+			if( md->auth->fd == -1 )
+				msn_ns_connect( soap_req->ic, md->auth, MSN_NS_HOST, MSN_NS_PORT );
+			md->soapq = g_slist_prepend( md->soapq, soap_req );
+			
+			return;
+		}
+		
 		xt_handle( parser, NULL, -1 );
 		xt_free( parser );
 	}
@@ -201,12 +216,24 @@ static void msn_soap_debug_print( const char *headers, const char *payload )
 #endif
 }
 
+static int msn_soapq_empty( struct im_connection *ic )
+{
+	struct msn_data *md = ic->proto_data;
+	
+	while( md->soapq )
+	{
+		msn_soap_send_request( (struct msn_soap_req_data*) md->soapq->data );
+		md->soapq = g_slist_remove( md->soapq, md->soapq->data );
+	}
+	
+	return MSN_SOAP_OK;
+}
+
 
 /* passport_sso: Authentication MSNP15+ */
 
 struct msn_soap_passport_sso_data
 {
-	char *policy;
 	char *nonce;
 	char *secret;
 	char *error;
@@ -216,6 +243,7 @@ static int msn_soap_passport_sso_build_request( struct msn_soap_req_data *soap_r
 {
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
+	struct msn_data *md = ic->proto_data;
 	
 	if( g_str_has_suffix( ic->acc->user, "@msn.com" ) )
 		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL_MSN );
@@ -223,7 +251,7 @@ static int msn_soap_passport_sso_build_request( struct msn_soap_req_data *soap_r
 		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL );
 	
 	soap_req->payload = g_markup_printf_escaped( SOAP_PASSPORT_SSO_PAYLOAD,
-		ic->acc->user, ic->acc->pass, sd->policy );
+		ic->acc->user, ic->acc->pass, md->pp_policy );
 	
 	return MSN_SOAP_OK;
 }
@@ -300,6 +328,7 @@ static int msn_soap_passport_sso_handle_response( struct msn_soap_req_data *soap
 {
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
+	struct msn_data *md = ic->proto_data;
 	char *key1, *key2, *key3, *blurb64;
 	int key1_len;
 	unsigned char *padnonce, *des3res;
@@ -324,6 +353,9 @@ static int msn_soap_passport_sso_handle_response( struct msn_soap_req_data *soap
 		GUINT32_TO_LE( 20 ),
 		GUINT32_TO_LE( 72 ),
 	};
+	
+	if( md->soapq )
+		return msn_soapq_empty( ic );
 	
 	if( sd->secret == NULL )
 	{
@@ -363,7 +395,6 @@ static int msn_soap_passport_sso_free_data( struct msn_soap_req_data *soap_req )
 {
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	
-	g_free( sd->policy );
 	g_free( sd->nonce );
 	g_free( sd->secret );
 	g_free( sd->error );
@@ -371,11 +402,10 @@ static int msn_soap_passport_sso_free_data( struct msn_soap_req_data *soap_req )
 	return MSN_SOAP_OK;
 }
 
-int msn_soap_passport_sso_request( struct im_connection *ic, const char *policy, const char *nonce )
+int msn_soap_passport_sso_request( struct im_connection *ic, const char *nonce )
 {
 	struct msn_soap_passport_sso_data *sd = g_new0( struct msn_soap_passport_sso_data, 1 );
 	
-	sd->policy = g_strdup( policy );
 	sd->nonce = g_strdup( nonce );
 	
 	return msn_soap_start( ic, sd, msn_soap_passport_sso_build_request,

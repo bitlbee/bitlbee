@@ -138,7 +138,7 @@
    "</Body>" \
 "</Envelope>"
 
-int msn_soap_passport_sso_request( struct im_connection *ic, const char *policy, const char *nonce );
+int msn_soap_passport_sso_request( struct im_connection *ic, const char *nonce );
 
 
 #define SOAP_OIM_SEND_URL "https://ows.messenger.msn.com/OimWS/oim.asmx"

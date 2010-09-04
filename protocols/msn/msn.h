@@ -107,9 +107,9 @@ struct msn_data
 	
 	int trId;
 	char *tokens[4];
-	char *lock_key;
+	char *lock_key, *pp_policy;
 	
-	GSList *msgq, *grpq;
+	GSList *msgq, *grpq, *soapq;
 	GSList *switchboards;
 	int sb_failures;
 	time_t first_sb_failure;
