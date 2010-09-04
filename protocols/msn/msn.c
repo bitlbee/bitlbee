@@ -63,7 +63,7 @@ static void msn_login( account_t *acc )
 	md->ic = ic;
 	md->away_state = msn_away_state_list;
 	md->domaintree = g_tree_new( msn_domaintree_cmp );
-	md->ns->fd = md->auth->fd = -1;
+	md->ns->fd = -1;
 	
 	msn_connections = g_slist_prepend( msn_connections, ic );
 	
@@ -86,7 +86,6 @@ static void msn_logout( struct im_connection *ic )
 		*/
 		
 		msn_ns_close( md->ns );
-		msn_ns_close( md->auth );
 		
 		while( md->switchboards )
 			msn_sb_destroy( md->switchboards->data );
@@ -96,6 +95,7 @@ static void msn_logout( struct im_connection *ic )
 		for( i = 0; i < sizeof( md->tokens ) / sizeof( md->tokens[0] ); i ++ )
 			g_free( md->tokens[i] );
 		g_free( md->lock_key );
+		g_free( md->pp_policy );
 		
 		while( md->groups )
 		{
@@ -179,8 +179,6 @@ static void msn_set_away( struct im_connection *ic, char *state, char *message )
 {
 	char *uux;
 	struct msn_data *md = ic->proto_data;
-	
-	strcpy( md->tokens[1], md->tokens[2] );
 	
 	if( state == NULL )
 		md->away_state = msn_away_state_list;
@@ -283,7 +281,7 @@ static void msn_add_permit( struct im_connection *ic, char *who )
 
 static void msn_rem_permit( struct im_connection *ic, char *who )
 {
-	//msn_buddy_list_remove( ic, MSN_BUDDY_AL, who, NULL );
+	msn_buddy_list_remove( ic, MSN_BUDDY_AL, who, NULL );
 }
 
 static void msn_add_deny( struct im_connection *ic, char *who )
@@ -301,7 +299,7 @@ static void msn_add_deny( struct im_connection *ic, char *who )
 
 static void msn_rem_deny( struct im_connection *ic, char *who )
 {
-	//msn_buddy_list_remove( ic, MSN_BUDDY_BL, who, NULL );
+	msn_buddy_list_remove( ic, MSN_BUDDY_BL, who, NULL );
 }
 
 static int msn_send_typing( struct im_connection *ic, char *who, int typing )

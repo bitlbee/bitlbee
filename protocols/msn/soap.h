@@ -125,7 +125,7 @@
                "</wsp:AppliesTo>" \
                "<wsse:PolicyReference xmlns=\"http://schemas.xmlsoap.org/ws/2003/06/secext\" URI=\"MBI_SSL\"></wsse:PolicyReference>" \
            "</wst:RequestSecurityToken>" \
-           "<wst:RequestSecurityToken Id=\"RST3\">" \
+           "<wst:RequestSecurityToken Id=\"RST4\">" \
                "<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
                "<wsp:AppliesTo>" \
                    "<wsa:EndpointReference>" \

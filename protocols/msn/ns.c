@@ -274,11 +274,6 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 			g_free( md->pp_policy );
 			md->pp_policy = g_strdup( cmd[4] );
 			msn_soap_passport_sso_request( ic, cmd[5] );
-			if( handler == md->auth )
-			{
-				msn_ns_close( md->auth );
-				return 0;
-			}
 		}
 		else if( strcmp( cmd[2], "OK" ) == 0 )
 		{

@@ -80,6 +80,7 @@ typedef enum
 	MSN_GOT_PROFILE = 1,
 	MSN_GOT_PROFILE_DN = 2,
 	MSN_DONE_ADL = 4,
+	MSN_REAUTHING = 8,
 } msn_flags_t;
 
 struct msn_handler_data
@@ -102,7 +103,7 @@ struct msn_data
 {
 	struct im_connection *ic;
 	
-	struct msn_handler_data ns[1], auth[1];
+	struct msn_handler_data ns[1];
 	msn_flags_t flags;
 	
 	int trId;

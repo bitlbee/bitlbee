@@ -47,6 +47,7 @@ typedef enum
 {
 	MSN_SOAP_OK,
 	MSN_SOAP_RETRY,
+	MSN_SOAP_REAUTH,
 	MSN_SOAP_ABORT,
 } msn_soap_result_t;
 
@@ -133,6 +134,8 @@ static void msn_soap_handle_response( struct http_request *http_req )
 		return;
 	}
 	
+	msn_soap_debug_print( http_req->reply_headers, http_req->reply_body );
+	
 	if( http_req->body_size > 0 )
 	{
 		struct xt_parser *parser;
@@ -142,33 +145,45 @@ static void msn_soap_handle_response( struct http_request *http_req )
 		xt_feed( parser, http_req->reply_body, http_req->body_size );
 		if( http_req->status_code == 500 &&
 		    ( err = xt_find_path( parser->root, "soap:Body/soap:Fault/detail/errorcode" ) ) &&
-		    err->text_len > 0 && strcmp( err->text, "PassportAuthFail" ) == 0 )
+		    err->text_len > 0 )
 		{
-			struct msn_data *md = soap_req->ic->proto_data;
-			
-			xt_free( parser );
-			if( md->auth->fd == -1 )
-				msn_ns_connect( soap_req->ic, md->auth, MSN_NS_HOST, MSN_NS_PORT );
-			md->soapq = g_slist_prepend( md->soapq, soap_req );
-			
-			return;
+			if( strcmp( err->text, "PassportAuthFail" ) == 0 )
+			{
+				xt_free( parser );
+				st = MSN_SOAP_REAUTH;
+				goto fail;
+			}
+			/* TODO: Handle/report other errors. */
 		}
 		
 		xt_handle( parser, NULL, -1 );
 		xt_free( parser );
 	}
 	
-	msn_soap_debug_print( http_req->reply_headers, http_req->reply_body );
-	
 	st = soap_req->handle_response( soap_req );
-	
+
+fail:	
 	g_free( soap_req->url );
 	g_free( soap_req->action );
 	g_free( soap_req->payload );
 	soap_req->url = soap_req->action = soap_req->payload = NULL;
 	
 	if( st == MSN_SOAP_RETRY && --soap_req->ttl )
+	{
 		msn_soap_send_request( soap_req );
+	}
+	else if( st == MSN_SOAP_REAUTH )
+	{
+		struct msn_data *md = soap_req->ic->proto_data;
+		
+		if( !( md->flags & MSN_REAUTHING ) )
+		{
+			/* Nonce shouldn't actually be touched for re-auths. */
+			msn_soap_passport_sso_request( soap_req->ic, "blaataap" );
+			md->flags |= MSN_REAUTHING; 
+		}
+		md->soapq = g_slist_append( md->soapq, soap_req );
+	}
 	else
 	{
 		soap_req->free_data( soap_req );
@@ -241,7 +256,6 @@ struct msn_soap_passport_sso_data
 
 static int msn_soap_passport_sso_build_request( struct msn_soap_req_data *soap_req )
 {
-	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
 	struct msn_data *md = ic->proto_data;
 	
@@ -422,7 +436,7 @@ struct msn_soap_oim_send_data
 	char *to;
 	char *msg;
 	int number;
-	int need_retry;
+	msn_soap_result_t need_retry;
 };
 
 static int msn_soap_oim_build_request( struct msn_soap_req_data *soap_req )
@@ -443,28 +457,36 @@ static int msn_soap_oim_build_request( struct msn_soap_req_data *soap_req )
 		oim->number, oim->number, oim->msg );
 	
 	g_free( display_name_b64 );
+	oim->need_retry = MSN_SOAP_OK;
 	
 	return MSN_SOAP_OK;
 }
 
-static xt_status msn_soap_oim_send_challenge( struct xt_node *node, gpointer data )
+static xt_status msn_soap_oim_reauth( struct xt_node *node, gpointer data )
 {
 	struct msn_soap_req_data *soap_req = data;
 	struct msn_soap_oim_send_data *oim = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
 	struct msn_data *md = ic->proto_data;
+	struct xt_node *c;
 	
-	g_free( md->lock_key );
-	md->lock_key = msn_p11_challenge( node->text );
-	
-	oim->need_retry = 1;
+	if( ( c = xt_find_node( node->children, "LockKeyChallenge" ) ) && c->text_len > 0 )
+	{
+		g_free( md->lock_key );
+		md->lock_key = msn_p11_challenge( c->text );
+		oim->need_retry = MSN_SOAP_RETRY;
+	}
+	if( xt_find_node( node->children, "RequiredAuthPolicy" ) )
+	{
+		oim->need_retry = MSN_SOAP_REAUTH;
+	}
 	
 	return XT_HANDLED;
 }
 
 static const struct xt_handler_entry msn_soap_oim_send_parser[] = {
-	{ "LockKeyChallenge", "detail", msn_soap_oim_send_challenge },
-	{ NULL,               NULL,     NULL                        }
+	{ "detail", "soap:Fault", msn_soap_oim_reauth },
+	{ NULL,     NULL,         NULL                }
 };
 
 static int msn_soap_oim_handle_response( struct msn_soap_req_data *soap_req )
@@ -473,8 +495,7 @@ static int msn_soap_oim_handle_response( struct msn_soap_req_data *soap_req )
 	
 	if( soap_req->http_req->status_code == 500 && oim->need_retry && soap_req->ttl > 0 )
 	{
-		oim->need_retry = 0;
-		return MSN_SOAP_RETRY;
+		return oim->need_retry;
 	}
 	else if( soap_req->http_req->status_code == 200 )
 	{
