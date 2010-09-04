@@ -44,6 +44,9 @@
 #include "nogaim.h"
 
 
+int msn_soapq_flush( struct im_connection *ic, gboolean resend );
+
+
 #define SOAP_HTTP_REQUEST \
 "POST %s HTTP/1.0\r\n" \
 "Host: %s\r\n" \

@@ -68,6 +68,7 @@ struct msn_soap_req_data
 };
 
 static int msn_soap_send_request( struct msn_soap_req_data *req );
+static void msn_soap_free( struct msn_soap_req_data *soap_req );
 static void msn_soap_debug_print( const char *headers, const char *payload );
 
 static int msn_soap_start( struct im_connection *ic,
@@ -126,11 +127,7 @@ static void msn_soap_handle_response( struct http_request *http_req )
 	
 	if( g_slist_find( msn_connections, soap_req->ic ) == NULL )
 	{
-		soap_req->free_data( soap_req );
-		g_free( soap_req->url );
-		g_free( soap_req->action );
-		g_free( soap_req->payload );
-		g_free( soap_req );
+		msn_soap_free( soap_req );
 		return;
 	}
 	
@@ -231,17 +228,29 @@ static void msn_soap_debug_print( const char *headers, const char *payload )
 #endif
 }
 
-static int msn_soapq_empty( struct im_connection *ic )
+int msn_soapq_flush( struct im_connection *ic, gboolean resend )
 {
 	struct msn_data *md = ic->proto_data;
 	
 	while( md->soapq )
 	{
-		msn_soap_send_request( (struct msn_soap_req_data*) md->soapq->data );
+		if( resend )
+			msn_soap_send_request( (struct msn_soap_req_data*) md->soapq->data );
+		else
+			msn_soap_free( (struct msn_soap_req_data*) md->soapq->data );
 		md->soapq = g_slist_remove( md->soapq, md->soapq->data );
 	}
 	
 	return MSN_SOAP_OK;
+}
+
+static void msn_soap_free( struct msn_soap_req_data *soap_req )
+{
+	soap_req->free_data( soap_req );
+	g_free( soap_req->url );
+	g_free( soap_req->action );
+	g_free( soap_req->payload );
+	g_free( soap_req );
 }
 
 
@@ -369,7 +378,7 @@ static int msn_soap_passport_sso_handle_response( struct msn_soap_req_data *soap
 	};
 	
 	if( md->soapq )
-		return msn_soapq_empty( ic );
+		return msn_soapq_flush( ic, TRUE );
 	
 	if( sd->secret == NULL )
 	{
