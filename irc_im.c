@@ -797,9 +797,9 @@ static gboolean bee_irc_channel_chat_topic( irc_channel_t *ic, const char *new )
 		char *topic = g_strdup( new );
 		c->ic->acc->prpl->chat_topic( c, topic );
 		g_free( topic );
-		return TRUE;
 	}
 		
+	/* Whatever happened, the IM module should ack the topic change. */
 	return FALSE;
 }
 

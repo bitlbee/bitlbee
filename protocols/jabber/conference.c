@@ -311,6 +311,15 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 	struct jabber_chat *jc = chat ? chat->data : NULL;
 	char *s;
 	
+	if( subject && chat )
+	{
+		s = bud ? strchr( bud->ext_jid, '/' ) : NULL;
+		if( s ) *s = 0;
+		imcb_chat_topic( chat, bud ? bud->ext_jid : NULL, subject->text_len > 0 ?
+		                 subject->text : NULL, jabber_get_timestamp( node ) );
+		if( s ) *s = '/';
+	}
+	
 	if( bud == NULL || ( jc && ~jc->flags & JCFLAG_MESSAGE_SENT && bud == jc->me ) )
 	{
 		char *nick;
@@ -364,15 +373,6 @@ void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud
 		/* How could this happen?? We could do kill( self, 11 )
 		   now or just wait for the OS to do it. :-) */
 		return;
-	}
-	
-	if( subject )
-	{
-		s = strchr( bud->ext_jid, '/' );
-		if( s ) *s = 0;
-		imcb_chat_topic( chat, bud->ext_jid, subject->text_len > 0 ?
-		                 subject->text : NULL, jabber_get_timestamp( node ) );
-		if( s ) *s = '/';
 	}
 	if( body && body->text_len > 0 )
 	{
