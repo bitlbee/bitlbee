@@ -16,3 +16,4 @@ The developers of the Bee hope you have a buzzing time.
 * BitlBee development team: wilmer, jelmer, Maurits
  
 ... Buzzing, haha, get it?
+%
