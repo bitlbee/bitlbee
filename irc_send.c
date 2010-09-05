@@ -64,7 +64,7 @@ void irc_send_motd( irc_t *irc )
 	else
 	{
 		char linebuf[80];
-		char *add, max, *in;
+		char *add = "", max, *in;
 		
 		in = motd;
 		motd[len] = '\0';
