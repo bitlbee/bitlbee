@@ -261,14 +261,21 @@ struct msn_soap_passport_sso_data
 	char *nonce;
 	char *secret;
 	char *error;
+	char *redirect;
 };
 
 static int msn_soap_passport_sso_build_request( struct msn_soap_req_data *soap_req )
 {
+	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
 	struct msn_data *md = ic->proto_data;
 	
-	if( g_str_has_suffix( ic->acc->user, "@msn.com" ) )
+	if( sd->redirect )
+	{
+		soap_req->url = sd->redirect;
+		sd->redirect = NULL;
+	}
+	else if( g_str_has_suffix( ic->acc->user, "@msn.com" ) )
 		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL_MSN );
 	else
 		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL );
@@ -311,9 +318,14 @@ static xt_status msn_soap_passport_failure( struct xt_node *node, gpointer data 
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct xt_node *code = xt_find_node( node->children, "faultcode" );
 	struct xt_node *string = xt_find_node( node->children, "faultstring" );
+	struct xt_node *url;
 	
 	if( code == NULL || code->text_len == 0 )
 		sd->error = g_strdup( "Unknown error" );
+	else if( strcmp( code->text, "psf:Redirect" ) == 0 &&
+	         ( url = xt_find_node( node->children, "psf:redirectUrl" ) ) &&
+	         url->text_len > 0 )
+		sd->redirect = g_strdup( url->text );
 	else
 		sd->error = g_strdup_printf( "%s (%s)", code->text, string && string->text_len ?
 		                             string->text : "no description available" );
@@ -377,6 +389,9 @@ static int msn_soap_passport_sso_handle_response( struct msn_soap_req_data *soap
 		GUINT32_TO_LE( 72 ),
 	};
 	
+	if( sd->redirect )
+		return MSN_SOAP_RETRY;
+	
 	if( md->soapq )
 		return msn_soapq_flush( ic, TRUE );
 	
@@ -421,6 +436,7 @@ static int msn_soap_passport_sso_free_data( struct msn_soap_req_data *soap_req )
 	g_free( sd->nonce );
 	g_free( sd->secret );
 	g_free( sd->error );
+	g_free( sd->redirect );
 	
 	return MSN_SOAP_OK;
 }
