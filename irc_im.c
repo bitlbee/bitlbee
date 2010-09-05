@@ -529,7 +529,7 @@ static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_u
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ic = c->ui_data;
 	
-	if( ic == NULL )
+	if( ic == NULL || bu == NULL )
 		return FALSE;
 	
 	/* TODO: Possible bug here: If a module removes $user here instead of just
