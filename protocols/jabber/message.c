@@ -92,9 +92,20 @@ xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 					g_string_append_printf( fullmsg, "URL: %s\n", url->text );
 			}
 		}
-		else if( ( c = xt_find_node( node->children, "subject" ) ) && c->text_len > 0 )
+		else if( ( c = xt_find_node( node->children, "subject" ) ) && c->text_len > 0 &&
+		         ( !bud || !( bud->flags & JBFLAG_HIDE_SUBJECT ) ) )
 		{
 			g_string_append_printf( fullmsg, "<< \002BitlBee\002 - Message with subject: %s >>\n", c->text );
+			if( bud )
+				bud->flags |= JBFLAG_HIDE_SUBJECT;
+		}
+		else if( bud && !c )
+		{
+			/* Yeah, possibly we're hiding changes to this field now. But nobody uses
+			   this for anything useful anyway, except GMail when people reply to an
+			   e-mail via chat, repeating the same subject all the time. I don't want
+			   to have to remember full subject strings for everyone. */
+			bud->flags &= ~JBFLAG_HIDE_SUBJECT;
 		}
 		
 		if( body && body->text_len > 0 ) /* Could be just a typing notification. */

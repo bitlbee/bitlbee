@@ -251,7 +251,6 @@ static gboolean bee_irc_user_nick_update( irc_user_t *iu );
 static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 {
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
-	irc_t *irc = (irc_t *) bee->ui_data;
 	char *s;
 	
 	if( iu->fullname != iu->nick )
@@ -265,8 +264,11 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 	
 	if( ( bu->ic->flags & OPT_LOGGED_IN ) && set_getbool( &bee->set, "display_namechanges" ) )
 	{
+		/* People don't like this /NOTICE. Meh, let's go back to the old one.
 		char *msg = g_strdup_printf( "<< \002BitlBee\002 - Changed name to `%s' >>", iu->fullname );
 		irc_send_msg( iu, "NOTICE", irc->user->nick, msg, NULL );
+		*/
+		imcb_log( bu->ic, "User `%s' changed name to `%s'", iu->nick, iu->fullname );
 	}
 	
 	bee_irc_user_nick_update( iu );
@@ -690,7 +692,7 @@ static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg
 		if( ( s = strchr( nick, ':' ) ) || ( s = strchr( nick, ',' ) ) )
 		{
 			*s = '\0';
-			if( ( iu = irc_user_by_name( ic->irc, nick ) ) &&
+			if( ( iu = irc_user_by_name( ic->irc, nick ) ) && iu->bu &&
 			    iu->bu->nick && irc_channel_has_user( ic, iu ) )
 			{
 				trans = g_strconcat( iu->bu->nick, msg + ( s - nick ), NULL );
@@ -795,9 +797,9 @@ static gboolean bee_irc_channel_chat_topic( irc_channel_t *ic, const char *new )
 		char *topic = g_strdup( new );
 		c->ic->acc->prpl->chat_topic( c, topic );
 		g_free( topic );
-		return TRUE;
 	}
 		
+	/* Whatever happened, the IM module should ack the topic change. */
 	return FALSE;
 }
 

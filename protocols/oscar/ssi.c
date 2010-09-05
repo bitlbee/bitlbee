@@ -414,7 +414,7 @@ int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
 		for (parentgroup=sess->ssi.items; ((parentgroup) && (parentgroup->type!=AIM_SSI_TYPE_GROUP) && (parentgroup->gid==0x0000)); parentgroup=parentgroup->next);
 		if (!parentgroup) {
 			char *newgroup;
-			newgroup = (char*)g_malloc(strlen("Unknown")*sizeof(char));
+			newgroup = (char*)g_malloc(strlen("Unknown")+1);
 			strcpy(newgroup, "Unknown");
 			aim_ssi_addgroups(sess, conn, &newgroup, 1);
 		}

@@ -72,7 +72,7 @@
 					</para>
 					
 					<para>
-						By default all your Twitter contacts will come from a contact called twitter_(yourusername). You can change this behaviour using the <emphasis>mode</emphasis> setting (see <emphasis>help set mode</emphasis>).
+						By default all your Twitter contacts will appear in a new channel called #twitter_yourusername. You can change this behaviour using the <emphasis>mode</emphasis> setting (see <emphasis>help set mode</emphasis>).
 					</para>
 					
 					<para>
@@ -810,19 +810,23 @@
 
 	<bitlbee-setting name="mode" type="string" scope="account">
 		<possible-values>one, many, chat</possible-values>
-		<default>one</default>
+		<default>chat</default>
 
 		<description>
 			<para>
-				By default, everything from the Twitter module will come from one nick, twitter_(yourusername). If you prefer to have individual nicks for everyone, you can set this setting to "many" instead.
+				By default, BitlBee will create a separate channel (called #twitter_yourusername) for all your Twitter contacts/messages.
+			</para>
+
+			<para>
+				If you don't want an extra channel, you can set this setting to "one" (everything will come from one nick, twitter_yourusername), or to "many" (individual nicks for everyone).
 			</para>
 			
 			<para>
-				If you prefer to have all your Twitter things in a separate channel, you can set this setting to "chat".
+				With modes "chat" and "many", you can send direct messages by /msg'ing your contacts directly. Note, however, that incoming DMs are not fetched yet.
 			</para>
 			
 			<para>
-				In the last two modes, you can send direct messages by /msg'ing your contacts directly. Note, however, that incoming DMs are not fetched yet.
+				With modes "many" and "one", you can post tweets by /msg'ing the twitter_yourusername contact. In mode "chat", messages posted in the Twitter channel will also be posted as tweets.
 			</para>
 		</description>
 
@@ -1459,6 +1463,10 @@
 		<description>
 			<para>
 				Only the <emphasis>group list</emphasis> command is supported at the moment, which shows a list of all groups defined so far.
+			</para>
+			
+			<para>
+				If you want to move contacts between groups, you can use the IRC <emphasis>/invite</emphasis> command. Also, if you use the <emphasis>add</emphasis> command in a control channel configured to show just one group, the new contact will automatically be added to that group.
 			</para>
 		</description>
 	</bitlbee-command>

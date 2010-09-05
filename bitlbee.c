@@ -135,7 +135,8 @@ int bitlbee_daemon_init()
 			exit( 0 );
 		
 		setsid();
-		chdir( "/" );
+		i = chdir( "/" );
+		/* Don't use i, just make gcc happy. :-/ */
 		
 		if( getenv( "_BITLBEE_RESTART_STATE" ) == NULL )
 			for( i = 0; i < 3; i ++ )

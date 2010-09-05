@@ -156,8 +156,9 @@ char *help_get( help_t **help, char *title )
 				return NULL;
 			}
 			
-			lseek( h->fd, h->offset.file_offset, SEEK_SET );
-			read( h->fd, s, h->length );
+			if( lseek( h->fd, h->offset.file_offset, SEEK_SET ) == -1 ||
+			    read( h->fd, s, h->length ) != h->length )
+				return NULL;
 		}
 		else
 		{

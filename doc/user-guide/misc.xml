@@ -174,7 +174,41 @@ To start a simple group chat, you simply join a channel which a name starting wi
 </para>
 
 <para>
-If you want to configure your own channels, you can use the <emphasis>channel set</emphasis>.
+If you want to configure your own channels, you can use the <emphasis>channel set</emphasis> command. See <emphasis>help channels3</emphasis> for more information.
+</para>
+
+</sect1>
+
+<sect1 id="channels3">
+<title>Configuring a control channel</title>
+
+<para>
+The most important setting for a control channel is <emphasis>fill_by</emphasis>. It
+tells BitlBee what information should be used to decide if someone should be shown
+in the channel or not. After setting this setting to, for example, <emphasis>account</emphasis>, you
+also have to set the <emphasis>account</emphasis> setting. Example:
+</para>
+
+<ircexample>
+	<ircline nick="wilmer">chan set &amp;wlm fill_by account</ircline>
+	<ircline nick="root">fill_by = `account'</ircline>
+	<ircline nick="wilmer">chan set &amp;wlm account msn</ircline>
+	<ircline nick="root">account = `msn'</ircline>
+</ircexample>
+
+<para>
+Also, each channel has a <emphasis>show_users</emphasis> setting which lets you
+choose, for example, if you want to see only online contacts in a channel, or
+also/just offline contacts. Example:
+</para>
+
+<ircexample>
+	<ircline nick="wilmer">chan set &amp;offline show_users offline</ircline>
+	<ircline nick="root">show_users = `offline'</ircline>
+</ircexample>
+
+<para>
+See the help information for all these settings for more information.
 </para>
 
 </sect1>

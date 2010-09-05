@@ -516,6 +516,14 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 		case 0x05:
 			/* Incorrect nick/password */
 			imcb_error(ic, _("Incorrect nickname or password."));
+			{
+				int max = od->icq ? 8 : 16;
+				if (strlen(ic->acc->pass) > max)
+					imcb_log(ic, "Note that the maximum password "
+					         "length supported by this protocol is "
+					         "%d characters, try logging in using "
+					         "a shorter password.", max);
+			}
 //			plugin_event(event_error, (void *)980, 0, 0, 0);
 			break;
 		case 0x11:
