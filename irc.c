@@ -111,6 +111,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &b->set, "handle_unknown", "add_channel", NULL, irc );
 	s = set_add( &b->set, "last_version", NULL, NULL, irc );
 	s->flags |= SET_HIDDEN;
+	s->value = g_strdup_printf( "%d", BITLBEE_VERSION_CODE );
 	s = set_add( &b->set, "lcnicks", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "nick_format", "%-@nick", NULL, irc );
 	s = set_add( &b->set, "offline_user_quits", "true", set_eval_bool, irc );

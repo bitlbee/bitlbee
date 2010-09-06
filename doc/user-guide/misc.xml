@@ -267,8 +267,41 @@ everything in the handle up to the first @.
 
 </sect1>
 
-<sect1 id="news1.3">
+<sect1 id="whatsnew010206">
+<title>New stuff in BitlBee 1.2.6</title>
+
+<para>
+Twitter support. See <emphasis>help account add twitter</emphasis>.
+</para>
+</sect1>
+
+<sect1 id="whatsnew010300">
 <title>New stuff in BitlBee 1.3dev</title>
+
+<para>
+Support for multiple configurable control channels, each with a subset of
+your contact list. See <emphasis>help channels</emphasis> for more
+information.
+</para>
+
+<para>
+File transfer support for some protocols (more if you use libpurple). Just
+/DCC SEND stuff. Incoming files also become DCC transfers.
+</para>
+
+<para>
+Only if you run your own BitlBee instance: You can build a BitlBee that uses
+libpurple for connecting to IM networks instead of its own code, adding
+support for some of the more obscure IM protocols and features.
+</para>
+
+<para>
+Many more things, briefly described in <emphasis>help news1.3</emphasis>.
+</para>
+</sect1>
+
+<sect1 id="news1.3">
+<title>New stuff in BitlBee 1.3dev (details)</title>
 
 <para>
 Most of the core of BitlBee was rewritten since the last release. This entry

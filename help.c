@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2009 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Help file control                                                    */
@@ -25,6 +25,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
+#include "help.h"
 #undef read 
 #undef write
 
@@ -192,4 +193,25 @@ int help_add_mem( help_t **help, const char *title, const char *content )
 	h->offset.mem_offset = g_strdup( content );
 	
 	return 1;
+}
+
+char *help_get_whatsnew( help_t **help, int old )
+{
+	GString *ret = NULL;
+	help_t *h;
+	int v;
+	
+	for( h = *help; h; h = h->next )
+		if( h->title != NULL && strncmp( h->title, "whatsnew", 8 ) == 0 &&
+		    sscanf( h->title + 8, "%x", &v ) == 1 && v > old )
+		{
+			char *s = help_get( &h, h->title );
+			if( ret == NULL )
+				ret = g_string_new( s );
+			else
+				g_string_append_printf( ret, "\n\n%s", s );
+			g_free( s );
+		}
+	
+	return ret ? g_string_free( ret, FALSE ) : NULL;
 }
