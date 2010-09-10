@@ -3,13 +3,11 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
-Version 1.3dev:
-- For the first time since 2007, a dev snapshot. Like then, this is pretty
-  stable already (running on testing.bitlbee.org for weeks by now), but not
-  all planned features for the next major release are ready yet, and there
-  may be some rough edges in the interface and documentation.
-- Loads of new stuff, mostly ready for a new major release, but starting with
-  a dev snapshot. A few changes that were planned for a long time already:
+Version 
+- Important: This version drops backward compatibility with the file format
+  used for user settings in versions before 1.2. If you're upgrading from
+  very old BitlBee versions (like 1.0.x), you'll have to recreate your
+  BitlBee account - or use an 1.2.x BitlBee once to do the conversion.
 - Rewrote the IRC core, which brings:
   * Support for multiple (control) channels, so you can have one channel per
     buddy group, per IM account/protocol, or for example a &offline with all
@@ -57,8 +55,18 @@ Version 1.3dev:
   only the Jabber native protocol module currently supports file transfers.
 - Updated Yahoo! module to be in sync again with libyahoo2. This mostly
   fixes issues with authorization requests.
+- Show if a contact is mobile or not. See "help set mobile_is_away".
+- Easier handling of XMPP chatroom invitations.
+- The chatroom mode of the Twitter module is now enabled by default, since
+  this was by far the most popular. To disable it, see "help set mode".
+- Added some Twitter-specific commands that can only be used in the Twitter
+  window. Most important addition: Retweets. See "help set commands".
+- Removed some ancient account/nick migration scripts and added one for
+  easier switching from Pidgin and other libpurple-based clients to BitlBee.
+- Many bug fixes in both the core and IM modules, small feature enhancements
+  and other minor changes.
 
-Finished 6 Aug 2010
+Finished ...
 
 Version 1.2.8:
 - Now always using the AIM-style authentication method for OSCAR connections,

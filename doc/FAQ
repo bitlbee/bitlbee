@@ -61,16 +61,11 @@ A: BitlBee 0.7 was, sort-of. It contained a lot of code from Gaim 0.58
    
    These days, we replaced the Yahoo! code with libyahoo2 (which is a
    separate Yahoo! module. It's derived from Gaim, but separately
-   maintained) and wrote our own MSN module. More modules are probably going
-   to be changed, so in the near future, the API might be the only thing
-   left from Gaim.
-
-Q: What's that Gaim doing in BitlBee error messages and my Jabber resource?
-A: Ah, well, as you probably know we use some of Gaim's IM-modules, and we
-   don't think it's worth our time to do a search-and-replace over the whole
-   source to get rid of every reference to Gaim. In fact, we don't want to,
-   since we don't want to pretend we wrote all that code.
+   maintained) and wrote our own MSN, Jabber and Twitter modules from
+   scratch. Most of the API has also been changed, so by now the only traces
+   of Gaim left are in the "nogaim" filename.
    
-   About Jabber: If you want a different resource string, you can set it
-   when logging in by appending it to your Jabber ID, like:
-   lintux@jabber.com/BitlBee
+   There is good news for Gaim (or now Pidgin, of course) fans though:
+   BitlBee can now be compiled to use libpurple for all IM interactions.
+   This makes BitlBee a bit more resource-hungry, but adds support for many
+   IM protocols/networks that couldn't be used from BitlBee so far.
