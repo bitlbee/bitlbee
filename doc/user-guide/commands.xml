@@ -422,6 +422,23 @@
 		
 		</bitlbee-command>
 		
+		<bitlbee-command name="smpq">
+			<syntax>otr smpq &lt;nick&gt; &lt;question&gt; &lt;answer&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Attempts to authenticate the given user's active fingerprint via the Socialist Millionaires' Protocol, Q&amp;A style.
+				</para>
+
+				<para>
+					When initiating SMP, this is an alternative to the 'otr smp' command. The shared secret is provided as the answer to a specific question. The question is transmitted with the initial SMP packet and used to prompt the other party. If the protocol succeeds (i.e. they give the correct answer), the fingerprint will be trusted.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
 		<bitlbee-command name="trust">
 			<syntax>otr trust &lt;nick&gt; &lt;fp1&gt; &lt;fp2&gt; &lt;fp3&gt; &lt;fp4&gt; &lt;fp5&gt;</syntax>
 			
