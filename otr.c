@@ -1187,26 +1187,29 @@ void otr_initiate_smp(irc_t *irc, const char *nick, const char *question,
 		otrl_sm_state_free(ctx->smstate);
 	}
 	
-	/* warning: the following assumes that smstates are cleared whenever an SMP
-	   is completed or aborted! */ 
-	if(ctx->smstate->secret == NULL) {
+	if(question) {
+		/* this was 'otr smpq', just initiate */
 		irc_usermsg(irc, "smp: initiating with %s...", u->nick);
-		if(question) {
-			otrl_message_initiate_smp_q(irc->otr->us, &otr_ops,
-				u->bu->ic, ctx, question,
-				(unsigned char *)secret, strlen(secret));
-		} else {
-			otrl_message_initiate_smp(irc->otr->us, &otr_ops,
-				u->bu->ic, ctx, (unsigned char *)secret, strlen(secret));
-		}
+		otrl_message_initiate_smp_q(irc->otr->us, &otr_ops, u->bu->ic, ctx,
+			question, (unsigned char *)secret, strlen(secret));
 		/* smp is now in EXPECT2 */
 	} else {
-		/* if we're still in EXPECT1 but smstate is initialized, we must have
-		   received the SMP1, so let's issue a response */
-		irc_usermsg(irc, "smp: responding to %s...", u->nick);
-		otrl_message_respond_smp(irc->otr->us, &otr_ops,
-			u->bu->ic, ctx, (unsigned char *)secret, strlen(secret));
-		/* smp is now in EXPECT3 */
+		/* this was 'otr smp', initiate or reply */
+		/* warning: the following assumes that smstates are cleared whenever an SMP
+		   is completed or aborted! */ 
+		if(ctx->smstate->secret == NULL) {
+			irc_usermsg(irc, "smp: initiating with %s...", u->nick);
+			otrl_message_initiate_smp(irc->otr->us, &otr_ops,
+				u->bu->ic, ctx, (unsigned char *)secret, strlen(secret));
+			/* smp is now in EXPECT2 */
+		} else {
+			/* if we're still in EXPECT1 but smstate is initialized, we must have
+			   received the SMP1, so let's issue a response */
+			irc_usermsg(irc, "smp: responding to %s...", u->nick);
+			otrl_message_respond_smp(irc->otr->us, &otr_ops,
+				u->bu->ic, ctx, (unsigned char *)secret, strlen(secret));
+			/* smp is now in EXPECT3 */
+		}
 	}
 }
 
