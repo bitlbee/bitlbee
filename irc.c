@@ -221,16 +221,16 @@ void irc_free( irc_t * irc )
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
 	
+	if( irc->status & USTATUS_IDENTIFIED && set_getbool( &irc->b->set, "save_on_quit" ) ) 
+		if( storage_save( irc, NULL, TRUE ) != STORAGE_OK )
+			log_message( LOGLVL_WARNING, "Error while saving settings for user %s", irc->user->nick );
+	
 	for( l = irc_plugins; l; l = l->next )
 	{
 		irc_plugin_t *p = l->data;
 		if( p->irc_free )
 			p->irc_free( irc );
 	}
-	
-	if( irc->status & USTATUS_IDENTIFIED && set_getbool( &irc->b->set, "save_on_quit" ) ) 
-		if( storage_save( irc, NULL, TRUE ) != STORAGE_OK )
-			log_message( LOGLVL_WARNING, "Error while saving settings for user %s", irc->user->nick );
 	
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
