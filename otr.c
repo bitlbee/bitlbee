@@ -1,13 +1,13 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2008 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
   
-  2008-2010, Sven Moritz Hallberg <pesco@khjk.org>
+  2008, Sven Moritz Hallberg <pesco@khjk.org>
   (c) and funded by stonedcoder.org
     
   files used to store OTR data:
