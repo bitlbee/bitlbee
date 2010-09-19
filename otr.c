@@ -1063,6 +1063,9 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 		ic->acc->user, ic->acc->prpl->name, 1, NULL, NULL, NULL);
 	if(!context) {
 		/* huh? out of memory or what? */
+		irc_usermsg(irc, "smp: failed to get otr context for %s", u->nick);
+		otrl_message_abort_smp(us, ops, u->bu->ic, context);
+		otrl_sm_state_free(context->smstate);
 		return;
 	}
 	nextMsg = context->smstate->nextExpected;
@@ -1173,9 +1176,10 @@ void otr_initiate_smp(irc_t *irc, const char *nick, const char *question,
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
-		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 1, NULL, NULL, NULL);
-	if(!ctx) {
-		/* huh? out of memory or what? */
+		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+	if(!ctx || ctx->msgstate != OTRL_MSGSTATE_ENCRYPTED) {
+		irc_usermsg(irc, "smp: otr inactive with %s, try \x02otr connect"
+				" %s\x02", nick, nick);
 		return;
 	}
 
