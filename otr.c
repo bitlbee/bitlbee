@@ -1098,6 +1098,22 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	}
 	nextMsg = context->smstate->nextExpected;
 
+	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1Q);
+	if (tlv) {
+		if (nextMsg != OTRL_SMP_EXPECT1) {
+			irc_usermsg(irc, "smp %s: spurious SMP1Q received, aborting", u->nick);
+			otrl_message_abort_smp(us, ops, u->bu->ic, context);
+			otrl_sm_state_free(context->smstate);
+		} else {
+			char *question = g_strndup((char *)tlv->data, tlv->len);
+			irc_usermsg(irc, "smp: question from %s: \"%s\"", u->nick,
+				question);
+			irc_usermsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
+				u->nick);
+			g_free(question);
+			/* smp stays in EXPECT1 until user responds */
+		}
+	}
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1);
 	if (tlv) {
 		if (nextMsg != OTRL_SMP_EXPECT1) {
