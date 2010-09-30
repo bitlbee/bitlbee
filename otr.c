@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2008 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -86,6 +86,7 @@ static void cmd_otr(irc_t *irc, char **args);
 void cmd_otr_connect(irc_t *irc, char **args);
 void cmd_otr_disconnect(irc_t *irc, char **args);
 void cmd_otr_smp(irc_t *irc, char **args);
+void cmd_otr_smpq(irc_t *irc, char **args);
 void cmd_otr_trust(irc_t *irc, char **args);
 void cmd_otr_info(irc_t *irc, char **args);
 void cmd_otr_keygen(irc_t *irc, char **args);
@@ -95,6 +96,7 @@ const command_t otr_commands[] = {
 	{ "connect",     1, &cmd_otr_connect,    0 },
 	{ "disconnect",  1, &cmd_otr_disconnect, 0 },
 	{ "smp",         2, &cmd_otr_smp,        0 },
+	{ "smpq",        3, &cmd_otr_smpq,       0 },
 	{ "trust",       6, &cmd_otr_trust,      0 },
 	{ "info",        0, &cmd_otr_info,       0 },
 	{ "keygen",      1, &cmd_otr_keygen,     0 },
@@ -153,6 +155,10 @@ irc_user_t *peeruser(irc_t *irc, const char *handle, const char *protocol);
 
 /* handle SMP TLVs from a received message */
 void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs);
+
+/* combined handler for the 'otr smp' and 'otr smpq' commands */
+void otr_initiate_smp(irc_t *irc, const char *nick, const char *question,
+		const char *secret);
 
 /* update op/voice flag of given user according to encryption state and settings
    returns 0 if neither op_buddies nor voice_buddies is set to "encrypted",
@@ -731,49 +737,12 @@ void cmd_otr_connect(irc_t *irc, char **args)
 
 void cmd_otr_smp(irc_t *irc, char **args)
 {
-	irc_user_t *u;
-	ConnContext *ctx;
-	
-	u = irc_user_by_name(irc, args[1]);
-	if(!u || !u->bu || !u->bu->ic) {
-		irc_usermsg(irc, "%s: unknown user", args[1]);
-		return;
-	}
-	if(!(u->bu->flags & BEE_USER_ONLINE)) {
-		irc_usermsg(irc, "%s is offline", args[1]);
-		return;
-	}
-	
-	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
-		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 1, NULL, NULL, NULL);
-	if(!ctx) {
-		/* huh? out of memory or what? */
-		return;
-	}
+	otr_initiate_smp(irc, args[1], NULL, args[2]);	/* no question */
+}
 
-	if(ctx->smstate->nextExpected != OTRL_SMP_EXPECT1) {
-		log_message(LOGLVL_INFO,
-			"SMP already in phase %d, sending abort before reinitiating",
-			ctx->smstate->nextExpected+1);
-		otrl_message_abort_smp(irc->otr->us, &otr_ops, u->bu->ic, ctx);
-		otrl_sm_state_free(ctx->smstate);
-	}
-	
-	/* warning: the following assumes that smstates are cleared whenever an SMP
-	   is completed or aborted! */ 
-	if(ctx->smstate->secret == NULL) {
-		irc_usermsg(irc, "smp: initiating with %s...", u->nick);
-		otrl_message_initiate_smp(irc->otr->us, &otr_ops,
-			u->bu->ic, ctx, (unsigned char *)args[2], strlen(args[2]));
-		/* smp is now in EXPECT2 */
-	} else {
-		/* if we're still in EXPECT1 but smstate is initialized, we must have
-		   received the SMP1, so let's issue a response */
-		irc_usermsg(irc, "smp: responding to %s...", u->nick);
-		otrl_message_respond_smp(irc->otr->us, &otr_ops,
-			u->bu->ic, ctx, (unsigned char *)args[2], strlen(args[2]));
-		/* smp is now in EXPECT3 */
-	}
+void cmd_otr_smpq(irc_t *irc, char **args)
+{
+	otr_initiate_smp(irc, args[1], args[2], args[3]);
 }
 
 void cmd_otr_trust(irc_t *irc, char **args)
@@ -1097,10 +1066,29 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 		ic->acc->user, ic->acc->prpl->name, 1, NULL, NULL, NULL);
 	if(!context) {
 		/* huh? out of memory or what? */
+		irc_usermsg(irc, "smp: failed to get otr context for %s", u->nick);
+		otrl_message_abort_smp(us, ops, u->bu->ic, context);
+		otrl_sm_state_free(context->smstate);
 		return;
 	}
 	nextMsg = context->smstate->nextExpected;
 
+	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1Q);
+	if (tlv) {
+		if (nextMsg != OTRL_SMP_EXPECT1) {
+			irc_usermsg(irc, "smp %s: spurious SMP1Q received, aborting", u->nick);
+			otrl_message_abort_smp(us, ops, u->bu->ic, context);
+			otrl_sm_state_free(context->smstate);
+		} else {
+			char *question = g_strndup((char *)tlv->data, tlv->len);
+			irc_usermsg(irc, "smp: initiated by %s with question: \"%s\"", u->nick,
+				question);
+			irc_usermsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
+				u->nick);
+			g_free(question);
+			/* smp stays in EXPECT1 until user responds */
+		}
+	}
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1);
 	if (tlv) {
 		if (nextMsg != OTRL_SMP_EXPECT1) {
@@ -1170,6 +1158,65 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	 	irc_usermsg(irc, "smp: received abort from %s", u->nick);
 		otrl_sm_state_free(context->smstate);
 		/* smp is in back in EXPECT1 */
+	}
+}
+
+/* combined handler for the 'otr smp' and 'otr smpq' commands */
+void otr_initiate_smp(irc_t *irc, const char *nick, const char *question,
+		const char *secret)
+{
+	irc_user_t *u;
+	ConnContext *ctx;
+
+	u = irc_user_by_name(irc, nick);
+	if(!u || !u->bu || !u->bu->ic) {
+		irc_usermsg(irc, "%s: unknown user", nick);
+		return;
+	}
+	if(!(u->bu->flags & BEE_USER_ONLINE)) {
+		irc_usermsg(irc, "%s is offline", nick);
+		return;
+	}
+	
+	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
+		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+	if(!ctx || ctx->msgstate != OTRL_MSGSTATE_ENCRYPTED) {
+		irc_usermsg(irc, "smp: otr inactive with %s, try \x02otr connect"
+				" %s\x02", nick, nick);
+		return;
+	}
+
+	if(ctx->smstate->nextExpected != OTRL_SMP_EXPECT1) {
+		log_message(LOGLVL_INFO,
+			"SMP already in phase %d, sending abort before reinitiating",
+			ctx->smstate->nextExpected+1);
+		otrl_message_abort_smp(irc->otr->us, &otr_ops, u->bu->ic, ctx);
+		otrl_sm_state_free(ctx->smstate);
+	}
+	
+	if(question) {
+		/* this was 'otr smpq', just initiate */
+		irc_usermsg(irc, "smp: initiating with %s...", u->nick);
+		otrl_message_initiate_smp_q(irc->otr->us, &otr_ops, u->bu->ic, ctx,
+			question, (unsigned char *)secret, strlen(secret));
+		/* smp is now in EXPECT2 */
+	} else {
+		/* this was 'otr smp', initiate or reply */
+		/* warning: the following assumes that smstates are cleared whenever an SMP
+		   is completed or aborted! */ 
+		if(ctx->smstate->secret == NULL) {
+			irc_usermsg(irc, "smp: initiating with %s...", u->nick);
+			otrl_message_initiate_smp(irc->otr->us, &otr_ops,
+				u->bu->ic, ctx, (unsigned char *)secret, strlen(secret));
+			/* smp is now in EXPECT2 */
+		} else {
+			/* if we're still in EXPECT1 but smstate is initialized, we must have
+			   received the SMP1, so let's issue a response */
+			irc_usermsg(irc, "smp: responding to %s...", u->nick);
+			otrl_message_respond_smp(irc->otr->us, &otr_ops,
+				u->bu->ic, ctx, (unsigned char *)secret, strlen(secret));
+			/* smp is now in EXPECT3 */
+		}
 	}
 }
 

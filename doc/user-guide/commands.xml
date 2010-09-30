@@ -374,7 +374,7 @@
 		<description>
 
 			<para>
-				Available subcommands: connect, disconnect, smp, trust, info, keygen, and forget. See <emphasis>help otr &lt;subcommand&gt;</emphasis> for more information.
+				Available subcommands: connect, disconnect, smp, smpq, trust, info, keygen, and forget. See <emphasis>help otr &lt;subcommand&gt;</emphasis> for more information.
 			</para>
 
 		</description>
@@ -416,6 +416,23 @@
 				
 				<para>
 					If an SMP challenge has already been received from the given user, responds with the specified secret. Otherwise, a challenge for the secret will be sent. If the protocol succeeds (i.e. both parties gave the same secret), the fingerprint will be trusted.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="smpq">
+			<syntax>otr smpq &lt;nick&gt; &lt;question&gt; &lt;answer&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Attempts to authenticate the given user's active fingerprint via the Socialist Millionaires' Protocol, Q&amp;A style.
+				</para>
+
+				<para>
+					When initiating SMP, this is an alternative to the 'otr smp' command. The shared secret is provided as the answer to a specific question. The question is transmitted with the initial SMP packet and used to prompt the other party. If the protocol succeeds (i.e. they give the correct answer), the fingerprint will be trusted.
 				</para>
 				
 			</description>
