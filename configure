@@ -499,11 +499,16 @@ if [ "$otr" = "auto" ]; then
 	fi
 fi
 if [ "$otr" = 1 ]; then
-	echo '#define WITH_OTR' >> config.h
+	# BI == built-in
+	echo '#define OTR_BI' >> config.h
 	echo "EFLAGS+=-L${otrprefix}/lib -lotr" >> Makefile.settings
 	echo "CFLAGS+=-I${otrprefix}/include" >> Makefile.settings
-else
-	echo '#undef WITH_OTR' >> config.h
+	echo 'OTR_BI=otr.o' >> Makefile.settings
+elif [ "$otr" = "plugin" ]; then
+	echo '#define OTR_PI' >> config.h
+	echo "OTRFLAGS=-L${otrprefix}/lib -lotr" >> Makefile.settings
+	echo "CFLAGS+=-I${otrprefix}/include" >> Makefile.settings
+	echo 'OTR_PI=otr.so' >> Makefile.settings
 fi
 
 if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; then
@@ -702,6 +707,8 @@ fi
 
 if [ "$otr" = "1" ]; then
 	echo '  Off-the-Record (OTR) Messaging enabled.'
+elif [ "$otr" = "plugin" ]; then
+	echo '  Off-the-Record (OTR) Messaging enabled (as a plugin).'
 else
 	echo '  Off-the-Record (OTR) Messaging disabled.'
 fi

@@ -38,7 +38,6 @@
 */
 
 #include "bitlbee.h"
-#ifdef WITH_OTR
 #include "irc.h"
 #include "otr.h"
 #include <sys/types.h>
@@ -181,7 +180,11 @@ static const struct irc_plugin otr_plugin;
 
 /*** routines declared in otr.h: ***/
 
-void otr_init(void)
+#ifdef OTR_BI
+#define init_plugin otr_init
+#endif
+
+void init_plugin(void)
 {
 	OTRL_INIT;
 	
@@ -1715,13 +1718,3 @@ void yes_keygen(void *data)
 		otr_keygen(irc, acc->user, acc->prpl->name);
 	}
 }
-
-
-#else /* WITH_OTR undefined */
-
-void cmd_otr(irc_t *irc, char **args)
-{
-	irc_usermsg(irc, "otr: n/a, compiled without OTR support");
-}
-
-#endif

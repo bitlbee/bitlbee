@@ -76,7 +76,11 @@ int main( int argc, char *argv[] )
  	   memory management functions for libgcrypt while our gnutls module
  	   uses the defaults. Therefore we initialize OTR after SSL. *sigh* */
  	ssl_init();
+#ifdef OTR_BI
  	otr_init();
+#endif
+	/* And in case OTR is loaded as a plugin, it'll also get loaded after
+	   this point. */
 	
 	srand( time( NULL ) ^ getpid() );
 	
