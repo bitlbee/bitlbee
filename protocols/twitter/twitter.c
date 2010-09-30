@@ -28,6 +28,16 @@
 #include "twitter_lib.h"
 #include "url.h"
 
+#define twitter_msg( ic, fmt... ) \
+	do {                                                        \
+		struct twitter_data *td = ic->proto_data;           \
+		if( td->home_timeline_gc )                          \
+			imcb_chat_log( td->home_timeline_gc, fmt ); \
+		else                                                \
+			imcb_log( ic, fmt );                        \
+	} while( 0 );
+		
+
 /**
  * Main loop function
  */
@@ -435,6 +445,8 @@ static void twitter_handle_command( struct im_connection *ic, char *message )
 		/* TODO: User feedback. */
 		if( id )
 			twitter_status_destroy( ic, id );
+		else
+			twitter_msg( ic, "Could not undo last action" );
 		
 		g_free( cmds );
 		return;
@@ -466,6 +478,9 @@ static void twitter_handle_command( struct im_connection *ic, char *message )
 		td->last_status_id = 0;
 		if( id )
 			twitter_status_retweet( ic, id );
+		else
+			twitter_msg( ic, "User `%s' does not exist or didn't "
+			                 "post any statuses recently", cmd[1] );
 		
 		g_free( cmds );
 		return;
