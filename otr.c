@@ -7,8 +7,8 @@
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
   
-  2008, Sven Moritz Hallberg <pesco@khjk.org>
-  (c) and funded by stonedcoder.org
+  (c) 2008-2010 Sven Moritz Hallberg <pesco@khjk.org>
+  (c) 2008 funded by stonedcoder.org
     
   files used to store OTR data:
     <configdir>/<nick>.otr_keys
