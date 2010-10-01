@@ -1129,12 +1129,19 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 			otrl_sm_state_free(context->smstate);
 		} else {
 			/* SMP3 received, otrl_message_receiving will have sent SMP4 and set fp trust */
-			const char *trust = context->active_fingerprint->trust;
-			if(!trust || trust[0]=='\0') {
-				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
+			/* as noted above, fp trust SHOULD have been set by libotr.
+			 * however at least version 3.2.0 seems to forget it when
+			 * responding to an smp session that was initiated with SMP1Q
+			 * (question and answer); other cases appear to work fine.
+			 * as a workaround, we explicitly set it below.
+			 */ 
+			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
+				otrl_context_set_trust(context->active_fingerprint, "smp");
+				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
 					u->nick);
 			} else {
-				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
+				otrl_context_set_trust(context->active_fingerprint, "");
+				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
 					u->nick);
 			}
 			otrl_sm_state_free(context->smstate);
@@ -1149,12 +1156,11 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 			otrl_sm_state_free(context->smstate);
 		} else {
 			/* SMP4 received, otrl_message_receiving will have set fp trust */
-			const char *trust = context->active_fingerprint->trust;
-			if(!trust || trust[0]=='\0') {
-				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
+			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
+				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
 					u->nick);
 			} else {
-				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
+				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
 					u->nick);
 			}
 			otrl_sm_state_free(context->smstate);
@@ -1201,7 +1207,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		otrl_message_abort_smp(irc->otr->us, &otr_ops, u->bu->ic, ctx);
 		otrl_sm_state_free(ctx->smstate);
 	}
-	
+
 	if(question) {
 		/* this was 'otr smpq', just initiate */
 		irc_usermsg(irc, "smp: initiating with %s...", u->nick);
