@@ -1089,7 +1089,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 			otrl_sm_state_free(context->smstate);
 		} else {
 			char *question = g_strndup((char *)tlv->data, tlv->len);
-			irc_usermsg(irc, "smp: initiated by %s with question: \"%s\"", u->nick,
+			irc_usermsg(irc, "smp: initiated by %s with question: \x02\"%s\"\x02", u->nick,
 				question);
 			irc_usermsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
 				u->nick);
