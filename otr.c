@@ -157,7 +157,7 @@ irc_user_t *peeruser(irc_t *irc, const char *handle, const char *protocol);
 void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs);
 
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
-void otr_initiate_smp(irc_t *irc, const char *nick, const char *question,
+void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		const char *secret);
 
 /* update op/voice flag of given user according to encryption state and settings
@@ -737,12 +737,12 @@ void cmd_otr_connect(irc_t *irc, char **args)
 
 void cmd_otr_smp(irc_t *irc, char **args)
 {
-	otr_initiate_smp(irc, args[1], NULL, args[2]);	/* no question */
+	otr_smp_or_smpq(irc, args[1], NULL, args[2]);	/* no question */
 }
 
 void cmd_otr_smpq(irc_t *irc, char **args)
 {
-	otr_initiate_smp(irc, args[1], args[2], args[3]);
+	otr_smp_or_smpq(irc, args[1], args[2], args[3]);
 }
 
 void cmd_otr_trust(irc_t *irc, char **args)
@@ -1162,7 +1162,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 }
 
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
-void otr_initiate_smp(irc_t *irc, const char *nick, const char *question,
+void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		const char *secret)
 {
 	irc_user_t *u;
