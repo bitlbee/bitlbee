@@ -1073,6 +1073,14 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	}
 	nextMsg = context->smstate->nextExpected;
 
+	if (context->smstate->sm_prog_state == OTRL_SMP_PROG_CHEATED) {
+		irc_usermsg(irc, "smp %s: opponent violated protocol, aborting",
+			u->nick);
+		otrl_message_abort_smp(us, ops, u->bu->ic, context);
+		otrl_sm_state_free(context->smstate);
+		return;
+	}
+
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1Q);
 	if (tlv) {
 		if (nextMsg != OTRL_SMP_EXPECT1) {
