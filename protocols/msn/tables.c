@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Some tables with useful data                            */
@@ -82,6 +82,8 @@ const struct msn_status_code msn_status_code_list[] =
 	{ 229, "Group name too long",                                   0 },
 	{ 230, "Cannot remove that group",                              0 },
 	{ 231, "Invalid group",                                         0 },
+	{ 240, "ADL/RML command with corrupted payload",                STATUS_FATAL },
+	{ 241, "ADL/RML command with invalid modification",             0 },
 	{ 280, "Switchboard failed",                                    STATUS_SB_FATAL },
 	{ 281, "Transfer to switchboard failed",                        0 },
 	

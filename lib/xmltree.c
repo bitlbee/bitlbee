@@ -140,7 +140,7 @@ void xt_reset( struct xt_parser *xt )
 
 /* Feed the parser, don't execute any handler. Returns -1 on errors, 0 on
    end-of-stream and 1 otherwise. */
-int xt_feed( struct xt_parser *xt, char *text, int text_len )
+int xt_feed( struct xt_parser *xt, const char *text, int text_len )
 {
 	if( !g_markup_parse_context_parse( xt->parser, text, text_len, &xt->gerr ) )
 	{
@@ -173,20 +173,20 @@ int xt_handle( struct xt_parser *xt, struct xt_node *node, int depth )
 	
 	if( node->flags & XT_COMPLETE && !( node->flags & XT_SEEN ) )
 	{
-		for( i = 0; xt->handlers[i].func; i ++ )
+		if( xt->handlers ) for( i = 0; xt->handlers[i].func; i ++ )
 		{
 			/* This one is fun! \o/ */
 			
-						/* If handler.name == NULL it means it should always match. */
+			    /* If handler.name == NULL it means it should always match. */
 			if( ( xt->handlers[i].name == NULL || 
-						/* If it's not, compare. There should always be a name. */
+			      /* If it's not, compare. There should always be a name. */
 			      g_strcasecmp( xt->handlers[i].name, node->name ) == 0 ) &&
-						/* If handler.parent == NULL, it's a match. */
+			    /* If handler.parent == NULL, it's a match. */
 			    ( xt->handlers[i].parent == NULL ||
-						/* If there's a parent node, see if the name matches. */
+			      /* If there's a parent node, see if the name matches. */
 			      ( node->parent ? g_strcasecmp( xt->handlers[i].parent, node->parent->name ) == 0 : 
-						/* If there's no parent, the handler should mention <root> as a parent. */
-			                       g_strcasecmp( xt->handlers[i].parent, "<root>" ) == 0 ) ) )
+			      /* If there's no parent, the handler should mention <root> as a parent. */
+			                       strcmp( xt->handlers[i].parent, "<root>" ) == 0 ) ) )
 			{
 				st = xt->handlers[i].func( node, xt->data );
 				
@@ -259,6 +259,20 @@ void xt_cleanup( struct xt_parser *xt, struct xt_node *node, int depth )
 	}
 }
 
+struct xt_node *xt_from_string( const char *in )
+{
+	struct xt_parser *parser;
+	struct xt_node *ret;
+	
+	parser = xt_new( NULL, NULL );
+	xt_feed( parser, in, strlen( in ) );
+	ret = parser->root;
+	parser->root = NULL;
+	xt_free( parser );
+	
+	return ret;
+}
+
 static void xt_to_string_real( struct xt_node *node, GString *str )
 {
 	char *buf;
@@ -316,14 +330,18 @@ void xt_print( struct xt_node *node )
 	
 	/* Indentation */
 	for( c = node; c->parent; c = c->parent )
-		printf( "\t" );
+		printf( "    " );
 	
 	/* Start the tag */
 	printf( "<%s", node->name );
 	
 	/* Print the attributes */
 	for( i = 0; node->attr[i].key; i ++ )
-		printf( " %s=\"%s\"", node->attr[i].key, g_markup_escape_text( node->attr[i].value, -1 ) );
+	{
+		char *v = g_markup_escape_text( node->attr[i].value, -1 );
+		printf( " %s=\"%s\"", node->attr[i].key, v );
+		g_free( v );
+	}
 	
 	/* /> in case there's really *nothing* inside this tag, otherwise
 	   just >. */
@@ -343,7 +361,11 @@ void xt_print( struct xt_node *node )
 	{
 		for( i = 0; node->text[i] && isspace( node->text[i] ); i ++ );
 		if( node->text[i] )
-			printf( "%s", g_markup_escape_text( node->text, -1 ) );
+		{
+			char *v = g_markup_escape_text( node->text, -1 );
+			printf( "%s", v );
+			g_free( v );
+		}
 	}
 	
 	if( node->children )
@@ -354,7 +376,7 @@ void xt_print( struct xt_node *node )
 	
 	if( node->children )
 		for( c = node; c->parent; c = c->parent )
-			printf( "\t" );
+			printf( "    " );
 	
 	/* Non-empty tag is now finished. */
 	printf( "</%s>\n", node->name );
@@ -464,6 +486,46 @@ struct xt_node *xt_find_node( struct xt_node *node, const char *name )
 	return node;
 }
 
+/* More advanced than the one above, understands something like
+   ../foo/bar to find a subnode bar of a node foo which is a child
+   of node's parent. Pass the node directly, not its list of children. */
+struct xt_node *xt_find_path( struct xt_node *node, const char *name )
+{
+	while( name && *name && node )
+	{
+		char *colon, *slash;
+		int n;
+		
+		if( ( slash = strchr( name, '/' ) ) )
+			n = slash - name;
+		else
+			n = strlen( name );
+		
+		if( strncmp( name, "..", n ) == 0 )
+		{
+			node = node->parent;
+		}
+		else
+		{
+			node = node->children;
+			
+			while( node )
+			{
+				if( g_strncasecmp( node->name, name, n ) == 0 ||
+				    ( ( colon = strchr( node->name, ':' ) ) &&
+				      g_strncasecmp( colon + 1, name, n ) == 0 ) )
+					break;
+				
+				node = node->next;
+			}
+		}
+		
+		name = slash ? slash + 1 : NULL;
+	}
+	
+	return node;
+}
+
 char *xt_find_attr( struct xt_node *node, const char *key )
 {
 	int i;
@@ -547,6 +609,26 @@ void xt_add_child( struct xt_node *parent, struct xt_node *child )
 		for( node = parent->children; node->next; node = node->next );
 		node->next = child;
 	}
+}
+
+/* Same, but at the beginning. */
+void xt_insert_child( struct xt_node *parent, struct xt_node *child )
+{
+	struct xt_node *node, *last;
+	
+	for( node = child; node; node = node->next )
+	{
+		if( node->parent != NULL )
+		{
+			/* ERROR CONDITION: They seem to have a parent already??? */
+		}
+		
+		node->parent = parent;
+		last = node;
+	}
+	
+	last->next = parent->children;
+	parent->children = child;
 }
 
 void xt_add_attr( struct xt_node *node, const char *key, const char *value )

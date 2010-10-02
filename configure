@@ -422,6 +422,12 @@ if [ "$ret" = "0" ]; then
 	exit 1
 fi;
 
+if [ "$msn" = "1" -a "$ssl" != "openssl" ]; then
+	# Needed for MSN only. OpenSSL exports nice cipher functions already,
+	# others don't, so use our own 3des code.
+	echo 'DES=des.o' >> Makefile.settings
+fi
+
 echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 
 if detect_resolv_dynamic || detect_resolv_static; then
