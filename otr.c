@@ -7,8 +7,8 @@
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
   
-  2008, Sven Moritz Hallberg <pesco@khjk.org>
-  (c) and funded by stonedcoder.org
+  (c) 2008-2010 Sven Moritz Hallberg <pesco@khjk.org>
+  (c) 2008 funded by stonedcoder.org
     
   files used to store OTR data:
     <configdir>/<nick>.otr_keys
@@ -157,7 +157,7 @@ irc_user_t *peeruser(irc_t *irc, const char *handle, const char *protocol);
 void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs);
 
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
-void otr_initiate_smp(irc_t *irc, const char *nick, const char *question,
+void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		const char *secret);
 
 /* update op/voice flag of given user according to encryption state and settings
@@ -737,12 +737,12 @@ void cmd_otr_connect(irc_t *irc, char **args)
 
 void cmd_otr_smp(irc_t *irc, char **args)
 {
-	otr_initiate_smp(irc, args[1], NULL, args[2]);	/* no question */
+	otr_smp_or_smpq(irc, args[1], NULL, args[2]);	/* no question */
 }
 
 void cmd_otr_smpq(irc_t *irc, char **args)
 {
-	otr_initiate_smp(irc, args[1], args[2], args[3]);
+	otr_smp_or_smpq(irc, args[1], args[2], args[3]);
 }
 
 void cmd_otr_trust(irc_t *irc, char **args)
@@ -1073,6 +1073,14 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	}
 	nextMsg = context->smstate->nextExpected;
 
+	if (context->smstate->sm_prog_state == OTRL_SMP_PROG_CHEATED) {
+		irc_usermsg(irc, "smp %s: opponent violated protocol, aborting",
+			u->nick);
+		otrl_message_abort_smp(us, ops, u->bu->ic, context);
+		otrl_sm_state_free(context->smstate);
+		return;
+	}
+
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1Q);
 	if (tlv) {
 		if (nextMsg != OTRL_SMP_EXPECT1) {
@@ -1081,7 +1089,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 			otrl_sm_state_free(context->smstate);
 		} else {
 			char *question = g_strndup((char *)tlv->data, tlv->len);
-			irc_usermsg(irc, "smp: initiated by %s with question: \"%s\"", u->nick,
+			irc_usermsg(irc, "smp: initiated by %s with question: \x02\"%s\"\x02", u->nick,
 				question);
 			irc_usermsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
 				u->nick);
@@ -1121,12 +1129,19 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 			otrl_sm_state_free(context->smstate);
 		} else {
 			/* SMP3 received, otrl_message_receiving will have sent SMP4 and set fp trust */
-			const char *trust = context->active_fingerprint->trust;
-			if(!trust || trust[0]=='\0') {
-				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
+			/* as noted above, fp trust SHOULD have been set by libotr.
+			 * however at least version 3.2.0 seems to forget it when
+			 * responding to an smp session that was initiated with SMP1Q
+			 * (question and answer); other cases appear to work fine.
+			 * as a workaround, we explicitly set it below.
+			 */ 
+			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
+				otrl_context_set_trust(context->active_fingerprint, "smp");
+				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
 					u->nick);
 			} else {
-				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
+				otrl_context_set_trust(context->active_fingerprint, "");
+				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
 					u->nick);
 			}
 			otrl_sm_state_free(context->smstate);
@@ -1141,12 +1156,11 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 			otrl_sm_state_free(context->smstate);
 		} else {
 			/* SMP4 received, otrl_message_receiving will have set fp trust */
-			const char *trust = context->active_fingerprint->trust;
-			if(!trust || trust[0]=='\0') {
-				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
+			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
+				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
 					u->nick);
 			} else {
-				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
+				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
 					u->nick);
 			}
 			otrl_sm_state_free(context->smstate);
@@ -1162,7 +1176,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 }
 
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
-void otr_initiate_smp(irc_t *irc, const char *nick, const char *question,
+void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		const char *secret)
 {
 	irc_user_t *u;
@@ -1193,7 +1207,7 @@ void otr_initiate_smp(irc_t *irc, const char *nick, const char *question,
 		otrl_message_abort_smp(irc->otr->us, &otr_ops, u->bu->ic, ctx);
 		otrl_sm_state_free(ctx->smstate);
 	}
-	
+
 	if(question) {
 		/* this was 'otr smpq', just initiate */
 		irc_usermsg(irc, "smp: initiating with %s...", u->nick);
