@@ -969,13 +969,12 @@ int msn_soap_ab_contact_add( struct im_connection *ic, bee_user_t *bu )
 static int msn_soap_ab_contact_del_build_request( struct msn_soap_req_data *soap_req )
 {
 	struct msn_data *md = soap_req->ic->proto_data;
-	bee_user_t *bu = soap_req->data;
-	struct msn_buddy_data *bd = bu->data;
+	const char *cid = soap_req->data;
 	
 	soap_req->url = g_strdup( SOAP_ADDRESSBOOK_URL );
 	soap_req->action = g_strdup( SOAP_AB_CONTACT_DEL_ACTION );
 	soap_req->payload = msn_soap_abservice_build( SOAP_AB_CONTACT_DEL_PAYLOAD,
-		"Timer", md->tokens[1], bd->cid );
+		"Timer", md->tokens[1], cid );
 	
 	return 1;
 }
@@ -988,12 +987,15 @@ static int msn_soap_ab_contact_del_handle_response( struct msn_soap_req_data *so
 
 static int msn_soap_ab_contact_del_free_data( struct msn_soap_req_data *soap_req )
 {
+	g_free( soap_req->data );
 	return 0;
 }
 
 int msn_soap_ab_contact_del( struct im_connection *ic, bee_user_t *bu )
 {
-	return msn_soap_start( ic, bu,
+	struct msn_buddy_data *bd = bu->data;
+	
+	return msn_soap_start( ic, g_strdup( bd->cid ),
 	                       msn_soap_ab_contact_del_build_request,
 	                       NULL,
 	                       msn_soap_ab_contact_del_handle_response,
