@@ -633,7 +633,8 @@ static xt_status msn_soap_memlist_member( struct xt_node *node, gpointer data )
 	else if( strcmp( role, "Pending" ) == 0 )
 		bd->flags |= MSN_BUDDY_PL;
 	
-	printf( "%p %s %d\n", bu, handle, bd->flags );
+	if( getenv( "BITLBEE_DEBUG" ) )
+		printf( "%p %s %d\n", bu, handle, bd->flags );
 	
 	return XT_HANDLED;
 }
@@ -779,7 +780,8 @@ static xt_status msn_soap_addressbook_group( struct xt_node *node, gpointer data
 		md->groups = g_slist_prepend( md->groups, mg );
 	}
 	
-	printf( "%s %s\n", id, name );
+	if( getenv( "BITLBEE_DEBUG" ) )
+		printf( "%s %s\n", id, name );
 	
 	return XT_HANDLED;
 }
@@ -839,7 +841,8 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 	if( group_id && ( group = msn_group_by_id( ic, group_id ) ) )
 		imcb_add_buddy( ic, handle, group->name );
 	
-	printf( "%s %s %s %s\n", id, type, handle, display_name );
+	if( getenv( "BITLBEE_DEBUG" ) )
+		printf( "%s %s %s %s\n", id, type, handle, display_name );
 	
 	return XT_HANDLED;
 }
