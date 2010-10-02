@@ -51,7 +51,9 @@ Version
     binaries).
 - Rewritten MSN module, implementing MSNP15 instead of the old MSNP8:
   * MSNP8 support from MSN was getting pretty unreliable. There were issues
-    with remembering display names and adding contacts/auth requests.
+    with remembering display names and adding contacts/auth requests (or
+    even contacts silently getting blocked!). This upgrade should fix all
+    of that.
   * Support for sending offline messages.
   * Support for setting and reading status messages.
 - Support for file transfers, in and out. /DCC SEND a file to a contact and
