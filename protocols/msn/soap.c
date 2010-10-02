@@ -625,9 +625,15 @@ static xt_status msn_soap_memlist_member( struct xt_node *node, gpointer data )
 	
 	bd = bu->data;
 	if( strcmp( role, "Allow" ) == 0 )
+	{
 		bd->flags |= MSN_BUDDY_AL;
+		ic->permit = g_slist_prepend( ic->permit, g_strdup( handle ) );
+	}
 	else if( strcmp( role, "Block" ) == 0 )
+	{
 		bd->flags |= MSN_BUDDY_BL;
+		ic->deny = g_slist_prepend( ic->deny, g_strdup( handle ) );
+	}
 	else if( strcmp( role, "Reverse" ) == 0 )
 		bd->flags |= MSN_BUDDY_RL;
 	else if( strcmp( role, "Pending" ) == 0 )
