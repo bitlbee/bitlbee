@@ -33,7 +33,7 @@ debug=0
 strip=1
 gcov=0
 plugins=1
-otr=auto
+otr=0
 
 events=glib
 ldap=0
@@ -72,12 +72,14 @@ Option		Description				Default
 --twitter=0/1	Disable/enable Twitter part		$twitter
 
 --purple=0/1	Disable/enable libpurple support	$purple
+		(automatically disables other protocol modules)
 
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
 --plugins=0/1	Disable/enable plugins support		$plugins
---otr=0/1	Disable/enable OTR encryption support	$otr
+--otr=0/1/auto/plugin
+		Disable/enable OTR encryption support	$otr
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
