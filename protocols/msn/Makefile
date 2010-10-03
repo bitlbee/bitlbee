@@ -12,7 +12,7 @@ SRCDIR := $(SRCDIR)protocols/msn/
 endif
 
 # [SH] Program variables
-objects = msn.o msn_util.o ns.o passport.o sb.o tables.o
+objects = msn.o msn_util.o ns.o sb.o soap.o tables.o
 
 LFLAGS += -r
 

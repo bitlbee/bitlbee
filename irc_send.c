@@ -52,24 +52,27 @@ void irc_send_login( irc_t *irc )
 
 void irc_send_motd( irc_t *irc )
 {
+	char motd[2048];
+	size_t len;
 	int fd;
 	
 	fd = open( global.conf->motdfile, O_RDONLY );
-	if( fd == -1 )
+	if( fd == -1 || ( len = read( fd, motd, sizeof( motd ) - 1 ) ) <= 0 )
 	{
 		irc_send_num( irc, 422, ":We don't need MOTDs." );
 	}
 	else
 	{
-		char linebuf[80];	/* Max. line length for MOTD's is 79 chars. It's what most IRC networks seem to do. */
-		char *add, max;
-		int len;
+		char linebuf[80];
+		char *add = "", max, *in;
 		
+		in = motd;
+		motd[len] = '\0';
 		linebuf[79] = len = 0;
 		max = sizeof( linebuf ) - 1;
 		
 		irc_send_num( irc, 375, ":- %s Message Of The Day - ", irc->root->host );
-		while( read( fd, linebuf + len, 1 ) == 1 )
+		while( ( linebuf[len] = *(in++) ) )
 		{
 			if( linebuf[len] == '\n' || len == max )
 			{
@@ -79,13 +82,15 @@ void irc_send_motd( irc_t *irc )
 			}
 			else if( linebuf[len] == '%' )
 			{
-				read( fd, linebuf + len, 1 );
+				linebuf[len] = *(in++);
 				if( linebuf[len] == 'h' )
 					add = irc->root->host;
 				else if( linebuf[len] == 'v' )
 					add = BITLBEE_VERSION;
 				else if( linebuf[len] == 'n' )
 					add = irc->user->nick;
+				else if( linebuf[len] == '\0' )
+					in --;
 				else
 					add = "%";
 				
@@ -98,15 +103,17 @@ void irc_send_motd( irc_t *irc )
 			}
 		}
 		irc_send_num( irc, 376, ":End of MOTD" );
-		close( fd );
 	}
+	
+	if( fd != -1 )
+		close( fd );
 }
 
 void irc_usermsg( irc_t *irc, char *format, ... )
 {
 	irc_channel_t *ic = NULL;
 	irc_user_t *iu = irc->root;
-	char text[1024];
+	char text[1100];
 	va_list params;
 	char *dst;
 	

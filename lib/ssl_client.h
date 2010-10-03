@@ -80,3 +80,5 @@ G_MODULE_EXPORT int ssl_getfd( void *conn );
    adding an event handler to the queue. (And it should perform exactly
    the same action as the handler that just received the SSL_AGAIN.) */
 G_MODULE_EXPORT b_input_condition ssl_getdirection( void *conn );
+
+G_MODULE_EXPORT size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned char *input, size_t input_len, const unsigned char *iv, unsigned char **res);

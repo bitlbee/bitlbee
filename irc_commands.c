@@ -25,6 +25,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
+#include "help.h"
 #include "ipc.h"
 
 static void irc_cmd_pass( irc_t *irc, char **cmd )

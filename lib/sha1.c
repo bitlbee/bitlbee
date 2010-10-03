@@ -35,6 +35,7 @@
  *
  */
 
+#include <string.h>
 #include "sha1.h"
 
 /*
@@ -372,4 +373,50 @@ static void sha1_pad(sha1_state_t * context)
 	context->Message_Block[63] = context->Length_Low;
 
 	sha1_process_block(context);
+}
+
+#define HMAC_BLOCK_SIZE 64
+
+/* BitlBee addition: */
+void sha1_hmac(const char *key_, size_t key_len, const char *payload, size_t payload_len, uint8_t Message_Digest[sha1_hash_size])
+{
+	sha1_state_t sha1;
+	uint8_t hash[sha1_hash_size];
+	uint8_t key[HMAC_BLOCK_SIZE+1];
+	int i;
+	
+	if( key_len == 0 )
+		key_len = strlen( key_ );
+	if( payload_len == 0 )
+		payload_len = strlen( payload );
+	
+	/* Create K. If our current key is >64 chars we have to hash it,
+	   otherwise just pad. */
+	memset( key, 0, HMAC_BLOCK_SIZE + 1 );
+	if( key_len > HMAC_BLOCK_SIZE )
+	{
+		sha1_init( &sha1 );
+		sha1_append( &sha1, (uint8_t*) key_, key_len );
+		sha1_finish( &sha1, key );
+	}
+	else
+	{
+		memcpy( key, key_, key_len );
+	}
+	
+	/* Inner part: H(K XOR 0x36, text) */
+	sha1_init( &sha1 );
+	for( i = 0; i < HMAC_BLOCK_SIZE; i ++ )
+		key[i] ^= 0x36;
+	sha1_append( &sha1, key, HMAC_BLOCK_SIZE );
+	sha1_append( &sha1, (const uint8_t*) payload, payload_len );
+	sha1_finish( &sha1, hash );
+	
+	/* Final result: H(K XOR 0x5C, inner stuff) */
+	sha1_init( &sha1 );
+	for( i = 0; i < HMAC_BLOCK_SIZE; i ++ )
+		key[i] ^= 0x36 ^ 0x5c;
+	sha1_append( &sha1, key, HMAC_BLOCK_SIZE );
+	sha1_append( &sha1, hash, sha1_hash_size );
+	sha1_finish( &sha1, Message_Digest );
 }

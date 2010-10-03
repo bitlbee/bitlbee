@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Main file; functions to be called from BitlBee          */
@@ -24,6 +24,7 @@
 */
 
 #include "nogaim.h"
+#include "soap.h"
 #include "msn.h"
 
 int msn_chat_id;
@@ -34,10 +35,15 @@ static char *set_eval_display_name( set_t *set, char *value );
 
 static void msn_init( account_t *acc )
 {
-	set_add( &acc->set, "display_name", NULL, set_eval_display_name, acc );
-	set_add( &acc->set, "local_display_name", "false", set_eval_bool, acc );
+	set_t *s;
+	
+	s = set_add( &acc->set, "display_name", NULL, set_eval_display_name, acc );
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+	
 	set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
 	set_add( &acc->set, "switchboard_keepalives", "false", set_eval_bool, acc );
+	
+	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE;
 }
 
 static void msn_login( account_t *acc )
@@ -46,7 +52,6 @@ static void msn_login( account_t *acc )
 	struct msn_data *md = g_new0( struct msn_data, 1 );
 	
 	ic->proto_data = md;
-	md->fd = -1;
 	
 	if( strchr( acc->user, '@' ) == NULL )
 	{
@@ -55,26 +60,22 @@ static void msn_login( account_t *acc )
 		return;
 	}
 	
-	imcb_log( ic, "Connecting" );
-	
-	md->fd = proxy_connect( "messenger.hotmail.com", 1863, msn_ns_connected, ic );
-	if( md->fd < 0 )
-	{
-		imcb_error( ic, "Could not connect to server" );
-		imc_logout( ic, TRUE );
-		return;
-	}
-	
 	md->ic = ic;
 	md->away_state = msn_away_state_list;
+	md->domaintree = g_tree_new( msn_domaintree_cmp );
+	md->ns->fd = -1;
 	
-	msn_connections = g_slist_append( msn_connections, ic );
+	msn_connections = g_slist_prepend( msn_connections, ic );
+	
+	imcb_log( ic, "Connecting" );
+	msn_ns_connect( ic, md->ns, MSN_NS_HOST, MSN_NS_PORT );
 }
 
 static void msn_logout( struct im_connection *ic )
 {
 	struct msn_data *md = ic->proto_data;
 	GSList *l;
+	int i;
 	
 	if( md )
 	{
@@ -84,24 +85,30 @@ static void msn_logout( struct im_connection *ic )
 		}
 		*/
 		
-		if( md->fd >= 0 )
-			closesocket( md->fd );
-		
-		if( md->handler )
-		{
-			if( md->handler->rxq ) g_free( md->handler->rxq );
-			if( md->handler->cmd_text ) g_free( md->handler->cmd_text );
-			g_free( md->handler );
-		}
+		msn_ns_close( md->ns );
 		
 		while( md->switchboards )
 			msn_sb_destroy( md->switchboards->data );
 		
 		msn_msgq_purge( ic, &md->msgq );
+		msn_soapq_flush( ic, FALSE );
 		
-		while( md->groupcount > 0 )
-			g_free( md->grouplist[--md->groupcount] );
-		g_free( md->grouplist );
+		for( i = 0; i < sizeof( md->tokens ) / sizeof( md->tokens[0] ); i ++ )
+			g_free( md->tokens[i] );
+		g_free( md->lock_key );
+		g_free( md->pp_policy );
+		
+		while( md->groups )
+		{
+			struct msn_group *mg = md->groups->data;
+			g_free( mg->id );
+			g_free( mg->name );
+			g_free( mg );
+			md->groups = g_slist_remove( md->groups, mg );
+		}
+		
+		g_tree_destroy( md->domaintree );
+		md->domaintree = NULL;
 		
 		while( md->grpq )
 		{
@@ -133,8 +140,7 @@ static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, in
 #ifdef DEBUG
 	if( strcmp( who, "raw" ) == 0 )
 	{
-		msn_write( ic, message, strlen( message ) );
-		msn_write( ic, "\r\n", 2 );
+		msn_ns_write( ic, -1, "%s\r\n", message );
 	}
 	else
 #endif
@@ -172,7 +178,7 @@ static GList *msn_away_states( struct im_connection *ic )
 
 static void msn_set_away( struct im_connection *ic, char *state, char *message )
 {
-	char buf[1024];
+	char *uux;
 	struct msn_data *md = ic->proto_data;
 	
 	if( state == NULL )
@@ -180,13 +186,13 @@ static void msn_set_away( struct im_connection *ic, char *state, char *message )
 	else if( ( md->away_state = msn_away_state_by_name( state ) ) == NULL )
 		md->away_state = msn_away_state_list + 1;
 	
-	g_snprintf( buf, sizeof( buf ), "CHG %d %s\r\n", ++md->trId, md->away_state->code );
-	msn_write( ic, buf, strlen( buf ) );
-}
-
-static void msn_set_my_name( struct im_connection *ic, char *info )
-{
-	msn_set_display_name( ic, info );
+	if( !msn_ns_write( ic, -1, "CHG %d %s\r\n", ++md->trId, md->away_state->code ) )
+		return;
+	
+	uux = g_markup_printf_escaped( "<Data><PSM>%s</PSM><CurrentMedia></CurrentMedia>"
+	                               "</Data>", message ? message : "" );
+	msn_ns_write( ic, -1, "UUX %d %zd\r\n%s", ++md->trId, strlen( uux ), uux );
+	g_free( uux );
 }
 
 static void msn_get_info(struct im_connection *ic, char *who) 
@@ -199,14 +205,14 @@ static void msn_add_buddy( struct im_connection *ic, char *who, char *group )
 {
 	struct bee_user *bu = bee_user_by_handle( ic->bee, ic, who );
 	
-	msn_buddy_list_add( ic, "FL", who, who, group );
+	msn_buddy_list_add( ic, MSN_BUDDY_FL, who, who, group );
 	if( bu && bu->group )
-		msn_buddy_list_remove( ic, "FL", who, bu->group->name );
+		msn_buddy_list_remove( ic, MSN_BUDDY_FL, who, bu->group->name );
 }
 
 static void msn_remove_buddy( struct im_connection *ic, char *who, char *group )
 {
-	msn_buddy_list_remove( ic, "FL", who, NULL );
+	msn_buddy_list_remove( ic, MSN_BUDDY_FL, who, NULL );
 }
 
 static void msn_chat_msg( struct groupchat *c, char *message, int flags )
@@ -266,24 +272,24 @@ static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
 
 static void msn_keepalive( struct im_connection *ic )
 {
-	msn_write( ic, "PNG\r\n", strlen( "PNG\r\n" ) );
+	msn_ns_write( ic, -1, "PNG\r\n" );
 }
 
 static void msn_add_permit( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_add( ic, "AL", who, who, NULL );
+	msn_buddy_list_add( ic, MSN_BUDDY_AL, who, who, NULL );
 }
 
 static void msn_rem_permit( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_remove( ic, "AL", who, NULL );
+	msn_buddy_list_remove( ic, MSN_BUDDY_AL, who, NULL );
 }
 
 static void msn_add_deny( struct im_connection *ic, char *who )
 {
 	struct msn_switchboard *sb;
 	
-	msn_buddy_list_add( ic, "BL", who, who, NULL );
+	msn_buddy_list_add( ic, MSN_BUDDY_BL, who, who, NULL );
 	
 	/* If there's still a conversation with this person, close it. */
 	if( ( sb = msn_sb_by_handle( ic, who ) ) )
@@ -294,7 +300,7 @@ static void msn_add_deny( struct im_connection *ic, char *who )
 
 static void msn_rem_deny( struct im_connection *ic, char *who )
 {
-	msn_buddy_list_remove( ic, "BL", who, NULL );
+	msn_buddy_list_remove( ic, MSN_BUDDY_BL, who, NULL );
 }
 
 static int msn_send_typing( struct im_connection *ic, char *who, int typing )
@@ -313,10 +319,7 @@ static char *set_eval_display_name( set_t *set, char *value )
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
-	
-	/* Allow any name if we're offline. */
-	if( ic == NULL )
-		return value;
+	struct msn_data *md = ic->proto_data;
 	
 	if( strlen( value ) > 129 )
 	{
@@ -324,10 +327,26 @@ static char *set_eval_display_name( set_t *set, char *value )
 		return NULL;
 	}
 	
-	/* Returning NULL would be better, because the server still has to
-	   confirm the name change. However, it looks a bit confusing to the
-	   user. */
-	return msn_set_display_name( ic, value ) ? value : NULL;
+	if( md->flags & MSN_GOT_PROFILE_DN )
+		imcb_log( ic, "Warning: Persistent name changes for this account have to be done "
+		              "in the profile. BitlBee doesn't currently support this." );
+	
+	msn_soap_addressbook_set_display_name( ic, value );
+	return msn_ns_set_display_name( ic, value ) ? value : NULL;
+}
+
+static void msn_buddy_data_add( bee_user_t *bu )
+{
+	struct msn_data *md = bu->ic->proto_data;
+	bu->data = g_new0( struct msn_buddy_data, 1 );
+	g_tree_insert( md->domaintree, bu->handle, bu );
+}
+
+static void msn_buddy_data_free( bee_user_t *bu )
+{
+	struct msn_data *md = bu->ic->proto_data;
+	g_tree_remove( md->domaintree, bu->handle );
+	g_free( bu->data );
 }
 
 void msn_initmodule()
@@ -343,7 +362,6 @@ void msn_initmodule()
 	ret->away_states = msn_away_states;
 	ret->set_away = msn_set_away;
 	ret->get_info = msn_get_info;
-	ret->set_my_name = msn_set_my_name;
 	ret->add_buddy = msn_add_buddy;
 	ret->remove_buddy = msn_remove_buddy;
 	ret->chat_msg = msn_chat_msg;
@@ -357,6 +375,9 @@ void msn_initmodule()
 	ret->rem_deny = msn_rem_deny;
 	ret->send_typing = msn_send_typing;
 	ret->handle_cmp = g_strcasecmp;
+	ret->buddy_data_add = msn_buddy_data_add;
+	ret->buddy_data_free = msn_buddy_data_free;
+	
 	//ret->transfer_request = msn_ftp_transfer_request;
 
 	register_protocol(ret);

@@ -186,8 +186,13 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	
 	/* TODO(wilmer): OPT_AWAY, or just state == NULL ? */
 	bu->flags = flags;
-	bu->status = g_strdup( ( flags & OPT_AWAY ) && state == NULL ? "Away" : state );
 	bu->status_msg = g_strdup( message );
+	if( state && *state )
+		bu->status = g_strdup( state );
+	else if( flags & OPT_AWAY )
+		bu->status = g_strdup( "Away" );
+	else
+		bu->status = NULL;
 	
 	if( bu->status == NULL && ( flags & OPT_MOBILE ) &&
 	    set_getbool( &bee->set, "mobile_is_away" ) )
@@ -201,6 +206,28 @@ void imcb_buddy_status( struct im_connection *ic, const char *handle, int flags,
 	
 	g_free( old->status_msg );
 	g_free( old->status );
+	g_free( old );
+}
+
+/* Same, but only change the away/status message, not any away/online state info. */
+void imcb_buddy_status_msg( struct im_connection *ic, const char *handle, const char *message )
+{
+	bee_t *bee = ic->bee;
+	bee_user_t *bu, *old;
+	
+	if( !( bu = bee_user_by_handle( bee, ic, handle ) ) )
+	{
+		return;
+	}
+	
+	old = g_memdup( bu, sizeof( bee_user_t ) );
+	
+	bu->status_msg = message && *message ? g_strdup( message ) : NULL;
+	
+	if( bee->ui->user_status )
+		bee->ui->user_status( bee, bu, old );
+	
+	g_free( old->status_msg );
 	g_free( old );
 }
 

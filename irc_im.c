@@ -589,7 +589,7 @@ static gboolean bee_irc_chat_remove_user( bee_t *bee, struct groupchat *c, bee_u
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ic = c->ui_data;
 	
-	if( ic == NULL )
+	if( ic == NULL || bu == NULL )
 		return FALSE;
 	
 	/* TODO: Possible bug here: If a module removes $user here instead of just
@@ -752,7 +752,7 @@ static gboolean bee_irc_channel_chat_privmsg( irc_channel_t *ic, const char *msg
 		if( ( s = strchr( nick, ':' ) ) || ( s = strchr( nick, ',' ) ) )
 		{
 			*s = '\0';
-			if( ( iu = irc_user_by_name( ic->irc, nick ) ) &&
+			if( ( iu = irc_user_by_name( ic->irc, nick ) ) && iu->bu &&
 			    iu->bu->nick && irc_channel_has_user( ic, iu ) )
 			{
 				trans = g_strconcat( iu->bu->nick, msg + ( s - nick ), NULL );
@@ -857,9 +857,9 @@ static gboolean bee_irc_channel_chat_topic( irc_channel_t *ic, const char *new )
 		char *topic = g_strdup( new );
 		c->ic->acc->prpl->chat_topic( c, topic );
 		g_free( topic );
-		return TRUE;
 	}
 		
+	/* Whatever happened, the IM module should ack the topic change. */
 	return FALSE;
 }
 

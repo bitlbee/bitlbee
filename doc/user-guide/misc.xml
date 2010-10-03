@@ -174,7 +174,41 @@ To start a simple group chat, you simply join a channel which a name starting wi
 </para>
 
 <para>
-If you want to configure your own channels, you can use the <emphasis>channel set</emphasis>.
+If you want to configure your own channels, you can use the <emphasis>channel set</emphasis> command. See <emphasis>help channels3</emphasis> for more information.
+</para>
+
+</sect1>
+
+<sect1 id="channels3">
+<title>Configuring a control channel</title>
+
+<para>
+The most important setting for a control channel is <emphasis>fill_by</emphasis>. It
+tells BitlBee what information should be used to decide if someone should be shown
+in the channel or not. After setting this setting to, for example, <emphasis>account</emphasis>, you
+also have to set the <emphasis>account</emphasis> setting. Example:
+</para>
+
+<ircexample>
+	<ircline nick="wilmer">chan set &amp;wlm fill_by account</ircline>
+	<ircline nick="root">fill_by = `account'</ircline>
+	<ircline nick="wilmer">chan set &amp;wlm account msn</ircline>
+	<ircline nick="root">account = `msn'</ircline>
+</ircexample>
+
+<para>
+Also, each channel has a <emphasis>show_users</emphasis> setting which lets you
+choose, for example, if you want to see only online contacts in a channel, or
+also/just offline contacts. Example:
+</para>
+
+<ircexample>
+	<ircline nick="wilmer">chan set &amp;offline show_users offline</ircline>
+	<ircline nick="root">show_users = `offline'</ircline>
+</ircexample>
+
+<para>
+See the help information for all these settings for more information.
 </para>
 
 </sect1>
@@ -233,8 +267,41 @@ everything in the handle up to the first @.
 
 </sect1>
 
-<sect1 id="news1.3">
+<sect1 id="whatsnew010206">
+<title>New stuff in BitlBee 1.2.6</title>
+
+<para>
+Twitter support. See <emphasis>help account add twitter</emphasis>.
+</para>
+</sect1>
+
+<sect1 id="whatsnew010300">
 <title>New stuff in BitlBee 1.3dev</title>
+
+<para>
+Support for multiple configurable control channels, each with a subset of
+your contact list. See <emphasis>help channels</emphasis> for more
+information.
+</para>
+
+<para>
+File transfer support for some protocols (more if you use libpurple). Just
+/DCC SEND stuff. Incoming files also become DCC transfers.
+</para>
+
+<para>
+Only if you run your own BitlBee instance: You can build a BitlBee that uses
+libpurple for connecting to IM networks instead of its own code, adding
+support for some of the more obscure IM protocols and features.
+</para>
+
+<para>
+Many more things, briefly described in <emphasis>help news1.3</emphasis>.
+</para>
+</sect1>
+
+<sect1 id="news1.3">
+<title>New stuff in BitlBee 1.3dev (details)</title>
 
 <para>
 Most of the core of BitlBee was rewritten since the last release. This entry

@@ -79,6 +79,28 @@ static void purple_init( account_t *acc )
 	set_t *s;
 	char help_title[64];
 	GString *help;
+	static gboolean dir_fixed = FALSE;
+	
+	/* Layer violation coming up: Making an exception for libpurple here.
+	   Dig in the IRC state a bit to get a username. Ideally we should
+	   check if s/he identified but this info doesn't seem *that* important.
+	   It's just that fecking libpurple can't *not* store this shit.
+	   
+	   Remember that libpurple is not really meant to be used on public
+	   servers anyway! */
+	if( !dir_fixed )
+	{
+		irc_t *irc = acc->bee->ui_data;
+		char *dir;
+		
+		dir = g_strdup_printf( "%s/purple/%s", global.conf->configdir, irc->user->nick );
+		purple_util_set_user_dir( dir );
+		g_free( dir );
+		
+		purple_blist_load();
+		purple_prefs_load();
+		dir_fixed = TRUE;
+	}
 	
 	help = g_string_new( "" );
 	g_string_printf( help, "BitlBee libpurple module %s (%s).\n\nSupported settings:",
@@ -253,7 +275,8 @@ static void purple_login( account_t *acc )
 	struct im_connection *ic = imcb_new( acc );
 	PurpleAccount *pa;
 	
-	if( local_bee != NULL && local_bee != acc->bee )
+	if( ( local_bee != NULL && local_bee != acc->bee ) ||
+	    ( global.conf->runmode == RUNMODE_DAEMON && !getenv( "BITLBEE_DEBUG" ) ) )
 	{
 		imcb_error( ic,  "Daemon mode detected. Do *not* try to use libpurple in daemon mode! "
 		                 "Please use inetd or ForkDaemon mode instead." );
@@ -350,6 +373,9 @@ static char *set_eval_display_name( set_t *set, char *value )
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
+	
+	if( ic )
+		imcb_log( ic, "Changing display_name not currently supported with libpurple!" );
 	
 	return NULL;
 }
@@ -516,7 +542,7 @@ void purple_chat_leave( struct groupchat *gc )
 	purple_conversation_destroy( pc );
 }
 
-struct groupchat *purple_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password )
+struct groupchat *purple_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password, set_t **sets )
 {
 	PurpleAccount *pa = ic->proto_data;
 	PurplePlugin *prpl = purple_plugins_find_with_id( pa->protocol_id );
@@ -1131,6 +1157,7 @@ void purple_initmodule()
 	struct prpl funcs;
 	GList *prots;
 	GString *help;
+	char *dir;
 	
 	if( B_EV_IO_READ != PURPLE_INPUT_READ ||
 	    B_EV_IO_WRITE != PURPLE_INPUT_WRITE )
@@ -1139,7 +1166,10 @@ void purple_initmodule()
 		exit( 1 );
 	}
 	
-	purple_util_set_user_dir( "/tmp" );
+	dir = g_strdup_printf( "%s/purple", global.conf->configdir );
+	purple_util_set_user_dir( dir );
+	g_free( dir );
+	
 	purple_debug_set_enabled( FALSE );
 	purple_core_set_ui_ops( &bee_core_uiops );
 	purple_eventloop_set_ui_ops( &glib_eventloops );
@@ -1150,12 +1180,7 @@ void purple_initmodule()
 		abort();
 	}
 	
-	/* This seems like stateful shit we don't want... */
 	purple_set_blist( purple_blist_new() );
-	purple_blist_load();
-	
-	/* Meh? */
-	purple_prefs_load();
 	
 	/* No, really. So far there were ui_ops for everything, but now suddenly
 	   one needs to use signals for typing notification stuff. :-( */
@@ -1220,7 +1245,8 @@ void purple_initmodule()
 	}
 	
 	g_string_append( help, "\n\nFor used protocols, more information about available "
-	                 "settings can be found using \x02help purple <protocol name>\x02" );
+	                 "settings can be found using \x02help purple <protocol name>\x02 "
+	                 "(create an account using that protocol first!)" );
 	
 	/* Add a simple dynamically-generated help item listing all
 	   the supported protocols. */

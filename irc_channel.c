@@ -191,7 +191,7 @@ static char *set_eval_channel_type( set_t *set, char *value )
 	
 	if( strcmp( value, "control" ) == 0 )
 		new = &control_channel_funcs;
-	else if( strcmp( value, "chat" ) == 0 )
+	else if( ic != ic->irc->default_channel && strcmp( value, "chat" ) == 0 )
 		new = &irc_channel_im_chat_funcs;
 	else
 		return SET_INVALID;

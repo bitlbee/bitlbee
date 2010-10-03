@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2010 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Notification server callbacks                           */
@@ -26,24 +26,78 @@
 #include <ctype.h>
 #include "nogaim.h"
 #include "msn.h"
-#include "passport.h"
 #include "md5.h"
+#include "soap.h"
+#include "xmltree.h"
 
+static gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond );
 static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond );
-static int msn_ns_command( gpointer data, char **cmd, int num_parts );
-static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts );
+static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num_parts );
+static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msglen, char **cmd, int num_parts );
 
-static void msn_auth_got_passport_token( struct msn_auth_data *mad );
-static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name );
+static void msn_ns_send_adl_start( struct im_connection *ic );
+static void msn_ns_send_adl( struct im_connection *ic );
 
-gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
+int msn_ns_write( struct im_connection *ic, int fd, const char *fmt, ... )
 {
-	struct im_connection *ic = data;
+	struct msn_data *md = ic->proto_data;
+	va_list params;
+	char *out;
+	size_t len;
+	int st;
+	
+	va_start( params, fmt );
+	out = g_strdup_vprintf( fmt, params );
+	va_end( params );
+	
+	if( fd < 0 )
+		fd = md->ns->fd;
+	
+	if( getenv( "BITLBEE_DEBUG" ) )
+		fprintf( stderr, "->NS%d:%s", fd, out );
+	
+	len = strlen( out );
+	st = write( fd, out, len );
+	g_free( out );
+	if( st != len )
+	{
+		imcb_error( ic, "Short write() to main server" );
+		imc_logout( ic, TRUE );
+		return 0;
+	}
+	
+	return 1;
+}
+
+gboolean msn_ns_connect( struct im_connection *ic, struct msn_handler_data *handler, const char *host, int port )
+{
+	if( handler->fd >= 0 )
+		closesocket( handler->fd );
+	
+	handler->exec_command = msn_ns_command;
+	handler->exec_message = msn_ns_message;
+	handler->data = ic;
+	handler->fd = proxy_connect( host, port, msn_ns_connected, handler );
+	if( handler->fd < 0 )
+	{
+		imcb_error( ic, "Could not connect to server" );
+		imc_logout( ic, TRUE );
+		return FALSE;
+	}
+	
+	return TRUE;
+}
+
+static gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
+{
+	struct msn_handler_data *handler = data;
+	struct im_connection *ic = handler->data;
 	struct msn_data *md;
-	char s[1024];
 	
 	if( !g_slist_find( msn_connections, ic ) )
 		return FALSE;
+	
+	md = ic->proto_data;
 	
 	if( source == -1 )
 	{
@@ -52,42 +106,42 @@ gboolean msn_ns_connected( gpointer data, gint source, b_input_condition cond )
 		return FALSE;
 	}
 	
-	md = ic->proto_data;
+	g_free( handler->rxq );
+	handler->rxlen = 0;
+	handler->rxq = g_new0( char, 1 );
 	
-	if( !md->handler )
+	if( msn_ns_write( ic, source, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER ) )
 	{
-		md->handler = g_new0( struct msn_handler_data, 1 );
-		md->handler->data = ic;
-		md->handler->exec_command = msn_ns_command;
-		md->handler->exec_message = msn_ns_message;
-	}
-	else
-	{
-		if( md->handler->rxq )
-			g_free( md->handler->rxq );
-		
-		md->handler->rxlen = 0;
-	}
-	
-	md->handler->fd = md->fd;
-	md->handler->rxq = g_new0( char, 1 );
-	
-	g_snprintf( s, sizeof( s ), "VER %d MSNP8 CVR0\r\n", ++md->trId );
-	if( msn_write( ic, s, strlen( s ) ) )
-	{
-		ic->inpa = b_input_add( md->fd, B_EV_IO_READ, msn_ns_callback, ic );
+		handler->inpa = b_input_add( handler->fd, B_EV_IO_READ, msn_ns_callback, handler );
 		imcb_log( ic, "Connected to server, waiting for reply" );
 	}
 	
 	return FALSE;
 }
 
+void msn_ns_close( struct msn_handler_data *handler )
+{
+	if( handler->fd >= 0 )
+	{
+		closesocket( handler->fd );
+		b_event_remove( handler->inpa );
+	}
+	
+	handler->fd = handler->inpa = -1;
+	g_free( handler->rxq );
+	g_free( handler->cmd_text );
+	
+	handler->rxlen = 0;
+	handler->rxq = NULL;
+	handler->cmd_text = NULL;
+}
+
 static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition cond )
 {
-	struct im_connection *ic = data;
-	struct msn_data *md = ic->proto_data;
+	struct msn_handler_data *handler = data;
+	struct im_connection *ic = handler->data;
 	
-	if( msn_handler( md->handler ) == -1 ) /* Don't do this on ret == 0, it's already done then. */
+	if( msn_handler( handler ) == -1 ) /* Don't do this on ret == 0, it's already done then. */
 	{
 		imcb_error( ic, "Error while reading from server" );
 		imc_logout( ic, TRUE );
@@ -98,11 +152,10 @@ static gboolean msn_ns_callback( gpointer data, gint source, b_input_condition c
 		return TRUE;
 }
 
-static int msn_ns_command( gpointer data, char **cmd, int num_parts )
+static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num_parts )
 {
-	struct im_connection *ic = data;
+	struct im_connection *ic = handler->data;
 	struct msn_data *md = ic->proto_data;
-	char buf[1024];
 	
 	if( num_parts == 0 )
 	{
@@ -112,33 +165,30 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	
 	if( strcmp( cmd[0], "VER" ) == 0 )
 	{
-		if( cmd[2] && strncmp( cmd[2], "MSNP8", 5 ) != 0 )
+		if( cmd[2] && strncmp( cmd[2], MSNP_VER, 5 ) != 0 )
 		{
 			imcb_error( ic, "Unsupported protocol" );
 			imc_logout( ic, FALSE );
 			return( 0 );
 		}
 		
-		g_snprintf( buf, sizeof( buf ), "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s\r\n",
-		                                ++md->trId, ic->acc->user );
-		return( msn_write( ic, buf, strlen( buf ) ) );
+		return( msn_ns_write( ic, handler->fd, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s\r\n",
+		                      ++md->trId, ic->acc->user ) );
 	}
 	else if( strcmp( cmd[0], "CVR" ) == 0 )
 	{
 		/* We don't give a damn about the information we just received */
-		g_snprintf( buf, sizeof( buf ), "USR %d TWN I %s\r\n", ++md->trId, ic->acc->user );
-		return( msn_write( ic, buf, strlen( buf ) ) );
+		return msn_ns_write( ic, handler->fd, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user );
 	}
 	else if( strcmp( cmd[0], "XFR" ) == 0 )
 	{
 		char *server;
 		int port;
 		
-		if( num_parts == 6 && strcmp( cmd[2], "NS" ) == 0 )
+		if( num_parts >= 6 && strcmp( cmd[2], "NS" ) == 0 )
 		{
-			b_event_remove( ic->inpa );
-			ic->inpa = 0;
-			closesocket( md->fd );
+			b_event_remove( handler->inpa );
+			handler->inpa = -1;
 			
 			server = strchr( cmd[3], ':' );
 			if( !server )
@@ -152,10 +202,9 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			server = cmd[3];
 			
 			imcb_log( ic, "Transferring to other server" );
-			
-			md->fd = proxy_connect( server, port, msn_ns_connected, ic );
+			return msn_ns_connect( ic, handler, server, port );
 		}
-		else if( num_parts == 6 && strcmp( cmd[2], "SB" ) == 0 )
+		else if( num_parts >= 6 && strcmp( cmd[2], "SB" ) == 0 )
 		{
 			struct msn_switchboard *sb;
 			
@@ -219,27 +268,17 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "USR" ) == 0 )
 	{
-		if( num_parts == 5 && strcmp( cmd[2], "TWN" ) == 0 && strcmp( cmd[3], "S" ) == 0 )
+		if( num_parts >= 6 && strcmp( cmd[2], "SSO" ) == 0 &&
+		    strcmp( cmd[3], "S" ) == 0 )
 		{
-			/* Time for some Passport black magic... */
-			if( !passport_get_token( msn_auth_got_passport_token, ic, ic->acc->user, ic->acc->pass, cmd[4] ) )
-			{
-				imcb_error( ic, "Error while contacting Passport server" );
-				imc_logout( ic, TRUE );
-				return( 0 );
-			}
+			g_free( md->pp_policy );
+			md->pp_policy = g_strdup( cmd[4] );
+			msn_soap_passport_sso_request( ic, cmd[5] );
 		}
-		else if( num_parts >= 7 && strcmp( cmd[2], "OK" ) == 0 )
+		else if( strcmp( cmd[2], "OK" ) == 0 )
 		{
-			if( num_parts == 7 )
-				msn_ns_got_display_name( ic, cmd[4] );
-			else
-				imcb_log( ic, "Warning: Friendly name in server response was corrupted" );
-			
 			imcb_log( ic, "Authenticated, getting buddy list" );
-			
-			g_snprintf( buf, sizeof( buf ), "SYN %d 0\r\n", ++md->trId );
-			return( msn_write( ic, buf, strlen( buf ) ) );
+			msn_soap_memlist_request( ic );
 		}
 		else
 		{
@@ -250,163 +289,76 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "MSG" ) == 0 )
 	{
-		if( num_parts != 4 )
+		if( num_parts < 4 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
-		md->handler->msglen = atoi( cmd[3] );
+		handler->msglen = atoi( cmd[3] );
 		
-		if( md->handler->msglen <= 0 )
+		if( handler->msglen <= 0 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
-	else if( strcmp( cmd[0], "SYN" ) == 0 )
+	else if( strcmp( cmd[0], "BLP" ) == 0 )
 	{
-		if( num_parts == 5 )
+		msn_ns_send_adl_start( ic );
+		return msn_ns_finish_login( ic );
+	}
+	else if( strcmp( cmd[0], "ADL" ) == 0 )
+	{
+		if( num_parts >= 3 && strcmp( cmd[2], "OK" ) == 0 )
 		{
-			int i, groupcount;
-			
-			groupcount = atoi( cmd[4] );
-			if( groupcount > 0 )
-			{
-				/* valgrind says this is leaking memory, I'm guessing
-				   that this happens during server redirects. */
-				if( md->grouplist )
-				{
-					for( i = 0; i < md->groupcount; i ++ )
-						g_free( md->grouplist[i] );
-					g_free( md->grouplist );
-				}
-				
-				md->groupcount = groupcount;
-				md->grouplist = g_new0( char *, md->groupcount );
-			}
-			
-			md->buddycount = atoi( cmd[3] );
-			if( !*cmd[3] || md->buddycount == 0 )
-				msn_logged_in( ic );
+			msn_ns_send_adl( ic );
+			return msn_ns_finish_login( ic );
 		}
-		else
+		else if( num_parts >= 3 )
 		{
-			/* Hrrm... This SYN reply doesn't really look like something we expected.
-			   Let's assume everything is okay. */
-			
-			msn_logged_in( ic );
+			handler->msglen = atoi( cmd[2] );
 		}
 	}
-	else if( strcmp( cmd[0], "LST" ) == 0 )
+	else if( strcmp( cmd[0], "PRP" ) == 0 )
 	{
-		int list;
-		
-		if( num_parts != 4 && num_parts != 5 )
-		{
-			imcb_error( ic, "Syntax error" );
-			imc_logout( ic, TRUE );
-			return( 0 );
-		}
-		
-		http_decode( cmd[2] );
-		list = atoi( cmd[3] );
-		
-		if( list & 1 ) /* FL */
-		{
-			char *group = NULL;
-			int num;
-			
-			if( cmd[4] != NULL && sscanf( cmd[4], "%d", &num ) == 1 && num < md->groupcount )
-				group = md->grouplist[num];
-			
-			imcb_add_buddy( ic, cmd[1], group );
-			imcb_rename_buddy( ic, cmd[1], cmd[2] );
-		}
-		if( list & 2 ) /* AL */
-		{
-			ic->permit = g_slist_append( ic->permit, g_strdup( cmd[1] ) );
-		}
-		if( list & 4 ) /* BL */
-		{
-			ic->deny = g_slist_append( ic->deny, g_strdup( cmd[1] ) );
-		}
-		if( list & 8 ) /* RL */
-		{
-			if( ( list & 6 ) == 0 )
-				msn_buddy_ask( ic, cmd[1], cmd[2] );
-		}
-		
-		if( --md->buddycount == 0 )
-		{
-			if( ic->flags & OPT_LOGGED_IN )
-			{
-				imcb_log( ic, "Successfully transferred to different server" );
-				g_snprintf( buf, sizeof( buf ), "CHG %d %s %d\r\n", ++md->trId, md->away_state->code, 0 );
-				return( msn_write( ic, buf, strlen( buf ) ) );
-			}
-			else
-			{
-				msn_logged_in( ic );
-			}
-		}
-	}
-	else if( strcmp( cmd[0], "LSG" ) == 0 )
-	{
-		int num;
-		
-		if( num_parts != 4 )
-		{
-			imcb_error( ic, "Syntax error" );
-			imc_logout( ic, TRUE );
-			return( 0 );
-		}
-		
-		http_decode( cmd[2] );
-		num = atoi( cmd[1] );
-		
-		if( num < md->groupcount )
-			md->grouplist[num] = g_strdup( cmd[2] );
+		imcb_connected( ic );
 	}
 	else if( strcmp( cmd[0], "CHL" ) == 0 )
 	{
-		md5_state_t state;
-		md5_byte_t digest[16];
-		int i;
+		char *resp;
+		int st;
 		
-		if( num_parts != 3 )
+		if( num_parts < 3 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
-		md5_init( &state );
-		md5_append( &state, (const md5_byte_t *) cmd[2], strlen( cmd[2] ) );
-		md5_append( &state, (const md5_byte_t *) QRY_CODE, strlen( QRY_CODE ) );
-		md5_finish( &state, digest );
+		resp = msn_p11_challenge( cmd[2] );
 		
-		g_snprintf( buf, sizeof( buf ), "QRY %d %s %d\r\n", ++md->trId, QRY_NAME, 32 );
-		for( i = 0; i < 16; i ++ )
-			g_snprintf( buf + strlen( buf ), 3, "%02x", digest[i] );
-		
-		return( msn_write( ic, buf, strlen( buf ) ) );
+		st =  msn_ns_write( ic, -1, "QRY %d %s %zd\r\n%s",
+		                    ++md->trId, MSNP11_PROD_ID,
+		                    strlen( resp ), resp );
+		g_free( resp );
+		return st;
 	}
 	else if( strcmp( cmd[0], "ILN" ) == 0 )
 	{
 		const struct msn_away_state *st;
 		
-		if( num_parts != 6 )
+		if( num_parts < 6 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
-		http_decode( cmd[4] );
-		imcb_rename_buddy( ic, cmd[3], cmd[4] );
+		http_decode( cmd[5] );
+		imcb_rename_buddy( ic, cmd[3], cmd[5] );
 		
 		st = msn_away_state_by_code( cmd[2] );
 		if( !st )
@@ -431,16 +383,18 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	else if( strcmp( cmd[0], "NLN" ) == 0 )
 	{
 		const struct msn_away_state *st;
+		int cap;
 		
-		if( num_parts != 5 )
+		if( num_parts < 6 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 		
-		http_decode( cmd[3] );
-		imcb_rename_buddy( ic, cmd[2], cmd[3] );
+		http_decode( cmd[4] );
+		cap = atoi( cmd[5] );
+		imcb_rename_buddy( ic, cmd[2], cmd[4] );
 		
 		st = msn_away_state_by_code( cmd[1] );
 		if( !st )
@@ -450,7 +404,8 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN | 
-		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ),
+		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ) |
+		                   ( cap & 1 ? OPT_MOBILE : 0 ),
 		                   st->name, NULL );
 		
 		msn_sb_stop_keepalives( msn_sb_by_handle( ic, cmd[2] ) );
@@ -461,7 +416,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		char *server;
 		int session, port;
 		
-		if( num_parts != 7 )
+		if( num_parts < 7 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
@@ -503,46 +458,6 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			sb->who = g_strdup( cmd[5] );
 		}
 	}
-	else if( strcmp( cmd[0], "ADD" ) == 0 )
-	{
-		if( num_parts == 6 && strcmp( cmd[2], "RL" ) == 0 )
-		{
-			GSList *l;
-			
-			http_decode( cmd[5] );
-			
-			if( strchr( cmd[4], '@' ) == NULL )
-			{
-				imcb_error( ic, "Syntax error" );
-				imc_logout( ic, TRUE );
-				return 0;
-			}
-			
-			/* We got added by someone. If we don't have this
-			   person in permit/deny yet, inform the user. */
-			for( l = ic->permit; l; l = l->next )
-				if( g_strcasecmp( l->data, cmd[4] ) == 0 )
-					return 1;
-			
-			for( l = ic->deny; l; l = l->next )
-				if( g_strcasecmp( l->data, cmd[4] ) == 0 )
-					return 1;
-			
-			msn_buddy_ask( ic, cmd[4], cmd[5] );
-		}
-		else if( num_parts >= 6 && strcmp( cmd[2], "FL" ) == 0 )
-		{
-			const char *group = NULL;
-			int num;
-			
-			if( cmd[6] != NULL && sscanf( cmd[6], "%d", &num ) == 1 && num < md->groupcount )
-				group = md->grouplist[num];
-			
-			http_decode( cmd[5] );
-			imcb_add_buddy( ic, cmd[4], group );
-			imcb_rename_buddy( ic, cmd[4], cmd[5] );
-		}
-	}
 	else if( strcmp( cmd[0], "OUT" ) == 0 )
 	{
 		int allow_reconnect = TRUE;
@@ -564,53 +479,20 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		imc_logout( ic, allow_reconnect );
 		return( 0 );
 	}
-#if 0
-	/* Discard this one completely for now since I don't care about the ack
-	   and since MSN servers can apparently screw up the formatting. */
-	else if( strcmp( cmd[0], "REA" ) == 0 )
-	{
-		if( num_parts != 5 )
-		{
-			imcb_error( ic, "Syntax error" );
-			imc_logout( ic, TRUE );
-			return( 0 );
-		}
-		
-		if( g_strcasecmp( cmd[3], ic->acc->user ) == 0 )
-		{
-			set_t *s;
-			
-			http_decode( cmd[4] );
-			strncpy( ic->displayname, cmd[4], sizeof( ic->displayname ) );
-			ic->displayname[sizeof(ic->displayname)-1] = 0;
-			
-			if( ( s = set_find( &ic->acc->set, "display_name" ) ) )
-			{
-				g_free( s->value );
-				s->value = g_strdup( cmd[4] );
-			}
-		}
-		else
-		{
-			/* This is not supposed to happen, but let's handle it anyway... */
-			http_decode( cmd[4] );
-			imcb_rename_buddy( ic, cmd[3], cmd[4] );
-		}
-	}
-#endif
 	else if( strcmp( cmd[0], "IPG" ) == 0 )
 	{
 		imcb_error( ic, "Received IPG command, we don't handle them yet." );
 		
-		md->handler->msglen = atoi( cmd[1] );
+		handler->msglen = atoi( cmd[1] );
 		
-		if( md->handler->msglen <= 0 )
+		if( handler->msglen <= 0 )
 		{
 			imcb_error( ic, "Syntax error" );
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
 	}
+#if 0
 	else if( strcmp( cmd[0], "ADG" ) == 0 )
 	{
 		char *group = g_strdup( cmd[3] );
@@ -655,6 +537,26 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			}
 		}
 	}
+#endif
+	else if( strcmp( cmd[0], "GCF" ) == 0 )
+	{
+		/* Coming up is cmd[2] bytes of stuff we're supposed to
+		   censore. Meh. */
+		handler->msglen = atoi( cmd[2] );
+	}
+	else if( strcmp( cmd[0], "UBX" ) == 0 )
+	{
+		/* Status message. */
+		if( num_parts >= 4 )
+			handler->msglen = atoi( cmd[3] );
+	}
+	else if( strcmp( cmd[0], "NOT" ) == 0 )
+	{
+		/* Some kind of notification, poorly documented but
+		   apparently used to announce address book changes. */
+		if( num_parts >= 2 )
+			handler->msglen = atoi( cmd[1] );
+	}
 	else if( isdigit( cmd[0][0] ) )
 	{
 		int num = atoi( cmd[0] );
@@ -667,6 +569,10 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
+		
+		/* Oh yes, errors can have payloads too now. Discard them for now. */
+		if( num_parts >= 3 )
+			handler->msglen = atoi( cmd[2] );
 	}
 	else
 	{
@@ -676,9 +582,9 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	return( 1 );
 }
 
-static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int num_parts )
+static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msglen, char **cmd, int num_parts )
 {
-	struct im_connection *ic = data;
+	struct im_connection *ic = handler->data;
 	char *body;
 	int blen = 0;
 	
@@ -764,13 +670,75 @@ static int msn_ns_message( gpointer data, char *msg, int msglen, char **cmd, int
 			g_free( ct );
 		}
 	}
+	else if( strcmp( cmd[0], "UBX" ) == 0 )
+	{
+		struct xt_node *psm;
+		char *psm_text = NULL;
+		
+		psm = xt_from_string( msg );
+		if( psm && strcmp( psm->name, "Data" ) == 0 &&
+		    ( psm = xt_find_node( psm->children, "PSM" ) ) )
+			psm_text = psm->text;
+		
+		imcb_buddy_status_msg( ic, cmd[1], psm_text );
+		xt_free_node( psm );
+	}
+	else if( strcmp( cmd[0], "ADL" ) == 0 )
+	{
+		struct xt_node *adl, *d, *c;
+		
+		if( !( adl = xt_from_string( msg ) ) )
+			return 1;
+		
+		for( d = adl->children; d; d = d->next )
+		{
+			char *dn;
+			if( strcmp( d->name, "d" ) != 0 ||
+			    ( dn = xt_find_attr( d, "n" ) ) == NULL )
+				continue;
+			for( c = d->children; c; c = c->next )
+			{
+				bee_user_t *bu;
+				struct msn_buddy_data *bd;
+				char *cn, *handle, *f, *l;
+				int flags;
+				
+				if( strcmp( c->name, "c" ) != 0 ||
+				    ( l = xt_find_attr( c, "l" ) ) == NULL ||
+				    ( cn = xt_find_attr( c, "n" ) ) == NULL )
+					continue;
+				
+				handle = g_strdup_printf( "%s@%s", cn, dn );
+				if( !( ( bu = bee_user_by_handle( ic->bee, ic, handle ) ) ||
+				       ( bu = bee_user_new( ic->bee, ic, handle, 0 ) ) ) )
+				{
+					g_free( handle );
+					continue;
+				}
+				g_free( handle );
+				bd = bu->data;
+				
+				if( ( f = xt_find_attr( c, "f" ) ) )
+				{
+					http_decode( f );
+					imcb_rename_buddy( ic, bu->handle, f );
+				}
+				
+				flags = atoi( l ) & 15;
+				if( bd->flags != flags )
+				{
+					bd->flags = flags;
+					msn_buddy_ask( bu );
+				}
+			}
+		}
+	}
 	
 	return( 1 );
 }
 
-static void msn_auth_got_passport_token( struct msn_auth_data *mad )
+void msn_auth_got_passport_token( struct im_connection *ic, const char *token, const char *error )
 {
-	struct im_connection *ic = mad->data;
 	struct msn_data *md;
 	
 	/* Dead connection? */
@@ -778,61 +746,129 @@ static void msn_auth_got_passport_token( struct msn_auth_data *mad )
 		return;
 	
 	md = ic->proto_data;
-	if( mad->token )
+	
+	if( token )
 	{
-		char buf[1024];
-		
-		g_snprintf( buf, sizeof( buf ), "USR %d TWN S %s\r\n", ++md->trId, mad->token );
-		msn_write( ic, buf, strlen( buf ) );
+		msn_ns_write( ic, -1, "USR %d SSO S %s %s\r\n", ++md->trId, md->tokens[0], token );
 	}
 	else
 	{
-		imcb_error( ic, "Error during Passport authentication: %s", mad->error );
+		imcb_error( ic, "Error during Passport authentication: %s", error );
 		imc_logout( ic, TRUE );
 	}
 }
 
-static gboolean msn_ns_got_display_name( struct im_connection *ic, char *name )
+void msn_auth_got_contact_list( struct im_connection *ic )
 {
-	set_t *s;
+	struct msn_data *md;
 	
-	if( ( s = set_find( &ic->acc->set, "display_name" ) ) == NULL )
-		return FALSE; /* Shouldn't happen.. */
+	/* Dead connection? */
+	if( g_slist_find( msn_connections, ic ) == NULL )
+		return;
 	
-	http_decode( name );
+	md = ic->proto_data;
+	msn_ns_write( ic, -1, "BLP %d %s\r\n", ++md->trId, "BL" );
+}
+
+static gboolean msn_ns_send_adl_1( gpointer key, gpointer value, gpointer data )
+{
+	struct xt_node *adl = data, *d, *c;
+	struct bee_user *bu = value;
+	struct msn_buddy_data *bd = bu->data;
+	struct msn_data *md = bu->ic->proto_data;
+	char handle[strlen(bu->handle)];
+	char *domain;
+	char l[4];
 	
-	if( s->value && strcmp( s->value, name ) == 0 )
+	if( ( bd->flags & 7 ) == 0 || ( bd->flags & MSN_BUDDY_ADL_SYNCED ) )
+		return FALSE;
+	
+	strcpy( handle, bu->handle );
+	if( ( domain = strchr( handle, '@' ) ) == NULL ) /* WTF */
+		return FALSE; 
+	*domain = '\0';
+	domain ++;
+	
+	if( ( d = adl->children ) == NULL ||
+	    g_strcasecmp( xt_find_attr( d, "n" ), domain ) != 0 )
 	{
-		return TRUE;
-		/* The names match, nothing to worry about. */
+		d = xt_new_node( "d", NULL, NULL );
+		xt_add_attr( d, "n", domain );
+		xt_insert_child( adl, d );
 	}
-	else if( s->value != NULL &&
-	         ( strcmp( name, ic->acc->user ) == 0 ||
-	           set_getbool( &ic->acc->set, "local_display_name" ) ) )
+	
+	g_snprintf( l, sizeof( l ), "%d", bd->flags & 7 );
+	c = xt_new_node( "c", NULL, NULL );
+	xt_add_attr( c, "n", handle );
+	xt_add_attr( c, "l", l );
+	xt_add_attr( c, "t", "1" ); /* 1 means normal, 4 means mobile? */
+	xt_insert_child( d, c );
+	
+	/* Do this in batches of 100. */
+	bd->flags |= MSN_BUDDY_ADL_SYNCED;
+	return (--md->adl_todo % 140) == 0;
+}
+
+static void msn_ns_send_adl( struct im_connection *ic )
+{
+	struct xt_node *adl;
+	struct msn_data *md = ic->proto_data;
+	char *adls;
+	
+	adl = xt_new_node( "ml", NULL, NULL );
+	xt_add_attr( adl, "l", "1" );
+	g_tree_foreach( md->domaintree, msn_ns_send_adl_1, adl );
+	if( adl->children == NULL )
 	{
-		/* The server thinks our display name is our e-mail address
-		   which is probably wrong, or the user *wants* us to do this:
-		   Always use the locally set display_name. */
-		return msn_set_display_name( ic, s->value );
+		/* This tells the caller that we're done now. */
+		md->adl_todo = -1;
+		xt_free_node( adl );
+		return;
 	}
+	
+	adls = xt_to_string( adl );
+	msn_ns_write( ic, -1, "ADL %d %zd\r\n%s", ++md->trId, strlen( adls ), adls );
+	g_free( adls );
+}
+
+static void msn_ns_send_adl_start( struct im_connection *ic )
+{
+	struct msn_data *md;
+	GSList *l;
+	
+	/* Dead connection? */
+	if( g_slist_find( msn_connections, ic ) == NULL )
+		return;
+	
+	md = ic->proto_data;
+	md->adl_todo = 0;
+	for( l = ic->bee->users; l; l = l->next )
+	{
+		bee_user_t *bu = l->data;
+		struct msn_buddy_data *bd = bu->data;
+		
+		if( bu->ic != ic || ( bd->flags & 7 ) == 0 )
+			continue;
+		
+		bd->flags &= ~MSN_BUDDY_ADL_SYNCED;
+		md->adl_todo++;
+	}
+	
+	msn_ns_send_adl( ic );
+}
+
+int msn_ns_finish_login( struct im_connection *ic )
+{
+	struct msn_data *md = ic->proto_data;
+	
+	if( ic->flags & OPT_LOGGED_IN )
+		return 1;
+	
+	if( md->adl_todo < 0 )
+		md->flags |= MSN_DONE_ADL;
+	
+	if( ( md->flags & MSN_DONE_ADL ) && ( md->flags & MSN_GOT_PROFILE ) )
+		return msn_ns_set_display_name( ic, set_getstr( &ic->acc->set, "display_name" ) );
 	else
-	{
-		if( s->value && *s->value )
-			imcb_log( ic, "BitlBee thinks your display name is `%s' but "
-			              "the MSN server says it's `%s'. Using the MSN "
-			              "server's name. Set local_display_name to true "
-			              "to use the local name.", s->value, name );
-		
-		if( g_utf8_validate( name, -1, NULL ) )
-		{
-			g_free( s->value );
-			s->value = g_strdup( name );
-		}
-		else
-		{
-			imcb_log( ic, "Warning: Friendly name in server response was corrupted" );
-		}
-		
-		return TRUE;
-	}
+		return 1;
 }

@@ -78,19 +78,22 @@ struct xt_parser
 
 struct xt_parser *xt_new( const struct xt_handler_entry *handlers, gpointer data );
 void xt_reset( struct xt_parser *xt );
-int xt_feed( struct xt_parser *xt, char *text, int text_len );
+int xt_feed( struct xt_parser *xt, const char *text, int text_len );
 int xt_handle( struct xt_parser *xt, struct xt_node *node, int depth );
 void xt_cleanup( struct xt_parser *xt, struct xt_node *node, int depth );
+struct xt_node *xt_from_string( const char *in );
 char *xt_to_string( struct xt_node *node );
 void xt_print( struct xt_node *node );
 struct xt_node *xt_dup( struct xt_node *node );
 void xt_free_node( struct xt_node *node );
 void xt_free( struct xt_parser *xt );
 struct xt_node *xt_find_node( struct xt_node *node, const char *name );
+struct xt_node *xt_find_path( struct xt_node *node, const char *name );
 char *xt_find_attr( struct xt_node *node, const char *key );
 
 struct xt_node *xt_new_node( char *name, const char *text, struct xt_node *children );
 void xt_add_child( struct xt_node *parent, struct xt_node *child );
+void xt_insert_child( struct xt_node *parent, struct xt_node *child );
 void xt_add_attr( struct xt_node *node, const char *key, const char *value );
 int xt_remove_attr( struct xt_node *node, const char *key );
 

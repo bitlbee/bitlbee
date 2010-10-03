@@ -319,6 +319,16 @@ static void xml_text( GMarkupParseContext *ctx, const gchar *text_orig, gsize te
 	}
 	else if( g_strcasecmp( g_markup_parse_context_get_element( ctx ), "setting" ) == 0 && xd->current_setting )
 	{
+		if( xd->current_account )
+		{
+			set_t *s = set_find( xd->current_set_head, xd->current_setting );
+			if( s && ( s->flags & ACC_SET_ONLINE_ONLY ) )
+			{
+				g_free( xd->current_setting );
+				xd->current_setting = NULL;
+				return;
+			}
+		}
 		set_setstr( xd->current_set_head, xd->current_setting, (char*) text );
 		g_free( xd->current_setting );
 		xd->current_setting = NULL;

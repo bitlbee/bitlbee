@@ -1292,37 +1292,21 @@ static void cmd_nick( irc_t *irc, char **cmd )
 static void bitlbee_whatsnew( irc_t *irc )
 {
 	int last = set_getint( &irc->b->set, "last_version" );
-	GString *msg = g_string_new( "" );
-	char s[16];
+	char s[16], *msg;
 	
 	if( last >= BITLBEE_VERSION_CODE )
 		return;
 	
-	if( last < 0x010206 ) /* 1.2.6 */
-	{
-		g_string_append( msg,
-			"Twitter support. See \x02help account add twitter\x02.\n" );
-	}
-	if( last < 0x010300 ) /* 1.3dev */
-	{
-		g_string_append( msg,
-			"Support for multiple configurable control channels, "
-			"each with a subset of your contact list. See "
-			"\x02help channels\x02 for more information.\n"
-			"File transfer support for some protocols (more if "
-			"you use libpurple). Just /DCC SEND stuff. Incoming "
-			"files also become DCC transfers.\n"
-			"Many more things, briefly described in "
-			"\x02help news1.3\x02.\n" );
-	}
+	msg = help_get_whatsnew( &(global.help), last );
 	
-	if( msg->len > 0 )
+	if( msg )
 		irc_usermsg( irc, "%s: This seems to be your first time using this "
 		                  "this version of BitlBee. Here's a list of new "
 		                  "features you may like to know about:\n\n%s\n",
-		                  irc->user->nick, msg->str );
+		                  irc->user->nick, msg );
 	
-	g_string_free( msg, TRUE );
+	g_free( msg );
+	
 	g_snprintf( s, sizeof( s ), "%d", BITLBEE_VERSION_CODE );
 	set_setstr( &irc->b->set, "last_version", s );
 }

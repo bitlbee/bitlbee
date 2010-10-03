@@ -195,7 +195,7 @@ void imcb_chat_remove_buddy( struct groupchat *c, const char *handle, const char
 		bu = bee_user_by_handle( bee, ic, handle );
 	}
 	
-	if( bee->ui->chat_remove_user )
+	if( bee->ui->chat_remove_user && bu )
 		bee->ui->chat_remove_user( bee, c, bu );
 }
 

@@ -307,11 +307,10 @@ void http_decode( char *s )
 /* This fuction is safe, but make sure you call it safely as well! */
 void http_encode( char *s )
 {
-	char *t;
+	char t[strlen(s)+1];
 	int i, j;
 	
-	t = g_strdup( s );
-	
+	strcpy( t, s );
 	for( i = j = 0; t[i]; i ++, j ++ )
 	{
 		/* Warning: isalnum() is locale-aware, so don't use it here! */
@@ -329,8 +328,6 @@ void http_encode( char *s )
 		}
 	}
 	s[j] = 0;
-	
-	g_free( t );
 }
 
 /* Strip newlines from a string. Modifies the string passed to it. */ 

@@ -180,7 +180,7 @@ int main( int argc, char *argv[] )
 		/* Looks like env should *not* be freed here as putenv
 		   doesn't make a copy. Odd. */
 		
-		chdir( old_cwd );
+		i = chdir( old_cwd );
 		close( global.listen_socket );
 		
 		if( execv( argv[0], argv ) == -1 )
