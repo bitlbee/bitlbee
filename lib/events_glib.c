@@ -146,3 +146,8 @@ void b_event_remove(gint tag)
 	if (tag > 0)
 		g_source_remove(tag);
 }
+
+void closesocket( int fd )
+{
+	close( fd );
+}
