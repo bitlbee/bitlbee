@@ -415,7 +415,15 @@
 				</para>
 				
 				<para>
-					If an SMP challenge has already been received from the given user, responds with the specified secret. Otherwise, a challenge for the secret will be sent. If the protocol succeeds (i.e. both parties gave the same secret), the fingerprint will be trusted.
+					If an SMP challenge has been received from the given user, responds with the specified secret/answer. Otherwise, sends a challenge for the given secret.
+				</para>
+				
+				<para>
+					Note that there are two flavors of SMP challenges: "shared-secret" and "question &amp; answer". This command is used to respond to both of them, or to initiate a shared-secret style exchange. Use the <emphasis>otr smpq</emphasis> command to initiate a "Q&amp;A" session.
+				</para>
+				
+				<para>
+					When responding to a "Q&amp;A" challenge, the local trust value is not altered. Only the <emphasis>asking party</emphasis> sets trust in the case of success. Use <emphasis>otr smpq</emphasis> to pose your challenge. In a shared-secret exchange, both parties set their trust according to the outcome.
 				</para>
 				
 			</description>
@@ -432,7 +440,11 @@
 				</para>
 
 				<para>
-					When initiating SMP, this is an alternative to the 'otr smp' command. The shared secret is provided as the answer to a specific question. The question is transmitted with the initial SMP packet and used to prompt the other party. If the protocol succeeds (i.e. they give the correct answer), the fingerprint will be trusted.
+					Initiates an SMP session in "question &amp; answer" style. The question is transmitted with the initial SMP packet and used to prompt the other party. You must be confident that only they know the answer. If the protocol succeeds (i.e. they answer correctly), the fingerprint will be trusted. Note that the answer must be entered exactly, case and punctuation count!
+				</para>
+				
+				<para>
+					Note that this style of SMP only affects the trust setting on your side. Expect your opponent to send you their own challenge. Alternatively, if you and the other party have a shared secret, use the <emphasis>otr smp</emphasis> command.
 				</para>
 				
 			</description>
