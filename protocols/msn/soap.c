@@ -282,6 +282,7 @@ static int msn_soap_passport_sso_build_request( struct msn_soap_req_data *soap_r
 		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL );
 	
 	strncpy( pass, ic->acc->pass, MAX_PASSPORT_PWLEN );
+	pass[MAX_PASSPORT_PWLEN] = '\0';
 	soap_req->payload = g_markup_printf_escaped( SOAP_PASSPORT_SSO_PAYLOAD,
 		ic->acc->user, pass, md->pp_policy );
 	
