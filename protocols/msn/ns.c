@@ -827,6 +827,7 @@ static void msn_ns_send_adl( struct im_connection *ic )
 	}
 	
 	adls = xt_to_string( adl );
+	xt_free_node( adl );
 	msn_ns_write( ic, -1, "ADL %d %zd\r\n%s", ++md->trId, strlen( adls ), adls );
 	g_free( adls );
 }

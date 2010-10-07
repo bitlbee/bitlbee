@@ -156,6 +156,7 @@ int irc_user_set_nick( irc_user_t *iu, const char *new )
 	if( iu->host == NULL ) iu->host = g_strdup( iu->nick );
 	if( iu->fullname == NULL ) iu->fullname = g_strdup( iu->nick );
 	
+	g_free( iu->key );
 	iu->key = g_strdup( key );
 	g_hash_table_insert( irc->nick_user_hash, iu->key, iu );
 	irc->users = g_slist_insert_sorted( irc->users, iu, irc_user_cmp );

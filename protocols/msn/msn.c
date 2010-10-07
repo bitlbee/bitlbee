@@ -345,8 +345,10 @@ static void msn_buddy_data_add( bee_user_t *bu )
 static void msn_buddy_data_free( bee_user_t *bu )
 {
 	struct msn_data *md = bu->ic->proto_data;
+	struct msn_buddy_data *bd = bu->data;
 	g_tree_remove( md->domaintree, bu->handle );
 	g_free( bu->data );
+	g_free( bd->cid );
 }
 
 void msn_initmodule()

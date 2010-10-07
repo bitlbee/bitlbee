@@ -440,6 +440,7 @@ static int msn_soap_passport_sso_free_data( struct msn_soap_req_data *soap_req )
 	g_free( sd->secret );
 	g_free( sd->error );
 	g_free( sd->redirect );
+	g_free( sd );
 	
 	return MSN_SOAP_OK;
 }
