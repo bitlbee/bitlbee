@@ -188,7 +188,7 @@ int ssl_read( void *conn, char *buf, int len )
 	if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
 		ssl_errno = SSL_AGAIN;
 	
-	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) write( 1, buf, st );
+	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 1, buf, st );
 	
 	return st;
 }
@@ -209,7 +209,7 @@ int ssl_write( void *conn, const char *buf, int len )
 	if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
 		ssl_errno = SSL_AGAIN;
 	
-	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) write( 1, buf, st );
+	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 1, buf, st );
 	
 	return st;
 }

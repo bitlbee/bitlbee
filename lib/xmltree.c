@@ -614,7 +614,10 @@ void xt_add_child( struct xt_node *parent, struct xt_node *child )
 /* Same, but at the beginning. */
 void xt_insert_child( struct xt_node *parent, struct xt_node *child )
 {
-	struct xt_node *node, *last;
+	struct xt_node *node, *last = NULL;
+	
+	if( child == NULL )
+		return; /* BUG */
 	
 	for( node = child; node; node = node->next )
 	{

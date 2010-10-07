@@ -209,14 +209,15 @@ static char *msn_soap_abservice_build( const char *body_fmt, const char *scenari
 static void msn_soap_debug_print( const char *headers, const char *payload )
 {
 	char *s;
+	int st;
 	
 	if( !getenv( "BITLBEE_DEBUG" ) )
 		return;
 	
 	if( ( s = strstr( headers, "\r\n\r\n" ) ) )
-		write( 1, s, s - headers + 4 );
+		st = write( 1, s, s - headers + 4 );
 	else
-		write( 1, headers, strlen( headers ) );
+		st = write( 1, headers, strlen( headers ) );
 	
 #ifdef DEBUG
 	{
