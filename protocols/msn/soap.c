@@ -529,12 +529,16 @@ static int msn_soap_oim_handle_response( struct msn_soap_req_data *soap_req )
 	}
 	else if( soap_req->http_req->status_code == 200 )
 	{
+		/* Noise..
 		imcb_log( soap_req->ic, "Offline message successfully delivered to %s", oim->to );
+		*/
 		return MSN_SOAP_OK;
 	}
 	else
 	{
-		imcb_log( soap_req->ic, "Failed to deliver offline message to %s:\n%s", oim->to, oim->msg );
+		char *dec = frombase64( oim->msg );
+		imcb_log( soap_req->ic, "Failed to deliver offline message to %s:\n%s", oim->to, dec );
+		g_free( dec );
 		return MSN_SOAP_ABORT;
 	}
 }
