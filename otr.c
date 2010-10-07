@@ -1128,21 +1128,23 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 			otrl_message_abort_smp(us, ops, u->bu->ic, context);
 			otrl_sm_state_free(context->smstate);
 		} else {
-			/* SMP3 received, otrl_message_receiving will have sent SMP4 and set fp trust */
-			/* as noted above, fp trust SHOULD have been set by libotr.
-			 * however at least version 3.2.0 seems to forget it when
-			 * responding to an smp session that was initiated with SMP1Q
-			 * (question and answer); other cases appear to work fine.
-			 * as a workaround, we explicitly set it below.
-			 */ 
+			/* SMP3 received, otrl_message_receiving will have sent SMP4 */
 			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
-				otrl_context_set_trust(context->active_fingerprint, "smp");
-				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
-					u->nick);
+				if(context->smstate->received_question) {
+					irc_usermsg(irc, "smp %s: correct answer, you are trusted",
+						u->nick);
+				} else {
+					irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
+						u->nick);
+				}
 			} else {
-				otrl_context_set_trust(context->active_fingerprint, "");
-				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
-					u->nick);
+				if(context->smstate->received_question) {
+					irc_usermsg(irc, "smp %s: wrong answer, you are not trusted",
+						u->nick);
+				} else {
+					irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
+						u->nick);
+				}
 			}
 			otrl_sm_state_free(context->smstate);
 			/* smp is in back in EXPECT1 */
