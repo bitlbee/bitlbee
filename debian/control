@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Wilmer van der Gaast <wilmer@gaast.net>
 Uploaders: Jelmer Vernooij <jelmer@samba.org>
 Standards-Version: 3.8.4
-Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | libnss-dev (>= 1.6), po-debconf, libpurple-dev, debhelper (>= 6)
+Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | libnss-dev (>= 1.6), po-debconf, libpurple-dev, libotr2-dev, debhelper (>= 6)
 Homepage: http://www.bitlbee.org/
 Vcs-Bzr: http://code.bitlbee.org/bitlbee/
 DM-Upload-Allowed: yes
@@ -58,3 +58,14 @@ Description: An IRC to other chat networks gateway (dev files)
  and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
  .
  This package holds development stuff for compiling plug-ins.
+
+Package: bitlbee-plugin-otr
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, bitlbee (= ${bee:Version}) | bitlbee-libpurple (= ${bee:Version})
+Description: An IRC to other chat networks gateway (default version)
+ This program can be used as an IRC server which forwards everything you
+ say to people on other chat networks: Jabber (which includes Google Talk
+ and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
+ .
+ This package contains a plugin that adds support for Off-The-Record
+ encryption of instant messages.

@@ -7,8 +7,9 @@
 # exercise is over now.
 #
 
-# Include the bitlbee-libpurple variant by default
+# Include the bitlbee-libpurple variant and OTR plugin by default
 BITLBEE_LIBPURPLE ?= 1
+BITLBEE_OTR ?= plugin
 BITLBEE_CONFIGURE_FLAGS ?=
 DEBUG ?= 0
 
@@ -21,12 +22,16 @@ ifneq ($(BITLBEE_LIBPURPLE),1)
 DH_OPTIONS += -Nbitlbee-libpurple
 endif
 
+ifneq ($(BITLBEE_OTR),plugin)
+DH_OPTIONS += -Nbitlbee-plugin-otr
+endif
+
 build: build-stamp
 build-stamp:
 	dh_testdir
 
 	mkdir -p debian/build-native
-	ROOT=$$PWD; cd debian/build-native; $(BITLBEE_CONFIGURE_VERSION) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent $(BITLBEE_CONFIGURE_FLAGS)
+	ROOT=$$PWD; cd debian/build-native; $(BITLBEE_CONFIGURE_VERSION) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent --otr=$(BITLBEE_OTR) $(BITLBEE_CONFIGURE_FLAGS)
 	$(MAKE) -C debian/build-native
 
 ifeq ($(BITLBEE_LIBPURPLE),1)
@@ -55,19 +60,18 @@ install: build
 	dh_clean -k
 	dh_installdirs
 
-	$(MAKE) -C debian/build-native install DESTDIR=`pwd`/debian/bitlbee
-	$(MAKE) -C debian/build-native install-etc DESTDIR=`pwd`/debian/bitlbee-common
+	$(MAKE) -C debian/build-native install-bin DESTDIR=`pwd`/debian/bitlbee
+	$(MAKE) -C debian/build-native install-etc install-doc DESTDIR=`pwd`/debian/bitlbee-common
 	$(MAKE) -C debian/build-native install-dev DESTDIR=`pwd`/debian/bitlbee-dev
-	patch debian/bitlbee-common/etc/bitlbee/bitlbee.conf debian/patches/bitlbee.conf.diff
+	$(MAKE) -C debian/build-native install-plugins DESTDIR=`pwd`/debian/bitlbee-plugin-otr
 
 ifeq ($(BITLBEE_LIBPURPLE),1)
-	$(MAKE) -C debian/build-libpurple install DESTDIR=`pwd`/debian/bitlbee-libpurple
+	$(MAKE) -C debian/build-libpurple install-bin DESTDIR=`pwd`/debian/bitlbee-libpurple
 	ln -sf debian/bitlbee.prerm debian/bitlbee-libpurple.prerm
 endif
 
-	mkdir -p debian/bitlbee-common/usr
-	mv debian/bitlbee/usr/share debian/bitlbee-common/usr
-	rm -rf debian/bitlbee-libpurple/usr/share
+	patch debian/bitlbee-common/etc/bitlbee/bitlbee.conf debian/patches/bitlbee.conf.diff
+	chmod 640 debian/bitlbee-common/etc/bitlbee/bitlbee.conf
 
 binary-common:
 	dh_testdir
@@ -78,7 +82,7 @@ binary-common:
 	dh_installdocs #--link-doc=bitlbee-common
 	# TODO: Restore --link-doc up here and remove the hack below once
 	# Hardy and Lenny are deprecated.
-	for p in bitlbee bitlbee-libpurple bitlbee-dev; do rm -r debian/$$p/usr/share/doc/$$p && ln -s bitlbee-common debian/$$p/usr/share/doc/$$p; done
+	for p in bitlbee bitlbee-libpurple bitlbee-dev bitlbee-plugin-otr; do rm -r debian/$$p/usr/share/doc/$$p && ln -s bitlbee-common debian/$$p/usr/share/doc/$$p || true; done
 	dh_installdebconf
 	dh_installinit --init-script=bitlbee
 	dh_installman
