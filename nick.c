@@ -195,8 +195,8 @@ char *nick_gen( bee_user_t *bu )
 		   accents don't just get stripped. Note that it depends on
 		   LC_CTYPE being set to something other than C/POSIX. */
 		if( part )
-			part = asc = g_convert( part, -1, "ASCII//TRANSLIT//IGNORE",
-			                        "UTF-8", NULL, NULL, NULL );
+			part = asc = g_convert_with_fallback( part, -1, "ASCII//TRANSLIT",
+			                                      "UTF-8", "", NULL, NULL, NULL );
 		
 		if( ret->len == 0 && part && isdigit( *part ) )
 			g_string_append_c( ret, '_' );

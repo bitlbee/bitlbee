@@ -634,8 +634,8 @@ static void irc_cmd_completions( irc_t *irc, char **cmd )
 	
 	irc_send_msg_raw( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS OK" );
 	
-	for( i = 0; commands[i].command; i ++ )
-		irc_send_msg_f( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS %s", commands[i].command );
+	for( i = 0; root_commands[i].command; i ++ )
+		irc_send_msg_f( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS %s", root_commands[i].command );
 	
 	for( h = global.help; h; h = h->next )
 		irc_send_msg_f( irc->root, "NOTICE", irc->user->nick, "COMPLETIONS help %s", h->title );

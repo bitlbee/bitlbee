@@ -9,7 +9,7 @@
 -include Makefile.settings
 
 # Program variables
-objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o query.o root_commands.o set.o storage.o $(STORAGE_OBJS)
+objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o $(OTR_BI) query.o root_commands.o set.o storage.o $(STORAGE_OBJS)
 headers = bitlbee.h commands.h conf.h config.h help.h ipc.h irc.h log.h nick.h query.h set.h sock.h storage.h lib/events.h lib/ftutil.h lib/http_client.h lib/ini.h lib/md5.h lib/misc.h lib/proxy.h lib/sha1.h lib/ssl_client.h lib/url.h protocols/account.h protocols/bee.h protocols/ft.h protocols/nogaim.h
 subdirs = lib protocols
 
@@ -26,18 +26,18 @@ endif
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 
-all: $(OUTFILE)
+all: $(OUTFILE) $(OTR_PI)
 	$(MAKE) -C doc
 
 uninstall: uninstall-bin uninstall-doc 
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
 
-install: install-bin install-doc
+install: install-bin install-doc install-plugins
 	@if ! [ -d $(DESTDIR)$(CONFIG) ]; then echo -e '\nThe configuration directory $(DESTDIR)$(CONFIG) does not exist yet, don'\''t forget to create it!'; fi
 	@if ! [ -e $(DESTDIR)$(ETCDIR)/bitlbee.conf ]; then echo -e '\nNo files are installed in '$(DESTDIR)$(ETCDIR)' by make install. Run make install-etc to do that.'; fi
 	@echo
 
-.PHONY:   install   install-bin   install-etc   install-doc \
+.PHONY:   install   install-bin   install-etc   install-doc install-plugins \
         uninstall uninstall-bin uninstall-etc uninstall-doc \
         all clean distclean tar $(subdirs)
 
@@ -103,6 +103,12 @@ uninstall-etc:
 	rm -f $(DESTDIR)$(ETCDIR)/bitlbee.conf
 	-rmdir $(DESTDIR)$(ETCDIR)
 
+install-plugins:
+ifdef OTR_PI
+	mkdir -p $(DESTDIR)$(PLUGINDIR)
+	install -m 0755 otr.so $(DESTDIR)$(PLUGINDIR)
+endif
+
 tar:
 	fakeroot debian/rules clean || make distclean
 	x=$$(basename $$(pwd)); \
@@ -111,6 +117,10 @@ tar:
 
 $(subdirs):
 	@$(MAKE) -C $@ $(MAKECMDGOALS)
+
+$(OTR_PI): %.so: $(SRCDIR)%.c
+	@echo '*' Building plugin $@
+	@$(CC) $(CFLAGS) $(OTRFLAGS) -fPIC -shared $< -o $@
 
 $(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<

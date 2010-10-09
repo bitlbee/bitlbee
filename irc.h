@@ -27,7 +27,7 @@
 #define _IRC_H
 
 #define IRC_MAX_LINE 512
-#define IRC_MAX_ARGS 8
+#define IRC_MAX_ARGS 16
 
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"
@@ -85,6 +85,9 @@ typedef struct irc
 	gint ping_source_id;
 	gint login_source_id; /* To slightly delay some events at login time. */
 	
+	struct otr *otr; /* OTR state and book keeping, used by the OTR plugin.
+	                    TODO: Some mechanism for plugindata. */
+	
 	struct bee *b;
 } irc_t;
 
@@ -92,6 +95,9 @@ typedef enum
 {
 	/* Replaced with iu->last_channel IRC_USER_PRIVATE = 1, */
 	IRC_USER_AWAY = 2,
+	
+	IRC_USER_OTR_ENCRYPTED = 0x10000,
+	IRC_USER_OTR_TRUSTED   = 0x20000,
 } irc_user_flags_t;
 
 typedef struct irc_user
@@ -213,6 +219,37 @@ typedef enum
 	IRC_CDU_KICK,
 } irc_channel_del_user_type_t;
 
+/* These are a glued a little bit to the core/bee layer and a little bit to
+   IRC. The first user is OTR, and I guess at some point we'll get to shape
+   this a little bit more as other uses come up. */
+typedef struct irc_plugin
+{
+	/* Called at the end of irc_new(). Can be used to add settings, etc. */
+	gboolean (*irc_new)( irc_t *irc );
+	/* At the end of irc_free(). */
+	void (*irc_free)( irc_t *irc );
+	
+	/* Problem with the following two functions is ordering if multiple
+	   plugins are handling them. Let's keep fixing that problem for
+	   whenever it becomes important. */
+	
+	/* Called by bee_irc_user_privmsg_cb(). Return NULL if you want to
+	   abort sending the msg. */
+	char* (*filter_msg_out)( irc_user_t *iu, char *msg, int flags );
+	/* Called by bee_irc_user_msg(). Return NULL if you swallowed the
+	   message and don't want anything to go to the user. */
+	char* (*filter_msg_in)( irc_user_t *iu, char *msg, int flags );
+	
+	/* From storage.c functions. Ideally these should not be used
+	   and instead data should be stored in settings which will get
+	   saved automatically. Consider these deprecated! */
+	void (*storage_load)( irc_t *irc );
+	void (*storage_save)( irc_t *irc );
+	void (*storage_remove)( const char *nick );
+} irc_plugin_t;
+
+extern GSList *irc_plugins; /* struct irc_plugin */
+
 /* irc.c */
 extern GSList *irc_connection_list;
 
@@ -237,6 +274,8 @@ void irc_desync( irc_t *irc );
 int irc_check_login( irc_t *irc );
 
 void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv );
+
+void register_irc_plugin( const struct irc_plugin *p );
 
 /* irc_channel.c */
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name );

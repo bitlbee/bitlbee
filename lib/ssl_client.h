@@ -46,6 +46,9 @@ extern int ssl_errno;
 typedef gboolean (*ssl_input_function)(gpointer, void*, b_input_condition);
 
 
+/* Perform any global initialization the SSL library might need. */
+G_MODULE_EXPORT void ssl_init( void );
+
 /* Connect to host:port, call the given function when the connection is
    ready to be used for SSL traffic. This is all done asynchronously, no
    blocking I/O! (Except for the DNS lookups, for now...) */

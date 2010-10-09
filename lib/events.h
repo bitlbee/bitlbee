@@ -80,10 +80,8 @@ G_MODULE_EXPORT gint b_input_add(int fd, b_input_condition cond, b_event_handler
 G_MODULE_EXPORT gint b_timeout_add(gint timeout, b_event_handler func, gpointer data);
 G_MODULE_EXPORT void b_event_remove(gint id);
 
-/* For now, closesocket() is only a function when using libevent. With GLib
-   it's a preprocessor macro. */
-#ifdef EVENTS_LIBEVENT
+/* With libevent, this one also cleans up event handlers if that wasn't already
+   done (the caller is expected to do so but may miss it sometimes). */
 G_MODULE_EXPORT void closesocket(int fd);
-#endif
 
 #endif /* _EVENTS_H_ */

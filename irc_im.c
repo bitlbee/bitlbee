@@ -191,13 +191,15 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 	}
 }
 
-static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at )
+static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg_, time_t sent_at )
 {
 	irc_t *irc = bee->ui_data;
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
 	char *dst, *prefix = NULL;
 	char *wrapped, *ts = NULL;
 	irc_channel_t *ic = NULL;
+	char *msg = g_strdup( msg_ );
+	GSList *l;
 	
 	if( sent_at > 0 && set_getbool( &irc->b->set, "display_timestamps" ) )
 		ts = irc_format_timestamp( irc, sent_at );
@@ -223,11 +225,41 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg, t
 		ts = NULL;
 	}
 	
+	for( l = irc_plugins; l; l = l->next )
+	{
+		irc_plugin_t *p = l->data;
+		if( p->filter_msg_in )
+		{
+			char *s = p->filter_msg_in( iu, msg, 0 );
+			if( s )
+			{
+				if( s != msg )
+					g_free( msg );
+				msg = s;
+			}
+			else
+			{
+				/* Modules can swallow messages. */
+				return TRUE;
+			}
+		}
+	}
+	
+	if( ( g_strcasecmp( set_getstr( &bee->set, "strip_html" ), "always" ) == 0 ) ||
+	    ( ( bu->ic->flags & OPT_DOES_HTML ) && set_getbool( &bee->set, "strip_html" ) ) )
+	{
+		char *s = g_strdup( msg );
+		strip_html( s );
+		g_free( msg );
+		msg = s;
+	}
+	
 	wrapped = word_wrap( msg, 425 );
 	irc_send_msg( iu, "PRIVMSG", dst, wrapped, prefix );
 	
 	g_free( wrapped );
 	g_free( prefix );
+	g_free( msg );
 	g_free( ts );
 	
 	return TRUE;
@@ -348,17 +380,17 @@ static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
 			set_getint( &iu->irc->b->set, "away_reply_timeout" );
 	}
 	
+	if( iu->pastebuf == NULL )
+		iu->pastebuf = g_string_new( msg );
+	else
+	{
+		b_event_remove( iu->pastebuf_timer );
+		g_string_append_printf( iu->pastebuf, "\n%s", msg );
+	}
+	
 	if( set_getbool( &iu->irc->b->set, "paste_buffer" ) )
 	{
 		int delay;
-		
-		if( iu->pastebuf == NULL )
-			iu->pastebuf = g_string_new( msg );
-		else
-		{
-			b_event_remove( iu->pastebuf_timer );
-			g_string_append_printf( iu->pastebuf, "\n%s", msg );
-		}
 		
 		if( ( delay = set_getint( &iu->irc->b->set, "paste_buffer_delay" ) ) <= 5 )
 			delay *= 1000;
@@ -368,17 +400,45 @@ static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
 		return TRUE;
 	}
 	else
-		return bee_user_msg( iu->irc->b, iu->bu, msg, 0 );
+	{
+		bee_irc_user_privmsg_cb( iu, 0, 0 );
+		
+		return TRUE;
+	}
 }
 
 static gboolean bee_irc_user_privmsg_cb( gpointer data, gint fd, b_input_condition cond )
 {
 	irc_user_t *iu = data;
+	char *msg = g_string_free( iu->pastebuf, FALSE );
+	GSList *l;
 	
-	bee_user_msg( iu->irc->b, iu->bu, iu->pastebuf->str, 0 );
+	for( l = irc_plugins; l; l = l->next )
+	{
+		irc_plugin_t *p = l->data;
+		if( p->filter_msg_out )
+		{
+			char *s = p->filter_msg_out( iu, msg, 0 );
+			if( s )
+			{
+				if( s != msg )
+					g_free( msg );
+				msg = s;
+			}
+			else
+			{
+				/* Modules can swallow messages. */
+				iu->pastebuf = NULL;
+				g_free( msg );
+				return FALSE;
+			}
+		}
+	}
 	
-	g_string_free( iu->pastebuf, TRUE );
-	iu->pastebuf = 0;
+	bee_user_msg( iu->irc->b, iu->bu, msg, 0 );
+	
+	g_free( msg );
+	iu->pastebuf = NULL;
 	iu->pastebuf_timer = 0;
 	
 	return FALSE;

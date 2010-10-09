@@ -28,9 +28,11 @@
 #include "arc.h"
 #include "base64.h"
 #include "commands.h"
+#include "otr.h"
 #include "protocols/nogaim.h"
 #include "help.h"
 #include "ipc.h"
+#include "lib/ssl_client.h"
 #include "md5.h"
 #include "misc.h"
 #include <signal.h>
@@ -67,6 +69,18 @@ int main( int argc, char *argv[] )
 		return( 1 );
 	
 	b_main_init();
+	
+ 	/* Ugly Note: libotr and gnutls both use libgcrypt. libgcrypt
+ 	   has a process-global config state whose initialization happpens
+ 	   twice if libotr and gnutls are used together. libotr installs custom
+ 	   memory management functions for libgcrypt while our gnutls module
+ 	   uses the defaults. Therefore we initialize OTR after SSL. *sigh* */
+ 	ssl_init();
+#ifdef OTR_BI
+ 	otr_init();
+#endif
+	/* And in case OTR is loaded as a plugin, it'll also get loaded after
+	   this point. */
 	
 	srand( time( NULL ) ^ getpid() );
 	

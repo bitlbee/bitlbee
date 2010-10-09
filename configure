@@ -33,6 +33,7 @@ debug=0
 strip=1
 gcov=0
 plugins=1
+otr=0
 
 events=glib
 ldap=0
@@ -71,11 +72,14 @@ Option		Description				Default
 --twitter=0/1	Disable/enable Twitter part		$twitter
 
 --purple=0/1	Disable/enable libpurple support	$purple
+		(automatically disables other protocol modules)
 
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
 --plugins=0/1	Disable/enable plugins support		$plugins
+--otr=0/1/auto/plugin
+		Disable/enable OTR encryption support	$otr
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
@@ -488,6 +492,33 @@ else
 	echo '#define WITH_PLUGINS' >> config.h
 fi
 
+otrprefix=""
+for i in / /usr /usr/local; do
+	if [ -f ${i}/lib/libotr.a ]; then
+		otrprefix=${i}
+		break
+	fi
+done
+if [ "$otr" = "auto" ]; then
+	if [ -n "$otrprefix" ]; then
+		otr=1
+	else
+		otr=0
+	fi
+fi
+if [ "$otr" = 1 ]; then
+	# BI == built-in
+	echo '#define OTR_BI' >> config.h
+	echo "EFLAGS+=-L${otrprefix}/lib -lotr" >> Makefile.settings
+	echo "CFLAGS+=-I${otrprefix}/include" >> Makefile.settings
+	echo 'OTR_BI=otr.o' >> Makefile.settings
+elif [ "$otr" = "plugin" ]; then
+	echo '#define OTR_PI' >> config.h
+	echo "OTRFLAGS=-L${otrprefix}/lib -lotr" >> Makefile.settings
+	echo "CFLAGS+=-I${otrprefix}/include" >> Makefile.settings
+	echo 'OTR_PI=otr.so' >> Makefile.settings
+fi
+
 if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; then
 	echo
 	echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
@@ -680,6 +711,14 @@ if [ "$strip" = "1" ]; then
 	echo '  Binary stripping enabled.'
 else
 	echo '  Binary stripping disabled.'
+fi
+
+if [ "$otr" = "1" ]; then
+	echo '  Off-the-Record (OTR) Messaging enabled.'
+elif [ "$otr" = "plugin" ]; then
+	echo '  Off-the-Record (OTR) Messaging enabled (as a plugin).'
+else
+	echo '  Off-the-Record (OTR) Messaging disabled.'
 fi
 
 echo '  Using event handler: '$events

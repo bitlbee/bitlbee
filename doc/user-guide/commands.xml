@@ -366,6 +366,184 @@
 			</para>
 		</description>
 	</bitlbee-command>
+	
+	<bitlbee-command name="otr">
+		<short-description>Off-the-Record encryption control</short-description>
+		<syntax>otr &lt;subcommand&gt; [&lt;arguments&gt;]</syntax>
+
+		<description>
+
+			<para>
+				Available subcommands: connect, disconnect, smp, smpq, trust, info, keygen, and forget. See <emphasis>help otr &lt;subcommand&gt;</emphasis> for more information.
+			</para>
+
+		</description>
+		
+		<bitlbee-command name="connect">
+			<syntax>otr connect &lt;nick&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Attempts to establish an encrypted connection with the specified user by sending a magic string.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="disconnect">
+			<syntax>otr disconnect &lt;nick&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Resets the connection with the specified user to cleartext.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="smp">
+			<syntax>otr smp &lt;nick&gt; &lt;secret&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Attempts to authenticate the given user's active fingerprint via the Socialist Millionaires' Protocol.
+				</para>
+				
+				<para>
+					If an SMP challenge has been received from the given user, responds with the specified secret/answer. Otherwise, sends a challenge for the given secret.
+				</para>
+				
+				<para>
+					Note that there are two flavors of SMP challenges: "shared-secret" and "question &amp; answer". This command is used to respond to both of them, or to initiate a shared-secret style exchange. Use the <emphasis>otr smpq</emphasis> command to initiate a "Q&amp;A" session.
+				</para>
+				
+				<para>
+					When responding to a "Q&amp;A" challenge, the local trust value is not altered. Only the <emphasis>asking party</emphasis> sets trust in the case of success. Use <emphasis>otr smpq</emphasis> to pose your challenge. In a shared-secret exchange, both parties set their trust according to the outcome.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="smpq">
+			<syntax>otr smpq &lt;nick&gt; &lt;question&gt; &lt;answer&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Attempts to authenticate the given user's active fingerprint via the Socialist Millionaires' Protocol, Q&amp;A style.
+				</para>
+
+				<para>
+					Initiates an SMP session in "question &amp; answer" style. The question is transmitted with the initial SMP packet and used to prompt the other party. You must be confident that only they know the answer. If the protocol succeeds (i.e. they answer correctly), the fingerprint will be trusted. Note that the answer must be entered exactly, case and punctuation count!
+				</para>
+				
+				<para>
+					Note that this style of SMP only affects the trust setting on your side. Expect your opponent to send you their own challenge. Alternatively, if you and the other party have a shared secret, use the <emphasis>otr smp</emphasis> command.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="trust">
+			<syntax>otr trust &lt;nick&gt; &lt;fp1&gt; &lt;fp2&gt; &lt;fp3&gt; &lt;fp4&gt; &lt;fp5&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Manually affirms trust in the specified fingerprint, given as five blocks of precisely eight (hexadecimal) digits each.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="info">
+			<syntax>otr info</syntax>
+			<syntax>otr info &lt;nick&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Shows information about the OTR state. The first form lists our private keys and current OTR contexts. The second form displays information about the connection with a given user, including the list of their known fingerprints.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="keygen">
+			<syntax>otr keygen &lt;account-no&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Generates a new OTR private key for the given account.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="forget">
+			<syntax>otr forget &lt;thing&gt; &lt;arguments&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Forgets some part of our OTR userstate. Available things: fingerprint, context, and key. See <emphasis>help otr forget &lt;thing&gt;</emphasis> for more information.
+				</para>
+			
+			</description>
+			
+			<bitlbee-command name="fingerprint">
+				<syntax>otr forget fingerprint &lt;nick&gt; &lt;fingerprint&gt;</syntax>
+				
+				<description>
+				
+					<para>
+						Drops the specified fingerprint from the given user's OTR connection context. It is allowed to specify only a (unique) prefix of the desired fingerprint.
+					</para>
+					
+				</description>
+				
+			</bitlbee-command>
+				
+			<bitlbee-command name="context">
+				<syntax>otr forget context &lt;nick&gt;</syntax>
+				
+				<description>
+				
+					<para>
+						Forgets the entire OTR context associated with the given user. This includes current message and protocol states, as well as any fingerprints for that user.
+					</para>
+					
+				</description>
+				
+			</bitlbee-command>
+
+			<bitlbee-command name="key">
+				<syntax>otr forget key &lt;fingerprint&gt;</syntax>
+				
+				<description>
+				
+					<para>
+						Forgets an OTR private key matching the specified fingerprint. It is allowed to specify only a (unique) prefix of the fingerprint.
+					</para>
+					
+				</description>
+				
+			</bitlbee-command>
+		
+		</bitlbee-command>
+		
+	</bitlbee-command>
 
 	<bitlbee-command name="set">
 		<short-description>Miscellaneous settings</short-description>
@@ -588,6 +766,16 @@
 			</para>
 		</description>
 
+	</bitlbee-setting>
+
+	<bitlbee-setting name="color_encrypted" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				If set to true, BitlBee will color incoming encrypted messages according to their fingerprint trust level: untrusted=red, trusted=green.
+			</para>
+		</description>
 	</bitlbee-setting>
 
 	<bitlbee-setting name="control_channel" type="string" scope="global">
@@ -926,6 +1114,20 @@
 
 			<para>
 				The value "both" means both user and root get ops. "root" means, well, just root. "user" means just the user. "none" means nobody will get operator status.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="otr_policy" type="string" scope="global">
+		<default>opportunistic</default>
+		<possible-values>never, opportunistic, manual, always</possible-values>
+
+		<description>
+			<para>
+				This setting controls the policy for establishing Off-the-Record connections.
+			</para>
+			<para>
+				A value of "never" effectively disables the OTR subsystem. In "opportunistic" mode, a magic whitespace pattern will be appended to the first message sent to any user. If the peer is also running opportunistic OTR, an encrypted connection will be set up automatically. On "manual", on the other hand, OTR connections must be established explicitly using <emphasis>otr connect</emphasis>. Finally, the setting "always" enforces encrypted communication by causing BitlBee to refuse to send any cleartext messages at all.
 			</para>
 		</description>
 	</bitlbee-setting>

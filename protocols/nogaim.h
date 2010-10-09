@@ -67,6 +67,7 @@
 #define OPT_LOCALBUDDY  0x00000020 /* For nicks local to one groupchat */
 #define OPT_TYPING      0x00000100 /* Some pieces of code make assumptions */
 #define OPT_THINKING    0x00000200 /* about these values... Stupid me! */
+#define OPT_NOOTR       0x00001000 /* protocol not suitable for OTR */
 
 /* ok. now the fun begins. first we create a connection structure */
 struct im_connection
@@ -141,6 +142,10 @@ struct prpl {
 	 * - The user sees this name ie. when imcb_log() is used. */
 	const char *name;
 	void *data;
+	/* Maximum Message Size of this protocol.
+	 * - Introduced for OTR, in order to fragment large protocol messages.
+	 * - 0 means "unlimited". */
+	unsigned int mms;
 
 	/* Added this one to be able to add per-account settings, don't think
 	 * it should be used for anything else. You are supposed to use the

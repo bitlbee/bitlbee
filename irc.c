@@ -28,6 +28,7 @@
 #include "dcc.h"
 
 GSList *irc_connection_list;
+GSList *irc_plugins;
 
 static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond );
 static char *set_eval_charset( set_t *set, char *value );
@@ -41,6 +42,7 @@ irc_t *irc_new( int fd )
 	socklen_t socklen = sizeof( sock );
 	char *host = NULL, *myhost = NULL;
 	irc_user_t *iu;
+	GSList *l;
 	set_t *s;
 	bee_t *b;
 	
@@ -164,6 +166,13 @@ irc_t *irc_new( int fd )
 	
 	nogaim_init();
 	
+	for( l = irc_plugins; l; l = l->next )
+	{
+		irc_plugin_t *p = l->data;
+		if( p->irc_new )
+			p->irc_new( irc );
+	}
+	
 	return irc;
 }
 
@@ -207,6 +216,8 @@ static gboolean irc_free_hashkey( gpointer key, gpointer value, gpointer data );
 
 void irc_free( irc_t * irc )
 {
+	GSList *l;
+	
 	irc->status |= USTATUS_SHUTDOWN;
 	
 	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
@@ -214,6 +225,13 @@ void irc_free( irc_t * irc )
 	if( irc->status & USTATUS_IDENTIFIED && set_getbool( &irc->b->set, "save_on_quit" ) ) 
 		if( storage_save( irc, NULL, TRUE ) != STORAGE_OK )
 			log_message( LOGLVL_WARNING, "Error while saving settings for user %s", irc->user->nick );
+	
+	for( l = irc_plugins; l; l = l->next )
+	{
+		irc_plugin_t *p = l->data;
+		if( p->irc_free )
+			p->irc_free( irc );
+	}
 	
 	irc_connection_list = g_slist_remove( irc_connection_list, irc );
 	
@@ -931,4 +949,9 @@ static char *set_eval_bw_compat( set_t *set, char *value )
 	}
 	
 	return SET_INVALID;
+}
+
+void register_irc_plugin( const struct irc_plugin *p )
+{
+	irc_plugins = g_slist_prepend( irc_plugins, (gpointer) p );
 }

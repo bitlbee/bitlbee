@@ -556,6 +556,7 @@ void jabber_initmodule()
 	struct prpl *ret = g_new0( struct prpl, 1 );
 	
 	ret->name = "jabber";
+    ret->mms = 0;                        /* no limit */
 	ret->login = jabber_login;
 	ret->init = jabber_init;
 	ret->logout = jabber_logout;

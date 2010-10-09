@@ -36,7 +36,7 @@ typedef struct command
 	int flags;
 } command_t;
 
-extern const command_t commands[];
+extern command_t root_commands[];
 
 #define IRC_CMD_PRE_LOGIN	1
 #define IRC_CMD_LOGGED_IN	2
