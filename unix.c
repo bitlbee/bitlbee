@@ -28,7 +28,6 @@
 #include "arc.h"
 #include "base64.h"
 #include "commands.h"
-#include "otr.h"
 #include "protocols/nogaim.h"
 #include "help.h"
 #include "ipc.h"
@@ -41,6 +40,10 @@
 #include <sys/wait.h>
 #include <pwd.h>
 #include <locale.h>
+
+#if defined(OTR_BI) || defined(OTR_PI)
+#include "otr.h"
+#endif
 
 global_t global;	/* Against global namespace pollution */
 
