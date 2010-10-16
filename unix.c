@@ -73,6 +73,13 @@ int main( int argc, char *argv[] )
 	
 	b_main_init();
 	
+	/* libpurple doesn't like fork()s after initializing itself, so if
+	   we use it, do this init a little later (in case we're running in
+	   ForkDaemon mode). */
+#ifndef WITH_PURPLE
+	nogaim_init();
+#endif
+	
  	/* Ugly Note: libotr and gnutls both use libgcrypt. libgcrypt
  	   has a process-global config state whose initialization happpens
  	   twice if libotr and gnutls are used together. libotr installs custom

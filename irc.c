@@ -164,7 +164,11 @@ irc_t *irc_new( int fd )
 	g_free( myhost );
 	g_free( host );
 	
+	/* libpurple doesn't like fork()s after initializing itself, so this
+	   is the right moment to initialize it. */
+#ifdef WITH_PURPLE
 	nogaim_init();
+#endif
 	
 	for( l = irc_plugins; l; l = l->next )
 	{
