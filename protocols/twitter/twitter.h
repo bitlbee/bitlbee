@@ -68,7 +68,7 @@ struct twitter_user_data
  * make sure the connection is still alive in callbacks before we do anything
  * else.
  */
-GSList *twitter_connections;
+extern GSList *twitter_connections;
 
 void twitter_login_finish( struct im_connection *ic );
 

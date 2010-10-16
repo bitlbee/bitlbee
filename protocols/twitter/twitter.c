@@ -37,6 +37,7 @@
 			imcb_log( ic, fmt );                        \
 	} while( 0 );
 		
+GSList *twitter_connections = NULL;
 
 /**
  * Main loop function
@@ -563,7 +564,4 @@ void twitter_initmodule()
 	ret = g_memdup(ret, sizeof(struct prpl));
 	ret->name = "identica";
 	register_protocol(ret);
-
-	// Initialise the twitter_connections GSList.
-	twitter_connections = NULL;
 }
