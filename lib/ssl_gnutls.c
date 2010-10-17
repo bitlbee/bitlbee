@@ -24,6 +24,7 @@
 */
 
 #include <gnutls/gnutls.h>
+#include <gcrypt.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include "proxy.h"
@@ -62,6 +63,9 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 
 void ssl_init( void )
 {
+	if( initialized )
+		return;
+	
 	gnutls_global_init();
 	initialized = TRUE;
 	atexit( gnutls_global_deinit );
@@ -126,10 +130,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 		return FALSE;
 	}
 	
-	if( !initialized )
-	{
-		ssl_init();
-	}
+	ssl_init();
 	
 	gnutls_certificate_allocate_credentials( &conn->xcred );
 	gnutls_init( &conn->session, GNUTLS_CLIENT );
@@ -253,4 +254,27 @@ b_input_condition ssl_getdirection( void *conn )
 {
 	return( gnutls_record_get_direction( ((struct scd*)conn)->session ) ?
 	        B_EV_IO_WRITE : B_EV_IO_READ );
+}
+
+size_t ssl_des3_encrypt( const unsigned char *key, size_t key_len, const unsigned char *input,
+                         size_t input_len, const unsigned char *iv, unsigned char **res )
+{
+	gcry_cipher_hd_t gcr;
+	gcry_error_t st;
+	
+	ssl_init();
+	
+	*res = g_malloc( input_len  );
+	st = gcry_cipher_open( &gcr, GCRY_CIPHER_3DES, GCRY_CIPHER_MODE_CBC, 0 ) ||
+	     gcry_cipher_setkey( gcr, key, key_len ) ||
+	     gcry_cipher_setiv( gcr, iv, 8 ) ||
+	     gcry_cipher_encrypt( gcr, *res, input_len, input, input_len );
+	
+	gcry_cipher_close( gcr );
+	
+	if( st == 0 )
+		return input_len;
+	
+	g_free( *res );
+	return 0;
 }

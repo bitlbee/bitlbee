@@ -268,15 +268,15 @@ detect_gnutls()
 {
 	if $PKG_CONFIG --exists gnutls; then
 		cat <<EOF>>Makefile.settings
-EFLAGS+=`$PKG_CONFIG --libs gnutls`
-CFLAGS+=`$PKG_CONFIG --cflags gnutls`
+EFLAGS+=`$PKG_CONFIG --libs gnutls` `libgcrypt-config --libs`
+CFLAGS+=`$PKG_CONFIG --cflags gnutls` `libgcrypt-config --cflags`
 EOF
 		ssl=gnutls
 		ret=1
 	elif libgnutls-config --version > /dev/null 2> /dev/null; then
 		cat <<EOF>>Makefile.settings
-EFLAGS+=`libgnutls-config --libs`
-CFLAGS+=`libgnutls-config --cflags`
+EFLAGS+=`libgnutls-config --libs` `libgcrypt-config --libs`
+CFLAGS+=`libgnutls-config --cflags` `libgcrypt-config --cflags`
 EOF
 		
 		ssl=gnutls
@@ -426,9 +426,11 @@ if [ "$ret" = "0" ]; then
 	exit 1
 fi;
 
-if [ "$msn" = "1" -a "$ssl" != "openssl" ]; then
+if [ "$msn" = "1" -a "$ssl" != "openssl" -a "$ssl" != "gnutls" ]; then
 	# Needed for MSN only. OpenSSL exports nice cipher functions already,
-	# others don't, so use our own 3des code.
+	# in case of GnuTLS we should be able to use gcrypt. Otherwise, use
+	# built-in stuff. (Since right now those are the only two supported
+	# SSL modules anyway, this is mostly unnecessary.)
 	echo 'DES=des.o' >> Makefile.settings
 fi
 
