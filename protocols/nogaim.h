@@ -44,8 +44,6 @@
 #include <stdint.h>
 #endif
 
-#include "lib/events.h"
-
 #include "bitlbee.h"
 #include "account.h"
 #include "proxy.h"
