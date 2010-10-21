@@ -579,7 +579,8 @@ int jabber_buddy_remove( struct im_connection *ic, char *full_jid_ )
 		    ( ( s == NULL && bud->resource == NULL ) ||
 		      ( bud->resource && s && strcmp( bud->resource, s + 1 ) == 0 ) ) )
 		{
-			return jabber_buddy_remove_bare( ic, full_jid );
+			g_free( full_jid );
+			return jabber_buddy_remove_bare( ic, full_jid_ );
 		}
 		else if( s == NULL || bud->resource == NULL )
 		{
