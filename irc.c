@@ -196,7 +196,8 @@ void irc_abort( irc_t *irc, int immed, char *format, ... )
 		va_end( params );
 	}
 	
-	irc_write( irc, "ERROR :Closing link: %s", reason ? : "" );
+	if( reason )
+		irc_write( irc, "ERROR :Closing link: %s", reason );
 	
 	ipc_to_master_str( "OPERMSG :Client exiting: %s@%s [%s]\r\n",
 	                   irc->user->nick ? irc->user->nick : "(NONE)",
@@ -709,6 +710,9 @@ void irc_sync( irc_t *irc )
 		if( ic->flags & IRC_CHANNEL_JOINED )
 			irc_send_join( ic, irc->user );
 	}
+	
+	/* We may be waiting for a PONG from the previous client connection. */
+	irc->pinging = FALSE;
 }
 
 void irc_desync( irc_t *irc )
