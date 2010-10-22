@@ -205,6 +205,8 @@ gboolean cmd_identify_finish( gpointer data, gint fd, b_input_condition cond )
 
 static void cmd_register( irc_t *irc, char **cmd )
 {
+	char s[16];
+	
 	if( global.conf->authmode == AUTHMODE_REGISTERED )
 	{
 		irc_usermsg( irc, "This server does not allow registering new accounts" );
@@ -221,6 +223,12 @@ static void cmd_register( irc_t *irc, char **cmd )
 			irc_setpass( irc, cmd[1] );
 			irc->status |= USTATUS_IDENTIFIED;
 			irc_umode_set( irc, "+R", 1 );
+			
+			/* Set this var now, or anyone who logs in to his/her
+			   newly created account for the first time gets the
+			   whatsnew story. */
+			g_snprintf( s, sizeof( s ), "%d", BITLBEE_VERSION_CODE );
+			set_setstr( &irc->b->set, "last_version", s );
 			break;
 
 		default:
