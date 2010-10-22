@@ -3,7 +3,7 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
-Version 
+Version 3.0
 - Important: This version drops backward compatibility with the file format
   used for user settings in versions before 1.2. If you're upgrading from
   very old BitlBee versions (like 1.0.x), you'll have to recreate your
@@ -56,6 +56,11 @@ Version
     of that.
   * Support for sending offline messages.
   * Support for setting and reading status messages.
+- Integrated the bitlbee-otr branch in a mostly non-intrusive way. Since
+  this is not end-to-end it should *not* be enabled on public servers.
+  Distro packagers are requested to offer OTR as a separately installable
+  plugin. (Compile with --otr=plugin) Please do not enable it by default as
+  there is no easy way to disable OTR once the plugin is loaded/built in.
 - Support for file transfers, in and out. /DCC SEND a file to a contact and
   it becomes a file transfer, and incoming file transfers become /DCC SENDs
   to you. Note that this is mostly useful when combined with libpurple, as
@@ -73,7 +78,7 @@ Version
 - Many bug fixes in both the core and IM modules, small feature enhancements
   and other minor changes.
 
-Finished ...
+Finished 22 Oct 2010
 
 Version 1.2.8:
 - Now always using the AIM-style authentication method for OSCAR connections,

@@ -113,7 +113,7 @@ void irc_usermsg( irc_t *irc, char *format, ... )
 {
 	irc_channel_t *ic = NULL;
 	irc_user_t *iu = irc->root;
-	char text[1100];
+	char text[2048];
 	va_list params;
 	char *dst;
 	

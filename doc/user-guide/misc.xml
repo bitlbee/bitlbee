@@ -300,6 +300,29 @@ Many more things, briefly described in <emphasis>help news1.3</emphasis>.
 </para>
 </sect1>
 
+<sect1 id="whatsnew030000">
+<title>New stuff in BitlBee 3.0</title>
+
+<para>
+BitlBee can be compiled with support for OTR message encryption (not available
+on public servers since encryption should be end-to-end).
+</para>
+
+<para>
+The MSN module was heavily updated to support features added to MSN Messenger
+over the recent years. You can now see/set status messages, send offline
+messages, and many strange issues caused by Microsoft breaking old-protocol
+compatibility should now be resolved.
+</para>
+
+<para>
+Twitter extended: IRC-style replies ("BitlBee:") now get converted to proper
+Twitter replies ("@BitlBee") and get a reference to the original message
+(see <emphasis>help set auto_reply_timeout</emphasis>). Retweets and some
+other stuff is also supported now (see <emphasis>help set commands</emphasis>).
+</para>
+</sect1>
+
 <sect1 id="news1.3">
 <title>New stuff in BitlBee 1.3dev (details)</title>
 
