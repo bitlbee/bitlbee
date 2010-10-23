@@ -1,9 +1,12 @@
-bitlbee (1.3-0) unstable; urgency=low
+bitlbee (3.0-1) unstable; urgency=low
 
-  * Setting some bogus version number, fix that later.
+  * A milestone upstream release. See the non-Debian changelog.
   * Now using debhelper to improve maintainability.
   * Added a bitlbee-libpurple package, and split off docs and stuff into
     bitlbee-common.
+  * Added a bitlbee-plugin-otr package. (Closes: #541809)
+  * Can use IPv6 on the client side now. (Closes: #547300)
+  * Added Danish debconf translations done by Joe Dalton. (Closes: #592259)
 
  -- Wilmer van der Gaast <wilmer@gaast.net>  Wed, 18 Aug 2010 00:53:11 +0100
 
