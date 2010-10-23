@@ -672,16 +672,16 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 	}
 	else if( strcmp( cmd[0], "UBX" ) == 0 )
 	{
-		struct xt_node *psm;
+		struct xt_node *ubx, *psm;
 		char *psm_text = NULL;
 		
-		psm = xt_from_string( msg );
-		if( psm && strcmp( psm->name, "Data" ) == 0 &&
-		    ( psm = xt_find_node( psm->children, "PSM" ) ) )
+		ubx = xt_from_string( msg );
+		if( ubx && strcmp( ubx->name, "Data" ) == 0 &&
+		    ( psm = xt_find_node( ubx->children, "PSM" ) ) )
 			psm_text = psm->text;
 		
 		imcb_buddy_status_msg( ic, cmd[1], psm_text );
-		xt_free_node( psm );
+		xt_free_node( ubx );
 	}
 	else if( strcmp( cmd[0], "ADL" ) == 0 )
 	{
