@@ -51,7 +51,7 @@ Description: An IRC to other chat networks gateway (common files/docs)
 
 Package: bitlbee-dev
 Architecture: all
-Depends: ${misc:Depends}, bitlbee (>= ${bee:Version}), bitlbee (<< ${bee:Version}.1~)
+Depends: ${misc:Depends}, bitlbee (>= ${bee:Version}), bitlbee (<< ${bee:Version}.1~), bitlbee-common (= ${bee:Version})
 Description: An IRC to other chat networks gateway (dev files)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
@@ -61,7 +61,7 @@ Description: An IRC to other chat networks gateway (dev files)
 
 Package: bitlbee-plugin-otr
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, bitlbee (= ${bee:Version}) | bitlbee-libpurple (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, bitlbee (= ${bee:Version}) | bitlbee-libpurple (= ${bee:Version}), bitlbee-common (= ${bee:Version})
 Description: An IRC to other chat networks gateway (default version)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
