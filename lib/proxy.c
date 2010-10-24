@@ -52,6 +52,9 @@ char proxypass[128] = "";
 #ifndef AI_NUMERICSERV
 #define AI_NUMERICSERV 0
 #endif
+#ifndef AI_ADDRCONFIG
+#define AI_ADDRCONFIG 0
+#endif
 
 struct PHB {
 	b_event_handler func, proxy_func;
