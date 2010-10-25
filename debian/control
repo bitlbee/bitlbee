@@ -11,7 +11,7 @@ DM-Upload-Allowed: yes
 
 Package: bitlbee
 Architecture: any
-Depends: ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
 Conflicts: bitlbee-libpurple
 Replaces: bitlbee-libpurple
 Description: An IRC to other chat networks gateway (default version)
@@ -21,7 +21,7 @@ Description: An IRC to other chat networks gateway (default version)
 
 Package: bitlbee-libpurple
 Architecture: any
-Depends: ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
 Conflicts: bitlbee
 Replaces: bitlbee
 Description: An IRC to other chat networks gateway (using libpurple)
