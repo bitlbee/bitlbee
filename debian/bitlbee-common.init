@@ -5,9 +5,9 @@
 # Required-Stop:     $remote_fs $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      1
+# Description:       Start and stop BitlBee IRC to other chat networks gateway
 ### END INIT INFO
 #
-# Init script for BitlBee Debian package. Based on skeleton init script:
 #
 # Version:	@(#)skeleton  2.85-23  28-Jul-2004  miquels@cistron.nl
 #
