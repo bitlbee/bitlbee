@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
+
+set -e
 
 [ "$1" = "purge" ] || exit 0
 
