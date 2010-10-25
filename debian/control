@@ -62,7 +62,7 @@ Description: An IRC to other chat networks gateway (dev files)
 Package: bitlbee-plugin-otr
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, bitlbee (= ${bee:Version}) | bitlbee-libpurple (= ${bee:Version}), bitlbee-common (= ${bee:Version})
-Description: An IRC to other chat networks gateway (default version)
+Description: An IRC to other chat networks gateway (OTR plugin)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
  and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
