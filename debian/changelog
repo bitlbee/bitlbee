@@ -13,9 +13,11 @@ bitlbee (3.0-2) UNRELEASED; urgency=low
   * debian/copyright: Refer to /usr/share/common-licenses/GPL-2
   * Added lintian overrides for bitlbee & bitlbee-libpurple
   * Explicitly set source format to 1.0
-  * debian/bitlbee-common.init: Add Short-Description header.
+  * debian/bitlbee-common.init:
+    + Add Short-Description header.
+    + Also stop at runlevels 0 and 6.
 
- -- أحمد المحمودي (Ahmed El-Mahmoudy) <aelmahmoudy@sabily.org>  Mon, 25 Oct 2010 16:47:37 +0200
+ -- أحمد المحمودي (Ahmed El-Mahmoudy) <aelmahmoudy@sabily.org>  Mon, 25 Oct 2010 16:49:00 +0200
 
 bitlbee (3.0-1) unstable; urgency=low
 
