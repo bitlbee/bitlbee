@@ -15,7 +15,7 @@ BITLBEE_DISABLED=0
 BITLBEE_UPGRADE_DONT_RESTART=0
 [ -r /etc/default/bitlbee ] && . /etc/default/bitlbee
 
-if [ "$BITLBEE_DISABLED" = "0" ] && type update-inetd > /dev/null 2> /dev/null &&
+if [ "$BITLBEE_DISABLED" = "0" ] && which update-inetd > /dev/null 2> /dev/null &&
    ( expr "$2" : '0\..*' > /dev/null || expr "$2" : '1\.0\..*' > /dev/null ); then
 	## Make sure the inetd entry is gone (can still be there from a
 	## previous version.
@@ -70,7 +70,7 @@ fi
 # works since the debconf code will pick a free port on new installs.
 if [ "$BITLBEE_UPGRADE_DONT_RESTART" != "1" ]; then
 	unset IS_UPGRADE
-	if type netstat > /dev/null 2> /dev/null; then
+	if which netstat > /dev/null 2> /dev/null; then
 		netstat -an | grep -q :$PORT\\b.*LISTEN && IS_UPGRADE=1
 	else
 		[ -n "$2" ] && IS_UPGRADE=1
