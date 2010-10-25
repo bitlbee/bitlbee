@@ -7,9 +7,10 @@ bitlbee (3.0-2) UNRELEASED; urgency=low
     + Corrected short description of bitlbee-plugin-otr
     + Bumped Standards-Version to 3.9.1
     + Added ${misc:Depends} for bitlbee & bitlbee-libpurple
-  * 
+    + Moved dependency on adduser to bitlbee-common
+  * debian/copyright: Refer to /usr/share/common-licenses/GPL-2
 
- -- أحمد المحمودي (Ahmed El-Mahmoudy) <aelmahmoudy@sabily.org>  Mon, 25 Oct 2010 14:34:45 +0200
+ -- أحمد المحمودي (Ahmed El-Mahmoudy) <aelmahmoudy@sabily.org>  Mon, 25 Oct 2010 14:42:00 +0200
 
 bitlbee (3.0-1) unstable; urgency=low
 

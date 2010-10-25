@@ -11,7 +11,7 @@ DM-Upload-Allowed: yes
 
 Package: bitlbee
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
 Conflicts: bitlbee-libpurple
 Replaces: bitlbee-libpurple
 Description: An IRC to other chat networks gateway (default version)
@@ -21,7 +21,7 @@ Description: An IRC to other chat networks gateway (default version)
 
 Package: bitlbee-libpurple
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
 Conflicts: bitlbee
 Replaces: bitlbee
 Description: An IRC to other chat networks gateway (using libpurple)
@@ -39,7 +39,7 @@ Description: An IRC to other chat networks gateway (using libpurple)
 
 Package: bitlbee-common
 Architecture: all
-Depends: ${misc:Depends}, net-tools
+Depends: ${misc:Depends}, net-tools, adduser
 Replaces: bitlbee
 Description: An IRC to other chat networks gateway (common files/docs)
  This program can be used as an IRC server which forwards everything you
