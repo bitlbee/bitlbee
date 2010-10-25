@@ -1,9 +1,9 @@
 bitlbee (3.0-2) UNRELEASED; urgency=low
 
-  * debian/bitlbee-common.postinst: Replace 'type' with 'which' to avoid 
+  * debian/bitlbee-common.postinst: Replace 'type' with 'which' to avoid
     bashism.
-  * debian/{*.prerm, *.postinst, *.postrm}: use set -e in the body of the
-    script.
+  * debian/{*.prerm, *.postinst, *.postrm, *.config}: use set -e in the body
+    of maintainer scripts.
   * debian/control:
     + Corrected short description of bitlbee-plugin-otr
     + Bumped Standards-Version to 3.9.1
@@ -17,7 +17,7 @@ bitlbee (3.0-2) UNRELEASED; urgency=low
     + Add Short-Description header.
     + Also stop at runlevels 0 and 6.
 
- -- أحمد المحمودي (Ahmed El-Mahmoudy) <aelmahmoudy@sabily.org>  Mon, 25 Oct 2010 16:49:00 +0200
+ -- أحمد المحمودي (Ahmed El-Mahmoudy) <aelmahmoudy@sabily.org>  Mon, 25 Oct 2010 16:56:24 +0200
 
 bitlbee (3.0-1) unstable; urgency=low
 
