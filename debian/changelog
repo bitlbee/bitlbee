@@ -1,6 +1,7 @@
 bitlbee (3.0-2) UNRELEASED; urgency=low
 
-  * debian/bitlbee-common.postinst: Replace 'type' with 'which' to avoid bashism.
+  * debian/bitlbee-common.postinst: Replace 'type' with 'which' to avoid 
+    bashism.
   * debian/{*.prerm, *.postinst, *.postrm}: use set -e in the body of the
     script.
   * debian/control:
@@ -8,6 +9,7 @@ bitlbee (3.0-2) UNRELEASED; urgency=low
     + Bumped Standards-Version to 3.9.1
     + Added ${misc:Depends} for bitlbee & bitlbee-libpurple
     + Moved dependency on adduser to bitlbee-common
+    + Bumped debhelper version to 6.0.7~ for dh_lintian
   * debian/copyright: Refer to /usr/share/common-licenses/GPL-2
   * Added lintian overrides for bitlbee & bitlbee-libpurple
   * Explicitly set source format to 1.0
