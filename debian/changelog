@@ -1,3 +1,13 @@
+bitlbee (3.0-2) UNRELEASED; urgency=low
+
+  * debian/bitlbee-common.postinst: Replace 'type' with 'which' to avoid bashism
+  * debian/control:
+    + Corrected short description of bitlbee-plugin-otr
+    + Bumped Standards-Version to 3.9.1
+
+
+ -- أحمد المحمودي (Ahmed El-Mahmoudy) <aelmahmoudy@sabily.org>  Mon, 25 Oct 2010 14:16:30 +0200
+
 bitlbee (3.0-1) unstable; urgency=low
 
   * A milestone upstream release. See the non-Debian changelog.
