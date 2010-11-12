@@ -371,7 +371,7 @@ static int parseinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
 	}
 
 	if (snac2->family != 0x000d) {
-		imcb_error(sess->aux_data, "recieved response that maps to corrupt request!");
+		imcb_error(sess->aux_data, "received response that maps to corrupt request!");
 		return 0;
 	}
 

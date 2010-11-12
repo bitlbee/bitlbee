@@ -3,15 +3,15 @@ Section: net
 Priority: optional
 Maintainer: Wilmer van der Gaast <wilmer@gaast.net>
 Uploaders: Jelmer Vernooij <jelmer@samba.org>
-Standards-Version: 3.8.4
-Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | libnss-dev (>= 1.6), po-debconf, libpurple-dev, libotr2-dev, debhelper (>= 6)
+Standards-Version: 3.9.1
+Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | libnss-dev (>= 1.6), po-debconf, libpurple-dev, libotr2-dev, debhelper (>= 6.0.7~)
 Homepage: http://www.bitlbee.org/
 Vcs-Bzr: http://code.bitlbee.org/bitlbee/
 DM-Upload-Allowed: yes
 
 Package: bitlbee
 Architecture: any
-Depends: ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
 Conflicts: bitlbee-libpurple
 Replaces: bitlbee-libpurple
 Description: An IRC to other chat networks gateway (default version)
@@ -21,7 +21,7 @@ Description: An IRC to other chat networks gateway (default version)
 
 Package: bitlbee-libpurple
 Architecture: any
-Depends: ${shlibs:Depends}, adduser, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
 Conflicts: bitlbee
 Replaces: bitlbee
 Description: An IRC to other chat networks gateway (using libpurple)
@@ -39,7 +39,7 @@ Description: An IRC to other chat networks gateway (using libpurple)
 
 Package: bitlbee-common
 Architecture: all
-Depends: ${misc:Depends}, net-tools
+Depends: ${misc:Depends}, net-tools, adduser
 Replaces: bitlbee
 Description: An IRC to other chat networks gateway (common files/docs)
  This program can be used as an IRC server which forwards everything you
@@ -62,7 +62,7 @@ Description: An IRC to other chat networks gateway (dev files)
 Package: bitlbee-plugin-otr
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, bitlbee (= ${bee:Version}) | bitlbee-libpurple (= ${bee:Version}), bitlbee-common (= ${bee:Version})
-Description: An IRC to other chat networks gateway (default version)
+Description: An IRC to other chat networks gateway (OTR plugin)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
  and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.

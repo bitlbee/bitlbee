@@ -1,3 +1,24 @@
+bitlbee (3.0-2) UNRELEASED; urgency=low
+
+  * debian/bitlbee-common.postinst: Replace 'type' with 'which' to avoid
+    bashism.
+  * debian/{*.prerm, *.postinst, *.postrm, *.config}: use set -e in the body
+    of maintainer scripts.
+  * debian/control:
+    + Corrected short description of bitlbee-plugin-otr
+    + Bumped Standards-Version to 3.9.1
+    + Added ${misc:Depends} for bitlbee & bitlbee-libpurple
+    + Moved dependency on adduser to bitlbee-common
+    + Bumped debhelper version to 6.0.7~ for dh_lintian
+  * debian/copyright: Refer to /usr/share/common-licenses/GPL-2
+  * Added lintian overrides for bitlbee & bitlbee-libpurple
+  * Explicitly set source format to 1.0
+  * debian/bitlbee-common.init:
+    + Add Short-Description header.
+    + Also stop at runlevels 0 and 6.
+
+ -- أحمد المحمودي (Ahmed El-Mahmoudy) <aelmahmoudy@sabily.org>  Mon, 25 Oct 2010 16:56:24 +0200
+
 bitlbee (3.0-1) unstable; urgency=low
 
   * A milestone upstream release. See the non-Debian changelog.

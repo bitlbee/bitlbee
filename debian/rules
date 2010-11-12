@@ -86,6 +86,7 @@ binary-common:
 	dh_installdebconf
 	dh_installinit --init-script=bitlbee
 	dh_installman
+	dh_lintian
 	dh_strip
 	dh_link
 	dh_compress

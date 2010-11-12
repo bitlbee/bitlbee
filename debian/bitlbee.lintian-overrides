@@ -1,0 +1,2 @@
+# manpage is installed in bitlbee-common, which bitlbee depends on
+bitlbee: binary-without-manpage usr/sbin/bitlbee

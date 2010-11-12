@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
+
+set -e
 
 if [ "$1" != "upgrade" ]; then
 	invoke-rc.d bitlbee stop || exit 0
