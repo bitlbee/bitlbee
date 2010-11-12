@@ -38,6 +38,13 @@ static int ipc_child_recv_fd = -1;
 static void ipc_master_takeover_fail( struct bitlbee_child *child, gboolean both );
 static gboolean ipc_send_fd( int fd, int send_fd );
 
+/* On Solaris and possibly other systems passing FDs between processes is
+ * not possible (or at least not using the method used in this file.
+ * Just disable that code, the functionality is not that important. */
+#if defined(NO_FD_PASSING) && !defined(CMSG_SPACE)
+#define CMSG_SPACE(len) 1
+#endif
+
 static void ipc_master_cmd_client( irc_t *data, char **cmd )
 {
 	/* Normally data points at an irc_t block, but for the IPC master
@@ -445,10 +452,12 @@ gboolean ipc_child_identify( irc_t *irc )
 {
 	if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
+#ifndef NO_FD_PASSING
 		if( !ipc_send_fd( global.listen_socket, irc->fd ) )
 			ipc_child_disable();
 	
 		ipc_to_master_str( "IDENTIFY %s :%s\r\n", irc->user->nick, irc->password );
+#endif
 		
 		return TRUE;
 	}
@@ -565,12 +574,15 @@ static char *ipc_readline( int fd, int *recv_fd )
 	memset( &msg, 0, sizeof( msg ) );
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
+#ifndef NO_FD_PASSING
 	msg.msg_control = ccmsg;
 	msg.msg_controllen = sizeof( ccmsg );
+#endif
 	
 	if( recvmsg( fd, &msg, 0 ) != size )
 		return NULL;
 	
+#ifndef NO_FD_PASSING
 	if( recv_fd )
 		for( cmsg = CMSG_FIRSTHDR( &msg ); cmsg; cmsg = CMSG_NXTHDR( &msg, cmsg ) )
 			if( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS )
@@ -585,6 +597,7 @@ static char *ipc_readline( int fd, int *recv_fd )
 				fprintf( stderr, "pid %d received fd %d\n", (int) getpid(), *recv_fd );
 				*/
 			}
+#endif
 	
 	/*
 	fprintf( stderr, "pid %d received: %s", (int) getpid(), buf );
@@ -757,6 +770,7 @@ static gboolean ipc_send_fd( int fd, int send_fd )
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	
+#ifndef NO_FD_PASSING
 	msg.msg_control = ccmsg;
 	msg.msg_controllen = sizeof( ccmsg );
 	cmsg = CMSG_FIRSTHDR( &msg );
@@ -765,6 +779,7 @@ static gboolean ipc_send_fd( int fd, int send_fd )
 	cmsg->cmsg_len = CMSG_LEN( sizeof( send_fd ) );
 	*(int*)CMSG_DATA( cmsg ) = send_fd;
 	msg.msg_controllen = cmsg->cmsg_len;
+#endif
 	
 	return sendmsg( fd, &msg, 0 ) == 6;
 }

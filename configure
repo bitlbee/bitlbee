@@ -681,6 +681,7 @@ IRIX )
 SunOS )
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
+	echo '#define NO_FD_PASSING' >> config.h
 ;;
 AIX )
 	echo 'EFLAGS+=-Wl,-brtl' >> Makefile.settings
