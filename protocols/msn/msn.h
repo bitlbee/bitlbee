@@ -81,6 +81,7 @@ typedef enum
 	MSN_GOT_PROFILE_DN = 2,
 	MSN_DONE_ADL = 4,
 	MSN_REAUTHING = 8,
+	MSN_EMAIL_UNVERIFIED = 16,
 } msn_flags_t;
 
 struct msn_handler_data

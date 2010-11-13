@@ -277,6 +277,12 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		}
 		else if( strcmp( cmd[2], "OK" ) == 0 )
 		{
+			/* If the number after the handle is 0, the e-mail
+			   address is unverified, which means we can't change
+			   the display name. */
+			if( cmd[4][0] == '0' )
+				md->flags |= MSN_EMAIL_UNVERIFIED;
+			
 			imcb_log( ic, "Authenticated, getting buddy list" );
 			msn_soap_memlist_request( ic );
 		}
@@ -869,7 +875,12 @@ int msn_ns_finish_login( struct im_connection *ic )
 		md->flags |= MSN_DONE_ADL;
 	
 	if( ( md->flags & MSN_DONE_ADL ) && ( md->flags & MSN_GOT_PROFILE ) )
-		return msn_ns_set_display_name( ic, set_getstr( &ic->acc->set, "display_name" ) );
-	else
-		return 1;
+	{
+		if( md->flags & MSN_EMAIL_UNVERIFIED )
+			imcb_connected( ic );
+		else
+			return msn_ns_set_display_name( ic, set_getstr( &ic->acc->set, "display_name" ) );
+	}
+	
+	return 1;
 }
