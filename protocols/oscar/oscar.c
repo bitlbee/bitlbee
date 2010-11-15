@@ -368,16 +368,19 @@ static gboolean oscar_login_connect(gpointer data, gint source, b_input_conditio
 static void oscar_init(account_t *acc)
 {
 	set_t *s;
+	gboolean icq = isdigit(acc->user[0]);
 	
-	if (isdigit(acc->user[0])) {
+	if (icq) {
 		set_add(&acc->set, "ignore_auth_requests", "false", set_eval_bool, acc);
 		set_add(&acc->set, "old_icq_auth", "false", set_eval_bool, acc);
 	}
 	
-	s = set_add(&acc->set, "server", AIM_DEFAULT_LOGIN_SERVER, set_eval_account, acc);
+	s = set_add(&acc->set, "server",
+	            icq ? AIM_DEFAULT_LOGIN_SERVER_ICQ
+	                : AIM_DEFAULT_LOGIN_SERVER_AIM, set_eval_account, acc);
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	
-	if(isdigit(acc->user[0])) {
+	if (icq) {
 		s = set_add(&acc->set, "web_aware", "false", set_eval_bool, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY;
 	}

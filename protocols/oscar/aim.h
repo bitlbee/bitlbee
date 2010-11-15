@@ -93,7 +93,8 @@ typedef guint16 flap_seqnum_t;
  * the client to connect to it.
  *
  */
-#define AIM_DEFAULT_LOGIN_SERVER "login.messaging.aol.com"
+#define AIM_DEFAULT_LOGIN_SERVER_AIM "login.messaging.aol.com"
+#define AIM_DEFAULT_LOGIN_SERVER_ICQ "login.icq.com"
 #define AIM_LOGIN_PORT 5190
 
 /*
