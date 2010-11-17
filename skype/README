@@ -207,7 +207,7 @@ $ skyped
 
 ----
 account add skype <user> <pass>
-account set skype/server localhost
+account skype set server localhost
 ----
 
 <user> should be your Skype account name, <pass> should be the one you declared
@@ -217,20 +217,20 @@ in `skyped.conf`. If you want to run skyped on a remote machine, replace
 If you are running skyped on a custom port:
 
 ----
-account set skype/port <port>
+account skype set port <port>
 ----
 
 If you want to set your full name (optional):
 
 ----
-account set skype/display_name "John Smith"
+account skype set display_name "John Smith"
 ----
 
 If you want to see your skypeout contacts online as well (they are
 offline by default):
 
 ----
-account set skype/skypeout_offline false
+account skype set skypeout_offline false
 ----
 
 == Setting up Skype in a VNC server (optional)
@@ -338,44 +338,44 @@ $ skyped -n -d
 - Managing outgoing calls (with call duration at the end, including
   SkypeOut calls if you use a phone number instead of a nick):
 
-  * `account set skype/call nick`
-  * `account set -del skype/call`
+  * `account skype set call nick`
+  * `account skype set -del skype/call`
 
 - Managing incoming calls via questions, just like when you add / remove
   contacts.
 
 - Querying the current SkypeOut balance:
 
-  * `account set skype/balance query`
+  * `account skype set balance query`
 
 - For debug purposes, it's possible to send any command to `skyped`. To
   achieve this, you need to:
 
-  * `account set skype/skypeconsole true`
+  * `account skype set skypeconsole true`
 
   * then writing `skypeconsole: <command>` will work in the control
     channel.
 
-  * `account set skype/skypeconsole_receive true` will make the
+  * `account skype set skypeconsole_receive true` will make the
     `skypeconsole` account dump all the recieved raw traffic for you
 
 - If you want to automatically join bookmarked groupchats right after
   you logged in, do:
 
-  * `account set skype/auto_join true`
+  * `account skype set auto_join true`
 
 - Edited messages are shown with the `EDIT:` prefix. If you don't like
   this, you can set your own prefix using:
 
-  * `account set skype/edit_prefix "updated message:"`
+  * `account skype set edit_prefix "updated message:"`
 
 - The `echo123` test account is hidden by default. If you want to see it:
 
-  * `account set skype/test_join true`
+  * `account skype set test_join true`
 
 - Mood texts are not shown by default. If you want to see it:
 
-  * `account set skype/show_moods true`
+  * `account skype set show_moods true`
 
 == What needs to be done (aka. TODO)
 
