@@ -179,7 +179,7 @@
 
 		<description>
 			<para>
-				Available actions: del, list, set. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
+				Available actions: del, list, set. See <emphasis>help channel &lt;action&gt;</emphasis> for more information.
 			</para>
 			
 			<para>

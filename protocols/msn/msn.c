@@ -333,7 +333,7 @@ static char *set_eval_display_name( set_t *set, char *value )
 	
 	if( md->flags & MSN_EMAIL_UNVERIFIED )
 		imcb_log( ic, "Warning: Your e-mail address is unverified. MSN doesn't allow "
-		              "changing your display name until your e-mail address if verified." );
+		              "changing your display name until your e-mail address is verified." );
 	
 	msn_soap_addressbook_set_display_name( ic, value );
 	return msn_ns_set_display_name( ic, value ) ? value : NULL;
