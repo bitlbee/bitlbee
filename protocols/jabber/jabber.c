@@ -459,7 +459,7 @@ static struct groupchat *jabber_chat_join_( struct im_connection *ic, const char
 	else if( jabber_chat_by_jid( ic, room ) )
 		imcb_error( ic, "Already present in chat `%s'", room );
 	else
-		return jabber_chat_join( ic, room, nick, password );
+		return jabber_chat_join( ic, room, nick, set_getstr( sets, "password" ) );
 	
 	return NULL;
 }
@@ -551,12 +551,24 @@ static int jabber_send_typing( struct im_connection *ic, char *who, int typing )
 	return 1;
 }
 
+void jabber_chat_add_settings( account_t *acc, set_t **head )
+{
+	/* Meh. Stupid room passwords. Not trying to obfuscate/hide
+	   them from the user for now. */
+	set_add( head, "password", NULL, NULL, NULL );
+}
+
+void jabber_chat_free_settings( account_t *acc, set_t **head )
+{
+	set_del( head, "password" );
+}
+
 void jabber_initmodule()
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
 	
 	ret->name = "jabber";
-    ret->mms = 0;                        /* no limit */
+	ret->mms = 0;                        /* no limit */
 	ret->login = jabber_login;
 	ret->init = jabber_init;
 	ret->logout = jabber_logout;
@@ -572,6 +584,8 @@ void jabber_initmodule()
 	ret->chat_invite = jabber_chat_invite_;
 	ret->chat_leave = jabber_chat_leave_;
 	ret->chat_join = jabber_chat_join_;
+	ret->chat_add_settings = jabber_chat_add_settings;
+	ret->chat_free_settings = jabber_chat_free_settings;
 	ret->keepalive = jabber_keepalive;
 	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;
