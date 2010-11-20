@@ -33,8 +33,10 @@
 #include <prio.h>
 #include <sslproto.h>
 #include <nss.h>
+#include <pk11pub.h>
 #include <private/pprio.h>
 #include <ssl.h>
+#include <seccomon.h>
 #include <secerr.h>
 #include <sslerr.h>
 
@@ -52,6 +54,7 @@ struct scd
 };
 
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
+static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition cond );
 
 
 static SECStatus nss_auth_cert (void *arg, PRFileDesc *socket, PRBool checksig, PRBool isserver)
@@ -119,6 +122,35 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 
 	
 	return( conn );
+}
+
+static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition cond )
+{
+	struct scd *conn = data;
+
+	return ssl_connected( conn, conn->fd, B_EV_IO_WRITE );
+}
+
+void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
+{
+	struct scd *conn = g_new0( struct scd, 1 );
+
+	conn->fd = fd;
+	conn->func = func;
+	conn->data = data;
+
+	/* This function should be called via a (short) timeout instead of
+	   directly from here, because these SSL calls are *supposed* to be
+	   *completely* asynchronous and not ready yet when this function
+	   (or *_connect, for examle) returns. Also, errors are reported via
+	   the callback function, not via this function's return value.
+
+	   In short, doing things like this makes the rest of the code a lot
+	   simpler. */
+
+	b_timeout_add( 1, ssl_starttls_real, conn );
+
+	return conn;
 }
 
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
