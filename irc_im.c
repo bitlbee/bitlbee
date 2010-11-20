@@ -54,6 +54,11 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 	bu->ui_data = iu = irc_user_new( irc, nick );
 	iu->bu = bu;
 	
+	if( set_getbool( &irc->b->set, "private" ) )
+		iu->last_channel = NULL;
+	else
+		iu->last_channel = irc_channel_with_user( irc, iu );
+	
 	if( ( s = strchr( bu->handle, '@' ) ) )
 	{
 		iu->host = g_strdup( s + 1 );
@@ -209,8 +214,8 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg_, 
 	{
 		if( iu->last_channel->flags & IRC_CHANNEL_JOINED )
 			ic = iu->last_channel;
-		else if( irc->default_channel->flags & IRC_CHANNEL_JOINED )
-			ic = irc->default_channel;
+		else
+			ic = irc_channel_with_user( irc, iu );
 	}
 	
 	if( ic )

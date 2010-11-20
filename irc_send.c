@@ -126,8 +126,8 @@ void irc_usermsg( irc_t *irc, char *format, ... )
 	{
 		if( iu->last_channel->flags & IRC_CHANNEL_JOINED )
 			ic = iu->last_channel;
-		else if( irc->default_channel->flags & IRC_CHANNEL_JOINED )
-			ic = irc->default_channel;
+		else
+			ic = irc_channel_with_user( irc, irc->root );
 	}
 	
 	if( ic )

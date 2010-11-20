@@ -291,6 +291,43 @@ irc_channel_user_t *irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu )
 	return NULL;
 }
 
+/* Find a channel we're currently in, that currently has iu in it. */
+struct irc_channel *irc_channel_with_user( irc_t *irc, irc_user_t *iu )
+{
+	GSList *l;
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		
+		if( strcmp( set_getstr( &ic->set, "type" ), "control" ) != 0 )
+			continue;
+		
+		if( ( ic->flags & IRC_CHANNEL_JOINED ) &&
+		    irc_channel_has_user( ic, iu ) )
+			return ic;
+	}
+	
+	/* If there was no match, try once more but just see if the user
+	   *would* be in the channel, i.e. if s/he were online. */
+	if( iu->bu == NULL )
+		return NULL;
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		
+		if( strcmp( set_getstr( &ic->set, "type" ), "control" ) != 0 )
+			continue;
+		
+		if( ( ic->flags & IRC_CHANNEL_JOINED ) &&
+		    irc_channel_wants_user( ic, iu ) )
+			return ic;
+	}
+	
+	return NULL;
+}
+
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *iu )
 {
 	g_free( ic->topic );

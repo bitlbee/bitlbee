@@ -286,6 +286,7 @@ void irc_channel_free_soon( irc_channel_t *ic );
 int irc_channel_add_user( irc_channel_t *ic, irc_user_t *iu );
 int irc_channel_del_user( irc_channel_t *ic, irc_user_t *iu, irc_channel_del_user_type_t type, const char *msg );
 irc_channel_user_t *irc_channel_has_user( irc_channel_t *ic, irc_user_t *iu );
+struct irc_channel *irc_channel_with_user( irc_t *irc, irc_user_t *iu );
 int irc_channel_set_topic( irc_channel_t *ic, const char *topic, const irc_user_t *who );
 void irc_channel_user_set_mode( irc_channel_t *ic, irc_user_t *iu, irc_channel_user_flags_t flags );
 void irc_channel_set_mode( irc_channel_t *ic, const char *s );
