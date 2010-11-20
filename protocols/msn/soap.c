@@ -878,14 +878,16 @@ static int msn_soap_addressbook_handle_response( struct msn_soap_req_data *soap_
 		struct bee_user *bu = l->data;
 		struct msn_buddy_data *bd = bu->data;
 		
-		if( bu->ic == soap_req->ic )
-			msn_buddy_ask( bu );
-		
-		if( ( bd->flags & ( MSN_BUDDY_AL | MSN_BUDDY_BL ) ) ==
-		                  ( MSN_BUDDY_AL | MSN_BUDDY_BL ) )
+		if( bu->ic == soap_req->ic && bd )
 		{
-			bd->flags &= ~MSN_BUDDY_BL;
-			wtf++;
+			msn_buddy_ask( bu );
+			
+			if( ( bd->flags & ( MSN_BUDDY_AL | MSN_BUDDY_BL ) ) ==
+			                  ( MSN_BUDDY_AL | MSN_BUDDY_BL ) )
+			{
+				bd->flags &= ~MSN_BUDDY_BL;
+				wtf++;
+			}
 		}
 	}
 	
