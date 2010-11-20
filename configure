@@ -128,8 +128,9 @@ LFLAGS=
 EFLAGS=
 EOF
 
-srcdir="$(dirname $0)"
-if [ "$srcdir" != "." ]; then
+srcdir=$(cd $(dirname $0);pwd)
+currdir=$(pwd)
+if [ "$srcdir" != "$currdir" ]; then 
 	echo
 	echo "configure script run from a different directory. Will create some symlinks..."
 	if [ ! -e Makefile -o -L Makefile ]; then
