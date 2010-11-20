@@ -871,14 +871,29 @@ static const struct xt_handler_entry msn_soap_addressbook_parser[] = {
 static int msn_soap_addressbook_handle_response( struct msn_soap_req_data *soap_req )
 {
 	GSList *l;
+	int wtf = 0;
 	
 	for( l = soap_req->ic->bee->users; l; l = l->next )
 	{
 		struct bee_user *bu = l->data;
+		struct msn_buddy_data *bd = bu->data;
 		
 		if( bu->ic == soap_req->ic )
 			msn_buddy_ask( bu );
+		
+		if( ( bd->flags & ( MSN_BUDDY_AL | MSN_BUDDY_BL ) ) ==
+		                  ( MSN_BUDDY_AL | MSN_BUDDY_BL ) )
+		{
+			bd->flags &= ~MSN_BUDDY_BL;
+			wtf++;
+		}
 	}
+	
+	if( wtf )
+		imcb_log( soap_req->ic, "Warning: %d contacts were in both your "
+		          "block and your allow list. Assuming they're all "
+		          "allowed. Use the official WLM client once to fix "
+		          "this.", wtf );
 	
 	msn_auth_got_contact_list( soap_req->ic );
 	
