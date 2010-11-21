@@ -63,7 +63,7 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 	s->flags |= ACC_SET_NOSAVE; /* Just for bw compatibility! */
 	
 	s = set_add( &a->set, "password", NULL, set_eval_account, a );
-	s->flags |= ACC_SET_NOSAVE | SET_NULL_OK;
+	s->flags |= ACC_SET_NOSAVE | SET_NULL_OK | SET_PASSWORD;
 	
 	s = set_add( &a->set, "tag", NULL, set_eval_account, a );
 	s->flags |= ACC_SET_NOSAVE;

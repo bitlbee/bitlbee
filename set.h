@@ -47,6 +47,7 @@ typedef enum
 	SET_NOSAVE = 0x0001,
 	SET_NULL_OK = 0x0100,
 	SET_HIDDEN = 0x0200,
+	SET_PASSWORD = 0x0400,
 } set_flags_t;
 
 typedef struct set

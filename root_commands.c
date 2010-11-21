@@ -273,17 +273,20 @@ static void cmd_save( irc_t *irc, char **cmd )
 
 static void cmd_showset( irc_t *irc, set_t **head, char *key )
 {
+	set_t *set;
 	char *val;
 	
 	if( ( val = set_getstr( head, key ) ) )
 		irc_usermsg( irc, "%s = `%s'", key, val );
-	else if( !set_find( head, key ) )
+	else if( !( set = set_find( head, key ) ) )
 	{
 		irc_usermsg( irc, "Setting `%s' does not exist.", key );
 		if( *head == irc->b->set )
 			irc_usermsg( irc, "It might be an account or channel setting. "
 			             "See \x02help account set\x02 and \x02help channel set\x02." );
 	}
+	else if( set->flags & SET_PASSWORD )
+		irc_usermsg( irc, "%s = `********' (hidden)", key );
 	else
 		irc_usermsg( irc, "%s is empty", key );
 }

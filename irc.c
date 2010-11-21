@@ -122,7 +122,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &b->set, "paste_buffer_delay", "200", set_eval_int, irc );
 	s->old_key = g_strdup( "buddy_sendbuffer_delay" );
 	s = set_add( &b->set, "password", NULL, set_eval_password, irc );
-	s->flags |= SET_NULL_OK;
+	s->flags |= SET_NULL_OK | SET_PASSWORD;
 	s = set_add( &b->set, "private", "true", set_eval_bool, irc );
 	s = set_add( &b->set, "query_order", "lifo", NULL, irc );
 	s = set_add( &b->set, "root_nick", ROOT_NICK, set_eval_root_nick, irc );
