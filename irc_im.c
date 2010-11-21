@@ -64,21 +64,17 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 		iu->host = g_strdup( s + 1 );
 		iu->user = g_strndup( bu->handle, s - bu->handle );
 	}
-	else if( bu->ic->acc->server )
-	{
-		iu->host = g_strdup( bu->ic->acc->server );
-		iu->user = g_strdup( bu->handle );
-		
-		/* s/ /_/ ... important for AOL screennames */
-		for( s = iu->user; *s; s ++ )
-			if( *s == ' ' )
-				*s = '_';
-	}
 	else
 	{
-		iu->host = g_strdup( bu->ic->acc->prpl->name );
 		iu->user = g_strdup( bu->handle );
+		if( bu->ic->acc->server )
+			iu->host = g_strdup( bu->ic->acc->server );
+		else
+			iu->host = g_strdup( bu->ic->acc->prpl->name );
 	}
+	
+	while( ( s = strchr( iu->user, ' ' ) ) )
+		*s = '_';
 	
 	if( bu->flags & BEE_USER_LOCAL )
 	{
