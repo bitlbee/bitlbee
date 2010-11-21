@@ -276,6 +276,7 @@ void imcb_connected( struct im_connection *ic )
 	
 	imcb_log( ic, "Logged in" );
 	
+	b_event_remove( ic->keepalive );
 	ic->keepalive = b_timeout_add( 60000, send_keepalive, ic );
 	ic->flags |= OPT_LOGGED_IN;
 	

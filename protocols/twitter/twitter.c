@@ -107,6 +107,10 @@ static void twitter_oauth_start( struct im_connection *ic )
 	imcb_log( ic, "Requesting OAuth request token" );
 
 	td->oauth_info = oauth_request_token( &twitter_oauth, twitter_oauth_callback, ic );
+	
+	/* We need help from the user to complete OAuth login, so don't time
+	   out on this login. */
+	ic->flags |= OPT_SLOW_LOGIN;
 }
 
 static gboolean twitter_oauth_callback( struct oauth_info *info )

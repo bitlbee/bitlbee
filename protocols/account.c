@@ -338,6 +338,8 @@ void account_del( bee_t *bee, account_t *acc )
 		}
 }
 
+static gboolean account_on_timeout( gpointer d, gint fd, b_input_condition cond );
+
 void account_on( bee_t *bee, account_t *a )
 {
 	if( a->ic )
@@ -350,6 +352,9 @@ void account_on( bee_t *bee, account_t *a )
 	
 	a->reconnect = 0;
 	a->prpl->login( a );
+	
+	if( !( a->ic->flags & OPT_SLOW_LOGIN ) )
+		a->ic->keepalive = b_timeout_add( 120000, account_on_timeout, a->ic );
 }
 
 void account_off( bee_t *bee, account_t *a )
@@ -361,6 +366,16 @@ void account_off( bee_t *bee, account_t *a )
 		/* Shouldn't happen */
 		cancel_auto_reconnect( a );
 	}
+}
+
+static gboolean account_on_timeout( gpointer d, gint fd, b_input_condition cond )
+{
+	struct im_connection *ic = d;
+	
+	imcb_error( ic, "Connection timeout" );
+	imc_logout( ic, TRUE );
+	
+	return FALSE;
 }
 
 struct account_reconnect_delay

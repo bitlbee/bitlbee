@@ -63,6 +63,7 @@
 #define OPT_MOBILE      0x00000008
 #define OPT_DOES_HTML   0x00000010
 #define OPT_LOCALBUDDY  0x00000020 /* For nicks local to one groupchat */
+#define OPT_SLOW_LOGIN  0x00000040 /* I.e. Twitter Oauth @ login time */
 #define OPT_TYPING      0x00000100 /* Some pieces of code make assumptions */
 #define OPT_THINKING    0x00000200 /* about these values... Stupid me! */
 #define OPT_NOOTR       0x00001000 /* protocol not suitable for OTR */
