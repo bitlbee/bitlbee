@@ -44,6 +44,7 @@ extern char *SET_INVALID;
 
 typedef enum
 {
+	SET_NOSAVE = 0x0001,
 	SET_NULL_OK = 0x0100,
 	SET_HIDDEN = 0x0200,
 } set_flags_t;

@@ -493,7 +493,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	g_free( pass_buf );
 	
 	for( set = irc->b->set; set; set = set->next )
-		if( set->value )
+		if( set->value && !( set->flags & SET_NOSAVE ) )
 			if( !xml_printf( fd, 1, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
 				goto write_error;
 	
