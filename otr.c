@@ -732,7 +732,7 @@ void cmd_otr_connect(irc_t *irc, char **args)
 		return;
 	}
 	
-	bee_user_msg(irc->b, u->bu, "?OTR?", 0);
+	bee_user_msg(irc->b, u->bu, "?OTR?v2?", 0);
 }
 
 void cmd_otr_smp(irc_t *irc, char **args)
