@@ -3,7 +3,23 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
-Version 3.0
+Version 3.0.1:
+- Fixed some bugs that were found only after releasing 3.0, including
+  Jabber contacts never going offline, MSN login issues, compilation
+  issues on some non-Linux systems, a fairly big memory leak in the MSN
+  SOAP code, etc...
+- Better handling of multiple control channels and set private=false.
+- Using login.icq.com for ICQ logins again since AOL sold ICQ so it
+  doesn't live on the AIM servers anymore.
+- Fixed ability to join password-protected Jabber rooms.
+- Time out if logging into an account takes too long.
+- Fixed NSS SSL module.
+- Support for server-side Gadu-Gadu contact lists (via libpurple, there's
+  still no native gg support).
+
+Finished ...
+
+Version 3.0:
 - Important: This version drops backward compatibility with the file format
   used for user settings in versions before 1.2. If you're upgrading from
   very old BitlBee versions (like 1.0.x), you'll have to recreate your
