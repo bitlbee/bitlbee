@@ -208,6 +208,9 @@ static void purple_init( account_t *acc )
 		s->flags |= ACC_SET_OFFLINE_ONLY;
 	}
 	
+	if( strcmp( prpl->info->name, "Gadu-Gadu" ) == 0 )
+		s = set_add( &acc->set, "gg_sync_contacts", "true", set_eval_bool, acc );
+	
 	/* Go through all away states to figure out if away/status messages
 	   are possible. */
 	pa = purple_account_new( acc->user, (char*) acc->prpl->data );
@@ -380,6 +383,57 @@ static char *set_eval_display_name( set_t *set, char *value )
 	return NULL;
 }
 
+/* Bad bad gadu-gadu, not saving buddy list by itself */
+static void purple_gg_buddylist_export( PurpleConnection *gc )
+{
+	struct im_connection *ic = purple_ic_by_gc( gc );
+	
+	if( set_getstr( &ic->acc->set, "gg_sync_contacts" ) )
+	{
+		GList *actions = gc->prpl->info->actions( gc->prpl, gc );
+		GList *p;
+		for( p = g_list_first(actions); p; p = p->next )
+		{
+			if( ((PurplePluginAction*)p->data) &&
+			    purple_menu_cmp( ((PurplePluginAction*)p->data)->label, "Upload buddylist to Server" ) == 0)
+			{
+				PurplePluginAction action;
+				action.plugin = gc->prpl;
+				action.context = gc;
+				action.user_data = NULL;
+				((PurplePluginAction*)p->data)->callback(&action);
+				break;
+			}
+		}
+		g_list_free( actions );
+	}
+}
+
+static void purple_gg_buddylist_import( PurpleConnection *gc )
+{
+	struct im_connection *ic = purple_ic_by_gc( gc );
+	
+	if( set_getstr( &ic->acc->set, "gg_sync_contacts" ) )
+	{
+		GList *actions = gc->prpl->info->actions( gc->prpl, gc );
+		GList *p;
+		for( p = g_list_first(actions); p; p = p->next )
+		{
+			if( ((PurplePluginAction*)p->data) &&
+			    purple_menu_cmp( ((PurplePluginAction*)p->data)->label, "Download buddylist from Server" ) == 0 )
+			{
+				PurplePluginAction action;
+				action.plugin = gc->prpl;
+				action.context = gc;
+				action.user_data = NULL;
+				((PurplePluginAction*)p->data)->callback(&action);
+				break;
+			}
+		}
+		g_list_free( actions );
+	}
+}
+
 static void purple_add_buddy( struct im_connection *ic, char *who, char *group )
 {
 	PurpleBuddy *pb;
@@ -394,6 +448,8 @@ static void purple_add_buddy( struct im_connection *ic, char *who, char *group )
 	pb = purple_buddy_new( (PurpleAccount*) ic->proto_data, who, NULL );
 	purple_blist_add_buddy( pb, NULL, pg, NULL );
 	purple_account_add_buddy( (PurpleAccount*) ic->proto_data, pb );
+
+	purple_gg_buddylist_export( ((PurpleAccount*)ic->proto_data)->gc );
 }
 
 static void purple_remove_buddy( struct im_connection *ic, char *who, char *group )
@@ -410,6 +466,8 @@ static void purple_remove_buddy( struct im_connection *ic, char *who, char *grou
 		
 		purple_blist_remove_buddy( pb );
 	}
+
+	purple_gg_buddylist_export( ((PurpleAccount*)ic->proto_data)->gc );
 }
 
 static void purple_add_permit( struct im_connection *ic, char *who )
@@ -628,6 +686,9 @@ static void prplcb_conn_connected( PurpleConnection *gc )
 		g_free( s->value );
 		s->value = g_strdup( dn );
 	}
+
+	// user list needs to be requested for Gadu-Gadu
+	purple_gg_buddylist_import( gc );
 	
 	if( gc->flags & PURPLE_CONNECTION_HTML )
 		ic->flags |= OPT_DOES_HTML;

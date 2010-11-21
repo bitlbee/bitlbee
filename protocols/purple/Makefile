@@ -42,6 +42,6 @@ $(objects): %.o: $(SRCDIR)%.c
 
 purple_mod.o: $(objects)
 	@echo '*' Linking purple_mod.o
-	$(LD) $(LFLAGS) $(objects) -o purple_mod.o
+	@$(LD) $(LFLAGS) $(objects) -o purple_mod.o
 
 -include .depend/*.d
