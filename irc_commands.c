@@ -400,6 +400,17 @@ static void irc_cmd_nickserv( irc_t *irc, char **cmd )
 
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
+	account_t *a;
+	
+	/* /OPER can now also be used to enter IM passwords without echoing.
+	   It's a hack but the extra password security is worth it. */
+	for( a = irc->b->accounts; a; a = a->next )
+		if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
+		{
+			set_setstr( &a->set, "password", cmd[2] );
+			return;
+		}
+	
 	if( global.conf->oper_pass &&
 	    ( strncmp( global.conf->oper_pass, "md5:", 4 ) == 0 ?
 	        md5_verify_password( cmd[2], global.conf->oper_pass + 4 ) == 0 :

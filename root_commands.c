@@ -393,7 +393,16 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		struct prpl *prpl;
 		
-		MIN_ARGS( 4 );
+		MIN_ARGS( 3 );
+		
+		if( cmd[4] == NULL )
+			for( a = irc->b->accounts; a; a = a->next )
+				if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
+				{
+					irc_usermsg( irc, "Enter password for account %s(%s) "
+					             "first (use /OPER)", a->prpl->name, a->user );
+					return;
+				}
 		
 		prpl = find_protocol( cmd[2] );
 		
@@ -409,7 +418,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 				             "protocol `%s' and username `%s'. Are you accidentally "
 				             "trying to add it twice?", prpl->name, cmd[3] );
 		
-		a = account_add( irc->b, prpl, cmd[3], cmd[4] );
+		a = account_add( irc->b, prpl, cmd[3], cmd[4] ? cmd[4] : PASSWORD_PENDING );
 		if( cmd[5] )
 		{
 			irc_usermsg( irc, "Warning: Passing a servername/other flags to `account add' "
@@ -418,6 +427,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 		}
 		
 		irc_usermsg( irc, "Account successfully added" );
+		
+		if( cmd[4] == NULL )
+			irc_usermsg( irc, "Now, use /OPER to enter your password for this account" );
 		
 		return;
 	}
@@ -461,7 +473,13 @@ static void cmd_account( irc_t *irc, char **cmd )
 		
 			for( a = irc->b->accounts; a; a = a->next )
 				if( !a->ic && a->auto_connect )
-					account_on( irc->b, a );
+				{
+					if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
+						irc_usermsg( irc, "Enter password for account %s(%s) "
+						             "first (use /OPER)", a->prpl->name, a->user );
+					else
+						account_on( irc->b, a );
+				}
 		} 
 		else
 		{
@@ -519,6 +537,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 	{
 		if( a->ic )
 			irc_usermsg( irc, "Account already online" );
+		else if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
+			irc_usermsg( irc, "Enter password for account %s(%s) "
+			             "first (use /OPER)", a->prpl->name, a->user );
 		else
 			account_on( irc->b, a );
 	}

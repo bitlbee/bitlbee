@@ -125,6 +125,10 @@
 #define HELP_FILE VARDIR "help.txt"
 #define CONF_FILE_DEF ETCDIR "bitlbee.conf"
 
+/* Hack to give a little bit more password security on IRC: If an account has
+   this password set, use /OPER to change it. */
+#define PASSWORD_PENDING "\r\rchangeme\r\r"
+
 #include "bee.h"
 #include "irc.h"
 #include "storage.h"
