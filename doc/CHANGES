@@ -16,8 +16,10 @@ Version 3.0.1:
 - Fixed NSS SSL module.
 - Support for server-side Gadu-Gadu contact lists (via libpurple, there's
   still no native gg support).
+- Allow omitting password when using "account add", the password can be
+  entered using /OPER to prevent echoing to screen and logs.
 
-Finished ...
+Finished 24 Nov 2010
 
 Version 3.0:
 - Important: This version drops backward compatibility with the file format
