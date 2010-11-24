@@ -16,16 +16,20 @@
 		</description>
 
 		<bitlbee-command name="add">
-			<syntax>account add &lt;protocol&gt; &lt;username&gt; &lt;password&gt;</syntax>
+			<syntax>account add &lt;protocol&gt; &lt;username&gt; [&lt;password&gt;]</syntax>
 
 			<description>
 				<para>
 					Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ), Yahoo and Twitter. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
 				</para>
+
+				<para>
+					If you omit the password, you should use the IRC /OPER command to enter it separately. The advantage of this approach is that most IRC clients will not show OPER passwords on screen/save them in logs.
+				</para>
 			</description>
 			
 			<bitlbee-command name="jabber">
-				<syntax>account add jabber &lt;handle@server.tld&gt; &lt;password&gt;</syntax>
+				<syntax>account add jabber &lt;handle@server.tld&gt; [&lt;password&gt;]</syntax>
 
 				<description>
 					<para>
@@ -39,7 +43,7 @@
 			</bitlbee-command>
 
 			<bitlbee-command name="msn">
-				<syntax>account add msn &lt;handle@server.tld&gt; &lt;password&gt;</syntax>
+				<syntax>account add msn &lt;handle@server.tld&gt; [&lt;password&gt;]</syntax>
 
 				<description>
 					<para>
@@ -49,7 +53,7 @@
 			</bitlbee-command>
 			
 			<bitlbee-command name="oscar">
-				<syntax>account add oscar &lt;handle&gt; &lt;password&gt;</syntax>
+				<syntax>account add oscar &lt;handle&gt; [&lt;password&gt;]</syntax>
 
 				<description>
 					<para>
@@ -64,7 +68,7 @@
 			</bitlbee-command>
 			
 			<bitlbee-command name="twitter">
-				<syntax>account add twitter &lt;handle&gt; &lt;password&gt;</syntax>
+				<syntax>account add twitter &lt;handle&gt; [&lt;password&gt;]</syntax>
 
 				<description>
 					<para>
@@ -86,7 +90,7 @@
 			</bitlbee-command>
 
 			<bitlbee-command name="yahoo">
-				<syntax>account add yahoo &lt;handle&gt; &lt;password&gt;</syntax>
+				<syntax>account add yahoo &lt;handle&gt; [&lt;password&gt;]</syntax>
 
 				<description>
 					<para>

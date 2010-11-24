@@ -408,6 +408,12 @@ static void irc_cmd_oper( irc_t *irc, char **cmd )
 		if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
 		{
 			set_setstr( &a->set, "password", cmd[2] );
+			irc_usermsg( irc, "Password added to IM account "
+			             "%s(%s)", a->prpl->name, a->user );
+			/* The IRC client may expect this. Report failure since
+			   we didn't hand out a +o. */
+			irc_send_num( irc, 491, ":Password added to IM account "
+			              "%s(%s)", a->prpl->name, a->user );
 			return;
 		}
 	
@@ -421,7 +427,7 @@ static void irc_cmd_oper( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		irc_send_num( irc, 432, ":Incorrect password" );
+		irc_send_num( irc, 491, ":Incorrect password" );
 	}
 }
 

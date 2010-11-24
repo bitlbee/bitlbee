@@ -426,10 +426,8 @@ static void cmd_account( irc_t *irc, char **cmd )
 			set_setstr( &a->set, "server", cmd[5] );
 		}
 		
-		irc_usermsg( irc, "Account successfully added" );
-		
-		if( cmd[4] == NULL )
-			irc_usermsg( irc, "Now, use /OPER to enter your password for this account" );
+		irc_usermsg( irc, "Account successfully added%s", cmd[4] ? "" :
+		             ", now use /OPER to enter the password" );
 		
 		return;
 	}
