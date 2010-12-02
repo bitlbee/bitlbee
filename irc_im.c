@@ -793,7 +793,8 @@ static gboolean bee_irc_channel_chat_privmsg_cb( gpointer data, gint fd, b_input
 {
 	irc_channel_t *ic = data;
 	
-	bee_chat_msg( ic->irc->b, ic->data, ic->pastebuf->str, 0 );
+	if( ic->data )
+		bee_chat_msg( ic->irc->b, ic->data, ic->pastebuf->str, 0 );
 	
 	g_string_free( ic->pastebuf, TRUE );
 	ic->pastebuf = 0;
@@ -839,6 +840,8 @@ static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
 	
 	if( c && c->ic->acc->prpl->chat_leave )
 		c->ic->acc->prpl->chat_leave( c );
+	
+	ic->data = NULL;
 	
 	return TRUE;
 }

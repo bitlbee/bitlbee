@@ -142,6 +142,8 @@ int irc_channel_free( irc_channel_t *ic )
 			iu->last_channel = irc->default_channel;
 	}
 	
+	if( ic->pastebuf_timer ) b_event_remove( ic->pastebuf_timer );
+	
 	g_free( ic->name );
 	g_free( ic->topic );
 	g_free( ic->topic_who );
