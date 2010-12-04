@@ -55,7 +55,7 @@ distclean: clean $(subdirs)
 	rm -f Makefile.settings config.h bitlbee.pc
 	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -exec rm -f {} \;
 	@# May still be present in dirs of disabled protocols.
-	find . -name .depend | xargs -r rmdir
+	-find . -name .depend -exec rm -rf {} \;
 	$(MAKE) -C tests distclean
 
 check: all
