@@ -23,7 +23,7 @@
 #define _BSD_SOURCE
 #include <poll.h>
 #include <bitlbee.h>
-#include <bitlbee/ssl_client.h>
+#include <ssl_client.h>
 
 #define SKYPE_DEFAULT_SERVER "localhost"
 #define SKYPE_DEFAULT_PORT "2727"
