@@ -1539,10 +1539,15 @@
 	<bitlbee-command name="rename">
 		<short-description>Rename (renick) a buddy</short-description>
 		<syntax>rename &lt;oldnick&gt; &lt;newnick&gt;</syntax>
+		<syntax>rename -del &lt;oldnick&gt;</syntax>
 
 		<description>
 			<para>
 				Renick a user in your buddy list. Very useful, in fact just very important, if you got a lot of people with stupid account names (or hard ICQ numbers).
+			</para>
+			
+			<para>
+				<emphasis>rename -del</emphasis> can be used to erase your manually set nickname for a contact and reset it to what was automatically generated.
 			</para>
 		</description>
 

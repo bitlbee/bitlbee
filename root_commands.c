@@ -773,12 +773,19 @@ static void cmd_info( irc_t *irc, char **cmd )
 static void cmd_rename( irc_t *irc, char **cmd )
 {
 	irc_user_t *iu, *old;
+	gboolean del = g_strcasecmp( cmd[1], "-del" ) == 0;
 	
-	iu = irc_user_by_name( irc, cmd[1] );
+	iu = irc_user_by_name( irc, cmd[del ? 2 : 1] );
 	
 	if( iu == NULL )
 	{
 		irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
+	}
+	else if( del )
+	{
+		if( iu->bu )
+			bee_irc_user_nick_reset( iu );
+		irc_usermsg( irc, "Nickname reset to `%s'", iu->nick );
 	}
 	else if( iu == irc->user )
 	{

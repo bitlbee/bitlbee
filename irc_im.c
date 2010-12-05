@@ -362,6 +362,24 @@ static gboolean bee_irc_user_nick_update( irc_user_t *iu )
 	return TRUE;
 }
 
+void bee_irc_user_nick_reset( irc_user_t *iu )
+{
+	bee_user_t *bu = iu->bu;
+	bee_user_flags_t online;
+	
+	if( bu == FALSE )
+		return;
+	
+	/* In this case, pretend the user is offline. */
+	if( ( online = bu->flags & BEE_USER_ONLINE ) )
+		bu->flags &= ~BEE_USER_ONLINE;
+	
+	nick_del( bu );
+	bee_irc_user_nick_update( iu );
+	
+	bu->flags |= online;
+}
+
 /* IRC->IM calls */
 
 static gboolean bee_irc_user_privmsg_cb( gpointer data, gint fd, b_input_condition cond );
