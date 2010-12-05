@@ -109,6 +109,7 @@ static void txl_free(struct twitter_xml_list *txl)
 		else if (txl->type == TXL_ID)
 			g_free(l->data);
 	g_slist_free(txl->list);
+	g_free(txl);
 }
 
 /**
@@ -269,7 +270,6 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 		twitter_get_friends_ids(ic, txl->next_cursor);
 
 	txl_free(txl);
-	g_free(txl);
 }
 
 /**
@@ -506,12 +506,20 @@ static void twitter_groupchat_init(struct im_connection *ic)
 	char *name_hint;
 	struct groupchat *gc;
 	struct twitter_data *td = ic->proto_data;
+	GSList *l;
 	
 	td->home_timeline_gc = gc = imcb_chat_new( ic, "home/timeline" );
 	
 	name_hint = g_strdup_printf( "%s_%s", td->prefix, ic->acc->user );
 	imcb_chat_name_hint( gc, name_hint );
 	g_free( name_hint );
+	
+	for( l = ic->bee->users; l; l = l->next )
+	{
+		bee_user_t *bu = l->data;
+		if( bu->ic == ic )
+			imcb_chat_add_buddy( td->home_timeline_gc, bu->handle );
+	}
 }
 
 /**
@@ -648,14 +656,15 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	xt_free( parser );
 
 	// See if the user wants to see the messages in a groupchat window or as private messages.
-	if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
+	if (txl->list == NULL)
+		;
+	else if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
 		twitter_groupchat(ic, txl->list);
 	else
 		twitter_private_message_chat(ic, txl->list);
 
 	// Free the structure.	
 	txl_free(txl);
-	g_free(txl);
 }
 
 /**
@@ -730,7 +739,6 @@ static void twitter_http_get_statuses_friends(struct http_request *req)
 	
 	// Free the structure.
 	txl_free(txl);
-	g_free(txl);
 }
 
 /**
