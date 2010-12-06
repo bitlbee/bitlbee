@@ -110,6 +110,8 @@ typedef struct bee_ui_funcs
 	gboolean (*user_msg)( bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at );
 	/* Flags currently defined (OPT_TYPING/THINKING) in nogaim.h. */
 	gboolean (*user_typing)( bee_t *bee, bee_user_t *bu, guint32 flags );
+	/* CTCP-like stuff (buddy action) response */
+	gboolean (*user_action_response)( bee_t *bee, bee_user_t *bu, const char *action, char * const args[], void *data );
 	
 	/* Called at creation time. Don't show to the user until s/he is
 	   added using chat_add_user().  UI state can be stored via c->data. */

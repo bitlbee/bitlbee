@@ -793,3 +793,51 @@ xt_status jabber_iq_parse_server_features( struct im_connection *ic, struct xt_n
 
 	return XT_HANDLED;
 }
+
+static xt_status jabber_iq_version_response( struct im_connection *ic,
+	struct xt_node *node, struct xt_node *orig );
+
+void jabber_iq_version_send( struct im_connection *ic, struct jabber_buddy *bud, void *data )
+{
+	struct xt_node *node, *query;
+	
+	node = xt_new_node( "query", NULL, NULL );
+	xt_add_attr( node, "xmlns", XMLNS_VERSION );
+	query = jabber_make_packet( "iq", "get", bud->full_jid, node );
+	jabber_cache_add( ic, query, jabber_iq_version_response );
+
+	jabber_write_packet( ic, query );
+}
+
+static xt_status jabber_iq_version_response( struct im_connection *ic,
+	struct xt_node *node, struct xt_node *orig )
+{
+	struct xt_node *query;
+	GString *rets;
+	char *s;
+	char *ret[2] = {};
+	bee_user_t *bu;
+	struct jabber_buddy *bud = NULL;
+	
+	if( ( s = xt_find_attr( node, "from" ) ) &&
+	    ( bud = jabber_buddy_by_jid( ic, s, 0 ) ) &&
+	    ( query = xt_find_node( node->children, "query" ) ) &&
+	    ( bu = bee_user_by_handle( ic->bee, ic, bud->bare_jid ) ) )
+	{
+		rets = g_string_new( "Resource " );
+		g_string_append( rets, bud->resource );
+	}
+	else
+		return XT_HANDLED;
+	
+	for( query = query->children; query; query = query->next )
+		if( query->text_len > 0 )
+			g_string_append_printf( rets, " %s: %s,", query->name, query->text );
+	
+	g_string_truncate( rets, rets->len - 1 );
+	ret[0] = rets->str;
+	imcb_buddy_action_response( bu, "VERSION", ret, NULL );
+	g_string_free( rets, TRUE );
+	
+	return XT_HANDLED;
+}

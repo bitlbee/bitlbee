@@ -280,3 +280,9 @@ void imcb_buddy_typing( struct im_connection *ic, const char *handle, uint32_t f
 		ic->bee->ui->user_typing( ic->bee, bu, flags );
 	}
 }
+
+void imcb_buddy_action_response( bee_user_t *bu, const char *action, char * const args[], void *data )
+{
+	if( bu->bee->ui->user_action_response )
+		bu->bee->ui->user_action_response( bu->bee, bu, action, args, data );
+}

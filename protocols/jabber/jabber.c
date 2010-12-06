@@ -563,6 +563,37 @@ void jabber_chat_free_settings( account_t *acc, set_t **head )
 	set_del( head, "password" );
 }
 
+GList *jabber_buddy_action_list( bee_user_t *bu )
+{
+	static GList *ret = NULL;
+	
+	if( ret == NULL )
+	{
+		struct buddy_action ba[2] = {
+			{ "VERSION", "Get client (version) information" },
+		};
+		
+		ret = g_list_prepend( ret, ba + 0 );
+	}
+	
+	return ret;
+}
+
+void *jabber_buddy_action( struct bee_user *bu, const char *action, char * const args[], void *data )
+{
+	if( g_strcasecmp( action, "VERSION" ) == 0 )
+	{
+		struct jabber_buddy *bud;
+		
+		if( ( bud = jabber_buddy_by_ext_jid( bu->ic, bu->handle, 0 ) ) == NULL )
+			bud = jabber_buddy_by_jid( bu->ic, bu->handle, GET_BUDDY_FIRST );
+		for( ; bud; bud = bud->next )
+			jabber_iq_version_send( bu->ic, bud, data );
+	}
+	
+	return NULL;
+}
+
 void jabber_initmodule()
 {
 	struct prpl *ret = g_new0( struct prpl, 1 );
@@ -590,6 +621,8 @@ void jabber_initmodule()
 	ret->send_typing = jabber_send_typing;
 	ret->handle_cmp = g_strcasecmp;
 	ret->transfer_request = jabber_si_transfer_request;
+	ret->buddy_action_list = jabber_buddy_action_list;
+	ret->buddy_action = jabber_buddy_action;
 
 	register_protocol( ret );
 }

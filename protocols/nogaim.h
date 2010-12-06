@@ -135,6 +135,11 @@ struct buddy {
 	struct im_connection *ic; /* the connection it belongs to */
 };
 
+struct buddy_action {
+	char *name;
+	char *description;
+};
+
 struct prpl {
 	int options;
 	/* You should set this to the name of your protocol.
@@ -256,6 +261,9 @@ struct prpl {
 	void (* buddy_data_add) (struct bee_user *bu);
 	void (* buddy_data_free) (struct bee_user *bu);
 	
+	GList *(* buddy_action_list) (struct bee_user *bu);
+	void *(* buddy_action) (struct bee_user *bu, const char *action, char * const args[], void *data);
+	
 	/* Some placeholders so eventually older plugins may cooperate with newer BitlBees. */
 	void *resv1;
 	void *resv2;
@@ -315,6 +323,7 @@ G_MODULE_EXPORT void imcb_remove_buddy( struct im_connection *ic, const char *ha
 G_MODULE_EXPORT struct buddy *imcb_find_buddy( struct im_connection *ic, char *handle );
 G_MODULE_EXPORT void imcb_rename_buddy( struct im_connection *ic, const char *handle, const char *realname );
 G_MODULE_EXPORT void imcb_buddy_nick_hint( struct im_connection *ic, const char *handle, const char *nick );
+G_MODULE_EXPORT void imcb_buddy_action_response( bee_user_t *bu, const char *action, char * const args[], void *data );
 
 G_MODULE_EXPORT void imcb_buddy_typing( struct im_connection *ic, const char *handle, uint32_t flags );
 G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle( struct im_connection *ic, const char *handle );

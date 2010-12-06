@@ -279,6 +279,27 @@ static gboolean bee_irc_user_typing( bee_t *bee, bee_user_t *bu, uint32_t flags 
 	return TRUE;
 }
 
+static gboolean bee_irc_user_action_response( bee_t *bee, bee_user_t *bu, const char *action, char * const args[], void *data )
+{
+	irc_t *irc = (irc_t *) bee->ui_data;
+	GString *msg = g_string_new( "\001" );
+	
+	g_string_append( msg, action );
+	while( *args )
+	{
+		if( strchr( *args, ' ' ) )
+			g_string_append_printf( msg, " \"%s\"", *args );
+		else
+			g_string_append_printf( msg, " %s", *args );
+		args ++;
+	}
+	g_string_append_c( msg, '\001' );
+	
+	irc_send_msg( (irc_user_t *) bu->ui_data, "NOTICE", irc->user->nick, msg->str, NULL );
+	
+	return TRUE;
+}
+
 static gboolean bee_irc_user_nick_update( irc_user_t *iu );
 
 static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
@@ -490,6 +511,10 @@ static gboolean bee_irc_user_ctcp( irc_user_t *iu, char *const *ctcp )
 			
 			return TRUE;
 		}
+	}
+	else if( iu->bu && iu->bu->ic && iu->bu->ic->acc->prpl->buddy_action )
+	{
+		iu->bu->ic->acc->prpl->buddy_action( iu->bu, ctcp[0], ctcp + 1, NULL );
 	}
 	
 	return FALSE;
@@ -1040,6 +1065,7 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_user_status,
 	bee_irc_user_msg,
 	bee_irc_user_typing,
+	bee_irc_user_action_response,
 	
 	bee_irc_chat_new,
 	bee_irc_chat_free,
