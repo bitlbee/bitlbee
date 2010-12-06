@@ -50,7 +50,8 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 	else if( strcmp( type, "get" ) == 0 )
 	{
 		if( !( ( c = xt_find_node( node->children, "query" ) ) ||
-		       ( c = xt_find_node( node->children, "ping" ) ) ) ||
+		       ( c = xt_find_node( node->children, "ping" ) ) ||
+		       ( c = xt_find_node( node->children, "time" ) ) ) ||
 		    !( s = xt_find_attr( c, "xmlns" ) ) )
 		{
 			/* Sigh. Who decided to suddenly invent new elements
@@ -68,7 +69,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			xt_add_child( reply, xt_new_node( "version", BITLBEE_VERSION, NULL ) );
 			xt_add_child( reply, xt_new_node( "os", ARCH, NULL ) );
 		}
-		else if( strcmp( s, XMLNS_TIME ) == 0 )
+		else if( strcmp( s, XMLNS_TIME_OLD ) == 0 )
 		{
 			time_t time_ep;
 			char buf[1024];
@@ -82,6 +83,31 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			strftime( buf, sizeof( buf ) - 1, "%Z", localtime( &time_ep ) );
 			xt_add_child( reply, xt_new_node( "tz", buf, NULL ) );
 		}
+		else if( strcmp( s, XMLNS_TIME ) == 0 )
+		{
+			time_t time_ep;
+			char buf[1024];
+			
+			buf[sizeof(buf)-1] = 0;
+			time_ep = time( NULL );
+			
+			xt_free_node( reply );
+			reply = xt_new_node( "time", NULL, NULL );
+			xt_add_attr( reply, "xmlns", XMLNS_TIME );
+			
+			strftime( buf, sizeof( buf ) - 1, "%Y%m%dT%H:%M:%SZ", gmtime( &time_ep ) );
+			xt_add_child( reply, xt_new_node( "utc", buf, NULL ) );
+			
+			strftime( buf, sizeof( buf ) - 1, "%z", localtime( &time_ep ) );
+			if( strlen( buf ) >= 5 )
+			{
+				buf[6] = '\0';
+				buf[5] = buf[4];
+				buf[4] = buf[3];
+				buf[3] = ':';
+			}
+			xt_add_child( reply, xt_new_node( "tzo", buf, NULL ) );
+		}
 		else if( strcmp( s, XMLNS_PING ) == 0 )
 		{
 			xt_free_node( reply );
@@ -94,6 +120,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		{
 			const char *features[] = { XMLNS_DISCO_INFO,
 			                           XMLNS_VERSION,
+			                           XMLNS_TIME_OLD,
 			                           XMLNS_TIME,
 			                           XMLNS_CHATSTATES,
 			                           XMLNS_MUC,
