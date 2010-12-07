@@ -34,8 +34,7 @@ Description: An IRC to other chat networks gateway (using libpurple)
  protocols (all protocols supported by Pidgin/Finch) and features (like file
  transfers), at the price of being less lightweight.
  .
- This variant may not be very suitable for BitlBee instances used by many
- (tens or hundreds) of clients.
+ If you don't need the extra features, it's better to use the built-in code.
 
 Package: bitlbee-common
 Architecture: all
