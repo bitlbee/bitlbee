@@ -1286,6 +1286,11 @@ void purple_initmodule()
 		PurplePlugin *prot = prots->data;
 		struct prpl *ret;
 		
+		/* If we already have this one (as a native module), don't
+		   add a libpurple duplicate. */
+		if( find_protocol( prot->info->id ) )
+			continue;
+		
 		ret = g_memdup( &funcs, sizeof( funcs ) );
 		ret->name = ret->data = prot->info->id;
 		if( strncmp( ret->name, "prpl-", 5 ) == 0 )

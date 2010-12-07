@@ -600,13 +600,12 @@ EOF
 	jabber=0
 	oscar=0
 	yahoo=0
-	twitter=0
 	
 	if [ "$events" = "libevent" ]; then
-		echo
 		echo 'Warning: Some libpurple modules (including msn-pecan) do their event handling'
 		echo 'outside libpurple, talking to GLib directly. At least for now the combination'
 		echo 'libpurple + libevent is *not* recommended!'
+		echo
 	fi
 fi
 
