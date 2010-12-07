@@ -151,6 +151,9 @@ int skype_write(struct im_connection *ic, char *buf, int len)
 	struct skype_data *sd = ic->proto_data;
 	struct pollfd pfd[1];
 
+	if (!sd->ssl)
+		return FALSE;
+
 	pfd[0].fd = sd->fd;
 	pfd[0].events = POLLOUT;
 
