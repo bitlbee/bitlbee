@@ -569,11 +569,11 @@ GList *jabber_buddy_action_list( bee_user_t *bu )
 	
 	if( ret == NULL )
 	{
-		struct buddy_action ba[2] = {
+		static const struct buddy_action ba[2] = {
 			{ "VERSION", "Get client (version) information" },
 		};
 		
-		ret = g_list_prepend( ret, ba + 0 );
+		ret = g_list_prepend( ret, (void*) ba + 0 );
 	}
 	
 	return ret;

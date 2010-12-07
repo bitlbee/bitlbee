@@ -512,6 +512,26 @@ static gboolean bee_irc_user_ctcp( irc_user_t *iu, char *const *ctcp )
 			return TRUE;
 		}
 	}
+	else if( g_strcasecmp( ctcp[0], "HELP" ) == 0 && iu->bu )
+	{
+		GString *supp = g_string_new( "Supported CTCPs:" );
+		GList *l;
+		
+		if( iu->bu->ic && iu->bu->ic->acc->prpl->transfer_request )
+			g_string_append( supp, " DCC SEND," );
+		if( iu->bu->ic && iu->bu->ic->acc->prpl->send_typing )
+			g_string_append( supp, " TYPING," );
+		if( iu->bu->ic->acc->prpl->buddy_action_list )
+			for( l = iu->bu->ic->acc->prpl->buddy_action_list( iu->bu ); l; l = l->next )
+			{
+				struct buddy_action *ba = l->data;
+				g_string_append_printf( supp, " %s (%s),",
+				                        ba->name, ba->description );
+			}
+		g_string_truncate( supp, supp->len - 1 );
+		irc_send_msg_f( iu, "NOTICE", iu->irc->user->nick, "\001HELP %s\001", supp->str );
+		g_string_free( supp, TRUE );
+	}
 	else if( iu->bu && iu->bu->ic && iu->bu->ic->acc->prpl->buddy_action )
 	{
 		iu->bu->ic->acc->prpl->buddy_action( iu->bu, ctcp[0], ctcp + 1, NULL );

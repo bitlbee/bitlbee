@@ -376,11 +376,6 @@ static void twitter_chat_leave( struct groupchat *c )
 	td->home_timeline_gc = NULL;
 }
 
-static struct groupchat *twitter_chat_with( struct im_connection *ic, char *who )
-{
-	return NULL;
-}
-
 static void twitter_keepalive( struct im_connection *ic )
 {
 }
@@ -399,11 +394,6 @@ static void twitter_add_deny( struct im_connection *ic, char *who )
 
 static void twitter_rem_deny( struct im_connection *ic, char *who )
 {
-}
-
-static int twitter_send_typing( struct im_connection *ic, char *who, int typing )
-{
-	return( 1 );
 }
 
 //static char *twitter_set_display_name( set_t *set, char *value )
@@ -551,13 +541,11 @@ void twitter_initmodule()
 	ret->chat_msg = twitter_chat_msg;
 	ret->chat_invite = twitter_chat_invite;
 	ret->chat_leave = twitter_chat_leave;
-	ret->chat_with = twitter_chat_with;
 	ret->keepalive = twitter_keepalive;
 	ret->add_permit = twitter_add_permit;
 	ret->rem_permit = twitter_rem_permit;
 	ret->add_deny = twitter_add_deny;
 	ret->rem_deny = twitter_rem_deny;
-	ret->send_typing = twitter_send_typing;
 	ret->buddy_data_add = twitter_buddy_data_add;
 	ret->buddy_data_free = twitter_buddy_data_free;
 	ret->handle_cmp = g_strcasecmp;
