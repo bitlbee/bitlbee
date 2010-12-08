@@ -875,6 +875,8 @@ static void skype_parse_profile(struct im_connection *ic, char *line)
 
 static void skype_parse_ping(struct im_connection *ic, char *line)
 {
+	/* Unused parameter */
+	line = line;
 	skype_printf(ic, "PONG\n");
 }
 
@@ -917,6 +919,10 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 		{ "PING", skype_parse_ping },
 		{ "CHATS ", skype_parse_chats },
 	};
+
+	/* Unused parameters */
+	fd = fd;
+	cond = cond;
 
 	if (!sd || sd->fd == -1)
 		return FALSE;
@@ -982,6 +988,10 @@ gboolean skype_connected(gpointer data, void *source, b_input_condition cond)
 {
 	struct im_connection *ic = data;
 	struct skype_data *sd = ic->proto_data;
+
+	/* Unused parameter */
+	cond = cond;
+
 	if (!source) {
 		sd->ssl = NULL;
 		imcb_error(ic, "Could not connect to server");
@@ -989,6 +999,7 @@ gboolean skype_connected(gpointer data, void *source, b_input_condition cond)
 		return FALSE;
 	}
 	imcb_log(ic, "Connected to server, logging in");
+
 	return skype_start_stream(ic);
 }
 
@@ -1029,6 +1040,9 @@ static int skype_buddy_msg(struct im_connection *ic, char *who, char *message,
 	char *ptr, *nick;
 	int st;
 
+	/* Unused parameter */
+	flags = flags;
+
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if (ptr)
@@ -1059,6 +1073,9 @@ static void skype_set_away(struct im_connection *ic, char *state_txt,
 {
 	const struct skype_away_state *state;
 
+	/* Unused parameter */
+	message = message;
+
 	if (state_txt == NULL)
 		state = skype_away_state_by_name("Online");
 	else
@@ -1070,6 +1087,9 @@ static GList *skype_away_states(struct im_connection *ic)
 {
 	static GList *l;
 	int i;
+
+	/* Unused parameter */
+	ic = ic;
 
 	if (l == NULL)
 		for (i = 0; skype_away_state_list[i].full_name; i++)
@@ -1137,6 +1157,9 @@ static void skype_add_buddy(struct im_connection *ic, char *who, char *group)
 {
 	char *nick, *ptr;
 
+	/* Unused parameter */
+	group = group;
+
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if (ptr)
@@ -1150,6 +1173,9 @@ static void skype_remove_buddy(struct im_connection *ic, char *who, char *group)
 {
 	char *nick, *ptr;
 
+	/* Unused parameter */
+	group = group;
+
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if (ptr)
@@ -1161,6 +1187,10 @@ static void skype_remove_buddy(struct im_connection *ic, char *who, char *group)
 void skype_chat_msg(struct groupchat *gc, char *message, int flags)
 {
 	struct im_connection *ic = gc->ic;
+
+	/* Unused parameter */
+	flags = flags;
+
 	skype_printf(ic, "CHATMESSAGE %s %s\n", gc->title, message);
 }
 
@@ -1175,6 +1205,10 @@ void skype_chat_invite(struct groupchat *gc, char *who, char *message)
 {
 	struct im_connection *ic = gc->ic;
 	char *ptr, *nick;
+
+	/* Unused parameter */
+	who = who;
+
 	nick = g_strdup(message);
 	ptr = strchr(nick, '@');
 	if (ptr)
