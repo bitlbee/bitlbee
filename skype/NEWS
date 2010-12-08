@@ -1,5 +1,9 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.8.4         - now using python2.7 directly in case python would point to python3k
+              - merge patch to avoid a crash when failing to connect to skyped
+              - merge support for building the plugin on NetBSD
+              - merge Debian patches
 0.8.3         - support for BitlBee 1.3dev
               - fixed --debug switch (-d was fine)
               - documentation fixes

@@ -1,9 +1,9 @@
 -include config.mak
 
-VERSION = 0.8.3
+VERSION = 0.8.4
 DATE := $(shell date +%Y-%m-%d)
 # latest stable
-BITLBEE_VERSION = 1.2.7
+BITLBEE_VERSION = 3.0.1
 
 ifeq ($(ASCIIDOC),yes)
 MANPAGES = skyped.1
