@@ -40,7 +40,6 @@ not..)
 * Python >= 2.5. Skype4Py does not work with 2.4.
 * PyGObject >= 2.8.0. Older versions are part of PyGTK. (And you don't want to
   install GTK for nothing, right?)
-* pyopenssl or python-gnutls.
 
 `bitlbee-skype` has been tested under Linux and Mac OS X. Skype and Skype4py is
 available under Windows, too, so it probably works, but this has not been tested.
@@ -89,7 +88,7 @@ just append install-dev after install-etc.
 # port -v install py25-gobject
 ----
 
-and you have to install `bitlbee-skype`, `skype4py` and `python-gnutls` from
+and you have to install `bitlbee-skype` and `skype4py` from
 source.
 
 === Installing from source
@@ -123,23 +122,6 @@ $ make
 $ tar -zxvf Skype4Py-x.x.x.x.tar.gz
 $ cd Skype4Py-x.x.x.x
 # python setup.py install
-----
-
-- To install http://pypi.python.org/pypi/python-gnutls[python-gnutls] from source
-  (unless you want to install the plugin for a public server):
-
-----
-$ tar -zxvf python-gnutls-x.x.x.tar.gz
-$ cd python-gnutls-x.x.x
-# python setup.py install
-----
-
-NOTE: On OS X you will need the following hacks first:
-
-----
-$ export LD_LIBRARY_PATH=/opt/local/lib
-$ export CFLAGS="-I/opt/local/include"
-$ export LDFLAGS="-L/opt/local/lib"
 ----
 
 - Get the plugin code (in an empty dir, or whereever you want, it does
@@ -189,13 +171,6 @@ TIP: In case you have difficulties generating `skyped.cert.pem` /
 `skyped.key.pem` and you just want to experiment, you can copy&paste the
 contents of those files from
 http://code.google.com/p/gdata-python-client/source/browse/src/gdata/oauth/rsa.py#87[here].
-
-- If both pyopenssl and python-gnutls are available, then python-gnutls
-  will be used. This behaviour can be overwritten by:
-
-----
-$ export SKYPED_NO_GNUTLS=1
-----
 
 - Start `skyped` (the tcp server):
 

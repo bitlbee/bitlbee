@@ -32,6 +32,7 @@ import Skype4Py
 import hashlib
 from ConfigParser import ConfigParser, NoOptionError
 from traceback import print_exception
+import ssl
 
 __version__ = "0.1.1"
 
@@ -85,21 +86,7 @@ def bitlbee_idle_handler(skype):
 
 def server(host, port):
 	global options
-	try:
-		if "SKYPED_NO_GNUTLS" in os.environ.keys():
-			dprint("Warning, using OpenSSL instead of gnutls as requested (not recommended).")
-			raise ImportError
-		from gnutls import crypto, connection
-		cert = crypto.X509Certificate(open(options.config.sslcert).read())
-		key = crypto.X509PrivateKey(open(options.config.sslkey).read())
-		cred = connection.X509Credentials(cert, key)
-		sock = connection.ServerSessionFactory(socket.socket(), cred)
-	except ImportError:
-		from OpenSSL import SSL
-		ctx = SSL.Context(SSL.TLSv1_METHOD)
-		ctx.use_privatekey_file(options.config.sslkey)
-		ctx.use_certificate_file(options.config.sslcert)
-		sock = SSL.Connection(ctx, socket.socket())
+	sock = socket.socket()
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((host, port))
 	sock.listen(1)
@@ -107,7 +94,12 @@ def server(host, port):
 
 def listener(sock, *args):
 	global options
-	options.conn, addr = sock.accept()
+	rawsock, addr = sock.accept()
+	options.conn = ssl.wrap_socket(rawsock,
+		server_side=True,
+		certfile=options.config.sslcert,
+		keyfile=options.config.sslkey,
+		ssl_version=ssl.PROTOCOL_TLSv1)
 	if hasattr(options.conn, 'handshake'):
 		try:
 			options.conn.handshake()
