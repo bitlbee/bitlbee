@@ -168,11 +168,6 @@ if you used the `--sysconfdir` switch when running bitlbee-skype's `configure`.
 NOTE: Maybe you want to adjust the permissions in the `~/.skyped`
 dir. For example make it readable by just your user.
 
-TIP: In case you have difficulties generating `skyped.cert.pem` /
-`skyped.key.pem` and you just want to experiment, you can copy&paste the
-contents of those files from
-http://code.google.com/p/gdata-python-client/source/browse/src/gdata/oauth/rsa.py#87[here].
-
 - Start `skyped` (the tcp server):
 
 ----
