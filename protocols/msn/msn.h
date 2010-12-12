@@ -118,6 +118,7 @@ struct msn_data
 	
 	const struct msn_away_state *away_state;
 	GSList *groups;
+	char *profile_rid;
 	
 	/* Mostly used for sending the ADL command; since MSNP13 the client
 	   is responsible for downloading the contact list and then sending

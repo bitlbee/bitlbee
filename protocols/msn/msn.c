@@ -107,6 +107,8 @@ static void msn_logout( struct im_connection *ic )
 			md->groups = g_slist_remove( md->groups, mg );
 		}
 		
+		g_free( md->profile_rid );
+		
 		g_tree_destroy( md->domaintree );
 		md->domaintree = NULL;
 		
@@ -321,21 +323,15 @@ static char *set_eval_display_name( set_t *set, char *value )
 	struct im_connection *ic = acc->ic;
 	struct msn_data *md = ic->proto_data;
 	
-	if( strlen( value ) > 129 )
-	{
-		imcb_log( ic, "Maximum name length exceeded" );
-		return NULL;
-	}
-	
-	if( md->flags & MSN_GOT_PROFILE_DN )
-		imcb_log( ic, "Warning: Persistent name changes for this account have to be done "
-		              "in the profile. BitlBee doesn't currently support this." );
-	
 	if( md->flags & MSN_EMAIL_UNVERIFIED )
 		imcb_log( ic, "Warning: Your e-mail address is unverified. MSN doesn't allow "
 		              "changing your display name until your e-mail address is verified." );
 	
-	msn_soap_addressbook_set_display_name( ic, value );
+	if( md->flags & MSN_GOT_PROFILE_DN )
+		msn_soap_profile_set_dn( ic, value );
+	else
+		msn_soap_addressbook_set_display_name( ic, value );
+	
 	return msn_ns_set_display_name( ic, value ) ? value : NULL;
 }
 
@@ -362,7 +358,7 @@ void msn_initmodule()
 	struct prpl *ret = g_new0(struct prpl, 1);
 	
 	ret->name = "msn";
-    ret->mms = 1409;         /* this guess taken from libotr UPGRADING file */
+	ret->mms = 1409;         /* this guess taken from libotr UPGRADING file */
 	ret->login = msn_login;
 	ret->init = msn_init;
 	ret->logout = msn_logout;

@@ -302,6 +302,7 @@ int msn_soap_ab_contact_del( struct im_connection *ic, bee_user_t *bu );
 
 #define SOAP_STORAGE_URL "https://storage.msn.com/storageservice/SchematizedStore.asmx"
 #define SOAP_PROFILE_GET_ACTION "http://www.msn.com/webservices/storage/w10/GetProfile"
+#define SOAP_PROFILE_SET_DN_ACTION "http://www.msn.com/webservices/storage/w10/UpdateProfile"
 
 #define SOAP_PROFILE_GET_PAYLOAD \
 "<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
@@ -344,7 +345,34 @@ int msn_soap_ab_contact_del( struct im_connection *ic, bee_user_t *bu );
   "</soap:Body>" \
 "</soap:Envelope>"
 
-int msn_soap_profile_get( struct im_connection *ic, const char *cid );
+#define SOAP_PROFILE_SET_DN_PAYLOAD \
+"<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
+"<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+  "<soap:Header xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+    "<StorageApplicationHeader xmlns=\"http://www.msn.com/webservices/storage/w10\">" \
+      "<ApplicationID>Messenger Client 9.0</ApplicationID>" \
+      "<Scenario>Initial</Scenario>" \
+    "</StorageApplicationHeader>" \
+    "<StorageUserHeader xmlns=\"http://www.msn.com/webservices/storage/w10\">" \
+      "<Puid>0</Puid>" \
+      "<TicketToken>%s</TicketToken>" \
+    "</StorageUserHeader>" \
+  "</soap:Header>" \
+  "<soap:Body xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
+    "<UpdateProfile xmlns=\"http://www.msn.com/webservices/storage/w10\">" \
+      "<profile>" \
+        "<ResourceID>%s</ResourceID>" \
+        "<ExpressionProfile>" \
+          "<FreeText>Update</FreeText>" \
+          "<DisplayName>%s</DisplayName>" \
+          "<Flags>0</Flags>" \
+        "</ExpressionProfile>" \
+      "</profile>" \
+    "</UpdateProfile>" \
+  "</soap:Body>" \
+"</soap:Envelope>"
 
+int msn_soap_profile_get( struct im_connection *ic, const char *cid );
+int msn_soap_profile_set_dn( struct im_connection *ic, const char *dn );
 
 #endif /* __SOAP_H__ */

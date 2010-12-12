@@ -397,7 +397,10 @@ static int msn_soap_passport_sso_handle_response( struct msn_soap_req_data *soap
 		return MSN_SOAP_RETRY;
 	
 	if( md->soapq )
+	{
+		md->flags &= ~MSN_REAUTHING; 
 		return msn_soapq_flush( ic, TRUE );
+	}
 	
 	if( sd->secret == NULL )
 	{
@@ -1071,8 +1074,20 @@ static xt_status msn_soap_profile_get_result( struct xt_node *node, gpointer dat
 	return XT_HANDLED;
 }
 
+static xt_status msn_soap_profile_get_rid( struct xt_node *node, gpointer data )
+{
+	struct msn_soap_req_data *soap_req = data;
+	struct msn_data *md = soap_req->ic->proto_data;
+	
+	g_free( md->profile_rid );
+	md->profile_rid = g_strdup( node->text );
+	
+	return XT_HANDLED;
+}
+
 static const struct xt_handler_entry msn_soap_profile_get_parser[] = {
 	{ "ExpressionProfile", "GetProfileResult", msn_soap_profile_get_result },
+	{ "ResourceID",        "GetProfileResult", msn_soap_profile_get_rid },
 	{ NULL,               NULL,     NULL                        }
 };
 
@@ -1099,4 +1114,41 @@ int msn_soap_profile_get( struct im_connection *ic, const char *cid )
 	                       msn_soap_profile_get_parser,
 	                       msn_soap_profile_get_handle_response,
 	                       msn_soap_profile_get_free_data );
+}
+
+/* Update profile (display name). */
+static int msn_soap_profile_set_dn_build_request( struct msn_soap_req_data *soap_req )
+{
+	struct msn_data *md = soap_req->ic->proto_data;
+	
+	soap_req->url = g_strdup( SOAP_STORAGE_URL );
+	soap_req->action = g_strdup( SOAP_PROFILE_SET_DN_ACTION );
+	soap_req->payload = g_markup_printf_escaped( SOAP_PROFILE_SET_DN_PAYLOAD,
+		md->tokens[3], md->profile_rid, (char*) soap_req->data );
+	
+	return 1;
+}
+
+static const struct xt_handler_entry msn_soap_profile_set_dn_parser[] = {
+	{ NULL,               NULL,     NULL                        }
+};
+
+static int msn_soap_profile_set_dn_handle_response( struct msn_soap_req_data *soap_req )
+{
+	return MSN_SOAP_OK;
+}
+
+static int msn_soap_profile_set_dn_free_data( struct msn_soap_req_data *soap_req )
+{
+	g_free( soap_req->data );
+	return 0;
+}
+
+int msn_soap_profile_set_dn( struct im_connection *ic, const char *dn )
+{
+	return msn_soap_start( ic, g_strdup( dn ),
+	                       msn_soap_profile_set_dn_build_request,
+	                       msn_soap_profile_set_dn_parser,
+	                       msn_soap_profile_set_dn_handle_response,
+	                       msn_soap_profile_set_dn_free_data );
 }
