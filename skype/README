@@ -306,11 +306,16 @@ $ skyped -n -d
 - Running Skype on a machine different to BitlBee is possible, the
   communication is encrypted.
 
-- Managing outgoing calls (with call duration at the end, including
-  SkypeOut calls if you use a phone number instead of a nick):
+- Managing outgoing calls (with call duration at the end):
 
-  * `account skype set call nick`
-  * `account skype set -del skype/call`
+  * `/ctcp nick call`
+  * `/ctcp nick hangup`
+
+- Managing outgoing SkypeOut or conference calls:
+
+  * `account skype set call +18005551234`
+  * `account skype set call nick1 nick2`
+  * `account skype set -del call`
 
 - Managing incoming calls via questions, just like when you add / remove
   contacts.

@@ -1117,12 +1117,34 @@ static char *skype_set_balance(set_t *set, char *value)
 	return value;
 }
 
+static void skype_call(struct im_connection *ic, char *value) {
+	char *nick = g_strdup(value);
+	char *ptr = strchr(nick, '@');
+
+	if (ptr)
+		*ptr = '\0';
+	skype_printf(ic, "CALL %s", nick);
+	g_free(nick);
+}
+
+static void skype_hangup(struct im_connection *ic)
+{
+	struct skype_data *sd = ic->proto_data;
+
+	if (sd->call_id) {
+		skype_printf(ic, "SET CALL %s STATUS FINISHED",
+				sd->call_id);
+		g_free(sd->call_id);
+		sd->call_id = 0;
+	} else
+		imcb_error(ic, "There are no active calls currently.");
+}
+
 static char *skype_set_call(set_t *set, char *value)
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
-	struct skype_data *sd = ic->proto_data;
-	char *nick, *ptr;
+	char *nick;
 
 	if (value) {
 #if BITLBEE_VERSION_CODE < BITLBEE_VER(1, 3, 0)
@@ -1130,26 +1152,13 @@ static char *skype_set_call(set_t *set, char *value)
 		user_t *u = user_find(acc->irc, value);
 		/* We are starting a call */
 		if (u)
-			nick = g_strdup(u->handle);
+			nick = u->handle;
 		else
 #endif
-			nick = g_strdup(value);
-		ptr = strchr(nick, '@');
-		if (ptr)
-			*ptr = '\0';
-
-		skype_printf(ic, "CALL %s", nick);
-		g_free(nick);
-	} else {
-		/* We are ending a call */
-		if (sd->call_id) {
-			skype_printf(ic, "SET CALL %s STATUS FINISHED",
-				sd->call_id);
-			g_free(sd->call_id);
-			sd->call_id = NULL;
-		} else
-			imcb_error(ic, "There are no active calls currently.");
-	}
+			nick = value;
+		skype_call(ic, nick);
+	} else
+		skype_hangup(ic);
 	return value;
 }
 
@@ -1313,6 +1322,36 @@ static void skype_init(account_t *acc)
 			NULL, acc);
 }
 
+#if BITLBEE_VERSION_CODE >= BITLBEE_VER(3, 0, 1)
+GList *skype_buddy_action_list( bee_user_t *bu )
+{
+	static GList *ret = NULL;
+
+	if (ret == NULL)
+	{
+		static const struct buddy_action ba[3] = {
+			{"CALL", "Initiate a call" },
+			{"HANGUP", "Hang up a call" },
+		};
+
+		ret = g_list_prepend(ret, (void*) ba + 0);
+	}
+
+	return ret;
+}
+
+void *skype_buddy_action( struct bee_user *bu, const char *action, char * const args[], void *data )
+{
+	if (!g_strcasecmp(action, "CALL")) {
+		skype_call(bu->ic, bu->handle);
+	} else if (!g_strcasecmp(action, "HANGUP")) {
+		skype_hangup(bu->ic);
+	}
+
+	return NULL;
+}
+#endif
+
 void init_plugin(void)
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
@@ -1334,5 +1373,9 @@ void init_plugin(void)
 	ret->chat_with = skype_chat_with;
 	ret->handle_cmp = g_strcasecmp;
 	ret->chat_topic = skype_chat_topic;
+#if BITLBEE_VERSION_CODE >= BITLBEE_VER(3, 0, 1)
+	ret->buddy_action_list = skype_buddy_action_list;
+	ret->buddy_action = skype_buddy_action;
+#endif
 	register_protocol(ret);
 }
