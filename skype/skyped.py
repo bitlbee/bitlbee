@@ -37,9 +37,12 @@ import ssl
 __version__ = "0.1.1"
 
 def eh(type, value, tb):
+	global options
+
 	if type != KeyboardInterrupt:
 		print_exception(type, value, tb)
 	gobject.MainLoop().quit()
+	options.conn.close()
 	# shut down client if it's running
 	try:
 		skype.skype.Client.Shutdown()
@@ -74,11 +77,26 @@ def skype_idle_handler(skype):
 		dprint("Warning, pinging Skype failed (%s)." % (s))
 	return True
 
+def send(sock, txt):
+	from time import sleep
+	count = 1
+	done = False
+	while (not done) and (count < 10):
+		try:
+			sock.send(txt)
+			done = True
+		except Exception, s:
+			count += 1
+			dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, count))
+			sleep(1)
+	if not done:
+		options.conn.close()
+
 def bitlbee_idle_handler(skype):
 	if options.conn:
 		try:
 			e = "PING"
-			options.conn.send("%s\n" % e)
+			send(options.conn, "%s\n" % e)
 		except Exception, s:
 			dprint("Warning, sending '%s' failed (%s)." % (e, s))
 			options.conn.close()
@@ -136,6 +154,7 @@ def dprint(msg):
 
 	if options.debug:
 		print now + ": " + msg
+		sys.stdout.flush()
 	if options.log:
 		sock = open(options.log, "a")
 		sock.write("%s: %s\n" % (now, msg))
@@ -171,7 +190,7 @@ class SkypeApi:
 			dprint('<< ' + e)
 			if options.conn:
 				try:
-					options.conn.send(e + "\n")
+					send(options.conn, e + "\n")
 				except Exception, s:
 					dprint("Warning, sending '%s' failed (%s)." % (e, s))
 					options.conn.close()
