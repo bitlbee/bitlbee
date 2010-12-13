@@ -31,13 +31,6 @@
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 /*
- * Compatibility with BitlBee 1.3+
- */
-#if BITLBEE_VERSION_CODE < BITLBEE_VER(1, 3, 0)
-#define B_EV_IO_READ GAIM_INPUT_READ
-#endif
-
-/*
  * Enumerations
  */
 
@@ -242,20 +235,6 @@ void skype_call_ask(struct im_connection *ic, char *call_id, char *message)
 
 	imcb_ask(ic, message, bla, skype_call_ask_yes, skype_call_ask_no);
 }
-struct groupchat *skype_chat_by_name(struct im_connection *ic, char *name)
-{
-#if BITLBEE_VERSION_CODE < BITLBEE_VER(1, 3, 0)
-	struct groupchat *ret;
-
-	for (ret = ic->groupchats; ret; ret = ret->next)
-		if (strcmp(name, ret->title) == 0)
-			break;
-
-	return ret;
-#else
-	return bee_chat_by_title(ic->bee, ic, name);
-#endif
-}
 
 static char *skype_call_strerror(int err)
 {
@@ -341,27 +320,12 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		}
 	} else if (!strncmp(ptr, "MOOD_TEXT ", 10)) {
 		char *buf = g_strdup_printf("%s@skype.com", user);
-#if BITLBEE_VERSION_CODE < BITLBEE_VER(1, 3, 0)
-		user_t *u = user_findhandle(ic, buf);
-		g_free(buf);
-		buf = ptr + 10;
-		if (u) {
-			if (u->status_msg)
-				g_free(u->status_msg);
-			if (strlen(buf))
-				u->status_msg = g_strdup(buf);
-			else
-				u->status_msg = NULL;
-		}
-#else
 		bee_user_t *bu = bee_user_by_handle(ic->bee, ic, buf);
 		g_free(buf);
 		buf = ptr + 10;
-		if (bu) {
+		if (bu)
 			imcb_buddy_status(ic, bu->handle, bu->flags, NULL,
 					*buf ? buf : NULL);
-		}
-#endif
 		if (set_getbool(&ic->acc->set, "show_moods"))
 			imcb_log(ic, "User `%s' changed mood text to `%s'", user, buf);
 	} else if (!strncmp(ptr, "FULLNAME ", 9))
@@ -588,7 +552,7 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 	} else if (!strncmp(info, "CHATNAME ", 9)) {
 		info += 9;
 		if (sd->handle && sd->body && sd->type) {
-			struct groupchat *gc = skype_chat_by_name(ic, info);
+			struct groupchat *gc = bee_chat_by_title(ic->bee, ic, info);
 			int i;
 			for (i = 0; i < g_list_length(sd->body); i++) {
 				char *body = g_list_nth_data(sd->body, i);
@@ -787,7 +751,7 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 	*info = '\0';
 	info++;
 	/* Remove fake chat if we created one in skype_chat_with() */
-	gc = skype_chat_by_name(ic, "");
+	gc = bee_chat_by_title(ic->bee, ic, "");
 	if (gc)
 		imcb_chat_free(gc);
 	if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
@@ -814,7 +778,7 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		skype_printf(ic, "GET CHAT %s ADDER\n", id);
 		skype_printf(ic, "GET CHAT %s TOPIC\n", id);
 	} else if (!strcmp(info, "STATUS UNSUBSCRIBED")) {
-		gc = skype_chat_by_name(ic, id);
+		gc = bee_chat_by_title(ic->bee, ic, id);
 		if (gc)
 			gc->data = (void *)FALSE;
 	} else if (!strncmp(info, "ADDER ", 6)) {
@@ -823,7 +787,7 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		sd->adder = g_strdup_printf("%s@skype.com", info);
 	} else if (!strncmp(info, "TOPIC ", 6)) {
 		info += 6;
-		gc = skype_chat_by_name(ic, id);
+		gc = bee_chat_by_title(ic->bee, ic, id);
 		if (gc && (sd->adder || sd->topic_wait)) {
 			if (sd->topic_wait) {
 				sd->adder = g_strdup(sd->username);
@@ -835,7 +799,7 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		}
 	} else if (!strncmp(info, "ACTIVEMEMBERS ", 14)) {
 		info += 14;
-		gc = skype_chat_by_name(ic, id);
+		gc = bee_chat_by_title(ic->bee, ic, id);
 		/* Hack! We set ->data to TRUE
 		 * while we're on the channel
 		 * so that we won't rejoin
@@ -1144,19 +1108,9 @@ static char *skype_set_call(set_t *set, char *value)
 {
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
-	char *nick;
 
 	if (value) {
-#if BITLBEE_VERSION_CODE < BITLBEE_VER(1, 3, 0)
-		/* IRC stuff shouldn't be touched from inside IM modules. */
-		user_t *u = user_find(acc->irc, value);
-		/* We are starting a call */
-		if (u)
-			nick = u->handle;
-		else
-#endif
-			nick = value;
-		skype_call(ic, nick);
+		skype_call(ic, value);
 	} else
 		skype_hangup(ic);
 	return value;
