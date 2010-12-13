@@ -183,9 +183,14 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 			buf = g_new0( char, i );
 			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->ic->acc->user );
 		}
+		else if( strcmp( text, NUDGE_MESSAGE ) == 0 )
+		{
+			buf = g_strdup( MSN_NUDGE_HEADERS );
+			i = strlen( buf );
+		}
 		else if( strcmp( text, SB_KEEPALIVE_MESSAGE ) == 0 )
 		{
-			buf = g_strdup( SB_KEEPALIVE_HEADERS );
+			buf = g_strdup( MSN_SB_KEEPALIVE_HEADERS );
 			i = strlen( buf );
 		}
 		else if( strncmp( text, MSN_INVITE_HEADERS, sizeof( MSN_INVITE_HEADERS ) - 1 ) == 0 ) 

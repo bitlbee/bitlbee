@@ -353,6 +353,30 @@ static void msn_buddy_data_free( bee_user_t *bu )
 	g_tree_remove( md->domaintree, bu->handle );
 }
 
+GList *msn_buddy_action_list( bee_user_t *bu )
+{
+	static GList *ret = NULL;
+	
+	if( ret == NULL )
+	{
+		static const struct buddy_action ba[2] = {
+			{ "NUDGE", "Draw attention" },
+		};
+		
+		ret = g_list_prepend( ret, (void*) ba + 0 );
+	}
+	
+	return ret;
+}
+
+void *msn_buddy_action( struct bee_user *bu, const char *action, char * const args[], void *data )
+{
+	if( g_strcasecmp( action, "NUDGE" ) == 0 )
+		msn_buddy_msg( bu->ic, bu->handle, NUDGE_MESSAGE, 0 );
+	
+	return NULL;
+}
+
 void msn_initmodule()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
@@ -381,6 +405,8 @@ void msn_initmodule()
 	ret->handle_cmp = g_strcasecmp;
 	ret->buddy_data_add = msn_buddy_data_add;
 	ret->buddy_data_free = msn_buddy_data_free;
+	ret->buddy_action_list = msn_buddy_action_list;
+	ret->buddy_action = msn_buddy_action;
 	
 	//ret->transfer_request = msn_ftp_transfer_request;
 

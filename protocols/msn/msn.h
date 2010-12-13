@@ -29,6 +29,7 @@
 /* Some hackish magicstrings to make special-purpose messages/switchboards.
  */
 #define TYPING_NOTIFICATION_MESSAGE "\r\r\rBEWARE, ME R TYPINK MESSAGE!!!!\r\r\r"
+#define NUDGE_MESSAGE "\r\r\rSHAKE THAT THING\r\r\r"
 #define GROUPCHAT_SWITCHBOARD_MESSAGE "\r\r\rME WANT TALK TO MANY PEOPLE\r\r\r"
 #define SB_KEEPALIVE_MESSAGE "\r\r\rDONT HANG UP ON ME!\r\r\r"
 
@@ -69,9 +70,15 @@
                            "TypingUser: %s\r\n" \
                            "\r\n\r\n"
 
-#define SB_KEEPALIVE_HEADERS "MIME-Version: 1.0\r\n" \
-                             "Content-Type: text/x-ping\r\n" \
-                             "\r\n\r\n"
+#define MSN_NUDGE_HEADERS "MIME-Version: 1.0\r\n" \
+			  "Content-Type: text/x-msnmsgr-datacast\r\n" \
+			  "\r\n" \
+			  "ID: 1\r\n" \
+			  "\r\n"
+
+#define MSN_SB_KEEPALIVE_HEADERS "MIME-Version: 1.0\r\n" \
+                                 "Content-Type: text/x-ping\r\n" \
+                                 "\r\n\r\n"
 
 #define PROFILE_URL "http://members.msn.com/"
 
