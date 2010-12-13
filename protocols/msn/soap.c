@@ -561,6 +561,10 @@ int msn_soap_oim_send( struct im_connection *ic, const char *to, const char *msg
 {
 	struct msn_soap_oim_send_data *data;
 	
+	/* Don't send any of the special messages since they creep people out. :-) */
+	if( strncmp( msg, "\r\r", 2 ) == 0 )
+		return 0;
+	
 	data = g_new0( struct msn_soap_oim_send_data, 1 );
 	data->to = g_strdup( to );
 	data->msg = tobase64( msg );
