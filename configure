@@ -365,7 +365,8 @@ detect_resolv_static()
 if [ "$ssl" = "auto" ]; then
 	detect_gnutls
 	if [ "$ret" = "0" ]; then
-		detect_nss
+		# Disable NSS for now as it's known to not work very well ATM.
+		#detect_nss
 	fi
 elif [ "$ssl" = "gnutls" ]; then
 	detect_gnutls
