@@ -46,9 +46,16 @@ int jabber_write( struct im_connection *ic, char *buf, int len )
 	
 	if( jd->flags & JFLAG_XMLCONSOLE )
 	{
-		char *msg;
+		char *msg, *s;
 		
 		msg = g_strdup_printf( "TX: %s", buf );
+		/* Don't include auth info in XML logs. */
+		if( strncmp( msg, "TX: <auth ", 10 ) == 0 && ( s = strchr( msg, '>' ) ) )
+		{
+			s++;
+			while( *s && *s != '<' )
+				*(s++) = '*';
+		}
 		imcb_buddy_msg( ic, JABBER_XMLCONSOLE_HANDLE, msg, 0, 0 );
 		g_free( msg );
 	}
