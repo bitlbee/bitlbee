@@ -25,7 +25,6 @@ import os
 import signal
 import locale
 import time
-import gobject
 import socket
 import getopt
 import Skype4Py
@@ -33,6 +32,7 @@ import hashlib
 from ConfigParser import ConfigParser, NoOptionError
 from traceback import print_exception
 import ssl
+import select
 
 __version__ = "0.1.1"
 
@@ -41,7 +41,6 @@ def eh(type, value, tb):
 
 	if type != KeyboardInterrupt:
 		print_exception(type, value, tb)
-	gobject.MainLoop().quit()
 	options.conn.close()
 	# shut down client if it's running
 	try:
@@ -93,6 +92,7 @@ def send(sock, txt):
 		options.conn.close()
 
 def bitlbee_idle_handler(skype):
+	global options
 	if options.conn:
 		try:
 			e = "PING"
@@ -102,15 +102,16 @@ def bitlbee_idle_handler(skype):
 			options.conn.close()
 	return True
 
-def server(host, port):
+def server(host, port, skype):
 	global options
 	sock = socket.socket()
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((host, port))
 	sock.listen(1)
-	gobject.io_add_watch(sock, gobject.IO_IN, listener)
+	dprint("Waiting for connection...")
+	listener(sock, skype)
 
-def listener(sock, *args):
+def listener(sock, skype):
 	global options
 	rawsock, addr = sock.accept()
 	options.conn = ssl.wrap_socket(rawsock,
@@ -139,7 +140,7 @@ def listener(sock, *args):
 	if ret == 2:
 		dprint("Username and password OK.")
 		options.conn.send("PASSWORD OK\n")
-		gobject.io_add_watch(options.conn, gobject.IO_IN, input_handler)
+		serverloop(options, skype)
 		return True
 	else:
 		dprint("Username and/or password WRONG.")
@@ -190,6 +191,7 @@ class SkypeApi:
 			dprint('<< ' + e)
 			if options.conn:
 				try:
+					# I called the send function really_send
 					send(options.conn, e + "\n")
 				except Exception, s:
 					dprint("Warning, sending '%s' failed (%s)." % (e, s))
@@ -251,6 +253,28 @@ Options:
 	-p	--port		set the tcp port (default: %s)
 	-v	--version	display version information""" % (self.cfgpath, self.host, self.port)
 		sys.exit(ret)
+
+def serverloop(options, skype):
+	timeout = 1; # in seconds
+	skype_ping_period = 5
+	bitlbee_ping_period = 30
+	skype_ping_start_time = time.time()
+	bitlbee_ping_start_time = time.time()
+	while 1:
+		ready_to_read, ready_to_write, in_error = \
+			select.select([options.conn], [], [], timeout)
+		now = time.time()
+		if len(ready_to_read) == 1:
+			input_handler(ready_to_read.pop(), options)
+			# don't ping bitlbee/skype if they already received data
+			bitlbee_ping_start_time = now
+			skype_ping_start_time = now
+		if now - skype_ping_period > skype_ping_start_time:
+			skype_idle_handler(skype)
+			skype_ping_start_time = now
+		if now - bitlbee_ping_period > bitlbee_ping_start_time:
+			bitlbee_idle_handler(skype)
+			bitlbee_ping_start_time = now
 
 if __name__=='__main__':
 	options = Options()
@@ -316,11 +340,8 @@ if __name__=='__main__':
 			sys.exit(0)
 	else:
 		dprint('skyped is started on port %s' % options.port)
-	server(options.host, options.port)
 	try:
 		skype = SkypeApi()
 	except Skype4Py.SkypeAPIError, s:
 		sys.exit("%s. Are you sure you have started Skype?" % s)
-	gobject.timeout_add(2000, skype_idle_handler, skype)
-	gobject.timeout_add(60000, bitlbee_idle_handler, skype)
-	gobject.MainLoop().run()
+	server(options.host, options.port, skype)
