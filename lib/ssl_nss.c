@@ -209,7 +209,13 @@ int ssl_write( void *conn, const char *buf, int len )
 /* See ssl_openssl.c for an explanation. */
 int ssl_pending( void *conn )
 {
-	return 0;
+	struct scd *c = (struct scd *) conn;
+
+	if( c == NULL ) {
+		return 0;
+	}
+
+	return ( c->established && SSL_DataPending( c->prfd ) > 0 );
 }
 
 void ssl_disconnect( void *conn_ )
