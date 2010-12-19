@@ -1,3 +1,10 @@
+bitlbee (3.0.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * Includes changes from non-maintainer, see below. (Closes #603681)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 04 Dec 2010 11:50:53 +0000
+
 bitlbee (3.0-2) UNRELEASED; urgency=low
 
   * debian/bitlbee-common.postinst: Replace 'type' with 'which' to avoid
