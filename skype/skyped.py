@@ -72,6 +72,7 @@ def skype_idle_handler(skype):
 	try:
 		c = skype.skype.Command("PING", Block=True)
 		skype.skype.SendCommand(c)
+		dprint("... skype pinged")
 	except Skype4Py.SkypeAPIError, s:
 		dprint("Warning, pinging Skype failed (%s)." % (s))
 	return True
@@ -97,6 +98,7 @@ def bitlbee_idle_handler(skype):
 		try:
 			e = "PING"
 			send(options.conn, "%s\n" % e)
+			dprint("... pinged Bitlbee")
 		except Exception, s:
 			dprint("Warning, sending '%s' failed (%s)." % (e, s))
 			options.conn.close()
