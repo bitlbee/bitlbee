@@ -41,7 +41,7 @@ def eh(type, value, tb):
 
 	if type != KeyboardInterrupt:
 		print_exception(type, value, tb)
-	options.conn.close()
+	if options.conn: options.conn.close()
 	# shut down client if it's running
 	try:
 		skype.skype.Client.Shutdown()
@@ -51,18 +51,21 @@ def eh(type, value, tb):
 
 sys.excepthook = eh
 
-def input_handler(fd, io_condition):
+def input_handler(fd):
 	global options
+	global skype
 	if options.buf:
 		for i in options.buf:
 			skype.send(i.strip())
 		options.buf = None
+		return True
 	else:
 		try:
 			input = fd.recv(1024)
 		except Exception, s:
 			dprint("Warning, receiving 1024 bytes failed (%s)." % s)
 			fd.close()
+			options.conn = False
 			return False
 		for i in input.split("\n"):
 			skype.send(i.strip())
@@ -78,7 +81,6 @@ def skype_idle_handler(skype):
 	return True
 
 def send(sock, txt):
-	from time import sleep
 	count = 1
 	done = False
 	while (not done) and (count < 10):
@@ -88,21 +90,26 @@ def send(sock, txt):
 		except Exception, s:
 			count += 1
 			dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, count))
-			sleep(1)
+			time.sleep(1)
 	if not done:
-		options.conn.close()
+		if options.conn: options.conn.close()
+		options.conn = False
+	return done
 
 def bitlbee_idle_handler(skype):
 	global options
+	done = False
 	if options.conn:
 		try:
 			e = "PING"
-			send(options.conn, "%s\n" % e)
+			done = send(options.conn, "%s\n" % e)
 			dprint("... pinged Bitlbee")
 		except Exception, s:
 			dprint("Warning, sending '%s' failed (%s)." % (e, s))
-			options.conn.close()
-	return True
+			if options.conn: options.conn.close()
+			options.conn = False
+			done = False
+	return done
 
 def server(host, port, skype):
 	global options
@@ -138,6 +145,7 @@ def listener(sock, skype):
 	except Exception, s:
 		dprint("Warning, receiving 1024 bytes failed (%s)." % s)
 		options.conn.close()
+		options.conn = False
 		return False
 	if ret == 2:
 		dprint("Username and password OK.")
@@ -147,6 +155,8 @@ def listener(sock, skype):
 	else:
 		dprint("Username and/or password WRONG.")
 		options.conn.send("PASSWORD KO\n")
+		options.conn.close()
+		options.conn = False
 		return False
 
 def dprint(msg):
@@ -190,17 +200,21 @@ class SkypeApi:
 			# messages.. so here it is: always use utf-8 then
 			# everybody will be happy
 			e = i.encode('UTF-8')
-			dprint('<< ' + e)
 			if options.conn:
+				dprint('<< ' + e)
 				try:
 					# I called the send function really_send
 					send(options.conn, e + "\n")
 				except Exception, s:
 					dprint("Warning, sending '%s' failed (%s)." % (e, s))
-					options.conn.close()
+					if options.conn: options.conn.close()
+					options.conn = False
+			else:
+				dprint('---' + e)
 
 	def send(self, msg_text):
 		if not len(msg_text) or msg_text == "PONG":
+			if msg_text == "PONG": options.last_bitlbee_pong = time.time()
 			return
 		try:
 			encoding = locale.getdefaultlocale()[1]
@@ -259,24 +273,42 @@ Options:
 def serverloop(options, skype):
 	timeout = 1; # in seconds
 	skype_ping_period = 5
-	bitlbee_ping_period = 30
-	skype_ping_start_time = time.time()
-	bitlbee_ping_start_time = time.time()
-	while 1:
+	bitlbee_ping_period = 10
+	bitlbee_pong_timeout = 30
+	now = time.time()
+	skype_ping_start_time = now
+	bitlbee_ping_start_time = now
+	options.last_bitlbee_pong = now
+	in_error = []
+	handler_ok = True
+	while (len(in_error) == 0) and handler_ok and options.conn:
 		ready_to_read, ready_to_write, in_error = \
 			select.select([options.conn], [], [], timeout)
 		now = time.time()
+		handler_ok = True
 		if len(ready_to_read) == 1:
-			input_handler(ready_to_read.pop(), options)
+			handler_ok = input_handler(ready_to_read.pop())
 			# don't ping bitlbee/skype if they already received data
 			bitlbee_ping_start_time = now
 			skype_ping_start_time = now
-		if now - skype_ping_period > skype_ping_start_time:
-			skype_idle_handler(skype)
+		if (now - skype_ping_period > skype_ping_start_time) and handler_ok:
+			handler_ok = skype_idle_handler(skype)
 			skype_ping_start_time = now
 		if now - bitlbee_ping_period > bitlbee_ping_start_time:
-			bitlbee_idle_handler(skype)
+			handler_ok = bitlbee_idle_handler(skype)
 			bitlbee_ping_start_time = now
+			if options.last_bitlbee_pong:
+				if (now - options.last_bitlbee_pong) > bitlbee_pong_timeout:
+					dprint("Bitlbee pong timeout")
+					# TODO is following line necessary? Should there be a options.conn.unwrap() somewhere?
+					# options.conn.shutdown()
+					if options.conn: options.conn.close()
+					options.conn = False
+				else:
+					dprint("%f seconds since last PONG" % (now - options.last_bitlbee_pong))
+			else:
+				options.last_bitlbee_pong = now
+	dprint("Serverloop done")
 
 if __name__=='__main__':
 	options = Options()
@@ -346,4 +378,6 @@ if __name__=='__main__':
 		skype = SkypeApi()
 	except Skype4Py.SkypeAPIError, s:
 		sys.exit("%s. Are you sure you have started Skype?" % s)
-	server(options.host, options.port, skype)
+	while 1:
+		options.conn = False
+		server(options.host, options.port, skype)
