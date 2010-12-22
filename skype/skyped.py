@@ -283,14 +283,17 @@ def serverloop(options, skype):
 	handler_ok = True
 	while (len(in_error) == 0) and handler_ok and options.conn:
 		ready_to_read, ready_to_write, in_error = \
-			select.select([options.conn], [], [], timeout)
+			select.select([options.conn], [], [options.conn], \
+				timeout)
 		now = time.time()
-		handler_ok = True
-		if len(ready_to_read) == 1:
+		handler_ok = len(in_error) == 0
+		if (len(ready_to_read) == 1) and handler_ok:
 			handler_ok = input_handler(ready_to_read.pop())
 			# don't ping bitlbee/skype if they already received data
+			now = time.time() # allow for the input_handler to take some time
 			bitlbee_ping_start_time = now
 			skype_ping_start_time = now
+			options.last_bitlbee_pong = now
 		if (now - skype_ping_period > skype_ping_start_time) and handler_ok:
 			handler_ok = skype_idle_handler(skype)
 			skype_ping_start_time = now
