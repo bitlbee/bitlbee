@@ -33,6 +33,7 @@ from ConfigParser import ConfigParser, NoOptionError
 from traceback import print_exception
 import ssl
 import select
+import threading
 
 __version__ = "0.1.1"
 
@@ -51,6 +52,22 @@ def eh(type, value, tb):
 
 sys.excepthook = eh
 
+def wait_for_lock(lock, timeout_to_print, timeout, msg):
+	start = time.time()
+	locked = lock.acquire(0)
+	while not(locked):
+		time.sleep(0.5)
+		if timeout_to_print and (time.time() - timeout_to_print > start):
+			dprint("%s: Waited %f seconds" % \
+					(msg, time.time() - start))
+			timeout_to_print = False
+		if timeout and (time.time() - timeout > start):
+			dprint("%s: Waited %f seconds, giving up" % \
+					(msg, time.time() - start))
+			return False
+		locked = lock.acquire(0)
+	return True
+
 def input_handler(fd):
 	global options
 	global skype
@@ -60,15 +77,18 @@ def input_handler(fd):
 		options.buf = None
 		return True
 	else:
-		try:
-			input = fd.recv(1024)
-		except Exception, s:
-			dprint("Warning, receiving 1024 bytes failed (%s)." % s)
-			fd.close()
-			options.conn = False
-			return False
-		for i in input.split("\n"):
-			skype.send(i.strip())
+		if wait_for_lock(options.lock, 3, 10, "input_handler"):
+			try:
+					input = fd.recv(1024)
+					options.lock.release()
+			except Exception, s:
+				dprint("Warning, receiving 1024 bytes failed (%s)." % s)
+				fd.close()
+				options.conn = False
+				options.lock.release()
+				return False
+			for i in input.split("\n"):
+				skype.send(i.strip())
 		return True
 
 def skype_idle_handler(skype):
@@ -84,13 +104,16 @@ def send(sock, txt):
 	count = 1
 	done = False
 	while (not done) and (count < 10):
-		try:
-			sock.send(txt)
-			done = True
-		except Exception, s:
-			count += 1
-			dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, count))
-			time.sleep(1)
+		if wait_for_lock(options.lock, 3, 10, "socket send"):
+			try:
+				sock.send(txt)
+				options.lock.release()
+				done = True
+			except Exception, s:
+				options.lock.release()
+				count += 1
+				dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, count))
+				time.sleep(1)
 	if not done:
 		if options.conn: options.conn.close()
 		options.conn = False
@@ -122,6 +145,7 @@ def server(host, port, skype):
 
 def listener(sock, skype):
 	global options
+	if not(wait_for_lock(options.lock, 3, 10, "listener")): return False
 	rawsock, addr = sock.accept()
 	options.conn = ssl.wrap_socket(rawsock,
 		server_side=True,
@@ -132,6 +156,7 @@ def listener(sock, skype):
 		try:
 			options.conn.handshake()
 		except Exception:
+			options.lock.release()
 			dprint("Warning, handshake failed, closing connection.")
 			return False
 	ret = 0
@@ -146,10 +171,12 @@ def listener(sock, skype):
 		dprint("Warning, receiving 1024 bytes failed (%s)." % s)
 		options.conn.close()
 		options.conn = False
+		options.lock.release()
 		return False
 	if ret == 2:
 		dprint("Username and password OK.")
 		options.conn.send("PASSWORD OK\n")
+		options.lock.release()
 		serverloop(options, skype)
 		return True
 	else:
@@ -157,6 +184,7 @@ def listener(sock, skype):
 		options.conn.send("PASSWORD KO\n")
 		options.conn.close()
 		options.conn = False
+		options.lock.release()
 		return False
 
 def dprint(msg):
@@ -383,4 +411,5 @@ if __name__=='__main__':
 		sys.exit("%s. Are you sure you have started Skype?" % s)
 	while 1:
 		options.conn = False
+		options.lock = threading.Lock()
 		server(options.host, options.port, skype)
