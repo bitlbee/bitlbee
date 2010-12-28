@@ -77,6 +77,7 @@ def input_handler(fd):
 		options.buf = None
 		return True
 	else:
+		close_socket = False
 		if wait_for_lock(options.lock, 3, 10, "input_handler"):
 			try:
 					input = fd.recv(1024)
@@ -88,8 +89,10 @@ def input_handler(fd):
 				options.lock.release()
 				return False
 			for i in input.split("\n"):
+				if i.strip() == "SET USERSTATUS OFFLINE":
+					close_socket = True
 				skype.send(i.strip())
-		return True
+		return not(close_socket)
 
 def skype_idle_handler(skype):
 	try:
