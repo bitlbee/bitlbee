@@ -101,12 +101,13 @@ def skype_idle_handler(skype):
 	return True
 
 def send(sock, txt):
+	global options
 	count = 1
 	done = False
-	while (not done) and (count < 10):
+	while (not done) and (count < 10) and options.conn:
 		if wait_for_lock(options.lock, 3, 10, "socket send"):
 			try:
-				sock.send(txt)
+				if options.conn: sock.send(txt)
 				options.lock.release()
 				done = True
 			except Exception, s:
