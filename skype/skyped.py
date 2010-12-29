@@ -42,7 +42,8 @@ def eh(type, value, tb):
 
 	if type != KeyboardInterrupt:
 		print_exception(type, value, tb)
-	if options.conn: options.conn.close()
+	if options.conn:
+		options.conn.close()
 	# shut down client if it's running
 	try:
 		skype.skype.Client.Shutdown()
@@ -98,7 +99,6 @@ def skype_idle_handler(skype):
 	try:
 		c = skype.skype.Command("PING", Block=True)
 		skype.skype.SendCommand(c)
-		dprint("... skype pinged")
 	except Skype4Py.SkypeAPIError, s:
 		dprint("Warning, pinging Skype failed (%s)." % (s))
 	return True
@@ -119,7 +119,8 @@ def send(sock, txt):
 				dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, count))
 				time.sleep(1)
 	if not done:
-		if options.conn: options.conn.close()
+		if options.conn:
+			options.conn.close()
 		options.conn = False
 	return done
 
@@ -130,7 +131,6 @@ def bitlbee_idle_handler(skype):
 		try:
 			e = "PING"
 			done = send(options.conn, "%s\n" % e)
-			dprint("... pinged Bitlbee")
 		except Exception, s:
 			dprint("Warning, sending '%s' failed (%s)." % (e, s))
 			if options.conn: options.conn.close()
@@ -242,11 +242,12 @@ class SkypeApi:
 					if options.conn: options.conn.close()
 					options.conn = False
 			else:
-				dprint('---' + e)
+				dprint('-- ' + e)
 
 	def send(self, msg_text):
 		if not len(msg_text) or msg_text == "PONG":
-			if msg_text == "PONG": options.last_bitlbee_pong = time.time()
+			if msg_text == "PONG":
+				options.last_bitlbee_pong = time.time()
 			return
 		try:
 			encoding = locale.getdefaultlocale()[1]
@@ -337,13 +338,11 @@ def serverloop(options, skype):
 					dprint("Bitlbee pong timeout")
 					# TODO is following line necessary? Should there be a options.conn.unwrap() somewhere?
 					# options.conn.shutdown()
-					if options.conn: options.conn.close()
+					if options.conn:
+						options.conn.close()
 					options.conn = False
-				else:
-					dprint("%f seconds since last PONG" % (now - options.last_bitlbee_pong))
 			else:
 				options.last_bitlbee_pong = now
-	dprint("Serverloop done")
 
 if __name__=='__main__':
 	options = Options()
