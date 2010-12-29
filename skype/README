@@ -38,8 +38,6 @@ not..)
   The latest version I've tested is 1.0.32.0.
 
 * Python >= 2.5. Skype4Py does not work with 2.4.
-* PyGObject >= 2.8.0. Older versions are part of PyGTK. (And you don't want to
-  install GTK for nothing, right?)
 
 `bitlbee-skype` has been tested under Linux and Mac OS X. The plugin part has
 been tested under NetBSD and FreeBSD as well. Skype and Skype4py is available
@@ -86,7 +84,6 @@ just append install-dev after install-etc.
 
 ----
 # port -v install bitlbee
-# port -v install py25-gobject
 ----
 
 and you have to install `bitlbee-skype` and `skype4py` from
