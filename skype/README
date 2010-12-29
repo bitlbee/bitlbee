@@ -39,9 +39,9 @@ not..)
 
 * Python >= 2.5. Skype4Py does not work with 2.4.
 
-`bitlbee-skype` has been tested under Linux and Mac OS X. The plugin part has
-been tested under NetBSD and FreeBSD as well. Skype and Skype4py is available
-under Windows, too, so it probably works, but this has not been tested.
+* OS: `bitlbee-skype` has been tested under Linux and Mac OS X. The plugin part
+  has been tested under Free/Open/NetBSD as well. The daemon part has been
+  tested on Windows, too.
 
 == How to set it up
 
