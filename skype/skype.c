@@ -858,6 +858,20 @@ static void skype_parse_chats(struct im_connection *ic, char *line)
 	g_strfreev(chats);
 }
 
+static void skype_parse_groups(struct im_connection *ic, char *line)
+{
+	char **i;
+	char **groups = g_strsplit(line + 7, ", ", 0);
+
+	i = groups;
+	while (*i) {
+		skype_printf(ic, "GET GROUP %s DISPLAYNAME\n", *i);
+		skype_printf(ic, "GET GROUP %s USERS\n", *i);
+		i++;
+	}
+	g_strfreev(groups);
+}
+
 typedef void (*skype_parser)(struct im_connection *ic, char *line);
 
 static gboolean skype_read_callback(gpointer data, gint fd,
@@ -882,6 +896,7 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 		{ "PROFILE PSTN_BALANCE ", skype_parse_profile },
 		{ "PING", skype_parse_ping },
 		{ "CHATS ", skype_parse_chats },
+		{ "GROUPS ", skype_parse_groups },
 	};
 
 	/* Unused parameters */
@@ -938,8 +953,10 @@ gboolean skype_start_stream(struct im_connection *ic)
 	skype_printf(ic, "USERNAME %s\n", ic->acc->user);
 	skype_printf(ic, "PASSWORD %s\n", ic->acc->pass);
 
-	/* This will download all buddies. */
+	/* This will download all buddies and groups. */
 	st = skype_printf(ic, "SEARCH FRIENDS\n");
+	skype_printf(ic, "SEARCH GROUPS CUSTOM\n");
+
 	skype_printf(ic, "SET USERSTATUS ONLINE\n");
 
 	/* Auto join to bookmarked chats if requested.*/
