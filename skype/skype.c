@@ -276,6 +276,24 @@ static char *skype_call_strerror(int err)
 	}
 }
 
+static char *skype_group_by_username(struct im_connection *ic, char *username)
+{
+	struct skype_data *sd = ic->proto_data;
+	int i, j;
+
+	/* NEEDSWORK: we just search for the first group of the user, multiple
+	 * groups / user is not yet supported by BitlBee. */
+
+	for (i = 0; i < g_list_length(sd->groups); i++) {
+		struct skype_group *sg = g_list_nth_data(sd->groups, i);
+		for (j = 0; j < g_list_length(sg->users); j++) {
+			if (!strcmp(g_list_nth_data(sg->users, j), username))
+				return sg->name;
+		}
+	}
+	return NULL;
+}
+
 static void skype_parse_users(struct im_connection *ic, char *line)
 {
 	char **i, **nicks;
@@ -307,7 +325,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 				&& !strcmp(user, "echo123"))
 				return;
 		ptr = g_strdup_printf("%s@skype.com", user);
-		imcb_add_buddy(ic, ptr, NULL);
+		imcb_add_buddy(ic, ptr, skype_group_by_username(ic, user));
 		if (strcmp(status, "OFFLINE") && (strcmp(status, "SKYPEOUT") ||
 			!set_getbool(&ic->acc->set, "skypeout_offline")))
 			flags |= OPT_LOGGED_IN;
@@ -323,7 +341,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		char *st = ptr + 12;
 		if (!strcmp(st, "3")) {
 			char *buf = g_strdup_printf("%s@skype.com", user);
-			imcb_add_buddy(ic, buf, NULL);
+			imcb_add_buddy(ic, buf, skype_group_by_username(ic, user));
 			g_free(buf);
 		}
 	} else if (!strncmp(ptr, "MOOD_TEXT ", 10)) {
@@ -770,6 +788,18 @@ static void skype_group_free(struct skype_group* sg, gboolean usersonly) {
 	g_free(sg);
 }
 
+/* Update the group of each user in this group */
+static void skype_group_users(struct im_connection *ic, struct skype_group *sg) {
+	int i;
+
+	for (i = 0; i < g_list_length(sg->users); i++) {
+		char *user = g_list_nth_data(sg->users, i);
+		char *buf = g_strdup_printf("%s@skype.com", user);
+		imcb_add_buddy(ic, buf, sg->name);
+		g_free(buf);
+	}
+}
+
 static void skype_parse_group(struct im_connection *ic, char *line)
 {
 	struct skype_data *sd = ic->proto_data;
@@ -814,6 +844,7 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 				i++;
 			}
 			g_strfreev(users);
+			skype_group_users(ic, sg);
 		} else
 			log_message(LOGLVL_ERROR, "No skype group with id %s. That's probably a bug.", id);
 	}
@@ -1039,8 +1070,8 @@ gboolean skype_start_stream(struct im_connection *ic)
 	skype_printf(ic, "PASSWORD %s\n", ic->acc->pass);
 
 	/* This will download all buddies and groups. */
-	st = skype_printf(ic, "SEARCH FRIENDS\n");
-	skype_printf(ic, "SEARCH GROUPS CUSTOM\n");
+	st = skype_printf(ic, "SEARCH GROUPS CUSTOM\n");
+	skype_printf(ic, "SEARCH FRIENDS\n");
 
 	skype_printf(ic, "SET USERSTATUS ONLINE\n");
 
