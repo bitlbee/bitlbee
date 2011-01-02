@@ -1,7 +1,7 @@
 /*
  *  skype.c - Skype plugin for BitlBee
  *
- *  Copyright (c) 2007, 2008, 2009, 2010 by Miklos Vajna <vmiklos@frugalware.org>
+ *  Copyright (c) 2007, 2008, 2009, 2010, 2011 by Miklos Vajna <vmiklos@frugalware.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -107,6 +107,8 @@ struct skype_data {
 	int failurereason;
 	/* If this is just an update of an already received message. */
 	int is_edit;
+	/* List of struct skype_group* */
+	GList *groups;
 };
 
 struct skype_away_state {
@@ -118,6 +120,12 @@ struct skype_buddy_ask_data {
 	struct im_connection *ic;
 	/* This is also used for call IDs for simplicity */
 	char *handle;
+};
+
+struct skype_group {
+	int id;
+	char *name;
+	GList *users;
 };
 
 /*
@@ -735,6 +743,82 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 	}
 }
 
+static struct skype_group *skype_group_by_id(struct im_connection *ic, int id) {
+	struct skype_data *sd = ic->proto_data;
+	int i;
+
+	for (i = 0; i < g_list_length(sd->groups); i++) {
+		struct skype_group *sg = (struct skype_group *)g_list_nth_data(sd->groups, i);
+
+		if (sg->id == id)
+			return sg;
+	}
+	return NULL;
+}
+
+static void skype_group_free(struct skype_group* sg, gboolean usersonly) {
+	int i;
+	
+	for (i = 0; i < g_list_length(sg->users); i++) {
+		char *user = g_list_nth_data(sg->users, i);
+		g_free(user);
+	}
+	sg->users = NULL;
+	if (usersonly)
+		return;
+	g_free(sg->name);
+	g_free(sg);
+}
+
+static void skype_parse_group(struct im_connection *ic, char *line)
+{
+	struct skype_data *sd = ic->proto_data;
+	char *id = strchr(line, ' ');
+
+	if (!++id)
+		return;
+
+	char *info = strchr(id, ' ');
+
+	if (!info)
+		return;
+	*info = '\0';
+	info++;
+
+	if (!strncmp(info, "DISPLAYNAME ", 12)) {
+		info += 12;
+
+		/* Name given for a group ID: try to update it or insert a new
+		 * one if not found */
+		struct skype_group *sg = skype_group_by_id(ic, atoi(id));
+		if (sg) {
+			g_free(sg->name);
+			sg->name = g_strdup(info);
+		} else {
+			sg = g_new0(struct skype_group, 1);
+			sg->id = atoi(id);
+			sg->name = g_strdup(info);
+			sd->groups = g_list_append(sd->groups, sg);
+		}
+	} else if (!strncmp(info, "USERS ", 6)) {
+		struct skype_group *sg = skype_group_by_id(ic, atoi(id));
+
+		if (sg) {
+			char **i;
+			char **users = g_strsplit(info + 6, ", ", 0);
+
+			skype_group_free(sg, TRUE);
+			i = users;
+			while (*i) {
+				sg->users = g_list_append(sg->users, g_strdup(*i));
+				i++;
+			}
+			g_strfreev(users);
+		} else
+			log_message(LOGLVL_ERROR, "No skype group with id %s. That's probably a bug.", id);
+	}
+}
+
 static void skype_parse_chat(struct im_connection *ic, char *line)
 {
 	struct skype_data *sd = ic->proto_data;
@@ -892,6 +976,7 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 		{ "CALL ", skype_parse_call },
 		{ "FILETRANSFER ", skype_parse_filetransfer },
 		{ "CHAT ", skype_parse_chat },
+		{ "GROUP ", skype_parse_group },
 		{ "PASSWORD ", skype_parse_password },
 		{ "PROFILE PSTN_BALANCE ", skype_parse_profile },
 		{ "PING", skype_parse_ping },
@@ -1006,9 +1091,14 @@ static void skype_login(account_t *acc)
 static void skype_logout(struct im_connection *ic)
 {
 	struct skype_data *sd = ic->proto_data;
+	int i;
 
 	skype_printf(ic, "SET USERSTATUS OFFLINE\n");
 
+	for (i = 0; i < g_list_length(sd->groups); i++) {
+		struct skype_group *sg = (struct skype_group *)g_list_nth_data(sd->groups, i);
+		skype_group_free(sg, FALSE);
+	}
 	g_free(sd->username);
 	g_free(sd->handle);
 	g_free(sd);
