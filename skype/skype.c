@@ -761,7 +761,8 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 	}
 }
 
-static struct skype_group *skype_group_by_id(struct im_connection *ic, int id) {
+static struct skype_group *skype_group_by_id(struct im_connection *ic, int id)
+{
 	struct skype_data *sd = ic->proto_data;
 	int i;
 
@@ -774,9 +775,10 @@ static struct skype_group *skype_group_by_id(struct im_connection *ic, int id) {
 	return NULL;
 }
 
-static void skype_group_free(struct skype_group* sg, gboolean usersonly) {
+static void skype_group_free(struct skype_group *sg, gboolean usersonly)
+{
 	int i;
-	
+
 	for (i = 0; i < g_list_length(sg->users); i++) {
 		char *user = g_list_nth_data(sg->users, i);
 		g_free(user);
@@ -789,7 +791,8 @@ static void skype_group_free(struct skype_group* sg, gboolean usersonly) {
 }
 
 /* Update the group of each user in this group */
-static void skype_group_users(struct im_connection *ic, struct skype_group *sg) {
+static void skype_group_users(struct im_connection *ic, struct skype_group *sg)
+{
 	int i;
 
 	for (i = 0; i < g_list_length(sg->users); i++) {
@@ -846,7 +849,8 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 			g_strfreev(users);
 			skype_group_users(ic, sg);
 		} else
-			log_message(LOGLVL_ERROR, "No skype group with id %s. That's probably a bug.", id);
+			log_message(LOGLVL_ERROR,
+				"No skype group with id %s. That's probably a bug.", id);
 	}
 }
 
@@ -1219,7 +1223,8 @@ static char *skype_set_balance(set_t *set, char *value)
 	return value;
 }
 
-static void skype_call(struct im_connection *ic, char *value) {
+static void skype_call(struct im_connection *ic, char *value)
+{
 	char *nick = g_strdup(value);
 	char *ptr = strchr(nick, '@');
 
@@ -1247,9 +1252,9 @@ static char *skype_set_call(set_t *set, char *value)
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
 
-	if (value) {
+	if (value)
 		skype_call(ic, value);
-	} else
+	else
 		skype_hangup(ic);
 	return value;
 }
@@ -1415,30 +1420,28 @@ static void skype_init(account_t *acc)
 }
 
 #if BITLBEE_VERSION_CODE >= BITLBEE_VER(3, 0, 1)
-GList *skype_buddy_action_list( bee_user_t *bu )
+GList *skype_buddy_action_list(bee_user_t *bu)
 {
-	static GList *ret = NULL;
+	static GList *ret;
 
-	if (ret == NULL)
-	{
+	if (ret == NULL) {
 		static const struct buddy_action ba[3] = {
 			{"CALL", "Initiate a call" },
 			{"HANGUP", "Hang up a call" },
 		};
 
-		ret = g_list_prepend(ret, (void*) ba + 0);
+		ret = g_list_prepend(ret, (void *) ba + 0);
 	}
 
 	return ret;
 }
 
-void *skype_buddy_action( struct bee_user *bu, const char *action, char * const args[], void *data )
+void *skype_buddy_action(struct bee_user *bu, const char *action, char * const args[], void *data)
 {
-	if (!g_strcasecmp(action, "CALL")) {
+	if (!g_strcasecmp(action, "CALL"))
 		skype_call(bu->ic, bu->handle);
-	} else if (!g_strcasecmp(action, "HANGUP")) {
+	else if (!g_strcasecmp(action, "HANGUP"))
 		skype_hangup(bu->ic);
-	}
 
 	return NULL;
 }
