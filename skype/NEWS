@@ -1,5 +1,11 @@
 VERSION         DESCRIPTION
 -----------------------------------------------------------------------------
+0.9.0         - merge support for building the plugin on OpenBSD
+	      - merge support for running skyped without gobject and
+	        pygnutls/pyopenssl - as a side effect this adds Windows support
+	      - add /ctcp call|hangup support (you need BitlBee from bzr to use
+	        this)
+              - add group support (see http://wiki.bitlbee.org/UiFix)
 0.8.4         - now using python2.7 directly in case python would point to python3k
               - merge patch to avoid a crash when failing to connect to skyped
               - merge support for building the plugin on NetBSD

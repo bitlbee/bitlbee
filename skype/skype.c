@@ -1498,7 +1498,7 @@ static void skype_init(account_t *acc)
 			NULL, acc);
 }
 
-#if BITLBEE_VERSION_CODE >= BITLBEE_VER(3, 0, 1)
+#if BITLBEE_VERSION_CODE > BITLBEE_VER(3, 0, 1)
 GList *skype_buddy_action_list(bee_user_t *bu)
 {
 	static GList *ret;
@@ -1554,7 +1554,7 @@ void init_plugin(void)
 	ret->chat_with = skype_chat_with;
 	ret->handle_cmp = g_strcasecmp;
 	ret->chat_topic = skype_chat_topic;
-#if BITLBEE_VERSION_CODE >= BITLBEE_VER(3, 0, 1)
+#if BITLBEE_VERSION_CODE > BITLBEE_VER(3, 0, 1)
 	ret->buddy_action_list = skype_buddy_action_list;
 	ret->buddy_action = skype_buddy_action;
 #endif
