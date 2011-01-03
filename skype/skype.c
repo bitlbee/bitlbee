@@ -1430,6 +1430,9 @@ GList *skype_buddy_action_list(bee_user_t *bu)
 {
 	static GList *ret;
 
+	/* Unused parameter */
+	bu = bu;
+
 	if (ret == NULL) {
 		static const struct buddy_action ba[3] = {
 			{"CALL", "Initiate a call" },
@@ -1444,6 +1447,10 @@ GList *skype_buddy_action_list(bee_user_t *bu)
 
 void *skype_buddy_action(struct bee_user *bu, const char *action, char * const args[], void *data)
 {
+	/* Unused parameters */
+	args = args;
+	data = data;
+
 	if (!g_strcasecmp(action, "CALL"))
 		skype_call(bu->ic, bu->handle);
 	else if (!g_strcasecmp(action, "HANGUP"))
