@@ -851,7 +851,13 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 		} else
 			log_message(LOGLVL_ERROR,
 				"No skype group with id %s. That's probably a bug.", id);
-	}
+	} else if (!strncmp(info, "NROFUSERS ", 10))
+		/* Number of users changed in this group, query its type to see
+		 * if it's a custom one we should care about. */
+		skype_printf(ic, "GET GROUP %s TYPE", id);
+	else if (!strcmp(info, "TYPE CUSTOM_GROUP"))
+		/* This one is interesting, query its users. */
+		skype_printf(ic, "GET GROUP %s USERS", id);
 }
 
 static void skype_parse_chat(struct im_connection *ic, char *line)
