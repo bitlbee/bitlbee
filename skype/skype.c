@@ -886,8 +886,7 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 		} else
 			log_message(LOGLVL_ERROR,
 					"No skype group with id %s. That's probably a bug.", id);
-	}
-	else if (!strcmp(info, "TYPE CUSTOM_GROUP"))
+	} else if (!strcmp(info, "TYPE CUSTOM_GROUP"))
 		/* This one is interesting, query its users. */
 		skype_printf(ic, "GET GROUP %s USERS", id);
 }
