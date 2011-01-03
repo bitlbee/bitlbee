@@ -109,6 +109,9 @@ struct skype_data {
 	int is_edit;
 	/* List of struct skype_group* */
 	GList *groups;
+	/* Pending user which has to be added to the next group which is
+	 * created. */
+	char *pending_user;
 };
 
 struct skype_away_state {
@@ -864,10 +867,26 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 		} else
 			log_message(LOGLVL_ERROR,
 				"No skype group with id %s. That's probably a bug.", id);
-	} else if (!strncmp(info, "NROFUSERS ", 10))
-		/* Number of users changed in this group, query its type to see
-		 * if it's a custom one we should care about. */
-		skype_printf(ic, "GET GROUP %s TYPE", id);
+	} else if (!strncmp(info, "NROFUSERS ", 10)) {
+		if (!sd->pending_user) {
+			/* Number of users changed in this group, query its type to see
+			 * if it's a custom one we should care about. */
+			skype_printf(ic, "GET GROUP %s TYPE", id);
+			return;
+		}
+
+		/* This is a newly created group, we have a single user
+		 * to add. */
+		struct skype_group *sg = skype_group_by_id(ic, atoi(id));
+
+		if (sg) {
+			skype_printf(ic, "ALTER GROUP %d ADDUSER %s", sg->id, sd->pending_user);
+			g_free(sd->pending_user);
+			sd->pending_user = NULL;
+		} else
+			log_message(LOGLVL_ERROR,
+					"No skype group with id %s. That's probably a bug.", id);
+	}
 	else if (!strcmp(info, "TYPE CUSTOM_GROUP"))
 		/* This one is interesting, query its users. */
 		skype_printf(ic, "GET GROUP %s USERS", id);
@@ -1310,6 +1329,7 @@ static char *skype_set_call(set_t *set, char *value)
 
 static void skype_add_buddy(struct im_connection *ic, char *who, char *group)
 {
+	struct skype_data *sd = ic->proto_data;
 	char *nick, *ptr;
 
 	nick = g_strdup(who);
@@ -1325,10 +1345,10 @@ static void skype_add_buddy(struct im_connection *ic, char *who, char *group)
 		struct skype_group *sg = skype_group_by_name(ic, group);
 
 		if (!sg) {
-			// TODO
 			/* No such group, we need to create it, then have to
 			 * add the user once it's created. */
-			//skype_printf(ic, "CREATE GROUP %s", group);
+			skype_printf(ic, "CREATE GROUP %s", group);
+			sd->pending_user = g_strdup(nick);
 		} else {
 			skype_printf(ic, "ALTER GROUP %d ADDUSER %s", sg->id, nick);
 		}
