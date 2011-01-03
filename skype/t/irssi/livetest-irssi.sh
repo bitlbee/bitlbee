@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ISCRIPT=$1
 OPT=$2
 

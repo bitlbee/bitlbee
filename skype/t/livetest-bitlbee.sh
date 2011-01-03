@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 BITLBEE=$1
 typeset -ix PORT=`echo $2 | egrep '^[0-9]{1,5}$'`
 SCRIPT=$3
