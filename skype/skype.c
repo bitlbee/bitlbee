@@ -294,6 +294,19 @@ static char *skype_group_by_username(struct im_connection *ic, char *username)
 	return NULL;
 }
 
+static struct skype_group *skype_group_by_name(struct im_connection *ic, char *name)
+{
+	struct skype_data *sd = ic->proto_data;
+	int i;
+
+	for (i = 0; i < g_list_length(sd->groups); i++) {
+		struct skype_group *sg = g_list_nth_data(sd->groups, i);
+		if (!strcmp(sg->name, name))
+			return sg;
+	}
+	return NULL;
+}
+
 static void skype_parse_users(struct im_connection *ic, char *line)
 {
 	char **i, **nicks;
@@ -997,6 +1010,35 @@ static void skype_parse_groups(struct im_connection *ic, char *line)
 	g_strfreev(groups);
 }
 
+static void skype_parse_alter_group(struct im_connection *ic, char *line)
+{
+	char *id = line + strlen("ALTER GROUP");
+
+	if (!++id)
+		return;
+
+	char *info = strchr(id, ' ');
+
+	if (!info)
+		return;
+	*info = '\0';
+	info++;
+
+	if (!strncmp(info, "ADDUSER ", 8)) {
+		struct skype_group *sg = skype_group_by_id(ic, atoi(id));
+
+		info += 8;
+		if (sg) {
+			char *buf = g_strdup_printf("%s@skype.com", info);
+			sg->users = g_list_append(sg->users, g_strdup(info));
+			imcb_add_buddy(ic, buf, sg->name);
+			g_free(buf);
+		} else
+			log_message(LOGLVL_ERROR,
+				"No skype group with id %s. That's probably a bug.", id);
+	}
+}
+
 typedef void (*skype_parser)(struct im_connection *ic, char *line);
 
 static gboolean skype_read_callback(gpointer data, gint fd,
@@ -1023,6 +1065,7 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 		{ "PING", skype_parse_ping },
 		{ "CHATS ", skype_parse_chats },
 		{ "GROUPS ", skype_parse_groups },
+		{ "ALTER GROUP ", skype_parse_alter_group },
 	};
 
 	/* Unused parameters */
@@ -1269,16 +1312,27 @@ static void skype_add_buddy(struct im_connection *ic, char *who, char *group)
 {
 	char *nick, *ptr;
 
-	/* Unused parameter */
-	group = group;
-
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if (ptr)
 		*ptr = '\0';
-	skype_printf(ic, "SET USER %s BUDDYSTATUS 2 Please authorize me\n",
-		nick);
-	g_free(nick);
+
+	if (!group) {
+		skype_printf(ic, "SET USER %s BUDDYSTATUS 2 Please authorize me\n",
+				nick);
+		g_free(nick);
+	} else {
+		struct skype_group *sg = skype_group_by_name(ic, group);
+
+		if (!sg) {
+			// TODO
+			/* No such group, we need to create it, then have to
+			 * add the user once it's created. */
+			//skype_printf(ic, "CREATE GROUP %s", group);
+		} else {
+			skype_printf(ic, "ALTER GROUP %d ADDUSER %s", sg->id, nick);
+		}
+	}
 }
 
 static void skype_remove_buddy(struct im_connection *ic, char *who, char *group)
