@@ -350,6 +350,12 @@ $ skyped -n -d
 
   * `account skype set show_moods true`
 
+- Group support:
+
+  * Skype groups are told to BitlBee
+  * The usual `/invite` in a group channel adds the buddy to the group in skype
+    as well (and if necessary, it creates a new group in Skype)
+
 == What needs to be done (aka. TODO)
 
 - Notice if foo invites bar. Currently you can see only that bar joined.
