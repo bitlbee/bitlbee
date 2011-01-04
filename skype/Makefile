@@ -76,7 +76,7 @@ release:
 	gpg --comment "See http://vmiklos.hu/gpg/ for info" \
 		-ba bitlbee-skype-$(VERSION).tar.gz
 
-doc: HEADER.html Changelog
+doc: HEADER.html Changelog AUTHORS
 
 HEADER.html: README Makefile
 	asciidoc -a toc -a numbered -a sectids -o HEADER.html -a icons -a data-uri --attribute iconsdir=./images/icons README
@@ -85,6 +85,9 @@ HEADER.html: README Makefile
 
 Changelog: .git/refs/heads/master
 	git log --no-merges |git name-rev --tags --stdin >Changelog
+
+AUTHORS: .git/refs/heads/master
+	git shortlog -s -n |sed 's/.*\t//'> AUTHORS
 
 %.1: %.txt asciidoc.conf
 	a2x --asciidoc-opts="-f asciidoc.conf" \

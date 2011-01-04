@@ -398,7 +398,6 @@ The Skype API documentation is
 http://developer.skype.com/resources/public_api_ref.zip[here] if you're
 interested.
 
-
 == Testimonials
 
 ----
@@ -472,7 +471,7 @@ michael
 
 to the following people:
 
-* Wilmer van der Gaast, for answering questions about the BitlBee plugin interface
+* people in link:AUTHORS[AUTHORS] for their contributions
 
 * Arkadiusz Wahlig, author of skype4py, for making suggestions to skyped
 
@@ -481,8 +480,6 @@ to the following people:
 
 * Cristobal Palmer (tarheelcoxn), for helping to testing the plugin in a
   timezone different to mine
-
-* Risko Gergely, for his SkypeOut ideas
 
 * people on `#bitlbee` for feedback
 
