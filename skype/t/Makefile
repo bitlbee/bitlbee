@@ -14,7 +14,13 @@ default: $(tests)
 
 $(tests): % : %.test
 	@echo "--- Running test $@ ---"; \
-		if ! ./livetest-bitlbee.sh $(BITLBEE) $(PORT) irssi/livetest-irssi.sh $< >$@.log; then \
+		if [ -r "$(BITLBEE)" -a -x "$(BITLBEE)" ]; then \
+			bitlbee_binary="$(BITLBEE)"; \
+		else \
+			bitlbee_basename=`basename $(BITLBEE)`; \
+			bitlbee_binary=`which $$bitlbee_basename`; \
+		fi; \
+		if ! ./livetest-bitlbee.sh "$$bitlbee_binary" $(PORT) irssi/livetest-irssi.sh $< >$@.log; then \
 			echo Test failed, log: ;\
 			cat $@.log;\
 			exit 1;\

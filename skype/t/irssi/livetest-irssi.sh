@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ISCRIPT=$1
 OPT=$2
 
@@ -78,7 +78,7 @@ screen -D -m irssi --config=dotirssi/config --home=dotirssi/ &
 # output logs
 
 submitlogs() {
-	sed -i -e "s/$TESTLOGIN/---TESTLOGIN---/;s/$TESTPASSWORD/---TESTPASSWORD---/" dotirssi/logs/*.log
+	perl -p -i -e "s/$TESTLOGIN/---TESTLOGIN---/;s/$TESTPASSWORD/---TESTPASSWORD---/" dotirssi/logs/*.log
 
 	if [ "$OPT" == "tgz" ]; then
 		tar czf "`dirname $0`"/"`basename "$ISCRIPT"`".logs.tgz dotirssi/logs/*.log
