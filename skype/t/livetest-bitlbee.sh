@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+start_skyped()
+{
+	python ../skyped.py "$@" > skypedtest.pid
+	while true
+	do
+		[ -e skypedtest.pid ] || break
+		pid=$(sed 's/.*: //' skypedtest.pid)
+		if [ -e /proc/$pid ]; then
+			sleep 5
+		else
+			start_skyped "$@"
+			break
+		fi
+	done
+}
+
 BITLBEE=$1
 typeset -ix PORT=`echo $2 | egrep '^[0-9]{1,5}$'`
 SCRIPT=$3
@@ -45,7 +62,7 @@ if [ -z "$TUNNELED_MODE" ]; then
 	echo "port = 2727" >> skyped.conf
 
 	# Run skyped
-	python ../skyped.py -c skyped.conf -l skypedtest.log > skypedtest.pid
+	start_skyped -c skyped.conf -l skypedtest.log &
 	sleep 2
 fi
 
@@ -67,7 +84,11 @@ if [ -z "$TUNNELED_MODE" ]; then
 	# skyped runs on another host: no means to kill it
 	# Kill skyped
 	killall -TERM skype
-	kill -TERM $(sed 's/.*: //' skypedtest.pid)
+	if [ -f skypedtest.pid ]; then
+		pid=$(sed 's/.*: //' skypedtest.pid)
+		rm skypedtest.pid
+		[ -e /proc/$pid ] && kill -TERM $pid
+	fi
 fi
 
 if [ "$TUNNELED_MODE" = "yes" ]; then
