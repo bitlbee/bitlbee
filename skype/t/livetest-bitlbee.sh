@@ -7,7 +7,7 @@ start_skyped()
 	do
 		[ -e skypedtest.pid ] || break
 		pid=$(sed 's/.*: //' skypedtest.pid)
-		if [ -e /proc/$pid ]; then
+		if [ -n "$(ps -p $pid -o pid=)" ]; then
 			sleep 5
 		else
 			start_skyped "$@"
@@ -87,7 +87,7 @@ if [ -z "$TUNNELED_MODE" ]; then
 	if [ -f skypedtest.pid ]; then
 		pid=$(sed 's/.*: //' skypedtest.pid)
 		rm skypedtest.pid
-		[ -e /proc/$pid ] && kill -TERM $pid
+		[ -n "$(ps -p $pid -o pid=)" ] && kill -TERM $pid
 	fi
 fi
 
