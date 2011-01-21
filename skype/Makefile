@@ -62,6 +62,9 @@ autoclean: distclean
 check:
 	perl checkpatch.pl --no-tree --file skype.c
 
+test: all
+	$(MAKE) -C t/ all
+
 dist:
 	git archive --format=tar --prefix=bitlbee-skype-$(VERSION)/ HEAD | tar xf -
 	mkdir -p bitlbee-skype-$(VERSION)

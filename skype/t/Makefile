@@ -9,7 +9,7 @@ tests := $(patsubst %.test,%,$(testfiles))
 
 .PHONY: $(tests)
 
-default: $(tests)
+all: $(tests)
 	@echo "passed $$(echo $(testfiles)|wc -w) tests."
 
 $(tests): % : %.test
