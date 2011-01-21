@@ -198,7 +198,17 @@ def dprint(msg):
 	now = strftime("%Y-%m-%d %H:%M:%S")
 
 	if options.debug:
-		print now + ": " + msg
+		try:
+			print now + ": " + msg
+		except Exception, s:
+			try:
+				sanitized = msg.encode("ascii", "backslashreplace")
+			except Error, s:
+				try:
+					sanitized = "hex [" + msg.encode("hex") + "]"
+				except Error, s:
+					sanitized = "[unable to print debug message]"
+			print now + "~=" + sanitized
 		sys.stdout.flush()
 	if options.log:
 		sock = open(options.log, "a")
