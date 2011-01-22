@@ -277,10 +277,14 @@ static int msn_soap_passport_sso_build_request( struct msn_soap_req_data *soap_r
 		soap_req->url = sd->redirect;
 		sd->redirect = NULL;
 	}
+	/* MS changed this URL and broke the old MSN-specific one. The generic
+	   one works, forwarding us to a msn.com URL that works. Takes an extra
+	   second, but that's better than not being able to log in at all. :-/
 	else if( g_str_has_suffix( ic->acc->user, "@msn.com" ) )
 		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL_MSN );
 	else
-		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL );
+	*/
+	soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL );
 	
 	strncpy( pass, ic->acc->pass, MAX_PASSPORT_PWLEN );
 	pass[MAX_PASSPORT_PWLEN] = '\0';

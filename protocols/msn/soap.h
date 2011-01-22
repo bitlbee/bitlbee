@@ -61,7 +61,7 @@ int msn_soapq_flush( struct im_connection *ic, gboolean resend );
 
 
 #define SOAP_PASSPORT_SSO_URL "https://login.live.com/RST.srf"
-#define SOAP_PASSPORT_SSO_URL_MSN "https://msnia.login.live.com/pp800/RST.srf"
+#define SOAP_PASSPORT_SSO_URL_MSN "https://msnia.login.live.com/pp900/RST.srf"
 #define MAX_PASSPORT_PWLEN 16
 
 #define SOAP_PASSPORT_SSO_PAYLOAD \
