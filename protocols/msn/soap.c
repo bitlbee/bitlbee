@@ -282,9 +282,9 @@ static int msn_soap_passport_sso_build_request( struct msn_soap_req_data *soap_r
 	   second, but that's better than not being able to log in at all. :-/
 	else if( g_str_has_suffix( ic->acc->user, "@msn.com" ) )
 		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL_MSN );
-	else
 	*/
-	soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL );
+	else
+		soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL );
 	
 	strncpy( pass, ic->acc->pass, MAX_PASSPORT_PWLEN );
 	pass[MAX_PASSPORT_PWLEN] = '\0';
