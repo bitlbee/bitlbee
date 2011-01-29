@@ -803,17 +803,18 @@ void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv )
 	char m[128], st = 1;
 	const char *t;
 	int i;
-	char changes[512], *p, st2 = 2;
+	char changes[512], st2 = 2;
 	char badflag = 0;
 	
 	memset( m, 0, sizeof( m ) );
 	
+	/* Keep track of which modes are enabled in this array. */
 	for( t = irc->umode; *t; t ++ )
 		if( *t < sizeof( m ) )
 			m[(int)*t] = 1;
 	
-	p = changes;
-	for( t = s; *t; t ++ )
+	i = 0;
+	for( t = s; *t && i < sizeof( changes ) - 3; t ++ )
 	{
 		if( *t == '+' || *t == '-' )
 			st = *t == '+';
@@ -823,19 +824,21 @@ void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv )
 		{
 			if( m[(int)*t] != st)
 			{
+				/* If we're actually making a change, remember this
+				   for the response. */
 				if( st != st2 )
-					st2 = st, *p++ = st ? '+' : '-';
-				*p++ = *t;
+					st2 = st, changes[i++] = st ? '+' : '-';
+				changes[i++] = *t;
 			}
 			m[(int)*t] = st;
 		}
 		else
 			badflag = 1;
 	}
-	*p = '\0';
+	changes[i] = '\0';
 	
+	/* Convert the m array back into an umode string. */
 	memset( irc->umode, 0, sizeof( irc->umode ) );
-	
 	for( i = 'A'; i <= 'z' && strlen( irc->umode ) < ( sizeof( irc->umode ) - 1 ); i ++ )
 		if( m[i] )
 			irc->umode[strlen(irc->umode)] = i;
