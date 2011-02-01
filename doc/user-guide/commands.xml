@@ -24,7 +24,7 @@
 				</para>
 
 				<para>
-					If you omit the password, you should use the IRC /OPER command to enter it separately. The advantage of this approach is that most IRC clients will not show OPER passwords on screen/save them in logs.
+					You can omit the password and enter it separately using the IRC /OPER command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
 				</para>
 			</description>
 			
@@ -1603,7 +1603,7 @@
 
 	<bitlbee-command name="register">
 		<short-description>Register yourself</short-description>
-		<syntax>register &lt;password&gt;</syntax>
+		<syntax>register [&lt;password&gt;]</syntax>
 
 		<description>
 			<para>
@@ -1617,12 +1617,16 @@
 			<para>
 				To identify yourself in later sessions, you can use the <emphasis>identify</emphasis> command. To change your password later, you can use the <emphasis>set password</emphasis> command.
 			</para>
+
+			<para>
+				You can omit the password and enter it separately using the IRC /OPER command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
+			</para>
 		</description>
 
 	</bitlbee-command>
 
 	<bitlbee-command name="identify">
-		<syntax>identify [-noload|-force] &lt;password&gt;</syntax>
+		<syntax>identify [-noload|-force] [&lt;password&gt;]</syntax>
 		<short-description>Identify yourself with your password</short-description>
 
 		<description>
@@ -1640,6 +1644,10 @@
 			
 			<para>
 				<emphasis>-noload</emphasis> will log you in but not load any accounts and settings saved under your current nickname. These will be overwritten once you save your settings (i.e. when you disconnect).
+			</para>
+
+			<para>
+				You can omit the password and enter it separately using the IRC /OPER command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
 			</para>
 		</description>
 	</bitlbee-command>

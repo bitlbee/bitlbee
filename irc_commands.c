@@ -396,26 +396,13 @@ static void irc_cmd_nickserv( irc_t *irc, char **cmd )
 	root_command( irc, cmd + 1 );
 }
 
-
+static void irc_cmd_oper_hack( irc_t *irc, char **cmd );
 
 static void irc_cmd_oper( irc_t *irc, char **cmd )
 {
-	account_t *a;
-	
-	/* /OPER can now also be used to enter IM passwords without echoing.
-	   It's a hack but the extra password security is worth it. */
-	for( a = irc->b->accounts; a; a = a->next )
-		if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
-		{
-			set_setstr( &a->set, "password", cmd[2] );
-			irc_usermsg( irc, "Password added to IM account "
-			             "%s(%s)", a->prpl->name, a->user );
-			/* The IRC client may expect this. Report failure since
-			   we didn't hand out a +o. */
-			irc_send_num( irc, 491, ":Password added to IM account "
-			              "%s(%s)", a->prpl->name, a->user );
-			return;
-		}
+	/* Very non-standard evil but useful/secure hack, see below. */
+	if( irc->status & OPER_HACK_ANY )
+		return irc_cmd_oper_hack( irc, cmd );
 	
 	if( global.conf->oper_pass &&
 	    ( strncmp( global.conf->oper_pass, "md5:", 4 ) == 0 ?
@@ -429,6 +416,46 @@ static void irc_cmd_oper( irc_t *irc, char **cmd )
 	{
 		irc_send_num( irc, 491, ":Incorrect password" );
 	}
+}
+
+static void irc_cmd_oper_hack( irc_t *irc, char **cmd )
+{
+	char *password = g_strjoinv( " ", cmd + 2 );
+	
+	/* /OPER can now also be used to enter IM/identify passwords without
+	   echoing. It's a hack but the extra password security is worth it. */
+	if( irc->status & OPER_HACK_ACCOUNT_ADD )
+	{
+		account_t *a;
+		
+		for( a = irc->b->accounts; a; a = a->next )
+			if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
+			{
+				set_setstr( &a->set, "password", password );
+				irc_usermsg( irc, "Password added to IM account "
+				             "%s(%s)", a->prpl->name, a->user );
+				/* The IRC client may expect this. 491 suggests the OPER
+				   password was wrong, so the client won't expect a +o.
+				   It may however repeat the password prompt. We'll see. */
+				irc_send_num( irc, 491, ":Password added to IM account "
+				              "%s(%s)", a->prpl->name, a->user );
+			}
+	}
+	else if( irc->status & OPER_HACK_IDENTIFY )
+	{
+		char *send_cmd[] = { "identify", password, NULL };
+		irc_send_num( irc, 491, ":Trying to identify" );
+		root_command( irc, send_cmd );
+	}
+	else if( irc->status & OPER_HACK_REGISTER )
+	{
+		char *send_cmd[] = { "register", password, NULL };
+		irc_send_num( irc, 491, ":Trying to identify" );
+		root_command( irc, send_cmd );
+	}
+	
+	irc->status &= ~OPER_HACK_ANY;
+	g_free( password );
 }
 
 static void irc_cmd_invite( irc_t *irc, char **cmd )
@@ -755,6 +782,6 @@ void irc_exec( irc_t *irc, char *cmd[] )
 			return;
 		}
 	
-	if( irc->status >= USTATUS_LOGGED_IN )
+	if( irc->status & USTATUS_LOGGED_IN )
 		irc_send_num( irc, 421, "%s :Unknown command", cmd[0] );
 }

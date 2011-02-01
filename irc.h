@@ -49,6 +49,16 @@ typedef enum
 	USTATUS_IDENTIFIED = 4, /* To NickServ (root). */
 	USTATUS_SHUTDOWN = 8,   /* Now used to indicate we're shutting down.
 	                           Currently just blocks irc_vawrite(). */
+
+	/* Not really status stuff, but other kinds of flags: For slightly
+	   better password security, since the only way to send passwords
+	   to the IRC server securely (i.e. not echoing to screen or written
+	   to logfiles) is the /OPER command, try to use that command for
+	   stuff that matters. */
+	OPER_HACK_IDENTIFY = 0x100,
+	OPER_HACK_REGISTER = 0x200,
+	OPER_HACK_ACCOUNT_ADD = 0x400,
+	OPER_HACK_ANY = 0x700,	/* To check for them all at once. */
 } irc_status_t;
 
 struct irc_user;

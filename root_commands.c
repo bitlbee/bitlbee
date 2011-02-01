@@ -113,7 +113,10 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		return;
 	}
 	
-	if( strncmp( cmd[1], "-no", 3 ) == 0 )
+	if( cmd[1] == NULL )
+	{
+	}
+	else if( strncmp( cmd[1], "-no", 3 ) == 0 )
 	{
 		load = FALSE;
 		password = cmd[2];
@@ -134,7 +137,9 @@ static void cmd_identify( irc_t *irc, char **cmd )
 	
 	if( password == NULL )
 	{
-		MIN_ARGS( 2 );
+		irc_usermsg( irc, "About to identify, use /OPER to enter the password" );
+		irc->status |= OPER_HACK_IDENTIFY;
+		return;
 	}
 	
 	if( load )
@@ -210,6 +215,13 @@ static void cmd_register( irc_t *irc, char **cmd )
 	if( global.conf->authmode == AUTHMODE_REGISTERED )
 	{
 		irc_usermsg( irc, "This server does not allow registering new accounts" );
+		return;
+	}
+	
+	if( cmd[1] == NULL )
+	{
+		irc_usermsg( irc, "About to register, use /OPER to enter the password" );
+		irc->status |= OPER_HACK_REGISTER;
 		return;
 	}
 
@@ -1361,12 +1373,12 @@ command_t root_commands[] = {
 	{ "ft",             0, cmd_transfer,       0 },
 	{ "group",          1, cmd_group,          0 },
 	{ "help",           0, cmd_help,           0 }, 
-	{ "identify",       1, cmd_identify,       0 },
+	{ "identify",       0, cmd_identify,       0 },
 	{ "info",           1, cmd_info,           0 },
 	{ "nick",           1, cmd_nick,           0 },
 	{ "no",             0, cmd_yesno,          0 },
 	{ "qlist",          0, cmd_qlist,          0 },
-	{ "register",       1, cmd_register,       0 },
+	{ "register",       0, cmd_register,       0 },
 	{ "remove",         1, cmd_remove,         0 },
 	{ "rename",         2, cmd_rename,         0 },
 	{ "save",           0, cmd_save,           0 },
