@@ -408,6 +408,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 		MIN_ARGS( 3 );
 		
 		if( cmd[4] == NULL )
+		{
 			for( a = irc->b->accounts; a; a = a->next )
 				if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
 				{
@@ -415,6 +416,9 @@ static void cmd_account( irc_t *irc, char **cmd )
 					             "first (use /OPER)", a->prpl->name, a->user );
 					return;
 				}
+			
+			irc->status |= OPER_HACK_ACCOUNT_ADD;
+		}
 		
 		prpl = find_protocol( cmd[2] );
 		
