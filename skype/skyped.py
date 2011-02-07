@@ -245,7 +245,6 @@ class SkypeApi:
 			if options.conn:
 				dprint('<< ' + e)
 				try:
-					# I called the send function really_send
 					send(options.conn, e + "\n")
 				except Exception, s:
 					dprint("Warning, sending '%s' failed (%s)." % (e, s))
