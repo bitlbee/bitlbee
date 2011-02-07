@@ -236,12 +236,15 @@ class SkypeApi:
 		else:
 			msg_text = [msg_text]
 		for i in msg_text:
-			# use utf-8 here to solve the following problem:
-			# people use env vars like LC_ALL=en_US (latin1) then
-			# they complain about why can't they receive latin2
-			# messages.. so here it is: always use utf-8 then
-			# everybody will be happy
-			e = i.encode('UTF-8')
+			try:
+				# Internally, BitlBee always uses UTF-8 and encodes/decodes as
+				# necessary to communicate with the IRC client; thus send the
+				# UTF-8 it expects
+				e = i.encode('UTF-8')
+			except:
+				# Should never happen, but it's better to send difficult to
+				# read data than crash because some message couldn't be encoded
+				e = i.encode('ascii', 'backslashreplace')
 			if options.conn:
 				dprint('<< ' + e)
 				try:
@@ -259,12 +262,14 @@ class SkypeApi:
 				options.last_bitlbee_pong = time.time()
 			return
 		try:
-			encoding = locale.getdefaultlocale()[1]
-			if not encoding:
-				raise ValueError
-			e = msg_text.decode(encoding)
-		except ValueError:
+			# Internally, BitlBee always uses UTF-8 and encodes/decodes as
+			# necessary to communicate with the IRC client; thus decode the
+			# UTF-8 it sent us
 			e = msg_text.decode('UTF-8')
+		except:
+			# Should never happen, but it's better to send difficult to read
+			# data to Skype than to crash
+			e = msg_text.decode('ascii', 'backslashreplace')
 		dprint('>> ' + e)
 		try:
 			c = self.skype.Command(e, Block=True)
