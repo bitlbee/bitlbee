@@ -552,7 +552,7 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 		
 		// Say it!
 		if (g_strcasecmp(td->user, status->user->screen_name) == 0)
-			imcb_chat_log (gc, "Your Tweet: %s", status->text);
+			imcb_chat_log (gc, "You: %s", status->text);
 		else
 			imcb_chat_msg (gc, status->user->screen_name, status->text, 0, status->created_at );
 		
