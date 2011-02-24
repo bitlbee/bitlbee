@@ -250,7 +250,7 @@ void imcb_buddy_msg( struct im_connection *ic, const char *handle, char *msg, ui
 	
 	bu = bee_user_by_handle( bee, ic, handle );
 	
-	if( !bu )
+	if( !bu && !( ic->flags & OPT_LOGGING_OUT ) )
 	{
 		char *h = set_getstr( &bee->set, "handle_unknown" );
 		

@@ -44,7 +44,7 @@ int jabber_write( struct im_connection *ic, char *buf, int len )
 	struct jabber_data *jd = ic->proto_data;
 	gboolean ret;
 	
-	if( jd->flags & JFLAG_XMLCONSOLE )
+	if( jd->flags & JFLAG_XMLCONSOLE && !( ic->flags & OPT_LOGGING_OUT ) )
 	{
 		char *msg, *s;
 		
