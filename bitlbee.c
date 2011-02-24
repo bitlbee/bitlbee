@@ -86,7 +86,11 @@ int bitlbee_daemon_init()
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE
 #ifdef AI_ADDRCONFIG
-	               | AI_ADDRCONFIG
+	/* Disabled as it may be doing more harm than good: this flag
+	   ignores IPv6 addresses on lo (which seems reasonable), but
+	   the result is that some clients (including irssi) try to
+	   connect to ::1 and fail.
+	               | AI_ADDRCONFIG */
 #endif
 	;
 
