@@ -728,10 +728,16 @@ fi
 
 echo '  Using event handler: '$events
 echo '  Using SSL library: '$ssl
-echo '  Building with these storage backends: '$STORAGES
+#echo '  Building with these storage backends: '$STORAGES
 
 if [ -n "$protocols" ]; then
 	echo '  Building with these protocols:' $protocols
+	case "$protocols" in
+	*purple*)
+		echo "    Note that BitlBee-libpurple is supported on a best-effort basis. It's"
+		echo "    not *fully* compatible with normal BitlBee. Don't use it unless you"
+		echo "    absolutely need it (i.e. support for a certain protocol or feature)."
+	esac
 else
 	echo '  Building without IM-protocol support. We wish you a lot of fun...'
 fi
