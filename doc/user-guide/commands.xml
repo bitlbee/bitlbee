@@ -72,7 +72,7 @@
 
 				<description>
 					<para>
-						This module gives you simple access to Twitter. Although it uses the Twitter API, only Twitter itself is supported at the moment.
+						This module gives you simple access to Twitter and Twitter API compatible services.
 					</para>
 					
 					<para>
@@ -85,6 +85,20 @@
 
 					<para>
 						Since Twitter now requires OAuth authentication, you should not enter your Twitter password into BitlBee. Just type a bogus password. The first time you log in, BitlBee will start OAuth authentication. (See <emphasis>help set oauth</emphasis>.)
+					</para>
+					
+					<para>
+						To use a non-Twitter service, change the <emphasis>base_url</emphasis> setting. For identi.ca, you can simply use <emphasis>account add identica</emphasis>.
+					</para>
+				</description>
+			</bitlbee-command>
+			
+			<bitlbee-command name="identica">
+				<syntax>account add identica &lt;handle&gt; [&lt;password&gt;]</syntax>
+
+				<description>
+					<para>
+						Same protocol as <emphasis>twitter</emphasis>, but defaults to a <emphasis>base_url</emphasis> pointing at identi.ca, and with OAuth disabled.
 					</para>
 				</description>
 			</bitlbee-command>
