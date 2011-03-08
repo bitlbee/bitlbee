@@ -3,6 +3,17 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 3.0.2:
+- Fixed MSN login issues with @msn.com accounts.
+- /CTCP support: You can CTCP VERSION Jabber contacts, and CTCP NUDGE MSN
+  contacts. More may come later, ideas are welcome.
+- By default, leave Twitter turned on for libpurple builds.
+- Allow using /OPER to identify/register as well. (Password security hack.)
+- Fixed proxy support with libpurple.
+- Some minor changes/fixes.
+
+Finished 7 Mar 2011
+
 Version 3.0.1:
 - Fixed some bugs that were found only after releasing 3.0, including
   Jabber contacts never going offline, MSN login issues, compilation
