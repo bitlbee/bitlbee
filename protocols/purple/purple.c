@@ -1241,6 +1241,28 @@ void purple_initmodule()
 		abort();
 	}
 	
+	if( proxytype != PROXY_NONE )
+	{
+		PurpleProxyInfo *pi = purple_proxy_info_new();
+		switch( proxytype )
+		{
+		case PROXY_SOCKS4:
+			purple_proxy_info_set_type( pi, PURPLE_PROXY_SOCKS4 );
+			break;
+		case PROXY_SOCKS5:
+			purple_proxy_info_set_type( pi, PURPLE_PROXY_SOCKS5 );
+			break;
+		case PROXY_HTTP:
+			purple_proxy_info_set_type( pi, PURPLE_PROXY_HTTP );
+			break;
+		} 
+	 	purple_proxy_info_set_host( pi, proxyhost );
+ 		purple_proxy_info_set_port( pi, proxyport );
+	 	purple_proxy_info_set_username( pi, proxyuser );
+	 	purple_proxy_info_set_password( pi, proxypass );
+	 	purple_global_proxy_set_info( pi );
+	}
+	
 	purple_set_blist( purple_blist_new() );
 	
 	/* No, really. So far there were ui_ops for everything, but now suddenly
