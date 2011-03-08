@@ -109,7 +109,8 @@ static void msn_logout( struct im_connection *ic )
 		
 		g_free( md->profile_rid );
 		
-		g_tree_destroy( md->domaintree );
+		if( md->domaintree )
+			g_tree_destroy( md->domaintree );
 		md->domaintree = NULL;
 		
 		while( md->grpq )
