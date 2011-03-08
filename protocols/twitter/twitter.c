@@ -148,6 +148,16 @@ static gboolean twitter_oauth_callback( struct oauth_info *info )
 			imc_logout( ic, TRUE );
 			return FALSE;
 		}
+		else
+		{
+			const char *sn = oauth_params_get( &info->params, "screen_name" );
+			
+			if( sn != NULL && ic->acc->prpl->handle_cmp( sn, ic->acc->user ) != 0 )
+			{
+				imcb_log( ic, "Warning: You logged in via OAuth as %s "
+				          "instead of %s.", sn, ic->acc->user );
+			}
+		}
 		
 		/* IM mods didn't do this so far and it's ugly but I should
 		   be able to get away with it... */

@@ -51,6 +51,7 @@ struct oauth_info
 	
 	char *token;
 	char *token_secret;
+	GSList *params;
 };
 
 struct oauth_service
@@ -88,3 +89,6 @@ void oauth_info_free( struct oauth_info *info );
 /* Convert to and back from strings, for easier saving. */
 char *oauth_to_string( struct oauth_info *oi );
 struct oauth_info *oauth_from_string( char *in, const struct oauth_service *sp );
+
+/* For reading misc. data. */
+const char *oauth_params_get( GSList **params, const char *key );
