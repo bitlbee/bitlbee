@@ -47,7 +47,7 @@ Makefile.settings:
 	@echo
 
 clean: $(subdirs)
-	rm -f *.o $(OUTFILE) core utils/bitlbeed
+	rm -f *.o $(OUTFILE) core utils/bitlbeed init/bitlbee*.service
 	$(MAKE) -C tests clean
 
 distclean: clean $(subdirs)

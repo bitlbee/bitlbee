@@ -1,0 +1,9 @@
+[Unit]
+Conflicts=bitlbee.service
+
+[Socket]
+ListenStream=127.0.0.1:6667
+Accept=yes
+
+[Install]
+WantedBy=sockets.target
