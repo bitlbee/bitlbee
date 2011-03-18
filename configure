@@ -15,6 +15,7 @@ datadir='$prefix/share/bitlbee/'
 config='/var/lib/bitlbee/'
 plugindir='$prefix/lib/bitlbee/'
 includedir='$prefix/include/bitlbee/'
+systemdsystemunitdir=''
 libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
 ipcsocket='/var/run/bitlbee.sock'
@@ -61,6 +62,7 @@ Option		Description				Default
 --mandir=...						$mandir
 --datadir=...						$datadir
 --plugindir=...						$plugindir
+--systemdsystemunitdir=...				$systemdsystemunitdir
 --pidfile=...						$pidfile
 --config=...						$config
 --ipcsocket=...						$ipcsocket
@@ -486,6 +488,17 @@ else
 	fi;
 fi
 
+if [ -z "$systemdsystemunitdir" ]; then
+	if $PKG_CONFIG --exists systemd; then
+		systemdsystemunitdir=`$PKG_CONFIG --variable=systemdsystemunitdir systemd`
+	fi
+fi
+if [ -n "$systemdsystemunitdir" ]; then
+	if [ "$systemdsystemunitdir" != "no" ]; then
+		echo "SYSTEMDSYSTEMUNITDIR=$systemdsystemunitdir" >> Makefile.settings
+	fi
+fi
+
 if [ "$gcov" = "1" ]; then
 	echo "CFLAGS+=--coverage" >> Makefile.settings
 	echo "EFLAGS+=--coverage" >> Makefile.settings
@@ -724,6 +737,12 @@ elif [ "$otr" = "plugin" ]; then
 	echo '  Off-the-Record (OTR) Messaging enabled (as a plugin).'
 else
 	echo '  Off-the-Record (OTR) Messaging disabled.'
+fi
+
+if [ -n "$systemdsystemunitdir" ]; then
+	echo '  systemd enabled.'
+else
+	echo '  systemd disabled.'
 fi
 
 echo '  Using event handler: '$events
