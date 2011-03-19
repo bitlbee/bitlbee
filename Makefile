@@ -117,7 +117,7 @@ endif
 
 install-systemd:
 ifdef SYSTEMDSYSTEMUNITDIR
-ifeq ($(USER),root)
+ifeq ($(shell id -u),0)
 	mkdir -p $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 	install -m 0644 init/bitlbee.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 	install -m 0644 init/bitlbee@.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
