@@ -1243,7 +1243,7 @@ void purple_initmodule()
 	
 	if( proxytype != PROXY_NONE )
 	{
-		PurpleProxyInfo *pi = purple_proxy_info_new();
+		PurpleProxyInfo *pi = purple_global_proxy_get_info();
 		switch( proxytype )
 		{
 		case PROXY_SOCKS4:
@@ -1260,7 +1260,6 @@ void purple_initmodule()
  		purple_proxy_info_set_port( pi, proxyport );
 	 	purple_proxy_info_set_username( pi, proxyuser );
 	 	purple_proxy_info_set_password( pi, proxypass );
-	 	purple_global_proxy_set_info( pi );
 	}
 	
 	purple_set_blist( purple_blist_new() );
