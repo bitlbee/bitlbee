@@ -45,7 +45,7 @@ void irc_send_login( irc_t *irc )
 	irc_send_num( irc,   4, "%s %s %s %s", irc->root->host, BITLBEE_VERSION, UMODES UMODES_PRIV, CMODES );
 	irc_send_num( irc,   5, "PREFIX=(ohv)@%%+ CHANTYPES=%s CHANMODES=,,,%s NICKLEN=%d CHANNELLEN=%d "
 	                        "NETWORK=BitlBee SAFELIST CASEMAPPING=rfc1459 MAXTARGETS=1 WATCH=128 "
-	                        ":are supported by this server",
+	                        "FLOOD=0/9999 :are supported by this server",
 	                        CTYPES, CMODES, MAX_NICK_LENGTH - 1, MAX_NICK_LENGTH - 1 );
 	irc_send_motd( irc );
 }
