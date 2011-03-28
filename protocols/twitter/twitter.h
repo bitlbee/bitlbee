@@ -37,6 +37,8 @@ typedef enum
 	TWITTER_HAVE_FRIENDS = 1,
 } twitter_flags_t;
 
+struct twitter_log_data;
+
 struct twitter_data
 {
 	char* user;
@@ -55,12 +57,22 @@ struct twitter_data
 	char *url_path;
 
 	char *prefix; /* Used to generate contact + channel name. */
+	
+	struct twitter_log_data *log;
+	int log_id;
 };
 
 struct twitter_user_data
 {
 	guint64 last_id;
 	time_t last_time;
+};
+
+#define TWITTER_LOG_LENGTH 100
+struct twitter_log_data
+{
+	guint64 id;
+	struct bee_user *bu;
 };
 
 /**

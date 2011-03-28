@@ -244,6 +244,9 @@ static void twitter_init( account_t *acc )
 	s = set_add( &acc->set, "mode", "chat", set_eval_mode, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
+	s = set_add( &acc->set, "show_ids", "false", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+	
 	s = set_add( &acc->set, "oauth", def_oauth, set_eval_bool, acc );
 }
 
@@ -290,6 +293,9 @@ static void twitter_login( account_t *acc )
 	imcb_add_buddy( ic, name, NULL );
 	imcb_buddy_status( ic, name, OPT_LOGGED_IN, NULL, NULL );
 	
+	if( set_getbool( &acc->set, "show_ids" ) )
+		td->log = g_new0( struct twitter_log_data, TWITTER_LOG_LENGTH );
+	
 	imcb_log( ic, "Connecting" );
 	
 	twitter_login_finish( ic );
@@ -318,6 +324,7 @@ static void twitter_logout( struct im_connection *ic )
 		g_free( td->url_host );
 		g_free( td->url_path );
 		g_free( td->pass );
+		g_free( td->log );
 		g_free( td );
 	}
 

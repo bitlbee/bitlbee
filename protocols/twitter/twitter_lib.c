@@ -66,7 +66,7 @@ struct twitter_xml_status {
 	time_t created_at;
 	char *text;
 	struct twitter_xml_user *user;
-	guint64 id;
+	guint64 id, reply_to;
 };
 
 static void twitter_groupchat_init(struct im_connection *ic);
@@ -409,6 +409,10 @@ static xt_status twitter_xt_get_status( struct xt_node *node, struct twitter_xml
 		{
 			txs->id = g_ascii_strtoull (child->text, NULL, 10);
 		}
+		else if (g_strcasecmp( "in_reply_to_status_id", child->name ) == 0)
+		{
+			txs->reply_to = g_ascii_strtoull (child->text, NULL, 10);
+		}
 	}
 	
 	/* If it's a truncated retweet, get the original because dots suck. */
@@ -501,6 +505,41 @@ void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
 	}
 }
 
+static char *twitter_msg_add_id(struct im_connection *ic,
+    struct twitter_xml_status *txs, const char *prefix)
+{
+	struct twitter_data *td = ic->proto_data;
+	char *ret = NULL;
+	
+	if (!set_getbool(&ic->acc->set, "show_ids"))
+	{
+		if (*prefix)
+			return g_strconcat(prefix, txs->text, NULL);
+		else
+			return NULL;
+	}
+	
+	td->log[td->log_id].id = txs->id;
+	td->log[td->log_id].bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name);
+	if (txs->reply_to)
+	{
+		int i;
+		for (i = 0; i < TWITTER_LOG_LENGTH; i ++)
+			if (td->log[i].id == txs->reply_to)
+			{
+				ret = g_strdup_printf( "\002[\002%02d->%02d\002]\002 %s%s",
+				                       td->log_id, i, prefix, txs->text);
+				break;
+			}
+	}
+	if (ret == NULL)
+		ret = g_strdup_printf( "\002[\002%02d\002]\002 %s%s",
+		                       td->log_id, prefix, txs->text);
+	td->log_id = (td->log_id + 1) % TWITTER_LOG_LENGTH;
+	
+	return ret;
+}
+
 static void twitter_groupchat_init(struct im_connection *ic)
 {
 	char *name_hint;
@@ -542,6 +581,8 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 
 	for ( l = list; l ; l = g_slist_next(l) )
 	{
+		char *msg;
+		
 		status = l->data;
 		if (status->user == NULL || status->text == NULL)
 			continue;
@@ -549,16 +590,20 @@ static void twitter_groupchat(struct im_connection *ic, GSList *list)
 		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
 		
 		strip_html(status->text);
+		msg = twitter_msg_add_id(ic, status, "");
 		
 		// Say it!
 		if (g_strcasecmp(td->user, status->user->screen_name) == 0)
-			imcb_chat_log (gc, "You: %s", status->text);
+			imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
 		else
-			imcb_chat_msg (gc, status->user->screen_name, status->text, 0, status->created_at );
+			imcb_chat_msg(gc, status->user->screen_name,
+			              msg ? msg : status->text, 0, status->created_at );
+		
+		g_free(msg);
 		
 		// Update the home_timeline_id to hold the highest id, so that by the next request
-		// we won't pick up the updates allready in the list.
-		td->home_timeline_id = td->home_timeline_id < status->id ? status->id : td->home_timeline_id;
+		// we won't pick up the updates already in the list.
+		td->home_timeline_id = MAX(td->home_timeline_id, status->id);
 	}
 }
 
@@ -583,27 +628,30 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList *list)
 	
 	for ( l = list; l ; l = g_slist_next(l) )
 	{
-		char *text = NULL;
+		char *prefix = NULL, *text = NULL;
 		
 		status = l->data;
 		
 		strip_html( status->text );
 		if( mode_one )
-			text = g_strdup_printf( "\002<\002%s\002>\002 %s",
-			                        status->user->screen_name, status->text );
+			prefix = g_strdup_printf("\002<\002%s\002>\002 ",
+			                         status->user->screen_name);
 		else
 			twitter_add_buddy(ic, status->user->screen_name, status->user->name);
 		
+		text = twitter_msg_add_id(ic, status, prefix ? prefix : "");
+		
 		imcb_buddy_msg( ic,
 		                mode_one ? from : status->user->screen_name,
-		                mode_one ? text : status->text,
+		                text ? text : status->text,
 		                0, status->created_at );
 		
 		// Update the home_timeline_id to hold the highest id, so that by the next request
-		// we won't pick up the updates allready in the list.
-		td->home_timeline_id = td->home_timeline_id < status->id ? status->id : td->home_timeline_id;
+		// we won't pick up the updates already in the list.
+		td->home_timeline_id = MAX(td->home_timeline_id,  status->id);
 		
 		g_free( text );
+		g_free( prefix );
 	}
 }
 
