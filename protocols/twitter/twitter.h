@@ -72,7 +72,7 @@ struct twitter_user_data
 struct twitter_log_data
 {
 	guint64 id;
-	struct bee_user *bu;
+	struct bee_user *bu; /* DANGER: can be a dead pointer. Check it first. */
 };
 
 /**
