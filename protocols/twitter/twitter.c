@@ -453,7 +453,8 @@ static void twitter_buddy_data_free( struct bee_user *bu )
 static void twitter_handle_command( struct im_connection *ic, char *message )
 {
 	struct twitter_data *td = ic->proto_data;
-	char *cmds, **cmd;
+	char *cmds, **cmd, *new = NULL;
+	guint64 in_reply_to = 0;
 	
 	cmds = g_strdup( message );
 	cmd = split_command_parts( cmds );
@@ -523,24 +524,54 @@ static void twitter_handle_command( struct im_connection *ic, char *message )
 		g_free( cmds );
 		return;
 	}
+	else if( g_strcasecmp( cmd[0], "reply" ) == 0 && cmd[1] && cmd[2] )
+	{
+		struct twitter_user_data *tud;
+		bee_user_t *bu = NULL;
+		guint64 id = 0;
+		
+		if( ( bu = bee_user_by_handle( ic->bee, ic, cmd[1] ) ) &&
+		    ( tud = bu->data ) && tud->last_id )
+		{
+			id = tud->last_id;
+		}
+		else if( ( id = g_ascii_strtoull( cmd[1], NULL, 10 ) ) &&
+		         ( id < TWITTER_LOG_LENGTH ) )
+		{
+			bu = td->log[id].bu;
+			if( g_slist_find( ic->bee->users, bu ) )
+				id = td->log[id].id;
+			else
+				bu = NULL;
+		}
+		if( !id || !bu )
+		{
+			twitter_msg( ic, "User `%s' does not exist or didn't "
+			                 "post any statuses recently", cmd[1] );
+			return;
+		}
+		message = new = g_strdup_printf( "@%s %s", bu->handle,
+		                                 message + ( cmd[2] - cmd[0] ) );
+		in_reply_to = id;
+	}
 	else if( g_strcasecmp( cmd[0], "post" ) == 0 )
 	{
 		message += 5;
 	}
 	
 	{
-		guint64 in_reply_to = 0;
-		char *s, *new = NULL;
+		char *s;
 		bee_user_t *bu;
 		
 		if( !twitter_length_check( ic, message ) )
 		{
+			g_free( new );
 			g_free( cmds );
 		  	return;
 		}
 		
 		s = cmd[0] + strlen( cmd[0] ) - 1;
-		if( s > cmd[0] && ( *s == ':' || *s == ',' ) )
+		if( !new && s > cmd[0] && ( *s == ':' || *s == ',' ) )
 		{
 			*s = '\0';
 			
