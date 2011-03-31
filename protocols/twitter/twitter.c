@@ -510,7 +510,7 @@ static void twitter_handle_command( struct im_connection *ic, char *message )
 		else
 		{
 			id = g_ascii_strtoull( cmd[1], NULL, 10 );
-			if( id < TWITTER_LOG_LENGTH )
+			if( id < TWITTER_LOG_LENGTH && td->log )
 				id = td->log[id].id;
 		}
 		
@@ -536,7 +536,7 @@ static void twitter_handle_command( struct im_connection *ic, char *message )
 			id = tud->last_id;
 		}
 		else if( ( id = g_ascii_strtoull( cmd[1], NULL, 10 ) ) &&
-		         ( id < TWITTER_LOG_LENGTH ) )
+		         ( id < TWITTER_LOG_LENGTH ) && td->log )
 		{
 			bu = td->log[id].bu;
 			if( g_slist_find( ic->bee->users, bu ) )
