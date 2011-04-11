@@ -2,7 +2,7 @@
 # 
 #   skyped.py
 #  
-#   Copyright (c) 2007, 2008, 2009, 2010 by Miklos Vajna <vmiklos@frugalware.org>
+#   Copyright (c) 2007, 2008, 2009, 2010, 2011 by Miklos Vajna <vmiklos@frugalware.org>
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -32,16 +32,24 @@ import hashlib
 from ConfigParser import ConfigParser, NoOptionError
 from traceback import print_exception
 import ssl
-import select
-import threading
 
 __version__ = "0.1.1"
+
+try:
+	import gobject
+	hasgobject = True
+except ImportError:
+	import select
+	import threading
+	hasgobject = False
 
 def eh(type, value, tb):
 	global options
 
 	if type != KeyboardInterrupt:
 		print_exception(type, value, tb)
+	if hasgobject:
+		gobject.MainLoop().quit()
 	if options.conn:
 		options.conn.close()
 	# shut down client if it's running
@@ -69,31 +77,42 @@ def wait_for_lock(lock, timeout_to_print, timeout, msg):
 		locked = lock.acquire(0)
 	return True
 
-def input_handler(fd):
+def input_handler(fd, io_condition = None):
 	global options
 	global skype
 	if options.buf:
 		for i in options.buf:
 			skype.send(i.strip())
 		options.buf = None
-		return True
+		if not hasgobject:
+			return True
 	else:
-		close_socket = False
-		if wait_for_lock(options.lock, 3, 10, "input_handler"):
-			try:
-					input = fd.recv(1024)
+		if not hasgobject:
+			close_socket = False
+			if wait_for_lock(options.lock, 3, 10, "input_handler"):
+				try:
+						input = fd.recv(1024)
+						options.lock.release()
+				except Exception, s:
+					dprint("Warning, receiving 1024 bytes failed (%s)." % s)
+					fd.close()
+					options.conn = False
 					options.lock.release()
-			except Exception, s:
-				dprint("Warning, receiving 1024 bytes failed (%s)." % s)
-				fd.close()
-				options.conn = False
-				options.lock.release()
-				return False
-			for i in input.split("\n"):
-				if i.strip() == "SET USERSTATUS OFFLINE":
-					close_socket = True
-				skype.send(i.strip())
-		return not(close_socket)
+					return False
+				for i in input.split("\n"):
+					if i.strip() == "SET USERSTATUS OFFLINE":
+						close_socket = True
+					skype.send(i.strip())
+			return not(close_socket)
+		try:
+			input = fd.recv(1024)
+		except Exception, s:
+			dprint("Warning, receiving 1024 bytes failed (%s)." % s)
+			fd.close()
+			return False
+		for i in input.split("\n"):
+			skype.send(i.strip())
+		return True
 
 def skype_idle_handler(skype):
 	try:
@@ -105,24 +124,37 @@ def skype_idle_handler(skype):
 
 def send(sock, txt):
 	global options
+	from time import sleep
 	count = 1
 	done = False
-	while (not done) and (count < 10) and options.conn:
-		if wait_for_lock(options.lock, 3, 10, "socket send"):
+	if hasgobject:
+		while (not done) and (count < 10):
 			try:
-				if options.conn: sock.send(txt)
-				options.lock.release()
+				sock.send(txt)
 				done = True
 			except Exception, s:
-				options.lock.release()
 				count += 1
 				dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, count))
-				time.sleep(1)
-	if not done:
-		if options.conn:
+				sleep(1)
+		if not done:
 			options.conn.close()
-		options.conn = False
-	return done
+	else:
+		while (not done) and (count < 10) and options.conn:
+			if wait_for_lock(options.lock, 3, 10, "socket send"):
+				try:
+					 if options.conn: sock.send(txt)
+					 options.lock.release()
+					 done = True
+				except Exception, s:
+					options.lock.release()
+					count += 1
+					dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, count))
+					sleep(1)
+		if not done:
+			if options.conn:
+				options.conn.close()
+			options.conn = False
+		return done
 
 def bitlbee_idle_handler(skype):
 	global options
@@ -133,23 +165,34 @@ def bitlbee_idle_handler(skype):
 			done = send(options.conn, "%s\n" % e)
 		except Exception, s:
 			dprint("Warning, sending '%s' failed (%s)." % (e, s))
-			if options.conn: options.conn.close()
-			options.conn = False
-			done = False
-	return done
+			if hasgobject:
+				options.conn.close()
+			else:
+				if options.conn: options.conn.close()
+				options.conn = False
+				done = False
+	if hasgobject:
+		return True
+	else:
+		return done
+	return True
 
-def server(host, port, skype):
+def server(host, port, skype = None):
 	global options
 	sock = socket.socket()
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((host, port))
 	sock.listen(1)
-	dprint("Waiting for connection...")
-	listener(sock, skype)
+	if hasgobject:
+		gobject.io_add_watch(sock, gobject.IO_IN, listener)
+	else:
+		dprint("Waiting for connection...")
+		listener(sock, skype)
 
 def listener(sock, skype):
 	global options
-	if not(wait_for_lock(options.lock, 3, 10, "listener")): return False
+	if not hasgobject:
+		if not(wait_for_lock(options.lock, 3, 10, "listener")): return False
 	rawsock, addr = sock.accept()
 	options.conn = ssl.wrap_socket(rawsock,
 		server_side=True,
@@ -160,7 +203,8 @@ def listener(sock, skype):
 		try:
 			options.conn.handshake()
 		except Exception:
-			options.lock.release()
+			if not hasgobject:
+				options.lock.release()
 			dprint("Warning, handshake failed, closing connection.")
 			return False
 	ret = 0
@@ -174,21 +218,26 @@ def listener(sock, skype):
 	except Exception, s:
 		dprint("Warning, receiving 1024 bytes failed (%s)." % s)
 		options.conn.close()
-		options.conn = False
-		options.lock.release()
+		if not hasgobject:
+			options.conn = False
+			options.lock.release()
 		return False
 	if ret == 2:
 		dprint("Username and password OK.")
 		options.conn.send("PASSWORD OK\n")
-		options.lock.release()
-		serverloop(options, skype)
+		if hasgobject:
+			gobject.io_add_watch(options.conn, gobject.IO_IN, input_handler)
+		else:
+			options.lock.release()
+			serverloop(options, skype)
 		return True
 	else:
 		dprint("Username and/or password WRONG.")
 		options.conn.send("PASSWORD KO\n")
-		options.conn.close()
-		options.conn = False
-		options.lock.release()
+		if not hasgobject:
+			options.conn.close()
+			options.conn = False
+			options.lock.release()
 		return False
 
 def dprint(msg):
@@ -422,11 +471,18 @@ if __name__=='__main__':
 			sys.exit(0)
 	else:
 		dprint('skyped is started on port %s' % options.port)
+	if hasgobject:
+		server(options.host, options.port)
 	try:
 		skype = SkypeApi()
 	except Skype4Py.SkypeAPIError, s:
 		sys.exit("%s. Are you sure you have started Skype?" % s)
-	while 1:
-		options.conn = False
-		options.lock = threading.Lock()
-		server(options.host, options.port, skype)
+	if hasgobject:
+		gobject.timeout_add(2000, skype_idle_handler, skype)
+		gobject.timeout_add(60000, bitlbee_idle_handler, skype)
+		gobject.MainLoop().run()
+	else:
+		while 1:
+			options.conn = False
+			options.lock = threading.Lock()
+			server(options.host, options.port, skype)
