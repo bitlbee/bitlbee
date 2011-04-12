@@ -35,6 +35,7 @@ strip=1
 gcov=0
 plugins=1
 otr=0
+skype=0
 
 events=glib
 ldap=0
@@ -82,6 +83,8 @@ Option		Description				Default
 --plugins=0/1	Disable/enable plugins support		$plugins
 --otr=0/1/auto/plugin
 		Disable/enable OTR encryption support	$otr
+--skype=0/plugin
+		Disable/enable Skype support		$skype
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
@@ -537,6 +540,10 @@ elif [ "$otr" = "plugin" ]; then
 	echo 'OTR_PI=otr.so' >> Makefile.settings
 fi
 
+if [ "$skype" = "plugin" ]; then
+	echo 'SKYPE_PI=skype.so' >> Makefile.settings
+fi
+
 if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; then
 	echo
 	echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
@@ -737,6 +744,12 @@ elif [ "$otr" = "plugin" ]; then
 	echo '  Off-the-Record (OTR) Messaging enabled (as a plugin).'
 else
 	echo '  Off-the-Record (OTR) Messaging disabled.'
+fi
+
+if [ "$skype" = "plugin" ]; then
+	echo '  Skype enabled (as a plugin).'
+else
+	echo '  Skype disabled.'
 fi
 
 if [ -n "$systemdsystemunitdir" ]; then
