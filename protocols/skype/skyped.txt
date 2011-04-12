@@ -1,0 +1,52 @@
+= skyped(1)
+
+== NAME
+
+skyped - allows remote control of the Skype GUI client
+
+== SYNOPSIS
+
+skyped [<options>]
+
+== DESCRIPTION
+
+Skype supports remote control of the GUI client only via X11 or DBus
+messages. This is hard in care you want remote control. This daemon
+listens on a TCP port and runs on the same machine where the GUI client
+runs. It passes all the input it gets to Skype directly, except for a
+few commands which is related to authentication. The whole communication
+is done via SSL.
+
+== CONFIGURATION
+
+See the README for information about how to configure this daemon.
+
+== OPTIONS
+
+-c, --config::
+	Path to configuration file (default: $HOME/.skyped/skyped.conf)
+
+-d, --debug::
+	Enable debug messages
+
+-h, --help::
+	Show short summary of options
+
+-H, --host::
+	Set the tcp host (default: 0.0.0.0)
+
+-l, --log::
+	Set the log file in background mode (default: none)
+
+-n, --nofork::
+	Don't run as daemon in the background
+
+-p, --port::
+	Set the tcp port (default: 2727)
+
+-v, --version::
+	Display version information
+
+== AUTHOR
+
+Written by Miklos Vajna <vmiklos@frugalware.org>
