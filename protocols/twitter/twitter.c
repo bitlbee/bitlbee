@@ -150,7 +150,7 @@ static gboolean twitter_oauth_callback( struct oauth_info *info )
 		
 		if( info->request_token == NULL )
 		{
-			imcb_error( ic, "OAuth error: %s", info->http->status_string );
+			imcb_error( ic, "OAuth error: %s", twitter_parse_error( info->http ) );
 			imc_logout( ic, TRUE );
 			return FALSE;
 		}
@@ -166,7 +166,7 @@ static gboolean twitter_oauth_callback( struct oauth_info *info )
 	{
 		if( info->token == NULL || info->token_secret == NULL )
 		{
-			imcb_error( ic, "OAuth error: %s", info->http->status_string );
+			imcb_error( ic, "OAuth error: %s", twitter_parse_error( info->http ) );
 			imc_logout( ic, TRUE );
 			return FALSE;
 		}

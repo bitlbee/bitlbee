@@ -141,7 +141,7 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 
 /* Warning: May return a malloc()ed value, which will be free()d on the next
    call. Only for short-term use. */
-static char *twitter_parse_error(struct http_request *req)
+char *twitter_parse_error(struct http_request *req)
 {
 	static char *ret = NULL;
 	struct xt_parser *xp = NULL;
@@ -160,14 +160,12 @@ static char *twitter_parse_error(struct http_request *req)
 		    node->text_len > 0)
 		{
 			ret = g_strdup_printf("%s (%s)", req->status_string, node->text);
-			xt_free(xp);
-			return ret;
 		}
 		
 		xt_free(xp);
 	}
 	
-	return req->status_string;
+	return ret ? ret : req->status_string;
 }
 
 static void twitter_http_get_friends_ids(struct http_request *req);

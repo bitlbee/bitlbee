@@ -84,4 +84,7 @@ extern GSList *twitter_connections;
 
 void twitter_login_finish( struct im_connection *ic );
 
+struct http_request;
+char *twitter_parse_error( struct http_request *req );
+
 #endif //_TWITTER_H
