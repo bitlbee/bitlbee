@@ -836,6 +836,7 @@
 			<variablelist>
 				<varlistentry><term>undo [&lt;id&gt;]</term><listitem><para>Delete your last Tweet (or one with the given ID)</para></listitem></varlistentry>
 				<varlistentry><term>rt &lt;screenname|id&gt;</term><listitem><para>Retweet someone's last Tweet (or one with the given ID)</para></listitem></varlistentry>
+				<varlistentry><term>reply &lt;screenname|id&gt;</term><listitem><para>Reply to a Tweet (with a reply-to reference)</para></listitem></varlistentry>
 				<varlistentry><term>follow &lt;screenname&gt;</term><listitem><para>Start following a person</para></listitem></varlistentry>
 				<varlistentry><term>unfollow &lt;screenname&gt;</term><listitem><para>Stop following a person</para></listitem></varlistentry>
 				<varlistentry><term>post &lt;message&gt;</term><listitem><para>Post a tweet</para></listitem></varlistentry>
@@ -1308,6 +1309,16 @@
 		<description>
 			<para>
 				Can be set for Jabber- and OSCAR-connections. For Jabber, you might have to set this if the servername isn't equal to the part after the @ in the Jabber handle. For OSCAR this shouldn't be necessary anymore in recent BitlBee versions.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="show_ids" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				Enable this setting on a Twitter account to have BitlBee include a two-digit "id" in front of every message. This id can then be used for replies and retweets.
 			</para>
 		</description>
 	</bitlbee-setting>
