@@ -134,6 +134,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	
 	gnutls_certificate_allocate_credentials( &conn->xcred );
 	gnutls_init( &conn->session, GNUTLS_CLIENT );
+	gnutls_transport_set_lowat( conn->session, 1 ); 
 	gnutls_set_default_priority( conn->session );
 	gnutls_credentials_set( conn->session, GNUTLS_CRD_CERTIFICATE, conn->xcred );
 	
