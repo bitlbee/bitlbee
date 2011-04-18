@@ -92,6 +92,7 @@ struct http_request *http_dorequest_url( char *url_string, http_input_function f
 	
 	request = g_strdup_printf( "GET %s HTTP/1.0\r\n"
 	                           "Host: %s\r\n"
+	                           "Connection: close\r\n"
 	                           "User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n"
 	                           "\r\n", url->file, url->host );
 	

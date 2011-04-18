@@ -285,6 +285,7 @@ static void *oauth_post_request( const char *url, GSList **params_, http_input_f
 	                     "Host: %s\r\n"
 	                     "Content-Type: application/x-www-form-urlencoded\r\n"
 	                     "Content-Length: %zd\r\n"
+	                     "Connection: close\r\n"
 	                     "\r\n"
 	                     "%s", url_p.file, url_p.host, strlen( post ), post );
 	g_free( post );
