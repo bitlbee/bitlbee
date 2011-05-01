@@ -85,6 +85,7 @@ const char *op_account_name(void *opdata, const char *account, const char *proto
 static void cmd_otr(irc_t *irc, char **args);
 void cmd_otr_connect(irc_t *irc, char **args);
 void cmd_otr_disconnect(irc_t *irc, char **args);
+void cmd_otr_reconnect(irc_t *irc, char **args);
 void cmd_otr_smp(irc_t *irc, char **args);
 void cmd_otr_smpq(irc_t *irc, char **args);
 void cmd_otr_trust(irc_t *irc, char **args);
@@ -95,6 +96,7 @@ void cmd_otr_forget(irc_t *irc, char **args);
 const command_t otr_commands[] = {
 	{ "connect",     1, &cmd_otr_connect,    0 },
 	{ "disconnect",  1, &cmd_otr_disconnect, 0 },
+	{ "reconnect",   1, &cmd_otr_reconnect,  0 },
 	{ "smp",         2, &cmd_otr_smp,        0 },
 	{ "smpq",        3, &cmd_otr_smpq,       0 },
 	{ "trust",       6, &cmd_otr_trust,      0 },
@@ -692,6 +694,12 @@ const char *op_account_name(void *opdata, const char *account, const char *proto
 
 
 /*** OTR sub-command handlers ***/
+
+void cmd_otr_reconnect(irc_t *irc, char **args)
+{
+	cmd_otr_disconnect(irc, args);
+	cmd_otr_connect(irc, args);
+}
 
 void cmd_otr_disconnect(irc_t *irc, char **args)
 {

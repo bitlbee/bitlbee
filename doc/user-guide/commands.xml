@@ -392,7 +392,7 @@
 		<description>
 
 			<para>
-				Available subcommands: connect, disconnect, smp, smpq, trust, info, keygen, and forget. See <emphasis>help otr &lt;subcommand&gt;</emphasis> for more information.
+				Available subcommands: connect, disconnect, reconnect, smp, smpq, trust, info, keygen, and forget. See <emphasis>help otr &lt;subcommand&gt;</emphasis> for more information.
 			</para>
 
 		</description>
@@ -417,6 +417,23 @@
 			
 				<para>
 					Resets the connection with the specified user to cleartext.
+				</para>
+				
+			</description>
+		
+		</bitlbee-command>
+		
+		<bitlbee-command name="reconnect">
+			<syntax>otr reconnect &lt;nick&gt;</syntax>
+			
+			<description>
+			
+				<para>
+					Breaks and re-establishes the encrypted connection with the specified user. Useful if something got desynced.
+				</para>
+				
+				<para>
+					Equivalent to <emphasis>otr disconnect</emphasis> followed by <emphasis>otr connect</emphasis>.
 				</para>
 				
 			</description>
