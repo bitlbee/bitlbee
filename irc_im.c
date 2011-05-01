@@ -599,6 +599,7 @@ static gboolean bee_irc_chat_free( bee_t *bee, struct groupchat *c )
 		irc_channel_printf( ic, "Cleaning up channel, bye!" );
 	
 	ic->data = NULL;
+	c->ui_data = NULL;
 	irc_channel_del_user( ic, ic->irc->user, IRC_CDU_KICK, "Chatroom closed by server" );
 	
 	return TRUE;
@@ -904,7 +905,9 @@ static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
 	if( c && c->ic->acc->prpl->chat_leave )
 		c->ic->acc->prpl->chat_leave( c );
 	
+	/* Remove references in both directions now. We don't need each other anymore. */
 	ic->data = NULL;
+	c->ui_data = NULL;
 	
 	return TRUE;
 }
