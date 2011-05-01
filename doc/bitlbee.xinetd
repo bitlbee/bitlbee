@@ -11,7 +11,7 @@ service ircd
 	
 	## You most likely want to change these two
 	user            = nobody
-	server          = /usr/local/sbin/bitlbee
+	server          = /usr/local/sbin/bitlbee -I
 	
 	## You might want to limit access to localhost only:
 	# bind            = 127.0.0.1
