@@ -138,7 +138,7 @@ $(subdirs):
 
 $(OTR_PI): %.so: $(SRCDIR)%.c
 	@echo '*' Building plugin $@
-	@$(CC) $(CFLAGS) $(OTRFLAGS) -fPIC -shared $< -o $@
+	@$(CC) $(CFLAGS) $(OTRFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@
 
 $(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<
