@@ -285,6 +285,7 @@ static void twitter_login( account_t *acc )
 	else
 		td->prefix = g_strdup( url.host );
 	
+	td->flags |= TWITTER_HAVE_FRIENDS;
 	td->user = acc->user;
 	if( strstr( acc->pass, "oauth_token=" ) )
 		td->oauth_info = oauth_from_string( acc->pass, get_oauth_service( ic ) );
