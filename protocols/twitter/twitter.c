@@ -516,8 +516,8 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
 		    (tud = bu->data) && tud->last_id) {
 			id = tud->last_id;
-		} else if ((id = g_ascii_strtoull(cmd[1], NULL, 10)) &&
-			   (id < TWITTER_LOG_LENGTH) && td->log) {
+		} else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1 &&
+		           (id < TWITTER_LOG_LENGTH) && td->log) {
 			bu = td->log[id].bu;
 			if (g_slist_find(ic->bee->users, bu))
 				id = td->log[id].id;
