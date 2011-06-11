@@ -143,7 +143,7 @@ char *twitter_parse_error(struct http_request *req)
 {
 	static char *ret = NULL;
 	struct xt_parser *xp = NULL;
-	struct xt_node *node;
+	struct xt_node *node, *err;
 
 	g_free(ret);
 	ret = NULL;
@@ -153,8 +153,8 @@ char *twitter_parse_error(struct http_request *req)
 		xt_feed(xp, req->reply_body, req->body_size);
 		
 		for (node = xp->root; node; node = node->next)
-			if ((node = xt_find_node(node->children, "error")) && node->text_len > 0) {
-				ret = g_strdup_printf("%s (%s)", req->status_string, node->text);
+			if ((err = xt_find_node(node->children, "error")) && err->text_len > 0) {
+				ret = g_strdup_printf("%s (%s)", req->status_string, err->text);
 				break;
 			}
 

@@ -28,8 +28,8 @@
 #include "nogaim.h"
 #include "twitter_http.h"
 
-#define TWITTER_API_URL "http://twitter.com"
-#define IDENTICA_API_URL "http://identi.ca/api"
+#define TWITTER_API_URL "http://api.twitter.com/1"
+#define IDENTICA_API_URL "https://identi.ca/api"
 
 /* Status URLs */
 #define TWITTER_STATUS_UPDATE_URL "/statuses/update.xml"

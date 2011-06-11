@@ -248,13 +248,16 @@ static void twitter_login(account_t * acc)
 	struct twitter_data *td;
 	char name[strlen(acc->user) + 9];
 	url_t url;
-
+	char *s;
+	
 	if (!url_set(&url, set_getstr(&ic->acc->set, "base_url")) ||
 	    (url.proto != PROTO_HTTP && url.proto != PROTO_HTTPS)) {
 		imcb_error(ic, "Incorrect API base URL: %s", set_getstr(&ic->acc->set, "base_url"));
 		imc_logout(ic, FALSE);
 		return;
 	}
+
+	imcb_log(ic, "Connecting");
 
 	twitter_connections = g_slist_append(twitter_connections, ic);
 	td = g_new0(struct twitter_data, 1);
@@ -266,13 +269,25 @@ static void twitter_login(account_t * acc)
 	td->url_host = g_strdup(url.host);
 	if (strcmp(url.file, "/") != 0)
 		td->url_path = g_strdup(url.file);
-	else
+	else {
 		td->url_path = g_strdup("");
-	if (g_str_has_suffix(url.host, ".com"))
-		td->prefix = g_strndup(url.host, strlen(url.host) - 4);
-	else
-		td->prefix = g_strdup(url.host);
-
+		if (g_str_has_suffix(url.host, "twitter.com"))
+			/* May fire for people who turned on HTTPS. */
+			imcb_error(ic, "Warning: Twitter requires a version number in API calls "
+			               "now. Try resetting the base_url account setting.");
+	}
+	
+	/* Hacky string mangling: Turn identi.ca into identi.ca and api.twitter.com
+	   into twitter, and try to be sensible if we get anything else. */
+	td->prefix = g_strdup(url.host);
+	if (g_str_has_suffix(td->prefix, ".com"))
+		td->prefix[strlen(url.host) - 4] = '\0';
+	if ((s = strrchr(td->prefix, '.'))) {
+		s = g_strdup(s + 1);
+		g_free(td->prefix);
+		td->prefix = s;
+	}
+	
 	if (strstr(acc->pass, "oauth_token="))
 		td->oauth_info = oauth_from_string(acc->pass, get_oauth_service(ic));
 
@@ -282,8 +297,6 @@ static void twitter_login(account_t * acc)
 
 	if (set_getbool(&acc->set, "show_ids"))
 		td->log = g_new0(struct twitter_log_data, TWITTER_LOG_LENGTH);
-
-	imcb_log(ic, "Connecting");
 
 	twitter_login_finish(ic);
 }

@@ -770,7 +770,7 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="base_url" type="string" scope="account">
-		<default>http://twitter.com</default>
+		<default>http://api.twitter.com/1</default>
 
 		<description>
 			<para>
