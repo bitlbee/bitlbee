@@ -907,7 +907,8 @@ static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
 	
 	/* Remove references in both directions now. We don't need each other anymore. */
 	ic->data = NULL;
-	c->ui_data = NULL;
+	if( c )
+		c->ui_data = NULL;
 	
 	return TRUE;
 }
