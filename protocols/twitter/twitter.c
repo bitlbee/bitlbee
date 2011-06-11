@@ -282,7 +282,9 @@ static void twitter_login(account_t * acc)
 	td->prefix = g_strdup(url.host);
 	if (g_str_has_suffix(td->prefix, ".com"))
 		td->prefix[strlen(url.host) - 4] = '\0';
-	if ((s = strrchr(td->prefix, '.'))) {
+	if ((s = strrchr(td->prefix, '.')) && strlen(s) > 4) {
+		/* If we have at least 3 chars after the last dot, cut off the rest.
+		   (mostly a www/api prefix or sth) */
 		s = g_strdup(s + 1);
 		g_free(td->prefix);
 		td->prefix = s;
