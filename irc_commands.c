@@ -636,7 +636,7 @@ static void irc_cmd_away( irc_t *irc, char **cmd )
 		/* Copy away string, but skip control chars. Mainly because
 		   Jabber really doesn't like them. */
 		for( i = j = 0; cmd[1][i]; i ++ )
-			if( ( away[j] = cmd[1][i] ) >= ' ' )
+			if( (unsigned char) ( away[j] = cmd[1][i] ) >= ' ' )
 				j ++;
 		away[j] = '\0';
 		
