@@ -42,8 +42,9 @@ struct twitter_log_data;
 struct twitter_data
 {
 	char* user;
-	char* pass;
 	struct oauth_info *oauth_info;
+	GSList *follow_ids;
+	
 	guint64 home_timeline_id;
 	guint64 last_status_id; /* For undo */
 	gint main_loop_id;
@@ -51,6 +52,7 @@ struct twitter_data
 	gint http_fails;
 	twitter_flags_t flags;
 	
+	/* set base_url */
 	gboolean url_ssl;
 	int url_port;
 	char *url_host;
@@ -58,6 +60,7 @@ struct twitter_data
 
 	char *prefix; /* Used to generate contact + channel name. */
 	
+	/* set show_ids */
 	struct twitter_log_data *log;
 	int log_id;
 };

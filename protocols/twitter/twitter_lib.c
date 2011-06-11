@@ -54,7 +54,6 @@ struct twitter_xml_list {
 	int type;
 	gint64 next_cursor;
 	GSList *list;
-	gpointer data;
 };
 
 struct twitter_xml_user {
@@ -108,6 +107,8 @@ static void txl_free(struct twitter_xml_list *txl)
 			txs_free((struct twitter_xml_status *) l->data);
 		else if (txl->type == TXL_ID)
 			g_free(l->data);
+		else if (txl->type == TXL_USER)
+			txu_free(l->data);
 	g_slist_free(txl->list);
 	g_free(txl);
 }
@@ -119,7 +120,7 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 {
 	struct twitter_data *td = ic->proto_data;
 
-	// Check if the buddy is allready in the buddy list.
+	// Check if the buddy is already in the buddy list.
 	if (!bee_user_by_handle(ic->bee, ic, name)) {
 		char *mode = set_getstr(&ic->acc->set, "mode");
 
@@ -137,7 +138,7 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 }
 
 /* Warning: May return a malloc()ed value, which will be free()d on the next
-   call. Only for short-term use. */
+   call. Only for short-term use. NOT THREADSAFE!  */
 char *twitter_parse_error(struct http_request *req)
 {
 	static char *ret = NULL;
@@ -150,11 +151,12 @@ char *twitter_parse_error(struct http_request *req)
 	if (req->body_size > 0) {
 		xp = xt_new(NULL, NULL);
 		xt_feed(xp, req->reply_body, req->body_size);
-
-		if ((node = xt_find_node(xp->root, "hash")) &&
-		    (node = xt_find_node(node->children, "error")) && node->text_len > 0) {
-			ret = g_strdup_printf("%s (%s)", req->status_string, node->text);
-		}
+		
+		for (node = xp->root; node; node = node->next)
+			if ((node = xt_find_node(node->children, "error")) && node->text_len > 0) {
+				ret = g_strdup_printf("%s (%s)", req->status_string, node->text);
+				break;
+			}
 
 		xt_free(xp);
 	}
@@ -206,10 +208,12 @@ static xt_status twitter_xt_get_friends_id_list(struct xt_node *node, struct twi
 	// The root <statuses> node should hold the list of statuses <status>
 	// Walk over the nodes children.
 	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("id", child->name) == 0) {
-			// Add the item to the list.
-			txl->list =
-			    g_slist_append(txl->list, g_memdup(child->text, child->text_len + 1));
+		if (g_strcasecmp("ids", child->name) == 0) {
+			struct xt_node *idc;
+			for (idc = child->children; idc; idc = idc->next)
+				if (g_strcasecmp(idc->name, "id") == 0)
+					txl->list = g_slist_prepend(txl->list,
+						g_memdup(idc->text, idc->text_len + 1));
 		} else if (g_strcasecmp("next_cursor", child->name) == 0) {
 			twitter_xt_next_cursor(child, txl);
 		}
@@ -217,6 +221,8 @@ static xt_status twitter_xt_get_friends_id_list(struct xt_node *node, struct twi
 
 	return XT_HANDLED;
 }
+
+static void twitter_get_users_lookup(struct im_connection *ic);
 
 /**
  * Callback for getting the friends ids.
@@ -236,18 +242,28 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 
 	td = ic->proto_data;
 
-	// Check if the HTTP request went well.
-	if (req->status_code != 200) {
+	// Check if the HTTP request went well. More strict checks as this is
+	// the first request we do in a session.
+	if (req->status_code == 401) {
+		imcb_error(ic, "Authentication failure");
+		imc_logout(ic, FALSE);
+		return;
+	} else if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve friends: %s", twitter_parse_error(req));
-
+		imcb_error(ic, "Could not retrieve %s: %s",
+			   TWITTER_FRIENDS_IDS_URL, twitter_parse_error(req));
+		imc_logout(ic, TRUE);
 		return;
 	} else {
 		td->http_fails = 0;
 	}
 
+	/* Create the room now that we "logged in". */
+	if (!td->home_timeline_gc && g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
+		twitter_groupchat_init(ic);
+
 	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = td->follow_ids;
 
 	// Parse the data.
 	parser = xt_new(NULL, txl);
@@ -255,10 +271,103 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	twitter_xt_get_friends_id_list(parser->root, txl);
 	xt_free(parser);
 
+	td->follow_ids = txl->list;
 	if (txl->next_cursor)
+		/* These were just numbers. Up to 4000 in a response AFAIK so if we get here
+		   we may be using a spammer account. \o/ */
 		twitter_get_friends_ids(ic, txl->next_cursor);
+	else
+		/* Now to convert all those numbers into names.. */
+		twitter_get_users_lookup(ic);
 
+	txl->list = NULL;
 	txl_free(txl);
+}
+
+static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_list *txl);
+static void twitter_http_get_users_lookup(struct http_request *req);
+
+static void twitter_get_users_lookup(struct im_connection *ic)
+{
+	struct twitter_data *td = ic->proto_data;
+	char *args[2] = {
+		"user_id",
+		NULL,
+	};
+	GString *ids = g_string_new("");
+	int i;
+	
+	/* We can request up to 100 users at a time. */
+	for (i = 0; i < 100 && td->follow_ids; i ++) {
+		g_string_append_printf(ids, ",%s", (char*) td->follow_ids->data);
+		g_free(td->follow_ids->data);
+		td->follow_ids = g_slist_remove(td->follow_ids, td->follow_ids->data);
+	}
+	if (ids->len > 0) {
+		args[1] = ids->str + 1;
+		/* POST, because I think ids can be up to 1KB long. */
+		twitter_http(ic, TWITTER_USERS_LOOKUP_URL, twitter_http_get_users_lookup, ic, 1, args, 2);
+	} else {
+		/* We have all users. Continue with login. (Get statuses.) */
+		td->flags |= TWITTER_HAVE_FRIENDS;
+		twitter_login_finish(ic);
+	}
+	g_string_free(ids, TRUE);
+}
+
+/**
+ * Callback for getting (twitter)friends...
+ *
+ * Be afraid, be very afraid! This function will potentially add hundreds of "friends". "Who has 
+ * hundreds of friends?" you wonder? You probably not, since you are reading the source of 
+ * BitlBee... Get a life and meet new people!
+ */
+static void twitter_http_get_users_lookup(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	struct twitter_data *td;
+	struct xt_parser *parser;
+	struct twitter_xml_list *txl;
+	GSList *l = NULL;
+	struct twitter_xml_user *user;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(twitter_connections, ic))
+		return;
+
+	td = ic->proto_data;
+
+	if (req->status_code != 200) {
+		// It didn't go well, output the error and return.
+		imcb_error(ic, "Could not retrieve %s: %s",
+			   TWITTER_USERS_LOOKUP_URL, twitter_parse_error(req));
+		imc_logout(ic, TRUE);
+		return;
+	} else {
+		td->http_fails = 0;
+	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = NULL;
+
+	// Parse the data.
+	parser = xt_new(NULL, txl);
+	xt_feed(parser, req->reply_body, req->body_size);
+
+	// Get the user list from the parsed xml feed.
+	twitter_xt_get_users(parser->root, txl);
+	xt_free(parser);
+
+	// Add the users as buddies.
+	for (l = txl->list; l; l = g_slist_next(l)) {
+		user = l->data;
+		twitter_add_buddy(ic, user->screen_name, user->name);
+	}
+
+	// Free the structure.
+	txl_free(txl);
+
+	twitter_get_users_lookup(ic);
 }
 
 /**
@@ -303,32 +412,6 @@ static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_l
 			twitter_xt_get_user(child, txu);
 			// Put the item in the front of the list.
 			txl->list = g_slist_prepend(txl->list, txu);
-		}
-	}
-
-	return XT_HANDLED;
-}
-
-/**
- * Function to fill a twitter_xml_list struct.
- * It calls twitter_xt_get_users to get the <user>s from a <users> element.
- * It sets:
- *  - the next_cursor.
- */
-static xt_status twitter_xt_get_user_list(struct xt_node *node, struct twitter_xml_list *txl)
-{
-	struct xt_node *child;
-
-	// Set the type of the list.
-	txl->type = TXL_USER;
-
-	// The root <user_list> node should hold a users <users> element
-	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("users", child->name) == 0) {
-			twitter_xt_get_users(child, txl);
-		} else if (g_strcasecmp("next_cursor", child->name) == 0) {
-			twitter_xt_next_cursor(child, txl);
 		}
 	}
 
@@ -633,8 +716,8 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	} else {
 		// It didn't go well, output the error and return.
 		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve " TWITTER_HOME_TIMELINE_URL ": %s",
-				   twitter_parse_error(req));
+			imcb_error(ic, "Could not retrieve %s: %s",
+				   TWITTER_HOME_TIMELINE_URL, twitter_parse_error(req));
 
 		return;
 	}
@@ -661,91 +744,8 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 }
 
 /**
- * Callback for getting (twitter)friends...
- *
- * Be afraid, be very afraid! This function will potentially add hundreds of "friends". "Who has 
- * hundreds of friends?" you wonder? You probably not, since you are reading the source of 
- * BitlBee... Get a life and meet new people!
- */
-static void twitter_http_get_statuses_friends(struct http_request *req)
-{
-	struct im_connection *ic = req->data;
-	struct twitter_data *td;
-	struct xt_parser *parser;
-	struct twitter_xml_list *txl;
-	GSList *l = NULL;
-	struct twitter_xml_user *user;
-
-	// Check if the connection is still active.
-	if (!g_slist_find(twitter_connections, ic))
-		return;
-
-	td = ic->proto_data;
-
-	// Check if the HTTP request went well.
-	if (req->status_code == 401) {
-		imcb_error(ic, "Authentication failure");
-		imc_logout(ic, FALSE);
-		return;
-	} else if (req->status_code != 200) {
-		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not retrieve " TWITTER_SHOW_FRIENDS_URL ": %s",
-			   twitter_parse_error(req));
-		imc_logout(ic, TRUE);
-		return;
-	} else {
-		td->http_fails = 0;
-	}
-
-	if (!td->home_timeline_gc && g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
-		twitter_groupchat_init(ic);
-
-	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = NULL;
-
-	// Parse the data.
-	parser = xt_new(NULL, txl);
-	xt_feed(parser, req->reply_body, req->body_size);
-
-	// Get the user list from the parsed xml feed.
-	twitter_xt_get_user_list(parser->root, txl);
-	xt_free(parser);
-
-	// Add the users as buddies.
-	for (l = txl->list; l; l = g_slist_next(l)) {
-		user = l->data;
-		twitter_add_buddy(ic, user->screen_name, user->name);
-	}
-
-	// if the next_cursor is set to something bigger then 0 there are more friends to gather.
-	if (txl->next_cursor > 0) {
-		twitter_get_statuses_friends(ic, txl->next_cursor);
-	} else {
-		td->flags |= TWITTER_HAVE_FRIENDS;
-		twitter_login_finish(ic);
-	}
-
-	// Free the structure.
-	txl_free(txl);
-}
-
-/**
- * Get the friends.
- */
-void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor)
-{
-	char *args[2];
-	args[0] = "cursor";
-	args[1] = g_strdup_printf("%lld", (long long) next_cursor);
-
-	twitter_http(ic, TWITTER_SHOW_FRIENDS_URL, twitter_http_get_statuses_friends, ic, 0, args,
-		     2);
-
-	g_free(args[1]);
-}
-
-/**
- * Callback to use after sending a post request to twitter.
+ * Callback to use after sending a POST request to twitter.
+ * (Generic, used for a few kinds of queries.)
  */
 static void twitter_http_post(struct http_request *req)
 {
@@ -809,8 +809,6 @@ void twitter_direct_messages_new(struct im_connection *ic, char *who, char *msg)
 	args[3] = msg;
 	// Use the same callback as for twitter_post_status, since it does basically the same.
 	twitter_http(ic, TWITTER_DIRECT_MESSAGES_NEW_URL, twitter_http_post, ic, 1, args, 4);
-//      g_free(args[1]);
-//      g_free(args[3]);
 }
 
 void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int create)
@@ -825,9 +823,8 @@ void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int
 void twitter_status_destroy(struct im_connection *ic, guint64 id)
 {
 	char *url;
-	url =
-	    g_strdup_printf("%s%llu%s", TWITTER_STATUS_DESTROY_URL, (unsigned long long) id,
-			    ".xml");
+	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_DESTROY_URL,
+	                      (unsigned long long) id, ".xml");
 	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }
@@ -835,9 +832,8 @@ void twitter_status_destroy(struct im_connection *ic, guint64 id)
 void twitter_status_retweet(struct im_connection *ic, guint64 id)
 {
 	char *url;
-	url =
-	    g_strdup_printf("%s%llu%s", TWITTER_STATUS_RETWEET_URL, (unsigned long long) id,
-			    ".xml");
+	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_RETWEET_URL,
+	                      (unsigned long long) id, ".xml");
 	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }

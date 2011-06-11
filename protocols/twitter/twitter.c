@@ -82,7 +82,8 @@ void twitter_login_finish(struct im_connection *ic)
 	else if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "one") != 0 &&
 		 !(td->flags & TWITTER_HAVE_FRIENDS)) {
 		imcb_log(ic, "Getting contact list");
-		twitter_get_statuses_friends(ic, -1);
+		twitter_get_friends_ids(ic, -1);
+		//twitter_get_statuses_friends(ic, -1);
 	} else
 		twitter_main_loop_start(ic);
 }
@@ -167,6 +168,8 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 				imcb_log(ic, "Warning: You logged in via OAuth as %s "
 					 "instead of %s.", sn, ic->acc->user);
 			}
+			g_free(td->user);
+			td->user = g_strdup(sn);
 		}
 
 		/* IM mods didn't do this so far and it's ugly but I should
@@ -256,6 +259,7 @@ static void twitter_login(account_t * acc)
 	twitter_connections = g_slist_append(twitter_connections, ic);
 	td = g_new0(struct twitter_data, 1);
 	ic->proto_data = td;
+	td->user = g_strdup(acc->user);
 
 	td->url_ssl = url.proto == PROTO_HTTPS;
 	td->url_port = url.port;
@@ -269,8 +273,6 @@ static void twitter_login(account_t * acc)
 	else
 		td->prefix = g_strdup(url.host);
 
-	td->flags |= TWITTER_HAVE_FRIENDS;
-	td->user = acc->user;
 	if (strstr(acc->pass, "oauth_token="))
 		td->oauth_info = oauth_from_string(acc->pass, get_oauth_service(ic));
 
@@ -304,10 +306,10 @@ static void twitter_logout(struct im_connection *ic)
 
 	if (td) {
 		oauth_info_free(td->oauth_info);
+		g_free(td->user);
 		g_free(td->prefix);
 		g_free(td->url_host);
 		g_free(td->url_path);
-		g_free(td->pass);
 		g_free(td->log);
 		g_free(td);
 	}
