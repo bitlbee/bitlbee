@@ -3,6 +3,22 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 3.0.3:
+- Fixed Twitter compatibility. (The API call used to get the following list
+  was deprecated.)
+- Twitter: Enable the show_ids setting to assign a two-digit short ID to
+  recent tweets to use for retweets and replies (so you can RT/reply to more
+  than just a person's last message).
+- Some other Twitter fixes/improvements.
+- "otr reconnect" command and some other fixes.
+- GnuTLS 2.12 compatibility fix.
+- Include "FLOOD=0/9999" in the 005/ISUPPORT line at login to hint the IRC
+  client that rate limiting is not required. (Next step: Get IRC clients to
+  parse it.)
+- Other stuff too small to mention.
+
+Finished 12 Jun 2011
+
 Version 3.0.2:
 - Fixed MSN login issues with @msn.com accounts.
 - /CTCP support: You can CTCP VERSION Jabber contacts, and CTCP NUDGE MSN
