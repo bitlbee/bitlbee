@@ -1,3 +1,10 @@
+bitlbee (3.0.3-1) unstable; urgency=low
+
+  * New upstream release. (Skipped 3.0.2, sorry!)
+  * Fixes Twitter issues.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Tue, 14 Jun 2011 22:39:22 +0100
+
 bitlbee (3.0.1-1) unstable; urgency=low
 
   * New upstream release.
