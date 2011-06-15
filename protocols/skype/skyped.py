@@ -179,7 +179,10 @@ def bitlbee_idle_handler(skype):
 
 def server(host, port, skype = None):
 	global options
-	sock = socket.socket()
+	if ":" in host:
+		sock = socket.socket(socket.AF_INET6)
+	else:
+		sock = socket.socket()
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	sock.bind((host, port))
 	sock.listen(1)
@@ -359,7 +362,7 @@ Options:
 	-c      --config        path to configuration file (default: %s)
 	-d	--debug		enable debug messages
 	-h	--help		this help
-	-H	--host		set the tcp host (default: %s)
+	-H	--host		set the tcp host, supports IPv4 and IPv6 (default: %s)
 	-l      --log           set the log file in background mode (default: none)
 	-n	--nofork	don't run as daemon in the background
 	-p	--port		set the tcp port (default: %s)
