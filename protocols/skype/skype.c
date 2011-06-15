@@ -1200,6 +1200,9 @@ static void skype_logout(struct im_connection *ic)
 
 	skype_printf(ic, "SET USERSTATUS OFFLINE\n");
 
+	while( ic->groupchats )
+		imcb_chat_free(ic->groupchats->data);
+
 	for (i = 0; i < g_list_length(sd->groups); i++) {
 		struct skype_group *sg = (struct skype_group *)g_list_nth_data(sd->groups, i);
 		skype_group_free(sg, FALSE);
