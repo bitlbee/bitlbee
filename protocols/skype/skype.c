@@ -1391,10 +1391,7 @@ void skype_chat_invite(struct groupchat *gc, char *who, char *message)
 	struct im_connection *ic = gc->ic;
 	char *ptr, *nick;
 
-	/* Unused parameter */
-	who = who;
-
-	nick = g_strdup(message);
+	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if (ptr)
 		*ptr = '\0';
