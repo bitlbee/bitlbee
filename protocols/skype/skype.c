@@ -911,8 +911,11 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 	if (gc)
 		imcb_chat_free(gc);
 	if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
-		gc = imcb_chat_new(ic, id);
-		imcb_chat_name_hint(gc, id);
+		gc = bee_chat_by_title(ic->bee, ic, id);
+		if (!gc) {
+			gc = imcb_chat_new(ic, id);
+			imcb_chat_name_hint(gc, id);
+		}
 		skype_printf(ic, "GET CHAT %s ADDER\n", id);
 		skype_printf(ic, "GET CHAT %s TOPIC\n", id);
 	} else if (!strcmp(info, "STATUS DIALOG") && sd->groupchat_with) {
