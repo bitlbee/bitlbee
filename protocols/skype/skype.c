@@ -911,8 +911,11 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 	if (gc)
 		imcb_chat_free(gc);
 	if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
-		gc = imcb_chat_new(ic, id);
-		imcb_chat_name_hint(gc, id);
+		gc = bee_chat_by_title(ic->bee, ic, id);
+		if (!gc) {
+			gc = imcb_chat_new(ic, id);
+			imcb_chat_name_hint(gc, id);
+		}
 		skype_printf(ic, "GET CHAT %s ADDER\n", id);
 		skype_printf(ic, "GET CHAT %s TOPIC\n", id);
 	} else if (!strcmp(info, "STATUS DIALOG") && sd->groupchat_with) {
@@ -1197,6 +1200,9 @@ static void skype_logout(struct im_connection *ic)
 
 	skype_printf(ic, "SET USERSTATUS OFFLINE\n");
 
+	while( ic->groupchats )
+		imcb_chat_free(ic->groupchats->data);
+
 	for (i = 0; i < g_list_length(sd->groups); i++) {
 		struct skype_group *sg = (struct skype_group *)g_list_nth_data(sd->groups, i);
 		skype_group_free(sg, FALSE);
@@ -1391,10 +1397,7 @@ void skype_chat_invite(struct groupchat *gc, char *who, char *message)
 	struct im_connection *ic = gc->ic;
 	char *ptr, *nick;
 
-	/* Unused parameter */
-	who = who;
-
-	nick = g_strdup(message);
+	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if (ptr)
 		*ptr = '\0';
