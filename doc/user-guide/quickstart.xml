@@ -52,43 +52,7 @@ When you are finished adding your account(s) use the <emphasis>account on</empha
 </sect1>
 
 <sect1 id="quickstart3">
-<title>Managing Contact Lists: Rename</title>
-
-<!--quickstart3-->
-<para>
-<emphasis>Step Three: Managing Contact Lists: Rename</emphasis>
-</para>
-
-<para>
-Now BitlBee logs in and downloads the contact list from the IM server. In a few seconds, all your on-line buddies should show up in the control channel.
-</para>
-
-<para>
-BitlBee will convert names into IRC-friendly form (for instance: tux@example.com will be given the nickname tux). If you have more than one person who would have the same name by this logic (for instance: tux@example.com and tux@bitlbee.org) the second one to log on will be tux_. The same is true if you have a tux log on to AOL and a tux log on from Yahoo.
-</para>
-
-<para>
-It would be easy to get these two mixed up, so BitlBee has a <emphasis>rename</emphasis> command to change the nickname into something more suitable: <emphasis>rename &lt;oldnick&gt; &lt;newnick&gt;</emphasis>
-</para>
-
-<ircexample>
-	<ircline nick="you">rename tux_ bitlbeetux</ircline>
-	<ircaction nick="tux_">is now known as <emphasis>bitlbeetux</emphasis></ircaction>
-	<ircline nick="root">Nick successfully changed</ircline>
-</ircexample>
-
-<para>
-When finished, type <emphasis>help quickstart4</emphasis> to continue.
-</para>
-
-</sect1>
-
-<sect1 id="quickstart4">
-<title>Step Four: Managing Contact Lists: Add and Remove.</title>
-
-<para>
-<emphasis>Step Four: Managing Contact Lists: Add and Remove.</emphasis>
-</para>
+<title>Step Four: Managing Contact Lists: Add, Remove and Rename</title>
 
 <para>
 Now you might want to add some contacts, to do this we will use the <emphasis>add</emphasis> command. It needs two arguments: a connection ID (which can be a number (try <emphasis>account list</emphasis>), protocol name or (part of) the screenname) and the user's handle. It is used in the following way: <emphasis>add &lt;connection&gt; &lt;handle&gt;</emphasis>
@@ -104,16 +68,18 @@ In this case r2d2 is online, since he/she joins the channel immediately. If the 
 </para>
 
 <para>
-Lets say you accidentally added r2d3@example.com rather than r2d2@example.com, or maybe you just want to remove a user from your list because you never talk to them. To remove a name you will want to use the <emphasis>remove</emphasis> command: <emphasis>remove &lt;nick&gt;</emphasis>
+Lets say you accidentally added r2d3@example.com rather than r2d2@example.com, or maybe you just want to remove a user from your list because you never talk to them. To remove a name you will want to use the <emphasis>remove</emphasis> command: <emphasis>remove r2d3</emphasis>
 </para>
 
+<para>Finally, if you have multiple users with similar names you may use the <emphasis>rename</emphasis> command to make it easier to remember: <emphasis>rename r2d2_ r2d2_aim</emphasis>
+
 <para>
-When finished, type <emphasis>help quickstart5</emphasis> to continue.
+When finished, type <emphasis>help quickstart4</emphasis> to continue.
 </para>
 
 </sect1>
 
-<sect1 id="quickstart5">
+<sect1 id="quickstart4">
 <title>Chatting</title>
 
 <para>
@@ -138,16 +104,16 @@ If you prefer chatting in a separate window, use the <emphasis>/msg</emphasis> o
 </para>
 
 <para>
-You know the basics. If you want to get to know more about BitlBee, please type <emphasis>help quickstart6</emphasis>.
+You know the basics. If you want to know about some of the neat features BitlBee offers, please type <emphasis>help quickstart5</emphasis>.
 </para>
 
 </sect1>
 
-<sect1 id="quickstart6">
+<sect1 id="quickstart5">
 <title>Further Resources</title>
 
 <para>
-<emphasis>So you want more than just chatting? Or maybe you're just looking for a feature?</emphasis>
+<emphasis>So you want more than just chatting? Or maybe you're just looking for more features?</emphasis>
 </para>
 
 <para>
