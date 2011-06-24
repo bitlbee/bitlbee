@@ -117,6 +117,14 @@ You know the basics. If you want to know about some of the neat features BitlBee
 </para>
 
 <para>
+With multiple channel support you can have contacts for specific protocols in their own channels, for instance, if you <emphasis>/join &amp;msn</emphasis> you will join a channel that only contains your MSN contacts.
+</para>
+
+<para>
+Account tagging allows you to use the given account name rather than a number when referencing your account. If you wish to turn off your gtalk account, you may <emphasis>account off gtalk</emphasis> rather than <emphasis>account off 3</emphasis> where "3" is the account number.
+</para>
+
+<para>
 You can type <emphasis>help set</emphasis> to learn more about the possible BitlBee user settings. Among these user settings you will find options for common issues, such as changing the charset, HTML stripping and automatic connecting (simply type <emphasis>set</emphasis> to see current user settings).
 </para>
 
