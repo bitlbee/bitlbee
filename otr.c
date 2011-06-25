@@ -1326,7 +1326,7 @@ void otr_update_uflags(ConnContext *context, irc_user_t *u)
 
 int otr_update_modeflags(irc_t *irc, irc_user_t *u)
 {
-	return 1;
+	return 0;
 }
 
 void show_fingerprints(irc_t *irc, ConnContext *ctx)
