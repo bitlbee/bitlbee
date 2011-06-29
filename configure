@@ -540,7 +540,7 @@ elif [ "$otr" = "plugin" ]; then
 	echo 'OTR_PI=otr.so' >> Makefile.settings
 fi
 
-if [ "$skype" = "plugin" ]; then
+if [ "$skype" = "1" ]; then
 	echo 'SKYPE_PI=skype.so' >> Makefile.settings
 fi
 
@@ -746,7 +746,7 @@ else
 	echo '  Off-the-Record (OTR) Messaging disabled.'
 fi
 
-if [ "$skype" = "plugin" ]; then
+if [ "$skype" = "1" ]; then
 	echo '  Skype enabled (as a plugin).'
 else
 	echo '  Skype disabled.'
