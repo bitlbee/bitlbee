@@ -641,8 +641,10 @@ void op_gone_secure(void *opdata, ConnContext *context)
 	}
 	
 	otr_update_uflags(context, u);
-	if(!otr_update_modeflags(irc, u))
-		irc_usermsg(irc, "conversation with %s is now off the record", u->nick);
+	if(!otr_update_modeflags(irc, u)) {
+		char *trust = u->flags & IRC_USER_OTR_TRUSTED ? "trusted" : "untrusted!";
+		irc_usermsg(irc, "conversation with %s is now off the record (%s)", u->nick, trust);
+	}
 }
 
 void op_gone_insecure(void *opdata, ConnContext *context)
@@ -680,8 +682,10 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 	}
 
 	otr_update_uflags(context, u);
-	if(!otr_update_modeflags(irc, u))
-		irc_usermsg(irc, "otr connection with %s has been refreshed", u->nick);
+	if(!otr_update_modeflags(irc, u)) {
+		char *trust = u->flags & IRC_USER_OTR_TRUSTED ? "trusted" : "untrusted!";
+		irc_usermsg(irc, "otr connection with %s has been refreshed (%s)", u->nick, trust);
+	}
 }
 
 void op_log_message(void *opdata, const char *message)
