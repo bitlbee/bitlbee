@@ -239,6 +239,8 @@ gboolean otr_irc_new(irc_t *irc)
 	l = g_slist_prepend( l, "manual" );
 	l = g_slist_prepend( l, "always" );
 	s->eval_data = l;
+
+	s = set_add( &irc->b->set, "otr_does_html", "true", set_eval_bool, irc );
 	
 	return TRUE;
 }
@@ -387,26 +389,38 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 		/* OTR has processed this message */
 		ConnContext *context = otrl_context_find(irc->otr->us, iu->bu->handle,
 			ic->acc->user, ic->acc->prpl->name, 0, NULL, NULL, NULL);
-		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
-		   set_getbool(&ic->bee->set, "otr_color_encrypted")) {
-			/* color according to f'print trust */
-			int color;
-			const char *trust = context->active_fingerprint->trust;
-			if(trust && trust[0] != '\0')
-				color=3;   /* green */
-			else
-				color=5;   /* red */
 
-			if(newmsg[0] == ',') {
-				/* could be a problem with the color code */
-				/* insert a space between color spec and message */
-				colormsg = g_strdup_printf("\x03%.2d %s\x0F", color, newmsg);
-			} else {
-				colormsg = g_strdup_printf("\x03%.2d%s\x0F", color, newmsg);
+		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
+			/* HTML decoding */
+			/* perform any necessary stripping that the top level would miss */
+			if(set_getbool(&ic->bee->set, "otr_does_html") &&
+			   !(ic->flags & OPT_DOES_HTML) &&
+			   set_getbool(&ic->bee->set, "strip_html")) {
+				strip_html(newmsg);
+			}
+
+			/* coloring */
+			if(set_getbool(&ic->bee->set, "otr_color_encrypted")) {
+				/* color according to f'print trust */
+				int color;
+				const char *trust = context->active_fingerprint->trust;
+				if(trust && trust[0] != '\0')
+					color=3;   /* green */
+				else
+					color=5;   /* red */
+
+				if(newmsg[0] == ',') {
+					/* could be a problem with the color code */
+					/* insert a space between color spec and message */
+					colormsg = g_strdup_printf("\x03%.2d %s\x0F", color, newmsg);
+				} else {
+					colormsg = g_strdup_printf("\x03%.2d%s\x0F", color, newmsg);
+				}
 			}
 		} else {
 			colormsg = g_strdup(newmsg);
 		}
+
 		otrl_message_free(newmsg);
 		return colormsg;
 	}
@@ -423,6 +437,13 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
 	if(ic->acc->prpl->options & OPT_NOOTR) {
 		return msg;
+	}
+
+	/* HTML encoding */
+	/* consider OTR plaintext to be HTML if otr_does_html is set */
+	if(set_getbool(&ic->bee->set, "otr_does_html") &&
+	   (g_strncasecmp(msg, "<html>", 6) != 0)) {
+		msg = escape_html(msg);
 	}
 	
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
