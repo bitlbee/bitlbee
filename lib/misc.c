@@ -399,7 +399,7 @@ signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t si
 	
 	cd = g_iconv_open( to_cs, from_cs );
 	if( cd == (GIConv) -1 )
-		return( -1 );
+		return -1;
 	
 	inbytesleft = size ? size : strlen( src );
 	outbytesleft = maxbuf - 1;
@@ -407,10 +407,10 @@ signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t si
 	*outbuf = '\0';
 	g_iconv_close( cd );
 	
-	if( res == (size_t) -1 )
-		return( -1 );
+	if( res != 0 )
+		return -1;
 	else
-		return( outbuf - dst );
+		return outbuf - dst;
 }
 
 /* A pretty reliable random number generator. Tries to use the /dev/random
