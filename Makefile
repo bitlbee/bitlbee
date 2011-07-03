@@ -28,6 +28,9 @@ subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 
 all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) systemd
 	$(MAKE) -C doc
+ifdef SKYPE_PI
+	$(MAKE) -C protocols/skype doc
+endif
 
 uninstall: uninstall-bin uninstall-doc 
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
@@ -70,9 +73,15 @@ lcov: check
 
 install-doc:
 	$(MAKE) -C doc install
+ifdef SKYPE_PI
+	$(MAKE) -C protocols/skype install-doc
+endif
 
 uninstall-doc:
 	$(MAKE) -C doc uninstall
+ifdef SKYPE_PI
+	$(MAKE) -C protocols/skype uninstall-doc
+endif
 
 install-bin:
 	mkdir -p $(DESTDIR)$(BINDIR)

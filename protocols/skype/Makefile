@@ -1,4 +1,7 @@
--include config.mak
+-include ../../Makefile.settings
+ifdef SRCDIR
+SRCDIR := $(SRCDIR)protocls/skype/
+endif
 
 VERSION = 0.9.0
 DATE := $(shell date +%Y-%m-%d)
@@ -79,7 +82,14 @@ release:
 	gpg --comment "See http://vmiklos.hu/gpg/ for info" \
 		-ba bitlbee-skype-$(VERSION).tar.gz
 
-doc: HEADER.html Changelog AUTHORS
+doc: skyped.1
+
+install-doc:
+	mkdir -p $(DESTDIR)$(MANDIR)/man1/
+	install -m 0644 $(SRCDIR)skyped.1 $(DESTDIR)$(MANDIR)/man1/
+
+uninstall-doc:
+	rm -f $(DESTDIR)$(MANDIR)/man1/skyped.1*
 
 HEADER.html: README Makefile
 	asciidoc -a toc -a numbered -a sectids -o HEADER.html -a icons -a data-uri --attribute iconsdir=./images/icons README
