@@ -111,6 +111,10 @@ endif
 ifdef SKYPE_PI
 	mkdir -p $(DESTDIR)$(PLUGINDIR)
 	install -m 0755 skype.so $(DESTDIR)$(PLUGINDIR)
+	mkdir -p $(DESTDIR)$(ETCDIR)/../skyped
+	install -m 0644 $(SRCDIR)protocols/skype/skyped.cnf $(DESTDIR)$(ETCDIR)/../skyped/skyped.cnf
+	install -m 0644 $(SRCDIR)protocols/skype/skyped.conf $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
+	install -m 0755 $(SRCDIR)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
 endif
 
 systemd:
