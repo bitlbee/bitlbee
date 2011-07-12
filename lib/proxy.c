@@ -84,6 +84,7 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 				b_event_remove(phb->inpa);
 				closesocket(source);
 				dup2(new_fd, source);
+				closesocket(new_fd);
 				phb->inpa = b_input_add(source, B_EV_IO_WRITE, gaim_io_connected, phb);
 				return FALSE;
 			}
