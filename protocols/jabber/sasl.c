@@ -25,6 +25,7 @@
 
 #include "jabber.h"
 #include "base64.h"
+#include "oauth2.h"
 
 xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 {
@@ -32,7 +33,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	char *s;
-	int sup_plain = 0, sup_digest = 0;
+	int sup_plain = 0, sup_digest = 0, sup_oauth2 = 0;
 	
 	if( !sasl_supported( ic ) )
 	{
@@ -58,6 +59,8 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 			sup_plain = 1;
 		if( c->text && g_strcasecmp( c->text, "DIGEST-MD5" ) == 0 )
 			sup_digest = 1;
+		if( c->text && g_strcasecmp( c->text, "X-OAUTH2" ) == 0 )
+			sup_oauth2 = 1;
 		
 		c = c->next;
 	}
@@ -72,7 +75,15 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	reply = xt_new_node( "auth", NULL, NULL );
 	xt_add_attr( reply, "xmlns", XMLNS_SASL );
 	
-	if( sup_digest )
+	if( sup_oauth2 && set_getbool( &ic->acc->set, "oauth" ) )
+	{
+		imcb_log( ic, "Open this URL in your browser to authenticate: %s",
+		          oauth2_url( &oauth2_service_google,
+		                      "https://www.googleapis.com/auth/googletalk" ) );
+		xt_free_node( reply );
+		reply = NULL;
+	}
+	else if( sup_digest )
 	{
 		xt_add_attr( reply, "mechanism", "DIGEST-MD5" );
 		
@@ -95,7 +106,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		g_free( s );
 	}
 	
-	if( !jabber_write_packet( ic, reply ) )
+	if( reply && !jabber_write_packet( ic, reply ) )
 	{
 		xt_free_node( reply );
 		return XT_ABORT;

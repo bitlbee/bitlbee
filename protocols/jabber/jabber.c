@@ -59,6 +59,8 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "activity_timeout", "600", set_eval_int, acc );
 	
+	s = set_add( &acc->set, "oauth", "false", set_eval_bool, acc );
+
 	g_snprintf( str, sizeof( str ), "%d", jabber_port_list[0] );
 	s = set_add( &acc->set, "port", str, set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
