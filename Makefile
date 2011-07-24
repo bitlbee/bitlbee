@@ -26,8 +26,11 @@ endif
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 
-all: $(OUTFILE) $(OTR_PI) systemd
+all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) systemd
 	$(MAKE) -C doc
+ifdef SKYPE_PI
+	$(MAKE) -C protocols/skype doc
+endif
 
 uninstall: uninstall-bin uninstall-doc 
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
@@ -70,9 +73,15 @@ lcov: check
 
 install-doc:
 	$(MAKE) -C doc install
+ifdef SKYPE_PI
+	$(MAKE) -C protocols/skype install-doc
+endif
 
 uninstall-doc:
 	$(MAKE) -C doc uninstall
+ifdef SKYPE_PI
+	$(MAKE) -C protocols/skype uninstall-doc
+endif
 
 install-bin:
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -108,6 +117,14 @@ ifdef OTR_PI
 	mkdir -p $(DESTDIR)$(PLUGINDIR)
 	install -m 0755 otr.so $(DESTDIR)$(PLUGINDIR)
 endif
+ifdef SKYPE_PI
+	mkdir -p $(DESTDIR)$(PLUGINDIR)
+	install -m 0755 skype.so $(DESTDIR)$(PLUGINDIR)
+	mkdir -p $(DESTDIR)$(ETCDIR)/../skyped
+	install -m 0644 $(SRCDIR)protocols/skype/skyped.cnf $(DESTDIR)$(ETCDIR)/../skyped/skyped.cnf
+	install -m 0644 $(SRCDIR)protocols/skype/skyped.conf $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
+	install -m 0755 $(SRCDIR)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
+endif
 
 systemd:
 ifdef SYSTEMDSYSTEMUNITDIR
@@ -139,6 +156,10 @@ $(subdirs):
 $(OTR_PI): %.so: $(SRCDIR)%.c
 	@echo '*' Building plugin $@
 	@$(CC) $(CFLAGS) $(OTRFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@
+
+$(SKYPE_PI): $(SRCDIR)protocols/skype/skype.c
+	@echo '*' Building plugin skype
+	@$(CC) $(CFLAGS) -fPIC -shared $< -o $@
 
 $(objects): %.o: $(SRCDIR)%.c
 	@echo '*' Compiling $<

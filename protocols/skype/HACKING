@@ -1,0 +1,26 @@
+== Tabs
+
+I use the following tabs during the development:
+
+1) bitlbee-skype:
+
+vim, make, etc.
+
+2) bitlbee:
+
+gdb --args ./bitlbee -v -n -D
+run
+
+3) skyped:
+
+python skyped.py -n -d
+
+4) irssi
+
+== Get the code from git
+
+To get the code directly from git, you need:
+
+git clone git://vmiklos.hu/bitlbee-skype
+cd bitlbee-skype
+make autogen
