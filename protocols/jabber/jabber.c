@@ -136,61 +136,6 @@ static void jabber_login( account_t *acc )
 		*s = 0;
 	}
 	
-	/* This code isn't really pretty. Backwards compatibility never is... */
-	s = acc->server;
-	while( s )
-	{
-		static int had_port = 0;
-		
-		if( strncmp( s, "ssl", 3 ) == 0 )
-		{
-			set_setstr( &acc->set, "ssl", "true" );
-			
-			/* Flush this part so that (if this was the first
-			   part of the server string) acc->server gets
-			   flushed. We don't want to have to do this another
-			   time. :-) */
-			*s = 0;
-			s ++;
-			
-			/* Only set this if the user didn't specify a custom
-			   port number already... */
-			if( !had_port )
-				set_setint( &acc->set, "port", 5223 );
-		}
-		else if( isdigit( *s ) )
-		{
-			int i;
-			
-			/* The first character is a digit. It could be an
-			   IP address though. Only accept this as a port#
-			   if there are only digits. */
-			for( i = 0; isdigit( s[i] ); i ++ );
-			
-			/* If the first non-digit character is a colon or
-			   the end of the string, save the port number
-			   where it should be. */
-			if( s[i] == ':' || s[i] == 0 )
-			{
-				sscanf( s, "%d", &i );
-				set_setint( &acc->set, "port", i );
-				
-				/* See above. */
-				*s = 0;
-				s ++;
-			}
-			
-			had_port = 1;
-		}
-		
-		s = strchr( s, ':' );
-		if( s )
-		{
-			*s = 0;
-			s ++;
-		}
-	}
-	
 	jd->node_cache = g_hash_table_new_full( g_str_hash, g_str_equal, NULL, jabber_cache_entry_free );
 	jd->buddies = g_hash_table_new( g_str_hash, g_str_equal );
 	
