@@ -97,9 +97,7 @@ static void jabber_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
-	struct ns_srv_reply **srvl = NULL, *srv = NULL;
-	char *connect_to, *s;
-	int i;
+	char *s;
 	
 	/* For now this is needed in the _connected() handlers if using
 	   GLib event handling, to make sure we're not handling events
@@ -138,6 +136,30 @@ static void jabber_login( account_t *acc )
 	
 	jd->node_cache = g_hash_table_new_full( g_str_hash, g_str_equal, NULL, jabber_cache_entry_free );
 	jd->buddies = g_hash_table_new( g_str_hash, g_str_equal );
+	
+	if( set_getbool( &acc->set, "oauth" ) )
+	{
+		/* For the first login with OAuth, we have to authenticate via the browser.
+		   For subsequent logins, exchange the refresh token for a valid access
+		   token (even though the last one maybe didn't expire yet). */
+		if( strncmp( acc->pass, "refresh_token=", 14 ) != 0 )
+			sasl_oauth2_init( ic );
+		else
+			sasl_oauth2_refresh( ic, acc->pass + 14 );
+	}
+	else
+		jabber_connect( ic );
+}
+
+/* Separate this from jabber_login() so we can do OAuth first if necessary.
+   Putting this in io.c would probably be more correct. */
+void jabber_connect( struct im_connection *ic )
+{
+	account_t *acc = ic->acc;
+	struct jabber_data *jd = ic->proto_data;
+	int i;
+	char *connect_to;
+	struct ns_srv_reply **srvl = NULL, *srv = NULL;
 	
 	/* Figure out the hostname to connect to. */
 	if( acc->server && *acc->server )
@@ -279,6 +301,19 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 	
 	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
 		return jabber_write( ic, message, strlen( message ) );
+	
+	if( g_strcasecmp( who, "jabber_oauth" ) == 0 )
+	{
+		if( sasl_oauth2_get_refresh_token( ic, message ) )
+		{
+			return 1;
+		}
+		else
+		{
+			imcb_error( ic, "OAuth failure" );
+			imc_logout( ic, TRUE );
+		}
+	}
 	
 	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_jid( ic, s + 1 ) )
 		bud = jabber_buddy_by_ext_jid( ic, who, 0 );

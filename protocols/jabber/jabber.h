@@ -92,6 +92,8 @@ struct jabber_data
 	char *username;		/* USERNAME@server */
 	char *server;		/* username@SERVER -=> server/domain, not hostname */
 	
+	char *oauth2_access_token;
+	
 	/* After changing one of these two (or the priority setting), call
 	   presence_send_update() to inform the server about the changes. */
 	const struct jabber_away_state *away_state;
@@ -231,6 +233,9 @@ struct jabber_transfer
 #define XMLNS_BYTESTREAMS  "http://jabber.org/protocol/bytestreams"              /* XEP-0065 */
 #define XMLNS_IBB          "http://jabber.org/protocol/ibb"                      /* XEP-0047 */
 
+/* jabber.c */
+void jabber_connect( struct im_connection *ic );
+
 /* iq.c */
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
 int jabber_init_iq_auth( struct im_connection *ic );
@@ -315,6 +320,9 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data );
 xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data );
 xt_status sasl_pkt_result( struct xt_node *node, gpointer data );
 gboolean sasl_supported( struct im_connection *ic );
+void sasl_oauth2_init( struct im_connection *ic );
+int sasl_oauth2_get_refresh_token( struct im_connection *ic, const char *msg );
+int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token );
 
 /* conference.c */
 struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password );

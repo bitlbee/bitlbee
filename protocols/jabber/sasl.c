@@ -75,13 +75,31 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	reply = xt_new_node( "auth", NULL, NULL );
 	xt_add_attr( reply, "xmlns", XMLNS_SASL );
 	
-	if( sup_oauth2 && set_getbool( &ic->acc->set, "oauth" ) )
+	if( set_getbool( &ic->acc->set, "oauth" ) )
 	{
-		imcb_log( ic, "Open this URL in your browser to authenticate: %s",
-		          oauth2_url( &oauth2_service_google,
-		                      "https://www.googleapis.com/auth/googletalk" ) );
-		xt_free_node( reply );
-		reply = NULL;
+		int len;
+		
+		if( !sup_oauth2 )
+		{
+			imcb_error( ic, "OAuth requested, but not supported by server" );
+			imc_logout( ic, FALSE );
+			xt_free_node( reply );
+			return XT_ABORT;
+		}
+		
+		/* X-OAUTH2 is, not *the* standard OAuth2 SASL/XMPP implementation.
+		   It's currently used by GTalk and vaguely documented on
+		   http://code.google.com/apis/cloudprint/docs/rawxmpp.html . */
+		xt_add_attr( reply, "mechanism", "X-OAUTH2" );
+		
+		len = strlen( jd->username ) + strlen( jd->oauth2_access_token ) + 2;
+		s = g_malloc( len + 1 );
+		s[0] = 0;
+		strcpy( s + 1, jd->username );
+		strcpy( s + 2 + strlen( jd->username ), jd->oauth2_access_token );
+		reply->text = base64_encode( (unsigned char *)s, len );
+		reply->text_len = strlen( reply->text );
+		g_free( s );
 	}
 	else if( sup_digest )
 	{
@@ -356,4 +374,85 @@ gboolean sasl_supported( struct im_connection *ic )
 	struct jabber_data *jd = ic->proto_data;
 	
 	return ( jd->xt && jd->xt->root && xt_find_attr( jd->xt->root, "version" ) ) != 0;
+}
+
+void sasl_oauth2_init( struct im_connection *ic )
+{
+	char *msg, *url;
+	
+	imcb_log( ic, "Starting OAuth authentication" );
+	
+	/* Temporary contact, just used to receive the OAuth response. */
+	imcb_add_buddy( ic, "jabber_oauth", NULL );
+	url = oauth2_url( &oauth2_service_google,
+	                  "https://www.googleapis.com/auth/googletalk" );
+	msg = g_strdup_printf( "Open this URL in your browser to authenticate: %s", url );
+	imcb_buddy_msg( ic, "jabber_oauth", msg, 0, 0 );
+	imcb_buddy_msg( ic, "jabber_oauth", "Respond to this message with the returned "
+	                                    "authorization token.", 0, 0 );
+	
+	g_free( msg );
+	g_free( url );
+}
+
+static gboolean sasl_oauth2_remove_contact( gpointer data, gint fd, b_input_condition cond )
+{
+	struct im_connection *ic = data;
+	imcb_remove_buddy( ic, "jabber_oauth", NULL );
+	return FALSE;
+}
+
+static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token );
+
+int sasl_oauth2_get_refresh_token( struct im_connection *ic, const char *msg )
+{
+	char *code;
+	int ret;
+	
+	imcb_log( ic, "Requesting OAuth access token" );
+	
+	/* Don't do it here because the caller may get confused if the contact
+	   we're currently sending a message to is deleted. */
+	b_timeout_add( 1, sasl_oauth2_remove_contact, ic );
+	
+	code = g_strdup( msg );
+	g_strstrip( code );
+	ret = oauth2_access_token( &oauth2_service_google, OAUTH2_AUTH_CODE,
+	                           code, sasl_oauth2_got_token, ic );
+	
+	g_free( code );
+	return ret;
+}
+
+int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token )
+{
+	return oauth2_access_token( &oauth2_service_google, OAUTH2_AUTH_REFRESH,
+	                            refresh_token, sasl_oauth2_got_token, ic );
+}
+
+static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token )
+{
+	struct im_connection *ic = data;
+	struct jabber_data *jd;
+	
+	if( g_slist_find( jabber_connections, ic ) == NULL )
+		return;
+	
+	jd = ic->proto_data;
+	
+	if( access_token == NULL )
+	{
+		imcb_error( ic, "OAuth failure (missing access token)" );
+		imc_logout( ic, TRUE );
+	}
+	if( refresh_token != NULL )
+	{
+		g_free( ic->acc->pass );
+		ic->acc->pass = g_strdup_printf( "refresh_token=%s", refresh_token );
+	}
+	
+	g_free( jd->oauth2_access_token );
+	jd->oauth2_access_token = g_strdup( access_token );
+	
+	jabber_connect( ic );
 }
