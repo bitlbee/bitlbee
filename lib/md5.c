@@ -161,6 +161,16 @@ void md5_finish(struct MD5Context *ctx, md5_byte_t digest[16])
 	memset(ctx, 0, sizeof(ctx));	/* In case it's sensitive */
 }
 
+void md5_finish_ascii(struct MD5Context *context, char *ascii)
+{
+	md5_byte_t bin[16];
+	int i;
+	
+	md5_finish(context, bin);
+	for (i = 0; i < 16; i ++)
+		sprintf(ascii + i * 2, "%02x", bin[i]);
+}
+
 /* The four core functions - F1 is optimized somewhat */
 
 /* #define F1(x, y, z) (x & y | ~x & z) */
