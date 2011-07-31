@@ -28,7 +28,9 @@ typedef void (*oauth2_token_callback)( gpointer data, const char *atoken, const 
 
 struct oauth2_service
 {
-	char *base_url;
+	char *auth_url;
+	char *token_url;
+	char *redirect_url;
 	char *consumer_key;
 	char *consumer_secret;
 };
@@ -36,6 +38,8 @@ struct oauth2_service
 /* Currently suitable for authenticating to Google Talk only, and only for
    accounts that have 2-factor authorization enabled. */
 extern struct oauth2_service oauth2_service_google;
+
+extern struct oauth2_service oauth2_service_facebook;
 
 #define OAUTH2_AUTH_CODE "authorization_code"
 #define OAUTH2_AUTH_REFRESH "refresh_token"

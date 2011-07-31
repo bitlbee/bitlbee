@@ -29,17 +29,27 @@
 
 struct oauth2_service oauth2_service_google =
 {
-	"https://accounts.google.com/o/oauth2/",
+	"https://accounts.google.com/o/oauth2/auth",
+	"https://accounts.google.com/o/oauth2/token",
+	"urn:ietf:wg:oauth:2.0:oob",
 	"783993391592.apps.googleusercontent.com",
 	"k5_EV4EQ7jEVCEk3WBwEFfuW",
+};
+struct oauth2_service oauth2_service_facebook =
+{
+	"https://www.facebook.com/dialog/oauth",
+	"https://graph.facebook.com/oauth/access_token",
+	"http://www.bitlbee.org/main.php/fb.html",
+	"126828914005625",
+	"4b100f0f244d620bf3f15f8b217d4c32",
 };
 
 char *oauth2_url( const struct oauth2_service *sp, const char *scope )
 {
-	return g_strconcat( sp->base_url, "auth"
+	return g_strconcat( sp->auth_url,
 	                    "?scope=", scope,
 	                    "&response_type=code"
-	                    "&redirect_uri=urn:ietf:wg:oauth:2.0:oob",
+	                    "&redirect_uri=", sp->redirect_url, 
 	                    "&client_id=", sp->consumer_key,
 	                    NULL );
 }
@@ -63,7 +73,7 @@ int oauth2_access_token( const struct oauth2_service *sp,
 	struct http_request *req;
 	struct oauth2_access_token_data *cb_data;
 	
-	if( !url_set( &url_p, sp->base_url ) )
+	if( !url_set( &url_p, sp->token_url ) )
 		return 0;
 	
 	oauth_params_add( &args, "client_id", sp->consumer_key );
@@ -71,7 +81,7 @@ int oauth2_access_token( const struct oauth2_service *sp,
 	oauth_params_add( &args, "grant_type", auth_type );
 	if( strcmp( auth_type, OAUTH2_AUTH_CODE ) == 0 )
 	{
-		oauth_params_add( &args, "redirect_uri", "urn:ietf:wg:oauth:2.0:oob" );
+		oauth_params_add( &args, "redirect_uri", sp->redirect_url );
 		oauth_params_add( &args, "code", auth );
 	}
 	else
@@ -81,13 +91,13 @@ int oauth2_access_token( const struct oauth2_service *sp,
 	args_s = oauth_params_string( args );
 	oauth_params_free( &args );
 	
-	s = g_strdup_printf( "POST %s%s HTTP/1.0\r\n"
+	s = g_strdup_printf( "POST %s HTTP/1.0\r\n"
 	                     "Host: %s\r\n"
 	                     "Content-Type: application/x-www-form-urlencoded\r\n"
 	                     "Content-Length: %zd\r\n"
 	                     "Connection: close\r\n"
 	                     "\r\n"
-	                     "%s", url_p.file, "token", url_p.host, strlen( args_s ), args_s );
+	                     "%s", url_p.file, url_p.host, strlen( args_s ), args_s );
 	g_free( args_s );
 	
 	cb_data = g_new0( struct oauth2_access_token_data, 1 );
