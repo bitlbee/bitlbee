@@ -7,7 +7,7 @@
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
   
-  (c) 2008-2010 Sven Moritz Hallberg <pesco@khjk.org>
+  (c) 2008-2011 Sven Moritz Hallberg <pesco@khjk.org>
   (c) 2008 funded by stonedcoder.org
     
   files used to store OTR data:
@@ -162,6 +162,9 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		const char *secret);
 
+/* update flags within the irc_user structure to reflect OTR status of context */
+void otr_update_uflags(ConnContext *context, irc_user_t *u);
+
 /* update op/voice flag of given user according to encryption state and settings
    returns 0 if neither op_buddies nor voice_buddies is set to "encrypted",
    i.e. msgstate should be announced seperately */
@@ -236,6 +239,8 @@ gboolean otr_irc_new(irc_t *irc)
 	l = g_slist_prepend( l, "manual" );
 	l = g_slist_prepend( l, "always" );
 	s->eval_data = l;
+
+	s = set_add( &irc->b->set, "otr_does_html", "true", set_eval_bool, irc );
 	
 	return TRUE;
 }
@@ -384,26 +389,38 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 		/* OTR has processed this message */
 		ConnContext *context = otrl_context_find(irc->otr->us, iu->bu->handle,
 			ic->acc->user, ic->acc->prpl->name, 0, NULL, NULL, NULL);
-		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
-		   set_getbool(&ic->bee->set, "otr_color_encrypted")) {
-			/* color according to f'print trust */
-			int color;
-			const char *trust = context->active_fingerprint->trust;
-			if(trust && trust[0] != '\0')
-				color=3;   /* green */
-			else
-				color=5;   /* red */
 
-			if(newmsg[0] == ',') {
-				/* could be a problem with the color code */
-				/* insert a space between color spec and message */
-				colormsg = g_strdup_printf("\x03%.2d %s\x0F", color, newmsg);
-			} else {
-				colormsg = g_strdup_printf("\x03%.2d%s\x0F", color, newmsg);
+		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
+			/* HTML decoding */
+			/* perform any necessary stripping that the top level would miss */
+			if(set_getbool(&ic->bee->set, "otr_does_html") &&
+			   !(ic->flags & OPT_DOES_HTML) &&
+			   set_getbool(&ic->bee->set, "strip_html")) {
+				strip_html(newmsg);
+			}
+
+			/* coloring */
+			if(set_getbool(&ic->bee->set, "otr_color_encrypted")) {
+				/* color according to f'print trust */
+				int color;
+				const char *trust = context->active_fingerprint->trust;
+				if(trust && trust[0] != '\0')
+					color=3;   /* green */
+				else
+					color=5;   /* red */
+
+				if(newmsg[0] == ',') {
+					/* could be a problem with the color code */
+					/* insert a space between color spec and message */
+					colormsg = g_strdup_printf("\x03%.2d %s\x0F", color, newmsg);
+				} else {
+					colormsg = g_strdup_printf("\x03%.2d%s\x0F", color, newmsg);
+				}
 			}
 		} else {
 			colormsg = g_strdup(newmsg);
 		}
+
 		otrl_message_free(newmsg);
 		return colormsg;
 	}
@@ -420,6 +437,13 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
 	if(ic->acc->prpl->options & OPT_NOOTR) {
 		return msg;
+	}
+
+	/* HTML encoding */
+	/* consider OTR plaintext to be HTML if otr_does_html is set */
+	if(set_getbool(&ic->bee->set, "otr_does_html") &&
+	   (g_strncasecmp(msg, "<html>", 6) != 0)) {
+		msg = escape_html(msg);
 	}
 	
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
@@ -607,7 +631,6 @@ void op_gone_secure(void *opdata, ConnContext *context)
 		check_imc(opdata, context->accountname, context->protocol);
 	irc_user_t *u;
 	irc_t *irc = ic->bee->ui_data;
-	const char *trust;
 
 	u = peeruser(irc, context->username, context->protocol);
 	if(!u) {
@@ -617,13 +640,11 @@ void op_gone_secure(void *opdata, ConnContext *context)
 		return;
 	}
 	
-	trust = context->active_fingerprint->trust;
-	if(trust && trust[0])
-		u->flags |= IRC_USER_OTR_ENCRYPTED | IRC_USER_OTR_TRUSTED;
-	else
-		u->flags = ( u->flags & ~IRC_USER_OTR_TRUSTED ) | IRC_USER_OTR_ENCRYPTED;
-	if(!otr_update_modeflags(irc, u))
-		irc_usermsg(irc, "conversation with %s is now off the record", u->nick);
+	otr_update_uflags(context, u);
+	if(!otr_update_modeflags(irc, u)) {
+		char *trust = u->flags & IRC_USER_OTR_TRUSTED ? "trusted" : "untrusted!";
+		irc_usermsg(irc, "conversation with %s is now off the record (%s)", u->nick, trust);
+	}
 }
 
 void op_gone_insecure(void *opdata, ConnContext *context)
@@ -640,7 +661,7 @@ void op_gone_insecure(void *opdata, ConnContext *context)
 			context->username, context->protocol, context->accountname);
 		return;
 	}
-	u->flags &= ~( IRC_USER_OTR_ENCRYPTED | IRC_USER_OTR_TRUSTED );
+	otr_update_uflags(context, u);
 	if(!otr_update_modeflags(irc, u))
 		irc_usermsg(irc, "conversation with %s is now in the clear", u->nick);
 }
@@ -659,12 +680,12 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 			context->username, context->protocol, context->accountname);
 		return;
 	}
-	if(context->active_fingerprint->trust[0])
-		u->flags |= IRC_USER_OTR_ENCRYPTED | IRC_USER_OTR_TRUSTED;
-	else
-		u->flags = ( u->flags & ~IRC_USER_OTR_TRUSTED ) | IRC_USER_OTR_ENCRYPTED;
-	if(!otr_update_modeflags(irc, u))
-		irc_usermsg(irc, "otr connection with %s has been refreshed", u->nick);
+
+	otr_update_uflags(context, u);
+	if(!otr_update_modeflags(irc, u)) {
+		char *trust = u->flags & IRC_USER_OTR_TRUSTED ? "trusted" : "untrusted!";
+		irc_usermsg(irc, "otr connection with %s has been refreshed (%s)", u->nick, trust);
+	}
 }
 
 void op_log_message(void *opdata, const char *message)
@@ -1311,9 +1332,26 @@ const char *peernick(irc_t *irc, const char *handle, const char *protocol)
 	}
 }
 
+void otr_update_uflags(ConnContext *context, irc_user_t *u)
+{
+	const char *trust;
+
+	if(context->active_fingerprint) {
+		u->flags |= IRC_USER_OTR_ENCRYPTED;
+
+		trust = context->active_fingerprint->trust;
+		if(trust && trust[0])
+			u->flags |= IRC_USER_OTR_TRUSTED;
+		else
+			u->flags &= ~IRC_USER_OTR_TRUSTED;
+	} else {
+		u->flags &= ~IRC_USER_OTR_ENCRYPTED;
+	}
+}
+
 int otr_update_modeflags(irc_t *irc, irc_user_t *u)
 {
-	return 1;
+	return 0;
 }
 
 void show_fingerprints(irc_t *irc, ConnContext *ctx)
