@@ -26,6 +26,7 @@
 #include "jabber.h"
 #include "base64.h"
 #include "oauth2.h"
+#include "oauth.h"
 
 xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 {
@@ -33,7 +34,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	char *s;
-	int sup_plain = 0, sup_digest = 0, sup_oauth2 = 0;
+	int sup_plain = 0, sup_digest = 0, sup_oauth2 = 0, sup_fb = 0;
 	
 	if( !sasl_supported( ic ) )
 	{
@@ -61,6 +62,8 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 			sup_digest = 1;
 		if( c->text && g_strcasecmp( c->text, "X-OAUTH2" ) == 0 )
 			sup_oauth2 = 1;
+		if( c->text && g_strcasecmp( c->text, "X-FACEBOOK-PLATFORM" ) == 0 )
+			sup_fb = 1;
 		
 		c = c->next;
 	}
@@ -100,6 +103,11 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		reply->text = base64_encode( (unsigned char *)s, len );
 		reply->text_len = strlen( reply->text );
 		g_free( s );
+	}
+	else if( sup_fb && strstr( ic->acc->pass, "session_key=" ) )
+	{
+		xt_add_attr( reply, "mechanism", "X-FACEBOOK-PLATFORM" );
+		jd->flags |= JFLAG_SASL_FB;
 	}
 	else if( sup_digest )
 	{
@@ -238,7 +246,45 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	
 	dec = frombase64( node->text );
 	
-	if( !( s = sasl_get_part( dec, "rspauth" ) ) )
+	if( jd->flags & JFLAG_SASL_FB )
+	{
+		GSList *p_in = NULL, *p_out = NULL, *p;
+		md5_state_t md5;
+		char time[33], *fmt, *token;
+		const char *secret;
+		
+		oauth_params_parse( &p_in, dec );
+		oauth_params_add( &p_out, "nonce", oauth_params_get( &p_in, "nonce" ) );
+		oauth_params_add( &p_out, "method", oauth_params_get( &p_in, "method" ) );
+		oauth_params_free( &p_in );
+		
+		token = g_strdup( ic->acc->pass );
+		oauth_params_parse( &p_in, token );
+		g_free( token );
+		oauth_params_add( &p_out, "session_key", oauth_params_get( &p_in, "session_key" ) );
+		
+		g_snprintf( time, sizeof( time ), "%lld", (long long) ( gettime() * 1000 ) );
+		oauth_params_add( &p_out, "call_id", time );
+		oauth_params_add( &p_out, "api_key", oauth2_service_facebook.consumer_key );
+		oauth_params_add( &p_out, "v", "1.0" );
+		oauth_params_add( &p_out, "format", "XML" );
+		
+		md5_init( &md5 );
+		for( p = p_out; p; p = p->next )
+			md5_append( &md5, p->data, strlen( p->data ) );
+		
+		secret = oauth_params_get( &p_in, "secret" );
+		md5_append( &md5, (unsigned char*) secret, strlen( secret ) );
+		md5_finish_ascii( &md5, time );
+		oauth_params_add( &p_out, "sig", time );
+		
+		fmt = oauth_params_string( p_out );
+		oauth_params_free( &p_out );
+		oauth_params_free( &p_in );
+		s = tobase64( fmt );
+		g_free( fmt );
+	}
+	else if( !( s = sasl_get_part( dec, "rspauth" ) ) )
 	{
 		/* See RFC 2831 for for information. */
 		md5_state_t A1, A2, H;
@@ -444,6 +490,7 @@ static void sasl_oauth2_got_token( gpointer data, const char *access_token, cons
 	{
 		imcb_error( ic, "OAuth failure (missing access token)" );
 		imc_logout( ic, TRUE );
+		return;
 	}
 	if( refresh_token != NULL )
 	{

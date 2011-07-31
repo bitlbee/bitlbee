@@ -23,6 +23,7 @@
 
 #include <sys/types.h>
 #include <string.h>		/* for memcpy() */
+#include <stdio.h>
 #include "md5.h"
 
 static void md5_transform(uint32_t buf[4], uint32_t const in[16]);
