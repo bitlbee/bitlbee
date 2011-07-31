@@ -233,12 +233,12 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd = ic->proto_data;
-	struct xt_node *reply = NULL;
+	struct xt_node *reply_pkt = NULL;
 	char *nonce = NULL, *realm = NULL, *cnonce = NULL;
 	unsigned char cnonce_bin[30];
 	char *digest_uri = NULL;
 	char *dec = NULL;
-	char *s = NULL;
+	char *s = NULL, *reply = NULL;
 	xt_status ret = XT_ABORT;
 	
 	if( node->text_len == 0 )
@@ -248,9 +248,15 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	
 	if( jd->flags & JFLAG_SASL_FB )
 	{
+		/* Facebook proprietary authentication. Not as useful as it seemed, but
+		   the code's written now, may as well keep it..
+		   
+		   Mechanism is described on http://developers.facebook.com/docs/chat/
+		   and in their Python module. It's all mostly useless because the tokens
+		   expire after 24h. */
 		GSList *p_in = NULL, *p_out = NULL, *p;
 		md5_state_t md5;
-		char time[33], *fmt, *token;
+		char time[33], *token;
 		const char *secret;
 		
 		oauth_params_parse( &p_in, dec );
@@ -274,15 +280,14 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 			md5_append( &md5, p->data, strlen( p->data ) );
 		
 		secret = oauth_params_get( &p_in, "secret" );
-		md5_append( &md5, (unsigned char*) secret, strlen( secret ) );
+		if( secret )
+			md5_append( &md5, (unsigned char*) secret, strlen( secret ) );
 		md5_finish_ascii( &md5, time );
 		oauth_params_add( &p_out, "sig", time );
 		
-		fmt = oauth_params_string( p_out );
+		reply = oauth_params_string( p_out );
 		oauth_params_free( &p_out );
 		oauth_params_free( &p_in );
-		s = tobase64( fmt );
-		g_free( fmt );
 	}
 	else if( !( s = sasl_get_part( dec, "rspauth" ) ) )
 	{
@@ -345,23 +350,20 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 			sprintf( Hh + i * 2, "%02x", Hr[i] );
 		
 		/* Now build the SASL response string: */
-		g_free( dec );
-		dec = g_strdup_printf( "username=\"%s\",realm=\"%s\",nonce=\"%s\",cnonce=\"%s\","
-		                       "nc=%08x,qop=auth,digest-uri=\"%s\",response=%s,charset=%s",
-		                       jd->username, realm, nonce, cnonce, 1, digest_uri, Hh, "utf-8" );
-		s = tobase64( dec );
+		reply = g_strdup_printf( "username=\"%s\",realm=\"%s\",nonce=\"%s\",cnonce=\"%s\","
+		                         "nc=%08x,qop=auth,digest-uri=\"%s\",response=%s,charset=%s",
+		                         jd->username, realm, nonce, cnonce, 1, digest_uri, Hh, "utf-8" );
 	}
 	else
 	{
 		/* We found rspauth, but don't really care... */
-		g_free( s );
-		s = NULL;
 	}
 	
-	reply = xt_new_node( "response", s, NULL );
-	xt_add_attr( reply, "xmlns", XMLNS_SASL );
+	s = reply ? tobase64( reply ) : NULL;
+	reply_pkt = xt_new_node( "response", s, NULL );
+	xt_add_attr( reply_pkt, "xmlns", XMLNS_SASL );
 	
-	if( !jabber_write_packet( ic, reply ) )
+	if( !jabber_write_packet( ic, reply_pkt ) )
 		goto silent_error;
 	
 	ret = XT_HANDLED;
@@ -375,10 +377,11 @@ silent_error:
 	g_free( digest_uri );
 	g_free( cnonce );
 	g_free( nonce );
+	g_free( reply );
 	g_free( realm );
 	g_free( dec );
 	g_free( s );
-	xt_free_node( reply );
+	xt_free_node( reply_pkt );
 	
 	return ret;
 }

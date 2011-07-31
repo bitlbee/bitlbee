@@ -121,6 +121,9 @@ void oauth_params_add( GSList **params, const char *key, const char *value )
 {
 	char *item;
 	
+	if( !key || !value )
+		return;
+	
 	item = g_strdup_printf( "%s=%s", key, value );
 	*params = g_slist_insert_sorted( *params, item, (GCompareFunc) strcmp );
 }

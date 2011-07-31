@@ -139,6 +139,8 @@ static void jabber_login( account_t *acc )
 	
 	if( set_getbool( &acc->set, "oauth" ) )
 	{
+		jd->fd = jd->r_inpa = jd->w_inpa = -1;
+		
 		/* For the first login with OAuth, we have to authenticate via the browser.
 		   For subsequent logins, exchange the refresh token for a valid access
 		   token (even though the last one maybe didn't expire yet). */
@@ -284,6 +286,7 @@ static void jabber_logout( struct im_connection *ic )
 	
 	xt_free( jd->xt );
 	
+	g_free( jd->oauth2_access_token );
 	g_free( jd->away_message );
 	g_free( jd->username );
 	g_free( jd );
