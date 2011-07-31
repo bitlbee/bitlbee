@@ -164,7 +164,7 @@ const char *oauth_params_get( GSList **params, const char *key )
 	return NULL;
 }
 
-static void oauth_params_parse( GSList **params, char *in )
+void oauth_params_parse( GSList **params, char *in )
 {
 	char *amp, *eq, *s;
 	
