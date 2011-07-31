@@ -145,7 +145,10 @@ static void jabber_login( account_t *acc )
 		   For subsequent logins, exchange the refresh token for a valid access
 		   token (even though the last one maybe didn't expire yet). */
 		if( strncmp( acc->pass, "refresh_token=", 14 ) != 0 )
+		{
 			sasl_oauth2_init( ic );
+			ic->flags |= OPT_SLOW_LOGIN;
+		}
 		else
 			sasl_oauth2_refresh( ic, acc->pass + 14 );
 	}
