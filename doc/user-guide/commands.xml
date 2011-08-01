@@ -1125,15 +1125,15 @@
 
 		<description>
 			<para>
-				This enables OAuth authentication for Twitter accounts. From June 2010 this will be mandatory.
+				This enables OAuth authentication for accounts that support it; right now Twitter and Google Talk (if you have 2-factor authentication enabled on your account) support it.
 			</para>
 
 			<para>
-				With OAuth enabled, you shouldn't tell BitlBee your Twitter password. Just add your account with a bogus password and type <emphasis>account on</emphasis>. BitlBee will then give you a URL to authenticate with Twitter. If this succeeds, Twitter will return a PIN code which you can give back to BitlBee to finish the process.
+				With OAuth enabled, you shouldn't tell BitlBee your Twitter password. Just add your account with a bogus password and type <emphasis>account on</emphasis>. BitlBee will then give you a URL to authenticate with the service. If this succeeds, you will get a PIN code which you can give back to BitlBee to finish the process.
 			</para>
 
 			<para>
-				The resulting access token will be saved permanently, so you have to do this only once.
+				The resulting access token will be saved permanently, so you have to do this only once. If for any reason you want to/have to reauthenticate, you can use <emphasis>account set</emphasis> to reset the account password to something random.
 			</para>
 		</description>
 
