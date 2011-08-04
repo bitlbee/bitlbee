@@ -318,6 +318,7 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 		{
 			imcb_error( ic, "OAuth failure" );
 			imc_logout( ic, TRUE );
+			return 0;
 		}
 	}
 	

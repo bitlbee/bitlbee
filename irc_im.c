@@ -450,8 +450,12 @@ static gboolean bee_irc_user_privmsg( irc_user_t *iu, const char *msg )
 static gboolean bee_irc_user_privmsg_cb( gpointer data, gint fd, b_input_condition cond )
 {
 	irc_user_t *iu = data;
-	char *msg = g_string_free( iu->pastebuf, FALSE );
+	char *msg;
 	GSList *l;
+	
+	msg = g_string_free( iu->pastebuf, FALSE );
+	iu->pastebuf = NULL;
+	iu->pastebuf_timer = 0;
 	
 	for( l = irc_plugins; l; l = l->next )
 	{
@@ -478,8 +482,6 @@ static gboolean bee_irc_user_privmsg_cb( gpointer data, gint fd, b_input_conditi
 	bee_user_msg( iu->irc->b, iu->bu, msg, 0 );
 	
 	g_free( msg );
-	iu->pastebuf = NULL;
-	iu->pastebuf_timer = 0;
 	
 	return FALSE;
 }

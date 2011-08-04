@@ -447,7 +447,8 @@ void sasl_oauth2_init( struct im_connection *ic )
 static gboolean sasl_oauth2_remove_contact( gpointer data, gint fd, b_input_condition cond )
 {
 	struct im_connection *ic = data;
-	imcb_remove_buddy( ic, "jabber_oauth", NULL );
+	if( g_slist_find( jabber_connections, ic ) )
+		imcb_remove_buddy( ic, "jabber_oauth", NULL );
 	return FALSE;
 }
 
