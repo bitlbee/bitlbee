@@ -33,7 +33,7 @@ struct oauth2_service oauth2_service_google =
 	"https://accounts.google.com/o/oauth2/token",
 	"urn:ietf:wg:oauth:2.0:oob",
 	"783993391592.apps.googleusercontent.com",
-	"k5_EV4EQ7jEVCEk3WBwEFfuW",
+	"6C-Zgf7Tr7gEQTPlBhMUgo7R",
 };
 struct oauth2_service oauth2_service_facebook =
 {
