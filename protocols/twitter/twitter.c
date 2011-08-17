@@ -490,7 +490,11 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		bee_user_t *bu;
 		guint64 id;
 
-		if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
+		if (g_str_has_prefix(cmd[1], "#")) {
+			id = g_ascii_strtoull(cmd[1] + 1, NULL, 10);
+			if (id < TWITTER_LOG_LENGTH && td->log)
+				id = td->log[id].id;
+		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
 		    (tud = bu->data) && tud->last_id)
 			id = tud->last_id;
 		else {
