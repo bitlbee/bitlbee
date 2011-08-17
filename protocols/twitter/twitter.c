@@ -464,15 +464,14 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
 		guint64 id;
 
-		if (cmd[1])
-			id = g_ascii_strtoull(cmd[1], NULL, 10);
-		else
-			id = td->last_status_id;
-
-		/* TODO: User feedback. */
-		if (id)
+		if (cmd[1] == NULL)
+			twitter_status_destroy(ic, td->last_status_id);
+		else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1) {
+			if (id < TWITTER_LOG_LENGTH && td->log)
+				id = td->log[id].id;
+			
 			twitter_status_destroy(ic, id);
-		else
+		} else
 			twitter_msg(ic, "Could not undo last action");
 
 		g_free(cmds);
@@ -490,15 +489,14 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		bee_user_t *bu;
 		guint64 id;
 
-		if (g_str_has_prefix(cmd[1], "#")) {
-			id = g_ascii_strtoull(cmd[1] + 1, NULL, 10);
+		if (g_str_has_prefix(cmd[1], "#") &&
+		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
 			if (id < TWITTER_LOG_LENGTH && td->log)
 				id = td->log[id].id;
 		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
 		    (tud = bu->data) && tud->last_id)
 			id = tud->last_id;
-		else {
-			id = g_ascii_strtoull(cmd[1], NULL, 10);
+		else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1){
 			if (id < TWITTER_LOG_LENGTH && td->log)
 				id = td->log[id].id;
 		}
@@ -517,7 +515,15 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		bee_user_t *bu = NULL;
 		guint64 id = 0;
 
-		if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
+		if (g_str_has_prefix(cmd[1], "#") &&
+		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1 &&
+		    (id < TWITTER_LOG_LENGTH) && td->log) {
+			bu = td->log[id].bu;
+			if (g_slist_find(ic->bee->users, bu))
+				id = td->log[id].id;
+			else
+				bu = NULL;
+		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
 		    (tud = bu->data) && tud->last_id) {
 			id = tud->last_id;
 		} else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1 &&
@@ -528,6 +534,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 			else
 				bu = NULL;
 		}
+
 		if (!id || !bu) {
 			twitter_msg(ic, "User `%s' does not exist or didn't "
 				    "post any statuses recently", cmd[1]);
