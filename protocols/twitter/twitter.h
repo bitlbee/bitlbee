@@ -35,6 +35,9 @@
 typedef enum
 {
 	TWITTER_HAVE_FRIENDS = 1,
+	TWITTER_DOING_TIMELINE = 0x10000,
+	TWITTER_GOT_TIMELINE = 0x20000,
+	TWITTER_GOT_MENTIONS = 0x40000,
 } twitter_flags_t;
 
 struct twitter_log_data;
@@ -43,12 +46,17 @@ struct twitter_data
 {
 	char* user;
 	struct oauth_info *oauth_info;
+
+	gpointer home_timeline_obj;
+	gpointer mentions_obj;
+
+	guint64 timeline_id;
+
 	GSList *follow_ids;
 	
-	guint64 home_timeline_id;
 	guint64 last_status_id; /* For undo */
 	gint main_loop_id;
-	struct groupchat *home_timeline_gc;
+	struct groupchat *timeline_gc;
 	gint http_fails;
 	twitter_flags_t flags;
 	

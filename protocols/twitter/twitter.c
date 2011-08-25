@@ -29,12 +29,12 @@
 #include "url.h"
 
 #define twitter_msg( ic, fmt... ) \
-	do {                                                        \
-		struct twitter_data *td = ic->proto_data;           \
-		if( td->home_timeline_gc )                          \
-			imcb_chat_log( td->home_timeline_gc, fmt ); \
-		else                                                \
-			imcb_log( ic, fmt );                        \
+	do {                                            \
+		struct twitter_data *td = ic->proto_data;   \
+		if( td->timeline_gc )                       \
+			imcb_chat_log( td->timeline_gc, fmt );  \
+		else                                        \
+			imcb_log( ic, fmt );                    \
 	} while( 0 );
 
 GSList *twitter_connections = NULL;
@@ -51,7 +51,7 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 		return 0;
 
 	// Do stuff..
-	twitter_get_home_timeline(ic, -1);
+	twitter_get_timeline(ic, -1);
 
 	// If we are still logged in run this function again after timeout.
 	return (ic->flags & OPT_LOGGED_IN) == OPT_LOGGED_IN;
@@ -68,7 +68,8 @@ static void twitter_main_loop_start(struct im_connection *ic)
 
 	// Queue the main_loop
 	// Save the return value, so we can remove the timeout on logout.
-	td->main_loop_id = b_timeout_add(60000, twitter_main_loop, ic);
+	td->main_loop_id =
+	    b_timeout_add(set_getint(&ic->acc->set, "fetch_interval") * 1000, twitter_main_loop, ic);
 }
 
 static void twitter_oauth_start(struct im_connection *ic);
@@ -76,6 +77,8 @@ static void twitter_oauth_start(struct im_connection *ic);
 void twitter_login_finish(struct im_connection *ic)
 {
 	struct twitter_data *td = ic->proto_data;
+
+	td->flags &= ~TWITTER_DOING_TIMELINE;
 
 	if (set_getbool(&ic->acc->set, "oauth") && !td->oauth_info)
 		twitter_oauth_start(ic);
@@ -215,7 +218,6 @@ static void twitter_init(account_t * acc)
 		def_url = TWITTER_API_URL;
 		def_oauth = "true";
 	} else {		/* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
-
 		def_url = IDENTICA_API_URL;
 		def_oauth = "false";
 	}
@@ -227,6 +229,11 @@ static void twitter_init(account_t * acc)
 
 	s = set_add(&acc->set, "commands", "true", set_eval_bool, acc);
 
+	s = set_add(&acc->set, "fetch_interval", "60", set_eval_int, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "fetch_mentions", "true", set_eval_bool, acc);
+
 	s = set_add(&acc->set, "message_length", "140", set_eval_int, acc);
 
 	s = set_add(&acc->set, "mode", "chat", set_eval_mode, acc);
@@ -234,6 +241,8 @@ static void twitter_init(account_t * acc)
 
 	s = set_add(&acc->set, "show_ids", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "show_old_mentions", "true", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "oauth", def_oauth, set_eval_bool, acc);
 }
@@ -316,8 +325,8 @@ static void twitter_logout(struct im_connection *ic)
 	// Remove the main_loop function from the function queue.
 	b_event_remove(td->main_loop_id);
 
-	if (td->home_timeline_gc)
-		imcb_chat_free(td->home_timeline_gc);
+	if (td->timeline_gc)
+		imcb_chat_free(td->timeline_gc);
 
 	if (td) {
 		oauth_info_free(td->oauth_info);
@@ -403,13 +412,13 @@ static void twitter_chat_leave(struct groupchat *c)
 {
 	struct twitter_data *td = c->ic->proto_data;
 
-	if (c != td->home_timeline_gc)
+	if (c != td->timeline_gc)
 		return;		/* WTF? */
 
 	/* If the user leaves the channel: Fine. Rejoin him/her once new
 	   tweets come in. */
-	imcb_chat_free(td->home_timeline_gc);
-	td->home_timeline_gc = NULL;
+	imcb_chat_free(td->timeline_gc);
+	td->timeline_gc = NULL;
 }
 
 static void twitter_keepalive(struct im_connection *ic)

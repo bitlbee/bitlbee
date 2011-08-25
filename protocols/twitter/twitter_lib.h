@@ -75,8 +75,10 @@
 #define TWITTER_BLOCKS_CREATE_URL "/blocks/create/"
 #define TWITTER_BLOCKS_DESTROY_URL "/blocks/destroy/"
 
+void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor);
+void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
 
 void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to);
