@@ -498,6 +498,27 @@ static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_
 		g_free(txs->text);
 		txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
 		txs_free(rtxs);
+	} else {
+		struct xt_node *urls, *url;
+		
+		urls = xt_find_path(node, "entities/urls");
+		for (url = urls ? urls->children : NULL; url; url = url->next) {
+			/* "short" is a reserved word. :-P */
+			struct xt_node *kort = xt_find_node(url->children, "url");
+			struct xt_node *disp = xt_find_node(url->children, "display_url");
+			char *pos, *new;
+			
+			if (!kort || !kort->text || !disp || !disp->text ||
+			    !(pos = strstr(txs->text, kort->text)))
+				continue;
+			
+			*pos = '\0';
+			new = g_strdup_printf("%s%s &lt;%s&gt;%s", txs->text, kort->text,
+			                      disp->text, pos + strlen(kort->text));
+			
+			g_free(txs->text);
+			txs->text = new;
+		}
 	}
 
 	return XT_HANDLED;
@@ -787,20 +808,22 @@ void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
 	td->home_timeline_obj = NULL;
 	td->flags &= ~TWITTER_GOT_TIMELINE;
 
-	char *args[4];
+	char *args[6];
 	args[0] = "cursor";
 	args[1] = g_strdup_printf("%lld", (long long) next_cursor);
+	args[2] = "include_entities";
+	args[3] = "true";
 	if (td->timeline_id) {
-		args[2] = "since_id";
-		args[3] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
+		args[4] = "since_id";
+		args[5] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
 	}
 
 	twitter_http(ic, TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, args,
-		     td->timeline_id ? 4 : 2);
+		     td->timeline_id ? 6 : 4);
 
 	g_free(args[1]);
 	if (td->timeline_id) {
-		g_free(args[3]);
+		g_free(args[5]);
 	}
 }
 
@@ -814,20 +837,22 @@ void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 	td->mentions_obj = NULL;
 	td->flags &= ~TWITTER_GOT_MENTIONS;
 
-	char *args[4];
+	char *args[6];
 	args[0] = "cursor";
 	args[1] = g_strdup_printf("%lld", (long long) next_cursor);
+	args[2] = "include_entities";
+	args[3] = "true";
 	if (td->timeline_id) {
-		args[2] = "since_id";
-		args[3] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
+		args[4] = "since_id";
+		args[5] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
 	}
 
 	twitter_http(ic, TWITTER_MENTIONS_URL, twitter_http_get_mentions, ic, 0, args,
-		     td->timeline_id ? 4 : 2);
+		     td->timeline_id ? 6 : 4);
 
 	g_free(args[1]);
 	if (td->timeline_id) {
-		g_free(args[3]);
+		g_free(args[5]);
 	}
 }
 
