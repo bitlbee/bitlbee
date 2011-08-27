@@ -459,14 +459,11 @@ static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_l
 static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_status *txs)
 {
 	struct xt_node *child, *rt = NULL;
-	gboolean truncated = FALSE;
 
 	// Walk over the nodes children.
 	for (child = node->children; child; child = child->next) {
 		if (g_strcasecmp("text", child->name) == 0) {
 			txs->text = g_memdup(child->text, child->text_len + 1);
-		} else if (g_strcasecmp("truncated", child->name) == 0 && child->text) {
-			truncated = bool2int(child->text);
 		} else if (g_strcasecmp("retweeted_status", child->name) == 0) {
 			rt = child;
 		} else if (g_strcasecmp("created_at", child->name) == 0) {
@@ -487,8 +484,9 @@ static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_
 		}
 	}
 
-	/* If it's a truncated retweet, get the original because dots suck. */
-	if (truncated && rt) {
+	/* If it's a (truncated) retweet, get the original. Even if the API claims it
+	   wasn't truncated because it may be lying. */
+	if (rt) {
 		struct twitter_xml_status *rtxs = g_new0(struct twitter_xml_status, 1);
 		if (twitter_xt_get_status(rt, rtxs) != XT_HANDLED) {
 			txs_free(rtxs);
