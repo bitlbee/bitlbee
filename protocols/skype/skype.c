@@ -22,6 +22,7 @@
 #define _XOPEN_SOURCE
 #define _BSD_SOURCE
 #include <poll.h>
+#include <stdio.h>
 #include <bitlbee.h>
 #include <ssl_client.h>
 
