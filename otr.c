@@ -430,6 +430,7 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 {	
 	int st;
 	char *otrmsg = NULL;
+	char *emsg = msg;           /* the message as we hand it to libotr */
 	ConnContext *ctx = NULL;
 	irc_t *irc = iu->irc;
 	struct im_connection *ic = iu->bu->ic;
@@ -439,23 +440,27 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 		return msg;
 	}
 
+	ctx = otrl_context_find(irc->otr->us,
+			iu->bu->handle, ic->acc->user, ic->acc->prpl->name,
+			1, NULL, NULL, NULL);
+
 	/* HTML encoding */
 	/* consider OTR plaintext to be HTML if otr_does_html is set */
-	if(set_getbool(&ic->bee->set, "otr_does_html") &&
+	if(ctx && ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
+	   set_getbool(&ic->bee->set, "otr_does_html") &&
 	   (g_strncasecmp(msg, "<html>", 6) != 0)) {
-		msg = escape_html(msg);
+		emsg = escape_html(msg);
 	}
 	
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, iu->bu->handle,
-		msg, NULL, &otrmsg, NULL, NULL);
+		emsg, NULL, &otrmsg, NULL, NULL);
+	if(emsg != msg) {
+		g_free(emsg);   /* we're done with this one */
+	}
 	if(st) {
 		return NULL;
 	}
-
-	ctx = otrl_context_find(irc->otr->us,
-			iu->bu->handle, ic->acc->user, ic->acc->prpl->name,
-			1, NULL, NULL, NULL);
 
 	if(otrmsg) {
 		if(!ctx) {
