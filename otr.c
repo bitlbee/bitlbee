@@ -364,7 +364,6 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 	int ignore_msg;
 	char *newmsg = NULL;
 	OtrlTLV *tlvs = NULL;
-	char *colormsg;
 	irc_t *irc = iu->irc;
 	struct im_connection *ic = iu->bu->ic;
 	
@@ -384,11 +383,15 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 		return NULL;
 	} else if(!newmsg) {
 		/* this was a non-OTR message */
-		return g_strdup(msg);
+		return msg;
 	} else {
 		/* OTR has processed this message */
 		ConnContext *context = otrl_context_find(irc->otr->us, iu->bu->handle,
 			ic->acc->user, ic->acc->prpl->name, 0, NULL, NULL, NULL);
+
+		/* we're done with the original msg, which will be caller-freed. */
+		/* NB: must not change the newmsg pointer, since we free it. */
+		msg = newmsg;
 
 		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
 			/* HTML decoding */
@@ -396,33 +399,42 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 			if(set_getbool(&ic->bee->set, "otr_does_html") &&
 			   !(ic->flags & OPT_DOES_HTML) &&
 			   set_getbool(&ic->bee->set, "strip_html")) {
-				strip_html(newmsg);
+				strip_html(msg);
 			}
 
 			/* coloring */
 			if(set_getbool(&ic->bee->set, "otr_color_encrypted")) {
-				/* color according to f'print trust */
-				int color;
+				int color;                /* color according to f'print trust */
+				char *pre="", *sep="";    /* optional parts */
 				const char *trust = context->active_fingerprint->trust;
+
 				if(trust && trust[0] != '\0')
 					color=3;   /* green */
 				else
 					color=5;   /* red */
 
-				if(newmsg[0] == ',') {
-					/* could be a problem with the color code */
-					/* insert a space between color spec and message */
-					colormsg = g_strdup_printf("\x03%.2d %s\x0F", color, newmsg);
-				} else {
-					colormsg = g_strdup_printf("\x03%.2d%s\x0F", color, newmsg);
+				/* keep "/me " uncolored at the beginning */
+				if (g_strncasecmp(msg, "/me ", 4) == 0) {
+					msg += 4;  /* skip */
+					pre = "/me ";
 				}
+
+				/* comma in first place could mess with the color code */
+				if (msg[0] == ',') {
+				    /* insert a space between color spec and message */
+				    sep = " ";
+				}
+
+				msg = g_strdup_printf("%s\x03%.2d%s%s\x0F", pre,
+					color, sep, msg);
 			}
-		} else {
-			colormsg = g_strdup(newmsg);
 		}
 
+		if(msg == newmsg) {
+			msg = g_strdup(newmsg);
+		}
 		otrl_message_free(newmsg);
-		return colormsg;
+		return msg;
 	}
 }
 
