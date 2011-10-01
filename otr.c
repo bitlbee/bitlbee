@@ -613,9 +613,15 @@ int op_display_otr_message(void *opdata, const char *accountname,
 	struct im_connection *ic = check_imc(opdata, accountname, protocol);
 	char *msg = g_strdup(message);
 	irc_t *irc = ic->bee->ui_data;
+	irc_user_t *u = peeruser(irc, username, protocol);
 
 	strip_html(msg);
-	irc_usermsg(irc, "otr: %s", msg);
+	if(u) {
+		/* display message like it came from this particular user */
+		bee_irc_msg_from_user(u, msg, 0 /* sent_at */);
+	} else {
+		irc_usermsg(irc, "otr: %s", msg);
+	}
 
 	g_free(msg);
 	return 0;
@@ -1844,3 +1850,5 @@ void yes_keygen(void *data)
 		otr_keygen(irc, acc->user, acc->prpl->name);
 	}
 }
+
+/* vim: noet ts=4 sw=4 */
