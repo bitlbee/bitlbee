@@ -192,16 +192,14 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 	}
 }
 
-static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg_, time_t sent_at )
+void bee_irc_msg_from_user( irc_user_t *iu, const char *msg, time_t sent_at )
 {
-	irc_t *irc = bee->ui_data;
-	irc_user_t *iu = (irc_user_t *) bu->ui_data;
+    irc_t *irc = iu->irc;
+	bee_t *bee = irc->b;
+	irc_channel_t *ic = NULL;
 	char *dst, *prefix = NULL;
 	char *wrapped, *ts = NULL;
-	irc_channel_t *ic = NULL;
-	char *msg = g_strdup( msg_ );
-	GSList *l;
-	
+
 	if( sent_at > 0 && set_getbool( &irc->b->set, "display_timestamps" ) )
 		ts = irc_format_timestamp( irc, sent_at );
 	
@@ -225,6 +223,20 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg_, 
 		prefix = ts;
 		ts = NULL;
 	}
+	
+	wrapped = word_wrap( msg, 425 );
+	irc_send_msg( iu, "PRIVMSG", dst, wrapped, prefix );
+	
+	g_free( wrapped );
+	g_free( prefix );
+	g_free( ts );
+}
+
+static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg_, time_t sent_at )
+{
+	irc_user_t *iu = (irc_user_t *) bu->ui_data;
+	char *msg = g_strdup( msg_ );
+	GSList *l;
 	
 	for( l = irc_plugins; l; l = l->next )
 	{
@@ -255,14 +267,9 @@ static gboolean bee_irc_user_msg( bee_t *bee, bee_user_t *bu, const char *msg_, 
 		msg = s;
 	}
 	
-	wrapped = word_wrap( msg, 425 );
-	irc_send_msg( iu, "PRIVMSG", dst, wrapped, prefix );
-	
-	g_free( wrapped );
-	g_free( prefix );
+    bee_irc_msg_from_user( iu, msg, sent_at );
+
 	g_free( msg );
-	g_free( ts );
-	
 	return TRUE;
 }
 

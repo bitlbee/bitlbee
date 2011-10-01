@@ -349,5 +349,6 @@ char *irc_format_timestamp( irc_t *irc, time_t msg_ts );
 /* irc_im.c */
 void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu );
 void bee_irc_user_nick_reset( irc_user_t *iu );
+void bee_irc_msg_from_user( irc_user_t *iu, const char *msg, time_t sent_at );
 
 #endif
