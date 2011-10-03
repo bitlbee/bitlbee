@@ -413,14 +413,15 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 				else
 					color=5;   /* red */
 
-				/* keep "/me " uncolored at the beginning */
-				if (g_strncasecmp(msg, "/me ", 4) == 0) {
+				/* in a query window, keep "/me " uncolored at the beginning */
+				if(g_strncasecmp(msg, "/me ", 4) == 0
+				   && irc_user_msgdest(iu) == irc->user->nick) {
 					msg += 4;  /* skip */
 					pre = "/me ";
 				}
 
 				/* comma in first place could mess with the color code */
-				if (msg[0] == ',') {
+				if(msg[0] == ',') {
 				    /* insert a space between color spec and message */
 				    sep = " ";
 				}
