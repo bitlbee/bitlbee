@@ -633,11 +633,17 @@ void op_new_fingerprint(void *opdata, OtrlUserState us,
 {
 	struct im_connection *ic = check_imc(opdata, accountname, protocol);
 	irc_t *irc = ic->bee->ui_data;
+	irc_user_t *u = peeruser(irc, username, protocol);
 	char hunam[45];		/* anybody looking? ;-) */
 	
 	otrl_privkey_hash_to_human(hunam, fingerprint);
-	irc_rootmsg(irc, "new fingerprint for %s: %s",
-		peernick(irc, username, protocol), hunam);
+	if(u) {
+		irc_usernotice(u, "new fingerprint: %s", hunam);
+	} else {
+		/* this case shouldn't normally happen */
+		irc_rootmsg(irc, "new fingerprint for %s/%s: %s",
+			username, protocol, hunam);
+	}
 }
 
 void op_write_fingerprints(void *opdata)
@@ -666,7 +672,7 @@ void op_gone_secure(void *opdata, ConnContext *context)
 	otr_update_uflags(context, u);
 	if(!otr_update_modeflags(irc, u)) {
 		char *trust = u->flags & IRC_USER_OTR_TRUSTED ? "trusted" : "untrusted!";
-		irc_rootmsg(irc, "conversation with %s is now off the record (%s)", u->nick, trust);
+		irc_usernotice(u, "conversation is now off the record (%s)", trust);
 	}
 }
 
@@ -686,7 +692,7 @@ void op_gone_insecure(void *opdata, ConnContext *context)
 	}
 	otr_update_uflags(context, u);
 	if(!otr_update_modeflags(irc, u))
-		irc_rootmsg(irc, "conversation with %s is now in the clear", u->nick);
+		irc_usernotice(u, "conversation is now in cleartext");
 }
 
 void op_still_secure(void *opdata, ConnContext *context, int is_reply)
@@ -707,7 +713,7 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 	otr_update_uflags(context, u);
 	if(!otr_update_modeflags(irc, u)) {
 		char *trust = u->flags & IRC_USER_OTR_TRUSTED ? "trusted" : "untrusted!";
-		irc_rootmsg(irc, "otr connection with %s has been refreshed (%s)", u->nick, trust);
+		irc_usernotice(u, "otr connection has been refreshed (%s)", trust);
 	}
 }
 
