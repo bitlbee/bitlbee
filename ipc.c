@@ -355,7 +355,7 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 		{
 			irc_switch_fd( irc, ipc_child_recv_fd );
 			irc_sync( irc );
-			irc_usermsg( irc, "You've successfully taken over your old session" );
+			irc_rootmsg( irc, "You've successfully taken over your old session" );
 			ipc_child_recv_fd = -1;
 			
 			ipc_to_master_str( "TAKEOVER DONE\r\n" );
@@ -373,7 +373,7 @@ static void ipc_child_cmd_takeover( irc_t *irc, char **cmd )
 	else if( strcmp( cmd[1], "FAIL" ) == 0 ) 
 	{
 		/* Master->New connection */
-		irc_usermsg( irc, "Could not take over old session" );
+		irc_rootmsg( irc, "Could not take over old session" );
 	}
 }
 
@@ -411,7 +411,7 @@ static void ipc_child_cmd_takeover_yes( void *data )
 	
 	/* Drop credentials, we'll shut down soon and shouldn't overwrite
 	   any settings. */
-	irc_usermsg( irc, "Trying to take over existing session" );
+	irc_rootmsg( irc, "Trying to take over existing session" );
 	
 	irc_desync( irc );
 	

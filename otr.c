@@ -277,12 +277,12 @@ void otr_load(irc_t *irc)
 	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, irc->user->nick);
 	e = otrl_privkey_read(irc->otr->us, s);
 	if(e && e!=enoent) {
-		irc_usermsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
+		irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
 	}
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->user->nick);
 	e = otrl_privkey_read_fingerprints(irc->otr->us, s, NULL, NULL);
 	if(e && e!=enoent) {
-		irc_usermsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
+		irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
 	}
 	
 	/* check for otr keys on all accounts */
@@ -290,7 +290,7 @@ void otr_load(irc_t *irc)
 		kg = otr_check_for_key(a) || kg;
 	}
 	if(kg) {
-		irc_usermsg(irc, "Notice: "
+		irc_rootmsg(irc, "Notice: "
 			"The accounts above do not have OTR encryption keys associated with them, yet. "
 			"These keys are now being generated in the background. "
 			"You will be notified as they are completed. "
@@ -308,7 +308,7 @@ void otr_save(irc_t *irc)
 	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->user->nick);
 	e = otrl_privkey_write_fingerprints(irc->otr->us, s);
 	if(e) {
-		irc_usermsg(irc, "otr save: %s: %s", s, gcry_strerror(e));
+		irc_rootmsg(irc, "otr save: %s: %s", s, gcry_strerror(e));
 	}
 	chmod(s, 0600);
 }
@@ -347,13 +347,13 @@ int otr_check_for_key(account_t *a)
 	
 	k = otrl_privkey_find(irc->otr->us, a->user, a->prpl->name);
 	if(k) {
-		irc_usermsg(irc, "otr: %s/%s ready", a->user, a->prpl->name);
+		irc_rootmsg(irc, "otr: %s/%s ready", a->user, a->prpl->name);
 		return 0;
 	} if(keygen_in_progress(irc, a->user, a->prpl->name)) {
-		irc_usermsg(irc, "otr: keygen for %s/%s already in progress", a->user, a->prpl->name);
+		irc_rootmsg(irc, "otr: keygen for %s/%s already in progress", a->user, a->prpl->name);
 		return 0;
 	} else {
-		irc_usermsg(irc, "otr: starting background keygen for %s/%s", a->user, a->prpl->name);
+		irc_rootmsg(irc, "otr: starting background keygen for %s/%s", a->user, a->prpl->name);
 		otr_keygen(irc, a->user, a->prpl->name);
 		return 1;
 	}
@@ -520,13 +520,13 @@ static void cmd_otr(irc_t *irc, char **args)
 	}
 	
 	if(!cmd->command) {
-		irc_usermsg(irc, "%s: unknown subcommand \"%s\", see \x02help otr\x02",
+		irc_rootmsg(irc, "%s: unknown subcommand \"%s\", see \x02help otr\x02",
 			args[0], args[1]);
 		return;
 	}
 	
 	if(!args[cmd->required_parameters+1]) {
-		irc_usermsg(irc, "%s %s: not enough arguments (%d req.)",
+		irc_rootmsg(irc, "%s %s: not enough arguments (%d req.)",
 			args[0], args[1], cmd->required_parameters);
 		return;
 	}
@@ -598,7 +598,7 @@ void op_inject_message(void *opdata, const char *accountname,
 
 	if (strcmp(accountname, recipient) == 0) {
 		/* huh? injecting messages to myself? */
-		irc_usermsg(irc, "note to self: %s", message);
+		irc_rootmsg(irc, "note to self: %s", message);
 	} else {
 		/* need to drop some consts here :-( */
 		/* TODO: get flags into op_inject_message?! */
@@ -617,10 +617,10 @@ int op_display_otr_message(void *opdata, const char *accountname,
 
 	strip_html(msg);
 	if(u) {
-		/* display message like it came from this particular user */
-		bee_irc_msg_from_user(u, msg, 0 /* sent_at */);
+		/* display as a notice from this particular user */
+		irc_usernotice(u, "%s", msg);
 	} else {
-		irc_usermsg(irc, "otr: %s", msg);
+		irc_rootmsg(irc, "[otr] %s", msg);
 	}
 
 	g_free(msg);
@@ -636,7 +636,7 @@ void op_new_fingerprint(void *opdata, OtrlUserState us,
 	char hunam[45];		/* anybody looking? ;-) */
 	
 	otrl_privkey_hash_to_human(hunam, fingerprint);
-	irc_usermsg(irc, "new fingerprint for %s: %s",
+	irc_rootmsg(irc, "new fingerprint for %s: %s",
 		peernick(irc, username, protocol), hunam);
 }
 
@@ -666,7 +666,7 @@ void op_gone_secure(void *opdata, ConnContext *context)
 	otr_update_uflags(context, u);
 	if(!otr_update_modeflags(irc, u)) {
 		char *trust = u->flags & IRC_USER_OTR_TRUSTED ? "trusted" : "untrusted!";
-		irc_usermsg(irc, "conversation with %s is now off the record (%s)", u->nick, trust);
+		irc_rootmsg(irc, "conversation with %s is now off the record (%s)", u->nick, trust);
 	}
 }
 
@@ -686,7 +686,7 @@ void op_gone_insecure(void *opdata, ConnContext *context)
 	}
 	otr_update_uflags(context, u);
 	if(!otr_update_modeflags(irc, u))
-		irc_usermsg(irc, "conversation with %s is now in the clear", u->nick);
+		irc_rootmsg(irc, "conversation with %s is now in the clear", u->nick);
 }
 
 void op_still_secure(void *opdata, ConnContext *context, int is_reply)
@@ -707,7 +707,7 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 	otr_update_uflags(context, u);
 	if(!otr_update_modeflags(irc, u)) {
 		char *trust = u->flags & IRC_USER_OTR_TRUSTED ? "trusted" : "untrusted!";
-		irc_usermsg(irc, "otr connection with %s has been refreshed (%s)", u->nick, trust);
+		irc_rootmsg(irc, "otr connection with %s has been refreshed (%s)", u->nick, trust);
 	}
 }
 
@@ -751,7 +751,7 @@ void cmd_otr_disconnect(irc_t *irc, char **args)
 
 	u = irc_user_by_name(irc, args[1]);
 	if(!u || !u->bu || !u->bu->ic) {
-		irc_usermsg(irc, "%s: unknown user", args[1]);
+		irc_rootmsg(irc, "%s: unknown user", args[1]);
 		return;
 	}
 	
@@ -776,11 +776,11 @@ void cmd_otr_connect(irc_t *irc, char **args)
 
 	u = irc_user_by_name(irc, args[1]);
 	if(!u || !u->bu || !u->bu->ic) {
-		irc_usermsg(irc, "%s: unknown user", args[1]);
+		irc_rootmsg(irc, "%s: unknown user", args[1]);
 		return;
 	}
 	if(!(u->bu->flags & BEE_USER_ONLINE)) {
-		irc_usermsg(irc, "%s is offline", args[1]);
+		irc_rootmsg(irc, "%s is offline", args[1]);
 		return;
 	}
 	
@@ -807,14 +807,14 @@ void cmd_otr_trust(irc_t *irc, char **args)
 	
 	u = irc_user_by_name(irc, args[1]);
 	if(!u || !u->bu || !u->bu->ic) {
-		irc_usermsg(irc, "%s: unknown user", args[1]);
+		irc_rootmsg(irc, "%s: unknown user", args[1]);
 		return;
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
 		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 	if(!ctx) {
-		irc_usermsg(irc, "%s: no otr context with user", args[1]);
+		irc_rootmsg(irc, "%s: no otr context with user", args[1]);
 		return;
 	}
 	
@@ -826,18 +826,18 @@ void cmd_otr_trust(irc_t *irc, char **args)
 			int x, y;
 			
 			if(!*p || !*q) {
-				irc_usermsg(irc, "failed: truncated fingerprint block %d", i+1);
+				irc_rootmsg(irc, "failed: truncated fingerprint block %d", i+1);
 				return;
 			}
 			
 			x = hexval(*p);
 			y = hexval(*q);
 			if(x<0) {
-				irc_usermsg(irc, "failed: %d. hex digit of block %d out of range", 2*j+1, i+1);
+				irc_rootmsg(irc, "failed: %d. hex digit of block %d out of range", 2*j+1, i+1);
 				return;
 			}
 			if(y<0) {
-				irc_usermsg(irc, "failed: %d. hex digit of block %d out of range", 2*j+2, i+1);
+				irc_rootmsg(irc, "failed: %d. hex digit of block %d out of range", 2*j+2, i+1);
 				return;
 			}
 
@@ -846,11 +846,11 @@ void cmd_otr_trust(irc_t *irc, char **args)
 	}
 	fp = otrl_context_find_fingerprint(ctx, raw, 0, NULL);
 	if(!fp) {
-		irc_usermsg(irc, "failed: no such fingerprint for %s", args[1]);
+		irc_rootmsg(irc, "failed: no such fingerprint for %s", args[1]);
 	} else {
 		char *trust = args[7] ? args[7] : "affirmed";
 		otrl_context_set_trust(fp, trust);
-		irc_usermsg(irc, "fingerprint match, trust set to \"%s\"", trust);
+		irc_rootmsg(irc, "fingerprint match, trust set to \"%s\"", trust);
 		if(u->flags & IRC_USER_OTR_ENCRYPTED)
 			u->flags |= IRC_USER_OTR_TRUSTED;
 		otr_update_modeflags(irc, u);
@@ -878,21 +878,21 @@ void cmd_otr_info(irc_t *irc, char **args)
 			handle = arg;
 			ctx = otrl_context_find(irc->otr->us, handle, myhandle, protocol, 0, NULL, NULL, NULL);
 			if(!ctx) {
-				irc_usermsg(irc, "no such context");
+				irc_rootmsg(irc, "no such context");
 				g_free(arg);
 				return;
 			}
 		} else {
 			irc_user_t *u = irc_user_by_name(irc, args[1]);
 			if(!u || !u->bu || !u->bu->ic) {
-				irc_usermsg(irc, "%s: unknown user", args[1]);
+				irc_rootmsg(irc, "%s: unknown user", args[1]);
 				g_free(arg);
 				return;
 			}
 			ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
 				u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 			if(!ctx) {
-				irc_usermsg(irc, "no otr context with %s", args[1]);
+				irc_rootmsg(irc, "no otr context with %s", args[1]);
 				g_free(arg);
 				return;
 			}
@@ -900,7 +900,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 	
 		/* show how we resolved the (nick) argument, if we did */
 		if(handle!=arg) {
-			irc_usermsg(irc, "%s is %s/%s; we are %s/%s to them", args[1],
+			irc_rootmsg(irc, "%s is %s/%s; we are %s/%s to them", args[1],
 				ctx->username, ctx->protocol, ctx->accountname, ctx->protocol);
 		}
 		show_otr_context_info(irc, ctx);
@@ -915,19 +915,19 @@ void cmd_otr_keygen(irc_t *irc, char **args)
 	
 	n = atoi(args[1]);
 	if(n<0 || (!n && strcmp(args[1], "0"))) {
-		irc_usermsg(irc, "%s: invalid account number", args[1]);
+		irc_rootmsg(irc, "%s: invalid account number", args[1]);
 		return;
 	}
 	
 	a = irc->b->accounts;
 	for(i=0; i<n && a; i++, a=a->next);
 	if(!a) {
-		irc_usermsg(irc, "%s: no such account", args[1]);
+		irc_rootmsg(irc, "%s: no such account", args[1]);
 		return;
 	}
 	
 	if(keygen_in_progress(irc, a->user, a->prpl->name)) {
-		irc_usermsg(irc, "keygen for account %d already in progress", n);
+		irc_rootmsg(irc, "keygen for account %d already in progress", n);
 		return;
 	}
 	
@@ -949,7 +949,7 @@ void yes_forget_fingerprint(void *data)
 	g_free(p);
 	
 	if(fp == fp->context->active_fingerprint) {
-		irc_usermsg(irc, "that fingerprint is active, terminate otr connection first");
+		irc_rootmsg(irc, "that fingerprint is active, terminate otr connection first");
 		return;
 	}
 		
@@ -965,7 +965,7 @@ void yes_forget_context(void *data)
 	g_free(p);
 	
 	if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
-		irc_usermsg(irc, "active otr connection with %s, terminate it first",
+		irc_rootmsg(irc, "active otr connection with %s, terminate it first",
 			peernick(irc, ctx->username, ctx->protocol));
 		return;
 	}
@@ -997,21 +997,21 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		pair_t *p;
 		
 		if(!args[3]) {
-			irc_usermsg(irc, "otr %s %s: not enough arguments (2 req.)", args[0], args[1]);
+			irc_rootmsg(irc, "otr %s %s: not enough arguments (2 req.)", args[0], args[1]);
 			return;
 		}
 		
 		/* TODO: allow context specs ("user/proto/account") in 'otr forget fingerprint'? */
 		u = irc_user_by_name(irc, args[2]);
 		if(!u || !u->bu || !u->bu->ic) {
-			irc_usermsg(irc, "%s: unknown user", args[2]);
+			irc_rootmsg(irc, "%s: unknown user", args[2]);
 			return;
 		}
 		
 		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
 			u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 		if(!ctx) {
-			irc_usermsg(irc, "no otr context with %s", args[2]);
+			irc_rootmsg(irc, "no otr context with %s", args[2]);
 			return;
 		}
 		
@@ -1022,7 +1022,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		}
 		
 		if(fp == ctx->active_fingerprint) {
-			irc_usermsg(irc, "that fingerprint is active, terminate otr connection first");
+			irc_rootmsg(irc, "that fingerprint is active, terminate otr connection first");
 			return;
 		}
 		
@@ -1047,19 +1047,19 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		/* TODO: allow context specs ("user/proto/account") in 'otr forget contex'? */
 		u = irc_user_by_name(irc, args[2]);
 		if(!u || !u->bu || !u->bu->ic) {
-			irc_usermsg(irc, "%s: unknown user", args[2]);
+			irc_rootmsg(irc, "%s: unknown user", args[2]);
 			return;
 		}
 		
 		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
 			u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 		if(!ctx) {
-			irc_usermsg(irc, "no otr context with %s", args[2]);
+			irc_rootmsg(irc, "no otr context with %s", args[2]);
 			return;
 		}
 		
 		if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
-			irc_usermsg(irc, "active otr connection with %s, terminate it first", args[2]);
+			irc_rootmsg(irc, "active otr connection with %s, terminate it first", args[2]);
 			return;
 		}
 		
@@ -1092,7 +1092,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 	
 	else
 	{
-		irc_usermsg(irc, "otr %s: unknown subcommand \"%s\", see \x02help otr forget\x02",
+		irc_rootmsg(irc, "otr %s: unknown subcommand \"%s\", see \x02help otr forget\x02",
 			args[0], args[1]);
 	}
 }
@@ -1118,7 +1118,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 		ic->acc->user, ic->acc->prpl->name, 1, NULL, NULL, NULL);
 	if(!context) {
 		/* huh? out of memory or what? */
-		irc_usermsg(irc, "smp: failed to get otr context for %s", u->nick);
+		irc_rootmsg(irc, "smp: failed to get otr context for %s", u->nick);
 		otrl_message_abort_smp(us, ops, u->bu->ic, context);
 		otrl_sm_state_free(context->smstate);
 		return;
@@ -1126,7 +1126,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	nextMsg = context->smstate->nextExpected;
 
 	if (context->smstate->sm_prog_state == OTRL_SMP_PROG_CHEATED) {
-		irc_usermsg(irc, "smp %s: opponent violated protocol, aborting",
+		irc_rootmsg(irc, "smp %s: opponent violated protocol, aborting",
 			u->nick);
 		otrl_message_abort_smp(us, ops, u->bu->ic, context);
 		otrl_sm_state_free(context->smstate);
@@ -1136,14 +1136,14 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1Q);
 	if (tlv) {
 		if (nextMsg != OTRL_SMP_EXPECT1) {
-			irc_usermsg(irc, "smp %s: spurious SMP1Q received, aborting", u->nick);
+			irc_rootmsg(irc, "smp %s: spurious SMP1Q received, aborting", u->nick);
 			otrl_message_abort_smp(us, ops, u->bu->ic, context);
 			otrl_sm_state_free(context->smstate);
 		} else {
 			char *question = g_strndup((char *)tlv->data, tlv->len);
-			irc_usermsg(irc, "smp: initiated by %s with question: \x02\"%s\"\x02", u->nick,
+			irc_rootmsg(irc, "smp: initiated by %s with question: \x02\"%s\"\x02", u->nick,
 				question);
-			irc_usermsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
+			irc_rootmsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
 				u->nick);
 			g_free(question);
 			/* smp stays in EXPECT1 until user responds */
@@ -1152,11 +1152,11 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1);
 	if (tlv) {
 		if (nextMsg != OTRL_SMP_EXPECT1) {
-			irc_usermsg(irc, "smp %s: spurious SMP1 received, aborting", u->nick);
+			irc_rootmsg(irc, "smp %s: spurious SMP1 received, aborting", u->nick);
 			otrl_message_abort_smp(us, ops, u->bu->ic, context);
 			otrl_sm_state_free(context->smstate);
 		} else {
-			irc_usermsg(irc, "smp: initiated by %s"
+			irc_rootmsg(irc, "smp: initiated by %s"
 				" - respond with \x02otr smp %s <secret>\x02",
 				u->nick, u->nick);
 			/* smp stays in EXPECT1 until user responds */
@@ -1165,7 +1165,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP2);
 	if (tlv) {
 		if (nextMsg != OTRL_SMP_EXPECT2) {
-			irc_usermsg(irc, "smp %s: spurious SMP2 received, aborting", u->nick);
+			irc_rootmsg(irc, "smp %s: spurious SMP2 received, aborting", u->nick);
 			otrl_message_abort_smp(us, ops, u->bu->ic, context);
 			otrl_sm_state_free(context->smstate);
 		} else {
@@ -1176,25 +1176,25 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP3);
 	if (tlv) {
 		if (nextMsg != OTRL_SMP_EXPECT3) {
-			irc_usermsg(irc, "smp %s: spurious SMP3 received, aborting", u->nick);
+			irc_rootmsg(irc, "smp %s: spurious SMP3 received, aborting", u->nick);
 			otrl_message_abort_smp(us, ops, u->bu->ic, context);
 			otrl_sm_state_free(context->smstate);
 		} else {
 			/* SMP3 received, otrl_message_receiving will have sent SMP4 */
 			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
 				if(context->smstate->received_question) {
-					irc_usermsg(irc, "smp %s: correct answer, you are trusted",
+					irc_rootmsg(irc, "smp %s: correct answer, you are trusted",
 						u->nick);
 				} else {
-					irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
+					irc_rootmsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
 						u->nick);
 				}
 			} else {
 				if(context->smstate->received_question) {
-					irc_usermsg(irc, "smp %s: wrong answer, you are not trusted",
+					irc_rootmsg(irc, "smp %s: wrong answer, you are not trusted",
 						u->nick);
 				} else {
-					irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
+					irc_rootmsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
 						u->nick);
 				}
 			}
@@ -1205,16 +1205,16 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP4);
 	if (tlv) {
 		if (nextMsg != OTRL_SMP_EXPECT4) {
-			irc_usermsg(irc, "smp %s: spurious SMP4 received, aborting", u->nick);
+			irc_rootmsg(irc, "smp %s: spurious SMP4 received, aborting", u->nick);
 			otrl_message_abort_smp(us, ops, u->bu->ic, context);
 			otrl_sm_state_free(context->smstate);
 		} else {
 			/* SMP4 received, otrl_message_receiving will have set fp trust */
 			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
-				irc_usermsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
+				irc_rootmsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
 					u->nick);
 			} else {
-				irc_usermsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
+				irc_rootmsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
 					u->nick);
 			}
 			otrl_sm_state_free(context->smstate);
@@ -1223,7 +1223,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	}
 	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP_ABORT);
 	if (tlv) {
-	 	irc_usermsg(irc, "smp: received abort from %s", u->nick);
+	 	irc_rootmsg(irc, "smp: received abort from %s", u->nick);
 		otrl_sm_state_free(context->smstate);
 		/* smp is in back in EXPECT1 */
 	}
@@ -1238,18 +1238,18 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 
 	u = irc_user_by_name(irc, nick);
 	if(!u || !u->bu || !u->bu->ic) {
-		irc_usermsg(irc, "%s: unknown user", nick);
+		irc_rootmsg(irc, "%s: unknown user", nick);
 		return;
 	}
 	if(!(u->bu->flags & BEE_USER_ONLINE)) {
-		irc_usermsg(irc, "%s is offline", nick);
+		irc_rootmsg(irc, "%s is offline", nick);
 		return;
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
 		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
 	if(!ctx || ctx->msgstate != OTRL_MSGSTATE_ENCRYPTED) {
-		irc_usermsg(irc, "smp: otr inactive with %s, try \x02otr connect"
+		irc_rootmsg(irc, "smp: otr inactive with %s, try \x02otr connect"
 				" %s\x02", nick, nick);
 		return;
 	}
@@ -1264,7 +1264,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 
 	if(question) {
 		/* this was 'otr smpq', just initiate */
-		irc_usermsg(irc, "smp: initiating with %s...", u->nick);
+		irc_rootmsg(irc, "smp: initiating with %s...", u->nick);
 		otrl_message_initiate_smp_q(irc->otr->us, &otr_ops, u->bu->ic, ctx,
 			question, (unsigned char *)secret, strlen(secret));
 		/* smp is now in EXPECT2 */
@@ -1273,14 +1273,14 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		/* warning: the following assumes that smstates are cleared whenever an SMP
 		   is completed or aborted! */ 
 		if(ctx->smstate->secret == NULL) {
-			irc_usermsg(irc, "smp: initiating with %s...", u->nick);
+			irc_rootmsg(irc, "smp: initiating with %s...", u->nick);
 			otrl_message_initiate_smp(irc->otr->us, &otr_ops,
 				u->bu->ic, ctx, (unsigned char *)secret, strlen(secret));
 			/* smp is now in EXPECT2 */
 		} else {
 			/* if we're still in EXPECT1 but smstate is initialized, we must have
 			   received the SMP1, so let's issue a response */
-			irc_usermsg(irc, "smp: responding to %s...", u->nick);
+			irc_rootmsg(irc, "smp: responding to %s...", u->nick);
 			otrl_message_respond_smp(irc->otr->us, &otr_ops,
 				u->bu->ic, ctx, (unsigned char *)secret, strlen(secret));
 			/* smp is now in EXPECT3 */
@@ -1395,13 +1395,13 @@ void show_fingerprints(irc_t *irc, ConnContext *ctx)
 			trust=fp->trust;
 		}
 		if(fp == ctx->active_fingerprint) {
-			irc_usermsg(irc, "    \x02%s (%s)\x02", human, trust);
+			irc_rootmsg(irc, "    \x02%s (%s)\x02", human, trust);
 		} else {
-			irc_usermsg(irc, "    %s (%s)", human, trust);
+			irc_rootmsg(irc, "    %s (%s)", human, trust);
 		}
 	}
 	if(count==0)
-		irc_usermsg(irc, "    (none)");
+		irc_rootmsg(irc, "    (none)");
 }
 
 Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args)
@@ -1420,14 +1420,14 @@ Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args)
 			char c = toupper(args[i][j]);
 			
 			if(n>=40) {
-				irc_usermsg(irc, "too many fingerprint digits given, expected at most 40");
+				irc_rootmsg(irc, "too many fingerprint digits given, expected at most 40");
 				return NULL;
 			}
 			
 			if( (c>='A' && c<='F') || (c>='0' && c<='9') ) {
 				*(p++) = c;
 			} else {
-				irc_usermsg(irc, "invalid hex digit '%c' in block %d", args[i][j], i+1);
+				irc_rootmsg(irc, "invalid hex digit '%c' in block %d", args[i][j], i+1);
 				return NULL;
 			}
 			
@@ -1448,7 +1448,7 @@ Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args)
 			break;
 	}
 	if(!fp) {
-		irc_usermsg(irc, "%s: no match", prefix);
+		irc_rootmsg(irc, "%s: no match", prefix);
 		return NULL;
 	}
 	
@@ -1461,7 +1461,7 @@ Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args)
 			break;
 	}
 	if(fp2) {
-		irc_usermsg(irc, "%s: multiple matches", prefix);
+		irc_rootmsg(irc, "%s: multiple matches", prefix);
 		return NULL;
 	}
 	
@@ -1484,14 +1484,14 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args)
 			char c = toupper(args[i][j]);
 			
 			if(n>=40) {
-				irc_usermsg(irc, "too many fingerprint digits given, expected at most 40");
+				irc_rootmsg(irc, "too many fingerprint digits given, expected at most 40");
 				return NULL;
 			}
 			
 			if( (c>='A' && c<='F') || (c>='0' && c<='9') ) {
 				*(p++) = c;
 			} else {
-				irc_usermsg(irc, "invalid hex digit '%c' in block %d", args[i][j], i+1);
+				irc_rootmsg(irc, "invalid hex digit '%c' in block %d", args[i][j], i+1);
 				return NULL;
 			}
 			
@@ -1512,7 +1512,7 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args)
 			break;
 	}
 	if(!k) {
-		irc_usermsg(irc, "%s: no match", prefix);
+		irc_rootmsg(irc, "%s: no match", prefix);
 		return NULL;
 	}
 	
@@ -1525,7 +1525,7 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args)
 			break;
 	}
 	if(k2) {
-		irc_usermsg(irc, "%s: multiple matches", prefix);
+		irc_rootmsg(irc, "%s: multiple matches", prefix);
 		return NULL;
 	}
 	
@@ -1540,16 +1540,16 @@ void show_general_otr_info(irc_t *irc)
 	kg_t *kg;
 
 	/* list all privkeys (including ones being generated) */
-	irc_usermsg(irc, "\x1fprivate keys:\x1f");
+	irc_rootmsg(irc, "\x1fprivate keys:\x1f");
 	for(key=irc->otr->us->privkey_root; key; key=key->next) {
 		const char *hash;
 		
 		switch(key->pubkey_type) {
 		case OTRL_PUBKEY_TYPE_DSA:
-			irc_usermsg(irc, "  %s/%s - DSA", key->accountname, key->protocol);
+			irc_rootmsg(irc, "  %s/%s - DSA", key->accountname, key->protocol);
 			break;
 		default:
-			irc_usermsg(irc, "  %s/%s - type %d", key->accountname, key->protocol,
+			irc_rootmsg(irc, "  %s/%s - type %d", key->accountname, key->protocol,
 				key->pubkey_type);
 		}
 
@@ -1558,25 +1558,25 @@ void show_general_otr_info(irc_t *irc)
 		   for hashing a given 'OtrlPrivKey'... */
 		hash = otrl_privkey_fingerprint(irc->otr->us, human, key->accountname, key->protocol);
 		if(hash) /* should always succeed */
-			irc_usermsg(irc, "    %s", human);
+			irc_rootmsg(irc, "    %s", human);
 	}
 	if(irc->otr->sent_accountname) {
-		irc_usermsg(irc, "  %s/%s - DSA", irc->otr->sent_accountname,
+		irc_rootmsg(irc, "  %s/%s - DSA", irc->otr->sent_accountname,
 			irc->otr->sent_protocol);
-		irc_usermsg(irc, "    (being generated)");
+		irc_rootmsg(irc, "    (being generated)");
 	}
 	for(kg=irc->otr->todo; kg; kg=kg->next) {
-		irc_usermsg(irc, "  %s/%s - DSA", kg->accountname, kg->protocol);
-		irc_usermsg(irc, "    (queued)");
+		irc_rootmsg(irc, "  %s/%s - DSA", kg->accountname, kg->protocol);
+		irc_rootmsg(irc, "    (queued)");
 	}
 	if(key == irc->otr->us->privkey_root &&
 	   !irc->otr->sent_accountname &&
 	   kg == irc->otr->todo)
-		irc_usermsg(irc, "  (none)");
+		irc_rootmsg(irc, "  (none)");
 
 	/* list all contexts */
-	irc_usermsg(irc, "%s", "");
-	irc_usermsg(irc, "\x1f" "connection contexts:\x1f (bold=currently encrypted)");
+	irc_rootmsg(irc, "%s", "");
+	irc_rootmsg(irc, "\x1f" "connection contexts:\x1f (bold=currently encrypted)");
 	for(ctx=irc->otr->us->context_root; ctx; ctx=ctx->next) {\
 		irc_user_t *u;
 		char *userstring;
@@ -1590,51 +1590,51 @@ void show_general_otr_info(irc_t *irc)
 				ctx->username, ctx->protocol, ctx->accountname);
 		
 		if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
-			irc_usermsg(irc, "  \x02%s\x02", userstring);
+			irc_rootmsg(irc, "  \x02%s\x02", userstring);
 		} else {
-			irc_usermsg(irc, "  %s", userstring);
+			irc_rootmsg(irc, "  %s", userstring);
 		}
 		
 		g_free(userstring);
 	}
 	if(ctx == irc->otr->us->context_root)
-		irc_usermsg(irc, "  (none)");
+		irc_rootmsg(irc, "  (none)");
 }
 
 void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 {
 	switch(ctx->otr_offer) {
 	case OFFER_NOT:
-		irc_usermsg(irc, "  otr offer status: none sent");
+		irc_rootmsg(irc, "  otr offer status: none sent");
 		break;
 	case OFFER_SENT:
-		irc_usermsg(irc, "  otr offer status: awaiting reply");
+		irc_rootmsg(irc, "  otr offer status: awaiting reply");
 		break;
 	case OFFER_ACCEPTED:
-		irc_usermsg(irc, "  otr offer status: accepted our offer");
+		irc_rootmsg(irc, "  otr offer status: accepted our offer");
 		break;
 	case OFFER_REJECTED:
-		irc_usermsg(irc, "  otr offer status: ignored our offer");
+		irc_rootmsg(irc, "  otr offer status: ignored our offer");
 		break;
 	default:
-		irc_usermsg(irc, "  otr offer status: %d", ctx->otr_offer);
+		irc_rootmsg(irc, "  otr offer status: %d", ctx->otr_offer);
 	}
 
 	switch(ctx->msgstate) {
 	case OTRL_MSGSTATE_PLAINTEXT:
-		irc_usermsg(irc, "  connection state: cleartext");
+		irc_rootmsg(irc, "  connection state: cleartext");
 		break;
 	case OTRL_MSGSTATE_ENCRYPTED:
-		irc_usermsg(irc, "  connection state: encrypted (v%d)", ctx->protocol_version);
+		irc_rootmsg(irc, "  connection state: encrypted (v%d)", ctx->protocol_version);
 		break;
 	case OTRL_MSGSTATE_FINISHED:
-		irc_usermsg(irc, "  connection state: shut down");
+		irc_rootmsg(irc, "  connection state: shut down");
 		break;
 	default:
-		irc_usermsg(irc, "  connection state: %d", ctx->msgstate);
+		irc_rootmsg(irc, "  connection state: %d", ctx->msgstate);
 	}
 
-	irc_usermsg(irc, "  fingerprints: (bold=active)");	
+	irc_rootmsg(irc, "  fingerprints: (bold=active)");	
 	show_fingerprints(irc, ctx);
 }
 
@@ -1674,20 +1674,20 @@ void otr_keygen(irc_t *irc, const char *handle, const char *protocol)
 		FILE *tof, *fromf;
 		
 		if(pipe(to) < 0 || pipe(from) < 0) {
-			irc_usermsg(irc, "otr keygen: couldn't create pipe: %s", strerror(errno));
+			irc_rootmsg(irc, "otr keygen: couldn't create pipe: %s", strerror(errno));
 			return;
 		}
 		
 		tof = fdopen(to[1], "w");
 		fromf = fdopen(from[0], "r");
 		if(!tof || !fromf) {
-			irc_usermsg(irc, "otr keygen: couldn't streamify pipe: %s", strerror(errno));
+			irc_rootmsg(irc, "otr keygen: couldn't streamify pipe: %s", strerror(errno));
 			return;
 		}
 		
 		p = fork();
 		if(p<0) {
-			irc_usermsg(irc, "otr keygen: couldn't fork: %s", strerror(errno));
+			irc_rootmsg(irc, "otr keygen: couldn't fork: %s", strerror(errno));
 			return;
 		}
 		
@@ -1767,7 +1767,7 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 	myfgets(filename, 512, irc->otr->from);
 	myfgets(msg, 512, irc->otr->from);
 	
-	irc_usermsg(irc, "%s", msg);
+	irc_rootmsg(irc, "%s", msg);
 	if(filename[0]) {
 		char *kf = g_strdup_printf("%s%s.otr_keys", global.conf->configdir, irc->user->nick);
 		char *tmp = g_strdup_printf("%s.new", kf);
@@ -1841,14 +1841,14 @@ void yes_keygen(void *data)
 	irc_t *irc = acc->bee->ui_data;
 	
 	if(keygen_in_progress(irc, acc->user, acc->prpl->name)) {
-		irc_usermsg(irc, "keygen for %s/%s already in progress",
+		irc_rootmsg(irc, "keygen for %s/%s already in progress",
 			acc->user, acc->prpl->name);
 	} else {
-		irc_usermsg(irc, "starting background keygen for %s/%s",
+		irc_rootmsg(irc, "starting background keygen for %s/%s",
 			acc->user, acc->prpl->name);
-		irc_usermsg(irc, "you will be notified when it completes");
+		irc_rootmsg(irc, "you will be notified when it completes");
 		otr_keygen(irc, acc->user, acc->prpl->name);
 	}
 }
 
-/* vim: noet ts=4 sw=4 */
+/* vim: set noet ts=4 sw=4: */

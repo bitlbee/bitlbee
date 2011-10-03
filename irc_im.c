@@ -192,38 +192,26 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 	}
 }
 
-void bee_irc_msg_from_user( irc_user_t *iu, const char *msg, time_t sent_at )
+static void bee_irc_msg_from_user( irc_user_t *iu, const char *msg, time_t sent_at )
 {
-    irc_t *irc = iu->irc;
+	irc_t *irc = iu->irc;
 	bee_t *bee = irc->b;
-	irc_channel_t *ic = NULL;
-	char *dst, *prefix = NULL;
+	const char *dst;
+	char *prefix = NULL;
 	char *wrapped, *ts = NULL;
 
 	if( sent_at > 0 && set_getbool( &irc->b->set, "display_timestamps" ) )
 		ts = irc_format_timestamp( irc, sent_at );
 	
-	/* Too similar to irc_usermsg()... */
-	if( iu->last_channel )
-	{
-		if( iu->last_channel->flags & IRC_CHANNEL_JOINED )
-			ic = iu->last_channel;
-		else
-			ic = irc_channel_with_user( irc, iu );
-	}
-	
-	if( ic )
-	{
-		dst = ic->name;
+	dst = irc_user_msgdest(iu);
+	if(dst != irc->user->nick) {
+		/* if not messaging directly, call user by name */
 		prefix = g_strdup_printf( "%s%s%s", irc->user->nick, set_getstr( &bee->set, "to_char" ), ts ? : "" );
-	}
-	else
-	{
-		dst = irc->user->nick;
+	} else {
 		prefix = ts;
-		ts = NULL;
+		ts = NULL;      /* don't doulbe-free */
 	}
-	
+
 	wrapped = word_wrap( msg, 425 );
 	irc_send_msg( iu, "PRIVMSG", dst, wrapped, prefix );
 	
@@ -999,7 +987,7 @@ static char *set_eval_room_account( set_t *set, char *value )
 		return SET_INVALID;
 	else if( !acc->prpl->chat_join )
 	{
-		irc_usermsg( ic->irc, "Named chatrooms not supported on that account." );
+		irc_rootmsg( ic->irc, "Named chatrooms not supported on that account." );
 		return SET_INVALID;
 	}
 	

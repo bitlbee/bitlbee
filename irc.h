@@ -316,7 +316,10 @@ void irc_exec( irc_t *irc, char **cmd );
 void irc_send_num( irc_t *irc, int code, char *format, ... ) G_GNUC_PRINTF( 3, 4 );
 void irc_send_login( irc_t *irc );
 void irc_send_motd( irc_t *irc );
-void irc_usermsg( irc_t *irc, char *format, ... );
+const char *irc_user_msgdest( irc_user_t *iu );
+void irc_rootmsg( irc_t *irc, char *format, ... );
+void irc_usermsg( irc_user_t *iu, char *format, ... );
+void irc_usernotice( irc_user_t *iu, char *format, ... );
 void irc_send_join( irc_channel_t *ic, irc_user_t *iu );
 void irc_send_part( irc_channel_t *ic, irc_user_t *iu, const char *reason );
 void irc_send_quit( irc_user_t *iu, const char *reason );
@@ -349,6 +352,5 @@ char *irc_format_timestamp( irc_t *irc, time_t msg_ts );
 /* irc_im.c */
 void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu );
 void bee_irc_user_nick_reset( irc_user_t *iu );
-void bee_irc_msg_from_user( irc_user_t *iu, const char *msg, time_t sent_at );
 
 #endif

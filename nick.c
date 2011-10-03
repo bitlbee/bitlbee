@@ -242,17 +242,17 @@ void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] )
 		{
 			int i;
 			
-			irc_usermsg( irc, "Warning: Almost had an infinite loop in nick_get()! "
+			irc_rootmsg( irc, "Warning: Almost had an infinite loop in nick_get()! "
 			                  "This used to be a fatal BitlBee bug, but we tried to fix it. "
 			                  "This message should *never* appear anymore. "
 			                  "If it does, please *do* send us a bug report! "
 			                  "Please send all the following lines in your report:" );
 			
-			irc_usermsg( irc, "Trying to get a sane nick for handle %s", bu->handle );
+			irc_rootmsg( irc, "Trying to get a sane nick for handle %s", bu->handle );
 			for( i = 0; i < MAX_NICK_LENGTH; i ++ )
-				irc_usermsg( irc, "Char %d: %c/%d", i, nick[i], nick[i] );
+				irc_rootmsg( irc, "Char %d: %c/%d", i, nick[i], nick[i] );
 			
-			irc_usermsg( irc, "FAILED. Returning an insane nick now. Things might break. "
+			irc_rootmsg( irc, "FAILED. Returning an insane nick now. Things might break. "
 			                  "Good luck, and please don't forget to paste the lines up here "
 			                  "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
 			
