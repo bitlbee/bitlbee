@@ -71,7 +71,9 @@ In this case r2d2 is online, since he/she joins the channel immediately. If the 
 Lets say you accidentally added r2d3@example.com rather than r2d2@example.com, or maybe you just want to remove a user from your list because you never talk to them. To remove a name you will want to use the <emphasis>remove</emphasis> command: <emphasis>remove r2d3</emphasis>
 </para>
 
-<para>Finally, if you have multiple users with similar names you may use the <emphasis>rename</emphasis> command to make it easier to remember: <emphasis>rename r2d2_ r2d2_aim</emphasis>
+<para>
+Finally, if you have multiple users with similar names you may use the <emphasis>rename</emphasis> command to make it easier to remember: <emphasis>rename r2d2_ r2d2_aim</emphasis>
+</para>
 
 <para>
 When finished, type <emphasis>help quickstart4</emphasis> to continue.
