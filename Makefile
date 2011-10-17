@@ -155,7 +155,7 @@ $(subdirs):
 
 $(OTR_PI): %.so: $(SRCDIR)%.c
 	@echo '*' Building plugin $@
-	@$(CC) $(CFLAGS) $(OTRFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@
+	@$(CC) $(CFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@ $(OTRFLAGS)
 
 $(SKYPE_PI): $(SRCDIR)protocols/skype/skype.c
 	@echo '*' Building plugin skype
