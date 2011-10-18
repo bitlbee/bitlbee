@@ -726,6 +726,13 @@ void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor)
 	struct twitter_data *td = ic->proto_data;
 	gboolean include_mentions = set_getbool(&ic->acc->set, "fetch_mentions");
 
+	if ((td->flags & 0xf0000) == (TWITTER_DOING_TIMELINE | TWITTER_DOING_TIMELINE_SLOW)) {
+		imcb_log(ic, "Connection seems to have stalled again.\n"
+		             "This is a known bug, if you see this happen a lot "
+		             "please generate some traffic dumps.");
+		td->flags &= ~0xf0000;
+	}
+
 	if (td->flags & TWITTER_DOING_TIMELINE) {
 		return;
 	}
