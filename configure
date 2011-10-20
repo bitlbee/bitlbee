@@ -18,7 +18,7 @@ includedir='$prefix/include/bitlbee/'
 systemdsystemunitdir=''
 libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
-ipcsocket='/var/run/bitlbee.sock'
+ipcsocket=''
 pcdir='$prefix/lib/pkgconfig'
 systemlibdirs="/lib /lib64 /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64"
 
@@ -66,7 +66,6 @@ Option		Description				Default
 --systemdsystemunitdir=...				$systemdsystemunitdir
 --pidfile=...						$pidfile
 --config=...						$config
---ipcsocket=...						$ipcsocket
 
 --msn=0/1	Disable/enable MSN part			$msn
 --jabber=0/1	Disable/enable Jabber part		$jabber

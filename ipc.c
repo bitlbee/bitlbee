@@ -908,6 +908,9 @@ int ipc_master_listen_socket()
 	struct sockaddr_un un_addr;
 	int serversock;
 
+	if (!IPCSOCKET || !*IPCSOCKET)
+		return 1;
+
 	/* Clean up old socket files that were hanging around.. */
 	if (unlink(IPCSOCKET) == -1 && errno != ENOENT) {
 		log_message( LOGLVL_ERROR, "Could not remove old IPC socket at %s: %s", IPCSOCKET, strerror(errno) );
