@@ -2101,6 +2101,10 @@ static int gaim_ssi_parseack( aim_session_t *sess, aim_frame_t *fr, ... )
 				aim_ssi_auth_request( sess, fr->conn, list, "" );
 				aim_ssi_addbuddies( sess, fr->conn, OSCAR_GROUP, &list, 1, 1 );
 			}
+			else if( st == 0x0A )
+			{
+				imcb_error( sess->aux_data, "Buddy %s is already in your list", list );
+			}
 			else
 			{
 				imcb_error( sess->aux_data, "Error while adding buddy: 0x%04x", st );
