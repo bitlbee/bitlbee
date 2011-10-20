@@ -734,6 +734,10 @@ void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor)
 	}
 
 	if (td->flags & TWITTER_DOING_TIMELINE) {
+		/* This shouldn't normally happen at all but I'm currently hunting a bug
+		   where it does. Instead of having users suffer under it, have a work-
+		   around with a warning. */
+		td->flags |= TWITTER_DOING_TIMELINE_SLOW;
 		return;
 	}
 
