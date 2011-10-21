@@ -556,6 +556,28 @@ char *xt_find_attr( struct xt_node *node, const char *key )
 	return node->attr[i].value;
 }
 
+/* Strip a few non-printable characters that aren't allowed in XML streams
+   (and upset some XMPP servers for example). */
+void xt_strip_text( char *in )
+{
+	char *out = in;
+	static const char nonprint[32] = {
+		0, 0, 0, 0, 0, 0, 0, 0, /* 0..7 */
+		0, 1, 1, 0, 0, 1, 0, 0, /* 9 (tab), 10 (\n), 13 (\r) */
+	};
+	
+	if( !in )
+		return;
+
+	while( *in )
+	{
+		if( (unsigned int) *in >= ' ' || nonprint[(unsigned int) *in] )
+			*out ++ = *in;
+		in ++;
+	}
+	*out = *in;
+}
+
 struct xt_node *xt_new_node( char *name, const char *text, struct xt_node *children )
 {
 	struct xt_node *node, *c;
@@ -567,8 +589,9 @@ struct xt_node *xt_new_node( char *name, const char *text, struct xt_node *child
 	
 	if( text )
 	{
-		node->text_len = strlen( text );
-		node->text = g_memdup( text, node->text_len + 1 );
+		node->text = g_strdup( text );
+		xt_strip_text( node->text );
+		node->text_len = strlen( node->text );
 	}
 	
 	for( c = children; c; c = c->next )
