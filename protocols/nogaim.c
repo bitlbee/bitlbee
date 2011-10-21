@@ -215,9 +215,9 @@ static void serv_got_crap( struct im_connection *ic, char *format, ... )
 	/* If we found one, include the screenname in the message. */
 	if( a )
 		/* FIXME(wilmer): ui_log callback or so */
-		irc_usermsg( ic->bee->ui_data, "%s(%s) - %s", ic->acc->prpl->name, ic->acc->user, text );
+		irc_rootmsg( ic->bee->ui_data, "%s(%s) - %s", ic->acc->prpl->name, ic->acc->user, text );
 	else
-		irc_usermsg( ic->bee->ui_data, "%s - %s", ic->acc->prpl->name, text );
+		irc_rootmsg( ic->bee->ui_data, "%s - %s", ic->acc->prpl->name, text );
 	
 	g_free( text );
 }

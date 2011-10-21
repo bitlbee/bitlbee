@@ -149,7 +149,7 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		if( q->ic )
 			imcb_log( q->ic, "Accepted: %s", q->question );
 		else
-			irc_usermsg( irc, "Accepted: %s", q->question );
+			irc_rootmsg( irc, "Accepted: %s", q->question );
 		if( q->yes )
 			q->yes( q->data );
 	}
@@ -158,7 +158,7 @@ void query_answer( irc_t *irc, query_t *q, int ans )
 		if( q->ic )
 			imcb_log( q->ic, "Rejected: %s", q->question );
 		else
-			irc_usermsg( irc, "Rejected: %s", q->question );
+			irc_rootmsg( irc, "Rejected: %s", q->question );
 		if( q->no )
 			q->no( q->data );
 	}
@@ -178,7 +178,7 @@ static void query_display( irc_t *irc, query_t *q )
 	}
 	else
 	{
-		irc_usermsg( irc, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
+		irc_rootmsg( irc, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
 	}
 }
 

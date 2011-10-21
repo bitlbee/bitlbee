@@ -362,7 +362,7 @@ void irc_process( irc_t *irc )
 					   so let's be a little bit paranoid here: */
 					if( irc->status & USTATUS_LOGGED_IN )
 					{
-						irc_usermsg( irc, "Error: Charset mismatch detected. The charset "
+						irc_rootmsg( irc, "Error: Charset mismatch detected. The charset "
 						                  "setting is currently set to %s, so please make "
 						                  "sure your IRC client will send and accept text in "
 						                  "that charset, or tell BitlBee which charset to "
@@ -766,7 +766,7 @@ int irc_check_login( irc_t *irc )
 			
 			irc->root->last_channel = irc->default_channel;
 			
-			irc_usermsg( irc,
+			irc_rootmsg( irc,
 			             "Welcome to the BitlBee gateway!\n\n"
 			             "If you've never used BitlBee before, please do read the help "
 			             "information using the \x02help\x02 command. Lots of FAQs are "
@@ -909,7 +909,7 @@ static char *set_eval_charset( set_t *set, char *value )
 	{
 		g_free( test );
 		g_iconv_close( oc );
-		irc_usermsg( irc, "Unsupported character set: The IRC protocol "
+		irc_rootmsg( irc, "Unsupported character set: The IRC protocol "
 		                  "only supports 8-bit character sets." );
 		return NULL;
 	}
@@ -940,7 +940,7 @@ static char *set_eval_bw_compat( set_t *set, char *value )
 	char *val;
 	GSList *l;
 	
-	irc_usermsg( irc, "Setting `%s' is obsolete, use the `show_users' "
+	irc_rootmsg( irc, "Setting `%s' is obsolete, use the `show_users' "
 	             "channel setting instead.", set->key );
 	
 	if( strcmp( set->key, "away_devoice" ) == 0 && !bool2int( value ) )
