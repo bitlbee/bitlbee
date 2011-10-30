@@ -876,7 +876,8 @@ jabber_streamhost_t *jabber_si_parse_proxy( struct im_connection *ic, char *prox
 	jabber_streamhost_t *sh;
 
 	if( ( ( host = strchr( proxy, ',' ) ) == 0 ) ||
-	     ( ( port = strchr( host+1, ',' ) ) == 0 ) ) {
+	    ( ( port = strchr( host+1, ',' ) ) == 0 ) )
+	{
 		imcb_log( ic, "Error parsing proxy setting: \"%s\" (ignored)", proxy );
 		return NULL;
 	}
@@ -888,7 +889,7 @@ jabber_streamhost_t *jabber_si_parse_proxy( struct im_connection *ic, char *prox
 	sh = g_new0( jabber_streamhost_t, 1 );
 	sh->jid = g_strdup( jid );
 	sh->host = g_strdup( host );
-	strcpy( sh->port, port );
+	g_snprintf( sh->port, sizeof( sh->port ), "%s", port );
 
 	return sh;
 }
@@ -914,7 +915,7 @@ void jabber_si_set_proxies( struct bs_transfer *bt )
 				sh = g_new0( jabber_streamhost_t, 1 );
 				sh->jid = g_strdup( tf->ini_jid );
 				sh->host = g_strdup( host );
-				strcpy( sh->port, port );
+				g_snprintf( sh->port, sizeof( sh->port ), "%s", port );
 				bt->streamhosts = g_slist_append( bt->streamhosts, sh );
 
 				bt->tf->watch_in = b_input_add( tf->fd, B_EV_IO_READ, jabber_bs_send_handshake, bt );
