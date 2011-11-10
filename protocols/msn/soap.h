@@ -115,7 +115,7 @@ int msn_soapq_flush( struct im_connection *ic, gboolean resend );
                "<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
                "<wsp:AppliesTo>" \
                    "<wsa:EndpointReference>" \
-                       "<wsa:Address>contacts.msn.com</wsa:Address>" \
+                       "<wsa:Address>local-bay.contacts.msn.com</wsa:Address>" \
                    "</wsa:EndpointReference>" \
                "</wsp:AppliesTo>" \
                "<wsse:PolicyReference xmlns=\"http://schemas.xmlsoap.org/ws/2003/06/secext\" URI=\"MBI\"></wsse:PolicyReference>" \
@@ -198,7 +198,7 @@ int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq );
   "</soap:Body>" \
 "</soap:Envelope>"
 
-#define SOAP_MEMLIST_URL "http://contacts.msn.com/abservice/SharingService.asmx"
+#define SOAP_MEMLIST_URL "http://local-bay.contacts.msn.com/abservice/SharingService.asmx"
 #define SOAP_MEMLIST_ACTION "http://www.msn.com/webservices/AddressBook/FindMembership"
 
 #define SOAP_MEMLIST_PAYLOAD \
@@ -233,7 +233,7 @@ int msn_soap_memlist_request( struct im_connection *ic );
 int msn_soap_memlist_edit( struct im_connection *ic, const char *handle, gboolean add, int list );
 
 
-#define SOAP_ADDRESSBOOK_URL "http://contacts.msn.com/abservice/abservice.asmx"
+#define SOAP_ADDRESSBOOK_URL "http://local-bay.contacts.msn.com/abservice/abservice.asmx"
 #define SOAP_ADDRESSBOOK_ACTION "http://www.msn.com/webservices/AddressBook/ABFindAll"
 
 #define SOAP_ADDRESSBOOK_PAYLOAD \
