@@ -313,7 +313,7 @@ got_reply:
 		req->status_code = -1;
 	}
 	
-	if( ( req->status_code == 301 || req->status_code == 302 ) && req->redir_ttl-- > 0 )
+	if( ( req->status_code >= 301 && req->status_code <= 303 ) && req->redir_ttl-- > 0 )
 	{
 		char *loc, *new_request, *new_host;
 		int error = 0, new_port, new_proto;
@@ -374,10 +374,13 @@ got_reply:
 			/* So, now I just allocated enough memory, so I'm
 			   going to use strcat(), whether you like it or not. :-) */
 			
-			sprintf( new_request, "GET %s HTTP/1.0", url->file );
+			*s = 0;
+			sprintf( new_request, "%s %s HTTP/1.0\r\nHost: %s",
+			         req->status_code == 303 || req->request[0] == 'G' ? "GET" : "POST", url->file, url->host );
+			*s = ' ';
 			
-			s = strstr( req->request, "\r\n" );
-			if( s == NULL )
+			if( !( ( s = strstr( req->request, "\r\nHost: " ) ) &&
+			       ( s = strstr( s + strlen( "\r\nHost: " ), "\r\n" ) ) ) )
 			{
 				req->status_string = g_strdup( "Error while rebuilding request string" );
 				g_free( new_request );
