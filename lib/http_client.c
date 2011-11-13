@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2005 Wilmer van der Gaast and others                *
+  * Copyright 2002-2011 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* HTTP(S) module                                                       */
@@ -353,6 +353,7 @@ got_reply:
 			/* A whole URL */
 			url_t *url;
 			char *s;
+			const char *new_method;
 			
 			s = strstr( loc, "\r\n" );
 			if( s == NULL )
@@ -368,30 +369,36 @@ got_reply:
 				goto cleanup;
 			}
 			
-			/* Okay, this isn't fun! We have to rebuild the request... :-( */
-			new_request = g_malloc( req->request_length + strlen( url->file ) );
-			
-			/* So, now I just allocated enough memory, so I'm
-			   going to use strcat(), whether you like it or not. :-) */
-			
-			*s = 0;
-			sprintf( new_request, "%s %s HTTP/1.0\r\nHost: %s",
-			         req->status_code == 303 || req->request[0] == 'G' ? "GET" : "POST", url->file, url->host );
-			*s = ' ';
-			
+			/* Find all headers and, if necessary, the POST request contents.
+			   Skip the old Host: header though. This crappy code here means
+			   anything using this http_client MUST put the Host: header at
+			   the top. */
 			if( !( ( s = strstr( req->request, "\r\nHost: " ) ) &&
 			       ( s = strstr( s + strlen( "\r\nHost: " ), "\r\n" ) ) ) )
 			{
 				req->status_string = g_strdup( "Error while rebuilding request string" );
-				g_free( new_request );
 				g_free( url );
 				goto cleanup;
 			}
 			
-			strcat( new_request, s );
+			/* More or less HTTP/1.0 compliant, from my reading of RFC 2616.
+			   Always perform a GET request unless we received a 301. 303 was
+			   meant for this but it's HTTP/1.1-only and we're specifically
+			   speaking HTTP/1.0. */
+			new_method = req->status_code != 301 || req->request[0] == 'G' ? "GET" : "POST";
+			
+			/* Okay, this isn't fun! We have to rebuild the request... :-( */
+			new_request = g_strdup_printf( "%s %s HTTP/1.0\r\nHost: %s%s",
+			                               new_method, url->file, url->host, s );
+			
 			new_host = g_strdup( url->host );
 			new_port = url->port;
 			new_proto = url->proto;
+			
+			/* If we went from POST to GET, truncate the request content. */
+			if( new_request[0] != req->request[0] && new_request[0] == 'G' &&
+			    ( s = strstr( new_request, "\r\n\r\n" ) ) )
+				s[4] = '\0';
 			
 			g_free( url );
 		}
