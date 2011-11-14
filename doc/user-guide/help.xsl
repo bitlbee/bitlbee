@@ -72,9 +72,11 @@
 	</xsl:template>
 
 	<xsl:template match="command-list">
+		<xsl:text>These are all root commands. See _b_help &lt;command name&gt;_b_ for more details on each command.&#10;&#10;</xsl:text>
 		<xsl:for-each select="../bitlbee-command">
 			<xsl:text> * _b_</xsl:text><xsl:value-of select="@name"/><xsl:text>_b_ - </xsl:text><xsl:value-of select="short-description"/><xsl:text>&#10;</xsl:text>
 		</xsl:for-each>
+		<xsl:text>&#10;Most commands can be shortened. For example instead of _b_account list_b_, try _b_ac l_b_.&#10;</xsl:text>
 		<xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
