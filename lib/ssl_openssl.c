@@ -240,15 +240,6 @@ int ssl_write( void *conn, const char *buf, int len )
 	return st;
 }
 
-/* Only OpenSSL *really* needs this (and well, maybe NSS). See for more info:
-   http://www.gnu.org/software/gnutls/manual/gnutls.html#index-gnutls_005frecord_005fcheck_005fpending-209
-   http://www.openssl.org/docs/ssl/SSL_pending.html
-   
-   Required because OpenSSL empties the TCP buffer completely but doesn't
-   necessarily give us all the unencrypted data.
-   
-   Returns 0 if there's nothing left or if we don't have to care (GnuTLS),
-   1 if there's more data. */
 int ssl_pending( void *conn )
 {
 	return ( ((struct scd*)conn) && ((struct scd*)conn)->established ) ?

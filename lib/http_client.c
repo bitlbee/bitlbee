@@ -239,7 +239,10 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 	                         req->ssl ? ssl_getdirection( req->ssl ) : B_EV_IO_READ,
 	                         http_incoming_data, req );
 	
-	return FALSE;
+	if( ssl_pending( req->ssl ) )
+		return http_incoming_data( data, source, cond );
+	else
+		return FALSE;
 
 got_reply:
 	/* Maybe if the webserver is overloaded, or when there's bad SSL
