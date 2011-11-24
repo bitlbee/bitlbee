@@ -726,18 +726,7 @@ void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor)
 	struct twitter_data *td = ic->proto_data;
 	gboolean include_mentions = set_getbool(&ic->acc->set, "fetch_mentions");
 
-	if ((td->flags & 0xf0000) == (TWITTER_DOING_TIMELINE | TWITTER_DOING_TIMELINE_SLOW)) {
-		imcb_log(ic, "Connection seems to have stalled again.\n"
-		             "This is a known bug, if you see this happen a lot "
-		             "please generate some traffic dumps.");
-		td->flags &= ~0xf0000;
-	}
-
 	if (td->flags & TWITTER_DOING_TIMELINE) {
-		/* This shouldn't normally happen at all but I'm currently hunting a bug
-		   where it does. Instead of having users suffer under it, have a work-
-		   around with a warning. */
-		td->flags |= TWITTER_DOING_TIMELINE_SLOW;
 		return;
 	}
 
@@ -827,8 +816,14 @@ void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
 		args[5] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
 	}
 
-	twitter_http(ic, TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, args,
-		     td->timeline_id ? 6 : 4);
+	if (twitter_http(ic, TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, args,
+		     td->timeline_id ? 6 : 4) == NULL) {
+		if (++td->http_fails >= 5)
+			imcb_error(ic, "Could not retrieve %s: %s",
+			           TWITTER_HOME_TIMELINE_URL, "connection failed");
+		td->flags |= TWITTER_GOT_TIMELINE;
+		twitter_flush_timeline(ic);
+	}
 
 	g_free(args[1]);
 	if (td->timeline_id) {
@@ -856,8 +851,14 @@ void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 		args[5] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
 	}
 
-	twitter_http(ic, TWITTER_MENTIONS_URL, twitter_http_get_mentions, ic, 0, args,
-		     td->timeline_id ? 6 : 4);
+	if (twitter_http(ic, TWITTER_MENTIONS_URL, twitter_http_get_mentions, ic, 0, args,
+		     td->timeline_id ? 6 : 4) == NULL) {
+		if (++td->http_fails >= 5)
+			imcb_error(ic, "Could not retrieve %s: %s",
+			           TWITTER_MENTIONS_URL, "connection failed");
+		td->flags |= TWITTER_GOT_MENTIONS;
+		twitter_flush_timeline(ic);
+	}
 
 	g_free(args[1]);
 	if (td->timeline_id) {
@@ -945,8 +946,8 @@ static void twitter_http_get_mentions(struct http_request *req)
 	} else {
 		// It didn't go well, output the error and return.
 		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve " TWITTER_MENTIONS_URL ": %s",
-				   twitter_parse_error(req));
+			imcb_error(ic, "Could not retrieve %s: %s",
+				   TWITTER_MENTIONS_URL, twitter_parse_error(req));
 
 		goto end;
 	}

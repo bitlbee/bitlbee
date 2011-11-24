@@ -38,7 +38,6 @@ typedef enum
 	TWITTER_DOING_TIMELINE = 0x10000,
 	TWITTER_GOT_TIMELINE = 0x20000,
 	TWITTER_GOT_MENTIONS = 0x40000,
-	TWITTER_DOING_TIMELINE_SLOW = 0x80000,
 } twitter_flags_t;
 
 struct twitter_log_data;
