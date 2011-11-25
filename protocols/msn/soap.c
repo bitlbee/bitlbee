@@ -214,12 +214,16 @@ static void msn_soap_debug_print( const char *headers, const char *payload )
 	if( !getenv( "BITLBEE_DEBUG" ) )
 		return;
 	
-	if( ( s = strstr( headers, "\r\n\r\n" ) ) )
-		st = write( 1, headers, s - headers + 4 );
-	else
-		st = write( 1, headers, strlen( headers ) );
+	if( headers )
+	{
+		if( ( s = strstr( headers, "\r\n\r\n" ) ) )
+			st = write( 1, headers, s - headers + 4 );
+		else
+			st = write( 1, headers, strlen( headers ) );
+	}
 	
 #ifdef DEBUG
+	if( payload )
 	{
 		struct xt_node *xt = xt_from_string( payload );
 		if( xt )
