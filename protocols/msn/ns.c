@@ -479,7 +479,8 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		}
 		else
 		{
-			imcb_error( ic, "Session terminated by remote server (reason unknown)" );
+			imcb_error( ic, "Session terminated by remote server (%s)",
+			            cmd[1] ? cmd[1] : "reason unknown)" );
 		}
 		
 		imc_logout( ic, allow_reconnect );
