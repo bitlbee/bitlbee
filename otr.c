@@ -185,6 +185,9 @@ Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args);
 /* find a private key by fingerprint prefix (given as any number of hex strings) */
 OtrlPrivKey *match_privkey(irc_t *irc, const char **args);
 
+/* check whether a string is safe to use in a path component */
+int strsane(const char *s);
+
 /* functions to be called for certain events */
 static const struct irc_plugin otr_plugin;
 
@@ -274,15 +277,17 @@ void otr_load(irc_t *irc)
 	gcry_error_t enoent = gcry_error_from_errno(ENOENT);
 	int kg=0;
 
-	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, irc->user->nick);
-	e = otrl_privkey_read(irc->otr->us, s);
-	if(e && e!=enoent) {
-		irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
-	}
-	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->user->nick);
-	e = otrl_privkey_read_fingerprints(irc->otr->us, s, NULL, NULL);
-	if(e && e!=enoent) {
-		irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
+	if(strsane(irc->user->nick)) {
+		g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, irc->user->nick);
+		e = otrl_privkey_read(irc->otr->us, s);
+		if(e && e!=enoent) {
+			irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
+		}
+		g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->user->nick);
+		e = otrl_privkey_read_fingerprints(irc->otr->us, s, NULL, NULL);
+		if(e && e!=enoent) {
+			irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
+		}
 	}
 	
 	/* check for otr keys on all accounts */
@@ -305,34 +310,40 @@ void otr_save(irc_t *irc)
 	char s[512];
 	gcry_error_t e;
 
-	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->user->nick);
-	e = otrl_privkey_write_fingerprints(irc->otr->us, s);
-	if(e) {
-		irc_rootmsg(irc, "otr save: %s: %s", s, gcry_strerror(e));
+	if(strsane(irc->user->nick)) {
+		g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->user->nick);
+		e = otrl_privkey_write_fingerprints(irc->otr->us, s);
+		if(e) {
+			irc_rootmsg(irc, "otr save: %s: %s", s, gcry_strerror(e));
+		}
+		chmod(s, 0600);
 	}
-	chmod(s, 0600);
 }
 
 void otr_remove(const char *nick)
 {
 	char s[512];
 	
-	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, nick);
-	unlink(s);
-	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, nick);
-	unlink(s);
+	if(strsane(nick)) {
+		g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, nick);
+		unlink(s);
+		g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, nick);
+		unlink(s);
+	}
 }
 
 void otr_rename(const char *onick, const char *nnick)
 {
 	char s[512], t[512];
 	
-	g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, onick);
-	g_snprintf(t, 511, "%s%s.otr_keys", global.conf->configdir, nnick);
-	rename(s,t);
-	g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, onick);
-	g_snprintf(t, 511, "%s%s.otr_fprints", global.conf->configdir, nnick);
-	rename(s,t);
+	if(strsane(nnick) && strsane(onick)) {
+		g_snprintf(s, 511, "%s%s.otr_keys", global.conf->configdir, onick);
+		g_snprintf(t, 511, "%s%s.otr_keys", global.conf->configdir, nnick);
+		rename(s,t);
+		g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, onick);
+		g_snprintf(t, 511, "%s%s.otr_fprints", global.conf->configdir, nnick);
+		rename(s,t);
+	}
 }
 
 int otr_check_for_key(account_t *a)
@@ -1776,14 +1787,19 @@ gboolean keygen_finish_handler(gpointer data, gint fd, b_input_condition cond)
 	
 	irc_rootmsg(irc, "%s", msg);
 	if(filename[0]) {
-		char *kf = g_strdup_printf("%s%s.otr_keys", global.conf->configdir, irc->user->nick);
-		char *tmp = g_strdup_printf("%s.new", kf);
-		copyfile(filename, tmp);
-		unlink(filename);
-		rename(tmp,kf);
-		otrl_privkey_read(irc->otr->us, kf);
-		g_free(kf);
-		g_free(tmp);
+		if(strsane(irc->user->nick)) {
+			char *kf = g_strdup_printf("%s%s.otr_keys", global.conf->configdir, irc->user->nick);
+			char *tmp = g_strdup_printf("%s.new", kf);
+			copyfile(filename, tmp);
+			unlink(filename);
+			rename(tmp,kf);
+			otrl_privkey_read(irc->otr->us, kf);
+			g_free(kf);
+			g_free(tmp);
+		} else {
+			otrl_privkey_read(irc->otr->us, filename);
+			unlink(filename);
+		}
 	}
 	
 	/* forget this job */
@@ -1856,6 +1872,12 @@ void yes_keygen(void *data)
 		irc_rootmsg(irc, "you will be notified when it completes");
 		otr_keygen(irc, acc->user, acc->prpl->name);
 	}
+}
+
+/* check whether a string is safe to use in a path component */
+int strsane(const char *s)
+{
+	return strpbrk(s, "/\\") == NULL;
 }
 
 /* vim: set noet ts=4 sw=4: */
