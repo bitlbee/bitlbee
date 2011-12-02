@@ -278,6 +278,9 @@ got_reply:
 	
 	*end1 = 0;
 	
+	if( getenv( "BITLBEE_DEBUG" ) )
+		printf( "HTTP response headers:\n%s", req->reply_headers );
+	
 	if( evil_server )
 		req->reply_body = end1 + 1;
 	else
@@ -414,6 +417,9 @@ got_reply:
 		req->fd = -1;
 		req->ssl = NULL;
 		
+		if( getenv( "BITLBEE_DEBUG" ) )
+			printf( "New headers for redirected HTTP request:\n%s", new_request );
+	
 		if( new_proto == PROTO_HTTPS )
 		{
 			req->ssl = ssl_connect( new_host, new_port, http_ssl_connected, req );
@@ -454,6 +460,10 @@ cleanup:
 		ssl_disconnect( req->ssl );
 	else
 		closesocket( req->fd );
+	
+	if( getenv( "BITLBEE_DEBUG" ) && req )
+		printf( "Finishing HTTP request with status: %s",
+		        req->status_string ? req->status_string : "NULL" );
 	
 	req->func( req );
 	http_free( req );

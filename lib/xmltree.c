@@ -322,7 +322,6 @@ char *xt_to_string( struct xt_node *node )
 	return real;
 }
 
-#ifdef DEBUG
 void xt_print( struct xt_node *node )
 {
 	int i;
@@ -381,7 +380,6 @@ void xt_print( struct xt_node *node )
 	/* Non-empty tag is now finished. */
 	printf( "</%s>\n", node->name );
 }
-#endif
 
 struct xt_node *xt_dup( struct xt_node *node )
 {

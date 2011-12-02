@@ -222,7 +222,6 @@ static void msn_soap_debug_print( const char *headers, const char *payload )
 			st = write( 1, headers, strlen( headers ) );
 	}
 	
-#ifdef DEBUG
 	if( payload )
 	{
 		struct xt_node *xt = xt_from_string( payload );
@@ -230,7 +229,6 @@ static void msn_soap_debug_print( const char *headers, const char *payload )
 			xt_print( xt );
 		xt_free_node( xt );
 	}
-#endif
 }
 
 int msn_soapq_flush( struct im_connection *ic, gboolean resend )
