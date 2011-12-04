@@ -44,6 +44,8 @@ static gboolean initialized = FALSE;
 #define GNUTLS_STUPID_CAST (int)
 #endif
 
+#define SSLDEBUG 0
+
 struct scd
 {
 	ssl_input_function func;
@@ -197,7 +199,7 @@ int ssl_read( void *conn, char *buf, int len )
 	if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
 		ssl_errno = SSL_AGAIN;
 	
-	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 1, buf, st );
+	if( SSLDEBUG && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 2, buf, st );
 	
 	return st;
 }
@@ -218,7 +220,7 @@ int ssl_write( void *conn, const char *buf, int len )
 	if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
 		ssl_errno = SSL_AGAIN;
 	
-	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 1, buf, st );
+	if( SSLDEBUG && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 2, buf, st );
 	
 	return st;
 }
