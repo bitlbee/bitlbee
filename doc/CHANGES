@@ -3,6 +3,21 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 3.0.4:
+- Merged Skype support. This used to be a separate plugin, and it still is,
+  but by including it with BitlBee by default it will be easier to keep it
+  in sync with changes to BitlBee.
+- Fixed a file descriptor leak bug that may have caused strange behaviour
+  in BitlBee sessions running for a long time.
+- Now fetches Twitter mentions as well if the "fetch_mentions" account
+  setting is enabled.
+- With t.co now all over Twitter, show the original (but truncated) URL
+  between <brackets>.
+- Fixed MSN Messenger login issues ("timeout" while fetching buddy list).
+- Another (related) GnuTLS compatibility fix (now 2.13+?).
+
+Finished 4 Dec 2011 (Exactly 6 years since 1.0!)
+
 Version 3.0.3:
 - Fixed Twitter compatibility. (The API call used to get the following list
   was deprecated.)
