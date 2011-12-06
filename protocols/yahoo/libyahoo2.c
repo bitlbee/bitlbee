@@ -1808,7 +1808,6 @@ static void yahoo_https_auth_token_init(struct yahoo_https_auth_data *had)
 {
 	struct yahoo_input_data *yid = had->yid;
 	struct yahoo_data *yd = yid->yd;
-	struct http_request *req;
 	char *login, *passwd, *chal;
 	char *url;
 	
@@ -1822,7 +1821,7 @@ static void yahoo_https_auth_token_init(struct yahoo_https_auth_data *had)
 	url = g_strdup_printf("https://login.yahoo.com/config/pwtoken_get?src=ymsgr&ts=%d&login=%s&passwd=%s&chal=%s",
 	                       (int) time(NULL), login, passwd, chal);
 	
-	req = http_dorequest_url(url, yahoo_https_auth_token_finish, had);
+	http_dorequest_url(url, yahoo_https_auth_token_finish, had);
 	
 	g_free(url);
 	g_free(chal);
@@ -1869,13 +1868,12 @@ fail:
 
 static void yahoo_https_auth_init(struct yahoo_https_auth_data *had)
 {
-	struct http_request *req;
 	char *url;
 	
 	url = g_strdup_printf("https://login.yahoo.com/config/pwtoken_login?src=ymsgr&ts=%d&token=%s",
 	                      (int) time(NULL), had->token);
 	
-	req = http_dorequest_url(url, yahoo_https_auth_finish, had);
+	http_dorequest_url(url, yahoo_https_auth_finish, had);
 	
 	g_free(url);
 }
@@ -1989,8 +1987,6 @@ static void yahoo_process_auth_resp(struct yahoo_input_data *yid,
 	struct yahoo_packet *pkt)
 {
 	struct yahoo_data *yd = yid->yd;
-	char *login_id;
-	char *handle;
 	char *url = NULL;
 	int login_status = -1;
 
@@ -1999,9 +1995,9 @@ static void yahoo_process_auth_resp(struct yahoo_input_data *yid,
 	for (l = pkt->hash; l; l = l->next) {
 		struct yahoo_pair *pair = l->data;
 		if (pair->key == 0)
-			login_id = pair->value;
+			; /* login_id */
 		else if (pair->key == 1)
-			handle = pair->value;
+			; /* handle */
 		else if (pair->key == 20)
 			url = pair->value;
 		else if (pair->key == 66)
@@ -2088,9 +2084,7 @@ static void yahoo_process_contact(struct yahoo_input_data *yid,
 	char *who = NULL;
 	char *msg = NULL;
 	char *name = NULL;
-	long tm = 0L;
 	int state = YAHOO_STATUS_AVAILABLE;
-	int online = 0;
 	int away = 0;
 	int idle = 0;
 	int mobile = 0;
@@ -2110,9 +2104,9 @@ static void yahoo_process_contact(struct yahoo_input_data *yid,
 		else if (pair->key == 10)
 			state = strtol(pair->value, NULL, 10);
 		else if (pair->key == 15)
-			tm = strtol(pair->value, NULL, 10);
+			; /* tm */
 		else if (pair->key == 13)
-			online = strtol(pair->value, NULL, 10);
+			; /* online */
 		else if (pair->key == 47)
 			away = strtol(pair->value, NULL, 10);
 		else if (pair->key == 137)
@@ -2139,7 +2133,6 @@ static void yahoo_process_buddyadd(struct yahoo_input_data *yid,
 	char *who = NULL;
 	char *where = NULL;
 	int status = 0;
-	char *me = NULL;
 
 	struct yahoo_buddy *bud = NULL;
 
@@ -2147,7 +2140,7 @@ static void yahoo_process_buddyadd(struct yahoo_input_data *yid,
 	for (l = pkt->hash; l; l = l->next) {
 		struct yahoo_pair *pair = l->data;
 		if (pair->key == 1)
-			me = pair->value;
+			; /* Me... don't care */
 		if (pair->key == 7)
 			who = pair->value;
 		if (pair->key == 65)
@@ -2203,8 +2196,6 @@ static void yahoo_process_buddydel(struct yahoo_input_data *yid,
 	struct yahoo_data *yd = yid->yd;
 	char *who = NULL;
 	char *where = NULL;
-	int unk_66 = 0;
-	char *me = NULL;
 	struct yahoo_buddy *bud;
 
 	YList *buddy;
@@ -2213,13 +2204,13 @@ static void yahoo_process_buddydel(struct yahoo_input_data *yid,
 	for (l = pkt->hash; l; l = l->next) {
 		struct yahoo_pair *pair = l->data;
 		if (pair->key == 1)
-			me = pair->value;
+			; /* Me... don't care */
 		else if (pair->key == 7)
 			who = pair->value;
 		else if (pair->key == 65)
 			where = pair->value;
 		else if (pair->key == 66)
-			unk_66 = strtol(pair->value, NULL, 10);
+			; /* unk_66 */
 		else
 			DEBUG_MSG(("unknown key: %d = %s", pair->key,
 					pair->value));
@@ -2255,22 +2246,17 @@ static void yahoo_process_buddydel(struct yahoo_input_data *yid,
 static void yahoo_process_ignore(struct yahoo_input_data *yid,
 	struct yahoo_packet *pkt)
 {
-	char *who = NULL;
-	int status = 0;
-	char *me = NULL;
-	int un_ignore = 0;
-
 	YList *l;
 	for (l = pkt->hash; l; l = l->next) {
 		struct yahoo_pair *pair = l->data;
 		if (pair->key == 0)
-			who = pair->value;
+			; /* who */
 		if (pair->key == 1)
-			me = pair->value;
+			; /* Me... don't care */
 		if (pair->key == 13)	/* 1 == ignore, 2 == unignore */
-			un_ignore = strtol(pair->value, NULL, 10);
+			;
 		if (pair->key == 66)
-			status = strtol(pair->value, NULL, 10);
+			; /* status */
 	}
 
 	/*
@@ -2292,7 +2278,6 @@ static void yahoo_process_voicechat(struct yahoo_input_data *yid,
 	char *who = NULL;
 	char *me = NULL;
 	char *room = NULL;
-	char *voice_room = NULL;
 
 	YList *l;
 	for (l = pkt->hash; l; l = l->next) {
@@ -2302,7 +2287,7 @@ static void yahoo_process_voicechat(struct yahoo_input_data *yid,
 		if (pair->key == 5)
 			me = pair->value;
 		if (pair->key == 13)
-			voice_room = pair->value;
+			; /* voice room */
 		if (pair->key == 57)
 			room = pair->value;
 	}
@@ -2437,7 +2422,6 @@ static YList *webcam_queue = NULL;
 static void yahoo_process_webcam_key(struct yahoo_input_data *yid,
 	struct yahoo_packet *pkt)
 {
-	char *me = NULL;
 	char *key = NULL;
 	char *who = NULL;
 
@@ -2446,7 +2430,7 @@ static void yahoo_process_webcam_key(struct yahoo_input_data *yid,
 	for (l = pkt->hash; l; l = l->next) {
 		struct yahoo_pair *pair = l->data;
 		if (pair->key == 5)
-			me = pair->value;
+			; /* me */
 		if (pair->key == 61)
 			key = pair->value;
 	}
@@ -3368,7 +3352,6 @@ static void yahoo_webcam_connect(struct yahoo_input_data *y)
 {
 	struct yahoo_webcam *wcm = y->wcm;
 	struct yahoo_input_data *yid;
-	struct yahoo_server_settings *yss;
 
 	if (!wcm || !wcm->server || !wcm->key)
 		return;
@@ -3380,8 +3363,6 @@ static void yahoo_webcam_connect(struct yahoo_input_data *y)
 	/* copy webcam data to new connection */
 	yid->wcm = y->wcm;
 	y->wcm = NULL;
-
-	yss = y->yd->server_settings;
 
 	yid->wcd = y_new0(struct yahoo_webcam_data, 1);
 
@@ -4974,8 +4955,6 @@ static void yahoo_process_filetransferaccept(struct yahoo_input_data *yid,
 {
 	YList *l;
 	struct send_file_data *sfd;
-	char *who = NULL;
-	char *filename = NULL;
 	char *id = NULL;
 	char *token = NULL;
 
@@ -4983,7 +4962,7 @@ static void yahoo_process_filetransferaccept(struct yahoo_input_data *yid,
 		struct yahoo_pair *pair = l->data;
 		switch (pair->key) {
 		case 4:
-			who = pair->value;
+			/* who */
 			break;
 		case 5:
 			/* Me... don't care */
@@ -4997,7 +4976,7 @@ static void yahoo_process_filetransferaccept(struct yahoo_input_data *yid,
 			token = pair->value;
 			break;
 		case 27:
-			filename = pair->value;
+			/* filename */
 			break;
 		}
 	}
@@ -5022,8 +5001,6 @@ static void yahoo_process_filetransferinfo(struct yahoo_input_data *yid,
 	struct yahoo_packet *pkt)
 {
 	YList *l;
-	char *who = NULL;
-	char *filename = NULL;
 	char *id = NULL;
 	char *token = NULL;
 	char *ip_addr = NULL;
@@ -5035,7 +5012,7 @@ static void yahoo_process_filetransferinfo(struct yahoo_input_data *yid,
 		switch (pair->key) {
 		case 1:
 		case 4:
-			who = pair->value;
+			/* who */
 			break;
 		case 5:
 			/* Me... don't care */
@@ -5052,7 +5029,7 @@ static void yahoo_process_filetransferinfo(struct yahoo_input_data *yid,
 			token = pair->value;
 			break;
 		case 27:
-			filename = pair->value;
+			/* filename */
 			break;
 		}
 	}
