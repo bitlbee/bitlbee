@@ -383,7 +383,6 @@ static int infoupdate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	guint8 detaillevel = 0;
 	char *roomname = NULL;
 	struct aim_chat_roominfo roominfo;
-	guint16 tlvcount = 0;
 	aim_tlvlist_t *tlvlist;
 	char *roomdesc = NULL;
 	guint16 flags = 0;
@@ -400,7 +399,7 @@ static int infoupdate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 		return 1;
 	}
 
-	tlvcount = aimbs_get16(bs);
+	aimbs_get16(bs); /* tlv count */
 
 	/*
 	 * Everything else are TLVs.

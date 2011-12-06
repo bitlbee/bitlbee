@@ -918,7 +918,6 @@ static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 {
 	int i, ret = 0;
 	aim_rxcallback_t userfunc;
-	guint8 cookie[8];
 	guint16 channel;
 	aim_tlvlist_t *tlvlist;
 	char *sn;
@@ -930,7 +929,7 @@ static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 	/* ICBM Cookie. */
 	for (i = 0; i < 8; i++)
-		cookie[i] = aimbs_get8(bs);
+		aimbs_get8(bs);
 
 	/* Channel ID */
 	channel = aimbs_get16(bs);
@@ -1413,7 +1412,7 @@ static void incomingim_ch2_icqserverrelay_free(aim_session_t *sess, struct aim_i
 static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args, aim_bstream_t *servdata)
 {
 	guint16 hdrlen, msglen, dc;
-	guint8 msgtype, msgflags;
+	guint8 msgtype;
     guint8 *plugin;
     int i = 0, tmp = 0;
     struct im_connection *ic = sess->aux_data;
@@ -1441,7 +1440,7 @@ static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod
     if (!tmp) { /* message follows */
 
         msgtype = aimbs_getle8(servdata);
-        msgflags = aimbs_getle8(servdata);
+        aimbs_getle8(servdata); /* msgflags */
 
         aim_bstream_advance(servdata, 0x04); /* status code and priority code */
 
