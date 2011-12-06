@@ -234,8 +234,7 @@ static int icqresponse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	aim_tlvlist_t *tl;
 	aim_tlv_t *datatlv;
 	aim_bstream_t qbs;
-	guint32 ouruin;
-	guint16 cmdlen, cmd, reqid;
+	guint16 cmd, reqid;
 
 	if (!(tl = aim_readtlvchain(bs)) || !(datatlv = aim_gettlv(tl, 0x0001, 1))) {
 		aim_freetlvchain(&tl);
@@ -245,8 +244,8 @@ static int icqresponse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 
 	aim_bstream_init(&qbs, datatlv->value, datatlv->length);
 
-	cmdlen = aimbs_getle16(&qbs);
-	ouruin = aimbs_getle32(&qbs);
+	aimbs_getle16(&qbs); /* cmdlen */
+	aimbs_getle32(&qbs); /* ouruin */
 	cmd = aimbs_getle16(&qbs);
 	reqid = aimbs_getle16(&qbs);
 

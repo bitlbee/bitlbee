@@ -138,12 +138,8 @@ static int parseinfo_perms(aim_session_t *sess, aim_module_t *mod, aim_frame_t *
 		/* 
 		 * Type 0x0002: Unknown
 		 */
-		if (aim_gettlv(innerlist, 0x0002, 1)) {
-			guint16 classperms;
-
-			classperms = aim_gettlv16(innerlist, 0x0002, 1);
-			
-		}
+		if (aim_gettlv(innerlist, 0x0002, 1))
+			;
 
 		/*
 		 * Type 0x00c9: Flags
@@ -204,9 +200,7 @@ static int parseinfo_perms(aim_session_t *sess, aim_module_t *mod, aim_frame_t *
 		 * 
 		 */
 		if (aim_gettlv(innerlist, 0x00d5, 1)) {
-			guint8 createperms;
-
-			createperms = aim_gettlv8(innerlist, 0x00d5, 1);
+			aim_gettlv8(innerlist, 0x00d5, 1); /* createperms */
 		}
 
 		/*

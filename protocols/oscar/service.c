@@ -562,9 +562,7 @@ static int migrate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_
 	 */
 	groupcount = aimbs_get16(bs);
 	for (i = 0; i < groupcount; i++) {
-		guint16 group;
-
-		group = aimbs_get16(bs);
+		aimbs_get16(bs);
 
 		imcb_error(sess->aux_data, "bifurcated migration unsupported");
 	}
@@ -700,11 +698,10 @@ int aim_setversions(aim_session_t *sess, aim_conn_t *conn)
 /* Host versions (group 1, subtype 0x18) */
 static int hostversions(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
-	int vercount;
 	guint8 *versions;
 
 	/* This is frivolous. (Thank you SmarterChild.) */
-	vercount = aim_bstream_empty(bs)/4;
+	aim_bstream_empty(bs); /* == vercount * 4 */
 	versions = aimbs_getraw(bs, aim_bstream_empty(bs));
 	g_free(versions);
 
@@ -730,7 +727,6 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
 	aim_snacid_t snacid;
 	aim_tlvlist_t *tl = NULL;
 	guint32 data;
-	int tlvlen;
 	struct im_connection *ic = sess ? sess->aux_data : NULL;
 
 	data = AIM_ICQ_STATE_HIDEIP | status; /* yay for error checking ;^) */
@@ -738,7 +734,7 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
 	if (ic && set_getbool(&ic->acc->set, "web_aware"))
 		data |= AIM_ICQ_STATE_WEBAWARE;
 
-	tlvlen = aim_addtlvtochain32(&tl, 0x0006, data);
+	aim_addtlvtochain32(&tl, 0x0006, data); /* tlvlen */
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 8)))
 		return -ENOMEM;
