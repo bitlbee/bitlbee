@@ -307,7 +307,6 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct msn_switchboard *sb = data;
 	struct im_connection *ic;
-	struct msn_data *md;
 	char buf[1024];
 	
 	/* Are we still alive? */
@@ -315,7 +314,6 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 		return FALSE;
 	
 	ic = sb->ic;
-	md = ic->proto_data;
 	
 	if( source != sb->fd )
 	{
@@ -674,16 +672,12 @@ static int msn_sb_message( struct msn_handler_data *handler, char *msg, int msgl
 	struct msn_switchboard *sb = handler->data;
 	struct im_connection *ic = sb->ic;
 	char *body;
-	int blen = 0;
 	
 	if( !num_parts )
 		return( 1 );
 	
 	if( ( body = strstr( msg, "\r\n\r\n" ) ) )
-	{
 		body += 4;
-		blen = msglen - ( body - msg );
-	}
 	
 	if( strcmp( cmd[0], "MSG" ) == 0 )
 	{
