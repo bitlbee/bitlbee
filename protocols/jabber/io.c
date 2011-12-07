@@ -211,7 +211,7 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 				/* If there's no version attribute, assume
 				   this is an old server that can't do SASL
 				   authentication. */
-				if( !sasl_supported( ic ) )
+				if( !set_getbool( &ic->acc->set, "sasl") || !sasl_supported( ic ) )
 				{
 					/* If there's no version= tag, we suppose
 					   this server does NOT implement: XMPP 1.0,
@@ -374,7 +374,7 @@ static xt_status jabber_pkt_features( struct xt_node *node, gpointer data )
 	   support it after all, we should try to do authentication the
 	   other way. jabber.com doesn't seem to do SASL while it pretends
 	   to be XMPP 1.0 compliant! */
-	else if( !( jd->flags & JFLAG_AUTHENTICATED ) && sasl_supported( ic ) )
+	else if( !( jd->flags & JFLAG_AUTHENTICATED ) && set_getbool( &ic->acc->set, "sasl") && sasl_supported( ic ) )
 	{
 		if( !jabber_init_iq_auth( ic ) )
 			return XT_ABORT;

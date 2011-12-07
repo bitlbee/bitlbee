@@ -81,6 +81,9 @@ static void jabber_init( account_t *acc )
 	s = set_add( &acc->set, "tls", "try", set_eval_tls, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
+	s = set_add( &acc->set, "sasl", "true", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY | SET_HIDDEN_DEFAULT;
+
 	s = set_add( &acc->set, "user_agent", "BitlBee", NULL, acc );
 	
 	s = set_add( &acc->set, "xmlconsole", "false", set_eval_bool, acc );

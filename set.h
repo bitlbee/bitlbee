@@ -48,6 +48,7 @@ typedef enum
 	SET_NULL_OK = 0x0100,
 	SET_HIDDEN = 0x0200,
 	SET_PASSWORD = 0x0400,
+	SET_HIDDEN_DEFAULT = 0x0800,
 } set_flags_t;
 
 typedef struct set
@@ -96,6 +97,9 @@ int set_setstr( set_t **head, const char *key, char *value );
 int set_setint( set_t **head, const char *key, int value );
 void set_del( set_t **head, const char *key );
 int set_reset( set_t **head, const char *key );
+
+/* returns true if a setting shall be shown to the user */
+int set_isvisible( set_t *set );
 
 /* Two very useful generic evaluators. */
 char *set_eval_int( set_t *set, char *value );

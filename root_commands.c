@@ -361,7 +361,7 @@ static int cmd_set_real( irc_t *irc, char **cmd, set_t **head, cmd_set_checkflag
 		set_t *s = *head;
 		while( s )
 		{
-			if( !( s->flags & SET_HIDDEN ) )
+			if( set_isvisible( s ) )
 				cmd_showset( irc, &s, s->key );
 			s = s->next;
 		}

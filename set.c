@@ -111,6 +111,14 @@ int set_getbool( set_t **head, const char *key )
 	return bool2int( s );
 }
 
+int set_isvisible( set_t *set )
+{
+	/* the default value is not stored in value, only in def */
+	return !( ( set->flags & SET_HIDDEN ) ||
+	          ( ( set->flags & SET_HIDDEN_DEFAULT ) &&
+	            ( set->value == NULL ) ) );
+}
+
 int set_setstr( set_t **head, const char *key, char *value )
 {
 	set_t *s = set_find( head, key );
