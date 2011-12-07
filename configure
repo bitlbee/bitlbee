@@ -325,6 +325,8 @@ EOF
 }
 
 RESOLV_TESTCODE='
+#include <sys/types.h>
+#include <netinet/in.h>
 #include <arpa/nameser.h>
 #include <resolv.h> 
 
@@ -337,11 +339,18 @@ int main()
 
 detect_resolv_dynamic()
 {
+	case "$arch" in
+	FreeBSD )
+		# In FreeBSD res_* routines are present in libc.so
+		LIBRESOLV=;;
+	* )
+		LIBRESOLV=-lresolv;;
+	esac
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
-	echo "$RESOLV_TESTCODE" | $CC -o $TMPFILE -x c - -lresolv >/dev/null 2>/dev/null
+	echo "$RESOLV_TESTCODE" | $CC -o $TMPFILE -x c - $LIBRESOLV >/dev/null 2>/dev/null
 	if [ "$?" = "0" ]; then
-		echo 'EFLAGS+=-lresolv' >> Makefile.settings
+		echo "EFLAGS+=$LIBRESOLV" >> Makefile.settings
 		ret=0
 	fi
 
