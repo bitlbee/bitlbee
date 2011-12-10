@@ -84,11 +84,11 @@ ifdef SKYPE_PI
 endif
 
 install-bin:
-	mkdir -p $(DESTDIR)$(BINDIR)
-	install -m 0755 $(OUTFILE) $(DESTDIR)$(BINDIR)/$(OUTFILE)
+	mkdir -p $(DESTDIR)$(SBINDIR)
+	install -m 0755 $(OUTFILE) $(DESTDIR)$(SBINDIR)/$(OUTFILE)
 
 uninstall-bin:
-	rm -f $(DESTDIR)$(BINDIR)/$(OUTFILE)
+	rm -f $(DESTDIR)$(SBINDIR)/$(OUTFILE)
 
 install-dev:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
@@ -112,18 +112,23 @@ uninstall-etc:
 	rm -f $(DESTDIR)$(ETCDIR)/bitlbee.conf
 	-rmdir $(DESTDIR)$(ETCDIR)
 
-install-plugins:
+install-plugins: install-plugin-otr install-plugin-skype
+
+install-plugin-otr:
 ifdef OTR_PI
 	mkdir -p $(DESTDIR)$(PLUGINDIR)
 	install -m 0755 otr.so $(DESTDIR)$(PLUGINDIR)
 endif
+
+install-plugin-skype:
 ifdef SKYPE_PI
 	mkdir -p $(DESTDIR)$(PLUGINDIR)
 	install -m 0755 skype.so $(DESTDIR)$(PLUGINDIR)
-	mkdir -p $(DESTDIR)$(ETCDIR)/../skyped
+	mkdir -p $(DESTDIR)$(ETCDIR)/../skyped $(DESTDIR)$(BINDIR)
 	install -m 0644 $(SRCDIR)protocols/skype/skyped.cnf $(DESTDIR)$(ETCDIR)/../skyped/skyped.cnf
 	install -m 0644 $(SRCDIR)protocols/skype/skyped.conf.dist $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
 	install -m 0755 $(SRCDIR)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
+	make -C protocols/skype install-doc
 endif
 
 systemd:

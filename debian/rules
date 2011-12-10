@@ -10,6 +10,7 @@
 # Include the bitlbee-libpurple variant and OTR plugin by default
 BITLBEE_LIBPURPLE ?= 1
 BITLBEE_OTR ?= plugin
+BITLBEE_SKYPE ?= plugin
 BITLBEE_CONFIGURE_FLAGS ?=
 DEBUG ?= 0
 
@@ -26,12 +27,16 @@ ifneq ($(BITLBEE_OTR),plugin)
 DH_OPTIONS += -Nbitlbee-plugin-otr
 endif
 
+ifneq ($(BITLBEE_SKYPE),plugin)
+DH_OPTIONS += -Nbitlbee-plugin-skype -Nskyped
+endif
+
 build: build-stamp
 build-stamp:
 	dh_testdir
 
 	mkdir -p debian/build-native
-	ROOT=$$PWD; cd debian/build-native; $(BITLBEE_CONFIGURE_VERSION) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent --otr=$(BITLBEE_OTR) $(BITLBEE_CONFIGURE_FLAGS)
+	ROOT=$$PWD; cd debian/build-native; $(BITLBEE_CONFIGURE_VERSION) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent --otr=$(BITLBEE_OTR) --skype=$(BITLBEE_SKYPE) $(BITLBEE_CONFIGURE_FLAGS)
 	$(MAKE) -C debian/build-native
 
 ifeq ($(BITLBEE_LIBPURPLE),1)
@@ -63,7 +68,11 @@ install: build
 	$(MAKE) -C debian/build-native install-bin DESTDIR=`pwd`/debian/bitlbee
 	$(MAKE) -C debian/build-native install-etc install-doc DESTDIR=`pwd`/debian/bitlbee-common
 	$(MAKE) -C debian/build-native install-dev DESTDIR=`pwd`/debian/bitlbee-dev
-	$(MAKE) -C debian/build-native install-plugins DESTDIR=`pwd`/debian/bitlbee-plugin-otr
+	$(MAKE) -C debian/build-native install-plugin-otr DESTDIR=`pwd`/debian/bitlbee-plugin-otr
+	$(MAKE) -C debian/build-native install-plugin-skype DESTDIR=`pwd`/debian/skyped
+
+	mkdir -p debian/bitlbee-plugin-skype/usr
+	mv debian/skyped/usr/lib debian/bitlbee-plugin-skype/usr
 
 ifeq ($(BITLBEE_LIBPURPLE),1)
 	$(MAKE) -C debian/build-libpurple install-bin DESTDIR=`pwd`/debian/bitlbee-libpurple

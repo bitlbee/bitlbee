@@ -1,3 +1,13 @@
+bitlbee (3.0.4-0) unstable; urgency=low
+
+  * New upstream release.
+  * Added bitlbee-plugin-skype and skyped packages, now part of BitlBee
+    instead of a separate package.
+  * Fixed dependencies of bitlbee-plugin-otr package to not break with
+    binary MTUs. (Closes: #651612)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 10 Dec 2011 22:42:08 +0000
+
 bitlbee (3.0.3-1) unstable; urgency=low
 
   * New upstream release. (Skipped 3.0.2, sorry!)
