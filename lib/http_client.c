@@ -69,6 +69,9 @@ struct http_request *http_dorequest( char *host, int port, int ssl, char *reques
 	req->request_length = strlen( request );
 	req->redir_ttl = 3;
 	
+	if( getenv( "BITLBEE_DEBUG" ) )
+		printf( "About to send HTTP request:\n%s\n", req->request );
+	
 	return( req );
 }
 
@@ -279,7 +282,7 @@ got_reply:
 	*end1 = 0;
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
-		printf( "HTTP response headers:\n%s", req->reply_headers );
+		printf( "HTTP response headers:\n%s\n", req->reply_headers );
 	
 	if( evil_server )
 		req->reply_body = end1 + 1;
@@ -319,7 +322,8 @@ got_reply:
 		req->status_code = -1;
 	}
 	
-	if( ( req->status_code >= 301 && req->status_code <= 303 ) && req->redir_ttl-- > 0 )
+	if( ( ( req->status_code >= 301 && req->status_code <= 303 ) ||
+	      req->status_code == 307 ) && req->redir_ttl-- > 0 )
 	{
 		char *loc, *new_request, *new_host;
 		int error = 0, new_port, new_proto;
@@ -390,8 +394,20 @@ got_reply:
 			/* More or less HTTP/1.0 compliant, from my reading of RFC 2616.
 			   Always perform a GET request unless we received a 301. 303 was
 			   meant for this but it's HTTP/1.1-only and we're specifically
-			   speaking HTTP/1.0. */
-			new_method = req->status_code != 301 || req->request[0] == 'G' ? "GET" : "POST";
+			   speaking HTTP/1.0. ...
+			   
+			   Well except someone at identi.ca's didn't bother reading any
+			   RFCs and just return HTTP/1.1-specific status codes to HTTP/1.0
+			   requests. Fuckers. So here we are, handle 301..303,307. */
+			if( strncmp( req->request, "GET", 3 ) == 0 )
+				/* GETs never become POSTs. */
+				new_method = "GET";
+			else if( req->status_code == 302 || req->status_code == 303 )
+				/* 302 de-facto becomes GET, 303 as specified by RFC 2616#10.3.3 */
+				new_method = "GET";
+			else
+				/* 301 de-facto should stay POST, 307 specifally RFC 2616#10.3.8 */
+				new_method = "POST";
 			
 			/* Okay, this isn't fun! We have to rebuild the request... :-( */
 			new_request = g_strdup_printf( "%s %s HTTP/1.0\r\nHost: %s%s",
@@ -418,7 +434,7 @@ got_reply:
 		req->ssl = NULL;
 		
 		if( getenv( "BITLBEE_DEBUG" ) )
-			printf( "New headers for redirected HTTP request:\n%s", new_request );
+			printf( "New headers for redirected HTTP request:\n%s\n", new_request );
 	
 		if( new_proto == PROTO_HTTPS )
 		{
@@ -462,7 +478,7 @@ cleanup:
 		closesocket( req->fd );
 	
 	if( getenv( "BITLBEE_DEBUG" ) && req )
-		printf( "Finishing HTTP request with status: %s",
+		printf( "Finishing HTTP request with status: %s\n",
 		        req->status_string ? req->status_string : "NULL" );
 	
 	req->func( req );

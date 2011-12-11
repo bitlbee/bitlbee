@@ -92,16 +92,16 @@ void twitter_login_finish(struct im_connection *ic)
 }
 
 static const struct oauth_service twitter_oauth = {
-	"http://api.twitter.com/oauth/request_token",
-	"http://api.twitter.com/oauth/access_token",
+	"https://api.twitter.com/oauth/request_token",
+	"https://api.twitter.com/oauth/access_token",
 	"https://api.twitter.com/oauth/authorize",
 	.consumer_key = "xsDNKJuNZYkZyMcu914uEA",
 	.consumer_secret = "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo",
 };
 
 static const struct oauth_service identica_oauth = {
-	"http://identi.ca/api/oauth/request_token",
-	"http://identi.ca/api/oauth/access_token",
+	"https://identi.ca/api/oauth/request_token",
+	"https://identi.ca/api/oauth/access_token",
 	"https://identi.ca/api/oauth/authorize",
 	.consumer_key = "e147ff789fcbd8a5a07963afbb43f9da",
 	.consumer_secret = "c596267f277457ec0ce1ab7bb788d828",
