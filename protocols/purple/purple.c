@@ -749,6 +749,8 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 		
 		if( bud->server_alias )
 			imcb_rename_buddy( ic, bud->name, bud->server_alias );
+		else if( bud->alias )
+			imcb_rename_buddy( ic, bud->name, bud->alias );
 		
 		if( group )
 			imcb_add_buddy( ic, bud->name, purple_group_get_name( group ) );
