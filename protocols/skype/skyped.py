@@ -197,11 +197,15 @@ def listener(sock, skype):
 	if not hasgobject:
 		if not(wait_for_lock(options.lock, 3, 10, "listener")): return False
 	rawsock, addr = sock.accept()
-	options.conn = ssl.wrap_socket(rawsock,
-		server_side=True,
-		certfile=options.config.sslcert,
-		keyfile=options.config.sslkey,
-		ssl_version=ssl.PROTOCOL_TLSv1)
+	try:
+		options.conn = ssl.wrap_socket(rawsock,
+			server_side=True,
+			certfile=options.config.sslcert,
+			keyfile=options.config.sslkey,
+			ssl_version=ssl.PROTOCOL_TLSv1)
+	except ssl.SSLError:
+		dprint("Warning, SSL init failed, did you create your certificate?")
+		return False
 	if hasattr(options.conn, 'handshake'):
 		try:
 			options.conn.handshake()
