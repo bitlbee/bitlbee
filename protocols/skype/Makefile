@@ -7,6 +7,8 @@ VERSION = 0.9.0
 DATE := $(shell date +%Y-%m-%d)
 # latest stable
 BITLBEE_VERSION = 3.0.1
+INSTALL = install
+ASCIIDOC = yes
 
 ifeq ($(ASCIIDOC),yes)
 MANPAGES = skyped.1
@@ -27,11 +29,7 @@ ifeq ($(BITLBEE),yes)
 	$(CC) $(CFLAGS) $(SHARED_FLAGS) -o skype.$(SHARED_EXT) $(SRCDIR)skype.c $(LDFLAGS)
 endif
 
-install: all
-ifeq ($(ASCIIDOC),yes)
-	$(INSTALL) -d $(DESTDIR)$(mandir)/man1
-	$(INSTALL) -m644 $(MANPAGES) $(DESTDIR)$(mandir)/man1
-endif
+install: all install-doc
 ifeq ($(BITLBEE),yes)
 	$(INSTALL) -d $(DESTDIR)$(plugindir)
 	$(INSTALL) skype.$(SHARED_EXT) $(DESTDIR)$(plugindir)
@@ -56,7 +54,7 @@ clean:
 	rm -f $(LIBS) $(MANPAGES)
 
 distclean: clean
-	rm -f config.log config.mak config.status skyped.1
+	rm -f config.log config.mak config.status $(MANPAGES)
 
 autoclean: distclean
 	rm -rf aclocal.m4 autom4te.cache configure install-sh
@@ -82,11 +80,13 @@ release:
 	gpg --comment "See http://vmiklos.hu/gpg/ for info" \
 		-ba bitlbee-skype-$(VERSION).tar.gz
 
-doc: skyped.1
+doc: $(MANPAGES)
 
-install-doc:
-	mkdir -p $(DESTDIR)$(MANDIR)/man1/
-	install -m 0644 $(SRCDIR)skyped.1 $(DESTDIR)$(MANDIR)/man1/
+install-doc: doc
+ifeq ($(ASCIIDOC),yes)
+	$(INSTALL) -d $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL) -m644 $(MANPAGES) $(DESTDIR)$(MANDIR)/man1
+endif
 
 uninstall-doc:
 	rm -f $(DESTDIR)$(MANDIR)/man1/skyped.1*
@@ -104,4 +104,4 @@ AUTHORS: .git/refs/heads/master
 
 %.1: $(SRCDIR)%.txt $(SRCDIR)asciidoc.conf
 	a2x --asciidoc-opts="-f $(SRCDIR)asciidoc.conf" \
-		-a bs_version=$(VERSION) -a bs_date=$(DATE) -f manpage $<
+		-a bs_version=$(VERSION) -a bs_date=$(DATE) -f manpage -D . $<

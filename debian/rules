@@ -74,6 +74,9 @@ install: build
 	mkdir -p debian/bitlbee-plugin-skype/usr
 	mv debian/skyped/usr/lib debian/bitlbee-plugin-skype/usr
 
+	mkdir -p debian/skyped/usr/share/man/man1
+	mv debian/bitlbee-common/usr/share/man/man1/skyped* debian/skyped/usr/share/man/man1
+
 ifeq ($(BITLBEE_LIBPURPLE),1)
 	$(MAKE) -C debian/build-libpurple install-bin DESTDIR=`pwd`/debian/bitlbee-libpurple
 	ln -sf debian/bitlbee.prerm debian/bitlbee-libpurple.prerm
