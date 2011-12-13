@@ -433,12 +433,12 @@ static void irc_cmd_oper_hack( irc_t *irc, char **cmd )
 			{
 				set_setstr( &a->set, "password", password );
 				irc_rootmsg( irc, "Password added to IM account "
-				             "%s(%s)", a->prpl->name, a->user );
+				             "%s", a->tag );
 				/* The IRC client may expect this. 491 suggests the OPER
 				   password was wrong, so the client won't expect a +o.
 				   It may however repeat the password prompt. We'll see. */
 				irc_send_num( irc, 491, ":Password added to IM account "
-				              "%s(%s)", a->prpl->name, a->user );
+				              "%s", a->tag );
 			}
 	}
 	else if( irc->status & OPER_HACK_IDENTIFY )

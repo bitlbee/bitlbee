@@ -412,8 +412,8 @@ static void cmd_account( irc_t *irc, char **cmd )
 			for( a = irc->b->accounts; a; a = a->next )
 				if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
 				{
-					irc_rootmsg( irc, "Enter password for account %s(%s) "
-					             "first (use /OPER)", a->prpl->name, a->user );
+					irc_rootmsg( irc, "Enter password for account %s "
+					             "first (use /OPER)", a->tag );
 					return;
 				}
 			
@@ -442,7 +442,8 @@ static void cmd_account( irc_t *irc, char **cmd )
 			set_setstr( &a->set, "server", cmd[5] );
 		}
 		
-		irc_rootmsg( irc, "Account successfully added%s", cmd[4] ? "" :
+		irc_rootmsg( irc, "Account successfully added with tag %s%s",
+		             a->tag, cmd[4] ? "" :
 		             ", now use /OPER to enter the password" );
 		
 		return;
@@ -489,8 +490,8 @@ static void cmd_account( irc_t *irc, char **cmd )
 				if( !a->ic && a->auto_connect )
 				{
 					if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
-						irc_rootmsg( irc, "Enter password for account %s(%s) "
-						             "first (use /OPER)", a->prpl->name, a->user );
+						irc_rootmsg( irc, "Enter password for account %s "
+						             "first (use /OPER)", a->tag );
 					else
 						account_on( irc->b, a );
 				}
@@ -552,8 +553,8 @@ static void cmd_account( irc_t *irc, char **cmd )
 		if( a->ic )
 			irc_rootmsg( irc, "Account already online" );
 		else if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
-			irc_rootmsg( irc, "Enter password for account %s(%s) "
-			             "first (use /OPER)", a->prpl->name, a->user );
+			irc_rootmsg( irc, "Enter password for account %s "
+			             "first (use /OPER)", a->tag );
 		else
 			account_on( irc->b, a );
 	}
@@ -1092,7 +1093,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 			if( bu->status_msg )
 				g_snprintf( st, sizeof( st ) - 1, "Online (%s)", bu->status_msg );
 			
-			g_snprintf( s, sizeof( s ) - 1, "%s %s(%s)", bu->handle, bu->ic->acc->prpl->name, bu->ic->acc->user );
+			g_snprintf( s, sizeof( s ) - 1, "%s %s", bu->handle, bu->ic->acc->tag );
 			irc_rootmsg( irc, format, iu->nick, s, st );
 		}
 		
@@ -1110,7 +1111,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 		
 		if( away == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s %s(%s)", bu->handle, bu->ic->acc->prpl->name, bu->ic->acc->user );
+			g_snprintf( s, sizeof( s ) - 1, "%s %s", bu->handle, bu->ic->acc->tag );
 			irc_rootmsg( irc, format, iu->nick, s, irc_user_get_away( iu ) );
 		}
 		n_away ++;
@@ -1127,7 +1128,7 @@ static void cmd_blist( irc_t *irc, char **cmd )
 		
 		if( offline == 1 )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s %s(%s)", bu->handle, bu->ic->acc->prpl->name, bu->ic->acc->user );
+			g_snprintf( s, sizeof( s ) - 1, "%s %s", bu->handle, bu->ic->acc->tag );
 			irc_rootmsg( irc, format, iu->nick, s, "Offline" );
 		}
 		n_offline ++;
@@ -1151,7 +1152,7 @@ static void cmd_qlist( irc_t *irc, char **cmd )
 	
 	for( num = 0; q; q = q->next, num ++ )
 		if( q->ic ) /* Not necessary yet, but it might come later */
-			irc_rootmsg( irc, "%d, %s(%s): %s", num, q->ic->acc->prpl->name, q->ic->acc->user, q->question );
+			irc_rootmsg( irc, "%d, %s: %s", num, q->ic->acc->tag, q->question );
 		else
 			irc_rootmsg( irc, "%d, BitlBee: %s", num, q->question );
 }
