@@ -109,33 +109,62 @@ void irc_send_motd( irc_t *irc )
 		close( fd );
 }
 
-void irc_usermsg( irc_t *irc, char *format, ... )
+/* Used by some funcs that generate PRIVMSGs to figure out if we're talking to
+   this person in /query or in a control channel. WARNING: callers rely on
+   this returning a pointer at irc->user_nick, not a copy of it. */
+const char *irc_user_msgdest( irc_user_t *iu )
 {
+	irc_t *irc = iu->irc;
 	irc_channel_t *ic = NULL;
-	irc_user_t *iu = irc->root;
-	char text[2048];
-	va_list params;
-	char *dst;
-	
-	va_start( params, format );
-	g_vsnprintf( text, sizeof( text ), format, params );
-	va_end( params );
-	
-	/* Too similar to bee_irc_user_msg()... */
+
 	if( iu->last_channel )
 	{
 		if( iu->last_channel->flags & IRC_CHANNEL_JOINED )
 			ic = iu->last_channel;
 		else
-			ic = irc_channel_with_user( irc, irc->root );
+			ic = irc_channel_with_user( irc, iu );
 	}
 	
 	if( ic )
-		dst = ic->name;
+		return ic->name;
 	else
-		dst = irc->user->nick;
+		return irc->user->nick;
+}
+
+/* cmd = "PRIVMSG" or "NOTICE" */
+static void irc_usermsg_( const char *cmd, irc_user_t *iu, const char *format, va_list params )
+{
+	char text[2048];
+	const char *dst;
 	
-	irc_send_msg( irc->root, "PRIVMSG", dst, text, NULL );
+	g_vsnprintf( text, sizeof( text ), format, params );
+	
+	dst = irc_user_msgdest( iu );
+	irc_send_msg( iu, cmd, dst, text, NULL );
+}
+
+void irc_usermsg(irc_user_t *iu, char *format, ... )
+{
+	va_list params;
+	va_start( params, format );
+	irc_usermsg_( "PRIVMSG", iu, format, params );
+	va_end( params );
+}
+
+void irc_usernotice(irc_user_t *iu, char *format, ... )
+{
+	va_list params;
+	va_start( params, format );
+	irc_usermsg_( "NOTICE", iu, format, params );
+	va_end( params );
+}
+
+void irc_rootmsg( irc_t *irc, char *format, ... )
+{
+	va_list params;
+	va_start( params, format );
+	irc_usermsg_( "PRIVMSG", irc->root, format, params );
+	va_end( params );
 }
 
 void irc_send_join( irc_channel_t *ic, irc_user_t *iu )

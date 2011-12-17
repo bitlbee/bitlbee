@@ -1,0 +1,18 @@
+bitlbee-skype for Debian
+------------------------
+
+The upstream package installs global configuration files in /etc. Since 
+configuration cannot be used by multiple users, however, the default for 
+Debian packages is in ~/.skyped/. Please copy the configuration files 
+from ./examples to ~/.skyped/. 
+
+You will also need to change the configuration values in skyped.conf 
+and skyped.cnf to suit your needs and create the keys. More information
+in the respective files as well as the README.gz.
+
+Without these measures, skyped will NOT work. 
+
+You need to download the official skype client for this to be of any
+use. Go to http://www.skype.com/.
+
+ -- David Spreen <netzwurm@debian.org>, Thu,  2 Apr 2009 15:01:25 -0700

@@ -268,7 +268,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 	else
 	{
 		xd->unknown_tag ++;
-		irc_usermsg( irc, "Warning: Unknown XML tag found in configuration file (%s). "
+		irc_rootmsg( irc, "Warning: Unknown XML tag found in configuration file (%s). "
 		                  "This may happen when downgrading BitlBee versions. "
 		                  "This tag will be skipped and the information will be lost "
 		                  "once you save your settings.", element_name );
@@ -396,7 +396,7 @@ static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const ch
 			else
 			{
 				if( gerr && irc )
-					irc_usermsg( irc, "Error from XML-parser: %s", gerr->message );
+					irc_rootmsg( irc, "Error from XML-parser: %s", gerr->message );
 				
 				g_clear_error( &gerr );
 				return STORAGE_OTHER_ERROR;
@@ -472,7 +472,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	strcat( path, ".XXXXXX" );
 	if( ( fd = mkstemp( path ) ) < 0 )
 	{
-		irc_usermsg( irc, "Error while opening configuration file." );
+		irc_rootmsg( irc, "Error while opening configuration file." );
 		return STORAGE_OTHER_ERROR;
 	}
 	
@@ -569,7 +569,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	path2 = g_strndup( path, strlen( path ) - 7 );
 	if( rename( path, path2 ) != 0 )
 	{
-		irc_usermsg( irc, "Error while renaming temporary configuration file." );
+		irc_rootmsg( irc, "Error while renaming temporary configuration file." );
 		
 		g_free( path2 );
 		unlink( path );
@@ -584,7 +584,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 write_error:
 	g_free( pass_buf );
 	
-	irc_usermsg( irc, "Write error. Disk full?" );
+	irc_rootmsg( irc, "Write error. Disk full?" );
 	close( fd );
 	
 	return STORAGE_OTHER_ERROR;

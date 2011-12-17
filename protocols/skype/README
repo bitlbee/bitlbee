@@ -1,0 +1,488 @@
+= Skype plugin for BitlBee
+Miklos Vajna <vmiklos-at-vmiklos-dot-hu>
+
+== Status
+
+[quote, Wilmer van der Gaast (author of BitlBee)]
+____
+Okay, this exists now, with lots of thanks to vmiklos for his *excellent*
+work!!
+
+It's not in the main BitlBee and it'll never be for various reasons, but
+because it's a plugin that shouldn't be a problem.
+____
+
+One day I browsed the BitlBee bugtracker and found
+http://bugs.bitlbee.org/bitlbee/ticket/82[this] ticket. Then after a while I
+returned and saw that it was still open. So I wrote it.
+
+It's pretty stable (one day I wanted to restart it because of an upgrade
+and just noticed it was running for 2+ months without crashing), I use
+it for my daily work. Being a plug-in, no patching is required, you can
+just install it after installing BitlBee itself.
+
+NOTE: You will see that this implementation of the Skype plug-in still requires
+a Skype instance to be running. This is because I'm not motivated to reverse
+engineer Skype's
+http://en.wikipedia.org/wiki/Skype_Protocol#Obfuscation_Layer[obfuscation
+layer]. (Not mentioning that you should ask your lawyer about if it is legal or
+not..)
+
+== Requirements
+
+* Skype >= 1.4.0.99. The latest version I've tested is 2.1.0.81.
+* BitlBee >= 3.0. The latest version I've tested is @BITLBEE_VERSION@. Use
+  old versions (see the NEWS file about which one) if you have older BitlBee
+  installed.
+* Skype4Py >= 0.9.28.7. Previous versions won't work due to API changes.
+  The latest version I've tested is 1.0.32.0.
+
+* Python >= 2.5. Skype4Py does not work with 2.4.
+
+* OS: `bitlbee-skype` has been tested under Linux and Mac OS X. The plugin part
+  has been tested under Free/Open/NetBSD as well. The daemon part has been
+  tested on Windows, too.
+
+== How to set it up
+
+Before you start. The setup is the following: BitlBee can't connect directly to
+Skype servers (the company's ones). It needs a running Skype client to do so.
+In fact BitlBee will connect to `skyped` (a tcp server, provided in this
+package) and `skyped` will connect to to your Skype client.
+
+The benefit of this architecture is that you can run Skype and `skyped`
+on a machine different to the one where you run BitlBee (it can be even
+a public server) and/or your IRC client.
+
+NOTE: The order is important. First `skyped` starts Skype. Then `skyped`
+connects to Skype, finally BitlBee can connect to `skyped`.
+
+=== Installing under Frugalware or Debian
+
+- Install the necessary packages:
+
+----
+# pacman-g2 -S bitlbee-skype
+----
+
+or
+
+----
+# apt-get install skyped bitlbee-plugin-skype
+----
+
+(the later from the unstable repo)
+
+and you don't have to compile anything manually.
+
+=== Installing under OS X
+
+- Install the necessary packages from ports:
+
+NOTE: You have to edit the Portfile manually to include the install-dev target,
+just append install-dev after install-etc.
+
+----
+# port -v install bitlbee
+----
+
+and you have to install `bitlbee-skype` and `skype4py` from
+source.
+
+=== Installing from source
+
+NOTE: bitlbee-skype by default builds and installs skyped and the
+plugin. In case you just want to install the plugin for a public server
+or you want to use skyped with a public server (like
+`bitlbee1.asnetinc.net`), you don't need both.
+
+- You need the latest stable BitlBee release (unless you want to use a
+  public server):
+
+----
+$ wget http://get.bitlbee.org/src/bitlbee-@BITLBEE_VERSION@.tar.gz
+$ tar xf bitlbee-@BITLBEE_VERSION@.tar.gz
+$ cd bitlbee-@BITLBEE_VERSION@
+----
+
+- Now compile and install it:
+
+----
+$ ./configure
+$ make
+# make install install-dev
+----
+
+- To install http://skype4py.sourceforge.net/[Skype4Py] from source
+  (unless you want to install the plugin for a public server):
+
+----
+$ tar -zxvf Skype4Py-x.x.x.x.tar.gz
+$ cd Skype4Py-x.x.x.x
+# python setup.py install
+----
+
+- Get the plugin code (in an empty dir, or whereever you want, it does
+  not matter):
+
+----
+$ wget http://vmiklos.hu/project/bitlbee-skype/bitlbee-skype-@VERSION@.tar.gz
+$ tar xf bitlbee-skype-@VERSION@.tar.gz
+$ cd bitlbee-skype-@VERSION@
+----
+
+- Compile and install it:
+
+----
+$ ./configure
+$ make
+# make install
+----
+
+This will install the plugin to where BitlBee expects them, which is
+`/usr/local/lib/bitlbee` if you installed BitlBee from source.
+
+=== Configuring
+
+- Set up `~/.skyped/skyped.conf`: Create the `~/.skyped` directory, copy
+  `skyped.conf` and `skyped.cnf` from
+  `/usr/local/etc/skyped/skyped.conf` to `~/.skyped`, adjust `username`
+  and `password`. The `username` should be your Skype login and the
+  `password` can be whatever you want, but you will have to specify that
+  one when adding the Skype account to BitlBee (see later).
+
+NOTE: Here, and later - `/usr/local/etc` can be different on your installation
+if you used the `--sysconfdir` switch when running bitlbee-skype's `configure`.
+
+- Generate the SSL pem files:
+
+----
+# cd ~/.skyped
+# openssl req -new -x509 -days 365 -nodes -config skyped.cnf -out skyped.cert.pem \
+	-keyout skyped.key.pem
+----
+
+NOTE: Maybe you want to adjust the permissions in the `~/.skyped`
+dir. For example make it readable by just your user.
+
+- Start `skyped` (the tcp server):
+
+----
+$ skyped
+----
+
+- Start your `IRC` client, connect to BitlBee and add your account:
+
+----
+account add skype <user> <pass>
+account skype set server localhost
+----
+
+<user> should be your Skype account name, <pass> should be the one you declared
+in `skyped.conf`. If you want to run skyped on a remote machine, replace
+`localhost` with the name of the machine.
+
+If you are running skyped on a custom port:
+
+----
+account skype set port <port>
+----
+
+If you want to set your full name (optional):
+
+----
+account skype set display_name "John Smith"
+----
+
+If you want to see your skypeout contacts online as well (they are
+offline by default):
+
+----
+account skype set skypeout_offline false
+----
+
+== Setting up Skype in a VNC server (optional)
+
+Optionally, if you want to run Skype on a server, you might want to setup up
+a `VNC` server as well. I used `tightvnc` but probably other `VNC` servers will
+work, too.
+
+First run
+
+----
+$ vncpasswd ~/.vnc/passwd
+----
+
+and create a password. You will need it at least once.
+
+Now create `~/.vnc/xstartup` with the following contents:
+
+----
+#!/bin/sh
+
+blackbox
+----
+
+Adjust the permissions:
+
+----
+$ chmod +x ~/.vnc/xstartup
+----
+
+Then start the server:
+
+----
+$ vncserver
+----
+
+Then connect to it, start an `xterm`, set up Skype (username, password,
+enable X11 API and allow the `Skype4Py` client), quit from Skype, and
+start `skyped`. If you want to watch its traffic, enable debug messages
+and foreground mode:
+
+----
+$ skyped -n -d
+----
+
+== Features
+
+- Download nicks and away statuses from Skype
+
+- Noticing joins / parts while we're connected
+
+- Sending messages
+
+- Receiving messages
+
+- Receiving away status changes
+
+- `skyped` (the tcp daemon that is a gateway between Skype and tcp)
+
+- Error handling when `skyped` is not running and when it exits
+
+- Marking received messages as seen so that Skype won't say there are unread messages
+
+- Adding / removing contacts
+
+- Set away state when you do a `/away`.
+
+- When you `account off`, Skype will set status to `Offline`
+
+- When you `account on`, Skype will set status to `Online`
+
+- Detect when somebody wants to add you and ask for confirmation
+
+- Detect when somebody wants to transfer a file
+
+- Group chat support:
+
+  * Detect if we're invited
+
+  * Send / receive group chat messages
+
+  * Invite others (using `/invite <nick>`)
+
+  * Part from group chats
+
+  * Starting a group chat (using `/j #nick`)
+
+- Topic changes in group chats:
+
+  * Show the current topic (if any) on join
+
+  * Notice when someone changes the topic
+
+  * Support changing the topic using `/topic`
+
+- Viewing the profile using the `info` command.
+
+- Handling skype actions (when the `CHATMESSAGE` has `EMOTED` type)
+
+- Setting your display name using the `nick` command.
+
+- Running Skype on a machine different to BitlBee is possible, the
+  communication is encrypted.
+
+- Managing outgoing calls (with call duration at the end):
+
+  * `/ctcp nick call`
+  * `/ctcp nick hangup`
+
+- Managing outgoing SkypeOut or conference calls:
+
+  * `account skype set call +18005551234`
+  * `account skype set call nick1 nick2`
+  * `account skype set -del call`
+
+- Managing incoming calls via questions, just like when you add / remove
+  contacts.
+
+- Querying the current SkypeOut balance:
+
+  * `account skype set balance query`
+
+- For debug purposes, it's possible to send any command to `skyped`. To
+  achieve this, you need to:
+
+  * `account skype set skypeconsole true`
+
+  * then writing `skypeconsole: <command>` will work in the control
+    channel.
+
+  * `account skype set skypeconsole_receive true` will make the
+    `skypeconsole` account dump all the recieved raw traffic for you
+
+- If you want to automatically join bookmarked groupchats right after
+  you logged in, do:
+
+  * `account skype set auto_join true`
+
+- Edited messages are shown with the `EDIT:` prefix. If you don't like
+  this, you can set your own prefix using:
+
+  * `account skype set edit_prefix "updated message:"`
+
+- The `echo123` test account is hidden by default. If you want to see it:
+
+  * `account skype set test_join true`
+
+- Mood texts are not shown by default. If you want to see it:
+
+  * `account skype set show_moods true`
+
+- Group support:
+
+  * Skype groups are told to BitlBee
+  * The usual `/invite` in a group channel adds the buddy to the group in skype
+    as well (and if necessary, it creates a new group in Skype)
+
+== What needs to be done (aka. TODO)
+
+- Notice if foo invites bar. Currently you can see only that bar joined.
+
+- Public chats. See
+  link:https://developer.skype.com/jira/browse/SCL-381[this feature
+  request], this is because it is still not possible (under Linux) to
+  `join_chat` to a public chat..
+
+- Add yasrd (Yet Another Skype-Related Daemon) to allow using a public
+  server for users who are behind NAT.
+
+== I would like to have support for ...
+
+If something does not work and it's not in the TODO section, then please
+contact me! Please also try the link:HACKING[git version] before reporting a bug, your
+problem may be already fixed there.
+
+In fact, of course, I wrote this documentation after figured out how to do this
+setup, so maybe I left out some steps. If you needed 'any' additional tricks,
+then it would be nice to include them here.
+
+== Known bugs
+
+- File transfers are view-only from BitlBee. Quoting the
+  https://developer.skype.com/Docs/ApiDoc/FILETRANSFER_object[relevant
+  documentation]: 'File transfers cannot be initiated nor accepted via
+  API commands.' So it's not something I can add support for, sadly.
+
+== Screenshots
+
+You can reach some screenshots link:shot[here].
+
+== Additional resources
+
+You can reach the Changelog link:Changelog[here], and a gitweb interface
+http://vmiklos.hu/gitweb/?p=bitlbee-skype.git[here].
+
+The Skype API documentation is
+http://developer.skype.com/resources/public_api_ref.zip[here] if you're
+interested.
+
+== Testimonials
+
+----
+00:56 < scathe> I like your skype plugin :)
+----
+
+----
+It's really working great so far.
+
+Good Job and thank you!
+Sebastian
+----
+
+----
+Big respect for your work, i really appreciate it.
+
+Martin
+----
+
+----
+Thanks for bitlbee-skype. As a blind Linux user, I cannot use the
+skype GUI client because qt apps ar not accessible yet with the
+available screen readers. bitlbee-skype allows me to make use of skype
+without having to interact much with the GUI client, which helps me a
+lot.
+
+Lukas
+----
+
+----
+02:12 < newton> i must say, i love this little bee ;)
+02:15 < newton> tried it out today with the skype plugin, good work!
+----
+
+----
+18:10 < miCSu> it works fine
+----
+
+----
+13:56 < seo> i just want to thank you :)
+13:56 < seo> for bitlbee-skype
+13:57 < seo> it's working very well, so, again, thank you for your work, and for sharing it
+----
+
+----
+22:16 < ecraven> vmiklos: thanks a lot for the skype plugin for bitlbee!
+----
+
+----
+I'm blind and so I have to use a screen reader, in my case Gnome-Orca.
+But since Skype is written in QT, while Orca uses gtk+, I have no direct
+access to the Skype interface. That's why I desided to use Skyped and
+Erc.
+The text console is fully accessible.
+Thank you very much.
+
+Hermann
+----
+
+----
+i love that bitlbeeplugin. big thx for that.
+
+michael
+----
+
+----
+23:47 < krisfremen> thanks for creating this fabulous piece of software vmiklos :)
+----
+
+== Thanks
+
+to the following people:
+
+* people in link:AUTHORS[AUTHORS] for their contributions
+
+* Arkadiusz Wahlig, author of skype4py, for making suggestions to skyped
+
+* Gabor Adam Toth (tg), for noticing extra code is needed to handle multiline
+  messages
+
+* Cristobal Palmer (tarheelcoxn), for helping to testing the plugin in a
+  timezone different to mine
+
+* people on `#bitlbee` for feedback
+
+Back to my link:/projects[projects page].
+
+// vim: ft=asciidoc

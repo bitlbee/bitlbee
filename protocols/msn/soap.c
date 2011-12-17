@@ -209,24 +209,25 @@ static char *msn_soap_abservice_build( const char *body_fmt, const char *scenari
 static void msn_soap_debug_print( const char *headers, const char *payload )
 {
 	char *s;
-	int st;
 	
 	if( !getenv( "BITLBEE_DEBUG" ) )
 		return;
 	
-	if( ( s = strstr( headers, "\r\n\r\n" ) ) )
-		st = write( 1, s, s - headers + 4 );
-	else
-		st = write( 1, headers, strlen( headers ) );
+	if( headers )
+	{
+		if( ( s = strstr( headers, "\r\n\r\n" ) ) )
+			write( 2, headers, s - headers + 4 );
+		else
+			write( 2, headers, strlen( headers ) );
+	}
 	
-#ifdef DEBUG
+	if( payload )
 	{
 		struct xt_node *xt = xt_from_string( payload );
 		if( xt )
 			xt_print( xt );
 		xt_free_node( xt );
 	}
-#endif
 }
 
 int msn_soapq_flush( struct im_connection *ic, gboolean resend )
@@ -660,7 +661,7 @@ static xt_status msn_soap_memlist_member( struct xt_node *node, gpointer data )
 		bd->flags |= MSN_BUDDY_PL;
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
-		printf( "%p %s %d\n", bu, handle, bd->flags );
+		fprintf( stderr, "%p %s %d\n", bu, handle, bd->flags );
 	
 	return XT_HANDLED;
 }
@@ -807,7 +808,7 @@ static xt_status msn_soap_addressbook_group( struct xt_node *node, gpointer data
 	}
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
-		printf( "%s %s\n", id, name );
+		fprintf( stderr, "%s %s\n", id, name );
 	
 	return XT_HANDLED;
 }
@@ -868,7 +869,7 @@ static xt_status msn_soap_addressbook_contact( struct xt_node *node, gpointer da
 		imcb_add_buddy( ic, handle, group->name );
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
-		printf( "%s %s %s %s\n", id, type, handle, display_name );
+		fprintf( stderr, "%s %s %s %s\n", id, type, handle, display_name );
 	
 	return XT_HANDLED;
 }

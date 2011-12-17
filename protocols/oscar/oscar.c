@@ -1071,12 +1071,12 @@ static int incomingim_chan2(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 
 static void gaim_icq_authgrant(void *data_) {
 	struct icq_auth *data = data_;
-	char *uin, message;
+	char *uin;
 	struct oscar_data *od = (struct oscar_data *)data->ic->proto_data;
 	
 	uin = g_strdup_printf("%u", data->uin);
-	message = 0;
 	aim_ssi_auth_reply(od->sess, od->conn, uin, 1, "");
+	// char *message = 0;
 	// aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHGRANTED, &message);
 	imcb_ask_add(data->ic, uin, NULL);
 	
@@ -1218,11 +1218,11 @@ static int gaim_parse_incoming_im(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
-	guint16 chan, nummissed, reason;
+	guint16 nummissed, reason;
 	aim_userinfo_t *userinfo;
 
 	va_start(ap, fr);
-	chan = (guint16)va_arg(ap, unsigned int);
+	va_arg(ap, unsigned int); /* chan */
 	userinfo = va_arg(ap, aim_userinfo_t *);
 	nummissed = (guint16)va_arg(ap, unsigned int);
 	reason = (guint16)va_arg(ap, unsigned int);
@@ -1334,13 +1334,12 @@ static int gaim_parse_locerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 }
 
 static int gaim_parse_motd(aim_session_t *sess, aim_frame_t *fr, ...) {
-	char *msg;
 	guint16 id;
 	va_list ap;
 
 	va_start(ap, fr);
 	id  = (guint16)va_arg(ap, unsigned int);
-	msg = va_arg(ap, char *);
+	va_arg(ap, char *); /* msg */
 	va_end(ap);
 
 	if (id < 4)
@@ -1360,13 +1359,9 @@ static int gaim_chatnav_info(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	switch(type) {
 		case 0x0002: {
-			guint8 maxrooms;
-			struct aim_chat_exchangeinfo *exchanges;
-			int exchangecount; // i;
-
-			maxrooms = (guint8)va_arg(ap, unsigned int);
-			exchangecount = va_arg(ap, int);
-			exchanges = va_arg(ap, struct aim_chat_exchangeinfo *);
+			va_arg(ap, unsigned int); /* maxrooms */
+			va_arg(ap, int); /* exchangecount */
+			va_arg(ap, struct aim_chat_exchangeinfo *); /* exchanges */
 			va_end(ap);
 
 			while (odata->create_rooms) {
@@ -1379,21 +1374,19 @@ static int gaim_chatnav_info(aim_session_t *sess, aim_frame_t *fr, ...) {
 			}
 			break;
 		case 0x0008: {
-			char *fqcn, *name, *ck;
-			guint16 instance, flags, maxmsglen, maxoccupancy, unknown, exchange;
-			guint8 createperms;
-			guint32 createtime;
+			char *ck;
+			guint16 instance, exchange;
 
-			fqcn = va_arg(ap, char *);
+			va_arg(ap, char *); /* fqcn */
 			instance = (guint16)va_arg(ap, unsigned int);
 			exchange = (guint16)va_arg(ap, unsigned int);
-			flags = (guint16)va_arg(ap, unsigned int);
-			createtime = va_arg(ap, guint32);
-			maxmsglen = (guint16)va_arg(ap, unsigned int);
-			maxoccupancy = (guint16)va_arg(ap, unsigned int);
-			createperms = (guint8)va_arg(ap, int);
-			unknown = (guint16)va_arg(ap, unsigned int);
-			name = va_arg(ap, char *);
+			va_arg(ap, unsigned int); /* flags */
+			va_arg(ap, guint32); /* createtime */
+			va_arg(ap, unsigned int); /* maxmsglen */
+			va_arg(ap, unsigned int); /* maxoccupancy */
+			va_arg(ap, int); /* createperms */
+			va_arg(ap, unsigned int); /* unknown */
+			va_arg(ap, char *); /* name */
 			ck = va_arg(ap, char *);
 			va_end(ap);
 
@@ -1455,27 +1448,21 @@ static int gaim_chat_leave(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 static int gaim_chat_info_update(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
-	aim_userinfo_t *userinfo;
-	struct aim_chat_roominfo *roominfo;
-	char *roomname;
-	int usercount;
-	char *roomdesc;
-	guint16 unknown_c9, unknown_d2, unknown_d5, maxmsglen, maxvisiblemsglen;
-	guint32 creationtime;
+	guint16 maxmsglen, maxvisiblemsglen;
 	struct im_connection *ic = sess->aux_data;
 	struct chat_connection *ccon = find_oscar_chat_by_conn(ic, fr->conn);
 
 	va_start(ap, fr);
-	roominfo = va_arg(ap, struct aim_chat_roominfo *);
-	roomname = va_arg(ap, char *);
-	usercount= va_arg(ap, int);
-	userinfo = va_arg(ap, aim_userinfo_t *);
-	roomdesc = va_arg(ap, char *);
-	unknown_c9 = (guint16)va_arg(ap, int);
-	creationtime = (guint32)va_arg(ap, unsigned long);
+	va_arg(ap, struct aim_chat_roominfo *); /* roominfo */
+	va_arg(ap, char *); /* roomname */
+	va_arg(ap, int); /* usercount */
+	va_arg(ap, aim_userinfo_t *); /* userinfo */
+	va_arg(ap, char *); /* roomdesc */
+	va_arg(ap, int); /* unknown_c9 */
+	va_arg(ap, unsigned long); /* creationtime */
 	maxmsglen = (guint16)va_arg(ap, int);
-	unknown_d2 = (guint16)va_arg(ap, int);
-	unknown_d5 = (guint16)va_arg(ap, int);
+	va_arg(ap, int); /* unknown_d2 */
+	va_arg(ap, int); /* unknown_d5 */
 	maxvisiblemsglen = (guint16)va_arg(ap, int);
 	va_end(ap);
 
@@ -1516,19 +1503,19 @@ static int gaim_parse_ratechange(aim_session_t *sess, aim_frame_t *fr, ...) {
 	};
 #endif
 	va_list ap;
-	guint16 code, rateclass;
-	guint32 windowsize, clear, alert, limit, disconnect, currentavg, maxavg;
+	guint16 code;
+	guint32 windowsize, clear, currentavg;
 
 	va_start(ap, fr); 
 	code = (guint16)va_arg(ap, unsigned int);
-	rateclass= (guint16)va_arg(ap, unsigned int);
+	va_arg(ap, unsigned int); /* rateclass */
 	windowsize = (guint32)va_arg(ap, unsigned long);
 	clear = (guint32)va_arg(ap, unsigned long);
-	alert = (guint32)va_arg(ap, unsigned long);
-	limit = (guint32)va_arg(ap, unsigned long);
-	disconnect = (guint32)va_arg(ap, unsigned long);
+	va_arg(ap, unsigned long); /* alert */
+	va_arg(ap, unsigned long); /* limit */
+	va_arg(ap, unsigned long); /* disconnect */
 	currentavg = (guint32)va_arg(ap, unsigned long);
-	maxavg = (guint32)va_arg(ap, unsigned long);
+	va_arg(ap, unsigned long); /* maxavg */
 	va_end(ap);
 
 	/* XXX fix these values */
@@ -2101,6 +2088,10 @@ static int gaim_ssi_parseack( aim_session_t *sess, aim_frame_t *fr, ... )
 				aim_ssi_auth_request( sess, fr->conn, list, "" );
 				aim_ssi_addbuddies( sess, fr->conn, OSCAR_GROUP, &list, 1, 1 );
 			}
+			else if( st == 0x0A )
+			{
+				imcb_error( sess->aux_data, "Buddy %s is already in your list", list );
+			}
 			else
 			{
 				imcb_error( sess->aux_data, "Error while adding buddy: 0x%04x", st );
@@ -2412,11 +2403,11 @@ int gaim_parsemtn(aim_session_t *sess, aim_frame_t *fr, ...)
 {
 	struct im_connection * ic = sess->aux_data;
 	va_list ap;
-	guint16 type1, type2;
+	guint16 type2;
 	char * sn;
 
 	va_start(ap, fr);
-	type1 = va_arg(ap, int);
+	va_arg(ap, int); /* type1 */
 	sn = va_arg(ap, char*);
 	type2 = va_arg(ap, int);
 	va_end(ap);
@@ -2536,9 +2527,7 @@ struct groupchat *oscar_chat_join_internal(struct im_connection *ic, const char 
 	aim_conn_t * cur;
 
 	if((cur = aim_getconn_type(od->sess, AIM_CONN_TYPE_CHATNAV))) {
-		int st;
-		
-		st = aim_chatnav_createroom(od->sess, cur, room, exchange_number);
+		aim_chatnav_createroom(od->sess, cur, room, exchange_number);
 		
 		return ret;
 	} else {
@@ -2565,7 +2554,6 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	struct groupchat *ret;
 	static int chat_id = 0;
 	char * chatname, *s;
-	struct groupchat *c;
 	
 	chatname = g_strdup_printf("%s%s%d", isdigit(*ic->acc->user) ? "icq" : "",
 	                           ic->acc->user, chat_id++);
@@ -2574,13 +2562,12 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 		if (!isalnum(*s))
 			*s = '0';
 	
-	c = imcb_chat_new(ic, chatname);
 	ret = oscar_chat_join_internal(ic, chatname, NULL, NULL, 4);
 	aim_chat_invite(od->sess, od->conn, who, "", 4, chatname, 0x0);
 
 	g_free(chatname);
 	
-	return NULL;
+	return ret;
 }
 
 void oscar_accept_chat(void *data)

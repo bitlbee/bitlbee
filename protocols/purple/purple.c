@@ -180,7 +180,7 @@ static void purple_init( account_t *acc )
 		default:
 			/** No way to talk to the user right now, invent one when
 			this becomes important.
-			irc_usermsg( acc->irc, "Setting with unknown type: %s (%d) Expect stuff to break..\n",
+			irc_rootmsg( acc->irc, "Setting with unknown type: %s (%d) Expect stuff to break..\n",
 			             name, purple_account_option_get_type( o ) );
 			*/
 			name = NULL;
@@ -749,6 +749,8 @@ static void prplcb_blist_update( PurpleBuddyList *list, PurpleBlistNode *node )
 		
 		if( bud->server_alias )
 			imcb_rename_buddy( ic, bud->name, bud->server_alias );
+		else if( bud->alias )
+			imcb_rename_buddy( ic, bud->name, bud->alias );
 		
 		if( group )
 			imcb_add_buddy( ic, bud->name, purple_group_get_name( group ) );

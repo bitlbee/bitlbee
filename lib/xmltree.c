@@ -322,7 +322,6 @@ char *xt_to_string( struct xt_node *node )
 	return real;
 }
 
-#ifdef DEBUG
 void xt_print( struct xt_node *node )
 {
 	int i;
@@ -330,16 +329,16 @@ void xt_print( struct xt_node *node )
 	
 	/* Indentation */
 	for( c = node; c->parent; c = c->parent )
-		printf( "    " );
+		fprintf( stderr, "    " );
 	
 	/* Start the tag */
-	printf( "<%s", node->name );
+	fprintf( stderr, "<%s", node->name );
 	
 	/* Print the attributes */
 	for( i = 0; node->attr[i].key; i ++ )
 	{
 		char *v = g_markup_escape_text( node->attr[i].value, -1 );
-		printf( " %s=\"%s\"", node->attr[i].key, v );
+		fprintf( stderr, " %s=\"%s\"", node->attr[i].key, v );
 		g_free( v );
 	}
 	
@@ -348,13 +347,13 @@ void xt_print( struct xt_node *node )
 	/* If this tag doesn't have any content at all... */
 	if( node->text == NULL && node->children == NULL )
 	{
-		printf( "/>\n" );
+		fprintf( stderr, "/>\n" );
 		return;
 		/* Then we're finished! */
 	}
 	
 	/* Otherwise... */
-	printf( ">" );
+	fprintf( stderr, ">" );
 	
 	/* Only print the text if it contains more than whitespace (TEST). */
 	if( node->text_len > 0 )
@@ -363,25 +362,24 @@ void xt_print( struct xt_node *node )
 		if( node->text[i] )
 		{
 			char *v = g_markup_escape_text( node->text, -1 );
-			printf( "%s", v );
+			fprintf( stderr, "%s", v );
 			g_free( v );
 		}
 	}
 	
 	if( node->children )
-		printf( "\n" );
+		fprintf( stderr, "\n" );
 	
 	for( c = node->children; c; c = c->next )
 		xt_print( c );
 	
 	if( node->children )
 		for( c = node; c->parent; c = c->parent )
-			printf( "    " );
+			fprintf( stderr, "    " );
 	
 	/* Non-empty tag is now finished. */
-	printf( "</%s>\n", node->name );
+	fprintf( stderr, "</%s>\n", node->name );
 }
-#endif
 
 struct xt_node *xt_dup( struct xt_node *node )
 {
@@ -556,6 +554,28 @@ char *xt_find_attr( struct xt_node *node, const char *key )
 	return node->attr[i].value;
 }
 
+/* Strip a few non-printable characters that aren't allowed in XML streams
+   (and upset some XMPP servers for example). */
+void xt_strip_text( char *in )
+{
+	char *out = in;
+	static const char nonprint[32] = {
+		0, 0, 0, 0, 0, 0, 0, 0, /* 0..7 */
+		0, 1, 1, 0, 0, 1, 0, 0, /* 9 (tab), 10 (\n), 13 (\r) */
+	};
+	
+	if( !in )
+		return;
+
+	while( *in )
+	{
+		if( (unsigned int) *in >= ' ' || nonprint[(unsigned int) *in] )
+			*out ++ = *in;
+		in ++;
+	}
+	*out = *in;
+}
+
 struct xt_node *xt_new_node( char *name, const char *text, struct xt_node *children )
 {
 	struct xt_node *node, *c;
@@ -567,8 +587,9 @@ struct xt_node *xt_new_node( char *name, const char *text, struct xt_node *child
 	
 	if( text )
 	{
-		node->text_len = strlen( text );
-		node->text = g_memdup( text, node->text_len + 1 );
+		node->text = g_strdup( text );
+		xt_strip_text( node->text );
+		node->text_len = strlen( node->text );
 	}
 	
 	for( c = children; c; c = c->next )

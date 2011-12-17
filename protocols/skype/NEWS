@@ -1,0 +1,131 @@
+VERSION         DESCRIPTION
+-----------------------------------------------------------------------------
+0.9.0         - merge support for building the plugin on OpenBSD
+	      - merge support for running skyped without gobject and
+	        pygnutls/pyopenssl - as a side effect this adds Windows support
+	      - add /ctcp call|hangup support (you need BitlBee from bzr to use
+	        this)
+              - add group support (see http://wiki.bitlbee.org/UiFix)
+0.8.4         - now using python2.7 directly in case python would point to python3k
+              - merge patch to avoid a crash when failing to connect to skyped
+              - merge support for building the plugin on NetBSD
+              - merge Debian patches
+0.8.3         - support for BitlBee 1.3dev
+              - fixed --debug switch (-d was fine)
+              - documentation fixes
+0.8.2         - building documentation is now optional
+              - new settings: test_join and show_moods
+              - '~' in skyped.conf is now expanded to the user's home directory
+	      - groupchat channel names are now persistent (requires
+	        BitlBee-1.2.6)
+0.8.1         - support for BitlBee 1.2.5
+              - support for Skype 2.1.0.81 and Skype4Py 1.0.32.0
+              - the plugin part now supports FreeBSD
+              - fix for edited messages, the prefix can now be configured
+0.8.0         - fix build on x86_64 (-fPIC usage)
+              - debug messages now have a timestamp
+              - more work on having the default config under ~/.skyped
+              - added a manual page for skyped
+0.7.2         - add --log option to skyped to allow logging while it the
+                daemon is in the background.
+              - prefer config files from ~/.skyped over /etc/skyped
+              - handle the case when LANG and LC_ALL env vars are empty
+0.7.1         - mostly internal changes, the monster read callback is
+                now replaced by tiny parser functions
+0.7.0         - made 'make config' more portable
+              - add 'skypeconsole' buddy for debugging purposes
+              - support autojoin for bookmarked groupchats
+              - skyped: make hardwired '/dev/null' portable and fix
+                Python-2.6 warnings
+0.6.3         - various osx-specific improvements (see the new screenshot!)
+              - added python-gnutls install instructions
+              - bitlbee.pc is now searched under
+                /usr/local/lib/pkgconfig by default to help LFS monkeys ;)
+0.6.2         - bugfix: make install required the plugin even in case
+                its build was disabled
+0.6.1         - added keepalive traffic to avoid disconnects in bitlbee
+                when there is no traffic for a long time
+              - now the plugin or skyped is automatically disabled if
+		the dependencies are not available; useful in case the
+		plugin is to be installed on a public server, or the
+		skyped is to be used with a public server only
+0.6.0         - works with BitlBee 1.2.1
+0.5.1         - configure now automatically detects the right prefix to
+                match witl BitlBee's one
+              - minor documentation improvements (public chats, bug
+                reporting address)
+0.5.0         - skyped now uses gnutls if possible, which seem to be
+                more stable, compared to openssl.
+              - skyped now tries to handle all read/write errors from/to
+                clients, and always just warn about failures, never exit.
+              - installation for Debian users should be more simple
+              - improved documentation
+              - this .0 release should be quite stable, only about 100
+                lines of new code
+0.4.2         - skyped should be now more responsive
+              - new skypeout_offline setting for hiding/showing SkypeOut
+                contacts
+              - support for SkypeOut calls
+              - support for querying the balance from Skype
+              - all setting should be documented now
+0.4.1         - support for building the plugin on Mac OSX
+              - tested with BitlBee 1.2 and Skype 2.0.0.63
+              - avoid ${prefix} (by autoconf) in the config file as we
+                don't handle such a variable
+              - now you can call echo123 (patch by Riskó Gergely)
+0.4.0         - support for starting, accepting and rejecting calls
+              - also updated documentation (the key is the account set
+                skype/call command)
+	      - as usual with the .0 releases, be careful, ~200 lines of
+	        new code
+0.3.2         - support for Skype 2.0.0.43
+              - skyped now automatically starts/shuts down skype
+              - improved 'make prepare' to handle more automake versions
+              - documentation improvements
+0.3.1         - beautify output when skyped is interrupted using ^C
+              - 'nick skype foo' now really sets display name, not the mood
+                text
+              - documentation fixups
+              - this version should be again as stable as 0.2.6 was
+0.3.0         - authentication support in skyped via ssl
+              - ~200 lines of new code, so be careful :)
+	      - upgraders: please read the documentation about how to set up
+	        your config the ssl certificate, this was no necessary till now
+0.2.6         - the server setting has a default value, 'localhost' so in most
+		cases you no longer have to set it explicitly
+	      - support for receiving emoted messages, ie. when the user types
+	        '/me foo'
+	      - support for setting the display name (nick 0 "foo bar") - it
+	        sets the mood text
+0.2.5         - now bitlbee's info command is supported (it displays full name,
+		birthday, homepage, age, etc.)
+0.2.4         - improve documentation based on feedback from people on #bitlbee
+	      - fixed for Skype4Py >= 0.9.28.4
+	      - tested with latest Skype beta, too (the one which supports
+	        video)
+0.2.3         - fixed that annoying "creating groupchat failed" warning
+0.2.2         - don't change the topic if skype does not report a successful
+                topic change
+              - fixed for the recent bitlbee API changes
+0.2.1         - topic support in group chats
+              - bugfixes for multiline messages
+              - this version should be again as stable as 0.1.4 was
+0.2.0         - group chat support
+              - ~300 lines of new code, so be careful :)
+              - the version number mentions that this is not a minor change
+0.1.4         - documentation: mention the version of all deps (requirements
+                section)
+              - fix sending / sending accents
+              - don't use internal functions of skype4py
+              - skyped no longer dies when skype is killed
+0.1.3         - support for edited messages
+              - ignore empty messages (skype does the same)
+              - support for multiline messages
+              - switch to the x11 api instead of dbus (it's much more stable)
+0.1.2         - notification when a new call arrives in
+              - more documentation (vnc)
+              - first release which works with unpatched bitlbee
+0.1.1         - skyped now runs as daemon in the background by default
+              - skyped now automatically reconnects on Skype restarts
+0.1.0         - initial release
+              - see README for major features

@@ -309,7 +309,6 @@ int aim_setdirectoryinfo(aim_session_t *sess, aim_conn_t *conn, const char *firs
 int aim_setuserinterests(aim_session_t *sess, aim_conn_t *conn, const char *interest1, const char *interest2, const char *interest3, const char *interest4, const char *interest5, guint16 privacy)
 {
 	aim_frame_t *fr;
-	aim_snacid_t snacid;
 	aim_tlvlist_t *tl = NULL;
 
 	/* ?? privacy ?? */
@@ -329,7 +328,7 @@ int aim_setuserinterests(aim_session_t *sess, aim_conn_t *conn, const char *inte
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+aim_sizetlvchain(&tl))))
 		return -ENOMEM;
 
-	snacid = aim_cachesnac(sess, 0x0002, 0x000f, 0x0000, NULL, 0);
+	aim_cachesnac(sess, 0x0002, 0x000f, 0x0000, NULL, 0);
 
 	aim_putsnac(&fr->data, 0x0002, 0x000f, 0x0000, 0);
 	aim_writetlvchain(&fr->data, &tl);

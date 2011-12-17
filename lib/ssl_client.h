@@ -62,7 +62,15 @@ G_MODULE_EXPORT void *ssl_starttls( int fd, ssl_input_function func, gpointer da
 G_MODULE_EXPORT int ssl_read( void *conn, char *buf, int len );
 G_MODULE_EXPORT int ssl_write( void *conn, const char *buf, int len );
 
-/* See ssl_openssl.c for an explanation. */
+/* Now needed by most SSL libs. See for more info:
+   http://www.gnu.org/software/gnutls/manual/gnutls.html#index-gnutls_005frecord_005fcheck_005fpending-209
+   http://www.openssl.org/docs/ssl/SSL_pending.html
+   
+   Required because OpenSSL empties the TCP buffer completely but doesn't
+   necessarily give us all the unencrypted data. Or maybe you didn't ask
+   for all of it because your buffer is too small.
+   
+   Returns 0 if there's nothing left, 1 if there's more data. */
 G_MODULE_EXPORT int ssl_pending( void *conn );
 
 /* Abort the SSL connection and disconnect the socket. Do not use close()

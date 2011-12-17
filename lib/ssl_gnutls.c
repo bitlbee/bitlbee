@@ -44,6 +44,8 @@ static gboolean initialized = FALSE;
 #define GNUTLS_STUPID_CAST (int)
 #endif
 
+#define SSLDEBUG 0
+
 struct scd
 {
 	ssl_input_function func;
@@ -134,7 +136,9 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	
 	gnutls_certificate_allocate_credentials( &conn->xcred );
 	gnutls_init( &conn->session, GNUTLS_CLIENT );
-	gnutls_transport_set_lowat( conn->session, 1 ); 
+#if GNUTLS_VERSION_NUMBER < 0x020c00
+	gnutls_transport_set_lowat( conn->session, 0 );
+#endif
 	gnutls_set_default_priority( conn->session );
 	gnutls_credentials_set( conn->session, GNUTLS_CRD_CERTIFICATE, conn->xcred );
 	
@@ -186,7 +190,7 @@ int ssl_read( void *conn, char *buf, int len )
 	if( !((struct scd*)conn)->established )
 	{
 		ssl_errno = SSL_NOHANDSHAKE;
-		return( -1 );
+		return -1;
 	}
 	
 	st = gnutls_record_recv( ((struct scd*)conn)->session, buf, len );
@@ -195,7 +199,7 @@ int ssl_read( void *conn, char *buf, int len )
 	if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
 		ssl_errno = SSL_AGAIN;
 	
-	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 1, buf, st );
+	if( SSLDEBUG && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 2, buf, st );
 	
 	return st;
 }
@@ -207,7 +211,7 @@ int ssl_write( void *conn, const char *buf, int len )
 	if( !((struct scd*)conn)->established )
 	{
 		ssl_errno = SSL_NOHANDSHAKE;
-		return( -1 );
+		return -1;
 	}
 	
 	st = gnutls_record_send( ((struct scd*)conn)->session, buf, len );
@@ -216,15 +220,23 @@ int ssl_write( void *conn, const char *buf, int len )
 	if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )
 		ssl_errno = SSL_AGAIN;
 	
-	if( 0 && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 1, buf, st );
+	if( SSLDEBUG && getenv( "BITLBEE_DEBUG" ) && st > 0 ) len = write( 2, buf, st );
 	
 	return st;
 }
 
-/* See ssl_openssl.c for an explanation. */
 int ssl_pending( void *conn )
 {
-	return 0;
+	if( conn == NULL )
+		return 0;
+	
+	if( !((struct scd*)conn)->established )
+	{
+		ssl_errno = SSL_NOHANDSHAKE;
+		return 0;
+	}
+	
+	return gnutls_record_check_pending( ((struct scd*)conn)->session ) != 0;
 }
 
 void ssl_disconnect( void *conn_ )

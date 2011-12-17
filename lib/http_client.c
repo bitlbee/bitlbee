@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2005 Wilmer van der Gaast and others                *
+  * Copyright 2002-2011 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* HTTP(S) module                                                       */
@@ -68,6 +68,9 @@ struct http_request *http_dorequest( char *host, int port, int ssl, char *reques
 	req->request = g_strdup( request );
 	req->request_length = strlen( request );
 	req->redir_ttl = 3;
+	
+	if( getenv( "BITLBEE_DEBUG" ) )
+		printf( "About to send HTTP request:\n%s\n", req->request );
 	
 	return( req );
 }
@@ -239,7 +242,10 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 	                         req->ssl ? ssl_getdirection( req->ssl ) : B_EV_IO_READ,
 	                         http_incoming_data, req );
 	
-	return FALSE;
+	if( ssl_pending( req->ssl ) )
+		return http_incoming_data( data, source, cond );
+	else
+		return FALSE;
 
 got_reply:
 	/* Maybe if the webserver is overloaded, or when there's bad SSL
@@ -274,6 +280,9 @@ got_reply:
 	}
 	
 	*end1 = 0;
+	
+	if( getenv( "BITLBEE_DEBUG" ) )
+		printf( "HTTP response headers:\n%s\n", req->reply_headers );
 	
 	if( evil_server )
 		req->reply_body = end1 + 1;
@@ -313,7 +322,8 @@ got_reply:
 		req->status_code = -1;
 	}
 	
-	if( ( req->status_code == 301 || req->status_code == 302 ) && req->redir_ttl-- > 0 )
+	if( ( ( req->status_code >= 301 && req->status_code <= 303 ) ||
+	      req->status_code == 307 ) && req->redir_ttl-- > 0 )
 	{
 		char *loc, *new_request, *new_host;
 		int error = 0, new_port, new_proto;
@@ -353,6 +363,7 @@ got_reply:
 			/* A whole URL */
 			url_t *url;
 			char *s;
+			const char *new_method;
 			
 			s = strstr( loc, "\r\n" );
 			if( s == NULL )
@@ -368,27 +379,48 @@ got_reply:
 				goto cleanup;
 			}
 			
-			/* Okay, this isn't fun! We have to rebuild the request... :-( */
-			new_request = g_malloc( req->request_length + strlen( url->file ) );
-			
-			/* So, now I just allocated enough memory, so I'm
-			   going to use strcat(), whether you like it or not. :-) */
-			
-			sprintf( new_request, "GET %s HTTP/1.0", url->file );
-			
-			s = strstr( req->request, "\r\n" );
-			if( s == NULL )
+			/* Find all headers and, if necessary, the POST request contents.
+			   Skip the old Host: header though. This crappy code here means
+			   anything using this http_client MUST put the Host: header at
+			   the top. */
+			if( !( ( s = strstr( req->request, "\r\nHost: " ) ) &&
+			       ( s = strstr( s + strlen( "\r\nHost: " ), "\r\n" ) ) ) )
 			{
 				req->status_string = g_strdup( "Error while rebuilding request string" );
-				g_free( new_request );
 				g_free( url );
 				goto cleanup;
 			}
 			
-			strcat( new_request, s );
+			/* More or less HTTP/1.0 compliant, from my reading of RFC 2616.
+			   Always perform a GET request unless we received a 301. 303 was
+			   meant for this but it's HTTP/1.1-only and we're specifically
+			   speaking HTTP/1.0. ...
+			   
+			   Well except someone at identi.ca's didn't bother reading any
+			   RFCs and just return HTTP/1.1-specific status codes to HTTP/1.0
+			   requests. Fuckers. So here we are, handle 301..303,307. */
+			if( strncmp( req->request, "GET", 3 ) == 0 )
+				/* GETs never become POSTs. */
+				new_method = "GET";
+			else if( req->status_code == 302 || req->status_code == 303 )
+				/* 302 de-facto becomes GET, 303 as specified by RFC 2616#10.3.3 */
+				new_method = "GET";
+			else
+				/* 301 de-facto should stay POST, 307 specifally RFC 2616#10.3.8 */
+				new_method = "POST";
+			
+			/* Okay, this isn't fun! We have to rebuild the request... :-( */
+			new_request = g_strdup_printf( "%s %s HTTP/1.0\r\nHost: %s%s",
+			                               new_method, url->file, url->host, s );
+			
 			new_host = g_strdup( url->host );
 			new_port = url->port;
 			new_proto = url->proto;
+			
+			/* If we went from POST to GET, truncate the request content. */
+			if( new_request[0] != req->request[0] && new_request[0] == 'G' &&
+			    ( s = strstr( new_request, "\r\n\r\n" ) ) )
+				s[4] = '\0';
 			
 			g_free( url );
 		}
@@ -401,6 +433,9 @@ got_reply:
 		req->fd = -1;
 		req->ssl = NULL;
 		
+		if( getenv( "BITLBEE_DEBUG" ) )
+			printf( "New headers for redirected HTTP request:\n%s\n", new_request );
+	
 		if( new_proto == PROTO_HTTPS )
 		{
 			req->ssl = ssl_connect( new_host, new_port, http_ssl_connected, req );
@@ -441,6 +476,10 @@ cleanup:
 		ssl_disconnect( req->ssl );
 	else
 		closesocket( req->fd );
+	
+	if( getenv( "BITLBEE_DEBUG" ) && req )
+		printf( "Finishing HTTP request with status: %s\n",
+		        req->status_string ? req->status_string : "NULL" );
 	
 	req->func( req );
 	http_free( req );

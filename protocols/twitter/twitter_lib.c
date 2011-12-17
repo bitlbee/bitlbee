@@ -77,17 +77,20 @@ static void txu_free(struct twitter_xml_user *txu)
 {
 	if (txu == NULL)
 		return;
+
 	g_free(txu->name);
 	g_free(txu->screen_name);
 	g_free(txu);
 }
-
 
 /**
  * Frees a twitter_xml_status struct.
  */
 static void txs_free(struct twitter_xml_status *txs)
 {
+	if (txs == NULL)
+		return;
+
 	g_free(txs->text);
 	txu_free(txs->user);
 	g_free(txs);
@@ -102,19 +105,40 @@ static void txl_free(struct twitter_xml_list *txl)
 	GSList *l;
 	if (txl == NULL)
 		return;
-	for (l = txl->list; l; l = g_slist_next(l))
-		if (txl->type == TXL_STATUS)
+
+	for (l = txl->list; l; l = g_slist_next(l)) {
+		if (txl->type == TXL_STATUS) {
 			txs_free((struct twitter_xml_status *) l->data);
-		else if (txl->type == TXL_ID)
+		} else if (txl->type == TXL_ID) {
 			g_free(l->data);
-		else if (txl->type == TXL_USER)
+		} else if (txl->type == TXL_USER) {
 			txu_free(l->data);
+		}
+	}
+
 	g_slist_free(txl->list);
 	g_free(txl);
 }
 
 /**
- * Add a buddy if it is not allready added, set the status to logged in.
+ * Compare status elements
+ */
+static gint twitter_compare_elements(gconstpointer a, gconstpointer b)
+{
+	struct twitter_xml_status *a_status = (struct twitter_xml_status *) a;
+	struct twitter_xml_status *b_status = (struct twitter_xml_status *) b;
+
+	if (a_status->created_at < b_status->created_at) {
+		return -1;
+	} else if (a_status->created_at > b_status->created_at) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+/**
+ * Add a buddy if it is not already added, set the status to logged in.
  */
 static void twitter_add_buddy(struct im_connection *ic, char *name, const char *fullname)
 {
@@ -131,7 +155,7 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 			/* Necessary so that nicks always get translated to the
 			   exact Twitter username. */
 			imcb_buddy_nick_hint(ic, name, name);
-			imcb_chat_add_buddy(td->home_timeline_gc, name);
+			imcb_chat_add_buddy(td->timeline_gc, name);
 		} else if (g_strcasecmp(mode, "many") == 0)
 			imcb_buddy_status(ic, name, OPT_LOGGED_IN, NULL, NULL);
 	}
@@ -259,7 +283,7 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	}
 
 	/* Create the room now that we "logged in". */
-	if (!td->home_timeline_gc && g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
+	if (!td->timeline_gc && g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
 		twitter_groupchat_init(ic);
 
 	txl = g_new0(struct twitter_xml_list, 1);
@@ -435,14 +459,11 @@ static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_l
 static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_status *txs)
 {
 	struct xt_node *child, *rt = NULL;
-	gboolean truncated = FALSE;
 
 	// Walk over the nodes children.
 	for (child = node->children; child; child = child->next) {
 		if (g_strcasecmp("text", child->name) == 0) {
 			txs->text = g_memdup(child->text, child->text_len + 1);
-		} else if (g_strcasecmp("truncated", child->name) == 0 && child->text) {
-			truncated = bool2int(child->text);
 		} else if (g_strcasecmp("retweeted_status", child->name) == 0) {
 			rt = child;
 		} else if (g_strcasecmp("created_at", child->name) == 0) {
@@ -463,8 +484,9 @@ static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_
 		}
 	}
 
-	/* If it's a truncated retweet, get the original because dots suck. */
-	if (truncated && rt) {
+	/* If it's a (truncated) retweet, get the original. Even if the API claims it
+	   wasn't truncated because it may be lying. */
+	if (rt) {
 		struct twitter_xml_status *rtxs = g_new0(struct twitter_xml_status, 1);
 		if (twitter_xt_get_status(rt, rtxs) != XT_HANDLED) {
 			txs_free(rtxs);
@@ -474,6 +496,27 @@ static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_
 		g_free(txs->text);
 		txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
 		txs_free(rtxs);
+	} else {
+		struct xt_node *urls, *url;
+		
+		urls = xt_find_path(node, "entities/urls");
+		for (url = urls ? urls->children : NULL; url; url = url->next) {
+			/* "short" is a reserved word. :-P */
+			struct xt_node *kort = xt_find_node(url->children, "url");
+			struct xt_node *disp = xt_find_node(url->children, "display_url");
+			char *pos, *new;
+			
+			if (!kort || !kort->text || !disp || !disp->text ||
+			    !(pos = strstr(txs->text, kort->text)))
+				continue;
+			
+			*pos = '\0';
+			new = g_strdup_printf("%s%s &lt;%s&gt;%s", txs->text, kort->text,
+			                      disp->text, pos + strlen(kort->text));
+			
+			g_free(txs->text);
+			txs->text = new;
+		}
 	}
 
 	return XT_HANDLED;
@@ -521,32 +564,6 @@ static xt_status twitter_xt_get_status_list(struct im_connection *ic, struct xt_
 	return XT_HANDLED;
 }
 
-static void twitter_http_get_home_timeline(struct http_request *req);
-
-/**
- * Get the timeline.
- */
-void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
-{
-	struct twitter_data *td = ic->proto_data;
-
-	char *args[4];
-	args[0] = "cursor";
-	args[1] = g_strdup_printf("%lld", (long long) next_cursor);
-	if (td->home_timeline_id) {
-		args[2] = "since_id";
-		args[3] = g_strdup_printf("%llu", (long long unsigned int) td->home_timeline_id);
-	}
-
-	twitter_http(ic, TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, args,
-		     td->home_timeline_id ? 4 : 2);
-
-	g_free(args[1]);
-	if (td->home_timeline_id) {
-		g_free(args[3]);
-	}
-}
-
 static char *twitter_msg_add_id(struct im_connection *ic,
 				struct twitter_xml_status *txs, const char *prefix)
 {
@@ -585,7 +602,7 @@ static void twitter_groupchat_init(struct im_connection *ic)
 	struct twitter_data *td = ic->proto_data;
 	GSList *l;
 
-	td->home_timeline_gc = gc = imcb_chat_new(ic, "home/timeline");
+	td->timeline_gc = gc = imcb_chat_new(ic, "twitter/timeline");
 
 	name_hint = g_strdup_printf("%s_%s", td->prefix, ic->acc->user);
 	imcb_chat_name_hint(gc, name_hint);
@@ -594,7 +611,7 @@ static void twitter_groupchat_init(struct im_connection *ic)
 	for (l = ic->bee->users; l; l = l->next) {
 		bee_user_t *bu = l->data;
 		if (bu->ic == ic)
-			imcb_chat_add_buddy(td->home_timeline_gc, bu->handle);
+			imcb_chat_add_buddy(td->timeline_gc, bu->handle);
 	}
 }
 
@@ -607,12 +624,13 @@ static void twitter_groupchat(struct im_connection *ic, GSList * list)
 	GSList *l = NULL;
 	struct twitter_xml_status *status;
 	struct groupchat *gc;
+	guint64 last_id = 0;
 
 	// Create a new groupchat if it does not exsist.
-	if (!td->home_timeline_gc)
+	if (!td->timeline_gc)
 		twitter_groupchat_init(ic);
 
-	gc = td->home_timeline_gc;
+	gc = td->timeline_gc;
 	if (!gc->joined)
 		imcb_chat_add_buddy(gc, ic->acc->user);
 
@@ -620,26 +638,30 @@ static void twitter_groupchat(struct im_connection *ic, GSList * list)
 		char *msg;
 
 		status = l->data;
-		if (status->user == NULL || status->text == NULL)
+		if (status->user == NULL || status->text == NULL || last_id == status->id)
 			continue;
 
-		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
+		last_id = status->id;
 
 		strip_html(status->text);
+
 		msg = twitter_msg_add_id(ic, status, "");
 
 		// Say it!
-		if (g_strcasecmp(td->user, status->user->screen_name) == 0)
+		if (g_strcasecmp(td->user, status->user->screen_name) == 0) {
 			imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
-		else
+		} else {
+			twitter_add_buddy(ic, status->user->screen_name, status->user->name);
+
 			imcb_chat_msg(gc, status->user->screen_name,
 				      msg ? msg : status->text, 0, status->created_at);
+		}
 
 		g_free(msg);
 
-		// Update the home_timeline_id to hold the highest id, so that by the next request
+		// Update the timeline_id to hold the highest id, so that by the next request
 		// we won't pick up the updates already in the list.
-		td->home_timeline_id = MAX(td->home_timeline_id, status->id);
+		td->timeline_id = MAX(td->timeline_id, status->id);
 	}
 }
 
@@ -653,6 +675,7 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList * list
 	struct twitter_xml_status *status;
 	char from[MAX_STRING];
 	gboolean mode_one;
+	guint64 last_id = 0;
 
 	mode_one = g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "one") == 0;
 
@@ -665,6 +688,10 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList * list
 		char *prefix = NULL, *text = NULL;
 
 		status = l->data;
+		if (status->user == NULL || status->text == NULL || last_id == status->id)
+			continue;
+
+		last_id = status->id;
 
 		strip_html(status->text);
 		if (mode_one)
@@ -679,12 +706,163 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList * list
 			       mode_one ? from : status->user->screen_name,
 			       text ? text : status->text, 0, status->created_at);
 
-		// Update the home_timeline_id to hold the highest id, so that by the next request
+		// Update the timeline_id to hold the highest id, so that by the next request
 		// we won't pick up the updates already in the list.
-		td->home_timeline_id = MAX(td->home_timeline_id, status->id);
+		td->timeline_id = MAX(td->timeline_id, status->id);
 
 		g_free(text);
 		g_free(prefix);
+	}
+}
+
+static void twitter_http_get_home_timeline(struct http_request *req);
+static void twitter_http_get_mentions(struct http_request *req);
+
+/**
+ * Get the timeline with optionally mentions
+ */
+void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor)
+{
+	struct twitter_data *td = ic->proto_data;
+	gboolean include_mentions = set_getbool(&ic->acc->set, "fetch_mentions");
+
+	if (td->flags & TWITTER_DOING_TIMELINE) {
+		return;
+	}
+
+	td->flags |= TWITTER_DOING_TIMELINE;
+
+	twitter_get_home_timeline(ic, next_cursor);
+
+	if (include_mentions) {
+		twitter_get_mentions(ic, next_cursor);
+	}
+}
+
+/**
+ * Call this one after receiving timeline/mentions. Show to user once we have
+ * both.
+ */
+void twitter_flush_timeline(struct im_connection *ic)
+{
+	struct twitter_data *td = ic->proto_data;
+	gboolean include_mentions = set_getbool(&ic->acc->set, "fetch_mentions");
+	gboolean show_old_mentions = set_getbool(&ic->acc->set, "show_old_mentions");
+	struct twitter_xml_list *home_timeline = td->home_timeline_obj;
+	struct twitter_xml_list *mentions = td->mentions_obj;
+	GSList *output = NULL;
+	GSList *l;
+
+	if (!(td->flags & TWITTER_GOT_TIMELINE)) {
+		return;
+	}
+
+	if (include_mentions && !(td->flags & TWITTER_GOT_MENTIONS)) {
+		return;
+	}
+
+	if (home_timeline && home_timeline->list) {
+		for (l = home_timeline->list; l; l = g_slist_next(l)) {
+			output = g_slist_insert_sorted(output, l->data, twitter_compare_elements);
+		}
+	}
+
+	if (include_mentions && mentions && mentions->list) {
+		for (l = mentions->list; l; l = g_slist_next(l)) {
+			if (!show_old_mentions && output && twitter_compare_elements(l->data, output->data) < 0) {
+				continue;
+			}
+
+			output = g_slist_insert_sorted(output, l->data, twitter_compare_elements);
+		}
+	}
+
+	// See if the user wants to see the messages in a groupchat window or as private messages.
+	if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
+		twitter_groupchat(ic, output);
+	else
+		twitter_private_message_chat(ic, output);
+
+	g_slist_free(output);
+
+	if (home_timeline && home_timeline->list) {
+		txl_free(home_timeline);
+	}
+
+	if (mentions && mentions->list) {
+		txl_free(mentions);
+	}
+
+	td->flags &= ~(TWITTER_DOING_TIMELINE | TWITTER_GOT_TIMELINE | TWITTER_GOT_MENTIONS);
+}
+
+/**
+ * Get the timeline.
+ */
+void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
+{
+	struct twitter_data *td = ic->proto_data;
+
+	td->home_timeline_obj = NULL;
+	td->flags &= ~TWITTER_GOT_TIMELINE;
+
+	char *args[6];
+	args[0] = "cursor";
+	args[1] = g_strdup_printf("%lld", (long long) next_cursor);
+	args[2] = "include_entities";
+	args[3] = "true";
+	if (td->timeline_id) {
+		args[4] = "since_id";
+		args[5] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
+	}
+
+	if (twitter_http(ic, TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, args,
+		     td->timeline_id ? 6 : 4) == NULL) {
+		if (++td->http_fails >= 5)
+			imcb_error(ic, "Could not retrieve %s: %s",
+			           TWITTER_HOME_TIMELINE_URL, "connection failed");
+		td->flags |= TWITTER_GOT_TIMELINE;
+		twitter_flush_timeline(ic);
+	}
+
+	g_free(args[1]);
+	if (td->timeline_id) {
+		g_free(args[5]);
+	}
+}
+
+/**
+ * Get mentions.
+ */
+void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
+{
+	struct twitter_data *td = ic->proto_data;
+
+	td->mentions_obj = NULL;
+	td->flags &= ~TWITTER_GOT_MENTIONS;
+
+	char *args[6];
+	args[0] = "cursor";
+	args[1] = g_strdup_printf("%lld", (long long) next_cursor);
+	args[2] = "include_entities";
+	args[3] = "true";
+	if (td->timeline_id) {
+		args[4] = "since_id";
+		args[5] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
+	}
+
+	if (twitter_http(ic, TWITTER_MENTIONS_URL, twitter_http_get_mentions, ic, 0, args,
+		     td->timeline_id ? 6 : 4) == NULL) {
+		if (++td->http_fails >= 5)
+			imcb_error(ic, "Could not retrieve %s: %s",
+			           TWITTER_MENTIONS_URL, "connection failed");
+		td->flags |= TWITTER_GOT_MENTIONS;
+		twitter_flush_timeline(ic);
+	}
+
+	g_free(args[1]);
+	if (td->timeline_id) {
+		g_free(args[5]);
 	}
 }
 
@@ -712,14 +890,14 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	} else if (req->status_code == 401) {
 		imcb_error(ic, "Authentication failure");
 		imc_logout(ic, FALSE);
-		return;
+		goto end;
 	} else {
 		// It didn't go well, output the error and return.
 		if (++td->http_fails >= 5)
 			imcb_error(ic, "Could not retrieve %s: %s",
 				   TWITTER_HOME_TIMELINE_URL, twitter_parse_error(req));
 
-		return;
+		goto end;
 	}
 
 	txl = g_new0(struct twitter_xml_list, 1);
@@ -732,15 +910,64 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	twitter_xt_get_status_list(ic, parser->root, txl);
 	xt_free(parser);
 
-	// See if the user wants to see the messages in a groupchat window or as private messages.
-	if (txl->list == NULL);
-	else if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
-		twitter_groupchat(ic, txl->list);
-	else
-		twitter_private_message_chat(ic, txl->list);
+	td->home_timeline_obj = txl;
 
-	// Free the structure.  
-	txl_free(txl);
+      end:
+	td->flags |= TWITTER_GOT_TIMELINE;
+
+	twitter_flush_timeline(ic);
+}
+
+/**
+ * Callback for getting mentions.
+ */
+static void twitter_http_get_mentions(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	struct twitter_data *td;
+	struct xt_parser *parser;
+	struct twitter_xml_list *txl;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(twitter_connections, ic))
+		return;
+
+	td = ic->proto_data;
+
+	// Check if the HTTP request went well.
+	if (req->status_code == 200) {
+		td->http_fails = 0;
+		if (!(ic->flags & OPT_LOGGED_IN))
+			imcb_connected(ic);
+	} else if (req->status_code == 401) {
+		imcb_error(ic, "Authentication failure");
+		imc_logout(ic, FALSE);
+		goto end;
+	} else {
+		// It didn't go well, output the error and return.
+		if (++td->http_fails >= 5)
+			imcb_error(ic, "Could not retrieve %s: %s",
+				   TWITTER_MENTIONS_URL, twitter_parse_error(req));
+
+		goto end;
+	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = NULL;
+
+	// Parse the data.
+	parser = xt_new(NULL, txl);
+	xt_feed(parser, req->reply_body, req->body_size);
+	// The root <statuses> node should hold the list of statuses <status>
+	twitter_xt_get_status_list(ic, parser->root, txl);
+	xt_free(parser);
+
+	td->mentions_obj = txl;
+
+      end:
+	td->flags |= TWITTER_GOT_MENTIONS;
+
+	twitter_flush_timeline(ic);
 }
 
 /**

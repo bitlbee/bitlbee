@@ -91,7 +91,7 @@ static void irc_cmd_nick( irc_t *irc, char **cmd )
 			irc_setpass( irc, NULL );
 			irc->status &= ~USTATUS_IDENTIFIED;
 			irc_umode_set( irc, "-R", 1 );
-			irc_usermsg( irc, "Changing nicks resets your identify status. "
+			irc_rootmsg( irc, "Changing nicks resets your identify status. "
 			             "Re-identify or register a new account if you want "
 			             "your configuration to be saved. See \x02help "
 			             "nick_changes\x02." );
@@ -432,13 +432,13 @@ static void irc_cmd_oper_hack( irc_t *irc, char **cmd )
 			if( strcmp( a->pass, PASSWORD_PENDING ) == 0 )
 			{
 				set_setstr( &a->set, "password", password );
-				irc_usermsg( irc, "Password added to IM account "
-				             "%s(%s)", a->prpl->name, a->user );
+				irc_rootmsg( irc, "Password added to IM account "
+				             "%s", a->tag );
 				/* The IRC client may expect this. 491 suggests the OPER
 				   password was wrong, so the client won't expect a +o.
 				   It may however repeat the password prompt. We'll see. */
 				irc_send_num( irc, 491, ":Password added to IM account "
-				              "%s(%s)", a->prpl->name, a->user );
+				              "%s", a->tag );
 			}
 	}
 	else if( irc->status & OPER_HACK_IDENTIFY )

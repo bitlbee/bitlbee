@@ -29,12 +29,12 @@
 #include "url.h"
 
 #define twitter_msg( ic, fmt... ) \
-	do {                                                        \
-		struct twitter_data *td = ic->proto_data;           \
-		if( td->home_timeline_gc )                          \
-			imcb_chat_log( td->home_timeline_gc, fmt ); \
-		else                                                \
-			imcb_log( ic, fmt );                        \
+	do {                                            \
+		struct twitter_data *td = ic->proto_data;   \
+		if( td->timeline_gc )                       \
+			imcb_chat_log( td->timeline_gc, fmt );  \
+		else                                        \
+			imcb_log( ic, fmt );                    \
 	} while( 0 );
 
 GSList *twitter_connections = NULL;
@@ -51,7 +51,7 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 		return 0;
 
 	// Do stuff..
-	twitter_get_home_timeline(ic, -1);
+	twitter_get_timeline(ic, -1);
 
 	// If we are still logged in run this function again after timeout.
 	return (ic->flags & OPT_LOGGED_IN) == OPT_LOGGED_IN;
@@ -68,7 +68,8 @@ static void twitter_main_loop_start(struct im_connection *ic)
 
 	// Queue the main_loop
 	// Save the return value, so we can remove the timeout on logout.
-	td->main_loop_id = b_timeout_add(60000, twitter_main_loop, ic);
+	td->main_loop_id =
+	    b_timeout_add(set_getint(&ic->acc->set, "fetch_interval") * 1000, twitter_main_loop, ic);
 }
 
 static void twitter_oauth_start(struct im_connection *ic);
@@ -76,6 +77,8 @@ static void twitter_oauth_start(struct im_connection *ic);
 void twitter_login_finish(struct im_connection *ic)
 {
 	struct twitter_data *td = ic->proto_data;
+
+	td->flags &= ~TWITTER_DOING_TIMELINE;
 
 	if (set_getbool(&ic->acc->set, "oauth") && !td->oauth_info)
 		twitter_oauth_start(ic);
@@ -89,16 +92,16 @@ void twitter_login_finish(struct im_connection *ic)
 }
 
 static const struct oauth_service twitter_oauth = {
-	"http://api.twitter.com/oauth/request_token",
-	"http://api.twitter.com/oauth/access_token",
+	"https://api.twitter.com/oauth/request_token",
+	"https://api.twitter.com/oauth/access_token",
 	"https://api.twitter.com/oauth/authorize",
 	.consumer_key = "xsDNKJuNZYkZyMcu914uEA",
 	.consumer_secret = "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo",
 };
 
 static const struct oauth_service identica_oauth = {
-	"http://identi.ca/api/oauth/request_token",
-	"http://identi.ca/api/oauth/access_token",
+	"https://identi.ca/api/oauth/request_token",
+	"https://identi.ca/api/oauth/access_token",
 	"https://identi.ca/api/oauth/authorize",
 	.consumer_key = "e147ff789fcbd8a5a07963afbb43f9da",
 	.consumer_secret = "c596267f277457ec0ce1ab7bb788d828",
@@ -215,7 +218,6 @@ static void twitter_init(account_t * acc)
 		def_url = TWITTER_API_URL;
 		def_oauth = "true";
 	} else {		/* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
-
 		def_url = IDENTICA_API_URL;
 		def_oauth = "false";
 	}
@@ -227,6 +229,11 @@ static void twitter_init(account_t * acc)
 
 	s = set_add(&acc->set, "commands", "true", set_eval_bool, acc);
 
+	s = set_add(&acc->set, "fetch_interval", "60", set_eval_int, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "fetch_mentions", "true", set_eval_bool, acc);
+
 	s = set_add(&acc->set, "message_length", "140", set_eval_int, acc);
 
 	s = set_add(&acc->set, "mode", "chat", set_eval_mode, acc);
@@ -234,6 +241,8 @@ static void twitter_init(account_t * acc)
 
 	s = set_add(&acc->set, "show_ids", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "show_old_mentions", "true", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "oauth", def_oauth, set_eval_bool, acc);
 }
@@ -316,8 +325,8 @@ static void twitter_logout(struct im_connection *ic)
 	// Remove the main_loop function from the function queue.
 	b_event_remove(td->main_loop_id);
 
-	if (td->home_timeline_gc)
-		imcb_chat_free(td->home_timeline_gc);
+	if (td->timeline_gc)
+		imcb_chat_free(td->timeline_gc);
 
 	if (td) {
 		oauth_info_free(td->oauth_info);
@@ -403,13 +412,13 @@ static void twitter_chat_leave(struct groupchat *c)
 {
 	struct twitter_data *td = c->ic->proto_data;
 
-	if (c != td->home_timeline_gc)
+	if (c != td->timeline_gc)
 		return;		/* WTF? */
 
 	/* If the user leaves the channel: Fine. Rejoin him/her once new
 	   tweets come in. */
-	imcb_chat_free(td->home_timeline_gc);
-	td->home_timeline_gc = NULL;
+	imcb_chat_free(td->timeline_gc);
+	td->timeline_gc = NULL;
 }
 
 static void twitter_keepalive(struct im_connection *ic)
@@ -464,15 +473,14 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
 		guint64 id;
 
-		if (cmd[1])
-			id = g_ascii_strtoull(cmd[1], NULL, 10);
-		else
-			id = td->last_status_id;
-
-		/* TODO: User feedback. */
-		if (id)
+		if (cmd[1] == NULL)
+			twitter_status_destroy(ic, td->last_status_id);
+		else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1) {
+			if (id < TWITTER_LOG_LENGTH && td->log)
+				id = td->log[id].id;
+			
 			twitter_status_destroy(ic, id);
-		else
+		} else
 			twitter_msg(ic, "Could not undo last action");
 
 		g_free(cmds);
@@ -490,11 +498,14 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		bee_user_t *bu;
 		guint64 id;
 
-		if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
+		if (g_str_has_prefix(cmd[1], "#") &&
+		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
+			if (id < TWITTER_LOG_LENGTH && td->log)
+				id = td->log[id].id;
+		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
 		    (tud = bu->data) && tud->last_id)
 			id = tud->last_id;
-		else {
-			id = g_ascii_strtoull(cmd[1], NULL, 10);
+		else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1){
 			if (id < TWITTER_LOG_LENGTH && td->log)
 				id = td->log[id].id;
 		}
@@ -513,7 +524,15 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		bee_user_t *bu = NULL;
 		guint64 id = 0;
 
-		if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
+		if (g_str_has_prefix(cmd[1], "#") &&
+		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1 &&
+		    (id < TWITTER_LOG_LENGTH) && td->log) {
+			bu = td->log[id].bu;
+			if (g_slist_find(ic->bee->users, bu))
+				id = td->log[id].id;
+			else
+				bu = NULL;
+		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
 		    (tud = bu->data) && tud->last_id) {
 			id = tud->last_id;
 		} else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1 &&
@@ -524,6 +543,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 			else
 				bu = NULL;
 		}
+
 		if (!id || !bu) {
 			twitter_msg(ic, "User `%s' does not exist or didn't "
 				    "post any statuses recently", cmd[1]);

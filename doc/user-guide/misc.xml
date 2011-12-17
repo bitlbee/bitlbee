@@ -190,9 +190,9 @@ also have to set the <emphasis>account</emphasis> setting. Example:
 </para>
 
 <ircexample>
-	<ircline nick="wilmer">chan set &amp;wlm fill_by account</ircline>
+	<ircline nick="wilmer">chan &amp;wlm set fill_by account</ircline>
 	<ircline nick="root">fill_by = `account'</ircline>
-	<ircline nick="wilmer">chan set &amp;wlm account msn</ircline>
+	<ircline nick="wilmer">chan &amp;wlm set account msn</ircline>
 	<ircline nick="root">account = `msn'</ircline>
 </ircexample>
 
@@ -203,7 +203,7 @@ also/just offline contacts. Example:
 </para>
 
 <ircexample>
-	<ircline nick="wilmer">chan set &amp;offline show_users offline</ircline>
+	<ircline nick="wilmer">chan &amp;offline set show_users offline</ircline>
 	<ircline nick="root">show_users = `offline'</ircline>
 </ircexample>
 
