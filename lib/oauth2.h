@@ -31,22 +31,17 @@ struct oauth2_service
 	char *auth_url;
 	char *token_url;
 	char *redirect_url;
+	char *scope;
 	char *consumer_key;
 	char *consumer_secret;
 };
-
-/* Currently suitable for authenticating to Google Talk only, and only for
-   accounts that have 2-factor authorization enabled. */
-extern struct oauth2_service oauth2_service_google;
-
-extern struct oauth2_service oauth2_service_facebook;
 
 #define OAUTH2_AUTH_CODE "authorization_code"
 #define OAUTH2_AUTH_REFRESH "refresh_token"
 
 /* Generate a URL the user should open in his/her browser to get an
    authorization code. */
-char *oauth2_url( const struct oauth2_service *sp, const char *scope );
+char *oauth2_url( const struct oauth2_service *sp );
 
 /* Exchanges an auth code or refresh token for an access token.
    auth_type is one of the two OAUTH2_AUTH_.. constants above. */

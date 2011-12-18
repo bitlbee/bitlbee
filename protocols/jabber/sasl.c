@@ -28,13 +28,42 @@
 #include "oauth2.h"
 #include "oauth.h"
 
+const struct oauth2_service oauth2_service_google =
+{
+	"https://accounts.google.com/o/oauth2/auth",
+	"https://accounts.google.com/o/oauth2/token",
+	"urn:ietf:wg:oauth:2.0:oob",
+	"https://www.googleapis.com/auth/googletalk",
+	"783993391592.apps.googleusercontent.com",
+	"6C-Zgf7Tr7gEQTPlBhMUgo7R",
+};
+const struct oauth2_service oauth2_service_facebook =
+{
+	"https://www.facebook.com/dialog/oauth",
+	"https://graph.facebook.com/oauth/access_token",
+	"http://www.bitlbee.org/main.php/Facebook/oauth2.html",
+	"offline_access,xmpp_login",
+	"126828914005625",
+	"4b100f0f244d620bf3f15f8b217d4c32",
+};
+const struct oauth2_service oauth2_service_mslive =
+{
+	"https://oauth.live.com/authorize",
+	"https://oauth.live.com/token",
+	"http://www.bitlbee.org/main.php/Messenger/oauth2.html",
+	"wl.messenger",
+	"000000004C06FCD1",
+	"IRKlBPzJJAWcY-TbZjiTEJu9tn7XCFaV",
+};
+
 xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	char *s;
-	int sup_plain = 0, sup_digest = 0, sup_oauth2 = 0, sup_fb = 0;
+	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_fb = 0, sup_ms = 0;
+	int want_oauth = FALSE;
 	
 	if( !sasl_supported( ic ) )
 	{
@@ -61,14 +90,16 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		if( c->text && g_strcasecmp( c->text, "DIGEST-MD5" ) == 0 )
 			sup_digest = 1;
 		if( c->text && g_strcasecmp( c->text, "X-OAUTH2" ) == 0 )
-			sup_oauth2 = 1;
+			sup_gtalk = 1;
 		if( c->text && g_strcasecmp( c->text, "X-FACEBOOK-PLATFORM" ) == 0 )
 			sup_fb = 1;
+		if( c->text && g_strcasecmp( c->text, "X-MESSENGER-OAUTH2" ) == 0 )
+			sup_ms = 1;
 		
 		c = c->next;
 	}
 	
-	if( !sup_plain && !sup_digest )
+	if( !sup_plain && !sup_digest && !sup_gtalk && !sup_fb && !sup_ms )
 	{
 		imcb_error( ic, "No known SASL authentication schemes supported" );
 		imc_logout( ic, FALSE );
@@ -77,18 +108,11 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	
 	reply = xt_new_node( "auth", NULL, NULL );
 	xt_add_attr( reply, "xmlns", XMLNS_SASL );
+	want_oauth = set_getbool( &ic->acc->set, "oauth" );
 	
-	if( set_getbool( &ic->acc->set, "oauth" ) )
+	if( sup_gtalk && want_oauth )
 	{
 		int len;
-		
-		if( !sup_oauth2 )
-		{
-			imcb_error( ic, "OAuth requested, but not supported by server" );
-			imc_logout( ic, FALSE );
-			xt_free_node( reply );
-			return XT_ABORT;
-		}
 		
 		/* X-OAUTH2 is, not *the* standard OAuth2 SASL/XMPP implementation.
 		   It's currently used by GTalk and vaguely documented on
@@ -104,10 +128,23 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		reply->text_len = strlen( reply->text );
 		g_free( s );
 	}
-	else if( sup_fb && strstr( ic->acc->pass, "session_key=" ) )
+	else if( sup_ms && want_oauth )
+	{
+		xt_add_attr( reply, "mechanism", "X-MESSENGER-OAUTH2" );
+		reply->text = g_strdup( jd->oauth2_access_token );
+		reply->text_len = strlen( jd->oauth2_access_token );
+	}
+	else if( sup_fb && want_oauth && strstr( ic->acc->pass, "session_key=" ) )
 	{
 		xt_add_attr( reply, "mechanism", "X-FACEBOOK-PLATFORM" );
 		jd->flags |= JFLAG_SASL_FB;
+	}
+	else if( want_oauth )
+	{
+		imcb_error( ic, "OAuth requested, but not supported by server" );
+		imc_logout( ic, FALSE );
+		xt_free_node( reply );
+		return XT_ABORT;
 	}
 	else if( sup_digest )
 	{
@@ -427,14 +464,14 @@ gboolean sasl_supported( struct im_connection *ic )
 
 void sasl_oauth2_init( struct im_connection *ic )
 {
+	struct jabber_data *jd = ic->proto_data;
 	char *msg, *url;
 	
 	imcb_log( ic, "Starting OAuth authentication" );
 	
 	/* Temporary contact, just used to receive the OAuth response. */
 	imcb_add_buddy( ic, "jabber_oauth", NULL );
-	url = oauth2_url( &oauth2_service_google,
-	                  "https://www.googleapis.com/auth/googletalk" );
+	url = oauth2_url( jd->oauth2_service );
 	msg = g_strdup_printf( "Open this URL in your browser to authenticate: %s", url );
 	imcb_buddy_msg( ic, "jabber_oauth", msg, 0, 0 );
 	imcb_buddy_msg( ic, "jabber_oauth", "Respond to this message with the returned "
@@ -456,6 +493,7 @@ static void sasl_oauth2_got_token( gpointer data, const char *access_token, cons
 
 int sasl_oauth2_get_refresh_token( struct im_connection *ic, const char *msg )
 {
+	struct jabber_data *jd = ic->proto_data;
 	char *code;
 	int ret;
 	
@@ -467,7 +505,7 @@ int sasl_oauth2_get_refresh_token( struct im_connection *ic, const char *msg )
 	
 	code = g_strdup( msg );
 	g_strstrip( code );
-	ret = oauth2_access_token( &oauth2_service_google, OAUTH2_AUTH_CODE,
+	ret = oauth2_access_token( jd->oauth2_service, OAUTH2_AUTH_CODE,
 	                           code, sasl_oauth2_got_token, ic );
 	
 	g_free( code );
@@ -476,7 +514,9 @@ int sasl_oauth2_get_refresh_token( struct im_connection *ic, const char *msg )
 
 int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token )
 {
-	return oauth2_access_token( &oauth2_service_google, OAUTH2_AUTH_REFRESH,
+	struct jabber_data *jd = ic->proto_data;
+	
+	return oauth2_access_token( jd->oauth2_service, OAUTH2_AUTH_REFRESH,
 	                            refresh_token, sasl_oauth2_got_token, ic );
 }
 

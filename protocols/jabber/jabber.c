@@ -144,6 +144,13 @@ static void jabber_login( account_t *acc )
 	{
 		jd->fd = jd->r_inpa = jd->w_inpa = -1;
 		
+		if( strstr( jd->server, ".live.com" ) )
+			jd->oauth2_service = &oauth2_service_mslive;
+		else if( strstr( jd->server, ".facebook.com" ) )
+			jd->oauth2_service = &oauth2_service_facebook;
+		else
+			jd->oauth2_service = &oauth2_service_google;
+		
 		/* For the first login with OAuth, we have to authenticate via the browser.
 		   For subsequent logins, exchange the refresh token for a valid access
 		   token (even though the last one maybe didn't expire yet). */

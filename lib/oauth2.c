@@ -27,27 +27,10 @@
 #include "oauth.h"
 #include "url.h"
 
-struct oauth2_service oauth2_service_google =
-{
-	"https://accounts.google.com/o/oauth2/auth",
-	"https://accounts.google.com/o/oauth2/token",
-	"urn:ietf:wg:oauth:2.0:oob",
-	"783993391592.apps.googleusercontent.com",
-	"6C-Zgf7Tr7gEQTPlBhMUgo7R",
-};
-struct oauth2_service oauth2_service_facebook =
-{
-	"https://www.facebook.com/dialog/oauth",
-	"https://graph.facebook.com/oauth/access_token",
-	"http://www.bitlbee.org/main.php/fb.html",
-	"126828914005625",
-	"4b100f0f244d620bf3f15f8b217d4c32",
-};
-
-char *oauth2_url( const struct oauth2_service *sp, const char *scope )
+char *oauth2_url( const struct oauth2_service *sp )
 {
 	return g_strconcat( sp->auth_url,
-	                    "?scope=", scope,
+	                    "?scope=", sp->scope,
 	                    "&response_type=code"
 	                    "&redirect_uri=", sp->redirect_url, 
 	                    "&client_id=", sp->consumer_key,
@@ -120,10 +103,15 @@ static void oauth2_access_token_done( struct http_request *req )
 	struct oauth2_access_token_data *cb_data = req->data;
 	char *atoken = NULL, *rtoken = NULL;
 	
+	if( getenv( "BITLBEE_DEBUG" ) && req->reply_body )
+		printf( "%s\n", req->reply_body );
+	
 	if( req->status_code == 200 )
 	{
 		atoken = oauth2_json_dumb_get( req->reply_body, "access_token" );
 		rtoken = oauth2_json_dumb_get( req->reply_body, "refresh_token" );
+		if( getenv( "BITLBEE_DEBUG" ) )
+			printf( "Extracted atoken=%s rtoken=%s\n", atoken, rtoken );
 	}
 	cb_data->func( cb_data->data, atoken, rtoken );
 	g_free( atoken );
