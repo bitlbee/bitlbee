@@ -151,16 +151,27 @@ static void jabber_login( account_t *acc )
 		else
 			jd->oauth2_service = &oauth2_service_google;
 		
-		/* For the first login with OAuth, we have to authenticate via the browser.
-		   For subsequent logins, exchange the refresh token for a valid access
-		   token (even though the last one maybe didn't expire yet). */
-		if( strncmp( acc->pass, "refresh_token=", 14 ) != 0 )
+		/* First see if we have a refresh token, in which case any
+		   access token we *might* have has probably expired already
+		   anyway. */
+		if( strstr( acc->pass, "refresh_token=" ) )
+		{
+			sasl_oauth2_refresh( ic, acc->pass + 14 );
+		}
+		/* If we don't have a refresh token, let's hope the access
+		   token is still usable. */
+		else if( strstr( acc->pass, "access_token=" ) )
+		{
+			sasl_oauth2_load_access_token( ic );
+			jabber_connect( ic );
+		}
+		/* If we don't have any, start the OAuth process now. Don't
+		   even open an XMPP connection yet. */
+		else
 		{
 			sasl_oauth2_init( ic );
 			ic->flags |= OPT_SLOW_LOGIN;
 		}
-		else
-			sasl_oauth2_refresh( ic, acc->pass + 14 );
 	}
 	else
 		jabber_connect( ic );

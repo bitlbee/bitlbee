@@ -51,7 +51,7 @@ const struct oauth2_service oauth2_service_mslive =
 	"https://oauth.live.com/authorize",
 	"https://oauth.live.com/token",
 	"http://www.bitlbee.org/main.php/Messenger/oauth2.html",
-	"wl.messenger",
+	"wl.offline_access%20wl.messenger",
 	"000000004C06FCD1",
 	"IRKlBPzJJAWcY-TbZjiTEJu9tn7XCFaV",
 };
@@ -87,13 +87,13 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	{
 		if( c->text && g_strcasecmp( c->text, "PLAIN" ) == 0 )
 			sup_plain = 1;
-		if( c->text && g_strcasecmp( c->text, "DIGEST-MD5" ) == 0 )
+		else if( c->text && g_strcasecmp( c->text, "DIGEST-MD5" ) == 0 )
 			sup_digest = 1;
-		if( c->text && g_strcasecmp( c->text, "X-OAUTH2" ) == 0 )
+		else if( c->text && g_strcasecmp( c->text, "X-OAUTH2" ) == 0 )
 			sup_gtalk = 1;
-		if( c->text && g_strcasecmp( c->text, "X-FACEBOOK-PLATFORM" ) == 0 )
+		else if( c->text && g_strcasecmp( c->text, "X-FACEBOOK-PLATFORM" ) == 0 )
 			sup_fb = 1;
-		if( c->text && g_strcasecmp( c->text, "X-MESSENGER-OAUTH2" ) == 0 )
+		else if( c->text && g_strcasecmp( c->text, "X-MESSENGER-OAUTH2" ) == 0 )
 			sup_ms = 1;
 		
 		c = c->next;
@@ -134,7 +134,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		reply->text = g_strdup( jd->oauth2_access_token );
 		reply->text_len = strlen( jd->oauth2_access_token );
 	}
-	else if( sup_fb && want_oauth && strstr( ic->acc->pass, "session_key=" ) )
+	else if( sup_fb && want_oauth )
 	{
 		xt_add_attr( reply, "mechanism", "X-FACEBOOK-PLATFORM" );
 		jd->flags |= JFLAG_SASL_FB;
@@ -291,40 +291,23 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 		   Mechanism is described on http://developers.facebook.com/docs/chat/
 		   and in their Python module. It's all mostly useless because the tokens
 		   expire after 24h. */
-		GSList *p_in = NULL, *p_out = NULL, *p;
-		md5_state_t md5;
-		char time[33], *token;
-		const char *secret;
+		GSList *p_in = NULL, *p_out = NULL;
+		char time[33];
 		
 		oauth_params_parse( &p_in, dec );
 		oauth_params_add( &p_out, "nonce", oauth_params_get( &p_in, "nonce" ) );
 		oauth_params_add( &p_out, "method", oauth_params_get( &p_in, "method" ) );
 		oauth_params_free( &p_in );
 		
-		token = g_strdup( ic->acc->pass );
-		oauth_params_parse( &p_in, token );
-		g_free( token );
-		oauth_params_add( &p_out, "session_key", oauth_params_get( &p_in, "session_key" ) );
-		
 		g_snprintf( time, sizeof( time ), "%lld", (long long) ( gettime() * 1000 ) );
 		oauth_params_add( &p_out, "call_id", time );
 		oauth_params_add( &p_out, "api_key", oauth2_service_facebook.consumer_key );
 		oauth_params_add( &p_out, "v", "1.0" );
 		oauth_params_add( &p_out, "format", "XML" );
-		
-		md5_init( &md5 );
-		for( p = p_out; p; p = p->next )
-			md5_append( &md5, p->data, strlen( p->data ) );
-		
-		secret = oauth_params_get( &p_in, "secret" );
-		if( secret )
-			md5_append( &md5, (unsigned char*) secret, strlen( secret ) );
-		md5_finish_ascii( &md5, time );
-		oauth_params_add( &p_out, "sig", time );
+		oauth_params_add( &p_out, "access_token", jd->oauth2_access_token );
 		
 		reply = oauth_params_string( p_out );
 		oauth_params_free( &p_out );
-		oauth_params_free( &p_in );
 	}
 	else if( !( s = sasl_get_part( dec, "rspauth" ) ) )
 	{
@@ -518,6 +501,18 @@ int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token )
 	
 	return oauth2_access_token( jd->oauth2_service, OAUTH2_AUTH_REFRESH,
 	                            refresh_token, sasl_oauth2_got_token, ic );
+}
+
+int sasl_oauth2_load_access_token( struct im_connection *ic )
+{
+	struct jabber_data *jd = ic->proto_data;
+	GSList *p_in = NULL;
+	
+	oauth_params_parse( &p_in, ic->acc->pass );
+	jd->oauth2_access_token = g_strdup( oauth_params_get( &p_in, "access_token" ) );
+	oauth_params_free( &p_in );
+	
+	return jd->oauth2_access_token != NULL;
 }
 
 static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token )
