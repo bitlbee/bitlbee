@@ -291,7 +291,7 @@ gboolean jabber_connected_ssl( gpointer data, int returncode, void *source, b_in
 		   already, set it to NULL here to prevent a double cleanup: */
 		jd->ssl = NULL;
 		
-		if( returncode & VERIFY_CERT_INVALID)
+		if( returncode != 0 )
 		{
 			char *err = ssl_verify_strerror( returncode );
 			imcb_error( ic, "Certificate verification problem 0x%x: %s",
