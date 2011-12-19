@@ -36,14 +36,25 @@
 
 /* Some generic error codes. Especially SSL_AGAIN is important if you
    want to do asynchronous I/O. */
+#define NSS_VERIFY_ERROR -2
+#define OPENSSL_VERIFY_ERROR -1
 #define SSL_OK            0
 #define SSL_NOHANDSHAKE   1
 #define SSL_AGAIN         2
+#define VERIFY_CERT_ERROR 2
+#define VERIFY_CERT_INVALID 4
+#define VERIFY_CERT_REVOKED 8
+#define VERIFY_CERT_SIGNER_NOT_FOUND 16
+#define VERIFY_CERT_SIGNER_NOT_CA 32
+#define VERIFY_CERT_INSECURE_ALGORITHM 64
+#define VERIFY_CERT_NOT_ACTIVATED 128
+#define VERIFY_CERT_EXPIRED 256
+#define VERIFY_CERT_WRONG_HOSTNAME 512
 
 extern int ssl_errno;
 
 /* This is what your callback function should look like. */
-typedef gboolean (*ssl_input_function)(gpointer, void*, b_input_condition);
+typedef gboolean (*ssl_input_function)(gpointer, int, void*, b_input_condition);
 
 
 /* Perform any global initialization the SSL library might need. */
@@ -56,7 +67,7 @@ G_MODULE_EXPORT void *ssl_connect( char *host, int port, ssl_input_function func
 
 /* Start an SSL session on an existing fd. Useful for STARTTLS functionality,
    for example in Jabber. */
-G_MODULE_EXPORT void *ssl_starttls( int fd, ssl_input_function func, gpointer data );
+G_MODULE_EXPORT void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function func, gpointer data );
 
 /* Obviously you need special read/write functions to read data. */
 G_MODULE_EXPORT int ssl_read( void *conn, char *buf, int len );

@@ -66,6 +66,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->ft_max_kbps = G_MAXUINT;
 	conf->ft_listen = NULL;
 	conf->protocols = NULL;
+	conf->cafile = NULL;
 	proxytype = 0;
 	
 	i = conf_loadini( conf, global.conf_file );
@@ -338,6 +339,11 @@ static int conf_loadini( conf_t *conf, char *file )
 			{
 				g_strfreev( conf->protocols );
 				conf->protocols = g_strsplit_set( ini->value, " \t,;", -1 );
+			}
+			else if( g_strcasecmp( ini->key, "cafile" ) == 0 )
+			{
+				g_free( conf->cafile );
+				conf->cafile = g_strdup( ini->value );
 			}
 			else
 			{

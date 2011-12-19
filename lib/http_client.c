@@ -32,7 +32,7 @@
 
 
 static gboolean http_connected( gpointer data, int source, b_input_condition cond );
-static gboolean http_ssl_connected( gpointer data, void *source, b_input_condition cond );
+static gboolean http_ssl_connected( gpointer data, int returncode, void *source, b_input_condition cond );
 static gboolean http_incoming_data( gpointer data, int source, b_input_condition cond );
 static void http_free( struct http_request *req );
 
@@ -169,8 +169,9 @@ error:
 	return FALSE;
 }
 
-static gboolean http_ssl_connected( gpointer data, void *source, b_input_condition cond )
+static gboolean http_ssl_connected( gpointer data, int returncode, void *source, b_input_condition cond )
 {
+	//The returncode is not used at the moment.
 	struct http_request *req = data;
 	
 	if( source == NULL )

@@ -275,7 +275,7 @@ gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition c
 	return jabber_start_stream( ic );
 }
 
-gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition cond )
+gboolean jabber_connected_ssl( gpointer data, int returncode, void *source, b_input_condition cond )
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd;
@@ -292,6 +292,43 @@ gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition co
 		jd->ssl = NULL;
 		
 		imcb_error( ic, "Could not connect to server" );
+		if (returncode ==  OPENSSL_VERIFY_ERROR )
+		{
+			imcb_error( ic, "This BitlBee server is built agains the OpenSSL library." );
+			imcb_error( ic, "Unfortunately certificate verification is only supported when built against GnuTLS for now." );
+			imc_logout( ic, FALSE );
+		}
+		else if (returncode ==  NSS_VERIFY_ERROR )
+		{
+			imcb_error( ic, "This BitlBee server is built agains the NSS library." );
+			imcb_error( ic, "Unfortunately certificate verification is only supported when built against GnuTLS for now." );
+			imc_logout( ic, FALSE );
+		}
+		else if (returncode == VERIFY_CERT_ERROR )
+		{
+			imcb_error( ic, "An error occured during the certificate verification." );
+			imc_logout( ic, FALSE );
+		}
+		else if (returncode  & VERIFY_CERT_INVALID)
+		{
+			imcb_error( ic, "Unable to verify peer's certificate." );
+			if (returncode & VERIFY_CERT_REVOKED)
+				imcb_error( ic, "The certificate has been revoked." );
+			if (returncode & VERIFY_CERT_SIGNER_NOT_FOUND)
+				imcb_error( ic, "The certificate hasn't got a known issuer." );
+			if (returncode & VERIFY_CERT_SIGNER_NOT_CA)
+				imcb_error( ic, "The certificate's issuer is not a CA." );
+			if (returncode & VERIFY_CERT_INSECURE_ALGORITHM)
+				imcb_error( ic, "The certificate uses an insecure algorithm." );
+			if (returncode & VERIFY_CERT_NOT_ACTIVATED)
+				imcb_error( ic, "The certificate has not been activated." );
+			if (returncode & VERIFY_CERT_EXPIRED)
+				imcb_error( ic, "The certificate has expired." );
+			if (returncode & VERIFY_CERT_WRONG_HOSTNAME)
+				imcb_error( ic, "The hostname specified in the certificate doesn't match the server name." );
+			imc_logout( ic, FALSE );
+		}
+		else
 		imc_logout( ic, TRUE );
 		return FALSE;
 	}
@@ -396,7 +433,7 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd = ic->proto_data;
-	char *xmlns;
+	char *xmlns, *tlsname;
 	
 	xmlns = xt_find_attr( node, "xmlns" );
 	
@@ -422,7 +459,17 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 	imcb_log( ic, "Converting stream to TLS" );
 	
 	jd->flags |= JFLAG_STARTTLS_DONE;
-	jd->ssl = ssl_starttls( jd->fd, jabber_connected_ssl, ic );
+
+	/* If the user specified a server for the account, use this server as the 
+	 * hostname in the certificate verification. Else we use the domain from 
+	 * the username. */
+	if( ic->acc->server && *ic->acc->server )
+		tlsname = ic->acc->server;
+	else
+		tlsname = jd->server;
+	
+	jd->ssl = ssl_starttls( jd->fd, tlsname, set_getbool( &ic->acc->set, "tls_verify" ),
+	                        jabber_connected_ssl, ic );
 	
 	return XT_HANDLED;
 }

@@ -55,7 +55,7 @@ int ssl_getfd( void *conn )
 	return( -1 );
 }
 
-void *ssl_starttls( int fd, ssl_input_function func, gpointer data ) 
+void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function func, gpointer data ) 
 {
 	return NULL;
 }

@@ -1156,7 +1156,7 @@ gboolean skype_start_stream(struct im_connection *ic)
 	return st;
 }
 
-gboolean skype_connected(gpointer data, void *source, b_input_condition cond)
+gboolean skype_connected(gpointer data, int returncode, void *source, b_input_condition cond)
 {
 	struct im_connection *ic = data;
 	struct skype_data *sd = ic->proto_data;
