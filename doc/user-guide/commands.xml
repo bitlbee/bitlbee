@@ -647,7 +647,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="auto_connect" type="boolean" scope="both">
+	<bitlbee-setting name="auto_connect" type="boolean" scope="account,global">
 		<default>true</default>
 
 		<description>
@@ -671,7 +671,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="auto_reconnect" type="boolean" scope="both">
+	<bitlbee-setting name="auto_reconnect" type="boolean" scope="account,global">
 		<default>true</default>
 
 		<description>
@@ -725,7 +725,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="away" type="string" scope="both">
+	<bitlbee-setting name="away" type="string" scope="account,global">
 		<description>
 			<para>
 				To mark yourself as away, it is recommended to just use <emphasis>/away</emphasis>, like on normal IRC networks. If you want to mark yourself as away on only one IM network, you can use this per-account setting.
@@ -1075,7 +1075,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="nick_format" type="string" scope="both">
+	<bitlbee-setting name="nick_format" type="string" scope="account,global">
 		<default>%-@nick</default>
 
 		<description>
@@ -1168,7 +1168,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="password" type="string" scope="both">
+	<bitlbee-setting name="password" type="string" scope="account,global">
 		<description>
 			<para>
 				Use this global setting to change your "NickServ" password.
@@ -1396,10 +1396,10 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="status" type="string" scope="both">
+	<bitlbee-setting name="status" type="string" scope="account,global">
 		<description>
 			<para>
-				Certain protocols (like Jabber/XMPP) support status messages, similar to away messages. They can be used to indicate things like your location or activity, without showing up as away/busy.
+				Most IM protocols support status messages, similar to away messages. They can be used to indicate things like your location or activity, without showing up as away/busy.
 			</para>
 
 			<para>
@@ -1407,7 +1407,7 @@
 			</para>
 
 			<para>
-				Away states set using <emphasis>/away</emphasis> or the <emphasis>away</emphasis> setting will override this setting. To un-set the setting, use <emphasis>set -del status</emphasis>.
+				Away states set using <emphasis>/away</emphasis> or the <emphasis>away</emphasis> setting will override this setting. To clear the setting, use <emphasis>set -del status</emphasis>.
 			</para>
 		</description>
 	</bitlbee-setting>
