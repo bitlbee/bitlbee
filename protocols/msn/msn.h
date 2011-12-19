@@ -233,7 +233,6 @@ int msn_logged_in( struct im_connection *ic );
 int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *realname_, const char *group );
 int msn_buddy_list_remove( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *group );
 void msn_buddy_ask( bee_user_t *bu );
-char *msn_findheader( char *text, char *header, int len );
 char **msn_linesplit( char *line );
 int msn_handler( struct msn_handler_data *h );
 void msn_msgq_purge( struct im_connection *ic, GSList **list );

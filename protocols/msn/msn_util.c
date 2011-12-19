@@ -227,58 +227,6 @@ void msn_buddy_ask( bee_user_t *bu )
 	imcb_ask( bu->ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no );
 }
 
-char *msn_findheader( char *text, char *header, int len )
-{
-	int hlen = strlen( header ), i;
-	char *ret;
-	
-	if( len == 0 )
-		len = strlen( text );
-	
-	i = 0;
-	while( ( i + hlen ) < len )
-	{
-		/* Maybe this is a bit over-commented, but I just hate this part... */
-		if( g_strncasecmp( text + i, header, hlen ) == 0 )
-		{
-			/* Skip to the (probable) end of the header */
-			i += hlen;
-			
-			/* Find the first non-[: \t] character */
-			while( i < len && ( text[i] == ':' || text[i] == ' ' || text[i] == '\t' ) ) i ++;
-			
-			/* Make sure we're still inside the string */
-			if( i >= len ) return( NULL );
-			
-			/* Save the position */
-			ret = text + i;
-			
-			/* Search for the end of this line */
-			while( i < len && text[i] != '\r' && text[i] != '\n' ) i ++;
-			
-			/* Make sure we're still inside the string */
-			if( i >= len ) return( NULL );
-			
-			/* Copy the found data */
-			return( g_strndup( ret, text + i - ret ) );
-		}
-		
-		/* This wasn't the header we were looking for, skip to the next line. */
-		while( i < len && ( text[i] != '\r' && text[i] != '\n' ) ) i ++;
-		while( i < len && ( text[i] == '\r' || text[i] == '\n' ) ) i ++;
-		
-		/* End of headers? */
-		if( ( i >= 4 && strncmp( text + i - 4, "\r\n\r\n", 4 ) == 0 ) ||
-		    ( i >= 2 && ( strncmp( text + i - 2, "\n\n", 2 ) == 0 ||   
-		                  strncmp( text + i - 2, "\r\r", 2 ) == 0 ) ) )
-		{
-			break;
-		}
-	}
-	
-	return( NULL );
-}
-
 /* *NOT* thread-safe, but that's not a problem for now... */
 char **msn_linesplit( char *line )
 {

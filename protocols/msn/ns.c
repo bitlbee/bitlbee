@@ -608,7 +608,7 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 	{
 		if( g_strcasecmp( cmd[1], "Hotmail" ) == 0 )
 		{
-			char *ct = msn_findheader( msg, "Content-Type:", msglen );
+			char *ct = get_rfc822_header( msg, "Content-Type:", msglen );
 			
 			if( !ct )
 				return( 1 );
@@ -621,8 +621,8 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 				if( !body )
 					return( 1 );
 				
-				mtype = msn_findheader( body, "Type:", blen );
-				arg1 = msn_findheader( body, "Arg1:", blen );
+				mtype = get_rfc822_header( body, "Type:", blen );
+				arg1 = get_rfc822_header( body, "Arg1:", blen );
 				
 				if( mtype && strcmp( mtype, "1" ) == 0 )
 				{
@@ -641,8 +641,8 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 			{
 				if( set_getbool( &ic->acc->set, "mail_notifications" ) )
 				{
-					char *inbox = msn_findheader( body, "Inbox-Unread:", blen );
-					char *folders = msn_findheader( body, "Folders-Unread:", blen );
+					char *inbox = get_rfc822_header( body, "Inbox-Unread:", blen );
+					char *folders = get_rfc822_header( body, "Folders-Unread:", blen );
 
 					if( inbox && folders )
 						imcb_log( ic, "INBOX contains %s new messages, plus %s messages in other folders.", inbox, folders );
@@ -655,8 +655,8 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 			{
 				if( set_getbool( &ic->acc->set, "mail_notifications" ) )
 				{
-					char *from = msn_findheader( body, "From-Addr:", blen );
-					char *fromname = msn_findheader( body, "From:", blen );
+					char *from = get_rfc822_header( body, "From-Addr:", blen );
+					char *fromname = get_rfc822_header( body, "From:", blen );
 					
 					if( from && fromname )
 						imcb_log( ic, "Received an e-mail message from %s <%s>.", fromname, from );
