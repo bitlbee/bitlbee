@@ -31,7 +31,7 @@ void ssl_init( void )
 {
 }
 
-void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
+void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data )
 {
 	return( NULL );
 }

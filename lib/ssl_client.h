@@ -63,7 +63,7 @@ G_MODULE_EXPORT void ssl_init( void );
 /* Connect to host:port, call the given function when the connection is
    ready to be used for SSL traffic. This is all done asynchronously, no
    blocking I/O! (Except for the DNS lookups, for now...) */
-G_MODULE_EXPORT void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data );
+G_MODULE_EXPORT void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data );
 
 /* Start an SSL session on an existing fd. Useful for STARTTLS functionality,
    for example in Jabber. */

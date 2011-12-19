@@ -102,7 +102,7 @@ void ssl_init( void )
 	initialized = TRUE;
 }
 
-void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
+void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	

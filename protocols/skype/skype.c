@@ -1184,7 +1184,7 @@ static void skype_login(account_t *acc)
 
 	imcb_log(ic, "Connecting");
 	sd->ssl = ssl_connect(set_getstr(&acc->set, "server"),
-		set_getint(&acc->set, "port"), skype_connected, ic);
+		set_getint(&acc->set, "port"), FALSE, skype_connected, ic);
 	sd->fd = sd->ssl ? ssl_getfd(sd->ssl) : -1;
 	sd->username = g_strdup(acc->user);
 

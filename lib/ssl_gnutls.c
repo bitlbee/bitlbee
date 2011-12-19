@@ -77,7 +77,7 @@ void ssl_init( void )
 	atexit( gnutls_global_deinit );
 }
 
-void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
+void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	
@@ -85,6 +85,8 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	conn->func = func;
 	conn->data = data;
 	conn->inpa = -1;
+	conn->hostname = g_strdup( host );
+	conn->verify = verify && global.conf->cafile;
 	
 	if( conn->fd < 0 )
 	{
