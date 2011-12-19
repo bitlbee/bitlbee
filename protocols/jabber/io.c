@@ -291,45 +291,20 @@ gboolean jabber_connected_ssl( gpointer data, int returncode, void *source, b_in
 		   already, set it to NULL here to prevent a double cleanup: */
 		jd->ssl = NULL;
 		
-		imcb_error( ic, "Could not connect to server" );
-		if (returncode ==  OPENSSL_VERIFY_ERROR )
+		if( returncode & VERIFY_CERT_INVALID)
 		{
-			imcb_error( ic, "This BitlBee server is built agains the OpenSSL library." );
-			imcb_error( ic, "Unfortunately certificate verification is only supported when built against GnuTLS for now." );
-			imc_logout( ic, FALSE );
-		}
-		else if (returncode ==  NSS_VERIFY_ERROR )
-		{
-			imcb_error( ic, "This BitlBee server is built agains the NSS library." );
-			imcb_error( ic, "Unfortunately certificate verification is only supported when built against GnuTLS for now." );
-			imc_logout( ic, FALSE );
-		}
-		else if (returncode == VERIFY_CERT_ERROR )
-		{
-			imcb_error( ic, "An error occured during the certificate verification." );
-			imc_logout( ic, FALSE );
-		}
-		else if (returncode  & VERIFY_CERT_INVALID)
-		{
-			imcb_error( ic, "Unable to verify peer's certificate." );
-			if (returncode & VERIFY_CERT_REVOKED)
-				imcb_error( ic, "The certificate has been revoked." );
-			if (returncode & VERIFY_CERT_SIGNER_NOT_FOUND)
-				imcb_error( ic, "The certificate hasn't got a known issuer." );
-			if (returncode & VERIFY_CERT_SIGNER_NOT_CA)
-				imcb_error( ic, "The certificate's issuer is not a CA." );
-			if (returncode & VERIFY_CERT_INSECURE_ALGORITHM)
-				imcb_error( ic, "The certificate uses an insecure algorithm." );
-			if (returncode & VERIFY_CERT_NOT_ACTIVATED)
-				imcb_error( ic, "The certificate has not been activated." );
-			if (returncode & VERIFY_CERT_EXPIRED)
-				imcb_error( ic, "The certificate has expired." );
-			if (returncode & VERIFY_CERT_WRONG_HOSTNAME)
-				imcb_error( ic, "The hostname specified in the certificate doesn't match the server name." );
+			char *err = ssl_verify_strerror( returncode );
+			imcb_error( ic, "Certificate verification problem 0x%x: %s",
+			            returncode, err ? err : "Unknown" );
+			g_free( err );
 			imc_logout( ic, FALSE );
 		}
 		else
-		imc_logout( ic, TRUE );
+		{
+			imcb_error( ic, "Could not connect to server" );
+			imc_logout( ic, TRUE );
+		}
+		
 		return FALSE;
 	}
 	

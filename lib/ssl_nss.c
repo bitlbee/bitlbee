@@ -251,3 +251,8 @@ b_input_condition ssl_getdirection( void *conn )
 	/* Just in case someone calls us, let's return the most likely case: */
 	return B_EV_IO_READ;
 }
+
+char *ssl_verify_strerror( int code )
+{
+	return g_strdup( "SSL certificate verification not supported by BitlBee NSS code." );
+}

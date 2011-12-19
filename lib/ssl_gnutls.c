@@ -194,6 +194,37 @@ static int verify_certificate_callback( gnutls_session_t session )
 	return verifyret;
 }
 
+char *ssl_verify_strerror( int code )
+{
+	GString *ret = g_string_new( "" );
+	
+	if( code & VERIFY_CERT_REVOKED )
+		g_string_append( ret, "certificate has been revoked, " );
+	if( code & VERIFY_CERT_SIGNER_NOT_FOUND )
+		g_string_append( ret, "certificate hasn't got a known issuer, " );
+	if( code & VERIFY_CERT_SIGNER_NOT_CA )
+		g_string_append( ret, "certificate's issuer is not a CA, " );
+	if( code & VERIFY_CERT_INSECURE_ALGORITHM )
+		g_string_append( ret, "certificate uses an insecure algorithm, " );
+	if( code & VERIFY_CERT_NOT_ACTIVATED )
+		g_string_append( ret, "certificate has not been activated, " );
+	if( code & VERIFY_CERT_EXPIRED )
+		g_string_append( ret, "certificate has expired, " );
+	if( code & VERIFY_CERT_WRONG_HOSTNAME )
+		g_string_append( ret, "certificate hostname mismatch, " );
+	
+	if( ret->len == 0 )
+	{
+		g_string_free( ret, TRUE );
+		return NULL;
+	}
+	else
+	{
+		g_string_truncate( ret, ret->len - 2 );
+		return g_string_free( ret, FALSE );
+	}
+}
+
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;

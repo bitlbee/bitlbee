@@ -69,3 +69,8 @@ int ssl_pending( void *conn )
 {
 	return 0;
 }
+
+char *ssl_verify_strerror( int code )
+{
+	return NULL;
+}

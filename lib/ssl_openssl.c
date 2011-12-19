@@ -287,6 +287,11 @@ b_input_condition ssl_getdirection( void *conn )
 	return( ((struct scd*)conn)->lasterr == SSL_ERROR_WANT_WRITE ? B_EV_IO_WRITE : B_EV_IO_READ );
 }
 
+char *ssl_verify_strerror( int code )
+{
+	return g_strdup( "SSL certificate verification not supported by BitlBee OpenSSL code." );
+}
+
 size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned char *input, size_t input_len, const unsigned char *iv, unsigned char **res)
 {
 	int output_length = 0;    
