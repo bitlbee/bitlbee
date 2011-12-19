@@ -527,6 +527,7 @@ static void sasl_oauth2_got_token( gpointer data, const char *access_token, cons
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd;
+	GSList *auth = NULL;
 	
 	if( g_slist_find( jabber_connections, ic ) == NULL )
 		return;
@@ -539,19 +540,16 @@ static void sasl_oauth2_got_token( gpointer data, const char *access_token, cons
 		imc_logout( ic, TRUE );
 		return;
 	}
-	if( refresh_token != NULL )
-	{
-		g_free( ic->acc->pass );
-		ic->acc->pass = g_strdup_printf( "refresh_token=%s", refresh_token );
-	}
-	/* Should do this, but only in the Facebook case where we get an access
-	   token that never expires. Shouldn't overwrite a refresh token with
-	   an access token.
-	else
-	{
-		g_free( ic->acc->pass );
-		ic->acc->pass = g_strdup_printf( "access_token=%s", access_token );
-	} */
+	
+	oauth_params_parse( &auth, ic->acc->pass );
+	if( refresh_token )
+		oauth_params_set( &auth, "refresh_token", refresh_token );
+	if( access_token )
+		oauth_params_set( &auth, "access_token", access_token );
+	
+	g_free( ic->acc->pass );
+	ic->acc->pass = oauth_params_string( auth );
+	oauth_params_free( &auth );
 	
 	g_free( jd->oauth2_access_token );
 	jd->oauth2_access_token = g_strdup( access_token );
