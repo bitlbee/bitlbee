@@ -177,6 +177,14 @@ conf_t *conf_load( int argc, char *argv[] )
 	if( config_missing )
 		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", global.conf_file );
 	
+	if( conf->cafile && access( conf->cafile, R_OK ) != 0 )
+	{
+		/* Let's treat this as a serious problem so people won't think
+		   they're secure when in fact they're not. */
+		fprintf( stderr, "Error: Could not read CA file %s: %s\n", conf->cafile, strerror( errno ) );
+		return NULL;
+	}
+	
 	return conf;
 }
 
