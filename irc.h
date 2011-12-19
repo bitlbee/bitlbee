@@ -181,7 +181,7 @@ struct irc_channel_funcs
 	gboolean (*privmsg)( irc_channel_t *ic, const char *msg );
 	gboolean (*join)( irc_channel_t *ic );
 	gboolean (*part)( irc_channel_t *ic, const char *msg );
-	gboolean (*topic)( irc_channel_t *ic, const char *new );
+	gboolean (*topic)( irc_channel_t *ic, const char *new_topic );
 	gboolean (*invite)( irc_channel_t *ic, irc_user_t *iu );
 	
 	gboolean (*_init)( irc_channel_t *ic );
@@ -331,16 +331,16 @@ void irc_send_who( irc_t *irc, GSList *l, const char *channel );
 void irc_send_msg( irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix );
 void irc_send_msg_raw( irc_user_t *iu, const char *type, const char *dst, const char *msg );
 void irc_send_msg_f( irc_user_t *iu, const char *type, const char *dst, const char *format, ... ) G_GNUC_PRINTF( 4, 5 );
-void irc_send_nick( irc_user_t *iu, const char *new );
+void irc_send_nick( irc_user_t *iu, const char *new_nick );
 void irc_send_channel_user_mode_diff( irc_channel_t *ic, irc_user_t *iu,
-                                      irc_channel_user_flags_t old, irc_channel_user_flags_t new );
+                                      irc_channel_user_flags_t old_flags, irc_channel_user_flags_t new_flags );
 void irc_send_invite( irc_user_t *iu, irc_channel_t *ic );
 
 /* irc_user.c */
 irc_user_t *irc_user_new( irc_t *irc, const char *nick );
 int irc_user_free( irc_t *irc, irc_user_t *iu );
 irc_user_t *irc_user_by_name( irc_t *irc, const char *nick );
-int irc_user_set_nick( irc_user_t *iu, const char *new );
+int irc_user_set_nick( irc_user_t *iu, const char *new_nick );
 gint irc_user_cmp( gconstpointer a_, gconstpointer b_ );
 const char *irc_user_get_away( irc_user_t *iu );
 void irc_user_quit( irc_user_t *iu, const char *msg );

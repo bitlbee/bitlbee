@@ -26,6 +26,10 @@
 #ifndef _BITLBEE_H
 #define _BITLBEE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* Stupid GNU :-P */
 #endif
@@ -174,4 +178,9 @@ char *set_eval_control_channel( set_t *set, char *new_name );
 
 extern global_t global;
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif
+
