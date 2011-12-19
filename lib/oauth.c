@@ -134,7 +134,7 @@ void oauth_params_del( GSList **params, const char *key )
 	GSList *l, *n;
 	
 	if( params == NULL )
-		return NULL;
+		return;
 	
 	for( l = *params; l; l = n )
 	{

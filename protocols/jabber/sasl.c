@@ -64,6 +64,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	char *s;
 	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_fb = 0, sup_ms = 0;
 	int want_oauth = FALSE;
+	GString *mechs;
 	
 	if( !sasl_supported( ic ) )
 	{
@@ -82,6 +83,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		return XT_ABORT;
 	}
 	
+	mechs = g_string_new( "" );
 	c = node->children;
 	while( ( c = xt_find_node( c, "mechanism" ) ) )
 	{
@@ -96,15 +98,21 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		else if( c->text && g_strcasecmp( c->text, "X-MESSENGER-OAUTH2" ) == 0 )
 			sup_ms = 1;
 		
+		if( c->text )
+			g_string_append_printf( mechs, " %s", c->text );
+		
 		c = c->next;
 	}
 	
 	if( !sup_plain && !sup_digest && !sup_gtalk && !sup_fb && !sup_ms )
 	{
-		imcb_error( ic, "No known SASL authentication schemes supported" );
+		imcb_error( ic, "BitlBee does not support any of the offered SASL "
+		                "authentication schemes:%s", mechs->str );
 		imc_logout( ic, FALSE );
+		g_string_free( mechs, TRUE );
 		return XT_ABORT;
 	}
+	g_string_free( mechs, TRUE );
 	
 	reply = xt_new_node( "auth", NULL, NULL );
 	xt_add_attr( reply, "xmlns", XMLNS_SASL );
@@ -536,6 +544,14 @@ static void sasl_oauth2_got_token( gpointer data, const char *access_token, cons
 		g_free( ic->acc->pass );
 		ic->acc->pass = g_strdup_printf( "refresh_token=%s", refresh_token );
 	}
+	/* Should do this, but only in the Facebook case where we get an access
+	   token that never expires. Shouldn't overwrite a refresh token with
+	   an access token.
+	else
+	{
+		g_free( ic->acc->pass );
+		ic->acc->pass = g_strdup_printf( "access_token=%s", access_token );
+	} */
 	
 	g_free( jd->oauth2_access_token );
 	jd->oauth2_access_token = g_strdup( access_token );
