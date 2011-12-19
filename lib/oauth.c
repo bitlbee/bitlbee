@@ -133,6 +133,9 @@ void oauth_params_del( GSList **params, const char *key )
 	int key_len = strlen( key );
 	GSList *l, *n;
 	
+	if( params == NULL )
+		return NULL;
+	
 	for( l = *params; l; l = n )
 	{
 		n = l->next;
@@ -156,6 +159,9 @@ const char *oauth_params_get( GSList **params, const char *key )
 {
 	int key_len = strlen( key );
 	GSList *l;
+	
+	if( params == NULL )
+		return NULL;
 	
 	for( l = *params; l; l = l->next )
 	{

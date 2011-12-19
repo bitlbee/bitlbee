@@ -102,16 +102,32 @@ static void oauth2_access_token_done( struct http_request *req )
 {
 	struct oauth2_access_token_data *cb_data = req->data;
 	char *atoken = NULL, *rtoken = NULL;
+	const char *content_type;
 	
 	if( getenv( "BITLBEE_DEBUG" ) && req->reply_body )
 		printf( "%s\n", req->reply_body );
 	
-	if( req->status_code == 200 )
+	content_type = get_rfc822_header( req->reply_headers, "Content-Type", 0 );
+	
+	if( req->status_code != 200 )
+	{
+	}
+	else if( strstr( content_type, "application/json" ) )
 	{
 		atoken = oauth2_json_dumb_get( req->reply_body, "access_token" );
 		rtoken = oauth2_json_dumb_get( req->reply_body, "refresh_token" );
 		if( getenv( "BITLBEE_DEBUG" ) )
 			printf( "Extracted atoken=%s rtoken=%s\n", atoken, rtoken );
+	}
+	else
+	{
+		/* Facebook use their own odd format here, seems to be URL-encoded. */
+		GSList *p_in = NULL;
+		
+		oauth_params_parse( &p_in, req->reply_body );
+		atoken = g_strdup( oauth_params_get( &p_in, "access_token" ) );
+		rtoken = g_strdup( oauth_params_get( &p_in, "refresh_token" ) );
+		oauth_params_free( &p_in );
 	}
 	cb_data->func( cb_data->data, atoken, rtoken );
 	g_free( atoken );
