@@ -7,10 +7,12 @@
 # exercise is over now.
 #
 
-# Include the bitlbee-libpurple variant and OTR plugin by default
+# Include the bitlbee-libpurple variant and OTR plugin by default.
+# Don't build skype by default since it depends on deleted/non-free
+# packages. Need to at least get python-skype back into Debian.
 BITLBEE_LIBPURPLE ?= 1
 BITLBEE_OTR ?= plugin
-BITLBEE_SKYPE ?= plugin
+BITLBEE_SKYPE ?= 0
 BITLBEE_CONFIGURE_FLAGS ?=
 DEBUG ?= 0
 
@@ -71,11 +73,13 @@ install: build
 	$(MAKE) -C debian/build-native install-plugin-otr DESTDIR=`pwd`/debian/bitlbee-plugin-otr
 	$(MAKE) -C debian/build-native install-plugin-skype DESTDIR=`pwd`/debian/skyped
 
+ifneq ($(BITLBEE_SKYPE),0)
 	mkdir -p debian/bitlbee-plugin-skype/usr
 	mv debian/skyped/usr/lib debian/bitlbee-plugin-skype/usr
 
 	mkdir -p debian/skyped/usr/share/man/man1
 	mv debian/bitlbee-common/usr/share/man/man1/skyped* debian/skyped/usr/share/man/man1
+endif
 
 ifeq ($(BITLBEE_LIBPURPLE),1)
 	$(MAKE) -C debian/build-libpurple install-bin DESTDIR=`pwd`/debian/bitlbee-libpurple

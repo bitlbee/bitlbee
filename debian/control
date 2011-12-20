@@ -82,7 +82,7 @@ Description: An IRC to other chat networks gateway (Skype plugin)
  You need to download and install the Skype client for this to work.
 
 Package: skyped
-Architecture: any
+Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}, python (>= 2.5), python-gnutls, python-skype (>=0.9.28.7)
 Recommends: skype
 Description: Daemon to control Skype remotely
