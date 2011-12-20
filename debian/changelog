@@ -1,23 +1,25 @@
-bitlbee (3.0.4-1) unstable; urgency=low
+bitlbee (3.0.4+bzr855-1) unstable; urgency=low
 
   * New upstream release.
+  * This is not a vanilla 3.0.4 tree but a Bazaar snapshot. The source
+    release was a few weeks ago by now. There should be no significant
+    differences.
   * Added bitlbee-plugin-skype and skyped packages, now part of BitlBee
-    instead of a separate package.
-  * Fixed dependencies of bitlbee-plugin-otr package to not break with
-    binary MTUs. (Closes: #651612)
+    instead of a separate package. Not building these for Debian for now
+    though since python-skype was removed.
   * ^B and some other things are stripped in outgoing XMPP stanzas.
     (Closes: #507856)
   * OTR module linking fix. Not with the fix from the Debian bug but with
     one from bugs.bitlbee.org. I hope that covers it. (Closes: #646369)
   * Closing a few old bugs that were filed against the Debian package
-    instead of upstream:
+    instead of/as well as upstream:
     - Joining password-protected MUCs is working for a while already, set
       the password using "chan set". (Closes: #615624)
     - "Headline:" msgs (Closes: #605459)
     - Yahoo! was fixed long ago and Etch is deprecated. (Closes: #476529)
     - identi.ca support is documented. (Closes: #613789)
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 11 Dec 2011 16:53:31 +0000
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Tue, 20 Dec 2011 12:46:42 +0100
 
 bitlbee (3.0.3-1.1) unstable; urgency=low
 
