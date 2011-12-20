@@ -30,6 +30,7 @@ static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_no
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply = NULL;
 	char *type, *s;
 	int st, pack = 1;
@@ -169,10 +170,10 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 		/* This is a roster push. XMPP servers send this when someone
 		   was added to (or removed from) the buddy list. AFAIK they're
 		   sent even if we added this buddy in our own session. */
-			int bare_len = strlen( ic->acc->user );
+			int bare_len = strlen( jd->me );
 			
 			if( ( s = xt_find_attr( node, "from" ) ) == NULL ||
-			    ( strncmp( s, ic->acc->user, bare_len ) == 0 &&
+			    ( strncmp( s, jd->me, bare_len ) == 0 &&
 			      ( s[bare_len] == 0 || s[bare_len] == '/' ) ) )
 			{
 				jabber_parse_roster( ic, node, NULL );
@@ -342,8 +343,25 @@ xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, 
 	if( node && ( c = xt_find_node( node->children, "bind" ) ) )
 	{
 		c = xt_find_node( c->children, "jid" );
-		if( c && c->text_len && ( s = strchr( c->text, '/' ) ) &&
-		    strcmp( s + 1, set_getstr( &ic->acc->set, "resource" ) ) != 0 )
+		if( !c || !c->text )
+		{
+			/* Server is crap, but this is no disaster. */
+		}
+		else if( strncmp( jd->me, c->text, strlen( jd->me ) ) != 0 )
+		{
+			s = strchr( c->text, '/' );
+			if( s )
+				*s = '\0';
+			jabber_set_me( ic, c->text );
+			imcb_log( ic, "Server claims your JID is `%s' instead of `%s'. "
+			          "This mismatch may cause problems with groupchats "
+			          "and possibly other things.",
+			          c->text, ic->acc->user );
+			if( s )
+				*s = '/';
+		}
+		else if( c && c->text_len && ( s = strchr( c->text, '/' ) ) &&
+		         strcmp( s + 1, set_getstr( &ic->acc->set, "resource" ) ) != 0 )
 			imcb_log( ic, "Server changed session resource string to `%s'", s + 1 );
 	}
 	

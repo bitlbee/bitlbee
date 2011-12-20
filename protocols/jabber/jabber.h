@@ -93,6 +93,7 @@ struct jabber_data
 	
 	char *username;		/* USERNAME@server */
 	char *server;		/* username@SERVER -=> server/domain, not hostname */
+	char *me;		/* bare jid */
 	
 	const struct oauth2_service *oauth2_service;
 	char *oauth2_access_token;
@@ -307,6 +308,7 @@ void jabber_buddy_remove_all( struct im_connection *ic );
 time_t jabber_get_timestamp( struct xt_node *xt );
 struct jabber_error *jabber_error_parse( struct xt_node *node, char *xmlns );
 void jabber_error_free( struct jabber_error *err );
+gboolean jabber_set_me( struct im_connection *ic, const char *me );
 
 extern const struct jabber_away_state jabber_away_state_list[];
 

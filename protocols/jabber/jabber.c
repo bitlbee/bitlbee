@@ -110,8 +110,7 @@ static void jabber_login( account_t *acc )
 	jd->ic = ic;
 	ic->proto_data = jd;
 	
-	jd->username = g_strdup( acc->user );
-	jd->server = strchr( jd->username, '@' );
+	jabber_set_me( ic, acc->user );
 	
 	jd->fd = jd->r_inpa = jd->w_inpa = -1;
 	
@@ -121,10 +120,6 @@ static void jabber_login( account_t *acc )
 		imc_logout( ic, FALSE );
 		return;
 	}
-	
-	/* So don't think of free()ing jd->server.. :-) */
-	*jd->server = 0;
-	jd->server ++;
 	
 	if( ( s = strchr( jd->server, '/' ) ) )
 	{
@@ -313,6 +308,7 @@ static void jabber_logout( struct im_connection *ic )
 	g_free( jd->oauth2_access_token );
 	g_free( jd->away_message );
 	g_free( jd->username );
+	g_free( jd->me );
 	g_free( jd );
 	
 	jabber_connections = g_slist_remove( jabber_connections, ic );
@@ -494,11 +490,12 @@ static void jabber_chat_leave_( struct groupchat *c )
 
 static void jabber_chat_invite_( struct groupchat *c, char *who, char *msg )
 {
+	struct jabber_data *jd = c->ic->proto_data;
 	struct jabber_chat *jc = c->data;
 	gchar *msg_alt = NULL;
 
 	if( msg == NULL )
-		msg_alt = g_strdup_printf( "%s invited you to %s", c->ic->acc->user, jc->name );
+		msg_alt = g_strdup_printf( "%s invited you to %s", jd->me, jc->name );
 	
 	if( c && who )
 		jabber_chat_invite( c, who, msg ? msg : msg_alt );
