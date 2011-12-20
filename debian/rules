@@ -18,7 +18,7 @@ DEBUG ?= 0
 
 ifndef BITLBEE_VERSION
 # Want to use the full package version number instead of just the release.
-BITLBEE_CONFIGURE_VERSION ?= BITLBEE_VERSION=\"$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}')\"
+BITLBEE_CONFIGURE_VERSION ?= BITLBEE_VERSION=\"$(shell dpkg-parsechangelog | awk '/^Version:/ {print $$2}')\"
 endif
 
 ifneq ($(BITLBEE_LIBPURPLE),1)
@@ -110,9 +110,9 @@ binary-common:
 	dh_installdeb
 	dh_shlibdeps
 ifdef BITLBEE_VERSION
-	dh_gencontrol -- -v$(BITLBEE_VERSION)  -Vbee:Version=$(BITLBEE_VERSION)
+	dh_gencontrol -- -v$(BITLBEE_VERSION)
 else
-	dh_gencontrol -- -Vbee:Version=$(shell dpkg-parsechangelog | grep ^Version: | awk '{print $$2}' | sed -e 's/+b[0-9]\+$$//')
+	dh_gencontrol
 endif
 	dh_md5sums
 	dh_builddeb

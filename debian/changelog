@@ -19,6 +19,14 @@ bitlbee (3.0.4-1) unstable; urgency=low
 
  -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 11 Dec 2011 16:53:31 +0000
 
+bitlbee (3.0.3-1.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Use the standard ${source:Version} and ${binary:Version} substvars instead
+    of the custom and broken ${bee:Version} (closes: #651612).
+
+ -- Julien Cristau <jcristau@debian.org>  Thu, 15 Dec 2011 20:34:32 +0100
+
 bitlbee (3.0.3-1) unstable; urgency=low
 
   * New upstream release. (Skipped 3.0.2, sorry!)
