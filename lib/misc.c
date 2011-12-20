@@ -734,6 +734,9 @@ char *get_rfc822_header( char *text, char *header, int len )
 	int hlen = strlen( header ), i;
 	char *ret;
 	
+	if( text == NULL )
+		return NULL;
+	
 	if( len == 0 )
 		len = strlen( text );
 	
@@ -778,5 +781,5 @@ char *get_rfc822_header( char *text, char *header, int len )
 		}
 	}
 	
-	return( NULL );
+	return NULL;
 }

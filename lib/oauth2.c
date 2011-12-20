@@ -112,7 +112,7 @@ static void oauth2_access_token_done( struct http_request *req )
 	if( req->status_code != 200 )
 	{
 	}
-	else if( strstr( content_type, "application/json" ) )
+	else if( content_type && strstr( content_type, "application/json" ) )
 	{
 		atoken = oauth2_json_dumb_get( req->reply_body, "access_token" );
 		rtoken = oauth2_json_dumb_get( req->reply_body, "refresh_token" );
