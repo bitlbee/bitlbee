@@ -84,7 +84,7 @@ char *set_getstr( set_t **head, const char *key )
 	if( !s || ( !s->value && !s->def ) )
 		return NULL;
 	
-	return s->value ? s->value : s->def;
+	return set_value( s );
 }
 
 int set_getint( set_t **head, const char *key )
@@ -249,26 +249,12 @@ char *set_eval_to_char( set_t *set, char *value )
 	return s;
 }
 
-/*
-char *set_eval_ops( set_t *set, char *value )
+char *set_eval_oauth( set_t *set, char *value )
 {
-	irc_t *irc = set->data;
+	account_t *acc = set->data;
 	
-	if( g_strcasecmp( value, "user" ) == 0 )
-		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-		                                              irc->channel, "+o-o", irc->nick, irc->mynick );
-	else if( g_strcasecmp( value, "root" ) == 0 )
-		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-		                                              irc->channel, "-o+o", irc->nick, irc->mynick );
-	else if( g_strcasecmp( value, "both" ) == 0 )
-		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-		                                              irc->channel, "+oo", irc->nick, irc->mynick );
-	else if( g_strcasecmp( value, "none" ) == 0 )
-		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
-		                                              irc->channel, "-oo", irc->nick, irc->mynick );
-	else
-		return SET_INVALID;
+	if( bool2int( value ) && strcmp( acc->pass, PASSWORD_PENDING ) == 0 )
+		*acc->pass = '\0';
 	
-	return value;
+	return set_eval_bool( set, value );
 }
-*/

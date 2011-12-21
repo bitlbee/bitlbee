@@ -60,7 +60,7 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "activity_timeout", "600", set_eval_int, acc );
 	
-	s = set_add( &acc->set, "oauth", "false", set_eval_bool, acc );
+	s = set_add( &acc->set, "oauth", "false", set_eval_oauth, acc );
 
 	g_snprintf( str, sizeof( str ), "%d", jabber_port_list[0] );
 	s = set_add( &acc->set, "port", str, set_eval_int, acc );
@@ -75,6 +75,9 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "resource_select", "activity", NULL, acc );
 	
+	s = set_add( &acc->set, "sasl", "true", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY | SET_HIDDEN_DEFAULT;
+	
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 	
@@ -83,9 +86,6 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "tls", "try", set_eval_tls, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
-	
-	s = set_add( &acc->set, "sasl", "true", set_eval_bool, acc );
-	s->flags |= ACC_SET_OFFLINE_ONLY | SET_HIDDEN_DEFAULT;
 
 	s = set_add( &acc->set, "user_agent", "BitlBee", NULL, acc );
 	
