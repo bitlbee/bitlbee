@@ -308,6 +308,7 @@ static void oauth_request_token_done( struct http_request *req )
 		st->auth_url = g_strdup_printf( "%s?%s", st->sp->url_authorize, req->reply_body );
 		oauth_params_parse( &params, req->reply_body );
 		st->request_token = g_strdup( oauth_params_get( &params, "oauth_token" ) );
+		st->token_secret = g_strdup( oauth_params_get( &params, "oauth_token_secret" ) );
 		oauth_params_free( &params );
 	}
 	
@@ -337,6 +338,7 @@ static void oauth_access_token_done( struct http_request *req )
 	{
 		oauth_params_parse( &st->params, req->reply_body );
 		st->token = g_strdup( oauth_params_get( &st->params, "oauth_token" ) );
+		g_free( st->token_secret );
 		st->token_secret = g_strdup( oauth_params_get( &st->params, "oauth_token_secret" ) );
 	}
 	
