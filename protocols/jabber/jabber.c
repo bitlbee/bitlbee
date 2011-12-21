@@ -31,6 +31,7 @@
 #include "xmltree.h"
 #include "bitlbee.h"
 #include "jabber.h"
+#include "oauth.h"
 #include "md5.h"
 
 GSList *jabber_connections;
@@ -137,6 +138,9 @@ static void jabber_login( account_t *acc )
 	
 	if( set_getbool( &acc->set, "oauth" ) )
 	{
+		GSList *p_in = NULL;
+		const char *tok;
+		
 		jd->fd = jd->r_inpa = jd->w_inpa = -1;
 		
 		if( strstr( jd->server, ".live.com" ) )
@@ -146,18 +150,20 @@ static void jabber_login( account_t *acc )
 		else
 			jd->oauth2_service = &oauth2_service_google;
 		
+		oauth_params_parse( &p_in, ic->acc->pass );
+		
 		/* First see if we have a refresh token, in which case any
 		   access token we *might* have has probably expired already
 		   anyway. */
-		if( strstr( acc->pass, "refresh_token=" ) )
+		if( ( tok = oauth_params_get( &p_in, "refresh_token" ) ) )
 		{
-			sasl_oauth2_refresh( ic, acc->pass + 14 );
+			sasl_oauth2_refresh( ic, tok );
 		}
 		/* If we don't have a refresh token, let's hope the access
 		   token is still usable. */
-		else if( strstr( acc->pass, "access_token=" ) )
+		else if( ( tok = oauth_params_get( &p_in, "access_token" ) ) )
 		{
-			sasl_oauth2_load_access_token( ic );
+			jd->oauth2_access_token = g_strdup( tok );
 			jabber_connect( ic );
 		}
 		/* If we don't have any, start the OAuth process now. Don't
@@ -167,6 +173,8 @@ static void jabber_login( account_t *acc )
 			sasl_oauth2_init( ic );
 			ic->flags |= OPT_SLOW_LOGIN;
 		}
+		
+		oauth_params_free( &p_in );
 	}
 	else
 		jabber_connect( ic );

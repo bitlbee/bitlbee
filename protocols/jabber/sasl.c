@@ -511,18 +511,6 @@ int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token )
 	                            refresh_token, sasl_oauth2_got_token, ic );
 }
 
-int sasl_oauth2_load_access_token( struct im_connection *ic )
-{
-	struct jabber_data *jd = ic->proto_data;
-	GSList *p_in = NULL;
-	
-	oauth_params_parse( &p_in, ic->acc->pass );
-	jd->oauth2_access_token = g_strdup( oauth_params_get( &p_in, "access_token" ) );
-	oauth_params_free( &p_in );
-	
-	return jd->oauth2_access_token != NULL;
-}
-
 static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token )
 {
 	struct im_connection *ic = data;
