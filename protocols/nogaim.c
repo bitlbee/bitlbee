@@ -326,6 +326,21 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	
 	imcb_log( ic, "Signing off.." );
 	
+	/* TBH I don't remember anymore why I didn't just use ic->acc... */
+	for( a = bee->accounts; a; a = a->next )
+		if( a->ic == ic )
+			break;
+	
+	if( a && !allow_reconnect && !( ic->flags & OPT_LOGGED_IN ) &&
+	    set_getbool( &a->set, "oauth" ) )
+	{
+		/* If this account supports OAuth, we're not logged in yet and
+		   not allowed to retry, assume there were auth issues. Give a
+		   helpful message on what might be necessary to fix this. */
+		imcb_log( ic, "If you're having problems logging in, try re-requesting "
+		          "an OAuth token: account %s set password \"\"", a->tag );
+	}
+	
 	for( l = bee->users; l; )
 	{
 		bee_user_t *bu = l->data;
@@ -346,10 +361,6 @@ void imc_logout( struct im_connection *ic, int allow_reconnect )
 	ic->away = NULL;
 	
 	query_del_by_conn( (irc_t*) ic->bee->ui_data, ic );
-	
-	for( a = bee->accounts; a; a = a->next )
-		if( a->ic == ic )
-			break;
 	
 	if( !a )
 	{
