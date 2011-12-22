@@ -1,3 +1,10 @@
+bitlbee (3.0.4-2) unstable; urgency=low
+
+  * Not a real Debian release, but just resetting the version number to
+    get sane version numbers for the nightly builds.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Thu, 22 Dec 2011 17:09:15 +0100
+
 bitlbee (3.0.4+bzr855-1) unstable; urgency=low
 
   * New upstream release.
