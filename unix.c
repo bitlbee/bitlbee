@@ -40,6 +40,7 @@
 #include <sys/wait.h>
 #include <pwd.h>
 #include <locale.h>
+#include <grp.h>
 
 #if defined(OTR_BI) || defined(OTR_PI)
 #include "otr.h"
@@ -151,8 +152,13 @@ int main( int argc, char *argv[] )
 		pw = getpwnam( global.conf->user );
 		if( pw )
 		{
+			initgroups( global.conf->user, pw->pw_gid );
 			setgid( pw->pw_gid );
 			setuid( pw->pw_uid );
+		}
+		else
+		{
+			log_message( LOGLVL_WARNING, "Failed to look up user %s.", global.conf->user );
 		}
 	}
  	
