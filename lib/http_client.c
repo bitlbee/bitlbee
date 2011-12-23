@@ -32,7 +32,7 @@
 
 
 static gboolean http_connected( gpointer data, int source, b_input_condition cond );
-static gboolean http_ssl_connected( gpointer data, void *source, b_input_condition cond );
+static gboolean http_ssl_connected( gpointer data, int returncode, void *source, b_input_condition cond );
 static gboolean http_incoming_data( gpointer data, int source, b_input_condition cond );
 static void http_free( struct http_request *req );
 
@@ -46,7 +46,7 @@ struct http_request *http_dorequest( char *host, int port, int ssl, char *reques
 	
 	if( ssl )
 	{
-		req->ssl = ssl_connect( host, port, http_ssl_connected, req );
+		req->ssl = ssl_connect( host, port, TRUE, http_ssl_connected, req );
 		if( req->ssl == NULL )
 			error = 1;
 	}
@@ -162,19 +162,30 @@ static gboolean http_connected( gpointer data, int source, b_input_condition con
 	return FALSE;
 	
 error:
-	req->status_string = g_strdup( "Error while writing HTTP request" );
+	if( req->status_string == NULL )
+		req->status_string = g_strdup( "Error while writing HTTP request" );
 	
 	req->func( req );
 	http_free( req );
 	return FALSE;
 }
 
-static gboolean http_ssl_connected( gpointer data, void *source, b_input_condition cond )
+static gboolean http_ssl_connected( gpointer data, int returncode, void *source, b_input_condition cond )
 {
 	struct http_request *req = data;
 	
 	if( source == NULL )
+	{
+		if( returncode != 0 )
+		{
+			char *err = ssl_verify_strerror( returncode );
+			req->status_string = g_strdup_printf(
+				"Certificate verification problem 0x%x: %s",
+				returncode, err ? err : "Unknown" );
+			g_free( err );
+		}
 		return http_connected( data, -1, cond );
+	}
 	
 	req->fd = ssl_getfd( source );
 	
@@ -438,7 +449,7 @@ got_reply:
 	
 		if( new_proto == PROTO_HTTPS )
 		{
-			req->ssl = ssl_connect( new_host, new_port, http_ssl_connected, req );
+			req->ssl = ssl_connect( new_host, new_port, TRUE, http_ssl_connected, req );
 			if( req->ssl == NULL )
 				error = 1;
 		}

@@ -308,7 +308,7 @@ extern const struct jabber_away_state jabber_away_state_list[];
 int jabber_write_packet( struct im_connection *ic, struct xt_node *node );
 int jabber_write( struct im_connection *ic, char *buf, int len );
 gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond );
-gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition cond );
+gboolean jabber_connected_ssl( gpointer data, int returncode, void *source, b_input_condition cond );
 gboolean jabber_start_stream( struct im_connection *ic );
 void jabber_end_stream( struct im_connection *ic );
 

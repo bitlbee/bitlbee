@@ -59,6 +59,7 @@ struct msn_soap_req_data
 	void *data;
 	struct im_connection *ic;
 	int ttl;
+	char *error;
 	
 	char *url, *action, *payload;
 	struct http_request *http_req;
@@ -157,13 +158,17 @@ static void msn_soap_handle_response( struct http_request *http_req )
 		xt_free( parser );
 	}
 	
+	if( http_req->status_code != 200 )
+		soap_req->error = g_strdup( http_req->status_string );
+	
 	st = soap_req->handle_response( soap_req );
 
 fail:	
 	g_free( soap_req->url );
 	g_free( soap_req->action );
 	g_free( soap_req->payload );
-	soap_req->url = soap_req->action = soap_req->payload = NULL;
+	g_free( soap_req->error );
+	soap_req->url = soap_req->action = soap_req->payload = soap_req->error = NULL;
 	
 	if( st == MSN_SOAP_RETRY && --soap_req->ttl )
 	{
@@ -252,6 +257,7 @@ static void msn_soap_free( struct msn_soap_req_data *soap_req )
 	g_free( soap_req->url );
 	g_free( soap_req->action );
 	g_free( soap_req->payload );
+	g_free( soap_req->error );
 	g_free( soap_req );
 }
 
@@ -409,7 +415,7 @@ static int msn_soap_passport_sso_handle_response( struct msn_soap_req_data *soap
 	
 	if( sd->secret == NULL )
 	{
-		msn_auth_got_passport_token( ic, NULL, sd->error );
+		msn_auth_got_passport_token( ic, NULL, sd->error ? sd->error : soap_req->error );
 		return MSN_SOAP_OK;
 	}
 

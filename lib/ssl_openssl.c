@@ -44,6 +44,7 @@ struct scd
 	gpointer data;
 	int fd;
 	gboolean established;
+	gboolean verify;
 	
 	int inpa;
 	int lasterr;		/* Necessary for SSL_get_error */
@@ -63,7 +64,7 @@ void ssl_init( void )
 	// SSLeay_add_ssl_algorithms();
 }
 
-void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
+void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	
@@ -81,7 +82,7 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	return conn;
 }
 
-void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
+void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	
@@ -89,6 +90,7 @@ void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
 	conn->func = func;
 	conn->data = data;
 	conn->inpa = -1;
+	conn->verify = verify;
 	
 	/* This function should be called via a (short) timeout instead of
 	   directly from here, because these SSL calls are *supposed* to be
@@ -116,6 +118,18 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	struct scd *conn = data;
 	SSL_METHOD *meth;
 	
+	/* Right now we don't have any verification functionality for openssl so we 
+	   fail in case verification has been requested by the user. */
+
+	if( conn->verify )
+	{
+		conn->func( conn->data, OPENSSL_VERIFY_ERROR, NULL, cond );
+		if( source >= 0 ) closesocket( source );
+		g_free( conn );
+
+		return FALSE;
+	}
+
 	if( source == -1 )
 		goto ssl_connected_failure;
 	
@@ -140,7 +154,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	return ssl_handshake( data, source, cond );
 
 ssl_connected_failure:
-	conn->func( conn->data, NULL, cond );
+	conn->func( conn->data, 0, NULL, cond );
 	
 	if( conn->ssl )
 	{
@@ -168,7 +182,7 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 		conn->lasterr = SSL_get_error( conn->ssl, st );
 		if( conn->lasterr != SSL_ERROR_WANT_READ && conn->lasterr != SSL_ERROR_WANT_WRITE )
 		{
-			conn->func( conn->data, NULL, cond );
+			conn->func( conn->data, 0, NULL, cond );
 			
 			SSL_shutdown( conn->ssl );
 			SSL_free( conn->ssl );
@@ -186,7 +200,7 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 	
 	conn->established = TRUE;
 	sock_make_blocking( conn->fd );		/* For now... */
-	conn->func( conn->data, conn, cond );
+	conn->func( conn->data, 0, conn, cond );
 	return FALSE;
 }
 
@@ -271,6 +285,11 @@ int ssl_getfd( void *conn )
 b_input_condition ssl_getdirection( void *conn )
 {
 	return( ((struct scd*)conn)->lasterr == SSL_ERROR_WANT_WRITE ? B_EV_IO_WRITE : B_EV_IO_READ );
+}
+
+char *ssl_verify_strerror( int code )
+{
+	return g_strdup( "SSL certificate verification not supported by BitlBee OpenSSL code." );
 }
 
 size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned char *input, size_t input_len, const unsigned char *iv, unsigned char **res)
