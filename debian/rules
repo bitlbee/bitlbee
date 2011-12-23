@@ -109,11 +109,7 @@ binary-common:
 	dh_fixperms
 	dh_installdeb
 	dh_shlibdeps
-ifdef BITLBEE_VERSION
-	dh_gencontrol -- -v$(BITLBEE_VERSION)
-else
 	dh_gencontrol
-endif
 	dh_md5sums
 	dh_builddeb
 

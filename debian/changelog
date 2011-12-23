@@ -1,9 +1,10 @@
-bitlbee (3.0.4-2) unstable; urgency=low
+bitlbee (3.0.4+z-2) UNRELEASED; urgency=low
 
-  * Not a real Debian release, but just resetting the version number to
-    get sane version numbers for the nightly builds.
+  * Removed some version override stuff from Debian build scripts. Instead,
+    my buildbot now uses dch to generate a changelog entry with the right
+    version number.
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Thu, 22 Dec 2011 17:09:15 +0100
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Fri, 23 Dec 2011 09:45:55 +0100
 
 bitlbee (3.0.4+bzr855-1) unstable; urgency=low
 
