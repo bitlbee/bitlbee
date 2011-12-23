@@ -36,8 +36,6 @@
 
 /* Some generic error codes. Especially SSL_AGAIN is important if you
    want to do asynchronous I/O. */
-#define NSS_VERIFY_ERROR -2
-#define OPENSSL_VERIFY_ERROR -1
 #define SSL_OK            0
 #define SSL_NOHANDSHAKE   1
 #define SSL_AGAIN         2

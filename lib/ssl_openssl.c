@@ -90,7 +90,7 @@ void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function 
 	conn->func = func;
 	conn->data = data;
 	conn->inpa = -1;
-	conn->verify = verify;
+	conn->verify = verify && global.conf->cafile;
 	
 	/* This function should be called via a (short) timeout instead of
 	   directly from here, because these SSL calls are *supposed* to be
@@ -118,12 +118,11 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	struct scd *conn = data;
 	SSL_METHOD *meth;
 	
-	/* Right now we don't have any verification functionality for openssl so we 
-	   fail in case verification has been requested by the user. */
+	/* Right now we don't have any verification functionality for OpenSSL. */
 
 	if( conn->verify )
 	{
-		conn->func( conn->data, OPENSSL_VERIFY_ERROR, NULL, cond );
+		conn->func( conn->data, 1, NULL, cond );
 		if( source >= 0 ) closesocket( source );
 		g_free( conn );
 
