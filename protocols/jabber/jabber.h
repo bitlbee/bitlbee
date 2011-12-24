@@ -193,6 +193,7 @@ struct jabber_transfer
 };
 
 #define JABBER_XMLCONSOLE_HANDLE "xmlconsole"
+#define JABBER_OAUTH_HANDLE "jabber_oauth"
 
 /* Prefixes to use for packet IDs (mainly for IQ packets ATM). Usually the
    first one should be used, but when storing a packet in the cache, a

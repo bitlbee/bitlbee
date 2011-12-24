@@ -461,12 +461,12 @@ void sasl_oauth2_init( struct im_connection *ic )
 	imcb_log( ic, "Starting OAuth authentication" );
 	
 	/* Temporary contact, just used to receive the OAuth response. */
-	imcb_add_buddy( ic, "jabber_oauth", NULL );
+	imcb_add_buddy( ic, JABBER_OAUTH_HANDLE, NULL );
 	url = oauth2_url( jd->oauth2_service );
 	msg = g_strdup_printf( "Open this URL in your browser to authenticate: %s", url );
-	imcb_buddy_msg( ic, "jabber_oauth", msg, 0, 0 );
-	imcb_buddy_msg( ic, "jabber_oauth", "Respond to this message with the returned "
-	                                    "authorization token.", 0, 0 );
+	imcb_buddy_msg( ic, JABBER_OAUTH_HANDLE, msg, 0, 0 );
+	imcb_buddy_msg( ic, JABBER_OAUTH_HANDLE, "Respond to this message with the returned "
+	                                         "authorization token.", 0, 0 );
 	
 	g_free( msg );
 	g_free( url );
@@ -476,7 +476,7 @@ static gboolean sasl_oauth2_remove_contact( gpointer data, gint fd, b_input_cond
 {
 	struct im_connection *ic = data;
 	if( g_slist_find( jabber_connections, ic ) )
-		imcb_remove_buddy( ic, "jabber_oauth", NULL );
+		imcb_remove_buddy( ic, JABBER_OAUTH_HANDLE, NULL );
 	return FALSE;
 }
 

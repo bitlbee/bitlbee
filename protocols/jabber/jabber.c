@@ -89,7 +89,7 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "tls_verify", "true", set_eval_bool, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
-	
+
 	s = set_add( &acc->set, "user_agent", "BitlBee", NULL, acc );
 	
 	s = set_add( &acc->set, "xmlconsole", "false", set_eval_bool, acc );
@@ -336,7 +336,8 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
 		return jabber_write( ic, message, strlen( message ) );
 	
-	if( g_strcasecmp( who, "jabber_oauth" ) == 0 )
+	if( g_strcasecmp( who, JABBER_OAUTH_HANDLE ) == 0 &&
+	    !( jd->flags & OPT_LOGGED_IN ) && jd->fd == -1 )
 	{
 		if( sasl_oauth2_get_refresh_token( ic, message ) )
 		{
