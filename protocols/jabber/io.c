@@ -275,7 +275,7 @@ gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition c
 	return jabber_start_stream( ic );
 }
 
-gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition cond )
+gboolean jabber_connected_ssl( gpointer data, int returncode, void *source, b_input_condition cond )
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd;
@@ -291,8 +291,20 @@ gboolean jabber_connected_ssl( gpointer data, void *source, b_input_condition co
 		   already, set it to NULL here to prevent a double cleanup: */
 		jd->ssl = NULL;
 		
-		imcb_error( ic, "Could not connect to server" );
-		imc_logout( ic, TRUE );
+		if( returncode != 0 )
+		{
+			char *err = ssl_verify_strerror( returncode );
+			imcb_error( ic, "Certificate verification problem 0x%x: %s",
+			            returncode, err ? err : "Unknown" );
+			g_free( err );
+			imc_logout( ic, FALSE );
+		}
+		else
+		{
+			imcb_error( ic, "Could not connect to server" );
+			imc_logout( ic, TRUE );
+		}
+		
 		return FALSE;
 	}
 	
@@ -396,7 +408,7 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd = ic->proto_data;
-	char *xmlns;
+	char *xmlns, *tlsname;
 	
 	xmlns = xt_find_attr( node, "xmlns" );
 	
@@ -422,7 +434,17 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 	imcb_log( ic, "Converting stream to TLS" );
 	
 	jd->flags |= JFLAG_STARTTLS_DONE;
-	jd->ssl = ssl_starttls( jd->fd, jabber_connected_ssl, ic );
+
+	/* If the user specified a server for the account, use this server as the 
+	 * hostname in the certificate verification. Else we use the domain from 
+	 * the username. */
+	if( ic->acc->server && *ic->acc->server )
+		tlsname = ic->acc->server;
+	else
+		tlsname = jd->server;
+	
+	jd->ssl = ssl_starttls( jd->fd, tlsname, set_getbool( &ic->acc->set, "tls_verify" ),
+	                        jabber_connected_ssl, ic );
 	
 	return XT_HANDLED;
 }

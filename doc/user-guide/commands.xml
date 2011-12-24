@@ -647,7 +647,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="auto_connect" type="boolean" scope="both">
+	<bitlbee-setting name="auto_connect" type="boolean" scope="account,global">
 		<default>true</default>
 
 		<description>
@@ -671,7 +671,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="auto_reconnect" type="boolean" scope="both">
+	<bitlbee-setting name="auto_reconnect" type="boolean" scope="account,global">
 		<default>true</default>
 
 		<description>
@@ -725,7 +725,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="away" type="string" scope="both">
+	<bitlbee-setting name="away" type="string" scope="account,global">
 		<description>
 			<para>
 				To mark yourself as away, it is recommended to just use <emphasis>/away</emphasis>, like on normal IRC networks. If you want to mark yourself as away on only one IM network, you can use this per-account setting.
@@ -1075,7 +1075,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="nick_format" type="string" scope="both">
+	<bitlbee-setting name="nick_format" type="string" scope="account,global">
 		<default>%-@nick</default>
 
 		<description>
@@ -1168,7 +1168,7 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="password" type="string" scope="both">
+	<bitlbee-setting name="password" type="string" scope="account,global">
 		<description>
 			<para>
 				Use this global setting to change your "NickServ" password.
@@ -1391,15 +1391,19 @@
 
 		<description>
 			<para>
-				Currently only available for Jabber connections. Set this to true if the server accepts SSL connections.
+				Currently only available for Jabber connections. Set this to true if you want to connect to the server on an SSL-enabled port (usually 5223).
+			</para>
+
+			<para>
+				Please note that this method of establishing a secure connection to the server has long been deprecated. You are encouraged to look at the <emphasis>tls</emphasis> setting instead.
 			</para>
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="status" type="string" scope="both">
+	<bitlbee-setting name="status" type="string" scope="account,global">
 		<description>
 			<para>
-				Certain protocols (like Jabber/XMPP) support status messages, similar to away messages. They can be used to indicate things like your location or activity, without showing up as away/busy.
+				Most IM protocols support status messages, similar to away messages. They can be used to indicate things like your location or activity, without showing up as away/busy.
 			</para>
 
 			<para>
@@ -1407,7 +1411,7 @@
 			</para>
 
 			<para>
-				Away states set using <emphasis>/away</emphasis> or the <emphasis>away</emphasis> setting will override this setting. To un-set the setting, use <emphasis>set -del status</emphasis>.
+				Away states set using <emphasis>/away</emphasis> or the <emphasis>away</emphasis> setting will override this setting. To clear the setting, use <emphasis>set -del status</emphasis>.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1480,6 +1484,24 @@
 
 			<para>
 				If you want to force BitlBee to use TLS sessions only (and to give up if that doesn't seem to be possible) you can set this setting to <emphasis>true</emphasis>. Set it to <emphasis>false</emphasis> if you want the session to remain plain-text.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="tls_verify" type="boolean" scope="account">
+		<default>true</default>
+
+		<description>
+			<para>
+				Currently only available for Jabber connections in combination with the <emphasis>tls</emphasis> setting. Set this to <emphasis>true</emphasis> if you want BitlBee to strictly verify the server's certificate against a list of trusted certificate authorities.
+			</para>
+
+			<para>
+				The hostname used in the certificate verification is the value of the <emphasis>server</emphasis> setting if the latter is nonempty and the domain of the username else. If you get a hostname related error when connecting to Google Talk with a username from the gmail.com or googlemail.com domain, please try to empty the <emphasis>server</emphasis> setting.
+			</para>
+
+			<para>
+				Please note that no certificate verification is performed when the <emphasis>ssl</emphasis> setting is used, or when the <emphasis>CAfile</emphasis> setting in <emphasis>bitlbee.conf</emphasis> is not set.
 			</para>
 		</description>
 	</bitlbee-setting>

@@ -53,6 +53,7 @@ typedef struct conf
 	int ft_max_kbps;
 	char *ft_listen;
 	char **protocols;
+	char *cafile;
 } conf_t;
 
 G_GNUC_MALLOC conf_t *conf_load( int argc, char *argv[] );

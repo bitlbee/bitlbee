@@ -24,6 +24,7 @@
 */
 
 #include <gnutls/gnutls.h>
+#include <gnutls/x509.h>
 #include <gcrypt.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -31,6 +32,7 @@
 #include "ssl_client.h"
 #include "sock.h"
 #include "stdlib.h"
+#include "bitlbee.h"
 
 int ssl_errno = 0;
 
@@ -53,6 +55,8 @@ struct scd
 	int fd;
 	gboolean established;
 	int inpa;
+	char *hostname;
+	gboolean verify;
 	
 	gnutls_session session;
 	gnutls_certificate_credentials xcred;
@@ -73,7 +77,7 @@ void ssl_init( void )
 	atexit( gnutls_global_deinit );
 }
 
-void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
+void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	
@@ -81,6 +85,8 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	conn->func = func;
 	conn->data = data;
 	conn->inpa = -1;
+	conn->hostname = g_strdup( host );
+	conn->verify = verify && global.conf->cafile;
 	
 	if( conn->fd < 0 )
 	{
@@ -91,7 +97,7 @@ void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data 
 	return conn;
 }
 
-void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
+void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	
@@ -99,6 +105,13 @@ void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
 	conn->func = func;
 	conn->data = data;
 	conn->inpa = -1;
+	conn->hostname = hostname;
+	
+	/* For now, SSL verification is globally enabled by setting the cafile
+	   setting in bitlbee.conf. Commented out by default because probably
+	   not everyone has this file in the same place and plenty of folks
+	   may not have the cert of their private Jabber server in it. */
+	conn->verify = verify && global.conf->cafile;
 	
 	/* This function should be called via a (short) timeout instead of
 	   directly from here, because these SSL calls are *supposed* to be
@@ -121,13 +134,110 @@ static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition
 	return ssl_connected( conn, conn->fd, B_EV_IO_WRITE );
 }
 
+static int verify_certificate_callback( gnutls_session_t session )
+{
+	unsigned int status;
+	const gnutls_datum_t *cert_list;
+	unsigned int cert_list_size;
+	int gnutlsret;
+	int verifyret = 0;
+	gnutls_x509_crt_t cert;
+	const char *hostname;
+	
+	hostname = gnutls_session_get_ptr(session );
+
+	gnutlsret = gnutls_certificate_verify_peers2( session, &status );
+	if( gnutlsret < 0 )
+		return VERIFY_CERT_ERROR;
+
+	if( status & GNUTLS_CERT_INVALID )
+		verifyret |= VERIFY_CERT_INVALID;
+
+	if( status & GNUTLS_CERT_REVOKED )
+		verifyret |= VERIFY_CERT_REVOKED;
+
+	if( status & GNUTLS_CERT_SIGNER_NOT_FOUND )
+		verifyret |= VERIFY_CERT_SIGNER_NOT_FOUND;
+
+	if( status & GNUTLS_CERT_SIGNER_NOT_CA )
+		verifyret |= VERIFY_CERT_SIGNER_NOT_CA;
+
+	if( status & GNUTLS_CERT_INSECURE_ALGORITHM )
+		verifyret |= VERIFY_CERT_INSECURE_ALGORITHM;
+
+#ifdef GNUTLS_CERT_NOT_ACTIVATED
+	/* Amusingly, the GnuTLS function used above didn't check for expiry
+	   until GnuTLS 2.8 or so. (See CVE-2009-1417) */
+	if( status & GNUTLS_CERT_NOT_ACTIVATED )
+		verifyret |= VERIFY_CERT_NOT_ACTIVATED;
+
+	if( status & GNUTLS_CERT_EXPIRED )
+		verifyret |= VERIFY_CERT_EXPIRED;
+#endif
+
+	/* The following check is already performed inside 
+	 * gnutls_certificate_verify_peers2, so we don't need it.
+
+	 * if( gnutls_certificate_type_get( session ) != GNUTLS_CRT_X509 )
+	 * return GNUTLS_E_CERTIFICATE_ERROR;
+	 */
+
+	if( gnutls_x509_crt_init( &cert ) < 0 )
+		return VERIFY_CERT_ERROR;
+
+	cert_list = gnutls_certificate_get_peers( session, &cert_list_size );
+	if( cert_list == NULL || gnutls_x509_crt_import( cert, &cert_list[0], GNUTLS_X509_FMT_DER ) < 0 )
+		return VERIFY_CERT_ERROR;
+
+	if( !gnutls_x509_crt_check_hostname( cert, hostname ) )
+	{
+		verifyret |= VERIFY_CERT_INVALID;
+		verifyret |= VERIFY_CERT_WRONG_HOSTNAME;
+	}
+
+	gnutls_x509_crt_deinit( cert );
+
+	return verifyret;
+}
+
+char *ssl_verify_strerror( int code )
+{
+	GString *ret = g_string_new( "" );
+	
+	if( code & VERIFY_CERT_REVOKED )
+		g_string_append( ret, "certificate has been revoked, " );
+	if( code & VERIFY_CERT_SIGNER_NOT_FOUND )
+		g_string_append( ret, "certificate hasn't got a known issuer, " );
+	if( code & VERIFY_CERT_SIGNER_NOT_CA )
+		g_string_append( ret, "certificate's issuer is not a CA, " );
+	if( code & VERIFY_CERT_INSECURE_ALGORITHM )
+		g_string_append( ret, "certificate uses an insecure algorithm, " );
+	if( code & VERIFY_CERT_NOT_ACTIVATED )
+		g_string_append( ret, "certificate has not been activated, " );
+	if( code & VERIFY_CERT_EXPIRED )
+		g_string_append( ret, "certificate has expired, " );
+	if( code & VERIFY_CERT_WRONG_HOSTNAME )
+		g_string_append( ret, "certificate hostname mismatch, " );
+	
+	if( ret->len == 0 )
+	{
+		g_string_free( ret, TRUE );
+		return NULL;
+	}
+	else
+	{
+		g_string_truncate( ret, ret->len - 2 );
+		return g_string_free( ret, FALSE );
+	}
+}
+
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
 	
 	if( source == -1 )
 	{
-		conn->func( conn->data, NULL, cond );
+		conn->func( conn->data, 0, NULL, cond );
 		g_free( conn );
 		return FALSE;
 	}
@@ -135,7 +245,15 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	ssl_init();
 	
 	gnutls_certificate_allocate_credentials( &conn->xcred );
+	if( conn->verify && global.conf->cafile )
+	{
+		gnutls_certificate_set_x509_trust_file( conn->xcred, global.conf->cafile, GNUTLS_X509_FMT_PEM );
+		gnutls_certificate_set_verify_flags( conn->xcred, GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT );
+	}
+
 	gnutls_init( &conn->session, GNUTLS_CLIENT );
+	if( conn->verify )
+		gnutls_session_set_ptr( conn->session, (void *) conn->hostname );
 #if GNUTLS_VERSION_NUMBER < 0x020c00
 	gnutls_transport_set_lowat( conn->session, 0 );
 #endif
@@ -151,7 +269,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
-	int st;
+	int st, stver;
 	
 	if( ( st = gnutls_handshake( conn->session ) ) < 0 )
 	{
@@ -162,7 +280,7 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 		}
 		else
 		{
-			conn->func( conn->data, NULL, cond );
+			conn->func( conn->data, 0, NULL, cond );
 			
 			gnutls_deinit( conn->session );
 			gnutls_certificate_free_credentials( conn->xcred );
@@ -173,11 +291,24 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 	}
 	else
 	{
-		/* For now we can't handle non-blocking perfectly everywhere... */
-		sock_make_blocking( conn->fd );
+		if( conn->verify && ( stver = verify_certificate_callback( conn->session ) ) != 0 )
+		{
+			conn->func( conn->data, stver, NULL, cond );
+
+			gnutls_deinit( conn->session );
+			gnutls_certificate_free_credentials( conn->xcred );
+			closesocket( conn->fd );
+
+			g_free( conn );
+		}
+		else
+		{
+			/* For now we can't handle non-blocking perfectly everywhere... */
+			sock_make_blocking( conn->fd );
 		
-		conn->established = TRUE;
-		conn->func( conn->data, conn, cond );
+			conn->established = TRUE;
+			conn->func( conn->data, 0, conn, cond );
+		}
 	}
 	
 	return FALSE;

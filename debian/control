@@ -11,7 +11,7 @@ DM-Upload-Allowed: yes
 
 Package: bitlbee
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, debianutils (>= 1.16), bitlbee-common (= ${source:Version})
 Conflicts: bitlbee-libpurple
 Replaces: bitlbee-libpurple
 Description: An IRC to other chat networks gateway (default version)
@@ -21,7 +21,7 @@ Description: An IRC to other chat networks gateway (default version)
 
 Package: bitlbee-libpurple
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, debianutils (>= 1.16), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, debianutils (>= 1.16), bitlbee-common (= ${source:Version})
 Conflicts: bitlbee
 Replaces: bitlbee
 Description: An IRC to other chat networks gateway (using libpurple)
@@ -50,7 +50,7 @@ Description: An IRC to other chat networks gateway (common files/docs)
 
 Package: bitlbee-dev
 Architecture: all
-Depends: ${misc:Depends}, bitlbee (>= ${bee:Version}), bitlbee (<< ${bee:Version}.1~), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, bitlbee (>= ${source:Version}), bitlbee (<< ${source:Version}.1~), bitlbee-common (= ${source:Version})
 Description: An IRC to other chat networks gateway (dev files)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
@@ -60,7 +60,7 @@ Description: An IRC to other chat networks gateway (dev files)
 
 Package: bitlbee-plugin-otr
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, bitlbee (>= ${bee:Version}) | bitlbee-libpurple (>= ${bee:Version}), bitlbee (<< ${bee:Version}.1~) | bitlbee-libpurple (<< ${bee:Version}.1~), bitlbee-common (= ${bee:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, bitlbee (= ${binary:Version}) | bitlbee-libpurple (= ${binary:Version}), bitlbee-common (= ${source:Version})
 Description: An IRC to other chat networks gateway (OTR plugin)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
@@ -71,7 +71,7 @@ Description: An IRC to other chat networks gateway (OTR plugin)
 
 Package: bitlbee-plugin-skype
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, bitlbee (>= ${bee:Version}) | bitlbee-libpurple (>= ${bee:Version}), bitlbee (<< ${bee:Version}.1~) | bitlbee-libpurple (<< ${bee:Version}.1~)
+Depends: ${misc:Depends}, ${shlibs:Depends}, bitlbee (= ${binary:Version}) | bitlbee-libpurple (= ${binary:Version}), bitlbee-common (= ${source:Version})
 Recommends: skyped
 Description: An IRC to other chat networks gateway (Skype plugin)
  This program can be used as an IRC server which forwards everything you
@@ -82,8 +82,8 @@ Description: An IRC to other chat networks gateway (Skype plugin)
  You need to download and install the Skype client for this to work.
 
 Package: skyped
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, python (>= 2.5), python-gnutls, python-skype (>=0.9.28.7)
+Architecture: all
+Depends: ${misc:Depends}, ${shlibs:Depends}, python (>= 2.5), python-gnutls, python-skype (>=0.9.28.7)
 Recommends: skype
 Description: Daemon to control Skype remotely
  Daemon to control the GUI Skype client. Currently required to control Skype

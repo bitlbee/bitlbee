@@ -51,6 +51,7 @@ struct scd
 	int fd;
 	PRFileDesc *prfd;
 	gboolean established;
+	gboolean verify;
 };
 
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
@@ -101,7 +102,7 @@ void ssl_init( void )
 	initialized = TRUE;
 }
 
-void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data )
+void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	
@@ -131,13 +132,14 @@ static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition
 	return ssl_connected( conn, conn->fd, B_EV_IO_WRITE );
 }
 
-void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
+void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function func, gpointer data )
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 
 	conn->fd = fd;
 	conn->func = func;
 	conn->data = data;
+	conn->verify = verify && global.conf->cafile;
 
 	/* This function should be called via a (short) timeout instead of
 	   directly from here, because these SSL calls are *supposed* to be
@@ -156,6 +158,17 @@ void *ssl_starttls( int fd, ssl_input_function func, gpointer data )
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
+	
+	/* Right now we don't have any verification functionality for NSS. */
+
+	if( conn->verify )
+	{
+		conn->func( conn->data, 1, NULL, cond );
+		if( source >= 0 ) closesocket( source );
+		g_free( conn );
+
+		return FALSE;
+	}
 	
 	if( source == -1 )
 		goto ssl_connected_failure;
@@ -176,12 +189,12 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	
 	
 	conn->established = TRUE;
-	conn->func( conn->data, conn, cond );
+	conn->func( conn->data, 0, conn, cond );
 	return FALSE;
 	
 	ssl_connected_failure:
 	
-	conn->func( conn->data, NULL, cond );
+	conn->func( conn->data, 0, NULL, cond );
 	
 	PR_Close( conn -> prfd );
 	if( source >= 0 ) closesocket( source );
@@ -236,4 +249,9 @@ b_input_condition ssl_getdirection( void *conn )
 {
 	/* Just in case someone calls us, let's return the most likely case: */
 	return B_EV_IO_READ;
+}
+
+char *ssl_verify_strerror( int code )
+{
+	return g_strdup( "SSL certificate verification not supported by BitlBee NSS code." );
 }

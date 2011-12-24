@@ -39,11 +39,20 @@
 #define SSL_OK            0
 #define SSL_NOHANDSHAKE   1
 #define SSL_AGAIN         2
+#define VERIFY_CERT_ERROR 2
+#define VERIFY_CERT_INVALID 4
+#define VERIFY_CERT_REVOKED 8
+#define VERIFY_CERT_SIGNER_NOT_FOUND 16
+#define VERIFY_CERT_SIGNER_NOT_CA 32
+#define VERIFY_CERT_INSECURE_ALGORITHM 64
+#define VERIFY_CERT_NOT_ACTIVATED 128
+#define VERIFY_CERT_EXPIRED 256
+#define VERIFY_CERT_WRONG_HOSTNAME 512
 
 extern int ssl_errno;
 
 /* This is what your callback function should look like. */
-typedef gboolean (*ssl_input_function)(gpointer, void*, b_input_condition);
+typedef gboolean (*ssl_input_function)(gpointer, int, void*, b_input_condition);
 
 
 /* Perform any global initialization the SSL library might need. */
@@ -52,11 +61,11 @@ G_MODULE_EXPORT void ssl_init( void );
 /* Connect to host:port, call the given function when the connection is
    ready to be used for SSL traffic. This is all done asynchronously, no
    blocking I/O! (Except for the DNS lookups, for now...) */
-G_MODULE_EXPORT void *ssl_connect( char *host, int port, ssl_input_function func, gpointer data );
+G_MODULE_EXPORT void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data );
 
 /* Start an SSL session on an existing fd. Useful for STARTTLS functionality,
    for example in Jabber. */
-G_MODULE_EXPORT void *ssl_starttls( int fd, ssl_input_function func, gpointer data );
+G_MODULE_EXPORT void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function func, gpointer data );
 
 /* Obviously you need special read/write functions to read data. */
 G_MODULE_EXPORT int ssl_read( void *conn, char *buf, int len );
@@ -88,5 +97,9 @@ G_MODULE_EXPORT int ssl_getfd( void *conn );
    adding an event handler to the queue. (And it should perform exactly
    the same action as the handler that just received the SSL_AGAIN.) */
 G_MODULE_EXPORT b_input_condition ssl_getdirection( void *conn );
+
+/* Converts a verification bitfield passed to ssl_input_function into
+   a more useful string. Or NULL if it had no useful bits set. */
+G_MODULE_EXPORT char *ssl_verify_strerror( int code );
 
 G_MODULE_EXPORT size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned char *input, size_t input_len, const unsigned char *iv, unsigned char **res);

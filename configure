@@ -282,6 +282,10 @@ EFLAGS+=`$PKG_CONFIG --libs gnutls` `libgcrypt-config --libs`
 CFLAGS+=`$PKG_CONFIG --cflags gnutls` `libgcrypt-config --cflags`
 EOF
 		ssl=gnutls
+		if ! pkg-config gnutls --atleast-version=2.8; then
+			echo
+			echo 'Warning: With GnuTLS versions <2.8, certificate expire dates are not verified.'
+		fi
 		ret=1
 	elif libgnutls-config --version > /dev/null 2> /dev/null; then
 		cat <<EOF>>Makefile.settings

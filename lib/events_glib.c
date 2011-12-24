@@ -74,6 +74,9 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 	GaimIOClosure *closure = data;
 	b_input_condition gaim_cond = 0;
 	gboolean st;
+	
+	if (condition & G_IO_NVAL)
+		return FALSE;
 
 	if (condition & GAIM_READ_COND)
 		gaim_cond |= B_EV_IO_READ;

@@ -86,7 +86,10 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "tls", "try", set_eval_tls, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
-
+	
+	s = set_add( &acc->set, "tls_verify", "true", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+	
 	s = set_add( &acc->set, "user_agent", "BitlBee", NULL, acc );
 	
 	s = set_add( &acc->set, "xmlconsole", "false", set_eval_bool, acc );
@@ -227,7 +230,7 @@ void jabber_connect( struct im_connection *ic )
 	   non-standard ports... */
 	if( set_getbool( &acc->set, "ssl" ) )
 	{
-		jd->ssl = ssl_connect( connect_to, set_getint( &acc->set, "port" ), jabber_connected_ssl, ic );
+		jd->ssl = ssl_connect( connect_to, set_getint( &acc->set, "port" ), FALSE, jabber_connected_ssl, ic );
 		jd->fd = jd->ssl ? ssl_getfd( jd->ssl ) : -1;
 	}
 	else

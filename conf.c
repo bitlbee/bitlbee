@@ -66,6 +66,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf->ft_max_kbps = G_MAXUINT;
 	conf->ft_listen = NULL;
 	conf->protocols = NULL;
+	conf->cafile = NULL;
 	proxytype = 0;
 	
 	i = conf_loadini( conf, global.conf_file );
@@ -175,6 +176,14 @@ conf_t *conf_load( int argc, char *argv[] )
 	
 	if( config_missing )
 		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", global.conf_file );
+	
+	if( conf->cafile && access( conf->cafile, R_OK ) != 0 )
+	{
+		/* Let's treat this as a serious problem so people won't think
+		   they're secure when in fact they're not. */
+		fprintf( stderr, "Error: Could not read CA file %s: %s\n", conf->cafile, strerror( errno ) );
+		return NULL;
+	}
 	
 	return conf;
 }
@@ -338,6 +347,11 @@ static int conf_loadini( conf_t *conf, char *file )
 			{
 				g_strfreev( conf->protocols );
 				conf->protocols = g_strsplit_set( ini->value, " \t,;", -1 );
+			}
+			else if( g_strcasecmp( ini->key, "cafile" ) == 0 )
+			{
+				g_free( conf->cafile );
+				conf->cafile = g_strdup( ini->value );
 			}
 			else
 			{
