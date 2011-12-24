@@ -165,11 +165,15 @@ static int verify_certificate_callback( gnutls_session_t session )
 	if( status & GNUTLS_CERT_INSECURE_ALGORITHM )
 		verifyret |= VERIFY_CERT_INSECURE_ALGORITHM;
 
+#ifdef GNUTLS_CERT_NOT_ACTIVATED
+	/* Amusingly, the GnuTLS function used above didn't check for expiry
+	   until GnuTLS 2.8 or so. (See CVE-2009-1417) */
 	if( status & GNUTLS_CERT_NOT_ACTIVATED )
 		verifyret |= VERIFY_CERT_NOT_ACTIVATED;
 
 	if( status & GNUTLS_CERT_EXPIRED )
 		verifyret |= VERIFY_CERT_EXPIRED;
+#endif
 
 	/* The following check is already performed inside 
 	 * gnutls_certificate_verify_peers2, so we don't need it.
