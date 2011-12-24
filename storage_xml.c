@@ -149,7 +149,7 @@ static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_na
 			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			             "Unknown protocol: %s", protocol );
 		else if( ( pass_len = base64_decode( pass_b64, (unsigned char**) &pass_cr ) ) &&
-		                         arc_decode( pass_cr, pass_len, &password, xd->given_pass ) )
+		         arc_decode( pass_cr, pass_len, &password, xd->given_pass ) >= 0 )
 		{
 			xd->current_account = account_add( irc->b, prpl, handle, password );
 			if( server )

@@ -199,7 +199,7 @@ int arc_decode( unsigned char *crypt, int crypt_len, char **clear, char *passwor
 	if( clear_len < 0 )
 	{
 		*clear = g_strdup( "" );
-		return 0;
+		return -1;
 	}
 	
 	/* Prepare buffers and the key + IV */
