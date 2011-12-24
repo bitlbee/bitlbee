@@ -172,9 +172,6 @@ static gboolean jabber_read_callback( gpointer data, gint fd, b_input_condition 
 	
 	if( st > 0 )
 	{
-		if( jd->flags & JFLAG_MOCK )
-			return TRUE;
-		
 		/* Parse. */
 		if( xt_feed( jd->xt, buf, st ) < 0 )
 		{

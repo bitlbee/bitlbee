@@ -46,7 +46,6 @@ typedef enum
 	                                   activates all XEP-85 related code. */
 	JFLAG_XMLCONSOLE = 64,          /* If the user added an xmlconsole buddy. */
 	JFLAG_STARTTLS_DONE = 128,      /* If a plaintext session was converted to TLS. */
-	JFLAG_MOCK = 256,               /* If the user added a mock buddy. */
 } jabber_flags_t;
 
 typedef enum
@@ -188,7 +187,6 @@ struct jabber_transfer
 };
 
 #define JABBER_XMLCONSOLE_HANDLE "xmlconsole"
-#define JABBER_MOCK_HANDLE "mock"
 
 /* Prefixes to use for packet IDs (mainly for IQ packets ATM). Usually the
    first one should be used, but when storing a packet in the cache, a

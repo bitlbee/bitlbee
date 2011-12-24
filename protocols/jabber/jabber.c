@@ -338,25 +338,6 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 	
 	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
 		return jabber_write( ic, message, strlen( message ) );
-
-	if( g_strcasecmp( who, JABBER_MOCK_HANDLE ) == 0 )
-	{
-		/* Parse. */
-		if( xt_feed( jd->xt, message, strlen( message ) ) < 0 )
-		{
-			imcb_error( ic, "XML stream error" );
-			imc_logout( ic, TRUE );
-			return FALSE;
-		}
-		
-		/* Execute all handlers. */
-		if( !xt_handle( jd->xt, NULL, 1 ) )
-		{
-			/* Don't do anything, the handlers should have
-			   aborted the connection already. */
-			return FALSE;
-		}
-	}
 	
 	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_jid( ic, s + 1 ) )
 		bud = jabber_buddy_by_ext_jid( ic, who, 0 );
@@ -447,13 +428,7 @@ static void jabber_add_buddy( struct im_connection *ic, char *who, char *group )
 	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
 	{
 		jd->flags |= JFLAG_XMLCONSOLE;
-		imcb_add_buddy( ic, who, NULL );
-		return;
-	}
-	else if( g_strcasecmp( who, JABBER_MOCK_HANDLE ) == 0 )
-	{
-		jd->flags |= JFLAG_MOCK;
-		imcb_add_buddy( ic, who, NULL );
+		imcb_add_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL );
 		return;
 	}
 	
@@ -473,11 +448,6 @@ static void jabber_remove_buddy( struct im_connection *ic, char *who, char *grou
 		   this function already.
 		imcb_remove_buddy( ic, JABBER_XMLCONSOLE_HANDLE, NULL );
 		*/
-		return;
-	}
-	else if( g_strcasecmp( who, JABBER_MOCK_HANDLE ) == 0 )
-	{
-		jd->flags &= ~JFLAG_MOCK;
 		return;
 	}
 	
