@@ -675,6 +675,8 @@ static gboolean jabber_buddy_remove_all_cb( gpointer key, gpointer value, gpoint
 	struct jabber_buddy *bud, *next;
 	
 	bud = value;
+	if( bud->bare_jid != bud->full_jid )
+		g_free( bud->bare_jid );
 	while( bud )
 	{
 		next = bud->next;
