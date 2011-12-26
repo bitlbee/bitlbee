@@ -104,10 +104,14 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		c = c->next;
 	}
 	
-	if( !sup_plain && !sup_digest && !sup_gtalk && !sup_fb && !sup_ms )
+	if( !sup_plain && !sup_digest )
 	{
-		imcb_error( ic, "BitlBee does not support any of the offered SASL "
-		                "authentication schemes:%s", mechs->str );
+		if( !sup_gtalk && !sup_fb && !sup_ms )
+			imcb_error( ic, "This server requires OAuth "
+			                "(supported schemes:%s)", mechs->str );
+		else
+			imcb_error( ic, "BitlBee does not support any of the offered SASL "
+			                "authentication schemes:%s", mechs->str );
 		imc_logout( ic, FALSE );
 		g_string_free( mechs, TRUE );
 		return XT_ABORT;
@@ -293,12 +297,8 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	
 	if( jd->flags & JFLAG_SASL_FB )
 	{
-		/* Facebook proprietary authentication. Not as useful as it seemed, but
-		   the code's written now, may as well keep it..
-		   
-		   Mechanism is described on http://developers.facebook.com/docs/chat/
-		   and in their Python module. It's all mostly useless because the tokens
-		   expire after 24h. */
+		/* New-style Facebook OAauth2 support. Instead of sending a refresh
+		   token, they just send an access token that should never expire. */
 		GSList *p_in = NULL, *p_out = NULL;
 		char time[33];
 		

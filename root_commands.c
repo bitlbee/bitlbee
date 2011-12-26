@@ -458,7 +458,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 				irc_rootmsg( irc, "You can now use the /OPER command to "
 				             "enter the password" );
 				if( oauth )
-					irc_rootmsg( irc, "Alternatively, enable oauth if "
+					irc_rootmsg( irc, "Alternatively, enable OAuth if "
 					             "the account supports it: account %s "
 					             "set oauth on", a->tag );
 			}

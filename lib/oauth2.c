@@ -116,8 +116,6 @@ static void oauth2_access_token_done( struct http_request *req )
 	{
 		atoken = oauth2_json_dumb_get( req->reply_body, "access_token" );
 		rtoken = oauth2_json_dumb_get( req->reply_body, "refresh_token" );
-		if( getenv( "BITLBEE_DEBUG" ) )
-			printf( "Extracted atoken=%s rtoken=%s\n", atoken, rtoken );
 	}
 	else
 	{
@@ -129,6 +127,9 @@ static void oauth2_access_token_done( struct http_request *req )
 		rtoken = g_strdup( oauth_params_get( &p_in, "refresh_token" ) );
 		oauth_params_free( &p_in );
 	}
+	if( getenv( "BITLBEE_DEBUG" ) )
+		printf( "Extracted atoken=%s rtoken=%s\n", atoken, rtoken );
+	
 	cb_data->func( cb_data->data, atoken, rtoken );
 	g_free( atoken );
 	g_free( rtoken );
