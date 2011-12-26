@@ -37,64 +37,31 @@
 static char *oauth_sign( const char *method, const char *url,
                          const char *params, struct oauth_info *oi )
 {
-	sha1_state_t sha1;
 	uint8_t hash[sha1_hash_size];
-	uint8_t key[HMAC_BLOCK_SIZE+1];
+	GString *payload = g_string_new( "" );
+	char *key;
 	char *s;
-	int i;
 	
-	/* Create K. If our current key is >64 chars we have to hash it,
-	   otherwise just pad. */
-	memset( key, 0, HMAC_BLOCK_SIZE );
-	i = strlen( oi->sp->consumer_secret ) + 1 + ( oi->token_secret ? strlen( oi->token_secret ) : 0 );
-	if( i > HMAC_BLOCK_SIZE )
-	{
-		sha1_init( &sha1 );
-		sha1_append( &sha1, (uint8_t*) oi->sp->consumer_secret, strlen( oi->sp->consumer_secret ) );
-		sha1_append( &sha1, (uint8_t*) "&", 1 );
-		if( oi->token_secret )
-			sha1_append( &sha1, (uint8_t*) oi->token_secret, strlen( oi->token_secret ) );
-		sha1_finish( &sha1, key );
-	}
-	else
-	{
-		g_snprintf( (gchar*) key, HMAC_BLOCK_SIZE + 1, "%s&%s",
-		            oi->sp->consumer_secret, oi->token_secret ? oi->token_secret : "" );
-	}
+	key = g_strdup_printf( "%s&%s", oi->sp->consumer_secret, oi->token_secret ? oi->token_secret : "" );
 	
-	/* Inner part: H(K XOR 0x36, text) */
-	sha1_init( &sha1 );
-	
-	for( i = 0; i < HMAC_BLOCK_SIZE; i ++ )
-		key[i] ^= 0x36;
-	sha1_append( &sha1, key, HMAC_BLOCK_SIZE );
-	
-	/* OAuth: text = method&url&params, all http_encoded. */
-	sha1_append( &sha1, (const uint8_t*) method, strlen( method ) );
-	sha1_append( &sha1, (const uint8_t*) "&", 1 );
+	g_string_append_printf( payload, "%s&", method );
 	
 	s = g_new0( char, strlen( url ) * 3 + 1 );
 	strcpy( s, url );
 	http_encode( s );
-	sha1_append( &sha1, (const uint8_t*) s, strlen( s ) );
-	sha1_append( &sha1, (const uint8_t*) "&", 1 );
+	g_string_append_printf( payload, "%s&", s );
 	g_free( s );
 	
 	s = g_new0( char, strlen( params ) * 3 + 1 );
 	strcpy( s, params );
 	http_encode( s );
-	sha1_append( &sha1, (const uint8_t*) s, strlen( s ) );
+	g_string_append( payload, s );
 	g_free( s );
 	
-	sha1_finish( &sha1, hash );
+	sha1_hmac( key, 0, payload->str, 0, hash );
 	
-	/* Final result: H(K XOR 0x5C, inner stuff) */
-	sha1_init( &sha1 );
-	for( i = 0; i < HMAC_BLOCK_SIZE; i ++ )
-		key[i] ^= 0x36 ^ 0x5c;
-	sha1_append( &sha1, key, HMAC_BLOCK_SIZE );
-	sha1_append( &sha1, hash, sha1_hash_size );
-	sha1_finish( &sha1, hash );
+	g_free( key );
+	g_string_free( payload, TRUE );
 	
 	/* base64_encode + HTTP escape it (both consumers 
 	   need it that away) and we're done. */
@@ -121,6 +88,9 @@ void oauth_params_add( GSList **params, const char *key, const char *value )
 {
 	char *item;
 	
+	if( !key || !value )
+		return;
+	
 	item = g_strdup_printf( "%s=%s", key, value );
 	*params = g_slist_insert_sorted( *params, item, (GCompareFunc) strcmp );
 }
@@ -129,6 +99,9 @@ void oauth_params_del( GSList **params, const char *key )
 {
 	int key_len = strlen( key );
 	GSList *l, *n;
+	
+	if( params == NULL )
+		return;
 	
 	for( l = *params; l; l = n )
 	{
@@ -154,6 +127,9 @@ const char *oauth_params_get( GSList **params, const char *key )
 	int key_len = strlen( key );
 	GSList *l;
 	
+	if( params == NULL )
+		return NULL;
+	
 	for( l = *params; l; l = l->next )
 	{
 		if( strncmp( (char*) l->data, key, key_len ) == 0 &&
@@ -164,7 +140,7 @@ const char *oauth_params_get( GSList **params, const char *key )
 	return NULL;
 }
 
-static void oauth_params_parse( GSList **params, char *in )
+void oauth_params_parse( GSList **params, char *in )
 {
 	char *amp, *eq, *s;
 	
@@ -332,6 +308,7 @@ static void oauth_request_token_done( struct http_request *req )
 		st->auth_url = g_strdup_printf( "%s?%s", st->sp->url_authorize, req->reply_body );
 		oauth_params_parse( &params, req->reply_body );
 		st->request_token = g_strdup( oauth_params_get( &params, "oauth_token" ) );
+		st->token_secret = g_strdup( oauth_params_get( &params, "oauth_token_secret" ) );
 		oauth_params_free( &params );
 	}
 	
@@ -361,6 +338,7 @@ static void oauth_access_token_done( struct http_request *req )
 	{
 		oauth_params_parse( &st->params, req->reply_body );
 		st->token = g_strdup( oauth_params_get( &st->params, "oauth_token" ) );
+		g_free( st->token_secret );
 		st->token_secret = g_strdup( oauth_params_get( &st->params, "oauth_token_secret" ) );
 	}
 	

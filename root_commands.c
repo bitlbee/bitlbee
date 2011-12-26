@@ -442,9 +442,27 @@ static void cmd_account( irc_t *irc, char **cmd )
 			set_setstr( &a->set, "server", cmd[5] );
 		}
 		
-		irc_rootmsg( irc, "Account successfully added with tag %s%s",
-		             a->tag, cmd[4] ? "" :
-		             ", now use /OPER to enter the password" );
+		irc_rootmsg( irc, "Account successfully added with tag %s", a->tag );
+		
+		if( cmd[4] == NULL )
+		{
+			set_t *oauth = set_find( &a->set, "oauth" );
+			if( oauth && bool2int( set_value( oauth ) ) )
+			{
+				*a->pass = '\0';
+				irc_rootmsg( irc, "No need to enter a password for this "
+				             "account since it's using OAuth" );
+			}
+			else
+			{
+				irc_rootmsg( irc, "You can now use the /OPER command to "
+				             "enter the password" );
+				if( oauth )
+					irc_rootmsg( irc, "Alternatively, enable OAuth if "
+					             "the account supports it: account %s "
+					             "set oauth on", a->tag );
+			}
+		}
 		
 		return;
 	}

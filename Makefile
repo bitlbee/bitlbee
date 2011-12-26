@@ -26,11 +26,13 @@ endif
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 
-all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) systemd
-	$(MAKE) -C doc
+all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) doc systemd
 ifdef SKYPE_PI
 	$(MAKE) -C protocols/skype doc
 endif
+
+doc:
+	$(MAKE) -C doc
 
 uninstall: uninstall-bin uninstall-doc 
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
@@ -42,7 +44,7 @@ install: install-bin install-doc install-plugins install-systemd
 
 .PHONY:   install   install-bin   install-etc   install-doc install-plugins install-systemd \
         uninstall uninstall-bin uninstall-etc uninstall-doc \
-        all clean distclean tar $(subdirs)
+        all clean distclean tar $(subdirs) doc
 
 Makefile.settings:
 	@echo
@@ -187,6 +189,13 @@ ctags:
 # make is available.
 helloworld:
 	@echo Hello World
+
+# Check if we can load the helpfile. (This fails if some article is >1KB.)
+# If print returns a NULL pointer, the file is unusable.
+testhelp: doc
+	gdb --eval-command='b main' --eval-command='r' \
+	    --eval-command='print help_init(&global->helpfile, "doc/user-guide/help.txt")' \
+	    $(OUTFILE) < /dev/null
 
 -include .depend/*.d
 # DO NOT DELETE

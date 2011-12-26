@@ -76,6 +76,8 @@ typedef struct set
 	struct set *next;
 } set_t;
 
+#define set_value( set ) ((set)->value) ? ((set)->value) : ((set)->def)
+
 /* Should be pretty clear. */
 set_t *set_add( set_t **head, const char *key, const char *def, set_eval eval, void *data );
 
@@ -110,6 +112,6 @@ char *set_eval_list( set_t *set, char *value );
 
 /* Some not very generic evaluators that really shouldn't be here... */
 char *set_eval_to_char( set_t *set, char *value );
-char *set_eval_ops( set_t *set, char *value );
+char *set_eval_oauth( set_t *set, char *value );
 
 #endif /* __SET_H__ */

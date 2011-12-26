@@ -219,7 +219,7 @@ static void twitter_init(account_t * acc)
 		def_oauth = "true";
 	} else {		/* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
 		def_url = IDENTICA_API_URL;
-		def_oauth = "false";
+		def_oauth = "true";
 	}
 
 	s = set_add(&acc->set, "auto_reply_timeout", "10800", set_eval_int, acc);
@@ -239,12 +239,12 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "mode", "chat", set_eval_mode, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
+	s = set_add(&acc->set, "oauth", def_oauth, set_eval_oauth, acc);
+
 	s = set_add(&acc->set, "show_ids", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "show_old_mentions", "true", set_eval_bool, acc);
-
-	s = set_add(&acc->set, "oauth", def_oauth, set_eval_bool, acc);
 }
 
 /**

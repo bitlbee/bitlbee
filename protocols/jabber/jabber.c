@@ -31,6 +31,7 @@
 #include "xmltree.h"
 #include "bitlbee.h"
 #include "jabber.h"
+#include "oauth.h"
 #include "md5.h"
 
 GSList *jabber_connections;
@@ -59,6 +60,8 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "activity_timeout", "600", set_eval_int, acc );
 	
+	s = set_add( &acc->set, "oauth", "false", set_eval_oauth, acc );
+
 	g_snprintf( str, sizeof( str ), "%d", jabber_port_list[0] );
 	s = set_add( &acc->set, "port", str, set_eval_int, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -72,6 +75,9 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "resource_select", "activity", NULL, acc );
 	
+	s = set_add( &acc->set, "sasl", "true", set_eval_bool, acc );
+	s->flags |= ACC_SET_OFFLINE_ONLY | SET_HIDDEN_DEFAULT;
+	
 	s = set_add( &acc->set, "server", NULL, set_eval_account, acc );
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 	
@@ -83,9 +89,6 @@ static void jabber_init( account_t *acc )
 	
 	s = set_add( &acc->set, "tls_verify", "true", set_eval_bool, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
-	
-	s = set_add( &acc->set, "sasl", "true", set_eval_bool, acc );
-	s->flags |= ACC_SET_OFFLINE_ONLY | SET_HIDDEN_DEFAULT;
 
 	s = set_add( &acc->set, "user_agent", "BitlBee", NULL, acc );
 	
@@ -101,9 +104,7 @@ static void jabber_login( account_t *acc )
 {
 	struct im_connection *ic = imcb_new( acc );
 	struct jabber_data *jd = g_new0( struct jabber_data, 1 );
-	struct ns_srv_reply **srvl = NULL, *srv = NULL;
-	char *connect_to, *s;
-	int i;
+	char *s;
 	
 	/* For now this is needed in the _connected() handlers if using
 	   GLib event handling, to make sure we're not handling events
@@ -113,8 +114,7 @@ static void jabber_login( account_t *acc )
 	jd->ic = ic;
 	ic->proto_data = jd;
 	
-	jd->username = g_strdup( acc->user );
-	jd->server = strchr( jd->username, '@' );
+	jabber_set_me( ic, acc->user );
 	
 	jd->fd = jd->r_inpa = jd->w_inpa = -1;
 	
@@ -124,10 +124,6 @@ static void jabber_login( account_t *acc )
 		imc_logout( ic, FALSE );
 		return;
 	}
-	
-	/* So don't think of free()ing jd->server.. :-) */
-	*jd->server = 0;
-	jd->server ++;
 	
 	if( ( s = strchr( jd->server, '/' ) ) )
 	{
@@ -140,63 +136,62 @@ static void jabber_login( account_t *acc )
 		*s = 0;
 	}
 	
-	/* This code isn't really pretty. Backwards compatibility never is... */
-	s = acc->server;
-	while( s )
-	{
-		static int had_port = 0;
-		
-		if( strncmp( s, "ssl", 3 ) == 0 )
-		{
-			set_setstr( &acc->set, "ssl", "true" );
-			
-			/* Flush this part so that (if this was the first
-			   part of the server string) acc->server gets
-			   flushed. We don't want to have to do this another
-			   time. :-) */
-			*s = 0;
-			s ++;
-			
-			/* Only set this if the user didn't specify a custom
-			   port number already... */
-			if( !had_port )
-				set_setint( &acc->set, "port", 5223 );
-		}
-		else if( isdigit( *s ) )
-		{
-			int i;
-			
-			/* The first character is a digit. It could be an
-			   IP address though. Only accept this as a port#
-			   if there are only digits. */
-			for( i = 0; isdigit( s[i] ); i ++ );
-			
-			/* If the first non-digit character is a colon or
-			   the end of the string, save the port number
-			   where it should be. */
-			if( s[i] == ':' || s[i] == 0 )
-			{
-				sscanf( s, "%d", &i );
-				set_setint( &acc->set, "port", i );
-				
-				/* See above. */
-				*s = 0;
-				s ++;
-			}
-			
-			had_port = 1;
-		}
-		
-		s = strchr( s, ':' );
-		if( s )
-		{
-			*s = 0;
-			s ++;
-		}
-	}
-	
 	jd->node_cache = g_hash_table_new_full( g_str_hash, g_str_equal, NULL, jabber_cache_entry_free );
 	jd->buddies = g_hash_table_new( g_str_hash, g_str_equal );
+	
+	if( set_getbool( &acc->set, "oauth" ) )
+	{
+		GSList *p_in = NULL;
+		const char *tok;
+		
+		jd->fd = jd->r_inpa = jd->w_inpa = -1;
+		
+		if( strstr( jd->server, ".live.com" ) )
+			jd->oauth2_service = &oauth2_service_mslive;
+		else if( strstr( jd->server, ".facebook.com" ) )
+			jd->oauth2_service = &oauth2_service_facebook;
+		else
+			jd->oauth2_service = &oauth2_service_google;
+		
+		oauth_params_parse( &p_in, ic->acc->pass );
+		
+		/* First see if we have a refresh token, in which case any
+		   access token we *might* have has probably expired already
+		   anyway. */
+		if( ( tok = oauth_params_get( &p_in, "refresh_token" ) ) )
+		{
+			sasl_oauth2_refresh( ic, tok );
+		}
+		/* If we don't have a refresh token, let's hope the access
+		   token is still usable. */
+		else if( ( tok = oauth_params_get( &p_in, "access_token" ) ) )
+		{
+			jd->oauth2_access_token = g_strdup( tok );
+			jabber_connect( ic );
+		}
+		/* If we don't have any, start the OAuth process now. Don't
+		   even open an XMPP connection yet. */
+		else
+		{
+			sasl_oauth2_init( ic );
+			ic->flags |= OPT_SLOW_LOGIN;
+		}
+		
+		oauth_params_free( &p_in );
+	}
+	else
+		jabber_connect( ic );
+}
+
+/* Separate this from jabber_login() so we can do OAuth first if necessary.
+   Putting this in io.c would probably be more correct. */
+void jabber_connect( struct im_connection *ic )
+{
+	account_t *acc = ic->acc;
+	struct jabber_data *jd = ic->proto_data;
+	int i;
+	char *connect_to;
+	struct ns_srv_reply **srvl = NULL, *srv = NULL;
 	
 	/* Figure out the hostname to connect to. */
 	if( acc->server && *acc->server )
@@ -321,8 +316,10 @@ static void jabber_logout( struct im_connection *ic )
 	
 	xt_free( jd->xt );
 	
+	g_free( jd->oauth2_access_token );
 	g_free( jd->away_message );
 	g_free( jd->username );
+	g_free( jd->me );
 	g_free( jd );
 	
 	jabber_connections = g_slist_remove( jabber_connections, ic );
@@ -338,6 +335,21 @@ static int jabber_buddy_msg( struct im_connection *ic, char *who, char *message,
 	
 	if( g_strcasecmp( who, JABBER_XMLCONSOLE_HANDLE ) == 0 )
 		return jabber_write( ic, message, strlen( message ) );
+	
+	if( g_strcasecmp( who, JABBER_OAUTH_HANDLE ) == 0 &&
+	    !( jd->flags & OPT_LOGGED_IN ) && jd->fd == -1 )
+	{
+		if( sasl_oauth2_get_refresh_token( ic, message ) )
+		{
+			return 1;
+		}
+		else
+		{
+			imcb_error( ic, "OAuth failure" );
+			imc_logout( ic, TRUE );
+			return 0;
+		}
+	}
 	
 	if( ( s = strchr( who, '=' ) ) && jabber_chat_by_jid( ic, s + 1 ) )
 		bud = jabber_buddy_by_ext_jid( ic, who, 0 );
@@ -490,11 +502,12 @@ static void jabber_chat_leave_( struct groupchat *c )
 
 static void jabber_chat_invite_( struct groupchat *c, char *who, char *msg )
 {
+	struct jabber_data *jd = c->ic->proto_data;
 	struct jabber_chat *jc = c->data;
 	gchar *msg_alt = NULL;
 
 	if( msg == NULL )
-		msg_alt = g_strdup_printf( "%s invited you to %s", c->ic->acc->user, jc->name );
+		msg_alt = g_strdup_printf( "%s invited you to %s", jd->me, jc->name );
 	
 	if( c && who )
 		jabber_chat_invite( c, who, msg ? msg : msg_alt );

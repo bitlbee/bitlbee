@@ -760,3 +760,21 @@ void jabber_error_free( struct jabber_error *err )
 {
 	g_free( err );
 }
+
+gboolean jabber_set_me( struct im_connection *ic, const char *me )
+{
+	struct jabber_data *jd = ic->proto_data;
+	
+	if( strchr( me, '@' ) == NULL )
+		return FALSE;
+	
+	g_free( jd->username );
+	g_free( jd->me );
+	
+	jd->me = jabber_normalize( me );
+	jd->server = strchr( jd->me, '@' );
+	jd->username = g_strndup( jd->me, jd->server - jd->me );
+	jd->server ++;
+	
+	return TRUE;
+}

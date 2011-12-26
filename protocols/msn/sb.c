@@ -681,7 +681,7 @@ static int msn_sb_message( struct msn_handler_data *handler, char *msg, int msgl
 	
 	if( strcmp( cmd[0], "MSG" ) == 0 )
 	{
-		char *ct = msn_findheader( msg, "Content-Type:", msglen );
+		char *ct = get_rfc822_header( msg, "Content-Type:", msglen );
 		
 		if( !ct )
 			return( 1 );
@@ -710,8 +710,8 @@ static int msn_sb_message( struct msn_handler_data *handler, char *msg, int msgl
 		// Disable MSN ft support for now.
 		else if( g_strncasecmp( ct, "text/x-msmsgsinvite", 19 ) == 0 )
 		{
-			char *command = msn_findheader( body, "Invitation-Command:", blen );
-			char *cookie = msn_findheader( body, "Invitation-Cookie:", blen );
+			char *command = get_rfc822_header( body, "Invitation-Command:", blen );
+			char *cookie = get_rfc822_header( body, "Invitation-Cookie:", blen );
 			unsigned int icookie;
 			
 			g_free( ct );
@@ -749,7 +749,7 @@ static int msn_sb_message( struct msn_handler_data *handler, char *msg, int msgl
 		}
 		else if( g_strncasecmp( ct, "text/x-msmsgscontrol", 20 ) == 0 )
 		{
-			char *who = msn_findheader( msg, "TypingUser:", msglen );
+			char *who = get_rfc822_header( msg, "TypingUser:", msglen );
 			
 			if( who )
 			{

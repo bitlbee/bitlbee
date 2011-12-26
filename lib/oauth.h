@@ -91,4 +91,9 @@ char *oauth_to_string( struct oauth_info *oi );
 struct oauth_info *oauth_from_string( char *in, const struct oauth_service *sp );
 
 /* For reading misc. data. */
+void oauth_params_add( GSList **params, const char *key, const char *value );
+void oauth_params_parse( GSList **params, char *in );
+void oauth_params_free( GSList **params );
+char *oauth_params_string( GSList *params );
+void oauth_params_set( GSList **params, const char *key, const char *value );
 const char *oauth_params_get( GSList **params, const char *key );

@@ -42,5 +42,6 @@ typedef struct MD5Context {
 G_MODULE_EXPORT void md5_init(struct MD5Context *context);
 G_MODULE_EXPORT void md5_append(struct MD5Context *context, const md5_byte_t *buf, unsigned int len);
 G_MODULE_EXPORT void md5_finish(struct MD5Context *context, md5_byte_t digest[16]);
+G_MODULE_EXPORT void md5_finish_ascii(struct MD5Context *context, char *ascii);
 
 #endif

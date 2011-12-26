@@ -210,6 +210,7 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 	struct groupchat *chat;
 	struct xt_node *c;
 	char *type = xt_find_attr( node, "type" );
+	struct jabber_data *jd = ic->proto_data;
 	struct jabber_chat *jc;
 	char *s;
 	
@@ -251,7 +252,7 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 		{
 			if( bud == jc->me )
 			{
-				bud->ext_jid = jabber_normalize( ic->acc->user );
+				bud->ext_jid = g_strdup( jd->me );
 			}
 			else
 			{

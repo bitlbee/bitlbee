@@ -25,6 +25,36 @@
 
 #include "jabber.h"
 #include "base64.h"
+#include "oauth2.h"
+#include "oauth.h"
+
+const struct oauth2_service oauth2_service_google =
+{
+	"https://accounts.google.com/o/oauth2/auth",
+	"https://accounts.google.com/o/oauth2/token",
+	"urn:ietf:wg:oauth:2.0:oob",
+	"https://www.googleapis.com/auth/googletalk",
+	"783993391592.apps.googleusercontent.com",
+	"6C-Zgf7Tr7gEQTPlBhMUgo7R",
+};
+const struct oauth2_service oauth2_service_facebook =
+{
+	"https://www.facebook.com/dialog/oauth",
+	"https://graph.facebook.com/oauth/access_token",
+	"http://www.bitlbee.org/main.php/Facebook/oauth2.html",
+	"offline_access,xmpp_login",
+	"126828914005625",
+	"4b100f0f244d620bf3f15f8b217d4c32",
+};
+const struct oauth2_service oauth2_service_mslive =
+{
+	"https://oauth.live.com/authorize",
+	"https://oauth.live.com/token",
+	"http://www.bitlbee.org/main.php/Messenger/oauth2.html",
+	"wl.offline_access%20wl.messenger",
+	"000000004C06FCD1",
+	"IRKlBPzJJAWcY-TbZjiTEJu9tn7XCFaV",
+};
 
 xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 {
@@ -32,7 +62,9 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	char *s;
-	int sup_plain = 0, sup_digest = 0;
+	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_fb = 0, sup_ms = 0;
+	int want_oauth = FALSE;
+	GString *mechs;
 	
 	if( !sasl_supported( ic ) )
 	{
@@ -51,28 +83,82 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		return XT_ABORT;
 	}
 	
+	mechs = g_string_new( "" );
 	c = node->children;
 	while( ( c = xt_find_node( c, "mechanism" ) ) )
 	{
 		if( c->text && g_strcasecmp( c->text, "PLAIN" ) == 0 )
 			sup_plain = 1;
-		if( c->text && g_strcasecmp( c->text, "DIGEST-MD5" ) == 0 )
+		else if( c->text && g_strcasecmp( c->text, "DIGEST-MD5" ) == 0 )
 			sup_digest = 1;
+		else if( c->text && g_strcasecmp( c->text, "X-OAUTH2" ) == 0 )
+			sup_gtalk = 1;
+		else if( c->text && g_strcasecmp( c->text, "X-FACEBOOK-PLATFORM" ) == 0 )
+			sup_fb = 1;
+		else if( c->text && g_strcasecmp( c->text, "X-MESSENGER-OAUTH2" ) == 0 )
+			sup_ms = 1;
+		
+		if( c->text )
+			g_string_append_printf( mechs, " %s", c->text );
 		
 		c = c->next;
 	}
 	
 	if( !sup_plain && !sup_digest )
 	{
-		imcb_error( ic, "No known SASL authentication schemes supported" );
+		if( !sup_gtalk && !sup_fb && !sup_ms )
+			imcb_error( ic, "This server requires OAuth "
+			                "(supported schemes:%s)", mechs->str );
+		else
+			imcb_error( ic, "BitlBee does not support any of the offered SASL "
+			                "authentication schemes:%s", mechs->str );
 		imc_logout( ic, FALSE );
+		g_string_free( mechs, TRUE );
 		return XT_ABORT;
 	}
+	g_string_free( mechs, TRUE );
 	
 	reply = xt_new_node( "auth", NULL, NULL );
 	xt_add_attr( reply, "xmlns", XMLNS_SASL );
+	want_oauth = set_getbool( &ic->acc->set, "oauth" );
 	
-	if( sup_digest )
+	if( sup_gtalk && want_oauth )
+	{
+		int len;
+		
+		/* X-OAUTH2 is, not *the* standard OAuth2 SASL/XMPP implementation.
+		   It's currently used by GTalk and vaguely documented on
+		   http://code.google.com/apis/cloudprint/docs/rawxmpp.html . */
+		xt_add_attr( reply, "mechanism", "X-OAUTH2" );
+		
+		len = strlen( jd->username ) + strlen( jd->oauth2_access_token ) + 2;
+		s = g_malloc( len + 1 );
+		s[0] = 0;
+		strcpy( s + 1, jd->username );
+		strcpy( s + 2 + strlen( jd->username ), jd->oauth2_access_token );
+		reply->text = base64_encode( (unsigned char *)s, len );
+		reply->text_len = strlen( reply->text );
+		g_free( s );
+	}
+	else if( sup_ms && want_oauth )
+	{
+		xt_add_attr( reply, "mechanism", "X-MESSENGER-OAUTH2" );
+		reply->text = g_strdup( jd->oauth2_access_token );
+		reply->text_len = strlen( jd->oauth2_access_token );
+	}
+	else if( sup_fb && want_oauth )
+	{
+		xt_add_attr( reply, "mechanism", "X-FACEBOOK-PLATFORM" );
+		jd->flags |= JFLAG_SASL_FB;
+	}
+	else if( want_oauth )
+	{
+		imcb_error( ic, "OAuth requested, but not supported by server" );
+		imc_logout( ic, FALSE );
+		xt_free_node( reply );
+		return XT_ABORT;
+	}
+	else if( sup_digest )
 	{
 		xt_add_attr( reply, "mechanism", "DIGEST-MD5" );
 		
@@ -95,7 +181,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		g_free( s );
 	}
 	
-	if( !jabber_write_packet( ic, reply ) )
+	if( reply && !jabber_write_packet( ic, reply ) )
 	{
 		xt_free_node( reply );
 		return XT_ABORT;
@@ -196,12 +282,12 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd = ic->proto_data;
-	struct xt_node *reply = NULL;
+	struct xt_node *reply_pkt = NULL;
 	char *nonce = NULL, *realm = NULL, *cnonce = NULL;
 	unsigned char cnonce_bin[30];
 	char *digest_uri = NULL;
 	char *dec = NULL;
-	char *s = NULL;
+	char *s = NULL, *reply = NULL;
 	xt_status ret = XT_ABORT;
 	
 	if( node->text_len == 0 )
@@ -209,7 +295,29 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	
 	dec = frombase64( node->text );
 	
-	if( !( s = sasl_get_part( dec, "rspauth" ) ) )
+	if( jd->flags & JFLAG_SASL_FB )
+	{
+		/* New-style Facebook OAauth2 support. Instead of sending a refresh
+		   token, they just send an access token that should never expire. */
+		GSList *p_in = NULL, *p_out = NULL;
+		char time[33];
+		
+		oauth_params_parse( &p_in, dec );
+		oauth_params_add( &p_out, "nonce", oauth_params_get( &p_in, "nonce" ) );
+		oauth_params_add( &p_out, "method", oauth_params_get( &p_in, "method" ) );
+		oauth_params_free( &p_in );
+		
+		g_snprintf( time, sizeof( time ), "%lld", (long long) ( gettime() * 1000 ) );
+		oauth_params_add( &p_out, "call_id", time );
+		oauth_params_add( &p_out, "api_key", oauth2_service_facebook.consumer_key );
+		oauth_params_add( &p_out, "v", "1.0" );
+		oauth_params_add( &p_out, "format", "XML" );
+		oauth_params_add( &p_out, "access_token", jd->oauth2_access_token );
+		
+		reply = oauth_params_string( p_out );
+		oauth_params_free( &p_out );
+	}
+	else if( !( s = sasl_get_part( dec, "rspauth" ) ) )
 	{
 		/* See RFC 2831 for for information. */
 		md5_state_t A1, A2, H;
@@ -270,23 +378,20 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 			sprintf( Hh + i * 2, "%02x", Hr[i] );
 		
 		/* Now build the SASL response string: */
-		g_free( dec );
-		dec = g_strdup_printf( "username=\"%s\",realm=\"%s\",nonce=\"%s\",cnonce=\"%s\","
-		                       "nc=%08x,qop=auth,digest-uri=\"%s\",response=%s,charset=%s",
-		                       jd->username, realm, nonce, cnonce, 1, digest_uri, Hh, "utf-8" );
-		s = tobase64( dec );
+		reply = g_strdup_printf( "username=\"%s\",realm=\"%s\",nonce=\"%s\",cnonce=\"%s\","
+		                         "nc=%08x,qop=auth,digest-uri=\"%s\",response=%s,charset=%s",
+		                         jd->username, realm, nonce, cnonce, 1, digest_uri, Hh, "utf-8" );
 	}
 	else
 	{
 		/* We found rspauth, but don't really care... */
-		g_free( s );
-		s = NULL;
 	}
 	
-	reply = xt_new_node( "response", s, NULL );
-	xt_add_attr( reply, "xmlns", XMLNS_SASL );
+	s = reply ? tobase64( reply ) : NULL;
+	reply_pkt = xt_new_node( "response", s, NULL );
+	xt_add_attr( reply_pkt, "xmlns", XMLNS_SASL );
 	
-	if( !jabber_write_packet( ic, reply ) )
+	if( !jabber_write_packet( ic, reply_pkt ) )
 		goto silent_error;
 	
 	ret = XT_HANDLED;
@@ -300,10 +405,11 @@ silent_error:
 	g_free( digest_uri );
 	g_free( cnonce );
 	g_free( nonce );
+	g_free( reply );
 	g_free( realm );
 	g_free( dec );
 	g_free( s );
-	xt_free_node( reply );
+	xt_free_node( reply_pkt );
 	
 	return ret;
 }
@@ -345,4 +451,96 @@ gboolean sasl_supported( struct im_connection *ic )
 	struct jabber_data *jd = ic->proto_data;
 	
 	return ( jd->xt && jd->xt->root && xt_find_attr( jd->xt->root, "version" ) ) != 0;
+}
+
+void sasl_oauth2_init( struct im_connection *ic )
+{
+	struct jabber_data *jd = ic->proto_data;
+	char *msg, *url;
+	
+	imcb_log( ic, "Starting OAuth authentication" );
+	
+	/* Temporary contact, just used to receive the OAuth response. */
+	imcb_add_buddy( ic, JABBER_OAUTH_HANDLE, NULL );
+	url = oauth2_url( jd->oauth2_service );
+	msg = g_strdup_printf( "Open this URL in your browser to authenticate: %s", url );
+	imcb_buddy_msg( ic, JABBER_OAUTH_HANDLE, msg, 0, 0 );
+	imcb_buddy_msg( ic, JABBER_OAUTH_HANDLE, "Respond to this message with the returned "
+	                                         "authorization token.", 0, 0 );
+	
+	g_free( msg );
+	g_free( url );
+}
+
+static gboolean sasl_oauth2_remove_contact( gpointer data, gint fd, b_input_condition cond )
+{
+	struct im_connection *ic = data;
+	if( g_slist_find( jabber_connections, ic ) )
+		imcb_remove_buddy( ic, JABBER_OAUTH_HANDLE, NULL );
+	return FALSE;
+}
+
+static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token );
+
+int sasl_oauth2_get_refresh_token( struct im_connection *ic, const char *msg )
+{
+	struct jabber_data *jd = ic->proto_data;
+	char *code;
+	int ret;
+	
+	imcb_log( ic, "Requesting OAuth access token" );
+	
+	/* Don't do it here because the caller may get confused if the contact
+	   we're currently sending a message to is deleted. */
+	b_timeout_add( 1, sasl_oauth2_remove_contact, ic );
+	
+	code = g_strdup( msg );
+	g_strstrip( code );
+	ret = oauth2_access_token( jd->oauth2_service, OAUTH2_AUTH_CODE,
+	                           code, sasl_oauth2_got_token, ic );
+	
+	g_free( code );
+	return ret;
+}
+
+int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token )
+{
+	struct jabber_data *jd = ic->proto_data;
+	
+	return oauth2_access_token( jd->oauth2_service, OAUTH2_AUTH_REFRESH,
+	                            refresh_token, sasl_oauth2_got_token, ic );
+}
+
+static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token )
+{
+	struct im_connection *ic = data;
+	struct jabber_data *jd;
+	GSList *auth = NULL;
+	
+	if( g_slist_find( jabber_connections, ic ) == NULL )
+		return;
+	
+	jd = ic->proto_data;
+	
+	if( access_token == NULL )
+	{
+		imcb_error( ic, "OAuth failure (missing access token)" );
+		imc_logout( ic, TRUE );
+		return;
+	}
+	
+	oauth_params_parse( &auth, ic->acc->pass );
+	if( refresh_token )
+		oauth_params_set( &auth, "refresh_token", refresh_token );
+	if( access_token )
+		oauth_params_set( &auth, "access_token", access_token );
+	
+	g_free( ic->acc->pass );
+	ic->acc->pass = oauth_params_string( auth );
+	oauth_params_free( &auth );
+	
+	g_free( jd->oauth2_access_token );
+	jd->oauth2_access_token = g_strdup( access_token );
+	
+	jabber_connect( ic );
 }

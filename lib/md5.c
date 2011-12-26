@@ -23,6 +23,7 @@
 
 #include <sys/types.h>
 #include <string.h>		/* for memcpy() */
+#include <stdio.h>
 #include "md5.h"
 
 static void md5_transform(uint32_t buf[4], uint32_t const in[16]);
@@ -159,6 +160,16 @@ void md5_finish(struct MD5Context *ctx, md5_byte_t digest[16])
 	ctx->buf[3] = cvt32(ctx->buf[3]);
 	memcpy(digest, ctx->buf, 16);
 	memset(ctx, 0, sizeof(ctx));	/* In case it's sensitive */
+}
+
+void md5_finish_ascii(struct MD5Context *context, char *ascii)
+{
+	md5_byte_t bin[16];
+	int i;
+	
+	md5_finish(context, bin);
+	for (i = 0; i < 16; i ++)
+		sprintf(ascii + i * 2, "%02x", bin[i]);
 }
 
 /* The four core functions - F1 is optimized somewhat */
