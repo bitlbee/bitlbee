@@ -3,7 +3,8 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  Simple module to facilitate twitter functionality.                       *
 *                                                                           *
-*  Copyright 2009 Geert Mulders <g.c.w.m.mulders@gmail.com>                 *
+*  Copyright 2009-2010 Geert Mulders <g.c.w.m.mulders@gmail.com>            *
+*  Copyright 2010-2011 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -785,15 +786,11 @@ void twitter_flush_timeline(struct im_connection *ic)
 
 	g_slist_free(output);
 
-	if (home_timeline && home_timeline->list) {
-		txl_free(home_timeline);
-	}
-
-	if (mentions && mentions->list) {
-		txl_free(mentions);
-	}
+	txl_free(home_timeline);
+	txl_free(mentions);
 
 	td->flags &= ~(TWITTER_DOING_TIMELINE | TWITTER_GOT_TIMELINE | TWITTER_GOT_MENTIONS);
+	td->home_timeline_obj = td->mentions_obj = NULL;
 }
 
 /**
@@ -803,6 +800,7 @@ void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
 {
 	struct twitter_data *td = ic->proto_data;
 
+	txl_free(td->home_timeline_obj);
 	td->home_timeline_obj = NULL;
 	td->flags &= ~TWITTER_GOT_TIMELINE;
 
@@ -838,6 +836,7 @@ void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 {
 	struct twitter_data *td = ic->proto_data;
 
+	txl_free(td->mentions_obj);
 	td->mentions_obj = NULL;
 	td->flags &= ~TWITTER_GOT_MENTIONS;
 
