@@ -86,7 +86,10 @@ static void irc_cmd_nick( irc_t *irc, char **cmd )
 	}
 	else if( irc->status & USTATUS_LOGGED_IN )
 	{
-		if( irc->status & USTATUS_IDENTIFIED )
+		/* WATCH OUT: iu from the first if reused here to check if the
+		   new nickname is the same (other than case, possibly). If it
+		   is, no need to reset identify-status. */
+		if( ( irc->status & USTATUS_IDENTIFIED ) && iu != irc->user )
 		{
 			irc_setpass( irc, NULL );
 			irc->status &= ~USTATUS_IDENTIFIED;
@@ -97,7 +100,8 @@ static void irc_cmd_nick( irc_t *irc, char **cmd )
 			             "nick_changes\x02." );
 		}
 		
-		irc_user_set_nick( irc->user, cmd[1] );
+		if( strcmp( cmd[1], irc->user->nick ) != 0 )
+			irc_user_set_nick( irc->user, cmd[1] );
 	}
 	else
 	{
