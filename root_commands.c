@@ -184,8 +184,7 @@ static void cmd_identify( irc_t *irc, char **cmd )
 		   already sure that there's no takeover target (only
 		   possible in 1-process daemon mode). Start auto_connect
 		   immediately. */
-		if( !ipc_child_identify( irc ) && load &&
-		    set_getbool( &irc->b->set, "auto_connect" ) )
+		if( !ipc_child_identify( irc ) && load )
 			cmd_identify_finish( irc, 0, 0 );
 		
 		break;
@@ -201,7 +200,8 @@ gboolean cmd_identify_finish( gpointer data, gint fd, b_input_condition cond )
 	char *account_on[] = { "account", "on", NULL };
 	irc_t *irc = data;
 	
-	cmd_account( irc, account_on );
+	if( set_getbool( &irc->b->set, "auto_connect" ) )
+		cmd_account( irc, account_on );
 	
 	b_event_remove( irc->login_source_id );
 	irc->login_source_id = -1;
