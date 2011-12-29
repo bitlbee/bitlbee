@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2011 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* SSL module - GnuTLS version                                          */
@@ -37,6 +37,7 @@
 int ssl_errno = 0;
 
 static gboolean initialized = FALSE;
+gnutls_certificate_credentials xcred;
 
 #include <limits.h>
 
@@ -59,13 +60,13 @@ struct scd
 	gboolean verify;
 	
 	gnutls_session session;
-	gnutls_certificate_credentials xcred;
 };
 
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
 static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition cond );
 static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
 
+static void ssl_deinit( void );
 
 void ssl_init( void )
 {
@@ -73,8 +74,22 @@ void ssl_init( void )
 		return;
 	
 	gnutls_global_init();
+	gnutls_certificate_allocate_credentials( &xcred );
+	if( global.conf->cafile )
+	{
+		gnutls_certificate_set_x509_trust_file( xcred, global.conf->cafile, GNUTLS_X509_FMT_PEM );
+		/* TODO: Do we want/need this? */
+		gnutls_certificate_set_verify_flags( xcred, GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT );
+	}
 	initialized = TRUE;
-	atexit( gnutls_global_deinit );
+	
+	atexit( ssl_deinit );
+}
+
+static void ssl_deinit( void )
+{
+	gnutls_global_deinit();
+	gnutls_certificate_free_credentials( xcred );
 }
 
 void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data )
@@ -144,7 +159,7 @@ static int verify_certificate_callback( gnutls_session_t session )
 	gnutls_x509_crt_t cert;
 	const char *hostname;
 	
-	hostname = gnutls_session_get_ptr(session );
+	hostname = gnutls_session_get_ptr( session );
 
 	gnutlsret = gnutls_certificate_verify_peers2( session, &status );
 	if( gnutlsret < 0 )
@@ -244,13 +259,6 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	
 	ssl_init();
 	
-	gnutls_certificate_allocate_credentials( &conn->xcred );
-	if( conn->verify && global.conf->cafile )
-	{
-		gnutls_certificate_set_x509_trust_file( conn->xcred, global.conf->cafile, GNUTLS_X509_FMT_PEM );
-		gnutls_certificate_set_verify_flags( conn->xcred, GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT );
-	}
-
 	gnutls_init( &conn->session, GNUTLS_CLIENT );
 	if( conn->verify )
 		gnutls_session_set_ptr( conn->session, (void *) conn->hostname );
@@ -258,7 +266,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	gnutls_transport_set_lowat( conn->session, 0 );
 #endif
 	gnutls_set_default_priority( conn->session );
-	gnutls_credentials_set( conn->session, GNUTLS_CRD_CERTIFICATE, conn->xcred );
+	gnutls_credentials_set( conn->session, GNUTLS_CRD_CERTIFICATE, xcred );
 	
 	sock_make_nonblocking( conn->fd );
 	gnutls_transport_set_ptr( conn->session, (gnutls_transport_ptr) GNUTLS_STUPID_CAST conn->fd );
@@ -283,7 +291,6 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 			conn->func( conn->data, 0, NULL, cond );
 			
 			gnutls_deinit( conn->session );
-			gnutls_certificate_free_credentials( conn->xcred );
 			closesocket( conn->fd );
 			
 			g_free( conn );
@@ -296,7 +303,6 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 			conn->func( conn->data, stver, NULL, cond );
 
 			gnutls_deinit( conn->session );
-			gnutls_certificate_free_credentials( conn->xcred );
 			closesocket( conn->fd );
 
 			g_free( conn );
@@ -384,8 +390,6 @@ void ssl_disconnect( void *conn_ )
 	
 	if( conn->session )
 		gnutls_deinit( conn->session );
-	if( conn->xcred )
-		gnutls_certificate_free_credentials( conn->xcred );
 	g_free( conn );
 }
 
