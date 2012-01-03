@@ -30,6 +30,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#include "bitlbee.h"
 #include "proxy.h"
 #include "ssl_client.h"
 #include "sock.h"
@@ -116,7 +117,7 @@ static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
-	SSL_METHOD *meth;
+	const SSL_METHOD *meth;
 	
 	/* Right now we don't have any verification functionality for OpenSSL. */
 

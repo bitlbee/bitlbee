@@ -78,7 +78,8 @@ void ssl_init( void )
 	if( global.conf->cafile )
 	{
 		gnutls_certificate_set_x509_trust_file( xcred, global.conf->cafile, GNUTLS_X509_FMT_PEM );
-		/* TODO: Do we want/need this? */
+		
+		/* Not needed in GnuTLS 2.11+ but we support older versions for now. */
 		gnutls_certificate_set_verify_flags( xcred, GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT );
 	}
 	initialized = TRUE;
@@ -190,14 +191,7 @@ static int verify_certificate_callback( gnutls_session_t session )
 		verifyret |= VERIFY_CERT_EXPIRED;
 #endif
 
-	/* The following check is already performed inside 
-	 * gnutls_certificate_verify_peers2, so we don't need it.
-
-	 * if( gnutls_certificate_type_get( session ) != GNUTLS_CRT_X509 )
-	 * return GNUTLS_E_CERTIFICATE_ERROR;
-	 */
-
-	if( gnutls_x509_crt_init( &cert ) < 0 )
+	if( gnutls_certificate_type_get( session ) != GNUTLS_CRT_X509 || gnutls_x509_crt_init( &cert ) < 0 )
 		return VERIFY_CERT_ERROR;
 
 	cert_list = gnutls_certificate_get_peers( session, &cert_list_size );
