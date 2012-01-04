@@ -143,7 +143,7 @@ static void oauth2_access_token_done( struct http_request *req )
    work for integer values, nor will it strip/handle backslashes. */
 static char *oauth2_json_dumb_get( const char *json, const char *key )
 {
-	int is_key; /* 1 == reading key, 0 == reading value */
+	int is_key = 0; /* 1 == reading key, 0 == reading value */
 	int found_key = 0;
 		
 	while( json && *json )
