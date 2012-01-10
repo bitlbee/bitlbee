@@ -889,7 +889,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	} else if (req->status_code == 401) {
 		imcb_error(ic, "Authentication failure");
 		imc_logout(ic, FALSE);
-		goto end;
+		return;
 	} else {
 		// It didn't go well, output the error and return.
 		if (++td->http_fails >= 5)
@@ -941,7 +941,7 @@ static void twitter_http_get_mentions(struct http_request *req)
 	} else if (req->status_code == 401) {
 		imcb_error(ic, "Authentication failure");
 		imc_logout(ic, FALSE);
-		goto end;
+		return;
 	} else {
 		// It didn't go well, output the error and return.
 		if (++td->http_fails >= 5)
