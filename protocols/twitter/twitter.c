@@ -245,6 +245,8 @@ static void twitter_init(account_t * acc)
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "show_old_mentions", "true", set_eval_bool, acc);
+
+	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
 }
 
 /**

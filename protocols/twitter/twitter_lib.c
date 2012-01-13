@@ -646,6 +646,9 @@ static void twitter_groupchat(struct im_connection *ic, GSList * list)
 
 		strip_html(status->text);
 
+		if (set_getbool(&ic->acc->set, "strip_newlines"))
+		  strip_newlines(status->text);
+
 		msg = twitter_msg_add_id(ic, status, "");
 
 		// Say it!
