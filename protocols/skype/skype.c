@@ -409,24 +409,28 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 				g_string_append_printf(st, "Full Name: %s\n",
 					sd->info_fullname);
 			g_free(sd->info_fullname);
+			sd->info_fullname = NULL;
 		}
 		if (sd->info_phonehome) {
 			if (strlen(sd->info_phonehome))
 				g_string_append_printf(st, "Home Phone: %s\n",
 					sd->info_phonehome);
 			g_free(sd->info_phonehome);
+			sd->info_phonehome = NULL;
 		}
 		if (sd->info_phoneoffice) {
 			if (strlen(sd->info_phoneoffice))
 				g_string_append_printf(st, "Office Phone: %s\n",
 					sd->info_phoneoffice);
 			g_free(sd->info_phoneoffice);
+			sd->info_phoneoffice = NULL;
 		}
 		if (sd->info_phonemobile) {
 			if (strlen(sd->info_phonemobile))
 				g_string_append_printf(st, "Mobile Phone: %s\n",
 					sd->info_phonemobile);
 			g_free(sd->info_phonemobile);
+			sd->info_phonemobile = NULL;
 		}
 		g_string_append_printf(st, "Personal Information\n");
 		if (sd->info_nrbuddies) {
@@ -434,6 +438,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 				g_string_append_printf(st,
 					"Contacts: %s\n", sd->info_nrbuddies);
 			g_free(sd->info_nrbuddies);
+			sd->info_nrbuddies = NULL;
 		}
 		if (sd->info_tz) {
 			if (strlen(sd->info_tz)) {
@@ -446,6 +451,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Local Time: %s\n", ib);
 			}
 			g_free(sd->info_tz);
+			sd->info_tz = NULL;
 		}
 		if (sd->info_seen) {
 			if (strlen(sd->info_seen)) {
@@ -457,6 +463,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Last Seen: %s\n", ib);
 			}
 			g_free(sd->info_seen);
+			sd->info_seen = NULL;
 		}
 		if (sd->info_birthday) {
 			if (strlen(sd->info_birthday) &&
@@ -476,6 +483,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Age: %d\n", lt->tm_year+1900-year);
 			}
 			g_free(sd->info_birthday);
+			sd->info_birthday = NULL;
 		}
 		if (sd->info_sex) {
 			if (strlen(sd->info_sex)) {
@@ -486,6 +494,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Gender: %s\n", sd->info_sex);
 			}
 			g_free(sd->info_sex);
+			sd->info_sex = NULL;
 		}
 		if (sd->info_language) {
 			if (strlen(sd->info_language)) {
@@ -498,6 +507,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Language: %s\n", iptr);
 			}
 			g_free(sd->info_language);
+			sd->info_language = NULL;
 		}
 		if (sd->info_country) {
 			if (strlen(sd->info_country)) {
@@ -510,30 +520,35 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Country: %s\n", iptr);
 			}
 			g_free(sd->info_country);
+			sd->info_country = NULL;
 		}
 		if (sd->info_province) {
 			if (strlen(sd->info_province))
 				g_string_append_printf(st,
 					"Region: %s\n", sd->info_province);
 			g_free(sd->info_province);
+			sd->info_province = NULL;
 		}
 		if (sd->info_city) {
 			if (strlen(sd->info_city))
 				g_string_append_printf(st,
 					"City: %s\n", sd->info_city);
 			g_free(sd->info_city);
+			sd->info_city = NULL;
 		}
 		if (sd->info_homepage) {
 			if (strlen(sd->info_homepage))
 				g_string_append_printf(st,
 					"Homepage: %s\n", sd->info_homepage);
 			g_free(sd->info_homepage);
+			sd->info_homepage = NULL;
 		}
 		if (sd->info_about) {
 			if (strlen(sd->info_about))
 				g_string_append_printf(st, "%s\n",
 					sd->info_about);
 			g_free(sd->info_about);
+			sd->info_about = NULL;
 		}
 		imcb_log(ic, "%s", st->str);
 		g_string_free(st, TRUE);
