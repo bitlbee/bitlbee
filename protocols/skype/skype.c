@@ -1,7 +1,7 @@
 /*
  *  skype.c - Skype plugin for BitlBee
  *
- *  Copyright (c) 2007, 2008, 2009, 2010, 2011 by Miklos Vajna <vmiklos@frugalware.org>
+ *  Copyright (c) 2007, 2008, 2009, 2010, 2011, 2012 by Miklos Vajna <vmiklos@frugalware.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -385,8 +385,6 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		sd->info_tz = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "LASTONLINETIMESTAMP ", 20))
 		sd->info_seen = g_strdup(ptr + 20);
-	else if (!strncmp(ptr, "BIRTHDAY ", 9))
-		sd->info_birthday = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "SEX ", 4))
 		sd->info_sex = g_strdup(ptr + 4);
 	else if (!strncmp(ptr, "LANGUAGE ", 9))
@@ -400,7 +398,19 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 	else if (!strncmp(ptr, "HOMEPAGE ", 9))
 		sd->info_homepage = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "ABOUT ", 6)) {
-		sd->info_about = g_strdup(ptr + 6);
+		/* Support multiple about lines. */
+		if (!sd->info_about)
+			sd->info_about = g_strdup(ptr + 6);
+		else {
+			GString *st = g_string_new(sd->info_about);
+			g_string_append_printf(st, "\n%s", ptr + 6);
+			g_free(sd->info_about);
+			sd->info_about = g_strdup(st->str);
+			g_string_free(st, TRUE);
+		}
+	}
+	else if (!strncmp(ptr, "BIRTHDAY ", 9)) {
+		sd->info_birthday = g_strdup(ptr + 9);
 
 		GString *st = g_string_new("Contact Information\n");
 		g_string_append_printf(st, "Skype Name: %s\n", user);
@@ -1460,7 +1470,6 @@ static void skype_get_info(struct im_connection *ic, char *who)
 	skype_printf(ic, "GET USER %s NROF_AUTHED_BUDDIES\n", nick);
 	skype_printf(ic, "GET USER %s TIMEZONE\n", nick);
 	skype_printf(ic, "GET USER %s LASTONLINETIMESTAMP\n", nick);
-	skype_printf(ic, "GET USER %s BIRTHDAY\n", nick);
 	skype_printf(ic, "GET USER %s SEX\n", nick);
 	skype_printf(ic, "GET USER %s LANGUAGE\n", nick);
 	skype_printf(ic, "GET USER %s COUNTRY\n", nick);
@@ -1468,6 +1477,12 @@ static void skype_get_info(struct im_connection *ic, char *who)
 	skype_printf(ic, "GET USER %s CITY\n", nick);
 	skype_printf(ic, "GET USER %s HOMEPAGE\n", nick);
 	skype_printf(ic, "GET USER %s ABOUT\n", nick);
+	/*
+	 * Hack: we query the bithday property which is always a single line,
+	 * so we can send the collected properties to the user when we have
+	 * this one.
+	 */
+	skype_printf(ic, "GET USER %s BIRTHDAY\n", nick);
 }
 
 static void skype_set_my_name(struct im_connection *ic, char *info)
