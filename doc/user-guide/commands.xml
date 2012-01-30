@@ -1429,6 +1429,16 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="strip_newlines" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				Turn on this flag to prevent tweets from spanning over multiple lines.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="switchboard_keepalives" type="boolean" scope="account">
 		<default>false</default>
 
