@@ -183,6 +183,8 @@ static void purple_init( account_t *acc )
 			irc_rootmsg( acc->irc, "Setting with unknown type: %s (%d) Expect stuff to break..\n",
 			             name, purple_account_option_get_type( o ) );
 			*/
+			g_string_append_printf( help, "\n* [%s] UNSUPPORTED (type %d)",
+			                        name, purple_account_option_get_type( o ) );
 			name = NULL;
 		}
 		
