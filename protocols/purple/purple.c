@@ -106,6 +106,16 @@ static void purple_init( account_t *acc )
 	g_string_printf( help, "BitlBee libpurple module %s (%s).\n\nSupported settings:",
 	                        (char*) acc->prpl->name, prpl->info->name );
 	
+	if( pi->user_splits )
+	{
+		GList *l;
+		g_string_append_printf( help, "\n* username: Username" );
+		for( l = pi->user_splits; l; l = l->next )
+			g_string_append_printf( help, "%c%s",
+			                        purple_account_user_split_get_separator( l->data ),
+			                        purple_account_user_split_get_text( l->data ) );
+	}
+	
 	/* Convert all protocol_options into per-account setting variables. */
 	for( i = pi->protocol_options; i; i = i->next )
 	{
