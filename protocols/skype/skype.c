@@ -1,7 +1,7 @@
 /*
  *  skype.c - Skype plugin for BitlBee
  *
- *  Copyright (c) 2007, 2008, 2009, 2010, 2011 by Miklos Vajna <vmiklos@frugalware.org>
+ *  Copyright (c) 2007, 2008, 2009, 2010, 2011, 2012 by Miklos Vajna <vmiklos@frugalware.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -385,8 +385,6 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		sd->info_tz = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "LASTONLINETIMESTAMP ", 20))
 		sd->info_seen = g_strdup(ptr + 20);
-	else if (!strncmp(ptr, "BIRTHDAY ", 9))
-		sd->info_birthday = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "SEX ", 4))
 		sd->info_sex = g_strdup(ptr + 4);
 	else if (!strncmp(ptr, "LANGUAGE ", 9))
@@ -400,7 +398,19 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 	else if (!strncmp(ptr, "HOMEPAGE ", 9))
 		sd->info_homepage = g_strdup(ptr + 9);
 	else if (!strncmp(ptr, "ABOUT ", 6)) {
-		sd->info_about = g_strdup(ptr + 6);
+		/* Support multiple about lines. */
+		if (!sd->info_about)
+			sd->info_about = g_strdup(ptr + 6);
+		else {
+			GString *st = g_string_new(sd->info_about);
+			g_string_append_printf(st, "\n%s", ptr + 6);
+			g_free(sd->info_about);
+			sd->info_about = g_strdup(st->str);
+			g_string_free(st, TRUE);
+		}
+	}
+	else if (!strncmp(ptr, "BIRTHDAY ", 9)) {
+		sd->info_birthday = g_strdup(ptr + 9);
 
 		GString *st = g_string_new("Contact Information\n");
 		g_string_append_printf(st, "Skype Name: %s\n", user);
@@ -409,24 +419,28 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 				g_string_append_printf(st, "Full Name: %s\n",
 					sd->info_fullname);
 			g_free(sd->info_fullname);
+			sd->info_fullname = NULL;
 		}
 		if (sd->info_phonehome) {
 			if (strlen(sd->info_phonehome))
 				g_string_append_printf(st, "Home Phone: %s\n",
 					sd->info_phonehome);
 			g_free(sd->info_phonehome);
+			sd->info_phonehome = NULL;
 		}
 		if (sd->info_phoneoffice) {
 			if (strlen(sd->info_phoneoffice))
 				g_string_append_printf(st, "Office Phone: %s\n",
 					sd->info_phoneoffice);
 			g_free(sd->info_phoneoffice);
+			sd->info_phoneoffice = NULL;
 		}
 		if (sd->info_phonemobile) {
 			if (strlen(sd->info_phonemobile))
 				g_string_append_printf(st, "Mobile Phone: %s\n",
 					sd->info_phonemobile);
 			g_free(sd->info_phonemobile);
+			sd->info_phonemobile = NULL;
 		}
 		g_string_append_printf(st, "Personal Information\n");
 		if (sd->info_nrbuddies) {
@@ -434,6 +448,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 				g_string_append_printf(st,
 					"Contacts: %s\n", sd->info_nrbuddies);
 			g_free(sd->info_nrbuddies);
+			sd->info_nrbuddies = NULL;
 		}
 		if (sd->info_tz) {
 			if (strlen(sd->info_tz)) {
@@ -446,6 +461,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Local Time: %s\n", ib);
 			}
 			g_free(sd->info_tz);
+			sd->info_tz = NULL;
 		}
 		if (sd->info_seen) {
 			if (strlen(sd->info_seen)) {
@@ -457,6 +473,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Last Seen: %s\n", ib);
 			}
 			g_free(sd->info_seen);
+			sd->info_seen = NULL;
 		}
 		if (sd->info_birthday) {
 			if (strlen(sd->info_birthday) &&
@@ -476,6 +493,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Age: %d\n", lt->tm_year+1900-year);
 			}
 			g_free(sd->info_birthday);
+			sd->info_birthday = NULL;
 		}
 		if (sd->info_sex) {
 			if (strlen(sd->info_sex)) {
@@ -486,6 +504,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Gender: %s\n", sd->info_sex);
 			}
 			g_free(sd->info_sex);
+			sd->info_sex = NULL;
 		}
 		if (sd->info_language) {
 			if (strlen(sd->info_language)) {
@@ -498,6 +517,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Language: %s\n", iptr);
 			}
 			g_free(sd->info_language);
+			sd->info_language = NULL;
 		}
 		if (sd->info_country) {
 			if (strlen(sd->info_country)) {
@@ -510,30 +530,35 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					"Country: %s\n", iptr);
 			}
 			g_free(sd->info_country);
+			sd->info_country = NULL;
 		}
 		if (sd->info_province) {
 			if (strlen(sd->info_province))
 				g_string_append_printf(st,
 					"Region: %s\n", sd->info_province);
 			g_free(sd->info_province);
+			sd->info_province = NULL;
 		}
 		if (sd->info_city) {
 			if (strlen(sd->info_city))
 				g_string_append_printf(st,
 					"City: %s\n", sd->info_city);
 			g_free(sd->info_city);
+			sd->info_city = NULL;
 		}
 		if (sd->info_homepage) {
 			if (strlen(sd->info_homepage))
 				g_string_append_printf(st,
 					"Homepage: %s\n", sd->info_homepage);
 			g_free(sd->info_homepage);
+			sd->info_homepage = NULL;
 		}
 		if (sd->info_about) {
 			if (strlen(sd->info_about))
 				g_string_append_printf(st, "%s\n",
 					sd->info_about);
 			g_free(sd->info_about);
+			sd->info_about = NULL;
 		}
 		imcb_log(ic, "%s", st->str);
 		g_string_free(st, TRUE);
@@ -1445,7 +1470,6 @@ static void skype_get_info(struct im_connection *ic, char *who)
 	skype_printf(ic, "GET USER %s NROF_AUTHED_BUDDIES\n", nick);
 	skype_printf(ic, "GET USER %s TIMEZONE\n", nick);
 	skype_printf(ic, "GET USER %s LASTONLINETIMESTAMP\n", nick);
-	skype_printf(ic, "GET USER %s BIRTHDAY\n", nick);
 	skype_printf(ic, "GET USER %s SEX\n", nick);
 	skype_printf(ic, "GET USER %s LANGUAGE\n", nick);
 	skype_printf(ic, "GET USER %s COUNTRY\n", nick);
@@ -1453,6 +1477,12 @@ static void skype_get_info(struct im_connection *ic, char *who)
 	skype_printf(ic, "GET USER %s CITY\n", nick);
 	skype_printf(ic, "GET USER %s HOMEPAGE\n", nick);
 	skype_printf(ic, "GET USER %s ABOUT\n", nick);
+	/*
+	 * Hack: we query the bithday property which is always a single line,
+	 * so we can send the collected properties to the user when we have
+	 * this one.
+	 */
+	skype_printf(ic, "GET USER %s BIRTHDAY\n", nick);
 }
 
 static void skype_set_my_name(struct im_connection *ic, char *info)
