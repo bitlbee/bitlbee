@@ -196,11 +196,40 @@ static char *set_eval_mode(set_t * set, char *value)
 		return NULL;
 }
 
+int twitter_url_len_diff(gchar *msg, unsigned int target_len)
+{
+	int url_len_diff = 0;
+
+	static GRegex *regex = NULL;
+	GMatchInfo *match_info;
+
+	if (regex == NULL)
+		regex = g_regex_new("(^|\\s)(http(s)?://[^\\s$]+)", 0, 0, NULL);
+	
+	g_regex_match(regex, msg, 0, &match_info);
+	while (g_match_info_matches(match_info)) {
+		gchar *url = g_match_info_fetch(match_info, 2);
+		url_len_diff += target_len - g_utf8_strlen(url, -1);
+		if (g_match_info_fetch(match_info, 3) != NULL)
+			url_len_diff += 1;
+		g_free(url);
+		g_match_info_next(match_info, NULL);
+	}
+	g_match_info_free(match_info);
+
+	return url_len_diff;
+}
+
 static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
 {
 	int max = set_getint(&ic->acc->set, "message_length"), len;
+	int target_len = set_getint(&ic->acc->set, "target_url_length");
+	int url_len_diff = 0;
+    
+	if (target_len > 0)
+		url_len_diff = twitter_url_len_diff(msg, target_len);
 
-	if (max == 0 || (len = g_utf8_strlen(msg, -1)) <= max)
+	if (max == 0 || (len = g_utf8_strlen(msg, -1) + url_len_diff) <= max)
 		return TRUE;
 
 	imcb_error(ic, "Maximum message length exceeded: %d > %d", len, max);
@@ -213,13 +242,16 @@ static void twitter_init(account_t * acc)
 	set_t *s;
 	char *def_url;
 	char *def_oauth;
+	char *def_tul;
 
 	if (strcmp(acc->prpl->name, "twitter") == 0) {
 		def_url = TWITTER_API_URL;
 		def_oauth = "true";
+		def_tul = "20";
 	} else {		/* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
 		def_url = IDENTICA_API_URL;
 		def_oauth = "true";
+		def_tul = "0";
 	}
 
 	s = set_add(&acc->set, "auto_reply_timeout", "10800", set_eval_int, acc);
@@ -235,6 +267,8 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "fetch_mentions", "true", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "message_length", "140", set_eval_int, acc);
+
+	s = set_add(&acc->set, "target_url_length", def_tul, set_eval_int, acc);
 
 	s = set_add(&acc->set, "mode", "chat", set_eval_mode, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;

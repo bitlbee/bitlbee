@@ -1031,6 +1031,21 @@
 		</description>
 
 	</bitlbee-setting>
+	
+	<bitlbee-setting name="target_url_length" type="integer" scope="account">
+		<default>20</default>
+
+		<description>
+			<para>
+				Twitter replaces every URL with fixed-length t.co URLs. BitlBee is able to take t.co urls into account when calculating <emphasis>message_length</emphasis> replacing the actual URL length with target_url_length. Setting target_url_length to 0 disables this feature.
+			</para>
+
+			<para>
+				This setting is disabled for identica accounts by default and will not affect anything other than message safety checks (i.e. Twitter will still replace your URLs with t.co links, even if that makes them longer).
+			</para>
+		</description>
+
+	</bitlbee-setting>
 
 	<bitlbee-setting name="mode" type="string" scope="account">
 		<possible-values>one, many, chat</possible-values>
