@@ -1454,6 +1454,16 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="show_old_mentions" type="integer" scope="account">
+		<default>20</default>
+
+		<description>
+			<para>
+				This setting specifies the number of old mentions to fetch on connection. Must be less or equal to 200. Setting it to 0 disables this feature.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="switchboard_keepalives" type="boolean" scope="account">
 		<default>false</default>
 

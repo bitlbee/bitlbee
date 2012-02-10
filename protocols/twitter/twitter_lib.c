@@ -751,7 +751,7 @@ void twitter_flush_timeline(struct im_connection *ic)
 {
 	struct twitter_data *td = ic->proto_data;
 	gboolean include_mentions = set_getbool(&ic->acc->set, "fetch_mentions");
-	gboolean show_old_mentions = set_getbool(&ic->acc->set, "show_old_mentions");
+	int show_old_mentions = set_getint(&ic->acc->set, "show_old_mentions");
 	struct twitter_xml_list *home_timeline = td->home_timeline_obj;
 	struct twitter_xml_list *mentions = td->mentions_obj;
 	GSList *output = NULL;
@@ -773,7 +773,7 @@ void twitter_flush_timeline(struct im_connection *ic)
 
 	if (include_mentions && mentions && mentions->list) {
 		for (l = mentions->list; l; l = g_slist_next(l)) {
-			if (!show_old_mentions && output && twitter_compare_elements(l->data, output->data) < 0) {
+			if (show_old_mentions < 1 && output && twitter_compare_elements(l->data, output->data) < 0) {
 				continue;
 			}
 
@@ -851,10 +851,13 @@ void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 	if (td->timeline_id) {
 		args[4] = "since_id";
 		args[5] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
+	} else {
+		args[4] = "count";
+		args[5] = g_strdup_printf("%d", set_getint(&ic->acc->set, "show_old_mentions"));
 	}
 
-	if (twitter_http(ic, TWITTER_MENTIONS_URL, twitter_http_get_mentions, ic, 0, args,
-		     td->timeline_id ? 6 : 4) == NULL) {
+	if (twitter_http(ic, TWITTER_MENTIONS_URL, twitter_http_get_mentions,
+	                 ic, 0, args, 6) == NULL) {
 		if (++td->http_fails >= 5)
 			imcb_error(ic, "Could not retrieve %s: %s",
 			           TWITTER_MENTIONS_URL, "connection failed");
