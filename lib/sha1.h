@@ -67,5 +67,6 @@ G_MODULE_EXPORT int sha1_init(sha1_state_t *);
 G_MODULE_EXPORT int sha1_append(sha1_state_t *, const uint8_t *, unsigned int);
 G_MODULE_EXPORT int sha1_finish(sha1_state_t *, uint8_t Message_Digest[sha1_hash_size]);
 G_MODULE_EXPORT void sha1_hmac(const char *key_, size_t key_len, const char *payload, size_t payload_len, uint8_t Message_Digest[sha1_hash_size]);
+G_MODULE_EXPORT char *sha1_random_uuid( sha1_state_t * context );
 
 #endif

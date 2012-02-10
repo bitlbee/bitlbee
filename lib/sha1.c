@@ -36,6 +36,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include "sha1.h"
 
 /*
@@ -419,4 +420,34 @@ void sha1_hmac(const char *key_, size_t key_len, const char *payload, size_t pay
 	sha1_append( &sha1, key, HMAC_BLOCK_SIZE );
 	sha1_append( &sha1, hash, sha1_hash_size );
 	sha1_finish( &sha1, Message_Digest );
+}
+
+/* I think this follows the scheme described on:
+   http://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29
+   My random data comes from a SHA1 generator but hey, it's random enough for
+   me, and RFC 4122 looks way more complicated than I need this to be.
+   
+   Returns a value that must be free()d. */
+char *sha1_random_uuid( sha1_state_t * context )
+{
+	uint8_t dig[sha1_hash_size];
+	char *ret = g_new0( char, 40 ); /* 36 chars + \0 */
+	int i, p;
+	
+	sha1_finish(context, dig);
+	for( p = i = 0; i < 16; i ++ )
+	{
+		if( i == 4 || i == 6 || i == 8 || i == 10 )
+			ret[p++] = '-';
+		if( i == 6 )
+			dig[i] = ( dig[i] & 0x0f ) | 0x40;
+		if( i == 8 )
+			dig[i] = ( dig[i] & 0x30 ) | 0x80;
+		
+		sprintf( ret + p, "%02x", dig[i] );
+		p += 2;
+	}
+	ret[p] = '\0';
+	
+	return ret;
 }
