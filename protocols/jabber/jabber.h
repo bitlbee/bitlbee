@@ -46,7 +46,9 @@ typedef enum
 	                                   activates all XEP-85 related code. */
 	JFLAG_XMLCONSOLE = 64,          /* If the user added an xmlconsole buddy. */
 	JFLAG_STARTTLS_DONE = 128,      /* If a plaintext session was converted to TLS. */
-	
+
+	JFLAG_GTALK =  0x100000,        /* Is Google Talk, as confirmed by iq discovery */
+
 	JFLAG_SASL_FB = 0x10000,        /* Trying Facebook authentication. */
 } jabber_flags_t;
 

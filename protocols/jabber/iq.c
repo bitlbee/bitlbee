@@ -26,6 +26,7 @@
 
 static xt_status jabber_parse_roster( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 static xt_status jabber_iq_display_vcard( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+static int jabber_iq_disco_server( struct im_connection *ic );
 
 xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 {
@@ -329,6 +330,8 @@ static xt_status jabber_finish_iq_auth( struct im_connection *ic, struct xt_node
 		jd->flags |= JFLAG_AUTHENTICATED;
 		if( !jabber_get_roster( ic ) )
 			return XT_ABORT;
+		if( !jabber_iq_disco_server( ic ) )
+			return XT_ABORT;
 	}
 	
 	return XT_HANDLED;
@@ -389,6 +392,8 @@ xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, 
 	else if( ( jd->flags & ( JFLAG_WANT_BIND | JFLAG_WANT_SESSION ) ) == 0 )
 	{
 		if( !jabber_get_roster( ic ) )
+			return XT_ABORT;
+		if( !jabber_iq_disco_server( ic ) )
 			return XT_ABORT;
 	}
 	
@@ -883,6 +888,45 @@ static xt_status jabber_iq_version_response( struct im_connection *ic,
 	ret[0] = rets->str;
 	imcb_buddy_action_response( bu, "VERSION", ret, NULL );
 	g_string_free( rets, TRUE );
+	
+	return XT_HANDLED;
+}
+
+static xt_status jabber_iq_disco_server_response( struct im_connection *ic,
+	struct xt_node *node, struct xt_node *orig );
+
+static int jabber_iq_disco_server( struct im_connection *ic )
+{
+	struct xt_node *node, *iq;
+	struct jabber_data *jd = ic->proto_data;
+	
+	node = xt_new_node( "query", NULL, NULL );
+	xt_add_attr( node, "xmlns", XMLNS_DISCO_INFO );
+	iq = jabber_make_packet( "iq", "get", jd->server, node );
+	
+	jabber_cache_add( ic, iq, jabber_iq_disco_server_response );
+	return jabber_write_packet( ic, iq );
+}
+
+static xt_status jabber_iq_disco_server_response( struct im_connection *ic,
+	struct xt_node *node, struct xt_node *orig )
+{
+	struct jabber_data *jd = ic->proto_data;
+	struct xt_node *id;
+	
+	if( ( id = xt_find_path( node, "query/identity" ) ) )
+	{
+		char *cat, *type, *name;
+		
+		if( !( cat = xt_find_attr( id, "category" ) ) ||
+		    !( type = xt_find_attr( id, "type" ) ) ||
+		    !( name = xt_find_attr( id, "name" ) ) )
+			return XT_HANDLED;
+		
+		if( strcmp( cat, "server" ) == 0 && strcmp( type, "im" ) == 0 &&
+		    strstr( name, "Google" ) != NULL )
+			jd->flags |= JFLAG_GTALK;
+	}
 	
 	return XT_HANDLED;
 }
