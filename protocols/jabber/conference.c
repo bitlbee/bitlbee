@@ -22,6 +22,7 @@
 \***************************************************************************/
 
 #include "jabber.h"
+#include "sha1.h"
 
 static xt_status jabber_chat_join_failed( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
 
@@ -63,6 +64,42 @@ struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, 
 	
 	c = imcb_chat_new( ic, room );
 	c->data = jc;
+	
+	return c;
+}
+
+struct groupchat *jabber_chat_with( struct im_connection *ic, char *who )
+{
+	struct jabber_data *jd = ic->proto_data;
+	struct jabber_chat *jc;
+	struct groupchat *c;
+	sha1_state_t sum;
+	double now = gettime();
+	char *uuid, *rjid, *cserv;
+	
+	sha1_init( &sum );
+	sha1_append( &sum, (uint8_t*) ic->acc->user, strlen( ic->acc->user ) );
+	sha1_append( &sum, (uint8_t*) &now, sizeof( now ) );
+	sha1_append( &sum, (uint8_t*) who, strlen( who ) );
+	uuid = sha1_random_uuid( &sum );
+	
+	if( jd->flags & JFLAG_GTALK )
+		cserv = g_strdup( "groupchat.google.com" );
+	else
+		/* Guess... */
+		cserv = g_strdup_printf( "conference.%s", jd->server );
+	
+	rjid = g_strdup_printf( "private-chat-%s@%s", uuid, cserv );
+	g_free( uuid );
+	g_free( cserv );
+	
+	c = jabber_chat_join( ic, rjid, jd->username, NULL );
+	g_free( rjid );
+	if( c == NULL )
+		return NULL;
+	
+	jc = c->data;
+	jc->invite = g_strdup( who );
 	
 	return c;
 }
@@ -115,6 +152,7 @@ void jabber_chat_free( struct groupchat *c )
 	
 	g_free( jc->my_full_jid );
 	g_free( jc->name );
+	g_free( jc->invite );
 	g_free( jc );
 	
 	imcb_chat_free( c );
@@ -280,6 +318,15 @@ void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bu
 			   list for the duration of this chat. */
 			imcb_add_buddy( ic, bud->ext_jid, NULL );
 			imcb_buddy_nick_hint( ic, bud->ext_jid, bud->resource );
+		}
+		
+		if( bud == jc->me && jc->invite != NULL )
+		{
+			char *msg = g_strdup_printf( "Please join me in room %s", jc->name );
+			jabber_chat_invite( chat, jc->invite, msg );
+			g_free( jc->invite );
+			g_free( msg );
+			jc->invite = NULL;
 		}
 		
 		s = strchr( bud->ext_jid, '/' );

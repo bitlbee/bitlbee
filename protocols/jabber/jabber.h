@@ -162,6 +162,7 @@ struct jabber_chat
 	char *name;
 	char *my_full_jid; /* Separate copy because of case sensitivity. */
 	struct jabber_buddy *me;
+	char *invite;
 };
 
 struct jabber_transfer
@@ -338,6 +339,7 @@ extern const struct oauth2_service oauth2_service_mslive;
 
 /* conference.c */
 struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password );
+struct groupchat *jabber_chat_with( struct im_connection *ic, char *who );
 struct groupchat *jabber_chat_by_jid( struct im_connection *ic, const char *name );
 void jabber_chat_free( struct groupchat *c );
 int jabber_chat_msg( struct groupchat *ic, char *message, int flags );

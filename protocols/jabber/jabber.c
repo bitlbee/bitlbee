@@ -482,6 +482,11 @@ static struct groupchat *jabber_chat_join_( struct im_connection *ic, const char
 	return NULL;
 }
 
+static struct groupchat *jabber_chat_with_( struct im_connection *ic, char *who )
+{
+	return jabber_chat_with( ic, who );
+}
+
 static void jabber_chat_msg_( struct groupchat *c, char *message, int flags )
 {
 	if( c && message )
@@ -634,6 +639,7 @@ void jabber_initmodule()
 	ret->chat_invite = jabber_chat_invite_;
 	ret->chat_leave = jabber_chat_leave_;
 	ret->chat_join = jabber_chat_join_;
+	ret->chat_with = jabber_chat_with_;
 	ret->chat_add_settings = jabber_chat_add_settings;
 	ret->chat_free_settings = jabber_chat_free_settings;
 	ret->keepalive = jabber_keepalive;
