@@ -46,7 +46,7 @@ int msn_sb_write( struct msn_switchboard *sb, const char *fmt, ... )
 	va_end( params );
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
-		fprintf( stderr, "->SB%d:%s", sb->fd, out );
+		fprintf( stderr, "->SB%d:%s\n", sb->fd, out );
 	
 	len = strlen( out );
 	st = write( sb->fd, out, len );

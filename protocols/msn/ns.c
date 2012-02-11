@@ -54,7 +54,7 @@ int msn_ns_write( struct im_connection *ic, int fd, const char *fmt, ... )
 		fd = md->ns->fd;
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
-		fprintf( stderr, "->NS%d:%s", fd, out );
+		fprintf( stderr, "->NS%d:%s\n", fd, out );
 	
 	len = strlen( out );
 	st = write( fd, out, len );
