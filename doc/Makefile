@@ -1,6 +1,6 @@
 -include ../Makefile.settings
-ifdef SRCDIR
-SRCDIR := $(SRCDIR)doc/
+ifdef _SRCDIR_
+_SRCDIR_ := $(_SRCDIR_)doc/
 endif
 
 all:
@@ -9,8 +9,8 @@ all:
 
 install:
 	mkdir -p $(DESTDIR)$(MANDIR)/man8/ $(DESTDIR)$(MANDIR)/man5/
-	install -m 0644 $(SRCDIR)bitlbee.8 $(DESTDIR)$(MANDIR)/man8/
-	install -m 0644 $(SRCDIR)bitlbee.conf.5 $(DESTDIR)$(MANDIR)/man5/
+	install -m 0644 $(_SRCDIR_)bitlbee.8 $(DESTDIR)$(MANDIR)/man8/
+	install -m 0644 $(_SRCDIR_)bitlbee.conf.5 $(DESTDIR)$(MANDIR)/man5/
 	$(MAKE) -C user-guide $@
 
 uninstall:

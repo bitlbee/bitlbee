@@ -95,7 +95,7 @@ uninstall-bin:
 install-dev:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	install -m 0644 config.h $(DESTDIR)$(INCLUDEDIR)
-	for i in $(headers); do install -m 0644 $(SRCDIR)$$i $(DESTDIR)$(INCLUDEDIR); done
+	for i in $(headers); do install -m 0644 $(_SRCDIR_)$$i $(DESTDIR)$(INCLUDEDIR); done
 	mkdir -p $(DESTDIR)$(PCDIR)
 	install -m 0644 bitlbee.pc $(DESTDIR)$(PCDIR)
 
@@ -106,8 +106,8 @@ uninstall-dev:
 
 install-etc:
 	mkdir -p $(DESTDIR)$(ETCDIR)
-	install -m 0644 $(SRCDIR)motd.txt $(DESTDIR)$(ETCDIR)/motd.txt
-	install -m 0644 $(SRCDIR)bitlbee.conf $(DESTDIR)$(ETCDIR)/bitlbee.conf
+	install -m 0644 $(_SRCDIR_)motd.txt $(DESTDIR)$(ETCDIR)/motd.txt
+	install -m 0644 $(_SRCDIR_)bitlbee.conf $(DESTDIR)$(ETCDIR)/bitlbee.conf
 
 uninstall-etc:
 	rm -f $(DESTDIR)$(ETCDIR)/motd.txt
@@ -127,9 +127,9 @@ ifdef SKYPE_PI
 	mkdir -p $(DESTDIR)$(PLUGINDIR)
 	install -m 0755 skype.so $(DESTDIR)$(PLUGINDIR)
 	mkdir -p $(DESTDIR)$(ETCDIR)/../skyped $(DESTDIR)$(BINDIR)
-	install -m 0644 $(SRCDIR)protocols/skype/skyped.cnf $(DESTDIR)$(ETCDIR)/../skyped/skyped.cnf
-	install -m 0644 $(SRCDIR)protocols/skype/skyped.conf.dist $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
-	install -m 0755 $(SRCDIR)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
+	install -m 0644 $(_SRCDIR_)protocols/skype/skyped.cnf $(DESTDIR)$(ETCDIR)/../skyped/skyped.cnf
+	install -m 0644 $(_SRCDIR_)protocols/skype/skyped.conf.dist $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
+	install -m 0755 $(_SRCDIR_)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
 	make -C protocols/skype install-doc
 endif
 
@@ -160,15 +160,15 @@ tar:
 $(subdirs):
 	@$(MAKE) -C $@ $(MAKECMDGOALS)
 
-$(OTR_PI): %.so: $(SRCDIR)%.c
+$(OTR_PI): %.so: $(_SRCDIR_)%.c
 	@echo '*' Building plugin $@
 	@$(CC) $(CFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@ $(OTRFLAGS)
 
-$(SKYPE_PI): $(SRCDIR)protocols/skype/skype.c
+$(SKYPE_PI): $(_SRCDIR_)protocols/skype/skype.c
 	@echo '*' Building plugin skype
 	@$(CC) $(CFLAGS) -fPIC -shared $< -o $@
 
-$(objects): %.o: $(SRCDIR)%.c
+$(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 

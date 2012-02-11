@@ -155,7 +155,7 @@ if [ "$srcdir" != "$currdir" ]; then
 		rm -rf .bzr
 	fi
 	
-	echo "SRCDIR=$srcdir/" >> Makefile.settings
+	echo "_SRCDIR_=$srcdir/" >> Makefile.settings
 	CFLAGS="$CFLAGS -I${dst}"
 else
 	srcdir=$PWD

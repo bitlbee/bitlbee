@@ -7,8 +7,8 @@
 ### DEFINITIONS
 
 -include ../../Makefile.settings
-ifdef SRCDIR
-SRCDIR := $(SRCDIR)protocols/twitter/
+ifdef _SRCDIR_
+_SRCDIR_ := $(_SRCDIR_)protocols/twitter/
 endif
 
 # [SH] Program variables
@@ -35,7 +35,7 @@ distclean: clean
 
 $(objects): ../../Makefile.settings Makefile
 
-$(objects): %.o: $(SRCDIR)%.c
+$(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 

@@ -7,8 +7,8 @@
 ### DEFINITIONS
 
 -include ../Makefile.settings
-ifdef SRCDIR
-SRCDIR := $(SRCDIR)protocols/
+ifdef _SRCDIR_
+_SRCDIR_ := $(_SRCDIR_)protocols/
 endif
 
 # [SH] Program variables
@@ -52,7 +52,7 @@ protocols.o: $(objects) $(subdirs)
 
 $(objects): ../Makefile.settings Makefile
 
-$(objects): %.o: $(SRCDIR)%.c
+$(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 

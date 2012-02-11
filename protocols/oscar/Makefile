@@ -7,9 +7,9 @@
 ### DEFINITIONS
 
 -include ../../Makefile.settings
-ifdef SRCDIR
-SRCDIR := $(SRCDIR)protocols/oscar/
-CFLAGS += -I$(SRCDIR)
+ifdef _SRCDIR_
+_SRCDIR_ := $(_SRCDIR_)protocols/oscar/
+CFLAGS += -I$(_SRCDIR_)
 endif
 
 # [SH] Program variables
@@ -36,7 +36,7 @@ distclean: clean
 
 $(objects): ../../Makefile.settings Makefile
 
-$(objects): %.o: $(SRCDIR)%.c
+$(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 

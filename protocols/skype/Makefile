@@ -1,6 +1,6 @@
 -include ../../Makefile.settings
-ifdef SRCDIR
-SRCDIR := $(SRCDIR)protocols/skype/
+ifdef _SRCDIR_
+_SRCDIR_ := $(_SRCDIR_)protocols/skype/
 endif
 
 VERSION = 0.9.0
@@ -24,9 +24,9 @@ endif
 
 all: $(LIBS) $(MANPAGES)
 
-skype.$(SHARED_EXT): $(SRCDIR)skype.c config.mak
+skype.$(SHARED_EXT): $(_SRCDIR_)skype.c config.mak
 ifeq ($(BITLBEE),yes)
-	$(CC) $(CFLAGS) $(SHARED_FLAGS) -o skype.$(SHARED_EXT) $(SRCDIR)skype.c $(LDFLAGS)
+	$(CC) $(CFLAGS) $(SHARED_FLAGS) -o skype.$(SHARED_EXT) $(_SRCDIR_)skype.c $(LDFLAGS)
 endif
 
 install: all install-doc
@@ -44,7 +44,7 @@ ifeq ($(SKYPE4PY),yes)
 	$(INSTALL) -m644 skyped.cnf $(DESTDIR)$(sysconfdir)
 endif
 
-client: $(SRCDIR)client.c
+client: $(_SRCDIR_)client.c
 
 autogen: configure.ac
 	cp $(shell ls /usr/share/automake-*/install-sh | tail -n1) ./
@@ -102,6 +102,6 @@ Changelog: .git/refs/heads/master
 AUTHORS: .git/refs/heads/master
 	git shortlog -s -n |sed 's/.*\t//'> AUTHORS
 
-%.1: $(SRCDIR)%.txt $(SRCDIR)asciidoc.conf
-	a2x --asciidoc-opts="-f $(SRCDIR)asciidoc.conf" \
+%.1: $(_SRCDIR_)%.txt $(_SRCDIR_)asciidoc.conf
+	a2x --asciidoc-opts="-f $(_SRCDIR_)asciidoc.conf" \
 		-a bs_version=$(VERSION) -a bs_date=$(DATE) -f manpage -D . $<

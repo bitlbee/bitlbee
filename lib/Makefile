@@ -7,8 +7,8 @@
 ### DEFINITIONS
 
 -include ../Makefile.settings
-ifdef SRCDIR
-SRCDIR := $(SRCDIR)lib/
+ifdef _SRCDIR_
+_SRCDIR_ := $(_SRCDIR_)lib/
 endif
 
 # [SH] Program variables
@@ -39,7 +39,7 @@ lib.o: $(objects) $(subdirs)
 
 $(objects): ../Makefile.settings Makefile
 
-$(objects): %.o: $(SRCDIR)%.c
+$(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
