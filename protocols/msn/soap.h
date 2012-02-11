@@ -145,40 +145,6 @@ int msn_soapq_flush( struct im_connection *ic, gboolean resend );
 int msn_soap_passport_sso_request( struct im_connection *ic, const char *nonce );
 
 
-#define SOAP_OIM_SEND_URL "https://ows.messenger.msn.com/OimWS/oim.asmx"
-#define SOAP_OIM_SEND_ACTION "http://messenger.live.com/ws/2006/09/oim/Store2"
-
-#define SOAP_OIM_SEND_PAYLOAD \
-"<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
-"<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
-"<soap:Header>" \
-  "<From memberName=\"%s\" friendlyName=\"=?utf-8?B?%s?=\" xml:lang=\"nl-nl\" proxy=\"MSNMSGR\" xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\" msnpVer=\"%s\" buildVer=\"%s\"/>" \
-  "<To memberName=\"%s\" xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\"/>" \
-  "<Ticket passport=\"%s\" appid=\"%s\" lockkey=\"%s\" xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\"/>" \
-  "<Sequence xmlns=\"http://schemas.xmlsoap.org/ws/2003/03/rm\">" \
-    "<Identifier xmlns=\"http://schemas.xmlsoap.org/ws/2002/07/utility\">http://messenger.msn.com</Identifier>" \
-    "<MessageNumber>%d</MessageNumber>" \
-  "</Sequence>" \
-"</soap:Header>" \
-"<soap:Body>" \
-  "<MessageType xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\">text</MessageType>" \
-  "<Content xmlns=\"http://messenger.msn.com/ws/2004/09/oim/\">" \
-    "MIME-Version: 1.0\r\n" \
-    "Content-Type: text/plain; charset=UTF-8\r\n" \
-    "Content-Transfer-Encoding: base64\r\n" \
-    "X-OIM-Message-Type: OfflineMessage\r\n" \
-    "X-OIM-Run-Id: {F9A6C9DD-0D94-4E85-9CC6-F9D118CC1CAF}\r\n" \
-    "X-OIM-Sequence-Num: %d\r\n" \
-    "\r\n" \
-    "%s" \
-  "</Content>" \
-"</soap:Body>" \
-"</soap:Envelope>"
-
-int msn_soap_oim_send( struct im_connection *ic, const char *to, const char *msg );
-int msn_soap_oim_send_queue( struct im_connection *ic, GSList **msgq );
-
-
 #define SOAP_ABSERVICE_PAYLOAD \
 "<?xml version=\"1.0\" encoding=\"utf-8\"?>" \
 "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
