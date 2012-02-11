@@ -34,7 +34,10 @@ def parse_purple(f):
 	for acc in xt.getElementsByTagName('account')[1:]:
 		protocol = acc.getElementsByTagName('protocol')[0].firstChild.wholeText
 		name = acc.getElementsByTagName('name')[0].firstChild.wholeText
-		password = acc.getElementsByTagName('password')[0].firstChild.wholeText
+		try:
+			password = acc.getElementsByTagName('password')[0].firstChild.wholeText
+		except IndexError:
+			password = ''
 		if protocol.startswith('prpl-'):
 			protocol = protocol[5:]
 		if name.endswith('/'):
@@ -52,7 +55,7 @@ def print_commands(accs):
 	print 'commands into your &bitlbee channel:'
 	print
 	for acc in accs:
-		print 'account add %s %s %s' % acc
+		print 'account add %s %s "%s"' % acc
 
 def bitlbee_x(*args):
 	bb = subprocess.Popen([BITLBEE, '-x'] + list(args), stdout=subprocess.PIPE)
@@ -84,7 +87,7 @@ def print_xml(accs):
 		root.appendChild(accx)
 	
 	print
-	print 'Write the following XML data to a file called %s.xml (rename it if'
+	print 'Write the following XML data to a file called %s.xml (rename it if' % user.lower()
 	print 'you want to use a different nickname). It should be in the directory where'
 	print 'your BitlBee account files are stored (most likely /var/lib/bitlbee).'
 	print
