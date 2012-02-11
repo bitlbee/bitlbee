@@ -813,16 +813,6 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="control_channel" type="string" scope="global">
-		<default>&amp;bitlbee</default>
-
-		<description>
-			<para>
-				Normally the control channel where you can see all your contacts is called "&amp;bitlbee". If you don't like this name, you can rename it to anything else using the <emphasis>rename</emphasis> command, or by changing this setting.
-			</para>
-		</description>
-	</bitlbee-setting>
-
 	<bitlbee-setting name="chat_type" type="string" scope="channel">
 		<default>groupchat</default>
 		<possible-values>groupchat, room</possible-values>
@@ -870,7 +860,11 @@
 
 		<description>
 			<para>
-				Some debugging messages can be sent to the control channel if you wish. They're probably not really useful for you, unless you're doing some development on BitlBee.
+				Some debugging messages can be logged if you wish. They're probably not really useful for you, unless you're doing some development on BitlBee.
+			</para>
+			
+			<para>
+				This feature is not currently used for anything so don't expect this to generate any output.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -881,7 +875,7 @@
 
 		<description>
 			<para>
-				With this value set to <emphasis>root</emphasis>, lines written in the control channel without any nickname in front of them will be interpreted as commands. If you want BitlBee to send those lines to the last person you addressed in the control channel, set this to <emphasis>last</emphasis>.
+				With this value set to <emphasis>root</emphasis>, lines written in a control channel without any nickname in front of them will be interpreted as commands. If you want BitlBee to send those lines to the last person you addressed in that control channel, set this to <emphasis>last</emphasis>.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1259,7 +1253,7 @@
 
 		<description>
 			<para>
-				If value is true, messages from users will appear in separate query windows. If false, messages from users will appear in the control channel.
+				If value is true, messages from users will appear in separate query windows. If false, messages from users will appear in a control channel.
 			</para>
 
 			<para>
@@ -1396,7 +1390,7 @@
 
 		<description>
 			<para>
-				Some IRC clients parse quit messages sent by the IRC server to see if someone really left or just disappeared because of a netsplit. By default, BitlBee tries to simulate netsplit-like quit messages to keep the control channel window clean. If you don't like this (or if your IRC client doesn't support this) you can disable this setting.
+				Some IRC clients parse quit messages sent by the IRC server to see if someone really left or just disappeared because of a netsplit. By default, BitlBee tries to simulate netsplit-like quit messages to keep the control channels window clean. If you don't like this (or if your IRC client doesn't support this) you can disable this setting.
 			</para>
 		</description>
 	</bitlbee-setting>
