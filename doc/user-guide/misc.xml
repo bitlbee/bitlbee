@@ -365,4 +365,24 @@ of <emphasis>account list</emphasis>).
 
 </sect1>
 
+<sect1 id="whatsnew030005">
+<title>New stuff in BitlBee 3.0.5</title>
+
+<para>
+OAuth2 support in Jabber module (see <emphasis>help set oauth</emphasis>).
+For better password security when using Google Talk, Facebook XMPP, or for
+using MSN Messenger via XMPP. Especially recommended on public servers.
+</para>
+
+<para>
+Starting quick groupchats on Jabber is easier now (using the <emphasis>chat
+with</emphasis> command, or <emphasis>/join</emphasis> + <emphasis>/invite</emphasis>).
+</para>
+
+<para>
+SSL certificate verification. Works only with GnuTLS, and needs to be enabled
+by updating your <emphasis>bitlbee.conf</emphasis>.
+</para>
+</sect1>
+
 </chapter>

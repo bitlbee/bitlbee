@@ -3,6 +3,29 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 3.0.5:
+- SSL certificate verification (edit your bitlbee.conf to enable it).
+  Works only with GnuTLS!
+- OAuth2 support in Jabber module (works with Google Talk, Facebook and
+  MSN Messenger).
+- Support for ad-hoc Jabber groupchats. Just create a channel and start
+  inviting people, similar to how this works on other IM networks. Works
+  fine with GTalk, depends on a conference server being set up on other
+  networks.
+- Allow old-style Jabber login (non-SASL), this solves problems with some
+  old/buggy Jabber servers. (acc jabber set sasl off)
+- Use HTTPS for OAuth1 authentication traffic.
+- Awareness of Twitter's t.co URL lengt^Wshortening when checking message
+  length.
+- Fixed identi.ca OAuth support. OAuth will now always be used for both
+  Twitter and identi.ca accounts.
+- Fix nick_format=%full_name with libpurple.
+- Instead of "protocol(handle)", use the account tags introduced in 3.0
+  when root wants to refer to an account (in log messages, queries, etc.)
+- Many small bugfixes, improvements, etc.
+
+Finished ?
+
 Version 3.0.4:
 - Merged Skype support. This used to be a separate plugin, and it still is,
   but by including it with BitlBee by default it will be easier to keep it
