@@ -24,7 +24,7 @@ Version 3.0.5:
   when root wants to refer to an account (in log messages, queries, etc.)
 - Many small bugfixes, improvements, etc.
 
-Finished ?
+Finished 18 Feb 2012
 
 Version 3.0.4:
 - Merged Skype support. This used to be a separate plugin, and it still is,
