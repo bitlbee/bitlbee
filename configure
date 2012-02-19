@@ -44,7 +44,7 @@ ssl=auto
 arch=`uname -s`
 cpu=`uname -m`
 
-GLIB_MIN_VERSION=2.4
+GLIB_MIN_VERSION=2.14
 
 echo BitlBee configure
 
