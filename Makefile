@@ -135,8 +135,8 @@ endif
 
 systemd:
 ifdef SYSTEMDSYSTEMUNITDIR
-	sed 's|@sbindir@|$(BINDIR)|' init/bitlbee.service.in > init/bitlbee.service
-	sed 's|@sbindir@|$(BINDIR)|' init/bitlbee@.service.in > init/bitlbee@.service
+	sed 's|@sbindir@|$(SBINDIR)|' init/bitlbee.service.in > init/bitlbee.service
+	sed 's|@sbindir@|$(SBINDIR)|' init/bitlbee@.service.in > init/bitlbee@.service
 endif
 
 install-systemd:
