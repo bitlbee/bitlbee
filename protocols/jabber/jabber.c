@@ -472,8 +472,11 @@ static void jabber_remove_buddy( struct im_connection *ic, char *who, char *grou
 
 static struct groupchat *jabber_chat_join_( struct im_connection *ic, const char *room, const char *nick, const char *password, set_t **sets )
 {
+	struct jabber_data *jd = ic->proto_data;
+	
 	if( strchr( room, '@' ) == NULL )
-		imcb_error( ic, "Invalid room name: %s", room );
+		imcb_error( ic, "%s is not a valid Jabber room name. Maybe you mean %s@conference.%s?",
+		            room, room, jd->server );
 	else if( jabber_chat_by_jid( ic, room ) )
 		imcb_error( ic, "Already present in chat `%s'", room );
 	else
