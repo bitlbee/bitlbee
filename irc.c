@@ -857,30 +857,30 @@ void irc_umode_set( irc_t *irc, const char *s, gboolean allow_priv )
    connection when the user fails to connect in IRC_LOGIN_TIMEOUT secs. */
 static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond )
 {
+	double now = gettime();
 	irc_t *irc = _irc;
-	int rv = 0;
+	int fail = 0;
 	
 	if( !( irc->status & USTATUS_LOGGED_IN ) )
 	{
-		if( gettime() > ( irc->last_pong + IRC_LOGIN_TIMEOUT ) )
-			rv = gettime() - irc->last_pong;
+		if( now > ( irc->last_pong + IRC_LOGIN_TIMEOUT ) )
+			fail = now - irc->last_pong;
 	}
 	else
 	{
-		if( ( gettime() > ( irc->last_pong + global.conf->ping_interval ) ) && !irc->pinging )
+		if( now > ( irc->last_pong + global.conf->ping_timeout ) )
+		{
+			fail = now - irc->last_pong;
+		}
+		else
 		{
 			irc_write( irc, "PING :%s", IRC_PING_STRING );
-			irc->pinging = 1;
-		}
-		else if( gettime() > ( irc->last_pong + global.conf->ping_timeout ) )
-		{
-			rv = gettime() - irc->last_pong;
 		}
 	}
 	
-	if( rv > 0 )
+	if( fail > 0 )
 	{
-		irc_abort( irc, 0, "Ping Timeout: %d seconds", rv );
+		irc_abort( irc, 0, "Ping Timeout: %d seconds", fail );
 		return FALSE;
 	}
 	
