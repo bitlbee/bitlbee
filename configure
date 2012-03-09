@@ -651,7 +651,7 @@ fi
 
 case "$CC" in
 *gcc* )
-	echo CFLAGS+=-MD -MF .depend/\$@.d >> Makefile.settings
+	echo CFLAGS+=-MMD -MF .depend/\$@.d >> Makefile.settings
 	for i in . lib protocols protocols/*/; do
 		mkdir -p $i/.depend
 	done
