@@ -964,9 +964,14 @@ static char *set_eval_chat_type( set_t *set, char *value );
 
 static gboolean bee_irc_channel_init( irc_channel_t *ic )
 {
+	set_t *s;
+
 	set_add( &ic->set, "account", NULL, set_eval_room_account, ic );
 	set_add( &ic->set, "chat_type", "groupchat", set_eval_chat_type, ic );
-	set_add( &ic->set, "nick", NULL, NULL, ic );
+
+	s = set_add( &ic->set, "nick", NULL, NULL, ic );
+	s->flags |= SET_NULL_OK;
+
 	set_add( &ic->set, "room", NULL, NULL, ic );
 	set_add( &ic->set, "translate_to_nicks", "true", set_eval_bool, ic );
 	
