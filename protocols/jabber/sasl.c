@@ -83,6 +83,8 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		return XT_ABORT;
 	}
 	
+	want_oauth = set_getbool( &ic->acc->set, "oauth" );
+	
 	mechs = g_string_new( "" );
 	c = node->children;
 	while( ( c = xt_find_node( c, "mechanism" ) ) )
@@ -104,7 +106,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		c = c->next;
 	}
 	
-	if( !sup_plain && !sup_digest )
+	if( !want_oauth && !sup_plain && !sup_digest )
 	{
 		if( !sup_gtalk && !sup_fb && !sup_ms )
 			imcb_error( ic, "This server requires OAuth "
@@ -120,7 +122,6 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	
 	reply = xt_new_node( "auth", NULL, NULL );
 	xt_add_attr( reply, "xmlns", XMLNS_SASL );
-	want_oauth = set_getbool( &ic->acc->set, "oauth" );
 	
 	if( sup_gtalk && want_oauth )
 	{
