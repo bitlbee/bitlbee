@@ -1061,3 +1061,17 @@ void twitter_status_retweet(struct im_connection *ic, guint64 id)
 	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }
+
+/**
+ * Report a user for sending spam.
+ */
+void twitter_report_spam(struct im_connection *ic, char *screen_name)
+{
+	char *args[2] = {
+		"screen_name",
+		NULL,
+	};
+	args[1] = screen_name;
+	twitter_http(ic, TWITTER_REPORT_SPAM_URL, twitter_http_post,
+	             ic, 1, args, 2);
+}

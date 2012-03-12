@@ -529,6 +529,25 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		twitter_remove_buddy(ic, cmd[1], NULL);
 		g_free(cmds);
 		return;
+	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
+	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
+		char * screen_name;
+		guint64 id;
+		/* Report nominally works on users but look up the user who
+		   posted the given ID if the user wants to do it that way */
+		if (g_str_has_prefix(cmd[1], "#") &&
+		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
+			if (id < TWITTER_LOG_LENGTH && td->log) {
+				if (g_slist_find(ic->bee->users, td->log[id].bu)) {
+					screen_name = td->log[id].bu->handle;
+				}
+			}
+		} else {
+			screen_name = cmd[1];
+		}
+		twitter_report_spam(ic, screen_name);
+		g_free(cmds);
+		return;
 	} else if (g_strcasecmp(cmd[0], "rt") == 0 && cmd[1]) {
 		struct twitter_user_data *tud;
 		bee_user_t *bu;

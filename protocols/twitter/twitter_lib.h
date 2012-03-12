@@ -75,6 +75,9 @@
 #define TWITTER_BLOCKS_CREATE_URL "/blocks/create/"
 #define TWITTER_BLOCKS_DESTROY_URL "/blocks/destroy/"
 
+/* Report spam */
+#define TWITTER_REPORT_SPAM_URL "/report_spam.xml"
+
 void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor);
@@ -86,6 +89,7 @@ void twitter_direct_messages_new(struct im_connection *ic, char *who, char *mess
 void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int create);
 void twitter_status_destroy(struct im_connection *ic, guint64 id);
 void twitter_status_retweet(struct im_connection *ic, guint64 id);
+void twitter_report_spam(struct im_connection *ic, char *screen_name);
 
 #endif //_TWITTER_LIB_H
 

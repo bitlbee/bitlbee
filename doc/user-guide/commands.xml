@@ -844,6 +844,7 @@
 				<varlistentry><term>undo #[&lt;id&gt;]</term><listitem><para>Delete your last Tweet (or one with the given ID)</para></listitem></varlistentry>
 				<varlistentry><term>rt &lt;screenname|#id&gt;</term><listitem><para>Retweet someone's last Tweet (or one with the given ID)</para></listitem></varlistentry>
 				<varlistentry><term>reply &lt;screenname|#id&gt;</term><listitem><para>Reply to a Tweet (with a reply-to reference)</para></listitem></varlistentry>
+				<varlistentry><term>report &lt;screenname|#id&gt;</term><listitem><para>Report the given user (or the user who posted the tweet with the given ID) for sending spam. This will also block them.</para></listitem></varlistentry>
 				<varlistentry><term>follow &lt;screenname&gt;</term><listitem><para>Start following a person</para></listitem></varlistentry>
 				<varlistentry><term>unfollow &lt;screenname&gt;</term><listitem><para>Stop following a person</para></listitem></varlistentry>
 				<varlistentry><term>post &lt;message&gt;</term><listitem><para>Post a tweet</para></listitem></varlistentry>
