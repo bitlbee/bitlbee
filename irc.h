@@ -56,9 +56,11 @@ typedef enum
 	   to logfiles) is the /OPER command, try to use that command for
 	   stuff that matters. */
 	OPER_HACK_IDENTIFY = 0x100,
+	OPER_HACK_IDENTIFY_NOLOAD = 0x01100,
+	OPER_HACK_IDENTIFY_FORCE  = 0x02100,
 	OPER_HACK_REGISTER = 0x200,
 	OPER_HACK_ACCOUNT_ADD = 0x400,
-	OPER_HACK_ANY = 0x700,	/* To check for them all at once. */
+	OPER_HACK_ANY = 0x3700,	/* To check for them all at once. */
 } irc_status_t;
 
 struct irc_user;

@@ -447,7 +447,18 @@ static void irc_cmd_oper_hack( irc_t *irc, char **cmd )
 	}
 	else if( irc->status & OPER_HACK_IDENTIFY )
 	{
-		char *send_cmd[] = { "identify", password, NULL };
+		char *send_cmd[] = { "identify", password, NULL, NULL };
+		irc->status &= ~OPER_HACK_IDENTIFY;
+		if( irc->status & OPER_HACK_IDENTIFY_NOLOAD )
+		{
+			send_cmd[1] = "-noload";
+			send_cmd[2] = password;
+		}
+		else if( irc->status & OPER_HACK_IDENTIFY_FORCE )
+		{
+			send_cmd[1] = "-force";
+			send_cmd[2] = password;
+		}
 		irc_send_num( irc, 491, ":Trying to identify" );
 		root_command( irc, send_cmd );
 	}

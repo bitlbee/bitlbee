@@ -120,10 +120,14 @@ static void cmd_identify( irc_t *irc, char **cmd )
 	{
 		load = FALSE;
 		password = cmd[2];
+		if( password == NULL )
+			irc->status |= OPER_HACK_IDENTIFY_NOLOAD;
 	}
 	else if( strncmp( cmd[1], "-force", 6 ) == 0 )
 	{
 		password = cmd[2];
+		if( password == NULL )
+			irc->status |= OPER_HACK_IDENTIFY_FORCE;
 	}
 	else if( irc->b->accounts != NULL )
 	{
