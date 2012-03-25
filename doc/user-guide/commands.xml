@@ -947,21 +947,16 @@
 
 		<description>
 			<para>
-				Messages from unknown users are echoed like this by default:
+				By default, messages from people who aren't in your contact list are shown in a control channel instead of as a private message.
 			</para>
 
-			<ircexample>
-				<ircline nick="root">Unknown message from handle 3137137:</ircline>
-				<ircline nick="root">j0000! 1 4m l33t h4x0r! kill me!</ircline>
-			</ircexample>
-
 			<para>
-				If you want this lame user to be added automatically, you can set this setting to "add". If you prefer to ignore messages from people you don't know, you can set this one to "ignore". "add_private" and "add_channel" are like add, but you can use them to make messages from unknown buddies appear in the channel instead of a query window.
+				If you prefer to ignore messages from people you don't know, you can set this one to "ignore". "add_private" and "add_channel" are like add, but you can use them to make messages from unknown buddies appear in the channel instead of a query window.
 			</para>
 
 			<note>
 				<para>
-					Auto-added users aren't added to your real contact list. This is because you don't want the user to get authorization requests. So when you restart BitlBee, the auto-added user will be gone. If you want to keep the person in your buddy-list, you have to fixate the add using the <emphasis>add</emphasis> command.
+					Although these users will appear in your control channel, they aren't added to your real contact list. When you restart BitlBee, these auto-added users will be gone. If you want to keep someone in your list, you have to fixate the add using the <emphasis>add</emphasis> command.
 				</para>
 			</note>
 		</description>
