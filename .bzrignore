@@ -6,6 +6,7 @@ user-guide.html
 help.txt
 debian
 build-arch-stamp
+build-stamp
 tags
 decode
 encode
@@ -16,7 +17,9 @@ tests/check
 *.gcov
 *.gcno
 *.o
+*.so
 coverage
 bitlbee.info
 bitlbee.exe
 .depend
+DEADJOE
