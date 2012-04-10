@@ -68,6 +68,11 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 
 static void ssl_deinit( void );
 
+static void ssl_log( int level, const char *line )
+{
+	printf( "%d %s", level, line );
+}
+
 void ssl_init( void )
 {
 	if( initialized )
@@ -83,6 +88,11 @@ void ssl_init( void )
 		gnutls_certificate_set_verify_flags( xcred, GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT );
 	}
 	initialized = TRUE;
+	
+	gnutls_global_set_log_function( ssl_log );
+	/*
+	gnutls_global_set_log_level( 3 );
+	*/
 	
 	atexit( ssl_deinit );
 }
@@ -366,6 +376,11 @@ int ssl_pending( void *conn )
 		ssl_errno = SSL_NOHANDSHAKE;
 		return 0;
 	}
+
+#if GNUTLS_VERSION_NUMBER >= 0x03000d && GNUTLS_VERSION_NUMBER <= 0x030012
+	if( ssl_errno == SSL_AGAIN )
+		return 0;
+#endif
 	
 	return gnutls_record_check_pending( ((struct scd*)conn)->session ) != 0;
 }
