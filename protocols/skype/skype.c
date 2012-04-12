@@ -1143,8 +1143,9 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 		}
 		g_strfreev(lines);
 	} else if (st == 0 || (st < 0 && !sockerr_again())) {
-		closesocket(sd->fd);
+		ssl_disconnect(sd->ssl);
 		sd->fd = -1;
+		sd->ssl = NULL;
 
 		imcb_error(ic, "Error while reading from server");
 		imc_logout(ic, TRUE);
@@ -1233,6 +1234,10 @@ static void skype_logout(struct im_connection *ic)
 		struct skype_group *sg = (struct skype_group *)g_list_nth_data(sd->groups, i);
 		skype_group_free(sg, FALSE);
 	}
+
+	if (sd->ssl)
+		ssl_disconnect(sd->ssl);
+
 	g_free(sd->username);
 	g_free(sd->handle);
 	g_free(sd);
