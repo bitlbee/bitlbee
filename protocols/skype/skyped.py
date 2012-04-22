@@ -31,6 +31,7 @@ import Skype4Py
 import hashlib
 from ConfigParser import ConfigParser, NoOptionError
 from traceback import print_exception
+from fcntl import fcntl, F_SETFD, FD_CLOEXEC
 import ssl
 
 __version__ = "0.1.1"
@@ -184,8 +185,10 @@ def server(host, port, skype = None):
 	else:
 		sock = socket.socket()
 	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	fcntl(sock, F_SETFD, FD_CLOEXEC);
 	sock.bind((host, port))
 	sock.listen(1)
+
 	if hasgobject:
 		gobject.io_add_watch(sock, gobject.IO_IN, listener)
 	else:
