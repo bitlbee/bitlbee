@@ -122,7 +122,7 @@ extern "C" {
 
 #define DEFAULT_AWAY "Away from computer"
 #define CONTROL_TOPIC "Welcome to the control channel. Type \2help\2 for help information."
-#define IRCD_INFO "BitlBee <http://www.bitlbee.org/>"
+#define IRCD_INFO PACKAGE " <http://www.bitlbee.org/>"
 
 #define MAX_NICK_LENGTH 24
 

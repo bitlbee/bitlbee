@@ -232,7 +232,7 @@ static gboolean root_ctcp( irc_user_t *iu, char * const *ctcp )
 	if( g_strcasecmp( ctcp[0], "VERSION" ) == 0 )
 	{
 		irc_send_msg_f( iu, "NOTICE", iu->irc->user->nick, "\001%s %s\001",
-		                ctcp[0], "BitlBee " BITLBEE_VERSION " " ARCH "/" CPU );
+		                ctcp[0], PACKAGE " " BITLBEE_VERSION " " ARCH "/" CPU );
 	}
 	else if( g_strcasecmp( ctcp[0], "PING" ) == 0 )
 	{

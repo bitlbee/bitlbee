@@ -640,6 +640,9 @@ EOF
 	jabber=0
 	oscar=0
 	yahoo=0
+
+	echo '#undef PACKAGE' >> config.h
+	echo '#define PACKAGE "BitlBee-LIBPURPLE"' >> config.h
 	
 	if [ "$events" = "libevent" ]; then
 		echo 'Warning: Some libpurple modules (including msn-pecan) do their event handling'

@@ -112,7 +112,7 @@ int main( int argc, char *argv[] )
 		log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
 	
 		i = bitlbee_inetd_init();
-		log_message( LOGLVL_INFO, "BitlBee %s starting in inetd mode.", BITLBEE_VERSION );
+		log_message( LOGLVL_INFO, "%s %s starting in inetd mode.", PACKAGE, BITLBEE_VERSION );
 
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
@@ -121,7 +121,7 @@ int main( int argc, char *argv[] )
 		log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
 
 		i = bitlbee_daemon_init();
-		log_message( LOGLVL_INFO, "BitlBee %s starting in daemon mode.", BITLBEE_VERSION );
+		log_message( LOGLVL_INFO, "%s %s starting in daemon mode.", PACKAGE, BITLBEE_VERSION );
 	}
 	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
 	{
@@ -138,7 +138,7 @@ int main( int argc, char *argv[] )
 		}
 		
 		i = bitlbee_daemon_init();
-		log_message( LOGLVL_INFO, "BitlBee %s starting in forking daemon mode.", BITLBEE_VERSION );
+		log_message( LOGLVL_INFO, "%s %s starting in forking daemon mode.", PACKAGE, BITLBEE_VERSION );
 	}
 	if( i != 0 )
 		return( i );

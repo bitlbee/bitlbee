@@ -39,8 +39,9 @@ void irc_send_num( irc_t *irc, int code, char *format, ... )
 
 void irc_send_login( irc_t *irc )
 {
-	irc_send_num( irc,   1, ":Welcome to the BitlBee gateway, %s", irc->user->nick );
-	irc_send_num( irc,   2, ":Host %s is running BitlBee " BITLBEE_VERSION " " ARCH "/" CPU ".", irc->root->host );
+	irc_send_num( irc,   1, ":Welcome to the %s gateway, %s", PACKAGE, irc->user->nick );
+	irc_send_num( irc,   2, ":Host %s is running %s %s %s/%s.", irc->root->host,
+	                        PACKAGE, BITLBEE_VERSION, ARCH, CPU );
 	irc_send_num( irc,   3, ":%s", IRCD_INFO );
 	irc_send_num( irc,   4, "%s %s %s %s", irc->root->host, BITLBEE_VERSION, UMODES UMODES_PRIV, CMODES );
 	irc_send_num( irc,   5, "PREFIX=(ohv)@%%+ CHANTYPES=%s CHANMODES=,,,%s NICKLEN=%d CHANNELLEN=%d "
