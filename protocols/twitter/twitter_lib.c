@@ -500,23 +500,30 @@ static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_
 	} else {
 		struct xt_node *urls, *url;
 		
-		urls = xt_find_path(node, "entities/urls");
-		for (url = urls ? urls->children : NULL; url; url = url->next) {
-			/* "short" is a reserved word. :-P */
-			struct xt_node *kort = xt_find_node(url->children, "url");
-			struct xt_node *disp = xt_find_node(url->children, "display_url");
-			char *pos, *new;
-			
-			if (!kort || !kort->text || !disp || !disp->text ||
-			    !(pos = strstr(txs->text, kort->text)))
+		urls = xt_find_path(node, "entities");
+		if (urls != NULL)
+			urls = urls->children;
+		for (; urls; urls = urls->next) {
+			if (strcmp(urls->name, "urls") != 0 && strcmp(urls->name, "media") != 0)
 				continue;
 			
-			*pos = '\0';
-			new = g_strdup_printf("%s%s &lt;%s&gt;%s", txs->text, kort->text,
-			                      disp->text, pos + strlen(kort->text));
-			
-			g_free(txs->text);
-			txs->text = new;
+			for (url = urls ? urls->children : NULL; url; url = url->next) {
+				/* "short" is a reserved word. :-P */
+				struct xt_node *kort = xt_find_node(url->children, "url");
+				struct xt_node *disp = xt_find_node(url->children, "display_url");
+				char *pos, *new;
+				
+				if (!kort || !kort->text || !disp || !disp->text ||
+				    !(pos = strstr(txs->text, kort->text)))
+					continue;
+				
+				*pos = '\0';
+				new = g_strdup_printf("%s%s &lt;%s&gt;%s", txs->text, kort->text,
+				                      disp->text, pos + strlen(kort->text));
+				
+				g_free(txs->text);
+				txs->text = new;
+			}
 		}
 	}
 
