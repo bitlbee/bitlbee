@@ -533,6 +533,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
 		char * screen_name;
 		guint64 id;
+		screen_name = cmd[1];
 		/* Report nominally works on users but look up the user who
 		   posted the given ID if the user wants to do it that way */
 		if (g_str_has_prefix(cmd[1], "#") &&
@@ -542,8 +543,6 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 					screen_name = td->log[id].bu->handle;
 				}
 			}
-		} else {
-			screen_name = cmd[1];
 		}
 		twitter_report_spam(ic, screen_name);
 		g_free(cmds);
