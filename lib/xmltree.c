@@ -29,6 +29,9 @@
 
 #include "xmltree.h"
 
+#define g_strcasecmp g_ascii_strcasecmp
+#define g_strncasecmp g_ascii_strncasecmp
+
 static void xt_start_element( GMarkupParseContext *ctx, const gchar *element_name, const gchar **attr_names, const gchar **attr_values, gpointer data, GError **error )
 {
 	struct xt_parser *xt = data;

@@ -252,8 +252,7 @@ static char *normalize(const char *s)
 
 	g_return_val_if_fail((s != NULL), NULL);
 
-	u = t = g_strdup(s);
-	g_strdown(t);
+	u = t = g_ascii_strdown(s, -1);
 
 	while (*t && (x < BUF_LEN - 1)) {
 		if (*t != ' ' && *t != '!') {

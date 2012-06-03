@@ -106,6 +106,11 @@ extern "C" {
 #undef g_main_quit
 #define g_main_quit		__PLEASE_USE_B_MAIN_QUIT__
 
+/* And now, because GLib folks think everyone loves typing ridiculously long
+   function names ... no I don't or I'd write BitlBee in Java, ffs. */
+#define g_strcasecmp g_ascii_strcasecmp
+#define g_strncasecmp g_ascii_strncasecmp
+
 #ifndef G_GNUC_MALLOC
 /* Doesn't exist in GLib <=2.4 while everything else in BitlBee should
    work with it, so let's fake this one. */
