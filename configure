@@ -21,7 +21,7 @@ libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
 ipcsocket=''
 pcdir='$prefix/lib/pkgconfig'
-systemlibdirs="/lib /lib64 /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64"
+systemlibdirs="/lib64 /usr/lib64 /usr/local/lib64 /lib /usr/lib /usr/local/lib"
 
 msn=1
 jabber=1
@@ -131,6 +131,8 @@ PCDIR=$pcdir
 TARGET=$target
 ARCH=$arch
 CPU=$cpu
+
+INSTALL=install -p
 
 DESTDIR=
 LFLAGS=

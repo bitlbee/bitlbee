@@ -9,8 +9,8 @@ all:
 
 install:
 	mkdir -p $(DESTDIR)$(MANDIR)/man8/ $(DESTDIR)$(MANDIR)/man5/
-	install -m 0644 $(_SRCDIR_)bitlbee.8 $(DESTDIR)$(MANDIR)/man8/
-	install -m 0644 $(_SRCDIR_)bitlbee.conf.5 $(DESTDIR)$(MANDIR)/man5/
+	$(INSTALL) -m 0644 $(_SRCDIR_)bitlbee.8 $(DESTDIR)$(MANDIR)/man8/
+	$(INSTALL) -m 0644 $(_SRCDIR_)bitlbee.conf.5 $(DESTDIR)$(MANDIR)/man5/
 	$(MAKE) -C user-guide $@
 
 uninstall:
