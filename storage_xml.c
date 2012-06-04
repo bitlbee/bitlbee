@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2006 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Storage backend that uses an XMLish format for all data. */
@@ -28,6 +28,7 @@
 #include "base64.h"
 #include "arc.h"
 #include "md5.h"
+#include "xmltree.h"
 
 #include <glib/gstdio.h>
 
@@ -40,7 +41,7 @@ typedef enum
 } xml_pass_st;
 
 /* To make it easier later when extending the format: */
-#define XML_FORMAT_VERSION 1
+#define XML_FORMAT_VERSION "1"
 
 struct xml_parsedata
 {
@@ -421,39 +422,115 @@ static storage_status_t xml_check_pass( const char *my_nick, const char *passwor
 	return xml_load_real( NULL, my_nick, password, XML_PASS_CHECK_ONLY );
 }
 
-static int xml_printf( int fd, int indent, char *fmt, ... )
-{
-	va_list params;
-	char *out;
-	char tabs[9] = "\t\t\t\t\t\t\t\t";
-	int len;
-	
-	/* Maybe not very clean, but who needs more than 8 levels of indentation anyway? */
-	if( write( fd, tabs, indent <= 8 ? indent : 8 ) != indent )
-		return 0;
-	
-	va_start( params, fmt );
-	out = g_markup_vprintf_escaped( fmt, params );
-	va_end( params );
-	
-	len = strlen( out );
-	len -= write( fd, out, len );
-	g_free( out );
-	
-	return len == 0;
-}
-
 static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data );
 
-static storage_status_t xml_save( irc_t *irc, int overwrite )
+struct xt_node *xml_generate( irc_t *irc )
 {
-	char path[512], *path2, *pass_buf = NULL;
+	char *pass_buf = NULL;
 	set_t *set;
 	account_t *acc;
-	int fd;
 	md5_byte_t pass_md5[21];
 	md5_state_t md5_state;
 	GSList *l;
+	struct xt_node *root, *cur;
+	
+	/* Generate a salted md5sum of the password. Use 5 bytes for the salt
+	   (to prevent dictionary lookups of passwords) to end up with a 21-
+	   byte password hash, more convenient for base64 encoding. */
+	random_bytes( pass_md5 + 16, 5 );
+	md5_init( &md5_state );
+	md5_append( &md5_state, (md5_byte_t*) irc->password, strlen( irc->password ) );
+	md5_append( &md5_state, pass_md5 + 16, 5 ); /* Add the salt. */
+	md5_finish( &md5_state, pass_md5 );
+	/* Save the hash in base64-encoded form. */
+	pass_buf = base64_encode( pass_md5, 21 );
+	
+	root = cur = xt_new_node( "user", NULL, NULL );
+	xt_add_attr( cur, "nick", irc->user->nick );
+	xt_add_attr( cur, "password", pass_buf );
+	xt_add_attr( cur, "version", XML_FORMAT_VERSION );
+	
+	g_free( pass_buf );
+	
+	for( set = irc->b->set; set; set = set->next )
+		if( set->value && !( set->flags & SET_NOSAVE ) )
+		{
+			struct xt_node *xset;
+			xt_add_child( cur, xset = xt_new_node( "setting", set->value, NULL ) );
+			xt_add_attr( xset, "name", set->key );
+		}
+	
+	for( acc = irc->b->accounts; acc; acc = acc->next )
+	{
+		unsigned char *pass_cr;
+		char *pass_b64;
+		int pass_len;
+		
+		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password, 12 );
+		pass_b64 = base64_encode( pass_cr, pass_len );
+		g_free( pass_cr );
+		
+		cur = xt_new_node( "account", NULL, NULL );
+		xt_add_attr( cur, "protocol", acc->prpl->name );
+		xt_add_attr( cur, "handle", acc->user );
+		xt_add_attr( cur, "password", pass_b64 );
+		xt_add_attr( cur, "autoconnect", acc->auto_connect ? "true" : "false" );
+		xt_add_attr( cur, "tag", acc->tag );
+		if( acc->server && acc->server[0] )
+			xt_add_attr( cur, "server", acc->server );
+		
+		g_free( pass_b64 );
+		
+		for( set = acc->set; set; set = set->next )
+			if( set->value && !( set->flags & ACC_SET_NOSAVE ) )
+			{
+				struct xt_node *xset;
+				xt_add_child( cur, xset = xt_new_node( "setting", set->value, NULL ) );
+				xt_add_attr( xset, "name", set->key );
+			}
+		
+		/* This probably looks pretty strange. g_hash_table_foreach
+		   is quite a PITA already (but it can't get much better in
+		   C without using #define, I'm afraid), and since it
+		   doesn't seem to be possible to abort the foreach on write
+		   errors, so instead let's use the _find function and
+		   return TRUE on write errors. Which means, if we found
+		   something, there was an error. :-) */
+		g_hash_table_find( acc->nicks, xml_save_nick, cur );
+		
+		xt_add_child( root, cur );
+	}
+	
+	for( l = irc->channels; l; l = l->next )
+	{
+		irc_channel_t *ic = l->data;
+		
+		if( ic->flags & IRC_CHANNEL_TEMP )
+			continue;
+		
+		cur = xt_new_node( "channel", NULL, NULL );
+		xt_add_attr( cur, "name", ic->name );
+		xt_add_attr( cur, "type", set_getstr( &ic->set, "type" ) );
+		
+		for( set = ic->set; set; set = set->next )
+			if( set->value && strcmp( set->key, "type" ) != 0 )
+			{
+				struct xt_node *xset;
+				xt_add_child( cur, xset = xt_new_node( "setting", set->value, NULL ) );
+				xt_add_attr( xset, "name", set->key );
+			}
+		
+		xt_add_child( root, cur );
+	}
+	
+	return root;
+}
+
+static storage_status_t xml_save( irc_t *irc, int overwrite )
+{
+	char path[512], *path2, *xml;
+	struct xt_node *tree;
+	int fd;
 	
 	path2 = g_strdup( irc->user->nick );
 	nick_lc( path2 );
@@ -470,92 +547,9 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 		return STORAGE_OTHER_ERROR;
 	}
 	
-	/* Generate a salted md5sum of the password. Use 5 bytes for the salt
-	   (to prevent dictionary lookups of passwords) to end up with a 21-
-	   byte password hash, more convenient for base64 encoding. */
-	random_bytes( pass_md5 + 16, 5 );
-	md5_init( &md5_state );
-	md5_append( &md5_state, (md5_byte_t*) irc->password, strlen( irc->password ) );
-	md5_append( &md5_state, pass_md5 + 16, 5 ); /* Add the salt. */
-	md5_finish( &md5_state, pass_md5 );
-	/* Save the hash in base64-encoded form. */
-	pass_buf = base64_encode( pass_md5, 21 );
-	
-	if( !xml_printf( fd, 0, "<user nick=\"%s\" password=\"%s\" version=\"%d\">\n", irc->user->nick, pass_buf, XML_FORMAT_VERSION ) )
-		goto write_error;
-	
-	g_free( pass_buf );
-	
-	for( set = irc->b->set; set; set = set->next )
-		if( set->value && !( set->flags & SET_NOSAVE ) )
-			if( !xml_printf( fd, 1, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
-				goto write_error;
-	
-	for( acc = irc->b->accounts; acc; acc = acc->next )
-	{
-		unsigned char *pass_cr;
-		char *pass_b64;
-		int pass_len;
-		
-		pass_len = arc_encode( acc->pass, strlen( acc->pass ), (unsigned char**) &pass_cr, irc->password, 12 );
-		pass_b64 = base64_encode( pass_cr, pass_len );
-		g_free( pass_cr );
-		
-		if( !xml_printf( fd, 1, "<account protocol=\"%s\" handle=\"%s\" password=\"%s\" "
-		                        "autoconnect=\"%d\" tag=\"%s\"", acc->prpl->name, acc->user,
-		                        pass_b64, acc->auto_connect, acc->tag ) )
-		{
-			g_free( pass_b64 );
-			goto write_error;
-		}
-		g_free( pass_b64 );
-		
-		if( acc->server && acc->server[0] && !xml_printf( fd, 0, " server=\"%s\"", acc->server ) )
-			goto write_error;
-		if( !xml_printf( fd, 0, ">\n" ) )
-			goto write_error;
-		
-		for( set = acc->set; set; set = set->next )
-			if( set->value && !( set->flags & ACC_SET_NOSAVE ) )
-				if( !xml_printf( fd, 2, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
-					goto write_error;
-		
-		/* This probably looks pretty strange. g_hash_table_foreach
-		   is quite a PITA already (but it can't get much better in
-		   C without using #define, I'm afraid), and since it
-		   doesn't seem to be possible to abort the foreach on write
-		   errors, so instead let's use the _find function and
-		   return TRUE on write errors. Which means, if we found
-		   something, there was an error. :-) */
-		if( g_hash_table_find( acc->nicks, xml_save_nick, & fd ) )
-			goto write_error;
-		
-		if( !xml_printf( fd, 1, "</account>\n" ) )
-			goto write_error;
-	}
-	
-	for( l = irc->channels; l; l = l->next )
-	{
-		irc_channel_t *ic = l->data;
-		
-		if( ic->flags & IRC_CHANNEL_TEMP )
-			continue;
-		
-		if( !xml_printf( fd, 1, "<channel name=\"%s\" type=\"%s\">\n",
-		                 ic->name, set_getstr( &ic->set, "type" ) ) )
-			goto write_error;
-		
-		for( set = ic->set; set; set = set->next )
-			if( set->value && strcmp( set->key, "type" ) != 0 )
-				if( !xml_printf( fd, 2, "<setting name=\"%s\">%s</setting>\n", set->key, set->value ) )
-					goto write_error;
-		
-		if( !xml_printf( fd, 1, "</channel>\n" ) )
-			goto write_error;
-	}
-	
-	if( !xml_printf( fd, 0, "</user>\n" ) )
-		goto write_error;
+	tree = xml_generate( irc );
+	xml = xt_to_string( tree );
+	write( fd, xml, strlen( xml ) );
 	
 	fsync( fd );
 	close( fd );
@@ -576,7 +570,6 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	return STORAGE_OK;
 
 write_error:
-	g_free( pass_buf );
 	
 	irc_rootmsg( irc, "Write error. Disk full?" );
 	close( fd );
@@ -586,7 +579,12 @@ write_error:
 
 static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data )
 {
-	return !xml_printf( *( (int*) data ), 2, "<buddy handle=\"%s\" nick=\"%s\" />\n", key, value );
+	struct xt_node *node = xt_new_node( "buddy", NULL, NULL );
+	xt_add_attr( node, "handle", key );
+	xt_add_attr( node, "nick", value );
+	xt_add_child( (struct xt_node *) data, node );
+	
+	return FALSE;
 }
 
 static storage_status_t xml_remove( const char *nick, const char *password )
