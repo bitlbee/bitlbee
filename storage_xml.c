@@ -173,7 +173,6 @@ static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const ch
 	struct xt_parser *xp;
 	struct xt_node *node;
 	storage_status_t ret = STORAGE_OTHER_ERROR;
-	char *nick;
 	
 	xd->irc = irc;
 	strncpy( xd->given_nick, my_nick, MAX_NICK_LENGTH );
@@ -245,7 +244,7 @@ static storage_status_t xml_check_pass( const char *my_nick, const char *passwor
 }
 
 
-static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data );
+static gboolean xml_generate_nick( gpointer key, gpointer value, gpointer data );
 
 struct xt_node *xml_generate( irc_t *irc )
 {
@@ -319,7 +318,7 @@ struct xt_node *xml_generate( irc_t *irc )
 		   errors, so instead let's use the _find function and
 		   return TRUE on write errors. Which means, if we found
 		   something, there was an error. :-) */
-		g_hash_table_find( acc->nicks, xml_save_nick, cur );
+		g_hash_table_find( acc->nicks, xml_generate_nick, cur );
 		
 		xt_add_child( root, cur );
 	}
@@ -351,13 +350,15 @@ struct xt_node *xml_generate( irc_t *irc )
 
 static storage_status_t xml_save( irc_t *irc, int overwrite )
 {
-	char path[512], *path2, *xml;
-	struct xt_node *tree;
+	storage_status_t ret = STORAGE_OK;
+	char path[512], *path2 = NULL, *xml = NULL;
+	struct xt_node *tree = NULL;
+	size_t len;
 	int fd;
 	
 	path2 = g_strdup( irc->user->nick );
 	nick_lc( path2 );
-	g_snprintf( path, sizeof( path ) - 2, "%s%s%s", global.conf->configdir, path2, ".xml" );
+	g_snprintf( path, sizeof( path ) - 20, "%s%s%s", global.conf->configdir, path2, ".xml" );
 	g_free( path2 );
 	
 	if( !overwrite && g_access( path, F_OK ) == 0 )
@@ -372,35 +373,36 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	
 	tree = xml_generate( irc );
 	xml = xt_to_string( tree );
-	write( fd, xml, strlen( xml ) );
-	
-	fsync( fd );
-	close( fd );
+	len = strlen( xml );
+	if( write( fd, xml, len ) != len ||
+	    fsync( fd ) != 0 || /* #559 */
+	    close( fd ) != 0 )
+		goto error;
 	
 	path2 = g_strndup( path, strlen( path ) - 7 );
 	if( rename( path, path2 ) != 0 )
 	{
-		irc_rootmsg( irc, "Error while renaming temporary configuration file." );
-		
 		g_free( path2 );
-		unlink( path );
-		
-		return STORAGE_OTHER_ERROR;
+		goto error;
 	}
-	
 	g_free( path2 );
 	
-	return STORAGE_OK;
+	goto finish;
 
-write_error:
-	
+error:
 	irc_rootmsg( irc, "Write error. Disk full?" );
+	ret = STORAGE_OTHER_ERROR;
+
+finish:	
 	close( fd );
+	unlink( path );
+	g_free( xml );
+	xt_free_node( tree );
 	
-	return STORAGE_OTHER_ERROR;
+	return ret;
 }
 
-static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data )
+static gboolean xml_generate_nick( gpointer key, gpointer value, gpointer data )
 {
 	struct xt_node *node = xt_new_node( "buddy", NULL, NULL );
 	xt_add_attr( node, "handle", key );
@@ -409,6 +411,7 @@ static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data )
 	
 	return FALSE;
 }
+
 
 static storage_status_t xml_remove( const char *nick, const char *password )
 {
