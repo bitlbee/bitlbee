@@ -46,297 +46,8 @@ typedef enum
 struct xml_parsedata
 {
 	irc_t *irc;
-	char *current_setting;
-	account_t *current_account;
-	irc_channel_t *current_channel;
-	set_t **current_set_head;
-	char *given_nick;
+	char given_nick[MAX_NICK_LENGTH+1];
 	char *given_pass;
-	xml_pass_st pass_st;
-	int unknown_tag;
-};
-
-static char *xml_attr( const gchar **attr_names, const gchar **attr_values, const gchar *key )
-{
-	int i;
-	
-	for( i = 0; attr_names[i]; i ++ )
-		if( g_strcasecmp( attr_names[i], key ) == 0 )
-			return (char*) attr_values[i];
-	
-	return NULL;
-}
-
-static void xml_destroy_xd( gpointer data )
-{
-	struct xml_parsedata *xd = data;
-	
-	g_free( xd->given_nick );
-	g_free( xd->given_pass );
-	g_free( xd );
-}
-
-static void xml_start_element( GMarkupParseContext *ctx, const gchar *element_name, const gchar **attr_names, const gchar **attr_values, gpointer data, GError **error )
-{
-	struct xml_parsedata *xd = data;
-	irc_t *irc = xd->irc;
-	
-	if( xd->unknown_tag > 0 )
-	{
-		xd->unknown_tag ++;
-	}
-	else if( g_strcasecmp( element_name, "user" ) == 0 )
-	{
-		char *nick = xml_attr( attr_names, attr_values, "nick" );
-		char *pass = xml_attr( attr_names, attr_values, "password" );
-		int st;
-		
-		if( !nick || !pass )
-		{
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Missing attributes for %s element", element_name );
-		}
-		else if( ( st = md5_verify_password( xd->given_pass, pass ) ) == -1 )
-		{
-			xd->pass_st = XML_PASS_WRONG;
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Error while decoding password attribute" );
-		}
-		else if( st == 0 )
-		{
-			if( xd->pass_st != XML_PASS_CHECK_ONLY )
-				xd->pass_st = XML_PASS_OK;
-		}
-		else
-		{
-			xd->pass_st = XML_PASS_WRONG;
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Password mismatch" );
-		}
-	}
-	else if( xd->pass_st < XML_PASS_OK )
-	{
-		/* Let's not parse anything else if we only have to check
-		   the password. */
-	}
-	else if( g_strcasecmp( element_name, "account" ) == 0 )
-	{
-		char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag;
-		char *pass_b64 = NULL;
-		unsigned char *pass_cr = NULL;
-		int pass_len;
-		struct prpl *prpl = NULL;
-		
-		handle = xml_attr( attr_names, attr_values, "handle" );
-		pass_b64 = xml_attr( attr_names, attr_values, "password" );
-		server = xml_attr( attr_names, attr_values, "server" );
-		autoconnect = xml_attr( attr_names, attr_values, "autoconnect" );
-		tag = xml_attr( attr_names, attr_values, "tag" );
-		
-		protocol = xml_attr( attr_names, attr_values, "protocol" );
-		if( protocol )
-			prpl = find_protocol( protocol );
-		
-		if( !handle || !pass_b64 || !protocol )
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Missing attributes for %s element", element_name );
-		else if( !prpl )
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Unknown protocol: %s", protocol );
-		else if( ( pass_len = base64_decode( pass_b64, (unsigned char**) &pass_cr ) ) &&
-		         arc_decode( pass_cr, pass_len, &password, xd->given_pass ) >= 0 )
-		{
-			xd->current_account = account_add( irc->b, prpl, handle, password );
-			if( server )
-				set_setstr( &xd->current_account->set, "server", server );
-			if( autoconnect )
-				set_setstr( &xd->current_account->set, "auto_connect", autoconnect );
-			if( tag )
-				set_setstr( &xd->current_account->set, "tag", tag );
-		}
-		else
-		{
-			/* Actually the _decode functions don't even return error codes,
-			   but maybe they will later... */
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Error while decrypting account password" );
-		}
-		
-		g_free( pass_cr );
-		g_free( password );
-	}
-	else if( g_strcasecmp( element_name, "setting" ) == 0 )
-	{
-		char *setting;
-		
-		if( xd->current_setting )
-		{
-			g_free( xd->current_setting );
-			xd->current_setting = NULL;
-		}
-		
-		if( ( setting = xml_attr( attr_names, attr_values, "name" ) ) )
-		{
-			if( xd->current_channel != NULL )
-				xd->current_set_head = &xd->current_channel->set;
-			else if( xd->current_account != NULL )
-				xd->current_set_head = &xd->current_account->set;
-			else
-				xd->current_set_head = &xd->irc->b->set;
-			
-			xd->current_setting = g_strdup( setting );
-		}
-		else
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Missing attributes for %s element", element_name );
-	}
-	else if( g_strcasecmp( element_name, "buddy" ) == 0 )
-	{
-		char *handle, *nick;
-		
-		handle = xml_attr( attr_names, attr_values, "handle" );
-		nick = xml_attr( attr_names, attr_values, "nick" );
-		
-		if( xd->current_account && handle && nick )
-		{
-			nick_set_raw( xd->current_account, handle, nick );
-		}
-		else
-		{
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Missing attributes for %s element", element_name );
-		}
-	}
-	else if( g_strcasecmp( element_name, "channel" ) == 0 )
-	{
-		char *name, *type;
-		
-		name = xml_attr( attr_names, attr_values, "name" );
-		type = xml_attr( attr_names, attr_values, "type" );
-		
-		if( !name || !type )
-		{
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Missing attributes for %s element", element_name );
-			return;
-		}
-		
-		/* The channel may exist already, for example if it's &bitlbee.
-		   Also, it's possible that the user just reconnected and the
-		   IRC client already rejoined all channels it was in. They
-		   should still get the right settings. */
-		if( ( xd->current_channel = irc_channel_by_name( irc, name ) ) ||
-		    ( xd->current_channel = irc_channel_new( irc, name ) ) )
-			set_setstr( &xd->current_channel->set, "type", type );
-	}
-	/* Backward compatibility: Keep this around for a while for people
-	   switching from BitlBee 1.2.4+. */
-	else if( g_strcasecmp( element_name, "chat" ) == 0 )
-	{
-		char *handle, *channel;
-		
-		handle = xml_attr( attr_names, attr_values, "handle" );
-		channel = xml_attr( attr_names, attr_values, "channel" );
-		
-		if( xd->current_account && handle && channel )
-		{
-			irc_channel_t *ic;
-			
-			if( ( ic = irc_channel_new( irc, channel ) ) &&
-			    set_setstr( &ic->set, "type", "chat" ) &&
-			    set_setstr( &ic->set, "chat_type", "room" ) &&
-			    set_setstr( &ic->set, "account", xd->current_account->tag ) &&
-			    set_setstr( &ic->set, "room", handle ) )
-			{
-				/* Try to pick up some settings where possible. */
-				xd->current_channel = ic;
-			}
-			else if( ic )
-				irc_channel_free( ic );
-		}
-		else
-		{
-			g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-			             "Missing attributes for %s element", element_name );
-		}
-	}
-	else
-	{
-		xd->unknown_tag ++;
-		irc_rootmsg( irc, "Warning: Unknown XML tag found in configuration file (%s). "
-		                  "This may happen when downgrading BitlBee versions. "
-		                  "This tag will be skipped and the information will be lost "
-		                  "once you save your settings.", element_name );
-		/*
-		g_set_error( error, G_MARKUP_ERROR, G_MARKUP_ERROR_UNKNOWN_ELEMENT,
-		             "Unkown element: %s", element_name );
-		*/
-	}
-}
-
-static void xml_end_element( GMarkupParseContext *ctx, const gchar *element_name, gpointer data, GError **error )
-{
-	struct xml_parsedata *xd = data;
-	
-	if( xd->unknown_tag > 0 )
-	{
-		xd->unknown_tag --;
-	}
-	else if( g_strcasecmp( element_name, "setting" ) == 0 && xd->current_setting )
-	{
-		g_free( xd->current_setting );
-		xd->current_setting = NULL;
-	}
-	else if( g_strcasecmp( element_name, "account" ) == 0 )
-	{
-		xd->current_account = NULL;
-	}
-	else if( g_strcasecmp( element_name, "channel" ) == 0 ||
-	         g_strcasecmp( element_name, "chat" ) == 0 )
-	{
-		xd->current_channel = NULL;
-	}
-}
-
-static void xml_text( GMarkupParseContext *ctx, const gchar *text_orig, gsize text_len, gpointer data, GError **error )
-{
-	char text[text_len+1];
-	struct xml_parsedata *xd = data;
-	
-	strncpy( text, text_orig, text_len );
-	text[text_len] = 0;
-	
-	if( xd->pass_st < XML_PASS_OK )
-	{
-		/* Let's not parse anything else if we only have to check
-		   the password, or if we didn't get the chance to check it
-		   yet. */
-	}
-	else if( g_strcasecmp( g_markup_parse_context_get_element( ctx ), "setting" ) == 0 && xd->current_setting )
-	{
-		if( xd->current_account )
-		{
-			set_t *s = set_find( xd->current_set_head, xd->current_setting );
-			if( s && ( s->flags & ACC_SET_ONLINE_ONLY ) )
-			{
-				g_free( xd->current_setting );
-				xd->current_setting = NULL;
-				return;
-			}
-		}
-		set_setstr( xd->current_set_head, xd->current_setting, (char*) text );
-		g_free( xd->current_setting );
-		xd->current_setting = NULL;
-	}
-}
-
-GMarkupParser xml_parser =
-{
-	xml_start_element,
-	xml_end_element,
-	xml_text,
-	NULL,
-	NULL
 };
 
 static void xml_init( void )
@@ -348,66 +59,179 @@ static void xml_init( void )
 		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to `%s'.", global.conf->configdir );
 }
 
+static void handle_settings( struct xt_node *node, set_t **head )
+{
+	struct xt_node *c;
+	
+	for( c = node->children; ( c = xt_find_node( c, "setting" ) ); c = c->next )
+	{
+		char *name = xt_find_attr( c, "name" );
+		
+		if( strcmp( node->name, "account" ) == 0 )
+		{
+			set_t *s = set_find( head, name );
+			if( s && ( s->flags & ACC_SET_ONLINE_ONLY ) )
+				continue; /* U can't touch this! */
+		}
+		set_setstr( head, name, c->text );
+	}
+}
+
+static xt_status handle_account( struct xt_node *node, gpointer data )
+{
+	struct xml_parsedata *xd = data;
+	char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag;
+	char *pass_b64 = NULL;
+	unsigned char *pass_cr = NULL;
+	int pass_len;
+	struct prpl *prpl = NULL;
+	account_t *acc;
+	struct xt_node *c;
+	
+	handle = xt_find_attr( node, "handle" );
+	pass_b64 = xt_find_attr( node, "password" );
+	server = xt_find_attr( node, "server" );
+	autoconnect = xt_find_attr( node, "autoconnect" );
+	tag = xt_find_attr( node, "tag" );
+	
+	protocol = xt_find_attr( node, "protocol" );
+	if( protocol )
+		prpl = find_protocol( protocol );
+	
+	if( !handle || !pass_b64 || !protocol || !prpl )
+		return XT_ABORT;
+	else if( ( pass_len = base64_decode( pass_b64, (unsigned char**) &pass_cr ) ) &&
+	         arc_decode( pass_cr, pass_len, &password, xd->given_pass ) >= 0 )
+	{
+		acc = account_add( xd->irc->b, prpl, handle, password );
+		if( server )
+			set_setstr( &acc->set, "server", server );
+		if( autoconnect )
+			set_setstr( &acc->set, "auto_connect", autoconnect );
+		if( tag )
+			set_setstr( &acc->set, "tag", tag );
+	}
+	else
+		return XT_ABORT;
+	
+	g_free( pass_cr );
+	g_free( password );
+	
+	handle_settings( node, &acc->set );
+	
+	for( c = node->children; ( c = xt_find_node( c, "buddy" ) ); c = c->next )
+	{
+		char *handle, *nick;
+		
+		handle = xt_find_attr( c, "handle" );
+		nick = xt_find_attr( c, "nick" );
+		
+		if( handle && nick )
+			nick_set_raw( acc, handle, nick );
+		else
+			return XT_ABORT;
+	}	
+	return XT_HANDLED;
+}
+
+static xt_status handle_channel( struct xt_node *node, gpointer data )
+{
+	struct xml_parsedata *xd = data;
+	irc_channel_t *ic;
+	char *name, *type;
+	
+	name = xt_find_attr( node, "name" );
+	type = xt_find_attr( node, "type" );
+	
+	if( !name || !type )
+		return XT_ABORT;
+	
+	/* The channel may exist already, for example if it's &bitlbee.
+	   Also, it's possible that the user just reconnected and the
+	   IRC client already rejoined all channels it was in. They
+	   should still get the right settings. */
+	if( ( ic = irc_channel_by_name( xd->irc, name ) ) ||
+	    ( ic = irc_channel_new( xd->irc, name ) ) )
+		set_setstr( &ic->set, "type", type );
+	
+	handle_settings( node, &ic->set );
+	
+	return XT_HANDLED;
+}
+
+static const struct xt_handler_entry handlers[] = {
+	{ "account", "user", handle_account, },
+	{ "channel", "user", handle_channel, },
+	{ NULL,      NULL,   NULL, },
+};
+
 static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const char *password, xml_pass_st action )
 {
-	GMarkupParseContext *ctx;
-	struct xml_parsedata *xd;
-	char *fn, buf[512];
-	GError *gerr = NULL;
+	struct xml_parsedata xd[1];
+	char *fn, buf[204];
 	int fd, st;
+	struct xt_parser *xp;
+	struct xt_node *node;
+	storage_status_t ret = STORAGE_OTHER_ERROR;
+	char *nick;
 	
-	xd = g_new0( struct xml_parsedata, 1 );
 	xd->irc = irc;
-	xd->given_nick = g_strdup( my_nick );
-	xd->given_pass = g_strdup( password );
-	xd->pass_st = action;
+	strncpy( xd->given_nick, my_nick, MAX_NICK_LENGTH );
+	xd->given_nick[MAX_NICK_LENGTH] = '\0';
 	nick_lc( xd->given_nick );
+	xd->given_pass = password;
 	
-	fn = g_strdup_printf( "%s%s%s", global.conf->configdir, xd->given_nick, ".xml" );
+	fn = g_strconcat( global.conf->configdir, xd->given_nick, ".xml", NULL );
 	if( ( fd = open( fn, O_RDONLY ) ) < 0 )
 	{
-		xml_destroy_xd( xd );
-		g_free( fn );
-		return STORAGE_NO_SUCH_USER;
+		ret = STORAGE_NO_SUCH_USER;
+		goto error;
 	}
-	g_free( fn );
 	
-	ctx = g_markup_parse_context_new( &xml_parser, 0, xd, xml_destroy_xd );
-	
+	xp = xt_new( handlers, xd );
 	while( ( st = read( fd, buf, sizeof( buf ) ) ) > 0 )
 	{
-		if( !g_markup_parse_context_parse( ctx, buf, st, &gerr ) || gerr )
+		st = xt_feed( xp, buf, st );
+		if( st != 1 )
+			break;
+	}
+	close( fd );
+	if( st != 0 )
+		goto error;
+	
+	node = xp->root;
+	if( node == NULL || node->next != NULL || strcmp( node->name, "user" ) != 0 )
+		goto error;
+	
+	{
+		char *nick = xt_find_attr( node, "nick" );
+		char *pass = xt_find_attr( node, "password" );
+		
+		if( !nick || !pass )
 		{
-			xml_pass_st pass_st = xd->pass_st;
-			
-			g_markup_parse_context_free( ctx );
-			close( fd );
-			
-			if( pass_st == XML_PASS_WRONG )
-			{
-				g_clear_error( &gerr );
-				return STORAGE_INVALID_PASSWORD;
-			}
-			else
-			{
-				if( gerr && irc )
-					irc_rootmsg( irc, "Error from XML-parser: %s", gerr->message );
-				
-				g_clear_error( &gerr );
-				return STORAGE_OTHER_ERROR;
-			}
+			goto error;
+		}
+		else if( ( st = md5_verify_password( xd->given_pass, pass ) ) != 0 )
+		{
+			ret = STORAGE_INVALID_PASSWORD;
+			goto error;
 		}
 	}
-	/* Just to be sure... */
-	g_clear_error( &gerr );
-	
-	g_markup_parse_context_free( ctx );
-	close( fd );
 	
 	if( action == XML_PASS_CHECK_ONLY )
-		return STORAGE_OK;
+	{
+		ret = STORAGE_OK;
+		goto error;
+	}
 	
-	return STORAGE_OK;
+	/* DO NOT call xt_handle() before verifying the password! */
+	if( xt_handle( xp, NULL, -1 ) == XT_HANDLED )
+		ret = STORAGE_OK;
+	
+	handle_settings( node, &xd->irc->b->set );
+	
+error:
+	return ret;
 }
 
 static storage_status_t xml_load( irc_t *irc, const char *password )
@@ -417,10 +241,9 @@ static storage_status_t xml_load( irc_t *irc, const char *password )
 
 static storage_status_t xml_check_pass( const char *my_nick, const char *password )
 {
-	/* This is a little bit risky because we have to pass NULL for the
-	   irc_t argument. This *should* be fine, if I didn't miss anything... */
 	return xml_load_real( NULL, my_nick, password, XML_PASS_CHECK_ONLY );
 }
+
 
 static gboolean xml_save_nick( gpointer key, gpointer value, gpointer data );
 
