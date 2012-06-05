@@ -276,11 +276,15 @@ struct xt_node *xt_from_string( const char *in )
 	return ret;
 }
 
-static void xt_to_string_real( struct xt_node *node, GString *str )
+static void xt_to_string_real( struct xt_node *node, GString *str, int indent )
 {
 	char *buf;
 	struct xt_node *c;
 	int i;
+	
+	if( indent > 1 )
+		g_string_append_len( str, "\n\t\t\t\t\t\t\t\t",
+		                     indent < 8 ? indent : 8 );
 	
 	g_string_append_printf( str, "<%s", node->name );
 	
@@ -306,7 +310,11 @@ static void xt_to_string_real( struct xt_node *node, GString *str )
 	}
 	
 	for( c = node->children; c; c = c->next )
-		xt_to_string_real( c, str );
+		xt_to_string_real( c, str, indent ? indent + 1 : 0 );
+	
+	if( indent > 0 && node->children )
+		g_string_append_len( str, "\n\t\t\t\t\t\t\t\t",
+		                     indent < 8 ? indent : 8 );
 	
 	g_string_append_printf( str, "</%s>", node->name );
 }
@@ -314,74 +322,27 @@ static void xt_to_string_real( struct xt_node *node, GString *str )
 char *xt_to_string( struct xt_node *node )
 {
 	GString *ret;
-	char *real;
 	
 	ret = g_string_new( "" );
-	xt_to_string_real( node, ret );
+	xt_to_string_real( node, ret, 0 );
+	return g_string_free( ret, FALSE );
+}
+
+/* WITH indentation! */
+char *xt_to_string_i( struct xt_node *node )
+{
+	GString *ret;
 	
-	real = ret->str;
-	g_string_free( ret, FALSE );
-	
-	return real;
+	ret = g_string_new( "" );
+	xt_to_string_real( node, ret, 1 );
+	return g_string_free( ret, FALSE );
 }
 
 void xt_print( struct xt_node *node )
 {
-	int i;
-	struct xt_node *c;
-	
-	/* Indentation */
-	for( c = node; c->parent; c = c->parent )
-		fprintf( stderr, "    " );
-	
-	/* Start the tag */
-	fprintf( stderr, "<%s", node->name );
-	
-	/* Print the attributes */
-	for( i = 0; node->attr[i].key; i ++ )
-	{
-		char *v = g_markup_escape_text( node->attr[i].value, -1 );
-		fprintf( stderr, " %s=\"%s\"", node->attr[i].key, v );
-		g_free( v );
-	}
-	
-	/* /> in case there's really *nothing* inside this tag, otherwise
-	   just >. */
-	/* If this tag doesn't have any content at all... */
-	if( node->text == NULL && node->children == NULL )
-	{
-		fprintf( stderr, "/>\n" );
-		return;
-		/* Then we're finished! */
-	}
-	
-	/* Otherwise... */
-	fprintf( stderr, ">" );
-	
-	/* Only print the text if it contains more than whitespace (TEST). */
-	if( node->text_len > 0 )
-	{
-		for( i = 0; node->text[i] && isspace( node->text[i] ); i ++ );
-		if( node->text[i] )
-		{
-			char *v = g_markup_escape_text( node->text, -1 );
-			fprintf( stderr, "%s", v );
-			g_free( v );
-		}
-	}
-	
-	if( node->children )
-		fprintf( stderr, "\n" );
-	
-	for( c = node->children; c; c = c->next )
-		xt_print( c );
-	
-	if( node->children )
-		for( c = node; c->parent; c = c->parent )
-			fprintf( stderr, "    " );
-	
-	/* Non-empty tag is now finished. */
-	fprintf( stderr, "</%s>\n", node->name );
+	char *str = xt_to_string_i( node );
+	fprintf( stderr, "%s", str );
+	g_free( str );
 }
 
 struct xt_node *xt_dup( struct xt_node *node )

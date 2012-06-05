@@ -372,7 +372,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	}
 	
 	tree = xml_generate( irc );
-	xml = xt_to_string( tree );
+	xml = xt_to_string_i( tree );
 	len = strlen( xml );
 	if( write( fd, xml, len ) != len ||
 	    fsync( fd ) != 0 || /* #559 */
