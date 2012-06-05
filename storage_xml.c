@@ -67,6 +67,9 @@ static void handle_settings( struct xt_node *node, set_t **head )
 	{
 		char *name = xt_find_attr( c, "name" );
 		
+		if( !name )
+			continue;
+		
 		if( strcmp( node->name, "account" ) == 0 )
 		{
 			set_t *s = set_find( head, name );
@@ -168,7 +171,7 @@ static const struct xt_handler_entry handlers[] = {
 static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const char *password, xml_pass_st action )
 {
 	struct xml_parsedata xd[1];
-	char *fn, buf[204];
+	char *fn, buf[2048];
 	int fd, st;
 	struct xt_parser *xp;
 	struct xt_node *node;
@@ -224,12 +227,14 @@ static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const ch
 	}
 	
 	/* DO NOT call xt_handle() before verifying the password! */
-	if( xt_handle( xp, NULL, -1 ) == XT_HANDLED )
+	if( xt_handle( xp, NULL, 1 ) == XT_HANDLED )
 		ret = STORAGE_OK;
 	
 	handle_settings( node, &xd->irc->b->set );
 	
 error:
+	xt_free( xp );
+	g_free( fn );
 	return ret;
 }
 
@@ -348,6 +353,16 @@ struct xt_node *xml_generate( irc_t *irc )
 	return root;
 }
 
+static gboolean xml_generate_nick( gpointer key, gpointer value, gpointer data )
+{
+	struct xt_node *node = xt_new_node( "buddy", NULL, NULL );
+	xt_add_attr( node, "handle", key );
+	xt_add_attr( node, "nick", value );
+	xt_add_child( (struct xt_node *) data, node );
+	
+	return FALSE;
+}
+
 static storage_status_t xml_save( irc_t *irc, int overwrite )
 {
 	storage_status_t ret = STORAGE_OK;
@@ -400,16 +415,6 @@ finish:
 	xt_free_node( tree );
 	
 	return ret;
-}
-
-static gboolean xml_generate_nick( gpointer key, gpointer value, gpointer data )
-{
-	struct xt_node *node = xt_new_node( "buddy", NULL, NULL );
-	xt_add_attr( node, "handle", key );
-	xt_add_attr( node, "nick", value );
-	xt_add_child( (struct xt_node *) data, node );
-	
-	return FALSE;
 }
 
 
