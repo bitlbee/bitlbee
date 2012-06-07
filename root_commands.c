@@ -280,7 +280,7 @@ static void cmd_drop( irc_t *irc, char **cmd )
 static void cmd_save( irc_t *irc, char **cmd )
 {
 	if( ( irc->status & USTATUS_IDENTIFIED ) == 0 )
-		irc_rootmsg( irc, "Please create an account first" );
+		irc_rootmsg( irc, "Please create an account first (see \x02help register\x02)" );
 	else if( storage_save( irc, NULL, TRUE ) == STORAGE_OK )
 		irc_rootmsg( irc, "Configuration saved" );
 	else
