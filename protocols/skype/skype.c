@@ -1508,13 +1508,13 @@ static void skype_init(account_t *acc)
 
 	s = set_add(&acc->set, "display_name", NULL, skype_set_display_name,
 		acc);
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "call", NULL, skype_set_call, acc);
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "balance", NULL, skype_set_balance, acc);
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "skypeout_offline", "true", set_eval_bool, acc);
 

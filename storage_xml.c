@@ -309,7 +309,7 @@ struct xt_node *xml_generate( irc_t *irc )
 		g_free( pass_b64 );
 		
 		for( set = acc->set; set; set = set->next )
-			if( set->value && !( set->flags & ACC_SET_NOSAVE ) )
+			if( set->value && !( set->flags & SET_NOSAVE ) )
 			{
 				struct xt_node *xset;
 				xt_add_child( cur, xset = xt_new_node( "setting", set->value, NULL ) );

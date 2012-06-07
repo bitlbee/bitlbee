@@ -60,7 +60,6 @@ int account_reconnect_delay( account_t *a );
 
 typedef enum
 {
-	ACC_SET_NOSAVE = 0x01,          /* Don't save this setting (i.e. stored elsewhere). */
 	ACC_SET_OFFLINE_ONLY = 0x02,    /* Allow changes only if the acct is offline. */
 	ACC_SET_ONLINE_ONLY = 0x04,     /* Allow changes only if the acct is online. */
 } account_set_flag_t;

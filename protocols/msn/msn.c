@@ -38,7 +38,7 @@ static void msn_init( account_t *acc )
 	set_t *s;
 	
 	s = set_add( &acc->set, "display_name", NULL, set_eval_display_name, acc );
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 	
 	set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
 	set_add( &acc->set, "switchboard_keepalives", "false", set_eval_bool, acc );
