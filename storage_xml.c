@@ -250,11 +250,11 @@ static storage_status_t xml_check_pass( const char *my_nick, const char *passwor
 
 
 static gboolean xml_generate_nick( gpointer key, gpointer value, gpointer data );
+static void xml_generate_settings( struct xt_node *cur, set_t **head );
 
 struct xt_node *xml_generate( irc_t *irc )
 {
 	char *pass_buf = NULL;
-	set_t *set;
 	account_t *acc;
 	md5_byte_t pass_md5[21];
 	md5_state_t md5_state;
@@ -279,13 +279,7 @@ struct xt_node *xml_generate( irc_t *irc )
 	
 	g_free( pass_buf );
 	
-	for( set = irc->b->set; set; set = set->next )
-		if( set->value && !( set->flags & SET_NOSAVE ) )
-		{
-			struct xt_node *xset;
-			xt_add_child( cur, xset = xt_new_node( "setting", set->value, NULL ) );
-			xt_add_attr( xset, "name", set->key );
-		}
+	xml_generate_settings( cur, &irc->b->set );
 	
 	for( acc = irc->b->accounts; acc; acc = acc->next )
 	{
@@ -308,14 +302,6 @@ struct xt_node *xml_generate( irc_t *irc )
 		
 		g_free( pass_b64 );
 		
-		for( set = acc->set; set; set = set->next )
-			if( set->value && !( set->flags & SET_NOSAVE ) )
-			{
-				struct xt_node *xset;
-				xt_add_child( cur, xset = xt_new_node( "setting", set->value, NULL ) );
-				xt_add_attr( xset, "name", set->key );
-			}
-		
 		/* This probably looks pretty strange. g_hash_table_foreach
 		   is quite a PITA already (but it can't get much better in
 		   C without using #define, I'm afraid), and since it
@@ -324,6 +310,8 @@ struct xt_node *xml_generate( irc_t *irc )
 		   return TRUE on write errors. Which means, if we found
 		   something, there was an error. :-) */
 		g_hash_table_find( acc->nicks, xml_generate_nick, cur );
+		
+		xml_generate_settings( cur, &acc->set );
 		
 		xt_add_child( root, cur );
 	}
@@ -339,13 +327,7 @@ struct xt_node *xml_generate( irc_t *irc )
 		xt_add_attr( cur, "name", ic->name );
 		xt_add_attr( cur, "type", set_getstr( &ic->set, "type" ) );
 		
-		for( set = ic->set; set; set = set->next )
-			if( set->value && strcmp( set->key, "type" ) != 0 )
-			{
-				struct xt_node *xset;
-				xt_add_child( cur, xset = xt_new_node( "setting", set->value, NULL ) );
-				xt_add_attr( xset, "name", set->key );
-			}
+		xml_generate_settings( cur, &ic->set );
 		
 		xt_add_child( root, cur );
 	}
@@ -361,6 +343,19 @@ static gboolean xml_generate_nick( gpointer key, gpointer value, gpointer data )
 	xt_add_child( (struct xt_node *) data, node );
 	
 	return FALSE;
+}
+
+static void xml_generate_settings( struct xt_node *cur, set_t **head )
+{
+	set_t *set;
+	
+	for( set = *head; set; set = set->next )
+		if( set->value && !( set->flags & SET_NOSAVE ) )
+		{
+			struct xt_node *xset;
+			xt_add_child( cur, xset = xt_new_node( "setting", set->value, NULL ) );
+			xt_add_attr( xset, "name", set->key );
+		}
 }
 
 static storage_status_t xml_save( irc_t *irc, int overwrite )
