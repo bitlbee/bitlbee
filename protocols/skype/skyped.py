@@ -119,8 +119,9 @@ def skype_idle_handler(skype):
 	try:
 		c = skype.skype.Command("PING", Block=True)
 		skype.skype.SendCommand(c)
-	except Skype4Py.SkypeAPIError, s:
+	except (Skype4Py.SkypeAPIError, AttributeError), s:
 		dprint("Warning, pinging Skype failed (%s)." % (s))
+		time.sleep(1)
 	return True
 
 def send(sock, txt):
