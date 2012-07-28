@@ -12,5 +12,5 @@ fi
 update-rc.d bitlbee remove > /dev/null 2>&1 || true
 rm -f /etc/default/bitlbee
 
-deluser --system --remove-home bitlbee || true
+deluser --system bitlbee || true
 rm -rf /var/lib/bitlbee ## deluser doesn't seem to do this for homedirs in /var

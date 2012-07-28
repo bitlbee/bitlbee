@@ -1,3 +1,14 @@
+bitlbee (3.0.5-1.1) UNRELEASED; urgency=low
+
+  * Non-maintainer upload.
+  * Fix "fails to install, purge, and install again":
+    remove --remove-home option from deluser call in bitlbee-common.postrm.
+    The option needs perl-modules which is not guaranteed to be there, and the
+    directory gets removed manually anyway.
+    (Closes: #681146)
+
+ -- gregor herrmann <gregoa@debian.org>  Thu, 26 Jul 2012 18:44:36 +0200
+
 bitlbee (3.0.5-1) unstable; urgency=low
 
   * New upstream release.
