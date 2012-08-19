@@ -236,7 +236,7 @@ gboolean otr_irc_new(irc_t *irc)
 	
 	s = set_add( &irc->b->set, "otr_color_encrypted", "true", set_eval_bool, irc );
 	
-	s = set_add( &irc->b->set, "otr_policy", "oppurtunistic", set_eval_list, irc );
+	s = set_add( &irc->b->set, "otr_policy", "opportunistic", set_eval_list, irc );
 	l = g_slist_prepend( NULL, "never" );
 	l = g_slist_prepend( l, "opportunistic" );
 	l = g_slist_prepend( l, "manual" );
