@@ -453,14 +453,6 @@ if [ "$ret" = "0" ]; then
 	exit 1
 fi;
 
-if [ "$msn" = "1" -a "$ssl" != "openssl" -a "$ssl" != "gnutls" ]; then
-	# Needed for MSN only. OpenSSL exports nice cipher functions already,
-	# in case of GnuTLS we should be able to use gcrypt. Otherwise, use
-	# built-in stuff. (Since right now those are the only two supported
-	# SSL modules anyway, this is mostly unnecessary.)
-	echo 'DES=des.o' >> Makefile.settings
-fi
-
 echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 
 if detect_resolv_dynamic || detect_resolv_static; then
