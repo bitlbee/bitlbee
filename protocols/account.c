@@ -153,18 +153,14 @@ char *set_eval_account( set_t *set, char *value )
 	}
 	else if( strcmp( set->key, "password" ) == 0 )
 	{
-		if( value )
-		{
-			g_free( acc->pass );
-			acc->pass = g_strdup( value );
-			return NULL;	/* password shouldn't be visible in plaintext! */
-		}
-		else
-		{
-			/* NULL can (should) be stored in the set_t
-			   variable, but is otherwise not correct. */
-			return SET_INVALID;
-		}
+		/* set -del should be allowed now, but I don't want to have any
+		   NULL pointers to have to deal with. */
+		if( !value )
+			value = "";
+		
+		g_free( acc->pass );
+		acc->pass = g_strdup( value );
+		return NULL;	/* password shouldn't be visible in plaintext! */
 	}
 	else if( strcmp( set->key, "tag" ) == 0 )
 	{
