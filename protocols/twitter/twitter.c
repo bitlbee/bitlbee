@@ -601,6 +601,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		if (!id || !bu) {
 			twitter_msg(ic, "User `%s' does not exist or didn't "
 				    "post any statuses recently", cmd[1]);
+			g_free(cmds);
 			return;
 		}
 		message = new = g_strdup_printf("@%s %s", bu->handle, message + (cmd[2] - cmd[0]));
