@@ -241,16 +241,13 @@ static void twitter_init(account_t * acc)
 {
 	set_t *s;
 	char *def_url;
-	char *def_oauth;
 	char *def_tul;
 
 	if (strcmp(acc->prpl->name, "twitter") == 0) {
 		def_url = TWITTER_API_URL;
-		def_oauth = "true";
 		def_tul = "20";
 	} else {		/* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
 		def_url = IDENTICA_API_URL;
-		def_oauth = "true";
 		def_tul = "0";
 	}
 
@@ -273,7 +270,7 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "mode", "chat", set_eval_mode, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add(&acc->set, "oauth", def_oauth, set_eval_oauth, acc);
+	s = set_add(&acc->set, "oauth", "true", set_eval_oauth, acc);
 
 	s = set_add(&acc->set, "show_ids", "true", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;

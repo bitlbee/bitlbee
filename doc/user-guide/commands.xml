@@ -68,7 +68,7 @@
 			</bitlbee-command>
 			
 			<bitlbee-command name="twitter">
-				<syntax>account add twitter &lt;handle&gt; [&lt;password&gt;]</syntax>
+				<syntax>account add twitter &lt;handle&gt;</syntax>
 
 				<description>
 					<para>
@@ -94,11 +94,11 @@
 			</bitlbee-command>
 			
 			<bitlbee-command name="identica">
-				<syntax>account add identica &lt;handle&gt; [&lt;password&gt;]</syntax>
+				<syntax>account add identica &lt;handle&gt;</syntax>
 
 				<description>
 					<para>
-						Same protocol as <emphasis>twitter</emphasis>, but defaults to a <emphasis>base_url</emphasis> pointing at identi.ca, and with OAuth disabled.
+						Same protocol as <emphasis>twitter</emphasis>, but defaults to a <emphasis>base_url</emphasis> pointing at identi.ca. It also works with OAuth (so don't specify your password).
 					</para>
 				</description>
 			</bitlbee-command>
