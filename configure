@@ -41,6 +41,8 @@ events=glib
 ldap=0
 ssl=auto
 
+pie=1
+
 arch=`uname -s`
 cpu=`uname -m`
 
@@ -79,6 +81,7 @@ Option		Description				Default
 
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
+--pie=0/1       Build position independent executable   $pie
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
 --plugins=0/1	Disable/enable plugins support		$plugins
 --otr=0/1/auto/plugin
@@ -89,6 +92,7 @@ Option		Description				Default
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
 							$ssl
+
 
 --target=...	Cross compilation target 		same as host
 EOF
@@ -197,6 +201,11 @@ if [ "$debug" = "1" ]; then
 	CFLAGS="$CFLAGS -DDEBUG"
 else
 	[ -z "$CFLAGS" ] && CFLAGS="-O2 -fno-strict-aliasing"
+fi
+
+if [ "$pie" = "1" ]; then
+	echo 'CFLAGS_BITLBEE=-fPIE' >> Makefile.settings
+	echo 'LDFLAGS_BITLBEE=-pie' >> Makefile.settings
 fi
 
 echo CFLAGS=$CFLAGS $CPPFLAGS >> Makefile.settings
@@ -745,6 +754,12 @@ if [ "$debug" = "1" ]; then
 	echo '  Debugging enabled.'
 else
 	echo '  Debugging disabled.'
+fi
+
+if [ "$pie" = "1" ]; then
+	echo '  Building PIE executable'
+else
+	echo '  Building non-PIE executable'
 fi
 
 if [ "$strip" = "1" ]; then

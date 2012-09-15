@@ -38,7 +38,7 @@ $(objects): ../../Makefile.settings Makefile
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $< -o $@
+	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 oscar_mod.o: $(objects)
 	@echo '*' Linking oscar_mod.o

@@ -38,7 +38,7 @@ $(objects): ../../Makefile.settings Makefile
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $< -o $@
+	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 purple_mod.o: $(objects)
 	@echo '*' Linking purple_mod.o

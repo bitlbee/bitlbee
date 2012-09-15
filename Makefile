@@ -170,13 +170,13 @@ $(SKYPE_PI): $(_SRCDIR_)protocols/skype/skype.c
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $< -o $@
+	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 $(objects): Makefile Makefile.settings config.h
 
 $(OUTFILE): $(objects) $(subdirs)
 	@echo '*' Linking $(OUTFILE)
-	@$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LFLAGS) $(EFLAGS)
+	@$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LDFLAGS_BITLBEE) $(LFLAGS) $(EFLAGS)
 ifndef DEBUG
 	@echo '*' Stripping $(OUTFILE)
 	@-$(STRIP) $(OUTFILE)

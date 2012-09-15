@@ -37,7 +37,7 @@ $(objects): ../../Makefile.settings Makefile
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $< -o $@
+	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 jabber_mod.o: $(objects)
 	@echo '*' Linking jabber_mod.o
