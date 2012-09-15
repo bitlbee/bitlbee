@@ -489,6 +489,29 @@ static void twitter_buddy_data_free(struct bee_user *bu)
 	g_free(bu->data);
 }
 
+/** Convert the given bitlbee tweet ID, bitlbee username, or twitter tweet ID
+ *  into a twitter tweet ID.
+ *
+ *  Returns 0 if the user provides garbage.
+ */
+static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, struct twitter_data *td, char *arg) {
+	struct twitter_user_data *tud;
+	bee_user_t *bu;
+	guint64 id = 0;
+	if (g_str_has_prefix(arg, "#") &&
+		sscanf(arg + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
+		if (id < TWITTER_LOG_LENGTH && td->log)
+			id = td->log[id].id;
+	} else if ((bu = bee_user_by_handle(ic->bee, ic, arg)) &&
+		(tud = bu->data) && tud->last_id)
+		id = tud->last_id;
+	else if (sscanf(arg, "%" G_GUINT64_FORMAT, &id) == 1){
+		if (id < TWITTER_LOG_LENGTH && td->log)
+			id = td->log[id].id;
+	}
+	return id;
+}
+
 static void twitter_handle_command(struct im_connection *ic, char *message)
 {
 	struct twitter_data *td = ic->proto_data;
@@ -518,6 +541,15 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 
 		g_free(cmds);
 		return;
+	} else if (g_strcasecmp(cmd[0], "favourite") == 0 && cmd[1]) {
+		guint64 id;
+		if ((id = twitter_message_id_from_command_arg(ic, td, cmd[1]))) {
+			twitter_favourite_tweet(ic, id);
+		} else {
+			twitter_msg(ic, "Please provide a message ID or username.");
+		}
+		g_free(cmds);
+		return;
 	} else if (g_strcasecmp(cmd[0], "follow") == 0 && cmd[1]) {
 		twitter_add_buddy(ic, cmd[1], NULL);
 		g_free(cmds);
@@ -545,21 +577,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		g_free(cmds);
 		return;
 	} else if (g_strcasecmp(cmd[0], "rt") == 0 && cmd[1]) {
-		struct twitter_user_data *tud;
-		bee_user_t *bu;
-		guint64 id;
-
-		if (g_str_has_prefix(cmd[1], "#") &&
-		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
-			if (id < TWITTER_LOG_LENGTH && td->log)
-				id = td->log[id].id;
-		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
-		    (tud = bu->data) && tud->last_id)
-			id = tud->last_id;
-		else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1){
-			if (id < TWITTER_LOG_LENGTH && td->log)
-				id = td->log[id].id;
-		}
+		guint64 id = twitter_message_id_from_command_arg(ic, td, cmd[1]);
 
 		td->last_status_id = 0;
 		if (id)

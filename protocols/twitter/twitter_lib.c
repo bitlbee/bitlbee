@@ -1082,3 +1082,15 @@ void twitter_report_spam(struct im_connection *ic, char *screen_name)
 	twitter_http(ic, TWITTER_REPORT_SPAM_URL, twitter_http_post,
 	             ic, 1, args, 2);
 }
+
+/**
+ * Favourite a tweet.
+ */
+void twitter_favourite_tweet(struct im_connection *ic, guint64 id)
+{
+	char *url;
+	url = g_strdup_printf("%s%llu%s", TWITTER_FAVORITE_CREATE_URL,
+	                      (unsigned long long) id, ".xml");
+	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+	g_free(url);
+}

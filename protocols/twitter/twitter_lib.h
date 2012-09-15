@@ -90,6 +90,7 @@ void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int
 void twitter_status_destroy(struct im_connection *ic, guint64 id);
 void twitter_status_retweet(struct im_connection *ic, guint64 id);
 void twitter_report_spam(struct im_connection *ic, char *screen_name);
+void twitter_favourite_tweet(struct im_connection *ic, guint64 id);
 
 #endif //_TWITTER_LIB_H
 

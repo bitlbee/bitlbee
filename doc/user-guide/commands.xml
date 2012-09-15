@@ -847,6 +847,7 @@
 				<varlistentry><term>report &lt;screenname|#id&gt;</term><listitem><para>Report the given user (or the user who posted the tweet with the given ID) for sending spam. This will also block them.</para></listitem></varlistentry>
 				<varlistentry><term>follow &lt;screenname&gt;</term><listitem><para>Start following a person</para></listitem></varlistentry>
 				<varlistentry><term>unfollow &lt;screenname&gt;</term><listitem><para>Stop following a person</para></listitem></varlistentry>
+				<varlistentry><term>favourite &lt;screenname|#id&gt;</term><listitem><para>Favo<emphasis>u</emphasis>rite the given user's most recent tweet, or the given tweet ID.</para></listitem></varlistentry>
 				<varlistentry><term>post &lt;message&gt;</term><listitem><para>Post a tweet</para></listitem></varlistentry>
 			</variablelist>
 
