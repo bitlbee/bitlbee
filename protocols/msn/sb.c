@@ -635,7 +635,7 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 			   as a spare for a next conversation sounds more sane to me.
 			   The server will clean it up when it's idle for too long. */
 		}
-		else if( sb->chat )
+		else if( sb->chat && !strchr( cmd[1], ';' ) )
 		{
 			imcb_chat_remove_buddy( sb->chat, cmd[1], "" );
 		}
