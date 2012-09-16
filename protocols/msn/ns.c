@@ -674,7 +674,57 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 			}
 			else if( g_strncasecmp( ct, "text/x-msmsgsactivemailnotification", 35 ) == 0 )
 			{
-				/* Sorry, but this one really is *USELESS* */
+			}
+			else if( g_strncasecmp( ct, "text/x-msmsgsinitialmdatanotification", 37 ) == 0 ||
+			         g_strncasecmp( ct, "text/x-msmsgsoimnotification", 28 ) == 0 )
+			{
+				/* We received an offline message. Or at least notification
+				   that there is one waiting for us. Fetching the message(s)
+				   and purging them from the server is a lot of SOAPy work
+				   not worth doing IMHO. Also I thought it was possible to
+				   have the notification server send them directly, I was
+				   pretty sure I saw Pidgin do it..
+				   
+				   At least give a notification for now, seems like a
+				   reasonable thing to do. Only problem is, they'll keep
+				   coming back at login time until you read them using a
+				   different client. :-( */
+				
+				char *xml = get_rfc822_header( body, "Mail-Data:", blen );
+				struct xt_node *md, *m;
+				
+				if( !xml )
+					return 1;
+				md = xt_from_string( xml );
+				if( !md )
+					return 1;
+				
+				for( m = md->children; ( m = xt_find_node( m, "M" ) ); m = m->next )
+				{
+					struct xt_node *e = xt_find_node( m->children, "E" );
+					struct xt_node *rt = xt_find_node( m->children, "RT" );
+					struct tm tp;
+					time_t msgtime = 0;
+					
+					if( !e || !e->text )
+						continue;
+					
+					memset( &tp, 0, sizeof( tp ) );
+					if( rt && rt->text &&
+					    sscanf( rt->text, "%4d-%2d-%2dT%2d:%2d:%2d.",
+					            &tp.tm_year, &tp.tm_mon, &tp.tm_mday,
+					            &tp.tm_hour, &tp.tm_min, &tp.tm_sec ) == 6 )
+					{
+						tp.tm_year -= 1900;
+						tp.tm_mon --;
+						msgtime = mktime_utc( &tp );
+						
+					}
+					imcb_buddy_msg( ic, e->text, "<< \002BitlBee\002 - Received offline message. BitlBee can't show these. >>", 0, msgtime );
+				}
+				
+				g_free( xml );
+				xt_free_node( md );
 			}
 			else
 			{
