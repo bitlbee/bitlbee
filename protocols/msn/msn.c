@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Main file; functions to be called from BitlBee          */
@@ -97,6 +97,7 @@ static void msn_logout( struct im_connection *ic )
 			g_free( md->tokens[i] );
 		g_free( md->lock_key );
 		g_free( md->pp_policy );
+		g_free( md->uuid );
 		
 		while( md->groups )
 		{

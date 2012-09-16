@@ -122,6 +122,7 @@ struct msn_data
 	int trId;
 	char *tokens[4];
 	char *lock_key, *pp_policy;
+	char *uuid;
 	
 	GSList *msgq, *grpq, *soapq;
 	GSList *switchboards;

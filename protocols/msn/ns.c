@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Notification server callbacks                           */
@@ -24,9 +24,11 @@
 */
 
 #include <ctype.h>
+#include <sys/utsname.h>
 #include "nogaim.h"
 #include "msn.h"
 #include "md5.h"
+#include "sha1.h"
 #include "soap.h"
 #include "xmltree.h"
 
@@ -109,6 +111,23 @@ static gboolean msn_ns_connected( gpointer data, gint source, b_input_condition 
 	g_free( handler->rxq );
 	handler->rxlen = 0;
 	handler->rxq = g_new0( char, 1 );
+	
+	if( md->uuid == NULL )
+	{
+		struct utsname name;
+		sha1_state_t sha[1];
+		
+		/* UUID == SHA1("BitlBee" + my hostname + MSN username) */
+		sha1_init( sha );
+		sha1_append( sha, (void*) "BitlBee", 7 );
+		if( uname( &name ) == 0 )
+		{
+			sha1_append( sha, (void*) name.nodename, strlen( name.nodename ) );
+		}
+		sha1_append( sha, (void*) ic->acc->user, strlen( ic->acc->user ) );
+		md->uuid = sha1_random_uuid( sha );
+		memcpy( md->uuid, "b171be3e", 8 ); /* :-P */
+	}
 	
 	if( msn_ns_write( ic, source, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER ) )
 	{
@@ -756,7 +775,7 @@ void msn_auth_got_passport_token( struct im_connection *ic, const char *token, c
 	
 	if( token )
 	{
-		msn_ns_write( ic, -1, "USR %d SSO S %s %s {7535ef7c-ff92-11e1-8069-50e5493b06de}\r\n", ++md->trId, md->tokens[0], token );
+		msn_ns_write( ic, -1, "USR %d SSO S %s %s {%s}\r\n", ++md->trId, md->tokens[0], token, md->uuid );
 	}
 	else
 	{
