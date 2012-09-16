@@ -454,23 +454,31 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 		{
 			char buf[1024];
 			
-			if( num == 1 )
-			{
-				g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
-				sb->chat = imcb_chat_new( ic, buf );
-				
-				g_free( sb->who );
-				sb->who = NULL;
-			}
-			
 			/* For as much as I understand this MPOP stuff now, a
 			   switchboard has two (or more) roster entries per
 			   participant. One "bare JID" and one JID;UUID. Ignore
 			   the latter. */
 			if( !strchr( cmd[4], ';' ) )
-				imcb_chat_add_buddy( sb->chat, cmd[4] );
+			{
+				/* HACK: Since even 1:1 chats now have >2 participants
+				   (ourselves included) it gets hard to tell them apart
+				   from rooms. Let's hope this is enough: */
+				if( sb->chat == NULL && num != tot )
+				{
+					g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
+					sb->chat = imcb_chat_new( ic, buf );
+					
+					g_free( sb->who );
+					sb->who = NULL;
+				}
+				
+				if( sb->chat )
+					imcb_chat_add_buddy( sb->chat, cmd[4] );
+			}
 			
-			if( num == tot )
+			/* We have the full roster, start showing the channel to
+			   the user. */
+			if( num == tot && sb->chat )
 			{
 				imcb_chat_add_buddy( sb->chat, ic->acc->user );
 			}
