@@ -756,7 +756,7 @@ void msn_auth_got_passport_token( struct im_connection *ic, const char *token, c
 	
 	if( token )
 	{
-		msn_ns_write( ic, -1, "USR %d SSO S %s %s\r\n", ++md->trId, md->tokens[0], token );
+		msn_ns_write( ic, -1, "USR %d SSO S %s %s {7535ef7c-ff92-11e1-8069-50e5493b06de}\r\n", ++md->trId, md->tokens[0], token );
 	}
 	else
 	{
@@ -884,4 +884,52 @@ int msn_ns_finish_login( struct im_connection *ic )
 	}
 	
 	return 1;
+}
+
+int msn_ns_sendmessage( struct im_connection *ic, bee_user_t *bu, const char *text )
+{
+	struct msn_data *md = ic->proto_data;
+	char *buf;
+	
+	if( strncmp( text, "\r\r\r", 3 ) == 0 )
+		/* Err. Shouldn't happen but I guess it can. Don't send others
+		   any of the "SHAKE THAT THING" messages. :-D */
+		return 1;
+	
+	buf = g_strdup_printf( "%s%s", MSN_MESSAGE_HEADERS, text );
+	
+	if( msn_ns_write( ic, -1, "UUM %d %s %d %d %zd\r\n%s",
+	                          ++md->trId, bu->handle,
+	                          1, /* type == MSN offline message */
+	                          1, /* type == IM (not nudge/typing) */
+	                          strlen( buf ), buf ) )
+		return 1;
+	else
+		return 0;
+}
+
+void msn_ns_oim_send_queue( struct im_connection *ic, GSList **msgq )
+{
+	GSList *l;
+	
+	for( l = *msgq; l; l = l->next )
+	{
+		struct msn_message *m = l->data;
+		bee_user_t *bu = bee_user_by_handle( ic->bee, ic, m->who );
+		
+		if( bu )
+			if( !msn_ns_sendmessage( ic, bu, m->text ) )
+				return;
+	}
+	
+	while( *msgq != NULL )
+	{
+		struct msn_message *m = (*msgq)->data;
+		
+		g_free( m->who );
+		g_free( m->text );
+		g_free( m );
+		
+		*msgq = g_slist_remove( *msgq, m );
+	}
 }

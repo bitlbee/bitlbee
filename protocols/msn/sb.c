@@ -628,12 +628,9 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 		
 		/* If the person is offline, send an offline message instead,
 		   and don't report an error. */
-		/* TODO: Support for OIMs that works. (#874) */
-		/*
 		if( num == 217 )
-			msn_soap_oim_send_queue( ic, &sb->msgq );
+			msn_ns_oim_send_queue( ic, &sb->msgq );
 		else
-		*/
 			imcb_error( ic, "Error reported by switchboard server: %s", err->text );
 		
 		if( err->flags & STATUS_SB_FATAL )

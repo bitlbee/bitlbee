@@ -231,13 +231,9 @@ static void msn_chat_msg( struct groupchat *c, char *message, int flags )
 static void msn_chat_invite( struct groupchat *c, char *who, char *message )
 {
 	struct msn_switchboard *sb = msn_sb_by_chat( c );
-	char buf[1024];
 	
 	if( sb )
-	{
-		g_snprintf( buf, sizeof( buf ), "CAL %d %s\r\n", ++sb->trId, who );
-		msn_sb_write( sb, buf, strlen( buf ) );
-	}
+		msn_sb_write( sb, "CAL %d %s\r\n", ++sb->trId, who );
 }
 
 static void msn_chat_leave( struct groupchat *c )
@@ -245,7 +241,7 @@ static void msn_chat_leave( struct groupchat *c )
 	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	
 	if( sb )
-		msn_sb_write( sb, "OUT\r\n", 5 );
+		msn_sb_write( sb, "OUT\r\n" );
 }
 
 static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
