@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module                                                           */
@@ -252,6 +252,7 @@ gint msn_domaintree_cmp( gconstpointer a_, gconstpointer b_ );
 struct msn_group *msn_group_by_name( struct im_connection *ic, const char *name );
 struct msn_group *msn_group_by_id( struct im_connection *ic, const char *id );
 int msn_ns_set_display_name( struct im_connection *ic, const char *value );
+const char *msn_normalize_handle( const char *handle );
 
 /* tables.c */
 const struct msn_away_state *msn_away_state_by_number( int number );
@@ -262,7 +263,7 @@ const struct msn_status_code *msn_status_by_number( int number );
 /* sb.c */
 int msn_sb_write( struct msn_switchboard *sb, const char *fmt, ... ) G_GNUC_PRINTF( 2, 3 );;
 struct msn_switchboard *msn_sb_create( struct im_connection *ic, char *host, int port, char *key, int session );
-struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, char *handle );
+struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, const char *handle );
 struct msn_switchboard *msn_sb_by_chat( struct groupchat *c );
 struct msn_switchboard *msn_sb_spare( struct im_connection *ic );
 int msn_sb_sendmessage( struct msn_switchboard *sb, char *text );

@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Miscellaneous utilities                                 */
@@ -535,4 +535,12 @@ int msn_ns_set_display_name( struct im_connection *ic, const char *value )
 	/* Note: We don't actually know if the server accepted the new name,
 	   and won't give proper feedback yet if it doesn't. */
 	return msn_ns_write( ic, -1, "PRP %d MFN %s\r\n", ++md->trId, fn );
+}
+
+const char *msn_normalize_handle( const char *handle )
+{
+	if( strncmp( handle, "1:", 2 ) == 0 )
+		return handle + 2;
+	else
+		return handle;
 }

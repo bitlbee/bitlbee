@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Switchboard server callbacks and utilities              */
@@ -121,7 +121,7 @@ struct msn_switchboard *msn_sb_create( struct im_connection *ic, char *host, int
 	return( sb );
 }
 
-struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, char *handle )
+struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, const char *handle )
 {
 	struct msn_data *md = ic->proto_data;
 	struct msn_switchboard *sb;

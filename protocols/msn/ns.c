@@ -371,9 +371,11 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		g_free( resp );
 		return st;
 	}
-	else if( strcmp( cmd[0], "ILN" ) == 0 )
+	else if( strcmp( cmd[0], "ILN" ) == 0 || strcmp( cmd[0], "NLN" ) == 0 )
 	{
 		const struct msn_away_state *st;
+		const char *handle;
+		int cap = 0;
 		
 		if( num_parts < 6 )
 		{
@@ -381,45 +383,20 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
+		/* ILN and NLN are more or less the same, except ILN has a trId
+		   at the start, and NLN has a capability field at the end. 
+		   Does ILN still exist BTW? */
+		if( cmd[0][1] == 'I' )
+			cmd ++;
+		else
+			cap = atoi( cmd[4] );
+
+		handle = msn_normalize_handle( cmd[2] );
+		if( strcmp( handle, ic->acc->user ) == 0 )
+			return 1; /* That's me! */
 		
-		http_decode( cmd[5] );
-		imcb_rename_buddy( ic, cmd[3], cmd[5] );
-		
-		st = msn_away_state_by_code( cmd[2] );
-		if( !st )
-		{
-			/* FIXME: Warn/Bomb about unknown away state? */
-			st = msn_away_state_list + 1;
-		}
-		
-		imcb_buddy_status( ic, cmd[3], OPT_LOGGED_IN | 
-		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ),
-		                   st->name, NULL );
-	}
-	else if( strcmp( cmd[0], "FLN" ) == 0 )
-	{
-		if( cmd[1] == NULL )
-			return 1;
-		
-		imcb_buddy_status( ic, cmd[1], 0, NULL, NULL );
-		
-		msn_sb_start_keepalives( msn_sb_by_handle( ic, cmd[1] ), TRUE );
-	}
-	else if( strcmp( cmd[0], "NLN" ) == 0 )
-	{
-		const struct msn_away_state *st;
-		int cap;
-		
-		if( num_parts < 6 )
-		{
-			imcb_error( ic, "Syntax error" );
-			imc_logout( ic, TRUE );
-			return( 0 );
-		}
-		
-		http_decode( cmd[4] );
-		cap = atoi( cmd[5] );
-		imcb_rename_buddy( ic, cmd[2], cmd[4] );
+		http_decode( cmd[3] );
+		imcb_rename_buddy( ic, handle, cmd[3] );
 		
 		st = msn_away_state_by_code( cmd[1] );
 		if( !st )
@@ -428,12 +405,23 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 			st = msn_away_state_list + 1;
 		}
 		
-		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN | 
+		imcb_buddy_status( ic, handle, OPT_LOGGED_IN | 
 		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ) |
 		                   ( cap & 1 ? OPT_MOBILE : 0 ),
 		                   st->name, NULL );
 		
-		msn_sb_stop_keepalives( msn_sb_by_handle( ic, cmd[2] ) );
+		msn_sb_stop_keepalives( msn_sb_by_handle( ic, handle ) );
+	}
+	else if( strcmp( cmd[0], "FLN" ) == 0 )
+	{
+		const char *handle;
+		
+		if( cmd[1] == NULL )
+			return 1;
+		
+		handle = msn_normalize_handle( cmd[1] );
+		imcb_buddy_status( ic, handle, 0, NULL, NULL );
+		msn_sb_start_keepalives( msn_sb_by_handle( ic, handle ), TRUE );
 	}
 	else if( strcmp( cmd[0], "RNG" ) == 0 )
 	{
@@ -480,7 +468,7 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		}
 		else
 		{
-			sb->who = g_strdup( cmd[5] );
+			sb->who = g_strdup( msn_normalize_handle( cmd[5] ) );
 		}
 	}
 	else if( strcmp( cmd[0], "OUT" ) == 0 )
@@ -706,7 +694,7 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 		    ( psm = xt_find_node( ubx->children, "PSM" ) ) )
 			psm_text = psm->text;
 		
-		imcb_buddy_status_msg( ic, cmd[1], psm_text );
+		imcb_buddy_status_msg( ic, msn_normalize_handle( cmd[1] ), psm_text );
 		xt_free_node( ubx );
 	}
 	else if( strcmp( cmd[0], "ADL" ) == 0 )
