@@ -573,8 +573,8 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 	else if( strcmp( cmd[0], "UBX" ) == 0 )
 	{
 		/* Status message. */
-		if( num_parts >= 4 )
-			handler->msglen = atoi( cmd[3] );
+		if( num_parts >= 3 )
+			handler->msglen = atoi( cmd[2] );
 	}
 	else if( strcmp( cmd[0], "NOT" ) == 0 )
 	{

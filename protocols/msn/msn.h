@@ -64,6 +64,9 @@
 
 #define MSN_SB_NEW         -24062002
 
+#define MSN_CAP1        0xC000
+#define MSN_CAP2        0x0000
+
 #define MSN_MESSAGE_HEADERS "MIME-Version: 1.0\r\n" \
                             "Content-Type: text/plain; charset=UTF-8\r\n" \
                             "User-Agent: BitlBee " BITLBEE_VERSION "\r\n" \

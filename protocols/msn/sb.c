@@ -307,6 +307,7 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct msn_switchboard *sb = data;
 	struct im_connection *ic;
+	struct msn_data *md;
 	char buf[1024];
 	
 	/* Are we still alive? */
@@ -314,6 +315,7 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 		return FALSE;
 	
 	ic = sb->ic;
+	md = ic->proto_data;
 	
 	if( source != sb->fd )
 	{
@@ -331,9 +333,9 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 	sb->handler->exec_message = msn_sb_message;
 	
 	if( sb->session == MSN_SB_NEW )
-		g_snprintf( buf, sizeof( buf ), "USR %d %s %s\r\n", ++sb->trId, ic->acc->user, sb->key );
+		g_snprintf( buf, sizeof( buf ), "USR %d %s;{%s} %s\r\n", ++sb->trId, ic->acc->user, md->uuid, sb->key );
 	else
-		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, ic->acc->user, sb->key, sb->session );
+		g_snprintf( buf, sizeof( buf ), "ANS %d %s;{%s} %s %d\r\n", ++sb->trId, ic->acc->user, md->uuid, sb->key, sb->session );
 	
 	if( msn_sb_write( sb, "%s", buf ) )
 		sb->inp = b_input_add( sb->fd, B_EV_IO_READ, msn_sb_callback, sb );
@@ -461,7 +463,12 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 				sb->who = NULL;
 			}
 			
-			imcb_chat_add_buddy( sb->chat, cmd[4] );
+			/* For as much as I understand this MPOP stuff now, a
+			   switchboard has two (or more) roster entries per
+			   participant. One "bare JID" and one JID;UUID. Ignore
+			   the latter. */
+			if( !strchr( cmd[4], ';' ) )
+				imcb_chat_add_buddy( sb->chat, cmd[4] );
 			
 			if( num == tot )
 			{
@@ -506,6 +513,10 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 			return( 0 );
 		}
 		
+		/* See IRO above. Handle "bare JIDs" only. */
+		if( strchr( cmd[1], ';' ) )
+			return 1;
+		
 		if( sb->who && g_strcasecmp( cmd[1], sb->who ) == 0 )
 		{
 			/* The user we wanted to talk to is finally there, let's send the queued messages then. */
@@ -539,6 +550,10 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 			msn_sb_start_keepalives( sb, FALSE );
 			
 			return( st );
+		}
+		else if( strcmp( cmd[1], ic->acc->user ) == 0 )
+		{
+			/* Well, gee thanks. Thanks for letting me know I've arrived.. */
 		}
 		else if( sb->who )
 		{
