@@ -452,8 +452,39 @@ static xt_status jabber_pkt_proceed_tls( struct xt_node *node, gpointer data )
 static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	int allow_reconnect = TRUE;
 	struct jabber_error *err;
+	struct xt_node *host;
+	
+	if( !( ic->flags & OPT_LOGGED_IN ) &&
+	    ( host = xt_find_node( node->children, "see-other-host" ) ) &&
+	    host->text )
+	{
+		char *s;
+		int port = set_getint( &ic->acc->set, "port" );
+		
+		/* Let's try to obey this request, if we're not logged
+		   in yet (i.e. not have too much state yet). */
+		if( jd->ssl )
+			ssl_disconnect( jd->ssl );
+		closesocket( jd->fd );
+		b_event_remove( jd->r_inpa );
+		b_event_remove( jd->w_inpa );
+		
+		jd->ssl = NULL;
+		jd->r_inpa = jd->w_inpa = 0;
+		jd->flags &= JFLAG_XMLCONSOLE;
+		
+		s = strchr( host->text, ':' );
+		if( s != NULL )
+			sscanf( s + 1, "%d", &port );
+		
+		imcb_log( ic, "Redirected to %s", host->text );
+		jd->fd = proxy_connect( host->text, port, jabber_connected_plain, ic );
+		
+		return XT_ABORT;
+	}
 	
 	err = jabber_error_parse( node, XMLNS_STREAM_ERROR );
 	
