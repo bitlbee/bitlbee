@@ -695,7 +695,7 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 				
 				if( !xml )
 					return 1;
-				md = xt_from_string( xml );
+				md = xt_from_string( xml, 0 );
 				if( !md )
 					return 1;
 				
