@@ -734,7 +734,10 @@ void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor)
 	gboolean include_mentions = set_getbool(&ic->acc->set, "fetch_mentions");
 
 	if (td->flags & TWITTER_DOING_TIMELINE) {
-		return;
+		if (++td->http_fails >= 5) {
+			imcb_error(ic, "Fetch timeout (%d)", td->flags);
+			imc_logout(ic, TRUE);
+		}
 	}
 
 	td->flags |= TWITTER_DOING_TIMELINE;

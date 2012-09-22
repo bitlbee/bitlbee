@@ -72,7 +72,7 @@ struct http_request *http_dorequest( char *host, int port, int ssl, char *reques
 	if( getenv( "BITLBEE_DEBUG" ) )
 		printf( "About to send HTTP request:\n%s\n", req->request );
 	
-	return( req );
+	return req;
 }
 
 struct http_request *http_dorequest_url( char *url_string, http_input_function func, gpointer data )
