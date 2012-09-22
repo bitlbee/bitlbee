@@ -167,23 +167,21 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 char *twitter_parse_error(struct http_request *req)
 {
 	static char *ret = NULL;
-	struct xt_parser *xp = NULL;
-	struct xt_node *node, *err;
+	struct xt_node *root, *node, *err;
 
 	g_free(ret);
 	ret = NULL;
 
 	if (req->body_size > 0) {
-		xp = xt_new(NULL, NULL);
-		xt_feed(xp, req->reply_body, req->body_size);
+		root = xt_from_string(req->reply_body, req->body_size);
 		
-		for (node = xp->root; node; node = node->next)
+		for (node = root; node; node = node->next)
 			if ((err = xt_find_node(node->children, "error")) && err->text_len > 0) {
 				ret = g_strdup_printf("%s (%s)", req->status_string, err->text);
 				break;
 			}
 
-		xt_free(xp);
+		xt_free_node(root);
 	}
 
 	return ret ? ret : req->status_string;
@@ -255,7 +253,7 @@ static void twitter_get_users_lookup(struct im_connection *ic);
 static void twitter_http_get_friends_ids(struct http_request *req)
 {
 	struct im_connection *ic;
-	struct xt_parser *parser;
+	struct xt_node *parsed;
 	struct twitter_xml_list *txl;
 	struct twitter_data *td;
 
@@ -291,10 +289,9 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	txl->list = td->follow_ids;
 
 	// Parse the data.
-	parser = xt_new(NULL, txl);
-	xt_feed(parser, req->reply_body, req->body_size);
-	twitter_xt_get_friends_id_list(parser->root, txl);
-	xt_free(parser);
+	parsed = xt_from_string(req->reply_body, req->body_size);
+	twitter_xt_get_friends_id_list(parsed, txl);
+	xt_free_node(parsed);
 
 	td->follow_ids = txl->list;
 	if (txl->next_cursor)
@@ -351,7 +348,7 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
-	struct xt_parser *parser;
+	struct xt_node *parsed;
 	struct twitter_xml_list *txl;
 	GSList *l = NULL;
 	struct twitter_xml_user *user;
@@ -376,12 +373,11 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 	txl->list = NULL;
 
 	// Parse the data.
-	parser = xt_new(NULL, txl);
-	xt_feed(parser, req->reply_body, req->body_size);
+	parsed = xt_from_string(req->reply_body, req->body_size);
 
 	// Get the user list from the parsed xml feed.
-	twitter_xt_get_users(parser->root, txl);
-	xt_free(parser);
+	twitter_xt_get_users(parsed, txl);
+	xt_free_node(parsed);
 
 	// Add the users as buddies.
 	for (l = txl->list; l; l = g_slist_next(l)) {
@@ -885,7 +881,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
-	struct xt_parser *parser;
+	struct xt_node *parsed;
 	struct twitter_xml_list *txl;
 
 	// Check if the connection is still active.
@@ -912,11 +908,10 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	txl->list = NULL;
 
 	// Parse the data.
-	parser = xt_new(NULL, txl);
-	xt_feed(parser, req->reply_body, req->body_size);
+	parsed = xt_from_string(req->reply_body, req->body_size);
 	// The root <statuses> node should hold the list of statuses <status>
-	twitter_xt_get_status_list(ic, parser->root, txl);
-	xt_free(parser);
+	twitter_xt_get_status_list(ic, parsed, txl);
+	xt_free_node(parsed);
 
 	td->home_timeline_obj = txl;
 
@@ -933,7 +928,7 @@ static void twitter_http_get_mentions(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
-	struct xt_parser *parser;
+	struct xt_node *parsed;
 	struct twitter_xml_list *txl;
 
 	// Check if the connection is still active.
@@ -960,11 +955,10 @@ static void twitter_http_get_mentions(struct http_request *req)
 	txl->list = NULL;
 
 	// Parse the data.
-	parser = xt_new(NULL, txl);
-	xt_feed(parser, req->reply_body, req->body_size);
+	parsed = xt_from_string(req->reply_body, req->body_size);
 	// The root <statuses> node should hold the list of statuses <status>
-	twitter_xt_get_status_list(ic, parser->root, txl);
-	xt_free(parser);
+	twitter_xt_get_status_list(ic, parsed, txl);
+	xt_free_node(parsed);
 
 	td->mentions_obj = txl;
 
@@ -998,17 +992,15 @@ static void twitter_http_post(struct http_request *req)
 	}
 
 	if (req->body_size > 0) {
-		struct xt_parser *xp = NULL;
-		struct xt_node *node;
+		struct xt_node *parsed, *node;
 
-		xp = xt_new(NULL, NULL);
-		xt_feed(xp, req->reply_body, req->body_size);
+		parsed = xt_from_string(req->reply_body, req->body_size);
 
-		if ((node = xt_find_node(xp->root, "status")) &&
+		if ((node = xt_find_node(parsed, "status")) &&
 		    (node = xt_find_node(node->children, "id")) && node->text)
 			td->last_status_id = g_ascii_strtoull(node->text, NULL, 10);
 
-		xt_free(xp);
+		xt_free_node(parsed);
 	}
 }
 

@@ -262,13 +262,16 @@ void xt_cleanup( struct xt_parser *xt, struct xt_node *node, int depth )
 	}
 }
 
-struct xt_node *xt_from_string( const char *in )
+struct xt_node *xt_from_string( const char *in, int len )
 {
 	struct xt_parser *parser;
 	struct xt_node *ret;
 	
+	if( len == 0 )
+		len = strlen( in );
+	
 	parser = xt_new( NULL, NULL );
-	xt_feed( parser, in, strlen( in ) );
+	xt_feed( parser, in, len );
 	ret = parser->root;
 	parser->root = NULL;
 	xt_free( parser );
