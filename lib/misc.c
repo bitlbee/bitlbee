@@ -729,10 +729,10 @@ char **split_command_parts( char *command )
 	return cmd;
 }
 
-char *get_rfc822_header( char *text, char *header, int len )
+char *get_rfc822_header( const char *text, const char *header, int len )
 {
 	int hlen = strlen( header ), i;
-	char *ret;
+	const char *ret;
 	
 	if( text == NULL )
 		return NULL;

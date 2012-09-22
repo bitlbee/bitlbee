@@ -739,7 +739,7 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 		struct xt_node *ubx, *psm;
 		char *psm_text = NULL;
 		
-		ubx = xt_from_string( msg );
+		ubx = xt_from_string( msg, msglen );
 		if( ubx && strcmp( ubx->name, "Data" ) == 0 &&
 		    ( psm = xt_find_node( ubx->children, "PSM" ) ) )
 			psm_text = psm->text;
@@ -751,7 +751,7 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 	{
 		struct xt_node *adl, *d, *c;
 		
-		if( !( adl = xt_from_string( msg ) ) )
+		if( !( adl = xt_from_string( msg, msglen ) ) )
 			return 1;
 		
 		for( d = adl->children; d; d = d->next )

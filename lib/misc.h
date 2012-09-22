@@ -67,6 +67,6 @@ G_MODULE_EXPORT char *word_wrap( const char *msg, int line_len );
 G_MODULE_EXPORT gboolean ssl_sockerr_again( void *ssl );
 G_MODULE_EXPORT int md5_verify_password( char *password, char *hash );
 G_MODULE_EXPORT char **split_command_parts( char *command );
-G_MODULE_EXPORT char *get_rfc822_header( char *text, char *header, int len );
+G_MODULE_EXPORT char *get_rfc822_header( const char *text, const char *header, int len );
 
 #endif

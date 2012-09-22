@@ -228,7 +228,7 @@ static void msn_soap_debug_print( const char *headers, const char *payload )
 	
 	if( payload )
 	{
-		struct xt_node *xt = xt_from_string( payload );
+		struct xt_node *xt = xt_from_string( payload, 0 );
 		if( xt )
 			xt_print( xt );
 		xt_free_node( xt );

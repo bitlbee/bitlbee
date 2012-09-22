@@ -72,7 +72,7 @@ struct http_request *http_dorequest( char *host, int port, int ssl, char *reques
 	if( getenv( "BITLBEE_DEBUG" ) )
 		printf( "About to send HTTP request:\n%s\n", req->request );
 	
-	return( req );
+	return req;
 }
 
 struct http_request *http_dorequest_url( char *url_string, http_input_function func, gpointer data )
@@ -197,7 +197,8 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 	struct http_request *req = data;
 	int evil_server = 0;
 	char buffer[2048];
-	char *end1, *end2;
+	char *end1, *end2, *s;
+	size_t content_length;
 	int st;
 	
 	if( req->inpa > 0 )
@@ -480,13 +481,25 @@ got_reply:
 	
 	/* Assume that a closed connection means we're finished, this indeed
 	   breaks with keep-alive connections and faulty connections. */
-	req->finished = 1;
+	/* req->finished = 1; */
 
 cleanup:
 	if( req->ssl )
 		ssl_disconnect( req->ssl );
 	else
 		closesocket( req->fd );
+	
+	if( ( s = get_rfc822_header( req->reply_headers, "Content-Length", 0 ) ) &&
+	    sscanf( s, "%zd", &content_length ) == 1 )
+	{
+		if( content_length < req->body_size )
+		{
+			req->status_code = -1;
+			g_free( req->status_string );
+			req->status_string = g_strdup( "Response truncated" );
+		}
+	}
+	g_free( s );
 	
 	if( getenv( "BITLBEE_DEBUG" ) && req )
 		printf( "Finishing HTTP request with status: %s\n",

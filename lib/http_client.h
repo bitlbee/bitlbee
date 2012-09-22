@@ -58,7 +58,7 @@ struct http_request
 	char *reply_headers;
 	char *reply_body;
 	int body_size;          /* The number of bytes in reply_body. */
-	int finished;           /* Set to non-0 if the request was completed
+	/* int finished;           Set to non-0 if the request was completed
 	                           successfully. */
 	int redir_ttl;          /* You can set it to 0 if you don't want
 	                           http_client to follow them. */
