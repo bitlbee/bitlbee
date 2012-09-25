@@ -4,7 +4,7 @@
 *  Simple module to facilitate twitter functionality.                       *
 *                                                                           *
 *  Copyright 2009-2010 Geert Mulders <g.c.w.m.mulders@gmail.com>            *
-*  Copyright 2010-2011 Wilmer van der Gaast <wilmer@gaast.net>              *
+*  Copyright 2010-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -187,6 +187,52 @@ char *twitter_parse_error(struct http_request *req)
 	return ret ? ret : req->status_string;
 }
 
+static struct xt_node *twitter_parse_response(struct im_connection *ic, struct http_request *req)
+{
+	gboolean logging_in = !(ic->flags & OPT_LOGGED_IN);
+	gboolean periodic;
+	struct twitter_data *td = ic->proto_data;
+	struct xt_node *ret;
+	char path[64] = "", *s;
+	
+	if ((s = strchr(req->request, ' '))) {
+		path[sizeof(path)-1] = '\0';
+		strncpy(path, s + 1, sizeof(path) - 1);
+		if ((s = strchr(path, '?')) || (s = strchr(path, ' ')))
+			*s = '\0';
+	}
+	
+	/* Kinda nasty. :-( Trying to suppress error messages, but only
+	   for periodic (i.e. mentions/timeline) queries. */
+	periodic = strstr(path, "timeline") || strstr(path, "mentions");
+	
+	if (req->status_code == 401 && logging_in) {
+		/* IIRC Twitter once had an outage where they were randomly
+		   throwing 401s so I'll keep treating this one as fatal
+		   only during login. */
+		imcb_error(ic, "Authentication failure");
+		imc_logout(ic, FALSE);
+		return NULL;
+	} else if (req->status_code != 200) {
+		// It didn't go well, output the error and return.
+		if (!periodic || logging_in || ++td->http_fails >= 5)
+			imcb_error(ic, "Could not retrieve %s: %s",
+				   path, twitter_parse_error(req));
+		
+		if (logging_in)
+			imc_logout(ic, TRUE);
+		return NULL;
+	} else {
+		td->http_fails = 0;
+	}
+
+	if ((ret = xt_from_string(req->reply_body, req->body_size)) == NULL) {
+		imcb_error(ic, "Could not retrieve %s: %s",
+			   path, "XML parse error");
+	}
+	return ret;
+}
+
 static void twitter_http_get_friends_ids(struct http_request *req);
 
 /**
@@ -265,22 +311,6 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 
 	td = ic->proto_data;
 
-	// Check if the HTTP request went well. More strict checks as this is
-	// the first request we do in a session.
-	if (req->status_code == 401) {
-		imcb_error(ic, "Authentication failure");
-		imc_logout(ic, FALSE);
-		return;
-	} else if (req->status_code != 200) {
-		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not retrieve %s: %s",
-			   TWITTER_FRIENDS_IDS_URL, twitter_parse_error(req));
-		imc_logout(ic, TRUE);
-		return;
-	} else {
-		td->http_fails = 0;
-	}
-
 	/* Create the room now that we "logged in". */
 	if (!td->timeline_gc && g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
 		twitter_groupchat_init(ic);
@@ -289,7 +319,8 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	txl->list = td->follow_ids;
 
 	// Parse the data.
-	parsed = xt_from_string(req->reply_body, req->body_size);
+	if (!(parsed = twitter_parse_response(ic, req)))
+		return;
 	twitter_xt_get_friends_id_list(parsed, txl);
 	xt_free_node(parsed);
 
@@ -347,7 +378,6 @@ static void twitter_get_users_lookup(struct im_connection *ic)
 static void twitter_http_get_users_lookup(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct twitter_data *td;
 	struct xt_node *parsed;
 	struct twitter_xml_list *txl;
 	GSList *l = NULL;
@@ -357,25 +387,12 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 	if (!g_slist_find(twitter_connections, ic))
 		return;
 
-	td = ic->proto_data;
-
-	if (req->status_code != 200) {
-		// It didn't go well, output the error and return.
-		imcb_error(ic, "Could not retrieve %s: %s",
-			   TWITTER_USERS_LOOKUP_URL, twitter_parse_error(req));
-		imc_logout(ic, TRUE);
-		return;
-	} else {
-		td->http_fails = 0;
-	}
-
 	txl = g_new0(struct twitter_xml_list, 1);
 	txl->list = NULL;
 
-	// Parse the data.
-	parsed = xt_from_string(req->reply_body, req->body_size);
-
 	// Get the user list from the parsed xml feed.
+	if (!(parsed = twitter_parse_response(ic, req)))
+		return;
 	twitter_xt_get_users(parsed, txl);
 	xt_free_node(parsed);
 
@@ -786,6 +803,9 @@ void twitter_flush_timeline(struct im_connection *ic)
 			output = g_slist_insert_sorted(output, l->data, twitter_compare_elements);
 		}
 	}
+	
+	if (!(ic->flags & OPT_LOGGED_IN))
+		imcb_connected(ic);
 
 	// See if the user wants to see the messages in a groupchat window or as private messages.
 	if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
@@ -893,26 +913,12 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 
 	td = ic->proto_data;
 
-	// Check if the HTTP request went well.
-	if (req->status_code == 200) {
-		td->http_fails = 0;
-		if (!(ic->flags & OPT_LOGGED_IN))
-			imcb_connected(ic);
-	} else {
-		// It didn't go well, output the error and return.
-		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve %s: %s",
-				   TWITTER_HOME_TIMELINE_URL, twitter_parse_error(req));
-
-		goto end;
-	}
-
 	txl = g_new0(struct twitter_xml_list, 1);
 	txl->list = NULL;
 
-	// Parse the data.
-	parsed = xt_from_string(req->reply_body, req->body_size);
 	// The root <statuses> node should hold the list of statuses <status>
+	if (!(parsed = twitter_parse_response(ic, req)))
+		goto end;
 	twitter_xt_get_status_list(ic, parsed, txl);
 	xt_free_node(parsed);
 
@@ -940,26 +946,12 @@ static void twitter_http_get_mentions(struct http_request *req)
 
 	td = ic->proto_data;
 
-	// Check if the HTTP request went well.
-	if (req->status_code == 200) {
-		td->http_fails = 0;
-		if (!(ic->flags & OPT_LOGGED_IN))
-			imcb_connected(ic);
-	} else {
-		// It didn't go well, output the error and return.
-		if (++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve %s: %s",
-				   TWITTER_MENTIONS_URL, twitter_parse_error(req));
-
-		goto end;
-	}
-
 	txl = g_new0(struct twitter_xml_list, 1);
 	txl->list = NULL;
 
-	// Parse the data.
-	parsed = xt_from_string(req->reply_body, req->body_size);
 	// The root <statuses> node should hold the list of statuses <status>
+	if (!(parsed = twitter_parse_response(ic, req)))
+		goto end;
 	twitter_xt_get_status_list(ic, parsed, txl);
 	xt_free_node(parsed);
 
@@ -979,6 +971,7 @@ static void twitter_http_post(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
+	struct xt_node *parsed, *node;
 
 	// Check if the connection is still active.
 	if (!g_slist_find(twitter_connections, ic))
@@ -987,24 +980,12 @@ static void twitter_http_post(struct http_request *req)
 	td = ic->proto_data;
 	td->last_status_id = 0;
 
-	// Check if the HTTP request went well.
-	if (req->status_code != 200) {
-		// It didn't go well, output the error and return.
-		imcb_error(ic, "HTTP error: %s", twitter_parse_error(req));
+	if (!(parsed = twitter_parse_response(ic, req)))
 		return;
-	}
-
-	if (req->body_size > 0) {
-		struct xt_node *parsed, *node;
-
-		parsed = xt_from_string(req->reply_body, req->body_size);
-
-		if ((node = xt_find_node(parsed, "status")) &&
-		    (node = xt_find_node(node->children, "id")) && node->text)
-			td->last_status_id = g_ascii_strtoull(node->text, NULL, 10);
-
-		xt_free_node(parsed);
-	}
+	
+	if ((node = xt_find_node(parsed, "status")) &&
+	    (node = xt_find_node(node->children, "id")) && node->text)
+		td->last_status_id = g_ascii_strtoull(node->text, NULL, 10);
 }
 
 /**
