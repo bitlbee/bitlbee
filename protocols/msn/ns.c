@@ -571,6 +571,11 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		if( num_parts >= 2 )
 			handler->msglen = atoi( cmd[1] );
 	}
+	else if( strcmp( cmd[0], "UBM" ) == 0 )
+	{
+		if( num_parts >= 7 )
+			handler->msglen = atoi( cmd[6] );
+	}
 	else if( isdigit( cmd[0][0] ) )
 	{
 		int num = atoi( cmd[0] );
@@ -772,6 +777,8 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 				    ( cn = xt_find_attr( c, "n" ) ) == NULL )
 					continue;
 				
+				/* FIXME: Use "t" here, guess I should just add it
+				   as a prefix like elsewhere in the protocol. */
 				handle = g_strdup_printf( "%s@%s", cn, dn );
 				if( !( ( bu = bee_user_by_handle( ic->bee, ic, handle ) ) ||
 				       ( bu = bee_user_new( ic->bee, ic, handle, 0 ) ) ) )
@@ -797,8 +804,26 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 			}
 		}
 	}
+	else if( strcmp( cmd[0], "UBM" ) == 0 )
+	{
+		char *ct = get_rfc822_header( msg, "Content-Type", msglen );
+		char *handle;
+		
+		if( strncmp( ct, "text/plain", 10 ) != 0 )
+		{
+			g_free( ct );
+			return 1;
+		}
+		if( strcmp( cmd[2], "1" ) != 0 )
+			handle = g_strdup_printf( "%s:%s", cmd[2], cmd[1] );
+		else
+			handle = g_strdup( cmd[1] );
+		
+		imcb_buddy_msg( ic, handle, body, 0, 0 );
+		g_free( handle );
+	}
 	
-	return( 1 );
+	return 1;
 }
 
 void msn_auth_got_passport_token( struct im_connection *ic, const char *token, const char *error )
@@ -865,7 +890,7 @@ static gboolean msn_ns_send_adl_1( gpointer key, gpointer value, gpointer data )
 	c = xt_new_node( "c", NULL, NULL );
 	xt_add_attr( c, "n", handle );
 	xt_add_attr( c, "l", l );
-	xt_add_attr( c, "t", "1" ); /* 1 means normal, 4 means mobile? */
+	xt_add_attr( c, "t", "1" ); /* FIXME: Network type, i.e. 32 for Y!MSG */
 	xt_insert_child( d, c );
 	
 	/* Do this in batches of 100. */
@@ -957,7 +982,7 @@ int msn_ns_sendmessage( struct im_connection *ic, bee_user_t *bu, const char *te
 	
 	if( msn_ns_write( ic, -1, "UUM %d %s %d %d %zd\r\n%s",
 	                          ++md->trId, bu->handle,
-	                          1, /* type == MSN offline message */
+	                          1, /* type == MSN (offline) message */
 	                          1, /* type == IM (not nudge/typing) */
 	                          strlen( buf ), buf ) )
 		return 1;
