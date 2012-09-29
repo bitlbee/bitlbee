@@ -806,11 +806,22 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 	}
 	else if( strcmp( cmd[0], "UBM" ) == 0 )
 	{
-		char *ct = get_rfc822_header( msg, "Content-Type", msglen );
-		char *handle;
+		/* This one will give us msgs from federated networks. Technically
+		   it should also get us offline messages, but I don't know how
+		   I can signal MSN servers to use it. */
+		char *ct, *handle;
 		
+		if( strcmp( cmd[1], ic->acc->user ) == 0 )
+		{
+			/* With MPOP, you'll get copies of your own msgs from other
+			   sessions. Discard those at least for now. */
+			return 1;
+		}
+		
+		ct = get_rfc822_header( msg, "Content-Type", msglen );
 		if( strncmp( ct, "text/plain", 10 ) != 0 )
 		{
+			/* Typing notification or something? */
 			g_free( ct );
 			return 1;
 		}
