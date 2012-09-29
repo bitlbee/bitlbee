@@ -1,4 +1,12 @@
-bitlbee (3.0.5-1.1) UNRELEASED; urgency=low
+bitlbee (3.0.5-1.2) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * debian/bitlbee{,-dev}.postinst: Fix directory to symlink upgrade in
+    postinst. (Closes: #687865)
+
+ -- David Prévot <taffit@debian.org>  Wed, 26 Sep 2012 23:20:41 -0400
+
+bitlbee (3.0.5-1.1) unstable; urgency=low
 
   * Non-maintainer upload.
   * Fix "fails to install, purge, and install again":

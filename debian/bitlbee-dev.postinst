@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+# Replace documentation directory with symlink
+docdir="/usr/share/doc/bitlbee-dev"
+if [ -d $docdir ] && [ ! -L $docdir ]; then
+    if rmdir $docdir 2>/dev/null; then
+        ln -sf bitlbee-common $docdir
+    fi
+fi
+
+#DEBHELPER#
+
+exit 0
