@@ -139,6 +139,8 @@ static void msn_logout( struct im_connection *ic )
 
 static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, int away )
 {
+	struct bee_user *bu = bee_user_by_handle( ic->bee, ic, who );
+	struct msn_buddy_data *bd = bu ? bu->data : NULL;
 	struct msn_switchboard *sb;
 	
 #ifdef DEBUG
@@ -148,7 +150,11 @@ static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, in
 	}
 	else
 #endif
-	if( ( sb = msn_sb_by_handle( ic, who ) ) )
+	if( bd && bd->flags & MSN_BUDDY_FED )
+	{
+		msn_ns_sendmessage( ic, bu, message );
+	}
+	else if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
 		return( msn_sb_sendmessage( sb, message ) );
 	}
@@ -354,8 +360,27 @@ static char *set_eval_display_name( set_t *set, char *value )
 static void msn_buddy_data_add( bee_user_t *bu )
 {
 	struct msn_data *md = bu->ic->proto_data;
-	bu->data = g_new0( struct msn_buddy_data, 1 );
+	struct msn_buddy_data *bd;
+	char *handle;
+	
+	bd = bu->data = g_new0( struct msn_buddy_data, 1 );
 	g_tree_insert( md->domaintree, bu->handle, bu );
+	
+	for( handle = bu->handle; isdigit( *handle ); handle ++ );
+	if( *handle == ':' )
+	{
+		/* Pass a nick hint so hopefully the stupid numeric prefix
+		   won't show up to the user.  */
+		char *s = strchr( ++handle, '@' );
+		if( s )
+		{
+			handle = g_strndup( handle, s - handle );
+			imcb_buddy_nick_hint( bu->ic, bu->handle, handle );
+			g_free( handle );
+		}
+		
+		bd->flags |= MSN_BUDDY_FED;
+	}
 }
 
 static void msn_buddy_data_free( bee_user_t *bu )

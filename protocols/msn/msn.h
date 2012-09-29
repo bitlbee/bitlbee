@@ -197,6 +197,7 @@ typedef enum
 	MSN_BUDDY_RL = 8,
 	MSN_BUDDY_PL = 16,
 	MSN_BUDDY_ADL_SYNCED = 256,
+	MSN_BUDDY_FED = 512,
 } msn_buddy_flags_t;
 
 struct msn_buddy_data

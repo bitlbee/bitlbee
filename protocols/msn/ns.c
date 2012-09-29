@@ -971,18 +971,27 @@ int msn_ns_finish_login( struct im_connection *ic )
 int msn_ns_sendmessage( struct im_connection *ic, bee_user_t *bu, const char *text )
 {
 	struct msn_data *md = ic->proto_data;
-	char *buf;
+	int type = 0;
+	char *buf, *handle;
 	
 	if( strncmp( text, "\r\r\r", 3 ) == 0 )
 		/* Err. Shouldn't happen but I guess it can. Don't send others
 		   any of the "SHAKE THAT THING" messages. :-D */
 		return 1;
 	
+	/* This might be a federated contact. Get its network number,
+	   prefixed to bu->handle with a colon. Default is 1. */
+	for( handle = bu->handle; isdigit( *handle ); handle ++ )
+		type = type * 10 + *handle - '0';
+	if( *handle == ':' )
+		handle ++;
+	else
+		type = 1;
+	
 	buf = g_strdup_printf( "%s%s", MSN_MESSAGE_HEADERS, text );
 	
 	if( msn_ns_write( ic, -1, "UUM %d %s %d %d %zd\r\n%s",
-	                          ++md->trId, bu->handle,
-	                          1, /* type == MSN (offline) message */
+	                          ++md->trId, handle, type,
 	                          1, /* type == IM (not nudge/typing) */
 	                          strlen( buf ), buf ) )
 		return 1;
