@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Notification server callbacks                           */
@@ -24,9 +24,11 @@
 */
 
 #include <ctype.h>
+#include <sys/utsname.h>
 #include "nogaim.h"
 #include "msn.h"
 #include "md5.h"
+#include "sha1.h"
 #include "soap.h"
 #include "xmltree.h"
 
@@ -109,6 +111,23 @@ static gboolean msn_ns_connected( gpointer data, gint source, b_input_condition 
 	g_free( handler->rxq );
 	handler->rxlen = 0;
 	handler->rxq = g_new0( char, 1 );
+	
+	if( md->uuid == NULL )
+	{
+		struct utsname name;
+		sha1_state_t sha[1];
+		
+		/* UUID == SHA1("BitlBee" + my hostname + MSN username) */
+		sha1_init( sha );
+		sha1_append( sha, (void*) "BitlBee", 7 );
+		if( uname( &name ) == 0 )
+		{
+			sha1_append( sha, (void*) name.nodename, strlen( name.nodename ) );
+		}
+		sha1_append( sha, (void*) ic->acc->user, strlen( ic->acc->user ) );
+		md->uuid = sha1_random_uuid( sha );
+		memcpy( md->uuid, "b171be3e", 8 ); /* :-P */
+	}
 	
 	if( msn_ns_write( ic, source, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER ) )
 	{
@@ -352,9 +371,11 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		g_free( resp );
 		return st;
 	}
-	else if( strcmp( cmd[0], "ILN" ) == 0 )
+	else if( strcmp( cmd[0], "ILN" ) == 0 || strcmp( cmd[0], "NLN" ) == 0 )
 	{
 		const struct msn_away_state *st;
+		const char *handle;
+		int cap = 0;
 		
 		if( num_parts < 6 )
 		{
@@ -362,45 +383,20 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 			imc_logout( ic, TRUE );
 			return( 0 );
 		}
+		/* ILN and NLN are more or less the same, except ILN has a trId
+		   at the start, and NLN has a capability field at the end. 
+		   Does ILN still exist BTW? */
+		if( cmd[0][1] == 'I' )
+			cmd ++;
+		else
+			cap = atoi( cmd[4] );
+
+		handle = msn_normalize_handle( cmd[2] );
+		if( strcmp( handle, ic->acc->user ) == 0 )
+			return 1; /* That's me! */
 		
-		http_decode( cmd[5] );
-		imcb_rename_buddy( ic, cmd[3], cmd[5] );
-		
-		st = msn_away_state_by_code( cmd[2] );
-		if( !st )
-		{
-			/* FIXME: Warn/Bomb about unknown away state? */
-			st = msn_away_state_list + 1;
-		}
-		
-		imcb_buddy_status( ic, cmd[3], OPT_LOGGED_IN | 
-		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ),
-		                   st->name, NULL );
-	}
-	else if( strcmp( cmd[0], "FLN" ) == 0 )
-	{
-		if( cmd[1] == NULL )
-			return 1;
-		
-		imcb_buddy_status( ic, cmd[1], 0, NULL, NULL );
-		
-		msn_sb_start_keepalives( msn_sb_by_handle( ic, cmd[1] ), TRUE );
-	}
-	else if( strcmp( cmd[0], "NLN" ) == 0 )
-	{
-		const struct msn_away_state *st;
-		int cap;
-		
-		if( num_parts < 6 )
-		{
-			imcb_error( ic, "Syntax error" );
-			imc_logout( ic, TRUE );
-			return( 0 );
-		}
-		
-		http_decode( cmd[4] );
-		cap = atoi( cmd[5] );
-		imcb_rename_buddy( ic, cmd[2], cmd[4] );
+		http_decode( cmd[3] );
+		imcb_rename_buddy( ic, handle, cmd[3] );
 		
 		st = msn_away_state_by_code( cmd[1] );
 		if( !st )
@@ -409,12 +405,23 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 			st = msn_away_state_list + 1;
 		}
 		
-		imcb_buddy_status( ic, cmd[2], OPT_LOGGED_IN | 
+		imcb_buddy_status( ic, handle, OPT_LOGGED_IN | 
 		                   ( st != msn_away_state_list ? OPT_AWAY : 0 ) |
 		                   ( cap & 1 ? OPT_MOBILE : 0 ),
 		                   st->name, NULL );
 		
-		msn_sb_stop_keepalives( msn_sb_by_handle( ic, cmd[2] ) );
+		msn_sb_stop_keepalives( msn_sb_by_handle( ic, handle ) );
+	}
+	else if( strcmp( cmd[0], "FLN" ) == 0 )
+	{
+		const char *handle;
+		
+		if( cmd[1] == NULL )
+			return 1;
+		
+		handle = msn_normalize_handle( cmd[1] );
+		imcb_buddy_status( ic, handle, 0, NULL, NULL );
+		msn_sb_start_keepalives( msn_sb_by_handle( ic, handle ), TRUE );
 	}
 	else if( strcmp( cmd[0], "RNG" ) == 0 )
 	{
@@ -461,7 +468,7 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		}
 		else
 		{
-			sb->who = g_strdup( cmd[5] );
+			sb->who = g_strdup( msn_normalize_handle( cmd[5] ) );
 		}
 	}
 	else if( strcmp( cmd[0], "OUT" ) == 0 )
@@ -554,8 +561,8 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 	else if( strcmp( cmd[0], "UBX" ) == 0 )
 	{
 		/* Status message. */
-		if( num_parts >= 4 )
-			handler->msglen = atoi( cmd[3] );
+		if( num_parts >= 3 )
+			handler->msglen = atoi( cmd[2] );
 	}
 	else if( strcmp( cmd[0], "NOT" ) == 0 )
 	{
@@ -563,6 +570,11 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		   apparently used to announce address book changes. */
 		if( num_parts >= 2 )
 			handler->msglen = atoi( cmd[1] );
+	}
+	else if( strcmp( cmd[0], "UBM" ) == 0 )
+	{
+		if( num_parts >= 7 )
+			handler->msglen = atoi( cmd[6] );
 	}
 	else if( isdigit( cmd[0][0] ) )
 	{
@@ -667,7 +679,57 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 			}
 			else if( g_strncasecmp( ct, "text/x-msmsgsactivemailnotification", 35 ) == 0 )
 			{
-				/* Sorry, but this one really is *USELESS* */
+			}
+			else if( g_strncasecmp( ct, "text/x-msmsgsinitialmdatanotification", 37 ) == 0 ||
+			         g_strncasecmp( ct, "text/x-msmsgsoimnotification", 28 ) == 0 )
+			{
+				/* We received an offline message. Or at least notification
+				   that there is one waiting for us. Fetching the message(s)
+				   and purging them from the server is a lot of SOAPy work
+				   not worth doing IMHO. Also I thought it was possible to
+				   have the notification server send them directly, I was
+				   pretty sure I saw Pidgin do it..
+				   
+				   At least give a notification for now, seems like a
+				   reasonable thing to do. Only problem is, they'll keep
+				   coming back at login time until you read them using a
+				   different client. :-( */
+				
+				char *xml = get_rfc822_header( body, "Mail-Data:", blen );
+				struct xt_node *md, *m;
+				
+				if( !xml )
+					return 1;
+				md = xt_from_string( xml, 0 );
+				if( !md )
+					return 1;
+				
+				for( m = md->children; ( m = xt_find_node( m, "M" ) ); m = m->next )
+				{
+					struct xt_node *e = xt_find_node( m->children, "E" );
+					struct xt_node *rt = xt_find_node( m->children, "RT" );
+					struct tm tp;
+					time_t msgtime = 0;
+					
+					if( !e || !e->text )
+						continue;
+					
+					memset( &tp, 0, sizeof( tp ) );
+					if( rt && rt->text &&
+					    sscanf( rt->text, "%4d-%2d-%2dT%2d:%2d:%2d.",
+					            &tp.tm_year, &tp.tm_mon, &tp.tm_mday,
+					            &tp.tm_hour, &tp.tm_min, &tp.tm_sec ) == 6 )
+					{
+						tp.tm_year -= 1900;
+						tp.tm_mon --;
+						msgtime = mktime_utc( &tp );
+						
+					}
+					imcb_buddy_msg( ic, e->text, "<< \002BitlBee\002 - Received offline message. BitlBee can't show these. >>", 0, msgtime );
+				}
+				
+				g_free( xml );
+				xt_free_node( md );
 			}
 			else
 			{
@@ -687,7 +749,7 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 		    ( psm = xt_find_node( ubx->children, "PSM" ) ) )
 			psm_text = psm->text;
 		
-		imcb_buddy_status_msg( ic, cmd[1], psm_text );
+		imcb_buddy_status_msg( ic, msn_normalize_handle( cmd[1] ), psm_text );
 		xt_free_node( ubx );
 	}
 	else if( strcmp( cmd[0], "ADL" ) == 0 )
@@ -715,6 +777,8 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 				    ( cn = xt_find_attr( c, "n" ) ) == NULL )
 					continue;
 				
+				/* FIXME: Use "t" here, guess I should just add it
+				   as a prefix like elsewhere in the protocol. */
 				handle = g_strdup_printf( "%s@%s", cn, dn );
 				if( !( ( bu = bee_user_by_handle( ic->bee, ic, handle ) ) ||
 				       ( bu = bee_user_new( ic->bee, ic, handle, 0 ) ) ) )
@@ -740,8 +804,37 @@ static int msn_ns_message( struct msn_handler_data *handler, char *msg, int msgl
 			}
 		}
 	}
+	else if( strcmp( cmd[0], "UBM" ) == 0 )
+	{
+		/* This one will give us msgs from federated networks. Technically
+		   it should also get us offline messages, but I don't know how
+		   I can signal MSN servers to use it. */
+		char *ct, *handle;
+		
+		if( strcmp( cmd[1], ic->acc->user ) == 0 )
+		{
+			/* With MPOP, you'll get copies of your own msgs from other
+			   sessions. Discard those at least for now. */
+			return 1;
+		}
+		
+		ct = get_rfc822_header( msg, "Content-Type", msglen );
+		if( strncmp( ct, "text/plain", 10 ) != 0 )
+		{
+			/* Typing notification or something? */
+			g_free( ct );
+			return 1;
+		}
+		if( strcmp( cmd[2], "1" ) != 0 )
+			handle = g_strdup_printf( "%s:%s", cmd[2], cmd[1] );
+		else
+			handle = g_strdup( cmd[1] );
+		
+		imcb_buddy_msg( ic, handle, body, 0, 0 );
+		g_free( handle );
+	}
 	
-	return( 1 );
+	return 1;
 }
 
 void msn_auth_got_passport_token( struct im_connection *ic, const char *token, const char *error )
@@ -756,7 +849,7 @@ void msn_auth_got_passport_token( struct im_connection *ic, const char *token, c
 	
 	if( token )
 	{
-		msn_ns_write( ic, -1, "USR %d SSO S %s %s\r\n", ++md->trId, md->tokens[0], token );
+		msn_ns_write( ic, -1, "USR %d SSO S %s %s {%s}\r\n", ++md->trId, md->tokens[0], token, md->uuid );
 	}
 	else
 	{
@@ -808,7 +901,7 @@ static gboolean msn_ns_send_adl_1( gpointer key, gpointer value, gpointer data )
 	c = xt_new_node( "c", NULL, NULL );
 	xt_add_attr( c, "n", handle );
 	xt_add_attr( c, "l", l );
-	xt_add_attr( c, "t", "1" ); /* 1 means normal, 4 means mobile? */
+	xt_add_attr( c, "t", "1" ); /* FIXME: Network type, i.e. 32 for Y!MSG */
 	xt_insert_child( d, c );
 	
 	/* Do this in batches of 100. */
@@ -884,4 +977,61 @@ int msn_ns_finish_login( struct im_connection *ic )
 	}
 	
 	return 1;
+}
+
+int msn_ns_sendmessage( struct im_connection *ic, bee_user_t *bu, const char *text )
+{
+	struct msn_data *md = ic->proto_data;
+	int type = 0;
+	char *buf, *handle;
+	
+	if( strncmp( text, "\r\r\r", 3 ) == 0 )
+		/* Err. Shouldn't happen but I guess it can. Don't send others
+		   any of the "SHAKE THAT THING" messages. :-D */
+		return 1;
+	
+	/* This might be a federated contact. Get its network number,
+	   prefixed to bu->handle with a colon. Default is 1. */
+	for( handle = bu->handle; isdigit( *handle ); handle ++ )
+		type = type * 10 + *handle - '0';
+	if( *handle == ':' )
+		handle ++;
+	else
+		type = 1;
+	
+	buf = g_strdup_printf( "%s%s", MSN_MESSAGE_HEADERS, text );
+	
+	if( msn_ns_write( ic, -1, "UUM %d %s %d %d %zd\r\n%s",
+	                          ++md->trId, handle, type,
+	                          1, /* type == IM (not nudge/typing) */
+	                          strlen( buf ), buf ) )
+		return 1;
+	else
+		return 0;
+}
+
+void msn_ns_oim_send_queue( struct im_connection *ic, GSList **msgq )
+{
+	GSList *l;
+	
+	for( l = *msgq; l; l = l->next )
+	{
+		struct msn_message *m = l->data;
+		bee_user_t *bu = bee_user_by_handle( ic->bee, ic, m->who );
+		
+		if( bu )
+			if( !msn_ns_sendmessage( ic, bu, m->text ) )
+				return;
+	}
+	
+	while( *msgq != NULL )
+	{
+		struct msn_message *m = (*msgq)->data;
+		
+		g_free( m->who );
+		g_free( m->text );
+		g_free( m );
+		
+		*msgq = g_slist_remove( *msgq, m );
+	}
 }

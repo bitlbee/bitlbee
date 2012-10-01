@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Switchboard server callbacks and utilities              */
@@ -121,7 +121,7 @@ struct msn_switchboard *msn_sb_create( struct im_connection *ic, char *host, int
 	return( sb );
 }
 
-struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, char *handle )
+struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, const char *handle )
 {
 	struct msn_data *md = ic->proto_data;
 	struct msn_switchboard *sb;
@@ -307,6 +307,7 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct msn_switchboard *sb = data;
 	struct im_connection *ic;
+	struct msn_data *md;
 	char buf[1024];
 	
 	/* Are we still alive? */
@@ -314,6 +315,7 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 		return FALSE;
 	
 	ic = sb->ic;
+	md = ic->proto_data;
 	
 	if( source != sb->fd )
 	{
@@ -331,9 +333,9 @@ gboolean msn_sb_connected( gpointer data, gint source, b_input_condition cond )
 	sb->handler->exec_message = msn_sb_message;
 	
 	if( sb->session == MSN_SB_NEW )
-		g_snprintf( buf, sizeof( buf ), "USR %d %s %s\r\n", ++sb->trId, ic->acc->user, sb->key );
+		g_snprintf( buf, sizeof( buf ), "USR %d %s;{%s} %s\r\n", ++sb->trId, ic->acc->user, md->uuid, sb->key );
 	else
-		g_snprintf( buf, sizeof( buf ), "ANS %d %s %s %d\r\n", ++sb->trId, ic->acc->user, sb->key, sb->session );
+		g_snprintf( buf, sizeof( buf ), "ANS %d %s;{%s} %s %d\r\n", ++sb->trId, ic->acc->user, md->uuid, sb->key, sb->session );
 	
 	if( msn_sb_write( sb, "%s", buf ) )
 		sb->inp = b_input_add( sb->fd, B_EV_IO_READ, msn_sb_callback, sb );
@@ -452,18 +454,31 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 		{
 			char buf[1024];
 			
-			if( num == 1 )
+			/* For as much as I understand this MPOP stuff now, a
+			   switchboard has two (or more) roster entries per
+			   participant. One "bare JID" and one JID;UUID. Ignore
+			   the latter. */
+			if( !strchr( cmd[4], ';' ) )
 			{
-				g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
-				sb->chat = imcb_chat_new( ic, buf );
+				/* HACK: Since even 1:1 chats now have >2 participants
+				   (ourselves included) it gets hard to tell them apart
+				   from rooms. Let's hope this is enough: */
+				if( sb->chat == NULL && num != tot )
+				{
+					g_snprintf( buf, sizeof( buf ), "MSN groupchat session %d", sb->session );
+					sb->chat = imcb_chat_new( ic, buf );
+					
+					g_free( sb->who );
+					sb->who = NULL;
+				}
 				
-				g_free( sb->who );
-				sb->who = NULL;
+				if( sb->chat )
+					imcb_chat_add_buddy( sb->chat, cmd[4] );
 			}
 			
-			imcb_chat_add_buddy( sb->chat, cmd[4] );
-			
-			if( num == tot )
+			/* We have the full roster, start showing the channel to
+			   the user. */
+			if( num == tot && sb->chat )
 			{
 				imcb_chat_add_buddy( sb->chat, ic->acc->user );
 			}
@@ -506,6 +521,10 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 			return( 0 );
 		}
 		
+		/* See IRO above. Handle "bare JIDs" only. */
+		if( strchr( cmd[1], ';' ) )
+			return 1;
+		
 		if( sb->who && g_strcasecmp( cmd[1], sb->who ) == 0 )
 		{
 			/* The user we wanted to talk to is finally there, let's send the queued messages then. */
@@ -539,6 +558,10 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 			msn_sb_start_keepalives( sb, FALSE );
 			
 			return( st );
+		}
+		else if( strcmp( cmd[1], ic->acc->user ) == 0 )
+		{
+			/* Well, gee thanks. Thanks for letting me know I've arrived.. */
 		}
 		else if( sb->who )
 		{
@@ -612,7 +635,7 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 			   as a spare for a next conversation sounds more sane to me.
 			   The server will clean it up when it's idle for too long. */
 		}
-		else if( sb->chat )
+		else if( sb->chat && !strchr( cmd[1], ';' ) )
 		{
 			imcb_chat_remove_buddy( sb->chat, cmd[1], "" );
 		}
@@ -628,12 +651,9 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 		
 		/* If the person is offline, send an offline message instead,
 		   and don't report an error. */
-		/* TODO: Support for OIMs that works. (#874) */
-		/*
 		if( num == 217 )
-			msn_soap_oim_send_queue( ic, &sb->msgq );
+			msn_ns_oim_send_queue( ic, &sb->msgq );
 		else
-		*/
 			imcb_error( ic, "Error reported by switchboard server: %s", err->text );
 		
 		if( err->flags & STATUS_SB_FATAL )

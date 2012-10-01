@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module                                                           */
@@ -52,12 +52,20 @@
 #define MSNP11_PROD_ID  "PROD01065C%ZFN6F"
 */
 
+/* <= BitlBee 3.0.5
 #define MSNP11_PROD_KEY "ILTXC!4IXB5FB*PX"
 #define MSNP11_PROD_ID  "PROD0119GSJUC$18"
-#define MSNP_VER        "MSNP15"
-#define MSNP_BUILD      "8.5.1288"
+*/
+
+#define MSNP11_PROD_KEY "C1BX{V4W}Q3*10SM"
+#define MSNP11_PROD_ID  "PROD0120PW!CCV9@"
+#define MSNP_VER        "MSNP18"
+#define MSNP_BUILD      "14.0.8117.416"
 
 #define MSN_SB_NEW         -24062002
+
+#define MSN_CAP1        0xC000
+#define MSN_CAP2        0x0000
 
 #define MSN_MESSAGE_HEADERS "MIME-Version: 1.0\r\n" \
                             "Content-Type: text/plain; charset=UTF-8\r\n" \
@@ -117,6 +125,7 @@ struct msn_data
 	int trId;
 	char *tokens[4];
 	char *lock_key, *pp_policy;
+	char *uuid;
 	
 	GSList *msgq, *grpq, *soapq;
 	GSList *switchboards;
@@ -188,6 +197,7 @@ typedef enum
 	MSN_BUDDY_RL = 8,
 	MSN_BUDDY_PL = 16,
 	MSN_BUDDY_ADL_SYNCED = 256,
+	MSN_BUDDY_FED = 512,
 } msn_buddy_flags_t;
 
 struct msn_buddy_data
@@ -221,12 +231,14 @@ extern GSList *msn_connections;
 extern GSList *msn_switchboards;
 
 /* ns.c */
-int msn_ns_write( struct im_connection *ic, int fd, const char *fmt, ... );
+int msn_ns_write( struct im_connection *ic, int fd, const char *fmt, ... ) G_GNUC_PRINTF( 3, 4 );
 gboolean msn_ns_connect( struct im_connection *ic, struct msn_handler_data *handler, const char *host, int port );
 void msn_ns_close( struct msn_handler_data *handler );
 void msn_auth_got_passport_token( struct im_connection *ic, const char *token, const char *error );
 void msn_auth_got_contact_list( struct im_connection *ic );
 int msn_ns_finish_login( struct im_connection *ic );
+int msn_ns_sendmessage( struct im_connection *ic, struct bee_user *bu, const char *text );
+void msn_ns_oim_send_queue( struct im_connection *ic, GSList **msgq );
 
 /* msn_util.c */
 int msn_logged_in( struct im_connection *ic );
@@ -241,6 +253,7 @@ gint msn_domaintree_cmp( gconstpointer a_, gconstpointer b_ );
 struct msn_group *msn_group_by_name( struct im_connection *ic, const char *name );
 struct msn_group *msn_group_by_id( struct im_connection *ic, const char *id );
 int msn_ns_set_display_name( struct im_connection *ic, const char *value );
+const char *msn_normalize_handle( const char *handle );
 
 /* tables.c */
 const struct msn_away_state *msn_away_state_by_number( int number );
@@ -249,9 +262,9 @@ const struct msn_away_state *msn_away_state_by_name( char *name );
 const struct msn_status_code *msn_status_by_number( int number );
 
 /* sb.c */
-int msn_sb_write( struct msn_switchboard *sb, const char *fmt, ... );
+int msn_sb_write( struct msn_switchboard *sb, const char *fmt, ... ) G_GNUC_PRINTF( 2, 3 );;
 struct msn_switchboard *msn_sb_create( struct im_connection *ic, char *host, int port, char *key, int session );
-struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, char *handle );
+struct msn_switchboard *msn_sb_by_handle( struct im_connection *ic, const char *handle );
 struct msn_switchboard *msn_sb_by_chat( struct groupchat *c );
 struct msn_switchboard *msn_sb_spare( struct im_connection *ic );
 int msn_sb_sendmessage( struct msn_switchboard *sb, char *text );

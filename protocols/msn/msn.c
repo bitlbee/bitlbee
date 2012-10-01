@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Main file; functions to be called from BitlBee          */
@@ -97,6 +97,7 @@ static void msn_logout( struct im_connection *ic )
 			g_free( md->tokens[i] );
 		g_free( md->lock_key );
 		g_free( md->pp_policy );
+		g_free( md->uuid );
 		
 		while( md->groups )
 		{
@@ -138,6 +139,8 @@ static void msn_logout( struct im_connection *ic )
 
 static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, int away )
 {
+	struct bee_user *bu = bee_user_by_handle( ic->bee, ic, who );
+	struct msn_buddy_data *bd = bu ? bu->data : NULL;
 	struct msn_switchboard *sb;
 	
 #ifdef DEBUG
@@ -147,7 +150,11 @@ static int msn_buddy_msg( struct im_connection *ic, char *who, char *message, in
 	}
 	else
 #endif
-	if( ( sb = msn_sb_by_handle( ic, who ) ) )
+	if( bd && bd->flags & MSN_BUDDY_FED )
+	{
+		msn_ns_sendmessage( ic, bu, message );
+	}
+	else if( ( sb = msn_sb_by_handle( ic, who ) ) )
 	{
 		return( msn_sb_sendmessage( sb, message ) );
 	}
@@ -189,11 +196,29 @@ static void msn_set_away( struct im_connection *ic, char *state, char *message )
 	else if( ( md->away_state = msn_away_state_by_name( state ) ) == NULL )
 		md->away_state = msn_away_state_list + 1;
 	
-	if( !msn_ns_write( ic, -1, "CHG %d %s\r\n", ++md->trId, md->away_state->code ) )
+	if( !msn_ns_write( ic, -1, "CHG %d %s %d:%02d\r\n", ++md->trId, md->away_state->code, MSN_CAP1, MSN_CAP2 ) )
 		return;
 	
-	uux = g_markup_printf_escaped( "<Data><PSM>%s</PSM><CurrentMedia></CurrentMedia>"
-	                               "</Data>", message ? message : "" );
+	uux = g_markup_printf_escaped( "<EndpointData><Capabilities>%d:%02d"
+	                               "</Capabilities></EndpointData>",
+	                               MSN_CAP1, MSN_CAP2 );
+	msn_ns_write( ic, -1, "UUX %d %zd\r\n%s", ++md->trId, strlen( uux ), uux );
+	g_free( uux );
+	
+	uux = g_markup_printf_escaped( "<PrivateEndpointData><EpName>%s</EpName>"
+	                               "<Idle>%s</Idle><ClientType>%d</ClientType>"
+	                               "<State>%s</State></PrivateEndpointData>",
+	                               md->uuid,
+	                               strcmp( md->away_state->code, "IDL" ) ? "false" : "true",
+	                               1, /* ? */
+	                               md->away_state->code );
+	msn_ns_write( ic, -1, "UUX %d %zd\r\n%s", ++md->trId, strlen( uux ), uux );
+	g_free( uux );
+	
+	uux = g_markup_printf_escaped( "<Data><DDP></DDP><PSM>%s</PSM>"
+	                               "<CurrentMedia></CurrentMedia>"
+	                               "<MachineGuid>%s</MachineGuid></Data>",
+	                               message ? message : "", md->uuid );
 	msn_ns_write( ic, -1, "UUX %d %zd\r\n%s", ++md->trId, strlen( uux ), uux );
 	g_free( uux );
 }
@@ -231,13 +256,9 @@ static void msn_chat_msg( struct groupchat *c, char *message, int flags )
 static void msn_chat_invite( struct groupchat *c, char *who, char *message )
 {
 	struct msn_switchboard *sb = msn_sb_by_chat( c );
-	char buf[1024];
 	
 	if( sb )
-	{
-		g_snprintf( buf, sizeof( buf ), "CAL %d %s\r\n", ++sb->trId, who );
-		msn_sb_write( sb, buf, strlen( buf ) );
-	}
+		msn_sb_write( sb, "CAL %d %s\r\n", ++sb->trId, who );
 }
 
 static void msn_chat_leave( struct groupchat *c )
@@ -245,7 +266,7 @@ static void msn_chat_leave( struct groupchat *c )
 	struct msn_switchboard *sb = msn_sb_by_chat( c );
 	
 	if( sb )
-		msn_sb_write( sb, "OUT\r\n", 5 );
+		msn_sb_write( sb, "OUT\r\n" );
 }
 
 static struct groupchat *msn_chat_with( struct im_connection *ic, char *who )
@@ -339,8 +360,27 @@ static char *set_eval_display_name( set_t *set, char *value )
 static void msn_buddy_data_add( bee_user_t *bu )
 {
 	struct msn_data *md = bu->ic->proto_data;
-	bu->data = g_new0( struct msn_buddy_data, 1 );
+	struct msn_buddy_data *bd;
+	char *handle;
+	
+	bd = bu->data = g_new0( struct msn_buddy_data, 1 );
 	g_tree_insert( md->domaintree, bu->handle, bu );
+	
+	for( handle = bu->handle; isdigit( *handle ); handle ++ );
+	if( *handle == ':' )
+	{
+		/* Pass a nick hint so hopefully the stupid numeric prefix
+		   won't show up to the user.  */
+		char *s = strchr( ++handle, '@' );
+		if( s )
+		{
+			handle = g_strndup( handle, s - handle );
+			imcb_buddy_nick_hint( bu->ic, bu->handle, handle );
+			g_free( handle );
+		}
+		
+		bd->flags |= MSN_BUDDY_FED;
+	}
 }
 
 static void msn_buddy_data_free( bee_user_t *bu )
