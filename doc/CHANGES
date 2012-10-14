@@ -3,6 +3,23 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 3.0.6:
+- Updated MSN module to speak MSNP18:
+  * Biggest change is that this brings MPOP support (you can sign in to
+    one account from multiple locations).
+  * Restored support for *sending* offline messages.
+  * Some support for federated (i.e. Yahoo!) contacts. (Only messages
+    might work, you won't see them online.)
+- Twitter:
+  * Work-around for stalls that are still happening sometimes.
+  * Added "favourite" command.
+  * "show_ids" enabled by default.
+- Handle see-other-host Jabber messages which should fix support for
+  MSN-XMPP.
+- Misc. fixes and improvements.
+
+Finished 14 Oct 2012
+
 Version 3.0.5:
 - SSL certificate verification (edit your bitlbee.conf to enable it).
   Works only with GnuTLS!
