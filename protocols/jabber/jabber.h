@@ -226,6 +226,7 @@ struct jabber_transfer
 #define XMLNS_TIME_OLD     "jabber:iq:time"                                      /* XEP-0090 */
 #define XMLNS_TIME         "urn:xmpp:time"                                       /* XEP-0202 */
 #define XMLNS_PING         "urn:xmpp:ping"                                       /* XEP-0199 */
+#define XMLNS_RECEIPTS     "urn:xmpp:receipts"                                   /* XEP-0184 */
 #define XMLNS_VCARD        "vcard-temp"                                          /* XEP-0054 */
 #define XMLNS_DELAY        "jabber:x:delay"                                      /* XEP-0091 */
 #define XMLNS_XDATA        "jabber:x:data"                                       /* XEP-0004 */

@@ -23,17 +23,46 @@
 
 #include "jabber.h"
 
+static unsigned int next_receipt_id = 1;
+
 xt_status jabber_pkt_message( struct xt_node *node, gpointer data )
 {
 	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	char *from = xt_find_attr( node, "from" );
 	char *type = xt_find_attr( node, "type" );
+	char *id = xt_find_attr( node, "id" );
 	struct xt_node *body = xt_find_node( node->children, "body" ), *c;
+	struct xt_node *request = xt_find_node( node->children, "request" );
+	struct xt_node *received, *receipt;
 	struct jabber_buddy *bud = NULL;
 	char *s, *room = NULL, *reason = NULL;
 	
 	if( !from )
 		return XT_HANDLED; /* Consider this packet corrupted. */
+
+	if( request && id )
+	{
+		/* Send a message receipt (XEP-0184), looking like this:
+		 * <message
+		 *  from='kingrichard@royalty.england.lit/throne'
+		 *  id='bi29sg183b4v'
+		 *  to='northumberland@shakespeare.lit/westminster'>
+		 *  <received xmlns='urn:xmpp:receipts' id='richard2-4.1.247'/>
+		 * </message> */
+		received = xt_new_node( "received", NULL, NULL );
+		xt_add_attr( received, "xmlns", XMLNS_RECEIPTS );
+		xt_add_attr( received, "id", id );
+		receipt = jabber_make_packet( "message", NULL, from, received );
+		xt_add_attr( receipt, "from", jd->me );
+
+		char *id = g_strdup_printf( "%sRCPT%05x", JABBER_PACKET_ID, ( next_receipt_id++ ) & 0xfffff );
+		xt_add_attr( receipt, "id", id );
+		g_free( id );
+
+		jabber_write_packet( ic, receipt );
+		xt_free_node( receipt );
+	}
 	
 	bud = jabber_buddy_by_jid( ic, from, GET_BUDDY_EXACT );
 	
