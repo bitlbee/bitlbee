@@ -46,9 +46,6 @@ typedef struct aim_mpmsg_s {
 } aim_mpmsg_t;
 
 int aim_mpmsg_init(aim_session_t *sess, aim_mpmsg_t *mpm);
-int aim_mpmsg_addraw(aim_session_t *sess, aim_mpmsg_t *mpm, guint16 charset, guint16 charsubset, const guint8 *data, guint16 datalen);
-int aim_mpmsg_addascii(aim_session_t *sess, aim_mpmsg_t *mpm, const char *ascii);
-int aim_mpmsg_addunicode(aim_session_t *sess, aim_mpmsg_t *mpm, const guint16 *unicode, guint16 unicodelen);
 void aim_mpmsg_free(aim_session_t *sess, aim_mpmsg_t *mpm);
 
 /*
@@ -82,16 +79,6 @@ struct aim_sendimext_args {
 	/* Only used if AIM_IMFLAGS_CUSTOMCHARSET is set and mpmsg not used */
 	guint16 charset;
 	guint16 charsubset;
-};
-
-/*
- * Arguments to aim_send_rtfmsg().
- */
-struct aim_sendrtfmsg_args {
-	const char *destsn;
-	guint32 fgcolor;
-	guint32 bgcolor;
-	const char *rtfmsg; /* must be in RTF */
 };
 
 /*
@@ -182,18 +169,14 @@ struct aim_incomingim_ch4_args {
 	char *msg; /* Reason for auth request, deny, or accept */
 };
 
-int aim_send_rtfmsg(aim_session_t *sess, struct aim_sendrtfmsg_args *args);
 int aim_send_im_ext(aim_session_t *sess, struct aim_sendimext_args *args);
 int aim_send_im(aim_session_t *, const char *destsn, unsigned short flags, const char *msg);
-int aim_send_icon(aim_session_t *sess, const char *sn, const guint8 *icon, int iconlen, time_t stamp, guint16 iconsum);
-guint16 aim_iconsum(const guint8 *buf, int buflen);
 int aim_send_typing(aim_session_t *sess, aim_conn_t *conn, int typing);
 int aim_send_im_direct(aim_session_t *, aim_conn_t *, const char *msg, int len);
 const char *aim_directim_getsn(aim_conn_t *conn);
 aim_conn_t *aim_directim_initiate(aim_session_t *, const char *destsn);
 aim_conn_t *aim_directim_connect(aim_session_t *, const char *sn, const char *addr, const guint8 *cookie);
 
-int aim_send_im_ch2_geticqmessage(aim_session_t *sess, const char *sn, int type);
 int aim_im_sendmtn(aim_session_t *sess, guint16 type1, const char *sn, guint16 type2);
 int aim_send_im_ch2_statusmessage(aim_session_t *sess, const char *sender, const guint8 *cookie, const char *message, const guint8 state, const guint16 dc);
 

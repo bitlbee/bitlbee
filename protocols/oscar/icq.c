@@ -70,44 +70,6 @@ int aim_icq_ackofflinemsgs(aim_session_t *sess)
 	return 0;
 }
 
-int aim_icq_sendxmlreq(aim_session_t *sess, const char *xml)
-{
-	aim_conn_t *conn;
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-	int bslen;
-
-	if (!xml || !strlen(xml))
-		return -EINVAL;
-
-	if (!sess || !(conn = aim_conn_findbygroup(sess, 0x0015)))
-		return -EINVAL;
-
-	bslen = 2 + 10 + 2 + strlen(xml) + 1;
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 4 + bslen)))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, 0x0015, 0x0002, 0x0000, NULL, 0);
-	aim_putsnac(&fr->data, 0x0015, 0x0002, 0x0000, snacid);
-
-	/* For simplicity, don't bother using a tlvlist */
-	aimbs_put16(&fr->data, 0x0001);
-	aimbs_put16(&fr->data, bslen);
-
-	aimbs_putle16(&fr->data, bslen - 2);
-	aimbs_putle32(&fr->data, atoi(sess->sn));
-	aimbs_putle16(&fr->data, 0x07d0); /* I command thee. */
-	aimbs_putle16(&fr->data, snacid); /* eh. */
-	aimbs_putle16(&fr->data, 0x0998); /* shrug. */
-	aimbs_putle16(&fr->data, strlen(xml) + 1);
-	aimbs_putraw(&fr->data, (guint8 *)xml, strlen(xml) + 1);
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
-}
-
 int aim_icq_getallinfo(aim_session_t *sess, const char *uin)
 {
         aim_conn_t *conn;
@@ -151,43 +113,6 @@ int aim_icq_getallinfo(aim_session_t *sess, const char *uin)
         sess->icq_info = info;
 
         return 0;
-}
-
-int aim_icq_getsimpleinfo(aim_session_t *sess, const char *uin)
-{
-	aim_conn_t *conn;
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-	int bslen;
-
-	if (!uin || uin[0] < '0' || uin[0] > '9')
-		return -EINVAL;
-
-	if (!sess || !(conn = aim_conn_findbygroup(sess, 0x0015)))
-		return -EINVAL;
-
-	bslen = 2 + 4 + 2 + 2 + 2 + 4;
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 4 + bslen)))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, 0x0015, 0x0002, 0x0000, NULL, 0);
-	aim_putsnac(&fr->data, 0x0015, 0x0002, 0x0000, snacid);
-
-	/* For simplicity, don't bother using a tlvlist */
-	aimbs_put16(&fr->data, 0x0001);
-	aimbs_put16(&fr->data, bslen);
-
-	aimbs_putle16(&fr->data, bslen - 2);
-	aimbs_putle32(&fr->data, atoi(sess->sn));
-	aimbs_putle16(&fr->data, 0x07d0); /* I command thee. */
-	aimbs_putle16(&fr->data, snacid); /* eh. */
-	aimbs_putle16(&fr->data, 0x051f); /* shrug. */
-	aimbs_putle32(&fr->data, atoi(uin));
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
 }
 
 static void aim_icq_freeinfo(struct aim_icq_info *info) {

@@ -409,15 +409,6 @@ typedef struct {
 #define AIM_USERINFO_PRESENT_CAPABILITIES 0x00000080
 #define AIM_USERINFO_PRESENT_SESSIONLEN   0x00000100
 
-const char *aim_userinfo_sn(aim_userinfo_t *ui);
-guint16 aim_userinfo_flags(aim_userinfo_t *ui);
-guint16 aim_userinfo_idle(aim_userinfo_t *ui);
-float aim_userinfo_warnlevel(aim_userinfo_t *ui);
-time_t aim_userinfo_membersince(aim_userinfo_t *ui);
-time_t aim_userinfo_onlinesince(aim_userinfo_t *ui);
-guint32 aim_userinfo_sessionlen(aim_userinfo_t *ui);
-int aim_userinfo_hascap(aim_userinfo_t *ui, guint32 cap);
-
 #define AIM_FLAG_UNCONFIRMED 	0x0001 /* "damned transients" */
 #define AIM_FLAG_ADMINISTRATOR	0x0002
 #define AIM_FLAG_AOL		0x0004
@@ -473,7 +464,6 @@ int aim_writetlvchain(aim_bstream_t *bs, aim_tlvlist_t **list);
 int aim_addtlvtochain8(aim_tlvlist_t **list, const guint16 t, const guint8 v);
 int aim_addtlvtochain16(aim_tlvlist_t **list, const guint16 t, const guint16 v);
 int aim_addtlvtochain32(aim_tlvlist_t **list, const guint16 type, const guint32 v);
-int aim_addtlvtochain_availmsg(aim_tlvlist_t **list, const guint16 type, const char *msg);
 int aim_addtlvtochain_raw(aim_tlvlist_t **list, const guint16 t, const guint16 l, const guint8 *v);
 int aim_addtlvtochain_caps(aim_tlvlist_t **list, const guint16 t, const guint32 caps);
 int aim_addtlvtochain_noval(aim_tlvlist_t **list, const guint16 type);
@@ -600,12 +590,7 @@ struct aim_chat_invitation {
 
 #define AIM_WARN_ANON                     0x01
 
-int aim_sendpauseack(aim_session_t *sess, aim_conn_t *conn);
-int aim_send_warning(aim_session_t *sess, aim_conn_t *conn, const char *destsn, guint32 flags);
-int aim_nop(aim_session_t *, aim_conn_t *);
 int aim_flap_nop(aim_session_t *sess, aim_conn_t *conn);
-int aim_bos_setidle(aim_session_t *, aim_conn_t *, guint32);
-int aim_bos_setbuddylist(aim_session_t *, aim_conn_t *, const char *);
 int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const char *profile, const char *awaymsg, guint32 caps);
 int aim_bos_setgroupperm(aim_session_t *, aim_conn_t *, guint32 mask);
 int aim_bos_setprivacyflags(aim_session_t *, aim_conn_t *, guint32);
@@ -614,8 +599,6 @@ int aim_reqservice(aim_session_t *, aim_conn_t *, guint16);
 int aim_bos_reqrights(aim_session_t *, aim_conn_t *);
 int aim_bos_reqbuddyrights(aim_session_t *, aim_conn_t *);
 int aim_bos_reqlocaterights(aim_session_t *, aim_conn_t *);
-int aim_setdirectoryinfo(aim_session_t *sess, aim_conn_t *conn, const char *first, const char *middle, const char *last, const char *maiden, const char *nickname, const char *street, const char *city, const char *state, const char *zip, int country, guint16 privacy);
-int aim_setuserinterests(aim_session_t *sess, aim_conn_t *conn, const char *interest1, const char *interest2, const char *interest3, const char *interest4, const char *interest5, guint16 privacy);
 int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status);
 
 struct aim_fileheader_t *aim_getlisting(aim_session_t *sess, FILE *);
@@ -644,8 +627,6 @@ int aim_oft_getfile_end(aim_session_t *sess, aim_conn_t *conn);
 #define AIM_SENDMEMBLOCK_FLAG_ISREQUEST  0
 #define AIM_SENDMEMBLOCK_FLAG_ISHASH     1
 
-int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, guint32 offset, guint32 len, const guint8 *buf, guint8 flag);
-
 #define AIM_GETINFO_GENERALINFO 0x00001
 #define AIM_GETINFO_AWAYMESSAGE 0x00003
 #define AIM_GETINFO_CAPABILITIES 0x0004
@@ -671,12 +652,9 @@ int aim_handlerendconnect(aim_session_t *sess, aim_conn_t *cur);
 #define AIM_TRANSFER_DENY_NOTSUPPORTED 0x0000
 #define AIM_TRANSFER_DENY_DECLINE 0x0001
 #define AIM_TRANSFER_DENY_NOTACCEPTING 0x0002
-int aim_denytransfer(aim_session_t *sess, const char *sender, const guint8 *cookie, unsigned short code);
 aim_conn_t *aim_accepttransfer(aim_session_t *sess, aim_conn_t *conn, const char *sn, const guint8 *cookie, const guint8 *ip, guint16 listingfiles, guint16 listingtotsize, guint16 listingsize, guint32 listingchecksum, guint16 rendid);
 
 int aim_getinfo(aim_session_t *, aim_conn_t *, const char *, unsigned short);
-int aim_sendbuddyoncoming(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_t *info);
-int aim_sendbuddyoffgoing(aim_session_t *sess, aim_conn_t *conn, const char *sn);
 
 #define AIM_IMPARAM_FLAG_CHANMSGS_ALLOWED	0x00000001
 #define AIM_IMPARAM_FLAG_MISSEDCALLS_ENABLED	0x00000002
@@ -744,16 +722,12 @@ struct aim_chat_exchangeinfo {
 
 int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const char *msg, int msglen);
 int aim_chat_join(aim_session_t *sess, aim_conn_t *conn, guint16 exchange, const char *roomname, guint16 instance);
-int aim_chat_attachname(aim_conn_t *conn, guint16 exchange, const char *roomname, guint16 instance);
-char *aim_chat_getname(aim_conn_t *conn);
-aim_conn_t *aim_chat_getconn(aim_session_t *, const char *name);
 
 int aim_chatnav_reqrights(aim_session_t *sess, aim_conn_t *conn);
 
 int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *msg, guint16 exchange, const char *roomname, guint16 instance);
 
 int aim_chatnav_createroom(aim_session_t *sess, aim_conn_t *conn, const char *name, guint16 exchange);
-int aim_chat_leaveroom(aim_session_t *sess, const char *name);
 
 /* aim_util.c */
 /*
@@ -809,10 +783,6 @@ int aim_chat_leaveroom(aim_session_t *sess, const char *name);
 		(((*((buf)+3)) << 24) & 0xff000000))
 
 
-int aimutil_putstr(u_char *, const char *, int);
-int aimutil_tokslen(char *toSearch, int index, char dl);
-int aimutil_itemcnt(char *toSearch, char dl);
-char *aimutil_itemidx(char *toSearch, int index, char dl);
 int aim_sncmp(const char *a, const char *b);
 
 #include <aim_internal.h>

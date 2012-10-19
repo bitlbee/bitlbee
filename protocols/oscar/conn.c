@@ -353,50 +353,6 @@ aim_conn_t *aim_getconn_type_all(aim_session_t *sess, int type)
 }
 
 /**
- * aim_cloneconn - clone an aim_conn_t
- * @sess: session containing parent
- * @src: connection to clone
- *
- * A new connection is allocated, and the values are filled in
- * appropriately. Note that this function sets the new connnection's
- * ->priv pointer to be equal to that of its parent: only the pointer
- * is copied, not the data it points to.
- *
- * This function returns a pointer to the new aim_conn_t, or %NULL on
- * error
- */
-aim_conn_t *aim_cloneconn(aim_session_t *sess, aim_conn_t *src)
-{
-	aim_conn_t *conn;
-
-	if (!(conn = aim_conn_getnext(sess)))
-		return NULL;
-
-	conn->fd = src->fd;
-	conn->type = src->type;
-	conn->subtype = src->subtype;
-	conn->seqnum = src->seqnum;
-	conn->priv = src->priv;
-	conn->internal = src->internal;
-	conn->lastactivity = src->lastactivity;
-	conn->forcedlatency = src->forcedlatency;
-	conn->sessv = src->sessv;
-	aim_clonehandlers(sess, conn, src);
-
-	if (src->inside) {
-		/*
-		 * XXX should clone this section as well, but since currently
-		 * this function only gets called for some of that rendezvous
-		 * crap, and not on SNAC connections, its probably okay for
-		 * now. 
-		 *
-		 */
-	}
-
-	return conn;
-}
-
-/**
  * aim_newconn - Open a new connection
  * @sess: Session to create connection in
  * @type: Type of connection to create

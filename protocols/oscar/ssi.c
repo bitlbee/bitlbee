@@ -262,28 +262,6 @@ int aim_ssi_getpermdeny(struct aim_ssi_item *list)
 }
 
 /**
- * Locally find the presence flag item, and return the setting.  The returned setting is a 
- * bitmask of the user flags that you are visible to.  See the AIM_FLAG_* #defines 
- * in aim.h
- *
- * @param list A pointer to the current list of items.
- * @return Return the current visibility mask.
- */
-guint32 aim_ssi_getpresence(struct aim_ssi_item *list)
-{
-	struct aim_ssi_item *cur = aim_ssi_itemlist_finditem(list, NULL, NULL, AIM_SSI_TYPE_PRESENCEPREFS);
-	if (cur) {
-		aim_tlvlist_t *tlvlist = cur->data;
-		if (tlvlist) {
-			aim_tlv_t *tlv = aim_gettlv(tlvlist, 0x00c9, 1);
-			if (tlv && tlv->length)
-				return aimutil_get32(tlv->value);
-		}
-	}
-	return 0xFFFFFFFF;
-}
-
-/**
  * Add the given packet to the holding queue.  We totally need to send SSI SNACs one at 
  * a time, so we have a local queue where packets get put before they are sent, and 
  * then we send stuff one at a time, nice and orderly-like.
@@ -339,143 +317,6 @@ static int aim_ssi_dispatch(aim_session_t *sess, aim_conn_t *conn)
 		} else
 			aim_ssi_modend(sess, conn);
 	}
-
-	return 0;
-}
-
-/**
- * Send SNACs necessary to remove all SSI data from the server list, 
- * and then free the local copy as well.
- *
- * @param sess The oscar session.
- * @param conn The bos connection for this session.
- * @return Return 0 if no errors, otherwise return the error number.
- */
-int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn)
-{
-	int num;
-	struct aim_ssi_item *cur, **items;
-
-	for (cur=sess->ssi.items, num=0; cur; cur=cur->next)
-		num++;
-
-	if (!(items = g_new0(struct aim_ssi_item *, num)))
-		return -ENOMEM;
-
-	for (cur=sess->ssi.items, num=0; cur; cur=cur->next) {
-		items[num] = cur;
-		num++;
-	}
-
-	aim_ssi_addmoddel(sess, conn, items, num, AIM_CB_SSI_DEL);
-	g_free(items);
-	aim_ssi_dispatch(sess, conn);
-	aim_ssi_freelist(sess);
-
-	return 0;
-}
-
-/**
- * This "cleans" the ssi list.  It does a few things, with the intent of making 
- * sure there ain't nothin' wrong with your SSI.
- *   -Make sure all buddies are in a group, and all groups have the correct 
- *     additional data.
- *   -Make sure there are no empty groups in the list.  While there is nothing 
- *     wrong empty groups in the SSI, it's wiser to not have them.
- *
- * @param sess The oscar session.
- * @param conn The bos connection for this session.
- * @return Return 0 if no errors, otherwise return the error number.
- */
-int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
-{
-	unsigned int i;
-	struct aim_ssi_item *cur, *parentgroup;
-
-	/* Make sure we actually need to clean out the list */
-	for (cur=sess->ssi.items, i=0; cur && !i; cur=cur->next)
-		/* Any buddies directly in the master group */
-		if ((cur->type == AIM_SSI_TYPE_BUDDY) && (cur->gid == 0x0000))
-			i++;
-	if (!i)
-		return 0;
-
-	/* Remove all the additional data from all groups */
-	for (cur=sess->ssi.items; cur; cur=cur->next)
-		if ((cur->data) && (cur->type == AIM_SSI_TYPE_GROUP)) {
-			aim_freetlvchain((aim_tlvlist_t **)&cur->data);
-			cur->data = NULL;
-		}
-
-	/* If there are buddies directly in the master group, make sure  */
-	/* there is a group to put them in.  Any group, any group at all. */
-	for (cur=sess->ssi.items; ((cur) && ((cur->type != AIM_SSI_TYPE_BUDDY) || (cur->gid != 0x0000))); cur=cur->next);
-	if (!cur) {
-		for (parentgroup=sess->ssi.items; ((parentgroup) && (parentgroup->type!=AIM_SSI_TYPE_GROUP) && (parentgroup->gid==0x0000)); parentgroup=parentgroup->next);
-		if (!parentgroup) {
-			char *newgroup;
-			newgroup = (char*)g_malloc(strlen("Unknown")+1);
-			strcpy(newgroup, "Unknown");
-			aim_ssi_addgroups(sess, conn, &newgroup, 1);
-		}
-	}
-
-	/* Set parentgroup equal to any arbitray group */
-	for (parentgroup=sess->ssi.items; parentgroup->gid==0x0000 || parentgroup->type!=AIM_SSI_TYPE_GROUP; parentgroup=parentgroup->next);
-
-	/* If there are any buddies directly in the master group, put them in a real group */
-	for (cur=sess->ssi.items; cur; cur=cur->next)
-		if ((cur->type == AIM_SSI_TYPE_BUDDY) && (cur->gid == 0x0000)) {
-			aim_ssi_addmoddel(sess, conn, &cur, 1, AIM_CB_SSI_DEL);
-			cur->gid = parentgroup->gid;
-			aim_ssi_addmoddel(sess, conn, &cur, 1, AIM_CB_SSI_ADD);
-		}
-
-	/* Rebuild additional data for all groups */
-	for (parentgroup=sess->ssi.items; parentgroup; parentgroup=parentgroup->next)
-		if (parentgroup->type == AIM_SSI_TYPE_GROUP)
-			aim_ssi_itemlist_rebuildgroup(&sess->ssi.items, parentgroup);
-
-	/* Send a mod snac for all groups */
-	i = 0;
-	for (cur=sess->ssi.items; cur; cur=cur->next)
-		if (cur->type == AIM_SSI_TYPE_GROUP)
-			i++;
-	if (i > 0) {
-		/* Allocate an array of pointers to each of the groups */
-		struct aim_ssi_item **groups;
-		if (!(groups = g_new0(struct aim_ssi_item *, i)))
-			return -ENOMEM;
-
-		for (cur=sess->ssi.items, i=0; cur; cur=cur->next)
-			if (cur->type == AIM_SSI_TYPE_GROUP)
-				groups[i] = cur;
-
-		aim_ssi_addmoddel(sess, conn, groups, i, AIM_CB_SSI_MOD);
-		g_free(groups);
-	}
-
-	/* Send a del snac for any empty groups */
-	i = 0;
-	for (cur=sess->ssi.items; cur; cur=cur->next)
-		if ((cur->type == AIM_SSI_TYPE_GROUP) && !(cur->data))
-			i++;
-	if (i > 0) {
-		/* Allocate an array of pointers to each of the groups */
-		struct aim_ssi_item **groups;
-		if (!(groups = g_new0(struct aim_ssi_item *, i)))
-			return -ENOMEM;
-
-		for (cur=sess->ssi.items, i=0; cur; cur=cur->next)
-			if ((cur->type == AIM_SSI_TYPE_GROUP) && !(cur->data))
-				groups[i] = cur;
-
-		aim_ssi_addmoddel(sess, conn, groups, i, AIM_CB_SSI_DEL);
-		g_free(groups);
-	}
-
-	/* Begin sending SSI SNACs */
-	aim_ssi_dispatch(sess, conn);
 
 	return 0;
 }
@@ -998,57 +839,6 @@ int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned i
 	return 0;
 }
 
-/**
- * Stores your setting for whether you should show up as idle or not.
- *
- * @param sess The oscar session.
- * @param conn The bos connection for this session.
- * @param presence I think it's a bitmask, but I only know what one of the bits is:
- *        0x00000400 - Allow others to see your idle time
- * @return Return 0 if no errors, otherwise return the error number.
- */
-int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, guint32 presence) {
-	struct aim_ssi_item *cur; //, *tmp;
-//	guint16 j;
-	aim_tlv_t *tlv;
-
-	if (!sess || !conn)
-		return -EINVAL;
-
-	/* Look up the item */
-	cur = aim_ssi_itemlist_finditem(sess->ssi.items, NULL, NULL, AIM_SSI_TYPE_PRESENCEPREFS);
-
-	if (cur) {
-		/* The item exists */
-		if (cur->data && (tlv = aim_gettlv(cur->data, 0x00c9, 1))) {
-			/* Just change the value of the x00c9 TLV */
-			if (tlv->length != 4) {
-				tlv->length = 4;
-				g_free(tlv->value);
-				tlv->value = (guint8 *)g_malloc(4*sizeof(guint8));
-			}
-			aimutil_put32(tlv->value, presence);
-		} else {
-			/* Need to add the x00c9 TLV to the TLV chain */
-			aim_addtlvtochain32((aim_tlvlist_t**)&cur->data, 0x00c9, presence);
-		}
-
-		/* Send the mod item SNAC */
-		aim_ssi_addmoddel(sess, conn, &cur, 1, AIM_CB_SSI_MOD);
-	} else {
-		/* Need to add the item */
-		if (!(cur = aim_ssi_itemlist_add(&sess->ssi.items, NULL, NULL, AIM_SSI_TYPE_PRESENCEPREFS)))
-			return -ENOMEM;
-		aim_addtlvtochain32((aim_tlvlist_t**)&cur->data, 0x00c9, presence);
-		aim_ssi_addmoddel(sess, conn, &cur, 1, AIM_CB_SSI_ADD);
-	}
-
-	/* Begin sending SSI SNACs */
-	aim_ssi_dispatch(sess, conn);
-
-	return 0;
-}
-
 /*
  * Request SSI Rights.
  */
@@ -1069,37 +859,6 @@ static int parserights(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 		ret = userfunc(sess, rx);
 
 	return ret;
-}
-
-/*
- * Request SSI Data.
- *
- * The data will only be sent if it is newer than the posted local
- * timestamp and revision.
- * 
- * Note that the client should never increment the revision, only the server.
- * 
- */
-int aim_ssi_reqdata(aim_session_t *sess, aim_conn_t *conn, time_t localstamp, guint16 localrev)
-{
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-
-	if (!sess || !conn)
-		return -EINVAL;
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+4+2)))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, AIM_CB_FAM_SSI, AIM_CB_SSI_REQLIST, 0x0000, NULL, 0);
-
-	aim_putsnac(&fr->data, AIM_CB_FAM_SSI, AIM_CB_SSI_REQLIST, 0x0000, snacid);
-	aimbs_put32(&fr->data, localstamp);
-	aimbs_put16(&fr->data, localrev);
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
 }
 
 int aim_ssi_reqalldata(aim_session_t *sess, aim_conn_t *conn)

@@ -222,39 +222,6 @@ int aim_addtlvtochain32(aim_tlvlist_t **list, const guint16 t, const guint32 v)
 }
 
 /**
- * aim_addtlvtochain_availmsg - Add a ICQ availability message to a TLV chain
- * @list: Destination chain
- * @type: TLV type to add
- * @val: Value to add
- *
- * Adds a available message to a TLV chain
- *
- */
-int aim_addtlvtochain_availmsg(aim_tlvlist_t **list, const guint16 t, const char *msg)
-{
-	int ret;
-	guint16 unknown_data = 0x00;
-	guint8 add_data_len = 4;
-	guint16 msg_len = strlen(msg);
-	guint8 total_len = strlen(msg) + add_data_len;
-	guint8 *data, *cur;
-	guint8 alloc_len = msg_len + (3*sizeof(guint16)) + (2*sizeof(guint8));
-	data = cur = g_malloc(alloc_len);
-	
-	cur += aimutil_put16(cur, 2);
-	cur += aimutil_put8(cur, add_data_len);
-	cur += aimutil_put8(cur, total_len);
-	cur += aimutil_put16(cur, msg_len);
-	cur += aimutil_putstr(cur, msg, msg_len);
-	cur += aimutil_put16(cur, unknown_data);
-
-	ret = aim_addtlvtochain_raw(list, t, alloc_len, data);
-	g_free(data);
-
-	return ret;
-}
-
-/**
  * aim_addtlvtochain_caps - Add a capability block to a TLV chain
  * @list: Destination chain
  * @type: TLV type to add
@@ -277,18 +244,6 @@ int aim_addtlvtochain_caps(aim_tlvlist_t **list, const guint16 t, const guint32 
 	aim_putcap(&bs, caps);
 
 	return aim_addtlvtochain_raw(list, t, aim_bstream_curpos(&bs), buf);
-}
-
-int aim_addtlvtochain_userinfo(aim_tlvlist_t **list, guint16 type, aim_userinfo_t *ui)
-{
-	guint8 buf[1024]; /* bleh */
-	aim_bstream_t bs;
-
-	aim_bstream_init(&bs, buf, sizeof(buf));
-
-	aim_putuserinfo(&bs, ui);
-
-	return aim_addtlvtochain_raw(list, type, aim_bstream_curpos(&bs), buf);
 }
 
 /**

@@ -39,6 +39,4 @@
 #define AIM_CAPS_EXTCHAN2       0x00100000
 #define AIM_CAPS_LAST           0x00200000
 
-int aim_0002_000b(aim_session_t *sess, aim_conn_t *conn, const char *sn);
-
 #endif /* __OSCAR_INFO_H__ */

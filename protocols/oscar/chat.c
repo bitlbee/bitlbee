@@ -27,65 +27,6 @@ void aim_conn_kill_chat(aim_session_t *sess, aim_conn_t *conn)
 	return;
 }
 
-char *aim_chat_getname(aim_conn_t *conn)
-{
-	struct chatconnpriv *ccp;
-
-	if (!conn)
-		return NULL;
-
-	if (conn->type != AIM_CONN_TYPE_CHAT)
-		return NULL;
-
-	ccp = (struct chatconnpriv *)conn->priv;
-
-	return ccp->name;
-}
-
-/* XXX get this into conn.c -- evil!! */
-aim_conn_t *aim_chat_getconn(aim_session_t *sess, const char *name)
-{
-	aim_conn_t *cur;
-
-	for (cur = sess->connlist; cur; cur = cur->next) {
-		struct chatconnpriv *ccp = (struct chatconnpriv *)cur->priv;
-
-		if (cur->type != AIM_CONN_TYPE_CHAT)
-			continue;
-		if (!cur->priv) {
-			imcb_error(sess->aux_data, "chat connection with no name!");
-			continue;
-		}
-
-		if (strcmp(ccp->name, name) == 0)
-			break;
-	}
-
-	return cur;
-}
-
-int aim_chat_attachname(aim_conn_t *conn, guint16 exchange, const char *roomname, guint16 instance)
-{
-	struct chatconnpriv *ccp;
-
-	if (!conn || !roomname)
-		return -EINVAL;
-
-	if (conn->priv)
-		g_free(conn->priv);
-
-	if (!(ccp = g_malloc(sizeof(struct chatconnpriv))))
-		return -ENOMEM;
-
-	ccp->exchange = exchange;
-	ccp->name = g_strdup(roomname);
-	ccp->instance = instance;
-
-	conn->priv = (void *)ccp;
-
-	return 0;
-}
-
 /*
  * Send a Chat Message.
  *
@@ -249,18 +190,6 @@ int aim_chat_readroominfo(aim_bstream_t *bs, struct aim_chat_roominfo *outinfo)
 	namelen = aimbs_get8(bs);
 	outinfo->name = aimbs_getstr(bs, namelen);
 	outinfo->instance = aimbs_get16(bs);
-
-	return 0;
-}
-
-int aim_chat_leaveroom(aim_session_t *sess, const char *name)
-{
-	aim_conn_t *conn;
-
-	if (!(conn = aim_chat_getconn(sess, name)))
-		return -ENOENT;
-
-	aim_conn_close(conn);
 
 	return 0;
 }

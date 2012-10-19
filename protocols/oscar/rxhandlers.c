@@ -285,18 +285,6 @@ aim_rxcallback_t aim_callhandler(aim_session_t *sess, aim_conn_t *conn, guint16 
 	return aim_callhandler(sess, conn, family, AIM_CB_SPECIAL_DEFAULT);
 }
 
-void aim_clonehandlers(aim_session_t *sess, aim_conn_t *dest, aim_conn_t *src)
-{
-	struct aim_rxcblist_s *cur;
-
-	for (cur = (struct aim_rxcblist_s *)src->handlerlist; cur; cur = cur->next) {
-		aim_conn_addhandler(sess, dest, cur->family, cur->type, 
-						cur->handler, cur->flags);
-	}
-
-	return;
-}
-
 static int aim_callhandler_noparam(aim_session_t *sess, aim_conn_t *conn,guint16 family, guint16 type, aim_frame_t *ptr)
 {
 	aim_rxcallback_t userfunc;

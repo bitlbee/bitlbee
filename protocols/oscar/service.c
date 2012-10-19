@@ -360,28 +360,6 @@ int aim_rates_addparam(aim_session_t *sess, aim_conn_t *conn)
 	return 0;
 }
 
-/* Delete Rate Parameter (group 1, type 9) */
-int aim_rates_delparam(aim_session_t *sess, aim_conn_t *conn)
-{
-	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
-	aim_frame_t *fr;	
-	aim_snacid_t snacid;
-	struct rateclass *rc;
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 512)))
-		return -ENOMEM; 
-
-	snacid = aim_cachesnac(sess, 0x0001, 0x0009, 0x0000, NULL, 0);
-	aim_putsnac(&fr->data, 0x0001, 0x0009, 0x0000, snacid);
-
-	for (rc = ins->rates; rc; rc = rc->next)
-		aimbs_put16(&fr->data, rc->classid);
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
-}
-
 /* Rate Change (group 1, type 0x0a) */
 static int ratechange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
@@ -426,43 +404,6 @@ static int serverpause(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		return userfunc(sess, rx);
-
-	return 0;
-}
-
-/*
- * Service Pause Acknowledgement (group 1, type 0x0c)
- *
- * It is rather important that aim_sendpauseack() gets called for the exact
- * same connection that the Server Pause callback was called for, since
- * libfaim extracts the data for the SNAC from the connection structure.
- *
- * Of course, if you don't do that, more bad things happen than just what
- * libfaim can cause.
- *
- */
-int aim_sendpauseack(aim_session_t *sess, aim_conn_t *conn)
-{
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
-	struct snacgroup *sg;
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1024)))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, 0x0001, 0x000c, 0x0000, NULL, 0);
-	aim_putsnac(&fr->data, 0x0001, 0x000c, 0x0000, snacid);
-
-	/*
-	 * This list should have all the groups that the original 
-	 * Host Online / Server Ready said this host supports.  And 
-	 * we want them all back after the migration.
-	 */
-	for (sg = ins->groups; sg; sg = sg->next)
-		aimbs_put16(&fr->data, sg->group);
-
-	aim_tx_enqueue(sess, fr);
 
 	return 0;
 }
@@ -516,20 +457,6 @@ static int evilnotify(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 		return userfunc(sess, rx, newevil, &userinfo);
 
 	return 0;
-}
-
-/*
- * Idle Notification (group 1, type 0x11)
- *
- * Should set your current idle time in seconds.  Note that this should
- * never be called consecutively with a non-zero idle time.  That makes
- * OSCAR do funny things.  Instead, just set it once you go idle, and then
- * call it again with zero when you're back.
- *
- */
-int aim_bos_setidle(aim_session_t *sess, aim_conn_t *conn, guint32 idletime)
-{
-	return aim_genericreq_l(sess, conn, 0x0001, 0x0011, &idletime);
 }
 
 /*
@@ -636,17 +563,6 @@ int aim_bos_setprivacyflags(aim_session_t *sess, aim_conn_t *conn, guint32 flags
 	return aim_genericreq_l(sess, conn, 0x0001, 0x0014, &flags);
 }
 
-/*
- * No-op (group 1, type 0x16)
- *
- * WinAIM sends these every 4min or so to keep the connection alive.  Its not 
- * real necessary.
- *
- */
-int aim_nop(aim_session_t *sess, aim_conn_t *conn)
-{
-	return aim_genericreq_n(sess, conn, 0x0001, 0x0016);
-}
 
 /* 
  * Set client versions (group 1, subtype 0x17) 
@@ -806,94 +722,6 @@ static int memrequest(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 	g_free(modname);
 	aim_freetlvchain(&list);
-
-	return 0;
-}
-
-/* Client verification reply (group 1, subtype 0x20) */
-int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, guint32 offset, guint32 len, const guint8 *buf, guint8 flag)
-{
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-
-	if (!sess || !conn)
-		return -EINVAL;
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+2+16)))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, 0x0001, 0x0020, 0x0000, NULL, 0);
-
-	aim_putsnac(&fr->data, 0x0001, 0x0020, 0x0000, snacid);
-	aimbs_put16(&fr->data, 0x0010); /* md5 is always 16 bytes */
-
-	if ((flag == AIM_SENDMEMBLOCK_FLAG_ISHASH) && buf && (len == 0x10)) { /* we're getting a hash */
-
-		aimbs_putraw(&fr->data, buf, 0x10); 
-
-	} else if (buf && (len > 0)) { /* use input buffer */
-		md5_state_t state;
-		md5_byte_t digest[0x10];
-
-		md5_init(&state);	
-		md5_append(&state, (const md5_byte_t *)buf, len);
-		md5_finish(&state, digest);
-
-		aimbs_putraw(&fr->data, (guint8 *)digest, 0x10);
-
-	} else if (len == 0) { /* no length, just hash NULL (buf is optional) */
-		md5_state_t state;
-		guint8 nil = '\0';
-		md5_byte_t digest[0x10];
-
-		/*
-		 * These MD5 routines are stupid in that you have to have
-		 * at least one append.  So thats why this doesn't look 
-		 * real logical.
-		 */
-		md5_init(&state);
-		md5_append(&state, (const md5_byte_t *)&nil, 0);
-		md5_finish(&state, digest);
-
-		aimbs_putraw(&fr->data, (guint8 *)digest, 0x10);
-
-	} else {
-
-		/* 
-		 * This data is correct for AIM 3.5.1670.
-		 *
-		 * Using these blocks is as close to "legal" as you can get
-		 * without using an AIM binary.
-		 *
-		 */
-		if ((offset == 0x03ffffff) && (len == 0x03ffffff)) {
-
-#if 1 /* with "AnrbnrAqhfzcd" */
-			aimbs_put32(&fr->data, 0x44a95d26);
-			aimbs_put32(&fr->data, 0xd2490423);
-			aimbs_put32(&fr->data, 0x93b8821f);
-			aimbs_put32(&fr->data, 0x51c54b01);
-#else /* no filename */
-			aimbs_put32(&fr->data, 0x1df8cbae);
-			aimbs_put32(&fr->data, 0x5523b839);
-			aimbs_put32(&fr->data, 0xa0e10db3);
-			aimbs_put32(&fr->data, 0xa46d3b39);
-#endif
-
-/* len can't be 0 here anyway...
-		} else if ((offset == 0x00001000) && (len == 0x00000000)) {
-
-			aimbs_put32(&fr->data, 0xd41d8cd9);
-			aimbs_put32(&fr->data, 0x8f00b204);
-			aimbs_put32(&fr->data, 0xe9800998);
-			aimbs_put32(&fr->data, 0xecf8427e);
-*/
-		} else
-			imcb_error(sess->aux_data, "Warning: unknown hash request");
-
-	}
-
-	aim_tx_enqueue(sess, fr);
 
 	return 0;
 }

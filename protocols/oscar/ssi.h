@@ -44,7 +44,6 @@ struct aim_ssi_item {
 
 /* These build the actual SNACs and queue them to be sent */
 int aim_ssi_reqrights(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_reqdata(aim_session_t *sess, aim_conn_t *conn, time_t localstamp, guint16 localrev);
 int aim_ssi_reqalldata(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_enable(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_addmoddel(aim_session_t *sess, aim_conn_t *conn, struct aim_ssi_item **items, unsigned int num, guint16 subtype);
@@ -56,10 +55,8 @@ struct aim_ssi_item *aim_ssi_itemlist_find(struct aim_ssi_item *list, guint16 gi
 struct aim_ssi_item *aim_ssi_itemlist_finditem(struct aim_ssi_item *list, char *gn, char *sn, guint16 type);
 struct aim_ssi_item *aim_ssi_itemlist_findparent(struct aim_ssi_item *list, char *sn);
 int aim_ssi_getpermdeny(struct aim_ssi_item *list);
-guint32 aim_ssi_getpresence(struct aim_ssi_item *list);
 
 /* Send packets */
-int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num, unsigned int flags);
 int aim_ssi_addmastergroup(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_addgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num);
@@ -68,9 +65,7 @@ int aim_ssi_movebuddy(aim_session_t *sess, aim_conn_t *conn, char *oldgn, char *
 int aim_ssi_delbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num);
 int aim_ssi_delmastergroup(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_delgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num);
-int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned int num, guint16 type);
-int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, guint32 presence);
 int aim_ssi_auth_request(aim_session_t *sess, aim_conn_t *conn, char *uin, char *reason);
 int aim_ssi_auth_reply(aim_session_t *sess, aim_conn_t *conn, char *uin, int yesno, char *reason);
 

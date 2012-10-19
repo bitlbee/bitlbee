@@ -93,6 +93,5 @@ struct aim_icq_info {
 int aim_icq_reqofflinemsgs(aim_session_t *sess);
 int aim_icq_ackofflinemsgs(aim_session_t *sess);
 int aim_icq_getallinfo(aim_session_t *sess, const char *uin);
-int aim_icq_getsimpleinfo(aim_session_t *sess, const char *uin);
 
 #endif /* __OSCAR_ICQ_H__ */

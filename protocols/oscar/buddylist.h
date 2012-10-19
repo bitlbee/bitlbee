@@ -16,8 +16,4 @@
 #define AIM_CB_BUD_OFFGOING 0x000c
 #define AIM_CB_BUD_DEFAULT 0xffff
 
-/* aim_buddylist.c */
-int aim_add_buddy(aim_session_t *, aim_conn_t *, const char *);
-int aim_remove_buddy(aim_session_t *, aim_conn_t *, const char *);
-
 #endif /* __OSCAR_BUDDYLIST_H__ */

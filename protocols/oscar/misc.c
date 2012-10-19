@@ -13,56 +13,6 @@
 
 #include <aim.h> 
 
-/*
- * aim_bos_setbuddylist(buddylist)
- *
- * This just builds the "set buddy list" command then queues it.
- *
- * buddy_list = "Screen Name One&ScreenNameTwo&";
- *
- * TODO: Clean this up.  
- *
- * XXX: I can't stress the TODO enough.
- *
- */
-int aim_bos_setbuddylist(aim_session_t *sess, aim_conn_t *conn, const char *buddy_list)
-{
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-	int len = 0;
-	char *localcpy = NULL;
-	char *tmpptr = NULL;
-
-	if (!buddy_list || !(localcpy = g_strdup(buddy_list))) 
-		return -EINVAL;
-
-	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
-		len += 1 + strlen(tmpptr);
-		tmpptr = strtok(NULL, "&");
-	}
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+len)))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, 0x0003, 0x0004, 0x0000, NULL, 0);
-	aim_putsnac(&fr->data, 0x0003, 0x0004, 0x0000, snacid);
-
-	strncpy(localcpy, buddy_list, strlen(buddy_list) + 1);
-
-	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
-
-		aimbs_put8(&fr->data, strlen(tmpptr));
-		aimbs_putraw(&fr->data, (guint8 *)tmpptr, strlen(tmpptr));
-		tmpptr = strtok(NULL, "&");
-	}
-
-	aim_tx_enqueue(sess, fr);
-
-	g_free(localcpy);
-
-	return 0;
-}
-
 /* 
  * aim_bos_setprofile(profile)
  *
@@ -123,40 +73,6 @@ int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const char *profil
 int aim_bos_reqbuddyrights(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, 0x0003, 0x0002);
-}
-
-/*
- * Send a warning to destsn.
- * 
- * Flags:
- *  AIM_WARN_ANON  Send as an anonymous (doesn't count as much)
- *
- * returns -1 on error (couldn't alloc packet), 0 on success. 
- *
- */
-int aim_send_warning(aim_session_t *sess, aim_conn_t *conn, const char *destsn, guint32 flags)
-{
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-	guint16 outflags = 0x0000;
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, strlen(destsn)+13)))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, 0x0004, 0x0008, 0x0000, destsn, strlen(destsn)+1);
-
-	aim_putsnac(&fr->data, 0x0004, 0x0008, 0x0000, snacid);
-
-	if (flags & AIM_WARN_ANON)
-		outflags |= 0x0001;
-
-	aimbs_put16(&fr->data, outflags); 
-	aimbs_put8(&fr->data, strlen(destsn));
-	aimbs_putraw(&fr->data, (guint8 *)destsn, strlen(destsn));
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
 }
 
 /*
@@ -253,90 +169,6 @@ int aim_genericreq_s(aim_session_t *sess, aim_conn_t *conn, guint16 family, guin
 int aim_bos_reqlocaterights(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, 0x0002, 0x0002);
-}
-
-/* 
- * Set directory profile data (not the same as aim_bos_setprofile!)
- *
- * privacy: 1 to allow searching, 0 to disallow.
- */
-int aim_setdirectoryinfo(aim_session_t *sess, aim_conn_t *conn, const char *first, const char *middle, const char *last, const char *maiden, const char *nickname, const char *street, const char *city, const char *state, const char *zip, int country, guint16 privacy) 
-{
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-	aim_tlvlist_t *tl = NULL;
-
-
-	aim_addtlvtochain16(&tl, 0x000a, privacy);
-
-	if (first)
-		aim_addtlvtochain_raw(&tl, 0x0001, strlen(first), (guint8 *)first);
-	if (last)
-		aim_addtlvtochain_raw(&tl, 0x0002, strlen(last), (guint8 *)last);
-	if (middle)
-		aim_addtlvtochain_raw(&tl, 0x0003, strlen(middle), (guint8 *)middle);
-	if (maiden)
-		aim_addtlvtochain_raw(&tl, 0x0004, strlen(maiden), (guint8 *)maiden);
-
-	if (state)
-		aim_addtlvtochain_raw(&tl, 0x0007, strlen(state), (guint8 *)state);
-	if (city)
-		aim_addtlvtochain_raw(&tl, 0x0008, strlen(city), (guint8 *)city);
-
-	if (nickname)
-		aim_addtlvtochain_raw(&tl, 0x000c, strlen(nickname), (guint8 *)nickname);
-	if (zip)
-		aim_addtlvtochain_raw(&tl, 0x000d, strlen(zip), (guint8 *)zip);
-
-	if (street)
-		aim_addtlvtochain_raw(&tl, 0x0021, strlen(street), (guint8 *)street);
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+aim_sizetlvchain(&tl))))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, 0x0002, 0x0009, 0x0000, NULL, 0);
-	
-	aim_putsnac(&fr->data, 0x0002, 0x0009, 0x0000, snacid);
-	aim_writetlvchain(&fr->data, &tl);
-	aim_freetlvchain(&tl);
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
-}
-
-/* XXX pass these in better */
-int aim_setuserinterests(aim_session_t *sess, aim_conn_t *conn, const char *interest1, const char *interest2, const char *interest3, const char *interest4, const char *interest5, guint16 privacy)
-{
-	aim_frame_t *fr;
-	aim_tlvlist_t *tl = NULL;
-
-	/* ?? privacy ?? */
-	aim_addtlvtochain16(&tl, 0x000a, privacy);
-
-	if (interest1)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest1), (guint8 *)interest1);
-	if (interest2)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest2), (guint8 *)interest2);
-	if (interest3)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest3), (guint8 *)interest3);
-	if (interest4)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest4), (guint8 *)interest4);
-	if (interest5)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest5), (guint8 *)interest5);
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+aim_sizetlvchain(&tl))))
-		return -ENOMEM;
-
-	aim_cachesnac(sess, 0x0002, 0x000f, 0x0000, NULL, 0);
-
-	aim_putsnac(&fr->data, 0x0002, 0x000f, 0x0000, 0);
-	aim_writetlvchain(&fr->data, &tl);
-	aim_freetlvchain(&tl);
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
 }
 
 /*

@@ -8,27 +8,6 @@
 
 #include <aim.h>
 
-int aim_usersearch_address(aim_session_t *sess, aim_conn_t *conn, const char *address)
-{
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-
-	if (!sess || !conn || !address)
-		return -EINVAL;
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+strlen(address))))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, 0x000a, 0x0002, 0x0000, g_strdup(address), strlen(address)+1);
-	aim_putsnac(&fr->data, 0x000a, 0x0002, 0x0000, snacid);
-	
-	aimbs_putraw(&fr->data, (guint8 *)address, strlen(address)); 
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
-}
-
 /* XXX can this be integrated with the rest of the error handling? */
 static int error(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {

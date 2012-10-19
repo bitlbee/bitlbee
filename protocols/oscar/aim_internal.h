@@ -111,9 +111,6 @@ aim_snac_t *aim_remsnac(aim_session_t *, aim_snacid_t id);
 void aim_cleansnacs(aim_session_t *, int maxage);
 int aim_putsnac(aim_bstream_t *, guint16 family, guint16 type, guint16 flags, aim_snacid_t id);
 
-aim_conn_t *aim_cloneconn(aim_session_t *sess, aim_conn_t *src);
-void aim_clonehandlers(aim_session_t *sess, aim_conn_t *dest, aim_conn_t *src);
-
 int aim_oft_buildheader(unsigned char *,struct aim_fileheader_t *);
 
 int aim_parse_unknown(aim_session_t *, aim_frame_t *, ...);
@@ -194,12 +191,9 @@ int aim_freecookie(aim_session_t *sess, aim_msgcookie_t *cookie);
 int aim_cookie_free(aim_session_t *sess, aim_msgcookie_t *cookie);
 
 int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *);
-int aim_putuserinfo(aim_bstream_t *bs, aim_userinfo_t *info);
 
 int aim_chat_readroominfo(aim_bstream_t *bs, struct aim_chat_roominfo *outinfo);
 
-int aim_request_directim(aim_session_t *sess, const char *destsn, guint8 *ip, guint16 port, guint8 *ckret);
-int aim_request_sendfile(aim_session_t *sess, const char *sn, const char *filename, guint16 numfiles, guint32 totsize, guint8 *ip, guint16 port, guint8 *ckret);
 void aim_conn_close_rend(aim_session_t *sess, aim_conn_t *conn);
 void aim_conn_kill_rend(aim_session_t *sess, aim_conn_t *conn);
 
@@ -209,6 +203,5 @@ void aim_conn_kill_chat(aim_session_t *sess, aim_conn_t *conn);
 int aim_setversions(aim_session_t *sess, aim_conn_t *conn);
 int aim_reqrates(aim_session_t *, aim_conn_t *);
 int aim_rates_addparam(aim_session_t *, aim_conn_t *);
-int aim_rates_delparam(aim_session_t *, aim_conn_t *);
 
 #endif /* __AIM_INTERNAL_H__ */
