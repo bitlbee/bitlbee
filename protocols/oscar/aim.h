@@ -625,7 +625,6 @@ struct aim_fileheader_t *aim_getlisting(aim_session_t *sess, FILE *);
 #define AIM_CLIENTTYPE_WINAIM   0x0002
 #define AIM_CLIENTTYPE_WINAIM41 0x0003
 #define AIM_CLIENTTYPE_AOL_TOC  0x0004
-unsigned short aim_fingerprintclient(unsigned char *msghdr, int len);
 
 #define AIM_RATE_CODE_CHANGE     0x0001
 #define AIM_RATE_CODE_WARNING    0x0002

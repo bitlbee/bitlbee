@@ -23,67 +23,6 @@
 #include "im.h"
 #include "info.h"
 
-/*
- * Takes a msghdr (and a length) and returns a client type
- * code.  Note that this is *only a guess* and has a low likelihood
- * of actually being accurate.
- *
- * Its based on experimental data, with the help of Eric Warmenhoven
- * who seems to have collected a wide variety of different AIM clients.
- *
- *
- * Heres the current collection:
- *  0501 0003 0101 0101 01       AOL Mobile Communicator, WinAIM 1.0.414
- *  0501 0003 0101 0201 01       WinAIM 2.0.847, 2.1.1187, 3.0.1464, 
- *                                      4.3.2229, 4.4.2286
- *  0501 0004 0101 0102 0101     WinAIM 4.1.2010, libfaim (right here)
- *  0501 0001 0101 01            AOL v6.0, CompuServe 2000 v6.0, any
- *                                      TOC client
- *
- * Note that in this function, only the feature bytes are tested, since
- * the rest will always be the same.
- *
- */
-guint16 aim_fingerprintclient(guint8 *msghdr, int len)
-{
-	static const struct {
-		guint16 clientid;
-		int len;
-		guint8 data[10];
-	} fingerprints[] = {
-		/* AOL Mobile Communicator, WinAIM 1.0.414 */
-		{ AIM_CLIENTTYPE_MC, 
-		  3, {0x01, 0x01, 0x01}},
-
-		/* WinAIM 2.0.847, 2.1.1187, 3.0.1464, 4.3.2229, 4.4.2286 */
-		{ AIM_CLIENTTYPE_WINAIM, 
-		  3, {0x01, 0x01, 0x02}},
-
-		/* WinAIM 4.1.2010, libfaim */
-		{ AIM_CLIENTTYPE_WINAIM41,
-		  4, {0x01, 0x01, 0x01, 0x02}},
-
-		/* AOL v6.0, CompuServe 2000 v6.0, any TOC client */
-		{ AIM_CLIENTTYPE_AOL_TOC,
-		  1, {0x01}},
-
-		{ 0, 0}
-	};
-	int i;
-
-	if (!msghdr || (len <= 0))
-		return AIM_CLIENTTYPE_UNKNOWN;
-
-	for (i = 0; fingerprints[i].len; i++) {
-		if (fingerprints[i].len != len)
-			continue;
-		if (memcmp(fingerprints[i].data, msghdr, fingerprints[i].len) == 0)
-			return fingerprints[i].clientid;
-	}
-
-	return AIM_CLIENTTYPE_UNKNOWN;
-}
-
 /* This should be endian-safe now... but who knows... */
 guint16 aim_iconsum(const guint8 *buf, int buflen)
 {

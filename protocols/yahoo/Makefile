@@ -12,7 +12,7 @@ _SRCDIR_ := $(_SRCDIR_)protocols/yahoo/
 endif
 
 # [SH] Program variables
-objects = yahoo.o crypt.o libyahoo2.o yahoo_fn.o yahoo_httplib.o yahoo_util.o
+objects = yahoo.o libyahoo2.o yahoo_httplib.o yahoo_util.o
 
 CFLAGS += -DSTDC_HEADERS -DHAVE_STRING_H -DHAVE_STRCHR -DHAVE_MEMCPY -DHAVE_GLIB
 LFLAGS += -r

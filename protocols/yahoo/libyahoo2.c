@@ -82,7 +82,6 @@ char *strchr (), *strrchr ();
 #include "yahoo2.h"
 #include "yahoo_httplib.h"
 #include "yahoo_util.h"
-#include "yahoo_fn.h"
 
 #include "yahoo2_callbacks.h"
 #include "yahoo_debug.h"
@@ -429,8 +428,6 @@ static int count_inputs_with_id(int id)
 	LOG(("%d", c));
 	return c;
 }
-
-extern char *yahoo_crypt(char *, char *);
 
 /* Free a buddy list */
 static void yahoo_free_buddies(YList *list)
