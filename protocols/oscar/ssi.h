@@ -70,7 +70,6 @@ int aim_ssi_delmastergroup(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_delgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num);
 int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned int num, guint16 type);
-int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, guint8 permdeny, guint32 vismask);
 int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, guint32 presence);
 int aim_ssi_auth_request(aim_session_t *sess, aim_conn_t *conn, char *uin, char *reason);
 int aim_ssi_auth_reply(aim_session_t *sess, aim_conn_t *conn, char *uin, int yesno, char *reason);

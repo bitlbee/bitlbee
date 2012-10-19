@@ -605,7 +605,6 @@ int aim_send_warning(aim_session_t *sess, aim_conn_t *conn, const char *destsn, 
 int aim_nop(aim_session_t *, aim_conn_t *);
 int aim_flap_nop(aim_session_t *sess, aim_conn_t *conn);
 int aim_bos_setidle(aim_session_t *, aim_conn_t *, guint32);
-int aim_bos_changevisibility(aim_session_t *, aim_conn_t *, int, const char *);
 int aim_bos_setbuddylist(aim_session_t *, aim_conn_t *, const char *);
 int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const char *profile, const char *awaymsg, guint32 caps);
 int aim_bos_setgroupperm(aim_session_t *, aim_conn_t *, guint32 mask);

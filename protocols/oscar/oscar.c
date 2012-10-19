@@ -2102,47 +2102,6 @@ static int gaim_ssi_parseack( aim_session_t *sess, aim_frame_t *fr, ... )
 	return( 1 );
 }
 
-static void oscar_set_permit_deny(struct im_connection *ic) {
-	struct oscar_data *od = (struct oscar_data *)ic->proto_data;
-	if (od->icq) {
-		GSList *list;
-		char buf[MAXMSGLEN];
-		int at;
-
-		switch(ic->permdeny) {
-		case 1:
-			aim_bos_changevisibility(od->sess, od->conn, AIM_VISIBILITYCHANGE_DENYADD, ic->acc->user);
-			break;
-		case 2:
-			aim_bos_changevisibility(od->sess, od->conn, AIM_VISIBILITYCHANGE_PERMITADD, ic->acc->user);
-			break;
-		case 3:
-			list = ic->permit;
-			at = 0;
-			while (list) {
-				at += g_snprintf(buf + at, sizeof(buf) - at, "%s&", (char *)list->data);
-				list = list->next;
-			}
-			aim_bos_changevisibility(od->sess, od->conn, AIM_VISIBILITYCHANGE_PERMITADD, buf);
-			break;
-		case 4:
-			list = ic->deny;
-			at = 0;
-			while (list) {
-				at += g_snprintf(buf + at, sizeof(buf) - at, "%s&", (char *)list->data);
-				list = list->next;
-			}
-			aim_bos_changevisibility(od->sess, od->conn, AIM_VISIBILITYCHANGE_DENYADD, buf);
-			break;
-			default:
-			break;
-		}
-	} else {
-		if (od->sess->ssi.received_data)
-			aim_ssi_setpermdeny(od->sess, od->conn, ic->permdeny, 0xffffffff);
-	}
-}
-
 static void oscar_add_permit(struct im_connection *ic, char *who) {
 	struct oscar_data *od = (struct oscar_data *)ic->proto_data;
 	if (od->icq) {
@@ -2623,7 +2582,6 @@ void oscar_initmodule()
 	ret->add_deny = oscar_add_deny;
 	ret->rem_permit = oscar_rem_permit;
 	ret->rem_deny = oscar_rem_deny;
-	ret->set_permit_deny = oscar_set_permit_deny;
 	ret->send_typing = oscar_send_typing;
 	
 	ret->handle_cmp = aim_sncmp;
