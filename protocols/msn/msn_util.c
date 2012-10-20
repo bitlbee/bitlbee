@@ -29,13 +29,6 @@
 #include "soap.h"
 #include <ctype.h>
 
-int msn_logged_in( struct im_connection *ic )
-{
-	imcb_connected( ic );
-	
-	return( 0 );
-}
-
 static char *adlrml_entry( const char *handle_, msn_buddy_flags_t list )
 {
 	char *domain, handle[strlen(handle_)+1];

@@ -241,7 +241,6 @@ int msn_ns_sendmessage( struct im_connection *ic, struct bee_user *bu, const cha
 void msn_ns_oim_send_queue( struct im_connection *ic, GSList **msgq );
 
 /* msn_util.c */
-int msn_logged_in( struct im_connection *ic );
 int msn_buddy_list_add( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *realname_, const char *group );
 int msn_buddy_list_remove( struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *group );
 void msn_buddy_ask( bee_user_t *bu );

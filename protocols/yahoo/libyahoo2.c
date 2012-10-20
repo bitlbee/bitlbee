@@ -373,6 +373,7 @@ static struct yahoo_input_data * find_input_by_id(int id)
 }
 */
 
+#if 0
 static struct yahoo_input_data *find_input_by_id_and_webcam_user(int id,
 	const char *who)
 {
@@ -389,6 +390,7 @@ static struct yahoo_input_data *find_input_by_id_and_webcam_user(int id,
 	}
 	return NULL;
 }
+#endif
 
 static struct yahoo_input_data *find_input_by_id_and_type(int id,
 	enum yahoo_connection_type type)
@@ -2639,6 +2641,7 @@ static struct yahoo_packet *yahoo_getdata(struct yahoo_input_data *yid)
 	return pkt;
 }
 
+#if 0
 static struct yab *yahoo_yab_read(unsigned char *d, int len)
 {
 	char *st, *en;
@@ -2789,6 +2792,7 @@ static struct yab *yahoo_getyab(struct yahoo_input_data *yid)
 
 	return yab;
 }
+#endif
 
 static char *yahoo_getwebcam_master(struct yahoo_input_data *yid)
 {
@@ -3096,6 +3100,7 @@ static void yahoo_process_chatcat_connection(struct yahoo_input_data *yid,
 	}
 }
 
+#if 0
 static void yahoo_process_yab_connection(struct yahoo_input_data *yid, int over)
 {
 	struct yahoo_data *yd = yid->yd;
@@ -3155,6 +3160,7 @@ static void yahoo_process_yab_connection(struct yahoo_input_data *yid, int over)
 		YAHOO_CALLBACK(ext_yahoo_got_buddies) (yd->client_id,
 			yd->buddies);
 }
+#endif
 
 static void yahoo_process_search_connection(struct yahoo_input_data *yid,
 	int over)
@@ -3410,7 +3416,7 @@ static void yahoo_process_webcam_connection(struct yahoo_input_data *yid,
 static void (*yahoo_process_connection[]) (struct yahoo_input_data *,
 	int over) = {
 yahoo_process_pager_connection, yahoo_process_ft_connection,
-		yahoo_process_yab_connection,
+		NULL, /*yahoo_process_yab_connection, */
 		yahoo_process_webcam_master_connection,
 		yahoo_process_webcam_connection,
 		yahoo_process_chatcat_connection,
@@ -3754,6 +3760,7 @@ static void _yahoo_http_connected(int id, void *fd, int error, void *data)
 		YAHOO_INPUT_READ, yid);
 }
 
+#if 0
 /* FIXME Get address book from address.yahoo.com instead */
 void yahoo_get_yab(int id)
 {
@@ -3855,6 +3862,7 @@ void yahoo_set_yab(int id, struct yab *yab)
 	yahoo_http_post(yid->yd->client_id, url, buff, size,
 		_yahoo_http_post_connected, yad);
 }
+#endif
 
 void yahoo_set_identity_status(int id, const char *identity, int active)
 {
@@ -4286,6 +4294,7 @@ void yahoo_conference_message(int id, const char *from, YList *who,
 	yahoo_packet_free(pkt);
 }
 
+#if 0
 void yahoo_get_chatrooms(int id, int chatroomid)
 {
 	struct yahoo_data *yd = find_conn_by_id(id);
@@ -4728,6 +4737,7 @@ void yahoo_send_picture(int id, const char *name, unsigned long size,
 {
 	/* Not Implemented */
 }
+#endif
 
 /* File Transfer */
 static YList *active_file_transfers = NULL;
@@ -4755,6 +4765,7 @@ struct send_file_data {
 	void *data;
 };
 
+#if 0
 static char *yahoo_get_random(void)
 {
 	int i = 0;
@@ -4784,6 +4795,7 @@ static char *yahoo_get_random(void)
 
 	return strdup(out);
 }
+#endif
 
 static int _are_same_id(const void *sfd1, const void *id)
 {
@@ -5164,6 +5176,7 @@ static void yahoo_process_filetransfer(struct yahoo_input_data *yid,
 	}
 }
 
+#if 0
 void yahoo_send_file(int id, const char *who, const char *msg,
 	const char *name, unsigned long size,
 	yahoo_get_fd_callback callback, void *data)
@@ -5242,6 +5255,7 @@ void yahoo_send_file_transfer_response(int client_id, int response, char *id, vo
 	if(response == YAHOO_FILE_TRANSFER_REJECT)
 		yahoo_remove_active_transfer(sfd);
 }
+#endif
 
 static void yahoo_process_ft_connection(struct yahoo_input_data *yid, int over)
 {
@@ -5355,6 +5369,7 @@ static void yahoo_process_ft_connection(struct yahoo_input_data *yid, int over)
 
 /* End File Transfer */
 
+#if 0
 enum yahoo_status yahoo_current_status(int id)
 {
 	struct yahoo_data *yd = find_conn_by_id(id);
@@ -5404,6 +5419,7 @@ const char *yahoo_get_cookie(int id, const char *which)
 		return yd->login_cookie;
 	return NULL;
 }
+#endif
 
 const char *yahoo_get_profile_url(void)
 {
