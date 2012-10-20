@@ -61,6 +61,7 @@ extern struct yahoo_callbacks *yc;
 
 extern enum yahoo_log_level log_level;
 
+#if 0
 int yahoo_tcp_readline(char *ptr, int maxlen, void *fd)
 {
 	int n, rc;
@@ -92,6 +93,7 @@ int yahoo_tcp_readline(char *ptr, int maxlen, void *fd)
 	*ptr = 0;
 	return (n);
 }
+#endif
 
 static int url_to_host_port_path(const char *url,
 	char *host, int *port, char *path, int *ssl)
@@ -182,6 +184,7 @@ char *yahoo_urlencode(const char *instr)
 	return (str);
 }
 
+#if 0
 char *yahoo_urldecode(const char *instr)
 {
 	int ipos = 0, bpos = 0;
@@ -278,6 +281,7 @@ char *yahoo_xmldecode(const char *instr)
 
 	return (str);
 }
+#endif
 
 typedef void (*http_connected) (int id, void *fd, int error);
 

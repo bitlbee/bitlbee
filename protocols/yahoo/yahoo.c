@@ -569,10 +569,6 @@ void ext_yahoo_got_buddies( int id, YList *buds )
 	}
 }
 
-void ext_yahoo_got_ignore( int id, YList *igns )
-{
-}
-
 void ext_yahoo_got_identities( int id, YList *ids )
 {
 }
@@ -811,13 +807,6 @@ void ext_yahoo_got_buddy_change_group( int id, const char *me, const char *who,
 	struct im_connection *ic = byahoo_get_ic_by_id( id );
 	
 	imcb_add_buddy( ic, who, new_group );
-}
-
-/* Because we don't want asynchronous connects in BitlBee, and because
-   libyahoo doesn't seem to use this one anyway, this one is now defunct. */
-int ext_yahoo_connect(const char *host, int port)
-{
-	return -1;
 }
 
 static void byahoo_accept_conf( void *data )

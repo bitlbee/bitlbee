@@ -112,7 +112,7 @@ struct yahoo_callbacks {
  * 	id   - the id that identifies the server connection
  * 	igns - the ignore list
  */
-	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_ignore) (int id, YList *igns);
+//	void YAHOO_CALLBACK_TYPE(ext_yahoo_got_ignore) (int id, YList *igns);
 
 /*
  * Name: ext_yahoo_got_identities
@@ -677,7 +677,7 @@ struct yahoo_callbacks {
  * Returns:
  * 	a unix file descriptor to the socket
  */
-	int YAHOO_CALLBACK_TYPE(ext_yahoo_connect) (const char *host, int port);
+//	int YAHOO_CALLBACK_TYPE(ext_yahoo_connect) (const char *host, int port);
 
 /*
  * Name: ext_yahoo_connect_async

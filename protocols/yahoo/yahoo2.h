@@ -120,7 +120,7 @@ extern "C" {
 /* utf8 is whether msg is a utf8 string or not. */
 	void yahoo_send_im(int id, const char *from, const char *who,
 		const char *msg, int utf8, int picture);
-	void yahoo_send_buzz(int id, const char *from, const char *who);
+//	void yahoo_send_buzz(int id, const char *from, const char *who);
 /* if type is true, send typing notice, else send stopped typing notice */
 	void yahoo_send_typing(int id, const char *from, const char *who,
 		int typ);

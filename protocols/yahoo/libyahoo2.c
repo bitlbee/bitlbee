@@ -120,11 +120,6 @@ int yahoo_log_message(char *fmt, ...)
 	return YAHOO_CALLBACK(ext_yahoo_log) ("%s", out);
 }
 
-int yahoo_connect(char *host, int port)
-{
-	return YAHOO_CALLBACK(ext_yahoo_connect) (host, port);
-}
-
 static enum yahoo_log_level log_level = YAHOO_LOG_NONE;
 
 enum yahoo_log_level yahoo_get_log_level()
@@ -3580,10 +3575,12 @@ void *yahoo_get_fd(int id)
 		return yid->fd;
 }
 
+#if 0
 void yahoo_send_buzz(int id, const char *from, const char *who)
 {
 	yahoo_send_im(id, from, who, "<ding>", 1, 0);
 }
+#endif
 
 void yahoo_send_im(int id, const char *from, const char *who, const char *what,
 	int utf8, int picture)
@@ -3725,6 +3722,7 @@ void yahoo_logoff(int id)
 
 }
 
+#if 0
 void yahoo_get_list(int id)
 {
 	struct yahoo_input_data *yid =
@@ -3744,6 +3742,7 @@ void yahoo_get_list(int id)
 		yahoo_packet_free(pkt);
 	}
 }
+#endif
 
 static void _yahoo_http_connected(int id, void *fd, int error, void *data)
 {
@@ -3862,7 +3861,6 @@ void yahoo_set_yab(int id, struct yab *yab)
 	yahoo_http_post(yid->yd->client_id, url, buff, size,
 		_yahoo_http_post_connected, yad);
 }
-#endif
 
 void yahoo_set_identity_status(int id, const char *identity, int active)
 {
@@ -3902,6 +3900,7 @@ void yahoo_refresh(int id)
 		yahoo_packet_free(pkt);
 	}
 }
+#endif
 
 void yahoo_keepalive(int id)
 {
@@ -3919,6 +3918,7 @@ void yahoo_keepalive(int id)
 	yahoo_packet_free(pkt);
 }
 
+#if 0
 void yahoo_chat_keepalive(int id)
 {
 	struct yahoo_input_data *yid =
@@ -3936,6 +3936,7 @@ void yahoo_chat_keepalive(int id)
 	yahoo_send_packet(yid, pkt, 0);
 	yahoo_packet_free(pkt);
 }
+#endif
 
 void yahoo_add_buddy(int id, const char *who, const char *group,
 	const char *msg)
@@ -4028,6 +4029,7 @@ void yahoo_confirm_buddy(int id, const char *who, int reject, const char *msg)
 	yahoo_packet_free(pkt);
 }
 
+#if 0
 void yahoo_ignore_buddy(int id, const char *who, int unignore)
 {
 	struct yahoo_input_data *yid =
@@ -4074,6 +4076,7 @@ void yahoo_stealth_buddy(int id, const char *who, int unstealth)
 	yahoo_send_packet(yid, pkt, 0);
 	yahoo_packet_free(pkt);
 }
+#endif
 
 void yahoo_change_buddy_group(int id, const char *who, const char *old_group,
 	const char *new_group)
@@ -4102,6 +4105,7 @@ void yahoo_change_buddy_group(int id, const char *who, const char *old_group,
 	yahoo_packet_free(pkt);
 }
 
+#if 0
 void yahoo_group_rename(int id, const char *old_group, const char *new_group)
 {
 	struct yahoo_input_data *yid =
@@ -4153,6 +4157,7 @@ void yahoo_conference_addinvite(int id, const char *from, const char *who,
 
 	yahoo_packet_free(pkt);
 }
+#endif
 
 void yahoo_conference_invite(int id, const char *from, YList *who,
 	const char *room, const char *msg)
