@@ -1,3 +1,9 @@
+bitlbee (3.0.6-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 28 Oct 2012 19:58:33 +0000
+
 bitlbee (3.0.5-1.2) unstable; urgency=low
 
   * Non-maintainer upload.
