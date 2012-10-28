@@ -127,6 +127,7 @@ xt_status jabber_pkt_iq( struct xt_node *node, gpointer data )
 			                           XMLNS_CHATSTATES,
 			                           XMLNS_MUC,
 			                           XMLNS_PING,
+			                           XMLNS_RECEIPTS,
 			                           XMLNS_SI,
 			                           XMLNS_BYTESTREAMS,
 			                           XMLNS_FILETRANSFER,
