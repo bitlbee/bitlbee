@@ -4,9 +4,9 @@ Mon,  8 Jul 2002 13:17:42 +0200.
 The source can be downloaded from http://www.bitlbee.org/
 
 Authors: Wilmer van der Gaast, Sjoerd Hemminga, Jelmer Vernooij,
-         Maurits Dijkstra and others.
+         Maurits Dijkstra, Geert Mulders, Miklos Vajna and others.
 
-Mainly Copyright 2002-2004 Wilmer van der Gaast.
+Mainly Copyright 2002-2012 Wilmer van der Gaast.
 Some parts are borrowed from Gaim (version 0.58) <http://gaim.sf.net/>.
 For the copyrights on those parts, please read the Gaim source code.
 

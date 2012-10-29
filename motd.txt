@@ -13,6 +13,6 @@ information.
 
 The developers of the Bee hope you have a buzzing time.
 
-* BitlBee development team: wilmer, jelmer, Maurits
+* BitlBee development team.
  
 ... Buzzing, haha, get it?
