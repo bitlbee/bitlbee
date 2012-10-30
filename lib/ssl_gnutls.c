@@ -84,8 +84,10 @@ void ssl_init( void )
 	{
 		gnutls_certificate_set_x509_trust_file( xcred, global.conf->cafile, GNUTLS_X509_FMT_PEM );
 		
-		/* Not needed in GnuTLS 2.11+ but we support older versions for now. */
-		gnutls_certificate_set_verify_flags( xcred, GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT );
+		/* Not needed in GnuTLS 2.11+ (enabled by default there) so
+		   don't do it (resets possible other defaults). */
+		if( !gnutls_check_version( "2.11" ) )
+			gnutls_certificate_set_verify_flags( xcred, GNUTLS_VERIFY_ALLOW_X509_V1_CA_CRT );
 	}
 	initialized = TRUE;
 	
@@ -107,12 +109,12 @@ void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function fun
 {
 	struct scd *conn = g_new0( struct scd, 1 );
 	
-	conn->fd = proxy_connect( host, port, ssl_connected, conn );
 	conn->func = func;
 	conn->data = data;
 	conn->inpa = -1;
 	conn->hostname = g_strdup( host );
 	conn->verify = verify && global.conf->cafile;
+	conn->fd = proxy_connect( host, port, ssl_connected, conn );
 	
 	if( conn->fd < 0 )
 	{
