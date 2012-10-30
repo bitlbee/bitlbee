@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Wilmer van der Gaast <wilmer@gaast.net>
 Uploaders: Jelmer Vernooij <jelmer@samba.org>
 Standards-Version: 3.9.1
-Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | libnss-dev (>= 1.6), po-debconf, libpurple-dev, libotr2-dev, debhelper (>= 6.0.7~), asciidoc
+Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, gnutls-dev | libgnutls-dev, po-debconf, libpurple-dev, libotr2-dev, debhelper (>= 6.0.7~), asciidoc
 Homepage: http://www.bitlbee.org/
 Vcs-Bzr: http://code.bitlbee.org/bitlbee/
 DM-Upload-Allowed: yes
