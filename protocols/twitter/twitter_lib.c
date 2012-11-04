@@ -36,6 +36,7 @@
 #include "base64.h"
 #include "xmltree.h"
 #include "twitter_lib.h"
+#include "json_util.h"
 #include <ctype.h>
 #include <errno.h>
 
@@ -187,12 +188,12 @@ char *twitter_parse_error(struct http_request *req)
 	return ret ? ret : req->status_string;
 }
 
-static struct xt_node *twitter_parse_response(struct im_connection *ic, struct http_request *req)
+static json_value *twitter_parse_response(struct im_connection *ic, struct http_request *req)
 {
 	gboolean logging_in = !(ic->flags & OPT_LOGGED_IN);
 	gboolean periodic;
 	struct twitter_data *td = ic->proto_data;
-	struct xt_node *ret;
+	json_value *ret;
 	char path[64] = "", *s;
 	
 	if ((s = strchr(req->request, ' '))) {
@@ -226,7 +227,7 @@ static struct xt_node *twitter_parse_response(struct im_connection *ic, struct h
 		td->http_fails = 0;
 	}
 
-	if ((ret = xt_from_string(req->reply_body, req->body_size)) == NULL) {
+	if ((ret = json_parse(req->reply_body)) == NULL) {
 		imcb_error(ic, "Could not retrieve %s: %s",
 			   path, "XML parse error");
 	}
@@ -250,44 +251,32 @@ void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor)
 }
 
 /**
- * Function to help fill a list.
- */
-static xt_status twitter_xt_next_cursor(struct xt_node *node, struct twitter_xml_list *txl)
-{
-	char *end = NULL;
-
-	if (node->text)
-		txl->next_cursor = g_ascii_strtoll(node->text, &end, 10);
-	if (end == NULL)
-		txl->next_cursor = -1;
-
-	return XT_HANDLED;
-}
-
-/**
  * Fill a list of ids.
  */
-static xt_status twitter_xt_get_friends_id_list(struct xt_node *node, struct twitter_xml_list *txl)
+static xt_status twitter_xt_get_friends_id_list(json_value *node, struct twitter_xml_list *txl)
 {
-	struct xt_node *child;
+	json_value *c;
+	int i;
 
 	// Set the list type.
 	txl->type = TXL_ID;
 
-	// The root <statuses> node should hold the list of statuses <status>
-	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("ids", child->name) == 0) {
-			struct xt_node *idc;
-			for (idc = child->children; idc; idc = idc->next)
-				if (g_strcasecmp(idc->name, "id") == 0)
-					txl->list = g_slist_prepend(txl->list,
-						g_memdup(idc->text, idc->text_len + 1));
-		} else if (g_strcasecmp("next_cursor", child->name) == 0) {
-			twitter_xt_next_cursor(child, txl);
-		}
-	}
+	c = json_o_get(node, "ids");
+	if (!c || c->type != json_array)
+		return XT_ABORT;
 
+	for (i = 0; i < c->u.array.length; i ++) {
+		txl->list = g_slist_prepend(txl->list,
+			g_strdup_printf("%ld", c->u.array.values[i]->u.integer));
+		
+	}
+	
+	c = json_o_get(node, "next_cursor");
+	if (c && c->type == json_integer)
+		txl->next_cursor = c->u.integer;
+	else
+		txl->next_cursor = -1;
+	
 	return XT_HANDLED;
 }
 
@@ -299,7 +288,7 @@ static void twitter_get_users_lookup(struct im_connection *ic);
 static void twitter_http_get_friends_ids(struct http_request *req)
 {
 	struct im_connection *ic;
-	struct xt_node *parsed;
+	json_value *parsed;
 	struct twitter_xml_list *txl;
 	struct twitter_data *td;
 
@@ -321,8 +310,9 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	// Parse the data.
 	if (!(parsed = twitter_parse_response(ic, req)))
 		return;
+	
 	twitter_xt_get_friends_id_list(parsed, txl);
-	xt_free_node(parsed);
+	json_value_free(parsed);
 
 	td->follow_ids = txl->list;
 	if (txl->next_cursor)
@@ -337,7 +327,7 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	txl_free(txl);
 }
 
-static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_list *txl);
+static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list *txl);
 static void twitter_http_get_users_lookup(struct http_request *req);
 
 static void twitter_get_users_lookup(struct im_connection *ic)
@@ -378,7 +368,7 @@ static void twitter_get_users_lookup(struct im_connection *ic)
 static void twitter_http_get_users_lookup(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct xt_node *parsed;
+	json_value *parsed;
 	struct twitter_xml_list *txl;
 	GSList *l = NULL;
 	struct twitter_xml_user *user;
@@ -394,7 +384,7 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		return;
 	twitter_xt_get_users(parsed, txl);
-	xt_free_node(parsed);
+	json_value_free(parsed);
 
 	// Add the users as buddies.
 	for (l = txl->list; l; l = g_slist_next(l)) {
@@ -409,48 +399,28 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 }
 
 /**
- * Function to fill a twitter_xml_user struct.
- * It sets:
- *  - the name and
- *  - the screen_name.
- */
-static xt_status twitter_xt_get_user(struct xt_node *node, struct twitter_xml_user *txu)
-{
-	struct xt_node *child;
-
-	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("name", child->name) == 0) {
-			txu->name = g_memdup(child->text, child->text_len + 1);
-		} else if (g_strcasecmp("screen_name", child->name) == 0) {
-			txu->screen_name = g_memdup(child->text, child->text_len + 1);
-		}
-	}
-	return XT_HANDLED;
-}
-
-/**
  * Function to fill a twitter_xml_list struct.
  * It sets:
  *  - all <user>s from the <users> element.
  */
-static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_list *txl)
+static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list *txl)
 {
 	struct twitter_xml_user *txu;
-	struct xt_node *child;
+	int i;
 
 	// Set the type of the list.
 	txl->type = TXL_USER;
 
+	if (!node || node->type != json_array)
+		return XT_ABORT;
+
 	// The root <users> node should hold the list of users <user>
 	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("user", child->name) == 0) {
-			txu = g_new0(struct twitter_xml_user, 1);
-			twitter_xt_get_user(child, txu);
-			// Put the item in the front of the list.
-			txl->list = g_slist_prepend(txl->list, txu);
-		}
+	for (i = 0; i < node->u.array.length; i ++) {
+		txu = g_new0(struct twitter_xml_user, 1);
+		txu->name = g_strdup(json_o_str(node->u.array.values[i], "name"));
+		txu->screen_name = g_strdup(json_o_str(node->u.array.values[i], "screen_name"));
+		txl->list = g_slist_prepend(txl->list, txu);
 	}
 
 	return XT_HANDLED;
@@ -490,7 +460,7 @@ static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_
 				txs->created_at = mktime_utc(&parsed);
 		} else if (g_strcasecmp("user", child->name) == 0) {
 			txs->user = g_new0(struct twitter_xml_user, 1);
-			twitter_xt_get_user(child, txs->user);
+//			twitter_xt_get_user(child, txs->user);
 		} else if (g_strcasecmp("id", child->name) == 0) {
 			txs->id = g_ascii_strtoull(child->text, NULL, 10);
 		} else if (g_strcasecmp("in_reply_to_status_id", child->name) == 0) {
@@ -578,7 +548,7 @@ static xt_status twitter_xt_get_status_list(struct im_connection *ic, struct xt_
 				}
 			}
 		} else if (g_strcasecmp("next_cursor", child->name) == 0) {
-			twitter_xt_next_cursor(child, txl);
+//			twitter_xt_next_cursor(child, txl);
 		}
 	}
 
@@ -920,7 +890,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		goto end;
 	twitter_xt_get_status_list(ic, parsed, txl);
-	xt_free_node(parsed);
+//	json_value_free(parsed);
 
 	td->home_timeline_obj = txl;
 
@@ -953,7 +923,7 @@ static void twitter_http_get_mentions(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		goto end;
 	twitter_xt_get_status_list(ic, parsed, txl);
-	xt_free_node(parsed);
+//	json_value_free(parsed);
 
 	td->mentions_obj = txl;
 
