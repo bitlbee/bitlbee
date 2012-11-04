@@ -1031,7 +1031,7 @@ void twitter_status_destroy(struct im_connection *ic, guint64 id)
 {
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_DESTROY_URL,
-	                      (unsigned long long) id, ".xml");
+	                      (unsigned long long) id, ".json");
 	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }
@@ -1040,7 +1040,7 @@ void twitter_status_retweet(struct im_connection *ic, guint64 id)
 {
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_RETWEET_URL,
-	                      (unsigned long long) id, ".xml");
+	                      (unsigned long long) id, ".json");
 	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }
@@ -1066,7 +1066,7 @@ void twitter_favourite_tweet(struct im_connection *ic, guint64 id)
 {
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_FAVORITE_CREATE_URL,
-	                      (unsigned long long) id, ".xml");
+	                      (unsigned long long) id, ".json");
 	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }
