@@ -188,6 +188,7 @@ char *twitter_parse_error(struct http_request *req)
 	return ret ? ret : req->status_string;
 }
 
+/* TODO: NULL means failure, but not always that the connection is dead. This sucks for callers. */
 static json_value *twitter_parse_response(struct im_connection *ic, struct http_request *req)
 {
 	gboolean logging_in = !(ic->flags & OPT_LOGGED_IN);
@@ -266,6 +267,9 @@ static xt_status twitter_xt_get_friends_id_list(json_value *node, struct twitter
 		return XT_ABORT;
 
 	for (i = 0; i < c->u.array.length; i ++) {
+		if (c->u.array.values[i]->type != json_integer)
+			continue;
+		
 		txl->list = g_slist_prepend(txl->list,
 			g_strdup_printf("%ld", c->u.array.values[i]->u.integer));
 		
