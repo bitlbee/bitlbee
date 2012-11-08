@@ -271,7 +271,7 @@ static xt_status twitter_xt_get_friends_id_list(json_value *node, struct twitter
 			continue;
 		
 		txl->list = g_slist_prepend(txl->list,
-			g_strdup_printf("%ld", c->u.array.values[i]->u.integer));
+			g_strdup_printf("%lld", c->u.array.values[i]->u.integer));
 		
 	}
 	
@@ -402,6 +402,17 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 	twitter_get_users_lookup(ic);
 }
 
+struct twitter_xml_user *twitter_xt_get_user(const json_value *node)
+{
+	struct twitter_xml_user *txu;
+	
+	txu = g_new0(struct twitter_xml_user, 1);
+	txu->name = g_strdup(json_o_str(node, "name"));
+	txu->screen_name = g_strdup(json_o_str(node, "screen_name"));
+	
+	return txu;
+}
+
 /**
  * Function to fill a twitter_xml_list struct.
  * It sets:
@@ -421,10 +432,9 @@ static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list 
 	// The root <users> node should hold the list of users <user>
 	// Walk over the nodes children.
 	for (i = 0; i < node->u.array.length; i ++) {
-		txu = g_new0(struct twitter_xml_user, 1);
-		txu->name = g_strdup(json_o_str(node->u.array.values[i], "name"));
-		txu->screen_name = g_strdup(json_o_str(node->u.array.values[i], "screen_name"));
-		txl->list = g_slist_prepend(txl->list, txu);
+		txu = twitter_xt_get_user(node->u.array.values[i]);
+		if (txu)
+			txl->list = g_slist_prepend(txl->list, txu);
 	}
 
 	return XT_HANDLED;
@@ -444,31 +454,38 @@ static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list 
  *  - the status id and
  *  - the user in a twitter_xml_user struct.
  */
-static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_status *txs)
+static xt_status twitter_xt_get_status(const json_value *node, struct twitter_xml_status *txs)
 {
-	struct xt_node *child, *rt = NULL;
+	const json_value *c, *rt = NULL, *entities = NULL;
+	int i;
+	
+	if (node->type != json_object)
+		return XT_ABORT;
 
-	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("text", child->name) == 0) {
-			txs->text = g_memdup(child->text, child->text_len + 1);
-		} else if (g_strcasecmp("retweeted_status", child->name) == 0) {
-			rt = child;
-		} else if (g_strcasecmp("created_at", child->name) == 0) {
+	for (i = 0; i < node->u.object.length; i ++) {
+		const char *k = node->u.object.values[i].name;
+		const json_value *v = node->u.object.values[i].value;
+		
+		if (strcmp("text", k) == 0 && v->type == json_string) {
+			txs->text = g_memdup(v->u.string.ptr, v->u.string.length);
+		} else if (strcmp("retweeted_status", k) == 0 && v->type == json_object) {
+			rt = v;
+		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
 			struct tm parsed;
 
 			/* Very sensitive to changes to the formatting of
 			   this field. :-( Also assumes the timezone used
 			   is UTC since C time handling functions suck. */
-			if (strptime(child->text, TWITTER_TIME_FORMAT, &parsed) != NULL)
+			if (strptime(v->u.string.ptr, TWITTER_TIME_FORMAT, &parsed) != NULL)
 				txs->created_at = mktime_utc(&parsed);
-		} else if (g_strcasecmp("user", child->name) == 0) {
-			txs->user = g_new0(struct twitter_xml_user, 1);
-//			twitter_xt_get_user(child, txs->user);
-		} else if (g_strcasecmp("id", child->name) == 0) {
-			txs->id = g_ascii_strtoull(child->text, NULL, 10);
-		} else if (g_strcasecmp("in_reply_to_status_id", child->name) == 0) {
-			txs->reply_to = g_ascii_strtoull(child->text, NULL, 10);
+		} else if (strcmp("user", k) == 0 && v->type == json_object) {
+			txs->user = twitter_xt_get_user(v);
+		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
+			txs->id = v->u.integer;
+		} else if (strcmp("in_reply_to_status_id", k) == 0 && v->type == json_integer) {
+			txs->reply_to = v->u.integer;
+		} else if (strcmp("entities", k) == 0 && v->type == json_object) {
+			txs->reply_to = v->u.integer;
 		}
 	}
 
@@ -484,29 +501,29 @@ static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_
 		g_free(txs->text);
 		txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
 		txs_free(rtxs);
-	} else {
-		struct xt_node *urls, *url;
-		
-		urls = xt_find_path(node, "entities");
-		if (urls != NULL)
-			urls = urls->children;
-		for (; urls; urls = urls->next) {
-			if (strcmp(urls->name, "urls") != 0 && strcmp(urls->name, "media") != 0)
+	} else if (entities && NULL) {
+		JSON_O_FOREACH (entities, k, v) {
+			int i;
+			
+			if (v->type != json_array)
+				continue;
+			if (strcmp(k, "urls") != 0 && strcmp(k, "media") != 0)
 				continue;
 			
-			for (url = urls ? urls->children : NULL; url; url = url->next) {
-				/* "short" is a reserved word. :-P */
-				struct xt_node *kort = xt_find_node(url->children, "url");
-				struct xt_node *disp = xt_find_node(url->children, "display_url");
+			for (i = 0; i < v->u.array.length; i ++) {
+				if (v->u.array.values[i]->type != json_object)
+					continue;
+				
+				const char *kort = json_o_str(v->u.array.values[i], "url");
+				const char *disp = json_o_str(v->u.array.values[i], "display_url");
 				char *pos, *new;
 				
-				if (!kort || !kort->text || !disp || !disp->text ||
-				    !(pos = strstr(txs->text, kort->text)))
+				if (!kort || !disp || !(pos = strstr(txs->text, kort)))
 					continue;
 				
 				*pos = '\0';
-				new = g_strdup_printf("%s%s &lt;%s&gt;%s", txs->text, kort->text,
-				                      disp->text, pos + strlen(kort->text));
+				new = g_strdup_printf("%s%s &lt;%s&gt;%s", txs->text, kort,
+				                      disp, pos + strlen(kort));
 				
 				g_free(txs->text);
 				txs->text = new;
@@ -523,36 +540,36 @@ static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_
  *  - all <status>es within the <status> element and
  *  - the next_cursor.
  */
-static xt_status twitter_xt_get_status_list(struct im_connection *ic, struct xt_node *node,
+static xt_status twitter_xt_get_status_list(struct im_connection *ic, const json_value *node,
 					    struct twitter_xml_list *txl)
 {
 	struct twitter_xml_status *txs;
-	struct xt_node *child;
+	json_value *c;
 	bee_user_t *bu;
+	int i;
 
 	// Set the type of the list.
 	txl->type = TXL_STATUS;
+	
+	if (node->type != json_array)
+		return XT_ABORT;
 
 	// The root <statuses> node should hold the list of statuses <status>
 	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("status", child->name) == 0) {
-			txs = g_new0(struct twitter_xml_status, 1);
-			twitter_xt_get_status(child, txs);
-			// Put the item in the front of the list.
-			txl->list = g_slist_prepend(txl->list, txs);
+	for (i = 0; i < node->u.array.length; i ++) {
+		txs = g_new0(struct twitter_xml_status, 1);
+		twitter_xt_get_status(node->u.array.values[i], txs);
+		// Put the item in the front of the list.
+		txl->list = g_slist_prepend(txl->list, txs);
 
-			if (txs->user && txs->user->screen_name &&
-			    (bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
-				struct twitter_user_data *tud = bu->data;
+		if (txs->user && txs->user->screen_name &&
+		    (bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
+			struct twitter_user_data *tud = bu->data;
 
-				if (txs->id > tud->last_id) {
-					tud->last_id = txs->id;
-					tud->last_time = txs->created_at;
-				}
+			if (txs->id > tud->last_id) {
+				tud->last_id = txs->id;
+				tud->last_time = txs->created_at;
 			}
-		} else if (g_strcasecmp("next_cursor", child->name) == 0) {
-//			twitter_xt_next_cursor(child, txl);
 		}
 	}
 
@@ -878,7 +895,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
-	struct xt_node *parsed;
+	json_value *parsed;
 	struct twitter_xml_list *txl;
 
 	// Check if the connection is still active.
@@ -911,7 +928,7 @@ static void twitter_http_get_mentions(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
-	struct xt_node *parsed;
+	json_value *parsed;
 	struct twitter_xml_list *txl;
 
 	// Check if the connection is still active.

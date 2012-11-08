@@ -26,7 +26,7 @@
 
 #include "json_util.h"
 
-json_value *json_o_get( json_value *obj, json_char *name )
+json_value *json_o_get( const json_value *obj, const json_char *name )
 { 
 	int i;
 	
@@ -40,12 +40,22 @@ json_value *json_o_get( json_value *obj, json_char *name )
 	return NULL;
 }
 
-const char *json_o_str( json_value *obj, json_char *name )
+const char *json_o_str( const json_value *obj, const json_char *name )
 { 
 	json_value *ret = json_o_get( obj, name );
 	
-	if( ret )
+	if( ret && ret->type == json_string )
 		return ret->u.string.ptr;
+	else
+		return NULL;
+}
+
+char *json_o_strdup( const json_value *obj, const json_char *name )
+{
+	json_value *ret = json_o_get( obj, name );
+	
+	if( ret && ret->type == json_string && ret->u.string.ptr )
+		return g_memdup( ret->u.string.ptr, ret->u.string.length + 1 );
 	else
 		return NULL;
 }

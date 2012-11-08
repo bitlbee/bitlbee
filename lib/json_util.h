@@ -23,5 +23,12 @@
 
 #include "json.h"
 
-json_value *json_o_get( json_value *obj, json_char *name );
-const char *json_o_str( json_value *obj, json_char *name );
+#define JSON_O_FOREACH(o, k, v) \
+	char *k; json_value *v; int __i; \
+	for( __i = 0; k = (o)->u.object.values[__i].name, \
+	              v = (o)->u.object.values[__i].value, \
+	              __i < (o)->u.object.length; __i ++ )
+
+json_value *json_o_get( const json_value *obj, const json_char *name );
+const char *json_o_str( const json_value *obj, const json_char *name );
+char *json_o_strdup( const json_value *obj, const json_char *name );
