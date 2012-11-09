@@ -42,7 +42,7 @@
 #define TWITTER_FEATURED_USERS_URL "/statuses/featured.json"
 #define TWITTER_FRIENDS_TIMELINE_URL "/statuses/friends_timeline.json"
 #define TWITTER_HOME_TIMELINE_URL "/statuses/home_timeline.json"
-#define TWITTER_MENTIONS_URL "/statuses/mentions.json"
+#define TWITTER_MENTIONS_URL "/statuses/mentions_timeline.json"
 #define TWITTER_USER_TIMELINE_URL "/statuses/user_timeline.json"
 
 /* Users URLs */

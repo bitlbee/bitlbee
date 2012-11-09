@@ -173,6 +173,8 @@ char *twitter_parse_error(struct http_request *req)
 	g_free(ret);
 	ret = NULL;
 
+	/* EX:
+	{"errors":[{"message":"Rate limit exceeded","code":88}]} */
 	if (req->body_size > 0) {
 		root = xt_from_string(req->reply_body, req->body_size);
 		
@@ -188,7 +190,8 @@ char *twitter_parse_error(struct http_request *req)
 	return ret ? ret : req->status_string;
 }
 
-/* TODO: NULL means failure, but not always that the connection is dead. This sucks for callers. */
+/* WATCH OUT: This function might or might not destroy your connection.
+   Sub-optimal indeed, but just be careful when this returns NULL! */
 static json_value *twitter_parse_response(struct im_connection *ic, struct http_request *req)
 {
 	gboolean logging_in = !(ic->flags & OPT_LOGGED_IN);
@@ -456,7 +459,7 @@ static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list 
  */
 static xt_status twitter_xt_get_status(const json_value *node, struct twitter_xml_status *txs)
 {
-	const json_value *c, *rt = NULL, *entities = NULL;
+	const json_value *rt = NULL, *entities = NULL;
 	int i;
 	
 	if (node->type != json_object)
@@ -467,7 +470,7 @@ static xt_status twitter_xt_get_status(const json_value *node, struct twitter_xm
 		const json_value *v = node->u.object.values[i].value;
 		
 		if (strcmp("text", k) == 0 && v->type == json_string) {
-			txs->text = g_memdup(v->u.string.ptr, v->u.string.length);
+			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
 		} else if (strcmp("retweeted_status", k) == 0 && v->type == json_object) {
 			rt = v;
 		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
@@ -485,7 +488,7 @@ static xt_status twitter_xt_get_status(const json_value *node, struct twitter_xm
 		} else if (strcmp("in_reply_to_status_id", k) == 0 && v->type == json_integer) {
 			txs->reply_to = v->u.integer;
 		} else if (strcmp("entities", k) == 0 && v->type == json_object) {
-			txs->reply_to = v->u.integer;
+			entities = v;
 		}
 	}
 
@@ -501,7 +504,7 @@ static xt_status twitter_xt_get_status(const json_value *node, struct twitter_xm
 		g_free(txs->text);
 		txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
 		txs_free(rtxs);
-	} else if (entities && NULL) {
+	} else if (entities) {
 		JSON_O_FOREACH (entities, k, v) {
 			int i;
 			
@@ -544,7 +547,6 @@ static xt_status twitter_xt_get_status_list(struct im_connection *ic, const json
 					    struct twitter_xml_list *txl)
 {
 	struct twitter_xml_status *txs;
-	json_value *c;
 	bee_user_t *bu;
 	int i;
 
@@ -916,6 +918,9 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	td->home_timeline_obj = txl;
 
       end:
+	if (!g_slist_find(twitter_connections, ic))
+		return;
+
 	td->flags |= TWITTER_GOT_TIMELINE;
 
 	twitter_flush_timeline(ic);
@@ -949,6 +954,9 @@ static void twitter_http_get_mentions(struct http_request *req)
 	td->mentions_obj = txl;
 
       end:
+	if (!g_slist_find(twitter_connections, ic))
+		return;
+
 	td->flags |= TWITTER_GOT_MENTIONS;
 
 	twitter_flush_timeline(ic);
