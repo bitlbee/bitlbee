@@ -77,7 +77,7 @@ typedef struct _json_value
    union
    {
       int boolean;
-      long integer;
+      long long integer;
       double dbl;
 
       struct
