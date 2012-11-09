@@ -969,7 +969,7 @@ static void twitter_http_post(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
-	struct xt_node *parsed, *node;
+	json_value *parsed, *id;
 
 	// Check if the connection is still active.
 	if (!g_slist_find(twitter_connections, ic))
@@ -981,9 +981,8 @@ static void twitter_http_post(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		return;
 	
-	if ((node = xt_find_node(parsed, "status")) &&
-	    (node = xt_find_node(node->children, "id")) && node->text)
-		td->last_status_id = g_ascii_strtoull(node->text, NULL, 10);
+	if ((id = json_o_get(parsed, "id")) && id->type == json_integer)
+		td->last_status_id = id->u.integer;
 }
 
 /**
