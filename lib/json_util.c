@@ -30,7 +30,7 @@ json_value *json_o_get( const json_value *obj, const json_char *name )
 { 
 	int i;
 	
-	if( obj->type != json_object )
+	if( !obj || obj->type != json_object )
 		return NULL;
 
 	for( i = 0; i < obj->u.object.length; ++ i)

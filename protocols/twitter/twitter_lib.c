@@ -168,23 +168,21 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 char *twitter_parse_error(struct http_request *req)
 {
 	static char *ret = NULL;
-	struct xt_node *root, *node, *err;
+	json_value *root, *err;
 
 	g_free(ret);
 	ret = NULL;
 
-	/* EX:
-	{"errors":[{"message":"Rate limit exceeded","code":88}]} */
 	if (req->body_size > 0) {
-		root = xt_from_string(req->reply_body, req->body_size);
-		
-		for (node = root; node; node = node->next)
-			if ((err = xt_find_node(node->children, "error")) && err->text_len > 0) {
-				ret = g_strdup_printf("%s (%s)", req->status_string, err->text);
-				break;
-			}
-
-		xt_free_node(root);
+		root = json_parse(req->reply_body);
+		err = json_o_get(root, "errors");
+		if (err->type == json_array && (err = err->u.array.values[0]) &&
+		    err->type == json_object) {
+			const char *msg = json_o_str(err, "message");
+			if (msg)
+				ret = g_strdup_printf("%s (%s)", req->status_string, msg);
+		}
+		json_value_free(root);
 	}
 
 	return ret ? ret : req->status_string;
@@ -215,7 +213,8 @@ static json_value *twitter_parse_response(struct im_connection *ic, struct http_
 		/* IIRC Twitter once had an outage where they were randomly
 		   throwing 401s so I'll keep treating this one as fatal
 		   only during login. */
-		imcb_error(ic, "Authentication failure");
+		imcb_error(ic, "Authentication failure (%s)",
+		               twitter_parse_error(req));
 		imc_logout(ic, FALSE);
 		return NULL;
 	} else if (req->status_code != 200) {
