@@ -34,7 +34,6 @@
 #include "url.h"
 #include "misc.h"
 #include "base64.h"
-#include "xmltree.h"
 #include "twitter_lib.h"
 #include "json_util.h"
 #include <ctype.h>
@@ -256,7 +255,7 @@ void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor)
 /**
  * Fill a list of ids.
  */
-static xt_status twitter_xt_get_friends_id_list(json_value *node, struct twitter_xml_list *txl)
+static gboolean twitter_xt_get_friends_id_list(json_value *node, struct twitter_xml_list *txl)
 {
 	json_value *c;
 	int i;
@@ -266,7 +265,7 @@ static xt_status twitter_xt_get_friends_id_list(json_value *node, struct twitter
 
 	c = json_o_get(node, "ids");
 	if (!c || c->type != json_array)
-		return XT_ABORT;
+		return FALSE;
 
 	for (i = 0; i < c->u.array.length; i ++) {
 		if (c->u.array.values[i]->type != json_integer)
@@ -283,7 +282,7 @@ static xt_status twitter_xt_get_friends_id_list(json_value *node, struct twitter
 	else
 		txl->next_cursor = -1;
 	
-	return XT_HANDLED;
+	return TRUE;
 }
 
 static void twitter_get_users_lookup(struct im_connection *ic);
@@ -333,7 +332,7 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	txl_free(txl);
 }
 
-static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list *txl);
+static gboolean twitter_xt_get_users(json_value *node, struct twitter_xml_list *txl);
 static void twitter_http_get_users_lookup(struct http_request *req);
 
 static void twitter_get_users_lookup(struct im_connection *ic)
@@ -420,7 +419,7 @@ struct twitter_xml_user *twitter_xt_get_user(const json_value *node)
  * It sets:
  *  - all <user>s from the <users> element.
  */
-static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list *txl)
+static gboolean twitter_xt_get_users(json_value *node, struct twitter_xml_list *txl)
 {
 	struct twitter_xml_user *txu;
 	int i;
@@ -429,7 +428,7 @@ static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list 
 	txl->type = TXL_USER;
 
 	if (!node || node->type != json_array)
-		return XT_ABORT;
+		return FALSE;
 
 	// The root <users> node should hold the list of users <user>
 	// Walk over the nodes children.
@@ -439,7 +438,7 @@ static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list 
 			txl->list = g_slist_prepend(txl->list, txu);
 	}
 
-	return XT_HANDLED;
+	return TRUE;
 }
 
 #ifdef __GLIBC__
@@ -456,18 +455,14 @@ static xt_status twitter_xt_get_users(json_value *node, struct twitter_xml_list 
  *  - the status id and
  *  - the user in a twitter_xml_user struct.
  */
-static xt_status twitter_xt_get_status(const json_value *node, struct twitter_xml_status *txs)
+static gboolean twitter_xt_get_status(const json_value *node, struct twitter_xml_status *txs)
 {
 	const json_value *rt = NULL, *entities = NULL;
-	int i;
 	
 	if (node->type != json_object)
-		return XT_ABORT;
+		return FALSE;
 
-	for (i = 0; i < node->u.object.length; i ++) {
-		const char *k = node->u.object.values[i].name;
-		const json_value *v = node->u.object.values[i].value;
-		
+	JSON_O_FOREACH (node, k, v) {
 		if (strcmp("text", k) == 0 && v->type == json_string) {
 			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
 		} else if (strcmp("retweeted_status", k) == 0 && v->type == json_object) {
@@ -495,9 +490,9 @@ static xt_status twitter_xt_get_status(const json_value *node, struct twitter_xm
 	   wasn't truncated because it may be lying. */
 	if (rt) {
 		struct twitter_xml_status *rtxs = g_new0(struct twitter_xml_status, 1);
-		if (twitter_xt_get_status(rt, rtxs) != XT_HANDLED) {
+		if (!twitter_xt_get_status(rt, rtxs)) {
 			txs_free(rtxs);
-			return XT_HANDLED;
+			return TRUE;
 		}
 
 		g_free(txs->text);
@@ -533,7 +528,7 @@ static xt_status twitter_xt_get_status(const json_value *node, struct twitter_xm
 		}
 	}
 
-	return XT_HANDLED;
+	return TRUE;
 }
 
 /**
@@ -542,8 +537,8 @@ static xt_status twitter_xt_get_status(const json_value *node, struct twitter_xm
  *  - all <status>es within the <status> element and
  *  - the next_cursor.
  */
-static xt_status twitter_xt_get_status_list(struct im_connection *ic, const json_value *node,
-					    struct twitter_xml_list *txl)
+static gboolean twitter_xt_get_status_list(struct im_connection *ic, const json_value *node,
+                                           struct twitter_xml_list *txl)
 {
 	struct twitter_xml_status *txs;
 	bee_user_t *bu;
@@ -553,7 +548,7 @@ static xt_status twitter_xt_get_status_list(struct im_connection *ic, const json
 	txl->type = TXL_STATUS;
 	
 	if (node->type != json_array)
-		return XT_ABORT;
+		return FALSE;
 
 	// The root <statuses> node should hold the list of statuses <status>
 	// Walk over the nodes children.
@@ -574,7 +569,7 @@ static xt_status twitter_xt_get_status_list(struct im_connection *ic, const json
 		}
 	}
 
-	return XT_HANDLED;
+	return TRUE;
 }
 
 static char *twitter_msg_add_id(struct im_connection *ic,
