@@ -56,6 +56,7 @@ struct twitter_data
 	
 	guint64 last_status_id; /* For undo */
 	gint main_loop_id;
+	struct http_request *stream;
 	struct groupchat *timeline_gc;
 	gint http_fails;
 	twitter_flags_t flags;

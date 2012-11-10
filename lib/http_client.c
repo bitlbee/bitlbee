@@ -281,6 +281,7 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 			memcpy( req->sbuf + req->sblen, buffer, st );
 			req->bytes_read += st;
 			req->sblen += st;
+			req->sbuf[req->sblen] = '\0';
 			req->reply_body = req->sbuf + pos;
 			req->body_size = req->sblen - pos;
 		}
