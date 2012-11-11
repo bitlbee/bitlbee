@@ -957,9 +957,7 @@ static void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 	}
 
 	g_free(args[1]);
-	if (td->timeline_id) {
-		g_free(args[5]);
-	}
+	g_free(args[5]);
 }
 
 /**
@@ -985,7 +983,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		goto end;
 	twitter_xt_get_status_list(ic, parsed, txl);
-//	json_value_free(parsed);
+	json_value_free(parsed);
 
 	td->home_timeline_obj = txl;
 
@@ -1021,7 +1019,7 @@ static void twitter_http_get_mentions(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		goto end;
 	twitter_xt_get_status_list(ic, parsed, txl);
-//	json_value_free(parsed);
+	json_value_free(parsed);
 
 	td->mentions_obj = txl;
 
