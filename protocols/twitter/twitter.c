@@ -4,6 +4,7 @@
 *  Simple module to facilitate twitter functionality.                       *
 *                                                                           *
 *  Copyright 2009 Geert Mulders <g.c.w.m.mulders@gmail.com>                 *
+*  Copyright 2010-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -65,11 +66,18 @@ static void twitter_main_loop_start(struct im_connection *ic)
 
 	// Run this once. After this queue the main loop function.
 	twitter_main_loop(ic, -1, 0);
-
-	// Queue the main_loop
-	// Save the return value, so we can remove the timeout on logout.
-	td->main_loop_id =
-	    b_timeout_add(set_getint(&ic->acc->set, "fetch_interval") * 1000, twitter_main_loop, ic);
+	
+	if (set_getbool(&ic->acc->set, "stream")) {
+		/* That fetch was just to get backlog, the stream will give
+		   us the rest. \o/ */
+		twitter_open_stream(ic);
+	} else {
+		/* Not using the streaming API, so keep polling the old-
+		   fashioned way. :-( */
+		td->main_loop_id =
+		    b_timeout_add(set_getint(&ic->acc->set, "fetch_interval") * 1000,
+		                  twitter_main_loop, ic);
+	}
 }
 
 static void twitter_oauth_start(struct im_connection *ic);
@@ -278,6 +286,9 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "show_old_mentions", "20", set_eval_int, acc);
 
 	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
+	
+	s = set_add(&acc->set, "stream", "true", set_eval_bool, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY;
 }
 
 /**

@@ -175,7 +175,7 @@ char *twitter_parse_error(struct http_request *req)
 	if (req->body_size > 0) {
 		root = json_parse(req->reply_body);
 		err = json_o_get(root, "errors");
-		if (err->type == json_array && (err = err->u.array.values[0]) &&
+		if (err && err->type == json_array && (err = err->u.array.values[0]) &&
 		    err->type == json_object) {
 			const char *msg = json_o_str(err, "message");
 			if (msg)
@@ -528,7 +528,7 @@ static gboolean twitter_xt_get_status(const json_value *node, struct twitter_xml
 		}
 	}
 
-	return TRUE;
+	return txs->text && txs->user && txs->id;
 }
 
 /**
@@ -726,15 +726,19 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList * list
 	}
 }
 
-static void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor);
-static void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor);
+static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o);
 
 static void twitter_http_stream(struct http_request *req)
 {
-	int len;
-	int i;
+	struct im_connection *ic = req->data;
+	//struct twitter_data *td = ic->proto_data;
+	json_value *parsed;
+	int len, i;
 	char c;
-	json_value *j;
+	
+	if (!g_slist_find(twitter_connections, ic))
+		return;
+	//td = ic->proto_data;;
 	
 	printf( "%d bytes in stream\n", req->body_size );
 	
@@ -762,12 +766,53 @@ static void twitter_http_stream(struct http_request *req)
 	req->reply_body[len] = '\0';
 	
 	printf("JSON: %s\n", req->reply_body);
-	printf("parsed: %p\n", (j = json_parse(req->reply_body)));
-	json_value_free(j);
+	printf("parsed: %p\n", (parsed = json_parse(req->reply_body)));
+	if (parsed) {
+		twitter_stream_handle_object(ic, parsed);
+	}
+	json_value_free(parsed);
 	req->reply_body[len] = c;
 	
 	http_flush_bytes(req, len);
+	
+	/* One notification might bring multiple events! */
+	if (req->body_size > 0)
+		twitter_http_stream(req);
 }
+
+static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o)
+{
+	struct twitter_xml_status *txs = g_new0(struct twitter_xml_status, 1);
+	
+	if (twitter_xt_get_status(o, txs)) {
+		GSList *output = g_slist_append(NULL, txs);
+		twitter_groupchat(ic, output);
+		txs_free(txs);
+		g_slist_free(output);
+		return TRUE;
+	}
+	txs_free(txs);
+	return FALSE;
+}
+
+gboolean twitter_open_stream(struct im_connection *ic)
+{
+	struct twitter_data *td = ic->proto_data;
+	char *args[4] = {"with", "followings", "delimited", "length"};
+	
+	if ((td->stream = twitter_http(ic, TWITTER_USER_STREAM_URL,
+	                               twitter_http_stream, ic, 0, args, 4))) {
+		/* This flag must be enabled or we'll get no data until EOF
+		   (which err, kind of, defeats the purpose of a streaming API). */
+		td->stream->flags |= HTTPC_STREAMING;
+		return TRUE;
+	}
+	
+	return FALSE;
+}
+
+static void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor);
+static void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor);
 
 /**
  * Get the timeline with optionally mentions
@@ -790,23 +835,6 @@ void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor)
 
 	if (include_mentions) {
 		twitter_get_mentions(ic, next_cursor);
-	}
-	
-	static int bla = 0;
-	
-	if (bla)
-		return;
-	bla = 1;
-	
-	char *args[4];
-	args[0] = "with";
-	args[1] = "followings";
-	args[2] = "delimited";
-	args[3] = "length";
-	
-	if ((td->stream = twitter_http(ic, "https://userstream.twitter.com/1.1/user.json",
-	                               twitter_http_stream, ic, 0, args, 4))) {
-		td->stream->flags |= HTTPC_STREAMING;
 	}
 }
 

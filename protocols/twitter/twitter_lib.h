@@ -78,6 +78,9 @@
 /* Report spam */
 #define TWITTER_REPORT_SPAM_URL "/report_spam.json"
 
+#define TWITTER_USER_STREAM_URL "https://userstream.twitter.com/1.1/user.json"
+
+gboolean twitter_open_stream(struct im_connection *ic);
 void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
