@@ -373,6 +373,7 @@ static void twitter_logout(struct im_connection *ic)
 		imcb_chat_free(td->timeline_gc);
 
 	if (td) {
+		http_close(td->stream);
 		oauth_info_free(td->oauth_info);
 		g_free(td->user);
 		g_free(td->prefix);

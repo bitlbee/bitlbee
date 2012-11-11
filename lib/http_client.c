@@ -567,11 +567,33 @@ static gboolean http_handle_headers( struct http_request *req )
 
 void http_flush_bytes( struct http_request *req, size_t len )
 {
-	if( len > 0 && len <= req->body_size )
+	if( len <= 0 || len > req->body_size || !( req->flags & HTTPC_STREAMING ) )
+		return;
+	
+	req->reply_body += len;
+	req->body_size -= len;
+	
+	if( req->reply_body - req->sbuf >= 512 )
 	{
-		req->reply_body += len;
-		req->body_size -= len;
+		printf( "Wasting %ld bytes, cleaning up stream buffer\n", req->reply_body - req->sbuf );
+		char *new = g_memdup( req->reply_body, req->body_size + 1 );
+		g_free( req->sbuf );
+		req->reply_body = req->sbuf = new;
+		req->sblen = req->body_size;
 	}
+}
+
+void http_close( struct http_request *req )
+{
+	if( !req )
+		return;
+	
+	if( req->ssl )
+		ssl_disconnect( req->ssl );
+	else
+		closesocket( req->fd );
+	
+	http_free( req );
 }
 
 static void http_free( struct http_request *req )

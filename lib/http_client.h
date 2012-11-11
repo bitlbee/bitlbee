@@ -88,3 +88,4 @@ struct http_request *http_dorequest_url( char *url_string, http_input_function f
 
 /* For streaming connections only; flushes len bytes at the start of the buffer. */
 void http_flush_bytes( struct http_request *req, size_t len );
+void http_close( struct http_request *req );
