@@ -71,6 +71,7 @@ static void twitter_main_loop_start(struct im_connection *ic)
 		/* That fetch was just to get backlog, the stream will give
 		   us the rest. \o/ */
 		twitter_open_stream(ic);
+		ic->flags |= OPT_PONGS;
 	} else {
 		/* Not using the streaming API, so keep polling the old-
 		   fashioned way. :-( */

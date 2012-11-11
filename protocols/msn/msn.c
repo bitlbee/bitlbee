@@ -52,6 +52,7 @@ static void msn_login( account_t *acc )
 	struct msn_data *md = g_new0( struct msn_data, 1 );
 	
 	ic->proto_data = md;
+	ic->flags |= OPT_PONGS | OPT_PONGED;
 	
 	if( strchr( acc->user, '@' ) == NULL )
 	{

@@ -576,6 +576,10 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 		if( num_parts >= 7 )
 			handler->msglen = atoi( cmd[6] );
 	}
+	else if( strcmp( cmd[0], "QNG" ) == 0 )
+	{
+		ic->flags |= OPT_PONGED;
+	}
 	else if( isdigit( cmd[0][0] ) )
 	{
 		int num = atoi( cmd[0] );

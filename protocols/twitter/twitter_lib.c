@@ -739,6 +739,7 @@ static void twitter_http_stream(struct http_request *req)
 	if (!g_slist_find(twitter_connections, ic))
 		return;
 	
+	ic->flags |= OPT_PONGED;
 	td = ic->proto_data;
 	
 	if ((req->flags & HTTPC_EOF) || !req->reply_body) {
