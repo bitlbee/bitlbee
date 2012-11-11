@@ -731,12 +731,22 @@ static gboolean twitter_stream_handle_object(struct im_connection *ic, json_valu
 static void twitter_http_stream(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
+	struct twitter_data *td;
 	json_value *parsed;
 	int len = 0;
 	char c, *nl;
 	
 	if (!g_slist_find(twitter_connections, ic))
 		return;
+	
+	td = ic->proto_data;
+	
+	if ((req->flags & HTTPC_EOF) || !req->reply_body) {
+		td->stream = NULL;
+		imcb_error(ic, "Stream closed (%s)", req->status_string);
+		imc_logout(ic, TRUE);
+		return;
+	}
 	
 	printf( "%d bytes in stream\n", req->body_size );
 	

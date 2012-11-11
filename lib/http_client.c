@@ -301,6 +301,8 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 	return FALSE;
 
 eof:
+	req->flags |= HTTPC_EOF;
+	
 	/* Maybe if the webserver is overloaded, or when there's bad SSL
 	   support... */
 	if( req->bytes_read == 0 )
