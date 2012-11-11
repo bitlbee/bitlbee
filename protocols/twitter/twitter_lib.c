@@ -731,49 +731,39 @@ static gboolean twitter_stream_handle_object(struct im_connection *ic, json_valu
 static void twitter_http_stream(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	//struct twitter_data *td = ic->proto_data;
 	json_value *parsed;
-	int len, i;
-	char c;
+	int len = 0;
+	char c, *nl;
 	
 	if (!g_slist_find(twitter_connections, ic))
 		return;
-	//td = ic->proto_data;;
 	
 	printf( "%d bytes in stream\n", req->body_size );
 	
-	/* m/^[\d\s]*/      /* why is there a second commend here? :-) */
-	for (i = 0; i < req->body_size; i ++) {
-		if (!isspace(req->reply_body[i]) && !isdigit(req->reply_body[i]))
-			break;
-	}
+	/* MUST search for CRLF, not just LF:
+	   https://dev.twitter.com/docs/streaming-apis/processing#Parsing_responses */
+	nl = strstr(req->reply_body, "\r\n");
 	
-	/* Nothing but numbers and whitespace in there. Try again later. */
-	if (i == req->body_size)
-		return;
-	
-	/* Get length. */
-	if (sscanf(req->reply_body, "%d", &len) != 1)
-		return;
-	
-	if (req->body_size < i + len) {
-		printf("Not enough bytes in buffer yet\n");
+	if (!nl) {
+		printf("Incomplete data\n");
 		return;
 	}
 	
-	http_flush_bytes(req, i);
-	c = req->reply_body[len];
-	req->reply_body[len] = '\0';
-	
-	printf("JSON: %s\n", req->reply_body);
-	printf("parsed: %p\n", (parsed = json_parse(req->reply_body)));
-	if (parsed) {
-		twitter_stream_handle_object(ic, parsed);
+	len = nl - req->reply_body;
+	if (len > 0) {
+		c = req->reply_body[len];
+		req->reply_body[len] = '\0';
+		
+		printf("JSON: %s\n", req->reply_body);
+		printf("parsed: %p\n", (parsed = json_parse(req->reply_body)));
+		if (parsed) {
+			twitter_stream_handle_object(ic, parsed);
+		}
+		json_value_free(parsed);
+		req->reply_body[len] = c;
 	}
-	json_value_free(parsed);
-	req->reply_body[len] = c;
 	
-	http_flush_bytes(req, len);
+	http_flush_bytes(req, len + 2);
 	
 	/* One notification might bring multiple events! */
 	if (req->body_size > 0)
@@ -798,10 +788,10 @@ static gboolean twitter_stream_handle_object(struct im_connection *ic, json_valu
 gboolean twitter_open_stream(struct im_connection *ic)
 {
 	struct twitter_data *td = ic->proto_data;
-	char *args[4] = {"with", "followings", "delimited", "length"};
+	char *args[2] = {"with", "followings"};
 	
 	if ((td->stream = twitter_http(ic, TWITTER_USER_STREAM_URL,
-	                               twitter_http_stream, ic, 0, args, 4))) {
+	                               twitter_http_stream, ic, 0, args, 2))) {
 		/* This flag must be enabled or we'll get no data until EOF
 		   (which err, kind of, defeats the purpose of a streaming API). */
 		td->stream->flags |= HTTPC_STREAMING;
