@@ -447,6 +447,8 @@ static gboolean twitter_xt_get_users(json_value *node, struct twitter_xml_list *
 #define TWITTER_TIME_FORMAT "%a %b %d %H:%M:%S +0000 %Y"
 #endif
 
+static char* expand_entities(char* text, const json_value *entities);
+
 /**
  * Function to fill a twitter_xml_status struct.
  * It sets:
@@ -499,36 +501,77 @@ static gboolean twitter_xt_get_status(const json_value *node, struct twitter_xml
 		txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
 		txs_free(rtxs);
 	} else if (entities) {
-		JSON_O_FOREACH (entities, k, v) {
-			int i;
-			
-			if (v->type != json_array)
-				continue;
-			if (strcmp(k, "urls") != 0 && strcmp(k, "media") != 0)
-				continue;
-			
-			for (i = 0; i < v->u.array.length; i ++) {
-				if (v->u.array.values[i]->type != json_object)
-					continue;
-				
-				const char *kort = json_o_str(v->u.array.values[i], "url");
-				const char *disp = json_o_str(v->u.array.values[i], "display_url");
-				char *pos, *new;
-				
-				if (!kort || !disp || !(pos = strstr(txs->text, kort)))
-					continue;
-				
-				*pos = '\0';
-				new = g_strdup_printf("%s%s &lt;%s&gt;%s", txs->text, kort,
-				                      disp, pos + strlen(kort));
-				
-				g_free(txs->text);
-				txs->text = new;
-			}
-		}
+		txs->text = expand_entities(txs->text, entities);
 	}
 
 	return txs->text && txs->user && txs->id;
+}
+
+/**
+ * Function to fill a twitter_xml_status struct (DM variant).
+ */
+static gboolean twitter_xt_get_dm(const json_value *node, struct twitter_xml_status *txs)
+{
+	const json_value *entities = NULL;
+	
+	if (node->type != json_object)
+		return FALSE;
+
+	JSON_O_FOREACH (node, k, v) {
+		if (strcmp("text", k) == 0 && v->type == json_string) {
+			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
+		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
+			struct tm parsed;
+
+			/* Very sensitive to changes to the formatting of
+			   this field. :-( Also assumes the timezone used
+			   is UTC since C time handling functions suck. */
+			if (strptime(v->u.string.ptr, TWITTER_TIME_FORMAT, &parsed) != NULL)
+				txs->created_at = mktime_utc(&parsed);
+		} else if (strcmp("sender", k) == 0 && v->type == json_object) {
+			txs->user = twitter_xt_get_user(v);
+		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
+			txs->id = v->u.integer;
+		}
+	}
+
+	if (entities) {
+		txs->text = expand_entities(txs->text, entities);
+	}
+
+	return txs->text && txs->user && txs->id;
+}
+
+static char* expand_entities(char* text, const json_value *entities) {
+	JSON_O_FOREACH (entities, k, v) {
+		int i;
+		
+		if (v->type != json_array)
+			continue;
+		if (strcmp(k, "urls") != 0 && strcmp(k, "media") != 0)
+			continue;
+		
+		for (i = 0; i < v->u.array.length; i ++) {
+			if (v->u.array.values[i]->type != json_object)
+				continue;
+			
+			const char *kort = json_o_str(v->u.array.values[i], "url");
+			const char *disp = json_o_str(v->u.array.values[i], "display_url");
+			char *pos, *new;
+			
+			if (!kort || !disp || !(pos = strstr(text, kort)))
+				continue;
+			
+			*pos = '\0';
+			new = g_strdup_printf("%s%s &lt;%s&gt;%s", text, kort,
+			                      disp, pos + strlen(kort));
+			
+			g_free(text);
+			text = new;
+		}
+	}
+	
+	return text;
 }
 
 /**
@@ -784,10 +827,18 @@ static void twitter_http_stream(struct http_request *req)
 static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o)
 {
 	struct twitter_xml_status *txs = g_new0(struct twitter_xml_status, 1);
+	json_value *c;
 	
 	if (twitter_xt_get_status(o, txs)) {
 		GSList *output = g_slist_append(NULL, txs);
 		twitter_groupchat(ic, output);
+		txs_free(txs);
+		g_slist_free(output);
+		return TRUE;
+	} else if ((c = json_o_get(o, "direct_message")) &&
+	           twitter_xt_get_dm(c, txs)) {
+		GSList *output = g_slist_append(NULL, txs);
+		twitter_private_message_chat(ic, output);
 		txs_free(txs);
 		g_slist_free(output);
 		return TRUE;
