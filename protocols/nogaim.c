@@ -297,8 +297,7 @@ void imcb_connected( struct im_connection *ic )
 	imcb_log( ic, "Logged in" );
 	
 	ic->flags |= OPT_LOGGED_IN;
-	if( !ic->keepalive )
-		start_keepalives( ic, 60000 );
+	start_keepalives( ic, 60000 );
 	
 	/* Necessary to send initial presence status, even if we're not away. */
 	imc_away_send_update( ic );
