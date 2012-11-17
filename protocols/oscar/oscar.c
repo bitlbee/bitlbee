@@ -946,9 +946,6 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 			g_hash_table_insert(od->ips, uin, (gpointer) (long) info->icqinfo.ipaddr);
 	}
 
-	if (!aim_sncmp(ic->acc->user, info->sn))
-		g_snprintf(ic->displayname, sizeof(ic->displayname), "%s", info->sn);
-
 	tmp = normalize(info->sn);
 	imcb_buddy_status(ic, tmp, flags, state_string, NULL);
 	imcb_buddy_times(ic, tmp, signon, time_idle);
@@ -1535,17 +1532,6 @@ static int gaim_parse_ratechange(aim_session_t *sess, aim_frame_t *fr, ...) {
 }
 
 static int gaim_selfinfo(aim_session_t *sess, aim_frame_t *fr, ...) {
-	va_list ap;
-	aim_userinfo_t *info;
-	struct im_connection *ic = sess->aux_data;
-
-	va_start(ap, fr);
-	info = va_arg(ap, aim_userinfo_t *);
-	va_end(ap);
-
-	ic->evil = info->warnlevel/10;
-	/* ic->correction_time = (info->onlinesince - ic->login_time); */
-
 	return 1;
 }
 

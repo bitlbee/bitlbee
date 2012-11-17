@@ -89,10 +89,7 @@ struct im_connection
 	GSList *deny;
 	int permdeny;
 	
-	char displayname[128];
 	char *away;
-	
-	int evil;
 	
 	/* BitlBee */
 	bee_t *bee;
@@ -128,7 +125,6 @@ struct buddy {
 	char name[80];
 	char show[BUDDY_ALIAS_MAXLEN];
 	int present;
-	int evil;
 	time_t signon;
 	time_t idle;
 	int uc;

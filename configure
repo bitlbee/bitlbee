@@ -90,7 +90,7 @@ Option		Description				Default
 		Disable/enable Skype support		$skype
 
 --events=...	Event handler (glib, libevent)		$events
---ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
+--ssl=...	SSL library to use (gnutls, nss, openssl, auto)
 							$ssl
 
 
@@ -433,19 +433,6 @@ elif [ "$ssl" = "openssl" ]; then
 	echo 'EFLAGS+=-lssl -lcrypto' >> Makefile.settings
 	
 	ret=1
-elif [ "$ssl" = "bogus" ]; then
-	echo
-	echo 'Using bogus SSL code. This means some features will not work properly.'
-	
-	## Yes, you, at the console! How can you authenticate if you don't have any SSL!?
-	if [ "$msn" = "1" -o "$yahoo" = "1" ]; then
-		echo
-		echo 'WARNING: The MSN and Yahoo! modules will not work without SSL. Disabling.'
-		msn=0
-		yahoo=0
-	fi
-	
-	ret=1
 else
 	echo
 	echo 'ERROR: Unknown SSL library specified.'
@@ -456,8 +443,7 @@ if [ "$ret" = "0" ]; then
 	echo
 	echo 'ERROR: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
 	echo '       Please note that this script doesn'\''t have detection code for OpenSSL,'
-	echo '       so if you want to use that, you have to select it by hand. If you don'\''t'
-	echo '       need SSL support, you can select the "bogus" SSL library. (--ssl=bogus)'
+	echo '       so if you want to use that, you have to select it by hand.'
 	
 	exit 1
 fi;
