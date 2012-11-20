@@ -824,8 +824,11 @@ static void twitter_http_stream(struct http_request *req)
 		twitter_http_stream(req);
 }
 
+static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value *o);
+
 static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o)
 {
+	struct twitter_data *td = ic->proto_data;
 	struct twitter_xml_status *txs = g_new0(struct twitter_xml_status, 1);
 	json_value *c;
 	
@@ -842,9 +845,47 @@ static gboolean twitter_stream_handle_object(struct im_connection *ic, json_valu
 		txs_free(txs);
 		g_slist_free(output);
 		return TRUE;
+	} else if ((c = json_o_get(o, "event")) && c->type == json_string) {
+		twitter_stream_handle_event(ic, o);
+		return TRUE;
+	} else if ((c = json_o_get(o, "disconnect")) && c->type == json_object) {
+		/* HACK: Because we're inside an event handler, we can't just
+		   disconnect here. Instead, just change the HTTP status string
+		   into a Twitter status string. */
+		char *reason = json_o_strdup(c, "reason");
+		if (reason) {
+			g_free(td->stream->status_string);
+			td->stream->status_string = reason;
+		}
+		return TRUE;
 	}
 	txs_free(txs);
 	return FALSE;
+}
+
+static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value *o)
+{
+	struct twitter_data *td = ic->proto_data;
+	json_value *source = json_o_get(o, "source");
+	json_value *target = json_o_get(o, "target");
+	const char *type = json_o_str(o, "event");
+	
+	if (!type || !source || source->type != json_object
+	          || !target || target->type != json_object) {
+		return FALSE;
+	}
+	
+	if (strcmp(type, "follow") == 0) {
+		struct twitter_xml_user *us = twitter_xt_get_user(source);
+		struct twitter_xml_user *ut = twitter_xt_get_user(target);
+		if (strcmp(us->screen_name, td->user) == 0) {
+			twitter_add_buddy(ic, ut->screen_name, ut->name);
+		}
+		txu_free(us);
+		txu_free(ut);
+	}
+	
+	return TRUE;
 }
 
 gboolean twitter_open_stream(struct im_connection *ic)
