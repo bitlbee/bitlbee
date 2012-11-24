@@ -1022,6 +1022,21 @@
 		</description>
 
 	</bitlbee-setting>
+
+	<bitlbee-setting name="stream" type="boolean" scope="account">
+		<default>true</default>
+
+		<description>
+			<para>
+				For Twitter accounts, this setting enables use of the Streaming API. This automatically gives you incoming DMs as well.
+			</para>
+			
+			<para>
+				For other Twitter-like services, this setting is not supported.
+			</para>
+		</description>
+
+	</bitlbee-setting>
 	
 	<bitlbee-setting name="target_url_length" type="integer" scope="account">
 		<default>20</default>

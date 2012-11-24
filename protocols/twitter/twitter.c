@@ -64,13 +64,17 @@ static void twitter_main_loop_start(struct im_connection *ic)
 
 	imcb_log(ic, "Getting initial statuses");
 
-	// Run this once. After this queue the main loop function.
+	// Run this once. After this queue the main loop function (or open the
+	// stream if available).
 	twitter_main_loop(ic, -1, 0);
 	
 	if (set_getbool(&ic->acc->set, "stream")) {
 		/* That fetch was just to get backlog, the stream will give
 		   us the rest. \o/ */
 		twitter_open_stream(ic);
+		
+		/* Stream sends keepalives (empty lines) or actual data at
+		   least twice a minute. Disconnect if this stops. */
 		ic->flags |= OPT_PONGS;
 	} else {
 		/* Not using the streaming API, so keep polling the old-
@@ -95,7 +99,6 @@ void twitter_login_finish(struct im_connection *ic)
 		 !(td->flags & TWITTER_HAVE_FRIENDS)) {
 		imcb_log(ic, "Getting contact list");
 		twitter_get_friends_ids(ic, -1);
-		//twitter_get_statuses_friends(ic, -1);
 	} else
 		twitter_main_loop_start(ic);
 }
@@ -288,12 +291,14 @@ static void twitter_init(account_t * acc)
 
 	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
 	
-	s = set_add(&acc->set, "stream", "true", set_eval_bool, acc);
-	s->flags |= ACC_SET_OFFLINE_ONLY;
+	if (strcmp(acc->prpl->name, "twitter") == 0) {
+		s = set_add(&acc->set, "stream", "true", set_eval_bool, acc);
+		s->flags |= ACC_SET_OFFLINE_ONLY;
+	}
 }
 
 /**
- * Login method. Since the twitter API works with seperate HTTP request we 
+ * Login method. Since the twitter API works with separate HTTP request we
  * only save the user and pass to the twitter_data object.
  */
 static void twitter_login(account_t * acc)
@@ -309,6 +314,12 @@ static void twitter_login(account_t * acc)
 		imcb_error(ic, "Incorrect API base URL: %s", set_getstr(&ic->acc->set, "base_url"));
 		imc_logout(ic, FALSE);
 		return;
+	}
+
+	if (!strstr(url.host, "twitter.com") &&
+	    set_getbool(&ic->acc->set, "stream")) {
+		imcb_error(ic, "Warning: The streaming API is only supported by Twitter, "
+		               "and you seem to be connecting to a different service.");
 	}
 
 	imcb_log(ic, "Connecting");
