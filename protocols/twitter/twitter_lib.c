@@ -1157,6 +1157,8 @@ static void twitter_http_post(struct http_request *req)
 	
 	if ((id = json_o_get(parsed, "id")) && id->type == json_integer)
 		td->last_status_id = id->u.integer;
+	
+	json_value_free(parsed);
 }
 
 /**
