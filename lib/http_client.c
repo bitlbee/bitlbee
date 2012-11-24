@@ -197,7 +197,7 @@ static gboolean http_handle_headers( struct http_request *req );
 static gboolean http_incoming_data( gpointer data, int source, b_input_condition cond )
 {
 	struct http_request *req = data;
-	char buffer[2048];
+	char buffer[4096];
 	char *s;
 	size_t content_length;
 	int st;
