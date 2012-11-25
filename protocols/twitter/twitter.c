@@ -52,6 +52,10 @@ static void twitter_main_loop_start(struct im_connection *ic)
 {
 	struct twitter_data *td = ic->proto_data;
 
+	/* Create the room now that we "logged in". */
+	if (td->flags & TWITTER_MODE_CHAT)
+		twitter_groupchat_init(ic);
+
 	imcb_log(ic, "Getting initial statuses");
 
 	// Run this once. After this queue the main loop function (or open the
@@ -75,6 +79,32 @@ static void twitter_main_loop_start(struct im_connection *ic)
 	}
 }
 
+struct groupchat *twitter_groupchat_init(struct im_connection *ic)
+{
+	char *name_hint;
+	struct groupchat *gc;
+	struct twitter_data *td = ic->proto_data;
+	GSList *l;
+
+	if (td->timeline_gc)
+		return td->timeline_gc;
+
+	td->timeline_gc = gc = imcb_chat_new(ic, "twitter/timeline");
+
+	name_hint = g_strdup_printf("%s_%s", td->prefix, ic->acc->user);
+	imcb_chat_name_hint(gc, name_hint);
+	g_free(name_hint);
+
+	for (l = ic->bee->users; l; l = l->next) {
+		bee_user_t *bu = l->data;
+		if (bu->ic == ic)
+			imcb_chat_add_buddy(td->timeline_gc, bu->handle);
+	}
+	imcb_chat_add_buddy(gc, ic->acc->user);
+	
+	return gc;
+}
+
 static void twitter_oauth_start(struct im_connection *ic);
 
 void twitter_login_finish(struct im_connection *ic)
@@ -85,8 +115,8 @@ void twitter_login_finish(struct im_connection *ic)
 
 	if (set_getbool(&ic->acc->set, "oauth") && !td->oauth_info)
 		twitter_oauth_start(ic);
-	else if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "one") != 0 &&
-		 !(td->flags & TWITTER_HAVE_FRIENDS)) {
+	else if ((td->flags & TWITTER_MODE_ONE) &&
+	         !(td->flags & TWITTER_HAVE_FRIENDS)) {
 		imcb_log(ic, "Getting contact list");
 		twitter_get_friends_ids(ic, -1);
 	} else
@@ -353,6 +383,14 @@ static void twitter_login(account_t * acc)
 
 	td->log = g_new0(struct twitter_log_data, TWITTER_LOG_LENGTH);
 	td->log_id = -1;
+	
+	s = set_getstr(&ic->acc->set, "mode");
+	if (g_strcasecmp(s, "one") == 0)
+		td->flags |= TWITTER_MODE_ONE;
+	else if (g_strcasecmp(s, "many") == 0)
+		td->flags |= TWITTER_MODE_MANY;
+	else
+		td->flags |= TWITTER_MODE_CHAT;
 
 	twitter_login_finish(ic);
 }

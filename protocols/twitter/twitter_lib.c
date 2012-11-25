@@ -69,8 +69,6 @@ struct twitter_xml_status {
 	guint64 id, reply_to;
 };
 
-static void twitter_groupchat_init(struct im_connection *ic);
-
 /**
  * Frees a twitter_xml_user struct.
  */
@@ -147,17 +145,15 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 
 	// Check if the buddy is already in the buddy list.
 	if (!bee_user_by_handle(ic->bee, ic, name)) {
-		char *mode = set_getstr(&ic->acc->set, "mode");
-
 		// The buddy is not in the list, add the buddy and set the status to logged in.
 		imcb_add_buddy(ic, name, NULL);
 		imcb_rename_buddy(ic, name, fullname);
-		if (g_strcasecmp(mode, "chat") == 0) {
+		if (td->flags & TWITTER_MODE_CHAT) {
 			/* Necessary so that nicks always get translated to the
 			   exact Twitter username. */
 			imcb_buddy_nick_hint(ic, name, name);
 			imcb_chat_add_buddy(td->timeline_gc, name);
-		} else if (g_strcasecmp(mode, "many") == 0)
+		} else if (td->flags & TWITTER_MODE_MANY)
 			imcb_buddy_status(ic, name, OPT_LOGGED_IN, NULL, NULL);
 	}
 }
@@ -304,10 +300,6 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 		return;
 
 	td = ic->proto_data;
-
-	/* Create the room now that we "logged in". */
-	if (!td->timeline_gc && g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
-		twitter_groupchat_init(ic);
 
 	txl = g_new0(struct twitter_xml_list, 1);
 	txl->list = td->follow_ids;
@@ -662,26 +654,6 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 	}
 }
 
-static void twitter_groupchat_init(struct im_connection *ic)
-{
-	char *name_hint;
-	struct groupchat *gc;
-	struct twitter_data *td = ic->proto_data;
-	GSList *l;
-
-	td->timeline_gc = gc = imcb_chat_new(ic, "twitter/timeline");
-
-	name_hint = g_strdup_printf("%s_%s", td->prefix, ic->acc->user);
-	imcb_chat_name_hint(gc, name_hint);
-	g_free(name_hint);
-
-	for (l = ic->bee->users; l; l = l->next) {
-		bee_user_t *bu = l->data;
-		if (bu->ic == ic)
-			imcb_chat_add_buddy(td->timeline_gc, bu->handle);
-	}
-}
-
 /**
  * Function that is called to see the statuses in a groupchat window.
  */
@@ -694,12 +666,7 @@ static void twitter_groupchat(struct im_connection *ic, GSList * list)
 	guint64 last_id = 0;
 
 	// Create a new groupchat if it does not exsist.
-	if (!td->timeline_gc)
-		twitter_groupchat_init(ic);
-
-	gc = td->timeline_gc;
-	if (!gc->joined)
-		imcb_chat_add_buddy(gc, ic->acc->user);
+	gc = twitter_groupchat_init(ic);
 
 	for (l = list; l; l = g_slist_next(l)) {
 		char *msg;
@@ -743,13 +710,10 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList * list
 	struct twitter_data *td = ic->proto_data;
 	GSList *l = NULL;
 	struct twitter_xml_status *status;
-	char from[MAX_STRING];
-	gboolean mode_one;
+	char from[MAX_STRING] = "";
 	guint64 last_id = 0;
 
-	mode_one = g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "one") == 0;
-
-	if (mode_one) {
+	if (td->flags & TWITTER_MODE_ONE) {
 		g_snprintf(from, sizeof(from) - 1, "%s_%s", td->prefix, ic->acc->user);
 		from[MAX_STRING - 1] = '\0';
 	}
@@ -764,17 +728,17 @@ static void twitter_private_message_chat(struct im_connection *ic, GSList * list
 		last_id = status->id;
 
 		strip_html(status->text);
-		if (mode_one)
+		if (td->flags & TWITTER_MODE_ONE)
 			prefix = g_strdup_printf("\002<\002%s\002>\002 ",
-						 status->user->screen_name);
+			                         status->user->screen_name);
 		else
 			twitter_add_buddy(ic, status->user->screen_name, status->user->name);
 
 		text = twitter_msg_add_id(ic, status, prefix ? prefix : "");
 
 		imcb_buddy_msg(ic,
-			       mode_one ? from : status->user->screen_name,
-			       text ? text : status->text, 0, status->created_at);
+		               *from ? from : status->user->screen_name,
+		               text ? text : status->text, 0, status->created_at);
 
 		// Update the timeline_id to hold the highest id, so that by the next request
 		// we won't pick up the updates already in the list.
@@ -1016,7 +980,7 @@ void twitter_flush_timeline(struct im_connection *ic)
 		imcb_connected(ic);
 
 	// See if the user wants to see the messages in a groupchat window or as private messages.
-	if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
+	if (td->flags & TWITTER_MODE_CHAT)
 		twitter_groupchat(ic, output);
 	else
 		twitter_private_message_chat(ic, output);

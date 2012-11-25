@@ -104,5 +104,6 @@ struct http_request;
 char *twitter_parse_error( struct http_request *req );
 
 void twitter_log(struct im_connection *ic, char *format, ... );
+struct groupchat *twitter_groupchat_init(struct im_connection *ic);
 
 #endif //_TWITTER_H
