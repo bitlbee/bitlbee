@@ -41,6 +41,8 @@ typedef enum http_client_flags
 {
 	HTTPC_STREAMING = 1,
 	HTTPC_EOF = 2,
+	
+	/* Let's reserve 0x1000000+ for lib users. */
 } http_client_flags_t;
 
 /* Your callback function should look like this: */

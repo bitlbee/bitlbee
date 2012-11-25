@@ -134,6 +134,15 @@ struct http_request *twitter_http(struct im_connection *ic, char *url_string, ht
 	return ret;
 }
 
+struct http_request *twitter_http_f(struct im_connection *ic, char *url_string, http_input_function func,
+		                    gpointer data, int is_post, char **arguments, int arguments_len, twitter_http_flags_t flags)
+{
+	struct http_request *ret = twitter_http(ic, url_string, func, data, is_post, arguments, arguments_len);
+	if (ret)
+		ret->flags |= flags;
+	return ret;
+}
+
 static char *twitter_url_append(char *url, char *key, char *value)
 {
 	char *key_encoded = g_strndup(key, 3 * strlen(key));

@@ -27,10 +27,18 @@
 #include "nogaim.h"
 #include "http_client.h"
 
+typedef enum {
+	/* With this set, twitter_http_post() will post a generic confirmation
+	   message to the user. */
+	TWITTER_HTTP_USER_ACK = 0x1000000,
+} twitter_http_flags_t;
+
 struct oauth_info;
 
 struct http_request *twitter_http(struct im_connection *ic, char *url_string, http_input_function func,
                                   gpointer data, int is_post, char** arguments, int arguments_len);
+struct http_request *twitter_http_f(struct im_connection *ic, char *url_string, http_input_function func,
+                                    gpointer data, int is_post, char** arguments, int arguments_len, twitter_http_flags_t flags);
 
 #endif //_TWITTER_HTTP_H
 

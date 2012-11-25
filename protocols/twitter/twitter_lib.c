@@ -1166,6 +1166,9 @@ static void twitter_http_post(struct http_request *req)
 	}
 	
 	json_value_free(parsed);
+	
+	if (req->flags & TWITTER_HTTP_USER_ACK)
+		twitter_log(ic, "Command processed successfully");
 }
 
 /**
@@ -1212,7 +1215,8 @@ void twitter_status_destroy(struct im_connection *ic, guint64 id)
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_DESTROY_URL,
 	                      (unsigned long long) id, ".json");
-	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+	twitter_http_f(ic, url, twitter_http_post, ic, 1, NULL, 0,
+	               TWITTER_HTTP_USER_ACK);
 	g_free(url);
 }
 
@@ -1221,7 +1225,8 @@ void twitter_status_retweet(struct im_connection *ic, guint64 id)
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_RETWEET_URL,
 	                      (unsigned long long) id, ".json");
-	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+	twitter_http_f(ic, url, twitter_http_post, ic, 1, NULL, 0,
+	               TWITTER_HTTP_USER_ACK);
 	g_free(url);
 }
 
@@ -1235,8 +1240,8 @@ void twitter_report_spam(struct im_connection *ic, char *screen_name)
 		NULL,
 	};
 	args[1] = screen_name;
-	twitter_http(ic, TWITTER_REPORT_SPAM_URL, twitter_http_post,
-	             ic, 1, args, 2);
+	twitter_http_f(ic, TWITTER_REPORT_SPAM_URL, twitter_http_post,
+	               ic, 1, args, 2, TWITTER_HTTP_USER_ACK);
 }
 
 /**
@@ -1247,6 +1252,7 @@ void twitter_favourite_tweet(struct im_connection *ic, guint64 id)
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_FAVORITE_CREATE_URL,
 	                      (unsigned long long) id, ".json");
-	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+	twitter_http_f(ic, url, twitter_http_post, ic, 1, NULL, 0,
+	               TWITTER_HTTP_USER_ACK);
 	g_free(url);
 }
