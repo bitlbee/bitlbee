@@ -557,13 +557,13 @@ static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, str
 	bee_user_t *bu;
 	guint64 id = 0;
 	if (g_str_has_prefix(arg, "#") &&
-		sscanf(arg + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
+	    sscanf(arg + 1, "%" G_GINT64_MODIFIER "x", &id) == 1) {
 		if (id < TWITTER_LOG_LENGTH && td->log)
 			id = td->log[id].id;
 	} else if ((bu = bee_user_by_handle(ic->bee, ic, arg)) &&
 		(tud = bu->data) && tud->last_id)
 		id = tud->last_id;
-	else if (sscanf(arg, "%" G_GUINT64_FORMAT, &id) == 1){
+	else if (sscanf(arg, "%" G_GINT64_MODIFIER "x", &id) == 1){
 		if (id < TWITTER_LOG_LENGTH && td->log)
 			id = td->log[id].id;
 	}

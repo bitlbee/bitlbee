@@ -643,10 +643,10 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 	
 	if (set_getbool(&ic->acc->set, "show_ids")) {
 		if (reply_to != -1)
-			return g_strdup_printf("\002[\002%02d->%02d\002]\002 %s%s",
+			return g_strdup_printf("\002[\002%02x->%02x\002]\002 %s%s",
 			                       td->log_id, reply_to, prefix, txs->text);
 		else
-			return g_strdup_printf("\002[\002%02d\002]\002 %s%s",
+			return g_strdup_printf("\002[\002%02x\002]\002 %s%s",
 			                       td->log_id, prefix, txs->text);
 	} else {
 		if (*prefix)

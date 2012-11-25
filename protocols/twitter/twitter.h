@@ -84,7 +84,7 @@ struct twitter_user_data
 	time_t last_time;
 };
 
-#define TWITTER_LOG_LENGTH 100
+#define TWITTER_LOG_LENGTH 256
 struct twitter_log_data
 {
 	guint64 id;
