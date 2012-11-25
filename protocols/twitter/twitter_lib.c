@@ -457,12 +457,14 @@ static char* expand_entities(char* text, const json_value *entities);
  *  - the status id and
  *  - the user in a twitter_xml_user struct.
  */
-static gboolean twitter_xt_get_status(const json_value *node, struct twitter_xml_status *txs)
+static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 {
+	struct twitter_xml_status *txs;
 	const json_value *rt = NULL, *entities = NULL;
 	
 	if (node->type != json_object)
 		return FALSE;
+	txs = g_new0(struct twitter_xml_status, 1);
 
 	JSON_O_FOREACH (node, k, v) {
 		if (strcmp("text", k) == 0 && v->type == json_string) {
@@ -491,20 +493,22 @@ static gboolean twitter_xt_get_status(const json_value *node, struct twitter_xml
 	/* If it's a (truncated) retweet, get the original. Even if the API claims it
 	   wasn't truncated because it may be lying. */
 	if (rt) {
-		struct twitter_xml_status *rtxs = g_new0(struct twitter_xml_status, 1);
-		if (!twitter_xt_get_status(rt, rtxs)) {
+		struct twitter_xml_status *rtxs = twitter_xt_get_status(rt);
+		if (rtxs) {
+			g_free(txs->text);
+			txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
+			txs->id = rtxs->id;
 			txs_free(rtxs);
-			return TRUE;
 		}
-
-		g_free(txs->text);
-		txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
-		txs_free(rtxs);
 	} else if (entities) {
 		txs->text = expand_entities(txs->text, entities);
 	}
 
-	return txs->text && txs->user && txs->id;
+	if (txs->text && txs->user && txs->id)
+		return txs;
+	
+	txs_free(txs);
+	return NULL;
 }
 
 /**
@@ -584,7 +588,6 @@ static gboolean twitter_xt_get_status_list(struct im_connection *ic, const json_
                                            struct twitter_xml_list *txl)
 {
 	struct twitter_xml_status *txs;
-	bee_user_t *bu;
 	int i;
 
 	// Set the type of the list.
@@ -596,54 +599,61 @@ static gboolean twitter_xt_get_status_list(struct im_connection *ic, const json_
 	// The root <statuses> node should hold the list of statuses <status>
 	// Walk over the nodes children.
 	for (i = 0; i < node->u.array.length; i ++) {
-		txs = g_new0(struct twitter_xml_status, 1);
-		twitter_xt_get_status(node->u.array.values[i], txs);
-		// Put the item in the front of the list.
+		txs = twitter_xt_get_status(node->u.array.values[i]);
+		if (!txs)
+			continue;
+		
 		txl->list = g_slist_prepend(txl->list, txs);
-
-		if (txs->user && txs->user->screen_name &&
-		    (bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
-			struct twitter_user_data *tud = bu->data;
-
-			if (txs->id > tud->last_id) {
-				tud->last_id = txs->id;
-				tud->last_time = txs->created_at;
-			}
-		}
 	}
 
 	return TRUE;
 }
 
+/* Will log messages either way. Need to keep track of IDs for stream deduping.
+   Plus, show_ids is on by default and I don't see why anyone would disable it. */
 static char *twitter_msg_add_id(struct im_connection *ic,
 				struct twitter_xml_status *txs, const char *prefix)
 {
 	struct twitter_data *td = ic->proto_data;
-	char *ret = NULL;
+	int reply_to = -1;
+	bee_user_t *bu;
 
-	if (!set_getbool(&ic->acc->set, "show_ids")) {
+	if (txs->reply_to) {
+		int i;
+		for (i = 0; i < TWITTER_LOG_LENGTH; i++)
+			if (td->log[i].id == txs->reply_to) {
+				reply_to = i;
+				break;
+			}
+	}
+
+	if (txs->user && txs->user->screen_name &&
+	    (bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
+		struct twitter_user_data *tud = bu->data;
+
+		if (txs->id > tud->last_id) {
+			tud->last_id = txs->id;
+			tud->last_time = txs->created_at;
+		}
+	}
+	
+	td->log_id = (td->log_id + 1) % TWITTER_LOG_LENGTH;
+	td->log[td->log_id].id = txs->id;
+	td->log[td->log_id].bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name);
+	
+	if (set_getbool(&ic->acc->set, "show_ids")) {
+		if (reply_to != -1)
+			return g_strdup_printf("\002[\002%02d->%02d\002]\002 %s%s",
+			                       td->log_id, reply_to, prefix, txs->text);
+		else
+			return g_strdup_printf("\002[\002%02d\002]\002 %s%s",
+			                       td->log_id, prefix, txs->text);
+	} else {
 		if (*prefix)
 			return g_strconcat(prefix, txs->text, NULL);
 		else
 			return NULL;
 	}
-
-	td->log[td->log_id].id = txs->id;
-	td->log[td->log_id].bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name);
-	if (txs->reply_to) {
-		int i;
-		for (i = 0; i < TWITTER_LOG_LENGTH; i++)
-			if (td->log[i].id == txs->reply_to) {
-				ret = g_strdup_printf("\002[\002%02d->%02d\002]\002 %s%s",
-						      td->log_id, i, prefix, txs->text);
-				break;
-			}
-	}
-	if (ret == NULL)
-		ret = g_strdup_printf("\002[\002%02d\002]\002 %s%s", td->log_id, prefix, txs->text);
-	td->log_id = (td->log_id + 1) % TWITTER_LOG_LENGTH;
-
-	return ret;
 }
 
 static void twitter_groupchat_init(struct im_connection *ic)
@@ -825,19 +835,16 @@ static void twitter_http_stream(struct http_request *req)
 }
 
 static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value *o);
+static gboolean twitter_stream_handle_status(struct im_connection *ic, struct twitter_xml_status *txs);
 
 static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o)
 {
 	struct twitter_data *td = ic->proto_data;
-	struct twitter_xml_status *txs = g_new0(struct twitter_xml_status, 1);
+	struct twitter_xml_status *txs;
 	json_value *c;
 	
-	if (twitter_xt_get_status(o, txs)) {
-		GSList *output = g_slist_append(NULL, txs);
-		twitter_groupchat(ic, output);
-		txs_free(txs);
-		g_slist_free(output);
-		return TRUE;
+	if ((txs = twitter_xt_get_status(o))) {
+		return twitter_stream_handle_status(ic, txs);
 	} else if ((c = json_o_get(o, "direct_message")) &&
 	           twitter_xt_get_dm(c, txs)) {
 		GSList *output = g_slist_append(NULL, txs);
@@ -859,8 +866,38 @@ static gboolean twitter_stream_handle_object(struct im_connection *ic, json_valu
 		}
 		return TRUE;
 	}
-	txs_free(txs);
 	return FALSE;
+}
+
+static gboolean twitter_stream_handle_status(struct im_connection *ic, struct twitter_xml_status *txs)
+{
+	struct twitter_data *td = ic->proto_data;
+	int i;
+	
+	for (i = 0; i < TWITTER_LOG_LENGTH; i++) {
+		if (td->log[i].id == txs->id) {
+			/* Got a duplicate (RT, surely). Drop it. */
+			txs_free(txs);
+			return TRUE;
+		}
+	}
+	
+	if (!(set_getbool(&ic->acc->set, "fetch_mentions") ||
+	      bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
+		/* Tweet is from an unknown person and the user does not want
+		   to see @mentions, so drop it. twitter_stream_handle_event()
+		   picks up new follows so this simple filter should be safe. */
+		/* TODO: The streaming API seems to do poor @mention matching.
+		   I.e. I'm getting mentions for @WilmerSomething, not just for
+		   @Wilmer. But meh. You want spam, you get spam. */
+		return TRUE;
+	}
+	
+	GSList *output = g_slist_append(NULL, txs);
+	twitter_groupchat(ic, output);
+	txs_free(txs);
+	g_slist_free(output);
+	return TRUE;
 }
 
 static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value *o)

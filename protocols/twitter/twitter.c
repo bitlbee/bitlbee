@@ -285,7 +285,6 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "oauth", "true", set_eval_oauth, acc);
 
 	s = set_add(&acc->set, "show_ids", "true", set_eval_bool, acc);
-	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "show_old_mentions", "20", set_eval_int, acc);
 
@@ -362,8 +361,8 @@ static void twitter_login(account_t * acc)
 	imcb_add_buddy(ic, name, NULL);
 	imcb_buddy_status(ic, name, OPT_LOGGED_IN, NULL, NULL);
 
-	if (set_getbool(&acc->set, "show_ids"))
-		td->log = g_new0(struct twitter_log_data, TWITTER_LOG_LENGTH);
+	td->log = g_new0(struct twitter_log_data, TWITTER_LOG_LENGTH);
+	td->log_id = -1;
 
 	twitter_login_finish(ic);
 }
