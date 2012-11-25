@@ -115,7 +115,7 @@ void twitter_login_finish(struct im_connection *ic)
 
 	if (set_getbool(&ic->acc->set, "oauth") && !td->oauth_info)
 		twitter_oauth_start(ic);
-	else if ((td->flags & TWITTER_MODE_ONE) &&
+	else if (!(td->flags & TWITTER_MODE_ONE) &&
 	         !(td->flags & TWITTER_HAVE_FRIENDS)) {
 		imcb_log(ic, "Getting contact list");
 		twitter_get_friends_ids(ic, -1);

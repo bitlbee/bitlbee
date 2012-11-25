@@ -152,7 +152,8 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 			/* Necessary so that nicks always get translated to the
 			   exact Twitter username. */
 			imcb_buddy_nick_hint(ic, name, name);
-			imcb_chat_add_buddy(td->timeline_gc, name);
+			if (td->timeline_gc)
+				imcb_chat_add_buddy(td->timeline_gc, name);
 		} else if (td->flags & TWITTER_MODE_MANY)
 			imcb_buddy_status(ic, name, OPT_LOGGED_IN, NULL, NULL);
 	}
