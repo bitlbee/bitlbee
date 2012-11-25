@@ -98,7 +98,7 @@ struct groupchat *twitter_groupchat_init(struct im_connection *ic)
 	for (l = ic->bee->users; l; l = l->next) {
 		bee_user_t *bu = l->data;
 		if (bu->ic == ic)
-			imcb_chat_add_buddy(td->timeline_gc, bu->handle);
+			imcb_chat_add_buddy(gc, bu->handle);
 	}
 	imcb_chat_add_buddy(gc, ic->acc->user);
 	

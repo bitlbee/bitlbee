@@ -462,6 +462,7 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 	JSON_O_FOREACH (node, k, v) {
 		if (strcmp("text", k) == 0 && v->type == json_string) {
 			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
+			strip_html(txs->text);
 		} else if (strcmp("retweeted_status", k) == 0 && v->type == json_object) {
 			rt = v;
 		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
@@ -519,6 +520,7 @@ static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
 	JSON_O_FOREACH (node, k, v) {
 		if (strcmp("text", k) == 0 && v->type == json_string) {
 			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
+			strip_html(txs->text);
 		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
 			struct tm parsed;
 
@@ -566,7 +568,7 @@ static char* expand_entities(char* text, const json_value *entities) {
 				continue;
 			
 			*pos = '\0';
-			new = g_strdup_printf("%s%s &lt;%s&gt;%s", text, kort,
+			new = g_strdup_printf("%s%s <%s>%s", text, kort,
 			                      disp, pos + strlen(kort));
 			
 			g_free(text);
@@ -658,96 +660,85 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 /**
  * Function that is called to see the statuses in a groupchat window.
  */
-static void twitter_groupchat(struct im_connection *ic, GSList * list)
+static void twitter_status_show_chat(struct im_connection *ic, struct twitter_xml_status *status)
 {
 	struct twitter_data *td = ic->proto_data;
-	GSList *l = NULL;
-	struct twitter_xml_status *status;
 	struct groupchat *gc;
-	guint64 last_id = 0;
+	gboolean me = g_strcasecmp(td->user, status->user->screen_name) == 0;
+	char *msg;
 
 	// Create a new groupchat if it does not exsist.
 	gc = twitter_groupchat_init(ic);
 
-	for (l = list; l; l = g_slist_next(l)) {
-		char *msg;
-
-		status = l->data;
-		if (status->user == NULL || status->text == NULL || last_id == status->id)
-			continue;
-
-		last_id = status->id;
-
-		strip_html(status->text);
-
-		if (set_getbool(&ic->acc->set, "strip_newlines"))
-			strip_newlines(status->text);
-
-		msg = twitter_msg_add_id(ic, status, "");
-
-		// Say it!
-		if (g_strcasecmp(td->user, status->user->screen_name) == 0) {
-			imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
-		} else {
-			twitter_add_buddy(ic, status->user->screen_name, status->user->name);
-
-			imcb_chat_msg(gc, status->user->screen_name,
-				      msg ? msg : status->text, 0, status->created_at);
-		}
-
-		g_free(msg);
-
-		// Update the timeline_id to hold the highest id, so that by the next request
-		// we won't pick up the updates already in the list.
-		td->timeline_id = MAX(td->timeline_id, status->id);
+	if (!me)
+		/* MUST be done before twitter_msg_add_id() to avoid #872. */
+		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
+	msg = twitter_msg_add_id(ic, status, "");
+	
+	// Say it!
+	if (me) {
+		imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
+	} else {
+		imcb_chat_msg(gc, status->user->screen_name,
+			      msg ? msg : status->text, 0, status->created_at);
 	}
+
+	g_free(msg);
 }
 
 /**
  * Function that is called to see statuses as private messages.
  */
-static void twitter_private_message_chat(struct im_connection *ic, GSList * list)
+static void twitter_status_show_msg(struct im_connection *ic, struct twitter_xml_status *status)
 {
 	struct twitter_data *td = ic->proto_data;
-	GSList *l = NULL;
-	struct twitter_xml_status *status;
 	char from[MAX_STRING] = "";
-	guint64 last_id = 0;
+	char *prefix = NULL, *text = NULL;
+	gboolean me = g_strcasecmp(td->user, status->user->screen_name) == 0;
 
 	if (td->flags & TWITTER_MODE_ONE) {
 		g_snprintf(from, sizeof(from) - 1, "%s_%s", td->prefix, ic->acc->user);
 		from[MAX_STRING - 1] = '\0';
 	}
 
-	for (l = list; l; l = g_slist_next(l)) {
-		char *prefix = NULL, *text = NULL;
+	if (td->flags & TWITTER_MODE_ONE)
+		prefix = g_strdup_printf("\002<\002%s\002>\002 ",
+		                         status->user->screen_name);
+	else if (!me)
+		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
+	else
+		prefix = g_strdup("You: ");
 
-		status = l->data;
-		if (status->user == NULL || status->text == NULL || last_id == status->id)
-			continue;
+	text = twitter_msg_add_id(ic, status, prefix ? prefix : "");
 
-		last_id = status->id;
+	imcb_buddy_msg(ic,
+	               *from ? from : status->user->screen_name,
+	               text ? text : status->text, 0, status->created_at);
 
-		strip_html(status->text);
-		if (td->flags & TWITTER_MODE_ONE)
-			prefix = g_strdup_printf("\002<\002%s\002>\002 ",
-			                         status->user->screen_name);
-		else
-			twitter_add_buddy(ic, status->user->screen_name, status->user->name);
+	g_free(text);
+	g_free(prefix);
+}
 
-		text = twitter_msg_add_id(ic, status, prefix ? prefix : "");
+static void twitter_status_show(struct im_connection *ic, struct twitter_xml_status *status)
+{
+	struct twitter_data *td = ic->proto_data;
+	
+	if (status->user == NULL || status->text == NULL)
+		return;
+	
+	/* Grrrr. Would like to do this during parsing, but can't access
+	   settings from there. */
+	if (set_getbool(&ic->acc->set, "strip_newlines"))
+		strip_newlines(status->text);
+	
+	if (td->flags & TWITTER_MODE_CHAT)
+		twitter_status_show_chat(ic, status);
+	else
+		twitter_status_show_msg(ic, status);
 
-		imcb_buddy_msg(ic,
-		               *from ? from : status->user->screen_name,
-		               text ? text : status->text, 0, status->created_at);
-
-		// Update the timeline_id to hold the highest id, so that by the next request
-		// we won't pick up the updates already in the list.
-		td->timeline_id = MAX(td->timeline_id, status->id);
-
-		g_free(text);
-		g_free(prefix);
-	}
+	// Update the timeline_id to hold the highest id, so that by the next request
+	// we won't pick up the updates already in the list.
+	td->timeline_id = MAX(td->timeline_id, status->id);
 }
 
 static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o);
@@ -847,7 +838,7 @@ static gboolean twitter_stream_handle_status(struct im_connection *ic, struct tw
 	
 	for (i = 0; i < TWITTER_LOG_LENGTH; i++) {
 		if (td->log[i].id == txs->id) {
-			/* Got a duplicate (RT, surely). Drop it. */
+			/* Got a duplicate (RT, probably). Drop it. */
 			txs_free(txs);
 			return TRUE;
 		}
@@ -864,10 +855,9 @@ static gboolean twitter_stream_handle_status(struct im_connection *ic, struct tw
 		return TRUE;
 	}
 	
-	GSList *output = g_slist_append(NULL, txs);
-	twitter_groupchat(ic, output);
+	twitter_status_show(ic, txs);
 	txs_free(txs);
-	g_slist_free(output);
+	
 	return TRUE;
 }
 
@@ -950,9 +940,12 @@ void twitter_flush_timeline(struct im_connection *ic)
 	int show_old_mentions = set_getint(&ic->acc->set, "show_old_mentions");
 	struct twitter_xml_list *home_timeline = td->home_timeline_obj;
 	struct twitter_xml_list *mentions = td->mentions_obj;
+	guint64 last_id = 0;
 	GSList *output = NULL;
 	GSList *l;
 
+	imcb_connected(ic);
+	
 	if (!(td->flags & TWITTER_GOT_TIMELINE)) {
 		return;
 	}
@@ -976,17 +969,15 @@ void twitter_flush_timeline(struct im_connection *ic)
 			output = g_slist_insert_sorted(output, l->data, twitter_compare_elements);
 		}
 	}
-	
-	if (!(ic->flags & OPT_LOGGED_IN))
-		imcb_connected(ic);
 
 	// See if the user wants to see the messages in a groupchat window or as private messages.
-	if (td->flags & TWITTER_MODE_CHAT)
-		twitter_groupchat(ic, output);
-	else
-		twitter_private_message_chat(ic, output);
-
-	g_slist_free(output);
+	while (output) {
+		struct twitter_xml_status *txs = output->data;
+		if (txs->id != last_id)
+			twitter_status_show(ic, txs);
+		last_id = txs->id;
+		output = g_slist_remove(output, txs);
+	}
 
 	txl_free(home_timeline);
 	txl_free(mentions);
