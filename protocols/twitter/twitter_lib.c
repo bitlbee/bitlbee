@@ -270,7 +270,6 @@ static gboolean twitter_xt_get_friends_id_list(json_value *node, struct twitter_
 		
 		txl->list = g_slist_prepend(txl->list,
 			g_strdup_printf("%lld", c->u.array.values[i]->u.integer));
-		
 	}
 	
 	c = json_o_get(node, "next_cursor");

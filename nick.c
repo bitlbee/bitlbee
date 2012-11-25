@@ -133,7 +133,10 @@ char *nick_gen( bee_user_t *bu )
 			{
 				chop = fmt[1];
 				if( chop == '\0' )
+				{
+					g_string_free( ret, TRUE );
 					return NULL;
+				}
 				fmt += 2;
 			}
 			else if( isdigit( *fmt ) )
@@ -186,6 +189,7 @@ char *nick_gen( bee_user_t *bu )
 			}
 			else
 			{
+				g_string_free( ret, TRUE );
 				return NULL;
 			}
 		}
