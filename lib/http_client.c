@@ -590,6 +590,9 @@ void http_close( struct http_request *req )
 	if( !req )
 		return;
 	
+	if( req->inpa > 0 )
+		b_event_remove( req->inpa );
+	
 	if( req->ssl )
 		ssl_disconnect( req->ssl );
 	else
