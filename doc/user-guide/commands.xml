@@ -1352,7 +1352,7 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="show_ids" type="boolean" scope="account">
-		<default>false</default>
+		<default>true</default>
 
 		<description>
 			<para>
