@@ -514,12 +514,14 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 /**
  * Function to fill a twitter_xml_status struct (DM variant).
  */
-static gboolean twitter_xt_get_dm(const json_value *node, struct twitter_xml_status *txs)
+static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
 {
+	struct twitter_xml_status *txs;
 	const json_value *entities = NULL;
 	
 	if (node->type != json_object)
 		return FALSE;
+	txs = g_new0(struct twitter_xml_status, 1);
 
 	JSON_O_FOREACH (node, k, v) {
 		if (strcmp("text", k) == 0 && v->type == json_string) {
@@ -543,7 +545,11 @@ static gboolean twitter_xt_get_dm(const json_value *node, struct twitter_xml_sta
 		txs->text = expand_entities(txs->text, entities);
 	}
 
-	return txs->text && txs->user && txs->id;
+	if (txs->text && txs->user && txs->id)
+		return txs;
+	
+	txs_free(txs);
+	return NULL;
 }
 
 static char* expand_entities(char* text, const json_value *entities) {
@@ -846,11 +852,11 @@ static gboolean twitter_stream_handle_object(struct im_connection *ic, json_valu
 	if ((txs = twitter_xt_get_status(o))) {
 		return twitter_stream_handle_status(ic, txs);
 	} else if ((c = json_o_get(o, "direct_message")) &&
-	           twitter_xt_get_dm(c, txs)) {
-		GSList *output = g_slist_append(NULL, txs);
-		twitter_private_message_chat(ic, output);
+	           (txs = twitter_xt_get_dm(c))) {
+		if (strcmp(txs->user->screen_name, td->user) != 0)
+			imcb_buddy_msg(ic, txs->user->screen_name,
+				       txs->text, 0, txs->created_at);
 		txs_free(txs);
-		g_slist_free(output);
 		return TRUE;
 	} else if ((c = json_o_get(o, "event")) && c->type == json_string) {
 		twitter_stream_handle_event(ic, o);
