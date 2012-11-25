@@ -3,7 +3,7 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  Simple module to facilitate twitter functionality.                       *
 *                                                                           *
-*  Copyright 2009 Geert Mulders <g.c.w.m.mulders@gmail.com>                 *
+*  Copyright 2009-2010 Geert Mulders <g.c.w.m.mulders@gmail.com>            *
 *  Copyright 2010-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
@@ -29,17 +29,7 @@
 #include "twitter_lib.h"
 #include "url.h"
 
-#define twitter_msg( ic, fmt... ) \
-	do {                                            \
-		struct twitter_data *td = ic->proto_data;   \
-		if( td->timeline_gc )                       \
-			imcb_chat_log( td->timeline_gc, fmt );  \
-		else                                        \
-			imcb_log( ic, fmt );                    \
-	} while( 0 );
-
 GSList *twitter_connections = NULL;
-
 /**
  * Main loop function
  */
@@ -244,7 +234,7 @@ static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
 	if (max == 0 || (len = g_utf8_strlen(msg, -1) + url_len_diff) <= max)
 		return TRUE;
 
-	imcb_error(ic, "Maximum message length exceeded: %d > %d", len, max);
+	twitter_log(ic, "Maximum message length exceeded: %d > %d", len, max);
 
 	return FALSE;
 }
@@ -560,7 +550,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 			
 			twitter_status_destroy(ic, id);
 		} else
-			twitter_msg(ic, "Could not undo last action");
+			twitter_log(ic, "Could not undo last action");
 
 		g_free(cmds);
 		return;
@@ -569,7 +559,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		if ((id = twitter_message_id_from_command_arg(ic, td, cmd[1]))) {
 			twitter_favourite_tweet(ic, id);
 		} else {
-			twitter_msg(ic, "Please provide a message ID or username.");
+			twitter_log(ic, "Please provide a message ID or username.");
 		}
 		g_free(cmds);
 		return;
@@ -606,7 +596,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		if (id)
 			twitter_status_retweet(ic, id);
 		else
-			twitter_msg(ic, "User `%s' does not exist or didn't "
+			twitter_log(ic, "User `%s' does not exist or didn't "
 				    "post any statuses recently", cmd[1]);
 
 		g_free(cmds);
@@ -637,7 +627,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		}
 
 		if (!id || !bu) {
-			twitter_msg(ic, "User `%s' does not exist or didn't "
+			twitter_log(ic, "User `%s' does not exist or didn't "
 				    "post any statuses recently", cmd[1]);
 			g_free(cmds);
 			return;
@@ -683,6 +673,25 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	}
 	g_free(cmds);
 }
+
+void twitter_log(struct im_connection *ic, char *format, ... )
+{
+	struct twitter_data *td = ic->proto_data;
+	va_list params;
+	char *text;
+	
+	va_start(params, format);
+	text = g_strdup_vprintf(format, params);
+	va_end(params);
+	
+	if (td->timeline_gc)
+		imcb_chat_log(td->timeline_gc, "%s", text);
+	else
+		imcb_log(ic, "%s", text);
+	
+	g_free(text);
+}
+
 
 void twitter_initmodule()
 {

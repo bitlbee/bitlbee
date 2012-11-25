@@ -3,7 +3,8 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  Simple module to facilitate twitter functionality.                       *
 *                                                                           *
-*  Copyright 2009 Geert Mulders <g.c.w.m.mulders@gmail.com>                 *
+*  Copyright 2009-2010 Geert Mulders <g.c.w.m.mulders@gmail.com>            *
+*  Copyright 2010-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -34,10 +35,13 @@
 
 typedef enum
 {
-	TWITTER_HAVE_FRIENDS = 1,
+	TWITTER_HAVE_FRIENDS   = 0x00001,
+	TWITTER_MODE_ONE       = 0x00002,
+	TWITTER_MODE_MANY      = 0x00004,
+	TWITTER_MODE_CHAT      = 0x00008,
 	TWITTER_DOING_TIMELINE = 0x10000,
-	TWITTER_GOT_TIMELINE = 0x20000,
-	TWITTER_GOT_MENTIONS = 0x40000,
+	TWITTER_GOT_TIMELINE   = 0x20000,
+	TWITTER_GOT_MENTIONS   = 0x40000,
 } twitter_flags_t;
 
 struct twitter_log_data;
@@ -98,5 +102,7 @@ void twitter_login_finish( struct im_connection *ic );
 
 struct http_request;
 char *twitter_parse_error( struct http_request *req );
+
+void twitter_log(struct im_connection *ic, char *format, ... );
 
 #endif //_TWITTER_H

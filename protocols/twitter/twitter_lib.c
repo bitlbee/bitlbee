@@ -219,8 +219,8 @@ static json_value *twitter_parse_response(struct im_connection *ic, struct http_
 	} else if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
 		if (!periodic || logging_in || ++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve %s: %s",
-				   path, twitter_parse_error(req));
+			twitter_log(ic, "Error: Could not retrieve %s: %s",
+				    path, twitter_parse_error(req));
 		
 		if (logging_in)
 			imc_logout(ic, TRUE);
