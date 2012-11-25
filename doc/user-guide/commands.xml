@@ -834,6 +834,7 @@
 
 	<bitlbee-setting name="commands" type="boolean" scope="account">
 		<default>true</default>
+		<possible-values>true, false, strict</possible-values>
 
 		<description>
 			<para>
@@ -852,7 +853,7 @@
 			</variablelist>
 
 			<para>
-				Anything that doesn't look like a command will be treated as a tweet. Watch out for typos! :-)
+				Anything that doesn't look like a command will be treated as a tweet. Watch out for typos, or to avoid this behaviour, you can set this setting to <emphasis>strict</emphasis>, which causes the <emphasis>post</emphasis> command to become mandatory for posting a tweet.
 			</para>
 		</description>
 	</bitlbee-setting>

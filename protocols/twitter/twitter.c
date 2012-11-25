@@ -218,16 +218,6 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 	return TRUE;
 }
 
-
-static char *set_eval_mode(set_t * set, char *value)
-{
-	if (g_strcasecmp(value, "one") == 0 ||
-	    g_strcasecmp(value, "many") == 0 || g_strcasecmp(value, "chat") == 0)
-		return value;
-	else
-		return NULL;
-}
-
 int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 {
 	int url_len_diff = 0;
@@ -269,6 +259,23 @@ static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
 	return FALSE;
 }
 
+static char *set_eval_commands(set_t * set, char *value)
+{
+	if (g_strcasecmp(value, "strict") == 0 )
+		return value;
+	else
+		return set_eval_bool(set, value);
+}
+
+static char *set_eval_mode(set_t * set, char *value)
+{
+	if (g_strcasecmp(value, "one") == 0 ||
+	    g_strcasecmp(value, "many") == 0 || g_strcasecmp(value, "chat") == 0)
+		return value;
+	else
+		return NULL;
+}
+
 static void twitter_init(account_t * acc)
 {
 	set_t *s;
@@ -288,7 +295,7 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "base_url", def_url, NULL, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add(&acc->set, "commands", "true", set_eval_bool, acc);
+	s = set_add(&acc->set, "commands", "true", set_eval_commands, acc);
 
 	s = set_add(&acc->set, "fetch_interval", "60", set_eval_int, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -568,6 +575,8 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	struct twitter_data *td = ic->proto_data;
 	char *cmds, **cmd, *new = NULL;
 	guint64 in_reply_to = 0;
+	gboolean strict_commands =
+		g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") == 0;
 
 	cmds = g_strdup(message);
 	cmd = split_command_parts(cmds);
@@ -575,7 +584,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	if (cmd[0] == NULL) {
 		g_free(cmds);
 		return;
-	} else if (!set_getbool(&ic->acc->set, "commands")) {
+	} else if (!(strict_commands || set_getbool(&ic->acc->set, "commands"))) {
 		/* Not supporting commands. */
 	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
 		guint64 id;
@@ -674,9 +683,12 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		in_reply_to = id;
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
 		message += 5;
+		strict_commands = FALSE;
 	}
 
-	{
+	if (strict_commands) {
+		twitter_log(ic, "Unknown command: %s", cmd[0]);
+	} else {
 		char *s;
 		bee_user_t *bu;
 
