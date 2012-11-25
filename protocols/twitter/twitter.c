@@ -591,7 +591,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 
 		if (cmd[1] == NULL)
 			twitter_status_destroy(ic, td->last_status_id);
-		else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1) {
+		else if (sscanf(cmd[1], "%" G_GINT64_MODIFIER "x", &id) == 1) {
 			if (id < TWITTER_LOG_LENGTH && td->log)
 				id = td->log[id].id;
 			
@@ -626,7 +626,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		/* Report nominally works on users but look up the user who
 		   posted the given ID if the user wants to do it that way */
 		if (g_str_has_prefix(cmd[1], "#") &&
-		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
+		    sscanf(cmd[1] + 1, "%" G_GINT64_MODIFIER "x", &id) == 1) {
 			if (id < TWITTER_LOG_LENGTH && td->log) {
 				if (g_slist_find(ic->bee->users, td->log[id].bu)) {
 					screen_name = td->log[id].bu->handle;
@@ -654,7 +654,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		guint64 id = 0;
 
 		if (g_str_has_prefix(cmd[1], "#") &&
-		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1 &&
+		    sscanf(cmd[1] + 1, "%" G_GINT64_MODIFIER "x", &id) == 1 &&
 		    (id < TWITTER_LOG_LENGTH) && td->log) {
 			bu = td->log[id].bu;
 			if (g_slist_find(ic->bee->users, bu))
@@ -664,7 +664,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
 		    (tud = bu->data) && tud->last_id) {
 			id = tud->last_id;
-		} else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1 &&
+		} else if (sscanf(cmd[1], "%" G_GINT64_MODIFIER "x", &id) == 1 &&
 		           (id < TWITTER_LOG_LENGTH) && td->log) {
 			bu = td->log[id].bu;
 			if (g_slist_find(ic->bee->users, bu))

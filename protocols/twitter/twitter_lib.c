@@ -66,7 +66,8 @@ struct twitter_xml_status {
 	time_t created_at;
 	char *text;
 	struct twitter_xml_user *user;
-	guint64 id, reply_to;
+	guint64 id, rt_id; /* Usually equal, with RTs id == *original* id */
+	guint64 reply_to;
 };
 
 /**
@@ -490,6 +491,7 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 		if (rtxs) {
 			g_free(txs->text);
 			txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
+			txs->rt_id = txs->id;
 			txs->id = rtxs->id;
 			txs_free(rtxs);
 		}
@@ -640,6 +642,12 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 	td->log_id = (td->log_id + 1) % TWITTER_LOG_LENGTH;
 	td->log[td->log_id].id = txs->id;
 	td->log[td->log_id].bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name);
+	
+	/* This is all getting hairy. :-( If we RT'ed something ourselves,
+	   remember OUR id instead so undo will work. In other cases, the
+	   original tweet's id should be remembered for deduplicating. */
+	if (txs->rt_id && strcmp(txs->user->screen_name, td->user) == 0)
+		td->log[td->log_id].id = txs->rt_id;
 	
 	if (set_getbool(&ic->acc->set, "show_ids")) {
 		if (reply_to != -1)
@@ -1153,8 +1161,9 @@ static void twitter_http_post(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		return;
 	
-	if ((id = json_o_get(parsed, "id")) && id->type == json_integer)
+	if ((id = json_o_get(parsed, "id")) && id->type == json_integer) {
 		td->last_status_id = id->u.integer;
+	}
 	
 	json_value_free(parsed);
 }
