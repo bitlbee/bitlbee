@@ -484,7 +484,7 @@ json_value * json_parse_ex (json_settings * settings, const json_char * json, ch
                            if (top->type == json_double)
                               top->u.dbl = strtod (i, (json_char **) &i);
                            else
-                              top->u.integer = strtol (i, (json_char **) &i, 10);
+                              top->u.integer = strtoll (i, (json_char **) &i, 10);
 
                            flags |= flag_next | flag_reproc;
                         }
