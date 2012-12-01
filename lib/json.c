@@ -42,6 +42,7 @@
    const struct _json_value json_value_none = { 0 };
 #endif
 
+#include <glib.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -286,7 +287,7 @@ json_value * json_parse_ex (json_settings * settings, const json_char * json, ch
                         if (state.first_pass)
                            string_length += 2;
                         else
-                        {  string [string_length ++] = 0xC0 | ((uc_b2 & 0xC0) >> 6) | ((uc_b1 & 0x3) << 3);
+                        {  string [string_length ++] = 0xC0 | ((uc_b2 & 0xC0) >> 6) | ((uc_b1 & 0x7) << 2);
                            string [string_length ++] = 0x80 | (uc_b2 & 0x3F);
                         }
 
@@ -482,9 +483,9 @@ json_value * json_parse_ex (json_settings * settings, const json_char * json, ch
                               continue;
 
                            if (top->type == json_double)
-                              top->u.dbl = strtod (i, (json_char **) &i);
+                              top->u.dbl = g_ascii_strtod (i, (json_char **) &i);
                            else
-                              top->u.integer = strtoll (i, (json_char **) &i, 10);
+                              top->u.integer = g_ascii_strtoll (i, (json_char **) &i, 10);
 
                            flags |= flag_next | flag_reproc;
                         }
