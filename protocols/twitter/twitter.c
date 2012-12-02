@@ -552,21 +552,40 @@ static void twitter_buddy_data_free(struct bee_user *bu)
  *
  *  Returns 0 if the user provides garbage.
  */
-static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, struct twitter_data *td, char *arg) {
+static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, char *arg, bee_user_t **bu_) {
+	struct twitter_data *td = ic->proto_data;
 	struct twitter_user_data *tud;
-	bee_user_t *bu;
+	bee_user_t *bu = NULL;
 	guint64 id = 0;
-	if (g_str_has_prefix(arg, "#") &&
-	    sscanf(arg + 1, "%" G_GINT64_MODIFIER "x", &id) == 1) {
-		if (id < TWITTER_LOG_LENGTH && td->log)
+	
+	if (bu_)
+		*bu_ = NULL;
+	if (!arg || !arg[0])
+		return 0;
+	
+	if (arg[0] != '#' && (bu = bee_user_by_handle(ic->bee, ic, arg))) {
+		if ((tud = bu->data))
+			id = tud->last_id;
+	} else {
+		if (arg[0] == '#')
+			arg++;
+		if (sscanf(arg, "%" G_GINT64_MODIFIER "x", &id) == 1 &&
+		    id < TWITTER_LOG_LENGTH) {
+			bu = td->log[id].bu;
 			id = td->log[id].id;
-	} else if ((bu = bee_user_by_handle(ic->bee, ic, arg)) &&
-		(tud = bu->data) && tud->last_id)
-		id = tud->last_id;
-	else if (sscanf(arg, "%" G_GINT64_MODIFIER "x", &id) == 1){
-		if (id < TWITTER_LOG_LENGTH && td->log)
-			id = td->log[id].id;
+			/* Beware of dangling pointers! */
+			if (!g_slist_find(ic->bee->users, bu))
+				bu = NULL;
+		} else if (sscanf(arg, "%" G_GINT64_MODIFIER "d", &id) == 1) {
+			/* Allow normal tweet IDs as well; not a very useful
+			   feature but it's always been there. Just ignore
+			   very low IDs to avoid accidents. */
+			if (id < 1000000)
+				id = 0;
+		}
 	}
+	if (bu_)
+		*bu_ = bu;
 	return id;
 }
 
@@ -574,70 +593,56 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 {
 	struct twitter_data *td = ic->proto_data;
 	char *cmds, **cmd, *new = NULL;
-	guint64 in_reply_to = 0;
-	gboolean strict_commands =
-		g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") == 0;
+	guint64 in_reply_to = 0, id;
+	gboolean allow_post =
+		g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") != 0;
+	bee_user_t *bu = NULL;
 
 	cmds = g_strdup(message);
 	cmd = split_command_parts(cmds);
 
 	if (cmd[0] == NULL) {
-		g_free(cmds);
-		return;
-	} else if (!(strict_commands || set_getbool(&ic->acc->set, "commands"))) {
-		/* Not supporting commands. */
+		goto eof;
+	} else if (!set_getbool(&ic->acc->set, "commands") && allow_post) {
+		/* Not supporting commands if "commands" is set to true/strict. */
 	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
-		guint64 id;
-
 		if (cmd[1] == NULL)
 			twitter_status_destroy(ic, td->last_status_id);
-		else if (sscanf(cmd[1], "%" G_GINT64_MODIFIER "x", &id) == 1) {
-			if (id < TWITTER_LOG_LENGTH && td->log)
-				id = td->log[id].id;
-			
+		else if ((id = twitter_message_id_from_command_arg(ic, cmd[1], NULL)))
 			twitter_status_destroy(ic, id);
-		} else
+		else
 			twitter_log(ic, "Could not undo last action");
 
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "favourite") == 0 && cmd[1]) {
-		guint64 id;
-		if ((id = twitter_message_id_from_command_arg(ic, td, cmd[1]))) {
+		if ((id = twitter_message_id_from_command_arg(ic, cmd[1], NULL))) {
 			twitter_favourite_tweet(ic, id);
 		} else {
 			twitter_log(ic, "Please provide a message ID or username.");
 		}
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "follow") == 0 && cmd[1]) {
 		twitter_add_buddy(ic, cmd[1], NULL);
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "unfollow") == 0 && cmd[1]) {
 		twitter_remove_buddy(ic, cmd[1], NULL);
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
-		char * screen_name;
-		guint64 id;
-		screen_name = cmd[1];
+		char *screen_name;
+		
 		/* Report nominally works on users but look up the user who
 		   posted the given ID if the user wants to do it that way */
-		if (g_str_has_prefix(cmd[1], "#") &&
-		    sscanf(cmd[1] + 1, "%" G_GINT64_MODIFIER "x", &id) == 1) {
-			if (id < TWITTER_LOG_LENGTH && td->log) {
-				if (g_slist_find(ic->bee->users, td->log[id].bu)) {
-					screen_name = td->log[id].bu->handle;
-				}
-			}
-		}
+		twitter_message_id_from_command_arg(ic, cmd[1], &bu);
+		if (bu)
+			screen_name = bu->handle;
+		else
+			screen_name = cmd[1];
+		
 		twitter_report_spam(ic, screen_name);
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "rt") == 0 && cmd[1]) {
-		guint64 id = twitter_message_id_from_command_arg(ic, td, cmd[1]);
+		id = twitter_message_id_from_command_arg(ic, cmd[1], NULL);
 
 		td->last_status_id = 0;
 		if (id)
@@ -646,57 +651,27 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 			twitter_log(ic, "User `%s' does not exist or didn't "
 				    "post any statuses recently", cmd[1]);
 
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
-		struct twitter_user_data *tud;
-		bee_user_t *bu = NULL;
-		guint64 id = 0;
-
-		if (g_str_has_prefix(cmd[1], "#") &&
-		    sscanf(cmd[1] + 1, "%" G_GINT64_MODIFIER "x", &id) == 1 &&
-		    (id < TWITTER_LOG_LENGTH) && td->log) {
-			bu = td->log[id].bu;
-			if (g_slist_find(ic->bee->users, bu))
-				id = td->log[id].id;
-			else
-				bu = NULL;
-		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
-		    (tud = bu->data) && tud->last_id) {
-			id = tud->last_id;
-		} else if (sscanf(cmd[1], "%" G_GINT64_MODIFIER "x", &id) == 1 &&
-		           (id < TWITTER_LOG_LENGTH) && td->log) {
-			bu = td->log[id].bu;
-			if (g_slist_find(ic->bee->users, bu))
-				id = td->log[id].id;
-			else
-				bu = NULL;
-		}
-
+		id = twitter_message_id_from_command_arg(ic, cmd[1], &bu);
 		if (!id || !bu) {
 			twitter_log(ic, "User `%s' does not exist or didn't "
 				    "post any statuses recently", cmd[1]);
-			g_free(cmds);
-			return;
+			goto eof;
 		}
 		message = new = g_strdup_printf("@%s %s", bu->handle, message + (cmd[2] - cmd[0]));
 		in_reply_to = id;
+		allow_post = TRUE;
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
 		message += 5;
-		strict_commands = FALSE;
+		allow_post = TRUE;
 	}
 
-	if (strict_commands) {
-		twitter_log(ic, "Unknown command: %s", cmd[0]);
-	} else {
+	if (allow_post) {
 		char *s;
-		bee_user_t *bu;
 
-		if (!twitter_length_check(ic, message)) {
-			g_free(new);
-			g_free(cmds);
-			return;
-		}
+		if (!twitter_length_check(ic, message))
+			goto eof;
 
 		s = cmd[0] + strlen(cmd[0]) - 1;
 		if (!new && s > cmd[0] && (*s == ':' || *s == ',')) {
@@ -719,8 +694,11 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		   this would delete the second-last Tweet. Prevent that. */
 		td->last_status_id = 0;
 		twitter_post_status(ic, message, in_reply_to);
-		g_free(new);
+	} else {
+		twitter_log(ic, "Unknown command: %s", cmd[0]);
 	}
+eof:
+	g_free(new);
 	g_free(cmds);
 }
 
