@@ -411,20 +411,20 @@ elif [ "$ssl" = "sspi" ]; then
 elif [ "$ssl" = "openssl" ]; then
 	echo
 	echo 'No detection code exists for OpenSSL. Make sure that you have a complete'
-	echo 'install of OpenSSL (including devel/header files) before reporting'
+	echo 'installation of OpenSSL (including devel/header files) before reporting'
 	echo 'compilation problems.'
 	echo
 	echo 'Also, keep in mind that the OpenSSL is, according to some people, not'
-	echo 'completely GPL-compatible. Using GnuTLS or NSS is recommended and better'
-	echo 'supported by us. However, on many BSD machines, OpenSSL can be considered'
-	echo 'part of the operating system, which makes it GPL-compatible.'
+	echo 'completely GPL-compatible. Using GnuTLS is recommended and better supported'
+	echo 'by us. However, on many BSD machines, OpenSSL can be considered part of the'
+	echo 'operating system, which makes it GPL-compatible.'
 	echo
 	echo 'For more info, see: http://www.openssl.org/support/faq.html#LEGAL2'
 	echo '                    http://www.gnome.org/~markmc/openssl-and-the-gpl.html'
 	echo
 	echo 'Please note that distributing a BitlBee binary which links to OpenSSL is'
 	echo 'probably illegal. If you want to create and distribute a binary BitlBee'
-	echo 'package, you really should use GnuTLS or NSS instead.'
+	echo 'package, you really should use GnuTLS instead.'
 	echo
 	echo 'Also, the OpenSSL license requires us to say this:'
 	echo ' *    "This product includes software developed by the OpenSSL Project'
