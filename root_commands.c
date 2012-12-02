@@ -552,8 +552,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 	    g_strcasecmp( cmd[1], "del" ) == 0 ||
 	    ( a = account_get( irc->b, cmd[1] ) ) == NULL )
 	{
-		irc_rootmsg( irc, "Could not find account `%s'. Note that the syntax "
-		             "of the account command changed, see \x02help account\x02.", cmd[1] );
+		irc_rootmsg( irc, "Could not find account `%s'.", cmd[1] );
 		
 		return;
 	}
