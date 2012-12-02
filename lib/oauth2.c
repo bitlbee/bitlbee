@@ -102,7 +102,7 @@ static void oauth2_access_token_done( struct http_request *req )
 {
 	struct oauth2_access_token_data *cb_data = req->data;
 	char *atoken = NULL, *rtoken = NULL;
-	const char *content_type;
+	char *content_type;
 	
 	if( getenv( "BITLBEE_DEBUG" ) && req->reply_body )
 		printf( "%s\n", req->reply_body );
@@ -131,6 +131,7 @@ static void oauth2_access_token_done( struct http_request *req )
 		printf( "Extracted atoken=%s rtoken=%s\n", atoken, rtoken );
 	
 	cb_data->func( cb_data->data, atoken, rtoken );
+	g_free( content_type );
 	g_free( atoken );
 	g_free( rtoken );
 	g_free( cb_data );
