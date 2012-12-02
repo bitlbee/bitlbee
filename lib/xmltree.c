@@ -162,9 +162,8 @@ int xt_handle( struct xt_parser *xt, struct xt_node *node, int depth )
 	xt_status st;
 	int i;
 	
-	/* Just in case someone likes infinite loops... */
 	if( xt->root == NULL )
-		return 0;
+		return 1;
 	
 	if( node == NULL )
 		return xt_handle( xt, xt->root, depth );
