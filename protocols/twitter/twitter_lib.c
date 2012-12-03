@@ -813,7 +813,9 @@ static gboolean twitter_stream_handle_object(struct im_connection *ic, json_valu
 	json_value *c;
 	
 	if ((txs = twitter_xt_get_status(o))) {
-		return twitter_stream_handle_status(ic, txs);
+		gboolean ret = twitter_stream_handle_status(ic, txs);
+		txs_free(txs);
+		return ret;
 	} else if ((c = json_o_get(o, "direct_message")) &&
 	           (txs = twitter_xt_get_dm(c))) {
 		if (strcmp(txs->user->screen_name, td->user) != 0)
@@ -846,12 +848,12 @@ static gboolean twitter_stream_handle_status(struct im_connection *ic, struct tw
 	for (i = 0; i < TWITTER_LOG_LENGTH; i++) {
 		if (td->log[i].id == txs->id) {
 			/* Got a duplicate (RT, probably). Drop it. */
-			txs_free(txs);
 			return TRUE;
 		}
 	}
 	
-	if (!(set_getbool(&ic->acc->set, "fetch_mentions") ||
+	if (!(strcmp(txs->user->screen_name, td->user) == 0 ||
+	      set_getbool(&ic->acc->set, "fetch_mentions") ||
 	      bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
 		/* Tweet is from an unknown person and the user does not want
 		   to see @mentions, so drop it. twitter_stream_handle_event()
@@ -863,7 +865,6 @@ static gboolean twitter_stream_handle_status(struct im_connection *ic, struct tw
 	}
 	
 	twitter_status_show(ic, txs);
-	txs_free(txs);
 	
 	return TRUE;
 }
