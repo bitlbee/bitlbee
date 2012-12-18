@@ -292,9 +292,11 @@ int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, st
 			requestok = FALSE;
 		}
 
-		*s = '/';
+		if( s )
+			*s = '/';
 	}
-	else
+	
+	if( !requestok )
 	{ 
 		reply = jabber_make_error_packet( node, "item-not-found", "cancel", NULL );
 		if (!jabber_write_packet( ic, reply ))
