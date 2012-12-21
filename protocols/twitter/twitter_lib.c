@@ -476,7 +476,7 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 		} else if (strcmp("user", k) == 0 && v->type == json_object) {
 			txs->user = twitter_xt_get_user(v);
 		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
-			txs->id = v->u.integer;
+			txs->rt_id = txs->id = v->u.integer;
 		} else if (strcmp("in_reply_to_status_id", k) == 0 && v->type == json_integer) {
 			txs->reply_to = v->u.integer;
 		} else if (strcmp("entities", k) == 0 && v->type == json_object) {
@@ -491,7 +491,6 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 		if (rtxs) {
 			g_free(txs->text);
 			txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
-			txs->rt_id = txs->id;
 			txs->id = rtxs->id;
 			txs_free(rtxs);
 		}
@@ -646,7 +645,7 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 	/* This is all getting hairy. :-( If we RT'ed something ourselves,
 	   remember OUR id instead so undo will work. In other cases, the
 	   original tweet's id should be remembered for deduplicating. */
-	if (txs->rt_id && strcmp(txs->user->screen_name, td->user) == 0)
+	if (strcmp(txs->user->screen_name, td->user) == 0)
 		td->log[td->log_id].id = txs->rt_id;
 	
 	if (set_getbool(&ic->acc->set, "show_ids")) {
@@ -745,7 +744,7 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 
 	// Update the timeline_id to hold the highest id, so that by the next request
 	// we won't pick up the updates already in the list.
-	td->timeline_id = MAX(td->timeline_id, status->id);
+	td->timeline_id = MAX(td->timeline_id, status->rt_id);
 }
 
 static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o);
