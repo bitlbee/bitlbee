@@ -76,7 +76,7 @@
 #define TWITTER_BLOCKS_DESTROY_URL "/blocks/destroy/"
 
 /* Report spam */
-#define TWITTER_REPORT_SPAM_URL "/report_spam.json"
+#define TWITTER_REPORT_SPAM_URL "/users/report_spam.json"
 
 #define TWITTER_USER_STREAM_URL "https://userstream.twitter.com/1.1/user.json"
 
