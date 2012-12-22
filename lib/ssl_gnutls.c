@@ -37,7 +37,7 @@
 int ssl_errno = 0;
 
 static gboolean initialized = FALSE;
-gnutls_certificate_credentials xcred;
+gnutls_certificate_credentials_t xcred;
 
 #include <limits.h>
 
@@ -59,7 +59,7 @@ struct scd
 	char *hostname;
 	gboolean verify;
 	
-	gnutls_session session;
+	gnutls_session_t session;
 };
 
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
@@ -133,7 +133,7 @@ void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function 
 	conn->func = func;
 	conn->data = data;
 	conn->inpa = -1;
-	conn->hostname = hostname;
+	conn->hostname = g_strdup( hostname );
 	
 	/* For now, SSL verification is globally enabled by setting the cafile
 	   setting in bitlbee.conf. Commented out by default because probably
@@ -170,9 +170,9 @@ static int verify_certificate_callback( gnutls_session_t session )
 	int gnutlsret;
 	int verifyret = 0;
 	gnutls_x509_crt_t cert;
-	const char *hostname;
+	struct scd *conn;
 	
-	hostname = gnutls_session_get_ptr( session );
+	conn = gnutls_session_get_ptr( session );
 
 	gnutlsret = gnutls_certificate_verify_peers2( session, &status );
 	if( gnutlsret < 0 )
@@ -210,7 +210,7 @@ static int verify_certificate_callback( gnutls_session_t session )
 	if( cert_list == NULL || gnutls_x509_crt_import( cert, &cert_list[0], GNUTLS_X509_FMT_DER ) < 0 )
 		return VERIFY_CERT_ERROR;
 
-	if( !gnutls_x509_crt_check_hostname( cert, hostname ) )
+	if( !gnutls_x509_crt_check_hostname( cert, conn->hostname ) )
 	{
 		verifyret |= VERIFY_CERT_INVALID;
 		verifyret |= VERIFY_CERT_WRONG_HOSTNAME;
@@ -266,8 +266,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	ssl_init();
 	
 	gnutls_init( &conn->session, GNUTLS_CLIENT );
-	if( conn->verify )
-		gnutls_session_set_ptr( conn->session, (void *) conn->hostname );
+	gnutls_session_set_ptr( conn->session, (void *) conn );
 #if GNUTLS_VERSION_NUMBER < 0x020c00
 	gnutls_transport_set_lowat( conn->session, 0 );
 #endif
@@ -275,7 +274,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	gnutls_credentials_set( conn->session, GNUTLS_CRD_CERTIFICATE, xcred );
 	
 	sock_make_nonblocking( conn->fd );
-	gnutls_transport_set_ptr( conn->session, (gnutls_transport_ptr) GNUTLS_STUPID_CAST conn->fd );
+	gnutls_transport_set_ptr( conn->session, (gnutls_transport_ptr_t) GNUTLS_STUPID_CAST conn->fd );
 	
 	return ssl_handshake( data, source, cond );
 }
@@ -401,6 +400,7 @@ void ssl_disconnect( void *conn_ )
 	
 	if( conn->session )
 		gnutls_deinit( conn->session );
+	g_free( conn->hostname );
 	g_free( conn );
 }
 

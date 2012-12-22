@@ -25,22 +25,25 @@
 
 /* http_client allows you to talk (asynchronously, again) to HTTP servers.
    In the "background" it will send the whole query and wait for a complete
-   response to come back. Right now it's only used by the MSN Passport
-   authentication code, but it might be useful for other things too (for
-   example the AIM usericon patch uses this so icons can be stored on
-   webservers instead of the local filesystem).
+   response to come back. Initially written for MS Passport authentication,
+   but used for many other things now like OAuth and Twitter.
    
-   Didn't test this too much, but it seems to work well. Just don't look
-   at the code that handles HTTP 30x redirects. ;-) The function is
-   probably not very useful for downloading lots of data since it keeps 
-   everything in a memory buffer until the download is completed (and
-   can't pass any data or whatever before then). It's very useful for
-   doing quick requests without blocking the whole program, though. */
+   It's very useful for doing quick requests without blocking the whole
+   program. Unfortunately it doesn't support fancy stuff like HTTP keep-
+   alives. */
 
 #include <glib.h>
 #include "ssl_client.h"
 
 struct http_request;
+
+typedef enum http_client_flags
+{
+	HTTPC_STREAMING = 1,
+	HTTPC_EOF = 2,
+	
+	/* Let's reserve 0x1000000+ for lib users. */
+} http_client_flags_t;
 
 /* Your callback function should look like this: */
 typedef void (*http_input_function)( struct http_request * );
@@ -52,28 +55,31 @@ struct http_request
 {
 	char *request;          /* The request to send to the server. */
 	int request_length;     /* Its size. */
-	int status_code;        /* The numeric HTTP status code. (Or -1
+	short status_code;      /* The numeric HTTP status code. (Or -1
 	                           if something really went wrong) */
 	char *status_string;    /* The error text. */
 	char *reply_headers;
 	char *reply_body;
 	int body_size;          /* The number of bytes in reply_body. */
-	/* int finished;           Set to non-0 if the request was completed
-	                           successfully. */
-	int redir_ttl;          /* You can set it to 0 if you don't want
+	short redir_ttl;        /* You can set it to 0 if you don't want
 	                           http_client to follow them. */
+	
+	http_client_flags_t flags;
 	
 	http_input_function func;
 	gpointer data;
 	
 	/* Please don't touch the things down here, you shouldn't need them. */
-	
 	void *ssl;
 	int fd;
 	
 	int inpa;
 	int bytes_written;
 	int bytes_read;
+	
+	/* Used in streaming mode. Caller should read from reply_body. */
+	char *sbuf;
+	size_t sblen;
 };
 
 /* The _url variant is probably more useful than the raw version. The raw
@@ -82,3 +88,7 @@ struct http_request
    are also supported (using ssl_client). */
 struct http_request *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data );
 struct http_request *http_dorequest_url( char *url_string, http_input_function func, gpointer data );
+
+/* For streaming connections only; flushes len bytes at the start of the buffer. */
+void http_flush_bytes( struct http_request *req, size_t len );
+void http_close( struct http_request *req );

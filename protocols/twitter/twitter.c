@@ -3,7 +3,8 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  Simple module to facilitate twitter functionality.                       *
 *                                                                           *
-*  Copyright 2009 Geert Mulders <g.c.w.m.mulders@gmail.com>                 *
+*  Copyright 2009-2010 Geert Mulders <g.c.w.m.mulders@gmail.com>            *
+*  Copyright 2010-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -28,17 +29,7 @@
 #include "twitter_lib.h"
 #include "url.h"
 
-#define twitter_msg( ic, fmt... ) \
-	do {                                            \
-		struct twitter_data *td = ic->proto_data;   \
-		if( td->timeline_gc )                       \
-			imcb_chat_log( td->timeline_gc, fmt );  \
-		else                                        \
-			imcb_log( ic, fmt );                    \
-	} while( 0 );
-
 GSList *twitter_connections = NULL;
-
 /**
  * Main loop function
  */
@@ -61,15 +52,57 @@ static void twitter_main_loop_start(struct im_connection *ic)
 {
 	struct twitter_data *td = ic->proto_data;
 
+	/* Create the room now that we "logged in". */
+	if (td->flags & TWITTER_MODE_CHAT)
+		twitter_groupchat_init(ic);
+
 	imcb_log(ic, "Getting initial statuses");
 
-	// Run this once. After this queue the main loop function.
+	// Run this once. After this queue the main loop function (or open the
+	// stream if available).
 	twitter_main_loop(ic, -1, 0);
+	
+	if (set_getbool(&ic->acc->set, "stream")) {
+		/* That fetch was just to get backlog, the stream will give
+		   us the rest. \o/ */
+		twitter_open_stream(ic);
+		
+		/* Stream sends keepalives (empty lines) or actual data at
+		   least twice a minute. Disconnect if this stops. */
+		ic->flags |= OPT_PONGS;
+	} else {
+		/* Not using the streaming API, so keep polling the old-
+		   fashioned way. :-( */
+		td->main_loop_id =
+		    b_timeout_add(set_getint(&ic->acc->set, "fetch_interval") * 1000,
+		                  twitter_main_loop, ic);
+	}
+}
 
-	// Queue the main_loop
-	// Save the return value, so we can remove the timeout on logout.
-	td->main_loop_id =
-	    b_timeout_add(set_getint(&ic->acc->set, "fetch_interval") * 1000, twitter_main_loop, ic);
+struct groupchat *twitter_groupchat_init(struct im_connection *ic)
+{
+	char *name_hint;
+	struct groupchat *gc;
+	struct twitter_data *td = ic->proto_data;
+	GSList *l;
+
+	if (td->timeline_gc)
+		return td->timeline_gc;
+
+	td->timeline_gc = gc = imcb_chat_new(ic, "twitter/timeline");
+
+	name_hint = g_strdup_printf("%s_%s", td->prefix, ic->acc->user);
+	imcb_chat_name_hint(gc, name_hint);
+	g_free(name_hint);
+
+	for (l = ic->bee->users; l; l = l->next) {
+		bee_user_t *bu = l->data;
+		if (bu->ic == ic)
+			imcb_chat_add_buddy(gc, bu->handle);
+	}
+	imcb_chat_add_buddy(gc, ic->acc->user);
+	
+	return gc;
 }
 
 static void twitter_oauth_start(struct im_connection *ic);
@@ -82,11 +115,10 @@ void twitter_login_finish(struct im_connection *ic)
 
 	if (set_getbool(&ic->acc->set, "oauth") && !td->oauth_info)
 		twitter_oauth_start(ic);
-	else if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "one") != 0 &&
-		 !(td->flags & TWITTER_HAVE_FRIENDS)) {
+	else if (!(td->flags & TWITTER_MODE_ONE) &&
+	         !(td->flags & TWITTER_HAVE_FRIENDS)) {
 		imcb_log(ic, "Getting contact list");
 		twitter_get_friends_ids(ic, -1);
-		//twitter_get_statuses_friends(ic, -1);
 	} else
 		twitter_main_loop_start(ic);
 }
@@ -186,16 +218,6 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 	return TRUE;
 }
 
-
-static char *set_eval_mode(set_t * set, char *value)
-{
-	if (g_strcasecmp(value, "one") == 0 ||
-	    g_strcasecmp(value, "many") == 0 || g_strcasecmp(value, "chat") == 0)
-		return value;
-	else
-		return NULL;
-}
-
 int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 {
 	int url_len_diff = 0;
@@ -232,9 +254,26 @@ static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
 	if (max == 0 || (len = g_utf8_strlen(msg, -1) + url_len_diff) <= max)
 		return TRUE;
 
-	imcb_error(ic, "Maximum message length exceeded: %d > %d", len, max);
+	twitter_log(ic, "Maximum message length exceeded: %d > %d", len, max);
 
 	return FALSE;
+}
+
+static char *set_eval_commands(set_t * set, char *value)
+{
+	if (g_strcasecmp(value, "strict") == 0 )
+		return value;
+	else
+		return set_eval_bool(set, value);
+}
+
+static char *set_eval_mode(set_t * set, char *value)
+{
+	if (g_strcasecmp(value, "one") == 0 ||
+	    g_strcasecmp(value, "many") == 0 || g_strcasecmp(value, "chat") == 0)
+		return value;
+	else
+		return NULL;
 }
 
 static void twitter_init(account_t * acc)
@@ -256,7 +295,7 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "base_url", def_url, NULL, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add(&acc->set, "commands", "true", set_eval_bool, acc);
+	s = set_add(&acc->set, "commands", "true", set_eval_commands, acc);
 
 	s = set_add(&acc->set, "fetch_interval", "60", set_eval_int, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -273,15 +312,19 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "oauth", "true", set_eval_oauth, acc);
 
 	s = set_add(&acc->set, "show_ids", "true", set_eval_bool, acc);
-	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "show_old_mentions", "20", set_eval_int, acc);
 
 	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
+	
+	if (strcmp(acc->prpl->name, "twitter") == 0) {
+		s = set_add(&acc->set, "stream", "true", set_eval_bool, acc);
+		s->flags |= ACC_SET_OFFLINE_ONLY;
+	}
 }
 
 /**
- * Login method. Since the twitter API works with seperate HTTP request we 
+ * Login method. Since the twitter API works with separate HTTP request we
  * only save the user and pass to the twitter_data object.
  */
 static void twitter_login(account_t * acc)
@@ -297,6 +340,12 @@ static void twitter_login(account_t * acc)
 		imcb_error(ic, "Incorrect API base URL: %s", set_getstr(&ic->acc->set, "base_url"));
 		imc_logout(ic, FALSE);
 		return;
+	}
+
+	if (!strstr(url.host, "twitter.com") &&
+	    set_getbool(&ic->acc->set, "stream")) {
+		imcb_error(ic, "Warning: The streaming API is only supported by Twitter, "
+		               "and you seem to be connecting to a different service.");
 	}
 
 	imcb_log(ic, "Connecting");
@@ -339,8 +388,16 @@ static void twitter_login(account_t * acc)
 	imcb_add_buddy(ic, name, NULL);
 	imcb_buddy_status(ic, name, OPT_LOGGED_IN, NULL, NULL);
 
-	if (set_getbool(&acc->set, "show_ids"))
-		td->log = g_new0(struct twitter_log_data, TWITTER_LOG_LENGTH);
+	td->log = g_new0(struct twitter_log_data, TWITTER_LOG_LENGTH);
+	td->log_id = -1;
+	
+	s = set_getstr(&ic->acc->set, "mode");
+	if (g_strcasecmp(s, "one") == 0)
+		td->flags |= TWITTER_MODE_ONE;
+	else if (g_strcasecmp(s, "many") == 0)
+		td->flags |= TWITTER_MODE_MANY;
+	else
+		td->flags |= TWITTER_MODE_CHAT;
 
 	twitter_login_finish(ic);
 }
@@ -362,6 +419,7 @@ static void twitter_logout(struct im_connection *ic)
 		imcb_chat_free(td->timeline_gc);
 
 	if (td) {
+		http_close(td->stream);
 		oauth_info_free(td->oauth_info);
 		g_free(td->user);
 		g_free(td->prefix);
@@ -494,21 +552,40 @@ static void twitter_buddy_data_free(struct bee_user *bu)
  *
  *  Returns 0 if the user provides garbage.
  */
-static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, struct twitter_data *td, char *arg) {
+static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, char *arg, bee_user_t **bu_) {
+	struct twitter_data *td = ic->proto_data;
 	struct twitter_user_data *tud;
-	bee_user_t *bu;
+	bee_user_t *bu = NULL;
 	guint64 id = 0;
-	if (g_str_has_prefix(arg, "#") &&
-		sscanf(arg + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
-		if (id < TWITTER_LOG_LENGTH && td->log)
+	
+	if (bu_)
+		*bu_ = NULL;
+	if (!arg || !arg[0])
+		return 0;
+	
+	if (arg[0] != '#' && (bu = bee_user_by_handle(ic->bee, ic, arg))) {
+		if ((tud = bu->data))
+			id = tud->last_id;
+	} else {
+		if (arg[0] == '#')
+			arg++;
+		if (sscanf(arg, "%" G_GINT64_MODIFIER "x", &id) == 1 &&
+		    id < TWITTER_LOG_LENGTH) {
+			bu = td->log[id].bu;
 			id = td->log[id].id;
-	} else if ((bu = bee_user_by_handle(ic->bee, ic, arg)) &&
-		(tud = bu->data) && tud->last_id)
-		id = tud->last_id;
-	else if (sscanf(arg, "%" G_GUINT64_FORMAT, &id) == 1){
-		if (id < TWITTER_LOG_LENGTH && td->log)
-			id = td->log[id].id;
+			/* Beware of dangling pointers! */
+			if (!g_slist_find(ic->bee->users, bu))
+				bu = NULL;
+		} else if (sscanf(arg, "%" G_GINT64_MODIFIER "d", &id) == 1) {
+			/* Allow normal tweet IDs as well; not a very useful
+			   feature but it's always been there. Just ignore
+			   very low IDs to avoid accidents. */
+			if (id < 1000000)
+				id = 0;
+		}
 	}
+	if (bu_)
+		*bu_ = bu;
 	return id;
 }
 
@@ -516,124 +593,85 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 {
 	struct twitter_data *td = ic->proto_data;
 	char *cmds, **cmd, *new = NULL;
-	guint64 in_reply_to = 0;
+	guint64 in_reply_to = 0, id;
+	gboolean allow_post =
+		g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") != 0;
+	bee_user_t *bu = NULL;
 
 	cmds = g_strdup(message);
 	cmd = split_command_parts(cmds);
 
 	if (cmd[0] == NULL) {
-		g_free(cmds);
-		return;
-	} else if (!set_getbool(&ic->acc->set, "commands")) {
-		/* Not supporting commands. */
+		goto eof;
+	} else if (!set_getbool(&ic->acc->set, "commands") && allow_post) {
+		/* Not supporting commands if "commands" is set to true/strict. */
 	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
-		guint64 id;
-
 		if (cmd[1] == NULL)
 			twitter_status_destroy(ic, td->last_status_id);
-		else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1) {
-			if (id < TWITTER_LOG_LENGTH && td->log)
-				id = td->log[id].id;
-			
+		else if ((id = twitter_message_id_from_command_arg(ic, cmd[1], NULL)))
 			twitter_status_destroy(ic, id);
-		} else
-			twitter_msg(ic, "Could not undo last action");
+		else
+			twitter_log(ic, "Could not undo last action");
 
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "favourite") == 0 && cmd[1]) {
-		guint64 id;
-		if ((id = twitter_message_id_from_command_arg(ic, td, cmd[1]))) {
+		if ((id = twitter_message_id_from_command_arg(ic, cmd[1], NULL))) {
 			twitter_favourite_tweet(ic, id);
 		} else {
-			twitter_msg(ic, "Please provide a message ID or username.");
+			twitter_log(ic, "Please provide a message ID or username.");
 		}
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "follow") == 0 && cmd[1]) {
 		twitter_add_buddy(ic, cmd[1], NULL);
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "unfollow") == 0 && cmd[1]) {
 		twitter_remove_buddy(ic, cmd[1], NULL);
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
-		char * screen_name;
-		guint64 id;
-		screen_name = cmd[1];
+		char *screen_name;
+		
 		/* Report nominally works on users but look up the user who
 		   posted the given ID if the user wants to do it that way */
-		if (g_str_has_prefix(cmd[1], "#") &&
-		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
-			if (id < TWITTER_LOG_LENGTH && td->log) {
-				if (g_slist_find(ic->bee->users, td->log[id].bu)) {
-					screen_name = td->log[id].bu->handle;
-				}
-			}
-		}
+		twitter_message_id_from_command_arg(ic, cmd[1], &bu);
+		if (bu)
+			screen_name = bu->handle;
+		else
+			screen_name = cmd[1];
+		
 		twitter_report_spam(ic, screen_name);
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "rt") == 0 && cmd[1]) {
-		guint64 id = twitter_message_id_from_command_arg(ic, td, cmd[1]);
+		id = twitter_message_id_from_command_arg(ic, cmd[1], NULL);
 
 		td->last_status_id = 0;
 		if (id)
 			twitter_status_retweet(ic, id);
 		else
-			twitter_msg(ic, "User `%s' does not exist or didn't "
+			twitter_log(ic, "User `%s' does not exist or didn't "
 				    "post any statuses recently", cmd[1]);
 
-		g_free(cmds);
-		return;
+		goto eof;
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
-		struct twitter_user_data *tud;
-		bee_user_t *bu = NULL;
-		guint64 id = 0;
-
-		if (g_str_has_prefix(cmd[1], "#") &&
-		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1 &&
-		    (id < TWITTER_LOG_LENGTH) && td->log) {
-			bu = td->log[id].bu;
-			if (g_slist_find(ic->bee->users, bu))
-				id = td->log[id].id;
-			else
-				bu = NULL;
-		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
-		    (tud = bu->data) && tud->last_id) {
-			id = tud->last_id;
-		} else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1 &&
-		           (id < TWITTER_LOG_LENGTH) && td->log) {
-			bu = td->log[id].bu;
-			if (g_slist_find(ic->bee->users, bu))
-				id = td->log[id].id;
-			else
-				bu = NULL;
-		}
-
+		id = twitter_message_id_from_command_arg(ic, cmd[1], &bu);
 		if (!id || !bu) {
-			twitter_msg(ic, "User `%s' does not exist or didn't "
+			twitter_log(ic, "User `%s' does not exist or didn't "
 				    "post any statuses recently", cmd[1]);
-			g_free(cmds);
-			return;
+			goto eof;
 		}
 		message = new = g_strdup_printf("@%s %s", bu->handle, message + (cmd[2] - cmd[0]));
 		in_reply_to = id;
+		allow_post = TRUE;
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
 		message += 5;
+		allow_post = TRUE;
 	}
 
-	{
+	if (allow_post) {
 		char *s;
-		bee_user_t *bu;
 
-		if (!twitter_length_check(ic, message)) {
-			g_free(new);
-			g_free(cmds);
-			return;
-		}
+		if (!twitter_length_check(ic, message))
+			goto eof;
 
 		s = cmd[0] + strlen(cmd[0]) - 1;
 		if (!new && s > cmd[0] && (*s == ':' || *s == ',')) {
@@ -656,10 +694,32 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		   this would delete the second-last Tweet. Prevent that. */
 		td->last_status_id = 0;
 		twitter_post_status(ic, message, in_reply_to);
-		g_free(new);
+	} else {
+		twitter_log(ic, "Unknown command: %s", cmd[0]);
 	}
+eof:
+	g_free(new);
 	g_free(cmds);
 }
+
+void twitter_log(struct im_connection *ic, char *format, ... )
+{
+	struct twitter_data *td = ic->proto_data;
+	va_list params;
+	char *text;
+	
+	va_start(params, format);
+	text = g_strdup_vprintf(format, params);
+	va_end(params);
+	
+	if (td->timeline_gc)
+		imcb_chat_log(td->timeline_gc, "%s", text);
+	else
+		imcb_log(ic, "%s", text);
+	
+	g_free(text);
+}
+
 
 void twitter_initmodule()
 {

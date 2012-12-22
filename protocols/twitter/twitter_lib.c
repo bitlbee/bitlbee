@@ -34,8 +34,8 @@
 #include "url.h"
 #include "misc.h"
 #include "base64.h"
-#include "xmltree.h"
 #include "twitter_lib.h"
+#include "json_util.h"
 #include <ctype.h>
 #include <errno.h>
 
@@ -66,10 +66,9 @@ struct twitter_xml_status {
 	time_t created_at;
 	char *text;
 	struct twitter_xml_user *user;
-	guint64 id, reply_to;
+	guint64 id, rt_id; /* Usually equal, with RTs id == *original* id */
+	guint64 reply_to;
 };
-
-static void twitter_groupchat_init(struct im_connection *ic);
 
 /**
  * Frees a twitter_xml_user struct.
@@ -147,17 +146,16 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 
 	// Check if the buddy is already in the buddy list.
 	if (!bee_user_by_handle(ic->bee, ic, name)) {
-		char *mode = set_getstr(&ic->acc->set, "mode");
-
 		// The buddy is not in the list, add the buddy and set the status to logged in.
 		imcb_add_buddy(ic, name, NULL);
 		imcb_rename_buddy(ic, name, fullname);
-		if (g_strcasecmp(mode, "chat") == 0) {
+		if (td->flags & TWITTER_MODE_CHAT) {
 			/* Necessary so that nicks always get translated to the
 			   exact Twitter username. */
 			imcb_buddy_nick_hint(ic, name, name);
-			imcb_chat_add_buddy(td->timeline_gc, name);
-		} else if (g_strcasecmp(mode, "many") == 0)
+			if (td->timeline_gc)
+				imcb_chat_add_buddy(td->timeline_gc, name);
+		} else if (td->flags & TWITTER_MODE_MANY)
 			imcb_buddy_status(ic, name, OPT_LOGGED_IN, NULL, NULL);
 	}
 }
@@ -167,32 +165,34 @@ static void twitter_add_buddy(struct im_connection *ic, char *name, const char *
 char *twitter_parse_error(struct http_request *req)
 {
 	static char *ret = NULL;
-	struct xt_node *root, *node, *err;
+	json_value *root, *err;
 
 	g_free(ret);
 	ret = NULL;
 
 	if (req->body_size > 0) {
-		root = xt_from_string(req->reply_body, req->body_size);
-		
-		for (node = root; node; node = node->next)
-			if ((err = xt_find_node(node->children, "error")) && err->text_len > 0) {
-				ret = g_strdup_printf("%s (%s)", req->status_string, err->text);
-				break;
-			}
-
-		xt_free_node(root);
+		root = json_parse(req->reply_body);
+		err = json_o_get(root, "errors");
+		if (err && err->type == json_array && (err = err->u.array.values[0]) &&
+		    err->type == json_object) {
+			const char *msg = json_o_str(err, "message");
+			if (msg)
+				ret = g_strdup_printf("%s (%s)", req->status_string, msg);
+		}
+		json_value_free(root);
 	}
 
 	return ret ? ret : req->status_string;
 }
 
-static struct xt_node *twitter_parse_response(struct im_connection *ic, struct http_request *req)
+/* WATCH OUT: This function might or might not destroy your connection.
+   Sub-optimal indeed, but just be careful when this returns NULL! */
+static json_value *twitter_parse_response(struct im_connection *ic, struct http_request *req)
 {
 	gboolean logging_in = !(ic->flags & OPT_LOGGED_IN);
 	gboolean periodic;
 	struct twitter_data *td = ic->proto_data;
-	struct xt_node *ret;
+	json_value *ret;
 	char path[64] = "", *s;
 	
 	if ((s = strchr(req->request, ' '))) {
@@ -210,14 +210,15 @@ static struct xt_node *twitter_parse_response(struct im_connection *ic, struct h
 		/* IIRC Twitter once had an outage where they were randomly
 		   throwing 401s so I'll keep treating this one as fatal
 		   only during login. */
-		imcb_error(ic, "Authentication failure");
+		imcb_error(ic, "Authentication failure (%s)",
+		               twitter_parse_error(req));
 		imc_logout(ic, FALSE);
 		return NULL;
 	} else if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
 		if (!periodic || logging_in || ++td->http_fails >= 5)
-			imcb_error(ic, "Could not retrieve %s: %s",
-				   path, twitter_parse_error(req));
+			twitter_log(ic, "Error: Could not retrieve %s: %s",
+				    path, twitter_parse_error(req));
 		
 		if (logging_in)
 			imc_logout(ic, TRUE);
@@ -226,7 +227,7 @@ static struct xt_node *twitter_parse_response(struct im_connection *ic, struct h
 		td->http_fails = 0;
 	}
 
-	if ((ret = xt_from_string(req->reply_body, req->body_size)) == NULL) {
+	if ((ret = json_parse(req->reply_body)) == NULL) {
 		imcb_error(ic, "Could not retrieve %s: %s",
 			   path, "XML parse error");
 	}
@@ -250,45 +251,35 @@ void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor)
 }
 
 /**
- * Function to help fill a list.
- */
-static xt_status twitter_xt_next_cursor(struct xt_node *node, struct twitter_xml_list *txl)
-{
-	char *end = NULL;
-
-	if (node->text)
-		txl->next_cursor = g_ascii_strtoll(node->text, &end, 10);
-	if (end == NULL)
-		txl->next_cursor = -1;
-
-	return XT_HANDLED;
-}
-
-/**
  * Fill a list of ids.
  */
-static xt_status twitter_xt_get_friends_id_list(struct xt_node *node, struct twitter_xml_list *txl)
+static gboolean twitter_xt_get_friends_id_list(json_value *node, struct twitter_xml_list *txl)
 {
-	struct xt_node *child;
+	json_value *c;
+	int i;
 
 	// Set the list type.
 	txl->type = TXL_ID;
 
-	// The root <statuses> node should hold the list of statuses <status>
-	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("ids", child->name) == 0) {
-			struct xt_node *idc;
-			for (idc = child->children; idc; idc = idc->next)
-				if (g_strcasecmp(idc->name, "id") == 0)
-					txl->list = g_slist_prepend(txl->list,
-						g_memdup(idc->text, idc->text_len + 1));
-		} else if (g_strcasecmp("next_cursor", child->name) == 0) {
-			twitter_xt_next_cursor(child, txl);
-		}
-	}
+	c = json_o_get(node, "ids");
+	if (!c || c->type != json_array)
+		return FALSE;
 
-	return XT_HANDLED;
+	for (i = 0; i < c->u.array.length; i ++) {
+		if (c->u.array.values[i]->type != json_integer)
+			continue;
+		
+		txl->list = g_slist_prepend(txl->list,
+			g_strdup_printf("%lld", c->u.array.values[i]->u.integer));
+	}
+	
+	c = json_o_get(node, "next_cursor");
+	if (c && c->type == json_integer)
+		txl->next_cursor = c->u.integer;
+	else
+		txl->next_cursor = -1;
+	
+	return TRUE;
 }
 
 static void twitter_get_users_lookup(struct im_connection *ic);
@@ -299,7 +290,7 @@ static void twitter_get_users_lookup(struct im_connection *ic);
 static void twitter_http_get_friends_ids(struct http_request *req)
 {
 	struct im_connection *ic;
-	struct xt_node *parsed;
+	json_value *parsed;
 	struct twitter_xml_list *txl;
 	struct twitter_data *td;
 
@@ -311,18 +302,15 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 
 	td = ic->proto_data;
 
-	/* Create the room now that we "logged in". */
-	if (!td->timeline_gc && g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
-		twitter_groupchat_init(ic);
-
 	txl = g_new0(struct twitter_xml_list, 1);
 	txl->list = td->follow_ids;
 
 	// Parse the data.
 	if (!(parsed = twitter_parse_response(ic, req)))
 		return;
+	
 	twitter_xt_get_friends_id_list(parsed, txl);
-	xt_free_node(parsed);
+	json_value_free(parsed);
 
 	td->follow_ids = txl->list;
 	if (txl->next_cursor)
@@ -337,7 +325,7 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 	txl_free(txl);
 }
 
-static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_list *txl);
+static gboolean twitter_xt_get_users(json_value *node, struct twitter_xml_list *txl);
 static void twitter_http_get_users_lookup(struct http_request *req);
 
 static void twitter_get_users_lookup(struct im_connection *ic)
@@ -378,7 +366,7 @@ static void twitter_get_users_lookup(struct im_connection *ic)
 static void twitter_http_get_users_lookup(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct xt_node *parsed;
+	json_value *parsed;
 	struct twitter_xml_list *txl;
 	GSList *l = NULL;
 	struct twitter_xml_user *user;
@@ -394,7 +382,7 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		return;
 	twitter_xt_get_users(parsed, txl);
-	xt_free_node(parsed);
+	json_value_free(parsed);
 
 	// Add the users as buddies.
 	for (l = txl->list; l; l = g_slist_next(l)) {
@@ -408,25 +396,15 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 	twitter_get_users_lookup(ic);
 }
 
-/**
- * Function to fill a twitter_xml_user struct.
- * It sets:
- *  - the name and
- *  - the screen_name.
- */
-static xt_status twitter_xt_get_user(struct xt_node *node, struct twitter_xml_user *txu)
+struct twitter_xml_user *twitter_xt_get_user(const json_value *node)
 {
-	struct xt_node *child;
-
-	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("name", child->name) == 0) {
-			txu->name = g_memdup(child->text, child->text_len + 1);
-		} else if (g_strcasecmp("screen_name", child->name) == 0) {
-			txu->screen_name = g_memdup(child->text, child->text_len + 1);
-		}
-	}
-	return XT_HANDLED;
+	struct twitter_xml_user *txu;
+	
+	txu = g_new0(struct twitter_xml_user, 1);
+	txu->name = g_strdup(json_o_str(node, "name"));
+	txu->screen_name = g_strdup(json_o_str(node, "screen_name"));
+	
+	return txu;
 }
 
 /**
@@ -434,26 +412,26 @@ static xt_status twitter_xt_get_user(struct xt_node *node, struct twitter_xml_us
  * It sets:
  *  - all <user>s from the <users> element.
  */
-static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_list *txl)
+static gboolean twitter_xt_get_users(json_value *node, struct twitter_xml_list *txl)
 {
 	struct twitter_xml_user *txu;
-	struct xt_node *child;
+	int i;
 
 	// Set the type of the list.
 	txl->type = TXL_USER;
 
+	if (!node || node->type != json_array)
+		return FALSE;
+
 	// The root <users> node should hold the list of users <user>
 	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("user", child->name) == 0) {
-			txu = g_new0(struct twitter_xml_user, 1);
-			twitter_xt_get_user(child, txu);
-			// Put the item in the front of the list.
+	for (i = 0; i < node->u.array.length; i ++) {
+		txu = twitter_xt_get_user(node->u.array.values[i]);
+		if (txu)
 			txl->list = g_slist_prepend(txl->list, txu);
-		}
 	}
 
-	return XT_HANDLED;
+	return TRUE;
 }
 
 #ifdef __GLIBC__
@@ -461,6 +439,8 @@ static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_l
 #else
 #define TWITTER_TIME_FORMAT "%a %b %d %H:%M:%S +0000 %Y"
 #endif
+
+static char* expand_entities(char* text, const json_value *entities);
 
 /**
  * Function to fill a twitter_xml_status struct.
@@ -470,77 +450,133 @@ static xt_status twitter_xt_get_users(struct xt_node *node, struct twitter_xml_l
  *  - the status id and
  *  - the user in a twitter_xml_user struct.
  */
-static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_status *txs)
+static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 {
-	struct xt_node *child, *rt = NULL;
+	struct twitter_xml_status *txs;
+	const json_value *rt = NULL, *entities = NULL;
+	
+	if (node->type != json_object)
+		return FALSE;
+	txs = g_new0(struct twitter_xml_status, 1);
 
-	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("text", child->name) == 0) {
-			txs->text = g_memdup(child->text, child->text_len + 1);
-		} else if (g_strcasecmp("retweeted_status", child->name) == 0) {
-			rt = child;
-		} else if (g_strcasecmp("created_at", child->name) == 0) {
+	JSON_O_FOREACH (node, k, v) {
+		if (strcmp("text", k) == 0 && v->type == json_string) {
+			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
+			strip_html(txs->text);
+		} else if (strcmp("retweeted_status", k) == 0 && v->type == json_object) {
+			rt = v;
+		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
 			struct tm parsed;
 
 			/* Very sensitive to changes to the formatting of
 			   this field. :-( Also assumes the timezone used
 			   is UTC since C time handling functions suck. */
-			if (strptime(child->text, TWITTER_TIME_FORMAT, &parsed) != NULL)
+			if (strptime(v->u.string.ptr, TWITTER_TIME_FORMAT, &parsed) != NULL)
 				txs->created_at = mktime_utc(&parsed);
-		} else if (g_strcasecmp("user", child->name) == 0) {
-			txs->user = g_new0(struct twitter_xml_user, 1);
-			twitter_xt_get_user(child, txs->user);
-		} else if (g_strcasecmp("id", child->name) == 0) {
-			txs->id = g_ascii_strtoull(child->text, NULL, 10);
-		} else if (g_strcasecmp("in_reply_to_status_id", child->name) == 0) {
-			txs->reply_to = g_ascii_strtoull(child->text, NULL, 10);
+		} else if (strcmp("user", k) == 0 && v->type == json_object) {
+			txs->user = twitter_xt_get_user(v);
+		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
+			txs->rt_id = txs->id = v->u.integer;
+		} else if (strcmp("in_reply_to_status_id", k) == 0 && v->type == json_integer) {
+			txs->reply_to = v->u.integer;
+		} else if (strcmp("entities", k) == 0 && v->type == json_object) {
+			entities = v;
 		}
 	}
 
 	/* If it's a (truncated) retweet, get the original. Even if the API claims it
 	   wasn't truncated because it may be lying. */
 	if (rt) {
-		struct twitter_xml_status *rtxs = g_new0(struct twitter_xml_status, 1);
-		if (twitter_xt_get_status(rt, rtxs) != XT_HANDLED) {
+		struct twitter_xml_status *rtxs = twitter_xt_get_status(rt);
+		if (rtxs) {
+			g_free(txs->text);
+			txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
+			txs->id = rtxs->id;
 			txs_free(rtxs);
-			return XT_HANDLED;
 		}
+	} else if (entities) {
+		txs->text = expand_entities(txs->text, entities);
+	}
 
-		g_free(txs->text);
-		txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
-		txs_free(rtxs);
-	} else {
-		struct xt_node *urls, *url;
-		
-		urls = xt_find_path(node, "entities");
-		if (urls != NULL)
-			urls = urls->children;
-		for (; urls; urls = urls->next) {
-			if (strcmp(urls->name, "urls") != 0 && strcmp(urls->name, "media") != 0)
-				continue;
-			
-			for (url = urls ? urls->children : NULL; url; url = url->next) {
-				/* "short" is a reserved word. :-P */
-				struct xt_node *kort = xt_find_node(url->children, "url");
-				struct xt_node *disp = xt_find_node(url->children, "display_url");
-				char *pos, *new;
-				
-				if (!kort || !kort->text || !disp || !disp->text ||
-				    !(pos = strstr(txs->text, kort->text)))
-					continue;
-				
-				*pos = '\0';
-				new = g_strdup_printf("%s%s &lt;%s&gt;%s", txs->text, kort->text,
-				                      disp->text, pos + strlen(kort->text));
-				
-				g_free(txs->text);
-				txs->text = new;
-			}
+	if (txs->text && txs->user && txs->id)
+		return txs;
+	
+	txs_free(txs);
+	return NULL;
+}
+
+/**
+ * Function to fill a twitter_xml_status struct (DM variant).
+ */
+static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
+{
+	struct twitter_xml_status *txs;
+	const json_value *entities = NULL;
+	
+	if (node->type != json_object)
+		return FALSE;
+	txs = g_new0(struct twitter_xml_status, 1);
+
+	JSON_O_FOREACH (node, k, v) {
+		if (strcmp("text", k) == 0 && v->type == json_string) {
+			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
+			strip_html(txs->text);
+		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
+			struct tm parsed;
+
+			/* Very sensitive to changes to the formatting of
+			   this field. :-( Also assumes the timezone used
+			   is UTC since C time handling functions suck. */
+			if (strptime(v->u.string.ptr, TWITTER_TIME_FORMAT, &parsed) != NULL)
+				txs->created_at = mktime_utc(&parsed);
+		} else if (strcmp("sender", k) == 0 && v->type == json_object) {
+			txs->user = twitter_xt_get_user(v);
+		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
+			txs->id = v->u.integer;
 		}
 	}
 
-	return XT_HANDLED;
+	if (entities) {
+		txs->text = expand_entities(txs->text, entities);
+	}
+
+	if (txs->text && txs->user && txs->id)
+		return txs;
+	
+	txs_free(txs);
+	return NULL;
+}
+
+static char* expand_entities(char* text, const json_value *entities) {
+	JSON_O_FOREACH (entities, k, v) {
+		int i;
+		
+		if (v->type != json_array)
+			continue;
+		if (strcmp(k, "urls") != 0 && strcmp(k, "media") != 0)
+			continue;
+		
+		for (i = 0; i < v->u.array.length; i ++) {
+			if (v->u.array.values[i]->type != json_object)
+				continue;
+			
+			const char *kort = json_o_str(v->u.array.values[i], "url");
+			const char *disp = json_o_str(v->u.array.values[i], "display_url");
+			char *pos, *new;
+			
+			if (!kort || !disp || !(pos = strstr(text, kort)))
+				continue;
+			
+			*pos = '\0';
+			new = g_strdup_printf("%s%s <%s>%s", text, kort,
+			                      disp, pos + strlen(kort));
+			
+			g_free(text);
+			text = new;
+		}
+	}
+	
+	return text;
 }
 
 /**
@@ -549,198 +585,332 @@ static xt_status twitter_xt_get_status(struct xt_node *node, struct twitter_xml_
  *  - all <status>es within the <status> element and
  *  - the next_cursor.
  */
-static xt_status twitter_xt_get_status_list(struct im_connection *ic, struct xt_node *node,
-					    struct twitter_xml_list *txl)
+static gboolean twitter_xt_get_status_list(struct im_connection *ic, const json_value *node,
+                                           struct twitter_xml_list *txl)
 {
 	struct twitter_xml_status *txs;
-	struct xt_node *child;
-	bee_user_t *bu;
+	int i;
 
 	// Set the type of the list.
 	txl->type = TXL_STATUS;
+	
+	if (node->type != json_array)
+		return FALSE;
 
 	// The root <statuses> node should hold the list of statuses <status>
 	// Walk over the nodes children.
-	for (child = node->children; child; child = child->next) {
-		if (g_strcasecmp("status", child->name) == 0) {
-			txs = g_new0(struct twitter_xml_status, 1);
-			twitter_xt_get_status(child, txs);
-			// Put the item in the front of the list.
-			txl->list = g_slist_prepend(txl->list, txs);
-
-			if (txs->user && txs->user->screen_name &&
-			    (bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
-				struct twitter_user_data *tud = bu->data;
-
-				if (txs->id > tud->last_id) {
-					tud->last_id = txs->id;
-					tud->last_time = txs->created_at;
-				}
-			}
-		} else if (g_strcasecmp("next_cursor", child->name) == 0) {
-			twitter_xt_next_cursor(child, txl);
-		}
+	for (i = 0; i < node->u.array.length; i ++) {
+		txs = twitter_xt_get_status(node->u.array.values[i]);
+		if (!txs)
+			continue;
+		
+		txl->list = g_slist_prepend(txl->list, txs);
 	}
 
-	return XT_HANDLED;
+	return TRUE;
 }
 
+/* Will log messages either way. Need to keep track of IDs for stream deduping.
+   Plus, show_ids is on by default and I don't see why anyone would disable it. */
 static char *twitter_msg_add_id(struct im_connection *ic,
 				struct twitter_xml_status *txs, const char *prefix)
 {
 	struct twitter_data *td = ic->proto_data;
-	char *ret = NULL;
+	int reply_to = -1;
+	bee_user_t *bu;
 
-	if (!set_getbool(&ic->acc->set, "show_ids")) {
-		if (*prefix)
-			return g_strconcat(prefix, txs->text, NULL);
-		else
-			return NULL;
-	}
-
-	td->log[td->log_id].id = txs->id;
-	td->log[td->log_id].bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name);
 	if (txs->reply_to) {
 		int i;
 		for (i = 0; i < TWITTER_LOG_LENGTH; i++)
 			if (td->log[i].id == txs->reply_to) {
-				ret = g_strdup_printf("\002[\002%02d->%02d\002]\002 %s%s",
-						      td->log_id, i, prefix, txs->text);
+				reply_to = i;
 				break;
 			}
 	}
-	if (ret == NULL)
-		ret = g_strdup_printf("\002[\002%02d\002]\002 %s%s", td->log_id, prefix, txs->text);
+
+	if (txs->user && txs->user->screen_name &&
+	    (bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
+		struct twitter_user_data *tud = bu->data;
+
+		if (txs->id > tud->last_id) {
+			tud->last_id = txs->id;
+			tud->last_time = txs->created_at;
+		}
+	}
+	
 	td->log_id = (td->log_id + 1) % TWITTER_LOG_LENGTH;
-
-	return ret;
-}
-
-static void twitter_groupchat_init(struct im_connection *ic)
-{
-	char *name_hint;
-	struct groupchat *gc;
-	struct twitter_data *td = ic->proto_data;
-	GSList *l;
-
-	td->timeline_gc = gc = imcb_chat_new(ic, "twitter/timeline");
-
-	name_hint = g_strdup_printf("%s_%s", td->prefix, ic->acc->user);
-	imcb_chat_name_hint(gc, name_hint);
-	g_free(name_hint);
-
-	for (l = ic->bee->users; l; l = l->next) {
-		bee_user_t *bu = l->data;
-		if (bu->ic == ic)
-			imcb_chat_add_buddy(td->timeline_gc, bu->handle);
+	td->log[td->log_id].id = txs->id;
+	td->log[td->log_id].bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name);
+	
+	/* This is all getting hairy. :-( If we RT'ed something ourselves,
+	   remember OUR id instead so undo will work. In other cases, the
+	   original tweet's id should be remembered for deduplicating. */
+	if (strcmp(txs->user->screen_name, td->user) == 0)
+		td->log[td->log_id].id = txs->rt_id;
+	
+	if (set_getbool(&ic->acc->set, "show_ids")) {
+		if (reply_to != -1)
+			return g_strdup_printf("\002[\002%02x->%02x\002]\002 %s%s",
+			                       td->log_id, reply_to, prefix, txs->text);
+		else
+			return g_strdup_printf("\002[\002%02x\002]\002 %s%s",
+			                       td->log_id, prefix, txs->text);
+	} else {
+		if (*prefix)
+			return g_strconcat(prefix, txs->text, NULL);
+		else
+			return NULL;
 	}
 }
 
 /**
  * Function that is called to see the statuses in a groupchat window.
  */
-static void twitter_groupchat(struct im_connection *ic, GSList * list)
+static void twitter_status_show_chat(struct im_connection *ic, struct twitter_xml_status *status)
 {
 	struct twitter_data *td = ic->proto_data;
-	GSList *l = NULL;
-	struct twitter_xml_status *status;
 	struct groupchat *gc;
-	guint64 last_id = 0;
+	gboolean me = g_strcasecmp(td->user, status->user->screen_name) == 0;
+	char *msg;
 
 	// Create a new groupchat if it does not exsist.
-	if (!td->timeline_gc)
-		twitter_groupchat_init(ic);
+	gc = twitter_groupchat_init(ic);
 
-	gc = td->timeline_gc;
-	if (!gc->joined)
-		imcb_chat_add_buddy(gc, ic->acc->user);
-
-	for (l = list; l; l = g_slist_next(l)) {
-		char *msg;
-
-		status = l->data;
-		if (status->user == NULL || status->text == NULL || last_id == status->id)
-			continue;
-
-		last_id = status->id;
-
-		strip_html(status->text);
-
-		if (set_getbool(&ic->acc->set, "strip_newlines"))
-			strip_newlines(status->text);
-
-		msg = twitter_msg_add_id(ic, status, "");
-
-		// Say it!
-		if (g_strcasecmp(td->user, status->user->screen_name) == 0) {
-			imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
-		} else {
-			twitter_add_buddy(ic, status->user->screen_name, status->user->name);
-
-			imcb_chat_msg(gc, status->user->screen_name,
-				      msg ? msg : status->text, 0, status->created_at);
-		}
-
-		g_free(msg);
-
-		// Update the timeline_id to hold the highest id, so that by the next request
-		// we won't pick up the updates already in the list.
-		td->timeline_id = MAX(td->timeline_id, status->id);
+	if (!me)
+		/* MUST be done before twitter_msg_add_id() to avoid #872. */
+		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
+	msg = twitter_msg_add_id(ic, status, "");
+	
+	// Say it!
+	if (me) {
+		imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
+	} else {
+		imcb_chat_msg(gc, status->user->screen_name,
+			      msg ? msg : status->text, 0, status->created_at);
 	}
+
+	g_free(msg);
 }
 
 /**
  * Function that is called to see statuses as private messages.
  */
-static void twitter_private_message_chat(struct im_connection *ic, GSList * list)
+static void twitter_status_show_msg(struct im_connection *ic, struct twitter_xml_status *status)
 {
 	struct twitter_data *td = ic->proto_data;
-	GSList *l = NULL;
-	struct twitter_xml_status *status;
-	char from[MAX_STRING];
-	gboolean mode_one;
-	guint64 last_id = 0;
+	char from[MAX_STRING] = "";
+	char *prefix = NULL, *text = NULL;
+	gboolean me = g_strcasecmp(td->user, status->user->screen_name) == 0;
 
-	mode_one = g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "one") == 0;
-
-	if (mode_one) {
+	if (td->flags & TWITTER_MODE_ONE) {
 		g_snprintf(from, sizeof(from) - 1, "%s_%s", td->prefix, ic->acc->user);
 		from[MAX_STRING - 1] = '\0';
 	}
 
-	for (l = list; l; l = g_slist_next(l)) {
-		char *prefix = NULL, *text = NULL;
+	if (td->flags & TWITTER_MODE_ONE)
+		prefix = g_strdup_printf("\002<\002%s\002>\002 ",
+		                         status->user->screen_name);
+	else if (!me)
+		twitter_add_buddy(ic, status->user->screen_name, status->user->name);
+	else
+		prefix = g_strdup("You: ");
 
-		status = l->data;
-		if (status->user == NULL || status->text == NULL || last_id == status->id)
-			continue;
+	text = twitter_msg_add_id(ic, status, prefix ? prefix : "");
 
-		last_id = status->id;
+	imcb_buddy_msg(ic,
+	               *from ? from : status->user->screen_name,
+	               text ? text : status->text, 0, status->created_at);
 
-		strip_html(status->text);
-		if (mode_one)
-			prefix = g_strdup_printf("\002<\002%s\002>\002 ",
-						 status->user->screen_name);
-		else
-			twitter_add_buddy(ic, status->user->screen_name, status->user->name);
-
-		text = twitter_msg_add_id(ic, status, prefix ? prefix : "");
-
-		imcb_buddy_msg(ic,
-			       mode_one ? from : status->user->screen_name,
-			       text ? text : status->text, 0, status->created_at);
-
-		// Update the timeline_id to hold the highest id, so that by the next request
-		// we won't pick up the updates already in the list.
-		td->timeline_id = MAX(td->timeline_id, status->id);
-
-		g_free(text);
-		g_free(prefix);
-	}
+	g_free(text);
+	g_free(prefix);
 }
 
-static void twitter_http_get_home_timeline(struct http_request *req);
-static void twitter_http_get_mentions(struct http_request *req);
+static void twitter_status_show(struct im_connection *ic, struct twitter_xml_status *status)
+{
+	struct twitter_data *td = ic->proto_data;
+	
+	if (status->user == NULL || status->text == NULL)
+		return;
+	
+	/* Grrrr. Would like to do this during parsing, but can't access
+	   settings from there. */
+	if (set_getbool(&ic->acc->set, "strip_newlines"))
+		strip_newlines(status->text);
+	
+	if (td->flags & TWITTER_MODE_CHAT)
+		twitter_status_show_chat(ic, status);
+	else
+		twitter_status_show_msg(ic, status);
+
+	// Update the timeline_id to hold the highest id, so that by the next request
+	// we won't pick up the updates already in the list.
+	td->timeline_id = MAX(td->timeline_id, status->rt_id);
+}
+
+static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o);
+
+static void twitter_http_stream(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	struct twitter_data *td;
+	json_value *parsed;
+	int len = 0;
+	char c, *nl;
+	
+	if (!g_slist_find(twitter_connections, ic))
+		return;
+	
+	ic->flags |= OPT_PONGED;
+	td = ic->proto_data;
+	
+	if ((req->flags & HTTPC_EOF) || !req->reply_body) {
+		td->stream = NULL;
+		imcb_error(ic, "Stream closed (%s)", req->status_string);
+		imc_logout(ic, TRUE);
+		return;
+	}
+	
+	printf( "%d bytes in stream\n", req->body_size );
+	
+	/* MUST search for CRLF, not just LF:
+	   https://dev.twitter.com/docs/streaming-apis/processing#Parsing_responses */
+	nl = strstr(req->reply_body, "\r\n");
+	
+	if (!nl) {
+		printf("Incomplete data\n");
+		return;
+	}
+	
+	len = nl - req->reply_body;
+	if (len > 0) {
+		c = req->reply_body[len];
+		req->reply_body[len] = '\0';
+		
+		printf("JSON: %s\n", req->reply_body);
+		printf("parsed: %p\n", (parsed = json_parse(req->reply_body)));
+		if (parsed) {
+			twitter_stream_handle_object(ic, parsed);
+		}
+		json_value_free(parsed);
+		req->reply_body[len] = c;
+	}
+	
+	http_flush_bytes(req, len + 2);
+	
+	/* One notification might bring multiple events! */
+	if (req->body_size > 0)
+		twitter_http_stream(req);
+}
+
+static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value *o);
+static gboolean twitter_stream_handle_status(struct im_connection *ic, struct twitter_xml_status *txs);
+
+static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o)
+{
+	struct twitter_data *td = ic->proto_data;
+	struct twitter_xml_status *txs;
+	json_value *c;
+	
+	if ((txs = twitter_xt_get_status(o))) {
+		gboolean ret = twitter_stream_handle_status(ic, txs);
+		txs_free(txs);
+		return ret;
+	} else if ((c = json_o_get(o, "direct_message")) &&
+	           (txs = twitter_xt_get_dm(c))) {
+		if (strcmp(txs->user->screen_name, td->user) != 0)
+			imcb_buddy_msg(ic, txs->user->screen_name,
+				       txs->text, 0, txs->created_at);
+		txs_free(txs);
+		return TRUE;
+	} else if ((c = json_o_get(o, "event")) && c->type == json_string) {
+		twitter_stream_handle_event(ic, o);
+		return TRUE;
+	} else if ((c = json_o_get(o, "disconnect")) && c->type == json_object) {
+		/* HACK: Because we're inside an event handler, we can't just
+		   disconnect here. Instead, just change the HTTP status string
+		   into a Twitter status string. */
+		char *reason = json_o_strdup(c, "reason");
+		if (reason) {
+			g_free(td->stream->status_string);
+			td->stream->status_string = reason;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+static gboolean twitter_stream_handle_status(struct im_connection *ic, struct twitter_xml_status *txs)
+{
+	struct twitter_data *td = ic->proto_data;
+	int i;
+	
+	for (i = 0; i < TWITTER_LOG_LENGTH; i++) {
+		if (td->log[i].id == txs->id) {
+			/* Got a duplicate (RT, probably). Drop it. */
+			return TRUE;
+		}
+	}
+	
+	if (!(strcmp(txs->user->screen_name, td->user) == 0 ||
+	      set_getbool(&ic->acc->set, "fetch_mentions") ||
+	      bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
+		/* Tweet is from an unknown person and the user does not want
+		   to see @mentions, so drop it. twitter_stream_handle_event()
+		   picks up new follows so this simple filter should be safe. */
+		/* TODO: The streaming API seems to do poor @mention matching.
+		   I.e. I'm getting mentions for @WilmerSomething, not just for
+		   @Wilmer. But meh. You want spam, you get spam. */
+		return TRUE;
+	}
+	
+	twitter_status_show(ic, txs);
+	
+	return TRUE;
+}
+
+static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value *o)
+{
+	struct twitter_data *td = ic->proto_data;
+	json_value *source = json_o_get(o, "source");
+	json_value *target = json_o_get(o, "target");
+	const char *type = json_o_str(o, "event");
+	
+	if (!type || !source || source->type != json_object
+	          || !target || target->type != json_object) {
+		return FALSE;
+	}
+	
+	if (strcmp(type, "follow") == 0) {
+		struct twitter_xml_user *us = twitter_xt_get_user(source);
+		struct twitter_xml_user *ut = twitter_xt_get_user(target);
+		if (strcmp(us->screen_name, td->user) == 0) {
+			twitter_add_buddy(ic, ut->screen_name, ut->name);
+		}
+		txu_free(us);
+		txu_free(ut);
+	}
+	
+	return TRUE;
+}
+
+gboolean twitter_open_stream(struct im_connection *ic)
+{
+	struct twitter_data *td = ic->proto_data;
+	char *args[2] = {"with", "followings"};
+	
+	if ((td->stream = twitter_http(ic, TWITTER_USER_STREAM_URL,
+	                               twitter_http_stream, ic, 0, args, 2))) {
+		/* This flag must be enabled or we'll get no data until EOF
+		   (which err, kind of, defeats the purpose of a streaming API). */
+		td->stream->flags |= HTTPC_STREAMING;
+		return TRUE;
+	}
+	
+	return FALSE;
+}
+
+static void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor);
+static void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor);
 
 /**
  * Get the timeline with optionally mentions
@@ -777,9 +947,12 @@ void twitter_flush_timeline(struct im_connection *ic)
 	int show_old_mentions = set_getint(&ic->acc->set, "show_old_mentions");
 	struct twitter_xml_list *home_timeline = td->home_timeline_obj;
 	struct twitter_xml_list *mentions = td->mentions_obj;
+	guint64 last_id = 0;
 	GSList *output = NULL;
 	GSList *l;
 
+	imcb_connected(ic);
+	
 	if (!(td->flags & TWITTER_GOT_TIMELINE)) {
 		return;
 	}
@@ -803,17 +976,15 @@ void twitter_flush_timeline(struct im_connection *ic)
 			output = g_slist_insert_sorted(output, l->data, twitter_compare_elements);
 		}
 	}
-	
-	if (!(ic->flags & OPT_LOGGED_IN))
-		imcb_connected(ic);
 
 	// See if the user wants to see the messages in a groupchat window or as private messages.
-	if (g_strcasecmp(set_getstr(&ic->acc->set, "mode"), "chat") == 0)
-		twitter_groupchat(ic, output);
-	else
-		twitter_private_message_chat(ic, output);
-
-	g_slist_free(output);
+	while (output) {
+		struct twitter_xml_status *txs = output->data;
+		if (txs->id != last_id)
+			twitter_status_show(ic, txs);
+		last_id = txs->id;
+		output = g_slist_remove(output, txs);
+	}
 
 	txl_free(home_timeline);
 	txl_free(mentions);
@@ -822,10 +993,13 @@ void twitter_flush_timeline(struct im_connection *ic)
 	td->home_timeline_obj = td->mentions_obj = NULL;
 }
 
+static void twitter_http_get_home_timeline(struct http_request *req);
+static void twitter_http_get_mentions(struct http_request *req);
+
 /**
  * Get the timeline.
  */
-void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
+static void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
 {
 	struct twitter_data *td = ic->proto_data;
 
@@ -861,7 +1035,7 @@ void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
 /**
  * Get mentions.
  */
-void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
+static void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 {
 	struct twitter_data *td = ic->proto_data;
 
@@ -892,9 +1066,7 @@ void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 	}
 
 	g_free(args[1]);
-	if (td->timeline_id) {
-		g_free(args[5]);
-	}
+	g_free(args[5]);
 }
 
 /**
@@ -904,7 +1076,7 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
-	struct xt_node *parsed;
+	json_value *parsed;
 	struct twitter_xml_list *txl;
 
 	// Check if the connection is still active.
@@ -920,11 +1092,14 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		goto end;
 	twitter_xt_get_status_list(ic, parsed, txl);
-	xt_free_node(parsed);
+	json_value_free(parsed);
 
 	td->home_timeline_obj = txl;
 
       end:
+	if (!g_slist_find(twitter_connections, ic))
+		return;
+
 	td->flags |= TWITTER_GOT_TIMELINE;
 
 	twitter_flush_timeline(ic);
@@ -937,7 +1112,7 @@ static void twitter_http_get_mentions(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
-	struct xt_node *parsed;
+	json_value *parsed;
 	struct twitter_xml_list *txl;
 
 	// Check if the connection is still active.
@@ -953,11 +1128,14 @@ static void twitter_http_get_mentions(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		goto end;
 	twitter_xt_get_status_list(ic, parsed, txl);
-	xt_free_node(parsed);
+	json_value_free(parsed);
 
 	td->mentions_obj = txl;
 
       end:
+	if (!g_slist_find(twitter_connections, ic))
+		return;
+
 	td->flags |= TWITTER_GOT_MENTIONS;
 
 	twitter_flush_timeline(ic);
@@ -971,7 +1149,7 @@ static void twitter_http_post(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct twitter_data *td;
-	struct xt_node *parsed, *node;
+	json_value *parsed, *id;
 
 	// Check if the connection is still active.
 	if (!g_slist_find(twitter_connections, ic))
@@ -983,9 +1161,14 @@ static void twitter_http_post(struct http_request *req)
 	if (!(parsed = twitter_parse_response(ic, req)))
 		return;
 	
-	if ((node = xt_find_node(parsed, "status")) &&
-	    (node = xt_find_node(node->children, "id")) && node->text)
-		td->last_status_id = g_ascii_strtoull(node->text, NULL, 10);
+	if ((id = json_o_get(parsed, "id")) && id->type == json_integer) {
+		td->last_status_id = id->u.integer;
+	}
+	
+	json_value_free(parsed);
+	
+	if (req->flags & TWITTER_HTTP_USER_ACK)
+		twitter_log(ic, "Command processed successfully");
 }
 
 /**
@@ -1031,8 +1214,9 @@ void twitter_status_destroy(struct im_connection *ic, guint64 id)
 {
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_DESTROY_URL,
-	                      (unsigned long long) id, ".xml");
-	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+	                      (unsigned long long) id, ".json");
+	twitter_http_f(ic, url, twitter_http_post, ic, 1, NULL, 0,
+	               TWITTER_HTTP_USER_ACK);
 	g_free(url);
 }
 
@@ -1040,8 +1224,9 @@ void twitter_status_retweet(struct im_connection *ic, guint64 id)
 {
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_RETWEET_URL,
-	                      (unsigned long long) id, ".xml");
-	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+	                      (unsigned long long) id, ".json");
+	twitter_http_f(ic, url, twitter_http_post, ic, 1, NULL, 0,
+	               TWITTER_HTTP_USER_ACK);
 	g_free(url);
 }
 
@@ -1055,8 +1240,8 @@ void twitter_report_spam(struct im_connection *ic, char *screen_name)
 		NULL,
 	};
 	args[1] = screen_name;
-	twitter_http(ic, TWITTER_REPORT_SPAM_URL, twitter_http_post,
-	             ic, 1, args, 2);
+	twitter_http_f(ic, TWITTER_REPORT_SPAM_URL, twitter_http_post,
+	               ic, 1, args, 2, TWITTER_HTTP_USER_ACK);
 }
 
 /**
@@ -1066,7 +1251,8 @@ void twitter_favourite_tweet(struct im_connection *ic, guint64 id)
 {
 	char *url;
 	url = g_strdup_printf("%s%llu%s", TWITTER_FAVORITE_CREATE_URL,
-	                      (unsigned long long) id, ".xml");
-	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+	                      (unsigned long long) id, ".json");
+	twitter_http_f(ic, url, twitter_http_post, ic, 1, NULL, 0,
+	               TWITTER_HTTP_USER_ACK);
 	g_free(url);
 }

@@ -67,6 +67,8 @@
 #define OPT_TYPING      0x00000100 /* Some pieces of code make assumptions */
 #define OPT_THINKING    0x00000200 /* about these values... Stupid me! */
 #define OPT_NOOTR       0x00001000 /* protocol not suitable for OTR */
+#define OPT_PONGS       0x00010000 /* Service sends us keep-alives */
+#define OPT_PONGED      0x00020000 /* Received a keep-alive during last interval */
 
 /* ok. now the fun begins. first we create a connection structure */
 struct im_connection

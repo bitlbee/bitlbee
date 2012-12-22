@@ -260,10 +260,30 @@ static gboolean send_keepalive( gpointer d, gint fd, b_input_condition cond )
 {
 	struct im_connection *ic = d;
 	
+	if( ( ic->flags & OPT_PONGS ) && !( ic->flags & OPT_PONGED ) )
+	{
+		/* This protocol is expected to ack keepalives and hasn't
+		   since the last time we were here. */
+		imcb_error( ic, "Connection timeout" );
+		imc_logout( ic, TRUE );
+		return FALSE;
+	}
+	ic->flags &= ~OPT_PONGED;
+	
 	if( ic->acc->prpl->keepalive )
 		ic->acc->prpl->keepalive( ic );
 	
 	return TRUE;
+}
+
+void start_keepalives( struct im_connection *ic, int interval )
+{
+	b_event_remove( ic->keepalive );
+	ic->keepalive = b_timeout_add( interval, send_keepalive, ic );
+	
+	/* Connecting successfully counts as a first successful pong. */
+	if( ic->flags & OPT_PONGS )
+		ic->flags |= OPT_PONGED;
 }
 
 void imcb_connected( struct im_connection *ic )
@@ -276,9 +296,8 @@ void imcb_connected( struct im_connection *ic )
 	
 	imcb_log( ic, "Logged in" );
 	
-	b_event_remove( ic->keepalive );
-	ic->keepalive = b_timeout_add( 60000, send_keepalive, ic );
 	ic->flags |= OPT_LOGGED_IN;
+	start_keepalives( ic, 60000 );
 	
 	/* Necessary to send initial presence status, even if we're not away. */
 	imc_away_send_update( ic );

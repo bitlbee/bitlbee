@@ -1,9 +1,9 @@
 /***************************************************************************\
 *                                                                           *
 *  BitlBee - An IRC to IM gateway                                           *
-*  Simple module to facilitate twitter functionality.                       *
+*  Helper functions for json.c                                              *
 *                                                                           *
-*  Copyright 2009 Geert Mulders <g.c.w.m.mulders@gmail.com>                 *
+*  Copyright 2012 Wilmer van der Gaast <wilmer@gaast.net>                   *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -21,24 +21,15 @@
 *                                                                           *
 ****************************************************************************/
 
-#ifndef _TWITTER_HTTP_H
-#define _TWITTER_HTTP_H
+#include "json.h"
 
-#include "nogaim.h"
-#include "http_client.h"
+#define JSON_O_FOREACH(o, k, v) \
+	char *k; json_value *v; int __i; \
+	for( __i = 0; ( __i < (o)->u.object.length ) && \
+	              ( k = (o)->u.object.values[__i].name ) && \
+	              ( v = (o)->u.object.values[__i].value ); \
+	              __i ++ )
 
-typedef enum {
-	/* With this set, twitter_http_post() will post a generic confirmation
-	   message to the user. */
-	TWITTER_HTTP_USER_ACK = 0x1000000,
-} twitter_http_flags_t;
-
-struct oauth_info;
-
-struct http_request *twitter_http(struct im_connection *ic, char *url_string, http_input_function func,
-                                  gpointer data, int is_post, char** arguments, int arguments_len);
-struct http_request *twitter_http_f(struct im_connection *ic, char *url_string, http_input_function func,
-                                    gpointer data, int is_post, char** arguments, int arguments_len, twitter_http_flags_t flags);
-
-#endif //_TWITTER_HTTP_H
-
+json_value *json_o_get( const json_value *obj, const json_char *name );
+const char *json_o_str( const json_value *obj, const json_char *name );
+char *json_o_strdup( const json_value *obj, const json_char *name );

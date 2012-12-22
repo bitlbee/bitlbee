@@ -46,14 +46,15 @@ static char *twitter_url_append(char *url, char *key, char *value);
  * Do a request.
  * This is actually pretty generic function... Perhaps it should move to the lib/http_client.c
  */
-void *twitter_http(struct im_connection *ic, char *url_string, http_input_function func,
-		   gpointer data, int is_post, char **arguments, int arguments_len)
+struct http_request *twitter_http(struct im_connection *ic, char *url_string, http_input_function func,
+		                  gpointer data, int is_post, char **arguments, int arguments_len)
 {
 	struct twitter_data *td = ic->proto_data;
 	char *tmp;
 	GString *request = g_string_new("");
 	void *ret;
 	char *url_arguments;
+	url_t *base_url = NULL;
 
 	url_arguments = g_strdup("");
 
@@ -66,20 +67,34 @@ void *twitter_http(struct im_connection *ic, char *url_string, http_input_functi
 			url_arguments = tmp;
 		}
 	}
+	
+	if (strstr(url_string, "://")) {
+		base_url = g_new0(url_t, 1);
+		if (!url_set(base_url, url_string)) {
+			g_free(base_url);
+			return NULL;
+		}
+	}
+	
 	// Make the request.
 	g_string_printf(request, "%s %s%s%s%s HTTP/1.0\r\n"
 			"Host: %s\r\n"
 			"User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n",
 			is_post ? "POST" : "GET",
-			td->url_path, url_string,
-			is_post ? "" : "?", is_post ? "" : url_arguments, td->url_host);
+			base_url ? base_url->file : td->url_path,
+			base_url ? "" : url_string,
+			is_post ? "" : "?", is_post ? "" : url_arguments,
+			base_url ? base_url->host : td->url_host);
 
 	// If a pass and user are given we append them to the request.
 	if (td->oauth_info) {
 		char *full_header;
 		char *full_url;
 
-		full_url = g_strconcat(set_getstr(&ic->acc->set, "base_url"), url_string, NULL);
+		if (base_url)
+			full_url = g_strdup(url_string);
+		else
+			full_url = g_strconcat(set_getstr(&ic->acc->set, "base_url"), url_string, NULL);
 		full_header = oauth_http_header(td->oauth_info, is_post ? "POST" : "GET",
 						full_url, url_arguments);
 
@@ -108,10 +123,23 @@ void *twitter_http(struct im_connection *ic, char *url_string, http_input_functi
 		g_string_append(request, "\r\n");
 	}
 
-	ret = http_dorequest(td->url_host, td->url_port, td->url_ssl, request->str, func, data);
+	if (base_url)
+		ret = http_dorequest(base_url->host, base_url->port, base_url->proto == PROTO_HTTPS, request->str, func, data);
+	else
+		ret = http_dorequest(td->url_host, td->url_port, td->url_ssl, request->str, func, data);
 
 	g_free(url_arguments);
 	g_string_free(request, TRUE);
+	g_free(base_url);
+	return ret;
+}
+
+struct http_request *twitter_http_f(struct im_connection *ic, char *url_string, http_input_function func,
+		                    gpointer data, int is_post, char **arguments, int arguments_len, twitter_http_flags_t flags)
+{
+	struct http_request *ret = twitter_http(ic, url_string, func, data, is_post, arguments, arguments_len);
+	if (ret)
+		ret->flags |= flags;
 	return ret;
 }
 

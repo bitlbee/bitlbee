@@ -834,6 +834,7 @@
 
 	<bitlbee-setting name="commands" type="boolean" scope="account">
 		<default>true</default>
+		<possible-values>true, false, strict</possible-values>
 
 		<description>
 			<para>
@@ -852,7 +853,7 @@
 			</variablelist>
 
 			<para>
-				Anything that doesn't look like a command will be treated as a tweet. Watch out for typos! :-)
+				Anything that doesn't look like a command will be treated as a tweet. Watch out for typos, or to avoid this behaviour, you can set this setting to <emphasis>strict</emphasis>, which causes the <emphasis>post</emphasis> command to become mandatory for posting a tweet.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1018,6 +1019,21 @@
 
 			<para>
 				You can change this limit here but this won't disable length checks on Twitter's side. You can also set it to 0 to disable the check in case you believe BitlBee doesn't count the characters correctly.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="stream" type="boolean" scope="account">
+		<default>true</default>
+
+		<description>
+			<para>
+				For Twitter accounts, this setting enables use of the Streaming API. This automatically gives you incoming DMs as well.
+			</para>
+			
+			<para>
+				For other Twitter-like services, this setting is not supported.
 			</para>
 		</description>
 
@@ -1337,7 +1353,7 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="show_ids" type="boolean" scope="account">
-		<default>false</default>
+		<default>true</default>
 
 		<description>
 			<para>

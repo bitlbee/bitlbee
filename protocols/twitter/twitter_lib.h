@@ -28,46 +28,46 @@
 #include "nogaim.h"
 #include "twitter_http.h"
 
-#define TWITTER_API_URL "http://api.twitter.com/1"
+#define TWITTER_API_URL "http://api.twitter.com/1.1"
 #define IDENTICA_API_URL "https://identi.ca/api"
 
 /* Status URLs */
-#define TWITTER_STATUS_UPDATE_URL "/statuses/update.xml"
+#define TWITTER_STATUS_UPDATE_URL "/statuses/update.json"
 #define TWITTER_STATUS_SHOW_URL "/statuses/show/"
 #define TWITTER_STATUS_DESTROY_URL "/statuses/destroy/"
 #define TWITTER_STATUS_RETWEET_URL "/statuses/retweet/"
 
 /* Timeline URLs */
-#define TWITTER_PUBLIC_TIMELINE_URL "/statuses/public_timeline.xml"
-#define TWITTER_FEATURED_USERS_URL "/statuses/featured.xml"
-#define TWITTER_FRIENDS_TIMELINE_URL "/statuses/friends_timeline.xml"
-#define TWITTER_HOME_TIMELINE_URL "/statuses/home_timeline.xml"
-#define TWITTER_MENTIONS_URL "/statuses/mentions.xml"
-#define TWITTER_USER_TIMELINE_URL "/statuses/user_timeline.xml"
+#define TWITTER_PUBLIC_TIMELINE_URL "/statuses/public_timeline.json"
+#define TWITTER_FEATURED_USERS_URL "/statuses/featured.json"
+#define TWITTER_FRIENDS_TIMELINE_URL "/statuses/friends_timeline.json"
+#define TWITTER_HOME_TIMELINE_URL "/statuses/home_timeline.json"
+#define TWITTER_MENTIONS_URL "/statuses/mentions_timeline.json"
+#define TWITTER_USER_TIMELINE_URL "/statuses/user_timeline.json"
 
 /* Users URLs */
-#define TWITTER_USERS_LOOKUP_URL "/users/lookup.xml"
+#define TWITTER_USERS_LOOKUP_URL "/users/lookup.json"
 
 /* Direct messages URLs */
-#define TWITTER_DIRECT_MESSAGES_URL "/direct_messages.xml"
-#define TWITTER_DIRECT_MESSAGES_NEW_URL "/direct_messages/new.xml"
-#define TWITTER_DIRECT_MESSAGES_SENT_URL "/direct_messages/sent.xml"
+#define TWITTER_DIRECT_MESSAGES_URL "/direct_messages.json"
+#define TWITTER_DIRECT_MESSAGES_NEW_URL "/direct_messages/new.json"
+#define TWITTER_DIRECT_MESSAGES_SENT_URL "/direct_messages/sent.json"
 #define TWITTER_DIRECT_MESSAGES_DESTROY_URL "/direct_messages/destroy/"
 
 /* Friendships URLs */
-#define TWITTER_FRIENDSHIPS_CREATE_URL "/friendships/create.xml"
-#define TWITTER_FRIENDSHIPS_DESTROY_URL "/friendships/destroy.xml"
-#define TWITTER_FRIENDSHIPS_SHOW_URL "/friendships/show.xml"
+#define TWITTER_FRIENDSHIPS_CREATE_URL "/friendships/create.json"
+#define TWITTER_FRIENDSHIPS_DESTROY_URL "/friendships/destroy.json"
+#define TWITTER_FRIENDSHIPS_SHOW_URL "/friendships/show.json"
 
 /* Social graphs URLs */
-#define TWITTER_FRIENDS_IDS_URL "/friends/ids.xml"
-#define TWITTER_FOLLOWERS_IDS_URL "/followers/ids.xml"
+#define TWITTER_FRIENDS_IDS_URL "/friends/ids.json"
+#define TWITTER_FOLLOWERS_IDS_URL "/followers/ids.json"
 
 /* Account URLs */
-#define TWITTER_ACCOUNT_RATE_LIMIT_URL "/account/rate_limit_status.xml"
+#define TWITTER_ACCOUNT_RATE_LIMIT_URL "/account/rate_limit_status.json"
 
 /* Favorites URLs */
-#define TWITTER_FAVORITES_GET_URL "/favorites.xml"
+#define TWITTER_FAVORITES_GET_URL "/favorites.json"
 #define TWITTER_FAVORITE_CREATE_URL "/favorites/create/"
 #define TWITTER_FAVORITE_DESTROY_URL "/favorites/destroy/"
 
@@ -76,12 +76,13 @@
 #define TWITTER_BLOCKS_DESTROY_URL "/blocks/destroy/"
 
 /* Report spam */
-#define TWITTER_REPORT_SPAM_URL "/report_spam.xml"
+#define TWITTER_REPORT_SPAM_URL "/report_spam.json"
 
+#define TWITTER_USER_STREAM_URL "https://userstream.twitter.com/1.1/user.json"
+
+gboolean twitter_open_stream(struct im_connection *ic);
 void twitter_get_timeline(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor);
-void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor);
-void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
 
 void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to);

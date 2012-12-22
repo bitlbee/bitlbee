@@ -192,12 +192,13 @@ static gboolean http_ssl_connected( gpointer data, int returncode, void *source,
 	return http_connected( data, req->fd, cond );
 }
 
+static gboolean http_handle_headers( struct http_request *req );
+
 static gboolean http_incoming_data( gpointer data, int source, b_input_condition cond )
 {
 	struct http_request *req = data;
-	int evil_server = 0;
-	char buffer[2048];
-	char *end1, *end2, *s;
+	char buffer[4096];
+	char *s;
 	size_t content_length;
 	int st;
 	
@@ -217,12 +218,12 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 				   servers that LOVE to send invalid TLS
 				   packets that abort connections! \o/ */
 				
-				goto got_reply;
+				goto eof;
 			}
 		}
 		else if( st == 0 )
 		{
-			goto got_reply;
+			goto eof;
 		}
 	}
 	else
@@ -238,28 +239,70 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 		}
 		else if( st == 0 )
 		{
-			goto got_reply;
+			goto eof;
 		}
 	}
 	
-	if( st > 0 )
+	if( st > 0 && !req->sbuf )
 	{
 		req->reply_headers = g_realloc( req->reply_headers, req->bytes_read + st + 1 );
 		memcpy( req->reply_headers + req->bytes_read, buffer, st );
 		req->bytes_read += st;
+		
+		st = 0;
 	}
+	
+	if( st >= 0 && ( req->flags & HTTPC_STREAMING ) )
+	{
+		if( !req->reply_body &&
+		    ( strstr( req->reply_headers, "\r\n\r\n" ) ||
+		      strstr( req->reply_headers, "\n\n" ) ) )
+		{
+			size_t hlen;
+			
+			/* We've now received all headers, so process them once
+			   before we start feeding back data. */
+			if( !http_handle_headers( req ) )
+				return FALSE;
+			
+			hlen = req->reply_body - req->reply_headers;
+			
+			req->sblen = req->bytes_read - hlen;
+			req->sbuf = g_memdup( req->reply_body, req->sblen + 1 );
+			req->reply_headers = g_realloc( req->reply_headers, hlen + 1 );
+			
+			req->reply_body = req->sbuf;
+		}
+		
+		if( st > 0 )
+		{
+			int pos = req->reply_body - req->sbuf;
+			req->sbuf = g_realloc( req->sbuf, req->sblen + st + 1 );
+			memcpy( req->sbuf + req->sblen, buffer, st );
+			req->bytes_read += st;
+			req->sblen += st;
+			req->sbuf[req->sblen] = '\0';
+			req->reply_body = req->sbuf + pos;
+			req->body_size = req->sblen - pos;
+		}
+		
+		if( req->reply_body )
+			req->func( req );
+	}
+	
+	if( ssl_pending( req->ssl ) )
+		return http_incoming_data( data, source, cond );
 	
 	/* There will be more! */
 	req->inpa = b_input_add( req->fd,
 	                         req->ssl ? ssl_getdirection( req->ssl ) : B_EV_IO_READ,
 	                         http_incoming_data, req );
 	
-	if( ssl_pending( req->ssl ) )
-		return http_incoming_data( data, source, cond );
-	else
-		return FALSE;
+	return FALSE;
 
-got_reply:
+eof:
+	req->flags |= HTTPC_EOF;
+	
 	/* Maybe if the webserver is overloaded, or when there's bad SSL
 	   support... */
 	if( req->bytes_read == 0 )
@@ -268,8 +311,50 @@ got_reply:
 		goto cleanup;
 	}
 	
+	if( !( req->flags & HTTPC_STREAMING ) )
+	{
+		/* Returns FALSE if we were redirected, in which case we should abort
+		   and not run any callback yet. */
+		if( !http_handle_headers( req ) )
+			return FALSE;
+	}
+
+cleanup:
+	if( req->ssl )
+		ssl_disconnect( req->ssl );
+	else
+		closesocket( req->fd );
+	
+	if( ( s = get_rfc822_header( req->reply_headers, "Content-Length", 0 ) ) &&
+	    sscanf( s, "%zd", &content_length ) == 1 )
+	{
+		if( content_length < req->body_size )
+		{
+			req->status_code = -1;
+			g_free( req->status_string );
+			req->status_string = g_strdup( "Response truncated" );
+		}
+	}
+	g_free( s );
+	
+	if( getenv( "BITLBEE_DEBUG" ) && req )
+		printf( "Finishing HTTP request with status: %s\n",
+		        req->status_string ? req->status_string : "NULL" );
+	
+	req->func( req );
+	http_free( req );
+	return FALSE;
+}
+
+/* Splits headers and body. Checks result code, in case of 300s it'll handle
+   redirects. If this returns FALSE, don't call any callbacks! */
+static gboolean http_handle_headers( struct http_request *req )
+{
+	char *end1, *end2;
+	int evil_server = 0;
+	
 	/* Zero termination is very convenient. */
-	req->reply_headers[req->bytes_read] = 0;
+	req->reply_headers[req->bytes_read] = '\0';
 	
 	/* Find the separation between headers and body, and keep stupid
 	   webservers in mind. */
@@ -288,7 +373,7 @@ got_reply:
 	else
 	{
 		req->status_string = g_strdup( "Malformed HTTP reply" );
-		goto cleanup;
+		return TRUE;
 	}
 	
 	*end1 = 0;
@@ -305,7 +390,7 @@ got_reply:
 	
 	if( ( end1 = strchr( req->reply_headers, ' ' ) ) != NULL )
 	{
-		if( sscanf( end1 + 1, "%d", &req->status_code ) != 1 )
+		if( sscanf( end1 + 1, "%hd", &req->status_code ) != 1 )
 		{
 			req->status_string = g_strdup( "Can't parse status code" );
 			req->status_code = -1;
@@ -348,7 +433,7 @@ got_reply:
 		if( loc == NULL ) /* We can't handle this redirect... */
 		{
 			req->status_string = g_strdup( "Can't locate Location: header" );
-			goto cleanup;
+			return TRUE;
 		}
 		
 		loc += 11;
@@ -368,7 +453,7 @@ got_reply:
 			
 			req->status_string = g_strdup( "Can't handle recursive redirects" );
 			
-			goto cleanup;
+			return TRUE;
 		}
 		else
 		{
@@ -379,7 +464,7 @@ got_reply:
 			
 			s = strstr( loc, "\r\n" );
 			if( s == NULL )
-				goto cleanup;
+				return TRUE;
 			
 			url = g_new0( url_t, 1 );
 			*s = 0;
@@ -388,7 +473,7 @@ got_reply:
 			{
 				req->status_string = g_strdup( "Malformed redirect URL" );
 				g_free( url );
-				goto cleanup;
+				return TRUE;
 			}
 			
 			/* Find all headers and, if necessary, the POST request contents.
@@ -400,7 +485,7 @@ got_reply:
 			{
 				req->status_string = g_strdup( "Error while rebuilding request string" );
 				g_free( url );
-				goto cleanup;
+				return TRUE;
 			}
 			
 			/* More or less HTTP/1.0 compliant, from my reading of RFC 2616.
@@ -466,7 +551,7 @@ got_reply:
 		{
 			req->status_string = g_strdup( "Connection problem during redirect" );
 			g_free( new_request );
-			goto cleanup;
+			return TRUE;
 		}
 		
 		g_free( req->request );
@@ -479,35 +564,41 @@ got_reply:
 		return FALSE;
 	}
 	
-	/* Assume that a closed connection means we're finished, this indeed
-	   breaks with keep-alive connections and faulty connections. */
-	/* req->finished = 1; */
+	return TRUE;
+}
 
-cleanup:
+void http_flush_bytes( struct http_request *req, size_t len )
+{
+	if( len <= 0 || len > req->body_size || !( req->flags & HTTPC_STREAMING ) )
+		return;
+	
+	req->reply_body += len;
+	req->body_size -= len;
+	
+	if( req->reply_body - req->sbuf >= 512 )
+	{
+		printf( "Wasting %ld bytes, cleaning up stream buffer\n", req->reply_body - req->sbuf );
+		char *new = g_memdup( req->reply_body, req->body_size + 1 );
+		g_free( req->sbuf );
+		req->reply_body = req->sbuf = new;
+		req->sblen = req->body_size;
+	}
+}
+
+void http_close( struct http_request *req )
+{
+	if( !req )
+		return;
+	
+	if( req->inpa > 0 )
+		b_event_remove( req->inpa );
+	
 	if( req->ssl )
 		ssl_disconnect( req->ssl );
 	else
 		closesocket( req->fd );
 	
-	if( ( s = get_rfc822_header( req->reply_headers, "Content-Length", 0 ) ) &&
-	    sscanf( s, "%zd", &content_length ) == 1 )
-	{
-		if( content_length < req->body_size )
-		{
-			req->status_code = -1;
-			g_free( req->status_string );
-			req->status_string = g_strdup( "Response truncated" );
-		}
-	}
-	g_free( s );
-	
-	if( getenv( "BITLBEE_DEBUG" ) && req )
-		printf( "Finishing HTTP request with status: %s\n",
-		        req->status_string ? req->status_string : "NULL" );
-	
-	req->func( req );
 	http_free( req );
-	return FALSE;
 }
 
 static void http_free( struct http_request *req )
@@ -515,6 +606,6 @@ static void http_free( struct http_request *req )
 	g_free( req->request );
 	g_free( req->reply_headers );
 	g_free( req->status_string );
+	g_free( req->sbuf );
 	g_free( req );
 }
-

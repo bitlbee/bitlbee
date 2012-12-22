@@ -3,7 +3,7 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  Simple OAuth client (consumer) implementation.                           *
 *                                                                           *
-*  Copyright 2010-2011 Wilmer van der Gaast <wilmer@gaast.net>              *
+*  Copyright 2010-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This program is free software; you can redistribute it and/or modify     *
 *  it under the terms of the GNU General Public License as published by     *
@@ -25,6 +25,7 @@
 #include "http_client.h"
 #include "oauth2.h"
 #include "oauth.h"
+#include "json.h"
 #include "url.h"
 
 char *oauth2_url( const struct oauth2_service *sp )
@@ -43,7 +44,6 @@ struct oauth2_access_token_data
 	gpointer data;
 };
 
-static char *oauth2_json_dumb_get( const char *json, const char *key );
 static void oauth2_access_token_done( struct http_request *req );
 
 int oauth2_access_token( const struct oauth2_service *sp,
@@ -114,8 +114,22 @@ static void oauth2_access_token_done( struct http_request *req )
 	}
 	else if( content_type && strstr( content_type, "application/json" ) )
 	{
-		atoken = oauth2_json_dumb_get( req->reply_body, "access_token" );
-		rtoken = oauth2_json_dumb_get( req->reply_body, "refresh_token" );
+		json_value *js = json_parse( req->reply_body );
+		if( js && js->type == json_object )
+		{
+			int i;
+			
+			for( i = 0; i < js->u.object.length; i ++ )
+			{
+				if( js->u.object.values[i].value->type != json_string )
+					continue;
+				if( strcmp( js->u.object.values[i].name, "access_token" ) == 0 )
+					atoken = g_strdup( js->u.object.values[i].value->u.string.ptr );
+				if( strcmp( js->u.object.values[i].name, "refresh_token" ) == 0 )
+					rtoken = g_strdup( js->u.object.values[i].value->u.string.ptr );
+			}
+		}
+		json_value_free( js );
 	}
 	else
 	{
@@ -135,63 +149,4 @@ static void oauth2_access_token_done( struct http_request *req )
 	g_free( atoken );
 	g_free( rtoken );
 	g_free( cb_data );
-}
-
-/* Super dumb. I absolutely refuse to use/add a complete json parser library
-   (adding a new dependency to BitlBee for the first time in.. 6 years?) just
-   to parse 100 bytes of data. So I have to do my own parsing because OAuth2
-   dropped support for XML. (GRRR!) This is very dumb and for example won't
-   work for integer values, nor will it strip/handle backslashes. */
-static char *oauth2_json_dumb_get( const char *json, const char *key )
-{
-	int is_key = 0; /* 1 == reading key, 0 == reading value */
-	int found_key = 0;
-		
-	while( json && *json )
-	{
-		/* Grab strings and see if they're what we're looking for. */
-		if( *json == '"' || *json == '\'' )
-		{
-			char q = *json;
-			const char *str_start;
-			json ++;
-			str_start = json;
-			
-			while( *json )
-			{
-				/* \' and \" are not string terminators. */
-				if( *json == '\\' && json[1] == q )
-					json ++;
-				/* But without a \ it is. */
-				else if( *json == q )
-					break;
-				json ++;
-			}
-			if( *json == '\0' )
-				return NULL;
-			
-			if( is_key && strncmp( str_start, key, strlen( key ) ) == 0 )
-			{
-				found_key = 1;
-			}
-			else if( !is_key && found_key )
-			{
-				char *ret = g_memdup( str_start, json - str_start + 1 );
-				ret[json-str_start] = '\0';
-				return ret;
-			}
-			
-		}
-		else if( *json == '{' || *json == ',' )
-		{
-			found_key = 0;
-			is_key = 1;
-		}
-		else if( *json == ':' )
-			is_key = 0;
-		
-		json ++;
-	}
-	
-	return NULL;
 }
