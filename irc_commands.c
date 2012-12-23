@@ -381,6 +381,8 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 
 static void irc_cmd_notice( irc_t *irc, char **cmd )
 {
+	irc_user_t *iu;
+	
 	if( !cmd[2] ) 
 	{
 		irc_send_num( irc, 412, ":No text to send" );
@@ -391,6 +393,8 @@ static void irc_cmd_notice( irc_t *irc, char **cmd )
 	   for lag checks, so try to support that. */
 	if( nick_cmp( cmd[1], irc->user->nick ) == 0 )
 		irc_send_msg( irc->user, "NOTICE", irc->user->nick, cmd[2], NULL );
+	else if( ( iu = irc_user_by_name( irc, cmd[1] ) ) )
+		iu->f->privmsg( iu, cmd[2] );
 }
 
 static void irc_cmd_nickserv( irc_t *irc, char **cmd )
