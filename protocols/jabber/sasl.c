@@ -386,6 +386,7 @@ xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data )
 	else
 	{
 		/* We found rspauth, but don't really care... */
+		g_free( s );
 	}
 	
 	s = reply ? tobase64( reply ) : NULL;
