@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2011 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* SSL module - GnuTLS version                                          */
@@ -62,6 +62,8 @@ struct scd
 	gnutls_session_t session;
 };
 
+static GHashTable *session_cache;
+
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
 static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition cond );
 static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
@@ -96,6 +98,8 @@ void ssl_init( void )
 	gnutls_global_set_log_level( 3 );
 	*/
 	
+	session_cache = g_hash_table_new_full( g_str_hash, g_str_equal, g_free, g_free );
+	
 	atexit( ssl_deinit );
 }
 
@@ -103,6 +107,8 @@ static void ssl_deinit( void )
 {
 	gnutls_global_deinit();
 	gnutls_certificate_free_credentials( xcred );
+	g_hash_table_destroy( session_cache );
+	session_cache = NULL;
 }
 
 void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data )
@@ -221,6 +227,45 @@ static int verify_certificate_callback( gnutls_session_t session )
 	return verifyret;
 }
 
+struct ssl_session
+{
+	size_t size;
+	char data[];
+};
+
+static void ssl_cache_add( struct scd *conn )
+{
+	size_t data_size;
+	struct ssl_session *data;
+	char *hostname;
+	
+	if( !conn->hostname || 
+	    gnutls_session_get_data( conn->session, NULL, &data_size ) != 0 )
+		return;
+	
+	data = g_malloc( sizeof( struct ssl_session ) + data_size );
+	if( gnutls_session_get_data( conn->session, data->data, &data->size ) != 0 )
+	{
+		g_free( data );
+		return;
+	}
+	
+	hostname = g_strdup( conn->hostname );
+	g_hash_table_insert( session_cache, hostname, data );
+}
+
+static void ssl_cache_resume( struct scd *conn )
+{
+	struct ssl_session *data;
+	
+	if( conn->hostname &&
+	    ( data = g_hash_table_lookup( session_cache, conn->hostname ) ) )
+	{
+		gnutls_session_set_data( conn->session, data->data, data->size );
+		g_hash_table_remove( session_cache, conn->hostname );
+	}
+}
+
 char *ssl_verify_strerror( int code )
 {
 	GString *ret = g_string_new( "" );
@@ -279,6 +324,8 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	sock_make_nonblocking( conn->fd );
 	gnutls_transport_set_ptr( conn->session, (gnutls_transport_ptr_t) GNUTLS_STUPID_CAST conn->fd );
 	
+	ssl_cache_resume( conn );
+	
 	return ssl_handshake( data, source, cond );
 }
 
@@ -319,7 +366,8 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 		{
 			/* For now we can't handle non-blocking perfectly everywhere... */
 			sock_make_blocking( conn->fd );
-		
+			
+			ssl_cache_add( conn );
 			conn->established = TRUE;
 			conn->func( conn->data, 0, conn, cond );
 		}
