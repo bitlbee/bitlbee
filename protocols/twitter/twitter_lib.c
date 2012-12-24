@@ -770,24 +770,16 @@ static void twitter_http_stream(struct http_request *req)
 		return;
 	}
 	
-	printf( "%d bytes in stream\n", req->body_size );
-	
 	/* MUST search for CRLF, not just LF:
 	   https://dev.twitter.com/docs/streaming-apis/processing#Parsing_responses */
-	nl = strstr(req->reply_body, "\r\n");
-	
-	if (!nl) {
-		printf("Incomplete data\n");
+	if (!(nl = strstr(req->reply_body, "\r\n")))
 		return;
-	}
 	
 	len = nl - req->reply_body;
 	if (len > 0) {
 		c = req->reply_body[len];
 		req->reply_body[len] = '\0';
 		
-		printf("JSON: %s\n", req->reply_body);
-		printf("parsed: %p\n", (parsed = json_parse(req->reply_body)));
 		if (parsed) {
 			twitter_stream_handle_object(ic, parsed);
 		}

@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2011 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* HTTP(S) module                                                       */
@@ -577,7 +577,6 @@ void http_flush_bytes( struct http_request *req, size_t len )
 	
 	if( req->reply_body - req->sbuf >= 512 )
 	{
-		printf( "Wasting %ld bytes, cleaning up stream buffer\n", req->reply_body - req->sbuf );
 		char *new = g_memdup( req->reply_body, req->body_size + 1 );
 		g_free( req->sbuf );
 		req->reply_body = req->sbuf = new;
