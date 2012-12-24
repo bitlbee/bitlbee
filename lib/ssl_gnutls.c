@@ -272,6 +272,9 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 #endif
 	gnutls_set_default_priority( conn->session );
 	gnutls_credentials_set( conn->session, GNUTLS_CRD_CERTIFICATE, xcred );
+	if( conn->hostname && !isdigit( conn->hostname[0] ) )
+		gnutls_server_name_set( conn->session, GNUTLS_NAME_DNS,
+		                        conn->hostname, strlen( conn->hostname ) );
 	
 	sock_make_nonblocking( conn->fd );
 	gnutls_transport_set_ptr( conn->session, (gnutls_transport_ptr_t) GNUTLS_STUPID_CAST conn->fd );

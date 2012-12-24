@@ -46,6 +46,7 @@ struct scd
 	int fd;
 	gboolean established;
 	gboolean verify;
+	char *hostname;
 	
 	int inpa;
 	int lasterr;		/* Necessary for SSL_get_error */
@@ -53,6 +54,7 @@ struct scd
 	SSL_CTX *ssl_ctx;
 };
 
+static void ssl_conn_free( struct scd *conn );
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
 static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition cond );
 static gboolean ssl_handshake( gpointer data, gint source, b_input_condition cond );
@@ -72,13 +74,14 @@ void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function fun
 	conn->fd = proxy_connect( host, port, ssl_connected, conn );
 	if( conn->fd < 0 )
 	{
-		g_free( conn );
+		ssl_conn_free( conn );
 		return NULL;
 	}
 	
 	conn->func = func;
 	conn->data = data;
 	conn->inpa = -1;
+	conn->hostname = g_strdup( host );
 	
 	return conn;
 }
@@ -92,6 +95,7 @@ void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function 
 	conn->data = data;
 	conn->inpa = -1;
 	conn->verify = verify && global.conf->cafile;
+	conn->hostname = g_strdup( hostname );
 	
 	/* This function should be called via a (short) timeout instead of
 	   directly from here, because these SSL calls are *supposed* to be
@@ -119,13 +123,12 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	struct scd *conn = data;
 	const SSL_METHOD *meth;
 	
-	/* Right now we don't have any verification functionality for OpenSSL. */
-
 	if( conn->verify )
 	{
+		/* Right now we don't have any verification functionality for OpenSSL. */
 		conn->func( conn->data, 1, NULL, cond );
 		if( source >= 0 ) closesocket( source );
-		g_free( conn );
+		ssl_conn_free( conn );
 
 		return FALSE;
 	}
@@ -151,23 +154,14 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	sock_make_nonblocking( conn->fd );
 	SSL_set_fd( conn->ssl, conn->fd );
 	
+	if( conn->hostname && !isdigit( conn->hostname[0] ) )
+		SSL_set_tlsext_host_name( conn->ssl, conn->hostname );
+	
 	return ssl_handshake( data, source, cond );
 
 ssl_connected_failure:
 	conn->func( conn->data, 0, NULL, cond );
-	
-	if( conn->ssl )
-	{
-		SSL_shutdown( conn->ssl );
-		SSL_free( conn->ssl );
-	}
-	if( conn->ssl_ctx )
-	{
-		SSL_CTX_free( conn->ssl_ctx );
-	}
-	if( source >= 0 ) closesocket( source );
-	g_free( conn );
-	
+	ssl_disconnect( conn );
 	return FALSE;
 
 }	
@@ -183,14 +177,7 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 		if( conn->lasterr != SSL_ERROR_WANT_READ && conn->lasterr != SSL_ERROR_WANT_WRITE )
 		{
 			conn->func( conn->data, 0, NULL, cond );
-			
-			SSL_shutdown( conn->ssl );
-			SSL_free( conn->ssl );
-			SSL_CTX_free( conn->ssl_ctx );
-			
-			if( source >= 0 ) closesocket( source );
-			g_free( conn );
-			
+			ssl_disconnect( conn );
 			return FALSE;
 		}
 		
@@ -260,6 +247,15 @@ int ssl_pending( void *conn )
 	       SSL_pending( ((struct scd*)conn)->ssl ) > 0 : 0;
 }
 
+static void ssl_conn_free( struct scd *conn )
+{
+	SSL_free( conn->ssl );
+	SSL_CTX_free( conn->ssl_ctx );
+	g_free( conn->hostname );
+	g_free( conn );
+	
+}
+
 void ssl_disconnect( void *conn_ )
 {
 	struct scd *conn = conn_;
@@ -272,9 +268,7 @@ void ssl_disconnect( void *conn_ )
 	
 	closesocket( conn->fd );
 	
-	SSL_free( conn->ssl );
-	SSL_CTX_free( conn->ssl_ctx );
-	g_free( conn );
+	ssl_conn_free( conn );
 }
 
 int ssl_getfd( void *conn )
