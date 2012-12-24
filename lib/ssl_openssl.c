@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* SSL module - OpenSSL version                                         */
@@ -51,8 +51,9 @@ struct scd
 	int inpa;
 	int lasterr;		/* Necessary for SSL_get_error */
 	SSL *ssl;
-	SSL_CTX *ssl_ctx;
 };
+
+static SSL_CTX *ssl_ctx;
 
 static void ssl_conn_free( struct scd *conn );
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond );
@@ -62,9 +63,14 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 
 void ssl_init( void )
 {
-	initialized = TRUE;
+	const SSL_METHOD *meth;
+	
 	SSL_library_init();
-	// SSLeay_add_ssl_algorithms();
+	
+	meth = TLSv1_client_method();
+	ssl_ctx = SSL_CTX_new( meth );
+	
+	initialized = TRUE;
 }
 
 void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data )
@@ -121,7 +127,6 @@ static gboolean ssl_starttls_real( gpointer data, gint source, b_input_condition
 static gboolean ssl_connected( gpointer data, gint source, b_input_condition cond )
 {
 	struct scd *conn = data;
-	const SSL_METHOD *meth;
 	
 	if( conn->verify )
 	{
@@ -141,12 +146,11 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 		ssl_init();
 	}
 	
-	meth = TLSv1_client_method();
-	conn->ssl_ctx = SSL_CTX_new( meth );
-	if( conn->ssl_ctx == NULL )
+	
+	if( ssl_ctx == NULL )
 		goto ssl_connected_failure;
 	
-	conn->ssl = SSL_new( conn->ssl_ctx );
+	conn->ssl = SSL_new( ssl_ctx );
 	if( conn->ssl == NULL )
 		goto ssl_connected_failure;
 	
@@ -250,7 +254,6 @@ int ssl_pending( void *conn )
 static void ssl_conn_free( struct scd *conn )
 {
 	SSL_free( conn->ssl );
-	SSL_CTX_free( conn->ssl_ctx );
 	g_free( conn->hostname );
 	g_free( conn );
 	
