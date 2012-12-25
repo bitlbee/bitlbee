@@ -780,7 +780,7 @@ static void twitter_http_stream(struct http_request *req)
 		c = req->reply_body[len];
 		req->reply_body[len] = '\0';
 		
-		if (parsed) {
+		if ((parsed = json_parse(req->reply_body))) {
 			twitter_stream_handle_object(ic, parsed);
 		}
 		json_value_free(parsed);
