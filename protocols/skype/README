@@ -30,7 +30,7 @@ not..)
 
 == Requirements
 
-* Skype >= 1.4.0.99. The latest version I've tested is 2.1.0.81.
+* Skype >= 1.4.0.99. The latest version I've tested is 2.2.0.35.
 * BitlBee >= 3.0. The latest version I've tested is @BITLBEE_VERSION@. Use
   old versions (see the NEWS file about which one) if you have older BitlBee
   installed.
@@ -352,6 +352,7 @@ $ skyped -n -d
 
 - Group support:
 
+  * To enable: `account skype set read_groups true`
   * Skype groups are told to BitlBee
   * The usual `/invite` in a group channel adds the buddy to the group in skype
     as well (and if necessary, it creates a new group in Skype)
