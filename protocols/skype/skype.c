@@ -1045,6 +1045,9 @@ static void skype_parse_chats(struct im_connection *ic, char *line)
 
 static void skype_parse_groups(struct im_connection *ic, char *line)
 {
+	if (!set_getbool(&ic->acc->set, "read_groups"))
+		return;
+
 	char **i;
 	char **groups = g_strsplit(line + 7, ", ", 0);
 
@@ -1535,6 +1538,8 @@ static void skype_init(account_t *acc)
 
 	s = set_add(&acc->set, "edit_prefix", "EDIT:",
 			NULL, acc);
+
+	s = set_add(&acc->set, "read_groups", "false", set_eval_bool, acc);
 }
 
 #if BITLBEE_VERSION_CODE > BITLBEE_VER(3, 0, 1)
