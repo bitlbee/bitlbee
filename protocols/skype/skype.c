@@ -1,7 +1,7 @@
 /*
  *  skype.c - Skype plugin for BitlBee
  *
- *  Copyright (c) 2007, 2008, 2009, 2010, 2011, 2012 by Miklos Vajna <vmiklos@frugalware.org>
+ *  Copyright (c) 2007-2013 by Miklos Vajna <vmiklos@frugalware.org>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1321,6 +1321,15 @@ static char *skype_set_display_name(set_t *set, char *value)
 	return value;
 }
 
+static char *skype_set_mood_text(set_t *set, char *value)
+{
+	account_t *acc = set->data;
+	struct im_connection *ic = acc->ic;
+
+	skype_printf(ic, "SET PROFILE MOOD_TEXT %s", value);
+	return value;
+}
+
 static char *skype_set_balance(set_t *set, char *value)
 {
 	account_t *acc = set->data;
@@ -1511,6 +1520,9 @@ static void skype_init(account_t *acc)
 
 	s = set_add(&acc->set, "display_name", NULL, skype_set_display_name,
 		acc);
+	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+
+	s = set_add(&acc->set, "mood_text", NULL, skype_set_mood_text, acc);
 	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "call", NULL, skype_set_call, acc);

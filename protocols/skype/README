@@ -346,9 +346,10 @@ $ skyped -n -d
 
   * `account skype set test_join true`
 
-- Mood texts are not shown by default. If you want to see it:
+- Mood texts are not shown by default.
 
-  * `account skype set show_moods true`
+  * If you want to see them: `account skype set show_moods true`
+  * If you want to change your mood text: `account skype set mood_text 'foo bar'`
 
 - Group support:
 
