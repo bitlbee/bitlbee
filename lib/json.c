@@ -212,8 +212,8 @@ json_value * json_parse_ex (json_settings * settings, const json_char * json, ch
    {
       json_uchar uchar;
       unsigned char uc_b1, uc_b2, uc_b3, uc_b4;
-      json_char * string;
-      unsigned int string_length;
+      json_char * string = 0;
+      unsigned int string_length = 0;
 
       top = root = 0;
       flags = flag_seek_value;
