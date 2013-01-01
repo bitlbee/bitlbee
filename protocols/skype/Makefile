@@ -61,7 +61,7 @@ autoclean: distclean
 
 # take this from the kernel
 check:
-	perl checkpatch.pl --no-tree --file skype.c
+	perl checkpatch.pl --show-types --ignore LONG_LINE,CAMELCASE --no-tree --file skype.c
 
 test: all
 	$(MAKE) -C t/ all

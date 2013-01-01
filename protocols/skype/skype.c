@@ -213,8 +213,7 @@ void skype_buddy_ask(struct im_connection *ic, char *handle, char *message)
 	bla->ic = ic;
 	bla->handle = g_strdup(handle);
 
-	buf = g_strdup_printf("The user %s wants to add you to "
-		"his/her buddy list, saying: '%s'.", handle, message);
+	buf = g_strdup_printf("The user %s wants to add you to his/her buddy list, saying: '%s'.", handle, message);
 	imcb_ask(ic, buf, bla, skype_buddy_ask_yes, skype_buddy_ask_no);
 	g_free(buf);
 }
@@ -408,8 +407,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			sd->info_about = g_strdup(st->str);
 			g_string_free(st, TRUE);
 		}
-	}
-	else if (!strncmp(ptr, "BIRTHDAY ", 9)) {
+	} else if (!strncmp(ptr, "BIRTHDAY ", 9)) {
 		sd->info_birthday = g_strdup(ptr + 9);
 
 		GString *st = g_string_new("Contact Information\n");
@@ -565,10 +563,30 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 	}
 }
 
-static void skype_parse_chatmessage(struct im_connection *ic, char *line)
+static void skype_parse_chatmessage_said_emoted(struct im_connection *ic, struct groupchat *gc, char *body)
 {
 	struct skype_data *sd = ic->proto_data;
 	char buf[IRC_LINE_SIZE];
+	if (!strcmp(sd->type, "SAID")) {
+		if (!sd->is_edit)
+			g_snprintf(buf, IRC_LINE_SIZE, "%s", body);
+		else {
+			g_snprintf(buf, IRC_LINE_SIZE, "%s %s", set_getstr(&ic->acc->set, "edit_prefix"), body);
+			sd->is_edit = 0;
+		}
+	} else
+		g_snprintf(buf, IRC_LINE_SIZE, "/me %s", body);
+	if (!gc)
+		/* Private message */
+		imcb_buddy_msg(ic, sd->handle, buf, 0, 0);
+	else
+		/* Groupchat message */
+		imcb_chat_msg(gc, sd->handle, buf, 0, 0);
+}
+
+static void skype_parse_chatmessage(struct im_connection *ic, char *line)
+{
+	struct skype_data *sd = ic->proto_data;
 	char *id = strchr(line, ' ');
 
 	if (!++id)
@@ -626,27 +644,7 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 				char *body = g_list_nth_data(sd->body, i);
 				if (!strcmp(sd->type, "SAID") ||
 					!strcmp(sd->type, "EMOTED")) {
-					if (!strcmp(sd->type, "SAID")) {
-						if (!sd->is_edit)
-							g_snprintf(buf, IRC_LINE_SIZE, "%s",
-								body);
-						else {
-							g_snprintf(buf, IRC_LINE_SIZE, "%s %s",
-								set_getstr(&ic->acc->set, "edit_prefix"),
-								body);
-							sd->is_edit = 0;
-						}
-					} else
-						g_snprintf(buf, IRC_LINE_SIZE, "/me %s",
-							body);
-					if (!gc)
-						/* Private message */
-						imcb_buddy_msg(ic,
-							sd->handle, buf, 0, 0);
-					else
-						/* Groupchat message */
-						imcb_chat_msg(gc,
-							sd->handle, buf, 0, 0);
+					skype_parse_chatmessage_said_emoted(ic, gc, body);
 				} else if (!strcmp(sd->type, "SETTOPIC") && gc)
 					imcb_chat_topic(gc,
 						sd->handle, body, 0);
@@ -715,8 +713,7 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 		switch (sd->call_status) {
 		case SKYPE_CALL_RINGING:
 			if (sd->call_out)
-				imcb_log(ic, "You are currently ringing "
-					"the user %s.", info);
+				imcb_log(ic, "You are currently ringing the user %s.", info);
 			else {
 				g_snprintf(buf, IRC_LINE_SIZE,
 					"The user %s is currently ringing you.",
@@ -1230,7 +1227,7 @@ static void skype_logout(struct im_connection *ic)
 
 	skype_printf(ic, "SET USERSTATUS OFFLINE\n");
 
-	while( ic->groupchats )
+	while (ic->groupchats)
 		imcb_chat_free(ic->groupchats->data);
 
 	for (i = 0; i < g_list_length(sd->groups); i++) {
