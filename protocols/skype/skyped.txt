@@ -11,7 +11,7 @@ skyped [<options>]
 == DESCRIPTION
 
 Skype supports remote control of the GUI client only via X11 or DBus
-messages. This is hard in care you want remote control. This daemon
+messages. This is hard in case you want remote control. This daemon
 listens on a TCP port and runs on the same machine where the GUI client
 runs. It passes all the input it gets to Skype directly, except for a
 few commands which is related to authentication. The whole communication

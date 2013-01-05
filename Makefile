@@ -54,6 +54,9 @@ Makefile.settings:
 clean: $(subdirs)
 	rm -f *.o $(OUTFILE) core utils/bitlbeed init/bitlbee*.service
 	$(MAKE) -C tests clean
+ifdef SKYPE_PI
+	$(MAKE) -C protocols/skype clean
+endif
 
 distclean: clean $(subdirs)
 	rm -rf .depend

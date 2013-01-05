@@ -346,9 +346,10 @@ $ skyped -n -d
 
   * `account skype set test_join true`
 
-- Mood texts are not shown by default. If you want to see it:
+- Mood texts are not shown by default.
 
-  * `account skype set show_moods true`
+  * If you want to see them: `account skype set show_moods true`
+  * If you want to change your mood text: `account skype set mood_text 'foo bar'`
 
 - Group support:
 
@@ -372,7 +373,7 @@ $ skyped -n -d
 == I would like to have support for ...
 
 If something does not work and it's not in the TODO section, then please
-contact me! Please also try the link:HACKING[git version] before reporting a bug, your
+contact me! Please also try the bzr version before reporting a bug, your
 problem may be already fixed there.
 
 In fact, of course, I wrote this documentation after figured out how to do this
@@ -391,9 +392,6 @@ then it would be nice to include them here.
 You can reach some screenshots link:shot[here].
 
 == Additional resources
-
-You can reach the Changelog link:Changelog[here], and a gitweb interface
-http://vmiklos.hu/gitweb/?p=bitlbee-skype.git[here].
 
 The Skype API documentation is
 http://developer.skype.com/resources/public_api_ref.zip[here] if you're

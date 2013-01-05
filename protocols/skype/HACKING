@@ -16,11 +16,3 @@ run
 python skyped.py -n -d
 
 4) irssi
-
-== Get the code from git
-
-To get the code directly from git, you need:
-
-git clone git://vmiklos.hu/bitlbee-skype
-cd bitlbee-skype
-make autogen
