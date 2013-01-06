@@ -1517,15 +1517,15 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="tls" type="boolean" scope="account">
-		<default>try</default>
+		<default>true</default>
 
 		<description>
 			<para>
-				Newer Jabber servers allow clients to convert a plain-text session to a TLS/SSL-encrypted session. Normally (with this setting set to <emphasis>try</emphasis>) BitlBee will do this, if possible.
+				By default (with this setting enabled), BitlBee will require Jabber servers to offer encryption via StartTLS and refuse to connect if they don't.
 			</para>
 
 			<para>
-				If you want to force BitlBee to use TLS sessions only (and to give up if that doesn't seem to be possible) you can set this setting to <emphasis>true</emphasis>. Set it to <emphasis>false</emphasis> if you want the session to remain plain-text.
+				If you set this to "try", BitlBee will use StartTLS only if it's offered. With the setting disabled, StartTLS support will be ignored and avoided entirely.
 			</para>
 		</description>
 	</bitlbee-setting>

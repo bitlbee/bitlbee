@@ -84,7 +84,7 @@ static void jabber_init( account_t *acc )
 	s = set_add( &acc->set, "ssl", "false", set_eval_bool, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
-	s = set_add( &acc->set, "tls", "try", set_eval_tls, acc );
+	s = set_add( &acc->set, "tls", "true", set_eval_tls, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
 	s = set_add( &acc->set, "tls_verify", "true", set_eval_bool, acc );
