@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2004 Wilmer van der Gaast and others                *
+  * Copyright 2002-2013 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Main file                                                            */
@@ -38,10 +38,10 @@ extern "C" {
 #define _WIN32_WINNT 0x0501
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "3.0.6"
+#define BITLBEE_VERSION "3.2"
 #define VERSION BITLBEE_VERSION
 #define BITLBEE_VER(a,b,c) (((a) << 16) + ((b) << 8) + (c))
-#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 0, 6)
+#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 2, 0)
 
 #define MAX_STRING 511
 

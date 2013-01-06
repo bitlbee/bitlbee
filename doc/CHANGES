@@ -3,6 +3,28 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 3.2:
+- By far the most important change, a thorough update to the Twitter
+  module:
+  * Now using Twitter API 1.1,
+  * which means it's now using JSON instead of XML,
+  * which means access to the streaming API (Twitter only, other Twitter
+    API services don't seem to have it). No more 60-second polls, #twitter
+    looks even more like real IRC now!
+  * Also, the streaming API means nice things like receiving DMs.
+  * show_ids, already enabled by default for a while, now uses hexa-
+    decimal numbers, which means a 256-entry backlog instead of just 100.
+  * Added a mode=strict setting which requires everything to be a command.
+    The "post" command should then be used to post a Tweet.
+- Jabber module bugfix that fixes connection issues with at least Google
+  Talk but reportedly some other servers (OpenFire?) as well.
+- SSL modules improved a little bit. GnuTLS module now supports SNI and
+  session caching. Shouldn't change much, but hopefully reduces latency
+  and bandwidth usage a little bit.  
+- A bunch of other fixes/improvements here and there.
+
+Finished ... 2013
+
 Version 3.0.6:
 - Updated MSN module to speak MSNP18:
   * Biggest change is that this brings MPOP support (you can sign in to

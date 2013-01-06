@@ -385,4 +385,14 @@ by updating your <emphasis>bitlbee.conf</emphasis>.
 </para>
 </sect1>
 
+<sect1 id="whatsnew030200">
+<title>New stuff in BitlBee 3.2</title>
+
+<para>
+Upgradeed to Twitter API version 1.1. This is necessary because previous
+versions will stop working from March 2013. At the same time, BitlBee now
+supports the streaming API and incoming direct messages.
+</para>
+</sect1>
+
 </chapter>
