@@ -192,17 +192,18 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 		imcb_buddy_msg(ic, name, msg, 0, 0);
 		g_free(msg);
 	} else if (info->stage == OAUTH_ACCESS_TOKEN) {
+		const char *sn;
+		
 		if (info->token == NULL || info->token_secret == NULL) {
 			imcb_error(ic, "OAuth error: %s", twitter_parse_error(info->http));
 			imc_logout(ic, TRUE);
 			return FALSE;
-		} else {
-			const char *sn = oauth_params_get(&info->params, "screen_name");
-
-			if (sn != NULL && ic->acc->prpl->handle_cmp(sn, ic->acc->user) != 0) {
+		}
+		
+		if ((sn = oauth_params_get(&info->params, "screen_name"))) {
+			if (ic->acc->prpl->handle_cmp(sn, ic->acc->user) != 0)
 				imcb_log(ic, "Warning: You logged in via OAuth as %s "
-					 "instead of %s.", sn, ic->acc->user);
-			}
+				         "instead of %s.", sn, ic->acc->user);
 			g_free(td->user);
 			td->user = g_strdup(sn);
 		}
