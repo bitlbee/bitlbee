@@ -23,7 +23,7 @@ check:
 	perl checkpatch.pl --show-types --ignore LONG_LINE,CAMELCASE --no-tree --file skype.c
 
 test: all
-	$(MAKE) -C t/ all
+	./test.py
 
 doc: $(MANPAGES)
 
