@@ -52,4 +52,4 @@ See the README for information about how to configure this daemon.
 
 == AUTHOR
 
-Written by Miklos Vajna <vmiklos@frugalware.org>
+Written by Miklos Vajna <vmiklos@vmiklos.hu>

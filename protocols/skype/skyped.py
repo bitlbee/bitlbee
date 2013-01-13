@@ -2,7 +2,7 @@
 # 
 #   skyped.py
 #  
-#   Copyright (c) 2007-2013 by Miklos Vajna <vmiklos@frugalware.org>
+#   Copyright (c) 2007-2013 by Miklos Vajna <vmiklos@vmiklos.hu>
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
