@@ -349,7 +349,7 @@ void account_on( bee_t *bee, account_t *a )
 	a->reconnect = 0;
 	a->prpl->login( a );
 	
-	if( a->ic && !( a->ic->flags & OPT_SLOW_LOGIN ) )
+	if( a->ic && !( a->ic->flags & ( OPT_SLOW_LOGIN | OPT_LOGGED_IN ) ) )
 		a->ic->keepalive = b_timeout_add( 120000, account_on_timeout, a->ic );
 }
 
@@ -368,8 +368,11 @@ static gboolean account_on_timeout( gpointer d, gint fd, b_input_condition cond 
 {
 	struct im_connection *ic = d;
 	
-	imcb_error( ic, "Connection timeout" );
-	imc_logout( ic, TRUE );
+	if( !( ic->flags & ( OPT_SLOW_LOGIN | OPT_LOGGED_IN ) ) )
+	{
+		imcb_error( ic, "Connection timeout" );
+		imc_logout( ic, TRUE );
+	}
 	
 	return FALSE;
 }
