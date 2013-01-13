@@ -1,0 +1,11 @@
+>> NOTICE AUTH
+<< NICK alice
+<< USER alice alice localhost :alice
+>> PRIVMSG &bitlbee
+<< PRIVMSG &bitlbee :account add skype alice foo
+<< PRIVMSG &bitlbee :account skype on
+>> :bob!bob@skype.com JOIN :&bitlbee
+<< PRIVMSG bob :CALL
+>> PRIVMSG &bitlbee :skype - You are currently ringing the user bob.
+<< PRIVMSG bob :HANGUP
+>> PRIVMSG &bitlbee :skype - You cancelled the call to the user bob.

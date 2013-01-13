@@ -1,0 +1,7 @@
+>> NOTICE AUTH
+<< NICK alice
+<< USER alice alice localhost :Alice
+>> PRIVMSG &bitlbee
+<< PRIVMSG &bitlbee :account add skype alice foo
+<< PRIVMSG &bitlbee :account skype on
+>> PRIVMSG &bitlbee :skype - Logging in: Logged in

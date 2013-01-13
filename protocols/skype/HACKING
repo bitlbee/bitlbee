@@ -16,3 +16,25 @@ run
 python skyped.py -n -d
 
 4) irssi
+
+== Tests
+
+The plugin is tested with a mocked IRC client and a mocked skyped. To add a new
+test, the following steps are necessary:
+
+1) Add a new -skyped.mock file: just do the test manually, copy&paste the
+skyped output and clean it up, so Alice talks to Bob.  You can test the created
+mock file by starting skyped with the -m option, and testing it from an IRC
+client manually.
+
+2) Add a new -bitlbee.mock file: do the test manually from irssi, and use:
+
+/connect -rawlog rawlog localhost
+
+Then clean up the rawlog: the input lines are parsed as matching patterns, so
+boring prefix/suffix text can be left out, non-interesting lines can be
+deleted. The output lines still have to be strict IRC commands, as usual.
+
+3) Add the new test to test.py and run it!
+
+// vim: ft=asciidoc
