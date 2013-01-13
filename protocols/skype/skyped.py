@@ -2,7 +2,7 @@
 # 
 #   skyped.py
 #  
-#   Copyright (c) 2007, 2008, 2009, 2010, 2011 by Miklos Vajna <vmiklos@frugalware.org>
+#   Copyright (c) 2007-2013 by Miklos Vajna <vmiklos@frugalware.org>
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -275,11 +275,46 @@ def dprint(msg):
 		sock.write("%s: %s\n" % (now, msg))
 		sock.close()
 
+class MockedSkype:
+	"""Mock class for Skype4Py.Skype(), in case the -m option is used."""
+	def __init__(self, mock):
+		sock = open(mock)
+		self.lines = sock.readlines()
+	
+	def SendCommand(self, c):
+		pass
+
+	def Command(self, msg, Block):
+		if msg == "PING":
+			return ["PONG"]
+		line = self.lines[0].strip()
+		if not line.startswith(">> "):
+			raise Exception("Corrupted mock input")
+		line = line[3:]
+		if line != msg:
+			raise Exception("'%s' != '%s'" % (line, msg))
+		self.lines = self.lines[1:] # drop the expected incoming line
+		ret = []
+		while True:
+			# and now send back all the following lines, up to the next expected incoming line
+			if len(self.lines) == 0:
+				break
+			if self.lines[0].startswith(">> "):
+				break
+			if not self.lines[0].startswith("<< "):
+				raise Exception("Corrupted mock input")
+			ret.append(self.lines[0][3:].strip())
+			self.lines = self.lines[1:]
+		return ret
+
 class SkypeApi:
-	def __init__(self):
-		self.skype = Skype4Py.Skype()
-		self.skype.OnNotify = self.recv
-		self.skype.Client.Start()
+	def __init__(self, mock):
+		if not mock:
+			self.skype = Skype4Py.Skype()
+			self.skype.OnNotify = self.recv
+			self.skype.Client.Start()
+		else:
+			self.skype = MockedSkype(mock)
 
 	def recv(self, msg_text):
 		global options
@@ -334,7 +369,11 @@ class SkypeApi:
 		try:
 			c = self.skype.Command(e, Block=True)
 			self.skype.SendCommand(c)
-			self.recv(c.Reply)
+			if hasattr(c, "Reply"):
+				self.recv(c.Reply) # Skype4Py answer
+			else:
+				for i in c: # mock may return multiple iterable answers
+					self.recv(i)
 		except Skype4Py.SkypeError:
 			pass
 		except Skype4Py.SkypeAPIError, s:
@@ -359,6 +398,7 @@ class Options:
 		self.conn = None
 		# this will be read first by the input handler
 		self.buf = None
+		self.mock = None
 
 
 	def usage(self, ret):
@@ -421,7 +461,7 @@ def serverloop(options, skype):
 if __name__=='__main__':
 	options = Options()
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "c:dhH:l:np:v", ["config=", "debug", "help", "host=", "log=", "nofork", "port=", "version"])
+		opts, args = getopt.getopt(sys.argv[1:], "c:dhH:l:m:np:v", ["config=", "debug", "help", "host=", "log=", "mock=", "nofork", "port=", "version"])
 	except getopt.GetoptError:
 		options.usage(1)
 	for opt, arg in opts:
@@ -435,6 +475,8 @@ if __name__=='__main__':
 			options.host = arg
 		elif opt in ("-l", "--log"):
 			options.log = arg
+		elif opt in ("-m", "--mock"):
+			options.mock = arg
 		elif opt in ("-n", "--nofork"):
 			options.daemon = False
 		elif opt in ("-p", "--port"):
@@ -485,7 +527,7 @@ if __name__=='__main__':
 	if hasgobject:
 		server(options.host, options.port)
 	try:
-		skype = SkypeApi()
+		skype = SkypeApi(options.mock)
 	except Skype4Py.SkypeAPIError, s:
 		sys.exit("%s. Are you sure you have started Skype?" % s)
 	if hasgobject:

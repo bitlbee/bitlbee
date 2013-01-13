@@ -38,6 +38,9 @@ See the README for information about how to configure this daemon.
 -l, --log::
 	Set the log file in background mode (default: none)
 
+-m, --mock=<file>::
+	Mock mode: replay session from file, instead of connecting to Skype.
+
 -n, --nofork::
 	Don't run as daemon in the background
 
