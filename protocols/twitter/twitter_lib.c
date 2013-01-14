@@ -1241,10 +1241,12 @@ void twitter_report_spam(struct im_connection *ic, char *screen_name)
  */
 void twitter_favourite_tweet(struct im_connection *ic, guint64 id)
 {
-	char *url;
-	url = g_strdup_printf("%s%llu%s", TWITTER_FAVORITE_CREATE_URL,
-	                      (unsigned long long) id, ".json");
-	twitter_http_f(ic, url, twitter_http_post, ic, 1, NULL, 0,
-	               TWITTER_HTTP_USER_ACK);
-	g_free(url);
+	char *args[2] = {
+		"id",
+		NULL,
+	};
+	args[1] = g_strdup_printf("%llu", (unsigned long long) id);
+	twitter_http_f(ic, TWITTER_FAVORITE_CREATE_URL, twitter_http_post,
+	               ic, 1, args, 2, TWITTER_HTTP_USER_ACK);
+	g_free(args[1]);
 }

@@ -68,8 +68,8 @@
 
 /* Favorites URLs */
 #define TWITTER_FAVORITES_GET_URL "/favorites.json"
-#define TWITTER_FAVORITE_CREATE_URL "/favorites/create/"
-#define TWITTER_FAVORITE_DESTROY_URL "/favorites/destroy/"
+#define TWITTER_FAVORITE_CREATE_URL "/favorites/create.json"
+#define TWITTER_FAVORITE_DESTROY_URL "/favorites/destroy.json"
 
 /* Block URLs */
 #define TWITTER_BLOCKS_CREATE_URL "/blocks/create/"
