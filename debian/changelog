@@ -1,10 +1,11 @@
-bitlbee (3.0.6-2) UNRELEASED; urgency=low
+bitlbee (3.2-1) unstable; urgency=high
 
+  * New upstream release.
   * Depend on gnutls-dev instead of libgnutls-dev. (Closes: #691766)
   * Also, drop nss dependency. GnuTLS is supported officially, the rest is
     use-at-your-own-risk (so compile it yourself).
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Tue, 30 Oct 2012 23:25:56 +0000
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Mon, 14 Jan 2013 22:34:06 +0000
 
 bitlbee (3.0.6-1) unstable; urgency=low
 
