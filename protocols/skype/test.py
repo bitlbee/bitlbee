@@ -84,5 +84,8 @@ class Test(unittest.TestCase):
 	def testGroupchatInvited(self):
 		self.mock("groupchat-invited")
 
+	def testGroupchatInvite(self):
+		self.mock("groupchat-invite")
+
 if __name__ == '__main__':
 	unittest.main()
