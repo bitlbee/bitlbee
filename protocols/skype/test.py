@@ -75,6 +75,9 @@ class Test(unittest.TestCase):
 	def testCall(self):
 		self.mock("call")
 	
+	def testCallFailed(self):
+		self.mock("call-failed")
+	
 	def testAddYes(self):
 		self.mock("add-yes")
 
