@@ -74,6 +74,9 @@ class Test(unittest.TestCase):
 	
 	def testCall(self):
 		self.mock("call")
+	
+	def testAddYes(self):
+		self.mock("add-yes")
 
 if __name__ == '__main__':
 	unittest.main()
