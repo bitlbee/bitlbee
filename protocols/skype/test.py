@@ -27,7 +27,7 @@ class Test(unittest.TestCase):
 			for i in bitlbee_mock.readlines():
 				line = i.strip()
 				if line.startswith(">> "):
-					bitlbee.expect(line[3:], timeout=10)
+					bitlbee.expect_exact(line[3:], timeout=10)
 				elif line.startswith("<< "):
 					bitlbee.sendline(line[3:])
 			bitlbee_mock.close()
@@ -80,6 +80,9 @@ class Test(unittest.TestCase):
 
 	def testAddNo(self):
 		self.mock("add-no")
+
+	def testGroupchatInvited(self):
+		self.mock("groupchat-invited")
 
 if __name__ == '__main__':
 	unittest.main()
