@@ -78,5 +78,8 @@ class Test(unittest.TestCase):
 	def testAddYes(self):
 		self.mock("add-yes")
 
+	def testAddNo(self):
+		self.mock("add-no")
+
 if __name__ == '__main__':
 	unittest.main()
