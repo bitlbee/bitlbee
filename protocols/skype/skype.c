@@ -45,6 +45,8 @@ enum {
 
 enum {
 	SKYPE_FILETRANSFER_NEW = 1,
+	SKYPE_FILETRANSFER_TRANSFERRING,
+	SKYPE_FILETRANSFER_COMPLETED,
 	SKYPE_FILETRANSFER_FAILED
 };
 
@@ -80,6 +82,8 @@ struct skype_data {
 	int call_out;
 	/* Same for file transfers. */
 	int filetransfer_status;
+	/* Path of the file being transferred. */
+	char *filetransfer_path;
 	/* Using /j #nick we want to have a groupchat with two people. Usually
 	 * not (default). */
 	char *groupchat_with;
@@ -782,6 +786,15 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 		skype_printf(ic, "GET FILETRANSFER %s PARTNER_HANDLE\n",
 			id);
 		sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
+	} else if (!strcmp(info, "STATUS COMPLETED")) {
+		skype_printf(ic, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+		sd->filetransfer_status = SKYPE_FILETRANSFER_COMPLETED;
+	} else if (!strcmp(info, "STATUS TRANSFERRING")) {
+		skype_printf(ic, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
+		sd->filetransfer_status = SKYPE_FILETRANSFER_TRANSFERRING;
+	} else if (!strncmp(info, "FILEPATH ", 9)) {
+		info += 9;
+		sd->filetransfer_path = g_strdup(info);
 	} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
 		info += 15;
 		if (!sd->filetransfer_status)
@@ -794,6 +807,16 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 		case SKYPE_FILETRANSFER_FAILED:
 			imcb_log(ic, "Failed to transfer file from user %s.",
 				info);
+			break;
+		case SKYPE_FILETRANSFER_COMPLETED:
+			imcb_log(ic, "File transfer from user %s completed.", info);
+			break;
+		case SKYPE_FILETRANSFER_TRANSFERRING:
+			if (sd->filetransfer_path) {
+				imcb_log(ic, "File transfer from user %s started, saving to %s.", info, sd->filetransfer_path);
+				g_free(sd->filetransfer_path);
+				sd->filetransfer_path = NULL;
+			}
 			break;
 		}
 		sd->filetransfer_status = 0;
