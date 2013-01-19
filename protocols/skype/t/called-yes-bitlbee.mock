@@ -1,0 +1,9 @@
+>> NOTICE AUTH
+<< NICK alice
+<< USER alice alice localhost :Alice
+>> PRIVMSG &bitlbee
+<< PRIVMSG &bitlbee :account add skype alice foo
+<< PRIVMSG &bitlbee :account skype on
+>> PRIVMSG &bitlbee :skype - New request: The user bob is currently ringing you.
+<< PRIVMSG &bitlbee :yes
+>> PRIVMSG &bitlbee :skype - Accepted: The user bob is currently ringing you.

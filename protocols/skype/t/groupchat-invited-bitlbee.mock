@@ -1,0 +1,8 @@
+>> NOTICE AUTH
+<< NICK alice
+<< USER alice alice localhost :Alice
+>> PRIVMSG &bitlbee
+<< PRIVMSG &bitlbee :account add skype alice foo
+<< PRIVMSG &bitlbee :account skype on
+>> JOIN :##cecil/$bob;4d8cc9965791
+>> 353 alice = ##cecil/$bob;4d8cc9965791 :@alice bob cecil @root

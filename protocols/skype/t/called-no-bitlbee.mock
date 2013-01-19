@@ -1,0 +1,10 @@
+>> NOTICE AUTH
+<< NICK alice
+<< USER alice alice localhost :Alice
+>> PRIVMSG &bitlbee
+<< PRIVMSG &bitlbee :account add skype alice foo
+<< PRIVMSG &bitlbee :account skype on
+>> PRIVMSG &bitlbee :skype - New request: The user bob is currently ringing you.
+<< PRIVMSG &bitlbee :no
+>> PRIVMSG &bitlbee :skype - Rejected: The user bob is currently ringing you.
+>> PRIVMSG &bitlbee :skype - You refused the call from user bob.
