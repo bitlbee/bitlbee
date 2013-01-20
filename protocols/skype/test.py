@@ -96,5 +96,8 @@ class Test(unittest.TestCase):
 	def testCalledNo(self):
 		self.mock("called-no")
 
+	def testFiletransfer(self):
+		self.mock("filetransfer")
+
 if __name__ == '__main__':
 	unittest.main()

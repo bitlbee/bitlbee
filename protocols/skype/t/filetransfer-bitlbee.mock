@@ -1,0 +1,10 @@
+>> NOTICE AUTH
+<< NICK alice
+<< USER alice alice localhost :Alice
+>> PRIVMSG &bitlbee
+<< PRIVMSG &bitlbee :account add skype alice foo
+<< PRIVMSG &bitlbee :account skype on
+>> :bob!bob@skype.com JOIN :&bitlbee
+>> PRIVMSG &bitlbee :skype - The user bob offered a new file for you.
+>> PRIVMSG &bitlbee :skype - File transfer from user bob started, saving to /home/alice/text.odt.
+>> PRIVMSG &bitlbee :skype - File transfer from user bob completed.
