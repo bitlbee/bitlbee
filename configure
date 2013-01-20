@@ -644,7 +644,7 @@ fi
 case "$CC" in
 *gcc* )
 	echo CFLAGS+=-MMD -MF .depend/\$@.d >> Makefile.settings
-	for i in . lib protocols protocols/*/; do
+	for i in . lib tests protocols protocols/*/; do
 		mkdir -p $i/.depend
 	done
 esac
