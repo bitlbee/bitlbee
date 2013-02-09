@@ -99,5 +99,8 @@ class Test(unittest.TestCase):
 	def testFiletransfer(self):
 		self.mock("filetransfer")
 
+	def testGroupRead(self):
+		self.mock("group-read")
+
 if __name__ == '__main__':
 	unittest.main()
