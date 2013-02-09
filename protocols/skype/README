@@ -144,62 +144,7 @@ This will install the plugin to where BitlBee expects them, which is
 
 === Configuring
 
-- Set up `~/.skyped/skyped.conf`: Create the `~/.skyped` directory, copy
-  `skyped.conf` and `skyped.cnf` from
-  `/usr/local/etc/skyped/skyped.conf` to `~/.skyped`, adjust `username`
-  and `password`. The `username` should be your Skype login and the
-  `password` can be whatever you want, but you will have to specify that
-  one when adding the Skype account to BitlBee (see later).
-
-NOTE: Here, and later - `/usr/local/etc` can be different on your installation
-if you used the `--sysconfdir` switch when running bitlbee-skype's `configure`.
-
-- Generate the SSL pem files:
-
-----
-# cd ~/.skyped
-# openssl req -new -x509 -days 365 -nodes -config skyped.cnf -out skyped.cert.pem \
-	-keyout skyped.key.pem
-----
-
-NOTE: Maybe you want to adjust the permissions in the `~/.skyped`
-dir. For example make it readable by just your user.
-
-- Start `skyped` (the tcp server):
-
-----
-$ skyped
-----
-
-- Start your `IRC` client, connect to BitlBee and add your account:
-
-----
-account add skype <user> <pass>
-account skype set server localhost
-----
-
-<user> should be your Skype account name, <pass> should be the one you declared
-in `skyped.conf`. If you want to run skyped on a remote machine, replace
-`localhost` with the name of the machine.
-
-If you are running skyped on a custom port:
-
-----
-account skype set port <port>
-----
-
-If you want to set your full name (optional):
-
-----
-account skype set display_name "John Smith"
-----
-
-If you want to see your skypeout contacts online as well (they are
-offline by default):
-
-----
-account skype set skypeout_offline false
-----
+See the manpage of `skyped`.
 
 == Setting up Skype in a VNC server (optional)
 
