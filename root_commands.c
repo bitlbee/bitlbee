@@ -1290,6 +1290,37 @@ static void cmd_group( irc_t *irc, char **cmd )
 		}
 		irc_rootmsg( irc, "End of group list" );
 	}
+	else if( g_strncasecmp(cmd[1], "info", len ) == 0 )
+	{
+		bee_group_t *bg = NULL;
+		int n = 0;
+
+		MIN_ARGS(2);
+
+		for( l = irc->b->groups; l; l = l->next )
+		{
+			bee_group_t *bg = l->data;
+			if( !strcmp( bg->name, cmd[2] ) )
+			{
+				bg = l->data;
+				break;
+			}
+		}
+		if( bg )
+		{
+			if( strchr(irc->umode, 'b') )
+				irc_rootmsg( irc, "Members of %s:", cmd[2] );
+			for( l = irc->b->users; l; l = l->next )
+			{
+				bee_user_t *bu = l->data;
+				if( bu->group == bg )
+					irc_rootmsg( irc, "%d. %s", n ++, bu->nick ? : bu->handle );
+			}
+			irc_rootmsg( irc, "End of member list" );
+		}
+		else
+			irc_rootmsg( irc, "Unknown group: %s. Please use \x02group list\x02 to get a list of available groups.", cmd[2] );
+	}
 	else
 	{
 		irc_rootmsg( irc, "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "group", cmd[1] );

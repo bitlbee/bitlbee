@@ -1783,11 +1783,15 @@
 
 	<bitlbee-command name="group">
 		<short-description>Contact group management</short-description>
-		<syntax>group list</syntax>
+		<syntax>group [ list | info &lt;group&gt; ]</syntax>
 
 		<description>
 			<para>
-				Only the <emphasis>group list</emphasis> command is supported at the moment, which shows a list of all groups defined so far.
+				The <emphasis>group list</emphasis> command shows a list of all groups defined so far.
+			</para>
+			
+			<para>
+				The <emphasis>group info</emphasis> command shows a list of all members of a the group &lt;group&gt;.
 			</para>
 			
 			<para>
