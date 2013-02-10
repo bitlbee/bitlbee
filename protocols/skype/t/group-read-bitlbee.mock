@@ -1,0 +1,14 @@
+>> NOTICE AUTH
+<< NICK alice
+<< USER alice alice localhost :Alice
+>> PRIVMSG &bitlbee
+<< PRIVMSG &bitlbee :account add skype alice foo
+<< PRIVMSG &bitlbee :account skype set read_groups true
+<< PRIVMSG &bitlbee :account skype on
+>> :bob!bob@skype.com JOIN :&bitlbee
+>> :cecil!cecil@skype.com JOIN :&bitlbee
+>> :daniel!daniel@skype.com JOIN :&bitlbee
+<< JOIN &family
+>> 353 alice = &family :@alice +bob +cecil @root
+<< JOIN &work
+>> 353 alice = &work :@alice +daniel @root
