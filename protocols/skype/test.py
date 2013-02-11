@@ -17,25 +17,25 @@ class Test(unittest.TestCase):
 			proc.stdin.close()
 			proc.communicate()
 	def mock(self, name):
-		skyped_log = open("t/skyped.log", "w")
-		skyped = subprocess.Popen([sys.executable, "skyped.py", "-c", "t/skyped/skyped.conf", "-n", "-d", "-m", "t/%s-skyped.mock" % name],
+		with open("t/skyped.log", "w") as skyped_log,\
+				open("t/pexpect.log", "w") as pexpect_log:
+			skyped = subprocess.Popen([sys.executable, "skyped.py",
+				"-c", "t/skyped/skyped.conf", "-n", "-d", "-m", "t/%s-skyped.mock" % name],
 				stdout=skyped_log, stderr=subprocess.STDOUT)
-
-		try:
-			bitlbee = pexpect.spawn('../../bitlbee', ['-d', 't/bitlbee'])
-			bitlbee_mock = open("t/%s-bitlbee.mock" % name)
-			for i in bitlbee_mock.readlines():
-				line = i.strip()
-				if line.startswith(">> "):
-					bitlbee.expect_exact(line[3:], timeout=10)
-				elif line.startswith("<< "):
-					bitlbee.sendline(line[3:])
-			bitlbee_mock.close()
-			bitlbee.close()
-		finally:
-			skyped.terminate()
-			skyped.communicate()
-			skyped_log.close()
+			try:
+				bitlbee = pexpect.spawn('../../bitlbee', ['-d', 't/bitlbee'], logfile=pexpect_log)
+				bitlbee_mock = open("t/%s-bitlbee.mock" % name)
+				for i in bitlbee_mock.readlines():
+					line = i.strip()
+					if line.startswith(">> "):
+						bitlbee.expect_exact(line[3:], timeout=10)
+					elif line.startswith("<< "):
+						bitlbee.sendline(line[3:])
+				bitlbee_mock.close()
+				bitlbee.close()
+			finally:
+				skyped.terminate()
+				skyped.communicate()
 
 	def setUp(self):
 		try:
