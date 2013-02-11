@@ -193,7 +193,7 @@ int skype_printf(struct im_connection *ic, char *fmt, ...)
 static void skype_buddy_ask_yes(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
-	skype_printf(bla->ic, "SET USER %s ISAUTHORIZED TRUE",
+	skype_printf(bla->ic, "SET USER %s ISAUTHORIZED TRUE\n",
 		bla->handle);
 	g_free(bla->handle);
 	g_free(bla);
@@ -202,7 +202,7 @@ static void skype_buddy_ask_yes(void *data)
 static void skype_buddy_ask_no(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
-	skype_printf(bla->ic, "SET USER %s ISAUTHORIZED FALSE",
+	skype_printf(bla->ic, "SET USER %s ISAUTHORIZED FALSE\n",
 		bla->handle);
 	g_free(bla->handle);
 	g_free(bla);
@@ -225,7 +225,7 @@ void skype_buddy_ask(struct im_connection *ic, char *handle, char *message)
 static void skype_call_ask_yes(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
-	skype_printf(bla->ic, "SET CALL %s STATUS INPROGRESS",
+	skype_printf(bla->ic, "SET CALL %s STATUS INPROGRESS\n",
 		bla->handle);
 	g_free(bla->handle);
 	g_free(bla);
@@ -234,7 +234,7 @@ static void skype_call_ask_yes(void *data)
 static void skype_call_ask_no(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
-	skype_printf(bla->ic, "SET CALL %s STATUS FINISHED",
+	skype_printf(bla->ic, "SET CALL %s STATUS FINISHED\n",
 		bla->handle);
 	g_free(bla->handle);
 	g_free(bla);
@@ -917,7 +917,7 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 		if (!sd->pending_user) {
 			/* Number of users changed in this group, query its type to see
 			 * if it's a custom one we should care about. */
-			skype_printf(ic, "GET GROUP %s TYPE", id);
+			skype_printf(ic, "GET GROUP %s TYPE\n", id);
 			return;
 		}
 
@@ -926,7 +926,7 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 		struct skype_group *sg = skype_group_by_id(ic, atoi(id));
 
 		if (sg) {
-			skype_printf(ic, "ALTER GROUP %d ADDUSER %s", sg->id, sd->pending_user);
+			skype_printf(ic, "ALTER GROUP %d ADDUSER %s\n", sg->id, sd->pending_user);
 			g_free(sd->pending_user);
 			sd->pending_user = NULL;
 		} else
@@ -934,7 +934,7 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 					"No skype group with id %s. That's probably a bug.", id);
 	} else if (!strcmp(info, "TYPE CUSTOM_GROUP"))
 		/* This one is interesting, query its users. */
-		skype_printf(ic, "GET GROUP %s USERS", id);
+		skype_printf(ic, "GET GROUP %s USERS\n", id);
 }
 
 static void skype_parse_chat(struct im_connection *ic, char *line)
@@ -1337,7 +1337,7 @@ static char *skype_set_display_name(set_t *set, char *value)
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
 
-	skype_printf(ic, "SET PROFILE FULLNAME %s", value);
+	skype_printf(ic, "SET PROFILE FULLNAME %s\n", value);
 	return value;
 }
 
@@ -1346,7 +1346,7 @@ static char *skype_set_mood_text(set_t *set, char *value)
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
 
-	skype_printf(ic, "SET PROFILE MOOD_TEXT %s", value);
+	skype_printf(ic, "SET PROFILE MOOD_TEXT %s\n", value);
 	return value;
 }
 
@@ -1355,7 +1355,7 @@ static char *skype_set_balance(set_t *set, char *value)
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
 
-	skype_printf(ic, "GET PROFILE PSTN_BALANCE");
+	skype_printf(ic, "GET PROFILE PSTN_BALANCE\n");
 	return value;
 }
 
@@ -1366,7 +1366,7 @@ static void skype_call(struct im_connection *ic, char *value)
 
 	if (ptr)
 		*ptr = '\0';
-	skype_printf(ic, "CALL %s", nick);
+	skype_printf(ic, "CALL %s\n", nick);
 	g_free(nick);
 }
 
@@ -1375,7 +1375,7 @@ static void skype_hangup(struct im_connection *ic)
 	struct skype_data *sd = ic->proto_data;
 
 	if (sd->call_id) {
-		skype_printf(ic, "SET CALL %s STATUS FINISHED",
+		skype_printf(ic, "SET CALL %s STATUS FINISHED\n",
 				sd->call_id);
 		g_free(sd->call_id);
 		sd->call_id = 0;
@@ -1415,10 +1415,10 @@ static void skype_add_buddy(struct im_connection *ic, char *who, char *group)
 		if (!sg) {
 			/* No such group, we need to create it, then have to
 			 * add the user once it's created. */
-			skype_printf(ic, "CREATE GROUP %s", group);
+			skype_printf(ic, "CREATE GROUP %s\n", group);
 			sd->pending_user = g_strdup(nick);
 		} else {
-			skype_printf(ic, "ALTER GROUP %d ADDUSER %s", sg->id, nick);
+			skype_printf(ic, "ALTER GROUP %d ADDUSER %s\n", sg->id, nick);
 		}
 	}
 }
