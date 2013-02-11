@@ -123,35 +123,33 @@ def skype_idle_handler(skype):
 		time.sleep(1)
 	return True
 
-def send(sock, txt):
+def send(sock, txt, tries=10):
 	global options
-	from time import sleep
-	count = 1
-	done = False
 	if hasgobject:
-		while (not done) and (count < 10):
+		for attempt in xrange(1, tries+1):
 			try:
-				sock.send(txt)
-				done = True
+				sock.sendall(txt)
 			except Exception, s:
-				count += 1
-				dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, count))
-				sleep(1)
-		if not done:
+				dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, attempt))
+				time.sleep(1)
+			else:
+				break
+		else:
 			options.conn.close()
 	else:
-		while (not done) and (count < 10) and options.conn:
+		for attempt in xrange(1, tries+1):
+			if not options.conn: break
 			if wait_for_lock(options.lock, 3, 10, "socket send"):
 				try:
-					 if options.conn: sock.send(txt)
+					 if options.conn: sock.sendall(txt)
 					 options.lock.release()
-					 done = True
 				except Exception, s:
 					options.lock.release()
-					count += 1
 					dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, count))
-					sleep(1)
-		if not done:
+					time.sleep(1)
+				else:
+					break
+		else:
 			if options.conn:
 				options.conn.close()
 			options.conn = False
