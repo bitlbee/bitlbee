@@ -126,16 +126,13 @@ def skype_idle_handler(skype):
 def send(sock, txt, tries=10):
 	global options
 	if hasgobject:
-		for attempt in xrange(1, tries+1):
-			try:
-				sock.sendall(txt)
-			except Exception, s:
-				dprint("Warning, sending '%s' failed (%s). count=%d" % (txt, s, attempt))
-				time.sleep(1)
-			else:
-				break
-		else:
+		if not options.conn: return
+		try:
+			sock.sendall(txt)
+		except Exception, s:
+			dprint("Warning, sending '%s' failed (%s)." % (txt, s))
 			options.conn.close()
+			options.conn = False
 	else:
 		for attempt in xrange(1, tries+1):
 			if not options.conn: break
