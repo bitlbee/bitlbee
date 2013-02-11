@@ -201,9 +201,13 @@ def listener(sock, skype):
 			certfile=options.config.sslcert,
 			keyfile=options.config.sslkey,
 			ssl_version=ssl.PROTOCOL_TLSv1)
-	except ssl.SSLError:
-		dprint("Warning, SSL init failed, did you create your certificate?")
-		return False
+	except (ssl.SSLError, socket.error) as err:
+		if isinstance(err, ssl.SSLError):
+			dprint("Warning, SSL init failed, did you create your certificate?")
+			return False
+		else:
+			dprint('Warning, SSL init failed')
+			return True
 	if hasattr(options.conn, 'handshake'):
 		try:
 			options.conn.handshake()
