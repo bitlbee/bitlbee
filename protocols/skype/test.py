@@ -51,16 +51,18 @@ class Test(unittest.TestCase):
 		os.makedirs("t/skyped")
 		cwd = os.getcwd()
 		os.chdir("t/skyped")
-		shutil.copyfile("../../skyped.cnf", "skyped.cnf")
-		self.openssl(['req', '-new', '-x509', '-days', '365', '-nodes', '-config', 'skyped.cnf', '-out', 'skyped.cert.pem', '-keyout', 'skyped.key.pem'])
-		with open("skyped.conf", "w") as sock:
-			sock.write("[skyped]\n")
-			sock.write("username = alice\n")
-			sock.write("password = %s\n" % hashlib.sha1("foo").hexdigest())
-			sock.write("cert = %s/skyped.cert.pem\n" % os.getcwd())
-			sock.write("key = %s/skyped.key.pem\n" % os.getcwd())
-			sock.write("port = 2727\n")
-		os.chdir(cwd)
+		try:
+			shutil.copyfile("../../skyped.cnf", "skyped.cnf")
+			self.openssl(['req', '-new', '-x509', '-days', '365', '-nodes', '-config', 'skyped.cnf', '-out', 'skyped.cert.pem', '-keyout', 'skyped.key.pem'])
+			with open("skyped.conf", "w") as sock:
+				sock.write("[skyped]\n")
+				sock.write("username = alice\n")
+				sock.write("password = %s\n" % hashlib.sha1("foo").hexdigest())
+				sock.write("cert = %s/skyped.cert.pem\n" % os.getcwd())
+				sock.write("key = %s/skyped.key.pem\n" % os.getcwd())
+				sock.write("port = 2727\n")
+		finally:
+			os.chdir(cwd)
 
 
 	def testMsg(self):
@@ -71,13 +73,13 @@ class Test(unittest.TestCase):
 
 	def testInfo(self):
 		self.mock("info")
-	
+
 	def testCall(self):
 		self.mock("call")
-	
+
 	def testCallFailed(self):
 		self.mock("call-failed")
-	
+
 	def testAddYes(self):
 		self.mock("add-yes")
 
@@ -89,7 +91,7 @@ class Test(unittest.TestCase):
 
 	def testGroupchatInvite(self):
 		self.mock("groupchat-invite")
-	
+
 	def testCalledYes(self):
 		self.mock("called-yes")
 
