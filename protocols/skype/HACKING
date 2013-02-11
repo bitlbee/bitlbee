@@ -19,8 +19,19 @@ python skyped.py -n -d
 
 == Tests
 
-The plugin is tested with a mocked IRC client and a mocked skyped. To add a new
-test, the following steps are necessary:
+The plugin is tested with a mocked IRC client and a mocked skyped.
+
+To run tests with bitlbee built in a development tree and not (the one)
+installed in the system (e.g. /usr), make sure to specify --plugindir= option to
+./configure script during the build process:
+
+bitlbee% ./configure --skype=1 --plugindir="$(realpath .)"
+
+Otherwise bitlbee will try to load skype.so (among other things) from /usr/lib,
+which is probably not what you want to test, or produce "Unknown protocol"
+error.
+
+To add a new test, the following steps are necessary:
 
 1) Add a new -skyped.mock file: just do the test manually, copy&paste the
 skyped output and clean it up, so Alice talks to Bob.  You can test the created
