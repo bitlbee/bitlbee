@@ -24,6 +24,20 @@ class Test(unittest.TestCase):
 				stdout=skyped_log, stderr=subprocess.STDOUT)
 			try:
 				bitlbee = pexpect.spawn('../../bitlbee', ['-d', 't/bitlbee'], logfile=pexpect_log)
+				if os.environ.get('ATTACH_GDB'):
+					subprocess.Popen(['gdb', '-batch-silent',
+						'-ex', 'set logging overwrite on',
+						'-ex', 'set logging file t/gdb-%s.log' % bitlbee.pid,
+						'-ex', 'set logging on',
+						'-ex', 'handle all pass nostop noprint',
+						'-ex', 'handle SIGSEGV pass stop print',
+						'-ex', 'set pagination 0',
+						'-ex', 'continue',
+						'-ex', 'backtrace full',
+						'-ex', 'info registers',
+						'-ex', 'thread apply all backtrace',
+						'-ex', 'quit',
+						'../../bitlbee', str(bitlbee.pid) ])
 				bitlbee_mock = open("t/%s-bitlbee.mock" % name)
 				for i in bitlbee_mock.readlines():
 					line = i.strip()

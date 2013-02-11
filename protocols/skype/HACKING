@@ -17,9 +17,14 @@ python skyped.py -n -d
 
 4) irssi
 
+
 == Tests
 
 The plugin is tested with a mocked IRC client and a mocked skyped.
+
+=== Requirements
+
+Python pexpect module is required to run the tests.
 
 To run tests with bitlbee built in a development tree and not (the one)
 installed in the system (e.g. /usr), make sure to specify --plugindir= option to
@@ -30,6 +35,30 @@ bitlbee% ./configure --skype=1 --plugindir="$(realpath .)"
 Otherwise bitlbee will try to load skype.so (among other things) from /usr/lib,
 which is probably not what you want to test, or produce "Unknown protocol"
 error.
+
+=== Running
+
+Tests can be run by running test.py script in this ("protocols/skype")
+directory.
+
+For more control over how/which tests are being run from there, use "python -m
+unittest" command:
+
+bitlbee/protocols/skype% python -m unittest test
+bitlbee/protocols/skype% python -m unittest -f test
+bitlbee/protocols/skype% python -m unittest test.Test.testMsg
+
+If bitlbee crashes during tests with SIGSEGV (segmentation fault), it's likely
+that there is some problem with skype.c plugin.
+To get a backtrace of such crash, use:
+
+bitlbee/protocols/skype% ATTACH_GDB=true python -m unittest test.Test.testMsg
+
+Example shows running "testMsg" test with gdb attached to bitlbee, which will
+produce full backtrace in "t/gdb-<pid>.log" files (see pid in pexpect error
+output of the test).
+
+=== Adding new tests
 
 To add a new test, the following steps are necessary:
 
