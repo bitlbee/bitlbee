@@ -51,11 +51,12 @@ def eh(type, value, tb):
 		gobject.MainLoop().quit()
 	if options.conn:
 		options.conn.close()
-	# shut down client if it's running
-	try:
-		skype.skype.Client.Shutdown()
-	except NameError:
-		pass
+	if not options.dont_start_skype:
+		# shut down client if it's running
+		try:
+			skype.skype.Client.Shutdown()
+		except NameError:
+			pass
 	sys.exit("Exiting.")
 
 sys.excepthook = eh
@@ -307,10 +308,12 @@ class MockedSkype:
 
 class SkypeApi:
 	def __init__(self, mock):
+		global options
 		if not mock:
 			self.skype = Skype4Py.Skype()
 			self.skype.OnNotify = self.recv
-			self.skype.Client.Start()
+			if not options.dont_start_skype:
+				self.skype.Client.Start()
 		else:
 			self.skype = MockedSkype(mock)
 
@@ -444,6 +447,8 @@ def main(args=None):
 	parser.add_argument('-v', '--version', action='store_true', help='display version information')
 	parser.add_argument('-n', '--nofork',
 		action='store_true', help="don't run as daemon in the background")
+	parser.add_argument('-s', '--dont-start-skype', action='store_true',
+		help="assume that skype is running independently, don't try to start/stop it")
 	parser.add_argument('-m', '--mock', help='fake interactions with skype (only useful for tests)')
 	parser.add_argument('-d', '--debug', action='store_true', help='enable debug messages')
 	options = parser.parse_args(sys.argv[1:] if args is None else args)
