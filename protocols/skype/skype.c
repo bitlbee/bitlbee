@@ -28,7 +28,7 @@
 
 #define SKYPE_DEFAULT_SERVER "localhost"
 #define SKYPE_DEFAULT_PORT "2727"
-#define IRC_LINE_SIZE 1024
+#define IRC_LINE_SIZE 16384
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 /*
@@ -1146,6 +1146,13 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 		return FALSE;
 	/* Read the whole data. */
 	st = ssl_read(sd->ssl, buf, sizeof(buf));
+	if (st >= IRC_LINE_SIZE-1) {
+		/* As we don't buffer incoming data, if IRC_LINE_SIZE amount of bytes
+		 * were received, there's a good chance last message was truncated
+		 * and the next recv() will yield garbage. */
+		imcb_error(ic, "Unable to handle incoming data from skyped");
+		st = 0;
+	}
 	if (st > 0) {
 		buf[st] = '\0';
 		/* Then split it up to lines. */
