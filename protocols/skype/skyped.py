@@ -485,7 +485,7 @@ def main(args=None):
 		pass
 	if not options.port:
 		options.port = port
-	dprint("Parsing config file '%s' done, username is '%s'." % (options.config, options.config.username))
+	dprint("Parsing config file '%s' done, username is '%s'." % (cfgpath, options.config.username))
 	if not options.nofork:
 		pid = os.fork()
 		if pid == 0:
