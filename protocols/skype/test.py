@@ -94,11 +94,11 @@ class Test(unittest.TestCase):
 	def testCallFailed(self):
 		self.mock("call-failed")
 
-	def testAddYes(self):
-		self.mock("add-yes")
+	def testAddedYes(self):
+		self.mock("added-yes")
 
-	def testAddNo(self):
-		self.mock("add-no")
+	def testAddedNo(self):
+		self.mock("added-no")
 
 	def testGroupchatInvited(self):
 		self.mock("groupchat-invited")
