@@ -1590,12 +1590,14 @@ GList *skype_buddy_action_list(bee_user_t *bu)
 	bu = bu;
 
 	if (ret == NULL) {
-		static const struct buddy_action ba[3] = {
+		static const struct buddy_action ba[2] = {
 			{"CALL", "Initiate a call" },
 			{"HANGUP", "Hang up a call" },
 		};
+		int i;
 
-		ret = g_list_prepend(ret, (void *) ba + 0);
+		for (i = 0; i < ARRAY_SIZE(ba); i++)
+			ret = g_list_prepend(ret, (void *)(ba + i));
 	}
 
 	return ret;
