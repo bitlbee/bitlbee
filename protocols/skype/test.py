@@ -8,14 +8,35 @@ import shutil
 import os
 import hashlib
 
+def openssl(args):
+	with open(os.devnull, "w") as devnull:
+		proc = subprocess.Popen(['openssl'] + args, stdin=subprocess.PIPE, stderr=devnull)
+		for i in range(6):
+			proc.stdin.write("\n")
+		proc.stdin.close()
+		proc.communicate()
+def setupSkyped():
+	try:
+		shutil.rmtree("t/skyped")
+	except OSError:
+		pass
+	os.makedirs("t/skyped")
+	cwd = os.getcwd()
+	os.chdir("t/skyped")
+	try:
+		shutil.copyfile("../../skyped.cnf", "skyped.cnf")
+		openssl(['req', '-new', '-x509', '-days', '365', '-nodes', '-config', 'skyped.cnf', '-out', 'skyped.cert.pem', '-keyout', 'skyped.key.pem'])
+		with open("skyped.conf", "w") as sock:
+			sock.write("[skyped]\n")
+			sock.write("username = alice\n")
+			sock.write("password = %s\n" % hashlib.sha1("foo").hexdigest())
+			sock.write("cert = %s/skyped.cert.pem\n" % os.getcwd())
+			sock.write("key = %s/skyped.key.pem\n" % os.getcwd())
+			sock.write("port = 2727\n")
+	finally:
+		os.chdir(cwd)
+
 class Test(unittest.TestCase):
-	def openssl(self, args):
-		with open(os.devnull, "w") as devnull:
-			proc = subprocess.Popen(['openssl'] + args, stdin=subprocess.PIPE, stderr=devnull)
-			for i in range(6):
-				proc.stdin.write("\n")
-			proc.stdin.close()
-			proc.communicate()
 	def mock(self, name):
 		with open("t/skyped.log", "w") as skyped_log,\
 				open("t/pexpect.log", "w") as pexpect_log:
@@ -57,27 +78,6 @@ class Test(unittest.TestCase):
 		except OSError:
 			pass
 		os.makedirs("t/bitlbee")
-
-		try:
-			shutil.rmtree("t/skyped")
-		except OSError:
-			pass
-		os.makedirs("t/skyped")
-		cwd = os.getcwd()
-		os.chdir("t/skyped")
-		try:
-			shutil.copyfile("../../skyped.cnf", "skyped.cnf")
-			self.openssl(['req', '-new', '-x509', '-days', '365', '-nodes', '-config', 'skyped.cnf', '-out', 'skyped.cert.pem', '-keyout', 'skyped.key.pem'])
-			with open("skyped.conf", "w") as sock:
-				sock.write("[skyped]\n")
-				sock.write("username = alice\n")
-				sock.write("password = %s\n" % hashlib.sha1("foo").hexdigest())
-				sock.write("cert = %s/skyped.cert.pem\n" % os.getcwd())
-				sock.write("key = %s/skyped.key.pem\n" % os.getcwd())
-				sock.write("port = 2727\n")
-		finally:
-			os.chdir(cwd)
-
 
 	def testMsg(self):
 		self.mock("msg")
@@ -128,4 +128,5 @@ class Test(unittest.TestCase):
 		self.mock("set-mood-text")
 
 if __name__ == '__main__':
+	setupSkyped()
 	unittest.main()
