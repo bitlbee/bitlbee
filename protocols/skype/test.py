@@ -124,5 +124,8 @@ class Test(unittest.TestCase):
 	def testCtcpHelp(self):
 		self.mock("ctcp-help")
 
+	def testSetMoodText(self):
+		self.mock("set-mood-text")
+
 if __name__ == '__main__':
 	unittest.main()
