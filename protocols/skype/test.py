@@ -121,5 +121,8 @@ class Test(unittest.TestCase):
 	def testGroupRead(self):
 		self.mock("group-read")
 
+	def testCtcpHelp(self):
+		self.mock("ctcp-help")
+
 if __name__ == '__main__':
 	unittest.main()
