@@ -469,13 +469,6 @@ static int twitter_buddy_msg(struct im_connection *ic, char *who, char *message,
 	return (0);
 }
 
-/**
- *
- */
-static void twitter_set_my_name(struct im_connection *ic, char *info)
-{
-}
-
 static void twitter_get_info(struct im_connection *ic, char *who)
 {
 }
@@ -733,7 +726,6 @@ void twitter_initmodule()
 	ret->logout = twitter_logout;
 	ret->buddy_msg = twitter_buddy_msg;
 	ret->get_info = twitter_get_info;
-	ret->set_my_name = twitter_set_my_name;
 	ret->add_buddy = twitter_add_buddy;
 	ret->remove_buddy = twitter_remove_buddy;
 	ret->chat_msg = twitter_chat_msg;

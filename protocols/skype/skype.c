@@ -1529,11 +1529,6 @@ static void skype_get_info(struct im_connection *ic, char *who)
 	skype_printf(ic, "GET USER %s BIRTHDAY\n", nick);
 }
 
-static void skype_set_my_name(struct im_connection *ic, char *info)
-{
-	skype_set_display_name(set_find(&ic->acc->set, "display_name"), info);
-}
-
 static void skype_init(account_t *acc)
 {
 	set_t *s;
@@ -1628,7 +1623,6 @@ void init_plugin(void)
 	ret->logout = skype_logout;
 	ret->buddy_msg = skype_buddy_msg;
 	ret->get_info = skype_get_info;
-	ret->set_my_name = skype_set_my_name;
 	ret->away_states = skype_away_states;
 	ret->set_away = skype_set_away;
 	ret->add_buddy = skype_add_buddy;
