@@ -206,11 +206,13 @@ typedef struct irc_channel_user
 
 typedef enum
 {
-	IRC_CC_TYPE_DEFAULT,
-	IRC_CC_TYPE_REST,
-	IRC_CC_TYPE_GROUP,
-	IRC_CC_TYPE_ACCOUNT,
-	IRC_CC_TYPE_PROTOCOL,
+	IRC_CC_TYPE_DEFAULT  = 0x00001,
+	IRC_CC_TYPE_REST     = 0x00002, /* Still not implemented. */
+	IRC_CC_TYPE_GROUP    = 0x00004,
+	IRC_CC_TYPE_ACCOUNT  = 0x00008,
+	IRC_CC_TYPE_PROTOCOL = 0x00010,
+	IRC_CC_TYPE_MASK     = 0x000ff,
+	IRC_CC_TYPE_INVERT   = 0x00100,
 } irc_control_channel_type_t;
 
 struct irc_control_channel

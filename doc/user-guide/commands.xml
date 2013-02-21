@@ -929,6 +929,10 @@
 			</para>
 			
 			<para>
+				With a ! prefix an inverted channel can be created, for example with this setting set to <emphasis>!group</emphasis> you can create a channel with all users <emphasis>not</emphasis> in that group.
+			</para>
+			
+			<para>
 				Note that, when creating a new channel, BitlBee will try to preconfigure the channel for you, based on the channel name. See <emphasis>help channels</emphasis>.
 			</para>
 		</description>

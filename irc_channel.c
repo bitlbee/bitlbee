@@ -669,7 +669,7 @@ static char *set_eval_by_account( set_t *set, char *value )
 		return SET_INVALID;
 	
 	icc->account = acc;
-	if( icc->type == IRC_CC_TYPE_ACCOUNT )
+	if( ( icc->type & IRC_CC_TYPE_MASK ) == IRC_CC_TYPE_ACCOUNT )
 		bee_irc_channel_update( ic->irc, ic, NULL );
 	
 	return g_strdup( acc->tag );
@@ -679,17 +679,27 @@ static char *set_eval_fill_by( set_t *set, char *value )
 {
 	struct irc_channel *ic = set->data;
 	struct irc_control_channel *icc = ic->data;
+	char *s;
 	
-	if( strcmp( value, "all" ) == 0 )
-		icc->type = IRC_CC_TYPE_DEFAULT;
-	else if( strcmp( value, "rest" ) == 0 )
-		icc->type = IRC_CC_TYPE_REST;
-	else if( strcmp( value, "group" ) == 0 )
-		icc->type = IRC_CC_TYPE_GROUP;
-	else if( strcmp( value, "account" ) == 0 )
-		icc->type = IRC_CC_TYPE_ACCOUNT;
-	else if( strcmp( value, "protocol" ) == 0 )
-		icc->type = IRC_CC_TYPE_PROTOCOL;
+	icc->type &= ~( IRC_CC_TYPE_MASK | IRC_CC_TYPE_INVERT );
+	
+	s = value;
+	if( s[0] == '!' )
+	{
+		icc->type |= IRC_CC_TYPE_INVERT;
+		s ++;
+	}
+	
+	if( strcmp( s, "all" ) == 0 )
+		icc->type |= IRC_CC_TYPE_DEFAULT;
+	else if( strcmp( s, "rest" ) == 0 )
+		icc->type |= IRC_CC_TYPE_REST;
+	else if( strcmp( s, "group" ) == 0 )
+		icc->type |= IRC_CC_TYPE_GROUP;
+	else if( strcmp( s, "account" ) == 0 )
+		icc->type |= IRC_CC_TYPE_ACCOUNT;
+	else if( strcmp( s, "protocol" ) == 0 )
+		icc->type |= IRC_CC_TYPE_PROTOCOL;
 	else
 		return SET_INVALID;
 	
@@ -703,7 +713,7 @@ static char *set_eval_by_group( set_t *set, char *value )
 	struct irc_control_channel *icc = ic->data;
 	
 	icc->group = bee_group_by_name( ic->irc->b, value, TRUE );
-	if( icc->type == IRC_CC_TYPE_GROUP )
+	if( ( icc->type & IRC_CC_TYPE_MASK ) == IRC_CC_TYPE_GROUP )
 		bee_irc_channel_update( ic->irc, ic, NULL );
 	
 	return g_strdup( icc->group->name );
@@ -719,7 +729,7 @@ static char *set_eval_by_protocol( set_t *set, char *value )
 		return SET_INVALID;
 	
 	icc->protocol = prpl;
-	if( icc->type == IRC_CC_TYPE_PROTOCOL )
+	if( ( icc->type & IRC_CC_TYPE_MASK ) == IRC_CC_TYPE_PROTOCOL )
 		bee_irc_channel_update( ic->irc, ic, NULL );
 	
 	return value;
@@ -775,22 +785,32 @@ fail:
 gboolean irc_channel_wants_user( irc_channel_t *ic, irc_user_t *iu )
 {
 	struct irc_control_channel *icc = ic->data;
+	gboolean ret = FALSE;
 	
 	if( iu->bu == NULL )
 		return FALSE;
 	
-	switch( icc->type )
+	switch( icc->type & IRC_CC_TYPE_MASK )
 	{
 	case IRC_CC_TYPE_GROUP:
-		return iu->bu->group == icc->group;
+		ret = iu->bu->group == icc->group;
+		break;
 	case IRC_CC_TYPE_ACCOUNT:
-		return iu->bu->ic->acc == icc->account;
+		ret = iu->bu->ic->acc == icc->account;
+		break;
 	case IRC_CC_TYPE_PROTOCOL:
-		return iu->bu->ic->acc->prpl == icc->protocol;
+		ret = iu->bu->ic->acc->prpl == icc->protocol;
+		break;
 	case IRC_CC_TYPE_DEFAULT:
 	default:
-		return TRUE;
+		ret = TRUE;
+		break;
 	}
+	
+	if( icc->type & IRC_CC_TYPE_INVERT )
+		ret = !ret;
+	
+	return ret;
 }
 
 static gboolean control_channel_free( irc_channel_t *ic )
