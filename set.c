@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2005 Wilmer van der Gaast and others                *
+  * Copyright 2002-2013 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Some stuff to register, handle and save user preferences             */
@@ -22,6 +22,7 @@
   if not, write to the Free Software Foundation, Inc., 59 Temple Place,
   Suite 330, Boston, MA  02111-1307  USA
 */
+
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
@@ -38,9 +39,22 @@ set_t *set_add( set_t **head, const char *key, const char *def, set_eval eval, v
 	{
 		if( ( s = *head ) )
 		{
-			while( s->next ) s = s->next;
-			s->next = g_new0( set_t, 1 );
-			s = s->next;
+			/* Sorted insertion. Special-case insertion at the start. */
+			if( strcmp( key, s->key ) < 0 )
+			{
+				s = g_new0( set_t, 1 );
+				s->next = *head;
+				*head = s;
+			}
+			else
+			{
+				while( s->next && strcmp( key, s->next->key ) > 0 )
+					s = s->next;
+				set_t *last_next = s->next;
+				s->next = g_new0( set_t, 1 );
+				s = s->next;
+				s->next = last_next;
+			}
 		}
 		else
 		{
