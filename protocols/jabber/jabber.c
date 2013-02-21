@@ -95,7 +95,8 @@ static void jabber_init( account_t *acc )
 	s = set_add( &acc->set, "xmlconsole", "false", set_eval_bool, acc );
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 	
-	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE;
+	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE |
+	              ACC_FLAG_HANDLE_DOMAINS;
 }
 
 static void jabber_generate_id_hash( struct jabber_data *jd );

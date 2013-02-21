@@ -69,6 +69,7 @@ typedef enum
 {
 	ACC_FLAG_AWAY_MESSAGE = 0x01,   /* Supports away messages instead of just states. */
 	ACC_FLAG_STATUS_MESSAGE = 0x02, /* Supports status messages (without being away). */
+	ACC_FLAG_HANDLE_DOMAINS = 0x04, /* Contact handles need a domain portion. */
 } account_flag_t;
 
 #endif

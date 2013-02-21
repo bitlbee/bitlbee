@@ -195,7 +195,7 @@ struct jabber_transfer
 	struct sockaddr_storage saddr;
 };
 
-#define JABBER_XMLCONSOLE_HANDLE "xmlconsole"
+#define JABBER_XMLCONSOLE_HANDLE "_xmlconsole"
 #define JABBER_OAUTH_HANDLE "jabber_oauth"
 
 /* Prefixes to use for packet IDs (mainly for IQ packets ATM). Usually the

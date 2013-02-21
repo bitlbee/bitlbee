@@ -43,7 +43,8 @@ static void msn_init( account_t *acc )
 	set_add( &acc->set, "mail_notifications", "false", set_eval_bool, acc );
 	set_add( &acc->set, "switchboard_keepalives", "false", set_eval_bool, acc );
 	
-	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE;
+	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE |
+	              ACC_FLAG_HANDLE_DOMAINS;
 }
 
 static void msn_login( account_t *acc )

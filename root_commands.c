@@ -679,6 +679,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 {
 	account_t *a;
 	int add_on_server = 1;
+	char *handle = NULL, *s;
 	
 	if( g_strcasecmp( cmd[1], "-tmp" ) == 0 )
 	{
@@ -716,6 +717,18 @@ static void cmd_add( irc_t *irc, char **cmd )
 		}
 	}
 	
+	if( ( a->flags & ACC_FLAG_HANDLE_DOMAINS ) && cmd[2][0] != '_' &&
+	    ( !( s = strchr( cmd[2], '@' ) ) || s[1] == '\0' ) )
+	{
+		/* If there's no @ or it's the last char, append the user's
+		   domain name now. Exclude handles starting with a _ so
+		   adding _xmlconsole will keep working. */
+		if( s )
+			*s = '\0';
+		if( ( s = strchr( a->user, '@' ) ) )
+			cmd[2] = handle = g_strconcat( cmd[2], s, NULL );
+	}
+	
 	if( add_on_server )
 	{
 		irc_channel_t *ic;
@@ -745,6 +758,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 			             "to contact `%s'", iu->nick, cmd[2] );
 	}
 	
+	g_free( handle );
 }
 
 static void cmd_remove( irc_t *irc, char **cmd )
