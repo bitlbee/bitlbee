@@ -74,6 +74,9 @@ in `skyped.conf`.
 -n, --nofork::
 	Don't run as daemon in the background
 
+-s, --dont-start-skype::
+	Assume that skype is running independently, don't try to start/stop it.
+
 -p, --port::
 	Set the tcp port (default: 2727)
 

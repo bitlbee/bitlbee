@@ -4,5 +4,6 @@
 >> PRIVMSG &bitlbee
 << PRIVMSG &bitlbee :account add skype alice foo
 << PRIVMSG &bitlbee :account skype on
-<< PRIVMSG &bitlbee :add skype bob
 >> :bob!bob@skype.com JOIN :&bitlbee
+<< PRIVMSG bob :HELP
+>> :bob!bob@skype.com NOTICE alice :HELP Supported CTCPs: HANGUP (Hang up a call), CALL (Initiate a call)
