@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2012 Wilmer van der Gaast and others                *
+  * Copyright 2002-2013 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* MSN module - Main file; functions to be called from BitlBee          */

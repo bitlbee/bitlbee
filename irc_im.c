@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Some glue to put the IRC and the IM stuff together.                  */

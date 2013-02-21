@@ -4,7 +4,7 @@
 *  Simple module to facilitate twitter functionality.                       *
 *                                                                           *
 *  Copyright 2009-2010 Geert Mulders <g.c.w.m.mulders@gmail.com>            *
-*  Copyright 2010-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
+*  Copyright 2010-2013 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *

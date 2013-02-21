@@ -1,7 +1,7 @@
 /*
  * libyahoo2 wrapper to BitlBee
  *
- * Mostly Copyright 2004-2010 Wilmer van der Gaast <wilmer@gaast.net>
+ * Mostly Copyright 2004-2012 Wilmer van der Gaast <wilmer@gaast.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

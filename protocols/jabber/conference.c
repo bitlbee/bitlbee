@@ -3,7 +3,7 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  Jabber module - Conference rooms                                         *
 *                                                                           *
-*  Copyright 2007 Wilmer van der Gaast <wilmer@gaast.net>                   *
+*  Copyright 2007-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This program is free software; you can redistribute it and/or modify     *
 *  it under the terms of the GNU General Public License as published by     *

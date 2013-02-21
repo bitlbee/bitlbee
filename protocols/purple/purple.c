@@ -3,7 +3,7 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  libpurple module - Main file                                             *
 *                                                                           *
-*  Copyright 2009-2010 Wilmer van der Gaast <wilmer@gaast.net>              *
+*  Copyright 2009-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This program is free software; you can redistribute it and/or modify     *
 *  it under the terms of the GNU General Public License as published by     *

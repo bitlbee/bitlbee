@@ -3,7 +3,7 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  Helper functions for json.c                                              *
 *                                                                           *
-*  Copyright 2012 Wilmer van der Gaast <wilmer@gaast.net>                   *
+*  Copyright 2012-2012 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *

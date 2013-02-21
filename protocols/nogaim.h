@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2010 Wilmer van der Gaast and others                *
+  * Copyright 2002-2012 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -15,7 +15,7 @@
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *                          (and possibly other members of the Gaim team)
- * Copyright 2002-2007 Wilmer van der Gaast <wilmer@gaast.net>
+ * Copyright 2002-2012 Wilmer van der Gaast <wilmer@gaast.net>
  */
 
 /*
