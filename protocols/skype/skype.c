@@ -117,6 +117,8 @@ struct skype_data {
 	/* Pending user which has to be added to the next group which is
 	 * created. */
 	char *pending_user;
+	/* If the info command was used, to determine what to do with FULLNAME result. */
+	int is_info;
 };
 
 struct skype_away_state {
@@ -319,8 +321,10 @@ static void skype_parse_users(struct im_connection *ic, char *line)
 	char **i, **nicks;
 
 	nicks = g_strsplit(line + 6, ", ", 0);
-	for (i = nicks; *i; i++)
+	for (i = nicks; *i; i++) {
 		skype_printf(ic, "GET USER %s ONLINESTATUS\n", *i);
+		skype_printf(ic, "GET USER %s FULLNAME\n", *i);
+	}
 	g_strfreev(nicks);
 }
 
@@ -374,9 +378,17 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 					*buf ? buf : NULL);
 		if (set_getbool(&ic->acc->set, "show_moods"))
 			imcb_log(ic, "User `%s' changed mood text to `%s'", user, buf);
-	} else if (!strncmp(ptr, "FULLNAME ", 9))
-		sd->info_fullname = g_strdup(ptr + 9);
-	else if (!strncmp(ptr, "PHONE_HOME ", 11))
+	} else if (!strncmp(ptr, "FULLNAME ", 9)) {
+		char *name = ptr + 9;
+		if (sd->is_info) {
+			sd->is_info = FALSE;
+			sd->info_fullname = g_strdup(name);
+		} else {
+			char *buf = g_strdup_printf("%s@skype.com", user);
+			imcb_rename_buddy(ic, buf, name);
+			g_free(buf);
+		}
+	} else if (!strncmp(ptr, "PHONE_HOME ", 11))
 		sd->info_phonehome = g_strdup(ptr + 11);
 	else if (!strncmp(ptr, "PHONE_OFFICE ", 13))
 		sd->info_phoneoffice = g_strdup(ptr + 13);
@@ -1502,11 +1514,13 @@ struct groupchat *skype_chat_with(struct im_connection *ic, char *who)
 
 static void skype_get_info(struct im_connection *ic, char *who)
 {
+	struct skype_data *sd = ic->proto_data;
 	char *ptr, *nick;
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
 	if (ptr)
 		*ptr = '\0';
+	sd->is_info = TRUE;
 	skype_printf(ic, "GET USER %s FULLNAME\n", nick);
 	skype_printf(ic, "GET USER %s PHONE_HOME\n", nick);
 	skype_printf(ic, "GET USER %s PHONE_OFFICE\n", nick);
