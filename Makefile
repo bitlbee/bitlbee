@@ -169,7 +169,7 @@ $(OTR_PI): %.so: $(_SRCDIR_)%.c
 
 $(SKYPE_PI): $(_SRCDIR_)protocols/skype/skype.c
 	@echo '*' Building plugin skype
-	@$(CC) $(CFLAGS) -fPIC -shared $< -o $@
+	@$(CC) $(CFLAGS) $(SKYPEFLAGS) $< -o $@
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<

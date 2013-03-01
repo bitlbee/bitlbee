@@ -547,6 +547,11 @@ elif [ "$otr" = "plugin" ]; then
 fi
 
 if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
+	if [ "$arch" = "Darwin" ]; then
+		echo "SKYPEFLAGS=-dynamiclib -undefined dynamic_lookup" >> Makefile.settings
+	else
+		echo "SKYPEFLAGS=-fPIC -shared" >> Makefile.settings
+	fi
 	echo 'SKYPE_PI=skype.so' >> Makefile.settings
 	protocols_mods="$protocol_mods skype(plugin)"
 fi
