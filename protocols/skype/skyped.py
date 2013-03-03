@@ -256,6 +256,8 @@ def dprint(msg):
 	now = strftime("%Y-%m-%d %H:%M:%S")
 
 	if options.debug:
+		sanitized = msg
+
 		try:
 			print now + ": " + msg
 		except Exception, s:
@@ -267,11 +269,13 @@ def dprint(msg):
 				except Error, s:
 					sanitized = "[unable to print debug message]"
 			print now + "~=" + sanitized
+
+		if options.log:
+			sock = open(options.log, "a")
+			sock.write("%s skyped: %s\n" % (now, sanitized))
+			sock.close()
+
 		sys.stdout.flush()
-	if options.log:
-		sock = open(options.log, "a")
-		sock.write("%s: %s\n" % (now, msg))
-		sock.close()
 
 class MockedSkype:
 	"""Mock class for Skype4Py.Skype(), in case the -m option is used."""

@@ -4,6 +4,7 @@
 >> PRIVMSG &bitlbee
 << PRIVMSG &bitlbee :account add skype alice foo
 << PRIVMSG &bitlbee :account skype on
+>> :bob!bob@skype.com JOIN :&bitlbee
 << PRIVMSG &bitlbee :chat with bob
 >> 353 alice = ##alice/$bob;a7ab206ec780 :@alice bob @root
 << INVITE cecil ##alice/$bob;a7ab206ec780
