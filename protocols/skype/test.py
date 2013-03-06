@@ -109,6 +109,9 @@ class Test(unittest.TestCase):
 	def testGroupchatInvite(self):
 		self.mock("groupchat-invite")
 
+	def testGroupchatLeave(self):
+		self.mock("groupchat-leave")
+	
 	def testCalledYes(self):
 		self.mock("called-yes")
 
