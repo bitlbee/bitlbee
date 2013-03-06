@@ -467,7 +467,7 @@ def main(args=None):
 	options.buf = None
 
 	if not os.path.exists(options.config):
-		parser.error(( "Can't find configuration file at '%s'."
+		parser.error(( "Can't find configuration file at '%s'. "
 			"Use the -c option to specify an alternate one." )% options.config)
 
 	cfgpath = options.config
