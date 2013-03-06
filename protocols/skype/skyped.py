@@ -253,13 +253,13 @@ def dprint(msg):
 	from time import strftime
 	global options
 
-	now = strftime("%Y-%m-%d %H:%M:%S")
-
 	if options.debug:
+		import inspect
+		prefix = strftime("[%Y-%m-%d %H:%M:%S]") + " %s:%d" % inspect.stack()[1][1:3]
 		sanitized = msg
 
 		try:
-			print now + ": " + msg
+			print prefix + ": " + msg
 		except Exception, s:
 			try:
 				sanitized = msg.encode("ascii", "backslashreplace")
@@ -268,11 +268,11 @@ def dprint(msg):
 					sanitized = "hex [" + msg.encode("hex") + "]"
 				except Error, s:
 					sanitized = "[unable to print debug message]"
-			print now + "~=" + sanitized
+			print prefix + "~=" + sanitized
 
 		if options.log:
 			sock = open(options.log, "a")
-			sock.write("%s skyped: %s\n" % (now, sanitized))
+			sock.write(prefix + ": " + sanitized)
 			sock.close()
 
 		sys.stdout.flush()
