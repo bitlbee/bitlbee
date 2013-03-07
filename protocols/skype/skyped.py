@@ -128,7 +128,7 @@ def send(sock, txt, tries=10):
 	if hasgobject:
 		if not options.conn: return
 		try:
-			sock.sendall(txt)
+			done = sock.sendall(txt)
 		except socket.error as s:
 			dprint("Warning, sending '%s' failed (%s)." % (txt, s))
 			options.conn.close()
@@ -138,7 +138,7 @@ def send(sock, txt, tries=10):
 			if not options.conn: break
 			if wait_for_lock(options.lock, 3, 10, "socket send"):
 				try:
-					 if options.conn: sock.sendall(txt)
+					 if options.conn: done = sock.sendall(txt)
 					 options.lock.release()
 				except socket.error as s:
 					options.lock.release()
