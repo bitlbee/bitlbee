@@ -1219,8 +1219,12 @@ gboolean skype_start_stream(struct im_connection *ic)
 	skype_printf(ic, "SET USERSTATUS ONLINE\n");
 
 	/* Auto join to bookmarked chats if requested.*/
-	if (set_getbool(&ic->acc->set, "auto_join"))
+	if (set_getbool(&ic->acc->set, "auto_join")) {
 		skype_printf(ic, "SEARCH BOOKMARKEDCHATS\n");
+		skype_printf(ic, "SEARCH ACTIVECHATS\n");
+		skype_printf(ic, "SEARCH MISSEDCHATS\n");
+		skype_printf(ic, "SEARCH RECENTCHATS\n");
+	}
 	return st;
 }
 
