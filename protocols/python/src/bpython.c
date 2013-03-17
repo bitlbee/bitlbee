@@ -24,9 +24,55 @@
 
 #include <bitlbee.h>
 #include <Python.h>
+#include "bytesobject.h"
+
+static void load_pyfile(char * path, PyObject * main_dict) {
+    FILE * pyfile;
+    PyObject * err;
+    struct prpl *ret;
+    ret = g_new0(struct prpl, 1);
+    
+    printf("Loading python file %s\n", path);
+    pyfile = fopen(path, "r");
+    /* Copy main dict to make sure that separate plugins
+       run in separate environments */
+    PyObject * main_dict_copy = PyDict_Copy(main_dict);
+    PyRun_File(pyfile, path, Py_file_input, main_dict_copy, main_dict_copy);
+    
+    PyObject * pluginname = PyDict_GetItemString(main_dict_copy, "name");
+    if ((err = PyErr_Occurred()) || !pluginname) {
+        printf("No plugin name\n");
+        PyErr_Print();
+        g_free(ret);
+        return;
+    }
+    PyObject * pluginname_unicode = PyObject_Unicode(pluginname);
+    PyObject * pluginname_encoded = PyUnicode_AsEncodedString(pluginname_unicode, "ascii", "ignore");
+    if ((err = PyErr_Occurred())) {
+        printf("Error encoding plugin name\n");
+        PyErr_Print();
+        g_free(ret);
+        return;
+    }
+    char * pluginname_tmp; /* reference, do not modify */
+    Py_ssize_t length;
+    PyBytes_AsStringAndSize(pluginname_encoded, &pluginname_tmp, &length);
+    if ((err = PyErr_Occurred())) {
+        printf("Bad plugin name\n");
+        PyErr_Print();
+        g_free(ret);
+        return;
+    }
+    ret->name = g_malloc0(length + 1);
+    memmove(ret->name, pluginname_tmp, length);
+
+    Py_DECREF(pluginname_encoded);
+    Py_DECREF(pluginname_unicode);
+
+    register_protocol(ret);
+}
 
 void init_plugin() {
-    struct prpl *ret = g_new0(struct prpl, 1);
     GDir *dir;
     GError *error = NULL;
 
@@ -52,23 +98,12 @@ void init_plugin() {
             }
             
             if (g_str_has_suffix(path, ".py")) {
-                printf("Loading python file %s\n", path);
-                FILE* pyfile = fopen(path, "r");
-                /* Copy main dict to make sure that separate plugins
-                   run in separate environments */
-                PyObject* main_dict_copy = PyDict_Copy(main_dict);
-                PyRun_File(pyfile, path, Py_file_input, main_dict_copy, main_dict_copy);
-                
+                load_pyfile(path, main_dict);
             }
 
             g_free(path);
         }
     }
-
-
-    ret->name = "bpython";
-
-    register_protocol(ret);
 
     // Py_Finalize(); // TODO - there's no plugin_unload for us to do this in.
 }
