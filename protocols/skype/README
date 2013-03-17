@@ -30,7 +30,7 @@ not..)
 
 == Requirements
 
-* Skype >= 1.4.0.99. The latest version I've tested is 2.2.0.35.
+* Skype >= 1.4.0.99. The latest version I've tested is 4.1.0.20.
 * BitlBee >= 3.0. The latest version I've tested is @BITLBEE_VERSION@. Use
   old versions (see the NEWS file about which one) if you have older BitlBee
   installed.

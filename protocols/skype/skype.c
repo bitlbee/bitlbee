@@ -1014,7 +1014,7 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 			g_free(sd->adder);
 			sd->adder = NULL;
 		}
-	} else if (!strncmp(info, "MEMBERS ", 8)) {
+	} else if (!strncmp(info, "MEMBERS ", 8) || !strncmp(info, "ACTIVEMEMBERS ", 14) ) {
 		info += 8;
 		gc = bee_chat_by_title(ic->bee, ic, id);
 		/* Hack! We set ->data to TRUE
@@ -1219,8 +1219,12 @@ gboolean skype_start_stream(struct im_connection *ic)
 	skype_printf(ic, "SET USERSTATUS ONLINE\n");
 
 	/* Auto join to bookmarked chats if requested.*/
-	if (set_getbool(&ic->acc->set, "auto_join"))
+	if (set_getbool(&ic->acc->set, "auto_join")) {
 		skype_printf(ic, "SEARCH BOOKMARKEDCHATS\n");
+		skype_printf(ic, "SEARCH ACTIVECHATS\n");
+		skype_printf(ic, "SEARCH MISSEDCHATS\n");
+		skype_printf(ic, "SEARCH RECENTCHATS\n");
+	}
 	return st;
 }
 

@@ -128,7 +128,7 @@ def send(sock, txt, tries=10):
 	if hasgobject:
 		if not options.conn: return
 		try:
-			sock.sendall(txt)
+			done = sock.sendall(txt)
 		except socket.error as s:
 			dprint("Warning, sending '%s' failed (%s)." % (txt, s))
 			options.conn.close()
@@ -138,7 +138,7 @@ def send(sock, txt, tries=10):
 			if not options.conn: break
 			if wait_for_lock(options.lock, 3, 10, "socket send"):
 				try:
-					 if options.conn: sock.sendall(txt)
+					 if options.conn: done = sock.sendall(txt)
 					 options.lock.release()
 				except socket.error as s:
 					options.lock.release()
@@ -253,13 +253,13 @@ def dprint(msg):
 	from time import strftime
 	global options
 
-	now = strftime("%Y-%m-%d %H:%M:%S")
-
 	if options.debug:
+		import inspect
+		prefix = strftime("[%Y-%m-%d %H:%M:%S]") + " %s:%d" % inspect.stack()[1][1:3]
 		sanitized = msg
 
 		try:
-			print now + ": " + msg
+			print prefix + ": " + msg
 		except Exception, s:
 			try:
 				sanitized = msg.encode("ascii", "backslashreplace")
@@ -268,11 +268,11 @@ def dprint(msg):
 					sanitized = "hex [" + msg.encode("hex") + "]"
 				except Error, s:
 					sanitized = "[unable to print debug message]"
-			print now + "~=" + sanitized
+			print prefix + "~=" + sanitized
 
 		if options.log:
 			sock = open(options.log, "a")
-			sock.write("%s skyped: %s\n" % (now, sanitized))
+			sock.write(prefix + ": " + sanitized)
 			sock.close()
 
 		sys.stdout.flush()
@@ -467,7 +467,7 @@ def main(args=None):
 	options.buf = None
 
 	if not os.path.exists(options.config):
-		parser.error(( "Can't find configuration file at '%s'."
+		parser.error(( "Can't find configuration file at '%s'. "
 			"Use the -c option to specify an alternate one." )% options.config)
 
 	cfgpath = options.config
