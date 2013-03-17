@@ -1,0 +1,11 @@
+-include config.mak
+
+all: bpython.$(SHARED_EXT)
+
+bpython.$(SHARED_EXT): @srcdir@/src/bpython.c
+	$(CC) $(CFLAGS) $(SHARED_FLAGS) -o bpython.$(SHARED_EXT) @srcdir@/src/bpython.c $(LDFLAGS)
+
+install: all
+	$(INSTALL) -d $(DESTDIR)$(plugindir)
+	$(INSTALL) bpython.$(SHARED_EXT) $(DESTDIR)$(plugindir)
+

@@ -26,7 +26,7 @@ endif
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 
-all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) doc systemd
+all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) $(PYTHON_PI) doc systemd
 ifdef SKYPE_PI
 	$(MAKE) -C protocols/skype doc
 endif
@@ -56,6 +56,9 @@ clean: $(subdirs)
 	$(MAKE) -C tests clean
 ifdef SKYPE_PI
 	$(MAKE) -C protocols/skype clean
+endif
+ifdef PYTHON_PI
+	$(MAKE) -C protocols/python clean
 endif
 
 distclean: clean $(subdirs)
@@ -117,7 +120,7 @@ uninstall-etc:
 	rm -f $(DESTDIR)$(ETCDIR)/bitlbee.conf
 	-rmdir $(DESTDIR)$(ETCDIR)
 
-install-plugins: install-plugin-otr install-plugin-skype
+install-plugins: install-plugin-otr install-plugin-skype install-plugin-python
 
 install-plugin-otr:
 ifdef OTR_PI
@@ -134,6 +137,12 @@ ifdef SKYPE_PI
 	install -m 0644 $(_SRCDIR_)protocols/skype/skyped.conf.dist $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
 	install -m 0755 $(_SRCDIR_)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
 	make -C protocols/skype install-doc
+endif
+
+install-plugin-python:
+ifdef PYTHON_PI
+	mkdir -p $(DESTDIR)$(PLUGINDIR)
+	install -m 0755 bpython.so $(DESTDIR)$(PLUGINDIR)
 endif
 
 systemd:
@@ -169,7 +178,11 @@ $(OTR_PI): %.so: $(_SRCDIR_)%.c
 
 $(SKYPE_PI): $(_SRCDIR_)protocols/skype/skype.c
 	@echo '*' Building plugin skype
-	@$(CC) $(CFLAGS) $(SKYPEFLAGS) $< -o $@
+	$(CC) $(CFLAGS) $(SKYPEFLAGS) $< -o $@
+
+$(PYTHON_PI): $(_SRCDIR_)protocols/python/src/bpython.c
+	@echo '*' Building plugin python
+	$(CC) $(CFLAGS) $(PYTHONCFLAGS) $< -o $@ $(EFLAGS) $(PYTHONLDFLAGS)
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<

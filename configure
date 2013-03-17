@@ -36,6 +36,7 @@ gcov=0
 plugins=1
 otr=0
 skype=0
+python=0
 
 events=glib
 ldap=0
@@ -88,6 +89,8 @@ Option		Description				Default
 		Disable/enable OTR encryption support	$otr
 --skype=0/1/plugin
 		Disable/enable Skype support		$skype
+--python=0/1/plugin
+		Disable/enable Python support		$skype
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, auto)
@@ -553,7 +556,14 @@ if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
 		echo "SKYPEFLAGS=-fPIC -shared" >> Makefile.settings
 	fi
 	echo 'SKYPE_PI=skype.so' >> Makefile.settings
-	protocols_mods="$protocol_mods skype(plugin)"
+	protocols_mods="$protocols_mods skype(plugin)"
+fi
+
+if [ "$python" = "1" -o "$python" = "plugin" ]; then
+	echo "PYTHONCFLAGS=-fPIC -shared $(python-config --cflags)" >> Makefile.settings
+	echo "PYTHONLDFLAGS=$(python-config --ldflags)" >> Makefile.settings
+	echo 'PYTHON_PI=bpython.so' >> Makefile.settings
+        protocols_mods="$protocols_mods python(plugin)"
 fi
 
 if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; then
