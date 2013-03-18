@@ -26,6 +26,30 @@
 #include <Python.h>
 #include "bytesobject.h"
 
+static PyObject * bpython_register_protocol(PyObject *self, PyObject *args)
+{
+    const char *command;
+    int sts;
+
+    if (!PyArg_ParseTuple(args, "s", &command))
+        return NULL;
+    sts = system(command);
+    return Py_BuildValue("i", sts);
+}
+
+static PyMethodDef BpythonMethods[] = {
+    {"register_protocol",  bpython_register_protocol, METH_VARARGS,
+     "Register a protocol."},
+    {NULL, NULL, 0, NULL}        /* Sentinel */
+};
+
+PyMODINIT_FUNC initbpython(void)
+{
+    PyImport_AddModule("bpython");
+    Py_InitModule("bpython", BpythonMethods);
+}
+
+
 static void load_pyfile(char * path, PyObject * main_dict) {
     FILE * pyfile;
     PyObject * err;
@@ -34,9 +58,12 @@ static void load_pyfile(char * path, PyObject * main_dict) {
     
     printf("Loading python file %s\n", path);
     pyfile = fopen(path, "r");
+    
     /* Copy main dict to make sure that separate plugins
        run in separate environments */
     PyObject * main_dict_copy = PyDict_Copy(main_dict);
+
+    /* Run the python file */
     PyRun_File(pyfile, path, Py_file_input, main_dict_copy, main_dict_copy);
     
     PyObject * pluginname = PyDict_GetItemString(main_dict_copy, "name");
@@ -80,6 +107,9 @@ void init_plugin() {
     Py_Initialize();
     PyRun_SimpleString("print 'Python initialised!'\n");
     
+    /* Add our static module */
+    initbpython();
+
     /* Get a reference to the main module. */
     PyObject* main_module = PyImport_AddModule("__main__");
 
