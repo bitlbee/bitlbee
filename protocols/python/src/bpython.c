@@ -26,6 +26,40 @@
 #include <Python.h>
 #include "bytesobject.h"
 
+/* Python module classes: */
+
+typedef struct {
+    PyObject_HEAD
+
+} bpython_ProtocolObject;
+
+static PyTypeObject bpython_ProtocolType = {
+    PyObject_HEAD_INIT(NULL)
+    0,                         /*ob_size*/
+    "bpython.Protocol",  /*tp_name*/
+    sizeof(bpython_ProtocolObject), /*tp_basicsize*/
+    0,                         /*tp_itemsize*/
+    0,                         /*tp_dealloc*/
+    0,                         /*tp_print*/
+    0,                         /*tp_getattr*/
+    0,                         /*tp_setattr*/
+    0,                         /*tp_compare*/
+    0,                         /*tp_repr*/
+    0,                         /*tp_as_number*/
+    0,                         /*tp_as_sequence*/
+    0,                         /*tp_as_mapping*/
+    0,                         /*tp_hash */
+    0,                         /*tp_call*/
+    0,                         /*tp_str*/
+    0,                         /*tp_getattro*/
+    0,                         /*tp_setattro*/
+    0,                         /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+    "Protocol plugin objects",           /* tp_doc */
+};
+
+/* Python module functions: */
+
 static PyObject * bpython_register_protocol(PyObject *self, PyObject *args)
 {
     const char *command;
@@ -45,28 +79,26 @@ static PyMethodDef BpythonMethods[] = {
 
 PyMODINIT_FUNC initbpython(void)
 {
-    PyImport_AddModule("bpython");
-    Py_InitModule("bpython", BpythonMethods);
+    PyObject * m;
+
+    bpython_ProtocolType.tp_new = PyType_GenericNew;
+    if (PyType_Ready(&bpython_ProtocolType) < 0) {
+        return;
+    }
+
+    m = Py_InitModule3("bpython", BpythonMethods, "Bitlbee Plugin module");
+
+    Py_INCREF(&bpython_ProtocolType);
+    PyModule_AddObject(m, "Protocol", (PyObject *)&bpython_ProtocolType);
 }
 
 
 static void load_pyfile(char * path, PyObject * main_dict) {
-    FILE * pyfile;
     PyObject * err;
     struct prpl *ret;
     ret = g_new0(struct prpl, 1);
     
-    printf("Loading python file %s\n", path);
-    pyfile = fopen(path, "r");
-    
-    /* Copy main dict to make sure that separate plugins
-       run in separate environments */
-    PyObject * main_dict_copy = PyDict_Copy(main_dict);
-
-    /* Run the python file */
-    PyRun_File(pyfile, path, Py_file_input, main_dict_copy, main_dict_copy);
-    
-    PyObject * pluginname = PyDict_GetItemString(main_dict_copy, "name");
+    PyObject * pluginname = PyDict_GetItemString(main_dict, "name");
     if ((err = PyErr_Occurred()) || !pluginname) {
         printf("No plugin name\n");
         PyErr_Print();
@@ -99,6 +131,8 @@ static void load_pyfile(char * path, PyObject * main_dict) {
     register_protocol(ret);
 }
 
+/* Bitlbee plugin functions: */
+
 void init_plugin() {
     GDir *dir;
     GError *error = NULL;
@@ -128,7 +162,17 @@ void init_plugin() {
             }
             
             if (g_str_has_suffix(path, ".py")) {
-                load_pyfile(path, main_dict);
+                FILE * pyfile;
+                printf("Loading python file %s\n", path);
+                pyfile = fopen(path, "r");
+                
+                /* Copy main dict to make sure that separate plugins
+                   run in separate environments */
+                PyObject * main_dict_copy = PyDict_Copy(main_dict);
+
+                /* Run the python file */
+                PyRun_File(pyfile, path, Py_file_input, main_dict_copy, main_dict_copy);
+
             }
 
             g_free(path);

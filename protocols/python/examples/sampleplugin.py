@@ -8,9 +8,17 @@ import sys
 import bpython
 print "hello, I'm a test plugin running on Python", sys.version_info
 
-# plugin name:
-name = 'moose'
-
+print bpython.ProtocolPlugin
+print bpython.ProtocolPlugin()
 print bpython.register_protocol
+
+try:
+    class MyProtocol(bpython.ProtocolPlugin):
+        pass
+except Exception, e:
+    print "error:", e
+
+myproto = MyProtocol()
+print "myproto: ", myproto
 
 bpython.register_protocol('echo "hello"')
