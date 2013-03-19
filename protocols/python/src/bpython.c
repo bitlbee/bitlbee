@@ -22,24 +22,82 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <bitlbee.h>
 #include <Python.h>
 #include "bytesobject.h"
+#include "structmember.h"
+
+#include <bitlbee.h>
 
 /* Python module classes: */
 
 typedef struct {
     PyObject_HEAD
+    PyObject * name; /* protocol name */
+} Protocol;
 
-} bpython_ProtocolObject;
+static void Protocol_dealloc(Protocol * self) {
+    Py_XDECREF(self->name);
+    self->ob_type->tp_free((PyObject*)self);
+}
 
-static PyTypeObject bpython_ProtocolType = {
+static PyObject * Protocol_new(PyTypeObject * type, PyObject * args, PyObject * kwds) {
+    Protocol * self;
+
+    self = (Protocol *)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->name = PyString_FromString("unnamed");
+        if (self->name == NULL) {
+            Py_DECREF(self);
+            return NULL;
+        }
+    }
+
+    return (PyObject *)self;
+}
+
+static int Protocol_init(Protocol *self, PyObject *args, PyObject *kwds)
+{
+    PyObject * name;
+    PyObject * tmp;
+
+    static char *kwlist[] = {"name", NULL};
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, 
+                                      &name))
+        return -1; 
+
+    if (name) {
+        tmp = self->name;
+        Py_INCREF(name);
+        self->name = name;
+        Py_XDECREF(tmp);
+    }
+
+    return 0;
+}
+
+static PyMemberDef Protocol_members[] = {
+    {"name", T_OBJECT_EX, offsetof(Protocol, name), 0,
+     "protocol name (used in 'account add')"},
+    {NULL}  /* Sentinel */
+};
+
+
+static PyMethodDef Protocol_methods[] = {
+    //{"name", (PyCFunction)Noddy_name, METH_NOARGS,
+    // "Return the name, combining the first and last name"
+    //},
+    {NULL}  /* Sentinel */
+};
+
+
+static PyTypeObject ProtocolType = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
     "bpython.Protocol",  /*tp_name*/
-    sizeof(bpython_ProtocolObject), /*tp_basicsize*/
+    sizeof(Protocol), /*tp_basicsize*/
     0,                         /*tp_itemsize*/
-    0,                         /*tp_dealloc*/
+    (destructor)Protocol_dealloc, /*tp_dealloc*/
     0,                         /*tp_print*/
     0,                         /*tp_getattr*/
     0,                         /*tp_setattr*/
@@ -54,8 +112,25 @@ static PyTypeObject bpython_ProtocolType = {
     0,                         /*tp_getattro*/
     0,                         /*tp_setattro*/
     0,                         /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,        /*tp_flags*/
     "Protocol plugin objects",           /* tp_doc */
+    0,                         /* tp_traverse */
+    0,                         /* tp_clear */
+    0,                         /* tp_richcompare */
+    0,                         /* tp_weaklistoffset */
+    0,                         /* tp_iter */
+    0,                         /* tp_iternext */
+    Protocol_methods,             /* tp_methods */
+    Protocol_members,             /* tp_members */
+    0,                         /* tp_getset */
+    0,                         /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    (initproc)Protocol_init,      /* tp_init */
+    0,                         /* tp_alloc */
+    Protocol_new,                 /* tp_new */
 };
 
 /* Python module functions: */
@@ -71,7 +146,7 @@ static PyObject * bpython_register_protocol(PyObject *self, PyObject *args)
     return Py_BuildValue("i", sts);
 }
 
-static PyMethodDef BpythonMethods[] = {
+static PyMethodDef bpython_methods[] = {
     {"register_protocol",  bpython_register_protocol, METH_VARARGS,
      "Register a protocol."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
@@ -81,15 +156,15 @@ PyMODINIT_FUNC initbpython(void)
 {
     PyObject * m;
 
-    bpython_ProtocolType.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&bpython_ProtocolType) < 0) {
+    ProtocolType.tp_new = PyType_GenericNew;
+    if (PyType_Ready(&ProtocolType) < 0) {
         return;
     }
 
-    m = Py_InitModule3("bpython", BpythonMethods, "Bitlbee Plugin module");
+    m = Py_InitModule3("bpython", bpython_methods, "Bitlbee Plugin module");
 
-    Py_INCREF(&bpython_ProtocolType);
-    PyModule_AddObject(m, "Protocol", (PyObject *)&bpython_ProtocolType);
+    Py_INCREF(&ProtocolType);
+    PyModule_AddObject(m, "Protocol", (PyObject *)&ProtocolType);
 }
 
 

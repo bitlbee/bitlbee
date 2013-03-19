@@ -8,12 +8,12 @@ import sys
 import bpython
 print "hello, I'm a test plugin running on Python", sys.version_info
 
-print bpython.ProtocolPlugin
-print bpython.ProtocolPlugin()
+print bpython.Protocol
+print bpython.Protocol()
 print bpython.register_protocol
 
 try:
-    class MyProtocol(bpython.ProtocolPlugin):
+    class MyProtocol(bpython.Protocol):
         pass
 except Exception, e:
     print "error:", e
