@@ -137,13 +137,23 @@ static PyTypeObject ProtocolType = {
 
 static PyObject * bpython_register_protocol(PyObject *self, PyObject *args)
 {
-    const char *command;
-    int sts;
+    PyObject *protocol;
+    char * name;
+    struct prpl * ret;
 
-    if (!PyArg_ParseTuple(args, "s", &command))
+    if (!PyArg_ParseTuple(args, "sO", &name, &protocol))
         return NULL;
-    sts = system(command);
-    return Py_BuildValue("i", sts);
+    
+    /* Increase the reference count to stop garbage collection */
+    Py_INCREF(protocol);
+
+    ret = g_new0(struct prpl, 1);
+    ret->name = name;
+    ret->data = ret;
+
+    register_protocol(ret);
+
+    Py_RETURN_NONE;
 }
 
 static PyMethodDef bpython_methods[] = {
@@ -167,44 +177,6 @@ PyMODINIT_FUNC initbpython(void)
     PyModule_AddObject(m, "Protocol", (PyObject *)&ProtocolType);
 }
 
-
-static void load_pyfile(char * path, PyObject * main_dict) {
-    PyObject * err;
-    struct prpl *ret;
-    ret = g_new0(struct prpl, 1);
-    
-    PyObject * pluginname = PyDict_GetItemString(main_dict, "name");
-    if ((err = PyErr_Occurred()) || !pluginname) {
-        printf("No plugin name\n");
-        PyErr_Print();
-        g_free(ret);
-        return;
-    }
-    PyObject * pluginname_unicode = PyObject_Unicode(pluginname);
-    PyObject * pluginname_encoded = PyUnicode_AsEncodedString(pluginname_unicode, "ascii", "ignore");
-    if ((err = PyErr_Occurred())) {
-        printf("Error encoding plugin name\n");
-        PyErr_Print();
-        g_free(ret);
-        return;
-    }
-    char * pluginname_tmp; /* reference, do not modify */
-    Py_ssize_t length;
-    PyBytes_AsStringAndSize(pluginname_encoded, &pluginname_tmp, &length);
-    if ((err = PyErr_Occurred())) {
-        printf("Bad plugin name\n");
-        PyErr_Print();
-        g_free(ret);
-        return;
-    }
-    ret->name = g_malloc0(length + 1);
-    memmove(ret->name, pluginname_tmp, length);
-
-    Py_DECREF(pluginname_encoded);
-    Py_DECREF(pluginname_unicode);
-
-    register_protocol(ret);
-}
 
 /* Bitlbee plugin functions: */
 
@@ -238,7 +210,8 @@ void init_plugin() {
             
             if (g_str_has_suffix(path, ".py")) {
                 FILE * pyfile;
-                printf("Loading python file %s\n", path);
+                PyObject * result;
+		printf("Loading python file %s\n", path);
                 pyfile = fopen(path, "r");
                 
                 /* Copy main dict to make sure that separate plugins
@@ -246,8 +219,11 @@ void init_plugin() {
                 PyObject * main_dict_copy = PyDict_Copy(main_dict);
 
                 /* Run the python file */
-                PyRun_File(pyfile, path, Py_file_input, main_dict_copy, main_dict_copy);
-
+                result = PyRun_File(pyfile, path, Py_file_input, main_dict_copy, main_dict_copy);
+		if (result == NULL) {
+		    printf("Error loading module %s\n", path);
+		    PyErr_PrintEx(0);
+		}
             }
 
             g_free(path);

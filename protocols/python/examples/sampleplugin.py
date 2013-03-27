@@ -6,19 +6,13 @@ will pick it up as long as it has a .py extension.
 
 import sys
 import bpython
-print "hello, I'm a test plugin running on Python", sys.version_info
+print ("hello, I'm a test plugin running on Python {}.{}.{}".format(
+    sys.version_info.major, sys.version_info.minor, sys.version_info.micro))
 
-print bpython.Protocol
-print bpython.Protocol()
-print bpython.register_protocol
-
-try:
-    class MyProtocol(bpython.Protocol):
-        pass
-except Exception, e:
-    print "error:", e
+class MyProtocol(bpython.Protocol):
+    pass
 
 myproto = MyProtocol()
-print "myproto: ", myproto
 
-bpython.register_protocol('echo "hello"')
+bpython.register_protocol('myproto', myproto)
+
