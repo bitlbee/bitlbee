@@ -181,7 +181,7 @@ static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const ch
 	strncpy( xd->given_nick, my_nick, MAX_NICK_LENGTH );
 	xd->given_nick[MAX_NICK_LENGTH] = '\0';
 	nick_lc( xd->given_nick );
-	xd->given_pass = password;
+	xd->given_pass = (char*) password;
 	
 	fn = g_strconcat( global.conf->configdir, xd->given_nick, ".xml", NULL );
 	if( ( fd = open( fn, O_RDONLY ) ) < 0 )
