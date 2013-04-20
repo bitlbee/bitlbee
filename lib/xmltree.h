@@ -83,6 +83,7 @@ int xt_handle( struct xt_parser *xt, struct xt_node *node, int depth );
 void xt_cleanup( struct xt_parser *xt, struct xt_node *node, int depth );
 struct xt_node *xt_from_string( const char *in, int text_len );
 char *xt_to_string( struct xt_node *node );
+char *xt_to_string_i( struct xt_node *node );
 void xt_print( struct xt_node *node );
 struct xt_node *xt_dup( struct xt_node *node );
 void xt_free_node( struct xt_node *node );

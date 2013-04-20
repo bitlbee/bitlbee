@@ -38,7 +38,6 @@ otr=0
 skype=0
 
 events=glib
-ldap=0
 ssl=auto
 
 pie=1
@@ -326,23 +325,6 @@ EOF
 	fi;
 }
 
-detect_ldap()
-{
-	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
-	if $CC -o $TMPFILE -shared -lldap 2>/dev/null >/dev/null; then
-		cat<<EOF>>Makefile.settings
-EFLAGS+=-lldap
-CFLAGS+=
-EOF
-		ldap=1
-		rm -f $TMPFILE
-		ret=1
-	else
-		ldap=0
-		ret=0
-	fi
-}
-
 RESOLV_TESTCODE='
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -455,22 +437,6 @@ if detect_resolv_dynamic || detect_resolv_static; then
 fi
 
 STORAGES="xml"
-
-if [ "$ldap" = "auto" ]; then
-	detect_ldap
-fi
-
-if [ "$ldap" = 0 ]; then
-	echo "#undef WITH_LDAP" >> config.h
-elif [ "$ldap" = 1 ]; then
-	echo
-	echo 'LDAP support is a work in progress and does NOT work AT ALL right now.'
-	echo
-	exit 1
-	
-	echo "#define WITH_LDAP 1" >> config.h
-	STORAGES="$STORAGES ldap"
-fi
 
 for i in $STORAGES; do
 	STORAGE_OBJS="$STORAGE_OBJS storage_$i.o"

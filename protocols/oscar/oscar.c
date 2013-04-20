@@ -377,7 +377,7 @@ static void oscar_init(account_t *acc)
 	s = set_add(&acc->set, "server",
 	            icq ? AIM_DEFAULT_LOGIN_SERVER_ICQ
 	                : AIM_DEFAULT_LOGIN_SERVER_AIM, set_eval_account, acc);
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	
 	if (icq) {
 		s = set_add(&acc->set, "web_aware", "false", set_eval_bool, acc);

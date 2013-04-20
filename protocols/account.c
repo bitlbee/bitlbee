@@ -52,7 +52,7 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 	a->bee = bee;
 	
 	s = set_add( &a->set, "auto_connect", "true", set_eval_account, a );
-	s->flags |= ACC_SET_NOSAVE;
+	s->flags |= SET_NOSAVE;
 	
 	s = set_add( &a->set, "auto_reconnect", "true", set_eval_bool, a );
 	
@@ -60,16 +60,16 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 	s->flags |= SET_NULL_OK;
 	
 	s = set_add( &a->set, "nick_source", "handle", set_eval_nick_source, a );
-	s->flags |= ACC_SET_NOSAVE; /* Just for bw compatibility! */
+	s->flags |= SET_NOSAVE; /* Just for bw compatibility! */
 	
 	s = set_add( &a->set, "password", NULL, set_eval_account, a );
-	s->flags |= ACC_SET_NOSAVE | SET_NULL_OK | SET_PASSWORD;
+	s->flags |= SET_NOSAVE | SET_NULL_OK | SET_PASSWORD;
 	
 	s = set_add( &a->set, "tag", NULL, set_eval_account, a );
-	s->flags |= ACC_SET_NOSAVE;
+	s->flags |= SET_NOSAVE;
 	
 	s = set_add( &a->set, "username", NULL, set_eval_account, a );
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 	set_setstr( &a->set, "username", user );
 	
 	/* Hardcode some more clever tag guesses. */
