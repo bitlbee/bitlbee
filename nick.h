@@ -30,10 +30,10 @@ char *nick_gen( bee_user_t *bu );
 void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] );
 int nick_saved( bee_user_t *bu );
 void nick_del( bee_user_t *bu );
-void nick_strip( char *nick );
 
-int nick_ok( const char *nick );
-int nick_lc( char *nick );
-int nick_uc( char *nick );
-int nick_cmp( const char *a, const char *b );
+void nick_strip( irc_t *irc, char *nick );
+int nick_ok( irc_t *irc, const char *nick );
+int nick_lc( irc_t *irc, char *nick );
+int nick_uc( irc_t *irc, char *nick );
+int nick_cmp( irc_t *irc, const char *a, const char *b );
 char *nick_dup( const char *nick );

@@ -50,11 +50,12 @@ static char *clean_handle( const char *orig )
 void nick_set_raw( account_t *acc, const char *handle, const char *nick )
 {
 	char *store_handle, *store_nick = g_malloc( MAX_NICK_LENGTH + 1 );
+	irc_t *irc = (irc_t *) acc->bee->ui_data;
 	
 	store_handle = clean_handle( handle );
 	store_nick[MAX_NICK_LENGTH] = '\0';
 	strncpy( store_nick, nick, MAX_NICK_LENGTH );
-	nick_strip( store_nick );
+	nick_strip( irc, store_nick );
 	
 	g_hash_table_replace( acc->nicks, store_handle, store_nick );
 }
@@ -68,6 +69,7 @@ char *nick_get( bee_user_t *bu )
 {
 	static char nick[MAX_NICK_LENGTH+1];
 	char *store_handle, *found_nick;
+	irc_t *irc = (irc_t *) bu->bee->ui_data;
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	
@@ -93,9 +95,9 @@ char *nick_get( bee_user_t *bu )
 			while( *s )
 				*(s++) = 0;
 		
-		nick_strip( nick );
+		nick_strip( irc, nick );
 		if( set_getbool( &bu->bee->set, "lcnicks" ) )
-			nick_lc( nick );
+			nick_lc( irc, nick );
 	}
 	g_free( store_handle );
 	
@@ -229,7 +231,7 @@ void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] )
 	
 	/* Now, find out if the nick is already in use at the moment, and make
 	   subtle changes to make it unique. */
-	while( !nick_ok( nick ) ||
+	while( !nick_ok( irc, nick ) ||
 	       ( ( iu = irc_user_by_name( irc, nick ) ) && iu->bu != bu ) )
 	{
 		if( strlen( nick ) < ( MAX_NICK_LENGTH - 1 ) )
@@ -286,7 +288,7 @@ void nick_del( bee_user_t *bu )
 }
 
 
-void nick_strip( char *nick )
+void nick_strip( irc_t *irc, char *nick )
 {
 	int i, j;
 	
@@ -312,7 +314,7 @@ void nick_strip( char *nick )
 		nick[j++] = '\0';
 }
 
-int nick_ok( const char *nick )
+int nick_ok( irc_t *irc, const char *nick )
 {
 	const char *s;
 	
@@ -327,7 +329,7 @@ int nick_ok( const char *nick )
 	return( 1 );
 }
 
-int nick_lc( char *nick )
+int nick_lc( irc_t *irc, char *nick )
 {
 	static char tab[128] = { 0 };
 	int i;
@@ -350,7 +352,7 @@ int nick_lc( char *nick )
 	return( 1 );
 }
 
-int nick_uc( char *nick )
+int nick_uc( irc_t *irc, char *nick )
 {
 	static char tab[128] = { 0 };
 	int i;
@@ -373,13 +375,13 @@ int nick_uc( char *nick )
 	return( 1 );
 }
 
-int nick_cmp( const char *a, const char *b )
+int nick_cmp( irc_t *irc, const char *a, const char *b )
 {
 	char aa[1024] = "", bb[1024] = "";
 	
 	strncpy( aa, a, sizeof( aa ) - 1 );
 	strncpy( bb, b, sizeof( bb ) - 1 );
-	if( nick_lc( aa ) && nick_lc( bb ) )
+	if( nick_lc( irc, aa ) && nick_lc( irc, bb ) )
 	{
 		return( strcmp( aa, bb ) );
 	}
@@ -387,9 +389,4 @@ int nick_cmp( const char *a, const char *b )
 	{
 		return( -1 );	/* Hmm... Not a clear answer.. :-/ */
 	}
-}
-
-char *nick_dup( const char *nick )
-{
-	return g_strndup( nick, MAX_NICK_LENGTH );
 }

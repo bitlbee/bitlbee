@@ -151,7 +151,7 @@ void ipc_master_cmd_identify( irc_t *data, char **cmd )
 	{
 		old = l->data;
 		if( child != old &&
-		    old->nick && nick_cmp( old->nick, child->nick ) == 0 &&
+		    old->nick && nick_cmp( NULL, old->nick, child->nick ) == 0 &&
 		    old->password && strcmp( old->password, child->password ) == 0 )
 			break;
 	}
@@ -297,7 +297,7 @@ static void ipc_child_cmd_kill( irc_t *irc, char **cmd )
 	if( !( irc->status & USTATUS_LOGGED_IN ) )
 		return;
 	
-	if( nick_cmp( cmd[1], irc->user->nick ) != 0 )
+	if( nick_cmp( NULL, cmd[1], irc->user->nick ) != 0 )
 		return;		/* It's not for us. */
 	
 	irc_write( irc, ":%s!%s@%s KILL %s :%s", irc->root->nick, irc->root->nick, irc->root->host, irc->user->nick, cmd[2] );

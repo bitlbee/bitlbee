@@ -701,7 +701,7 @@ static void cmd_add( irc_t *irc, char **cmd )
 	
 	if( cmd[3] )
 	{
-		if( !nick_ok( cmd[3] ) )
+		if( !nick_ok( irc, cmd[3] ) )
 		{
 			irc_rootmsg( irc, "The requested nick `%s' is invalid", cmd[3] );
 			return;
@@ -843,7 +843,7 @@ static void cmd_rename( irc_t *irc, char **cmd )
 	{
 		irc_rootmsg( irc, "Use /nick to change your own nickname" );
 	}
-	else if( !nick_ok( cmd[2] ) )
+	else if( !nick_ok( irc, cmd[2] ) )
 	{
 		irc_rootmsg( irc, "Nick `%s' is invalid", cmd[2] );
 	}

@@ -180,7 +180,7 @@ static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const ch
 	xd->irc = irc;
 	strncpy( xd->given_nick, my_nick, MAX_NICK_LENGTH );
 	xd->given_nick[MAX_NICK_LENGTH] = '\0';
-	nick_lc( xd->given_nick );
+	nick_lc( NULL, xd->given_nick );
 	xd->given_pass = (char*) password;
 	
 	fn = g_strconcat( global.conf->configdir, xd->given_nick, ".xml", NULL );
@@ -367,7 +367,7 @@ static storage_status_t xml_save( irc_t *irc, int overwrite )
 	int fd;
 	
 	path2 = g_strdup( irc->user->nick );
-	nick_lc( path2 );
+	nick_lc( NULL, path2 );
 	g_snprintf( path, sizeof( path ) - 20, "%s%s%s", global.conf->configdir, path2, ".xml" );
 	g_free( path2 );
 	
@@ -423,7 +423,7 @@ static storage_status_t xml_remove( const char *nick, const char *password )
 		return status;
 
 	lc = g_strdup( nick );
-	nick_lc( lc );
+	nick_lc( NULL, lc );
 	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, lc, ".xml" );
 	g_free( lc );
 	
