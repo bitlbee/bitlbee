@@ -1015,7 +1015,10 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 			sd->adder = NULL;
 		}
 	} else if (!strncmp(info, "MEMBERS ", 8) || !strncmp(info, "ACTIVEMEMBERS ", 14) ) {
-		info += 8;
+		if (!strncmp(info, "MEMBERS ", 8))
+			info += 8;
+		else
+			info += 14;
 		gc = bee_chat_by_title(ic->bee, ic, id);
 		/* Hack! We set ->data to TRUE
 		 * while we're on the channel
