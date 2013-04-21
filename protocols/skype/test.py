@@ -130,6 +130,9 @@ class Test(unittest.TestCase):
 	def testGroupRead(self):
 		self.mock("group-read")
 
+	def testGroupAdd(self):
+		self.mock("group-add")
+
 	def testCtcpHelp(self):
 		self.mock("ctcp-help")
 
