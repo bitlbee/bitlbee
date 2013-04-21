@@ -272,7 +272,7 @@ def dprint(msg):
 
 		if options.log:
 			sock = open(options.log, "a")
-			sock.write(prefix + ": " + sanitized)
+			sock.write("%s: %s\n" % (prefix, sanitized))
 			sock.close()
 
 		sys.stdout.flush()
