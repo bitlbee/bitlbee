@@ -129,6 +129,9 @@ class Test(unittest.TestCase):
 
 	def testSetMoodText(self):
 		self.mock("set-mood-text")
+	
+	def testAwaySet(self):
+		self.mock("away-set")
 
 if __name__ == '__main__':
 	setupSkyped()
