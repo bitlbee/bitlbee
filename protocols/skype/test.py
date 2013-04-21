@@ -115,6 +115,9 @@ class Test(unittest.TestCase):
 	def testGroupchatMsg(self):
 		self.mock("groupchat-msg")
 	
+	def testGroupchatTopic(self):
+		self.mock("groupchat-topic")
+	
 	def testCalledYes(self):
 		self.mock("called-yes")
 
