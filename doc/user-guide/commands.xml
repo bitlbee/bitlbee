@@ -1619,6 +1619,20 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="utf8_nicks" type="boolean" scope="global">
+		<default>false</default>
+
+		<description>
+			<para>
+				Officially, IRC nicknames are restricted to ASCII. Recently some clients and servers started supporting Unicode nicknames though. To enable UTF-8 nickname support (contacts only) in BitlBee, enable this setting.
+			</para>
+			
+			<para>
+				To avoid confusing old clients, this setting is disabled by default. Be careful when you try it, and be prepared to be locked out of your BitlBee in case your client interacts poorly with UTF-8 nicknames.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="web_aware" type="string" scope="account">
 		<default>false</default>
 
