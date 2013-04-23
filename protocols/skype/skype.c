@@ -1566,7 +1566,7 @@ static void skype_init(account_t *acc)
 	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "mood_text", NULL, skype_set_mood_text, acc);
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "call", NULL, skype_set_call, acc);
 	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
