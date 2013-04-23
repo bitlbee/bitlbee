@@ -111,14 +111,15 @@ char *nick_get( bee_user_t *bu )
 char *nick_gen( bee_user_t *bu )
 {
 	gboolean ok = FALSE; /* Set to true once the nick contains something unique. */
-	GString *ret = g_string_new( "" );
+	GString *ret = g_string_sized_new( MAX_NICK_LENGTH + 1 );
+	char *rets;
+	irc_t *irc = (irc_t *) bu->bee->ui_data;
 	char *fmt = set_getstr( &bu->ic->acc->set, "nick_format" ) ? :
 	            set_getstr( &bu->bee->set, "nick_format" );
 	
 	while( fmt && *fmt && ret->len < MAX_NICK_LENGTH )
 	{
 		char *part = NULL, chop = '\0', *asc = NULL;
-		int len = MAX_NICK_LENGTH;
 		
 		if( *fmt != '%' )
 		{
@@ -140,13 +141,6 @@ char *nick_gen( bee_user_t *bu )
 					return NULL;
 				}
 				fmt += 2;
-			}
-			else if( isdigit( *fmt ) )
-			{
-				len = 0;
-				/* Grab a number. */
-				while( isdigit( *fmt ) )
-					len = len * 10 + ( *(fmt++) - '0' );
 			}
 			else if( g_strncasecmp( fmt, "nick", 4 ) == 0 )
 			{
@@ -196,31 +190,31 @@ char *nick_gen( bee_user_t *bu )
 			}
 		}
 		
+		if( !part )
+			continue;
+		
 		/* Credits to Josay_ in #bitlbee for this idea. //TRANSLIT
 		   should do lossy/approximate conversions, so letters with
 		   accents don't just get stripped. Note that it depends on
 		   LC_CTYPE being set to something other than C/POSIX. */
-		if( part )
+		if( !( irc && irc->status & IRC_UTF8_NICKS ) )
 			part = asc = g_convert_with_fallback( part, -1, "ASCII//TRANSLIT",
 			                                      "UTF-8", "", NULL, NULL, NULL );
 		
-		if( ret->len == 0 && part && isdigit( *part ) )
-			g_string_append_c( ret, '_' );
-		
-		while( part && *part && *part != chop && len > 0 )
-		{
-			if( strchr( nick_lc_chars, *part ) ||
-			    strchr( nick_uc_chars, *part ) )
-				g_string_append_c( ret, *part );
-			
-			part ++;
-			len --;
-		}
+		if( part )
+			g_string_append( ret, part );
 		g_free( asc );
 	}
 	
-	/* This returns NULL if the nick is empty or otherwise not ok. */
-	return g_string_free( ret, ret->len == 0 || !ok );
+	rets = g_string_free( ret, FALSE );
+	if( ok && rets && *rets )
+	{
+		nick_strip( irc, rets );
+		rets[MAX_NICK_LENGTH] = '\0';
+		return rets;
+	}
+	g_free( rets );
+	return NULL;
 }
 
 void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] )
@@ -246,23 +240,14 @@ void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] )
 		
 		if( inf_protection-- == 0 )
 		{
-			int i;
-			
-			irc_rootmsg( irc, "Warning: Almost had an infinite loop in nick_get()! "
-			                  "This used to be a fatal BitlBee bug, but we tried to fix it. "
-			                  "This message should *never* appear anymore. "
-			                  "If it does, please *do* send us a bug report! "
-			                  "Please send all the following lines in your report:" );
-			
-			irc_rootmsg( irc, "Trying to get a sane nick for handle %s", bu->handle );
-			for( i = 0; i < MAX_NICK_LENGTH; i ++ )
-				irc_rootmsg( irc, "Char %d: %c/%d", i, nick[i], nick[i] );
-			
-			irc_rootmsg( irc, "FAILED. Returning an insane nick now. Things might break. "
-			                  "Good luck, and please don't forget to paste the lines up here "
-			                  "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
-			
 			g_snprintf( nick, MAX_NICK_LENGTH + 1, "xx%x", rand() );
+			
+			irc_rootmsg( irc, "Warning: Something went wrong while trying "
+			                  "to generate a nickname for contact %s on %s.",
+			                  bu->handle, bu->ic->acc->tag );
+			irc_rootmsg( irc, "This might be a bug in BitlBee, or the result "
+			                  "of a faulty nick_format setting. Will use %s "
+			                  "instead.", nick );
 			
 			break;
 		}
@@ -290,43 +275,95 @@ void nick_del( bee_user_t *bu )
 
 void nick_strip( irc_t *irc, char *nick )
 {
-	int i, j;
+	int len = 0;
 	
-	for( i = j = 0; nick[i] && j < MAX_NICK_LENGTH; i++ )
+	if( irc && ( irc->status & IRC_UTF8_NICKS ) )
 	{
-		if( strchr( nick_lc_chars, nick[i] ) || 
-		    strchr( nick_uc_chars, nick[i] ) )
+		gunichar c;
+		char *p = nick, *n, tmp[strlen(nick)+1];
+		
+		while( p && *p )
 		{
-			nick[j] = nick[i];
-			j++;
+			c = g_utf8_get_char_validated( p, -1 );
+			n = g_utf8_find_next_char( p, NULL );
+			
+			if( ( c < 0x7f && !( strchr( nick_lc_chars, c ) ||
+			                     strchr( nick_uc_chars, c ) ) ) ||
+			    !g_unichar_isgraph( c ) )
+			{
+				strcpy( tmp, n );
+				strcpy( p, tmp );
+			}
+			else
+				p = n;
+		}
+		if( p )
+			len = p - nick;
+	}
+	else
+	{
+		int i;
+		
+		for( i = len = 0; nick[i] && len < MAX_NICK_LENGTH; i++ )
+		{
+			if( strchr( nick_lc_chars, nick[i] ) || 
+			    strchr( nick_uc_chars, nick[i] ) )
+			{
+				nick[len] = nick[i];
+				len++;
+			}
 		}
 	}
 	if( isdigit( nick[0] ) )
 	{
 		char *orig;
 		
+		/* First character of a nick can't be a digit, so insert an
+		   underscore if necessary. */
 		orig = g_strdup( nick );
 		g_snprintf( nick, MAX_NICK_LENGTH, "_%s", orig );
 		g_free( orig );
-		j ++;
+		len ++;
 	}
-	while( j <= MAX_NICK_LENGTH )
-		nick[j++] = '\0';
+	while( len <= MAX_NICK_LENGTH )
+		nick[len++] = '\0';
 }
 
-int nick_ok( irc_t *irc, const char *nick )
+gboolean nick_ok( irc_t *irc, const char *nick )
 {
 	const char *s;
 	
 	/* Empty/long nicks are not allowed, nor numbers at [0] */
 	if( !*nick || isdigit( nick[0] ) || strlen( nick ) > MAX_NICK_LENGTH )
-		return( 0 );
+		return 0;
 	
-	for( s = nick; *s; s ++ )
-		if( !strchr( nick_lc_chars, *s ) && !strchr( nick_uc_chars, *s ) )
-			return( 0 );
+	if( irc && ( irc->status & IRC_UTF8_NICKS ) )
+	{
+		gunichar c;
+		const char *p = nick, *n;
+		
+		while( p && *p )
+		{
+			c = g_utf8_get_char_validated( p, -1 );
+			n = g_utf8_find_next_char( p, NULL );
+			
+			if( ( c < 0x7f && !( strchr( nick_lc_chars, c ) ||
+			                     strchr( nick_uc_chars, c ) ) ) ||
+			    !g_unichar_isgraph( c ) )
+			{
+				return FALSE;
+			}
+			p = n;
+		}
+	}
+	else
+	{
+		for( s = nick; *s; s ++ )
+			if( !strchr( nick_lc_chars, *s ) && !strchr( nick_uc_chars, *s ) )
+				return FALSE;
+	}
 	
-	return( 1 );
+	return TRUE;
 }
 
 int nick_lc( irc_t *irc, char *nick )
@@ -341,38 +378,22 @@ int nick_lc( irc_t *irc, char *nick )
 			tab[(int)nick_lc_chars[i]] = nick_lc_chars[i];
 		}
 	
-	for( i = 0; nick[i]; i ++ )
+	if( irc && ( irc->status & IRC_UTF8_NICKS ) )
 	{
-		if( !tab[(int)nick[i]] )
-			return( 0 );
-		
-		nick[i] = tab[(int)nick[i]];
-	}
-	
-	return( 1 );
-}
-
-int nick_uc( irc_t *irc, char *nick )
-{
-	static char tab[128] = { 0 };
-	int i;
-	
-	if( tab['A'] == 0 )
-		for( i = 0; nick_lc_chars[i]; i ++ )
+		gchar *down = g_utf8_strdown( nick, -1 );
+		if( strlen( down ) > strlen( nick ) )
 		{
-			tab[(int)nick_uc_chars[i]] = nick_uc_chars[i];
-			tab[(int)nick_lc_chars[i]] = nick_uc_chars[i];
+			/* Well crap. Corrupt it if we have to. */
+			down[strlen(nick)] = '\0';
 		}
-	
-	for( i = 0; nick[i]; i ++ )
-	{
-		if( !tab[(int)nick[i]] )
-			return( 0 );
-		
-		nick[i] = tab[(int)nick[i]];
+		strcpy( nick, down );
+		g_free( down );
 	}
 	
-	return( 1 );
+	for( i = 0; nick[i]; i ++ )
+		nick[i] = tab[(int)nick[i]];
+	
+	return nick_ok( irc, nick );
 }
 
 int nick_cmp( irc_t *irc, const char *a, const char *b )

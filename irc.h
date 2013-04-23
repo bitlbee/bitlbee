@@ -61,6 +61,8 @@ typedef enum
 	OPER_HACK_REGISTER = 0x200,
 	OPER_HACK_ACCOUNT_ADD = 0x400,
 	OPER_HACK_ANY = 0x3700,	/* To check for them all at once. */
+	
+	IRC_UTF8_NICKS = 0x10000, /* Disable ASCII restrictions on buddy nicks. */
 } irc_status_t;
 
 struct irc_user;

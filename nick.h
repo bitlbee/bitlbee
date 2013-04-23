@@ -32,7 +32,7 @@ int nick_saved( bee_user_t *bu );
 void nick_del( bee_user_t *bu );
 
 void nick_strip( irc_t *irc, char *nick );
-int nick_ok( irc_t *irc, const char *nick );
+gboolean nick_ok( irc_t *irc, const char *nick );
 int nick_lc( irc_t *irc, char *nick );
 int nick_uc( irc_t *irc, char *nick );
 int nick_cmp( irc_t *irc, const char *a, const char *b );
