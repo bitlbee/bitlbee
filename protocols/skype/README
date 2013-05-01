@@ -57,90 +57,17 @@ a public server) and/or your IRC client.
 NOTE: The order is important. First `skyped` starts Skype. Then `skyped`
 connects to Skype, finally BitlBee can connect to `skyped`.
 
-=== Installing under Frugalware or Debian
+=== Installing
 
-- Install the necessary packages:
-
-----
-# pacman-g2 -S bitlbee-skype
-----
-
-or
+Either use your package manager to install the Skype plugin, using something
+like:
 
 ----
 # apt-get install skyped bitlbee-plugin-skype
 ----
 
-(the later from the unstable repo)
-
-and you don't have to compile anything manually.
-
-=== Installing under OS X
-
-- Install the necessary packages from ports:
-
-NOTE: You have to edit the Portfile manually to include the install-dev target,
-just append install-dev after install-etc.
-
-----
-# port -v install bitlbee
-----
-
-and you have to install `bitlbee-skype` and `skype4py` from
-source.
-
-=== Installing from source
-
-NOTE: bitlbee-skype by default builds and installs skyped and the
-plugin. In case you just want to install the plugin for a public server
-or you want to use skyped with a public server (like
-`bitlbee1.asnetinc.net`), you don't need both.
-
-- You need the latest stable BitlBee release (unless you want to use a
-  public server):
-
-----
-$ wget http://get.bitlbee.org/src/bitlbee-@BITLBEE_VERSION@.tar.gz
-$ tar xf bitlbee-@BITLBEE_VERSION@.tar.gz
-$ cd bitlbee-@BITLBEE_VERSION@
-----
-
-- Now compile and install it:
-
-----
-$ ./configure
-$ make
-# make install install-dev
-----
-
-- To install http://skype4py.sourceforge.net/[Skype4Py] from source
-  (unless you want to install the plugin for a public server):
-
-----
-$ tar -zxvf Skype4Py-x.x.x.x.tar.gz
-$ cd Skype4Py-x.x.x.x
-# python setup.py install
-----
-
-- Get the plugin code (in an empty dir, or whereever you want, it does
-  not matter):
-
-----
-$ wget http://vmiklos.hu/project/bitlbee-skype/bitlbee-skype-@VERSION@.tar.gz
-$ tar xf bitlbee-skype-@VERSION@.tar.gz
-$ cd bitlbee-skype-@VERSION@
-----
-
-- Compile and install it:
-
-----
-$ ./configure
-$ make
-# make install
-----
-
-This will install the plugin to where BitlBee expects them, which is
-`/usr/local/lib/bitlbee` if you installed BitlBee from source.
+Or install http://sourceforge.net/projects/skype4py/[Skype4Py], and build
+BitlBee with `--skype=1`.
 
 === Configuring
 

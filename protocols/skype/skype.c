@@ -343,11 +343,11 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 	*ptr = '\0';
 	ptr++;
 	if (!strncmp(ptr, "ONLINESTATUS ", 13)) {
-			if (!strcmp(user, sd->username))
-				return;
-			if (!set_getbool(&ic->acc->set, "test_join")
+		if (!strlen(user) || !strcmp(user, sd->username))
+			return;
+		if (!set_getbool(&ic->acc->set, "test_join")
 				&& !strcmp(user, "echo123"))
-				return;
+			return;
 		ptr = g_strdup_printf("%s@skype.com", user);
 		imcb_add_buddy(ic, ptr, skype_group_by_username(ic, user));
 		if (strcmp(status, "OFFLINE") && (strcmp(status, "SKYPEOUT") ||
@@ -1015,7 +1015,10 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 			sd->adder = NULL;
 		}
 	} else if (!strncmp(info, "MEMBERS ", 8) || !strncmp(info, "ACTIVEMEMBERS ", 14) ) {
-		info += 8;
+		if (!strncmp(info, "MEMBERS ", 8))
+			info += 8;
+		else
+			info += 14;
 		gc = bee_chat_by_title(ic->bee, ic, id);
 		/* Hack! We set ->data to TRUE
 		 * while we're on the channel
@@ -1563,7 +1566,7 @@ static void skype_init(account_t *acc)
 	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "mood_text", NULL, skype_set_mood_text, acc);
-	s->flags |= ACC_SET_NOSAVE | ACC_SET_ONLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "call", NULL, skype_set_call, acc);
 	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;

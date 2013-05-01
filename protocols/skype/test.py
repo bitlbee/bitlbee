@@ -112,6 +112,12 @@ class Test(unittest.TestCase):
 	def testGroupchatLeave(self):
 		self.mock("groupchat-leave")
 	
+	def testGroupchatMsg(self):
+		self.mock("groupchat-msg")
+	
+	def testGroupchatTopic(self):
+		self.mock("groupchat-topic")
+	
 	def testCalledYes(self):
 		self.mock("called-yes")
 
@@ -124,11 +130,17 @@ class Test(unittest.TestCase):
 	def testGroupRead(self):
 		self.mock("group-read")
 
+	def testGroupAdd(self):
+		self.mock("group-add")
+
 	def testCtcpHelp(self):
 		self.mock("ctcp-help")
 
 	def testSetMoodText(self):
 		self.mock("set-mood-text")
+	
+	def testAwaySet(self):
+		self.mock("away-set")
 
 if __name__ == '__main__':
 	setupSkyped()
