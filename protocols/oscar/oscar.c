@@ -980,7 +980,7 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 		char *src;
 		
 		if (args->icbmflags & AIM_IMFLAGS_UNICODE)
-			src = "UNICODEBIG";
+			src = "UCS-2BE";
 		else
 			src = "ISO8859-1";
 		
@@ -1768,7 +1768,7 @@ static int oscar_buddy_msg(struct im_connection *ic, char *name, char *message, 
 			if ((ret = do_iconv("UTF-8", "ISO8859-1", message, s, len, BUF_LONG)) >= 0) {
 				args.flags |= AIM_IMFLAGS_ISO_8859_1;
 				len = ret;
-			} else if ((ret = do_iconv("UTF-8", "UNICODEBIG", message, s, len, BUF_LONG)) >= 0) {
+			} else if ((ret = do_iconv("UTF-8", "UCS-2BE", message, s, len, BUF_LONG)) >= 0) {
 				args.flags |= AIM_IMFLAGS_UNICODE;
 				len = ret;
 			} else {
@@ -2405,7 +2405,7 @@ void oscar_chat_msg(struct groupchat *c, char *message, int msgflags)
 		if ((ret = do_iconv("UTF-8", "ISO8859-1", message, s, len, BUF_LONG)) >= 0) {
 			flags |= AIM_CHATFLAGS_ISO_8859_1;
 			len = ret;
-		} else if ((ret = do_iconv("UTF-8", "UNICODEBIG", message, s, len, BUF_LONG)) >= 0) {
+		} else if ((ret = do_iconv("UTF-8", "UCS-2BE", message, s, len, BUF_LONG)) >= 0) {
 			flags |= AIM_CHATFLAGS_UNICODE;
 			len = ret;
 		} else {
