@@ -28,7 +28,7 @@
 #include "nogaim.h"
 #include "twitter_http.h"
 
-#define TWITTER_API_URL "http://api.twitter.com/1.1"
+#define TWITTER_API_URL "https://api.twitter.com/1.1"
 #define IDENTICA_API_URL "https://identi.ca/api"
 
 /* Status URLs */
