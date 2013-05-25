@@ -3,7 +3,7 @@
 *  BitlBee - An IRC to IM gateway                                           *
 *  Simple OAuth2 client (consumer) implementation.                          *
 *                                                                           *
-*  Copyright 2010-2011 Wilmer van der Gaast <wilmer@gaast.net>              *
+*  Copyright 2010-2013 Wilmer van der Gaast <wilmer@gaast.net>              *
 *                                                                           *
 *  This program is free software; you can redistribute it and/or modify     *
 *  it under the terms of the GNU General Public License as published by     *
@@ -24,7 +24,8 @@
 /* Implementation mostly based on my experience with writing the previous OAuth
    module, and from http://code.google.com/apis/accounts/docs/OAuth2.html . */
 
-typedef void (*oauth2_token_callback)( gpointer data, const char *atoken, const char *rtoken );
+typedef void (*oauth2_token_callback)( gpointer data, const char *atoken,
+                                       const char *rtoken, const char *error );
 
 struct oauth2_service
 {

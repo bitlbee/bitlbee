@@ -482,7 +482,7 @@ static gboolean sasl_oauth2_remove_contact( gpointer data, gint fd, b_input_cond
 	return FALSE;
 }
 
-static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token );
+static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token, const char *error );
 
 int sasl_oauth2_get_refresh_token( struct im_connection *ic, const char *msg )
 {
@@ -513,7 +513,7 @@ int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token )
 	                            refresh_token, sasl_oauth2_got_token, ic );
 }
 
-static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token )
+static void sasl_oauth2_got_token( gpointer data, const char *access_token, const char *refresh_token, const char *error )
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd;
@@ -526,7 +526,7 @@ static void sasl_oauth2_got_token( gpointer data, const char *access_token, cons
 	
 	if( access_token == NULL )
 	{
-		imcb_error( ic, "OAuth failure (missing access token)" );
+		imcb_error( ic, "OAuth failure (%s)", error );
 		imc_logout( ic, TRUE );
 		return;
 	}
