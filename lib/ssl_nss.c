@@ -151,7 +151,7 @@ void *ssl_starttls(int fd, char *hostname, gboolean verify,
 	conn->fd = fd;
 	conn->func = func;
 	conn->data = data;
-	conn->hostname = hostname;
+	conn->hostname = g_strdup(hostname);
 
 	/* For now, SSL verification is globally enabled by setting the cafile
 	   setting in bitlbee.conf. Commented out by default because probably
@@ -295,7 +295,7 @@ void ssl_disconnect(void *conn_)
 	if (conn->prfd)
 		PR_Close(conn->prfd);
 
-        g_free(conn->hostname);
+	g_free(conn->hostname);
 	g_free(conn);
 }
 
