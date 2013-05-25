@@ -10,9 +10,7 @@ For those who don't know it yet, this is not quite a regular Internet
 Relay Chat server. Please see the site mentioned above for more
 information.
 
-
 The developers of the Bee hope you have a buzzing time.
-
-* BitlBee development team.
+-- BitlBee development team.
  
 ... Buzzing, haha, get it?
