@@ -157,8 +157,13 @@ static const struct oauth_service *get_oauth_service(struct im_connection *ic)
 static void twitter_oauth_start(struct im_connection *ic)
 {
 	struct twitter_data *td = ic->proto_data;
+	const char *url = set_getstr(&ic->acc->set, "base_url");
 
 	imcb_log(ic, "Requesting OAuth request token");
+	
+	if (!strstr(url, "twitter.com") && !strstr(url, "identi.ca"))
+		imcb_log(ic, "Warning: OAuth only works with identi.ca and "
+		             "Twitter.");
 
 	td->oauth_info = oauth_request_token(get_oauth_service(ic), twitter_oauth_callback, ic);
 
@@ -177,7 +182,7 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 
 	td = ic->proto_data;
 	if (info->stage == OAUTH_REQUEST_TOKEN) {
-		char name[strlen(ic->acc->user) + 9], *msg;
+		char *name, *msg;
 
 		if (info->request_token == NULL) {
 			imcb_error(ic, "OAuth error: %s", twitter_parse_error(info->http));
@@ -185,11 +190,12 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 			return FALSE;
 		}
 
-		sprintf(name, "%s_%s", td->prefix, ic->acc->user);
+		name = g_strdup_printf("%s_%s", td->prefix, ic->acc->user);
 		msg = g_strdup_printf("To finish OAuth authentication, please visit "
 				      "%s and respond with the resulting PIN code.",
 				      info->auth_url);
 		imcb_buddy_msg(ic, name, msg, 0, 0);
+		g_free(name);
 		g_free(msg);
 	} else if (info->stage == OAUTH_ACCESS_TOKEN) {
 		const char *sn;
