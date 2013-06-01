@@ -210,7 +210,7 @@ fi
 echo CFLAGS=$CFLAGS $CPPFLAGS >> Makefile.settings
 echo CFLAGS+=-I${srcdir} -I${srcdir}/lib -I${srcdir}/protocols -I. >> Makefile.settings
 
-echo CFLAGS+=-DHAVE_CONFIG_H >> Makefile.settings
+echo CFLAGS+=-DHAVE_CONFIG_H -D_GNU_SOURCE >> Makefile.settings
 
 if [ -n "$CC" ]; then
 	CC=$CC
