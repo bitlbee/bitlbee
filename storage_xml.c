@@ -173,7 +173,7 @@ static storage_status_t xml_load_real( irc_t *irc, const char *my_nick, const ch
 	struct xml_parsedata xd[1];
 	char *fn, buf[2048];
 	int fd, st;
-	struct xt_parser *xp;
+	struct xt_parser *xp = NULL;
 	struct xt_node *node;
 	storage_status_t ret = STORAGE_OTHER_ERROR;
 	
