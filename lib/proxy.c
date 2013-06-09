@@ -157,7 +157,7 @@ static int proxy_connect_none(const char *host, unsigned short port_, struct PHB
 				event_debug("bind( %d, \"%s\" ) failure\n", fd, global.conf->iface_out);
 		}
 
-		event_debug("proxy_connect_none( \"%s\", %d ) = %d\n", host, port, fd);
+		event_debug("proxy_connect_none( \"%s\", %d ) = %d\n", host, port_, fd);
 	
 		if (connect(fd, phb->gai_cur->ai_addr, phb->gai_cur->ai_addrlen) < 0 && !sockerr_again()) {
 			event_debug( "connect failed: %s\n", strerror(errno));

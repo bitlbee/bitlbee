@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2012 Wilmer van der Gaast and others                *
+  * Copyright 2002-2013 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* HTTP(S) module                                                       */
@@ -68,6 +68,7 @@ struct http_request *http_dorequest( char *host, int port, int ssl, char *reques
 	req->request = g_strdup( request );
 	req->request_length = strlen( request );
 	req->redir_ttl = 3;
+	req->content_length = -1;
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
 		printf( "About to send HTTP request:\n%s\n", req->request );
@@ -95,7 +96,6 @@ struct http_request *http_dorequest_url( char *url_string, http_input_function f
 	
 	request = g_strdup_printf( "GET %s HTTP/1.0\r\n"
 	                           "Host: %s\r\n"
-	                           "Connection: close\r\n"
 	                           "User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n"
 	                           "\r\n", url->file, url->host );
 	
@@ -192,14 +192,21 @@ static gboolean http_ssl_connected( gpointer data, int returncode, void *source,
 	return http_connected( data, req->fd, cond );
 }
 
+typedef enum {
+	CR_OK,
+	CR_EOF,
+	CR_ERROR,
+	CR_ABORT,
+} http_ret_t;
+
 static gboolean http_handle_headers( struct http_request *req );
+static http_ret_t http_process_chunked_data( struct http_request *req, const char *buffer, int len );
+static http_ret_t http_process_data( struct http_request *req, const char *buffer, int len );
 
 static gboolean http_incoming_data( gpointer data, int source, b_input_condition cond )
 {
 	struct http_request *req = data;
 	char buffer[4096];
-	char *s;
-	size_t content_length;
 	int st;
 	
 	if( req->inpa > 0 )
@@ -243,52 +250,24 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 		}
 	}
 	
-	if( st > 0 && !req->sbuf )
+	if( st > 0 )
 	{
-		req->reply_headers = g_realloc( req->reply_headers, req->bytes_read + st + 1 );
-		memcpy( req->reply_headers + req->bytes_read, buffer, st );
-		req->bytes_read += st;
+		http_ret_t c;
 		
-		st = 0;
+		if( req->flags & HTTPC_CHUNKED )
+			c = http_process_chunked_data( req, buffer, st );
+		else
+			c = http_process_data( req, buffer, st );
+		
+		if( c == CR_EOF )
+			goto eof;
+		else if( c == CR_ERROR || c == CR_ABORT )
+			return FALSE;
 	}
 	
-	if( st >= 0 && ( req->flags & HTTPC_STREAMING ) )
-	{
-		if( !req->reply_body &&
-		    ( strstr( req->reply_headers, "\r\n\r\n" ) ||
-		      strstr( req->reply_headers, "\n\n" ) ) )
-		{
-			size_t hlen;
-			
-			/* We've now received all headers, so process them once
-			   before we start feeding back data. */
-			if( !http_handle_headers( req ) )
-				return FALSE;
-			
-			hlen = req->reply_body - req->reply_headers;
-			
-			req->sblen = req->bytes_read - hlen;
-			req->sbuf = g_memdup( req->reply_body, req->sblen + 1 );
-			req->reply_headers = g_realloc( req->reply_headers, hlen + 1 );
-			
-			req->reply_body = req->sbuf;
-		}
-		
-		if( st > 0 )
-		{
-			int pos = req->reply_body - req->sbuf;
-			req->sbuf = g_realloc( req->sbuf, req->sblen + st + 1 );
-			memcpy( req->sbuf + req->sblen, buffer, st );
-			req->bytes_read += st;
-			req->sblen += st;
-			req->sbuf[req->sblen] = '\0';
-			req->reply_body = req->sbuf + pos;
-			req->body_size = req->sblen - pos;
-		}
-		
-		if( req->reply_body )
-			req->func( req );
-	}
+	if( req->content_length != -1 &&
+	    req->body_size >= req->content_length )
+		goto eof;
 	
 	if( ssl_pending( req->ssl ) )
 		return http_incoming_data( data, source, cond );
@@ -310,14 +289,6 @@ eof:
 		req->status_string = g_strdup( "Empty HTTP reply" );
 		goto cleanup;
 	}
-	
-	if( !( req->flags & HTTPC_STREAMING ) )
-	{
-		/* Returns FALSE if we were redirected, in which case we should abort
-		   and not run any callback yet. */
-		if( !http_handle_headers( req ) )
-			return FALSE;
-	}
 
 cleanup:
 	if( req->ssl )
@@ -325,17 +296,12 @@ cleanup:
 	else
 		closesocket( req->fd );
 	
-	if( ( s = get_rfc822_header( req->reply_headers, "Content-Length", 0 ) ) &&
-	    sscanf( s, "%zd", &content_length ) == 1 )
+	if( req->body_size < req->content_length )
 	{
-		if( content_length < req->body_size )
-		{
-			req->status_code = -1;
-			g_free( req->status_string );
-			req->status_string = g_strdup( "Response truncated" );
-		}
+		req->status_code = -1;
+		g_free( req->status_string );
+		req->status_string = g_strdup( "Response truncated" );
 	}
-	g_free( s );
 	
 	if( getenv( "BITLBEE_DEBUG" ) && req )
 		printf( "Finishing HTTP request with status: %s\n",
@@ -346,11 +312,118 @@ cleanup:
 	return FALSE;
 }
 
+static http_ret_t http_process_chunked_data( struct http_request *req, const char *buffer, int len )
+{
+	char *chunk, *eos, *s;
+	
+	if( len < 0 )
+		return TRUE;
+	
+	if( len > 0 )
+	{
+		req->cbuf = g_realloc( req->cbuf, req->cblen + len + 1 );
+		memcpy( req->cbuf + req->cblen, buffer, len );
+		req->cblen += len;
+		req->cbuf[req->cblen] = '\0';
+	}
+	
+	/* Turns out writing a proper chunked-encoding state machine is not
+	   that simple. :-( */
+	chunk = req->cbuf;
+	eos = req->cbuf + req->cblen;
+	while( TRUE )
+	{
+		int clen = 0;
+		
+		/* Might be a \r\n from the last chunk. */
+		s = chunk;
+		while( isspace( *s ) )
+			s ++;
+		/* Chunk length. Might be incomplete. */
+		if( s < eos && sscanf( s, "%x", &clen ) != 1 )
+			return CR_ERROR;
+		while( isxdigit( *s ) )
+			s ++;
+		
+		/* If we read anything here, it *must* be \r\n. */
+		if( strncmp( s, "\r\n", MIN( 2, eos - s ) ) != 0 )
+			return CR_ERROR;
+		s += 2;
+		
+		if( s >= eos )
+			break;
+		
+		/* 0-length chunk means end of response. */	
+		if( clen == 0 )
+			return CR_EOF;
+		
+		if( s + clen > eos )
+			break;
+		if( http_process_data( req, s, clen ) != CR_OK )
+			return CR_ABORT;
+		
+		chunk = s + clen;
+	}
+	
+	if( chunk != req->cbuf )
+	{
+		req->cblen = eos - chunk;
+		s = g_memdup( chunk, req->cblen + 1 );
+		g_free( req->cbuf );
+		req->cbuf = s;
+	}
+	
+	return CR_OK;
+}
+
+static http_ret_t http_process_data( struct http_request *req, const char *buffer, int len )
+{
+	if( len <= 0 )
+		return CR_OK;
+	
+	if( !req->reply_body )
+	{
+		req->reply_headers = g_realloc( req->reply_headers, req->bytes_read + len + 1 );
+		memcpy( req->reply_headers + req->bytes_read, buffer, len );
+		req->bytes_read += len;
+		req->reply_headers[req->bytes_read] = '\0';
+		
+		if( strstr( req->reply_headers, "\r\n\r\n" ) ||
+		    strstr( req->reply_headers, "\n\n" ) )
+		{
+			/* We've now received all headers. Look for something
+			   interesting. */
+			if( !http_handle_headers( req ) )
+				return CR_ABORT;
+			
+			/* Start parsing the body as chunked if required. */
+			if( req->flags & HTTPC_CHUNKED )
+				return http_process_chunked_data( req, NULL, 0 );
+		}
+	}
+	else
+	{
+		int pos = req->reply_body - req->sbuf;
+		req->sbuf = g_realloc( req->sbuf, req->sblen + len + 1 );
+		memcpy( req->sbuf + req->sblen, buffer, len );
+		req->bytes_read += len;
+		req->sblen += len;
+		req->sbuf[req->sblen] = '\0';
+		req->reply_body = req->sbuf + pos;
+		req->body_size = req->sblen - pos;
+	}
+	
+	if( ( req->flags & HTTPC_STREAMING ) && req->reply_body )
+		req->func( req );
+	
+	return CR_OK;
+}
+
 /* Splits headers and body. Checks result code, in case of 300s it'll handle
    redirects. If this returns FALSE, don't call any callbacks! */
 static gboolean http_handle_headers( struct http_request *req )
 {
-	char *end1, *end2;
+	char *end1, *end2, *s;
 	int evil_server = 0;
 	
 	/* Zero termination is very convenient. */
@@ -376,7 +449,7 @@ static gboolean http_handle_headers( struct http_request *req )
 		return TRUE;
 	}
 	
-	*end1 = 0;
+	*end1 = '\0';
 	
 	if( getenv( "BITLBEE_DEBUG" ) )
 		printf( "HTTP response headers:\n%s\n", req->reply_headers );
@@ -386,7 +459,10 @@ static gboolean http_handle_headers( struct http_request *req )
 	else
 		req->reply_body = end1 + 2;
 	
-	req->body_size = req->reply_headers + req->bytes_read - req->reply_body;
+	/* Separately allocated space for headers and body. */
+	req->sblen = req->body_size = req->reply_headers + req->bytes_read - req->reply_body;
+	req->sbuf = req->reply_body = g_memdup( req->reply_body, req->body_size + 1 );
+	req->reply_headers = g_realloc( req->reply_headers, end1 - req->reply_headers + 1 );
 	
 	if( ( end1 = strchr( req->reply_headers, ' ' ) ) != NULL )
 	{
@@ -451,7 +527,7 @@ static gboolean http_handle_headers( struct http_request *req )
 			/* Since we don't cache the servername, and since we
 			   don't need this yet anyway, I won't implement it. */
 			
-			req->status_string = g_strdup( "Can't handle recursive redirects" );
+			req->status_string = g_strdup( "Can't handle relative redirects" );
 			
 			return TRUE;
 		}
@@ -507,7 +583,7 @@ static gboolean http_handle_headers( struct http_request *req )
 				new_method = "POST";
 			
 			/* Okay, this isn't fun! We have to rebuild the request... :-( */
-			new_request = g_strdup_printf( "%s %s HTTP/1.0\r\nHost: %s%s",
+			new_request = g_strdup_printf( "%s %s HTTP/1.1\r\nHost: %s%s",
 			                               new_method, url->file, url->host, s );
 			
 			new_host = g_strdup( url->host );
@@ -563,6 +639,25 @@ static gboolean http_handle_headers( struct http_request *req )
 		
 		return FALSE;
 	}
+
+	if( ( s = get_rfc822_header( req->reply_headers, "Content-Length", 0 ) ) &&
+	    sscanf( s, "%d", &req->content_length ) != 1 )
+		req->content_length = -1;
+	g_free( s );
+	
+	if( ( s = get_rfc822_header( req->reply_headers, "Transfer-Encoding", 0 ) ) )
+	{
+		if( strcasestr( s, "chunked" ) )
+		{
+			req->flags |= HTTPC_CHUNKED;
+			req->cbuf = req->sbuf;
+			req->cblen = req->sblen;
+			
+			req->reply_body = req->sbuf = g_strdup( "" );
+			req->body_size = req->sblen = 0;
+		}
+		g_free( s );
+	}
 	
 	return TRUE;
 }
@@ -606,5 +701,6 @@ static void http_free( struct http_request *req )
 	g_free( req->reply_headers );
 	g_free( req->status_string );
 	g_free( req->sbuf );
+	g_free( req->cbuf );
 	g_free( req );
 }
