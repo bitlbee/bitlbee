@@ -39,13 +39,11 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 
 	// Check if we are still logged in...
 	if (!g_slist_find(twitter_connections, ic))
-		return 0;
+		return FALSE;
 
 	// Do stuff..
-	twitter_get_timeline(ic, -1);
-
-	// If we are still logged in run this function again after timeout.
-	return (ic->flags & OPT_LOGGED_IN) == OPT_LOGGED_IN;
+	return twitter_get_timeline(ic, -1) &&
+	       ((ic->flags & OPT_LOGGED_IN) == OPT_LOGGED_IN);
 }
 
 static void twitter_main_loop_start(struct im_connection *ic)
