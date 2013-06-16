@@ -535,7 +535,7 @@ static gboolean http_handle_headers( struct http_request *req )
 		{
 			/* A whole URL */
 			url_t *url;
-			char *s;
+			char *s, *version, *headers;
 			const char *new_method;
 			
 			s = strstr( loc, "\r\n" );
@@ -563,6 +563,7 @@ static gboolean http_handle_headers( struct http_request *req )
 				g_free( url );
 				return TRUE;
 			}
+			headers = s;
 			
 			/* More or less HTTP/1.0 compliant, from my reading of RFC 2616.
 			   Always perform a GET request unless we received a 301. 303 was
@@ -582,9 +583,19 @@ static gboolean http_handle_headers( struct http_request *req )
 				/* 301 de-facto should stay POST, 307 specifally RFC 2616#10.3.8 */
 				new_method = "POST";
 			
+			if( ( version = strstr( req->request, " HTTP/" ) ) &&
+			    ( s = strstr( version, "\r\n" ) ) )
+			{
+				version ++;
+				version = g_strndup( version, s - version );
+			}
+			else
+				version = g_strdup( "HTTP/1.0" );
+			
 			/* Okay, this isn't fun! We have to rebuild the request... :-( */
-			new_request = g_strdup_printf( "%s %s HTTP/1.1\r\nHost: %s%s",
-			                               new_method, url->file, url->host, s );
+			new_request = g_strdup_printf( "%s %s %s\r\nHost: %s%s",
+			                               new_method, url->file, version,
+			                               url->host, headers );
 			
 			new_host = g_strdup( url->host );
 			new_port = url->port;
@@ -596,6 +607,7 @@ static gboolean http_handle_headers( struct http_request *req )
 				s[4] = '\0';
 			
 			g_free( url );
+			g_free( version );
 		}
 		
 		if( req->ssl )
