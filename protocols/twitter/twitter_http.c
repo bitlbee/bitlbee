@@ -77,7 +77,7 @@ struct http_request *twitter_http(struct im_connection *ic, char *url_string, ht
 	}
 	
 	// Make the request.
-	g_string_printf(request, "%s %s%s%s%s HTTP/1.0\r\n"
+	g_string_printf(request, "%s %s%s%s%s HTTP/1.1\r\n"
 			"Host: %s\r\n"
 			"User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n",
 			is_post ? "POST" : "GET",

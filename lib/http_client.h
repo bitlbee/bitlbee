@@ -41,6 +41,7 @@ typedef enum http_client_flags
 {
 	HTTPC_STREAMING = 1,
 	HTTPC_EOF = 2,
+	HTTPC_CHUNKED = 4,
 	
 	/* Let's reserve 0x1000000+ for lib users. */
 } http_client_flags_t;
@@ -76,10 +77,15 @@ struct http_request
 	int inpa;
 	int bytes_written;
 	int bytes_read;
+	int content_length;     /* "Content-Length:" header or -1 */
 	
 	/* Used in streaming mode. Caller should read from reply_body. */
 	char *sbuf;
 	size_t sblen;
+	
+	/* Chunked encoding only. Raw chunked stream is decoded from here. */
+	char *cbuf;
+	size_t cblen;
 };
 
 /* The _url variant is probably more useful than the raw version. The raw

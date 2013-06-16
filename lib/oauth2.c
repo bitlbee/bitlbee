@@ -95,7 +95,6 @@ int oauth2_access_token( const struct oauth2_service *sp,
 	                     "Host: %s\r\n"
 	                     "Content-Type: application/x-www-form-urlencoded\r\n"
 	                     "Content-Length: %zd\r\n"
-	                     "Connection: close\r\n"
 	                     "\r\n"
 	                     "%s", url_p.file, url_p.host, strlen( args_s ), args_s );
 	g_free( args_s );

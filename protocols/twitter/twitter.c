@@ -288,13 +288,16 @@ static void twitter_init(account_t * acc)
 	set_t *s;
 	char *def_url;
 	char *def_tul;
+	char *def_mentions;
 
 	if (strcmp(acc->prpl->name, "twitter") == 0) {
 		def_url = TWITTER_API_URL;
 		def_tul = "20";
+		def_mentions = "true";
 	} else {		/* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
 		def_url = IDENTICA_API_URL;
 		def_tul = "0";
+		def_mentions = "false";
 	}
 
 	s = set_add(&acc->set, "auto_reply_timeout", "10800", set_eval_int, acc);
@@ -307,7 +310,7 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "fetch_interval", "60", set_eval_int, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add(&acc->set, "fetch_mentions", "true", set_eval_bool, acc);
+	s = set_add(&acc->set, "fetch_mentions", def_mentions, set_eval_bool, acc);
 
 	s = set_add(&acc->set, "message_length", "140", set_eval_int, acc);
 
