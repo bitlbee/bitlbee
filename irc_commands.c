@@ -79,7 +79,7 @@ static void irc_cmd_nick( irc_t *irc, char **cmd )
 	{
 		irc_send_num( irc, 433, "%s :This nick is already in use", cmd[1] );
 	}
-	else if( !nick_ok( cmd[1] ) )
+	else if( !nick_ok( NULL, cmd[1] ) )
 	{
 		/* [SH] Invalid characters. */
 		irc_send_num( irc, 432, "%s :This nick contains invalid characters", cmd[1] );
@@ -290,7 +290,7 @@ static void irc_cmd_mode( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		if( nick_cmp( cmd[1], irc->user->nick ) == 0 )
+		if( nick_cmp( NULL, cmd[1], irc->user->nick ) == 0 )
 		{
 			if( cmd[2] )
 				irc_umode_set( irc, cmd[2], 0 );
@@ -391,7 +391,7 @@ static void irc_cmd_notice( irc_t *irc, char **cmd )
 	
 	/* At least for now just echo. IIRC some IRC clients use self-notices
 	   for lag checks, so try to support that. */
-	if( nick_cmp( cmd[1], irc->user->nick ) == 0 )
+	if( nick_cmp( NULL, cmd[1], irc->user->nick ) == 0 )
 		irc_send_msg( irc->user, "NOTICE", irc->user->nick, cmd[2], NULL );
 	else if( ( iu = irc_user_by_name( irc, cmd[1] ) ) )
 		iu->f->privmsg( iu, cmd[2] );
@@ -592,7 +592,7 @@ static void irc_cmd_watch( irc_t *irc, char **cmd )
 			break;
 		
 		nick = g_strdup( cmd[i] + 1 );
-		nick_lc( nick );
+		nick_lc( irc, nick );
 		
 		iu = irc_user_by_name( irc, nick );
 		

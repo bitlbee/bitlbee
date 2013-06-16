@@ -35,7 +35,7 @@ irc_user_t *irc_user_new( irc_t *irc, const char *nick )
 	iu->user = iu->host = iu->fullname = iu->nick;
 	
 	iu->key = g_strdup( nick );
-	nick_lc( iu->key );
+	nick_lc( irc, iu->key );
 	/* Using the hash table for speed and irc->users for easy iteration
 	   through the list (since the GLib API doesn't have anything sane
 	   for that.) */
@@ -106,7 +106,7 @@ irc_user_t *irc_user_by_name( irc_t *irc, const char *nick )
 	char key[strlen(nick)+1];
 	
 	strcpy( key, nick );
-	if( nick_lc( key ) )
+	if( nick_lc( irc, key ) )
 		return g_hash_table_lookup( irc->nick_user_hash, key );
 	else
 		return NULL;
@@ -120,7 +120,7 @@ int irc_user_set_nick( irc_user_t *iu, const char *new )
 	GSList *cl;
 	
 	strcpy( key, new );
-	if( iu == NULL || !nick_lc( key ) ||
+	if( iu == NULL || !nick_lc( irc, key ) ||
 	    ( ( new_iu = irc_user_by_name( irc, new ) ) && new_iu != iu ) )
 		return 0;
 	

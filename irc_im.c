@@ -696,7 +696,7 @@ static gboolean bee_irc_chat_name_hint( bee_t *bee, struct groupchat *c, const c
 	stripped[MAX_NICK_LENGTH] = '\0';
 	irc_channel_name_strip( stripped );
 	if( set_getbool( &bee->set, "lcnicks" ) )
-		nick_lc( stripped );
+		nick_lc( irc, stripped );
 	
 	if( stripped[0] == '\0' )
 		return FALSE;

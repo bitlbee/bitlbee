@@ -34,6 +34,7 @@ static gboolean irc_userping( gpointer _irc, gint fd, b_input_condition cond );
 static char *set_eval_charset( set_t *set, char *value );
 static char *set_eval_password( set_t *set, char *value );
 static char *set_eval_bw_compat( set_t *set, char *value );
+static char *set_eval_utf8_nicks( set_t *set, char *value );
 
 irc_t *irc_new( int fd )
 {
@@ -133,6 +134,7 @@ irc_t *irc_new( int fd )
 	s = set_add( &b->set, "timezone", "local", set_eval_timezone, irc );
 	s = set_add( &b->set, "to_char", ": ", set_eval_to_char, irc );
 	s = set_add( &b->set, "typing_notice", "false", set_eval_bool, irc );
+	s = set_add( &b->set, "utf8_nicks", "false", set_eval_utf8_nicks, irc );
 
 	irc->root = iu = irc_user_new( irc, ROOT_NICK );
 	iu->host = g_strdup( myhost );
@@ -959,6 +961,23 @@ static char *set_eval_bw_compat( set_t *set, char *value )
 	}
 	
 	return SET_INVALID;
+}
+
+static char *set_eval_utf8_nicks( set_t *set, char *value )
+{
+	irc_t *irc = set->data;
+	gboolean val = bool2int( value );
+	
+	/* Do *NOT* unset this flag in the middle of a session. There will
+	   be UTF-8 nicks around already so if we suddenly disable support
+	   for them, various functions might behave strangely. */
+	if( val )
+		irc->status |= IRC_UTF8_NICKS;
+	else if( irc->status & IRC_UTF8_NICKS )
+		irc_rootmsg( irc, "You need to reconnect to BitlBee for this "
+		                  "change to take effect." );
+	
+	return set_eval_bool( set, value );
 }
 
 void register_irc_plugin( const struct irc_plugin *p )
