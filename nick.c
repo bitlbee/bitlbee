@@ -119,7 +119,8 @@ char *nick_gen( bee_user_t *bu )
 	
 	while( fmt && *fmt && ret->len < MAX_NICK_LENGTH )
 	{
-		char *part = NULL, chop = '\0', *asc = NULL;
+		char *part = NULL, chop = '\0', *asc = NULL, *s;
+		int len = INT_MAX;
 		
 		if( *fmt != '%' )
 		{
@@ -141,6 +142,13 @@ char *nick_gen( bee_user_t *bu )
 					return NULL;
 				}
 				fmt += 2;
+			}
+			else if( isdigit( *fmt ) )
+			{
+				len = 0;
+				/* Grab a number. */
+				while( isdigit( *fmt ) )
+					len = len * 10 + ( *(fmt++) - '0' );
 			}
 			else if( g_strncasecmp( fmt, "nick", 4 ) == 0 )
 			{
@@ -201,8 +209,16 @@ char *nick_gen( bee_user_t *bu )
 			part = asc = g_convert_with_fallback( part, -1, "ASCII//TRANSLIT",
 			                                      "UTF-8", "", NULL, NULL, NULL );
 		
+		if( chop && ( s = strchr( part, chop ) ) )
+			len = MIN( len, s - part );
+		
 		if( part )
-			g_string_append( ret, part );
+		{
+			if( len < INT_MAX )
+				g_string_append_len( ret, part, len );
+			else
+				g_string_append( ret, part );
+		}
 		g_free( asc );
 	}
 	
