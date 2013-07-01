@@ -70,7 +70,17 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 		if( bu->ic->acc->server )
 			iu->host = g_strdup( bu->ic->acc->server );
 		else
-			iu->host = g_strdup( bu->ic->acc->prpl->name );
+		{
+			char *s;
+			for( s = bu->ic->acc->tag; isalnum( *s ); s ++ );
+			/* Only use the tag if we got to the end of the string.
+			   (So allow alphanumerics only. Hopefully not too
+			   restrictive.) */
+			if( *s )
+				iu->host = g_strdup( bu->ic->acc->prpl->name );
+			else
+				iu->host = g_strdup( bu->ic->acc->tag );
+		}
 	}
 	
 	while( ( s = strchr( iu->user, ' ' ) ) )
