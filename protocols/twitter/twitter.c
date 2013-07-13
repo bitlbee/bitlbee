@@ -237,6 +237,7 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 	while (g_match_info_matches(match_info)) {
 		gchar *url = g_match_info_fetch(match_info, 2);
 		url_len_diff += target_len - g_utf8_strlen(url, -1);
+		/* Add another character for https://t.co/... URLs */
 		if (g_match_info_fetch(match_info, 3) != NULL)
 			url_len_diff += 1;
 		g_free(url);
@@ -252,7 +253,7 @@ static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
 	int max = set_getint(&ic->acc->set, "message_length"), len;
 	int target_len = set_getint(&ic->acc->set, "target_url_length");
 	int url_len_diff = 0;
-    
+
 	if (target_len > 0)
 		url_len_diff = twitter_url_len_diff(msg, target_len);
 
@@ -290,7 +291,7 @@ static void twitter_init(account_t * acc)
 
 	if (strcmp(acc->prpl->name, "twitter") == 0) {
 		def_url = TWITTER_API_URL;
-		def_tul = "20";
+		def_tul = "22";
 		def_mentions = "true";
 	} else {		/* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
 		def_url = IDENTICA_API_URL;
