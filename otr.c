@@ -83,6 +83,8 @@ void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
 	char **dst, const char *src);
 void op_convert_free(void *opdata, ConnContext *ctx, char *msg);
 
+void op_handle_smp_event(void *opdata, OtrlSMPEvent ev, ConnContext *ctx,
+	unsigned short percent, char *question);
 
 /** otr sub-command handlers: **/
 
@@ -159,9 +161,6 @@ int hexval(char a);
    returns NULL if not found */
 irc_user_t *peeruser(irc_t *irc, const char *handle, const char *protocol);
 
-/* handle SMP TLVs from a received message */
-void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs);
-
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
 void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		const char *secret);
@@ -227,9 +226,9 @@ void init_plugin(void)
 	otr_ops.received_symkey = NULL;         /* we don't use the extra key */
 	otr_ops.otr_error_message = NULL;       // TODO?
 	otr_ops.otr_error_message_free = NULL;
-	otr_ops.resent_msg_prefix = NULL;       // XXX don't need?
+	otr_ops.resent_msg_prefix = NULL;       // don't need?
 	otr_ops.resent_msg_prefix_free = NULL;
-	otr_ops.handle_smp_event = NULL; // XXX replace smp state machine w/this
+	otr_ops.handle_smp_event = &op_handle_smp_event;
 	otr_ops.handle_msg_event = NULL; // XXX
 	otr_ops.create_instag = NULL;    // XXX
 	otr_ops.convert_msg = &op_convert_msg;
@@ -401,8 +400,6 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, msg, &newmsg,
 		&tlvs, NULL, NULL, NULL);
 
-	otr_handle_smp(ic, iu->bu->handle, tlvs);
-	
 	if(ignore_msg) {
 		/* this was an internal OTR protocol message */
 		return NULL;
@@ -760,6 +757,73 @@ void op_convert_free(void *opdata, ConnContext *ctx, char *msg)
 	g_free(msg);
 }
 	
+/* Socialist Millionaires' Protocol */
+void op_handle_smp_event(void *opdata, OtrlSMPEvent ev, ConnContext *ctx,
+	unsigned short percent, char *question)
+{
+	struct im_connection *ic =
+		check_imc(opdata, ctx->accountname, ctx->protocol);
+	irc_t *irc = ic->bee->ui_data;
+	OtrlUserState us = irc->otr->us;
+	irc_user_t *u = peeruser(irc, ctx->username, ctx->protocol);
+
+	if(!u) return;
+
+	switch(ev) {
+	case OTRL_SMPEVENT_ASK_FOR_SECRET:
+		irc_rootmsg(irc, "smp: initiated by %s"
+			" - respond with \x02otr smp %s <secret>\x02",
+			u->nick, u->nick);
+		break;
+	case OTRL_SMPEVENT_ASK_FOR_ANSWER:
+		irc_rootmsg(irc, "smp: initiated by %s with question: \x02\"%s\"\x02", u->nick,
+			question);
+		irc_rootmsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
+			u->nick);
+		break;
+	case OTRL_SMPEVENT_CHEATED:
+		irc_rootmsg(irc, "smp %s: opponent violated protocol, aborting",
+			u->nick);
+		otrl_message_abort_smp(us, &otr_ops, u->bu->ic, ctx);
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	case OTRL_SMPEVENT_NONE:
+		break;
+	case OTRL_SMPEVENT_IN_PROGRESS:
+		break;
+	case OTRL_SMPEVENT_SUCCESS:
+		if(ctx->smstate->received_question) {
+			irc_rootmsg(irc, "smp %s: correct answer, you are trusted",
+				u->nick);
+		} else {
+			irc_rootmsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
+				u->nick);
+		}
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	case OTRL_SMPEVENT_FAILURE:
+		if(ctx->smstate->received_question) {
+			irc_rootmsg(irc, "smp %s: wrong answer, you are not trusted",
+				u->nick);
+		} else {
+			irc_rootmsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
+				u->nick);
+		}
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	case OTRL_SMPEVENT_ABORT:
+	 	irc_rootmsg(irc, "smp: received abort from %s", u->nick);
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	case OTRL_SMPEVENT_ERROR:
+		irc_rootmsg(irc, "smp %s: protocol error, aborting",
+			u->nick);
+		otrl_message_abort_smp(us, &otr_ops, u->bu->ic, ctx);
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	}
+}
+
 
 
 /*** OTR sub-command handlers ***/
@@ -1130,135 +1194,6 @@ void cmd_otr_forget(irc_t *irc, char **args)
 
 /*** local helpers / subroutines: ***/
 
-/* Socialist Millionaires' Protocol */
-void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
-{
-	irc_t *irc = ic->bee->ui_data;
-	OtrlUserState us = irc->otr->us;
-	OtrlMessageAppOps *ops = &otr_ops;
-	OtrlTLV *tlv = NULL;
-	ConnContext *context;
-	NextExpectedSMP nextMsg;
-	irc_user_t *u;
-	bee_user_t *bu;
-
-	bu = bee_user_by_handle(ic->bee, ic, handle);
-	if(!bu || !(u = bu->ui_data)) return;
-	context = otrl_context_find(us, handle,
-		ic->acc->user, ic->acc->prpl->name, OTRL_INSTAG_MASTER, 1, NULL, NULL, NULL);
-	if(!context) {
-		/* huh? out of memory or what? */
-		irc_rootmsg(irc, "smp: failed to get otr context for %s", u->nick);
-		otrl_message_abort_smp(us, ops, u->bu->ic, context);
-		otrl_sm_state_free(context->smstate);
-		return;
-	}
-	nextMsg = context->smstate->nextExpected;
-
-	if (context->smstate->sm_prog_state == OTRL_SMP_PROG_CHEATED) {
-		irc_rootmsg(irc, "smp %s: opponent violated protocol, aborting",
-			u->nick);
-		otrl_message_abort_smp(us, ops, u->bu->ic, context);
-		otrl_sm_state_free(context->smstate);
-		return;
-	}
-
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1Q);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT1) {
-			irc_rootmsg(irc, "smp %s: spurious SMP1Q received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			char *question = g_strndup((char *)tlv->data, tlv->len);
-			irc_rootmsg(irc, "smp: initiated by %s with question: \x02\"%s\"\x02", u->nick,
-				question);
-			irc_rootmsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
-				u->nick);
-			g_free(question);
-			/* smp stays in EXPECT1 until user responds */
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT1) {
-			irc_rootmsg(irc, "smp %s: spurious SMP1 received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			irc_rootmsg(irc, "smp: initiated by %s"
-				" - respond with \x02otr smp %s <secret>\x02",
-				u->nick, u->nick);
-			/* smp stays in EXPECT1 until user responds */
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP2);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT2) {
-			irc_rootmsg(irc, "smp %s: spurious SMP2 received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			/* SMP2 received, otrl_message_receiving will have sent SMP3 */
-			context->smstate->nextExpected = OTRL_SMP_EXPECT4;
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP3);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT3) {
-			irc_rootmsg(irc, "smp %s: spurious SMP3 received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			/* SMP3 received, otrl_message_receiving will have sent SMP4 */
-			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
-				if(context->smstate->received_question) {
-					irc_rootmsg(irc, "smp %s: correct answer, you are trusted",
-						u->nick);
-				} else {
-					irc_rootmsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
-						u->nick);
-				}
-			} else {
-				if(context->smstate->received_question) {
-					irc_rootmsg(irc, "smp %s: wrong answer, you are not trusted",
-						u->nick);
-				} else {
-					irc_rootmsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
-						u->nick);
-				}
-			}
-			otrl_sm_state_free(context->smstate);
-			/* smp is in back in EXPECT1 */
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP4);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT4) {
-			irc_rootmsg(irc, "smp %s: spurious SMP4 received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			/* SMP4 received, otrl_message_receiving will have set fp trust */
-			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
-				irc_rootmsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
-					u->nick);
-			} else {
-				irc_rootmsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
-					u->nick);
-			}
-			otrl_sm_state_free(context->smstate);
-			/* smp is in back in EXPECT1 */
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP_ABORT);
-	if (tlv) {
-	 	irc_rootmsg(irc, "smp: received abort from %s", u->nick);
-		otrl_sm_state_free(context->smstate);
-		/* smp is in back in EXPECT1 */
-	}
-}
-
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
 void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		const char *secret)
@@ -1277,7 +1212,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
-		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
+		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
 	if(!ctx || ctx->msgstate != OTRL_MSGSTATE_ENCRYPTED) {
 		irc_rootmsg(irc, "smp: otr inactive with %s, try \x02otr connect"
 				" %s\x02", nick, nick);
