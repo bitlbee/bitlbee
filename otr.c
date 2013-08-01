@@ -59,9 +59,6 @@ int op_is_logged_in(void *opdata, const char *accountname, const char *protocol,
 void op_inject_message(void *opdata, const char *accountname, const char *protocol,
 	const char *recipient, const char *message);
 
-int op_display_otr_message(void *opdata, const char *accountname, const char *protocol,
-	const char *username, const char *msg);
-
 void op_new_fingerprint(void *opdata, OtrlUserState us, const char *accountname,
 	const char *protocol, const char *username, unsigned char fingerprint[20]);
 
@@ -85,6 +82,9 @@ void op_convert_free(void *opdata, ConnContext *ctx, char *msg);
 
 void op_handle_smp_event(void *opdata, OtrlSMPEvent ev, ConnContext *ctx,
 	unsigned short percent, char *question);
+
+void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
+	const char *message, gcry_error_t err);
 
 /** otr sub-command handlers: **/
 
@@ -161,6 +161,12 @@ int hexval(char a);
    returns NULL if not found */
 irc_user_t *peeruser(irc_t *irc, const char *handle, const char *protocol);
 
+/* show an otr-related message to the user */
+void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...);
+
+/* write an otr-related message to the system log */
+void log_otr_message(void *opdata, const char *fmt, ...);
+
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
 void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 		const char *secret);
@@ -210,14 +216,12 @@ void init_plugin(void)
 	otr_ops.create_privkey = &op_create_privkey;
 	otr_ops.is_logged_in = &op_is_logged_in;
 	otr_ops.inject_message = &op_inject_message;
-	//XXX otr_ops.display_otr_message = &op_display_otr_message;
 	otr_ops.update_context_list = NULL;
 	otr_ops.new_fingerprint = &op_new_fingerprint;
 	otr_ops.write_fingerprints = &op_write_fingerprints;
 	otr_ops.gone_secure = &op_gone_secure;
 	otr_ops.gone_insecure = &op_gone_insecure;
 	otr_ops.still_secure = &op_still_secure;
-	//XXX otr_ops.log_message = &op_log_message;
 	otr_ops.max_message_size = &op_max_message_size;
 	otr_ops.account_name = &op_account_name;
 	otr_ops.account_name_free = NULL;
@@ -229,7 +233,7 @@ void init_plugin(void)
 	otr_ops.resent_msg_prefix = NULL;       // don't need?
 	otr_ops.resent_msg_prefix_free = NULL;
 	otr_ops.handle_smp_event = &op_handle_smp_event;
-	otr_ops.handle_msg_event = NULL; // XXX
+	otr_ops.handle_msg_event = &op_handle_msg_event;
 	otr_ops.create_instag = NULL;    // XXX
 	otr_ops.convert_msg = &op_convert_msg;
 	otr_ops.convert_free = &op_convert_free;
@@ -559,26 +563,6 @@ void op_inject_message(void *opdata, const char *accountname,
 	}
 }
 
-int op_display_otr_message(void *opdata, const char *accountname,
-	const char *protocol, const char *username, const char *message)
-{
-	struct im_connection *ic = check_imc(opdata, accountname, protocol);
-	char *msg = g_strdup(message);
-	irc_t *irc = ic->bee->ui_data;
-	irc_user_t *u = peeruser(irc, username, protocol);
-
-	strip_html(msg);
-	if(u) {
-		/* display as a notice from this particular user */
-		irc_usernotice(u, "%s", msg);
-	} else {
-		irc_rootmsg(irc, "[otr] %s", msg);
-	}
-
-	g_free(msg);
-	return 0;
-}
-
 void op_new_fingerprint(void *opdata, OtrlUserState us,
 	const char *accountname, const char *protocol,
 	const char *username, unsigned char fingerprint[20])
@@ -667,15 +651,6 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 		char *trust = u->flags & IRC_USER_OTR_TRUSTED ? "trusted" : "untrusted!";
 		irc_usernotice(u, "otr connection has been refreshed (%s)", trust);
 	}
-}
-
-void op_log_message(void *opdata, const char *message)
-{
-	char *msg = g_strdup(message);
-	
-	strip_html(msg);
-	log_message(LOGLVL_INFO, "otr: %s", msg);
-	g_free(msg);
 }
 
 int op_max_message_size(void *opdata, ConnContext *context)
@@ -820,6 +795,65 @@ void op_handle_smp_event(void *opdata, OtrlSMPEvent ev, ConnContext *ctx,
 			u->nick);
 		otrl_message_abort_smp(us, &otr_ops, u->bu->ic, ctx);
 		otrl_sm_state_free(ctx->smstate);
+		break;
+	}
+}
+
+void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
+	const char *message, gcry_error_t err)
+{
+	switch(ev) {
+	case OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
+		display_otr_message(opdata, ctx,
+			"policy requires encryption - message not sent");
+		break;
+	case OTRL_MSGEVENT_ENCRYPTION_ERROR:
+		display_otr_message(opdata, ctx,
+			"error during encryption - message not sent");
+		break;
+	case OTRL_MSGEVENT_CONNECTION_ENDED:
+		display_otr_message(opdata, ctx,
+			"other end has disconnected OTR - "
+			"close connection or reconnect!");
+		break;
+	case OTRL_MSGEVENT_SETUP_ERROR:
+		display_otr_message(opdata, ctx,
+			"OTR connection failed: %s", gcry_strerror(err));
+		break;
+	case OTRL_MSGEVENT_MSG_REFLECTED:
+		display_otr_message(opdata, ctx,
+			"received our own OTR message (!?)");
+		break;
+	case OTRL_MSGEVENT_MSG_RESENT:
+		display_otr_message(opdata, ctx,
+			"the previous message was resent");
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
+		display_otr_message(opdata, ctx,
+			"unexpected encrypted message received");
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_UNREADABLE:
+		display_otr_message(opdata, ctx,
+			"unreadable encrypted message received");
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_MALFORMED:
+		display_otr_message(opdata, ctx,
+			"malformed OTR message received");
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_GENERAL_ERR:
+		display_otr_message(opdata, ctx,
+			"OTR error message received: %s", message);
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
+		display_otr_message(opdata, ctx,
+			"unencrypted message received: %s", message);
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_UNRECOGNIZED:
+		display_otr_message(opdata, ctx,
+			"unrecognized OTR message received");
+		break;
+	default:
+		/* ignore  XXX log? */
 		break;
 	}
 }
@@ -1193,6 +1227,39 @@ void cmd_otr_forget(irc_t *irc, char **args)
 
 
 /*** local helpers / subroutines: ***/
+
+void log_otr_message(void *opdata, const char *fmt, ...)
+{
+	va_list va;
+
+	va_start(va, fmt);
+	char *msg = g_strdup_vprintf(fmt, va);
+	va_end(va);
+	
+	log_message(LOGLVL_INFO, "otr: %s", msg);
+}
+
+void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
+{
+	struct im_connection *ic =
+		check_imc(opdata, ctx->accountname, ctx->protocol);
+	irc_t *irc = ic->bee->ui_data;
+	irc_user_t *u = peeruser(irc, ctx->username, ctx->protocol);
+	va_list va;
+
+	va_start(va, fmt);
+	char *msg = g_strdup_vprintf(fmt, va);
+	va_end(va);
+
+	if(u) {
+		/* display as a notice from this particular user */
+		irc_usernotice(u, "%s", msg);
+	} else {
+		irc_rootmsg(irc, "[otr] %s", msg);
+	}
+
+	g_free(msg);
+}
 
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
 void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
