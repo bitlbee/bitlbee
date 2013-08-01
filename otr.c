@@ -79,6 +79,10 @@ int op_max_message_size(void *opdata, ConnContext *context);
 
 const char *op_account_name(void *opdata, const char *account, const char *protocol);
 
+void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
+	char **dst, const char *src);
+void op_convert_free(void *opdata, ConnContext *ctx, char *msg);
+
 
 /** otr sub-command handlers: **/
 
@@ -228,7 +232,8 @@ void init_plugin(void)
 	otr_ops.handle_smp_event = NULL; // XXX replace smp state machine w/this
 	otr_ops.handle_msg_event = NULL; // XXX
 	otr_ops.create_instag = NULL;    // XXX
-	otr_ops.convert_msg = NULL;      // XXX other plugins? de/htmlize?
+	otr_ops.convert_msg = &op_convert_msg;
+	otr_ops.convert_free = &op_convert_free;
 	otr_ops.timer_control = NULL;    // XXX call otrl_message_poll reg'ly
 		
 	root_command_add( "otr", 1, cmd_otr, 0 );
@@ -405,59 +410,8 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 		/* this was a non-OTR message */
 		return msg;
 	} else {
-        /* XXX move this to convert callback */
-
-		/* OTR has processed this message */
-		ConnContext *context = otrl_context_find(irc->otr->us, iu->bu->handle,
-			ic->acc->user, ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
-
 		/* we're done with the original msg, which will be caller-freed. */
-		/* NB: must not change the newmsg pointer, since we free it. */
-		msg = newmsg;
-
-		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
-			/* HTML decoding */
-			/* perform any necessary stripping that the top level would miss */
-			if(set_getbool(&ic->bee->set, "otr_does_html") &&
-			   !(ic->flags & OPT_DOES_HTML) &&
-			   set_getbool(&ic->bee->set, "strip_html")) {
-				strip_html(msg);
-			}
-
-			/* coloring */
-			if(set_getbool(&ic->bee->set, "otr_color_encrypted")) {
-				int color;                /* color according to f'print trust */
-				char *pre="", *sep="";    /* optional parts */
-				const char *trust = context->active_fingerprint->trust;
-
-				if(trust && trust[0] != '\0')
-					color=3;   /* green */
-				else
-					color=5;   /* red */
-
-				/* in a query window, keep "/me " uncolored at the beginning */
-				if(g_strncasecmp(msg, "/me ", 4) == 0
-				   && irc_user_msgdest(iu) == irc->user->nick) {
-					msg += 4;  /* skip */
-					pre = "/me ";
-				}
-
-				/* comma in first place could mess with the color code */
-				if(msg[0] == ',') {
-				    /* insert a space between color spec and message */
-				    sep = " ";
-				}
-
-				msg = g_strdup_printf("%s\x03%.2d%s%s\x0F", pre,
-					color, sep, msg);
-			}
-		}
-
-		if(msg == newmsg) {
-			msg = g_strdup(newmsg);
-		}
-		otrl_message_free(newmsg);
-		return msg;
+		return newmsg;
 	}
 }
 
@@ -476,43 +430,20 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 		return msg;
 	}
 
-	ctx = otrl_context_find(irc->otr->us,
-			iu->bu->handle, ic->acc->user, ic->acc->prpl->name,
-			instag, 1, NULL, NULL, NULL);
-
-	/* HTML encoding */
-	/* consider OTR plaintext to be HTML if otr_does_html is set */
-	if(ctx && ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
-	   set_getbool(&ic->bee->set, "otr_does_html") &&
-	   (g_strncasecmp(msg, "<html>", 6) != 0)) {
-		emsg = escape_html(msg);
-	}
-	
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, instag,
-		emsg, NULL, &otrmsg, OTRL_FRAGMENT_SEND_SKIP, NULL, NULL, NULL);
+		emsg, NULL, &otrmsg, OTRL_FRAGMENT_SEND_ALL, &ctx, NULL, NULL);
+
 	if(emsg != msg) {
 		g_free(emsg);   /* we're done with this one */
 	}
-	if(st) {
-		return NULL;
-	}
-
 	if(otrmsg) {
-		if(!ctx) {
-			otrl_message_free(otrmsg);
-			return NULL;
-		}
-		otr_ops.inject_message(ic, ctx->accountname,
-			ctx->protocol, ctx->username, otrmsg);
-		otrl_message_free(otrmsg);
-	} else {
-		/* note: otrl_message_sending handles policy, so that if REQUIRE_ENCRYPTION is set,
-		   this case does not occur */
-		return msg;
+		/* Is this ever reached!? */
+		ic->acc->prpl->buddy_msg(ic, iu->bu->handle, otrmsg, 0);
 	}
-	
-	/* TODO: Error reporting should be done here now (if st!=0), probably. */
+	if(st) {
+		/* TODO: Error reporting? */
+	}
 	
 	return NULL;
 }
@@ -765,6 +696,70 @@ const char *op_account_name(void *opdata, const char *account, const char *proto
 
 	return peernick(irc, account, protocol);
 }
+
+void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
+	char **dst, const char *src)
+{
+	struct im_connection *ic =
+		check_imc(opdata, ctx->accountname, ctx->protocol);
+	irc_t *irc = ic->bee->ui_data;
+	irc_user_t *iu = peeruser(irc, ctx->username, ctx->protocol);
+
+	if(typ == OTRL_CONVERT_RECEIVING) {
+		char *msg = g_strdup(src);
+
+		/* HTML decoding */
+		if(set_getbool(&ic->bee->set, "otr_does_html") &&
+		   !(ic->flags & OPT_DOES_HTML) &&
+		   set_getbool(&ic->bee->set, "strip_html")) {
+			strip_html(msg);
+			*dst = msg;
+		}
+
+		/* coloring */
+		if(set_getbool(&ic->bee->set, "otr_color_encrypted")) {
+			int color;                /* color according to f'print trust */
+			char *pre="", *sep="";    /* optional parts */
+			const char *trust = ctx->active_fingerprint->trust;
+
+			if(trust && trust[0] != '\0')
+				color=3;   /* green */
+			else
+				color=5;   /* red */
+
+			/* in a query window, keep "/me " uncolored at the beginning */
+			if(g_strncasecmp(msg, "/me ", 4) == 0
+			   && irc_user_msgdest(iu) == irc->user->nick) {
+				msg += 4;  /* skip */
+				pre = "/me ";
+			}
+
+			/* comma in first place could mess with the color code */
+			if(msg[0] == ',') {
+			    /* insert a space between color spec and message */
+			    sep = " ";
+			}
+
+			*dst = g_strdup_printf("%s\x03%.2d%s%s\x0F", pre,
+				color, sep, msg);
+			g_free(msg);
+		}
+	} else {
+		/* HTML encoding */
+		/* consider OTR plaintext to be HTML if otr_does_html is set */
+		if(ctx && ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
+		   set_getbool(&ic->bee->set, "otr_does_html") &&
+		   (g_strncasecmp(src, "<html>", 6) != 0)) {
+			*dst = escape_html(src);
+		}
+	}
+}
+
+void op_convert_free(void *opdata, ConnContext *ctx, char *msg)
+{
+	g_free(msg);
+}
+	
 
 
 /*** OTR sub-command handlers ***/
