@@ -7,8 +7,8 @@
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
   
-  (c) 2008-2011 Sven Moritz Hallberg <pesco@khjk.org>
-  (c) 2008 funded by stonedcoder.org
+  (c) 2008-2011,2013 Sven Moritz Hallberg <pesco@khjk.org>
+  funded by stonedcoder.org
     
   files used to store OTR data:
     <configdir>/<nick>.otr_keys
@@ -207,21 +207,30 @@ void init_plugin(void)
 	otr_ops.create_privkey = &op_create_privkey;
 	otr_ops.is_logged_in = &op_is_logged_in;
 	otr_ops.inject_message = &op_inject_message;
-	otr_ops.notify = NULL;
-	otr_ops.display_otr_message = &op_display_otr_message;
+	//XXX otr_ops.display_otr_message = &op_display_otr_message;
 	otr_ops.update_context_list = NULL;
-	otr_ops.protocol_name = NULL;
-	otr_ops.protocol_name_free = NULL;
 	otr_ops.new_fingerprint = &op_new_fingerprint;
 	otr_ops.write_fingerprints = &op_write_fingerprints;
 	otr_ops.gone_secure = &op_gone_secure;
 	otr_ops.gone_insecure = &op_gone_insecure;
 	otr_ops.still_secure = &op_still_secure;
-	otr_ops.log_message = &op_log_message;
+	//XXX otr_ops.log_message = &op_log_message;
 	otr_ops.max_message_size = &op_max_message_size;
 	otr_ops.account_name = &op_account_name;
 	otr_ops.account_name_free = NULL;
-	
+
+	/* stuff added with libotr 4.0.0 */
+	otr_ops.received_symkey = NULL;         /* we don't use the extra key */
+	otr_ops.otr_error_message = NULL;       // TODO?
+	otr_ops.otr_error_message_free = NULL;
+	otr_ops.resent_msg_prefix = NULL;       // XXX don't need?
+	otr_ops.resent_msg_prefix_free = NULL;
+	otr_ops.handle_smp_event = NULL; // XXX replace smp state machine w/this
+	otr_ops.handle_msg_event = NULL; // XXX
+	otr_ops.create_instag = NULL;    // XXX
+	otr_ops.convert_msg = NULL;      // XXX other plugins? de/htmlize?
+	otr_ops.timer_control = NULL;    // XXX call otrl_message_poll reg'ly
+		
 	root_command_add( "otr", 1, cmd_otr, 0 );
 	register_irc_plugin( &otr_plugin );
 }
@@ -385,7 +394,7 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 	
 	ignore_msg = otrl_message_receiving(irc->otr->us, &otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, msg, &newmsg,
-		&tlvs, NULL, NULL);
+		&tlvs, NULL, NULL, NULL);
 
 	otr_handle_smp(ic, iu->bu->handle, tlvs);
 	
@@ -396,9 +405,11 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 		/* this was a non-OTR message */
 		return msg;
 	} else {
+        /* XXX move this to convert callback */
+
 		/* OTR has processed this message */
 		ConnContext *context = otrl_context_find(irc->otr->us, iu->bu->handle,
-			ic->acc->user, ic->acc->prpl->name, 0, NULL, NULL, NULL);
+			ic->acc->user, ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 
 		/* we're done with the original msg, which will be caller-freed. */
 		/* NB: must not change the newmsg pointer, since we free it. */
@@ -458,6 +469,7 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	ConnContext *ctx = NULL;
 	irc_t *irc = iu->irc;
 	struct im_connection *ic = iu->bu->ic;
+	otrl_instag_t instag = OTRL_INSTAG_MASTER; // XXX?
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
 	if(ic->acc->prpl->options & OPT_NOOTR) {
@@ -466,7 +478,7 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 
 	ctx = otrl_context_find(irc->otr->us,
 			iu->bu->handle, ic->acc->user, ic->acc->prpl->name,
-			1, NULL, NULL, NULL);
+			instag, 1, NULL, NULL, NULL);
 
 	/* HTML encoding */
 	/* consider OTR plaintext to be HTML if otr_does_html is set */
@@ -477,8 +489,8 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	}
 	
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
-		ic->acc->user, ic->acc->prpl->name, iu->bu->handle,
-		emsg, NULL, &otrmsg, NULL, NULL);
+		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, instag,
+		emsg, NULL, &otrmsg, OTRL_FRAGMENT_SEND_SKIP, NULL, NULL, NULL);
 	if(emsg != msg) {
 		g_free(emsg);   /* we're done with this one */
 	}
@@ -491,8 +503,8 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 			otrl_message_free(otrmsg);
 			return NULL;
 		}
-		st = otrl_message_fragment_and_send(&otr_ops, ic, ctx,
-			otrmsg, OTRL_FRAGMENT_SEND_ALL, NULL);
+		otr_ops.inject_message(ic, ctx->accountname,
+			ctx->protocol, ctx->username, otrmsg);
 		otrl_message_free(otrmsg);
 	} else {
 		/* note: otrl_message_sending handles policy, so that if REQUIRE_ENCRYPTION is set,
@@ -773,19 +785,24 @@ void cmd_otr_disconnect(irc_t *irc, char **args)
 		return;
 	}
 	
-	otrl_message_disconnect(irc->otr->us, &otr_ops,
+	/* XXX we disconnect all instances; is that what we want? */
+	otrl_message_disconnect_all_instances(irc->otr->us, &otr_ops,
 		u->bu->ic, u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, u->bu->handle);
 	
-	/* for some reason, libotr (3.1.0) doesn't do this itself: */
-	if(u->flags & IRC_USER_OTR_ENCRYPTED) {
-		ConnContext *ctx;
-		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-			u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
-		if(ctx)
-			op_gone_insecure(u->bu->ic, ctx);
-		else /* huh? */
-			u->flags &= ( IRC_USER_OTR_ENCRYPTED | IRC_USER_OTR_TRUSTED );
+	/* for some reason, libotr (4.0.0) doesn't do this itself: */
+	if(!(u->flags & IRC_USER_OTR_ENCRYPTED))
+		return;
+
+	ConnContext *ctx, *p;
+	ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
+		u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
+	if(!ctx) { /* huh? */
+		u->flags &= ( IRC_USER_OTR_ENCRYPTED | IRC_USER_OTR_TRUSTED );
+		return;
 	}
+
+	for(p=ctx; p && p->m_context == ctx->m_context; p=p->next)
+		op_gone_insecure(u->bu->ic, p);
 }
 
 void cmd_otr_connect(irc_t *irc, char **args)
@@ -830,7 +847,7 @@ void cmd_otr_trust(irc_t *irc, char **args)
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
-		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
 	if(!ctx) {
 		irc_rootmsg(irc, "%s: no otr context with user", args[1]);
 		return;
@@ -894,7 +911,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 		if(protocol && myhandle) {
 			*(myhandle++) = '\0';
 			handle = arg;
-			ctx = otrl_context_find(irc->otr->us, handle, myhandle, protocol, 0, NULL, NULL, NULL);
+			ctx = otrl_context_find(irc->otr->us, handle, myhandle, protocol, 0, OTRL_INSTAG_MASTER, NULL, NULL, NULL);  // XXX
 			if(!ctx) {
 				irc_rootmsg(irc, "no such context");
 				g_free(arg);
@@ -908,7 +925,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 				return;
 			}
 			ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-				u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+				u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
 			if(!ctx) {
 				irc_rootmsg(irc, "no otr context with %s", args[1]);
 				g_free(arg);
@@ -1027,7 +1044,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		}
 		
 		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-			u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+			u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
 		if(!ctx) {
 			irc_rootmsg(irc, "no otr context with %s", args[2]);
 			return;
@@ -1070,7 +1087,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		}
 		
 		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-			u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+			u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
 		if(!ctx) {
 			irc_rootmsg(irc, "no otr context with %s", args[2]);
 			return;
@@ -1133,7 +1150,7 @@ void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
 	bu = bee_user_by_handle(ic->bee, ic, handle);
 	if(!bu || !(u = bu->ui_data)) return;
 	context = otrl_context_find(us, handle,
-		ic->acc->user, ic->acc->prpl->name, 1, NULL, NULL, NULL);
+		ic->acc->user, ic->acc->prpl->name, OTRL_INSTAG_MASTER, 1, NULL, NULL, NULL);
 	if(!context) {
 		/* huh? out of memory or what? */
 		irc_rootmsg(irc, "smp: failed to get otr context for %s", u->nick);
@@ -1265,7 +1282,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
-		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 	if(!ctx || ctx->msgstate != OTRL_MSGSTATE_ENCRYPTED) {
 		irc_rootmsg(irc, "smp: otr inactive with %s, try \x02otr connect"
 				" %s\x02", nick, nick);

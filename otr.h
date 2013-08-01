@@ -7,8 +7,8 @@
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
   
-  2008, Sven Moritz Hallberg <pesco@khjk.org>
-  (c) and funded by stonedcoder.org
+  (c) 2008,2013 Sven Moritz Hallberg <pesco@khjk.org>
+  funded by stonedcoder.org
 */
 
 /*
