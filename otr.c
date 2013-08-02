@@ -86,6 +86,9 @@ void op_handle_smp_event(void *opdata, OtrlSMPEvent ev, ConnContext *ctx,
 void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
 	const char *message, gcry_error_t err);
 
+const char *op_otr_error_message(void *opdata, ConnContext *ctx,
+	OtrlErrorCode err_code);
+
 /** otr sub-command handlers: **/
 
 static void cmd_otr(irc_t *irc, char **args);
@@ -228,9 +231,9 @@ void init_plugin(void)
 
 	/* stuff added with libotr 4.0.0 */
 	otr_ops.received_symkey = NULL;         /* we don't use the extra key */
-	otr_ops.otr_error_message = NULL;       // TODO?
+	otr_ops.otr_error_message = &op_otr_error_message;
 	otr_ops.otr_error_message_free = NULL;
-	otr_ops.resent_msg_prefix = NULL;       // don't need?
+	otr_ops.resent_msg_prefix = NULL;       /* default: [resent] */
 	otr_ops.resent_msg_prefix_free = NULL;
 	otr_ops.handle_smp_event = &op_handle_smp_event;
 	otr_ops.handle_msg_event = &op_handle_msg_event;
@@ -860,6 +863,23 @@ void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
 	default:
 		/* ignore  XXX log? */
 		break;
+	}
+}
+
+const char *op_otr_error_message(void *opdata, ConnContext *ctx,
+	OtrlErrorCode err_code)
+{
+	switch(err_code) {
+	case OTRL_ERRCODE_ENCRYPTION_ERROR:
+		return "i failed to encrypt a message";
+	case OTRL_ERRCODE_MSG_NOT_IN_PRIVATE:
+		return "you sent an encrypted message i didn't expect";
+	case OTRL_ERRCODE_MSG_UNREADABLE:
+		return "could not read encrypted message";
+	case OTRL_ERRCODE_MSG_MALFORMED:
+		return "you sent a malformed OTR message";
+	default:
+		return "i suffered an unexpected OTR error";
 	}
 }
 
