@@ -270,7 +270,7 @@ gboolean otr_irc_new(irc_t *irc)
 	
 	/* regularly call otrl_message_poll */
 	gint definterval = otrl_message_poll_get_default_interval(irc->otr->us);
-	b_timeout_add(definterval, ev_message_poll, irc->otr);
+	irc->otr->timer = b_timeout_add(definterval, ev_message_poll, irc->otr);
 
 	return TRUE;
 }
@@ -278,6 +278,7 @@ gboolean otr_irc_new(irc_t *irc)
 void otr_irc_free(irc_t *irc)
 {
 	otr_t *otr = irc->otr;
+	b_event_remove(otr->timer);
 	otrl_userstate_free(otr->us);
 	if(otr->keygen) {
 		kill(otr->keygen, SIGTERM);
@@ -845,6 +846,10 @@ void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
 		display_otr_message(opdata, ctx,
 			"unreadable encrypted message received");
 		break;
+	case OTRL_MSGEVENT_RCVDMSG_FOR_OTHER_INSTANCE:
+		display_otr_message(opdata, ctx,
+			"OTR message for a different instance received");
+		break;
 	case OTRL_MSGEVENT_RCVDMSG_MALFORMED:
 		display_otr_message(opdata, ctx,
 			"malformed OTR message received");
@@ -1354,7 +1359,8 @@ gboolean ev_message_poll(gpointer data, gint fd, b_input_condition cond)
 {
 	otr_t *otr = data;
 
-	otrl_message_poll(otr->us, &otr_ops, NULL);
+	if(otr && otr->us)
+		otrl_message_poll(otr->us, &otr_ops, NULL);
 
 	return TRUE;	/* cycle timer */
 }

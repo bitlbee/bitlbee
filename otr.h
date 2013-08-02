@@ -65,6 +65,9 @@ typedef struct otr {
 	
 	/* keygen jobs waiting to be sent to slave */
 	kg_t *todo;
+
+	/* event timer for otrl_message_poll */
+	gint timer;
 } otr_t;
 
 /* called from main() */
