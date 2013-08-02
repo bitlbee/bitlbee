@@ -149,6 +149,9 @@ void yes_forget_fingerprint(void *data);
 void yes_forget_context(void *data);
 void yes_forget_key(void *data);
 
+/* timeout handler that calls otrl_message_poll */
+gboolean ev_message_poll(gpointer data, gint fd, b_input_condition cond);
+
 /* helper to make sure accountname and protocol match the incoming "opdata" */
 struct im_connection *check_imc(void *opdata, const char *accountname,
 	const char *protocol);
@@ -240,7 +243,7 @@ void init_plugin(void)
 	otr_ops.create_instag = NULL;    // XXX
 	otr_ops.convert_msg = &op_convert_msg;
 	otr_ops.convert_free = &op_convert_free;
-	otr_ops.timer_control = NULL;    // XXX call otrl_message_poll reg'ly
+	otr_ops.timer_control = NULL;    	/* we just poll */
 		
 	root_command_add( "otr", 1, cmd_otr, 0 );
 	register_irc_plugin( &otr_plugin );
@@ -265,6 +268,10 @@ gboolean otr_irc_new(irc_t *irc)
 
 	s = set_add( &irc->b->set, "otr_does_html", "true", set_eval_bool, irc );
 	
+	/* regularly call otrl_message_poll */
+	gint definterval = otrl_message_poll_get_default_interval(irc->otr->us);
+	b_timeout_add(definterval, ev_message_poll, irc->otr);
+
 	return TRUE;
 }
 
@@ -1343,6 +1350,16 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 			/* smp is now in EXPECT3 */
 		}
 	}
+}
+
+/* timeout handler that calls otrl_message_poll */
+gboolean ev_message_poll(gpointer data, gint fd, b_input_condition cond)
+{
+	otr_t *otr = data;
+
+	otrl_message_poll(otr->us, &otr_ops, NULL);
+
+	return TRUE;	/* cycle timer */
 }
 
 /* helper to assert that account and protocol names given to ops below always
