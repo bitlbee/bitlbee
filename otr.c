@@ -966,7 +966,7 @@ void cmd_otr_trust(irc_t *irc, char **args)
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
-		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
+		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 	if(!ctx) {
 		irc_rootmsg(irc, "%s: no otr context with user", args[1]);
 		return;
@@ -1030,7 +1030,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 		if(protocol && myhandle) {
 			*(myhandle++) = '\0';
 			handle = arg;
-			ctx = otrl_context_find(irc->otr->us, handle, myhandle, protocol, 0, OTRL_INSTAG_MASTER, NULL, NULL, NULL);  // XXX
+			ctx = otrl_context_find(irc->otr->us, handle, myhandle, protocol, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 			if(!ctx) {
 				irc_rootmsg(irc, "no such context");
 				g_free(arg);
@@ -1044,7 +1044,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 				return;
 			}
 			ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-				u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
+				u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 			if(!ctx) {
 				irc_rootmsg(irc, "no otr context with %s", args[1]);
 				g_free(arg);
@@ -1117,6 +1117,8 @@ void yes_forget_context(void *data)
 	ConnContext *ctx = (ConnContext *)p->snd;
 
 	g_free(p);
+
+	// XXX forget all contexts
 	
 	if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
 		irc_rootmsg(irc, "active otr connection with %s, terminate it first",
@@ -1163,7 +1165,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		}
 		
 		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-			u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
+			u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 		if(!ctx) {
 			irc_rootmsg(irc, "no otr context with %s", args[2]);
 			return;
@@ -1206,7 +1208,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		}
 		
 		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-			u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
+			u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 		if(!ctx) {
 			irc_rootmsg(irc, "no otr context with %s", args[2]);
 			return;
@@ -1293,6 +1295,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 {
 	irc_user_t *u;
 	ConnContext *ctx;
+	otrl_instag_t instag = OTRL_INSTAG_RECENT;  // XXX
 
 	u = irc_user_by_name(irc, nick);
 	if(!u || !u->bu || !u->bu->ic) {
@@ -1305,7 +1308,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
-		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);  // XXX
+		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, instag, 0, NULL, NULL, NULL);
 	if(!ctx || ctx->msgstate != OTRL_MSGSTATE_ENCRYPTED) {
 		irc_rootmsg(irc, "smp: otr inactive with %s, try \x02otr connect"
 				" %s\x02", nick, nick);
@@ -1686,6 +1689,8 @@ void show_general_otr_info(irc_t *irc)
 
 void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 {
+	// XXX show all contexts
+
 	switch(ctx->otr_offer) {
 	case OFFER_NOT:
 		irc_rootmsg(irc, "  otr offer status: none sent");
