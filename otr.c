@@ -943,7 +943,9 @@ void cmd_otr_connect(irc_t *irc, char **args)
 		return;
 	}
 	
-	bee_user_msg(irc->b, u->bu, "?OTR?v2?", 0);
+	/* passing this through the filter so it goes through libotr which
+	 * will replace the simple query string with a proper one */
+	otr_filter_msg_out(u, "?OTR?", 0);
 }
 
 void cmd_otr_smp(irc_t *irc, char **args)
