@@ -664,12 +664,6 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 
 int op_max_message_size(void *opdata, ConnContext *context)
 {
-	/* libotr 4.0.0 has a bug where it doesn't set opdata */
-	if(!opdata) {
-		/* crude fallback */
-		return 800;
-	}
-
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
  
@@ -1368,6 +1362,19 @@ struct im_connection *check_imc(void *opdata, const char *accountname,
 	const char *protocol)
 {
 	struct im_connection *ic = (struct im_connection *)opdata;
+
+	/* libotr 4.0.0 has a bug where it doesn't set opdata, so we catch
+	 * that and try to find the desired connection in the global list. */
+	if(!ic) {
+		GSList *l;
+		for(l=get_connections(); l; l=l->next) {
+			ic = l->data;
+			if(strcmp(accountname, ic->acc->user) == 0 &&
+			   strcmp(protocol, ic->acc->prpl->name) == 0)
+				break;
+		}
+		assert(l != NULL);  /* a match should always be found */
+	}
 
 	if (strcmp(accountname, ic->acc->user) != 0) {
 		log_message(LOGLVL_WARNING,
