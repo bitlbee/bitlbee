@@ -434,7 +434,7 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	ConnContext *ctx = NULL;
 	irc_t *irc = iu->irc;
 	struct im_connection *ic = iu->bu->ic;
-	otrl_instag_t instag = OTRL_INSTAG_MASTER; // XXX?
+	otrl_instag_t instag = OTRL_INSTAG_RECENT; // XXX?
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
 	if(ic->acc->prpl->options & OPT_NOOTR) {
@@ -1374,6 +1374,8 @@ struct im_connection *check_imc(void *opdata, const char *accountname,
 				break;
 		}
 		assert(l != NULL);  /* a match should always be found */
+		if(!l)
+			return NULL;
 	}
 
 	if (strcmp(accountname, ic->acc->user) != 0) {
