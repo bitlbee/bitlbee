@@ -434,13 +434,12 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, instag,
 		emsg, NULL, &otrmsg, OTRL_FRAGMENT_SEND_ALL, &ctx, NULL, NULL);
+	/* in libotr 4.0.0 with OTRL_FRAGMENT_SEND_ALL, otrmsg must be passed
+	 * but the value it gets carries no meaning. it can be set even though
+	 * the message has been injected. */
 
 	if(emsg != msg) {
 		g_free(emsg);   /* we're done with this one */
-	}
-	if(otrmsg) {
-		/* Is this ever reached!? */
-		ic->acc->prpl->buddy_msg(ic, iu->bu->handle, otrmsg, 0);
 	}
 	if(st) {
 		/* TODO: Error reporting? */
@@ -655,9 +654,15 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 
 int op_max_message_size(void *opdata, ConnContext *context)
 {
+	/* libotr 4.0.0 has a bug where it doesn't set opdata */
+	if(!opdata) {
+		/* crude fallback */
+		return 800;
+	}
+
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
-
+ 
 	return ic->acc->prpl->mms;
 }
 
