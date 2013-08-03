@@ -13,11 +13,13 @@
   files used to store OTR data:
     <configdir>/<nick>.otr_keys
     <configdir>/<nick>.otr_fprints
+    <configdir>/<nick>.otr_instags  <- don't copy this one between hosts
     
   top-level todos: (search for TODO for more ;-))
     integrate otr_load/otr_save with existing storage backends
     per-account policy settings
     per-user policy settings
+    add a way to select recipient instance
 */
 
 /*
@@ -631,6 +633,9 @@ void op_gone_secure(void *opdata, ConnContext *context)
 
 void op_gone_insecure(void *opdata, ConnContext *context)
 {
+	/* XXX on 'otr disconnect', this gets called for every instance and we
+	 * get the message multiple times... */
+
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
 	irc_t *irc = ic->bee->ui_data;
@@ -870,10 +875,6 @@ void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
 		display_otr_message(opdata, ctx,
 			"unreadable encrypted message received");
 		break;
-	case OTRL_MSGEVENT_RCVDMSG_FOR_OTHER_INSTANCE:
-		display_otr_message(opdata, ctx,
-			"OTR message for a different instance received");
-		break;
 	case OTRL_MSGEVENT_RCVDMSG_MALFORMED:
 		display_otr_message(opdata, ctx,
 			"malformed OTR message received");
@@ -889,6 +890,10 @@ void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
 	case OTRL_MSGEVENT_RCVDMSG_UNRECOGNIZED:
 		display_otr_message(opdata, ctx,
 			"unrecognized OTR message received");
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_FOR_OTHER_INSTANCE:
+		display_otr_message(opdata, ctx,
+			"OTR message for a different instance received");
 		break;
 	default:
 		/* ignore  XXX log? */
@@ -1693,6 +1698,8 @@ void show_general_otr_info(irc_t *irc)
 		irc_rootmsg(irc, "  (none)");
 
 	/* list all contexts */
+	/* XXX remove this, or split off as its own command */
+	/* XXX show instags? */
 	irc_rootmsg(irc, "%s", "");
 	irc_rootmsg(irc, "\x1f" "connection contexts:\x1f (bold=currently encrypted)");
 	for(ctx=irc->otr->us->context_root; ctx; ctx=ctx->next) {\
@@ -1721,7 +1728,7 @@ void show_general_otr_info(irc_t *irc)
 
 void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 {
-	// XXX show all contexts
+	// XXX show all instags/subcontexts
 
 	switch(ctx->otr_offer) {
 	case OFFER_NOT:
