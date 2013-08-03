@@ -879,6 +879,18 @@ void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
 		display_otr_message(opdata, ctx,
 			"malformed OTR message received");
 		break;
+	case OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
+		if(global.conf->verbose) {
+			log_otr_message(opdata, "%s/%s: heartbeat received",
+				ctx->accountname, ctx->protocol);
+		}
+		break;
+	case OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
+		if(global.conf->verbose) {
+			log_otr_message(opdata, "%s/%s: heartbeat sent",
+				ctx->accountname, ctx->protocol);
+		}
+		break;
 	case OTRL_MSGEVENT_RCVDMSG_GENERAL_ERR:
 		display_otr_message(opdata, ctx,
 			"OTR error message received: %s", message);
@@ -896,7 +908,7 @@ void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
 			"OTR message for a different instance received");
 		break;
 	default:
-		/* ignore  XXX log? */
+		/* shouldn't happen */
 		break;
 	}
 }
