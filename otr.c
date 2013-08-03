@@ -76,6 +76,8 @@ int op_max_message_size(void *opdata, ConnContext *context);
 
 const char *op_account_name(void *opdata, const char *account, const char *protocol);
 
+void op_create_instag(void *opdata, const char *account, const char *protocol);
+
 void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
 	char **dst, const char *src);
 void op_convert_free(void *opdata, ConnContext *ctx, char *msg);
@@ -240,7 +242,7 @@ void init_plugin(void)
 	otr_ops.resent_msg_prefix_free = NULL;
 	otr_ops.handle_smp_event = &op_handle_smp_event;
 	otr_ops.handle_msg_event = &op_handle_msg_event;
-	otr_ops.create_instag = NULL;    // XXX
+	otr_ops.create_instag = &op_create_instag;
 	otr_ops.convert_msg = &op_convert_msg;
 	otr_ops.convert_free = &op_convert_free;
 	otr_ops.timer_control = NULL;    	/* we just poll */
@@ -313,6 +315,11 @@ void otr_load(irc_t *irc)
 		}
 		g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->user->nick);
 		e = otrl_privkey_read_fingerprints(irc->otr->us, s, NULL, NULL);
+		if(e && e!=enoent) {
+			irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
+		}
+		g_snprintf(s, 511, "%s%s.otr_instags", global.conf->configdir, irc->user->nick);
+		e = otrl_instag_read(irc->otr->us, s);
 		if(e && e!=enoent) {
 			irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
 		}
@@ -677,6 +684,23 @@ const char *op_account_name(void *opdata, const char *account, const char *proto
 	irc_t *irc = ic->bee->ui_data;
 
 	return peernick(irc, account, protocol);
+}
+
+void op_create_instag(void *opdata, const char *account, const char *protocol)
+{
+	struct im_connection *ic =
+		check_imc(opdata, account, protocol);
+	irc_t *irc = ic->bee->ui_data;
+	gcry_error_t e;
+	char s[512];
+ 
+	g_snprintf(s, 511, "%s%s.otr_instags", global.conf->configdir,
+		irc->user->nick);
+	e = otrl_instag_generate(irc->otr->us, s, account, protocol);
+	if(e) {
+		irc_rootmsg(irc, "otr: %s/%s: otrl_instag_generate failed: %s",
+			account, protocol, gcry_strerror(e));
+	}
 }
 
 void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
