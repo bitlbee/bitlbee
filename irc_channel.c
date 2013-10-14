@@ -34,6 +34,7 @@ extern const struct irc_channel_funcs irc_channel_im_chat_funcs;
 irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 {
 	irc_channel_t *ic;
+	set_t *s;
 	
 	if( !irc_channel_name_ok( name ) || irc_channel_by_name( irc, name ) )
 		return NULL;
@@ -48,7 +49,9 @@ irc_channel_t *irc_channel_new( irc_t *irc, const char *name )
 	irc->channels = g_slist_append( irc->channels, ic );
 	
 	set_add( &ic->set, "auto_join", "false", set_eval_bool, ic );
-	set_add( &ic->set, "type", "control", set_eval_channel_type, ic );
+	
+	s = set_add( &ic->set, "type", "control", set_eval_channel_type, ic );
+	s->flags |= SET_NOSAVE;    /* Layer violation (XML format detail) */
 	
 	if( name[0] == '&' )
 		set_setstr( &ic->set, "type", "control" );
