@@ -3,6 +3,17 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 3.2.1:
+- Most important change: http_client updated to use HTTP/1.1, now required
+  by Twitter.
+- fill_by setting can now be used to fill a channel contacts *not* in a
+  certain group/on a certain account/etc. See "help set fill_by"
+- Added utf8_nicks setting which lets you use non-ASCII nicknames for your
+  contacts. Might not work with all IRC clients, use at your own risk!
+- Lots of bugfixes.
+
+Finished 27 Nov 2013
+
 Version 3.2:
 - By far the most important change, a thorough update to the Twitter
   module:
