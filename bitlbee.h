@@ -41,7 +41,7 @@ extern "C" {
 #define BITLBEE_VERSION "3.2.1"
 #define VERSION BITLBEE_VERSION
 #define BITLBEE_VER(a,b,c) (((a) << 16) + ((b) << 8) + (c))
-#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 2, 0)
+#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 2, 1)
 
 #define MAX_STRING 511
 
