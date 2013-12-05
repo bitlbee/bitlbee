@@ -7,8 +7,8 @@
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
   
-  2008, Sven Moritz Hallberg <pesco@khjk.org>
-  (c) and funded by stonedcoder.org
+  (c) 2008,2013 Sven Moritz Hallberg <pesco@khjk.org>
+  funded by stonedcoder.org
 */
 
 /*
@@ -65,6 +65,9 @@ typedef struct otr {
 	
 	/* keygen jobs waiting to be sent to slave */
 	kg_t *todo;
+
+	/* event timer for otrl_message_poll */
+	gint timer;
 } otr_t;
 
 /* called from main() */

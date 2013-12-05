@@ -7,17 +7,19 @@
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
   
-  (c) 2008-2011 Sven Moritz Hallberg <pesco@khjk.org>
-  (c) 2008 funded by stonedcoder.org
+  (c) 2008-2011,2013 Sven Moritz Hallberg <pesco@khjk.org>
+  funded by stonedcoder.org
     
   files used to store OTR data:
     <configdir>/<nick>.otr_keys
     <configdir>/<nick>.otr_fprints
+    <configdir>/<nick>.otr_instags  <- don't copy this one between hosts
     
   top-level todos: (search for TODO for more ;-))
     integrate otr_load/otr_save with existing storage backends
     per-account policy settings
     per-user policy settings
+    add a way to select recipient instance
 */
 
 /*
@@ -59,9 +61,6 @@ int op_is_logged_in(void *opdata, const char *accountname, const char *protocol,
 void op_inject_message(void *opdata, const char *accountname, const char *protocol,
 	const char *recipient, const char *message);
 
-int op_display_otr_message(void *opdata, const char *accountname, const char *protocol,
-	const char *username, const char *msg);
-
 void op_new_fingerprint(void *opdata, OtrlUserState us, const char *accountname,
 	const char *protocol, const char *username, unsigned char fingerprint[20]);
 
@@ -79,6 +78,20 @@ int op_max_message_size(void *opdata, ConnContext *context);
 
 const char *op_account_name(void *opdata, const char *account, const char *protocol);
 
+void op_create_instag(void *opdata, const char *account, const char *protocol);
+
+void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
+	char **dst, const char *src);
+void op_convert_free(void *opdata, ConnContext *ctx, char *msg);
+
+void op_handle_smp_event(void *opdata, OtrlSMPEvent ev, ConnContext *ctx,
+	unsigned short percent, char *question);
+
+void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
+	const char *message, gcry_error_t err);
+
+const char *op_otr_error_message(void *opdata, ConnContext *ctx,
+	OtrlErrorCode err_code);
 
 /** otr sub-command handlers: **/
 
@@ -140,6 +153,9 @@ void yes_forget_fingerprint(void *data);
 void yes_forget_context(void *data);
 void yes_forget_key(void *data);
 
+/* timeout handler that calls otrl_message_poll */
+gboolean ev_message_poll(gpointer data, gint fd, b_input_condition cond);
+
 /* helper to make sure accountname and protocol match the incoming "opdata" */
 struct im_connection *check_imc(void *opdata, const char *accountname,
 	const char *protocol);
@@ -155,8 +171,11 @@ int hexval(char a);
    returns NULL if not found */
 irc_user_t *peeruser(irc_t *irc, const char *handle, const char *protocol);
 
-/* handle SMP TLVs from a received message */
-void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs);
+/* show an otr-related message to the user */
+void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...);
+
+/* write an otr-related message to the system log */
+void log_otr_message(void *opdata, const char *fmt, ...);
 
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
 void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
@@ -207,21 +226,29 @@ void init_plugin(void)
 	otr_ops.create_privkey = &op_create_privkey;
 	otr_ops.is_logged_in = &op_is_logged_in;
 	otr_ops.inject_message = &op_inject_message;
-	otr_ops.notify = NULL;
-	otr_ops.display_otr_message = &op_display_otr_message;
 	otr_ops.update_context_list = NULL;
-	otr_ops.protocol_name = NULL;
-	otr_ops.protocol_name_free = NULL;
 	otr_ops.new_fingerprint = &op_new_fingerprint;
 	otr_ops.write_fingerprints = &op_write_fingerprints;
 	otr_ops.gone_secure = &op_gone_secure;
 	otr_ops.gone_insecure = &op_gone_insecure;
 	otr_ops.still_secure = &op_still_secure;
-	otr_ops.log_message = &op_log_message;
 	otr_ops.max_message_size = &op_max_message_size;
 	otr_ops.account_name = &op_account_name;
 	otr_ops.account_name_free = NULL;
-	
+
+	/* stuff added with libotr 4.0.0 */
+	otr_ops.received_symkey = NULL;         /* we don't use the extra key */
+	otr_ops.otr_error_message = &op_otr_error_message;
+	otr_ops.otr_error_message_free = NULL;
+	otr_ops.resent_msg_prefix = NULL;       /* default: [resent] */
+	otr_ops.resent_msg_prefix_free = NULL;
+	otr_ops.handle_smp_event = &op_handle_smp_event;
+	otr_ops.handle_msg_event = &op_handle_msg_event;
+	otr_ops.create_instag = &op_create_instag;
+	otr_ops.convert_msg = &op_convert_msg;
+	otr_ops.convert_free = &op_convert_free;
+	otr_ops.timer_control = NULL;    	/* we just poll */
+		
 	root_command_add( "otr", 1, cmd_otr, 0 );
 	register_irc_plugin( &otr_plugin );
 }
@@ -245,12 +272,17 @@ gboolean otr_irc_new(irc_t *irc)
 
 	s = set_add( &irc->b->set, "otr_does_html", "true", set_eval_bool, irc );
 	
+	/* regularly call otrl_message_poll */
+	gint definterval = otrl_message_poll_get_default_interval(irc->otr->us);
+	irc->otr->timer = b_timeout_add(definterval, ev_message_poll, irc->otr);
+
 	return TRUE;
 }
 
 void otr_irc_free(irc_t *irc)
 {
 	otr_t *otr = irc->otr;
+	b_event_remove(otr->timer);
 	otrl_userstate_free(otr->us);
 	if(otr->keygen) {
 		kill(otr->keygen, SIGTERM);
@@ -285,6 +317,11 @@ void otr_load(irc_t *irc)
 		}
 		g_snprintf(s, 511, "%s%s.otr_fprints", global.conf->configdir, irc->user->nick);
 		e = otrl_privkey_read_fingerprints(irc->otr->us, s, NULL, NULL);
+		if(e && e!=enoent) {
+			irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
+		}
+		g_snprintf(s, 511, "%s%s.otr_instags", global.conf->configdir, irc->user->nick);
+		e = otrl_instag_read(irc->otr->us, s);
 		if(e && e!=enoent) {
 			irc_rootmsg(irc, "otr load: %s: %s", s, gcry_strerror(e));
 		}
@@ -385,10 +422,8 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 	
 	ignore_msg = otrl_message_receiving(irc->otr->us, &otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, msg, &newmsg,
-		&tlvs, NULL, NULL);
+		&tlvs, NULL, NULL, NULL);
 
-	otr_handle_smp(ic, iu->bu->handle, tlvs);
-	
 	if(ignore_msg) {
 		/* this was an internal OTR protocol message */
 		return NULL;
@@ -396,57 +431,8 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 		/* this was a non-OTR message */
 		return msg;
 	} else {
-		/* OTR has processed this message */
-		ConnContext *context = otrl_context_find(irc->otr->us, iu->bu->handle,
-			ic->acc->user, ic->acc->prpl->name, 0, NULL, NULL, NULL);
-
 		/* we're done with the original msg, which will be caller-freed. */
-		/* NB: must not change the newmsg pointer, since we free it. */
-		msg = newmsg;
-
-		if(context && context->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
-			/* HTML decoding */
-			/* perform any necessary stripping that the top level would miss */
-			if(set_getbool(&ic->bee->set, "otr_does_html") &&
-			   !(ic->flags & OPT_DOES_HTML) &&
-			   set_getbool(&ic->bee->set, "strip_html")) {
-				strip_html(msg);
-			}
-
-			/* coloring */
-			if(set_getbool(&ic->bee->set, "otr_color_encrypted")) {
-				int color;                /* color according to f'print trust */
-				char *pre="", *sep="";    /* optional parts */
-				const char *trust = context->active_fingerprint->trust;
-
-				if(trust && trust[0] != '\0')
-					color=3;   /* green */
-				else
-					color=5;   /* red */
-
-				/* in a query window, keep "/me " uncolored at the beginning */
-				if(g_strncasecmp(msg, "/me ", 4) == 0
-				   && irc_user_msgdest(iu) == irc->user->nick) {
-					msg += 4;  /* skip */
-					pre = "/me ";
-				}
-
-				/* comma in first place could mess with the color code */
-				if(msg[0] == ',') {
-				    /* insert a space between color spec and message */
-				    sep = " ";
-				}
-
-				msg = g_strdup_printf("%s\x03%.2d%s%s\x0F", pre,
-					color, sep, msg);
-			}
-		}
-
-		if(msg == newmsg) {
-			msg = g_strdup(newmsg);
-		}
-		otrl_message_free(newmsg);
-		return msg;
+		return newmsg;
 	}
 }
 
@@ -458,49 +444,26 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	ConnContext *ctx = NULL;
 	irc_t *irc = iu->irc;
 	struct im_connection *ic = iu->bu->ic;
+	otrl_instag_t instag = OTRL_INSTAG_RECENT; // XXX?
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
 	if(ic->acc->prpl->options & OPT_NOOTR) {
 		return msg;
 	}
 
-	ctx = otrl_context_find(irc->otr->us,
-			iu->bu->handle, ic->acc->user, ic->acc->prpl->name,
-			1, NULL, NULL, NULL);
-
-	/* HTML encoding */
-	/* consider OTR plaintext to be HTML if otr_does_html is set */
-	if(ctx && ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
-	   set_getbool(&ic->bee->set, "otr_does_html") &&
-	   (g_strncasecmp(msg, "<html>", 6) != 0)) {
-		emsg = escape_html(msg);
-	}
-	
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
-		ic->acc->user, ic->acc->prpl->name, iu->bu->handle,
-		emsg, NULL, &otrmsg, NULL, NULL);
+		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, instag,
+		emsg, NULL, &otrmsg, OTRL_FRAGMENT_SEND_ALL, &ctx, NULL, NULL);
+	/* in libotr 4.0.0 with OTRL_FRAGMENT_SEND_ALL, otrmsg must be passed
+	 * but the value it gets carries no meaning. it can be set even though
+	 * the message has been injected. */
+
 	if(emsg != msg) {
 		g_free(emsg);   /* we're done with this one */
 	}
 	if(st) {
-		return NULL;
+		/* TODO: Error reporting? */
 	}
-
-	if(otrmsg) {
-		if(!ctx) {
-			otrl_message_free(otrmsg);
-			return NULL;
-		}
-		st = otrl_message_fragment_and_send(&otr_ops, ic, ctx,
-			otrmsg, OTRL_FRAGMENT_SEND_ALL, NULL);
-		otrl_message_free(otrmsg);
-	} else {
-		/* note: otrl_message_sending handles policy, so that if REQUIRE_ENCRYPTION is set,
-		   this case does not occur */
-		return msg;
-	}
-	
-	/* TODO: Error reporting should be done here now (if st!=0), probably. */
 	
 	return NULL;
 }
@@ -619,26 +582,6 @@ void op_inject_message(void *opdata, const char *accountname,
 	}
 }
 
-int op_display_otr_message(void *opdata, const char *accountname,
-	const char *protocol, const char *username, const char *message)
-{
-	struct im_connection *ic = check_imc(opdata, accountname, protocol);
-	char *msg = g_strdup(message);
-	irc_t *irc = ic->bee->ui_data;
-	irc_user_t *u = peeruser(irc, username, protocol);
-
-	strip_html(msg);
-	if(u) {
-		/* display as a notice from this particular user */
-		irc_usernotice(u, "%s", msg);
-	} else {
-		irc_rootmsg(irc, "[otr] %s", msg);
-	}
-
-	g_free(msg);
-	return 0;
-}
-
 void op_new_fingerprint(void *opdata, OtrlUserState us,
 	const char *accountname, const char *protocol,
 	const char *username, unsigned char fingerprint[20])
@@ -690,6 +633,9 @@ void op_gone_secure(void *opdata, ConnContext *context)
 
 void op_gone_insecure(void *opdata, ConnContext *context)
 {
+	/* XXX on 'otr disconnect', this gets called for every instance and we
+	 * get the message multiple times... */
+
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
 	irc_t *irc = ic->bee->ui_data;
@@ -729,20 +675,11 @@ void op_still_secure(void *opdata, ConnContext *context, int is_reply)
 	}
 }
 
-void op_log_message(void *opdata, const char *message)
-{
-	char *msg = g_strdup(message);
-	
-	strip_html(msg);
-	log_message(LOGLVL_INFO, "otr: %s", msg);
-	g_free(msg);
-}
-
 int op_max_message_size(void *opdata, ConnContext *context)
 {
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
-
+ 
 	return ic->acc->prpl->mms;
 }
 
@@ -753,6 +690,246 @@ const char *op_account_name(void *opdata, const char *account, const char *proto
 
 	return peernick(irc, account, protocol);
 }
+
+void op_create_instag(void *opdata, const char *account, const char *protocol)
+{
+	struct im_connection *ic =
+		check_imc(opdata, account, protocol);
+	irc_t *irc = ic->bee->ui_data;
+	gcry_error_t e;
+	char s[512];
+ 
+	g_snprintf(s, 511, "%s%s.otr_instags", global.conf->configdir,
+		irc->user->nick);
+	e = otrl_instag_generate(irc->otr->us, s, account, protocol);
+	if(e) {
+		irc_rootmsg(irc, "otr: %s/%s: otrl_instag_generate failed: %s",
+			account, protocol, gcry_strerror(e));
+	}
+}
+
+void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
+	char **dst, const char *src)
+{
+	struct im_connection *ic =
+		check_imc(opdata, ctx->accountname, ctx->protocol);
+	irc_t *irc = ic->bee->ui_data;
+	irc_user_t *iu = peeruser(irc, ctx->username, ctx->protocol);
+
+	if(typ == OTRL_CONVERT_RECEIVING) {
+		char *msg = g_strdup(src);
+
+		/* HTML decoding */
+		if(set_getbool(&ic->bee->set, "otr_does_html") &&
+		   !(ic->flags & OPT_DOES_HTML) &&
+		   set_getbool(&ic->bee->set, "strip_html")) {
+			strip_html(msg);
+			*dst = msg;
+		}
+
+		/* coloring */
+		if(set_getbool(&ic->bee->set, "otr_color_encrypted")) {
+			int color;                /* color according to f'print trust */
+			char *pre="", *sep="";    /* optional parts */
+			const char *trust = ctx->active_fingerprint->trust;
+
+			if(trust && trust[0] != '\0')
+				color=3;   /* green */
+			else
+				color=5;   /* red */
+
+			/* in a query window, keep "/me " uncolored at the beginning */
+			if(g_strncasecmp(msg, "/me ", 4) == 0
+			   && irc_user_msgdest(iu) == irc->user->nick) {
+				msg += 4;  /* skip */
+				pre = "/me ";
+			}
+
+			/* comma in first place could mess with the color code */
+			if(msg[0] == ',') {
+			    /* insert a space between color spec and message */
+			    sep = " ";
+			}
+
+			*dst = g_strdup_printf("%s\x03%.2d%s%s\x0F", pre,
+				color, sep, msg);
+			g_free(msg);
+		}
+	} else {
+		/* HTML encoding */
+		/* consider OTR plaintext to be HTML if otr_does_html is set */
+		if(ctx && ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED &&
+		   set_getbool(&ic->bee->set, "otr_does_html") &&
+		   (g_strncasecmp(src, "<html>", 6) != 0)) {
+			*dst = escape_html(src);
+		}
+	}
+}
+
+void op_convert_free(void *opdata, ConnContext *ctx, char *msg)
+{
+	g_free(msg);
+}
+	
+/* Socialist Millionaires' Protocol */
+void op_handle_smp_event(void *opdata, OtrlSMPEvent ev, ConnContext *ctx,
+	unsigned short percent, char *question)
+{
+	struct im_connection *ic =
+		check_imc(opdata, ctx->accountname, ctx->protocol);
+	irc_t *irc = ic->bee->ui_data;
+	OtrlUserState us = irc->otr->us;
+	irc_user_t *u = peeruser(irc, ctx->username, ctx->protocol);
+
+	if(!u) return;
+
+	switch(ev) {
+	case OTRL_SMPEVENT_ASK_FOR_SECRET:
+		irc_rootmsg(irc, "smp: initiated by %s"
+			" - respond with \x02otr smp %s <secret>\x02",
+			u->nick, u->nick);
+		break;
+	case OTRL_SMPEVENT_ASK_FOR_ANSWER:
+		irc_rootmsg(irc, "smp: initiated by %s with question: \x02\"%s\"\x02", u->nick,
+			question);
+		irc_rootmsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
+			u->nick);
+		break;
+	case OTRL_SMPEVENT_CHEATED:
+		irc_rootmsg(irc, "smp %s: opponent violated protocol, aborting",
+			u->nick);
+		otrl_message_abort_smp(us, &otr_ops, u->bu->ic, ctx);
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	case OTRL_SMPEVENT_NONE:
+		break;
+	case OTRL_SMPEVENT_IN_PROGRESS:
+		break;
+	case OTRL_SMPEVENT_SUCCESS:
+		if(ctx->smstate->received_question) {
+			irc_rootmsg(irc, "smp %s: correct answer, you are trusted",
+				u->nick);
+		} else {
+			irc_rootmsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
+				u->nick);
+		}
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	case OTRL_SMPEVENT_FAILURE:
+		if(ctx->smstate->received_question) {
+			irc_rootmsg(irc, "smp %s: wrong answer, you are not trusted",
+				u->nick);
+		} else {
+			irc_rootmsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
+				u->nick);
+		}
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	case OTRL_SMPEVENT_ABORT:
+	 	irc_rootmsg(irc, "smp: received abort from %s", u->nick);
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	case OTRL_SMPEVENT_ERROR:
+		irc_rootmsg(irc, "smp %s: protocol error, aborting",
+			u->nick);
+		otrl_message_abort_smp(us, &otr_ops, u->bu->ic, ctx);
+		otrl_sm_state_free(ctx->smstate);
+		break;
+	}
+}
+
+void op_handle_msg_event(void *opdata, OtrlMessageEvent ev, ConnContext *ctx,
+	const char *message, gcry_error_t err)
+{
+	switch(ev) {
+	case OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
+		display_otr_message(opdata, ctx,
+			"policy requires encryption - message not sent");
+		break;
+	case OTRL_MSGEVENT_ENCRYPTION_ERROR:
+		display_otr_message(opdata, ctx,
+			"error during encryption - message not sent");
+		break;
+	case OTRL_MSGEVENT_CONNECTION_ENDED:
+		display_otr_message(opdata, ctx,
+			"other end has disconnected OTR - "
+			"close connection or reconnect!");
+		break;
+	case OTRL_MSGEVENT_SETUP_ERROR:
+		display_otr_message(opdata, ctx,
+			"OTR connection failed: %s", gcry_strerror(err));
+		break;
+	case OTRL_MSGEVENT_MSG_REFLECTED:
+		display_otr_message(opdata, ctx,
+			"received our own OTR message (!?)");
+		break;
+	case OTRL_MSGEVENT_MSG_RESENT:
+		display_otr_message(opdata, ctx,
+			"the previous message was resent");
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
+		display_otr_message(opdata, ctx,
+			"unexpected encrypted message received");
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_UNREADABLE:
+		display_otr_message(opdata, ctx,
+			"unreadable encrypted message received");
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_MALFORMED:
+		display_otr_message(opdata, ctx,
+			"malformed OTR message received");
+		break;
+	case OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
+		if(global.conf->verbose) {
+			log_otr_message(opdata, "%s/%s: heartbeat received",
+				ctx->accountname, ctx->protocol);
+		}
+		break;
+	case OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
+		if(global.conf->verbose) {
+			log_otr_message(opdata, "%s/%s: heartbeat sent",
+				ctx->accountname, ctx->protocol);
+		}
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_GENERAL_ERR:
+		display_otr_message(opdata, ctx,
+			"OTR error message received: %s", message);
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
+		display_otr_message(opdata, ctx,
+			"unencrypted message received: %s", message);
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_UNRECOGNIZED:
+		display_otr_message(opdata, ctx,
+			"unrecognized OTR message received");
+		break;
+	case OTRL_MSGEVENT_RCVDMSG_FOR_OTHER_INSTANCE:
+		display_otr_message(opdata, ctx,
+			"OTR message for a different instance received");
+		break;
+	default:
+		/* shouldn't happen */
+		break;
+	}
+}
+
+const char *op_otr_error_message(void *opdata, ConnContext *ctx,
+	OtrlErrorCode err_code)
+{
+	switch(err_code) {
+	case OTRL_ERRCODE_ENCRYPTION_ERROR:
+		return "i failed to encrypt a message";
+	case OTRL_ERRCODE_MSG_NOT_IN_PRIVATE:
+		return "you sent an encrypted message i didn't expect";
+	case OTRL_ERRCODE_MSG_UNREADABLE:
+		return "could not read encrypted message";
+	case OTRL_ERRCODE_MSG_MALFORMED:
+		return "you sent a malformed OTR message";
+	default:
+		return "i suffered an unexpected OTR error";
+	}
+}
+
 
 
 /*** OTR sub-command handlers ***/
@@ -773,19 +950,24 @@ void cmd_otr_disconnect(irc_t *irc, char **args)
 		return;
 	}
 	
-	otrl_message_disconnect(irc->otr->us, &otr_ops,
+	/* XXX we disconnect all instances; is that what we want? */
+	otrl_message_disconnect_all_instances(irc->otr->us, &otr_ops,
 		u->bu->ic, u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, u->bu->handle);
 	
-	/* for some reason, libotr (3.1.0) doesn't do this itself: */
-	if(u->flags & IRC_USER_OTR_ENCRYPTED) {
-		ConnContext *ctx;
-		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-			u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
-		if(ctx)
-			op_gone_insecure(u->bu->ic, ctx);
-		else /* huh? */
-			u->flags &= ( IRC_USER_OTR_ENCRYPTED | IRC_USER_OTR_TRUSTED );
+	/* for some reason, libotr (4.0.0) doesn't do this itself: */
+	if(!(u->flags & IRC_USER_OTR_ENCRYPTED))
+		return;
+
+	ConnContext *ctx, *p;
+	ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
+		u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
+	if(!ctx) { /* huh? */
+		u->flags &= ( IRC_USER_OTR_ENCRYPTED | IRC_USER_OTR_TRUSTED );
+		return;
 	}
+
+	for(p=ctx; p && p->m_context == ctx->m_context; p=p->next)
+		op_gone_insecure(u->bu->ic, p);
 }
 
 void cmd_otr_connect(irc_t *irc, char **args)
@@ -802,7 +984,9 @@ void cmd_otr_connect(irc_t *irc, char **args)
 		return;
 	}
 	
-	bee_user_msg(irc->b, u->bu, "?OTR?v2?", 0);
+	/* passing this through the filter so it goes through libotr which
+	 * will replace the simple query string with a proper one */
+	otr_filter_msg_out(u, "?OTR?", 0);
 }
 
 void cmd_otr_smp(irc_t *irc, char **args)
@@ -830,7 +1014,7 @@ void cmd_otr_trust(irc_t *irc, char **args)
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
-		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 	if(!ctx) {
 		irc_rootmsg(irc, "%s: no otr context with user", args[1]);
 		return;
@@ -894,7 +1078,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 		if(protocol && myhandle) {
 			*(myhandle++) = '\0';
 			handle = arg;
-			ctx = otrl_context_find(irc->otr->us, handle, myhandle, protocol, 0, NULL, NULL, NULL);
+			ctx = otrl_context_find(irc->otr->us, handle, myhandle, protocol, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 			if(!ctx) {
 				irc_rootmsg(irc, "no such context");
 				g_free(arg);
@@ -908,7 +1092,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 				return;
 			}
 			ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-				u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+				u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 			if(!ctx) {
 				irc_rootmsg(irc, "no otr context with %s", args[1]);
 				g_free(arg);
@@ -981,6 +1165,8 @@ void yes_forget_context(void *data)
 	ConnContext *ctx = (ConnContext *)p->snd;
 
 	g_free(p);
+
+	// XXX forget all contexts
 	
 	if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
 		irc_rootmsg(irc, "active otr connection with %s, terminate it first",
@@ -1027,7 +1213,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		}
 		
 		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-			u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+			u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 		if(!ctx) {
 			irc_rootmsg(irc, "no otr context with %s", args[2]);
 			return;
@@ -1070,7 +1256,7 @@ void cmd_otr_forget(irc_t *irc, char **args)
 		}
 		
 		ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-			u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+			u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
 		if(!ctx) {
 			irc_rootmsg(irc, "no otr context with %s", args[2]);
 			return;
@@ -1118,133 +1304,37 @@ void cmd_otr_forget(irc_t *irc, char **args)
 
 /*** local helpers / subroutines: ***/
 
-/* Socialist Millionaires' Protocol */
-void otr_handle_smp(struct im_connection *ic, const char *handle, OtrlTLV *tlvs)
+void log_otr_message(void *opdata, const char *fmt, ...)
 {
+	va_list va;
+
+	va_start(va, fmt);
+	char *msg = g_strdup_vprintf(fmt, va);
+	va_end(va);
+	
+	log_message(LOGLVL_INFO, "otr: %s", msg);
+}
+
+void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
+{
+	struct im_connection *ic =
+		check_imc(opdata, ctx->accountname, ctx->protocol);
 	irc_t *irc = ic->bee->ui_data;
-	OtrlUserState us = irc->otr->us;
-	OtrlMessageAppOps *ops = &otr_ops;
-	OtrlTLV *tlv = NULL;
-	ConnContext *context;
-	NextExpectedSMP nextMsg;
-	irc_user_t *u;
-	bee_user_t *bu;
+	irc_user_t *u = peeruser(irc, ctx->username, ctx->protocol);
+	va_list va;
 
-	bu = bee_user_by_handle(ic->bee, ic, handle);
-	if(!bu || !(u = bu->ui_data)) return;
-	context = otrl_context_find(us, handle,
-		ic->acc->user, ic->acc->prpl->name, 1, NULL, NULL, NULL);
-	if(!context) {
-		/* huh? out of memory or what? */
-		irc_rootmsg(irc, "smp: failed to get otr context for %s", u->nick);
-		otrl_message_abort_smp(us, ops, u->bu->ic, context);
-		otrl_sm_state_free(context->smstate);
-		return;
-	}
-	nextMsg = context->smstate->nextExpected;
+	va_start(va, fmt);
+	char *msg = g_strdup_vprintf(fmt, va);
+	va_end(va);
 
-	if (context->smstate->sm_prog_state == OTRL_SMP_PROG_CHEATED) {
-		irc_rootmsg(irc, "smp %s: opponent violated protocol, aborting",
-			u->nick);
-		otrl_message_abort_smp(us, ops, u->bu->ic, context);
-		otrl_sm_state_free(context->smstate);
-		return;
+	if(u) {
+		/* display as a notice from this particular user */
+		irc_usernotice(u, "%s", msg);
+	} else {
+		irc_rootmsg(irc, "[otr] %s", msg);
 	}
 
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1Q);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT1) {
-			irc_rootmsg(irc, "smp %s: spurious SMP1Q received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			char *question = g_strndup((char *)tlv->data, tlv->len);
-			irc_rootmsg(irc, "smp: initiated by %s with question: \x02\"%s\"\x02", u->nick,
-				question);
-			irc_rootmsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
-				u->nick);
-			g_free(question);
-			/* smp stays in EXPECT1 until user responds */
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP1);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT1) {
-			irc_rootmsg(irc, "smp %s: spurious SMP1 received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			irc_rootmsg(irc, "smp: initiated by %s"
-				" - respond with \x02otr smp %s <secret>\x02",
-				u->nick, u->nick);
-			/* smp stays in EXPECT1 until user responds */
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP2);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT2) {
-			irc_rootmsg(irc, "smp %s: spurious SMP2 received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			/* SMP2 received, otrl_message_receiving will have sent SMP3 */
-			context->smstate->nextExpected = OTRL_SMP_EXPECT4;
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP3);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT3) {
-			irc_rootmsg(irc, "smp %s: spurious SMP3 received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			/* SMP3 received, otrl_message_receiving will have sent SMP4 */
-			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
-				if(context->smstate->received_question) {
-					irc_rootmsg(irc, "smp %s: correct answer, you are trusted",
-						u->nick);
-				} else {
-					irc_rootmsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
-						u->nick);
-				}
-			} else {
-				if(context->smstate->received_question) {
-					irc_rootmsg(irc, "smp %s: wrong answer, you are not trusted",
-						u->nick);
-				} else {
-					irc_rootmsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
-						u->nick);
-				}
-			}
-			otrl_sm_state_free(context->smstate);
-			/* smp is in back in EXPECT1 */
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP4);
-	if (tlv) {
-		if (nextMsg != OTRL_SMP_EXPECT4) {
-			irc_rootmsg(irc, "smp %s: spurious SMP4 received, aborting", u->nick);
-			otrl_message_abort_smp(us, ops, u->bu->ic, context);
-			otrl_sm_state_free(context->smstate);
-		} else {
-			/* SMP4 received, otrl_message_receiving will have set fp trust */
-			if(context->smstate->sm_prog_state == OTRL_SMP_PROG_SUCCEEDED) {
-				irc_rootmsg(irc, "smp %s: secrets proved equal, fingerprint trusted",
-					u->nick);
-			} else {
-				irc_rootmsg(irc, "smp %s: secrets did not match, fingerprint not trusted",
-					u->nick);
-			}
-			otrl_sm_state_free(context->smstate);
-			/* smp is in back in EXPECT1 */
-		}
-	}
-	tlv = otrl_tlv_find(tlvs, OTRL_TLV_SMP_ABORT);
-	if (tlv) {
-	 	irc_rootmsg(irc, "smp: received abort from %s", u->nick);
-		otrl_sm_state_free(context->smstate);
-		/* smp is in back in EXPECT1 */
-	}
+	g_free(msg);
 }
 
 /* combined handler for the 'otr smp' and 'otr smpq' commands */
@@ -1253,6 +1343,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 {
 	irc_user_t *u;
 	ConnContext *ctx;
+	otrl_instag_t instag = OTRL_INSTAG_RECENT;  // XXX
 
 	u = irc_user_by_name(irc, nick);
 	if(!u || !u->bu || !u->bu->ic) {
@@ -1265,7 +1356,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 	}
 	
 	ctx = otrl_context_find(irc->otr->us, u->bu->handle,
-		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, 0, NULL, NULL, NULL);
+		u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, instag, 0, NULL, NULL, NULL);
 	if(!ctx || ctx->msgstate != OTRL_MSGSTATE_ENCRYPTED) {
 		irc_rootmsg(irc, "smp: otr inactive with %s, try \x02otr connect"
 				" %s\x02", nick, nick);
@@ -1306,12 +1397,38 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 	}
 }
 
+/* timeout handler that calls otrl_message_poll */
+gboolean ev_message_poll(gpointer data, gint fd, b_input_condition cond)
+{
+	otr_t *otr = data;
+
+	if(otr && otr->us)
+		otrl_message_poll(otr->us, &otr_ops, NULL);
+
+	return TRUE;	/* cycle timer */
+}
+
 /* helper to assert that account and protocol names given to ops below always
    match the im_connection passed through as opdata */
 struct im_connection *check_imc(void *opdata, const char *accountname,
 	const char *protocol)
 {
 	struct im_connection *ic = (struct im_connection *)opdata;
+
+	/* libotr 4.0.0 has a bug where it doesn't set opdata, so we catch
+	 * that and try to find the desired connection in the global list. */
+	if(!ic) {
+		GSList *l;
+		for(l=get_connections(); l; l=l->next) {
+			ic = l->data;
+			if(strcmp(accountname, ic->acc->user) == 0 &&
+			   strcmp(protocol, ic->acc->prpl->name) == 0)
+				break;
+		}
+		assert(l != NULL);  /* a match should always be found */
+		if(!l)
+			return NULL;
+	}
 
 	if (strcmp(accountname, ic->acc->user) != 0) {
 		log_message(LOGLVL_WARNING,
@@ -1593,6 +1710,8 @@ void show_general_otr_info(irc_t *irc)
 		irc_rootmsg(irc, "  (none)");
 
 	/* list all contexts */
+	/* XXX remove this, or split off as its own command */
+	/* XXX show instags? */
 	irc_rootmsg(irc, "%s", "");
 	irc_rootmsg(irc, "\x1f" "connection contexts:\x1f (bold=currently encrypted)");
 	for(ctx=irc->otr->us->context_root; ctx; ctx=ctx->next) {\
@@ -1621,6 +1740,8 @@ void show_general_otr_info(irc_t *irc)
 
 void show_otr_context_info(irc_t *irc, ConnContext *ctx)
 {
+	// XXX show all instags/subcontexts
+
 	switch(ctx->otr_offer) {
 	case OFFER_NOT:
 		irc_rootmsg(irc, "  otr offer status: none sent");
