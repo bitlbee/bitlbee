@@ -511,6 +511,12 @@ elif [ "$otr" = "plugin" ]; then
 	echo "CFLAGS+=-I${otrprefix}/include" >> Makefile.settings
 	echo 'OTR_PI=otr.so' >> Makefile.settings
 fi
+if [ "$otr" != 0 ] && ! pkg-config libotr --atleast-version=4.0; then
+	echo
+	echo 'WARNING: Your libotr seems to be old. BitlBee now needs at least libotr 4.0.'
+	# Not hard-failing because the code above doesn't use pkg-config, so who knows
+	# what's true at this point...
+fi
 
 if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
 	if [ "$arch" = "Darwin" ]; then
