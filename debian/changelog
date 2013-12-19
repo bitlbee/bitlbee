@@ -1,8 +1,37 @@
-bitlbee (3.2.1-0) UNRELEASED; urgency=low
+bitlbee (3.2.1+otr4-1) unstable; urgency=low
 
-  * Bogus changelog entry so nightly builds get the right version number.
+  * New upstream version, fixes Twitter API compatibility (now using HTTP/1.1).
+    (Closes: #731748)
+  * Define _GNU_SOURCE via cmdline instead of include file. (Closes: #703550)
+  * Restore OTR support. (Closes: #711071)
+    - This is not part of the 3.2.1 release but really should have been.
+    - Package still has a libotr2-dev dependency even though it doesn't work
+      with that anymore. It's a hack so I can at least still do pbuilder
+      builds on older distros. (Just with the otr pkg disabled.)
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 07 Dec 2013 17:48:17 +0000
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Thu, 19 Dec 2013 01:11:52 +0100
+
+bitlbee (3.2-1.2) unstable; urgency=low
+
+  [ Cyril Brulebois ]
+  * Disable libotr support (hopefully temporarily) for the transition from
+    libotr2 to libotr5 (Closes: #711071):
+    - debian/control: Drop bitlbee-plugin-otr package.
+    - debian/rules: Adjust DH_OPTIONS handling, drop support for
+      bitlbee-plugin-otr, and pass --otr=0 to configure.
+
+  [ Antoine Beaupré ]
+  * Non-maintainer upload.
+
+ -- Antoine Beaupré <anarcat@debian.org>  Tue, 24 Sep 2013 16:04:04 +0200
+
+bitlbee (3.2-1.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Switch the order of (lib)gnutls-dev Build-Depends to libgnutls-dev |
+    gnutls-dev. (Closes: #698236)
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Mon, 04 Mar 2013 23:52:07 +0100
 
 bitlbee (3.2-1) unstable; urgency=high
 
