@@ -195,9 +195,8 @@ fi
 
 
 if [ "$debug" = "1" ]; then
-	[ -z "$CFLAGS" ] && CFLAGS=-g
 	echo 'DEBUG=1' >> Makefile.settings
-	CFLAGS="$CFLAGS -DDEBUG"
+	CFLAGS="$CFLAGS -g -DDEBUG"
 else
 	[ -z "$CFLAGS" ] && CFLAGS="-O2 -fno-strict-aliasing"
 fi
