@@ -453,19 +453,26 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, instag,
-		emsg, NULL, &otrmsg, OTRL_FRAGMENT_SEND_ALL, &ctx, NULL, NULL);
+		emsg, NULL, &otrmsg, OTRL_FRAGMENT_SEND_SKIP, &ctx, NULL, NULL);
 	/* in libotr 4.0.0 with OTRL_FRAGMENT_SEND_ALL, otrmsg must be passed
 	 * but the value it gets carries no meaning. it can be set even though
-	 * the message has been injected. */
+	 * the message has been injected.
+	 * With OTRL_FRAGMENT_SEND_SKIP, libotr doesn't handle the sending, it's
+	 * up to us.
+	 */
 
 	if(emsg != msg) {
 		g_free(emsg);   /* we're done with this one */
+		emsg = NULL;
 	}
 	if(st) {
-		/* TODO: Error reporting? */
+		irc_rootmsg(irc, "Error encrypting text for OTR: %d", st);
 	}
 	
-	return NULL;
+	if (otrmsg != NULL) {
+		return otrmsg;
+	}
+	return emsg;
 }
 
 static const struct irc_plugin otr_plugin =
