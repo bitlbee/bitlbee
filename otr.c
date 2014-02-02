@@ -443,7 +443,10 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	ConnContext *ctx = NULL;
 	irc_t *irc = iu->irc;
 	struct im_connection *ic = iu->bu->ic;
-	otrl_instag_t instag = OTRL_INSTAG_RECENT; // XXX?
+	otrl_instag_t instag = OTRL_INSTAG_BEST; // XXX?
+	/* NB: in libotr 4.0.0 OTRL_INSTAG_RECENT will cause a null-pointer deref
+	 * in otrl_message_sending with newly-added OTR contexts.
+	 */
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
 	if(ic->acc->prpl->options & OPT_NOOTR) {
@@ -1344,7 +1347,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 {
 	irc_user_t *u;
 	ConnContext *ctx;
-	otrl_instag_t instag = OTRL_INSTAG_RECENT;  // XXX
+	otrl_instag_t instag = OTRL_INSTAG_BEST;  // XXX
 
 	u = irc_user_by_name(irc, nick);
 	if(!u || !u->bu || !u->bu->ic) {
