@@ -440,11 +440,13 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 {	
 	int st;
 	char *otrmsg = NULL;
-	char *emsg = msg;           /* the message as we hand it to libotr */
 	ConnContext *ctx = NULL;
 	irc_t *irc = iu->irc;
 	struct im_connection *ic = iu->bu->ic;
-	otrl_instag_t instag = OTRL_INSTAG_RECENT; // XXX?
+	otrl_instag_t instag = OTRL_INSTAG_BEST; // XXX?
+	/* NB: in libotr 4.0.0 OTRL_INSTAG_RECENT will cause a null-pointer deref
+	 * in otrl_message_sending with newly-added OTR contexts.
+	 */
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
 	if(ic->acc->prpl->options & OPT_NOOTR) {
@@ -453,26 +455,21 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 
 	st = otrl_message_sending(irc->otr->us, &otr_ops, ic,
 		ic->acc->user, ic->acc->prpl->name, iu->bu->handle, instag,
-		emsg, NULL, &otrmsg, OTRL_FRAGMENT_SEND_SKIP, &ctx, NULL, NULL);
-	/* in libotr 4.0.0 with OTRL_FRAGMENT_SEND_ALL, otrmsg must be passed
-	 * but the value it gets carries no meaning. it can be set even though
-	 * the message has been injected.
-	 * With OTRL_FRAGMENT_SEND_SKIP, libotr doesn't handle the sending, it's
-	 * up to us.
-	 */
+		msg, NULL, &otrmsg, OTRL_FRAGMENT_SEND_ALL_BUT_LAST, &ctx, NULL, NULL);
 
-	if(emsg != msg) {
-		g_free(emsg);   /* we're done with this one */
-		emsg = NULL;
-	}
-	if(st) {
-		irc_rootmsg(irc, "Error encrypting text for OTR: %d", st);
+	if(otrmsg && otrmsg != msg) {
+		/* libotr wants us to replace our message */
+		/* NB: caller will free old msg */
+		msg = g_strdup(otrmsg);
+		otrl_message_free(otrmsg);
 	}
 	
-	if (otrmsg != NULL) {
-		return otrmsg;
+	if(st) {
+		irc_usernotice(iu, "otr: error handling outgoing message: %d", st);
+		msg = NULL;	/* do not send plaintext! */
 	}
-	return emsg;
+
+	return msg;
 }
 
 static const struct irc_plugin otr_plugin =
@@ -1350,7 +1347,7 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 {
 	irc_user_t *u;
 	ConnContext *ctx;
-	otrl_instag_t instag = OTRL_INSTAG_RECENT;  // XXX
+	otrl_instag_t instag = OTRL_INSTAG_BEST;  // XXX
 
 	u = irc_user_by_name(irc, nick);
 	if(!u || !u->bu || !u->bu->ic) {
