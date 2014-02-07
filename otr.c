@@ -207,9 +207,14 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args);
 /* check whether a string is safe to use in a path component */
 int strsane(const char *s);
 
+/* close the OTR connection with the given buddy */
+gboolean otr_disconnect_user(irc_t *irc, irc_user_t *u);
+
+/* close all active OTR connections */
+void otr_disconnect_all(irc_t *irc);
+
 /* functions to be called for certain events */
 static const struct irc_plugin otr_plugin;
-
 
 /*** routines declared in otr.h: ***/
 
@@ -282,6 +287,7 @@ gboolean otr_irc_new(irc_t *irc)
 void otr_irc_free(irc_t *irc)
 {
 	otr_t *otr = irc->otr;
+	otr_disconnect_all(irc);
 	b_event_remove(otr->timer);
 	otrl_userstate_free(otr->us);
 	if(otr->keygen) {
@@ -637,9 +643,6 @@ void op_gone_secure(void *opdata, ConnContext *context)
 
 void op_gone_insecure(void *opdata, ConnContext *context)
 {
-	/* XXX on 'otr disconnect', this gets called for every instance and we
-	 * get the message multiple times... */
-
 	struct im_connection *ic =
 		check_imc(opdata, context->accountname, context->protocol);
 	irc_t *irc = ic->bee->ui_data;
@@ -948,30 +951,16 @@ void cmd_otr_disconnect(irc_t *irc, char **args)
 {
 	irc_user_t *u;
 
-	u = irc_user_by_name(irc, args[1]);
-	if(!u || !u->bu || !u->bu->ic) {
-		irc_rootmsg(irc, "%s: unknown user", args[1]);
-		return;
+	if(!strcmp("*", args[1])) {
+		otr_disconnect_all(irc);
+		irc_rootmsg(irc, "all conversations are now in cleartext");
+	} else {
+		u = irc_user_by_name(irc, args[1]);
+		if(otr_disconnect_user(irc, u))
+			irc_usernotice(u, "conversation is now in cleartext");
+		else
+			irc_rootmsg(irc, "%s: unknown user", args[1]);
 	}
-	
-	/* XXX we disconnect all instances; is that what we want? */
-	otrl_message_disconnect_all_instances(irc->otr->us, &otr_ops,
-		u->bu->ic, u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, u->bu->handle);
-	
-	/* for some reason, libotr (4.0.0) doesn't do this itself: */
-	if(!(u->flags & IRC_USER_OTR_ENCRYPTED))
-		return;
-
-	ConnContext *ctx, *p;
-	ctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
-		u->bu->ic->acc->prpl->name, OTRL_INSTAG_MASTER, 0, NULL, NULL, NULL);
-	if(!ctx) { /* huh? */
-		u->flags &= ( IRC_USER_OTR_ENCRYPTED | IRC_USER_OTR_TRUSTED );
-		return;
-	}
-
-	for(p=ctx; p && p->m_context == ctx->m_context; p=p->next)
-		op_gone_insecure(u->bu->ic, p);
 }
 
 void cmd_otr_connect(irc_t *irc, char **args)
@@ -2003,6 +1992,37 @@ void yes_keygen(void *data)
 int strsane(const char *s)
 {
 	return strpbrk(s, "/\\") == NULL;
+}
+
+/* close the OTR connection with the given buddy */
+gboolean otr_disconnect_user(irc_t *irc, irc_user_t *u)
+{
+	if(!u || !u->bu || !u->bu->ic)
+		return FALSE;
+
+	/* XXX we disconnect all instances; is that what we want? */
+	otrl_message_disconnect_all_instances(irc->otr->us, &otr_ops,
+		u->bu->ic, u->bu->ic->acc->user, u->bu->ic->acc->prpl->name, u->bu->handle);
+	
+	u->flags &= ~IRC_USER_OTR_TRUSTED;
+	u->flags &= ~IRC_USER_OTR_ENCRYPTED;
+	otr_update_modeflags(irc, u);
+
+	return TRUE;
+}
+
+/* close all active OTR connections */
+void otr_disconnect_all(irc_t *irc)
+{
+	irc_user_t *u;
+	ConnContext *ctx;
+
+	for(ctx=irc->otr->us->context_root; ctx; ctx=ctx->next) {
+		if(ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
+			u = peeruser(irc, ctx->username, ctx->protocol);
+			(void) otr_disconnect_user(irc, u);
+		}
+	}
 }
 
 /* vim: set noet ts=4 sw=4: */

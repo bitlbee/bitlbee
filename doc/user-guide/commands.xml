@@ -412,11 +412,12 @@
 		
 		<bitlbee-command name="disconnect">
 			<syntax>otr disconnect &lt;nick&gt;</syntax>
+			<syntax>otr disconnect *</syntax>
 			
 			<description>
 			
 				<para>
-					Resets the connection with the specified user to cleartext.
+					Resets the connection with the specified user/all users to cleartext.
 				</para>
 				
 			</description>
