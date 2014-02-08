@@ -183,7 +183,7 @@ static void oauth2_access_token_done( struct http_request *req )
 	if( getenv( "BITLBEE_DEBUG" ) )
 		printf( "Extracted atoken=%s rtoken=%s\n", atoken, rtoken );
 	if( !atoken && !rtoken && !error )
-		error = g_strdup( "Unusuable response" );
+		error = g_strdup( "Unusable response" );
 	
 	cb_data->func( cb_data->data, atoken, rtoken, error );
 	g_free( content_type );
