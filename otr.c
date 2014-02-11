@@ -725,6 +725,7 @@ void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
 
 	if(typ == OTRL_CONVERT_RECEIVING) {
 		char *msg = g_strdup(src);
+		char *buf = msg;
 
 		/* HTML decoding */
 		if(set_getbool(&ic->bee->set, "otr_does_html") &&
@@ -760,7 +761,7 @@ void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
 
 			*dst = g_strdup_printf("%s\x03%.2d%s%s\x0F", pre,
 				color, sep, msg);
-			g_free(msg);
+			g_free(buf);
 		}
 	} else {
 		/* HTML encoding */
