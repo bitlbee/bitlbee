@@ -725,6 +725,7 @@ void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
 
 	if(typ == OTRL_CONVERT_RECEIVING) {
 		char *msg = g_strdup(src);
+		char *buf = msg;
 
 		/* HTML decoding */
 		if(set_getbool(&ic->bee->set, "otr_does_html") &&
@@ -760,7 +761,7 @@ void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
 
 			*dst = g_strdup_printf("%s\x03%.2d%s%s\x0F", pre,
 				color, sep, msg);
-			g_free(msg);
+			g_free(buf);
 		}
 	} else {
 		/* HTML encoding */
@@ -966,6 +967,7 @@ void cmd_otr_disconnect(irc_t *irc, char **args)
 void cmd_otr_connect(irc_t *irc, char **args)
 {
 	irc_user_t *u;
+	char *msg, *query = "?OTR?";
 
 	u = irc_user_by_name(irc, args[1]);
 	if(!u || !u->bu || !u->bu->ic) {
@@ -979,7 +981,16 @@ void cmd_otr_connect(irc_t *irc, char **args)
 	
 	/* passing this through the filter so it goes through libotr which
 	 * will replace the simple query string with a proper one */
-	otr_filter_msg_out(u, "?OTR?", 0);
+	msg = otr_filter_msg_out(u, query, 0);
+
+	/* send the message */
+	if(msg) {
+		u->bu->ic->acc->prpl->buddy_msg(u->bu->ic, u->bu->handle, msg, 0);  /* XXX flags? */
+		/* XXX error message? */
+
+		if(msg != query)
+			g_free(msg);
+	}
 }
 
 void cmd_otr_smp(irc_t *irc, char **args)
