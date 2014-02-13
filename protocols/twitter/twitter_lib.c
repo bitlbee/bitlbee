@@ -163,7 +163,7 @@ char *twitter_parse_error(struct http_request *req)
 	ret = NULL;
 
 	if (req->body_size > 0) {
-		root = json_parse(req->reply_body);
+		root = json_parse(req->reply_body, req->body_size);
 		err = json_o_get(root, "errors");
 		if (err && err->type == json_array && (err = err->u.array.values[0]) &&
 		    err->type == json_object) {
@@ -219,7 +219,7 @@ static json_value *twitter_parse_response(struct im_connection *ic, struct http_
 		td->http_fails = 0;
 	}
 
-	if ((ret = json_parse(req->reply_body)) == NULL) {
+	if ((ret = json_parse(req->reply_body, req->body_size)) == NULL) {
 		imcb_error(ic, "Could not retrieve %s: %s",
 			   path, "XML parse error");
 	}
@@ -262,7 +262,7 @@ static gboolean twitter_xt_get_friends_id_list(json_value *node, struct twitter_
 			continue;
 		
 		txl->list = g_slist_prepend(txl->list,
-			g_strdup_printf("%lld", c->u.array.values[i]->u.integer));
+			g_strdup_printf("%" PRIu64, c->u.array.values[i]->u.integer));
 	}
 	
 	c = json_o_get(node, "next_cursor");
@@ -772,7 +772,7 @@ static void twitter_http_stream(struct http_request *req)
 		c = req->reply_body[len];
 		req->reply_body[len] = '\0';
 		
-		if ((parsed = json_parse(req->reply_body))) {
+		if ((parsed = json_parse(req->reply_body, req->body_size))) {
 			twitter_stream_handle_object(ic, parsed);
 		}
 		json_value_free(parsed);

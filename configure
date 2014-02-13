@@ -139,7 +139,7 @@ INSTALL=install -p
 
 DESTDIR=
 LFLAGS=
-EFLAGS=
+EFLAGS=-lm
 EOF
 
 srcdir=$(cd $(dirname $0);pwd)

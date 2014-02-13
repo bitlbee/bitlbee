@@ -153,7 +153,7 @@ static void oauth2_access_token_done( struct http_request *req )
 	if( content_type && ( strstr( content_type, "application/json" ) ||
 	                      strstr( content_type, "text/javascript" ) ) )
 	{
-		json_value *js = json_parse( req->reply_body );
+		json_value *js = json_parse( req->reply_body, req->body_size );
 		if( js && js->type == json_object )
 		{
 			JSON_O_FOREACH( js, k, v )
