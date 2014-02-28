@@ -133,7 +133,7 @@ ifdef SKYPE_PI
 	$(INSTALL) -m 0644 $(_SRCDIR_)protocols/skype/skyped.cnf $(DESTDIR)$(ETCDIR)/../skyped/skyped.cnf
 	$(INSTALL) -m 0644 $(_SRCDIR_)protocols/skype/skyped.conf.dist $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
 	$(INSTALL) -m 0755 $(_SRCDIR_)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
-	make -C protocols/skype install-doc
+	$(MAKE) -C protocols/skype install-doc
 endif
 
 systemd:
