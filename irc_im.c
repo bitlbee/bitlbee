@@ -625,7 +625,7 @@ static gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *b
 	irc_t *irc = bee->ui_data;
 	irc_user_t *iu = bu->ui_data;
 	irc_channel_t *ic = c->ui_data;
-	char *ts = NULL;
+	char *wrapped, *ts = NULL;
 	
 	if( ic == NULL )
 		return FALSE;
@@ -633,7 +633,8 @@ static gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *b
 	if( sent_at > 0 && set_getbool( &bee->set, "display_timestamps" ) )
 		ts = irc_format_timestamp( irc, sent_at );
 	
-	irc_send_msg( iu, "PRIVMSG", ic->name, msg, ts );
+	wrapped = word_wrap( msg, 425 );
+	irc_send_msg( iu, "PRIVMSG", ic->name, wrapped, ts );
 	g_free( ts );
 	
 	return TRUE;

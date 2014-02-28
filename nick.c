@@ -209,7 +209,7 @@ char *nick_gen( bee_user_t *bu )
 			part = asc = g_convert_with_fallback( part, -1, "ASCII//TRANSLIT",
 			                                      "UTF-8", "", NULL, NULL, NULL );
 		
-		if( chop && ( s = strchr( part, chop ) ) )
+		if( part && chop && ( s = strchr( part, chop ) ) )
 			len = MIN( len, s - part );
 		
 		if( part )

@@ -288,7 +288,7 @@ static void jabber_buddy_ask_no( void *data )
 {
 	struct jabber_buddy_ask_data *bla = data;
 	
-	presence_send_request( bla->ic, bla->handle, "subscribed" );
+	presence_send_request( bla->ic, bla->handle, "unsubscribed" );
 	
 	g_free( bla->handle );
 	g_free( bla );

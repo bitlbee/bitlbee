@@ -90,17 +90,17 @@ endif
 
 install-bin:
 	mkdir -p $(DESTDIR)$(SBINDIR)
-	install -m 0755 $(OUTFILE) $(DESTDIR)$(SBINDIR)/$(OUTFILE)
+	$(INSTALL) -m 0755 $(OUTFILE) $(DESTDIR)$(SBINDIR)/$(OUTFILE)
 
 uninstall-bin:
 	rm -f $(DESTDIR)$(SBINDIR)/$(OUTFILE)
 
 install-dev:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
-	install -m 0644 config.h $(DESTDIR)$(INCLUDEDIR)
-	for i in $(headers); do install -m 0644 $(_SRCDIR_)$$i $(DESTDIR)$(INCLUDEDIR); done
+	$(INSTALL) -m 0644 config.h $(DESTDIR)$(INCLUDEDIR)
+	for i in $(headers); do $(INSTALL) -m 0644 $(_SRCDIR_)$$i $(DESTDIR)$(INCLUDEDIR); done
 	mkdir -p $(DESTDIR)$(PCDIR)
-	install -m 0644 bitlbee.pc $(DESTDIR)$(PCDIR)
+	$(INSTALL) -m 0644 bitlbee.pc $(DESTDIR)$(PCDIR)
 
 uninstall-dev:
 	rm -f $(foreach hdr,$(headers),$(DESTDIR)$(INCLUDEDIR)/$(hdr))
@@ -109,8 +109,8 @@ uninstall-dev:
 
 install-etc:
 	mkdir -p $(DESTDIR)$(ETCDIR)
-	install -m 0644 $(_SRCDIR_)motd.txt $(DESTDIR)$(ETCDIR)/motd.txt
-	install -m 0644 $(_SRCDIR_)bitlbee.conf $(DESTDIR)$(ETCDIR)/bitlbee.conf
+	$(INSTALL) -m 0644 $(_SRCDIR_)motd.txt $(DESTDIR)$(ETCDIR)/motd.txt
+	$(INSTALL) -m 0644 $(_SRCDIR_)bitlbee.conf $(DESTDIR)$(ETCDIR)/bitlbee.conf
 
 uninstall-etc:
 	rm -f $(DESTDIR)$(ETCDIR)/motd.txt
@@ -122,18 +122,18 @@ install-plugins: install-plugin-otr install-plugin-skype
 install-plugin-otr:
 ifdef OTR_PI
 	mkdir -p $(DESTDIR)$(PLUGINDIR)
-	install -m 0755 otr.so $(DESTDIR)$(PLUGINDIR)
+	$(INSTALL) -m 0755 otr.so $(DESTDIR)$(PLUGINDIR)
 endif
 
 install-plugin-skype:
 ifdef SKYPE_PI
 	mkdir -p $(DESTDIR)$(PLUGINDIR)
-	install -m 0755 skype.so $(DESTDIR)$(PLUGINDIR)
+	$(INSTALL) -m 0755 skype.so $(DESTDIR)$(PLUGINDIR)
 	mkdir -p $(DESTDIR)$(ETCDIR)/../skyped $(DESTDIR)$(BINDIR)
-	install -m 0644 $(_SRCDIR_)protocols/skype/skyped.cnf $(DESTDIR)$(ETCDIR)/../skyped/skyped.cnf
-	install -m 0644 $(_SRCDIR_)protocols/skype/skyped.conf.dist $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
-	install -m 0755 $(_SRCDIR_)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
-	make -C protocols/skype install-doc
+	$(INSTALL) -m 0644 $(_SRCDIR_)protocols/skype/skyped.cnf $(DESTDIR)$(ETCDIR)/../skyped/skyped.cnf
+	$(INSTALL) -m 0644 $(_SRCDIR_)protocols/skype/skyped.conf.dist $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
+	$(INSTALL) -m 0755 $(_SRCDIR_)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
+	$(MAKE) -C protocols/skype install-doc
 endif
 
 systemd:
@@ -146,9 +146,9 @@ install-systemd:
 ifdef SYSTEMDSYSTEMUNITDIR
 ifeq ($(shell id -u),0)
 	mkdir -p $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
-	install -m 0644 init/bitlbee.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
-	install -m 0644 init/bitlbee@.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
-	install -m 0644 init/bitlbee.socket $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
+	$(INSTALL) -m 0644 init/bitlbee.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
+	$(INSTALL) -m 0644 init/bitlbee@.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
+	$(INSTALL) -m 0644 init/bitlbee.socket $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 else
 	@echo Not root, so not installing systemd files.
 endif
