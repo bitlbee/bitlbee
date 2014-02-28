@@ -6,6 +6,7 @@
 #include "irc.h"
 #include "set.h"
 #include "misc.h"
+#include "bitlbee.h"
 
 START_TEST(test_nick_strip)
 {
@@ -30,7 +31,7 @@ START_TEST(test_nick_strip)
 	for (i = 0; get[i]; i++) {
 		char copy[60];
 		strcpy(copy, get[i]);
-		nick_strip(copy);
+		nick_strip(NULL, copy);
 		fail_unless (strcmp(copy, expected[i]) == 0, 
 					 "(%d) nick_strip broken: %s -> %s (expected: %s)", 
 					 i, get[i], copy, expected[i]);
@@ -45,7 +46,7 @@ START_TEST(test_nick_ok_ok)
 	int i;
 
 	for (i = 0; nicks[i]; i++) {
-		fail_unless (nick_ok(nicks[i]) == 1,
+		fail_unless (nick_ok(NULL, nicks[i]) == 1,
 					 "nick_ok() failed: %s", nicks[i]);
 	}
 }
@@ -58,7 +59,7 @@ START_TEST(test_nick_ok_notok)
 	int i;
 
 	for (i = 0; nicks[i]; i++) {
-		fail_unless (nick_ok(nicks[i]) == 0,
+		fail_unless (nick_ok(NULL, nicks[i]) == 0,
 					 "nick_ok() succeeded for invalid: %s", nicks[i]);
 	}
 }
