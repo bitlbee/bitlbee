@@ -421,7 +421,7 @@ static void cmd_account( irc_t *irc, char **cmd )
 					return;
 				}
 			
-			irc->status |= OPER_HACK_ACCOUNT_ADD;
+			irc->status |= OPER_HACK_ACCOUNT_PASSWORD;
 		}
 		
 		prpl = find_protocol( cmd[2] );
