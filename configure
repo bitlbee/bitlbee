@@ -479,6 +479,7 @@ if [ "$gcov" = "1" ]; then
 fi
 
 if [ "$plugins" = 0 ]; then
+	plugindir=""
 	echo '#undef WITH_PLUGINS' >> config.h
 else
 	echo '#define WITH_PLUGINS' >> config.h
@@ -570,6 +571,7 @@ fi
 cat <<EOF>bitlbee.pc
 prefix=$prefix
 includedir=$includedir
+plugindir=$plugindir
 
 Name: bitlbee
 Description: IRC to IM gateway
