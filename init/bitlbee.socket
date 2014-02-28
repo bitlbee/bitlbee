@@ -2,7 +2,8 @@
 Conflicts=bitlbee.service
 
 [Socket]
-ListenStream=127.0.0.1:6667
+ListenStream=6667
+BindToDevice=lo
 Accept=yes
 
 [Install]
