@@ -159,7 +159,7 @@ void md5_finish(struct MD5Context *ctx, md5_byte_t digest[16])
 	ctx->buf[2] = cvt32(ctx->buf[2]);
 	ctx->buf[3] = cvt32(ctx->buf[3]);
 	memcpy(digest, ctx->buf, 16);
-	memset(ctx, 0, sizeof(ctx));	/* In case it's sensitive */
+	memset(ctx, 0, sizeof(*ctx));	/* In case it's sensitive */
 }
 
 void md5_finish_ascii(struct MD5Context *context, char *ascii)
