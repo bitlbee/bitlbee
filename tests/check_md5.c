@@ -36,7 +36,6 @@ static void check_sums(int l)
 		md5_byte_t sum[16];
   		tcase_fn_start (tests[i].str, __FILE__, __LINE__);
 		md5_state_t state;
-		int di;
 
 		md5_init(&state);
 		md5_append(&state, (const md5_byte_t *)tests[i].str, strlen(tests[i].str));

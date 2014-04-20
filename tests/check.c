@@ -3,6 +3,7 @@
 #include <gmodule.h>
 #include <check.h>
 #include <locale.h>
+#include <sys/time.h>
 #include "bitlbee.h"
 #include "testsuite.h"
 
@@ -81,7 +82,6 @@ int main (int argc, char **argv)
 		{"verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Be verbose", NULL },
 		{ NULL }
 	};
-	int i;
 
 	pc = g_option_context_new("");
 	g_option_context_add_main_entries(pc, options, NULL);
