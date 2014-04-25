@@ -3,9 +3,10 @@ ifdef _SRCDIR_
 _SRCDIR_ := $(_SRCDIR_)tests/
 endif
 
-LFLAGS +=-lcheck
+CFLAGS += $(shell pkg-config --cflags check)
+LFLAGS += $(shell pkg-config --libs check)
 
-all: check 
+all: check
 	./check $(CHECKFLAGS)
 
 clean:

@@ -25,7 +25,7 @@ START_TEST(test_set_add_existing)
 END_TEST
 
 START_TEST(test_set_find_unknown)
-	set_t *s = NULL, *t;
+	set_t *s = NULL;
 	fail_unless (set_find(&s, "foo") == NULL);
 END_TEST
 
@@ -68,8 +68,8 @@ END_TEST
 
 START_TEST(test_set_get_str_value)
 	void *data = "data";
-	set_t *s = NULL, *t;
-	t = set_add(&s, "name", "default", NULL, data);
+	set_t *s = NULL;
+	set_add(&s, "name", "default", NULL, data);
 	set_setstr(&s, "name", "foo");
 	fail_unless(strcmp(set_getstr(&s, "name"), "foo") == 0);
 END_TEST
@@ -81,16 +81,16 @@ END_TEST
 
 START_TEST(test_setint)
 	void *data = "data";
-	set_t *s = NULL, *t;
-	t = set_add(&s, "name", "10", NULL, data);
+	set_t *s = NULL;
+	set_add(&s, "name", "10", NULL, data);
 	set_setint(&s, "name", 3);
 	fail_unless(set_getint(&s, "name") == 3);
 END_TEST
 
 START_TEST(test_setstr)
 	void *data = "data";
-	set_t *s = NULL, *t;
-	t = set_add(&s, "name", "foo", NULL, data);
+	set_t *s = NULL;
+	set_add(&s, "name", "foo", NULL, data);
 	set_setstr(&s, "name", "bloe");
 	fail_unless(strcmp(set_getstr(&s, "name"), "bloe") == 0);
 END_TEST
