@@ -540,6 +540,7 @@ if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; th
 	echo 'Install xmlto if you want online help to work.'
 fi
 
+REAL_BITLBEE_VERSION=`grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/'`
 echo
 if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; then
 	nick=`bzr nick`
@@ -550,14 +551,17 @@ if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; th
 	fi
 	rev=`bzr revno`
 	echo 'Using bzr revision #'$rev' as version number'
-	BITLBEE_VERSION=\"bzr$nick-$rev\"
+	BITLBEE_VERSION=$REAL_BITLBEE_VERSION-bzr$nick-$rev
 fi
 
 if [ -n "$BITLBEE_VERSION" ]; then
 	echo 'Spoofing version number: '$BITLBEE_VERSION
 	echo '#undef BITLBEE_VERSION' >> config.h
-	echo '#define BITLBEE_VERSION '$BITLBEE_VERSION >> config.h
+	echo '#define BITLBEE_VERSION "'$BITLBEE_VERSION'"' >> config.h
 	echo
+else
+	# for pkg-config
+	BITLBEE_VERSION=$REAL_BITLBEE_VERSION
 fi
 
 if ! make helloworld > /dev/null 2>&1; then
