@@ -3,7 +3,7 @@ Description=BitlBee IRC/IM gateway
 After=syslog.target
 
 [Service]
-ExecStart=@sbindir@/bitlbee -F -n
+ExecStart=@sbindir@bitlbee -F -n
 
 [Install]
 WantedBy=multi-user.target
