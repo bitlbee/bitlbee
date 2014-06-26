@@ -23,10 +23,16 @@ ipcsocket=''
 pcdir='$prefix/lib/pkgconfig'
 systemlibdirs="/lib64 /usr/lib64 /usr/local/lib64 /lib /usr/lib /usr/local/lib"
 
-msn=1
-jabber=1
-oscar=1
-yahoo=1
+# Set these to default-on to let it be overriden by either the user or purple
+#
+# If the user sets one of these to 1, purple won't disable them.
+# Otherwise, if it's still default-on, it gets included in normal builds,
+# but not purple ones.
+msn="default-on"
+jabber="default-on"
+oscar="default-on"
+yahoo="default-on"
+
 twitter=1
 purple=0
 
@@ -601,12 +607,11 @@ EOF
 	protocols=$protocols'purple '
 	protoobjs=$protoobjs'purple_mod.o '
 
-	# Having both libpurple and native IM modules in one binary may
-	# do strange things. Let's not do that.
-	msn=0
-	jabber=0
-	oscar=0
-	yahoo=0
+	# only disable these if the user didn't enable them explicitly
+	[ "$msn" = "default-on" ] && msn=0
+	[ "$jabber" = "default-on" ] && jabber=0
+	[ "$oscar" = "default-on" ] && oscar=0
+	[ "$yahoo" = "default-on" ] && yahoo=0
 
 	echo '#undef PACKAGE' >> config.h
 	echo '#define PACKAGE "BitlBee-LIBPURPLE"' >> config.h
