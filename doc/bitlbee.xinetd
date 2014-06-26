@@ -5,20 +5,23 @@
 ## don't work, check that file first.
 service ircd
 {
+	disable = yes
 	socket_type     = stream
 	protocol        = tcp
 	wait            = no
 	
-	## You most likely want to change these two
-	user            = nobody
-	server          = /usr/local/sbin/bitlbee -I
+	user            = bitlbee
+	server          = /usr/sbin/bitlbee
+	server_args     = -I
 	
 	## You might want to limit access to localhost only:
-	# bind            = 127.0.0.1
+	bind            = 127.0.0.1
 	
 	## Thanks a lot to friedman@splode.com for telling us about the type
 	## argument, so now this file can be used without having to edit
 	## /etc/services too.
 	type            = UNLISTED
 	port            = 6667
+
+	log_on_failure	+= USERID
 }
