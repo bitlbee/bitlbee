@@ -18,7 +18,7 @@ DEBUG ?= 0
 
 ifndef BITLBEE_VERSION
 # Want to use the full package version number instead of just the release.
-BITLBEE_CONFIGURE_VERSION ?= BITLBEE_VERSION=\"$(shell dpkg-parsechangelog | awk '/^Version:/ {print $$2}')\"
+BITLBEE_CONFIGURE_VERSION ?= BITLBEE_VERSION="$(shell dpkg-parsechangelog | awk '/^Version:/ {print $$2}')"
 endif
 
 ifneq ($(BITLBEE_LIBPURPLE),1)

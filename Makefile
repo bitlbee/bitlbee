@@ -138,8 +138,9 @@ endif
 
 systemd:
 ifdef SYSTEMDSYSTEMUNITDIR
-	sed 's|@sbindir@|$(SBINDIR)|' init/bitlbee.service.in > init/bitlbee.service
-	sed 's|@sbindir@|$(SBINDIR)|' init/bitlbee@.service.in > init/bitlbee@.service
+	mkdir -p init
+	sed 's|@sbindir@|$(SBINDIR)|' $(_SRCDIR_)init/bitlbee.service.in > init/bitlbee.service
+	sed 's|@sbindir@|$(SBINDIR)|' $(_SRCDIR_)init/bitlbee@.service.in > init/bitlbee@.service
 endif
 
 install-systemd:
@@ -148,7 +149,7 @@ ifeq ($(shell id -u),0)
 	mkdir -p $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 	$(INSTALL) -m 0644 init/bitlbee.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 	$(INSTALL) -m 0644 init/bitlbee@.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
-	$(INSTALL) -m 0644 init/bitlbee.socket $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
+	$(INSTALL) -m 0644 $(_SRCDIR_)init/bitlbee.socket $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 else
 	@echo Not root, so not installing systemd files.
 endif
