@@ -3,6 +3,18 @@ found in the bzr commit logs, for example you can try:
 
 http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
 
+Version 3.2.2:
+- The OTR plugin now uses libotr 4.0 (AKA libotr5 in debian based distros)
+- Rejecting buddy requests in jabber won't accept them. Sorry for that.
+- Purple builds can now enable built in protocols when configuring, by
+  passing a parameter such as --jabber=1 to configure
+- You can now use /oper to change passwords with "ac x set -del password"
+- Complex unicode characters (non-BMP) now display correctly in twitter.
+- A few init / build script / pkg-config fixes. Added "install-systemd"
+  make target.
+
+Finished 5 Jul 2014
+
 Version 3.2.1:
 - Most important change: http_client updated to use HTTP/1.1, now required
   by Twitter.

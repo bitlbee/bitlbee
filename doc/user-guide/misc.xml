@@ -395,4 +395,17 @@ supports the streaming API and incoming direct messages.
 </para>
 </sect1>
 
+<sect1 id="whatsnew030202">
+<title>New stuff in BitlBee 3.2.2</title>
+
+<para>
+The OTR plugin now uses libotr 4.0 (AKA libotr5 in debian based distros)
+</para>
+
+<para>
+A few minor fixes/additions, like being able to use /oper to change
+passwords with <emphasis>account tag set -del password</emphasis>
+</para>
+</sect1>
+
 </chapter>
