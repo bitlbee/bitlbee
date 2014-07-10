@@ -86,8 +86,6 @@ int main( int argc, char *argv[] )
  	otr_init();
 #endif
 	
-	srand( time( NULL ) ^ getpid() );
-	
 	global.helpfile = g_strdup( HELP_FILE );
 	if( help_init( &global.help, global.helpfile ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );

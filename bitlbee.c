@@ -328,10 +328,6 @@ static gboolean bitlbee_io_new_client( gpointer data, gint fd, b_input_condition
 		{
 			irc_t *irc;
 			
-			/* Since we're fork()ing here, let's make sure we won't
-			   get the same random numbers as the parent/siblings. */
-			srand( time( NULL ) ^ getpid() );
-			
 			b_main_init();
 			
 			/* Close the listening socket, we're a client. */
