@@ -1,6 +1,5 @@
-bitlbee (3.2.1+otr4-1.1) UNRELEASED; urgency=medium
+bitlbee (3.2.1+otr4-2) UNRELEASED; urgency=medium
 
-  * Non-maintainer upload.
   * Bump standards version to 3.9.5 (no changes).
   * Remove obsolete DM-Upload-Allowed header.
   * Build with dpkg-flags, for hardening.
