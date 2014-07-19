@@ -53,16 +53,27 @@ static const int jabber_port_list[] = {
 	0
 };
 
+static jabber_subproto_desc_t jabber_subproto_list[] = {
+	{ "jabber", JSUB_NONE, NULL, NULL },
+	{ "gtalk", JSUB_GTALK, &oauth2_service_google, "talk.google.com" },
+	{ "fb", JSUB_FACEBOOK, &oauth2_service_facebook, "chat.facebook.com" },
+	{ "hipchat", JSUB_HIPCHAT, NULL, "chat.hipchat.com" },
+	{ NULL },
+};
+
 static void jabber_init(account_t *acc)
 {
 	set_t *s;
 	char str[16];
+	jabber_subproto_desc_t *subproto = acc->prpl->data;
 
 	s = set_add(&acc->set, "activity_timeout", "600", set_eval_int, acc);
 
-	s = set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
-
 	s = set_add(&acc->set, "display_name", NULL, NULL, acc);
+
+	if (subproto->oauth2_service) {
+		s = set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
+	}
 
 	g_snprintf(str, sizeof(str), "%d", jabber_port_list[0]);
 	s = set_add(&acc->set, "port", str, set_eval_int, acc);
@@ -99,6 +110,10 @@ static void jabber_init(account_t *acc)
 
 	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE |
 	              ACC_FLAG_HANDLE_DOMAINS;
+
+	if (subproto->server) {
+		set_setstr(&acc->set, "server", (char *) subproto->server);
+	}
 }
 
 static void jabber_generate_id_hash(struct jabber_data *jd);
@@ -107,6 +122,7 @@ static void jabber_login(account_t *acc)
 {
 	struct im_connection *ic = imcb_new(acc);
 	struct jabber_data *jd = g_new0(struct jabber_data, 1);
+	jabber_subproto_desc_t *subproto = acc->prpl->data;
 	char *s;
 
 	/* For now this is needed in the _connected() handlers if using
@@ -116,6 +132,7 @@ static void jabber_login(account_t *acc)
 
 	jd->ic = ic;
 	ic->proto_data = jd;
+	jd->subproto = subproto->id;
 
 	jabber_set_me(ic, acc->user);
 
@@ -140,17 +157,13 @@ static void jabber_login(account_t *acc)
 	jd->node_cache = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, jabber_cache_entry_free);
 	jd->buddies = g_hash_table_new(g_str_hash, g_str_equal);
 
-	if (set_getbool(&acc->set, "oauth")) {
+	if (subproto->oauth2_service && set_getbool(&acc->set, "oauth")) {
 		GSList *p_in = NULL;
 		const char *tok;
 
 		jd->fd = jd->r_inpa = jd->w_inpa = -1;
 
-		if (strstr(jd->server, ".facebook.com")) {
-			jd->oauth2_service = &oauth2_service_facebook;
-		} else {
-			jd->oauth2_service = &oauth2_service_google;
-		}
+		jd->oauth2_service = subproto->oauth2_service;
 
 		oauth_params_parse(&p_in, ic->acc->pass);
 
@@ -654,35 +667,41 @@ gboolean jabber_handle_is_self(struct im_connection *ic, const char *who)
 
 void jabber_initmodule()
 {
-	struct prpl *ret = g_new0(struct prpl, 1);
+	int i;
+	struct prpl funcs;
 
-	ret->name = "jabber";
-	ret->mms = 0;                        /* no limit */
-	ret->login = jabber_login;
-	ret->init = jabber_init;
-	ret->logout = jabber_logout;
-	ret->buddy_msg = jabber_buddy_msg;
-	ret->away_states = jabber_away_states;
-	ret->set_away = jabber_set_away;
-//	ret->set_info = jabber_set_info;
-	ret->get_info = jabber_get_info;
-	ret->add_buddy = jabber_add_buddy;
-	ret->remove_buddy = jabber_remove_buddy;
-	ret->chat_msg = jabber_chat_msg_;
-	ret->chat_topic = jabber_chat_topic_;
-	ret->chat_invite = jabber_chat_invite_;
-	ret->chat_leave = jabber_chat_leave_;
-	ret->chat_join = jabber_chat_join_;
-	ret->chat_with = jabber_chat_with_;
-	ret->chat_add_settings = jabber_chat_add_settings;
-	ret->chat_free_settings = jabber_chat_free_settings;
-	ret->keepalive = jabber_keepalive;
-	ret->send_typing = jabber_send_typing;
-	ret->handle_cmp = g_strcasecmp;
-	ret->handle_is_self = jabber_handle_is_self;
-	ret->transfer_request = jabber_si_transfer_request;
-	ret->buddy_action_list = jabber_buddy_action_list;
-	ret->buddy_action = jabber_buddy_action;
+	memset(&funcs, 0, sizeof(funcs));
 
-	register_protocol(ret);
+	funcs.mms = 0;                        /* no limit */
+	funcs.login = jabber_login;
+	funcs.init = jabber_init;
+	funcs.logout = jabber_logout;
+	funcs.buddy_msg = jabber_buddy_msg;
+	funcs.away_states = jabber_away_states;
+	funcs.set_away = jabber_set_away;
+	funcs.get_info = jabber_get_info;
+	funcs.add_buddy = jabber_add_buddy;
+	funcs.remove_buddy = jabber_remove_buddy;
+	funcs.chat_msg = jabber_chat_msg_;
+	funcs.chat_topic = jabber_chat_topic_;
+	funcs.chat_invite = jabber_chat_invite_;
+	funcs.chat_leave = jabber_chat_leave_;
+	funcs.chat_join = jabber_chat_join_;
+	funcs.chat_with = jabber_chat_with_;
+	funcs.chat_add_settings = jabber_chat_add_settings;
+	funcs.chat_free_settings = jabber_chat_free_settings;
+	funcs.keepalive = jabber_keepalive;
+	funcs.send_typing = jabber_send_typing;
+	funcs.handle_cmp = g_strcasecmp;
+	funcs.handle_is_self = jabber_handle_is_self;
+	funcs.transfer_request = jabber_si_transfer_request;
+	funcs.buddy_action_list = jabber_buddy_action_list;
+	funcs.buddy_action = jabber_buddy_action;
+
+	for (i = 0; jabber_subproto_list[i].name; i++) {
+		struct prpl *subproto = g_memdup(&funcs, sizeof(funcs));
+		subproto->name = jabber_subproto_list[i].name;
+		subproto->data = &jabber_subproto_list[i];
+		register_protocol(subproto);
+	}
 }

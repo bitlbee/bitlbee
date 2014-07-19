@@ -394,6 +394,7 @@ static void cmd_account(irc_t *irc, char **cmd)
 
 	if (len >= 1 && g_strncasecmp(cmd[1], "add", len) == 0) {
 		struct prpl *prpl;
+		char *protocol_name = cmd[2];
 
 		MIN_ARGS(3);
 
@@ -409,7 +410,17 @@ static void cmd_account(irc_t *irc, char **cmd)
 			irc->status |= OPER_HACK_ACCOUNT_PASSWORD;
 		}
 
-		prpl = find_protocol(cmd[2]);
+		/* These used to be just hardcoded account tag guesses,
+		 * now they are promoted to hardecoded subprotocol guesses */
+		if (strcmp(protocol_name, "jabber") == 0) {
+			if (strstr(cmd[3], "@gmail.com") || strstr(cmd[3], "@googlemail.com")) {
+				protocol_name = "gtalk";
+			} else if (strstr(cmd[3], "@chat.facebook.com")) {
+				protocol_name = "fb";
+			}
+		}
+
+		prpl = find_protocol(protocol_name);
 
 		if (prpl == NULL) {
 			irc_rootmsg(irc, "Unknown protocol");
