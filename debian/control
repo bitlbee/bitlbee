@@ -2,7 +2,7 @@ Source: bitlbee
 Section: net
 Priority: optional
 Maintainer: Wilmer van der Gaast <wilmer@gaast.net>
-Uploaders: Jelmer Vernooij <jelmer@samba.org>
+Uploaders: Jelmer Vernooij <jelmer@debian.org>
 Standards-Version: 3.9.5
 Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls-dev | gnutls-dev, po-debconf, libpurple-dev, libotr5-dev, debhelper (>= 6.0.7~), asciidoc
 Homepage: http://www.bitlbee.org/
