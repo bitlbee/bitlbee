@@ -15,7 +15,7 @@ subdirs = lib protocols
 
 ifeq ($(TARGET),i586-mingw32msvc)
 objects += win32.o
-LFLAGS+=-lws2_32
+LDFLAGS+=-lws2_32
 EFLAGS+=-lsecur32
 OUTFILE=bitlbee.exe
 else
@@ -173,7 +173,7 @@ $(OTR_PI): %.so: $(_SRCDIR_)%.c
 
 $(SKYPE_PI): $(_SRCDIR_)protocols/skype/skype.c
 	@echo '*' Building plugin skype
-	@$(CC) $(CFLAGS) $(SKYPEFLAGS) $< -o $@
+	@$(CC) $(CFLAGS) $(LDFLAGS) $(SKYPEFLAGS) $< -o $@
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
@@ -183,7 +183,7 @@ $(objects): Makefile Makefile.settings config.h
 
 $(OUTFILE): $(objects) $(subdirs)
 	@echo '*' Linking $(OUTFILE)
-	@$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LDFLAGS_BITLBEE) $(LFLAGS) $(EFLAGS)
+	@$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LDFLAGS_BITLBEE) $(LDFLAGS) $(EFLAGS)
 ifndef DEBUG
 	@echo '*' Stripping $(OUTFILE)
 	@-$(STRIP) $(OUTFILE)

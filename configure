@@ -212,6 +212,8 @@ if [ "$pie" = "1" ]; then
 	echo 'LDFLAGS_BITLBEE=-pie' >> Makefile.settings
 fi
 
+echo LDFLAGS=$LDFLAGS >> Makefile.settings
+
 echo CFLAGS=$CFLAGS $CPPFLAGS >> Makefile.settings
 echo CFLAGS+=-I${srcdir} -I${srcdir}/lib -I${srcdir}/protocols -I. >> Makefile.settings
 
