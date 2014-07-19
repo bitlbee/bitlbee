@@ -4,6 +4,7 @@ bitlbee (3.2.1+otr4-1.1) UNRELEASED; urgency=medium
   * Bump standards version to 3.9.5 (no changes).
   * Remove obsolete DM-Upload-Allowed header.
   * Build with dpkg-flags, for hardening.
+  * Force re-building of user guide on Debian.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sun, 20 Jul 2014 01:19:30 +0200
 

@@ -48,6 +48,7 @@ ifeq ($(BITLBEE_LIBPURPLE),1)
 endif
 
 	$(MAKE) -C doc
+	$(MAKE) -C doc/user-guide
 
 	touch build-stamp
 
