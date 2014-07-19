@@ -11,5 +11,5 @@ if [ "$1" = "upgrade" ]; then
 		mv /usr/share/bitlbee/help.txt /usr/share/bitlbee/help.upgrading
 	fi
 else
-	invoke-rc.d bitlbee stop || exit 0
+	invoke-rc.d bitlbee stop
 fi

@@ -5,6 +5,7 @@ bitlbee (3.2.1+otr4-1.1) UNRELEASED; urgency=medium
   * Remove obsolete DM-Upload-Allowed header.
   * Build with dpkg-flags, for hardening.
   * Force re-building of user guide on Debian.
+  * Don't ignore failure of invoke-rc.d; fixes lintian warning.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sun, 20 Jul 2014 01:19:30 +0200
 
