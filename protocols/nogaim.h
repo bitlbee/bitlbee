@@ -262,6 +262,9 @@ struct prpl {
 	GList *(* buddy_action_list) (struct bee_user *bu);
 	void *(* buddy_action) (struct bee_user *bu, const char *action, char * const args[], void *data);
 	
+	/* If null, equivalent to handle_cmp( ic->acc->user, who ) */
+	gboolean (* handle_is_self) (struct im_connection *, const char *who);
+
 	/* Some placeholders so eventually older plugins may cooperate with newer BitlBees. */
 	void *resv1;
 	void *resv2;

@@ -96,6 +96,7 @@ struct jabber_data
 	char *username;		/* USERNAME@server */
 	char *server;		/* username@SERVER -=> server/domain, not hostname */
 	char *me;		/* bare jid */
+	char *internal_jid;
 	
 	const struct oauth2_service *oauth2_service;
 	char *oauth2_access_token;

@@ -823,6 +823,10 @@ gboolean jabber_set_me( struct im_connection *ic, const char *me )
 	jd->server = strchr( jd->me, '@' );
 	jd->username = g_strndup( jd->me, jd->server - jd->me );
 	jd->server ++;
+
+	/* Set the "internal" account username, for groupchats */
+	g_free( jd->internal_jid );
+	jd->internal_jid = g_strdup( jd->me );
 	
 	return TRUE;
 }

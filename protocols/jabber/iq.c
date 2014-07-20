@@ -357,10 +357,6 @@ xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, 
 			if( s )
 				*s = '\0';
 			jabber_set_me( ic, c->text );
-			imcb_log( ic, "Server claims your JID is `%s' instead of `%s'. "
-			          "This mismatch may cause problems with groupchats "
-			          "and possibly other things.",
-			          c->text, ic->acc->user );
 			if( s )
 				*s = '/';
 		}
