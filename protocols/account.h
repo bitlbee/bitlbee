@@ -58,6 +58,8 @@ char *set_eval_account( set_t *set, char *value );
 char *set_eval_account_reconnect_delay( set_t *set, char *value );
 int account_reconnect_delay( account_t *a );
 
+int protocol_account_islocal( const char* protocol );
+
 typedef enum
 {
 	ACC_SET_OFFLINE_ONLY = 0x02,    /* Allow changes only if the acct is offline. */
@@ -69,6 +71,7 @@ typedef enum
 	ACC_FLAG_AWAY_MESSAGE = 0x01,   /* Supports away messages instead of just states. */
 	ACC_FLAG_STATUS_MESSAGE = 0x02, /* Supports status messages (without being away). */
 	ACC_FLAG_HANDLE_DOMAINS = 0x04, /* Contact handles need a domain portion. */
+	ACC_FLAG_LOCAL = 0x08,          /* Contact list is local. */
 } account_flag_t;
 
 #endif

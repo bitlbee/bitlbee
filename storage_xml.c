@@ -86,7 +86,7 @@ static xt_status handle_account( struct xt_node *node, gpointer data )
 	char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag;
 	char *pass_b64 = NULL;
 	unsigned char *pass_cr = NULL;
-	int pass_len;
+	int pass_len, local = 0;
 	struct prpl *prpl = NULL;
 	account_t *acc;
 	struct xt_node *c;
@@ -99,7 +99,10 @@ static xt_status handle_account( struct xt_node *node, gpointer data )
 	
 	protocol = xt_find_attr( node, "protocol" );
 	if( protocol )
+	{
 		prpl = find_protocol( protocol );
+		local = protocol_account_islocal( protocol );
+	}
 	
 	if( !handle || !pass_b64 || !protocol || !prpl )
 		return XT_ABORT;
@@ -113,6 +116,8 @@ static xt_status handle_account( struct xt_node *node, gpointer data )
 			set_setstr( &acc->set, "auto_connect", autoconnect );
 		if( tag )
 			set_setstr( &acc->set, "tag", tag );
+		if( local )
+			acc->flags |= ACC_FLAG_LOCAL;
 	}
 	else
 		return XT_ABORT;

@@ -27,6 +27,10 @@
 #include "bitlbee.h"
 #include "account.h"
 
+static const char* account_protocols_local[] = {
+	"gg", NULL
+};
+
 static char *set_eval_nick_source( set_t *set, char *value );
 
 account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
@@ -346,6 +350,9 @@ static gboolean account_on_timeout( gpointer d, gint fd, b_input_condition cond 
 
 void account_on( bee_t *bee, account_t *a )
 {
+	GHashTableIter nicks;
+	gpointer k, v;
+
 	if( a->ic )
 	{
 		/* Trying to enable an already-enabled account */
@@ -359,6 +366,15 @@ void account_on( bee_t *bee, account_t *a )
 	
 	if( a->ic && !( a->ic->flags & ( OPT_SLOW_LOGIN | OPT_LOGGED_IN ) ) )
 		a->ic->keepalive = b_timeout_add( 120000, account_on_timeout, a->ic );
+
+	if( a->flags & ACC_FLAG_LOCAL )
+	{
+		g_hash_table_iter_init(&nicks, a->nicks);
+		while( g_hash_table_iter_next( &nicks, &k, &v ) )
+		{
+			a->prpl->add_buddy( a->ic, (char*) k, NULL );
+		}
+	}
 }
 
 void account_off( bee_t *bee, account_t *a )
@@ -463,4 +479,14 @@ int account_reconnect_delay( account_t *a )
 	}
 	
 	return a->auto_reconnect_delay;
+}
+
+int protocol_account_islocal( const char* protocol )
+{
+	const char** p = account_protocols_local;
+	do {
+		if( strcmp( *p, protocol ) == 0 )
+			return 1;
+	} while( *( ++p ) );
+	return 0;
 }
