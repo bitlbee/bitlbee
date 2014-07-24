@@ -340,6 +340,34 @@ RESOLV_TESTCODE='
 
 int main()
 {
+
+	res_query( NULL, 0, 0, NULL, 0);
+	dn_expand( NULL, NULL, NULL, NULL, 0);
+	dn_skipname( NULL, NULL);
+}
+'
+RESOLV_NS_TESTCODE='
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/nameser.h>
+#include <resolv.h> 
+
+int main()
+{
+	ns_initparse( NULL, 0, NULL );
+	ns_parserr( NULL, ns_s_an, 0, NULL );
+}
+'
+RESOLV_NS_TYPES_TESTCODE='
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/nameser.h>
+
+int main()
+{
+	ns_msg nsh;
+	ns_rr rr;
+
 	ns_initparse( NULL, 0, NULL );
 	ns_parserr( NULL, ns_s_an, 0, NULL );
 }
@@ -348,8 +376,14 @@ int main()
 detect_resolv_dynamic()
 {
 	case "$arch" in
+	OpenBSD )
+		# In FreeBSD res_*/dn_* routines are present in libc.so
+		LIBRESOLV=;;
 	FreeBSD )
-		# In FreeBSD res_* routines are present in libc.so
+		# In FreeBSD res_*/dn_* routines are present in libc.so
+		LIBRESOLV=;;
+	CYGWIN* )
+		# In Cygwin res_*/dn_* routines are present in libc.so
 		LIBRESOLV=;;
 	* )
 		LIBRESOLV=-lresolv;;
@@ -379,6 +413,74 @@ detect_resolv_static()
 			fi
 		fi
 	done
+
+	rm -f $TMPFILE
+	return $ret
+}
+
+detect_resolv_ns_dynamic()
+{
+	case "$arch" in
+	FreeBSD )
+		# In FreeBSD ns_ routines are present in libc.so
+		LIBRESOLV=;;
+	* )
+		LIBRESOLV=-lresolv;;
+	esac
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
+	ret=1
+	echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - $LIBRESOLV >/dev/null 2>/dev/null
+        if [ "$?" = "0" ]; then
+                ret=0
+        fi
+
+	rm -f $TMPFILE
+	return $ret
+}
+
+detect_resolv_ns_static()
+{
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
+	ret=1
+	for i in $systemlibdirs; do
+		if [ -f $i/libresolv.a ]; then
+			echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
+                        if [ "$?" = "0" ]; then
+                                ret=0
+                        fi
+		fi
+	done
+
+	rm -f $TMPFILE
+	return $ret
+}
+
+detect_nameser_has_ns_types()
+{
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
+	case "$arch" in
+	FreeBSD )
+		# In FreeBSD ns_ routines are present in libc.so
+		LIBRESOLV=;;
+	* )
+		LIBRESOLV=-lresolv;;
+	esac
+	ret=1
+    if detect_resolv_ns_dynamic; then
+	    echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c $LIBRESOLV -  >/dev/null 2>/dev/null
+        if [ "$?" = "0" ]; then
+            ret=0
+        fi
+    elif detect_resolv_ns_static; then
+	    for i in $systemlibdirs; do
+		    if [ -f $i/libresolv.a ]; then
+			    echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
+                    if [ "$?" = "0" ]; then
+                        ret=0
+                    fi
+		    fi
+	    done
+    fi
 
 	rm -f $TMPFILE
 	return $ret
@@ -439,9 +541,18 @@ fi;
 
 echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 
+if detect_nameser_has_ns_types; then
+	echo '#define NAMESER_HAS_NS_TYPES' >> config.h
+fi
 if detect_resolv_dynamic || detect_resolv_static; then
 	echo '#define HAVE_RESOLV_A' >> config.h
+    if detect_resolv_ns_dynamic || detect_resolv_ns_static; then
+	    echo '#define HAVE_RESOLV_A_WITH_NS' >> config.h
+    fi
+else
+    echo 'Insufficient resolv routines. Jabber server must be set explicitly'
 fi
+
 
 STORAGES="xml"
 
