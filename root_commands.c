@@ -1084,8 +1084,10 @@ static void cmd_set( irc_t *irc, char **cmd )
 
 static void cmd_blist( irc_t *irc, char **cmd )
 {
-	int online = 0, away = 0, offline = 0;
+	int online = 0, away = 0, offline = 0, ismatch = 0;
 	GSList *l;
+	GRegex *regex = NULL;
+	GError *error = NULL;
 	char s[256];
 	char *format;
 	int n_online = 0, n_away = 0, n_offline = 0;
@@ -1100,6 +1102,15 @@ static void cmd_blist( irc_t *irc, char **cmd )
 		online = 1;
 	else
 		online = away = 1;
+	
+	if( cmd[2] )
+		regex = g_regex_new( cmd[2], G_REGEX_CASELESS, 0, &error );
+	
+	if( error )
+	{
+		irc_rootmsg( irc, error->message );
+		g_error_free( error );
+	}
 	
 	if( strchr( irc->umode, 'b' ) != NULL )
 		format = "%s\t%s\t%s";
@@ -1117,59 +1128,55 @@ static void cmd_blist( irc_t *irc, char **cmd )
 		irc_user_t *iu = l->data;
 		bee_user_t *bu = iu->bu;
 		
-		if( !bu || ( irc->root->last_channel && !irc_channel_wants_user( irc->root->last_channel, iu ) ) ||
-		    ( bu->flags & ( BEE_USER_ONLINE | BEE_USER_AWAY ) ) != BEE_USER_ONLINE )
+		if( !regex || g_regex_match( regex, iu->nick, 0, NULL ) )
+			ismatch = 1;
+		else
+			ismatch = 0;
+		
+		if( !bu || ( irc->root->last_channel && !irc_channel_wants_user( irc->root->last_channel, iu ) ) )
 			continue;
 		
-		if( online == 1 )
+		if( ( bu->flags & ( BEE_USER_ONLINE | BEE_USER_AWAY ) ) == BEE_USER_ONLINE )
 		{
-			char st[256] = "Online";
+			if( ismatch == 1 && online == 1 )
+			{
+				char st[256] = "Online";
+				
+				if( bu->status_msg )
+					g_snprintf( st, sizeof( st ) - 1, "Online (%s)", bu->status_msg );
+				
+				g_snprintf( s, sizeof( s ) - 1, "%s %s", bu->handle, bu->ic->acc->tag );
+				irc_rootmsg( irc, format, iu->nick, s, st );
+			}
 			
-			if( bu->status_msg )
-				g_snprintf( st, sizeof( st ) - 1, "Online (%s)", bu->status_msg );
-			
-			g_snprintf( s, sizeof( s ) - 1, "%s %s", bu->handle, bu->ic->acc->tag );
-			irc_rootmsg( irc, format, iu->nick, s, st );
+			n_online ++;
 		}
 		
-		n_online ++;
-	}
-
-	for( l = irc->users; l; l = l->next )
-	{
-		irc_user_t *iu = l->data;
-		bee_user_t *bu = iu->bu;
-		
-		if( !bu || ( irc->root->last_channel && !irc_channel_wants_user( irc->root->last_channel, iu ) ) ||
-		    !( bu->flags & BEE_USER_ONLINE ) || !( bu->flags & BEE_USER_AWAY ) )
-			continue;
-		
-		if( away == 1 )
+		if( ( bu->flags & BEE_USER_ONLINE ) && ( bu->flags & BEE_USER_AWAY ) )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s %s", bu->handle, bu->ic->acc->tag );
-			irc_rootmsg( irc, format, iu->nick, s, irc_user_get_away( iu ) );
+			if( ismatch == 1 && away == 1 )
+			{
+				g_snprintf( s, sizeof( s ) - 1, "%s %s", bu->handle, bu->ic->acc->tag );
+				irc_rootmsg( irc, format, iu->nick, s, irc_user_get_away( iu ) );
+			}
+			n_away ++;
 		}
-		n_away ++;
-	}
-	
-	for( l = irc->users; l; l = l->next )
-	{
-		irc_user_t *iu = l->data;
-		bee_user_t *bu = iu->bu;
 		
-		if( !bu || ( irc->root->last_channel && !irc_channel_wants_user( irc->root->last_channel, iu ) ) ||
-		    bu->flags & BEE_USER_ONLINE )
-			continue;
-		
-		if( offline == 1 )
+		if( !(bu->flags & BEE_USER_ONLINE) )
 		{
-			g_snprintf( s, sizeof( s ) - 1, "%s %s", bu->handle, bu->ic->acc->tag );
-			irc_rootmsg( irc, format, iu->nick, s, "Offline" );
+			if( ismatch == 1 && offline == 1 )
+			{
+				g_snprintf( s, sizeof( s ) - 1, "%s %s", bu->handle, bu->ic->acc->tag );
+				irc_rootmsg( irc, format, iu->nick, s, "Offline" );
+			}
+			n_offline ++;
 		}
-		n_offline ++;
 	}
 	
 	irc_rootmsg( irc, "%d buddies (%d available, %d away, %d offline)", n_online + n_away + n_offline, n_online, n_away, n_offline );
+	
+	if( regex )
+		g_regex_unref( regex );
 }
 
 static void cmd_qlist( irc_t *irc, char **cmd )
