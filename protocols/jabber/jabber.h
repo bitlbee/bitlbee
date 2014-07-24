@@ -288,6 +288,7 @@ xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *
 const struct jabber_away_state *jabber_away_state_by_code( char *code );
 const struct jabber_away_state *jabber_away_state_by_name( char *name );
 void jabber_buddy_ask( struct im_connection *ic, char *handle );
+int jabber_compare_jid( const char *jid1, const char *jid2 );
 char *jabber_normalize( const char *orig );
 
 typedef enum

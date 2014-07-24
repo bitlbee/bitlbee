@@ -307,6 +307,28 @@ void jabber_buddy_ask( struct im_connection *ic, char *handle )
 	g_free( buf );
 }
 
+/* Compares two Jabber IDs to check for match. */
+int jabber_compare_jid( const char *jid1, const char *jid2 )
+{
+	int i;
+	
+	for( i = 0; ; i ++ )
+	{
+		if( jid1[i] == '\0' || jid1[i] == '/' || jid2[i] == '\0' || jid2[i] == '/' )
+		{
+			if( ( jid1[i] == '\0' || jid1[i] == '/' ) && ( jid2[i] == '\0' || jid2[i] == '/' ) )
+				break;
+			return FALSE;
+		}
+		if( tolower( jid1[i] ) != tolower( jid2[i] ) )
+		{
+			return FALSE;
+		}
+	}
+	
+	return TRUE;
+}
+
 /* Returns a new string. Don't leak it! */
 char *jabber_normalize( const char *orig )
 {

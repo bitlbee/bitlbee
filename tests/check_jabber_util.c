@@ -94,6 +94,16 @@ static void check_buddy_add(int l)
 	fail_unless( jabber_buddy_remove( ic, "bugtest@google.com/C" ) );
 }
 
+static void check_compareJID(int l)
+{
+	fail_unless( jabber_compare_jid( "bugtest@google.com/B", "bugtest@google.com/A" ) );
+	fail_if( jabber_compare_jid( "bugtest1@google.com/B", "bugtest@google.com/A" ) );
+	fail_if( jabber_compare_jid( "bugtest@google.com/B", "bugtest1@google.com/A" ) );
+	fail_if( jabber_compare_jid( "bugtest1@google.com/B", "bugtest2@google.com/A" ) );
+	fail_unless( jabber_compare_jid( "bugtest@google.com/A", "bugtest@google.com/A" ) );
+	fail_if( jabber_compare_jid( "", "bugtest@google.com/A" ) );
+}
+
 Suite *jabber_util_suite (void)
 {
 	Suite *s = suite_create("jabber/util");
@@ -109,5 +119,6 @@ Suite *jabber_util_suite (void)
 	
 	suite_add_tcase (s, tc_core);
 	tcase_add_test (tc_core, check_buddy_add);
+	tcase_add_test (tc_core, check_compareJID);
 	return s;
 }

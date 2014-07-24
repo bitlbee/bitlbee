@@ -351,7 +351,7 @@ xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, 
 		{
 			/* Server is crap, but this is no disaster. */
 		}
-		else if( strncmp( jd->me, c->text, strlen( jd->me ) ) != 0 )
+		else if( jabber_compare_jid( jd->me, c->text ) == 0 )
 		{
 			s = strchr( c->text, '/' );
 			if( s )
