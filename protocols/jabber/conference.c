@@ -353,78 +353,88 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 {
 	struct xt_node *subject = xt_find_node(node->children, "subject");
 	struct xt_node *body = xt_find_node(node->children, "body");
-	struct groupchat *chat = bud ? jabber_chat_by_jid(ic, bud->bare_jid) : NULL;
-	struct jabber_chat *jc = chat ? chat->data : NULL;
-	char *s;
+	struct groupchat *chat = NULL;
+	struct jabber_chat *jc = NULL;
+	char *from = NULL;
+	char *nick = NULL;
+	char *final_from = NULL;
+	char *bare_jid = NULL;
+
+	from = (bud) ? bud->full_jid : xt_find_attr(node, "from");
+
+	if (from) {
+		nick = strchr(from, '/');
+		if (nick) {
+			*nick = 0;
+		}
+		chat = jabber_chat_by_jid(ic, from);
+		if (nick) {
+			*nick = '/';
+			nick++;
+		}
+	}
+
+	jc = (chat) ? chat->data : NULL;
+
+	if (!bud) {
+		struct xt_node *c;
+		char *s;
+
+		/* Try some clever stuff to find out the real JID here */
+		c = xt_find_node_by_attr(node->children, "delay", "xmlns", XMLNS_DELAY);
+
+		if (c && ((s = xt_find_attr(c, "from")) ||
+		          (s = xt_find_attr(c, "from_jid")))) {
+			/* This won't be useful if it's the MUC JID */
+			if (!(jc && jabber_compare_jid(s, jc->name))) {
+				/* Hopefully this one makes more sense! */
+				bud = jabber_buddy_by_jid(ic, s, GET_BUDDY_FIRST | GET_BUDDY_CREAT);
+			}
+		}
+
+	}
 
 	if (subject && chat) {
-		s = (bud && bud->ext_jid) ? strchr(bud->ext_jid, '/') : NULL;
-		if (s) {
-			*s = 0;
-		}
-		imcb_chat_topic(chat, bud ? bud->ext_jid : NULL, subject->text_len > 0 ?
-		                subject->text : NULL, jabber_get_timestamp(node));
-		if (s) {
-			*s = '/';
+		char *subject_text = subject->text_len > 0 ? subject->text : NULL;
+		if (g_strcmp0(chat->topic, subject_text) != 0) {
+			bare_jid = (bud) ? jabber_get_bare_jid(bud->ext_jid) : NULL;
+			imcb_chat_topic(chat, bare_jid, subject_text,
+			                jabber_get_timestamp(node));
+			g_free(bare_jid);
 		}
 	}
 
-	if (bud == NULL || (jc && ~jc->flags & JCFLAG_MESSAGE_SENT && bud == jc->me)) {
-		char *nick;
+	if (body == NULL || body->text_len == 0) {
+		/* Meh. Empty messages aren't very interesting, no matter
+		   how much some servers love to send them. */
+		return;
+	}
 
-		if (body == NULL || body->text_len == 0) {
-			/* Meh. Empty messages aren't very interesting, no matter
-			   how much some servers love to send them. */
-			return;
-		}
-
-		s = xt_find_attr(node, "from");   /* pkt_message() already NULL-checked this one. */
-		nick = strchr(s, '/');
-		if (nick) {
-			/* If this message included a resource/nick we don't know,
-			   we might still know the groupchat itself. */
-			*nick = 0;
-			chat = jabber_chat_by_jid(ic, s);
-			*nick = '/';
-
-			nick++;
-		} else {
-			/* message.c uses the EXACT_JID option, so bud should
-			   always be NULL here for bare JIDs. */
-			chat = jabber_chat_by_jid(ic, s);
-		}
-
+	if (chat == NULL) {
 		if (nick == NULL) {
-			/* This is fine, the groupchat itself isn't in jd->buddies. */
-			if (chat) {
-				imcb_chat_log(chat, "From conference server: %s", body->text);
-			} else {
-				imcb_log(ic, "System message from unknown groupchat %s: %s", s, body->text);
-			}
+			imcb_log(ic, "System message from unknown groupchat %s: %s", from, body->text);
 		} else {
-			/* This can happen too, at least when receiving a backlog when
-			   just joining a channel. */
-			if (chat) {
-				imcb_chat_log(chat, "Message from unknown participant %s: %s", nick, body->text);
-			} else {
-				imcb_log(ic, "Groupchat message from unknown JID %s: %s", s, body->text);
-			}
+			imcb_log(ic, "Groupchat message from unknown JID %s: %s", from, body->text);
 		}
 
 		return;
-	} else if (chat == NULL) {
-		/* How could this happen?? We could do kill( self, 11 )
-		   now or just wait for the OS to do it. :-) */
+	} else if (chat != NULL && bud == NULL && nick == NULL) {
+		imcb_chat_log(chat, "From conference server: %s", body->text);
+		return;
+	} else if (jc && jc->flags & JCFLAG_MESSAGE_SENT && bud == jc->me) {
+		/* exclude self-messages since they would get filtered out
+		 * but not the ones in the backlog */
 		return;
 	}
-	if (body && body->text_len > 0) {
-		s = (bud->ext_jid) ? strchr(bud->ext_jid, '/') : NULL;
-		if (s) {
-			*s = 0;
-		}
-		imcb_chat_msg(chat, bud->ext_jid, body->text, 0, jabber_get_timestamp(node));
-		if (s) {
-			*s = '/';
-		}
+
+	if (bud && jc && bud != jc->me) {
+		bare_jid = jabber_get_bare_jid(bud->ext_jid ? bud->ext_jid : bud->full_jid);
+		final_from = bare_jid;
+	} else {
+		final_from = nick;
 	}
+
+	imcb_chat_msg(chat, final_from, body->text, 0, jabber_get_timestamp(node));
+
+	g_free(bare_jid);
 }
