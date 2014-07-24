@@ -26,6 +26,7 @@
 #include "bitlbee.h"
 #include "ipc.h"
 #include "dcc.h"
+#include "lib/ssl_client.h"
 
 GSList *irc_connection_list;
 GSList *irc_plugins;
@@ -170,6 +171,11 @@ irc_t *irc_new( int fd )
 #ifdef WITH_PURPLE
 	nogaim_init();
 #endif
+
+	/* SSL library initialization also should be done after the fork, to
+	   avoid shared CSPRNG state. This is required by NSS, which refuses to
+	   work if a fork is detected */
+	ssl_init();
 	
 	for( l = irc_plugins; l; l = l->next )
 	{
