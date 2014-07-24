@@ -601,7 +601,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	bee_user_t *bu = NULL;
 
 	cmds = g_strdup(message);
-	cmd = split_command_parts(cmds);
+	cmd = split_command_parts(cmds, 2);
 
 	if (cmd[0] == NULL) {
 		goto eof;
@@ -661,7 +661,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 				    "post any statuses recently", cmd[1]);
 			goto eof;
 		}
-		message = new = g_strdup_printf("@%s %s", bu->handle, message + (cmd[2] - cmd[0]));
+		message = new = g_strdup_printf("@%s %s", bu->handle, cmd[2]);
 		in_reply_to = id;
 		allow_post = TRUE;
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {

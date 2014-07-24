@@ -681,7 +681,7 @@ int md5_verify_password( char *password, char *hash )
 /* Split commands (root-style, *not* IRC-style). Handles "quoting of"
    white\ space in 'various ways'. Returns a NULL-terminated static
    char** so watch out with nested use! Definitely not thread-safe. */
-char **split_command_parts( char *command )
+char **split_command_parts( char *command, int limit )
 {
 	static char *cmd[IRC_MAX_ARGS+1];
 	char *s, q = 0;
@@ -691,11 +691,12 @@ char **split_command_parts( char *command )
 	cmd[0] = command;
 	k = 1;
 	for( s = command; *s && k < IRC_MAX_ARGS; s ++ )
+	{
 		if( *s == ' ' && !q )
 		{
 			*s = 0;
 			while( *++s == ' ' );
-			if( *s == '"' || *s == '\'' )
+			if( k != limit && (*s == '"' || *s == '\'') )
 			{
 				q = *s;
 				s ++;
@@ -703,6 +704,9 @@ char **split_command_parts( char *command )
 			if( *s )
 			{
 				cmd[k++] = s;
+				if (limit && k > limit) {
+					break;
+				}
 				s --;
 			}
 			else
@@ -721,6 +725,7 @@ char **split_command_parts( char *command )
 		{
 			q = *s = 0;
 		}
+	}
 	
 	/* Full zero-padding for easier argc checking. */
 	while( k <= IRC_MAX_ARGS )

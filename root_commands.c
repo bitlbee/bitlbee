@@ -31,7 +31,7 @@
 
 void root_command_string( irc_t *irc, char *command )
 {
-	root_command( irc, split_command_parts( command ) );
+	root_command( irc, split_command_parts( command, 0 ) );
 }
 
 #define MIN_ARGS( x, y... )                                                    \

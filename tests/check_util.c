@@ -168,6 +168,50 @@ START_TEST(test_http_encode)
 	fail_unless( strcmp( s, "ee%C3%ABee%21%21..." ) == 0 );
 END_TEST
 
+struct {
+	int limit;
+	char *command;
+	char *expected[IRC_MAX_ARGS+1];
+} split_tests[] = {
+	{
+		0, "account add etc \"user name with spaces\" 'pass\\ word'",
+		{"account", "add", "etc", "user name with spaces", "pass\\ word", NULL},
+	},
+	{
+		0, "channel set group Close\\ friends",
+		{"channel", "set", "group", "Close friends", NULL},
+	},
+	{
+		2, "reply wilmer \"testing in C is a PITA\", you said.",
+		{"reply", "wilmer", "\"testing in C is a PITA\", you said.", NULL},
+	},
+	{
+		4, "one space  two  spaces  limit  limit",
+		{"one", "space", "two", "spaces", "limit  limit", NULL},
+	},
+	{
+		0, NULL,
+		{NULL}
+	},
+};
+
+START_TEST(test_split_command_parts)
+	int i;
+	for (i = 0; split_tests[i].command; i++) {
+		char *cmd = g_strdup(split_tests[i].command);
+		char **split = split_command_parts(cmd, split_tests[i].limit);
+		char **expected = split_tests[i].expected;
+
+		int j;
+		for (j = 0; split[j] && expected[j]; j++) {
+			fail_unless (strcmp(split[j], expected[j]) == 0,
+				"(%d) split_command_parts broken: split(\"%s\")[%d] -> %s (expected: %s)",
+				i, split_tests[i].command, j, split[j], expected[j]);
+		}
+		g_free(cmd);
+	}
+END_TEST
+
 Suite *util_suite (void)
 {
 	Suite *s = suite_create("Util");
@@ -182,5 +226,6 @@ Suite *util_suite (void)
 	tcase_add_test (tc_core, test_set_url_username_pwd);
 	tcase_add_test (tc_core, test_word_wrap);
 	tcase_add_test (tc_core, test_http_encode);
+	tcase_add_test (tc_core, test_split_command_parts);
 	return s;
 }

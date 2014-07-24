@@ -364,7 +364,7 @@ static void irc_cmd_privmsg( irc_t *irc, char **cmd )
 			if( cmd[2][strlen(cmd[2])-1] == '\001' )
 				cmd[2][strlen(cmd[2])-1] = '\0';
 			
-			ctcp = split_command_parts( cmd[2] + 1 );
+			ctcp = split_command_parts( cmd[2] + 1, 0 );
 			iu->f->ctcp( iu, ctcp );
 		}
 		else if( iu->f->privmsg )
