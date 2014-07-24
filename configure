@@ -368,8 +368,10 @@ int main()
 	ns_msg nsh;
 	ns_rr rr;
 
-	ns_initparse( NULL, 0, NULL );
-	ns_parserr( NULL, ns_s_an, 0, NULL );
+	/* Not all platforms we want to work on have
+	 ns_* routines, so use this to make sure
+	 the compiler uses it.*/
+	return (int)(sizeof(nsh) + sizeof(rr));
 }
 '
 
@@ -457,33 +459,17 @@ detect_resolv_ns_static()
 
 detect_nameser_has_ns_types()
 {
-	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
-	case "$arch" in
-	FreeBSD )
-		# In FreeBSD ns_ routines are present in libc.so
-		LIBRESOLV=;;
-	* )
-		LIBRESOLV=-lresolv;;
-	esac
-	ret=1
-    if detect_resolv_ns_dynamic; then
-	    echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c $LIBRESOLV -  >/dev/null 2>/dev/null
-        if [ "$?" = "0" ]; then
-            ret=0
-        fi
-    elif detect_resolv_ns_static; then
-	    for i in $systemlibdirs; do
-		    if [ -f $i/libresolv.a ]; then
-			    echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
-                    if [ "$?" = "0" ]; then
-                        ret=0
-                    fi
-		    fi
-	    done
+    TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
+    ret=1
+    # since we aren't actually linking with ns_* routines
+    # we can just compile the test code
+    echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
+    if [ "$?" = "0" ]; then
+        ret=0
     fi
 
-	rm -f $TMPFILE
-	return $ret
+    rm -f $TMPFILE
+    return $ret
 }
 
 if [ "$ssl" = "auto" ]; then
