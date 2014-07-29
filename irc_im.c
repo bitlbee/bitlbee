@@ -572,11 +572,19 @@ static gboolean bee_irc_chat_new(bee_t *bee, struct groupchat *c)
 	c->ui_data = ic;
 	ic->data = c;
 
-	topic = g_strdup_printf(
-	        "BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!",
-	        c->title);
-	irc_channel_set_topic(ic, topic, irc->root);
-	g_free(topic);
+	if (ic->topic == NULL) {
+		/* New channel with no preset topic - make up a generic one */
+		topic = g_strdup_printf(
+		        "BitlBee groupchat: \"%s\". Please keep in mind that root-commands won't work here. Have fun!",
+		        c->title);
+		irc_channel_set_topic(ic, topic, irc->root);
+	} else {
+		/* Preset topic from the channel we picked */
+		topic = g_strdup(ic->topic);
+	}
+
+	g_free(c->topic);
+	c->topic = topic;         /* Let groupchat borrow this pointer */
 
 	return TRUE;
 }
