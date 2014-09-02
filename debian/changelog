@@ -1,3 +1,13 @@
+bitlbee (3.2.1+otr4-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Rebuild against GnuTLS v3. Closes: #753020
+  * Comment unbuilt packages bitlbee-plugin-skype and skyped in
+    debian/control. As a side-effect of allowing source only uploads listing
+    unbuilt packages in debian/control triggers NEW processing.
+
+ -- Andreas Metzler <ametzler@debian.org>  Sat, 23 Aug 2014 19:39:58 +0200
+
 bitlbee (3.2.1+otr4-1) unstable; urgency=low
 
   * New upstream version, fixes Twitter API compatibility (now using HTTP/1.1).
