@@ -307,7 +307,7 @@ void jabber_buddy_ask( struct im_connection *ic, char *handle )
 	g_free( buf );
 }
 
-/* Compares two Jabber IDs to check for match. */
+/* Compares just the bare portions of two Jabber IDs. */
 int jabber_compare_jid( const char *jid1, const char *jid2 )
 {
 	int i;
