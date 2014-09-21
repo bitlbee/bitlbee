@@ -6,6 +6,7 @@ bitlbee (3.2.1+otr4-2) UNRELEASED; urgency=medium
   * Force re-building of user guide on Debian.
   * Don't ignore failure of invoke-rc.d; fixes lintian warning.
   * Use my Debian e-mail address in Uploaders.
+  * Support building against libgnutls28-dev. Closes: #753020
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sun, 20 Jul 2014 01:19:30 +0200
 
@@ -642,6 +643,3 @@ bitlbee (0.6-1) unstable; urgency=low
 
  -- Wilmer van der Gaast <lintux@debian.org>  Wed, 10 Jul 2002 11:02:28 +0200
 
-Local variables:
-mode: debian-changelog
-End:
