@@ -636,6 +636,7 @@ static gboolean bee_irc_chat_msg( bee_t *bee, struct groupchat *c, bee_user_t *b
 	wrapped = word_wrap( msg, 425 );
 	irc_send_msg( iu, "PRIVMSG", ic->name, wrapped, ts );
 	g_free( ts );
+	g_free( wrapped );
 	
 	return TRUE;
 }
