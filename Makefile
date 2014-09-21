@@ -146,7 +146,7 @@ ifdef SYSTEMDSYSTEMUNITDIR
 	sed 's|@sbindir@|$(SBINDIR)|' $(_SRCDIR_)init/bitlbee@.service.in > init/bitlbee@.service
 endif
 
-install-systemd:
+install-systemd: systemd
 ifdef SYSTEMDSYSTEMUNITDIR
 ifeq ($(shell id -u),0)
 	mkdir -p $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
