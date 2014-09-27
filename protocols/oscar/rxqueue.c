@@ -8,9 +8,7 @@
 
 #include <aim.h> 
 
-#ifndef _WIN32
 #include <sys/socket.h>
-#endif
 
 /*
  *

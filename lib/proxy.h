@@ -27,11 +27,9 @@
 #define _PROXY_H_
 
 #include <sys/types.h>
-#ifndef _WIN32
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#endif
 #include <glib.h>
 #include <gmodule.h>
 

@@ -41,11 +41,7 @@ help_t *help_init( help_t **help, const char *helpfile )
 	
 	*help = h = g_new0 ( help_t, 1 );
 	
-	h->fd = open( helpfile, O_RDONLY
-#ifdef _WIN32
-				  | O_BINARY
-#endif
-				  );
+	h->fd = open( helpfile, O_RDONLY );
 	
 	if( h->fd == -1 )
 	{

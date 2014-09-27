@@ -9,19 +9,11 @@
 -include Makefile.settings
 
 # Program variables
-objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o $(OTR_BI) query.o root_commands.o set.o storage.o $(STORAGE_OBJS)
+objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o $(OTR_BI) query.o root_commands.o set.o storage.o $(STORAGE_OBJS) unix.o conf.o log.o
 headers = $(wildcard *.h lib/*.h protocols/*.h)
 subdirs = lib protocols
 
-ifeq ($(TARGET),i586-mingw32msvc)
-objects += win32.o
-LDFLAGS+=-lws2_32
-EFLAGS+=-lsecur32
-OUTFILE=bitlbee.exe
-else
-objects += unix.o conf.o log.o
-OUTFILE=bitlbee
-endif
+OUTFILE = bitlbee
 
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)

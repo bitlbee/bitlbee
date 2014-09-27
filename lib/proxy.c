@@ -25,17 +25,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#ifndef _WIN32
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#else
-#include "sock.h"
-#define ETIMEDOUT WSAETIMEDOUT
-#define EINPROGRESS WSAEINPROGRESS
-#endif
 #include <fcntl.h>
 #include <errno.h>
 #include "nogaim.h"
@@ -75,7 +69,6 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 	int error = ETIMEDOUT;
 	len = sizeof(error);
 	
-#ifndef _WIN32
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0 || error) {
 		if ((phb->gai_cur = phb->gai_cur->ai_next)) {
 			int new_fd;
@@ -100,7 +93,6 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 		}
 		return FALSE;
 	}
-#endif
 	freeaddrinfo(phb->gai);
 	sock_make_blocking(source);
 	b_event_remove(phb->inpa);

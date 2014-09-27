@@ -27,10 +27,8 @@
 #include "bitlbee.h"
 #include "ipc.h"
 #include "commands.h"
-#ifndef _WIN32
 #include <sys/uio.h>
 #include <sys/un.h>
-#endif
 
 GSList *child_list = NULL;
 static int ipc_child_recv_fd = -1;
@@ -842,7 +840,6 @@ void ipc_child_disable()
 	global.listen_socket = -1;
 }
 
-#ifndef _WIN32
 char *ipc_master_save_state()
 {
 	char *fn = g_strdup( "/tmp/bee-restart.XXXXXX" );
@@ -941,13 +938,6 @@ int ipc_master_listen_socket()
 	
 	return 1;
 }
-#else
-int ipc_master_listen_socket()
-{
-	/* FIXME: Open named pipe \\.\BITLBEE */
-	return 0;
-}
-#endif
 
 int ipc_master_load_state( char *statefile )
 {

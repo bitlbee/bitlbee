@@ -8,9 +8,7 @@
 #include <aim.h>
 #include "im.h"
 
-#ifndef _WIN32
 #include <sys/socket.h>
-#endif
 
 /*
  * Allocate a new tx frame.

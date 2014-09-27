@@ -483,8 +483,6 @@ elif [ "$ssl" = "gnutls" ]; then
 	detect_gnutls
 elif [ "$ssl" = "nss" ]; then
 	detect_nss
-elif [ "$ssl" = "sspi" ]; then
-	echo
 elif [ "$ssl" = "openssl" ]; then
 	echo
 	echo 'No detection code exists for OpenSSL. Make sure that you have a complete'
@@ -805,9 +803,9 @@ AIX )
 	echo 'EFLAGS+=-Wl,-brtl' >> Makefile.settings
 ;;
 CYGWIN* )
-	echo 'Cygwin is not officially supported.'
 ;;
 Windows )
+	echo 'Native windows compilation is not supported anymore, use cygwin instead.'
 ;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'
