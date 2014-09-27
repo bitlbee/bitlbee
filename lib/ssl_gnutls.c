@@ -235,7 +235,7 @@ struct ssl_session
 
 static void ssl_cache_add( struct scd *conn )
 {
-	size_t data_size;
+	size_t data_size = 0;
 	struct ssl_session *data;
 	char *hostname;
 	
@@ -244,7 +244,7 @@ static void ssl_cache_add( struct scd *conn )
 		return;
 	
 	data = g_malloc( sizeof( struct ssl_session ) + data_size );
-	if( gnutls_session_get_data( conn->session, data->data, &data->size ) != 0 )
+	if( gnutls_session_get_data( conn->session, data->data, &data_size ) != 0 )
 	{
 		g_free( data );
 		return;
