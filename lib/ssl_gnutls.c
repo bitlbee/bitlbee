@@ -334,6 +334,9 @@ static gboolean ssl_handshake( gpointer data, gint source, b_input_condition con
 	struct scd *conn = data;
 	int st, stver;
 	
+	/* This function returns false, so avoid calling b_event_remove again */
+	conn->inpa = -1;
+	
 	if( ( st = gnutls_handshake( conn->session ) ) < 0 )
 	{
 		if( st == GNUTLS_E_AGAIN || st == GNUTLS_E_INTERRUPTED )

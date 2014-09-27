@@ -291,6 +291,9 @@ eof:
 	}
 
 cleanup:
+	/* Avoid g_source_remove warnings */
+	req->inpa = 0;
+
 	if( req->ssl )
 		ssl_disconnect( req->ssl );
 	else
