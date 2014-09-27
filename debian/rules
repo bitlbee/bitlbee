@@ -33,17 +33,23 @@ ifneq ($(BITLBEE_SKYPE),plugin)
 DH_OPTIONS += -Nbitlbee-plugin-skype -Nskyped
 endif
 
+CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
+CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
+LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
+
+CONFIGURE_OVERRIDES:=CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+
 build: build-stamp
 build-stamp:
 	dh_testdir
 
 	mkdir -p debian/build-native
-	ROOT=$$PWD; cd debian/build-native; $(BITLBEE_CONFIGURE_VERSION) $(shell dpkg-buildflags --export=configure) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent --otr=$(BITLBEE_OTR) --skype=$(BITLBEE_SKYPE) $(BITLBEE_CONFIGURE_FLAGS)
+	ROOT=$$PWD; cd debian/build-native; $(BITLBEE_CONFIGURE_VERSION) $(CONFIGURE_OVERRIDES) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --events=libevent --otr=$(BITLBEE_OTR) --skype=$(BITLBEE_SKYPE) $(BITLBEE_CONFIGURE_FLAGS)
 	$(MAKE) -C debian/build-native
 
 ifeq ($(BITLBEE_LIBPURPLE),1)
 	mkdir -p debian/build-libpurple
-	ROOT=$$PWD; cd debian/build-libpurple; $(BITLBEE_CONFIGURE_VERSION) $(shell dpkg-buildflags --export=configure) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --purple=1 $(BITLBEE_CONFIGURE_FLAGS)
+	ROOT=$$PWD; cd debian/build-libpurple; $(BITLBEE_CONFIGURE_VERSION) $(CONFIGURE_OVERRIDES) $$ROOT/configure --debug=$(DEBUG) --prefix=/usr --etcdir=/etc/bitlbee --purple=1 $(BITLBEE_CONFIGURE_FLAGS)
 	$(MAKE) -C debian/build-libpurple
 endif
 
