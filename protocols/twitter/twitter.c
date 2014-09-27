@@ -616,7 +616,9 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 			twitter_log(ic, "Could not undo last action");
 
 		goto eof;
-	} else if (g_strcasecmp(cmd[0], "favourite") == 0 && cmd[1]) {
+	} else if ((g_strcasecmp(cmd[0], "favourite") == 0 ||
+		    g_strcasecmp(cmd[0], "favorite") == 0 ||
+		    g_strcasecmp(cmd[0], "fav") == 0) && cmd[1]) {
 		if ((id = twitter_message_id_from_command_arg(ic, cmd[1], NULL))) {
 			twitter_favourite_tweet(ic, id);
 		} else {
