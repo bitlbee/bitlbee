@@ -607,7 +607,7 @@ fi
 if [ "$otr" = 1 ]; then
 	# BI == built-in
 	echo '#define OTR_BI' >> config.h
-	echo "EFLAGS+=-L${otrprefix}/lib -lotr" >> Makefile.settings
+	echo "EFLAGS+=-L${otrprefix}/lib -lotr -lgcrypt" >> Makefile.settings
 	echo "CFLAGS+=-I${otrprefix}/include" >> Makefile.settings
 	echo 'OTR_BI=otr.o' >> Makefile.settings
 elif [ "$otr" = "plugin" ]; then
