@@ -10,7 +10,7 @@
 
 # Program variables
 objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o $(OTR_BI) query.o root_commands.o set.o storage.o $(STORAGE_OBJS) unix.o conf.o log.o
-headers = $(wildcard *.h lib/*.h protocols/*.h)
+headers = $(wildcard $(_SRCDIR_)*.h $(_SRCDIR_)lib/*.h $(_SRCDIR_)protocols/*.h)
 subdirs = lib protocols
 
 OUTFILE = bitlbee
@@ -93,7 +93,7 @@ uninstall-bin:
 install-dev:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
 	$(INSTALL) -m 0644 config.h $(DESTDIR)$(INCLUDEDIR)
-	for i in $(headers); do $(INSTALL) -m 0644 $(_SRCDIR_)$$i $(DESTDIR)$(INCLUDEDIR); done
+	for i in $(headers); do $(INSTALL) -m 0644 $$i $(DESTDIR)$(INCLUDEDIR); done
 	mkdir -p $(DESTDIR)$(PCDIR)
 	$(INSTALL) -m 0644 bitlbee.pc $(DESTDIR)$(PCDIR)
 
@@ -140,14 +140,12 @@ endif
 
 install-systemd: systemd
 ifdef SYSTEMDSYSTEMUNITDIR
-ifeq ($(shell id -u),0)
 	mkdir -p $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 	$(INSTALL) -m 0644 init/bitlbee.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 	$(INSTALL) -m 0644 init/bitlbee@.service $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 	$(INSTALL) -m 0644 $(_SRCDIR_)init/bitlbee.socket $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 else
-	@echo Not root, so not installing systemd files.
-endif
+	@echo SYSTEMDSYSTEMUNITDIR not set, not installing systemd unit files.
 endif
 
 tar:
