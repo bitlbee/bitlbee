@@ -12,6 +12,8 @@ bitlbee (3.2.2-1) unstable; urgency=medium
   [ Wilmer van der Gaast ]
   * Merged 3.2.2 with a few later Debian-specific fixes for a belated
     3.2.2-1 upload. Apologies for the delay!
+  * Removed stale workaround on upgrades from bitlbee <3.0 (with no
+    bitlbee-common package).
 
  -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 05 Oct 2014 22:11:12 +0100
 
