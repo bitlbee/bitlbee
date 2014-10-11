@@ -725,19 +725,29 @@ time_t jabber_get_timestamp( struct xt_node *xt )
 	struct xt_node *c;
 	char *s = NULL;
 	struct tm tp;
-	
-	for( c = xt->children; ( c = xt_find_node( c, "x" ) ); c = c->next )
-	{
-		if( ( s = xt_find_attr( c, "xmlns" ) ) && strcmp( s, XMLNS_DELAY ) == 0 )
-			break;
+	gboolean is_old = TRUE;
+	const char *format;
+
+	/* XEP-0091 has <x> */
+	c = xt_find_node_by_attr( xt->children, "x", "xmlns", XMLNS_DELAY_OLD );
+
+	if( !c || !( s = xt_find_attr( c, "stamp" ) ) ) {
+		is_old = FALSE;
+
+		/* XEP-0203 has <delay> */
+		c = xt_find_node_by_attr( xt->children, "delay", "xmlns", XMLNS_DELAY );
+		if( !c || !( s = xt_find_attr( c, "stamp" ) ) ) {
+			return 0;
+		}
 	}
 	
-	if( !c || !( s = xt_find_attr( c, "stamp" ) ) )
-		return 0;
-	
 	memset( &tp, 0, sizeof( tp ) );
-	if( sscanf( s, "%4d%2d%2dT%2d:%2d:%2d", &tp.tm_year, &tp.tm_mon, &tp.tm_mday,
-	                                        &tp.tm_hour, &tp.tm_min, &tp.tm_sec ) != 6 )
+
+	/* The other main difference between XEPs is the timestamp format */
+	format = (is_old) ? "%4d%2d%2dT%2d:%2d:%2d" : "%4d-%2d-%2dT%2d:%2d:%2dZ";
+
+	if( sscanf( s, format, &tp.tm_year, &tp.tm_mon, &tp.tm_mday,
+	                       &tp.tm_hour, &tp.tm_min, &tp.tm_sec ) != 6 )
 		return 0;
 	
 	tp.tm_year -= 1900;

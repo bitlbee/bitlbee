@@ -523,6 +523,21 @@ char *xt_find_attr( struct xt_node *node, const char *key )
 	return node->attr[i].value;
 }
 
+struct xt_node *xt_find_node_by_attr( struct xt_node *xt, const char *tag, const char *key, const char *value ) {
+	struct xt_node *c;
+	char *s;
+
+	for( c = xt; ( c = xt_find_node( c, tag ) ); c = c->next )
+	{
+		if( ( s = xt_find_attr( c, key ) ) && strcmp( s, value ) == 0 )
+		{
+			return c;
+		}
+	}
+	return NULL;
+}
+
+
 /* Strip a few non-printable characters that aren't allowed in XML streams
    (and upset some XMPP servers for example). */
 void xt_strip_text( char *in )
