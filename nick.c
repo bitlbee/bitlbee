@@ -407,8 +407,8 @@ int nick_lc( irc_t *irc, char *nick )
 	}
 	
 	for( i = 0; nick[i]; i ++ )
-		if( nick[i] < 0x7f )
-			nick[i] = tab[(int)nick[i]];
+		if( ((guchar)nick[i]) < 0x7f )
+			nick[i] = tab[(guchar)nick[i]];
 	
 	return nick_ok( irc, nick );
 }
