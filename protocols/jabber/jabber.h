@@ -337,7 +337,6 @@ int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token );
 
 extern const struct oauth2_service oauth2_service_google;
 extern const struct oauth2_service oauth2_service_facebook;
-extern const struct oauth2_service oauth2_service_mslive;
 
 /* conference.c */
 struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password );

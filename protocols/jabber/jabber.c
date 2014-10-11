@@ -147,9 +147,7 @@ static void jabber_login( account_t *acc )
 		
 		jd->fd = jd->r_inpa = jd->w_inpa = -1;
 		
-		if( strstr( jd->server, ".live.com" ) )
-			jd->oauth2_service = &oauth2_service_mslive;
-		else if( strstr( jd->server, ".facebook.com" ) )
+		if( strstr( jd->server, ".facebook.com" ) )
 			jd->oauth2_service = &oauth2_service_facebook;
 		else
 			jd->oauth2_service = &oauth2_service_google;
