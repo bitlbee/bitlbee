@@ -228,7 +228,8 @@ struct jabber_transfer
 #define XMLNS_PING         "urn:xmpp:ping"                                       /* XEP-0199 */
 #define XMLNS_RECEIPTS     "urn:xmpp:receipts"                                   /* XEP-0184 */
 #define XMLNS_VCARD        "vcard-temp"                                          /* XEP-0054 */
-#define XMLNS_DELAY        "jabber:x:delay"                                      /* XEP-0091 */
+#define XMLNS_DELAY_OLD    "jabber:x:delay"                                      /* XEP-0091 */
+#define XMLNS_DELAY        "urn:xmpp:delay"                                      /* XEP-0203 */
 #define XMLNS_XDATA        "jabber:x:data"                                       /* XEP-0004 */
 #define XMLNS_CHATSTATES   "http://jabber.org/protocol/chatstates"               /* XEP-0085 */
 #define XMLNS_DISCO_INFO   "http://jabber.org/protocol/disco#info"               /* XEP-0030 */
@@ -337,7 +338,6 @@ int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token );
 
 extern const struct oauth2_service oauth2_service_google;
 extern const struct oauth2_service oauth2_service_facebook;
-extern const struct oauth2_service oauth2_service_mslive;
 
 /* conference.c */
 struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password );

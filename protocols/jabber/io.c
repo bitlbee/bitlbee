@@ -505,6 +505,11 @@ static xt_status jabber_pkt_stream_error( struct xt_node *node, gpointer data )
 		imcb_error( ic, "Account and resource used from a different location" );
 		allow_reconnect = FALSE;
 	}
+	else if( strcmp( err->code, "not-authorized" ) == 0 )
+	{
+		imcb_error( ic, "Not authorized" );
+		allow_reconnect = FALSE;
+	}
 	else
 	{
 		imcb_error( ic, "Stream error: %s%s%s", err->code, err->text ? ": " : "",

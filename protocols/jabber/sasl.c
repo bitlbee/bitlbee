@@ -46,15 +46,6 @@ const struct oauth2_service oauth2_service_facebook =
 	"126828914005625",
 	"4b100f0f244d620bf3f15f8b217d4c32",
 };
-const struct oauth2_service oauth2_service_mslive =
-{
-	"https://oauth.live.com/authorize",
-	"https://oauth.live.com/token",
-	"http://www.bitlbee.org/main.php/Messenger/oauth2.html",
-	"wl.offline_access%20wl.messenger",
-	"000000004C06FCD1",
-	"IRKlBPzJJAWcY-TbZjiTEJu9tn7XCFaV",
-};
 
 xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 {
@@ -62,7 +53,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	char *s;
-	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_fb = 0, sup_ms = 0;
+	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_fb = 0;
 	int want_oauth = FALSE;
 	GString *mechs;
 	
@@ -97,8 +88,6 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 			sup_gtalk = 1;
 		else if( c->text && g_strcasecmp( c->text, "X-FACEBOOK-PLATFORM" ) == 0 )
 			sup_fb = 1;
-		else if( c->text && g_strcasecmp( c->text, "X-MESSENGER-OAUTH2" ) == 0 )
-			sup_ms = 1;
 		
 		if( c->text )
 			g_string_append_printf( mechs, " %s", c->text );
@@ -108,7 +97,7 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 	
 	if( !want_oauth && !sup_plain && !sup_digest )
 	{
-		if( !sup_gtalk && !sup_fb && !sup_ms )
+		if( !sup_gtalk && !sup_fb )
 			imcb_error( ic, "This server requires OAuth "
 			                "(supported schemes:%s)", mechs->str );
 		else
@@ -140,12 +129,6 @@ xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data )
 		reply->text = base64_encode( (unsigned char *)s, len );
 		reply->text_len = strlen( reply->text );
 		g_free( s );
-	}
-	else if( sup_ms && want_oauth )
-	{
-		xt_add_attr( reply, "mechanism", "X-MESSENGER-OAUTH2" );
-		reply->text = g_strdup( jd->oauth2_access_token );
-		reply->text_len = strlen( jd->oauth2_access_token );
 	}
 	else if( sup_fb && want_oauth )
 	{
