@@ -6,13 +6,13 @@ The source can be downloaded from http://www.bitlbee.org/
 Authors: Wilmer van der Gaast, Sjoerd Hemminga, Jelmer Vernooij,
          Maurits Dijkstra, Geert Mulders, Miklos Vajna and others.
 
-Mainly Copyright 2002-2012 Wilmer van der Gaast.
+Mainly Copyright 2002-2014 Wilmer van der Gaast.
 
 
-Bits of third party code, also GPLed:
-* Some parts (mostly protocols/oscar/) are borrowed from Gaim (version
-  0.58), now known as Pidgin <http://www.pidgin.im/>.
+Bits of third party code, also (L)GPLed:
 * protocols/yahoo/ is libyahoo2 <http://libyahoo2.sf.net/>.
+* Some parts (though there is very little left at this point) are borrowed
+  from Gaim (version 0.58), now known as Pidgin <http://www.pidgin.im/>.
 
 Other license (but GPL-compatible):
 * lib/json.[ch] is from <https://github.com/udp/json-parser> and licensed
@@ -38,6 +38,25 @@ BitlBee License:
   Fifth Floor, Boston, MA 02110-1301, USA.
 ============================================================================
 
+
+Portions (mostly protocols/twitter and protocols/oscar) are licenced under
+the LGPL:
+
+============================================================================
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation, version
+  2.1.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with this library; if not, write to the Free Software Foundation,
+  Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+============================================================================
 
 
 The SGML-formatted documentation is written by Jelmer Vernooij
