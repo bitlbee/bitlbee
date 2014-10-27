@@ -210,7 +210,10 @@ static gboolean http_incoming_data( gpointer data, int source, b_input_condition
 	int st;
 	
 	if( req->inpa > 0 )
+	{
 		b_event_remove( req->inpa );
+		req->inpa = 0;
+	}
 	
 	if( req->ssl )
 	{

@@ -34,7 +34,10 @@ void jabber_si_free_transfer( file_transfer_t *ft)
 	struct jabber_data *jd = tf->ic->proto_data;
 
 	if ( tf->watch_in )
+	{
 		b_event_remove( tf->watch_in );
+		tf->watch_in = 0;
+	}
 
 	jd->filetransfers = g_slist_remove( jd->filetransfers, tf );
 
