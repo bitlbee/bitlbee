@@ -122,10 +122,16 @@ void jabber_bs_free_transfer( file_transfer_t *ft) {
 	}
 
 	if ( tf->watch_in )
+	{
 		b_event_remove( tf->watch_in );
+		tf->watch_in = 0;
+	}
 	
 	if( tf->watch_out )
+	{
 		b_event_remove( tf->watch_out );
+		tf->watch_out = 0;
+	}
 	
 	g_free( bt->pseudoadr );
 
