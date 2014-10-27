@@ -137,7 +137,7 @@ int ft_listen( struct sockaddr_storage *saddr_ptr, char *host, char *port, int c
 		memcpy( saddr_ptr, saddr, saddrlen );
 
 	/* I hate static-length strings.. */
-	host[HOST_NAME_MAX] = '\0';
+	host[HOST_NAME_MAX-1] = '\0';
 	port[5] = '\0';
 	
 	return fd;

@@ -384,10 +384,11 @@ gboolean dccs_recv_proto( gpointer data, gint fd, b_input_condition cond )
 			if( df->watch_out )
 				b_event_remove( df->watch_out );
 
+			df->watch_in = 0;
+
 			if( df->proto_finished )
 				dcc_finish( ft );
 
-			df->watch_in = 0;
 			return FALSE;
 		}
 
