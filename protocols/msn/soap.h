@@ -148,7 +148,7 @@ int msn_soap_passport_sso_request( struct im_connection *ic, const char *nonce )
 "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
   "<soap:Header xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">" \
     "<ABApplicationHeader xmlns=\"http://www.msn.com/webservices/AddressBook\">" \
-      "<ApplicationId xmlns=\"http://www.msn.com/webservices/AddressBook\">CFE80F9D-180F-4399-82AB-413F33A1FA11</ApplicationId>" \
+      "<ApplicationId xmlns=\"http://www.msn.com/webservices/AddressBook\">484AAC02-7F59-41B7-9601-772045DCC569</ApplicationId>" \
       "<IsMigration xmlns=\"http://www.msn.com/webservices/AddressBook\">false</IsMigration>" \
       "<PartnerScenario xmlns=\"http://www.msn.com/webservices/AddressBook\">%s</PartnerScenario>" \
     "</ABApplicationHeader>" \
