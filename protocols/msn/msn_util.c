@@ -206,7 +206,7 @@ void msn_buddy_ask( bee_user_t *bu )
 	struct msn_buddy_data *bd = bu->data;
 	char buf[1024];
 	
-	if( ( bd->flags & 30 ) != 8 && ( bd->flags & 30 ) != 16 )
+	if( !( bd->flags & MSN_BUDDY_PL ) )
 		return;
 	
 	bla = g_new0( struct msn_buddy_ask_data, 1 );
