@@ -759,8 +759,16 @@ static int msn_soap_addressbook_handle_response( struct msn_soap_req_data *soap_
 			if( ( bd->flags & ( MSN_BUDDY_AL | MSN_BUDDY_BL ) ) ==
 			                  ( MSN_BUDDY_AL | MSN_BUDDY_BL ) )
 			{
+				/* both allow and block, delete block, add wtf */
 				bd->flags &= ~MSN_BUDDY_BL;
 				wtf++;
+			}
+
+
+			if( ( bd->flags & ( MSN_BUDDY_AL | MSN_BUDDY_BL ) ) == 0 )
+			{
+				/* neither allow or block, add allow */
+				bd->flags |= MSN_BUDDY_AL;
 			}
 		}
 	}
