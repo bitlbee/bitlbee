@@ -637,7 +637,7 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 	/* This is all getting hairy. :-( If we RT'ed something ourselves,
 	   remember OUR id instead so undo will work. In other cases, the
 	   original tweet's id should be remembered for deduplicating. */
-	if (strcmp(txs->user->screen_name, td->user) == 0)
+	if (g_strcasecmp(txs->user->screen_name, td->user) == 0)
 		td->log[td->log_id].id = txs->rt_id;
 	
 	if (set_getbool(&ic->acc->set, "show_ids")) {
@@ -801,7 +801,7 @@ static gboolean twitter_stream_handle_object(struct im_connection *ic, json_valu
 		return ret;
 	} else if ((c = json_o_get(o, "direct_message")) &&
 	           (txs = twitter_xt_get_dm(c))) {
-		if (strcmp(txs->user->screen_name, td->user) != 0)
+		if (g_strcasecmp(txs->user->screen_name, td->user) != 0)
 			imcb_buddy_msg(ic, txs->user->screen_name,
 				       txs->text, 0, txs->created_at);
 		txs_free(txs);
@@ -835,7 +835,7 @@ static gboolean twitter_stream_handle_status(struct im_connection *ic, struct tw
 		}
 	}
 	
-	if (!(strcmp(txs->user->screen_name, td->user) == 0 ||
+	if (!(g_strcasecmp(txs->user->screen_name, td->user) == 0 ||
 	      set_getbool(&ic->acc->set, "fetch_mentions") ||
 	      bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
 		/* Tweet is from an unknown person and the user does not want
@@ -867,7 +867,7 @@ static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value
 	if (strcmp(type, "follow") == 0) {
 		struct twitter_xml_user *us = twitter_xt_get_user(source);
 		struct twitter_xml_user *ut = twitter_xt_get_user(target);
-		if (strcmp(us->screen_name, td->user) == 0) {
+		if (g_strcasecmp(us->screen_name, td->user) == 0) {
 			twitter_add_buddy(ic, ut->screen_name, ut->name);
 		}
 		txu_free(us);
