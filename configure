@@ -39,6 +39,7 @@ purple=0
 debug=0
 strip=1
 gcov=0
+asan=0
 plugins=1
 otr=0
 skype=0
@@ -88,6 +89,7 @@ Option		Description				Default
 --strip=0/1	Disable/enable binary stripping		$strip
 --pie=0/1       Build position independent executable   $pie
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
+--asan=0/1	Disable/enable AddressSanitizer		$asan
 --plugins=0/1	Disable/enable plugins support		$plugins
 --otr=0/1/auto/plugin
 		Disable/enable OTR encryption support	$otr
@@ -199,10 +201,15 @@ if [ -n "$target" ]; then
 	systemlibdirs="/usr/$target/lib"
 fi
 
+if [ "$asan" = "1" ]; then
+	CFLAGS="$CFLAGS -fsanitize=address"
+	LDFLAGS="$LDFLAGS -fsanitize=address"
+	debug=1
+fi
 
 if [ "$debug" = "1" ]; then
 	echo 'DEBUG=1' >> Makefile.settings
-	CFLAGS="$CFLAGS -g -DDEBUG"
+	CFLAGS="$CFLAGS -g3 -DDEBUG -O0"
 else
 	[ -z "$CFLAGS" ] && CFLAGS="-O2 -fno-strict-aliasing"
 fi
@@ -824,6 +831,12 @@ if [ "$debug" = "1" ]; then
 	echo '  Debugging enabled.'
 else
 	echo '  Debugging disabled.'
+fi
+
+if [ "$asan" = "1" ]; then
+	echo '  AddressSanitizer (ASAN) enabled.'
+else
+	echo '  AddressSanitizer (ASAN) disabled.'
 fi
 
 if [ "$pie" = "1" ]; then
