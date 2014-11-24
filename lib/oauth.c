@@ -75,13 +75,8 @@ static char *oauth_sign( const char *method, const char *url,
 static char *oauth_nonce()
 {
 	unsigned char bytes[21];
-	char *ret = g_new0( char, sizeof( bytes) / 3 * 4 + 1 );
-	
 	random_bytes( bytes, sizeof( bytes ) );
-	base64_encode_real( bytes, sizeof( bytes), (unsigned char*) ret, "0123456789"
-	                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0A" );
-	
-	return ret;
+	return base64_encode( bytes, sizeof( bytes ) );
 }
 
 void oauth_params_add( GSList **params, const char *key, const char *value )

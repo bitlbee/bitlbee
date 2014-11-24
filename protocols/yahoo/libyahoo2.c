@@ -680,10 +680,25 @@ static void yahoo_packet_dump(unsigned char *data, int len)
 	}
 }
 
-/* raw bytes in quasi-big-endian order to base 64 string (NUL-terminated) */
+/* yahoo's variant of base64 */
 static void to_y64(unsigned char *out, const unsigned char *in, int inlen)
 {
-	base64_encode_real(in, inlen, out, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-");
+	char *encoded = base64_encode(in, inlen);
+	int i = 0;
+
+	do {
+		if (encoded[i] == '+') {
+			out[i] = '.';
+		} else if (encoded[i] == '/') {
+			out[i] = '_';
+		} else if (encoded[i] == '=') {
+			out[i] = '-';
+		} else {
+			out[i] = encoded[i];
+		}
+	} while (encoded[i++]);
+
+	g_free(encoded);
 }
 
 static void yahoo_add_to_send_queue(struct yahoo_input_data *yid, void *data,
