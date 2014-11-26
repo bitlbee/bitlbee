@@ -47,7 +47,9 @@
 
 global_t global;	/* Against global namespace pollution */
 
-static void sighandler( int signal );
+static int signal_shutdown_pipe[2] = { -1, -1 };
+static void sighandler_shutdown( int signal );
+static void sighandler_crash( int signal );
 
 static int crypt_main( int argc, char *argv[] );
 
@@ -155,18 +157,20 @@ int main( int argc, char *argv[] )
  	
 	/* Catch some signals to tell the user what's happening before quitting */
 	memset( &sig, 0, sizeof( sig ) );
-	sig.sa_handler = sighandler;
+	sig.sa_handler = SIG_IGN;
 	sigaction( SIGCHLD, &sig, &old );
 	sigaction( SIGPIPE, &sig, &old );
 	sig.sa_flags = SA_RESETHAND;
-	sigaction( SIGINT,  &sig, &old );
-	sigaction( SIGILL,  &sig, &old );
-	sigaction( SIGBUS,  &sig, &old );
-	sigaction( SIGFPE,  &sig, &old );
+	sig.sa_handler = sighandler_crash;
 	sigaction( SIGSEGV, &sig, &old );
-	sigaction( SIGTERM, &sig, &old );
-	sigaction( SIGQUIT, &sig, &old );
-	sigaction( SIGXCPU, &sig, &old );
+
+	/* Use a pipe for SIGTERM/SIGINT so the actual signal handler doesn't do anything unsafe */
+	if ( pipe( signal_shutdown_pipe ) == 0 ) {
+		b_input_add( signal_shutdown_pipe[0], B_EV_IO_READ, bitlbee_shutdown, NULL );
+		sig.sa_handler = sighandler_shutdown;
+		sigaction( SIGINT, &sig, &old );
+		sigaction( SIGTERM, &sig, &old );
+	}
 	
 	if( !getuid() || !geteuid() )
 		log_message( LOGLVL_WARNING, "BitlBee is running with root privileges. Why?" );
@@ -258,52 +262,29 @@ static int crypt_main( int argc, char *argv[] )
 	return 0;
 }
 
-static void sighandler( int signal )
+/* Signal handler for SIGTERM and SIGINT */
+static void sighandler_shutdown( int signal )
 {
-	/* FIXME: Calling log_message() here is not a very good idea! */
-	
-	if( signal == SIGTERM || signal == SIGQUIT || signal == SIGINT )
-	{
-		static int first = 1;
-		
-		if( first )
-		{
-			/* We don't know what we were doing when this signal came in. It's not safe to touch
-			   the user data now (not to mention writing them to disk), so add a timer. */
-			
-			log_message( LOGLVL_ERROR, "SIGTERM received, cleaning up process." );
-			b_timeout_add( 1, (b_event_handler) bitlbee_shutdown, NULL );
-			
-			first = 0;
-		}
-		else
-		{
-			/* Well, actually, for now we'll never need this part because this signal handler
-			   will never be called more than once in a session for a non-SIGPIPE signal...
-			   But just in case we decide to change that: */
-			
-			log_message( LOGLVL_ERROR, "SIGTERM received twice, so long for a clean shutdown." );
-			raise( signal );
-		}
+	/* Write a single null byte to the pipe, just to send a message to the main loop.
+	 * This gets handled by bitlbee_shutdown (the b_input_add callback for this pipe) */
+	write( signal_shutdown_pipe[1], "", 1 );
+}
+
+/* Signal handler for SIGSEGV
+ * A desperate attempt to tell the user that everything is wrong in the world.
+ * Avoids using irc_abort() because it has several unsafe calls to malloc */
+static void sighandler_crash( int signal )
+{
+	GSList *l;
+	const char *message = "ERROR :BitlBee crashed! (SIGSEGV received)\r\n";
+	int len = strlen(message);
+
+	for (l = irc_connection_list; l; l = l->next ) {
+		irc_t *irc = l->data;
+		write( irc->fd, message, len );
 	}
-	else if( signal == SIGCHLD )
-	{
-		pid_t pid;
-		int st;
-		
-		while( ( pid = waitpid( 0, &st, WNOHANG ) ) > 0 )
-		{
-			if( WIFSIGNALED( st ) )
-				log_message( LOGLVL_INFO, "Client %d terminated normally. (status = %d)", (int) pid, WEXITSTATUS( st ) );
-			else if( WIFEXITED( st ) )
-				log_message( LOGLVL_INFO, "Client %d killed by signal %d.", (int) pid, WTERMSIG( st ) );
-		}
-	}
-	else if( signal != SIGPIPE )
-	{
-		log_message( LOGLVL_ERROR, "Fatal signal received: %d. That's probably a bug.", signal );
-		raise( signal );
-	}
+
+	raise( signal );
 }
 
 double gettime()
