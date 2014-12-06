@@ -45,7 +45,7 @@
 */
 
 #define MSN_NS_HOST "messenger.hotmail.com"
-#define MSN_NS_PORT 1863
+#define MSN_NS_PORT "1863"
 
 /* Some other version.
 #define MSNP11_PROD_KEY "O4BG@C7BWLYQX?5G"
