@@ -44,6 +44,12 @@ typedef enum
 	TWITTER_GOT_MENTIONS   = 0x40000,
 } twitter_flags_t;
 
+typedef enum
+{
+	TWITTER_FILTER_TYPE_FOLLOW = 0,
+	TWITTER_FILTER_TYPE_TRACK
+} twitter_filter_type_t;
+
 struct twitter_log_data;
 
 struct twitter_data
@@ -57,10 +63,13 @@ struct twitter_data
 	guint64 timeline_id;
 
 	GSList *follow_ids;
+	GSList *filters;
 	
 	guint64 last_status_id; /* For undo */
 	gint main_loop_id;
+	gint filter_update_id;
 	struct http_request *stream;
+	struct http_request *filter_stream;
 	struct groupchat *timeline_gc;
 	gint http_fails;
 	twitter_flags_t flags;
@@ -76,6 +85,15 @@ struct twitter_data
 	/* set show_ids */
 	struct twitter_log_data *log;
 	int log_id;
+};
+
+#define TWITTER_FILTER_UPDATE_WAIT 3000
+struct twitter_filter
+{
+	twitter_filter_type_t type;
+	char *text;
+	guint64 uid;
+	GSList *groupchats;
 };
 
 struct twitter_user_data

@@ -30,6 +30,215 @@
 #include "url.h"
 
 GSList *twitter_connections = NULL;
+
+static int twitter_filter_cmp(struct twitter_filter *tf1,
+                              struct twitter_filter *tf2)
+{
+	int i1 = 0;
+	int i2 = 0;
+	int i;
+
+	static const twitter_filter_type_t types[] = {
+		/* Order of the types */
+		TWITTER_FILTER_TYPE_FOLLOW,
+		TWITTER_FILTER_TYPE_TRACK
+	};
+
+	for (i = 0; i < G_N_ELEMENTS(types); i++) {
+		if (types[i] == tf1->type) {
+			i1 = i + 1;
+			break;
+		}
+	}
+
+	for (i = 0; i < G_N_ELEMENTS(types); i++) {
+		if (types[i] == tf2->type) {
+			i2 = i + 1;
+			break;
+		}
+	}
+
+	if (i1 != i2) {
+		/* With different types, return their difference */
+		return i1 - i2;
+	}
+
+	/* With the same type, return the text comparison */
+	return g_strcasecmp(tf1->text, tf2->text);
+}
+
+static gboolean twitter_filter_update(gpointer data, gint fd,
+                                      b_input_condition cond)
+{
+	struct im_connection *ic = data;
+	struct twitter_data *td = ic->proto_data;
+
+	if (td->filters) {
+		twitter_open_filter_stream(ic);
+	} else if (td->filter_stream) {
+		http_close(td->filter_stream);
+		td->filter_stream = NULL;
+	}
+
+	td->filter_update_id = 0;
+	return FALSE;
+}
+
+static struct twitter_filter *twitter_filter_get(struct groupchat *c,
+                                                 twitter_filter_type_t type,
+                                                 const char *text)
+{
+	struct twitter_data *td = c->ic->proto_data;
+	struct twitter_filter *tf = NULL;
+	struct twitter_filter tfc = {type, (char*) text};
+	GSList *l;
+
+	for (l = td->filters; l; l = g_slist_next(l)) {
+		tf = l->data;
+
+		if (twitter_filter_cmp(tf, &tfc) == 0)
+			break;
+
+		tf = NULL;
+	}
+
+	if (!tf) {
+		tf = g_new0(struct twitter_filter, 1);
+		tf->type = type;
+		tf->text = g_strdup(text);
+		td->filters = g_slist_prepend(td->filters, tf);
+	}
+
+	if (!g_slist_find(tf->groupchats, c))
+		tf->groupchats = g_slist_prepend(tf->groupchats, c);
+
+	if (td->filter_update_id > 0)
+		b_event_remove(td->filter_update_id);
+
+	/* Wait for other possible filter changes to avoid request spam */
+	td->filter_update_id = b_timeout_add(TWITTER_FILTER_UPDATE_WAIT,
+					     twitter_filter_update, c->ic);
+	return tf;
+}
+
+static void twitter_filter_free(struct twitter_filter *tf)
+{
+	g_slist_free(tf->groupchats);
+	g_free(tf->text);
+	g_free(tf);
+}
+
+static void twitter_filter_remove(struct groupchat *c)
+{
+	struct twitter_data *td = c->ic->proto_data;
+	struct twitter_filter *tf;
+	GSList *l = td->filters;
+	GSList *p;
+
+	while (l != NULL) {
+		tf = l->data;
+		tf->groupchats = g_slist_remove(tf->groupchats, c);
+
+		p = l;
+		l = g_slist_next(l);
+
+		if (!tf->groupchats) {
+			twitter_filter_free(tf);
+			td->filters = g_slist_delete_link(td->filters, p);
+		}
+	}
+
+	if (td->filter_update_id > 0)
+		b_event_remove(td->filter_update_id);
+
+	/* Wait for other possible filter changes to avoid request spam */
+	td->filter_update_id = b_timeout_add(TWITTER_FILTER_UPDATE_WAIT,
+					     twitter_filter_update, c->ic);}
+
+static void twitter_filter_remove_all(struct im_connection *ic)
+{
+	struct twitter_data *td = ic->proto_data;
+	GSList *chats = NULL;
+	struct twitter_filter *tf;
+	GSList *l = td->filters;
+	GSList *p;
+
+	while (l != NULL) {
+		tf = l->data;
+
+		/* Build up a list of groupchats to be freed */
+		for (p = tf->groupchats; p; p = g_slist_next(p)) {
+			if (!g_slist_find(chats, p->data))
+				chats = g_slist_prepend(chats, p->data);
+		}
+
+		p = l;
+		l = g_slist_next(l);
+		twitter_filter_free(p->data);
+		td->filters = g_slist_delete_link(td->filters, p);
+	}
+
+	l = chats;
+
+	while (l != NULL) {
+		p = l;
+		l = g_slist_next(l);
+
+		/* Freed each remaining groupchat */
+		imcb_chat_free(p->data);
+		chats = g_slist_delete_link(chats, p);
+	}
+
+	if (td->filter_stream) {
+		http_close(td->filter_stream);
+		td->filter_stream = NULL;
+	}
+}
+
+static GSList *twitter_filter_parse(struct groupchat *c, const char *text)
+{
+	char **fs = g_strsplit(text, ";", 0);
+	GSList *ret = NULL;
+	struct twitter_filter *tf;
+	char **f;
+	char *v;
+	int i;
+	int t;
+
+	static const twitter_filter_type_t types[] = {
+		TWITTER_FILTER_TYPE_FOLLOW,
+		TWITTER_FILTER_TYPE_TRACK
+	};
+
+	static const char *typestrs[] = {
+		"follow",
+		"track"
+	};
+
+	for (f = fs; *f; f++) {
+		if ((v = strchr(*f, ':')) == NULL)
+			continue;
+
+		*(v++) = 0;
+
+		for (t = -1, i = 0; i < G_N_ELEMENTS(types); i++) {
+			if (g_strcasecmp(typestrs[i], *f) == 0) {
+				t = i;
+				break;
+			}
+		}
+
+		if (t < 0 || strlen(v) == 0)
+			continue;
+
+		tf = twitter_filter_get(c, types[t], v);
+		ret = g_slist_prepend(ret, tf);
+	}
+
+	g_strfreev(fs);
+	return ret;
+}
+
 /**
  * Main loop function
  */
@@ -435,7 +644,11 @@ static void twitter_logout(struct im_connection *ic)
 		imcb_chat_free(td->timeline_gc);
 
 	if (td) {
+		if (td->filter_update_id > 0)
+			b_event_remove(td->filter_update_id);
+
 		http_close(td->stream);
+		twitter_filter_remove_all(ic);
 		oauth_info_free(td->oauth_info);
 		g_free(td->user);
 		g_free(td->prefix);
@@ -508,12 +721,57 @@ static void twitter_chat_invite(struct groupchat *c, char *who, char *message)
 {
 }
 
+static struct groupchat *twitter_chat_join(struct im_connection *ic,
+                                           const char *room, const char *nick,
+                                           const char *password, set_t **sets)
+{
+	struct groupchat *c = imcb_chat_new(ic, room);
+	GSList *fs = twitter_filter_parse(c, room);
+	GString *topic = g_string_new("");
+	struct twitter_filter *tf;
+	GSList *l;
+
+	fs = g_slist_sort(fs, (GCompareFunc) twitter_filter_cmp);
+
+	for (l = fs; l; l = g_slist_next(l)) {
+		tf = l->data;
+
+		if (topic->len > 0)
+			g_string_append(topic, ", ");
+
+		if (tf->type == TWITTER_FILTER_TYPE_FOLLOW)
+			g_string_append_c(topic, '@');
+
+		g_string_append(topic, tf->text);
+	}
+
+	if (topic->len > 0)
+		g_string_prepend(topic, "Twitter Filter: ");
+
+	imcb_chat_topic(c, NULL, topic->str, 0);
+	imcb_chat_add_buddy(c, ic->acc->user);
+
+	if (topic->len == 0) {
+		imcb_error(ic, "Failed to handle any filters");
+		imcb_chat_free(c);
+		c = NULL;
+	}
+
+	g_string_free(topic, TRUE);
+	g_slist_free(fs);
+
+	return c;
+}
+
 static void twitter_chat_leave(struct groupchat *c)
 {
 	struct twitter_data *td = c->ic->proto_data;
 
-	if (c != td->timeline_gc)
-		return;		/* WTF? */
+	if (c != td->timeline_gc) {
+		twitter_filter_remove(c);
+		imcb_chat_free(c);
+		return;
+	}
 
 	/* If the user leaves the channel: Fine. Rejoin him/her once new
 	   tweets come in. */
@@ -747,6 +1005,7 @@ void twitter_initmodule()
 	ret->remove_buddy = twitter_remove_buddy;
 	ret->chat_msg = twitter_chat_msg;
 	ret->chat_invite = twitter_chat_invite;
+	ret->chat_join = twitter_chat_join;
 	ret->chat_leave = twitter_chat_leave;
 	ret->keepalive = twitter_keepalive;
 	ret->add_permit = twitter_add_permit;

@@ -50,6 +50,7 @@ struct twitter_xml_list {
 };
 
 struct twitter_xml_user {
+	guint64 uid;
 	char *name;
 	char *screen_name;
 };
@@ -60,6 +61,7 @@ struct twitter_xml_status {
 	struct twitter_xml_user *user;
 	guint64 id, rt_id; /* Usually equal, with RTs id == *original* id */
 	guint64 reply_to;
+	gboolean from_filter;
 };
 
 /**
@@ -391,10 +393,14 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 struct twitter_xml_user *twitter_xt_get_user(const json_value *node)
 {
 	struct twitter_xml_user *txu;
+	json_value *jv;
 	
 	txu = g_new0(struct twitter_xml_user, 1);
 	txu->name = g_strdup(json_o_str(node, "name"));
 	txu->screen_name = g_strdup(json_o_str(node, "screen_name"));
+	
+	jv = json_o_get(node, "id");
+	txu->uid = jv->u.integer;
 	
 	return txu;
 }
@@ -656,6 +662,44 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 }
 
 /**
+ * Function that is called to see the filter statuses in groupchat windows.
+ */
+static void twitter_status_show_filter(struct im_connection *ic, struct twitter_xml_status *status)
+{
+	struct twitter_data *td = ic->proto_data;
+	char *msg = twitter_msg_add_id(ic, status, "");
+	struct twitter_filter *tf;
+	GSList *f;
+	GSList *l;
+
+	for (f = td->filters; f; f = g_slist_next(f)) {
+		tf = f->data;
+
+		switch (tf->type) {
+		case TWITTER_FILTER_TYPE_FOLLOW:
+			if (status->user->uid != tf->uid)
+				continue;
+			break;
+
+		case TWITTER_FILTER_TYPE_TRACK:
+			if (strcasestr(status->text, tf->text) == NULL)
+				continue;
+			break;
+
+		default:
+			continue;
+		}
+
+		for (l = tf->groupchats; l; l = g_slist_next(l)) {
+			imcb_chat_msg(l->data, status->user->screen_name,
+				      msg ? msg : status->text, 0, 0);
+		}
+	}
+
+	g_free(msg);
+}
+
+/**
  * Function that is called to see the statuses in a groupchat window.
  */
 static void twitter_status_show_chat(struct im_connection *ic, struct twitter_xml_status *status)
@@ -730,7 +774,9 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	if (set_getbool(&ic->acc->set, "strip_newlines"))
 		strip_newlines(status->text);
 	
-	if (td->flags & TWITTER_MODE_CHAT)
+	if (status->from_filter)
+		twitter_status_show_filter(ic, status);
+	else if (td->flags & TWITTER_MODE_CHAT)
 		twitter_status_show_chat(ic, status);
 	else
 		twitter_status_show_msg(ic, status);
@@ -744,7 +790,7 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	g_free(last_id_str);
 }
 
-static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o);
+static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o, gboolean from_filter);
 
 static void twitter_http_stream(struct http_request *req)
 {
@@ -753,6 +799,7 @@ static void twitter_http_stream(struct http_request *req)
 	json_value *parsed;
 	int len = 0;
 	char c, *nl;
+	gboolean from_filter;
 	
 	if (!g_slist_find(twitter_connections, ic))
 		return;
@@ -761,7 +808,11 @@ static void twitter_http_stream(struct http_request *req)
 	td = ic->proto_data;
 	
 	if ((req->flags & HTTPC_EOF) || !req->reply_body) {
-		td->stream = NULL;
+		if (req == td->stream)
+			td->stream = NULL;
+		else if (req == td->filter_stream)
+			td->filter_stream = NULL;
+
 		imcb_error(ic, "Stream closed (%s)", req->status_string);
 		imc_logout(ic, TRUE);
 		return;
@@ -778,7 +829,8 @@ static void twitter_http_stream(struct http_request *req)
 		req->reply_body[len] = '\0';
 		
 		if ((parsed = json_parse(req->reply_body, req->body_size))) {
-			twitter_stream_handle_object(ic, parsed);
+			from_filter = (req == td->filter_stream);
+			twitter_stream_handle_object(ic, parsed, from_filter);
 		}
 		json_value_free(parsed);
 		req->reply_body[len] = c;
@@ -794,13 +846,14 @@ static void twitter_http_stream(struct http_request *req)
 static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value *o);
 static gboolean twitter_stream_handle_status(struct im_connection *ic, struct twitter_xml_status *txs);
 
-static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o)
+static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o, gboolean from_filter)
 {
 	struct twitter_data *td = ic->proto_data;
 	struct twitter_xml_status *txs;
 	json_value *c;
 	
 	if ((txs = twitter_xt_get_status(o))) {
+		txs->from_filter = from_filter;
 		gboolean ret = twitter_stream_handle_status(ic, txs);
 		txs_free(txs);
 		return ret;
@@ -896,6 +949,169 @@ gboolean twitter_open_stream(struct im_connection *ic)
 	}
 	
 	return FALSE;
+}
+
+static gboolean twitter_filter_stream(struct im_connection *ic)
+{
+	struct twitter_data *td = ic->proto_data;
+	char *args[4] = {"follow", NULL, "track", NULL};
+	GString *followstr = g_string_new("");
+	GString *trackstr = g_string_new("");
+	gboolean ret = FALSE;
+	struct twitter_filter *tf;
+	GSList *l;
+
+	for (l = td->filters; l; l = g_slist_next(l)) {
+		tf = l->data;
+
+		switch (tf->type) {
+		case TWITTER_FILTER_TYPE_FOLLOW:
+			if (followstr->len > 0)
+				g_string_append_c(followstr, ',');
+
+			g_string_append_printf(followstr, "%" G_GUINT64_FORMAT,
+					       tf->uid);
+			break;
+
+		case TWITTER_FILTER_TYPE_TRACK:
+			if (trackstr->len > 0)
+				g_string_append_c(trackstr, ',');
+
+			g_string_append(trackstr, tf->text);
+			break;
+
+		default:
+			continue;
+		}
+	}
+
+	args[1] = followstr->str;
+	args[3] = trackstr->str;
+
+	if (td->filter_stream)
+		http_close(td->filter_stream);
+
+	if ((td->filter_stream = twitter_http(ic, TWITTER_FILTER_STREAM_URL,
+	                                      twitter_http_stream, ic, 0,
+					      args, 4))) {
+		/* This flag must be enabled or we'll get no data until EOF
+		   (which err, kind of, defeats the purpose of a streaming API). */
+		td->filter_stream->flags |= HTTPC_STREAMING;
+		ret = TRUE;
+	}
+
+	g_string_free(followstr, TRUE);
+	g_string_free(trackstr, TRUE);
+
+	return ret;
+}
+
+static void twitter_filter_users_post(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	struct twitter_data *td;
+	struct twitter_filter *tf;
+	GList *users = NULL;
+	json_value *parsed;
+	json_value *id;
+	const char *name;
+	GString *fstr;
+	GSList *l;
+	GList *u;
+	int i;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(twitter_connections, ic))
+		return;
+
+	td = ic->proto_data;
+
+	if (!(parsed = twitter_parse_response(ic, req)))
+		return;
+
+	for (l = td->filters; l; l = g_slist_next(l)) {
+		tf = l->data;
+
+		if (tf->type == TWITTER_FILTER_TYPE_FOLLOW)
+			users = g_list_prepend(users, tf);
+	}
+
+	if (parsed->type != json_array)
+		goto finish;
+
+	for (i = 0; i < parsed->u.array.length; i++) {
+		id = json_o_get(parsed->u.array.values[i], "id");
+		name = json_o_str(parsed->u.array.values[i], "screen_name");
+
+		if (!name || !id || id->type != json_integer)
+			continue;
+
+		for (u = users; u; u = g_list_next(u)) {
+			tf = u->data;
+
+			if (g_strcasecmp(tf->text, name) == 0) {
+				tf->uid = id->u.integer;
+				users = g_list_delete_link(users, u);
+				break;
+			}
+		}
+	}
+
+finish:
+	json_value_free(parsed);
+	twitter_filter_stream(ic);
+
+	if (!users)
+		return;
+
+	fstr = g_string_new("");
+
+	for (u = users; u; u = g_list_next(u)) {
+		if (fstr->len > 0)
+			g_string_append(fstr, ", ");
+
+		g_string_append(fstr, tf->text);
+	}
+
+	imcb_error(ic, "Failed UID acquisitions: %s", fstr->str);
+
+	g_string_free(fstr, TRUE);
+	g_list_free(users);
+}
+
+gboolean twitter_open_filter_stream(struct im_connection *ic)
+{
+	struct twitter_data *td = ic->proto_data;
+	char *args[2] = {"screen_name", NULL};
+	GString *ustr = g_string_new("");
+	struct twitter_filter *tf;
+	struct http_request *req;
+	GSList *l;
+
+	for (l = td->filters; l; l = g_slist_next(l)) {
+		tf = l->data;
+
+		if (tf->type != TWITTER_FILTER_TYPE_FOLLOW || tf->uid != 0)
+			continue;
+
+		if (ustr->len > 0)
+			g_string_append_c(ustr, ',');
+
+		g_string_append(ustr, tf->text);
+	}
+
+	if (ustr->len == 0) {
+		g_string_free(ustr, TRUE);
+		return twitter_filter_stream(ic);
+	}
+
+	args[1] = ustr->str;
+	req = twitter_http(ic, TWITTER_USERS_LOOKUP_URL,
+			   twitter_filter_users_post,
+			   ic, 0, args, 2);
+
+	g_string_free(ustr, TRUE);
+	return req != NULL;
 }
 
 static void twitter_get_home_timeline(struct im_connection *ic, gint64 next_cursor);
