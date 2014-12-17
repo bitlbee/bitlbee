@@ -641,13 +641,13 @@ static gboolean control_channel_init( irc_channel_t *ic )
 	set_add( &ic->set, "protocol", NULL, set_eval_by_protocol, ic );
 	
 	/* When changing the default, also change it below. */
-	set_add( &ic->set, "show_users", "online+,away", set_eval_show_users, ic );
+	set_add( &ic->set, "show_users", "online+,special%,away", set_eval_show_users, ic );
 	
 	ic->data = icc = g_new0( struct irc_control_channel, 1 );
 	icc->type = IRC_CC_TYPE_DEFAULT;
 	
 	/* Have to run the evaluator to initialize icc->modes. */
-	set_setstr( &ic->set, "show_users", "online+,away" );
+	set_setstr( &ic->set, "show_users", "online+,special%,away" );
 	
 	/* For scripts that care. */
 	irc_channel_set_mode( ic, "+C" );
@@ -743,9 +743,9 @@ static char *set_eval_show_users( set_t *set, char *value )
 	struct irc_channel *ic = set->data;
 	struct irc_control_channel *icc = ic->data;
 	char **parts = g_strsplit( value, ",", 0 ), **part;
-	char modes[4];
+	char modes[5];
 	
-	memset( modes, 0, 4 );
+	memset( modes, 0, 5 );
 	for( part = parts; *part; part ++ )
 	{
 		char last, modechar = IRC_CHANNEL_USER_NONE;
@@ -765,12 +765,14 @@ static char *set_eval_show_users( set_t *set, char *value )
 			modes[0] = modechar;
 		else if( strncmp( *part, "away", 4 ) == 0 )
 			modes[1] = modechar;
-		else if( strncmp( *part, "online", 6 ) == 0 )
+		else if( strncmp( *part, "special", 7 ) == 0 )
 			modes[2] = modechar;
+		else if( strncmp( *part, "online", 6 ) == 0 )
+			modes[3] = modechar;
 		else
 			goto fail;
 	}
-	memcpy( icc->modes, modes, 4 );
+	memcpy( icc->modes, modes, 5 );
 	bee_irc_channel_update( ic->irc, ic, NULL );
 	
 	g_strfreev( parts );

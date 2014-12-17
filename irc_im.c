@@ -189,8 +189,10 @@ void bee_irc_channel_update( irc_t *irc, irc_channel_t *ic, irc_user_t *iu )
 			mode = icc->modes[0];
 		else if( iu->bu->flags & BEE_USER_AWAY )
 			mode = icc->modes[1];
-		else
+		else if( iu->bu->flags & BEE_USER_SPECIAL )
 			mode = icc->modes[2];
+		else
+			mode = icc->modes[3];
 		
 		if( !mode )
 			irc_channel_del_user( ic, iu, IRC_CDU_PART, NULL );

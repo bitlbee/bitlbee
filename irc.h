@@ -223,7 +223,7 @@ struct irc_control_channel
 	struct bee_group *group;
 	struct account *account;
 	struct prpl *protocol;
-	char modes[4];
+	char modes[5];
 };
 
 extern const struct bee_ui_funcs irc_ui_funcs;

@@ -952,11 +952,11 @@ static char *set_eval_bw_compat( set_t *set, char *value )
 	             "channel setting instead.", set->key );
 	
 	if( strcmp( set->key, "away_devoice" ) == 0 && !bool2int( value ) )
-		val = "online,away";
+		val = "online,special%,away";
 	else if( strcmp( set->key, "show_offline" ) == 0 && bool2int( value ) )
-		val = "online@,away+,offline";
+		val = "online@,special%,away+,offline";
 	else
-		val = "online+,away";
+		val = "online+,special%,away";
 	
 	for( l = irc->channels; l; l = l->next )
 	{
