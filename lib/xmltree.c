@@ -27,7 +27,7 @@
 #include <ctype.h>
 #include <stdio.h>
 
-#include "xmltree.h"
+#include "lib/xmltree.h"
 
 #define g_strcasecmp g_ascii_strcasecmp
 #define g_strncasecmp g_ascii_strncasecmp

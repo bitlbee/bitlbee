@@ -5,8 +5,8 @@
 #include <string.h>
 #include "irc.h"
 #include "set.h"
-#include "misc.h"
-#include "url.h"
+#include "lib/misc.h"
+#include "lib/url.h"
 
 START_TEST(test_strip_linefeed){
 	int i;

@@ -28,8 +28,8 @@
 #include <gcrypt.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "proxy.h"
-#include "ssl_client.h"
+#include "lib/proxy.h"
+#include "lib/ssl_client.h"
 #include "sock.h"
 #include "stdlib.h"
 #include "bitlbee.h"

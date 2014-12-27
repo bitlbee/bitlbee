@@ -27,7 +27,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <ctype.h>
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 #include "yahoo2.h"
 #include "yahoo2_callbacks.h"
 

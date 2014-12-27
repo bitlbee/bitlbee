@@ -31,11 +31,11 @@
 #include "twitter_http.h"
 #include "twitter.h"
 #include "bitlbee.h"
-#include "url.h"
-#include "misc.h"
-#include "base64.h"
+#include "lib/url.h"
+#include "lib/misc.h"
+#include "lib/base64.h"
 #include "twitter_lib.h"
-#include "json_util.h"
+#include "lib/json_util.h"
 #include <ctype.h>
 #include <errno.h>
 

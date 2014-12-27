@@ -33,7 +33,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <event.h>
-#include "proxy.h"
+#include "lib/proxy.h"
 
 static void b_main_restart();
 static guint id_next = 1; /* Next ID to be allocated to an event handler. */

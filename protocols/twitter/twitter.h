@@ -22,7 +22,7 @@
 *                                                                           *
 ****************************************************************************/
 
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 
 #ifndef _TWITTER_H
 #define _TWITTER_H

@@ -22,7 +22,7 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "sha1.h"
+#include "lib/sha1.h"
 
 static xt_status jabber_chat_join_failed(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 

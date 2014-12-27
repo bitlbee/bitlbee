@@ -6,7 +6,7 @@
  * aim_rxhandlers.c.
  */
 
-#include <aim.h>
+#include "aim.h"
 
 #include <sys/socket.h>
 

@@ -25,14 +25,14 @@
 
 #include "bitlbee.h"
 
-#include "arc.h"
-#include "base64.h"
+#include "lib/arc.h"
+#include "lib/base64.h"
 #include "commands.h"
 #include "protocols/nogaim.h"
 #include "help.h"
 #include "ipc.h"
-#include "md5.h"
-#include "misc.h"
+#include "lib/md5.h"
+#include "lib/misc.h"
 #include <signal.h>
 #include <unistd.h>
 #include <sys/time.h>

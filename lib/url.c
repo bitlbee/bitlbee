@@ -23,7 +23,7 @@
   Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "url.h"
+#include "lib/url.h"
 
 /* Convert an URL to a url_t structure */
 int url_set(url_t *url, const char *set_url)

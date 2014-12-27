@@ -12,7 +12,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 
 static aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac);
 

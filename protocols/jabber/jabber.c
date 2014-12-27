@@ -27,12 +27,12 @@
 #include <ctype.h>
 #include <stdio.h>
 
-#include "ssl_client.h"
-#include "xmltree.h"
+#include "lib/ssl_client.h"
+#include "lib/xmltree.h"
 #include "bitlbee.h"
 #include "jabber.h"
-#include "oauth.h"
-#include "md5.h"
+#include "lib/oauth.h"
+#include "lib/md5.h"
 
 GSList *jabber_connections;
 

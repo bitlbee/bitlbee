@@ -22,12 +22,12 @@
 *                                                                           *
 ****************************************************************************/
 
-#include "nogaim.h"
-#include "oauth.h"
+#include "protocols/nogaim.h"
+#include "lib/oauth.h"
 #include "twitter.h"
 #include "twitter_http.h"
 #include "twitter_lib.h"
-#include "url.h"
+#include "lib/url.h"
 
 GSList *twitter_connections = NULL;
 

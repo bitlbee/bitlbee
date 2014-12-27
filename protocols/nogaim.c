@@ -34,7 +34,7 @@
 #define BITLBEE_CORE
 #include <ctype.h>
 
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 
 GSList *connections;
 

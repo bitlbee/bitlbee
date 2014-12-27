@@ -11,7 +11,7 @@
  * wrong, we get quirky behavior when cookies step on each others' toes.
  */
 
-#include <aim.h>
+#include "aim.h"
 #include "info.h"
 
 /**

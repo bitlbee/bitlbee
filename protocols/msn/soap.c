@@ -26,15 +26,15 @@
   Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "http_client.h"
+#include "lib/http_client.h"
 #include "soap.h"
 #include "msn.h"
 #include "bitlbee.h"
-#include "url.h"
-#include "misc.h"
-#include "sha1.h"
-#include "base64.h"
-#include "xmltree.h"
+#include "lib/url.h"
+#include "lib/misc.h"
+#include "lib/sha1.h"
+#include "lib/base64.h"
+#include "lib/xmltree.h"
 #include <ctype.h>
 #include <errno.h>
 

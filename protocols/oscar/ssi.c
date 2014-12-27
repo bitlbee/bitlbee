@@ -22,7 +22,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 #include "ssi.h"
 
 /**

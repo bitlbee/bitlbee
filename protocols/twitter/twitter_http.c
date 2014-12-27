@@ -30,10 +30,10 @@
 
 #include "twitter.h"
 #include "bitlbee.h"
-#include "url.h"
-#include "misc.h"
-#include "base64.h"
-#include "oauth.h"
+#include "lib/url.h"
+#include "lib/misc.h"
+#include "lib/base64.h"
+#include "lib/oauth.h"
 #include <ctype.h>
 #include <errno.h>
 

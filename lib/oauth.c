@@ -25,12 +25,12 @@
 #include <gmodule.h>
 #include <stdlib.h>
 #include <string.h>
-#include "http_client.h"
-#include "base64.h"
-#include "misc.h"
-#include "sha1.h"
-#include "url.h"
-#include "oauth.h"
+#include "lib/http_client.h"
+#include "lib/base64.h"
+#include "lib/misc.h"
+#include "lib/sha1.h"
+#include "lib/url.h"
+#include "lib/oauth.h"
 
 #define HMAC_BLOCK_SIZE 64
 

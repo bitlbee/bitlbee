@@ -39,7 +39,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 
 
 int msn_soapq_flush(struct im_connection *ic, gboolean resend);

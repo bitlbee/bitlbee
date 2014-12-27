@@ -29,11 +29,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include "conf.h"
-#include "ini.h"
-#include "url.h"
+#include "lib/ini.h"
+#include "lib/url.h"
 #include "ipc.h"
 
-#include "proxy.h"
+#include "lib/proxy.h"
 
 static int conf_loadini(conf_t *conf, char *file);
 

@@ -31,8 +31,8 @@
 #include <openssl/err.h>
 
 #include "bitlbee.h"
-#include "proxy.h"
-#include "ssl_client.h"
+#include "lib/proxy.h"
+#include "lib/ssl_client.h"
 #include "sock.h"
 
 int ssl_errno = 0;

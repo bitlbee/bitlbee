@@ -21,7 +21,7 @@
 *                                                                           *
 ****************************************************************************/
 
-#include "json.h"
+#include "lib/json.h"
 
 #define JSON_O_FOREACH(o, k, v) \
 	char *k; json_value *v; int __i; \

@@ -1,4 +1,4 @@
-#include <aim.h>
+#include "aim.h"
 #include "bos.h"
 
 /* Request BOS rights (group 9, type 2) */

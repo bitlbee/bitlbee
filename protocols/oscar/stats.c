@@ -1,5 +1,5 @@
 
-#include <aim.h>
+#include "aim.h"
 
 static int reportinterval(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac,
                           aim_bstream_t *bs)
