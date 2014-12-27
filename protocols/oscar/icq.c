@@ -3,7 +3,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 #include "icq.h"
 
 int aim_icq_reqofflinemsgs(aim_session_t *sess)

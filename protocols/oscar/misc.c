@@ -11,7 +11,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 
 /*
  * aim_bos_setprofile(profile)

@@ -29,7 +29,7 @@
 
 #include <glib.h>
 
-#include "json.h"
+#include "lib/json.h"
 
 #ifdef _MSC_VER
    #ifndef _CRT_SECURE_NO_WARNINGS

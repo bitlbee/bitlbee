@@ -4,7 +4,7 @@
 #include <check.h>
 #include <string.h>
 #include <stdio.h>
-#include "jabber/jabber.h"
+#include "protocols/jabber/jabber.h"
 
 static struct im_connection *ic;
 

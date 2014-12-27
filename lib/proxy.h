@@ -33,7 +33,7 @@
 #include <glib.h>
 #include <gmodule.h>
 
-#include "events.h"
+#include "lib/events.h"
 
 #define PROXY_NONE 0
 #define PROXY_HTTP 1

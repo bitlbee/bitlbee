@@ -3,9 +3,9 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 
-#include "md5.h"
+#include "lib/md5.h"
 
 static int aim_encode_password(const char *password, unsigned char *encoded);
 

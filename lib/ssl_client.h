@@ -32,7 +32,7 @@
    is completed. */
 
 #include <glib.h>
-#include "proxy.h"
+#include "lib/proxy.h"
 
 /* Some generic error codes. Especially SSL_AGAIN is important if you
    want to do asynchronous I/O. */

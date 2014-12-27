@@ -23,7 +23,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
-#include "ft.h"
+#include "protocols/ft.h"
 
 file_transfer_t *imcb_file_send_start(struct im_connection *ic, char *handle, char *file_name, size_t file_size)
 {

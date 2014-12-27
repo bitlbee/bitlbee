@@ -22,7 +22,7 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "sha1.h"
+#include "lib/sha1.h"
 #include "lib/ftutil.h"
 #include <poll.h>
 

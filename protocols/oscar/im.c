@@ -19,7 +19,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 #include "im.h"
 #include "info.h"
 

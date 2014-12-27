@@ -24,9 +24,9 @@
 */
 
 #include <ctype.h>
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 #include "msn.h"
-#include "md5.h"
+#include "lib/md5.h"
 #include "soap.h"
 #include "invitation.h"
 

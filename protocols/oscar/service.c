@@ -3,9 +3,9 @@
  * this group, as it does some particularly good things (like rate limiting).
  */
 
-#include <aim.h>
+#include "aim.h"
 
-#include "md5.h"
+#include "lib/md5.h"
 
 /* Client Online (group 1, subtype 2) */
 int aim_clientready(aim_session_t *sess, aim_conn_t *conn)

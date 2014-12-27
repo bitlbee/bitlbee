@@ -10,7 +10,7 @@
 
 # Program variables
 objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o $(OTR_BI) query.o root_commands.o set.o storage.o $(STORAGE_OBJS) unix.o conf.o log.o
-headers = $(wildcard $(_SRCDIR_)*.h $(_SRCDIR_)lib/*.h $(_SRCDIR_)protocols/*.h)
+headers = $(foreach dir,./ ./lib/ ./protocols/,$(patsubst $(_SRCDIR_)%,%,$(wildcard $(_SRCDIR_)$(dir)*.h)))
 subdirs = lib protocols
 
 OUTFILE = bitlbee
@@ -91,15 +91,15 @@ uninstall-bin:
 	rm -f $(DESTDIR)$(SBINDIR)/$(OUTFILE)
 
 install-dev:
-	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+	mkdir -p $(DESTDIR)$(INCLUDEDIR) $(DESTDIR)$(INCLUDEDIR)lib $(DESTDIR)$(INCLUDEDIR)protocols
 	$(INSTALL) -m 0644 config.h $(DESTDIR)$(INCLUDEDIR)
-	for i in $(headers); do $(INSTALL) -m 0644 $$i $(DESTDIR)$(INCLUDEDIR); done
+	for i in $(headers); do $(INSTALL) -m 0644 $(_SRCDIR_)$$i $(DESTDIR)$(INCLUDEDIR)$$i; done
 	mkdir -p $(DESTDIR)$(PCDIR)
 	$(INSTALL) -m 0644 bitlbee.pc $(DESTDIR)$(PCDIR)
 
 uninstall-dev:
-	rm -f $(foreach hdr,$(headers),$(DESTDIR)$(INCLUDEDIR)/$(hdr))
-	-rmdir $(DESTDIR)$(INCLUDEDIR)
+	rm -f $(foreach hdr,$(headers),$(DESTDIR)$(INCLUDEDIR)$(hdr))
+	-rmdir $(DESTDIR)$(INCLUDEDIR)lib $(DESTDIR)$(INCLUDEDIR)protocols $(DESTDIR)$(INCLUDEDIR)
 	rm -f $(DESTDIR)$(PCDIR)/bitlbee.pc
 
 install-etc:

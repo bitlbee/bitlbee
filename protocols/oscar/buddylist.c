@@ -1,4 +1,4 @@
-#include <aim.h>
+#include "aim.h"
 #include "buddylist.h"
 
 /*

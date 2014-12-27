@@ -5,7 +5,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 #include <glib.h>
 #include "info.h"
 

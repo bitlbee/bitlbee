@@ -24,8 +24,8 @@
 #ifndef _TWITTER_HTTP_H
 #define _TWITTER_HTTP_H
 
-#include "nogaim.h"
-#include "http_client.h"
+#include "protocols/nogaim.h"
+#include "lib/http_client.h"
 
 typedef enum {
 	/* With this set, twitter_http_post() will post a generic confirmation

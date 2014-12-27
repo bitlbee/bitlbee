@@ -25,12 +25,12 @@
 
 #include <ctype.h>
 #include <sys/utsname.h>
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 #include "msn.h"
-#include "md5.h"
-#include "sha1.h"
+#include "lib/md5.h"
+#include "lib/sha1.h"
 #include "soap.h"
-#include "xmltree.h"
+#include "lib/xmltree.h"
 
 static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition cond);
 static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition cond);

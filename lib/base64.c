@@ -24,7 +24,7 @@
 
 #include <glib.h>
 #include <string.h>
-#include "base64.h"
+#include "lib/base64.h"
 
 char *tobase64(const char *text)
 {

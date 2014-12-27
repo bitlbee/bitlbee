@@ -4,7 +4,7 @@
 #include <check.h>
 #include <string.h>
 #include <stdio.h>
-#include "arc.h"
+#include "lib/arc.h"
 
 char *password = "ArcVier";
 

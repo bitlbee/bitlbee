@@ -25,7 +25,7 @@
 #ifndef _TWITTER_LIB_H
 #define _TWITTER_LIB_H
 
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 #include "twitter_http.h"
 
 #define TWITTER_API_URL "https://api.twitter.com/1.1"

@@ -75,8 +75,8 @@ char *strchr(), *strrchr();
 #include <stdlib.h>
 #include <ctype.h>
 
-#include "sha1.h"
-#include "md5.h"
+#include "lib/sha1.h"
+#include "lib/md5.h"
 #include "yahoo2.h"
 #include "yahoo_httplib.h"
 #include "yahoo_util.h"
@@ -88,8 +88,8 @@ char *strchr(), *strrchr();
 #define vsnprintf _vsnprintf
 #endif
 
-#include "base64.h"
-#include "http_client.h"
+#include "lib/base64.h"
+#include "lib/http_client.h"
 
 #ifdef USE_STRUCT_CALLBACKS
 struct yahoo_callbacks *yc = NULL;

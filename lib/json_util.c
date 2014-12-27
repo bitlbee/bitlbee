@@ -25,7 +25,7 @@
 #include <string.h>
 #include <glib.h>
 
-#include "json_util.h"
+#include "lib/json_util.h"
 
 json_value *json_o_get(const json_value *obj, const json_char *name)
 {

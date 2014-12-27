@@ -44,8 +44,8 @@
 #include <gmodule.h>
 #include <stdlib.h>
 #include <string.h>
-#include "misc.h"
-#include "arc.h"
+#include "lib/misc.h"
+#include "lib/arc.h"
 
 /* Add some seed to the password, to make sure we *never* use the same key.
    This defines how many bytes we use as a seed. */

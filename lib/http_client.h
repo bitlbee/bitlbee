@@ -33,7 +33,7 @@
    alives. */
 
 #include <glib.h>
-#include "ssl_client.h"
+#include "lib/ssl_client.h"
 
 struct http_request;
 

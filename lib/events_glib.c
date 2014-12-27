@@ -37,7 +37,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "proxy.h"
+#include "lib/proxy.h"
 
 typedef struct _GaimIOClosure {
 	b_event_handler function;

@@ -23,9 +23,9 @@
   Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 #include "msn.h"
-#include "md5.h"
+#include "lib/md5.h"
 #include "soap.h"
 #include <ctype.h>
 
