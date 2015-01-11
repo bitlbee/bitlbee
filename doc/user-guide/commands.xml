@@ -1083,6 +1083,56 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="format_string" type="string" scope="account">
+		<default>\002[\002%i\002]\002 %c</default>
+
+		<description>
+			<para>
+				This setting controls how tweets are displayed. Below are listed the two replacement attributes you may use in the string. If you wish to use a percent symbol in your string, ensure you escape it with a second percent symbol (i.e. "%%").
+			</para>
+
+			<variablelist>
+				<varlistentry><term>%i</term><listitem><para>The ID of the tweet</para></listitem></varlistentry>
+				<varlistentry><term>%c</term><listitem><para>The text of the tweet</para></listitem></varlistentry>
+			</variablelist>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="reply_format_string" type="string" scope="account">
+		<default>\002[\002%i->%t\002]\002 %c</default>
+
+		<description>
+			<para>
+				This setting controls how replies to tweets are displayed. Below are listed the three replacement attributes you may use in the string. If you wish to use a percent symbol in your string, ensure you escape it with a second percent symbol (i.e. "%%").
+			</para>
+
+			<variablelist>
+				<varlistentry><term>%i</term><listitem><para>The ID of this tweet</para></listitem></varlistentry>
+				<varlistentry><term>%t</term><listitem><para>The ID of the tweet being replied to</para></listitem></varlistentry>
+				<varlistentry><term>%c</term><listitem><para>The text of the tweet</para></listitem></varlistentry>
+			</variablelist>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="retweet_format_string" type="string" scope="account">
+		<default>\002[\002%i\002]\002 RT @%a: %c</default>
+
+		<description>
+			<para>
+				This setting controls how retweets are displayed. Below are listed the three replacement attributes you may use in the string. If you wish to use a percent symbol in your string, ensure you escape it with a second percent symbol (i.e. "%%").
+			</para>
+
+			<variablelist>
+				<varlistentry><term>%i</term><listitem><para>The ID of the tweet</para></listitem></varlistentry>
+				<varlistentry><term>%a</term><listitem><para>The author of the original tweet</para></listitem></varlistentry>
+				<varlistentry><term>%c</term><listitem><para>The text of the tweet</para></listitem></varlistentry>
+			</variablelist>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="mobile_is_away" type="boolean" scope="global">
 		<default>false</default>
 
