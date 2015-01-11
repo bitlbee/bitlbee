@@ -1090,6 +1090,68 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="format_string" type="string" scope="account">
+		<default>^B[^B%i^B]^B %c</default>
+
+		<description>
+			<para>
+				This setting controls how tweets are displayed. Below are listed the two replacement attributes you may use in the string. If you wish to use a percent symbol in your string, ensure you escape it with a second percent symbol (i.e. "%%").
+			</para>
+
+			<para>
+				The default setting contains ^B as a control code for toggling of the bold property. Other similar properties (including color codes) are also functional in this setting. See the documentation for your IRC client for details on such control codes.
+			</para>
+
+			<variablelist>
+				<varlistentry><term>%i</term><listitem><para>The ID of the tweet</para></listitem></varlistentry>
+				<varlistentry><term>%c</term><listitem><para>The text of the tweet</para></listitem></varlistentry>
+			</variablelist>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="reply_format_string" type="string" scope="account">
+		<default>^B[^B%i->%t^B]^B %c</default>
+
+		<description>
+			<para>
+				This setting controls how replies to tweets are displayed. Below are listed the three replacement attributes you may use in the string. If you wish to use a percent symbol in your string, ensure you escape it with a second percent symbol (i.e. "%%").
+			</para>
+
+			<para>
+				The default setting contains ^B as a control code for toggling of the bold property. Other similar properties (including color codes) are also functional in this setting. See the documentation for your IRC client for details on such control codes.
+			</para>
+
+			<variablelist>
+				<varlistentry><term>%i</term><listitem><para>The ID of this tweet</para></listitem></varlistentry>
+				<varlistentry><term>%r</term><listitem><para>The ID of the tweet being replied to</para></listitem></varlistentry>
+				<varlistentry><term>%c</term><listitem><para>The text of the tweet</para></listitem></varlistentry>
+			</variablelist>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="retweet_format_string" type="string" scope="account">
+		<default>^B[^B%i^B]^B RT @%a: %c</default>
+
+		<description>
+			<para>
+				This setting controls how retweets are displayed. Below are listed the three replacement attributes you may use in the string. If you wish to use a percent symbol in your string, ensure you escape it with a second percent symbol (i.e. "%%").
+			</para>
+
+			<para>
+				The default setting contains ^B as a control code for toggling of the bold property. Other similar properties (including color codes) are also functional in this setting. See the documentation for your IRC client for details on such control codes.
+			</para>
+
+			<variablelist>
+				<varlistentry><term>%i</term><listitem><para>The ID of the tweet</para></listitem></varlistentry>
+				<varlistentry><term>%a</term><listitem><para>The author of the original tweet</para></listitem></varlistentry>
+				<varlistentry><term>%c</term><listitem><para>The text of the tweet</para></listitem></varlistentry>
+			</variablelist>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="mobile_is_away" type="boolean" scope="global">
 		<default>false</default>
 
