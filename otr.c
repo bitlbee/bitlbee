@@ -1116,29 +1116,20 @@ void cmd_otr_info(irc_t *irc, char **args)
 
 void cmd_otr_keygen(irc_t *irc, char **args)
 {
-	int i, n;
 	account_t *a;
 	
-	n = atoi(args[1]);
-	if(n<0 || (!n && strcmp(args[1], "0"))) {
-		irc_rootmsg(irc, "%s: invalid account number", args[1]);
-		return;
-	}
-	
-	a = irc->b->accounts;
-	for(i=0; i<n && a; i++, a=a->next);
-	if(!a) {
-		irc_rootmsg(irc, "%s: no such account", args[1]);
+	if ((a = account_get(irc->b, args[1])) == NULL) {
+		irc_rootmsg(irc, "Could not find account `%s'.", args[1]);
 		return;
 	}
 	
 	if(keygen_in_progress(irc, a->user, a->prpl->name)) {
-		irc_rootmsg(irc, "keygen for account %d already in progress", n);
+		irc_rootmsg(irc, "keygen for account `%s' already in progress", a->tag);
 		return;
 	}
 	
 	if(otrl_privkey_find(irc->otr->us, a->user, a->prpl->name)) {
-		char *s = g_strdup_printf("account %d already has a key, replace it?", n);
+		char *s = g_strdup_printf("account `%s' already has a key, replace it?", a->tag);
 		query_add(irc, NULL, s, yes_keygen, NULL, NULL, a);
 		g_free(s);
 	} else {
