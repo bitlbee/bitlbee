@@ -779,3 +779,12 @@ char *get_rfc822_header( const char *text, const char *header, int len )
 	
 	return NULL;
 }
+
+/* Takes a string, truncates it where it's safe, returns the new length */
+int truncate_utf8( char *string, int maxlen )
+{
+	char *end;
+	g_utf8_validate( (const gchar *) string, maxlen, (const gchar **) &end );
+	*end = '\0';
+	return end - string;
+}

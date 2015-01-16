@@ -226,7 +226,7 @@ char *nick_gen( bee_user_t *bu )
 	if( ok && rets && *rets )
 	{
 		nick_strip( irc, rets );
-		rets[MAX_NICK_LENGTH] = '\0';
+		truncate_utf8( rets, MAX_NICK_LENGTH );
 		return rets;
 	}
 	g_free( rets );
@@ -251,7 +251,12 @@ void nick_dedupe( bee_user_t *bu, char nick[MAX_NICK_LENGTH+1] )
 		}
 		else
 		{
-			nick[0] ++;
+			/* We've got no more space for underscores,
+			   so truncate it and replace the last three
+			   chars with a random "_XX" suffix */
+			int len = truncate_utf8( nick, MAX_NICK_LENGTH - 3 );
+			nick[len] = '_';
+			g_snprintf(nick + len + 1, 3, "%2x", rand() );
 		}
 		
 		if( inf_protection-- == 0 )
@@ -399,8 +404,7 @@ int nick_lc( irc_t *irc, char *nick )
 		gchar *down = g_utf8_strdown( nick, -1 );
 		if( strlen( down ) > strlen( nick ) )
 		{
-			/* Well crap. Corrupt it if we have to. */
-			down[strlen(nick)] = '\0';
+			truncate_utf8( down, strlen(nick) );
 		}
 		strcpy( nick, down );
 		g_free( down );
