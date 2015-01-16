@@ -462,7 +462,7 @@ gboolean ipc_child_identify( irc_t *irc )
 	else if( global.conf->runmode == RUNMODE_DAEMON )
 	{
 		GSList *l;
-		irc_t *old;
+		irc_t *old = NULL;
 		char *to_init[] = { "TAKEOVER", "INIT", NULL };
 		
 		for( l = irc_connection_list; l; l = l->next )
@@ -476,7 +476,7 @@ gboolean ipc_child_identify( irc_t *irc )
 			    strcmp( irc->password, old->password ) == 0 )
 				break;
 		}
-		if( l == NULL ||
+		if( l == NULL || old == NULL ||
 		    !set_getbool( &irc->b->set, "allow_takeover" ) ||
 		    !set_getbool( &old->b->set, "allow_takeover" ) )
 			return FALSE;
