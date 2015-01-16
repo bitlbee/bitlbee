@@ -18,7 +18,7 @@
 #include "bitlbee.h"
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_parse.c,v 1.10 2009/01/23 19:59:16 each Exp $";
+//static const char rcsid[] = "$Id: ns_parse.c,v 1.10 2009/01/23 19:59:16 each Exp $";
 #endif
 
 #ifdef HAVE_RESOLV_A

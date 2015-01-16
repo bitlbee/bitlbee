@@ -27,7 +27,6 @@ END_TEST
 START_TEST(test_login)
 	GIOChannel *ch1, *ch2;
 	irc_t *irc;
-	GError *error = NULL;
 	char *raw;
 	fail_unless(g_io_channel_pair(&ch1, &ch2));
 

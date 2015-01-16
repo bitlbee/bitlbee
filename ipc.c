@@ -523,7 +523,9 @@ static void ipc_command_exec( void *data, char **cmd, const command_t *commands 
 		if( g_strcasecmp( commands[i].command, cmd[0] ) == 0 )
 		{
 			/* There is no typo in this line: */
-			for( j = 1; cmd[j]; j ++ ); j --;
+			for( j = 1; cmd[j]; j ++ )
+				;
+			j--;
 			
 			if( j < commands[i].required_parameters )
 				break;

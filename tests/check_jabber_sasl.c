@@ -86,7 +86,6 @@ static void check_get_part(int l)
 	{
   		tcase_fn_start( get_part_tests[i].key, __FILE__, i );
 		char *res;
-		int len;
 		
 		res = sasl_get_part( get_part_tests[i].challenge,
 		                     get_part_tests[i].key );
