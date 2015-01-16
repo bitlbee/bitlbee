@@ -174,10 +174,10 @@ int set_setstr( set_t **head, const char *key, char *value )
 
 int set_setint( set_t **head, const char *key, int value )
 {
-	char s[24];	/* Not quite 128-bit clean eh? ;-) */
-	
-	g_snprintf( s, sizeof( s ), "%d", value );
-	return set_setstr( head, key, s );
+	char *s = g_strdup_printf( "%d", value );
+	int retval = set_setstr( head, key, s );
+	g_free( s );
+	return retval;
 }
 
 void set_del( set_t **head, const char *key )
