@@ -175,8 +175,8 @@ static int proxy_connect_none(const char *host, unsigned short port_, struct PHB
 
 /* Connecting to HTTP proxies */
 
-#define HTTP_GOODSTRING "HTTP/1.0 200 Connection established"
-#define HTTP_GOODSTRING2 "HTTP/1.1 200 Connection established"
+#define HTTP_GOODSTRING "HTTP/1.0 200"
+#define HTTP_GOODSTRING2 "HTTP/1.1 200"
 
 static gboolean http_canread(gpointer data, gint source, b_input_condition cond)
 {
