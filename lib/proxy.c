@@ -85,6 +85,7 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 		freeaddrinfo(phb->gai);
 		closesocket(source);
 		b_event_remove(phb->inpa);
+		phb->inpa = 0;
 		if( phb->proxy_func )
 			phb->proxy_func(phb->proxy_data, -1, B_EV_IO_READ);
 		else {
@@ -96,6 +97,7 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 	freeaddrinfo(phb->gai);
 	sock_make_blocking(source);
 	b_event_remove(phb->inpa);
+	phb->inpa = 0;
 	if( phb->proxy_func )
 		phb->proxy_func(phb->proxy_data, source, B_EV_IO_READ);
 	else {
