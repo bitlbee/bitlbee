@@ -233,10 +233,10 @@ static void twitter_http_get_friends_ids(struct http_request *req);
  */
 void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor)
 {
-	// Primitive, but hey! It works...      
+	// Primitive, but hey! It works...
 	char *args[2];
 	args[0] = "cursor";
-	args[1] = g_strdup_printf("%lld", (long long) next_cursor);
+	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
 	twitter_http(ic, TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, args, 2);
 
 	g_free(args[1]);
@@ -1001,7 +1001,7 @@ static void twitter_get_home_timeline(struct im_connection *ic, gint64 next_curs
 
 	char *args[6];
 	args[0] = "cursor";
-	args[1] = g_strdup_printf("%lld", (long long) next_cursor);
+	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
 	args[2] = "include_entities";
 	args[3] = "true";
 	if (td->timeline_id) {
@@ -1037,12 +1037,12 @@ static void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 
 	char *args[6];
 	args[0] = "cursor";
-	args[1] = g_strdup_printf("%lld", (long long) next_cursor);
+	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
 	args[2] = "include_entities";
 	args[3] = "true";
 	if (td->timeline_id) {
 		args[4] = "since_id";
-		args[5] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
+		args[5] = g_strdup_printf("%" G_GUINT64_FORMAT, td->timeline_id);
 	} else {
 		args[4] = "count";
 		args[5] = g_strdup_printf("%d", set_getint(&ic->acc->set, "show_old_mentions"));
@@ -1171,7 +1171,7 @@ void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_t
 	char *args[4] = {
 		"status", msg,
 		"in_reply_to_status_id",
-		g_strdup_printf("%llu", (unsigned long long) in_reply_to)
+		g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
 	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post, ic, 1,
 		     args, in_reply_to ? 4 : 2);
@@ -1205,8 +1205,8 @@ void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int
 void twitter_status_destroy(struct im_connection *ic, guint64 id)
 {
 	char *url;
-	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_DESTROY_URL,
-	                      (unsigned long long) id, ".json");
+	url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s",
+	                      TWITTER_STATUS_DESTROY_URL, id, ".json");
 	twitter_http_f(ic, url, twitter_http_post, ic, 1, NULL, 0,
 	               TWITTER_HTTP_USER_ACK);
 	g_free(url);
@@ -1215,8 +1215,8 @@ void twitter_status_destroy(struct im_connection *ic, guint64 id)
 void twitter_status_retweet(struct im_connection *ic, guint64 id)
 {
 	char *url;
-	url = g_strdup_printf("%s%llu%s", TWITTER_STATUS_RETWEET_URL,
-	                      (unsigned long long) id, ".json");
+	url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s",
+	                      TWITTER_STATUS_RETWEET_URL, id, ".json");
 	twitter_http_f(ic, url, twitter_http_post, ic, 1, NULL, 0,
 	               TWITTER_HTTP_USER_ACK);
 	g_free(url);
@@ -1245,7 +1245,7 @@ void twitter_favourite_tweet(struct im_connection *ic, guint64 id)
 		"id",
 		NULL,
 	};
-	args[1] = g_strdup_printf("%llu", (unsigned long long) id);
+	args[1] = g_strdup_printf("%" G_GUINT64_FORMAT, id);
 	twitter_http_f(ic, TWITTER_FAVORITE_CREATE_URL, twitter_http_post,
 	               ic, 1, args, 2, TWITTER_HTTP_USER_ACK);
 	g_free(args[1]);
