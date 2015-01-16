@@ -720,6 +720,7 @@ static void twitter_status_show_msg(struct im_connection *ic, struct twitter_xml
 static void twitter_status_show(struct im_connection *ic, struct twitter_xml_status *status)
 {
 	struct twitter_data *td = ic->proto_data;
+	char *last_id_str;
 	
 	if (status->user == NULL || status->text == NULL)
 		return;
@@ -737,6 +738,10 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	// Update the timeline_id to hold the highest id, so that by the next request
 	// we won't pick up the updates already in the list.
 	td->timeline_id = MAX(td->timeline_id, status->rt_id);
+
+	last_id_str = g_strdup_printf("%" G_GUINT64_FORMAT, td->timeline_id);
+	set_setstr(&ic->acc->set, "last_tweet", last_id_str);
+	g_free(last_id_str);
 }
 
 static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o);
@@ -1001,7 +1006,7 @@ static void twitter_get_home_timeline(struct im_connection *ic, gint64 next_curs
 	args[3] = "true";
 	if (td->timeline_id) {
 		args[4] = "since_id";
-		args[5] = g_strdup_printf("%llu", (long long unsigned int) td->timeline_id);
+		args[5] = g_strdup_printf("%" G_GUINT64_FORMAT, td->timeline_id);
 	}
 
 	if (twitter_http(ic, TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, args,
