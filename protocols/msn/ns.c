@@ -880,7 +880,7 @@ static gboolean msn_ns_send_adl_1( gpointer key, gpointer value, gpointer data )
 	struct bee_user *bu = value;
 	struct msn_buddy_data *bd = bu->data;
 	struct msn_data *md = bu->ic->proto_data;
-	char handle[strlen(bu->handle)];
+	char handle[strlen(bu->handle) + 1];
 	char *domain;
 	char l[4];
 	
