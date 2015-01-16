@@ -1469,7 +1469,7 @@ irc_user_t *peeruser(irc_t *irc, const char *handle, const char *protocol)
 
 int hexval(char a)
 {
-	int x=tolower(a);
+	int x=g_ascii_tolower(a);
 	
 	if(x>='a' && x<='f')
 		x = x - 'a' + 10;
@@ -1556,7 +1556,7 @@ Fingerprint *match_fingerprint(irc_t *irc, ConnContext *ctx, const char **args)
 	p=prefix;
 	for(i=0; args[i]; i++) {
 		for(j=0; args[i][j]; j++) {
-			char c = toupper(args[i][j]);
+			char c = g_ascii_toupper(args[i][j]);
 			
 			if(n>=40) {
 				irc_rootmsg(irc, "too many fingerprint digits given, expected at most 40");
@@ -1620,7 +1620,7 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args)
 	p=prefix;
 	for(i=0; args[i]; i++) {
 		for(j=0; args[i][j]; j++) {
-			char c = toupper(args[i][j]);
+			char c = g_ascii_toupper(args[i][j]);
 			
 			if(n>=40) {
 				irc_rootmsg(irc, "too many fingerprint digits given, expected at most 40");

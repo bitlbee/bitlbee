@@ -162,7 +162,7 @@ void strip_html( char *in )
 	
 	while( *in )
 	{
-		if( *in == '<' && ( isalpha( *(in+1) ) || *(in+1) == '/' ) )
+		if( *in == '<' && ( g_ascii_isalpha( *(in+1) ) || *(in+1) == '/' ) )
 		{
 			/* If in points at a < and in+1 points at a letter or a slash, this is probably
 			   a HTML-tag. Try to find a closing > and continue there. If the > can't be
@@ -197,7 +197,7 @@ void strip_html( char *in )
 		else if( *in == '&' )
 		{
 			cs = ++in;
-			while( *in && isalpha( *in ) )
+			while( *in && g_ascii_isalpha( *in ) )
 				in ++;
 			
 			if( *in == ';' ) in ++;
@@ -313,7 +313,7 @@ void http_encode( char *s )
 	strcpy( t, s );
 	for( i = j = 0; t[i]; i ++, j ++ )
 	{
-		/* Warning: isalnum() is locale-aware, so don't use it here! */
+		/* Warning: g_ascii_isalnum() is locale-aware, so don't use it here! */
 		if( ( t[i] >= 'A' && t[i] <= 'Z' ) ||
 		    ( t[i] >= 'a' && t[i] <= 'z' ) ||
 		    ( t[i] >= '0' && t[i] <= '9' ) ||
@@ -489,7 +489,7 @@ int is_bool( char *value )
 		return 1;
 	
 	while( *value )
-		if( !isdigit( *value ) )
+		if( !g_ascii_isdigit( *value ) )
 			return 0;
 		else
 			value ++;

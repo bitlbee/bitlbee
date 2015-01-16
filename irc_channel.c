@@ -574,7 +574,7 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 	const char *s;
 	
 	/* Scan for non-whitespace chars followed by a colon: */
-	for( s = msg; *s && !isspace( *s ) && *s != ':' && *s != ','; s ++ ) {}
+	for( s = msg; *s && !g_ascii_isspace( *s ) && *s != ':' && *s != ','; s ++ ) {}
 	
 	if( *s == ':' || *s == ',' )
 	{
@@ -582,7 +582,7 @@ static gboolean control_channel_privmsg( irc_channel_t *ic, const char *msg )
 		
 		memset( to, 0, sizeof( to ) );
 		strncpy( to, msg, s - msg );
-		while( *(++s) && isspace( *s ) ) {}
+		while( *(++s) && g_ascii_isspace( *s ) ) {}
 		msg = s;
 		
 		if( !( iu = irc_user_by_name( irc, to ) ) )

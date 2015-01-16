@@ -376,7 +376,7 @@ static void msn_buddy_data_add( bee_user_t *bu )
 	bd = bu->data = g_new0( struct msn_buddy_data, 1 );
 	g_tree_insert( md->domaintree, bu->handle, bu );
 	
-	for( handle = bu->handle; isdigit( *handle ); handle ++ );
+	for( handle = bu->handle; g_ascii_isdigit( *handle ); handle ++ );
 	if( *handle == ':' )
 	{
 		/* Pass a nick hint so hopefully the stupid numeric prefix

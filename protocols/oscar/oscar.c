@@ -367,7 +367,7 @@ static gboolean oscar_login_connect(gpointer data, gint source, b_input_conditio
 static void oscar_init(account_t *acc)
 {
 	set_t *s;
-	gboolean icq = isdigit(acc->user[0]);
+	gboolean icq = g_ascii_isdigit(acc->user[0]);
 	
 	if (icq) {
 		set_add(&acc->set, "ignore_auth_requests", "false", set_eval_bool, acc);
@@ -393,7 +393,7 @@ static void oscar_login(account_t *acc) {
 	struct im_connection *ic = imcb_new(acc);
 	struct oscar_data *odata = ic->proto_data = g_new0(struct oscar_data, 1);
 
-	if (isdigit(acc->user[0]))
+	if (g_ascii_isdigit(acc->user[0]))
 		odata->icq = TRUE;
 	else
 		ic->flags |= OPT_DOES_HTML;
@@ -2499,11 +2499,11 @@ struct groupchat *oscar_chat_with(struct im_connection * ic, char *who)
 	static int chat_id = 0;
 	char * chatname, *s;
 	
-	chatname = g_strdup_printf("%s%s%d", isdigit(*ic->acc->user) ? "icq" : "",
+	chatname = g_strdup_printf("%s%s%d", g_ascii_isdigit(*ic->acc->user) ? "icq" : "",
 	                           ic->acc->user, chat_id++);
 	
 	for (s = chatname; *s; s ++)
-		if (!isalnum(*s))
+		if (!g_ascii_isalnum(*s))
 			*s = '0';
 	
 	ret = oscar_chat_join_internal(ic, chatname, NULL, NULL, 4);

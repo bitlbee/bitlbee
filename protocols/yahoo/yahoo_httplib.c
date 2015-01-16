@@ -151,7 +151,7 @@ static int url_to_host_port_path(const char *url,
 
 static int isurlchar(unsigned char c)
 {
-	return (isalnum(c));
+	return (g_ascii_isalnum(c));
 }
 
 char *yahoo_urlencode(const char *instr)

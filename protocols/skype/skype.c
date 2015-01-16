@@ -513,7 +513,7 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			if (strlen(sd->info_sex)) {
 				char *iptr = sd->info_sex;
 				while (*iptr++)
-					*iptr = tolower(*iptr);
+					*iptr = g_ascii_tolower(*iptr);
 				g_string_append_printf(st,
 					"Gender: %s\n", sd->info_sex);
 			}

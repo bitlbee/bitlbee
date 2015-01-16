@@ -158,7 +158,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 	sock_make_nonblocking( conn->fd );
 	SSL_set_fd( conn->ssl, conn->fd );
 	
-	if( conn->hostname && !isdigit( conn->hostname[0] ) )
+	if( conn->hostname && !g_ascii_isdigit( conn->hostname[0] ) )
 		SSL_set_tlsext_host_name( conn->ssl, conn->hostname );
 	
 	return ssl_handshake( data, source, cond );

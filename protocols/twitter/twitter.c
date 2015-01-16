@@ -458,9 +458,9 @@ static int twitter_buddy_msg(struct im_connection *ic, char *who, char *message,
 			char pin[strlen(message) + 1], *s;
 
 			strcpy(pin, message);
-			for (s = pin + sizeof(pin) - 2; s > pin && isspace(*s); s--)
+			for (s = pin + sizeof(pin) - 2; s > pin && g_ascii_isspace(*s); s--)
 				*s = '\0';
-			for (s = pin; *s && isspace(*s); s++) {
+			for (s = pin; *s && g_ascii_isspace(*s); s++) {
 			}
 
 			if (!oauth_access_token(s, td->oauth_info)) {

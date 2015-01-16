@@ -344,12 +344,12 @@ static http_ret_t http_process_chunked_data( struct http_request *req, const cha
 		
 		/* Might be a \r\n from the last chunk. */
 		s = chunk;
-		while( isspace( *s ) )
+		while( g_ascii_isspace( *s ) )
 			s ++;
 		/* Chunk length. Might be incomplete. */
 		if( s < eos && sscanf( s, "%x", &clen ) != 1 )
 			return CR_ERROR;
-		while( isxdigit( *s ) )
+		while( g_ascii_isxdigit( *s ) )
 			s ++;
 		
 		/* If we read anything here, it *must* be \r\n. */

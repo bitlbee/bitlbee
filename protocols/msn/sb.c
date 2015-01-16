@@ -505,7 +505,7 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 	}
 	else if( strcmp( cmd[0], "CAL" ) == 0 )
 	{
-		if( num_parts < 4 || !isdigit( cmd[3][0] ) )
+		if( num_parts < 4 || !g_ascii_isdigit( cmd[3][0] ) )
 		{
 			msn_sb_destroy( sb );
 			return( 0 );
@@ -644,7 +644,7 @@ static int msn_sb_command( struct msn_handler_data *handler, char **cmd, int num
 			/* PANIC! */
 		}
 	}
-	else if( isdigit( cmd[0][0] ) )
+	else if( g_ascii_isdigit( cmd[0][0] ) )
 	{
 		int num = atoi( cmd[0] );
 		const struct msn_status_code *err = msn_status_by_number( num );

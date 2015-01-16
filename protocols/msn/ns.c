@@ -580,7 +580,7 @@ static int msn_ns_command( struct msn_handler_data *handler, char **cmd, int num
 	{
 		ic->flags |= OPT_PONGED;
 	}
-	else if( isdigit( cmd[0][0] ) )
+	else if( g_ascii_isdigit( cmd[0][0] ) )
 	{
 		int num = atoi( cmd[0] );
 		const struct msn_status_code *err = msn_status_by_number( num );
@@ -996,7 +996,7 @@ int msn_ns_sendmessage( struct im_connection *ic, bee_user_t *bu, const char *te
 	
 	/* This might be a federated contact. Get its network number,
 	   prefixed to bu->handle with a colon. Default is 1. */
-	for( handle = bu->handle; isdigit( *handle ); handle ++ )
+	for( handle = bu->handle; g_ascii_isdigit( *handle ); handle ++ )
 		type = type * 10 + *handle - '0';
 	if( *handle == ':' )
 		handle ++;

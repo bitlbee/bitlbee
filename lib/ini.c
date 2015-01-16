@@ -62,11 +62,11 @@ static char *ini_strip_whitespace( char *in )
 {
 	char *e;
 
-	while( isspace( *in ) )
+	while( g_ascii_isspace( *in ) )
 		in++;
 
 	e = in + strlen( in ) - 1;
-	while( e > in && isspace( *e ) )
+	while( e > in && g_ascii_isspace( *e ) )
 		e--;
 	e[1] = 0;
 	

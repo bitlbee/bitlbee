@@ -225,7 +225,7 @@ char *set_eval_int( set_t *set, char *value )
 		s ++;
 	
 	for( ; *s; s ++ )
-		if( !isdigit( *s ) )
+		if( !g_ascii_isdigit( *s ) )
 			return SET_INVALID;
 	
 	return value;

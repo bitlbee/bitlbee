@@ -124,7 +124,7 @@ int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 	if (!sess || !conn || !sn)
 		return -EINVAL;
 
-	if (isdigit(sn[0]) && set_getbool(&ic->acc->set, "old_icq_auth"))
+	if (g_ascii_isdigit(sn[0]) && set_getbool(&ic->acc->set, "old_icq_auth"))
 		return goddamnicq(sess, conn, sn);
 
 	sess->flags |= AIM_SESS_FLAGS_SNACLOGIN;

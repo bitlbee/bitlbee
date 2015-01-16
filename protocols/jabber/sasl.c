@@ -186,7 +186,7 @@ char *sasl_get_part( char *data, char *field )
 	
 	len = strlen( field );
 	
-	while( isspace( *data ) || *data == ',' )
+	while( g_ascii_isspace( *data ) || *data == ',' )
 		data ++;
 	
 	if( g_strncasecmp( data, field, len ) == 0 && data[len] == '=' )
@@ -209,7 +209,7 @@ char *sasl_get_part( char *data, char *field )
 			   find the next key after it. */
 			if( data[i] == ',' )
 			{
-				while( isspace( data[i] ) || data[i] == ',' )
+				while( g_ascii_isspace( data[i] ) || data[i] == ',' )
 					i ++;
 				
 				if( g_strncasecmp( data + i, field, len ) == 0 &&

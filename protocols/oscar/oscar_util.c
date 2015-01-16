@@ -56,7 +56,7 @@ int aim_sncmp(const char *sn1, const char *sn2)
 			if (*curPtr2 == ' ')
 				curPtr2++;
 		} else {
-			if ( toupper(*curPtr1) != toupper(*curPtr2))
+			if ( g_ascii_toupper(*curPtr1) != g_ascii_toupper(*curPtr2))
 				return 1;
 			curPtr1++;
 			curPtr2++;

@@ -522,7 +522,7 @@ file_transfer_t *dcc_request( struct im_connection *ic, char* const* ctcp )
 		filename = ctcp[2];
 		
 		host = ctcp[3];
-		while( *host && isdigit( *host ) ) host++; /* Just digits? */
+		while( *host && g_ascii_isdigit( *host ) ) host++; /* Just digits? */
 		if( *host == '\0' )
 		{
 			struct in_addr ipaddr = { .s_addr = htonl( atoll( ctcp[3] ) ) };
