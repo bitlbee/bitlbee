@@ -17,8 +17,8 @@
 
   You should have received a copy of the GNU General Public License with
   the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
-  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
-  Suite 330, Boston, MA  02111-1307  USA
+  if not, write to the Free Software Foundation, Inc., 51 Franklin St.,
+  Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #define BITLBEE_CORE
@@ -522,7 +522,7 @@ file_transfer_t *dcc_request( struct im_connection *ic, char* const* ctcp )
 		filename = ctcp[2];
 		
 		host = ctcp[3];
-		while( *host && isdigit( *host ) ) host++; /* Just digits? */
+		while( *host && g_ascii_isdigit( *host ) ) host++; /* Just digits? */
 		if( *host == '\0' )
 		{
 			struct in_addr ipaddr = { .s_addr = htonl( atoll( ctcp[3] ) ) };

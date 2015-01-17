@@ -19,8 +19,8 @@
 
   You should have received a copy of the GNU General Public License with
   the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
-  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
-  Suite 330, Boston, MA  02111-1307  USA
+  if not, write to the Free Software Foundation, Inc., 51 Franklin St.,
+  Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "bitlbee.h"
@@ -41,9 +41,9 @@ char *set_eval_timezone( set_t *set, char *value )
 		s ++;
 	
 	/* \d+ */
-	if( !isdigit( *s ) )
+	if( !g_ascii_isdigit( *s ) )
 		return SET_INVALID;
-	while( *s && isdigit( *s ) ) s ++;
+	while( *s && g_ascii_isdigit( *s ) ) s ++;
 	
 	/* EOS? */
 	if( *s == '\0' )
@@ -55,9 +55,9 @@ char *set_eval_timezone( set_t *set, char *value )
 	s ++;
 	
 	/* \d+ */
-	if( !isdigit( *s ) )
+	if( !g_ascii_isdigit( *s ) )
 		return SET_INVALID;
-	while( *s && isdigit( *s ) ) s ++;
+	while( *s && g_ascii_isdigit( *s ) ) s ++;
 	
 	/* EOS */
 	return *s == '\0' ? value : SET_INVALID;

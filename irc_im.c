@@ -19,8 +19,8 @@
 
   You should have received a copy of the GNU General Public License with
   the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
-  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
-  Suite 330, Boston, MA  02111-1307  USA
+  if not, write to the Free Software Foundation, Inc., 51 Franklin St.,
+  Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "bitlbee.h"
@@ -72,7 +72,7 @@ static gboolean bee_irc_user_new( bee_t *bee, bee_user_t *bu )
 		else
 		{
 			char *s;
-			for( s = bu->ic->acc->tag; isalnum( *s ); s ++ );
+			for( s = bu->ic->acc->tag; g_ascii_isalnum( *s ); s ++ );
 			/* Only use the tag if we got to the end of the string.
 			   (So allow alphanumerics only. Hopefully not too
 			   restrictive.) */
@@ -315,7 +315,7 @@ static gboolean bee_irc_user_fullname( bee_t *bee, bee_user_t *bu )
 	/* Strip newlines (unlikely, but IRC-unfriendly so they must go)
 	   TODO(wilmer): Do the same with away msgs again! */
 	for( s = iu->fullname; *s; s ++ )
-		if( isspace( *s ) ) *s = ' ';
+		if( g_ascii_isspace( *s ) ) *s = ' ';
 	
 	if( ( bu->ic->flags & OPT_LOGGED_IN ) && set_getbool( &bee->set, "display_namechanges" ) )
 	{

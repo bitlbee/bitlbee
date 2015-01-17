@@ -60,7 +60,7 @@ static gboolean purple_menu_cmp( const char *a, const char *b )
 	{
 		while( *a == '_' ) a ++;
 		while( *b == '_' ) b ++;
-		if( tolower( *a ) != tolower( *b ) )
+		if( g_ascii_tolower( *a ) != g_ascii_tolower( *b ) )
 			return FALSE;
 		
 		a ++;
@@ -1147,7 +1147,7 @@ static void *prplcb_notify_userinfo( PurpleConnection *gc, const char *who, Purp
 				if( value )
 				{
 					n = strlen( value ) - 1;
-					while( isspace( value[n] ) )
+					while( g_ascii_isspace( value[n] ) )
 						n --;
 					g_string_append_len( info, value, n + 1 );
 				}

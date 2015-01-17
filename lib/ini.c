@@ -19,8 +19,8 @@
 
   You should have received a copy of the GNU General Public License with
   the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
-  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
-  Suite 330, Boston, MA  02111-1307  USA
+  if not, write to the Free Software Foundation, Inc., 51 Franklin St.,
+  Fifth Floor, Boston, MA  02110-1301  USA
 */
 #define BITLBEE_CORE
 #include "bitlbee.h"
@@ -62,11 +62,11 @@ static char *ini_strip_whitespace( char *in )
 {
 	char *e;
 
-	while( isspace( *in ) )
+	while( g_ascii_isspace( *in ) )
 		in++;
 
 	e = in + strlen( in ) - 1;
-	while( e > in && isspace( *e ) )
+	while( e > in && g_ascii_isspace( *e ) )
 		e--;
 	e[1] = 0;
 	

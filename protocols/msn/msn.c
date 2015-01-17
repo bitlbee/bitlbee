@@ -19,8 +19,8 @@
 
   You should have received a copy of the GNU General Public License with
   the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
-  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
-  Suite 330, Boston, MA  02111-1307  USA
+  if not, write to the Free Software Foundation, Inc., 51 Franklin St.,
+  Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "nogaim.h"
@@ -376,7 +376,7 @@ static void msn_buddy_data_add( bee_user_t *bu )
 	bd = bu->data = g_new0( struct msn_buddy_data, 1 );
 	g_tree_insert( md->domaintree, bu->handle, bu );
 	
-	for( handle = bu->handle; isdigit( *handle ); handle ++ );
+	for( handle = bu->handle; g_ascii_isdigit( *handle ); handle ++ );
 	if( *handle == ':' )
 	{
 		/* Pass a nick hint so hopefully the stupid numeric prefix

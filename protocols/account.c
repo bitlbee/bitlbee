@@ -19,8 +19,8 @@
 
   You should have received a copy of the GNU General Public License with
   the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
-  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
-  Suite 330, Boston, MA  02111-1307  USA
+  if not, write to the Free Software Foundation, Inc., 51 Franklin St.,
+  Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #define BITLBEE_CORE
@@ -80,7 +80,7 @@ account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass )
 	strcpy( tag, prpl->name );
 	if( strcmp( prpl->name, "oscar" ) == 0 )
 	{
-		if( isdigit( a->user[0] ) )
+		if( g_ascii_isdigit( a->user[0] ) )
 			strcpy( tag, "icq" );
 		else
 			strcpy( tag, "aim" );
@@ -416,7 +416,7 @@ int account_reconnect_delay_parse( char *value, struct account_reconnect_delay *
 	p->max = 86400;
 	
 	/* Format: /[0-9]+([*+][0-9]+(<[0-9+])?)?/ */
-	while( *value && isdigit( *value ) )
+	while( *value && g_ascii_isdigit( *value ) )
 		p->start = p->start * 10 + *value++ - '0';
 	
 	/* Sure, call me evil for implementing my own fscanf here, but it's
@@ -432,7 +432,7 @@ int account_reconnect_delay_parse( char *value, struct account_reconnect_delay *
 	p->op = *value++;
 	
 	/* + or * the delay by this number every time. */
-	while( *value && isdigit( *value ) )
+	while( *value && g_ascii_isdigit( *value ) )
 		p->step = p->step * 10 + *value++ - '0';
 	
 	if( *value == 0 )
@@ -443,7 +443,7 @@ int account_reconnect_delay_parse( char *value, struct account_reconnect_delay *
 	
 	p->max = 0;
 	value ++;
-	while( *value && isdigit( *value ) )
+	while( *value && g_ascii_isdigit( *value ) )
 		p->max = p->max * 10 + *value++ - '0';
 	
 	return p->max > 0;

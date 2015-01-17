@@ -320,7 +320,7 @@ int jabber_compare_jid( const char *jid1, const char *jid2 )
 				break;
 			return FALSE;
 		}
-		if( tolower( jid1[i] ) != tolower( jid2[i] ) )
+		if( g_ascii_tolower( jid1[i] ) != g_ascii_tolower( jid2[i] ) )
 		{
 			return FALSE;
 		}
@@ -341,7 +341,7 @@ char *jabber_normalize( const char *orig )
 	/* So it turns out the /resource part is case sensitive. Yeah, and
 	   it's Unicode but feck Unicode. :-P So stop once we see a slash. */
 	for( i = 0; i < len && orig[i] != '/' ; i ++ )
-		new[i] = tolower( orig[i] );
+		new[i] = g_ascii_tolower( orig[i] );
 	for( ; orig[i]; i ++ )
 		new[i] = orig[i];
 	

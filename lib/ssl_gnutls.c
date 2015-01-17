@@ -19,8 +19,8 @@
 
   You should have received a copy of the GNU General Public License with
   the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
-  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
-  Suite 330, Boston, MA  02111-1307  USA
+  if not, write to the Free Software Foundation, Inc., 51 Franklin St.,
+  Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <gnutls/gnutls.h>
@@ -317,7 +317,7 @@ static gboolean ssl_connected( gpointer data, gint source, b_input_condition con
 #endif
 	gnutls_set_default_priority( conn->session );
 	gnutls_credentials_set( conn->session, GNUTLS_CRD_CERTIFICATE, xcred );
-	if( conn->hostname && !isdigit( conn->hostname[0] ) )
+	if( conn->hostname && !g_ascii_isdigit( conn->hostname[0] ) )
 		gnutls_server_name_set( conn->session, GNUTLS_NAME_DNS,
 		                        conn->hostname, strlen( conn->hostname ) );
 	

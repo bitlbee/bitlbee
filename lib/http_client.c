@@ -19,8 +19,8 @@
 
   You should have received a copy of the GNU General Public License with
   the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
-  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
-  Suite 330, Boston, MA  02111-1307  USA
+  if not, write to the Free Software Foundation, Inc., 51 Franklin St.,
+  Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <string.h>
@@ -344,12 +344,12 @@ static http_ret_t http_process_chunked_data( struct http_request *req, const cha
 		
 		/* Might be a \r\n from the last chunk. */
 		s = chunk;
-		while( isspace( *s ) )
+		while( g_ascii_isspace( *s ) )
 			s ++;
 		/* Chunk length. Might be incomplete. */
 		if( s < eos && sscanf( s, "%x", &clen ) != 1 )
 			return CR_ERROR;
-		while( isxdigit( *s ) )
+		while( g_ascii_isxdigit( *s ) )
 			s ++;
 		
 		/* If we read anything here, it *must* be \r\n. */
