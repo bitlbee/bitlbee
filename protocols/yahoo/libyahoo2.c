@@ -973,7 +973,8 @@ static void yahoo_process_conference(struct yahoo_input_data *yid,
 		if (pair->key == 14)	/* decline/conf message */
 			msg = pair->value;
 
-		if (pair->key == 13) ;
+		if (pair->key == 13) 
+			;
 		if (pair->key == 16)	/* error */
 			msg = pair->value;
 
@@ -1794,9 +1795,9 @@ static enum yahoo_status yahoo_https_status_parse(int code)
 {
 	switch (code)
 	{
-		case 1212: return YAHOO_LOGIN_PASSWD;
-		case 1213: return YAHOO_LOGIN_LOCK;
-		case 1235: return YAHOO_LOGIN_UNAME;
+		case 1212: return (enum yahoo_status) YAHOO_LOGIN_PASSWD;
+		case 1213: return (enum yahoo_status) YAHOO_LOGIN_LOCK;
+		case 1235: return (enum yahoo_status) YAHOO_LOGIN_UNAME;
 		default: return (enum yahoo_status) code;
 	}
 }
@@ -3609,7 +3610,7 @@ void yahoo_send_im(int id, const char *from, const char *who, const char *what,
 
 	yd = yid->yd;
 
-	pkt = yahoo_packet_new(YAHOO_SERVICE_MESSAGE, YAHOO_STATUS_OFFLINE,
+	pkt = yahoo_packet_new(YAHOO_SERVICE_MESSAGE, (enum ypacket_status) YAHOO_STATUS_OFFLINE,
 		yd->session_id);
 
 	snprintf(pic_str, sizeof(pic_str), "%d", picture);
@@ -3676,7 +3677,7 @@ void yahoo_set_away(int id, enum yahoo_status state, const char *msg, int away)
 	/* Thank you libpurple :) */
 	if (yd->current_status == YAHOO_STATUS_INVISIBLE) {
 		pkt = yahoo_packet_new(YAHOO_SERVICE_Y6_VISIBLE_TOGGLE,
-			YAHOO_STATUS_AVAILABLE, 0);
+			(enum ypacket_status) YAHOO_STATUS_AVAILABLE, 0);
 		yahoo_packet_hash(pkt, 13, "2");
 		yahoo_send_packet(yid, pkt, 0);
 		yahoo_packet_free(pkt);
@@ -3695,7 +3696,7 @@ void yahoo_set_away(int id, enum yahoo_status state, const char *msg, int away)
 
 	if (old_status == YAHOO_STATUS_INVISIBLE) {
 		pkt = yahoo_packet_new(YAHOO_SERVICE_Y6_VISIBLE_TOGGLE,
-			YAHOO_STATUS_AVAILABLE, 0);
+			(enum ypacket_status) YAHOO_STATUS_AVAILABLE, 0);
 		yahoo_packet_hash(pkt, 13, "1");
 		yahoo_send_packet(yid, pkt, 0);
 		yahoo_packet_free(pkt);

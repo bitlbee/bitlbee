@@ -329,23 +329,37 @@ int jabber_compare_jid( const char *jid1, const char *jid2 )
 	return TRUE;
 }
 
-/* Returns a new string. Don't leak it! */
+/* The /resource part is case sensitive. This stops once we see a slash.
+   Returns a new string. Don't leak it! */
 char *jabber_normalize( const char *orig )
 {
-	int len, i;
-	char *new;
-	
-	len = strlen( orig );
-	new = g_new( char, len + 1 );
-	
-	/* So it turns out the /resource part is case sensitive. Yeah, and
-	   it's Unicode but feck Unicode. :-P So stop once we see a slash. */
-	for( i = 0; i < len && orig[i] != '/' ; i ++ )
-		new[i] = g_ascii_tolower( orig[i] );
-	for( ; orig[i]; i ++ )
-		new[i] = orig[i];
-	
-	new[i] = 0;
+	char *lower, *new, *s;
+
+	if ( ! ( s = strchr( orig, '/' ) ) )
+		return g_utf8_strdown( orig, -1 );
+
+	lower = g_utf8_strdown( orig, (s - orig) );  /* stop in s */
+	new = g_strconcat( lower, s, NULL );
+	g_free( lower );
+	return new;
+}
+
+/* Similar to jabber_normalize, but works with addresses in the form
+ * resource=chatroom@example.com */
+char *jabber_normalize_ext( const char *orig )
+{
+	char *lower, *new, *s;
+
+	if ( ! ( s = strchr( orig, '=' ) ) )
+		return g_utf8_strdown( orig, -1 );
+
+	lower = g_utf8_strdown( s, -1 ); /* start in s */
+
+	*s = 0;
+	new = g_strconcat( orig, lower, NULL );
+	*s = '=';
+
+	g_free( lower );
 	return new;
 }
 
@@ -555,7 +569,7 @@ struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *ji
 	struct jabber_buddy *bud;
 	char *s, *jid;
 	
-	jid = jabber_normalize( jid_ );
+	jid = jabber_normalize_ext( jid_ );
 	
 	if( ( s = strchr( jid, '=' ) ) == NULL )
 		return NULL;

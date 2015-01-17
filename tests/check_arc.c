@@ -87,6 +87,8 @@ static void check_decod(int l)
 		len = arc_decode( decrypt_tests[i].crypted, decrypt_tests[i].len,
 		                  &decrypted, password );
 		
+		fail_if( len == -1, 
+                 "`%s' didn't decrypt properly", decrypt_tests[i].decrypted );
 		fail_if( strcmp( decrypt_tests[i].decrypted, decrypted ) != 0,
 		         "`%s' didn't decrypt properly", decrypt_tests[i].decrypted );
 		

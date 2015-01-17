@@ -47,6 +47,9 @@
 # endif
 
 # define snprintf	g_snprintf
+#ifdef vsnprintf
+#undef vsnprintf
+#endif
 # define vsnprintf	g_vsnprintf
 
 #else

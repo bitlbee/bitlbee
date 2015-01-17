@@ -769,7 +769,9 @@ void irc_exec( irc_t *irc, char *cmd[] )
 		if( g_strcasecmp( irc_commands[i].command, cmd[0] ) == 0 )
 		{
 			/* There should be no typo in the next line: */
-			for( n_arg = 0; cmd[n_arg]; n_arg ++ ); n_arg --;
+			for( n_arg = 0; cmd[n_arg]; n_arg ++ )
+				;
+			n_arg--;
 			
 			if( irc_commands[i].flags & IRC_CMD_PRE_LOGIN && irc->status & USTATUS_LOGGED_IN )
 			{

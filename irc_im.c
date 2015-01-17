@@ -910,10 +910,8 @@ static gboolean bee_irc_channel_chat_part( irc_channel_t *ic, const char *msg )
 	if( c && c->ic->acc->prpl->chat_leave )
 		c->ic->acc->prpl->chat_leave( c );
 	
-	/* Remove references in both directions now. We don't need each other anymore. */
+	/* Remove the reference. We don't need it anymore. */
 	ic->data = NULL;
-	if( c )
-		c->ui_data = NULL;
 	
 	return TRUE;
 }

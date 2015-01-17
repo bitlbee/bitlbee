@@ -570,7 +570,7 @@ int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 	} 
 
 	if (FD_ISSET(conn->fd, &fds) || FD_ISSET(conn->fd, &wfds)) {
-		unsigned int len = sizeof(error);
+		socklen_t len = sizeof(error);
 
 		if (getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0)
 			error = errno;

@@ -65,7 +65,7 @@ static int proxy_connect_none(const char *host, unsigned short port_, struct PHB
 static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition cond)
 {
 	struct PHB *phb = data;
-	unsigned int len;
+	socklen_t len;
 	int error = ETIMEDOUT;
 	len = sizeof(error);
 	
@@ -85,6 +85,7 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 		freeaddrinfo(phb->gai);
 		closesocket(source);
 		b_event_remove(phb->inpa);
+		phb->inpa = 0;
 		if( phb->proxy_func )
 			phb->proxy_func(phb->proxy_data, -1, B_EV_IO_READ);
 		else {
@@ -96,6 +97,7 @@ static gboolean gaim_io_connected(gpointer data, gint source, b_input_condition 
 	freeaddrinfo(phb->gai);
 	sock_make_blocking(source);
 	b_event_remove(phb->inpa);
+	phb->inpa = 0;
 	if( phb->proxy_func )
 		phb->proxy_func(phb->proxy_data, source, B_EV_IO_READ);
 	else {
@@ -173,8 +175,8 @@ static int proxy_connect_none(const char *host, unsigned short port_, struct PHB
 
 /* Connecting to HTTP proxies */
 
-#define HTTP_GOODSTRING "HTTP/1.0 200 Connection established"
-#define HTTP_GOODSTRING2 "HTTP/1.1 200 Connection established"
+#define HTTP_GOODSTRING "HTTP/1.0 200"
+#define HTTP_GOODSTRING2 "HTTP/1.1 200"
 
 static gboolean http_canread(gpointer data, gint source, b_input_condition cond)
 {
@@ -213,7 +215,7 @@ static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond
 {
 	char cmd[384];
 	struct PHB *phb = data;
-	unsigned int len;
+	socklen_t len;
 	int error = ETIMEDOUT;
 	if (phb->inpa > 0)
 		b_event_remove(phb->inpa);
@@ -308,7 +310,7 @@ static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
 	unsigned char packet[12];
 	struct hostent *hp;
 	struct PHB *phb = data;
-	unsigned int len;
+	socklen_t len;
 	int error = ETIMEDOUT;
 	if (phb->inpa > 0)
 		b_event_remove(phb->inpa);
@@ -500,7 +502,7 @@ static gboolean s5_canwrite(gpointer data, gint source, b_input_condition cond)
 	unsigned char buf[512];
 	int i;
 	struct PHB *phb = data;
-	unsigned int len;
+	socklen_t len;
 	int error = ETIMEDOUT;
 	if (phb->inpa > 0)
 		b_event_remove(phb->inpa);
