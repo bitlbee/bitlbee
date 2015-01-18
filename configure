@@ -52,7 +52,7 @@ pie=1
 arch=`uname -s`
 cpu=`uname -m`
 
-GLIB_MIN_VERSION=2.14
+GLIB_MIN_VERSION=2.16
 
 echo BitlBee configure
 

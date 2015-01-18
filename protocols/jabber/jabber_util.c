@@ -147,7 +147,7 @@ void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_ca
 	
 	id_hash = jd->cached_id_prefix;
 	md5_append( &id_hash, (md5_byte_t*) &next_id, sizeof( next_id ) );
-	md5_finish( &id_hash, id_sum );
+	md5_digest_keep( &id_hash, id_sum );
 	asc_hash = base64_encode( id_sum, 12 );
 	
 	id = g_strdup_printf( "%s%s", JABBER_CACHED_ID, asc_hash );

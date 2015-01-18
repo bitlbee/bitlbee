@@ -37,7 +37,7 @@
 static char *oauth_sign( const char *method, const char *url,
                          const char *params, struct oauth_info *oi )
 {
-	uint8_t hash[sha1_hash_size];
+	uint8_t hash[SHA1_HASH_SIZE];
 	GString *payload = g_string_new( "" );
 	char *key;
 	char *s;
@@ -65,7 +65,7 @@ static char *oauth_sign( const char *method, const char *url,
 	
 	/* base64_encode + HTTP escape it (both consumers 
 	   need it that away) and we're done. */
-	s = base64_encode( hash, sha1_hash_size );
+	s = base64_encode( hash, SHA1_HASH_SIZE );
 	s = g_realloc( s, strlen( s ) * 3 + 1 );
 	http_encode( s );
 	

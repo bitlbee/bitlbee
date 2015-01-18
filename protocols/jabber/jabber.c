@@ -316,6 +316,8 @@ static void jabber_logout( struct im_connection *ic )
 	jabber_buddy_remove_all( ic );
 	
 	xt_free( jd->xt );
+
+	md5_free( &jd->cached_id_prefix );
 	
 	g_free( jd->oauth2_access_token );
 	g_free( jd->away_message );
