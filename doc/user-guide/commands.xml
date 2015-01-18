@@ -887,7 +887,13 @@
 	<bitlbee-setting name="display_name" type="string" scope="account">
 		<description>
 			<para>
-				Currently only available for MSN connections. This setting allows you to read and change your "friendly name" for this connection. Since this is a server-side setting, it can't be changed when the account is off-line.
+				Currently only available for MSN connections, and for jabber groupchats.
+			</para>
+			<para>
+				For MSN: This setting allows you to read and change your "friendly name" for this connection. Since this is a server-side setting, it can't be changed when the account is off-line.
+			</para>
+			<para>
+				For jabber groupchats: this sets the default value of 'nick' for newly created groupchats. There is no way to set an account-wide nick like MSN.
 			</para>
 		</description>
 	</bitlbee-setting>
