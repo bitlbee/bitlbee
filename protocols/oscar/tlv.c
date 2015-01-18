@@ -180,7 +180,7 @@ int aim_addtlvtochain8(aim_tlvlist_t **list, const guint16 t, const guint8 v)
 {
 	guint8 v8[1];
 
-	aimutil_put8(v8, v);
+	(void) aimutil_put8(v8, v);
 
 	return aim_addtlvtochain_raw(list, t, 1, v8);
 }
@@ -198,7 +198,7 @@ int aim_addtlvtochain16(aim_tlvlist_t **list, const guint16 t, const guint16 v)
 {
 	guint8 v16[2];
 
-	aimutil_put16(v16, v);
+	(void) aimutil_put16(v16, v);
 
 	return aim_addtlvtochain_raw(list, t, 2, v16);
 }
@@ -216,7 +216,7 @@ int aim_addtlvtochain32(aim_tlvlist_t **list, const guint16 t, const guint32 v)
 {
 	guint8 v32[4];
 
-	aimutil_put32(v32, v);
+	(void) aimutil_put32(v32, v);
 
 	return aim_addtlvtochain_raw(list, t, 4, v32);
 }

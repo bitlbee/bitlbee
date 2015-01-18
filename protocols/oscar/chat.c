@@ -66,7 +66,8 @@ int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const
 	 *
 	 */
 	for (i = 0; i < sizeof(ckstr); i++)
-		aimutil_put8(ckstr+i, (guint8) rand());
+		(void) aimutil_put8(ckstr+i, (guint8) rand());
+	
 
 	cookie = aim_mkcookie(ckstr, AIM_COOKIETYPE_CHAT, NULL);
 	cookie->data = NULL; /* XXX store something useful here */
@@ -227,7 +228,7 @@ int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const
 	 * Cookie
 	 */
 	for (i = 0; i < sizeof(ckstr); i++)
-		aimutil_put8(ckstr, (guint8) rand());
+		(void) aimutil_put8(ckstr, (guint8) rand());
 
 	/* XXX should be uncached by an unwritten 'invite accept' handler */
 	if ((priv = g_malloc(sizeof(struct aim_invite_priv)))) {
