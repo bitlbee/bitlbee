@@ -999,6 +999,7 @@ static void *prplcb_request_action(const char *title, const char *primary, const
                                    va_list actions)
 {
 	struct prplcb_request_action_data *pqad;
+	struct im_connection *ic = purple_ic_by_pa(account);
 	int i;
 	char *q;
 
@@ -1024,7 +1025,7 @@ static void *prplcb_request_action(const char *title, const char *primary, const
 
 	/* TODO: IRC stuff here :-( */
 	q = g_strdup_printf("Request: %s\n\n%s\n\n%s", title, primary, secondary);
-	pqad->bee_data = query_add(local_bee->ui_data, purple_ic_by_pa(account), q,
+	pqad->bee_data = query_add(ic->bee->ui_data, ic, q,
 	                           prplcb_request_action_yes, prplcb_request_action_no, g_free, pqad);
 
 	g_free(q);
