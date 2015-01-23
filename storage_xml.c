@@ -258,7 +258,6 @@ static storage_status_t xml_check_pass(const char *my_nick, const char *password
 }
 
 
-static gboolean xml_generate_nick(gpointer key, gpointer value, gpointer data);
 static void xml_generate_settings(struct xt_node *cur, set_t **head);
 
 struct xt_node *xml_generate(irc_t *irc)
@@ -291,6 +290,8 @@ struct xt_node *xml_generate(irc_t *irc)
 	xml_generate_settings(cur, &irc->b->set);
 
 	for (acc = irc->b->accounts; acc; acc = acc->next) {
+		GHashTableIter iter;
+		gpointer key, value;
 		unsigned char *pass_cr;
 		char *pass_b64;
 		int pass_len;
@@ -311,14 +312,13 @@ struct xt_node *xml_generate(irc_t *irc)
 
 		g_free(pass_b64);
 
-		/* This probably looks pretty strange. g_hash_table_foreach
-		   is quite a PITA already (but it can't get much better in
-		   C without using #define, I'm afraid), and it
-		   doesn't seem to be possible to abort the foreach on write
-		   errors, so instead let's use the _find function and
-		   return TRUE on write errors. Which means, if we found
-		   something, there was an error. :-) */
-		g_hash_table_find(acc->nicks, xml_generate_nick, cur);
+		g_hash_table_iter_init(&iter, acc->nicks);
+		while (g_hash_table_iter_next(&iter, &key, &value)) {
+			struct xt_node *node = xt_new_node("buddy", NULL, NULL);
+			xt_add_attr(node, "handle", key);
+			xt_add_attr(node, "nick", value);
+			xt_add_child(cur, node);
+		}
 
 		xml_generate_settings(cur, &acc->set);
 
@@ -342,17 +342,6 @@ struct xt_node *xml_generate(irc_t *irc)
 	}
 
 	return root;
-}
-
-static gboolean xml_generate_nick(gpointer key, gpointer value, gpointer data)
-{
-	struct xt_node *node = xt_new_node("buddy", NULL, NULL);
-
-	xt_add_attr(node, "handle", key);
-	xt_add_attr(node, "nick", value);
-	xt_add_child((struct xt_node *) data, node);
-
-	return FALSE;
 }
 
 static void xml_generate_settings(struct xt_node *cur, set_t **head)
