@@ -293,6 +293,17 @@ void imcb_connected( struct im_connection *ic )
 	   function should be handled correctly. (IOW, ignored) */
 	if( ic->flags & OPT_LOGGED_IN )
 		return;
+
+	if( ic->acc->flags & ACC_FLAG_LOCAL )
+	{
+		GHashTableIter nicks;
+		gpointer k, v;
+		g_hash_table_iter_init( &nicks, ic->acc->nicks );
+		while( g_hash_table_iter_next( &nicks, &k, &v ) )
+		{
+			ic->acc->prpl->add_buddy( ic, (char*) k, NULL );
+		}
+	}
 	
 	imcb_log( ic, "Logged in" );
 	
