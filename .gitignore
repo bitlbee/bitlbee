@@ -23,3 +23,9 @@ bitlbee.info
 bitlbee.exe
 .depend
 DEADJOE
+callgrind.out.*
+cov-int
+.bzr
+.bzrignore
+.git
+.gitignore

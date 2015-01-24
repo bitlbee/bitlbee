@@ -666,6 +666,12 @@ if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; th
 	BITLBEE_VERSION=$REAL_BITLBEE_VERSION-bzr$nick-$rev
 fi
 
+if [ -z "$BITLBEE_VERSION" -a -d .git ] && type git > /dev/null 2> /dev/null; then
+	rev=`git describe --long --tags`-`git rev-parse --abbrev-ref HEAD`
+	echo 'Using '$rev' as git version number'
+	BITLBEE_VERSION=$rev-git
+fi
+
 if [ -n "$BITLBEE_VERSION" ]; then
 	echo 'Spoofing version number: '$BITLBEE_VERSION
 	echo '#undef BITLBEE_VERSION' >> config.h
