@@ -28,7 +28,6 @@
 #include "msn.h"
 #include "md5.h"
 #include "soap.h"
-#include "invitation.h"
 
 static gboolean msn_sb_callback(gpointer data, gint source, b_input_condition cond);
 static int msn_sb_command(struct msn_handler_data *handler, char **cmd, int num_parts);
@@ -181,9 +180,6 @@ int msn_sb_sendmessage(struct msn_switchboard *sb, char *text)
 			i = strlen(buf);
 		} else if (strcmp(text, SB_KEEPALIVE_MESSAGE) == 0) {
 			buf = g_strdup(MSN_SB_KEEPALIVE_HEADERS);
-			i = strlen(buf);
-		} else if (strncmp(text, MSN_INVITE_HEADERS, sizeof(MSN_INVITE_HEADERS) - 1) == 0) {
-			buf = g_strdup(text);
 			i = strlen(buf);
 		} else {
 			buf = g_new0(char, sizeof(MSN_MESSAGE_HEADERS) + strlen(text) * 2 + 1);
@@ -663,40 +659,6 @@ static int msn_sb_message(struct msn_handler_data *handler, char *msg, int msgle
 				/* PANIC! */
 			}
 		}
-#if 0
-		// Disable MSN ft support for now.
-		else if (g_strncasecmp(ct, "text/x-msmsgsinvite", 19) == 0) {
-			char *command = get_rfc822_header(body, "Invitation-Command:", blen);
-			char *cookie = get_rfc822_header(body, "Invitation-Cookie:", blen);
-			unsigned int icookie;
-
-			g_free(ct);
-
-			/* Every invite should have both a Command and Cookie header */
-			if (!command || !cookie) {
-				g_free(command);
-				g_free(cookie);
-				imcb_log(ic, "Warning: No command or cookie from %s", sb->who);
-				return 1;
-			}
-
-			icookie = strtoul(cookie, NULL, 10);
-			g_free(cookie);
-
-			if (g_strncasecmp(command, "INVITE", 6) == 0) {
-				msn_invitation_invite(sb, cmd[1], icookie, body, blen);
-			} else if (g_strncasecmp(command, "ACCEPT", 6) == 0) {
-				msn_invitation_accept(sb, cmd[1], icookie, body, blen);
-			} else if (g_strncasecmp(command, "CANCEL", 6) == 0) {
-				msn_invitation_cancel(sb, cmd[1], icookie, body, blen);
-			} else {
-				imcb_log(ic, "Warning: Received invalid invitation with "
-				         "command %s from %s", command, sb->who);
-			}
-
-			g_free(command);
-		}
-#endif
 		else if (g_strncasecmp(ct, "application/x-msnmsgrp2p", 24) == 0) {
 			/* Not currently implemented. Don't warn about it since
 			   this seems to be used for avatars now. */

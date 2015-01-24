@@ -95,12 +95,6 @@ static void msn_logout(struct im_connection *ic)
 	int i;
 
 	if (md) {
-		/** Disabling MSN ft support for now.
-		while( md->filetransfers ) {
-		        imcb_file_canceled( md->filetransfers->data, "Closing connection" );
-		}
-		*/
-
 		msn_ns_close(md->ns);
 
 		while (md->switchboards) {
@@ -468,8 +462,6 @@ void msn_initmodule()
 	ret->buddy_data_free = msn_buddy_data_free;
 	ret->buddy_action_list = msn_buddy_action_list;
 	ret->buddy_action = msn_buddy_action;
-
-	//ret->transfer_request = msn_ftp_transfer_request;
 
 	register_protocol(ret);
 }
