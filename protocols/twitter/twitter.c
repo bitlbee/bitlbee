@@ -931,6 +931,15 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		message = new = g_strdup_printf("@%s %s", bu->handle, cmd[2]);
 		in_reply_to = id;
 		allow_post = TRUE;
+	} else if (g_strcasecmp(cmd[0], "rawreply") == 0 && cmd[1] && cmd[2]) {
+		id = twitter_message_id_from_command_arg(ic, cmd[1], NULL);
+		if (!id) {
+			twitter_log(ic, "Tweet `%s' does not exist", cmd[1]);
+			goto eof;
+		}
+		message = cmd[2];
+		in_reply_to = id;
+		allow_post = TRUE;
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
 		message += 5;
 		allow_post = TRUE;
