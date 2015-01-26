@@ -1109,7 +1109,7 @@
 
 			<variablelist>
 				<varlistentry><term>%i</term><listitem><para>The ID of this tweet</para></listitem></varlistentry>
-				<varlistentry><term>%t</term><listitem><para>The ID of the tweet being replied to</para></listitem></varlistentry>
+				<varlistentry><term>%r</term><listitem><para>The ID of the tweet being replied to</para></listitem></varlistentry>
 				<varlistentry><term>%c</term><listitem><para>The text of the tweet</para></listitem></varlistentry>
 			</variablelist>
 		</description>
