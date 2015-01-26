@@ -679,7 +679,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 			twitter_log(ic, "Tweet `%s' does not exist", cmd[1]);
 			goto eof;
 		}
-		message += (cmd[2] - cmd[0]);
+		message = cmd[2];
 		in_reply_to = id;
 		allow_post = TRUE;
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
