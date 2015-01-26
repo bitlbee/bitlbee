@@ -831,6 +831,12 @@ void prplcb_conv_new( PurpleConversation *conv )
 		struct groupchat *gc;
 		
 		gc = imcb_chat_new( ic, conv->name );
+		if( conv->title != NULL )
+		{
+			imcb_chat_name_hint( gc, conv->title );
+			imcb_chat_topic( gc, NULL, conv->title, 0 );
+		}
+
 		conv->ui_data = gc;
 		gc->data = conv;
 		
