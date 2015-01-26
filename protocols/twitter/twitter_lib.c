@@ -633,7 +633,7 @@ static char *twitter_msg_get_text(struct im_connection *ic, int log_id, int repl
 				g_string_append_printf(text, "%02x", reply_to);
 				break;
 			case 'a':
-				if (txs->rt) // In case someone does put %t in the wrong format_string
+				if (txs->rt) // In case someone does put %a in the wrong format_string
 					text = g_string_append(text, txs->rt->user->screen_name);
 				break;
 			case 'c':
