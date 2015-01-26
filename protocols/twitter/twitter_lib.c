@@ -86,7 +86,7 @@ static void txs_free(struct twitter_xml_status *txs)
 
 	g_free(txs->text);
 	txu_free(txs->user);
-	g_free(txs->rt);
+	txs_free(txs->rt);
 	g_free(txs);
 }
 
