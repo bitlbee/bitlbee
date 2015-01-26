@@ -685,7 +685,7 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 	if (g_strcasecmp(txs->user->screen_name, td->user) == 0)
 		td->log[td->log_id].id = txs->rt_id;
 	
-  return twitter_msg_get_text(ic, td->log_id, reply_to, txs, prefix);
+	return twitter_msg_get_text(ic, td->log_id, reply_to, txs, prefix);
 }
 
 /**
