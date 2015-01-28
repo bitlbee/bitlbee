@@ -49,7 +49,7 @@ Description: An IRC to other chat networks gateway (common files/docs)
 
 Package: bitlbee-dev
 Architecture: all
-Depends: ${misc:Depends}, bitlbee (>= ${source:Version}), bitlbee (<< ${source:Version}.1~), bitlbee-common (= ${source:Version})
+Depends: ${misc:Depends}, bitlbee (>= ${source:Version}) | bitlbee-libpurple (>= ${source:Version}), bitlbee (<< ${source:Version}.1~) | bitlbee-libpurple (<< ${source:Version}.1~), bitlbee-common (= ${source:Version})
 Description: An IRC to other chat networks gateway (dev files)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
