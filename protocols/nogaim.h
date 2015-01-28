@@ -212,6 +212,11 @@ struct prpl {
 	 * - 'message' is a handle to invite
 	 */
 	void (* chat_invite)	(struct groupchat *, char *who, char *message);
+	/* This is called when the user uses the /kick IRC command.
+	 * - 'who' is a handle to kick
+	 * - 'message' is a kick message or NULL
+	 */
+	void (* chat_kick)	(struct groupchat *, char *who, const char *message);
 	/* This is called when the user uses the /part IRC command in a group
 	 * chat. You just should tell the user about it, nothing more. */
 	void (* chat_leave)	(struct groupchat *);

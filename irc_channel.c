@@ -625,6 +625,24 @@ static gboolean control_channel_invite( irc_channel_t *ic, irc_user_t *iu )
 	return TRUE;
 }
 
+static void control_channel_kick( irc_channel_t *ic, irc_user_t *iu, const char *msg )
+{
+	struct irc_control_channel *icc = ic->data;
+	bee_user_t *bu = iu->bu;
+	
+	if( bu == NULL )
+		return;
+	
+	if( icc->type != IRC_CC_TYPE_GROUP )
+	{
+		irc_send_num( ic->irc, 482, "%s :Kicks are only possible to fill_by=group channels", ic->name );
+		return;
+	}
+	
+	bu->ic->acc->prpl->remove_buddy( bu->ic, bu->handle,
+	                                 icc->group ? icc->group->name : NULL );
+}
+
 static char *set_eval_by_account( set_t *set, char *value );
 static char *set_eval_fill_by( set_t *set, char *value );
 static char *set_eval_by_group( set_t *set, char *value );
@@ -843,6 +861,7 @@ static const struct irc_channel_funcs control_channel_funcs = {
 	NULL,
 	NULL,
 	control_channel_invite,
+	control_channel_kick,
 	
 	control_channel_init,
 	control_channel_free,

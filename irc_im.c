@@ -971,6 +971,23 @@ static gboolean bee_irc_channel_chat_invite( irc_channel_t *ic, irc_user_t *iu )
 	return TRUE;
 }
 
+static void bee_irc_channel_chat_kick( irc_channel_t *ic, irc_user_t *iu, const char *msg )
+{
+	struct groupchat *c = ic->data;
+	bee_user_t *bu = iu->bu;
+	
+	if( ( c == NULL ) || ( bu == NULL ) )
+		return;
+	
+	if( !c->ic->acc->prpl->chat_kick )
+	{
+		irc_send_num( ic->irc, 482, "%s :IM protocol does not support room kicking", ic->name );
+		return;
+	}
+	
+	c->ic->acc->prpl->chat_kick( c, iu->bu->handle, msg );
+}
+
 static char *set_eval_room_account( set_t *set, char *value );
 static char *set_eval_chat_type( set_t *set, char *value );
 
@@ -1055,6 +1072,7 @@ const struct irc_channel_funcs irc_channel_im_chat_funcs = {
 	bee_irc_channel_chat_part,
 	bee_irc_channel_chat_topic,
 	bee_irc_channel_chat_invite,
+	bee_irc_channel_chat_kick,
 
 	bee_irc_channel_init,
 	bee_irc_channel_free,

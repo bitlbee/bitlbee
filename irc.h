@@ -187,6 +187,7 @@ struct irc_channel_funcs
 	gboolean (*part)( irc_channel_t *ic, const char *msg );
 	gboolean (*topic)( irc_channel_t *ic, const char *new_topic );
 	gboolean (*invite)( irc_channel_t *ic, irc_user_t *iu );
+	void (*kick)( irc_channel_t *ic, irc_user_t *iu, const char *msg );
 	
 	gboolean (*_init)( irc_channel_t *ic );
 	gboolean (*_free)( irc_channel_t *ic );

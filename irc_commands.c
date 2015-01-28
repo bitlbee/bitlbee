@@ -499,6 +499,30 @@ static void irc_cmd_invite( irc_t *irc, char **cmd )
 		irc_send_num( irc, 341, "%s %s", iu->nick, ic->name );
 }
 
+static void irc_cmd_kick( irc_t *irc, char **cmd )
+{
+	irc_channel_t *ic;
+	irc_user_t *iu;
+	
+	if( ( iu = irc_user_by_name( irc, cmd[2] ) ) == NULL )
+	{
+		irc_send_num( irc, 401, "%s :No such nick", cmd[2] );
+		return;
+	}
+	else if( ( ic = irc_channel_by_name( irc, cmd[1] ) ) == NULL )
+	{
+		irc_send_num( irc, 403, "%s :No such channel", cmd[1] );
+		return;
+	}
+	else if( !ic->f->kick )
+	{
+		irc_send_num( irc, 482, "%s :Can't kick people here", cmd[1] );
+		return;
+	}
+	
+	ic->f->kick( ic, iu, cmd[3] ? cmd[3] : NULL );
+}
+
 static void irc_cmd_userhost( irc_t *irc, char **cmd )
 {
 	int i;
@@ -745,6 +769,7 @@ static const command_t irc_commands[] = {
 	{ "ison",        1, irc_cmd_ison,        IRC_CMD_LOGGED_IN },
 	{ "watch",       1, irc_cmd_watch,       IRC_CMD_LOGGED_IN },
 	{ "invite",      2, irc_cmd_invite,      IRC_CMD_LOGGED_IN },
+	{ "kick",        2, irc_cmd_kick,        IRC_CMD_LOGGED_IN },
 	{ "topic",       1, irc_cmd_topic,       IRC_CMD_LOGGED_IN },
 	{ "oper",        2, irc_cmd_oper,        IRC_CMD_LOGGED_IN },
 	{ "list",        0, irc_cmd_list,        IRC_CMD_LOGGED_IN },
