@@ -605,6 +605,14 @@ void purple_chat_invite( struct groupchat *gc, char *who, char *message )
 	                  who );
 }
 
+void purple_chat_kick( struct groupchat *gc, char *who, const char *message )
+{
+	PurpleConversation *pc = gc->data;
+	char *str = g_strdup_printf( "kick %s %s", who, message );
+	purple_conversation_do_command( pc, str, NULL, NULL );
+	g_free( str );
+}
+
 void purple_chat_leave( struct groupchat *gc )
 {
 	PurpleConversation *pc = gc->data;
@@ -1314,6 +1322,7 @@ void purple_initmodule()
 	funcs.chat_msg = purple_chat_msg;
 	funcs.chat_with = purple_chat_with;
 	funcs.chat_invite = purple_chat_invite;
+	funcs.chat_kick = purple_chat_kick;
 	funcs.chat_leave = purple_chat_leave;
 	funcs.chat_join = purple_chat_join;
 	funcs.transfer_request = purple_transfer_request;
