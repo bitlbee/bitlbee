@@ -28,13 +28,12 @@
 #define _TWITTER_H
 
 #ifdef DEBUG_TWITTER
-#define debug( text... ) imcb_log( ic, text );
+#define debug(text ...) imcb_log(ic, text);
 #else
-#define debug( text... )
+#define debug(text ...)
 #endif
 
-typedef enum
-{
+typedef enum {
 	TWITTER_HAVE_FRIENDS   = 0x00001,
 	TWITTER_MODE_ONE       = 0x00002,
 	TWITTER_MODE_MANY      = 0x00004,
@@ -44,16 +43,14 @@ typedef enum
 	TWITTER_GOT_MENTIONS   = 0x40000,
 } twitter_flags_t;
 
-typedef enum
-{
+typedef enum {
 	TWITTER_FILTER_TYPE_FOLLOW = 0,
 	TWITTER_FILTER_TYPE_TRACK
 } twitter_filter_type_t;
 
 struct twitter_log_data;
 
-struct twitter_data
-{
+struct twitter_data {
 	char* user;
 	struct oauth_info *oauth_info;
 
@@ -64,7 +61,7 @@ struct twitter_data
 
 	GSList *follow_ids;
 	GSList *filters;
-	
+
 	guint64 last_status_id; /* For undo */
 	gint main_loop_id;
 	gint filter_update_id;
@@ -73,7 +70,7 @@ struct twitter_data
 	struct groupchat *timeline_gc;
 	gint http_fails;
 	twitter_flags_t flags;
-	
+
 	/* set base_url */
 	gboolean url_ssl;
 	int url_port;
@@ -81,47 +78,44 @@ struct twitter_data
 	char *url_path;
 
 	char *prefix; /* Used to generate contact + channel name. */
-	
+
 	/* set show_ids */
 	struct twitter_log_data *log;
 	int log_id;
 };
 
 #define TWITTER_FILTER_UPDATE_WAIT 3000
-struct twitter_filter
-{
+struct twitter_filter {
 	twitter_filter_type_t type;
 	char *text;
 	guint64 uid;
 	GSList *groupchats;
 };
 
-struct twitter_user_data
-{
+struct twitter_user_data {
 	guint64 last_id;
 	time_t last_time;
 };
 
 #define TWITTER_LOG_LENGTH 256
-struct twitter_log_data
-{
+struct twitter_log_data {
 	guint64 id;
 	struct bee_user *bu; /* DANGER: can be a dead pointer. Check it first. */
 };
 
 /**
- * This has the same function as the msn_connections GSList. We use this to 
+ * This has the same function as the msn_connections GSList. We use this to
  * make sure the connection is still alive in callbacks before we do anything
  * else.
  */
 extern GSList *twitter_connections;
 
-void twitter_login_finish( struct im_connection *ic );
+void twitter_login_finish(struct im_connection *ic);
 
 struct http_request;
-char *twitter_parse_error( struct http_request *req );
+char *twitter_parse_error(struct http_request *req);
 
-void twitter_log(struct im_connection *ic, char *format, ... );
+void twitter_log(struct im_connection *ic, char *format, ...);
 struct groupchat *twitter_groupchat_init(struct im_connection *ic);
 
 #endif //_TWITTER_H

@@ -21,7 +21,7 @@
 
 /* this is the export part of the proxy.c file. it does a little
    prototype-ing stuff and redefine some net function to mask them
-   with some kind of transparent layer */ 
+   with some kind of transparent layer */
 
 #ifndef _PROXY_H_
 #define _PROXY_H_
@@ -41,8 +41,8 @@
 #define PROXY_SOCKS5 3
 
 extern char proxyhost[128];
-extern int  proxyport;
-extern int  proxytype;
+extern int proxyport;
+extern int proxytype;
 extern char proxyuser[128];
 extern char proxypass[128];
 

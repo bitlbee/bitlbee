@@ -28,7 +28,7 @@
 
 char *tobase64(const char *text)
 {
-	return base64_encode((const unsigned char *)text, strlen(text));
+	return base64_encode((const unsigned char *) text, strlen(text));
 }
 
 char *base64_encode(const unsigned char *in, int len)
@@ -41,13 +41,15 @@ char *base64_encode(const unsigned char *in, int len)
 char *frombase64(const char *in)
 {
 	unsigned char *out;
+
 	base64_decode(in, &out);
-	return (char*) out;
+	return (char *) out;
 }
 
 int base64_decode(const char *in, unsigned char **out)
 {
 	gsize len;
+
 	*out = g_base64_decode(in, &len);
 
 	/* Some silly functions expect it to be zero terminated */

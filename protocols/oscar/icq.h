@@ -7,7 +7,7 @@
  * SNAC Family: ICQ
  *
  * Most of these are actually special.
- */ 
+ */
 #define AIM_CB_ICQ_ERROR 0x0001
 #define AIM_CB_ICQ_OFFLINEMSG 0x00f0
 #define AIM_CB_ICQ_OFFLINEMSGCOMPLETE 0x00f1
@@ -32,61 +32,61 @@ struct aim_icq_simpleinfo {
 };
 
 struct aim_icq_info {
-        gushort reqid;
+	gushort reqid;
 
-        /* simple */
-        guint32 uin;
+	/* simple */
+	guint32 uin;
 
-        /* general and "home" information (0x00c8) */
-        char *nick;
-        char *first;
-        char *last;
-        char *email;
-        char *homecity;
-        char *homestate;
-        char *homephone;
-        char *homefax;
-        char *homeaddr;
-        char *mobile;
-        char *homezip;
-        gushort homecountry;
+	/* general and "home" information (0x00c8) */
+	char *nick;
+	char *first;
+	char *last;
+	char *email;
+	char *homecity;
+	char *homestate;
+	char *homephone;
+	char *homefax;
+	char *homeaddr;
+	char *mobile;
+	char *homezip;
+	gushort homecountry;
 /*      guchar timezone;
         guchar hideemail; */
 
-        /* personal (0x00dc) */
-        guchar age;
-        guchar unknown;
-        guchar gender;
-        char *personalwebpage;
-        gushort birthyear;
-        guchar birthmonth;
-        guchar birthday;
-        guchar language1;
-        guchar language2;
-        guchar language3;
+	/* personal (0x00dc) */
+	guchar age;
+	guchar unknown;
+	guchar gender;
+	char *personalwebpage;
+	gushort birthyear;
+	guchar birthmonth;
+	guchar birthday;
+	guchar language1;
+	guchar language2;
+	guchar language3;
 
-        /* work (0x00d2) */
-        char *workcity;
-        char *workstate;
-        char *workphone;
-        char *workfax;
-        char *workaddr;
-        char *workzip;
-        gushort workcountry;
-        char *workcompany;
-        char *workdivision;
-        char *workposition;
-        char *workwebpage;
+	/* work (0x00d2) */
+	char *workcity;
+	char *workstate;
+	char *workphone;
+	char *workfax;
+	char *workaddr;
+	char *workzip;
+	gushort workcountry;
+	char *workcompany;
+	char *workdivision;
+	char *workposition;
+	char *workwebpage;
 
-        /* additional personal information (0x00e6) */
-        char *info;
+	/* additional personal information (0x00e6) */
+	char *info;
 
-        /* email (0x00eb) */
-        gushort numaddresses;
-        char **email2;
+	/* email (0x00eb) */
+	gushort numaddresses;
+	char **email2;
 
-        /* we keep track of these in a linked list because we're 1337 */
-        struct aim_icq_info *next;
+	/* we keep track of these in a linked list because we're 1337 */
+	struct aim_icq_info *next;
 };
 
 

@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2012 Wilmer van der Gaast and others                *
@@ -29,8 +29,7 @@
 #include <gmodule.h>
 #include <time.h>
 
-struct ns_srv_reply
-{
+struct ns_srv_reply {
 	int prio;
 	int weight;
 	int port;
@@ -44,22 +43,22 @@ struct ns_srv_reply
 #define NS_INT32SZ  4
 
 #define NS_GET16(s, cp) do { \
-	register const unsigned char *t_cp = (const unsigned char*)(cp); \
-	(s) = ((guint16)t_cp[0] << 8) \
-	    | ((guint16)t_cp[1]) \
-	    ; \
-	(cp) += NS_INT16SZ; \
-} while(0)
+		register const unsigned char *t_cp = (const unsigned char *) (cp); \
+		(s) = ((guint16) t_cp[0] << 8) \
+		      | ((guint16) t_cp[1]) \
+		; \
+		(cp) += NS_INT16SZ; \
+} while (0)
 
 #define NS_GET32(s, cp) do { \
-	register const unsigned char *t_cp = (const unsigned char*)(cp); \
-	(s) = ((guint16)t_cp[0] << 24) \
-	    | ((guint16)t_cp[1] << 16) \
-	    | ((guint16)t_cp[2] << 8) \
-	    | ((guint16)t_cp[3]) \
-	    ; \
-	(cp) += NS_INT32SZ; \
-} while(0)
+		register const unsigned char *t_cp = (const unsigned char *) (cp); \
+		(s) = ((guint16) t_cp[0] << 24) \
+		      | ((guint16) t_cp[1] << 16) \
+		      | ((guint16) t_cp[2] << 8) \
+		      | ((guint16) t_cp[3]) \
+		; \
+		(cp) += NS_INT32SZ; \
+} while (0)
 
 #define ns_rr_rdlen(rr) ((rr).rdlength + 0)
 #define ns_rr_rdata(rr) ((rr).rdata + 0)
@@ -83,11 +82,10 @@ typedef enum __ns_sect {
 	ns_s_ns = 2,
 	ns_s_ud = 2,
 	ns_s_ar = 3,
-	ns_s_max =4
+	ns_s_max = 4
 } ns_sect;
 
-typedef struct __ns_msg
-{
+typedef struct __ns_msg {
 	const unsigned char* _msg;
 	const unsigned char* _eom;
 	guint16 _id;
@@ -118,37 +116,37 @@ typedef enum __ns_type {
 
 #endif /* NAMESER_HAS_NS_INITPARSE */
 
-G_MODULE_EXPORT void strip_linefeed( gchar *text );
-G_MODULE_EXPORT char *add_cr( char *text );
+G_MODULE_EXPORT void strip_linefeed(gchar *text);
+G_MODULE_EXPORT char *add_cr(char *text);
 G_MODULE_EXPORT char *strip_newlines(char *source);
 
-G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min, int sec );
-G_MODULE_EXPORT time_t mktime_utc( struct tm *tp );
-double gettime( void );
+G_MODULE_EXPORT time_t get_time(int year, int month, int day, int hour, int min, int sec);
+G_MODULE_EXPORT time_t mktime_utc(struct tm *tp);
+double gettime(void);
 
-G_MODULE_EXPORT void strip_html( char *msg );
-G_MODULE_EXPORT char *escape_html( const char *html );
-G_MODULE_EXPORT void http_decode( char *s );
-G_MODULE_EXPORT void http_encode( char *s );
+G_MODULE_EXPORT void strip_html(char *msg);
+G_MODULE_EXPORT char *escape_html(const char *html);
+G_MODULE_EXPORT void http_decode(char *s);
+G_MODULE_EXPORT void http_encode(char *s);
 
-G_MODULE_EXPORT char *ipv6_wrap( char *src );
-G_MODULE_EXPORT char *ipv6_unwrap( char *src );
+G_MODULE_EXPORT char *ipv6_wrap(char *src);
+G_MODULE_EXPORT char *ipv6_unwrap(char *src);
 
-G_MODULE_EXPORT signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf );
+G_MODULE_EXPORT signed int do_iconv(char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf);
 
-G_MODULE_EXPORT void random_bytes( unsigned char *buf, int count );
+G_MODULE_EXPORT void random_bytes(unsigned char *buf, int count);
 
-G_MODULE_EXPORT int is_bool( char *value );
-G_MODULE_EXPORT int bool2int( char *value );
+G_MODULE_EXPORT int is_bool(char *value);
+G_MODULE_EXPORT int bool2int(char *value);
 
-G_MODULE_EXPORT struct ns_srv_reply **srv_lookup( char *service, char *protocol, char *domain );
-G_MODULE_EXPORT void srv_free( struct ns_srv_reply **srv );
+G_MODULE_EXPORT struct ns_srv_reply **srv_lookup(char *service, char *protocol, char *domain);
+G_MODULE_EXPORT void srv_free(struct ns_srv_reply **srv);
 
-G_MODULE_EXPORT char *word_wrap( const char *msg, int line_len );
-G_MODULE_EXPORT gboolean ssl_sockerr_again( void *ssl );
-G_MODULE_EXPORT int md5_verify_password( char *password, char *hash );
-G_MODULE_EXPORT char **split_command_parts( char *command, int limit );
-G_MODULE_EXPORT char *get_rfc822_header( const char *text, const char *header, int len );
-G_MODULE_EXPORT int truncate_utf8( char *string, int maxlen );
+G_MODULE_EXPORT char *word_wrap(const char *msg, int line_len);
+G_MODULE_EXPORT gboolean ssl_sockerr_again(void *ssl);
+G_MODULE_EXPORT int md5_verify_password(char *password, char *hash);
+G_MODULE_EXPORT char **split_command_parts(char *command, int limit);
+G_MODULE_EXPORT char *get_rfc822_header(const char *text, const char *header, int len);
+G_MODULE_EXPORT int truncate_utf8(char *string, int maxlen);
 
 #endif

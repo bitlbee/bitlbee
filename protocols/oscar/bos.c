@@ -15,32 +15,35 @@ static int rights(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_m
 	guint16 maxpermits = 0, maxdenies = 0;
 	int ret = 0;
 
-	/* 
-	 * TLVs follow 
+	/*
+	 * TLVs follow
 	 */
 	tlvlist = aim_readtlvchain(bs);
 
 	/*
 	 * TLV type 0x0001: Maximum number of buddies on permit list.
 	 */
-	if (aim_gettlv(tlvlist, 0x0001, 1))
+	if (aim_gettlv(tlvlist, 0x0001, 1)) {
 		maxpermits = aim_gettlv16(tlvlist, 0x0001, 1);
+	}
 
 	/*
 	 * TLV type 0x0002: Maximum number of buddies on deny list.
 	 */
-	if (aim_gettlv(tlvlist, 0x0002, 1)) 
+	if (aim_gettlv(tlvlist, 0x0002, 1)) {
 		maxdenies = aim_gettlv16(tlvlist, 0x0002, 1);
+	}
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, maxpermits, maxdenies);
+	}
 
 	aim_freetlvchain(&tlvlist);
 
-	return ret;  
+	return ret;
 }
 
-/* 
+/*
  * Set group permisson mask (group 9, type 4)
  *
  * Normally 0x1f (all classes).
@@ -58,8 +61,9 @@ int aim_bos_setgroupperm(aim_session_t *sess, aim_conn_t *conn, guint32 mask)
 static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 
-	if (snac->subtype == 0x0003)
+	if (snac->subtype == 0x0003) {
 		return rights(sess, mod, rx, snac, bs);
+	}
 
 	return 0;
 }

@@ -21,12 +21,14 @@ static int error(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 		return 0;
 	}
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, snac2->data /* address */);
+	}
 
 	/* XXX freesnac()? */
-	if (snac2)
+	if (snac2) {
 		g_free(snac2->data);
+	}
 	g_free(snac2);
 
 	return ret;
@@ -41,30 +43,33 @@ static int reply(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 	aim_snac_t *snac2;
 	char *searchaddr = NULL;
 
-	if ((snac2 = aim_remsnac(sess, snac->id)))
-		searchaddr = (char *)snac2->data;
+	if ((snac2 = aim_remsnac(sess, snac->id))) {
+		searchaddr = (char *) snac2->data;
+	}
 
 	tlvlist = aim_readtlvchain(bs);
 	m = aim_counttlvchain(&tlvlist);
 
 	/* XXX uhm. */
-	while ((cur = aim_gettlv_str(tlvlist, 0x0001, j+1)) && j < m) {
-		buf = g_realloc(buf, (j+1) * (MAXSNLEN+1));
+	while ((cur = aim_gettlv_str(tlvlist, 0x0001, j + 1)) && j < m) {
+		buf = g_realloc(buf, (j + 1) * (MAXSNLEN + 1));
 
-		strncpy(&buf[j * (MAXSNLEN+1)], cur, MAXSNLEN);
+		strncpy(&buf[j * (MAXSNLEN + 1)], cur, MAXSNLEN);
 		g_free(cur);
 
-		j++; 
+		j++;
 	}
 
 	aim_freetlvchain(&tlvlist);
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, searchaddr, j, buf);
+	}
 
 	/* XXX freesnac()? */
-	if (snac2)
+	if (snac2) {
 		g_free(snac2->data);
+	}
 	g_free(snac2);
 
 	g_free(buf);
@@ -75,10 +80,11 @@ static int reply(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 
-	if (snac->subtype == 0x0001)
+	if (snac->subtype == 0x0001) {
 		return error(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0003)
+	} else if (snac->subtype == 0x0003) {
 		return reply(sess, mod, rx, snac, bs);
+	}
 
 	return 0;
 }

@@ -21,8 +21,9 @@ typedef struct aim_module_s {
 	guint16 toolid;
 	guint16 toolversion;
 	guint16 flags;
-	char name[AIM_MODULENAME_MAXLEN+1];
-	int (*snachandler)(aim_session_t *sess, struct aim_module_s *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs);
+	char name[AIM_MODULENAME_MAXLEN + 1];
+	int (*snachandler)(aim_session_t *sess, struct aim_module_s *mod, aim_frame_t *rx, aim_modsnac_t *snac,
+	                   aim_bstream_t *bs);
 	void (*shutdown)(aim_session_t *sess, struct aim_module_s *mod);
 	void *priv;
 	struct aim_module_s *next;
@@ -106,12 +107,13 @@ typedef struct aim_snac_s {
 } aim_snac_t;
 
 void aim_initsnachash(aim_session_t *sess);
-aim_snacid_t aim_cachesnac(aim_session_t *sess, const guint16 family, const guint16 type, const guint16 flags, const void *data, const int datalen);
+aim_snacid_t aim_cachesnac(aim_session_t *sess, const guint16 family, const guint16 type, const guint16 flags,
+                           const void *data, const int datalen);
 aim_snac_t *aim_remsnac(aim_session_t *, aim_snacid_t id);
 void aim_cleansnacs(aim_session_t *, int maxage);
 int aim_putsnac(aim_bstream_t *, guint16 family, guint16 type, guint16 flags, aim_snacid_t id);
 
-int aim_oft_buildheader(unsigned char *,struct aim_fileheader_t *);
+int aim_oft_buildheader(unsigned char *, struct aim_fileheader_t *);
 
 int aim_parse_unknown(aim_session_t *, aim_frame_t *, ...);
 
@@ -137,7 +139,7 @@ struct aim_tool_version {
 	guint16 toolversion;
 };
 
-/* 
+/*
  * In SNACland, the terms 'family' and 'group' are synonymous -- the former
  * is my term, the latter is AOL's.
  */
@@ -169,9 +171,9 @@ struct rateclass {
 /*
  * This is inside every connection.  But it is a void * to anything
  * outside of libfaim.  It should remain that way.  It's called data
- * abstraction.  Maybe you've heard of it.  (Probably not if you're a 
+ * abstraction.  Maybe you've heard of it.  (Probably not if you're a
  * libfaim user.)
- * 
+ *
  */
 typedef struct aim_conn_inside_s {
 	struct snacgroup *groups;

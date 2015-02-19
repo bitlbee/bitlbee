@@ -5,7 +5,7 @@
 
 /*
  * SNAC Family: Location Services.
- */ 
+ */
 #define AIM_CB_LOC_ERROR 0x0001
 #define AIM_CB_LOC_REQRIGHTS 0x0002
 #define AIM_CB_LOC_RIGHTSINFO 0x0003
@@ -28,8 +28,8 @@
 #define AIM_CAPS_GAMES2         0x00000200
 #define AIM_CAPS_ICQ            0x00000400
 #define AIM_CAPS_APINFO         0x00000800
-#define AIM_CAPS_ICQRTF	        0x00001000
-#define AIM_CAPS_EMPTY	        0x00002000
+#define AIM_CAPS_ICQRTF         0x00001000
+#define AIM_CAPS_EMPTY          0x00002000
 #define AIM_CAPS_ICQSERVERRELAY 0x00004000
 #define AIM_CAPS_ICQUNKNOWN     0x00008000
 #define AIM_CAPS_TRILLIANCRYPT  0x00010000

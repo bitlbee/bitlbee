@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2012 Wilmer van der Gaast and others                *
@@ -27,7 +27,7 @@
    In the "background" it will send the whole query and wait for a complete
    response to come back. Initially written for MS Passport authentication,
    but used for many other things now like OAuth and Twitter.
-   
+
    It's very useful for doing quick requests without blocking the whole
    program. Unfortunately it doesn't support fancy stuff like HTTP keep-
    alives. */
@@ -37,23 +37,21 @@
 
 struct http_request;
 
-typedef enum http_client_flags
-{
+typedef enum http_client_flags {
 	HTTPC_STREAMING = 1,
 	HTTPC_EOF = 2,
 	HTTPC_CHUNKED = 4,
-	
+
 	/* Let's reserve 0x1000000+ for lib users. */
 } http_client_flags_t;
 
 /* Your callback function should look like this: */
-typedef void (*http_input_function)( struct http_request * );
+typedef void (*http_input_function)(struct http_request *);
 
 /* This structure will be filled in by the http_dorequest* functions, and
    it will be passed to the callback function. Use the data field to add
    your own data. */
-struct http_request
-{
+struct http_request {
 	char *request;          /* The request to send to the server. */
 	int request_length;     /* Its size. */
 	short status_code;      /* The numeric HTTP status code. (Or -1
@@ -64,25 +62,25 @@ struct http_request
 	int body_size;          /* The number of bytes in reply_body. */
 	short redir_ttl;        /* You can set it to 0 if you don't want
 	                           http_client to follow them. */
-	
+
 	http_client_flags_t flags;
-	
+
 	http_input_function func;
 	gpointer data;
-	
+
 	/* Please don't touch the things down here, you shouldn't need them. */
 	void *ssl;
 	int fd;
-	
+
 	int inpa;
 	int bytes_written;
 	int bytes_read;
 	int content_length;     /* "Content-Length:" header or -1 */
-	
+
 	/* Used in streaming mode. Caller should read from reply_body. */
 	char *sbuf;
 	size_t sblen;
-	
+
 	/* Chunked encoding only. Raw chunked stream is decoded from here. */
 	char *cbuf;
 	size_t cblen;
@@ -92,9 +90,10 @@ struct http_request
    version is probably only useful if you want to do POST requests or if
    you want to add some extra headers. As you can see, HTTPS connections
    are also supported (using ssl_client). */
-struct http_request *http_dorequest( char *host, int port, int ssl, char *request, http_input_function func, gpointer data );
-struct http_request *http_dorequest_url( char *url_string, http_input_function func, gpointer data );
+struct http_request *http_dorequest(char *host, int port, int ssl, char *request, http_input_function func,
+                                    gpointer data);
+struct http_request *http_dorequest_url(char *url_string, http_input_function func, gpointer data);
 
 /* For streaming connections only; flushes len bytes at the start of the buffer. */
-void http_flush_bytes( struct http_request *req, size_t len );
-void http_close( struct http_request *req );
+void http_flush_bytes(struct http_request *req, size_t len);
+void http_close(struct http_request *req);

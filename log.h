@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2005 Wilmer van der Gaast and others                *
@@ -44,7 +44,7 @@ typedef enum {
 
 typedef struct log_t {
 	void (*error)(int level, const char *logmessage);
-	void (*warning)(int level, const char *logmessage); 
+	void (*warning)(int level, const char *logmessage);
 	void (*informational)(int level, const char *logmessage);
 #ifdef DEBUG
 	void (*debug)(int level, const char *logmessage);
@@ -53,7 +53,7 @@ typedef struct log_t {
 
 void log_init(void);
 void log_link(int level, int output);
-void log_message(int level, const char *message, ...) G_GNUC_PRINTF( 2, 3 );
+void log_message(int level, const char *message, ...) G_GNUC_PRINTF(2, 3);
 void log_error(const char *functionname);
 
 #endif

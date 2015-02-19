@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2010 Wilmer van der Gaast and others                *
@@ -27,45 +27,44 @@
 #include "bitlbee.h"
 
 
-struct bitlbee_child
-{
+struct bitlbee_child {
 	pid_t pid;
 	int ipc_fd;
 	gint ipc_inpa;
-	
+
 	char *host;
 	char *nick;
 	char *realname;
-	
+
 	char *password;
-	
+
 	/* For takeovers: */
 	struct bitlbee_child *to_child;
 	int to_fd;
 };
 
 
-gboolean ipc_master_read( gpointer data, gint source, b_input_condition cond );
-gboolean ipc_child_read( gpointer data, gint source, b_input_condition cond );
+gboolean ipc_master_read(gpointer data, gint source, b_input_condition cond);
+gboolean ipc_child_read(gpointer data, gint source, b_input_condition cond);
 
-void ipc_master_free_one( struct bitlbee_child *child );
-void ipc_master_free_fd( int fd );
+void ipc_master_free_one(struct bitlbee_child *child);
+void ipc_master_free_fd(int fd);
 void ipc_master_free_all();
 
 void ipc_child_disable();
 
-gboolean ipc_child_identify( irc_t *irc );
+gboolean ipc_child_identify(irc_t *irc);
 
-void ipc_to_master( char **cmd );
-void ipc_to_master_str( char *format, ... ) G_GNUC_PRINTF( 1, 2 );
-void ipc_to_children( char **cmd );
-void ipc_to_children_str( char *format, ... ) G_GNUC_PRINTF( 1, 2 );
+void ipc_to_master(char **cmd);
+void ipc_to_master_str(char *format, ...) G_GNUC_PRINTF(1, 2);
+void ipc_to_children(char **cmd);
+void ipc_to_children_str(char *format, ...) G_GNUC_PRINTF(1, 2);
 
 /* We need this function in inetd mode, so let's just make it non-static. */
-void ipc_master_cmd_rehash( irc_t *data, char **cmd );
+void ipc_master_cmd_rehash(irc_t *data, char **cmd);
 
 char *ipc_master_save_state();
-int ipc_master_load_state( char *statefile );
+int ipc_master_load_state(char *statefile);
 int ipc_master_listen_socket();
 
 extern GSList *child_list;

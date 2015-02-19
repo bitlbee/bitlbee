@@ -2,7 +2,7 @@
  * aim_info.c
  *
  * The functions here are responsible for requesting and parsing information-
- * gathering SNACs.  Or something like that. 
+ * gathering SNACs.  Or something like that.
  *
  */
 
@@ -10,7 +10,7 @@
 #include "info.h"
 
 struct aim_priv_inforeq {
-	char sn[MAXSNLEN+1];
+	char sn[MAXSNLEN + 1];
 	guint16 infotype;
 };
 
@@ -20,20 +20,22 @@ int aim_getinfo(aim_session_t *sess, aim_conn_t *conn, const char *sn, guint16 i
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 
-	if (!sess || !conn || !sn)
+	if (!sess || !conn || !sn) {
 		return -EINVAL;
+	}
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 12+1+strlen(sn))))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 12 + 1 + strlen(sn)))) {
 		return -ENOMEM;
+	}
 
 	strncpy(privdata.sn, sn, sizeof(privdata.sn));
 	privdata.infotype = infotype;
 	snacid = aim_cachesnac(sess, 0x0002, 0x0005, 0x0000, &privdata, sizeof(struct aim_priv_inforeq));
-	
+
 	aim_putsnac(&fr->data, 0x0002, 0x0005, 0x0000, snacid);
 	aimbs_put16(&fr->data, infotype);
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *) sn, strlen(sn));
 
 	aim_tx_enqueue(sess, fr);
 
@@ -41,7 +43,7 @@ int aim_getinfo(aim_session_t *sess, aim_conn_t *conn, const char *sn, guint16 i
 }
 
 /*
- * Capability blocks. 
+ * Capability blocks.
  *
  * These are CLSIDs. They should actually be of the form:
  *
@@ -58,111 +60,111 @@ static const struct {
 	/*
 	 * Chat is oddball.
 	 */
-	{AIM_CAPS_CHAT,
-	 {0x74, 0x8f, 0x24, 0x20, 0x62, 0x87, 0x11, 0xd1, 
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_CHAT,
+	  { 0x74, 0x8f, 0x24, 0x20, 0x62, 0x87, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
 	/*
 	 * These are mostly in order.
 	 */
-	{AIM_CAPS_VOICE,
-	 {0x09, 0x46, 0x13, 0x41, 0x4c, 0x7f, 0x11, 0xd1, 
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_VOICE,
+	  { 0x09, 0x46, 0x13, 0x41, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_SENDFILE,
-	 {0x09, 0x46, 0x13, 0x43, 0x4c, 0x7f, 0x11, 0xd1, 
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_SENDFILE,
+	  { 0x09, 0x46, 0x13, 0x43, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
 	/*
 	 * Advertised by the EveryBuddy client.
 	 */
-	{AIM_CAPS_ICQ,
-	 {0x09, 0x46, 0x13, 0x44, 0x4c, 0x7f, 0x11, 0xd1, 
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_ICQ,
+	  { 0x09, 0x46, 0x13, 0x44, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_IMIMAGE,
-	 {0x09, 0x46, 0x13, 0x45, 0x4c, 0x7f, 0x11, 0xd1, 
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_IMIMAGE,
+	  { 0x09, 0x46, 0x13, 0x45, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_BUDDYICON,
-	 {0x09, 0x46, 0x13, 0x46, 0x4c, 0x7f, 0x11, 0xd1, 
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_BUDDYICON,
+	  { 0x09, 0x46, 0x13, 0x46, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_SAVESTOCKS,
-	 {0x09, 0x46, 0x13, 0x47, 0x4c, 0x7f, 0x11, 0xd1,
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_SAVESTOCKS,
+	  { 0x09, 0x46, 0x13, 0x47, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_GETFILE,
-	 {0x09, 0x46, 0x13, 0x48, 0x4c, 0x7f, 0x11, 0xd1,
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
-
-    /*
-     * Client supports channel 2 extended, TLV(0x2711) based messages.
-     * Currently used only by ICQ clients. ICQ clients and clones use this GUID
-     * as message format sign. Trillian client use another GUID in channel 2
-     * messages to implement its own message format (trillian doesn't use
-     * TLV(x2711) in SecureIM channel 2 messages!).
-     */
-	{AIM_CAPS_ICQSERVERRELAY,
-	 {0x09, 0x46, 0x13, 0x49, 0x4c, 0x7f, 0x11, 0xd1,
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_GETFILE,
+	  { 0x09, 0x46, 0x13, 0x48, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
 	/*
-	 * Indeed, there are two of these.  The former appears to be correct, 
-	 * but in some versions of winaim, the second one is set.  Either they 
-	 * forgot to fix endianness, or they made a typo. It really doesn't 
+	 * Client supports channel 2 extended, TLV(0x2711) based messages.
+	 * Currently used only by ICQ clients. ICQ clients and clones use this GUID
+	 * as message format sign. Trillian client use another GUID in channel 2
+	 * messages to implement its own message format (trillian doesn't use
+	 * TLV(x2711) in SecureIM channel 2 messages!).
+	 */
+	{ AIM_CAPS_ICQSERVERRELAY,
+	  { 0x09, 0x46, 0x13, 0x49, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
+
+	/*
+	 * Indeed, there are two of these.  The former appears to be correct,
+	 * but in some versions of winaim, the second one is set.  Either they
+	 * forgot to fix endianness, or they made a typo. It really doesn't
 	 * matter which.
 	 */
-	{AIM_CAPS_GAMES,
-	 {0x09, 0x46, 0x13, 0x4a, 0x4c, 0x7f, 0x11, 0xd1,
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
-	{AIM_CAPS_GAMES2,
-	 {0x09, 0x46, 0x13, 0x4a, 0x4c, 0x7f, 0x11, 0xd1,
-	  0x22, 0x82, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_GAMES,
+	  { 0x09, 0x46, 0x13, 0x4a, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
+	{ AIM_CAPS_GAMES2,
+	  { 0x09, 0x46, 0x13, 0x4a, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x22, 0x82, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_SENDBUDDYLIST,
-	 {0x09, 0x46, 0x13, 0x4b, 0x4c, 0x7f, 0x11, 0xd1,
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_SENDBUDDYLIST,
+	  { 0x09, 0x46, 0x13, 0x4b, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_UTF8,
-	 {0x09, 0x46, 0x13, 0x4E, 0x4C, 0x7F, 0x11, 0xD1,
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_UTF8,
+	  { 0x09, 0x46, 0x13, 0x4E, 0x4C, 0x7F, 0x11, 0xD1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_ICQRTF,
-	 {0x97, 0xb1, 0x27, 0x51, 0x24, 0x3c, 0x43, 0x34, 
-	  0xad, 0x22, 0xd6, 0xab, 0xf7, 0x3f, 0x14, 0x92}},
+	{ AIM_CAPS_ICQRTF,
+	  { 0x97, 0xb1, 0x27, 0x51, 0x24, 0x3c, 0x43, 0x34,
+	    0xad, 0x22, 0xd6, 0xab, 0xf7, 0x3f, 0x14, 0x92 } },
 
-	{AIM_CAPS_ICQUNKNOWN,
-	 {0x2e, 0x7a, 0x64, 0x75, 0xfa, 0xdf, 0x4d, 0xc8,
-	  0x88, 0x6f, 0xea, 0x35, 0x95, 0xfd, 0xb6, 0xdf}},
+	{ AIM_CAPS_ICQUNKNOWN,
+	  { 0x2e, 0x7a, 0x64, 0x75, 0xfa, 0xdf, 0x4d, 0xc8,
+	    0x88, 0x6f, 0xea, 0x35, 0x95, 0xfd, 0xb6, 0xdf } },
 
-	{AIM_CAPS_EMPTY,
-	 {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+	{ AIM_CAPS_EMPTY,
+	  { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },
 
-	{AIM_CAPS_TRILLIANCRYPT,
-	 {0xf2, 0xe7, 0xc7, 0xf4, 0xfe, 0xad, 0x4d, 0xfb,
-	  0xb2, 0x35, 0x36, 0x79, 0x8b, 0xdf, 0x00, 0x00}},
+	{ AIM_CAPS_TRILLIANCRYPT,
+	  { 0xf2, 0xe7, 0xc7, 0xf4, 0xfe, 0xad, 0x4d, 0xfb,
+	    0xb2, 0x35, 0x36, 0x79, 0x8b, 0xdf, 0x00, 0x00 } },
 
-	{AIM_CAPS_APINFO, 
-     {0xAA, 0x4A, 0x32, 0xB5, 0xF8, 0x84, 0x48, 0xc6,
-      0xA3, 0xD7, 0x8C, 0x50, 0x97, 0x19, 0xFD, 0x5B}},
+	{ AIM_CAPS_APINFO,
+	  { 0xAA, 0x4A, 0x32, 0xB5, 0xF8, 0x84, 0x48, 0xc6,
+	    0xA3, 0xD7, 0x8C, 0x50, 0x97, 0x19, 0xFD, 0x5B } },
 
-	{AIM_CAPS_INTEROP,
-	 {0x09, 0x46, 0x13, 0x4d, 0x4c, 0x7f, 0x11, 0xd1,
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_INTEROP,
+	  { 0x09, 0x46, 0x13, 0x4d, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_ICHAT,
-	 {0x09, 0x46, 0x00, 0x00, 0x4c, 0x7f, 0x11, 0xd1, 
-	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	{ AIM_CAPS_ICHAT,
+	  { 0x09, 0x46, 0x00, 0x00, 0x4c, 0x7f, 0x11, 0xd1,
+	    0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } },
 
-	{AIM_CAPS_LAST}
+	{ AIM_CAPS_LAST }
 };
 
 /*
  * This still takes a length parameter even with a bstream because capabilities
  * are not naturally bounded.
- * 
+ *
  */
 guint32 aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 {
@@ -189,12 +191,12 @@ guint32 aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 			/*FIXME*/
 			/*REMOVEME :-)
 			g_strdup_printf("unknown capability: {%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x}\n",
-					cap[0], cap[1], cap[2], cap[3],
-					cap[4], cap[5],
-					cap[6], cap[7],
-					cap[8], cap[9],
-					cap[10], cap[11], cap[12], cap[13],
-					cap[14], cap[15]);
+			                cap[0], cap[1], cap[2], cap[3],
+			                cap[4], cap[5],
+			                cap[6], cap[7],
+			                cap[8], cap[9],
+			                cap[10], cap[11], cap[12], cap[13],
+			                cap[14], cap[15]);
 			*/
 		}
 
@@ -208,16 +210,19 @@ int aim_putcap(aim_bstream_t *bs, guint32 caps)
 {
 	int i;
 
-	if (!bs)
+	if (!bs) {
 		return -EINVAL;
+	}
 
 	for (i = 0; aim_bstream_empty(bs); i++) {
 
-		if (aim_caps[i].flag == AIM_CAPS_LAST)
+		if (aim_caps[i].flag == AIM_CAPS_LAST) {
 			break;
+		}
 
-		if (caps & aim_caps[i].flag)
+		if (caps & aim_caps[i].flag) {
 			aimbs_putraw(bs, aim_caps[i].data, 0x10);
+		}
 
 	}
 
@@ -225,7 +230,7 @@ int aim_putcap(aim_bstream_t *bs, guint32 caps)
 }
 
 /*
- * AIM is fairly regular about providing user info.  This is a generic 
+ * AIM is fairly regular about providing user info.  This is a generic
  * routine to extract it in its standard form.
  */
 int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *outinfo)
@@ -233,18 +238,19 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 	int curtlv, tlvcnt;
 	guint8 snlen;
 
-	if (!bs || !outinfo)
+	if (!bs || !outinfo) {
 		return -EINVAL;
+	}
 
 	/* Clear out old data first */
 	memset(outinfo, 0x00, sizeof(aim_userinfo_t));
 
 	/*
-	 * Screen name.  Stored as an unterminated string prepended with a 
+	 * Screen name.  Stored as an unterminated string prepended with a
 	 * byte containing its length.
 	 */
 	snlen = aimbs_get8(bs);
-	aimbs_getrawbuf(bs, (guint8 *)outinfo->sn, snlen);
+	aimbs_getrawbuf(bs, (guint8 *) outinfo->sn, snlen);
 
 	/*
 	 * Warning Level.  Stored as an unsigned short.
@@ -252,12 +258,12 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 	outinfo->warnlevel = aimbs_get16(bs);
 
 	/*
-	 * TLV Count. Unsigned short representing the number of 
+	 * TLV Count. Unsigned short representing the number of
 	 * Type-Length-Value triples that follow.
 	 */
 	tlvcnt = aimbs_get16(bs);
 
-	/* 
+	/*
 	 * Parse out the Type-Length-Value triples as they're found.
 	 */
 	for (curtlv = 0; curtlv < tlvcnt; curtlv++) {
@@ -272,13 +278,13 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 		if (type == 0x0001) {
 			/*
 			 * Type = 0x0001: User flags
-			 * 
+			 *
 			 * Specified as any of the following ORed together:
 			 *      0x0001  Trial (user less than 60days)
 			 *      0x0002  Unknown bit 2
 			 *      0x0004  AOL Main Service user
 			 *      0x0008  Unknown bit 4
-			 *      0x0010  Free (AIM) user 
+			 *      0x0010  Free (AIM) user
 			 *      0x0020  Away
 			 *      0x0400  ActiveBuddy
 			 *
@@ -288,7 +294,7 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 
 		} else if (type == 0x0002) {
 			/*
-			 * Type = 0x0002: Member-Since date. 
+			 * Type = 0x0002: Member-Since date.
 			 *
 			 * The time/date that the user originally registered for
 			 * the service, stored in time_t format.
@@ -300,7 +306,7 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 			/*
 			 * Type = 0x0003: On-Since date.
 			 *
-			 * The time/date that the user started their current 
+			 * The time/date that the user started their current
 			 * session, stored in time_t format.
 			 */
 			outinfo->onlinesince = aimbs_get32(bs);
@@ -310,11 +316,11 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 			/*
 			 * Type = 0x0004: Idle time.
 			 *
-			 * Number of seconds since the user actively used the 
+			 * Number of seconds since the user actively used the
 			 * service.
 			 *
 			 * Note that the client tells the server when to start
-			 * counting idle times, so this may or may not be 
+			 * counting idle times, so this may or may not be
 			 * related to reality.
 			 */
 			outinfo->idletime = aimbs_get16(bs);
@@ -324,7 +330,7 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 			/*
 			 * Type = 0x0006: ICQ Online Status
 			 *
-			 * ICQ's Away/DND/etc "enriched" status. Some decoding 
+			 * ICQ's Away/DND/etc "enriched" status. Some decoding
 			 * of values done by Scott <darkagl@pcnet.com>
 			 */
 			aimbs_get16(bs);
@@ -342,7 +348,7 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 			outinfo->present |= AIM_USERINFO_PRESENT_ICQIPADDR;
 
 		} else if (type == 0x000c) {
-			/* 
+			/*
 			 * Type = 0x000c
 			 *
 			 * random crap containing the IP address,
@@ -378,7 +384,7 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 			 * Type = 0x000f: Session Length. (AIM)
 			 * Type = 0x0010: Session Length. (AOL)
 			 *
-			 * The duration, in seconds, of the user's current 
+			 * The duration, in seconds, of the user's current
 			 * session.
 			 *
 			 * Which TLV type this comes in depends on the
@@ -392,7 +398,7 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 
 			/*
 			 * Reaching here indicates that either AOL has
-			 * added yet another TLV for us to deal with, 
+			 * added yet another TLV for us to deal with,
 			 * or the parsing has gone Terribly Wrong.
 			 *
 			 * Either way, inform the owner and attempt
@@ -428,11 +434,13 @@ static int rights(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_m
 
 	tlvlist = aim_readtlvchain(bs);
 
-	if (aim_gettlv(tlvlist, 0x0001, 1))
+	if (aim_gettlv(tlvlist, 0x0001, 1)) {
 		maxsiglen = aim_gettlv16(tlvlist, 0x0001, 1);
+	}
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, maxsiglen);
+	}
 
 	aim_freetlvchain(&tlvlist);
 
@@ -458,11 +466,11 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 		return 0;
 	}
 
-	inforeq = (struct aim_priv_inforeq *)origsnac->data;
+	inforeq = (struct aim_priv_inforeq *) origsnac->data;
 
 	if ((inforeq->infotype != AIM_GETINFO_GENERALINFO) &&
-			(inforeq->infotype != AIM_GETINFO_AWAYMESSAGE) &&
-			(inforeq->infotype != AIM_GETINFO_CAPABILITIES)) {
+	    (inforeq->infotype != AIM_GETINFO_AWAYMESSAGE) &&
+	    (inforeq->infotype != AIM_GETINFO_CAPABILITIES)) {
 		imcb_error(sess->aux_data, "unknown infotype in request!");
 		return 0;
 	}
@@ -471,7 +479,7 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 
 	tlvlist = aim_readtlvchain(bs);
 
-	/* 
+	/*
 	 * Depending on what informational text was requested, different
 	 * TLVs will appear here.
 	 *
@@ -480,14 +488,14 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	 */
 	if (inforeq->infotype == AIM_GETINFO_GENERALINFO) {
 		text_encoding = aim_gettlv_str(tlvlist, 0x0001, 1);
-		if((tlv = aim_gettlv(tlvlist, 0x0002, 1))) {
+		if ((tlv = aim_gettlv(tlvlist, 0x0002, 1))) {
 			text = g_new0(char, tlv->length);
 			memcpy(text, tlv->value, tlv->length);
 			text_length = tlv->length;
 		}
 	} else if (inforeq->infotype == AIM_GETINFO_AWAYMESSAGE) {
 		text_encoding = aim_gettlv_str(tlvlist, 0x0003, 1);
-		if((tlv = aim_gettlv(tlvlist, 0x0004, 1))) {
+		if ((tlv = aim_gettlv(tlvlist, 0x0004, 1))) {
 			text = g_new0(char, tlv->length);
 			memcpy(text, tlv->value, tlv->length);
 			text_length = tlv->length;
@@ -505,16 +513,18 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 		}
 	}
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, &userinfo, inforeq->infotype, text_encoding, text, text_length);
+	}
 
 	g_free(text_encoding);
 	g_free(text);
 
 	aim_freetlvchain(&tlvlist);
 
-	if (origsnac)
+	if (origsnac) {
 		g_free(origsnac->data);
+	}
 	g_free(origsnac);
 
 	return ret;
@@ -523,10 +533,11 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 
-	if (snac->subtype == 0x0003)
+	if (snac->subtype == 0x0003) {
 		return rights(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0006)
+	} else if (snac->subtype == 0x0006) {
 		return userinfo(sess, mod, rx, snac, bs);
+	}
 
 	return 0;
 }

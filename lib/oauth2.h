@@ -24,11 +24,10 @@
 /* Implementation mostly based on my experience with writing the previous OAuth
    module, and from http://code.google.com/apis/accounts/docs/OAuth2.html . */
 
-typedef void (*oauth2_token_callback)( gpointer data, const char *atoken,
-                                       const char *rtoken, const char *error );
+typedef void (*oauth2_token_callback)(gpointer data, const char *atoken,
+                                      const char *rtoken, const char *error);
 
-struct oauth2_service
-{
+struct oauth2_service {
 	char *auth_url;
 	char *token_url;
 	char *redirect_url;
@@ -42,10 +41,10 @@ struct oauth2_service
 
 /* Generate a URL the user should open in his/her browser to get an
    authorization code. */
-char *oauth2_url( const struct oauth2_service *sp );
+char *oauth2_url(const struct oauth2_service *sp);
 
 /* Exchanges an auth code or refresh token for an access token.
    auth_type is one of the two OAUTH2_AUTH_.. constants above. */
-int oauth2_access_token( const struct oauth2_service *sp,
-                         const char *auth_type, const char *auth,
-                         oauth2_token_callback func, gpointer data );
+int oauth2_access_token(const struct oauth2_service *sp,
+                        const char *auth_type, const char *auth,
+                        oauth2_token_callback func, gpointer data);

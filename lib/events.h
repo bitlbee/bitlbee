@@ -25,7 +25,7 @@
    ground and calls a callback function once the connection is ready to use.
    This function (proxy_connect()) can be found in proxy.c. (It also
    transparently handles HTTP/SOCKS proxies, when necessary.)
-   
+
    This file offers some extra event handling toys, which will be handled
    by GLib or libevent. The advantage of using libevent is that it can use
    more advanced I/O polling functions like epoll() in recent Linux
@@ -46,9 +46,9 @@
    the given callback function. */
 typedef enum {
 	B_EV_IO_READ = 1 << 0,
-	B_EV_IO_WRITE = 1 << 1,
-	B_EV_FLAG_FORCE_ONCE = 1 << 16,
-	B_EV_FLAG_FORCE_REPEAT = 1 << 17,
+	        B_EV_IO_WRITE = 1 << 1,
+	        B_EV_FLAG_FORCE_ONCE = 1 << 16,
+	        B_EV_FLAG_FORCE_REPEAT = 1 << 17,
 } b_input_condition;
 typedef gboolean (*b_event_handler)(gpointer data, gint fd, b_input_condition cond);
 
@@ -58,7 +58,7 @@ typedef gboolean (*b_event_handler)(gpointer data, gint fd, b_input_condition co
 #define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
 /* #define event_debug( x... ) printf( x ) */
-#define event_debug( x... )
+#define event_debug(x ...)
 
 /* Call this once when the program starts. It'll initialize the event handler
    library (if necessary) and then return immediately. */

@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2008 Wilmer van der Gaast and others                *
@@ -6,7 +6,7 @@
 
 /*
   OTR support (cf. http://www.cypherpunks.ca/otr/)
-  
+
   (c) 2008,2013 Sven Moritz Hallberg <pesco@khjk.org>
   funded by stonedcoder.org
 */
@@ -48,7 +48,7 @@ struct account;
 typedef struct kg {
 	char *accountname;
 	char *protocol;
-	
+
 	struct kg *next;
 } kg_t;
 
@@ -58,11 +58,11 @@ typedef struct otr {
 	pid_t keygen;    /* pid of keygen slave (0 if none) */
 	FILE *to;        /* pipe to keygen slave */
 	FILE *from;      /* pipe from keygen slave */
-	
+
 	/* active keygen job (NULL if none) */
 	char *sent_accountname;
 	char *sent_protocol;
-	
+
 	/* keygen jobs waiting to be sent to slave */
 	kg_t *todo;
 

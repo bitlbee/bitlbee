@@ -5,7 +5,7 @@
 
 /*
  * SNAC Family: Administrative Services.
- */ 
+ */
 #define AIM_CB_ADM_ERROR 0x0001
 #define AIM_CB_ADM_INFOCHANGE_REPLY 0x0005
 #define AIM_CB_ADM_DEFAULT 0xffff

@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2012 Wilmer van der Gaast and others                *
@@ -59,12 +59,12 @@ struct scd {
 };
 
 static gboolean ssl_connected(gpointer data, gint source,
-			      b_input_condition cond);
+                              b_input_condition cond);
 static gboolean ssl_starttls_real(gpointer data, gint source,
-				  b_input_condition cond);
+                                  b_input_condition cond);
 
 static SECStatus nss_auth_cert(void *arg, PRFileDesc * socket, PRBool checksig,
-			       PRBool isserver)
+                               PRBool isserver)
 {
 	return SECSuccess;
 }
@@ -73,8 +73,9 @@ static SECStatus nss_bad_cert(void *arg, PRFileDesc * socket)
 {
 	PRErrorCode err;
 
-	if (!arg)
+	if (!arg) {
 		return SECFailure;
+	}
 
 	*(PRErrorCode *) arg = err = PORT_GetError();
 
@@ -113,7 +114,7 @@ void ssl_init(void)
 }
 
 void *ssl_connect(char *host, int port, gboolean verify,
-		  ssl_input_function func, gpointer data)
+                  ssl_input_function func, gpointer data)
 {
 	struct scd *conn = g_new0(struct scd, 1);
 
@@ -136,7 +137,7 @@ void *ssl_connect(char *host, int port, gboolean verify,
 }
 
 static gboolean ssl_starttls_real(gpointer data, gint source,
-				  b_input_condition cond)
+                                  b_input_condition cond)
 {
 	struct scd *conn = data;
 
@@ -144,7 +145,7 @@ static gboolean ssl_starttls_real(gpointer data, gint source,
 }
 
 void *ssl_starttls(int fd, char *hostname, gboolean verify,
-		   ssl_input_function func, gpointer data)
+                   ssl_input_function func, gpointer data)
 {
 	struct scd *conn = g_new0(struct scd, 1);
 
@@ -174,7 +175,7 @@ void *ssl_starttls(int fd, char *hostname, gboolean verify,
 }
 
 static gboolean ssl_connected(gpointer data, gint source,
-			      b_input_condition cond)
+                              b_input_condition cond)
 {
 	struct scd *conn = data;
 
@@ -182,28 +183,31 @@ static gboolean ssl_connected(gpointer data, gint source,
 
 	if (conn->verify) {
 		conn->func(conn->data, 1, NULL, cond);
-		if (source >= 0)
+		if (source >= 0) {
 			closesocket(source);
+		}
 		g_free(conn->hostname);
 		g_free(conn);
 
 		return FALSE;
 	}
 
-	if (source == -1)
+	if (source == -1) {
 		goto ssl_connected_failure;
+	}
 
 	/* Until we find out how to handle non-blocking I/O with NSS... */
 	sock_make_blocking(conn->fd);
 
 	conn->prfd = SSL_ImportFD(NULL, PR_ImportTCPSocket(source));
-	if (!conn->prfd)
+	if (!conn->prfd) {
 		goto ssl_connected_failure;
+	}
 	SSL_OptionSet(conn->prfd, SSL_SECURITY, PR_TRUE);
 	SSL_OptionSet(conn->prfd, SSL_HANDSHAKE_AS_CLIENT, PR_TRUE);
 	SSL_BadCertHook(conn->prfd, (SSLBadCertHandler) nss_bad_cert, NULL);
 	SSL_AuthCertificateHook(conn->prfd, (SSLAuthCertificate) nss_auth_cert,
-				(void *)CERT_GetDefaultCertDB());
+	                        (void *) CERT_GetDefaultCertDB());
 	SSL_SetURL(conn->prfd, conn->hostname);
 	SSL_ResetHandshake(conn->prfd, PR_FALSE);
 
@@ -215,14 +219,16 @@ static gboolean ssl_connected(gpointer data, gint source,
 	conn->func(conn->data, 0, conn, cond);
 	return FALSE;
 
- ssl_connected_failure:
+ssl_connected_failure:
 
 	conn->func(conn->data, 0, NULL, cond);
 
-	if (conn->prfd)
+	if (conn->prfd) {
 		PR_Close(conn->prfd);
-	if (source >= 0)
+	}
+	if (source >= 0) {
 		closesocket(source);
+	}
 	g_free(conn->hostname);
 	g_free(conn);
 
@@ -234,20 +240,22 @@ int ssl_read(void *conn, char *buf, int len)
 	int st;
 	PRErrorCode PR_err;
 
-	if (!((struct scd *)conn)->established) {
+	if (!((struct scd *) conn)->established) {
 		ssl_errno = SSL_NOHANDSHAKE;
 		return -1;
 	}
 
-	st = PR_Read(((struct scd *)conn)->prfd, buf, len);
+	st = PR_Read(((struct scd *) conn)->prfd, buf, len);
 	PR_err = PR_GetError();
 
 	ssl_errno = SSL_OK;
-	if (PR_err == PR_WOULD_BLOCK_ERROR)
+	if (PR_err == PR_WOULD_BLOCK_ERROR) {
 		ssl_errno = SSL_AGAIN;
+	}
 
-	if (SSLDEBUG && getenv("BITLBEE_DEBUG") && st > 0)
+	if (SSLDEBUG && getenv("BITLBEE_DEBUG") && st > 0) {
 		len = write(STDERR_FILENO, buf, st);
+	}
 
 	return st;
 }
@@ -257,26 +265,28 @@ int ssl_write(void *conn, const char *buf, int len)
 	int st;
 	PRErrorCode PR_err;
 
-	if (!((struct scd *)conn)->established) {
+	if (!((struct scd *) conn)->established) {
 		ssl_errno = SSL_NOHANDSHAKE;
 		return -1;
 	}
-	st = PR_Write(((struct scd *)conn)->prfd, buf, len);
+	st = PR_Write(((struct scd *) conn)->prfd, buf, len);
 	PR_err = PR_GetError();
 
 	ssl_errno = SSL_OK;
-	if (PR_err == PR_WOULD_BLOCK_ERROR)
+	if (PR_err == PR_WOULD_BLOCK_ERROR) {
 		ssl_errno = SSL_AGAIN;
+	}
 
-	if (SSLDEBUG && getenv("BITLBEE_DEBUG") && st > 0)
+	if (SSLDEBUG && getenv("BITLBEE_DEBUG") && st > 0) {
 		len = write(2, buf, st);
+	}
 
 	return st;
 }
 
 int ssl_pending(void *conn)
 {
-	struct scd *c = (struct scd *)conn;
+	struct scd *c = (struct scd *) conn;
 
 	if (c == NULL) {
 		return 0;
@@ -292,8 +302,9 @@ void ssl_disconnect(void *conn_)
 	// When we swich to NSS_Init, we should have here
 	// NSS_Shutdown();
 
-	if (conn->prfd)
+	if (conn->prfd) {
 		PR_Close(conn->prfd);
+	}
 
 	g_free(conn->hostname);
 	g_free(conn);
@@ -301,7 +312,7 @@ void ssl_disconnect(void *conn_)
 
 int ssl_getfd(void *conn)
 {
-	return (((struct scd *)conn)->fd);
+	return (((struct scd *) conn)->fd);
 }
 
 b_input_condition ssl_getdirection(void *conn)
@@ -313,13 +324,13 @@ b_input_condition ssl_getdirection(void *conn)
 char *ssl_verify_strerror(int code)
 {
 	return
-	    g_strdup
-	    ("SSL certificate verification not supported by BitlBee NSS code.");
+	        g_strdup
+	                ("SSL certificate verification not supported by BitlBee NSS code.");
 }
 
 size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len,
-			const unsigned char *input, size_t input_len,
-			const unsigned char *iv, unsigned char **res)
+                        const unsigned char *input, size_t input_len,
+                        const unsigned char *iv, unsigned char **res)
 {
 #define CIPHER_MECH CKM_DES3_CBC
 #define MAX_OUTPUT_LEN 72
@@ -341,45 +352,45 @@ size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len,
 		ssl_init();
 	}
 
-	keyItem.data = (unsigned char *)key;
+	keyItem.data = (unsigned char *) key;
 	keyItem.len = key_len;
 
 	slot = PK11_GetBestSlot(CIPHER_MECH, NULL);
 	if (slot == NULL) {
 		fprintf(stderr, "PK11_GetBestSlot failed (err %d)\n",
-			PR_GetError());
+		        PR_GetError());
 		rc = 0;
 		goto out;
 	}
 
 	symKey =
-	    PK11_ImportSymKey(slot, CIPHER_MECH, PK11_OriginUnwrap, CKA_ENCRYPT,
-			      &keyItem, NULL);
+	        PK11_ImportSymKey(slot, CIPHER_MECH, PK11_OriginUnwrap, CKA_ENCRYPT,
+	                          &keyItem, NULL);
 	if (symKey == NULL) {
 		fprintf(stderr, "PK11_ImportSymKey failed (err %d)\n",
-			PR_GetError());
+		        PR_GetError());
 		rc = 0;
 		goto out;
 	}
 
-	ivItem.data = (unsigned char *)iv;
+	ivItem.data = (unsigned char *) iv;
 	/* See msn_soap_passport_sso_handle_response in protocols/msn/soap.c */
 	ivItem.len = 8;
 
 	secParam = PK11_ParamFromIV(CIPHER_MECH, &ivItem);
 	if (secParam == NULL) {
 		fprintf(stderr, "PK11_ParamFromIV failed (err %d)\n",
-			PR_GetError());
+		        PR_GetError());
 		rc = 0;
 		goto out;
 	}
 
 	ctx =
-	    PK11_CreateContextBySymKey(CIPHER_MECH, CKA_ENCRYPT, symKey,
-				       secParam);
+	        PK11_CreateContextBySymKey(CIPHER_MECH, CKA_ENCRYPT, symKey,
+	                                   secParam);
 	if (ctx == NULL) {
 		fprintf(stderr, "PK11_CreateContextBySymKey failed (err %d)\n",
-			PR_GetError());
+		        PR_GetError());
 		rc = 0;
 		goto out;
 	}
@@ -387,10 +398,10 @@ size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len,
 	*res = g_new0(unsigned char, MAX_OUTPUT_LEN);
 
 	rv = PK11_CipherOp(ctx, *res, &len1, MAX_OUTPUT_LEN,
-			   (unsigned char *)input, input_len);
+	                   (unsigned char *) input, input_len);
 	if (rv != SECSuccess) {
 		fprintf(stderr, "PK11_CipherOp failed (err %d)\n",
-			PR_GetError());
+		        PR_GetError());
 		rc = 0;
 		goto out;
 	}
@@ -398,25 +409,29 @@ size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len,
 	assert(len1 <= MAX_OUTPUT_LEN);
 
 	rv = PK11_DigestFinal(ctx, *res + len1, &len2,
-			      (unsigned int)MAX_OUTPUT_LEN - len1);
+	                      (unsigned int) MAX_OUTPUT_LEN - len1);
 	if (rv != SECSuccess) {
 		fprintf(stderr, "PK11_DigestFinal failed (err %d)\n",
-			PR_GetError());
+		        PR_GetError());
 		rc = 0;
 		goto out;
 	}
 
 	rc = len1 + len2;
 
- out:
-	if (ctx)
+out:
+	if (ctx) {
 		PK11_DestroyContext(ctx, PR_TRUE);
-	if (symKey)
+	}
+	if (symKey) {
 		PK11_FreeSymKey(symKey);
-	if (secParam)
+	}
+	if (secParam) {
 		SECITEM_FreeItem(secParam, PR_TRUE);
-	if (slot)
+	}
+	if (slot) {
 		PK11_FreeSlot(slot);
+	}
 
 	return rc;
 }

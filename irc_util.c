@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2010 Wilmer van der Gaast and others                *
@@ -25,91 +25,96 @@
 
 #include "bitlbee.h"
 
-char *set_eval_timezone( set_t *set, char *value )
+char *set_eval_timezone(set_t *set, char *value)
 {
 	char *s;
-	
-	if( strcmp( value, "local" ) == 0 ||
-	    strcmp( value, "gmt" ) == 0 || strcmp( value, "utc" ) == 0 )
+
+	if (strcmp(value, "local") == 0 ||
+	    strcmp(value, "gmt") == 0 || strcmp(value, "utc") == 0) {
 		return value;
-	
+	}
+
 	/* Otherwise: +/- at the beginning optional, then one or more numbers,
 	   possibly followed by a colon and more numbers. Don't bother bound-
 	   checking them since users are free to shoot themselves in the foot. */
 	s = value;
-	if( *s == '+' || *s == '-' )
-		s ++;
-	
+	if (*s == '+' || *s == '-') {
+		s++;
+	}
+
 	/* \d+ */
-	if( !g_ascii_isdigit( *s ) )
+	if (!g_ascii_isdigit(*s)) {
 		return SET_INVALID;
-	while( *s && g_ascii_isdigit( *s ) ) s ++;
-	
+	}
+	while (*s && g_ascii_isdigit(*s)) {
+		s++;
+	}
+
 	/* EOS? */
-	if( *s == '\0' )
+	if (*s == '\0') {
 		return value;
-	
+	}
+
 	/* Otherwise, colon */
-	if( *s != ':' )
+	if (*s != ':') {
 		return SET_INVALID;
-	s ++;
-	
+	}
+	s++;
+
 	/* \d+ */
-	if( !g_ascii_isdigit( *s ) )
+	if (!g_ascii_isdigit(*s)) {
 		return SET_INVALID;
-	while( *s && g_ascii_isdigit( *s ) ) s ++;
-	
+	}
+	while (*s && g_ascii_isdigit(*s)) {
+		s++;
+	}
+
 	/* EOS */
 	return *s == '\0' ? value : SET_INVALID;
 }
 
-char *irc_format_timestamp( irc_t *irc, time_t msg_ts )
+char *irc_format_timestamp(irc_t *irc, time_t msg_ts)
 {
-	time_t now_ts = time( NULL );
+	time_t now_ts = time(NULL);
 	struct tm now, msg;
 	char *set;
-	
+
 	/* If the timestamp is <= 0 or less than a minute ago, discard it as
 	   it doesn't seem to add to much useful info and/or might be noise. */
-	if( msg_ts <= 0 || msg_ts > now_ts - 60 )
+	if (msg_ts <= 0 || msg_ts > now_ts - 60) {
 		return NULL;
-	
-	set = set_getstr( &irc->b->set, "timezone" );
-	if( strcmp( set, "local" ) == 0 )
-	{
-		localtime_r( &now_ts, &now );
-		localtime_r( &msg_ts, &msg );
 	}
-	else
-	{
+
+	set = set_getstr(&irc->b->set, "timezone");
+	if (strcmp(set, "local") == 0) {
+		localtime_r(&now_ts, &now);
+		localtime_r(&msg_ts, &msg);
+	} else {
 		int hr, min = 0, sign = 60;
-		
-		if( set[0] == '-' )
-		{
+
+		if (set[0] == '-') {
 			sign *= -1;
-			set ++;
+			set++;
+		} else if (set[0] == '+') {
+			set++;
 		}
-		else if( set[0] == '+' )
-		{
-			set ++;
+
+		if (sscanf(set, "%d:%d", &hr, &min) >= 1) {
+			msg_ts += sign * (hr * 60 + min);
+			now_ts += sign * (hr * 60 + min);
 		}
-		
-		if( sscanf( set, "%d:%d", &hr, &min ) >= 1 )
-		{
-			msg_ts += sign * ( hr * 60 + min );
-			now_ts += sign * ( hr * 60 + min );
-		}
-		
-		gmtime_r( &now_ts, &now );
-		gmtime_r( &msg_ts, &msg );
+
+		gmtime_r(&now_ts, &now);
+		gmtime_r(&msg_ts, &msg);
 	}
-	
-	if( msg.tm_year == now.tm_year && msg.tm_yday == now.tm_yday )
-		return g_strdup_printf( "\x02[\x02\x02\x02%02d:%02d:%02d\x02]\x02 ",
-		                        msg.tm_hour, msg.tm_min, msg.tm_sec );
-	else
-		return g_strdup_printf( "\x02[\x02\x02\x02%04d-%02d-%02d "
-		                        "%02d:%02d:%02d\x02]\x02 ",
-		                        msg.tm_year + 1900, msg.tm_mon + 1, msg.tm_mday,
-		                        msg.tm_hour, msg.tm_min, msg.tm_sec );
+
+	if (msg.tm_year == now.tm_year && msg.tm_yday == now.tm_yday) {
+		return g_strdup_printf("\x02[\x02\x02\x02%02d:%02d:%02d\x02]\x02 ",
+		                       msg.tm_hour, msg.tm_min, msg.tm_sec);
+	} else {
+		return g_strdup_printf("\x02[\x02\x02\x02%04d-%02d-%02d "
+		                       "%02d:%02d:%02d\x02]\x02 ",
+		                       msg.tm_year + 1900, msg.tm_mon + 1, msg.tm_mday,
+		                       msg.tm_hour, msg.tm_min, msg.tm_sec);
+	}
 }

@@ -90,14 +90,15 @@ static struct twitter_filter *twitter_filter_get(struct groupchat *c,
 {
 	struct twitter_data *td = c->ic->proto_data;
 	struct twitter_filter *tf = NULL;
-	struct twitter_filter tfc = {type, (char*) text};
+	struct twitter_filter tfc = { type, (char *) text };
 	GSList *l;
 
 	for (l = td->filters; l; l = g_slist_next(l)) {
 		tf = l->data;
 
-		if (twitter_filter_cmp(tf, &tfc) == 0)
+		if (twitter_filter_cmp(tf, &tfc) == 0) {
 			break;
+		}
 
 		tf = NULL;
 	}
@@ -109,15 +110,17 @@ static struct twitter_filter *twitter_filter_get(struct groupchat *c,
 		td->filters = g_slist_prepend(td->filters, tf);
 	}
 
-	if (!g_slist_find(tf->groupchats, c))
+	if (!g_slist_find(tf->groupchats, c)) {
 		tf->groupchats = g_slist_prepend(tf->groupchats, c);
+	}
 
-	if (td->filter_update_id > 0)
+	if (td->filter_update_id > 0) {
 		b_event_remove(td->filter_update_id);
+	}
 
 	/* Wait for other possible filter changes to avoid request spam */
 	td->filter_update_id = b_timeout_add(TWITTER_FILTER_UPDATE_WAIT,
-					     twitter_filter_update, c->ic);
+	                                     twitter_filter_update, c->ic);
 	return tf;
 }
 
@@ -148,12 +151,14 @@ static void twitter_filter_remove(struct groupchat *c)
 		}
 	}
 
-	if (td->filter_update_id > 0)
+	if (td->filter_update_id > 0) {
 		b_event_remove(td->filter_update_id);
+	}
 
 	/* Wait for other possible filter changes to avoid request spam */
 	td->filter_update_id = b_timeout_add(TWITTER_FILTER_UPDATE_WAIT,
-					     twitter_filter_update, c->ic);}
+	                                     twitter_filter_update, c->ic);
+}
 
 static void twitter_filter_remove_all(struct im_connection *ic)
 {
@@ -168,8 +173,9 @@ static void twitter_filter_remove_all(struct im_connection *ic)
 
 		/* Build up a list of groupchats to be freed */
 		for (p = tf->groupchats; p; p = g_slist_next(p)) {
-			if (!g_slist_find(chats, p->data))
+			if (!g_slist_find(chats, p->data)) {
 				chats = g_slist_prepend(chats, p->data);
+			}
 		}
 
 		p = l;
@@ -216,8 +222,9 @@ static GSList *twitter_filter_parse(struct groupchat *c, const char *text)
 	};
 
 	for (f = fs; *f; f++) {
-		if ((v = strchr(*f, ':')) == NULL)
+		if ((v = strchr(*f, ':')) == NULL) {
 			continue;
+		}
 
 		*(v++) = 0;
 
@@ -228,8 +235,9 @@ static GSList *twitter_filter_parse(struct groupchat *c, const char *text)
 			}
 		}
 
-		if (t < 0 || strlen(v) == 0)
+		if (t < 0 || strlen(v) == 0) {
 			continue;
+		}
 
 		tf = twitter_filter_get(c, types[t], v);
 		ret = g_slist_prepend(ret, tf);
@@ -247,8 +255,9 @@ gboolean twitter_main_loop(gpointer data, gint fd, b_input_condition cond)
 	struct im_connection *ic = data;
 
 	// Check if we are still logged in...
-	if (!g_slist_find(twitter_connections, ic))
+	if (!g_slist_find(twitter_connections, ic)) {
 		return FALSE;
+	}
 
 	// Do stuff..
 	return twitter_get_timeline(ic, -1) &&
@@ -260,24 +269,27 @@ static void twitter_main_loop_start(struct im_connection *ic)
 	struct twitter_data *td = ic->proto_data;
 
 	char *last_tweet = set_getstr(&ic->acc->set, "_last_tweet");
-	if (last_tweet)
+
+	if (last_tweet) {
 		td->timeline_id = g_ascii_strtoull(last_tweet, NULL, 0);
+	}
 
 	/* Create the room now that we "logged in". */
-	if (td->flags & TWITTER_MODE_CHAT)
+	if (td->flags & TWITTER_MODE_CHAT) {
 		twitter_groupchat_init(ic);
+	}
 
 	imcb_log(ic, "Getting initial statuses");
 
 	// Run this once. After this queue the main loop function (or open the
 	// stream if available).
 	twitter_main_loop(ic, -1, 0);
-	
+
 	if (set_getbool(&ic->acc->set, "stream")) {
 		/* That fetch was just to get backlog, the stream will give
 		   us the rest. \o/ */
 		twitter_open_stream(ic);
-		
+
 		/* Stream sends keepalives (empty lines) or actual data at
 		   least twice a minute. Disconnect if this stops. */
 		ic->flags |= OPT_PONGS;
@@ -285,8 +297,8 @@ static void twitter_main_loop_start(struct im_connection *ic)
 		/* Not using the streaming API, so keep polling the old-
 		   fashioned way. :-( */
 		td->main_loop_id =
-		    b_timeout_add(set_getint(&ic->acc->set, "fetch_interval") * 1000,
-		                  twitter_main_loop, ic);
+		        b_timeout_add(set_getint(&ic->acc->set, "fetch_interval") * 1000,
+		                      twitter_main_loop, ic);
 	}
 }
 
@@ -297,8 +309,9 @@ struct groupchat *twitter_groupchat_init(struct im_connection *ic)
 	struct twitter_data *td = ic->proto_data;
 	GSList *l;
 
-	if (td->timeline_gc)
+	if (td->timeline_gc) {
 		return td->timeline_gc;
+	}
 
 	td->timeline_gc = gc = imcb_chat_new(ic, "twitter/timeline");
 
@@ -308,11 +321,12 @@ struct groupchat *twitter_groupchat_init(struct im_connection *ic)
 
 	for (l = ic->bee->users; l; l = l->next) {
 		bee_user_t *bu = l->data;
-		if (bu->ic == ic)
+		if (bu->ic == ic) {
 			imcb_chat_add_buddy(gc, bu->handle);
+		}
 	}
 	imcb_chat_add_buddy(gc, ic->acc->user);
-	
+
 	return gc;
 }
 
@@ -324,14 +338,15 @@ void twitter_login_finish(struct im_connection *ic)
 
 	td->flags &= ~TWITTER_DOING_TIMELINE;
 
-	if (set_getbool(&ic->acc->set, "oauth") && !td->oauth_info)
+	if (set_getbool(&ic->acc->set, "oauth") && !td->oauth_info) {
 		twitter_oauth_start(ic);
-	else if (!(td->flags & TWITTER_MODE_ONE) &&
-	         !(td->flags & TWITTER_HAVE_FRIENDS)) {
+	} else if (!(td->flags & TWITTER_MODE_ONE) &&
+	           !(td->flags & TWITTER_HAVE_FRIENDS)) {
 		imcb_log(ic, "Getting contact list");
 		twitter_get_friends_ids(ic, -1);
-	} else
+	} else {
 		twitter_main_loop_start(ic);
+	}
 }
 
 static const struct oauth_service twitter_oauth = {
@@ -356,10 +371,11 @@ static const struct oauth_service *get_oauth_service(struct im_connection *ic)
 {
 	struct twitter_data *td = ic->proto_data;
 
-	if (strstr(td->url_host, "identi.ca"))
+	if (strstr(td->url_host, "identi.ca")) {
 		return &identica_oauth;
-	else
+	} else {
 		return &twitter_oauth;
+	}
 
 	/* Could add more services, or allow configuring your own base URL +
 	   API keys. */
@@ -371,10 +387,11 @@ static void twitter_oauth_start(struct im_connection *ic)
 	const char *url = set_getstr(&ic->acc->set, "base_url");
 
 	imcb_log(ic, "Requesting OAuth request token");
-	
-	if (!strstr(url, "twitter.com") && !strstr(url, "identi.ca"))
+
+	if (!strstr(url, "twitter.com") && !strstr(url, "identi.ca")) {
 		imcb_log(ic, "Warning: OAuth only works with identi.ca and "
-		             "Twitter.");
+		         "Twitter.");
+	}
 
 	td->oauth_info = oauth_request_token(get_oauth_service(ic), twitter_oauth_callback, ic);
 
@@ -388,8 +405,9 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 	struct im_connection *ic = info->data;
 	struct twitter_data *td;
 
-	if (!g_slist_find(twitter_connections, ic))
+	if (!g_slist_find(twitter_connections, ic)) {
 		return FALSE;
+	}
 
 	td = ic->proto_data;
 	if (info->stage == OAUTH_REQUEST_TOKEN) {
@@ -403,24 +421,25 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 
 		name = g_strdup_printf("%s_%s", td->prefix, ic->acc->user);
 		msg = g_strdup_printf("To finish OAuth authentication, please visit "
-				      "%s and respond with the resulting PIN code.",
-				      info->auth_url);
+		                      "%s and respond with the resulting PIN code.",
+		                      info->auth_url);
 		imcb_buddy_msg(ic, name, msg, 0, 0);
 		g_free(name);
 		g_free(msg);
 	} else if (info->stage == OAUTH_ACCESS_TOKEN) {
 		const char *sn;
-		
+
 		if (info->token == NULL || info->token_secret == NULL) {
 			imcb_error(ic, "OAuth error: %s", twitter_parse_error(info->http));
 			imc_logout(ic, TRUE);
 			return FALSE;
 		}
-		
+
 		if ((sn = oauth_params_get(&info->params, "screen_name"))) {
-			if (ic->acc->prpl->handle_cmp(sn, ic->acc->user) != 0)
+			if (ic->acc->prpl->handle_cmp(sn, ic->acc->user) != 0) {
 				imcb_log(ic, "Warning: You logged in via OAuth as %s "
 				         "instead of %s.", sn, ic->acc->user);
+			}
 			g_free(td->user);
 			td->user = g_strdup(sn);
 		}
@@ -443,16 +462,18 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 	static GRegex *regex = NULL;
 	GMatchInfo *match_info;
 
-	if (regex == NULL)
+	if (regex == NULL) {
 		regex = g_regex_new("(^|\\s)(http(s)?://[^\\s$]+)", 0, 0, NULL);
-	
+	}
+
 	g_regex_match(regex, msg, 0, &match_info);
 	while (g_match_info_matches(match_info)) {
 		gchar *url = g_match_info_fetch(match_info, 2);
 		url_len_diff += target_len - g_utf8_strlen(url, -1);
 		/* Add another character for https://t.co/... URLs */
-		if (g_match_info_fetch(match_info, 3) != NULL)
+		if (g_match_info_fetch(match_info, 3) != NULL) {
 			url_len_diff += 1;
+		}
 		g_free(url);
 		g_match_info_next(match_info, NULL);
 	}
@@ -467,11 +488,13 @@ static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
 	int target_len = set_getint(&ic->acc->set, "target_url_length");
 	int url_len_diff = 0;
 
-	if (target_len > 0)
+	if (target_len > 0) {
 		url_len_diff = twitter_url_len_diff(msg, target_len);
+	}
 
-	if (max == 0 || (len = g_utf8_strlen(msg, -1) + url_len_diff) <= max)
+	if (max == 0 || (len = g_utf8_strlen(msg, -1) + url_len_diff) <= max) {
 		return TRUE;
+	}
 
 	twitter_log(ic, "Maximum message length exceeded: %d > %d", len, max);
 
@@ -480,19 +503,21 @@ static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
 
 static char *set_eval_commands(set_t * set, char *value)
 {
-	if (g_strcasecmp(value, "strict") == 0 )
+	if (g_strcasecmp(value, "strict") == 0) {
 		return value;
-	else
+	} else {
 		return set_eval_bool(set, value);
+	}
 }
 
 static char *set_eval_mode(set_t * set, char *value)
 {
 	if (g_strcasecmp(value, "one") == 0 ||
-	    g_strcasecmp(value, "many") == 0 || g_strcasecmp(value, "chat") == 0)
+	    g_strcasecmp(value, "many") == 0 || g_strcasecmp(value, "chat") == 0) {
 		return value;
-	else
+	} else {
 		return NULL;
+	}
 }
 
 static void twitter_init(account_t * acc)
@@ -506,7 +531,7 @@ static void twitter_init(account_t * acc)
 		def_url = TWITTER_API_URL;
 		def_tul = "22";
 		def_mentions = "true";
-	} else {		/* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
+	} else {                /* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
 		def_url = IDENTICA_API_URL;
 		def_tul = "0";
 		def_mentions = "false";
@@ -538,7 +563,7 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "show_old_mentions", "0", set_eval_int, acc);
 
 	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
-	
+
 	s = set_add(&acc->set, "_last_tweet", "0", NULL, acc);
 	s->flags |= SET_HIDDEN | SET_NOSAVE;
 
@@ -559,7 +584,7 @@ static void twitter_login(account_t * acc)
 	char name[strlen(acc->user) + 9];
 	url_t url;
 	char *s;
-	
+
 	if (!url_set(&url, set_getstr(&ic->acc->set, "base_url")) ||
 	    (url.proto != PROTO_HTTP && url.proto != PROTO_HTTPS)) {
 		imcb_error(ic, "Incorrect API base URL: %s", set_getstr(&ic->acc->set, "base_url"));
@@ -570,7 +595,7 @@ static void twitter_login(account_t * acc)
 	if (!strstr(url.host, "twitter.com") &&
 	    set_getbool(&ic->acc->set, "stream")) {
 		imcb_error(ic, "Warning: The streaming API is only supported by Twitter, "
-		               "and you seem to be connecting to a different service.");
+		           "and you seem to be connecting to a different service.");
 	}
 
 	imcb_log(ic, "Connecting");
@@ -583,21 +608,23 @@ static void twitter_login(account_t * acc)
 	td->url_ssl = url.proto == PROTO_HTTPS;
 	td->url_port = url.port;
 	td->url_host = g_strdup(url.host);
-	if (strcmp(url.file, "/") != 0)
+	if (strcmp(url.file, "/") != 0) {
 		td->url_path = g_strdup(url.file);
-	else {
+	} else {
 		td->url_path = g_strdup("");
-		if (g_str_has_suffix(url.host, "twitter.com"))
+		if (g_str_has_suffix(url.host, "twitter.com")) {
 			/* May fire for people who turned on HTTPS. */
 			imcb_error(ic, "Warning: Twitter requires a version number in API calls "
-			               "now. Try resetting the base_url account setting.");
+			           "now. Try resetting the base_url account setting.");
+		}
 	}
-	
+
 	/* Hacky string mangling: Turn identi.ca into identi.ca and api.twitter.com
 	   into twitter, and try to be sensible if we get anything else. */
 	td->prefix = g_strdup(url.host);
-	if (g_str_has_suffix(td->prefix, ".com"))
+	if (g_str_has_suffix(td->prefix, ".com")) {
 		td->prefix[strlen(url.host) - 4] = '\0';
+	}
 	if ((s = strrchr(td->prefix, '.')) && strlen(s) > 4) {
 		/* If we have at least 3 chars after the last dot, cut off the rest.
 		   (mostly a www/api prefix or sth) */
@@ -605,9 +632,10 @@ static void twitter_login(account_t * acc)
 		g_free(td->prefix);
 		td->prefix = s;
 	}
-	
-	if (strstr(acc->pass, "oauth_token="))
+
+	if (strstr(acc->pass, "oauth_token=")) {
 		td->oauth_info = oauth_from_string(acc->pass, get_oauth_service(ic));
+	}
 
 	sprintf(name, "%s_%s", td->prefix, acc->user);
 	imcb_add_buddy(ic, name, NULL);
@@ -615,14 +643,15 @@ static void twitter_login(account_t * acc)
 
 	td->log = g_new0(struct twitter_log_data, TWITTER_LOG_LENGTH);
 	td->log_id = -1;
-	
+
 	s = set_getstr(&ic->acc->set, "mode");
-	if (g_strcasecmp(s, "one") == 0)
+	if (g_strcasecmp(s, "one") == 0) {
 		td->flags |= TWITTER_MODE_ONE;
-	else if (g_strcasecmp(s, "many") == 0)
+	} else if (g_strcasecmp(s, "many") == 0) {
 		td->flags |= TWITTER_MODE_MANY;
-	else
+	} else {
 		td->flags |= TWITTER_MODE_CHAT;
+	}
 
 	twitter_login_finish(ic);
 }
@@ -640,12 +669,14 @@ static void twitter_logout(struct im_connection *ic)
 	// Remove the main_loop function from the function queue.
 	b_event_remove(td->main_loop_id);
 
-	if (td->timeline_gc)
+	if (td->timeline_gc) {
 		imcb_chat_free(td->timeline_gc);
+	}
 
 	if (td) {
-		if (td->filter_update_id > 0)
+		if (td->filter_update_id > 0) {
 			b_event_remove(td->filter_update_id);
+		}
 
 		http_close(td->stream);
 		twitter_filter_remove_all(ic);
@@ -678,19 +709,21 @@ static int twitter_buddy_msg(struct im_connection *ic, char *who, char *message,
 			char pin[strlen(message) + 1], *s;
 
 			strcpy(pin, message);
-			for (s = pin + sizeof(pin) - 2; s > pin && g_ascii_isspace(*s); s--)
+			for (s = pin + sizeof(pin) - 2; s > pin && g_ascii_isspace(*s); s--) {
 				*s = '\0';
+			}
 			for (s = pin; *s && g_ascii_isspace(*s); s++) {
 			}
 
 			if (!oauth_access_token(s, td->oauth_info)) {
 				imcb_error(ic, "OAuth error: %s",
-					   "Failed to send access token request");
+				           "Failed to send access token request");
 				imc_logout(ic, TRUE);
 				return FALSE;
 			}
-		} else
+		} else {
 			twitter_handle_command(ic, message);
+		}
 	} else {
 		twitter_direct_messages_new(ic, who, message);
 	}
@@ -713,8 +746,9 @@ static void twitter_remove_buddy(struct im_connection *ic, char *who, char *grou
 
 static void twitter_chat_msg(struct groupchat *c, char *message, int flags)
 {
-	if (c && message)
+	if (c && message) {
 		twitter_handle_command(c->ic, message);
+	}
 }
 
 static void twitter_chat_invite(struct groupchat *c, char *who, char *message)
@@ -736,17 +770,20 @@ static struct groupchat *twitter_chat_join(struct im_connection *ic,
 	for (l = fs; l; l = g_slist_next(l)) {
 		tf = l->data;
 
-		if (topic->len > 0)
+		if (topic->len > 0) {
 			g_string_append(topic, ", ");
+		}
 
-		if (tf->type == TWITTER_FILTER_TYPE_FOLLOW)
+		if (tf->type == TWITTER_FILTER_TYPE_FOLLOW) {
 			g_string_append_c(topic, '@');
+		}
 
 		g_string_append(topic, tf->text);
 	}
 
-	if (topic->len > 0)
+	if (topic->len > 0) {
 		g_string_prepend(topic, "Twitter Filter: ");
+	}
 
 	imcb_chat_topic(c, NULL, topic->str, 0);
 	imcb_chat_add_buddy(c, ic->acc->user);
@@ -819,40 +856,48 @@ static void twitter_buddy_data_free(struct bee_user *bu)
  *
  *  Returns 0 if the user provides garbage.
  */
-static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, char *arg, bee_user_t **bu_) {
+static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, char *arg, bee_user_t **bu_)
+{
 	struct twitter_data *td = ic->proto_data;
 	struct twitter_user_data *tud;
 	bee_user_t *bu = NULL;
 	guint64 id = 0;
-	
-	if (bu_)
+
+	if (bu_) {
 		*bu_ = NULL;
-	if (!arg || !arg[0])
+	}
+	if (!arg || !arg[0]) {
 		return 0;
-	
+	}
+
 	if (arg[0] != '#' && (bu = bee_user_by_handle(ic->bee, ic, arg))) {
-		if ((tud = bu->data))
+		if ((tud = bu->data)) {
 			id = tud->last_id;
+		}
 	} else {
-		if (arg[0] == '#')
+		if (arg[0] == '#') {
 			arg++;
+		}
 		if (sscanf(arg, "%" G_GINT64_MODIFIER "x", &id) == 1 &&
 		    id < TWITTER_LOG_LENGTH) {
 			bu = td->log[id].bu;
 			id = td->log[id].id;
 			/* Beware of dangling pointers! */
-			if (!g_slist_find(ic->bee->users, bu))
+			if (!g_slist_find(ic->bee->users, bu)) {
 				bu = NULL;
+			}
 		} else if (sscanf(arg, "%" G_GINT64_MODIFIER "d", &id) == 1) {
 			/* Allow normal tweet IDs as well; not a very useful
 			   feature but it's always been there. Just ignore
 			   very low IDs to avoid accidents. */
-			if (id < 1000000)
+			if (id < 1000000) {
 				id = 0;
+			}
 		}
 	}
-	if (bu_)
+	if (bu_) {
 		*bu_ = bu;
+	}
 	return id;
 }
 
@@ -862,7 +907,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	char *cmds, **cmd, *new = NULL;
 	guint64 in_reply_to = 0, id;
 	gboolean allow_post =
-		g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") != 0;
+	        g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") != 0;
 	bee_user_t *bu = NULL;
 
 	cmds = g_strdup(message);
@@ -873,17 +918,18 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	} else if (!set_getbool(&ic->acc->set, "commands") && allow_post) {
 		/* Not supporting commands if "commands" is set to true/strict. */
 	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
-		if (cmd[1] == NULL)
+		if (cmd[1] == NULL) {
 			twitter_status_destroy(ic, td->last_status_id);
-		else if ((id = twitter_message_id_from_command_arg(ic, cmd[1], NULL)))
+		} else if ((id = twitter_message_id_from_command_arg(ic, cmd[1], NULL))) {
 			twitter_status_destroy(ic, id);
-		else
+		} else {
 			twitter_log(ic, "Could not undo last action");
+		}
 
 		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "favourite") == 0 ||
-		    g_strcasecmp(cmd[0], "favorite") == 0 ||
-		    g_strcasecmp(cmd[0], "fav") == 0) && cmd[1]) {
+	            g_strcasecmp(cmd[0], "favorite") == 0 ||
+	            g_strcasecmp(cmd[0], "fav") == 0) && cmd[1]) {
 		if ((id = twitter_message_id_from_command_arg(ic, cmd[1], NULL))) {
 			twitter_favourite_tweet(ic, id);
 		} else {
@@ -899,33 +945,35 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
 		char *screen_name;
-		
+
 		/* Report nominally works on users but look up the user who
 		   posted the given ID if the user wants to do it that way */
 		twitter_message_id_from_command_arg(ic, cmd[1], &bu);
-		if (bu)
+		if (bu) {
 			screen_name = bu->handle;
-		else
+		} else {
 			screen_name = cmd[1];
-		
+		}
+
 		twitter_report_spam(ic, screen_name);
 		goto eof;
 	} else if (g_strcasecmp(cmd[0], "rt") == 0 && cmd[1]) {
 		id = twitter_message_id_from_command_arg(ic, cmd[1], NULL);
 
 		td->last_status_id = 0;
-		if (id)
+		if (id) {
 			twitter_status_retweet(ic, id);
-		else
+		} else {
 			twitter_log(ic, "User `%s' does not exist or didn't "
-				    "post any statuses recently", cmd[1]);
+			            "post any statuses recently", cmd[1]);
+		}
 
 		goto eof;
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
 		id = twitter_message_id_from_command_arg(ic, cmd[1], &bu);
 		if (!id || !bu) {
 			twitter_log(ic, "User `%s' does not exist or didn't "
-				    "post any statuses recently", cmd[1]);
+			            "post any statuses recently", cmd[1]);
 			goto eof;
 		}
 		message = new = g_strdup_printf("@%s %s", bu->handle, cmd[2]);
@@ -948,8 +996,9 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	if (allow_post) {
 		char *s;
 
-		if (!twitter_length_check(ic, message))
+		if (!twitter_length_check(ic, message)) {
 			goto eof;
+		}
 
 		s = cmd[0] + strlen(cmd[0]) - 1;
 		if (!new && s > cmd[0] && (*s == ':' || *s == ',')) {
@@ -959,12 +1008,13 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 				struct twitter_user_data *tud = bu->data;
 
 				new = g_strdup_printf("@%s %s", bu->handle,
-						      message + (s - cmd[0]) + 2);
+				                      message + (s - cmd[0]) + 2);
 				message = new;
 
 				if (time(NULL) < tud->last_time +
-				    set_getint(&ic->acc->set, "auto_reply_timeout"))
+				    set_getint(&ic->acc->set, "auto_reply_timeout")) {
 					in_reply_to = tud->last_id;
+				}
 			}
 		}
 
@@ -980,21 +1030,22 @@ eof:
 	g_free(cmds);
 }
 
-void twitter_log(struct im_connection *ic, char *format, ... )
+void twitter_log(struct im_connection *ic, char *format, ...)
 {
 	struct twitter_data *td = ic->proto_data;
 	va_list params;
 	char *text;
-	
+
 	va_start(params, format);
 	text = g_strdup_vprintf(format, params);
 	va_end(params);
-	
-	if (td->timeline_gc)
+
+	if (td->timeline_gc) {
 		imcb_chat_log(td->timeline_gc, "%s", text);
-	else
+	} else {
 		imcb_log(ic, "%s", text);
-	
+	}
+
 	g_free(text);
 }
 

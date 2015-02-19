@@ -3,13 +3,13 @@
  *
  */
 
-#include <aim.h> 
+#include <aim.h>
 
 #include "md5.h"
 
 static int aim_encode_password(const char *password, unsigned char *encoded);
 
-/* 
+/*
  * This just pushes the passed cookie onto the passed connection, without
  * the SNAC header or any of that.
  *
@@ -22,11 +22,12 @@ int aim_sendcookie(aim_session_t *sess, aim_conn_t *conn, const guint8 *chipsaho
 	aim_frame_t *fr;
 	aim_tlvlist_t *tl = NULL;
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x0001, 4+2+2+AIM_COOKIELEN)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x0001, 4 + 2 + 2 + AIM_COOKIELEN))) {
 		return -ENOMEM;
+	}
 
 	aimbs_put32(&fr->data, 0x00000001);
-	aim_addtlvtochain_raw(&tl, 0x0006, AIM_COOKIELEN, chipsahoy);	
+	aim_addtlvtochain_raw(&tl, 0x0006, AIM_COOKIELEN, chipsahoy);
 	aim_writetlvchain(&fr->data, &tl);
 	aim_freetlvchain(&tl);
 
@@ -47,8 +48,9 @@ int aim_sendflapver(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_frame_t *fr;
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x01, 4)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x01, 4))) {
 		return -ENOMEM;
+	}
 
 	aimbs_put32(&fr->data, 0x00000001);
 
@@ -94,24 +96,25 @@ static int goddamnicq(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 {
 	aim_frame_t fr;
 	aim_rxcallback_t userfunc;
-	
+
 	sess->flags &= ~AIM_SESS_FLAGS_SNACLOGIN;
 	sess->flags |= AIM_SESS_FLAGS_XORLOGIN;
 
 	fr.conn = conn;
-	
-	if ((userfunc = aim_callhandler(sess, conn, 0x0017, 0x0007)))
+
+	if ((userfunc = aim_callhandler(sess, conn, 0x0017, 0x0007))) {
 		userfunc(sess, &fr, "");
+	}
 
 	return 0;
 }
 
 /*
- * In AIM 3.5 protocol, the first stage of login is to request login from the 
- * Authorizer, passing it the screen name for verification.  If the name is 
- * invalid, a 0017/0003 is spit back, with the standard error contents.  If 
- * valid, a 0017/0007 comes back, which is the signal to send it the main 
- * login command (0017/0002). 
+ * In AIM 3.5 protocol, the first stage of login is to request login from the
+ * Authorizer, passing it the screen name for verification.  If the name is
+ * invalid, a 0017/0003 is spit back, with the standard error contents.  If
+ * valid, a 0017/0007 comes back, which is the signal to send it the main
+ * login command (0017/0002).
  *
  */
 int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
@@ -120,24 +123,27 @@ int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 	aim_snacid_t snacid;
 	aim_tlvlist_t *tl = NULL;
 	struct im_connection *ic = sess->aux_data;
-	
-	if (!sess || !conn || !sn)
-		return -EINVAL;
 
-	if (g_ascii_isdigit(sn[0]) && set_getbool(&ic->acc->set, "old_icq_auth"))
+	if (!sess || !conn || !sn) {
+		return -EINVAL;
+	}
+
+	if (g_ascii_isdigit(sn[0]) && set_getbool(&ic->acc->set, "old_icq_auth")) {
 		return goddamnicq(sess, conn, sn);
+	}
 
 	sess->flags |= AIM_SESS_FLAGS_SNACLOGIN;
 
 	aim_sendflapver(sess, conn);
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+2+2+strlen(sn))))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 2 + 2 + strlen(sn)))) {
 		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, 0x0017, 0x0006, 0x0000, NULL, 0);
 	aim_putsnac(&fr->data, 0x0017, 0x0006, 0x0000, snacid);
 
-	aim_addtlvtochain_raw(&tl, 0x0001, strlen(sn), (guint8 *)sn);
+	aim_addtlvtochain_raw(&tl, 0x0001, strlen(sn), (guint8 *) sn);
 	aim_writetlvchain(&fr->data, &tl);
 	aim_freetlvchain(&tl);
 
@@ -151,15 +157,16 @@ int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
  */
 static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *password)
 {
-	static const char clientstr[] = {"ICQ Inc. - Product of ICQ (TM) 2001b.5.17.1.3642.85"};
-	static const char lang[] = {"en"};
-	static const char country[] = {"us"};
+	static const char clientstr[] = { "ICQ Inc. - Product of ICQ (TM) 2001b.5.17.1.3642.85" };
+	static const char lang[] = { "en" };
+	static const char country[] = { "us" };
 	aim_frame_t *fr;
 	aim_tlvlist_t *tl = NULL;
 	guint8 *password_encoded;
 
-	if (!(password_encoded = (guint8 *) g_malloc(strlen(password))))
+	if (!(password_encoded = (guint8 *) g_malloc(strlen(password)))) {
 		return -ENOMEM;
+	}
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x01, 1152))) {
 		g_free(password_encoded);
@@ -169,17 +176,17 @@ static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, co
 	aim_encode_password(password, password_encoded);
 
 	aimbs_put32(&fr->data, 0x00000001);
-	aim_addtlvtochain_raw(&tl, 0x0001, strlen(sn), (guint8 *)sn);
+	aim_addtlvtochain_raw(&tl, 0x0001, strlen(sn), (guint8 *) sn);
 	aim_addtlvtochain_raw(&tl, 0x0002, strlen(password), password_encoded);
-	aim_addtlvtochain_raw(&tl, 0x0003, strlen(clientstr), (guint8 *)clientstr);
+	aim_addtlvtochain_raw(&tl, 0x0003, strlen(clientstr), (guint8 *) clientstr);
 	aim_addtlvtochain16(&tl, 0x0016, 0x010a); /* cliend ID */
 	aim_addtlvtochain16(&tl, 0x0017, 0x0005); /* major version */
 	aim_addtlvtochain16(&tl, 0x0018, 0x0011); /* minor version */
 	aim_addtlvtochain16(&tl, 0x0019, 0x0001); /* point version */
 	aim_addtlvtochain16(&tl, 0x001a, 0x0e3a); /* build */
 	aim_addtlvtochain32(&tl, 0x0014, 0x00000055); /* distribution chan */
-	aim_addtlvtochain_raw(&tl, 0x000f, strlen(lang), (guint8 *)lang);
-	aim_addtlvtochain_raw(&tl, 0x000e, strlen(country), (guint8 *)country);
+	aim_addtlvtochain_raw(&tl, 0x000f, strlen(lang), (guint8 *) lang);
+	aim_addtlvtochain_raw(&tl, 0x000e, strlen(country), (guint8 *) country);
 
 	aim_writetlvchain(&fr->data, &tl);
 
@@ -193,7 +200,7 @@ static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, co
 
 /*
  * send_login(int socket, char *sn, char *password)
- *  
+ *
  * This is the initial login request packet.
  *
  * NOTE!! If you want/need to make use of the aim_sendmemblock() function,
@@ -248,7 +255,7 @@ static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, co
  *   point = (not sent)
  *   build  = 0x0013
  *   unknown= (not sent)
- *   
+ *
  * AIM for Linux 1.1.112:
  *   clientstring = "AOL Instant Messenger (SM)"
  *   clientid = 0x1d09
@@ -260,32 +267,36 @@ static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, co
  *   serverstore = 0x01
  *
  */
-int aim_send_login(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *password, struct client_info_s *ci, const char *key)
+int aim_send_login(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *password,
+                   struct client_info_s *ci, const char *key)
 {
 	aim_frame_t *fr;
 	aim_tlvlist_t *tl = NULL;
 	guint8 digest[16];
 	aim_snacid_t snacid;
 
-	if (!ci || !sn || !password)
+	if (!ci || !sn || !password) {
 		return -EINVAL;
+	}
 
 	/*
 	 * What the XORLOGIN flag _really_ means is that its an ICQ login,
 	 * which is really stupid and painful, so its not done here.
 	 *
 	 */
-	if (sess->flags & AIM_SESS_FLAGS_XORLOGIN)
+	if (sess->flags & AIM_SESS_FLAGS_XORLOGIN) {
 		return goddamnicq2(sess, conn, sn, password);
+	}
 
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152))) {
 		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, 0x0017, 0x0002, 0x0000, NULL, 0);
 	aim_putsnac(&fr->data, 0x0017, 0x0002, 0x0000, snacid);
 
-	aim_addtlvtochain_raw(&tl, 0x0001, strlen(sn), (guint8 *)sn);
+	aim_addtlvtochain_raw(&tl, 0x0001, strlen(sn), (guint8 *) sn);
 
 	aim_encode_password_md5(password, key, digest);
 	aim_addtlvtochain_raw(&tl, 0x0025, 16, digest);
@@ -294,15 +305,16 @@ int aim_send_login(aim_session_t *sess, aim_conn_t *conn, const char *sn, const 
 	 * Newer versions of winaim have an empty type x004c TLV here.
 	 */
 
-	if (ci->clientstring)
-		aim_addtlvtochain_raw(&tl, 0x0003, strlen(ci->clientstring), (guint8 *)ci->clientstring);
-	aim_addtlvtochain16(&tl, 0x0016, (guint16)ci->clientid);
-	aim_addtlvtochain16(&tl, 0x0017, (guint16)ci->major);
-	aim_addtlvtochain16(&tl, 0x0018, (guint16)ci->minor);
-	aim_addtlvtochain16(&tl, 0x0019, (guint16)ci->point);
-	aim_addtlvtochain16(&tl, 0x001a, (guint16)ci->build);
-	aim_addtlvtochain_raw(&tl, 0x000e, strlen(ci->country), (guint8 *)ci->country);
-	aim_addtlvtochain_raw(&tl, 0x000f, strlen(ci->lang), (guint8 *)ci->lang);
+	if (ci->clientstring) {
+		aim_addtlvtochain_raw(&tl, 0x0003, strlen(ci->clientstring), (guint8 *) ci->clientstring);
+	}
+	aim_addtlvtochain16(&tl, 0x0016, (guint16) ci->clientid);
+	aim_addtlvtochain16(&tl, 0x0017, (guint16) ci->major);
+	aim_addtlvtochain16(&tl, 0x0018, (guint16) ci->minor);
+	aim_addtlvtochain16(&tl, 0x0019, (guint16) ci->point);
+	aim_addtlvtochain16(&tl, 0x001a, (guint16) ci->build);
+	aim_addtlvtochain_raw(&tl, 0x000e, strlen(ci->country), (guint8 *) ci->country);
+	aim_addtlvtochain_raw(&tl, 0x000f, strlen(ci->lang), (guint8 *) ci->lang);
 
 	/*
 	 * If set, old-fashioned buddy lists will not work. You will need
@@ -313,7 +325,7 @@ int aim_send_login(aim_session_t *sess, aim_conn_t *conn, const char *sn, const 
 	aim_writetlvchain(&fr->data, &tl);
 
 	aim_freetlvchain(&tl);
-	
+
 	aim_tx_enqueue(sess, fr);
 
 	return 0;
@@ -323,11 +335,11 @@ int aim_encode_password_md5(const char *password, const char *key, guint8 *diges
 {
 	md5_state_t state;
 
-	md5_init(&state);	
-	md5_append(&state, (const md5_byte_t *)key, strlen(key));
-	md5_append(&state, (const md5_byte_t *)password, strlen(password));
-	md5_append(&state, (const md5_byte_t *)AIM_MD5_STRING, strlen(AIM_MD5_STRING));
-	md5_finish(&state, (md5_byte_t *)digest);
+	md5_init(&state);
+	md5_append(&state, (const md5_byte_t *) key, strlen(key));
+	md5_append(&state, (const md5_byte_t *) password, strlen(password));
+	md5_append(&state, (const md5_byte_t *) AIM_MD5_STRING, strlen(AIM_MD5_STRING));
+	md5_finish(&state, (md5_byte_t *) digest);
 
 	return 0;
 }
@@ -344,7 +356,7 @@ int aim_encode_password_md5(const char *password, const char *key, guint8 *diges
  * the null.  The encoded password buffer /is not %NULL terminated/.
  *
  * The encoding_table seems to be a fixed set of values.  We'll
- * hope it doesn't change over time!  
+ * hope it doesn't change over time!
  *
  * This is only used for the XOR method, not the better MD5 method.
  *
@@ -352,7 +364,7 @@ int aim_encode_password_md5(const char *password, const char *key, guint8 *diges
 static int aim_encode_password(const char *password, guint8 *encoded)
 {
 	guint8 encoding_table[] = {
-	/* v2.1 table, also works for ICQ */
+		/* v2.1 table, also works for ICQ */
 		0xf3, 0x26, 0x81, 0xc4,
 		0x39, 0x86, 0xdb, 0x92,
 		0x71, 0xa3, 0xb9, 0xe6,
@@ -360,8 +372,9 @@ static int aim_encode_password(const char *password, guint8 *encoded)
 	};
 	int i;
 
-	for (i = 0; i < strlen(password); i++)
+	for (i = 0; i < strlen(password); i++) {
 		encoded[i] = (password[i] ^ encoding_table[i]);
+	}
 
 	return 0;
 }
@@ -369,7 +382,7 @@ static int aim_encode_password(const char *password, guint8 *encoded)
 /*
  * This is sent back as a general response to the login command.
  * It can be either an error or a success, depending on the
- * precense of certain TLVs.  
+ * precense of certain TLVs.
  *
  * The client should check the value passed as errorcode. If
  * its nonzero, there was an error.
@@ -403,16 +416,19 @@ static int parse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 	 * Check for an error code.  If so, we should also
 	 * have an error url.
 	 */
-	if (aim_gettlv(tlvlist, 0x0008, 1)) 
+	if (aim_gettlv(tlvlist, 0x0008, 1)) {
 		info.errorcode = aim_gettlv16(tlvlist, 0x0008, 1);
-	if (aim_gettlv(tlvlist, 0x0004, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0004, 1)) {
 		info.errorurl = aim_gettlv_str(tlvlist, 0x0004, 1);
+	}
 
 	/*
 	 * BOS server address.
 	 */
-	if (aim_gettlv(tlvlist, 0x0005, 1))
+	if (aim_gettlv(tlvlist, 0x0005, 1)) {
 		info.bosip = aim_gettlv_str(tlvlist, 0x0005, 1);
+	}
 
 	/*
 	 * Authorization cookie.
@@ -429,8 +445,9 @@ static int parse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 	 * The email address attached to this account
 	 *   Not available for ICQ logins.
 	 */
-	if (aim_gettlv(tlvlist, 0x0011, 1))
+	if (aim_gettlv(tlvlist, 0x0011, 1)) {
 		info.email = aim_gettlv_str(tlvlist, 0x0011, 1);
+	}
 
 	/*
 	 * The registration status.  (Not real sure what it means.)
@@ -444,34 +461,46 @@ static int parse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 	 * to other users or not.  AFAIK, this feature is no longer used.
 	 *
 	 */
-	if (aim_gettlv(tlvlist, 0x0013, 1))
+	if (aim_gettlv(tlvlist, 0x0013, 1)) {
 		info.regstatus = aim_gettlv16(tlvlist, 0x0013, 1);
+	}
 
-	if (aim_gettlv(tlvlist, 0x0040, 1))
+	if (aim_gettlv(tlvlist, 0x0040, 1)) {
 		info.latestbeta.build = aim_gettlv32(tlvlist, 0x0040, 1);
-	if (aim_gettlv(tlvlist, 0x0041, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0041, 1)) {
 		info.latestbeta.url = aim_gettlv_str(tlvlist, 0x0041, 1);
-	if (aim_gettlv(tlvlist, 0x0042, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0042, 1)) {
 		info.latestbeta.info = aim_gettlv_str(tlvlist, 0x0042, 1);
-	if (aim_gettlv(tlvlist, 0x0043, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0043, 1)) {
 		info.latestbeta.name = aim_gettlv_str(tlvlist, 0x0043, 1);
-	if (aim_gettlv(tlvlist, 0x0048, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0048, 1)) {
 		; /* no idea what this is */
 
-	if (aim_gettlv(tlvlist, 0x0044, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0044, 1)) {
 		info.latestrelease.build = aim_gettlv32(tlvlist, 0x0044, 1);
-	if (aim_gettlv(tlvlist, 0x0045, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0045, 1)) {
 		info.latestrelease.url = aim_gettlv_str(tlvlist, 0x0045, 1);
-	if (aim_gettlv(tlvlist, 0x0046, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0046, 1)) {
 		info.latestrelease.info = aim_gettlv_str(tlvlist, 0x0046, 1);
-	if (aim_gettlv(tlvlist, 0x0047, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0047, 1)) {
 		info.latestrelease.name = aim_gettlv_str(tlvlist, 0x0047, 1);
-	if (aim_gettlv(tlvlist, 0x0049, 1))
+	}
+	if (aim_gettlv(tlvlist, 0x0049, 1)) {
 		; /* no idea what this is */
 
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac ? snac->family : 0x0017, snac ? snac->subtype : 0x0003)))
+	}
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac ? snac->family : 0x0017, snac ? snac->subtype : 0x0003))) {
 		ret = userfunc(sess, rx, &info);
+	}
 
 	g_free(info.sn);
 	g_free(info.bosip);
@@ -505,10 +534,11 @@ static int keyparse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	keylen = aimbs_get16(bs);
 	keystr = aimbs_getstr(bs, keylen);
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, keystr);
+	}
 
-	g_free(keystr); 
+	g_free(keystr);
 
 	return ret;
 }
@@ -516,10 +546,11 @@ static int keyparse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 
-	if (snac->subtype == 0x0003)
+	if (snac->subtype == 0x0003) {
 		return parse(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0007)
+	} else if (snac->subtype == 0x0007) {
 		return keyparse(sess, mod, rx, snac, bs);
+	}
 
 	return 0;
 }

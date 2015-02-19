@@ -5,7 +5,7 @@
  *
  */
 
-#include <aim.h> 
+#include <aim.h>
 #include <glib.h>
 #include "info.h"
 
@@ -18,10 +18,11 @@ struct chatconnpriv {
 
 void aim_conn_kill_chat(aim_session_t *sess, aim_conn_t *conn)
 {
-	struct chatconnpriv *ccp = (struct chatconnpriv *)conn->priv;
+	struct chatconnpriv *ccp = (struct chatconnpriv *) conn->priv;
 
-	if (ccp)
+	if (ccp) {
 		g_free(ccp->name);
+	}
 	g_free(ccp);
 
 	return;
@@ -37,10 +38,10 @@ void aim_conn_kill_chat(aim_session_t *sess, aim_conn_t *conn)
  *                                 (Note that WinAIM does not honor this,
  *                                 and displays the message as normal.)
  *
- * XXX convert this to use tlvchains 
+ * XXX convert this to use tlvchains
  */
 int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const char *msg, int msglen)
-{   
+{
 	int i;
 	aim_frame_t *fr;
 	aim_msgcookie_t *cookie;
@@ -48,38 +49,42 @@ int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const
 	guint8 ckstr[8];
 	aim_tlvlist_t *otl = NULL, *itl = NULL;
 
-	if (!sess || !conn || !msg || (msglen <= 0))
+	if (!sess || !conn || !msg || (msglen <= 0)) {
 		return 0;
+	}
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152))) {
 		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, 0x000e, 0x0005, 0x0000, NULL, 0);
 	aim_putsnac(&fr->data, 0x000e, 0x0005, 0x0000, snacid);
 
 
-	/* 
+	/*
 	 * Generate a random message cookie.
 	 *
 	 * XXX mkcookie should generate the cookie and cache it in one
 	 * operation to preserve uniqueness.
 	 *
 	 */
-	for (i = 0; i < sizeof(ckstr); i++)
-		(void) aimutil_put8(ckstr+i, (guint8) rand());
-	
+	for (i = 0; i < sizeof(ckstr); i++) {
+		(void) aimutil_put8(ckstr + i, (guint8) rand());
+	}
+
 
 	cookie = aim_mkcookie(ckstr, AIM_COOKIETYPE_CHAT, NULL);
 	cookie->data = NULL; /* XXX store something useful here */
 
 	aim_cachecookie(sess, cookie);
 
-	for (i = 0; i < sizeof(ckstr); i++)
+	for (i = 0; i < sizeof(ckstr); i++) {
 		aimbs_put8(&fr->data, ckstr[i]);
+	}
 
 
 	/*
-	 * Channel ID. 
+	 * Channel ID.
 	 */
 	aimbs_put16(&fr->data, 0x0003);
 
@@ -92,57 +97,59 @@ int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const
 	/*
 	 * Type 6: Reflect
 	 */
-	if (!(flags & AIM_CHATFLAGS_NOREFLECT))
+	if (!(flags & AIM_CHATFLAGS_NOREFLECT)) {
 		aim_addtlvtochain_noval(&otl, 0x0006);
+	}
 
 	/*
 	 * Type 7: Autoresponse
 	 */
-	if (flags & AIM_CHATFLAGS_AWAY)
+	if (flags & AIM_CHATFLAGS_AWAY) {
 		aim_addtlvtochain_noval(&otl, 0x0007);
-	
+	}
+
 	/* [WvG] This wasn't there originally, but we really should send
 	         the right charset flags, as we also do with normal
 	         messages. Hope this will work. :-) */
 	/*
 	if (flags & AIM_CHATFLAGS_UNICODE)
-		aimbs_put16(&fr->data, 0x0002);
+	        aimbs_put16(&fr->data, 0x0002);
 	else if (flags & AIM_CHATFLAGS_ISO_8859_1)
-		aimbs_put16(&fr->data, 0x0003);
+	        aimbs_put16(&fr->data, 0x0003);
 	else
-		aimbs_put16(&fr->data, 0x0000);
-	
+	        aimbs_put16(&fr->data, 0x0000);
+
 	aimbs_put16(&fr->data, 0x0000);
 	*/
-	
+
 	/*
 	 * SubTLV: Type 1: Message
 	 */
-	aim_addtlvtochain_raw(&itl, 0x0001, strlen(msg), (guint8 *)msg);
+	aim_addtlvtochain_raw(&itl, 0x0001, strlen(msg), (guint8 *) msg);
 
 	/*
 	 * Type 5: Message block.  Contains more TLVs.
 	 *
 	 * This could include other information... We just
-	 * put in a message TLV however.  
-	 * 
+	 * put in a message TLV however.
+	 *
 	 */
 	aim_addtlvtochain_frozentlvlist(&otl, 0x0005, &itl);
 
 	aim_writetlvchain(&fr->data, &otl);
-	
+
 	aim_freetlvchain(&itl);
 	aim_freetlvchain(&otl);
-	
+
 	aim_tx_enqueue(sess, fr);
 
 	return 0;
 }
 
 /*
- * Join a room of name roomname.  This is the first step to joining an 
- * already created room.  It's basically a Service Request for 
- * family 0x000e, with a little added on to specify the exchange and room 
+ * Join a room of name roomname.  This is the first step to joining an
+ * already created room.  It's basically a Service Request for
+ * family 0x000e, with a little added on to specify the exchange and room
  * name.
  */
 int aim_chat_join(aim_session_t *sess, aim_conn_t *conn, guint16 exchange, const char *roomname, guint16 instance)
@@ -151,12 +158,14 @@ int aim_chat_join(aim_session_t *sess, aim_conn_t *conn, guint16 exchange, const
 	aim_snacid_t snacid;
 	aim_tlvlist_t *tl = NULL;
 	struct chatsnacinfo csi;
-	
-	if (!sess || !conn || !roomname || !strlen(roomname))
-		return -EINVAL;
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 512)))
+	if (!sess || !conn || !roomname || !strlen(roomname)) {
+		return -EINVAL;
+	}
+
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 512))) {
 		return -ENOMEM;
+	}
 
 	memset(&csi, 0, sizeof(csi));
 	csi.exchange = exchange;
@@ -177,15 +186,16 @@ int aim_chat_join(aim_session_t *sess, aim_conn_t *conn, guint16 exchange, const
 
 	aim_tx_enqueue(sess, fr);
 
-	return 0; 
+	return 0;
 }
 
 int aim_chat_readroominfo(aim_bstream_t *bs, struct aim_chat_roominfo *outinfo)
 {
 	int namelen;
 
-	if (!bs || !outinfo)
+	if (!bs || !outinfo) {
 		return 0;
+	}
 
 	outinfo->exchange = aimbs_get16(bs);
 	namelen = aimbs_get8(bs);
@@ -198,7 +208,8 @@ int aim_chat_readroominfo(aim_bstream_t *bs, struct aim_chat_roominfo *outinfo)
 /*
  * conn must be a BOS connection!
  */
-int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *msg, guint16 exchange, const char *roomname, guint16 instance)
+int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *msg, guint16 exchange,
+                    const char *roomname, guint16 instance)
 {
 	int i;
 	aim_frame_t *fr;
@@ -210,25 +221,31 @@ int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const
 	guint8 *hdr;
 	int hdrlen;
 	aim_bstream_t hdrbs;
-	
-	if (!sess || !conn || !sn || !msg || !roomname)
-		return -EINVAL;
 
-	if (conn->type != AIM_CONN_TYPE_BOS)
+	if (!sess || !conn || !sn || !msg || !roomname) {
 		return -EINVAL;
+	}
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152+strlen(sn)+strlen(roomname)+strlen(msg))))
+	if (conn->type != AIM_CONN_TYPE_BOS) {
+		return -EINVAL;
+	}
+
+	if (!(fr =
+	              aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152 + strlen(sn) + strlen(roomname) +
+	                         strlen(msg)))) {
 		return -ENOMEM;
+	}
 
-	snacid = aim_cachesnac(sess, 0x0004, 0x0006, 0x0000, sn, strlen(sn)+1);
+	snacid = aim_cachesnac(sess, 0x0004, 0x0006, 0x0000, sn, strlen(sn) + 1);
 	aim_putsnac(&fr->data, 0x0004, 0x0006, 0x0000, snacid);
 
 
 	/*
 	 * Cookie
 	 */
-	for (i = 0; i < sizeof(ckstr); i++)
+	for (i = 0; i < sizeof(ckstr); i++) {
 		(void) aimutil_put8(ckstr, (guint8) rand());
+	}
 
 	/* XXX should be uncached by an unwritten 'invite accept' handler */
 	if ((priv = g_malloc(sizeof(struct aim_invite_priv)))) {
@@ -238,13 +255,15 @@ int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const
 		priv->instance = instance;
 	}
 
-	if ((cookie = aim_mkcookie(ckstr, AIM_COOKIETYPE_INVITE, priv)))
+	if ((cookie = aim_mkcookie(ckstr, AIM_COOKIETYPE_INVITE, priv))) {
 		aim_cachecookie(sess, cookie);
-	else
+	} else {
 		g_free(priv);
+	}
 
-	for (i = 0; i < sizeof(ckstr); i++)
+	for (i = 0; i < sizeof(ckstr); i++) {
 		aimbs_put8(&fr->data, ckstr[i]);
+	}
 
 
 	/*
@@ -256,7 +275,7 @@ int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const
 	 * Dest sn
 	 */
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *) sn, strlen(sn));
 
 	/*
 	 * TLV t(0005)
@@ -265,23 +284,23 @@ int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const
 	 *
 	 * Sigh.  AOL was rather inconsistent right here.  So we have
 	 * to play some minor tricks.  Right inside the type 5 is some
-	 * raw data, followed by a series of TLVs.  
+	 * raw data, followed by a series of TLVs.
 	 *
 	 */
-	hdrlen = 2+8+16+6+4+4+strlen(msg)+4+2+1+strlen(roomname)+2;
+	hdrlen = 2 + 8 + 16 + 6 + 4 + 4 + strlen(msg) + 4 + 2 + 1 + strlen(roomname) + 2;
 	hdr = g_malloc(hdrlen);
 	aim_bstream_init(&hdrbs, hdr, hdrlen);
-	
+
 	aimbs_put16(&hdrbs, 0x0000); /* Unknown! */
 	aimbs_putraw(&hdrbs, ckstr, sizeof(ckstr)); /* I think... */
 	aim_putcap(&hdrbs, AIM_CAPS_CHAT);
 
 	aim_addtlvtochain16(&itl, 0x000a, 0x0001);
 	aim_addtlvtochain_noval(&itl, 0x000f);
-	aim_addtlvtochain_raw(&itl, 0x000c, strlen(msg), (guint8 *)msg);
+	aim_addtlvtochain_raw(&itl, 0x000c, strlen(msg), (guint8 *) msg);
 	aim_addtlvtochain_chatroom(&itl, 0x2711, exchange, roomname, instance);
 	aim_writetlvchain(&hdrbs, &itl);
-	
+
 	aim_addtlvtochain_raw(&otl, 0x0005, aim_bstream_curpos(&hdrbs), hdr);
 
 	aim_writetlvchain(&fr->data, &otl);
@@ -289,7 +308,7 @@ int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const
 	g_free(hdr);
 	aim_freetlvchain(&itl);
 	aim_freetlvchain(&otl);
-	
+
 	aim_tx_enqueue(sess, fr);
 
 	return 0;
@@ -333,25 +352,27 @@ static int infoupdate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 	/*
 	 * Everything else are TLVs.
-	 */ 
+	 */
 	tlvlist = aim_readtlvchain(bs);
 
 	/*
 	 * TLV type 0x006a is the room name in Human Readable Form.
 	 */
-	if (aim_gettlv(tlvlist, 0x006a, 1))
+	if (aim_gettlv(tlvlist, 0x006a, 1)) {
 		roomname = aim_gettlv_str(tlvlist, 0x006a, 1);
+	}
 
 	/*
 	 * Type 0x006f: Number of occupants.
 	 */
-	if (aim_gettlv(tlvlist, 0x006f, 1))
+	if (aim_gettlv(tlvlist, 0x006f, 1)) {
 		usercount = aim_gettlv16(tlvlist, 0x006f, 1);
+	}
 
 	/*
 	 * Type 0x0073:  Occupant list.
 	 */
-	if (aim_gettlv(tlvlist, 0x0073, 1)) {	
+	if (aim_gettlv(tlvlist, 0x0073, 1)) {
 		int curoccupant = 0;
 		aim_tlv_t *tmptlv;
 		aim_bstream_t occbs;
@@ -363,97 +384,110 @@ static int infoupdate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 		aim_bstream_init(&occbs, tmptlv->value, tmptlv->length);
 
-		while (curoccupant < usercount)
+		while (curoccupant < usercount) {
 			aim_extractuserinfo(sess, &occbs, &userinfo[curoccupant++]);
+		}
 	}
 
-	/* 
+	/*
 	 * Type 0x00c9: Flags. (AIM_CHATROOM_FLAG)
 	 */
-	if (aim_gettlv(tlvlist, 0x00c9, 1))
+	if (aim_gettlv(tlvlist, 0x00c9, 1)) {
 		flags = aim_gettlv16(tlvlist, 0x00c9, 1);
+	}
 
-	/* 
+	/*
 	 * Type 0x00ca: Creation time (4 bytes)
 	 */
-	if (aim_gettlv(tlvlist, 0x00ca, 1))
+	if (aim_gettlv(tlvlist, 0x00ca, 1)) {
 		creationtime = aim_gettlv32(tlvlist, 0x00ca, 1);
+	}
 
-	/* 
+	/*
 	 * Type 0x00d1: Maximum Message Length
 	 */
-	if (aim_gettlv(tlvlist, 0x00d1, 1))
+	if (aim_gettlv(tlvlist, 0x00d1, 1)) {
 		maxmsglen = aim_gettlv16(tlvlist, 0x00d1, 1);
+	}
 
-	/* 
+	/*
 	 * Type 0x00d2: Unknown. (2 bytes)
 	 */
-	if (aim_gettlv(tlvlist, 0x00d2, 1))
+	if (aim_gettlv(tlvlist, 0x00d2, 1)) {
 		unknown_d2 = aim_gettlv16(tlvlist, 0x00d2, 1);
+	}
 
-	/* 
+	/*
 	 * Type 0x00d3: Room Description
 	 */
-	if (aim_gettlv(tlvlist, 0x00d3, 1))
+	if (aim_gettlv(tlvlist, 0x00d3, 1)) {
 		roomdesc = aim_gettlv_str(tlvlist, 0x00d3, 1);
+	}
 
 	/*
 	 * Type 0x000d4: Unknown (flag only)
 	 */
-	if (aim_gettlv(tlvlist, 0x000d4, 1))
+	if (aim_gettlv(tlvlist, 0x000d4, 1)) {
 		;
+	}
 
-	/* 
+	/*
 	 * Type 0x00d5: Unknown. (1 byte)
 	 */
-	if (aim_gettlv(tlvlist, 0x00d5, 1))
+	if (aim_gettlv(tlvlist, 0x00d5, 1)) {
 		unknown_d5 = aim_gettlv8(tlvlist, 0x00d5, 1);
+	}
 
 
 	/*
 	 * Type 0x00d6: Encoding 1 ("us-ascii")
 	 */
-	if (aim_gettlv(tlvlist, 0x000d6, 1))
+	if (aim_gettlv(tlvlist, 0x000d6, 1)) {
 		;
-	
+	}
+
 	/*
 	 * Type 0x00d7: Language 1 ("en")
 	 */
-	if (aim_gettlv(tlvlist, 0x000d7, 1))
+	if (aim_gettlv(tlvlist, 0x000d7, 1)) {
 		;
+	}
 
 	/*
 	 * Type 0x00d8: Encoding 2 ("us-ascii")
 	 */
-	if (aim_gettlv(tlvlist, 0x000d8, 1))
+	if (aim_gettlv(tlvlist, 0x000d8, 1)) {
 		;
-	
+	}
+
 	/*
 	 * Type 0x00d9: Language 2 ("en")
 	 */
-	if (aim_gettlv(tlvlist, 0x000d9, 1))
+	if (aim_gettlv(tlvlist, 0x000d9, 1)) {
 		;
+	}
 
 	/*
 	 * Type 0x00da: Maximum visible message length
 	 */
-	if (aim_gettlv(tlvlist, 0x000da, 1))
+	if (aim_gettlv(tlvlist, 0x000da, 1)) {
 		maxvisiblemsglen = aim_gettlv16(tlvlist, 0x00da, 1);
+	}
 
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess,
-				rx, 
-				&roominfo,
-				roomname,
-				usercount,
-				userinfo,	
-				roomdesc,
-				flags,
-				creationtime,
-				maxmsglen,
-				unknown_d2,
-				unknown_d5,
-				maxvisiblemsglen);
+		               rx,
+		               &roominfo,
+		               roomname,
+		               usercount,
+		               userinfo,
+		               roomdesc,
+		               flags,
+		               creationtime,
+		               maxmsglen,
+		               unknown_d2,
+		               unknown_d5,
+		               maxvisiblemsglen);
 	}
 
 	g_free(roominfo.name);
@@ -465,7 +499,8 @@ static int infoupdate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	return ret;
 }
 
-static int userlistchange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
+static int userlistchange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac,
+                          aim_bstream_t *bs)
 {
 	aim_userinfo_t *userinfo = NULL;
 	aim_rxcallback_t userfunc;
@@ -474,11 +509,12 @@ static int userlistchange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	while (aim_bstream_empty(bs)) {
 		curcount++;
 		userinfo = g_realloc(userinfo, curcount * sizeof(aim_userinfo_t));
-		aim_extractuserinfo(sess, bs, &userinfo[curcount-1]);
+		aim_extractuserinfo(sess, bs, &userinfo[curcount - 1]);
 	}
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, curcount, userinfo);
+	}
 
 	g_free(userinfo);
 
@@ -486,7 +522,7 @@ static int userlistchange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 }
 
 /*
- * We could probably include this in the normal ICBM parsing 
+ * We could probably include this in the normal ICBM parsing
  * code as channel 0x0003, however, since only the start
  * would be the same, we might as well do it here.
  *
@@ -506,12 +542,12 @@ static int userlistchange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
  *       message tlv
  *         message string
  *       possibly others
- *  
+ *
  */
 static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	aim_userinfo_t userinfo;
-	aim_rxcallback_t userfunc;	
+	aim_rxcallback_t userfunc;
 	int ret = 0;
 	guint8 *cookie;
 	guint16 channel;
@@ -548,7 +584,7 @@ static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	}
 
 	/*
-	 * Start parsing TLVs right away. 
+	 * Start parsing TLVs right away.
 	 */
 	otl = aim_readtlvchain(bs);
 
@@ -566,11 +602,12 @@ static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	}
 
 	/*
-	 * Type 0x0001: If present, it means it was a message to the 
+	 * Type 0x0001: If present, it means it was a message to the
 	 * room (as opposed to a whisper).
 	 */
-	if (aim_gettlv(otl, 0x0001, 1))
+	if (aim_gettlv(otl, 0x0001, 1)) {
 		;
+	}
 
 	/*
 	 * Type 0x0005: Message Block.  Conains more TLVs.
@@ -584,17 +621,19 @@ static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 		aim_bstream_init(&tbs, msgblock->value, msgblock->length);
 		itl = aim_readtlvchain(&tbs);
 
-		/* 
+		/*
 		 * Type 0x0001: Message.
-		 */	
-		if (aim_gettlv(itl, 0x0001, 1))
+		 */
+		if (aim_gettlv(itl, 0x0001, 1)) {
 			msg = aim_gettlv_str(itl, 0x0001, 1);
+		}
 
-		aim_freetlvchain(&itl); 
+		aim_freetlvchain(&itl);
 	}
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, &userinfo, msg);
+	}
 
 	g_free(cookie);
 	g_free(msg);
@@ -606,12 +645,13 @@ static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 
-	if (snac->subtype == 0x0002)
+	if (snac->subtype == 0x0002) {
 		return infoupdate(sess, mod, rx, snac, bs);
-	else if ((snac->subtype == 0x0003) || (snac->subtype == 0x0004))
+	} else if ((snac->subtype == 0x0003) || (snac->subtype == 0x0004)) {
 		return userlistchange(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0006)
+	} else if (snac->subtype == 0x0006) {
 		return incomingmsg(sess, mod, rx, snac, bs);
+	}
 
 	return 0;
 }

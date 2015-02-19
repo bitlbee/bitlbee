@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2001-2004 Wilmer van der Gaast and others                *
@@ -31,14 +31,13 @@
 #define PROTO_SOCKS5    4
 #define PROTO_DEFAULT   PROTO_HTTP
 
-typedef struct url
-{
+typedef struct url {
 	int proto;
 	int port;
-	char host[MAX_STRING+1];
-	char file[MAX_STRING+1];
-	char user[MAX_STRING+1];
-	char pass[MAX_STRING+1];
+	char host[MAX_STRING + 1];
+	char file[MAX_STRING + 1];
+	char user[MAX_STRING + 1];
+	char pass[MAX_STRING + 1];
 } url_t;
 
-int url_set( url_t *url, const char *set_url );
+int url_set(url_t *url, const char *set_url);

@@ -1,5 +1,5 @@
 #ifndef __BITLBEE_CHECK_H__
-#define __BITLBEE_CHECK_H__ 
+#define __BITLBEE_CHECK_H__
 
 #include "irc.h"
 

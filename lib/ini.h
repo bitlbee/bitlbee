@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
@@ -26,8 +26,7 @@
 #ifndef _INI_H
 #define _INI_H
 
-typedef struct
-{
+typedef struct {
 	int line;
 	char *c_section;
 	char *section;
@@ -38,8 +37,8 @@ typedef struct
 	char file[];
 } ini_t;
 
-ini_t *ini_open( char *file );
-int ini_read( ini_t *file );
-void ini_close( ini_t *file );
+ini_t *ini_open(char *file);
+int ini_read(ini_t *file);
+void ini_close(ini_t *file);
 
 #endif

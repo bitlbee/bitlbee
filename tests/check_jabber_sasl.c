@@ -5,17 +5,16 @@
 #include <string.h>
 #include <stdio.h>
 
-char *sasl_get_part( char *data, char *field );
+char *sasl_get_part(char *data, char *field);
 
 #define challenge1 "nonce=\"1669585310\",qop=\"auth\",charset=utf-8,algorithm=md5-sess," \
-                   "something=\"Not \\\"standardized\\\"\""
+	"something=\"Not \\\"standardized\\\"\""
 #define challenge2 "realm=\"quadpoint.org\", nonce=\"NPotlQpQf9RNYodOwierkQ==\", " \
-                   "qop=\"auth, auth-int\", charset=utf-8, algorithm=md5-sess"
+	"qop=\"auth, auth-int\", charset=utf-8, algorithm=md5-sess"
 #define challenge3 ", realm=\"localhost\", nonce=\"LlBV2txnO8RbB5hgs3KgiQ==\", " \
-                   "qop=\"auth, auth-int, \", ,\n, charset=utf-8, algorithm=md5-sess,"
+	"qop=\"auth, auth-int, \", ,\n, charset=utf-8, algorithm=md5-sess,"
 
-struct
-{
+struct {
 	char *challenge;
 	char *key;
 	char *value;
@@ -81,35 +80,36 @@ struct
 static void check_get_part(int l)
 {
 	int i;
-	
-	for( i = 0; get_part_tests[i].key; i++ )
-	{
-  		tcase_fn_start( get_part_tests[i].key, __FILE__, i );
+
+	for (i = 0; get_part_tests[i].key; i++) {
+		tcase_fn_start(get_part_tests[i].key, __FILE__, i);
 		char *res;
-		
-		res = sasl_get_part( get_part_tests[i].challenge,
-		                     get_part_tests[i].key );
-		
-		if( get_part_tests[i].value == NULL )
-			fail_if( res != NULL, "Found key %s in %s while it shouldn't be there!",
-			         get_part_tests[i].key, get_part_tests[i].challenge );
-		else if( res )
-			fail_unless( strcmp( res, get_part_tests[i].value ) == 0,
-			             "Incorrect value for key %s in %s: %s",
-			             get_part_tests[i].key, get_part_tests[i].challenge, res );
-		else
-			fail( "Could not find key %s in %s",
-			      get_part_tests[i].key, get_part_tests[i].challenge );
-		
-		g_free( res );
+
+		res = sasl_get_part(get_part_tests[i].challenge,
+		                    get_part_tests[i].key);
+
+		if (get_part_tests[i].value == NULL) {
+			fail_if(res != NULL, "Found key %s in %s while it shouldn't be there!",
+			        get_part_tests[i].key, get_part_tests[i].challenge);
+		} else if (res) {
+			fail_unless(strcmp(res, get_part_tests[i].value) == 0,
+			            "Incorrect value for key %s in %s: %s",
+			            get_part_tests[i].key, get_part_tests[i].challenge, res);
+		} else {
+			fail("Could not find key %s in %s",
+			     get_part_tests[i].key, get_part_tests[i].challenge);
+		}
+
+		g_free(res);
 	}
 }
 
-Suite *jabber_sasl_suite (void)
+Suite *jabber_sasl_suite(void)
 {
 	Suite *s = suite_create("jabber/sasl");
 	TCase *tc_core = tcase_create("Core");
-	suite_add_tcase (s, tc_core);
-	tcase_add_test (tc_core, check_get_part);
+
+	suite_add_tcase(s, tc_core);
+	tcase_add_test(tc_core, check_get_part);
 	return s;
 }

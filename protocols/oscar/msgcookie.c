@@ -1,7 +1,7 @@
 /*
  * Cookie Caching stuff. Adam wrote this, apparently just some
  * derivatives of n's SNAC work. I cleaned it up, added comments.
- * 
+ *
  */
 
 /*
@@ -25,24 +25,26 @@
  *
  * returns -1 on error, 0 on append, 1 on update.  the cookie you pass
  * in may be free'd, so don't count on its value after calling this!
- * 
+ *
  */
 int aim_cachecookie(aim_session_t *sess, aim_msgcookie_t *cookie)
 {
 	aim_msgcookie_t *newcook;
 
-	if (!sess || !cookie)
+	if (!sess || !cookie) {
 		return -EINVAL;
+	}
 
 	newcook = aim_checkcookie(sess, cookie->cookie, cookie->type);
-	
+
 	if (newcook == cookie) {
 		newcook->addtime = time(NULL);
 		return 1;
-	} else if (newcook)
+	} else if (newcook) {
 		aim_cookie_free(sess, newcook);
+	}
 
-	cookie->addtime = time(NULL);  
+	cookie->addtime = time(NULL);
 
 	cookie->next = sess->msgcookies;
 	sess->msgcookies = cookie;
@@ -64,12 +66,13 @@ aim_msgcookie_t *aim_uncachecookie(aim_session_t *sess, guint8 *cookie, int type
 {
 	aim_msgcookie_t *cur, **prev;
 
-	if (!cookie || !sess->msgcookies)
+	if (!cookie || !sess->msgcookies) {
 		return NULL;
+	}
 
 	for (prev = &sess->msgcookies; (cur = *prev); ) {
-		if ((cur->type == type) && 
-				(memcmp(cur->cookie, cookie, 8) == 0)) {
+		if ((cur->type == type) &&
+		    (memcmp(cur->cookie, cookie, 8) == 0)) {
 			*prev = cur->next;
 			return cur;
 		}
@@ -89,15 +92,17 @@ aim_msgcookie_t *aim_uncachecookie(aim_session_t *sess, guint8 *cookie, int type
  * success.
  *
  */
-aim_msgcookie_t *aim_mkcookie(guint8 *c, int type, void *data) 
+aim_msgcookie_t *aim_mkcookie(guint8 *c, int type, void *data)
 {
 	aim_msgcookie_t *cookie;
 
-	if (!c)
+	if (!c) {
 		return NULL;
+	}
 
-	if (!(cookie = g_new0(aim_msgcookie_t,1)))
+	if (!(cookie = g_new0(aim_msgcookie_t, 1))) {
 		return NULL;
+	}
 
 	cookie->data = data;
 	cookie->type = type;
@@ -122,9 +127,10 @@ aim_msgcookie_t *aim_checkcookie(aim_session_t *sess, const guint8 *cookie, int 
 	aim_msgcookie_t *cur;
 
 	for (cur = sess->msgcookies; cur; cur = cur->next) {
-		if ((cur->type == type) && 
-				(memcmp(cur->cookie, cookie, 8) == 0))
-			return cur;   
+		if ((cur->type == type) &&
+		    (memcmp(cur->cookie, cookie, 8) == 0)) {
+			return cur;
+		}
 	}
 
 	return NULL;
@@ -143,22 +149,24 @@ aim_msgcookie_t *aim_checkcookie(aim_session_t *sess, const guint8 *cookie, int 
  * returns -1 on error, 0 on success.
  *
  */
-int aim_cookie_free(aim_session_t *sess, aim_msgcookie_t *cookie) 
+int aim_cookie_free(aim_session_t *sess, aim_msgcookie_t *cookie)
 {
 	aim_msgcookie_t *cur, **prev;
 
-	if (!sess || !cookie)
+	if (!sess || !cookie) {
 		return -EINVAL;
+	}
 
 	for (prev = &sess->msgcookies; (cur = *prev); ) {
-		if (cur == cookie)
+		if (cur == cookie) {
 			*prev = cur->next;
-		else
+		} else {
 			prev = &cur->next;
+		}
 	}
 
 	g_free(cookie->data);
 	g_free(cookie);
 
 	return 0;
-} 
+}

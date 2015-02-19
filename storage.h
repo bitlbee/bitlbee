@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
@@ -31,32 +31,32 @@ typedef enum {
 	STORAGE_NO_SUCH_USER,
 	STORAGE_INVALID_PASSWORD,
 	STORAGE_ALREADY_EXISTS,
-	STORAGE_OTHER_ERROR /* Error that isn't caused by user input, such as 
-	                       a database that is unreachable. log() will be 
+	STORAGE_OTHER_ERROR /* Error that isn't caused by user input, such as
+	                       a database that is unreachable. log() will be
 	                       used for the exact error message */
 } storage_status_t;
 
 typedef struct {
 	const char *name;
-	
+
 	/* May be set to NULL if not required */
-	void (*init) (void);
+	void (*init)(void);
 
-	storage_status_t (*check_pass) (const char *nick, const char *password);
+	storage_status_t (*check_pass)(const char *nick, const char *password);
 
-	storage_status_t (*load) (irc_t *irc, const char *password);
-	storage_status_t (*save) (irc_t *irc, int overwrite);
-	storage_status_t (*remove) (const char *nick, const char *password);
+	storage_status_t (*load)(irc_t *irc, const char *password);
+	storage_status_t (*save)(irc_t *irc, int overwrite);
+	storage_status_t (*remove)(const char *nick, const char *password);
 
 	/* May be NULL if not supported by backend */
-	storage_status_t (*rename) (const char *onick, const char *nnick, const char *password);
+	storage_status_t (*rename)(const char *onick, const char *nnick, const char *password);
 } storage_t;
 
-storage_status_t storage_check_pass (const char *nick, const char *password);
+storage_status_t storage_check_pass(const char *nick, const char *password);
 
-storage_status_t storage_load (irc_t * irc, const char *password);
-storage_status_t storage_save (irc_t *irc, char *password, int overwrite);
-storage_status_t storage_remove (const char *nick, const char *password);
+storage_status_t storage_load(irc_t * irc, const char *password);
+storage_status_t storage_save(irc_t *irc, char *password, int overwrite);
+storage_status_t storage_remove(const char *nick, const char *password);
 
 void register_storage_backend(storage_t *);
 G_GNUC_MALLOC GList *storage_init(const char *primary, char **migrate);

@@ -34,11 +34,11 @@
 #define FT_BUFFER_SIZE 2048
 
 typedef enum {
-	FT_STATUS_LISTENING	= 1,
-	FT_STATUS_TRANSFERRING	= 2,
-	FT_STATUS_FINISHED	= 4,
-	FT_STATUS_CANCELED	= 8,
-	FT_STATUS_CONNECTING	= 16
+	FT_STATUS_LISTENING     = 1,
+	FT_STATUS_TRANSFERRING  = 2,
+	FT_STATUS_FINISHED      = 4,
+	FT_STATUS_CANCELED      = 8,
+	FT_STATUS_CONNECTING    = 16
 } file_status_t;
 
 /*
@@ -74,14 +74,14 @@ typedef struct file_transfer {
 
 	/*
 	 * The current status of this file transfer.
-	 */ 
+	 */
 	file_status_t status;
-	
+
 	/*
 	 * file size
 	 */
 	size_t file_size;
-	
+
 	/*
 	 * Number of bytes that have been successfully transferred.
 	 */
@@ -107,42 +107,42 @@ typedef struct file_transfer {
 	 */
 	gpointer data;
 	struct im_connection *ic;
-	
+
 	/*
 	 * Private data.
 	 */
 	gpointer priv;
-	
+
 	/*
 	 * If set, called after succesful connection setup.
 	 */
-	void (*accept) ( struct file_transfer *file );
-	
+	void (*accept)(struct file_transfer *file);
+
 	/*
 	 * If set, called when the transfer is canceled or finished.
 	 * Subsequently, this structure will be freed.
 	 *
 	 */
-	void (*free) ( struct file_transfer *file );
-	
+	void (*free)(struct file_transfer *file);
+
 	/*
 	 * If set, called when the transfer is finished and successful.
 	 */
-	void (*finished) ( struct file_transfer *file );
-	
+	void (*finished)(struct file_transfer *file);
+
 	/*
 	 * If set, called when the transfer is canceled.
 	 * ( canceled either by the transfer implementation or by
 	 *  a call to imcb_file_canceled )
 	 */
-	void (*canceled) ( struct file_transfer *file, char *reason );
-	
+	void (*canceled)(struct file_transfer *file, char *reason);
+
 	/*
 	 * called by the sending side to indicate that it is writable.
-	 * The callee should check if data is available and call the 
+	 * The callee should check if data is available and call the
 	 * function(as seen below) if that is the case.
 	 */
-	gboolean (*write_request) ( struct file_transfer *file );
+	gboolean (*write_request)(struct file_transfer *file);
 
 	/*
 	 * When sending files, protocols register this function to receive data.
@@ -150,7 +150,7 @@ typedef struct file_transfer {
 	 * should not read more data until write_request is called again. This technique
 	 * avoids buffering.
 	 */
-	gboolean (*write) (struct file_transfer *file, char *buffer, unsigned int len );
+	gboolean (*write)(struct file_transfer *file, char *buffer, unsigned int len);
 
 	/* The send buffer associated with this transfer.
 	 * Since receivers always wait for a write_request call one is enough.
@@ -162,15 +162,15 @@ typedef struct file_transfer {
 /*
  * This starts a file transfer from bitlbee to the user.
  */
-file_transfer_t *imcb_file_send_start( struct im_connection *ic, char *user_nick, char *file_name, size_t file_size );
+file_transfer_t *imcb_file_send_start(struct im_connection *ic, char *user_nick, char *file_name, size_t file_size);
 
 /*
  * This should be called by a protocol when the transfer is canceled. Note that
  * the canceled() and free() callbacks given in file will be called by this function.
  */
-void imcb_file_canceled( struct im_connection *ic, file_transfer_t *file, char *reason );
+void imcb_file_canceled(struct im_connection *ic, file_transfer_t *file, char *reason);
 
-gboolean imcb_file_recv_start( struct im_connection *ic, file_transfer_t *ft );
+gboolean imcb_file_recv_start(struct im_connection *ic, file_transfer_t *ft);
 
-void imcb_file_finished( struct im_connection *ic, file_transfer_t *file );
+void imcb_file_finished(struct im_connection *ic, file_transfer_t *file);
 #endif

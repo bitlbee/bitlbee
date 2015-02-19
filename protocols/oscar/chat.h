@@ -5,7 +5,7 @@
 
 /*
  * SNAC Family: Chat Services
- */ 
+ */
 #define AIM_CB_CHT_ERROR 0x0001
 #define AIM_CB_CHT_ROOMINFOUPDATE 0x0002
 #define AIM_CB_CHT_USERJOIN 0x0003

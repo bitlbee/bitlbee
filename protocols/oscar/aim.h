@@ -1,4 +1,4 @@
-/* 
+/*
  * Main libfaim header.  Must be included in client for prototypes/macros.
  *
  * "come on, i turned a chick lesbian; i think this is the hackish equivalent"
@@ -28,11 +28,11 @@ typedef guint16 flap_seqnum_t;
 /* Portability stuff (DMP) */
 
 #if defined(mach) && defined(__APPLE__)
-#define gethostbyname(x) gethostbyname2(x, AF_INET) 
+#define gethostbyname(x) gethostbyname2(x, AF_INET)
 #endif
 
-/* 
- * Current Maximum Length for Screen Names (not including NULL) 
+/*
+ * Current Maximum Length for Screen Names (not including NULL)
  *
  * Currently only names up to 16 characters can be registered
  * however it is aparently legal for them to be larger.
@@ -52,7 +52,7 @@ typedef guint16 flap_seqnum_t;
  * with utterly oversized instant messages!
  *
  * XXX: the real limit is the total SNAC size at 8192. Fix this.
- * 
+ *
  */
 #define MAXMSGLEN 7987
 
@@ -66,7 +66,7 @@ typedef guint16 flap_seqnum_t;
  * Current Maximum Length for Chat Room Messages
  *
  * This is actually defined by the protocol to be
- * dynamic, but I have yet to see due cause to 
+ * dynamic, but I have yet to see due cause to
  * define it dynamically here.  Maybe later.
  *
  */
@@ -80,10 +80,10 @@ typedef guint16 flap_seqnum_t;
 #define AIM_MD5_STRING "AOL Instant Messenger (SM)"
 
 /*
- * Default Authorizer server name and TCP port for the OSCAR farm.  
+ * Default Authorizer server name and TCP port for the OSCAR farm.
  *
  * You shouldn't need to change this unless you're writing
- * your own server. 
+ * your own server.
  *
  * Note that only one server is needed to start the whole
  * AIM process.  The later server addresses come from
@@ -106,7 +106,7 @@ typedef guint16 flap_seqnum_t;
 #define AIM_SNAC_HASH_SIZE 16
 
 /*
- * Client info.  Filled in by the client and passed in to 
+ * Client info.  Filled in by the client and passed in to
  * aim_send_login().  The information ends up getting passed to OSCAR
  * through the initial login command.
  *
@@ -123,44 +123,44 @@ struct client_info_s {
 };
 
 #define AIM_CLIENTINFO_KNOWNGOOD_3_5_1670 { \
-	"AOL Instant Messenger (SM), version 3.5.1670/WIN32", \
-	0x0004, \
-	0x0003, \
-	0x0005, \
-	0x0000, \
-	0x0686, \
-	"us", \
-	"en", \
+		"AOL Instant Messenger (SM), version 3.5.1670/WIN32", \
+		0x0004, \
+		0x0003, \
+		0x0005, \
+		0x0000, \
+		0x0686, \
+		"us", \
+		"en", \
 }
 
 #define AIM_CLIENTINFO_KNOWNGOOD_4_1_2010 { \
-	  "AOL Instant Messenger (SM), version 4.1.2010/WIN32", \
-	  0x0004, \
-	  0x0004, \
-	  0x0001, \
-	  0x0000, \
-	  0x07da, \
-	  "us", \
-	  "en", \
+		"AOL Instant Messenger (SM), version 4.1.2010/WIN32", \
+		0x0004, \
+		0x0004, \
+		0x0001, \
+		0x0000, \
+		0x07da, \
+		"us", \
+		"en", \
 }
 
 #define AIM_CLIENTINFO_KNOWNGOOD_5_1_3036 { \
-	"AOL Instant Messenger, version 5.1.3036/WIN32", \
-	0x0109, \
-	0x0005, \
-	0x0001, \
-	0x0000, \
-	0x0bdc, \
-	"us", \
-	"en", \
+		"AOL Instant Messenger, version 5.1.3036/WIN32", \
+		0x0109, \
+		0x0005, \
+		0x0001, \
+		0x0000, \
+		0x0bdc, \
+		"us", \
+		"en", \
 }
 
 /*
  * I would make 4.1.2010 the default, but they seem to have found
- * an alternate way of breaking that one. 
+ * an alternate way of breaking that one.
  *
  * 3.5.1670 should work fine, however, you will be subjected to the
- * memory test, which may require you to have a WinAIM binary laying 
+ * memory test, which may require you to have a WinAIM binary laying
  * around. (see login.c::memrequest())
  */
 #define AIM_CLIENTINFO_KNOWNGOOD AIM_CLIENTINFO_KNOWNGOOD_5_1_3036
@@ -170,8 +170,8 @@ struct client_info_s {
 #define FALSE 0
 #endif
 
-/* 
- * These could be arbitrary, but its easier to use the actual AIM values 
+/*
+ * These could be arbitrary, but its easier to use the actual AIM values
  */
 #define AIM_CONN_TYPE_AUTH          0x0007
 #define AIM_CONN_TYPE_ADS           0x0005
@@ -206,11 +206,11 @@ struct client_info_s {
 #define AIM_MTYPE_EEXPRESS  0x0E
 #define AIM_MTYPE_CONTACTS  0x13
 #define AIM_MTYPE_PLUGIN    0x1A
-#define AIM_MTYPE_AUTOAWAY	0xE8
-#define AIM_MTYPE_AUTOBUSY	0xE9
-#define AIM_MTYPE_AUTONA	0xEA
-#define AIM_MTYPE_AUTODND	0xEB
-#define AIM_MTYPE_AUTOFFC	0xEC
+#define AIM_MTYPE_AUTOAWAY      0xE8
+#define AIM_MTYPE_AUTOBUSY      0xE9
+#define AIM_MTYPE_AUTONA        0xEA
+#define AIM_MTYPE_AUTODND       0xEB
+#define AIM_MTYPE_AUTOFFC       0xEC
 
 typedef struct aim_conn_s {
 	int fd;
@@ -221,7 +221,7 @@ typedef struct aim_conn_s {
 	void *priv; /* misc data the client may want to store */
 	void *internal; /* internal conn-specific libfaim data */
 	time_t lastactivity; /* time of last transmit */
-	int forcedlatency; 
+	int forcedlatency;
 	void *handlerlist;
 	void *sessv; /* pointer to parent session */
 	void *inside; /* only accessible from inside libfaim */
@@ -251,14 +251,14 @@ typedef struct aim_bstream_s {
 typedef struct aim_frame_s {
 	guint8 hdrtype; /* defines which piece of the union to use */
 	union {
-		struct { 
+		struct {
 			guint8 type;
-			flap_seqnum_t seqnum;     
+			flap_seqnum_t seqnum;
 		} flap;
 	} hdr;
-	aim_bstream_t data;	/* payload stream */
-	guint8 handled;		/* 0 = new, !0 = been handled */
-	guint8 nofree;		/* 0 = free data on purge, 1 = only unlink */
+	aim_bstream_t data;     /* payload stream */
+	guint8 handled;         /* 0 = new, !0 = been handled */
+	guint8 nofree;          /* 0 = free data on purge, 1 = only unlink */
 	aim_conn_t *conn;  /* the connection it came in on... */
 	struct aim_frame_s *next;
 } aim_frame_t;
@@ -272,7 +272,7 @@ typedef struct aim_msgcookie_s {
 } aim_msgcookie_t;
 
 /*
- * AIM Session: The main client-data interface.  
+ * AIM Session: The main client-data interface.
  *
  */
 typedef struct aim_session_s {
@@ -280,10 +280,10 @@ typedef struct aim_session_s {
 	/* ---- Client Accessible ------------------------ */
 
 	/* Our screen name. */
-	char sn[MAXSNLEN+1];
+	char sn[MAXSNLEN + 1];
 
 	/*
-	 * Pointer to anything the client wants to 
+	 * Pointer to anything the client wants to
 	 * explicitly associate with this session.
 	 *
 	 * This is for use in the callbacks mainly. In any
@@ -313,10 +313,10 @@ typedef struct aim_session_s {
 	 * These are only used when you don't use your own lowlevel
 	 * I/O.  I don't suggest that you use libfaim's internal I/O.
 	 * Its really bad and the API/event model is quirky at best.
-	 *  
+	 *
 	 */
-	aim_frame_t *queue_outgoing;   
-	aim_frame_t *queue_incoming; 
+	aim_frame_t *queue_outgoing;
+	aim_frame_t *queue_incoming;
 
 	/*
 	 * Tx Enqueuing function.
@@ -329,7 +329,7 @@ typedef struct aim_session_s {
 	int (*tx_enqueue)(struct aim_session_s *, aim_frame_t *);
 
 	/*
-	 * Outstanding snac handling 
+	 * Outstanding snac handling
 	 *
 	 * XXX: Should these be per-connection? -mid
 	 */
@@ -383,13 +383,13 @@ typedef struct aim_session_s {
  * AIM User Info, Standard Form.
  */
 typedef struct {
-	char sn[MAXSNLEN+1];
+	char sn[MAXSNLEN + 1];
 	guint16 warnlevel;
 	guint16 idletime;
 	guint16 flags;
 	guint32 membersince;
 	guint32 onlinesince;
-	guint32 sessionlen; 
+	guint32 sessionlen;
 	guint32 capabilities;
 	struct {
 		guint32 status;
@@ -409,21 +409,21 @@ typedef struct {
 #define AIM_USERINFO_PRESENT_CAPABILITIES 0x00000080
 #define AIM_USERINFO_PRESENT_SESSIONLEN   0x00000100
 
-#define AIM_FLAG_UNCONFIRMED 	0x0001 /* "damned transients" */
-#define AIM_FLAG_ADMINISTRATOR	0x0002
-#define AIM_FLAG_AOL		0x0004
-#define AIM_FLAG_OSCAR_PAY	0x0008
-#define AIM_FLAG_FREE 		0x0010
-#define AIM_FLAG_AWAY		0x0020
-#define AIM_FLAG_ICQ		0x0040
-#define AIM_FLAG_WIRELESS	0x0080
-#define AIM_FLAG_UNKNOWN100	0x0100
-#define AIM_FLAG_UNKNOWN200	0x0200
+#define AIM_FLAG_UNCONFIRMED    0x0001 /* "damned transients" */
+#define AIM_FLAG_ADMINISTRATOR  0x0002
+#define AIM_FLAG_AOL            0x0004
+#define AIM_FLAG_OSCAR_PAY      0x0008
+#define AIM_FLAG_FREE           0x0010
+#define AIM_FLAG_AWAY           0x0020
+#define AIM_FLAG_ICQ            0x0040
+#define AIM_FLAG_WIRELESS       0x0080
+#define AIM_FLAG_UNKNOWN100     0x0100
+#define AIM_FLAG_UNKNOWN200     0x0200
 #define AIM_FLAG_ACTIVEBUDDY    0x0400
-#define AIM_FLAG_UNKNOWN800	0x0800
+#define AIM_FLAG_UNKNOWN800     0x0800
 #define AIM_FLAG_ABINTERNAL     0x1000
 
-#define AIM_FLAG_ALLUSERS	0x001f
+#define AIM_FLAG_ALLUSERS       0x001f
 
 /*
  * TLV handling
@@ -467,7 +467,8 @@ int aim_addtlvtochain32(aim_tlvlist_t **list, const guint16 type, const guint32 
 int aim_addtlvtochain_raw(aim_tlvlist_t **list, const guint16 t, const guint16 l, const guint8 *v);
 int aim_addtlvtochain_caps(aim_tlvlist_t **list, const guint16 t, const guint32 caps);
 int aim_addtlvtochain_noval(aim_tlvlist_t **list, const guint16 type);
-int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, guint16 type, guint16 exchange, const char *roomname, guint16 instance);
+int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, guint16 type, guint16 exchange, const char *roomname,
+                               guint16 instance);
 int aim_addtlvtochain_userinfo(aim_tlvlist_t **list, guint16 type, aim_userinfo_t *ui);
 int aim_addtlvtochain_frozentlvlist(aim_tlvlist_t **list, guint16 type, aim_tlvlist_t **tl);
 int aim_counttlvchain(aim_tlvlist_t **list);
@@ -542,7 +543,8 @@ int aim_conn_setlatency(aim_conn_t *conn, int newval);
 
 void aim_conn_kill(aim_session_t *sess, aim_conn_t **deadconn);
 
-int aim_conn_addhandler(aim_session_t *, aim_conn_t *conn, u_short family, u_short type, aim_rxcallback_t newhandler, u_short flags);
+int aim_conn_addhandler(aim_session_t *, aim_conn_t *conn, u_short family, u_short type, aim_rxcallback_t newhandler,
+                        u_short flags);
 int aim_clearhandlers(aim_conn_t *conn);
 
 aim_conn_t *aim_conn_findbygroup(aim_session_t *sess, guint16 group);
@@ -557,7 +559,7 @@ int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn);
 int aim_conn_isconnecting(aim_conn_t *conn);
 
 typedef void (*faim_debugging_callback_t)(aim_session_t *sess, int level, const char *format, va_list va);
-int aim_setdebuggingcb(aim_session_t *sess, faim_debugging_callback_t);
+int aim_setdebuggingcb(aim_session_t * sess, faim_debugging_callback_t);
 void aim_session_init(aim_session_t *, guint32 flags, int debuglevel);
 void aim_session_kill(aim_session_t *);
 void aim_setupproxy(aim_session_t *sess, const char *server, const char *username, const char *password);
@@ -617,7 +619,8 @@ int aim_ads_requestads(aim_session_t *sess, aim_conn_t *conn);
 
 /* aim_im.c */
 
-aim_conn_t *aim_sendfile_initiate(aim_session_t *, const char *destsn, const char *filename, guint16 numfiles, guint32 totsize);
+aim_conn_t *aim_sendfile_initiate(aim_session_t *, const char *destsn, const char *filename, guint16 numfiles,
+                                  guint32 totsize);
 
 aim_conn_t *aim_getfile_initiate(aim_session_t *sess, aim_conn_t *conn, const char *destsn);
 int aim_oft_getfile_request(aim_session_t *sess, aim_conn_t *conn, const char *name, int size);
@@ -652,29 +655,31 @@ int aim_handlerendconnect(aim_session_t *sess, aim_conn_t *cur);
 #define AIM_TRANSFER_DENY_NOTSUPPORTED 0x0000
 #define AIM_TRANSFER_DENY_DECLINE 0x0001
 #define AIM_TRANSFER_DENY_NOTACCEPTING 0x0002
-aim_conn_t *aim_accepttransfer(aim_session_t *sess, aim_conn_t *conn, const char *sn, const guint8 *cookie, const guint8 *ip, guint16 listingfiles, guint16 listingtotsize, guint16 listingsize, guint32 listingchecksum, guint16 rendid);
+aim_conn_t *aim_accepttransfer(aim_session_t *sess, aim_conn_t *conn, const char *sn, const guint8 *cookie,
+                               const guint8 *ip, guint16 listingfiles, guint16 listingtotsize, guint16 listingsize,
+                               guint32 listingchecksum, guint16 rendid);
 
 int aim_getinfo(aim_session_t *, aim_conn_t *, const char *, unsigned short);
 
-#define AIM_IMPARAM_FLAG_CHANMSGS_ALLOWED	0x00000001
-#define AIM_IMPARAM_FLAG_MISSEDCALLS_ENABLED	0x00000002
+#define AIM_IMPARAM_FLAG_CHANMSGS_ALLOWED       0x00000001
+#define AIM_IMPARAM_FLAG_MISSEDCALLS_ENABLED    0x00000002
 
 /* This is what the server will give you if you don't set them yourself. */
 #define AIM_IMPARAM_DEFAULTS { \
-	0, \
-	AIM_IMPARAM_FLAG_CHANMSGS_ALLOWED | AIM_IMPARAM_FLAG_MISSEDCALLS_ENABLED, \
-	512, /* !! Note how small this is. */ \
-	(99.9)*10, (99.9)*10, \
-	1000 /* !! And how large this is. */ \
+		0, \
+		AIM_IMPARAM_FLAG_CHANMSGS_ALLOWED | AIM_IMPARAM_FLAG_MISSEDCALLS_ENABLED, \
+		512, /* !! Note how small this is. */ \
+		(99.9) * 10, (99.9) * 10, \
+		1000 /* !! And how large this is. */ \
 }
 
 /* This is what most AIM versions use. */
 #define AIM_IMPARAM_REASONABLE { \
-	0, \
-	AIM_IMPARAM_FLAG_CHANMSGS_ALLOWED | AIM_IMPARAM_FLAG_MISSEDCALLS_ENABLED, \
-	8000, \
-	(99.9)*10, (99.9)*10, \
-	0 \
+		0, \
+		AIM_IMPARAM_FLAG_CHANMSGS_ALLOWED | AIM_IMPARAM_FLAG_MISSEDCALLS_ENABLED, \
+		8000, \
+		(99.9) * 10, (99.9) * 10, \
+		0 \
 }
 
 
@@ -715,17 +720,18 @@ struct aim_chat_exchangeinfo {
 	char *lang2;
 };
 
-#define AIM_CHATFLAGS_NOREFLECT 	0x0001
-#define AIM_CHATFLAGS_AWAY      	0x0002
-#define AIM_CHATFLAGS_UNICODE		0x0004
-#define AIM_CHATFLAGS_ISO_8859_1	0x0008
+#define AIM_CHATFLAGS_NOREFLECT         0x0001
+#define AIM_CHATFLAGS_AWAY              0x0002
+#define AIM_CHATFLAGS_UNICODE           0x0004
+#define AIM_CHATFLAGS_ISO_8859_1        0x0008
 
 int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const char *msg, int msglen);
 int aim_chat_join(aim_session_t *sess, aim_conn_t *conn, guint16 exchange, const char *roomname, guint16 instance);
 
 int aim_chatnav_reqrights(aim_session_t *sess, aim_conn_t *conn);
 
-int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *msg, guint16 exchange, const char *roomname, guint16 instance);
+int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *msg, guint16 exchange,
+                    const char *roomname, guint16 instance);
 
 int aim_chatnav_createroom(aim_session_t *sess, aim_conn_t *conn, const char *name, guint16 exchange);
 
@@ -737,50 +743,50 @@ int aim_chatnav_createroom(aim_session_t *sess, aim_conn_t *conn, const char *na
  * their use.
  *
  */
-#define aimutil_put8(buf, data) ((*(buf) = (u_char)(data)&0xff),1)
-#define aimutil_get8(buf) ((*(buf))&0xff)
+#define aimutil_put8(buf, data) ((*(buf) = (u_char) (data) & 0xff), 1)
+#define aimutil_get8(buf) ((*(buf)) & 0xff)
 #define aimutil_put16(buf, data) ( \
-		(*(buf) = (u_char)((data)>>8)&0xff), \
-		(*((buf)+1) = (u_char)(data)&0xff),  \
-		2)
-#define aimutil_get16(buf) ((((*(buf))<<8)&0xff00) + ((*((buf)+1)) & 0xff))
+	        (*(buf) = (u_char) ((data) >> 8) & 0xff), \
+	        (*((buf) + 1) = (u_char) (data) & 0xff),  \
+	        2)
+#define aimutil_get16(buf) ((((*(buf)) << 8) & 0xff00) + ((*((buf) + 1)) & 0xff))
 #define aimutil_put32(buf, data) ( \
-		(*((buf)) = (u_char)((data)>>24)&0xff), \
-		(*((buf)+1) = (u_char)((data)>>16)&0xff), \
-		(*((buf)+2) = (u_char)((data)>>8)&0xff), \
-		(*((buf)+3) = (u_char)(data)&0xff), \
-		4)
-#define aimutil_get32(buf) ((((*(buf))<<24)&0xff000000) + \
-		(((*((buf)+1))<<16)&0x00ff0000) + \
-		(((*((buf)+2))<< 8)&0x0000ff00) + \
-		(((*((buf)+3)    )&0x000000ff)))
+	        (*((buf)) = (u_char) ((data) >> 24) & 0xff), \
+	        (*((buf) + 1) = (u_char) ((data) >> 16) & 0xff), \
+	        (*((buf) + 2) = (u_char) ((data) >> 8) & 0xff), \
+	        (*((buf) + 3) = (u_char) (data) & 0xff), \
+	        4)
+#define aimutil_get32(buf) ((((*(buf)) << 24) & 0xff000000) + \
+	                    (((*((buf) + 1)) << 16) & 0x00ff0000) + \
+	                    (((*((buf) + 2)) << 8) & 0x0000ff00) + \
+	                    (((*((buf) + 3)) & 0x000000ff)))
 
 /* Little-endian versions (damn ICQ) */
 #define aimutil_putle8(buf, data) ( \
-		(*(buf) = (unsigned char)(data) & 0xff), \
-		1)
+	        (*(buf) = (unsigned char) (data) & 0xff), \
+	        1)
 #define aimutil_getle8(buf) ( \
-		(*(buf)) & 0xff \
-		)
+	        (*(buf)) & 0xff \
+	        )
 #define aimutil_putle16(buf, data) ( \
-		(*((buf)+0) = (unsigned char)((data) >> 0) & 0xff),  \
-		(*((buf)+1) = (unsigned char)((data) >> 8) & 0xff), \
-		2)
+	        (*((buf) + 0) = (unsigned char) ((data) >> 0) & 0xff),  \
+	        (*((buf) + 1) = (unsigned char) ((data) >> 8) & 0xff), \
+	        2)
 #define aimutil_getle16(buf) ( \
-		(((*((buf)+0)) << 0) & 0x00ff) + \
-		(((*((buf)+1)) << 8) & 0xff00) \
-		)
+	        (((*((buf) + 0)) << 0) & 0x00ff) + \
+	        (((*((buf) + 1)) << 8) & 0xff00) \
+	        )
 #define aimutil_putle32(buf, data) ( \
-		(*((buf)+0) = (unsigned char)((data) >>  0) & 0xff), \
-		(*((buf)+1) = (unsigned char)((data) >>  8) & 0xff), \
-		(*((buf)+2) = (unsigned char)((data) >> 16) & 0xff), \
-		(*((buf)+3) = (unsigned char)((data) >> 24) & 0xff), \
-		4)
+	        (*((buf) + 0) = (unsigned char) ((data) >>  0) & 0xff), \
+	        (*((buf) + 1) = (unsigned char) ((data) >>  8) & 0xff), \
+	        (*((buf) + 2) = (unsigned char) ((data) >> 16) & 0xff), \
+	        (*((buf) + 3) = (unsigned char) ((data) >> 24) & 0xff), \
+	        4)
 #define aimutil_getle32(buf) ( \
-		(((*((buf)+0)) <<  0) & 0x000000ff) + \
-		(((*((buf)+1)) <<  8) & 0x0000ff00) + \
-		(((*((buf)+2)) << 16) & 0x00ff0000) + \
-		(((*((buf)+3)) << 24) & 0xff000000))
+	        (((*((buf) + 0)) <<  0) & 0x000000ff) + \
+	        (((*((buf) + 1)) <<  8) & 0x0000ff00) + \
+	        (((*((buf) + 2)) << 16) & 0x00ff0000) + \
+	        (((*((buf) + 3)) << 24) & 0xff000000))
 
 
 int aim_sncmp(const char *a, const char *b);
@@ -796,7 +802,7 @@ int aim_sncmp(const char *a, const char *b);
 
 /*
  * SNAC Family: Ack.
- * 
+ *
  * Not really a family, but treating it as one really
  * helps it fit into the libfaim callback structure better.
  *
@@ -805,7 +811,7 @@ int aim_sncmp(const char *a, const char *b);
 
 /*
  * SNAC Family: General.
- */ 
+ */
 #define AIM_CB_GEN_ERROR 0x0001
 #define AIM_CB_GEN_CLIENTREADY 0x0002
 #define AIM_CB_GEN_SERVERREADY 0x0003
@@ -830,7 +836,7 @@ int aim_sncmp(const char *a, const char *b);
 
 /*
  * SNAC Family: Advertisement Services
- */ 
+ */
 #define AIM_CB_ADS_ERROR 0x0001
 #define AIM_CB_ADS_DEFAULT 0xffff
 
@@ -839,7 +845,7 @@ int aim_sncmp(const char *a, const char *b);
  *
  * See non-SNAC note below.
  */
-#define AIM_CB_OFT_DIRECTIMCONNECTREQ 0x0001/* connect request -- actually an OSCAR CAP*/
+#define AIM_CB_OFT_DIRECTIMCONNECTREQ 0x0001 /* connect request -- actually an OSCAR CAP*/
 #define AIM_CB_OFT_DIRECTIMINCOMING 0x0002
 #define AIM_CB_OFT_DIRECTIMDISCONNECT 0x0003
 #define AIM_CB_OFT_DIRECTIMTYPING 0x0004
@@ -868,7 +874,7 @@ int aim_sncmp(const char *a, const char *b);
  * these, we can integrated non-SNAC services into
  * the SNAC-centered libfaim callback structure.
  *
- */ 
+ */
 #define AIM_CB_SPECIAL_AUTHSUCCESS 0x0001
 #define AIM_CB_SPECIAL_AUTHOTHER 0x0002
 #define AIM_CB_SPECIAL_CONNERR 0x0003

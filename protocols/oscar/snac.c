@@ -1,10 +1,10 @@
 /*
  *
- * Various SNAC-related dodads... 
+ * Various SNAC-related dodads...
  *
  * outstanding_snacs is a list of aim_snac_t structs.  A SNAC should be added
  * whenever a new SNAC is sent and it should remain in the list until the
- * response for it has been receieved.  
+ * response for it has been receieved.
  *
  * cleansnacs() should be called periodically by the client in order
  * to facilitate the aging out of unreplied-to SNACs. This can and does
@@ -23,13 +23,15 @@ void aim_initsnachash(aim_session_t *sess)
 {
 	int i;
 
-	for (i = 0; i < AIM_SNAC_HASH_SIZE; i++)
+	for (i = 0; i < AIM_SNAC_HASH_SIZE; i++) {
 		sess->snac_hash[i] = NULL;
+	}
 
 	return;
 }
 
-aim_snacid_t aim_cachesnac(aim_session_t *sess, const guint16 family, const guint16 type, const guint16 flags, const void *data, const int datalen)
+aim_snacid_t aim_cachesnac(aim_session_t *sess, const guint16 family, const guint16 type, const guint16 flags,
+                           const void *data, const int datalen)
 {
 	aim_snac_t snac;
 
@@ -39,11 +41,13 @@ aim_snacid_t aim_cachesnac(aim_session_t *sess, const guint16 family, const guin
 	snac.flags = flags;
 
 	if (datalen) {
-		if (!(snac.data = g_malloc(datalen)))
+		if (!(snac.data = g_malloc(datalen))) {
 			return 0; /* er... */
+		}
 		memcpy(snac.data, data, datalen);
-	} else
+	} else {
 		snac.data = NULL;
+	}
 
 	return aim_newsnac(sess, &snac);
 }
@@ -57,42 +61,45 @@ static aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac)
 	aim_snac_t *snac;
 	int index;
 
-	if (!newsnac)
+	if (!newsnac) {
 		return 0;
+	}
 
-	if (!(snac = g_malloc(sizeof(aim_snac_t))))
+	if (!(snac = g_malloc(sizeof(aim_snac_t)))) {
 		return 0;
+	}
 	memcpy(snac, newsnac, sizeof(aim_snac_t));
 	snac->issuetime = time(NULL);
 
 	index = snac->id % AIM_SNAC_HASH_SIZE;
 
-	snac->next = (aim_snac_t *)sess->snac_hash[index];
-	sess->snac_hash[index] = (void *)snac;
+	snac->next = (aim_snac_t *) sess->snac_hash[index];
+	sess->snac_hash[index] = (void *) snac;
 
 	return snac->id;
 }
 
 /*
- * Finds a snac structure with the passed SNAC ID, 
+ * Finds a snac structure with the passed SNAC ID,
  * removes it from the list/hash, and returns a pointer to it.
  *
  * The returned structure must be freed by the caller.
  *
  */
-aim_snac_t *aim_remsnac(aim_session_t *sess, aim_snacid_t id) 
+aim_snac_t *aim_remsnac(aim_session_t *sess, aim_snacid_t id)
 {
 	aim_snac_t *cur, **prev;
 	int index;
 
 	index = id % AIM_SNAC_HASH_SIZE;
 
-	for (prev = (aim_snac_t **)&sess->snac_hash[index]; (cur = *prev); ) {
+	for (prev = (aim_snac_t **) &sess->snac_hash[index]; (cur = *prev); ) {
 		if (cur->id == id) {
 			*prev = cur->next;
 			return cur;
-		} else
+		} else {
 			prev = &cur->next;
+		}
 	}
 
 	return cur;
@@ -113,12 +120,13 @@ void aim_cleansnacs(aim_session_t *sess, int maxage)
 		aim_snac_t *cur, **prev;
 		time_t curtime;
 
-		if (!sess->snac_hash[i])
+		if (!sess->snac_hash[i]) {
 			continue;
+		}
 
 		curtime = time(NULL); /* done here in case we waited for the lock */
 
-		for (prev = (aim_snac_t **)&sess->snac_hash[i]; (cur = *prev); ) {
+		for (prev = (aim_snac_t **) &sess->snac_hash[i]; (cur = *prev); ) {
 			if ((curtime - cur->issuetime) > maxage) {
 
 				*prev = cur->next;
@@ -127,8 +135,9 @@ void aim_cleansnacs(aim_session_t *sess, int maxage)
 				g_free(cur->data);
 				g_free(cur);
 
-			} else
+			} else {
 				prev = &cur->next;
+			}
 		}
 	}
 

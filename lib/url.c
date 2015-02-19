@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2001-2005 Wilmer van der Gaast and others                *
@@ -26,84 +26,74 @@
 #include "url.h"
 
 /* Convert an URL to a url_t structure */
-int url_set( url_t *url, const char *set_url )
+int url_set(url_t *url, const char *set_url)
 {
-	char s[MAX_STRING+1];
+	char s[MAX_STRING + 1];
 	char *i;
-	
-	memset( url, 0, sizeof( url_t ) );
-	memset( s, 0, sizeof( s ) );
-	
+
+	memset(url, 0, sizeof(url_t));
+	memset(s, 0, sizeof(s));
+
 	/* protocol:// */
-	if( ( i = strstr( set_url, "://" ) ) == NULL )
-	{
+	if ((i = strstr(set_url, "://")) == NULL) {
 		url->proto = PROTO_DEFAULT;
-		strncpy( s, set_url, MAX_STRING );
-	}
-	else
-	{
-		if( g_strncasecmp( set_url, "http", i - set_url ) == 0 )
+		strncpy(s, set_url, MAX_STRING);
+	} else {
+		if (g_strncasecmp(set_url, "http", i - set_url) == 0) {
 			url->proto = PROTO_HTTP;
-		else if( g_strncasecmp( set_url, "https", i - set_url ) == 0 )
+		} else if (g_strncasecmp(set_url, "https", i - set_url) == 0) {
 			url->proto = PROTO_HTTPS;
-		else if( g_strncasecmp( set_url, "socks4", i - set_url ) == 0 )
+		} else if (g_strncasecmp(set_url, "socks4", i - set_url) == 0) {
 			url->proto = PROTO_SOCKS4;
-		else if( g_strncasecmp( set_url, "socks5", i - set_url ) == 0 )
+		} else if (g_strncasecmp(set_url, "socks5", i - set_url) == 0) {
 			url->proto = PROTO_SOCKS5;
-		else
+		} else {
 			return 0;
-		
-		strncpy( s, i + 3, MAX_STRING );
+		}
+
+		strncpy(s, i + 3, MAX_STRING);
 	}
-	
+
 	/* Split */
-	if( ( i = strchr( s, '/' ) ) == NULL )
-	{
-		strcpy( url->file, "/" );
-	}
-	else
-	{
-		strncpy( url->file, i, MAX_STRING );
+	if ((i = strchr(s, '/')) == NULL) {
+		strcpy(url->file, "/");
+	} else {
+		strncpy(url->file, i, MAX_STRING);
 		*i = 0;
 	}
-	strncpy( url->host, s, MAX_STRING );
-	
+	strncpy(url->host, s, MAX_STRING);
+
 	/* Check for username in host field */
-	if( strrchr( url->host, '@' ) != NULL )
-	{
-		strncpy( url->user, url->host, MAX_STRING );
-		i = strrchr( url->user, '@' );
+	if (strrchr(url->host, '@') != NULL) {
+		strncpy(url->user, url->host, MAX_STRING);
+		i = strrchr(url->user, '@');
 		*i = 0;
-		strcpy( url->host, i + 1 );
+		strcpy(url->host, i + 1);
 		*url->pass = 0;
 	}
 	/* If not: Fill in defaults */
-	else
-	{
+	else {
 		*url->user = *url->pass = 0;
 	}
-	
+
 	/* Password? */
-	if( ( i = strchr( url->user, ':' ) ) != NULL )
-	{
+	if ((i = strchr(url->user, ':')) != NULL) {
 		*i = 0;
-		strcpy( url->pass, i + 1 );
+		strcpy(url->pass, i + 1);
 	}
 	/* Port number? */
-	if( ( i = strchr( url->host, ':' ) ) != NULL )
-	{
+	if ((i = strchr(url->host, ':')) != NULL) {
 		*i = 0;
-		sscanf( i + 1, "%d", &url->port );
-	}
-	else
-	{
-		if( url->proto == PROTO_HTTP )
+		sscanf(i + 1, "%d", &url->port);
+	} else {
+		if (url->proto == PROTO_HTTP) {
 			url->port = 80;
-		else if( url->proto == PROTO_HTTPS )
+		} else if (url->proto == PROTO_HTTPS) {
 			url->port = 443;
-		else if( url->proto == PROTO_SOCKS4 || url->proto == PROTO_SOCKS5 )
+		} else if (url->proto == PROTO_SOCKS4 || url->proto == PROTO_SOCKS5) {
 			url->port = 1080;
+		}
 	}
-	
-	return( url->port > 0 );
+
+	return(url->port > 0);
 }

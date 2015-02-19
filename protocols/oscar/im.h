@@ -5,7 +5,7 @@
 
 /*
  * SNAC Family: Messaging Services.
- */ 
+ */
 #define AIM_CB_MSG_ERROR 0x0001
 #define AIM_CB_MSG_PARAMINFO 0x0005
 #define AIM_CB_MSG_INCOMING 0x0007
@@ -16,18 +16,18 @@
 #define AIM_CB_MSG_MTN 0x0014
 #define AIM_CB_MSG_DEFAULT 0xffff
 
-#define AIM_IMFLAGS_AWAY		0x0001 /* mark as an autoreply */
-#define AIM_IMFLAGS_ACK			0x0002 /* request a receipt notice */
-#define AIM_IMFLAGS_UNICODE		0x0004
-#define AIM_IMFLAGS_ISO_8859_1		0x0008
-#define AIM_IMFLAGS_BUDDYREQ		0x0010 /* buddy icon requested */
-#define AIM_IMFLAGS_HASICON		0x0020 /* already has icon */
-#define AIM_IMFLAGS_SUBENC_MACINTOSH	0x0040 /* damn that Steve Jobs! */
-#define AIM_IMFLAGS_CUSTOMFEATURES 	0x0080 /* features field present */
-#define AIM_IMFLAGS_EXTDATA		0x0100
-#define AIM_IMFLAGS_CUSTOMCHARSET	0x0200 /* charset fields set */
-#define AIM_IMFLAGS_MULTIPART		0x0400 /* ->mpmsg section valid */
-#define AIM_IMFLAGS_OFFLINE		0x0800 /* send to offline user */
+#define AIM_IMFLAGS_AWAY                0x0001 /* mark as an autoreply */
+#define AIM_IMFLAGS_ACK                 0x0002 /* request a receipt notice */
+#define AIM_IMFLAGS_UNICODE             0x0004
+#define AIM_IMFLAGS_ISO_8859_1          0x0008
+#define AIM_IMFLAGS_BUDDYREQ            0x0010 /* buddy icon requested */
+#define AIM_IMFLAGS_HASICON             0x0020 /* already has icon */
+#define AIM_IMFLAGS_SUBENC_MACINTOSH    0x0040 /* damn that Steve Jobs! */
+#define AIM_IMFLAGS_CUSTOMFEATURES      0x0080 /* features field present */
+#define AIM_IMFLAGS_EXTDATA             0x0100
+#define AIM_IMFLAGS_CUSTOMCHARSET       0x0200 /* charset fields set */
+#define AIM_IMFLAGS_MULTIPART           0x0400 /* ->mpmsg section valid */
+#define AIM_IMFLAGS_OFFLINE             0x0800 /* send to offline user */
 
 /*
  * Multipart message structures.
@@ -83,7 +83,7 @@ struct aim_sendimext_args {
 
 /*
  * This information is provided in the Incoming ICBM callback for
- * Channel 1 ICBM's.  
+ * Channel 1 ICBM's.
  *
  * Note that although CUSTOMFEATURES and CUSTOMCHARSET say they
  * are optional, both are always set by the current libfaim code.
@@ -99,7 +99,7 @@ struct aim_incomingim_ch1_args {
 	/* Always provided */
 	aim_mpmsg_t mpmsg;
 	guint32 icbmflags; /* some flags apply only to ->msg, not all mpmsg */
-	
+
 	/* Only provided if message has a human-readable section */
 	char *msg;
 	int msglen;
@@ -178,6 +178,7 @@ aim_conn_t *aim_directim_initiate(aim_session_t *, const char *destsn);
 aim_conn_t *aim_directim_connect(aim_session_t *, const char *sn, const char *addr, const guint8 *cookie);
 
 int aim_im_sendmtn(aim_session_t *sess, guint16 type1, const char *sn, guint16 type2);
-int aim_send_im_ch2_statusmessage(aim_session_t *sess, const char *sender, const guint8 *cookie, const char *message, const guint8 state, const guint16 dc);
+int aim_send_im_ch2_statusmessage(aim_session_t *sess, const char *sender, const guint8 *cookie, const char *message,
+                                  const guint8 state, const guint16 dc);
 
 #endif /* __OSCAR_IM_H__ */
