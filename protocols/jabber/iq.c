@@ -26,7 +26,6 @@
 
 static xt_status jabber_parse_roster(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 static xt_status jabber_iq_display_vcard(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
-static int jabber_iq_disco_server(struct im_connection *ic);
 
 xt_status jabber_pkt_iq(struct xt_node *node, gpointer data)
 {
@@ -860,7 +859,7 @@ static xt_status jabber_iq_version_response(struct im_connection *ic,
 static xt_status jabber_iq_disco_server_response(struct im_connection *ic,
                                                  struct xt_node *node, struct xt_node *orig);
 
-static int jabber_iq_disco_server(struct im_connection *ic)
+int jabber_iq_disco_server(struct im_connection *ic)
 {
 	struct xt_node *node, *iq;
 	struct jabber_data *jd = ic->proto_data;
