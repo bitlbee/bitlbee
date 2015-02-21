@@ -235,6 +235,10 @@ struct jabber_transfer {
 #define XMLNS_BYTESTREAMS  "http://jabber.org/protocol/bytestreams"              /* XEP-0065 */
 #define XMLNS_IBB          "http://jabber.org/protocol/ibb"                      /* XEP-0047 */
 
+/* Hipchat protocol extensions*/
+#define XMLNS_HIPCHAT         "http://hipchat.com"
+#define XMLNS_HIPCHAT_PROFILE "http://hipchat.com/protocol/profile"
+
 /* jabber.c */
 void jabber_connect(struct im_connection *ic);
 
@@ -249,6 +253,7 @@ int jabber_remove_from_roster(struct im_connection *ic, char *handle);
 xt_status jabber_iq_query_features(struct im_connection *ic, char *bare_jid);
 xt_status jabber_iq_query_server(struct im_connection *ic, char *jid, char *xmlns);
 void jabber_iq_version_send(struct im_connection *ic, struct jabber_buddy *bud, void *data);
+int jabber_iq_disco_server(struct im_connection *ic);
 
 /* si.c */
 int jabber_si_handle_request(struct im_connection *ic, struct xt_node *node, struct xt_node *sinode);
@@ -340,5 +345,10 @@ int jabber_chat_leave(struct groupchat *c, const char *reason);
 void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node);
 void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node);
 void jabber_chat_invite(struct groupchat *c, char *who, char *message);
+
+/* hipchat.c */
+int jabber_get_hipchat_profile(struct im_connection *ic);
+xt_status jabber_parse_hipchat_profile(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
+xt_status hipchat_handle_success(struct im_connection *ic, struct xt_node *node);
 
 #endif
