@@ -29,3 +29,5 @@ cov-int
 .bzrignore
 .git
 .gitignore
+bitlbee.service
+bitlbee@.service
