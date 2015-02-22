@@ -252,6 +252,31 @@ gboolean jabber_bs_abort(struct bs_transfer *bt, char *format, ...)
 	}
 }
 
+void jabber_bs_remove_events(struct bs_transfer *bt)
+{
+	struct jabber_transfer *tf = bt->tf;
+
+	if (tf->watch_out) {
+		b_event_remove(tf->watch_out);
+		tf->watch_out = 0;
+	}
+
+	if (tf->watch_in) {
+		b_event_remove(tf->watch_in);
+		tf->watch_in = 0;
+	}
+
+	if (tf->fd != -1) {
+		closesocket(tf->fd);
+		tf->fd = -1;
+	}
+
+	if (bt->connect_timeout) {
+		b_event_remove(bt->connect_timeout);
+		bt->connect_timeout = 0;
+	}
+}
+
 /* Bad luck */
 void jabber_bs_canceled(file_transfer_t *ft, char *reason)
 {
@@ -554,6 +579,7 @@ gboolean jabber_bs_recv_handshake_abort(struct bs_transfer *bt, char *error)
 	shlist = g_slist_find(bt->streamhosts, bt->sh);
 	if (shlist && shlist->next) {
 		bt->sh = shlist->next->data;
+		jabber_bs_remove_events(bt);
 		return jabber_bs_recv_handshake(bt, -1, 0);
 	}
 
@@ -763,20 +789,7 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 	} else {
 		/* using a proxy, abort listen */
 
-		if (tf->watch_in) {
-			b_event_remove(tf->watch_in);
-			tf->watch_in = 0;
-		}
-
-		if (tf->fd != -1) {
-			closesocket(tf->fd);
-			tf->fd = -1;
-		}
-
-		if (bt->connect_timeout) {
-			b_event_remove(bt->connect_timeout);
-			bt->connect_timeout = 0;
-		}
+		jabber_bs_remove_events(bt);
 
 		GSList *shlist;
 		for (shlist = jd->streamhosts; shlist; shlist = g_slist_next(shlist)) {
