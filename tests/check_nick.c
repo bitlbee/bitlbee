@@ -5,7 +5,7 @@
 #include <string.h>
 #include "irc.h"
 #include "set.h"
-#include "misc.h"
+#include "lib/misc.h"
 #include "bitlbee.h"
 
 START_TEST(test_nick_strip){

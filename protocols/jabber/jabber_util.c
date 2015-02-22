@@ -22,8 +22,8 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "md5.h"
-#include "base64.h"
+#include "lib/md5.h"
+#include "lib/base64.h"
 
 static unsigned int next_id = 1;
 

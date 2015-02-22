@@ -791,7 +791,7 @@ int aim_chatnav_createroom(aim_session_t *sess, aim_conn_t *conn, const char *na
 
 int aim_sncmp(const char *a, const char *b);
 
-#include <aim_internal.h>
+#include "aim_internal.h"
 
 /*
  * SNAC Families.

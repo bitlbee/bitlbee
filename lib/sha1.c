@@ -1,6 +1,7 @@
-#include "sha1.h"
+#include "lib/sha1.h"
 #include <string.h>
 #include <stdio.h>
+
 
 
 void sha1_init(sha1_state_t *ctx)

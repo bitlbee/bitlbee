@@ -6,7 +6,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 #include "sock.h"
 
 static int aim_logoff(aim_session_t *sess);

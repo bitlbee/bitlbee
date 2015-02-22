@@ -26,8 +26,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "http_client.h"
-#include "url.h"
+#include "lib/http_client.h"
+#include "lib/url.h"
 #include "sock.h"
 
 

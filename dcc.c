@@ -23,7 +23,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
-#include "ft.h"
+#include "protocols/ft.h"
 #include "dcc.h"
 #include <netinet/tcp.h>
 #include <regex.h>

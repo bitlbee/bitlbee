@@ -25,7 +25,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
-#include "account.h"
+#include "protocols/account.h"
 
 static const char* account_protocols_local[] = {
 	"gg", "whatsapp", NULL

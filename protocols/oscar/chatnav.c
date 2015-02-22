@@ -7,7 +7,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 #include "chatnav.h"
 
 /*

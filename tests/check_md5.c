@@ -4,7 +4,7 @@
 #include <check.h>
 #include <string.h>
 #include <stdio.h>
-#include "md5.h"
+#include "lib/md5.h"
 
 /* From RFC 1321 */
 struct md5_test {

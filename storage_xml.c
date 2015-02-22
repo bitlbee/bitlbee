@@ -25,10 +25,10 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
-#include "base64.h"
-#include "arc.h"
-#include "md5.h"
-#include "xmltree.h"
+#include "lib/base64.h"
+#include "lib/arc.h"
+#include "lib/md5.h"
+#include "lib/xmltree.h"
 
 #include <glib/gstdio.h>
 

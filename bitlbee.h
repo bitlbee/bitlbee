@@ -43,7 +43,7 @@ extern "C" {
 #define MAX_STRING 511
 
 #if HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
 #include <fcntl.h>
@@ -131,21 +131,21 @@ extern "C" {
    this password set, use /OPER to change it. */
 #define PASSWORD_PENDING "\r\rchangeme\r\r"
 
-#include "bee.h"
+#include "protocols/bee.h"
 #include "irc.h"
 #include "storage.h"
 #include "set.h"
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 #include "commands.h"
-#include "account.h"
+#include "protocols/account.h"
 #include "nick.h"
 #include "conf.h"
 #include "log.h"
-#include "ini.h"
+#include "lib/ini.h"
 #include "query.h"
 #include "sock.h"
-#include "misc.h"
-#include "proxy.h"
+#include "lib/misc.h"
+#include "lib/proxy.h"
 
 typedef struct global {
 	/* In forked mode, child processes store the fd of the IPC socket here. */

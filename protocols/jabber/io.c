@@ -22,7 +22,7 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "ssl_client.h"
+#include "lib/ssl_client.h"
 
 static gboolean jabber_write_callback(gpointer data, gint fd, b_input_condition cond);
 static gboolean jabber_write_queue(struct im_connection *ic);

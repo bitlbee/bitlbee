@@ -22,7 +22,7 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "sha1.h"
+#include "lib/sha1.h"
 
 static xt_status jabber_parse_roster(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 static xt_status jabber_iq_display_vcard(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);

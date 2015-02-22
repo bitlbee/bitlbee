@@ -6,7 +6,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 #include "info.h"
 
 struct aim_priv_inforeq {

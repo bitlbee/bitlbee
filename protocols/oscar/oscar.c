@@ -30,9 +30,9 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <glib.h>
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 #include "bitlbee.h"
-#include "proxy.h"
+#include "lib/proxy.h"
 #include "sock.h"
 
 #include "aim.h"

@@ -7,7 +7,7 @@
  *
  */
 
-#include <aim.h>
+#include "aim.h"
 
 struct aim_rxcblist_s {
 	guint16 family;

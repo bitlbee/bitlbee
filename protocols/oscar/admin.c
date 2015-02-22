@@ -1,4 +1,4 @@
-#include <aim.h>
+#include "aim.h"
 #include "admin.h"
 
 /* called for both reply and change-reply */

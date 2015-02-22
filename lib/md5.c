@@ -1,4 +1,4 @@
-#include "md5.h"
+#include "lib/md5.h"
 
 /* Creates a new GChecksum in ctx */
 void md5_init(md5_state_t *ctx)

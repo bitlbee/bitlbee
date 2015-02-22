@@ -38,12 +38,12 @@
    http://hueniverse.com/2012/07/oauth-2-0-and-the-road-to-hell/ */
 
 #include <glib.h>
-#include "http_client.h"
-#include "oauth2.h"
-#include "oauth.h"
-#include "json.h"
-#include "json_util.h"
-#include "url.h"
+#include "lib/http_client.h"
+#include "lib/oauth2.h"
+#include "lib/oauth.h"
+#include "lib/json.h"
+#include "lib/json_util.h"
+#include "lib/url.h"
 
 char *oauth2_url(const struct oauth2_service *sp)
 {

@@ -24,9 +24,9 @@
 #include <ctype.h>
 
 #include "jabber.h"
-#include "base64.h"
-#include "oauth2.h"
-#include "oauth.h"
+#include "lib/base64.h"
+#include "lib/oauth2.h"
+#include "lib/oauth.h"
 
 const struct oauth2_service oauth2_service_google =
 {

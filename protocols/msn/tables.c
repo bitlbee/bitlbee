@@ -23,7 +23,7 @@
   Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "nogaim.h"
+#include "protocols/nogaim.h"
 #include "msn.h"
 
 const struct msn_away_state msn_away_state_list[] =
