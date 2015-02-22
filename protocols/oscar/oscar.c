@@ -1913,23 +1913,6 @@ static void oscar_get_info(struct im_connection *g, char *name)
 	}
 }
 
-static void oscar_get_away(struct im_connection *g, char *who)
-{
-	struct oscar_data *odata = (struct oscar_data *) g->proto_data;
-
-	if (odata->icq) {
-		/** FIXME(wilmer): Hmm, lost the ability to get away msgs here, do we care to get that back?
-		struct buddy *budlight = imcb_find_buddy(g, who);
-		if (budlight)
-		        if ((budlight->uc & 0xff80) >> 7)
-		                if (budlight->caps & AIM_CAPS_ICQSERVERRELAY)
-		                        aim_send_im_ch2_geticqmessage(odata->sess, who, (budlight->uc & 0xff80) >> 7);
-		*/
-	} else {
-		aim_getinfo(odata->sess, odata->conn, who, AIM_GETINFO_AWAYMESSAGE);
-	}
-}
-
 static void oscar_set_away_aim(struct im_connection *ic, struct oscar_data *od, const char *state, const char *message)
 {
 	if (state == NULL) {
@@ -2711,7 +2694,6 @@ void oscar_initmodule()
 	ret->buddy_msg = oscar_buddy_msg;
 	ret->get_info = oscar_get_info;
 	ret->set_away = oscar_set_away;
-	ret->get_away = oscar_get_away;
 	ret->add_buddy = oscar_add_buddy;
 	ret->remove_buddy = oscar_remove_buddy;
 	ret->chat_msg = oscar_chat_msg;

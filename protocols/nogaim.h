@@ -179,8 +179,6 @@ struct prpl {
 	 */
 	void (* set_away)       (struct im_connection *, char *state, char *message);
 	/* Implementing this function is optional. */
-	void (* get_away)       (struct im_connection *, char *who);
-	/* Implementing this function is optional. */
 	int (* send_typing)    (struct im_connection *, char *who, int flags);
 
 	/* 'name' is a handle to add/remove. For now BitlBee doesn't really
@@ -194,16 +192,10 @@ struct prpl {
 	void (* add_deny)       (struct im_connection *, char *who);
 	void (* rem_permit)     (struct im_connection *, char *who);
 	void (* rem_deny)       (struct im_connection *, char *who);
-	/* Doesn't actually have UI hooks. Not used at all, can be removed. */
-	void (* set_permit_deny)(struct im_connection *);
 
 	/* Request profile info. Free-formatted stuff, the IM module gives back
 	   this info via imcb_log(). Implementing these are optional. */
 	void (* get_info)       (struct im_connection *, char *who);
-	/* set_my_name is *DEPRECATED*, not used by the UI anymore. Use the
-	   display_name setting instead. */
-	void (* set_my_name)    (struct im_connection *, char *name);
-	void (* set_name)       (struct im_connection *, char *who, char *name);
 
 	/* Group chat stuff. */
 	/* This is called when the user uses the /invite IRC command.
