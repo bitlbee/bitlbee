@@ -874,6 +874,15 @@ const char * json_object_get_name(const JSON_Object *object, size_t index) {
     return object->names[index];
 }
 
+int json_object_get_tuple(const JSON_Object *object, size_t index,
+                          const char **key, const JSON_Value **value) {
+    if (index >= json_object_get_count(object))
+        return 0;
+    *key = object->names[index];
+    *value = object->values[index];
+    return 1;
+}
+
 /* JSON Array API */
 JSON_Value * json_array_get_value(const JSON_Array *array, size_t index) {
     if (index >= json_array_get_count(array))
