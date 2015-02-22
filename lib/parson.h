@@ -52,14 +52,17 @@ enum json_result_t {
     JSONFailure = -1
 };
 typedef int JSON_Status;
-   
+
 /* Parses first JSON value in a file, returns NULL in case of error */
 JSON_Value * json_parse_file(const char *filename);
 
 /* Parses first JSON value in a file and ignores comments (/ * * / and //),
    returns NULL in case of error */
 JSON_Value * json_parse_file_with_comments(const char *filename);
-    
+
+/*  Like json_parse_string, but *end is set to wherever it stopped parsing. */
+JSON_Value * json_parse_first(const char *string, const char **end);
+
 /*  Parses first JSON value in a string, returns NULL in case of error */
 JSON_Value * json_parse_string(const char *string);
 

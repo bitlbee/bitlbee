@@ -768,13 +768,26 @@ JSON_Value * json_parse_file_with_comments(const char *filename) {
     return output_value;
 }
 
-JSON_Value * json_parse_string(const char *string) {
+JSON_Value * json_parse_first(const char *string, const char **end) {
+    const char *pos;
+    JSON_Value *ret;
+
     if (!string)
         return NULL;
     SKIP_WHITESPACES(&string);
     if (*string != '{' && *string != '[')
         return NULL;
-    return parse_value((const char**)&string, 0);
+
+    pos = string;
+    ret = parse_value(&pos, 0);
+    if (end)
+        *end = pos;
+
+    return ret;
+}
+
+JSON_Value * json_parse_string(const char *string) {
+    return json_parse_first(string, NULL);
 }
 
 JSON_Value * json_parse_string_with_comments(const char *string) {
