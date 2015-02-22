@@ -67,14 +67,14 @@ int bee_user_free(bee_t *bee, bee_user_t *bu)
 		bu->ic->acc->prpl->buddy_data_free(bu);
 	}
 
+	bee->users = g_slist_remove(bee->users, bu);
+
 	g_free(bu->handle);
 	g_free(bu->fullname);
 	g_free(bu->nick);
 	g_free(bu->status);
 	g_free(bu->status_msg);
 	g_free(bu);
-
-	bee->users = g_slist_remove(bee->users, bu);
 
 	return 1;
 }

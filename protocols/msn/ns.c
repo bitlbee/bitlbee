@@ -943,10 +943,9 @@ void msn_ns_oim_send_queue(struct im_connection *ic, GSList **msgq)
 	while (*msgq != NULL) {
 		struct msn_message *m = (*msgq)->data;
 
+		*msgq = g_slist_remove(*msgq, m);
 		g_free(m->who);
 		g_free(m->text);
 		g_free(m);
-
-		*msgq = g_slist_remove(*msgq, m);
 	}
 }

@@ -111,10 +111,10 @@ static void msn_logout(struct im_connection *ic)
 
 		while (md->groups) {
 			struct msn_group *mg = md->groups->data;
+			md->groups = g_slist_remove(md->groups, mg);
 			g_free(mg->id);
 			g_free(mg->name);
 			g_free(mg);
-			md->groups = g_slist_remove(md->groups, mg);
 		}
 
 		g_free(md->profile_rid);
@@ -126,10 +126,10 @@ static void msn_logout(struct im_connection *ic)
 
 		while (md->grpq) {
 			struct msn_groupadd *ga = md->grpq->data;
+			md->grpq = g_slist_remove(md->grpq, ga);
 			g_free(ga->group);
 			g_free(ga->who);
 			g_free(ga);
-			md->grpq = g_slist_remove(md->grpq, ga);
 		}
 
 		g_free(md);

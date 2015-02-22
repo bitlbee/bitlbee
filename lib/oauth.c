@@ -106,8 +106,8 @@ void oauth_params_del(GSList **params, const char *key)
 
 		if (strncmp((char *) l->data, key, key_len) == 0 &&
 		    ((char *) l->data)[key_len] == '=') {
-			g_free(l->data);
 			*params = g_slist_remove(*params, l->data);
+			g_free(l->data);
 		}
 	}
 }
