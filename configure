@@ -36,6 +36,7 @@ yahoo="default-on"
 twitter=1
 purple=0
 
+doc=1
 debug=0
 strip=1
 gcov=0
@@ -58,10 +59,10 @@ echo BitlBee configure
 
 # Cygwin and Darwin don't support PIC/PIE
 case "$arch" in
-    CYGWIN* )
-        pie=0;;
-    Darwin )
-        pie=0;;
+	CYGWIN* )
+		pie=0;;
+	Darwin )
+		pie=0;;
 esac
 
 while [ -n "$1" ]; do
@@ -93,6 +94,7 @@ Option		Description				Default
 --purple=0/1	Disable/enable libpurple support	$purple
 		(automatically disables other protocol modules)
 
+--doc=0/1	Disable/enable help.txt generation	$doc
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 --pie=0/1       Build position independent executable   $pie
@@ -646,10 +648,27 @@ if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
 	protocols_mods="$protocol_mods skype(plugin)"
 fi
 
-if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; then
-	echo
-	echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
-	echo 'Install xmlto if you want online help to work.'
+if [ "$doc" = "1" ]; then
+	if [ ! -e doc/user-guide/help.txt ] && \
+	     ! type xmlto > /dev/null 2> /dev/null || \
+	     ! type xsltproc > /dev/null 2> /dev/null
+	then
+		echo
+		echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
+		echo 'Install xmlto and xsltproc if you want online help to work.'
+	else
+		echo "DOC=1" >> Makefile.settings
+	fi
+
+	if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
+		# skype also needs asciidoc
+		if ! type a2x > /dev/null 2> /dev/null; then
+			echo
+			echo 'WARNING: The skyped man page requires asciidoc. It will not be generated.'
+		else
+			echo "ASCIIDOC=1" >> Makefile.settings
+		fi
+	fi
 fi
 
 REAL_BITLBEE_VERSION=`grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/'`
