@@ -449,9 +449,9 @@ detect_resolv_ns_dynamic()
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
 	echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - $LIBRESOLV >/dev/null 2>/dev/null
-        if [ "$?" = "0" ]; then
-                ret=0
-        fi
+	if [ "$?" = "0" ]; then
+		ret=0
+	fi
 
 	rm -f $TMPFILE
 	return $ret
@@ -464,9 +464,9 @@ detect_resolv_ns_static()
 	for i in $systemlibdirs; do
 		if [ -f $i/libresolv.a ]; then
 			echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
-                        if [ "$?" = "0" ]; then
-                                ret=0
-                        fi
+			if [ "$?" = "0" ]; then
+				ret=0
+			fi
 		fi
 	done
 
@@ -476,17 +476,17 @@ detect_resolv_ns_static()
 
 detect_nameser_has_ns_types()
 {
-    TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
-    ret=1
-    # since we aren't actually linking with ns_* routines
-    # we can just compile the test code
-    echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
-    if [ "$?" = "0" ]; then
-        ret=0
-    fi
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
+	ret=1
+	# since we aren't actually linking with ns_* routines
+	# we can just compile the test code
+	echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
+	if [ "$?" = "0" ]; then
+		ret=0
+	fi
 
-    rm -f $TMPFILE
-    return $ret
+	rm -f $TMPFILE
+	return $ret
 }
 
 if [ "$ssl" = "auto" ]; then
@@ -547,11 +547,11 @@ if detect_nameser_has_ns_types; then
 fi
 if detect_resolv_dynamic || detect_resolv_static; then
 	echo '#define HAVE_RESOLV_A' >> config.h
-    if detect_resolv_ns_dynamic || detect_resolv_ns_static; then
-	    echo '#define HAVE_RESOLV_A_WITH_NS' >> config.h
-    fi
+	if detect_resolv_ns_dynamic || detect_resolv_ns_static; then
+		echo '#define HAVE_RESOLV_A_WITH_NS' >> config.h
+	fi
 else
-    echo 'Insufficient resolv routines. Jabber server must be set explicitly'
+	echo 'Insufficient resolv routines. Jabber server must be set explicitly'
 fi
 
 
