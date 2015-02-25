@@ -31,6 +31,7 @@ systemlibdirs="/lib64 /usr/lib64 /usr/local/lib64 /lib /usr/lib /usr/local/lib"
 msn="default-on"
 jabber="default-on"
 oscar="default-on"
+rpc="rpc-on"
 yahoo="default-on"
 
 twitter=1
@@ -92,6 +93,7 @@ Option		Description				Default
 
 --purple=0/1	Disable/enable libpurple support	$purple
 		(automatically disables other protocol modules)
+--rpc=0/1       Disable/enable RPC interface            $rpc
 
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
@@ -792,6 +794,14 @@ else
 	echo '#define WITH_TWITTER' >> config.h
 	protocols=$protocols'twitter '
 	protoobjs=$protoobjs'twitter_mod.o '
+fi
+
+if [ "$rpc" = 0 ]; then
+	echo '#undef WITH_RPC' >> config.h
+else
+	echo '#define WITH_RPC' >> config.h
+	protocols=$protocols'rpc '
+	protoobjs=$protoobjs'rpc_mod.o '
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then
