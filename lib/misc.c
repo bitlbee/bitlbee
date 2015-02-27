@@ -30,10 +30,18 @@
   Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#undef TEST
+
+#ifdef TEST
+#define HAVE_RESOLV_A
+#endif
+
 #define BITLBEE_CORE
 #include "nogaim.h"
 #include "base64.h"
 #include "md5.h"
+#include "misc.h"
+#include "ssl_client.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,13 +49,20 @@
 #include <glib.h>
 #include <time.h>
 
+#include <sys/types.h>
+#include <glib/gprintf.h>
+#include <glib/gutils.h>
+#include <unistd.h>
+
 #ifdef HAVE_RESOLV_A
-#include <arpa/nameser.h>
 #include <resolv.h>
 #endif
 
-#include "md5.h"
-#include "ssl_client.h"
+
+/* Not every installation has gotten around to supporting SRVs yet...*/
+#ifndef T_SRV
+#define T_SRV 33
+#endif
 
 void strip_linefeed(gchar *text)
 {
@@ -472,62 +487,134 @@ int bool2int(char *value)
 	return 0;
 }
 
-struct ns_srv_reply **srv_lookup(char *service, char *protocol, char *domain)
+static int srv_compare( const void *a, const void *b )
 {
-	struct ns_srv_reply **replies = NULL;
+	int prio;
+	const struct ns_srv_reply *sa = *(struct ns_srv_reply **) a;
+	const struct ns_srv_reply *sb = *(struct ns_srv_reply **) b;
 
-#ifdef HAVE_RESOLV_A
+	prio = sa->prio - sb->prio;
+	if( prio == 0 )
+	{
+		/* Place weight 0 entries first. */
+		if( sa->weight == 0 )
+			return -1;
+		if( sb->weight == 0 )
+			return 1;
+	}
+
+	return prio;
+}
+
+struct ns_srv_reply **srv_lookup( char *service, char *protocol, char *domain )
+{
+	struct ns_srv_reply **results = NULL;
 	struct ns_srv_reply *reply = NULL;
 	char name[1024];
-	unsigned char querybuf[1024];
-	const unsigned char *buf;
-	ns_msg nsh;
-	ns_rr rr;
-	int n, len, size;
 
-	g_snprintf(name, sizeof(name), "_%s._%s.%s", service, protocol, domain);
+	/* PACKETSZ is a maximum packet size and
+	   defined in arpa/nameser_compat.h as 512 */
+	unsigned char answer[PACKETSZ];
+	int len;
+	HEADER *header;
+	unsigned char *p;
+	unsigned char *end;
+	unsigned int count;
+	size_t n;
 
-	if ((size = res_query(name, ns_c_in, ns_t_srv, querybuf, sizeof(querybuf))) <= 0) {
-		return NULL;
+	uint16_t type;
+	uint16_t class;
+	uint32_t ttl;
+	uint16_t rdlength;
+
+	g_snprintf( name, sizeof( name ), "_%s._%s.%s", service, protocol, domain );
+
+	len = res_query( name, C_IN, T_SRV, answer, PACKETSZ );
+	if( len == -1 )
+	{
+		goto fail;
 	}
 
-	if (ns_initparse(querybuf, size, &nsh) != 0) {
-		return NULL;
+	header = (HEADER *) answer;
+	p = answer + sizeof( HEADER );
+	end = answer + len;
+
+	if( header->rcode != NOERROR )
+	{
+		goto fail;
 	}
+
+	len = dn_skipname( p, end );
+	if( len == -1 )
+	{
+		goto fail;
+	}
+	p += len + QFIXEDSZ;
+
+	count = ntohs( header->ancount );
 
 	n = 0;
-	while (ns_parserr(&nsh, ns_s_an, n, &rr) == 0) {
-		char name[NS_MAXDNAME];
+	while( count-- > 0 && p < end )
+	{
+		len = dn_skipname( p, end );
+		if( len == -1 )
+		{
+			goto fail;
+		}
+		p += len;
 
-		if (ns_rr_rdlen(rr) < 7) {
-			break;
+		GETSHORT( type, p );
+		GETSHORT( class, p );
+		GETLONG( ttl, p );
+		GETSHORT( rdlength, p );
+
+		if( type != T_SRV || class != C_IN )
+		{
+			p += rdlength;
+			continue;
 		}
 
-		buf = ns_rr_rdata(rr);
+		/* This is an overestimate of the needed size. */
+		reply = g_malloc( sizeof( struct ns_srv_reply ) + rdlength + 1 );
 
-		if (dn_expand(querybuf, querybuf + size, &buf[6], name, NS_MAXDNAME) == -1) {
-			break;
+		GETSHORT( reply->prio, p );
+		GETSHORT( reply->weight, p );
+		GETSHORT( reply->port, p );
+
+		len = dn_expand( answer, end, p, reply->name, rdlength + 1 );
+		if( len == -1 )
+		{
+			g_free( reply );
+			goto fail;
 		}
+		p += len;
 
-		len = strlen(name) + 1;
-
-		reply = g_malloc(sizeof(struct ns_srv_reply) + len);
-		memcpy(reply->name, name, len);
-
-		reply->prio = (buf[0] << 8) | buf[1];
-		reply->weight = (buf[2] << 8) | buf[3];
-		reply->port = (buf[4] << 8) | buf[5];
-
-		n++;
-		replies = g_renew(struct ns_srv_reply *, replies, n + 1);
-		replies[n - 1] = reply;
+		/* n + 2 includes an entry for the terminating NULL. */
+		results = g_renew( struct ns_srv_reply *, results, n + 2 );
+		results[n++] = reply;
 	}
-	if (replies) {
-		replies[n] = NULL;
-	}
-#endif
 
-	return replies;
+	if( results != NULL )
+	{
+		results[n] = NULL;
+
+		/* Order by priority. */
+		qsort( results, n, sizeof( struct ns_srv_reply * ), srv_compare );
+	}
+
+	return results;
+
+fail:
+	if( results )
+	{
+		while( n-- > 0 )
+		{
+			g_free( results[n] );
+		}
+		g_free( results );
+	}
+
+	return NULL;
 }
 
 void srv_free(struct ns_srv_reply **srv)
@@ -755,3 +842,24 @@ int truncate_utf8(char *string, int maxlen)
 	*end = '\0';
 	return end - string;
 }
+
+#ifdef TEST
+int main()
+{
+	struct ns_srv_reply **srv;
+	int i;
+
+	srv = srv_lookup( "xmpp-client", "tcp", "jabber.org" );
+	for( i = 0; srv[i]; ++i )
+	{
+		printf( "priority=%hu\n", srv[i]->prio );
+		printf( "weight=%hu\n", srv[i]->weight );
+		printf( "port=%hu\n", srv[i]->port );
+		printf( "target=%s\n", srv[i]->name );
+		printf( "\n" );
+	}
+	srv_free( srv );
+
+	return 0;
+}
+#endif /* TEST */
