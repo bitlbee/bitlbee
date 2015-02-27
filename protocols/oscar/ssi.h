@@ -46,7 +46,8 @@ struct aim_ssi_item {
 int aim_ssi_reqrights(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_reqalldata(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_enable(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_addmoddel(aim_session_t *sess, aim_conn_t *conn, struct aim_ssi_item **items, unsigned int num, guint16 subtype);
+int aim_ssi_addmoddel(aim_session_t *sess, aim_conn_t *conn, struct aim_ssi_item **items, unsigned int num,
+                      guint16 subtype);
 int aim_ssi_modbegin(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_modend(aim_session_t *sess, aim_conn_t *conn);
 
@@ -57,7 +58,8 @@ struct aim_ssi_item *aim_ssi_itemlist_findparent(struct aim_ssi_item *list, char
 int aim_ssi_getpermdeny(struct aim_ssi_item *list);
 
 /* Send packets */
-int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num, unsigned int flags);
+int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num,
+                       unsigned int flags);
 int aim_ssi_addmastergroup(aim_session_t *sess, aim_conn_t *conn);
 int aim_ssi_addgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num);
 int aim_ssi_addpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned int num, guint16 type);

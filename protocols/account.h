@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2013 Wilmer van der Gaast and others                *
@@ -26,48 +26,45 @@
 #ifndef _ACCOUNT_H
 #define _ACCOUNT_H
 
-typedef struct account
-{
+typedef struct account {
 	struct prpl *prpl;
 	char *user;
 	char *pass;
 	char *server;
 	char *tag;
-	
+
 	int auto_connect;
 	int auto_reconnect_delay;
 	int reconnect;
 	int flags;
-	
+
 	set_t *set;
 	GHashTable *nicks;
-	
+
 	struct bee *bee;
 	struct im_connection *ic;
 	struct account *next;
 } account_t;
 
-account_t *account_add( bee_t *bee, struct prpl *prpl, char *user, char *pass );
-account_t *account_get( bee_t *bee, const char *id );
-account_t *account_by_tag( bee_t *bee, const char *tag );
-void account_del( bee_t *bee, account_t *acc );
-void account_on( bee_t *bee, account_t *a );
-void account_off( bee_t *bee, account_t *a );
+account_t *account_add(bee_t *bee, struct prpl *prpl, char *user, char *pass);
+account_t *account_get(bee_t *bee, const char *id);
+account_t *account_by_tag(bee_t *bee, const char *tag);
+void account_del(bee_t *bee, account_t *acc);
+void account_on(bee_t *bee, account_t *a);
+void account_off(bee_t *bee, account_t *a);
 
-char *set_eval_account( set_t *set, char *value );
-char *set_eval_account_reconnect_delay( set_t *set, char *value );
-int account_reconnect_delay( account_t *a );
+char *set_eval_account(set_t *set, char *value);
+char *set_eval_account_reconnect_delay(set_t *set, char *value);
+int account_reconnect_delay(account_t *a);
 
-int protocol_account_islocal( const char* protocol );
+int protocol_account_islocal(const char* protocol);
 
-typedef enum
-{
+typedef enum {
 	ACC_SET_OFFLINE_ONLY = 0x02,    /* Allow changes only if the acct is offline. */
 	ACC_SET_ONLINE_ONLY = 0x04,     /* Allow changes only if the acct is online. */
 } account_set_flag_t;
 
-typedef enum
-{
+typedef enum {
 	ACC_FLAG_AWAY_MESSAGE = 0x01,   /* Supports away messages instead of just states. */
 	ACC_FLAG_STATUS_MESSAGE = 0x02, /* Supports status messages (without being away). */
 	ACC_FLAG_HANDLE_DOMAINS = 0x04, /* Contact handles need a domain portion. */

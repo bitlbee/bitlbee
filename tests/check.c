@@ -7,11 +7,12 @@
 #include "bitlbee.h"
 #include "testsuite.h"
 
-global_t global;	/* Against global namespace pollution */
+global_t global;        /* Against global namespace pollution */
 
 gboolean g_io_channel_pair(GIOChannel **ch1, GIOChannel **ch2)
 {
 	int sock[2];
+
 	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, sock) < 0) {
 		perror("socketpair");
 		return FALSE;
@@ -26,8 +27,10 @@ irc_t *torture_irc(void)
 {
 	irc_t *irc;
 	GIOChannel *ch1, *ch2;
-	if (!g_io_channel_pair(&ch1, &ch2))
+
+	if (!g_io_channel_pair(&ch1, &ch2)) {
 		return NULL;
+	}
 	irc = irc_new(g_io_channel_unix_get_fd(ch1));
 	return irc;
 }
@@ -36,8 +39,8 @@ double gettime()
 {
 	struct timeval time[1];
 
-	gettimeofday( time, 0 );
-	return( (double) time->tv_sec + (double) time->tv_usec / 1000000 );
+	gettimeofday(time, 0);
+	return((double) time->tv_sec + (double) time->tv_usec / 1000000);
 }
 
 /* From check_util.c */
@@ -70,7 +73,7 @@ Suite *jabber_sasl_suite(void);
 /* From check_jabber_sasl.c */
 Suite *jabber_util_suite(void);
 
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
 	int nf;
 	SRunner *sr;
@@ -78,16 +81,17 @@ int main (int argc, char **argv)
 	gboolean no_fork = FALSE;
 	gboolean verbose = FALSE;
 	GOptionEntry options[] = {
-		{"no-fork", 'n', 0, G_OPTION_ARG_NONE, &no_fork, "Don't fork" },
-		{"verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Be verbose", NULL },
+		{ "no-fork", 'n', 0, G_OPTION_ARG_NONE, &no_fork, "Don't fork" },
+		{ "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Be verbose", NULL },
 		{ NULL }
 	};
 
 	pc = g_option_context_new("");
 	g_option_context_add_main_entries(pc, options, NULL);
 
-	if(!g_option_context_parse(pc, &argc, &argv, NULL))
+	if (!g_option_context_parse(pc, &argc, &argv, NULL)) {
 		return 1;
+	}
 
 	g_option_context_free(pc);
 
@@ -96,15 +100,15 @@ int main (int argc, char **argv)
 	setlocale(LC_CTYPE, "");
 
 	if (verbose) {
-		log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
+		log_link(LOGLVL_ERROR, LOGOUTPUT_CONSOLE);
 #ifdef DEBUG
-		log_link( LOGLVL_DEBUG, LOGOUTPUT_CONSOLE );
+		log_link(LOGLVL_DEBUG, LOGOUTPUT_CONSOLE);
 #endif
-		log_link( LOGLVL_INFO, LOGOUTPUT_CONSOLE );
-		log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
+		log_link(LOGLVL_INFO, LOGOUTPUT_CONSOLE);
+		log_link(LOGLVL_WARNING, LOGOUTPUT_CONSOLE);
 	}
 
-	global.conf = conf_load( 0, NULL);
+	global.conf = conf_load(0, NULL);
 	global.conf->runmode = RUNMODE_DAEMON;
 
 	sr = srunner_create(util_suite());
@@ -117,9 +121,10 @@ int main (int argc, char **argv)
 	srunner_add_suite(sr, set_suite());
 	srunner_add_suite(sr, jabber_sasl_suite());
 	srunner_add_suite(sr, jabber_util_suite());
-	if (no_fork)
+	if (no_fork) {
 		srunner_set_fork_status(sr, CK_NOFORK);
-	srunner_run_all (sr, verbose?CK_VERBOSE:CK_NORMAL);
+	}
+	srunner_run_all(sr, verbose ? CK_VERBOSE : CK_NORMAL);
 	nf = srunner_ntests_failed(sr);
 	srunner_free(sr);
 	return (nf == 0) ? EXIT_SUCCESS : EXIT_FAILURE;

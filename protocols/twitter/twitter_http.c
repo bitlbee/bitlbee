@@ -47,7 +47,7 @@ static char *twitter_url_append(char *url, char *key, char *value);
  * This is actually pretty generic function... Perhaps it should move to the lib/http_client.c
  */
 struct http_request *twitter_http(struct im_connection *ic, char *url_string, http_input_function func,
-		                  gpointer data, int is_post, char **arguments, int arguments_len)
+                                  gpointer data, int is_post, char **arguments, int arguments_len)
 {
 	struct twitter_data *td = ic->proto_data;
 	char *tmp;
@@ -67,7 +67,7 @@ struct http_request *twitter_http(struct im_connection *ic, char *url_string, ht
 			url_arguments = tmp;
 		}
 	}
-	
+
 	if (strstr(url_string, "://")) {
 		base_url = g_new0(url_t, 1);
 		if (!url_set(base_url, url_string)) {
@@ -75,28 +75,29 @@ struct http_request *twitter_http(struct im_connection *ic, char *url_string, ht
 			return NULL;
 		}
 	}
-	
+
 	// Make the request.
 	g_string_printf(request, "%s %s%s%s%s HTTP/1.1\r\n"
-			"Host: %s\r\n"
-			"User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n",
-			is_post ? "POST" : "GET",
-			base_url ? base_url->file : td->url_path,
-			base_url ? "" : url_string,
-			is_post ? "" : "?", is_post ? "" : url_arguments,
-			base_url ? base_url->host : td->url_host);
+	                "Host: %s\r\n"
+	                "User-Agent: BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\r\n",
+	                is_post ? "POST" : "GET",
+	                base_url ? base_url->file : td->url_path,
+	                base_url ? "" : url_string,
+	                is_post ? "" : "?", is_post ? "" : url_arguments,
+	                base_url ? base_url->host : td->url_host);
 
 	// If a pass and user are given we append them to the request.
 	if (td->oauth_info) {
 		char *full_header;
 		char *full_url;
 
-		if (base_url)
+		if (base_url) {
 			full_url = g_strdup(url_string);
-		else
+		} else {
 			full_url = g_strconcat(set_getstr(&ic->acc->set, "base_url"), url_string, NULL);
+		}
 		full_header = oauth_http_header(td->oauth_info, is_post ? "POST" : "GET",
-						full_url, url_arguments);
+		                                full_url, url_arguments);
 
 		g_string_append_printf(request, "Authorization: %s\r\n", full_header);
 		g_free(full_header);
@@ -115,18 +116,20 @@ struct http_request *twitter_http(struct im_connection *ic, char *url_string, ht
 	if (is_post) {
 		// Append the Content-Type and url-encoded arguments.
 		g_string_append_printf(request,
-				       "Content-Type: application/x-www-form-urlencoded\r\n"
-				       "Content-Length: %zd\r\n\r\n%s",
-				       strlen(url_arguments), url_arguments);
+		                       "Content-Type: application/x-www-form-urlencoded\r\n"
+		                       "Content-Length: %zd\r\n\r\n%s",
+		                       strlen(url_arguments), url_arguments);
 	} else {
 		// Append an extra \r\n to end the request...
 		g_string_append(request, "\r\n");
 	}
 
-	if (base_url)
-		ret = http_dorequest(base_url->host, base_url->port, base_url->proto == PROTO_HTTPS, request->str, func, data);
-	else
+	if (base_url) {
+		ret = http_dorequest(base_url->host, base_url->port, base_url->proto == PROTO_HTTPS, request->str, func,
+		                     data);
+	} else {
 		ret = http_dorequest(td->url_host, td->url_port, td->url_ssl, request->str, func, data);
+	}
 
 	g_free(url_arguments);
 	g_string_free(request, TRUE);
@@ -135,26 +138,31 @@ struct http_request *twitter_http(struct im_connection *ic, char *url_string, ht
 }
 
 struct http_request *twitter_http_f(struct im_connection *ic, char *url_string, http_input_function func,
-		                    gpointer data, int is_post, char **arguments, int arguments_len, twitter_http_flags_t flags)
+                                    gpointer data, int is_post, char **arguments, int arguments_len,
+                                    twitter_http_flags_t flags)
 {
 	struct http_request *ret = twitter_http(ic, url_string, func, data, is_post, arguments, arguments_len);
-	if (ret)
+
+	if (ret) {
 		ret->flags |= flags;
+	}
 	return ret;
 }
 
 static char *twitter_url_append(char *url, char *key, char *value)
 {
 	char *key_encoded = g_strndup(key, 3 * strlen(key));
+
 	http_encode(key_encoded);
 	char *value_encoded = g_strndup(value, 3 * strlen(value));
 	http_encode(value_encoded);
 
 	char *retval;
-	if (strlen(url) != 0)
+	if (strlen(url) != 0) {
 		retval = g_strdup_printf("%s&%s=%s", url, key_encoded, value_encoded);
-	else
+	} else {
 		retval = g_strdup_printf("%s=%s", key_encoded, value_encoded);
+	}
 
 	g_free(key_encoded);
 	g_free(value_encoded);

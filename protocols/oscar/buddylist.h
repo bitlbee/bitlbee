@@ -5,7 +5,7 @@
 
 /*
  * SNAC Family: Buddy List Management Services.
- */ 
+ */
 #define AIM_CB_BUD_ERROR 0x0001
 #define AIM_CB_BUD_REQRIGHTS 0x0002
 #define AIM_CB_BUD_RIGHTSINFO 0x0003

@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
@@ -26,170 +26,172 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
-static void query_display( irc_t *irc, query_t *q );
-static query_t *query_default( irc_t *irc );
+static void query_display(irc_t *irc, query_t *q);
+static query_t *query_default(irc_t *irc);
 
-query_t *query_add( irc_t *irc, struct im_connection *ic, char *question,
-                    query_callback yes, query_callback no, query_callback free,
-                    void *data )
+query_t *query_add(irc_t *irc, struct im_connection *ic, char *question,
+                   query_callback yes, query_callback no, query_callback free,
+                   void *data)
 {
-	query_t *q = g_new0( query_t, 1 );
-	
+	query_t *q = g_new0(query_t, 1);
+
 	q->ic = ic;
-	q->question = g_strdup( question );
+	q->question = g_strdup(question);
 	q->yes = yes;
 	q->no = no;
 	q->free = free;
 	q->data = data;
-	
-	if( strchr( irc->umode, 'b' ) != NULL )
-	{
+
+	if (strchr(irc->umode, 'b') != NULL) {
 		char *s;
-		
+
 		/* At least for the machine-parseable version, get rid of
 		   newlines to make "parsing" easier. */
-		for( s = q->question; *s; s ++ )
-			if( *s == '\r' || *s == '\n' )
+		for (s = q->question; *s; s++) {
+			if (*s == '\r' || *s == '\n') {
 				*s = ' ';
+			}
+		}
 	}
-	
-	if( irc->queries )
-	{
+
+	if (irc->queries) {
 		query_t *l = irc->queries;
-		
-		while( l->next ) l = l->next;
+
+		while (l->next) {
+			l = l->next;
+		}
 		l->next = q;
-	}
-	else
-	{
+	} else {
 		irc->queries = q;
 	}
-	
-	if( g_strcasecmp( set_getstr( &irc->b->set, "query_order" ), "lifo" ) == 0 || irc->queries == q )
-		query_display( irc, q );
-	
-	return( q );
+
+	if (g_strcasecmp(set_getstr(&irc->b->set, "query_order"), "lifo") == 0 || irc->queries == q) {
+		query_display(irc, q);
+	}
+
+	return(q);
 }
 
-void query_del( irc_t *irc, query_t *q )
+void query_del(irc_t *irc, query_t *q)
 {
 	query_t *l;
-	
-	if( irc->queries == q )
-	{
+
+	if (irc->queries == q) {
 		irc->queries = q->next;
-	}
-	else
-	{
-		for( l = irc->queries; l; l = l->next )
-		{
-			if( l->next == q )
-			{
+	} else {
+		for (l = irc->queries; l; l = l->next) {
+			if (l->next == q) {
 				l->next = q->next;
 				break;
 			}
 		}
-		
-		if( !l )
+
+		if (!l) {
 			return; /* Hrmmm... */
+		}
 	}
-	
-	g_free( q->question );
-	if( q->free && q->data )
-		q->free( q->data );
-	g_free( q );
+
+	g_free(q->question);
+	if (q->free && q->data) {
+		q->free(q->data);
+	}
+	g_free(q);
 }
 
-void query_del_by_conn( irc_t *irc, struct im_connection *ic )
+void query_del_by_conn(irc_t *irc, struct im_connection *ic)
 {
 	query_t *q, *n, *def;
 	int count = 0;
-	
-	if( !ic )
+
+	if (!ic) {
 		return;
-	
+	}
+
 	q = irc->queries;
-	def = query_default( irc );
-	
-	while( q )
-	{
-		if( q->ic == ic )
-		{
+	def = query_default(irc);
+
+	while (q) {
+		if (q->ic == ic) {
 			n = q->next;
-			query_del( irc, q );
+			query_del(irc, q);
 			q = n;
-			
-			count ++;
-		}
-		else
-		{
+
+			count++;
+		} else {
 			q = q->next;
 		}
 	}
-	
-	if( count > 0 )
-		imcb_log( ic, "Flushed %d unanswered question(s) for this connection.", count );
-	
-	q = query_default( irc );
-	if( q && q != def )
-		query_display( irc, q );
+
+	if (count > 0) {
+		imcb_log(ic, "Flushed %d unanswered question(s) for this connection.", count);
+	}
+
+	q = query_default(irc);
+	if (q && q != def) {
+		query_display(irc, q);
+	}
 }
 
-void query_answer( irc_t *irc, query_t *q, int ans )
+void query_answer(irc_t *irc, query_t *q, int ans)
 {
 	int disp = 0;
-	
-	if( !q )
-	{
-		q = query_default( irc );
+
+	if (!q) {
+		q = query_default(irc);
 		disp = 1;
 	}
-	if( ans )
-	{
-		if( q->ic )
-			imcb_log( q->ic, "Accepted: %s", q->question );
-		else
-			irc_rootmsg( irc, "Accepted: %s", q->question );
-		if( q->yes )
-			q->yes( q->data );
-	}
-	else
-	{
-		if( q->ic )
-			imcb_log( q->ic, "Rejected: %s", q->question );
-		else
-			irc_rootmsg( irc, "Rejected: %s", q->question );
-		if( q->no )
-			q->no( q->data );
+	if (ans) {
+		if (q->ic) {
+			imcb_log(q->ic, "Accepted: %s", q->question);
+		} else {
+			irc_rootmsg(irc, "Accepted: %s", q->question);
+		}
+		if (q->yes) {
+			q->yes(q->data);
+		}
+	} else {
+		if (q->ic) {
+			imcb_log(q->ic, "Rejected: %s", q->question);
+		} else {
+			irc_rootmsg(irc, "Rejected: %s", q->question);
+		}
+		if (q->no) {
+			q->no(q->data);
+		}
 	}
 	q->data = NULL;
-	
-	query_del( irc, q );
-	
-	if( disp && ( q = query_default( irc ) ) )
-		query_display( irc, q );
+
+	query_del(irc, q);
+
+	if (disp && (q = query_default(irc))) {
+		query_display(irc, q);
+	}
 }
 
-static void query_display( irc_t *irc, query_t *q )
+static void query_display(irc_t *irc, query_t *q)
 {
-	if( q->ic )
-	{
-		imcb_log( q->ic, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
-	}
-	else
-	{
-		irc_rootmsg( irc, "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.", q->question );
+	if (q->ic) {
+		imcb_log(q->ic,
+		         "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.",
+		         q->question);
+	} else {
+		irc_rootmsg(irc,
+		            "New request: %s\nYou can use the \2yes\2/\2no\2 commands to accept/reject this request.",
+		            q->question);
 	}
 }
 
-static query_t *query_default( irc_t *irc )
+static query_t *query_default(irc_t *irc)
 {
 	query_t *q;
-	
-	if( g_strcasecmp( set_getstr( &irc->b->set, "query_order" ), "fifo" ) == 0 )
+
+	if (g_strcasecmp(set_getstr(&irc->b->set, "query_order"), "fifo") == 0) {
 		q = irc->queries;
-	else
-		for( q = irc->queries; q && q->next; q = q->next );
-	
-	return( q );
+	} else {
+		for (q = irc->queries; q && q->next; q = q->next) {
+			;
+		}
+	}
+
+	return(q);
 }

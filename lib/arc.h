@@ -24,8 +24,7 @@
 
 /* See arc.c for more information. */
 
-struct arc_state
-{
+struct arc_state {
 	unsigned char S[256];
 	unsigned char i, j;
 };
@@ -34,7 +33,7 @@ struct arc_state
 #define G_GNUC_MALLOC
 #endif
 
-G_GNUC_MALLOC struct arc_state *arc_keymaker( unsigned char *key, int kl, int cycles );
-unsigned char arc_getbyte( struct arc_state *st );
-int arc_encode( char *clear, int clear_len, unsigned char **crypt, char *password, int pad_to );
-int arc_decode( unsigned char *crypt, int crypt_len, char **clear, const char *password );
+G_GNUC_MALLOC struct arc_state *arc_keymaker(unsigned char *key, int kl, int cycles);
+unsigned char arc_getbyte(struct arc_state *st);
+int arc_encode(char *clear, int clear_len, unsigned char **crypt, char *password, int pad_to);
+int arc_decode(unsigned char *crypt, int crypt_len, char **clear, const char *password);

@@ -22,7 +22,7 @@
   Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-/* 
+/*
  * DCC SEND
  *
  * Historically, DCC means send 1024 Bytes and wait for a 4 byte reply
@@ -38,7 +38,7 @@
  * about those DCC ACKs and just send data as you please. This behaviour is
  * enabled by default. Note that this also means that packets may be as large
  * as the maximum segment size.
- */ 
+ */
 
 #ifndef _DCC_H
 #define _DCC_H
@@ -60,13 +60,13 @@ typedef struct dcc_file_transfer {
 	 * taking place.
 	 */
 	int fd;
-	
+
 	/*
 	 * IDs returned by b_input_add for watch_ing over the above socket.
 	 */
 	gint watch_in;   /* readable */
 	gint watch_out;  /* writable */
-	
+
 	/* the progress watcher cancels any file transfer if nothing happens within DCC_MAX_STALL */
 	gint progress_timeout;
 	size_t progress_bytes_last;
@@ -75,31 +75,31 @@ typedef struct dcc_file_transfer {
 	 * The total amount of bytes that have been sent to the irc client.
 	 */
 	size_t bytes_sent;
-	
+
 	/*
 	 * Handle the wonderful sadly-not-deprecated ACKs.
 	 */
 	guint32 acked;
 	int acked_len;
-	
+
 	/* imc's handle */
 	file_transfer_t *ft;
 
 	/* if we're receiving, this is the sender's socket address */
 	struct sockaddr_storage saddr;
 
-	/* set to true if the protocol has finished 
+	/* set to true if the protocol has finished
 	 * (i.e. called imcb_file_finished)
 	 */
 	int proto_finished;
 } dcc_file_transfer_t;
 
-file_transfer_t *dccs_send_start( struct im_connection *ic, irc_user_t *iu, const char *file_name, size_t file_size );
-void dcc_canceled( file_transfer_t *file, char *reason );
-gboolean dccs_send_write( file_transfer_t *file, char *data, unsigned int data_size );
-file_transfer_t *dcc_request( struct im_connection *ic, char* const* ctcp );
-void dcc_finish( file_transfer_t *file );
-void dcc_close( file_transfer_t *file );
-gboolean dccs_recv_start( file_transfer_t *ft );
+file_transfer_t *dccs_send_start(struct im_connection *ic, irc_user_t *iu, const char *file_name, size_t file_size);
+void dcc_canceled(file_transfer_t *file, char *reason);
+gboolean dccs_send_write(file_transfer_t *file, char *data, unsigned int data_size);
+file_transfer_t *dcc_request(struct im_connection *ic, char* const* ctcp);
+void dcc_finish(file_transfer_t *file);
+void dcc_close(file_transfer_t *file);
+gboolean dccs_recv_start(file_transfer_t *ft);
 
 #endif

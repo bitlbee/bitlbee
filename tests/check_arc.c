@@ -20,27 +20,25 @@ char *clear_tests[] =
 static void check_codec(int l)
 {
 	int i;
-	
-	for( i = 0; clear_tests[i]; i++ )
-	{
-  		tcase_fn_start (clear_tests[i], __FILE__, __LINE__);
+
+	for (i = 0; clear_tests[i]; i++) {
+		tcase_fn_start(clear_tests[i], __FILE__, __LINE__);
 		unsigned char *crypted;
 		char *decrypted;
 		int len;
-		
-		len = arc_encode( clear_tests[i], 0, &crypted, password, 12 );
-		len = arc_decode( crypted, len, &decrypted, password );
-		
-		fail_if( strcmp( clear_tests[i], decrypted ) != 0,
-		         "%s didn't decrypt back properly", clear_tests[i] );
-		
-		g_free( crypted );
-		g_free( decrypted );
+
+		len = arc_encode(clear_tests[i], 0, &crypted, password, 12);
+		len = arc_decode(crypted, len, &decrypted, password);
+
+		fail_if(strcmp(clear_tests[i], decrypted) != 0,
+		        "%s didn't decrypt back properly", clear_tests[i]);
+
+		g_free(crypted);
+		g_free(decrypted);
 	}
 }
 
-struct
-{
+struct {
 	unsigned char crypted[30];
 	int len;
 	char *decrypted;
@@ -52,7 +50,7 @@ struct
 			0xb1, 0x31, 0xc9, 0xdb, 0xf9, 0xaa
 		}, 18, "short pass"
 	},
-	
+
 	/* Two blocks with padding. */
 	{
 		{
@@ -77,31 +75,31 @@ struct
 static void check_decod(int l)
 {
 	int i;
-	
-	for( i = 0; decrypt_tests[i].len; i++ )
-	{
-  		tcase_fn_start (decrypt_tests[i].decrypted, __FILE__, __LINE__);
+
+	for (i = 0; decrypt_tests[i].len; i++) {
+		tcase_fn_start(decrypt_tests[i].decrypted, __FILE__, __LINE__);
 		char *decrypted;
 		int len;
-		
-		len = arc_decode( decrypt_tests[i].crypted, decrypt_tests[i].len,
-		                  &decrypted, password );
-		
-		fail_if( len == -1, 
-                 "`%s' didn't decrypt properly", decrypt_tests[i].decrypted );
-		fail_if( strcmp( decrypt_tests[i].decrypted, decrypted ) != 0,
-		         "`%s' didn't decrypt properly", decrypt_tests[i].decrypted );
-		
-		g_free( decrypted );
+
+		len = arc_decode(decrypt_tests[i].crypted, decrypt_tests[i].len,
+		                 &decrypted, password);
+
+		fail_if(len == -1,
+		        "`%s' didn't decrypt properly", decrypt_tests[i].decrypted);
+		fail_if(strcmp(decrypt_tests[i].decrypted, decrypted) != 0,
+		        "`%s' didn't decrypt properly", decrypt_tests[i].decrypted);
+
+		g_free(decrypted);
 	}
 }
 
-Suite *arc_suite (void)
+Suite *arc_suite(void)
 {
 	Suite *s = suite_create("ArcFour");
 	TCase *tc_core = tcase_create("Core");
-	suite_add_tcase (s, tc_core);
-	tcase_add_test (tc_core, check_codec);
-	tcase_add_test (tc_core, check_decod);
+
+	suite_add_tcase(s, tc_core);
+	tcase_add_test(tc_core, check_codec);
+	tcase_add_test(tc_core, check_decod);
 	return s;
 }

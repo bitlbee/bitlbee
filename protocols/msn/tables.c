@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2010 Wilmer van der Gaast and others                *
@@ -39,25 +39,29 @@ const struct msn_away_state msn_away_state_list[] =
 	{ "",    "" }
 };
 
-const struct msn_away_state *msn_away_state_by_code( char *code )
+const struct msn_away_state *msn_away_state_by_code(char *code)
 {
 	int i;
-	
-	for( i = 0; *msn_away_state_list[i].code; i ++ )
-		if( g_strcasecmp( msn_away_state_list[i].code, code ) == 0 )
-			return( msn_away_state_list + i );
-	
+
+	for (i = 0; *msn_away_state_list[i].code; i++) {
+		if (g_strcasecmp(msn_away_state_list[i].code, code) == 0) {
+			return(msn_away_state_list + i);
+		}
+	}
+
 	return NULL;
 }
 
-const struct msn_away_state *msn_away_state_by_name( char *name )
+const struct msn_away_state *msn_away_state_by_name(char *name)
 {
 	int i;
-	
-	for( i = 0; *msn_away_state_list[i].code; i ++ )
-		if( g_strcasecmp( msn_away_state_list[i].name, name ) == 0 )
-			return( msn_away_state_list + i );
-	
+
+	for (i = 0; *msn_away_state_list[i].code; i++) {
+		if (g_strcasecmp(msn_away_state_list[i].name, name) == 0) {
+			return(msn_away_state_list + i);
+		}
+	}
+
 	return NULL;
 }
 
@@ -86,24 +90,24 @@ const struct msn_status_code msn_status_code_list[] =
 	{ 241, "ADL/RML command with invalid modification",             0 },
 	{ 280, "Switchboard failed",                                    STATUS_SB_FATAL },
 	{ 281, "Transfer to switchboard failed",                        0 },
-	
+
 	{ 300, "Required field missing",                                0 },
 	{ 302, "Not logged in",                                         0 },
-	
+
 	{ 500, "Internal server error/Account banned",                  STATUS_FATAL },
 	{ 501, "Database server error",                                 STATUS_FATAL },
 	{ 502, "Command disabled",                                      0 },
 	{ 510, "File operation failed",                                 STATUS_FATAL },
 	{ 520, "Memory allocation failed",                              STATUS_FATAL },
 	{ 540, "Challenge response invalid",                            STATUS_FATAL },
-	
+
 	{ 600, "Server is busy",                                        STATUS_FATAL },
 	{ 601, "Server is unavailable",                                 STATUS_FATAL },
 	{ 602, "Peer nameserver is down",                               STATUS_FATAL },
 	{ 603, "Database connection failed",                            STATUS_FATAL },
 	{ 604, "Server is going down",                                  STATUS_FATAL },
 	{ 605, "Server is unavailable",                                 STATUS_FATAL },
-	
+
 	{ 700, "Could not create connection",                           STATUS_FATAL },
 	{ 710, "Invalid CVR parameters",                                STATUS_FATAL },
 	{ 711, "Write is blocking",                                     STATUS_FATAL },
@@ -113,9 +117,9 @@ const struct msn_status_code msn_status_code_list[] =
 	{ 715, "Not expected/Invalid argument/action",                  0 },
 	{ 717, "Bad friend file",                                       STATUS_FATAL },
 	{ 731, "Not expected/Invalid argument",                         0 },
-	
+
 	{ 800, "Changing too rapidly",                                  0 },
-	
+
 	{ 910, "Server is busy",                                        STATUS_FATAL },
 	{ 911, "Authentication failed",                                 STATUS_SB_FATAL | STATUS_FATAL },
 	{ 912, "Server is busy",                                        STATUS_FATAL },
@@ -134,24 +138,25 @@ const struct msn_status_code msn_status_code_list[] =
 	{  -1, NULL,                                                    0 }
 };
 
-const struct msn_status_code *msn_status_by_number( int number )
+const struct msn_status_code *msn_status_by_number(int number)
 {
 	static struct msn_status_code *unknown = NULL;
 	int i;
-	
-	for( i = 0; msn_status_code_list[i].number >= 0; i ++ )
-		if( msn_status_code_list[i].number == number )
-			return( msn_status_code_list + i );
-	
-	if( unknown == NULL )
-	{
-		unknown = g_new0( struct msn_status_code, 1 );
-		unknown->text = g_new0( char, 128 );
+
+	for (i = 0; msn_status_code_list[i].number >= 0; i++) {
+		if (msn_status_code_list[i].number == number) {
+			return(msn_status_code_list + i);
+		}
 	}
-	
+
+	if (unknown == NULL) {
+		unknown = g_new0(struct msn_status_code, 1);
+		unknown->text = g_new0(char, 128);
+	}
+
 	unknown->number = number;
 	unknown->flags = 0;
-	g_snprintf( unknown->text, 128, "Unknown error (%d)", number );
-	
-	return( unknown );
+	g_snprintf(unknown->text, 128, "Unknown error (%d)", number);
+
+	return(unknown);
 }

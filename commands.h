@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
@@ -28,8 +28,7 @@
 
 #include "bitlbee.h"
 
-typedef struct command
-{
+typedef struct command {
 	char *command;
 	int required_parameters;
 	void (*execute)(irc_t *, char **args);
@@ -38,11 +37,11 @@ typedef struct command
 
 extern command_t root_commands[];
 
-#define IRC_CMD_PRE_LOGIN	1
-#define IRC_CMD_LOGGED_IN	2
-#define IRC_CMD_OPER_ONLY	4
-#define IRC_CMD_TO_MASTER	8
+#define IRC_CMD_PRE_LOGIN       1
+#define IRC_CMD_LOGGED_IN       2
+#define IRC_CMD_OPER_ONLY       4
+#define IRC_CMD_TO_MASTER       8
 
-#define IPC_CMD_TO_CHILDREN	1
+#define IPC_CMD_TO_CHILDREN     1
 
 #endif

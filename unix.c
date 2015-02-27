@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2012 Wilmer van der Gaast and others                *
@@ -45,250 +45,233 @@
 #include "otr.h"
 #endif
 
-global_t global;	/* Against global namespace pollution */
+global_t global;        /* Against global namespace pollution */
 
 static int signal_shutdown_pipe[2] = { -1, -1 };
-static void sighandler_shutdown( int signal );
-static void sighandler_crash( int signal );
+static void sighandler_shutdown(int signal);
+static void sighandler_crash(int signal);
 
-static int crypt_main( int argc, char *argv[] );
+static int crypt_main(int argc, char *argv[]);
 
-int main( int argc, char *argv[] )
+int main(int argc, char *argv[])
 {
 	int i = 0;
 	char *old_cwd = NULL;
 	struct sigaction sig, old;
-	
+
 	/* Required to make iconv to ASCII//TRANSLIT work. This makes BitlBee
 	   system-locale-sensitive. :-( */
-	setlocale( LC_CTYPE, "" );
-	
-	if( argc > 1 && strcmp( argv[1], "-x" ) == 0 )
-		return crypt_main( argc, argv );
-	
+	setlocale(LC_CTYPE, "");
+
+	if (argc > 1 && strcmp(argv[1], "-x") == 0) {
+		return crypt_main(argc, argv);
+	}
+
 	log_init();
-	
-	global.conf_file = g_strdup( CONF_FILE_DEF );
-	global.conf = conf_load( argc, argv );
-	if( global.conf == NULL )
-		return( 1 );
-	
+
+	global.conf_file = g_strdup(CONF_FILE_DEF);
+	global.conf = conf_load(argc, argv);
+	if (global.conf == NULL) {
+		return(1);
+	}
+
 	b_main_init();
-	
+
 	/* libpurple doesn't like fork()s after initializing itself, so if
 	   we use it, do this init a little later (in case we're running in
 	   ForkDaemon mode). */
 #ifndef WITH_PURPLE
 	nogaim_init();
 #endif
-	
+
 #ifdef OTR_BI
- 	otr_init();
+	otr_init();
 #endif
-	
-	global.helpfile = g_strdup( HELP_FILE );
-	if( help_init( &global.help, global.helpfile ) == NULL )
-		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 
-	global.storage = storage_init( global.conf->primary_storage, global.conf->migrate_storage );
-	if( global.storage == NULL )
-	{
-		log_message( LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage );
-		return( 1 );
+	global.helpfile = g_strdup(HELP_FILE);
+	if (help_init(&global.help, global.helpfile) == NULL) {
+		log_message(LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE);
 	}
-	
-	if( global.conf->runmode == RUNMODE_INETD )
-	{
-		log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
-		log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
-	
+
+	global.storage = storage_init(global.conf->primary_storage, global.conf->migrate_storage);
+	if (global.storage == NULL) {
+		log_message(LOGLVL_ERROR, "Unable to load storage backend '%s'", global.conf->primary_storage);
+		return(1);
+	}
+
+	if (global.conf->runmode == RUNMODE_INETD) {
+		log_link(LOGLVL_ERROR, LOGOUTPUT_IRC);
+		log_link(LOGLVL_WARNING, LOGOUTPUT_IRC);
+
 		i = bitlbee_inetd_init();
-		log_message( LOGLVL_INFO, "%s %s starting in inetd mode.", PACKAGE, BITLBEE_VERSION );
+		log_message(LOGLVL_INFO, "%s %s starting in inetd mode.", PACKAGE, BITLBEE_VERSION);
 
-	}
-	else if( global.conf->runmode == RUNMODE_DAEMON )
-	{
-		log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
-		log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
+	} else if (global.conf->runmode == RUNMODE_DAEMON) {
+		log_link(LOGLVL_ERROR, LOGOUTPUT_CONSOLE);
+		log_link(LOGLVL_WARNING, LOGOUTPUT_CONSOLE);
 
 		i = bitlbee_daemon_init();
-		log_message( LOGLVL_INFO, "%s %s starting in daemon mode.", PACKAGE, BITLBEE_VERSION );
-	}
-	else if( global.conf->runmode == RUNMODE_FORKDAEMON )
-	{
-		log_link( LOGLVL_ERROR, LOGOUTPUT_CONSOLE );
-		log_link( LOGLVL_WARNING, LOGOUTPUT_CONSOLE );
+		log_message(LOGLVL_INFO, "%s %s starting in daemon mode.", PACKAGE, BITLBEE_VERSION);
+	} else if (global.conf->runmode == RUNMODE_FORKDAEMON) {
+		log_link(LOGLVL_ERROR, LOGOUTPUT_CONSOLE);
+		log_link(LOGLVL_WARNING, LOGOUTPUT_CONSOLE);
 
 		/* In case the operator requests a restart, we need this. */
-		old_cwd = g_malloc( 256 );
-		if( getcwd( old_cwd, 255 ) == NULL )
-		{
-			log_message( LOGLVL_WARNING, "Could not save current directory: %s", strerror( errno ) );
-			g_free( old_cwd );
+		old_cwd = g_malloc(256);
+		if (getcwd(old_cwd, 255) == NULL) {
+			log_message(LOGLVL_WARNING, "Could not save current directory: %s", strerror(errno));
+			g_free(old_cwd);
 			old_cwd = NULL;
 		}
-		
+
 		i = bitlbee_daemon_init();
-		log_message( LOGLVL_INFO, "%s %s starting in forking daemon mode.", PACKAGE, BITLBEE_VERSION );
+		log_message(LOGLVL_INFO, "%s %s starting in forking daemon mode.", PACKAGE, BITLBEE_VERSION);
 	}
-	if( i != 0 )
-		return( i );
-	
-	if( ( global.conf->user && *global.conf->user ) &&
-	    ( global.conf->runmode == RUNMODE_DAEMON || 
-	      global.conf->runmode == RUNMODE_FORKDAEMON ) &&
-	    ( !getuid() || !geteuid() ) )
-	{
+	if (i != 0) {
+		return(i);
+	}
+
+	if ((global.conf->user && *global.conf->user) &&
+	    (global.conf->runmode == RUNMODE_DAEMON ||
+	     global.conf->runmode == RUNMODE_FORKDAEMON) &&
+	    (!getuid() || !geteuid())) {
 		struct passwd *pw = NULL;
-		pw = getpwnam( global.conf->user );
-		if( pw )
-		{
-			initgroups( global.conf->user, pw->pw_gid );
-			setgid( pw->pw_gid );
-			setuid( pw->pw_uid );
-		}
-		else
-		{
-			log_message( LOGLVL_WARNING, "Failed to look up user %s.", global.conf->user );
+		pw = getpwnam(global.conf->user);
+		if (pw) {
+			initgroups(global.conf->user, pw->pw_gid);
+			setgid(pw->pw_gid);
+			setuid(pw->pw_uid);
+		} else {
+			log_message(LOGLVL_WARNING, "Failed to look up user %s.", global.conf->user);
 		}
 	}
- 	
+
 	/* Catch some signals to tell the user what's happening before quitting */
-	memset( &sig, 0, sizeof( sig ) );
+	memset(&sig, 0, sizeof(sig));
 	sig.sa_handler = SIG_IGN;
-	sigaction( SIGCHLD, &sig, &old );
-	sigaction( SIGPIPE, &sig, &old );
+	sigaction(SIGCHLD, &sig, &old);
+	sigaction(SIGPIPE, &sig, &old);
 	sig.sa_flags = SA_RESETHAND;
 	sig.sa_handler = sighandler_crash;
-	sigaction( SIGSEGV, &sig, &old );
+	sigaction(SIGSEGV, &sig, &old);
 
 	/* Use a pipe for SIGTERM/SIGINT so the actual signal handler doesn't do anything unsafe */
-	if ( pipe( signal_shutdown_pipe ) == 0 ) {
-		b_input_add( signal_shutdown_pipe[0], B_EV_IO_READ, bitlbee_shutdown, NULL );
+	if (pipe(signal_shutdown_pipe) == 0) {
+		b_input_add(signal_shutdown_pipe[0], B_EV_IO_READ, bitlbee_shutdown, NULL);
 		sig.sa_handler = sighandler_shutdown;
-		sigaction( SIGINT, &sig, &old );
-		sigaction( SIGTERM, &sig, &old );
+		sigaction(SIGINT, &sig, &old);
+		sigaction(SIGTERM, &sig, &old);
 	}
-	
-	if( !getuid() || !geteuid() )
-		log_message( LOGLVL_WARNING, "BitlBee is running with root privileges. Why?" );
-	
+
+	if (!getuid() || !geteuid()) {
+		log_message(LOGLVL_WARNING, "BitlBee is running with root privileges. Why?");
+	}
+
 	b_main_run();
-	
+
 	/* Mainly good for restarting, to make sure we close the help.txt fd. */
-	help_free( &global.help );
-	
-	if( global.restart )
-	{
+	help_free(&global.help);
+
+	if (global.restart) {
 		char *fn = ipc_master_save_state();
 		char *env;
-		
-		env = g_strdup_printf( "_BITLBEE_RESTART_STATE=%s", fn );
-		putenv( env );
-		g_free( fn );
+
+		env = g_strdup_printf("_BITLBEE_RESTART_STATE=%s", fn);
+		putenv(env);
+		g_free(fn);
 		/* Looks like env should *not* be freed here as putenv
 		   doesn't make a copy. Odd. */
-		
-		i = chdir( old_cwd );
-		close( global.listen_socket );
-		
-		if( execv( argv[0], argv ) == -1 )
+
+		i = chdir(old_cwd);
+		close(global.listen_socket);
+
+		if (execv(argv[0], argv) == -1) {
 			/* Apparently the execve() failed, so let's just
 			   jump back into our own/current main(). */
 			/* Need more cleanup code to make this work. */
 			return 1; /* main( argc, argv ); */
+		}
 	}
-	
-	return( 0 );
+
+	return(0);
 }
 
-static int crypt_main( int argc, char *argv[] )
+static int crypt_main(int argc, char *argv[])
 {
 	int pass_len;
 	unsigned char *pass_cr, *pass_cl;
-	
-	if( argc < 4 || ( strcmp( argv[2], "hash" ) != 0 &&
-	                  strcmp( argv[2], "unhash" ) != 0 && argc < 5 ) )
-	{
-		printf( "Supported:\n"
-		        "  %s -x enc <key> <cleartext password>\n"
-		        "  %s -x dec <key> <encrypted password>\n"
-		        "  %s -x hash <cleartext password>\n"
-		        "  %s -x unhash <hashed password>\n"
-		        "  %s -x chkhash <hashed password> <cleartext password>\n",
-		        argv[0], argv[0], argv[0], argv[0], argv[0] );
-	}
-	else if( strcmp( argv[2], "enc" ) == 0 )
-	{
-		pass_len = arc_encode( argv[4], strlen( argv[4] ), (unsigned char**) &pass_cr, argv[3], 12 );
-		printf( "%s\n", base64_encode( pass_cr, pass_len ) );
-	}
-	else if( strcmp( argv[2], "dec" ) == 0 )
-	{
-		pass_len = base64_decode( argv[4], (unsigned char**) &pass_cr );
-		arc_decode( pass_cr, pass_len, (char**) &pass_cl, argv[3] );
-		printf( "%s\n", pass_cl );
-	}
-	else if( strcmp( argv[2], "hash" ) == 0 )
-	{
+
+	if (argc < 4 || (strcmp(argv[2], "hash") != 0 &&
+	                 strcmp(argv[2], "unhash") != 0 && argc < 5)) {
+		printf("Supported:\n"
+		       "  %s -x enc <key> <cleartext password>\n"
+		       "  %s -x dec <key> <encrypted password>\n"
+		       "  %s -x hash <cleartext password>\n"
+		       "  %s -x unhash <hashed password>\n"
+		       "  %s -x chkhash <hashed password> <cleartext password>\n",
+		       argv[0], argv[0], argv[0], argv[0], argv[0]);
+	} else if (strcmp(argv[2], "enc") == 0) {
+		pass_len = arc_encode(argv[4], strlen(argv[4]), (unsigned char **) &pass_cr, argv[3], 12);
+		printf("%s\n", base64_encode(pass_cr, pass_len));
+	} else if (strcmp(argv[2], "dec") == 0) {
+		pass_len = base64_decode(argv[4], (unsigned char **) &pass_cr);
+		arc_decode(pass_cr, pass_len, (char **) &pass_cl, argv[3]);
+		printf("%s\n", pass_cl);
+	} else if (strcmp(argv[2], "hash") == 0) {
 		md5_byte_t pass_md5[21];
 		md5_state_t md5_state;
-		
-		random_bytes( pass_md5 + 16, 5 );
-		md5_init( &md5_state );
-		md5_append( &md5_state, (md5_byte_t*) argv[3], strlen( argv[3] ) );
-		md5_append( &md5_state, pass_md5 + 16, 5 ); /* Add the salt. */
-		md5_finish( &md5_state, pass_md5 );
-		
-		printf( "%s\n", base64_encode( pass_md5, 21 ) );
-	}
-	else if( strcmp( argv[2], "unhash" ) == 0 )
-	{
-		printf( "Hash %s submitted to a massive Beowulf cluster of\n"
-		        "overclocked 486s. Expect your answer next year somewhere around this time. :-)\n", argv[3] );
-	}
-	else if( strcmp( argv[2], "chkhash" ) == 0 )
-	{
-		char *hash = strncmp( argv[3], "md5:", 4 ) == 0 ? argv[3] + 4 : argv[3];
-		int st = md5_verify_password( argv[4], hash );
-		
-		printf( "Hash %s given password.\n", st == 0 ? "matches" : "does not match" );
-		
+
+		random_bytes(pass_md5 + 16, 5);
+		md5_init(&md5_state);
+		md5_append(&md5_state, (md5_byte_t *) argv[3], strlen(argv[3]));
+		md5_append(&md5_state, pass_md5 + 16, 5);   /* Add the salt. */
+		md5_finish(&md5_state, pass_md5);
+
+		printf("%s\n", base64_encode(pass_md5, 21));
+	} else if (strcmp(argv[2], "unhash") == 0) {
+		printf("Hash %s submitted to a massive Beowulf cluster of\n"
+		       "overclocked 486s. Expect your answer next year somewhere around this time. :-)\n", argv[3]);
+	} else if (strcmp(argv[2], "chkhash") == 0) {
+		char *hash = strncmp(argv[3], "md5:", 4) == 0 ? argv[3] + 4 : argv[3];
+		int st = md5_verify_password(argv[4], hash);
+
+		printf("Hash %s given password.\n", st == 0 ? "matches" : "does not match");
+
 		return st;
 	}
-	
+
 	return 0;
 }
 
 /* Signal handler for SIGTERM and SIGINT */
-static void sighandler_shutdown( int signal )
+static void sighandler_shutdown(int signal)
 {
 	/* Write a single null byte to the pipe, just to send a message to the main loop.
 	 * This gets handled by bitlbee_shutdown (the b_input_add callback for this pipe) */
-	write( signal_shutdown_pipe[1], "", 1 );
+	write(signal_shutdown_pipe[1], "", 1);
 }
 
 /* Signal handler for SIGSEGV
  * A desperate attempt to tell the user that everything is wrong in the world.
  * Avoids using irc_abort() because it has several unsafe calls to malloc */
-static void sighandler_crash( int signal )
+static void sighandler_crash(int signal)
 {
 	GSList *l;
 	const char *message = "ERROR :BitlBee crashed! (SIGSEGV received)\r\n";
 	int len = strlen(message);
 
-	for (l = irc_connection_list; l; l = l->next ) {
+	for (l = irc_connection_list; l; l = l->next) {
 		irc_t *irc = l->data;
-		write( irc->fd, message, len );
+		write(irc->fd, message, len);
 	}
 
-	raise( signal );
+	raise(signal);
 }
 
 double gettime()
 {
 	struct timeval time[1];
 
-	gettimeofday( time, 0 );
-	return( (double) time->tv_sec + (double) time->tv_usec / 1000000 );
+	gettimeofday(time, 0);
+	return((double) time->tv_sec + (double) time->tv_usec / 1000000);
 }

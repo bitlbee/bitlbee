@@ -6,7 +6,7 @@
  *
  */
 
-#include <aim.h> 
+#include <aim.h>
 #include "sock.h"
 
 static int aim_logoff(aim_session_t *sess);
@@ -14,17 +14,17 @@ static int aim_logoff(aim_session_t *sess);
 /*
  * In OSCAR, every connection has a set of SNAC groups associated
  * with it.  These are the groups that you can send over this connection
- * without being guarenteed a "Not supported" SNAC error.  
+ * without being guarenteed a "Not supported" SNAC error.
  *
- * The grand theory of things says that these associations transcend 
+ * The grand theory of things says that these associations transcend
  * what libfaim calls "connection types" (conn->type).  You can probably
- * see the elegance here, but since I want to revel in it for a bit, you 
+ * see the elegance here, but since I want to revel in it for a bit, you
  * get to hear it all spelled out.
  *
  * So let us say that you have your core BOS connection running.  One
  * of your modules has just given you a SNAC of the group 0x0004 to send
  * you.  Maybe an IM destined for some twit in Greenland.  So you start
- * at the top of your connection list, looking for a connection that 
+ * at the top of your connection list, looking for a connection that
  * claims to support group 0x0004.  You find one.  Why, that neat BOS
  * connection of yours can do that.  So you send it on its way.
  *
@@ -42,8 +42,8 @@ static int aim_logoff(aim_session_t *sess);
  * it.  Great, you say.  Now I have something to do.  Off you go, making
  * that connection.  One of the first things you get from this new server
  * is a message saying that indeed it does support the group you were looking
- * for.  So you continue and send rate confirmation and all that.  
- * 
+ * for.  So you continue and send rate confirmation and all that.
+ *
  * Then you remember you had that SNAC to send, and now you have a means to
  * do it, and you do, and everyone is happy.  Except the Greenlander, who is
  * still stuck in the bitter cold.
@@ -56,7 +56,7 @@ static int aim_logoff(aim_session_t *sess);
  * scheme for quite some time now.  But I still haven't convinced myself
  * to make libfaim work that way.  It would take a fair amount of effort,
  * and probably some client API changes as well.  (Whenever I don't want
- * to do something, I just say it would change the client API.  Then I 
+ * to do something, I just say it would change the client API.  Then I
  * instantly have a couple of supporters of not doing it.)
  *
  * Generally, addgroup is only called by the internal handling of the
@@ -68,11 +68,12 @@ static int aim_logoff(aim_session_t *sess);
  */
 void aim_conn_addgroup(aim_conn_t *conn, guint16 group)
 {
-	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
+	aim_conn_inside_t *ins = (aim_conn_inside_t *) conn->inside;
 	struct snacgroup *sg;
 
-	if (!(sg = g_malloc(sizeof(struct snacgroup))))
+	if (!(sg = g_malloc(sizeof(struct snacgroup)))) {
 		return;
+	}
 
 	sg->group = group;
 
@@ -87,12 +88,13 @@ aim_conn_t *aim_conn_findbygroup(aim_session_t *sess, guint16 group)
 	aim_conn_t *cur;
 
 	for (cur = sess->connlist; cur; cur = cur->next) {
-		aim_conn_inside_t *ins = (aim_conn_inside_t *)cur->inside;
+		aim_conn_inside_t *ins = (aim_conn_inside_t *) cur->inside;
 		struct snacgroup *sg;
 
 		for (sg = ins->groups; sg; sg = sg->next) {
-			if (sg->group == group)
+			if (sg->group == group) {
 				return cur;
+			}
 		}
 	}
 
@@ -149,25 +151,28 @@ static void connkill_real(aim_session_t *sess, aim_conn_t **deadconn)
 	aim_rxqueue_cleanbyconn(sess, *deadconn);
 	aim_tx_cleanqueue(sess, *deadconn);
 
-	if ((*deadconn)->fd != -1) 
+	if ((*deadconn)->fd != -1) {
 		aim_conn_close(*deadconn);
+	}
 
 	/*
 	 * XXX ->priv should never be touched by the library. I know
 	 * it used to be, but I'm getting rid of all that.  Use
 	 * ->internal instead.
 	 */
-	if ((*deadconn)->priv)
+	if ((*deadconn)->priv) {
 		g_free((*deadconn)->priv);
+	}
 
 	/*
 	 * This will free ->internal if it necessary...
 	 */
-	if ((*deadconn)->type == AIM_CONN_TYPE_CHAT)
+	if ((*deadconn)->type == AIM_CONN_TYPE_CHAT) {
 		aim_conn_kill_chat(sess, *deadconn);
+	}
 
 	if ((*deadconn)->inside) {
-		aim_conn_inside_t *inside = (aim_conn_inside_t *)(*deadconn)->inside;
+		aim_conn_inside_t *inside = (aim_conn_inside_t *) (*deadconn)->inside;
 
 		connkill_snacgroups(&inside->groups);
 		connkill_rates(&inside->rates);
@@ -217,8 +222,9 @@ static void aim_connrst(aim_session_t *sess)
 static void aim_conn_init(aim_conn_t *deadconn)
 {
 
-	if (!deadconn)
+	if (!deadconn) {
 		return;
+	}
 
 	deadconn->fd = -1;
 	deadconn->subtype = -1;
@@ -244,10 +250,11 @@ static aim_conn_t *aim_conn_getnext(aim_session_t *sess)
 {
 	aim_conn_t *newconn;
 
-	if (!(newconn = g_new0(aim_conn_t,1))) 	
+	if (!(newconn = g_new0(aim_conn_t, 1))) {
 		return NULL;
+	}
 
-	if (!(newconn->inside = g_new0(aim_conn_inside_t,1))) {
+	if (!(newconn->inside = g_new0(aim_conn_inside_t, 1))) {
 		g_free(newconn);
 		return NULL;
 	}
@@ -273,8 +280,9 @@ void aim_conn_kill(aim_session_t *sess, aim_conn_t **deadconn)
 {
 	aim_conn_t *cur, **prev;
 
-	if (!deadconn || !*deadconn)	
+	if (!deadconn || !*deadconn) {
 		return;
+	}
 
 	for (prev = &sess->connlist; (cur = *prev); ) {
 		if (cur == *deadconn) {
@@ -284,9 +292,10 @@ void aim_conn_kill(aim_session_t *sess, aim_conn_t **deadconn)
 		prev = &cur->next;
 	}
 
-	if (!cur)
+	if (!cur) {
 		return; /* oops */
 
+	}
 	connkill_real(sess, &cur);
 
 	return;
@@ -298,7 +307,7 @@ void aim_conn_kill(aim_session_t *sess, aim_conn_t **deadconn)
  *
  * Close (but not free) a connection.
  *
- * This leaves everything untouched except for clearing the 
+ * This leaves everything untouched except for clearing the
  * handler list and setting the fd to -1 (used to recognize
  * dead connections).  It will also remove cookies if necessary.
  *
@@ -306,11 +315,13 @@ void aim_conn_kill(aim_session_t *sess, aim_conn_t **deadconn)
 void aim_conn_close(aim_conn_t *deadconn)
 {
 
-	if (deadconn->fd >= 3)
+	if (deadconn->fd >= 3) {
 		closesocket(deadconn->fd);
+	}
 	deadconn->fd = -1;
-	if (deadconn->handlerlist)
+	if (deadconn->handlerlist) {
 		aim_clearhandlers(deadconn);
+	}
 
 	return;
 }
@@ -320,7 +331,7 @@ void aim_conn_close(aim_conn_t *deadconn)
  * @sess: Session to search
  * @type: Type of connection to look for
  *
- * Searches for a connection of the specified type in the 
+ * Searches for a connection of the specified type in the
  * specified session.  Returns the first connection of that
  * type found.
  *
@@ -332,9 +343,10 @@ aim_conn_t *aim_getconn_type(aim_session_t *sess, int type)
 	aim_conn_t *cur;
 
 	for (cur = sess->connlist; cur; cur = cur->next) {
-		if ((cur->type == type) && 
-				!(cur->status & AIM_CONN_STATUS_INPROGRESS))
+		if ((cur->type == type) &&
+		    !(cur->status & AIM_CONN_STATUS_INPROGRESS)) {
 			break;
+		}
 	}
 
 	return cur;
@@ -345,8 +357,9 @@ aim_conn_t *aim_getconn_type_all(aim_session_t *sess, int type)
 	aim_conn_t *cur;
 
 	for (cur = sess->connlist; cur; cur = cur->next) {
-		if (cur->type == type)
+		if (cur->type == type) {
 			break;
+		}
 	}
 
 	return cur;
@@ -360,7 +373,7 @@ aim_conn_t *aim_getconn_type_all(aim_session_t *sess, int type)
  *
  * Opens a new connection to the specified dest host of specified
  * type, using the proxy settings if available.  If @host is %NULL,
- * the connection is allocated and returned, but no connection 
+ * the connection is allocated and returned, but no connection
  * is made.
  *
  * FIXME: Return errors in a more sane way.
@@ -373,10 +386,11 @@ aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *dest)
 	char *host;
 	int i;
 
-	if (!(connstruct = aim_conn_getnext(sess)))
+	if (!(connstruct = aim_conn_getnext(sess))) {
 		return NULL;
+	}
 
-	connstruct->sessv = (void *)sess;
+	connstruct->sessv = (void *) sess;
 	connstruct->type = type;
 
 	if (!dest) { /* just allocate a struct */
@@ -385,23 +399,23 @@ aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *dest)
 		return connstruct;
 	}
 
-	/* 
-	 * As of 23 Jul 1999, AOL now sends the port number, preceded by a 
-	 * colon, in the BOS redirect.  This fatally breaks all previous 
+	/*
+	 * As of 23 Jul 1999, AOL now sends the port number, preceded by a
+	 * colon, in the BOS redirect.  This fatally breaks all previous
 	 * libfaims.  Bad, bad AOL.
 	 *
-	 * We put this here to catch every case. 
+	 * We put this here to catch every case.
 	 *
 	 */
 
-	for(i = 0; i < (int)strlen(dest); i++) {
+	for (i = 0; i < (int) strlen(dest); i++) {
 		if (dest[i] == ':') {
-			port = atoi(&(dest[i+1]));
+			port = atoi(&(dest[i + 1]));
 			break;
 		}
 	}
 
-	host = (char *)g_malloc(i+1);
+	host = (char *) g_malloc(i + 1);
 	strncpy(host, dest, i);
 	host[i] = '\0';
 
@@ -420,7 +434,7 @@ aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *dest)
  * Causes @newval seconds to be spent between transmits on a connection.
  *
  * This is my lame attempt at overcoming not understanding the rate
- * limiting. 
+ * limiting.
  *
  * XXX: This should really be replaced with something that scales and
  * backs off like the real rate limiting does.
@@ -429,8 +443,9 @@ aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *dest)
 int aim_conn_setlatency(aim_conn_t *conn, int newval)
 {
 
-	if (!conn)
+	if (!conn) {
 		return -1;
+	}
 
 	conn->forcedlatency = newval;
 	conn->lastactivity = 0; /* reset this just to make sure */
@@ -450,8 +465,9 @@ int aim_conn_setlatency(aim_conn_t *conn, int newval)
 void aim_session_init(aim_session_t *sess, guint32 flags, int debuglevel)
 {
 
-	if (!sess)
+	if (!sess) {
 		return;
+	}
 
 	memset(sess, 0, sizeof(aim_session_t));
 	aim_connrst(sess);
@@ -470,7 +486,7 @@ void aim_session_init(aim_session_t *sess, guint32 flags, int debuglevel)
 	sess->ssi.holding_queue = NULL;
 	sess->ssi.revision = 0;
 	sess->ssi.items = NULL;
-	sess->ssi.timestamp = (time_t)0;
+	sess->ssi.timestamp = (time_t) 0;
 
 	sess->locate.userinfo = NULL;
 	sess->locate.torequest = NULL;
@@ -486,13 +502,14 @@ void aim_session_init(aim_session_t *sess, guint32 flags, int debuglevel)
 	/*
 	 * Default to SNAC login unless XORLOGIN is explicitly set.
 	 */
-	if (!(flags & AIM_SESS_FLAGS_XORLOGIN))
+	if (!(flags & AIM_SESS_FLAGS_XORLOGIN)) {
 		sess->flags |= AIM_SESS_FLAGS_SNACLOGIN;
+	}
 	sess->flags |= flags;
 
 	/*
 	 * This must always be set.  Default to the queue-based
-	 * version for back-compatibility.  
+	 * version for back-compatibility.
 	 */
 	aim_tx_setenqueue(sess, AIM_TX_QUEUED, NULL);
 
@@ -547,11 +564,13 @@ int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 	int res, error = ETIMEDOUT;
 	aim_rxcallback_t userfunc;
 
-	if (!conn || (conn->fd == -1))
+	if (!conn || (conn->fd == -1)) {
 		return -1;
+	}
 
-	if (!(conn->status & AIM_CONN_STATUS_INPROGRESS))
+	if (!(conn->status & AIM_CONN_STATUS_INPROGRESS)) {
 		return -1;
+	}
 
 	FD_ZERO(&fds);
 	FD_SET(conn->fd, &fds);
@@ -560,20 +579,21 @@ int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 	tv.tv_sec = 0;
 	tv.tv_usec = 0;
 
-	if ((res = select(conn->fd+1, &fds, &wfds, NULL, &tv)) == -1) {
+	if ((res = select(conn->fd + 1, &fds, &wfds, NULL, &tv)) == -1) {
 		error = errno;
 		aim_conn_close(conn);
 		errno = error;
 		return -1;
 	} else if (res == 0) {
 		return 0; /* hasn't really completed yet... */
-	} 
+	}
 
 	if (FD_ISSET(conn->fd, &fds) || FD_ISSET(conn->fd, &wfds)) {
 		socklen_t len = sizeof(error);
 
-		if (getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0)
+		if (getsockopt(conn->fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
 			error = errno;
+		}
 	}
 
 	if (error) {
@@ -586,8 +606,9 @@ int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 
 	conn->status &= ~AIM_CONN_STATUS_INPROGRESS;
 
-	if ((userfunc = aim_callhandler(sess, conn, AIM_CB_FAM_SPECIAL, AIM_CB_SPECIAL_CONNCOMPLETE)))
+	if ((userfunc = aim_callhandler(sess, conn, AIM_CB_FAM_SPECIAL, AIM_CB_SPECIAL_CONNCOMPLETE))) {
 		userfunc(sess, NULL, conn);
+	}
 
 	/* Flush out the queues if there was something waiting for this conn  */
 	aim_tx_flushqueue(sess);
@@ -598,10 +619,11 @@ int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 aim_session_t *aim_conn_getsess(aim_conn_t *conn)
 {
 
-	if (!conn)
+	if (!conn) {
 		return NULL;
+	}
 
-	return (aim_session_t *)conn->sessv;
+	return (aim_session_t *) conn->sessv;
 }
 
 /*
@@ -623,14 +645,15 @@ static int aim_logoff(aim_session_t *sess)
  * aim_flap_nop()
  *
  * No-op.  WinAIM 4.x sends these _every minute_ to keep
- * the connection alive.  
+ * the connection alive.
  */
 int aim_flap_nop(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_frame_t *fr;
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x05, 0)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x05, 0))) {
 		return -ENOMEM;
+	}
 
 	aim_tx_enqueue(sess, fr);
 

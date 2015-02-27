@@ -36,6 +36,7 @@ yahoo="default-on"
 twitter=1
 purple=0
 
+doc=1
 debug=0
 strip=1
 gcov=0
@@ -58,10 +59,10 @@ echo BitlBee configure
 
 # Cygwin and Darwin don't support PIC/PIE
 case "$arch" in
-    CYGWIN* )
-        pie=0;;
-    Darwin )
-        pie=0;;
+	CYGWIN* )
+		pie=0;;
+	Darwin )
+		pie=0;;
 esac
 
 while [ -n "$1" ]; do
@@ -93,6 +94,7 @@ Option		Description				Default
 --purple=0/1	Disable/enable libpurple support	$purple
 		(automatically disables other protocol modules)
 
+--doc=0/1	Disable/enable help.txt generation	$doc
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 --pie=0/1       Build position independent executable   $pie
@@ -422,10 +424,10 @@ detect_resolv_static()
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
 	for i in $systemlibdirs; do
-		if [ -f $i/libresolv.a ]; then
+		if [ -f $i/libresolv.so ]; then
 			echo "$RESOLV_TESTCODE" | $CC -o $TMPFILE -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
 			if [ "$?" = "0" ]; then
-				echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
+				echo 'EFLAGS+=-lresolv' >> Makefile.settings
 				ret=0
 			fi
 		fi
@@ -447,9 +449,9 @@ detect_resolv_ns_dynamic()
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
 	echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - $LIBRESOLV >/dev/null 2>/dev/null
-        if [ "$?" = "0" ]; then
-                ret=0
-        fi
+	if [ "$?" = "0" ]; then
+		ret=0
+	fi
 
 	rm -f $TMPFILE
 	return $ret
@@ -462,9 +464,9 @@ detect_resolv_ns_static()
 	for i in $systemlibdirs; do
 		if [ -f $i/libresolv.a ]; then
 			echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
-                        if [ "$?" = "0" ]; then
-                                ret=0
-                        fi
+			if [ "$?" = "0" ]; then
+				ret=0
+			fi
 		fi
 	done
 
@@ -474,17 +476,17 @@ detect_resolv_ns_static()
 
 detect_nameser_has_ns_types()
 {
-    TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
-    ret=1
-    # since we aren't actually linking with ns_* routines
-    # we can just compile the test code
-    echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
-    if [ "$?" = "0" ]; then
-        ret=0
-    fi
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
+	ret=1
+	# since we aren't actually linking with ns_* routines
+	# we can just compile the test code
+	echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
+	if [ "$?" = "0" ]; then
+		ret=0
+	fi
 
-    rm -f $TMPFILE
-    return $ret
+	rm -f $TMPFILE
+	return $ret
 }
 
 if [ "$ssl" = "auto" ]; then
@@ -545,11 +547,11 @@ if detect_nameser_has_ns_types; then
 fi
 if detect_resolv_dynamic || detect_resolv_static; then
 	echo '#define HAVE_RESOLV_A' >> config.h
-    if detect_resolv_ns_dynamic || detect_resolv_ns_static; then
-	    echo '#define HAVE_RESOLV_A_WITH_NS' >> config.h
-    fi
+	if detect_resolv_ns_dynamic || detect_resolv_ns_static; then
+		echo '#define HAVE_RESOLV_A_WITH_NS' >> config.h
+	fi
 else
-    echo 'Insufficient resolv routines. Jabber server must be set explicitly'
+	echo 'Insufficient resolv routines. Jabber server must be set explicitly'
 fi
 
 
@@ -646,10 +648,27 @@ if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
 	protocols_mods="$protocol_mods skype(plugin)"
 fi
 
-if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; then
-	echo
-	echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
-	echo 'Install xmlto if you want online help to work.'
+if [ "$doc" = "1" ]; then
+	if [ ! -e doc/user-guide/help.txt ] && \
+	     ! type xmlto > /dev/null 2> /dev/null || \
+	     ! type xsltproc > /dev/null 2> /dev/null
+	then
+		echo
+		echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
+		echo 'Install xmlto and xsltproc if you want online help to work.'
+	else
+		echo "DOC=1" >> Makefile.settings
+	fi
+
+	if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
+		# skype also needs asciidoc
+		if ! type a2x > /dev/null 2> /dev/null; then
+			echo
+			echo 'WARNING: The skyped man page requires asciidoc. It will not be generated.'
+		else
+			echo "ASCIIDOC=1" >> Makefile.settings
+		fi
+	fi
 fi
 
 REAL_BITLBEE_VERSION=`grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/'`

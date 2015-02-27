@@ -6,30 +6,30 @@
  *
  * Other things...
  *
- *   - Idle setting 
- * 
+ *   - Idle setting
+ *
  *
  */
 
-#include <aim.h> 
+#include <aim.h>
 
-/* 
+/*
  * aim_bos_setprofile(profile)
  *
  * Gives BOS your profile.
- * 
+ *
  */
 int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const char *profile, const char *awaymsg, guint32 caps)
 {
-	static const char defencoding[] = {"text/aolrtf; charset=\"utf-8\""};
+	static const char defencoding[] = { "text/aolrtf; charset=\"utf-8\"" };
 	aim_frame_t *fr;
 	aim_tlvlist_t *tl = NULL;
 	aim_snacid_t snacid;
 
 	/* Build to packet first to get real length */
 	if (profile) {
-		aim_addtlvtochain_raw(&tl, 0x0001, strlen(defencoding), (guint8 *)defencoding);
-		aim_addtlvtochain_raw(&tl, 0x0002, strlen(profile), (guint8 *)profile);
+		aim_addtlvtochain_raw(&tl, 0x0001, strlen(defencoding), (guint8 *) defencoding);
+		aim_addtlvtochain_raw(&tl, 0x0002, strlen(profile), (guint8 *) profile);
 	}
 
 	/*
@@ -42,19 +42,21 @@ int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const char *profil
 	 */
 	if (awaymsg) {
 		if (strlen(awaymsg)) {
-			aim_addtlvtochain_raw(&tl, 0x0003, strlen(defencoding), (guint8 *)defencoding);
-			aim_addtlvtochain_raw(&tl, 0x0004, strlen(awaymsg), (guint8 *)awaymsg);
-		} else
+			aim_addtlvtochain_raw(&tl, 0x0003, strlen(defencoding), (guint8 *) defencoding);
+			aim_addtlvtochain_raw(&tl, 0x0004, strlen(awaymsg), (guint8 *) awaymsg);
+		} else {
 			aim_addtlvtochain_noval(&tl, 0x0004);
+		}
 	}
 
 	aim_addtlvtochain_caps(&tl, 0x0005, caps);
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + aim_sizetlvchain(&tl))))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + aim_sizetlvchain(&tl)))) {
 		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, 0x0002, 0x0004, 0x0000, NULL, 0);
-	
+
 	aim_putsnac(&fr->data, 0x0002, 0x004, 0x0000, snacid);
 	aim_writetlvchain(&fr->data, &tl);
 	aim_freetlvchain(&tl);
@@ -92,8 +94,9 @@ int aim_genericreq_n(aim_session_t *sess, aim_conn_t *conn, guint16 family, guin
 	aim_frame_t *fr;
 	aim_snacid_t snacid = 0x00000000;
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10))) {
 		return -ENOMEM;
+	}
 
 	aim_putsnac(&fr->data, family, subtype, 0x0000, snacid);
 
@@ -107,8 +110,9 @@ int aim_genericreq_n_snacid(aim_session_t *sess, aim_conn_t *conn, guint16 famil
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10))) {
 		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, family, subtype, 0x0000, NULL, 0);
 	aim_putsnac(&fr->data, family, subtype, 0x0000, snacid);
@@ -123,11 +127,13 @@ int aim_genericreq_l(aim_session_t *sess, aim_conn_t *conn, guint16 family, guin
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 
-	if (!longdata)
+	if (!longdata) {
 		return aim_genericreq_n(sess, conn, family, subtype);
+	}
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+4)))
-		return -ENOMEM; 
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 4))) {
+		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, family, subtype, 0x0000, NULL, 0);
 
@@ -144,11 +150,13 @@ int aim_genericreq_s(aim_session_t *sess, aim_conn_t *conn, guint16 family, guin
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 
-	if (!shortdata)
+	if (!shortdata) {
 		return aim_genericreq_n(sess, conn, family, subtype);
+	}
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+2)))
-		return -ENOMEM; 
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 2))) {
+		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, family, subtype, 0x0000, NULL, 0);
 
@@ -184,14 +192,17 @@ static int generror(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 
 	snac2 = aim_remsnac(sess, snac->id);
 
-	if (aim_bstream_empty(bs))
+	if (aim_bstream_empty(bs)) {
 		error = aimbs_get16(bs);
+	}
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, error, snac2 ? snac2->data : NULL);
+	}
 
-	if (snac2)
+	if (snac2) {
 		g_free(snac2->data);
+	}
 	g_free(snac2);
 
 	return ret;
@@ -200,13 +211,14 @@ static int generror(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 
-	if (snac->subtype == 0x0001)
+	if (snac->subtype == 0x0001) {
 		return generror(sess, mod, rx, snac, bs);
-	else if ((snac->family == 0xffff) && (snac->subtype == 0xffff)) {
+	} else if ((snac->family == 0xffff) && (snac->subtype == 0xffff)) {
 		aim_rxcallback_t userfunc;
 
-		if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+		if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 			return userfunc(sess, rx);
+		}
 	}
 
 	return 0;

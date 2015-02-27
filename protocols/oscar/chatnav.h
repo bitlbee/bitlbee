@@ -5,7 +5,7 @@
 
 /*
  * SNAC Family: Chat Navigation Services
- */ 
+ */
 #define AIM_CB_CTN_ERROR 0x0001
 #define AIM_CB_CTN_CREATE 0x0008
 #define AIM_CB_CTN_INFO 0x0009

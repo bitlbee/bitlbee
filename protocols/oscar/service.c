@@ -10,23 +10,25 @@
 /* Client Online (group 1, subtype 2) */
 int aim_clientready(aim_session_t *sess, aim_conn_t *conn)
 {
-	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
+	aim_conn_inside_t *ins = (aim_conn_inside_t *) conn->inside;
 	struct snacgroup *sg;
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 
-	if (!ins)
+	if (!ins) {
 		return -EINVAL;
+	}
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152))) {
 		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, 0x0001, 0x0002, 0x0000, NULL, 0);
 	aim_putsnac(&fr->data, 0x0001, 0x0002, 0x0000, snacid);
 
 	/*
 	 * Send only the tool versions that the server cares about (that it
-	 * marked as supporting in the server ready SNAC).  
+	 * marked as supporting in the server ready SNAC).
 	 */
 	for (sg = ins->groups; sg; sg = sg->next) {
 		aim_module_t *mod;
@@ -36,7 +38,7 @@ int aim_clientready(aim_session_t *sess, aim_conn_t *conn)
 			aimbs_put16(&fr->data, mod->version);
 			aimbs_put16(&fr->data, mod->toolid);
 			aimbs_put16(&fr->data, mod->toolversion);
-		} 
+		}
 	}
 
 	aim_tx_enqueue(sess, fr);
@@ -46,7 +48,7 @@ int aim_clientready(aim_session_t *sess, aim_conn_t *conn)
 
 /*
  * Host Online (group 1, type 3)
- * 
+ *
  * See comments in conn.c about how the group associations are supposed
  * to work, and how they really work.
  *
@@ -54,9 +56,9 @@ int aim_clientready(aim_session_t *sess, aim_conn_t *conn)
  *
  * We don't actually call the client here.  This starts off the connection
  * initialization routine required by all AIM connections.  The next time
- * the client is called is the CONNINITDONE callback, which should be 
+ * the client is called is the CONNINITDONE callback, which should be
  * shortly after the rate information is acknowledged.
- * 
+ *
  */
 static int hostonline(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
@@ -64,8 +66,9 @@ static int hostonline(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	int famcount;
 
 
-	if (!(families = g_malloc(aim_bstream_empty(bs))))
+	if (!(families = g_malloc(aim_bstream_empty(bs)))) {
 		return 0;
+	}
 
 	for (famcount = 0; aim_bstream_empty(bs); famcount++) {
 		families[famcount] = aimbs_get16(bs);
@@ -85,7 +88,7 @@ static int hostonline(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	 */
 	aim_setversions(sess, rx->conn);
 
-	return 1; 
+	return 1;
 }
 
 /* Service request (group 1, type 4) */
@@ -108,35 +111,37 @@ static int redirect(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	tlvlist = aim_readtlvchain(bs);
 
 	if (!aim_gettlv(tlvlist, 0x000d, 1) ||
-			!aim_gettlv(tlvlist, 0x0005, 1) ||
-			!aim_gettlv(tlvlist, 0x0006, 1)) {
+	    !aim_gettlv(tlvlist, 0x0005, 1) ||
+	    !aim_gettlv(tlvlist, 0x0006, 1)) {
 		aim_freetlvchain(&tlvlist);
 		return 0;
 	}
 
 	redir.group = aim_gettlv16(tlvlist, 0x000d, 1);
 	redir.ip = aim_gettlv_str(tlvlist, 0x0005, 1);
-	redir.cookie = (guint8 *)aim_gettlv_str(tlvlist, 0x0006, 1);
+	redir.cookie = (guint8 *) aim_gettlv_str(tlvlist, 0x0006, 1);
 
 	/* Fetch original SNAC so we can get csi if needed */
 	origsnac = aim_remsnac(sess, snac->id);
 
 	if ((redir.group == AIM_CONN_TYPE_CHAT) && origsnac) {
-		struct chatsnacinfo *csi = (struct chatsnacinfo *)origsnac->data;
+		struct chatsnacinfo *csi = (struct chatsnacinfo *) origsnac->data;
 
 		redir.chat.exchange = csi->exchange;
 		redir.chat.room = csi->name;
 		redir.chat.instance = csi->instance;
 	}
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, &redir);
+	}
 
-	g_free((void *)redir.ip);
-	g_free((void *)redir.cookie);
+	g_free((void *) redir.ip);
+	g_free((void *) redir.cookie);
 
-	if (origsnac)
+	if (origsnac) {
 		g_free(origsnac->data);
+	}
 	g_free(origsnac);
 
 	aim_freetlvchain(&tlvlist);
@@ -156,7 +161,7 @@ int aim_reqrates(aim_session_t *sess, aim_conn_t *conn)
  * level, etc), and a set of SNAC family/type pairs associated with
  * it.  The rate classes, their limiting properties, and the definitions
  * of which SNACs are belong to which class, are defined in the
- * Rate Response packet at login to each host.  
+ * Rate Response packet at login to each host.
  *
  * Logically, all rate offenses within one class count against further
  * offenses for other SNACs in the same class (ie, sending messages
@@ -170,10 +175,10 @@ int aim_reqrates(aim_session_t *sess, aim_conn_t *conn)
  * members as follows...
  *
  *  Rate class 0x0001:
- *  	- Everything thats not in any of the other classes
+ *      - Everything thats not in any of the other classes
  *
  *  Rate class 0x0002:
- * 	- Buddy list add/remove
+ *      - Buddy list add/remove
  *	- Permit list add/remove
  *	- Deny list add/remove
  *
@@ -189,32 +194,35 @@ int aim_reqrates(aim_session_t *sess, aim_conn_t *conn)
  *	- Outgoing chat ICBMs
  *
  * The only other thing of note is that class 5 (chat) has slightly looser
- * limiting properties than class 3 (normal messages).  But thats just a 
+ * limiting properties than class 3 (normal messages).  But thats just a
  * small bit of trivia for you.
  *
  * The last thing that needs to be learned about the rate limiting
  * system is how the actual numbers relate to the passing of time.  This
  * seems to be a big mystery.
- * 
+ *
  */
 
 static void rc_addclass(struct rateclass **head, struct rateclass *inrc)
 {
 	struct rateclass *rc, *rc2;
 
-	if (!(rc = g_malloc(sizeof(struct rateclass))))
+	if (!(rc = g_malloc(sizeof(struct rateclass)))) {
 		return;
+	}
 
 	memcpy(rc, inrc, sizeof(struct rateclass));
 	rc->next = NULL;
 
-	for (rc2 = *head; rc2 && rc2->next; rc2 = rc2->next)
+	for (rc2 = *head; rc2 && rc2->next; rc2 = rc2->next) {
 		;
+	}
 
-	if (!rc2)
+	if (!rc2) {
 		*head = rc;
-	else
+	} else {
 		rc2->next = rc;
+	}
 
 	return;
 }
@@ -224,8 +232,9 @@ static struct rateclass *rc_findclass(struct rateclass **head, guint16 id)
 	struct rateclass *rc;
 
 	for (rc = *head; rc; rc = rc->next) {
-		if (rc->classid == id)
+		if (rc->classid == id) {
 			return rc;
+		}
 	}
 
 	return NULL;
@@ -235,20 +244,23 @@ static void rc_addpair(struct rateclass *rc, guint16 group, guint16 type)
 {
 	struct snacpair *sp, *sp2;
 
-	if (!(sp = g_new0(struct snacpair, 1)))
+	if (!(sp = g_new0(struct snacpair, 1))) {
 		return;
+	}
 
 	sp->group = group;
 	sp->subtype = type;
 	sp->next = NULL;
 
-	for (sp2 = rc->members; sp2 && sp2->next; sp2 = sp2->next)
+	for (sp2 = rc->members; sp2 && sp2->next; sp2 = sp2->next) {
 		;
+	}
 
-	if (!sp2)
+	if (!sp2) {
 		rc->members = sp;
-	else
+	} else {
 		sp2->next = sp;
+	}
 
 	return;
 }
@@ -256,7 +268,7 @@ static void rc_addpair(struct rateclass *rc, guint16 group, guint16 type)
 /* Rate Parameters (group 1, type 7) */
 static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
-	aim_conn_inside_t *ins = (aim_conn_inside_t *)rx->conn->inside;
+	aim_conn_inside_t *ins = (aim_conn_inside_t *) rx->conn->inside;
 	guint16 numclasses, i;
 	aim_rxcallback_t userfunc;
 
@@ -283,11 +295,12 @@ static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 		 * The server will send an extra five bytes of parameters
 		 * depending on the version we advertised in 1/17.  If we
 		 * didn't send 1/17 (evil!), then this will crash and you
-		 * die, as it will default to the old version but we have 
-		 * the new version hardcoded here. 
+		 * die, as it will default to the old version but we have
+		 * the new version hardcoded here.
 		 */
-		if (mod->version >= 3)
+		if (mod->version >= 3) {
 			aimbs_getrawbuf(bs, rc.unknown, sizeof(rc.unknown));
+		}
 
 		rc_addclass(&ins->rates, &rc);
 	}
@@ -311,8 +324,9 @@ static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 			group = aimbs_get16(bs);
 			subtype = aimbs_get16(bs);
 
-			if (rc)
+			if (rc) {
 				rc_addpair(rc, group, subtype);
+			}
 		}
 	}
 
@@ -331,8 +345,9 @@ static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	/*
 	 * Finally, tell the client it's ready to go...
 	 */
-	if ((userfunc = aim_callhandler(sess, rx->conn, AIM_CB_FAM_SPECIAL, AIM_CB_SPECIAL_CONNINITDONE)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, AIM_CB_FAM_SPECIAL, AIM_CB_SPECIAL_CONNINITDONE))) {
 		userfunc(sess, rx);
+	}
 
 
 	return 1;
@@ -341,19 +356,21 @@ static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 /* Add Rate Parameter (group 1, type 8) */
 int aim_rates_addparam(aim_session_t *sess, aim_conn_t *conn)
 {
-	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
-	aim_frame_t *fr;	
+	aim_conn_inside_t *ins = (aim_conn_inside_t *) conn->inside;
+	aim_frame_t *fr;
 	aim_snacid_t snacid;
 	struct rateclass *rc;
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 512)))
-		return -ENOMEM; 
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 512))) {
+		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, 0x0001, 0x0008, 0x0000, NULL, 0);
 	aim_putsnac(&fr->data, 0x0001, 0x0008, 0x0000, snacid);
 
-	for (rc = ins->rates; rc; rc = rc->next)
+	for (rc = ins->rates; rc; rc = rc->next) {
 		aimbs_put16(&fr->data, rc->classid);
+	}
 
 	aim_tx_enqueue(sess, fr);
 
@@ -369,7 +386,7 @@ static int ratechange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 	code = aimbs_get16(bs);
 	rateclass = aimbs_get16(bs);
-	
+
 	windowsize = aimbs_get32(bs);
 	clear = aimbs_get32(bs);
 	alert = aimbs_get32(bs);
@@ -378,19 +395,21 @@ static int ratechange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	currentavg = aimbs_get32(bs);
 	maxavg = aimbs_get32(bs);
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
-		return userfunc(sess, rx, code, rateclass, windowsize, clear, alert, limit, disconnect, currentavg, maxavg);
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
+		return userfunc(sess, rx, code, rateclass, windowsize, clear, alert, limit, disconnect, currentavg,
+		                maxavg);
+	}
 
 	return 0;
 }
 
 /*
- * How Migrations work.  
+ * How Migrations work.
  *
- * The server sends a Server Pause message, which the client should respond to 
- * with a Server Pause Ack, which contains the families it needs on this 
- * connection. The server will send a Migration Notice with an IP address, and 
- * then disconnect. Next the client should open the connection and send the 
+ * The server sends a Server Pause message, which the client should respond to
+ * with a Server Pause Ack, which contains the families it needs on this
+ * connection. The server will send a Migration Notice with an IP address, and
+ * then disconnect. Next the client should open the connection and send the
  * cookie.  Repeat the normal login process and pretend this never happened.
  *
  * The Server Pause contains no data.
@@ -402,8 +421,9 @@ static int serverpause(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 {
 	aim_rxcallback_t userfunc;
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		return userfunc(sess, rx);
+	}
 
 	return 0;
 }
@@ -413,8 +433,9 @@ static int serverresume(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx,
 {
 	aim_rxcallback_t userfunc;
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		return userfunc(sess, rx);
+	}
 
 	return 0;
 }
@@ -433,8 +454,9 @@ static int selfinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 
 	aim_extractuserinfo(sess, bs, &userinfo);
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		return userfunc(sess, rx, &userinfo);
+	}
 
 	return 0;
 }
@@ -447,14 +469,16 @@ static int evilnotify(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	aim_userinfo_t userinfo;
 
 	memset(&userinfo, 0, sizeof(aim_userinfo_t));
-	
+
 	newevil = aimbs_get16(bs);
 
-	if (aim_bstream_empty(bs))
+	if (aim_bstream_empty(bs)) {
 		aim_extractuserinfo(sess, bs, &userinfo);
+	}
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		return userfunc(sess, rx, newevil, &userinfo);
+	}
 
 	return 0;
 }
@@ -463,7 +487,7 @@ static int evilnotify(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
  * Service Migrate (group 1, type 0x12)
  *
  * This is the final SNAC sent on the original connection during a migration.
- * It contains the IP and cookie used to connect to the new server, and 
+ * It contains the IP and cookie used to connect to the new server, and
  * optionally a list of the SNAC groups being migrated.
  *
  */
@@ -481,7 +505,7 @@ static int migrate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_
 	 * migration can actually be quite selective about what groups it
 	 * moves to the new server.  When not all the groups for a connection
 	 * are migrated, or they are all migrated but some groups are moved
-	 * to a different server than others, it is called a bifurcated 
+	 * to a different server than others, it is called a bifurcated
 	 * migration.
 	 *
 	 * Let's play dumb and not support that.
@@ -496,13 +520,15 @@ static int migrate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_
 
 	tl = aim_readtlvchain(bs);
 
-	if (aim_gettlv(tl, 0x0005, 1))
+	if (aim_gettlv(tl, 0x0005, 1)) {
 		ip = aim_gettlv_str(tl, 0x0005, 1);
+	}
 
 	cktlv = aim_gettlv(tl, 0x0006, 1);
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, ip, cktlv ? cktlv->value : NULL);
+	}
 
 	aim_freetlvchain(&tl);
 	g_free(ip);
@@ -527,20 +553,21 @@ static int motd(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mod
 	 *   2 Advisory upgrade
 	 *   3 System bulletin
 	 *   4 Nothing's wrong ("top o the world" -- normal)
-	 *   5 Lets-break-something. 
+	 *   5 Lets-break-something.
 	 *
 	 */
 	id = aimbs_get16(bs);
 
-	/* 
-	 * TLVs follow 
+	/*
+	 * TLVs follow
 	 */
 	tlvlist = aim_readtlvchain(bs);
 
 	msg = aim_gettlv_str(tlvlist, 0x000b, 1);
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		ret = userfunc(sess, rx, id, msg);
+	}
 
 	g_free(msg);
 
@@ -549,7 +576,7 @@ static int motd(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mod
 	return ret;
 }
 
-/* 
+/*
  * Set privacy flags (group 1, type 0x14)
  *
  * Normally 0x03.
@@ -564,14 +591,14 @@ int aim_bos_setprivacyflags(aim_session_t *sess, aim_conn_t *conn, guint32 flags
 }
 
 
-/* 
- * Set client versions (group 1, subtype 0x17) 
+/*
+ * Set client versions (group 1, subtype 0x17)
  *
- * If you've seen the clientonline/clientready SNAC you're probably 
+ * If you've seen the clientonline/clientready SNAC you're probably
  * wondering what the point of this one is.  And that point seems to be
  * that the versions in the client online SNAC are sent too late for the
  * server to be able to use them to change the protocol for the earlier
- * login packets (client versions are sent right after Host Online is 
+ * login packets (client versions are sent right after Host Online is
  * received, but client online versions aren't sent until quite a bit later).
  * We can see them already making use of this by changing the format of
  * the rate information based on what version of group 1 we advertise here.
@@ -579,23 +606,25 @@ int aim_bos_setprivacyflags(aim_session_t *sess, aim_conn_t *conn, guint32 flags
  */
 int aim_setversions(aim_session_t *sess, aim_conn_t *conn)
 {
-	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
+	aim_conn_inside_t *ins = (aim_conn_inside_t *) conn->inside;
 	struct snacgroup *sg;
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 
-	if (!ins)
+	if (!ins) {
 		return -EINVAL;
+	}
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152))) {
 		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, 0x0001, 0x0017, 0x0000, NULL, 0);
 	aim_putsnac(&fr->data, 0x0001, 0x0017, 0x0000, snacid);
 
 	/*
 	 * Send only the versions that the server cares about (that it
-	 * marked as supporting in the server ready SNAC).  
+	 * marked as supporting in the server ready SNAC).
 	 */
 	for (sg = ins->groups; sg; sg = sg->next) {
 		aim_module_t *mod;
@@ -629,12 +658,12 @@ static int hostversions(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx,
 	return 1;
 }
 
-/* 
+/*
  * Subtype 0x001e - Extended Status
  *
  * Sets your ICQ status (available, away, do not disturb, etc.)
  *
- * These are the same TLVs seen in user info.  You can 
+ * These are the same TLVs seen in user info.  You can
  * also set 0x0008 and 0x000c.
  */
 int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
@@ -646,21 +675,23 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
 	struct im_connection *ic = sess ? sess->aux_data : NULL;
 
 	data = AIM_ICQ_STATE_HIDEIP | status; /* yay for error checking ;^) */
-	
-	if (ic && set_getbool(&ic->acc->set, "web_aware"))
+
+	if (ic && set_getbool(&ic->acc->set, "web_aware")) {
 		data |= AIM_ICQ_STATE_WEBAWARE;
+	}
 
 	aim_addtlvtochain32(&tl, 0x0006, data); /* tlvlen */
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 8)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 8))) {
 		return -ENOMEM;
+	}
 
 	snacid = aim_cachesnac(sess, 0x0001, 0x001e, 0x0000, NULL, 0);
 	aim_putsnac(&fr->data, 0x0001, 0x001e, 0x0000, snacid);
-	
+
 	aim_writetlvchain(&fr->data, &tl);
 	aim_freetlvchain(&tl);
-	
+
 	aim_tx_enqueue(sess, fr);
 
 	return 0;
@@ -687,14 +718,14 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
  * If the client does not send any data back, or the data does not match
  * the data that the specific client should have, the client will get the
  * following message from "AOL Instant Messenger":
- *    "You have been disconnected from the AOL Instant Message Service (SM) 
+ *    "You have been disconnected from the AOL Instant Message Service (SM)
  *     for accessing the AOL network using unauthorized software.  You can
- *     download a FREE, fully featured, and authorized client, here 
+ *     download a FREE, fully featured, and authorized client, here
  *     http://www.aol.com/aim/download2.html"
  * The connection is then closed, recieving disconnect code 1, URL
- * http://www.aim.aol.com/errors/USER_LOGGED_OFF_NEW_LOGIN.html.  
+ * http://www.aim.aol.com/errors/USER_LOGGED_OFF_NEW_LOGIN.html.
  *
- * Note, however, that numerous inconsistencies can cause the above error, 
+ * Note, however, that numerous inconsistencies can cause the above error,
  * not just sending back a bad hash.  Do not immediatly suspect this code
  * if you get disconnected.  AOL and the open/free software community have
  * played this game for a couple years now, generating the above message
@@ -717,8 +748,9 @@ static int memrequest(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 	modname = aim_gettlv_str(list, 0x0001, 1);
 
-	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
+	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype))) {
 		return userfunc(sess, rx, offset, len, modname);
+	}
 
 	g_free(modname);
 	aim_freetlvchain(&list);
@@ -729,30 +761,31 @@ static int memrequest(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 
-	if (snac->subtype == 0x0003)
+	if (snac->subtype == 0x0003) {
 		return hostonline(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0005)
+	} else if (snac->subtype == 0x0005) {
 		return redirect(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0007)
+	} else if (snac->subtype == 0x0007) {
 		return rateresp(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x000a)
+	} else if (snac->subtype == 0x000a) {
 		return ratechange(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x000b)
+	} else if (snac->subtype == 0x000b) {
 		return serverpause(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x000d)
+	} else if (snac->subtype == 0x000d) {
 		return serverresume(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x000f)
+	} else if (snac->subtype == 0x000f) {
 		return selfinfo(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0010)
+	} else if (snac->subtype == 0x0010) {
 		return evilnotify(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0012)
+	} else if (snac->subtype == 0x0012) {
 		return migrate(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0013)
+	} else if (snac->subtype == 0x0013) {
 		return motd(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x0018)
+	} else if (snac->subtype == 0x0018) {
 		return hostversions(sess, mod, rx, snac, bs);
-	else if (snac->subtype == 0x001f)
+	} else if (snac->subtype == 0x001f) {
 		return memrequest(sess, mod, rx, snac, bs);
+	}
 
 	return 0;
 }

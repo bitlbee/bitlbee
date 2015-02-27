@@ -29,7 +29,7 @@
 #define SKYPE_DEFAULT_SERVER "localhost"
 #define SKYPE_DEFAULT_PORT "2727"
 #define IRC_LINE_SIZE 16384
-#define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
 /*
  * Enumerations
@@ -150,7 +150,7 @@ const struct skype_away_state skype_away_state_list[] = {
 	{ "OFFLINE", "Offline" },
 	{ "SKYPEME", "Skype Me" },
 	{ "ONLINE", "Online" },
-	{ NULL, NULL}
+	{ NULL, NULL }
 };
 
 /*
@@ -162,8 +162,9 @@ int skype_write(struct im_connection *ic, char *buf, int len)
 	struct skype_data *sd = ic->proto_data;
 	struct pollfd pfd[1];
 
-	if (!sd->ssl)
+	if (!sd->ssl) {
 		return FALSE;
+	}
 
 	pfd[0].fd = sd->fd;
 	pfd[0].events = POLLOUT;
@@ -195,8 +196,9 @@ int skype_printf(struct im_connection *ic, char *fmt, ...)
 static void skype_buddy_ask_yes(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
+
 	skype_printf(bla->ic, "SET USER %s ISAUTHORIZED TRUE\n",
-		bla->handle);
+	             bla->handle);
 	g_free(bla->handle);
 	g_free(bla);
 }
@@ -204,8 +206,9 @@ static void skype_buddy_ask_yes(void *data)
 static void skype_buddy_ask_no(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
+
 	skype_printf(bla->ic, "SET USER %s ISAUTHORIZED FALSE\n",
-		bla->handle);
+	             bla->handle);
 	g_free(bla->handle);
 	g_free(bla);
 }
@@ -213,7 +216,7 @@ static void skype_buddy_ask_no(void *data)
 void skype_buddy_ask(struct im_connection *ic, char *handle, char *message)
 {
 	struct skype_buddy_ask_data *bla = g_new0(struct skype_buddy_ask_data,
-		1);
+	                                          1);
 	char *buf;
 
 	bla->ic = ic;
@@ -227,8 +230,9 @@ void skype_buddy_ask(struct im_connection *ic, char *handle, char *message)
 static void skype_call_ask_yes(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
+
 	skype_printf(bla->ic, "SET CALL %s STATUS INPROGRESS\n",
-		bla->handle);
+	             bla->handle);
 	g_free(bla->handle);
 	g_free(bla);
 }
@@ -236,8 +240,9 @@ static void skype_call_ask_yes(void *data)
 static void skype_call_ask_no(void *data)
 {
 	struct skype_buddy_ask_data *bla = data;
+
 	skype_printf(bla->ic, "SET CALL %s STATUS FINISHED\n",
-		bla->handle);
+	             bla->handle);
 	g_free(bla->handle);
 	g_free(bla);
 }
@@ -245,7 +250,7 @@ static void skype_call_ask_no(void *data)
 void skype_call_ask(struct im_connection *ic, char *call_id, char *message)
 {
 	struct skype_buddy_ask_data *bla = g_new0(struct skype_buddy_ask_data,
-		1);
+	                                          1);
 
 	bla->ic = ic;
 	bla->handle = g_strdup(call_id);
@@ -296,8 +301,9 @@ static char *skype_group_by_username(struct im_connection *ic, char *username)
 	for (i = 0; i < g_list_length(sd->groups); i++) {
 		struct skype_group *sg = g_list_nth_data(sd->groups, i);
 		for (j = 0; j < g_list_length(sg->users); j++) {
-			if (!strcmp(g_list_nth_data(sg->users, j), username))
+			if (!strcmp(g_list_nth_data(sg->users, j), username)) {
 				return sg->name;
+			}
 		}
 	}
 	return NULL;
@@ -310,8 +316,9 @@ static struct skype_group *skype_group_by_name(struct im_connection *ic, char *n
 
 	for (i = 0; i < g_list_length(sd->groups); i++) {
 		struct skype_group *sg = g_list_nth_data(sd->groups, i);
-		if (!strcmp(sg->name, name))
+		if (!strcmp(sg->name, name)) {
 			return sg;
+		}
 	}
 	return NULL;
 }
@@ -338,29 +345,35 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 
 	status++;
 	ptr = strchr(++user, ' ');
-	if (!ptr)
+	if (!ptr) {
 		return;
+	}
 	*ptr = '\0';
 	ptr++;
 	if (!strncmp(ptr, "ONLINESTATUS ", 13)) {
-		if (!strlen(user) || !strcmp(user, sd->username))
+		if (!strlen(user) || !strcmp(user, sd->username)) {
 			return;
+		}
 		if (!set_getbool(&ic->acc->set, "test_join")
-				&& !strcmp(user, "echo123"))
+		    && !strcmp(user, "echo123")) {
 			return;
+		}
 		ptr = g_strdup_printf("%s@skype.com", user);
 		imcb_add_buddy(ic, ptr, skype_group_by_username(ic, user));
 		if (strcmp(status, "OFFLINE") && (strcmp(status, "SKYPEOUT") ||
-			!set_getbool(&ic->acc->set, "skypeout_offline")))
+		                                  !set_getbool(&ic->acc->set, "skypeout_offline"))) {
 			flags |= OPT_LOGGED_IN;
-		if (strcmp(status, "ONLINE") && strcmp(status, "SKYPEME"))
+		}
+		if (strcmp(status, "ONLINE") && strcmp(status, "SKYPEME")) {
 			flags |= OPT_AWAY;
+		}
 		imcb_buddy_status(ic, ptr, flags, NULL, NULL);
 		g_free(ptr);
 	} else if (!strncmp(ptr, "RECEIVEDAUTHREQUEST ", 20)) {
 		char *message = ptr + 20;
-		if (strlen(message))
+		if (strlen(message)) {
 			skype_buddy_ask(ic, user, message);
+		}
 	} else if (!strncmp(ptr, "BUDDYSTATUS ", 12)) {
 		char *st = ptr + 12;
 		if (!strcmp(st, "3")) {
@@ -373,11 +386,13 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		bee_user_t *bu = bee_user_by_handle(ic->bee, ic, buf);
 		g_free(buf);
 		buf = ptr + 10;
-		if (bu)
+		if (bu) {
 			imcb_buddy_status(ic, bu->handle, bu->flags, NULL,
-					*buf ? buf : NULL);
-		if (set_getbool(&ic->acc->set, "show_moods"))
+			                  *buf ? buf : NULL);
+		}
+		if (set_getbool(&ic->acc->set, "show_moods")) {
 			imcb_log(ic, "User `%s' changed mood text to `%s'", user, buf);
+		}
 	} else if (!strncmp(ptr, "FULLNAME ", 9)) {
 		char *name = ptr + 9;
 		if (sd->is_info) {
@@ -388,35 +403,35 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			imcb_rename_buddy(ic, buf, name);
 			g_free(buf);
 		}
-	} else if (!strncmp(ptr, "PHONE_HOME ", 11))
+	} else if (!strncmp(ptr, "PHONE_HOME ", 11)) {
 		sd->info_phonehome = g_strdup(ptr + 11);
-	else if (!strncmp(ptr, "PHONE_OFFICE ", 13))
+	} else if (!strncmp(ptr, "PHONE_OFFICE ", 13)) {
 		sd->info_phoneoffice = g_strdup(ptr + 13);
-	else if (!strncmp(ptr, "PHONE_MOBILE ", 13))
+	} else if (!strncmp(ptr, "PHONE_MOBILE ", 13)) {
 		sd->info_phonemobile = g_strdup(ptr + 13);
-	else if (!strncmp(ptr, "NROF_AUTHED_BUDDIES ", 20))
+	} else if (!strncmp(ptr, "NROF_AUTHED_BUDDIES ", 20)) {
 		sd->info_nrbuddies = g_strdup(ptr + 20);
-	else if (!strncmp(ptr, "TIMEZONE ", 9))
+	} else if (!strncmp(ptr, "TIMEZONE ", 9)) {
 		sd->info_tz = g_strdup(ptr + 9);
-	else if (!strncmp(ptr, "LASTONLINETIMESTAMP ", 20))
+	} else if (!strncmp(ptr, "LASTONLINETIMESTAMP ", 20)) {
 		sd->info_seen = g_strdup(ptr + 20);
-	else if (!strncmp(ptr, "SEX ", 4))
+	} else if (!strncmp(ptr, "SEX ", 4)) {
 		sd->info_sex = g_strdup(ptr + 4);
-	else if (!strncmp(ptr, "LANGUAGE ", 9))
+	} else if (!strncmp(ptr, "LANGUAGE ", 9)) {
 		sd->info_language = g_strdup(ptr + 9);
-	else if (!strncmp(ptr, "COUNTRY ", 8))
+	} else if (!strncmp(ptr, "COUNTRY ", 8)) {
 		sd->info_country = g_strdup(ptr + 8);
-	else if (!strncmp(ptr, "PROVINCE ", 9))
+	} else if (!strncmp(ptr, "PROVINCE ", 9)) {
 		sd->info_province = g_strdup(ptr + 9);
-	else if (!strncmp(ptr, "CITY ", 5))
+	} else if (!strncmp(ptr, "CITY ", 5)) {
 		sd->info_city = g_strdup(ptr + 5);
-	else if (!strncmp(ptr, "HOMEPAGE ", 9))
+	} else if (!strncmp(ptr, "HOMEPAGE ", 9)) {
 		sd->info_homepage = g_strdup(ptr + 9);
-	else if (!strncmp(ptr, "ABOUT ", 6)) {
+	} else if (!strncmp(ptr, "ABOUT ", 6)) {
 		/* Support multiple about lines. */
-		if (!sd->info_about)
+		if (!sd->info_about) {
 			sd->info_about = g_strdup(ptr + 6);
-		else {
+		} else {
 			GString *st = g_string_new(sd->info_about);
 			g_string_append_printf(st, "\n%s", ptr + 6);
 			g_free(sd->info_about);
@@ -429,38 +444,43 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		GString *st = g_string_new("Contact Information\n");
 		g_string_append_printf(st, "Skype Name: %s\n", user);
 		if (sd->info_fullname) {
-			if (strlen(sd->info_fullname))
+			if (strlen(sd->info_fullname)) {
 				g_string_append_printf(st, "Full Name: %s\n",
-					sd->info_fullname);
+				                       sd->info_fullname);
+			}
 			g_free(sd->info_fullname);
 			sd->info_fullname = NULL;
 		}
 		if (sd->info_phonehome) {
-			if (strlen(sd->info_phonehome))
+			if (strlen(sd->info_phonehome)) {
 				g_string_append_printf(st, "Home Phone: %s\n",
-					sd->info_phonehome);
+				                       sd->info_phonehome);
+			}
 			g_free(sd->info_phonehome);
 			sd->info_phonehome = NULL;
 		}
 		if (sd->info_phoneoffice) {
-			if (strlen(sd->info_phoneoffice))
+			if (strlen(sd->info_phoneoffice)) {
 				g_string_append_printf(st, "Office Phone: %s\n",
-					sd->info_phoneoffice);
+				                       sd->info_phoneoffice);
+			}
 			g_free(sd->info_phoneoffice);
 			sd->info_phoneoffice = NULL;
 		}
 		if (sd->info_phonemobile) {
-			if (strlen(sd->info_phonemobile))
+			if (strlen(sd->info_phonemobile)) {
 				g_string_append_printf(st, "Mobile Phone: %s\n",
-					sd->info_phonemobile);
+				                       sd->info_phonemobile);
+			}
 			g_free(sd->info_phonemobile);
 			sd->info_phonemobile = NULL;
 		}
 		g_string_append_printf(st, "Personal Information\n");
 		if (sd->info_nrbuddies) {
-			if (strlen(sd->info_nrbuddies))
+			if (strlen(sd->info_nrbuddies)) {
 				g_string_append_printf(st,
-					"Contacts: %s\n", sd->info_nrbuddies);
+				                       "Contacts: %s\n", sd->info_nrbuddies);
+			}
 			g_free(sd->info_nrbuddies);
 			sd->info_nrbuddies = NULL;
 		}
@@ -468,11 +488,11 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 			if (strlen(sd->info_tz)) {
 				char ib[256];
 				time_t t = time(NULL);
-				t += atoi(sd->info_tz)-(60*60*24);
+				t += atoi(sd->info_tz) - (60 * 60 * 24);
 				struct tm *gt = gmtime(&t);
 				strftime(ib, 256, "%H:%M:%S", gt);
 				g_string_append_printf(st,
-					"Local Time: %s\n", ib);
+				                       "Local Time: %s\n", ib);
 			}
 			g_free(sd->info_tz);
 			sd->info_tz = NULL;
@@ -484,27 +504,27 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 				struct tm *tm = localtime(&it);
 				strftime(ib, 256, ("%Y. %m. %d. %H:%M"), tm);
 				g_string_append_printf(st,
-					"Last Seen: %s\n", ib);
+				                       "Last Seen: %s\n", ib);
 			}
 			g_free(sd->info_seen);
 			sd->info_seen = NULL;
 		}
 		if (sd->info_birthday) {
 			if (strlen(sd->info_birthday) &&
-				strcmp(sd->info_birthday, "0")) {
+			    strcmp(sd->info_birthday, "0")) {
 				char ib[256];
 				struct tm tm;
 				strptime(sd->info_birthday, "%Y%m%d", &tm);
 				strftime(ib, 256, "%B %d, %Y", &tm);
 				g_string_append_printf(st,
-					"Birthday: %s\n", ib);
+				                       "Birthday: %s\n", ib);
 
 				strftime(ib, 256, "%Y", &tm);
 				int year = atoi(ib);
 				time_t t = time(NULL);
 				struct tm *lt = localtime(&t);
 				g_string_append_printf(st,
-					"Age: %d\n", lt->tm_year+1900-year);
+				                       "Age: %d\n", lt->tm_year + 1900 - year);
 			}
 			g_free(sd->info_birthday);
 			sd->info_birthday = NULL;
@@ -512,10 +532,11 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		if (sd->info_sex) {
 			if (strlen(sd->info_sex)) {
 				char *iptr = sd->info_sex;
-				while (*iptr++)
+				while (*iptr++) {
 					*iptr = g_ascii_tolower(*iptr);
+				}
 				g_string_append_printf(st,
-					"Gender: %s\n", sd->info_sex);
+				                       "Gender: %s\n", sd->info_sex);
 			}
 			g_free(sd->info_sex);
 			sd->info_sex = NULL;
@@ -523,12 +544,13 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		if (sd->info_language) {
 			if (strlen(sd->info_language)) {
 				char *iptr = strchr(sd->info_language, ' ');
-				if (iptr)
+				if (iptr) {
 					iptr++;
-				else
+				} else {
 					iptr = sd->info_language;
+				}
 				g_string_append_printf(st,
-					"Language: %s\n", iptr);
+				                       "Language: %s\n", iptr);
 			}
 			g_free(sd->info_language);
 			sd->info_language = NULL;
@@ -536,41 +558,46 @@ static void skype_parse_user(struct im_connection *ic, char *line)
 		if (sd->info_country) {
 			if (strlen(sd->info_country)) {
 				char *iptr = strchr(sd->info_country, ' ');
-				if (iptr)
+				if (iptr) {
 					iptr++;
-				else
+				} else {
 					iptr = sd->info_country;
+				}
 				g_string_append_printf(st,
-					"Country: %s\n", iptr);
+				                       "Country: %s\n", iptr);
 			}
 			g_free(sd->info_country);
 			sd->info_country = NULL;
 		}
 		if (sd->info_province) {
-			if (strlen(sd->info_province))
+			if (strlen(sd->info_province)) {
 				g_string_append_printf(st,
-					"Region: %s\n", sd->info_province);
+				                       "Region: %s\n", sd->info_province);
+			}
 			g_free(sd->info_province);
 			sd->info_province = NULL;
 		}
 		if (sd->info_city) {
-			if (strlen(sd->info_city))
+			if (strlen(sd->info_city)) {
 				g_string_append_printf(st,
-					"City: %s\n", sd->info_city);
+				                       "City: %s\n", sd->info_city);
+			}
 			g_free(sd->info_city);
 			sd->info_city = NULL;
 		}
 		if (sd->info_homepage) {
-			if (strlen(sd->info_homepage))
+			if (strlen(sd->info_homepage)) {
 				g_string_append_printf(st,
-					"Homepage: %s\n", sd->info_homepage);
+				                       "Homepage: %s\n", sd->info_homepage);
+			}
 			g_free(sd->info_homepage);
 			sd->info_homepage = NULL;
 		}
 		if (sd->info_about) {
-			if (strlen(sd->info_about))
+			if (strlen(sd->info_about)) {
 				g_string_append_printf(st, "%s\n",
-					sd->info_about);
+				                       sd->info_about);
+			}
 			g_free(sd->info_about);
 			sd->info_about = NULL;
 		}
@@ -583,21 +610,24 @@ static void skype_parse_chatmessage_said_emoted(struct im_connection *ic, struct
 {
 	struct skype_data *sd = ic->proto_data;
 	char buf[IRC_LINE_SIZE];
+
 	if (!strcmp(sd->type, "SAID")) {
-		if (!sd->is_edit)
+		if (!sd->is_edit) {
 			g_snprintf(buf, IRC_LINE_SIZE, "%s", body);
-		else {
+		} else {
 			g_snprintf(buf, IRC_LINE_SIZE, "%s %s", set_getstr(&ic->acc->set, "edit_prefix"), body);
 			sd->is_edit = 0;
 		}
-	} else
+	} else {
 		g_snprintf(buf, IRC_LINE_SIZE, "/me %s", body);
-	if (!gc)
+	}
+	if (!gc) {
 		/* Private message */
 		imcb_buddy_msg(ic, sd->handle, buf, 0, 0);
-	else
+	} else {
 		/* Groupchat message */
 		imcb_chat_msg(gc, sd->handle, buf, 0, 0);
+	}
 }
 
 static void skype_parse_chatmessage(struct im_connection *ic, char *line)
@@ -605,12 +635,14 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 	struct skype_data *sd = ic->proto_data;
 	char *id = strchr(line, ' ');
 
-	if (!++id)
+	if (!++id) {
 		return;
+	}
 	char *info = strchr(id, ' ');
 
-	if (!info)
+	if (!info) {
 		return;
+	}
 	*info = '\0';
 	info++;
 	if (!strcmp(info, "STATUS RECEIVED") || !strncmp(info, "EDITED_TIMESTAMP", 16)) {
@@ -621,10 +653,11 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 		 * (4) Query chatname
 		 */
 		skype_printf(ic, "GET CHATMESSAGE %s FROM_HANDLE\n", id);
-		if (!strcmp(info, "STATUS RECEIVED"))
+		if (!strcmp(info, "STATUS RECEIVED")) {
 			skype_printf(ic, "GET CHATMESSAGE %s BODY\n", id);
-		else
+		} else {
 			sd->is_edit = 1;
+		}
 		skype_printf(ic, "GET CHATMESSAGE %s TYPE\n", id);
 		skype_printf(ic, "GET CHATMESSAGE %s CHATNAME\n", id);
 	} else if (!strncmp(info, "FROM_HANDLE ", 12)) {
@@ -647,7 +680,7 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 	} else if (!strncmp(info, "BODY ", 5)) {
 		info += 5;
 		sd->body = g_list_append(sd->body, g_strdup(info));
-	}	else if (!strncmp(info, "TYPE ", 5)) {
+	} else if (!strncmp(info, "TYPE ", 5)) {
 		info += 5;
 		g_free(sd->type);
 		sd->type = g_strdup(info);
@@ -659,14 +692,15 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 			for (i = 0; i < g_list_length(sd->body); i++) {
 				char *body = g_list_nth_data(sd->body, i);
 				if (!strcmp(sd->type, "SAID") ||
-					!strcmp(sd->type, "EMOTED")) {
+				    !strcmp(sd->type, "EMOTED")) {
 					skype_parse_chatmessage_said_emoted(ic, gc, body);
-				} else if (!strcmp(sd->type, "SETTOPIC") && gc)
+				} else if (!strcmp(sd->type, "SETTOPIC") && gc) {
 					imcb_chat_topic(gc,
-						sd->handle, body, 0);
-				else if (!strcmp(sd->type, "LEFT") && gc)
+					                sd->handle, body, 0);
+				} else if (!strcmp(sd->type, "LEFT") && gc) {
 					imcb_chat_remove_buddy(gc,
-						sd->handle, NULL);
+					                       sd->handle, NULL);
+				}
 			}
 			g_list_free(sd->body);
 			sd->body = NULL;
@@ -680,19 +714,22 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 	char *id = strchr(line, ' ');
 	char buf[IRC_LINE_SIZE];
 
-	if (!++id)
+	if (!++id) {
 		return;
+	}
 	char *info = strchr(id, ' ');
 
-	if (!info)
+	if (!info) {
 		return;
+	}
 	*info = '\0';
 	info++;
-	if (!strncmp(info, "FAILUREREASON ", 14))
+	if (!strncmp(info, "FAILUREREASON ", 14)) {
 		sd->failurereason = atoi(strchr(info, ' '));
-	else if (!strcmp(info, "STATUS RINGING")) {
-		if (sd->call_id)
+	} else if (!strcmp(info, "STATUS RINGING")) {
+		if (sd->call_id) {
 			g_free(sd->call_id);
+		}
 		sd->call_id = g_strdup(id);
 		skype_printf(ic, "GET CALL %s PARTNER_HANDLE\n", id);
 		sd->call_status = SKYPE_CALL_RINGING;
@@ -709,64 +746,69 @@ static void skype_parse_call(struct im_connection *ic, char *line)
 		skype_printf(ic, "GET CALL %s PARTNER_HANDLE\n", id);
 		sd->call_status = SKYPE_CALL_REFUSED;
 	} else if (!strcmp(info, "STATUS UNPLACED")) {
-		if (sd->call_id)
+		if (sd->call_id) {
 			g_free(sd->call_id);
+		}
 		/* Save the ID for later usage (Cancel/Finish). */
 		sd->call_id = g_strdup(id);
 		sd->call_out = TRUE;
 	} else if (!strcmp(info, "STATUS FAILED")) {
 		imcb_error(ic, "Call failed: %s",
-			skype_call_strerror(sd->failurereason));
+		           skype_call_strerror(sd->failurereason));
 		sd->call_id = NULL;
 	} else if (!strncmp(info, "DURATION ", 9)) {
-		if (sd->call_duration)
+		if (sd->call_duration) {
 			g_free(sd->call_duration);
-		sd->call_duration = g_strdup(info+9);
+		}
+		sd->call_duration = g_strdup(info + 9);
 	} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
 		info += 15;
-		if (!sd->call_status)
+		if (!sd->call_status) {
 			return;
+		}
 		switch (sd->call_status) {
 		case SKYPE_CALL_RINGING:
-			if (sd->call_out)
+			if (sd->call_out) {
 				imcb_log(ic, "You are currently ringing the user %s.", info);
-			else {
+			} else {
 				g_snprintf(buf, IRC_LINE_SIZE,
-					"The user %s is currently ringing you.",
-					info);
+				           "The user %s is currently ringing you.",
+				           info);
 				skype_call_ask(ic, sd->call_id, buf);
 			}
 			break;
 		case SKYPE_CALL_MISSED:
 			imcb_log(ic, "You have missed a call from user %s.",
-				info);
+			         info);
 			break;
 		case SKYPE_CALL_CANCELLED:
 			imcb_log(ic, "You cancelled the call to the user %s.",
-				info);
+			         info);
 			sd->call_status = 0;
 			sd->call_out = FALSE;
 			break;
 		case SKYPE_CALL_REFUSED:
-			if (sd->call_out)
+			if (sd->call_out) {
 				imcb_log(ic, "The user %s refused the call.",
-					info);
-			else
+				         info);
+			} else {
 				imcb_log(ic,
-					"You refused the call from user %s.",
-					info);
+				         "You refused the call from user %s.",
+				         info);
+			}
 			sd->call_out = FALSE;
 			break;
 		case SKYPE_CALL_FINISHED:
-			if (sd->call_duration)
+			if (sd->call_duration) {
 				imcb_log(ic,
-					"You finished the call to the user %s "
-					"(duration: %s seconds).",
-					info, sd->call_duration);
-			else
+				         "You finished the call to the user %s "
+				         "(duration: %s seconds).",
+				         info, sd->call_duration);
+			} else {
 				imcb_log(ic,
-					"You finished the call to the user %s.",
-					info);
+				         "You finished the call to the user %s.",
+				         info);
+			}
 			sd->call_out = FALSE;
 			break;
 		default:
@@ -782,21 +824,23 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 	struct skype_data *sd = ic->proto_data;
 	char *id = strchr(line, ' ');
 
-	if (!++id)
+	if (!++id) {
 		return;
+	}
 	char *info = strchr(id, ' ');
 
-	if (!info)
+	if (!info) {
 		return;
+	}
 	*info = '\0';
 	info++;
 	if (!strcmp(info, "STATUS NEW")) {
 		skype_printf(ic, "GET FILETRANSFER %s PARTNER_HANDLE\n",
-			id);
+		             id);
 		sd->filetransfer_status = SKYPE_FILETRANSFER_NEW;
 	} else if (!strcmp(info, "STATUS FAILED")) {
 		skype_printf(ic, "GET FILETRANSFER %s PARTNER_HANDLE\n",
-			id);
+		             id);
 		sd->filetransfer_status = SKYPE_FILETRANSFER_FAILED;
 	} else if (!strcmp(info, "STATUS COMPLETED")) {
 		skype_printf(ic, "GET FILETRANSFER %s PARTNER_HANDLE\n", id);
@@ -809,23 +853,25 @@ static void skype_parse_filetransfer(struct im_connection *ic, char *line)
 		sd->filetransfer_path = g_strdup(info);
 	} else if (!strncmp(info, "PARTNER_HANDLE ", 15)) {
 		info += 15;
-		if (!sd->filetransfer_status)
+		if (!sd->filetransfer_status) {
 			return;
+		}
 		switch (sd->filetransfer_status) {
 		case SKYPE_FILETRANSFER_NEW:
 			imcb_log(ic, "The user %s offered a new file for you.",
-				info);
+			         info);
 			break;
 		case SKYPE_FILETRANSFER_FAILED:
 			imcb_log(ic, "Failed to transfer file from user %s.",
-				info);
+			         info);
 			break;
 		case SKYPE_FILETRANSFER_COMPLETED:
 			imcb_log(ic, "File transfer from user %s completed.", info);
 			break;
 		case SKYPE_FILETRANSFER_TRANSFERRING:
 			if (sd->filetransfer_path) {
-				imcb_log(ic, "File transfer from user %s started, saving to %s.", info, sd->filetransfer_path);
+				imcb_log(ic, "File transfer from user %s started, saving to %s.", info,
+				         sd->filetransfer_path);
 				g_free(sd->filetransfer_path);
 				sd->filetransfer_path = NULL;
 			}
@@ -841,10 +887,11 @@ static struct skype_group *skype_group_by_id(struct im_connection *ic, int id)
 	int i;
 
 	for (i = 0; i < g_list_length(sd->groups); i++) {
-		struct skype_group *sg = (struct skype_group *)g_list_nth_data(sd->groups, i);
+		struct skype_group *sg = (struct skype_group *) g_list_nth_data(sd->groups, i);
 
-		if (sg->id == id)
+		if (sg->id == id) {
 			return sg;
+		}
 	}
 	return NULL;
 }
@@ -858,8 +905,9 @@ static void skype_group_free(struct skype_group *sg, gboolean usersonly)
 		g_free(user);
 	}
 	sg->users = NULL;
-	if (usersonly)
+	if (usersonly) {
 		return;
+	}
 	g_free(sg->name);
 	g_free(sg);
 }
@@ -882,13 +930,15 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 	struct skype_data *sd = ic->proto_data;
 	char *id = strchr(line, ' ');
 
-	if (!++id)
+	if (!++id) {
 		return;
+	}
 
 	char *info = strchr(id, ' ');
 
-	if (!info)
+	if (!info) {
 		return;
+	}
 	*info = '\0';
 	info++;
 
@@ -922,9 +972,10 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 			}
 			g_strfreev(users);
 			skype_group_users(ic, sg);
-		} else
+		} else {
 			log_message(LOGLVL_ERROR,
-				"No skype group with id %s. That's probably a bug.", id);
+			            "No skype group with id %s. That's probably a bug.", id);
+		}
 	} else if (!strncmp(info, "NROFUSERS ", 10)) {
 		if (!sd->pending_user) {
 			/* Number of users changed in this group, query its type to see
@@ -941,12 +992,14 @@ static void skype_parse_group(struct im_connection *ic, char *line)
 			skype_printf(ic, "ALTER GROUP %d ADDUSER %s\n", sg->id, sd->pending_user);
 			g_free(sd->pending_user);
 			sd->pending_user = NULL;
-		} else
+		} else {
 			log_message(LOGLVL_ERROR,
-					"No skype group with id %s. That's probably a bug.", id);
-	} else if (!strcmp(info, "TYPE CUSTOM_GROUP"))
+			            "No skype group with id %s. That's probably a bug.", id);
+		}
+	} else if (!strcmp(info, "TYPE CUSTOM_GROUP")) {
 		/* This one is interesting, query its users. */
 		skype_printf(ic, "GET GROUP %s USERS\n", id);
+	}
 }
 
 static void skype_parse_chat(struct im_connection *ic, char *line)
@@ -955,19 +1008,22 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 	char buf[IRC_LINE_SIZE];
 	char *id = strchr(line, ' ');
 
-	if (!++id)
+	if (!++id) {
 		return;
+	}
 	struct groupchat *gc;
 	char *info = strchr(id, ' ');
 
-	if (!info)
+	if (!info) {
 		return;
+	}
 	*info = '\0';
 	info++;
 	/* Remove fake chat if we created one in skype_chat_with() */
 	gc = bee_chat_by_title(ic->bee, ic, "");
-	if (gc)
+	if (gc) {
 		imcb_chat_free(gc);
+	}
 	if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
 		gc = bee_chat_by_title(ic->bee, ic, id);
 		if (!gc) {
@@ -987,7 +1043,7 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		 * just leave it out. */
 		/*skype_printf(ic, "OPEN CHAT %s\n", id);*/
 		g_snprintf(buf, IRC_LINE_SIZE, "%s@skype.com",
-				sd->groupchat_with);
+		           sd->groupchat_with);
 		imcb_chat_add_buddy(gc, buf);
 		imcb_chat_add_buddy(gc, sd->username);
 		g_free(sd->groupchat_with);
@@ -996,8 +1052,9 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		skype_printf(ic, "GET CHAT %s TOPIC\n", id);
 	} else if (!strcmp(info, "STATUS UNSUBSCRIBED")) {
 		gc = bee_chat_by_title(ic->bee, ic, id);
-		if (gc)
-			gc->data = (void *)FALSE;
+		if (gc) {
+			gc->data = (void *) FALSE;
+		}
 	} else if (!strncmp(info, "ADDER ", 6)) {
 		info += 6;
 		g_free(sd->adder);
@@ -1014,28 +1071,32 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 			g_free(sd->adder);
 			sd->adder = NULL;
 		}
-	} else if (!strncmp(info, "MEMBERS ", 8) || !strncmp(info, "ACTIVEMEMBERS ", 14) ) {
-		if (!strncmp(info, "MEMBERS ", 8))
+	} else if (!strncmp(info, "MEMBERS ", 8) || !strncmp(info, "ACTIVEMEMBERS ", 14)) {
+		if (!strncmp(info, "MEMBERS ", 8)) {
 			info += 8;
-		else
+		} else {
 			info += 14;
+		}
 		gc = bee_chat_by_title(ic->bee, ic, id);
 		/* Hack! We set ->data to TRUE
 		 * while we're on the channel
 		 * so that we won't rejoin
 		 * after a /part. */
-		if (!gc || gc->data)
+		if (!gc || gc->data) {
 			return;
+		}
 		char **members = g_strsplit(info, " ", 0);
 		int i;
 		for (i = 0; members[i]; i++) {
-			if (!strcmp(members[i], sd->username))
+			if (!strcmp(members[i], sd->username)) {
 				continue;
+			}
 			g_snprintf(buf, IRC_LINE_SIZE, "%s@skype.com",
-					members[i]);
+			           members[i]);
 			if (!g_list_find_custom(gc->in_room, buf,
-				(GCompareFunc)strcmp))
+			                        (GCompareFunc) strcmp)) {
 				imcb_chat_add_buddy(gc, buf);
+			}
 		}
 		imcb_chat_add_buddy(gc, sd->username);
 		g_strfreev(members);
@@ -1044,9 +1105,9 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 
 static void skype_parse_password(struct im_connection *ic, char *line)
 {
-	if (!strncmp(line+9, "OK", 2))
+	if (!strncmp(line + 9, "OK", 2)) {
 		imcb_connected(ic);
-	else {
+	} else {
 		imcb_error(ic, "Authentication Failed");
 		imc_logout(ic, TRUE);
 	}
@@ -1054,7 +1115,7 @@ static void skype_parse_password(struct im_connection *ic, char *line)
 
 static void skype_parse_profile(struct im_connection *ic, char *line)
 {
-	imcb_log(ic, "SkypeOut balance value is '%s'.", line+21);
+	imcb_log(ic, "SkypeOut balance value is '%s'.", line + 21);
 }
 
 static void skype_parse_ping(struct im_connection *ic, char *line)
@@ -1080,8 +1141,9 @@ static void skype_parse_chats(struct im_connection *ic, char *line)
 
 static void skype_parse_groups(struct im_connection *ic, char *line)
 {
-	if (!set_getbool(&ic->acc->set, "read_groups"))
+	if (!set_getbool(&ic->acc->set, "read_groups")) {
 		return;
+	}
 
 	char **i;
 	char **groups = g_strsplit(line + 7, ", ", 0);
@@ -1099,13 +1161,15 @@ static void skype_parse_alter_group(struct im_connection *ic, char *line)
 {
 	char *id = line + strlen("ALTER GROUP");
 
-	if (!++id)
+	if (!++id) {
 		return;
+	}
 
 	char *info = strchr(id, ' ');
 
-	if (!info)
+	if (!info) {
 		return;
+	}
 	*info = '\0';
 	info++;
 
@@ -1118,16 +1182,17 @@ static void skype_parse_alter_group(struct im_connection *ic, char *line)
 			sg->users = g_list_append(sg->users, g_strdup(info));
 			imcb_add_buddy(ic, buf, sg->name);
 			g_free(buf);
-		} else
+		} else {
 			log_message(LOGLVL_ERROR,
-				"No skype group with id %s. That's probably a bug.", id);
+			            "No skype group with id %s. That's probably a bug.", id);
+		}
 	}
 }
 
 typedef void (*skype_parser)(struct im_connection *ic, char *line);
 
 static gboolean skype_read_callback(gpointer data, gint fd,
-				    b_input_condition cond)
+                                    b_input_condition cond)
 {
 	struct im_connection *ic = data;
 	struct skype_data *sd = ic->proto_data;
@@ -1157,11 +1222,12 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 	fd = fd;
 	cond = cond;
 
-	if (!sd || sd->fd == -1)
+	if (!sd || sd->fd == -1) {
 		return FALSE;
+	}
 	/* Read the whole data. */
 	st = ssl_read(sd->ssl, buf, sizeof(buf));
-	if (st >= IRC_LINE_SIZE-1) {
+	if (st >= IRC_LINE_SIZE - 1) {
 		/* As we don't buffer incoming data, if IRC_LINE_SIZE amount of bytes
 		 * were received, there's a good chance last message was truncated
 		 * and the next recv() will yield garbage. */
@@ -1174,16 +1240,19 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 		lines = g_strsplit(buf, "\n", 0);
 		lineptr = lines;
 		while ((line = *lineptr)) {
-			if (!strlen(line))
+			if (!strlen(line)) {
 				break;
-			if (set_getbool(&ic->acc->set, "skypeconsole_receive"))
+			}
+			if (set_getbool(&ic->acc->set, "skypeconsole_receive")) {
 				imcb_buddy_msg(ic, "skypeconsole", line, 0, 0);
-			for (i = 0; i < ARRAY_SIZE(parsers); i++)
+			}
+			for (i = 0; i < ARRAY_SIZE(parsers); i++) {
 				if (!strncmp(line, parsers[i].k,
-					strlen(parsers[i].k))) {
+				             strlen(parsers[i].k))) {
 					parsers[i].v(ic, line);
 					break;
 				}
+			}
 			lineptr++;
 		}
 		g_strfreev(lines);
@@ -1204,12 +1273,14 @@ gboolean skype_start_stream(struct im_connection *ic)
 	struct skype_data *sd = ic->proto_data;
 	int st;
 
-	if (!sd)
+	if (!sd) {
 		return FALSE;
+	}
 
-	if (sd->bfd <= 0)
+	if (sd->bfd <= 0) {
 		sd->bfd = b_input_add(sd->fd, B_EV_IO_READ,
-			skype_read_callback, ic);
+		                      skype_read_callback, ic);
+	}
 
 	/* Log in */
 	skype_printf(ic, "USERNAME %s\n", ic->acc->user);
@@ -1259,14 +1330,15 @@ static void skype_login(account_t *acc)
 
 	imcb_log(ic, "Connecting");
 	sd->ssl = ssl_connect(set_getstr(&acc->set, "server"),
-		set_getint(&acc->set, "port"), FALSE, skype_connected, ic);
+	                      set_getint(&acc->set, "port"), FALSE, skype_connected, ic);
 	sd->fd = sd->ssl ? ssl_getfd(sd->ssl) : -1;
 	sd->username = g_strdup(acc->user);
 
 	sd->ic = ic;
 
-	if (set_getbool(&acc->set, "skypeconsole"))
+	if (set_getbool(&acc->set, "skypeconsole")) {
 		imcb_add_buddy(ic, "skypeconsole", NULL);
+	}
 }
 
 static void skype_logout(struct im_connection *ic)
@@ -1276,16 +1348,18 @@ static void skype_logout(struct im_connection *ic)
 
 	skype_printf(ic, "SET USERSTATUS OFFLINE\n");
 
-	while (ic->groupchats)
+	while (ic->groupchats) {
 		imcb_chat_free(ic->groupchats->data);
+	}
 
 	for (i = 0; i < g_list_length(sd->groups); i++) {
-		struct skype_group *sg = (struct skype_group *)g_list_nth_data(sd->groups, i);
+		struct skype_group *sg = (struct skype_group *) g_list_nth_data(sd->groups, i);
 		skype_group_free(sg, FALSE);
 	}
 
-	if (sd->ssl)
+	if (sd->ssl) {
 		ssl_disconnect(sd->ssl);
+	}
 
 	g_free(sd->username);
 	g_free(sd->handle);
@@ -1294,7 +1368,7 @@ static void skype_logout(struct im_connection *ic)
 }
 
 static int skype_buddy_msg(struct im_connection *ic, char *who, char *message,
-			   int flags)
+                           int flags)
 {
 	char *ptr, *nick;
 	int st;
@@ -1304,13 +1378,15 @@ static int skype_buddy_msg(struct im_connection *ic, char *who, char *message,
 
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
-	if (ptr)
+	if (ptr) {
 		*ptr = '\0';
+	}
 
-	if (!strncmp(who, "skypeconsole", 12))
+	if (!strncmp(who, "skypeconsole", 12)) {
 		st = skype_printf(ic, "%s\n", message);
-	else
+	} else {
 		st = skype_printf(ic, "MESSAGE %s %s\n", nick, message);
+	}
 	g_free(nick);
 
 	return st;
@@ -1320,25 +1396,28 @@ const struct skype_away_state *skype_away_state_by_name(char *name)
 {
 	int i;
 
-	for (i = 0; skype_away_state_list[i].full_name; i++)
-		if (g_strcasecmp(skype_away_state_list[i].full_name, name) == 0)
+	for (i = 0; skype_away_state_list[i].full_name; i++) {
+		if (g_strcasecmp(skype_away_state_list[i].full_name, name) == 0) {
 			return skype_away_state_list + i;
+		}
+	}
 
 	return NULL;
 }
 
 static void skype_set_away(struct im_connection *ic, char *state_txt,
-			   char *message)
+                           char *message)
 {
 	const struct skype_away_state *state;
 
 	/* Unused parameter */
 	message = message;
 
-	if (state_txt == NULL)
+	if (state_txt == NULL) {
 		state = skype_away_state_by_name("Online");
-	else
+	} else {
 		state = skype_away_state_by_name(state_txt);
+	}
 	skype_printf(ic, "SET USERSTATUS %s\n", state->code);
 }
 
@@ -1350,10 +1429,12 @@ static GList *skype_away_states(struct im_connection *ic)
 	/* Unused parameter */
 	ic = ic;
 
-	if (l == NULL)
-		for (i = 0; skype_away_state_list[i].full_name; i++)
+	if (l == NULL) {
+		for (i = 0; skype_away_state_list[i].full_name; i++) {
 			l = g_list_append(l,
-				(void *)skype_away_state_list[i].full_name);
+			                  (void *) skype_away_state_list[i].full_name);
+		}
+	}
 
 	return l;
 }
@@ -1390,8 +1471,9 @@ static void skype_call(struct im_connection *ic, char *value)
 	char *nick = g_strdup(value);
 	char *ptr = strchr(nick, '@');
 
-	if (ptr)
+	if (ptr) {
 		*ptr = '\0';
+	}
 	skype_printf(ic, "CALL %s\n", nick);
 	g_free(nick);
 }
@@ -1402,11 +1484,12 @@ static void skype_hangup(struct im_connection *ic)
 
 	if (sd->call_id) {
 		skype_printf(ic, "SET CALL %s STATUS FINISHED\n",
-				sd->call_id);
+		             sd->call_id);
 		g_free(sd->call_id);
 		sd->call_id = 0;
-	} else
+	} else {
 		imcb_error(ic, "There are no active calls currently.");
+	}
 }
 
 static char *skype_set_call(set_t *set, char *value)
@@ -1414,10 +1497,11 @@ static char *skype_set_call(set_t *set, char *value)
 	account_t *acc = set->data;
 	struct im_connection *ic = acc->ic;
 
-	if (value)
+	if (value) {
 		skype_call(ic, value);
-	else
+	} else {
 		skype_hangup(ic);
+	}
 	return value;
 }
 
@@ -1428,12 +1512,13 @@ static void skype_add_buddy(struct im_connection *ic, char *who, char *group)
 
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
-	if (ptr)
+	if (ptr) {
 		*ptr = '\0';
+	}
 
 	if (!group) {
 		skype_printf(ic, "SET USER %s BUDDYSTATUS 2 Please authorize me\n",
-				nick);
+		             nick);
 		g_free(nick);
 	} else {
 		struct skype_group *sg = skype_group_by_name(ic, group);
@@ -1458,8 +1543,9 @@ static void skype_remove_buddy(struct im_connection *ic, char *who, char *group)
 
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
-	if (ptr)
+	if (ptr) {
 		*ptr = '\0';
+	}
 	skype_printf(ic, "SET USER %s BUDDYSTATUS 1\n", nick);
 	g_free(nick);
 }
@@ -1477,8 +1563,9 @@ void skype_chat_msg(struct groupchat *gc, char *message, int flags)
 void skype_chat_leave(struct groupchat *gc)
 {
 	struct im_connection *ic = gc->ic;
+
 	skype_printf(ic, "ALTER CHAT %s LEAVE\n", gc->title);
-	gc->data = (void *)TRUE;
+	gc->data = (void *) TRUE;
 }
 
 void skype_chat_invite(struct groupchat *gc, char *who, char *message)
@@ -1488,8 +1575,9 @@ void skype_chat_invite(struct groupchat *gc, char *who, char *message)
 
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
-	if (ptr)
+	if (ptr) {
 		*ptr = '\0';
+	}
 	skype_printf(ic, "ALTER CHAT %s ADDMEMBERS %s\n", gc->title, nick);
 	g_free(nick);
 }
@@ -1498,8 +1586,9 @@ void skype_chat_topic(struct groupchat *gc, char *message)
 {
 	struct im_connection *ic = gc->ic;
 	struct skype_data *sd = ic->proto_data;
+
 	skype_printf(ic, "ALTER CHAT %s SETTOPIC %s\n",
-		gc->title, message);
+	             gc->title, message);
 	sd->topic_wait = 1;
 }
 
@@ -1507,10 +1596,12 @@ struct groupchat *skype_chat_with(struct im_connection *ic, char *who)
 {
 	struct skype_data *sd = ic->proto_data;
 	char *ptr, *nick;
+
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
-	if (ptr)
+	if (ptr) {
 		*ptr = '\0';
+	}
 	skype_printf(ic, "CHAT CREATE %s\n", nick);
 	sd->groupchat_with = g_strdup(nick);
 	g_free(nick);
@@ -1523,10 +1614,12 @@ static void skype_get_info(struct im_connection *ic, char *who)
 {
 	struct skype_data *sd = ic->proto_data;
 	char *ptr, *nick;
+
 	nick = g_strdup(who);
 	ptr = strchr(nick, '@');
-	if (ptr)
+	if (ptr) {
 		*ptr = '\0';
+	}
 	sd->is_info = TRUE;
 	skype_printf(ic, "GET USER %s FULLNAME\n", nick);
 	skype_printf(ic, "GET USER %s PHONE_HOME\n", nick);
@@ -1555,14 +1648,14 @@ static void skype_init(account_t *acc)
 	set_t *s;
 
 	s = set_add(&acc->set, "server", SKYPE_DEFAULT_SERVER, set_eval_account,
-		acc);
+	            acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "port", SKYPE_DEFAULT_PORT, set_eval_int, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "display_name", NULL, skype_set_display_name,
-		acc);
+	            acc);
 	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "mood_text", NULL, skype_set_mood_text, acc);
@@ -1580,7 +1673,7 @@ static void skype_init(account_t *acc)
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "skypeconsole_receive", "false", set_eval_bool,
-		acc);
+	            acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "auto_join", "false", set_eval_bool, acc);
@@ -1592,7 +1685,7 @@ static void skype_init(account_t *acc)
 	s = set_add(&acc->set, "show_moods", "false", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "edit_prefix", "EDIT:",
-			NULL, acc);
+	            NULL, acc);
 
 	s = set_add(&acc->set, "read_groups", "false", set_eval_bool, acc);
 }
@@ -1607,13 +1700,14 @@ GList *skype_buddy_action_list(bee_user_t *bu)
 
 	if (ret == NULL) {
 		static const struct buddy_action ba[2] = {
-			{"CALL", "Initiate a call" },
-			{"HANGUP", "Hang up a call" },
+			{ "CALL", "Initiate a call" },
+			{ "HANGUP", "Hang up a call" },
 		};
 		int i;
 
-		for (i = 0; i < ARRAY_SIZE(ba); i++)
-			ret = g_list_prepend(ret, (void *)(ba + i));
+		for (i = 0; i < ARRAY_SIZE(ba); i++) {
+			ret = g_list_prepend(ret, (void *) (ba + i));
+		}
 	}
 
 	return ret;
@@ -1625,10 +1719,11 @@ void *skype_buddy_action(struct bee_user *bu, const char *action, char * const a
 	args = args;
 	data = data;
 
-	if (!g_strcasecmp(action, "CALL"))
+	if (!g_strcasecmp(action, "CALL")) {
 		skype_call(bu->ic, bu->handle);
-	else if (!g_strcasecmp(action, "HANGUP"))
+	} else if (!g_strcasecmp(action, "HANGUP")) {
 		skype_hangup(bu->ic);
+	}
 
 	return NULL;
 }

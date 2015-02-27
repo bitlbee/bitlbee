@@ -32,14 +32,13 @@
 
 extern GSList *jabber_connections;
 
-typedef enum
-{
+typedef enum {
 	JFLAG_STREAM_STARTED = 1,       /* Set when we detected the beginning of the stream
 	                                   and want to do auth. */
 	JFLAG_AUTHENTICATED = 2,        /* Set when we're successfully authenticatd. */
 	JFLAG_STREAM_RESTART = 4,       /* Set when we want to restart the stream (after
 	                                   SASL or TLS). */
-	JFLAG_WANT_SESSION = 8,	        /* Set if the server wants a <session/> tag
+	JFLAG_WANT_SESSION = 8,         /* Set if the server wants a <session/> tag
 	                                   before we continue. */
 	JFLAG_WANT_BIND = 16,           /* ... for <bind> tag. */
 	JFLAG_WANT_TYPING = 32,         /* Set if we ever sent a typing notification, this
@@ -52,8 +51,7 @@ typedef enum
 	JFLAG_SASL_FB = 0x10000,        /* Trying Facebook authentication. */
 } jabber_flags_t;
 
-typedef enum
-{
+typedef enum {
 	JBFLAG_PROBED_XEP85 = 1,        /* Set this when we sent our probe packet to make
 	                                   sure it gets sent only once. */
 	JBFLAG_DOES_XEP85 = 2,          /* Set this when the resource seems to support
@@ -67,45 +65,42 @@ typedef enum
 } jabber_buddy_flags_t;
 
 /* Stores a streamhost's (a.k.a. proxy) data */
-typedef struct
-{
+typedef struct {
 	char *jid;
 	char *host;
 	char port[6];
 } jabber_streamhost_t;
 
-typedef enum
-{
+typedef enum {
 	JCFLAG_MESSAGE_SENT = 1,        /* Set this after sending the first message, so
 	                                   we can detect echoes/backlogs. */
 } jabber_chat_flags_t;
 
-struct jabber_data
-{
+struct jabber_data {
 	struct im_connection *ic;
-	
+
 	int fd;
 	void *ssl;
 	char *txq;
 	int tx_len;
 	int r_inpa, w_inpa;
-	
+
 	struct xt_parser *xt;
 	jabber_flags_t flags;
-	
-	char *username;		/* USERNAME@server */
-	char *server;		/* username@SERVER -=> server/domain, not hostname */
-	char *me;		/* bare jid */
+
+	char *username;         /* USERNAME@server */
+	char *server;           /* username@SERVER -=> server/domain, not hostname */
+	char *me;               /* bare jid */
 	char *internal_jid;
-	
+
 	const struct oauth2_service *oauth2_service;
 	char *oauth2_access_token;
-	
+
 	/* After changing one of these two (or the priority setting), call
 	   presence_send_update() to inform the server about the changes. */
 	const struct jabber_away_state *away_state;
 	char *away_message;
-	
+
 	md5_state_t cached_id_prefix;
 	GHashTable *node_cache;
 	GHashTable *buddies;
@@ -115,16 +110,14 @@ struct jabber_data
 	int have_streamhosts;
 };
 
-struct jabber_away_state
-{
+struct jabber_away_state {
 	char code[5];
 	char *full_name;
 };
 
-typedef xt_status (*jabber_cache_event) ( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
+typedef xt_status (*jabber_cache_event) (struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 
-struct jabber_cache_entry
-{
+struct jabber_cache_entry {
 	time_t saved_at;
 	struct xt_node *node;
 	jabber_cache_event func;
@@ -137,28 +130,26 @@ struct jabber_cache_entry
    follow. In that case, the bare JID at the beginning doesn't actually
    refer to a real session and should only be used for operations that
    support incomplete JIDs. */
-struct jabber_buddy
-{
+struct jabber_buddy {
 	char *bare_jid;
 	char *full_jid;
 	char *resource;
-	
+
 	char *ext_jid; /* The JID to use in BitlBee. The real JID if possible, */
 	               /* otherwise something similar to the conference JID. */
-	
+
 	int priority;
 	struct jabber_away_state *away_state;
 	char *away_message;
 	GSList *features;
-	
+
 	time_t last_msg;
 	jabber_buddy_flags_t flags;
-	
+
 	struct jabber_buddy *next;
 };
 
-struct jabber_chat
-{
+struct jabber_chat {
 	int flags;
 	char *name;
 	char *my_full_jid; /* Separate copy because of case sensitivity. */
@@ -166,8 +157,7 @@ struct jabber_chat
 	char *invite;
 };
 
-struct jabber_transfer
-{
+struct jabber_transfer {
 	/* bitlbee's handle for this transfer */
 	file_transfer_t *ft;
 
@@ -245,111 +235,109 @@ struct jabber_transfer
 #define XMLNS_IBB          "http://jabber.org/protocol/ibb"                      /* XEP-0047 */
 
 /* jabber.c */
-void jabber_connect( struct im_connection *ic );
+void jabber_connect(struct im_connection *ic);
 
 /* iq.c */
-xt_status jabber_pkt_iq( struct xt_node *node, gpointer data );
-int jabber_init_iq_auth( struct im_connection *ic );
-xt_status jabber_pkt_bind_sess( struct im_connection *ic, struct xt_node *node, struct xt_node *orig );
-int jabber_get_roster( struct im_connection *ic );
-int jabber_get_vcard( struct im_connection *ic, char *bare_jid );
-int jabber_add_to_roster( struct im_connection *ic, const char *handle, const char *name, const char *group );
-int jabber_remove_from_roster( struct im_connection *ic, char *handle );
-xt_status jabber_iq_query_features( struct im_connection *ic, char *bare_jid );
-xt_status jabber_iq_query_server( struct im_connection *ic, char *jid, char *xmlns );
-void jabber_iq_version_send( struct im_connection *ic, struct jabber_buddy *bud, void *data );
+xt_status jabber_pkt_iq(struct xt_node *node, gpointer data);
+int jabber_init_iq_auth(struct im_connection *ic);
+xt_status jabber_pkt_bind_sess(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
+int jabber_get_roster(struct im_connection *ic);
+int jabber_get_vcard(struct im_connection *ic, char *bare_jid);
+int jabber_add_to_roster(struct im_connection *ic, const char *handle, const char *name, const char *group);
+int jabber_remove_from_roster(struct im_connection *ic, char *handle);
+xt_status jabber_iq_query_features(struct im_connection *ic, char *bare_jid);
+xt_status jabber_iq_query_server(struct im_connection *ic, char *jid, char *xmlns);
+void jabber_iq_version_send(struct im_connection *ic, struct jabber_buddy *bud, void *data);
 
 /* si.c */
-int jabber_si_handle_request( struct im_connection *ic, struct xt_node *node, struct xt_node *sinode );
-void jabber_si_transfer_request( struct im_connection *ic, file_transfer_t *ft, char *who );
-void jabber_si_free_transfer( file_transfer_t *ft);
+int jabber_si_handle_request(struct im_connection *ic, struct xt_node *node, struct xt_node *sinode);
+void jabber_si_transfer_request(struct im_connection *ic, file_transfer_t *ft, char *who);
+void jabber_si_free_transfer(file_transfer_t *ft);
 
 /* s5bytestream.c */
-int jabber_bs_recv_request( struct im_connection *ic, struct xt_node *node, struct xt_node *qnode);
-gboolean jabber_bs_send_start( struct jabber_transfer *tf );
-gboolean jabber_bs_send_write( file_transfer_t *ft, char *buffer, unsigned int len );
+int jabber_bs_recv_request(struct im_connection *ic, struct xt_node *node, struct xt_node *qnode);
+gboolean jabber_bs_send_start(struct jabber_transfer *tf);
+gboolean jabber_bs_send_write(file_transfer_t *ft, char *buffer, unsigned int len);
 
 /* message.c */
-xt_status jabber_pkt_message( struct xt_node *node, gpointer data );
+xt_status jabber_pkt_message(struct xt_node *node, gpointer data);
 
 /* presence.c */
-xt_status jabber_pkt_presence( struct xt_node *node, gpointer data );
-int presence_send_update( struct im_connection *ic );
-int presence_send_request( struct im_connection *ic, char *handle, char *request );
+xt_status jabber_pkt_presence(struct xt_node *node, gpointer data);
+int presence_send_update(struct im_connection *ic);
+int presence_send_request(struct im_connection *ic, char *handle, char *request);
 
 /* jabber_util.c */
-char *set_eval_priority( set_t *set, char *value );
-char *set_eval_tls( set_t *set, char *value );
-struct xt_node *jabber_make_packet( char *name, char *type, char *to, struct xt_node *children );
-struct xt_node *jabber_make_error_packet( struct xt_node *orig, char *err_cond, char *err_type, char *err_code );
-void jabber_cache_add( struct im_connection *ic, struct xt_node *node, jabber_cache_event func );
-struct xt_node *jabber_cache_get( struct im_connection *ic, char *id );
-void jabber_cache_entry_free( gpointer entry );
-void jabber_cache_clean( struct im_connection *ic );
-xt_status jabber_cache_handle_packet( struct im_connection *ic, struct xt_node *node );
-const struct jabber_away_state *jabber_away_state_by_code( char *code );
-const struct jabber_away_state *jabber_away_state_by_name( char *name );
-void jabber_buddy_ask( struct im_connection *ic, char *handle );
-int jabber_compare_jid( const char *jid1, const char *jid2 );
-char *jabber_normalize( const char *orig );
+char *set_eval_priority(set_t *set, char *value);
+char *set_eval_tls(set_t *set, char *value);
+struct xt_node *jabber_make_packet(char *name, char *type, char *to, struct xt_node *children);
+struct xt_node *jabber_make_error_packet(struct xt_node *orig, char *err_cond, char *err_type, char *err_code);
+void jabber_cache_add(struct im_connection *ic, struct xt_node *node, jabber_cache_event func);
+struct xt_node *jabber_cache_get(struct im_connection *ic, char *id);
+void jabber_cache_entry_free(gpointer entry);
+void jabber_cache_clean(struct im_connection *ic);
+xt_status jabber_cache_handle_packet(struct im_connection *ic, struct xt_node *node);
+const struct jabber_away_state *jabber_away_state_by_code(char *code);
+const struct jabber_away_state *jabber_away_state_by_name(char *name);
+void jabber_buddy_ask(struct im_connection *ic, char *handle);
+int jabber_compare_jid(const char *jid1, const char *jid2);
+char *jabber_normalize(const char *orig);
 
-typedef enum
-{
-	GET_BUDDY_CREAT = 1,	/* Try to create it, if necessary. */
-	GET_BUDDY_EXACT = 2,	/* Get an exact match (only makes sense with bare JIDs). */
-	GET_BUDDY_FIRST = 4,	/* No selection, simply get the first resource for this JID. */
-	GET_BUDDY_BARE = 8,	/* Get the bare version of the JID (possibly inexistent). */
-	GET_BUDDY_BARE_OK = 16,	/* Allow returning a bare JID if that seems better. */
+typedef enum {
+	GET_BUDDY_CREAT = 1,    /* Try to create it, if necessary. */
+	GET_BUDDY_EXACT = 2,    /* Get an exact match (only makes sense with bare JIDs). */
+	GET_BUDDY_FIRST = 4,    /* No selection, simply get the first resource for this JID. */
+	GET_BUDDY_BARE = 8,     /* Get the bare version of the JID (possibly inexistent). */
+	GET_BUDDY_BARE_OK = 16, /* Allow returning a bare JID if that seems better. */
 } get_buddy_flags_t;
 
-struct jabber_error
-{
+struct jabber_error {
 	char *code, *text, *type;
 };
 
-struct jabber_buddy *jabber_buddy_add( struct im_connection *ic, char *full_jid );
-struct jabber_buddy *jabber_buddy_by_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
-struct jabber_buddy *jabber_buddy_by_ext_jid( struct im_connection *ic, char *jid, get_buddy_flags_t flags );
-int jabber_buddy_remove( struct im_connection *ic, char *full_jid );
-int jabber_buddy_remove_bare( struct im_connection *ic, char *bare_jid );
-void jabber_buddy_remove_all( struct im_connection *ic );
-time_t jabber_get_timestamp( struct xt_node *xt );
-struct jabber_error *jabber_error_parse( struct xt_node *node, char *xmlns );
-void jabber_error_free( struct jabber_error *err );
-gboolean jabber_set_me( struct im_connection *ic, const char *me );
+struct jabber_buddy *jabber_buddy_add(struct im_connection *ic, char *full_jid);
+struct jabber_buddy *jabber_buddy_by_jid(struct im_connection *ic, char *jid, get_buddy_flags_t flags);
+struct jabber_buddy *jabber_buddy_by_ext_jid(struct im_connection *ic, char *jid, get_buddy_flags_t flags);
+int jabber_buddy_remove(struct im_connection *ic, char *full_jid);
+int jabber_buddy_remove_bare(struct im_connection *ic, char *bare_jid);
+void jabber_buddy_remove_all(struct im_connection *ic);
+time_t jabber_get_timestamp(struct xt_node *xt);
+struct jabber_error *jabber_error_parse(struct xt_node *node, char *xmlns);
+void jabber_error_free(struct jabber_error *err);
+gboolean jabber_set_me(struct im_connection *ic, const char *me);
 
 extern const struct jabber_away_state jabber_away_state_list[];
 
 /* io.c */
-int jabber_write_packet( struct im_connection *ic, struct xt_node *node );
-int jabber_write( struct im_connection *ic, char *buf, int len );
-gboolean jabber_connected_plain( gpointer data, gint source, b_input_condition cond );
-gboolean jabber_connected_ssl( gpointer data, int returncode, void *source, b_input_condition cond );
-gboolean jabber_start_stream( struct im_connection *ic );
-void jabber_end_stream( struct im_connection *ic );
+int jabber_write_packet(struct im_connection *ic, struct xt_node *node);
+int jabber_write(struct im_connection *ic, char *buf, int len);
+gboolean jabber_connected_plain(gpointer data, gint source, b_input_condition cond);
+gboolean jabber_connected_ssl(gpointer data, int returncode, void *source, b_input_condition cond);
+gboolean jabber_start_stream(struct im_connection *ic);
+void jabber_end_stream(struct im_connection *ic);
 
 /* sasl.c */
-xt_status sasl_pkt_mechanisms( struct xt_node *node, gpointer data );
-xt_status sasl_pkt_challenge( struct xt_node *node, gpointer data );
-xt_status sasl_pkt_result( struct xt_node *node, gpointer data );
-gboolean sasl_supported( struct im_connection *ic );
-void sasl_oauth2_init( struct im_connection *ic );
-int sasl_oauth2_get_refresh_token( struct im_connection *ic, const char *msg );
-int sasl_oauth2_refresh( struct im_connection *ic, const char *refresh_token );
+xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data);
+xt_status sasl_pkt_challenge(struct xt_node *node, gpointer data);
+xt_status sasl_pkt_result(struct xt_node *node, gpointer data);
+gboolean sasl_supported(struct im_connection *ic);
+void sasl_oauth2_init(struct im_connection *ic);
+int sasl_oauth2_get_refresh_token(struct im_connection *ic, const char *msg);
+int sasl_oauth2_refresh(struct im_connection *ic, const char *refresh_token);
 
 extern const struct oauth2_service oauth2_service_google;
 extern const struct oauth2_service oauth2_service_facebook;
 
 /* conference.c */
-struct groupchat *jabber_chat_join( struct im_connection *ic, const char *room, const char *nick, const char *password );
-struct groupchat *jabber_chat_with( struct im_connection *ic, char *who );
-struct groupchat *jabber_chat_by_jid( struct im_connection *ic, const char *name );
-void jabber_chat_free( struct groupchat *c );
-int jabber_chat_msg( struct groupchat *ic, char *message, int flags );
-int jabber_chat_topic( struct groupchat *c, char *topic );
-int jabber_chat_leave( struct groupchat *c, const char *reason );
-void jabber_chat_pkt_presence( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
-void jabber_chat_pkt_message( struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node );
-void jabber_chat_invite( struct groupchat *c, char *who, char *message );
+struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password);
+struct groupchat *jabber_chat_with(struct im_connection *ic, char *who);
+struct groupchat *jabber_chat_by_jid(struct im_connection *ic, const char *name);
+void jabber_chat_free(struct groupchat *c);
+int jabber_chat_msg(struct groupchat *ic, char *message, int flags);
+int jabber_chat_topic(struct groupchat *c, char *topic);
+int jabber_chat_leave(struct groupchat *c, const char *reason);
+void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node);
+void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud, struct xt_node *node);
+void jabber_chat_invite(struct groupchat *c, char *who, char *message);
 
 #endif

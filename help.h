@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
@@ -26,14 +26,12 @@
 #ifndef _HELP_H
 #define _HELP_H
 
-typedef union
-{
+typedef union {
 	off_t file_offset;
 	char *mem_offset;
 } help_off_t;
 
-typedef struct help
-{
+typedef struct help {
 	int fd;
 	time_t mtime;
 	char *title;
@@ -42,10 +40,10 @@ typedef struct help
 	struct help *next;
 } help_t;
 
-G_GNUC_MALLOC help_t *help_init( help_t **help, const char *helpfile );
-void help_free( help_t **help );
-char *help_get( help_t **help, char *title );
-int help_add_mem( help_t **help, const char *title, const char *content_ );
-char *help_get_whatsnew( help_t **help, int old );
+G_GNUC_MALLOC help_t *help_init(help_t **help, const char *helpfile);
+void help_free(help_t **help);
+char *help_get(help_t **help, char *title);
+int help_add_mem(help_t **help, const char *title, const char *content_);
+char *help_get_whatsnew(help_t **help, int old);
 
 #endif

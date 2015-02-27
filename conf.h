@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
@@ -29,8 +29,7 @@
 typedef enum runmode { RUNMODE_DAEMON, RUNMODE_FORKDAEMON, RUNMODE_INETD } runmode_t;
 typedef enum authmode { AUTHMODE_OPEN, AUTHMODE_CLOSED, AUTHMODE_REGISTERED } authmode_t;
 
-typedef struct conf
-{
+typedef struct conf {
 	char *iface_in, *iface_out;
 	char *port;
 	int nofork;
@@ -56,7 +55,7 @@ typedef struct conf
 	char *cafile;
 } conf_t;
 
-G_GNUC_MALLOC conf_t *conf_load( int argc, char *argv[] );
-void conf_loaddefaults( irc_t *irc );
+G_GNUC_MALLOC conf_t *conf_load(int argc, char *argv[]);
+void conf_loaddefaults(irc_t *irc);
 
 #endif

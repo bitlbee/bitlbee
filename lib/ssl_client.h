@@ -1,4 +1,4 @@
-  /********************************************************************\
+/********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
@@ -56,39 +56,39 @@ typedef gboolean (*ssl_input_function)(gpointer, int, void*, b_input_condition);
 
 
 /* Perform any global initialization the SSL library might need. */
-G_MODULE_EXPORT void ssl_init( void );
+G_MODULE_EXPORT void ssl_init(void);
 
 /* Connect to host:port, call the given function when the connection is
    ready to be used for SSL traffic. This is all done asynchronously, no
    blocking I/O! (Except for the DNS lookups, for now...) */
-G_MODULE_EXPORT void *ssl_connect( char *host, int port, gboolean verify, ssl_input_function func, gpointer data );
+G_MODULE_EXPORT void *ssl_connect(char *host, int port, gboolean verify, ssl_input_function func, gpointer data);
 
 /* Start an SSL session on an existing fd. Useful for STARTTLS functionality,
    for example in Jabber. */
-G_MODULE_EXPORT void *ssl_starttls( int fd, char *hostname, gboolean verify, ssl_input_function func, gpointer data );
+G_MODULE_EXPORT void *ssl_starttls(int fd, char *hostname, gboolean verify, ssl_input_function func, gpointer data);
 
 /* Obviously you need special read/write functions to read data. */
-G_MODULE_EXPORT int ssl_read( void *conn, char *buf, int len );
-G_MODULE_EXPORT int ssl_write( void *conn, const char *buf, int len );
+G_MODULE_EXPORT int ssl_read(void *conn, char *buf, int len);
+G_MODULE_EXPORT int ssl_write(void *conn, const char *buf, int len);
 
 /* Now needed by most SSL libs. See for more info:
    http://www.gnu.org/software/gnutls/manual/gnutls.html#index-gnutls_005frecord_005fcheck_005fpending-209
    http://www.openssl.org/docs/ssl/SSL_pending.html
-   
+
    Required because OpenSSL empties the TCP buffer completely but doesn't
    necessarily give us all the unencrypted data. Or maybe you didn't ask
    for all of it because your buffer is too small.
-   
+
    Returns 0 if there's nothing left, 1 if there's more data. */
-G_MODULE_EXPORT int ssl_pending( void *conn );
+G_MODULE_EXPORT int ssl_pending(void *conn);
 
 /* Abort the SSL connection and disconnect the socket. Do not use close()
    directly, both the SSL library and the peer will be unhappy! */
-G_MODULE_EXPORT void ssl_disconnect( void *conn_ );
+G_MODULE_EXPORT void ssl_disconnect(void *conn_);
 
 /* Get the fd for this connection, you will usually need it for event
    handling. */
-G_MODULE_EXPORT int ssl_getfd( void *conn );
+G_MODULE_EXPORT int ssl_getfd(void *conn);
 
 /* This function returns B_EV_IO_READ/WRITE. With SSL connections it's
    possible that something has to be read while actually were trying to
@@ -96,10 +96,11 @@ G_MODULE_EXPORT int ssl_getfd( void *conn );
    SSL operation returned SSL_AGAIN, *always* use this function when
    adding an event handler to the queue. (And it should perform exactly
    the same action as the handler that just received the SSL_AGAIN.) */
-G_MODULE_EXPORT b_input_condition ssl_getdirection( void *conn );
+G_MODULE_EXPORT b_input_condition ssl_getdirection(void *conn);
 
 /* Converts a verification bitfield passed to ssl_input_function into
    a more useful string. Or NULL if it had no useful bits set. */
-G_MODULE_EXPORT char *ssl_verify_strerror( int code );
+G_MODULE_EXPORT char *ssl_verify_strerror(int code);
 
-G_MODULE_EXPORT size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned char *input, size_t input_len, const unsigned char *iv, unsigned char **res);
+G_MODULE_EXPORT size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned char *input,
+                                        size_t input_len, const unsigned char *iv, unsigned char **res);
