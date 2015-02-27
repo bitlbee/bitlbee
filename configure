@@ -455,10 +455,10 @@ detect_resolv_static()
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
 	for i in $systemlibdirs; do
-		if [ -f $i/libresolv.a ]; then
+		if [ -f $i/libresolv.so ]; then
 			echo "$RESOLV_TESTCODE" | $CC -o $TMPFILE -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
 			if [ "$?" = "0" ]; then
-				echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
+				echo 'EFLAGS+=-lresolv' >> Makefile.settings
 				ret=0
 			fi
 		fi
