@@ -1,3 +1,6 @@
+#include <sys/socket.h>
+#include <sys/un.h>
+
 #include "bitlbee.h"
 #include "bee.h"
 #include "nogaim.h"
@@ -14,11 +17,12 @@ struct rpc_connection {
 	int fd;
 	char *buf;
 	int buflen;
+	GHashTable *groupchats;
 };
 
 struct rpc_groupchat {
-	struct groupchat *bee_gc;
-	char *rpc_handle;
+	int id;
+	struct groupchat *gc;
 };
 
 static JSON_Value *rpc_out_new(const char *method, JSON_Array **params_) {
@@ -40,11 +44,27 @@ static JSON_Value *rpc_out_new(const char *method, JSON_Array **params_) {
 	JSON_Value *rpc = rpc_out_new(method, &params);
 
 /** Sends an RPC object. Takes ownership (i.e. frees it when done). */
-static void rpc_send(struct im_connection *ic, JSON_Value *rpc) {
+static gboolean rpc_send(struct im_connection *ic, JSON_Value *rpc) {
+	struct rpc_connection *rd = ic->proto_data;
 	char *buf = json_serialize_to_string(rpc);
+	int len = strlen(buf);
+	int st;
 
+	buf = g_realloc(buf, len + 3);
+	strcpy(buf + len, "\r\n");
+	len += 2;
+
+	st = write(rd->fd, buf, len);
 	g_free(buf);
 	json_value_free(rpc);
+
+	if (st != len) {
+		imcb_log(ic, "Write error");
+		imc_logout(ic, TRUE);
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
 static JSON_Value *rpc_ser_account(const account_t *acc) {
@@ -52,7 +72,8 @@ static JSON_Value *rpc_ser_account(const account_t *acc) {
 	JSON_Object *o = json_object(v);
 	json_object_set_string(o, "user", acc->user);
 	json_object_set_string(o, "pass", acc->user);
-	json_object_set_string(o, "server", acc->server);
+	if (acc->server)
+		json_object_set_string(o, "server", acc->server);
 	return v;
 }
 
@@ -74,6 +95,7 @@ static void rpc_login(account_t *acc) {
 		return;
 	}
 	ic->inpa = b_input_add(rd->fd, B_EV_IO_WRITE, rpc_login_cb, ic);
+	rd->groupchats = g_hash_table_new(g_int_hash, g_int_equal);
 }
 
 static gboolean rpc_login_cb(gpointer data, gint fd, b_input_condition cond) {
@@ -96,6 +118,13 @@ static void rpc_keepalive(struct im_connection *ic) {
 static void rpc_logout(struct im_connection *ic) {
 	RPC_OUT_INIT("logout");
 	rpc_send(ic, rpc);
+
+	struct rpc_connection *rd = ic->proto_data;
+	b_event_remove(ic->inpa);
+	closesocket(rd->fd);
+	g_free(rd->buf);
+	g_hash_table_destroy(rd->groupchats);
+	g_free(rd);
 }
 
 static int rpc_buddy_msg(struct im_connection *ic, char *to, char *message, int flags) {
@@ -170,6 +199,8 @@ static void rpc_get_info(struct im_connection *ic, char *who) {
 
 static void rpc_chat_invite(struct groupchat *gc, char *who, char *message) {
 	RPC_OUT_INIT("chat_invite");
+	struct rpc_groupchat *rc = gc->data;
+	json_array_append_number(params, rc->id);
 	json_array_append_string(params, who);
 	json_array_append_string(params, message);
 	rpc_send(gc->ic, rpc);
@@ -177,6 +208,8 @@ static void rpc_chat_invite(struct groupchat *gc, char *who, char *message) {
 
 static void rpc_chat_kick(struct groupchat *gc, char *who, const char *message) {
 	RPC_OUT_INIT("chat_kick");
+	struct rpc_groupchat *rc = gc->data;
+	json_array_append_number(params, rc->id);
 	json_array_append_string(params, who);
 	json_array_append_string(params, message);
 	rpc_send(gc->ic, rpc);
@@ -184,20 +217,33 @@ static void rpc_chat_kick(struct groupchat *gc, char *who, const char *message) 
 
 static void rpc_chat_leave(struct groupchat *gc) {
 	RPC_OUT_INIT("chat_leave");
+	struct rpc_groupchat *rc = gc->data;
+	json_array_append_number(params, rc->id);
 	rpc_send(gc->ic, rpc);
 }
 
 static void rpc_chat_msg(struct groupchat *gc, char *msg, int flags) {
 	RPC_OUT_INIT("chat_msg");	
-	struct rpc_groupchat *data = gc->data;
-	json_array_append_string(params, data->rpc_handle);
+	struct rpc_groupchat *rc = gc->data;
+	json_array_append_number(params, rc->id);
 	json_array_append_string(params, msg);
 	json_array_append_number(params, flags);
 	rpc_send(gc->ic, rpc);
 }
 
+static struct groupchat *rpc_groupchat_new(struct im_connection *ic, const char *handle) {
+	struct groupchat *gc = imcb_chat_new(ic, handle);
+	struct rpc_groupchat *rc = gc->data = g_new0(struct rpc_groupchat, 1);
+	rc->id = next_rpc_id;
+	rc->gc = gc;
+	return gc;
+}
+
 static struct groupchat *rpc_chat_with(struct im_connection *ic, char *who) {
 	RPC_OUT_INIT("chat_with");
+	struct groupchat *gc = rpc_groupchat_new(ic, who);
+	struct rpc_groupchat *rc = gc->data;
+	json_array_append_number(params, rc->id);
 	json_array_append_string(params, who);
 	rpc_send(ic, rpc);
 
@@ -207,6 +253,9 @@ static struct groupchat *rpc_chat_with(struct im_connection *ic, char *who) {
 static struct groupchat *rpc_chat_join(struct im_connection *ic, const char *room, const char *nick,
                                        const char *password, set_t **sets) {
 	RPC_OUT_INIT("chat_join");
+	struct groupchat *gc = rpc_groupchat_new(ic, room);
+	struct rpc_groupchat *rc = gc->data;
+	json_array_append_number(params, rc->id);
 	json_array_append_string(params, room);
 	json_array_append_string(params, nick);
 	json_array_append_string(params, password);
@@ -218,6 +267,8 @@ static struct groupchat *rpc_chat_join(struct im_connection *ic, const char *roo
 
 static void rpc_chat_topic(struct groupchat *gc, char *topic) {
 	RPC_OUT_INIT("chat_topic");
+	struct rpc_groupchat *rc = gc->data;
+	json_array_append_number(params, rc->id);
 	json_array_append_string(params, topic);
 	rpc_send(gc->ic, rpc);
 }
@@ -314,8 +365,12 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	json_object_set_number(json_object(d), "version", BITLBEE_VERSION_CODE);
 	json_array_append_value(params, d);
 	char *s = json_serialize_to_string(rpc);
+	int len = strlen(s);
+	s = g_realloc(s, len + 3);
+	strcpy(s + len, "\r\n");
+	len += 2;
 
-	if ((st = write(fd, s, strlen(s))) != strlen(s)) {
+	if ((st = write(fd, s, len)) != len) {
 		// LOG ERROR
 		return;
 	}
@@ -336,6 +391,7 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 
 		if (st == 0) {
 			// LOG ERROR
+			closesocket(fd);
 			return;
 		}
 		
@@ -347,12 +403,14 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 			if (sockerr_again())
 				continue;
 			// LOG ERROR
+			closesocket(fd);
 			return;
 		}
 		resplen += st;
 		resp[resplen] = '\0';
 	}
 	while (!(parsed = json_parse_string(resp)));
+	closesocket(fd);
 
 	JSON_Object *isup = json_object_get_object(json_object(parsed), "result");
 	if (isup == NULL) {
@@ -409,6 +467,30 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	register_protocol(ret);
 }
 
+#define PDIR "/tmp/rpcplugins"
+
+/* YA RLY :-/ */
+#ifndef UNIX_PATH_MAX
+struct sockaddr_un sizecheck;
+#define UNIX_PATH_MAX sizeof(sizecheck.sun_path)
+#endif
+
 void rpc_initmodule() {
+	DIR *pdir = opendir(PDIR);
+	struct dirent *de;
+
+	if (!pdir)
+		return;
+
+	while ((de = readdir(pdir))) {
+		char *fn = g_build_filename(PDIR, de->d_name, NULL);
+		struct sockaddr_un su;
+
+		strncpy(su.sun_path, fn, UNIX_PATH_MAX);
+		su.sun_path[UNIX_PATH_MAX-1] = '\0';
+		su.sun_family = AF_UNIX;
+		rpc_initmodule_sock((struct sockaddr*) &su, sizeof(su));
+		g_free(fn);
+	}
 }
 

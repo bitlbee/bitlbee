@@ -131,6 +131,7 @@ void nogaim_init()
 	extern void jabber_initmodule();
 	extern void twitter_initmodule();
 	extern void purple_initmodule();
+	extern void rpc_initmodule();
 
 #ifdef WITH_MSN
 	msn_initmodule();
@@ -154,6 +155,10 @@ void nogaim_init()
 
 #ifdef WITH_PURPLE
 	purple_initmodule();
+#endif
+
+#ifdef WITH_RPC
+	rpc_initmodule();
 #endif
 
 #ifdef WITH_PLUGINS
