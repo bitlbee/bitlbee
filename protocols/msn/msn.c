@@ -40,7 +40,7 @@ static void msn_init(account_t *acc)
 	s = set_add(&acc->set, "display_name", NULL, set_eval_display_name, acc);
 	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
-	s = set_add(&acc->set, "server", MSN_NS_HOST, set_eval_account, acc);
+	s = set_add(&acc->set, "server", NULL, set_eval_account, acc);
 	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
 
 	s = set_add(&acc->set, "port", MSN_NS_PORT, set_eval_int, acc);
@@ -57,9 +57,18 @@ static void msn_login(account_t *acc)
 {
 	struct im_connection *ic = imcb_new(acc);
 	struct msn_data *md = g_new0(struct msn_data, 1);
+	char *server = set_getstr(&ic->acc->set, "server");
 
 	ic->proto_data = md;
 	ic->flags |= OPT_PONGS | OPT_PONGED;
+
+	if (!server) {
+		imcb_error(ic, "The msn protocol is disabled in this version because most servers disabled MSNP18 over port 1863.");
+		imcb_error(ic, "If you find a working server, you can change the 'server' setting of this account. Good luck!");
+		imcb_error(ic, "See also: http://ismsndeadyet.com/"); // shameless plug
+		imc_logout(ic, FALSE);
+		return;
+	}
 
 	if (strchr(acc->user, '@') == NULL) {
 		imcb_error(ic, "Invalid account name");
@@ -75,8 +84,7 @@ static void msn_login(account_t *acc)
 	msn_connections = g_slist_prepend(msn_connections, ic);
 
 	imcb_log(ic, "Connecting");
-	msn_ns_connect(ic, md->ns,
-	               set_getstr(&ic->acc->set, "server"),
+	msn_ns_connect(ic, md->ns, server,
 	               set_getint(&ic->acc->set, "port"));
 }
 
