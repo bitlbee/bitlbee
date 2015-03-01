@@ -39,6 +39,9 @@ static bee_t *local_bee;
 
 static char *set_eval_display_name(set_t *set, char *value);
 
+void purple_request_input_callback(unsigned int id, struct im_connection *ic,
+                                   const char *message, const char *who);
+
 struct im_connection *purple_ic_by_pa(PurpleAccount *pa)
 {
 	GSList *i;
@@ -310,6 +313,9 @@ static void purple_login(account_t *acc)
 
 	ic->proto_data = pd = g_new0(struct purple_data, 1);
 	pd->account = purple_account_new(acc->user, (char *) acc->prpl->data);
+	pd->input_requests = g_hash_table_new_full(g_int_hash, g_int_equal,
+	                                           g_free, g_free);
+	pd->next_request_id = 0;
 	purple_account_set_password(pd->account, acc->pass);
 	purple_sync_settings(acc, pd->account);
 
@@ -330,6 +336,12 @@ static int purple_buddy_msg(struct im_connection *ic, char *who, char *message, 
 {
 	PurpleConversation *conv;
 	struct purple_data *pd = ic->proto_data;
+
+	if (!strncmp(who, PURPLE_REQUEST_HANDLE, strlen(PURPLE_REQUEST_HANDLE))) {
+		unsigned int request_id = atoi(who + strlen(PURPLE_REQUEST_HANDLE) + 1);
+		purple_request_input_callback(request_id, ic, message, who);
+		return 1;
+	}
 
 	if ((conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
 	                                                  who, pd->account)) == NULL) {
@@ -1055,9 +1067,57 @@ static void prplcb_request_test()
 }
 */
 
+struct request_input_data {
+	GCallback data_callback;
+	void *user_data;
+};
+
+void* prplcb_request_input(const char *title, const char *primary,
+        const char *secondary, const char *default_value, gboolean multiline,
+        gboolean masked, gchar *hint, const char *ok_text, GCallback ok_cb,
+        const char *cancel_text, GCallback cancel_cb, PurpleAccount *account,
+        const char *who, PurpleConversation *conv, void *user_data)
+{
+	struct im_connection *ic = purple_ic_by_pa(account);
+	struct purple_data *pd = ic->proto_data;
+	unsigned int id = pd->next_request_id;
+	struct request_input_data *ri = g_new0(struct request_input_data, 1);
+
+	pd->next_request_id = (id + 1) % 10000;
+	ri->data_callback = ok_cb;
+	ri->user_data = user_data;
+	g_hash_table_insert(pd->input_requests, &id, ri);
+
+	char buddy[20] = { 0 };
+	sprintf(buddy, "%s_%d", PURPLE_REQUEST_HANDLE, id);
+
+	imcb_add_buddy(ic, buddy, NULL);
+	imcb_buddy_msg(ic, buddy, secondary, 0, 0);
+
+	return 0;
+}
+
+void purple_request_input_callback(unsigned int id, struct im_connection *ic,
+                                   const char *message, const char *who)
+{
+	typedef void (*callback_t)(gpointer, const gchar *);
+	struct purple_data *pd = ic->proto_data;
+	struct request_input_data *ri = g_hash_table_lookup(pd->input_requests,
+	                                                    &id);
+
+	if (ri) {
+		callback_t callback = (callback_t) ri->data_callback;
+		callback(ri->user_data, message);
+	}
+
+	imcb_remove_buddy(ic, who, NULL);
+	g_hash_table_remove(pd->input_requests, &id);
+}
+
+
 static PurpleRequestUiOps bee_request_uiops =
 {
-	NULL,
+	prplcb_request_input,
 	NULL,
 	prplcb_request_action,
 	NULL,
