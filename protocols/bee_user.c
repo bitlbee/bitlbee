@@ -246,7 +246,7 @@ void imcb_buddy_times(struct im_connection *ic, const char *handle, time_t login
 	bu->idle_time = idle;
 }
 
-void imcb_buddy_msg(struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at)
+void imcb_buddy_msg(struct im_connection *ic, const char *handle, const char *msg, uint32_t flags, time_t sent_at)
 {
 	bee_t *bee = ic->bee;
 	bee_user_t *bu;

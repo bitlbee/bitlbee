@@ -27,6 +27,7 @@
    varying levels of success). */
 
 #include "bitlbee.h"
+#include "bpurple.h"
 
 #include <stdarg.h>
 
@@ -284,12 +285,13 @@ void purple_transfer_request(struct im_connection *ic, file_transfer_t *ft, char
 static void purple_transfer_forward(struct file_transfer *ft)
 {
 	struct prpl_xfer_data *px = ft->data;
-	PurpleAccount *pa = px->ic->proto_data;
+	struct purple_data *pd = px->ic->proto_data;
 
 	/* xfer_new() will pick up this variable. It's a hack but we're not
 	   multi-threaded anyway. */
 	next_ft = ft;
-	serv_send_file(purple_account_get_connection(pa), px->handle, px->fn);
+	serv_send_file(purple_account_get_connection(pd->account),
+                   px->handle, px->fn);
 }
 
 static gboolean purple_transfer_request_cb(gpointer data, gint fd, b_input_condition cond)
