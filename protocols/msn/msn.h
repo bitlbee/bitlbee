@@ -123,6 +123,25 @@ typedef enum {
 	MSN_EMAIL_UNVERIFIED = 16,
 } msn_flags_t;
 
+struct msn_gw {
+	char *last_host;
+	int port;
+	gboolean ssl;
+
+	char *session_id;
+
+	GByteArray *in;
+	GByteArray *out;
+
+	int poll_timeout;
+
+	b_event_handler callback;
+	gpointer data;
+
+	gboolean open;
+	gboolean waiting;
+};
+
 struct msn_data {
 	int fd, inpa;
 	int rxlen;
@@ -151,6 +170,9 @@ struct msn_data {
 	   it to the MSNP server. */
 	GTree *domaintree;
 	int adl_todo;
+
+	gboolean is_http;
+	struct msn_gw *gw;
 };
 
 struct msn_away_state {
