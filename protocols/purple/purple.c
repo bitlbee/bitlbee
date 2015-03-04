@@ -1047,6 +1047,19 @@ static void *prplcb_request_action(const char *title, const char *primary, const
 	return pqad;
 }
 
+/* So it turns out some requests have no account context at all, because
+ * libpurple hates us. This means that query_del_by_conn() won't remove those
+ * on logout, and will segfault if the user replies. That's why this exists.
+ */
+static void prplcb_close_request(PurpleRequestType type, void *data)
+{
+	if (type == PURPLE_REQUEST_ACTION) {
+		struct prplcb_request_action_data *pqad = data;
+		query_del(local_bee->ui_data, pqad->bee_data);
+	}
+	/* Add the request input handler here when that becomes a thing */
+}
+
 /*
 static void prplcb_request_test()
 {
@@ -1061,7 +1074,7 @@ static PurpleRequestUiOps bee_request_uiops =
 	prplcb_request_action,
 	NULL,
 	NULL,
-	NULL,
+	prplcb_close_request,
 	NULL,
 };
 
