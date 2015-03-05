@@ -133,7 +133,6 @@ xt_status jabber_parse_muc_list(struct im_connection *ic, struct xt_node *node, 
 		struct xt_node *c2;
 		struct groupchat *gc;
 		struct irc_channel *ircc;
-		//char *participants = NULL;
 		char *topic = NULL;
 		gboolean new_room = FALSE;
 		char *jid = xt_find_attr(c, "jid");
@@ -141,18 +140,9 @@ xt_status jabber_parse_muc_list(struct im_connection *ic, struct xt_node *node, 
 
 		imcb_log(ic, "Debug: adding MUC to channel list: %s - '%s'", jid, name);
 
-		c2 = xt_find_node_by_attr(c->children, "x", "xmlns", XMLNS_HIPCHAT_MUC);
-
-		if (c2) {
-			struct xt_node *node;
-			/*
-			if ( ( node = xt_find_node( c2->children, "num_participants" ) ) ) {
-			        participants = node->text;
-			}
-			*/
-			if ((node = xt_find_node(c2->children, "topic"))) {
-				topic = node->text;
-			}
+		if ((c2 = xt_find_node_by_attr(c->children, "x", "xmlns", XMLNS_HIPCHAT_MUC)) &&
+		    (c2 = xt_find_node(c2->children, "topic"))) {
+			topic = c2->text;
 		}
 
 		gc = bee_chat_by_title(ic->bee, ic, jid);
