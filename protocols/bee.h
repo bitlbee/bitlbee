@@ -114,6 +114,8 @@ typedef struct bee_ui_funcs {
 	   added using chat_add_user().  UI state can be stored via c->data. */
 	gboolean (*chat_new)(bee_t *bee, struct groupchat *c);
 	gboolean (*chat_free)(bee_t *bee, struct groupchat *c);
+	gboolean (*chat_placeholder_new)(bee_t *bee, struct im_connection *ic, const char *handle,
+	                                 const char *name, const char *topic);
 	/* System messages of any kind. */
 	gboolean (*chat_log)(bee_t *bee, struct groupchat *c, const char *text);
 	gboolean (*chat_msg)(bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, time_t sent_at);
@@ -164,6 +166,8 @@ G_MODULE_EXPORT void imcb_buddy_msg(struct im_connection *ic, const char *handle
  *   the user her/himself. At that point the group chat will be visible to the
  *   user, too. */
 G_MODULE_EXPORT struct groupchat *imcb_chat_new(struct im_connection *ic, const char *handle);
+G_MODULE_EXPORT void imcb_chat_placeholder_new(struct im_connection *ic, const char *handle, const char *name,
+                                               const char *topic);
 G_MODULE_EXPORT void imcb_chat_name_hint(struct groupchat *c, const char *name);
 G_MODULE_EXPORT void imcb_chat_free(struct groupchat *c);
 /* To tell BitlBee 'who' said 'msg' in 'c'. 'flags' and 'sent_at' can be 0. */

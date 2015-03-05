@@ -147,6 +147,9 @@ typedef enum {
 	IRC_CHANNEL_TEMP = 2,   /* Erase the channel when the user leaves,
 	                           and don't save it. */
 
+	/* Show a placeholder of the channel in listings, but don't save it */
+	IRC_CHANNEL_KEEP_PLACEHOLDER = 4,
+
 	/* Hack: Set this flag right before jumping into IM when we expect
 	   a call to imcb_chat_new(). */
 	IRC_CHANNEL_CHAT_PICKME = 0x10000,
@@ -298,6 +301,8 @@ void irc_channel_printf(irc_channel_t *ic, char *format, ...);
 gboolean irc_channel_name_ok(const char *name);
 void irc_channel_name_strip(char *name);
 int irc_channel_name_cmp(const char *a_, const char *b_);
+char *irc_channel_name_gen(bee_t *bee, const char *name);
+gboolean irc_channel_name_hint(irc_channel_t *ic, const char *name);
 void irc_channel_update_ops(irc_channel_t *ic, char *value);
 char *set_eval_irc_channel_ops(struct set *set, char *value);
 gboolean irc_channel_wants_user(irc_channel_t *ic, irc_user_t *iu);

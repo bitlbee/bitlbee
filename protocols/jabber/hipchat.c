@@ -131,10 +131,7 @@ xt_status jabber_parse_muc_list(struct im_connection *ic, struct xt_node *node, 
 	c = query->children;
 	while ((c = xt_find_node(c, "item"))) {
 		struct xt_node *c2;
-		struct groupchat *gc;
-		struct irc_channel *ircc;
 		char *topic = NULL;
-		gboolean new_room = FALSE;
 		char *jid = xt_find_attr(c, "jid");
 		char *name = xt_find_attr(c, "name");
 
@@ -145,25 +142,7 @@ xt_status jabber_parse_muc_list(struct im_connection *ic, struct xt_node *node, 
 			topic = c2->text;
 		}
 
-		gc = bee_chat_by_title(ic->bee, ic, jid);
-		if (!gc) {
-			gc = imcb_chat_new(ic, jid);
-			new_room = TRUE;
-		}
-		imcb_chat_name_hint(gc, name);
-		imcb_chat_topic(gc, NULL, topic, 0);
-
-		ircc = gc->ui_data;
-		set_setstr(&ircc->set, "account", ic->acc->tag);
-		set_setstr(&ircc->set, "room", jid);
-		set_setstr(&ircc->set, "chat_type", "room");
-
-		if (new_room) {
-			/* This cleans everything but leaves the irc channel around,
-			 * since it just graduated to a room.*/
-			imcb_chat_free(gc);
-		}
-
+		imcb_chat_placeholder_new(ic, jid, name, topic);
 		c = c->next;
 	}
 	return XT_HANDLED;

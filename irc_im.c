@@ -608,6 +608,27 @@ static gboolean bee_irc_chat_free(bee_t *bee, struct groupchat *c)
 	return TRUE;
 }
 
+static gboolean bee_irc_chat_placeholder_new(bee_t *bee, struct im_connection *ic, const char *handle,
+                                             const char *name, const char *topic)
+{
+	irc_t *irc = bee->ui_data;
+	irc_channel_t *ircc;
+	char *full_name = irc_channel_name_gen(bee, name);
+
+	ircc = irc_channel_new(irc, full_name);
+
+	set_setstr(&ircc->set, "type", "chat");
+	set_setstr(&ircc->set, "chat_type", "placeholder");
+	set_setstr(&ircc->set, "account", ic->acc->tag);
+	set_setstr(&ircc->set, "room", (char *) handle);
+
+	irc_channel_set_topic(ircc, topic, NULL);
+
+	g_free(full_name);
+
+	return TRUE;
+}
+
 static gboolean bee_irc_chat_log(bee_t *bee, struct groupchat *c, const char *text)
 {
 	irc_channel_t *ic = c->ui_data;
@@ -700,55 +721,7 @@ static gboolean bee_irc_chat_topic(bee_t *bee, struct groupchat *c, const char *
 
 static gboolean bee_irc_chat_name_hint(bee_t *bee, struct groupchat *c, const char *name)
 {
-	irc_t *irc = bee->ui_data;
-	irc_channel_t *ic = c->ui_data, *oic;
-	char stripped[MAX_NICK_LENGTH + 1], *full_name;
-
-	if (ic == NULL) {
-		return FALSE;
-	}
-
-	/* Don't rename a channel if the user's in it already. */
-	if (ic->flags & IRC_CHANNEL_JOINED) {
-		return FALSE;
-	}
-
-	strncpy(stripped, name, MAX_NICK_LENGTH);
-	stripped[MAX_NICK_LENGTH] = '\0';
-	irc_channel_name_strip(stripped);
-	if (set_getbool(&bee->set, "lcnicks")) {
-		nick_lc(irc, stripped);
-	}
-
-	if (stripped[0] == '\0') {
-		return FALSE;
-	}
-
-	full_name = g_strdup_printf("#%s", stripped);
-	if ((oic = irc_channel_by_name(irc, full_name))) {
-		char *type, *chat_type;
-
-		type = set_getstr(&oic->set, "type");
-		chat_type = set_getstr(&oic->set, "chat_type");
-
-		if (type && chat_type && oic->data == FALSE &&
-		    strcmp(type, "chat") == 0 &&
-		    strcmp(chat_type, "groupchat") == 0) {
-			/* There's a channel with this name already, but it looks
-			   like it's not in use yet. Most likely the IRC client
-			   rejoined the channel after a reconnect. Remove it so
-			   we can reuse its name. */
-			irc_channel_free(oic);
-		} else {
-			g_free(full_name);
-			return FALSE;
-		}
-	}
-
-	g_free(ic->name);
-	ic->name = full_name;
-
-	return TRUE;
+	return irc_channel_name_hint(c->ui_data, name);
 }
 
 static gboolean bee_irc_chat_invite(bee_t *bee, bee_user_t *bu, const char *name, const char *msg)
@@ -876,10 +849,12 @@ static gboolean bee_irc_channel_chat_privmsg_cb(gpointer data, gint fd, b_input_
 
 static gboolean bee_irc_channel_chat_join(irc_channel_t *ic)
 {
-	char *acc_s, *room;
+	char *acc_s, *room, *chat_type;
 	account_t *acc;
 
-	if (strcmp(set_getstr(&ic->set, "chat_type"), "room") != 0) {
+	chat_type = set_getstr(&ic->set, "chat_type");
+
+	if (strcmp(chat_type, "room") != 0 && strcmp(chat_type, "placeholder") != 0) {
 		return TRUE;
 	}
 
@@ -1035,10 +1010,14 @@ static char *set_eval_chat_type(set_t *set, char *value)
 {
 	struct irc_channel *ic = set->data;
 
+	ic->flags &= ~(IRC_CHANNEL_TEMP | IRC_CHANNEL_KEEP_PLACEHOLDER);
+
 	if (strcmp(value, "groupchat") == 0) {
 		ic->flags |= IRC_CHANNEL_TEMP;
 	} else if (strcmp(value, "room") == 0) {
-		ic->flags &= ~IRC_CHANNEL_TEMP;
+		// beep boop
+	} else if (strcmp(value, "placeholder") == 0) {
+		ic->flags |= IRC_CHANNEL_TEMP | IRC_CHANNEL_KEEP_PLACEHOLDER;
 	} else {
 		return NULL;
 	}
@@ -1122,6 +1101,7 @@ const struct bee_ui_funcs irc_ui_funcs = {
 
 	bee_irc_chat_new,
 	bee_irc_chat_free,
+	bee_irc_chat_placeholder_new,
 	bee_irc_chat_log,
 	bee_irc_chat_msg,
 	bee_irc_chat_add_user,

@@ -53,6 +53,15 @@ struct groupchat *imcb_chat_new(struct im_connection *ic, const char *handle)
 	return c;
 }
 
+void imcb_chat_placeholder_new(struct im_connection *ic, const char *handle, const char *name, const char *topic)
+{
+	bee_t *bee = ic->bee;
+
+	if (bee->ui->chat_placeholder_new) {
+		bee->ui->chat_placeholder_new(bee, ic, handle, name, topic);
+	}
+}
+
 void imcb_chat_name_hint(struct groupchat *c, const char *name)
 {
 	bee_t *bee = c->ic->bee;
