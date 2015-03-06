@@ -851,18 +851,19 @@ static void twitter_buddy_data_free(struct bee_user *bu)
 	g_free(bu->data);
 }
 
-/* Parses a decimal or hex tweet ID, handling errors by returning 0 */
-static guint64 twitter_parse_id(char *string, int base)
+/* Parses a decimal or hex tweet ID, returns TRUE on success */
+static gboolean twitter_parse_id(char *string, int base, guint64 *id)
 {
 	guint64 parsed;
 	char *endptr;
 
 	errno = 0;
 	parsed = g_ascii_strtoull(string, &endptr, base);
-	if (errno || endptr == string || *endptr == '\0') {
-		return 0;
+	if (errno || endptr == string || *endptr != '\0') {
+		return FALSE;
 	}
-	return parsed;
+	*id = parsed;
+	return TRUE;
 }
 
 /** Convert the given bitlbee tweet ID, bitlbee username, or twitter tweet ID
@@ -892,14 +893,14 @@ static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, cha
 		if (arg[0] == '#') {
 			arg++;
 		}
-		if ((id = twitter_parse_id(arg, 16)) && id < TWITTER_LOG_LENGTH) {
+		if (twitter_parse_id(arg, 16, &id) && id < TWITTER_LOG_LENGTH) {
 			bu = td->log[id].bu;
 			id = td->log[id].id;
 			/* Beware of dangling pointers! */
 			if (!g_slist_find(ic->bee->users, bu)) {
 				bu = NULL;
 			}
-		} else if ((id = twitter_parse_id(arg, 10))) {
+		} else if (twitter_parse_id(arg, 10, &id)) {
 			/* Allow normal tweet IDs as well; not a very useful
 			   feature but it's always been there. Just ignore
 			   very low IDs to avoid accidents. */
