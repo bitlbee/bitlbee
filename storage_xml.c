@@ -102,6 +102,10 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	protocol = xt_find_attr(node, "protocol");
 	if (protocol) {
 		prpl = find_protocol(protocol);
+		if (!prpl) {
+			irc_rootmsg(xd->irc, "Error loading user config: Protocol not found: `%s'", protocol);
+			return XT_ABORT;
+		}
 		local = protocol_account_islocal(protocol);
 	}
 
@@ -196,7 +200,11 @@ static storage_status_t xml_load_real(irc_t *irc, const char *my_nick, const cha
 
 	fn = g_strconcat(global.conf->configdir, xd->given_nick, ".xml", NULL);
 	if ((fd = open(fn, O_RDONLY)) < 0) {
-		ret = STORAGE_NO_SUCH_USER;
+		if (errno == ENOENT) {
+			ret = STORAGE_NO_SUCH_USER;
+		} else {
+			irc_rootmsg(irc, "Error loading user config: %s", g_strerror(errno));
+		}
 		goto error;
 	}
 
@@ -376,8 +384,7 @@ static storage_status_t xml_save(irc_t *irc, int overwrite)
 
 	strcat(path, ".XXXXXX");
 	if ((fd = mkstemp(path)) < 0) {
-		irc_rootmsg(irc, "Error while opening configuration file.");
-		return STORAGE_OTHER_ERROR;
+		goto error;
 	}
 
 	tree = xml_generate(irc);
@@ -399,7 +406,7 @@ static storage_status_t xml_save(irc_t *irc, int overwrite)
 	goto finish;
 
 error:
-	irc_rootmsg(irc, "Write error. Disk full?");
+	irc_rootmsg(irc, "Write error: %s", g_strerror(errno));
 	ret = STORAGE_OTHER_ERROR;
 
 finish:

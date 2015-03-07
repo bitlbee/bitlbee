@@ -763,11 +763,13 @@ int irc_check_login(irc_t *irc)
 
 			irc_rootmsg(irc,
 			            "Welcome to the BitlBee gateway!\n\n"
+			            "Running %s %s\n\n"
 			            "If you've never used BitlBee before, please do read the help "
 			            "information using the \x02help\x02 command. Lots of FAQs are "
 			            "answered there.\n"
 			            "If you already have an account on this server, just use the "
-			            "\x02identify\x02 command to identify yourself.");
+			            "\x02identify\x02 command to identify yourself.",
+			            PACKAGE, BITLBEE_VERSION);
 
 			/* This is for bug #209 (use PASS to identify to NickServ). */
 			if (irc->password != NULL) {

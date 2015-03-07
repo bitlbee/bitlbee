@@ -861,6 +861,9 @@ static void twitter_http_stream(struct http_request *req)
 		}
 
 		imcb_error(ic, "Stream closed (%s)", req->status_string);
+		if (req->status_code == 401) {
+			imcb_error(ic, "Check your system clock.");
+		}
 		imc_logout(ic, TRUE);
 		return;
 	}
