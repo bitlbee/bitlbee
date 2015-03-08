@@ -57,7 +57,7 @@ int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
 	}
 
 	if (getenv("BITLBEE_DEBUG")) {
-		fprintf(stderr, "->NS%d:%s\n", fd, out);
+		fprintf(stderr, "\x1b[91m>>>[NS%d] %s\n\x1b[97m", fd, out);
 	}
 
 	len = strlen(out);

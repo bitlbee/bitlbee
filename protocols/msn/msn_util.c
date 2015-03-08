@@ -274,12 +274,14 @@ int msn_handler(struct msn_handler_data *h)
 	h->rxlen += st;
 
 	if (st <= 0) {
+		fprintf(stderr, "\n\x1b[92m<<< [closed]\x1b[97m ");
 		return(-1);
 	}
 
 	if (getenv("BITLBEE_DEBUG")) {
-		write(2, "->C:", 4);
+		fprintf(stderr, "\n\x1b[92m<<< ");
 		write(2, h->rxq + h->rxlen - st, st);
+		fprintf(stderr, "\x1b[97m");
 	}
 
 	while (st) {
