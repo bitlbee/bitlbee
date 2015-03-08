@@ -59,7 +59,7 @@
 
 #define MSNP11_PROD_KEY "C1BX{V4W}Q3*10SM"
 #define MSNP11_PROD_ID  "PROD0120PW!CCV9@"
-#define MSNP_VER        "MSNP18"
+#define MSNP_VER        "MSNP21"
 #define MSNP_BUILD      "14.0.8117.416"
 
 #define MSN_SB_NEW         -24062002

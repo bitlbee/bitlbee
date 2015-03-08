@@ -184,7 +184,7 @@ static int msn_ns_command(struct msn_handler_data *handler, char **cmd, int num_
 			return(0);
 		}
 
-		return(msn_ns_write(ic, handler->fd, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s\r\n",
+		return(msn_ns_write(ic, handler->fd, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s VmVyc2lvbjogMQ0KWGZyQ291bnQ6IDINClhmclNlbnRVVENUaW1lOiA2MzU2MTQ3OTU5NzgzOTAwMDANCklzR2VvWGZyOiB0cnVlDQo=\r\n",
 		                    ++md->trId, ic->acc->user));
 	} else if (strcmp(cmd[0], "CVR") == 0) {
 		/* We don't give a damn about the information we just received */
@@ -296,9 +296,6 @@ static int msn_ns_command(struct msn_handler_data *handler, char **cmd, int num_
 			imc_logout(ic, TRUE);
 			return(0);
 		}
-	} else if (strcmp(cmd[0], "BLP") == 0) {
-		msn_ns_send_adl_start(ic);
-		return msn_ns_finish_login(ic);
 	} else if (strcmp(cmd[0], "ADL") == 0) {
 		if (num_parts >= 3 && strcmp(cmd[2], "OK") == 0) {
 			msn_ns_send_adl(ic);
@@ -495,6 +492,10 @@ static int msn_ns_command(struct msn_handler_data *handler, char **cmd, int num_
 		   apparently used to announce address book changes. */
 		if (num_parts >= 2) {
 			handler->msglen = atoi(cmd[1]);
+		}
+	} else if (strcmp(cmd[0], "NFY") == 0) {
+		if (num_parts >= 3) {
+			handler->msglen = atoi(cmd[2]);
 		}
 	} else if (strcmp(cmd[0], "UBM") == 0) {
 		if (num_parts >= 7) {
@@ -767,20 +768,18 @@ void msn_auth_got_passport_token(struct im_connection *ic, const char *token, co
 
 void msn_auth_got_contact_list(struct im_connection *ic)
 {
-	struct msn_data *md;
-
 	/* Dead connection? */
 	if (g_slist_find(msn_connections, ic) == NULL) {
 		return;
 	}
 
-	md = ic->proto_data;
-	msn_ns_write(ic, -1, "BLP %d %s\r\n", ++md->trId, "BL");
+	msn_ns_send_adl_start(ic);
+	msn_ns_finish_login(ic);
 }
 
 static gboolean msn_ns_send_adl_1(gpointer key, gpointer value, gpointer data)
 {
-	struct xt_node *adl = data, *d, *c;
+	struct xt_node *adl = data, *d, *c, *s;
 	struct bee_user *bu = value;
 	struct msn_buddy_data *bd = bu->data;
 	struct msn_data *md = bu->ic->proto_data;
@@ -809,8 +808,11 @@ static gboolean msn_ns_send_adl_1(gpointer key, gpointer value, gpointer data)
 	g_snprintf(l, sizeof(l), "%d", bd->flags & 7);
 	c = xt_new_node("c", NULL, NULL);
 	xt_add_attr(c, "n", handle);
-	xt_add_attr(c, "l", l);
 	xt_add_attr(c, "t", "1");   /* FIXME: Network type, i.e. 32 for Y!MSG */
+	s = xt_new_node("s", NULL, NULL);
+	xt_add_attr(s, "n", "IM");
+	xt_add_attr(s, "l", l);
+	xt_insert_child(c, s);
 	xt_insert_child(d, c);
 
 	/* Do this in batches of 100. */
