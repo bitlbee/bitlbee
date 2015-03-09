@@ -95,7 +95,6 @@ static void msn_logout(struct im_connection *ic)
 	if (md) {
 		msn_ns_close(md);
 
-		msn_msgq_purge(ic, &md->msgq);
 		msn_soapq_flush(ic, FALSE);
 
 		for (i = 0; i < sizeof(md->tokens) / sizeof(md->tokens[0]); i++) {

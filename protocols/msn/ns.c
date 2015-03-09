@@ -247,8 +247,6 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 		} else if (num_parts >= 3) {
 			handler->msglen = atoi(cmd[2]);
 		}
-	} else if (strcmp(cmd[0], "PRP") == 0) {
-		imcb_connected(ic);
 	} else if (strcmp(cmd[0], "CHL") == 0) {
 		char *resp;
 		int st;
@@ -266,53 +264,6 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 		                   strlen(resp), resp);
 		g_free(resp);
 		return st;
-	} else if (strcmp(cmd[0], "ILN") == 0 || strcmp(cmd[0], "NLN") == 0) {
-		const struct msn_away_state *st;
-		const char *handle;
-		int cap = 0;
-
-		if (num_parts < 6) {
-			imcb_error(ic, "Syntax error");
-			imc_logout(ic, TRUE);
-			return(0);
-		}
-		/* ILN and NLN are more or less the same, except ILN has a trId
-		   at the start, and NLN has a capability field at the end.
-		   Does ILN still exist BTW? */
-		if (cmd[0][1] == 'I') {
-			cmd++;
-		} else {
-			cap = atoi(cmd[4]);
-		}
-
-		handle = msn_normalize_handle(cmd[2]);
-		if (strcmp(handle, ic->acc->user) == 0) {
-			return 1; /* That's me! */
-
-		}
-		http_decode(cmd[3]);
-		imcb_rename_buddy(ic, handle, cmd[3]);
-
-		st = msn_away_state_by_code(cmd[1]);
-		if (!st) {
-			/* FIXME: Warn/Bomb about unknown away state? */
-			st = msn_away_state_list + 1;
-		}
-
-		imcb_buddy_status(ic, handle, OPT_LOGGED_IN |
-		                  (st != msn_away_state_list ? OPT_AWAY : 0) |
-		                  (cap & 1 ? OPT_MOBILE : 0),
-		                  st->name, NULL);
-
-	} else if (strcmp(cmd[0], "FLN") == 0) {
-		const char *handle;
-
-		if (cmd[1] == NULL) {
-			return 1;
-		}
-
-		handle = msn_normalize_handle(cmd[1]);
-		imcb_buddy_status(ic, handle, 0, NULL, NULL);
 	} else if (strcmp(cmd[0], "OUT") == 0) {
 		int allow_reconnect = TRUE;
 
@@ -328,80 +279,13 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 
 		imc_logout(ic, allow_reconnect);
 		return(0);
-	} else if (strcmp(cmd[0], "IPG") == 0) {
-		imcb_error(ic, "Received IPG command, we don't handle them yet.");
-
-		handler->msglen = atoi(cmd[1]);
-
-		if (handler->msglen <= 0) {
-			imcb_error(ic, "Syntax error");
-			imc_logout(ic, TRUE);
-			return(0);
-		}
-	}
-#if 0
-	else if (strcmp(cmd[0], "ADG") == 0) {
-		char *group = g_strdup(cmd[3]);
-		int groupnum, i;
-		GSList *l, *next;
-
-		http_decode(group);
-		if (sscanf(cmd[4], "%d", &groupnum) == 1) {
-			if (groupnum >= md->groupcount) {
-				md->grouplist = g_renew(char *, md->grouplist, groupnum + 1);
-				for (i = md->groupcount; i <= groupnum; i++) {
-					md->grouplist[i] = NULL;
-				}
-				md->groupcount = groupnum + 1;
-			}
-			g_free(md->grouplist[groupnum]);
-			md->grouplist[groupnum] = group;
-		} else {
-			/* Shouldn't happen, but if it does, give up on the group. */
-			g_free(group);
-			imcb_error(ic, "Syntax error");
-			imc_logout(ic, TRUE);
-			return 0;
-		}
-
-		for (l = md->grpq; l; l = next) {
-			struct msn_groupadd *ga = l->data;
-			next = l->next;
-			if (g_strcasecmp(ga->group, group) == 0) {
-				if (!msn_buddy_list_add(ic, "FL", ga->who, ga->who, group)) {
-					return 0;
-				}
-
-				g_free(ga->group);
-				g_free(ga->who);
-				g_free(ga);
-				md->grpq = g_slist_remove(md->grpq, ga);
-			}
-		}
-	}
-#endif
-	else if (strcmp(cmd[0], "GCF") == 0) {
+	} else if (strcmp(cmd[0], "GCF") == 0) {
 		/* Coming up is cmd[2] bytes of stuff we're supposed to
 		   censore. Meh. */
 		handler->msglen = atoi(cmd[2]);
-	} else if (strcmp(cmd[0], "UBX") == 0) {
-		/* Status message. */
-		if (num_parts >= 3) {
-			handler->msglen = atoi(cmd[2]);
-		}
-	} else if (strcmp(cmd[0], "NOT") == 0) {
-		/* Some kind of notification, poorly documented but
-		   apparently used to announce address book changes. */
-		if (num_parts >= 2) {
-			handler->msglen = atoi(cmd[1]);
-		}
 	} else if ((strcmp(cmd[0], "NFY") == 0) || (strcmp(cmd[0], "SDG") == 0)) {
 		if (num_parts >= 3) {
 			handler->msglen = atoi(cmd[2]);
-		}
-	} else if (strcmp(cmd[0], "UBM") == 0) {
-		if (num_parts >= 7) {
-			handler->msglen = atoi(cmd[6]);
 		}
 	} else if (strcmp(cmd[0], "QNG") == 0) {
 		ic->flags |= OPT_PONGED;
@@ -421,7 +305,7 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 			handler->msglen = atoi(cmd[2]);
 		}
 	} else {
-		/* debug( "Received unknown command from main server: %s", cmd[0] ); */
+		imcb_error(ic, "Received unknown command from main server: %s", cmd[0]);
 	}
 
 	return(1);
@@ -500,76 +384,13 @@ int msn_ns_message(struct msn_data *handler, char *msg, int msglen, char **cmd, 
 					g_free(fromname);
 				}
 			} else if (g_strncasecmp(ct, "text/x-msmsgsactivemailnotification", 35) == 0) {
-			} else if (g_strncasecmp(ct, "text/x-msmsgsinitialmdatanotification", 37) == 0 ||
-			           g_strncasecmp(ct, "text/x-msmsgsoimnotification", 28) == 0) {
-				/* We received an offline message. Or at least notification
-				   that there is one waiting for us. Fetching the message(s)
-				   and purging them from the server is a lot of SOAPy work
-				   not worth doing IMHO. Also I thought it was possible to
-				   have the notification server send them directly, I was
-				   pretty sure I saw Pidgin do it..
-
-				   At least give a notification for now, seems like a
-				   reasonable thing to do. Only problem is, they'll keep
-				   coming back at login time until you read them using a
-				   different client. :-( */
-
-				char *xml = get_rfc822_header(body, "Mail-Data:", blen);
-				struct xt_node *md, *m;
-
-				if (!xml) {
-					return 1;
-				}
-				md = xt_from_string(xml, 0);
-				if (!md) {
-					return 1;
-				}
-
-				for (m = md->children; (m = xt_find_node(m, "M")); m = m->next) {
-					struct xt_node *e = xt_find_node(m->children, "E");
-					struct xt_node *rt = xt_find_node(m->children, "RT");
-					struct tm tp;
-					time_t msgtime = 0;
-
-					if (!e || !e->text) {
-						continue;
-					}
-
-					memset(&tp, 0, sizeof(tp));
-					if (rt && rt->text &&
-					    sscanf(rt->text, "%4d-%2d-%2dT%2d:%2d:%2d.",
-					           &tp.tm_year, &tp.tm_mon, &tp.tm_mday,
-					           &tp.tm_hour, &tp.tm_min, &tp.tm_sec) == 6) {
-						tp.tm_year -= 1900;
-						tp.tm_mon--;
-						msgtime = mktime_utc(&tp);
-
-					}
-					imcb_buddy_msg(ic, e->text,
-					               "<< \002BitlBee\002 - Received offline message. BitlBee can't show these. >>", 0,
-					               msgtime);
-				}
-
-				g_free(xml);
-				xt_free_node(md);
+				/* Notification that a message has been read... Ignore it */
 			} else {
 				debug("Can't handle %s packet from notification server", ct);
 			}
 
 			g_free(ct);
 		}
-	} else if (strcmp(cmd[0], "UBX") == 0) {
-		struct xt_node *ubx, *psm;
-		char *psm_text = NULL;
-
-		ubx = xt_from_string(msg, msglen);
-		if (ubx && strcmp(ubx->name, "Data") == 0 &&
-		    (psm = xt_find_node(ubx->children, "PSM"))) {
-			psm_text = psm->text;
-		}
-
-		imcb_buddy_status_msg(ic, msn_normalize_handle(cmd[1]), psm_text);
-		xt_free_node(ubx);
 	} else if (strcmp(cmd[0], "ADL") == 0) {
 		struct xt_node *adl, *d, *c;
 
@@ -781,11 +602,7 @@ int msn_ns_finish_login(struct im_connection *ic)
 	}
 
 	if ((md->flags & MSN_DONE_ADL) && (md->flags & MSN_GOT_PROFILE)) {
-		if (md->flags & MSN_EMAIL_UNVERIFIED) {
-			imcb_connected(ic);
-		} else {
-			return msn_ns_set_display_name(ic, set_getstr(&ic->acc->set, "display_name"));
-		}
+		imcb_connected(ic);
 	}
 
 	return 1;
@@ -808,29 +625,4 @@ int msn_ns_sendmessage(struct im_connection *ic, bee_user_t *bu, const char *tex
 	retval = msn_ns_write(ic, -1, "SDG %d %zd\r\n%s", ++md->trId, strlen(buf), buf);
 	g_free(buf);
 	return retval;
-}
-
-void msn_ns_oim_send_queue(struct im_connection *ic, GSList **msgq)
-{
-	GSList *l;
-
-	for (l = *msgq; l; l = l->next) {
-		struct msn_message *m = l->data;
-		bee_user_t *bu = bee_user_by_handle(ic->bee, ic, m->who);
-
-		if (bu) {
-			if (!msn_ns_sendmessage(ic, bu, m->text)) {
-				return;
-			}
-		}
-	}
-
-	while (*msgq != NULL) {
-		struct msn_message *m = (*msgq)->data;
-
-		*msgq = g_slist_remove(*msgq, m);
-		g_free(m->who);
-		g_free(m->text);
-		g_free(m);
-	}
 }

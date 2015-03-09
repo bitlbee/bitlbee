@@ -54,48 +54,6 @@ int msn_buddy_list_add(struct im_connection *ic, msn_buddy_flags_t list, const c
 	char *adl;
 
 	*groupid = '\0';
-#if 0
-	if (group) {
-		int i;
-		for (i = 0; i < md->groupcount; i++) {
-			if (g_strcasecmp(md->grouplist[i], group) == 0) {
-				g_snprintf(groupid, sizeof(groupid), " %d", i);
-				break;
-			}
-		}
-
-		if (*groupid == '\0') {
-			/* Have to create this group, it doesn't exist yet. */
-			struct msn_groupadd *ga;
-			GSList *l;
-
-			for (l = md->grpq; l; l = l->next) {
-				ga = l->data;
-				if (g_strcasecmp(ga->group, group) == 0) {
-					break;
-				}
-			}
-
-			ga = g_new0(struct msn_groupadd, 1);
-			ga->who = g_strdup(who);
-			ga->group = g_strdup(group);
-			md->grpq = g_slist_prepend(md->grpq, ga);
-
-			if (l == NULL) {
-				char groupname[strlen(group) + 1];
-				strcpy(groupname, group);
-				http_encode(groupname);
-				g_snprintf(buf, sizeof(buf), "ADG %d %s %d\r\n", ++md->trId, groupname, 0);
-				return msn_write(ic, buf, strlen(buf));
-			} else {
-				/* This can happen if the user's doing lots of adds to a
-				   new group at once; we're still waiting for the server
-				   to confirm group creation. */
-				return 1;
-			}
-		}
-	}
-#endif
 
 	if (!((bu = bee_user_by_handle(ic->bee, ic, who)) ||
 	      (bu = bee_user_new(ic->bee, ic, who, 0))) ||
@@ -131,17 +89,6 @@ int msn_buddy_list_remove(struct im_connection *ic, msn_buddy_flags_t list, cons
 	char *adl;
 
 	*groupid = '\0';
-#if 0
-	if (group) {
-		int i;
-		for (i = 0; i < md->groupcount; i++) {
-			if (g_strcasecmp(md->grouplist[i], group) == 0) {
-				g_snprintf(groupid, sizeof(groupid), " %d", i);
-				break;
-			}
-		}
-	}
-#endif
 
 	if (!(bu = bee_user_by_handle(ic->bee, ic, who)) ||
 	    !(bd = bu->data) || !(bd->flags & list)) {
@@ -372,46 +319,6 @@ int msn_handler(struct msn_data *h)
 	}
 
 	return(1);
-}
-
-void msn_msgq_purge(struct im_connection *ic, GSList **list)
-{
-	struct msn_message *m;
-	GString *ret;
-	GSList *l;
-	int n = 0;
-
-	l = *list;
-	if (l == NULL) {
-		return;
-	}
-
-	m = l->data;
-	ret = g_string_sized_new(1024);
-	g_string_printf(ret, "Warning: Cleaning up MSN (switchboard) connection with unsent "
-	                "messages to %s:", m->who ? m->who : "unknown recipient");
-
-	while (l) {
-		m = l->data;
-
-		if (strncmp(m->text, "\r\r\r", 3) != 0) {
-			g_string_append_printf(ret, "\n%s", m->text);
-			n++;
-		}
-
-		g_free(m->who);
-		g_free(m->text);
-		g_free(m);
-
-		l = l->next;
-	}
-	g_slist_free(*list);
-	*list = NULL;
-
-	if (n > 0) {
-		imcb_log(ic, "%s", ret->str);
-	}
-	g_string_free(ret, TRUE);
 }
 
 /* Copied and heavily modified from http://tmsnc.sourceforge.net/chl.c */
