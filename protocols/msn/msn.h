@@ -31,7 +31,6 @@
 #define TYPING_NOTIFICATION_MESSAGE "\r\r\rBEWARE, ME R TYPINK MESSAGE!!!!\r\r\r"
 #define NUDGE_MESSAGE "\r\r\rSHAKE THAT THING\r\r\r"
 #define GROUPCHAT_SWITCHBOARD_MESSAGE "\r\r\rME WANT TALK TO MANY PEOPLE\r\r\r"
-#define SB_KEEPALIVE_MESSAGE "\r\r\rDONT HANG UP ON ME!\r\r\r"
 
 #ifdef DEBUG_MSN
 #define debug(text ...) imcb_log(ic, text);
@@ -67,11 +66,20 @@
 #define MSN_CAP1        0xC000
 #define MSN_CAP2        0x0000
 
-#define MSN_MESSAGE_HEADERS "MIME-Version: 1.0\r\n" \
+#define MSN_MESSAGE_HEADERS \
+	"Routing: 1.0\r\n" \
+	"To: 1:%s\r\n" \
+	"From: 1:%s;epid={%s}\r\n" \
+	"\r\n" \
+	"Reliability: 1.0\r\n" \
+	"\r\n" \
+	"Messaging: 2.0\r\n" \
+	"Message-Type: Text\r\n" \
+	"Content-Length: %zd\r\n" \
 	"Content-Type: text/plain; charset=UTF-8\r\n" \
-	"User-Agent: BitlBee " BITLBEE_VERSION "\r\n" \
-	"X-MMS-IM-Format: FN=MS%20Shell%20Dlg; EF=; CO=0; CS=0; PF=0\r\n" \
-	"\r\n"
+	"X-MMS-IM-Format: FN=Segoe%%20UI; EF=; CO=0; CS=0; PF=0\r\n" \
+	"\r\n" \
+	"%s"
 
 #define MSN_TYPING_HEADERS "MIME-Version: 1.0\r\n" \
 	"Content-Type: text/x-msmsgscontrol\r\n" \
@@ -84,10 +92,6 @@
 	"ID: 1\r\n" \
 	"\r\n"
 
-#define MSN_SB_KEEPALIVE_HEADERS "MIME-Version: 1.0\r\n" \
-	"Content-Type: text/x-ping\r\n" \
-	"\r\n\r\n"
-
 #define PROFILE_URL "http://members.msn.com/"
 
 typedef enum {
@@ -98,7 +102,7 @@ typedef enum {
 	MSN_EMAIL_UNVERIFIED = 16,
 } msn_flags_t;
 
-struct msn_handler_data {
+struct msn_data {
 	int fd, inpa;
 	int rxlen;
 	char *rxq;
@@ -106,17 +110,8 @@ struct msn_handler_data {
 	int msglen;
 	char *cmd_text;
 
-	/* Either ic or sb */
-	gpointer data;
-
-	int (*exec_command) (struct msn_handler_data *handler, char **cmd, int count);
-	int (*exec_message) (struct msn_handler_data *handler, char *msg, int msglen, char **cmd, int count);
-};
-
-struct msn_data {
 	struct im_connection *ic;
 
-	struct msn_handler_data ns[1];
 	msn_flags_t flags;
 
 	int trId;
@@ -125,9 +120,6 @@ struct msn_data {
 	char *uuid;
 
 	GSList *msgq, *grpq, *soapq;
-	GSList *switchboards;
-	int sb_failures;
-	time_t first_sb_failure;
 
 	const struct msn_away_state *away_state;
 	GSList *groups;
@@ -138,26 +130,6 @@ struct msn_data {
 	   it to the MSNP server. */
 	GTree *domaintree;
 	int adl_todo;
-};
-
-struct msn_switchboard {
-	struct im_connection *ic;
-
-	/* The following two are also in the handler. TODO: Clean up. */
-	int fd;
-	gint inp;
-	struct msn_handler_data *handler;
-	gint keepalive;
-
-	int trId;
-	int ready;
-
-	int session;
-	char *key;
-
-	GSList *msgq;
-	char *who;
-	struct groupchat *chat;
 };
 
 struct msn_away_state {
@@ -204,8 +176,6 @@ struct msn_group {
 /* Bitfield values for msn_status_code.flags */
 #define STATUS_FATAL            1
 #define STATUS_SB_FATAL         2
-#define STATUS_SB_IM_SPARE      4       /* Make one-to-one conversation switchboard available again, invite failed. */
-#define STATUS_SB_CHAT_SPARE    8       /* Same, but also for groupchats (not used yet). */
 
 extern int msn_chat_id;
 extern const struct msn_away_state msn_away_state_list[];
@@ -217,17 +187,18 @@ extern const struct msn_status_code msn_status_code_list[];
    connection), the callback should check whether it's still listed here
    before doing *anything* else. */
 extern GSList *msn_connections;
-extern GSList *msn_switchboards;
 
 /* ns.c */
 int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...) G_GNUC_PRINTF(3, 4);
-gboolean msn_ns_connect(struct im_connection *ic, struct msn_handler_data *handler, const char *host, int port);
-void msn_ns_close(struct msn_handler_data *handler);
+gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port);
+void msn_ns_close(struct msn_data *handler);
 void msn_auth_got_passport_token(struct im_connection *ic, const char *token, const char *error);
 void msn_auth_got_contact_list(struct im_connection *ic);
 int msn_ns_finish_login(struct im_connection *ic);
 int msn_ns_sendmessage(struct im_connection *ic, struct bee_user *bu, const char *text);
 void msn_ns_oim_send_queue(struct im_connection *ic, GSList **msgq);
+int msn_ns_command(struct msn_data *md, char **cmd, int num_parts);
+int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int num_parts);
 
 /* msn_util.c */
 int msn_buddy_list_add(struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *realname_,
@@ -235,7 +206,7 @@ int msn_buddy_list_add(struct im_connection *ic, msn_buddy_flags_t list, const c
 int msn_buddy_list_remove(struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *group);
 void msn_buddy_ask(bee_user_t *bu);
 char **msn_linesplit(char *line);
-int msn_handler(struct msn_handler_data *h);
+int msn_handler(struct msn_data *h);
 void msn_msgq_purge(struct im_connection *ic, GSList **list);
 char *msn_p11_challenge(char *challenge);
 gint msn_domaintree_cmp(gconstpointer a_, gconstpointer b_);
@@ -249,19 +220,5 @@ const struct msn_away_state *msn_away_state_by_number(int number);
 const struct msn_away_state *msn_away_state_by_code(char *code);
 const struct msn_away_state *msn_away_state_by_name(char *name);
 const struct msn_status_code *msn_status_by_number(int number);
-
-/* sb.c */
-int msn_sb_write(struct msn_switchboard *sb, const char *fmt, ...) G_GNUC_PRINTF(2, 3);;
-struct msn_switchboard *msn_sb_create(struct im_connection *ic, char *host, int port, char *key, int session);
-struct msn_switchboard *msn_sb_by_handle(struct im_connection *ic, const char *handle);
-struct msn_switchboard *msn_sb_by_chat(struct groupchat *c);
-struct msn_switchboard *msn_sb_spare(struct im_connection *ic);
-int msn_sb_sendmessage(struct msn_switchboard *sb, char *text);
-struct groupchat *msn_sb_to_chat(struct msn_switchboard *sb);
-void msn_sb_destroy(struct msn_switchboard *sb);
-gboolean msn_sb_connected(gpointer data, gint source, b_input_condition cond);
-int msn_sb_write_msg(struct im_connection *ic, struct msn_message *m);
-void msn_sb_start_keepalives(struct msn_switchboard *sb, gboolean initial);
-void msn_sb_stop_keepalives(struct msn_switchboard *sb);
 
 #endif //_MSN_H

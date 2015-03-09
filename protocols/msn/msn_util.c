@@ -265,8 +265,9 @@ char **msn_linesplit(char *line)
                    0: Command reported error; Abort *immediately*. (The connection does not exist anymore)
                    1: OK */
 
-int msn_handler(struct msn_handler_data *h)
+int msn_handler(struct msn_data *h)
 {
+	struct im_connection *ic = h->ic;
 	int st;
 
 	h->rxq = g_renew(char, h->rxq, h->rxlen + 1024);
@@ -298,7 +299,7 @@ int msn_handler(struct msn_handler_data *h)
 					for (count = 0; cmd[count]; count++) {
 						;
 					}
-					st = h->exec_command(h, cmd, count);
+					st = msn_ns_command(h, cmd, count);
 					g_free(cmd_text);
 
 					/* If the connection broke, don't continue. We don't even exist anymore. */
@@ -339,7 +340,7 @@ int msn_handler(struct msn_handler_data *h)
 				;
 			}
 
-			st = h->exec_message(h, msg, h->msglen, cmd, count);
+			st = msn_ns_message(h, msg, h->msglen, cmd, count);
 			g_free(msg);
 			g_free(h->cmd_text);
 			h->cmd_text = NULL;
