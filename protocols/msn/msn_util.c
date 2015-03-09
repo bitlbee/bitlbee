@@ -537,15 +537,8 @@ struct msn_group *msn_group_by_id(struct im_connection *ic, const char *id)
 
 int msn_ns_set_display_name(struct im_connection *ic, const char *value)
 {
-	struct msn_data *md = ic->proto_data;
-	char fn[strlen(value) * 3 + 1];
-
-	strcpy(fn, value);
-	http_encode(fn);
-
-	/* Note: We don't actually know if the server accepted the new name,
-	   and won't give proper feedback yet if it doesn't. */
-	return msn_ns_write(ic, -1, "PRP %d MFN %s\r\n", ++md->trId, fn);
+	// TODO, implement this through msn_set_away's method
+	return 1;
 }
 
 const char *msn_normalize_handle(const char *handle)

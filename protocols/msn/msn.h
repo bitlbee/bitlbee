@@ -66,13 +66,15 @@
 #define MSN_CAP1        0xC000
 #define MSN_CAP2        0x0000
 
-#define MSN_MESSAGE_HEADERS \
+#define MSN_BASE_HEADERS \
 	"Routing: 1.0\r\n" \
 	"To: 1:%s\r\n" \
 	"From: 1:%s;epid={%s}\r\n" \
 	"\r\n" \
 	"Reliability: 1.0\r\n" \
-	"\r\n" \
+	"\r\n"
+
+#define MSN_MESSAGE_HEADERS MSN_BASE_HEADERS \
 	"Messaging: 2.0\r\n" \
 	"Message-Type: Text\r\n" \
 	"Content-Length: %zd\r\n" \
@@ -80,6 +82,25 @@
 	"X-MMS-IM-Format: FN=Segoe%%20UI; EF=; CO=0; CS=0; PF=0\r\n" \
 	"\r\n" \
 	"%s"
+
+#define MSN_PUT_HEADERS MSN_BASE_HEADERS \
+	"Publication: 1.0\r\n" \
+	"Uri: %s\r\n" \
+	"Content-Type: %s\r\n" \
+	"Content-Length: %zd\r\n" \
+	"\r\n" \
+	"%s"
+
+#define MSN_PUT_USER_BODY \
+	"<user>" \
+	"<s n=\"PE\"><UserTileLocation></UserTileLocation><FriendlyName>%s</FriendlyName><PSM>%s</PSM><DDP></DDP>" \
+	"<Scene></Scene><ASN></ASN><ColorScheme>-3</ColorScheme><BDG></BDG><RUM>%s</RUM><RUL></RUL><RLT>0</RLT>" \
+	"<RID></RID><SUL></SUL><MachineGuid>%s</MachineGuid></s>" \
+	"<s n=\"IM\"><Status>%s</Status><CurrentMedia></CurrentMedia></s>" \
+	"<sep n=\"PD\"><ClientType>1</ClientType><EpName>%s</EpName><Idle>%s</Idle><State>%s</State></sep>" \
+	"<sep n=\"PE\"><VER>BitlBee:" BITLBEE_VERSION "</VER><TYP>1</TYP><Capabilities>%d:%d</Capabilities></sep>" \
+	"<sep n=\"IM\"><Capabilities>%d:%d</Capabilities></sep>" \
+	"</user>"
 
 #define MSN_TYPING_HEADERS "MIME-Version: 1.0\r\n" \
 	"Content-Type: text/x-msmsgscontrol\r\n" \
