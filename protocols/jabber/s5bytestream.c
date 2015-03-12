@@ -22,7 +22,6 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "sha1.h"
 #include "lib/ftutil.h"
 #include <poll.h>
 
@@ -41,7 +40,7 @@ struct bs_transfer {
 	} phase;
 
 	/* SHA1( SID + Initiator JID + Target JID) */
-	char *pseudoadr;
+	char *pseudoaddr;
 
 	gint connect_timeout;
 
@@ -129,7 +128,7 @@ void jabber_bs_free_transfer(file_transfer_t *ft)
 		tf->watch_out = 0;
 	}
 
-	g_free(bt->pseudoadr);
+	g_free(bt->pseudoaddr);
 
 	while (bt->streamhosts) {
 		sh = bt->streamhosts->data;
@@ -253,12 +252,68 @@ gboolean jabber_bs_abort(struct bs_transfer *bt, char *format, ...)
 	}
 }
 
+void jabber_bs_remove_events(struct bs_transfer *bt)
+{
+	struct jabber_transfer *tf = bt->tf;
+
+	if (tf->watch_out) {
+		b_event_remove(tf->watch_out);
+		tf->watch_out = 0;
+	}
+
+	if (tf->watch_in) {
+		b_event_remove(tf->watch_in);
+		tf->watch_in = 0;
+	}
+
+	if (tf->fd != -1) {
+		closesocket(tf->fd);
+		tf->fd = -1;
+	}
+
+	if (bt->connect_timeout) {
+		b_event_remove(bt->connect_timeout);
+		bt->connect_timeout = 0;
+	}
+}
+
 /* Bad luck */
 void jabber_bs_canceled(file_transfer_t *ft, char *reason)
 {
 	struct jabber_transfer *tf = ft->data;
 
 	imcb_log(tf->ic, "File transfer aborted: %s", reason);
+}
+
+static struct jabber_transfer *get_ft_by_sid(GSList *tflist, char *sid) {
+	GSList *l;
+	for (l = tflist; l; l = g_slist_next(l)) {
+		struct jabber_transfer *tft = l->data;
+		if ((strcmp(tft->sid, sid) == 0)) { 
+			return tft;
+		}
+	}
+	return NULL;
+}
+
+/* SHA1( SID + Initiator JID + Target JID ) is given to the streamhost which it will match against the initiator's value
+ * Returns a newly allocated string */
+static char *generate_pseudoaddr(char *sid, char *ini_jid, char *tgt_jid) {
+	char *contents = g_strconcat(sid, ini_jid, tgt_jid, NULL);
+	char *hash_hex = g_compute_checksum_for_string(G_CHECKSUM_SHA1, contents, -1);
+	g_free(contents);
+	return hash_hex;
+}
+
+static jabber_streamhost_t *jabber_streamhost_new(char *jid, char *host, int port)
+{
+	jabber_streamhost_t *sh = g_new0(jabber_streamhost_t, 1);
+	sh->jid = g_strdup(jid);
+	sh->host = g_strdup(host);
+	if (port) {
+		g_snprintf(sh->port, sizeof(sh->port), "%u", port);
+	}
+	return sh;
 }
 
 /*
@@ -269,15 +324,9 @@ int jabber_bs_recv_request(struct im_connection *ic, struct xt_node *node, struc
 	char *sid, *ini_jid, *tgt_jid, *mode, *iq_id;
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_transfer *tf = NULL;
-	GSList *tflist;
 	struct bs_transfer *bt;
 	GSList *shlist = NULL;
 	struct xt_node *shnode;
-
-	sha1_state_t sha;
-	char hash_hex[41];
-	unsigned char hash[20];
-	int i;
 
 	if (!(iq_id   = xt_find_attr(node, "id")) ||
 	    !(ini_jid = xt_find_attr(node, "from")) ||
@@ -302,11 +351,7 @@ int jabber_bs_recv_request(struct im_connection *ic, struct xt_node *node, struc
 		    (host = xt_find_attr(shnode, "host")) &&
 		    (port_s = xt_find_attr(shnode, "port")) &&
 		    (sscanf(port_s, "%d", &port) == 1)) {
-			jabber_streamhost_t *sh = g_new0(jabber_streamhost_t, 1);
-			sh->jid = g_strdup(jid);
-			sh->host = g_strdup(host);
-			sprintf(sh->port, "%u", port);
-			shlist = g_slist_append(shlist, sh);
+			shlist = g_slist_append(shlist, jabber_streamhost_new(jid, host, port));
 		}
 		shnode = shnode->next;
 	}
@@ -316,19 +361,7 @@ int jabber_bs_recv_request(struct im_connection *ic, struct xt_node *node, struc
 		return XT_HANDLED;
 	}
 
-	/* Let's see if we can find out what this bytestream should be for... */
-
-	for (tflist = jd->filetransfers; tflist; tflist = g_slist_next(tflist)) {
-		struct jabber_transfer *tft = tflist->data;
-		if ((strcmp(tft->sid, sid) == 0) &&
-		    (strcmp(tft->ini_jid, ini_jid) == 0) &&
-		    (strcmp(tft->tgt_jid, tgt_jid) == 0)) {
-			tf = tft;
-			break;
-		}
-	}
-
-	if (!tf) {
+	if (!(tf = get_ft_by_sid(jd->filetransfers, sid))) {
 		imcb_log(ic, "WARNING: Received bytestream request from %s that doesn't match an SI request", ini_jid);
 		return XT_HANDLED;
 	}
@@ -339,23 +372,12 @@ int jabber_bs_recv_request(struct im_connection *ic, struct xt_node *node, struc
 
 	tf->ft->canceled = jabber_bs_canceled;
 
-	/* SHA1( SID + Initiator JID + Target JID ) is given to the streamhost which it will match against the initiator's value */
-	sha1_init(&sha);
-	sha1_append(&sha, (unsigned char *) sid, strlen(sid));
-	sha1_append(&sha, (unsigned char *) ini_jid, strlen(ini_jid));
-	sha1_append(&sha, (unsigned char *) tgt_jid, strlen(tgt_jid));
-	sha1_finish(&sha, hash);
-
-	for (i = 0; i < 20; i++) {
-		sprintf(hash_hex + i * 2, "%02x", hash[i]);
-	}
-
 	bt = g_new0(struct bs_transfer, 1);
 	bt->tf = tf;
 	bt->streamhosts = shlist;
 	bt->sh = shlist->data;
 	bt->phase = BS_PHASE_CONNECT;
-	bt->pseudoadr = g_strdup(hash_hex);
+	bt->pseudoaddr = generate_pseudoaddr(sid, ini_jid, tgt_jid);
 	tf->streamhandle = bt;
 	tf->ft->free = jabber_bs_free_transfer;
 
@@ -450,7 +472,7 @@ gboolean jabber_bs_recv_handshake(gpointer data, gint fd, b_input_condition cond
 			.cmdrep.cmd = 0x01,
 			.rsv = 0,
 			.atyp = 0x03,
-			.addrlen = strlen(bt->pseudoadr),
+			.addrlen = strlen(bt->pseudoaddr),
 			.port = 0
 		};
 		int ret;
@@ -467,7 +489,7 @@ gboolean jabber_bs_recv_handshake(gpointer data, gint fd, b_input_condition cond
 		}
 
 		/* copy hash into connect message */
-		memcpy(socks5_connect.address, bt->pseudoadr, socks5_connect.addrlen);
+		memcpy(socks5_connect.address, bt->pseudoaddr, socks5_connect.addrlen);
 
 		ASSERTSOCKOP(send(fd, &socks5_connect, sizeof(struct socks5_message), 0), "Sending SOCKS5 Connect");
 
@@ -557,6 +579,7 @@ gboolean jabber_bs_recv_handshake_abort(struct bs_transfer *bt, char *error)
 	shlist = g_slist_find(bt->streamhosts, bt->sh);
 	if (shlist && shlist->next) {
 		bt->sh = shlist->next->data;
+		jabber_bs_remove_events(bt);
 		return jabber_bs_recv_handshake(bt, -1, 0);
 	}
 
@@ -730,7 +753,6 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 	struct jabber_transfer *tf = NULL;
 	struct jabber_data *jd = ic->proto_data;
 	struct bs_transfer *bt;
-	GSList *tflist;
 	struct xt_node *c;
 	char *sid, *jid;
 
@@ -749,15 +771,7 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 
 	/* Let's see if we can find out what this bytestream should be for... */
 
-	for (tflist = jd->filetransfers; tflist; tflist = g_slist_next(tflist)) {
-		struct jabber_transfer *tft = tflist->data;
-		if ((strcmp(tft->sid, sid) == 0)) {
-			tf = tft;
-			break;
-		}
-	}
-
-	if (!tf) {
+	if (!(tf = get_ft_by_sid(jd->filetransfers, sid))) {
 		imcb_log(ic, "WARNING: Received SOCKS5 bytestream reply to unknown request");
 		return XT_HANDLED;
 	}
@@ -775,20 +789,7 @@ static xt_status jabber_bs_send_handle_reply(struct im_connection *ic, struct xt
 	} else {
 		/* using a proxy, abort listen */
 
-		if (tf->watch_in) {
-			b_event_remove(tf->watch_in);
-			tf->watch_in = 0;
-		}
-
-		if (tf->fd != -1) {
-			closesocket(tf->fd);
-			tf->fd = -1;
-		}
-
-		if (bt->connect_timeout) {
-			b_event_remove(bt->connect_timeout);
-			bt->connect_timeout = 0;
-		}
+		jabber_bs_remove_events(bt);
 
 		GSList *shlist;
 		for (shlist = jd->streamhosts; shlist; shlist = g_slist_next(shlist)) {
@@ -837,7 +838,6 @@ void jabber_bs_send_activate(struct bs_transfer *bt)
 static xt_status jabber_bs_send_handle_activate(struct im_connection *ic, struct xt_node *node, struct xt_node *orig)
 {
 	char *sid;
-	GSList *tflist;
 	struct jabber_transfer *tf = NULL;
 	struct xt_node *query;
 	struct jabber_data *jd = ic->proto_data;
@@ -845,15 +845,7 @@ static xt_status jabber_bs_send_handle_activate(struct im_connection *ic, struct
 	query = xt_find_node(orig->children, "query");
 	sid = xt_find_attr(query, "sid");
 
-	for (tflist = jd->filetransfers; tflist; tflist = g_slist_next(tflist)) {
-		struct jabber_transfer *tft = tflist->data;
-		if ((strcmp(tft->sid, sid) == 0)) {
-			tf = tft;
-			break;
-		}
-	}
-
-	if (!tf) {
+	if (!(tf = get_ft_by_sid(jd->filetransfers, sid))) {
 		imcb_log(ic, "WARNING: Received SOCKS5 bytestream activation for unknown stream");
 		return XT_HANDLED;
 	}
@@ -882,10 +874,8 @@ jabber_streamhost_t *jabber_si_parse_proxy(struct im_connection *ic, char *proxy
 	*host++ = '\0';
 	*port++ = '\0';
 
-	sh = g_new0(jabber_streamhost_t, 1);
-	sh->jid = g_strdup(jid);
-	sh->host = g_strdup(host);
-	g_snprintf(sh->port, sizeof(sh->port), "%s", port);
+	sh = jabber_streamhost_new(jid, host, 0);
+	strncpy(sh->port, port, sizeof(sh->port));
 
 	return sh;
 }
@@ -909,10 +899,8 @@ void jabber_si_set_proxies(struct bs_transfer *bt)
 
 		if (strcmp(proxy, "<local>") == 0) {
 			if ((tf->fd = ft_listen(&tf->saddr, host, port, jd->fd, FALSE, &errmsg)) != -1) {
-				sh = g_new0(jabber_streamhost_t, 1);
-				sh->jid = g_strdup(tf->ini_jid);
-				sh->host = g_strdup(host);
-				g_snprintf(sh->port, sizeof(sh->port), "%s", port);
+				sh = jabber_streamhost_new(tf->ini_jid, host, 0);
+				strncpy(sh->port, port, sizeof(sh->port));
 				bt->streamhosts = g_slist_append(bt->streamhosts, sh);
 
 				bt->tf->watch_in = b_input_add(tf->fd, B_EV_IO_READ, jabber_bs_send_handshake, bt);
@@ -947,35 +935,18 @@ void jabber_si_set_proxies(struct bs_transfer *bt)
 gboolean jabber_bs_send_start(struct jabber_transfer *tf)
 {
 	struct bs_transfer *bt;
-	sha1_state_t sha;
-	char hash_hex[41];
-	unsigned char hash[20];
-	int i, ret;
-
-	/* SHA1( SID + Initiator JID + Target JID ) is given to the streamhost which it will match against the initiator's value */
-	sha1_init(&sha);
-	sha1_append(&sha, (unsigned char *) tf->sid, strlen(tf->sid));
-	sha1_append(&sha, (unsigned char *) tf->ini_jid, strlen(tf->ini_jid));
-	sha1_append(&sha, (unsigned char *) tf->tgt_jid, strlen(tf->tgt_jid));
-	sha1_finish(&sha, hash);
-
-	for (i = 0; i < 20; i++) {
-		sprintf(hash_hex + i * 2, "%02x", hash[i]);
-	}
 
 	bt = g_new0(struct bs_transfer, 1);
 	bt->tf = tf;
 	bt->phase = BS_PHASE_CONNECT;
-	bt->pseudoadr = g_strdup(hash_hex);
+	bt->pseudoaddr = generate_pseudoaddr(tf->sid, tf->ini_jid, tf->tgt_jid);
 	tf->streamhandle = bt;
 	tf->ft->free = jabber_bs_free_transfer;
 	tf->ft->canceled = jabber_bs_canceled;
 
 	jabber_si_set_proxies(bt);
 
-	ret = jabber_bs_send_request(tf, bt->streamhosts);
-
-	return ret;
+	return jabber_bs_send_request(tf, bt->streamhosts);
 }
 
 gboolean jabber_bs_send_request(struct jabber_transfer *tf, GSList *streamhosts)
@@ -1138,7 +1109,7 @@ gboolean jabber_bs_send_handshake(gpointer data, gint fd, b_input_condition cond
 			                       socks5_connect.addrlen, socks5_connect.ver, socks5_connect.cmdrep.cmd,
 			                       socks5_connect.atyp);
 		}
-		if (!(memcmp(socks5_connect.address, bt->pseudoadr, 40) == 0)) {
+		if (!(memcmp(socks5_connect.address, bt->pseudoaddr, 40) == 0)) {
 			return jabber_bs_abort(bt, "SOCKS5 Connect message contained wrong digest");
 		}
 

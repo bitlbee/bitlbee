@@ -41,7 +41,7 @@ const struct oauth2_service oauth2_service_facebook =
 {
 	"https://www.facebook.com/dialog/oauth",
 	"https://graph.facebook.com/oauth/access_token",
-	"http://www.bitlbee.org/main.php/Facebook/oauth2.html",
+	"https://www.bitlbee.org/main.php/Facebook/oauth2.html",
 	"offline_access,xmpp_login",
 	"126828914005625",
 	"4b100f0f244d620bf3f15f8b217d4c32",

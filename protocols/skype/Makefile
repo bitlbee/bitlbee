@@ -5,9 +5,9 @@ endif
 
 DATE := $(shell date +%Y-%m-%d)
 INSTALL = install
-ASCIIDOC = yes
 
-ifeq ($(ASCIIDOC),yes)
+
+ifdef ASCIIDOC
 MANPAGES = skyped.1
 else
 MANPAGES =
@@ -28,7 +28,7 @@ test: all
 doc: $(MANPAGES)
 
 install-doc: doc
-ifeq ($(ASCIIDOC),yes)
+ifdef ASCIIDOC
 	$(INSTALL) -d $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL) -m644 $(MANPAGES) $(DESTDIR)$(MANDIR)/man1
 endif

@@ -24,7 +24,9 @@ ifdef SKYPE_PI
 endif
 
 doc:
+ifdef DOC
 	$(MAKE) -C doc
+endif
 
 uninstall: uninstall-bin uninstall-doc 
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
@@ -72,13 +74,17 @@ lcov: check
 	genhtml -o coverage bitlbee.info
 
 install-doc:
+ifdef DOC
 	$(MAKE) -C doc install
+endif
 ifdef SKYPE_PI
 	$(MAKE) -C protocols/skype install-doc
 endif
 
 uninstall-doc:
+ifdef DOC
 	$(MAKE) -C doc uninstall
+endif
 ifdef SKYPE_PI
 	$(MAKE) -C protocols/skype uninstall-doc
 endif

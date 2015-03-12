@@ -518,11 +518,10 @@ static int msn_sb_command(struct msn_handler_data *handler, char **cmd, int num_
 						st = msn_sb_sendmessage(sb, m->text);
 					}
 				}
+				sb->msgq = g_slist_remove(sb->msgq, m);
 				g_free(m->text);
 				g_free(m->who);
 				g_free(m);
-
-				sb->msgq = g_slist_remove(sb->msgq, m);
 			}
 
 			msn_sb_start_keepalives(sb, FALSE);

@@ -67,14 +67,14 @@ int bee_user_free(bee_t *bee, bee_user_t *bu)
 		bu->ic->acc->prpl->buddy_data_free(bu);
 	}
 
+	bee->users = g_slist_remove(bee->users, bu);
+
 	g_free(bu->handle);
 	g_free(bu->fullname);
 	g_free(bu->nick);
 	g_free(bu->status);
 	g_free(bu->status_msg);
 	g_free(bu);
-
-	bee->users = g_slist_remove(bee->users, bu);
 
 	return 1;
 }
@@ -246,7 +246,7 @@ void imcb_buddy_times(struct im_connection *ic, const char *handle, time_t login
 	bu->idle_time = idle;
 }
 
-void imcb_buddy_msg(struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at)
+void imcb_buddy_msg(struct im_connection *ic, const char *handle, const char *msg, uint32_t flags, time_t sent_at)
 {
 	bee_t *bee = ic->bee;
 	bee_user_t *bu;
