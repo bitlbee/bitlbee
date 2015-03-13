@@ -147,15 +147,23 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 {
 	struct msn_data *handler = data;
 	struct im_connection *ic = handler->ic;
+	char bytes[1024];
+	int st;
 
-	if (msn_handler(handler) == -1) {  /* Don't do this on ret == 0, it's already done then. */
+	st = read(handler->fd, bytes, 1024);
+	if (st <= 0) {
 		imcb_error(ic, "Error while reading from server");
 		imc_logout(ic, TRUE);
-
 		return FALSE;
-	} else {
-		return TRUE;
 	}
+
+	msn_queue_feed(handler, bytes, st);
+
+	/* Ignore ret == 0, it's already disconnected then. */
+	msn_handler(handler);
+
+	return TRUE;
+	
 }
 
 int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)

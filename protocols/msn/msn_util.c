@@ -171,6 +171,19 @@ void msn_buddy_ask(bee_user_t *bu)
 	imcb_ask_with_free(bu->ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no, msn_buddy_ask_free);
 }
 
+void msn_queue_feed(struct msn_data *h, char *bytes, int st)
+{
+	h->rxq = g_renew(char, h->rxq, h->rxlen + 1024);
+	memcpy(h->rxq + h->rxlen, bytes, st);
+	h->rxlen += st;
+
+	if (getenv("BITLBEE_DEBUG")) {
+		fprintf(stderr, "\n\x1b[92m<<< ");
+		write(2, bytes , st);
+		fprintf(stderr, "\x1b[97m");
+	}
+}
+
 /* This one handles input from a MSN Messenger server. Both the NS and SB servers usually give
    commands, but sometimes they give additional data (payload). This function tries to handle
    this all in a nice way and send all data to the right places. */
@@ -181,23 +194,7 @@ void msn_buddy_ask(bee_user_t *bu)
 
 int msn_handler(struct msn_data *h)
 {
-	struct im_connection *ic = h->ic;
-	int st;
-
-	h->rxq = g_renew(char, h->rxq, h->rxlen + 1024);
-	st = read(h->fd, h->rxq + h->rxlen, 1024);
-	h->rxlen += st;
-
-	if (st <= 0) {
-		fprintf(stderr, "\n\x1b[92m<<< [closed]\x1b[97m ");
-		return(-1);
-	}
-
-	if (getenv("BITLBEE_DEBUG")) {
-		fprintf(stderr, "\n\x1b[92m<<< ");
-		write(2, h->rxq + h->rxlen - st, st);
-		fprintf(stderr, "\x1b[97m");
-	}
+	int st = 1;
 
 	while (st) {
 		int i;

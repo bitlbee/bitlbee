@@ -247,6 +247,7 @@ int msn_buddy_list_add(struct im_connection *ic, msn_buddy_flags_t list, const c
                        const char *group);
 int msn_buddy_list_remove(struct im_connection *ic, msn_buddy_flags_t list, const char *who, const char *group);
 void msn_buddy_ask(bee_user_t *bu);
+void msn_queue_feed(struct msn_data *h, char *bytes, int st);
 int msn_handler(struct msn_data *h);
 char *msn_p11_challenge(char *challenge);
 gint msn_domaintree_cmp(gconstpointer a_, gconstpointer b_);
