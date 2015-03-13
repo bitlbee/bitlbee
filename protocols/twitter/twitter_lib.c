@@ -831,7 +831,7 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	td->timeline_id = MAX(td->timeline_id, status->rt_id);
 
 	last_id_str = g_strdup_printf("%" G_GUINT64_FORMAT, td->timeline_id);
-	set_setstr(&ic->acc->set, "last_tweet", last_id_str);
+	set_setstr(&ic->acc->set, "_last_tweet", last_id_str);
 	g_free(last_id_str);
 }
 
