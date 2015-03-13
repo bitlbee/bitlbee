@@ -171,39 +171,6 @@ void msn_buddy_ask(bee_user_t *bu)
 	imcb_ask_with_free(bu->ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no, msn_buddy_ask_free);
 }
 
-/* *NOT* thread-safe, but that's not a problem for now... */
-char **msn_linesplit(char *line)
-{
-	static char **ret = NULL;
-	static int size = 3;
-	int i, n = 0;
-
-	if (ret == NULL) {
-		ret = g_new0(char*, size);
-	}
-
-	for (i = 0; line[i] && line[i] == ' '; i++) {
-		;
-	}
-	if (line[i]) {
-		ret[n++] = line + i;
-		for (i++; line[i]; i++) {
-			if (line[i] == ' ') {
-				line[i] = 0;
-			} else if (line[i] != ' ' && !line[i - 1]) {
-				ret[n++] = line + i;
-			}
-
-			if (n >= size) {
-				ret = g_renew(char*, ret, size += 2);
-			}
-		}
-	}
-	ret[n] = NULL;
-
-	return(ret);
-}
-
 /* This one handles input from a MSN Messenger server. Both the NS and SB servers usually give
    commands, but sometimes they give additional data (payload). This function tries to handle
    this all in a nice way and send all data to the right places. */
@@ -242,11 +209,12 @@ int msn_handler(struct msn_data *h)
 					int count;
 
 					cmd_text = g_strndup(h->rxq, i);
-					cmd = msn_linesplit(cmd_text);
-					for (count = 0; cmd[count]; count++) {
-						;
-					}
+					cmd = g_strsplit_set(cmd_text, " ", -1);
+					count = g_strv_length(cmd);
+
 					st = msn_ns_command(h, cmd, count);
+
+					g_strfreev(cmd);
 					g_free(cmd_text);
 
 					/* If the connection broke, don't continue. We don't even exist anymore. */
@@ -282,12 +250,13 @@ int msn_handler(struct msn_data *h)
 			}
 
 			msg = g_strndup(h->rxq, h->msglen);
-			cmd = msn_linesplit(h->cmd_text);
-			for (count = 0; cmd[count]; count++) {
-				;
-			}
+
+			cmd = g_strsplit_set(h->cmd_text, " ", -1);
+			count = g_strv_length(cmd);
 
 			st = msn_ns_message(h, msg, h->msglen, cmd, count);
+
+			g_strfreev(cmd);
 			g_free(msg);
 			g_free(h->cmd_text);
 			h->cmd_text = NULL;
