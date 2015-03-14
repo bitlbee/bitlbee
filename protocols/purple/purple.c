@@ -48,6 +48,9 @@ typedef void (*ri_callback_t)(gpointer, const gchar *);
 struct request_input_data {
 	ri_callback_t data_callback;
 	void *user_data;
+	struct im_connection *ic;
+	char *buddy;
+	guint id;
 };
 
 struct im_connection *purple_ic_by_pa(PurpleAccount *pa)
@@ -1016,7 +1019,6 @@ static void prplcb_request_action_yes(void *data)
 	if (pqad->yes) {
 		pqad->yes(pqad->user_data, pqad->yes_i);
 	}
-	g_free(pqad);
 }
 
 static void prplcb_request_action_no(void *data)
@@ -1026,7 +1028,15 @@ static void prplcb_request_action_no(void *data)
 	if (pqad->no) {
 		pqad->no(pqad->user_data, pqad->no_i);
 	}
-	g_free(pqad);
+}
+
+/* q->free() callback from query_del()*/
+static void prplcb_request_action_free(void *data)
+{
+	struct prplcb_request_action_data *pqad = data;
+
+	pqad->bee_data = NULL;
+	purple_request_close(PURPLE_REQUEST_ACTION, pqad);
 }
 
 static void *prplcb_request_action(const char *title, const char *primary, const char *secondary,
@@ -1061,7 +1071,8 @@ static void *prplcb_request_action(const char *title, const char *primary, const
 	/* TODO: IRC stuff here :-( */
 	q = g_strdup_printf("Request: %s\n\n%s\n\n%s", title, primary, secondary);
 	pqad->bee_data = query_add(local_bee->ui_data, purple_ic_by_pa(account), q,
-	                           prplcb_request_action_yes, prplcb_request_action_no, g_free, pqad);
+	                           prplcb_request_action_yes, prplcb_request_action_no,
+	                           prplcb_request_action_free, pqad);
 
 	g_free(q);
 
@@ -1074,19 +1085,36 @@ static void *prplcb_request_action(const char *title, const char *primary, const
  */
 static void prplcb_close_request(PurpleRequestType type, void *data)
 {
-	if (type == PURPLE_REQUEST_ACTION) {
-		struct prplcb_request_action_data *pqad = data;
-		query_del(local_bee->ui_data, pqad->bee_data);
-	}
-	/* Add the request input handler here when that becomes a thing */
-}
+	struct prplcb_request_action_data *pqad;
+	struct request_input_data *ri;
+	struct purple_data *pd;
 
-/*
-static void prplcb_request_test()
-{
-        fprintf( stderr, "bla\n" );
+	if (!data) {
+		return;
+	}
+
+	switch (type) {
+	case PURPLE_REQUEST_ACTION:
+		pqad = data;
+		/* if this is null, it's because query_del was run already */
+		if (pqad->bee_data) {
+			query_del(local_bee->ui_data, pqad->bee_data);
+		}
+		g_free(pqad);
+		break;
+	case PURPLE_REQUEST_INPUT:
+		ri = data;
+		pd = ri->ic->proto_data;
+		imcb_remove_buddy(ri->ic, ri->buddy, NULL);
+		g_free(ri->buddy);
+		g_hash_table_remove(pd->input_requests, GUINT_TO_POINTER(ri->id));
+		break;
+	default:
+		g_free(data);
+		break;
+	}
+
 }
-*/
 
 void* prplcb_request_input(const char *title, const char *primary,
         const char *secondary, const char *default_value, gboolean multiline,
@@ -1098,32 +1126,33 @@ void* prplcb_request_input(const char *title, const char *primary,
 	struct purple_data *pd = ic->proto_data;
 	struct request_input_data *ri = g_new0(struct request_input_data, 1);
 	guint id = pd->next_request_id++;
-	gchar *buddy = g_strdup_printf("%s_%u", PURPLE_REQUEST_HANDLE, id);
 
+	ri->id = id;
+	ri->ic = ic;
+	ri->buddy = g_strdup_printf("%s_%u", PURPLE_REQUEST_HANDLE, id);
 	ri->data_callback = (ri_callback_t) ok_cb;
 	ri->user_data = user_data;
 	g_hash_table_insert(pd->input_requests, GUINT_TO_POINTER(id), ri);
 
-	imcb_add_buddy(ic, buddy, NULL);
-	imcb_buddy_msg(ic, buddy, secondary, 0, 0);
+	imcb_add_buddy(ic, ri->buddy, NULL);
+	imcb_buddy_msg(ic, ri->buddy, secondary, 0, 0);
 
-	g_free(buddy);
-	return 0;
+	return ri;
 }
 
 void purple_request_input_callback(guint id, struct im_connection *ic,
                                    const char *message, const char *who)
 {
 	struct purple_data *pd = ic->proto_data;
-	struct request_input_data *ri = g_hash_table_lookup(pd->input_requests,
-	                                                    GUINT_TO_POINTER(id));
+	struct request_input_data *ri;
 
-	if (ri) {
-		ri->data_callback(ri->user_data, message);
+	if (!(ri = g_hash_table_lookup(pd->input_requests, GUINT_TO_POINTER(id)))) {
+		return;
 	}
 
-	imcb_remove_buddy(ic, who, NULL);
-	g_hash_table_remove(pd->input_requests, GUINT_TO_POINTER(id));
+	ri->data_callback(ri->user_data, message);
+
+	purple_request_close(PURPLE_REQUEST_INPUT, ri);
 }
 
 
