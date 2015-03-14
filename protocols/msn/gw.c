@@ -29,6 +29,9 @@ struct msn_gw *msn_gw_new(struct msn_data *md)
 
 void msn_gw_free(struct msn_gw *gw)
 {
+	if (gw->poll_timeout != -1) {
+		b_event_remove(gw->poll_timeout);
+	}
 	g_byte_array_free(gw->in, TRUE);
 	g_byte_array_free(gw->out, TRUE);
 	g_free(gw->session_id);
@@ -65,9 +68,30 @@ void msn_gw_callback(struct http_request *req)
 	char *value;
 	struct msn_gw *gw = req->data;
 
+	gw->waiting = FALSE;
+
+	if (!gw->open) {
+		/* the user tried to logout while the request was pending
+		 * see msn_ns_close() */
+		msn_gw_free(gw);
+		return;
+	}
+
+	if (getenv("BITLBEE_DEBUG")) {
+		fprintf(stderr, "\n\x1b[90mHTTP:%s\n", req->reply_body);
+		fprintf(stderr, "\n\x1b[97m\n");
+	}
+
+	if (req->status_code != 200) {
+		gw->callback(gw->data, -1, B_EV_IO_READ);
+		return;
+	}
+
 	if ((value = get_rfc822_header(req->reply_headers, "X-MSN-Messenger", 0))) {
 		if (!msn_gw_parse_session_header(gw, value)) {
-			/* XXX handle this */
+			gw->callback(gw->data, -1, B_EV_IO_READ);
+			g_free(value);
+			return;
 		}
 		g_free(value);
 	}
@@ -77,7 +101,10 @@ void msn_gw_callback(struct http_request *req)
 		gw->last_host = value; /* transfer */
 	}
 
-	/* XXX handle reply */
+	if (req->body_size) {
+		g_byte_array_append(gw->in, (const guint8 *) req->reply_body, req->body_size);
+		gw->callback(gw->data, -1, B_EV_IO_READ);
+	}
 
 	if (gw->poll_timeout != -1) {
 		b_event_remove(gw->poll_timeout);
@@ -103,6 +130,7 @@ void msn_gw_dorequest(struct msn_gw *gw, char *args)
 		gw->session_id ? : "", args ? : "", gw->last_host, bodylen, body ? : "");
 
 	http_dorequest(gw->last_host, gw->port, gw->ssl, request, msn_gw_callback, gw);
+	gw->open = TRUE;
 	gw->waiting = TRUE;
 
 	g_free(body);
@@ -112,7 +140,6 @@ void msn_gw_dorequest(struct msn_gw *gw, char *args)
 void msn_gw_open(struct msn_gw *gw)
 {
 	msn_gw_dorequest(gw, "Action=open&Server=NS");
-	gw->open = TRUE;
 }
 
 static gboolean msn_gw_poll_timeout(gpointer data, gint source, b_input_condition cond)
@@ -123,4 +150,28 @@ static gboolean msn_gw_poll_timeout(gpointer data, gint source, b_input_conditio
 		msn_gw_dorequest(gw, NULL);
 	}
 	return FALSE;
+}
+
+ssize_t msn_gw_read(struct msn_gw *gw, char **buf)
+{
+	size_t bodylen;
+	if (!gw->open) {
+		return 0;
+	}
+
+	bodylen = gw->in->len;
+	g_byte_array_append(gw->in, (guint8 *) "", 1); /* nullnullnull */
+	*buf = (char *) g_byte_array_free(gw->in, FALSE);
+	gw->in = g_byte_array_new();
+	return bodylen;
+}
+
+void msn_gw_write(struct msn_gw *gw, char *buf, size_t len)
+{
+	g_byte_array_append(gw->out, (const guint8 *) buf, len);
+	if (!gw->open) {
+		msn_gw_open(gw);
+	} else if (!gw->waiting) {
+		msn_gw_dorequest(gw, NULL);
+	}
 }

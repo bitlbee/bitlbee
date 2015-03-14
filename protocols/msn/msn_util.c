@@ -173,7 +173,7 @@ void msn_buddy_ask(bee_user_t *bu)
 
 void msn_queue_feed(struct msn_data *h, char *bytes, int st)
 {
-	h->rxq = g_renew(char, h->rxq, h->rxlen + 1024);
+	h->rxq = g_renew(char, h->rxq, h->rxlen + st);
 	memcpy(h->rxq + h->rxlen, bytes, st);
 	h->rxlen += st;
 
@@ -234,7 +234,7 @@ int msn_handler(struct msn_data *h)
 
 			/* If we reached the end of the buffer, there's still an incomplete command there.
 			   Return and wait for more data. */
-			if (i == h->rxlen && h->rxq[i - 1] != '\r' && h->rxq[i - 1] != '\n') {
+			if (i && i == h->rxlen && h->rxq[i - 1] != '\r' && h->rxq[i - 1] != '\n') {
 				break;
 			}
 		} else {

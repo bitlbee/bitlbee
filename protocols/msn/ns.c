@@ -59,7 +59,14 @@ int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
 	}
 
 	len = strlen(out);
-	st = write(fd, out, len);
+
+	if (md->is_http) {
+		st = len;
+		msn_gw_write(md->gw, out, len);
+	} else {
+		st = write(fd, out, len);
+	}
+
 	g_free(out);
 	if (st != len) {
 		imcb_error(ic, "Short write() to main server");
@@ -78,11 +85,17 @@ gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port)
 		closesocket(handler->fd);
 	}
 
-	handler->fd = proxy_connect(host, port, msn_ns_connected, handler);
-	if (handler->fd < 0) {
-		imcb_error(ic, "Could not connect to server");
-		imc_logout(ic, TRUE);
-		return FALSE;
+	if (handler->is_http) {
+		handler->gw = msn_gw_new(handler);
+		handler->gw->callback = msn_ns_callback;
+		msn_ns_connected(handler, -1, B_EV_IO_READ);
+	} else {
+		handler->fd = proxy_connect(host, port, msn_ns_connected, handler);
+		if (handler->fd < 0) {
+			imcb_error(ic, "Could not connect to server");
+			imc_logout(ic, TRUE);
+			return FALSE;
+		}
 	}
 
 	return TRUE;
@@ -94,7 +107,7 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 	struct msn_data *handler = md;
 	struct im_connection *ic = md->ic;
 
-	if (source == -1) {
+	if (source == -1 && !md->is_http) {
 		imcb_error(ic, "Could not connect to server");
 		imc_logout(ic, TRUE);
 		return FALSE;
@@ -120,7 +133,9 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 	}
 
 	if (msn_ns_write(ic, source, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER)) {
-		handler->inpa = b_input_add(handler->fd, B_EV_IO_READ, msn_ns_callback, handler);
+		if (!handler->is_http) {
+			handler->inpa = b_input_add(handler->fd, B_EV_IO_READ, msn_ns_callback, handler);
+		}
 		imcb_log(ic, "Connected to server, waiting for reply");
 	}
 
@@ -129,6 +144,14 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 
 void msn_ns_close(struct msn_data *handler)
 {
+	if (handler->gw) {
+		if (handler->gw->waiting) {
+			/* mark it as closed, let the request callback clean it */
+			handler->gw->open = FALSE;
+		} else {
+			msn_gw_free(handler->gw);
+		}
+	}
 	if (handler->fd >= 0) {
 		closesocket(handler->fd);
 		b_event_remove(handler->inpa);
@@ -147,10 +170,16 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 {
 	struct msn_data *handler = data;
 	struct im_connection *ic = handler->ic;
-	char bytes[1024];
+	char *bytes;
 	int st;
 
-	st = read(handler->fd, bytes, 1024);
+	if (handler->is_http) {
+		st = msn_gw_read(handler->gw, &bytes);
+	} else {
+		bytes = g_malloc(1024);
+		st = read(handler->fd, bytes, 1024);
+	}
+
 	if (st <= 0) {
 		imcb_error(ic, "Error while reading from server");
 		imc_logout(ic, TRUE);
@@ -158,6 +187,8 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 	}
 
 	msn_queue_feed(handler, bytes, st);
+
+	g_free(bytes);
 
 	/* Ignore ret == 0, it's already disconnected then. */
 	msn_handler(handler);

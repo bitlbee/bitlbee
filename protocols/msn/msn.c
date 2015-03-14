@@ -61,11 +61,7 @@ static void msn_login(account_t *acc)
 	ic->flags |= OPT_PONGS | OPT_PONGED;
 
 	if (!server) {
-		imcb_error(ic, "The msn protocol is disabled in this version because most servers disabled MSNP18 over port 1863.");
-		imcb_error(ic, "If you find a working server, you can change the 'server' setting of this account. Good luck!");
-		imcb_error(ic, "See also: http://ismsndeadyet.com/"); // shameless plug
-		imc_logout(ic, FALSE);
-		return;
+		server = "geo.gateway.messenger.live.com";
 	}
 
 	if (strchr(acc->user, '@') == NULL) {
@@ -78,6 +74,7 @@ static void msn_login(account_t *acc)
 	md->away_state = msn_away_state_list;
 	md->domaintree = g_tree_new(msn_domaintree_cmp);
 	md->fd = -1;
+	md->is_http = TRUE;
 
 	msn_connections = g_slist_prepend(msn_connections, ic);
 

@@ -262,4 +262,11 @@ const struct msn_away_state *msn_away_state_by_code(char *code);
 const struct msn_away_state *msn_away_state_by_name(char *name);
 const struct msn_status_code *msn_status_by_number(int number);
 
+/* gw.c */
+struct msn_gw *msn_gw_new(struct msn_data *md);
+void msn_gw_free(struct msn_gw *gw);
+void msn_gw_open(struct msn_gw *gw);
+ssize_t msn_gw_read(struct msn_gw *gw, char **buf);
+void msn_gw_write(struct msn_gw *gw, char *buf, size_t len);
+
 #endif //_MSN_H
