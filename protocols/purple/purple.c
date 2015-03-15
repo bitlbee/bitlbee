@@ -337,6 +337,10 @@ static void purple_logout(struct im_connection *ic)
 {
 	struct purple_data *pd = ic->proto_data;
 
+	if (!pd) {
+		return;
+	}
+
 	purple_account_set_enabled(pd->account, "BitlBee", FALSE);
 	purple_connections = g_slist_remove(purple_connections, ic);
 	purple_accounts_remove(pd->account);
