@@ -39,6 +39,20 @@ static bee_t *local_bee;
 
 static char *set_eval_display_name(set_t *set, char *value);
 
+void purple_request_input_callback(guint id, struct im_connection *ic,
+                                   const char *message, const char *who);
+
+/* purple_request_input specific stuff */
+typedef void (*ri_callback_t)(gpointer, const gchar *);
+
+struct request_input_data {
+	ri_callback_t data_callback;
+	void *user_data;
+	struct im_connection *ic;
+	char *buddy;
+	guint id;
+};
+
 struct im_connection *purple_ic_by_pa(PurpleAccount *pa)
 {
 	GSList *i;
@@ -310,6 +324,9 @@ static void purple_login(account_t *acc)
 
 	ic->proto_data = pd = g_new0(struct purple_data, 1);
 	pd->account = purple_account_new(acc->user, (char *) acc->prpl->data);
+	pd->input_requests = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+	                                           NULL, g_free);
+	pd->next_request_id = 0;
 	purple_account_set_password(pd->account, acc->pass);
 	purple_sync_settings(acc, pd->account);
 
@@ -320,9 +337,14 @@ static void purple_logout(struct im_connection *ic)
 {
 	struct purple_data *pd = ic->proto_data;
 
+	if (!pd) {
+		return;
+	}
+
 	purple_account_set_enabled(pd->account, "BitlBee", FALSE);
 	purple_connections = g_slist_remove(purple_connections, ic);
 	purple_accounts_remove(pd->account);
+	g_hash_table_destroy(pd->input_requests);
 	g_free(pd);
 }
 
@@ -330,6 +352,12 @@ static int purple_buddy_msg(struct im_connection *ic, char *who, char *message, 
 {
 	PurpleConversation *conv;
 	struct purple_data *pd = ic->proto_data;
+
+	if (!strncmp(who, PURPLE_REQUEST_HANDLE, sizeof(PURPLE_REQUEST_HANDLE) - 1)) {
+		guint request_id = atoi(who + sizeof(PURPLE_REQUEST_HANDLE));
+		purple_request_input_callback(request_id, ic, message, who);
+		return 1;
+	}
 
 	if ((conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
 	                                                  who, pd->account)) == NULL) {
@@ -995,7 +1023,6 @@ static void prplcb_request_action_yes(void *data)
 	if (pqad->yes) {
 		pqad->yes(pqad->user_data, pqad->yes_i);
 	}
-	g_free(pqad);
 }
 
 static void prplcb_request_action_no(void *data)
@@ -1005,7 +1032,15 @@ static void prplcb_request_action_no(void *data)
 	if (pqad->no) {
 		pqad->no(pqad->user_data, pqad->no_i);
 	}
-	g_free(pqad);
+}
+
+/* q->free() callback from query_del()*/
+static void prplcb_request_action_free(void *data)
+{
+	struct prplcb_request_action_data *pqad = data;
+
+	pqad->bee_data = NULL;
+	purple_request_close(PURPLE_REQUEST_ACTION, pqad);
 }
 
 static void *prplcb_request_action(const char *title, const char *primary, const char *secondary,
@@ -1040,7 +1075,8 @@ static void *prplcb_request_action(const char *title, const char *primary, const
 	/* TODO: IRC stuff here :-( */
 	q = g_strdup_printf("Request: %s\n\n%s\n\n%s", title, primary, secondary);
 	pqad->bee_data = query_add(local_bee->ui_data, purple_ic_by_pa(account), q,
-	                           prplcb_request_action_yes, prplcb_request_action_no, g_free, pqad);
+	                           prplcb_request_action_yes, prplcb_request_action_no,
+	                           prplcb_request_action_free, pqad);
 
 	g_free(q);
 
@@ -1053,23 +1089,80 @@ static void *prplcb_request_action(const char *title, const char *primary, const
  */
 static void prplcb_close_request(PurpleRequestType type, void *data)
 {
-	if (type == PURPLE_REQUEST_ACTION) {
-		struct prplcb_request_action_data *pqad = data;
-		query_del(local_bee->ui_data, pqad->bee_data);
+	struct prplcb_request_action_data *pqad;
+	struct request_input_data *ri;
+	struct purple_data *pd;
+
+	if (!data) {
+		return;
 	}
-	/* Add the request input handler here when that becomes a thing */
+
+	switch (type) {
+	case PURPLE_REQUEST_ACTION:
+		pqad = data;
+		/* if this is null, it's because query_del was run already */
+		if (pqad->bee_data) {
+			query_del(local_bee->ui_data, pqad->bee_data);
+		}
+		g_free(pqad);
+		break;
+	case PURPLE_REQUEST_INPUT:
+		ri = data;
+		pd = ri->ic->proto_data;
+		imcb_remove_buddy(ri->ic, ri->buddy, NULL);
+		g_free(ri->buddy);
+		g_hash_table_remove(pd->input_requests, GUINT_TO_POINTER(ri->id));
+		break;
+	default:
+		g_free(data);
+		break;
+	}
+
 }
 
-/*
-static void prplcb_request_test()
+void* prplcb_request_input(const char *title, const char *primary,
+        const char *secondary, const char *default_value, gboolean multiline,
+        gboolean masked, gchar *hint, const char *ok_text, GCallback ok_cb,
+        const char *cancel_text, GCallback cancel_cb, PurpleAccount *account,
+        const char *who, PurpleConversation *conv, void *user_data)
 {
-        fprintf( stderr, "bla\n" );
+	struct im_connection *ic = purple_ic_by_pa(account);
+	struct purple_data *pd = ic->proto_data;
+	struct request_input_data *ri = g_new0(struct request_input_data, 1);
+	guint id = pd->next_request_id++;
+
+	ri->id = id;
+	ri->ic = ic;
+	ri->buddy = g_strdup_printf("%s_%u", PURPLE_REQUEST_HANDLE, id);
+	ri->data_callback = (ri_callback_t) ok_cb;
+	ri->user_data = user_data;
+	g_hash_table_insert(pd->input_requests, GUINT_TO_POINTER(id), ri);
+
+	imcb_add_buddy(ic, ri->buddy, NULL);
+	imcb_buddy_msg(ic, ri->buddy, secondary, 0, 0);
+
+	return ri;
 }
-*/
+
+void purple_request_input_callback(guint id, struct im_connection *ic,
+                                   const char *message, const char *who)
+{
+	struct purple_data *pd = ic->proto_data;
+	struct request_input_data *ri;
+
+	if (!(ri = g_hash_table_lookup(pd->input_requests, GUINT_TO_POINTER(id)))) {
+		return;
+	}
+
+	ri->data_callback(ri->user_data, message);
+
+	purple_request_close(PURPLE_REQUEST_INPUT, ri);
+}
+
 
 static PurpleRequestUiOps bee_request_uiops =
 {
-	NULL,
+	prplcb_request_input,
 	NULL,
 	prplcb_request_action,
 	NULL,
