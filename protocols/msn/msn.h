@@ -140,6 +140,7 @@ struct msn_gw {
 
 	gboolean open;
 	gboolean waiting;
+	gboolean polling;
 };
 
 struct msn_data {

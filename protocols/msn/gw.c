@@ -69,6 +69,7 @@ void msn_gw_callback(struct http_request *req)
 	struct msn_gw *gw = req->data;
 
 	gw->waiting = FALSE;
+	gw->polling = FALSE;
 
 	if (!gw->open) {
 		/* the user tried to logout while the request was pending
@@ -109,7 +110,7 @@ void msn_gw_callback(struct http_request *req)
 	if (gw->poll_timeout != -1) {
 		b_event_remove(gw->poll_timeout);
 	}
-	gw->poll_timeout = b_timeout_add(5000, msn_gw_poll_timeout, gw);
+	gw->poll_timeout = b_timeout_add(500, msn_gw_poll_timeout, gw);
 
 }
 
@@ -124,6 +125,11 @@ void msn_gw_dorequest(struct msn_gw *gw, char *args)
 		g_byte_array_append(gw->out, (guint8 *) "", 1); /* nullnullnull */
 		body = (char *) g_byte_array_free(gw->out, FALSE);
 		gw->out = g_byte_array_new();
+	}
+
+	if (!bodylen && !args) {
+		args = "Action=poll&Lifespan=60";
+		gw->polling = TRUE;
 	}
 
 	request = g_strdup_printf(REQUEST_TEMPLATE,
@@ -171,7 +177,7 @@ void msn_gw_write(struct msn_gw *gw, char *buf, size_t len)
 	g_byte_array_append(gw->out, (const guint8 *) buf, len);
 	if (!gw->open) {
 		msn_gw_open(gw);
-	} else if (!gw->waiting) {
+	} else if (gw->polling || !gw->waiting) {
 		msn_gw_dorequest(gw, NULL);
 	}
 }
