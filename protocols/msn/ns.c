@@ -303,6 +303,8 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 		                   strlen(resp), resp);
 		g_free(resp);
 		return st;
+	} else if (strcmp(cmd[0], "QRY") == 0) {
+		/* CONGRATULATIONS */
 	} else if (strcmp(cmd[0], "OUT") == 0) {
 		int allow_reconnect = TRUE;
 
@@ -325,6 +327,10 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 	} else if ((strcmp(cmd[0], "NFY") == 0) || (strcmp(cmd[0], "SDG") == 0)) {
 		if (num_parts >= 3) {
 			handler->msglen = atoi(cmd[2]);
+		}
+	} else if (strcmp(cmd[0], "PUT") == 0) {
+		if (num_parts >= 4) {
+			handler->msglen = atoi(cmd[3]);
 		}
 	} else if (strcmp(cmd[0], "QNG") == 0) {
 		ic->flags |= OPT_PONGED;

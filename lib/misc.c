@@ -718,11 +718,6 @@ char *get_rfc822_header(const char *text, const char *header, int len)
 				i++;
 			}
 
-			/* Make sure we're still inside the string */
-			if (i >= len) {
-				return(NULL);
-			}
-
 			/* Copy the found data */
 			return(g_strndup(ret, text + i - ret));
 		}
