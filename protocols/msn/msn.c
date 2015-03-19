@@ -185,7 +185,7 @@ static void msn_set_away(struct im_connection *ic, char *state, char *message)
 	statecode = (char *) md->away_state->code;
 	nick = set_getstr(&ic->acc->set, "display_name");
 	psm = message ? message : "";
-	idle = strcmp(statecode, "IDL") ? "false" : "true";
+	idle = (strcmp(statecode, "IDL") == 0) ? "false" : "true";
 
 	body = g_markup_printf_escaped(MSN_PUT_USER_BODY,
 		nick, psm, psm, md->uuid, statecode, md->uuid, idle, statecode,
