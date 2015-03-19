@@ -37,6 +37,9 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 
 static void msn_ns_send_adl_start(struct im_connection *ic);
 static void msn_ns_send_adl(struct im_connection *ic);
+static void msn_ns_structured_message(struct msn_data *handler, char *msg, int msglen, char **cmd);
+static void msn_ns_sdg(struct msn_data *handler, char *who, char **parts, char *action);
+static void msn_ns_nfy(struct msn_data *handler, char *who, char **parts, char *action, gboolean is_put);
 
 int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
 {
@@ -484,32 +487,116 @@ int msn_ns_message(struct msn_data *handler, char *msg, int msglen, char **cmd, 
 				}
 			}
 		}
-	} else if (strcmp(cmd[0], "SDG") == 0) {
-		char **parts = g_strsplit(msg, "\r\n\r\n", 4);
-		char *from = NULL;
-		char *mt = NULL;
-		char *who = NULL;
-		char *s = NULL;
-
-		if ((from = get_rfc822_header(parts[0], "From", 0)) &&
-		    (mt = get_rfc822_header(parts[2], "Message-Type", 0)) &&
-		    (s = strchr(from, ';'))) {
-
-			who = g_strndup(from + 2, s - from - 2);
-
-			if (strcmp(mt, "Control/Typing") == 0) {
-				imcb_buddy_typing(ic, who, OPT_TYPING);
-			} else if (strcmp(mt, "Text") == 0) {
-				imcb_buddy_msg(ic, who, parts[3], 0, 0);
-			}
-		}
-		g_free(from);
-		g_free(mt);
-		g_free(who);
-		return 1;
+	} else if ((strcmp(cmd[0], "SDG") == 0) || (strcmp(cmd[0], "NFY") == 0)) {
+		msn_ns_structured_message(handler, msg, msglen, cmd);
 	}
 
 	return 1;
+}
+
+static void msn_ns_structured_message(struct msn_data *handler, char *msg, int msglen, char **cmd)
+{
+	char **parts = NULL;
+	char *semicolon = NULL;
+	char *action = NULL;
+	char *from = NULL;
+	char *who = NULL;
+
+	parts = g_strsplit(msg, "\r\n\r\n", 4);
+
+	if (!(from = get_rfc822_header(parts[0], "From", 0))) {
+		goto cleanup;
+	}
+
+	/* either the semicolon or the end of the string */
+	semicolon = strchr(from, ';') ? : (from + strlen(from));
+
+	who = g_strndup(from + 2, semicolon - from - 2);
+
+	if ((strcmp(cmd[0], "SDG") == 0) && (action = get_rfc822_header(parts[2], "Message-Type", 0))) {
+		msn_ns_sdg(handler, who, parts, action);
+
+	} else if ((strcmp(cmd[0], "NFY") == 0) && (action = get_rfc822_header(parts[2], "Uri", 0))) {
+		gboolean is_put = (strcmp(cmd[1], "PUT") == 0);
+		msn_ns_nfy(handler, who, parts, action, is_put);
+	}
+
+cleanup:
+	g_strfreev(parts);
+	g_free(action);
+	g_free(from);
+	g_free(who);
+}
+
+static void msn_ns_sdg(struct msn_data *handler, char *who, char **parts, char *action)
+{
+	struct im_connection *ic = handler->ic;
+
+	if (strcmp(action, "Control/Typing") == 0) {
+		imcb_buddy_typing(ic, who, OPT_TYPING);
+	} else if (strcmp(action, "Text") == 0) {
+		imcb_buddy_msg(ic, who, parts[3], 0, 0);
+	}
+}
+
+static void msn_ns_nfy(struct msn_data *handler, char *who, char **parts, char *action, gboolean is_put)
+{
+	struct im_connection *ic = handler->ic;
+	struct xt_node *body = NULL;
+	struct xt_node *s = NULL;
+	const char *state = NULL;
+	char *nick = NULL;
+	char *psm = NULL;
+	int flags = OPT_LOGGED_IN;
+
+	if (strcmp(action, "/user") != 0) {
+		return;
+	}
+
+	if (!(body = xt_from_string(parts[3], 0))) {
+		goto cleanup;
+	}
+
+	s = body->children;
+	while ((s = xt_find_node(s, "s"))) {
+		struct xt_node *s2;
+		char *n = xt_find_attr(s, "n");  /* service name: IM, PE, etc */
+
+		if (strcmp(n, "IM") == 0) {
+			/* IM has basic presence information */
+			if (!is_put) {
+				/* NFY DEL with a <s> usually means log out from the last endpoint */
+				flags &= ~OPT_LOGGED_IN;
+				break;
+			}
+
+			s2 = xt_find_node(s->children, "Status");
+			if (s2 && s2->text_len) {
+				const struct msn_away_state *msn_state = msn_away_state_by_code(s2->text);
+				state = msn_state->name;
+				if (msn_state != msn_away_state_list) {
+					flags |= OPT_AWAY;
+				}
+			}
+		} else if (strcmp(n, "PE") == 0) {
+			if ((s2 = xt_find_node(s->children, "PSM")) && s2->text_len) {
+				psm = s2->text;
+			}
+			if ((s2 = xt_find_node(s->children, "FriendlyName")) && s2->text_len) {
+				nick = s2->text;
+			}
+		}
+		s = s->next;
+	}
+
+	imcb_buddy_status(ic, who, flags, state, psm);
+
+	if (nick) {
+		imcb_rename_buddy(ic, who, nick);
+	}
+
+cleanup:
+	xt_free_node(body);
 }
 
 void msn_auth_got_passport_token(struct im_connection *ic, const char *token, const char *error)
