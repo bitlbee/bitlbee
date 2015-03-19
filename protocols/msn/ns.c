@@ -335,6 +335,10 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 		if (num_parts >= 4) {
 			handler->msglen = atoi(cmd[3]);
 		}
+	} else if (strcmp(cmd[0], "NOT") == 0) {
+		if (num_parts >= 2) {
+			handler->msglen = atoi(cmd[1]);
+		}
 	} else if (strcmp(cmd[0], "QNG") == 0) {
 		ic->flags |= OPT_PONGED;
 	} else if (g_ascii_isdigit(cmd[0][0])) {
