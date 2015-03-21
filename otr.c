@@ -286,11 +286,16 @@ gboolean otr_irc_new(irc_t *irc)
 
 void otr_irc_free(irc_t *irc)
 {
+	set_t *s;
 	otr_t *otr = irc->otr;
 
 	otr_disconnect_all(irc);
 	b_event_remove(otr->timer);
 	otrl_userstate_free(otr->us);
+
+	s = set_find(&irc->b->set, "otr_policy");
+	g_slist_free(s->eval_data);
+
 	if (otr->keygen) {
 		kill(otr->keygen, SIGTERM);
 		waitpid(otr->keygen, NULL, 0);
@@ -434,6 +439,10 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 	                                    ic->acc->user, ic->acc->prpl->name, iu->bu->handle, msg, &newmsg,
 	                                    &tlvs, NULL, NULL, NULL);
 
+	if (tlvs) {
+		otrl_tlv_free(tlvs);
+	}
+
 	if (ignore_msg) {
 		/* this was an internal OTR protocol message */
 		return NULL;
@@ -471,7 +480,7 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	if (otrmsg && otrmsg != msg) {
 		/* libotr wants us to replace our message */
 		/* NB: caller will free old msg */
-		msg = g_strdup(otrmsg);
+		msg = st ? NULL : g_strdup(otrmsg);
 		otrl_message_free(otrmsg);
 	}
 
@@ -1324,6 +1333,8 @@ void log_otr_message(void *opdata, const char *fmt, ...)
 	va_end(va);
 
 	log_message(LOGLVL_INFO, "otr: %s", msg);
+
+	g_free(msg);
 }
 
 void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
@@ -2074,5 +2085,3 @@ void otr_disconnect_all(irc_t *irc)
 		}
 	}
 }
-
-/* vim: set noet ts=4 sw=4: */
