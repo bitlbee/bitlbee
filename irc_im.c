@@ -697,7 +697,8 @@ static gboolean bee_irc_chat_name_hint(bee_t *bee, struct groupchat *c, const ch
 {
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ic = c->ui_data, *oic;
-	char stripped[MAX_NICK_LENGTH + 1], *full_name;
+	char *stripped, *full_name;
+	gsize bytes_written;
 
 	if (ic == NULL) {
 		return FALSE;
@@ -708,18 +709,23 @@ static gboolean bee_irc_chat_name_hint(bee_t *bee, struct groupchat *c, const ch
 		return FALSE;
 	}
 
-	strncpy(stripped, name, MAX_NICK_LENGTH);
-	stripped[MAX_NICK_LENGTH] = '\0';
+	stripped = g_convert_with_fallback(name, -1, "ASCII//TRANSLIT",
+	        "UTF-8", "", NULL, &bytes_written, NULL);
+	if (bytes_written > MAX_NICK_LENGTH)
+		stripped[MAX_NICK_LENGTH] = '\0';
+
 	irc_channel_name_strip(stripped);
 	if (set_getbool(&bee->set, "lcnicks")) {
 		nick_lc(irc, stripped);
 	}
 
 	if (stripped[0] == '\0') {
+		g_free(stripped);
 		return FALSE;
 	}
 
 	full_name = g_strdup_printf("#%s", stripped);
+	g_free(stripped);
 	if ((oic = irc_channel_by_name(irc, full_name))) {
 		char *type, *chat_type;
 
