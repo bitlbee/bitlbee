@@ -1,7 +1,50 @@
 This ChangeLog mostly lists changes relevant to users. A full log can be
-found in the bzr commit logs, for example you can try:
+found in the git commit logs, for example you can try:
 
-http://bugs.bitlbee.org/bitlbee/timeline?daysback=90&changeset=on
+https://github.com/bitlbee/bitlbee/commits/master
+
+Version 3.4:
+- First release pretty much fully prepared by dx instead of Wilmer. Just look
+  at the tightly structured changelog!
+- Main repository migrated from bzr to git
+- Some API/ABI changes. Recompiling third party plugins is required!
+- Important bugfixes:
+  * Fix memory leak when calling word_wrap() on groupchat messages (dx)
+  * Fix segfault after a file transfer is complete (dx)
+  * Fix bug where NSS would refuse to work in forkdaemon mode (dx)
+  * Fix several bugs with UTF8 nicks (dx)
+  * Fix some nasty deadlocks that appared mostly with libpurple (dx)
+- General changes:
+  * Add a 'pattern' parameter to the blist command, to filter it (tribut)
+  * Implemented /kick support, only supported by purple for now (jgeboski)
+  * Add a "special" state to show_users (mapped to the % prefix) (jgeboski)
+  * Improved support for cygwin, openbsd and darwin (jcopenha)
+  * Create temporary users instead of showing "Message from unknown
+    participant" (jgeboski)
+- purple:
+  * Local contact lists for gadugadu and whatsapp (dx)
+  * Add topic and name_hint to groupchats (seirl)
+  * Support for 'input' requests (such as telegram auth codes) (seirl)
+    Note that telegram-purple itself is rather unstable ATM, it may crash.
+- jabber:
+  * Handle compressed DNS responses in SRV lookup (jcopenha)
+  * Fix case sensitivity issues with JIDs (GRMrGecko, dx)
+  * Implement XEP-0203 style message timestamps (dx)
+  * Fix "Server claims your JID is X instead of Y" warnings (dx)
+  * Account-wide display_name setting, mostly for hipchat (dx)
+- twitter:
+  * Filter channels. Search by keyword/hashtag or a list of users (jgeboski)
+  * Fix bug in "reply" command which removed the first quote character (dx)
+  * Add "rawreply" command, like reply but bitlbee won't add @mention (WillP)
+  * Add support for The United States of America (favorite/fav aliases) (dx)
+  * Default show_old_mentions to 0 (dx)
+  * Start stream from last tweet on connect/reconnect (roger)
+- msn:
+  * Disabled module by default. The protocol we used (MSNP18) stopped working
+    last week. This is being worked on, but it's far from ready for release.
+- And lots of small bugfixes, too many to list here.
+
+Finished 25 Mar 2015
 
 Version 3.2.2:
 - The OTR plugin now uses libotr 4.0 (AKA libotr5 in debian based distros)
