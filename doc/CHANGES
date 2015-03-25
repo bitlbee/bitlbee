@@ -4,6 +4,8 @@ found in the git commit logs, for example you can try:
 https://github.com/bitlbee/bitlbee/commits/master
 
 Version 3.4:
+- First release pretty much fully prepared by dx instead of Wilmer. Just look
+  at the tightly structured changelog!
 - Main repository migrated from bzr to git
 - Some API/ABI changes. Recompiling third party plugins is required!
 - Important bugfixes:
@@ -42,7 +44,7 @@ Version 3.4:
     last week. This is being worked on, but it's far from ready for release.
 - And lots of small bugfixes, too many to list here.
 
-Finished ... 20XX
+Finished 25 Mar 2015
 
 Version 3.2.2:
 - The OTR plugin now uses libotr 4.0 (AKA libotr5 in debian based distros)
