@@ -122,7 +122,13 @@ static char *byahoo_strip(const char *in)
 
 static void byahoo_init(account_t *acc)
 {
-	set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
+	set_t *s;
+
+	s = set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "notify_handle", NULL, NULL, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 
 	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE;
 }
@@ -144,6 +150,10 @@ static void byahoo_login(account_t *acc)
 	imcb_log(ic, "Connecting");
 	yd->y2_id = yahoo_init(acc->user, acc->pass);
 	yahoo_login(yd->y2_id, yd->current_status);
+
+	if (set_getbool(&acc->set, "mail_notifications") && set_getstr(&acc->set, "notify_handle")) {
+		imcb_add_buddy(ic, set_getstr(&acc->set, "notify_handle"), NULL);
+	}
 }
 
 static void byahoo_logout(struct im_connection *ic)
@@ -948,13 +958,17 @@ void ext_yahoo_game_notify(int id, const char *me, const char *who, int stat, co
 void ext_yahoo_mail_notify(int id, const char *from, const char *subj, int cnt)
 {
 	struct im_connection *ic = byahoo_get_ic_by_id(id);
+	char *msg;
 
-	if (!set_getbool(&ic->acc->set, "mail_notifications")) {
-		; /* The user doesn't care. */
-	} else if (from && subj) {
-		imcb_log(ic, "Received e-mail message from %s with subject `%s'", from, subj);
-	} else if (cnt > 0) {
-		imcb_log(ic, "Received %d new e-mails", cnt);
+	if (set_getbool(&ic->acc->set, "mail_notifications")) {
+		if (from && subj) {
+			msg = g_strdup_printf("Received e-mail message from %s with subject `%s'", from, subj);
+		} else if (cnt > 0) {
+			msg = g_strdup_printf("Received %d new e-mails", cnt);
+		}
+
+		imcb_notify_email(ic, set_getstr(&ic->acc->set, "notify_handle"), msg, 0, 0);
+		g_free(msg);
 	}
 }
 

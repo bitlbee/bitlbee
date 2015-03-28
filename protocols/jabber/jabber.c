@@ -99,7 +99,12 @@ static void jabber_init(account_t *acc)
 	s = set_add(&acc->set, "user_agent", "BitlBee", NULL, acc);
 
 	s = set_add(&acc->set, "xmlconsole", "false", set_eval_bool, acc);
+
+	s = set_add(&acc->set, "gmail_notifications", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "notify_handle", NULL, NULL, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 
 	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE |
 	              ACC_FLAG_HANDLE_DOMAINS;
@@ -258,6 +263,12 @@ void jabber_connect(struct im_connection *ic)
 		   I think this shouldn't break anything. */
 		imcb_add_buddy(ic, JABBER_XMLCONSOLE_HANDLE, NULL);
 	}
+	if (set_getbool(&acc->set, "gmail_notifications")) {
+		jd->flags |= JFLAG_GMAILNOTIFY;
+		if (set_getstr(&acc->set, "notify_handle")) {
+			imcb_add_buddy(ic, set_getstr(&acc->set, "notify_handle"), NULL);
+		}
+	}
 
 	jabber_generate_id_hash(jd);
 }
@@ -333,6 +344,7 @@ static void jabber_logout(struct im_connection *ic)
 	g_free(jd->oauth2_access_token);
 	g_free(jd->away_message);
 	g_free(jd->internal_jid);
+	g_free(jd->gmail_tid);
 	g_free(jd->username);
 	g_free(jd->me);
 	g_free(jd);

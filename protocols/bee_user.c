@@ -270,6 +270,15 @@ void imcb_buddy_msg(struct im_connection *ic, const char *handle, const char *ms
 	}
 }
 
+void imcb_notify_email(struct im_connection *ic, const char *handle, char *msg, uint32_t flags, time_t sent_at)
+{
+	if (handle != NULL) {
+		imcb_buddy_msg(ic, handle, msg, flags, sent_at);
+	} else {
+		imcb_log(ic, "%s", msg);
+	}
+}
+
 void imcb_buddy_typing(struct im_connection *ic, const char *handle, uint32_t flags)
 {
 	bee_user_t *bu;

@@ -237,6 +237,9 @@ static void purple_init(account_t *acc)
 	if (pi->options & OPT_PROTO_MAIL_CHECK) {
 		s = set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY;
+
+		s = set_add(&acc->set, "notify_handle", NULL, NULL, acc);
+		s->flags |= ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 	}
 
 	if (strcmp(prpl->info->name, "Gadu-Gadu") == 0) {
@@ -331,6 +334,10 @@ static void purple_login(account_t *acc)
 	purple_sync_settings(acc, pd->account);
 
 	purple_account_set_enabled(pd->account, "BitlBee", TRUE);
+
+	if (set_getbool(&acc->set, "mail_notifications") && set_getstr(&acc->set, "notify_handle")) {
+		imcb_add_buddy(ic, set_getstr(&acc->set, "notify_handle"), NULL);
+	}
 }
 
 static void purple_logout(struct im_connection *ic)
@@ -1253,8 +1260,10 @@ static void *prplcb_notify_email(PurpleConnection *gc, const char *subject, cons
                                  const char *to, const char *url)
 {
 	struct im_connection *ic = purple_ic_by_gc(gc);
+	char *msg = g_strdup_printf("Received e-mail from %s for %s: %s <%s>", from, to, subject, url);
 
-	imcb_log(ic, "Received e-mail from %s for %s: %s <%s>", from, to, subject, url);
+	imcb_notify_email(ic, set_getstr(&ic->acc->set, "notify_handle"), msg, 0, 0);
+	g_free(msg);
 
 	return NULL;
 }

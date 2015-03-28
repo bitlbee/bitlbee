@@ -1022,6 +1022,28 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="notify_handle" type="string" scope="account">
+		<default>empty</default>
+
+		<description>
+			<para>
+				This setting is available for protocols with e-mail notification functionality. If set to empty all e-mail notifications will go to control channel, if set to some string - this will be the name of a contact who will PRIVMSG you on every new notification.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="gmail_notifications" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				Same as "mail_notifications" but GMail specific.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="message_length" type="integer" scope="account">
 		<default>140</default>
 
