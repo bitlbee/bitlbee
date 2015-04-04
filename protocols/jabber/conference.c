@@ -358,7 +358,7 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 	char *s;
 
 	if (subject && chat) {
-		s = bud ? strchr(bud->ext_jid, '/') : NULL;
+		s = (bud && bud->ext_jid) ? strchr(bud->ext_jid, '/') : NULL;
 		if (s) {
 			*s = 0;
 		}
@@ -418,7 +418,7 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 		return;
 	}
 	if (body && body->text_len > 0) {
-		s = strchr(bud->ext_jid, '/');
+		s = (bud->ext_jid) ? strchr(bud->ext_jid, '/') : NULL;
 		if (s) {
 			*s = 0;
 		}
