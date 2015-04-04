@@ -26,13 +26,27 @@ struct rpc_groupchat {
 };
 
 static JSON_Value *jsonrpc_error(int code, const char *msg) {
-	JSON_Value *error = json_value_init_object();
-	json_object_set_number(json_object(error), "code", code);
-	json_object_set_string(json_object(error), "message", msg);
 	JSON_Value *ret = json_value_init_object();
-	json_object_set_value(json_object(ret), "error", error);
+	json_object_set_null(json_object(ret), "result");
+	if (TRUE) {
+		/* Format from http://jsonrpc.org/historical/json-rpc-1-1-alt.html.
+		 * Not sure whether to use it. */
+		JSON_Value *error = json_value_init_object();
+		json_object_set_number(json_object(error), "code", code);
+		json_object_set_string(json_object(error), "message", msg);
+		json_object_set_value(json_object(ret), "error", error);
+	} else {
+		json_object_set_string(json_object(ret), "error", msg);
+	}
 	
 	return ret;
+}
+
+static void json_array_append_string_or_null(JSON_Array *params, const char *string) {
+	if (string)
+		json_array_append_string(params, string);
+	else
+		json_array_append_null(params);
 }
 
 static JSON_Value *rpc_out_new(const char *method, JSON_Array **params_) {
@@ -149,8 +163,8 @@ static int rpc_buddy_msg(struct im_connection *ic, char *to, char *message, int 
 
 static void rpc_set_away(struct im_connection *ic, char *state, char *message) {
 	RPC_OUT_INIT("set_away");
-	json_array_append_string(params, state);
-	json_array_append_string(params, message);
+	json_array_append_string_or_null(params, state);
+	json_array_append_string_or_null(params, message);
 	rpc_send(ic, rpc);
 }
 
@@ -164,14 +178,14 @@ static int rpc_send_typing(struct im_connection *ic, char *who, int flags) {
 static void rpc_add_buddy(struct im_connection *ic, char *name, char *group) {
 	RPC_OUT_INIT("add_buddy");
 	json_array_append_string(params, name);
-	json_array_append_string(params, group);
+	json_array_append_string_or_null(params, group);
 	rpc_send(ic, rpc);
 }
 
 static void rpc_remove_buddy(struct im_connection *ic, char *name, char *group) {
 	RPC_OUT_INIT("remove_buddy");
 	json_array_append_string(params, name);
-	json_array_append_string(params, group);
+	json_array_append_string_or_null(params, group);
 	rpc_send(ic, rpc);
 }
 
@@ -210,7 +224,7 @@ static void rpc_chat_invite(struct groupchat *gc, char *who, char *message) {
 	struct rpc_groupchat *rc = gc->data;
 	json_array_append_number(params, rc->id);
 	json_array_append_string(params, who);
-	json_array_append_string(params, message);
+	json_array_append_string_or_null(params, message);
 	rpc_send(gc->ic, rpc);
 }
 
@@ -219,7 +233,7 @@ static void rpc_chat_kick(struct groupchat *gc, char *who, const char *message) 
 	struct rpc_groupchat *rc = gc->data;
 	json_array_append_number(params, rc->id);
 	json_array_append_string(params, who);
-	json_array_append_string(params, message);
+	json_array_append_string_or_null(params, message);
 	rpc_send(gc->ic, rpc);
 }
 
@@ -281,8 +295,8 @@ static struct groupchat *rpc_chat_join(struct im_connection *ic, const char *roo
 	struct rpc_groupchat *rc = rpc_groupchat_new(ic, room);
 	json_array_append_number(params, rc->id);
 	json_array_append_string(params, room);
-	json_array_append_string(params, nick);
-	json_array_append_string(params, password);
+	json_array_append_string_or_null(params, nick);
+	json_array_append_string_or_null(params, password);
 	//json_array_append_value(params, rpc_ser_sets(sets));
 	rpc_send(ic, rpc);
 
@@ -302,6 +316,7 @@ static JSON_Value *rpc_cmd_in(struct im_connection *ic, const char *cmd, JSON_Ar
 static gboolean rpc_in(struct im_connection *ic, JSON_Object *rpc) {
 	const char *cmd = json_object_get_string(rpc, "method");
 	JSON_Value *id = json_object_get_value(rpc, "id");
+	JSON_Value *error = json_object_get_value(rpc, "error");
 	JSON_Array *params = json_object_get_array(rpc, "params");
 
 	/* Removed checks for result/error/etc. as it's all too free-form and
@@ -321,6 +336,12 @@ static gboolean rpc_in(struct im_connection *ic, JSON_Object *rpc) {
 		}
 		json_object_set_value(json_object(resp), "id", json_value_deep_copy(id));
 		return rpc_send(ic, resp);
+	} else if (error && json_type(error) != JSONNull) {
+		char *error_str = json_serialize_to_string(error);
+		/* Maybe sanitise/truncate? Though really that should be done at
+		 * a different layer. */
+		imcb_error(ic, "RPC Error: %s", error_str);
+		g_free(error_str);
 	}
 
 	return TRUE;
@@ -533,7 +554,7 @@ static JSON_Value *rpc_cmd_in(struct im_connection *ic, const char *cmd, JSON_Ar
 				gboolean ok = FALSE;
 				switch (methods[i].args[j]) {
 				case 's':
-					ok = type == JSONString;
+					ok = type == JSONString || type == JSONNull;
 					break;
 				case 'n':
 					ok = type == JSONNumber;
@@ -662,6 +683,7 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	g_hash_table_destroy(methods);
 
 	// TODO: Property for a few standard nickcmp implementations.
+	ret->handle_cmp = g_ascii_strcasecmp;
 	
 	struct rpc_plugin *proto_data = g_new0(struct rpc_plugin, 1);
 	proto_data->addr = g_memdup(address, addrlen);
