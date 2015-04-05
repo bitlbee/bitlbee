@@ -900,7 +900,7 @@ Version 0.82:
 - Removed the old login/logout commands.
 - Added the qlist command.
 - Fixed a buffer overflow in the nick checking code. (Thanks to Jon
-  Åslund for pointing us at this problem)
+  Ã…slund for pointing us at this problem)
 - Adds the add_private and add_channel options for set handle_unknown.
 - Some documentation updates.
 - Added two small utilities to encode/decode BitlCrypted files.
@@ -987,7 +987,7 @@ Version 0.80:
 - Added the daemon-patch by Maurits Dijkstra which adds stand-alone daemon
   support to BitlBee.
 - Jabber now doesn't barf on high ASCII characters in away messages anymore.
-  (Thanks to Christian Häggström <chm@c00.info>)
+  (Thanks to Christian HÃ¤ggstrÃ¶m <chm@c00.info>)
 
 Finished 24 Jun 2003
 
