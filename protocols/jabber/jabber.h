@@ -76,20 +76,6 @@ typedef enum {
 	                                   we can detect echoes/backlogs. */
 } jabber_chat_flags_t;
 
-typedef enum {
-	JSUB_NONE = 0,
-	JSUB_GTALK,
-	JSUB_FACEBOOK,
-	JSUB_HIPCHAT,
-} jabber_subproto_t;
-
-typedef struct {
-	const char *name;
-	jabber_subproto_t id;
-	const struct oauth2_service *oauth2_service;
-	const char *server;
-} jabber_subproto_desc_t;
-
 struct jabber_data {
 	struct im_connection *ic;
 
@@ -101,7 +87,6 @@ struct jabber_data {
 
 	struct xt_parser *xt;
 	jabber_flags_t flags;
-	jabber_subproto_t subproto;
 
 	char *username;         /* USERNAME@server */
 	char *server;           /* username@SERVER -=> server/domain, not hostname */

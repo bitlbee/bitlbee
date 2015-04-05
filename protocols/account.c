@@ -83,6 +83,13 @@ account_t *account_add(bee_t *bee, struct prpl *prpl, char *user, char *pass)
 		} else {
 			strcpy(tag, "aim");
 		}
+	} else if (strcmp(prpl->name, "jabber") == 0) {
+		if (strstr(a->user, "@gmail.com") ||
+		    strstr(a->user, "@googlemail.com")) {
+			strcpy(tag, "gtalk");
+		} else if (strstr(a->user, "@chat.facebook.com")) {
+			strcpy(tag, "fb");
+		}
 	}
 
 	if (account_by_tag(bee, tag)) {
