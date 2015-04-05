@@ -47,6 +47,7 @@ typedef enum {
 	JFLAG_STARTTLS_DONE = 128,      /* If a plaintext session was converted to TLS. */
 
 	JFLAG_GTALK =  0x100000,        /* Is Google Talk, as confirmed by iq discovery */
+	JFLAG_HIPCHAT = 0x200000,       /* Is hipchat, because prpl->name says so */
 
 	JFLAG_SASL_FB = 0x10000,        /* Trying Facebook authentication. */
 } jabber_flags_t;
