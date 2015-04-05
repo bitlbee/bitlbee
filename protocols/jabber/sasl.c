@@ -74,7 +74,7 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 	}
 
 	want_oauth = set_getbool(&ic->acc->set, "oauth");
-	want_hipchat = (jd->subproto == JSUB_HIPCHAT);
+	want_hipchat = (jd->flags & JFLAG_HIPCHAT);
 
 	mechs = g_string_new("");
 	c = node->children;
@@ -420,7 +420,7 @@ xt_status sasl_pkt_result(struct xt_node *node, gpointer data)
 		imcb_log(ic, "Authentication finished");
 		jd->flags |= JFLAG_AUTHENTICATED | JFLAG_STREAM_RESTART;
 
-		if (jd->subproto == JSUB_HIPCHAT) {
+		if (jd->flags & JFLAG_HIPCHAT) {
 			return hipchat_handle_success(ic, node);
 		}
 	} else if (strcmp(node->name, "failure") == 0) {
