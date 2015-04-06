@@ -213,6 +213,22 @@ char *nick_gen(bee_user_t *bu)
 	return NULL;
 }
 
+/* Used for nicks and channel names too! */
+void underscore_dedupe(char nick[MAX_NICK_LENGTH + 1])
+{
+	if (strlen(nick) < (MAX_NICK_LENGTH - 1)) {
+		nick[strlen(nick) + 1] = 0;
+		nick[strlen(nick)] = '_';
+	} else {
+		/* We've got no more space for underscores,
+		   so truncate it and replace the last three
+		   chars with a random "_XX" suffix */
+		int len = truncate_utf8(nick, MAX_NICK_LENGTH - 3);
+		nick[len] = '_';
+		g_snprintf(nick + len + 1, 3, "%2x", rand());
+	}
+}
+
 void nick_dedupe(bee_user_t *bu, char nick[MAX_NICK_LENGTH + 1])
 {
 	irc_t *irc = (irc_t *) bu->bee->ui_data;
@@ -223,17 +239,8 @@ void nick_dedupe(bee_user_t *bu, char nick[MAX_NICK_LENGTH + 1])
 	   subtle changes to make it unique. */
 	while (!nick_ok(irc, nick) ||
 	       ((iu = irc_user_by_name(irc, nick)) && iu->bu != bu)) {
-		if (strlen(nick) < (MAX_NICK_LENGTH - 1)) {
-			nick[strlen(nick) + 1] = 0;
-			nick[strlen(nick)] = '_';
-		} else {
-			/* We've got no more space for underscores,
-			   so truncate it and replace the last three
-			   chars with a random "_XX" suffix */
-			int len = truncate_utf8(nick, MAX_NICK_LENGTH - 3);
-			nick[len] = '_';
-			g_snprintf(nick + len + 1, 3, "%2x", rand());
-		}
+
+		underscore_dedupe(nick);
 
 		if (inf_protection-- == 0) {
 			g_snprintf(nick, MAX_NICK_LENGTH + 1, "xx%x", rand());

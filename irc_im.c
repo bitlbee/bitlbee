@@ -695,61 +695,7 @@ static gboolean bee_irc_chat_topic(bee_t *bee, struct groupchat *c, const char *
 
 static gboolean bee_irc_chat_name_hint(bee_t *bee, struct groupchat *c, const char *name)
 {
-	irc_t *irc = bee->ui_data;
-	irc_channel_t *ic = c->ui_data, *oic;
-	char *stripped, *full_name;
-	gsize bytes_written;
-
-	if (ic == NULL) {
-		return FALSE;
-	}
-
-	/* Don't rename a channel if the user's in it already. */
-	if (ic->flags & IRC_CHANNEL_JOINED) {
-		return FALSE;
-	}
-
-	stripped = g_convert_with_fallback(name, -1, "ASCII//TRANSLIT", "UTF-8", "", NULL, &bytes_written, NULL);
-	if (bytes_written > MAX_NICK_LENGTH) {
-		stripped[MAX_NICK_LENGTH] = '\0';
-	}
-
-	irc_channel_name_strip(stripped);
-	if (set_getbool(&bee->set, "lcnicks")) {
-		nick_lc(irc, stripped);
-	}
-
-	if (stripped[0] == '\0') {
-		g_free(stripped);
-		return FALSE;
-	}
-
-	full_name = g_strdup_printf("#%s", stripped);
-	g_free(stripped);
-	if ((oic = irc_channel_by_name(irc, full_name))) {
-		char *type, *chat_type;
-
-		type = set_getstr(&oic->set, "type");
-		chat_type = set_getstr(&oic->set, "chat_type");
-
-		if (type && chat_type && oic->data == FALSE &&
-		    strcmp(type, "chat") == 0 &&
-		    strcmp(chat_type, "groupchat") == 0) {
-			/* There's a channel with this name already, but it looks
-			   like it's not in use yet. Most likely the IRC client
-			   rejoined the channel after a reconnect. Remove it so
-			   we can reuse its name. */
-			irc_channel_free(oic);
-		} else {
-			g_free(full_name);
-			return FALSE;
-		}
-	}
-
-	g_free(ic->name);
-	ic->name = full_name;
-
-	return TRUE;
+	return irc_channel_name_hint(c->ui_data, name);
 }
 
 static gboolean bee_irc_chat_invite(bee_t *bee, bee_user_t *bu, const char *name, const char *msg)
