@@ -173,6 +173,15 @@ struct msn_buddy_ask_data {
 	char *realname;
 };
 
+static void msn_buddy_ask_free(void *data)
+{
+	struct msn_buddy_ask_data *bla = data;
+
+	g_free(bla->handle);
+	g_free(bla->realname);
+	g_free(bla);
+}
+
 static void msn_buddy_ask_yes(void *data)
 {
 	struct msn_buddy_ask_data *bla = data;
@@ -181,9 +190,7 @@ static void msn_buddy_ask_yes(void *data)
 
 	imcb_ask_add(bla->ic, bla->handle, NULL);
 
-	g_free(bla->handle);
-	g_free(bla->realname);
-	g_free(bla);
+	msn_buddy_ask_free(bla);
 }
 
 static void msn_buddy_ask_no(void *data)
@@ -192,9 +199,7 @@ static void msn_buddy_ask_no(void *data)
 
 	msn_buddy_list_add(bla->ic, MSN_BUDDY_BL, bla->handle, bla->realname, NULL);
 
-	g_free(bla->handle);
-	g_free(bla->realname);
-	g_free(bla);
+	msn_buddy_ask_free(bla);
 }
 
 void msn_buddy_ask(bee_user_t *bu)
@@ -215,7 +220,8 @@ void msn_buddy_ask(bee_user_t *bu)
 	g_snprintf(buf, sizeof(buf),
 	           "The user %s (%s) wants to add you to his/her buddy list.",
 	           bu->handle, bu->fullname);
-	imcb_ask(bu->ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no);
+
+	imcb_ask_with_free(bu->ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no, msn_buddy_ask_free);
 }
 
 /* *NOT* thread-safe, but that's not a problem for now... */

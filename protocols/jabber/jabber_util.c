@@ -565,6 +565,7 @@ struct jabber_buddy *jabber_buddy_by_ext_jid(struct im_connection *ic, char *jid
 	jid = jabber_normalize_ext(jid_);
 
 	if ((s = strchr(jid, '=')) == NULL) {
+		g_free(jid);
 		return NULL;
 	}
 

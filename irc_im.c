@@ -234,7 +234,7 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, t
 				msg = s;
 			} else {
 				/* Modules can swallow messages. */
-				return TRUE;
+				goto cleanup;
 			}
 		}
 	}
@@ -249,8 +249,9 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, t
 
 	wrapped = word_wrap(msg, 425);
 	irc_send_msg(iu, "PRIVMSG", dst, wrapped, prefix);
-
 	g_free(wrapped);
+
+cleanup:
 	g_free(prefix);
 	g_free(msg);
 	g_free(ts);
@@ -290,6 +291,8 @@ static gboolean bee_irc_user_action_response(bee_t *bee, bee_user_t *bu, const c
 	g_string_append_c(msg, '\001');
 
 	irc_send_msg((irc_user_t *) bu->ui_data, "NOTICE", irc->user->nick, msg->str, NULL);
+
+	g_string_free(msg, TRUE);
 
 	return TRUE;
 }

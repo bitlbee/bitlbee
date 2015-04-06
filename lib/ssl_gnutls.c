@@ -123,6 +123,7 @@ void *ssl_connect(char *host, int port, gboolean verify, ssl_input_function func
 	conn->fd = proxy_connect(host, port, ssl_connected, conn);
 
 	if (conn->fd < 0) {
+		g_free(conn->hostname);
 		g_free(conn);
 		return NULL;
 	}
@@ -313,6 +314,7 @@ static gboolean ssl_connected(gpointer data, gint source, b_input_condition cond
 
 	if (source == -1) {
 		conn->func(conn->data, 0, NULL, cond);
+		g_free(conn->hostname);
 		g_free(conn);
 		return FALSE;
 	}
@@ -354,19 +356,13 @@ static gboolean ssl_handshake(gpointer data, gint source, b_input_condition cond
 		} else {
 			conn->func(conn->data, 0, NULL, cond);
 
-			gnutls_deinit(conn->session);
-			closesocket(conn->fd);
-
-			g_free(conn);
+			ssl_disconnect(conn);
 		}
 	} else {
 		if (conn->verify && (stver = verify_certificate_callback(conn->session)) != 0) {
 			conn->func(conn->data, stver, NULL, cond);
 
-			gnutls_deinit(conn->session);
-			closesocket(conn->fd);
-
-			g_free(conn);
+			ssl_disconnect(conn);
 		} else {
 			/* For now we can't handle non-blocking perfectly everywhere... */
 			sock_make_blocking(conn->fd);

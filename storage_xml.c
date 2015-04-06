@@ -127,6 +127,8 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 			acc->flags |= ACC_FLAG_LOCAL;
 		}
 	} else {
+		g_free(pass_cr);
+		g_free(password);
 		return XT_ABORT;
 	}
 
