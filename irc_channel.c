@@ -588,10 +588,19 @@ gboolean irc_channel_is_unused(bee_t *bee, char *name)
 char *irc_channel_name_gen(bee_t *bee, const char *hint)
 {
 	char name[MAX_NICK_LENGTH + 1] = { 0 };
+	char *translit_name;
+	gsize bytes_written;
+
+	translit_name = g_convert_with_fallback(hint, -1, "ASCII//TRANSLIT", "UTF-8", "", NULL, &bytes_written, NULL);
+	if (bytes_written > MAX_NICK_LENGTH) {
+		translit_name[MAX_NICK_LENGTH] = '\0';
+	}
 
 	name[0] = '#';
-	strncpy(name + 1, hint, MAX_NICK_LENGTH - 1);
+	strncpy(name + 1, translit_name, MAX_NICK_LENGTH - 1);
 	name[MAX_NICK_LENGTH] = '\0';
+
+	g_free(translit_name);
 
 	irc_channel_name_strip(name);
 
