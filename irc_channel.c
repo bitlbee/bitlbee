@@ -555,7 +555,7 @@ int irc_channel_name_cmp(const char *a_, const char *b_)
 	return case_map[a[i]] - case_map[b[i]];
 }
 
-gboolean irc_channel_is_unused(bee_t *bee, char *name)
+gboolean irc_channel_is_unused(irc_t *irc, char *name)
 {
 	char *type, *chat_type;
 	irc_channel_t *oic;
@@ -564,7 +564,7 @@ gboolean irc_channel_is_unused(bee_t *bee, char *name)
 		return FALSE;
 	}
 
-	if (!(oic = irc_channel_by_name(bee->ui_data, name))) {
+	if (!(oic = irc_channel_by_name(irc, name))) {
 		return TRUE;
 	}
 
@@ -585,7 +585,7 @@ gboolean irc_channel_is_unused(bee_t *bee, char *name)
 	return FALSE;
 }
 
-char *irc_channel_name_gen(bee_t *bee, const char *hint)
+char *irc_channel_name_gen(irc_t *irc, const char *hint)
 {
 	char name[MAX_NICK_LENGTH + 1] = { 0 };
 	char *translit_name;
@@ -604,11 +604,11 @@ char *irc_channel_name_gen(bee_t *bee, const char *hint)
 
 	irc_channel_name_strip(name);
 
-	if (set_getbool(&bee->set, "lcnicks")) {
-		nick_lc(bee->ui_data, name + 1);
+	if (set_getbool(&irc->b->set, "lcnicks")) {
+		nick_lc(irc, name + 1);
 	}
 
-	while (!irc_channel_is_unused(bee, name)) {
+	while (!irc_channel_is_unused(irc, name)) {
 		underscore_dedupe(name);
 	}
 
@@ -625,7 +625,7 @@ gboolean irc_channel_name_hint(irc_channel_t *ic, const char *name)
 		return FALSE;
 	}
 
-	if (!(full_name = irc_channel_name_gen(irc->b, name))) {
+	if (!(full_name = irc_channel_name_gen(irc, name))) {
 		return FALSE;
 	}
 
