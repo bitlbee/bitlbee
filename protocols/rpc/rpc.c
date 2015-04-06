@@ -6,11 +6,16 @@
 #include "nogaim.h"
 #include "parson.h"
 
+#define JSON_O_FOREACH(o, k, v) \
+    const char *k; const JSON_Value *v; int __i; \
+    for (__i = 0; json_object_get_tuple(o, __i, &k, &v); __i++)
+
 static int next_rpc_id = 1;
 
 struct rpc_plugin {
 	struct sockaddr *addr;
 	socklen_t addrlen;
+	JSON_Value *settings;
 };
 
 struct rpc_connection {
@@ -42,11 +47,19 @@ static JSON_Value *jsonrpc_error(int code, const char *msg) {
 	return ret;
 }
 
-static void json_array_append_string_or_null(JSON_Array *params, const char *string) {
+// Might have liked to have this one in the library for optional values/etc.
+static void json_array_append_string_or_null(JSON_Array *array, const char *string) {
 	if (string)
-		json_array_append_string(params, string);
+		json_array_append_string(array, string);
 	else
-		json_array_append_null(params);
+		json_array_append_null(array);
+}
+
+static void json_object_set_string_or_null(JSON_Object *object, const char *key, const char *string) {
+	if (string)
+		json_object_set_string(object, key, string);
+	else
+		json_object_set_null(object, key);
 }
 
 static JSON_Value *rpc_out_new(const char *method, JSON_Array **params_) {
@@ -83,7 +96,8 @@ static gboolean rpc_send(struct im_connection *ic, JSON_Value *rpc) {
 	json_value_free(rpc);
 
 	if (st != len) {
-		imcb_log(ic, "Write error");
+		if (!(ic->flags & OPT_LOGGING_OUT))
+			imcb_log(ic, "Write error");
 		imc_logout(ic, TRUE);
 		return FALSE;
 	}
@@ -91,22 +105,40 @@ static gboolean rpc_send(struct im_connection *ic, JSON_Value *rpc) {
 	return TRUE;
 }
 
-static JSON_Value *rpc_ser_account(const account_t *acc) {
+static JSON_Value *rpc_ser_settings(set_t **set) {
+	const set_t *s;
+	JSON_Value *ret = json_value_init_object();
+       
+	for (s = *set; s; s = s->next) {
+		json_object_set_string_or_null(json_object(ret), s->key, set_getstr(set, s->key));
+	}
+
+	return ret;
+}
+
+static JSON_Value *rpc_ser_account(account_t *acc) {
 	JSON_Value *v = json_value_init_object();
 	JSON_Object *o = json_object(v);
 	json_object_set_string(o, "user", acc->user);
 	json_object_set_string(o, "pass", acc->user);
 	if (acc->server)
 		json_object_set_string(o, "server", acc->server);
+	json_object_set_value(o, "settings", rpc_ser_settings(&acc->set));
 	return v;
 }
 
 static void rpc_init(account_t *acc) {
-	// Add settings. Probably should not RPC at all.
+	struct rpc_plugin *pd = acc->prpl->data;
+
+	JSON_O_FOREACH(json_object(pd->settings), name, value) {
+		JSON_Object *o = json_object(value);
+		set_t *set = set_add(&acc->set, name, json_object_get_string(o, "default"), NULL, acc);
+	}
 }
 
 static gboolean rpc_login_cb(gpointer data, gint fd, b_input_condition cond);
 static gboolean rpc_in_event(gpointer data, gint fd, b_input_condition cond);
+static JSON_Value *rpc_init_isup();
 
 static void rpc_login(account_t *acc) {
 	struct im_connection *ic = imcb_new(acc);
@@ -126,9 +158,17 @@ static void rpc_login(account_t *acc) {
 static gboolean rpc_login_cb(gpointer data, gint fd, b_input_condition cond) {
 	struct im_connection *ic = data;
 	struct rpc_connection *rd = ic->proto_data;
+
+	/* Need to repeat this since each IM connection means an actual new
+	 * RPC session. */
+	JSON_Value *init = rpc_init_isup();
+	if (!rpc_send(ic, init))
+		return FALSE;
+
 	RPC_OUT_INIT("login");
 	json_array_append_value(params, rpc_ser_account(ic->acc));
-	rpc_send(ic, rpc);
+	if (!rpc_send(ic, rpc))
+		return FALSE;
 
 	ic->inpa = b_input_add(rd->fd, B_EV_IO_READ, rpc_in_event, ic);
 
@@ -297,7 +337,7 @@ static struct groupchat *rpc_chat_join(struct im_connection *ic, const char *roo
 	json_array_append_string(params, room);
 	json_array_append_string_or_null(params, nick);
 	json_array_append_string_or_null(params, password);
-	//json_array_append_value(params, rpc_ser_sets(sets));
+	json_array_append_value(params, rpc_ser_settings(sets));
 	rpc_send(ic, rpc);
 
 	return rc->gc;
@@ -583,7 +623,25 @@ static JSON_Value *rpc_cmd_in(struct im_connection *ic, const char *cmd, JSON_Ar
 
 #define RPC_ADD_FUNC(func) \
 	if (g_hash_table_contains(methods, #func)) \
-		ret->func = rpc_ ## func
+	 	ret->func = rpc_ ## func
+
+static JSON_Value *rpc_init_isup() {
+	int i;
+
+	RPC_OUT_INIT("init");
+	JSON_Value *d = json_value_init_object();
+	json_object_set_string(json_object(d), "version_str", BITLBEE_VERSION);
+	json_object_set_number(json_object(d), "version", BITLBEE_VERSION_CODE);
+	
+	JSON_Value *ml = json_value_init_array();
+	for (i = 0; methods[i].name; i++) {
+		json_array_append_string(json_array(ml), methods[i].name);
+	}
+	json_object_set_value(json_object(d), "method_list", ml);
+	json_array_append_value(params, d);
+
+	return rpc;
+}
 
 void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	int st, fd, i;
@@ -592,12 +650,10 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	if (fd == -1 || connect(fd, address, addrlen) == -1)
 		return;
 
-	RPC_OUT_INIT("init");
-	JSON_Value *d = json_value_init_object();
-	json_object_set_string(json_object(d), "version_str", BITLBEE_VERSION);
-	json_object_set_number(json_object(d), "version", BITLBEE_VERSION_CODE);
-	json_array_append_value(params, d);
+	JSON_Value *rpc = rpc_init_isup();
 	char *s = json_serialize_to_string(rpc);
+	json_value_free(rpc);
+
 	int len = strlen(s);
 	s = g_realloc(s, len + 3);
 	strcpy(s + len, "\r\n");
@@ -691,11 +747,11 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	ret->name = g_strdup(json_object_get_string(isup, "name"));
 	ret->data = proto_data;
 
-	JSON_Array *settings = json_object_get_array(isup, "settings");
-	for (i = 0; i < json_array_get_count(settings); i++) {
-		//JSON_Object *set = json_array_get_object(settings, i);
-		// set..name, set..type, set..default, set..flags ?
-	}
+	/* Keep a full copy of the settings list, we can only use it when we
+	 * have an account to work on. */
+	JSON_Value *settings = json_object_get_value(isup, "settings");
+	if (json_type(settings) == JSONObject)
+		proto_data->settings = json_value_deep_copy(settings);
 
 	register_protocol(ret);
 }
