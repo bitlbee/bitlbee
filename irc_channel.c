@@ -587,29 +587,23 @@ gboolean irc_channel_is_unused(bee_t *bee, char *name)
 
 char *irc_channel_name_gen(bee_t *bee, const char *hint)
 {
-	char *name, *final_name;
-	gsize bytes_written;
+	char name[MAX_NICK_LENGTH + 1] = { 0 };
 
-	name = g_convert_with_fallback(hint, -1, "ASCII//TRANSLIT", "UTF-8", "", NULL, &bytes_written, NULL);
-	if (bytes_written > MAX_NICK_LENGTH) {
-		name[MAX_NICK_LENGTH] = '\0';
-	}
+	name[0] = '#';
+	strncpy(name + 1, hint, MAX_NICK_LENGTH - 1);
+	name[MAX_NICK_LENGTH] = '\0';
 
 	irc_channel_name_strip(name);
 
 	if (set_getbool(&bee->set, "lcnicks")) {
-		nick_lc(bee->ui_data, name);
+		nick_lc(bee->ui_data, name + 1);
 	}
 
 	while (!irc_channel_is_unused(bee, name)) {
 		underscore_dedupe(name);
 	}
 
-	final_name = g_strconcat("#", name, NULL);
-
-	g_free(name);
-
-	return final_name;
+	return g_strdup(name);
 }
 
 gboolean irc_channel_name_hint(irc_channel_t *ic, const char *name)
