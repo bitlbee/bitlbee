@@ -2,9 +2,6 @@
 #include "lib/http_client.h"
 #include "msn.h"
 
-#define GATEWAY_HOST "geo.gateway.messenger.live.com"
-#define GATEWAY_PORT 443
-
 #define REQUEST_TEMPLATE \
 	"POST /gateway/gateway.dll?SessionID=%s&%s HTTP/1.1\r\n" \
 	"Host: %s\r\n" \
@@ -17,9 +14,9 @@ static gboolean msn_gw_poll_timeout(gpointer data, gint source, b_input_conditio
 struct msn_gw *msn_gw_new(struct im_connection *ic)
 {
 	struct msn_gw *gw = g_new0(struct msn_gw, 1);
-	gw->last_host = g_strdup(GATEWAY_HOST);
-	gw->port = GATEWAY_PORT;
-	gw->ssl = (GATEWAY_PORT == 443);
+	gw->last_host = g_strdup(MSN_HTTP_HOST);
+	gw->port = MSN_HTTP_PORT;
+	gw->ssl = (MSN_HTTP_PORT == 443);
 	gw->poll_timeout = -1;
 	gw->ic = ic;
 	gw->md = ic->proto_data;

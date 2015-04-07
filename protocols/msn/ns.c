@@ -31,8 +31,9 @@
 #include "sha1.h"
 #include "soap.h"
 #include "xmltree.h"
+#include "ssl_client.h"
 
-static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition cond);
+static gboolean msn_ns_connected(gpointer data, int source, void *scd, b_input_condition cond);
 static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition cond);
 
 static void msn_ns_send_adl_start(struct im_connection *ic);
@@ -67,7 +68,7 @@ int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
 		st = len;
 		msn_gw_write(md->gw, out, len);
 	} else {
-		st = write(fd, out, len);
+		st = ssl_write(md->ssl, out, len);
 	}
 
 	g_free(out);
@@ -91,9 +92,10 @@ gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port)
 	if (md->is_http) {
 		md->gw = msn_gw_new(ic);
 		md->gw->callback = msn_ns_callback;
-		msn_ns_connected(md, -1, B_EV_IO_READ);
+		msn_ns_connected(md, 0, NULL, B_EV_IO_READ);
 	} else {
-		md->fd = proxy_connect(host, port, msn_ns_connected, md);
+		md->ssl = ssl_connect((char *) host, port, TRUE, msn_ns_connected, md);
+		md->fd = md->ssl ? ssl_getfd(md->ssl) : -1;
 		if (md->fd < 0) {
 			imcb_error(ic, "Could not connect to server");
 			imc_logout(ic, TRUE);
@@ -104,12 +106,13 @@ gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port)
 	return TRUE;
 }
 
-static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition cond)
+static gboolean msn_ns_connected(gpointer data, int source, void *scd, b_input_condition cond)
 {
 	struct msn_data *md = data;
 	struct im_connection *ic = md->ic;
 
-	if (source == -1 && !md->is_http) {
+	if (!scd && !md->is_http) {
+		md->ssl = NULL;
 		imcb_error(ic, "Could not connect to server");
 		imc_logout(ic, TRUE);
 		return FALSE;
@@ -134,7 +137,7 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 		memcpy(md->uuid, "b171be3e", 8);   /* :-P */
 	}
 
-	if (msn_ns_write(ic, source, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER)) {
+	if (msn_ns_write(ic, -1, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER)) {
 		if (!md->is_http) {
 			md->inpa = b_input_add(md->fd, B_EV_IO_READ, msn_ns_callback, md);
 		}
@@ -149,12 +152,15 @@ void msn_ns_close(struct msn_data *md)
 	if (md->gw) {
 		msn_gw_free(md->gw);
 	}
-	if (md->fd >= 0) {
-		closesocket(md->fd);
+
+	if (md->ssl) {
+		ssl_disconnect(md->ssl);
 		b_event_remove(md->inpa);
 	}
 
+	md->ssl = NULL;
 	md->fd = md->inpa = -1;
+
 	g_free(md->rxq);
 	g_free(md->cmd_text);
 
@@ -174,10 +180,10 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 		st = msn_gw_read(md->gw, &bytes);
 	} else {
 		bytes = g_malloc(1024);
-		st = read(md->fd, bytes, 1024);
+		st = ssl_read(md->ssl, bytes, 1024);
 	}
 
-	if (st <= 0) {
+	if (st == 0 || (st < 0 && (md->is_http || !ssl_sockerr_again(md->ssl)))) {
 		imcb_error(ic, "Error while reading from server");
 		imc_logout(ic, TRUE);
 		g_free(bytes);
@@ -187,6 +193,10 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 	msn_queue_feed(md, bytes, st);
 
 	g_free(bytes);
+
+	if (!md->is_http && ssl_pending(md->ssl)) {
+		return msn_ns_callback(data, source, cond);
+	}
 
 	return msn_handler(md);
 }

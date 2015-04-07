@@ -31,8 +31,11 @@
 #define MSNP11_PROD_ID  "PROD0101{0RM?UBW"
 */
 
-#define MSN_NS_HOST "messenger.hotmail.com"
-#define MSN_NS_PORT "1863"
+#define MSN_SSL_HOST "s.gateway.messenger.live.com"
+#define MSN_SSL_PORT 443
+
+#define MSN_HTTP_HOST "geo.gateway.messenger.live.com"
+#define MSN_HTTP_PORT 443
 
 /* Some other version.
 #define MSNP11_PROD_KEY "O4BG@C7BWLYQX?5G"
@@ -153,6 +156,7 @@ struct msn_data {
 
 	gboolean is_http;
 	struct msn_gw *gw;
+	void *ssl;
 };
 
 struct msn_away_state {
