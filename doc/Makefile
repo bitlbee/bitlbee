@@ -4,8 +4,8 @@ _SRCDIR_ := $(_SRCDIR_)doc/
 endif
 
 all:
-	# Only build the docs if this is a git tree
-	test ! '(' -d ../.git -o -d ../.bzr ')' || $(MAKE) -C user-guide
+	# Only build the docs if this is a git or bzr tree
+	( git rev-parse --is-inside-work-tree || bzr status ) && $(MAKE) -C user-guide
 
 install:
 	mkdir -p $(DESTDIR)$(MANDIR)/man8/ $(DESTDIR)$(MANDIR)/man5/
