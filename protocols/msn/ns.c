@@ -42,7 +42,7 @@ static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen
 static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action);
 static void msn_ns_nfy(struct msn_data *md, char *who, char **parts, char *action, gboolean is_put);
 
-int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
+int msn_ns_write(struct im_connection *ic, const char *fmt, ...)
 {
 	struct msn_data *md = ic->proto_data;
 	va_list params;
@@ -54,12 +54,8 @@ int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
 	out = g_strdup_vprintf(fmt, params);
 	va_end(params);
 
-	if (fd < 0) {
-		fd = md->fd;
-	}
-
 	if (getenv("BITLBEE_DEBUG")) {
-		fprintf(stderr, "\x1b[91m>>>[NS%d] %s\n\x1b[97m", fd, out);
+		fprintf(stderr, "\x1b[91m>>>[NS] %s\n\x1b[97m", out);
 	}
 
 	len = strlen(out);
@@ -137,7 +133,7 @@ static gboolean msn_ns_connected(gpointer data, int source, void *scd, b_input_c
 		memcpy(md->uuid, "b171be3e", 8);   /* :-P */
 	}
 
-	if (msn_ns_write(ic, -1, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER)) {
+	if (msn_ns_write(ic, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER)) {
 		if (!md->is_http) {
 			md->inpa = b_input_add(md->fd, B_EV_IO_READ, msn_ns_callback, md);
 		}
@@ -217,11 +213,11 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)
 			return(0);
 		}
 
-		return(msn_ns_write(ic, md->fd, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s VmVyc2lvbjogMQ0KWGZyQ291bnQ6IDINClhmclNlbnRVVENUaW1lOiA2MzU2MTQ3OTU5NzgzOTAwMDANCklzR2VvWGZyOiB0cnVlDQo=\r\n",
+		return(msn_ns_write(ic, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s VmVyc2lvbjogMQ0KWGZyQ291bnQ6IDINClhmclNlbnRVVENUaW1lOiA2MzU2MTQ3OTU5NzgzOTAwMDANCklzR2VvWGZyOiB0cnVlDQo=\r\n",
 		                    ++md->trId, ic->acc->user));
 	} else if (strcmp(cmd[0], "CVR") == 0) {
 		/* We don't give a damn about the information we just received */
-		return msn_ns_write(ic, md->fd, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user);
+		return msn_ns_write(ic, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user);
 	} else if (strcmp(cmd[0], "XFR") == 0) {
 		char *server;
 		int port;
@@ -301,7 +297,7 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)
 
 		resp = msn_p11_challenge(cmd[2]);
 
-		st =  msn_ns_write(ic, -1, "QRY %d %s %zd\r\n%s",
+		st =  msn_ns_write(ic, "QRY %d %s %zd\r\n%s",
 		                   ++md->trId, MSNP11_PROD_ID,
 		                   strlen(resp), resp);
 		g_free(resp);
@@ -601,7 +597,7 @@ void msn_auth_got_passport_token(struct im_connection *ic, const char *token, co
 	md = ic->proto_data;
 
 	if (token) {
-		msn_ns_write(ic, -1, "USR %d SSO S %s %s {%s}\r\n", ++md->trId, md->tokens[0], token, md->uuid);
+		msn_ns_write(ic, "USR %d SSO S %s %s {%s}\r\n", ++md->trId, md->tokens[0], token, md->uuid);
 	} else {
 		imcb_error(ic, "Error during Passport authentication: %s", error);
 		imc_logout(ic, TRUE);
@@ -680,7 +676,7 @@ static void msn_ns_send_adl(struct im_connection *ic)
 
 	adls = xt_to_string(adl);
 	xt_free_node(adl);
-	msn_ns_write(ic, -1, "ADL %d %zd\r\n%s", ++md->trId, strlen(adls), adls);
+	msn_ns_write(ic, "ADL %d %zd\r\n%s", ++md->trId, strlen(adls), adls);
 	g_free(adls);
 }
 
@@ -737,7 +733,7 @@ static int msn_ns_send_sdg(struct im_connection *ic, bee_user_t *bu, const char 
 	char *buf;
 
 	buf = g_strdup_printf(MSN_MESSAGE_HEADERS, bu->handle, ic->acc->user, md->uuid, message_type, strlen(text), text);
-	retval = msn_ns_write(ic, -1, "SDG %d %zd\r\n%s", ++md->trId, strlen(buf), buf);
+	retval = msn_ns_write(ic, "SDG %d %zd\r\n%s", ++md->trId, strlen(buf), buf);
 	g_free(buf);
 	return retval;
 }

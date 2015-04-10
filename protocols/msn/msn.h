@@ -216,7 +216,7 @@ extern const struct msn_status_code msn_status_code_list[];
 extern GSList *msn_connections;
 
 /* ns.c */
-int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...) G_GNUC_PRINTF(3, 4);
+int msn_ns_write(struct im_connection *ic, const char *fmt, ...) G_GNUC_PRINTF(2, 3);
 gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port);
 void msn_ns_close(struct msn_data *handler);
 void msn_auth_got_passport_token(struct im_connection *ic, const char *token, const char *error);

@@ -70,7 +70,7 @@ int msn_buddy_list_add(struct im_connection *ic, msn_buddy_flags_t list, const c
 	}
 
 	if ((adl = adlrml_entry(who, list))) {
-		int st = msn_ns_write(ic, -1, "ADL %d %zd\r\n%s",
+		int st = msn_ns_write(ic, "ADL %d %zd\r\n%s",
 		                      ++md->trId, strlen(adl), adl);
 		g_free(adl);
 
@@ -104,7 +104,7 @@ int msn_buddy_list_remove(struct im_connection *ic, msn_buddy_flags_t list, cons
 	}
 
 	if ((adl = adlrml_entry(who, list))) {
-		int st = msn_ns_write(ic, -1, "RML %d %zd\r\n%s",
+		int st = msn_ns_write(ic, "RML %d %zd\r\n%s",
 		                      ++md->trId, strlen(adl), adl);
 		g_free(adl);
 
