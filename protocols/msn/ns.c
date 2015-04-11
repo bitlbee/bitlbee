@@ -37,9 +37,9 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 
 static void msn_ns_send_adl_start(struct im_connection *ic);
 static void msn_ns_send_adl(struct im_connection *ic);
-static void msn_ns_structured_message(struct msn_data *handler, char *msg, int msglen, char **cmd);
-static void msn_ns_sdg(struct msn_data *handler, char *who, char **parts, char *action);
-static void msn_ns_nfy(struct msn_data *handler, char *who, char **parts, char *action, gboolean is_put);
+static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen, char **cmd);
+static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action);
+static void msn_ns_nfy(struct msn_data *md, char *who, char **parts, char *action, gboolean is_put);
 
 int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
 {
@@ -82,19 +82,19 @@ int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
 
 gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port)
 {
-	struct msn_data *handler = ic->proto_data;
+	struct msn_data *md = ic->proto_data;
 
-	if (handler->fd >= 0) {
-		closesocket(handler->fd);
+	if (md->fd >= 0) {
+		closesocket(md->fd);
 	}
 
-	if (handler->is_http) {
-		handler->gw = msn_gw_new(handler);
-		handler->gw->callback = msn_ns_callback;
-		msn_ns_connected(handler, -1, B_EV_IO_READ);
+	if (md->is_http) {
+		md->gw = msn_gw_new(md);
+		md->gw->callback = msn_ns_callback;
+		msn_ns_connected(md, -1, B_EV_IO_READ);
 	} else {
-		handler->fd = proxy_connect(host, port, msn_ns_connected, handler);
-		if (handler->fd < 0) {
+		md->fd = proxy_connect(host, port, msn_ns_connected, md);
+		if (md->fd < 0) {
 			imcb_error(ic, "Could not connect to server");
 			imc_logout(ic, TRUE);
 			return FALSE;
@@ -107,7 +107,6 @@ gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port)
 static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition cond)
 {
 	struct msn_data *md = data;
-	struct msn_data *handler = md;
 	struct im_connection *ic = md->ic;
 
 	if (source == -1 && !md->is_http) {
@@ -116,9 +115,9 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 		return FALSE;
 	}
 
-	g_free(handler->rxq);
-	handler->rxlen = 0;
-	handler->rxq = g_new0(char, 1);
+	g_free(md->rxq);
+	md->rxlen = 0;
+	md->rxq = g_new0(char, 1);
 
 	if (md->uuid == NULL) {
 		struct utsname name;
@@ -136,8 +135,8 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 	}
 
 	if (msn_ns_write(ic, source, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER)) {
-		if (!handler->is_http) {
-			handler->inpa = b_input_add(handler->fd, B_EV_IO_READ, msn_ns_callback, handler);
+		if (!md->is_http) {
+			md->inpa = b_input_add(md->fd, B_EV_IO_READ, msn_ns_callback, md);
 		}
 		imcb_log(ic, "Connected to server, waiting for reply");
 	}
@@ -145,42 +144,42 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 	return FALSE;
 }
 
-void msn_ns_close(struct msn_data *handler)
+void msn_ns_close(struct msn_data *md)
 {
-	if (handler->gw) {
-		if (handler->gw->waiting) {
+	if (md->gw) {
+		if (md->gw->waiting) {
 			/* mark it as closed, let the request callback clean it */
-			handler->gw->open = FALSE;
+			md->gw->open = FALSE;
 		} else {
-			msn_gw_free(handler->gw);
+			msn_gw_free(md->gw);
 		}
 	}
-	if (handler->fd >= 0) {
-		closesocket(handler->fd);
-		b_event_remove(handler->inpa);
+	if (md->fd >= 0) {
+		closesocket(md->fd);
+		b_event_remove(md->inpa);
 	}
 
-	handler->fd = handler->inpa = -1;
-	g_free(handler->rxq);
-	g_free(handler->cmd_text);
+	md->fd = md->inpa = -1;
+	g_free(md->rxq);
+	g_free(md->cmd_text);
 
-	handler->rxlen = 0;
-	handler->rxq = NULL;
-	handler->cmd_text = NULL;
+	md->rxlen = 0;
+	md->rxq = NULL;
+	md->cmd_text = NULL;
 }
 
 static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition cond)
 {
-	struct msn_data *handler = data;
-	struct im_connection *ic = handler->ic;
+	struct msn_data *md = data;
+	struct im_connection *ic = md->ic;
 	char *bytes;
 	int st;
 
-	if (handler->is_http) {
-		st = msn_gw_read(handler->gw, &bytes);
+	if (md->is_http) {
+		st = msn_gw_read(md->gw, &bytes);
 	} else {
 		bytes = g_malloc(1024);
-		st = read(handler->fd, bytes, 1024);
+		st = read(md->fd, bytes, 1024);
 	}
 
 	if (st <= 0) {
@@ -189,21 +188,20 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 		return FALSE;
 	}
 
-	msn_queue_feed(handler, bytes, st);
+	msn_queue_feed(md, bytes, st);
 
 	g_free(bytes);
 
 	/* Ignore ret == 0, it's already disconnected then. */
-	msn_handler(handler);
+	msn_handler(md);
 
 	return TRUE;
 	
 }
 
-int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
+int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)
 {
-	struct im_connection *ic = handler->ic;
-	struct msn_data *md = handler;
+	struct im_connection *ic = md->ic;
 
 	if (num_parts == 0) {
 		/* Hrrm... Empty command...? Ignore? */
@@ -217,18 +215,18 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 			return(0);
 		}
 
-		return(msn_ns_write(ic, handler->fd, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s VmVyc2lvbjogMQ0KWGZyQ291bnQ6IDINClhmclNlbnRVVENUaW1lOiA2MzU2MTQ3OTU5NzgzOTAwMDANCklzR2VvWGZyOiB0cnVlDQo=\r\n",
+		return(msn_ns_write(ic, md->fd, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s VmVyc2lvbjogMQ0KWGZyQ291bnQ6IDINClhmclNlbnRVVENUaW1lOiA2MzU2MTQ3OTU5NzgzOTAwMDANCklzR2VvWGZyOiB0cnVlDQo=\r\n",
 		                    ++md->trId, ic->acc->user));
 	} else if (strcmp(cmd[0], "CVR") == 0) {
 		/* We don't give a damn about the information we just received */
-		return msn_ns_write(ic, handler->fd, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user);
+		return msn_ns_write(ic, md->fd, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user);
 	} else if (strcmp(cmd[0], "XFR") == 0) {
 		char *server;
 		int port;
 
 		if (num_parts >= 6 && strcmp(cmd[2], "NS") == 0) {
-			b_event_remove(handler->inpa);
-			handler->inpa = -1;
+			b_event_remove(md->inpa);
+			md->inpa = -1;
 
 			server = strchr(cmd[3], ':');
 			if (!server) {
@@ -275,9 +273,9 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 			return(0);
 		}
 
-		handler->msglen = atoi(cmd[3]);
+		md->msglen = atoi(cmd[3]);
 
-		if (handler->msglen <= 0) {
+		if (md->msglen <= 0) {
 			imcb_error(ic, "Syntax error");
 			imc_logout(ic, TRUE);
 			return(0);
@@ -287,7 +285,7 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 			msn_ns_send_adl(ic);
 			return msn_ns_finish_login(ic);
 		} else if (num_parts >= 3) {
-			handler->msglen = atoi(cmd[2]);
+			md->msglen = atoi(cmd[2]);
 		}
 	} else if (strcmp(cmd[0], "CHL") == 0) {
 		char *resp;
@@ -326,18 +324,18 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 	} else if (strcmp(cmd[0], "GCF") == 0) {
 		/* Coming up is cmd[2] bytes of stuff we're supposed to
 		   censore. Meh. */
-		handler->msglen = atoi(cmd[2]);
+		md->msglen = atoi(cmd[2]);
 	} else if ((strcmp(cmd[0], "NFY") == 0) || (strcmp(cmd[0], "SDG") == 0)) {
 		if (num_parts >= 3) {
-			handler->msglen = atoi(cmd[2]);
+			md->msglen = atoi(cmd[2]);
 		}
 	} else if (strcmp(cmd[0], "PUT") == 0) {
 		if (num_parts >= 4) {
-			handler->msglen = atoi(cmd[3]);
+			md->msglen = atoi(cmd[3]);
 		}
 	} else if (strcmp(cmd[0], "NOT") == 0) {
 		if (num_parts >= 2) {
-			handler->msglen = atoi(cmd[1]);
+			md->msglen = atoi(cmd[1]);
 		}
 	} else if (strcmp(cmd[0], "QNG") == 0) {
 		ic->flags |= OPT_PONGED;
@@ -354,7 +352,7 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 
 		/* Oh yes, errors can have payloads too now. Discard them for now. */
 		if (num_parts >= 3) {
-			handler->msglen = atoi(cmd[2]);
+			md->msglen = atoi(cmd[2]);
 		}
 	} else {
 		imcb_error(ic, "Received unknown command from main server: %s", cmd[0]);
@@ -363,9 +361,9 @@ int msn_ns_command(struct msn_data *handler, char **cmd, int num_parts)
 	return(1);
 }
 
-int msn_ns_message(struct msn_data *handler, char *msg, int msglen, char **cmd, int num_parts)
+int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int num_parts)
 {
-	struct im_connection *ic = handler->ic;
+	struct im_connection *ic = md->ic;
 	char *body;
 	int blen = 0;
 
@@ -492,13 +490,13 @@ int msn_ns_message(struct msn_data *handler, char *msg, int msglen, char **cmd, 
 			}
 		}
 	} else if ((strcmp(cmd[0], "SDG") == 0) || (strcmp(cmd[0], "NFY") == 0)) {
-		msn_ns_structured_message(handler, msg, msglen, cmd);
+		msn_ns_structured_message(md, msg, msglen, cmd);
 	}
 
 	return 1;
 }
 
-static void msn_ns_structured_message(struct msn_data *handler, char *msg, int msglen, char **cmd)
+static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen, char **cmd)
 {
 	char **parts = NULL;
 	char *semicolon = NULL;
@@ -518,11 +516,11 @@ static void msn_ns_structured_message(struct msn_data *handler, char *msg, int m
 	who = g_strndup(from + 2, semicolon - from - 2);
 
 	if ((strcmp(cmd[0], "SDG") == 0) && (action = get_rfc822_header(parts[2], "Message-Type", 0))) {
-		msn_ns_sdg(handler, who, parts, action);
+		msn_ns_sdg(md, who, parts, action);
 
 	} else if ((strcmp(cmd[0], "NFY") == 0) && (action = get_rfc822_header(parts[2], "Uri", 0))) {
 		gboolean is_put = (strcmp(cmd[1], "PUT") == 0);
-		msn_ns_nfy(handler, who, parts, action, is_put);
+		msn_ns_nfy(md, who, parts, action, is_put);
 	}
 
 cleanup:
@@ -532,9 +530,9 @@ cleanup:
 	g_free(who);
 }
 
-static void msn_ns_sdg(struct msn_data *handler, char *who, char **parts, char *action)
+static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action)
 {
-	struct im_connection *ic = handler->ic;
+	struct im_connection *ic = md->ic;
 
 	if (strcmp(action, "Control/Typing") == 0) {
 		imcb_buddy_typing(ic, who, OPT_TYPING);
@@ -543,9 +541,9 @@ static void msn_ns_sdg(struct msn_data *handler, char *who, char **parts, char *
 	}
 }
 
-static void msn_ns_nfy(struct msn_data *handler, char *who, char **parts, char *action, gboolean is_put)
+static void msn_ns_nfy(struct msn_data *md, char *who, char **parts, char *action, gboolean is_put)
 {
-	struct im_connection *ic = handler->ic;
+	struct im_connection *ic = md->ic;
 	struct xt_node *body = NULL;
 	struct xt_node *s = NULL;
 	const char *state = NULL;
