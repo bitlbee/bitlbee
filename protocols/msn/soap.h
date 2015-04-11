@@ -104,10 +104,10 @@ int msn_soapq_flush(struct im_connection *ic, gboolean resend);
 	"<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
 	"<wsp:AppliesTo>" \
 	"<wsa:EndpointReference>" \
-	"<wsa:Address>messengerclear.live.com</wsa:Address>" \
+	"<wsa:Address>chatservice.live.com</wsa:Address>" \
 	"</wsa:EndpointReference>" \
 	"</wsp:AppliesTo>" \
-	"<wsse:PolicyReference URI=\"%s\"></wsse:PolicyReference>" \
+	"<wsse:PolicyReference URI=\"MBI_SSL\"></wsse:PolicyReference>" \
 	"</wst:RequestSecurityToken>" \
 	"<wst:RequestSecurityToken Id=\"RST2\">" \
 	"<wst:RequestType>http://schemas.xmlsoap.org/ws/2004/04/security/trust/Issue</wst:RequestType>" \
@@ -140,7 +140,7 @@ int msn_soapq_flush(struct im_connection *ic, gboolean resend);
 	"</Body>" \
 	"</Envelope>"
 
-int msn_soap_passport_sso_request(struct im_connection *ic, const char *nonce);
+int msn_soap_passport_sso_request(struct im_connection *ic);
 
 
 #define SOAP_ABSERVICE_PAYLOAD \

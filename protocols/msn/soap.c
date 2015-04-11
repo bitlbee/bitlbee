@@ -173,7 +173,7 @@ fail:
 
 		if (!(md->flags & MSN_REAUTHING)) {
 			/* Nonce shouldn't actually be touched for re-auths. */
-			msn_soap_passport_sso_request(soap_req->ic, "blaataap");
+			msn_soap_passport_sso_request(soap_req->ic);
 			md->flags |= MSN_REAUTHING;
 		}
 		md->soapq = g_slist_append(md->soapq, soap_req);
@@ -258,8 +258,6 @@ static void msn_soap_free(struct msn_soap_req_data *soap_req)
 /* passport_sso: Authentication MSNP15+ */
 
 struct msn_soap_passport_sso_data {
-	char *nonce;
-	char *secret;
 	char *error;
 	char *redirect;
 };
@@ -268,27 +266,19 @@ static int msn_soap_passport_sso_build_request(struct msn_soap_req_data *soap_re
 {
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
-	struct msn_data *md = ic->proto_data;
 	char pass[MAX_PASSPORT_PWLEN + 1];
 
 	if (sd->redirect) {
 		soap_req->url = sd->redirect;
 		sd->redirect = NULL;
-	}
-	/* MS changed this URL and broke the old MSN-specific one. The generic
-	   one works, forwarding us to a msn.com URL that works. Takes an extra
-	   second, but that's better than not being able to log in at all. :-/
-	else if( g_str_has_suffix( ic->acc->user, "@msn.com" ) )
-	        soap_req->url = g_strdup( SOAP_PASSPORT_SSO_URL_MSN );
-	*/
-	else {
+	} else {
 		soap_req->url = g_strdup(SOAP_PASSPORT_SSO_URL);
 	}
 
 	strncpy(pass, ic->acc->pass, MAX_PASSPORT_PWLEN);
 	pass[MAX_PASSPORT_PWLEN] = '\0';
 	soap_req->payload = g_markup_printf_escaped(SOAP_PASSPORT_SSO_PAYLOAD,
-	                                            ic->acc->user, pass, md->pp_policy);
+	                                            ic->acc->user, pass);
 
 	return MSN_SOAP_OK;
 }
@@ -296,20 +286,13 @@ static int msn_soap_passport_sso_build_request(struct msn_soap_req_data *soap_re
 static xt_status msn_soap_passport_sso_token(struct xt_node *node, gpointer data)
 {
 	struct msn_soap_req_data *soap_req = data;
-	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct msn_data *md = soap_req->ic->proto_data;
-	struct xt_node *p;
 	char *id;
 
 	if ((id = xt_find_attr(node, "Id")) == NULL) {
 		return XT_HANDLED;
 	}
 	id += strlen(id) - 1;
-	if (*id == '1' &&
-	    (p = xt_find_path(node, "../../wst:RequestedProofToken/wst:BinarySecret")) &&
-	    p->text) {
-		sd->secret = g_strdup(p->text);
-	}
 
 	*id -= '1';
 	if (*id >= 0 && *id < sizeof(md->tokens) / sizeof(md->tokens[0])) {
@@ -348,55 +331,11 @@ static const struct xt_handler_entry msn_soap_passport_sso_parser[] = {
 	{ NULL, NULL, NULL }
 };
 
-static char *msn_key_fuckery(char *key, int key_len, char *type)
-{
-	unsigned char hash1[20 + strlen(type) + 1];
-	unsigned char hash2[20];
-	char *ret;
-
-	sha1_hmac(key, key_len, type, 0, hash1);
-	strcpy((char *) hash1 + 20, type);
-	sha1_hmac(key, key_len, (char *) hash1, sizeof(hash1) - 1, hash2);
-
-	/* This is okay as hash1 is read completely before it's overwritten. */
-	sha1_hmac(key, key_len, (char *) hash1, 20, hash1);
-	sha1_hmac(key, key_len, (char *) hash1, sizeof(hash1) - 1, hash1);
-
-	ret = g_malloc(24);
-	memcpy(ret, hash2, 20);
-	memcpy(ret + 20, hash1, 4);
-	return ret;
-}
-
 static int msn_soap_passport_sso_handle_response(struct msn_soap_req_data *soap_req)
 {
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
 	struct msn_data *md = ic->proto_data;
-	char *key1, *key2, *key3, *blurb64;
-	int key1_len;
-	unsigned char *padnonce, *des3res;
-
-	struct {
-		unsigned int uStructHeaderSize; // 28. Does not count data
-		unsigned int uCryptMode; // CRYPT_MODE_CBC (1)
-		unsigned int uCipherType; // TripleDES (0x6603)
-		unsigned int uHashType; // SHA1 (0x8004)
-		unsigned int uIVLen;    // 8
-		unsigned int uHashLen;  // 20
-		unsigned int uCipherLen; // 72
-		unsigned char iv[8];
-		unsigned char hash[20];
-		unsigned char cipherbytes[72];
-	} blurb = {
-		GUINT32_TO_LE(28),
-		GUINT32_TO_LE(1),
-		GUINT32_TO_LE(0x6603),
-		GUINT32_TO_LE(0x8004),
-		GUINT32_TO_LE(8),
-		GUINT32_TO_LE(20),
-		GUINT32_TO_LE(72),
-	};
 
 	if (sd->redirect) {
 		return MSN_SOAP_RETRY;
@@ -407,35 +346,12 @@ static int msn_soap_passport_sso_handle_response(struct msn_soap_req_data *soap_
 		return msn_soapq_flush(ic, TRUE);
 	}
 
-	if (sd->secret == NULL) {
+	if (md->tokens[0] == NULL) {
 		msn_auth_got_passport_token(ic, NULL, sd->error ? sd->error : soap_req->error);
 		return MSN_SOAP_OK;
 	}
 
-	key1_len = base64_decode(sd->secret, (unsigned char **) &key1);
-
-	key2 = msn_key_fuckery(key1, key1_len, "WS-SecureConversationSESSION KEY HASH");
-	key3 = msn_key_fuckery(key1, key1_len, "WS-SecureConversationSESSION KEY ENCRYPTION");
-
-	sha1_hmac(key2, 24, sd->nonce, 0, blurb.hash);
-	padnonce = g_malloc(strlen(sd->nonce) + 8);
-	strcpy((char *) padnonce, sd->nonce);
-	memset(padnonce + strlen(sd->nonce), 8, 8);
-
-	random_bytes(blurb.iv, 8);
-
-	ssl_des3_encrypt((unsigned char *) key3, 24, padnonce, strlen(sd->nonce) + 8, blurb.iv, &des3res);
-	memcpy(blurb.cipherbytes, des3res, 72);
-
-	blurb64 = base64_encode((unsigned char *) &blurb, sizeof(blurb));
-	msn_auth_got_passport_token(ic, blurb64, NULL);
-
-	g_free(padnonce);
-	g_free(blurb64);
-	g_free(des3res);
-	g_free(key1);
-	g_free(key2);
-	g_free(key3);
+	msn_auth_got_passport_token(ic, md->tokens[0], NULL);
 
 	return MSN_SOAP_OK;
 }
@@ -444,8 +360,6 @@ static int msn_soap_passport_sso_free_data(struct msn_soap_req_data *soap_req)
 {
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 
-	g_free(sd->nonce);
-	g_free(sd->secret);
 	g_free(sd->error);
 	g_free(sd->redirect);
 	g_free(sd);
@@ -453,11 +367,9 @@ static int msn_soap_passport_sso_free_data(struct msn_soap_req_data *soap_req)
 	return MSN_SOAP_OK;
 }
 
-int msn_soap_passport_sso_request(struct im_connection *ic, const char *nonce)
+int msn_soap_passport_sso_request(struct im_connection *ic)
 {
 	struct msn_soap_passport_sso_data *sd = g_new0(struct msn_soap_passport_sso_data, 1);
-
-	sd->nonce = g_strdup(nonce);
 
 	return msn_soap_start(ic, sd, msn_soap_passport_sso_build_request,
 	                      msn_soap_passport_sso_parser,

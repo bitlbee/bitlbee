@@ -102,8 +102,6 @@ static void msn_logout(struct im_connection *ic)
 		for (i = 0; i < sizeof(md->tokens) / sizeof(md->tokens[0]); i++) {
 			g_free(md->tokens[i]);
 		}
-		g_free(md->lock_key);
-		g_free(md->pp_policy);
 		g_free(md->uuid);
 
 		while (md->groups) {
