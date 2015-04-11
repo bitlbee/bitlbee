@@ -264,26 +264,10 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts, char *msg, in
 			imc_logout(ic, FALSE);
 			return(0);
 		}
-	} else if (strcmp(cmd[0], "MSG") == 0) {
-		if (num_parts < 4) {
-			imcb_error(ic, "Syntax error");
-			imc_logout(ic, TRUE);
-			return(0);
-		}
-
-		md->msglen = atoi(cmd[3]);
-
-		if (md->msglen <= 0) {
-			imcb_error(ic, "Syntax error");
-			imc_logout(ic, TRUE);
-			return(0);
-		}
 	} else if (strcmp(cmd[0], "ADL") == 0) {
 		if (num_parts >= 3 && strcmp(cmd[2], "OK") == 0) {
 			msn_ns_send_adl(ic);
 			return msn_ns_finish_login(ic);
-		} else if (num_parts >= 3) {
-			md->msglen = atoi(cmd[2]);
 		}
 	} else if (strcmp(cmd[0], "CHL") == 0) {
 		char *resp;
@@ -308,22 +292,6 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts, char *msg, in
 		imcb_error(ic, "Session terminated by remote server (%s)", cmd[1] ? cmd[1] : "reason unknown");
 		imc_logout(ic, TRUE);
 		return(0);
-	} else if (strcmp(cmd[0], "GCF") == 0) {
-		/* Coming up is cmd[2] bytes of stuff we're supposed to
-		   censore. Meh. */
-		md->msglen = atoi(cmd[2]);
-	} else if ((strcmp(cmd[0], "NFY") == 0) || (strcmp(cmd[0], "SDG") == 0)) {
-		if (num_parts >= 3) {
-			md->msglen = atoi(cmd[2]);
-		}
-	} else if (strcmp(cmd[0], "PUT") == 0) {
-		if (num_parts >= 4) {
-			md->msglen = atoi(cmd[3]);
-		}
-	} else if (strcmp(cmd[0], "NOT") == 0) {
-		if (num_parts >= 2) {
-			md->msglen = atoi(cmd[1]);
-		}
 	} else if (strcmp(cmd[0], "QNG") == 0) {
 		ic->flags |= OPT_PONGED;
 	} else if (g_ascii_isdigit(cmd[0][0])) {
@@ -336,11 +304,8 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts, char *msg, in
 			imc_logout(ic, TRUE);
 			return(0);
 		}
-
-		/* Oh yes, errors can have payloads too now. Discard them for now. */
-		if (num_parts >= 3) {
-			md->msglen = atoi(cmd[2]);
-		}
+	} else if ((strcmp(cmd[0], "SDG") == 0) || (strcmp(cmd[0], "NFY") == 0)) {
+		msn_ns_structured_message(md, msg, msglen, cmd);
 	} else {
 		imcb_error(ic, "Received unknown command from main server: %s", cmd[0]);
 	}
@@ -353,10 +318,6 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 	struct im_connection *ic = md->ic;
 	char *body;
 	int blen = 0;
-
-	if (!num_parts) {
-		return(1);
-	}
 
 	if ((body = strstr(msg, "\r\n\r\n"))) {
 		body += 4;
@@ -473,8 +434,6 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 				}
 			}
 		}
-	} else if ((strcmp(cmd[0], "SDG") == 0) || (strcmp(cmd[0], "NFY") == 0)) {
-		msn_ns_structured_message(md, msg, msglen, cmd);
 	}
 
 	return 1;
