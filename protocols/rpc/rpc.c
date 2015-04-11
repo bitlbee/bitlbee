@@ -127,12 +127,47 @@ static JSON_Value *rpc_ser_account(account_t *acc) {
 	return v;
 }
 
+static JSON_Value *rpc_ser_bee_user(bee_user_t *bu) {
+	JSON_Value *v = json_value_init_object();
+	JSON_Object *o = json_object(v);
+	json_object_set_string_or_null(o, "handle", bu->handle);
+	json_object_set_string_or_null(o, "fullname", bu->fullname);
+	json_object_set_string_or_null(o, "nick", bu->nick);
+	json_object_set_string_or_null(o, "group", bu->group ? bu->group->name : NULL);
+	json_object_set_number(o, "flags", bu->flags);
+	json_object_set_string_or_null(o, "status", bu->status);
+	json_object_set_string_or_null(o, "status_msg", bu->status_msg);
+	json_object_set_number(o, "login_time", bu->login_time);
+	json_object_set_number(o, "idle_time", bu->idle_time);
+	return v;
+}
+
 static void rpc_init(account_t *acc) {
 	struct rpc_plugin *pd = acc->prpl->data;
 
 	JSON_O_FOREACH(json_object(pd->settings), name, value) {
 		JSON_Object *o = json_object(value);
 		set_t *set = set_add(&acc->set, name, json_object_get_string(o, "default"), NULL, acc);
+		/* JSON numbers are floats. The following line "might" be a
+		 * terrible idea. As was JSON, but hey. */
+		set->flags |= (int) json_object_get_number(o, "flags");
+		const char *eval = json_object_get_string(o, "type");
+		if (eval == NULL) {
+		} else if (strcmp(eval, "int") == 0) {
+			set->eval = set_eval_int;
+		} else if (strcmp(eval, "bool") == 0) {
+			set->eval = set_eval_bool;
+		} else {
+			/* Default is string which means no evaluator. */
+		}
+		/* eval_list turns out to be a memory leak so don't implement it
+		 * for now.
+		 * Allowing a plugin to define its own evaluator is not really
+		 * possible without having BitlBee block on it responding which
+		 * I don't want to do.
+		 * Should a module want to override a user's setting, it can
+		 * use set_setstr(). (Though ATM setting changes are not yet
+		 * passed to the module immediately. TODO. */
 	}
 }
 
@@ -541,6 +576,39 @@ static JSON_Value *rpc_imcb_chat_invite(struct im_connection *ic, void *func_, J
 	return NULL;
 }
 
+static JSON_Value *rpc_set_getstr(struct im_connection *ic, void *func_, JSON_Array *params) {
+	char *rets = set_getstr(&ic->acc->set, json_array_get_string(params, 0));
+	JSON_Value *ret = json_value_init_object();
+	if (rets)
+		json_object_set_string(json_object(ret), "result", rets);
+	else
+		json_object_set_null(json_object(ret), "result");
+	return ret;
+}
+
+static JSON_Value *rpc_set_setstr(struct im_connection *ic, void *func_, JSON_Array *params) {
+	/* Sadly use of const is very poor in BitlBee. :-( */
+	char *newval = g_strdup(json_array_get_string(params, 1));
+	set_setstr(&ic->acc->set, json_array_get_string(params, 0), newval);
+	g_free(newval);
+	return rpc_set_getstr(ic, func_, params);
+}
+
+static JSON_Value *rpc_set_reset(struct im_connection *ic, void *func_, JSON_Array *params) {
+	set_reset(&ic->acc->set, json_array_get_string(params, 0));
+	return rpc_set_getstr(ic, func_, params);
+}
+
+static JSON_Value *rpc_bee_user_by_handle(struct im_connection *ic, void *func_, JSON_Array *params) {
+	bee_user_t *bu = bee_user_by_handle(ic->bee, ic, json_array_get_string(params, 0));
+	JSON_Value *ret = json_value_init_object();
+	if (bu)
+		json_object_set_value(json_object(ret), "result", rpc_ser_bee_user(bu));
+	else
+		json_object_set_value(json_object(ret), "error", jsonrpc_error(ENOENT, "Contact not found"));
+	return ret;
+}
+
 struct rpc_in_method {
 	char *name;
 	void *func;
@@ -550,7 +618,7 @@ struct rpc_in_method {
 
 static const struct rpc_in_method methods[] = {
 	/* All these RPCs are equivalent of BitlBee C functions but with the
-	 * struct im_connection* removed. */
+	 * struct im_connection* removed as this is in the object context. */
 	{ "imcb_log", imcb_log, rpc_imcb_log, "s" },
 	{ "imcb_error", imcb_error, rpc_imcb_log, "s" },
 	{ "imcb_connected", imcb_connected, rpc_imcb_connected, "" },
@@ -575,6 +643,16 @@ static const struct rpc_in_method methods[] = {
 	{ "imcb_chat_add_buddy", imcb_chat_add_buddy, rpc_imcb_chat_name_hint, "ns" },
 	{ "imcb_chat_remove_buddy", imcb_chat_remove_buddy, rpc_imcb_chat_remove_buddy, "nss" },
 	{ "imcb_chat_invite", imcb_chat_invite, rpc_imcb_chat_invite, "nsss" },
+
+	/* These are not imcb* functions but should still be exported. */
+	/* Setting functions. Starting with just providing access to account
+	 * settings. See later whether access to chat/chan settings is necessary.
+	 * All of these will return the (new) value of given setting. */
+	{ "set_getstr", NULL, rpc_set_getstr, "s" },
+	{ "set_setstr", NULL, rpc_set_setstr, "ss" },
+	{ "set_reset", NULL, rpc_set_reset, "s" },
+	
+	{ "bee_user_by_handle", NULL, rpc_bee_user_by_handle, "s" },
 
 	{ NULL },
 };
@@ -709,7 +787,7 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 
 	struct prpl *ret = g_new0(struct prpl, 1);
 	
-	JSON_Array *methods_a = json_object_get_array(isup, "methods");
+	JSON_Array *methods_a = json_object_get_array(isup, "method_list");
 	GHashTable *methods = g_hash_table_new(g_str_hash, g_str_equal);
 	for (i = 0; i < json_array_get_count(methods_a); i++)
 		g_hash_table_add(methods, (void*) json_array_get_string(methods_a, i));
