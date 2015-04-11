@@ -224,7 +224,7 @@ void msn_auth_got_contact_list(struct im_connection *ic);
 int msn_ns_finish_login(struct im_connection *ic);
 int msn_ns_send_typing(struct im_connection *ic, struct bee_user *bu);
 int msn_ns_send_message(struct im_connection *ic, struct bee_user *bu, const char *text);
-int msn_ns_command(struct msn_data *md, char **cmd, int num_parts);
+int msn_ns_command(struct msn_data *md, char **cmd, int num_parts, char *msg, int msglen);
 int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int num_parts);
 
 /* msn_util.c */

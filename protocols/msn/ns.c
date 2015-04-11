@@ -197,7 +197,7 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 	return msn_handler(md);
 }
 
-int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)
+int msn_ns_command(struct msn_data *md, char **cmd, int num_parts, char *msg, int msglen)
 {
 	struct im_connection *ic = md->ic;
 

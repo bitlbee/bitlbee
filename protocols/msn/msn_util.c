@@ -184,6 +184,27 @@ void msn_queue_feed(struct msn_data *h, char *bytes, int st)
 	}
 }
 
+
+static int msn_handle_command(struct msn_data *h) {
+	char *msg, **cmd;
+	int count, st;
+
+	msg = g_strndup(h->rxq, h->msglen);
+
+	cmd = g_strsplit_set(h->cmd_text, " ", -1);
+	count = g_strv_length(cmd);
+
+	st = msn_ns_command(h, cmd, count, msg, h->msglen);
+
+	g_strfreev(cmd);
+	g_free(msg);
+
+	g_free(h->cmd_text);
+	h->cmd_text = NULL;
+
+	return st;
+}
+
 /* This one handles input from a MSN Messenger server. Both the NS and SB servers usually give
    commands, but sometimes they give additional data (payload). This function tries to handle
    this all in a nice way and send all data to the right places. */
@@ -202,31 +223,32 @@ int msn_handler(struct msn_data *h)
 		if (h->msglen == 0) {
 			for (i = 0; i < h->rxlen; i++) {
 				if (h->rxq[i] == '\r' || h->rxq[i] == '\n') {
-					char *cmd_text, **cmd;
-					int count;
+					char *cmd_text, *last_param;
+					guint64 parsed_len;
 
 					cmd_text = g_strndup(h->rxq, i);
-					cmd = g_strsplit_set(cmd_text, " ", -1);
-					count = g_strv_length(cmd);
 
-					st = msn_ns_command(h, cmd, count);
-
-					g_strfreev(cmd);
-					g_free(cmd_text);
-
-					/* If the connection broke, don't continue. We don't even exist anymore. */
-					if (!st) {
-						return(0);
+					/* find the position of the last parameter from the end */
+					last_param = cmd_text + i;
+					while (last_param != cmd_text && last_param[-1] != ' ') {
+						last_param--;
 					}
 
-					if (h->msglen) {
-						h->cmd_text = g_strndup(h->rxq, i);
+					/* that parameter is the payload size */
+					if (!parse_int64(last_param, 10, &parsed_len)) {
+						return -1;
 					}
 
-					/* Skip to the next non-emptyline */
-					while (i < h->rxlen && (h->rxq[i] == '\r' || h->rxq[i] == '\n')) {
-						i++;
+					h->msglen = (int) parsed_len;
+					h->cmd_text = cmd_text;
+
+					/* if there's no payload, handle it right away */
+					if (parsed_len == 0 && !msn_handle_command(h)) {
+						return 0;
 					}
+
+					/* Skip the \r\n */
+					i += 2;
 
 					break;
 				}
@@ -238,28 +260,12 @@ int msn_handler(struct msn_data *h)
 				break;
 			}
 		} else {
-			char *msg, **cmd;
-			int count;
 
 			/* Do we have the complete message already? */
 			if (h->msglen > h->rxlen) {
 				break;
-			}
-
-			msg = g_strndup(h->rxq, h->msglen);
-
-			cmd = g_strsplit_set(h->cmd_text, " ", -1);
-			count = g_strv_length(cmd);
-
-			st = msn_ns_message(h, msg, h->msglen, cmd, count);
-
-			g_strfreev(cmd);
-			g_free(msg);
-			g_free(h->cmd_text);
-			h->cmd_text = NULL;
-
-			if (!st) {
-				return(0);
+			} else if (!msn_handle_command(h)) {
+				return 0;
 			}
 
 			i = h->msglen;
