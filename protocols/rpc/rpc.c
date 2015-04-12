@@ -154,6 +154,8 @@ static JSON_Value *rpc_ser_bee_user(bee_user_t *bu) {
 	return v;
 }
 
+static char *rpc_set_evaluator(set_t *set, char *value);
+
 static void rpc_init(account_t *acc) {
 	struct rpc_plugin *pd = acc->prpl->data;
 
@@ -163,15 +165,8 @@ static void rpc_init(account_t *acc) {
 		/* JSON numbers are floats. The following line "might" be a
 		 * terrible idea. As was JSON, but hey. */
 		set->flags |= (int) json_object_get_number(o, "flags");
-		const char *eval = json_object_get_string(o, "type");
-		if (eval == NULL) {
-		} else if (strcmp(eval, "int") == 0) {
-			set->eval = set_eval_int;
-		} else if (strcmp(eval, "bool") == 0) {
-			set->eval = set_eval_bool;
-		} else {
-			/* Default is string which means no evaluator. */
-		}
+		set->eval = rpc_set_evaluator;
+		set->eval_data = o;
 		/* eval_list turns out to be a memory leak so don't implement it
 		 * for now.
 		 * Allowing a plugin to define its own evaluator is not really
@@ -183,6 +178,48 @@ static void rpc_init(account_t *acc) {
 	}
 
 	acc->flags |= pd->account_flags;
+}
+
+static char *rpc_set_evaluator(set_t *set, char *value) {
+	JSON_Object *o = set->eval_data;
+	const char *type = json_object_get_string(o, "type");
+
+	/* Just allow two simple int/bool evaluators with no protocol awareness. */
+	set_eval type_eval = NULL;
+	if (type == NULL) {
+	} else if (strncmp(type, "int", 3) == 0) {
+		type_eval = set_eval_int;
+	} else if (strncmp(type, "bool", 4) == 0) {
+		type_eval = set_eval_bool;
+	}
+
+	if (type_eval) {
+		char *new = type_eval(set, value);
+		if (new == SET_INVALID) {
+			return SET_INVALID;
+		}
+	}
+
+	account_t *acc = set->data;
+	if (acc->ic) {
+		/* But do send RPCs to the plugin for each changed setting so
+		 * it always has up-to-date values. */
+		RPC_OUT_INIT("set_set");
+		json_array_append_string(params, set->key);
+		if (type_eval == set_eval_int) {
+			int num = 0;
+			/* Evaluator already did validation so ignore retval. */
+			sscanf(value, "%d", &num);
+			json_array_append_number(params, num);
+		} else if (type_eval == set_eval_bool) {
+			json_array_append_boolean(params, bool2int(value));
+		} else {
+			json_array_append_string(params, value);
+		}
+		rpc_send(acc->ic, rpc);
+	}
+
+	return value;
 }
 
 static gboolean rpc_login_cb(gpointer data, gint fd, b_input_condition cond);

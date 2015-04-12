@@ -76,10 +76,16 @@ class BitlBeeIMPlugin(BaseHandler):
 			"settings": {
 				"oauth": {
 					"default": "off",
+					"type": "bool",
 				},
 				"test": {
 					"default": "123",
+					"type": "int",
 				},
+				"stringetje": {
+					"default": "testje",
+					"flags": 0x04,
+				}
 			},
 		}
 	
@@ -103,6 +109,9 @@ class BitlBeeIMPlugin(BaseHandler):
 	
 	def set_away(self, state, message):
 		print "You're a slacker: %s (%r)" % (state, message)
+	
+	def set_set(self, setting, value):
+		print "Setting %s changed to %r" % (setting, value)
 
 def RunPlugin(plugin, debug=True):
 	sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
