@@ -14,14 +14,15 @@
 
 static gboolean msn_gw_poll_timeout(gpointer data, gint source, b_input_condition cond);
 
-struct msn_gw *msn_gw_new(struct msn_data *md)
+struct msn_gw *msn_gw_new(struct im_connection *ic)
 {
 	struct msn_gw *gw = g_new0(struct msn_gw, 1);
 	gw->last_host = g_strdup(GATEWAY_HOST);
 	gw->port = GATEWAY_PORT;
 	gw->ssl = (GATEWAY_PORT == 443);
 	gw->poll_timeout = -1;
-	gw->data = md;
+	gw->ic = ic;
+	gw->md = ic->proto_data;
 	gw->in = g_byte_array_new();
 	gw->out = g_byte_array_new();
 	return gw;
@@ -37,6 +38,16 @@ void msn_gw_free(struct msn_gw *gw)
 	g_free(gw->session_id);
 	g_free(gw->last_host);
 	g_free(gw);
+}
+
+static struct msn_gw *msn_gw_from_ic(struct im_connection *ic)
+{
+	if (g_slist_find(msn_connections, ic) == NULL) {
+		return NULL;
+	} else {
+		struct msn_data *md = ic->proto_data;
+		return md->gw;
+	}
 }
 
 static gboolean msn_gw_parse_session_header(struct msn_gw *gw, char *value)
@@ -65,18 +76,15 @@ static gboolean msn_gw_parse_session_header(struct msn_gw *gw, char *value)
 
 void msn_gw_callback(struct http_request *req)
 {
+	struct msn_gw *gw;
 	char *value;
-	struct msn_gw *gw = req->data;
+
+	if (!(gw = msn_gw_from_ic(req->data))) {
+		return;
+	}
 
 	gw->waiting = FALSE;
 	gw->polling = FALSE;
-
-	if (!gw->open) {
-		/* the user tried to logout while the request was pending
-		 * see msn_ns_close() */
-		msn_gw_free(gw);
-		return;
-	}
 
 	if (getenv("BITLBEE_DEBUG")) {
 		fprintf(stderr, "\n\x1b[90mHTTP:%s\n", req->reply_body);
@@ -84,13 +92,13 @@ void msn_gw_callback(struct http_request *req)
 	}
 
 	if (req->status_code != 200) {
-		gw->callback(gw->data, -1, B_EV_IO_READ);
+		gw->callback(gw->md, -1, B_EV_IO_READ);
 		return;
 	}
 
 	if ((value = get_rfc822_header(req->reply_headers, "X-MSN-Messenger", 0))) {
 		if (!msn_gw_parse_session_header(gw, value)) {
-			gw->callback(gw->data, -1, B_EV_IO_READ);
+			gw->callback(gw->md, -1, B_EV_IO_READ);
 			g_free(value);
 			return;
 		}
@@ -104,13 +112,13 @@ void msn_gw_callback(struct http_request *req)
 
 	if (req->body_size) {
 		g_byte_array_append(gw->in, (const guint8 *) req->reply_body, req->body_size);
-		gw->callback(gw->data, -1, B_EV_IO_READ);
+		gw->callback(gw->md, -1, B_EV_IO_READ);
 	}
 
 	if (gw->poll_timeout != -1) {
 		b_event_remove(gw->poll_timeout);
 	}
-	gw->poll_timeout = b_timeout_add(500, msn_gw_poll_timeout, gw);
+	gw->poll_timeout = b_timeout_add(500, msn_gw_poll_timeout, gw->ic);
 
 }
 
@@ -135,7 +143,7 @@ void msn_gw_dorequest(struct msn_gw *gw, char *args)
 	request = g_strdup_printf(REQUEST_TEMPLATE,
 		gw->session_id ? : "", args ? : "", gw->last_host, bodylen, body ? : "");
 
-	http_dorequest(gw->last_host, gw->port, gw->ssl, request, msn_gw_callback, gw);
+	http_dorequest(gw->last_host, gw->port, gw->ssl, request, msn_gw_callback, gw->ic);
 	gw->open = TRUE;
 	gw->waiting = TRUE;
 
@@ -150,7 +158,12 @@ void msn_gw_open(struct msn_gw *gw)
 
 static gboolean msn_gw_poll_timeout(gpointer data, gint source, b_input_condition cond)
 {
-	struct msn_gw *gw = data;
+	struct msn_gw *gw;
+
+	if (!(gw = msn_gw_from_ic(data))) {
+		return FALSE;
+	}
+
 	gw->poll_timeout = -1;
 	if (!gw->waiting) {
 		msn_gw_dorequest(gw, NULL);

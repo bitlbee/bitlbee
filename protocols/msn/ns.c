@@ -89,7 +89,7 @@ gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port)
 	}
 
 	if (md->is_http) {
-		md->gw = msn_gw_new(md);
+		md->gw = msn_gw_new(ic);
 		md->gw->callback = msn_ns_callback;
 		msn_ns_connected(md, -1, B_EV_IO_READ);
 	} else {
@@ -147,12 +147,7 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 void msn_ns_close(struct msn_data *md)
 {
 	if (md->gw) {
-		if (md->gw->waiting) {
-			/* mark it as closed, let the request callback clean it */
-			md->gw->open = FALSE;
-		} else {
-			msn_gw_free(md->gw);
-		}
+		msn_gw_free(md->gw);
 	}
 	if (md->fd >= 0) {
 		closesocket(md->fd);

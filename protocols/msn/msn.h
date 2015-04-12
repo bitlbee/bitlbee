@@ -136,7 +136,9 @@ struct msn_gw {
 	int poll_timeout;
 
 	b_event_handler callback;
-	gpointer data;
+
+	struct im_connection *ic;
+	struct msn_data *md;
 
 	gboolean open;
 	gboolean waiting;
@@ -264,7 +266,7 @@ const struct msn_away_state *msn_away_state_by_name(char *name);
 const struct msn_status_code *msn_status_by_number(int number);
 
 /* gw.c */
-struct msn_gw *msn_gw_new(struct msn_data *md);
+struct msn_gw *msn_gw_new(struct im_connection *ic);
 void msn_gw_free(struct msn_gw *gw);
 void msn_gw_open(struct msn_gw *gw);
 ssize_t msn_gw_read(struct msn_gw *gw, char **buf);
