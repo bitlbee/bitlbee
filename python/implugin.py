@@ -34,7 +34,15 @@ class RpcForwarder(object):
 			self.__setattr__(newname, target.__getattr__(m))
 
 class BitlBeeIMPlugin(BaseHandler):
+	# Protocol name to be used in the BitlBee CLI, etc.
 	NAME = "rpc-test"
+
+	# See account.h (TODO: Add constants.)
+	ACCOUNT_FLAGS = 3
+	
+	# Supported away states. If your protocol supports a specific set of
+	# away states, put them in a list in this variable.
+	AWAY_STATES = ["Away", "Busy"] #None
 	
 	# Filled in during initialisation:
 	# Version code in hex. So if you need to do comparisions, for example
@@ -42,6 +50,8 @@ class BitlBeeIMPlugin(BaseHandler):
 	bitlbee_version = None
 	# Full version string
 	bitlbee_version_str = None
+	# Will become an RpcForwarder object to call into BitlBee
+	bee = None
 	
 	@classmethod
 	def _factory(cls, *args, **kwargs):
@@ -61,6 +71,8 @@ class BitlBeeIMPlugin(BaseHandler):
 		return {
 			"name": self.NAME,
 			"method_list": list(set(dir(self)) & set(SUPPORTED_FUNCTIONS)),
+			"account_flags": self.ACCOUNT_FLAGS,
+			"away_state_list": self.AWAY_STATES,
 			"settings": {
 				"oauth": {
 					"default": "off",
@@ -88,6 +100,9 @@ class BitlBeeIMPlugin(BaseHandler):
 		print self.bee.bee_user_by_handle(handle)
 		print self.bee.set_setstr("test", handle)
 		print self.bee.set_reset("test")
+	
+	def set_away(self, state, message):
+		print "You're a slacker: %s (%r)" % (state, message)
 
 def RunPlugin(plugin, debug=True):
 	sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

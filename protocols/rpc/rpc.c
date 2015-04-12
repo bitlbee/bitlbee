@@ -13,9 +13,21 @@
 static int next_rpc_id = 1;
 
 struct rpc_plugin {
+	/* Socket address of the RPC server. */
 	struct sockaddr *addr;
 	socklen_t addrlen;
+	/* Full copy of the "settings" section of the init message. This info
+	 * can only be applied later on, when an account is created (but well
+	 * before logging in). */
 	JSON_Value *settings;
+	/* Supported away states returned by the away_states() function. Since
+	 * RPC servers can't do return values, just get this info at init time.
+	 * This means the list of possible away states is static from init time
+	 * which hopefully won't be a problem. If NULL, the away_states function
+	 * will not be set on this protocol. */
+	GList *away_states;
+	/* Account flags. See account.h. Plugin lib should provide constants. */
+	int account_flags;
 };
 
 struct rpc_connection {
@@ -169,6 +181,8 @@ static void rpc_init(account_t *acc) {
 		 * use set_setstr(). (Though ATM setting changes are not yet
 		 * passed to the module immediately. TODO. */
 	}
+
+	acc->flags |= pd->account_flags;
 }
 
 static gboolean rpc_login_cb(gpointer data, gint fd, b_input_condition cond);
@@ -184,6 +198,8 @@ static void rpc_login(account_t *acc) {
 	sock_make_nonblocking(rd->fd);
 	if (connect(rd->fd, pd->addr, pd->addrlen) == -1) {
 		closesocket(rd->fd);
+		imcb_error(ic, "RPC server unreachable");
+		imc_logout(ic, TRUE);
 		return;
 	}
 	ic->inpa = b_input_add(rd->fd, B_EV_IO_WRITE, rpc_login_cb, ic);
@@ -384,6 +400,11 @@ static void rpc_chat_topic(struct groupchat *gc, char *topic) {
 	json_array_append_number(params, rc->id);
 	json_array_append_string(params, topic);
 	rpc_send(gc->ic, rpc);
+}
+
+static GList *rpc_away_states(struct im_connection *ic) {
+	struct rpc_plugin *pd = ic->acc->prpl->data;
+	return pd->away_states;
 }
 
 static JSON_Value *rpc_cmd_in(struct im_connection *ic, const char *cmd, JSON_Array *params);
@@ -786,7 +807,29 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	}
 
 	struct prpl *ret = g_new0(struct prpl, 1);
-	
+	struct rpc_plugin *proto_data = g_new0(struct rpc_plugin, 1);
+	proto_data->addr = g_memdup(address, addrlen);
+	proto_data->addrlen = addrlen;
+	ret->name = g_strdup(json_object_get_string(isup, "name"));
+	ret->data = proto_data;
+
+	proto_data->account_flags = json_object_get_number(isup, "account_flags");
+
+	/* Keep a full copy of the settings list, we can only use it when we
+	 * have an account to work on. */
+	JSON_Value *settings = json_object_get_value(isup, "settings");
+	if (json_type(settings) == JSONObject)
+		proto_data->settings = json_value_deep_copy(settings);
+
+	JSON_Array *aways_a = json_object_get_array(isup, "away_state_list");
+	for (i = 0; i < json_array_get_count(aways_a); ++i) {
+		JSON_Value *state = json_array_get_value(aways_a, i);
+		if (json_type(state) == JSONString)
+			proto_data->away_states =
+				g_list_append(proto_data->away_states,
+					      g_strdup(json_string(state)));
+	}
+
 	JSON_Array *methods_a = json_object_get_array(isup, "method_list");
 	GHashTable *methods = g_hash_table_new(g_str_hash, g_str_equal);
 	for (i = 0; i < json_array_get_count(methods_a); i++)
@@ -813,24 +856,14 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	RPC_ADD_FUNC(chat_with);
 	RPC_ADD_FUNC(chat_join);
 	RPC_ADD_FUNC(chat_topic);
+	if (proto_data->away_states)
+		ret->away_states = rpc_away_states;
 	
 	g_hash_table_destroy(methods);
 
 	// TODO: Property for a few standard nickcmp implementations.
 	ret->handle_cmp = g_ascii_strcasecmp;
 	
-	struct rpc_plugin *proto_data = g_new0(struct rpc_plugin, 1);
-	proto_data->addr = g_memdup(address, addrlen);
-	proto_data->addrlen = addrlen;
-	ret->name = g_strdup(json_object_get_string(isup, "name"));
-	ret->data = proto_data;
-
-	/* Keep a full copy of the settings list, we can only use it when we
-	 * have an account to work on. */
-	JSON_Value *settings = json_object_get_value(isup, "settings");
-	if (json_type(settings) == JSONObject)
-		proto_data->settings = json_value_deep_copy(settings);
-
 	register_protocol(ret);
 }
 
@@ -858,6 +891,9 @@ void rpc_initmodule() {
 		su.sun_family = AF_UNIX;
 		rpc_initmodule_sock((struct sockaddr*) &su, sizeof(su));
 		g_free(fn);
+		/* Idea: Also support textfiles containing a host:port tuple to
+		 * connect to. Not that remote RPC'ing would be a great idea,
+		 * but maybe some jsonrpc libs don't support Unix domain sockets. */
 	}
 }
 
