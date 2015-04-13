@@ -616,7 +616,7 @@ static gboolean bee_irc_chat_placeholder_new(bee_t *bee, struct im_connection *i
 {
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ircc;
-	char *full_name = irc_channel_name_gen(bee, name);
+	char *full_name = irc_channel_name_gen(irc, name);
 
 	ircc = irc_channel_new(irc, full_name);
 
