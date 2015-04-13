@@ -55,15 +55,8 @@ static const int jabber_port_list[] = {
 
 static void jabber_init(account_t *acc)
 {
-	char *default_server = NULL;
 	set_t *s;
 	char str[16];
-
-	if (strcmp(acc->prpl->name, "hipchat") == 0) {
-		default_server = "chat.hipchat.com";
-	} else {
-		s = set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
-	}
 
 	s = set_add(&acc->set, "activity_timeout", "600", set_eval_int, acc);
 
@@ -85,8 +78,14 @@ static void jabber_init(account_t *acc)
 	s = set_add(&acc->set, "sasl", "true", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY | SET_HIDDEN_DEFAULT;
 
-	s = set_add(&acc->set, "server", default_server, set_eval_account, acc);
+	s = set_add(&acc->set, "server", NULL, set_eval_account, acc);
 	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
+
+	if (strcmp(acc->prpl->name, "hipchat") == 0) {
+		set_setstr(&acc->set, "server", "chat.hipchat.com");
+	} else {
+		s = set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
+	}
 
 	s = set_add(&acc->set, "ssl", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
