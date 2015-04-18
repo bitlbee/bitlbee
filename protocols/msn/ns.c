@@ -77,6 +77,20 @@ int msn_ns_write(struct im_connection *ic, const char *fmt, ...)
 	return 1;
 }
 
+int msn_ns_write_cmd(struct im_connection *ic, const char *cmd, const char *params, const char *payload)
+{
+	struct msn_data *md = ic->proto_data;
+	int trid = ++md->trId;
+	const char *headers = "\r\n"; /* not needed yet */
+	size_t len = strlen(headers) + strlen(payload);
+
+	if (params && *params) {
+		return msn_ns_write(ic, "%s %d %s %zd\r\n%s%s", cmd, trid, params, len, headers, payload);
+	} else {
+		return msn_ns_write(ic, "%s %d %zd\r\n%s%s", cmd, trid, len, headers, payload);
+	}
+}
+
 gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port)
 {
 	struct msn_data *md = ic->proto_data;
