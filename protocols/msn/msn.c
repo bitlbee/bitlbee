@@ -75,7 +75,7 @@ static void msn_login(account_t *acc)
 	md->away_state = msn_away_state_list;
 	md->domaintree = g_tree_new(msn_domaintree_cmp);
 	md->fd = -1;
-	md->is_http = TRUE;
+	md->is_http = FALSE;
 
 	msn_connections = g_slist_prepend(msn_connections, ic);
 

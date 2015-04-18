@@ -55,7 +55,7 @@ int msn_ns_write(struct im_connection *ic, const char *fmt, ...)
 	va_end(params);
 
 	if (getenv("BITLBEE_DEBUG")) {
-		fprintf(stderr, "\x1b[91m>>>[NS] %s\n\x1b[97m", out);
+		fprintf(stderr, "\n\x1b[91m>>>[NS] %s\n\x1b[97m", out);
 	}
 
 	len = strlen(out);
@@ -147,7 +147,7 @@ static gboolean msn_ns_connected(gpointer data, int source, void *scd, b_input_c
 		memcpy(md->uuid, "b171be3e", 8);   /* :-P */
 	}
 
-	if (msn_ns_write(ic, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER)) {
+	if (msn_ns_write_cmd(ic, "CNT", "CON", "<connect><ver>2</ver><agent><os>winnt</os><osVer>5.2</osVer><proc>x86</proc><lcid>en-us</lcid></agent></connect>")) {
 		if (!md->is_http) {
 			md->inpa = b_input_add(md->fd, B_EV_IO_READ, msn_ns_callback, md);
 		}
@@ -214,70 +214,56 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 int msn_ns_command(struct msn_data *md, char **cmd, int num_parts, char *msg, int msglen)
 {
 	struct im_connection *ic = md->ic;
+	struct xt_node *xml;
 
-	if (num_parts == 0) {
-		/* Hrrm... Empty command...? Ignore? */
-		return(1);
-	}
+	if (strcmp(cmd[0], "XFR") == 0) {
+		struct xt_node *target;
+		char *server, *p;
+		int port, st;
 
-	if (strcmp(cmd[0], "VER") == 0) {
-		if (cmd[2] && strncmp(cmd[2], MSNP_VER, 5) != 0) {
-			imcb_error(ic, "Unsupported protocol");
-			imc_logout(ic, FALSE);
-			return(0);
+		if (!(xml = xt_from_string(msg + 2, msglen - 2)) ||
+		    !(target = xt_find_node(xml->children, "target")) ||
+		    !(server = target->text) ||
+		    !(p = strchr(server, ':'))) {
+			return 1;
 		}
+		
+		server = target->text;
+		*p = 0;
+		port = atoi(p + 1);
 
-		return(msn_ns_write(ic, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s VmVyc2lvbjogMQ0KWGZyQ291bnQ6IDINClhmclNlbnRVVENUaW1lOiA2MzU2MTQ3OTU5NzgzOTAwMDANCklzR2VvWGZyOiB0cnVlDQo=\r\n",
-		                    ++md->trId, ic->acc->user));
-	} else if (strcmp(cmd[0], "CVR") == 0) {
-		/* We don't give a damn about the information we just received */
-		return msn_ns_write(ic, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user);
-	} else if (strcmp(cmd[0], "XFR") == 0) {
-		char *server;
-		int port;
+		b_event_remove(md->inpa);
+		md->inpa = -1;
 
-		if (num_parts >= 6 && strcmp(cmd[2], "NS") == 0) {
-			b_event_remove(md->inpa);
-			md->inpa = -1;
+		imcb_log(ic, "Transferring to other server");
 
-			server = strchr(cmd[3], ':');
-			if (!server) {
-				imcb_error(ic, "Syntax error");
-				imc_logout(ic, TRUE);
-				return(0);
-			}
-			*server = 0;
-			port = atoi(server + 1);
-			server = cmd[3];
+		st = msn_ns_connect(ic, server, port);
 
-			imcb_log(ic, "Transferring to other server");
-			return msn_ns_connect(ic, server, port);
-		} else {
-			imcb_error(ic, "Syntax error");
-			imc_logout(ic, TRUE);
-			return(0);
-		}
-	} else if (strcmp(cmd[0], "USR") == 0) {
-		if (num_parts >= 6 && strcmp(cmd[2], "SSO") == 0 &&
-		    strcmp(cmd[3], "S") == 0) {
-			g_free(md->pp_policy);
-			md->pp_policy = g_strdup(cmd[4]);
-			msn_soap_passport_sso_request(ic, cmd[5]);
-		} else if (strcmp(cmd[2], "OK") == 0) {
-			/* If the number after the handle is 0, the e-mail
-			   address is unverified, which means we can't change
-			   the display name. */
-			if (cmd[4][0] == '0') {
-				md->flags |= MSN_EMAIL_UNVERIFIED;
-			}
+		xt_free_node(xml);
 
-			imcb_log(ic, "Authenticated, getting buddy list");
-			msn_soap_memlist_request(ic);
-		} else {
-			imcb_error(ic, "Unknown authentication type");
-			imc_logout(ic, FALSE);
-			return(0);
-		}
+		return st;
+
+	} else if (strcmp(cmd[0], "CNT") == 0) {
+		msn_soap_passport_sso_request(ic);
+
+		/* continues in msn_auth_got_passport_token */
+
+	} else if (strcmp(cmd[0], "ATH") == 0) {
+		char *payload;
+
+		payload = g_markup_printf_escaped(
+			"<msgr><ver>1</ver><client><name>Skype</name><ver>2/4.3.0.37/174</ver></client>"
+			"<epid>%s</epid></msgr>\r\n",
+			md->uuid);
+
+		msn_ns_write_cmd(ic, "BND", "CON\\MSGR", payload);
+
+		g_free(payload);
+
+	} else if (strcmp(cmd[0], "BND") == 0) {
+		imcb_log(ic, "Authenticated, getting buddy list");
+		msn_soap_memlist_request(ic);
+
 	} else if (strcmp(cmd[0], "ADL") == 0) {
 		if (num_parts >= 3 && strcmp(cmd[2], "OK") == 0) {
 			msn_ns_send_adl(ic);
@@ -561,6 +547,7 @@ cleanup:
 void msn_auth_got_passport_token(struct im_connection *ic, const char *token, const char *error)
 {
 	struct msn_data *md;
+	char *payload = NULL;
 
 	/* Dead connection? */
 	if (g_slist_find(msn_connections, ic) == NULL) {
@@ -569,12 +556,22 @@ void msn_auth_got_passport_token(struct im_connection *ic, const char *token, co
 
 	md = ic->proto_data;
 
-	if (token) {
-		msn_ns_write(ic, "USR %d SSO S %s %s {%s}\r\n", ++md->trId, md->tokens[0], token, md->uuid);
-	} else {
+	if (!token) {
 		imcb_error(ic, "Error during Passport authentication: %s", error);
 		imc_logout(ic, TRUE);
 	}
+
+	// ATH
+	payload = g_markup_printf_escaped(
+		"<user><ssl-compact-ticket>%s</ssl-compact-ticket>"
+		"<ssl-site-name>chatservice.live.com</ssl-site-name></user>",
+		md->tokens[0]);
+
+	msn_ns_write_cmd(ic, "ATH", "CON\\USER", payload);
+
+	g_free(payload);
+
+	/* continues in msn_ns_command */
 }
 
 void msn_auth_got_contact_list(struct im_connection *ic)

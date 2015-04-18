@@ -153,7 +153,7 @@ void msn_gw_dorequest(struct msn_gw *gw, char *args)
 
 void msn_gw_open(struct msn_gw *gw)
 {
-	msn_gw_dorequest(gw, "Action=open&Server=NS");
+	msn_gw_dorequest(gw, "Action=open&Server=NS&Protocol=mtp&Version=1");
 }
 
 static gboolean msn_gw_poll_timeout(gpointer data, gint source, b_input_condition cond)
