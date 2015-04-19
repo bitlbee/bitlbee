@@ -302,19 +302,8 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)
 	} else if (strcmp(cmd[0], "QRY") == 0) {
 		/* CONGRATULATIONS */
 	} else if (strcmp(cmd[0], "OUT") == 0) {
-		int allow_reconnect = TRUE;
-
-		if (cmd[1] && strcmp(cmd[1], "OTH") == 0) {
-			imcb_error(ic, "Someone else logged in with your account");
-			allow_reconnect = FALSE;
-		} else if (cmd[1] && strcmp(cmd[1], "SSD") == 0) {
-			imcb_error(ic, "Terminating session because of server shutdown");
-		} else {
-			imcb_error(ic, "Session terminated by remote server (%s)",
-			           cmd[1] ? cmd[1] : "reason unknown)");
-		}
-
-		imc_logout(ic, allow_reconnect);
+		imcb_error(ic, "Session terminated by remote server (%s)", cmd[1] ? cmd[1] : "reason unknown");
+		imc_logout(ic, TRUE);
 		return(0);
 	} else if (strcmp(cmd[0], "GCF") == 0) {
 		/* Coming up is cmd[2] bytes of stuff we're supposed to
