@@ -198,6 +198,7 @@ extern GSList *msn_connections;
 
 /* ns.c */
 int msn_ns_write(struct im_connection *ic, const char *fmt, ...) G_GNUC_PRINTF(2, 3);
+int msn_ns_write_cmd(struct im_connection *ic, const char *cmd, const char *params, const char *payload);
 gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port);
 void msn_ns_close(struct msn_data *handler);
 void msn_auth_got_passport_token(struct im_connection *ic, const char *token, const char *error);

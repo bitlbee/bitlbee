@@ -190,7 +190,7 @@ static void msn_set_away(struct im_connection *ic, char *state, char *message)
 	buf = g_strdup_printf(MSN_PUT_HEADERS, ic->acc->user, ic->acc->user, md->uuid,
 		"/user", "application/user+xml",
 		strlen(body), body);
-	msn_ns_write(ic, "PUT %d %zd\r\n%s", ++md->trId, strlen(buf), buf);
+	msn_ns_write_cmd(ic, "PUT", "MSGR\\PRESENCE", buf);
 
 	g_free(buf);
 	g_free(body);
