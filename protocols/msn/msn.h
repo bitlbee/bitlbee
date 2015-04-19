@@ -26,33 +26,14 @@
 #ifndef _MSN_H
 #define _MSN_H
 
-/* This should be MSN Messenger 7.0.0813
-#define MSNP11_PROD_KEY "CFHUR$52U_{VIX5T"
-#define MSNP11_PROD_ID  "PROD0101{0RM?UBW"
-*/
-
 #define MSN_SSL_HOST "s.gateway.messenger.live.com"
 #define MSN_SSL_PORT 443
 
 #define MSN_HTTP_HOST "geo.gateway.messenger.live.com"
 #define MSN_HTTP_PORT 443
 
-/* Some other version.
-#define MSNP11_PROD_KEY "O4BG@C7BWLYQX?5G"
-#define MSNP11_PROD_ID  "PROD01065C%ZFN6F"
-*/
-
-/* <= BitlBee 3.0.5
-#define MSNP11_PROD_KEY "ILTXC!4IXB5FB*PX"
-#define MSNP11_PROD_ID  "PROD0119GSJUC$18"
-*/
-
-#define MSNP11_PROD_KEY "C1BX{V4W}Q3*10SM"
-#define MSNP11_PROD_ID  "PROD0120PW!CCV9@"
-#define MSNP_VER        "MSNP21"
-#define MSNP_BUILD      "14.0.8117.416"
-
-#define MSN_SB_NEW         -24062002
+#define MSNP11_PROD_KEY "YMM8C_H7KCQ2S_KL"
+#define MSNP11_PROD_ID  "PROD0090YUAUV{2B"
 
 #define MSN_CAP1        0xC000
 #define MSN_CAP2        0x0000
@@ -101,6 +82,7 @@ typedef enum {
 	MSN_DONE_ADL = 4,
 	MSN_REAUTHING = 8,
 	MSN_EMAIL_UNVERIFIED = 16,
+	MSN_DONE_BND = 32,
 } msn_flags_t;
 
 struct msn_gw {

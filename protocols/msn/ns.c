@@ -251,6 +251,13 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts, char *msg, in
 	} else if (strcmp(cmd[0], "ATH") == 0) {
 		char *payload;
 
+		if (md->flags & MSN_DONE_BND) {
+			return 1;
+		}
+
+		md->flags |= MSN_DONE_BND;
+
+		// BND
 		payload = g_markup_printf_escaped(
 			"<msgr><ver>1</ver><client><name>Skype</name><ver>2/4.3.0.37/174</ver></client>"
 			"<epid>%s</epid></msgr>\r\n",
@@ -261,33 +268,36 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts, char *msg, in
 		g_free(payload);
 
 	} else if (strcmp(cmd[0], "BND") == 0) {
+		struct xt_node *node;
+		char *nonce, *resp, *payload;
+
+		if (!(xml = xt_from_string(msg + 2, msglen - 2)) ||
+		    !(node = xt_find_node(xml->children, "nonce")) ||
+		    !(nonce = node->text)) {
+			return 1;
+		}
+
+		resp = msn_p11_challenge(nonce);
+
+		// PUT MSGR\CHALLENGE
+		payload = g_markup_printf_escaped(
+			"<challenge><appId>%s</appId><response>%s</response></challenge>",
+			MSNP11_PROD_ID, resp);
+
+		msn_ns_write_cmd(ic, "PUT", "MSGR\\CHALLENGE", payload);
+
 		imcb_log(ic, "Authenticated, getting buddy list");
 		msn_soap_memlist_request(ic);
+
+		xt_free_node(xml);
+		g_free(payload);
+		g_free(resp);
 
 	} else if (strcmp(cmd[0], "ADL") == 0) {
 		if (num_parts >= 3 && strcmp(cmd[2], "OK") == 0) {
 			msn_ns_send_adl(ic);
 			return msn_ns_finish_login(ic);
 		}
-	} else if (strcmp(cmd[0], "CHL") == 0) {
-		char *resp;
-		int st;
-
-		if (num_parts < 3) {
-			imcb_error(ic, "Syntax error");
-			imc_logout(ic, TRUE);
-			return(0);
-		}
-
-		resp = msn_p11_challenge(cmd[2]);
-
-		st =  msn_ns_write(ic, "QRY %d %s %zd\r\n%s",
-		                   ++md->trId, MSNP11_PROD_ID,
-		                   strlen(resp), resp);
-		g_free(resp);
-		return st;
-	} else if (strcmp(cmd[0], "QRY") == 0) {
-		/* CONGRATULATIONS */
 	} else if (strcmp(cmd[0], "OUT") == 0) {
 		imcb_error(ic, "Session terminated by remote server (%s)", cmd[1] ? cmd[1] : "reason unknown");
 		imc_logout(ic, TRUE);
