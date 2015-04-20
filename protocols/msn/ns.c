@@ -570,6 +570,7 @@ void msn_auth_got_passport_token(struct im_connection *ic, const char *token, co
 	if (!token) {
 		imcb_error(ic, "Error during Passport authentication: %s", error);
 		imc_logout(ic, TRUE);
+		return;
 	}
 
 	// ATH
