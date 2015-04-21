@@ -54,48 +54,6 @@ int msn_buddy_list_add(struct im_connection *ic, msn_buddy_flags_t list, const c
 	char *adl;
 
 	*groupid = '\0';
-#if 0
-	if (group) {
-		int i;
-		for (i = 0; i < md->groupcount; i++) {
-			if (g_strcasecmp(md->grouplist[i], group) == 0) {
-				g_snprintf(groupid, sizeof(groupid), " %d", i);
-				break;
-			}
-		}
-
-		if (*groupid == '\0') {
-			/* Have to create this group, it doesn't exist yet. */
-			struct msn_groupadd *ga;
-			GSList *l;
-
-			for (l = md->grpq; l; l = l->next) {
-				ga = l->data;
-				if (g_strcasecmp(ga->group, group) == 0) {
-					break;
-				}
-			}
-
-			ga = g_new0(struct msn_groupadd, 1);
-			ga->who = g_strdup(who);
-			ga->group = g_strdup(group);
-			md->grpq = g_slist_prepend(md->grpq, ga);
-
-			if (l == NULL) {
-				char groupname[strlen(group) + 1];
-				strcpy(groupname, group);
-				http_encode(groupname);
-				g_snprintf(buf, sizeof(buf), "ADG %d %s %d\r\n", ++md->trId, groupname, 0);
-				return msn_write(ic, buf, strlen(buf));
-			} else {
-				/* This can happen if the user's doing lots of adds to a
-				   new group at once; we're still waiting for the server
-				   to confirm group creation. */
-				return 1;
-			}
-		}
-	}
-#endif
 
 	if (!((bu = bee_user_by_handle(ic->bee, ic, who)) ||
 	      (bu = bee_user_new(ic->bee, ic, who, 0))) ||
@@ -131,17 +89,6 @@ int msn_buddy_list_remove(struct im_connection *ic, msn_buddy_flags_t list, cons
 	char *adl;
 
 	*groupid = '\0';
-#if 0
-	if (group) {
-		int i;
-		for (i = 0; i < md->groupcount; i++) {
-			if (g_strcasecmp(md->grouplist[i], group) == 0) {
-				g_snprintf(groupid, sizeof(groupid), " %d", i);
-				break;
-			}
-		}
-	}
-#endif
 
 	if (!(bu = bee_user_by_handle(ic->bee, ic, who)) ||
 	    !(bd = bu->data) || !(bd->flags & list)) {
@@ -224,37 +171,17 @@ void msn_buddy_ask(bee_user_t *bu)
 	imcb_ask_with_free(bu->ic, buf, bla, msn_buddy_ask_yes, msn_buddy_ask_no, msn_buddy_ask_free);
 }
 
-/* *NOT* thread-safe, but that's not a problem for now... */
-char **msn_linesplit(char *line)
+void msn_queue_feed(struct msn_data *h, char *bytes, int st)
 {
-	static char **ret = NULL;
-	static int size = 3;
-	int i, n = 0;
+	h->rxq = g_renew(char, h->rxq, h->rxlen + st);
+	memcpy(h->rxq + h->rxlen, bytes, st);
+	h->rxlen += st;
 
-	if (ret == NULL) {
-		ret = g_new0(char*, size);
+	if (getenv("BITLBEE_DEBUG")) {
+		fprintf(stderr, "\n\x1b[92m<<< ");
+		write(2, bytes , st);
+		fprintf(stderr, "\x1b[97m");
 	}
-
-	for (i = 0; line[i] && line[i] == ' '; i++) {
-		;
-	}
-	if (line[i]) {
-		ret[n++] = line + i;
-		for (i++; line[i]; i++) {
-			if (line[i] == ' ') {
-				line[i] = 0;
-			} else if (line[i] != ' ' && !line[i - 1]) {
-				ret[n++] = line + i;
-			}
-
-			if (n >= size) {
-				ret = g_renew(char*, ret, size += 2);
-			}
-		}
-	}
-	ret[n] = NULL;
-
-	return(ret);
 }
 
 /* This one handles input from a MSN Messenger server. Both the NS and SB servers usually give
@@ -265,22 +192,9 @@ char **msn_linesplit(char *line)
                    0: Command reported error; Abort *immediately*. (The connection does not exist anymore)
                    1: OK */
 
-int msn_handler(struct msn_handler_data *h)
+int msn_handler(struct msn_data *h)
 {
-	int st;
-
-	h->rxq = g_renew(char, h->rxq, h->rxlen + 1024);
-	st = read(h->fd, h->rxq + h->rxlen, 1024);
-	h->rxlen += st;
-
-	if (st <= 0) {
-		return(-1);
-	}
-
-	if (getenv("BITLBEE_DEBUG")) {
-		write(2, "->C:", 4);
-		write(2, h->rxq + h->rxlen - st, st);
-	}
+	int st = 1;
 
 	while (st) {
 		int i;
@@ -292,11 +206,12 @@ int msn_handler(struct msn_handler_data *h)
 					int count;
 
 					cmd_text = g_strndup(h->rxq, i);
-					cmd = msn_linesplit(cmd_text);
-					for (count = 0; cmd[count]; count++) {
-						;
-					}
-					st = h->exec_command(h, cmd, count);
+					cmd = g_strsplit_set(cmd_text, " ", -1);
+					count = g_strv_length(cmd);
+
+					st = msn_ns_command(h, cmd, count);
+
+					g_strfreev(cmd);
 					g_free(cmd_text);
 
 					/* If the connection broke, don't continue. We don't even exist anymore. */
@@ -319,7 +234,7 @@ int msn_handler(struct msn_handler_data *h)
 
 			/* If we reached the end of the buffer, there's still an incomplete command there.
 			   Return and wait for more data. */
-			if (i == h->rxlen && h->rxq[i - 1] != '\r' && h->rxq[i - 1] != '\n') {
+			if (i && i == h->rxlen && h->rxq[i - 1] != '\r' && h->rxq[i - 1] != '\n') {
 				break;
 			}
 		} else {
@@ -332,12 +247,13 @@ int msn_handler(struct msn_handler_data *h)
 			}
 
 			msg = g_strndup(h->rxq, h->msglen);
-			cmd = msn_linesplit(h->cmd_text);
-			for (count = 0; cmd[count]; count++) {
-				;
-			}
 
-			st = h->exec_message(h, msg, h->msglen, cmd, count);
+			cmd = g_strsplit_set(h->cmd_text, " ", -1);
+			count = g_strv_length(cmd);
+
+			st = msn_ns_message(h, msg, h->msglen, cmd, count);
+
+			g_strfreev(cmd);
 			g_free(msg);
 			g_free(h->cmd_text);
 			h->cmd_text = NULL;
@@ -369,46 +285,6 @@ int msn_handler(struct msn_handler_data *h)
 	}
 
 	return(1);
-}
-
-void msn_msgq_purge(struct im_connection *ic, GSList **list)
-{
-	struct msn_message *m;
-	GString *ret;
-	GSList *l;
-	int n = 0;
-
-	l = *list;
-	if (l == NULL) {
-		return;
-	}
-
-	m = l->data;
-	ret = g_string_sized_new(1024);
-	g_string_printf(ret, "Warning: Cleaning up MSN (switchboard) connection with unsent "
-	                "messages to %s:", m->who ? m->who : "unknown recipient");
-
-	while (l) {
-		m = l->data;
-
-		if (strncmp(m->text, "\r\r\r", 3) != 0) {
-			g_string_append_printf(ret, "\n%s", m->text);
-			n++;
-		}
-
-		g_free(m->who);
-		g_free(m->text);
-		g_free(m);
-
-		l = l->next;
-	}
-	g_slist_free(*list);
-	*list = NULL;
-
-	if (n > 0) {
-		imcb_log(ic, "%s", ret->str);
-	}
-	g_string_free(ret, TRUE);
 }
 
 /* Copied and heavily modified from http://tmsnc.sourceforge.net/chl.c */
@@ -534,15 +410,8 @@ struct msn_group *msn_group_by_id(struct im_connection *ic, const char *id)
 
 int msn_ns_set_display_name(struct im_connection *ic, const char *value)
 {
-	struct msn_data *md = ic->proto_data;
-	char fn[strlen(value) * 3 + 1];
-
-	strcpy(fn, value);
-	http_encode(fn);
-
-	/* Note: We don't actually know if the server accepted the new name,
-	   and won't give proper feedback yet if it doesn't. */
-	return msn_ns_write(ic, -1, "PRP %d MFN %s\r\n", ++md->trId, fn);
+	// TODO, implement this through msn_set_away's method
+	return 1;
 }
 
 const char *msn_normalize_handle(const char *handle)
