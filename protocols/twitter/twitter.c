@@ -1002,6 +1002,19 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		message = cmd[2];
 		in_reply_to = id;
 		allow_post = TRUE;
+	} else if (g_strcasecmp(cmd[0], "url") == 0) {
+		id = twitter_message_id_from_command_arg(ic, cmd[1], &bu);
+		if (!id) {
+			twitter_log(ic, "Tweet `%s' does not exist", cmd[1]);
+		} else {
+			/* More common link is twitter.com/$UID/status/$ID (and that's
+			 * what this will 302 to) but can't generate that since for RTs,
+			 * bu here points at the retweeter while id contains the id of
+			 * the original message. */
+			twitter_log(ic, "https://twitter.com/statuses/%lld", id);
+		}
+		goto eof;
+
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
 		message += 5;
 		allow_post = TRUE;

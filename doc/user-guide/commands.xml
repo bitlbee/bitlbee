@@ -120,7 +120,7 @@
 
 			<description>
 				<para>
-					This commands deletes an account from your account list. You should signoff the account before deleting it.
+					This command deletes an account from your account list. You should signoff the account before deleting it.
 				</para>
 
 
@@ -852,6 +852,7 @@
 				<varlistentry><term>unfollow &lt;screenname&gt;</term><listitem><para>Stop following a person</para></listitem></varlistentry>
 				<varlistentry><term>favourite &lt;screenname|#id&gt;</term><listitem><para>Favo<emphasis>u</emphasis>rite the given user's most recent tweet, or the given tweet ID.</para></listitem></varlistentry>
 				<varlistentry><term>post &lt;message&gt;</term><listitem><para>Post a tweet</para></listitem></varlistentry>
+				<varlistentry><term>url &lt;screenname|#id&gt;</term><listitem><para>Show URL for a tweet to open it in a browser (and see context)</para></listitem></varlistentry>
 			</variablelist>
 
 			<para>
