@@ -700,6 +700,8 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 	   original tweet's id should be remembered for deduplicating. */
 	if (g_strcasecmp(txs->user->screen_name, td->user) == 0) {
 		td->log[td->log_id].id = txs->rt_id;
+		/* More useful than NULL. */
+		td->log[td->log_id].bu = &twitter_log_local_user;
 	}
 
 	if (set_getbool(&ic->acc->set, "show_ids")) {

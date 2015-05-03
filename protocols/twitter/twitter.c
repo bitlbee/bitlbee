@@ -866,6 +866,8 @@ static gboolean twitter_parse_id(char *string, int base, guint64 *id)
 	return TRUE;
 }
 
+bee_user_t twitter_log_local_user;
+
 /** Convert the given bitlbee tweet ID, bitlbee username, or twitter tweet ID
  *  into a twitter tweet ID.
  *
@@ -896,10 +898,6 @@ static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, cha
 		if (twitter_parse_id(arg, 16, &id) && id < TWITTER_LOG_LENGTH) {
 			bu = td->log[id].bu;
 			id = td->log[id].id;
-			/* Beware of dangling pointers! */
-			if (!g_slist_find(ic->bee->users, bu)) {
-				bu = NULL;
-			}
 		} else if (twitter_parse_id(arg, 10, &id)) {
 			/* Allow normal tweet IDs as well; not a very useful
 			   feature but it's always been there. Just ignore
@@ -910,6 +908,16 @@ static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, cha
 		}
 	}
 	if (bu_) {
+		if (bu == &twitter_log_local_user) {
+			/* HACK alert. There's no bee_user object for the local
+			 * user so just fake one for the few cmds that need it. */
+			twitter_log_local_user.handle = td->user;
+		} else {
+			/* Beware of dangling pointers! */
+			if (!g_slist_find(ic->bee->users, bu)) {
+				bu = NULL;
+			}
+		}
 		*bu_ = bu;
 	}
 	return id;
