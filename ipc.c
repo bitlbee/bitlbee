@@ -775,13 +775,13 @@ void ipc_master_free_one(struct bitlbee_child *c)
 		close(c->to_fd);
 	}
 
+	child_list = g_slist_remove(child_list, c);
+
 	g_free(c->host);
 	g_free(c->nick);
 	g_free(c->realname);
 	g_free(c->password);
 	g_free(c);
-
-	child_list = g_slist_remove(child_list, c);
 
 	/* Also, if any child has a reference to this one, remove it. */
 	for (l = child_list; l; l = l->next) {

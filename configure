@@ -37,6 +37,7 @@ yahoo="default-on"
 twitter=1
 purple=0
 
+doc=1
 debug=0
 strip=1
 gcov=0
@@ -55,15 +56,39 @@ cpu=`uname -m`
 
 GLIB_MIN_VERSION=2.16
 
-echo BitlBee configure
-
 # Cygwin and Darwin don't support PIC/PIE
 case "$arch" in
-    CYGWIN* )
-        pie=0;;
-    Darwin )
-        pie=0;;
+	CYGWIN* )
+		pie=0;;
+	Darwin )
+		pie=0;;
 esac
+
+get_version() {
+	REAL_BITLBEE_VERSION=$(grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/')
+	BITLBEE_VERSION=$REAL_BITLBEE_VERSION
+
+	if [ -d $srcdir/.git ] && type git > /dev/null 2> /dev/null; then
+		timestamp=$(cd $srcdir; git show -s --format=%ci HEAD | sed 's/ .*$//; s/-//g')
+		branch=$(cd $srcdir; git rev-parse --abbrev-ref HEAD)
+
+		search="(.+)-([0-9]+)-(g[0-9a-f]+)"
+		replace="\1+$timestamp+$branch+\2-\3-git"
+
+		BITLBEE_VERSION=$(cd $srcdir; git describe --long --tags | sed -r "s/$search/$replace/")
+
+		unset timestamp branch search replace
+	fi
+}
+
+if [ "$1" = "--dump-version" ]; then
+	srcdir=$(cd $(dirname $0);pwd)
+	get_version
+	echo $BITLBEE_VERSION
+	exit
+fi
+
+echo BitlBee configure
 
 while [ -n "$1" ]; do
 	e="`expr "X$1" : 'X--\(.*=.*\)'`"
@@ -95,6 +120,7 @@ Option		Description				Default
 		(automatically disables other protocol modules)
 --rpc=0/1       Disable/enable RPC interface            $rpc
 
+--doc=0/1	Disable/enable help.txt generation	$doc
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 --pie=0/1       Build position independent executable   $pie
@@ -449,9 +475,9 @@ detect_resolv_ns_dynamic()
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
 	echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - $LIBRESOLV >/dev/null 2>/dev/null
-        if [ "$?" = "0" ]; then
-                ret=0
-        fi
+	if [ "$?" = "0" ]; then
+		ret=0
+	fi
 
 	rm -f $TMPFILE
 	return $ret
@@ -464,9 +490,9 @@ detect_resolv_ns_static()
 	for i in $systemlibdirs; do
 		if [ -f $i/libresolv.a ]; then
 			echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
-                        if [ "$?" = "0" ]; then
-                                ret=0
-                        fi
+			if [ "$?" = "0" ]; then
+				ret=0
+			fi
 		fi
 	done
 
@@ -476,17 +502,17 @@ detect_resolv_ns_static()
 
 detect_nameser_has_ns_types()
 {
-    TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
-    ret=1
-    # since we aren't actually linking with ns_* routines
-    # we can just compile the test code
-    echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
-    if [ "$?" = "0" ]; then
-        ret=0
-    fi
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
+	ret=1
+	# since we aren't actually linking with ns_* routines
+	# we can just compile the test code
+	echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
+	if [ "$?" = "0" ]; then
+		ret=0
+	fi
 
-    rm -f $TMPFILE
-    return $ret
+	rm -f $TMPFILE
+	return $ret
 }
 
 if [ "$ssl" = "auto" ]; then
@@ -547,11 +573,11 @@ if detect_nameser_has_ns_types; then
 fi
 if detect_resolv_dynamic || detect_resolv_static; then
 	echo '#define HAVE_RESOLV_A' >> config.h
-    if detect_resolv_ns_dynamic || detect_resolv_ns_static; then
-	    echo '#define HAVE_RESOLV_A_WITH_NS' >> config.h
-    fi
+	if detect_resolv_ns_dynamic || detect_resolv_ns_static; then
+		echo '#define HAVE_RESOLV_A_WITH_NS' >> config.h
+	fi
 else
-    echo 'Insufficient resolv routines. Jabber server must be set explicitly'
+	echo 'Insufficient resolv routines. Jabber server must be set explicitly'
 fi
 
 
@@ -648,40 +674,36 @@ if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
 	protocols_mods="$protocol_mods skype(plugin)"
 fi
 
-if [ ! -e doc/user-guide/help.txt ] && ! type xmlto > /dev/null 2> /dev/null; then
-	echo
-	echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
-	echo 'Install xmlto if you want online help to work.'
-fi
-
-REAL_BITLBEE_VERSION=`grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/'`
-echo
-if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; then
-	nick=`bzr nick`
-	if [ -n "$nick" -a "$nick" != "bitlbee" ]; then
-		nick="-$nick"
+if [ "$doc" = "1" ]; then
+	if [ ! -e doc/user-guide/help.txt ] && \
+	     ! type xmlto > /dev/null 2> /dev/null || \
+	     ! type xsltproc > /dev/null 2> /dev/null
+	then
+		echo
+		echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
+		echo 'Install xmlto and xsltproc if you want online help to work.'
 	else
-		nick=""
+		echo "DOC=1" >> Makefile.settings
 	fi
-	rev=`bzr revno`
-	echo 'Using bzr revision #'$rev' as version number'
-	BITLBEE_VERSION=$REAL_BITLBEE_VERSION-bzr$nick-$rev
+
+	if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
+		# skype also needs asciidoc
+		if ! type a2x > /dev/null 2> /dev/null; then
+			echo
+			echo 'WARNING: The skyped man page requires asciidoc. It will not be generated.'
+		else
+			echo "ASCIIDOC=1" >> Makefile.settings
+		fi
+	fi
 fi
 
-if [ -z "$BITLBEE_VERSION" -a -d .git ] && type git > /dev/null 2> /dev/null; then
-	rev=`git describe --long --tags`-`git rev-parse --abbrev-ref HEAD`
-	echo 'Using '$rev' as git version number'
-	BITLBEE_VERSION=$rev-git
-fi
+get_version
 
-if [ -n "$BITLBEE_VERSION" ]; then
+if [ "$BITLBEE_VERSION" != "$REAL_BITLBEE_VERSION" ]; then
 	echo 'Spoofing version number: '$BITLBEE_VERSION
 	echo '#undef BITLBEE_VERSION' >> config.h
 	echo '#define BITLBEE_VERSION "'$BITLBEE_VERSION'"' >> config.h
 	echo
-else
-	# for pkg-config
-	BITLBEE_VERSION=$REAL_BITLBEE_VERSION
 fi
 
 if ! make helloworld > /dev/null 2>&1; then

@@ -1,8 +1,31 @@
 language: c
-script: ./configure && make check && dpkg-buildpackage -uc -us
+
+script:
+ - ./configure
+ - make check
+ - dpkg-buildpackage -uc -us
+
 before_install:
  - sudo apt-get update -qq
  - sudo apt-get install --no-install-recommends -qq asciidoc xsltproc xmlto lynx check libevent-dev libpurple-dev check
  - wget http://dump.dequis.org/indexed/bitlbee-travis-libs/libotr5{,-dev}_4.1.0-2~bpo70+1_amd64.deb
  - sudo dpkg -i *.deb
 
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "MO6hy2cRxR02A0nSenfQFyPFpepxorJ+XgNkq2JS7LtI6tcwYRR0alvunIPJXam1/OUKxoFsBJLS1nCJTvEUXFCOvoTSAoMiePTBUEg2zfzcTb5k+cqtcOUznCXHNmXAwrqriP4vkG+57ijO9Ojz2r9LijcvjtFDRFJQY9Rcs38="
+
+addons:
+  coverity_scan:
+    project:
+      name: "bitlbee/bitlbee"
+      description: "An IRC to other chat networks gateway"
+    notification_email: dx@dxzone.com.ar
+    build_command_prepend: ./configure --otr=1 --debug=1
+    build_command: make
+    branch_pattern: coverity_scan
+
+notifications:
+  email: false

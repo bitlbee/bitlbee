@@ -208,6 +208,7 @@ static void msn_soap_debug_print(const char *headers, const char *payload)
 	if (!getenv("BITLBEE_DEBUG")) {
 		return;
 	}
+	fprintf(stderr, "\n\x1b[90mSOAP:\n");
 
 	if (headers) {
 		if ((s = strstr(headers, "\r\n\r\n"))) {
@@ -224,6 +225,7 @@ static void msn_soap_debug_print(const char *headers, const char *payload)
 		}
 		xt_free_node(xt);
 	}
+	fprintf(stderr, "\n\x1b[97m\n");
 }
 
 int msn_soapq_flush(struct im_connection *ic, gboolean resend)

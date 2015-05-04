@@ -234,7 +234,7 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, t
 				msg = s;
 			} else {
 				/* Modules can swallow messages. */
-				return TRUE;
+				goto cleanup;
 			}
 		}
 	}
@@ -249,8 +249,9 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, t
 
 	wrapped = word_wrap(msg, 425);
 	irc_send_msg(iu, "PRIVMSG", dst, wrapped, prefix);
-
 	g_free(wrapped);
+
+cleanup:
 	g_free(prefix);
 	g_free(msg);
 	g_free(ts);
@@ -290,6 +291,8 @@ static gboolean bee_irc_user_action_response(bee_t *bee, bee_user_t *bu, const c
 	g_string_append_c(msg, '\001');
 
 	irc_send_msg((irc_user_t *) bu->ui_data, "NOTICE", irc->user->nick, msg->str, NULL);
+
+	g_string_free(msg, TRUE);
 
 	return TRUE;
 }
@@ -692,55 +695,7 @@ static gboolean bee_irc_chat_topic(bee_t *bee, struct groupchat *c, const char *
 
 static gboolean bee_irc_chat_name_hint(bee_t *bee, struct groupchat *c, const char *name)
 {
-	irc_t *irc = bee->ui_data;
-	irc_channel_t *ic = c->ui_data, *oic;
-	char stripped[MAX_NICK_LENGTH + 1], *full_name;
-
-	if (ic == NULL) {
-		return FALSE;
-	}
-
-	/* Don't rename a channel if the user's in it already. */
-	if (ic->flags & IRC_CHANNEL_JOINED) {
-		return FALSE;
-	}
-
-	strncpy(stripped, name, MAX_NICK_LENGTH);
-	stripped[MAX_NICK_LENGTH] = '\0';
-	irc_channel_name_strip(stripped);
-	if (set_getbool(&bee->set, "lcnicks")) {
-		nick_lc(irc, stripped);
-	}
-
-	if (stripped[0] == '\0') {
-		return FALSE;
-	}
-
-	full_name = g_strdup_printf("#%s", stripped);
-	if ((oic = irc_channel_by_name(irc, full_name))) {
-		char *type, *chat_type;
-
-		type = set_getstr(&oic->set, "type");
-		chat_type = set_getstr(&oic->set, "chat_type");
-
-		if (type && chat_type && oic->data == FALSE &&
-		    strcmp(type, "chat") == 0 &&
-		    strcmp(chat_type, "groupchat") == 0) {
-			/* There's a channel with this name already, but it looks
-			   like it's not in use yet. Most likely the IRC client
-			   rejoined the channel after a reconnect. Remove it so
-			   we can reuse its name. */
-			irc_channel_free(oic);
-		} else {
-			g_free(full_name);
-			return FALSE;
-		}
-	}
-
-	g_free(ic->name);
-	ic->name = full_name;
-
-	return TRUE;
+	return irc_channel_name_hint(c->ui_data, name);
 }
 
 static gboolean bee_irc_chat_invite(bee_t *bee, bee_user_t *bu, const char *name, const char *msg)

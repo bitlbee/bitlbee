@@ -732,9 +732,9 @@ void ext_yahoo_remove_handler(int id, int tag)
 	while (l) {
 		inp = l->data;
 		if (inp->h == tag) {
+			byahoo_inputs = g_slist_remove(byahoo_inputs, inp);
 			g_free(inp->d);
 			g_free(inp);
-			byahoo_inputs = g_slist_remove(byahoo_inputs, inp);
 			break;
 		}
 		l = l->next;

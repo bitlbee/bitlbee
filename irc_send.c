@@ -54,7 +54,7 @@ void irc_send_login(irc_t *irc)
 void irc_send_motd(irc_t *irc)
 {
 	char motd[2048];
-	size_t len;
+	ssize_t len;
 	int fd;
 
 	fd = open(global.conf->motdfile, O_RDONLY);

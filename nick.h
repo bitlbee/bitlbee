@@ -27,6 +27,7 @@ void nick_set_raw(account_t *acc, const char *handle, const char *nick);
 void nick_set(bee_user_t *bu, const char *nick);
 char *nick_get(bee_user_t *bu);
 char *nick_gen(bee_user_t *bu);
+void underscore_dedupe(char nick[MAX_NICK_LENGTH + 1]);
 void nick_dedupe(bee_user_t * bu, char nick[MAX_NICK_LENGTH + 1]);
 int nick_saved(bee_user_t *bu);
 void nick_del(bee_user_t *bu);

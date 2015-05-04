@@ -408,4 +408,28 @@ passwords with <emphasis>account tag set -del password</emphasis>
 </para>
 </sect1>
 
+<sect1 id="whatsnew030400">
+<title>New stuff in BitlBee 3.4</title>
+
+<para>
+Lots of bugfixes! <emphasis>Important:</emphasis> Recompiling third party plugins such as bitlbee-steam or bitlbee-facebook is <emphasis>required</emphasis>!
+</para>
+
+<simplelist>
+	<member><emphasis>twitter:</emphasis> Filter channels - Search by keyword/hashtag or a list of users. See the <emphasis>HowtoTwitter</emphasis> wiki page for more details!</member>
+	<member><emphasis>twitter:</emphasis> Add "rawreply" command, like reply but bitlbee won't add @mention. Also add "favorite" / "fav" command aliases.</member>
+	<member><emphasis>twitter:</emphasis> Start stream from last tweet on connect/reconnect to avoid showing duplicate tweets</member>
+	<member><emphasis>jabber:</emphasis> Fixed crashes with file transfers (they still fail at bypassing NATs, but at least they fail without crashing)</member>
+	<member><emphasis>purple:</emphasis> Improved support for gadugadu, whatsapp and telegram.</member>
+	<member><emphasis>msn:</emphasis> disabled in this release since the protocol we used (MSNP18) stopped working.</member>
+	<member>Add a 'pattern' parameter to the blist command, to filter it.</member>
+	<member>The <emphasis>utf8_nicks</emphasis> setting should be more reliable now.</member>
+</simplelist>
+
+<para>
+See the full changelog for details!
+</para>
+
+</sect1>
+
 </chapter>

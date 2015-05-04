@@ -555,6 +555,86 @@ int irc_channel_name_cmp(const char *a_, const char *b_)
 	return case_map[a[i]] - case_map[b[i]];
 }
 
+gboolean irc_channel_is_unused(irc_t *irc, char *name)
+{
+	char *type, *chat_type;
+	irc_channel_t *oic;
+
+	if (!irc_channel_name_ok(name)) {
+		return FALSE;
+	}
+
+	if (!(oic = irc_channel_by_name(irc, name))) {
+		return TRUE;
+	}
+
+	type = set_getstr(&oic->set, "type");
+	chat_type = set_getstr(&oic->set, "chat_type");
+
+	if (type && chat_type && oic->data == FALSE &&
+	    strcmp(type, "chat") == 0 &&
+	    strcmp(chat_type, "groupchat") == 0) {
+		/* There's a channel with this name already, but it looks
+		   like it's not in use yet. Most likely the IRC client
+		   rejoined the channel after a reconnect. Remove it so
+		   we can reuse its name. */
+		irc_channel_free(oic);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+char *irc_channel_name_gen(irc_t *irc, const char *hint)
+{
+	char name[MAX_NICK_LENGTH + 1] = { 0 };
+	char *translit_name;
+	gsize bytes_written;
+
+	translit_name = g_convert_with_fallback(hint, -1, "ASCII//TRANSLIT", "UTF-8", "", NULL, &bytes_written, NULL);
+	if (bytes_written > MAX_NICK_LENGTH) {
+		translit_name[MAX_NICK_LENGTH] = '\0';
+	}
+
+	name[0] = '#';
+	strncpy(name + 1, translit_name, MAX_NICK_LENGTH - 1);
+	name[MAX_NICK_LENGTH] = '\0';
+
+	g_free(translit_name);
+
+	irc_channel_name_strip(name);
+
+	if (set_getbool(&irc->b->set, "lcnicks")) {
+		nick_lc(irc, name + 1);
+	}
+
+	while (!irc_channel_is_unused(irc, name)) {
+		underscore_dedupe(name);
+	}
+
+	return g_strdup(name);
+}
+
+gboolean irc_channel_name_hint(irc_channel_t *ic, const char *name)
+{
+	irc_t *irc = ic->irc;
+	char *full_name;
+
+	/* Don't rename a channel if the user's in it already. */
+	if (ic->flags & IRC_CHANNEL_JOINED) {
+		return FALSE;
+	}
+
+	if (!(full_name = irc_channel_name_gen(irc, name))) {
+		return FALSE;
+	}
+
+	g_free(ic->name);
+	ic->name = full_name;
+
+	return TRUE;
+}
+
 static gint irc_channel_user_cmp(gconstpointer a_, gconstpointer b_)
 {
 	const irc_channel_user_t *a = a_, *b = b_;

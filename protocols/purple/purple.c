@@ -22,6 +22,7 @@
 \***************************************************************************/
 
 #include "bitlbee.h"
+#include "bpurple.h"
 #include "help.h"
 
 #include <stdarg.h>
@@ -38,12 +39,28 @@ static bee_t *local_bee;
 
 static char *set_eval_display_name(set_t *set, char *value);
 
+void purple_request_input_callback(guint id, struct im_connection *ic,
+                                   const char *message, const char *who);
+
+/* purple_request_input specific stuff */
+typedef void (*ri_callback_t)(gpointer, const gchar *);
+
+struct request_input_data {
+	ri_callback_t data_callback;
+	void *user_data;
+	struct im_connection *ic;
+	char *buddy;
+	guint id;
+};
+
 struct im_connection *purple_ic_by_pa(PurpleAccount *pa)
 {
 	GSList *i;
+	struct purple_data *pd;
 
 	for (i = purple_connections; i; i = i->next) {
-		if (((struct im_connection *) i->data)->proto_data == pa) {
+		pd = ((struct im_connection *) i->data)->proto_data;
+		if (pd->account == pa) {
 			return i->data;
 		}
 	}
@@ -289,7 +306,7 @@ static void purple_sync_settings(account_t *acc, PurpleAccount *pa)
 static void purple_login(account_t *acc)
 {
 	struct im_connection *ic = imcb_new(acc);
-	PurpleAccount *pa;
+	struct purple_data *pd;
 
 	if ((local_bee != NULL && local_bee != acc->bee) ||
 	    (global.conf->runmode == RUNMODE_DAEMON && !getenv("BITLBEE_DEBUG"))) {
@@ -305,30 +322,47 @@ static void purple_login(account_t *acc)
 	   on dead connections. */
 	purple_connections = g_slist_prepend(purple_connections, ic);
 
-	ic->proto_data = pa = purple_account_new(acc->user, (char *) acc->prpl->data);
-	purple_account_set_password(pa, acc->pass);
-	purple_sync_settings(acc, pa);
+	ic->proto_data = pd = g_new0(struct purple_data, 1);
+	pd->account = purple_account_new(acc->user, (char *) acc->prpl->data);
+	pd->input_requests = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+	                                           NULL, g_free);
+	pd->next_request_id = 0;
+	purple_account_set_password(pd->account, acc->pass);
+	purple_sync_settings(acc, pd->account);
 
-	purple_account_set_enabled(pa, "BitlBee", TRUE);
+	purple_account_set_enabled(pd->account, "BitlBee", TRUE);
 }
 
 static void purple_logout(struct im_connection *ic)
 {
-	PurpleAccount *pa = ic->proto_data;
+	struct purple_data *pd = ic->proto_data;
 
-	purple_account_set_enabled(pa, "BitlBee", FALSE);
+	if (!pd) {
+		return;
+	}
+
+	purple_account_set_enabled(pd->account, "BitlBee", FALSE);
 	purple_connections = g_slist_remove(purple_connections, ic);
-	purple_accounts_remove(pa);
+	purple_accounts_remove(pd->account);
+	g_hash_table_destroy(pd->input_requests);
+	g_free(pd);
 }
 
 static int purple_buddy_msg(struct im_connection *ic, char *who, char *message, int flags)
 {
 	PurpleConversation *conv;
+	struct purple_data *pd = ic->proto_data;
+
+	if (!strncmp(who, PURPLE_REQUEST_HANDLE, sizeof(PURPLE_REQUEST_HANDLE) - 1)) {
+		guint request_id = atoi(who + sizeof(PURPLE_REQUEST_HANDLE));
+		purple_request_input_callback(request_id, ic, message, who);
+		return 1;
+	}
 
 	if ((conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_IM,
-	                                                  who, ic->proto_data)) == NULL) {
+	                                                  who, pd->account)) == NULL) {
 		conv = purple_conversation_new(PURPLE_CONV_TYPE_IM,
-		                               ic->proto_data, who);
+		                               pd->account, who);
 	}
 
 	purple_conv_im_send(purple_conversation_get_im_data(conv), message);
@@ -338,10 +372,10 @@ static int purple_buddy_msg(struct im_connection *ic, char *who, char *message, 
 
 static GList *purple_away_states(struct im_connection *ic)
 {
-	PurpleAccount *pa = ic->proto_data;
+	struct purple_data *pd = ic->proto_data;
 	GList *st, *ret = NULL;
 
-	for (st = purple_account_get_status_types(pa); st; st = st->next) {
+	for (st = purple_account_get_status_types(pd->account); st; st = st->next) {
 		PurpleStatusPrimitive prim = purple_status_type_get_primitive(st->data);
 		if (prim != PURPLE_STATUS_AVAILABLE && prim != PURPLE_STATUS_OFFLINE) {
 			ret = g_list_append(ret, (void *) purple_status_type_get_name(st->data));
@@ -353,8 +387,8 @@ static GList *purple_away_states(struct im_connection *ic)
 
 static void purple_set_away(struct im_connection *ic, char *state_txt, char *message)
 {
-	PurpleAccount *pa = ic->proto_data;
-	GList *status_types = purple_account_get_status_types(pa), *st;
+	struct purple_data *pd = ic->proto_data;
+	GList *status_types = purple_account_get_status_types(pd->account), *st;
 	PurpleStatusType *pst = NULL;
 	GList *args = NULL;
 
@@ -377,7 +411,8 @@ static void purple_set_away(struct im_connection *ic, char *state_txt, char *mes
 		args = g_list_append(args, message);
 	}
 
-	purple_account_set_status_list(pa, st ? purple_status_type_get_id(pst) : "away",
+	purple_account_set_status_list(pd->account,
+	                               st ? purple_status_type_get_id(pst) : "away",
 	                               TRUE, args);
 
 	g_list_free(args);
@@ -446,67 +481,71 @@ static void purple_add_buddy(struct im_connection *ic, char *who, char *group)
 {
 	PurpleBuddy *pb;
 	PurpleGroup *pg = NULL;
+	struct purple_data *pd = ic->proto_data;
 
 	if (group && !(pg = purple_find_group(group))) {
 		pg = purple_group_new(group);
 		purple_blist_add_group(pg, NULL);
 	}
 
-	pb = purple_buddy_new((PurpleAccount *) ic->proto_data, who, NULL);
+	pb = purple_buddy_new(pd->account, who, NULL);
 	purple_blist_add_buddy(pb, NULL, pg, NULL);
-	purple_account_add_buddy((PurpleAccount *) ic->proto_data, pb);
+	purple_account_add_buddy(pd->account, pb);
 
-	purple_gg_buddylist_export(((PurpleAccount *) ic->proto_data)->gc);
+	purple_gg_buddylist_export(pd->account->gc);
 }
 
 static void purple_remove_buddy(struct im_connection *ic, char *who, char *group)
 {
 	PurpleBuddy *pb;
+	struct purple_data *pd = ic->proto_data;
 
-	pb = purple_find_buddy((PurpleAccount *) ic->proto_data, who);
+	pb = purple_find_buddy(pd->account, who);
 	if (pb != NULL) {
 		PurpleGroup *group;
 
 		group = purple_buddy_get_group(pb);
-		purple_account_remove_buddy((PurpleAccount *) ic->proto_data, pb, group);
+		purple_account_remove_buddy(pd->account, pb, group);
 
 		purple_blist_remove_buddy(pb);
 	}
 
-	purple_gg_buddylist_export(((PurpleAccount *) ic->proto_data)->gc);
+	purple_gg_buddylist_export(pd->account->gc);
 }
 
 static void purple_add_permit(struct im_connection *ic, char *who)
 {
-	PurpleAccount *pa = ic->proto_data;
+	struct purple_data *pd = ic->proto_data;
 
-	purple_privacy_permit_add(pa, who, FALSE);
+	purple_privacy_permit_add(pd->account, who, FALSE);
 }
 
 static void purple_add_deny(struct im_connection *ic, char *who)
 {
-	PurpleAccount *pa = ic->proto_data;
+	struct purple_data *pd = ic->proto_data;
 
-	purple_privacy_deny_add(pa, who, FALSE);
+	purple_privacy_deny_add(pd->account, who, FALSE);
 }
 
 static void purple_rem_permit(struct im_connection *ic, char *who)
 {
-	PurpleAccount *pa = ic->proto_data;
+	struct purple_data *pd = ic->proto_data;
 
-	purple_privacy_permit_remove(pa, who, FALSE);
+	purple_privacy_permit_remove(pd->account, who, FALSE);
 }
 
 static void purple_rem_deny(struct im_connection *ic, char *who)
 {
-	PurpleAccount *pa = ic->proto_data;
+	struct purple_data *pd = ic->proto_data;
 
-	purple_privacy_deny_remove(pa, who, FALSE);
+	purple_privacy_deny_remove(pd->account, who, FALSE);
 }
 
 static void purple_get_info(struct im_connection *ic, char *who)
 {
-	serv_get_info(purple_account_get_connection(ic->proto_data), who);
+	struct purple_data *pd = ic->proto_data;
+
+	serv_get_info(purple_account_get_connection(pd->account), who);
 }
 
 static void purple_keepalive(struct im_connection *ic)
@@ -516,7 +555,7 @@ static void purple_keepalive(struct im_connection *ic)
 static int purple_send_typing(struct im_connection *ic, char *who, int flags)
 {
 	PurpleTypingState state = PURPLE_NOT_TYPING;
-	PurpleAccount *pa = ic->proto_data;
+	struct purple_data *pd = ic->proto_data;
 
 	if (flags & OPT_TYPING) {
 		state = PURPLE_TYPING;
@@ -524,7 +563,7 @@ static int purple_send_typing(struct im_connection *ic, char *who, int flags)
 		state = PURPLE_TYPED;
 	}
 
-	serv_send_typing(purple_account_get_connection(pa), who, state);
+	serv_send_typing(purple_account_get_connection(pd->account), who, state);
 
 	return 1;
 }
@@ -558,10 +597,10 @@ struct groupchat *purple_chat_with(struct im_connection *ic, char *who)
 
 	/* There went my nice afternoon. :-( */
 
-	PurpleAccount *pa = ic->proto_data;
-	PurplePlugin *prpl = purple_plugins_find_with_id(pa->protocol_id);
+	struct purple_data *pd = ic->proto_data;
+	PurplePlugin *prpl = purple_plugins_find_with_id(pd->account->protocol_id);
 	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
-	PurpleBuddy *pb = purple_find_buddy((PurpleAccount *) ic->proto_data, who);
+	PurpleBuddy *pb = purple_find_buddy(pd->account, who);
 	PurpleMenuAction *mi;
 	GList *menu;
 
@@ -596,8 +635,9 @@ void purple_chat_invite(struct groupchat *gc, char *who, char *message)
 {
 	PurpleConversation *pc = gc->data;
 	PurpleConvChat *pcc = PURPLE_CONV_CHAT(pc);
+	struct purple_data *pd = gc->ic->proto_data;
 
-	serv_chat_invite(purple_account_get_connection(gc->ic->proto_data),
+	serv_chat_invite(purple_account_get_connection(pd->account),
 	                 purple_conv_chat_get_id(pcc),
 	                 message && *message ? message : "Please join my chat",
 	                 who);
@@ -622,24 +662,27 @@ void purple_chat_leave(struct groupchat *gc)
 struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password,
                                    set_t **sets)
 {
-	PurpleAccount *pa = ic->proto_data;
-	PurplePlugin *prpl = purple_plugins_find_with_id(pa->protocol_id);
+	struct purple_data *pd = ic->proto_data;
+	PurplePlugin *prpl = purple_plugins_find_with_id(pd->account->protocol_id);
 	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
 	GHashTable *chat_hash;
 	PurpleConversation *conv;
 	GList *info, *l;
 
 	if (!pi->chat_info || !pi->chat_info_defaults ||
-	    !(info = pi->chat_info(purple_account_get_connection(pa)))) {
+	    !(info = pi->chat_info(purple_account_get_connection(pd->account)))) {
 		imcb_error(ic, "Joining chatrooms not supported by this protocol");
 		return NULL;
 	}
 
-	if ((conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT, room, pa))) {
+	if ((conv = purple_find_conversation_with_account(PURPLE_CONV_TYPE_CHAT,
+	                                                  room, pd->account))) {
 		purple_conversation_destroy(conv);
 	}
 
-	chat_hash = pi->chat_info_defaults(purple_account_get_connection(pa), room);
+	chat_hash = pi->chat_info_defaults(
+	        purple_account_get_connection(pd->account), room
+	);
 
 	for (l = info; l; l = l->next) {
 		struct proto_chat_entry *pce = l->data;
@@ -653,7 +696,7 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 		}
 	}
 
-	serv_join_chat(purple_account_get_connection(pa), chat_hash);
+	serv_join_chat(purple_account_get_connection(pd->account), chat_hash);
 
 	return NULL;
 }
@@ -980,7 +1023,6 @@ static void prplcb_request_action_yes(void *data)
 	if (pqad->yes) {
 		pqad->yes(pqad->user_data, pqad->yes_i);
 	}
-	g_free(pqad);
 }
 
 static void prplcb_request_action_no(void *data)
@@ -990,7 +1032,15 @@ static void prplcb_request_action_no(void *data)
 	if (pqad->no) {
 		pqad->no(pqad->user_data, pqad->no_i);
 	}
-	g_free(pqad);
+}
+
+/* q->free() callback from query_del()*/
+static void prplcb_request_action_free(void *data)
+{
+	struct prplcb_request_action_data *pqad = data;
+
+	pqad->bee_data = NULL;
+	purple_request_close(PURPLE_REQUEST_ACTION, pqad);
 }
 
 static void *prplcb_request_action(const char *title, const char *primary, const char *secondary,
@@ -1025,28 +1075,99 @@ static void *prplcb_request_action(const char *title, const char *primary, const
 	/* TODO: IRC stuff here :-( */
 	q = g_strdup_printf("Request: %s\n\n%s\n\n%s", title, primary, secondary);
 	pqad->bee_data = query_add(local_bee->ui_data, purple_ic_by_pa(account), q,
-	                           prplcb_request_action_yes, prplcb_request_action_no, g_free, pqad);
+	                           prplcb_request_action_yes, prplcb_request_action_no,
+	                           prplcb_request_action_free, pqad);
 
 	g_free(q);
 
 	return pqad;
 }
 
-/*
-static void prplcb_request_test()
+/* So it turns out some requests have no account context at all, because
+ * libpurple hates us. This means that query_del_by_conn() won't remove those
+ * on logout, and will segfault if the user replies. That's why this exists.
+ */
+static void prplcb_close_request(PurpleRequestType type, void *data)
 {
-        fprintf( stderr, "bla\n" );
+	struct prplcb_request_action_data *pqad;
+	struct request_input_data *ri;
+	struct purple_data *pd;
+
+	if (!data) {
+		return;
+	}
+
+	switch (type) {
+	case PURPLE_REQUEST_ACTION:
+		pqad = data;
+		/* if this is null, it's because query_del was run already */
+		if (pqad->bee_data) {
+			query_del(local_bee->ui_data, pqad->bee_data);
+		}
+		g_free(pqad);
+		break;
+	case PURPLE_REQUEST_INPUT:
+		ri = data;
+		pd = ri->ic->proto_data;
+		imcb_remove_buddy(ri->ic, ri->buddy, NULL);
+		g_free(ri->buddy);
+		g_hash_table_remove(pd->input_requests, GUINT_TO_POINTER(ri->id));
+		break;
+	default:
+		g_free(data);
+		break;
+	}
+
 }
-*/
+
+void* prplcb_request_input(const char *title, const char *primary,
+        const char *secondary, const char *default_value, gboolean multiline,
+        gboolean masked, gchar *hint, const char *ok_text, GCallback ok_cb,
+        const char *cancel_text, GCallback cancel_cb, PurpleAccount *account,
+        const char *who, PurpleConversation *conv, void *user_data)
+{
+	struct im_connection *ic = purple_ic_by_pa(account);
+	struct purple_data *pd = ic->proto_data;
+	struct request_input_data *ri = g_new0(struct request_input_data, 1);
+	guint id = pd->next_request_id++;
+
+	ri->id = id;
+	ri->ic = ic;
+	ri->buddy = g_strdup_printf("%s_%u", PURPLE_REQUEST_HANDLE, id);
+	ri->data_callback = (ri_callback_t) ok_cb;
+	ri->user_data = user_data;
+	g_hash_table_insert(pd->input_requests, GUINT_TO_POINTER(id), ri);
+
+	imcb_add_buddy(ic, ri->buddy, NULL);
+	imcb_buddy_msg(ic, ri->buddy, secondary, 0, 0);
+
+	return ri;
+}
+
+void purple_request_input_callback(guint id, struct im_connection *ic,
+                                   const char *message, const char *who)
+{
+	struct purple_data *pd = ic->proto_data;
+	struct request_input_data *ri;
+
+	if (!(ri = g_hash_table_lookup(pd->input_requests, GUINT_TO_POINTER(id)))) {
+		return;
+	}
+
+	ri->data_callback(ri->user_data, message);
+
+	purple_request_close(PURPLE_REQUEST_INPUT, ri);
+}
+
 
 static PurpleRequestUiOps bee_request_uiops =
 {
-	NULL,
+	prplcb_request_input,
 	NULL,
 	prplcb_request_action,
 	NULL,
 	NULL,
-	NULL,
+	prplcb_close_request,
 	NULL,
 };
 

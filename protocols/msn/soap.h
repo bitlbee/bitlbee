@@ -166,7 +166,7 @@ int msn_soap_passport_sso_request(struct im_connection *ic, const char *nonce);
 #define SOAP_MEMLIST_ACTION "http://www.msn.com/webservices/AddressBook/FindMembership"
 
 #define SOAP_MEMLIST_PAYLOAD \
-	"<FindMembership xmlns=\"http://www.msn.com/webservices/AddressBook\"><serviceFilter xmlns=\"http://www.msn.com/webservices/AddressBook\"><Types xmlns=\"http://www.msn.com/webservices/AddressBook\"><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">Messenger</ServiceType><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">Invitation</ServiceType><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">SocialNetwork</ServiceType><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">Space</ServiceType><ServiceType xmlns=\"http://www.msn.com/webservices/AddressBook\">Profile</ServiceType></Types></serviceFilter>" \
+	"<FindMembership xmlns=\"http://www.msn.com/webservices/AddressBook\"><serviceFilter><Types><ServiceType>Messenger</ServiceType><ServiceType>IMAvailability</ServiceType></Types></serviceFilter><expandMembership>true</expandMembership>" \
 	"</FindMembership>"
 
 #define SOAP_MEMLIST_ADD_ACTION "http://www.msn.com/webservices/AddressBook/AddMember"

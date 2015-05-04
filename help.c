@@ -29,7 +29,7 @@
 #undef read
 #undef write
 
-#define BUFSIZE 1100
+#define BUFSIZE 2048
 
 help_t *help_init(help_t **help, const char *helpfile)
 {

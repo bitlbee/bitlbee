@@ -27,6 +27,7 @@
    this code for now. */
 
 #include "bitlbee.h"
+#include "bpurple.h"
 
 #include <stdarg.h>
 
@@ -206,13 +207,14 @@ static gboolean prplcb_xfer_send_cb(gpointer data, gint fd, b_input_condition co
 
 void purple_transfer_request(struct im_connection *ic, file_transfer_t *ft, char *handle)
 {
-	PurpleAccount *pa = ic->proto_data;
+	struct purple_data *pd = ic->proto_data;
 	struct prpl_xfer_data *px;
 
 	/* xfer_new() will pick up this variable. It's a hack but we're not
 	   multi-threaded anyway. */
 	next_ft = ft;
-	serv_send_file(purple_account_get_connection(pa), handle, ft->file_name);
+	serv_send_file(purple_account_get_connection(pd->account), handle,
+	               ft->file_name);
 
 	ft->write = prpl_xfer_write;
 

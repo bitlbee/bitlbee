@@ -60,8 +60,6 @@ static void jabber_init(account_t *acc)
 
 	s = set_add(&acc->set, "activity_timeout", "600", set_eval_int, acc);
 
-	s = set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
-
 	s = set_add(&acc->set, "display_name", NULL, NULL, acc);
 
 	g_snprintf(str, sizeof(str), "%d", jabber_port_list[0]);
@@ -82,6 +80,12 @@ static void jabber_init(account_t *acc)
 
 	s = set_add(&acc->set, "server", NULL, set_eval_account, acc);
 	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
+
+	if (strcmp(acc->prpl->name, "hipchat") == 0) {
+		set_setstr(&acc->set, "server", "chat.hipchat.com");
+	} else {
+		s = set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
+	}
 
 	s = set_add(&acc->set, "ssl", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -120,6 +124,10 @@ static void jabber_login(account_t *acc)
 	jabber_set_me(ic, acc->user);
 
 	jd->fd = jd->r_inpa = jd->w_inpa = -1;
+
+	if (strcmp(acc->prpl->name, "hipchat") == 0) {
+		jd->flags |= JFLAG_HIPCHAT;
+	}
 
 	if (jd->server == NULL) {
 		imcb_error(ic, "Incomplete account name (format it like <username@jabberserver.name>)");
@@ -655,6 +663,7 @@ gboolean jabber_handle_is_self(struct im_connection *ic, const char *who)
 void jabber_initmodule()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
+	struct prpl *hipchat = NULL;
 
 	ret->name = "jabber";
 	ret->mms = 0;                        /* no limit */
@@ -685,4 +694,9 @@ void jabber_initmodule()
 	ret->buddy_action = jabber_buddy_action;
 
 	register_protocol(ret);
+
+	/* Another one for hipchat, which has completely different logins */
+	hipchat = g_memdup(ret, sizeof(struct prpl));
+	hipchat->name = "hipchat";
+	register_protocol(hipchat);
 }
