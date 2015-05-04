@@ -100,7 +100,9 @@ struct twitter_user_data {
 #define TWITTER_LOG_LENGTH 256
 struct twitter_log_data {
 	guint64 id;
-	struct bee_user *bu; /* DANGER: can be a dead pointer. Check it first. */
+	/* DANGER: bu can be a dead pointer. Check it first.
+	 * twitter_message_id_from_command_arg() will do this. */
+	struct bee_user *bu;
 };
 
 /**
@@ -109,6 +111,14 @@ struct twitter_log_data {
  * else.
  */
 extern GSList *twitter_connections;
+
+/**
+ * Evil hack: Fake bee_user which will always point at the local user.
+ * Sometimes used as a return value by twitter_message_id_from_command_arg.
+ * NOT thread safe but don't you dare to even think of ever making BitlBee
+ * threaded. :-)
+ */
+extern bee_user_t twitter_log_local_user;
 
 void twitter_login_finish(struct im_connection *ic);
 
