@@ -173,8 +173,7 @@ static void rpc_init(account_t *acc) {
 		 * possible without having BitlBee block on it responding which
 		 * I don't want to do.
 		 * Should a module want to override a user's setting, it can
-		 * use set_setstr(). (Though ATM setting changes are not yet
-		 * passed to the module immediately. TODO. */
+		 * use set_setstr(). */
 	}
 
 	acc->flags |= pd->account_flags;
@@ -779,12 +778,16 @@ static JSON_Value *rpc_init_isup() {
 	return rpc;
 }
 
-void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
+gboolean rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	int st, fd, i;
 
 	fd = socket(address->sa_family, SOCK_STREAM, 0);
-	if (fd == -1 || connect(fd, address, addrlen) == -1)
-		return;
+	if (fd == -1 || connect(fd, address, addrlen) == -1) {
+		log_message(LOGLVL_WARNING, "Failed to connect to RPC server: %s", strerror(errno));
+		if (fd != -1)
+			closesocket(fd);
+		return FALSE;
+	}
 
 	JSON_Value *rpc = rpc_init_isup();
 	char *s = json_serialize_to_string(rpc);
@@ -796,8 +799,8 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	len += 2;
 
 	if ((st = write(fd, s, len)) != len) {
-		// LOG ERROR
-		return;
+		log_message(LOGLVL_WARNING, "Error while writing to RPC server: %s", strerror(errno));
+		return FALSE;
 	}
 	g_free(s);
 
@@ -815,9 +818,9 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 		st = select(fd + 1, &rfds, NULL, NULL, &to);
 
 		if (st == 0) {
-			// LOG ERROR
+			log_message(LOGLVL_WARNING, "Error while reading from RPC server: %s", strerror(errno));
 			closesocket(fd);
-			return;
+			return FALSE;
 		}
 		
 		if (resplen >= buflen)
@@ -827,9 +830,9 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 		if (st == -1) {
 			if (sockerr_again())
 				continue;
-			// LOG ERROR
+			log_message(LOGLVL_WARNING, "Error while reading from RPC server: %s", strerror(errno));
 			closesocket(fd);
-			return;
+			return FALSE;
 		}
 		resplen += st;
 		resp[resplen] = '\0';
@@ -839,8 +842,8 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 
 	JSON_Object *isup = json_object_get_object(json_object(parsed), "result");
 	if (isup == NULL) {
-		// LOG ERROR
-		return;
+		log_message(LOGLVL_WARNING, "Error while parsing RPC server response");
+		return FALSE;
 	}
 
 	struct prpl *ret = g_new0(struct prpl, 1);
@@ -902,6 +905,8 @@ void rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	ret->handle_cmp = g_ascii_strcasecmp;
 	
 	register_protocol(ret);
+
+	return TRUE;
 }
 
 #define PDIR "/tmp/rpcplugins"
@@ -920,17 +925,36 @@ void rpc_initmodule() {
 		return;
 
 	while ((de = readdir(pdir))) {
+		if (de->d_type != DT_SOCK && de->d_type != DT_UNKNOWN)
+			continue;
+
 		char *fn = g_build_filename(PDIR, de->d_name, NULL);
 		struct sockaddr_un su;
 
 		strncpy(su.sun_path, fn, UNIX_PATH_MAX);
+
+#if 0
+		struct stat fdata;
+		if (stat(fn, &fdata) == -1) {
+			log_message(LOGLVL_WARNING, "Could not stat %s: %s", fn, strerror(errno));
+			g_free(fn);
+			continue;
+		}
+		/* For now just skip anything that is not a Unix domain socket. */
+		if (!S_ISSOCK(fdata.st_mode))
+			continue;
+#endif
+
 		su.sun_path[UNIX_PATH_MAX-1] = '\0';
 		su.sun_family = AF_UNIX;
-		rpc_initmodule_sock((struct sockaddr*) &su, sizeof(su));
+		gboolean st = rpc_initmodule_sock((struct sockaddr*) &su, sizeof(su));
 		g_free(fn);
+		if (!st)
+			log_message(LOGLVL_WARNING, "Failed to register protocol %s", fn);
 		/* Idea: Also support textfiles containing a host:port tuple to
 		 * connect to. Not that remote RPC'ing would be a great idea,
 		 * but maybe some jsonrpc libs don't support Unix domain sockets. */
 	}
+	closedir(pdir);
 }
 
