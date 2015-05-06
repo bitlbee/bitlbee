@@ -1225,6 +1225,8 @@ JSON_Value * json_value_deep_copy(const JSON_Value *value) {
             return return_value;
         case JSONBoolean:
             return json_value_init_boolean(json_value_get_boolean(value));
+        case JSONInteger:
+            return json_value_init_integer(json_value_get_integer(value));
         case JSONNumber:
             return json_value_init_number(json_value_get_number(value));
         case JSONString:
@@ -1672,7 +1674,7 @@ JSON_Status json_validate(const JSON_Value *schema, const JSON_Value *value) {
                     return JSONFailure;
             }
             return JSONSuccess;
-        case JSONString: case JSONNumber: case JSONBoolean: case JSONNull:
+        case JSONString: case JSONInteger: case JSONNumber: case JSONBoolean: case JSONNull:
             return JSONSuccess; /* equality already tested before switch */
         case JSONError: default:
             return JSONFailure;
@@ -1729,6 +1731,8 @@ JSON_Status json_value_equals(const JSON_Value *a, const JSON_Value *b) {
             return strcmp(a_string, b_string) == 0;
         case JSONBoolean:
             return json_value_get_boolean(a) == json_value_get_boolean(b);
+        case JSONInteger:
+            return json_value_get_integer(a) == json_value_get_integer(b);
         case JSONNumber:
             return fabs(json_value_get_number(a) - json_value_get_number(b)) < 0.000001; /* EPSILON */
         case JSONError:
