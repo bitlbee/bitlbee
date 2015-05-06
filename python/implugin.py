@@ -9,9 +9,12 @@ import re
 import socket
 import time
 
+import feedparser
+
 # List of functions an IM plugin can export. This library will indicate to
 # BitlBee which functions are actually implemented so omitted features
 # will be disabled, but note that some/many functions are simply mandatory.
+# (Currently login/-out, buddy_msg, add/remove_buddy.)
 SUPPORTED_FUNCTIONS = [
 	'login', 'keepalive', 'logout', 'buddy_msg', 'set_away',
 	'send_typing', 'add_buddy', 'remove_buddy', 'add_permit',
@@ -42,7 +45,7 @@ class BitlBeeIMPlugin(BaseHandler):
 	
 	# Supported away states. If your protocol supports a specific set of
 	# away states, put them in a list in this variable.
-	AWAY_STATES = ["Away", "Busy"] #None
+	AWAY_STATES = None
 	
 	# Filled in during initialisation:
 	# Version code in hex. So if you need to do comparisions, for example
@@ -67,6 +70,9 @@ class BitlBeeIMPlugin(BaseHandler):
 		self.bee = RpcForwarder(bee["method_list"], self._conn.call)
 		self.bitlbee_version = bee["version"]
 		self.bitlbee_version_str = bee["version_str"]
+
+		self.feeds = {}
+
 		# TODO: See how to call into the module here.
 		return {
 			"name": self.NAME,
@@ -100,15 +106,24 @@ class BitlBeeIMPlugin(BaseHandler):
 		self.bee.error("Ok bye!")
 
 	def add_buddy(self, handle, group):
-		print "%s is my new best friend in %s \o/" % (handle, group)
-		self.bee.add_buddy(handle, group)
-		self.bee.buddy_status(handle, 5, "Friend", "Best friend!")
-		print self.bee.bee_user_by_handle(handle)
-		print self.bee.set_setstr("test", handle)
-		print self.bee.set_reset("test")
+		self.bee.add_buddy(handle, None)
+		self.feeds[handle] = {
+			"url": handle,
+			"seen": set(),
+		}
 	
-	def set_away(self, state, message):
-		print "You're a slacker: %s (%r)" % (state, message)
+	def buddy_msg(self, handle, msg, flags):
+		feed = self.feeds[handle]
+		cmd = re.split(r"\s+", msg)
+		if cmd[0] == "list":
+			fp = feedparser.parse(handle)
+			for art in fp.entries:
+				line = "%(title)s <%(link)s>" % art
+				ts = 0
+				if "updated_parsed" in art:
+					ts = int(time.mktime(art.updated_parsed))
+				self.bee.buddy_msg(handle, line, 0, ts)
+				feed["seen"].add(art.id)
 	
 	def set_set(self, setting, value):
 		print "Setting %s changed to %r" % (setting, value)
