@@ -125,12 +125,7 @@ static char* oauth2_parse_error(const JSON_Value *e)
 		const char *msg = json_object_get_string(json_object(e), "message");
 		const char *type = json_object_get_string(json_object(e), "type");
 		JSON_Value *code_o = json_object_get_value(json_object(e), "code");
-		int code = 0;
-
-		if (json_type(code_o) == JSONNumber) {
-			code = json_value_get_number(code_o);
-		}
-
+		int code = json_value_get_integer(code_o);
 		return g_strdup_printf("Error %d: %s", code, msg ? msg : type ? type : "Unknown error");
 	} else if (json_type(e) == JSONString) {
 		return g_strdup(json_string(e));

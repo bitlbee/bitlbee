@@ -49,7 +49,7 @@ static JSON_Value *jsonrpc_error(int code, const char *msg) {
 		/* Format from http://jsonrpc.org/historical/json-rpc-1-1-alt.html.
 		 * Not sure whether to use it. */
 		JSON_Value *error = json_value_init_object();
-		json_object_set_number(json_object(error), "code", code);
+		json_object_set_integer(json_object(error), "code", code);
 		json_object_set_string(json_object(error), "message", msg);
 		json_object_set_value(json_object(ret), "error", error);
 	} else {
@@ -77,7 +77,7 @@ static void json_object_set_string_or_null(JSON_Object *object, const char *key,
 static JSON_Value *rpc_out_new(const char *method, JSON_Array **params_) {
 	JSON_Value *rpc = json_value_init_object();
 	json_object_set_string(json_object(rpc), "method", method);
-	json_object_set_number(json_object(rpc), "id", next_rpc_id++);
+	json_object_set_integer(json_object(rpc), "id", next_rpc_id++);
 
 	JSON_Value *params = json_value_init_array();
 	json_object_set_value(json_object(rpc), "params", params);
@@ -146,11 +146,11 @@ static JSON_Value *rpc_ser_bee_user(bee_user_t *bu) {
 	json_object_set_string_or_null(o, "fullname", bu->fullname);
 	json_object_set_string_or_null(o, "nick", bu->nick);
 	json_object_set_string_or_null(o, "group", bu->group ? bu->group->name : NULL);
-	json_object_set_number(o, "flags", bu->flags);
+	json_object_set_integer(o, "flags", bu->flags);
 	json_object_set_string_or_null(o, "status", bu->status);
 	json_object_set_string_or_null(o, "status_msg", bu->status_msg);
-	json_object_set_number(o, "login_time", bu->login_time);
-	json_object_set_number(o, "idle_time", bu->idle_time);
+	json_object_set_integer(o, "login_time", bu->login_time);
+	json_object_set_integer(o, "idle_time", bu->idle_time);
 	return v;
 }
 
@@ -162,9 +162,7 @@ static void rpc_init(account_t *acc) {
 	JSON_O_FOREACH(json_object(pd->settings), name, value) {
 		JSON_Object *o = json_object(value);
 		set_t *set = set_add(&acc->set, name, json_object_get_string(o, "default"), NULL, acc);
-		/* JSON numbers are floats. The following line "might" be a
-		 * terrible idea. As was JSON, but hey. */
-		set->flags |= (int) json_object_get_number(o, "flags");
+		set->flags |= json_object_get_integer(o, "flags");
 		set->eval = rpc_set_evaluator;
 		set->eval_data = o;
 		/* eval_list turns out to be a memory leak so don't implement it
@@ -209,7 +207,7 @@ static char *rpc_set_evaluator(set_t *set, char *value) {
 			int num = 0;
 			/* Evaluator already did validation so ignore retval. */
 			sscanf(value, "%d", &num);
-			json_array_append_number(params, num);
+			json_array_append_integer(params, num);
 		} else if (type_eval == set_eval_bool) {
 			json_array_append_boolean(params, bool2int(value));
 		} else {
@@ -284,7 +282,7 @@ static int rpc_buddy_msg(struct im_connection *ic, char *to, char *message, int 
 	RPC_OUT_INIT("buddy_msg");
 	json_array_append_string(params, to);
 	json_array_append_string(params, message);
-	json_array_append_number(params, flags);
+	json_array_append_integer(params, flags);
 	return rpc_send(ic, rpc);
 }
 
@@ -298,7 +296,7 @@ static void rpc_set_away(struct im_connection *ic, char *state, char *message) {
 static int rpc_send_typing(struct im_connection *ic, char *who, int flags) {
 	RPC_OUT_INIT("send_typing");
 	json_array_append_string(params, who);
-	json_array_append_number(params, flags);
+	json_array_append_integer(params, flags);
 	return rpc_send(ic, rpc);
 }
 
@@ -349,7 +347,7 @@ static void rpc_get_info(struct im_connection *ic, char *who) {
 static void rpc_chat_invite(struct groupchat *gc, char *who, char *message) {
 	RPC_OUT_INIT("chat_invite");
 	struct rpc_groupchat *rc = gc->data;
-	json_array_append_number(params, rc->id);
+	json_array_append_integer(params, rc->id);
 	json_array_append_string(params, who);
 	json_array_append_string_or_null(params, message);
 	rpc_send(gc->ic, rpc);
@@ -358,7 +356,7 @@ static void rpc_chat_invite(struct groupchat *gc, char *who, char *message) {
 static void rpc_chat_kick(struct groupchat *gc, char *who, const char *message) {
 	RPC_OUT_INIT("chat_kick");
 	struct rpc_groupchat *rc = gc->data;
-	json_array_append_number(params, rc->id);
+	json_array_append_integer(params, rc->id);
 	json_array_append_string(params, who);
 	json_array_append_string_or_null(params, message);
 	rpc_send(gc->ic, rpc);
@@ -367,16 +365,16 @@ static void rpc_chat_kick(struct groupchat *gc, char *who, const char *message) 
 static void rpc_chat_leave(struct groupchat *gc) {
 	RPC_OUT_INIT("chat_leave");
 	struct rpc_groupchat *rc = gc->data;
-	json_array_append_number(params, rc->id);
+	json_array_append_integer(params, rc->id);
 	rpc_send(gc->ic, rpc);
 }
 
 static void rpc_chat_msg(struct groupchat *gc, char *msg, int flags) {
 	RPC_OUT_INIT("chat_msg");	
 	struct rpc_groupchat *rc = gc->data;
-	json_array_append_number(params, rc->id);
+	json_array_append_integer(params, rc->id);
 	json_array_append_string(params, msg);
-	json_array_append_number(params, flags);
+	json_array_append_integer(params, flags);
 	rpc_send(gc->ic, rpc);
 }
 
@@ -401,7 +399,7 @@ static struct rpc_groupchat *rpc_groupchat_by_id(struct im_connection *ic, int i
  * numeric ID). */
 #define SET_GROUPCHAT(rc) \
 	do { \
-		rc = rpc_groupchat_by_id(ic, json_array_get_number(params, 0)); \
+		rc = rpc_groupchat_by_id(ic, json_array_get_integer(params, 0)); \
 		if (rc == NULL) \
 			return jsonrpc_error(ENOENT, "No groupchat with that id."); \
 	} while (0)
@@ -409,7 +407,7 @@ static struct rpc_groupchat *rpc_groupchat_by_id(struct im_connection *ic, int i
 static struct groupchat *rpc_chat_with(struct im_connection *ic, char *who) {
 	RPC_OUT_INIT("chat_with");
 	struct rpc_groupchat *rc = rpc_groupchat_new(ic, who);
-	json_array_append_number(params, rc->id);
+	json_array_append_integer(params, rc->id);
 	json_array_append_string(params, who);
 	rpc_send(ic, rpc);
 
@@ -420,7 +418,7 @@ static struct groupchat *rpc_chat_join(struct im_connection *ic, const char *roo
                                        const char *password, set_t **sets) {
 	RPC_OUT_INIT("chat_join");
 	struct rpc_groupchat *rc = rpc_groupchat_new(ic, room);
-	json_array_append_number(params, rc->id);
+	json_array_append_integer(params, rc->id);
 	json_array_append_string(params, room);
 	json_array_append_string_or_null(params, nick);
 	json_array_append_string_or_null(params, password);
@@ -433,7 +431,7 @@ static struct groupchat *rpc_chat_join(struct im_connection *ic, const char *roo
 static void rpc_chat_topic(struct groupchat *gc, char *topic) {
 	RPC_OUT_INIT("chat_topic");
 	struct rpc_groupchat *rc = gc->data;
-	json_array_append_number(params, rc->id);
+	json_array_append_integer(params, rc->id);
 	json_array_append_string(params, topic);
 	rpc_send(gc->ic, rpc);
 }
@@ -550,35 +548,35 @@ static JSON_Value *rpc_imcb_add_buddy(struct im_connection *ic, void *func_, JSO
 
 static JSON_Value *rpc_imcb_buddy_status(struct im_connection *ic, void *func_, JSON_Array *params) {
 	void (*func)(struct im_connection*, const char*, int, const char*, const char*) = func_;
-	func(ic, json_array_get_string(params, 0), json_array_get_number(params, 1),
+	func(ic, json_array_get_string(params, 0), json_array_get_integer(params, 1),
 	         json_array_get_string(params, 2), json_array_get_string(params, 3));
 	return NULL;
 }
 
 static JSON_Value *rpc_imcb_buddy_times(struct im_connection *ic, void *func_, JSON_Array *params) {
 	void (*func)(struct im_connection*, const char*, int, int) = func_;
-	func(ic, json_array_get_string(params, 0), json_array_get_number(params, 1),
-	         json_array_get_number(params, 2));
+	func(ic, json_array_get_string(params, 0), json_array_get_integer(params, 1),
+	         json_array_get_integer(params, 2));
 	return NULL;
 }
 
 static JSON_Value *rpc_imcb_buddy_msg(struct im_connection *ic, void *func_, JSON_Array *params) {
 	void (*func)(struct im_connection*, const char*, const char*, int, int) = func_;
 	func(ic, json_array_get_string(params, 0), json_array_get_string(params, 1),
-	         json_array_get_number(params, 2), json_array_get_number(params, 3));
+	         json_array_get_integer(params, 2), json_array_get_integer(params, 3));
 	return NULL;
 }
 
 static JSON_Value *rpc_imcb_buddy_typing(struct im_connection *ic, void *func_, JSON_Array *params) {
 	void (*func)(struct im_connection*, const char*, int) = func_;
-	func(ic, (char*) json_array_get_string(params, 0), json_array_get_number(params, 1));
+	func(ic, (char*) json_array_get_string(params, 0), json_array_get_integer(params, 1));
 	return NULL;
 }
 
 static JSON_Value *rpc_imcb_chat_new(struct im_connection *ic, void *func_, JSON_Array *params) {
 	struct rpc_groupchat *rc = rpc_groupchat_new(ic, json_array_get_string(params, 0));
 	JSON_Value *resp = json_value_init_object();
-	json_object_set_number(json_object(resp), "result", rc->id);
+	json_object_set_integer(json_object(resp), "result", rc->id);
 	return resp;
 }
 
@@ -595,7 +593,7 @@ static JSON_Value *rpc_imcb_chat_msg(struct im_connection *ic, void *func_, JSON
 	struct rpc_groupchat *rc;
 	SET_GROUPCHAT(rc);
 	func(rc->gc, json_array_get_string(params, 1), json_array_get_string(params, 2),
-	     json_array_get_number(params, 3), json_array_get_number(params, 4));
+	     json_array_get_integer(params, 3), json_array_get_integer(params, 4));
 	return NULL;
 }
 
@@ -612,7 +610,7 @@ static JSON_Value *rpc_imcb_chat_topic(struct im_connection *ic, void *func_, JS
 	struct rpc_groupchat *rc;
 	SET_GROUPCHAT(rc);
 	func(rc->gc, json_array_get_string(params, 1), json_array_get_string(params, 2),
-	     json_array_get_number(params, 3));
+	     json_array_get_integer(params, 3));
 	return NULL;
 }
 
@@ -686,20 +684,20 @@ static const struct rpc_in_method methods[] = {
 	{ "imcb_buddy_nick_hint", imcb_buddy_nick_hint, rpc_imcb_add_buddy, "ss" },
 	{ "imcb_buddy_status", imcb_buddy_status, rpc_imcb_buddy_status, "snss" },
 	{ "imcb_buddy_status_msg", imcb_buddy_status_msg, rpc_imcb_add_buddy, "ss" },
-	{ "imcb_buddy_times", imcb_buddy_times, rpc_imcb_buddy_times, "snn" },
-	{ "imcb_buddy_msg", imcb_buddy_msg, rpc_imcb_buddy_msg, "ssnn" },
-	{ "imcb_buddy_typing", imcb_buddy_typing, rpc_imcb_buddy_typing, "sn" },
+	{ "imcb_buddy_times", imcb_buddy_times, rpc_imcb_buddy_times, "sii" },
+	{ "imcb_buddy_msg", imcb_buddy_msg, rpc_imcb_buddy_msg, "ssii" },
+	{ "imcb_buddy_typing", imcb_buddy_typing, rpc_imcb_buddy_typing, "si" },
 	{ "imcb_chat_new", NULL, rpc_imcb_chat_new, "s" },
 	
 	/* RPCs below are equivalent, but with the struct groupchat* replaced
 	 * with the numeric id of the chat. */
-	{ "imcb_chat_name_hint", imcb_chat_name_hint, rpc_imcb_chat_name_hint, "ns" },
-	{ "imcb_chat_msg", imcb_chat_msg, rpc_imcb_chat_msg, "nssnn" },
-	{ "imcb_chat_log", imcb_chat_log, rpc_imcb_chat_log, "ns" },
-	{ "imcb_chat_topic", imcb_chat_topic, rpc_imcb_chat_topic, "nssn" },
-	{ "imcb_chat_add_buddy", imcb_chat_add_buddy, rpc_imcb_chat_name_hint, "ns" },
-	{ "imcb_chat_remove_buddy", imcb_chat_remove_buddy, rpc_imcb_chat_remove_buddy, "nss" },
-	{ "imcb_chat_invite", imcb_chat_invite, rpc_imcb_chat_invite, "nsss" },
+	{ "imcb_chat_name_hint", imcb_chat_name_hint, rpc_imcb_chat_name_hint, "is" },
+	{ "imcb_chat_msg", imcb_chat_msg, rpc_imcb_chat_msg, "issii" },
+	{ "imcb_chat_log", imcb_chat_log, rpc_imcb_chat_log, "is" },
+	{ "imcb_chat_topic", imcb_chat_topic, rpc_imcb_chat_topic, "issi" },
+	{ "imcb_chat_add_buddy", imcb_chat_add_buddy, rpc_imcb_chat_name_hint, "is" },
+	{ "imcb_chat_remove_buddy", imcb_chat_remove_buddy, rpc_imcb_chat_remove_buddy, "iss" },
+	{ "imcb_chat_invite", imcb_chat_invite, rpc_imcb_chat_invite, "isss" },
 
 	/* These are not imcb* functions but should still be exported. */
 	/* Setting functions. Starting with just providing access to account
@@ -721,7 +719,7 @@ static JSON_Value *rpc_cmd_in(struct im_connection *ic, const char *cmd, JSON_Ar
 		if (strcmp(cmd, methods[i].name) == 0) {
 			if (json_array_get_count(params) != strlen(methods[i].args)) {
 				imcb_error(ic, "Invalid argument count to method %s: %d, wanted %zd", cmd, (int) json_array_get_count(params), strlen(methods[i].args));
-				return jsonrpc_error(E2BIG, "Invalid number of arguments");
+				return jsonrpc_error(E2BIG, "Invalid integer of arguments");
 			}
 			int j;
 			for (j = 0; methods[i].args[j]; j++) {
@@ -731,8 +729,8 @@ static JSON_Value *rpc_cmd_in(struct im_connection *ic, const char *cmd, JSON_Ar
 				case 's':
 					ok = type == JSONString || type == JSONNull;
 					break;
-				case 'n':
-					ok = type == JSONNumber;
+				case 'i':
+					ok = type == JSONInteger;
 					break;
 				case 'o':
 					ok = type == JSONObject;
@@ -757,8 +755,10 @@ static JSON_Value *rpc_cmd_in(struct im_connection *ic, const char *cmd, JSON_Ar
 }
 
 #define RPC_ADD_FUNC(func) \
+	ret->func = rpc_ ## func
+#define RPC_ADD_OPT_FUNC(func) \
 	if (g_hash_table_contains(methods, #func)) \
-	 	ret->func = rpc_ ## func
+		RPC_ADD_FUNC(func)
 
 static JSON_Value *rpc_init_isup() {
 	int i;
@@ -766,7 +766,7 @@ static JSON_Value *rpc_init_isup() {
 	RPC_OUT_INIT("init");
 	JSON_Value *d = json_value_init_object();
 	json_object_set_string(json_object(d), "version_str", BITLBEE_VERSION);
-	json_object_set_number(json_object(d), "version", BITLBEE_VERSION_CODE);
+	json_object_set_integer(json_object(d), "version", BITLBEE_VERSION_CODE);
 	
 	JSON_Value *ml = json_value_init_array();
 	for (i = 0; methods[i].name; i++) {
@@ -853,7 +853,7 @@ gboolean rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	ret->name = g_strdup(json_object_get_string(isup, "name"));
 	ret->data = proto_data;
 
-	proto_data->account_flags = json_object_get_number(isup, "account_flags");
+	proto_data->account_flags = json_object_get_integer(isup, "account_flags");
 
 	/* Keep a full copy of the settings list, we can only use it when we
 	 * have an account to work on. */
@@ -877,25 +877,25 @@ gboolean rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 
 	ret->init = rpc_init;
 	RPC_ADD_FUNC(login);
-	RPC_ADD_FUNC(keepalive);
+	RPC_ADD_OPT_FUNC(keepalive);
 	RPC_ADD_FUNC(logout);
 	RPC_ADD_FUNC(buddy_msg);
-	RPC_ADD_FUNC(set_away);
-	RPC_ADD_FUNC(send_typing);
-	RPC_ADD_FUNC(add_buddy);
+	RPC_ADD_OPT_FUNC(set_away);
+	RPC_ADD_OPT_FUNC(send_typing);
+	RPC_ADD_FUNC(add_buddy);     /* Consider making these two optional? */
 	RPC_ADD_FUNC(remove_buddy);
-	RPC_ADD_FUNC(add_permit);
-	RPC_ADD_FUNC(add_deny);
-	RPC_ADD_FUNC(rem_permit);
-	RPC_ADD_FUNC(rem_deny);
-	RPC_ADD_FUNC(get_info);
-	RPC_ADD_FUNC(chat_invite);
-	RPC_ADD_FUNC(chat_kick);
-	RPC_ADD_FUNC(chat_leave);
-	RPC_ADD_FUNC(chat_msg);
-	RPC_ADD_FUNC(chat_with);
-	RPC_ADD_FUNC(chat_join);
-	RPC_ADD_FUNC(chat_topic);
+	RPC_ADD_OPT_FUNC(add_permit);
+	RPC_ADD_OPT_FUNC(add_deny);
+	RPC_ADD_OPT_FUNC(rem_permit);
+	RPC_ADD_OPT_FUNC(rem_deny);
+	RPC_ADD_OPT_FUNC(get_info);
+	RPC_ADD_OPT_FUNC(chat_invite);
+	RPC_ADD_OPT_FUNC(chat_kick);
+	RPC_ADD_OPT_FUNC(chat_leave);
+	RPC_ADD_OPT_FUNC(chat_msg);
+	RPC_ADD_OPT_FUNC(chat_with);
+	RPC_ADD_OPT_FUNC(chat_join);
+	RPC_ADD_OPT_FUNC(chat_topic);
 	if (proto_data->away_states)
 		ret->away_states = rpc_away_states;
 	
