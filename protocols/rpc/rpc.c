@@ -132,7 +132,7 @@ static JSON_Value *rpc_ser_account(account_t *acc) {
 	JSON_Value *v = json_value_init_object();
 	JSON_Object *o = json_object(v);
 	json_object_set_string(o, "user", acc->user);
-	json_object_set_string(o, "pass", acc->user);
+	json_object_set_string(o, "pass", acc->pass);
 	if (acc->server)
 		json_object_set_string(o, "server", acc->server);
 	json_object_set_value(o, "settings", rpc_ser_settings(&acc->set));

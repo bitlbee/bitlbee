@@ -4,12 +4,13 @@ import sys
 import bjsonrpc
 from bjsonrpc.handlers import BaseHandler
 
+import operator
 import random
 import re
 import socket
 import time
 
-import feedparser
+import requests
 
 # List of functions an IM plugin can export. This library will indicate to
 # BitlBee which functions are actually implemented so omitted features
@@ -41,7 +42,7 @@ class BitlBeeIMPlugin(BaseHandler):
 	NAME = "rpc-test"
 
 	# See account.h (TODO: Add constants.)
-	ACCOUNT_FLAGS = 3
+	ACCOUNT_FLAGS = 0
 	
 	# Supported away states. If your protocol supports a specific set of
 	# away states, put them in a list in this variable.
@@ -56,6 +57,8 @@ class BitlBeeIMPlugin(BaseHandler):
 	# Will become an RpcForwarder object to call into BitlBee
 	bee = None
 	
+	BASE_URL = "https://newsblur.com"
+	
 	@classmethod
 	def _factory(cls, *args, **kwargs):
 		def handler_factory(connection):
@@ -66,12 +69,13 @@ class BitlBeeIMPlugin(BaseHandler):
 	#def __init__(self, connection, *args, **kwargs):
 	#	BaseHandler.__init__(self,connection)
 
+	def url(self, path):
+		return (self.BASE_URL + path)
+
 	def init(self, bee):
 		self.bee = RpcForwarder(bee["method_list"], self._conn.call)
 		self.bitlbee_version = bee["version"]
 		self.bitlbee_version_str = bee["version_str"]
-
-		self.feeds = {}
 
 		# TODO: See how to call into the module here.
 		return {
@@ -96,37 +100,85 @@ class BitlBeeIMPlugin(BaseHandler):
 		}
 	
 	def login(self, account):
-		print "Logging in with username %s and password %s" % (account['user'], account['pass'])
-		self.bee.log("Blaataap %r" % account)
-		self.bee.error("HALP!")
-		self.bee.connected()
-		return [{1:2,3:4}, {"a":"A", "b":"B"}, 1, 2, True]
+		self.ua = requests.Session()
+		creds = {"username": account["user"], "password": account["pass"]}
+		r = self.ua.post(self.url("/api/login"), creds)
+		if r.status_code != 200:
+			self.bee.error("HTTP error %d" % r.status_code)
+			self.bee.logout(True)
+		elif r.json()["errors"]:
+			self.bee.error("Authentication error")
+			self.bee.logout(False)
+		else:
+			self.bee.add_buddy("rss", None)
+			self.bee.connected()
+			self.seen_hashes = set()
+			self.keepalive()
 
 	def logout(self):
 		self.bee.error("Ok bye!")
 
 	def add_buddy(self, handle, group):
-		self.bee.add_buddy(handle, None)
-		self.feeds[handle] = {
-			"url": handle,
-			"seen": set(),
-		}
+		return False
+	
+	def remove_buddy(self, handle, group):
+		return False
 	
 	def buddy_msg(self, handle, msg, flags):
 		feed = self.feeds[handle]
 		cmd = re.split(r"\s+", msg)
-		if cmd[0] == "list":
-			fp = feedparser.parse(handle)
-			for art in fp.entries:
-				line = "%(title)s <%(link)s>" % art
-				ts = 0
-				if "updated_parsed" in art:
-					ts = int(time.mktime(art.updated_parsed))
-				self.bee.buddy_msg(handle, line, 0, ts)
-				feed["seen"].add(art.id)
 	
 	def set_set(self, setting, value):
 		print "Setting %s changed to %r" % (setting, value)
+	
+	# BitlBee will call us here every minute which is actually a neat way
+	# to get periodic work (like RSS polling) scheduled. :-D
+	def keepalive(self):
+		r = self.ua.post(
+			self.url("/reader/unread_story_hashes"),
+			{"include_timestamps": True})
+		if r.status_code != 200:
+			self.bee.error("HTTP error %d" % r.status_code)
+			return
+
+		# Throw all unread-post hashes in a long list and sort it by posting time.
+		#feed_hashes = r.json()["unread_feed_story_hashes"]
+		wtf = r.json()
+		feed_hashes = wtf["unread_feed_story_hashes"]
+		all_hashes = []
+		for feed, hashes in feed_hashes.iteritems():
+			all_hashes += [tuple(h) for h in hashes]
+		all_hashes.sort(key=operator.itemgetter(1))
+		
+		# Look at the most recent 20, grab the ones we haven't shown yet.
+		req_hashes = []
+		for hash, _ in all_hashes[-20:]:
+			if hash not in self.seen_hashes:
+				req_hashes.append(hash)
+		
+		if not req_hashes:
+			return
+		print req_hashes
+		
+		# Grab post details.
+		r = self.ua.post(self.url("/reader/river_stories"), {"h": req_hashes})
+		if r.status_code != 200:
+			self.bee.error("HTTP error %d" % r.status_code)
+			return
+		
+		# Response is not in the order we requested. :-(
+		wtf = r.json()
+		stories = {}
+		for s in wtf["stories"]:
+			stories[s["story_hash"]] = s
+		
+		for s in (stories[hash] for hash in req_hashes):
+			line = "%(story_title)s <%(story_permalink)s>" % s
+			ts = int(s.get("story_timestamp", "0"))
+			self.bee.buddy_msg("rss", line, 0, ts)
+			self.seen_hashes.add(s["story_hash"])
+			print s["story_hash"]
+
 
 def RunPlugin(plugin, debug=True):
 	sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
