@@ -15,7 +15,7 @@ import requests
 # List of functions an IM plugin can export. This library will indicate to
 # BitlBee which functions are actually implemented so omitted features
 # will be disabled, but note that some/many functions are simply mandatory.
-# (Currently login/-out, buddy_msg, add/remove_buddy.)
+# (Currently login/-out, buddy_msg.)
 SUPPORTED_FUNCTIONS = [
 	'login', 'keepalive', 'logout', 'buddy_msg', 'set_away',
 	'send_typing', 'add_buddy', 'remove_buddy', 'add_permit',
@@ -118,12 +118,6 @@ class BitlBeeIMPlugin(BaseHandler):
 	def logout(self):
 		self.bee.error("Ok bye!")
 
-	def add_buddy(self, handle, group):
-		return False
-	
-	def remove_buddy(self, handle, group):
-		return False
-	
 	def buddy_msg(self, handle, msg, flags):
 		feed = self.feeds[handle]
 		cmd = re.split(r"\s+", msg)

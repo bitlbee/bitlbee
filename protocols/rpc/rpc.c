@@ -882,8 +882,8 @@ gboolean rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	RPC_ADD_FUNC(buddy_msg);
 	RPC_ADD_OPT_FUNC(set_away);
 	RPC_ADD_OPT_FUNC(send_typing);
-	RPC_ADD_FUNC(add_buddy);     /* Consider making these two optional? */
-	RPC_ADD_FUNC(remove_buddy);
+	RPC_ADD_OPT_FUNC(add_buddy);
+	RPC_ADD_OPT_FUNC(remove_buddy);
 	RPC_ADD_OPT_FUNC(add_permit);
 	RPC_ADD_OPT_FUNC(add_deny);
 	RPC_ADD_OPT_FUNC(rem_permit);

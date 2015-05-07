@@ -646,6 +646,9 @@ static void cmd_add(irc_t *irc, char **cmd)
 	} else if (!(a->ic && (a->ic->flags & OPT_LOGGED_IN))) {
 		irc_rootmsg(irc, "That account is not on-line");
 		return;
+	} else if (add_on_server && !a->prpl->add_buddy) {
+		irc_rootmsg(irc, "IM protocol does not support contact list modification");
+		return;
 	}
 
 	if (cmd[3]) {
@@ -716,7 +719,13 @@ static void cmd_remove(irc_t *irc, char **cmd)
 	}
 	s = g_strdup(bu->handle);
 
-	bu->ic->acc->prpl->remove_buddy(bu->ic, bu->handle, NULL);
+	if (bu->ic->acc->prpl->remove_buddy) {
+		bu->ic->acc->prpl->remove_buddy(bu->ic, bu->handle, NULL);
+	} else {
+		irc_rootmsg(irc, "IM protocol does not support contact list modification, "
+		                 "removal will likely not be permanent");
+	}
+
 	nick_del(bu);
 	if (g_slist_find(irc->users, iu)) {
 		bee_user_free(irc->b, bu);

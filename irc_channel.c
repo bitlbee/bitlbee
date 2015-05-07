@@ -723,6 +723,11 @@ static gboolean control_channel_invite(irc_channel_t *ic, irc_user_t *iu)
 		return FALSE;
 	}
 
+	if (!bu->ic->acc->prpl->add_buddy) {
+		irc_send_num(ic->irc, 482, "%s :IM protocol does not support contact list modification", ic->name);
+		return FALSE;
+	}
+
 	bu->ic->acc->prpl->add_buddy(bu->ic, bu->handle,
 	                             icc->group ? icc->group->name : NULL);
 
@@ -740,6 +745,11 @@ static void control_channel_kick(irc_channel_t *ic, irc_user_t *iu, const char *
 
 	if (icc->type != IRC_CC_TYPE_GROUP) {
 		irc_send_num(ic->irc, 482, "%s :Kicks are only possible to fill_by=group channels", ic->name);
+		return;
+	}
+
+	if (!bu->ic->acc->prpl->remove_buddy) {
+		irc_send_num(ic->irc, 482, "%s :IM protocol does not support contact list modification", ic->name);
 		return;
 	}
 
