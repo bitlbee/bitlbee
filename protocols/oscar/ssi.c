@@ -65,7 +65,7 @@ static struct aim_ssi_item *aim_ssi_itemlist_add(struct aim_ssi_item **list, str
 			do {
 				newitem->gid += 0x0001;
 				for (cur = *list, i = 0; ((cur) && (!i)); cur = cur->next) {
-					if ((cur->gid == newitem->gid) && (cur->gid == newitem->gid)) {
+					if ((cur->bid == newitem->bid) && (cur->gid == newitem->gid)) {
 						i = 1;
 					}
 				}
