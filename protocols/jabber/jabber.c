@@ -427,7 +427,7 @@ static void jabber_get_info(struct im_connection *ic, char *who)
 		bud = bud->next;
 	}
 
-	jabber_get_vcard(ic, bud ? bud->full_jid : who);
+	jabber_get_vcard(ic, who);
 }
 
 static void jabber_set_away(struct im_connection *ic, char *state_txt, char *message)
