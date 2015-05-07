@@ -65,6 +65,13 @@ esac
 
 get_version() {
 	REAL_BITLBEE_VERSION=$(grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/')
+
+	if [ -n "$BITLBEE_VERSION" ]; then
+		# environment variable already set to something to spoof it
+		# don't replace it with the git stuff
+		return
+	fi
+
 	BITLBEE_VERSION=$REAL_BITLBEE_VERSION
 
 	if [ -d $srcdir/.git ] && type git > /dev/null 2> /dev/null; then
