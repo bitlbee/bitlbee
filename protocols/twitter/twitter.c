@@ -482,17 +482,24 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 	return url_len_diff;
 }
 
-static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
+int twitter_message_len(gchar *msg, int target_len)
 {
-	int max = set_getint(&ic->acc->set, "message_length"), len;
-	int target_len = set_getint(&ic->acc->set, "target_url_length");
 	int url_len_diff = 0;
 
 	if (target_len > 0) {
 		url_len_diff = twitter_url_len_diff(msg, target_len);
 	}
 
-	if (max == 0 || (len = g_utf8_strlen(msg, -1) + url_len_diff) <= max) {
+	return g_utf8_strlen(msg, -1) + url_len_diff;
+}
+
+static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
+{
+	int max = set_getint(&ic->acc->set, "message_length");
+	int target_len = set_getint(&ic->acc->set, "target_url_length");
+	int len = twitter_message_len(msg, target_len);
+
+	if (max == 0 || len <= max) {
 		return TRUE;
 	}
 
