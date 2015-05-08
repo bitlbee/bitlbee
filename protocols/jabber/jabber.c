@@ -103,6 +103,10 @@ static void jabber_init(account_t *acc)
 	s = set_add(&acc->set, "gmail_notifications", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
+	/* changing this is rarely needed so keeping it secret */
+	s = set_add(&acc->set, "gmail_notifications_limit", "5", set_eval_int, acc);
+	s->flags |= SET_HIDDEN_DEFAULT;
+
 	s = set_add(&acc->set, "notify_handle", NULL, NULL, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 
