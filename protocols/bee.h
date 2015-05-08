@@ -155,8 +155,7 @@ G_MODULE_EXPORT void imcb_buddy_times(struct im_connection *ic, const char *hand
 /* Call when a handle says something. 'flags' and 'sent_at may be just 0. */
 G_MODULE_EXPORT void imcb_buddy_msg(struct im_connection *ic, const char *handle, const char *msg, guint32 flags,
                                     time_t sent_at);
-G_MODULE_EXPORT void imcb_notify_email(struct im_connection *ic, const char *handle, char *msg, guint32 flags,
-                                       time_t sent_at);
+G_MODULE_EXPORT void imcb_notify_email(struct im_connection *ic, char *format, ...) G_GNUC_PRINTF(2, 3);
 
 /* bee_chat.c */
 /* These two functions are to create a group chat.

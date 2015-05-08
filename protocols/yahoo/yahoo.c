@@ -958,17 +958,11 @@ void ext_yahoo_game_notify(int id, const char *me, const char *who, int stat, co
 void ext_yahoo_mail_notify(int id, const char *from, const char *subj, int cnt)
 {
 	struct im_connection *ic = byahoo_get_ic_by_id(id);
-	char *msg;
 
-	if (set_getbool(&ic->acc->set, "mail_notifications")) {
-		if (from && subj) {
-			msg = g_strdup_printf("Received e-mail message from %s with subject `%s'", from, subj);
-		} else if (cnt > 0) {
-			msg = g_strdup_printf("Received %d new e-mails", cnt);
-		}
-
-		imcb_notify_email(ic, set_getstr(&ic->acc->set, "notify_handle"), msg, 0, 0);
-		g_free(msg);
+	if (from && subj) {
+		imcb_notify_email(ic, "Received e-mail message from %s with subject `%s'", from, subj);
+	} else if (cnt > 0) {
+		imcb_notify_email(ic, "Received %d new e-mails", cnt);
 	}
 }
 

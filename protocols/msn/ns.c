@@ -393,11 +393,9 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 					char *folders = get_rfc822_header(body, "Folders-Unread:", blen);
 
 					if (inbox && folders) {
-						char *msg = g_strdup_printf(
+						imcb_notify_email(ic,
 						        "INBOX contains %s new messages, plus %s messages in other folders.", inbox,
 						        folders);
-						imcb_notify_email(ic, set_getstr(&ic->acc->set, "notify_handle"), msg, 0, 0);
-						g_free(msg);
 					}
 
 					g_free(inbox);
@@ -409,10 +407,7 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 					char *fromname = get_rfc822_header(body, "From:", blen);
 
 					if (from && fromname) {
-						char *msg = g_strdup_printf("Received an e-mail message from %s <%s>.",
-						                            fromname, from);
-						imcb_notify_email(ic, set_getstr(&ic->acc->set, "notify_handle"), msg, 0, 0);
-						g_free(msg);
+						imcb_notify_email(ic, "Received an e-mail message from %s <%s>.", fromname, from);
 					}
 
 					g_free(from);

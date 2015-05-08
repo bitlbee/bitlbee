@@ -1260,10 +1260,8 @@ static void *prplcb_notify_email(PurpleConnection *gc, const char *subject, cons
                                  const char *to, const char *url)
 {
 	struct im_connection *ic = purple_ic_by_gc(gc);
-	char *msg = g_strdup_printf("Received e-mail from %s for %s: %s <%s>", from, to, subject, url);
 
-	imcb_notify_email(ic, set_getstr(&ic->acc->set, "notify_handle"), msg, 0, 0);
-	g_free(msg);
+	imcb_notify_email(ic, "Received e-mail from %s for %s: %s <%s>", from, to, subject, url);
 
 	return NULL;
 }

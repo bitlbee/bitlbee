@@ -809,7 +809,6 @@ xt_status jabber_iq_parse_gmail(struct im_connection *ic, struct xt_node *node, 
 		struct xt_node *s;
 		char *subject = "<no subject>";
 		char *sender = "<no sender>";
-		char *msg = NULL;
 		guint64 t_time;
 
 		t_time = g_ascii_strtoull(xt_find_attr(c, "date"), NULL, 10);
@@ -827,12 +826,9 @@ xt_status jabber_iq_parse_gmail(struct im_connection *ic, struct xt_node *node, 
 			subject = s->text;
 		}
 
-		msg = g_strdup_printf("New mail from %s: %s", sender, subject);
-
-		imcb_notify_email(ic, set_getstr(&ic->acc->set, "notify_handle"), msg, 0, 0);
+		imcb_notify_email(ic, "New mail from %s: %s", sender, subject);
 
 		c = c->next;
-		g_free(msg);
 	}
 
 	if (l_time && (!jd->gmail_time || l_time > jd->gmail_time)) {
