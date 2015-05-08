@@ -180,6 +180,7 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 	if (st <= 0) {
 		imcb_error(ic, "Error while reading from server");
 		imc_logout(ic, TRUE);
+		g_free(bytes);
 		return FALSE;
 	}
 
@@ -187,11 +188,7 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 
 	g_free(bytes);
 
-	/* Ignore ret == 0, it's already disconnected then. */
-	msn_handler(md);
-
-	return TRUE;
-	
+	return msn_handler(md);
 }
 
 int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)

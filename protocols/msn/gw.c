@@ -86,14 +86,14 @@ void msn_gw_callback(struct http_request *req)
 	gw->waiting = FALSE;
 	gw->polling = FALSE;
 
+	if (req->status_code != 200 || !req->reply_body) {
+		gw->callback(gw->md, -1, B_EV_IO_READ);
+		return;
+	}
+
 	if (getenv("BITLBEE_DEBUG")) {
 		fprintf(stderr, "\n\x1b[90mHTTP:%s\n", req->reply_body);
 		fprintf(stderr, "\n\x1b[97m\n");
-	}
-
-	if (req->status_code != 200) {
-		gw->callback(gw->md, -1, B_EV_IO_READ);
-		return;
 	}
 
 	if ((value = get_rfc822_header(req->reply_headers, "X-MSN-Messenger", 0))) {
@@ -112,7 +112,10 @@ void msn_gw_callback(struct http_request *req)
 
 	if (req->body_size) {
 		g_byte_array_append(gw->in, (const guint8 *) req->reply_body, req->body_size);
-		gw->callback(gw->md, -1, B_EV_IO_READ);
+
+		if (!gw->callback(gw->md, -1, B_EV_IO_READ)) {
+			return;
+		}
 	}
 
 	if (gw->poll_timeout != -1) {
