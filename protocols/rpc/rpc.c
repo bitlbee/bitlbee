@@ -1,5 +1,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 #include "bitlbee.h"
 #include "bee.h"
