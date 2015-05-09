@@ -32,8 +32,6 @@ extern "C" {
 #define free(x)               g_free(x)
 #undef malloc
 #define malloc(x)             g_malloc(x)
-#undef calloc
-#define calloc(x, y)          g_calloc(x, y)
 #undef realloc
 #define realloc(x, y)         g_realloc(x, y)
 #undef strdup

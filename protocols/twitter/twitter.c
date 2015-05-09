@@ -482,17 +482,24 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 	return url_len_diff;
 }
 
-static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
+int twitter_message_len(gchar *msg, int target_len)
 {
-	int max = set_getint(&ic->acc->set, "message_length"), len;
-	int target_len = set_getint(&ic->acc->set, "target_url_length");
 	int url_len_diff = 0;
 
 	if (target_len > 0) {
 		url_len_diff = twitter_url_len_diff(msg, target_len);
 	}
 
-	if (max == 0 || (len = g_utf8_strlen(msg, -1) + url_len_diff) <= max) {
+	return g_utf8_strlen(msg, -1) + url_len_diff;
+}
+
+static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
+{
+	int max = set_getint(&ic->acc->set, "message_length");
+	int target_len = set_getint(&ic->acc->set, "target_url_length");
+	int len = twitter_message_len(msg, target_len);
+
+	if (max == 0 || len <= max) {
 		return TRUE;
 	}
 
@@ -866,6 +873,8 @@ static gboolean twitter_parse_id(char *string, int base, guint64 *id)
 	return TRUE;
 }
 
+bee_user_t twitter_log_local_user;
+
 /** Convert the given bitlbee tweet ID, bitlbee username, or twitter tweet ID
  *  into a twitter tweet ID.
  *
@@ -896,10 +905,6 @@ static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, cha
 		if (twitter_parse_id(arg, 16, &id) && id < TWITTER_LOG_LENGTH) {
 			bu = td->log[id].bu;
 			id = td->log[id].id;
-			/* Beware of dangling pointers! */
-			if (!g_slist_find(ic->bee->users, bu)) {
-				bu = NULL;
-			}
 		} else if (twitter_parse_id(arg, 10, &id)) {
 			/* Allow normal tweet IDs as well; not a very useful
 			   feature but it's always been there. Just ignore
@@ -910,6 +915,16 @@ static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, cha
 		}
 	}
 	if (bu_) {
+		if (bu == &twitter_log_local_user) {
+			/* HACK alert. There's no bee_user object for the local
+			 * user so just fake one for the few cmds that need it. */
+			twitter_log_local_user.handle = td->user;
+		} else {
+			/* Beware of dangling pointers! */
+			if (!g_slist_find(ic->bee->users, bu)) {
+				bu = NULL;
+			}
+		}
 		*bu_ = bu;
 	}
 	return id;
@@ -1002,6 +1017,19 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		message = cmd[2];
 		in_reply_to = id;
 		allow_post = TRUE;
+	} else if (g_strcasecmp(cmd[0], "url") == 0) {
+		id = twitter_message_id_from_command_arg(ic, cmd[1], &bu);
+		if (!id) {
+			twitter_log(ic, "Tweet `%s' does not exist", cmd[1]);
+		} else {
+			/* More common link is twitter.com/$UID/status/$ID (and that's
+			 * what this will 302 to) but can't generate that since for RTs,
+			 * bu here points at the retweeter while id contains the id of
+			 * the original message. */
+			twitter_log(ic, "https://twitter.com/statuses/%lld", id);
+		}
+		goto eof;
+
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
 		message += 5;
 		allow_post = TRUE;

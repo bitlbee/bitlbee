@@ -139,9 +139,15 @@ static void oauth2_access_token_done(struct http_request *req)
 {
 	struct oauth2_access_token_data *cb_data = req->data;
 	char *atoken = NULL, *rtoken = NULL, *error = NULL;
-	char *content_type;
+	char *content_type = NULL;
 
-	if (getenv("BITLBEE_DEBUG") && req->reply_body) {
+	if (req->status_code <= 0 && !req->reply_body) {
+		cb_data->func(cb_data->data, NULL, NULL, req->status_string);
+		g_free(cb_data);
+		return;
+	}
+
+	if (getenv("BITLBEE_DEBUG")) {
 		printf("%s\n", req->reply_body);
 	}
 

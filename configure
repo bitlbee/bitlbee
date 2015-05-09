@@ -55,8 +55,6 @@ cpu=`uname -m`
 
 GLIB_MIN_VERSION=2.16
 
-echo BitlBee configure
-
 # Cygwin and Darwin don't support PIC/PIE
 case "$arch" in
 	CYGWIN* )
@@ -64,6 +62,39 @@ case "$arch" in
 	Darwin )
 		pie=0;;
 esac
+
+get_version() {
+	REAL_BITLBEE_VERSION=$(grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/')
+
+	if [ -n "$BITLBEE_VERSION" ]; then
+		# environment variable already set to something to spoof it
+		# don't replace it with the git stuff
+		return
+	fi
+
+	BITLBEE_VERSION=$REAL_BITLBEE_VERSION
+
+	if [ -d $srcdir/.git ] && type git > /dev/null 2> /dev/null; then
+		timestamp=$(cd $srcdir; git show -s --format=%ci HEAD | sed 's/ .*$//; s/-//g')
+		branch=$(cd $srcdir; git rev-parse --abbrev-ref HEAD)
+
+		search="(.+)-([0-9]+)-(g[0-9a-f]+)"
+		replace="\1+$timestamp+$branch+\2-\3-git"
+
+		BITLBEE_VERSION=$(cd $srcdir; git describe --long --tags | sed -r "s/$search/$replace/")
+
+		unset timestamp branch search replace
+	fi
+}
+
+if [ "$1" = "--dump-version" ]; then
+	srcdir=$(cd $(dirname $0);pwd)
+	get_version
+	echo $BITLBEE_VERSION
+	exit
+fi
+
+echo BitlBee configure
 
 while [ -n "$1" ]; do
 	e="`expr "X$1" : 'X--\(.*=.*\)'`"
@@ -671,34 +702,13 @@ if [ "$doc" = "1" ]; then
 	fi
 fi
 
-REAL_BITLBEE_VERSION=`grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/'`
-echo
-if [ -z "$BITLBEE_VERSION" -a -d .bzr ] && type bzr > /dev/null 2> /dev/null; then
-	nick=`bzr nick`
-	if [ -n "$nick" -a "$nick" != "bitlbee" ]; then
-		nick="-$nick"
-	else
-		nick=""
-	fi
-	rev=`bzr revno`
-	echo 'Using bzr revision #'$rev' as version number'
-	BITLBEE_VERSION=$REAL_BITLBEE_VERSION-bzr$nick-$rev
-fi
+get_version
 
-if [ -z "$BITLBEE_VERSION" -a -d .git ] && type git > /dev/null 2> /dev/null; then
-	rev=`git describe --long --tags`-`git rev-parse --abbrev-ref HEAD`
-	echo 'Using '$rev' as git version number'
-	BITLBEE_VERSION=$rev-git
-fi
-
-if [ -n "$BITLBEE_VERSION" ]; then
+if [ "$BITLBEE_VERSION" != "$REAL_BITLBEE_VERSION" ]; then
 	echo 'Spoofing version number: '$BITLBEE_VERSION
 	echo '#undef BITLBEE_VERSION' >> config.h
 	echo '#define BITLBEE_VERSION "'$BITLBEE_VERSION'"' >> config.h
 	echo
-else
-	# for pkg-config
-	BITLBEE_VERSION=$REAL_BITLBEE_VERSION
 fi
 
 if ! make helloworld > /dev/null 2>&1; then

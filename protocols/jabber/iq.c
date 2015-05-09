@@ -372,6 +372,7 @@ int jabber_get_roster(struct im_connection *ic)
 
 static xt_status jabber_parse_roster(struct im_connection *ic, struct xt_node *node, struct xt_node *orig)
 {
+	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *query, *c;
 	int initial = (orig != NULL);
 
@@ -387,7 +388,6 @@ static xt_status jabber_parse_roster(struct im_connection *ic, struct xt_node *n
 		char *name = xt_find_attr(c, "name");
 		char *sub = xt_find_attr(c, "subscription");
 		char *mention_name = xt_find_attr(c, "mention_name");
-		char *nick = mention_name ? : name;
 
 		if (jid && sub) {
 			if ((strcmp(sub, "both") == 0 || strcmp(sub, "to") == 0)) {
@@ -398,8 +398,10 @@ static xt_status jabber_parse_roster(struct im_connection *ic, struct xt_node *n
 					imcb_rename_buddy(ic, jid, name);
 				}
 
-				if (nick) {
-					imcb_buddy_nick_hint(ic, jid, nick);
+				/* This could also be used to set the full name as nick for fb/gtalk,
+				 * but i'm keeping the old (ugly?) default behavior just to be safe */
+				if (mention_name && (jd->flags & JFLAG_HIPCHAT)) {
+					imcb_buddy_nick_hint(ic, jid, mention_name);
 				}
 			} else if (strcmp(sub, "remove") == 0) {
 				jabber_buddy_remove_bare(ic, jid);

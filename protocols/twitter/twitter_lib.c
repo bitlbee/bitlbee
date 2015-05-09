@@ -459,7 +459,7 @@ static gboolean twitter_xt_get_users(json_value *node, struct twitter_xml_list *
 #define TWITTER_TIME_FORMAT "%a %b %d %H:%M:%S +0000 %Y"
 #endif
 
-static char* expand_entities(char* text, const json_value *entities);
+static void expand_entities(char **text, const json_value *node);
 
 /**
  * Function to fill a twitter_xml_status struct.
@@ -472,7 +472,7 @@ static char* expand_entities(char* text, const json_value *entities);
 static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 {
 	struct twitter_xml_status *txs;
-	const json_value *rt = NULL, *entities = NULL;
+	const json_value *rt = NULL;
 
 	if (node->type != json_object) {
 		return FALSE;
@@ -500,8 +500,6 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 			txs->rt_id = txs->id = v->u.integer;
 		} else if (strcmp("in_reply_to_status_id", k) == 0 && v->type == json_integer) {
 			txs->reply_to = v->u.integer;
-		} else if (strcmp("entities", k) == 0 && v->type == json_object) {
-			entities = v;
 		}
 	}
 
@@ -515,8 +513,8 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 			txs->id = rtxs->id;
 			txs_free(rtxs);
 		}
-	} else if (entities) {
-		txs->text = expand_entities(txs->text, entities);
+	} else {
+		expand_entities(&txs->text, node);
 	}
 
 	if (txs->text && txs->user && txs->id) {
@@ -533,7 +531,6 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
 {
 	struct twitter_xml_status *txs;
-	const json_value *entities = NULL;
 
 	if (node->type != json_object) {
 		return FALSE;
@@ -560,9 +557,7 @@ static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
 		}
 	}
 
-	if (entities) {
-		txs->text = expand_entities(txs->text, entities);
-	}
+	expand_entities(&txs->text, node);
 
 	if (txs->text && txs->user && txs->id) {
 		return txs;
@@ -572,8 +567,26 @@ static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
 	return NULL;
 }
 
-static char* expand_entities(char* text, const json_value *entities)
+static void expand_entities(char **text, const json_value *node)
 {
+	json_value *entities, *quoted;
+	char *quote_url = NULL, *quote_text = NULL;
+
+	if (!((entities = json_o_get(node, "entities")) && entities->type == json_object))
+		return;
+	if ((quoted = json_o_get(node, "quoted_status")) && quoted->type == json_object) {
+		/* New "retweets with comments" feature. Note that this info
+		 * seems to be included in the streaming API only! Grab the
+		 * full message and try to insert it when we run into the
+		 * Tweet entity. */
+		struct twitter_xml_status *txs = twitter_xt_get_status(quoted);
+		quote_text = g_strdup_printf("@%s: %s", txs->user->screen_name, txs->text);
+		quote_url = g_strdup_printf("%s/status/%" G_GUINT64_FORMAT, txs->user->screen_name, txs->id);
+		txs_free(txs);
+	} else {
+		quoted = NULL;
+	}
+
 	JSON_O_FOREACH(entities, k, v) {
 		int i;
 
@@ -585,28 +598,35 @@ static char* expand_entities(char* text, const json_value *entities)
 		}
 
 		for (i = 0; i < v->u.array.length; i++) {
+			const char *format = "%s%s <%s>%s";
+
 			if (v->u.array.values[i]->type != json_object) {
 				continue;
 			}
 
 			const char *kort = json_o_str(v->u.array.values[i], "url");
 			const char *disp = json_o_str(v->u.array.values[i], "display_url");
+			const char *full = json_o_str(v->u.array.values[i], "expanded_url");
 			char *pos, *new;
 
-			if (!kort || !disp || !(pos = strstr(text, kort))) {
+			if (!kort || !disp || !(pos = strstr(*text, kort))) {
 				continue;
+			}
+			if (quote_url && strstr(full, quote_url)) {
+				format = "%s<%s> [%s]%s";
+				disp = quote_text;
 			}
 
 			*pos = '\0';
-			new = g_strdup_printf("%s%s <%s>%s", text, kort,
+			new = g_strdup_printf(format, *text, kort,
 			                      disp, pos + strlen(kort));
 
-			g_free(text);
-			text = new;
+			g_free(*text);
+			*text = new;
 		}
 	}
-
-	return text;
+	g_free(quote_text);
+	g_free(quote_url);
 }
 
 /**
@@ -680,6 +700,8 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 	   original tweet's id should be remembered for deduplicating. */
 	if (g_strcasecmp(txs->user->screen_name, td->user) == 0) {
 		td->log[td->log_id].id = txs->rt_id;
+		/* More useful than NULL. */
+		td->log[td->log_id].bu = &twitter_log_local_user;
 	}
 
 	if (set_getbool(&ic->acc->set, "show_ids")) {

@@ -46,16 +46,10 @@ xt_status hipchat_handle_success(struct im_connection *ic, struct xt_node *node)
 	/* Hipchat's auth doesn't expect a restart here */
 	jd->flags &= ~JFLAG_STREAM_RESTART;
 
-	if (!jabber_get_roster(ic)) {
-		return XT_ABORT;
-	}
-	if (!jabber_iq_disco_server(ic)) {
-		return XT_ABORT;
-	}
-	if (!jabber_get_hipchat_profile(ic)) {
-		return XT_ABORT;
-	}
-	if (!jabber_iq_disco_muc(ic, muc_host)) {
+	if (!jabber_get_roster(ic) ||
+	    !jabber_iq_disco_server(ic) ||
+	    !jabber_get_hipchat_profile(ic) ||
+            !jabber_iq_disco_muc(ic, muc_host)) {
 		return XT_ABORT;
 	}
 
@@ -83,8 +77,6 @@ int jabber_get_hipchat_profile(struct im_connection *ic)
 xt_status jabber_parse_hipchat_profile(struct im_connection *ic, struct xt_node *node, struct xt_node *orig)
 {
 	struct xt_node *query, *name_node;
-
-	//char *name;
 
 	if (!(query = xt_find_node(node->children, "query"))) {
 		imcb_log(ic, "Warning: Received NULL profile packet");

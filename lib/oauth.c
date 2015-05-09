@@ -95,13 +95,14 @@ void oauth_params_add(GSList **params, const char *key, const char *value)
 void oauth_params_del(GSList **params, const char *key)
 {
 	int key_len = strlen(key);
-	GSList *l;
+	GSList *l, *n;
 
 	if (!params) {
 		return;
 	}
 
-	for (l = *params; l; l = l->next) {
+	for (l = *params; l; l = n) {
+		n = l->next;
 		char *data = l->data;
 
 		if (strncmp(data, key, key_len) == 0 && data[key_len] == '=') {
