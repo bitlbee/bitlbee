@@ -54,8 +54,6 @@
 
 #define IS_CONT(b) (((unsigned char)(b) & 0xC0) == 0x80) /* is utf-8 continuation byte */
 
-typedef long long jint;
-
 /* Type definitions */
 typedef union json_value_value {
     const char  *string;
