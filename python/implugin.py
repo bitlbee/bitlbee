@@ -24,6 +24,13 @@ SUPPORTED_FUNCTIONS = [
 	'chat_topic'
 ]
 
+def make_version_tuple(hex):
+	"""Convert the BitlBee binary-encoded version number into something
+	more "Pythonic". Could use distutils.version instead but its main
+	benefit appears to be string parsing which here is not that useful."""
+
+	return (hex >> 16, (hex >> 8) & 0xff, hex & 0xff)
+
 class RpcForwarder(object):
 	"""Tiny object that forwards RPCs from local Python code to BitlBee
 	with a marginally nicer syntax. This layer could eventually be
@@ -49,8 +56,7 @@ class BitlBeeIMPlugin(BaseHandler):
 	AWAY_STATES = None
 	
 	# Filled in during initialisation:
-	# Version code in hex. So if you need to do comparisions, for example
-	# check "self.bitlbee_version >= 0x030202" for versions 3.2.2+
+	# Version number as a three-tuple, so 3.2 becomes (3, 2, 0).
 	bitlbee_version = None
 	# Full version string
 	bitlbee_version_str = None
@@ -74,7 +80,7 @@ class BitlBeeIMPlugin(BaseHandler):
 
 	def init(self, bee):
 		self.bee = RpcForwarder(bee["method_list"], self._conn.call)
-		self.bitlbee_version = bee["version"]
+		self.bitlbee_version = make_version_tuple(bee["version"])
 		self.bitlbee_version_str = bee["version_str"]
 
 		# TODO: See how to call into the module here.
@@ -103,6 +109,7 @@ class BitlBeeIMPlugin(BaseHandler):
 		self.ua = requests.Session()
 		creds = {"username": account["user"], "password": account["pass"]}
 		r = self.ua.post(self.url("/api/login"), creds)
+		self.bee.log("You're running BitlBee %d.%d.%d" % self.bitlbee_version)
 		if r.status_code != 200:
 			self.bee.error("HTTP error %d" % r.status_code)
 			self.bee.logout(True)
