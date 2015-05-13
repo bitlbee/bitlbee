@@ -143,16 +143,8 @@ static void msn_logout(struct im_connection *ic)
 static int msn_buddy_msg(struct im_connection *ic, char *who, char *message, int away)
 {
 	struct bee_user *bu = bee_user_by_handle(ic->bee, ic, who);
-
-#ifdef DEBUG
-	if (strcmp(who, "raw") == 0) {
-		msn_ns_write(ic, -1, "%s\r\n", message);
-		return 0;
-	}
-#endif
-
-	msn_ns_sendmessage(ic, bu, message);
-	return(0);
+	msn_ns_send_message(ic, bu, message);
+	return 0;
 }
 
 static GList *msn_away_states(struct im_connection *ic)
@@ -276,7 +268,7 @@ static int msn_send_typing(struct im_connection *ic, char *who, int typing)
 	if (!(bu->flags & BEE_USER_ONLINE)) {
 		return 0;
 	} else if (typing & OPT_TYPING) {
-		return(msn_buddy_msg(ic, who, TYPING_NOTIFICATION_MESSAGE, 0));
+		return msn_ns_send_typing(ic, bu);
 	} else {
 		return 1;
 	}

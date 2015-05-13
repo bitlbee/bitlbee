@@ -723,21 +723,25 @@ int msn_ns_finish_login(struct im_connection *ic)
 	return 1;
 }
 
-// TODO: typing notifications, nudges lol, etc
-int msn_ns_sendmessage(struct im_connection *ic, bee_user_t *bu, const char *text)
+static int msn_ns_send_sdg(struct im_connection *ic, bee_user_t *bu, const char *message_type, const char *text)
 {
 	struct msn_data *md = ic->proto_data;
 	int retval = 0;
 	char *buf;
 
-	if (strncmp(text, "\r\r\r", 3) == 0) {
-		/* Err. Shouldn't happen but I guess it can. Don't send others
-		   any of the "SHAKE THAT THING" messages. :-D */
-		return 1;
-	}
-
-	buf = g_strdup_printf(MSN_MESSAGE_HEADERS, bu->handle, ic->acc->user, md->uuid, strlen(text), text);
+	buf = g_strdup_printf(MSN_MESSAGE_HEADERS, bu->handle, ic->acc->user, md->uuid, message_type, strlen(text), text);
 	retval = msn_ns_write(ic, -1, "SDG %d %zd\r\n%s", ++md->trId, strlen(buf), buf);
 	g_free(buf);
 	return retval;
 }
+
+int msn_ns_send_typing(struct im_connection *ic, bee_user_t *bu)
+{
+	return msn_ns_send_sdg(ic, bu, "Control/Typing", "");
+}
+
+int msn_ns_send_message(struct im_connection *ic, bee_user_t *bu, const char *text)
+{
+	return msn_ns_send_sdg(ic, bu, "Text", text);
+}
+
