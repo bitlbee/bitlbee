@@ -622,7 +622,7 @@ static gboolean msn_ns_send_adl_1(gpointer key, gpointer value, gpointer data)
 	char *domain;
 	char l[4];
 
-	if ((bd->flags & 7) == 0 || (bd->flags & MSN_BUDDY_ADL_SYNCED)) {
+	if ((bd->flags & (MSN_BUDDY_FL | MSN_BUDDY_AL)) == 0 || (bd->flags & MSN_BUDDY_ADL_SYNCED)) {
 		return FALSE;
 	}
 
@@ -640,7 +640,7 @@ static gboolean msn_ns_send_adl_1(gpointer key, gpointer value, gpointer data)
 		xt_insert_child(adl, d);
 	}
 
-	g_snprintf(l, sizeof(l), "%d", bd->flags & 7);
+	g_snprintf(l, sizeof(l), "%d", bd->flags & (MSN_BUDDY_FL | MSN_BUDDY_AL));
 	c = xt_new_node("c", NULL, NULL);
 	xt_add_attr(c, "n", handle);
 	xt_add_attr(c, "t", "1");   /* FIXME: Network type, i.e. 32 for Y!MSG */
@@ -693,7 +693,7 @@ static void msn_ns_send_adl_start(struct im_connection *ic)
 		bee_user_t *bu = l->data;
 		struct msn_buddy_data *bd = bu->data;
 
-		if (bu->ic != ic || (bd->flags & 7) == 0) {
+		if (bu->ic != ic || (bd->flags & (MSN_BUDDY_FL | MSN_BUDDY_AL)) == 0) {
 			continue;
 		}
 
