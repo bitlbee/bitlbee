@@ -416,8 +416,6 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 				}
 			} else if (g_strncasecmp(ct, "text/x-msmsgsactivemailnotification", 35) == 0) {
 				/* Notification that a message has been read... Ignore it */
-			} else {
-				debug("Can't handle %s packet from notification server", ct);
 			}
 
 			g_free(ct);
