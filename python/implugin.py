@@ -143,9 +143,7 @@ class BitlBeeIMPlugin(BaseHandler):
 			return
 
 		# Throw all unread-post hashes in a long list and sort it by posting time.
-		#feed_hashes = r.json()["unread_feed_story_hashes"]
-		wtf = r.json()
-		feed_hashes = wtf["unread_feed_story_hashes"]
+		feed_hashes = r.json()["unread_feed_story_hashes"]
 		all_hashes = []
 		for feed, hashes in feed_hashes.iteritems():
 			all_hashes += [tuple(h) for h in hashes]
@@ -159,7 +157,6 @@ class BitlBeeIMPlugin(BaseHandler):
 		
 		if not req_hashes:
 			return
-		print req_hashes
 		
 		# Grab post details.
 		r = self.ua.post(self.url("/reader/river_stories"), {"h": req_hashes})
@@ -167,18 +164,14 @@ class BitlBeeIMPlugin(BaseHandler):
 			self.bee.error("HTTP error %d" % r.status_code)
 			return
 		
-		# Response is not in the order we requested. :-(
-		wtf = r.json()
-		stories = {}
-		for s in wtf["stories"]:
-			stories[s["story_hash"]] = s
-		
+		# Response is not in the order we requested. :-( Make it a hash
+		# and reconstruct order from our request.
+		stories = {s["story_hash"]: s for s in r.json()["stories"]}
 		for s in (stories[hash] for hash in req_hashes):
 			line = "%(story_title)s <%(story_permalink)s>" % s
 			ts = int(s.get("story_timestamp", "0"))
 			self.bee.buddy_msg("rss", line, 0, ts)
 			self.seen_hashes.add(s["story_hash"])
-			print s["story_hash"]
 
 
 def RunPlugin(plugin, debug=True):
