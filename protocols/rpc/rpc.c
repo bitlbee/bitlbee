@@ -163,7 +163,16 @@ static void rpc_init(account_t *acc) {
 
 	JSON_O_FOREACH(json_object(pd->settings), name, value) {
 		JSON_Object *o = json_object(value);
-		set_t *set = set_add(&acc->set, name, json_object_get_string(o, "default"), NULL, acc);
+		char *defs = NULL;
+		JSON_Value *defv = json_object_get_value(o, "default");
+		if (json_type(defv) == JSONString)
+			defs = g_strdup(json_string(defv));
+		else if(json_type(defv) == JSONInteger)
+			defs = g_strdup_printf("%lld", (long long) json_integer(defv));
+		else if(json_type(defv) == JSONBoolean)
+			defs = g_strdup(json_boolean(defv) ? "true" : "false");
+		set_t *set = set_add(&acc->set, name, defs, NULL, acc);
+		g_free(defs);
 		set->flags |= json_object_get_integer(o, "flags");
 		set->eval = rpc_set_evaluator;
 		set->eval_data = o;
