@@ -119,16 +119,7 @@ static gboolean rpc_send(struct im_connection *ic, JSON_Value *rpc) {
 	return TRUE;
 }
 
-static JSON_Value *rpc_ser_settings(set_t **set) {
-	const set_t *s;
-	JSON_Value *ret = json_value_init_object();
-       
-	for (s = *set; s; s = s->next) {
-		json_object_set_string_or_null(json_object(ret), s->key, set_getstr(set, s->key));
-	}
-
-	return ret;
-}
+static JSON_Value *rpc_ser_settings(set_t **set);
 
 static JSON_Value *rpc_ser_account(account_t *acc) {
 	JSON_Value *v = json_value_init_object();
@@ -188,19 +179,45 @@ static void rpc_init(account_t *acc) {
 	acc->flags |= pd->account_flags;
 }
 
-static char *rpc_set_evaluator(set_t *set, char *value) {
+set_eval rpc_type_set_eval(const set_t *set) {
 	JSON_Object *o = set->eval_data;
 	const char *type = json_object_get_string(o, "type");
 
-	/* Just allow two simple int/bool evaluators with no protocol awareness. */
 	set_eval type_eval = NULL;
 	if (type == NULL) {
-	} else if (strncmp(type, "int", 3) == 0) {
+		/* Try to do something sane for settings that aren't ours. */
+		if (set->eval == set_eval_int || set->eval == set_eval_bool) {
+			type_eval = set->eval;
+		}
+	} else if (g_str_has_prefix(type, "int")) {
 		type_eval = set_eval_int;
-	} else if (strncmp(type, "bool", 4) == 0) {
+	} else if (g_str_has_prefix(type, "bool")) {
 		type_eval = set_eval_bool;
 	}
 
+	return type_eval;
+}
+
+static JSON_Value *set_make_json_value(set_eval type, const char *value) {
+	JSON_Value *ret;
+
+	if (value == NULL) {
+		ret = json_value_init_null();
+	} else if (type == set_eval_int) {
+		long long num = 0;
+		/* Evaluator already did validation so ignore retval. */
+		sscanf(value, "%lld", &num);
+		ret = json_value_init_integer(num);
+	} else if (type == set_eval_bool) {
+		ret = json_value_init_boolean(bool2int(value));
+	} else {
+		ret = json_value_init_string(value);
+	}
+	return ret;
+}
+
+static char *rpc_set_evaluator(set_t *set, char *value) {
+	set_eval type_eval = rpc_type_set_eval(set);
 	if (type_eval) {
 		char *new = type_eval(set, value);
 		if (new == SET_INVALID) {
@@ -214,20 +231,23 @@ static char *rpc_set_evaluator(set_t *set, char *value) {
 		 * it always has up-to-date values. */
 		RPC_OUT_INIT("set_set");
 		json_array_append_string(params, set->key);
-		if (type_eval == set_eval_int) {
-			int num = 0;
-			/* Evaluator already did validation so ignore retval. */
-			sscanf(value, "%d", &num);
-			json_array_append_integer(params, num);
-		} else if (type_eval == set_eval_bool) {
-			json_array_append_boolean(params, bool2int(value));
-		} else {
-			json_array_append_string(params, value);
-		}
+		json_array_append_value(params, set_make_json_value(rpc_type_set_eval(set), value));
 		rpc_send(acc->ic, rpc);
 	}
 
 	return value;
+}
+
+static JSON_Value *rpc_ser_settings(set_t **set) {
+	const set_t *s;
+	JSON_Value *ret = json_value_init_object();
+       
+	for (s = *set; s; s = s->next) {
+		JSON_Value *v = set_make_json_value(rpc_type_set_eval(s), set_value(s));
+		json_object_set_value(json_object(ret), s->key, v);
+	}
+
+	return ret;
 }
 
 static gboolean rpc_login_cb(gpointer data, gint fd, b_input_condition cond);
@@ -238,7 +258,7 @@ static void rpc_login(account_t *acc) {
 	struct im_connection *ic = imcb_new(acc);
 	struct rpc_connection *rd = ic->proto_data = g_new0(struct rpc_connection, 1);
 	struct rpc_plugin *pd = acc->prpl->data;
-	imcb_log(ic, "Connecting to RPC server");
+	imcb_log(ic, "Logging in via RPC server");
 	rd->fd = socket(pd->addr->sa_family, SOCK_STREAM, 0);
 	sock_make_nonblocking(rd->fd);
 	if (connect(rd->fd, pd->addr, pd->addrlen) == -1) {

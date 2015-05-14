@@ -136,8 +136,8 @@ G_MODULE_EXPORT signed int do_iconv(char *from_cs, char *to_cs, char *src, char 
 
 G_MODULE_EXPORT void random_bytes(unsigned char *buf, int count);
 
-G_MODULE_EXPORT int is_bool(char *value);
-G_MODULE_EXPORT int bool2int(char *value);
+G_MODULE_EXPORT int is_bool(const char *value);
+G_MODULE_EXPORT int bool2int(const char *value);
 
 G_MODULE_EXPORT struct ns_srv_reply **srv_lookup(char *service, char *protocol, char *domain);
 G_MODULE_EXPORT void srv_free(struct ns_srv_reply **srv);

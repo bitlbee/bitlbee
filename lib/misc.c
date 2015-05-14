@@ -426,7 +426,7 @@ void random_bytes(unsigned char *buf, int count)
 	close(fd);
 }
 
-int is_bool(char *value)
+int is_bool(const char *value)
 {
 	if (*value == 0) {
 		return 0;
@@ -452,7 +452,7 @@ int is_bool(char *value)
 	return 1;
 }
 
-int bool2int(char *value)
+int bool2int(const char *value)
 {
 	int i;
 
