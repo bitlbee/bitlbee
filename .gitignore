@@ -31,3 +31,4 @@ cov-int
 .gitignore
 bitlbee.service
 bitlbee@.service
+*.pyc
