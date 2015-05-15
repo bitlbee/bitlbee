@@ -194,13 +194,15 @@ static int msn_handle_command(struct msn_data *h) {
 	cmd = g_strsplit_set(h->cmd_text, " ", -1);
 	count = g_strv_length(cmd);
 
+	/* msn_data might be freed if there's a server error,
+	 * so clean this up now - we don't need it anymore */
+	g_free(h->cmd_text);
+	h->cmd_text = NULL;
+
 	st = msn_ns_command(h, cmd, count, msg, h->msglen);
 
 	g_strfreev(cmd);
 	g_free(msg);
-
-	g_free(h->cmd_text);
-	h->cmd_text = NULL;
 
 	return st;
 }
