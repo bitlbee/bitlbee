@@ -788,7 +788,7 @@ static JSON_Value *rpc_cmd_in(struct im_connection *ic, const char *cmd, JSON_Ar
 #define RPC_ADD_FUNC(func) \
 	ret->func = rpc_ ## func
 #define RPC_ADD_OPT_FUNC(func) \
-	if (g_hash_table_contains(methods, #func)) \
+	if (g_hash_table_lookup(methods, #func)) \
 		RPC_ADD_FUNC(func)
 
 static JSON_Value *rpc_init_isup() {
@@ -903,8 +903,10 @@ gboolean rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 
 	JSON_Array *methods_a = json_object_get_array(isup, "method_list");
 	GHashTable *methods = g_hash_table_new(g_str_hash, g_str_equal);
-	for (i = 0; i < json_array_get_count(methods_a); i++)
-		g_hash_table_add(methods, (void*) json_array_get_string(methods_a, i));
+	for (i = 0; i < json_array_get_count(methods_a); i++) {
+		gpointer func = (void*) json_array_get_string(methods_a, i);
+		g_hash_table_replace(methods, func, func);
+	}
 
 	ret->init = rpc_init;
 	RPC_ADD_FUNC(login);
