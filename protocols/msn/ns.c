@@ -95,15 +95,20 @@ gboolean msn_ns_connect(struct im_connection *ic, const char *host, int port)
 {
 	struct msn_data *md = ic->proto_data;
 
-	if (md->fd >= 0) {
-		closesocket(md->fd);
-	}
-
 	if (md->is_http) {
 		md->gw = msn_gw_new(ic);
 		md->gw->callback = msn_ns_callback;
 		msn_ns_connected(md, 0, NULL, B_EV_IO_READ);
 	} else {
+		if (md->fd >= 0) {
+			closesocket(md->fd);
+		}
+
+		if (md->ssl) {
+			ssl_disconnect(md->ssl);
+			b_event_remove(md->inpa);
+		}
+
 		md->ssl = ssl_connect((char *) host, port, TRUE, msn_ns_connected, md);
 		md->fd = md->ssl ? ssl_getfd(md->ssl) : -1;
 		if (md->fd < 0) {
