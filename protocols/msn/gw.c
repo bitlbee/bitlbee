@@ -84,7 +84,7 @@ void msn_gw_callback(struct http_request *req)
 	gw->polling = FALSE;
 
 	if (req->status_code != 200 || !req->reply_body) {
-		gw->callback(gw->md, -1, B_EV_IO_READ);
+		gw->callback(req->data, -1, B_EV_IO_READ);
 		return;
 	}
 
@@ -95,7 +95,7 @@ void msn_gw_callback(struct http_request *req)
 
 	if ((value = get_rfc822_header(req->reply_headers, "X-MSN-Messenger", 0))) {
 		if (!msn_gw_parse_session_header(gw, value)) {
-			gw->callback(gw->md, -1, B_EV_IO_READ);
+			gw->callback(req->data, -1, B_EV_IO_READ);
 			g_free(value);
 			return;
 		}
@@ -110,7 +110,7 @@ void msn_gw_callback(struct http_request *req)
 	if (req->body_size) {
 		g_byte_array_append(gw->in, (const guint8 *) req->reply_body, req->body_size);
 
-		if (!gw->callback(gw->md, -1, B_EV_IO_READ)) {
+		if (!gw->callback(req->data, -1, B_EV_IO_READ)) {
 			return;
 		}
 	}

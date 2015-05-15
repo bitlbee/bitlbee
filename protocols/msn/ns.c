@@ -149,7 +149,7 @@ static gboolean msn_ns_connected(gpointer data, int source, void *scd, b_input_c
 
 	if (msn_ns_write_cmd(ic, "CNT", "CON", "<connect><ver>2</ver><agent><os>winnt</os><osVer>5.2</osVer><proc>x86</proc><lcid>en-us</lcid></agent></connect>")) {
 		if (!md->is_http) {
-			md->inpa = b_input_add(md->fd, B_EV_IO_READ, msn_ns_callback, md);
+			md->inpa = b_input_add(md->fd, B_EV_IO_READ, msn_ns_callback, ic);
 		}
 		imcb_log(ic, "Connected to server, waiting for reply");
 	}
@@ -181,10 +181,16 @@ void msn_ns_close(struct msn_data *md)
 
 static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition cond)
 {
-	struct msn_data *md = data;
-	struct im_connection *ic = md->ic;
+	struct im_connection *ic = data;
+	struct msn_data *md;
 	char *bytes;
 	int st;
+
+	if (g_slist_find(msn_connections, ic) == NULL) {
+		return FALSE;
+	}
+
+	md = ic->proto_data;
 
 	if (md->is_http) {
 		st = msn_gw_read(md->gw, &bytes);
