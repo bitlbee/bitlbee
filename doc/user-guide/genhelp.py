@@ -1,3 +1,21 @@
+#!/usr/bin/env python
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
+
+
 import re
 import xml.etree.ElementTree as ET
 
@@ -5,33 +23,55 @@ IN_FILE = 'help.xml'
 OUT_FILE = 'help.txt'
 NORMALIZE_RE = re.compile(r"([^<>\s\t])[\s\t]+([^<>\s\t])")
 
-def join(list):
-    return ''.join([str(x) for x in list])
+# Helpers
 
 def normalize(x):
+    """Normalize whitespace of a string.
+
+    The regexp turns any sequence of whitespace into a single space if it's in
+    the middle of the tag text, and then all newlines and tabs are removed,
+    keeping spaces.
+    """
+
     x = NORMALIZE_RE.sub(r"\1 \2", x or '')
     return x.replace("\n", "").replace("\t", "")
 
-def fix_tree(tag, lvl=''):
+def join(list):
+    """Turns any iterator into a string"""
+    return ''.join([str(x) for x in list])
+
+def fix_tree(tag, debug=False, lvl=''):
+    """Walks the XML tree and modifies it in-place fixing various details"""
+
+    # The include tags have an ugly namespace in the tag name. Simplify that.
     if tag.tag.count("XInclude"):
         tag.tag = 'include'
 
-    #print("%s<%s>%r" % (lvl, tag.tag, [tag.text, normalize(tag.text)]))
+    # Print a pretty tree-like representation of the processed tags
+    if debug:
+        print("%s<%s>%r" % (lvl, tag.tag, [tag.text, normalize(tag.text)]))
 
     for subtag in tag:
-        fix_tree(subtag, lvl + "  ")
+        fix_tree(subtag, debug, lvl + "  ")
 
-    #print("%s</%s>%r" % (lvl, tag.tag, [tag.tail, normalize(tag.tail)]))
+    if debug:
+        print("%s</%s>%r" % (lvl, tag.tag, [tag.tail, normalize(tag.tail)]))
 
+    # Actually normalize whitespace
     tag.text = normalize(tag.text)
     tag.tail = normalize(tag.tail)
 
-def parse_file(filename, parent=None):
+
+# Main logic
+
+def process_file(filename, parent=None):
     tree = ET.parse(open(filename)).getroot()
     fix_tree(tree)
     return parse_tag(tree, parent)
 
 def parse_tag(tag, parent):
+    """Calls a tag_... function based on the tag name"""
+
     fun = globals()["tag_%s" % tag.tag.replace("-", "_")]
     return join(fun(tag, parent))
 
@@ -43,7 +83,12 @@ def parse_subtags(tag, parent=None):
 
     yield tag.tail
 
+
+# Main tag handlers
+
 def handle_subject(tag, parent):
+    """Tag handler for preface, chapter, sect1 and sect2 (aliased below)"""
+
     yield '?%s\n' % tag.attrib['id']
 
     first = True
@@ -51,6 +96,7 @@ def handle_subject(tag, parent):
         if element.tag in ["para", "variablelist", "simplelist",
                            "command-list", "ircexample"]:
             if not first:
+                # Spaces between paragraphs
                 yield "\n"
             first = False
 
@@ -73,6 +119,8 @@ def handle_subject(tag, parent):
         yield join(handle_setting(element))
 
 def handle_command(tag, prefix=''):
+    """Tag handler for <bitlbee-command> (called from handle_subject)"""
+
     this_cmd = prefix + tag.attrib['name']
 
     yield "?%s\n" % this_cmd
@@ -94,6 +142,8 @@ def handle_command(tag, prefix=''):
         yield join(handle_command(element, this_cmd + " "))
 
 def handle_setting(tag):
+    """Tag handler for <bitlbee-setting> (called from handle_subject)"""
+
     yield "?set %s\n" % tag.attrib['name']
     yield "\x02Type:\x02 %s\n" % tag.attrib["type"]
     yield "\x02Scope:\x02 %s\n" % tag.attrib["scope"]
@@ -108,18 +158,24 @@ def handle_setting(tag):
     yield join(parse_subtags(tag.find("description"))).rstrip()
     yield "\n%\n"
 
+
+# Aliases for tags that behave like subjects
 tag_preface = handle_subject
 tag_chapter = handle_subject
 tag_sect1 = handle_subject
 tag_sect2 = handle_subject
 
+# Aliases for tags that don't have any special behavior
 tag_ulink = parse_subtags
 tag_note = parse_subtags
 tag_book = parse_subtags
 tag_ircexample = parse_subtags
 
+
+# Handlers for specific tags
+
 def tag_include(tag, parent):
-    return parse_file(tag.attrib['href'], tag)
+    return process_file(tag.attrib['href'], tag)
 
 def tag_para(tag, parent):
     return join(parse_subtags(tag)) + "\n\n"
@@ -157,8 +213,9 @@ def tag_simplelist(tag, parent):
         yield " - %s\n" % join(parse_subtags(subtag))
     yield '\n'
 
+
 def main():
-    txt = parse_file(IN_FILE)
+    txt = process_file(IN_FILE)
     open(OUT_FILE, "w").write(txt)
 
 if __name__ == '__main__':
