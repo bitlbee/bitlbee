@@ -3,10 +3,9 @@ ifdef _SRCDIR_
 _SRCDIR_ := $(_SRCDIR_)doc/user-guide/
 endif
 
-EXTRAPARANEWLINE = 1
-# EXTRAPARANEWLINE = 0
+all: help.txt
 
-all: user-guide.txt user-guide.html help.txt # user-guide.pdf user-guide.ps user-guide.rtf
+user-guide: user-guide.txt user-guide.html # user-guide.pdf user-guide.ps user-guide.rtf
 
 %.tex: %.db.xml
 	xsltproc --stringparam l10n.gentext.default.language "en" --stringparam latex.documentclass.common "" --stringparam latex.babel.language "" --output $@ http://db2latex.sourceforge.net/xsl/docbook.xsl $<
@@ -32,7 +31,7 @@ help.xml: commands.xml
 	xsltproc --xinclude --output $@ docbook.xsl $< 
 
 help.txt: help.xml help.xsl commands.xml misc.xml quickstart.xml
-	xsltproc --stringparam extraparanewline "$(EXTRAPARANEWLINE)" --xinclude help.xsl $< | perl -0077 -pe 's/\n\n%/\n%/s; s/_b_/\002/g;' > $@
+	python genhelp.py $< $@
 
 clean: 
 	rm -f *.html *.pdf *.ps *.rtf *.txt *.db.xml
@@ -47,4 +46,4 @@ uninstall:
 	rm -f $(DESTDIR)$(DATADIR)/help.txt
 	-rmdir $(DESTDIR)$(DATADIR)
 
-.PHONY: clean install uninstall
+.PHONY: clean install uninstall user-guide
