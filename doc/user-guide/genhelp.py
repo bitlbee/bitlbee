@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-#
+
+# Usage: python genhelp.py input.xml output.txt
+# (Both python2 (>=2.5) or python3 work)
+
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
@@ -17,10 +20,9 @@
 
 
 import re
+import sys
 import xml.etree.ElementTree as ET
 
-IN_FILE = 'help.xml'
-OUT_FILE = 'help.txt'
 NORMALIZE_RE = re.compile(r"([^<>\s\t])[\s\t]+([^<>\s\t])")
 
 # Helpers
@@ -215,8 +217,12 @@ def tag_simplelist(tag, parent):
 
 
 def main():
-    txt = process_file(IN_FILE)
-    open(OUT_FILE, "w").write(txt)
+    if len(sys.argv) != 3:
+        print("Usage: python genhelp.py input.xml output.txt")
+        return
+
+    txt = process_file(sys.argv[1])
+    open(sys.argv[2], "w").write(txt)
 
 if __name__ == '__main__':
     main()
