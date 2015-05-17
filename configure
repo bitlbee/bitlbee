@@ -680,16 +680,13 @@ if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
 fi
 
 if [ "$doc" = "1" ]; then
-	if [ ! -e doc/user-guide/help.txt ] && \
-	     ! type xmlto > /dev/null 2> /dev/null || \
-	     ! type xsltproc > /dev/null 2> /dev/null
-	then
+	# check this here just in case someone tries to install it in python2.4...
+	if ! python -m xml.etree.ElementTree > /dev/null 2>&1; then
 		echo
-		echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
-		echo 'Install xmlto and xsltproc if you want online help to work.'
-	else
-		echo "DOC=1" >> Makefile.settings
+		echo 'ERROR: Python (>=2.5 or 3.x) is required to generate docs'
+		exit 1
 	fi
+	echo "DOC=1" >> Makefile.settings
 
 	if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
 		# skype also needs asciidoc
