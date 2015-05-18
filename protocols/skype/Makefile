@@ -6,17 +6,8 @@ endif
 DATE := $(shell date +%Y-%m-%d)
 INSTALL = install
 
-
-ifdef ASCIIDOC
-MANPAGES = skyped.1
-else
-MANPAGES =
-endif
-
-all: $(MANPAGES)
-
+all:
 clean:
-	rm -f $(MANPAGES)
 
 # take this from the kernel
 check:
@@ -28,13 +19,11 @@ test: all
 doc: $(MANPAGES)
 
 install-doc: doc
-ifdef ASCIIDOC
 	$(INSTALL) -d $(DESTDIR)$(MANDIR)/man1
 	$(INSTALL) -m644 $(MANPAGES) $(DESTDIR)$(MANDIR)/man1
-endif
 
 uninstall-doc:
 	rm -f $(DESTDIR)$(MANDIR)/man1/skyped.1*
 
 %.1: $(_SRCDIR_)%.txt $(_SRCDIR_)asciidoc.conf
-	a2x --asciidoc-opts="-f $(_SRCDIR_)asciidoc.conf" -a bee_date=$(DATE) -f manpage -D . $<
+	a2x --asciidoc-opts="-f $(_SRCDIR_)asciidoc.conf" -a bee_date=$(DATE) -f manpage $<
