@@ -6,9 +6,18 @@ import threading
 import yowsup
 
 from yowsup.layers.auth                        import YowAuthenticationProtocolLayer
-from yowsup.layers.protocol_messages           import YowMessagesProtocolLayer
-from yowsup.layers.protocol_receipts           import YowReceiptProtocolLayer
 from yowsup.layers.protocol_acks               import YowAckProtocolLayer
+from yowsup.layers.protocol_chatstate          import YowChatstateProtocolLayer
+from yowsup.layers.protocol_contacts           import YowContactsIqProtocolLayer
+from yowsup.layers.protocol_groups             import YowGroupsProtocolLayer
+from yowsup.layers.protocol_ib                 import YowIbProtocolLayer
+from yowsup.layers.protocol_iq                 import YowIqProtocolLayer
+from yowsup.layers.protocol_messages           import YowMessagesProtocolLayer
+from yowsup.layers.protocol_notifications      import YowNotificationsProtocolLayer
+from yowsup.layers.protocol_presence           import YowPresenceProtocolLayer
+from yowsup.layers.protocol_privacy            import YowPrivacyProtocolLayer
+from yowsup.layers.protocol_profiles           import YowProfilesProtocolLayer
+from yowsup.layers.protocol_receipts           import YowReceiptProtocolLayer
 from yowsup.layers.network                     import YowNetworkLayer
 from yowsup.layers.coder                       import YowCoderLayer
 from yowsup.stacks import YowStack
@@ -17,20 +26,21 @@ from yowsup.layers import YowLayerEvent
 from yowsup.stacks import YowStack, YOWSUP_CORE_LAYERS
 from yowsup import env
 
-from yowsup.layers.interface                           import YowInterfaceLayer, ProtocolEntityCallback
-from yowsup.layers.protocol_receipts.protocolentities    import *
-from yowsup.layers.protocol_groups.protocolentities      import *
-from yowsup.layers.protocol_presence.protocolentities    import *
-from yowsup.layers.protocol_messages.protocolentities    import *
+from yowsup.layers.interface                             import YowInterfaceLayer, ProtocolEntityCallback
 from yowsup.layers.protocol_acks.protocolentities        import *
+from yowsup.layers.protocol_chatstate.protocolentities   import *
+from yowsup.layers.protocol_contacts.protocolentities    import *
+from yowsup.layers.protocol_groups.protocolentities      import *
 from yowsup.layers.protocol_ib.protocolentities          import *
 from yowsup.layers.protocol_iq.protocolentities          import *
-from yowsup.layers.protocol_contacts.protocolentities    import *
-from yowsup.layers.protocol_chatstate.protocolentities   import *
-from yowsup.layers.protocol_privacy.protocolentities     import *
-from yowsup.layers.protocol_media.protocolentities       import *
 from yowsup.layers.protocol_media.mediauploader import MediaUploader
+from yowsup.layers.protocol_media.protocolentities       import *
+from yowsup.layers.protocol_messages.protocolentities    import *
+from yowsup.layers.protocol_notifications.protocolentities import *
+from yowsup.layers.protocol_presence.protocolentities    import *
+from yowsup.layers.protocol_privacy.protocolentities     import *
 from yowsup.layers.protocol_profiles.protocolentities    import *
+from yowsup.layers.protocol_receipts.protocolentities    import *
 from yowsup.layers.axolotl.protocolentities.iq_key_get import GetKeysIqProtocolEntity
 from yowsup.layers.axolotl import YowAxolotlLayer
 from yowsup.common.tools import ModuleTools
@@ -75,6 +85,15 @@ class BitlBeeLayer(YowInterfaceLayer):
 		self.cb = self.b.bee
 		self.cb.error(entity.getReason())
 		self.cb.logout(False)
+
+	def onEvent(self, event):
+		print event
+		if event.getName() == "disconnect":
+			self.getStack().execDetached(self.daemon.StopDaemon)
+	
+	@ProtocolEntityCallback("presence")
+	def onPresence(self, pres):
+		print pres
 	
 	@ProtocolEntityCallback("message")
 	def onMessage(self, msg):
@@ -85,8 +104,15 @@ class BitlBeeLayer(YowInterfaceLayer):
 
 	@ProtocolEntityCallback("receipt")
 	def onReceipt(self, entity):
-		ack = OutgoingAckProtocolEntity(entity.getId(), "receipt", "delivery", entity.getFrom())
+		print "ACK THE ACK!"
+		ack = OutgoingAckProtocolEntity(entity.getId(), entity.getTag(),
+		                                entity.getType(), entity.getFrom())
 		self.toLower(ack)
+
+	@ProtocolEntityCallback("chatstate")
+	def onChatstate(self, entity):
+		print(entity)
+
 
 class YowsupDaemon(threading.Thread):
 	daemon = True
@@ -117,16 +143,21 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 			"flags": 0x100, # NULL_OK
 		},
 	}
-	ACCOUNT_FLAGS = 6 # HANDLE_DOMAINS + STATUS_MESSAGE
+	AWAY_STATES = ["Available"]
+	ACCOUNT_FLAGS = 14 # HANDLE_DOMAINS + STATUS_MESSAGE + LOCAL_CONTACTS
 	# TODO: LOCAL LIST CAUSES CRASH!
 	# TODO: HANDLE_DOMAIN in right place (add ... ... nick bug)
-	
+	# TODO? Allow set_away (for status msg) even if AWAY_STATES not set?
+	#   and/or, see why with the current value set_away state is None.
+
 	def login(self, account):
 		self.stack = self.build_stack(account)
 		self.daemon = YowsupDaemon(name="yowsup")
 		self.daemon.stack = self.stack
 		self.daemon.start()
 		self.bee.log("Started yowsup thread")
+		
+		self.contacts = set()
 
 	def keepalive(self):
 		self.yow.Ship(PingIqProtocolEntity(to="s.whatsapp.net"))
@@ -141,13 +172,15 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 
 	def add_buddy(self, handle, _group):
 		self.yow.Ship(SubscribePresenceProtocolEntity(handle))
+		# Need to confirm additions. See if this can be done based on server ACKs.
+		self.bee.add_buddy(handle, "")
 
 	def remove_buddy(self, handle, _group):
 		self.yow.Ship(UnsubscribePresenceProtocolEntity(handle))
 
-	def set_away(_state, message):
+	def set_away(self, _state, status):
 		# I think state is not supported?
-		print "Trying to set status to %r" % status
+		print "Trying to set status to %r, %r" % (_state, status)
 		self.yow.Ship(SetStatusIqProtocolEntity(status))
 
 	def set_set_name(self, _key, value):
@@ -156,7 +189,18 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	def build_stack(self, account):
 		layers = (
 			BitlBeeLayer,
-			(YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer, YowAckProtocolLayer)
+			
+			(
+			 YowAckProtocolLayer,
+			 YowAuthenticationProtocolLayer,
+			 YowIbProtocolLayer,
+			 YowIqProtocolLayer,
+			 YowMessagesProtocolLayer,
+			 YowNotificationsProtocolLayer,
+			 YowPresenceProtocolLayer,
+			 YowReceiptProtocolLayer,
+			)
+
 		) + YOWSUP_CORE_LAYERS
 		
 		creds = (account["user"].split("@")[0], account["pass"])
