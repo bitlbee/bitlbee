@@ -2,6 +2,7 @@
 
 import logging
 import threading
+import time
 
 import yowsup
 
@@ -20,7 +21,7 @@ from yowsup.layers.protocol_profiles           import YowProfilesProtocolLayer
 from yowsup.layers.protocol_receipts           import YowReceiptProtocolLayer
 from yowsup.layers.network                     import YowNetworkLayer
 from yowsup.layers.coder                       import YowCoderLayer
-from yowsup.stacks import YowStack
+from yowsup.stacks import YowStack, YowStackBuilder
 from yowsup.common import YowConstants
 from yowsup.layers import YowLayerEvent
 from yowsup.stacks import YowStack, YOWSUP_CORE_LAYERS
@@ -59,7 +60,7 @@ class BitlBeeLayer(YowInterfaceLayer):
 		super(BitlBeeLayer, self).__init__(*a, **kwa)
 
 	def receive(self, entity):
-		print "Received: %s" % entity.getTag()
+		print "Received: %r" % entity
 		print entity
 		super(BitlBeeLayer, self).receive(entity)
 
@@ -93,7 +94,11 @@ class BitlBeeLayer(YowInterfaceLayer):
 	
 	@ProtocolEntityCallback("presence")
 	def onPresence(self, pres):
-		print pres
+		status = 8 # MOBILE
+		online = isinstance(pres, AvailablePresenceProtocolEntity)
+		if online:
+			status += 1 # ONLINE
+		imcb_buddy_status(pres.getFrom(), status, None, None)
 	
 	@ProtocolEntityCallback("message")
 	def onMessage(self, msg):
@@ -108,6 +113,32 @@ class BitlBeeLayer(YowInterfaceLayer):
 		ack = OutgoingAckProtocolEntity(entity.getId(), entity.getTag(),
 		                                entity.getType(), entity.getFrom())
 		self.toLower(ack)
+
+	@ProtocolEntityCallback("iq")
+	def onIq(self, entity):
+		if isinstance(entity, ResultSyncIqProtocolEntity):
+			return self.onSyncResult(entity)
+	
+	def onSyncResult(self, entity):
+		# TODO HERE AND ELSEWHERE: Threat idiocy happens when going
+		# from here to the IMPlugin. Check how bjsonrpc lets me solve that.
+		ok = set(num.lstrip("+") for num in entity.inNumbers)
+		for handle in self.b.contacts:
+			if handle.split("@")[0] in ok:
+				self.toLower(SubscribePresenceProtocolEntity(handle))
+				self.cb.add_buddy(handle, "")
+		if entity.outNumbers:
+			self.cb.error("Not on WhatsApp: %s" % ", ".join(entity.outNumbers))
+		if entity.invalidNumbers:
+			self.cb.error("Invalid numbers: %s" % ", ".join(entity.invalidNumbers))
+
+	@ProtocolEntityCallback("notification")
+	def onNotification(self, ent):
+		if isinstance(ent, StatusNotificationProtocolEntity):
+			return self.onStatusNotification(ent)
+	
+	def onStatusNotification(self, status):
+		print "New status for %s: %s" % (status.getFrom(), status.status)
 
 	@ProtocolEntityCallback("chatstate")
 	def onChatstate(self, entity):
@@ -133,6 +164,7 @@ class YowsupDaemon(threading.Thread):
 		# of their event loop :-(
 		raise YowsupDaemon.Terminate
 
+
 class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	NAME = "wa"
 	SETTINGS = {
@@ -157,6 +189,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		self.daemon.start()
 		self.bee.log("Started yowsup thread")
 		
+		self.logging_in = True
 		self.contacts = set()
 
 	def keepalive(self):
@@ -171,41 +204,44 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		self.yow.Ship(msg)
 
 	def add_buddy(self, handle, _group):
-		self.yow.Ship(SubscribePresenceProtocolEntity(handle))
-		# Need to confirm additions. See if this can be done based on server ACKs.
-		self.bee.add_buddy(handle, "")
+		if self.logging_in:
+			# Need to batch up the initial adds. This is a "little" ugly.
+			self.contacts.add(handle)
+		else:
+			self.yow.Ship(GetSyncIqProtocolEntity(
+			    ["+" + handle.split("@")[0]], mode=GetSyncIqProtocolEntity.MODE_DELTA))
+			self.yow.Ship(SubscribePresenceProtocolEntity(handle))
 
 	def remove_buddy(self, handle, _group):
 		self.yow.Ship(UnsubscribePresenceProtocolEntity(handle))
 
 	def set_away(self, _state, status):
+		# When our first status is set, we've finalised login.
+		# Which means sync the full contact list now.
+		if self.logging_in:
+			self.logging_in = False
+			self.send_initial_contacts()
+		
 		# I think state is not supported?
 		print "Trying to set status to %r, %r" % (_state, status)
 		self.yow.Ship(SetStatusIqProtocolEntity(status))
 
+	def send_initial_contacts(self):
+		if not self.contacts:
+			return
+		numbers = [("+" + x.split("@")[0]) for x in self.contacts]
+		self.yow.Ship(GetSyncIqProtocolEntity(numbers))
+
 	def set_set_name(self, _key, value):
-		self.yow.Ship(PresenceProtocolEntity(value))
+		self.yow.Ship(PresenceProtocolEntity(name=value))
 
 	def build_stack(self, account):
-		layers = (
-			BitlBeeLayer,
-			
-			(
-			 YowAckProtocolLayer,
-			 YowAuthenticationProtocolLayer,
-			 YowIbProtocolLayer,
-			 YowIqProtocolLayer,
-			 YowMessagesProtocolLayer,
-			 YowNotificationsProtocolLayer,
-			 YowPresenceProtocolLayer,
-			 YowReceiptProtocolLayer,
-			)
-
-		) + YOWSUP_CORE_LAYERS
-		
 		creds = (account["user"].split("@")[0], account["pass"])
 
-		stack = YowStack(layers)
+		stack = (YowStackBuilder()
+		         .pushDefaultLayers(False)
+		         .push(BitlBeeLayer)
+		         .build())
 		stack.setProp(YowAuthenticationProtocolLayer.PROP_CREDENTIALS, creds)
 		stack.setProp(YowNetworkLayer.PROP_ENDPOINT, YowConstants.ENDPOINTS[0])
 		stack.setProp(YowCoderLayer.PROP_DOMAIN, YowConstants.DOMAIN)
