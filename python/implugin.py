@@ -106,6 +106,7 @@ class BitlBeeIMPlugin(BaseHandler):
 		func(key, value)
 	
 	def setting(self, key):
+		"""Throws KeyError if the setting does not exist!"""
 		return self._settings_values[key]
 
 

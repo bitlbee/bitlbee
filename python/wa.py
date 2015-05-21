@@ -61,13 +61,13 @@ class BitlBeeLayer(YowInterfaceLayer):
 
 	def receive(self, entity):
 		print "Received: %r" % entity
-		print entity
+		#print entity
 		super(BitlBeeLayer, self).receive(entity)
 
 	def Ship(self, entity):
 		"""Send an entity into Yowsup, but through the correct thread."""
 		print "Queueing: %s" % entity.getTag()
-		print entity
+		#print entity
 		def doit():
 			self.toLower(entity)
 		self.getStack().execDetached(doit)
@@ -78,7 +78,12 @@ class BitlBeeLayer(YowInterfaceLayer):
 		self.cb = self.b.bee
 		self.b.yow = self
 		self.cb.connected()
-		self.toLower(AvailablePresenceProtocolEntity())
+		try:
+			self.toLower(PresenceProtocolEntity(name=self.b.setting("name")))
+		except KeyError:
+			pass
+		# Should send the contact list now, but BitlBee hasn't given
+		# it yet. See set_away() and send_initial_contacts() below.
 	
 	@ProtocolEntityCallback("failure")
 	def onFailure(self, entity):
@@ -88,24 +93,30 @@ class BitlBeeLayer(YowInterfaceLayer):
 		self.cb.logout(False)
 
 	def onEvent(self, event):
-		print event
+		print "Received event: %s name %s" % (event, event.getName())
 		if event.getName() == "disconnect":
 			self.getStack().execDetached(self.daemon.StopDaemon)
 	
 	@ProtocolEntityCallback("presence")
 	def onPresence(self, pres):
 		status = 8 # MOBILE
-		online = isinstance(pres, AvailablePresenceProtocolEntity)
-		if online:
-			status += 1 # ONLINE
-		imcb_buddy_status(pres.getFrom(), status, None, None)
+		if pres.getType() != "unavailable":
+			status |= 1 # ONLINE
+		self.cb.buddy_status(pres.getFrom(), status, None, None)
 	
 	@ProtocolEntityCallback("message")
 	def onMessage(self, msg):
-		self.cb.buddy_msg(msg.getFrom(), msg.getBody(), 0, msg.getTimestamp())
-
 		receipt = OutgoingReceiptProtocolEntity(msg.getId(), msg.getFrom())
 		self.toLower(receipt)
+
+		if msg.getParticipant():
+			group = self.b.groups.get(msg.getFrom(), None)
+			if not group:
+				self.cb.log("Warning: Activity in room %s" % msg.getFrom())
+				return
+			self.cb.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
+		else:
+			self.cb.buddy_msg(msg.getFrom(), msg.getBody(), 0, msg.getTimestamp())
 
 	@ProtocolEntityCallback("receipt")
 	def onReceipt(self, entity):
@@ -140,9 +151,9 @@ class BitlBeeLayer(YowInterfaceLayer):
 	def onStatusNotification(self, status):
 		print "New status for %s: %s" % (status.getFrom(), status.status)
 
-	@ProtocolEntityCallback("chatstate")
-	def onChatstate(self, entity):
-		print(entity)
+	#@ProtocolEntityCallback("chatstate")
+	#def onChatstate(self, entity):
+	#	print(entity)
 
 
 class YowsupDaemon(threading.Thread):
@@ -175,7 +186,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 			"flags": 0x100, # NULL_OK
 		},
 	}
-	AWAY_STATES = ["Available"]
+	AWAY_STATES = ["Away"]
 	ACCOUNT_FLAGS = 14 # HANDLE_DOMAINS + STATUS_MESSAGE + LOCAL_CONTACTS
 	# TODO: LOCAL LIST CAUSES CRASH!
 	# TODO: HANDLE_DOMAIN in right place (add ... ... nick bug)
@@ -191,9 +202,13 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		
 		self.logging_in = True
 		self.contacts = set()
+		self.groups = {}
+		self.groups_by_id = {}
 
 	def keepalive(self):
-		self.yow.Ship(PingIqProtocolEntity(to="s.whatsapp.net"))
+		# Too noisy while debugging
+		pass
+		#self.yow.Ship(PingIqProtocolEntity(to="s.whatsapp.net"))
 
 	def logout(self):
 		self.stack.broadcastEvent(YowLayerEvent(YowNetworkLayer.EVENT_STATE_DISCONNECT))
@@ -215,16 +230,21 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	def remove_buddy(self, handle, _group):
 		self.yow.Ship(UnsubscribePresenceProtocolEntity(handle))
 
-	def set_away(self, _state, status):
+	def set_away(self, state, status):
 		# When our first status is set, we've finalised login.
 		# Which means sync the full contact list now.
 		if self.logging_in:
 			self.logging_in = False
 			self.send_initial_contacts()
 		
-		# I think state is not supported?
-		print "Trying to set status to %r, %r" % (_state, status)
-		self.yow.Ship(SetStatusIqProtocolEntity(status))
+		print "Trying to set status to %r, %r" % (state, status)
+		if state:
+			# Only one option offered so None = available, not None = away.
+			self.yow.Ship(AvailablePresenceProtocolEntity())
+		else:
+			self.yow.Ship(UnavailablePresenceProtocolEntity())
+		if status:
+			self.yow.Ship(SetStatusIqProtocolEntity(status))
 
 	def send_initial_contacts(self):
 		if not self.contacts:
@@ -235,7 +255,18 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	def set_set_name(self, _key, value):
 		self.yow.Ship(PresenceProtocolEntity(name=value))
 
+	def chat_join(self, id, name, _nick, _password, settings):
+		print "New chat created with id: %d" % id
+		self.groups[name] = {"id": id, "name": name}
+		self.groups_by_id[id] = self.groups[name]
+		self.bee.chat_add_buddy(id, self.account["user"])
+	
+	def chat_msg(self, id, text, flags):
+		msg = TextMessageProtocolEntity(text, to=self.groups_by_id[id]["name"])
+		self.yow.Ship(msg)
+
 	def build_stack(self, account):
+		self.account = account
 		creds = (account["user"].split("@")[0], account["pass"])
 
 		stack = (YowStackBuilder()

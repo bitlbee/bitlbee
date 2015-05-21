@@ -713,7 +713,7 @@ static const struct rpc_in_method methods[] = {
 	{ "imcb_remove_buddy", imcb_remove_buddy, rpc_imcb_add_buddy, "ss" },
 	{ "imcb_rename_buddy", imcb_rename_buddy, rpc_imcb_add_buddy, "ss" },
 	{ "imcb_buddy_nick_hint", imcb_buddy_nick_hint, rpc_imcb_add_buddy, "ss" },
-	{ "imcb_buddy_status", imcb_buddy_status, rpc_imcb_buddy_status, "snss" },
+	{ "imcb_buddy_status", imcb_buddy_status, rpc_imcb_buddy_status, "siss" },
 	{ "imcb_buddy_status_msg", imcb_buddy_status_msg, rpc_imcb_add_buddy, "ss" },
 	{ "imcb_buddy_times", imcb_buddy_times, rpc_imcb_buddy_times, "sii" },
 	{ "imcb_buddy_msg", imcb_buddy_msg, rpc_imcb_buddy_msg, "ssii" },
