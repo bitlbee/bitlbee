@@ -113,6 +113,7 @@ class BitlBeeLayer(YowInterfaceLayer):
 			group = self.b.groups.get(msg.getFrom(), None)
 			if not group:
 				self.cb.log("Warning: Activity in room %s" % msg.getFrom())
+				self.b.groups.setdefault(msg.getFrom(), {}).setdefault("queue", []).append(msg)
 				return
 			self.cb.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
 		else:
@@ -120,7 +121,6 @@ class BitlBeeLayer(YowInterfaceLayer):
 
 	@ProtocolEntityCallback("receipt")
 	def onReceipt(self, entity):
-		print "ACK THE ACK!"
 		ack = OutgoingAckProtocolEntity(entity.getId(), entity.getTag(),
 		                                entity.getType(), entity.getFrom())
 		self.toLower(ack)
@@ -128,20 +128,25 @@ class BitlBeeLayer(YowInterfaceLayer):
 	@ProtocolEntityCallback("iq")
 	def onIq(self, entity):
 		if isinstance(entity, ResultSyncIqProtocolEntity):
+			print "XXX SYNC RESULT RECEIVED!"
 			return self.onSyncResult(entity)
+		elif isinstance(entity, ListParticipantsResultIqProtocolEntity):
+			return self.b.chat_join_participants(entity)
 	
 	def onSyncResult(self, entity):
-		# TODO HERE AND ELSEWHERE: Threat idiocy happens when going
+		# TODO HERE AND ELSEWHERE: Thread idiocy happens when going
 		# from here to the IMPlugin. Check how bjsonrpc lets me solve that.
-		ok = set(num.lstrip("+") for num in entity.inNumbers)
+		ok = set(jid.lower() for jid in entity.inNumbers.values())
 		for handle in self.b.contacts:
-			if handle.split("@")[0] in ok:
+			if handle.lower() in ok:
 				self.toLower(SubscribePresenceProtocolEntity(handle))
 				self.cb.add_buddy(handle, "")
 		if entity.outNumbers:
-			self.cb.error("Not on WhatsApp: %s" % ", ".join(entity.outNumbers))
+			self.cb.error("Not on WhatsApp: %s" %
+			              ", ".join(entity.outNumbers.keys()))
 		if entity.invalidNumbers:
-			self.cb.error("Invalid numbers: %s" % ", ".join(entity.invalidNumbers))
+			self.cb.error("Invalid numbers: %s" %
+			              ", ".join(entity.invalidNumbers.keys()))
 
 	@ProtocolEntityCallback("notification")
 	def onNotification(self, ent):
@@ -257,8 +262,20 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 
 	def chat_join(self, id, name, _nick, _password, settings):
 		print "New chat created with id: %d" % id
-		self.groups[name] = {"id": id, "name": name}
+		self.groups.setdefault(name, {}).update({"id": id, "name": name})
 		self.groups_by_id[id] = self.groups[name]
+		self.yow.Ship(ParticipantsGroupsIqProtocolEntity(name))
+
+		for msg in self.groups[name].get("queue", []):
+			self.cb.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
+
+	def chat_join_participants(self, entity):
+		group = self.groups[entity.getFrom()]
+		id = group["id"]
+		for p in entity.getParticipants():
+			if p != self.account["user"]:
+				self.bee.chat_add_buddy(id, p)
+		# Add the user themselves last to avoid a visible join flood.
 		self.bee.chat_add_buddy(id, self.account["user"])
 	
 	def chat_msg(self, id, text, flags):
