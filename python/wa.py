@@ -78,6 +78,7 @@ class BitlBeeLayer(YowInterfaceLayer):
 		self.cb = self.b.bee
 		self.b.yow = self
 		self.cb.connected()
+		self.toLower(ListGroupsIqProtocolEntity())
 		try:
 			self.toLower(PresenceProtocolEntity(name=self.b.setting("name")))
 		except KeyError:
@@ -103,6 +104,13 @@ class BitlBeeLayer(YowInterfaceLayer):
 		if pres.getType() != "unavailable":
 			status |= 1 # ONLINE
 		self.cb.buddy_status(pres.getFrom(), status, None, None)
+		try:
+			# Last online time becomes idle time which I guess is
+			# sane enough?
+			self.cb.buddy_times(pres.getFrom(), 0, int(pres.getLast()))
+		except ValueError:
+			# Could be "error" or, more likely, "deny"
+			pass
 	
 	@ProtocolEntityCallback("message")
 	def onMessage(self, msg):
@@ -132,10 +140,13 @@ class BitlBeeLayer(YowInterfaceLayer):
 			return self.onSyncResult(entity)
 		elif isinstance(entity, ListParticipantsResultIqProtocolEntity):
 			return self.b.chat_join_participants(entity)
+		elif isinstance(entity, ListGroupsResultIqProtocolEntity):
+			return self.onListGroupsResult(entity)
 	
 	def onSyncResult(self, entity):
 		# TODO HERE AND ELSEWHERE: Thread idiocy happens when going
 		# from here to the IMPlugin. Check how bjsonrpc lets me solve that.
+		# ALSO TODO: See why this one doesn't seem to be called for adds later.
 		ok = set(jid.lower() for jid in entity.inNumbers.values())
 		for handle in self.b.contacts:
 			if handle.lower() in ok:
@@ -148,13 +159,29 @@ class BitlBeeLayer(YowInterfaceLayer):
 			self.cb.error("Invalid numbers: %s" %
 			              ", ".join(entity.invalidNumbers.keys()))
 
+	def onListGroupsResult(self, groups):
+		"""Save group info for later if the user decides to join."""
+		for g in groups.getGroups():
+			jid = g.getId()
+			if "@" not in jid:
+				jid += "@g.us"
+			group = self.b.groups.setdefault(jid, {})
+			group["info"] = g
+
 	@ProtocolEntityCallback("notification")
 	def onNotification(self, ent):
 		if isinstance(ent, StatusNotificationProtocolEntity):
 			return self.onStatusNotification(ent)
-	
+
 	def onStatusNotification(self, status):
 		print "New status for %s: %s" % (status.getFrom(), status.status)
+		self.bee.buddy_status_msg(status.getFrom(), status.status)
+
+	@ProtocolEntityCallback("media")
+	def onMedia(self, med):
+		"""Your PC better be MPC3 compliant!"""
+		print "YAY MEDIA! %r" % med
+		print med
 
 	#@ProtocolEntityCallback("chatstate")
 	#def onChatstate(self, entity):
@@ -263,11 +290,18 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	def chat_join(self, id, name, _nick, _password, settings):
 		print "New chat created with id: %d" % id
 		self.groups.setdefault(name, {}).update({"id": id, "name": name})
-		self.groups_by_id[id] = self.groups[name]
+		group = self.groups[name]
+		self.groups_by_id[id] = group
+		
+		gi = group.get("info", None)
+		if gi:
+			self.bee.chat_topic(id, gi.getSubjectOwner(),
+			                    gi.getSubject(), gi.getSubjectTime())
+		
+		# WA doesn't really have a concept of joined or not, just
+		# long-term membership. Let's just get a list of members and
+		# pretend we've "joined" then.
 		self.yow.Ship(ParticipantsGroupsIqProtocolEntity(name))
-
-		for msg in self.groups[name].get("queue", []):
-			self.cb.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
 
 	def chat_join_participants(self, entity):
 		group = self.groups[entity.getFrom()]
@@ -275,12 +309,22 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		for p in entity.getParticipants():
 			if p != self.account["user"]:
 				self.bee.chat_add_buddy(id, p)
+
 		# Add the user themselves last to avoid a visible join flood.
 		self.bee.chat_add_buddy(id, self.account["user"])
+		for msg in group.setdefault("queue", []):
+			self.cb.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
+		del group["queue"]
 	
 	def chat_msg(self, id, text, flags):
 		msg = TextMessageProtocolEntity(text, to=self.groups_by_id[id]["name"])
 		self.yow.Ship(msg)
+
+	def chat_leave(self, id):
+		# WA never really let us leave, so just disconnect id and jid.
+		group = self.groups_by_id[id]
+		del self.groups_by_id[id]
+		del group["id"]
 
 	def build_stack(self, account):
 		self.account = account
