@@ -108,8 +108,8 @@ class BitlBeeLayer(YowInterfaceLayer):
 			# Last online time becomes idle time which I guess is
 			# sane enough?
 			self.cb.buddy_times(pres.getFrom(), 0, int(pres.getLast()))
-		except ValueError:
-			# Could be "error" or, more likely, "deny"
+		except (ValueError, TypeError):
+			# Could be "error" or, more likely, "deny", or None.
 			pass
 	
 	@ProtocolEntityCallback("message")
@@ -119,7 +119,7 @@ class BitlBeeLayer(YowInterfaceLayer):
 
 		if msg.getParticipant():
 			group = self.b.groups.get(msg.getFrom(), None)
-			if not group:
+			if not group or "id" not in group:
 				self.cb.log("Warning: Activity in room %s" % msg.getFrom())
 				self.b.groups.setdefault(msg.getFrom(), {}).setdefault("queue", []).append(msg)
 				return
@@ -313,7 +313,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		# Add the user themselves last to avoid a visible join flood.
 		self.bee.chat_add_buddy(id, self.account["user"])
 		for msg in group.setdefault("queue", []):
-			self.cb.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
+			self.bee.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
 		del group["queue"]
 	
 	def chat_msg(self, id, text, flags):
