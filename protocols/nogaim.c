@@ -311,7 +311,7 @@ void imcb_connected(struct im_connection *ic)
 		return;
 	}
 
-	if (ic->acc->flags & ACC_FLAG_LOCAL) {
+	if (ic->acc->flags & ACC_FLAG_LOCAL_CONTACTS) {
 		GHashTableIter nicks;
 		gpointer k, v;
 		g_hash_table_iter_init(&nicks, ic->acc->nicks);

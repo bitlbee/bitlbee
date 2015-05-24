@@ -27,10 +27,6 @@
 #include "bitlbee.h"
 #include "account.h"
 
-static const char* account_protocols_local[] = {
-	"gg", "whatsapp", NULL
-};
-
 static char *set_eval_nick_source(set_t *set, char *value);
 
 account_t *account_add(bee_t *bee, struct prpl *prpl, char *user, char *pass)
@@ -461,16 +457,4 @@ int account_reconnect_delay(account_t *a)
 	}
 
 	return a->auto_reconnect_delay;
-}
-
-int protocol_account_islocal(const char* protocol)
-{
-	const char** p = account_protocols_local;
-
-	do {
-		if (strcmp(*p, protocol) == 0) {
-			return 1;
-		}
-	} while (*(++p));
-	return 0;
 }

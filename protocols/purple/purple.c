@@ -260,6 +260,11 @@ static void purple_init(account_t *acc)
 		}
 	}
 	purple_accounts_remove(pa);
+	
+	/* Last, some protocols want their contact lists locally. */
+	if (strcmp(acc->prpl->name, "whatsapp") == 0 || strcmp(acc->prpl->name, "gg") == 0) {
+		acc->flags |= ACC_FLAG_LOCAL_CONTACTS;
+	}
 }
 
 static void purple_sync_settings(account_t *acc, PurpleAccount *pa)
