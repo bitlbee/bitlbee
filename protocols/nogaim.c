@@ -311,12 +311,13 @@ void imcb_connected(struct im_connection *ic)
 		return;
 	}
 
-	if (ic->acc->flags & ACC_FLAG_LOCAL_CONTACTS) {
+	if ((ic->acc->flags & ACC_FLAG_LOCAL_CONTACTS) &&
+	    !(ic->flags & OPT_LOCAL_CONTACTS_SENT)) {
 		GHashTableIter nicks;
-		gpointer k, v;
+		gpointer handle;
 		g_hash_table_iter_init(&nicks, ic->acc->nicks);
-		while (g_hash_table_iter_next(&nicks, &k, &v)) {
-			ic->acc->prpl->add_buddy(ic, (char *) k, NULL);
+		while (g_hash_table_iter_next(&nicks, &handle, NULL)) {
+			ic->acc->prpl->add_buddy(ic, (char *) handle, NULL);
 		}
 	}
 
@@ -494,6 +495,28 @@ void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const ch
 	if (bee->ui->user_nick_hint) {
 		bee->ui->user_nick_hint(bee, bu, nick);
 	}
+}
+
+/* Returns the local contacts for an IM account (based on assigned nicks).
+   Linked list should be freed, the strings themselves not! So look at it
+   like a GSList<const char*> I guess? Empty list means NULL retval (as
+   always with GSList). */
+GSList *imcb_get_local_contacts(struct im_connection *ic)
+{
+ 	GHashTableIter nicks;
+	GSList *ret = NULL;
+	
+	g_hash_table_iter_init(&nicks, ic->acc->nicks);
+	gpointer handle;
+	while (g_hash_table_iter_next(&nicks, &handle, NULL)) {
+		ret = g_slist_prepend(ret, (char *) handle);
+	}
+	
+	/* If the protocol asked for the list, assume we won't have to send it
+	   anymore in imcb_connected(). */
+	ic->flags |= OPT_LOCAL_CONTACTS_SENT;
+	
+	return ret;
 }
 
 

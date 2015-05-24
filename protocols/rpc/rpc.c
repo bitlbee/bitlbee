@@ -604,6 +604,19 @@ static JSON_Value *rpc_imcb_buddy_typing(struct im_connection *ic, void *func_, 
 	return NULL;
 }
 
+static JSON_Value *rpc_imcb_get_local_contacts(struct im_connection *ic, void *func_, JSON_Array *params) {
+	JSON_Value *resp = json_value_init_object();
+	JSON_Value *arr = json_value_init_array();
+	GSList *contacts = imcb_get_local_contacts(ic);
+	GSList *c;
+	for (c = contacts; c; c = c->next) {
+		json_array_append_string(json_array(arr), (const char*) c->data);
+	}
+	g_slist_free(contacts);
+	json_object_set_value(json_object(resp), "result", arr);
+	return resp;
+}
+
 static JSON_Value *rpc_imcb_chat_new(struct im_connection *ic, void *func_, JSON_Array *params) {
 	struct rpc_groupchat *rc = rpc_groupchat_new(ic, json_array_get_string(params, 0));
 	JSON_Value *resp = json_value_init_object();
@@ -718,6 +731,7 @@ static const struct rpc_in_method methods[] = {
 	{ "imcb_buddy_times", imcb_buddy_times, rpc_imcb_buddy_times, "sii" },
 	{ "imcb_buddy_msg", imcb_buddy_msg, rpc_imcb_buddy_msg, "ssii" },
 	{ "imcb_buddy_typing", imcb_buddy_typing, rpc_imcb_buddy_typing, "si" },
+	{ "imcb_get_local_contacts", NULL, rpc_imcb_get_local_contacts, "" },
 	{ "imcb_chat_new", NULL, rpc_imcb_chat_new, "s" },
 	
 	/* RPCs below are equivalent, but with the struct groupchat* replaced

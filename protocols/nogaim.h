@@ -56,7 +56,12 @@
 #define WEBSITE "http://www.bitlbee.org/"
 
 /* Sharing flags between all kinds of things. I just hope I won't hit any
-   limits before 32-bit machines become extinct. ;-) */
+   limits before 32-bit machines become extinct. ;-)
+   
+   Argh! This needs to be renamed to be more clear which field they're used
+   for. As said it's currently mixed which is nonsense. Some are for the
+   im_connection flags field, some for imcb_buddy_status(), some for typing
+   notifications, and who knows what else... */
 #define OPT_LOGGED_IN   0x00000001
 #define OPT_LOGGING_OUT 0x00000002
 #define OPT_AWAY        0x00000004
@@ -69,6 +74,7 @@
 #define OPT_NOOTR       0x00001000 /* protocol not suitable for OTR */
 #define OPT_PONGS       0x00010000 /* Service sends us keep-alives */
 #define OPT_PONGED      0x00020000 /* Received a keep-alive during last interval */
+#define OPT_LOCAL_CONTACTS_SENT 0x00040000 /* Protocol already requested local contact list, so don't send it after finishing login. */
 
 /* ok. now the fun begins. first we create a connection structure */
 struct im_connection {
@@ -323,6 +329,7 @@ G_MODULE_EXPORT struct buddy *imcb_find_buddy(struct im_connection *ic, char *ha
 G_MODULE_EXPORT void imcb_rename_buddy(struct im_connection *ic, const char *handle, const char *realname);
 G_MODULE_EXPORT void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const char *nick);
 G_MODULE_EXPORT void imcb_buddy_action_response(bee_user_t *bu, const char *action, char * const args[], void *data);
+G_MODULE_EXPORT GSList *imcb_get_local_contacts(struct im_connection *ic);
 
 G_MODULE_EXPORT void imcb_buddy_typing(struct im_connection *ic, const char *handle, uint32_t flags);
 G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle(struct im_connection *ic, const char *handle);
