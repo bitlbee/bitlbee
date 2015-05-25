@@ -77,14 +77,31 @@ class BitlBeeLayer(YowInterfaceLayer):
 		self.b = self.getStack().getProp("org.bitlbee.Bijtje")
 		self.cb = self.b.bee
 		self.b.yow = self
-		self.cb.connected()
+		
+		self.cb.log("Authenticated, syncing contact list")
+		
+		# We're done once this set is empty.
+		self.todo = set(["contacts", "groups"])
+		
+		# Supposedly WA can also do national-style phone numbers without
+		# a + prefix BTW (relative to I guess the user's country?). I
+		# don't want to support this at least for now.
+		numbers = [("+" + x.split("@")[0]) for x in self.cb.get_local_contacts()]
+		self.toLower(GetSyncIqProtocolEntity(numbers))
 		self.toLower(ListGroupsIqProtocolEntity())
+		
 		try:
 			self.toLower(PresenceProtocolEntity(name=self.b.setting("name")))
 		except KeyError:
 			pass
-		# Should send the contact list now, but BitlBee hasn't given
-		# it yet. See set_away() and send_initial_contacts() below.
+
+	def check_connected(self, done):
+		if self.todo is None:
+			return
+		self.todo.remove(done)
+		if not self.todo:
+			self.todo = None
+			self.cb.connected()
 	
 	@ProtocolEntityCallback("failure")
 	def onFailure(self, entity):
@@ -100,10 +117,15 @@ class BitlBeeLayer(YowInterfaceLayer):
 	
 	@ProtocolEntityCallback("presence")
 	def onPresence(self, pres):
+		if pres.getFrom() == self.b.account["user"]:
+			# WA returns our own presence. Meh.
+			return
+		
 		status = 8 # MOBILE
 		if pres.getType() != "unavailable":
 			status |= 1 # ONLINE
 		self.cb.buddy_status(pres.getFrom(), status, None, None)
+		
 		try:
 			# Last online time becomes idle time which I guess is
 			# sane enough?
@@ -136,7 +158,6 @@ class BitlBeeLayer(YowInterfaceLayer):
 	@ProtocolEntityCallback("iq")
 	def onIq(self, entity):
 		if isinstance(entity, ResultSyncIqProtocolEntity):
-			print "XXX SYNC RESULT RECEIVED!"
 			return self.onSyncResult(entity)
 		elif isinstance(entity, ListParticipantsResultIqProtocolEntity):
 			return self.b.chat_join_participants(entity)
@@ -146,18 +167,17 @@ class BitlBeeLayer(YowInterfaceLayer):
 	def onSyncResult(self, entity):
 		# TODO HERE AND ELSEWHERE: Thread idiocy happens when going
 		# from here to the IMPlugin. Check how bjsonrpc lets me solve that.
-		# ALSO TODO: See why this one doesn't seem to be called for adds later.
-		ok = set(jid.lower() for jid in entity.inNumbers.values())
-		for handle in self.b.contacts:
-			if handle.lower() in ok:
-				self.toLower(SubscribePresenceProtocolEntity(handle))
-				self.cb.add_buddy(handle, "")
+		for num, jid in entity.inNumbers.iteritems():
+			self.toLower(SubscribePresenceProtocolEntity(jid))
+			self.cb.add_buddy(jid, "")
 		if entity.outNumbers:
 			self.cb.error("Not on WhatsApp: %s" %
 			              ", ".join(entity.outNumbers.keys()))
 		if entity.invalidNumbers:
 			self.cb.error("Invalid numbers: %s" %
 			              ", ".join(entity.invalidNumbers.keys()))
+
+		self.check_connected("contacts")
 
 	def onListGroupsResult(self, groups):
 		"""Save group info for later if the user decides to join."""
@@ -167,6 +187,8 @@ class BitlBeeLayer(YowInterfaceLayer):
 				jid += "@g.us"
 			group = self.b.groups.setdefault(jid, {})
 			group["info"] = g
+
+		self.check_connected("groups")
 
 	@ProtocolEntityCallback("notification")
 	def onNotification(self, ent):
@@ -212,6 +234,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	NAME = "wa"
 	SETTINGS = {
 		"cc": {
+			# Country code. Seems to be required for registration only.
 			"type": "int",
 		},
 		"name": {
@@ -232,8 +255,6 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		self.daemon.start()
 		self.bee.log("Started yowsup thread")
 		
-		self.logging_in = True
-		self.contacts = set()
 		self.groups = {}
 		self.groups_by_id = {}
 
@@ -251,24 +272,13 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		self.yow.Ship(msg)
 
 	def add_buddy(self, handle, _group):
-		if self.logging_in:
-			# Need to batch up the initial adds. This is a "little" ugly.
-			self.contacts.add(handle)
-		else:
-			self.yow.Ship(GetSyncIqProtocolEntity(
-			    ["+" + handle.split("@")[0]], mode=GetSyncIqProtocolEntity.MODE_DELTA))
-			self.yow.Ship(SubscribePresenceProtocolEntity(handle))
+		self.yow.Ship(GetSyncIqProtocolEntity(
+		    ["+" + handle.split("@")[0]], mode=GetSyncIqProtocolEntity.MODE_DELTA))
 
 	def remove_buddy(self, handle, _group):
 		self.yow.Ship(UnsubscribePresenceProtocolEntity(handle))
 
 	def set_away(self, state, status):
-		# When our first status is set, we've finalised login.
-		# Which means sync the full contact list now.
-		if self.logging_in:
-			self.logging_in = False
-			self.send_initial_contacts()
-		
 		print "Trying to set status to %r, %r" % (state, status)
 		if state:
 			# Only one option offered so None = available, not None = away.
@@ -277,12 +287,6 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 			self.yow.Ship(UnavailablePresenceProtocolEntity())
 		if status:
 			self.yow.Ship(SetStatusIqProtocolEntity(status))
-
-	def send_initial_contacts(self):
-		if not self.contacts:
-			return
-		numbers = [("+" + x.split("@")[0]) for x in self.contacts]
-		self.yow.Ship(GetSyncIqProtocolEntity(numbers))
 
 	def set_set_name(self, _key, value):
 		self.yow.Ship(PresenceProtocolEntity(name=value))
