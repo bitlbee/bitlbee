@@ -54,6 +54,24 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
+
+# Tried this but yowsup is not passing back the result, will have to update the library. :-(
+class GetStatusIqProtocolEntity(IqProtocolEntity):
+	def __init__(self, jids=None):
+		super(GetStatusIqProtocolEntity, self).__init__("status", None, _type="get", to="s.whatsapp.net")
+		self.jids = jids or []
+
+	def toProtocolTreeNode(self):
+		from yowsup.structs import ProtocolTreeNode
+		
+		node = super(GetStatusIqProtocolEntity, self).toProtocolTreeNode()
+		sr = ProtocolTreeNode("status")
+		node.addChild(sr)
+		for jid in self.jids:
+			sr.addChild(ProtocolTreeNode("user", {"jid": jid}))
+		return node
+
+
 class BitlBeeLayer(YowInterfaceLayer):
 
 	def __init__(self, *a, **kwa):
@@ -177,6 +195,11 @@ class BitlBeeLayer(YowInterfaceLayer):
 			self.cb.error("Invalid numbers: %s" %
 			              ", ".join(entity.invalidNumbers.keys()))
 
+		# Disabled since yowsup won't give us the result...
+		if entity.inNumbers and False:
+			self.toLower(GetStatusIqProtocolEntity(entity.inNumbers.values()))
+			self.todo.add("statuses")
+			
 		self.check_connected("contacts")
 
 	def onListGroupsResult(self, groups):
