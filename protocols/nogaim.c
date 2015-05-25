@@ -506,6 +506,12 @@ GSList *imcb_get_local_contacts(struct im_connection *ic)
  	GHashTableIter nicks;
 	GSList *ret = NULL;
 	
+	if (!(ic->acc->flags & ACC_FLAG_LOCAL_CONTACTS)) {
+		/* Only allow protocols that indicate local contact list
+		   support to use this function. */
+		return ret;
+	}
+	
 	g_hash_table_iter_init(&nicks, ic->acc->nicks);
 	gpointer handle;
 	while (g_hash_table_iter_next(&nicks, &handle, NULL)) {
