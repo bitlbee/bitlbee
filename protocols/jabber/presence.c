@@ -180,6 +180,22 @@ xt_status jabber_pkt_presence(struct xt_node *node, gpointer data)
 	return XT_HANDLED;
 }
 
+static char *choose_priority(struct im_connection *ic)
+{
+	struct jabber_data *jd = ic->proto_data;
+	char *prio = set_getstr(&ic->acc->set, "priority");
+
+	if (jd->away_state->code != NULL) {
+		int new_prio = (atoi(prio) - 5);
+		if (new_prio < 0) {
+			new_prio = 0;
+		}
+		return g_strdup_printf("%d", new_prio);
+	}
+
+	return g_strdup(prio);
+}
+
 /* Whenever presence information is updated, call this function to inform the
    server. */
 int presence_send_update(struct im_connection *ic)
@@ -188,9 +204,10 @@ int presence_send_update(struct im_connection *ic)
 	struct xt_node *node, *cap;
 	GSList *l;
 	int st;
+	char *prio = choose_priority(ic);
 
 	node = jabber_make_packet("presence", NULL, NULL, NULL);
-	xt_add_child(node, xt_new_node("priority", set_getstr(&ic->acc->set, "priority"), NULL));
+	xt_add_child(node, xt_new_node("priority", prio, NULL));
 	if (jd->away_state) {
 		xt_add_child(node, xt_new_node("show", jd->away_state->code, NULL));
 	}
@@ -221,6 +238,7 @@ int presence_send_update(struct im_connection *ic)
 	}
 
 	xt_free_node(node);
+	g_free(prio);
 	return st;
 }
 
