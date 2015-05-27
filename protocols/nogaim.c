@@ -312,7 +312,8 @@ void imcb_connected(struct im_connection *ic)
 	}
 
 	if ((ic->acc->flags & ACC_FLAG_LOCAL_CONTACTS) &&
-	    !(ic->flags & OPT_LOCAL_CONTACTS_SENT)) {
+	    !(ic->flags & OPT_LOCAL_CONTACTS_SENT) &&
+	    ic->acc->prpl->add_buddy) {
 		GHashTableIter nicks;
 		gpointer handle;
 		g_hash_table_iter_init(&nicks, ic->acc->nicks);
@@ -583,7 +584,9 @@ static void imcb_ask_add_cb_yes(void *data)
 {
 	struct imcb_ask_cb_data *cbd = data;
 
-	cbd->ic->acc->prpl->add_buddy(cbd->ic, cbd->handle, NULL);
+	if (cbd->ic->acc->prpl->add_buddy) {
+		cbd->ic->acc->prpl->add_buddy(cbd->ic, cbd->handle, NULL);
+	}
 
 	imcb_ask_cb_free(data);
 }
