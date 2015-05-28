@@ -45,6 +45,7 @@ typedef enum {
 	                                   activates all XEP-85 related code. */
 	JFLAG_XMLCONSOLE = 64,          /* If the user added an xmlconsole buddy. */
 	JFLAG_STARTTLS_DONE = 128,      /* If a plaintext session was converted to TLS. */
+	JFLAG_GMAILNOTIFY = 256,        /* If gmail notification is enabled */
 
 	JFLAG_GTALK =  0x100000,        /* Is Google Talk, as confirmed by iq discovery */
 	JFLAG_HIPCHAT = 0x200000,       /* Is hipchat, because prpl->name says so */
@@ -101,6 +102,8 @@ struct jabber_data {
 	   presence_send_update() to inform the server about the changes. */
 	const struct jabber_away_state *away_state;
 	char *away_message;
+	guint64 gmail_time;
+	char *gmail_tid;
 
 	md5_state_t cached_id_prefix;
 	GHashTable *node_cache;
@@ -223,6 +226,7 @@ struct jabber_transfer {
 #define XMLNS_DELAY_OLD    "jabber:x:delay"                                      /* XEP-0091 */
 #define XMLNS_DELAY        "urn:xmpp:delay"                                      /* XEP-0203 */
 #define XMLNS_XDATA        "jabber:x:data"                                       /* XEP-0004 */
+#define XMLNS_GMAILNOTIFY  "google:mail:notify"                                  /* Not a XEP */
 #define XMLNS_CHATSTATES   "http://jabber.org/protocol/chatstates"               /* XEP-0085 */
 #define XMLNS_DISCO_INFO   "http://jabber.org/protocol/disco#info"               /* XEP-0030 */
 #define XMLNS_DISCO_ITEMS  "http://jabber.org/protocol/disco#items"              /* XEP-0030 */

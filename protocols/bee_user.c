@@ -270,6 +270,32 @@ void imcb_buddy_msg(struct im_connection *ic, const char *handle, const char *ms
 	}
 }
 
+void imcb_notify_email(struct im_connection *ic, char *format, ...)
+{
+	const char *handle;
+	va_list params;
+	char *msg;
+
+	if (!set_getbool(&ic->acc->set, "mail_notifications")) {
+		return;
+	}
+
+	va_start(params, format);
+	msg = g_strdup_vprintf(format, params);
+	va_end(params);
+
+	/* up to the protocol to set_add this if they want to use this */
+	handle = set_getstr(&ic->acc->set, "mail_notifications_handle");
+
+	if (handle != NULL) {
+		imcb_buddy_msg(ic, handle, msg, 0, 0);
+	} else {
+		imcb_log(ic, "%s", msg);
+	}
+
+	g_free(msg);
+}
+
 void imcb_buddy_typing(struct im_connection *ic, const char *handle, uint32_t flags)
 {
 	bee_user_t *bu;
