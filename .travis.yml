@@ -3,7 +3,7 @@ language: c
 script:
  - ./configure
  - make check
- - dpkg-buildpackage -uc -us
+ - BITLBEE_SKYPE=plugin dpkg-buildpackage -uc -us
 
 before_install:
  - sudo apt-get update -qq

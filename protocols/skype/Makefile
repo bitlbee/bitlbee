@@ -18,7 +18,7 @@ test: all
 
 install-doc:
 	$(INSTALL) -d $(DESTDIR)$(MANDIR)/man1
-	$(INSTALL) -m644 skyped.1 $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL) -m644 $(_SRCDIR_)skyped.1 $(DESTDIR)$(MANDIR)/man1
 
 uninstall-doc:
 	rm -f $(DESTDIR)$(MANDIR)/man1/skyped.1*
