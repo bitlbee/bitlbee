@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import collections
 import logging
 import threading
 import time
@@ -54,6 +55,9 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
+# Yowsup starts an entire THREAD just to do pings. I'll do them myself TYVM.
+from yowsup.layers.protocol_iq.layer import YowPingThread
+YowPingThread.start = lambda x: None
 
 # Tried this but yowsup is not passing back the result, will have to update the library. :-(
 class GetStatusIqProtocolEntity(IqProtocolEntity):
@@ -129,9 +133,14 @@ class BitlBeeLayer(YowInterfaceLayer):
 		self.cb.logout(False)
 
 	def onEvent(self, event):
-		print "Received event: %s name %s" % (event, event.getName())
-		if event.getName() == "disconnect":
+		# TODO: Make this work without, hmm, over-recursing. (This handler
+		# getting called when we initiated the disconnect, which upsets yowsup.)
+		if event.getName() == "orgopenwhatsapp.yowsup.event.network.disconnected":
+			self.cb.error(event.getArg("reason"))
+			self.cb.logout(True)
 			self.getStack().execDetached(self.daemon.StopDaemon)
+		else:
+			print "Received event: %s name %s" % (event, event.getName())
 	
 	@ProtocolEntityCallback("presence")
 	def onPresence(self, pres):
@@ -154,18 +163,31 @@ class BitlBeeLayer(YowInterfaceLayer):
 	
 	@ProtocolEntityCallback("message")
 	def onMessage(self, msg):
-		receipt = OutgoingReceiptProtocolEntity(msg.getId(), msg.getFrom())
-		self.toLower(receipt)
+		if hasattr(msg, "getBody"):
+			text = msg.getBody()
+		elif hasattr(msg, "getCaption") and hasattr(msg, "getMediaUrl"):
+			lines = []
+			if msg.getMediaUrl():
+				lines.append(msg.getMediaUrl())
+			else:
+				lines.append("<Broken link>")
+			if msg.getCaption():
+				lines.append(msg.getCaption())
+			text = "\n".join(lines)
 
 		if msg.getParticipant():
-			group = self.b.groups.get(msg.getFrom(), None)
-			if not group or "id" not in group:
+			group = self.b.groups[msg.getFrom()]
+			if "id" in group:
+				self.cb.chat_msg(group["id"], msg.getParticipant(), text, 0, msg.getTimestamp())
+			else:
 				self.cb.log("Warning: Activity in room %s" % msg.getFrom())
-				self.b.groups.setdefault(msg.getFrom(), {}).setdefault("queue", []).append(msg)
-				return
-			self.cb.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
+				self.b.groups[msg.getFrom()].setdefault("queue", []).append(msg)
 		else:
-			self.cb.buddy_msg(msg.getFrom(), msg.getBody(), 0, msg.getTimestamp())
+			self.cb.buddy_msg(msg.getFrom(), text, 0, msg.getTimestamp())
+
+		# ACK is required! So only use return above in case of errors.
+		# (So that we will/might get a retry after restarting.)
+		self.toLower(OutgoingReceiptProtocolEntity(msg.getId(), msg.getFrom()))
 
 	@ProtocolEntityCallback("receipt")
 	def onReceipt(self, entity):
@@ -208,8 +230,13 @@ class BitlBeeLayer(YowInterfaceLayer):
 			jid = g.getId()
 			if "@" not in jid:
 				jid += "@g.us"
-			group = self.b.groups.setdefault(jid, {})
-			group["info"] = g
+			group = self.b.groups[jid]
+			
+			# Save it. We're going to mix ListGroups elements and
+			# Group-Subject notifications there, which don't have
+			# consistent fieldnames for the same bits of info \o/
+			g.getSubjectTimestamp = g.getSubjectTime
+			group["topic"] = g
 
 		self.check_connected("groups")
 
@@ -217,10 +244,21 @@ class BitlBeeLayer(YowInterfaceLayer):
 	def onNotification(self, ent):
 		if isinstance(ent, StatusNotificationProtocolEntity):
 			return self.onStatusNotification(ent)
+		elif isinstance(ent, SubjectGroupsNotificationProtocolEntity):
+			return self.onGroupSubjectNotification(ent)
 
 	def onStatusNotification(self, status):
 		print "New status for %s: %s" % (status.getFrom(), status.status)
 		self.bee.buddy_status_msg(status.getFrom(), status.status)
+	
+	def onGroupSubjectNotification(self, sub):
+		print "New /topic for %s: %s" % (sub.getFrom(), sub.getSubject())
+		group = self.b.groups[sub.getFrom()]
+		group["topic"] = sub
+		id = group.get("id", None)
+		if id is not None:
+			self.cb.chat_topic(id, sub.getSubjectOwner(),
+			                   sub.getSubject(), sub.getSubjectTimestamp())
 
 	@ProtocolEntityCallback("media")
 	def onMedia(self, med):
@@ -266,10 +304,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	}
 	AWAY_STATES = ["Away"]
 	ACCOUNT_FLAGS = 14 # HANDLE_DOMAINS + STATUS_MESSAGE + LOCAL_CONTACTS
-	# TODO: LOCAL LIST CAUSES CRASH!
 	# TODO: HANDLE_DOMAIN in right place (add ... ... nick bug)
-	# TODO? Allow set_away (for status msg) even if AWAY_STATES not set?
-	#   and/or, see why with the current value set_away state is None.
 
 	def login(self, account):
 		self.stack = self.build_stack(account)
@@ -278,11 +313,13 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		self.daemon.start()
 		self.bee.log("Started yowsup thread")
 		
-		self.groups = {}
+		self.groups = collections.defaultdict(dict)
 		self.groups_by_id = {}
 
 	def keepalive(self):
 		# Too noisy while debugging
+		# WTF yowsup is SPAWNING A THREAD just for this. Figure out
+		# how to kill that nonsense.
 		pass
 		#self.yow.Ship(PingIqProtocolEntity(to="s.whatsapp.net"))
 
@@ -316,18 +353,19 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 
 	def chat_join(self, id, name, _nick, _password, settings):
 		print "New chat created with id: %d" % id
-		self.groups.setdefault(name, {}).update({"id": id, "name": name})
 		group = self.groups[name]
+		group.update({"id": id, "name": name})
 		self.groups_by_id[id] = group
 		
-		gi = group.get("info", None)
+		gi = group.get("topic", None)
 		if gi:
 			self.bee.chat_topic(id, gi.getSubjectOwner(),
-			                    gi.getSubject(), gi.getSubjectTime())
+			                    gi.getSubject(), gi.getSubjectTimestamp())
 		
 		# WA doesn't really have a concept of joined or not, just
-		# long-term membership. Let's just get a list of members and
-		# pretend we've "joined" then.
+		# long-term membership. Let's just sync state (we have
+		# basic info but not yet a member list) and ACK the join
+		# once that's done.
 		self.yow.Ship(ParticipantsGroupsIqProtocolEntity(name))
 
 	def chat_join_participants(self, entity):
@@ -370,5 +408,6 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		stack.broadcastEvent(YowLayerEvent(YowNetworkLayer.EVENT_STATE_CONNECT))
 
 		return stack
+
 
 implugin.RunPlugin(YowsupIMPlugin, debug=True)
