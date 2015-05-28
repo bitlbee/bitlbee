@@ -16,11 +16,9 @@ check:
 test: all
 	./test.py
 
-doc: $(MANPAGES)
-
-install-doc: doc
+install-doc:
 	$(INSTALL) -d $(DESTDIR)$(MANDIR)/man1
-	$(INSTALL) -m644 $(MANPAGES) $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL) -m644 skyped.1 $(DESTDIR)$(MANDIR)/man1
 
 uninstall-doc:
 	rm -f $(DESTDIR)$(MANDIR)/man1/skyped.1*
