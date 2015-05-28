@@ -19,9 +19,6 @@ OUTFILE = bitlbee
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 
 all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) doc systemd
-ifdef SKYPE_PI
-	$(MAKE) -C protocols/skype doc
-endif
 
 doc:
 ifdef DOC
