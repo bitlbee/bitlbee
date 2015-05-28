@@ -802,7 +802,7 @@ xt_status jabber_iq_parse_gmail(struct im_connection *ic, struct xt_node *node, 
 		return XT_HANDLED;
 	}
 
-	max = set_getint(&ic->acc->set, "gmail_notifications_limit");
+	max = set_getint(&ic->acc->set, "mail_notifications_limit");
 	c = c->children;
 
 	while ((max-- > 0) && (c = xt_find_node(c, "mail-thread-info"))) {

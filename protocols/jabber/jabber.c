@@ -100,14 +100,14 @@ static void jabber_init(account_t *acc)
 
 	s = set_add(&acc->set, "xmlconsole", "false", set_eval_bool, acc);
 
-	s = set_add(&acc->set, "gmail_notifications", "false", set_eval_bool, acc);
+	s = set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	/* changing this is rarely needed so keeping it secret */
-	s = set_add(&acc->set, "gmail_notifications_limit", "5", set_eval_int, acc);
+	s = set_add(&acc->set, "mail_notifications_limit", "5", set_eval_int, acc);
 	s->flags |= SET_HIDDEN_DEFAULT;
 
-	s = set_add(&acc->set, "notify_handle", NULL, NULL, acc);
+	s = set_add(&acc->set, "mail_notifications_handle", NULL, NULL, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 
 	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE |
@@ -267,10 +267,12 @@ void jabber_connect(struct im_connection *ic)
 		   I think this shouldn't break anything. */
 		imcb_add_buddy(ic, JABBER_XMLCONSOLE_HANDLE, NULL);
 	}
-	if (set_getbool(&acc->set, "gmail_notifications")) {
+
+	if (set_getbool(&acc->set, "mail_notifications")) {
+		/* It's gmail specific, but it checks for server support before enabling it */
 		jd->flags |= JFLAG_GMAILNOTIFY;
-		if (set_getstr(&acc->set, "notify_handle")) {
-			imcb_add_buddy(ic, set_getstr(&acc->set, "notify_handle"), NULL);
+		if (set_getstr(&acc->set, "mail_notifications_handle")) {
+			imcb_add_buddy(ic, set_getstr(&acc->set, "mail_notifications_handle"), NULL);
 		}
 	}
 

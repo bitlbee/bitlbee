@@ -48,7 +48,7 @@ static void msn_init(account_t *acc)
 	s = set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add(&acc->set, "notify_handle", NULL, NULL, acc);
+	s = set_add(&acc->set, "mail_notifications_handle", NULL, NULL, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 
 	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE |
@@ -86,8 +86,8 @@ static void msn_login(account_t *acc)
 	msn_ns_connect(ic, server,
 	               set_getint(&ic->acc->set, "port"));
 
-	if (set_getbool(&acc->set, "mail_notifications") && set_getstr(&acc->set, "notify_handle")) {
-		imcb_add_buddy(ic, set_getstr(&acc->set, "notify_handle"), NULL);
+	if (set_getbool(&acc->set, "mail_notifications") && set_getstr(&acc->set, "mail_notifications_handle")) {
+		imcb_add_buddy(ic, set_getstr(&acc->set, "mail_notifications_handle"), NULL);
 	}
 }
 

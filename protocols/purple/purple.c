@@ -238,7 +238,7 @@ static void purple_init(account_t *acc)
 		s = set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY;
 
-		s = set_add(&acc->set, "notify_handle", NULL, NULL, acc);
+		s = set_add(&acc->set, "mail_notifications_handle", NULL, NULL, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 	}
 
@@ -335,8 +335,8 @@ static void purple_login(account_t *acc)
 
 	purple_account_set_enabled(pd->account, "BitlBee", TRUE);
 
-	if (set_getbool(&acc->set, "mail_notifications") && set_getstr(&acc->set, "notify_handle")) {
-		imcb_add_buddy(ic, set_getstr(&acc->set, "notify_handle"), NULL);
+	if (set_getbool(&acc->set, "mail_notifications") && set_getstr(&acc->set, "mail_notifications_handle")) {
+		imcb_add_buddy(ic, set_getstr(&acc->set, "mail_notifications_handle"), NULL);
 	}
 }
 
