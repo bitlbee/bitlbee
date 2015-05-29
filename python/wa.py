@@ -55,9 +55,6 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
-# Yowsup starts an entire THREAD just to do pings. I'll do them myself TYVM.
-from yowsup.layers.protocol_iq.layer import YowPingThread
-YowPingThread.start = lambda x: None
 
 # Tried this but yowsup is not passing back the result, will have to update the library. :-(
 class GetStatusIqProtocolEntity(IqProtocolEntity):
@@ -403,6 +400,13 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		stack.setProp(YowNetworkLayer.PROP_ENDPOINT, YowConstants.ENDPOINTS[0])
 		stack.setProp(YowCoderLayer.PROP_DOMAIN, YowConstants.DOMAIN)
 		stack.setProp(YowCoderLayer.PROP_RESOURCE, env.CURRENT_ENV.getResource())
+		try:
+			stack.setProp(YowIqProtocolLayer.PROP_PING_INTERVAL, 0)
+		except AttributeError:
+			# Ping setting only exists since May 2015.
+			from yowsup.layers.protocol_iq.layer import YowPingThread
+			YowPingThread.start = lambda x: None
+
 		stack.setProp("org.bitlbee.Bijtje", self)
 
 		stack.broadcastEvent(YowLayerEvent(YowNetworkLayer.EVENT_STATE_CONNECT))
