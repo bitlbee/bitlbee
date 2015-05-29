@@ -5,7 +5,7 @@ endif
 
 all:
 	# Only build the docs if this is a git tree
-	test ! '(' -d ../.git -o -d ../.bzr ')' || $(MAKE) -C user-guide
+	git rev-parse --is-inside-work-tree && $(MAKE) -C user-guide
 
 install:
 	mkdir -p $(DESTDIR)$(MANDIR)/man8/ $(DESTDIR)$(MANDIR)/man5/
