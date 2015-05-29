@@ -296,12 +296,22 @@ static void rpc_keepalive(struct im_connection *ic) {
 	rpc_send(ic, rpc);
 }
 
+static void rpc_groupchat_free(struct groupchat *gc);
+
 static void rpc_logout(struct im_connection *ic) {
 	RPC_OUT_INIT("logout");
 	if (!rpc_send(ic, rpc))
 		return;
 
 	struct rpc_connection *rd = ic->proto_data;
+
+	GHashTableIter iter;
+	struct rpc_groupchat *rc;
+	g_hash_table_iter_init(&iter, rd->groupchats);
+	while (g_hash_table_iter_next(&iter, NULL, (gpointer*)&rc)) {
+		rpc_groupchat_free(rc->gc);
+	}
+
 	b_event_remove(ic->inpa);
 	closesocket(rd->fd);
 	g_free(rd->buf);
@@ -398,6 +408,7 @@ static void rpc_chat_leave(struct groupchat *gc) {
 	struct rpc_groupchat *rc = gc->data;
 	json_array_append_integer(params, rc->id);
 	rpc_send(gc->ic, rpc);
+	rpc_groupchat_free(gc);
 }
 
 static void rpc_chat_msg(struct groupchat *gc, char *msg, int flags) {
@@ -424,6 +435,11 @@ static struct rpc_groupchat *rpc_groupchat_by_id(struct im_connection *ic, int i
 	struct rpc_groupchat *rc = g_hash_table_lookup(rd->groupchats, &id);
 
 	return rc;
+}
+
+static void rpc_groupchat_free(struct groupchat *gc) {
+	g_free(gc->data);
+	imcb_chat_free(gc);
 }
 
 /* Boilerplate for all incoming RPCs (where groupchat is identified using
