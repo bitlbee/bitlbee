@@ -19,6 +19,7 @@
 # Boston, MA  02110-1301, USA.
 
 
+import os
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -220,6 +221,9 @@ def main():
     if len(sys.argv) != 3:
         print("Usage: python genhelp.py input.xml output.txt")
         return
+
+    # ensure that we really are in the same directory as the input file
+    os.chdir(os.path.dirname(os.path.abspath(sys.argv[1])))
 
     txt = process_file(sys.argv[1])
     open(sys.argv[2], "w").write(txt)

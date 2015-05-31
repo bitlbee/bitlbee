@@ -30,8 +30,8 @@ help.xml: commands.xml
 %.db.xml: %.xml docbook.xsl
 	xsltproc --xinclude --output $@ docbook.xsl $< 
 
-help.txt: help.xml help.xsl commands.xml misc.xml quickstart.xml
-	python genhelp.py $< $@
+help.txt: $(_SRCDIR_)help.xml $(_SRCDIR_)commands.xml $(_SRCDIR_)misc.xml $(_SRCDIR_)quickstart.xml
+	python $(_SRCDIR_)genhelp.py $< $@
 
 clean: 
 	rm -f *.html *.pdf *.ps *.rtf *.txt *.db.xml
