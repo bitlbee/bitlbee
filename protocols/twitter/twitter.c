@@ -858,6 +858,8 @@ static void twitter_buddy_data_free(struct bee_user *bu)
 	g_free(bu->data);
 }
 
+bee_user_t twitter_log_local_user;
+
 /** Convert the given bitlbee tweet ID, bitlbee username, or twitter tweet ID
  *  into a twitter tweet ID.
  *
