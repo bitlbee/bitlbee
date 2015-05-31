@@ -819,3 +819,19 @@ gboolean jabber_set_me(struct im_connection *ic, const char *me)
 
 	return TRUE;
 }
+
+/* Returns new reference! g_free() afterwards. */
+char *jabber_get_bare_jid(char *jid)
+{
+	char *s = NULL;
+
+	if (jid == NULL) {
+		return NULL;
+	}
+
+	if ((s = strchr(jid, '/'))) {
+		return g_strndup(jid, s - jid);
+	} else {
+		return g_strdup(jid);
+	}
+}

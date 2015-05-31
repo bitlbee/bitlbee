@@ -367,9 +367,13 @@ int nick_lc(irc_t *irc, char *nick)
 	int i;
 
 	if (tab['A'] == 0) {
+		/* initialize table so nonchars are mapped to themselves */
+		for (i = 0; i < sizeof(tab); i++) {
+			tab[i] = i;
+		}
+		/* replace uppercase chars with lowercase chars */
 		for (i = 0; nick_lc_chars[i]; i++) {
 			tab[(int) nick_uc_chars[i]] = nick_lc_chars[i];
-			tab[(int) nick_lc_chars[i]] = nick_lc_chars[i];
 		}
 	}
 
