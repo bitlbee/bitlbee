@@ -750,3 +750,19 @@ int truncate_utf8(char *string, int maxlen)
 	*end = '\0';
 	return end - string;
 }
+
+/* Parses a guint64 from string, returns TRUE on success */
+gboolean parse_int64(char *string, int base, guint64 *number)
+{
+	guint64 parsed;
+	char *endptr;
+
+	errno = 0;
+	parsed = g_ascii_strtoull(string, &endptr, base);
+	if (errno || endptr == string || *endptr != '\0') {
+		return FALSE;
+	}
+	*number = parsed;
+	return TRUE;
+}
+

@@ -148,5 +148,6 @@ G_MODULE_EXPORT int md5_verify_password(char *password, char *hash);
 G_MODULE_EXPORT char **split_command_parts(char *command, int limit);
 G_MODULE_EXPORT char *get_rfc822_header(const char *text, const char *header, int len);
 G_MODULE_EXPORT int truncate_utf8(char *string, int maxlen);
+G_MODULE_EXPORT gboolean parse_int64(char *string, int base, guint64 *number);
 
 #endif
