@@ -78,7 +78,7 @@ get_version() {
 		timestamp=$(cd $srcdir; git show -s --format=%ci HEAD | sed 's/ .*$//; s/-//g')
 		branch=$(cd $srcdir; git rev-parse --abbrev-ref HEAD)
 
-		search="\(.\+\)-\([0-9]\+\)-\(g[0-9a-f]\+\)"
+		search='\(.*\)-\([0-9]*\)-\(g[0-9a-f]*\)'
 		replace="\1+$timestamp+$branch+\2-\3-git"
 
 		describe=$(cd $srcdir; git describe --long --tags 2>/dev/null)
