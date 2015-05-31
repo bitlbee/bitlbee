@@ -81,9 +81,14 @@ get_version() {
 		search="(.+)-([0-9]+)-(g[0-9a-f]+)"
 		replace="\1+$timestamp+$branch+\2-\3-git"
 
-		BITLBEE_VERSION=$(cd $srcdir; git describe --long --tags | sed -r "s#$search#$replace#")
+		describe=$(cd $srcdir; git describe --long --tags 2>/dev/null)
+		if [ $? -ne 0 ]; then
+			describe=${REAL_BITLBEE_VERSION}-0-g$(cd $srcdir; git rev-parse --short HEAD)
+		fi
 
-		unset timestamp branch search replace
+		BITLBEE_VERSION=$(echo $describe | sed -r "s#$search#$replace#")
+
+		unset timestamp branch search replace describe
 	fi
 }
 
