@@ -21,7 +21,6 @@ Description: An IRC to other chat networks gateway (default version)
 Package: bitlbee-libpurple
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, debianutils (>= 1.16), bitlbee-common (= ${source:Version})
-Provides: bitlbee (= ${source:Version})
 Conflicts: bitlbee
 Replaces: bitlbee
 Description: An IRC to other chat networks gateway (using libpurple)
