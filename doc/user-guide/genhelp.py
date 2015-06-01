@@ -2,6 +2,9 @@
 
 # Usage: python genhelp.py input.xml output.txt
 # (Both python2 (>=2.5) or python3 work)
+#
+# The shebang above isn't used, set the PYTHON environment variable
+# before running ./configure instead
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License

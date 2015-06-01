@@ -3,6 +3,10 @@ ifdef _SRCDIR_
 _SRCDIR_ := $(_SRCDIR_)doc/user-guide/
 endif
 
+ifndef PYTHON
+PYTHON = python
+endif 
+
 all: help.txt
 
 user-guide: user-guide.txt user-guide.html # user-guide.pdf user-guide.ps user-guide.rtf
@@ -31,7 +35,7 @@ help.xml: commands.xml
 	xsltproc --xinclude --output $@ docbook.xsl $< 
 
 help.txt: $(_SRCDIR_)help.xml $(_SRCDIR_)commands.xml $(_SRCDIR_)misc.xml $(_SRCDIR_)quickstart.xml
-	python $(_SRCDIR_)genhelp.py $< $@
+	$(PYTHON) $(_SRCDIR_)genhelp.py $< $@
 
 clean: 
 	rm -f *.html *.pdf *.ps *.rtf *.txt *.db.xml
