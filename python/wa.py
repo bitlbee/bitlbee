@@ -145,9 +145,13 @@ class BitlBeeLayer(YowInterfaceLayer):
 			# WA returns our own presence. Meh.
 			return
 		
-		status = 8 # MOBILE
-		if pres.getType() != "unavailable":
-			status |= 1 # ONLINE
+		# Online/offline is not really how WA works. Let's show everyone
+		# as online but unavailable folks as away. This also solves the
+		# problem of offline->IRC /quit causing the persons to leave chat
+		# channels as well (and not reappearing there when they return).
+		status = 8 | 1  # MOBILE | ONLINE
+		if pres.getType() == "unavailable":
+			status |= 4  # AWAY
 		self.cb.buddy_status(pres.getFrom(), status, None, None)
 		
 		try:
@@ -212,7 +216,7 @@ class BitlBeeLayer(YowInterfaceLayer):
 			              ", ".join(entity.outNumbers.keys()))
 		if entity.invalidNumbers:
 			self.cb.error("Invalid numbers: %s" %
-			              ", ".join(entity.invalidNumbers.keys()))
+			              ", ".join(entity.invalidNumbers))
 
 		# Disabled since yowsup won't give us the result...
 		if entity.inNumbers and False:
@@ -375,6 +379,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		# Add the user themselves last to avoid a visible join flood.
 		self.bee.chat_add_buddy(id, self.account["user"])
 		for msg in group.setdefault("queue", []):
+			## TODO: getBody fails for media msgs.
 			self.bee.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
 		del group["queue"]
 	
