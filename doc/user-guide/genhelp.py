@@ -2,6 +2,9 @@
 
 # Usage: python genhelp.py input.xml output.txt
 # (Both python2 (>=2.5) or python3 work)
+#
+# The shebang above isn't used, set the PYTHON environment variable
+# before running ./configure instead
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,6 +22,7 @@
 # Boston, MA  02110-1301, USA.
 
 
+import os
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -220,6 +224,9 @@ def main():
     if len(sys.argv) != 3:
         print("Usage: python genhelp.py input.xml output.txt")
         return
+
+    # ensure that we really are in the same directory as the input file
+    os.chdir(os.path.dirname(os.path.abspath(sys.argv[1])))
 
     txt = process_file(sys.argv[1])
     open(sys.argv[2], "w").write(txt)

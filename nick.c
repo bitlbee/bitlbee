@@ -185,8 +185,16 @@ char *nick_gen(bee_user_t *bu)
 		   accents don't just get stripped. Note that it depends on
 		   LC_CTYPE being set to something other than C/POSIX. */
 		if (!(irc && irc->status & IRC_UTF8_NICKS)) {
-			part = asc = g_convert_with_fallback(part, -1, "ASCII//TRANSLIT",
-			                                     "UTF-8", "", NULL, NULL, NULL);
+			asc = g_convert_with_fallback(part, -1, "ASCII//TRANSLIT", "UTF-8", "", NULL, NULL, NULL);
+
+			if (!asc) {
+				/* If above failed, try again without //TRANSLIT.
+				   //TRANSLIT is a GNU iconv special and is not POSIX.
+				   Other platforms may not support it. */
+				asc = g_convert_with_fallback(part, -1, "ASCII", "UTF-8", "", NULL, NULL, NULL);
+			}
+
+			part = asc;
 		}
 
 		if (part && chop && (s = strchr(part, chop))) {

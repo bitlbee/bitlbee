@@ -468,11 +468,15 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 
 	g_regex_match(regex, msg, 0, &match_info);
 	while (g_match_info_matches(match_info)) {
-		gchar *url = g_match_info_fetch(match_info, 2);
+		gchar *s, *url;
+
+		url = g_match_info_fetch(match_info, 2);
 		url_len_diff += target_len - g_utf8_strlen(url, -1);
+
 		/* Add another character for https://t.co/... URLs */
-		if (g_match_info_fetch(match_info, 3) != NULL) {
+		if ((s = g_match_info_fetch(match_info, 3))) {
 			url_len_diff += 1;
+			g_free(s);
 		}
 		g_free(url);
 		g_match_info_next(match_info, NULL);
@@ -858,21 +862,6 @@ static void twitter_buddy_data_free(struct bee_user *bu)
 	g_free(bu->data);
 }
 
-/* Parses a decimal or hex tweet ID, returns TRUE on success */
-static gboolean twitter_parse_id(char *string, int base, guint64 *id)
-{
-	guint64 parsed;
-	char *endptr;
-
-	errno = 0;
-	parsed = g_ascii_strtoull(string, &endptr, base);
-	if (errno || endptr == string || *endptr != '\0') {
-		return FALSE;
-	}
-	*id = parsed;
-	return TRUE;
-}
-
 bee_user_t twitter_log_local_user;
 
 /** Convert the given bitlbee tweet ID, bitlbee username, or twitter tweet ID
@@ -902,10 +891,10 @@ static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, cha
 		if (arg[0] == '#') {
 			arg++;
 		}
-		if (twitter_parse_id(arg, 16, &id) && id < TWITTER_LOG_LENGTH) {
+		if (parse_int64(arg, 16, &id) && id < TWITTER_LOG_LENGTH) {
 			bu = td->log[id].bu;
 			id = td->log[id].id;
-		} else if (twitter_parse_id(arg, 10, &id)) {
+		} else if (parse_int64(arg, 10, &id)) {
 			/* Allow normal tweet IDs as well; not a very useful
 			   feature but it's always been there. Just ignore
 			   very low IDs to avoid accidents. */
