@@ -82,6 +82,25 @@ static void handle_settings(struct xt_node *node, set_t **head)
 	}
 }
 
+/* Use for unsupported/not-found protocols. Save settings as-is but don't allow changes. */
+static void handle_settings_raw(struct xt_node *node, set_t **head)
+{
+	struct xt_node *c;
+
+	for (c = node->children; (c = xt_find_node(c, "setting")); c = c->next) {
+		char *name = xt_find_attr(c, "name");
+
+		if (!name) {
+			continue;
+		}
+
+		set_t *s = set_add(head, name, NULL, NULL, NULL);
+		set_setstr(head, name, c->text);
+		s->flags |= SET_HIDDEN |
+		            ACC_SET_OFFLINE_ONLY | ACC_SET_ONLINE_ONLY;
+	}
+}
+
 static xt_status handle_account(struct xt_node *node, gpointer data)
 {
 	struct xml_parsedata *xd = data;
@@ -103,8 +122,8 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	if (protocol) {
 		prpl = find_protocol(protocol);
 		if (!prpl) {
-			irc_rootmsg(xd->irc, "Error loading user config: Protocol not found: `%s'", protocol);
-			return XT_ABORT;
+			irc_rootmsg(xd->irc, "Warning: Protocol not found: `%s'", protocol);
+			prpl = (struct prpl*) &protocol_missing;
 		}
 	}
 
@@ -122,6 +141,11 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 		if (tag) {
 			set_setstr(&acc->set, "tag", tag);
 		}
+		if (prpl == &protocol_missing) {
+			set_t *s = set_add(&acc->set, "_protocol_name", protocol, NULL, NULL);
+			s->flags |= SET_HIDDEN | SET_NOSAVE |
+			            ACC_SET_OFFLINE_ONLY | ACC_SET_ONLINE_ONLY;
+		}
 	} else {
 		g_free(pass_cr);
 		g_free(password);
@@ -131,7 +155,11 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	g_free(pass_cr);
 	g_free(password);
 
-	handle_settings(node, &acc->set);
+	if (prpl == &protocol_missing) {
+		handle_settings_raw(node, &acc->set);
+	} else {
+		handle_settings(node, &acc->set);
+	}
 
 	for (c = node->children; (c = xt_find_node(c, "buddy")); c = c->next) {
 		char *handle, *nick;
@@ -307,7 +335,11 @@ struct xt_node *xml_generate(irc_t *irc)
 		g_free(pass_cr);
 
 		cur = xt_new_node("account", NULL, NULL);
-		xt_add_attr(cur, "protocol", acc->prpl->name);
+		if (acc->prpl == &protocol_missing) {
+			xt_add_attr(cur, "protocol", set_getstr(&acc->set, "_protocol_name"));
+		} else {
+			xt_add_attr(cur, "protocol", acc->prpl->name);
+		}
 		xt_add_attr(cur, "handle", acc->user);
 		xt_add_attr(cur, "password", pass_b64);
 		xt_add_attr(cur, "autoconnect", acc->auto_connect ? "true" : "false");

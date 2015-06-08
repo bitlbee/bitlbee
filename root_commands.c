@@ -459,7 +459,7 @@ static void cmd_account(irc_t *irc, char **cmd)
 		}
 
 		for (a = irc->b->accounts; a; a = a->next) {
-			char *con;
+			char *con = NULL, *protocol = NULL;
 
 			if (a->ic && (a->ic->flags & OPT_LOGGED_IN)) {
 				con = " (connected)";
@@ -470,8 +470,14 @@ static void cmd_account(irc_t *irc, char **cmd)
 			} else {
 				con = "";
 			}
+			if (a->prpl == &protocol_missing) {
+				protocol = g_strdup_printf("%s (missing!)", set_getstr(&a->set, "_protocol_name"));
+			} else {
+				protocol = g_strdup(a->prpl->name);
+			}
 
-			irc_rootmsg(irc, "%2d (%s): %s, %s%s", i, a->tag, a->prpl->name, a->user, con);
+			irc_rootmsg(irc, "%2d (%s): %s, %s%s", i, a->tag, protocol, a->user, con);
+			g_free(protocol);
 
 			i++;
 		}
@@ -485,7 +491,7 @@ static void cmd_account(irc_t *irc, char **cmd)
 			irc_rootmsg(irc, "Trying to get all accounts connected...");
 
 			for (a = irc->b->accounts; a; a = a->next) {
-				if (!a->ic && a->auto_connect) {
+				if (!a->ic && a->auto_connect && a->prpl != &protocol_missing) {
 					if (strcmp(a->pass, PASSWORD_PENDING) == 0) {
 						irc_rootmsg(irc, "Enter password for account %s "
 						            "first (use /OPER)", a->tag);
@@ -542,6 +548,9 @@ static void cmd_account(irc_t *irc, char **cmd)
 		} else if (strcmp(a->pass, PASSWORD_PENDING) == 0) {
 			irc_rootmsg(irc, "Enter password for account %s "
 			            "first (use /OPER)", a->tag);
+		} else if (a->prpl == &protocol_missing) {
+			irc_rootmsg(irc, "Protocol `%s' not recognised (plugin may be missing or not running?)",
+			            set_getstr(&a->set, "_protocol_name"));
 		} else {
 			account_on(irc->b, a);
 		}
