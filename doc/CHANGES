@@ -11,19 +11,19 @@ Version 3.4.1:
 - jabber:
   * Add "hipchat" protocol, for smoother login. Takes the same username as
     the official client. Note that unlike the 'hip-cat' branch, this doesn't
-    preload channels. See the HowtoHipchat wiki page for details (dx)
+    preload channels. https://wiki.bitlbee.org/HowtoHipchat for details (dx)
   * Fixed a bug when receiving topics set by people who left the channel (dx)
   * Create fake users instead of showing "unknown participant" errors (dx)
   * Gmail mail notifications support (Artem Savkov)
   * Lowering xmpp presence priority on away (Artem Savkov)
 - twitter:
-  * Show quoted tweets inline (wilmer)
+  * Show quoted tweets/RTs with comment inline (wilmer)
   * Added "url" command, can be used to quote tweets (wilmer)
   * Make replies to self work (wilmer)
 - Building documentation is now done with a python script (both 2.x/3.x work)
   Asciidoc/xsltproc/xmlto are no longer build dependencies (dx)
 
-Finished ... 200XX
+Finished 16 Jun 2015
 
 Version 3.4:
 - First release pretty much fully prepared by dx instead of Wilmer. Just look
