@@ -1581,7 +1581,8 @@ void twitter_favourite_tweet(struct im_connection *ic, guint64 id)
 static void twitter_http_status_show_url(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed, *id;
+	JSON_Value *parsed;
+	uint64_t id;
 	const char *name;
 
 	// Check if the connection is still active.
@@ -1593,16 +1594,11 @@ static void twitter_http_status_show_url(struct http_request *req)
 		return;
 	}
 
-	/* for the parson branch:
 	name = json_object_dotget_string(json_object(parsed), "user.screen_name");
 	id = json_object_get_integer(json_object(parsed), "id");
-	*/
 
-	name = json_o_str(json_o_get(parsed, "user"), "screen_name");
-	id = json_o_get(parsed, "id");
-
-	if (name && id && id->type == json_integer) {
-		twitter_log(ic, "https://twitter.com/%s/status/%" G_GUINT64_FORMAT, name, id->u.integer);
+	if (name && id) {
+		twitter_log(ic, "https://twitter.com/%s/status/%" G_GUINT64_FORMAT, name, id);
 	} else {
 		twitter_log(ic, "Error: could not fetch tweet url.");
 	}
