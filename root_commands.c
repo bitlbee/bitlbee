@@ -660,18 +660,6 @@ static void cmd_add(irc_t *irc, char **cmd)
 		return;
 	}
 
-	if (cmd[3]) {
-		if (!nick_ok(irc, cmd[3])) {
-			irc_rootmsg(irc, "The requested nick `%s' is invalid", cmd[3]);
-			return;
-		} else if (irc_user_by_name(irc, cmd[3])) {
-			irc_rootmsg(irc, "The requested nick `%s' already exists", cmd[3]);
-			return;
-		} else {
-			nick_set_raw(a, cmd[2], cmd[3]);
-		}
-	}
-
 	if ((a->flags & ACC_FLAG_HANDLE_DOMAINS) && cmd[2][0] != '_' &&
 	    (!(s = strchr(cmd[2], '@')) || s[1] == '\0')) {
 		/* If there's no @ or it's the last char, append the user's
@@ -682,6 +670,18 @@ static void cmd_add(irc_t *irc, char **cmd)
 		}
 		if ((s = strchr(a->user, '@'))) {
 			cmd[2] = handle = g_strconcat(cmd[2], s, NULL);
+		}
+	}
+
+	if (cmd[3]) {
+		if (!nick_ok(irc, cmd[3])) {
+			irc_rootmsg(irc, "The requested nick `%s' is invalid", cmd[3]);
+			return;
+		} else if (irc_user_by_name(irc, cmd[3])) {
+			irc_rootmsg(irc, "The requested nick `%s' already exists", cmd[3]);
+			return;
+		} else {
+			nick_set_raw(a, cmd[2], cmd[3]);
 		}
 	}
 
