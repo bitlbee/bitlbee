@@ -100,7 +100,7 @@ class BitlBeeLayer(YowInterfaceLayer):
 		self.cb.log("Authenticated, syncing contact list")
 		
 		# We're done once this set is empty.
-		self.todo = set(["contacts", "groups"])
+		self.todo = set(["contacts", "groups", "ping"])
 		
 		# Supposedly WA can also do national-style phone numbers without
 		# a + prefix BTW (relative to I guess the user's country?). I
@@ -108,6 +108,7 @@ class BitlBeeLayer(YowInterfaceLayer):
 		numbers = [("+" + x.split("@")[0]) for x in self.cb.get_local_contacts()]
 		self.toLower(GetSyncIqProtocolEntity(numbers))
 		self.toLower(ListGroupsIqProtocolEntity())
+		self.b.keepalive()
 		
 		try:
 			self.toLower(PresenceProtocolEntity(name=self.b.setting("name")))
@@ -204,6 +205,14 @@ class BitlBeeLayer(YowInterfaceLayer):
 			return self.b.chat_join_participants(entity)
 		elif isinstance(entity, ListGroupsResultIqProtocolEntity):
 			return self.onListGroupsResult(entity)
+		elif "ping" in self.todo: # Pong has no type, sigh.
+			if "contacts" in self.todo:
+				# Shitty Whatsapp rejected the sync request, and
+				# annoying Yowsup doesn't inform on error responses.
+				# So instead, if we received no response to it but
+				# did get our ping back, declare failure.
+				self.onSyncResultFail()
+			self.check_connected("ping")
 	
 	def onSyncResult(self, entity):
 		# TODO HERE AND ELSEWHERE: Thread idiocy happens when going
@@ -218,11 +227,16 @@ class BitlBeeLayer(YowInterfaceLayer):
 			self.cb.error("Invalid numbers: %s" %
 			              ", ".join(entity.invalidNumbers))
 
-		# Disabled since yowsup won't give us the result...
-		if entity.inNumbers and False:
-			self.toLower(GetStatusIqProtocolEntity(entity.inNumbers.values()))
-			self.todo.add("statuses")
-			
+		#self.getStatuses(entity.inNumbers.values())
+		self.check_connected("contacts")
+
+	def onSyncResultFail(self):
+		# Whatsapp rate-limits sync stanzas, so in case of failure
+		# just assume all contacts are valid.
+		for jid in self.cb.get_local_contacts():
+			self.toLower(SubscribePresenceProtocolEntity(jid))
+			self.cb.add_buddy(jid, "")
+		#self.getStatuses?
 		self.check_connected("contacts")
 
 	def onListGroupsResult(self, groups):
@@ -240,6 +254,11 @@ class BitlBeeLayer(YowInterfaceLayer):
 			group["topic"] = g
 
 		self.check_connected("groups")
+
+	def getStatuses(self, contacts):
+		return # Disabled since yowsup won't give us the result...
+		self.toLower(GetStatusIqProtocolEntity(contacts))
+		self.todo.add("statuses")
 
 	@ProtocolEntityCallback("notification")
 	def onNotification(self, ent):
@@ -306,6 +325,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	AWAY_STATES = ["Away"]
 	ACCOUNT_FLAGS = 14 # HANDLE_DOMAINS + STATUS_MESSAGE + LOCAL_CONTACTS
 	# TODO: HANDLE_DOMAIN in right place (add ... ... nick bug)
+	PING_INTERVAL = 299 # seconds
 
 	def login(self, account):
 		self.stack = self.build_stack(account)
@@ -317,12 +337,13 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		self.groups = collections.defaultdict(dict)
 		self.groups_by_id = {}
 
+		self.next_ping = None
+
 	def keepalive(self):
-		# Too noisy while debugging
-		# WTF yowsup is SPAWNING A THREAD just for this. Figure out
-		# how to kill that nonsense.
-		pass
-		#self.yow.Ship(PingIqProtocolEntity(to="s.whatsapp.net"))
+		if self.next_ping and (time.time() < self.next_ping):
+			return
+		self.yow.Ship(PingIqProtocolEntity(to="s.whatsapp.net"))
+		self.next_ping = time.time() + self.PING_INTERVAL
 
 	def logout(self):
 		self.stack.broadcastEvent(YowLayerEvent(YowNetworkLayer.EVENT_STATE_DISCONNECT))
