@@ -3,10 +3,13 @@ ifdef _SRCDIR_
 _SRCDIR_ := $(_SRCDIR_)doc/user-guide/
 endif
 
-EXTRAPARANEWLINE = 1
-# EXTRAPARANEWLINE = 0
+ifndef PYTHON
+PYTHON = python
+endif 
 
-all: user-guide.txt user-guide.html help.txt # user-guide.pdf user-guide.ps user-guide.rtf
+all: help.txt
+
+user-guide: user-guide.txt user-guide.html # user-guide.pdf user-guide.ps user-guide.rtf
 
 %.tex: %.db.xml
 	xsltproc --stringparam l10n.gentext.default.language "en" --stringparam latex.documentclass.common "" --stringparam latex.babel.language "" --output $@ http://db2latex.sourceforge.net/xsl/docbook.xsl $<
@@ -31,8 +34,8 @@ help.xml: commands.xml
 %.db.xml: %.xml docbook.xsl
 	xsltproc --xinclude --output $@ docbook.xsl $< 
 
-help.txt: help.xml help.xsl commands.xml misc.xml quickstart.xml
-	xsltproc --stringparam extraparanewline "$(EXTRAPARANEWLINE)" --xinclude help.xsl $< | perl -0077 -pe 's/\n\n%/\n%/s; s/_b_/\002/g;' > $@
+help.txt: $(_SRCDIR_)help.xml $(_SRCDIR_)commands.xml $(_SRCDIR_)misc.xml $(_SRCDIR_)quickstart.xml
+	$(PYTHON) $(_SRCDIR_)genhelp.py $< $@
 
 clean: 
 	rm -f *.html *.pdf *.ps *.rtf *.txt *.db.xml
@@ -47,4 +50,4 @@ uninstall:
 	rm -f $(DESTDIR)$(DATADIR)/help.txt
 	-rmdir $(DESTDIR)$(DATADIR)
 
-.PHONY: clean install uninstall
+.PHONY: clean install uninstall user-guide

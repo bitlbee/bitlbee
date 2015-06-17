@@ -35,10 +35,10 @@ extern "C" {
 #endif
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "3.4"
+#define BITLBEE_VERSION "3.4.1"
 #define VERSION BITLBEE_VERSION
 #define BITLBEE_VER(a, b, c) (((a) << 16) + ((b) << 8) + (c))
-#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 4, 0)
+#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 4, 1)
 
 #define MAX_STRING 511
 
@@ -92,8 +92,6 @@ extern "C" {
 #define g_io_add_watch_full     __PLEASE_USE_B_INPUT_ADD__
 #undef g_source_remove
 #define g_source_remove         __PLEASE_USE_B_EVENT_REMOVE__
-#undef g_source_remove_by_user_data
-#define g_source_remove_by_user_data    __PLEASE_USE_B_SOURCE_REMOVE_BY_USER_DATA__
 #undef g_main_run
 #define g_main_run              __PLEASE_USE_B_MAIN_RUN__
 #undef g_main_quit

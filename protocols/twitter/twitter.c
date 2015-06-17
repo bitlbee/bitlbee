@@ -468,11 +468,15 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 
 	g_regex_match(regex, msg, 0, &match_info);
 	while (g_match_info_matches(match_info)) {
-		gchar *url = g_match_info_fetch(match_info, 2);
+		gchar *s, *url;
+
+		url = g_match_info_fetch(match_info, 2);
 		url_len_diff += target_len - g_utf8_strlen(url, -1);
+
 		/* Add another character for https://t.co/... URLs */
-		if (g_match_info_fetch(match_info, 3) != NULL) {
+		if ((s = g_match_info_fetch(match_info, 3))) {
 			url_len_diff += 1;
+			g_free(s);
 		}
 		g_free(url);
 		g_match_info_next(match_info, NULL);
@@ -482,17 +486,24 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 	return url_len_diff;
 }
 
-static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
+int twitter_message_len(gchar *msg, int target_len)
 {
-	int max = set_getint(&ic->acc->set, "message_length"), len;
-	int target_len = set_getint(&ic->acc->set, "target_url_length");
 	int url_len_diff = 0;
 
 	if (target_len > 0) {
 		url_len_diff = twitter_url_len_diff(msg, target_len);
 	}
 
-	if (max == 0 || (len = g_utf8_strlen(msg, -1) + url_len_diff) <= max) {
+	return g_utf8_strlen(msg, -1) + url_len_diff;
+}
+
+static gboolean twitter_length_check(struct im_connection *ic, gchar * msg)
+{
+	int max = set_getint(&ic->acc->set, "message_length");
+	int target_len = set_getint(&ic->acc->set, "target_url_length");
+	int len = twitter_message_len(msg, target_len);
+
+	if (max == 0 || len <= max) {
 		return TRUE;
 	}
 
@@ -851,21 +862,6 @@ static void twitter_buddy_data_free(struct bee_user *bu)
 	g_free(bu->data);
 }
 
-/* Parses a decimal or hex tweet ID, returns TRUE on success */
-static gboolean twitter_parse_id(char *string, int base, guint64 *id)
-{
-	guint64 parsed;
-	char *endptr;
-
-	errno = 0;
-	parsed = g_ascii_strtoull(string, &endptr, base);
-	if (errno || endptr == string || *endptr != '\0') {
-		return FALSE;
-	}
-	*id = parsed;
-	return TRUE;
-}
-
 bee_user_t twitter_log_local_user;
 
 /** Convert the given bitlbee tweet ID, bitlbee username, or twitter tweet ID
@@ -895,10 +891,10 @@ static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, cha
 		if (arg[0] == '#') {
 			arg++;
 		}
-		if (twitter_parse_id(arg, 16, &id) && id < TWITTER_LOG_LENGTH) {
+		if (parse_int64(arg, 16, &id) && id < TWITTER_LOG_LENGTH) {
 			bu = td->log[id].bu;
 			id = td->log[id].id;
-		} else if (twitter_parse_id(arg, 10, &id)) {
+		} else if (parse_int64(arg, 10, &id)) {
 			/* Allow normal tweet IDs as well; not a very useful
 			   feature but it's always been there. Just ignore
 			   very low IDs to avoid accidents. */
@@ -1015,11 +1011,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		if (!id) {
 			twitter_log(ic, "Tweet `%s' does not exist", cmd[1]);
 		} else {
-			/* More common link is twitter.com/$UID/status/$ID (and that's
-			 * what this will 302 to) but can't generate that since for RTs,
-			 * bu here points at the retweeter while id contains the id of
-			 * the original message. */
-			twitter_log(ic, "https://twitter.com/statuses/%lld", id);
+			twitter_status_show_url(ic, id);
 		}
 		goto eof;
 

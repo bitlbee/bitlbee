@@ -180,6 +180,7 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 	if (st <= 0) {
 		imcb_error(ic, "Error while reading from server");
 		imc_logout(ic, TRUE);
+		g_free(bytes);
 		return FALSE;
 	}
 
@@ -187,11 +188,7 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 
 	g_free(bytes);
 
-	/* Ignore ret == 0, it's already disconnected then. */
-	msn_handler(md);
-
-	return TRUE;
-	
+	return msn_handler(md);
 }
 
 int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)
@@ -396,9 +393,9 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 					char *folders = get_rfc822_header(body, "Folders-Unread:", blen);
 
 					if (inbox && folders) {
-						imcb_log(ic,
-						         "INBOX contains %s new messages, plus %s messages in other folders.", inbox,
-						         folders);
+						imcb_notify_email(ic,
+						        "INBOX contains %s new messages, plus %s messages in other folders.", inbox,
+						        folders);
 					}
 
 					g_free(inbox);
@@ -410,8 +407,7 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 					char *fromname = get_rfc822_header(body, "From:", blen);
 
 					if (from && fromname) {
-						imcb_log(ic, "Received an e-mail message from %s <%s>.", fromname,
-						         from);
+						imcb_notify_email(ic, "Received an e-mail message from %s <%s>.", fromname, from);
 					}
 
 					g_free(from);
@@ -419,8 +415,6 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 				}
 			} else if (g_strncasecmp(ct, "text/x-msmsgsactivemailnotification", 35) == 0) {
 				/* Notification that a message has been read... Ignore it */
-			} else {
-				debug("Can't handle %s packet from notification server", ct);
 			}
 
 			g_free(ct);
@@ -625,7 +619,7 @@ static gboolean msn_ns_send_adl_1(gpointer key, gpointer value, gpointer data)
 	char *domain;
 	char l[4];
 
-	if ((bd->flags & 7) == 0 || (bd->flags & MSN_BUDDY_ADL_SYNCED)) {
+	if ((bd->flags & (MSN_BUDDY_FL | MSN_BUDDY_AL)) == 0 || (bd->flags & MSN_BUDDY_ADL_SYNCED)) {
 		return FALSE;
 	}
 
@@ -643,7 +637,7 @@ static gboolean msn_ns_send_adl_1(gpointer key, gpointer value, gpointer data)
 		xt_insert_child(adl, d);
 	}
 
-	g_snprintf(l, sizeof(l), "%d", bd->flags & 7);
+	g_snprintf(l, sizeof(l), "%d", bd->flags & (MSN_BUDDY_FL | MSN_BUDDY_AL));
 	c = xt_new_node("c", NULL, NULL);
 	xt_add_attr(c, "n", handle);
 	xt_add_attr(c, "t", "1");   /* FIXME: Network type, i.e. 32 for Y!MSG */
@@ -696,7 +690,7 @@ static void msn_ns_send_adl_start(struct im_connection *ic)
 		bee_user_t *bu = l->data;
 		struct msn_buddy_data *bd = bu->data;
 
-		if (bu->ic != ic || (bd->flags & 7) == 0) {
+		if (bu->ic != ic || (bd->flags & (MSN_BUDDY_FL | MSN_BUDDY_AL)) == 0) {
 			continue;
 		}
 
@@ -726,21 +720,25 @@ int msn_ns_finish_login(struct im_connection *ic)
 	return 1;
 }
 
-// TODO: typing notifications, nudges lol, etc
-int msn_ns_sendmessage(struct im_connection *ic, bee_user_t *bu, const char *text)
+static int msn_ns_send_sdg(struct im_connection *ic, bee_user_t *bu, const char *message_type, const char *text)
 {
 	struct msn_data *md = ic->proto_data;
 	int retval = 0;
 	char *buf;
 
-	if (strncmp(text, "\r\r\r", 3) == 0) {
-		/* Err. Shouldn't happen but I guess it can. Don't send others
-		   any of the "SHAKE THAT THING" messages. :-D */
-		return 1;
-	}
-
-	buf = g_strdup_printf(MSN_MESSAGE_HEADERS, bu->handle, ic->acc->user, md->uuid, strlen(text), text);
+	buf = g_strdup_printf(MSN_MESSAGE_HEADERS, bu->handle, ic->acc->user, md->uuid, message_type, strlen(text), text);
 	retval = msn_ns_write(ic, -1, "SDG %d %zd\r\n%s", ++md->trId, strlen(buf), buf);
 	g_free(buf);
 	return retval;
 }
+
+int msn_ns_send_typing(struct im_connection *ic, bee_user_t *bu)
+{
+	return msn_ns_send_sdg(ic, bu, "Control/Typing", "");
+}
+
+int msn_ns_send_message(struct im_connection *ic, bee_user_t *bu, const char *text)
+{
+	return msn_ns_send_sdg(ic, bu, "Text", text);
+}
+

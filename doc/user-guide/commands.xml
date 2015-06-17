@@ -1016,7 +1016,18 @@
 
 		<description>
 			<para>
-				Some protocols (MSN, Yahoo!) can notify via IM about new e-mail. Since most people use their Hotmail/Yahoo! addresses as a spam-box, this is disabled default. If you want these notifications, you can enable this setting.
+				Some protocols (MSN, Yahoo!, GTalk) can notify via IM about new e-mail. Since most people use their Hotmail/Yahoo! addresses as a spam-box, this is disabled default. If you want these notifications, you can enable this setting.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="mail_notifications_handle" type="string" scope="account">
+		<default>empty</default>
+
+		<description>
+			<para>
+				This setting is available for protocols with e-mail notification functionality. If set to empty all e-mail notifications will go to control channel, if set to some string - this will be the name of a contact who will PRIVMSG you on every new notification.
 			</para>
 		</description>
 

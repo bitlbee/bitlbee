@@ -192,8 +192,10 @@ int otr_update_modeflags(irc_t *irc, irc_user_t *u);
 /* show general info about the OTR subsystem; called by 'otr info' */
 void show_general_otr_info(irc_t *irc);
 
-/* show info about a given OTR context */
-void show_otr_context_info(irc_t *irc, ConnContext *ctx);
+/* show info about a given OTR context and subcontexts/instances. bestctx
+   may be either NULL or preferred destination context (this is hilighted
+   in the output as being the target for a message) */
+void show_otr_context_info(irc_t *irc, ConnContext *ctx, ConnContext *bestctx);
 
 /* show the list of fingerprints associated with a given context */
 void show_fingerprints(irc_t *irc, ConnContext *ctx);
@@ -1101,7 +1103,7 @@ void cmd_otr_info(irc_t *irc, char **args)
 	} else {
 		char *arg = g_strdup(args[1]);
 		char *myhandle, *handle = NULL, *protocol;
-		ConnContext *ctx;
+		ConnContext *bestctx = NULL, *ctx;
 
 		/* interpret arg as 'user/protocol/account' if possible */
 		protocol = strchr(arg, '/');
@@ -1134,14 +1136,18 @@ void cmd_otr_info(irc_t *irc, char **args)
 				g_free(arg);
 				return;
 			}
+			/* This does no harm if it returns NULL */
+			bestctx = otrl_context_find(irc->otr->us, u->bu->handle, u->bu->ic->acc->user,
+			                            u->bu->ic->acc->prpl->name, OTRL_INSTAG_BEST, 0, NULL, NULL, NULL);
 		}
 
 		/* show how we resolved the (nick) argument, if we did */
 		if (handle != arg) {
-			irc_rootmsg(irc, "%s is %s/%s; we are %s/%s to them", args[1],
-			            ctx->username, ctx->protocol, ctx->accountname, ctx->protocol);
+			irc_rootmsg(irc, "%s:", args[1]);
+			irc_rootmsg(irc, "  they are: %s/%s", ctx->username, ctx->protocol);
+			irc_rootmsg(irc, "  we are: %s/%s", ctx->accountname, ctx->protocol);
 		}
-		show_otr_context_info(irc, ctx);
+		show_otr_context_info(irc, ctx, bestctx);
 		g_free(arg);
 	}
 }
@@ -1548,8 +1554,16 @@ void show_fingerprints(irc_t *irc, ConnContext *ctx)
 	const char *trust;
 	int count = 0;
 
-	for (fp = &ctx->fingerprint_root; fp; fp = fp->next) {
+	/* Is this a subcontext? If so, only list the active fingerprint */
+	if (ctx->m_context != ctx) {
+		fp = ctx->active_fingerprint;
+	} else {
+		fp = &ctx->fingerprint_root;
+	}
+
+	while (fp) {
 		if (!fp->fingerprint) {
+			fp = fp->next;
 			continue;
 		}
 		count++;
@@ -1560,13 +1574,19 @@ void show_fingerprints(irc_t *irc, ConnContext *ctx)
 			trust = fp->trust;
 		}
 		if (fp == ctx->active_fingerprint) {
-			irc_rootmsg(irc, "    \x02%s (%s)\x02", human, trust);
+			irc_rootmsg(irc, "      \x02%s (%s)\x02", human, trust);
 		} else {
-			irc_rootmsg(irc, "    %s (%s)", human, trust);
+			irc_rootmsg(irc, "      %s (%s)", human, trust);
 		}
+
+		/* Break if this is a subcontext - we only print active fp */
+		if (ctx->m_context != ctx) {
+			break;
+		}
+		fp = fp->next;
 	}
 	if (count == 0) {
-		irc_rootmsg(irc, "    (none)");
+		irc_rootmsg(irc, "      (none)");
 	}
 }
 
@@ -1754,12 +1774,15 @@ void show_general_otr_info(irc_t *irc)
 
 	/* list all contexts */
 	/* XXX remove this, or split off as its own command */
-	/* XXX show instags? */
 	irc_rootmsg(irc, "%s", "");
 	irc_rootmsg(irc, "\x1f" "connection contexts:\x1f (bold=currently encrypted)");
-	for (ctx = irc->otr->us->context_root; ctx; ctx = ctx->next) { \
+
+	ctx = irc->otr->us->context_root;
+	while (ctx) {
+		ConnContext *subctx;
 		irc_user_t *u;
 		char *userstring;
+		char encrypted = 0;
 
 		u = peeruser(irc, ctx->username, ctx->protocol);
 		if (u) {
@@ -1770,56 +1793,73 @@ void show_general_otr_info(irc_t *irc)
 			                             ctx->username, ctx->protocol, ctx->accountname);
 		}
 
-		if (ctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
+		subctx = ctx;
+		while (subctx && subctx->m_context == ctx) {
+			if (subctx->msgstate == OTRL_MSGSTATE_ENCRYPTED) {
+				encrypted = 1;
+			}
+			subctx = subctx->next;
+		}
+
+		if(encrypted) {
 			irc_rootmsg(irc, "  \x02%s\x02", userstring);
 		} else {
 			irc_rootmsg(irc, "  %s", userstring);
 		}
 
+		/* Skip subcontexts/instances from output */
+		ctx = subctx;
+
 		g_free(userstring);
 	}
+
 	if (ctx == irc->otr->us->context_root) {
 		irc_rootmsg(irc, "  (none)");
 	}
 }
 
-void show_otr_context_info(irc_t *irc, ConnContext *ctx)
+void show_otr_context_info(irc_t *irc, ConnContext *ctx, ConnContext *bestctx)
 {
-	// XXX show all instags/subcontexts
+	ConnContext *subctx;
+	int instcount = 0;
 
-	switch (ctx->otr_offer) {
-	case OFFER_NOT:
-		irc_rootmsg(irc, "  otr offer status: none sent");
-		break;
-	case OFFER_SENT:
-		irc_rootmsg(irc, "  otr offer status: awaiting reply");
-		break;
-	case OFFER_ACCEPTED:
-		irc_rootmsg(irc, "  otr offer status: accepted our offer");
-		break;
-	case OFFER_REJECTED:
-		irc_rootmsg(irc, "  otr offer status: ignored our offer");
-		break;
-	default:
-		irc_rootmsg(irc, "  otr offer status: %d", ctx->otr_offer);
+	subctx = ctx;
+	while (subctx && subctx->m_context == ctx) {
+		if (subctx->m_context == subctx) {
+			if (subctx == bestctx) {
+				irc_rootmsg(irc, "  \x02master context (target):\x02");
+			} else {
+				irc_rootmsg(irc, "  master context:");
+			}
+			irc_rootmsg(irc, "    known fingerprints (bold = active for v1 or v2):");
+		} else {
+			if (subctx == bestctx) {
+				irc_rootmsg(irc, "  \x02instance %d (target):\x02", instcount);
+			} else {
+				irc_rootmsg(irc, "  instance %d:", instcount);
+			}
+			irc_rootmsg(irc, "    active fingerprint:");
+			instcount++;
+		}
+
+		show_fingerprints(irc, subctx);
+
+		switch (subctx->msgstate) {
+		case OTRL_MSGSTATE_PLAINTEXT:
+			irc_rootmsg(irc, "    connection state: cleartext");
+			break;
+		case OTRL_MSGSTATE_ENCRYPTED:
+			irc_rootmsg(irc, "    connection state: encrypted (v%d)", subctx->protocol_version);
+			break;
+		case OTRL_MSGSTATE_FINISHED:
+			irc_rootmsg(irc, "    connection state: shut down");
+			break;
+		default:
+			irc_rootmsg(irc, "    connection state: %d", subctx->msgstate);
+		}
+
+		subctx = subctx->next;
 	}
-
-	switch (ctx->msgstate) {
-	case OTRL_MSGSTATE_PLAINTEXT:
-		irc_rootmsg(irc, "  connection state: cleartext");
-		break;
-	case OTRL_MSGSTATE_ENCRYPTED:
-		irc_rootmsg(irc, "  connection state: encrypted (v%d)", ctx->protocol_version);
-		break;
-	case OTRL_MSGSTATE_FINISHED:
-		irc_rootmsg(irc, "  connection state: shut down");
-		break;
-	default:
-		irc_rootmsg(irc, "  connection state: %d", ctx->msgstate);
-	}
-
-	irc_rootmsg(irc, "  fingerprints: (bold=active)");
-	show_fingerprints(irc, ctx);
 }
 
 int keygen_in_progress(irc_t *irc, const char *handle, const char *protocol)

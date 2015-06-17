@@ -45,7 +45,11 @@ static void msn_init(account_t *acc)
 	s = set_add(&acc->set, "port", MSN_NS_PORT, set_eval_int, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
+	s = set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
+	s = set_add(&acc->set, "mail_notifications_handle", NULL, NULL, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 
 	acc->flags |= ACC_FLAG_AWAY_MESSAGE | ACC_FLAG_STATUS_MESSAGE |
 	              ACC_FLAG_HANDLE_DOMAINS;
@@ -81,6 +85,10 @@ static void msn_login(account_t *acc)
 	imcb_log(ic, "Connecting");
 	msn_ns_connect(ic, server,
 	               set_getint(&ic->acc->set, "port"));
+
+	if (set_getbool(&acc->set, "mail_notifications") && set_getstr(&acc->set, "mail_notifications_handle")) {
+		imcb_add_buddy(ic, set_getstr(&acc->set, "mail_notifications_handle"), NULL);
+	}
 }
 
 static void msn_logout(struct im_connection *ic)
@@ -143,16 +151,8 @@ static void msn_logout(struct im_connection *ic)
 static int msn_buddy_msg(struct im_connection *ic, char *who, char *message, int away)
 {
 	struct bee_user *bu = bee_user_by_handle(ic->bee, ic, who);
-
-#ifdef DEBUG
-	if (strcmp(who, "raw") == 0) {
-		msn_ns_write(ic, -1, "%s\r\n", message);
-		return 0;
-	}
-#endif
-
-	msn_ns_sendmessage(ic, bu, message);
-	return(0);
+	msn_ns_send_message(ic, bu, message);
+	return 0;
 }
 
 static GList *msn_away_states(struct im_connection *ic)
@@ -276,7 +276,7 @@ static int msn_send_typing(struct im_connection *ic, char *who, int typing)
 	if (!(bu->flags & BEE_USER_ONLINE)) {
 		return 0;
 	} else if (typing & OPT_TYPING) {
-		return(msn_buddy_msg(ic, who, TYPING_NOTIFICATION_MESSAGE, 0));
+		return msn_ns_send_typing(ic, bu);
 	} else {
 		return 1;
 	}
@@ -339,30 +339,6 @@ static void msn_buddy_data_free(bee_user_t *bu)
 	g_tree_remove(md->domaintree, bu->handle);
 }
 
-GList *msn_buddy_action_list(bee_user_t *bu)
-{
-	static GList *ret = NULL;
-
-	if (ret == NULL) {
-		static const struct buddy_action ba[2] = {
-			{ "NUDGE", "Draw attention" },
-		};
-
-		ret = g_list_prepend(ret, (void *) ba + 0);
-	}
-
-	return ret;
-}
-
-void *msn_buddy_action(struct bee_user *bu, const char *action, char * const args[], void *data)
-{
-	if (g_strcasecmp(action, "NUDGE") == 0) {
-		msn_buddy_msg(bu->ic, bu->handle, NUDGE_MESSAGE, 0);
-	}
-
-	return NULL;
-}
-
 void msn_initmodule()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
@@ -391,8 +367,6 @@ void msn_initmodule()
 	ret->handle_cmp = g_strcasecmp;
 	ret->buddy_data_add = msn_buddy_data_add;
 	ret->buddy_data_free = msn_buddy_data_free;
-	ret->buddy_action_list = msn_buddy_action_list;
-	ret->buddy_action = msn_buddy_action;
 
 	register_protocol(ret);
 }

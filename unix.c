@@ -211,15 +211,25 @@ static int crypt_main(int argc, char *argv[])
 		       "  %s -x chkhash <hashed password> <cleartext password>\n",
 		       argv[0], argv[0], argv[0], argv[0], argv[0]);
 	} else if (strcmp(argv[2], "enc") == 0) {
-		pass_len = arc_encode(argv[4], strlen(argv[4]), (unsigned char **) &pass_cr, argv[3], 12);
-		printf("%s\n", base64_encode(pass_cr, pass_len));
+		char *encoded;
+
+		pass_len = arc_encode(argv[4], strlen(argv[4]), &pass_cr, argv[3], 12);
+
+		encoded = base64_encode(pass_cr, pass_len);
+		printf("%s\n", encoded);
+		g_free(encoded);
+		g_free(pass_cr);
 	} else if (strcmp(argv[2], "dec") == 0) {
-		pass_len = base64_decode(argv[4], (unsigned char **) &pass_cr);
+		pass_len = base64_decode(argv[4], &pass_cr);
 		arc_decode(pass_cr, pass_len, (char **) &pass_cl, argv[3]);
 		printf("%s\n", pass_cl);
+
+		g_free(pass_cr);
+		g_free(pass_cl);
 	} else if (strcmp(argv[2], "hash") == 0) {
 		md5_byte_t pass_md5[21];
 		md5_state_t md5_state;
+		char *encoded;
 
 		random_bytes(pass_md5 + 16, 5);
 		md5_init(&md5_state);
@@ -227,7 +237,9 @@ static int crypt_main(int argc, char *argv[])
 		md5_append(&md5_state, pass_md5 + 16, 5);   /* Add the salt. */
 		md5_finish(&md5_state, pass_md5);
 
-		printf("%s\n", base64_encode(pass_md5, 21));
+		encoded = base64_encode(pass_md5, 21);
+		printf("%s\n", encoded);
+		g_free(encoded);
 	} else if (strcmp(argv[2], "unhash") == 0) {
 		printf("Hash %s submitted to a massive Beowulf cluster of\n"
 		       "overclocked 486s. Expect your answer next year somewhere around this time. :-)\n", argv[3]);

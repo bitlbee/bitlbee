@@ -49,7 +49,7 @@ static gboolean bee_irc_user_new(bee_t *bee, bee_user_t *bu)
 	char nick[MAX_NICK_LENGTH + 1], *s;
 
 	memset(nick, 0, MAX_NICK_LENGTH + 1);
-	strcpy(nick, nick_get(bu));
+	strncpy(nick, nick_get(bu), MAX_NICK_LENGTH);
 
 	bu->ui_data = iu = irc_user_new(irc, nick);
 	iu->bu = bu;
@@ -722,6 +722,8 @@ static gboolean bee_irc_chat_invite(bee_t *bee, bee_user_t *bu, const char *name
 		if (irc_channel_by_name(irc, s) == NULL) {
 			g_free(channel);
 			channel = s;
+		} else {
+			g_free(s);
 		}
 	}
 

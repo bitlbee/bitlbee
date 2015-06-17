@@ -174,11 +174,10 @@ void irc_send_join(irc_channel_t *ic, irc_user_t *iu)
 	irc_write(irc, ":%s!%s@%s JOIN :%s", iu->nick, iu->user, iu->host, ic->name);
 
 	if (iu == irc->user) {
-		irc_write(irc, ":%s MODE %s +%s", irc->root->host, ic->name, ic->mode);
-		irc_send_names(ic);
 		if (ic->topic && *ic->topic) {
 			irc_send_topic(ic, FALSE);
 		}
+		irc_send_names(ic);
 	}
 }
 

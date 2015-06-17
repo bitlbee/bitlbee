@@ -66,18 +66,30 @@ esac
 
 get_version() {
 	REAL_BITLBEE_VERSION=$(grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/')
+
+	if [ -n "$BITLBEE_VERSION" ]; then
+		# environment variable already set to something to spoof it
+		# don't replace it with the git stuff
+		return
+	fi
+
 	BITLBEE_VERSION=$REAL_BITLBEE_VERSION
 
 	if [ -d $srcdir/.git ] && type git > /dev/null 2> /dev/null; then
 		timestamp=$(cd $srcdir; git show -s --format=%ci HEAD | sed 's/ .*$//; s/-//g')
 		branch=$(cd $srcdir; git rev-parse --abbrev-ref HEAD)
 
-		search="(.+)-([0-9]+)-(g[0-9a-f]+)"
+		search='\(.*\)-\([0-9]*\)-\(g[0-9a-f]*\)'
 		replace="\1+$timestamp+$branch+\2-\3-git"
 
-		BITLBEE_VERSION=$(cd $srcdir; git describe --long --tags | sed -r "s/$search/$replace/")
+		describe=$(cd $srcdir; git describe --long --tags 2>/dev/null)
+		if [ $? -ne 0 ]; then
+			describe=${REAL_BITLBEE_VERSION}-0-g$(cd $srcdir; git rev-parse --short HEAD)
+		fi
 
-		unset timestamp branch search replace
+		BITLBEE_VERSION=$(echo $describe | sed "s#$search#$replace#")
+
+		unset timestamp branch search replace describe
 	fi
 }
 
@@ -674,27 +686,20 @@ if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
 	protocols_mods="$protocol_mods skype(plugin)"
 fi
 
-if [ "$doc" = "1" ]; then
-	if [ ! -e doc/user-guide/help.txt ] && \
-	     ! type xmlto > /dev/null 2> /dev/null || \
-	     ! type xsltproc > /dev/null 2> /dev/null
-	then
-		echo
-		echo 'WARNING: Building from an unreleased source tree without prebuilt helpfile.'
-		echo 'Install xmlto and xsltproc if you want online help to work.'
-	else
-		echo "DOC=1" >> Makefile.settings
-	fi
+if [ -z "$PYTHON" ]; then
+	PYTHON=python
+fi
 
-	if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
-		# skype also needs asciidoc
-		if ! type a2x > /dev/null 2> /dev/null; then
-			echo
-			echo 'WARNING: The skyped man page requires asciidoc. It will not be generated.'
-		else
-			echo "ASCIIDOC=1" >> Makefile.settings
-		fi
+if [ "$doc" = "1" ]; then
+	# check this here just in case someone tries to install it in python2.4...
+	if ! $PYTHON -m xml.etree.ElementTree > /dev/null 2>&1; then
+		echo
+		echo 'ERROR: Python (>=2.5 or 3.x) is required to generate docs'
+		echo "(Use the PYTHON environment variable if it's in a weird location)"
+		exit 1
 	fi
+	echo "DOC=1" >> Makefile.settings
+	echo "PYTHON=$PYTHON" >> Makefile.settings
 fi
 
 get_version
