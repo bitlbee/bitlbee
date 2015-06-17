@@ -55,6 +55,22 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
+"""
+TODO/Things I'm unhappy about:
+
+The randomness of where which bits/state live, in the implugin and the
+yowsup layer. Can't really merge this but at least state should live in
+one place.
+
+Mix of silly CamelCase and proper_style. \o/
+
+Most important: This is NOT thread-clean. implugin can call into yowsup
+cleanly by throwing closures into a queue, but there's no mechanism in
+the opposite direction, I'll need to cook up some hack to make this
+possible through bjsonrpc's tiny event loop. I think I know how...
+
+And more. But let's first get this into a state where it even works..
+"""
 
 # Tried this but yowsup is not passing back the result, will have to update the library. :-(
 class GetStatusIqProtocolEntity(IqProtocolEntity):
@@ -77,6 +93,8 @@ class BitlBeeLayer(YowInterfaceLayer):
 
 	def __init__(self, *a, **kwa):
 		super(BitlBeeLayer, self).__init__(*a, **kwa)
+		# Offline messages are sent while we're still logging in.
+		self.msg_queue = []
 
 	def receive(self, entity):
 		print "Received: %r" % entity
@@ -116,12 +134,17 @@ class BitlBeeLayer(YowInterfaceLayer):
 			pass
 
 	def check_connected(self, done):
-		if self.todo is None:
+		if not self.todo:
 			return
 		self.todo.remove(done)
 		if not self.todo:
-			self.todo = None
 			self.cb.connected()
+			self.flush_msg_queue()
+	
+	def flush_msg_queue(self):
+		for msg in self.msg_queue:
+			self.onMessage(msg)
+		self.msg_queue = None
 	
 	@ProtocolEntityCallback("failure")
 	def onFailure(self, entity):
@@ -165,27 +188,12 @@ class BitlBeeLayer(YowInterfaceLayer):
 	
 	@ProtocolEntityCallback("message")
 	def onMessage(self, msg):
-		if hasattr(msg, "getBody"):
-			text = msg.getBody()
-		elif hasattr(msg, "getCaption") and hasattr(msg, "getMediaUrl"):
-			lines = []
-			if msg.getMediaUrl():
-				lines.append(msg.getMediaUrl())
-			else:
-				lines.append("<Broken link>")
-			if msg.getCaption():
-				lines.append(msg.getCaption())
-			text = "\n".join(lines)
+		if self.todo:
+			# We're still logging in, so wait.
+			self.msg_queue.append(msg)
+			return
 
-		if msg.getParticipant():
-			group = self.b.groups[msg.getFrom()]
-			if "id" in group:
-				self.cb.chat_msg(group["id"], msg.getParticipant(), text, 0, msg.getTimestamp())
-			else:
-				self.cb.log("Warning: Activity in room %s" % msg.getFrom())
-				self.b.groups[msg.getFrom()].setdefault("queue", []).append(msg)
-		else:
-			self.cb.buddy_msg(msg.getFrom(), text, 0, msg.getTimestamp())
+		self.b.show_message(msg)
 
 		# ACK is required! So only use return above in case of errors.
 		# (So that we will/might get a retry after restarting.)
@@ -400,8 +408,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		# Add the user themselves last to avoid a visible join flood.
 		self.bee.chat_add_buddy(id, self.account["user"])
 		for msg in group.setdefault("queue", []):
-			## TODO: getBody fails for media msgs.
-			self.bee.chat_msg(group["id"], msg.getParticipant(), msg.getBody(), 0, msg.getTimestamp())
+			self.b.show_message(msg)
 		del group["queue"]
 	
 	def chat_msg(self, id, text, flags):
@@ -438,6 +445,31 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		stack.broadcastEvent(YowLayerEvent(YowNetworkLayer.EVENT_STATE_CONNECT))
 
 		return stack
+
+
+	# Not RPCs from here on.
+	def show_message(self, msg):
+		if hasattr(msg, "getBody"):
+			text = msg.getBody()
+		elif hasattr(msg, "getCaption") and hasattr(msg, "getMediaUrl"):
+			lines = []
+			if msg.getMediaUrl():
+				lines.append(msg.getMediaUrl())
+			else:
+				lines.append("<Broken link>")
+			if msg.getCaption():
+				lines.append(msg.getCaption())
+			text = "\n".join(lines)
+
+		if msg.getParticipant():
+			group = self.groups[msg.getFrom()]
+			if "id" in group:
+				self.bee.chat_msg(group["id"], msg.getParticipant(), text, 0, msg.getTimestamp())
+			else:
+				self.bee.log("Warning: Activity in room %s" % msg.getFrom())
+				self.groups[msg.getFrom()].setdefault("queue", []).append(msg)
+		else:
+			self.bee.buddy_msg(msg.getFrom(), text, 0, msg.getTimestamp())
 
 
 implugin.RunPlugin(YowsupIMPlugin, debug=True)
