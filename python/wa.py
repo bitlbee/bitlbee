@@ -49,7 +49,7 @@ from yowsup.common.tools import ModuleTools
 
 import implugin
 
-logger = logging.getLogger("yowsup.layers.network.layer")
+logger = logging.getLogger("yowsup.layers.logger.layer")
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
@@ -57,6 +57,12 @@ logger.addHandler(ch)
 
 """
 TODO/Things I'm unhappy about:
+
+About the fact that WhatsApp is a rubbish protocol that happily rejects
+every second stanza you send it if you're trying to implement a client that
+doesn't keep local state. See how to cope with that.. It'd help if Yowsup
+came with docs on what a normal login sequence looks like instead of just
+throwing some stanzas over a wall but hey.
 
 The randomness of where which bits/state live, in the implugin and the
 yowsup layer. Can't really merge this but at least state should live in
@@ -71,23 +77,6 @@ possible through bjsonrpc's tiny event loop. I think I know how...
 
 And more. But let's first get this into a state where it even works..
 """
-
-# Tried this but yowsup is not passing back the result, will have to update the library. :-(
-class GetStatusIqProtocolEntity(IqProtocolEntity):
-	def __init__(self, jids=None):
-		super(GetStatusIqProtocolEntity, self).__init__("status", None, _type="get", to="s.whatsapp.net")
-		self.jids = jids or []
-
-	def toProtocolTreeNode(self):
-		from yowsup.structs import ProtocolTreeNode
-		
-		node = super(GetStatusIqProtocolEntity, self).toProtocolTreeNode()
-		sr = ProtocolTreeNode("status")
-		node.addChild(sr)
-		for jid in self.jids:
-			sr.addChild(ProtocolTreeNode("user", {"jid": jid}))
-		return node
-
 
 class BitlBeeLayer(YowInterfaceLayer):
 
@@ -220,6 +209,10 @@ class BitlBeeLayer(YowInterfaceLayer):
 				# So instead, if we received no response to it but
 				# did get our ping back, declare failure.
 				self.onSyncResultFail()
+			if "groups" in self.todo:
+				# Well fuck this. Just reject ALL the things!
+				# Maybe I don't need this one then.
+				self.check_connected("groups")
 			self.check_connected("ping")
 	
 	def onSyncResult(self, entity):
@@ -396,17 +389,25 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		# long-term membership. Let's just sync state (we have
 		# basic info but not yet a member list) and ACK the join
 		# once that's done.
-		self.yow.Ship(ParticipantsGroupsIqProtocolEntity(name))
+		# Well except that WA/YS killed this one. \o/
+		#self.yow.Ship(ParticipantsGroupsIqProtocolEntity(name))
+		
+		# So for now do without a participant list..
+		#self.chat_join_participants(None)
+		self.chat_send_backlog(group)
 
 	def chat_join_participants(self, entity):
+		"""
 		group = self.groups[entity.getFrom()]
 		id = group["id"]
 		for p in entity.getParticipants():
 			if p != self.account["user"]:
 				self.bee.chat_add_buddy(id, p)
+		"""
 
+	def chat_send_backlog(self, group):
 		# Add the user themselves last to avoid a visible join flood.
-		self.bee.chat_add_buddy(id, self.account["user"])
+		self.bee.chat_add_buddy(group["id"], self.account["user"])
 		for msg in group.setdefault("queue", []):
 			self.b.show_message(msg)
 		del group["queue"]
@@ -464,6 +465,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		if msg.getParticipant():
 			group = self.groups[msg.getFrom()]
 			if "id" in group:
+				self.bee.chat_add_buddy(group["id"], msg.getParticipant())
 				self.bee.chat_msg(group["id"], msg.getParticipant(), text, 0, msg.getTimestamp())
 			else:
 				self.bee.log("Warning: Activity in room %s" % msg.getFrom())
