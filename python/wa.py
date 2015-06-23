@@ -198,22 +198,12 @@ class BitlBeeLayer(YowInterfaceLayer):
 	def onIq(self, entity):
 		if isinstance(entity, ResultSyncIqProtocolEntity):
 			return self.onSyncResult(entity)
-		elif isinstance(entity, ListParticipantsResultIqProtocolEntity):
-			return self.b.chat_join_participants(entity)
 		elif isinstance(entity, ListGroupsResultIqProtocolEntity):
 			return self.onListGroupsResult(entity)
-		elif "ping" in self.todo: # Pong has no type, sigh.
-			if "contacts" in self.todo:
-				# Shitty Whatsapp rejected the sync request, and
-				# annoying Yowsup doesn't inform on error responses.
-				# So instead, if we received no response to it but
-				# did get our ping back, declare failure.
-				self.onSyncResultFail()
-			if "groups" in self.todo:
-				# Well fuck this. Just reject ALL the things!
-				# Maybe I don't need this one then.
-				self.check_connected("groups")
-			self.check_connected("ping")
+		elif type(entity) == IqProtocolEntity:  # Pong has no type, sigh.
+			self.b.last_pong = time.time()
+			if self.todo:
+				return self.onLoginPong()
 	
 	def onSyncResult(self, entity):
 		# TODO HERE AND ELSEWHERE: Thread idiocy happens when going
@@ -247,6 +237,12 @@ class BitlBeeLayer(YowInterfaceLayer):
 			if "@" not in jid:
 				jid += "@g.us"
 			group = self.b.groups[jid]
+			try:
+				group["participants"] = g.getParticipants().keys()
+			except AttributeError:
+				# Depends on a change I made to yowsup that may
+				# or may not get merged..
+				group["participants"] = []
 			
 			# Save it. We're going to mix ListGroups elements and
 			# Group-Subject notifications there, which don't have
@@ -255,6 +251,19 @@ class BitlBeeLayer(YowInterfaceLayer):
 			group["topic"] = g
 
 		self.check_connected("groups")
+
+	def onLoginPong(self):
+		if "contacts" in self.todo:
+			# Shitty Whatsapp rejected the sync request, and
+			# annoying Yowsup doesn't inform on error responses.
+			# So instead, if we received no response to it but
+			# did get our ping back, declare failure.
+			self.onSyncResultFail()
+		if "groups" in self.todo:
+			# Well fuck this. Just reject ALL the things!
+			# Maybe I don't need this one then.
+			self.check_connected("groups")
+		self.check_connected("ping")
 
 	def getStatuses(self, contacts):
 		return # Disabled since yowsup won't give us the result...
@@ -327,6 +336,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	ACCOUNT_FLAGS = 14 # HANDLE_DOMAINS + STATUS_MESSAGE + LOCAL_CONTACTS
 	# TODO: HANDLE_DOMAIN in right place (add ... ... nick bug)
 	PING_INTERVAL = 299 # seconds
+	PING_TIMEOUT = 360 # seconds
 
 	def login(self, account):
 		self.stack = self.build_stack(account)
@@ -339,8 +349,13 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		self.groups_by_id = {}
 
 		self.next_ping = None
+		self.last_pong = time.time()
 
 	def keepalive(self):
+		if (time.time() - self.last_pong) > self.PING_TIMEOUT:
+			self.error("Ping timeout")
+			self.logout(True)
+			return
 		if self.next_ping and (time.time() < self.next_ping):
 			return
 		self.yow.Ship(PingIqProtocolEntity(to="s.whatsapp.net"))
@@ -393,17 +408,13 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		#self.yow.Ship(ParticipantsGroupsIqProtocolEntity(name))
 		
 		# So for now do without a participant list..
-		#self.chat_join_participants(None)
+		self.chat_join_participants(group)
 		self.chat_send_backlog(group)
 
-	def chat_join_participants(self, entity):
-		"""
-		group = self.groups[entity.getFrom()]
-		id = group["id"]
-		for p in entity.getParticipants():
+	def chat_join_participants(self, group):
+		for p in group.get("participants", []):
 			if p != self.account["user"]:
-				self.bee.chat_add_buddy(id, p)
-		"""
+				self.bee.chat_add_buddy(group["id"], p)
 
 	def chat_send_backlog(self, group):
 		# Add the user themselves last to avoid a visible join flood.
