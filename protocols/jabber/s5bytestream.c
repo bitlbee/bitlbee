@@ -84,7 +84,7 @@ char *socks5_reply_code[] = {
 	if ((op) == -1) { \
 		return jabber_bs_abort(bt, msg ": %s", strerror(errno)); }
 
-gboolean jabber_bs_abort(struct bs_transfer *bt, char *format, ...);
+gboolean jabber_bs_abort(struct bs_transfer *bt, char *format, ...) G_GNUC_PRINTF(2, 3);
 void jabber_bs_canceled(file_transfer_t *ft, char *reason);
 void jabber_bs_free_transfer(file_transfer_t *ft);
 gboolean jabber_bs_connect_timeout(gpointer data, gint fd, b_input_condition cond);
