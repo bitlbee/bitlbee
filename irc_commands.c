@@ -28,6 +28,33 @@
 #include "help.h"
 #include "ipc.h"
 
+static void irc_cmd_cap(irc_t *irc, char **cmd)
+{
+	if (!(irc->status & USTATUS_LOGGED_IN)) {
+		/* Put registration on hold until CAP END */
+		irc->status |= USTATUS_CAP_PENDING;
+	}
+
+	if (g_strcasecmp(cmd[1], "LS") == 0) {
+		/* gboolean irc302 = (g_strcmp0(cmd[2], "302") == 0); */
+		irc_send_cap(irc, "LS", "");
+
+	} else if (g_strcasecmp(cmd[1], "LIST") == 0) {
+		irc_send_cap(irc, "LIST", "");
+
+	} else if (g_strcasecmp(cmd[1], "REQ") == 0) {
+		irc_send_cap(irc, "NAK", cmd[2] ? : "");
+
+	} else if (g_strcasecmp(cmd[1], "END") == 0) {
+		irc->status &= ~USTATUS_CAP_PENDING;
+		irc_check_login(irc);
+
+	} else {
+		irc_send_num(irc, 410, "%s :Invalid CAP command", cmd[1]);
+	}
+
+}
+
 static void irc_cmd_pass(irc_t *irc, char **cmd)
 {
 	if (irc->status & USTATUS_LOGGED_IN) {
@@ -684,6 +711,7 @@ static void irc_cmd_rehash(irc_t *irc, char **cmd)
 }
 
 static const command_t irc_commands[] = {
+	{ "cap",         1, irc_cmd_cap,         0 },
 	{ "pass",        1, irc_cmd_pass,        0 },
 	{ "user",        4, irc_cmd_user,        IRC_CMD_PRE_LOGIN },
 	{ "nick",        1, irc_cmd_nick,        0 },

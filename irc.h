@@ -48,6 +48,7 @@ typedef enum {
 	USTATUS_IDENTIFIED = 4, /* To NickServ (root). */
 	USTATUS_SHUTDOWN = 8,   /* Now used to indicate we're shutting down.
 	                           Currently just blocks irc_vawrite(). */
+	USTATUS_CAP_PENDING = 16,
 
 	/* Not really status stuff, but other kinds of flags: For slightly
 	   better password security, since the only way to send passwords
@@ -330,6 +331,7 @@ void irc_send_nick(irc_user_t *iu, const char *new_nick);
 void irc_send_channel_user_mode_diff(irc_channel_t *ic, irc_user_t *iu,
                                      irc_channel_user_flags_t old_flags, irc_channel_user_flags_t new_flags);
 void irc_send_invite(irc_user_t *iu, irc_channel_t *ic);
+void irc_send_cap(irc_t *irc, char *subcommand, char *body);
 
 /* irc_user.c */
 irc_user_t *irc_user_new(irc_t *irc, const char *nick);

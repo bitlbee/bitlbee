@@ -427,3 +427,10 @@ void irc_send_invite(irc_user_t *iu, irc_channel_t *ic)
 	irc_write(iu->irc, ":%s!%s@%s INVITE %s :%s",
 	          iu->nick, iu->user, iu->host, irc->user->nick, ic->name);
 }
+
+void irc_send_cap(irc_t *irc, char *subcommand, char *body)
+{
+	char *nick = irc->user->nick ? : "*";
+
+	irc_write(irc, ":%s CAP %s %s :%s", irc->root->host, nick, subcommand, body);
+}

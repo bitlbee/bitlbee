@@ -726,7 +726,7 @@ void irc_desync(irc_t *irc)
 
 int irc_check_login(irc_t *irc)
 {
-	if (irc->user->user && irc->user->nick) {
+	if (irc->user->user && irc->user->nick && !(irc->status & USTATUS_CAP_PENDING)) {
 		if (global.conf->authmode == AUTHMODE_CLOSED && !(irc->status & USTATUS_AUTHORIZED)) {
 			irc_send_num(irc, 464, ":This server is password-protected.");
 			return 0;
