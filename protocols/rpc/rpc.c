@@ -408,6 +408,9 @@ static void rpc_chat_leave(struct groupchat *gc) {
 	struct rpc_groupchat *rc = gc->data;
 	json_array_append_integer(params, rc->id);
 	rpc_send(gc->ic, rpc);
+
+	struct rpc_connection *rd = gc->ic->proto_data;
+	g_hash_table_remove(rd->groupchats, &rc->id);
 	rpc_groupchat_free(gc);
 }
 
@@ -437,6 +440,9 @@ static struct rpc_groupchat *rpc_groupchat_by_id(struct im_connection *ic, int i
 	return rc;
 }
 
+/* When calling this, also make sure the element gets removes from
+   rpc_connection->groupchat. This function doesn't do that because it gets
+   called from within an iterator. */
 static void rpc_groupchat_free(struct groupchat *gc) {
 	g_free(gc->data);
 	imcb_chat_free(gc);

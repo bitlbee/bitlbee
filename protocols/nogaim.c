@@ -413,6 +413,15 @@ void imc_logout(struct im_connection *ic, int allow_reconnect)
 
 	query_del_by_conn((irc_t *) ic->bee->ui_data, ic);
 
+	/* Throw away groupchats owned by this account. Historically this was only
+	   ever done by IM modules which is a bug. But it gives them opportunity
+	   to clean up protocol-specific bits as well so keep it that way, just
+	   do another cleanup here as a fallback. Don't want to leave any dangling
+	   pointers! */
+	while (ic->groupchats) {
+		imcb_chat_free(ic->groupchats->data);
+	}
+
 	if (!a) {
 		/* Uhm... This is very sick. */
 	} else if (allow_reconnect && set_getbool(&bee->set, "auto_reconnect") &&
