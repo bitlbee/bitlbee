@@ -28,6 +28,87 @@
 #include "help.h"
 #include "ipc.h"
 
+typedef guint32 cap_flag;     /* 32 bits ought to be enough for anybody */
+
+typedef struct _cap_info {
+	char *name;
+	cap_flag flag;
+} cap_info_t;
+
+#define CAP_FOO (1 << 0)
+#define CAP_BAR (1 << 1)
+
+static const cap_info_t supported_caps[] = {
+	{"foo", CAP_FOO},
+	{"bar", CAP_BAR},
+	{NULL},
+};
+
+static cap_flag cap_flag_from_string(char *cap_name) {
+	int i;
+
+	if (!cap_name && !cap_name[0]) {
+		return 0;
+	}
+
+	if (cap_name[0] == '-') {
+		cap_name++;
+	}
+
+	for (i = 0; supported_caps[i].name; i++) {
+		if (strcmp(supported_caps[i].name, cap_name) == 0) {
+			return supported_caps[i].flag;
+		}
+	}
+	return 0;
+}
+
+static gboolean irc_cmd_cap_req(irc_t *irc, char *caps)
+{
+	int i;
+	char *lower = NULL;
+        char **split = NULL;
+	cap_flag new_caps = irc->caps;
+
+	if (!caps || !caps[0]) {
+		return FALSE;
+	}
+
+	lower = g_ascii_strdown(caps, -1);
+	split = g_strsplit(lower, " ", -1);
+	g_free(lower);
+
+	for (i = 0; split[i]; i++) {
+		gboolean remove;
+		cap_flag flag;
+
+		if (!split[i][0]) {
+			continue;   /* skip empty items (consecutive spaces) */
+		}
+
+		remove = (split[i][0] == '-');
+		flag = cap_flag_from_string(split[i]);
+		
+		if (!flag || (remove && !(irc->caps & flag))) {
+			/* unsupported cap, or removing something that isn't there */
+			g_strfreev(split);
+			return FALSE;
+		}
+
+		if (remove) {
+			new_caps &= ~flag;
+		} else {
+			new_caps |= flag;
+		}
+	}
+
+	/* if we got here, set the new caps and ack */
+	irc->caps = new_caps;
+
+	g_strfreev(split);
+	return TRUE;
+}
+
 static void irc_cmd_cap(irc_t *irc, char **cmd)
 {
 	if (!(irc->status & USTATUS_LOGGED_IN)) {
@@ -37,13 +118,19 @@ static void irc_cmd_cap(irc_t *irc, char **cmd)
 
 	if (g_strcasecmp(cmd[1], "LS") == 0) {
 		/* gboolean irc302 = (g_strcmp0(cmd[2], "302") == 0); */
-		irc_send_cap(irc, "LS", "");
+		//char *ls = g_strjoinv(" ", (char **) supported_caps);
+
+		irc_send_cap(irc, "LS", "foo bar");
+
+		//g_free(ls);
 
 	} else if (g_strcasecmp(cmd[1], "LIST") == 0) {
 		irc_send_cap(irc, "LIST", "");
 
 	} else if (g_strcasecmp(cmd[1], "REQ") == 0) {
-		irc_send_cap(irc, "NAK", cmd[2] ? : "");
+		gboolean ack = irc_cmd_cap_req(irc, cmd[2]);
+
+		irc_send_cap(irc, ack ? "ACK" : "NAK", cmd[2] ? : "");
 
 	} else if (g_strcasecmp(cmd[1], "END") == 0) {
 		irc->status &= ~USTATUS_CAP_PENDING;

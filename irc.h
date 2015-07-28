@@ -102,6 +102,7 @@ typedef struct irc {
 	                    TODO: Some mechanism for plugindata. */
 
 	struct bee *b;
+	guint32 caps;
 } irc_t;
 
 typedef enum {
