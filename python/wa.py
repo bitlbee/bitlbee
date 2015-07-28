@@ -420,7 +420,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		# Add the user themselves last to avoid a visible join flood.
 		self.bee.chat_add_buddy(group["id"], self.account["user"])
 		for msg in group.setdefault("queue", []):
-			self.b.show_message(msg)
+			self.show_message(msg)
 		del group["queue"]
 	
 	def chat_msg(self, id, text, flags):
