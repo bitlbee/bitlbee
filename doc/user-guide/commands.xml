@@ -1185,6 +1185,21 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="anonymous" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				This enables SASL ANONYMOUS login for jabber accounts, as specified by XEP-0175.
+			</para>
+
+			<para>
+				With this setting enabled, if the server allows this method, a password isn't required and the username part of the JID is ignored (you can use anonymous@jabber.example.com). Servers will usually assign you a random numeric username instead.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="ops" type="string" scope="global">
 		<default>both</default>
 		<possible-values>both, root, user, none</possible-values>
