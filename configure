@@ -50,8 +50,8 @@ ssl=auto
 
 pie=1
 
-arch=`uname -s`
-cpu=`uname -m`
+arch=$(uname -s)
+cpu=$(uname -m)
 
 GLIB_MIN_VERSION=2.16
 
@@ -102,7 +102,7 @@ fi
 echo BitlBee configure
 
 while [ -n "$1" ]; do
-	e="`expr "X$1" : 'X--\(.*=.*\)'`"
+	e="$(expr "X$1" : 'X--\(.*=.*\)')"
 	if [ -z "$e" ]; then
 		cat<<EOF
 
@@ -156,19 +156,19 @@ EOF
 done
 
 # Expand $prefix and get rid of double slashes
-bindir=`eval echo "$bindir/" | sed 's/\/\{1,\}/\//g'`
-sbindir=`eval echo "$sbindir/" | sed 's/\/\{1,\}/\//g'`
-etcdir=`eval echo "$etcdir/" | sed 's/\/\{1,\}/\//g'`
-mandir=`eval echo "$mandir/" | sed 's/\/\{1,\}/\//g'`
-datadir=`eval echo "$datadir/" | sed 's/\/\{1,\}/\//g'`
-config=`eval echo "$config/" | sed 's/\/\{1,\}/\//g'`
-plugindir=`eval echo "$plugindir/" | sed 's/\/\{1,\}/\//g'`
-includedir=`eval echo "$includedir"/ | sed 's/\/\{1,\}/\//g'`
-libevent=`eval echo "$libevent"/ | sed 's/\/\{1,\}/\//g'`
+bindir=$(eval echo "$bindir/" | sed 's/\/\{1,\}/\//g')
+sbindir=$(eval echo "$sbindir/" | sed 's/\/\{1,\}/\//g')
+etcdir=$(eval echo "$etcdir/" | sed 's/\/\{1,\}/\//g')
+mandir=$(eval echo "$mandir/" | sed 's/\/\{1,\}/\//g')
+datadir=$(eval echo "$datadir/" | sed 's/\/\{1,\}/\//g')
+config=$(eval echo "$config/" | sed 's/\/\{1,\}/\//g')
+plugindir=$(eval echo "$plugindir/" | sed 's/\/\{1,\}/\//g')
+includedir=$(eval echo "$includedir"/ | sed 's/\/\{1,\}/\//g')
+libevent=$(eval echo "$libevent"/ | sed 's/\/\{1,\}/\//g')
 
-pidfile=`eval echo "$pidfile" | sed 's/\/\{1,\}/\//g'`
-ipcsocket=`eval echo "$ipcsocket" | sed 's/\/\{1,\}/\//g'`
-pcdir=`eval echo "$pcdir" | sed 's/\/\{1,\}/\//g'`
+pidfile=$(eval echo "$pidfile" | sed 's/\/\{1,\}/\//g')
+ipcsocket=$(eval echo "$ipcsocket" | sed 's/\/\{1,\}/\//g')
+pcdir=$(eval echo "$pcdir" | sed 's/\/\{1,\}/\//g')
 
 protocols_mods=""
 
@@ -307,12 +307,12 @@ fi
 if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG glib-2.0; then
 	if $PKG_CONFIG glib-2.0 --atleast-version=$GLIB_MIN_VERSION; then
 		cat<<EOF >>Makefile.settings
-EFLAGS+=`$PKG_CONFIG --libs glib-2.0 gmodule-2.0`
-CFLAGS+=`$PKG_CONFIG --cflags glib-2.0 gmodule-2.0`
+EFLAGS+=$($PKG_CONFIG --libs glib-2.0 gmodule-2.0)
+CFLAGS+=$($PKG_CONFIG --cflags glib-2.0 gmodule-2.0)
 EOF
 	else
 		echo
-		echo 'Found glib2 '`$PKG_CONFIG glib-2.0 --modversion`', but version '$GLIB_MIN_VERSION' or newer is required.'
+		echo 'Found glib2 '$($PKG_CONFIG glib-2.0 --modversion)', but version '$GLIB_MIN_VERSION' or newer is required.'
 		exit 1
 	fi
 else
@@ -348,8 +348,8 @@ detect_gnutls()
 {
 	if $PKG_CONFIG --exists gnutls; then
 		cat <<EOF >>Makefile.settings
-EFLAGS+=`$PKG_CONFIG --libs gnutls` `libgcrypt-config --libs`
-CFLAGS+=`$PKG_CONFIG --cflags gnutls` `libgcrypt-config --cflags`
+EFLAGS+=$($PKG_CONFIG --libs gnutls) $(libgcrypt-config --libs)
+CFLAGS+=$($PKG_CONFIG --cflags gnutls) $(libgcrypt-config --cflags)
 EOF
 		ssl=gnutls
 		if ! pkg-config gnutls --atleast-version=2.8; then
@@ -359,8 +359,8 @@ EOF
 		ret=1
 	elif libgnutls-config --version > /dev/null 2> /dev/null; then
 		cat <<EOF >>Makefile.settings
-EFLAGS+=`libgnutls-config --libs` `libgcrypt-config --libs`
-CFLAGS+=`libgnutls-config --cflags` `libgcrypt-config --cflags`
+EFLAGS+=$(libgnutls-config --libs) $(libgcrypt-config --libs)
+CFLAGS+=$(libgnutls-config --cflags) $(libgcrypt-config --cflags)
 EOF
 		
 		ssl=gnutls
@@ -374,8 +374,8 @@ detect_nss()
 {
 	if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG nss; then
 		cat<<EOF >>Makefile.settings
-EFLAGS+=`$PKG_CONFIG --libs nss`
-CFLAGS+=`$PKG_CONFIG --cflags nss`
+EFLAGS+=$($PKG_CONFIG --libs nss)
+CFLAGS+=$($PKG_CONFIG --cflags nss)
 EOF
 		
 		ssl=nss
@@ -620,7 +620,7 @@ fi
 
 if [ -z "$systemdsystemunitdir" ]; then
 	if $PKG_CONFIG --exists systemd; then
-		systemdsystemunitdir=`$PKG_CONFIG --variable=systemdsystemunitdir systemd`
+		systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
 	fi
 fi
 if [ -n "$systemdsystemunitdir" ]; then
