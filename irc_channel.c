@@ -444,10 +444,10 @@ void irc_channel_auto_joins(irc_t *irc, account_t *acc)
 			   can only auto-join them if their account is online. */
 			char *acc_s;
 
-			if (!aj || (ic->flags & IRC_CHANNEL_JOINED)) {
-				/* Only continue if this one's marked as auto_join
-				   or if we're in it already. (Possible if the
-				   client auto-rejoined it before identyfing.) */
+			if (!aj && !(ic->flags & IRC_CHANNEL_JOINED)) {
+				/* Only proceed if this one's marked as auto_join
+				   or if we're in it already. (Very likely the IRC
+				   client auto-(re)joining at reconnect time.) */
 				continue;
 			} else if (!(acc_s = set_getstr(&ic->set, "account"))) {
 				continue;

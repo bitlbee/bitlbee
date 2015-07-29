@@ -835,7 +835,8 @@ static gboolean bee_irc_channel_chat_join(irc_channel_t *ic)
 	if ((acc_s = set_getstr(&ic->set, "account")) &&
 	    (room = set_getstr(&ic->set, "room")) &&
 	    (acc = account_get(ic->irc->b, acc_s)) &&
-	    acc->ic && acc->prpl->chat_join) {
+	    acc->ic && (acc->ic->flags & OPT_LOGGED_IN) &&
+	    acc->prpl->chat_join) {
 		char *nick;
 
 		if (!(nick = set_getstr(&ic->set, "nick"))) {
