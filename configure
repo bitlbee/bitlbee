@@ -15,6 +15,7 @@ mandir='$prefix/share/man/'
 datadir='$prefix/share/bitlbee/'
 config='/var/lib/bitlbee/'
 plugindir='$prefix/lib/bitlbee/'
+rpcplugindir='$plugindir/rpc/'
 includedir='$prefix/include/bitlbee/'
 systemdsystemunitdir=''
 libevent='/usr/'
@@ -31,11 +32,11 @@ systemlibdirs="/lib64 /usr/lib64 /usr/local/lib64 /lib /usr/lib /usr/local/lib"
 msn="default-on"
 jabber="default-on"
 oscar="default-on"
-rpc="rpc-on"
 yahoo="default-on"
 
 twitter=1
 purple=0
+rpc=1
 
 doc=1
 debug=0
@@ -118,6 +119,7 @@ Option		Description				Default
 --mandir=...						$mandir
 --datadir=...						$datadir
 --plugindir=...						$plugindir
+--rpcplugindir=...                                      $rpcplugindir
 --systemdsystemunitdir=...				$systemdsystemunitdir
 --pidfile=...						$pidfile
 --config=...						$config
@@ -130,7 +132,7 @@ Option		Description				Default
 
 --purple=0/1	Disable/enable libpurple support	$purple
 		(automatically disables other protocol modules)
---rpc=0/1       Disable/enable RPC interface            $rpc
+--rpc=0/1       Disable/enable RPC plugin interface     $rpc
 
 --doc=0/1	Disable/enable help.txt generation	$doc
 --debug=0/1	Disable/enable debugging		$debug
@@ -165,6 +167,7 @@ mandir=`eval echo "$mandir/" | sed 's/\/\{1,\}/\//g'`
 datadir=`eval echo "$datadir/" | sed 's/\/\{1,\}/\//g'`
 config=`eval echo "$config/" | sed 's/\/\{1,\}/\//g'`
 plugindir=`eval echo "$plugindir/" | sed 's/\/\{1,\}/\//g'`
+rpcplugindir=$(eval echo "$rpcplugindir/" | sed 's/\/\{1,\}/\//g')
 includedir=`eval echo "$includedir"/ | sed 's/\/\{1,\}/\//g'`
 libevent=`eval echo "$libevent"/ | sed 's/\/\{1,\}/\//g'`
 
@@ -183,6 +186,7 @@ ETCDIR=$etcdir
 MANDIR=$mandir
 DATADIR=$datadir
 PLUGINDIR=$plugindir
+RPCPLUGINDIR=$rpcplugindir
 CONFIG=$config
 INCLUDEDIR=$includedir
 PCDIR=$pcdir
@@ -232,6 +236,7 @@ cat<<EOF >config.h
 #define ETCDIR "$etcdir"
 #define VARDIR "$datadir"
 #define PLUGINDIR "$plugindir"
+#define RPCPLUGINDIR "$rpcplugindir"
 #define PIDFILE "$pidfile"
 #define IPCSOCKET "$ipcsocket"
 #define ARCH "$arch"
@@ -253,6 +258,12 @@ if [ "$asan" = "1" ]; then
 	CFLAGS="$CFLAGS -fsanitize=address"
 	LDFLAGS="$LDFLAGS -fsanitize=address"
 	debug=1
+fi
+
+if [ "$tsan" = "1" ]; then
+	echo
+	echo "Threaded BitlBee? Have a nice tall glass of http://imgur.com/gallery/tX4qxzS"
+	echo "No need to sanitise threads in a single-threaded process!"
 fi
 
 if [ "$debug" = "1" ]; then
@@ -643,6 +654,12 @@ else
 	echo '#define WITH_PLUGINS' >> config.h
 fi
 
+if [ "$rpc" = 0 ]; then
+	# Somewhat pointless at this stage already but at least this keeps it
+	# out of bitlbee.pc which is probably a good thing.
+	rpcplugindir=""
+fi
+
 otrprefix=""
 for i in / /usr /usr/local; do
 	if [ -f ${i}/lib/libotr.a ]; then
@@ -729,6 +746,7 @@ cat <<EOF >bitlbee.pc
 prefix=$prefix
 includedir=$includedir
 plugindir=$plugindir
+rpcplugindir=$rpcplugindir
 
 Name: bitlbee
 Description: IRC to IM gateway
@@ -918,7 +936,6 @@ fi
 
 echo '  Using event handler: '$events
 echo '  Using SSL library: '$ssl
-#echo '  Building with these storage backends: '$STORAGES
 
 if [ -n "$protocols" ]; then
 	echo '  Building with these protocols:' $protocols$protocols_mods

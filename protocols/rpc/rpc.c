@@ -978,8 +978,6 @@ gboolean rpc_initmodule_sock(struct sockaddr *address, socklen_t addrlen) {
 	return TRUE;
 }
 
-#define PDIR "/tmp/rpcplugins"
-
 /* YA RLY :-/ */
 #ifndef UNIX_PATH_MAX
 struct sockaddr_un sizecheck;
@@ -987,7 +985,7 @@ struct sockaddr_un sizecheck;
 #endif
 
 void rpc_initmodule() {
-	DIR *pdir = opendir(PDIR);
+	DIR *pdir = opendir(RPCPLUGINDIR);
 	struct dirent *de;
 
 	if (!pdir)
@@ -997,7 +995,7 @@ void rpc_initmodule() {
 		if (de->d_type != DT_SOCK && de->d_type != DT_UNKNOWN)
 			continue;
 
-		char *fn = g_build_filename(PDIR, de->d_name, NULL);
+		char *fn = g_build_filename(RPCPLUGINDIR, de->d_name, NULL);
 		struct sockaddr_un su;
 
 		strncpy(su.sun_path, fn, UNIX_PATH_MAX);
