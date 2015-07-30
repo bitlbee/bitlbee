@@ -53,8 +53,8 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	char *s;
-	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_fb = 0;
-	int want_oauth = FALSE, want_hipchat = FALSE;
+	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_fb = 0, sup_anonymous = 0;
+	int want_oauth = FALSE, want_hipchat = FALSE, want_anonymous = FALSE;
 	GString *mechs;
 
 	if (!sasl_supported(ic)) {
@@ -73,6 +73,7 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 		return XT_ABORT;
 	}
 
+	want_anonymous = set_getbool(&ic->acc->set, "anonymous");
 	want_oauth = set_getbool(&ic->acc->set, "oauth");
 	want_hipchat = (jd->flags & JFLAG_HIPCHAT);
 
@@ -83,6 +84,8 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 			sup_plain = 1;
 		} else if (c->text && g_strcasecmp(c->text, "DIGEST-MD5") == 0) {
 			sup_digest = 1;
+		} else if (c->text && g_strcasecmp(c->text, "ANONYMOUS") == 0) {
+			sup_anonymous = 1;
 		} else if (c->text && g_strcasecmp(c->text, "X-OAUTH2") == 0) {
 			sup_gtalk = 1;
 		} else if (c->text && g_strcasecmp(c->text, "X-FACEBOOK-PLATFORM") == 0) {
@@ -138,6 +141,15 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 		jd->flags |= JFLAG_SASL_FB;
 	} else if (want_oauth) {
 		imcb_error(ic, "OAuth requested, but not supported by server");
+		imc_logout(ic, FALSE);
+		xt_free_node(reply);
+		return XT_ABORT;
+	} else if (want_anonymous && sup_anonymous) {
+		xt_add_attr(reply, "mechanism", "ANONYMOUS");
+
+		/* Well, that was easy. */
+	} else if (want_anonymous) {
+		imcb_error(ic, "Anonymous login requested, but not supported by server");
 		imc_logout(ic, FALSE);
 		xt_free_node(reply);
 		return XT_ABORT;
