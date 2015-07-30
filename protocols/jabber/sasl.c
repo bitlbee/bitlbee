@@ -153,7 +153,11 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 		imc_logout(ic, FALSE);
 		xt_free_node(reply);
 		return XT_ABORT;
-	} else if (sup_digest) {
+	} else if (sup_digest && !(jd->ssl && sup_plain)) {
+		/* Only try DIGEST-MD5 if there's no SSL/TLS or if PLAIN isn't supported.
+		 * Which in practice means "don't bother with DIGEST-MD5 most of the time".
+		 * It's weak, pointless over TLS, and often breaks with some servers (hi openfire) */
+
 		xt_add_attr(reply, "mechanism", "DIGEST-MD5");
 
 		/* The rest will be done later, when we receive a <challenge/>. */
