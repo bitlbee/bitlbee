@@ -353,8 +353,8 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 
 	def keepalive(self):
 		if (time.time() - self.last_pong) > self.PING_TIMEOUT:
-			self.cb.error("Ping timeout")
-			self.cb.logout(True)
+			self.bee.error("Ping timeout")
+			self.bee.logout(True)
 			return
 		if self.next_ping and (time.time() < self.next_ping):
 			return
