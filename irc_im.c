@@ -653,7 +653,7 @@ static gboolean bee_irc_chat_add_user(bee_t *bee, struct groupchat *c, bee_user_
 	return TRUE;
 }
 
-static gboolean bee_irc_chat_remove_user(bee_t *bee, struct groupchat *c, bee_user_t *bu)
+static gboolean bee_irc_chat_remove_user(bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *reason)
 {
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ic = c->ui_data;
@@ -665,7 +665,7 @@ static gboolean bee_irc_chat_remove_user(bee_t *bee, struct groupchat *c, bee_us
 	/* TODO: Possible bug here: If a module removes $user here instead of just
 	   using imcb_chat_free() and the channel was IRC_CHANNEL_TEMP, we get into
 	   a broken state around here. */
-	irc_channel_del_user(ic, bu == bee->user ? irc->user : bu->ui_data, IRC_CDU_PART, NULL);
+	irc_channel_del_user(ic, bu == bee->user ? irc->user : bu->ui_data, IRC_CDU_PART, reason);
 
 	return TRUE;
 }
