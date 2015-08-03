@@ -1,8 +1,10 @@
-bitlbee (3.2.2-2) UNRELEASED; urgency=medium
+bitlbee (3.4.1-1) unstable; urgency=medium
 
   * Fix copyright info (Closes: #764181)
+  * "New" upstream release. Apologies for the delay.
+  * Exclude .git not .bzr when building the source package.
 
- -- Wilmer van der Gaast <wilmer@gaast.net>  Fri, 17 Oct 2014 23:25:33 +0100
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Mon, 03 Aug 2015 22:33:25 +0100
 
 bitlbee (3.2.2-1) unstable; urgency=medium
 
