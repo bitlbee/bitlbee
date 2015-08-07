@@ -294,7 +294,7 @@ void http_decode(char *s)
 }
 
 /* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
-/* This fuction is safe, but make sure you call it safely as well! */
+/* This function is safe, but make sure you call it safely as well! */
 void http_encode(char *s)
 {
 	char t[strlen(s) + 1];

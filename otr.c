@@ -186,7 +186,7 @@ void otr_update_uflags(ConnContext *context, irc_user_t *u);
 
 /* update op/voice flag of given user according to encryption state and settings
    returns 0 if neither op_buddies nor voice_buddies is set to "encrypted",
-   i.e. msgstate should be announced seperately */
+   i.e. msgstate should be announced separately */
 int otr_update_modeflags(irc_t *irc, irc_user_t *u);
 
 /* show general info about the OTR subsystem; called by 'otr info' */

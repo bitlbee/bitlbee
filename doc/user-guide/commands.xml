@@ -181,7 +181,7 @@
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
 				
 				<para>
@@ -239,7 +239,7 @@
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
 				
 				<para>
@@ -1890,7 +1890,7 @@
 			<syntax>transfer &lt;reject&gt;</syntax>
 
 			<description>
-				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is neccessary. Or is it?</para>
+				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is necessary. Or is it?</para>
 			</description>
 
 			<ircexample>
