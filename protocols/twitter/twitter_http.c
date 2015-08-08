@@ -23,7 +23,7 @@
 
 /***************************************************************************\
 *                                                                           *
-*  Some funtions within this file have been copied from other files within  *
+*  Some functions within this file have been copied from other files within  *
 *  BitlBee.                                                                 *
 *                                                                           *
 ****************************************************************************/

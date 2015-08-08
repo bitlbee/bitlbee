@@ -11,7 +11,7 @@
  * gaim released under the GNU GPL.  This code is also released under the
  * GNU GPL.
  *
- * This code is derivitive of Gaim <http://gaim.sourceforge.net>
+ * This code is derivative of Gaim <http://gaim.sourceforge.net>
  * copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
  *	       1998-1999, Adam Fritzler <afritz@marko.net>
  *	       1998-2002, Rob Flynn <rob@marko.net>
@@ -1401,7 +1401,7 @@ static void yahoo_process_status(struct yahoo_input_data *yid,
 	}
 
 	/*
-	 * Status updates may be spread accross multiple packets and not
+	 * Status updates may be spread across multiple packets and not
 	 * even on buddy boundaries, so keeping some state is important.
 	 * So, continue where we left off, and only add a user entry to
 	 * the list once it's complete (301-315 End buddy).

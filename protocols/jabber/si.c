@@ -185,7 +185,7 @@ void jabber_si_transfer_request(struct im_connection *ic, file_transfer_t *ft, c
 
 	jd->filetransfers = g_slist_prepend(jd->filetransfers, tf);
 
-	/* query buddy's features and server's streaming proxies if neccessary */
+	/* query buddy's features and server's streaming proxies if necessary */
 
 	if (!tf->bud->features) {
 		jabber_iq_query_features(ic, bud->full_jid);
@@ -282,7 +282,7 @@ int jabber_si_handle_request(struct im_connection *ic, struct xt_node *node, str
 	}
 
 	if (requestok) {
-		/* Figure out who the transfer should come frome... */
+		/* Figure out who the transfer should come from... */
 
 		ext_jid = ini_jid;
 		if ((s = strchr(ini_jid, '/'))) {
@@ -402,7 +402,7 @@ static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_n
 	/* All this means we expect something like this: ( I think )
 	 * <iq from=... to=... id=...>
 	 *      <si xmlns=si>
-	 *      [	<file xmlns=ft/>    ] <-- not neccessary
+	 *      [	<file xmlns=ft/>    ] <-- not necessary
 	 *              <feature xmlns=feature>
 	 *                      <x xmlns=xdata type=submit>
 	 *                              <field var=stream-method>

@@ -24,7 +24,7 @@ static void freetlv(aim_tlv_t **oldtlv)
  * XXX There should be a flag setable here to have the tlvlist contain
  * bstream references, so that at least the ->value portion of each
  * element doesn't need to be malloc/memcpy'd.  This could prove to be
- * just as effecient as the in-place TLV parsing used in a couple places
+ * just as efficient as the in-place TLV parsing used in a couple places
  * in libfaim.
  *
  */
@@ -134,7 +134,7 @@ int aim_sizetlvchain(aim_tlvlist_t **list)
 
 /**
  * aim_addtlvtochain_str - Add a string to a TLV chain
- * @list: Desination chain (%NULL pointer if empty)
+ * @list: Designation chain (%NULL pointer if empty)
  * @type: TLV type
  * @str: String to add
  * @len: Length of string to add (not including %NULL)

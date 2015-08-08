@@ -84,7 +84,10 @@ static void jabber_init(account_t *acc)
 	if (strcmp(acc->prpl->name, "hipchat") == 0) {
 		set_setstr(&acc->set, "server", "chat.hipchat.com");
 	} else {
-		s = set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
+		set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
+
+		/* this reuses set_eval_oauth, which clears the password */
+		set_add(&acc->set, "anonymous", "false", set_eval_oauth, acc);
 	}
 
 	s = set_add(&acc->set, "ssl", "false", set_eval_bool, acc);
@@ -341,7 +344,9 @@ static void jabber_logout(struct im_connection *ic)
 		g_hash_table_destroy(jd->node_cache);
 	}
 
-	jabber_buddy_remove_all(ic);
+	if (jd->buddies) {
+		jabber_buddy_remove_all(ic);
+	}
 
 	xt_free(jd->xt);
 

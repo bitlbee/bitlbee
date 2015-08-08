@@ -84,7 +84,7 @@ char *socks5_reply_code[] = {
 	if ((op) == -1) { \
 		return jabber_bs_abort(bt, msg ": %s", strerror(errno)); }
 
-gboolean jabber_bs_abort(struct bs_transfer *bt, char *format, ...);
+gboolean jabber_bs_abort(struct bs_transfer *bt, char *format, ...) G_GNUC_PRINTF(2, 3);
 void jabber_bs_canceled(file_transfer_t *ft, char *reason);
 void jabber_bs_free_transfer(file_transfer_t *ft);
 gboolean jabber_bs_connect_timeout(gpointer data, gint fd, b_input_condition cond);
@@ -535,7 +535,7 @@ gboolean jabber_bs_recv_handshake(gpointer data, gint fd, b_input_condition cond
 		/* usually a proxy sends back the 40 bytes address but I encountered at least one (of jabber.cz)
 		 * that sends atyp=0 addrlen=0 and only 6 bytes (one less than one would expect).
 		 * Therefore I removed the wait for more bytes. Since we don't care about what else the proxy
-		 * is sending, it shouldnt matter */
+		 * is sending, it should not matter */
 
 		if (bt->tf->ft->sending) {
 			jabber_bs_send_activate(bt);
@@ -558,7 +558,7 @@ gboolean jabber_bs_recv_handshake(gpointer data, gint fd, b_input_condition cond
  * If the handshake failed we can try the next streamhost, if there is one.
  * An intelligent sender would probably specify himself as the first streamhost and
  * a proxy as the second (Kopete and PSI are examples here). That way, a (potentially)
- * slow proxy is only used if neccessary. This of course also means, that the timeout
+ * slow proxy is only used if necessary. This of course also means, that the timeout
  * per streamhost should be kept short. If one or two firewalled adresses are specified,
  * they have to timeout first before a proxy is tried.
  */

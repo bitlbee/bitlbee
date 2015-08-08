@@ -181,7 +181,7 @@
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
 				
 				<para>
@@ -239,7 +239,7 @@
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
 				
 				<para>
@@ -1185,6 +1185,21 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="anonymous" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				This enables SASL ANONYMOUS login for jabber accounts, as specified by XEP-0175.
+			</para>
+
+			<para>
+				With this setting enabled, if the server allows this method, a password isn't required and the username part of the JID is ignored (you can use anonymous@jabber.example.com). Servers will usually assign you a random numeric username instead.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="ops" type="string" scope="global">
 		<default>both</default>
 		<possible-values>both, root, user, none</possible-values>
@@ -1875,7 +1890,7 @@
 			<syntax>transfer &lt;reject&gt;</syntax>
 
 			<description>
-				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is neccessary. Or is it?</para>
+				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is necessary. Or is it?</para>
 			</description>
 
 			<ircexample>

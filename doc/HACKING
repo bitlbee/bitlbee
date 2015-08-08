@@ -13,7 +13,7 @@ The API is gone for a while already - which wasn't incredibly intrusive,
 just a few functions renamed for slightly better consistency, added some
 calls and arguments where that seemed useful, etc.
 
-However, up to late in the 1.2 series, the IRC core was still spread accross
+However, up to late in the 1.2 series, the IRC core was still spread across
 several files, mostly irc.c + irc_commands.c and pieces and bits in
 nogaim.c. If you're looking for a textbook example of layer violation, start
 there.

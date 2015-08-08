@@ -141,7 +141,7 @@ aim_msgcookie_t *aim_checkcookie(aim_session_t *sess, const guint8 *cookie, int 
  * @sess: session to remove the cookie from
  * @cookiep: the address of a pointer to the cookie struct to remove
  *
- * this function removes the cookie *cookie from teh list of cookies
+ * this function removes the cookie *cookie from the list of cookies
  * in sess, and then frees all memory associated with it. including
  * its data! if you want to use the private data after calling this,
  * make sure you copy it first.
