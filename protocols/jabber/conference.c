@@ -330,17 +330,49 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 		}
 	} else if (type) { /* type can only be NULL or "unavailable" in this function */
 		if ((bud->flags & JBFLAG_IS_CHATROOM) && bud->ext_jid) {
+			char *reason = NULL;
+			
+			if ((c = xt_find_node_by_attr(node->children, "x", "xmlns", XMLNS_MUC_USER))) {
+				struct xt_node *c2;
+				char *status = NULL;
+				
+				if ((c2 = xt_find_node(c->children, "status"))) {
+					status = xt_find_attr(c2, "code");
+					if (g_strcmp0(status, "301") == 0) {
+						status = "Banned";
+					} else if (g_strcmp0(status, "303") == 0) {
+						/* This could be handled in a cleverer way,
+						 * but let's just show a literal part/join for now */
+						status = "Changing nicks";
+					} else if (g_strcmp0(status, "307") == 0) {
+						status = "Kicked";
+					}
+				}
+
+				if ((c2 = xt_find_path(c, "item/reason")) && c2->text && c2->text_len) {
+					if (status) {
+						reason = g_strdup_printf("%s: %s", status, c2->text);
+					} else {
+						reason = g_strdup(c2->text);
+					}
+				} else {
+					reason = g_strdup(status);
+				}
+			}
+
 			s = strchr(bud->ext_jid, '/');
 			if (s) {
 				*s = 0;
 			}
-			imcb_chat_remove_buddy(chat, bud->ext_jid, NULL);
+			imcb_chat_remove_buddy(chat, bud->ext_jid, reason);
 			if (bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS) {
-				imcb_remove_buddy(ic, bud->ext_jid, NULL);
+				imcb_remove_buddy(ic, bud->ext_jid, reason);
 			}
 			if (s) {
 				*s = '/';
 			}
+
+			g_free(reason);
 		}
 
 		if (bud == jc->me) {
