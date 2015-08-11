@@ -215,6 +215,10 @@ gboolean otr_disconnect_user(irc_t *irc, irc_user_t *u);
 /* close all active OTR connections */
 void otr_disconnect_all(irc_t *irc);
 
+/* modifies string in-place, replacing \x03 with '?',
+   as a quick way to prevent remote users from messing with irc colors */
+static char *otr_filter_colors(char *msg);
+
 /* functions to be called for certain events */
 static const struct irc_plugin otr_plugin;
 
@@ -453,7 +457,7 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 		return NULL;
 	} else if (!newmsg) {
 		/* this was a non-OTR message */
-		return msg;
+		return otr_filter_colors(msg);
 	} else {
 		/* we're done with the original msg, which will be caller-freed. */
 		return newmsg;
@@ -744,6 +748,16 @@ void op_create_instag(void *opdata, const char *account, const char *protocol)
 	}
 }
 
+static char *otr_filter_colors(char *msg) {
+	int i;
+	for (i = 0; msg[i]; i++) {
+		if (msg[i] == '\x03') {
+			msg[i] = '?';
+		}
+	}
+	return msg;
+}
+
 /* returns newly allocated string */
 static char *otr_color_encrypted(char *msg, char *color, gboolean is_query) {
 	char **lines;
@@ -776,7 +790,7 @@ static char *otr_color_encrypted(char *msg, char *color, gboolean is_query) {
 			g_string_append_c(out, ' ');
 		}
 
-		g_string_append(out, line);
+		g_string_append(out, otr_filter_colors(line));
 	}
 
 	g_strfreev(lines);
