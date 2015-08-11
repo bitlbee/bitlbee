@@ -218,6 +218,9 @@ void otr_disconnect_all(irc_t *irc);
 /* functions to be called for certain events */
 static const struct irc_plugin otr_plugin;
 
+#define OTR_COLOR_TRUSTED "03"     /* green */
+#define OTR_COLOR_UNTRUSTED "05"   /* red */
+
 /*** routines declared in otr.h: ***/
 
 #ifdef OTR_BI
@@ -741,6 +744,46 @@ void op_create_instag(void *opdata, const char *account, const char *protocol)
 	}
 }
 
+/* returns newly allocated string */
+static char *otr_color_encrypted(char *msg, char *color, gboolean is_query) {
+	char **lines;
+	GString *out;
+	int i;
+
+	lines = g_strsplit(msg, "\n", -1);
+
+	/* up to 4 extra chars per line (e.g., '\x03' + ("03"|"05") + ' ') */
+	out = g_string_sized_new(strlen(msg) + g_strv_length(lines) * 4);
+	
+	for (i = 0; lines[i]; i++) {
+		char *line = lines[i];
+
+		if (i != 0) {
+			g_string_append_c(out, '\n');
+
+		} else if (is_query && g_strncasecmp(line, "/me ", 4) == 0) {
+			/* in a query window, keep "/me " uncolored at the beginning */
+			line += 4;
+			g_string_append(out, "/me ");
+		}
+
+		g_string_append_c(out, '\x03');
+		g_string_append(out, color);
+
+		/* comma in first place could mess with the color code */
+		if (line[0] == ',') {
+			/* insert a space between color spec and message */
+			g_string_append_c(out, ' ');
+		}
+
+		g_string_append(out, line);
+	}
+
+	g_strfreev(lines);
+
+	return g_string_free(out, FALSE);
+}
+
 void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
                     char **dst, const char *src)
 {
@@ -751,44 +794,28 @@ void op_convert_msg(void *opdata, ConnContext *ctx, OtrlConvertType typ,
 
 	if (typ == OTRL_CONVERT_RECEIVING) {
 		char *msg = g_strdup(src);
-		char *buf = msg;
 
 		/* HTML decoding */
 		if (set_getbool(&ic->bee->set, "otr_does_html") &&
 		    !(ic->flags & OPT_DOES_HTML) &&
 		    set_getbool(&ic->bee->set, "strip_html")) {
 			strip_html(msg);
+
+			/* msg is borrowed by *dst (unless the next if decides to color it) */
 			*dst = msg;
 		}
 
 		/* coloring */
 		if (set_getbool(&ic->bee->set, "otr_color_encrypted")) {
-			int color;                /* color according to f'print trust */
-			char *pre = "", *sep = "";    /* optional parts */
 			const char *trust = ctx->active_fingerprint->trust;
+			char *color = (trust && *trust) ? OTR_COLOR_TRUSTED : OTR_COLOR_UNTRUSTED;
+			gboolean is_query = (irc_user_msgdest(iu) == irc->user->nick);
 
-			if (trust && trust[0] != '\0') {
-				color = 3;   /* green */
-			} else {
-				color = 5;   /* red */
+			/* the return value of otr_color_encrypted() is borrowed by *dst */
+			*dst = otr_color_encrypted(msg, color, is_query);
 
-			}
-			/* in a query window, keep "/me " uncolored at the beginning */
-			if (g_strncasecmp(msg, "/me ", 4) == 0
-			    && irc_user_msgdest(iu) == irc->user->nick) {
-				msg += 4;  /* skip */
-				pre = "/me ";
-			}
-
-			/* comma in first place could mess with the color code */
-			if (msg[0] == ',') {
-				/* insert a space between color spec and message */
-				sep = " ";
-			}
-
-			*dst = g_strdup_printf("%s\x03%.2d%s%s\x0F", pre,
-			                       color, sep, msg);
-			g_free(buf);
+			/* this branch doesn't need msg */
+			g_free(msg);
 		}
 	} else {
 		/* HTML encoding */
