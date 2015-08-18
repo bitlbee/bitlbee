@@ -126,6 +126,29 @@ static void irc_cmd_cap_ls(irc_t *irc, char *version) {
 	g_string_free(str, TRUE);
 }
 
+/* this one looks suspiciously similar to cap ls,
+ * but cap-3.2 will make them very different */
+static void irc_cmd_cap_list(irc_t *irc) {
+	int i;
+	gboolean first = TRUE;
+	GString *str = g_string_sized_new(256);
+
+	for (i = 0; supported_caps[i].name; i++) {
+		if (irc->caps & supported_caps[i].flag) {
+			if (!first) {
+				g_string_append_c(str, ' ');
+			}
+			first = FALSE;
+
+			g_string_append(str, supported_caps[i].name);
+		}
+	}
+
+	irc_send_cap(irc, "LIST", str->str);
+
+	g_string_free(str, TRUE);
+}
+
 static void irc_cmd_cap(irc_t *irc, char **cmd)
 {
 	if (!(irc->status & USTATUS_LOGGED_IN)) {
@@ -137,7 +160,7 @@ static void irc_cmd_cap(irc_t *irc, char **cmd)
 		irc_cmd_cap_ls(irc, cmd[2]);
 
 	} else if (g_strcasecmp(cmd[1], "LIST") == 0) {
-		irc_send_cap(irc, "LIST", "");
+		irc_cmd_cap_list(irc);
 
 	} else if (g_strcasecmp(cmd[1], "REQ") == 0) {
 		gboolean ack = irc_cmd_cap_req(irc, cmd[2]);
