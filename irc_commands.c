@@ -109,6 +109,23 @@ static gboolean irc_cmd_cap_req(irc_t *irc, char *caps)
 	return TRUE;
 }
 
+/* version can be "302" or NULL, but we don't need cap-3.2 for anything yet */
+static void irc_cmd_cap_ls(irc_t *irc, char *version) {
+	int i;
+	GString *str = g_string_sized_new(256);
+
+	for (i = 0; supported_caps[i].name; i++) {
+		if (i != 0) {
+			g_string_append_c(str, ' ');
+		}
+		g_string_append(str, supported_caps[i].name);
+	}
+
+	irc_send_cap(irc, "LS", str->str);
+
+	g_string_free(str, TRUE);
+}
+
 static void irc_cmd_cap(irc_t *irc, char **cmd)
 {
 	if (!(irc->status & USTATUS_LOGGED_IN)) {
@@ -117,12 +134,7 @@ static void irc_cmd_cap(irc_t *irc, char **cmd)
 	}
 
 	if (g_strcasecmp(cmd[1], "LS") == 0) {
-		/* gboolean irc302 = (g_strcmp0(cmd[2], "302") == 0); */
-		//char *ls = g_strjoinv(" ", (char **) supported_caps);
-
-		irc_send_cap(irc, "LS", "foo bar");
-
-		//g_free(ls);
+		irc_cmd_cap_ls(irc, cmd[2]);
 
 	} else if (g_strcasecmp(cmd[1], "LIST") == 0) {
 		irc_send_cap(irc, "LIST", "");
