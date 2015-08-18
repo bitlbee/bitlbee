@@ -65,6 +65,11 @@ typedef enum {
 	IRC_UTF8_NICKS = 0x10000, /* Disable ASCII restrictions on buddy nicks. */
 } irc_status_t;
 
+typedef enum {
+	CAP_FOO = (1 << 0),
+	CAP_BAR = (1 << 1),
+} irc_cap_flag_t;
+
 struct irc_user;
 
 typedef struct irc {
@@ -350,5 +355,8 @@ char *irc_format_timestamp(irc_t *irc, time_t msg_ts);
 /* irc_im.c */
 void bee_irc_channel_update(irc_t *irc, irc_channel_t *ic, irc_user_t *iu);
 void bee_irc_user_nick_reset(irc_user_t *iu);
+
+/* irc_cap.c */
+void irc_cmd_cap(irc_t *irc, char **cmd);
 
 #endif
