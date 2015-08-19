@@ -36,6 +36,7 @@
 #include "proxy.h"
 
 static int conf_loadini(conf_t *conf, char *file);
+static void conf_free(conf_t *conf);
 
 conf_t *conf_load(int argc, char *argv[])
 {
@@ -103,7 +104,7 @@ conf_t *conf_load(int argc, char *argv[])
 			if (strcmp(global.conf_file, optarg) != 0) {
 				g_free(global.conf_file);
 				global.conf_file = g_strdup(optarg);
-				g_free(conf);
+				conf_free(conf);
 				/* Re-evaluate arguments. Don't use this option twice,
 				   you'll end up in an infinite loop! Hope this trick
 				   works with all libcs BTW.. */
@@ -165,6 +166,34 @@ conf_t *conf_load(int argc, char *argv[])
 	}
 
 	return conf;
+}
+
+static void conf_free(conf_t *conf)
+{
+	/* Free software means users have the four essential freedoms:
+	   0. to run the program,
+	   2. to study and change the program in source code form,
+	   2. to redistribute exact copies, and
+	   3. to distribute modified versions
+	*/
+	g_free(conf->auth_pass);
+	g_free(conf->cafile);
+	g_free(conf->configdir);
+	g_free(conf->ft_listen);
+	g_free(conf->hostname);
+	g_free(conf->iface_in);
+	g_free(conf->iface_out);
+	g_free(conf->motdfile);
+	g_free(conf->oper_pass);
+	g_free(conf->pidfile);
+	g_free(conf->plugindir);
+	g_free(conf->port);
+	g_free(conf->primary_storage);
+	g_free(conf->user);
+	g_strfreev(conf->migrate_storage);
+	g_strfreev(conf->protocols);
+	g_free(conf);
+
 }
 
 static int conf_loadini(conf_t *conf, char *file)
