@@ -29,15 +29,19 @@ uninstall: uninstall-bin uninstall-doc
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
 
 install: install-bin install-doc install-plugins
+	@echo
+	@echo Installed successfully
+	@echo
 	@if ! [ -d $(DESTDIR)$(CONFIG) ]; then echo -e '\nThe configuration directory $(DESTDIR)$(CONFIG) does not exist yet, don'\''t forget to create it!'; fi
 	@if ! [ -e $(DESTDIR)$(ETCDIR)/bitlbee.conf ]; then echo -e '\nNo files are installed in '$(DESTDIR)$(ETCDIR)' by make install. Run make install-etc to do that.'; fi
 ifdef SYSTEMDSYSTEMUNITDIR
 	@echo If you want to start BitlBee using systemd, try \"make install-systemd\".
 endif
+	@echo To be able to compile third party plugins, run \"make install-dev\"
 	@echo
 
-.PHONY:   install   install-bin   install-etc   install-doc install-plugins install-systemd \
-        uninstall uninstall-bin uninstall-etc uninstall-doc \
+.PHONY:   install   install-bin   install-etc   install-doc install-plugins install-systemd install-dev \
+        uninstall uninstall-bin uninstall-etc uninstall-doc uninstall-etc \
         all clean distclean tar $(subdirs) doc
 
 Makefile.settings:
