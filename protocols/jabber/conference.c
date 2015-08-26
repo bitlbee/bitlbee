@@ -331,33 +331,44 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 	} else if (type) { /* type can only be NULL or "unavailable" in this function */
 		if ((bud->flags & JBFLAG_IS_CHATROOM) && bud->ext_jid) {
 			char *reason = NULL;
+			char *status = NULL;
+			char *status_text = NULL;
 			
 			if ((c = xt_find_node_by_attr(node->children, "x", "xmlns", XMLNS_MUC_USER))) {
-				struct xt_node *c2;
-				char *status = NULL;
-				
-				if ((c2 = xt_find_node(c->children, "status"))) {
-					status = xt_find_attr(c2, "code");
-					if (g_strcmp0(status, "301") == 0) {
+				struct xt_node *c2 = c->children;
+
+				while ((c2 = xt_find_node(c2, "status"))) {
+					char *code = xt_find_attr(c2, "code");
+					if (g_strcmp0(code, "301") == 0) {
 						status = "Banned";
-					} else if (g_strcmp0(status, "303") == 0) {
+						break;
+					} else if (g_strcmp0(code, "303") == 0) {
 						/* This could be handled in a cleverer way,
 						 * but let's just show a literal part/join for now */
 						status = "Changing nicks";
-					} else if (g_strcmp0(status, "307") == 0) {
+						break;
+					} else if (g_strcmp0(code, "307") == 0) {
 						status = "Kicked";
+						break;
 					}
+					c2 = c2->next;
 				}
 
+				/* Sometimes the status message is in presence/x/item/reason */
 				if ((c2 = xt_find_path(c, "item/reason")) && c2->text && c2->text_len) {
-					if (status) {
-						reason = g_strdup_printf("%s: %s", status, c2->text);
-					} else {
-						reason = g_strdup(c2->text);
-					}
-				} else {
-					reason = g_strdup(status);
+					status_text = c2->text;
 				}
+			}
+
+			/* Sometimes the status message is right inside <presence> */
+			if ((c = xt_find_node(node->children, "status")) && c->text && c->text_len) {
+				status_text = c->text;
+			}
+
+			if (status_text && status) {
+				reason = g_strdup_printf("%s: %s", status, status_text);
+			} else {
+				reason = g_strdup(status_text ? : status);
 			}
 
 			s = strchr(bud->ext_jid, '/');
