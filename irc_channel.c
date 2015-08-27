@@ -592,6 +592,16 @@ char *irc_channel_name_gen(irc_t *irc, const char *hint)
 	gsize bytes_written;
 
 	translit_name = g_convert_with_fallback(hint, -1, "ASCII//TRANSLIT", "UTF-8", "", NULL, &bytes_written, NULL);
+
+	if (!translit_name) {
+		/* Same thing as in nick_gen() in nick.c, try again without //TRANSLIT */
+		translit_name = g_convert_with_fallback(hint, -1, "ASCII", "UTF-8", "", NULL, &bytes_written, NULL);
+	}
+
+	if (!translit_name) {
+		return NULL;
+	}
+
 	if (bytes_written > MAX_NICK_LENGTH) {
 		translit_name[MAX_NICK_LENGTH] = '\0';
 	}
