@@ -1323,6 +1323,26 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="proxy" type="string" scope="account">
+		<default>&lt;local&gt;&lt;auto&gt;</default>
+
+		<description>
+			<para>
+				A list of <emphasis>file transfer proxies</emphasis> for jabber. This isn't the connection proxy. Sorry, look in bitlbee.conf for those.
+			</para>
+
+			<para>
+				It's a semicolon-separated list of items that can be either <emphasis>JID,HOST,PORT</emphasis> or two special values, <emphasis>&lt;local&gt;</emphasis> (to try a direct connection first) and <emphasis>&lt;auto&gt;</emphasis> (to try to discover a proxy). For example, "&lt;local&gt;;proxy.somewhere.org,123.123.123.123,7777".
+			</para>
+			<para>
+				The address should point to a SOCKS5 bytestreams server, usually provided by jabber servers. This is only used for sending files. Note that the host address might not match what DNS tells you, and the port isn't always the same.
+			</para>
+			<para>
+				The correct way to get a socks proxy host/port is a mystery, and the file transfer might fail anyway. Maybe just try using dropbox instead.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="query_order" type="string" scope="global">
 		<default>lifo</default>
 		<possible-values>lifo, fifo</possible-values>
