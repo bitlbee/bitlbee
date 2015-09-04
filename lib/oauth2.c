@@ -41,9 +41,12 @@
 #include "http_client.h"
 #include "oauth2.h"
 #include "oauth.h"
-#include "json.h"
-#include "json_util.h"
+#include "parson.h"
 #include "url.h"
+
+#define JSON_O_FOREACH(o, k, v) \
+    const char *k; const JSON_Value *v; int __i; \
+    for (__i = 0; json_object_get_tuple(o, __i, &k, &v); __i++)
 
 char *oauth2_url(const struct oauth2_service *sp)
 {
@@ -112,25 +115,20 @@ int oauth2_access_token(const struct oauth2_service *sp,
 	return req != NULL;
 }
 
-static char* oauth2_parse_error(json_value *e)
+static char* oauth2_parse_error(const JSON_Value *e)
 {
 	/* This does a reasonable job with some of the flavours of error
 	   responses I've seen. Because apparently it's not standardised. */
 
-	if (e->type == json_object) {
+	if (json_type(e) == JSONObject) {
 		/* Facebook style */
-		const char *msg = json_o_str(e, "message");
-		const char *type = json_o_str(e, "type");
-		json_value *code_o = json_o_get(e, "code");
-		int code = 0;
-
-		if (code_o && code_o->type == json_integer) {
-			code = code_o->u.integer;
-		}
-
+		const char *msg = json_object_get_string(json_object(e), "message");
+		const char *type = json_object_get_string(json_object(e), "type");
+		JSON_Value *code_o = json_object_get_value(json_object(e), "code");
+		int code = json_value_get_integer(code_o);
 		return g_strdup_printf("Error %d: %s", code, msg ? msg : type ? type : "Unknown error");
-	} else if (e->type == json_string) {
-		return g_strdup(e->u.string.ptr);
+	} else if (json_type(e) == JSONString) {
+		return g_strdup(json_string(e));
 	}
 	return NULL;
 }
@@ -155,20 +153,20 @@ static void oauth2_access_token_done(struct http_request *req)
 
 	if (content_type && (strstr(content_type, "application/json") ||
 	                     strstr(content_type, "text/javascript"))) {
-		json_value *js = json_parse(req->reply_body, req->body_size);
-		if (js && js->type == json_object) {
-			JSON_O_FOREACH(js, k, v){
+		JSON_Value *js = json_parse_string(req->reply_body);
+		if (js && json_type(js) == JSONObject) {
+			JSON_O_FOREACH(json_object(js), k, v){
 				if (strcmp(k, "error") == 0) {
 					error = oauth2_parse_error(v);
 				}
-				if (v->type != json_string) {
+				if (json_type(v) != JSONString) {
 					continue;
 				}
 				if (strcmp(k, "access_token") == 0) {
-					atoken = g_strdup(v->u.string.ptr);
+					atoken = g_strdup(json_string(v));
 				}
 				if (strcmp(k, "refresh_token") == 0) {
-					rtoken = g_strdup(v->u.string.ptr);
+					rtoken = g_strdup(json_string(v));
 				}
 			}
 		}
