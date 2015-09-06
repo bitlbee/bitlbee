@@ -247,6 +247,9 @@ static int conf_loadini(conf_t *conf, char *file)
 			} else if (g_strcasecmp(ini->key, "configdir") == 0) {
 				g_free(conf->configdir);
 				conf->configdir = g_strdup(ini->value);
+			} else if (g_strcasecmp(ini->key, "plugindir") == 0) {
+				g_free(conf->plugindir);
+				conf->plugindir = g_strdup(ini->value);
 			} else if (g_strcasecmp(ini->key, "motdfile") == 0) {
 				g_free(conf->motdfile);
 				conf->motdfile = g_strdup(ini->value);
