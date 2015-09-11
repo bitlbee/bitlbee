@@ -49,6 +49,7 @@ typedef enum {
 	USTATUS_SHUTDOWN = 8,   /* Now used to indicate we're shutting down.
 	                           Currently just blocks irc_vawrite(). */
 	USTATUS_CAP_PENDING = 16,
+	USTATUS_SASL_PLAIN_PENDING = 32,
 
 	/* Not really status stuff, but other kinds of flags: For slightly
 	   better password security, since the only way to send passwords
@@ -66,8 +67,7 @@ typedef enum {
 } irc_status_t;
 
 typedef enum {
-	CAP_FOO = (1 << 0),
-	CAP_BAR = (1 << 1),
+	CAP_SASL = (1 << 0),
 } irc_cap_flag_t;
 
 struct irc_user;

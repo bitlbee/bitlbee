@@ -27,6 +27,7 @@
 #include "bitlbee.h"
 #include "help.h"
 #include "ipc.h"
+#include "base64.h"
 
 static void irc_cmd_pass(irc_t *irc, char **cmd)
 {
@@ -57,6 +58,117 @@ static void irc_cmd_pass(irc_t *irc, char **cmd)
 	}
 }
 
+static gboolean irc_sasl_plain_parse(char *input, char **user, char **pass)
+{
+	int len;
+	int i = 0;
+	int part = 0;
+	guint8 *decoded;
+	char *parts[2];
+
+	/* bitlbee's base64_decode wrapper adds an extra null terminator at the end */
+	len = base64_decode(input, &decoded);
+
+	while (i < len && part < 3) {
+		parts[part] = (char *) decoded + i;
+		i += strlen(parts[part]) + 1;
+		part++;
+	}
+
+	/* sanity checks */
+	if (part != 3 || i != (len + 1) || strcmp(parts[0], parts[1]) != 0) {
+		g_free(decoded);
+		return FALSE;
+	} else {
+		*user = g_strdup(parts[0]);
+		*pass = g_strdup(parts[2]);
+		g_free(decoded);
+		return TRUE;
+	}
+}
+
+static gboolean irc_sasl_check_pass(irc_t *irc, char *user, char *pass)
+{
+	storage_status_t status;
+
+	/* just check the password here to be able to reply with useful numerics
+	 * the actual identification will be handled later */
+	status = storage_check_pass(user, pass);
+
+	if (status == STORAGE_OK) {
+		if (!irc->user->nick) {
+			/* set the nick here so we have it for the following numeric */
+			irc->user->nick = g_strdup(user);
+		}
+		irc_send_num(irc, 903, ":Password accepted");
+		return TRUE;
+
+	} else if (status == STORAGE_INVALID_PASSWORD) {
+		irc_send_num(irc, 904, ":Incorrect password");
+	} else if (status == STORAGE_NO_SUCH_USER) {
+		irc_send_num(irc, 904, ":The nick is (probably) not registered");
+	} else {
+		irc_send_num(irc, 904, ":Unknown SASL authentication error");
+	}
+
+	return FALSE;
+}
+
+static void irc_cmd_authenticate(irc_t *irc, char **cmd)
+{
+	/* require the CAP to be enabled, and don't allow authentication before server password */
+	if (!(irc->caps & CAP_SASL) ||
+	    (global.conf->authmode == AUTHMODE_CLOSED && !(irc->status & USTATUS_AUTHORIZED))) {
+		return;
+	}
+
+	if (irc->status & USTATUS_SASL_PLAIN_PENDING) {
+		char *user, *pass;
+
+		irc->status &= ~USTATUS_SASL_PLAIN_PENDING;
+
+		if (!irc_sasl_plain_parse(cmd[1], &user, &pass)) {
+			irc_send_num(irc, 904, ":SASL authentication failed");
+			return;
+		}
+
+		/* let's not support the nick != user case
+		 * if NICK is received after SASL, it will just fail after registration */
+		if (user && irc->user->nick && strcmp(user, irc->user->nick) != 0) {
+			irc_send_num(irc, 902, ":Your SASL username does not match your nickname");
+
+		} else if (irc_sasl_check_pass(irc, user, pass)) {
+			/* and here we do the same thing as the PASS command*/
+			if (irc->status & USTATUS_LOGGED_IN) {
+				char *send_cmd[] = { "identify", pass, NULL };
+				root_command(irc, send_cmd);
+			} else {
+				/* no check_login here - wait for CAP END */
+				irc_setpass(irc, pass);
+			}
+		}
+
+		g_free(user);
+		g_free(pass);
+
+	} else if (irc->status & USTATUS_IDENTIFIED) {
+		irc_send_num(irc, 907, ":You have already authenticated using SASL");
+
+	} else if (strcmp(cmd[1], "*") == 0) {
+		irc_send_num(irc, 906, ":SASL authentication aborted");
+		irc->status &= ~USTATUS_SASL_PLAIN_PENDING;
+
+	} else if (g_strcasecmp(cmd[1], "PLAIN") == 0) {
+		irc_write(irc, "AUTHENTICATE +");
+		irc->status |= USTATUS_SASL_PLAIN_PENDING;
+
+	} else {
+		irc_send_num(irc, 908, "PLAIN :is the available SASL mechanism");
+		irc_send_num(irc, 904, ":SASL authentication failed");
+		irc->status &= ~USTATUS_SASL_PLAIN_PENDING;
+	}
+}
+
 static void irc_cmd_user(irc_t *irc, char **cmd)
 {
 	irc->user->user = g_strdup(cmd[1]);
@@ -82,6 +194,12 @@ static void irc_cmd_nick(irc_t *irc, char **cmd)
 			irc_setpass(irc, NULL);
 			irc->status &= ~USTATUS_IDENTIFIED;
 			irc_umode_set(irc, "-R", 1);
+
+			if (irc->caps & CAP_SASL) {
+				irc_send_num(irc, 901, "%s!%s@%s :You are now logged out",
+					irc->user->nick, irc->user->user, irc->user->host);
+			}
+
 			irc_rootmsg(irc, "Changing nicks resets your identify status. "
 			            "Re-identify or register a new account if you want "
 			            "your configuration to be saved. See \x02help "
@@ -721,6 +839,7 @@ static const command_t irc_commands[] = {
 	{ "rehash",      0, irc_cmd_rehash,      IRC_CMD_OPER_ONLY },
 	{ "restart",     0, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
 	{ "kill",        2, NULL,                IRC_CMD_OPER_ONLY | IRC_CMD_TO_MASTER },
+	{ "authenticate", 1, irc_cmd_authenticate, 0 },
 	{ NULL }
 };
 

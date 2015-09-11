@@ -162,6 +162,12 @@ static void cmd_identify(irc_t *irc, char **cmd)
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set(irc, "+R", 1);
 
+		if (irc->caps & CAP_SASL) {
+			irc_user_t *iu = irc->user;
+			irc_send_num(irc, 900, "%s!%s@%s %s :You are now logged in as %s",
+				iu->nick, iu->user, iu->host, iu->nick, iu->nick);
+		}
+
 		bitlbee_whatsnew(irc);
 
 		/* The following code is a bit hairy now. With takeover
