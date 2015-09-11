@@ -37,6 +37,7 @@ typedef struct {
 } cap_info_t;
 
 static const cap_info_t supported_caps[] = {
+	{"sasl", CAP_SASL},
 	{"multi-prefix", CAP_MULTI_PREFIX},
 	{NULL},
 };
@@ -169,6 +170,12 @@ void irc_cmd_cap(irc_t *irc, char **cmd)
 
 	} else if (g_strcasecmp(cmd[1], "END") == 0) {
 		irc->status &= ~USTATUS_CAP_PENDING;
+
+		if (irc->status & USTATUS_SASL_PLAIN_PENDING) {
+			irc_send_num(irc, 906, ":SASL authentication aborted");
+			irc->status &= ~USTATUS_SASL_PLAIN_PENDING;
+		}
+
 		irc_check_login(irc);
 
 	} else {
