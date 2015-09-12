@@ -213,13 +213,8 @@ void irc_send_names(irc_channel_t *ic)
 			*namelist = 0;
 		}
 
-		if (icu->flags & IRC_CHANNEL_USER_OP) {
-			strcat(namelist, "@");
-		} else if (icu->flags & IRC_CHANNEL_USER_HALFOP) {
-			strcat(namelist, "%");
-		} else if (icu->flags & IRC_CHANNEL_USER_VOICE) {
-			strcat(namelist, "+");
-		}
+		namelist[strlen(namelist) + 1] = '\0';
+		namelist[strlen(namelist)] = irc_channel_user_get_prefix(icu);
 
 		strcat(namelist, iu->nick);
 		strcat(namelist, " ");
@@ -293,15 +288,26 @@ void irc_send_who(irc_t *irc, GSList *l, const char *channel)
 	gboolean is_channel = strchr(CTYPES, channel[0]) != NULL;
 
 	while (l) {
-		irc_user_t *iu = l->data;
+		irc_user_t *iu;
+
+		/* Null terminated string with three chars, respectively:
+		 * { <H|G>, <@|%|+|\0>, \0 } */
+		char status_prefix[3] = {0};
+
+		/* rfc1459 doesn't mention this: G means gone, H means here */
+		status_prefix[0] = iu->flags & IRC_USER_AWAY ? 'G' : 'H';
+
 		if (is_channel) {
-			iu = ((irc_channel_user_t *) iu)->iu;
+			irc_channel_user_t *icu = l->data;
+			status_prefix[1] = irc_channel_user_get_prefix(icu);
+			iu = icu->iu;
+		} else {
+			iu = l->data;
 		}
-		/* TODO(wilmer): Restore away/channel information here */
-		irc_send_num(irc, 352, "%s %s %s %s %s %c :0 %s",
+
+		irc_send_num(irc, 352, "%s %s %s %s %s %s :0 %s",
 		             is_channel ? channel : "*", iu->user, iu->host, irc->root->host,
-		             iu->nick, iu->flags & IRC_USER_AWAY ? 'G' : 'H',
-		             iu->fullname);
+		             iu->nick, status_prefix, iu->fullname);
 		l = l->next;
 	}
 

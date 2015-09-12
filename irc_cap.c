@@ -37,8 +37,7 @@ typedef struct {
 } cap_info_t;
 
 static const cap_info_t supported_caps[] = {
-	{"foo", CAP_FOO},
-	{"bar", CAP_BAR},
+	{"multi-prefix", CAP_MULTI_PREFIX},
 	{NULL},
 };
 

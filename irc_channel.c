@@ -428,6 +428,18 @@ void irc_channel_set_mode(irc_channel_t *ic, const char *s)
 	}
 }
 
+char irc_channel_user_get_prefix(irc_channel_user_t *icu)
+{
+	if (icu->flags & IRC_CHANNEL_USER_OP) {
+		return '@';
+	} else if (icu->flags & IRC_CHANNEL_USER_HALFOP) {
+		return '%';
+	} else if (icu->flags & IRC_CHANNEL_USER_VOICE) {
+		return '+';
+	}
+	return 0;
+}
+
 void irc_channel_auto_joins(irc_t *irc, account_t *acc)
 {
 	GSList *l;
