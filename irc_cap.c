@@ -38,6 +38,7 @@ typedef struct {
 
 static const cap_info_t supported_caps[] = {
 	{"sasl", CAP_SASL},
+	{"multi-prefix", CAP_MULTI_PREFIX},
 	{NULL},
 };
 
