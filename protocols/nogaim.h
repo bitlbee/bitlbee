@@ -69,6 +69,7 @@
 #define OPT_NOOTR       0x00001000 /* protocol not suitable for OTR */
 #define OPT_PONGS       0x00010000 /* Service sends us keep-alives */
 #define OPT_PONGED      0x00020000 /* Received a keep-alive during last interval */
+#define OPT_SELFMESSAGE 0x00080000 /* A message sent by self from another location */
 
 /* ok. now the fun begins. first we create a connection structure */
 struct im_connection {
@@ -324,7 +325,7 @@ G_MODULE_EXPORT void imcb_rename_buddy(struct im_connection *ic, const char *han
 G_MODULE_EXPORT void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const char *nick);
 G_MODULE_EXPORT void imcb_buddy_action_response(bee_user_t *bu, const char *action, char * const args[], void *data);
 
-G_MODULE_EXPORT void imcb_buddy_typing(struct im_connection *ic, const char *handle, uint32_t flags);
+G_MODULE_EXPORT void imcb_buddy_typing(struct im_connection *ic, const char *handle, guint32 flags);
 G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle(struct im_connection *ic, const char *handle);
 G_MODULE_EXPORT void imcb_clean_handle(struct im_connection *ic, char *handle);
 

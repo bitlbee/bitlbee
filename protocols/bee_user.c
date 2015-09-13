@@ -246,7 +246,7 @@ void imcb_buddy_times(struct im_connection *ic, const char *handle, time_t login
 	bu->idle_time = idle;
 }
 
-void imcb_buddy_msg(struct im_connection *ic, const char *handle, const char *msg, uint32_t flags, time_t sent_at)
+void imcb_buddy_msg(struct im_connection *ic, const char *handle, const char *msg, guint32 flags, time_t sent_at)
 {
 	bee_t *bee = ic->bee;
 	bee_user_t *bu;
@@ -264,7 +264,7 @@ void imcb_buddy_msg(struct im_connection *ic, const char *handle, const char *ms
 	}
 
 	if (bee->ui->user_msg && bu) {
-		bee->ui->user_msg(bee, bu, msg, sent_at);
+		bee->ui->user_msg(bee, bu, msg, flags, sent_at);
 	} else {
 		imcb_log(ic, "Message from unknown handle %s:\n%s", handle, msg);
 	}
@@ -296,7 +296,7 @@ void imcb_notify_email(struct im_connection *ic, char *format, ...)
 	g_free(msg);
 }
 
-void imcb_buddy_typing(struct im_connection *ic, const char *handle, uint32_t flags)
+void imcb_buddy_typing(struct im_connection *ic, const char *handle, guint32 flags)
 {
 	bee_user_t *bu;
 

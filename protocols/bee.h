@@ -104,7 +104,7 @@ typedef struct bee_ui_funcs {
 	/* State info is already updated, old is provided in case the UI needs a diff. */
 	gboolean (*user_status)(bee_t *bee, struct bee_user *bu, struct bee_user *old);
 	/* On every incoming message. sent_at = 0 means unknown. */
-	gboolean (*user_msg)(bee_t *bee, bee_user_t *bu, const char *msg, time_t sent_at);
+	gboolean (*user_msg)(bee_t *bee, bee_user_t *bu, const char *msg, guint32 flags, time_t sent_at);
 	/* Flags currently defined (OPT_TYPING/THINKING) in nogaim.h. */
 	gboolean (*user_typing)(bee_t *bee, bee_user_t *bu, guint32 flags);
 	/* CTCP-like stuff (buddy action) response */
@@ -117,7 +117,7 @@ typedef struct bee_ui_funcs {
 	gboolean (*chat_free)(bee_t *bee, struct groupchat *c);
 	/* System messages of any kind. */
 	gboolean (*chat_log)(bee_t *bee, struct groupchat *c, const char *text);
-	gboolean (*chat_msg)(bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, time_t sent_at);
+	gboolean (*chat_msg)(bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, guint32 flags, time_t sent_at);
 	gboolean (*chat_add_user)(bee_t *bee, struct groupchat *c, bee_user_t *bu);
 	gboolean (*chat_remove_user)(bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *reason);
 	gboolean (*chat_topic)(bee_t *bee, struct groupchat *c, const char *new_topic, bee_user_t *bu);

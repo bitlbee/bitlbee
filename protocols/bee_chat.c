@@ -94,16 +94,15 @@ static gboolean handle_is_self(struct im_connection *ic, const char *handle)
 	       (ic->acc->prpl->handle_cmp(ic->acc->user, handle) == 0);
 }
 
-void imcb_chat_msg(struct groupchat *c, const char *who, char *msg, uint32_t flags, time_t sent_at)
+void imcb_chat_msg(struct groupchat *c, const char *who, char *msg, guint32 flags, time_t sent_at)
 {
 	struct im_connection *ic = c->ic;
 	bee_t *bee = ic->bee;
 	bee_user_t *bu;
-	gboolean temp;
+	gboolean temp = FALSE;
 	char *s;
 
-	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
-	if (handle_is_self(ic, who)) {
+	if (handle_is_self(ic, who) && !(flags & OPT_SELFMESSAGE)) {
 		return;
 	}
 
@@ -121,7 +120,7 @@ void imcb_chat_msg(struct groupchat *c, const char *who, char *msg, uint32_t fla
 	}
 
 	if (bee->ui->chat_msg) {
-		bee->ui->chat_msg(bee, c, bu, msg, sent_at);
+		bee->ui->chat_msg(bee, c, bu, msg, flags, sent_at);
 	}
 
 	if (temp) {

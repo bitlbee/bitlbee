@@ -128,6 +128,7 @@ irc_t *irc_new(int fd)
 	s->flags |= SET_HIDDEN;
 	s = set_add(&b->set, "show_offline", "false", set_eval_bw_compat, irc);
 	s->flags |= SET_HIDDEN;
+	s = set_add(&b->set, "self_messages", "true", set_eval_self_messages, irc);
 	s = set_add(&b->set, "simulate_netsplit", "true", set_eval_bool, irc);
 	s = set_add(&b->set, "timezone", "local", set_eval_timezone, irc);
 	s = set_add(&b->set, "to_char", ": ", set_eval_to_char, irc);

@@ -353,6 +353,7 @@ void irc_user_quit(irc_user_t *iu, const char *msg);
 /* irc_util.c */
 char *set_eval_timezone(struct set *set, char *value);
 char *irc_format_timestamp(irc_t *irc, time_t msg_ts);
+char *set_eval_self_messages(struct set *set, char *value);
 
 /* irc_im.c */
 void bee_irc_channel_update(irc_t *irc, irc_channel_t *ic, irc_user_t *iu);
