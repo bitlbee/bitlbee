@@ -38,7 +38,7 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 static void msn_ns_send_adl_start(struct im_connection *ic);
 static void msn_ns_send_adl(struct im_connection *ic);
 static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen, char **cmd);
-static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action);
+static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action, gboolean selfmessage);
 static void msn_ns_nfy(struct msn_data *md, char *who, char **parts, char *action, gboolean is_put);
 
 int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
@@ -474,27 +474,49 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 	return 1;
 }
 
-static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen, char **cmd)
+/* returns newly allocated string */
+static char *msn_ns_parse_header_address(struct msn_data *md, char *headers, char *header_name)
 {
-	char **parts = NULL;
 	char *semicolon = NULL;
-	char *action = NULL;
-	char *from = NULL;
-	char *who = NULL;
+	char *header = NULL;
+	char *address = NULL;
 
-	parts = g_strsplit(msg, "\r\n\r\n", 4);
-
-	if (!(from = get_rfc822_header(parts[0], "From", 0))) {
-		goto cleanup;
+	if (!(header = get_rfc822_header(headers, header_name, 0))) {
+		return NULL;
 	}
 
 	/* either the semicolon or the end of the string */
-	semicolon = strchr(from, ';') ? : (from + strlen(from));
+	semicolon = strchr(header, ';') ? : (header + strlen(header));
 
-	who = g_strndup(from + 2, semicolon - from - 2);
+	address = g_strndup(header + 2, semicolon - header - 2);
+
+	g_free(header);
+	return address;
+}
+
+static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen, char **cmd)
+{
+	char **parts = NULL;
+	char *action = NULL;
+	char *who = NULL;
+	gboolean selfmessage = FALSE;
+
+	parts = g_strsplit(msg, "\r\n\r\n", 4);
+
+	if (!(who = msn_ns_parse_header_address(md, parts[0], "From"))) {
+		goto cleanup;
+	}
+
+	if (strcmp(who, md->ic->acc->user) == 0) {
+		selfmessage = TRUE;
+		g_free(who);
+		if (!(who = msn_ns_parse_header_address(md, parts[0], "To"))) {
+			goto cleanup;
+		}
+	}
 
 	if ((strcmp(cmd[0], "SDG") == 0) && (action = get_rfc822_header(parts[2], "Message-Type", 0))) {
-		msn_ns_sdg(md, who, parts, action);
+		msn_ns_sdg(md, who, parts, action, selfmessage);
 
 	} else if ((strcmp(cmd[0], "NFY") == 0) && (action = get_rfc822_header(parts[2], "Uri", 0))) {
 		gboolean is_put = (strcmp(cmd[1], "PUT") == 0);
@@ -504,18 +526,17 @@ static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen
 cleanup:
 	g_strfreev(parts);
 	g_free(action);
-	g_free(from);
 	g_free(who);
 }
 
-static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action)
+static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action, gboolean selfmessage)
 {
 	struct im_connection *ic = md->ic;
 
-	if (strcmp(action, "Control/Typing") == 0) {
+	if (strcmp(action, "Control/Typing") == 0 && !selfmessage) {
 		imcb_buddy_typing(ic, who, OPT_TYPING);
 	} else if (strcmp(action, "Text") == 0) {
-		imcb_buddy_msg(ic, who, parts[3], 0, 0);
+		imcb_buddy_msg(ic, who, parts[3], selfmessage ? OPT_SELFMESSAGE : 0, 0);
 	}
 }
 
