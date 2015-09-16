@@ -384,8 +384,8 @@ static xt_status jabber_gmail_handle_new(struct im_connection *ic, struct xt_nod
 {
 	struct xt_node *response;
 	struct jabber_data *jd = ic->proto_data;
-
-	response = jabber_make_packet("iq", "result", g_strdup_printf("%s@%s", jd->username, jd->server), NULL);
+	
+	response = jabber_make_packet("iq", "result", jd->me, NULL);
 
 	jabber_cache_add(ic, response, NULL);
 	if (!jabber_write_packet(ic, response)) {
