@@ -73,6 +73,7 @@ conf_t *conf_load(int argc, char *argv[])
 	i = conf_loadini(conf, global.conf_file);
 	if (i == 0) {
 		fprintf(stderr, "Error: Syntax error in configuration file `%s'.\n", global.conf_file);
+		conf_free(conf);
 		return NULL;
 	} else if (i == -1) {
 		config_missing++;
@@ -135,10 +136,12 @@ conf_t *conf_load(int argc, char *argv[])
 			       "  -x  Command-line interface to password encryption/hashing\n"
 			       "  -h  Show this help page.\n"
 			       "  -V  Show version info.\n");
+			conf_free(conf);
 			return NULL;
 		} else if (opt == 'V') {
 			printf("BitlBee %s\nAPI version %06x\n",
 			       BITLBEE_VERSION, BITLBEE_VERSION_CODE);
+			conf_free(conf);
 			return NULL;
 		} else if (opt == 'u') {
 			g_free(conf->user);
@@ -162,6 +165,7 @@ conf_t *conf_load(int argc, char *argv[])
 		/* Let's treat this as a serious problem so people won't think
 		   they're secure when in fact they're not. */
 		fprintf(stderr, "Error: Could not read CA file %s: %s\n", conf->cafile, strerror(errno));
+		conf_free(conf);
 		return NULL;
 	}
 

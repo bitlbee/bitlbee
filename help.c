@@ -145,6 +145,7 @@ char *help_get(help_t **help, char *title)
 
 			if (lseek(h->fd, h->offset.file_offset, SEEK_SET) == -1 ||
 			    read(h->fd, s, h->length) != h->length) {
+				g_free(s);
 				return NULL;
 			}
 		} else {
