@@ -60,19 +60,22 @@ static void irc_cmd_pass(irc_t *irc, char **cmd)
 
 static gboolean irc_sasl_plain_parse(char *input, char **user, char **pass)
 {
-	int len;
-	int i = 0;
-	int part = 0;
+	int i, part, len;
 	guint8 *decoded;
 	char *parts[2];
 
 	/* bitlbee's base64_decode wrapper adds an extra null terminator at the end */
 	len = base64_decode(input, &decoded);
 
-	while (i < len && part < 3) {
+	/* this loop splits the decoded string into the parts array, like this:
+	   "username\0username\0password" -> {"username", "username", "password"} */
+
+	for (i = 0, part = 0; i < len && part < 3; part++) {
+		/* set each of parts[] to point to the beginning of a string */
 		parts[part] = (char *) decoded + i;
+
+		/* move the cursor forward to the next null terminator*/
 		i += strlen(parts[part]) + 1;
-		part++;
 	}
 
 	/* sanity checks */
