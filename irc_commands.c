@@ -155,7 +155,7 @@ static void irc_cmd_authenticate(irc_t *irc, char **cmd)
 		g_free(pass);
 
 	} else if (irc->status & USTATUS_IDENTIFIED) {
-		irc_send_num(irc, 907, ":You have already authenticated using SASL");
+		irc_send_num(irc, 907, ":You have already authenticated");
 
 	} else if (strcmp(cmd[1], "*") == 0) {
 		irc_send_num(irc, 906, ":SASL authentication aborted");
