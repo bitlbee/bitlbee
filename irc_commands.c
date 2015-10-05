@@ -79,11 +79,11 @@ static gboolean irc_sasl_plain_parse(char *input, char **user, char **pass)
 	}
 
 	/* sanity checks */
-	if (part != 3 || i != (len + 1) || strcmp(parts[0], parts[1]) != 0) {
+	if (part != 3 || i != (len + 1) || (parts[0][0] && strcmp(parts[0], parts[1]) != 0)) {
 		g_free(decoded);
 		return FALSE;
 	} else {
-		*user = g_strdup(parts[0]);
+		*user = g_strdup(parts[1]);
 		*pass = g_strdup(parts[2]);
 		g_free(decoded);
 		return TRUE;
