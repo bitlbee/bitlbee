@@ -677,15 +677,15 @@ fi
 if [ "$otr" = 1 ]; then
 	# BI == built-in
 	echo '#define OTR_BI' >> config.h
-	echo "EFLAGS+=$($PKG_CONFIG --libs libotr)$(libgcrypt-config --libs)" >> Makefile.settings
-	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr)$(libgcrypt-config --cflags)" >> Makefile.settings
+	echo "EFLAGS+=$($PKG_CONFIG --libs libotr) $(libgcrypt-config --libs)" >> Makefile.settings
+	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr) $(libgcrypt-config --cflags)" >> Makefile.settings
 	echo 'OTR_BI=otr.o' >> Makefile.settings
 elif [ "$otr" = "plugin" ]; then
 	# for some mysterious reason beyond the comprehension of my mortal mind,
 	# the libgcrypt flags aren't needed when building as plugin. add them anyway.
 	echo '#define OTR_PI' >> config.h
-	echo "OTRFLAGS=$($PKG_CONFIG --libs libotr)$(libgcrypt-config --libs)" >> Makefile.settings
-	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr)$(libgcrypt-config --cflags)" >> Makefile.settings
+	echo "OTRFLAGS=$($PKG_CONFIG --libs libotr) $(libgcrypt-config --libs)" >> Makefile.settings
+	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr) $(libgcrypt-config --cflags)" >> Makefile.settings
 	echo 'OTR_PI=otr.so' >> Makefile.settings
 fi
 
