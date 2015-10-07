@@ -186,6 +186,10 @@ void strip_html(char *in)
 					*(s++) = '\x1f';
 				} else if (g_strncasecmp(cs + 1, "br", taglen) == 0) {
 					*(s++) = '\n';
+				} else if (g_strncasecmp(cs + 1, "br/", taglen) == 0) {
+					*(s++) = '\n';
+				} else if (g_strncasecmp(cs + 1, "br /", taglen) == 0) {
+					*(s++) = '\n';
 				}
 				in++;
 			} else {
