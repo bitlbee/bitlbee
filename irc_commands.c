@@ -62,7 +62,7 @@ static gboolean irc_sasl_plain_parse(char *input, char **user, char **pass)
 {
 	int i, part, len;
 	guint8 *decoded;
-	char *parts[2];
+	char *parts[3];
 
 	/* bitlbee's base64_decode wrapper adds an extra null terminator at the end */
 	len = base64_decode(input, &decoded);
