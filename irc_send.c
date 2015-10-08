@@ -294,9 +294,6 @@ void irc_send_who(irc_t *irc, GSList *l, const char *channel)
 		 * { <H|G>, <@|%|+|\0>, \0 } */
 		char status_prefix[3] = {0};
 
-		/* rfc1459 doesn't mention this: G means gone, H means here */
-		status_prefix[0] = iu->flags & IRC_USER_AWAY ? 'G' : 'H';
-
 		if (is_channel) {
 			irc_channel_user_t *icu = l->data;
 			status_prefix[1] = irc_channel_user_get_prefix(icu);
@@ -304,6 +301,9 @@ void irc_send_who(irc_t *irc, GSList *l, const char *channel)
 		} else {
 			iu = l->data;
 		}
+
+		/* rfc1459 doesn't mention this: G means gone, H means here */
+		status_prefix[0] = iu->flags & IRC_USER_AWAY ? 'G' : 'H';
 
 		irc_send_num(irc, 352, "%s %s %s %s %s %s :0 %s",
 		             is_channel ? channel : "*", iu->user, iu->host, irc->root->host,
