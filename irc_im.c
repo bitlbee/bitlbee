@@ -862,8 +862,11 @@ static gboolean bee_irc_channel_chat_part(irc_channel_t *ic, const char *msg)
 		c->ic->acc->prpl->chat_leave(c);
 	}
 
-	/* Remove the reference. We don't need it anymore. */
-	ic->data = NULL;
+	if (!(ic->flags & IRC_CHANNEL_TEMP)) {
+		/* Remove the reference.
+		 * We only need it for temp channels that are being freed */
+		ic->data = NULL;
+	}
 
 	return TRUE;
 }
