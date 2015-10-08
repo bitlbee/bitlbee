@@ -311,13 +311,13 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 
 	td = ic->proto_data;
 
-	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = td->follow_ids;
-
 	// Parse the data.
 	if (!(parsed = twitter_parse_response(ic, req))) {
 		return;
 	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = td->follow_ids;
 
 	twitter_xt_get_friends_id_list(parsed, txl);
 	json_value_free(parsed);
@@ -387,13 +387,14 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 		return;
 	}
 
-	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = NULL;
-
 	// Get the user list from the parsed xml feed.
 	if (!(parsed = twitter_parse_response(ic, req))) {
 		return;
 	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = NULL;
+
 	twitter_xt_get_users(parsed, txl);
 	json_value_free(parsed);
 
@@ -1384,13 +1385,14 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 
 	td = ic->proto_data;
 
-	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = NULL;
-
 	// The root <statuses> node should hold the list of statuses <status>
 	if (!(parsed = twitter_parse_response(ic, req))) {
 		goto end;
 	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = NULL;
+
 	twitter_xt_get_status_list(ic, parsed, txl);
 	json_value_free(parsed);
 
@@ -1423,13 +1425,14 @@ static void twitter_http_get_mentions(struct http_request *req)
 
 	td = ic->proto_data;
 
-	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = NULL;
-
 	// The root <statuses> node should hold the list of statuses <status>
 	if (!(parsed = twitter_parse_response(ic, req))) {
 		goto end;
 	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = NULL;
+
 	twitter_xt_get_status_list(ic, parsed, txl);
 	json_value_free(parsed);
 
