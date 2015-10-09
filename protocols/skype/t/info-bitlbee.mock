@@ -1,4 +1,4 @@
->> NOTICE AUTH
+>> NOTICE *
 << NICK alice
 << USER alice alice localhost :Alice
 >> PRIVMSG &bitlbee
