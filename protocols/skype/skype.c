@@ -20,7 +20,6 @@
  */
 
 #define _XOPEN_SOURCE
-#define _BSD_SOURCE
 #include <poll.h>
 #include <stdio.h>
 #include <bitlbee.h>
@@ -187,7 +186,7 @@ int skype_printf(struct im_connection *ic, char *fmt, ...)
 	char str[IRC_LINE_SIZE];
 
 	va_start(args, fmt);
-	vsnprintf(str, IRC_LINE_SIZE, fmt, args);
+	g_vsnprintf(str, IRC_LINE_SIZE, fmt, args);
 	va_end(args);
 
 	return skype_write(ic, str, strlen(str));
