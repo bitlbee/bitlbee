@@ -1256,7 +1256,7 @@ static gboolean skype_read_callback(gpointer data, gint fd,
 			lineptr++;
 		}
 		g_strfreev(lines);
-	} else if (st == 0 || (st < 0 && !sockerr_again())) {
+	} else if (st == 0 || (st < 0 && !ssl_sockerr_again(sd->ssl))) {
 		ssl_disconnect(sd->ssl);
 		sd->fd = -1;
 		sd->ssl = NULL;
