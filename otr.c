@@ -1735,6 +1735,9 @@ OtrlPrivKey *match_privkey(irc_t *irc, const char **args)
 	}
 	*p = '\0';
 
+	/* remove trailing whitespace */
+	g_strchomp(prefix);
+
 	/* find first key which matches the given prefix */
 	n = strlen(prefix);
 	for (k = irc->otr->us->privkey_root; k; k = k->next) {
