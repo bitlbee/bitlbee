@@ -322,6 +322,24 @@ static struct skype_group *skype_group_by_name(struct im_connection *ic, char *n
 	return NULL;
 }
 
+static struct groupchat *skype_chat_get_or_create(struct im_connection *ic, char *id)
+{
+	struct skype_data *sd = ic->proto_data;
+	struct groupchat *gc = bee_chat_by_title(ic->bee, ic, id);
+
+	if (!gc) {
+		gc = imcb_chat_new(ic, id);
+		imcb_chat_name_hint(gc, id);
+		imcb_chat_add_buddy(gc, sd->username);
+
+		skype_printf(ic, "GET CHAT %s ADDER\n", id);
+		skype_printf(ic, "GET CHAT %s TOPIC\n", id);
+		skype_printf(ic, "GET CHAT %s ACTIVEMEMBERS\n", id);
+	}
+
+	return gc;
+}
+
 static void skype_parse_users(struct im_connection *ic, char *line)
 {
 	char **i, **nicks;
@@ -686,7 +704,7 @@ static void skype_parse_chatmessage(struct im_connection *ic, char *line)
 	} else if (!strncmp(info, "CHATNAME ", 9)) {
 		info += 9;
 		if (sd->handle && sd->body && sd->type) {
-			struct groupchat *gc = bee_chat_by_title(ic->bee, ic, info);
+			struct groupchat *gc = skype_chat_get_or_create(ic, info);
 			int i;
 			for (i = 0; i < g_list_length(sd->body); i++) {
 				char *body = g_list_nth_data(sd->body, i);
@@ -1024,16 +1042,9 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		imcb_chat_free(gc);
 	}
 	if (!strcmp(info, "STATUS MULTI_SUBSCRIBED")) {
-		gc = bee_chat_by_title(ic->bee, ic, id);
-		if (!gc) {
-			gc = imcb_chat_new(ic, id);
-			imcb_chat_name_hint(gc, id);
-		}
-		skype_printf(ic, "GET CHAT %s ADDER\n", id);
-		skype_printf(ic, "GET CHAT %s TOPIC\n", id);
+		skype_chat_get_or_create(ic, id);
 	} else if (!strcmp(info, "STATUS DIALOG") && sd->groupchat_with) {
-		gc = imcb_chat_new(ic, id);
-		imcb_chat_name_hint(gc, id);
+		gc = skype_chat_get_or_create(ic, id);
 		/* According to the docs this
 		 * is necessary. However it
 		 * does not seem the situation
@@ -1044,11 +1055,8 @@ static void skype_parse_chat(struct im_connection *ic, char *line)
 		g_snprintf(buf, IRC_LINE_SIZE, "%s@skype.com",
 		           sd->groupchat_with);
 		imcb_chat_add_buddy(gc, buf);
-		imcb_chat_add_buddy(gc, sd->username);
 		g_free(sd->groupchat_with);
 		sd->groupchat_with = NULL;
-		skype_printf(ic, "GET CHAT %s ADDER\n", id);
-		skype_printf(ic, "GET CHAT %s TOPIC\n", id);
 	} else if (!strcmp(info, "STATUS UNSUBSCRIBED")) {
 		gc = bee_chat_by_title(ic->bee, ic, id);
 		if (gc) {

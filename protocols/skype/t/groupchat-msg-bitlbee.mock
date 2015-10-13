@@ -6,6 +6,6 @@
 << PRIVMSG &bitlbee :account skype set skypeconsole_receive true
 << PRIVMSG &bitlbee :account skype on
 >> JOIN :##cecil/$bob;4d8cc996579
->> 353 alice = ##cecil/$bob;4d8cc996579 :@alice bob cecil @root
+>> 353 alice = ##cecil/$bob;4d8cc996579 :@alice @root
 << PRIVMSG ##cecil/$bob;4d8cc996579 :hello
 >> PRIVMSG &bitlbee :alice: CHAT #cecil/$bob;4d8cc9965791c6b9 ACTIVITY_TIMESTAMP
