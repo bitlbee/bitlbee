@@ -202,7 +202,7 @@ $ skyped -n -d
     channel.
 
   * `account skype set skypeconsole_receive true` will make the
-    `skypeconsole` account dump all the recieved raw traffic for you
+    `skypeconsole` account dump all the received raw traffic for you
 
 - If you want to automatically join bookmarked groupchats right after
   you logged in, do:

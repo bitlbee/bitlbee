@@ -89,7 +89,7 @@ To mark yourself as away, you can just use the <emphasis>/away</emphasis> comman
 </para>
 
 <para>
-Away states have different names accross different protocols. BitlBee will try to pick the best available option for every connection:
+Away states have different names across different protocols. BitlBee will try to pick the best available option for every connection:
 </para>
 
 <simplelist>
@@ -145,7 +145,7 @@ You can create two kinds of channels. Control channels, and groupchat channels. 
 </para>
 
 <para>
-Control channels are where you see your contacts. By default, you will have one control channel called &amp;bitlbee, containing all your contacts. But you can create more, if you want, and divide your contact list accross several channels.
+Control channels are where you see your contacts. By default, you will have one control channel called &amp;bitlbee, containing all your contacts. But you can create more, if you want, and divide your contact list across several channels.
 </para>
 
 <para>

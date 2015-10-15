@@ -10,7 +10,7 @@ The center of BitlBee is the control channel, <emphasis>&amp;bitlbee</emphasis>.
 </para>
 
 <para>
-You need register so that all your IM settings (passwords, contacts, etc) can be saved on the BitlBee server. It's important that you pick a good password so no one else can access your account. Register with this password using the <emphasis>register</emphasis> command: <emphasis>register &lt;password&gt;</emphasis> (without the brackets!).
+You need to register so that all your IM settings (passwords, contacts, etc) can be saved on the BitlBee server. It's important that you pick a good password so no one else can access your account. Register with this password using the <emphasis>register</emphasis> command: <emphasis>register &lt;password&gt;</emphasis> (without the brackets!).
 </para>
 
 <para>

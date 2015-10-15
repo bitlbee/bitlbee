@@ -594,7 +594,13 @@ void msn_auth_got_passport_token(struct im_connection *ic, const char *token, co
 		msn_ns_write(ic, -1, "USR %d SSO S %s %s {%s}\r\n", ++md->trId, md->tokens[0], token, md->uuid);
 	} else {
 		imcb_error(ic, "Error during Passport authentication: %s", error);
-		imc_logout(ic, TRUE);
+
+		/* don't reconnect with auth errors */
+		if (error && g_str_has_prefix(error, "wsse:FailedAuthentication")) {
+			imc_logout(ic, FALSE);
+		} else {
+			imc_logout(ic, TRUE);
+		}
 	}
 }
 

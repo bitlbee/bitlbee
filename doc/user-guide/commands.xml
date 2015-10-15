@@ -181,7 +181,7 @@
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
 				
 				<para>
@@ -239,7 +239,7 @@
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
 				
 				<para>
@@ -1185,6 +1185,21 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="anonymous" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				This enables SASL ANONYMOUS login for jabber accounts, as specified by XEP-0175.
+			</para>
+
+			<para>
+				With this setting enabled, if the server allows this method, a password isn't required and the username part of the JID is ignored (you can use anonymous@jabber.example.com). Servers will usually assign you a random numeric username instead.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
 	<bitlbee-setting name="ops" type="string" scope="global">
 		<default>both</default>
 		<possible-values>both, root, user, none</possible-values>
@@ -1304,6 +1319,26 @@
 		<description>
 			<para>
 				For control channels with <emphasis>fill_by</emphasis> set to <emphasis>protocol</emphasis>: Set this setting to the name of the IM protocol of all contacts you want to see in this channel.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="proxy" type="string" scope="account">
+		<default>&lt;local&gt;&lt;auto&gt;</default>
+
+		<description>
+			<para>
+				A list of <emphasis>file transfer proxies</emphasis> for jabber. This isn't the connection proxy. Sorry, look in bitlbee.conf for those.
+			</para>
+
+			<para>
+				It's a semicolon-separated list of items that can be either <emphasis>JID,HOST,PORT</emphasis> or two special values, <emphasis>&lt;local&gt;</emphasis> (to try a direct connection first) and <emphasis>&lt;auto&gt;</emphasis> (to try to discover a proxy). For example, "&lt;local&gt;;proxy.somewhere.org,123.123.123.123,7777".
+			</para>
+			<para>
+				The address should point to a SOCKS5 bytestreams server, usually provided by jabber servers. This is only used for sending files. Note that the host address might not match what DNS tells you, and the port isn't always the same.
+			</para>
+			<para>
+				The correct way to get a socks proxy host/port is a mystery, and the file transfer might fail anyway. Maybe just try using dropbox instead.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1875,7 +1910,7 @@
 			<syntax>transfer &lt;reject&gt;</syntax>
 
 			<description>
-				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is neccessary. Or is it?</para>
+				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is necessary. Or is it?</para>
 			</description>
 
 			<ircexample>

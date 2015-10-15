@@ -1,23 +1,33 @@
+sudo: false
 language: c
 
 script:
  - ./configure
  - make check
- - BITLBEE_SKYPE=plugin dpkg-buildpackage -uc -us
+ - BITLBEE_SKYPE=plugin dpkg-buildpackage -uc -us -d
 
+# ubuntu precise doesn't have libotr5, so extract a prebuilt version to ~/otr
 before_install:
- - sudo apt-get update -qq
- - sudo apt-get install --no-install-recommends -qq libevent-dev libpurple-dev check
- - wget http://dump.dequis.org/indexed/bitlbee-travis-libs/libotr5{,-dev}_4.1.0-2~bpo70+1_amd64.deb
- - sudo dpkg -i *.deb
+ - wget http://dump.dequis.org/indexed/bitlbee-travis-libs/libotr5_4.1.0_amd64_with_dev_for_travis.tar.gz -O /tmp/otr.tar.gz
+ - echo "8424feb28a2cff3ce603ddcdff9be788701ff7e4  /tmp/otr.tar.gz" | sha1sum -c -
+ - tar -C "$HOME" -xf /tmp/otr.tar.gz
+ - sed -i "s#/usr#$HOME/otr/usr/#" "$HOME/otr/usr/lib/pkgconfig/libotr.pc"
+ - echo "libotr 5 libotr" > debian/shlibs.local
 
 env:
   global:
+   - PKG_CONFIG_PATH=$HOME/otr/usr/lib/pkgconfig/
+   - LD_LIBRARY_PATH=$HOME/otr/usr/lib/
    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
    #   via the "travis encrypt" command using the project repo's public key
    - secure: "MO6hy2cRxR02A0nSenfQFyPFpepxorJ+XgNkq2JS7LtI6tcwYRR0alvunIPJXam1/OUKxoFsBJLS1nCJTvEUXFCOvoTSAoMiePTBUEg2zfzcTb5k+cqtcOUznCXHNmXAwrqriP4vkG+57ijO9Ojz2r9LijcvjtFDRFJQY9Rcs38="
 
 addons:
+  apt:
+    packages:
+    - libevent-dev
+    - libpurple-dev
+    - check
   coverity_scan:
     project:
       name: "bitlbee/bitlbee"

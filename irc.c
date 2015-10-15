@@ -152,9 +152,9 @@ irc_t *irc_new(int fd)
 	/* Evaluator sets the iconv/oconv structures. */
 	set_eval_charset(set_find(&b->set, "charset"), set_getstr(&b->set, "charset"));
 
-	irc_write(irc, ":%s NOTICE AUTH :%s", irc->root->host, "BitlBee-IRCd initialized, please go on");
+	irc_write(irc, ":%s NOTICE * :%s", irc->root->host, "BitlBee-IRCd initialized, please go on");
 	if (isatty(irc->fd)) {
-		irc_write(irc, ":%s NOTICE AUTH :%s", irc->root->host,
+		irc_write(irc, ":%s NOTICE * :%s", irc->root->host,
 		          "If you read this, you most likely accidentally "
 		          "started BitlBee in inetd mode on the command line. "
 		          "You probably want to run it in (Fork)Daemon mode. "
@@ -379,7 +379,7 @@ void irc_process(irc_t *irc)
 						g_free(conv);
 						conv = NULL;
 					} else {
-						irc_write(irc, ":%s NOTICE AUTH :%s", irc->root->host,
+						irc_write(irc, ":%s NOTICE * :%s", irc->root->host,
 						          "Warning: invalid characters received at login time.");
 
 						conv = g_strdup(lines[i]);
@@ -726,7 +726,7 @@ void irc_desync(irc_t *irc)
 
 int irc_check_login(irc_t *irc)
 {
-	if (irc->user->user && irc->user->nick) {
+	if (irc->user->user && irc->user->nick && !(irc->status & USTATUS_CAP_PENDING)) {
 		if (global.conf->authmode == AUTHMODE_CLOSED && !(irc->status & USTATUS_AUTHORIZED)) {
 			irc_send_num(irc, 464, ":This server is password-protected.");
 			return 0;

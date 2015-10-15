@@ -14,7 +14,7 @@ static int aim_logoff(aim_session_t *sess);
 /*
  * In OSCAR, every connection has a set of SNAC groups associated
  * with it.  These are the groups that you can send over this connection
- * without being guarenteed a "Not supported" SNAC error.
+ * without being guaranteed a "Not supported" SNAC error.
  *
  * The grand theory of things says that these associations transcend
  * what libfaim calls "connection types" (conn->type).  You can probably
@@ -35,7 +35,7 @@ static int aim_logoff(aim_session_t *sess);
  * easy and deliver this SNAC for you, but there isn't one there.
  *
  * Here comes the good bit.  Without even letting anyone know, particularly
- * the module that decided to send this SNAC, and definitly not that twit
+ * the module that decided to send this SNAC, and definitely not that twit
  * in Greenland, you send out a service request.  In this request, you have
  * marked the need for a connection supporting group 0x000e.  A few seconds
  * later, you receive a service redirect with an IP address and a cookie in

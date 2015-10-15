@@ -264,7 +264,7 @@ gboolean dccs_send_proto(gpointer data, gint fd, b_input_condition cond)
 			return dcc_abort(df, "Remote end closed connection");
 		}
 
-		/* How likely is it that a 32-bit integer gets split accross
+		/* How likely is it that a 32-bit integer gets split across
 		   packet boundaries? Chances are rarely 0 so let's be sure. */
 		if ((df->acked_len = (df->acked_len + ret) % 4) > 0) {
 			return TRUE;

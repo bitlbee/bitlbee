@@ -653,7 +653,7 @@ static gboolean bee_irc_chat_add_user(bee_t *bee, struct groupchat *c, bee_user_
 	return TRUE;
 }
 
-static gboolean bee_irc_chat_remove_user(bee_t *bee, struct groupchat *c, bee_user_t *bu)
+static gboolean bee_irc_chat_remove_user(bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *reason)
 {
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ic = c->ui_data;
@@ -665,7 +665,7 @@ static gboolean bee_irc_chat_remove_user(bee_t *bee, struct groupchat *c, bee_us
 	/* TODO: Possible bug here: If a module removes $user here instead of just
 	   using imcb_chat_free() and the channel was IRC_CHANNEL_TEMP, we get into
 	   a broken state around here. */
-	irc_channel_del_user(ic, bu == bee->user ? irc->user : bu->ui_data, IRC_CDU_PART, NULL);
+	irc_channel_del_user(ic, bu == bee->user ? irc->user : bu->ui_data, IRC_CDU_PART, reason);
 
 	return TRUE;
 }
@@ -835,7 +835,8 @@ static gboolean bee_irc_channel_chat_join(irc_channel_t *ic)
 	if ((acc_s = set_getstr(&ic->set, "account")) &&
 	    (room = set_getstr(&ic->set, "room")) &&
 	    (acc = account_get(ic->irc->b, acc_s)) &&
-	    acc->ic && acc->prpl->chat_join) {
+	    acc->ic && (acc->ic->flags & OPT_LOGGED_IN) &&
+	    acc->prpl->chat_join) {
 		char *nick;
 
 		if (!(nick = set_getstr(&ic->set, "nick"))) {
@@ -861,8 +862,11 @@ static gboolean bee_irc_channel_chat_part(irc_channel_t *ic, const char *msg)
 		c->ic->acc->prpl->chat_leave(c);
 	}
 
-	/* Remove the reference. We don't need it anymore. */
-	ic->data = NULL;
+	if (!(ic->flags & IRC_CHANNEL_TEMP)) {
+		/* Remove the reference.
+		 * We only need it for temp channels that are being freed */
+		ic->data = NULL;
+	}
 
 	return TRUE;
 }

@@ -428,7 +428,7 @@ Version 1.2.1:
 - Preserving case in Jabber resources of buddies, since these should
   officially be treated as case sensitive.
 - Fully stripping spaces from AIM screennames, this didn't happen completely
-  which severly breaks the IRC protocol.
+  which severely breaks the IRC protocol.
 - Removed all the yellow tape around daemon mode, it's pretty mature by now:
   testing.bitlbee.org serves all (~30) SSL users from one daemon mode
   process without any serious stability issues.
@@ -628,7 +628,7 @@ Version 0.99:
 - Most likely fixed the bug that caused BitlBee to use 100% CPU time in
   some situations.
 - Outgoing MSN typing notifications are now understood correctly by the
-  orignal MS Mac/Windows clients (again).
+  original MS Mac/Windows clients (again).
 - Added "account add $protocol" to the documentation, got rid of a lot
   of over-markup (i.e. overuse of bold-tags), reviewed some other parts.
 - Small changes to help.xsl to fix small flaws in the help.txt formatting.

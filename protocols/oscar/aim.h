@@ -870,7 +870,7 @@ int aim_sncmp(const char *a, const char *b);
 /*
  * SNAC Family: Internal Messages
  *
- * This isn't truely a SNAC family either, but using
+ * This isn't truly a SNAC family either, but using
  * these, we can integrated non-SNAC services into
  * the SNAC-centered libfaim callback structure.
  *

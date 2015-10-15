@@ -40,7 +40,7 @@ int aim_sendcookie(aim_session_t *sess, aim_conn_t *conn, const guint8 *chipsaho
  * Normally the FLAP version is sent as the first few bytes of the cookie,
  * meaning you generally never call this.
  *
- * But there are times when something might want it seperate. Specifically,
+ * But there are times when something might want it separate. Specifically,
  * libfaim sends this internally when doing SNAC login.
  *
  */

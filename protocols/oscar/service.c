@@ -156,7 +156,7 @@ int aim_reqrates(aim_session_t *sess, aim_conn_t *conn)
 }
 
 /*
- * OSCAR defines several 'rate classes'.  Each class has seperate
+ * OSCAR defines several 'rate classes'.  Each class has separate
  * rate limiting properties (limit level, alert level, disconnect
  * level, etc), and a set of SNAC family/type pairs associated with
  * it.  The rate classes, their limiting properties, and the definitions
@@ -708,9 +708,9 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
  * on Win32.  So far, AOL has only been requesting bytes in static regions
  * of memory.  (I won't put it past them to start requesting data in
  * less static regions -- regions that are initialized at run time, but still
- * before the client recieves this request.)
+ * before the client receives this request.)
  *
- * When the client recieves the request, it adds it to the current ds
+ * When the client receives the request, it adds it to the current ds
  * (0x00400000) and dereferences it, copying the data into a buffer which
  * it then runs directly through the MD5 hasher.  The 16 byte output of
  * the hash is then sent back to the server.
@@ -722,14 +722,14 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
  *     for accessing the AOL network using unauthorized software.  You can
  *     download a FREE, fully featured, and authorized client, here
  *     http://www.aol.com/aim/download2.html"
- * The connection is then closed, recieving disconnect code 1, URL
+ * The connection is then closed, receiving disconnect code 1, URL
  * http://www.aim.aol.com/errors/USER_LOGGED_OFF_NEW_LOGIN.html.
  *
  * Note, however, that numerous inconsistencies can cause the above error,
- * not just sending back a bad hash.  Do not immediatly suspect this code
+ * not just sending back a bad hash.  Do not immediately suspect this code
  * if you get disconnected.  AOL and the open/free software community have
  * played this game for a couple years now, generating the above message
- * on numerous ocassions.
+ * on numerous occasions.
  *
  * Anyway, neener.  We win again.
  *
