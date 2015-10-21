@@ -591,20 +591,23 @@ static void jabber_keepalive(struct im_connection *ic)
 static int jabber_send_typing(struct im_connection *ic, char *who, int typing)
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct jabber_buddy *bud;
+	struct jabber_buddy *bud, *bare;
 
 	/* Enable typing notification related code from now. */
 	jd->flags |= JFLAG_WANT_TYPING;
 
-	if ((bud = jabber_buddy_by_jid(ic, who, 0)) == NULL) {
+	if ((bud = jabber_buddy_by_jid(ic, who, 0)) == NULL ||
+	    (bare = jabber_buddy_by_jid(ic, who, GET_BUDDY_BARE)) == NULL) {
 		/* Sending typing notifications to unknown buddies is
 		   unsupported for now. Shouldn't be a problem, I think. */
 		return 0;
 	}
 
-	if (bud->flags & JBFLAG_DOES_XEP85) {
+
+	if (bud->flags & JBFLAG_DOES_XEP85 || bare->flags & JBFLAG_DOES_XEP85) {
 		/* We're only allowed to send this stuff if we know the other
-		   side supports it. */
+		   side supports it. If the bare JID has the flag, all other
+		   resources get it, too (That is the case in gtalk) */
 
 		struct xt_node *node;
 		char *type;
