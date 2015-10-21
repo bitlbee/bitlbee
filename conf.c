@@ -294,6 +294,8 @@ static int conf_loadini(conf_t *conf, char *file)
 					proxytype = PROXY_SOCKS4;
 				} else if (url->proto == PROTO_SOCKS5) {
 					proxytype = PROXY_SOCKS5;
+				} else if (url->proto == PROTO_SOCKS4A) {
+					proxytype = PROXY_SOCKS4A;
 				}
 
 				g_free(url);

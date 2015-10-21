@@ -293,6 +293,7 @@ static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
 	struct PHB *phb = data;
 	socklen_t len;
 	int error = ETIMEDOUT;
+	gboolean is_socks4a = (proxytype == PROXY_SOCKS4A);
 
 	if (phb->inpa > 0) {
 		b_event_remove(phb->inpa);
@@ -303,8 +304,7 @@ static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
 	}
 	sock_make_blocking(source);
 
-	/* XXX does socks4 not support host name lookups by the proxy? */
-	if (!(hp = gethostbyname(phb->host))) {
+	if (!is_socks4a && !(hp = gethostbyname(phb->host))) {
 		return phb_close(phb);
 	}
 
@@ -312,13 +312,28 @@ static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
 	packet[1] = 1;
 	packet[2] = phb->port >> 8;
 	packet[3] = phb->port & 0xff;
-	packet[4] = (unsigned char) (hp->h_addr_list[0])[0];
-	packet[5] = (unsigned char) (hp->h_addr_list[0])[1];
-	packet[6] = (unsigned char) (hp->h_addr_list[0])[2];
-	packet[7] = (unsigned char) (hp->h_addr_list[0])[3];
+	if (is_socks4a) {
+		packet[4] = 0;
+		packet[5] = 0;
+		packet[6] = 0;
+		packet[7] = 1;
+	} else {
+		packet[4] = (unsigned char) (hp->h_addr_list[0])[0];
+		packet[5] = (unsigned char) (hp->h_addr_list[0])[1];
+		packet[6] = (unsigned char) (hp->h_addr_list[0])[2];
+		packet[7] = (unsigned char) (hp->h_addr_list[0])[3];
+	}
 	packet[8] = 0;
 	if (write(source, packet, 9) != 9) {
 		return phb_close(phb);
+	}
+
+	if (is_socks4a) {
+		size_t host_len = strlen(phb->host) + 1; /* include the \0 */
+
+		if (write(source, phb->host, host_len) != host_len) {
+			return phb_close(phb);
+		}
 	}
 
 	phb->inpa = b_input_add(source, B_EV_IO_READ, s4_canread, phb);
@@ -505,7 +520,7 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 		return proxy_connect_none(host, port, phb);
 	} else if (proxytype == PROXY_HTTP) {
 		return proxy_connect_http(host, port, phb);
-	} else if (proxytype == PROXY_SOCKS4) {
+	} else if (proxytype == PROXY_SOCKS4 || proxytype == PROXY_SOCKS4A) {
 		return proxy_connect_socks4(host, port, phb);
 	} else if (proxytype == PROXY_SOCKS5) {
 		return proxy_connect_socks5(host, port, phb);

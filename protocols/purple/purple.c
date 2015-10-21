@@ -121,6 +121,12 @@ static void purple_init(account_t *acc)
 
 		purple_blist_load();
 		purple_prefs_load();
+
+		if (proxytype == PROXY_SOCKS4A) {
+			/* do this here after loading prefs. yes, i know, it sucks */
+			purple_prefs_set_bool("/purple/proxy/socks4_remotedns", TRUE);
+		}
+
 		dir_fixed = TRUE;
 	}
 
@@ -1403,6 +1409,7 @@ void purple_initmodule()
 	if (proxytype != PROXY_NONE) {
 		PurpleProxyInfo *pi = purple_global_proxy_get_info();
 		switch (proxytype) {
+		case PROXY_SOCKS4A:
 		case PROXY_SOCKS4:
 			purple_proxy_info_set_type(pi, PURPLE_PROXY_SOCKS4);
 			break;

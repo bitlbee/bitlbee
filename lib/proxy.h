@@ -39,6 +39,7 @@
 #define PROXY_HTTP 1
 #define PROXY_SOCKS4 2
 #define PROXY_SOCKS5 3
+#define PROXY_SOCKS4A 4
 
 extern char proxyhost[128];
 extern int proxyport;
