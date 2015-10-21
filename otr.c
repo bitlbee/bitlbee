@@ -440,7 +440,8 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 	struct im_connection *ic = iu->bu->ic;
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
-	if (ic->acc->prpl->options & OPT_NOOTR) {
+	if (ic->acc->prpl->options & OPT_NOOTR ||
+	    iu->bu->flags & BEE_USER_NOOTR) {
 		return msg;
 	}
 
@@ -478,7 +479,8 @@ char *otr_filter_msg_out(irc_user_t *iu, char *msg, int flags)
 	 */
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
-	if (ic->acc->prpl->options & OPT_NOOTR) {
+	if (ic->acc->prpl->options & OPT_NOOTR ||
+	    iu->bu->flags & BEE_USER_NOOTR) {
 		return msg;
 	}
 

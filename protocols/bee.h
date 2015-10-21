@@ -61,6 +61,7 @@ typedef enum {
 	BEE_USER_MOBILE = 8,    /* Compatibility with old OPT_MOBILE flag */
 	BEE_USER_LOCAL = 256,   /* Locally-added contacts (not in real contact list) */
 	BEE_USER_SPECIAL = 512, /* Denotes a user as being special */
+	BEE_USER_NOOTR = 4096,  /* Per-user version of OPT_NOOTR */
 } bee_user_flags_t;
 
 typedef struct bee_user {
