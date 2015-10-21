@@ -447,6 +447,7 @@ void byahoo_connect_callback(gpointer data, gint source, b_input_condition cond)
 	}
 
 	if (source == -1) {
+		d->callback(NULL, 0, d->data);
 		imcb_error(ic, "Could not connect to server");
 		imc_logout(ic, TRUE);
 		g_free(d);
