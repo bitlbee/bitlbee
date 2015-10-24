@@ -60,6 +60,8 @@ struct PHB {
 	struct addrinfo *gai, *gai_cur;
 };
 
+typedef int (*proxy_connect_func)(const char *host, unsigned short port_, struct PHB *phb);
+
 static int proxy_connect_none(const char *host, unsigned short port_, struct PHB *phb);
 
 static gboolean phb_close(struct PHB *phb)
@@ -501,12 +503,20 @@ static int proxy_connect_socks5(const char *host, unsigned short port, struct PH
 	return(proxy_connect_none(proxyhost, proxyport, phb));
 }
 
+static const proxy_connect_func proxy_connect_funcs_array[] = {
+	proxy_connect_none,   /* PROXY_NONE */
+	proxy_connect_http,   /* PROXY_HTTP */
+	proxy_connect_socks4, /* PROXY_SOCKS4 */
+	proxy_connect_socks5, /* PROXY_SOCKS5 */
+	proxy_connect_socks4, /* PROXY_SOCKS4A */
+};
 
 /* Export functions */
 
 int proxy_connect(const char *host, int port, b_event_handler func, gpointer data)
 {
 	struct PHB *phb;
+	proxy_connect_func fun;
 
 	if (!host || port <= 0 || !func || strlen(host) > 128) {
 		return -1;
@@ -516,16 +526,11 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 	phb->func = func;
 	phb->data = data;
 
-	if (proxytype == PROXY_NONE || !proxyhost[0] || proxyport <= 0) {
-		return proxy_connect_none(host, port, phb);
-	} else if (proxytype == PROXY_HTTP) {
-		return proxy_connect_http(host, port, phb);
-	} else if (proxytype == PROXY_SOCKS4 || proxytype == PROXY_SOCKS4A) {
-		return proxy_connect_socks4(host, port, phb);
-	} else if (proxytype == PROXY_SOCKS5) {
-		return proxy_connect_socks5(host, port, phb);
+	if (proxyhost[0] && proxyport > 0 && proxytype >= 0 && proxytype <= G_N_ELEMENTS(proxy_connect_funcs_array)) {
+		fun = proxy_connect_funcs_array[proxytype];
+	} else {
+		fun = proxy_connect_none;
 	}
 
-	g_free(phb);
-	return -1;
+	return fun(host, port, phb);
 }
