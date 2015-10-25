@@ -1436,21 +1436,22 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="show_users" type="string" scope="channel">
-		<default>online+,away</default>
+		<default>online+,special%,away</default>
 
 		<description>
 			<para>
 				Comma-separated list of statuses of users you want in the channel,
 				and any modes they should have. The following statuses are currently
 				recognised: <emphasis>online</emphasis> (i.e. available, not
-				away), <emphasis>away</emphasis>, and <emphasis>offline</emphasis>.
+				away), <emphasis>special</emphasis>, <emphasis>away</emphasis>,
+				and <emphasis>offline</emphasis>.
 			</para>
 			
 			<para>
 				If a status is followed by a valid channel mode character
 				(@, % or +), it will be given to users with that status.
-				For example, <emphasis>online@,away+,offline</emphasis> will
-				show all users in the channel. Online people will
+				For example, <emphasis>online@,special%,away+,offline</emphasis>
+				will show all users in the channel. Online people will
 				have +o, people who are online but away will have +v,
 				and others will have no special modes.
 			</para>
