@@ -50,6 +50,8 @@ char proxypass[128] = "";
 #define AI_ADDRCONFIG 0
 #endif
 
+static GHashTable *phb_hash = NULL;
+
 struct PHB {
 	b_event_handler func, proxy_func;
 	gpointer data, proxy_data;
@@ -66,6 +68,8 @@ static int proxy_connect_none(const char *host, unsigned short port_, struct PHB
 
 static gboolean phb_free(struct PHB *phb, gboolean success)
 {
+	g_hash_table_remove(phb_hash, &phb->fd);
+
 	if (!success) {
 		if (phb->fd > 0) {
 			closesocket(phb->fd);
@@ -99,6 +103,7 @@ static gboolean proxy_connected(gpointer data, gint source, b_input_condition co
 				closesocket(source);
 				dup2(new_fd, source);
 				closesocket(new_fd);
+				phb->fd = source;
 				phb->inpa = b_input_add(source, B_EV_IO_WRITE, proxy_connected, phb);
 				return FALSE;
 			}
@@ -522,6 +527,11 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 {
 	struct PHB *phb;
 	proxy_connect_func fun;
+	int fd;
+
+	if (!phb_hash) {
+		phb_hash = g_hash_table_new(g_int_hash, g_int_equal);
+	}
 
 	if (!host || port <= 0 || !func || strlen(host) > 128) {
 		return -1;
@@ -537,5 +547,33 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 		fun = proxy_connect_none;
 	}
 
-	return fun(host, port, phb);
+	fd = fun(host, port, phb);
+
+	if (fd != -1) {
+		g_hash_table_insert(phb_hash, &phb->fd, phb);
+	}
+
+	return fd;
+}
+
+void proxy_disconnect(int fd)
+{
+	struct PHB *phb = g_hash_table_lookup(phb_hash, &fd);
+
+	if (!phb) {
+		/* not in the early part of the connection - just close the fd */
+		closesocket(fd);
+		return;
+	}
+
+	if (phb->inpa) {
+		b_event_remove(phb->inpa);
+		phb->inpa = 0;
+	}
+
+	/* avoid calling the callback, which might result in double-free */
+	phb->func = NULL;
+
+	/* close and free */
+	phb_free(phb, FALSE);
 }
