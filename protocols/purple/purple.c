@@ -112,6 +112,7 @@ static void purple_init(account_t *acc)
 	   Remember that libpurple is not really meant to be used on public
 	   servers anyway! */
 	if (!dir_fixed) {
+		PurpleCertificatePool *pool;
 		irc_t *irc = acc->bee->ui_data;
 		char *dir;
 
@@ -126,6 +127,11 @@ static void purple_init(account_t *acc)
 			/* do this here after loading prefs. yes, i know, it sucks */
 			purple_prefs_set_bool("/purple/proxy/socks4_remotedns", TRUE);
 		}
+
+		/* re-create the certificate cache directory */
+		pool = purple_certificate_find_pool("x509", "tls_peers");
+		dir = purple_certificate_pool_mkpath(pool, NULL);
+		purple_build_dir(dir, 0700);
 
 		dir_fixed = TRUE;
 	}
