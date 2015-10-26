@@ -316,7 +316,7 @@ void aim_conn_close(aim_conn_t *deadconn)
 {
 
 	if (deadconn->fd >= 3) {
-		closesocket(deadconn->fd);
+		proxy_disconnect(deadconn->fd);
 	}
 	deadconn->fd = -1;
 	if (deadconn->handlerlist) {

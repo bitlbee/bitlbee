@@ -344,7 +344,7 @@ static void jabber_logout(struct im_connection *ic)
 		ssl_disconnect(jd->ssl);
 	}
 	if (jd->fd >= 0) {
-		closesocket(jd->fd);
+		proxy_disconnect(jd->fd);
 	}
 
 	if (jd->tx_len) {

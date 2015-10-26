@@ -130,7 +130,7 @@ static gboolean ssl_connected(gpointer data, gint source, b_input_condition cond
 		/* Right now we don't have any verification functionality for OpenSSL. */
 		conn->func(conn->data, 1, NULL, cond);
 		if (source >= 0) {
-			closesocket(source);
+			proxy_disconnect(source);
 		}
 		ssl_conn_free(conn);
 
@@ -275,7 +275,7 @@ void ssl_disconnect(void *conn_)
 		SSL_shutdown(conn->ssl);
 	}
 
-	closesocket(conn->fd);
+	proxy_disconnect(conn->fd);
 
 	ssl_conn_free(conn);
 }

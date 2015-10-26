@@ -699,7 +699,7 @@ void http_close(struct http_request *req)
 	if (req->ssl) {
 		ssl_disconnect(req->ssl);
 	} else {
-		closesocket(req->fd);
+		proxy_disconnect(req->fd);
 	}
 
 	http_free(req);
