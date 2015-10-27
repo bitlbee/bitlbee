@@ -310,6 +310,9 @@ static gboolean bitlbee_io_new_client(gpointer data, gint fd, b_input_condition 
 			close(global.listen_socket);
 			b_event_remove(global.listen_watch_source_id);
 
+			/* Make a new pipe for the shutdown signal handler */
+			sighandler_shutdown_setup();
+
 			/* Make the connection. */
 			irc = irc_new(new_socket);
 
