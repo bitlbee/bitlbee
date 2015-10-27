@@ -36,16 +36,17 @@ xt_status jabber_pkt_message(struct xt_node *node, gpointer data)
 
 	if (!from) {
 		return XT_HANDLED; /* Consider this packet corrupted. */
-
 	}
-	if (request && id) {
+
+	if (request && id && g_strcmp0(type, "groupchat") != 0) {
 		/* Send a message receipt (XEP-0184), looking like this:
-		 * <message
-		 *  from='kingrichard@royalty.england.lit/throne'
-		 *  id='bi29sg183b4v'
-		 *  to='northumberland@shakespeare.lit/westminster'>
+		 * <message from='...' id='...' to='...'>
 		 *  <received xmlns='urn:xmpp:receipts' id='richard2-4.1.247'/>
-		 * </message> */
+		 * </message>
+		 *
+		 * MUC messages are excluded, since receipts aren't supposed to be sent over MUCs
+		 * (XEP-0184 section 5.3) and replying to those may result in 'forbidden' errors.
+		 */
 		struct xt_node *received, *receipt;
 
 		received = xt_new_node("received", NULL, NULL);
