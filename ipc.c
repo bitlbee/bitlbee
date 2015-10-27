@@ -589,7 +589,7 @@ static char *ipc_readline(int fd, int *recv_fd)
 					close(*recv_fd);
 				}
 
-				*recv_fd = *(int *) CMSG_DATA(cmsg);
+				memcpy(recv_fd, CMSG_DATA(cmsg), sizeof(int));
 				/*
 				fprintf( stderr, "pid %d received fd %d\n", (int) getpid(), *recv_fd );
 				*/
@@ -757,7 +757,7 @@ static gboolean ipc_send_fd(int fd, int send_fd)
 	cmsg->cmsg_level = SOL_SOCKET;
 	cmsg->cmsg_type = SCM_RIGHTS;
 	cmsg->cmsg_len = CMSG_LEN(sizeof(send_fd));
-	*(int *) CMSG_DATA(cmsg) = send_fd;
+	memcpy(CMSG_DATA(cmsg), &send_fd, sizeof(int));
 	msg.msg_controllen = cmsg->cmsg_len;
 #endif
 
