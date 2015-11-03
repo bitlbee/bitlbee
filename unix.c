@@ -291,6 +291,7 @@ static void sighandler_crash(int signal)
 
 	for (l = irc_connection_list; l; l = l->next) {
 		irc_t *irc = l->data;
+		sock_make_blocking(irc->fd);
 		write(irc->fd, message, len);
 	}
 
