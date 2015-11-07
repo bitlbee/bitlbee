@@ -1399,8 +1399,8 @@ void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
 	va_end(va);
 
 	if (u) {
-		/* display as a notice from this particular user */
-		irc_usernotice(u, "%s", msg);
+		/* just show this as a regular message */
+		irc_usermsg(u, "<<\002OTR\002>> %s", msg);
 	} else {
 		irc_rootmsg(irc, "[otr] %s", msg);
 	}
