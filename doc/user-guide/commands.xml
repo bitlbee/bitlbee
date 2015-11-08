@@ -1092,7 +1092,7 @@
 			</para>
 			
 			<para>
-				With modes "chat" and "many", you can send direct messages by /msg'ing your contacts directly. Note, however, that incoming DMs are not fetched yet.
+				With modes "chat" and "many", you can send direct messages by /msg'ing your contacts directly. Incoming DMs are only fetched if the "stream" setting is on (default).
 			</para>
 			
 			<para>
