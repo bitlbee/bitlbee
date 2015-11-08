@@ -171,7 +171,11 @@ void irc_send_join(irc_channel_t *ic, irc_user_t *iu)
 {
 	irc_t *irc = ic->irc;
 
-	irc_write(irc, ":%s!%s@%s JOIN :%s", iu->nick, iu->user, iu->host, ic->name);
+	if (irc->caps & CAP_EXTENDED_JOIN) {
+		irc_write(irc, ":%s!%s@%s JOIN %s * :%s", iu->nick, iu->user, iu->host, ic->name, iu->fullname);
+	} else {
+		irc_write(irc, ":%s!%s@%s JOIN :%s", iu->nick, iu->user, iu->host, ic->name);
+	}
 
 	if (iu == irc->user) {
 		if (ic->topic && *ic->topic) {

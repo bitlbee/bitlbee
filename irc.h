@@ -69,6 +69,7 @@ typedef enum {
 typedef enum {
 	CAP_SASL = (1 << 0),
 	CAP_MULTI_PREFIX = (1 << 1),
+	CAP_EXTENDED_JOIN = (1 << 2),
 } irc_cap_flag_t;
 
 struct irc_user;
