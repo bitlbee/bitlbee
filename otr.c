@@ -753,7 +753,7 @@ void op_create_instag(void *opdata, const char *account, const char *protocol)
 static char *otr_filter_colors(char *msg) {
 	int i;
 	for (i = 0; msg[i]; i++) {
-		if (msg[i] == '\x03') {
+		if (msg[i] == '\x02' || msg[i] == '\x03') {
 			msg[i] = '?';
 		}
 	}
