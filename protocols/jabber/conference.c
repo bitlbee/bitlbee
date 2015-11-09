@@ -301,9 +301,6 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 						bud->ext_jid[i] = '_';
 					}
 				}
-
-				/* Some program-specific restrictions. */
-				imcb_clean_handle(ic, bud->ext_jid);
 			}
 			bud->flags |= JBFLAG_IS_ANONYMOUS;
 		}

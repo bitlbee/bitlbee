@@ -327,7 +327,8 @@ G_MODULE_EXPORT void imcb_buddy_action_response(bee_user_t *bu, const char *acti
 
 G_MODULE_EXPORT void imcb_buddy_typing(struct im_connection *ic, const char *handle, guint32 flags);
 G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle(struct im_connection *ic, const char *handle);
-G_MODULE_EXPORT void imcb_clean_handle(struct im_connection *ic, char *handle);
+
+G_GNUC_DEPRECATED G_MODULE_EXPORT void imcb_clean_handle(struct im_connection *ic, char *handle);
 
 /* Actions, or whatever. */
 int imc_away_send_update(struct im_connection *ic);
