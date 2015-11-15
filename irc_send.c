@@ -247,6 +247,32 @@ void irc_send_topic(irc_channel_t *ic, gboolean topic_change)
 	}
 }
 
+/* msg1 and msg2 are output parameters. If msg2 is non-null, msg1 is guaranteed to be non-null too.
+   The idea is to defer the formatting of "$msg1 ($msg2)" to later calls to avoid a g_strdup_printf() here. */
+static void get_status_message(bee_user_t *bu, char **msg1, char **msg2)
+{
+	*msg1 = NULL;
+	*msg2 = NULL;
+
+	if (!(bu->flags & BEE_USER_ONLINE)) {
+		*msg1 = "User is offline";
+
+	} else if ((bu->status && *bu->status) ||
+		   (bu->status_msg && *bu->status_msg)) {
+
+		if (bu->status && bu->status_msg) {
+			*msg1 = bu->status;
+			*msg2 = bu->status_msg;
+		} else {
+			*msg1 = bu->status ? : bu->status_msg;
+		}
+	}
+
+	if (*msg1 && !**msg1) {
+		*msg1 = (bu->flags & BEE_USER_AWAY) ? "Away" : NULL;
+	}
+}
+
 void irc_send_whois(irc_user_t *iu)
 {
 	irc_t *irc = iu->irc;
@@ -256,22 +282,21 @@ void irc_send_whois(irc_user_t *iu)
 
 	if (iu->bu) {
 		bee_user_t *bu = iu->bu;
+		char *msg1, *msg2;
+		int num;
 
 		irc_send_num(irc, 312, "%s %s.%s :%s network", iu->nick, bu->ic->acc->user,
 		             bu->ic->acc->server && *bu->ic->acc->server ? bu->ic->acc->server : "",
 		             bu->ic->acc->prpl->name);
 
-		if ((bu->status && *bu->status) ||
-		    (bu->status_msg && *bu->status_msg)) {
-			int num = bu->flags & BEE_USER_AWAY ? 301 : 320;
+		num = (bu->flags & BEE_USER_AWAY || !(bu->flags & BEE_USER_ONLINE)) ? 301 : 320;
 
-			if (bu->status && bu->status_msg) {
-				irc_send_num(irc, num, "%s :%s (%s)", iu->nick, bu->status, bu->status_msg);
-			} else {
-				irc_send_num(irc, num, "%s :%s", iu->nick, bu->status ? : bu->status_msg);
-			}
-		} else if (!(bu->flags & BEE_USER_ONLINE)) {
-			irc_send_num(irc, 301, "%s :%s", iu->nick, "User is offline");
+		get_status_message(bu, &msg1, &msg2);
+
+		if (msg1 && msg2) {
+			irc_send_num(irc, num, "%s :%s (%s)", iu->nick, msg1, msg2);
+		} else if (msg1) {
+			irc_send_num(irc, num, "%s :%s", iu->nick, msg1);
 		}
 
 		if (bu->idle_time || bu->login_time) {
