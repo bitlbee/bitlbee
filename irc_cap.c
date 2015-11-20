@@ -40,6 +40,7 @@ static const cap_info_t supported_caps[] = {
 	{"sasl", CAP_SASL},
 	{"multi-prefix", CAP_MULTI_PREFIX},
 	{"extended-join", CAP_EXTENDED_JOIN},
+	{"away-notify", CAP_AWAY_NOTIFY},
 	{NULL},
 };
 

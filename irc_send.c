@@ -469,3 +469,27 @@ void irc_send_cap(irc_t *irc, char *subcommand, char *body)
 
 	irc_write(irc, ":%s CAP %s %s :%s", irc->root->host, nick, subcommand, body);
 }
+
+void irc_send_away_notify(irc_user_t *iu)
+{
+	bee_user_t *bu = iu->bu;
+
+	if (!bu) {
+		return;
+	}
+
+	if (bu->flags & BEE_USER_AWAY || !(bu->flags & BEE_USER_ONLINE)) {
+		char *msg1, *msg2;
+
+		get_status_message(bu, &msg1, &msg2);
+
+		if (msg2) {
+			irc_write(iu->irc, ":%s!%s@%s AWAY :%s (%s)", iu->nick, iu->user, iu->host, msg1, msg2);
+		} else {
+			irc_write(iu->irc, ":%s!%s@%s AWAY :%s", iu->nick, iu->user, iu->host, msg1);
+		}
+	} else {
+		irc_write(iu->irc, ":%s!%s@%s AWAY", iu->nick, iu->user, iu->host);
+	}
+}
+
