@@ -279,7 +279,7 @@ class BitlBeeLayer(YowInterfaceLayer):
 
 	def onStatusNotification(self, status):
 		print "New status for %s: %s" % (status.getFrom(), status.status)
-		self.bee.buddy_status_msg(status.getFrom(), status.status)
+		self.cb.buddy_status_msg(status.getFrom(), status.status)
 	
 	def onGroupSubjectNotification(self, sub):
 		print "New /topic for %s: %s" % (sub.getFrom(), sub.getSubject())
@@ -438,7 +438,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		creds = (account["user"].split("@")[0], account["pass"])
 
 		stack = (YowStackBuilder()
-		         .pushDefaultLayers(False)
+		         .pushDefaultLayers(True)
 		         .push(BitlBeeLayer)
 		         .build())
 		stack.setProp(YowAuthenticationProtocolLayer.PROP_CREDENTIALS, creds)
@@ -472,6 +472,8 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 			if msg.getCaption():
 				lines.append(msg.getCaption())
 			text = "\n".join(lines)
+		else:
+			text = "Message of unknown type %r" % type(msg)
 
 		if msg.getParticipant():
 			group = self.groups[msg.getFrom()]
