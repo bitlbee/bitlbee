@@ -360,7 +360,7 @@ void aim_frame_destroy(aim_frame_t *frame)
 
 /*
  * Grab a single command sequence off the socket, and enqueue
- * it in the incoming event queue in a seperate struct.
+ * it in the incoming event queue in a separate struct.
  */
 int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 {
@@ -478,7 +478,7 @@ int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 }
 
 /*
- * Purge recieve queue of all handled commands (->handled==1).  Also
+ * Purge receive queue of all handled commands (->handled==1).  Also
  * allows for selective freeing using ->nofree so that the client can
  * keep the data for various purposes.
  *

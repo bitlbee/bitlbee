@@ -171,7 +171,11 @@ void irc_send_join(irc_channel_t *ic, irc_user_t *iu)
 {
 	irc_t *irc = ic->irc;
 
-	irc_write(irc, ":%s!%s@%s JOIN :%s", iu->nick, iu->user, iu->host, ic->name);
+	if (irc->caps & CAP_EXTENDED_JOIN) {
+		irc_write(irc, ":%s!%s@%s JOIN %s * :%s", iu->nick, iu->user, iu->host, ic->name, iu->fullname);
+	} else {
+		irc_write(irc, ":%s!%s@%s JOIN :%s", iu->nick, iu->user, iu->host, ic->name);
+	}
 
 	if (iu == irc->user) {
 		if (ic->topic && *ic->topic) {
@@ -213,13 +217,8 @@ void irc_send_names(irc_channel_t *ic)
 			*namelist = 0;
 		}
 
-		if (icu->flags & IRC_CHANNEL_USER_OP) {
-			strcat(namelist, "@");
-		} else if (icu->flags & IRC_CHANNEL_USER_HALFOP) {
-			strcat(namelist, "%");
-		} else if (icu->flags & IRC_CHANNEL_USER_VOICE) {
-			strcat(namelist, "+");
-		}
+		namelist[strlen(namelist) + 1] = '\0';
+		namelist[strlen(namelist)] = irc_channel_user_get_prefix(icu);
 
 		strcat(namelist, iu->nick);
 		strcat(namelist, " ");
@@ -248,6 +247,32 @@ void irc_send_topic(irc_channel_t *ic, gboolean topic_change)
 	}
 }
 
+/* msg1 and msg2 are output parameters. If msg2 is non-null, msg1 is guaranteed to be non-null too.
+   The idea is to defer the formatting of "$msg1 ($msg2)" to later calls to avoid a g_strdup_printf() here. */
+static void get_status_message(bee_user_t *bu, char **msg1, char **msg2)
+{
+	*msg1 = NULL;
+	*msg2 = NULL;
+
+	if (!(bu->flags & BEE_USER_ONLINE)) {
+		*msg1 = "User is offline";
+
+	} else if ((bu->status && *bu->status) ||
+		   (bu->status_msg && *bu->status_msg)) {
+
+		if (bu->status && bu->status_msg) {
+			*msg1 = bu->status;
+			*msg2 = bu->status_msg;
+		} else {
+			*msg1 = bu->status ? : bu->status_msg;
+		}
+	}
+
+	if (*msg1 && !**msg1) {
+		*msg1 = (bu->flags & BEE_USER_AWAY) ? "Away" : NULL;
+	}
+}
+
 void irc_send_whois(irc_user_t *iu)
 {
 	irc_t *irc = iu->irc;
@@ -257,22 +282,21 @@ void irc_send_whois(irc_user_t *iu)
 
 	if (iu->bu) {
 		bee_user_t *bu = iu->bu;
+		char *msg1, *msg2;
+		int num;
 
 		irc_send_num(irc, 312, "%s %s.%s :%s network", iu->nick, bu->ic->acc->user,
 		             bu->ic->acc->server && *bu->ic->acc->server ? bu->ic->acc->server : "",
 		             bu->ic->acc->prpl->name);
 
-		if ((bu->status && *bu->status) ||
-		    (bu->status_msg && *bu->status_msg)) {
-			int num = bu->flags & BEE_USER_AWAY ? 301 : 320;
+		num = (bu->flags & BEE_USER_AWAY || !(bu->flags & BEE_USER_ONLINE)) ? 301 : 320;
 
-			if (bu->status && bu->status_msg) {
-				irc_send_num(irc, num, "%s :%s (%s)", iu->nick, bu->status, bu->status_msg);
-			} else {
-				irc_send_num(irc, num, "%s :%s", iu->nick, bu->status ? : bu->status_msg);
-			}
-		} else if (!(bu->flags & BEE_USER_ONLINE)) {
-			irc_send_num(irc, 301, "%s :%s", iu->nick, "User is offline");
+		get_status_message(bu, &msg1, &msg2);
+
+		if (msg1 && msg2) {
+			irc_send_num(irc, num, "%s :%s (%s)", iu->nick, msg1, msg2);
+		} else if (msg1) {
+			irc_send_num(irc, num, "%s :%s", iu->nick, msg1);
 		}
 
 		if (bu->idle_time || bu->login_time) {
@@ -293,15 +317,26 @@ void irc_send_who(irc_t *irc, GSList *l, const char *channel)
 	gboolean is_channel = strchr(CTYPES, channel[0]) != NULL;
 
 	while (l) {
-		irc_user_t *iu = l->data;
+		irc_user_t *iu;
+
+		/* Null terminated string with three chars, respectively:
+		 * { <H|G>, <@|%|+|\0>, \0 } */
+		char status_prefix[3] = {0};
+
 		if (is_channel) {
-			iu = ((irc_channel_user_t *) iu)->iu;
+			irc_channel_user_t *icu = l->data;
+			status_prefix[1] = irc_channel_user_get_prefix(icu);
+			iu = icu->iu;
+		} else {
+			iu = l->data;
 		}
-		/* TODO(wilmer): Restore away/channel information here */
-		irc_send_num(irc, 352, "%s %s %s %s %s %c :0 %s",
+
+		/* rfc1459 doesn't mention this: G means gone, H means here */
+		status_prefix[0] = iu->flags & IRC_USER_AWAY ? 'G' : 'H';
+
+		irc_send_num(irc, 352, "%s %s %s %s %s %s :0 %s",
 		             is_channel ? channel : "*", iu->user, iu->host, irc->root->host,
-		             iu->nick, iu->flags & IRC_USER_AWAY ? 'G' : 'H',
-		             iu->fullname);
+		             iu->nick, status_prefix, iu->fullname);
 		l = l->next;
 	}
 
@@ -427,3 +462,34 @@ void irc_send_invite(irc_user_t *iu, irc_channel_t *ic)
 	irc_write(iu->irc, ":%s!%s@%s INVITE %s :%s",
 	          iu->nick, iu->user, iu->host, irc->user->nick, ic->name);
 }
+
+void irc_send_cap(irc_t *irc, char *subcommand, char *body)
+{
+	char *nick = irc->user->nick ? : "*";
+
+	irc_write(irc, ":%s CAP %s %s :%s", irc->root->host, nick, subcommand, body);
+}
+
+void irc_send_away_notify(irc_user_t *iu)
+{
+	bee_user_t *bu = iu->bu;
+
+	if (!bu) {
+		return;
+	}
+
+	if (bu->flags & BEE_USER_AWAY || !(bu->flags & BEE_USER_ONLINE)) {
+		char *msg1, *msg2;
+
+		get_status_message(bu, &msg1, &msg2);
+
+		if (msg2) {
+			irc_write(iu->irc, ":%s!%s@%s AWAY :%s (%s)", iu->nick, iu->user, iu->host, msg1, msg2);
+		} else {
+			irc_write(iu->irc, ":%s!%s@%s AWAY :%s", iu->nick, iu->user, iu->host, msg1);
+		}
+	} else {
+		irc_write(iu->irc, ":%s!%s@%s AWAY", iu->nick, iu->user, iu->host);
+	}
+}
+

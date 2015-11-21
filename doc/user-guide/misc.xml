@@ -89,7 +89,7 @@ To mark yourself as away, you can just use the <emphasis>/away</emphasis> comman
 </para>
 
 <para>
-Away states have different names accross different protocols. BitlBee will try to pick the best available option for every connection:
+Away states have different names across different protocols. BitlBee will try to pick the best available option for every connection:
 </para>
 
 <simplelist>
@@ -145,7 +145,7 @@ You can create two kinds of channels. Control channels, and groupchat channels. 
 </para>
 
 <para>
-Control channels are where you see your contacts. By default, you will have one control channel called &amp;bitlbee, containing all your contacts. But you can create more, if you want, and divide your contact list accross several channels.
+Control channels are where you see your contacts. By default, you will have one control channel called &amp;bitlbee, containing all your contacts. But you can create more, if you want, and divide your contact list across several channels.
 </para>
 
 <para>
@@ -429,6 +429,18 @@ Lots of bugfixes! <emphasis>Important:</emphasis> Recompiling third party plugin
 <para>
 See the full changelog for details!
 </para>
+
+</sect1>
+
+<sect1 id="whatsnew030401">
+<title>New stuff in BitlBee 3.4.1</title>
+
+<simplelist>
+	<member><emphasis>msn:</emphasis> Upgraded protocol version to MSNP21, works again</member>
+	<member><emphasis>jabber:</emphasis> Add "hipchat" protocol, for smoother login. Takes the same username as the official client. Note that unlike the 'hip-cat' branch, this doesn't preload channels. See the <emphasis>HowtoHipchat</emphasis> wiki page for details</member>
+	<member><emphasis>jabber:</emphasis> Gmail notifications support</member>
+	<member><emphasis>twitter:</emphasis> Show quoted tweets inline. Added "url" command, can be used to quote tweets.</member>
+</simplelist>
 
 </sect1>
 

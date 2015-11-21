@@ -72,7 +72,7 @@ root.
 
 <para>
 By default, BitlBee runs as the user nobody. You might want 
-to run it as a seperate user (some computers run named or apache as nobody). 
+to run it as a separate user (some computers run named or apache as nobody). 
 </para>
 
 <para>

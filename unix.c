@@ -47,7 +47,11 @@
 
 global_t global;        /* Against global namespace pollution */
 
-static int signal_shutdown_pipe[2] = { -1, -1 };
+static struct {
+	int fd[2];
+	int tag;
+} shutdown_pipe = {{-1 , -1}, 0};
+
 static void sighandler_shutdown(int signal);
 static void sighandler_crash(int signal);
 
@@ -155,13 +159,11 @@ int main(int argc, char *argv[])
 	sig.sa_handler = sighandler_crash;
 	sigaction(SIGSEGV, &sig, &old);
 
-	/* Use a pipe for SIGTERM/SIGINT so the actual signal handler doesn't do anything unsafe */
-	if (pipe(signal_shutdown_pipe) == 0) {
-		b_input_add(signal_shutdown_pipe[0], B_EV_IO_READ, bitlbee_shutdown, NULL);
-		sig.sa_handler = sighandler_shutdown;
-		sigaction(SIGINT, &sig, &old);
-		sigaction(SIGTERM, &sig, &old);
-	}
+	sighandler_shutdown_setup();
+
+	sig.sa_handler = sighandler_shutdown;
+	sigaction(SIGINT, &sig, &old);
+	sigaction(SIGTERM, &sig, &old);
 
 	if (!getuid() || !geteuid()) {
 		log_message(LOGLVL_WARNING, "BitlBee is running with root privileges. Why?");
@@ -255,12 +257,27 @@ static int crypt_main(int argc, char *argv[])
 	return 0;
 }
 
+/* Set up a pipe for SIGTERM/SIGINT so the actual signal handler doesn't do anything unsafe */
+void sighandler_shutdown_setup()
+{
+	if (shutdown_pipe.fd[0] != -1) {
+		/* called again from a forked process, clean up to avoid propagating the signal */
+		b_event_remove(shutdown_pipe.tag);
+		close(shutdown_pipe.fd[0]);
+		close(shutdown_pipe.fd[1]);
+	}
+
+	if (pipe(shutdown_pipe.fd) == 0) {
+		shutdown_pipe.tag = b_input_add(shutdown_pipe.fd[0], B_EV_IO_READ, bitlbee_shutdown, NULL);
+	}
+}
+
 /* Signal handler for SIGTERM and SIGINT */
 static void sighandler_shutdown(int signal)
 {
 	/* Write a single null byte to the pipe, just to send a message to the main loop.
 	 * This gets handled by bitlbee_shutdown (the b_input_add callback for this pipe) */
-	write(signal_shutdown_pipe[1], "", 1);
+	write(shutdown_pipe.fd[1], "", 1);
 }
 
 /* Signal handler for SIGSEGV
@@ -274,6 +291,7 @@ static void sighandler_crash(int signal)
 
 	for (l = irc_connection_list; l; l = l->next) {
 		irc_t *irc = l->data;
+		sock_make_blocking(irc->fd);
 		write(irc->fd, message, len);
 	}
 

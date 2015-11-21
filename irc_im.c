@@ -119,6 +119,12 @@ static gboolean bee_irc_user_status(bee_t *bee, bee_user_t *bu, bee_user_t *old)
 		iu->flags |= IRC_USER_AWAY;
 	}
 
+	if ((irc->caps & CAP_AWAY_NOTIFY) &&
+	    ((bu->flags & BEE_USER_AWAY) != (old->flags & BEE_USER_AWAY) ||
+	     (bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE))) {
+		irc_send_away_notify(iu);
+	}
+
 	if ((bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE)) {
 		if (bu->flags & BEE_USER_ONLINE) {
 			if (g_hash_table_lookup(irc->watches, iu->key)) {
@@ -200,14 +206,17 @@ void bee_irc_channel_update(irc_t *irc, irc_channel_t *ic, irc_user_t *iu)
 	}
 }
 
-static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, time_t sent_at)
+static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, guint32 flags, time_t sent_at)
 {
 	irc_t *irc = bee->ui_data;
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
+	irc_user_t *src_iu = iu;
+	irc_user_t *dst_iu = irc->user;
 	const char *dst;
 	char *prefix = NULL;
 	char *wrapped, *ts = NULL;
 	char *msg = g_strdup(msg_);
+	char *message_type = "PRIVMSG";
 	GSList *l;
 
 	if (sent_at > 0 && set_getbool(&irc->b->set, "display_timestamps")) {
@@ -215,9 +224,44 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, t
 	}
 
 	dst = irc_user_msgdest(iu);
-	if (dst != irc->user->nick) {
-		/* if not messaging directly, call user by name */
-		prefix = g_strdup_printf("%s%s%s", irc->user->nick, set_getstr(&bee->set, "to_char"), ts ? : "");
+
+	if (flags & OPT_SELFMESSAGE) {
+		char *setting = set_getstr(&irc->b->set, "self_messages");
+
+		if (is_bool(setting)) {
+			if (bool2int(setting)) {
+				/* set to true, send it with src/dst flipped */
+				
+				dst_iu = iu;
+				src_iu = irc->user;
+
+				if (dst == irc->user->nick) {
+					dst = dst_iu->nick;
+				}
+			} else {
+				/* set to false, skip the message completely */
+				goto cleanup;
+			}
+		} else if (g_strncasecmp(setting, "prefix", 6) == 0) {
+			/* third state, prefix, loosely imitates the znc privmsg_prefix module */
+
+			g_free(msg);
+			if (g_strncasecmp(msg_, "/me ", 4) == 0) {
+				msg = g_strdup_printf("/me -> %s", msg_ + 4);
+			} else {
+				msg = g_strdup_printf("-> %s", msg_);
+			}
+
+			if (g_strcasecmp(setting, "prefix_notice") == 0) {
+				message_type = "NOTICE";
+			}
+		}
+
+	}
+
+	if (dst != dst_iu->nick) {
+		/* if not messaging directly (control channel), call user by name */
+		prefix = g_strdup_printf("%s%s%s", dst_iu->nick, set_getstr(&bee->set, "to_char"), ts ? : "");
 	} else {
 		prefix = ts;
 		ts = NULL;      /* don't double-free */
@@ -248,7 +292,7 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, t
 	}
 
 	wrapped = word_wrap(msg, 425);
-	irc_send_msg(iu, "PRIVMSG", dst, wrapped, prefix);
+	irc_send_msg(src_iu, message_type, dst, wrapped, prefix);
 	g_free(wrapped);
 
 cleanup:
@@ -259,7 +303,7 @@ cleanup:
 	return TRUE;
 }
 
-static gboolean bee_irc_user_typing(bee_t *bee, bee_user_t *bu, uint32_t flags)
+static gboolean bee_irc_user_typing(bee_t *bee, bee_user_t *bu, guint32 flags)
 {
 	irc_t *irc = (irc_t *) bee->ui_data;
 
@@ -645,10 +689,10 @@ static gboolean bee_irc_chat_log(bee_t *bee, struct groupchat *c, const char *te
 	return TRUE;
 }
 
-static gboolean bee_irc_chat_msg(bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, time_t sent_at)
+static gboolean bee_irc_chat_msg(bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *msg, guint32 flags, time_t sent_at)
 {
 	irc_t *irc = bee->ui_data;
-	irc_user_t *iu = bu->ui_data;
+	irc_user_t *iu = flags & OPT_SELFMESSAGE ? irc->user : bu->ui_data;
 	irc_channel_t *ic = c->ui_data;
 	char *wrapped, *ts = NULL;
 
@@ -682,7 +726,7 @@ static gboolean bee_irc_chat_add_user(bee_t *bee, struct groupchat *c, bee_user_
 	return TRUE;
 }
 
-static gboolean bee_irc_chat_remove_user(bee_t *bee, struct groupchat *c, bee_user_t *bu)
+static gboolean bee_irc_chat_remove_user(bee_t *bee, struct groupchat *c, bee_user_t *bu, const char *reason)
 {
 	irc_t *irc = bee->ui_data;
 	irc_channel_t *ic = c->ui_data;
@@ -694,7 +738,7 @@ static gboolean bee_irc_chat_remove_user(bee_t *bee, struct groupchat *c, bee_us
 	/* TODO: Possible bug here: If a module removes $user here instead of just
 	   using imcb_chat_free() and the channel was IRC_CHANNEL_TEMP, we get into
 	   a broken state around here. */
-	irc_channel_del_user(ic, bu == bee->user ? irc->user : bu->ui_data, IRC_CDU_PART, NULL);
+	irc_channel_del_user(ic, bu == bee->user ? irc->user : bu->ui_data, IRC_CDU_PART, reason);
 
 	return TRUE;
 }
@@ -866,7 +910,8 @@ static gboolean bee_irc_channel_chat_join(irc_channel_t *ic)
 	if ((acc_s = set_getstr(&ic->set, "account")) &&
 	    (room = set_getstr(&ic->set, "room")) &&
 	    (acc = account_get(ic->irc->b, acc_s)) &&
-	    acc->ic && acc->prpl->chat_join) {
+	    acc->ic && (acc->ic->flags & OPT_LOGGED_IN) &&
+	    acc->prpl->chat_join) {
 		char *nick;
 
 		if (!(nick = set_getstr(&ic->set, "nick"))) {
@@ -892,8 +937,11 @@ static gboolean bee_irc_channel_chat_part(irc_channel_t *ic, const char *msg)
 		c->ic->acc->prpl->chat_leave(c);
 	}
 
-	/* Remove the reference. We don't need it anymore. */
-	ic->data = NULL;
+	if (!(ic->flags & IRC_CHANNEL_TEMP)) {
+		/* Remove the reference.
+		 * We only need it for temp channels that are being freed */
+		ic->data = NULL;
+	}
 
 	return TRUE;
 }

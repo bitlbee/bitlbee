@@ -47,6 +47,8 @@ int url_set(url_t *url, const char *set_url)
 			url->proto = PROTO_SOCKS4;
 		} else if (g_strncasecmp(set_url, "socks5", i - set_url) == 0) {
 			url->proto = PROTO_SOCKS5;
+		} else if (g_strncasecmp(set_url, "socks4a", i - set_url) == 0) {
+			url->proto = PROTO_SOCKS4A;
 		} else {
 			return 0;
 		}

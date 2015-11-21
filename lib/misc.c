@@ -186,6 +186,10 @@ void strip_html(char *in)
 					*(s++) = '\x1f';
 				} else if (g_strncasecmp(cs + 1, "br", taglen) == 0) {
 					*(s++) = '\n';
+				} else if (g_strncasecmp(cs + 1, "br/", taglen) == 0) {
+					*(s++) = '\n';
+				} else if (g_strncasecmp(cs + 1, "br /", taglen) == 0) {
+					*(s++) = '\n';
 				}
 				in++;
 			} else {
@@ -294,7 +298,7 @@ void http_decode(char *s)
 }
 
 /* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
-/* This fuction is safe, but make sure you call it safely as well! */
+/* This function is safe, but make sure you call it safely as well! */
 void http_encode(char *s)
 {
 	char t[strlen(s) + 1];

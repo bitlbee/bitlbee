@@ -428,6 +428,18 @@ void irc_channel_set_mode(irc_channel_t *ic, const char *s)
 	}
 }
 
+char irc_channel_user_get_prefix(irc_channel_user_t *icu)
+{
+	if (icu->flags & IRC_CHANNEL_USER_OP) {
+		return '@';
+	} else if (icu->flags & IRC_CHANNEL_USER_HALFOP) {
+		return '%';
+	} else if (icu->flags & IRC_CHANNEL_USER_VOICE) {
+		return '+';
+	}
+	return 0;
+}
+
 void irc_channel_auto_joins(irc_t *irc, account_t *acc)
 {
 	GSList *l;
@@ -444,10 +456,10 @@ void irc_channel_auto_joins(irc_t *irc, account_t *acc)
 			   can only auto-join them if their account is online. */
 			char *acc_s;
 
-			if (!aj || (ic->flags & IRC_CHANNEL_JOINED)) {
-				/* Only continue if this one's marked as auto_join
-				   or if we're in it already. (Possible if the
-				   client auto-rejoined it before identyfing.) */
+			if (!aj && !(ic->flags & IRC_CHANNEL_JOINED)) {
+				/* Only proceed if this one's marked as auto_join
+				   or if we're in it already. (Very likely the IRC
+				   client auto-(re)joining at reconnect time.) */
 				continue;
 			} else if (!(acc_s = set_getstr(&ic->set, "account"))) {
 				continue;
@@ -592,6 +604,16 @@ char *irc_channel_name_gen(irc_t *irc, const char *hint)
 	gsize bytes_written;
 
 	translit_name = g_convert_with_fallback(hint, -1, "ASCII//TRANSLIT", "UTF-8", "", NULL, &bytes_written, NULL);
+
+	if (!translit_name) {
+		/* Same thing as in nick_gen() in nick.c, try again without //TRANSLIT */
+		translit_name = g_convert_with_fallback(hint, -1, "ASCII", "UTF-8", "", NULL, &bytes_written, NULL);
+	}
+
+	if (!translit_name) {
+		return NULL;
+	}
+
 	if (bytes_written > MAX_NICK_LENGTH) {
 		translit_name[MAX_NICK_LENGTH] = '\0';
 	}

@@ -48,6 +48,8 @@ typedef enum {
 	USTATUS_IDENTIFIED = 4, /* To NickServ (root). */
 	USTATUS_SHUTDOWN = 8,   /* Now used to indicate we're shutting down.
 	                           Currently just blocks irc_vawrite(). */
+	USTATUS_CAP_PENDING = 16,
+	USTATUS_SASL_PLAIN_PENDING = 32,
 
 	/* Not really status stuff, but other kinds of flags: For slightly
 	   better password security, since the only way to send passwords
@@ -63,6 +65,13 @@ typedef enum {
 
 	IRC_UTF8_NICKS = 0x10000, /* Disable ASCII restrictions on buddy nicks. */
 } irc_status_t;
+
+typedef enum {
+	CAP_SASL = (1 << 0),
+	CAP_MULTI_PREFIX = (1 << 1),
+	CAP_EXTENDED_JOIN = (1 << 2),
+	CAP_AWAY_NOTIFY = (1 << 3),
+} irc_cap_flag_t;
 
 struct irc_user;
 
@@ -101,6 +110,7 @@ typedef struct irc {
 	                    TODO: Some mechanism for plugindata. */
 
 	struct bee *b;
+	guint32 caps;
 } irc_t;
 
 typedef enum {
@@ -304,6 +314,7 @@ int irc_channel_name_cmp(const char *a_, const char *b_);
 char *irc_channel_name_gen(irc_t *irc, const char *name);
 gboolean irc_channel_name_hint(irc_channel_t *ic, const char *name);
 void irc_channel_update_ops(irc_channel_t *ic, char *value);
+char irc_channel_user_get_prefix(irc_channel_user_t *icu);
 char *set_eval_irc_channel_ops(struct set *set, char *value);
 gboolean irc_channel_wants_user(irc_channel_t *ic, irc_user_t *iu);
 
@@ -333,6 +344,8 @@ void irc_send_nick(irc_user_t *iu, const char *new_nick);
 void irc_send_channel_user_mode_diff(irc_channel_t *ic, irc_user_t *iu,
                                      irc_channel_user_flags_t old_flags, irc_channel_user_flags_t new_flags);
 void irc_send_invite(irc_user_t *iu, irc_channel_t *ic);
+void irc_send_cap(irc_t *irc, char *subcommand, char *body);
+void irc_send_away_notify(irc_user_t *iu);
 
 /* irc_user.c */
 irc_user_t *irc_user_new(irc_t *irc, const char *nick);
@@ -346,9 +359,13 @@ void irc_user_quit(irc_user_t *iu, const char *msg);
 /* irc_util.c */
 char *set_eval_timezone(struct set *set, char *value);
 char *irc_format_timestamp(irc_t *irc, time_t msg_ts);
+char *set_eval_self_messages(struct set *set, char *value);
 
 /* irc_im.c */
 void bee_irc_channel_update(irc_t *irc, irc_channel_t *ic, irc_user_t *iu);
 void bee_irc_user_nick_reset(irc_user_t *iu);
+
+/* irc_cap.c */
+void irc_cmd_cap(irc_t *irc, char **cmd);
 
 #endif

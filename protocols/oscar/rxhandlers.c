@@ -380,7 +380,7 @@ void aim_rxdispatch(aim_session_t *sess)
 
 	/*
 	 * This doesn't have to be called here.  It could easily be done
-	 * by a seperate thread or something. It's an administrative operation,
+	 * by a separate thread or something. It's an administrative operation,
 	 * and can take a while. Though the less you call it the less memory
 	 * you'll have :)
 	 */

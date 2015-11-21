@@ -57,15 +57,15 @@ typedef enum {
  *	                              |
  *	                              | accept
  *	                              V
- *	               /------ /-------------\                    /------------------------\
- *	   out_of_data |       | TRANSFERING | -----------------> | TRANSFERING | CANCELED |
- *	               \-----> \-------------/  [canceled,]free   \------------------------/
+ *	               /------ /-------------\                    /--------------------------\
+ *	   out_of_data |       | TRANSFERRING | -----------------> | TRANSFERRING | CANCELED |
+ *	               \-----> \-------------/  [canceled,]free   \--------------------------/
  *	                              |
  *	                              | finished,free
  *	                              V
- *	                 /------------------------\
- *	                 | TRANSFERING | FINISHED |
- *	                 \------------------------/
+ *	                 /-------------------------\
+ *	                 | TRANSFERRING | FINISHED |
+ *	                 \-------------------------/
  */
 typedef struct file_transfer {
 
@@ -114,7 +114,7 @@ typedef struct file_transfer {
 	gpointer priv;
 
 	/*
-	 * If set, called after succesful connection setup.
+	 * If set, called after successful connection setup.
 	 */
 	void (*accept)(struct file_transfer *file);
 

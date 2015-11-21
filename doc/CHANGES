@@ -3,6 +3,28 @@ found in the git commit logs, for example you can try:
 
 https://github.com/bitlbee/bitlbee/commits/master
 
+Version 3.4.1:
+- msn:
+  * Upgraded protocol to MSNP21, works again (dx)
+  * Contact list management, groupchats and skype username logins won't work.
+    Next release!
+- jabber:
+  * Add "hipchat" protocol, for smoother login. Takes the same username as
+    the official client. Note that unlike the 'hip-cat' branch, this doesn't
+    preload channels. https://wiki.bitlbee.org/HowtoHipchat for details (dx)
+  * Fixed a bug when receiving topics set by people who left the channel (dx)
+  * Create fake users instead of showing "unknown participant" errors (dx)
+  * Gmail mail notifications support (Artem Savkov)
+  * Lowering xmpp presence priority on away (Artem Savkov)
+- twitter:
+  * Show quoted tweets/RTs with comment inline (wilmer)
+  * Added "url" command, can be used to quote tweets (wilmer)
+  * Make replies to self work (wilmer)
+- Building documentation is now done with a python script (both 2.x/3.x work)
+  Asciidoc/xsltproc/xmlto are no longer build dependencies (dx)
+
+Finished 16 Jun 2015
+
 Version 3.4:
 - First release pretty much fully prepared by dx instead of Wilmer. Just look
   at the tightly structured changelog!
@@ -406,7 +428,7 @@ Version 1.2.1:
 - Preserving case in Jabber resources of buddies, since these should
   officially be treated as case sensitive.
 - Fully stripping spaces from AIM screennames, this didn't happen completely
-  which severly breaks the IRC protocol.
+  which severely breaks the IRC protocol.
 - Removed all the yellow tape around daemon mode, it's pretty mature by now:
   testing.bitlbee.org serves all (~30) SSL users from one daemon mode
   process without any serious stability issues.
@@ -606,7 +628,7 @@ Version 0.99:
 - Most likely fixed the bug that caused BitlBee to use 100% CPU time in
   some situations.
 - Outgoing MSN typing notifications are now understood correctly by the
-  orignal MS Mac/Windows clients (again).
+  original MS Mac/Windows clients (again).
 - Added "account add $protocol" to the documentation, got rid of a lot
   of over-markup (i.e. overuse of bold-tags), reviewed some other parts.
 - Small changes to help.xsl to fix small flaws in the help.txt formatting.

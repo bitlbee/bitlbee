@@ -35,14 +35,8 @@
 << CHAT #cecil/$bob;4d8cc9965791c6b9 ADDER bob
 >> GET CHAT #cecil/$bob;4d8cc9965791c6b9 TOPIC
 << CHAT #cecil/$bob;4d8cc9965791c6b9 TOPIC 
->> GET CHAT #cecil/$bob;4d8cc9965791c6b9 ADDER
-<< CHAT #cecil/$bob;4d8cc9965791c6b9 ADDER bob
->> GET CHAT #cecil/$bob;4d8cc9965791c6b9 TOPIC
-<< CHAT #cecil/$bob;4d8cc9965791c6b9 TOPIC 
->> GET CHAT #cecil/$bob;4d8cc9965791c6b9 ADDER
-<< CHAT #cecil/$bob;4d8cc9965791c6b9 ADDER bob
->> GET CHAT #cecil/$bob;4d8cc9965791c6b9 TOPIC
-<< CHAT #cecil/$bob;4d8cc9965791c6b9 TOPIC 
+>> GET CHAT #cecil/$bob;4d8cc9965791c6b9 ACTIVEMEMBERS
+<< CHAT #cecil/$bob;4d8cc9965791c6b9 ACTIVEMEMBERS bob cecil alice
 >> GET CHATMESSAGE 188 FROM_HANDLE
 << CHATMESSAGE 188 FROM_HANDLE bob
 >> GET CHATMESSAGE 188 BODY

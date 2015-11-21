@@ -49,7 +49,7 @@
  * notably when the (r) symbol is used), you must use the full UNICODE
  * encoding for your message.  In UNICODE mode, _all_ characters must
  * occupy 16bits, including ones that are not special.  (Remember that
- * the first 128 UNICODE symbols are equivelent to ASCII7, however they
+ * the first 128 UNICODE symbols are equivalent to ASCII7, however they
  * must be prefixed with a zero high order byte.)
  *
  * I strongly discourage the use of UNICODE mode, mainly because none
@@ -63,7 +63,7 @@
  * Implementation note:  Since this is one of the most-used functions
  * in all of libfaim, it is written with performance in mind.  As such,
  * it is not as clear as it could be in respect to how this message is
- * supposed to be layed out. Most obviously, tlvlists should be used
+ * supposed to be laid out. Most obviously, tlvlists should be used
  * instead of writing out the bytes manually.
  *
  * XXX more precise verification that we never send SNACs larger than 8192
@@ -475,7 +475,7 @@ static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
  * open source clients (like encryption or something) -- see faimtest for
  * examples of how to do this.
  *
- * I would definitly recommend avoiding this feature unless you really
+ * I would definitely recommend avoiding this feature unless you really
  * know what you are doing, and/or you have something neat to do with it.
  *
  */
@@ -637,7 +637,7 @@ static int incomingim_ch1_parsemsgs(aim_session_t *sess, guint8 *data, int len, 
 				; /* no subencoding */
 			}
 #if 0
-			/* XXX this isn't really necesary... */
+			/* XXX this isn't really necessary... */
 			if (((args.flag1 != 0x0000) &&
 			     (args.flag1 != 0x0002) &&
 			     (args.flag1 != 0x0003) &&
@@ -1160,11 +1160,11 @@ static int incomingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	 * Channel ID.
 	 *
 	 * Channel 0x0001 is the message channel.  There are
-	 * other channels for things called "rendevous"
+	 * other channels for things called "rendezvous"
 	 * which represent chat and some of the other new
 	 * features of AIM2/3/3.5.
 	 *
-	 * Channel 0x0002 is the Rendevous channel, which
+	 * Channel 0x0002 is the Rendezvous channel, which
 	 * is where Chat Invitiations and various client-client
 	 * connection negotiations come from.
 	 *
@@ -1180,7 +1180,7 @@ static int incomingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	 * Note that although this contains TLVs that appear contiguous
 	 * with the TLVs read below, they are two different pieces.  The
 	 * userinfo block contains the number of TLVs that contain user
-	 * information, the rest are not even though there is no seperation.
+	 * information, the rest are not even though there is no separation.
 	 * aim_extractuserinfo() returns the number of bytes used by the
 	 * userinfo tlvs, so you can start reading the rest of them right
 	 * afterward.
@@ -1252,7 +1252,7 @@ int aim_reqicbmparams(aim_session_t *sess)
 
 /*
  *
- * I definitly recommend sending this.  If you don't, you'll be stuck
+ * I definitely recommend sending this.  If you don't, you'll be stuck
  * with the rather unreasonable defaults.  You don't want those.  Send this.
  *
  */

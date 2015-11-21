@@ -35,10 +35,10 @@ extern "C" {
 #endif
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "3.4"
+#define BITLBEE_VERSION "3.4.1"
 #define VERSION BITLBEE_VERSION
 #define BITLBEE_VER(a, b, c) (((a) << 16) + ((b) << 8) + (c))
-#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 4, 0)
+#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 4, 1)
 
 #define MAX_STRING 511
 
@@ -156,6 +156,8 @@ typedef struct global {
 	char *helpfile;
 	int restart;
 } global_t;
+
+void sighandler_shutdown_setup(void);
 
 int bitlbee_daemon_init(void);
 int bitlbee_inetd_init(void);

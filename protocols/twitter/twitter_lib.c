@@ -311,13 +311,13 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 
 	td = ic->proto_data;
 
-	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = td->follow_ids;
-
 	// Parse the data.
 	if (!(parsed = twitter_parse_response(ic, req))) {
 		return;
 	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = td->follow_ids;
 
 	twitter_xt_get_friends_id_list(parsed, txl);
 	json_value_free(parsed);
@@ -387,13 +387,14 @@ static void twitter_http_get_users_lookup(struct http_request *req)
 		return;
 	}
 
-	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = NULL;
-
 	// Get the user list from the parsed xml feed.
 	if (!(parsed = twitter_parse_response(ic, req))) {
 		return;
 	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = NULL;
+
 	twitter_xt_get_users(parsed, txl);
 	json_value_free(parsed);
 
@@ -1384,13 +1385,14 @@ static void twitter_http_get_home_timeline(struct http_request *req)
 
 	td = ic->proto_data;
 
-	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = NULL;
-
 	// The root <statuses> node should hold the list of statuses <status>
 	if (!(parsed = twitter_parse_response(ic, req))) {
 		goto end;
 	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = NULL;
+
 	twitter_xt_get_status_list(ic, parsed, txl);
 	json_value_free(parsed);
 
@@ -1423,13 +1425,14 @@ static void twitter_http_get_mentions(struct http_request *req)
 
 	td = ic->proto_data;
 
-	txl = g_new0(struct twitter_xml_list, 1);
-	txl->list = NULL;
-
 	// The root <statuses> node should hold the list of statuses <status>
 	if (!(parsed = twitter_parse_response(ic, req))) {
 		goto end;
 	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = NULL;
+
 	twitter_xt_get_status_list(ic, parsed, txl);
 	json_value_free(parsed);
 
@@ -1571,4 +1574,43 @@ void twitter_favourite_tweet(struct im_connection *ic, guint64 id)
 	twitter_http_f(ic, TWITTER_FAVORITE_CREATE_URL, twitter_http_post,
 	               ic, 1, args, 2, TWITTER_HTTP_USER_ACK);
 	g_free(args[1]);
+}
+
+static void twitter_http_status_show_url(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	json_value *parsed, *id;
+	const char *name;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(twitter_connections, ic)) {
+		return;
+	}
+
+	if (!(parsed = twitter_parse_response(ic, req))) {
+		return;
+	}
+
+	/* for the parson branch:
+	name = json_object_dotget_string(json_object(parsed), "user.screen_name");
+	id = json_object_get_integer(json_object(parsed), "id");
+	*/
+
+	name = json_o_str(json_o_get(parsed, "user"), "screen_name");
+	id = json_o_get(parsed, "id");
+
+	if (name && id && id->type == json_integer) {
+		twitter_log(ic, "https://twitter.com/%s/status/%" G_GUINT64_FORMAT, name, id->u.integer);
+	} else {
+		twitter_log(ic, "Error: could not fetch tweet url.");
+	}
+
+	json_value_free(parsed);
+}
+
+void twitter_status_show_url(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s", TWITTER_STATUS_SHOW_URL, id, ".json");
+	twitter_http(ic, url, twitter_http_status_show_url, ic, 0, NULL, 0);
+	g_free(url);
 }

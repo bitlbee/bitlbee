@@ -326,6 +326,7 @@ static xt_status msn_soap_passport_failure(struct xt_node *node, gpointer data)
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct xt_node *code = xt_find_node(node->children, "faultcode");
 	struct xt_node *string = xt_find_node(node->children, "faultstring");
+	struct xt_node *reqstatus = xt_find_path(node, "psf:pp/psf:reqstatus");
 	struct xt_node *url;
 
 	if (code == NULL || code->text_len == 0) {
@@ -334,6 +335,9 @@ static xt_status msn_soap_passport_failure(struct xt_node *node, gpointer data)
 	           (url = xt_find_node(node->children, "psf:redirectUrl")) &&
 	           url->text_len > 0) {
 		sd->redirect = g_strdup(url->text);
+	} else if (reqstatus && strcmp(reqstatus->text, "0x800488fe") == 0) {
+		char *msg = "Location blocked. Log in to live.com, go to recent activity and click 'this was me'";
+		sd->error = g_strdup_printf("%s (%s)", code->text, msg);
 	} else {
 		sd->error = g_strdup_printf("%s (%s)", code->text, string && string->text_len ?
 		                            string->text : "no description available");
@@ -345,6 +349,7 @@ static xt_status msn_soap_passport_failure(struct xt_node *node, gpointer data)
 static const struct xt_handler_entry msn_soap_passport_sso_parser[] = {
 	{ "wsse:BinarySecurityToken", "wst:RequestedSecurityToken", msn_soap_passport_sso_token },
 	{ "S:Fault", "S:Envelope", msn_soap_passport_failure },
+	{ "S:Fault", "wst:RequestSecurityTokenResponse", msn_soap_passport_failure },
 	{ NULL, NULL, NULL }
 };
 

@@ -25,6 +25,7 @@
 #include "sha1.h"
 
 static xt_status jabber_chat_join_failed(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
+static xt_status jabber_chat_self_message(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 
 struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password)
 {
@@ -126,6 +127,12 @@ static xt_status jabber_chat_join_failed(struct im_connection *ic, struct xt_nod
 	return XT_HANDLED;
 }
 
+static xt_status jabber_chat_self_message(struct im_connection *ic, struct xt_node *node, struct xt_node *orig)
+{
+	/* This is a self message sent by this bitlbee - just drop it */
+	return XT_ABORT;
+}
+
 struct groupchat *jabber_chat_by_jid(struct im_connection *ic, const char *name)
 {
 	char *normalized = jabber_normalize(name);
@@ -170,13 +177,9 @@ int jabber_chat_msg(struct groupchat *c, char *message, int flags)
 	node = xt_new_node("body", message, NULL);
 	node = jabber_make_packet("message", "groupchat", jc->name, node);
 
-	if (!jabber_write_packet(ic, node)) {
-		xt_free_node(node);
-		return 0;
-	}
-	xt_free_node(node);
+	jabber_cache_add(ic, node, jabber_chat_self_message);
 
-	return 1;
+	return !jabber_write_packet(ic, node);
 }
 
 int jabber_chat_topic(struct groupchat *c, char *topic)
@@ -298,9 +301,6 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 						bud->ext_jid[i] = '_';
 					}
 				}
-
-				/* Some program-specific restrictions. */
-				imcb_clean_handle(ic, bud->ext_jid);
 			}
 			bud->flags |= JBFLAG_IS_ANONYMOUS;
 		}
@@ -330,17 +330,60 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 		}
 	} else if (type) { /* type can only be NULL or "unavailable" in this function */
 		if ((bud->flags & JBFLAG_IS_CHATROOM) && bud->ext_jid) {
+			char *reason = NULL;
+			char *status = NULL;
+			char *status_text = NULL;
+			
+			if ((c = xt_find_node_by_attr(node->children, "x", "xmlns", XMLNS_MUC_USER))) {
+				struct xt_node *c2 = c->children;
+
+				while ((c2 = xt_find_node(c2, "status"))) {
+					char *code = xt_find_attr(c2, "code");
+					if (g_strcmp0(code, "301") == 0) {
+						status = "Banned";
+						break;
+					} else if (g_strcmp0(code, "303") == 0) {
+						/* This could be handled in a cleverer way,
+						 * but let's just show a literal part/join for now */
+						status = "Changing nicks";
+						break;
+					} else if (g_strcmp0(code, "307") == 0) {
+						status = "Kicked";
+						break;
+					}
+					c2 = c2->next;
+				}
+
+				/* Sometimes the status message is in presence/x/item/reason */
+				if ((c2 = xt_find_path(c, "item/reason")) && c2->text && c2->text_len) {
+					status_text = c2->text;
+				}
+			}
+
+			/* Sometimes the status message is right inside <presence> */
+			if ((c = xt_find_node(node->children, "status")) && c->text && c->text_len) {
+				status_text = c->text;
+			}
+
+			if (status_text && status) {
+				reason = g_strdup_printf("%s: %s", status, status_text);
+			} else {
+				reason = g_strdup(status_text ? : status);
+			}
+
 			s = strchr(bud->ext_jid, '/');
 			if (s) {
 				*s = 0;
 			}
-			imcb_chat_remove_buddy(chat, bud->ext_jid, NULL);
+			imcb_chat_remove_buddy(chat, bud->ext_jid, reason);
 			if (bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS) {
-				imcb_remove_buddy(ic, bud->ext_jid, NULL);
+				imcb_remove_buddy(ic, bud->ext_jid, reason);
 			}
 			if (s) {
 				*s = '/';
 			}
+
+			g_free(reason);
 		}
 
 		if (bud == jc->me) {
@@ -359,6 +402,7 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 	char *nick = NULL;
 	char *final_from = NULL;
 	char *bare_jid = NULL;
+	guint32 flags = 0;
 
 	from = (bud) ? bud->full_jid : xt_find_attr(node, "from");
 
@@ -395,12 +439,13 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 	}
 
 	if (subject && chat) {
-		char *subject_text = subject->text_len > 0 ? subject->text : NULL;
+		char *subject_text = subject->text_len > 0 ? subject->text : "";
 		if (g_strcmp0(chat->topic, subject_text) != 0) {
 			bare_jid = (bud) ? jabber_get_bare_jid(bud->ext_jid) : NULL;
 			imcb_chat_topic(chat, bare_jid, subject_text,
 			                jabber_get_timestamp(node));
 			g_free(bare_jid);
+			bare_jid = NULL;
 		}
 	}
 
@@ -421,20 +466,21 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 	} else if (chat != NULL && bud == NULL && nick == NULL) {
 		imcb_chat_log(chat, "From conference server: %s", body->text);
 		return;
-	} else if (jc && jc->flags & JCFLAG_MESSAGE_SENT && bud == jc->me) {
-		/* exclude self-messages since they would get filtered out
-		 * but not the ones in the backlog */
+	} else if (jc && jc->flags & JCFLAG_MESSAGE_SENT && bud == jc->me &&
+		   (jabber_cache_handle_packet(ic, node) == XT_ABORT)) {
+		/* Self message marked by this bitlbee, don't show it */
 		return;
 	}
 
-	if (bud && jc && bud != jc->me) {
+	if (bud) {
 		bare_jid = jabber_get_bare_jid(bud->ext_jid ? bud->ext_jid : bud->full_jid);
 		final_from = bare_jid;
+		flags = (bud == jc->me) ? OPT_SELFMESSAGE : 0;
 	} else {
 		final_from = nick;
 	}
 
-	imcb_chat_msg(chat, final_from, body->text, 0, jabber_get_timestamp(node));
+	imcb_chat_msg(chat, final_from, body->text, flags, jabber_get_timestamp(node));
 
 	g_free(bare_jid);
 }

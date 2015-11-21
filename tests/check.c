@@ -43,6 +43,11 @@ double gettime()
 	return((double) time->tv_sec + (double) time->tv_usec / 1000000);
 }
 
+void sighandler_shutdown_setup()
+{
+	/* no-op. originally defined in unix.c, needed by bitlbee.c */
+}
+
 /* From check_util.c */
 Suite *util_suite(void);
 

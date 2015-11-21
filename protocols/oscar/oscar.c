@@ -455,6 +455,7 @@ static void oscar_logout(struct im_connection *ic)
 		if (n->inpa > 0) {
 			b_event_remove(n->inpa);
 		}
+		n->inpa = 0;
 		g_free(n->name);
 		g_free(n->show);
 		odata->oscar_chats = g_slist_remove(odata->oscar_chats, n);
@@ -480,12 +481,15 @@ static void oscar_logout(struct im_connection *ic)
 	}
 	if (ic->inpa > 0) {
 		b_event_remove(ic->inpa);
+		ic->inpa = 0;
 	}
 	if (odata->cnpa > 0) {
 		b_event_remove(odata->cnpa);
+		odata->cnpa = 0;
 	}
 	if (odata->paspa > 0) {
 		b_event_remove(odata->paspa);
+		odata->paspa = 0;
 	}
 	aim_session_kill(odata->sess);
 	g_free(odata->sess);
@@ -636,6 +640,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...)
 	}
 	aim_sendcookie(sess, bosconn, info->cookie);
 	b_event_remove(ic->inpa);
+	ic->inpa = 0;
 
 	return 1;
 }
@@ -1260,7 +1265,7 @@ static int gaim_parse_incoming_im(aim_session_t *sess, aim_frame_t *fr, ...)
 		ret = incomingim_chan1(sess, fr->conn, userinfo, args);
 	} break;
 
-	case 2: {         /* rendevous */
+	case 2: {         /* rendezvous */
 		struct aim_incomingim_ch2_args *args;
 		args = va_arg(ap, struct aim_incomingim_ch2_args *);
 		ret = incomingim_chan2(sess, fr->conn, userinfo, args);
@@ -2585,6 +2590,7 @@ void oscar_chat_kill(struct im_connection *ic, struct chat_connection *cc)
 	od->oscar_chats = g_slist_remove(od->oscar_chats, cc);
 	if (cc->inpa > 0) {
 		b_event_remove(cc->inpa);
+		cc->inpa = 0;
 	}
 	aim_conn_kill(od->sess, &cc->conn);
 	g_free(cc->name);

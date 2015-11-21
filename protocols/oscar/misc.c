@@ -2,7 +2,7 @@
 /*
  * aim_misc.c
  *
- * TODO: Seperate a lot of this into an aim_bos.c.
+ * TODO: Separate a lot of this into an aim_bos.c.
  *
  * Other things...
  *
