@@ -788,6 +788,22 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="carbons" type="boolean" scope="account">
+		<default>true</default>
+
+		<description>
+			<para>
+				Jabber specific. "Message carbons" (XEP-0280) is a server feature to get copies of outgoing messages sent from other clients connected to the same account. It's not widely supported by most public XMPP servers (easier if you host your own), but this will probably change in the next few years.
+			</para>
+			<para>
+				This defaults to true, which will enable it if the server supports it, or fail silently if it's not. This setting only exists to allow disabling the feature if anyone considers it undesirable.
+			</para>
+			<para>
+				See also the <emphasis>self_messages</emphasis> setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="charset" type="string" scope="global">
 		<default>utf-8</default>
 		<possible-values>you can get a list of all possible values by doing 'iconv -l' in a shell</possible-values>

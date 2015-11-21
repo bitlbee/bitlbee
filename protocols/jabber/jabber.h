@@ -227,6 +227,8 @@ struct jabber_transfer {
 #define XMLNS_DELAY        "urn:xmpp:delay"                                      /* XEP-0203 */
 #define XMLNS_XDATA        "jabber:x:data"                                       /* XEP-0004 */
 #define XMLNS_GMAILNOTIFY  "google:mail:notify"                                  /* Not a XEP */
+#define XMLNS_CARBONS      "urn:xmpp:carbons:2"                                  /* XEP-0280 */
+#define XMLNS_FORWARDING   "urn:xmpp:forward:0"                                  /* XEP-0297 */
 #define XMLNS_CHATSTATES   "http://jabber.org/protocol/chatstates"               /* XEP-0085 */
 #define XMLNS_DISCO_INFO   "http://jabber.org/protocol/disco#info"               /* XEP-0030 */
 #define XMLNS_DISCO_ITEMS  "http://jabber.org/protocol/disco#items"              /* XEP-0030 */

@@ -23,10 +23,10 @@
 
 #include "jabber.h"
 
-xt_status jabber_pkt_message(struct xt_node *node, gpointer data)
+static xt_status jabber_pkt_message_normal(struct xt_node *node, gpointer data, gboolean carbons_sent)
 {
 	struct im_connection *ic = data;
-	char *from = xt_find_attr(node, "from");
+	char *from = xt_find_attr(node, carbons_sent ? "to" : "from");
 	char *type = xt_find_attr(node, "type");
 	char *id = xt_find_attr(node, "id");
 	struct xt_node *body = xt_find_node(node->children, "body"), *c;
@@ -38,7 +38,7 @@ xt_status jabber_pkt_message(struct xt_node *node, gpointer data)
 		return XT_HANDLED; /* Consider this packet corrupted. */
 	}
 
-	if (request && id && g_strcmp0(type, "groupchat") != 0) {
+	if (request && id && g_strcmp0(type, "groupchat") != 0 && !carbons_sent) {
 		/* Send a message receipt (XEP-0184), looking like this:
 		 * <message from='...' id='...' to='...'>
 		 *  <received xmlns='urn:xmpp:receipts' id='richard2-4.1.247'/>
@@ -127,7 +127,7 @@ xt_status jabber_pkt_message(struct xt_node *node, gpointer data)
 
 		if (fullmsg->len > 0) {
 			imcb_buddy_msg(ic, from, fullmsg->str,
-			               0, jabber_get_timestamp(node));
+			               carbons_sent ? OPT_SELFMESSAGE : 0, jabber_get_timestamp(node));
 		}
 		if (room) {
 			imcb_chat_invite(ic, room, from, reason);
@@ -136,8 +136,9 @@ xt_status jabber_pkt_message(struct xt_node *node, gpointer data)
 		g_string_free(fullmsg, TRUE);
 
 		/* Handling of incoming typing notifications. */
-		if (bud == NULL) {
-			/* Can't handle these for unknown buddies. */
+		if (bud == NULL || carbons_sent) {
+			/* Can't handle these for unknown buddies.
+			   And ignore them if it's just carbons */
 		} else if (xt_find_node(node->children, "composing")) {
 			bud->flags |= JBFLAG_DOES_XEP85;
 			imcb_buddy_typing(ic, from, OPT_TYPING);
@@ -160,4 +161,45 @@ xt_status jabber_pkt_message(struct xt_node *node, gpointer data)
 	}
 
 	return XT_HANDLED;
+}
+
+static xt_status jabber_carbons_message(struct xt_node *node, gpointer data)
+{
+	struct im_connection *ic = data;
+	struct xt_node *wrap, *fwd, *msg;
+	gboolean carbons_sent;
+
+	if ((wrap = xt_find_node(node->children, "received"))) {
+		carbons_sent = FALSE;
+	} else if ((wrap = xt_find_node(node->children, "sent"))) {
+		carbons_sent = TRUE;
+	}
+
+	if (wrap == NULL || g_strcmp0(xt_find_attr(wrap, "xmlns"), XMLNS_CARBONS) != 0) {
+		return XT_NEXT;
+	}
+
+	if (!(fwd = xt_find_node(wrap->children, "forwarded")) ||
+	     (g_strcmp0(xt_find_attr(fwd, "xmlns"), XMLNS_FORWARDING) != 0) ||
+	    !(msg = xt_find_node(fwd->children, "message"))) {
+		imcb_log(ic, "Error: Invalid carbons message received");
+		return XT_ABORT;
+	}
+
+	return jabber_pkt_message_normal(msg, data, carbons_sent);
+}
+
+xt_status jabber_pkt_message(struct xt_node *node, gpointer data)
+{
+	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
+	char *from = xt_find_attr(node, "from");
+
+	if (jabber_compare_jid(jd->me, from)) {    /* Probably a Carbons message */
+		xt_status st = jabber_carbons_message(node, data);
+		if (st == XT_HANDLED || st == XT_ABORT) {
+			return st;
+		}
+	}
+	return jabber_pkt_message_normal(node, data, FALSE);
 }

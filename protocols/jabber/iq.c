@@ -27,6 +27,7 @@
 static xt_status jabber_parse_roster(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 static xt_status jabber_iq_display_vcard(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 static xt_status jabber_gmail_handle_new(struct im_connection *ic, struct xt_node *node);
+static xt_status jabber_iq_carbons_response(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 
 xt_status jabber_pkt_iq(struct xt_node *node, gpointer data)
 {
@@ -117,6 +118,7 @@ xt_status jabber_pkt_iq(struct xt_node *node, gpointer data)
 				                   XMLNS_SI,
 				                   XMLNS_BYTESTREAMS,
 				                   XMLNS_FILETRANSFER,
+				                   XMLNS_CARBONS,
 				                   NULL };
 			const char **f;
 
@@ -1003,9 +1005,26 @@ static xt_status jabber_iq_disco_server_response(struct im_connection *ic,
                                                  struct xt_node *node, struct xt_node *orig)
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct xt_node *id;
+	struct xt_node *query, *id;
 
-	if ((id = xt_find_path(node, "query/identity"))) {
+	if (!(query = xt_find_node(node->children, "query"))) {
+		return XT_HANDLED;
+	}
+
+	if (xt_find_node_by_attr(query->children, "feature", "var", XMLNS_CARBONS) &&
+	    set_getbool(&ic->acc->set, "carbons")) {
+
+		struct xt_node *enable, *iq;
+
+		enable = xt_new_node("enable", NULL, NULL);
+		xt_add_attr(enable, "xmlns", XMLNS_CARBONS);
+		iq = jabber_make_packet("iq", "set", NULL, enable);
+
+		jabber_cache_add(ic, iq, jabber_iq_carbons_response);
+		jabber_write_packet(ic, iq);
+	}
+
+	if ((id = xt_find_node(query->children, "identity"))) {
 		char *cat, *type, *name;
 
 		if (!(cat = xt_find_attr(id, "category")) ||
@@ -1018,6 +1037,22 @@ static xt_status jabber_iq_disco_server_response(struct im_connection *ic,
 		    strstr(name, "Google") != NULL) {
 			jd->flags |= JFLAG_GTALK;
 		}
+	}
+
+	return XT_HANDLED;
+}
+
+static xt_status jabber_iq_carbons_response(struct im_connection *ic,
+                                            struct xt_node *node, struct xt_node *orig)
+{
+	struct jabber_error *err;
+
+	if ((err = jabber_error_parse(xt_find_node(node->children, "error"), XMLNS_STANZA_ERROR))) {
+		imcb_error(ic, "Error enabling carbons: %s%s%s",
+		           err->code, err->text ? ": " : "", err->text ? err->text : "");
+		jabber_error_free(err);
+	} else {
+		imcb_log(ic, "Carbons enabled");
 	}
 
 	return XT_HANDLED;
