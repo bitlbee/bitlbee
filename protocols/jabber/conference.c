@@ -121,7 +121,10 @@ static xt_status jabber_chat_join_failed(struct im_connection *ic, struct xt_nod
 		jabber_error_free(err);
 	}
 	if (bud) {
-		jabber_chat_free(jabber_chat_by_jid(ic, bud->bare_jid));
+		struct groupchat *c = jabber_chat_by_jid(ic, bud->bare_jid);
+		if (c) {
+			jabber_chat_free(c);
+		}
 	}
 
 	return XT_HANDLED;
