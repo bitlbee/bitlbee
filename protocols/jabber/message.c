@@ -26,6 +26,7 @@
 static xt_status jabber_pkt_message_normal(struct xt_node *node, gpointer data, gboolean carbons_sent)
 {
 	struct im_connection *ic = data;
+	struct jabber_data *jd = ic->proto_data;
 	char *from = xt_find_attr(node, carbons_sent ? "to" : "from");
 	char *type = xt_find_attr(node, "type");
 	char *id = xt_find_attr(node, "id");
@@ -36,6 +37,17 @@ static xt_status jabber_pkt_message_normal(struct xt_node *node, gpointer data, 
 
 	if (!from) {
 		return XT_HANDLED; /* Consider this packet corrupted. */
+	}
+
+	/* try to detect hipchat's own version of self-messages */
+	if (jd->flags & JFLAG_HIPCHAT) {
+		struct xt_node *c;
+
+		if ((c = xt_find_node_by_attr(node->children, "delay", "xmlns", XMLNS_DELAY)) &&
+		    (s = xt_find_attr(c, "from_jid")) &&
+		    jabber_compare_jid(s, jd->me)) {
+			carbons_sent = TRUE;
+		}
 	}
 
 	if (request && id && g_strcmp0(type, "groupchat") != 0 && !carbons_sent) {
