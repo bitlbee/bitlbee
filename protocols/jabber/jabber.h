@@ -112,6 +112,8 @@ struct jabber_data {
 	GSList *filetransfers;
 	GSList *streamhosts;
 	int have_streamhosts;
+
+	char *muc_host;
 };
 
 struct jabber_away_state {
@@ -357,5 +359,7 @@ void jabber_chat_invite(struct groupchat *c, char *who, char *message);
 int jabber_get_hipchat_profile(struct im_connection *ic);
 xt_status jabber_parse_hipchat_profile(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 xt_status hipchat_handle_success(struct im_connection *ic, struct xt_node *node);
+char *hipchat_make_channel_slug(const char *name);
+char *hipchat_guess_channel_name(struct im_connection *ic, const char *name);
 
 #endif

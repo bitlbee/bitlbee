@@ -42,6 +42,8 @@ xt_status hipchat_handle_success(struct im_connection *ic, struct xt_node *node)
 		*sep = '/';
 	}
 
+	jd->muc_host = g_strdup(xt_find_attr(node, "muc_host"));
+
 	/* Hipchat's auth doesn't expect a restart here */
 	jd->flags &= ~JFLAG_STREAM_RESTART;
 
@@ -90,4 +92,52 @@ xt_status jabber_parse_hipchat_profile(struct im_connection *ic, struct xt_node 
 	set_setstr(&ic->acc->set, "display_name", name_node->text);
 	return XT_HANDLED;
 
+}
+
+/* Returns a newly allocated string that tries to match the "slug" part of the JID using an
+ * approximation of the method used by the server. This might fail in some rare conditions
+ * (old JIDs generated a different way, locale settings unicode, etc) */
+char *hipchat_make_channel_slug(const char *name)
+{
+	char *lower;
+	char *new = g_malloc(strlen(name) + 1);
+	int i = 0;
+
+	do {
+		if (*name == ' ') {
+			new[i++] = '_';
+		} else if (*name && !strchr("\"&'/:<>@", *name)) {
+			new[i++] = *name;
+		}
+	} while (*(name++));
+
+	new[i] = '\0';
+
+	lower = g_utf8_strdown(new, -1);
+	g_free(new);
+
+	return lower;
+}
+
+char *hipchat_guess_channel_name(struct im_connection *ic, const char *name)
+{
+	struct jabber_data *jd = ic->proto_data;
+	char *slug, *retval, *underscore;
+	
+	if (!(underscore = strchr(jd->username, '_')) || !jd->muc_host) {
+		return NULL;
+	}
+
+	slug = hipchat_make_channel_slug(name);
+
+	/* Get the organization ID from the username, before the underscore */
+	*underscore = '\0';
+
+	retval = g_strdup_printf("%s_%s@%s", jd->username, slug, jd->muc_host);
+
+	*underscore = '_';
+
+	g_free(slug);
+
+	return retval;
 }

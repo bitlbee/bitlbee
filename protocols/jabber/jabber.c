@@ -370,6 +370,7 @@ static void jabber_logout(struct im_connection *ic)
 	g_free(jd->away_message);
 	g_free(jd->internal_jid);
 	g_free(jd->gmail_tid);
+	g_free(jd->muc_host);
 	g_free(jd->username);
 	g_free(jd->me);
 	g_free(jd);
@@ -532,12 +533,24 @@ static struct groupchat *jabber_chat_join_(struct im_connection *ic, const char 
 		final_nick = (char *) nick;
 	}
 
+	if (jd->flags & JFLAG_HIPCHAT && jd->muc_host && !g_str_has_suffix(room, jd->muc_host)) {
+		char *guessed_name = hipchat_guess_channel_name(ic, room);
+		if (guessed_name) {
+			set_setstr(sets, "room", guessed_name);
+			g_free(guessed_name);
+
+			/* call this same function again with the fixed name */
+			return jabber_chat_join_(ic, set_getstr(sets, "room"), nick, password, sets);
+		}
+	}
+
 	if (strchr(room, '@') == NULL) {
 		imcb_error(ic, "%s is not a valid Jabber room name. Maybe you mean %s@conference.%s?",
 		           room, room, jd->server);
 	} else if (jabber_chat_by_jid(ic, room)) {
 		imcb_error(ic, "Already present in chat `%s'", room);
 	} else {
+		/* jabber_chat_join without the underscore is the conference.c one */
 		return jabber_chat_join(ic, room, final_nick, set_getstr(sets, "password"));
 	}
 
