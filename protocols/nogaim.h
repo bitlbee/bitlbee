@@ -274,6 +274,7 @@ struct prpl {
 void nogaim_init();
 G_MODULE_EXPORT GSList *get_connections();
 G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
+G_MODULE_EXPORT gboolean is_protocol_disabled(const char *name);
 /* When registering a new protocol, you should allocate space for a new prpl
  * struct, initialize it (set the function pointers to point to your
  * functions), finally call this function. */

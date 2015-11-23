@@ -89,6 +89,7 @@ void load_plugins(void)
 #endif
 
 GList *protocols = NULL;
+GList *disabled_protocols = NULL;
 
 void register_protocol(struct prpl *p)
 {
@@ -102,25 +103,27 @@ void register_protocol(struct prpl *p)
 	}
 
 	if (refused) {
-		log_message(LOGLVL_WARNING, "Protocol %s disabled\n", p->name);
+		disabled_protocols = g_list_append(disabled_protocols, p);
 	} else {
 		protocols = g_list_append(protocols, p);
 	}
 }
 
+static int proto_name_cmp(const void *proto_, const void *name)
+{
+	const struct prpl *proto = proto_;
+	return g_strcasecmp(proto->name, name);
+}
+
 struct prpl *find_protocol(const char *name)
 {
-	GList *gl;
+	GList *gl = g_list_find_custom(protocols, name, proto_name_cmp);
+	return gl ? gl->data: NULL;
+}
 
-	for (gl = protocols; gl; gl = gl->next) {
-		struct prpl *proto = gl->data;
-
-		if (g_strcasecmp(proto->name, name) == 0) {
-			return proto;
-		}
-	}
-
-	return NULL;
+gboolean is_protocol_disabled(const char *name)
+{
+	return g_list_find_custom(disabled_protocols, name, proto_name_cmp) != NULL;
 }
 
 void nogaim_init()
