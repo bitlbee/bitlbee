@@ -185,7 +185,7 @@ static char *choose_priority(struct im_connection *ic)
 	struct jabber_data *jd = ic->proto_data;
 	char *prio = set_getstr(&ic->acc->set, "priority");
 
-	if (jd->away_state->code != NULL) {
+	if (jd->away_state && jd->away_state->full_name != NULL) {
 		int new_prio = (atoi(prio) - 5);
 		if (new_prio < 0) {
 			new_prio = 0;
