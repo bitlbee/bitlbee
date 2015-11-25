@@ -52,9 +52,11 @@ xt_status jabber_pkt_iq(struct xt_node *node, gpointer data)
 		      (c = xt_find_node(node->children, "ping")) ||
 		      (c = xt_find_node(node->children, "time"))) ||
 		    !(s = xt_find_attr(c, "xmlns"))) {
-			/* Sigh. Who decided to suddenly invent new elements
-			   instead of just sticking with <query/>? */
-			return XT_HANDLED;
+
+			reply = jabber_make_error_packet(node, "service-unavailable", "cancel", NULL);
+			st = jabber_write_packet(ic, reply);
+			xt_free_node(reply);
+			return st;
 		}
 
 		reply = xt_new_node("query", NULL, NULL);
@@ -135,7 +137,7 @@ xt_status jabber_pkt_iq(struct xt_node *node, gpointer data)
 			}
 		} else {
 			xt_free_node(reply);
-			reply = jabber_make_error_packet(node, "feature-not-implemented", "cancel", NULL);
+			reply = jabber_make_error_packet(node, "service-unavailable", "cancel", NULL);
 			pack = 0;
 		}
 	} else if (strcmp(type, "set") == 0) {
