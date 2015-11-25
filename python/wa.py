@@ -328,8 +328,17 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 			# Country code. Seems to be required for registration only.
 			"type": "int",
 		},
+		"reg_mode": {
+			"default": "sms",
+		},
 		"name": {
 			"flags": 0x100, # NULL_OK
+		},
+		# EW! Need to include this setting to trick BitlBee into
+		# doing registration instead of refusing to login w/o pwd.
+		# TODO: Make this a flag instead of faking oauth.
+		"oauth": {
+			"default": True,
 		},
 	}
 	AWAY_STATES = ["Away"]
@@ -339,7 +348,14 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 	PING_TIMEOUT = 360 # seconds
 
 	def login(self, account):
-		self.stack = self.build_stack(account)
+		super(YowsupIMPlugin, self).login(account)
+		self.account = account
+		self.number = self.account["user"].split("@")[0]
+		self.registering = False
+		if not self.account["pass"]:
+			return self._register()
+		
+		self.stack = self._build_stack()
 		self.daemon = YowsupDaemon(name="yowsup")
 		self.daemon.stack = self.stack
 		self.daemon.start()
@@ -365,7 +381,45 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		self.stack.broadcastEvent(YowLayerEvent(YowNetworkLayer.EVENT_STATE_DISCONNECT))
 		self.stack.execDetached(self.daemon.StopDaemon)
 
+	def _register(self):
+		self.registering = True
+		self.bee.log("New account, starting registration")
+		from yowsup.registration import WACodeRequest
+		cr = WACodeRequest(str(self.setting("cc")), self.number,
+		                   "000", "000", "000", "000",
+		                   self.setting("reg_mode"))
+		res = cr.send()
+		res = {k: v for k, v in res.iteritems() if v is not None}
+		if res.get("status", "") != "sent":
+			self.bee.error("Failed to start registration: %r" % res)
+			self.bee.logout(False)
+			return
+		
+		text = ("Registration request sent. You will receive a SMS or "
+		        "call with a confirmation code. Please respond to this "
+		        "message with that code.")
+		sender = "wa_%s" % self.number
+		self.bee.add_buddy(sender, "")
+		self.bee.buddy_msg(sender, text, 0, 0)
+
+	def _register_confirm(self, code):
+		from yowsup.registration import WARegRequest
+		code = code.strip().replace("-", "")
+		rr = WARegRequest(str(self.setting("cc")), self.number, code)
+		res = rr.send()
+		res = {k: v for k, v in res.iteritems() if v is not None}
+		if (res.get("status", "") != "ok") or (not self.get("pw", "")):
+			self.bee.error("Failed to finish registration: %r" % res)
+			self.bee.logout(False)
+			return
+		self.bee.log("Registration finished, attempting login")
+		self.bee.set_setstr("password", res["pw"])
+		self.account["pass"] = res["pw"]
+		self.login(self.account)
+
 	def buddy_msg(self, to, text, flags):
+		if self.registering:
+			return self._register_confirm(text)
 		msg = TextMessageProtocolEntity(text, to=to)
 		self.yow.Ship(msg)
 
@@ -387,7 +441,8 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 			self.yow.Ship(SetStatusIqProtocolEntity(status))
 
 	def set_set_name(self, _key, value):
-		self.yow.Ship(PresenceProtocolEntity(name=value))
+		#self.yow.Ship(PresenceProtocolEntity(name=value))
+		pass
 
 	def chat_join(self, id, name, _nick, _password, settings):
 		print "New chat created with id: %d" % id
@@ -433,9 +488,8 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		del self.groups_by_id[id]
 		del group["id"]
 
-	def build_stack(self, account):
-		self.account = account
-		creds = (account["user"].split("@")[0], account["pass"])
+	def _build_stack(self):
+		creds = (self.number, self.account["pass"])
 
 		stack = (YowStackBuilder()
 		         .pushDefaultLayers(False)
