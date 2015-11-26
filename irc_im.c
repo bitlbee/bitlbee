@@ -882,14 +882,19 @@ static gboolean bee_irc_channel_chat_join(irc_channel_t *ic)
 	    acc->ic && (acc->ic->flags & OPT_LOGGED_IN) &&
 	    acc->prpl->chat_join) {
 		char *nick;
+		struct groupchat *gc;
 
 		if (!(nick = set_getstr(&ic->set, "nick"))) {
 			nick = ic->irc->user->nick;
 		}
 
 		ic->flags |= IRC_CHANNEL_CHAT_PICKME;
-		acc->prpl->chat_join(acc->ic, room, nick, NULL, &ic->set);
+		gc = acc->prpl->chat_join(acc->ic, room, nick, NULL, &ic->set);
 		ic->flags &= ~IRC_CHANNEL_CHAT_PICKME;
+
+		if (!gc) {
+			irc_send_num(ic->irc, 403, "%s :Error joining channel (check control channel?)", ic->name);
+		}
 
 		return FALSE;
 	} else {

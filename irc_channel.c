@@ -254,6 +254,10 @@ int irc_channel_del_user(irc_channel_t *ic, irc_user_t *iu, irc_channel_del_user
 	irc_channel_user_t *icu;
 
 	if (!(icu = irc_channel_has_user(ic, iu))) {
+		if (iu == ic->irc->user && type == IRC_CDU_KICK) {
+			/* an error happened before joining, inform the client with a numeric */
+			irc_send_num(ic->irc, 403, "%s :Error joining channel (check control channel?)", ic->name);
+		}
 		return 0;
 	}
 
