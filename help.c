@@ -104,7 +104,9 @@ void help_free(help_t **help)
 
 	h = *help;
 	while (h) {
-		if (h->fd != last_fd) {
+		if (h->fd == -1) {
+			g_free(h->offset.mem_offset);
+		} else if (h->fd != last_fd) {
 			close(h->fd);
 			last_fd = h->fd;
 		}
