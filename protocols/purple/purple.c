@@ -717,7 +717,7 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 
 	serv_join_chat(purple_account_get_connection(pd->account), chat_hash);
 
-	return NULL;
+	return imcb_chat_new(ic, room);
 }
 
 void purple_transfer_request(struct im_connection *ic, file_transfer_t *ft, char *handle);
@@ -901,9 +901,17 @@ void prplcb_conv_new(PurpleConversation *conv)
 		struct im_connection *ic = purple_ic_by_pa(conv->account);
 		struct groupchat *gc;
 
-		gc = imcb_chat_new(ic, conv->name);
-		if (conv->title != NULL) {
-			imcb_chat_name_hint(gc, conv->title);
+		gc = bee_chat_by_title(ic->bee, ic, conv->name);
+
+		if (!gc) {
+			gc = imcb_chat_new(ic, conv->name);
+			if (conv->title != NULL) {
+				imcb_chat_name_hint(gc, conv->title);
+			}
+		}
+
+		/* don't set the topic if it's just the name */
+		if (conv->title != NULL && strcmp(conv->name, conv->title) != 0) {
 			imcb_chat_topic(gc, NULL, conv->title, 0);
 		}
 
