@@ -132,6 +132,7 @@ static void purple_init(account_t *acc)
 		pool = purple_certificate_find_pool("x509", "tls_peers");
 		dir = purple_certificate_pool_mkpath(pool, NULL);
 		purple_build_dir(dir, 0700);
+		g_free(dir);
 
 		dir_fixed = TRUE;
 	}
@@ -358,6 +359,10 @@ static void purple_logout(struct im_connection *ic)
 
 	if (!pd) {
 		return;
+	}
+
+	while (ic->groupchats) {
+		imcb_chat_free(ic->groupchats->data);
 	}
 
 	purple_account_set_enabled(pd->account, "BitlBee", FALSE);
@@ -713,9 +718,15 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 		} else if (strcmp(pce->identifier, "passwd") == 0) {
 			g_hash_table_replace(chat_hash, "passwd", g_strdup(password));
 		}
+
+		g_free(pce);
 	}
 
+	g_list_free(info);
+
 	serv_join_chat(purple_account_get_connection(pd->account), chat_hash);
+
+	g_hash_table_destroy(chat_hash);
 
 	return imcb_chat_new(ic, room);
 }
