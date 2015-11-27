@@ -770,3 +770,19 @@ gboolean parse_int64(char *string, int base, guint64 *number)
 	return TRUE;
 }
 
+/* Filters all the characters in 'blacklist' replacing them with 'replacement'.
+ * Modifies the string in-place and returns the string itself.
+ * For the opposite, use g_strcanon() */
+char *str_reject_chars(char *string, const char *reject, char replacement)
+{
+	char *c = string;
+
+	while (*c) {
+		c += strcspn(c, reject);
+		if (*c) {
+			*c = replacement;
+		}
+	}
+
+	return string;
+}
