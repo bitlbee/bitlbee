@@ -83,9 +83,9 @@ static gboolean bee_irc_user_new(bee_t *bee, bee_user_t *bu)
 		}
 	}
 
-	while ((s = strchr(iu->user, ' '))) {
-		*s = '_';
-	}
+	/* Sanitize */
+	str_reject_chars(iu->user, " ", '_');
+	str_reject_chars(iu->host, " ", '_');
 
 	if (bu->flags & BEE_USER_LOCAL) {
 		char *s = set_getstr(&bee->set, "handle_unknown");
