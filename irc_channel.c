@@ -212,6 +212,11 @@ static char *set_eval_channel_type(set_t *set, char *value)
 		return SET_INVALID;
 	}
 
+	/* Skip the free/init if nothing is being changed */
+	if (ic->f == new) {
+		return value;
+	}
+
 	/* TODO: Return values. */
 	if (ic->f && ic->f->_free) {
 		ic->f->_free(ic);
