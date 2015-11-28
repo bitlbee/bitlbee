@@ -111,6 +111,7 @@ struct msn_gw {
 	GByteArray *out;
 
 	int poll_timeout;
+	int write_timeout;
 
 	b_event_handler callback;
 
