@@ -778,8 +778,7 @@ static int msn_soap_addressbook_handle_response(struct msn_soap_req_data *soap_r
 	if (wtf) {
 		imcb_log(soap_req->ic, "Warning: %d contacts were in both your "
 		         "block and your allow list. Assuming they're all "
-		         "allowed. Use the official WLM client once to fix "
-		         "this.", wtf);
+		         "allowed.", wtf);
 	}
 
 	msn_auth_got_contact_list(soap_req->ic);
