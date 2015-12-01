@@ -231,11 +231,6 @@ static void prplcb_xfer_cancel_remote(PurpleXfer *xfer)
 	}
 }
 
-static void prplcb_xfer_dbg(PurpleXfer *xfer)
-{
-	fprintf(stderr, "prplcb_xfer_dbg 0x%p\n", xfer);
-}
-
 
 /* Sending files (UI->IM): */
 static gboolean prpl_xfer_write(struct file_transfer *ft, char *buffer, unsigned int len);
@@ -340,9 +335,9 @@ PurpleXferUiOps bee_xfer_uiops =
 	prplcb_xfer_destroy,
 	NULL, /* prplcb_xfer_add, */
 	prplcb_xfer_progress,
-	prplcb_xfer_dbg,
+	NULL,
 	prplcb_xfer_cancel_remote,
 	NULL,
 	NULL,
-	prplcb_xfer_dbg,
+	NULL,
 };
