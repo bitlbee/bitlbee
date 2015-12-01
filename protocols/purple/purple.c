@@ -1287,6 +1287,27 @@ static PurpleEventLoopUiOps glib_eventloops =
 	prplcb_ev_remove,
 };
 
+/* Absolutely no connection context at all. Thanks purple! brb crying */
+static void *prplcb_notify_message(PurpleNotifyMsgType type, const char *title,
+                                   const char *primary, const char *secondary)
+{
+	char *text = g_strdup_printf("%s%s - %s%s%s",
+		(type == PURPLE_NOTIFY_MSG_ERROR) ? "Error: " : "",
+		title,
+		primary ?: "",
+		(primary && secondary) ? " - " : "",
+		secondary ?: ""
+	);
+
+	if (local_bee->ui->log) {
+		local_bee->ui->log(local_bee, "purple", text);
+	}
+
+	g_free(text);
+
+	return NULL;
+}
+
 static void *prplcb_notify_email(PurpleConnection *gc, const char *subject, const char *from,
                                  const char *to, const char *url)
 {
@@ -1347,7 +1368,7 @@ static void *prplcb_notify_userinfo(PurpleConnection *gc, const char *who, Purpl
 
 static PurpleNotifyUiOps bee_notify_uiops =
 {
-	NULL,
+	prplcb_notify_message,
 	prplcb_notify_email,
 	NULL,
 	NULL,
