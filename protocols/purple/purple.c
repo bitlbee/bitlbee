@@ -781,9 +781,7 @@ static void prplcb_conn_connected(PurpleConnection *gc)
 	// user list needs to be requested for Gadu-Gadu
 	purple_gg_buddylist_import(gc);
 
-	if (gc->flags & PURPLE_CONNECTION_HTML) {
-		ic->flags |= OPT_DOES_HTML;
-	}
+	ic->flags |= OPT_DOES_HTML;
 }
 
 static void prplcb_conn_disconnected(PurpleConnection *gc)
