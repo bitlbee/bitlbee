@@ -128,6 +128,8 @@ typedef struct bee_ui_funcs {
 	gboolean (*ft_out_start)(struct im_connection *ic, struct file_transfer *ft);
 	void (*ft_close)(struct im_connection *ic, struct file_transfer *ft);
 	void (*ft_finished)(struct im_connection *ic, struct file_transfer *ft);
+
+	void (*log)(bee_t *bee, const char *tag, const char *msg);
 } bee_ui_funcs_t;
 
 

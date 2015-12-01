@@ -1108,6 +1108,13 @@ static void bee_irc_ft_finished(struct im_connection *ic, file_transfer_t *file)
 	}
 }
 
+static void bee_irc_log(bee_t *bee, const char *tag, const char *msg)
+{
+	irc_t *irc = (irc_t *) bee->ui_data;
+
+	irc_rootmsg(irc, "%s - %s", tag, msg);
+}
+
 const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_imc_connected,
 	bee_irc_imc_disconnected,
@@ -1136,4 +1143,6 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_ft_out_start,
 	bee_irc_ft_close,
 	bee_irc_ft_finished,
+
+	bee_irc_log,
 };

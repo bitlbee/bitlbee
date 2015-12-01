@@ -206,6 +206,10 @@ static void serv_got_crap(struct im_connection *ic, char *format, ...)
 	char *text;
 	account_t *a;
 
+	if (!ic->bee->ui->log) {
+		return;
+	}
+
 	va_start(params, format);
 	text = g_strdup_vprintf(format, params);
 	va_end(params);
@@ -224,10 +228,9 @@ static void serv_got_crap(struct im_connection *ic, char *format, ...)
 
 	/* If we found one, include the screenname in the message. */
 	if (a) {
-		/* FIXME(wilmer): ui_log callback or so */
-		irc_rootmsg(ic->bee->ui_data, "%s - %s", ic->acc->tag, text);
+		ic->bee->ui->log(ic->bee, ic->acc->tag, text);
 	} else {
-		irc_rootmsg(ic->bee->ui_data, "%s - %s", ic->acc->prpl->name, text);
+		ic->bee->ui->log(ic->bee, ic->acc->prpl->name, text);
 	}
 
 	g_free(text);
