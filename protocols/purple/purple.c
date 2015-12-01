@@ -1412,11 +1412,8 @@ void purple_initmodule()
 	GString *help;
 	char *dir;
 
-	if (B_EV_IO_READ != PURPLE_INPUT_READ ||
-	    B_EV_IO_WRITE != PURPLE_INPUT_WRITE) {
-		/* FIXME FIXME FIXME FIXME FIXME :-) */
-		exit(1);
-	}
+	g_assert((int) B_EV_IO_READ == (int) PURPLE_INPUT_READ);
+	g_assert((int) B_EV_IO_WRITE == (int) PURPLE_INPUT_WRITE);
 
 	dir = g_strdup_printf("%s/purple", global.conf->configdir);
 	purple_util_set_user_dir(dir);
