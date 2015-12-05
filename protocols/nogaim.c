@@ -621,7 +621,8 @@ int imc_away_send_update(struct im_connection *ic)
 	if (away && *away) {
 		GList *m = ic->acc->prpl->away_states(ic);
 		msg = ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? away : NULL;
-		away = imc_away_state_find(m, away, &msg) ? : m->data;
+		away = imc_away_state_find(m, away, &msg) ? :
+		       (imc_away_state_find(m, "away", &msg) ? : m->data);
 	} else if (ic->acc->flags & ACC_FLAG_STATUS_MESSAGE) {
 		away = NULL;
 		msg = set_getstr(&ic->acc->set, "status") ?
