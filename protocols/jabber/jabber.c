@@ -150,6 +150,12 @@ static void jabber_login(account_t *acc)
 		return;
 	}
 
+	if (strstr(jd->server, ".facebook.com")) {
+		imcb_error(ic, "Facebook's XMPP service is gone. Try this instead: https://wiki.bitlbee.org/HowtoFacebookMQTT");
+		imc_logout(ic, FALSE);
+		return;
+	}
+
 	if ((s = strchr(jd->server, '/'))) {
 		*s = 0;
 		set_setstr(&acc->set, "resource", s + 1);
@@ -169,11 +175,9 @@ static void jabber_login(account_t *acc)
 
 		jd->fd = jd->r_inpa = jd->w_inpa = -1;
 
-		if (strstr(jd->server, ".facebook.com")) {
-			jd->oauth2_service = &oauth2_service_facebook;
-		} else {
-			jd->oauth2_service = &oauth2_service_google;
-		}
+		/* There are no other options atm, so assume google for everything 
+		   Facebook and MSN XMPP used to be here. RIP. */
+		jd->oauth2_service = &oauth2_service_google;
 
 		oauth_params_parse(&p_in, ic->acc->pass);
 

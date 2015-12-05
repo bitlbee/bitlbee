@@ -87,8 +87,6 @@ account_t *account_add(bee_t *bee, struct prpl *prpl, char *user, char *pass)
 		if (strstr(a->user, "@gmail.com") ||
 		    strstr(a->user, "@googlemail.com")) {
 			strcpy(tag, "gtalk");
-		} else if (strstr(a->user, "@chat.facebook.com")) {
-			strcpy(tag, "fb");
 		}
 	}
 

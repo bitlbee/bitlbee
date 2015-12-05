@@ -49,8 +49,6 @@ typedef enum {
 
 	JFLAG_GTALK =  0x100000,        /* Is Google Talk, as confirmed by iq discovery */
 	JFLAG_HIPCHAT = 0x200000,       /* Is hipchat, because prpl->name says so */
-
-	JFLAG_SASL_FB = 0x10000,        /* Trying Facebook authentication. */
 } jabber_flags_t;
 
 typedef enum {
@@ -341,7 +339,6 @@ int sasl_oauth2_get_refresh_token(struct im_connection *ic, const char *msg);
 int sasl_oauth2_refresh(struct im_connection *ic, const char *refresh_token);
 
 extern const struct oauth2_service oauth2_service_google;
-extern const struct oauth2_service oauth2_service_facebook;
 
 /* conference.c */
 struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password);

@@ -1173,7 +1173,7 @@
 
 		<description>
 			<para>
-				By default, BitlBee generates a nickname for every contact by taking its handle and chopping off everything after the @. In some cases, this gives very inconvenient nicknames. The Facebook XMPP server is a good example, as all Facebook XMPP handles are numeric.
+				By default, BitlBee generates a nickname for every contact by taking its handle and chopping off everything after the @. In some cases, this gives very inconvenient nicknames. Some servers use internal identifiers, which are often just numbers.
 			</para>
 
 			<para>
@@ -1187,7 +1187,7 @@
 
 		<description>
 			<para>
-				This enables OAuth authentication for an IM account; right now the Twitter (working for Twitter only) and Jabber (for Google Talk, Facebook and MSN Messenger) module support it.
+				This enables OAuth authentication for an IM account; right now the Twitter (working for Twitter only) and Jabber (for Google Talk only) module support it.
 			</para>
 
 			<para>

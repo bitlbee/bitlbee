@@ -37,15 +37,6 @@ const struct oauth2_service oauth2_service_google =
 	"783993391592.apps.googleusercontent.com",
 	"6C-Zgf7Tr7gEQTPlBhMUgo7R",
 };
-const struct oauth2_service oauth2_service_facebook =
-{
-	"https://www.facebook.com/dialog/oauth",
-	"https://graph.facebook.com/oauth/access_token",
-	"https://www.bitlbee.org/main.php/Facebook/oauth2.html",
-	"offline_access,xmpp_login",
-	"126828914005625",
-	"4b100f0f244d620bf3f15f8b217d4c32",
-};
 
 xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 {
@@ -53,7 +44,7 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	char *s;
-	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_fb = 0, sup_anonymous = 0;
+	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_anonymous = 0;
 	int want_oauth = FALSE, want_hipchat = FALSE, want_anonymous = FALSE;
 	GString *mechs;
 
@@ -88,8 +79,6 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 			sup_anonymous = 1;
 		} else if (c->text && g_strcasecmp(c->text, "X-OAUTH2") == 0) {
 			sup_gtalk = 1;
-		} else if (c->text && g_strcasecmp(c->text, "X-FACEBOOK-PLATFORM") == 0) {
-			sup_fb = 1;
 		}
 
 		if (c->text) {
@@ -100,7 +89,7 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 	}
 
 	if (!want_oauth && !sup_plain && !sup_digest) {
-		if (!sup_gtalk && !sup_fb) {
+		if (!sup_gtalk) {
 			imcb_error(ic, "This server requires OAuth "
 			           "(supported schemes:%s)", mechs->str);
 		} else {
@@ -136,9 +125,6 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 		reply->text = base64_encode((unsigned char *) s, len);
 		reply->text_len = strlen(reply->text);
 		g_free(s);
-	} else if (sup_fb && want_oauth) {
-		xt_add_attr(reply, "mechanism", "X-FACEBOOK-PLATFORM");
-		jd->flags |= JFLAG_SASL_FB;
 	} else if (want_oauth) {
 		imcb_error(ic, "OAuth requested, but not supported by server");
 		imc_logout(ic, FALSE);
@@ -298,27 +284,7 @@ xt_status sasl_pkt_challenge(struct xt_node *node, gpointer data)
 
 	dec = frombase64(node->text);
 
-	if (jd->flags & JFLAG_SASL_FB) {
-		/* New-style Facebook OAauth2 support. Instead of sending a refresh
-		   token, they just send an access token that should never expire. */
-		GSList *p_in = NULL, *p_out = NULL;
-		char time[33];
-
-		oauth_params_parse(&p_in, dec);
-		oauth_params_add(&p_out, "nonce", oauth_params_get(&p_in, "nonce"));
-		oauth_params_add(&p_out, "method", oauth_params_get(&p_in, "method"));
-		oauth_params_free(&p_in);
-
-		g_snprintf(time, sizeof(time), "%lld", (long long) (gettime() * 1000));
-		oauth_params_add(&p_out, "call_id", time);
-		oauth_params_add(&p_out, "api_key", oauth2_service_facebook.consumer_key);
-		oauth_params_add(&p_out, "v", "1.0");
-		oauth_params_add(&p_out, "format", "XML");
-		oauth_params_add(&p_out, "access_token", jd->oauth2_access_token);
-
-		reply = oauth_params_string(p_out);
-		oauth_params_free(&p_out);
-	} else if (!(s = sasl_get_part(dec, "rspauth"))) {
+	if (!(s = sasl_get_part(dec, "rspauth"))) {
 		/* See RFC 2831 for for information. */
 		md5_state_t A1, A2, H;
 		md5_byte_t A1r[16], A2r[16], Hr[16];
