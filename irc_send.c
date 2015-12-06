@@ -201,34 +201,41 @@ void irc_send_kick(irc_channel_t *ic, irc_user_t *iu, irc_user_t *kicker, const 
 	          kicker->host, ic->name, iu->nick, reason ? : "");
 }
 
+#define IRC_NAMES_LEN 385
+
 void irc_send_names(irc_channel_t *ic)
 {
 	GSList *l;
-	char namelist[385] = "";
+	GString *namelist = g_string_sized_new(IRC_NAMES_LEN);
 
 	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
 	for (l = ic->users; l; l = l->next) {
 		irc_channel_user_t *icu = l->data;
 		irc_user_t *iu = icu->iu;
+		size_t extra_len = strlen(iu->nick);
+		char prefix;
 
-		if (strlen(namelist) + strlen(iu->nick) > sizeof(namelist) - 4) {
-			irc_send_num(ic->irc, 353, "= %s :%s", ic->name, namelist);
-			*namelist = 0;
+		if (namelist->len + extra_len > IRC_NAMES_LEN - 4) {
+			irc_send_num(ic->irc, 353, "= %s :%s", ic->name, namelist->str);
+			g_string_truncate(namelist, 0);
 		}
 
-		namelist[strlen(namelist) + 1] = '\0';
-		namelist[strlen(namelist)] = irc_channel_user_get_prefix(icu);
+		if ((prefix = irc_channel_user_get_prefix(icu))) {
+			g_string_append_c(namelist, prefix);
+		}
 
-		strcat(namelist, iu->nick);
-		strcat(namelist, " ");
+		g_string_append(namelist, iu->nick);
+		g_string_append_c(namelist, ' ');
 	}
 
-	if (*namelist) {
-		irc_send_num(ic->irc, 353, "= %s :%s", ic->name, namelist);
+	if (namelist->len) {
+		irc_send_num(ic->irc, 353, "= %s :%s", ic->name, namelist->str);
 	}
 
 	irc_send_num(ic->irc, 366, "%s :End of /NAMES list", ic->name);
+
+	g_string_free(namelist, TRUE);
 }
 
 void irc_send_topic(irc_channel_t *ic, gboolean topic_change)
