@@ -71,6 +71,7 @@ typedef enum {
 	CAP_MULTI_PREFIX = (1 << 1),
 	CAP_EXTENDED_JOIN = (1 << 2),
 	CAP_AWAY_NOTIFY = (1 << 3),
+	CAP_USERHOST_IN_NAMES = (1 << 4),
 } irc_cap_flag_t;
 
 struct irc_user;

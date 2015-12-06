@@ -207,6 +207,7 @@ void irc_send_names(irc_channel_t *ic)
 {
 	GSList *l;
 	GString *namelist = g_string_sized_new(IRC_NAMES_LEN);
+	gboolean uhnames = (ic->irc->caps & CAP_USERHOST_IN_NAMES);
 
 	/* RFCs say there is no error reply allowed on NAMES, so when the
 	   channel is invalid, just give an empty reply. */
@@ -215,6 +216,10 @@ void irc_send_names(irc_channel_t *ic)
 		irc_user_t *iu = icu->iu;
 		size_t extra_len = strlen(iu->nick);
 		char prefix;
+
+		if (uhnames) {
+			extra_len += strlen(iu->user) + strlen(iu->host) + 2;
+		}
 
 		if (namelist->len + extra_len > IRC_NAMES_LEN - 4) {
 			irc_send_num(ic->irc, 353, "= %s :%s", ic->name, namelist->str);
@@ -225,8 +230,12 @@ void irc_send_names(irc_channel_t *ic)
 			g_string_append_c(namelist, prefix);
 		}
 
-		g_string_append(namelist, iu->nick);
-		g_string_append_c(namelist, ' ');
+		if (uhnames) {
+			g_string_append_printf(namelist, "%s!%s@%s ", iu->nick, iu->user, iu->host);
+		} else {
+			g_string_append(namelist, iu->nick);
+			g_string_append_c(namelist, ' ');
+		}
 	}
 
 	if (namelist->len) {

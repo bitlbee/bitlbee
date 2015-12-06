@@ -41,6 +41,7 @@ static const cap_info_t supported_caps[] = {
 	{"multi-prefix", CAP_MULTI_PREFIX},
 	{"extended-join", CAP_EXTENDED_JOIN},
 	{"away-notify", CAP_AWAY_NOTIFY},
+	{"userhost-in-names", CAP_USERHOST_IN_NAMES},
 	{NULL},
 };
 
