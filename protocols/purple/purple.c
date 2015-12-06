@@ -650,7 +650,7 @@ struct groupchat *purple_chat_with(struct im_connection *ic, char *who)
 
 	/* Call the fucker. */
 	callback = (void *) mi->callback;
-	callback(&pb->node, menu->data);
+	callback(&pb->node, mi->data);
 
 	return NULL;
 }
