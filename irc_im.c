@@ -341,7 +341,7 @@ static gboolean bee_irc_user_action_response(bee_t *bee, bee_user_t *bu, const c
 	return TRUE;
 }
 
-static gboolean bee_irc_user_nick_update(irc_user_t *iu);
+static gboolean bee_irc_user_nick_update(irc_user_t *iu, gboolean offline_only);
 
 static gboolean bee_irc_user_fullname(bee_t *bee, bee_user_t *bu)
 {
@@ -369,14 +369,21 @@ static gboolean bee_irc_user_fullname(bee_t *bee, bee_user_t *bu)
 		imcb_log(bu->ic, "User `%s' changed name to `%s'", iu->nick, iu->fullname);
 	}
 
-	bee_irc_user_nick_update(iu);
+	bee_irc_user_nick_update(iu, TRUE);
 
 	return TRUE;
 }
 
 static gboolean bee_irc_user_nick_hint(bee_t *bee, bee_user_t *bu, const char *hint)
 {
-	bee_irc_user_nick_update((irc_user_t *) bu->ui_data);
+	bee_irc_user_nick_update((irc_user_t *) bu->ui_data, TRUE);
+
+	return TRUE;
+}
+
+static gboolean bee_irc_user_nick_change(bee_t *bee, bee_user_t *bu, const char *nick)
+{
+	bee_irc_user_nick_update((irc_user_t *) bu->ui_data, FALSE);
 
 	return TRUE;
 }
@@ -385,30 +392,19 @@ static gboolean bee_irc_user_group(bee_t *bee, bee_user_t *bu)
 {
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
 	irc_t *irc = (irc_t *) bee->ui_data;
-	bee_user_flags_t online;
-
-	/* Take the user offline temporarily so we can change the nick (if necessary). */
-	if ((online = bu->flags & BEE_USER_ONLINE)) {
-		bu->flags &= ~BEE_USER_ONLINE;
-	}
 
 	bee_irc_channel_update(irc, NULL, iu);
-	bee_irc_user_nick_update(iu);
-
-	if (online) {
-		bu->flags |= online;
-		bee_irc_channel_update(irc, NULL, iu);
-	}
+	bee_irc_user_nick_update(iu, FALSE);
 
 	return TRUE;
 }
 
-static gboolean bee_irc_user_nick_update(irc_user_t *iu)
+static gboolean bee_irc_user_nick_update(irc_user_t *iu, gboolean offline_only)
 {
 	bee_user_t *bu = iu->bu;
 	char *newnick;
 
-	if (bu->flags & BEE_USER_ONLINE) {
+	if (offline_only && bu->flags & BEE_USER_ONLINE) {
 		/* Ignore if the user is visible already. */
 		return TRUE;
 	}
@@ -431,21 +427,14 @@ static gboolean bee_irc_user_nick_update(irc_user_t *iu)
 void bee_irc_user_nick_reset(irc_user_t *iu)
 {
 	bee_user_t *bu = iu->bu;
-	bee_user_flags_t online;
 
 	if (bu == FALSE) {
 		return;
 	}
 
-	/* In this case, pretend the user is offline. */
-	if ((online = bu->flags & BEE_USER_ONLINE)) {
-		bu->flags &= ~BEE_USER_ONLINE;
-	}
-
 	nick_del(bu);
-	bee_irc_user_nick_update(iu);
+	bee_irc_user_nick_update(iu, FALSE);
 
-	bu->flags |= online;
 }
 
 /* IRC->IM calls */
@@ -1145,4 +1134,5 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_ft_finished,
 
 	bee_irc_log,
+	bee_irc_user_nick_change,
 };

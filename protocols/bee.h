@@ -130,6 +130,7 @@ typedef struct bee_ui_funcs {
 	void (*ft_finished)(struct im_connection *ic, struct file_transfer *ft);
 
 	void (*log)(bee_t *bee, const char *tag, const char *msg);
+	gboolean (*user_nick_change)(bee_t *bee, bee_user_t *bu, const char *hint);
 } bee_ui_funcs_t;
 
 

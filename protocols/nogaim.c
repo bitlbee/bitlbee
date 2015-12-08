@@ -478,9 +478,8 @@ void imcb_remove_buddy(struct im_connection *ic, const char *handle, char *group
 	bee_user_free(ic->bee, bee_user_by_handle(ic->bee, ic, handle));
 }
 
-/* Mainly meant for ICQ (and now also for Jabber conferences) to allow IM
-   modules to suggest a nickname for a handle. */
-void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const char *nick)
+/* Implements either imcb_buddy_nick_hint() or imcb_buddy_nick_change() depending on the value of 'change' */
+static void buddy_nick_hint_or_change(struct im_connection *ic, const char *handle, const char *nick, gboolean change)
 {
 	bee_t *bee = ic->bee;
 	bee_user_t *bu = bee_user_by_handle(bee, ic, handle);
@@ -492,11 +491,24 @@ void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const ch
 	g_free(bu->nick);
 	bu->nick = g_strdup(nick);
 
-	if (bee->ui->user_nick_hint) {
+	if (change && bee->ui->user_nick_change) {
+		bee->ui->user_nick_change(bee, bu, nick);
+	} else if (!change && bee->ui->user_nick_hint) {
 		bee->ui->user_nick_hint(bee, bu, nick);
 	}
 }
 
+/* Soft variant, for newly created users. Does nothing if it's already online */
+void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const char *nick)
+{
+	buddy_nick_hint_or_change(ic, handle, nick, FALSE);
+}
+
+/* Hard variant, always changes the nick */
+void imcb_buddy_nick_change(struct im_connection *ic, const char *handle, const char *nick)
+{
+	buddy_nick_hint_or_change(ic, handle, nick, TRUE);
+}
 
 struct imcb_ask_cb_data {
 	struct im_connection *ic;
