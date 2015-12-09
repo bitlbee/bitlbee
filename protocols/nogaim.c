@@ -610,7 +610,6 @@ static char *imc_away_state_find(GList *gcm, char *away, char **message);
 int imc_away_send_update(struct im_connection *ic)
 {
 	char *away, *msg = NULL;
-	GList *m = NULL;
 
 	if (ic->acc->prpl->away_states == NULL ||
 	    ic->acc->prpl->set_away == NULL) {
@@ -620,7 +619,7 @@ int imc_away_send_update(struct im_connection *ic)
 	away = set_getstr(&ic->acc->set, "away") ?
 	       : set_getstr(&ic->bee->set, "away");
 	if (away && *away) {
-		m = ic->acc->prpl->away_states(ic);
+		GList *m = ic->acc->prpl->away_states(ic);
 		msg = ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? away : NULL;
 		away = imc_away_state_find(m, away, &msg) ? :
 		       (imc_away_state_find(m, "away", &msg) ? : m->data);
@@ -631,10 +630,6 @@ int imc_away_send_update(struct im_connection *ic)
 	}
 
 	ic->acc->prpl->set_away(ic, away, msg);
-
-	while (m) {
-		m = g_list_delete_link(m, m);
-	}
 
 	return 1;
 }
