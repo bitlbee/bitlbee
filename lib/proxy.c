@@ -541,7 +541,7 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 	phb->func = func;
 	phb->data = data;
 
-	if (proxyhost[0] && proxyport > 0 && proxytype >= 0 && proxytype <= G_N_ELEMENTS(proxy_connect_funcs_array)) {
+	if (proxyhost[0] && proxyport > 0 && proxytype >= 0 && proxytype < G_N_ELEMENTS(proxy_connect_funcs_array)) {
 		fun = proxy_connect_funcs_array[proxytype];
 	} else {
 		fun = proxy_connect_none;
