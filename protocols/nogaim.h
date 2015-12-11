@@ -321,7 +321,6 @@ G_MODULE_EXPORT void imcb_ask_add(struct im_connection *ic, const char *handle, 
  * server confirms that the add was successful. Don't forget to do this! */
 G_MODULE_EXPORT void imcb_add_buddy(struct im_connection *ic, const char *handle, const char *group);
 G_MODULE_EXPORT void imcb_remove_buddy(struct im_connection *ic, const char *handle, char *group);
-G_MODULE_EXPORT struct buddy *imcb_find_buddy(struct im_connection *ic, char *handle);
 G_MODULE_EXPORT void imcb_rename_buddy(struct im_connection *ic, const char *handle, const char *realname);
 G_MODULE_EXPORT void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const char *nick);
 G_MODULE_EXPORT void imcb_buddy_action_response(bee_user_t *bu, const char *action, char * const args[], void *data);
