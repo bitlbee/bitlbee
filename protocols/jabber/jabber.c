@@ -433,6 +433,27 @@ static int jabber_buddy_msg(struct im_connection *ic, char *who, char *message, 
 		bud->flags |= JBFLAG_PROBED_XEP85;
 	}
 
+	/* XEP-0364 suggests we add message processing hints (XEP-0334) to OTR messages,
+	   mostly to avoid carbons (XEP-0280) and server-side message archiving.
+	   OTR messages are roughly like this: /^\?OTR(.*\?| Error:|:)/
+	   But I'm going to simplify it to messages starting with "?OTR". */
+	if (g_str_has_prefix(message, "?OTR")) {
+		int i;
+		char *hints[] = {
+			"no-copy", XMLNS_HINTS,
+			"no-permanent-store", XMLNS_HINTS,
+			"private", XMLNS_CARBONS,
+			NULL
+		};
+			
+		for (i = 0; hints[i]; i += 2) {
+			struct xt_node *hint;
+			hint = xt_new_node(hints[i], NULL, NULL);
+			xt_add_attr(hint, "xmlns", hints[i + 1]);
+			xt_add_child(node, hint);
+		}
+	}
+
 	st = jabber_write_packet(ic, node);
 	xt_free_node(node);
 
