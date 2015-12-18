@@ -21,6 +21,11 @@
 
 #include "bitlbee.h"
 
+#ifdef WITH_PURPLE
+/* For compatibility with builds that include both purple and this oscar module */
+#include "aim_prefixes.h"
+#endif
+
 /* XXX adjust these based on autoconf-detected platform */
 typedef guint32 aim_snacid_t;
 typedef guint16 flap_seqnum_t;
