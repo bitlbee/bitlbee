@@ -750,11 +750,11 @@ GHashTable *prplcb_ui_info()
 
 static PurpleCoreUiOps bee_core_uiops =
 {
-	NULL,
-	NULL,
-	purple_ui_init,
-	NULL,
-	prplcb_ui_info,
+	NULL,                      /* ui_prefs_init */
+	NULL,                      /* debug_ui_init */
+	purple_ui_init,            /* ui_init */
+	NULL,                      /* quit */
+	prplcb_ui_info,            /* get_ui_info */
 };
 
 static void prplcb_conn_progress(PurpleConnection *gc, const char *text, size_t step, size_t step_count)
@@ -815,14 +815,14 @@ static void prplcb_conn_report_disconnect_reason(PurpleConnection *gc, PurpleCon
 
 static PurpleConnectionUiOps bee_conn_uiops =
 {
-	prplcb_conn_progress,
-	prplcb_conn_connected,
-	prplcb_conn_disconnected,
-	prplcb_conn_notice,
-	NULL,
-	NULL,
-	NULL,
-	prplcb_conn_report_disconnect_reason,
+	prplcb_conn_progress,                    /* connect_progress */
+	prplcb_conn_connected,                   /* connected */
+	prplcb_conn_disconnected,                /* disconnected */
+	prplcb_conn_notice,                      /* notice */
+	NULL,                                    /* report_disconnect */
+	NULL,                                    /* network_connected */
+	NULL,                                    /* network_disconnected */
+	prplcb_conn_report_disconnect_reason,    /* report_disconnect_reason */
 };
 
 static void prplcb_blist_update(PurpleBuddyList *list, PurpleBlistNode *node)
@@ -897,11 +897,11 @@ static void prplcb_blist_remove(PurpleBuddyList *list, PurpleBlistNode *node)
 
 static PurpleBlistUiOps bee_blist_uiops =
 {
-	NULL,
-	prplcb_blist_new,
-	NULL,
-	prplcb_blist_update,
-	prplcb_blist_remove,
+	NULL,                      /* new_list */
+	prplcb_blist_new,          /* new_node */
+	NULL,                      /* show */
+	prplcb_blist_update,       /* update */
+	prplcb_blist_remove,       /* remove */
 };
 
 void prplcb_conv_new(PurpleConversation *conv)
@@ -1198,13 +1198,13 @@ void purple_request_input_callback(guint id, struct im_connection *ic,
 
 static PurpleRequestUiOps bee_request_uiops =
 {
-	prplcb_request_input,
-	NULL,
-	prplcb_request_action,
-	NULL,
-	NULL,
-	prplcb_close_request,
-	NULL,
+	prplcb_request_input,      /* request_input */
+	NULL,                      /* request_choice */
+	prplcb_request_action,     /* request_action */
+	NULL,                      /* request_fields */
+	NULL,                      /* request_file */
+	prplcb_close_request,      /* close_request */
+	NULL,                      /* request_folder */
 };
 
 static void prplcb_privacy_permit_added(PurpleAccount *account, const char *name)
@@ -1245,10 +1245,10 @@ static void prplcb_privacy_deny_removed(PurpleAccount *account, const char *name
 
 static PurplePrivacyUiOps bee_privacy_uiops =
 {
-	prplcb_privacy_permit_added,
-	prplcb_privacy_permit_removed,
-	prplcb_privacy_deny_added,
-	prplcb_privacy_deny_removed,
+	prplcb_privacy_permit_added,       /* permit_added */
+	prplcb_privacy_permit_removed,     /* permit_removed */
+	prplcb_privacy_deny_added,         /* deny_added */
+	prplcb_privacy_deny_removed,       /* deny_removed */
 };
 
 static void prplcb_debug_print(PurpleDebugLevel level, const char *category, const char *arg_s)
@@ -1258,7 +1258,7 @@ static void prplcb_debug_print(PurpleDebugLevel level, const char *category, con
 
 static PurpleDebugUiOps bee_debug_uiops =
 {
-	prplcb_debug_print,
+	prplcb_debug_print,        /* print */
 };
 
 static guint prplcb_ev_timeout_add(guint interval, GSourceFunc func, gpointer udata)
@@ -1279,10 +1279,10 @@ static gboolean prplcb_ev_remove(guint id)
 
 static PurpleEventLoopUiOps glib_eventloops =
 {
-	prplcb_ev_timeout_add,
-	prplcb_ev_remove,
-	prplcb_ev_input_add,
-	prplcb_ev_remove,
+	prplcb_ev_timeout_add,     /* timeout_add */
+	prplcb_ev_remove,          /* timeout_remove */
+	prplcb_ev_input_add,       /* input_add */
+	prplcb_ev_remove,          /* input_remove */
 };
 
 /* Absolutely no connection context at all. Thanks purple! brb crying */
@@ -1366,13 +1366,13 @@ static void *prplcb_notify_userinfo(PurpleConnection *gc, const char *who, Purpl
 
 static PurpleNotifyUiOps bee_notify_uiops =
 {
-	prplcb_notify_message,
-	prplcb_notify_email,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	prplcb_notify_userinfo,
+	prplcb_notify_message,     /* notify_message */
+	prplcb_notify_email,       /* notify_email */
+	NULL,                      /* notify_emails */
+	NULL,                      /* notify_formatted */
+	NULL,                      /* notify_searchresults */
+	NULL,                      /* notify_searchresults_new_rows */
+	prplcb_notify_userinfo,    /* notify_userinfo */
 };
 
 static void *prplcb_account_request_authorize(PurpleAccount *account, const char *remote_user,
@@ -1399,11 +1399,11 @@ static void *prplcb_account_request_authorize(PurpleAccount *account, const char
 
 static PurpleAccountUiOps bee_account_uiops =
 {
-	NULL,
-	NULL,
-	NULL,
-	prplcb_account_request_authorize,
-	NULL,
+	NULL,                              /* notify_added */
+	NULL,                              /* status_changed */
+	NULL,                              /* request_add */
+	prplcb_account_request_authorize,  /* request_authorize */
+	NULL,                              /* close_account_request */
 };
 
 extern PurpleXferUiOps bee_xfer_uiops;

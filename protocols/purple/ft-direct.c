@@ -192,15 +192,15 @@ gssize prplcb_xfer_read(PurpleXfer *xfer, guchar **buffer, gssize size)
 
 PurpleXferUiOps bee_xfer_uiops =
 {
-	prplcb_xfer_new,
-	prplcb_xfer_dbg,
-	prplcb_xfer_dbg,
-	prplcb_xfer_progress,
-	prplcb_xfer_dbg,
-	prplcb_xfer_dbg,
-	prplcb_xfer_write,
-	prplcb_xfer_read,
-	prplcb_xfer_dbg,
+	prplcb_xfer_new,           /* new_xfer */
+	prplcb_xfer_dbg,           /* destroy */
+	prplcb_xfer_dbg,           /* add_xfer */
+	prplcb_xfer_progress,      /* update_progress */
+	prplcb_xfer_dbg,           /* cancel_local */
+	prplcb_xfer_dbg,           /* cancel_remote */
+	prplcb_xfer_write,         /* ui_write */
+	prplcb_xfer_read,          /* ui_read */
+	prplcb_xfer_dbg,           /* data_not_sent */
 };
 
 static gboolean prplcb_xfer_send_cb(gpointer data, gint fd, b_input_condition cond);
