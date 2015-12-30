@@ -269,7 +269,6 @@ static int msn_soap_passport_sso_build_request(struct msn_soap_req_data *soap_re
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
 	struct msn_data *md = ic->proto_data;
-	char pass[MAX_PASSPORT_PWLEN + 1];
 
 	if (sd->redirect) {
 		soap_req->url = sd->redirect;
@@ -285,10 +284,8 @@ static int msn_soap_passport_sso_build_request(struct msn_soap_req_data *soap_re
 		soap_req->url = g_strdup(SOAP_PASSPORT_SSO_URL);
 	}
 
-	strncpy(pass, ic->acc->pass, MAX_PASSPORT_PWLEN);
-	pass[MAX_PASSPORT_PWLEN] = '\0';
 	soap_req->payload = g_markup_printf_escaped(SOAP_PASSPORT_SSO_PAYLOAD,
-	                                            ic->acc->user, pass, md->pp_policy);
+	                                            ic->acc->user, ic->acc->pass, md->pp_policy);
 
 	return MSN_SOAP_OK;
 }
