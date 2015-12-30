@@ -285,6 +285,8 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)
 		} else if (num_parts >= 3) {
 			md->msglen = atoi(cmd[2]);
 		}
+	} else if (strcmp(cmd[0], "RML") == 0) {
+		/* Move along, nothing to see here */
 	} else if (strcmp(cmd[0], "CHL") == 0) {
 		char *resp;
 		int st;
