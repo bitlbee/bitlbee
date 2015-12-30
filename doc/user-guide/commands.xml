@@ -1443,6 +1443,10 @@
 			<para>
 				This setting only applies to private messages. Self messages in groupchats are always shown, since they haven't caused issues in any clients so far.
 			</para>
+
+			<para>
+				More information: <emphasis>https://wiki.bitlbee.org/SelfMessages</emphasis>
+			</para>
 		</description>
 	</bitlbee-setting>
 
