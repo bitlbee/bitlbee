@@ -3,6 +3,53 @@ found in the git commit logs, for example you can try:
 
 https://github.com/bitlbee/bitlbee/commits/master
 
+Version 3.4.2:
+- irc:
+  * Self-messages (messages sent by yourself from other IM clients), given
+    support by the IM protocols and your IRC client. See this for details:
+    https://wiki.bitlbee.org/SelfMessages
+  * IRCv3.1 support and part of 3.2: cap-3.2, sasl-3.2, multi-prefix,
+    away-notify, extended-join, userhost-in-names
+  * Send numeric errors when failing to join a channel, to not confuse clients
+  * Channel autojoins should be more reliable now.
+- jabber:
+  * Carbons (XEP-0280), for self-message support. It's not widely supported
+    by most public XMPP servers (easier if you host your own), but this will
+    probably change in the next few years. Thanks kormat for the original patch.
+  * Fix typing notifications between two bitlbee users or with gtalk users
+  * Remove facebook XMPP code, point people at bitlbee-facebook.
+  * Show groupchat kick/ban/leave reasons
+  * SASL ANONYMOUS (XEP-0175), for "guest" logins, see "help set anonymous"
+  * Hipchat: 'chat add hipchat "channel name"' now tries to guess the JID
+- purple:
+  * Fix problems remembering SSL certificates as trusted
+  * Fix /join #channel, which joined a differently named channel
+  * Fix crash when doing "chat with" with skypeweb
+  * Fix html entities appearing in some protocols
+  * Fix setting away states in jabber, which failed silently
+  * Implement notify_message UI op, to be able to show some error messages.
+- skype:
+  * Show all messages as groupchats since we can't tell which ones are private.
+  * This plugin is mostly-deprecated and mostly-broken but it's still useful
+    for p2p-based groupchats, which aren't delivered over newer protocols.
+    Everyone else should use the skypeweb purple plugin or msn instead.
+- msn:
+  * Minor tweaks. Faster login, better error reporting, fixed add/remove.
+    Still MSNP21. Disregard that "Next release!" in the previous release.
+- otr:
+  * Don't use NOTICE for user messages (revmischa)
+  * Fix crashes when using the jabber xmlconsole
+  * A few minor fixes: color multiline messages, filter incoming color codes.
+- Packaging:
+  * Show ./configure args in bitlbee -V, config.h and Makefile.settings
+  * Allow setting the plugin dir in bitlbee.conf, for NixOS (anderspapitto)
+  * Improved cross compiler support (gamaral)
+- Other important bugfixes:
+  * Fix potential crashes when leaving temporary channels
+  * Fix all sorts of crashing bugs when cancelling in-progress connections.
+
+Finished ... 200XX
+
 Version 3.4.1:
 - msn:
   * Upgraded protocol to MSNP21, works again (dx)

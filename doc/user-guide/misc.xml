@@ -444,4 +444,21 @@ See the full changelog for details!
 
 </sect1>
 
+<sect1 id="whatsnew030402">
+<title>New stuff in BitlBee 3.4.2</title>
+
+<simplelist>
+	<member><emphasis>irc:</emphasis> Self-messages (messages sent by yourself from other IM clients), see <emphasis>help set self_messages</emphasis>. IRCv3.1 support and part of 3.2. Many important groupchat related bugfixes.</member>
+	<member><emphasis>jabber:</emphasis> Carbons, see <emphasis>help set carbons</emphasis>. Removed facebook XMPP, use bitlbee-facebook instead. SASL ANONYMOUS login, see <emphasis>help set anonymous</emphasis>.</member>
+	<member><emphasis>hipchat:</emphasis> Channels can now be added with <emphasis>chat add hipchat "channel name"</emphasis> which tries to guess the channel JID.</member>
+	<member><emphasis>skype:</emphasis> Show all messages as groupchats since we can't tell which ones are private. This plugin is mostly-deprecated and mostly-broken, use the skypeweb purple plugin or msn instead.</member>
+	<member><emphasis>purple:</emphasis> Fix problems remembering SSL certificates as trusted. Groupchat related fixes. Better error reporting. Fixed setting jabber away states.</member>
+</simplelist>
+
+<para>
+	And lots of bugfixes / stability improvements. See the full changelog for details!
+</para>
+
+</sect1>
+
 </chapter>
