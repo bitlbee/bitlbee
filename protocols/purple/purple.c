@@ -1176,7 +1176,18 @@ void* prplcb_request_input(const char *title, const char *primary,
 	g_hash_table_insert(pd->input_requests, GUINT_TO_POINTER(id), ri);
 
 	imcb_add_buddy(ic, ri->buddy, NULL);
-	imcb_buddy_msg(ic, ri->buddy, secondary, 0, 0);
+
+	if (title && *title) {
+		imcb_buddy_msg(ic, ri->buddy, title, 0, 0);
+	}
+
+	if (primary && *primary) {
+		imcb_buddy_msg(ic, ri->buddy, primary, 0, 0);
+	}
+
+	if (secondary && *secondary) {
+		imcb_buddy_msg(ic, ri->buddy, secondary, 0, 0);
+	}
 
 	return ri;
 }
