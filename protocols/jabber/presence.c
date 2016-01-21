@@ -221,13 +221,7 @@ int presence_send_update(struct im_connection *ic)
 	   Trillian seem to do this right. */
 	cap = xt_new_node("c", NULL, NULL);
 	xt_add_attr(cap, "xmlns", XMLNS_CAPS);
-
-	if (jd->flags & JFLAG_HIPCHAT) {
-		/* hipchat specific node, whitelisted by request to receive self-messages */
-		xt_add_attr(cap, "node", "http://bitlbee.org/xmpp/caps/hipchat");
-	} else {
-		xt_add_attr(cap, "node", "http://bitlbee.org/xmpp/caps");
-	}
+	xt_add_attr(cap, "node", "http://bitlbee.org/xmpp/caps");
 	xt_add_attr(cap, "ver", BITLBEE_VERSION);   /* The XEP wants this hashed, but nobody's doing that. */
 	xt_add_child(node, cap);
 
