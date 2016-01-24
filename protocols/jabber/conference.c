@@ -478,7 +478,9 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 	if (bud) {
 		bare_jid = jabber_get_bare_jid(bud->ext_jid ? bud->ext_jid : bud->full_jid);
 		final_from = bare_jid;
-		flags = (bud == jc->me) ? OPT_SELFMESSAGE : 0;
+		if (bud == jc->me || (g_strcasecmp(final_from, ic->acc->user) == 0)) {
+			flags = OPT_SELFMESSAGE;
+		}
 	} else {
 		final_from = nick;
 	}
