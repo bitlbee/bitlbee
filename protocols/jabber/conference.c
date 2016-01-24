@@ -243,6 +243,19 @@ void jabber_chat_invite(struct groupchat *c, char *who, char *message)
 	xt_free_node(node);
 }
 
+static int jabber_chat_has_other_resources(struct im_connection *ic, struct jabber_buddy *bud)
+{
+	struct jabber_buddy *cur;
+
+	for (cur = jabber_buddy_by_jid(ic, bud->bare_jid, GET_BUDDY_FIRST); cur; cur = cur->next) {
+		if (cur != bud && jabber_compare_jid(cur->ext_jid, bud->ext_jid)) {
+			return TRUE;
+		}
+	}
+	
+	return FALSE;
+}
+
 /* Not really the same syntax as the normal pkt_ functions, but this isn't
    called by the xmltree parser directly and this way I can add some extra
    parameters so we won't have to repeat too many things done by the caller
@@ -332,7 +345,7 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 			*s = '/';
 		}
 	} else if (type) { /* type can only be NULL or "unavailable" in this function */
-		if ((bud->flags & JBFLAG_IS_CHATROOM) && bud->ext_jid) {
+		if ((bud->flags & JBFLAG_IS_CHATROOM) && bud->ext_jid && !jabber_chat_has_other_resources(ic, bud)) {
 			char *reason = NULL;
 			char *status = NULL;
 			char *status_text = NULL;
