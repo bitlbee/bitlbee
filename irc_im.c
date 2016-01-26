@@ -449,7 +449,8 @@ static gboolean bee_irc_user_privmsg(irc_user_t *iu, const char *msg)
 		return FALSE;
 	}
 
-	if ((away = irc_user_get_away(iu)) &&
+	if (iu->last_channel == NULL &&
+	    (away = irc_user_get_away(iu)) &&
 	    time(NULL) >= iu->away_reply_timeout) {
 		irc_send_num(iu->irc, 301, "%s :%s", iu->nick, away);
 		iu->away_reply_timeout = time(NULL) +
