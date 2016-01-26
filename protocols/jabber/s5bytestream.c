@@ -927,6 +927,8 @@ void jabber_si_set_proxies(struct bs_transfer *bt)
 		}
 		proxy = next;
 	}
+
+	g_free(proxysetting);
 }
 
 /*
