@@ -1237,6 +1237,7 @@ static void cmd_group(irc_t *irc, char **cmd)
 static void cmd_transfer(irc_t *irc, char **cmd)
 {
 	GSList *files = irc->file_transfers;
+	GSList *next;
 
 	enum { LIST, REJECT, CANCEL };
 	int subcmd = LIST;
@@ -1254,7 +1255,8 @@ static void cmd_transfer(irc_t *irc, char **cmd)
 		subcmd = CANCEL;
 	}
 
-	for (; files; files = g_slist_next(files)) {
+	for (; files; files = next) {
+		next = files->next;
 		file_transfer_t *file = files->data;
 
 		switch (subcmd) {
