@@ -119,12 +119,6 @@ static gboolean bee_irc_user_status(bee_t *bee, bee_user_t *bu, bee_user_t *old)
 		iu->flags |= IRC_USER_AWAY;
 	}
 
-	if ((irc->caps & CAP_AWAY_NOTIFY) &&
-	    ((bu->flags & BEE_USER_AWAY) != (old->flags & BEE_USER_AWAY) ||
-	     (bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE))) {
-		irc_send_away_notify(iu);
-	}
-
 	if ((bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE)) {
 		if (bu->flags & BEE_USER_ONLINE) {
 			if (g_hash_table_lookup(irc->watches, iu->key)) {
@@ -152,6 +146,12 @@ static gboolean bee_irc_user_status(bee_t *bee, bee_user_t *bu, bee_user_t *old)
 	iu->away_reply_timeout = 0;
 
 	bee_irc_channel_update(irc, NULL, iu);
+
+	if ((irc->caps & CAP_AWAY_NOTIFY) &&
+	    ((bu->flags & BEE_USER_AWAY) != (old->flags & BEE_USER_AWAY) ||
+	     (bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE))) {
+		irc_send_away_notify(iu);
+	}
 
 	return TRUE;
 }
