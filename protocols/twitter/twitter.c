@@ -473,11 +473,6 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 		url = g_match_info_fetch(match_info, 2);
 		url_len_diff += target_len - g_utf8_strlen(url, -1);
 
-		/* Add another character for https://t.co/... URLs */
-		if ((s = g_match_info_fetch(match_info, 3))) {
-			url_len_diff += 1;
-			g_free(s);
-		}
 		g_free(url);
 		g_match_info_next(match_info, NULL);
 	}
@@ -540,7 +535,7 @@ static void twitter_init(account_t * acc)
 
 	if (strcmp(acc->prpl->name, "twitter") == 0) {
 		def_url = TWITTER_API_URL;
-		def_tul = "22";
+		def_tul = "23";
 		def_mentions = "true";
 	} else {                /* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
 		def_url = IDENTICA_API_URL;
