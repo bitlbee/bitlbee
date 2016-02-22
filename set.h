@@ -48,6 +48,7 @@ typedef enum {
 	SET_HIDDEN = 0x0200,   /* Don't show up in setting lists. Mostly for internal storage. */
 	SET_PASSWORD = 0x0400, /* Value shows up in settings list as "********". */
 	SET_HIDDEN_DEFAULT = 0x0800, /* Hide unless changed from default. */
+	SET_LOCKED = 0x1000    /* Setting is locked, don't allow changing it */
 } set_flags_t;
 
 typedef struct set {
