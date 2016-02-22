@@ -56,6 +56,7 @@ conf_t *conf_load(int argc, char *argv[])
 	conf->authmode = AUTHMODE_OPEN;
 	conf->auth_pass = NULL;
 	conf->oper_pass = NULL;
+	conf->allow_account_add = 1;
 	conf->configdir = g_strdup(CONFIG);
 	conf->plugindir = g_strdup(PLUGINDIR);
 	conf->pidfile = g_strdup(PIDFILE);
@@ -245,6 +246,12 @@ static int conf_loadini(conf_t *conf, char *file)
 			} else if (g_strcasecmp(ini->key, "operpassword") == 0) {
 				g_free(conf->oper_pass);
 				conf->oper_pass = g_strdup(ini->value);
+			} else if (g_strcasecmp(ini->key, "allowaccountadd") == 0) {
+				if (sscanf(ini->value, "%d", &i) != 1) {
+					fprintf(stderr, "Invalid %s value: %s\n", ini->key, ini->value);
+					return 0;
+				}
+				conf->allow_account_add = !!i;
 			} else if (g_strcasecmp(ini->key, "hostname") == 0) {
 				g_free(conf->hostname);
 				conf->hostname = g_strdup(ini->value);
