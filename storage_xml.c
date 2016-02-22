@@ -85,7 +85,7 @@ static void handle_settings(struct xt_node *node, set_t **head)
 static xt_status handle_account(struct xt_node *node, gpointer data)
 {
 	struct xml_parsedata *xd = data;
-	char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag;
+	char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag, *locked;
 	char *pass_b64 = NULL;
 	unsigned char *pass_cr = NULL;
 	int pass_len, local = 0;
@@ -98,6 +98,7 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	server = xt_find_attr(node, "server");
 	autoconnect = xt_find_attr(node, "autoconnect");
 	tag = xt_find_attr(node, "tag");
+	locked = xt_find_attr(node, "locked");
 
 	protocol = xt_find_attr(node, "protocol");
 	if (protocol) {
@@ -125,6 +126,9 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 		}
 		if (local) {
 			acc->flags |= ACC_FLAG_LOCAL;
+		}
+		if (locked && !g_strcasecmp(locked, "true")) {
+			acc->flags |= ACC_FLAG_LOCKED;
 		}
 	} else {
 		g_free(pass_cr);
@@ -318,6 +322,9 @@ struct xt_node *xml_generate(irc_t *irc)
 		xt_add_attr(cur, "tag", acc->tag);
 		if (acc->server && acc->server[0]) {
 			xt_add_attr(cur, "server", acc->server);
+		}
+		if (acc->flags & ACC_FLAG_LOCKED) {
+			xt_add_attr(cur, "locked", "true");
 		}
 
 		g_free(pass_b64);
