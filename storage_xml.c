@@ -64,9 +64,11 @@ static void xml_init(void)
 static void handle_settings(struct xt_node *node, set_t **head)
 {
 	struct xt_node *c;
+	struct set *s;
 
 	for (c = node->children; (c = xt_find_node(c, "setting")); c = c->next) {
 		char *name = xt_find_attr(c, "name");
+		char *locked = xt_find_attr(c, "locked");
 
 		if (!name) {
 			continue;
@@ -79,6 +81,11 @@ static void handle_settings(struct xt_node *node, set_t **head)
 			}
 		}
 		set_setstr(head, name, c->text);
+		if (locked && !g_strcasecmp(locked, "true")) {
+			s = set_find(head, name);
+			if(s)
+				s->flags |= SET_LOCKED;
+		}
 	}
 }
 
@@ -370,6 +377,8 @@ static void xml_generate_settings(struct xt_node *cur, set_t **head)
 			struct xt_node *xset;
 			xt_add_child(cur, xset = xt_new_node("setting", set->value, NULL));
 			xt_add_attr(xset, "name", set->key);
+			if(set->flags & SET_LOCKED)
+				xt_add_attr(xset, "locked", "true");
 		}
 	}
 }

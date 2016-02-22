@@ -339,6 +339,10 @@ static int cmd_set_real(irc_t *irc, char **cmd, set_t **head, cmd_set_checkflags
 		set_t *s = set_find(head, set_name);
 		int st;
 
+		if (s && s->flags & SET_LOCKED) {
+			irc_rootmsg(irc, "This setting can not be changed");
+			return 0;
+		}
 		if (s && checkflags && checkflags(irc, s) == 0) {
 			return 0;
 		}
