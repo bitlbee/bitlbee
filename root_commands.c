@@ -416,6 +416,11 @@ static void cmd_account(irc_t *irc, char **cmd)
 
 		MIN_ARGS(3);
 
+		if (!global.conf->allow_account_add) {
+			irc_rootmsg(irc, "This server does not allow adding new accounts");
+			return;
+		}
+
 		if (cmd[4] == NULL) {
 			for (a = irc->b->accounts; a; a = a->next) {
 				if (strcmp(a->pass, PASSWORD_PENDING) == 0) {
