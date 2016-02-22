@@ -387,6 +387,9 @@ static int cmd_account_set_checkflags(irc_t *irc, set_t *s)
 	} else if (!a->ic && s && s->flags & ACC_SET_ONLINE_ONLY) {
 		irc_rootmsg(irc, "This setting can only be changed when the account is %s-line", "on");
 		return 0;
+	} else if (a->flags & ACC_FLAG_LOCKED && s && s->flags & ACC_SET_LOCKABLE) {
+		irc_rootmsg(irc, "This setting can not be changed for locked accounts");
+		return 0;
 	}
 
 	return 1;
@@ -546,7 +549,10 @@ static void cmd_account(irc_t *irc, char **cmd)
 	}
 
 	if (len >= 1 && g_strncasecmp(cmd[2], "del", len) == 0) {
-		if (a->ic) {
+		if (a->flags & ACC_FLAG_LOCKED) {
+			irc_rootmsg(irc, "Account is locked, can't delete");
+		}
+		else if (a->ic) {
 			irc_rootmsg(irc, "Account is still logged in, can't delete");
 		} else {
 			account_del(irc->b, a);
