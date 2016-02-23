@@ -254,9 +254,10 @@ typedef struct irc_plugin {
 	   message and don't want anything to go to the user. */
 	char* (*filter_msg_in)(irc_user_t * iu, char *msg, int flags);
 
-	/* From storage.c functions. Ideally these should not be used
-	   and instead data should be stored in settings which will get
-	   saved automatically. Consider these deprecated! */
+	/* Called from the storage.c functions with the same name right after
+	   the data has been loaded, saved or removed. Use these functions to
+	   manage plugin data that cannot be stored in settings or for other
+	   actions you want to do with accounts */
 	void (*storage_load)(irc_t *irc);
 	void (*storage_save)(irc_t *irc);
 	void (*storage_remove)(const char *nick);
