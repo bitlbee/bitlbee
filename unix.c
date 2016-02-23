@@ -103,6 +103,12 @@ int main(int argc, char *argv[])
 		return(1);
 	}
 
+	global.auth = auth_init(global.conf->auth_backend);
+	if (global.conf->auth_backend && global.auth == NULL) {
+		log_message(LOGLVL_ERROR, "Unable to load authentication backend '%s'", global.conf->auth_backend);
+		return(1);
+	}
+
 	if (global.conf->runmode == RUNMODE_INETD) {
 		log_link(LOGLVL_ERROR, LOGOUTPUT_IRC);
 		log_link(LOGLVL_WARNING, LOGOUTPUT_IRC);

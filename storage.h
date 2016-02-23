@@ -30,6 +30,7 @@ typedef enum {
 	STORAGE_OK = 0,
 	STORAGE_NO_SUCH_USER,
 	STORAGE_INVALID_PASSWORD,
+	STORAGE_CHECK_BACKEND,
 	STORAGE_ALREADY_EXISTS,
 	STORAGE_OTHER_ERROR /* Error that isn't caused by user input, such as
 	                       a database that is unreachable. log() will be
@@ -42,21 +43,21 @@ typedef struct {
 	/* May be set to NULL if not required */
 	void (*init)(void);
 
-	storage_status_t (*check_pass)(const char *nick, const char *password);
+	storage_status_t (*check_pass)(irc_t *irc, const char *nick, const char *password);
 
 	storage_status_t (*load)(irc_t *irc, const char *password);
 	storage_status_t (*save)(irc_t *irc, int overwrite);
-	storage_status_t (*remove)(const char *nick, const char *password);
+	storage_status_t (*remove)(const char *nick);
 
 	/* May be NULL if not supported by backend */
 	storage_status_t (*rename)(const char *onick, const char *nnick, const char *password);
 } storage_t;
 
-storage_status_t storage_check_pass(const char *nick, const char *password);
+storage_status_t storage_check_pass(irc_t *irc, const char *nick, const char *password);
 
 storage_status_t storage_load(irc_t * irc, const char *password);
 storage_status_t storage_save(irc_t *irc, char *password, int overwrite);
-storage_status_t storage_remove(const char *nick, const char *password);
+storage_status_t storage_remove(const char *nick);
 
 void register_storage_backend(storage_t *);
 G_GNUC_MALLOC GList *storage_init(const char *primary, char **migrate);

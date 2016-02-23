@@ -91,6 +91,7 @@ typedef struct irc {
 	char *password; /* HACK: Used to save the user's password, but before
 	                   logging in, this may contain a password we should
 	                   send to identify after USER/NICK are received. */
+	char *auth_backend;
 
 	char umode[8];
 

@@ -142,10 +142,9 @@ static void cmd_identify(irc_t *irc, char **cmd)
 		return;
 	}
 
-	if (load) {
+	status = auth_check_pass(irc, irc->user->nick, password);
+	if (load && (status == STORAGE_OK)) {
 		status = storage_load(irc, password);
-	} else {
-		status = storage_check_pass(irc->user->nick, password);
 	}
 
 	switch (status) {
@@ -158,7 +157,6 @@ static void cmd_identify(irc_t *irc, char **cmd)
 	case STORAGE_OK:
 		irc_rootmsg(irc, "Password accepted%s",
 		            load ? ", settings and accounts loaded" : "");
-		irc_setpass(irc, password);
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set(irc, "+R", 1);
 
@@ -267,7 +265,11 @@ static void cmd_drop(irc_t *irc, char **cmd)
 {
 	storage_status_t status;
 
-	status = storage_remove(irc->user->nick, cmd[1]);
+	status = auth_check_pass(irc, irc->user->nick, cmd[1]);
+	if (status == STORAGE_OK) {
+		status = storage_remove(irc->user->nick);
+	}
+
 	switch (status) {
 	case STORAGE_NO_SUCH_USER:
 		irc_rootmsg(irc, "That account does not exist");

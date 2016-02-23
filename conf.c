@@ -54,6 +54,7 @@ conf_t *conf_load(int argc, char *argv[])
 	conf->migrate_storage = g_strsplit("text", ",", -1);
 	conf->runmode = RUNMODE_INETD;
 	conf->authmode = AUTHMODE_OPEN;
+	conf->auth_backend = NULL;
 	conf->auth_pass = NULL;
 	conf->oper_pass = NULL;
 	conf->allow_account_add = 1;
@@ -239,6 +240,13 @@ static int conf_loadini(conf_t *conf, char *file)
 					conf->authmode = AUTHMODE_CLOSED;
 				} else {
 					conf->authmode = AUTHMODE_OPEN;
+				}
+			} else if (g_strcasecmp(ini->key, "authbackend") == 0) {
+				if (g_strcasecmp(ini->value, "storage") == 0) {
+					conf->auth_backend = NULL;
+				} else {
+					fprintf(stderr, "Invalid %s value: %s\n", ini->key, ini->value);
+					return 0;
 				}
 			} else if (g_strcasecmp(ini->key, "authpassword") == 0) {
 				g_free(conf->auth_pass);

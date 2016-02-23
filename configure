@@ -628,6 +628,11 @@ for i in $STORAGES; do
 done
 echo "STORAGE_OBJS="$STORAGE_OBJS >> Makefile.settings
 
+authobjs=
+authlibs=
+echo AUTH_OBJS=$authobjs >> Makefile.settings
+echo EFLAGS+=$authlibs >> Makefile.settings
+
 if [ "$strip" = 0 ]; then
 	echo "STRIP=\# skip strip" >> Makefile.settings;
 else
