@@ -52,6 +52,7 @@ events=glib
 ssl=auto
 
 pam=0
+ldap=0
 
 pie=1
 
@@ -136,6 +137,7 @@ Option		Description				Default
 		(automatically disables other protocol modules)
 
 --pam=0/1	Disable/enable PAM authentication	$pam
+--ldap=0/1	Disable/enable LDAP authentication	$ldap
 
 --doc=0/1	Disable/enable help.txt generation	$doc
 --debug=0/1	Disable/enable debugging		$debug
@@ -644,6 +646,17 @@ else
 	echo '#define WITH_PAM' >> config.h
 	authobjs=$authobjs'auth_pam.o '
 	authlibs=$authlibs'-lpam '
+fi
+if [ "$ldap" = 0 ]; then
+	echo '#undef WITH_LDAP' >> config.h
+else
+	if ! echo '#include <ldap.h>' | $CC -E - >/dev/null 2>/dev/null; then
+		echo 'Cannot find libldap development libraries, aborting. (Install libldap2-dev?)'
+		exit 1
+	fi
+	echo '#define WITH_LDAP' >> config.h
+	authobjs=$authobjs'auth_ldap.o '
+	authlibs=$authlibs'-lldap '
 fi
 echo AUTH_OBJS=$authobjs >> Makefile.settings
 echo EFLAGS+=$authlibs >> Makefile.settings
