@@ -28,7 +28,6 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
-extern storage_t storage_text;
 extern storage_t storage_xml;
 
 static GList *storage_backends = NULL;
