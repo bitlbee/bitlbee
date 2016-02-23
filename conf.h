@@ -36,6 +36,7 @@ typedef struct conf {
 	int verbose;
 	runmode_t runmode;
 	authmode_t authmode;
+	char *auth_backend;
 	char *auth_pass;
 	char *oper_pass;
 	char *hostname;

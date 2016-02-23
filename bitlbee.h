@@ -132,6 +132,7 @@ extern "C" {
 #include "bee.h"
 #include "irc.h"
 #include "storage.h"
+#include "auth.h"
 #include "set.h"
 #include "nogaim.h"
 #include "commands.h"
@@ -153,6 +154,7 @@ typedef struct global {
 	char *conf_file;
 	conf_t *conf;
 	GList *storage; /* The first backend in the list will be used for saving */
+	GList *auth;    /* Authentication backends */
 	char *helpfile;
 	int restart;
 } global_t;
