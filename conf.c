@@ -243,6 +243,9 @@ static int conf_loadini(conf_t *conf, char *file)
 			} else if (g_strcasecmp(ini->key, "authbackend") == 0) {
 				if (g_strcasecmp(ini->value, "storage") == 0) {
 					conf->auth_backend = NULL;
+				} else if (g_strcasecmp(ini->value, "pam") == 0) {
+					g_free(conf->auth_backend);
+					conf->auth_backend = g_strdup(ini->value);
 				} else {
 					fprintf(stderr, "Invalid %s value: %s\n", ini->key, ini->value);
 					return 0;

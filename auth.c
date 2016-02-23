@@ -1,10 +1,19 @@
 #define BITLBEE_CORE
 #include "bitlbee.h"
 
+#ifdef WITH_PAM
+extern auth_backend_t auth_pam;
+#endif
+
 GList *auth_init(const char *backend)
 {
 	GList *gl = NULL;
 	int ok = backend ? 0 : 1;
+#ifdef WITH_PAM
+	gl = g_list_append(gl, &auth_pam);
+	if (backend && !strcmp(backend, "pam"))
+		ok = 1;
+#endif
 
 	return ok ? gl : NULL;
 }
