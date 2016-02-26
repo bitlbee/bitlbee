@@ -468,7 +468,7 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 
 	g_regex_match(regex, msg, 0, &match_info);
 	while (g_match_info_matches(match_info)) {
-		gchar *s, *url;
+		gchar *url;
 
 		url = g_match_info_fetch(match_info, 2);
 		url_len_diff += target_len - g_utf8_strlen(url, -1);
