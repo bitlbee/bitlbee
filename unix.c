@@ -25,13 +25,10 @@
 
 #include "bitlbee.h"
 
-#include "arc.h"
-#include "base64.h"
 #include "commands.h"
 #include "protocols/nogaim.h"
 #include "help.h"
 #include "ipc.h"
-#include "md5.h"
 #include "misc.h"
 #include <signal.h>
 #include <unistd.h>
@@ -224,9 +221,6 @@ int main(int argc, char *argv[])
 
 static int crypt_main(int argc, char *argv[])
 {
-	int pass_len;
-	unsigned char *pass_cr, *pass_cl;
-
 	if (argc < 4 || (strcmp(argv[2], "hash") != 0 &&
 	                 strcmp(argv[2], "unhash") != 0 && argc < 5)) {
 		printf("Supported:\n"
@@ -238,40 +232,25 @@ static int crypt_main(int argc, char *argv[])
 		       argv[0], argv[0], argv[0], argv[0], argv[0]);
 	} else if (strcmp(argv[2], "enc") == 0) {
 		char *encoded;
-
-		pass_len = arc_encode(argv[4], strlen(argv[4]), &pass_cr, argv[3], 12);
-
-		encoded = base64_encode(pass_cr, pass_len);
+		password_encrypt(argv[4], argv[3], &encoded);
 		printf("%s\n", encoded);
 		g_free(encoded);
-		g_free(pass_cr);
 	} else if (strcmp(argv[2], "dec") == 0) {
-		pass_len = base64_decode(argv[4], &pass_cr);
-		arc_decode(pass_cr, pass_len, (char **) &pass_cl, argv[3]);
-		printf("%s\n", pass_cl);
-
-		g_free(pass_cr);
-		g_free(pass_cl);
+		char *decoded;
+		password_decrypt(argv[4], argv[3], &decoded);
+		printf("%s\n", decoded);
+		g_free(decoded);
 	} else if (strcmp(argv[2], "hash") == 0) {
-		md5_byte_t pass_md5[21];
-		md5_state_t md5_state;
-		char *encoded;
-
-		random_bytes(pass_md5 + 16, 5);
-		md5_init(&md5_state);
-		md5_append(&md5_state, (md5_byte_t *) argv[3], strlen(argv[3]));
-		md5_append(&md5_state, pass_md5 + 16, 5);   /* Add the salt. */
-		md5_finish(&md5_state, pass_md5);
-
-		encoded = base64_encode(pass_md5, 21);
-		printf("%s\n", encoded);
-		g_free(encoded);
+		char *hash;
+		password_hash(argv[3], &hash);
+		printf("%s\n", hash);
+		g_free(hash);
 	} else if (strcmp(argv[2], "unhash") == 0) {
 		printf("Hash %s submitted to a massive Beowulf cluster of\n"
 		       "overclocked 486s. Expect your answer next year somewhere around this time. :-)\n", argv[3]);
 	} else if (strcmp(argv[2], "chkhash") == 0) {
 		char *hash = strncmp(argv[3], "md5:", 4) == 0 ? argv[3] + 4 : argv[3];
-		int st = md5_verify_password(argv[4], hash);
+		int st = password_verify(argv[4], hash);
 
 		printf("Hash %s given password.\n", st == 0 ? "matches" : "does not match");
 

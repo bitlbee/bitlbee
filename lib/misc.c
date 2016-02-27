@@ -561,40 +561,6 @@ gboolean ssl_sockerr_again(void *ssl)
 	}
 }
 
-/* Returns values: -1 == Failure (base64-decoded to something unexpected)
-                    0 == Okay
-                    1 == Password doesn't match the hash. */
-int md5_verify_password(char *password, char *hash)
-{
-	md5_byte_t *pass_dec = NULL;
-	md5_byte_t pass_md5[16];
-	md5_state_t md5_state;
-	int ret = -1, i;
-
-	if (base64_decode(hash, &pass_dec) == 21) {
-		md5_init(&md5_state);
-		md5_append(&md5_state, (md5_byte_t *) password, strlen(password));
-		md5_append(&md5_state, (md5_byte_t *) pass_dec + 16, 5);  /* Hmmm, salt! */
-		md5_finish(&md5_state, pass_md5);
-
-		for (i = 0; i < 16; i++) {
-			if (pass_dec[i] != pass_md5[i]) {
-				ret = 1;
-				break;
-			}
-		}
-
-		/* If we reached the end of the loop, it was a match! */
-		if (i == 16) {
-			ret = 0;
-		}
-	}
-
-	g_free(pass_dec);
-
-	return ret;
-}
-
 /* Split commands (root-style, *not* IRC-style). Handles "quoting of"
    white\ space in 'various ways'. Returns a NULL-terminated static
    char** so watch out with nested use! Definitely not thread-safe. */

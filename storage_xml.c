@@ -25,9 +25,6 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
-#include "base64.h"
-#include "arc.h"
-#include "md5.h"
 #include "xmltree.h"
 
 #include <glib/gstdio.h>
@@ -111,15 +108,14 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 {
 	struct xml_parsedata *xd = data;
 	char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag, *locked;
-	char *pass_b64 = NULL;
-	unsigned char *pass_cr = NULL;
+	char *pass_raw = NULL;
 	int pass_len, local = 0;
 	struct prpl *prpl = NULL;
 	account_t *acc;
 	struct xt_node *c;
 
 	handle = xt_find_attr(node, "handle");
-	pass_b64 = xt_find_attr(node, "password");
+	pass_raw = xt_find_attr(node, "password");
 	server = xt_find_attr(node, "server");
 	autoconnect = xt_find_attr(node, "autoconnect");
 	tag = xt_find_attr(node, "tag");
@@ -135,17 +131,15 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 		local = protocol_account_islocal(protocol);
 	}
 
-	if (!handle || !pass_b64 || !protocol || !prpl) {
+	if (!handle || !pass_raw || !protocol || !prpl) {
 		return XT_ABORT;
 	}
 
-	pass_len = base64_decode(pass_b64, (unsigned char **) &pass_cr);
 	if (xd->irc->auth_backend) {
-		password = g_strdup((char *)pass_cr);
+		pass_len = password_decode(pass_raw, &password);
 	} else {
-		pass_len = arc_decode(pass_cr, pass_len, &password, xd->given_pass);
+		pass_len = password_decrypt(pass_raw, xd->given_pass, &password);
 		if (pass_len < 0) {
-			g_free(pass_cr);
 			g_free(password);
 			return XT_ABORT;
 		}
@@ -173,7 +167,6 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 			    ACC_SET_OFFLINE_ONLY | ACC_SET_ONLINE_ONLY;
 	}
 
-	g_free(pass_cr);
 	g_free(password);
 
 	if (prpl == &protocol_missing) {
@@ -285,8 +278,9 @@ static storage_status_t xml_load_real(irc_t *irc, const char *my_nick, const cha
 			g_free(xd->irc->auth_backend);
 			xd->irc->auth_backend = g_strdup(backend);
 			ret = STORAGE_CHECK_BACKEND;
-		} else if ((st = md5_verify_password(xd->given_pass, pass)) != 0) {
-			ret = STORAGE_INVALID_PASSWORD;
+		} else if ((ret = password_verify(xd->given_pass, pass)) != 0) {
+			ret = (ret == -1) ? STORAGE_OTHER_ERROR : STORAGE_INVALID_PASSWORD;
+                        goto error;
 		} else {
 			ret = STORAGE_OK;
 		}
@@ -322,8 +316,6 @@ struct xt_node *xml_generate(irc_t *irc)
 {
 	char *pass_buf = NULL;
 	account_t *acc;
-	md5_byte_t pass_md5[21];
-	md5_state_t md5_state;
 	GSList *l;
 	struct xt_node *root, *cur;
 
@@ -331,16 +323,7 @@ struct xt_node *xml_generate(irc_t *irc)
 	if (irc->auth_backend) {
 		xt_add_attr(cur, "auth_backend", irc->auth_backend);
 	} else {
-		/* Generate a salted md5sum of the password. Use 5 bytes for the salt
-		   (to prevent dictionary lookups of passwords) to end up with a 21-
-		   byte password hash, more convenient for base64 encoding. */
-		random_bytes(pass_md5 + 16, 5);
-		md5_init(&md5_state);
-		md5_append(&md5_state, (md5_byte_t *) irc->password, strlen(irc->password));
-		md5_append(&md5_state, pass_md5 + 16, 5);   /* Add the salt. */
-		md5_finish(&md5_state, pass_md5);
-		/* Save the hash in base64-encoded form. */
-		pass_buf = base64_encode(pass_md5, 21);
+		password_hash(irc->password, &pass_buf);
 		xt_add_attr(cur, "password", pass_buf);
 		g_free(pass_buf);
 	}
@@ -353,19 +336,15 @@ struct xt_node *xml_generate(irc_t *irc)
 	for (acc = irc->b->accounts; acc; acc = acc->next) {
 		GHashTableIter iter;
 		gpointer key, value;
-		unsigned char *pass_cr;
-		char *pass_b64;
-		int pass_len;
+		char *password;
 
 		if(irc->auth_backend) {
 			/* If we don't "own" the password, it may change without us
 			 * knowing, so we cannot encrypt the data, as we then may not be
 			 * able to decrypt it */
-			pass_b64 = base64_encode((unsigned char *)acc->pass, strlen(acc->pass));
+			password_encode(acc->pass, &password);
 		} else {
-			pass_len = arc_encode(acc->pass, strlen(acc->pass), (unsigned char **) &pass_cr, irc->password, 12);
-			pass_b64 = base64_encode(pass_cr, pass_len);
-			g_free(pass_cr);
+			password_encrypt(acc->pass, irc->password, &password);
 		}
 
 		cur = xt_new_node("account", NULL, NULL);
@@ -375,7 +354,7 @@ struct xt_node *xml_generate(irc_t *irc)
 			xt_add_attr(cur, "protocol", acc->prpl->name);
 		}
 		xt_add_attr(cur, "handle", acc->user);
-		xt_add_attr(cur, "password", pass_b64);
+		xt_add_attr(cur, "password", password);
 		xt_add_attr(cur, "autoconnect", acc->auto_connect ? "true" : "false");
 		xt_add_attr(cur, "tag", acc->tag);
 		if (acc->server && acc->server[0]) {
@@ -385,7 +364,7 @@ struct xt_node *xml_generate(irc_t *irc)
 			xt_add_attr(cur, "locked", "true");
 		}
 
-		g_free(pass_b64);
+		g_free(password);
 
 		g_hash_table_iter_init(&iter, acc->nicks);
 		while (g_hash_table_iter_next(&iter, &key, &value)) {

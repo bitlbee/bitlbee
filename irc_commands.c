@@ -44,14 +44,20 @@ static void irc_cmd_pass(irc_t *irc, char **cmd)
 	}
 	/* Handling in pre-logged-in state, first see if this server is
 	   password-protected: */
-	else if (global.conf->auth_pass &&
-	         (strncmp(global.conf->auth_pass, "md5:", 4) == 0 ?
-	          md5_verify_password(cmd[1], global.conf->auth_pass + 4) == 0 :
-	          strcmp(cmd[1], global.conf->auth_pass) == 0)) {
-		irc->status |= USTATUS_AUTHORIZED;
-		irc_check_login(irc);
-	} else if (global.conf->auth_pass) {
-		irc_send_num(irc, 464, ":Incorrect password");
+	else if (global.conf->auth_pass) {
+		int password_ok = 0;
+		if (strncmp(global.conf->auth_pass, "md5:", 4) == 0) {
+			password_ok = password_verify(cmd[1], global.conf->auth_pass + 4) == 0;
+		}
+		else {
+			password_ok = strcmp(cmd[1], global.conf->auth_pass) == 0;
+		}
+		if (password_ok) {
+			irc->status |= USTATUS_AUTHORIZED;
+			irc_check_login(irc);
+		} else {
+			irc_send_num(irc, 464, ":Incorrect password");
+		}
 	} else {
 		/* Remember the password and try to identify after USER/NICK. */
 		irc_setpass(irc, cmd[1]);
@@ -540,15 +546,21 @@ static void irc_cmd_oper_hack(irc_t *irc, char **cmd);
 
 static void irc_cmd_oper(irc_t *irc, char **cmd)
 {
+	int password_ok = 0;
 	/* Very non-standard evil but useful/secure hack, see below. */
 	if (irc->status & OPER_HACK_ANY) {
 		return irc_cmd_oper_hack(irc, cmd);
 	}
 
-	if (global.conf->oper_pass &&
-	    (strncmp(global.conf->oper_pass, "md5:", 4) == 0 ?
-	     md5_verify_password(cmd[2], global.conf->oper_pass + 4) == 0 :
-	     strcmp(cmd[2], global.conf->oper_pass) == 0)) {
+	if (global.conf->oper_pass) {
+		if (strncmp(global.conf->oper_pass, "md5:", 4) == 0) {
+			password_ok = password_verify(cmd[1], global.conf->oper_pass + 4) == 0;
+		}
+		else {
+			password_ok = strcmp(cmd[1], global.conf->oper_pass) == 0;
+		}
+	}
+	if(password_ok) {
 		irc_umode_set(irc, "+o", 1);
 		irc_send_num(irc, 381, ":Password accepted");
 	} else {

@@ -12,7 +12,7 @@ _SRCDIR_ := $(_SRCDIR_)lib/
 endif
 
 # [SH] Program variables
-objects = arc.o base64.o canohost.o $(EVENT_HANDLER) ftutil.o http_client.o ini.o json.o json_util.o md5.o misc.o oauth.o oauth2.o proxy.o sha1.o $(SSL_CLIENT) url.o xmltree.o ns_parse.o
+objects = arc.o base64.o canohost.o $(EVENT_HANDLER) ftutil.o http_client.o ini.o json.o json_util.o md5.o misc.o oauth.o oauth2.o proxy.o sha1.o $(SSL_CLIENT) url.o xmltree.o ns_parse.o password.o
 
 LFLAGS += -r
 

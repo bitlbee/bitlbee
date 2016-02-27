@@ -142,7 +142,6 @@ G_MODULE_EXPORT void srv_free(struct ns_srv_reply **srv);
 
 G_MODULE_EXPORT char *word_wrap(const char *msg, int line_len);
 G_MODULE_EXPORT gboolean ssl_sockerr_again(void *ssl);
-G_MODULE_EXPORT int md5_verify_password(char *password, char *hash);
 G_MODULE_EXPORT char **split_command_parts(char *command, int limit);
 G_MODULE_EXPORT char *get_rfc822_header(const char *text, const char *header, int len);
 G_MODULE_EXPORT int truncate_utf8(char *string, int maxlen);

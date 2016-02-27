@@ -146,6 +146,7 @@ extern "C" {
 #include "sock.h"
 #include "misc.h"
 #include "proxy.h"
+#include "password.h"
 
 typedef struct global {
 	/* In forked mode, child processes store the fd of the IPC socket here. */
