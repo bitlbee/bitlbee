@@ -61,9 +61,11 @@ static void xml_init(void)
 static void handle_settings(struct xt_node *node, set_t **head)
 {
 	struct xt_node *c;
+	struct set *s;
 
 	for (c = node->children; (c = xt_find_node(c, "setting")); c = c->next) {
 		char *name = xt_find_attr(c, "name");
+		char *locked = xt_find_attr(c, "locked");
 
 		if (!name) {
 			continue;
@@ -76,13 +78,18 @@ static void handle_settings(struct xt_node *node, set_t **head)
 			}
 		}
 		set_setstr(head, name, c->text);
+		if (locked && !g_strcasecmp(locked, "true")) {
+			s = set_find(head, name);
+			if(s)
+				s->flags |= SET_LOCKED;
+		}
 	}
 }
 
 static xt_status handle_account(struct xt_node *node, gpointer data)
 {
 	struct xml_parsedata *xd = data;
-	char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag;
+	char *protocol, *handle, *server, *password = NULL, *autoconnect, *tag, *locked;
 	char *pass_raw = NULL;
 	int pass_len, local = 0;
 	struct prpl *prpl = NULL;
@@ -94,6 +101,7 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	server = xt_find_attr(node, "server");
 	autoconnect = xt_find_attr(node, "autoconnect");
 	tag = xt_find_attr(node, "tag");
+	locked = xt_find_attr(node, "locked");
 
 	protocol = xt_find_attr(node, "protocol");
 	if (protocol) {
@@ -132,6 +140,9 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	}
 	if (local) {
 		acc->flags |= ACC_FLAG_LOCAL;
+	}
+	if (locked && !g_strcasecmp(locked, "true")) {
+		acc->flags |= ACC_FLAG_LOCKED;
 	}
 
 	g_free(password);
@@ -322,6 +333,9 @@ struct xt_node *xml_generate(irc_t *irc)
 		if (acc->server && acc->server[0]) {
 			xt_add_attr(cur, "server", acc->server);
 		}
+		if (acc->flags & ACC_FLAG_LOCKED) {
+			xt_add_attr(cur, "locked", "true");
+		}
 
 		g_free(password);
 
@@ -366,6 +380,8 @@ static void xml_generate_settings(struct xt_node *cur, set_t **head)
 			struct xt_node *xset;
 			xt_add_child(cur, xset = xt_new_node("setting", set->value, NULL));
 			xt_add_attr(xset, "name", set->key);
+			if(set->flags & SET_LOCKED)
+				xt_add_attr(xset, "locked", "true");
 		}
 	}
 }

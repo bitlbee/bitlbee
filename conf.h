@@ -39,6 +39,7 @@ typedef struct conf {
 	char *auth_backend;
 	char *auth_pass;
 	char *oper_pass;
+	int allow_account_add;
 	char *hostname;
 	char *configdir;
 	char *plugindir;
