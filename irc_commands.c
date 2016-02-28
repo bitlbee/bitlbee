@@ -45,7 +45,9 @@ static void irc_cmd_pass(irc_t *irc, char **cmd)
 	   password-protected: */
 	else if (global.conf->auth_pass) {
 		int password_ok = 0;
-		if (strncmp(global.conf->auth_pass, "md5:", 4) == 0) {
+		if (global.conf->auth_pass[0] == '$' && strlen(global.conf->auth_pass) > 100) {
+			password_ok = password_verify(cmd[1], global.conf->oper_pass) == 0;
+		} else if (strncmp(global.conf->auth_pass, "md5:", 4) == 0) {
 			password_ok = password_verify(cmd[1], global.conf->auth_pass + 4) == 0;
 		}
 		else {
@@ -505,10 +507,11 @@ static void irc_cmd_oper(irc_t *irc, char **cmd)
 	}
 
 	if (global.conf->oper_pass) {
-		if (strncmp(global.conf->oper_pass, "md5:", 4) == 0) {
+		if (global.conf->oper_pass[0] == '$' && strlen(global.conf->oper_pass) > 100) {
+			password_ok = password_verify(cmd[1], global.conf->oper_pass) == 0;
+		} else if (strncmp(global.conf->oper_pass, "md5:", 4) == 0) {
 			password_ok = password_verify(cmd[1], global.conf->oper_pass + 4) == 0;
-		}
-		else {
+		} else {
 			password_ok = strcmp(cmd[1], global.conf->oper_pass) == 0;
 		}
 	}

@@ -8,36 +8,6 @@
 
 char *password = "ArcVier";
 
-char *clear_tests[] =
-{
-	"Wie dit leest is gek :-)",
-	"ItllBeBitlBee",
-	"One more boring password",
-	"Hoi hoi",
-	NULL
-};
-
-static void check_codec(int l)
-{
-	int i;
-
-	for (i = 0; clear_tests[i]; i++) {
-		tcase_fn_start(clear_tests[i], __FILE__, __LINE__);
-		unsigned char *crypted;
-		char *decrypted;
-		int len;
-
-		len = arc_encode(clear_tests[i], 0, &crypted, password, 12);
-		len = arc_decode(crypted, len, &decrypted, password);
-
-		fail_if(strcmp(clear_tests[i], decrypted) != 0,
-		        "%s didn't decrypt back properly", clear_tests[i]);
-
-		g_free(crypted);
-		g_free(decrypted);
-	}
-}
-
 struct {
 	unsigned char crypted[30];
 	int len;
@@ -99,7 +69,6 @@ Suite *arc_suite(void)
 	TCase *tc_core = tcase_create("Core");
 
 	suite_add_tcase(s, tc_core);
-	tcase_add_test(tc_core, check_codec);
 	tcase_add_test(tc_core, check_decod);
 	return s;
 }
