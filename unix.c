@@ -69,6 +69,9 @@ int main(int argc, char *argv[])
 	}
 
 	log_init();
+	/* Catch early errors */
+	log_link(LOGLVL_ERROR, LOGOUTPUT_CONSOLE);
+	log_link(LOGLVL_WARNING, LOGOUTPUT_CONSOLE);
 
 	global.conf_file = g_strdup(CONF_FILE_DEF);
 	global.conf = conf_load(argc, argv);
