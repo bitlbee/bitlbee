@@ -30,6 +30,7 @@ addons:
     - check
     - libpam0g-dev
     - libldap2-dev
+    - libmysqlclient-dev
   coverity_scan:
     project:
       name: "bitlbee/bitlbee"

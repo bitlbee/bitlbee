@@ -629,6 +629,16 @@ fi
 
 STORAGES="xml"
 
+if mysql_config --libs >/dev/null 2>/dev/null; then
+	if echo '#include <ldap.h>' | cpp >/dev/null 2>/dev/null; then
+		echo "CFLAGS+=$(mysql_config --cflags)" >> Makefile.settings
+		echo "EFLAGS+=$(mysql_config --libs)" >> Makefile.settings
+		echo "EFLAGS+=-lldap" >> Makefile.settings
+		echo "#define WITH_MYSQL" >> config.h
+		STORAGES="$STORAGES mysql"
+	fi
+fi
+
 for i in $STORAGES; do
 	STORAGE_OBJS="$STORAGE_OBJS storage_$i.o"
 done
@@ -963,7 +973,7 @@ fi
 
 echo '  Using event handler: '$events
 echo '  Using SSL library: '$ssl
-#echo '  Building with these storage backends: '$STORAGES
+echo '  Building with these storage backends: '$STORAGES
 
 if [ -n "$protocols" ]; then
 	echo '  Building with these protocols:' $protocols$protocols_mods

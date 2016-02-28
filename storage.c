@@ -30,6 +30,9 @@
 
 extern storage_t storage_text;
 extern storage_t storage_xml;
+#ifdef WITH_MYSQL
+extern storage_t storage_mysql;
+#endif
 
 static GList *storage_backends = NULL;
 
@@ -68,6 +71,9 @@ GList *storage_init(const char *primary, char **migrate)
 	storage_t *storage;
 
 	register_storage_backend(&storage_xml);
+#ifdef WITH_MYSQL
+	register_storage_backend(&storage_mysql);
+#endif
 
 	storage = storage_init_single(primary);
 	if (storage == NULL || storage->save == NULL) {
