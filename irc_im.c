@@ -147,9 +147,16 @@ static gboolean bee_irc_user_status(bee_t *bee, bee_user_t *bu, bee_user_t *old)
 
 	bee_irc_channel_update(irc, NULL, iu);
 
+	/* If away-notify enabled, send status updates when:
+	 * Away or Online state changes
+	 * Status changes (e.g. "Away" to "Mobile")
+	 * Status message changes
+	 */
 	if ((irc->caps & CAP_AWAY_NOTIFY) &&
 	    ((bu->flags & BEE_USER_AWAY) != (old->flags & BEE_USER_AWAY) ||
-	     (bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE))) {
+	     (bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE) ||
+	     (g_strcmp0(bu->status, old->status) != 0) ||
+	     (g_strcmp0(bu->status_msg, old->status_msg) != 0))) {
 		irc_send_away_notify(iu);
 	}
 
