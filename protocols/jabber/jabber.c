@@ -576,7 +576,8 @@ static struct groupchat *jabber_chat_join_(struct im_connection *ic, const char 
 		imcb_error(ic, "Already present in chat `%s'", room);
 	} else {
 		/* jabber_chat_join without the underscore is the conference.c one */
-		return jabber_chat_join(ic, room, final_nick, set_getstr(sets, "password"));
+		return jabber_chat_join(ic, room, final_nick, set_getstr(sets, "password"),
+		                        set_getbool(sets, "always_use_nicks"));
 	}
 
 	return NULL;
@@ -685,6 +686,8 @@ static int jabber_send_typing(struct im_connection *ic, char *who, int typing)
 
 void jabber_chat_add_settings(account_t *acc, set_t **head)
 {
+	set_add(head, "always_use_nicks", "false", set_eval_bool, NULL);
+
 	/* Meh. Stupid room passwords. Not trying to obfuscate/hide
 	   them from the user for now. */
 	set_add(head, "password", NULL, NULL, NULL);
@@ -692,6 +695,8 @@ void jabber_chat_add_settings(account_t *acc, set_t **head)
 
 void jabber_chat_free_settings(account_t *acc, set_t **head)
 {
+	set_del(head, "always_use_nicks");
+
 	set_del(head, "password");
 }
 

@@ -27,7 +27,8 @@
 static xt_status jabber_chat_join_failed(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 static xt_status jabber_chat_self_message(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 
-struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password)
+struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password,
+                                   gboolean always_use_nicks)
 {
 	struct jabber_chat *jc;
 	struct xt_node *node;
@@ -56,6 +57,10 @@ struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, c
 		g_free(jc->name);
 		g_free(jc);
 		return NULL;
+	}
+
+	if (always_use_nicks) {
+		jc->flags = JCFLAG_ALWAYS_USE_NICKS;
 	}
 
 	/* roomjid isn't normalized yet, and we need an original version
@@ -94,7 +99,7 @@ struct groupchat *jabber_chat_with(struct im_connection *ic, char *who)
 	g_free(uuid);
 	g_free(cserv);
 
-	c = jabber_chat_join(ic, rjid, jd->username, NULL);
+	c = jabber_chat_join(ic, rjid, jd->username, NULL, FALSE);
 	g_free(rjid);
 	if (c == NULL) {
 		return NULL;
@@ -340,6 +345,11 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 		if (s) {
 			*s = 0; /* Should NEVER be NULL, but who knows... */
 		}
+
+		if (bud != jc->me && (jc->flags & JCFLAG_ALWAYS_USE_NICKS) && !(bud->flags & JBFLAG_IS_ANONYMOUS)) {
+			imcb_buddy_nick_change(ic, bud->ext_jid, bud->resource);
+		}
+
 		imcb_chat_add_buddy(chat, bud->ext_jid);
 		if (s) {
 			*s = '/';

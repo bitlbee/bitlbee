@@ -74,6 +74,7 @@ typedef struct {
 typedef enum {
 	JCFLAG_MESSAGE_SENT = 1,        /* Set this after sending the first message, so
 	                                   we can detect echoes/backlogs. */
+	JCFLAG_ALWAYS_USE_NICKS = 2,
 } jabber_chat_flags_t;
 
 struct jabber_data {
@@ -342,7 +343,8 @@ int sasl_oauth2_refresh(struct im_connection *ic, const char *refresh_token);
 extern const struct oauth2_service oauth2_service_google;
 
 /* conference.c */
-struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password);
+struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password,
+                                   gboolean always_use_nicks);
 struct groupchat *jabber_chat_with(struct im_connection *ic, char *who);
 struct groupchat *jabber_chat_by_jid(struct im_connection *ic, const char *name);
 void jabber_chat_free(struct groupchat *c);

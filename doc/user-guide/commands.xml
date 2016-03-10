@@ -648,6 +648,24 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="always_use_nicks" type="boolean" scope="channel">
+		<default>false</default>
+
+		<description>
+			<para>
+				Jabber groupchat specific. This setting ensures that the nicks defined by the other members of a groupchat are used, instead of the username part of their JID. This only applies to groupchats where their real JID is known (either "non-anonymous" ones, or "semi-anonymous" from the point of view of the channel moderators)
+			</para>
+
+			<para>
+				Enabling this may have the side effect of changing the nick of existing contacts, either in your buddy list or in other groupchats. If a contact is in multiple groupchats with different nicks, enabling this setting for all those would result in multiple nick changes when joining, and the order of those changes may vary.
+			</para>
+
+			<para>
+				Note that manual nick changes done through the <emphasis>rename</emphasis> command always take priority
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="auto_connect" type="boolean" scope="account,global">
 		<default>true</default>
 
