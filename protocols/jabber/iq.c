@@ -233,7 +233,7 @@ static xt_status jabber_do_iq_auth(struct im_connection *ic, struct xt_node *nod
 	if (!(query = xt_find_node(node->children, "query"))) {
 		imcb_log(ic, "Warning: Received incomplete IQ packet while authenticating");
 		imc_logout(ic, FALSE);
-		return XT_HANDLED;
+		return XT_ABORT;
 	}
 
 	/* Time to authenticate ourselves! */
@@ -286,7 +286,7 @@ static xt_status jabber_finish_iq_auth(struct im_connection *ic, struct xt_node 
 	if (!(type = xt_find_attr(node, "type"))) {
 		imcb_log(ic, "Warning: Received incomplete IQ packet while authenticating");
 		imc_logout(ic, FALSE);
-		return XT_HANDLED;
+		return XT_ABORT;
 	}
 
 	if (strcmp(type, "error") == 0) {
