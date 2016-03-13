@@ -40,10 +40,10 @@ static void msn_init(account_t *acc)
 	s->flags |= SET_NOSAVE | ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "server", NULL, set_eval_account, acc);
-	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY | ACC_SET_LOCKABLE;
 
 	s = set_add(&acc->set, "port", MSN_NS_PORT, set_eval_int, acc);
-	s->flags |= ACC_SET_OFFLINE_ONLY;
+	s->flags |= ACC_SET_OFFLINE_ONLY | ACC_SET_LOCKABLE;
 
 	s = set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;

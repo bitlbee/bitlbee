@@ -1656,10 +1656,10 @@ static void skype_init(account_t *acc)
 
 	s = set_add(&acc->set, "server", SKYPE_DEFAULT_SERVER, set_eval_account,
 	            acc);
-	s->flags |= ACC_SET_OFFLINE_ONLY;
+	s->flags |= ACC_SET_OFFLINE_ONLY | ACC_SET_LOCKABLE;
 
 	s = set_add(&acc->set, "port", SKYPE_DEFAULT_PORT, set_eval_int, acc);
-	s->flags |= ACC_SET_OFFLINE_ONLY;
+	s->flags |= ACC_SET_OFFLINE_ONLY | ACC_SET_LOCKABLE;
 
 	s = set_add(&acc->set, "display_name", NULL, skype_set_display_name,
 	            acc);

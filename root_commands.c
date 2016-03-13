@@ -339,6 +339,10 @@ static int cmd_set_real(irc_t *irc, char **cmd, set_t **head, cmd_set_checkflags
 		set_t *s = set_find(head, set_name);
 		int st;
 
+		if (s && s->flags & SET_LOCKED) {
+			irc_rootmsg(irc, "This setting can not be changed");
+			return 0;
+		}
 		if (s && checkflags && checkflags(irc, s) == 0) {
 			return 0;
 		}
@@ -387,6 +391,9 @@ static int cmd_account_set_checkflags(irc_t *irc, set_t *s)
 	} else if (!a->ic && s && s->flags & ACC_SET_ONLINE_ONLY) {
 		irc_rootmsg(irc, "This setting can only be changed when the account is %s-line", "on");
 		return 0;
+	} else if (a->flags & ACC_FLAG_LOCKED && s && s->flags & ACC_SET_LOCKABLE) {
+		irc_rootmsg(irc, "This setting can not be changed for locked accounts");
+		return 0;
 	}
 
 	return 1;
@@ -408,6 +415,11 @@ static void cmd_account(irc_t *irc, char **cmd)
 		struct prpl *prpl;
 
 		MIN_ARGS(3);
+
+		if (!global.conf->allow_account_add) {
+			irc_rootmsg(irc, "This server does not allow adding new accounts");
+			return;
+		}
 
 		if (cmd[4] == NULL) {
 			for (a = irc->b->accounts; a; a = a->next) {
@@ -546,7 +558,10 @@ static void cmd_account(irc_t *irc, char **cmd)
 	}
 
 	if (len >= 1 && g_strncasecmp(cmd[2], "del", len) == 0) {
-		if (a->ic) {
+		if (a->flags & ACC_FLAG_LOCKED) {
+			irc_rootmsg(irc, "Account is locked, can't delete");
+		}
+		else if (a->ic) {
 			irc_rootmsg(irc, "Account is still logged in, can't delete");
 		} else {
 			account_del(irc->b, a);
