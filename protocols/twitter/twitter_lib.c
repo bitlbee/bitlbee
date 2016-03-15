@@ -239,6 +239,8 @@ static json_value *twitter_parse_response(struct im_connection *ic, struct http_
 }
 
 static void twitter_http_get_friends_ids(struct http_request *req);
+static void twitter_http_get_mutes_ids(struct http_request *req);
+static void twitter_http_get_noretweets_ids(struct http_request *req);
 
 /**
  * Get the friends ids.
@@ -251,6 +253,34 @@ void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor)
 	args[0] = "cursor";
 	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
 	twitter_http(ic, TWITTER_FRIENDS_IDS_URL, twitter_http_get_friends_ids, ic, 0, args, 2);
+
+	g_free(args[1]);
+}
+
+/**
+ * Get the muted users ids.
+ */
+void twitter_get_mutes_ids(struct im_connection *ic, gint64 next_cursor)
+{
+	char *args[2];
+
+	args[0] = "cursor";
+	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
+	twitter_http(ic, TWITTER_MUTES_IDS_URL, twitter_http_get_mutes_ids, ic, 0, args, 2);
+
+	g_free(args[1]);
+}
+
+/**
+ * Get the ids for users from whom we should ignore retweets.
+ */
+void twitter_get_noretweets_ids(struct im_connection *ic, gint64 next_cursor)
+{
+	char *args[2];
+
+	args[0] = "cursor";
+	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
+	twitter_http(ic, TWITTER_NORETWEETS_IDS_URL, twitter_http_get_noretweets_ids, ic, 0, args, 2);
 
 	g_free(args[1]);
 }
@@ -331,6 +361,92 @@ static void twitter_http_get_friends_ids(struct http_request *req)
 		/* Now to convert all those numbers into names.. */
 		twitter_get_users_lookup(ic);
 	}
+
+	txl->list = NULL;
+	txl_free(txl);
+}
+
+/**
+ * Callback for getting the mutes ids.
+ */
+static void twitter_http_get_mutes_ids(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	json_value *parsed;
+	struct twitter_xml_list *txl;
+	struct twitter_data *td;
+
+	// Check if the connection is stil active
+	if (!g_slist_find(twitter_connections, ic)) {
+		return;
+	}
+
+	td = ic->proto_data;
+
+	// Parse the data.
+	if (!(parsed = twitter_parse_response(ic, req))) {
+		return;
+	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = td->mutes_ids;
+
+	/* mute ids API response is similar enough to friends response
+	   to reuse this method */
+	twitter_xt_get_friends_id_list(parsed, txl);
+	json_value_free(parsed);
+
+	td->mutes_ids = txl->list;
+	if (txl->next_cursor) {
+		/* Recurse while there are still more pages */
+		twitter_get_mutes_ids(ic, txl->next_cursor);
+	}
+
+	txl->list = NULL;
+	txl_free(txl);
+}
+
+/**
+ * Callback for getting the no-retweets ids.
+ */
+static void twitter_http_get_noretweets_ids(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	json_value *parsed;
+	struct twitter_xml_list *txl;
+	struct twitter_data *td;
+
+	// Check if the connection is stil active
+	if (!g_slist_find(twitter_connections, ic)) {
+		return;
+	}
+
+	td = ic->proto_data;
+
+	// Parse the data.
+	if (!(parsed = twitter_parse_response(ic, req))) {
+		return;
+	}
+
+	txl = g_new0(struct twitter_xml_list, 1);
+	txl->list = td->noretweets_ids;
+	
+	// Process the retweet ids
+	txl->type = TXL_ID;
+	if (parsed->type == json_array) {
+		unsigned int i;
+		for (i = 0; i < parsed->u.array.length; i++) {
+			json_value *c = parsed->u.array.values[i];
+			if (c->type != json_integer) {
+				continue;
+			}
+			txl->list = g_slist_prepend(txl->list,
+			                            g_strdup_printf("%"PRIu64, c->u.integer));
+		}
+	}
+
+	json_value_free(parsed);
+	td->noretweets_ids = txl->list;
 
 	txl->list = NULL;
 	txl_free(txl);
@@ -830,8 +946,20 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 {
 	struct twitter_data *td = ic->proto_data;
 	char *last_id_str;
+	char *uid_str;
 
 	if (status->user == NULL || status->text == NULL) {
+		return;
+	}
+	
+	/* Check this is not a tweet that should be muted */
+	uid_str = g_strdup_printf("%" PRIu64, status->user->uid);
+	if (g_slist_find_custom(td->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
+		g_free(uid_str);
+		return;
+	}
+	if (status->id != status->rt_id && g_slist_find_custom(td->noretweets_ids, uid_str, (GCompareFunc)strcmp)) {
+		g_free(uid_str);
 		return;
 	}
 
@@ -856,6 +984,7 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	last_id_str = g_strdup_printf("%" G_GUINT64_FORMAT, td->timeline_id);
 	set_setstr(&ic->acc->set, "_last_tweet", last_id_str);
 	g_free(last_id_str);
+	g_free(uid_str);
 }
 
 static gboolean twitter_stream_handle_object(struct im_connection *ic, json_value *o, gboolean from_filter);

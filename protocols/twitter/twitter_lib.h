@@ -62,6 +62,8 @@
 /* Social graphs URLs */
 #define TWITTER_FRIENDS_IDS_URL "/friends/ids.json"
 #define TWITTER_FOLLOWERS_IDS_URL "/followers/ids.json"
+#define TWITTER_MUTES_IDS_URL "/mutes/users/ids.json"
+#define TWITTER_NORETWEETS_IDS_URL "/friendships/no_retweets/ids.json"
 
 /* Account URLs */
 #define TWITTER_ACCOUNT_RATE_LIMIT_URL "/account/rate_limit_status.json"
@@ -86,6 +88,8 @@ gboolean twitter_open_stream(struct im_connection *ic);
 gboolean twitter_open_filter_stream(struct im_connection *ic);
 gboolean twitter_get_timeline(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor);
+void twitter_get_mutes_ids(struct im_connection *ic, gint64 next_cursor);
+void twitter_get_noretweets_ids(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
 
 void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to);

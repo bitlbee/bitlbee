@@ -344,6 +344,8 @@ void twitter_login_finish(struct im_connection *ic)
 	           !(td->flags & TWITTER_HAVE_FRIENDS)) {
 		imcb_log(ic, "Getting contact list");
 		twitter_get_friends_ids(ic, -1);
+		twitter_get_mutes_ids(ic, -1);
+		twitter_get_noretweets_ids(ic, -1);
 	} else {
 		twitter_main_loop_start(ic);
 	}
