@@ -48,7 +48,7 @@ Version 3.4.2:
   * Fix potential crashes when leaving temporary channels
   * Fix all sorts of crashing bugs when cancelling in-progress connections.
 
-Finished ... 200XX
+Finished 19 Mar 2017
 
 Version 3.4.1:
 - msn:
