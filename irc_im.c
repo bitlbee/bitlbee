@@ -408,11 +408,6 @@ static gboolean bee_irc_user_nick_update(irc_user_t *iu)
 	bee_user_t *bu = iu->bu;
 	char *newnick;
 
-	if (bu->flags & BEE_USER_ONLINE) {
-		/* Ignore if the user is visible already. */
-		return TRUE;
-	}
-
 	if (nick_saved(bu)) {
 		/* The user already assigned a nickname to this person. */
 		return TRUE;

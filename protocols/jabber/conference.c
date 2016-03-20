@@ -312,7 +312,6 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 			/* If JIDs are anonymized, add them to the local
 			   list for the duration of this chat. */
 			imcb_add_buddy(ic, bud->ext_jid, NULL);
-			imcb_buddy_nick_hint(ic, bud->ext_jid, bud->resource);
 		}
 
 		if (bud == jc->me && jc->invite != NULL) {
@@ -327,6 +326,7 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 		if (s) {
 			*s = 0; /* Should NEVER be NULL, but who knows... */
 		}
+		imcb_buddy_nick_hint(ic, bud->ext_jid, bud->resource);
 		imcb_chat_add_buddy(chat, bud->ext_jid);
 		if (s) {
 			*s = '/';
