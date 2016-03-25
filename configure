@@ -384,8 +384,8 @@ detect_gnutls()
 {
 	if $PKG_CONFIG --exists gnutls; then
 		cat <<EOF >>Makefile.settings
-EFLAGS+=$($PKG_CONFIG --libs gnutls) $(libgcrypt-config --libs)
-CFLAGS+=$($PKG_CONFIG --cflags gnutls) $(libgcrypt-config --cflags)
+EFLAGS+=$($PKG_CONFIG --libs gnutls)
+CFLAGS+=$($PKG_CONFIG --cflags gnutls)
 EOF
 		ssl=gnutls
 		if ! $PKG_CONFIG gnutls --atleast-version=2.8; then
@@ -395,8 +395,8 @@ EOF
 		ret=1
 	elif libgnutls-config --version > /dev/null 2> /dev/null; then
 		cat <<EOF >>Makefile.settings
-EFLAGS+=$(libgnutls-config --libs) $(libgcrypt-config --libs)
-CFLAGS+=$(libgnutls-config --cflags) $(libgcrypt-config --cflags)
+EFLAGS+=$(libgnutls-config --libs)
+CFLAGS+=$(libgnutls-config --cflags)
 EOF
 		
 		ssl=gnutls
@@ -614,6 +614,14 @@ fi;
 
 echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 
+if libgcrypt-config --cflags >/dev/null 2>&1; then
+	echo "EFLAGS+=$(libgcrypt-config --libs)" >> Makefile.settings
+	echo "CFLAGS+=$(libgcrypt-config --cflags)" >> Makefile.settings
+else
+	echo 'Cannot find libgcrypt devlopment libraries, aborting. (Install libgcrypt20-dev?)'
+	exit 1
+fi
+
 if detect_nameser_has_ns_types; then
 	echo '#define NAMESER_HAS_NS_TYPES' >> config.h
 fi
@@ -717,15 +725,13 @@ fi
 if [ "$otr" = 1 ]; then
 	# BI == built-in
 	echo '#define OTR_BI' >> config.h
-	echo "EFLAGS+=$($PKG_CONFIG --libs libotr) $(libgcrypt-config --libs)" >> Makefile.settings
-	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr) $(libgcrypt-config --cflags)" >> Makefile.settings
+	echo "EFLAGS+=$($PKG_CONFIG --libs libotr)" >> Makefile.settings
+	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr)" >> Makefile.settings
 	echo 'OTR_BI=otr.o' >> Makefile.settings
 elif [ "$otr" = "plugin" ]; then
-	# for some mysterious reason beyond the comprehension of my mortal mind,
-	# the libgcrypt flags aren't needed when building as plugin. add them anyway.
 	echo '#define OTR_PI' >> config.h
-	echo "OTRFLAGS=$($PKG_CONFIG --libs libotr) $(libgcrypt-config --libs)" >> Makefile.settings
-	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr) $(libgcrypt-config --cflags)" >> Makefile.settings
+	echo "OTRFLAGS=$($PKG_CONFIG --libs libotr)" >> Makefile.settings
+	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr)" >> Makefile.settings
 	echo 'OTR_PI=otr.so' >> Makefile.settings
 fi
 
