@@ -120,7 +120,7 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 		return XT_ABORT;
 	}
 
-	base64_decode(pass_b64, (unsigned char **) &pass_cr);
+	pass_len = base64_decode(pass_b64, (unsigned char **) &pass_cr);
 	if (xd->irc->auth_backend) {
 		password = g_strdup((char *)pass_cr);
 	} else {
