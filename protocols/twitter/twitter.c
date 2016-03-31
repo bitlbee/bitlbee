@@ -957,6 +957,12 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	} else if (g_strcasecmp(cmd[0], "unfollow") == 0 && cmd[1]) {
 		twitter_remove_buddy(ic, cmd[1], NULL);
 		goto eof;
+	} else if (g_strcasecmp(cmd[0], "mute") == 0 && cmd[1]) {
+		twitter_mute_create_destroy(ic, cmd[1], 1);
+		goto eof;
+	} else if (g_strcasecmp(cmd[0], "unmute") == 0 && cmd[1]) {
+		twitter_mute_create_destroy(ic, cmd[1], 0);
+		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
 		char *screen_name;

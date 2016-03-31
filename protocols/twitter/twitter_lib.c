@@ -1652,6 +1652,19 @@ void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int
 	             twitter_http_post, ic, 1, args, 2);
 }
 
+/**
+ * Mute or unmute a user
+ */
+void twitter_mute_create_destroy(struct im_connection *ic, char *who, int create)
+{
+	char *args[2];
+
+	args[0] = "screen_name";
+	args[1] = who;
+	twitter_http(ic, create ? TWITTER_MUTES_CREATE_URL : TWITTER_MUTES_DESTROY_URL,
+		     twitter_http_post, ic, 1, args, 2);
+}
+
 void twitter_status_destroy(struct im_connection *ic, guint64 id)
 {
 	char *url;
