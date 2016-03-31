@@ -953,7 +953,7 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	}
 	
 	/* Check this is not a tweet that should be muted */
-	uid_str = g_strdup_printf("%" PRIu64, status->user->uid);
+	uid_str = g_strdup_printf("%" G_GINT64_FORMAT, status->user->uid);
 	if (g_slist_find_custom(td->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
 		g_free(uid_str);
 		return;
@@ -1121,6 +1121,8 @@ static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value
 	json_value *source = json_o_get(o, "source");
 	json_value *target = json_o_get(o, "target");
 	const char *type = json_o_str(o, "event");
+	struct twitter_xml_user *us = NULL;
+	struct twitter_xml_user *ut = NULL;
 
 	if (!type || !source || source->type != json_object
 	    || !target || target->type != json_object) {
@@ -1128,14 +1130,32 @@ static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value
 	}
 
 	if (strcmp(type, "follow") == 0) {
-		struct twitter_xml_user *us = twitter_xt_get_user(source);
-		struct twitter_xml_user *ut = twitter_xt_get_user(target);
+		us = twitter_xt_get_user(source);
+		ut = twitter_xt_get_user(target);
 		if (g_strcasecmp(us->screen_name, td->user) == 0) {
 			twitter_add_buddy(ic, ut->screen_name, ut->name);
 		}
-		txu_free(us);
-		txu_free(ut);
+	} else if (strcmp(type, "mute") == 0) {
+		GSList *ids = td->mutes_ids;
+		ut = twitter_xt_get_user(target);
+		ids = g_slist_prepend(ids,
+		                      g_strdup_printf("%" G_GINT64_FORMAT, ut->uid));
+	
+		td->mutes_ids = ids;
+	} else if (strcmp(type, "unmute") == 0) {
+		GSList *found;
+		char *uid_str;
+		ut = twitter_xt_get_user(target);
+		uid_str = g_strdup_printf("%" G_GINT64_FORMAT, ut->uid);
+		if ((found = g_slist_find_custom(td->mutes_ids, uid_str,
+		                                (GCompareFunc)strcmp))) {
+			td->mutes_ids = g_slist_remove(td->mutes_ids, found);
+		}
+		g_free(uid_str);
 	}
+
+	txu_free(us);
+	txu_free(ut);
 
 	return TRUE;
 }
