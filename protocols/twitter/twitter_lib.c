@@ -953,7 +953,14 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	}
 	
 	/* Check this is not a tweet that should be muted */
-	uid_str = g_strdup_printf("%" G_GINT64_FORMAT, status->user->uid);
+	uid_str = g_strdup_printf("%" PRIu64, status->user->uid);
+	if (getenv("BITLBEE_DEBUG")) {
+		GSList *item;
+		fprintf(stderr, "Checking mutes; this uid=%s\n", uid_str);
+		for (item = td->mutes_ids; item != NULL; item = item->next) {
+			fprintf(stderr, "  id: %s\n", (char *)item->data);
+		}
+	}
 	if (g_slist_find_custom(td->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
 		g_free(uid_str);
 		return;
@@ -1136,22 +1143,34 @@ static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value
 			twitter_add_buddy(ic, ut->screen_name, ut->name);
 		}
 	} else if (strcmp(type, "mute") == 0) {
-		GSList *ids = td->mutes_ids;
+		GSList *found;
+		char *uid_str;
 		ut = twitter_xt_get_user(target);
-		ids = g_slist_prepend(ids,
-		                      g_strdup_printf("%" G_GINT64_FORMAT, ut->uid));
-	
-		td->mutes_ids = ids;
+		uid_str = g_strdup_printf("%" PRIu64, ut->uid);
+		if (!(found = g_slist_find_custom(td->mutes_ids, uid_str,
+		                                  (GCompareFunc)strcmp))) {
+			td->mutes_ids = g_slist_prepend(td->mutes_ids, uid_str);
+		}
+		twitter_log(ic, "Muted user %s", ut->screen_name);
+		if (getenv("BITLBEE_DEBUG")) {
+			fprintf(stderr, "New mute: %s %"PRIu64"\n",
+			        ut->screen_name, ut->uid);
+		}
 	} else if (strcmp(type, "unmute") == 0) {
 		GSList *found;
 		char *uid_str;
 		ut = twitter_xt_get_user(target);
-		uid_str = g_strdup_printf("%" G_GINT64_FORMAT, ut->uid);
+		uid_str = g_strdup_printf("%" PRIu64, ut->uid);
 		if ((found = g_slist_find_custom(td->mutes_ids, uid_str,
 		                                (GCompareFunc)strcmp))) {
 			td->mutes_ids = g_slist_remove(td->mutes_ids, found);
 		}
 		g_free(uid_str);
+		twitter_log(ic, "Unmuted user %s", ut->screen_name);
+		if (getenv("BITLBEE_DEBUG")) {
+			fprintf(stderr, "New unmute: %s %"PRIu64"\n",
+			        ut->screen_name, ut->uid);
+		}
 	}
 
 	txu_free(us);
