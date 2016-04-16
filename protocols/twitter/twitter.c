@@ -344,6 +344,8 @@ void twitter_login_finish(struct im_connection *ic)
 	           !(td->flags & TWITTER_HAVE_FRIENDS)) {
 		imcb_log(ic, "Getting contact list");
 		twitter_get_friends_ids(ic, -1);
+		twitter_get_mutes_ids(ic, -1);
+		twitter_get_noretweets_ids(ic, -1);
 	} else {
 		twitter_main_loop_start(ic);
 	}
@@ -954,6 +956,12 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		goto eof;
 	} else if (g_strcasecmp(cmd[0], "unfollow") == 0 && cmd[1]) {
 		twitter_remove_buddy(ic, cmd[1], NULL);
+		goto eof;
+	} else if (g_strcasecmp(cmd[0], "mute") == 0 && cmd[1]) {
+		twitter_mute_create_destroy(ic, cmd[1], 1);
+		goto eof;
+	} else if (g_strcasecmp(cmd[0], "unmute") == 0 && cmd[1]) {
+		twitter_mute_create_destroy(ic, cmd[1], 0);
 		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {

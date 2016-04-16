@@ -62,6 +62,8 @@
 /* Social graphs URLs */
 #define TWITTER_FRIENDS_IDS_URL "/friends/ids.json"
 #define TWITTER_FOLLOWERS_IDS_URL "/followers/ids.json"
+#define TWITTER_MUTES_IDS_URL "/mutes/users/ids.json"
+#define TWITTER_NORETWEETS_IDS_URL "/friendships/no_retweets/ids.json"
 
 /* Account URLs */
 #define TWITTER_ACCOUNT_RATE_LIMIT_URL "/account/rate_limit_status.json"
@@ -75,6 +77,10 @@
 #define TWITTER_BLOCKS_CREATE_URL "/blocks/create/"
 #define TWITTER_BLOCKS_DESTROY_URL "/blocks/destroy/"
 
+/* Mute URLs */
+#define TWITTER_MUTES_CREATE_URL "/mutes/users/create.json"
+#define TWITTER_MUTES_DESTROY_URL "/mutes/users/destroy.json"
+
 /* Report spam */
 #define TWITTER_REPORT_SPAM_URL "/users/report_spam.json"
 
@@ -86,11 +92,14 @@ gboolean twitter_open_stream(struct im_connection *ic);
 gboolean twitter_open_filter_stream(struct im_connection *ic);
 gboolean twitter_get_timeline(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_friends_ids(struct im_connection *ic, gint64 next_cursor);
+void twitter_get_mutes_ids(struct im_connection *ic, gint64 next_cursor);
+void twitter_get_noretweets_ids(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
 
 void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to);
 void twitter_direct_messages_new(struct im_connection *ic, char *who, char *message);
 void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int create);
+void twitter_mute_create_destroy(struct im_connection *ic, char *who, int create);
 void twitter_status_destroy(struct im_connection *ic, guint64 id);
 void twitter_status_retweet(struct im_connection *ic, guint64 id);
 void twitter_report_spam(struct im_connection *ic, char *screen_name);
