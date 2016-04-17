@@ -954,13 +954,7 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	
 	/* Check this is not a tweet that should be muted */
 	uid_str = g_strdup_printf("%" PRIu64, status->user->uid);
-	if (getenv("BITLBEE_DEBUG")) {
-		GSList *item;
-		fprintf(stderr, "Checking mutes; this uid=%s\n", uid_str);
-		for (item = td->mutes_ids; item != NULL; item = item->next) {
-			fprintf(stderr, "  id: %s\n", (char *)item->data);
-		}
-	}
+
 	if (g_slist_find_custom(td->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
 		g_free(uid_str);
 		return;
@@ -1163,7 +1157,9 @@ static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value
 		uid_str = g_strdup_printf("%" PRIu64, ut->uid);
 		if ((found = g_slist_find_custom(td->mutes_ids, uid_str,
 		                                (GCompareFunc)strcmp))) {
-			td->mutes_ids = g_slist_remove(td->mutes_ids, found);
+			char *found_str = found->data;
+			td->mutes_ids = g_slist_delete_link(td->mutes_ids, found);
+			g_free(found_str);
 		}
 		g_free(uid_str);
 		twitter_log(ic, "Unmuted user %s", ut->screen_name);

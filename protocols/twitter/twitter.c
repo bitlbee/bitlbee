@@ -686,6 +686,12 @@ static void twitter_logout(struct im_connection *ic)
 			b_event_remove(td->filter_update_id);
 		}
 
+		g_slist_foreach(td->mutes_ids, (GFunc) g_free, NULL);
+		g_slist_free(td->mutes_ids);
+
+		g_slist_foreach(td->noretweets_ids, (GFunc) g_free, NULL);
+		g_slist_free(td->noretweets_ids);
+
 		http_close(td->stream);
 		twitter_filter_remove_all(ic);
 		oauth_info_free(td->oauth_info);
