@@ -46,7 +46,7 @@ gboolean load_plugin(char *path)
 	GModule *mod = g_module_open(path, G_MODULE_BIND_LAZY);
 
 	if (!mod) {
-		log_message(LOGLVL_ERROR, "Can't find `%s', not loading (%s)\n", path, g_module_error());
+		log_message(LOGLVL_ERROR, "Error loading plugin `%s': %s\n", path, g_module_error());
 		return FALSE;
 	}
 
