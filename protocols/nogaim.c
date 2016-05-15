@@ -132,6 +132,10 @@ void load_plugins(void)
 		char *path;
 
 		while ((entry = g_dir_read_name(dir))) {
+			if (!g_str_has_suffix(entry, "." G_MODULE_SUFFIX)) {
+				continue;
+			}
+
 			path = g_build_filename(global.conf->plugindir, entry, NULL);
 			if (!path) {
 				log_message(LOGLVL_WARNING, "Can't build path for %s\n", entry);
