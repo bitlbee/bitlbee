@@ -1834,6 +1834,18 @@
 		</description>
 	</bitlbee-command>
 
+	<bitlbee-command name="plugins">
+		<short-description>List all the external plugins</short-description>
+		<syntax>plugins</syntax>
+
+		<description>
+			<para>
+				This gives you a list of all the external plugins.
+			</para>
+		</description>
+
+	</bitlbee-command>
+
 	<bitlbee-command name="qlist">
 		<short-description>List all the unanswered questions root asked</short-description>
 		<syntax>qlist</syntax>

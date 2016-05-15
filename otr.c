@@ -267,6 +267,22 @@ void init_plugin(void)
 	register_irc_plugin(&otr_plugin);
 }
 
+#ifndef OTR_BI
+struct plugin_info *init_plugin_info(void)
+{
+	static struct plugin_info info = {
+		BITLBEE_ABI_VERSION_CODE,
+		"otr",
+		BITLBEE_VERSION,
+		"Off-the-Record communication",
+		NULL,
+		NULL
+	};
+
+	return &info;
+}
+#endif
+
 gboolean otr_irc_new(irc_t *irc)
 {
 	set_t *s;

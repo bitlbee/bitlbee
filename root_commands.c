@@ -1106,6 +1106,36 @@ static void cmd_blist(irc_t *irc, char **cmd)
 	}
 }
 
+#ifdef WITH_PLUGINS
+static void cmd_plugins(irc_t *irc, char **cmd)
+{
+	GList *l;
+	struct plugin_info *info;
+
+	for (l = get_plugins(); l; l = l->next) {
+		info = l->data;
+		irc_rootmsg(irc, "%s:", info->name);
+		irc_rootmsg(irc, "  Version: %s", info->version);
+
+		if (info->description) {
+			irc_rootmsg(irc, "  Description: %s", info->description);
+		}
+
+		if (info->author) {
+			irc_rootmsg(irc, "  Author: %s", info->author);
+		}
+
+		if (info->url) {
+			irc_rootmsg(irc, "  URL: %s", info->url);
+		}
+
+		if (l->next) {
+			irc_rootmsg(irc, "");
+		}
+	}
+}
+#endif
+
 static void cmd_qlist(irc_t *irc, char **cmd)
 {
 	query_t *q = irc->queries;
@@ -1357,6 +1387,9 @@ command_t root_commands[] = {
 	{ "info",           1, cmd_info,           0 },
 	{ "nick",           1, cmd_nick,           0 },
 	{ "no",             0, cmd_yesno,          0 },
+#ifdef WITH_PLUGINS
+	{ "plugins",        0, cmd_plugins,        0 },
+#endif
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "register",       0, cmd_register,       0 },
 	{ "remove",         1, cmd_remove,         0 },

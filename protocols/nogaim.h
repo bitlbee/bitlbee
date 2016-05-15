@@ -270,6 +270,20 @@ struct prpl {
 	void *resv5;
 };
 
+struct plugin_info
+{
+	guint abiver;
+	const char *name;
+	const char *version;
+	const char *description;
+	const char *author;
+	const char *url;
+};
+
+#ifdef WITH_PLUGINS
+G_MODULE_EXPORT GList *get_plugins();
+#endif
+
 /* im_api core stuff. */
 void nogaim_init();
 G_MODULE_EXPORT GSList *get_connections();
