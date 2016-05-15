@@ -56,9 +56,6 @@ ldap=0
 
 pie=1
 
-arch=$(uname -s)
-cpu=$(uname -m)
-
 GLIB_MIN_VERSION=2.16
 
 # Cygwin and Darwin don't support PIC/PIE
@@ -199,8 +196,6 @@ INCLUDEDIR=$includedir
 PCDIR=$pcdir
 
 TARGET=$target
-ARCH=$arch
-CPU=$cpu
 
 INSTALL=install -p
 
@@ -247,8 +242,6 @@ cat<<EOF >config.h
 #define PLUGINDIR "$plugindir"
 #define PIDFILE "$pidfile"
 #define IPCSOCKET "$ipcsocket"
-#define ARCH "$arch"
-#define CPU "$cpu"
 EOF
 
 

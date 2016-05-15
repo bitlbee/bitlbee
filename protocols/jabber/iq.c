@@ -66,7 +66,6 @@ xt_status jabber_pkt_iq(struct xt_node *node, gpointer data)
 		if (strcmp(s, XMLNS_VERSION) == 0) {
 			xt_add_child(reply, xt_new_node("name", set_getstr(&ic->acc->set, "user_agent"), NULL));
 			xt_add_child(reply, xt_new_node("version", BITLBEE_VERSION, NULL));
-			xt_add_child(reply, xt_new_node("os", ARCH, NULL));
 		} else if (strcmp(s, XMLNS_TIME_OLD) == 0) {
 			time_t time_ep;
 			char buf[1024];
