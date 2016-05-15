@@ -766,8 +766,8 @@ static void irc_cmd_list(irc_t *irc, char **cmd)
 
 static void irc_cmd_version(irc_t *irc, char **cmd)
 {
-	irc_send_num(irc, 351, "%s-%s. %s :%s/%s ",
-	             PACKAGE, BITLBEE_VERSION, irc->root->host, ARCH, CPU);
+	irc_send_num(irc, 351, "%s-%s. %s :",
+	             PACKAGE, BITLBEE_VERSION, irc->root->host);
 }
 
 static void irc_cmd_completions(irc_t *irc, char **cmd)
