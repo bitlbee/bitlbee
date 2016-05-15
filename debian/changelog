@@ -2,6 +2,7 @@ bitlbee (3.4.2-1) UNRELEASED; urgency=medium
 
   * Make the build reproducible by not encoding ARCH / CPU defines in
     the binary.
+  * Fix Vcs-* control headers after migration to Git.
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 15 May 2016 17:15:13 +0000
 
