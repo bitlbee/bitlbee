@@ -1835,12 +1835,12 @@
 	</bitlbee-command>
 
 	<bitlbee-command name="plugins">
-		<short-description>List all the external plugins</short-description>
+		<short-description>List all the external plugins and protocols</short-description>
 		<syntax>plugins</syntax>
 
 		<description>
 			<para>
-				This gives you a list of all the external plugins.
+				This gives you a list of all the external plugins and protocols.
 			</para>
 		</description>
 

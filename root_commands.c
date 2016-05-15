@@ -1106,9 +1106,48 @@ static void cmd_blist(irc_t *irc, char **cmd)
 	}
 }
 
-#ifdef WITH_PLUGINS
+static gint prplcmp(gconstpointer a, gconstpointer b)
+{
+	const struct prpl *pa = a;
+	const struct prpl *pb = b;
+
+	return g_strcasecmp(pa->name, pb->name);
+}
+
+static void prplstr(GList *prpls, GString *gstr)
+{
+	const char *last = NULL;
+	GList *l;
+	struct prpl *p;
+
+	prpls = g_list_copy(prpls);
+	prpls = g_list_sort(prpls, prplcmp);
+
+	for (l = prpls; l; l = l->next) {
+		p = l->data;
+
+		if (last && g_strcasecmp(p->name, last) == 0) {
+			/* Ignore duplicates (mainly for libpurple) */
+			continue;
+		}
+
+		if (gstr->len != 0) {
+			g_string_append(gstr, ", ");
+		}
+
+		g_string_append(gstr, p->name);
+		last = p->name;
+	}
+
+	g_list_free(prpls);
+}
+
 static void cmd_plugins(irc_t *irc, char **cmd)
 {
+	GList *prpls;
+	GString *gstr;
+
+#ifdef WITH_PLUGINS
 	GList *l;
 	struct plugin_info *info;
 
@@ -1129,12 +1168,28 @@ static void cmd_plugins(irc_t *irc, char **cmd)
 			irc_rootmsg(irc, "  URL: %s", info->url);
 		}
 
-		if (l->next) {
-			irc_rootmsg(irc, "");
-		}
+		irc_rootmsg(irc, "");
 	}
-}
 #endif
+
+	gstr = g_string_new(NULL);
+	prpls = get_protocols();
+
+	if (prpls) {
+		prplstr(prpls, gstr);
+		irc_rootmsg(irc, "Enabled Protocols: %s", gstr->str);
+		g_string_truncate(gstr, 0);
+	}
+
+	prpls = get_protocols_disabled();
+
+	if (prpls) {
+		prplstr(prpls, gstr);
+		irc_rootmsg(irc, "Disabled Protocols: %s", gstr->str);
+	}
+
+	g_string_free(gstr, TRUE);
+}
 
 static void cmd_qlist(irc_t *irc, char **cmd)
 {
@@ -1387,9 +1442,7 @@ command_t root_commands[] = {
 	{ "info",           1, cmd_info,           0 },
 	{ "nick",           1, cmd_nick,           0 },
 	{ "no",             0, cmd_yesno,          0 },
-#ifdef WITH_PLUGINS
 	{ "plugins",        0, cmd_plugins,        0 },
-#endif
 	{ "qlist",          0, cmd_qlist,          0 },
 	{ "register",       0, cmd_register,       0 },
 	{ "remove",         1, cmd_remove,         0 },

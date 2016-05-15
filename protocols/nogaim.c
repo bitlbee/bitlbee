@@ -229,6 +229,16 @@ void nogaim_init()
 #endif
 }
 
+GList *get_protocols()
+{
+	return protocols;
+}
+
+GList *get_protocols_disabled()
+{
+	return disabled_protocols;
+}
+
 GSList *get_connections()
 {
 	return connections;

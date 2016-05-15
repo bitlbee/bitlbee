@@ -286,6 +286,8 @@ G_MODULE_EXPORT GList *get_plugins();
 
 /* im_api core stuff. */
 void nogaim_init();
+G_MODULE_EXPORT GList *get_protocols();
+G_MODULE_EXPORT GList *get_protocols_disabled();
 G_MODULE_EXPORT GSList *get_connections();
 G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
 G_MODULE_EXPORT gboolean is_protocol_disabled(const char *name);
