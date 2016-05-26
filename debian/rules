@@ -93,9 +93,6 @@ ifeq ($(BITLBEE_LIBPURPLE),1)
 	ln -sf debian/bitlbee.prerm debian/bitlbee-libpurple.prerm
 endif
 
-	patch debian/bitlbee-common/etc/bitlbee/bitlbee.conf debian/patches/bitlbee.conf.diff
-	chmod 640 debian/bitlbee-common/etc/bitlbee/bitlbee.conf
-
 binary-common:
 	dh_testdir
 	dh_testroot
@@ -107,7 +104,7 @@ binary-common:
 	# Hardy and Lenny are deprecated.
 	for p in bitlbee bitlbee-libpurple bitlbee-dev bitlbee-plugin-otr; do rm -r debian/$$p/usr/share/doc/$$p && ln -s bitlbee-common debian/$$p/usr/share/doc/$$p || true; done
 	dh_installdebconf
-	dh_installinit --init-script=bitlbee
+	dh_installinit --name=bitlbee
 	dh_installman
 	dh_lintian
 	dh_strip

@@ -1,0 +1,27 @@
+# bitlbee
+#
+# bitlbee im gateway
+
+description	"bitlbee"
+author		"Guido S. Nickels <gsn@kernel-oops.de>"
+
+start on runlevel 2
+stop on runlevel [016]
+
+script
+ # Default value
+ NAME="bitlbee"
+ BITLBEE_PORT=6667
+ BITLBEE_OPTS="-F -n"
+ BITLBEE_DISABLED=0
+ PIDFILE=/var/run/$NAME.pid
+
+ # Read config file if it is present.
+ if [ -r /etc/default/$NAME ]; then
+	. /etc/default/$NAME
+ fi
+
+ /usr/sbin/bitlbee -p $BITLBEE_PORT -P $PIDFILE $BITLBEE_OPTS
+end script
+
+respawn
