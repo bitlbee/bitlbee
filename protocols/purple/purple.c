@@ -964,10 +964,11 @@ void prplcb_conv_del_users(PurpleConversation *conv, GList *cbuddies)
 }
 
 /* Generic handler for IM or chat messages, covers write_chat, write_im and write_conv */
-static void handle_conv_msg(PurpleConversation *conv, const char *who, const char *message, guint32 bee_flags, time_t mtime)
+static void handle_conv_msg(PurpleConversation *conv, const char *who, const char *message_, guint32 bee_flags, time_t mtime)
 {
 	struct im_connection *ic = purple_ic_by_pa(conv->account);
 	struct groupchat *gc = conv->ui_data;
+	char *message = g_strdup(message_);
 	PurpleBuddy *buddy;
 
 	buddy = purple_find_buddy(conv->account, who);
@@ -976,10 +977,12 @@ static void handle_conv_msg(PurpleConversation *conv, const char *who, const cha
 	}
 
 	if (conv->type == PURPLE_CONV_TYPE_IM) {
-		imcb_buddy_msg(ic, (char *) who, (char *) message, bee_flags, mtime);
+		imcb_buddy_msg(ic, who, message, bee_flags, mtime);
 	} else if (gc) {
-		imcb_chat_msg(gc, who, (char *) message, bee_flags, mtime);
+		imcb_chat_msg(gc, who, message, bee_flags, mtime);
 	}
+
+	g_free(message);
 }
 
 /* Handles write_im and write_chat. Removes echoes of locally sent messages */
