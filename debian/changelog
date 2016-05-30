@@ -4,6 +4,7 @@ bitlbee (3.4.2-1) UNRELEASED; urgency=medium
     the binary.
   * Fix Vcs-* control headers after migration to Git.
   * Don't start synopsis with an article.
+  * Bump standards version to 3.9.8 (no changes).
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 15 May 2016 17:15:13 +0000
 
