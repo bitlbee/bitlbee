@@ -89,7 +89,7 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 	}
 
 	if (!want_oauth && !sup_plain && !sup_digest) {
-		if (!sup_gtalk) {
+		if (sup_gtalk) {
 			imcb_error(ic, "This server requires OAuth "
 			           "(supported schemes:%s)", mechs->str);
 		} else {
