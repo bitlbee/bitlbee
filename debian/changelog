@@ -1,5 +1,6 @@
-bitlbee (3.4.2-1) UNRELEASED; urgency=medium
+bitlbee (3.4.2-1) unstable; urgency=medium
 
+  [ Jelmer Vernooĳ ]
   * Make the build reproducible by not encoding ARCH / CPU defines in
     the binary.
   * Fix Vcs-* control headers after migration to Git.
@@ -7,7 +8,10 @@ bitlbee (3.4.2-1) UNRELEASED; urgency=medium
   * Bump standards version to 3.9.8 (no changes).
   * Use dh_prep rather than deprecated 'dh_clean -k'.
 
- -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 15 May 2016 17:15:13 +0000
+  [ Wilmer van der Gaast ]
+  * New upstream release.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sun, 12 Jun 2016 22:31:18 +0100
 
 bitlbee (3.4.1-1) unstable; urgency=medium
 
