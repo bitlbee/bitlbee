@@ -10,6 +10,6 @@ if [ "$1" = "upgrade" ]; then
 		rm -f /usr/share/bitlbee/help.upgrading
 		mv /usr/share/bitlbee/help.txt /usr/share/bitlbee/help.upgrading
 	fi
-else
-	invoke-rc.d bitlbee stop
 fi
+
+#DEBHELPER#

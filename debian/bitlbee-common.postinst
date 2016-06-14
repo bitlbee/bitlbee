@@ -9,8 +9,6 @@ PORT="$RET"
 
 CONFDIR=/var/lib/bitlbee/
 
-update-rc.d bitlbee defaults > /dev/null 2>&1
-
 ## Load default option. Don't want to put this in debconf (yet?)
 BITLBEE_OPTS=-F
 BITLBEE_DISABLED=0
@@ -91,6 +89,4 @@ else
 	chown bitlbee /etc/bitlbee/bitlbee.conf
 fi
 
-if [ -z "$2" ]; then
-	invoke-rc.d bitlbee start
-fi
+#DEBHELPER#
