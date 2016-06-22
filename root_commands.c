@@ -1217,8 +1217,10 @@ static void cmd_chat(irc_t *irc, char **cmd)
 	account_t *acc;
 
 	if (g_strcasecmp(cmd[1], "add") == 0) {
-		char *channel, *s;
+		bee_chat_info_t *ci;
+		char *channel, *room, *s;
 		struct irc_channel *ic;
+		guint i;
 
 		MIN_ARGS(3);
 
@@ -1230,8 +1232,27 @@ static void cmd_chat(irc_t *irc, char **cmd)
 			return;
 		}
 
+		if (cmd[3][0] == '!') {
+			if (!acc->prpl->chat_list) {
+				irc_rootmsg(irc, "Listing chatrooms not supported on that account.");
+				return;
+			}
+
+			i = g_ascii_strtoull(cmd[3] + 1, NULL, 10);
+			ci = g_slist_nth_data(acc->ic->chatlist, i - 1);
+
+			if (ci == NULL) {
+				irc_rootmsg(irc, "Invalid chatroom index");
+				return;
+			}
+
+			room = ci->title;
+		} else {
+			room = cmd[3];
+		}
+
 		if (cmd[4] == NULL) {
-			channel = g_strdup(cmd[3]);
+			channel = g_strdup(room);
 			if ((s = strchr(channel, '@'))) {
 				*s = 0;
 			}
@@ -1251,7 +1272,7 @@ static void cmd_chat(irc_t *irc, char **cmd)
 		    set_setstr(&ic->set, "type", "chat") &&
 		    set_setstr(&ic->set, "chat_type", "room") &&
 		    set_setstr(&ic->set, "account", cmd[2]) &&
-		    set_setstr(&ic->set, "room", cmd[3])) {
+		    set_setstr(&ic->set, "room", room)) {
 			irc_rootmsg(irc, "Chatroom successfully added.");
 		} else {
 			if (ic) {
@@ -1261,6 +1282,18 @@ static void cmd_chat(irc_t *irc, char **cmd)
 			irc_rootmsg(irc, "Could not add chatroom.");
 		}
 		g_free(channel);
+	} else if (g_strcasecmp(cmd[1], "list") == 0) {
+		MIN_ARGS(2);
+
+		if (!(acc = account_get(irc->b, cmd[2]))) {
+			irc_rootmsg(irc, "Invalid account");
+			return;
+		} else if (!acc->prpl->chat_list) {
+			irc_rootmsg(irc, "Listing chatrooms not supported on that account.");
+			return;
+		}
+
+		acc->prpl->chat_list(acc->ic, cmd[3]);
 	} else if (g_strcasecmp(cmd[1], "with") == 0) {
 		irc_user_t *iu;
 
@@ -1275,8 +1308,7 @@ static void cmd_chat(irc_t *irc, char **cmd)
 		} else {
 			irc_rootmsg(irc, "Can't open a groupchat with %s.", cmd[2]);
 		}
-	} else if (g_strcasecmp(cmd[1], "list") == 0 ||
-	           g_strcasecmp(cmd[1], "set") == 0 ||
+	} else if (g_strcasecmp(cmd[1], "set") == 0 ||
 	           g_strcasecmp(cmd[1], "del") == 0) {
 		irc_rootmsg(irc,
 		            "Warning: The \002chat\002 command was mostly replaced with the \002channel\002 command.");
@@ -1286,6 +1318,39 @@ static void cmd_chat(irc_t *irc, char **cmd)
 		            "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat",
 		            cmd[1]);
 	}
+}
+
+void cmd_chat_list_finish(struct im_connection *ic)
+{
+	account_t *acc = ic->acc;
+	bee_chat_info_t *ci;
+	char *hformat, *iformat, *topic;
+	GSList *l;
+	guint i = 0;
+	irc_t *irc = ic->bee->ui_data;
+
+	if (ic->chatlist == NULL) {
+		irc_rootmsg(irc, "No existing chatrooms");
+		return;
+	}
+
+	if (strchr(irc->umode, 'b') != NULL) {
+		hformat = "%s\t%s\t%s";
+		iformat = "%u\t%s\t%s";
+	} else {
+		hformat = "%s  %-20s  %s";
+		iformat = "%5u  %-20.20s  %s";
+	}
+
+	irc_rootmsg(irc, hformat, "Index", "Title", "Topic");
+
+	for (l = ic->chatlist; l; l = l->next) {
+		ci = l->data;
+		topic = ci->topic ? ci->topic : "";
+		irc_rootmsg(irc, iformat, ++i, ci->title, topic);
+	}
+
+	irc_rootmsg(irc, "%u %s chatrooms", i, acc->tag);
 }
 
 static void cmd_group(irc_t *irc, char **cmd)

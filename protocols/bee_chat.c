@@ -273,3 +273,8 @@ void imcb_chat_invite(struct im_connection *ic, const char *name, const char *wh
 		ic->bee->ui->chat_invite(ic->bee, bu, name, msg);
 	}
 }
+
+void bee_chat_list_finish(struct im_connection *ic)
+{
+	cmd_chat_list_finish(ic);
+}

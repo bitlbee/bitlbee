@@ -95,6 +95,7 @@ struct im_connection {
 	bee_t *bee;
 
 	GSList *groupchats;
+	GSList *chatlist;
 };
 
 struct groupchat {
@@ -261,6 +262,13 @@ struct prpl {
 
 	/* If null, equivalent to handle_cmp( ic->acc->user, who ) */
 	gboolean (* handle_is_self) (struct im_connection *, const char *who);
+
+	/* This sets/updates the im_connection->chatlist field with a
+	 * bee_chat_info_t GSList. This function should ensure the
+	 * bee_chat_list_finish() function gets called at some point
+	 * after the chat list is completely updated.
+	 */
+	void (* chat_list) (struct im_connection *, const char *server);
 
 	/* Some placeholders so eventually older plugins may cooperate with newer BitlBees. */
 	void *resv1;

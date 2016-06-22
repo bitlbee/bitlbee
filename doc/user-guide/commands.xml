@@ -263,7 +263,7 @@
 		</description>
 
 		<bitlbee-command name="add">
-			<syntax>chat add &lt;account id&gt; &lt;room&gt; [&lt;channel&gt;]</syntax>
+			<syntax>chat add &lt;account id&gt; &lt;room|!index&gt; [&lt;channel&gt;]</syntax>
 
 			<description>
 				<para>
@@ -279,6 +279,16 @@
 				</para>
 			</description>
 
+		</bitlbee-command>
+
+		<bitlbee-command name="list">
+			<syntax>chat list &lt;account id&gt; [&lt;server&gt;]</syntax>
+
+			<description>
+				<para>
+					List existing chatrooms provided by an account. BitlBee needs this to propogate an internal list of chats. The existing chat can then be added with <emphasis>chat add</emphasis>.
+				</para>
+			</description>
 		</bitlbee-command>
 
 		<bitlbee-command name="with">
