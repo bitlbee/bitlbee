@@ -353,6 +353,21 @@ static void purple_login(account_t *acc)
 	}
 }
 
+static void purple_chatlist_free(struct im_connection *ic)
+{
+	bee_chat_info_t *ci;
+	GSList *l = ic->chatlist;
+
+	while (l) {
+		ci = l->data;
+		l = g_slist_delete_link(l, l);
+
+		g_free(ci->title);
+		g_free(ci->topic);
+		g_free(ci);
+	}
+}
+
 static void purple_logout(struct im_connection *ic)
 {
 	struct purple_data *pd = ic->proto_data;
@@ -368,6 +383,7 @@ static void purple_logout(struct im_connection *ic)
 	purple_account_set_enabled(pd->account, "BitlBee", FALSE);
 	purple_connections = g_slist_remove(purple_connections, ic);
 	purple_accounts_remove(pd->account);
+	purple_chatlist_free(ic);
 	g_hash_table_destroy(pd->input_requests);
 	g_free(pd);
 }
@@ -729,6 +745,20 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 	g_hash_table_destroy(chat_hash);
 
 	return imcb_chat_new(ic, room);
+}
+
+void purple_chat_list(struct im_connection *ic, const char *server)
+{
+	PurpleRoomlist *list;
+	struct purple_data *pd = ic->proto_data;
+
+	list = purple_roomlist_get_list(pd->account->gc);
+
+	if (list) {
+		purple_roomlist_ref(list);
+	} else {
+		imcb_log(ic, "Room listing unsupported by this purple plugin");
+	}
 }
 
 void purple_transfer_request(struct im_connection *ic, file_transfer_t *ft, char *handle);
@@ -1266,6 +1296,102 @@ static PurplePrivacyUiOps bee_privacy_uiops =
 	prplcb_privacy_deny_removed,       /* deny_removed */
 };
 
+static void prplcb_roomlist_create(PurpleRoomlist *list)
+{
+	struct purple_roomlist_data *rld;
+
+	list->ui_data = rld = g_new0(struct purple_roomlist_data, 1);
+	rld->topic = -1;
+}
+
+static void prplcb_roomlist_set_fields(PurpleRoomlist *list, GList *fields)
+{
+	gint topic = -1;
+	GList *l;
+	guint i;
+	PurpleRoomlistField *field;
+	struct purple_roomlist_data *rld = list->ui_data;
+
+	for (i = 0, l = fields; l; i++, l = l->next) {
+		field = l->data;
+
+		/* Use the first visible string field as a fallback topic */
+		if (i != 0 && topic < 0 && !field->hidden &&
+		    field->type == PURPLE_ROOMLIST_FIELD_STRING) {
+			topic = i;
+		}
+
+		if ((g_strcasecmp(field->name, "description") == 0) ||
+		    (g_strcasecmp(field->name, "topic") == 0)) {
+			if (field->type == PURPLE_ROOMLIST_FIELD_STRING) {
+				rld->topic = i;
+			}
+		}
+	}
+
+	if (rld->topic < 0) {
+		rld->topic = topic;
+	}
+}
+
+static void prplcb_roomlist_add_room(PurpleRoomlist *list, PurpleRoomlistRoom *room)
+{
+	bee_chat_info_t *ci;
+	const char *title;
+	const char *topic;
+	GList *fields;
+	struct purple_roomlist_data *rld = list->ui_data;
+
+	fields = purple_roomlist_room_get_fields(room);
+	title = purple_roomlist_room_get_name(room);
+
+	if (rld->topic >= 0) {
+		topic = g_list_nth_data(fields, rld->topic);
+	} else {
+		topic = NULL;
+	}
+
+	ci = g_new(bee_chat_info_t, 1);
+	ci->title = g_strdup(title);
+	ci->topic = g_strdup(topic);
+	rld->chats = g_slist_prepend(rld->chats, ci);
+}
+
+static void prplcb_roomlist_in_progress(PurpleRoomlist *list, gboolean in_progress)
+{
+	struct im_connection *ic;
+	struct purple_roomlist_data *rld = list->ui_data;
+
+	if (in_progress) {
+		return;
+	}
+
+	ic = purple_ic_by_pa(list->account);
+	purple_chatlist_free(ic);
+
+	ic->chatlist = g_slist_reverse(rld->chats);
+	rld->chats = NULL;
+
+	bee_chat_list_finish(ic);
+	purple_roomlist_unref(list);
+}
+
+static void prplcb_roomlist_destroy(PurpleRoomlist *list)
+{
+	g_free(list->ui_data);
+	list->ui_data = NULL;
+}
+
+static PurpleRoomlistUiOps bee_roomlist_uiops =
+{
+	NULL,                         /* show_with_account */
+	prplcb_roomlist_create,       /* create */
+	prplcb_roomlist_set_fields,   /* set_fields */
+	prplcb_roomlist_add_room,     /* add_room */
+	prplcb_roomlist_in_progress,  /* in_progress */
+	prplcb_roomlist_destroy,      /* destroy */
+};
+
 static void prplcb_debug_print(PurpleDebugLevel level, const char *category, const char *arg_s)
 {
 	fprintf(stderr, "DEBUG %s: %s", category, arg_s);
@@ -1430,6 +1556,7 @@ static void purple_ui_init()
 	purple_conversations_set_ui_ops(&bee_conv_uiops);
 	purple_request_set_ui_ops(&bee_request_uiops);
 	purple_privacy_set_ui_ops(&bee_privacy_uiops);
+	purple_roomlist_set_ui_ops(&bee_roomlist_uiops);
 	purple_notify_set_ui_ops(&bee_notify_uiops);
 	purple_accounts_set_ui_ops(&bee_account_uiops);
 	purple_xfers_set_ui_ops(&bee_xfer_uiops);
@@ -1527,6 +1654,7 @@ void purple_initmodule()
 	funcs.chat_kick = purple_chat_kick;
 	funcs.chat_leave = purple_chat_leave;
 	funcs.chat_join = purple_chat_join;
+	funcs.chat_list = purple_chat_list;
 	funcs.transfer_request = purple_transfer_request;
 
 	help = g_string_new("BitlBee libpurple module supports the following IM protocols:\n");
