@@ -1453,6 +1453,10 @@ void purple_initmodule()
 	purple_util_set_user_dir(dir);
 	g_free(dir);
 
+	dir = g_strdup_printf("%s/purple", global.conf->plugindir);
+	purple_plugins_add_search_path(dir);
+	g_free(dir);
+
 	purple_debug_set_enabled(FALSE);
 	purple_core_set_ui_ops(&bee_core_uiops);
 	purple_eventloop_set_ui_ops(&glib_eventloops);
