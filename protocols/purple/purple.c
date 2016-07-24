@@ -1446,6 +1446,12 @@ void purple_initmodule()
 	GString *help;
 	char *dir;
 
+	if (purple_get_core() != NULL) {
+		log_message(LOGLVL_ERROR, "libpurple already initialized. "
+		            "Please use inetd or ForkDaemon mode instead.");
+		return;
+	}
+
 	g_assert((int) B_EV_IO_READ == (int) PURPLE_INPUT_READ);
 	g_assert((int) B_EV_IO_WRITE == (int) PURPLE_INPUT_WRITE);
 
