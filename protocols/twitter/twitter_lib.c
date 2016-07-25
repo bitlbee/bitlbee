@@ -383,6 +383,11 @@ static void twitter_http_get_mutes_ids(struct http_request *req)
 
 	td = ic->proto_data;
 
+	if (req->status_code != 200) {
+		/* Fail silently */
+		return;
+	}
+
 	// Parse the data.
 	if (!(parsed = twitter_parse_response(ic, req))) {
 		return;
@@ -418,6 +423,11 @@ static void twitter_http_get_noretweets_ids(struct http_request *req)
 
 	// Check if the connection is stil active
 	if (!g_slist_find(twitter_connections, ic)) {
+		return;
+	}
+
+	if (req->status_code != 200) {
+		/* Fail silently */
 		return;
 	}
 
