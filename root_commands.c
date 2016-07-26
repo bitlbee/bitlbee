@@ -1233,7 +1233,10 @@ static void cmd_chat(irc_t *irc, char **cmd)
 		}
 
 		if (cmd[3][0] == '!') {
-			if (!acc->prpl->chat_list) {
+			if (!acc->ic || !(acc->ic->flags & OPT_LOGGED_IN)) {
+				irc_rootmsg(irc, "Not logged in to account.");
+				return;
+			} else if (!acc->prpl->chat_list) {
 				irc_rootmsg(irc, "Listing chatrooms not supported on that account.");
 				return;
 			}
@@ -1287,6 +1290,9 @@ static void cmd_chat(irc_t *irc, char **cmd)
 
 		if (!(acc = account_get(irc->b, cmd[2]))) {
 			irc_rootmsg(irc, "Invalid account");
+			return;
+		} else if (!acc->ic || !(acc->ic->flags & OPT_LOGGED_IN)) {
+			irc_rootmsg(irc, "Not logged in to account.");
 			return;
 		} else if (!acc->prpl->chat_list) {
 			irc_rootmsg(irc, "Listing chatrooms not supported on that account.");
