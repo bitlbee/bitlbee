@@ -1508,8 +1508,8 @@
 				Comma-separated list of statuses of users you want in the channel,
 				and any modes they should have. The following statuses are currently
 				recognised: <emphasis>online</emphasis> (i.e. available, not
-				away), <emphasis>special</emphasis>, <emphasis>away</emphasis>,
-				and <emphasis>offline</emphasis>.
+				away), <emphasis>special</emphasis> (specific to the protocol),
+				<emphasis>away</emphasis>, and <emphasis>offline</emphasis>.
 			</para>
 			
 			<para>
