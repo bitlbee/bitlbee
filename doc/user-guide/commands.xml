@@ -1508,14 +1508,14 @@
 				Comma-separated list of statuses of users you want in the channel,
 				and any modes they should have. The following statuses are currently
 				recognised: <emphasis>online</emphasis> (i.e. available, not
-				away), <emphasis>special</emphasis> (specific to the protocol),
+				away), <emphasis>special</emphasis> (specific to the protocol), 
 				<emphasis>away</emphasis>, and <emphasis>offline</emphasis>.
 			</para>
 			
 			<para>
 				If a status is followed by a valid channel mode character
 				(@, % or +), it will be given to users with that status.
-				For example, <emphasis>online@,special%,away+,offline</emphasis>
+				For example, <emphasis>online@,special%,away+,offline</emphasis> 
 				will show all users in the channel. Online people will
 				have +o, people who are online but away will have +v,
 				and others will have no special modes.
