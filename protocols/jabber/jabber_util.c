@@ -314,6 +314,10 @@ int jabber_compare_jid(const char *jid1, const char *jid2)
 {
 	int i;
 
+	if (!jid1 || !jid2) {
+		return FALSE;
+	}
+
 	for (i = 0;; i++) {
 		if (jid1[i] == '\0' || jid1[i] == '/' || jid2[i] == '\0' || jid2[i] == '/') {
 			if ((jid1[i] == '\0' || jid1[i] == '/') && (jid2[i] == '\0' || jid2[i] == '/')) {
