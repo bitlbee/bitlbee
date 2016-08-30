@@ -81,11 +81,11 @@ static void jabber_init(account_t *acc)
 	s = set_add(&acc->set, "server", NULL, set_eval_account, acc);
 	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 
+	set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
+
 	if (strcmp(acc->prpl->name, "hipchat") == 0) {
 		set_setstr(&acc->set, "server", "chat.hipchat.com");
 	} else {
-		set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
-
 		/* this reuses set_eval_oauth, which clears the password */
 		set_add(&acc->set, "anonymous", "false", set_eval_oauth, acc);
 	}
@@ -396,7 +396,11 @@ static int jabber_buddy_msg(struct im_connection *ic, char *who, char *message, 
 
 	if (g_strcasecmp(who, JABBER_OAUTH_HANDLE) == 0 &&
 	    !(jd->flags & OPT_LOGGED_IN) && jd->fd == -1) {
-		if (sasl_oauth2_get_refresh_token(ic, message)) {
+
+		if (jd->flags & JFLAG_HIPCHAT) {
+			sasl_oauth2_got_token(ic, message, NULL, NULL);
+			return 1;
+		} else if (sasl_oauth2_get_refresh_token(ic, message)) {
 			return 1;
 		} else {
 			imcb_error(ic, "OAuth failure");

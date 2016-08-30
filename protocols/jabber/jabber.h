@@ -339,6 +339,7 @@ gboolean sasl_supported(struct im_connection *ic);
 void sasl_oauth2_init(struct im_connection *ic);
 int sasl_oauth2_get_refresh_token(struct im_connection *ic, const char *msg);
 int sasl_oauth2_refresh(struct im_connection *ic, const char *refresh_token);
+void sasl_oauth2_got_token(gpointer data, const char *access_token, const char *refresh_token, const char *error);
 
 extern const struct oauth2_service oauth2_service_google;
 
