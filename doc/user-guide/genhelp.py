@@ -64,7 +64,8 @@ def fix_tree(tag, debug=False, lvl=''):
         print("%s</%s>%r" % (lvl, tag.tag, [tag.tail, normalize(tag.tail)]))
 
     # Actually normalize whitespace
-    tag.text = normalize(tag.text)
+    if 'pre' not in tag.attrib:
+        tag.text = normalize(tag.text)
     tag.tail = normalize(tag.tail)
 
 

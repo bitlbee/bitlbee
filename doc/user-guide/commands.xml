@@ -257,7 +257,7 @@
 		<description>
 
 			<para>
-				Available actions: add, with. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
+				Available actions: add, with, list. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
 			</para>
 
 		</description>
@@ -271,7 +271,7 @@
 				</para>
 
 				<para>
-					After adding a room to your list, you can simply use the IRC /join command to enter the room. Also, you can tell BitlBee to automatically join the room when you log in. (See <emphasis>chat set</emphasis>)
+					After adding a room to your list, you can simply use the IRC /join command to enter the room. Also, you can tell BitlBee to automatically join the room when you log in. (<emphasis>channel &lt;channel&gt; set auto_join true</emphasis>)
 				</para>
 
 				<para>
@@ -286,9 +286,18 @@
 
 			<description>
 				<para>
-					List existing chatrooms provided by an account. BitlBee needs this to propogate an internal list of chats. The existing chat can then be added with <emphasis>chat add</emphasis>.
+					List existing chatrooms provided by an account. BitlBee needs this to propogate an internal list of chats. The existing chat can then be added with <emphasis>chat add</emphasis>, using the number in the index column after a "!" as a shortcut.
 				</para>
 			</description>
+
+			<ircexample>
+				<ircline nick="dx">chat list facebook</ircline>
+				<ircline pre="1" nick="root">Index  Title                 Topic</ircline>
+				<ircline pre="1" nick="root">    1  869891016470949       cool kids club</ircline>
+				<ircline pre="1" nick="root">    2  457892181062459       uncool kids club</ircline>
+				<ircline nick="root">2 facebook chatrooms</ircline>
+				<ircline nick="dx">chat add facebook !1 #cool-kids-club</ircline>
+			</ircexample>
 		</bitlbee-command>
 
 		<bitlbee-command name="with">
@@ -297,6 +306,10 @@
 			<description>
 				<para>
 					While most <emphasis>chat</emphasis> subcommands are about named chatrooms, this command can be used to open an unnamed groupchat with one or more persons. This command is what <emphasis>/join #nickname</emphasis> used to do in older BitlBee versions.
+				</para>
+
+				<para>
+					Another way to do this is to join to a new, empty channel with <emphasis>/join #newchannel</emphasis> and invite the first person with <emphasis>/invite nickname</emphasis>
 				</para>
 			</description>
 		</bitlbee-command>
