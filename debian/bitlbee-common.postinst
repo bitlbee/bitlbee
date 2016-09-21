@@ -63,7 +63,7 @@ if [ -e /usr/share/bitlbee/help.upgrading ]; then
 	fi
 fi
 
-if [ "$BITLBEE_UPGRADE_DONT_RESTART" != "1" -a  -n "$2" ]; then
+if [ "$BITLBEE_UPGRADE_DONT_RESTART" != "1" -a  -n "$2" -a -x "/etc/init.d/bitlbee" ]; then
 	invoke-rc.d bitlbee restart
 fi
 
