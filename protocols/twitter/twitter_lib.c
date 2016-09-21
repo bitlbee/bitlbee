@@ -598,8 +598,9 @@ static void expand_entities(char **text, const json_value *node);
  */
 static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 {
-	struct twitter_xml_status *txs;
+	struct twitter_xml_status *txs = {0};
 	const json_value *rt = NULL;
+	const json_value *text_value = NULL;
 
 	if (node->type != json_object) {
 		return FALSE;
@@ -607,9 +608,12 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 	txs = g_new0(struct twitter_xml_status, 1);
 
 	JSON_O_FOREACH(node, k, v) {
-		if (strcmp("text", k) == 0 && v->type == json_string) {
-			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
-			strip_html(txs->text);
+		if (strcmp("text", k) == 0 && v->type == json_string && text_value == NULL) {
+			text_value = v;
+		} else if (strcmp("full_text", k) == 0 && v->type == json_string) {
+			text_value = v;
+		} else if (strcmp("extended_tweet", k) == 0 && v->type == json_object) {
+			text_value = json_o_get(v, "full_text");
 		} else if (strcmp("retweeted_status", k) == 0 && v->type == json_object) {
 			rt = v;
 		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
@@ -635,12 +639,13 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 	if (rt) {
 		struct twitter_xml_status *rtxs = twitter_xt_get_status(rt);
 		if (rtxs) {
-			g_free(txs->text);
 			txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
 			txs->id = rtxs->id;
 			txs_free(rtxs);
 		}
-	} else {
+	} else if (text_value && text_value->type == json_string) {
+		txs->text = g_memdup(text_value->u.string.ptr, text_value->u.string.length + 1);
+		strip_html(txs->text);
 		expand_entities(&txs->text, node);
 	}
 
@@ -1478,18 +1483,20 @@ static void twitter_get_home_timeline(struct im_connection *ic, gint64 next_curs
 	td->home_timeline_obj = NULL;
 	td->flags &= ~TWITTER_GOT_TIMELINE;
 
-	char *args[6];
+	char *args[8];
 	args[0] = "cursor";
 	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
 	args[2] = "include_entities";
 	args[3] = "true";
+	args[4] = "tweet_mode";
+	args[5] = "extended";
 	if (td->timeline_id) {
-		args[4] = "since_id";
-		args[5] = g_strdup_printf("%" G_GUINT64_FORMAT, td->timeline_id);
+		args[6] = "since_id";
+		args[7] = g_strdup_printf("%" G_GUINT64_FORMAT, td->timeline_id);
 	}
 
 	if (twitter_http(ic, TWITTER_HOME_TIMELINE_URL, twitter_http_get_home_timeline, ic, 0, args,
-	                 td->timeline_id ? 6 : 4) == NULL) {
+	                 td->timeline_id ? 8 : 6) == NULL) {
 		if (++td->http_fails >= 5) {
 			imcb_error(ic, "Could not retrieve %s: %s",
 			           TWITTER_HOME_TIMELINE_URL, "connection failed");
@@ -1500,7 +1507,7 @@ static void twitter_get_home_timeline(struct im_connection *ic, gint64 next_curs
 
 	g_free(args[1]);
 	if (td->timeline_id) {
-		g_free(args[5]);
+		g_free(args[7]);
 	}
 }
 
@@ -1515,7 +1522,7 @@ static void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 	td->mentions_obj = NULL;
 	td->flags &= ~TWITTER_GOT_MENTIONS;
 
-	char *args[6];
+	char *args[8];
 	args[0] = "cursor";
 	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
 	args[2] = "include_entities";
@@ -1527,9 +1534,11 @@ static void twitter_get_mentions(struct im_connection *ic, gint64 next_cursor)
 		args[4] = "count";
 		args[5] = g_strdup_printf("%d", set_getint(&ic->acc->set, "show_old_mentions"));
 	}
+	args[6] = "tweet_mode";
+	args[7] = "extended";
 
 	if (twitter_http(ic, TWITTER_MENTIONS_URL, twitter_http_get_mentions,
-	                 ic, 0, args, 6) == NULL) {
+	                 ic, 0, args, 8) == NULL) {
 		if (++td->http_fails >= 5) {
 			imcb_error(ic, "Could not retrieve %s: %s",
 			           TWITTER_MENTIONS_URL, "connection failed");
