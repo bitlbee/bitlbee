@@ -667,7 +667,7 @@ void purple_chat_invite(struct groupchat *gc, char *who, char *message)
 	                 who);
 }
 
-void purple_chat_set_topic(struct groupchat *, char *topic)
+void purple_chat_set_topic(struct groupchat *gc, char *topic)
 {
 	PurpleConversation *pc = gc->data;
 	PurpleConvChat *pcc = PURPLE_CONV_CHAT(pc);
@@ -675,9 +675,11 @@ void purple_chat_set_topic(struct groupchat *, char *topic)
 	PurplePlugin *prpl = purple_plugins_find_with_id(pd->account->protocol_id);
 	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
 
-	pi->set_chat_topic(purple_account_get_connection(pd->account),
-	                   purple_conv_chat_get_id(pcc),
-	                   topic);
+	if (pi->set_chat_topic) {
+		pi->set_chat_topic(purple_account_get_connection(pd->account),
+		                   purple_conv_chat_get_id(pcc),
+		                   topic);
+	}
 }
 
 void purple_chat_kick(struct groupchat *gc, char *who, const char *message)
