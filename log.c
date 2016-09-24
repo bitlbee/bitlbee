@@ -50,50 +50,28 @@ void log_init(void)
 
 void log_link(int level, int output)
 {
-	/* I know it's ugly, but it works and I didn't feel like messing with pointer to function pointers */
+	void (*output_function)(int level, const char *logmessage) = &log_null;
+
+	if (output == LOGOUTPUT_NULL) {
+		output_function = &log_null;
+	} else if (output == LOGOUTPUT_IRC) {
+		output_function = &log_irc;
+	} else if (output == LOGOUTPUT_SYSLOG) {
+		output_function = &log_syslog;
+	} else if (output == LOGOUTPUT_CONSOLE) {
+		output_function = &log_console;
+	}
 
 	if (level == LOGLVL_INFO) {
-		if (output == LOGOUTPUT_NULL) {
-			logoutput.informational = &log_null;
-		} else if (output == LOGOUTPUT_IRC) {
-			logoutput.informational = &log_irc;
-		} else if (output == LOGOUTPUT_SYSLOG) {
-			logoutput.informational = &log_syslog;
-		} else if (output == LOGOUTPUT_CONSOLE) {
-			logoutput.informational = &log_console;
-		}
+		logoutput.informational = output_function;
 	} else if (level == LOGLVL_WARNING) {
-		if (output == LOGOUTPUT_NULL) {
-			logoutput.warning = &log_null;
-		} else if (output == LOGOUTPUT_IRC) {
-			logoutput.warning = &log_irc;
-		} else if (output == LOGOUTPUT_SYSLOG) {
-			logoutput.warning = &log_syslog;
-		} else if (output == LOGOUTPUT_CONSOLE) {
-			logoutput.warning = &log_console;
-		}
+		logoutput.warning = output_function;
 	} else if (level == LOGLVL_ERROR) {
-		if (output == LOGOUTPUT_NULL) {
-			logoutput.error = &log_null;
-		} else if (output == LOGOUTPUT_IRC) {
-			logoutput.error = &log_irc;
-		} else if (output == LOGOUTPUT_SYSLOG) {
-			logoutput.error = &log_syslog;
-		} else if (output == LOGOUTPUT_CONSOLE) {
-			logoutput.error = &log_console;
-		}
+		logoutput.error = output_function;
 	}
 #ifdef DEBUG
 	else if (level == LOGLVL_DEBUG) {
-		if (output == LOGOUTPUT_NULL) {
-			logoutput.debug = &log_null;
-		} else if (output == LOGOUTPUT_IRC) {
-			logoutput.debug = &log_irc;
-		} else if (output == LOGOUTPUT_SYSLOG) {
-			logoutput.debug = &log_syslog;
-		} else if (output == LOGOUTPUT_CONSOLE) {
-			logoutput.debug = &log_console;
-		}
+		logoutput.debug = output_function;
 	}
 #endif
 	return;

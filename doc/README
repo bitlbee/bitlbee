@@ -8,6 +8,9 @@ If you want to compile BitlBee yourself, that's fine. Just run ./configure
 to set up the build system. If configure succeeds, run make to build BitlBee.
 make install will move all the files to the right places.
 
+RUN MODES
+=========
+
 --- (Fork)Daemon mode
 
 These days ForkDaemon mode is the recommended way of running BitlBee. The
@@ -88,20 +91,10 @@ when you attempt to use OpenSSL.
 PORTABILITY ISSUES
 ==================
 
-Cygwin NOTE: You'll need a glib installation to run BitlBee. However, Cygwin
-doesn't provide a glib package. You can download a binary tar.gz from:
-<http://my.dreamwiz.com/jbdoll/>. When you installed it, BitlBee should work
-fine. You'll probably like bitlbeed or xinetd to get it running on the
-network.
-
-On some non-Linux systems the program still suffers from some random bugs.
-Please do report them, we might be able to fix them if they're not too
-mysterious.
-
-Also, the configure script is known to not work very well with non-Bash
-shells, so if you experience problems, make sure you use bash to run the
-script. Same for the Makefile, it only works well with GNU make. (gmake on
-most BSD systems)
+The configure script is may not work very well with some non-bash shells (but
+dash is supported), so if you experience problems, make sure you use bash to
+run the script. Same for the Makefile, it only works well with GNU make. (gmake
+on most BSD systems)
 
 If someone can tell us how to write Makefiles that work with both/all
 versions of make, we'd love to hear it, but it seems this just isn't
@@ -152,39 +145,20 @@ http://wiki.bitlbee.org/
 A NOTE ON PASSWORD ENCRYPTION
 =============================
 
-There used to be a note here about the simple obfuscation method used to
-make the passwords in the configuration files unreadable. However, BitlBee
-now uses a better format (and real encryption (salted MD5 and RC4)) to store
-the passwords. This means that people who somehow get their hands on your
-configuration files can't easily extract your passwords from them anymore.
+BitlBee currently uses salted MD5 and RC4 to store the passwords. This means
+that people who somehow get their hands on your configuration files can't
+easily extract your passwords from them anymore.
 
 However, once you log into the BitlBee server and send your password, an
 intruder with tcpdump can still read your passwords. This can't really be
-avoided, of course. The new format is a lot more reliable (because it can't
-be cracked with just very basic crypto analysis anymore), but you still have
-to be careful. The main extra protection offered by the new format is that
-the files can only be cracked with some help from the user (by sending the
-password at login time).
-
-So if you run a public server, it's most important that you don't give root
-access to people who like to play with tcpdump. Also, it's a good idea to
-delete all *.nicks/*.accounts files as soon as BitlBee converted them to the
-new format (which happens as soon as the user logs in, it can't be done
-automatically because it needs the password for that account). You won't
-need them anymore (unless you want to switch back to an older BitlBee
-version) and they only make it easier for others to crack your passwords.
-
+avoided, of course. So if you run a public server, it's most important that you
+don't give root access to people who like to play with tcpdump.
 
 LEGAL
 =====
 
 BitlBee is distributed under the GPL (GNU General Public License). See the
 file COPYING for this license.
-
-The MD5 algorithm code is licensed under the Aladdin license. This license
-can be found in the files, to which this applies. The SHA1 algorithm code
-is licensed under the Mozilla Public License, see http://www.mozilla.org/MPL/
-for details.
 
 The Yahoo! library used by BitlBee is libyahoo2 <http://libyahoo2.sf.net/>,
 also licensed under the GPL.

@@ -40,7 +40,7 @@ static char *adlrml_entry(const char *handle_, msn_buddy_flags_t list)
 		return NULL;
 	}
 
-	return g_markup_printf_escaped("<ml><d n=\"%s\"><c n=\"%s\" l=\"%d\" t=\"1\"/></d></ml>",
+	return g_markup_printf_escaped("<ml><d n=\"%s\"><c n=\"%s\" t=\"1\"><s n=\"IM\" l=\"%d\" /></c></d></ml>",
 	                               domain, handle, list);
 }
 

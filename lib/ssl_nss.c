@@ -225,8 +225,8 @@ ssl_connected_failure:
 
 	if (conn->prfd) {
 		PR_Close(conn->prfd);
-	}
-	if (source >= 0) {
+	} else if (source >= 0) {
+		/* proxy_disconnect() would be redundant here */
 		closesocket(source);
 	}
 	g_free(conn->hostname);
@@ -304,6 +304,8 @@ void ssl_disconnect(void *conn_)
 
 	if (conn->prfd) {
 		PR_Close(conn->prfd);
+	} else if (conn->fd) {
+		proxy_disconnect(conn->fd);
 	}
 
 	g_free(conn->hostname);

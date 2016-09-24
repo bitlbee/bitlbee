@@ -146,6 +146,76 @@ static gboolean jabber_write_queue(struct im_connection *ic)
 	}
 }
 
+static gboolean jabber_feed_input(struct im_connection *ic, char *buf, int size)
+{
+	struct jabber_data *jd = ic->proto_data;
+
+	/* Allow not passing a size for debugging purposes.
+	 * This never happens when reading from the socket */
+	if (size == -1) {
+		size = strlen(buf);
+	}
+
+	/* Parse. */
+	if (xt_feed(jd->xt, buf, size) < 0) {
+		imcb_error(ic, "XML stream error");
+		imc_logout(ic, TRUE);
+		return FALSE;
+	}
+
+	/* Execute all handlers. */
+	if (!xt_handle(jd->xt, NULL, 1)) {
+		/* Don't do anything, the handlers should have
+		   aborted the connection already. */
+		return FALSE;
+	}
+
+	if (jd->flags & JFLAG_STREAM_RESTART) {
+		jd->flags &= ~JFLAG_STREAM_RESTART;
+		jabber_start_stream(ic);
+	}
+
+	/* Garbage collection. */
+	xt_cleanup(jd->xt, NULL, 1);
+
+	/* This is a bit hackish, unfortunately. Although xmltree
+	   has nifty event handler stuff, it only calls handlers
+	   when nodes are complete. Since the server should only
+	   send an opening <stream:stream> tag, we have to check
+	   this by hand. :-( */
+	if (!(jd->flags & JFLAG_STREAM_STARTED) && jd->xt && jd->xt->root) {
+		if (g_strcasecmp(jd->xt->root->name, "stream:stream") == 0) {
+			jd->flags |= JFLAG_STREAM_STARTED;
+
+			/* If there's no version attribute, assume
+			   this is an old server that can't do SASL
+			   authentication. */
+			if (!set_getbool(&ic->acc->set, "sasl") || !sasl_supported(ic)) {
+				/* If there's no version= tag, we suppose
+				   this server does NOT implement: XMPP 1.0,
+				   SASL and TLS. */
+				if (set_getbool(&ic->acc->set, "tls")) {
+					imcb_error(ic, "TLS is turned on for this "
+						   "account, but is not supported by this server");
+					imc_logout(ic, FALSE);
+					return FALSE;
+				} else {
+					if (!jabber_init_iq_auth(ic)) {
+						return FALSE;
+					}
+				}
+			}
+		} else {
+			imcb_error(ic, "XML stream error");
+			imc_logout(ic, TRUE);
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+
 static gboolean jabber_read_callback(gpointer data, gint fd, b_input_condition cond)
 {
 	struct im_connection *ic = data;
@@ -164,58 +234,8 @@ static gboolean jabber_read_callback(gpointer data, gint fd, b_input_condition c
 	}
 
 	if (st > 0) {
-		/* Parse. */
-		if (xt_feed(jd->xt, buf, st) < 0) {
-			imcb_error(ic, "XML stream error");
-			imc_logout(ic, TRUE);
+		if (!jabber_feed_input(ic, buf, st)) {
 			return FALSE;
-		}
-
-		/* Execute all handlers. */
-		if (!xt_handle(jd->xt, NULL, 1)) {
-			/* Don't do anything, the handlers should have
-			   aborted the connection already. */
-			return FALSE;
-		}
-
-		if (jd->flags & JFLAG_STREAM_RESTART) {
-			jd->flags &= ~JFLAG_STREAM_RESTART;
-			jabber_start_stream(ic);
-		}
-
-		/* Garbage collection. */
-		xt_cleanup(jd->xt, NULL, 1);
-
-		/* This is a bit hackish, unfortunately. Although xmltree
-		   has nifty event handler stuff, it only calls handlers
-		   when nodes are complete. Since the server should only
-		   send an opening <stream:stream> tag, we have to check
-		   this by hand. :-( */
-		if (!(jd->flags & JFLAG_STREAM_STARTED) && jd->xt && jd->xt->root) {
-			if (g_strcasecmp(jd->xt->root->name, "stream:stream") == 0) {
-				jd->flags |= JFLAG_STREAM_STARTED;
-
-				/* If there's no version attribute, assume
-				   this is an old server that can't do SASL
-				   authentication. */
-				if (!set_getbool(&ic->acc->set, "sasl") || !sasl_supported(ic)) {
-					/* If there's no version= tag, we suppose
-					   this server does NOT implement: XMPP 1.0,
-					   SASL and TLS. */
-					if (set_getbool(&ic->acc->set, "tls")) {
-						imcb_error(ic, "TLS is turned on for this "
-						           "account, but is not supported by this server");
-						imc_logout(ic, FALSE);
-						return FALSE;
-					} else {
-						return jabber_init_iq_auth(ic);
-					}
-				}
-			} else {
-				imcb_error(ic, "XML stream error");
-				imc_logout(ic, TRUE);
-				return FALSE;
-			}
 		}
 	} else if (st == 0 || (st < 0 && !ssl_sockerr_again(jd->ssl))) {
 		closesocket(jd->fd);

@@ -186,6 +186,10 @@ void strip_html(char *in)
 					*(s++) = '\x1f';
 				} else if (g_strncasecmp(cs + 1, "br", taglen) == 0) {
 					*(s++) = '\n';
+				} else if (g_strncasecmp(cs + 1, "br/", taglen) == 0) {
+					*(s++) = '\n';
+				} else if (g_strncasecmp(cs + 1, "br /", taglen) == 0) {
+					*(s++) = '\n';
 				}
 				in++;
 			} else {
@@ -294,7 +298,7 @@ void http_decode(char *s)
 }
 
 /* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
-/* This fuction is safe, but make sure you call it safely as well! */
+/* This function is safe, but make sure you call it safely as well! */
 void http_encode(char *s)
 {
 	char t[strlen(s) + 1];
@@ -766,3 +770,19 @@ gboolean parse_int64(char *string, int base, guint64 *number)
 	return TRUE;
 }
 
+/* Filters all the characters in 'blacklist' replacing them with 'replacement'.
+ * Modifies the string in-place and returns the string itself.
+ * For the opposite, use g_strcanon() */
+char *str_reject_chars(char *string, const char *reject, char replacement)
+{
+	char *c = string;
+
+	while (*c) {
+		c += strcspn(c, reject);
+		if (*c) {
+			*c = replacement;
+		}
+	}
+
+	return string;
+}

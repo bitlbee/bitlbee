@@ -36,7 +36,7 @@ static void check_buddy_add(int l)
 	fail_unless(jabber_buddy_by_jid(ic, "WILMER@GAAST.NET/BitlBee", GET_BUDDY_EXACT) == budw1);
 	fail_unless(jabber_buddy_by_jid(ic, "wilmer@GAAST.NET/BitlBee", GET_BUDDY_CREAT) == budw1);
 
-	fail_if(jabber_buddy_by_jid(ic, "wilmer@gaast.net", GET_BUDDY_EXACT));
+	fail_unless(jabber_buddy_by_jid(ic, "wilmer@gaast.net", GET_BUDDY_EXACT));
 	fail_unless(jabber_buddy_by_jid(ic, "WILMER@gaast.net", 0) == budw3);
 
 	/* Check O_FIRST and see if it's indeed the first item from the list. */
@@ -104,6 +104,25 @@ static void check_compareJID(int l)
 	fail_if(jabber_compare_jid("", "bugtest@google.com/A"));
 }
 
+static void check_hipchat_slug(int l)
+{
+	int i;
+
+	const char *tests[] = {
+		"test !\"#$%&\'()*+,-./0123456789:;<=>?@ABC", "test_!#$%\()*+,-.0123456789;=?abc",
+		"test XYZ[\\]^_`abc", "test_xyz[\\]^_`abc",
+		"test {|}~¡¢£¤¥¦§¨©ª«¬\xad®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆ", "test_{|}~¡¢£¤¥¦§¨©ª«¬\xad®¯°±²³´µ¶·¸¹º»¼½¾¿àáâãäåæ",
+		"test Ĳ ĳ I ı I ı", "test_ĳ_ĳ_i_ı_i_ı",
+		NULL,
+	};
+
+	for (i = 0; tests[i]; i += 2) {
+		char *new = hipchat_make_channel_slug(tests[i]);
+		fail_unless(!strcmp(tests[i + 1], new));
+		g_free(new);
+	}
+}
+
 Suite *jabber_util_suite(void)
 {
 	Suite *s = suite_create("jabber/util");
@@ -120,5 +139,6 @@ Suite *jabber_util_suite(void)
 	suite_add_tcase(s, tc_core);
 	tcase_add_test(tc_core, check_buddy_add);
 	tcase_add_test(tc_core, check_compareJID);
+	tcase_add_test(tc_core, check_hipchat_slug);
 	return s;
 }

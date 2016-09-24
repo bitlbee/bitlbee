@@ -36,6 +36,7 @@
 #include "proxy.h"
 
 static int conf_loadini(conf_t *conf, char *file);
+static void conf_free(conf_t *conf);
 
 conf_t *conf_load(int argc, char *argv[])
 {
@@ -72,6 +73,7 @@ conf_t *conf_load(int argc, char *argv[])
 	i = conf_loadini(conf, global.conf_file);
 	if (i == 0) {
 		fprintf(stderr, "Error: Syntax error in configuration file `%s'.\n", global.conf_file);
+		conf_free(conf);
 		return NULL;
 	} else if (i == -1) {
 		config_missing++;
@@ -103,7 +105,7 @@ conf_t *conf_load(int argc, char *argv[])
 			if (strcmp(global.conf_file, optarg) != 0) {
 				g_free(global.conf_file);
 				global.conf_file = g_strdup(optarg);
-				g_free(conf);
+				conf_free(conf);
 				/* Re-evaluate arguments. Don't use this option twice,
 				   you'll end up in an infinite loop! Hope this trick
 				   works with all libcs BTW.. */
@@ -134,10 +136,12 @@ conf_t *conf_load(int argc, char *argv[])
 			       "  -x  Command-line interface to password encryption/hashing\n"
 			       "  -h  Show this help page.\n"
 			       "  -V  Show version info.\n");
+			conf_free(conf);
 			return NULL;
 		} else if (opt == 'V') {
-			printf("BitlBee %s\nAPI version %06x\n",
-			       BITLBEE_VERSION, BITLBEE_VERSION_CODE);
+			printf("BitlBee %s\nAPI version %06x\nConfigure args: %s\n",
+			       BITLBEE_VERSION, BITLBEE_VERSION_CODE, BITLBEE_CONFIGURE_ARGS);
+			conf_free(conf);
 			return NULL;
 		} else if (opt == 'u') {
 			g_free(conf->user);
@@ -161,10 +165,39 @@ conf_t *conf_load(int argc, char *argv[])
 		/* Let's treat this as a serious problem so people won't think
 		   they're secure when in fact they're not. */
 		fprintf(stderr, "Error: Could not read CA file %s: %s\n", conf->cafile, strerror(errno));
+		conf_free(conf);
 		return NULL;
 	}
 
 	return conf;
+}
+
+static void conf_free(conf_t *conf)
+{
+	/* Free software means users have the four essential freedoms:
+	   0. to run the program,
+	   2. to study and change the program in source code form,
+	   2. to redistribute exact copies, and
+	   3. to distribute modified versions
+	*/
+	g_free(conf->auth_pass);
+	g_free(conf->cafile);
+	g_free(conf->configdir);
+	g_free(conf->ft_listen);
+	g_free(conf->hostname);
+	g_free(conf->iface_in);
+	g_free(conf->iface_out);
+	g_free(conf->motdfile);
+	g_free(conf->oper_pass);
+	g_free(conf->pidfile);
+	g_free(conf->plugindir);
+	g_free(conf->port);
+	g_free(conf->primary_storage);
+	g_free(conf->user);
+	g_strfreev(conf->migrate_storage);
+	g_strfreev(conf->protocols);
+	g_free(conf);
+
 }
 
 static int conf_loadini(conf_t *conf, char *file)
@@ -218,6 +251,9 @@ static int conf_loadini(conf_t *conf, char *file)
 			} else if (g_strcasecmp(ini->key, "configdir") == 0) {
 				g_free(conf->configdir);
 				conf->configdir = g_strdup(ini->value);
+			} else if (g_strcasecmp(ini->key, "plugindir") == 0) {
+				g_free(conf->plugindir);
+				conf->plugindir = g_strdup(ini->value);
 			} else if (g_strcasecmp(ini->key, "motdfile") == 0) {
 				g_free(conf->motdfile);
 				conf->motdfile = g_strdup(ini->value);
@@ -258,6 +294,8 @@ static int conf_loadini(conf_t *conf, char *file)
 					proxytype = PROXY_SOCKS4;
 				} else if (url->proto == PROTO_SOCKS5) {
 					proxytype = PROXY_SOCKS5;
+				} else if (url->proto == PROTO_SOCKS4A) {
+					proxytype = PROXY_SOCKS4A;
 				}
 
 				g_free(url);

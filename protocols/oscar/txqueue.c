@@ -66,7 +66,7 @@ aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, guint8 framing, g
  *
  * The overall purpose here is to enqueue the passed in command struct
  * into the outgoing (tx) queue.  Basically...
- *   1) Make a scope-irrelevent copy of the struct
+ *   1) Make a scope-irrelevant copy of the struct
  *   3) Mark as not-sent-yet
  *   4) Enqueue the struct into the list
  *   6) Return

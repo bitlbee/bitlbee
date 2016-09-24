@@ -684,7 +684,7 @@ struct yahoo_callbacks {
 /*
  * Name: ext_yahoo_connect_async
  *      Connect to a host:port asynchronously. This function should return
- *      immediately returing a tag used to identify the connection handler,
+ *      immediately returning a tag used to identify the connection handler,
  *      or a pre-connect error (eg: host name lookup failure).
  *      Once the connect completes (successfully or unsuccessfully), callback
  *      should be called (see the signature for yahoo_connect_callback).

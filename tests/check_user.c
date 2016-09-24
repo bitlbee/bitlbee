@@ -45,7 +45,7 @@ fail_unless(user_del(irc, "foo") == 1);
 fail_unless(user_find(irc, "foo") == NULL);
 END_TEST
 
-START_TEST(test_user_del_nonexistant)
+START_TEST(test_user_del_nonexistent)
 irc_t * irc = torture_irc();
 fail_unless(user_del(irc, "foo") == 0);
 END_TEST
@@ -70,7 +70,7 @@ Suite *user_suite(void)
 	tcase_add_test(tc_core, test_user_add_invalid);
 	tcase_add_test(tc_core, test_user_add_exists);
 	tcase_add_test(tc_core, test_user_del_invalid);
-	tcase_add_test(tc_core, test_user_del_nonexistant);
+	tcase_add_test(tc_core, test_user_del_nonexistent);
 	tcase_add_test(tc_core, test_user_del);
 	tcase_add_test(tc_core, test_user_rename);
 #endif

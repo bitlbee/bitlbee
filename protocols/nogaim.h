@@ -75,6 +75,7 @@
 #define OPT_PONGS       0x00010000 /* Service sends us keep-alives */
 #define OPT_PONGED      0x00020000 /* Received a keep-alive during last interval */
 #define OPT_LOCAL_CONTACTS_SENT 0x00040000 /* Protocol already requested local contact list, so don't send it after finishing login. */
+#define OPT_SELFMESSAGE 0x00080000 /* A message sent by self from another location */
 
 /* ok. now the fun begins. first we create a connection structure */
 struct im_connection {
@@ -279,6 +280,7 @@ struct prpl {
 void nogaim_init();
 G_MODULE_EXPORT GSList *get_connections();
 G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
+G_MODULE_EXPORT gboolean is_protocol_disabled(const char *name);
 /* When registering a new protocol, you should allocate space for a new prpl
  * struct, initialize it (set the function pointers to point to your
  * functions), finally call this function. */
@@ -325,15 +327,15 @@ G_MODULE_EXPORT void imcb_ask_add(struct im_connection *ic, const char *handle, 
  * server confirms that the add was successful. Don't forget to do this! */
 G_MODULE_EXPORT void imcb_add_buddy(struct im_connection *ic, const char *handle, const char *group);
 G_MODULE_EXPORT void imcb_remove_buddy(struct im_connection *ic, const char *handle, char *group);
-G_MODULE_EXPORT struct buddy *imcb_find_buddy(struct im_connection *ic, char *handle);
 G_MODULE_EXPORT void imcb_rename_buddy(struct im_connection *ic, const char *handle, const char *realname);
 G_MODULE_EXPORT void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const char *nick);
 G_MODULE_EXPORT void imcb_buddy_action_response(bee_user_t *bu, const char *action, char * const args[], void *data);
 G_MODULE_EXPORT GSList *imcb_get_local_contacts(struct im_connection *ic);
 
-G_MODULE_EXPORT void imcb_buddy_typing(struct im_connection *ic, const char *handle, uint32_t flags);
+G_MODULE_EXPORT void imcb_buddy_typing(struct im_connection *ic, const char *handle, guint32 flags);
 G_MODULE_EXPORT struct bee_user *imcb_buddy_by_handle(struct im_connection *ic, const char *handle);
-G_MODULE_EXPORT void imcb_clean_handle(struct im_connection *ic, char *handle);
+
+G_GNUC_DEPRECATED G_MODULE_EXPORT void imcb_clean_handle(struct im_connection *ic, char *handle);
 
 /* Actions, or whatever. */
 int imc_away_send_update(struct im_connection *ic);

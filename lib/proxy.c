@@ -50,6 +50,8 @@ char proxypass[128] = "";
 #define AI_ADDRCONFIG 0
 #endif
 
+static GHashTable *phb_hash = NULL;
+
 struct PHB {
 	b_event_handler func, proxy_func;
 	gpointer data, proxy_data;
@@ -60,12 +62,25 @@ struct PHB {
 	struct addrinfo *gai, *gai_cur;
 };
 
+typedef int (*proxy_connect_func)(const char *host, unsigned short port_, struct PHB *phb);
+
 static int proxy_connect_none(const char *host, unsigned short port_, struct PHB *phb);
 
-static gboolean phb_close(struct PHB *phb)
+static gboolean phb_free(struct PHB *phb, gboolean success)
 {
-	close(phb->fd);
-	phb->func(phb->data, -1, B_EV_IO_READ);
+	g_hash_table_remove(phb_hash, &phb->fd);
+
+	if (!success) {
+		if (phb->fd > 0) {
+			closesocket(phb->fd);
+		}
+		if (phb->func) {
+			phb->func(phb->data, -1, B_EV_IO_READ);
+		}
+	}
+	if (phb->gai) {
+		freeaddrinfo(phb->gai);
+	}
 	g_free(phb->host);
 	g_free(phb);
 	return FALSE;
@@ -88,6 +103,7 @@ static gboolean proxy_connected(gpointer data, gint source, b_input_condition co
 				closesocket(source);
 				dup2(new_fd, source);
 				closesocket(new_fd);
+				phb->fd = source;
 				phb->inpa = b_input_add(source, B_EV_IO_WRITE, proxy_connected, phb);
 				return FALSE;
 			}
@@ -100,13 +116,16 @@ static gboolean proxy_connected(gpointer data, gint source, b_input_condition co
 	}
 
 	freeaddrinfo(phb->gai);
+	phb->gai = NULL;
+
 	b_event_remove(phb->inpa);
 	phb->inpa = 0;
+
 	if (phb->proxy_func) {
 		phb->proxy_func(phb->proxy_data, source, B_EV_IO_READ);
 	} else {
 		phb->func(phb->data, source, B_EV_IO_READ);
-		g_free(phb);
+		phb_free(phb, TRUE);
 	}
 
 	return FALSE;
@@ -170,7 +189,7 @@ static int proxy_connect_none(const char *host, unsigned short port_, struct PHB
 	}
 
 	if (fd < 0 && host) {
-		g_free(phb);
+		phb_free(phb, TRUE);
 	}
 
 	return fd;
@@ -203,12 +222,10 @@ static gboolean http_canread(gpointer data, gint source, b_input_condition cond)
 	if ((memcmp(HTTP_GOODSTRING, inputline, strlen(HTTP_GOODSTRING)) == 0) ||
 	    (memcmp(HTTP_GOODSTRING2, inputline, strlen(HTTP_GOODSTRING2)) == 0)) {
 		phb->func(phb->data, source, B_EV_IO_READ);
-		g_free(phb->host);
-		g_free(phb);
-		return FALSE;
+		return phb_free(phb, TRUE);
 	}
 
-	return phb_close(phb);
+	return phb_free(phb, FALSE);
 }
 
 static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond)
@@ -223,14 +240,14 @@ static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond
 	}
 	len = sizeof(error);
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 	sock_make_blocking(source);
 
 	g_snprintf(cmd, sizeof(cmd), "CONNECT %s:%d HTTP/1.1\r\nHost: %s:%d\r\n", phb->host, phb->port,
 	           phb->host, phb->port);
 	if (send(source, cmd, strlen(cmd), 0) < 0) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 
 	if (strlen(proxyuser) > 0) {
@@ -241,13 +258,13 @@ static gboolean http_canwrite(gpointer data, gint source, b_input_condition cond
 		g_snprintf(cmd, sizeof(cmd), "Proxy-Authorization: Basic %s\r\n", t2);
 		g_free(t2);
 		if (send(source, cmd, strlen(cmd), 0) < 0) {
-			return phb_close(phb);
+			return phb_free(phb, FALSE);
 		}
 	}
 
 	g_snprintf(cmd, sizeof(cmd), "\r\n");
 	if (send(source, cmd, strlen(cmd), 0) < 0) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 
 	phb->inpa = b_input_add(source, B_EV_IO_READ, http_canread, phb);
@@ -278,12 +295,10 @@ static gboolean s4_canread(gpointer data, gint source, b_input_condition cond)
 	memset(packet, 0, sizeof(packet));
 	if (read(source, packet, 9) >= 4 && packet[1] == 90) {
 		phb->func(phb->data, source, B_EV_IO_READ);
-		g_free(phb->host);
-		g_free(phb);
-		return FALSE;
+		return phb_free(phb, TRUE);
 	}
 
-	return phb_close(phb);
+	return phb_free(phb, FALSE);
 }
 
 static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
@@ -293,32 +308,47 @@ static gboolean s4_canwrite(gpointer data, gint source, b_input_condition cond)
 	struct PHB *phb = data;
 	socklen_t len;
 	int error = ETIMEDOUT;
+	gboolean is_socks4a = (proxytype == PROXY_SOCKS4A);
 
 	if (phb->inpa > 0) {
 		b_event_remove(phb->inpa);
 	}
 	len = sizeof(error);
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 	sock_make_blocking(source);
 
-	/* XXX does socks4 not support host name lookups by the proxy? */
-	if (!(hp = gethostbyname(phb->host))) {
-		return phb_close(phb);
+	if (!is_socks4a && !(hp = gethostbyname(phb->host))) {
+		return phb_free(phb, FALSE);
 	}
 
 	packet[0] = 4;
 	packet[1] = 1;
 	packet[2] = phb->port >> 8;
 	packet[3] = phb->port & 0xff;
-	packet[4] = (unsigned char) (hp->h_addr_list[0])[0];
-	packet[5] = (unsigned char) (hp->h_addr_list[0])[1];
-	packet[6] = (unsigned char) (hp->h_addr_list[0])[2];
-	packet[7] = (unsigned char) (hp->h_addr_list[0])[3];
+	if (is_socks4a) {
+		packet[4] = 0;
+		packet[5] = 0;
+		packet[6] = 0;
+		packet[7] = 1;
+	} else {
+		packet[4] = (unsigned char) (hp->h_addr_list[0])[0];
+		packet[5] = (unsigned char) (hp->h_addr_list[0])[1];
+		packet[6] = (unsigned char) (hp->h_addr_list[0])[2];
+		packet[7] = (unsigned char) (hp->h_addr_list[0])[3];
+	}
 	packet[8] = 0;
 	if (write(source, packet, 9) != 9) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
+	}
+
+	if (is_socks4a) {
+		size_t host_len = strlen(phb->host) + 1; /* include the \0 */
+
+		if (write(source, phb->host, host_len) != host_len) {
+			return phb_free(phb, FALSE);
+		}
 	}
 
 	phb->inpa = b_input_add(source, B_EV_IO_READ, s4_canread, phb);
@@ -347,17 +377,14 @@ static gboolean s5_canread_again(gpointer data, gint source, b_input_condition c
 	b_event_remove(phb->inpa);
 
 	if (read(source, buf, 10) < 10) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 	if ((buf[0] != 0x05) || (buf[1] != 0x00)) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 
 	phb->func(phb->data, source, B_EV_IO_READ);
-	g_free(phb->host);
-	g_free(phb);
-
-	return FALSE;
+	return phb_free(phb, TRUE);
 }
 
 static void s5_sendconnect(gpointer data, gint source)
@@ -376,7 +403,7 @@ static void s5_sendconnect(gpointer data, gint source)
 	buf[5 + strlen(phb->host) + 1] = phb->port & 0xff;
 
 	if (write(source, buf, (5 + strlen(phb->host) + 2)) < (5 + strlen(phb->host) + 2)) {
-		phb_close(phb);
+		phb_free(phb, FALSE);
 		return;
 	}
 
@@ -391,11 +418,11 @@ static gboolean s5_readauth(gpointer data, gint source, b_input_condition cond)
 	b_event_remove(phb->inpa);
 
 	if (read(source, buf, 2) < 2) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 
 	if ((buf[0] != 0x01) || (buf[1] != 0x00)) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 
 	s5_sendconnect(phb, source);
@@ -411,11 +438,11 @@ static gboolean s5_canread(gpointer data, gint source, b_input_condition cond)
 	b_event_remove(phb->inpa);
 
 	if (read(source, buf, 2) < 2) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 
 	if ((buf[0] != 0x05) || (buf[1] == 0xff)) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 
 	if (buf[1] == 0x02) {
@@ -426,7 +453,7 @@ static gboolean s5_canread(gpointer data, gint source, b_input_condition cond)
 		buf[2 + i] = j;
 		memcpy(buf + 2 + i + 1, proxypass, j);
 		if (write(source, buf, 3 + i + j) < 3 + i + j) {
-			return phb_close(phb);
+			return phb_free(phb, FALSE);
 		}
 
 		phb->inpa = b_input_add(source, B_EV_IO_READ, s5_readauth, phb);
@@ -450,7 +477,7 @@ static gboolean s5_canwrite(gpointer data, gint source, b_input_condition cond)
 	}
 	len = sizeof(error);
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 	sock_make_blocking(source);
 
@@ -468,7 +495,7 @@ static gboolean s5_canwrite(gpointer data, gint source, b_input_condition cond)
 	}
 
 	if (write(source, buf, i) < i) {
-		return phb_close(phb);
+		return phb_free(phb, FALSE);
 	}
 
 	phb->inpa = b_input_add(source, B_EV_IO_READ, s5_canread, phb);
@@ -486,12 +513,25 @@ static int proxy_connect_socks5(const char *host, unsigned short port, struct PH
 	return(proxy_connect_none(proxyhost, proxyport, phb));
 }
 
+static const proxy_connect_func proxy_connect_funcs_array[] = {
+	proxy_connect_none,   /* PROXY_NONE */
+	proxy_connect_http,   /* PROXY_HTTP */
+	proxy_connect_socks4, /* PROXY_SOCKS4 */
+	proxy_connect_socks5, /* PROXY_SOCKS5 */
+	proxy_connect_socks4, /* PROXY_SOCKS4A */
+};
 
 /* Export functions */
 
 int proxy_connect(const char *host, int port, b_event_handler func, gpointer data)
 {
 	struct PHB *phb;
+	proxy_connect_func fun;
+	int fd;
+
+	if (!phb_hash) {
+		phb_hash = g_hash_table_new(g_int_hash, g_int_equal);
+	}
 
 	if (!host || port <= 0 || !func || strlen(host) > 128) {
 		return -1;
@@ -501,16 +541,39 @@ int proxy_connect(const char *host, int port, b_event_handler func, gpointer dat
 	phb->func = func;
 	phb->data = data;
 
-	if (proxytype == PROXY_NONE || !proxyhost[0] || proxyport <= 0) {
-		return proxy_connect_none(host, port, phb);
-	} else if (proxytype == PROXY_HTTP) {
-		return proxy_connect_http(host, port, phb);
-	} else if (proxytype == PROXY_SOCKS4) {
-		return proxy_connect_socks4(host, port, phb);
-	} else if (proxytype == PROXY_SOCKS5) {
-		return proxy_connect_socks5(host, port, phb);
+	if (proxyhost[0] && proxyport > 0 && proxytype >= 0 && proxytype < G_N_ELEMENTS(proxy_connect_funcs_array)) {
+		fun = proxy_connect_funcs_array[proxytype];
+	} else {
+		fun = proxy_connect_none;
 	}
 
-	g_free(phb);
-	return -1;
+	fd = fun(host, port, phb);
+
+	if (fd != -1) {
+		g_hash_table_insert(phb_hash, &phb->fd, phb);
+	}
+
+	return fd;
+}
+
+void proxy_disconnect(int fd)
+{
+	struct PHB *phb = g_hash_table_lookup(phb_hash, &fd);
+
+	if (!phb) {
+		/* not in the early part of the connection - just close the fd */
+		closesocket(fd);
+		return;
+	}
+
+	if (phb->inpa) {
+		b_event_remove(phb->inpa);
+		phb->inpa = 0;
+	}
+
+	/* avoid calling the callback, which might result in double-free */
+	phb->func = NULL;
+
+	/* close and free */
+	phb_free(phb, FALSE);
 }

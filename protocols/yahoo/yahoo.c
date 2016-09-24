@@ -439,8 +439,17 @@ struct byahoo_connect_callback_data {
 void byahoo_connect_callback(gpointer data, gint source, b_input_condition cond)
 {
 	struct byahoo_connect_callback_data *d = data;
+	struct im_connection *ic;
 
-	if (!byahoo_get_ic_by_id(d->id)) {
+	if (!(ic = byahoo_get_ic_by_id(d->id))) {
+		g_free(d);
+		return;
+	}
+
+	if (source == -1) {
+		d->callback(NULL, 0, d->data);
+		imcb_error(ic, "Could not connect to server");
+		imc_logout(ic, TRUE);
 		g_free(d);
 		return;
 	}

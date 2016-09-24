@@ -38,7 +38,7 @@ static gboolean msn_ns_callback(gpointer data, gint source, b_input_condition co
 static void msn_ns_send_adl_start(struct im_connection *ic);
 static void msn_ns_send_adl(struct im_connection *ic);
 static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen, char **cmd);
-static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action);
+static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action, gboolean selfmessage);
 static void msn_ns_nfy(struct msn_data *md, char *who, char **parts, char *action, gboolean is_put);
 
 int msn_ns_write(struct im_connection *ic, int fd, const char *fmt, ...)
@@ -109,6 +109,9 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 	struct msn_data *md = data;
 	struct im_connection *ic = md->ic;
 
+	/* this should be taken from XFR, but hardcoding it for now. it also prevents more redirects. */
+	const char *redir_data = "VmVyc2lvbjogMQ0KWGZyQ291bnQ6IDINCklzR2VvWGZyOiB0cnVlDQo=";
+
 	if (source == -1 && !md->is_http) {
 		imcb_error(ic, "Could not connect to server");
 		imc_logout(ic, TRUE);
@@ -134,7 +137,13 @@ static gboolean msn_ns_connected(gpointer data, gint source, b_input_condition c
 		memcpy(md->uuid, "b171be3e", 8);   /* :-P */
 	}
 
-	if (msn_ns_write(ic, source, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER)) {
+	/* Having to handle potential errors in each write sure makes these ifs awkward...*/
+
+	if (msn_ns_write(ic, source, "VER %d %s CVR0\r\n", ++md->trId, MSNP_VER) &&
+	    msn_ns_write(ic, source, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s %s\r\n",
+	                 ++md->trId, ic->acc->user, redir_data) &&
+	    msn_ns_write(ic, md->fd, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user)) {
+
 		if (!md->is_http) {
 			md->inpa = b_input_add(md->fd, B_EV_IO_READ, msn_ns_callback, md);
 		}
@@ -207,11 +216,8 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)
 			return(0);
 		}
 
-		return(msn_ns_write(ic, md->fd, "CVR %d 0x0409 mac 10.2.0 ppc macmsgs 3.5.1 macmsgs %s VmVyc2lvbjogMQ0KWGZyQ291bnQ6IDINClhmclNlbnRVVENUaW1lOiA2MzU2MTQ3OTU5NzgzOTAwMDANCklzR2VvWGZyOiB0cnVlDQo=\r\n",
-		                    ++md->trId, ic->acc->user));
 	} else if (strcmp(cmd[0], "CVR") == 0) {
 		/* We don't give a damn about the information we just received */
-		return msn_ns_write(ic, md->fd, "USR %d SSO I %s\r\n", ++md->trId, ic->acc->user);
 	} else if (strcmp(cmd[0], "XFR") == 0) {
 		char *server;
 		int port;
@@ -279,6 +285,8 @@ int msn_ns_command(struct msn_data *md, char **cmd, int num_parts)
 		} else if (num_parts >= 3) {
 			md->msglen = atoi(cmd[2]);
 		}
+	} else if (strcmp(cmd[0], "RML") == 0) {
+		/* Move along, nothing to see here */
 	} else if (strcmp(cmd[0], "CHL") == 0) {
 		char *resp;
 		int st;
@@ -474,27 +482,49 @@ int msn_ns_message(struct msn_data *md, char *msg, int msglen, char **cmd, int n
 	return 1;
 }
 
-static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen, char **cmd)
+/* returns newly allocated string */
+static char *msn_ns_parse_header_address(struct msn_data *md, char *headers, char *header_name)
 {
-	char **parts = NULL;
 	char *semicolon = NULL;
-	char *action = NULL;
-	char *from = NULL;
-	char *who = NULL;
+	char *header = NULL;
+	char *address = NULL;
 
-	parts = g_strsplit(msg, "\r\n\r\n", 4);
-
-	if (!(from = get_rfc822_header(parts[0], "From", 0))) {
-		goto cleanup;
+	if (!(header = get_rfc822_header(headers, header_name, 0))) {
+		return NULL;
 	}
 
 	/* either the semicolon or the end of the string */
-	semicolon = strchr(from, ';') ? : (from + strlen(from));
+	semicolon = strchr(header, ';') ? : (header + strlen(header));
 
-	who = g_strndup(from + 2, semicolon - from - 2);
+	address = g_strndup(header + 2, semicolon - header - 2);
+
+	g_free(header);
+	return address;
+}
+
+static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen, char **cmd)
+{
+	char **parts = NULL;
+	char *action = NULL;
+	char *who = NULL;
+	gboolean selfmessage = FALSE;
+
+	parts = g_strsplit(msg, "\r\n\r\n", 4);
+
+	if (!(who = msn_ns_parse_header_address(md, parts[0], "From"))) {
+		goto cleanup;
+	}
+
+	if (strcmp(who, md->ic->acc->user) == 0) {
+		selfmessage = TRUE;
+		g_free(who);
+		if (!(who = msn_ns_parse_header_address(md, parts[0], "To"))) {
+			goto cleanup;
+		}
+	}
 
 	if ((strcmp(cmd[0], "SDG") == 0) && (action = get_rfc822_header(parts[2], "Message-Type", 0))) {
-		msn_ns_sdg(md, who, parts, action);
+		msn_ns_sdg(md, who, parts, action, selfmessage);
 
 	} else if ((strcmp(cmd[0], "NFY") == 0) && (action = get_rfc822_header(parts[2], "Uri", 0))) {
 		gboolean is_put = (strcmp(cmd[1], "PUT") == 0);
@@ -504,18 +534,17 @@ static void msn_ns_structured_message(struct msn_data *md, char *msg, int msglen
 cleanup:
 	g_strfreev(parts);
 	g_free(action);
-	g_free(from);
 	g_free(who);
 }
 
-static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action)
+static void msn_ns_sdg(struct msn_data *md, char *who, char **parts, char *action, gboolean selfmessage)
 {
 	struct im_connection *ic = md->ic;
 
-	if (strcmp(action, "Control/Typing") == 0) {
+	if (strcmp(action, "Control/Typing") == 0 && !selfmessage) {
 		imcb_buddy_typing(ic, who, OPT_TYPING);
 	} else if (strcmp(action, "Text") == 0) {
-		imcb_buddy_msg(ic, who, parts[3], 0, 0);
+		imcb_buddy_msg(ic, who, parts[3], selfmessage ? OPT_SELFMESSAGE : 0, 0);
 	}
 }
 
@@ -594,7 +623,13 @@ void msn_auth_got_passport_token(struct im_connection *ic, const char *token, co
 		msn_ns_write(ic, -1, "USR %d SSO S %s %s {%s}\r\n", ++md->trId, md->tokens[0], token, md->uuid);
 	} else {
 		imcb_error(ic, "Error during Passport authentication: %s", error);
-		imc_logout(ic, TRUE);
+
+		/* don't reconnect with auth errors */
+		if (error && g_str_has_prefix(error, "wsse:FailedAuthentication")) {
+			imc_logout(ic, FALSE);
+		} else {
+			imc_logout(ic, TRUE);
+		}
 	}
 }
 

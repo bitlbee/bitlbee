@@ -27,11 +27,11 @@
 
 ini_t *ini_open(char *file)
 {
-	int fd;
+	int fd = -1;
 	ini_t *ini = NULL;
 	struct stat fi;
 
-	if ((fd = open(file, O_RDONLY)) != -1 &&
+	if (file && (fd = open(file, O_RDONLY)) != -1 &&
 	    fstat(fd, &fi) == 0 &&
 	    fi.st_size <= 16384 &&
 	    (ini = g_malloc(sizeof(ini_t) + fi.st_size + 1)) &&

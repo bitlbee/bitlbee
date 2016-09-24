@@ -181,7 +181,7 @@
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
 				
 				<para>
@@ -239,7 +239,7 @@
 				</para>
 				
 				<para>
-					For more infomation about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
+					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
 				
 				<para>
@@ -788,6 +788,22 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="carbons" type="boolean" scope="account">
+		<default>true</default>
+
+		<description>
+			<para>
+				Jabber specific. "Message carbons" (XEP-0280) is a server feature to get copies of outgoing messages sent from other clients connected to the same account. It's not widely supported by most public XMPP servers (easier if you host your own), but this will probably change in the next few years.
+			</para>
+			<para>
+				This defaults to true, which will enable it if the server supports it, or fail silently if it's not. This setting only exists to allow disabling the feature if anyone considers it undesirable.
+			</para>
+			<para>
+				See also the <emphasis>self_messages</emphasis> setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="charset" type="string" scope="global">
 		<default>utf-8</default>
 		<possible-values>you can get a list of all possible values by doing 'iconv -l' in a shell</possible-values>
@@ -1092,7 +1108,7 @@
 			</para>
 			
 			<para>
-				With modes "chat" and "many", you can send direct messages by /msg'ing your contacts directly. Note, however, that incoming DMs are not fetched yet.
+				With modes "chat" and "many", you can send direct messages by /msg'ing your contacts directly. Incoming DMs are only fetched if the "stream" setting is on (default).
 			</para>
 			
 			<para>
@@ -1157,7 +1173,7 @@
 
 		<description>
 			<para>
-				By default, BitlBee generates a nickname for every contact by taking its handle and chopping off everything after the @. In some cases, this gives very inconvenient nicknames. The Facebook XMPP server is a good example, as all Facebook XMPP handles are numeric.
+				By default, BitlBee generates a nickname for every contact by taking its handle and chopping off everything after the @. In some cases, this gives very inconvenient nicknames. Some servers use internal identifiers, which are often just numbers.
 			</para>
 
 			<para>
@@ -1171,7 +1187,7 @@
 
 		<description>
 			<para>
-				This enables OAuth authentication for an IM account; right now the Twitter (working for Twitter only) and Jabber (for Google Talk, Facebook and MSN Messenger) module support it.
+				This enables OAuth authentication for an IM account; right now the Twitter (working for Twitter only) and Jabber (for Google Talk only) module support it.
 			</para>
 
 			<para>
@@ -1323,6 +1339,26 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="proxy" type="string" scope="account">
+		<default>&lt;local&gt;&lt;auto&gt;</default>
+
+		<description>
+			<para>
+				A list of <emphasis>file transfer proxies</emphasis> for jabber. This isn't the connection proxy. Sorry, look in bitlbee.conf for those.
+			</para>
+
+			<para>
+				It's a semicolon-separated list of items that can be either <emphasis>JID,HOST,PORT</emphasis> or two special values, <emphasis>&lt;local&gt;</emphasis> (to try a direct connection first) and <emphasis>&lt;auto&gt;</emphasis> (to try to discover a proxy). For example, "&lt;local&gt;;proxy.somewhere.org,123.123.123.123,7777".
+			</para>
+			<para>
+				The address should point to a SOCKS5 bytestreams server, usually provided by jabber servers. This is only used for sending files. Note that the host address might not match what DNS tells you, and the port isn't always the same.
+			</para>
+			<para>
+				The correct way to get a socks proxy host/port is a mystery, and the file transfer might fail anyway. Maybe just try using dropbox instead.
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="query_order" type="string" scope="global">
 		<default>lifo</default>
 		<possible-values>lifo, fifo</possible-values>
@@ -1383,6 +1419,37 @@
 		</description>
 	</bitlbee-setting>
 
+	<bitlbee-setting name="self_messages" type="string" scope="global">
+		<default>true</default>
+		<possible-values>true, false, prefix, prefix_notice</possible-values>
+
+		<description>
+			<para>
+				Change this setting to customize how (or whether) to show self-messages, which are messages sent by yourself from other locations (for example, mobile clients), for IM protocols that support it.
+			</para>
+
+			<para>
+				When this is set to "true", it will send those messages in the "standard" way, which is a PRIVMSG with source and target fields swapped.
+			</para>
+			
+			<para>
+				Since this isn't very well supported by some clients (the messages might appear in the wrong window), you can set it to "prefix" to show them as a normal message prefixed with "-> ", or use "prefix_notice" which is the same thing but with a NOTICE instead.
+			</para>
+
+			<para>
+				You can also set it to "false" to disable these messages completely.
+			</para>
+
+			<para>
+				This setting only applies to private messages. Self messages in groupchats are always shown, since they haven't caused issues in any clients so far.
+			</para>
+
+			<para>
+				More information: <emphasis>https://wiki.bitlbee.org/SelfMessages</emphasis>
+			</para>
+		</description>
+	</bitlbee-setting>
+
 	<bitlbee-setting name="server" type="string" scope="account">
 		<description>
 			<para>
@@ -1416,21 +1483,22 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="show_users" type="string" scope="channel">
-		<default>online+,away</default>
+		<default>online+,special%,away</default>
 
 		<description>
 			<para>
 				Comma-separated list of statuses of users you want in the channel,
 				and any modes they should have. The following statuses are currently
 				recognised: <emphasis>online</emphasis> (i.e. available, not
-				away), <emphasis>away</emphasis>, and <emphasis>offline</emphasis>.
+				away), <emphasis>special</emphasis>, <emphasis>away</emphasis>,
+				and <emphasis>offline</emphasis>.
 			</para>
 			
 			<para>
 				If a status is followed by a valid channel mode character
 				(@, % or +), it will be given to users with that status.
-				For example, <emphasis>online@,away+,offline</emphasis> will
-				show all users in the channel. Online people will
+				For example, <emphasis>online@,special%,away+,offline</emphasis>
+				will show all users in the channel. Online people will
 				have +o, people who are online but away will have +v,
 				and others will have no special modes.
 			</para>
@@ -1890,7 +1958,7 @@
 			<syntax>transfer &lt;reject&gt;</syntax>
 
 			<description>
-				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is neccessary. Or is it?</para>
+				<para>Rejects all incoming (not already transferring) file transfers. Since you probably have only one incoming transfer at a time, no id is necessary. Or is it?</para>
 			</description>
 
 			<ircexample>

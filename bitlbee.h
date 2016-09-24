@@ -157,6 +157,8 @@ typedef struct global {
 	int restart;
 } global_t;
 
+void sighandler_shutdown_setup(void);
+
 int bitlbee_daemon_init(void);
 int bitlbee_inetd_init(void);
 

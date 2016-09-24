@@ -185,7 +185,7 @@ static char *choose_priority(struct im_connection *ic)
 	struct jabber_data *jd = ic->proto_data;
 	char *prio = set_getstr(&ic->acc->set, "priority");
 
-	if (jd->away_state->code != NULL) {
+	if (jd->away_state && jd->away_state->full_name != NULL) {
 		int new_prio = (atoi(prio) - 5);
 		if (new_prio < 0) {
 			new_prio = 0;
@@ -221,7 +221,13 @@ int presence_send_update(struct im_connection *ic)
 	   Trillian seem to do this right. */
 	cap = xt_new_node("c", NULL, NULL);
 	xt_add_attr(cap, "xmlns", XMLNS_CAPS);
-	xt_add_attr(cap, "node", "http://bitlbee.org/xmpp/caps");
+
+	if (jd->flags & JFLAG_HIPCHAT) {
+		/* hipchat specific node, whitelisted by request to receive self-messages */
+		xt_add_attr(cap, "node", "http://bitlbee.org/xmpp/caps/hipchat");
+	} else {
+		xt_add_attr(cap, "node", "http://bitlbee.org/xmpp/caps");
+	}
 	xt_add_attr(cap, "ver", BITLBEE_VERSION);   /* The XEP wants this hashed, but nobody's doing that. */
 	xt_add_child(node, cap);
 

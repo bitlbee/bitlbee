@@ -454,7 +454,7 @@ void ssl_disconnect(void *conn_)
 		gnutls_bye(conn->session, GNUTLS_SHUT_WR);
 	}
 
-	closesocket(conn->fd);
+	proxy_disconnect(conn->fd);
 
 	if (conn->session) {
 		gnutls_deinit(conn->session);

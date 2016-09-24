@@ -39,6 +39,7 @@
 #define PROXY_HTTP 1
 #define PROXY_SOCKS4 2
 #define PROXY_SOCKS5 3
+#define PROXY_SOCKS4A 4
 
 extern char proxyhost[128];
 extern int proxyport;
@@ -47,5 +48,6 @@ extern char proxyuser[128];
 extern char proxypass[128];
 
 G_MODULE_EXPORT int proxy_connect(const char *host, int port, b_event_handler func, gpointer data);
+G_MODULE_EXPORT void proxy_disconnect(int fd);
 
 #endif /* _PROXY_H_ */

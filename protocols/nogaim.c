@@ -89,6 +89,7 @@ void load_plugins(void)
 #endif
 
 GList *protocols = NULL;
+GList *disabled_protocols = NULL;
 
 void register_protocol(struct prpl *p)
 {
@@ -102,25 +103,27 @@ void register_protocol(struct prpl *p)
 	}
 
 	if (refused) {
-		log_message(LOGLVL_WARNING, "Protocol %s disabled\n", p->name);
+		disabled_protocols = g_list_append(disabled_protocols, p);
 	} else {
 		protocols = g_list_append(protocols, p);
 	}
 }
 
+static int proto_name_cmp(const void *proto_, const void *name)
+{
+	const struct prpl *proto = proto_;
+	return g_strcasecmp(proto->name, name);
+}
+
 struct prpl *find_protocol(const char *name)
 {
-	GList *gl;
+	GList *gl = g_list_find_custom(protocols, name, proto_name_cmp);
+	return gl ? gl->data: NULL;
+}
 
-	for (gl = protocols; gl; gl = gl->next) {
-		struct prpl *proto = gl->data;
-
-		if (g_strcasecmp(proto->name, name) == 0) {
-			return proto;
-		}
-	}
-
-	return NULL;
+gboolean is_protocol_disabled(const char *name)
+{
+	return g_list_find_custom(disabled_protocols, name, proto_name_cmp) != NULL;
 }
 
 void nogaim_init()
@@ -208,6 +211,10 @@ static void serv_got_crap(struct im_connection *ic, char *format, ...)
 	char *text;
 	account_t *a;
 
+	if (!ic->bee->ui->log) {
+		return;
+	}
+
 	va_start(params, format);
 	text = g_strdup_vprintf(format, params);
 	va_end(params);
@@ -226,10 +233,9 @@ static void serv_got_crap(struct im_connection *ic, char *format, ...)
 
 	/* If we found one, include the screenname in the message. */
 	if (a) {
-		/* FIXME(wilmer): ui_log callback or so */
-		irc_rootmsg(ic->bee->ui_data, "%s - %s", ic->acc->tag, text);
+		ic->bee->ui->log(ic->bee, ic->acc->tag, text);
 	} else {
-		irc_rootmsg(ic->bee->ui_data, "%s - %s", ic->acc->prpl->name, text);
+		ic->bee->ui->log(ic->bee, ic->acc->prpl->name, text);
 	}
 
 	g_free(text);
@@ -661,7 +667,8 @@ int imc_away_send_update(struct im_connection *ic)
 	if (away && *away) {
 		GList *m = ic->acc->prpl->away_states(ic);
 		msg = ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? away : NULL;
-		away = imc_away_state_find(m, away, &msg) ? : m->data;
+		away = imc_away_state_find(m, away, &msg) ? :
+		       (imc_away_state_find(m, "away", &msg) ? : m->data);
 	} else if (ic->acc->flags & ACC_FLAG_STATUS_MESSAGE) {
 		away = NULL;
 		msg = set_getstr(&ic->acc->set, "status") ?
@@ -780,32 +787,8 @@ void imc_rem_block(struct im_connection *ic, char *handle)
 	ic->acc->prpl->rem_deny(ic, handle);
 }
 
+/* Deprecated: using this function resulted in merging several handles accidentally
+ * Also the irc layer handles this decently nowadays */
 void imcb_clean_handle(struct im_connection *ic, char *handle)
 {
-	/* Accepts a handle and does whatever is necessary to make it
-	   BitlBee-friendly. Currently this means removing everything
-	   outside 33-127 (ASCII printable excl spaces), @ (only one
-	   is allowed) and ! and : */
-	char out[strlen(handle) + 1];
-	int s, d;
-
-	s = d = 0;
-	while (handle[s]) {
-		if (handle[s] > ' ' && handle[s] != '!' && handle[s] != ':' &&
-		    (handle[s] & 0x80) == 0) {
-			if (handle[s] == '@') {
-				/* See if we got an @ already? */
-				out[d] = 0;
-				if (strchr(out, '@')) {
-					continue;
-				}
-			}
-
-			out[d++] = handle[s];
-		}
-		s++;
-	}
-	out[d] = handle[s];
-
-	strcpy(handle, out);
 }

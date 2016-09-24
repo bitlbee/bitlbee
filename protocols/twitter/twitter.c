@@ -677,14 +677,14 @@ static void twitter_logout(struct im_connection *ic)
 	// Set the status to logged out.
 	ic->flags &= ~OPT_LOGGED_IN;
 
-	// Remove the main_loop function from the function queue.
-	b_event_remove(td->main_loop_id);
-
-	if (td->timeline_gc) {
-		imcb_chat_free(td->timeline_gc);
-	}
-
 	if (td) {
+		// Remove the main_loop function from the function queue.
+		b_event_remove(td->main_loop_id);
+
+		if (td->timeline_gc) {
+			imcb_chat_free(td->timeline_gc);
+		}
+
 		if (td->filter_update_id > 0) {
 			b_event_remove(td->filter_update_id);
 		}

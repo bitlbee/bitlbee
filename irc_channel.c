@@ -212,6 +212,11 @@ static char *set_eval_channel_type(set_t *set, char *value)
 		return SET_INVALID;
 	}
 
+	/* Skip the free/init if nothing is being changed */
+	if (ic->f == new) {
+		return value;
+	}
+
 	/* TODO: Return values. */
 	if (ic->f && ic->f->_free) {
 		ic->f->_free(ic);
@@ -254,6 +259,10 @@ int irc_channel_del_user(irc_channel_t *ic, irc_user_t *iu, irc_channel_del_user
 	irc_channel_user_t *icu;
 
 	if (!(icu = irc_channel_has_user(ic, iu))) {
+		if (iu == ic->irc->user && type == IRC_CDU_KICK) {
+			/* an error happened before joining, inform the client with a numeric */
+			irc_send_num(ic->irc, 403, "%s :Error joining channel (check control channel?)", ic->name);
+		}
 		return 0;
 	}
 
@@ -428,6 +437,18 @@ void irc_channel_set_mode(irc_channel_t *ic, const char *s)
 	}
 }
 
+char irc_channel_user_get_prefix(irc_channel_user_t *icu)
+{
+	if (icu->flags & IRC_CHANNEL_USER_OP) {
+		return '@';
+	} else if (icu->flags & IRC_CHANNEL_USER_HALFOP) {
+		return '%';
+	} else if (icu->flags & IRC_CHANNEL_USER_VOICE) {
+		return '+';
+	}
+	return 0;
+}
+
 void irc_channel_auto_joins(irc_t *irc, account_t *acc)
 {
 	GSList *l;
@@ -592,6 +613,16 @@ char *irc_channel_name_gen(irc_t *irc, const char *hint)
 	gsize bytes_written;
 
 	translit_name = g_convert_with_fallback(hint, -1, "ASCII//TRANSLIT", "UTF-8", "", NULL, &bytes_written, NULL);
+
+	if (!translit_name) {
+		/* Same thing as in nick_gen() in nick.c, try again without //TRANSLIT */
+		translit_name = g_convert_with_fallback(hint, -1, "ASCII", "UTF-8", "", NULL, &bytes_written, NULL);
+	}
+
+	if (!translit_name) {
+		return NULL;
+	}
+
 	if (bytes_written > MAX_NICK_LENGTH) {
 		translit_name[MAX_NICK_LENGTH] = '\0';
 	}

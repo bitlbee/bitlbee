@@ -162,6 +162,12 @@ static void cmd_identify(irc_t *irc, char **cmd)
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set(irc, "+R", 1);
 
+		if (irc->caps & CAP_SASL) {
+			irc_user_t *iu = irc->user;
+			irc_send_num(irc, 900, "%s!%s@%s %s :You are now logged in as %s",
+				iu->nick, iu->user, iu->host, iu->nick, iu->nick);
+		}
+
 		bitlbee_whatsnew(irc);
 
 		/* The following code is a bit hairy now. With takeover
@@ -237,6 +243,12 @@ static void cmd_register(irc_t *irc, char **cmd)
 		irc_setpass(irc, cmd[1]);
 		irc->status |= USTATUS_IDENTIFIED;
 		irc_umode_set(irc, "+R", 1);
+
+		if (irc->caps & CAP_SASL) {
+			irc_user_t *iu = irc->user;
+			irc_send_num(irc, 900, "%s!%s@%s %s :You are now logged in as %s",
+				iu->nick, iu->user, iu->host, iu->nick, iu->nick);
+		}
 
 		/* Set this var now, or anyone who logs in to his/her
 		   newly created account for the first time gets the
@@ -412,7 +424,11 @@ static void cmd_account(irc_t *irc, char **cmd)
 		prpl = find_protocol(cmd[2]);
 
 		if (prpl == NULL) {
-			irc_rootmsg(irc, "Unknown protocol");
+			if (is_protocol_disabled(cmd[2])) {
+				irc_rootmsg(irc, "Protocol disabled in global config");
+			} else {
+				irc_rootmsg(irc, "Unknown protocol");
+			}
 			return;
 		}
 

@@ -112,6 +112,7 @@ static void purple_init(account_t *acc)
 	   Remember that libpurple is not really meant to be used on public
 	   servers anyway! */
 	if (!dir_fixed) {
+		PurpleCertificatePool *pool;
 		irc_t *irc = acc->bee->ui_data;
 		char *dir;
 
@@ -121,6 +122,18 @@ static void purple_init(account_t *acc)
 
 		purple_blist_load();
 		purple_prefs_load();
+
+		if (proxytype == PROXY_SOCKS4A) {
+			/* do this here after loading prefs. yes, i know, it sucks */
+			purple_prefs_set_bool("/purple/proxy/socks4_remotedns", TRUE);
+		}
+
+		/* re-create the certificate cache directory */
+		pool = purple_certificate_find_pool("x509", "tls_peers");
+		dir = purple_certificate_pool_mkpath(pool, NULL);
+		purple_build_dir(dir, 0700);
+		g_free(dir);
+
 		dir_fixed = TRUE;
 	}
 
@@ -351,6 +364,10 @@ static void purple_logout(struct im_connection *ic)
 
 	if (!pd) {
 		return;
+	}
+
+	while (ic->groupchats) {
+		imcb_chat_free(ic->groupchats->data);
 	}
 
 	purple_account_set_enabled(pd->account, "BitlBee", FALSE);
@@ -638,7 +655,7 @@ struct groupchat *purple_chat_with(struct im_connection *ic, char *who)
 
 	/* Call the fucker. */
 	callback = (void *) mi->callback;
-	callback(&pb->node, menu->data);
+	callback(&pb->node, mi->data);
 
 	return NULL;
 }
@@ -706,11 +723,17 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 		} else if (strcmp(pce->identifier, "passwd") == 0) {
 			g_hash_table_replace(chat_hash, "passwd", g_strdup(password));
 		}
+
+		g_free(pce);
 	}
+
+	g_list_free(info);
 
 	serv_join_chat(purple_account_get_connection(pd->account), chat_hash);
 
-	return NULL;
+	g_hash_table_destroy(chat_hash);
+
+	return imcb_chat_new(ic, room);
 }
 
 void purple_transfer_request(struct im_connection *ic, file_transfer_t *ft, char *handle);
@@ -732,11 +755,11 @@ GHashTable *prplcb_ui_info()
 
 static PurpleCoreUiOps bee_core_uiops =
 {
-	NULL,
-	NULL,
-	purple_ui_init,
-	NULL,
-	prplcb_ui_info,
+	NULL,                      /* ui_prefs_init */
+	NULL,                      /* debug_ui_init */
+	purple_ui_init,            /* ui_init */
+	NULL,                      /* quit */
+	prplcb_ui_info,            /* get_ui_info */
 };
 
 static void prplcb_conn_progress(PurpleConnection *gc, const char *text, size_t step, size_t step_count)
@@ -763,9 +786,7 @@ static void prplcb_conn_connected(PurpleConnection *gc)
 	// user list needs to be requested for Gadu-Gadu
 	purple_gg_buddylist_import(gc);
 
-	if (gc->flags & PURPLE_CONNECTION_HTML) {
-		ic->flags |= OPT_DOES_HTML;
-	}
+	ic->flags |= OPT_DOES_HTML;
 }
 
 static void prplcb_conn_disconnected(PurpleConnection *gc)
@@ -799,14 +820,14 @@ static void prplcb_conn_report_disconnect_reason(PurpleConnection *gc, PurpleCon
 
 static PurpleConnectionUiOps bee_conn_uiops =
 {
-	prplcb_conn_progress,
-	prplcb_conn_connected,
-	prplcb_conn_disconnected,
-	prplcb_conn_notice,
-	NULL,
-	NULL,
-	NULL,
-	prplcb_conn_report_disconnect_reason,
+	prplcb_conn_progress,                    /* connect_progress */
+	prplcb_conn_connected,                   /* connected */
+	prplcb_conn_disconnected,                /* disconnected */
+	prplcb_conn_notice,                      /* notice */
+	NULL,                                    /* report_disconnect */
+	NULL,                                    /* network_connected */
+	NULL,                                    /* network_disconnected */
+	prplcb_conn_report_disconnect_reason,    /* report_disconnect_reason */
 };
 
 static void prplcb_blist_update(PurpleBuddyList *list, PurpleBlistNode *node)
@@ -881,11 +902,11 @@ static void prplcb_blist_remove(PurpleBuddyList *list, PurpleBlistNode *node)
 
 static PurpleBlistUiOps bee_blist_uiops =
 {
-	NULL,
-	prplcb_blist_new,
-	NULL,
-	prplcb_blist_update,
-	prplcb_blist_remove,
+	NULL,                      /* new_list */
+	prplcb_blist_new,          /* new_node */
+	NULL,                      /* show */
+	prplcb_blist_update,       /* update */
+	prplcb_blist_remove,       /* remove */
 };
 
 void prplcb_conv_new(PurpleConversation *conv)
@@ -894,9 +915,17 @@ void prplcb_conv_new(PurpleConversation *conv)
 		struct im_connection *ic = purple_ic_by_pa(conv->account);
 		struct groupchat *gc;
 
-		gc = imcb_chat_new(ic, conv->name);
-		if (conv->title != NULL) {
-			imcb_chat_name_hint(gc, conv->title);
+		gc = bee_chat_by_title(ic->bee, ic, conv->name);
+
+		if (!gc) {
+			gc = imcb_chat_new(ic, conv->name);
+			if (conv->title != NULL) {
+				imcb_chat_name_hint(gc, conv->title);
+			}
+		}
+
+		/* don't set the topic if it's just the name */
+		if (conv->title != NULL && strcmp(conv->name, conv->title) != 0) {
 			imcb_chat_topic(gc, NULL, conv->title, 0);
 		}
 
@@ -939,42 +968,43 @@ void prplcb_conv_del_users(PurpleConversation *conv, GList *cbuddies)
 	}
 }
 
-void prplcb_conv_chat_msg(PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags,
-                          time_t mtime)
+/* Generic handler for IM or chat messages, covers write_chat, write_im and write_conv */
+static void handle_conv_msg(PurpleConversation *conv, const char *who, const char *message, guint32 bee_flags, time_t mtime)
 {
+	struct im_connection *ic = purple_ic_by_pa(conv->account);
 	struct groupchat *gc = conv->ui_data;
 	PurpleBuddy *buddy;
 
-	/* ..._SEND means it's an outgoing message, no need to echo those. */
-	if (flags & PURPLE_MESSAGE_SEND) {
-		return;
-	}
-
 	buddy = purple_find_buddy(conv->account, who);
 	if (buddy != NULL) {
 		who = purple_buddy_get_name(buddy);
 	}
 
-	imcb_chat_msg(gc, who, (char *) message, 0, mtime);
+	if (conv->type == PURPLE_CONV_TYPE_IM) {
+		imcb_buddy_msg(ic, (char *) who, (char *) message, bee_flags, mtime);
+	} else if (gc) {
+		imcb_chat_msg(gc, who, (char *) message, bee_flags, mtime);
+	}
 }
 
-static void prplcb_conv_im(PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags,
-                           time_t mtime)
+/* Handles write_im and write_chat. Removes echoes of locally sent messages */
+static void prplcb_conv_msg(PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
 {
-	struct im_connection *ic = purple_ic_by_pa(conv->account);
-	PurpleBuddy *buddy;
+	if (!(flags & PURPLE_MESSAGE_SEND)) {
+		handle_conv_msg(conv, who, message, 0, mtime);
+	}
+}
 
-	/* ..._SEND means it's an outgoing message, no need to echo those. */
+/* Handles write_conv. Only passes self messages from other locations through.
+ * That is, only writes of PURPLE_MESSAGE_SEND.
+ * There are more events which might be handled in the future, but some are tricky.
+ * (images look like <img id="123">, what do i do with that?) */
+static void prplcb_conv_write(PurpleConversation *conv, const char *who, const char *alias, const char *message,
+                              PurpleMessageFlags flags, time_t mtime)
+{
 	if (flags & PURPLE_MESSAGE_SEND) {
-		return;
+		handle_conv_msg(conv, who, message, OPT_SELFMESSAGE, mtime);
 	}
-
-	buddy = purple_find_buddy(conv->account, who);
-	if (buddy != NULL) {
-		who = purple_buddy_get_name(buddy);
-	}
-
-	imcb_buddy_msg(ic, (char *) who, (char *) message, 0, mtime);
 }
 
 /* No, this is not a ui_op but a signal. */
@@ -1007,9 +1037,9 @@ static PurpleConversationUiOps bee_conv_uiops =
 {
 	prplcb_conv_new,           /* create_conversation  */
 	prplcb_conv_free,          /* destroy_conversation */
-	prplcb_conv_chat_msg,      /* write_chat           */
-	prplcb_conv_im,            /* write_im             */
-	NULL,                      /* write_conv           */
+	prplcb_conv_msg,           /* write_chat           */
+	prplcb_conv_msg,           /* write_im             */
+	prplcb_conv_write,         /* write_conv           */
 	prplcb_conv_add_users,     /* chat_add_users       */
 	NULL,                      /* chat_rename_user     */
 	prplcb_conv_del_users,     /* chat_remove_users    */
@@ -1174,13 +1204,13 @@ void purple_request_input_callback(guint id, struct im_connection *ic,
 
 static PurpleRequestUiOps bee_request_uiops =
 {
-	prplcb_request_input,
-	NULL,
-	prplcb_request_action,
-	NULL,
-	NULL,
-	prplcb_close_request,
-	NULL,
+	prplcb_request_input,      /* request_input */
+	NULL,                      /* request_choice */
+	prplcb_request_action,     /* request_action */
+	NULL,                      /* request_fields */
+	NULL,                      /* request_file */
+	prplcb_close_request,      /* close_request */
+	NULL,                      /* request_folder */
 };
 
 static void prplcb_privacy_permit_added(PurpleAccount *account, const char *name)
@@ -1221,10 +1251,10 @@ static void prplcb_privacy_deny_removed(PurpleAccount *account, const char *name
 
 static PurplePrivacyUiOps bee_privacy_uiops =
 {
-	prplcb_privacy_permit_added,
-	prplcb_privacy_permit_removed,
-	prplcb_privacy_deny_added,
-	prplcb_privacy_deny_removed,
+	prplcb_privacy_permit_added,       /* permit_added */
+	prplcb_privacy_permit_removed,     /* permit_removed */
+	prplcb_privacy_deny_added,         /* deny_added */
+	prplcb_privacy_deny_removed,       /* deny_removed */
 };
 
 static void prplcb_debug_print(PurpleDebugLevel level, const char *category, const char *arg_s)
@@ -1234,7 +1264,7 @@ static void prplcb_debug_print(PurpleDebugLevel level, const char *category, con
 
 static PurpleDebugUiOps bee_debug_uiops =
 {
-	prplcb_debug_print,
+	prplcb_debug_print,        /* print */
 };
 
 static guint prplcb_ev_timeout_add(guint interval, GSourceFunc func, gpointer udata)
@@ -1255,11 +1285,32 @@ static gboolean prplcb_ev_remove(guint id)
 
 static PurpleEventLoopUiOps glib_eventloops =
 {
-	prplcb_ev_timeout_add,
-	prplcb_ev_remove,
-	prplcb_ev_input_add,
-	prplcb_ev_remove,
+	prplcb_ev_timeout_add,     /* timeout_add */
+	prplcb_ev_remove,          /* timeout_remove */
+	prplcb_ev_input_add,       /* input_add */
+	prplcb_ev_remove,          /* input_remove */
 };
+
+/* Absolutely no connection context at all. Thanks purple! brb crying */
+static void *prplcb_notify_message(PurpleNotifyMsgType type, const char *title,
+                                   const char *primary, const char *secondary)
+{
+	char *text = g_strdup_printf("%s%s - %s%s%s",
+		(type == PURPLE_NOTIFY_MSG_ERROR) ? "Error: " : "",
+		title,
+		primary ?: "",
+		(primary && secondary) ? " - " : "",
+		secondary ?: ""
+	);
+
+	if (local_bee->ui->log) {
+		local_bee->ui->log(local_bee, "purple", text);
+	}
+
+	g_free(text);
+
+	return NULL;
+}
 
 static void *prplcb_notify_email(PurpleConnection *gc, const char *subject, const char *from,
                                  const char *to, const char *url)
@@ -1321,13 +1372,13 @@ static void *prplcb_notify_userinfo(PurpleConnection *gc, const char *who, Purpl
 
 static PurpleNotifyUiOps bee_notify_uiops =
 {
-	NULL,
-	prplcb_notify_email,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	prplcb_notify_userinfo,
+	prplcb_notify_message,     /* notify_message */
+	prplcb_notify_email,       /* notify_email */
+	NULL,                      /* notify_emails */
+	NULL,                      /* notify_formatted */
+	NULL,                      /* notify_searchresults */
+	NULL,                      /* notify_searchresults_new_rows */
+	prplcb_notify_userinfo,    /* notify_userinfo */
 };
 
 static void *prplcb_account_request_authorize(PurpleAccount *account, const char *remote_user,
@@ -1354,11 +1405,11 @@ static void *prplcb_account_request_authorize(PurpleAccount *account, const char
 
 static PurpleAccountUiOps bee_account_uiops =
 {
-	NULL,
-	NULL,
-	NULL,
-	prplcb_account_request_authorize,
-	NULL,
+	NULL,                              /* notify_added */
+	NULL,                              /* status_changed */
+	NULL,                              /* request_add */
+	prplcb_account_request_authorize,  /* request_authorize */
+	NULL,                              /* close_account_request */
 };
 
 extern PurpleXferUiOps bee_xfer_uiops;
@@ -1386,11 +1437,8 @@ void purple_initmodule()
 	GString *help;
 	char *dir;
 
-	if (B_EV_IO_READ != PURPLE_INPUT_READ ||
-	    B_EV_IO_WRITE != PURPLE_INPUT_WRITE) {
-		/* FIXME FIXME FIXME FIXME FIXME :-) */
-		exit(1);
-	}
+	g_assert((int) B_EV_IO_READ == (int) PURPLE_INPUT_READ);
+	g_assert((int) B_EV_IO_WRITE == (int) PURPLE_INPUT_WRITE);
 
 	dir = g_strdup_printf("%s/purple", global.conf->configdir);
 	purple_util_set_user_dir(dir);
@@ -1408,6 +1456,7 @@ void purple_initmodule()
 	if (proxytype != PROXY_NONE) {
 		PurpleProxyInfo *pi = purple_global_proxy_get_info();
 		switch (proxytype) {
+		case PROXY_SOCKS4A:
 		case PROXY_SOCKS4:
 			purple_proxy_info_set_type(pi, PURPLE_PROXY_SOCKS4);
 			break;

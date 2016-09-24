@@ -269,7 +269,6 @@ static int msn_soap_passport_sso_build_request(struct msn_soap_req_data *soap_re
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct im_connection *ic = soap_req->ic;
 	struct msn_data *md = ic->proto_data;
-	char pass[MAX_PASSPORT_PWLEN + 1];
 
 	if (sd->redirect) {
 		soap_req->url = sd->redirect;
@@ -285,10 +284,8 @@ static int msn_soap_passport_sso_build_request(struct msn_soap_req_data *soap_re
 		soap_req->url = g_strdup(SOAP_PASSPORT_SSO_URL);
 	}
 
-	strncpy(pass, ic->acc->pass, MAX_PASSPORT_PWLEN);
-	pass[MAX_PASSPORT_PWLEN] = '\0';
 	soap_req->payload = g_markup_printf_escaped(SOAP_PASSPORT_SSO_PAYLOAD,
-	                                            ic->acc->user, pass, md->pp_policy);
+	                                            ic->acc->user, ic->acc->pass, md->pp_policy);
 
 	return MSN_SOAP_OK;
 }
@@ -326,6 +323,7 @@ static xt_status msn_soap_passport_failure(struct xt_node *node, gpointer data)
 	struct msn_soap_passport_sso_data *sd = soap_req->data;
 	struct xt_node *code = xt_find_node(node->children, "faultcode");
 	struct xt_node *string = xt_find_node(node->children, "faultstring");
+	struct xt_node *reqstatus = xt_find_path(node, "psf:pp/psf:reqstatus");
 	struct xt_node *url;
 
 	if (code == NULL || code->text_len == 0) {
@@ -334,6 +332,9 @@ static xt_status msn_soap_passport_failure(struct xt_node *node, gpointer data)
 	           (url = xt_find_node(node->children, "psf:redirectUrl")) &&
 	           url->text_len > 0) {
 		sd->redirect = g_strdup(url->text);
+	} else if (reqstatus && strcmp(reqstatus->text, "0x800488fe") == 0) {
+		char *msg = "Location blocked. Log in to live.com, go to recent activity and click 'this was me'";
+		sd->error = g_strdup_printf("%s (%s)", code->text, msg);
 	} else {
 		sd->error = g_strdup_printf("%s (%s)", code->text, string && string->text_len ?
 		                            string->text : "no description available");
@@ -345,6 +346,7 @@ static xt_status msn_soap_passport_failure(struct xt_node *node, gpointer data)
 static const struct xt_handler_entry msn_soap_passport_sso_parser[] = {
 	{ "wsse:BinarySecurityToken", "wst:RequestedSecurityToken", msn_soap_passport_sso_token },
 	{ "S:Fault", "S:Envelope", msn_soap_passport_failure },
+	{ "S:Fault", "wst:RequestSecurityTokenResponse", msn_soap_passport_failure },
 	{ NULL, NULL, NULL }
 };
 
@@ -773,8 +775,7 @@ static int msn_soap_addressbook_handle_response(struct msn_soap_req_data *soap_r
 	if (wtf) {
 		imcb_log(soap_req->ic, "Warning: %d contacts were in both your "
 		         "block and your allow list. Assuming they're all "
-		         "allowed. Use the official WLM client once to fix "
-		         "this.", wtf);
+		         "allowed.", wtf);
 	}
 
 	msn_auth_got_contact_list(soap_req->ic);

@@ -21,6 +21,7 @@ struct msn_gw *msn_gw_new(struct im_connection *ic)
 	gw->port = GATEWAY_PORT;
 	gw->ssl = (GATEWAY_PORT == 443);
 	gw->poll_timeout = -1;
+	gw->write_timeout = -1;
 	gw->ic = ic;
 	gw->md = ic->proto_data;
 	gw->in = g_byte_array_new();
@@ -33,6 +34,11 @@ void msn_gw_free(struct msn_gw *gw)
 	if (gw->poll_timeout != -1) {
 		b_event_remove(gw->poll_timeout);
 	}
+
+	if (gw->write_timeout != -1) {
+		b_event_remove(gw->write_timeout);
+	}
+
 	g_byte_array_free(gw->in, TRUE);
 	g_byte_array_free(gw->out, TRUE);
 	g_free(gw->session_id);
@@ -188,12 +194,30 @@ ssize_t msn_gw_read(struct msn_gw *gw, char **buf)
 	return bodylen;
 }
 
-void msn_gw_write(struct msn_gw *gw, char *buf, size_t len)
+static gboolean msn_gw_write_cb(gpointer data, gint source, b_input_condition cond)
 {
-	g_byte_array_append(gw->out, (const guint8 *) buf, len);
+	struct msn_gw *gw;
+	
+	if (!(gw = msn_gw_from_ic(data))) {
+		return FALSE;
+	}
+
 	if (!gw->open) {
 		msn_gw_open(gw);
 	} else if (gw->polling || !gw->waiting) {
 		msn_gw_dorequest(gw, NULL);
+	}
+
+	gw->write_timeout = -1;
+	return FALSE;
+}
+
+void msn_gw_write(struct msn_gw *gw, char *buf, size_t len)
+{
+	g_byte_array_append(gw->out, (const guint8 *) buf, len);
+
+	/* do a bit of buffering here to send several commands with a single request */
+	if (gw->write_timeout == -1) {
+		gw->write_timeout = b_timeout_add(1, msn_gw_write_cb, gw->ic);
 	}
 }

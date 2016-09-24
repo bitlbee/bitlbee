@@ -118,3 +118,15 @@ char *irc_format_timestamp(irc_t *irc, time_t msg_ts)
 		                       msg.tm_hour, msg.tm_min, msg.tm_sec);
 	}
 }
+
+
+char *set_eval_self_messages(set_t *set, char *value)
+{
+	if (is_bool(value) ||
+	    g_strcasecmp(value, "prefix") == 0 ||
+	    g_strcasecmp(value, "prefix_notice") == 0) {
+		return value;
+	} else {
+		return SET_INVALID;
+	}
+}

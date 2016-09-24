@@ -1265,7 +1265,7 @@ static int gaim_parse_incoming_im(aim_session_t *sess, aim_frame_t *fr, ...)
 		ret = incomingim_chan1(sess, fr->conn, userinfo, args);
 	} break;
 
-	case 2: {         /* rendevous */
+	case 2: {         /* rendezvous */
 		struct aim_incomingim_ch2_args *args;
 		args = va_arg(ap, struct aim_incomingim_ch2_args *);
 		ret = incomingim_chan2(sess, fr->conn, userinfo, args);
