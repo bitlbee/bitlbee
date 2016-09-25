@@ -722,6 +722,7 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
 	GHashTable *chat_hash;
 	PurpleConversation *conv;
+	struct groupchat *gc;
 	GList *info, *l;
 
 	if (!pi->chat_info || !pi->chat_info_defaults ||
@@ -755,11 +756,14 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 
 	g_list_free(info);
 
+	/* do this before serv_join_chat to handle cases where prplcb_conv_new is called immediately (not async) */
+	gc = imcb_chat_new(ic, room);
+
 	serv_join_chat(purple_account_get_connection(pd->account), chat_hash);
 
 	g_hash_table_destroy(chat_hash);
 
-	return imcb_chat_new(ic, room);
+	return gc;
 }
 
 void purple_chat_list(struct im_connection *ic, const char *server)
