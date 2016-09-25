@@ -1018,7 +1018,6 @@ static void twitter_http_stream(struct http_request *req)
 		return;
 	}
 
-	ic->flags |= OPT_PONGED;
 	td = ic->proto_data;
 
 	if ((req->flags & HTTPC_EOF) || !req->reply_body) {
@@ -1034,6 +1033,10 @@ static void twitter_http_stream(struct http_request *req)
 		}
 		imc_logout(ic, TRUE);
 		return;
+	}
+
+	if (req == td->stream) {
+		ic->flags |= OPT_PONGED;
 	}
 
 	/* MUST search for CRLF, not just LF:
