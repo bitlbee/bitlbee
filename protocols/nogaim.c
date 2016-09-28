@@ -711,6 +711,9 @@ int imc_away_send_update(struct im_connection *ic)
 	       : set_getstr(&ic->bee->set, "away");
 	if (away && *away) {
 		GList *m = ic->acc->prpl->away_states(ic);
+		if (m == NULL) {
+			return 0;
+		}
 		msg = ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? away : NULL;
 		away = imc_away_state_find(m, away, &msg) ? :
 		       (imc_away_state_find(m, "away", &msg) ? : m->data);
