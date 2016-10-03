@@ -586,7 +586,7 @@ static gboolean twitter_xt_get_users(json_value *node, struct twitter_xml_list *
 #define TWITTER_TIME_FORMAT "%a %b %d %H:%M:%S +0000 %Y"
 #endif
 
-static void expand_entities(char **text, const json_value *node);
+static void expand_entities(char **text, const json_value *node, const json_value *extended_node);
 
 /**
  * Function to fill a twitter_xml_status struct.
@@ -601,6 +601,7 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 	struct twitter_xml_status *txs = {0};
 	const json_value *rt = NULL;
 	const json_value *text_value = NULL;
+	const json_value *extended_node = NULL;
 
 	if (node->type != json_object) {
 		return FALSE;
@@ -614,6 +615,7 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 			text_value = v;
 		} else if (strcmp("extended_tweet", k) == 0 && v->type == json_object) {
 			text_value = json_o_get(v, "full_text");
+			extended_node = v;
 		} else if (strcmp("retweeted_status", k) == 0 && v->type == json_object) {
 			rt = v;
 		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
@@ -646,7 +648,7 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 	} else if (text_value && text_value->type == json_string) {
 		txs->text = g_memdup(text_value->u.string.ptr, text_value->u.string.length + 1);
 		strip_html(txs->text);
-		expand_entities(&txs->text, node);
+		expand_entities(&txs->text, node, extended_node);
 	}
 
 	if (txs->text && txs->user && txs->id) {
@@ -689,7 +691,7 @@ static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
 		}
 	}
 
-	expand_entities(&txs->text, node);
+	expand_entities(&txs->text, node, NULL);
 
 	if (txs->text && txs->user && txs->id) {
 		return txs;
@@ -699,9 +701,9 @@ static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
 	return NULL;
 }
 
-static void expand_entities(char **text, const json_value *node)
+static void expand_entities(char **text, const json_value *node, const json_value *extended_node)
 {
-	json_value *entities, *quoted;
+	json_value *entities, *extended_entities, *quoted;
 	char *quote_url = NULL, *quote_text = NULL;
 
 	if (!((entities = json_o_get(node, "entities")) && entities->type == json_object))
@@ -717,6 +719,13 @@ static void expand_entities(char **text, const json_value *node)
 		txs_free(txs);
 	} else {
 		quoted = NULL;
+	}
+
+	if (extended_node) {
+		extended_entities = json_o_get(extended_node, "entities");
+		if (extended_entities && extended_entities->type == json_object) {
+			entities = extended_entities;
+		}
 	}
 
 	JSON_O_FOREACH(entities, k, v) {
