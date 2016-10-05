@@ -162,6 +162,13 @@ void strip_html(char *in)
 
 	memset(out, 0, sizeof(out));
 
+	if (strlen(in) == 0) {
+		/* If strlen(in) == 0, there's no point processing it. Also, the strcpy at the end
+		   of this function will EXC_BAD_ACCESS because strlen(out) == 1. So just bail out
+		   now. */
+		return;
+	}
+
 	while (*in) {
 		if (*in == '<' && (g_ascii_isalpha(*(in + 1)) || *(in + 1) == '/')) {
 			/* If in points at a < and in+1 points at a letter or a slash, this is probably
