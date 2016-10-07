@@ -44,8 +44,6 @@ from yowsup.layers.protocol_privacy.protocolentities     import *
 from yowsup.layers.protocol_profiles.protocolentities    import *
 from yowsup.layers.protocol_receipts.protocolentities    import *
 from yowsup.layers.axolotl.protocolentities.iq_key_get import GetKeysIqProtocolEntity
-from yowsup.layers.axolotl import YowAxolotlLayer
-from yowsup.common.tools import ModuleTools
 
 import implugin
 
@@ -498,7 +496,7 @@ class YowsupIMPlugin(implugin.BitlBeeIMPlugin):
 		stack.setProp(YowAuthenticationProtocolLayer.PROP_CREDENTIALS, creds)
 		stack.setProp(YowNetworkLayer.PROP_ENDPOINT, YowConstants.ENDPOINTS[0])
 		stack.setProp(YowCoderLayer.PROP_DOMAIN, YowConstants.DOMAIN)
-		stack.setProp(YowCoderLayer.PROP_RESOURCE, env.CURRENT_ENV.getResource())
+		stack.setProp(YowCoderLayer.PROP_RESOURCE, env.YowsupEnv.getCurrent().getResource())
 		try:
 			stack.setProp(YowIqProtocolLayer.PROP_PING_INTERVAL, 0)
 		except AttributeError:
