@@ -14,10 +14,4 @@ struct purple_data
     guint next_request_id;
 };
 
-struct purple_roomlist_data
-{
-    GSList *chats;
-    gint topic;
-};
-
 #endif /* !BPURPLE_H */
