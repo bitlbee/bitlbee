@@ -1027,14 +1027,18 @@ void prplcb_conv_del_users(PurpleConversation *conv, GList *cbuddies)
 	}
 }
 
-/* Generic handler for IM or chat messages, covers write_chat, write_im and write_conv */
-static void handle_conv_msg(PurpleConversation *conv, const char *who, const char *message_, guint32 bee_flags, time_t mtime)
+/* Handles write_conv. Only passes self messages from other locations through.
+ * That is, only writes of PURPLE_MESSAGE_SEND.
+ * There are more events which might be handled in the future, but some are tricky.
+ * (images look like <img id="123">, what do i do with that?) */
+static void prplcb_conv_write(PurpleConversation *conv, const char *who, const char *alias, const char *message_,
+                              PurpleMessageFlags flags, time_t mtime)
 {
 	struct im_connection *ic = purple_ic_by_pa(conv->account);
 	struct groupchat *gc = conv->ui_data;
 	char *message = g_strdup(message_);
 	PurpleBuddy *buddy;
-
+	guint32 bee_flags = (flags & PURPLE_MESSAGE_SEND) ? OPT_SELFMESSAGE : 0;
 	buddy = purple_find_buddy(conv->account, who);
 	if (buddy != NULL) {
 		who = purple_buddy_get_name(buddy);
@@ -1047,26 +1051,6 @@ static void handle_conv_msg(PurpleConversation *conv, const char *who, const cha
 	}
 
 	g_free(message);
-}
-
-/* Handles write_im and write_chat. Removes echoes of locally sent messages */
-static void prplcb_conv_msg(PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
-{
-	if (!(flags & PURPLE_MESSAGE_SEND)) {
-		handle_conv_msg(conv, who, message, 0, mtime);
-	}
-}
-
-/* Handles write_conv. Only passes self messages from other locations through.
- * That is, only writes of PURPLE_MESSAGE_SEND.
- * There are more events which might be handled in the future, but some are tricky.
- * (images look like <img id="123">, what do i do with that?) */
-static void prplcb_conv_write(PurpleConversation *conv, const char *who, const char *alias, const char *message,
-                              PurpleMessageFlags flags, time_t mtime)
-{
-	if (flags & PURPLE_MESSAGE_SEND) {
-		handle_conv_msg(conv, who, message, OPT_SELFMESSAGE, mtime);
-	}
 }
 
 /* No, this is not a ui_op but a signal. */
@@ -1099,8 +1083,8 @@ static PurpleConversationUiOps bee_conv_uiops =
 {
 	prplcb_conv_new,           /* create_conversation  */
 	prplcb_conv_free,          /* destroy_conversation */
-	prplcb_conv_msg,           /* write_chat           */
-	prplcb_conv_msg,           /* write_im             */
+	NULL,                      /* write_chat           */
+	NULL,                      /* write_im             */
 	prplcb_conv_write,         /* write_conv           */
 	prplcb_conv_add_users,     /* chat_add_users       */
 	NULL,                      /* chat_rename_user     */
