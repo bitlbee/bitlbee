@@ -465,7 +465,8 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 	}
 
 	if (subject && chat) {
-		char *subject_text = subject->text_len > 0 ? subject->text : "";
+		char empty[1] = "";
+		char *subject_text = subject->text_len > 0 ? subject->text : empty;
 		if (g_strcmp0(chat->topic, subject_text) != 0) {
 			bare_jid = (bud) ? jabber_get_bare_jid(bud->ext_jid) : NULL;
 			imcb_chat_topic(chat, bare_jid, subject_text,
