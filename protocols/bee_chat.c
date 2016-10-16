@@ -274,7 +274,13 @@ void imcb_chat_invite(struct im_connection *ic, const char *name, const char *wh
 	}
 }
 
-void bee_chat_list_finish(struct im_connection *ic)
+void imcb_chat_list_finish(struct im_connection *ic)
 {
 	cmd_chat_list_finish(ic);
+}
+
+void bee_chat_list_finish(struct im_connection *ic)
+{
+	imcb_log(ic, "Warning: using deprecated bee_chat_list_finish. This will be removed in the stable release.");
+	imcb_chat_list_finish(ic);
 }

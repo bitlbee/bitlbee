@@ -189,6 +189,7 @@ G_MODULE_EXPORT int bee_chat_msg(bee_t *bee, struct groupchat *c, const char *ms
 G_MODULE_EXPORT struct groupchat *bee_chat_by_title(bee_t *bee, struct im_connection *ic, const char *title);
 G_MODULE_EXPORT void imcb_chat_invite(struct im_connection *ic, const char *name, const char *who, const char *msg);
 
-G_MODULE_EXPORT void bee_chat_list_finish(struct im_connection *ic);
+G_GNUC_DEPRECATED G_MODULE_EXPORT void bee_chat_list_finish(struct im_connection *ic);
+G_MODULE_EXPORT void imcb_chat_list_finish(struct im_connection *ic);
 
 #endif /* __BEE_H__ */

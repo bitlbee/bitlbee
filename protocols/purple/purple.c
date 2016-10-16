@@ -1406,7 +1406,7 @@ static void prplcb_roomlist_in_progress(PurpleRoomlist *list, gboolean in_progre
 	ic->chatlist = g_slist_reverse(rld->chats);
 	rld->chats = NULL;
 
-	bee_chat_list_finish(ic);
+	imcb_chat_list_finish(ic);
 
 	if (rld->initialized) {
 		purple_roomlist_unref(list);
