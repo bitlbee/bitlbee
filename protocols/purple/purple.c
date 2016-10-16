@@ -360,21 +360,6 @@ static void purple_login(account_t *acc)
 	}
 }
 
-static void purple_chatlist_free(struct im_connection *ic)
-{
-	bee_chat_info_t *ci;
-	GSList *l = ic->chatlist;
-
-	while (l) {
-		ci = l->data;
-		l = g_slist_delete_link(l, l);
-
-		g_free(ci->title);
-		g_free(ci->topic);
-		g_free(ci);
-	}
-}
-
 static void purple_logout(struct im_connection *ic)
 {
 	struct purple_data *pd = ic->proto_data;
@@ -390,7 +375,7 @@ static void purple_logout(struct im_connection *ic)
 	purple_account_set_enabled(pd->account, "BitlBee", FALSE);
 	purple_connections = g_slist_remove(purple_connections, ic);
 	purple_accounts_remove(pd->account);
-	purple_chatlist_free(ic);
+	imcb_chat_list_free(ic);
 	g_hash_table_destroy(pd->input_requests);
 	g_free(pd);
 }
@@ -1401,7 +1386,7 @@ static void prplcb_roomlist_in_progress(PurpleRoomlist *list, gboolean in_progre
 	}
 
 	ic = purple_ic_by_pa(list->account);
-	purple_chatlist_free(ic);
+	imcb_chat_list_free(ic);
 
 	ic->chatlist = g_slist_reverse(rld->chats);
 	rld->chats = NULL;

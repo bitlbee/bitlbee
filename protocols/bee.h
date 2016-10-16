@@ -191,5 +191,6 @@ G_MODULE_EXPORT void imcb_chat_invite(struct im_connection *ic, const char *name
 
 G_GNUC_DEPRECATED G_MODULE_EXPORT void bee_chat_list_finish(struct im_connection *ic);
 G_MODULE_EXPORT void imcb_chat_list_finish(struct im_connection *ic);
+G_MODULE_EXPORT void imcb_chat_list_free(struct im_connection *ic);
 
 #endif /* __BEE_H__ */

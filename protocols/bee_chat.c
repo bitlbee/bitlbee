@@ -284,3 +284,20 @@ void bee_chat_list_finish(struct im_connection *ic)
 	imcb_log(ic, "Warning: using deprecated bee_chat_list_finish. This will be removed in the stable release.");
 	imcb_chat_list_finish(ic);
 }
+
+void imcb_chat_list_free(struct im_connection *ic)
+{
+	bee_chat_info_t *ci;
+	GSList *l = ic->chatlist;
+
+	while (l) {
+		ci = l->data;
+		l = g_slist_delete_link(l, l);
+
+		g_free(ci->title);
+		g_free(ci->topic);
+		g_free(ci);
+	}
+
+	ic->chatlist = NULL;
+}
