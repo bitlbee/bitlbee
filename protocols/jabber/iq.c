@@ -1058,3 +1058,62 @@ static xt_status jabber_iq_carbons_response(struct im_connection *ic,
 
 	return XT_HANDLED;
 }
+
+xt_status jabber_iq_disco_muc_response(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
+
+int jabber_iq_disco_muc(struct im_connection *ic, const char *muc_server)
+{
+	struct xt_node *node;
+	int st;
+
+	node = xt_new_node("query", NULL, NULL);
+	xt_add_attr(node, "xmlns", XMLNS_DISCO_ITEMS);
+	node = jabber_make_packet("iq", "get", (char *) muc_server, node);
+
+	jabber_cache_add(ic, node, jabber_iq_disco_muc_response);
+	st = jabber_write_packet(ic, node);
+
+	return st;
+}
+
+xt_status jabber_iq_disco_muc_response(struct im_connection *ic, struct xt_node *node, struct xt_node *orig)
+{
+	struct xt_node *query, *c;
+	struct jabber_error *err;
+	GSList *rooms =  NULL;
+
+	if ((err = jabber_error_parse(xt_find_node(node->children, "error"), XMLNS_STANZA_ERROR))) {
+		imcb_error(ic, "The server replied with an error: %s%s%s",
+		           err->code, err->text ? ": " : "", err->text ? err->text : "");
+		jabber_error_free(err);
+		return XT_HANDLED;
+	}
+
+	if (!(query = xt_find_node(node->children, "query"))) {
+		imcb_error(ic, "Received incomplete MUC list reply");
+		return XT_HANDLED;
+	}
+
+	c = query->children;
+	while ((c = xt_find_node(c, "item"))) {
+		char *jid = xt_find_attr(c, "jid");
+
+		if (!jid || !strchr(jid, '@')) {
+			c = c->next;
+			continue;
+		}
+
+		bee_chat_info_t *ci = g_new(bee_chat_info_t, 1);
+		ci->title = g_strdup(xt_find_attr(c, "jid"));
+		ci->topic = g_strdup(xt_find_attr(c, "name"));
+		rooms = g_slist_prepend(rooms, ci);
+
+		c = c->next;
+	}
+
+	imcb_chat_list_free(ic);
+	ic->chatlist = g_slist_reverse(rooms);
+	imcb_chat_list_finish(ic);
+
+	return XT_HANDLED;
+}

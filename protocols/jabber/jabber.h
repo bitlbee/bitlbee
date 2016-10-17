@@ -262,6 +262,7 @@ xt_status jabber_iq_query_features(struct im_connection *ic, char *bare_jid);
 xt_status jabber_iq_query_server(struct im_connection *ic, char *jid, char *xmlns);
 void jabber_iq_version_send(struct im_connection *ic, struct jabber_buddy *bud, void *data);
 int jabber_iq_disco_server(struct im_connection *ic);
+int jabber_iq_disco_muc(struct im_connection *ic, const char *muc_server);
 
 /* si.c */
 int jabber_si_handle_request(struct im_connection *ic, struct xt_node *node, struct xt_node *sinode);

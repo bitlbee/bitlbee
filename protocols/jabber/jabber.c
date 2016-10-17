@@ -320,6 +320,8 @@ static void jabber_logout(struct im_connection *ic)
 {
 	struct jabber_data *jd = ic->proto_data;
 
+	imcb_chat_list_free(ic);
+
 	while (jd->filetransfers) {
 		imcb_file_canceled(ic, (( struct jabber_transfer *) jd->filetransfers->data)->ft, "Logging out");
 	}
@@ -592,6 +594,21 @@ static struct groupchat *jabber_chat_with_(struct im_connection *ic, char *who)
 	return jabber_chat_with(ic, who);
 }
 
+static void jabber_chat_list_(struct im_connection *ic, const char *server)
+{
+	struct jabber_data *jd = ic->proto_data;
+
+	if (server && *server) {
+		jabber_iq_disco_muc(ic, server);
+	} else if (jd->muc_host && *jd->muc_host) {
+		jabber_iq_disco_muc(ic, jd->muc_host);
+	} else {
+		/* throw an error here, don't query conference.[server] directly.
+		 * for things like jabber.org it gets you 18000 results of garbage */
+		imcb_error(ic, "Please specify a server name such as `conference.%s'", jd->server);
+	}
+}
+
 static void jabber_chat_msg_(struct groupchat *c, char *message, int flags)
 {
 	if (c && message) {
@@ -767,6 +784,7 @@ void jabber_initmodule()
 	ret->chat_leave = jabber_chat_leave_;
 	ret->chat_join = jabber_chat_join_;
 	ret->chat_with = jabber_chat_with_;
+	ret->chat_list = jabber_chat_list_;
 	ret->chat_add_settings = jabber_chat_add_settings;
 	ret->chat_free_settings = jabber_chat_free_settings;
 	ret->keepalive = jabber_keepalive;
