@@ -1326,13 +1326,18 @@ static void cmd_chat(irc_t *irc, char **cmd)
 	}
 }
 
+/* some arbitrary numbers */
+#define CHAT_TITLE_LEN_MIN 20
+#define CHAT_TITLE_LEN_MAX 100
+
 void cmd_chat_list_finish(struct im_connection *ic)
 {
 	account_t *acc = ic->acc;
 	bee_chat_info_t *ci;
-	char *hformat, *iformat, *topic;
+	char *hformat, *iformat, *topic, *padded;
 	GSList *l;
 	guint i = 0;
+	long title_len, new_len;
 	irc_t *irc = ic->bee->ui_data;
 
 	if (ic->chatlist == NULL) {
@@ -1340,20 +1345,40 @@ void cmd_chat_list_finish(struct im_connection *ic)
 		return;
 	}
 
+	/* find a reasonable width for the table */
+	title_len = CHAT_TITLE_LEN_MIN;
+
+	for (l = ic->chatlist; l; l = l->next) {
+		ci = l->data;
+		new_len = g_utf8_strlen(ci->title, -1);
+
+		if (new_len >= CHAT_TITLE_LEN_MAX) {
+			title_len = CHAT_TITLE_LEN_MAX;
+			break;
+		} else if (title_len < new_len) {
+			title_len = new_len;
+		}
+	}
+
 	if (strchr(irc->umode, 'b') != NULL) {
 		hformat = "%s\t%s\t%s";
 		iformat = "%u\t%s\t%s";
 	} else {
-		hformat = "%s  %-20s  %s";
-		iformat = "%5u  %-20.20s  %s";
+		hformat = "%s  %s  %s";
+		iformat = "%5u  %s  %s";
 	}
 
-	irc_rootmsg(irc, hformat, "Index", "Title", "Topic");
+	padded = str_pad_and_truncate("Title", title_len, NULL);
+	irc_rootmsg(irc, hformat, "Index", padded, "Topic");
+	g_free(padded);
 
 	for (l = ic->chatlist; l; l = l->next) {
 		ci = l->data;
 		topic = ci->topic ? ci->topic : "";
-		irc_rootmsg(irc, iformat, ++i, ci->title, topic);
+
+		padded = str_pad_and_truncate(ci->title, title_len, "[...]");
+		irc_rootmsg(irc, iformat, ++i, padded, topic);
+		g_free(padded);
 	}
 
 	irc_rootmsg(irc, "%u %s chatrooms", i, acc->tag);
