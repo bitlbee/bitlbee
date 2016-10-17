@@ -150,5 +150,6 @@ G_MODULE_EXPORT char *get_rfc822_header(const char *text, const char *header, in
 G_MODULE_EXPORT int truncate_utf8(char *string, int maxlen);
 G_MODULE_EXPORT gboolean parse_int64(char *string, int base, guint64 *number);
 G_MODULE_EXPORT char *str_reject_chars(char *string, const char *reject, char replacement);
+G_MODULE_EXPORT char *str_pad_and_truncate(const char *string, long char_len, const char *ellipsis);
 
 #endif
