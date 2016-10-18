@@ -53,19 +53,18 @@ void irc_send_login(irc_t *irc)
 
 void irc_send_motd(irc_t *irc)
 {
-	char motd[2048];
-	ssize_t len;
-	int fd;
+	char *motd;
+	size_t len;
 
-	fd = open(global.conf->motdfile, O_RDONLY);
-	if (fd == -1 || (len = read(fd, motd, sizeof(motd) - 1)) <= 0) {
+	g_file_get_contents(global.conf->motdfile, &motd, &len, NULL);
+
+	if (!motd || !len) {
 		irc_send_num(irc, 422, ":We don't need MOTDs.");
 	} else {
 		char linebuf[80];
 		char *add = "", max, *in;
 
 		in = motd;
-		motd[len] = '\0';
 		linebuf[79] = len = 0;
 		max = sizeof(linebuf) - 1;
 
@@ -100,9 +99,8 @@ void irc_send_motd(irc_t *irc)
 		irc_send_num(irc, 376, ":End of MOTD");
 	}
 
-	if (fd != -1) {
-		close(fd);
-	}
+	g_free(motd);
+
 }
 
 /* Used by some funcs that generate PRIVMSGs to figure out if we're talking to
