@@ -382,9 +382,6 @@ aim_conn_t *aim_getconn_type_all(aim_session_t *sess, int type)
 aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *dest)
 {
 	aim_conn_t *connstruct;
-	guint16 port = AIM_LOGIN_PORT;
-	char *host;
-	int i;
 
 	if (!(connstruct = aim_conn_getnext(sess))) {
 		return NULL;
@@ -399,29 +396,8 @@ aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *dest)
 		return connstruct;
 	}
 
-	/*
-	 * As of 23 Jul 1999, AOL now sends the port number, preceded by a
-	 * colon, in the BOS redirect.  This fatally breaks all previous
-	 * libfaims.  Bad, bad AOL.
-	 *
-	 * We put this here to catch every case.
-	 *
-	 */
-
-	for (i = 0; i < (int) strlen(dest); i++) {
-		if (dest[i] == ':') {
-			port = atoi(&(dest[i + 1]));
-			break;
-		}
-	}
-
-	host = (char *) g_malloc(i + 1);
-	strncpy(host, dest, i);
-	host[i] = '\0';
-
-	connstruct->fd = proxy_connect(host, port, NULL, NULL);
-
-	g_free(host);
+	/* The code that used to be here was very broken */
+	g_return_val_if_reached(connstruct);
 
 	return connstruct;
 }
