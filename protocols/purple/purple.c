@@ -388,6 +388,7 @@ static void purple_logout(struct im_connection *ic)
 	purple_connections = g_slist_remove(purple_connections, ic);
 	purple_accounts_remove(pd->account);
 	imcb_chat_list_free(ic);
+	g_free(pd->chat_list_server);
 	g_hash_table_destroy(pd->input_requests);
 	g_free(pd);
 }
@@ -781,6 +782,9 @@ void purple_chat_list(struct im_connection *ic, const char *server)
 		imcb_log(ic, "Room listing unsupported by this purple plugin");
 		return;
 	}
+
+	g_free(pd->chat_list_server);
+	pd->chat_list_server = (server && *server) ? g_strdup(server) : NULL;
 
 	list = purple_roomlist_get_list(pd->account->gc);
 
@@ -1229,8 +1233,19 @@ void* prplcb_request_input(const char *title, const char *primary,
 {
 	struct im_connection *ic = purple_ic_by_pa(account);
 	struct purple_data *pd = ic->proto_data;
-	struct request_input_data *ri = g_new0(struct request_input_data, 1);
-	guint id = pd->next_request_id++;
+	struct request_input_data *ri;
+	guint id;
+
+	/* hack so that jabber's chat list doesn't ask for conference server twice */
+	if (pd->chat_list_server && title && g_strcmp0(title, "Enter a Conference Server") == 0) {
+		((ri_callback_t) ok_cb)(user_data, pd->chat_list_server);
+		g_free(pd->chat_list_server);
+		pd->chat_list_server = NULL;
+		return NULL;
+	}
+
+	id = pd->next_request_id++;
+	ri = g_new0(struct request_input_data, 1);
 
 	ri->id = id;
 	ri->ic = ic;
@@ -1391,6 +1406,7 @@ static void prplcb_roomlist_add_room(PurpleRoomlist *list, PurpleRoomlistRoom *r
 static void prplcb_roomlist_in_progress(PurpleRoomlist *list, gboolean in_progress)
 {
 	struct im_connection *ic;
+	struct purple_data *pd;
 	struct purple_roomlist_data *rld = list->ui_data;
 
 	if (in_progress || !rld) {
@@ -1399,6 +1415,10 @@ static void prplcb_roomlist_in_progress(PurpleRoomlist *list, gboolean in_progre
 
 	ic = purple_ic_by_pa(list->account);
 	imcb_chat_list_free(ic);
+
+	pd = ic->proto_data;
+	g_free(pd->chat_list_server);
+	pd->chat_list_server = NULL;
 
 	ic->chatlist = g_slist_reverse(rld->chats);
 	rld->chats = NULL;
