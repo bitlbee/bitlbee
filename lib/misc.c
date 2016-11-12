@@ -548,7 +548,6 @@ void srv_free(struct ns_srv_reply **srv)
 	g_free(srv);
 }
 
-/* Word wrapping. Yes, I know this isn't UTF-8 clean. I'm willing to take the risk. */
 char *word_wrap(const char *msg, int line_len)
 {
 	GString *ret = g_string_sized_new(strlen(msg) + 16);
@@ -581,9 +580,16 @@ char *word_wrap(const char *msg, int line_len)
 			}
 		}
 		if (i == 0) {
-			g_string_append_len(ret, msg, line_len);
+			const char *end;
+			size_t len;
+
+			g_utf8_validate(msg, line_len, &end);
+
+			len = (end != msg) ? end - msg : line_len;
+
+			g_string_append_len(ret, msg, len);
 			g_string_append_c(ret, '\n');
-			msg += line_len;
+			msg += len;
 		}
 	}
 	g_string_append(ret, msg);
