@@ -298,7 +298,7 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, g
 		msg = s;
 	}
 
-	wrapped = word_wrap(msg, 425);
+	wrapped = word_wrap(msg, IRC_WORD_WRAP);
 	irc_send_msg(src_iu, message_type, dst, wrapped, prefix);
 	g_free(wrapped);
 
@@ -672,7 +672,7 @@ static gboolean bee_irc_chat_msg(bee_t *bee, struct groupchat *c, bee_user_t *bu
 		ts = irc_format_timestamp(irc, sent_at);
 	}
 
-	wrapped = word_wrap(msg, 425);
+	wrapped = word_wrap(msg, IRC_WORD_WRAP);
 	irc_send_msg(iu, "PRIVMSG", ic->name, wrapped, ts);
 	g_free(ts);
 	g_free(wrapped);

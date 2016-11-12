@@ -1399,6 +1399,7 @@ void log_otr_message(void *opdata, const char *fmt, ...)
 
 void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
 {
+	char *msg_, *msg;
 	struct im_connection *ic =
 	        check_imc(opdata, ctx->accountname, ctx->protocol);
 	irc_t *irc = ic->bee->ui_data;
@@ -1406,8 +1407,10 @@ void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
 	va_list va;
 
 	va_start(va, fmt);
-	char *msg = g_strdup_vprintf(fmt, va);
+	msg_ = g_strdup_vprintf(fmt, va);
 	va_end(va);
+
+	msg = word_wrap(msg_, IRC_WORD_WRAP);
 
 	if (u) {
 		/* just show this as a regular message */
@@ -1416,6 +1419,7 @@ void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
 		irc_rootmsg(irc, "[otr] %s", msg);
 	}
 
+	g_free(msg_);
 	g_free(msg);
 }
 
