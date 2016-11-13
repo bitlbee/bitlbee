@@ -42,6 +42,8 @@ static char *set_eval_display_name(set_t *set, char *value);
 void purple_request_input_callback(guint id, struct im_connection *ic,
                                    const char *message, const char *who);
 
+void purple_transfer_cancel_all(struct im_connection *ic);
+
 /* purple_request_input specific stuff */
 typedef void (*ri_callback_t)(gpointer, const gchar *);
 
@@ -382,6 +384,10 @@ static void purple_logout(struct im_connection *ic)
 
 	while (ic->groupchats) {
 		imcb_chat_free(ic->groupchats->data);
+	}
+
+	if (pd->filetransfers) {
+		purple_transfer_cancel_all(ic);
 	}
 
 	purple_account_set_enabled(pd->account, "BitlBee", FALSE);

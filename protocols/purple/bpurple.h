@@ -13,6 +13,7 @@ struct purple_data
     GHashTable *input_requests;
     guint next_request_id;
     char *chat_list_server;
+    GSList *filetransfers;
 };
 
 #endif /* !BPURPLE_H */
