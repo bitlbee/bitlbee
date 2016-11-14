@@ -428,7 +428,7 @@ int otr_check_for_key(account_t *a)
 	OtrlPrivKey *k;
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
-	if (a->prpl->options & OPT_NOOTR) {
+	if (a->prpl->options & PRPL_OPT_NOOTR) {
 		return 0;
 	}
 
@@ -456,7 +456,7 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 	struct im_connection *ic = iu->bu->ic;
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
-	if (ic->acc->prpl->options & OPT_NOOTR ||
+	if (ic->acc->prpl->options & PRPL_OPT_NOOTR ||
 	    iu->bu->flags & BEE_USER_NOOTR) {
 		return msg;
 	}

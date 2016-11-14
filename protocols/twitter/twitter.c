@@ -1091,7 +1091,7 @@ void twitter_initmodule()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
 
-	ret->options = OPT_NOOTR;
+	ret->options = PRPL_OPT_NOOTR | PRPL_OPT_NO_PASSWORD;
 	ret->name = "twitter";
 	ret->login = twitter_login;
 	ret->init = twitter_init;
@@ -1118,5 +1118,6 @@ void twitter_initmodule()
 	/* And an identi.ca variant: */
 	ret = g_memdup(ret, sizeof(struct prpl));
 	ret->name = "identica";
+	ret->options =  PRPL_OPT_NOOTR;
 	register_protocol(ret);
 }

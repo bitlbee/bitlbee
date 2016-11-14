@@ -139,6 +139,27 @@ struct buddy_action {
 	char *description;
 };
 
+/* This enum takes a few things from libpurple and a few things from old OPT_ flags.
+ * The only flag that was used before this struct was PRPL_OPT_NOOTR.
+ *
+ * The libpurple ones only use the same values as the PurpleProtocolOptions
+ * enum for convenience, but there's no promise of direct compatibility with
+ * those values. As of libpurple 2.8.0 they use up to 0x800 (1 << 11), which is
+ * a nice coincidence.
+ */
+typedef enum {
+	/* The protocol doesn't use passwords
+	 * Mirrors libpurple's OPT_PROTO_NO_PASSWORD */
+	PRPL_OPT_NO_PASSWORD = 1 << 4,
+
+	/* The protocol doesn't require passwords, but may use them
+	 * Mirrors libpurple's OPT_PROTO_PASSWORD_OPTIONAL */
+	PRPL_OPT_PASSWORD_OPTIONAL = 1 << 7,
+
+	/* The protocol is not suitable for OTR, see OPT_NOOTR */
+	PRPL_OPT_NOOTR = 1 << 12,
+} prpl_options_t;
+
 struct prpl {
 	int options;
 	/* You should set this to the name of your protocol.

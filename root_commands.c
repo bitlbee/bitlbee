@@ -469,6 +469,13 @@ static void cmd_account(irc_t *irc, char **cmd)
 				*a->pass = '\0';
 				irc_rootmsg(irc, "No need to enter a password for this "
 				            "account since it's using OAuth");
+			} else if (prpl->options & PRPL_OPT_NO_PASSWORD) {
+				*a->pass = '\0';
+			} else if (prpl->options & PRPL_OPT_PASSWORD_OPTIONAL) {
+				*a->pass = '\0';
+				irc_rootmsg(irc, "Passwords are optional for this account. "
+				            "If you wish to enter the password with /OPER, do "
+				            "account %s set -del password", a->tag);
 			} else {
 				irc_rootmsg(irc, "You can now use the /OPER command to "
 				            "enter the password");
@@ -478,6 +485,8 @@ static void cmd_account(irc_t *irc, char **cmd)
 					            "set oauth on", a->tag);
 				}
 			}
+		} else if (prpl->options & PRPL_OPT_NO_PASSWORD) {
+			irc_rootmsg(irc, "Note: this account doesn't use password for login");
 		}
 
 		return;

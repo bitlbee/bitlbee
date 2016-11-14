@@ -1724,6 +1724,7 @@ void purple_initmodule()
 	   supported by this libpurple instance. */
 	for (prots = purple_plugins_get_protocols(); prots; prots = prots->next) {
 		PurplePlugin *prot = prots->data;
+		PurplePluginProtocolInfo *pi = prot->info->extra_info;
 		struct prpl *ret;
 
 		/* If we already have this one (as a native module), don't
@@ -1737,6 +1738,15 @@ void purple_initmodule()
 		if (strncmp(ret->name, "prpl-", 5) == 0) {
 			ret->name += 5;
 		}
+
+		if (pi->options & OPT_PROTO_NO_PASSWORD) {
+			ret->options |= PRPL_OPT_NO_PASSWORD;
+		}
+
+		if (pi->options & OPT_PROTO_PASSWORD_OPTIONAL) {
+			ret->options |= PRPL_OPT_PASSWORD_OPTIONAL;
+		}
+
 		register_protocol(ret);
 
 		g_string_append_printf(help, "\n* %s (%s)", ret->name, prot->info->name);
