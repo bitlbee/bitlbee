@@ -246,7 +246,6 @@ void nogaim_init()
 {
 	extern void msn_initmodule();
 	extern void oscar_initmodule();
-	extern void byahoo_initmodule();
 	extern void jabber_initmodule();
 	extern void twitter_initmodule();
 	extern void purple_initmodule();
@@ -260,10 +259,6 @@ void nogaim_init()
 
 #ifdef WITH_OSCAR
 	oscar_initmodule();
-#endif
-
-#ifdef WITH_YAHOO
-	byahoo_initmodule();
 #endif
 
 #ifdef WITH_JABBER

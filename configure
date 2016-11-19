@@ -34,7 +34,6 @@ configure_args="$@"
 msn="default-on"
 jabber="default-on"
 oscar="default-on"
-yahoo="default-on"
 
 twitter=1
 purple=0
@@ -129,7 +128,6 @@ Option		Description				Default
 --msn=0/1	Disable/enable MSN part			$msn
 --jabber=0/1	Disable/enable Jabber part		$jabber
 --oscar=0/1	Disable/enable Oscar part (ICQ, AIM)	$oscar
---yahoo=0/1	Disable/enable Yahoo part		$yahoo
 --twitter=0/1	Disable/enable Twitter part		$twitter
 
 --purple=0/1	Disable/enable libpurple support	$purple
@@ -816,7 +814,6 @@ EOF
 	[ "$msn" = "default-on" ] && msn=0
 	[ "$jabber" = "default-on" ] && jabber=0
 	[ "$oscar" = "default-on" ] && oscar=0
-	[ "$yahoo" = "default-on" ] && yahoo=0
 
 	echo '#undef PACKAGE' >> config.h
 	echo '#define PACKAGE "BitlBee-LIBPURPLE"' >> config.h
@@ -859,14 +856,6 @@ else
 	echo '#define WITH_OSCAR' >> config.h
 	protocols=$protocols'oscar '
 	protoobjs=$protoobjs'oscar_mod.o '
-fi
-
-if [ "$yahoo" = 0 ]; then
-	echo '#undef WITH_YAHOO' >> config.h
-else
-	echo '#define WITH_YAHOO' >> config.h
-	protocols=$protocols'yahoo '
-	protoobjs=$protoobjs'yahoo_mod.o '
 fi
 
 if [ "$twitter" = 0 ]; then
