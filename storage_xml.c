@@ -59,7 +59,7 @@ static void xml_init(void)
 	}
 }
 
-static void handle_settings(struct xt_node *node, set_t **head)
+static void handle_settings(struct xt_node *node, set_t **head, gboolean add_unknowns)
 {
 	struct xt_node *c;
 	struct set *s;
@@ -69,6 +69,13 @@ static void handle_settings(struct xt_node *node, set_t **head)
 		char *locked = xt_find_attr(c, "locked");
 
 		if (!name) {
+			continue;
+		}
+
+		if (add_unknowns && !set_find(head, name)) {
+			s = set_add(head, name, NULL, NULL, NULL);
+			s->flags |= ACC_SET_ONLINE_ONLY;
+			s->value = g_strdup(c->text);
 			continue;
 		}
 
@@ -98,6 +105,7 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	struct prpl *prpl = NULL;
 	account_t *acc;
 	struct xt_node *c;
+	gboolean is_unknown = FALSE;
 
 	handle = xt_find_attr(node, "handle");
 	pass_b64 = xt_find_attr(node, "password");
@@ -110,9 +118,10 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	if (protocol) {
 		prpl = find_protocol(protocol);
 		if (!prpl) {
-			irc_rootmsg(xd->irc, "Error loading user config: Protocol not found: `%s'", protocol);
-			return XT_ABORT;
+			irc_rootmsg(xd->irc, "Warning: Protocol not found: `%s'", protocol);
+			prpl = make_unknown_protocol(protocol);
 		}
+		is_unknown = (prpl->options & PRPL_OPT_UNKNOWN_PROTOCOL) != 0;
 		local = protocol_account_islocal(protocol);
 	}
 
@@ -152,7 +161,7 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	g_free(pass_cr);
 	g_free(password);
 
-	handle_settings(node, &acc->set);
+	handle_settings(node, &acc->set, is_unknown);
 
 	for (c = node->children; (c = xt_find_node(c, "buddy")); c = c->next) {
 		char *handle, *nick;
@@ -191,7 +200,7 @@ static xt_status handle_channel(struct xt_node *node, gpointer data)
 		set_setstr(&ic->set, "type", type);
 	}
 
-	handle_settings(node, &ic->set);
+	handle_settings(node, &ic->set, FALSE);
 
 	return XT_HANDLED;
 }
@@ -269,7 +278,7 @@ static storage_status_t xml_load_real(irc_t *irc, const char *my_nick, const cha
 		ret = STORAGE_OK;
 	}
 
-	handle_settings(node, &xd->irc->b->set);
+	handle_settings(node, &xd->irc->b->set, FALSE);
 
 error:
 	xt_free(xp);

@@ -12,7 +12,7 @@ _SRCDIR_ := $(_SRCDIR_)protocols/
 endif
 
 # [SH] Program variables
-objects = account.o bee.o bee_chat.o bee_ft.o bee_user.o nogaim.o
+objects = account.o bee.o bee_chat.o bee_ft.o bee_user.o nogaim.o unknown.o 
 
 
 # [SH] The next two lines should contain the directory name (in $(subdirs))

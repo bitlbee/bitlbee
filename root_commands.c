@@ -438,11 +438,10 @@ static void cmd_account(irc_t *irc, char **cmd)
 		prpl = find_protocol(cmd[2]);
 
 		if (prpl == NULL) {
-			if (is_protocol_disabled(cmd[2])) {
-				irc_rootmsg(irc, "Protocol disabled in global config");
-			} else {
-				irc_rootmsg(irc, "Unknown protocol");
-			}
+			char *msg = explain_unknown_protocol(cmd[2]);
+			irc_rootmsg(irc, "Unknown protocol");
+			irc_rootmsg(irc, msg);
+			g_free(msg);
 			return;
 		}
 
