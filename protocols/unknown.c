@@ -33,7 +33,7 @@ static void unknown_prpl_login(account_t *acc)
 	imcb_error(ic, "Unknown protocol");
 
 	msg = explain_unknown_protocol(acc->prpl->name);
-	imcb_error(ic, msg);
+	imcb_error(ic, "%s", msg);
 	g_free(msg);
 
 	imc_logout(ic, FALSE);
