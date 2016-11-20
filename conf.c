@@ -54,8 +54,10 @@ conf_t *conf_load(int argc, char *argv[])
 	conf->migrate_storage = g_strsplit("text", ",", -1);
 	conf->runmode = RUNMODE_INETD;
 	conf->authmode = AUTHMODE_OPEN;
+	conf->auth_backend = NULL;
 	conf->auth_pass = NULL;
 	conf->oper_pass = NULL;
+	conf->allow_account_add = 1;
 	conf->configdir = g_strdup(CONFIG);
 	conf->plugindir = g_strdup(PLUGINDIR);
 	conf->pidfile = g_strdup(PIDFILE);
@@ -239,12 +241,29 @@ static int conf_loadini(conf_t *conf, char *file)
 				} else {
 					conf->authmode = AUTHMODE_OPEN;
 				}
+			} else if (g_strcasecmp(ini->key, "authbackend") == 0) {
+				if (g_strcasecmp(ini->value, "storage") == 0) {
+					conf->auth_backend = NULL;
+				} else if (g_strcasecmp(ini->value, "pam") == 0 ||
+				         g_strcasecmp(ini->value, "ldap") == 0) {
+					g_free(conf->auth_backend);
+					conf->auth_backend = g_strdup(ini->value);
+				} else {
+					fprintf(stderr, "Invalid %s value: %s\n", ini->key, ini->value);
+					return 0;
+				}
 			} else if (g_strcasecmp(ini->key, "authpassword") == 0) {
 				g_free(conf->auth_pass);
 				conf->auth_pass = g_strdup(ini->value);
 			} else if (g_strcasecmp(ini->key, "operpassword") == 0) {
 				g_free(conf->oper_pass);
 				conf->oper_pass = g_strdup(ini->value);
+			} else if (g_strcasecmp(ini->key, "allowaccountadd") == 0) {
+				if (!is_bool(ini->value)) {
+					fprintf(stderr, "Invalid %s value: %s\n", ini->key, ini->value);
+					return 0;
+				}
+				conf->allow_account_add = bool2int(ini->value);
 			} else if (g_strcasecmp(ini->key, "hostname") == 0) {
 				g_free(conf->hostname);
 				conf->hostname = g_strdup(ini->value);

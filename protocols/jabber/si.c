@@ -392,10 +392,40 @@ static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_n
 	GSList *tflist;
 	struct jabber_transfer *tf = NULL;
 	struct jabber_data *jd = ic->proto_data;
+	struct jabber_error *err;
 
 	if (!(tgt_jid = xt_find_attr(node, "from")) ||
-	    !(ini_jid = xt_find_attr(node, "to"))) {
+	    !(ini_jid = xt_find_attr(node, "to")) ||
+	    !(iq_id   = xt_find_attr(node, "id"))) {
 		imcb_log(ic, "Invalid SI response from=%s to=%s", tgt_jid, ini_jid);
+		return XT_HANDLED;
+	}
+
+	/* Let's see if we can find out what this bytestream should be for... */
+
+	for (tflist = jd->filetransfers; tflist; tflist = g_slist_next(tflist)) {
+		struct jabber_transfer *tft = tflist->data;
+		if ((strcmp(tft->iq_id, iq_id) == 0)) {
+			tf = tft;
+			break;
+		}
+	}
+
+	if (!tf) {
+		imcb_log(ic, "WARNING: Received bytestream request from %s that doesn't match an SI request", ini_jid);
+		return XT_HANDLED;
+	}
+
+	err = jabber_error_parse(xt_find_node(node->children, "error"), XMLNS_STANZA_ERROR);
+
+	if (err) {
+		if (g_strcmp0(err->code, "forbidden") == 0) {
+			imcb_log(ic, "File %s: %s rejected the transfer", tf->ft->file_name, tgt_jid);
+		} else {
+			imcb_log(ic, "Error: Stream initiation request failed: %s (%s)", err->code, err->text);
+		}
+		imcb_file_canceled(ic, tf->ft, "Stream initiation request failed");
+		jabber_error_free(err);
 		return XT_HANDLED;
 	}
 
@@ -408,10 +438,7 @@ static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_n
 	 *                              <field var=stream-method>
 	 *                                      <value>
 	 */
-	if (!(tgt_jid = xt_find_attr(node, "from")) ||
-	    !(ini_jid = xt_find_attr(node, "to")) ||
-	    !(iq_id   = xt_find_attr(node, "id")) ||
-	    !(c = xt_find_node(node->children, "si")) ||
+	if (!(c = xt_find_node(node->children, "si")) ||
 	    !(cmp = xt_find_attr(c, "xmlns")) ||
 	    !(strcmp(cmp, XMLNS_SI) == 0) ||
 	    !(d = xt_find_node(c->children, "feature")) ||
@@ -435,21 +462,6 @@ static xt_status jabber_si_handle_response(struct im_connection *ic, struct xt_n
 		 * only have chosen what we offered, this should never happen */
 		imcb_log(ic, "WARNING: Received invalid Stream Initiation response, method %s", d->text);
 
-		return XT_HANDLED;
-	}
-
-	/* Let's see if we can find out what this bytestream should be for... */
-
-	for (tflist = jd->filetransfers; tflist; tflist = g_slist_next(tflist)) {
-		struct jabber_transfer *tft = tflist->data;
-		if ((strcmp(tft->iq_id, iq_id) == 0)) {
-			tf = tft;
-			break;
-		}
-	}
-
-	if (!tf) {
-		imcb_log(ic, "WARNING: Received bytestream request from %s that doesn't match an SI request", ini_jid);
 		return XT_HANDLED;
 	}
 

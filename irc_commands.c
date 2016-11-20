@@ -96,7 +96,7 @@ static gboolean irc_sasl_check_pass(irc_t *irc, char *user, char *pass)
 
 	/* just check the password here to be able to reply with useful numerics
 	 * the actual identification will be handled later */
-	status = storage_check_pass(user, pass);
+	status = auth_check_pass(irc, user, pass);
 
 	if (status == STORAGE_OK) {
 		if (!irc->user->nick) {
@@ -766,8 +766,8 @@ static void irc_cmd_list(irc_t *irc, char **cmd)
 
 static void irc_cmd_version(irc_t *irc, char **cmd)
 {
-	irc_send_num(irc, 351, "%s-%s. %s :%s/%s ",
-	             PACKAGE, BITLBEE_VERSION, irc->root->host, ARCH, CPU);
+	irc_send_num(irc, 351, "%s-%s. %s :",
+	             PACKAGE, BITLBEE_VERSION, irc->root->host);
 }
 
 static void irc_cmd_completions(irc_t *irc, char **cmd)

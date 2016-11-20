@@ -39,24 +39,84 @@
 GSList *connections;
 
 #ifdef WITH_PLUGINS
+GList *plugins = NULL;
+
+static gint pluginscmp(gconstpointer a, gconstpointer b, gpointer data)
+{
+	const struct plugin_info *ia = a;
+	const struct plugin_info *ib = b;
+
+	return g_strcasecmp(ia->name, ib->name);
+}
+
 gboolean load_plugin(char *path)
 {
+	GList *l;
+	struct plugin_info *i;
+	struct plugin_info *info;
+	struct plugin_info * (*info_function) (void) = NULL;
 	void (*init_function) (void);
 
 	GModule *mod = g_module_open(path, G_MODULE_BIND_LAZY);
+	gboolean loaded = FALSE;
 
 	if (!mod) {
-		log_message(LOGLVL_ERROR, "Can't find `%s', not loading (%s)\n", path, g_module_error());
+		log_message(LOGLVL_ERROR, "Error loading plugin `%s': %s\n", path, g_module_error());
 		return FALSE;
+	}
+
+	if (g_module_symbol(mod, "init_plugin_info", (gpointer *) &info_function)) {
+		info = info_function();
+
+		if (info->abiver != BITLBEE_ABI_VERSION_CODE) {
+			log_message(LOGLVL_ERROR,
+				    "`%s' uses ABI %u but %u is required\n",
+				    path, info->abiver,
+				    BITLBEE_ABI_VERSION_CODE);
+			g_module_close(mod);
+			return FALSE;
+		}
+
+		if (!info->name || !info->version) {
+			log_message(LOGLVL_ERROR,
+				    "Name or version missing from the "
+				    "plugin info in `%s'\n", path);
+			g_module_close(mod);
+			return FALSE;
+		}
+
+		for (l = plugins; l; l = l->next) {
+			i = l->data;
+
+			if (g_strcasecmp(i->name, info->name) == 0) {
+				loaded = TRUE;
+				break;
+			}
+		}
+
+		if (loaded) {
+			log_message(LOGLVL_WARNING,
+				    "%s plugin already loaded\n",
+				    info->name);
+			g_module_close(mod);
+			return FALSE;
+		}
+	} else {
+		log_message(LOGLVL_WARNING, "Can't find function `init_plugin_info' in `%s'\n", path);
 	}
 
 	if (!g_module_symbol(mod, "init_plugin", (gpointer *) &init_function)) {
 		log_message(LOGLVL_WARNING, "Can't find function `init_plugin' in `%s'\n", path);
+		g_module_close(mod);
 		return FALSE;
 	}
 
-	init_function();
+	if (info_function) {
+		plugins = g_list_insert_sorted_with_data(plugins, info,
+		                                         pluginscmp, NULL);
+	}
 
+	init_function();
 	return TRUE;
 }
 
@@ -72,6 +132,10 @@ void load_plugins(void)
 		char *path;
 
 		while ((entry = g_dir_read_name(dir))) {
+			if (!g_str_has_suffix(entry, "." G_MODULE_SUFFIX)) {
+				continue;
+			}
+
 			path = g_build_filename(global.conf->plugindir, entry, NULL);
 			if (!path) {
 				log_message(LOGLVL_WARNING, "Can't build path for %s\n", entry);
@@ -85,6 +149,11 @@ void load_plugins(void)
 
 		g_dir_close(dir);
 	}
+}
+
+GList *get_plugins()
+{
+	return plugins;
 }
 #endif
 
@@ -167,6 +236,16 @@ void nogaim_init()
 #ifdef WITH_PLUGINS
 	load_plugins();
 #endif
+}
+
+GList *get_protocols()
+{
+	return protocols;
+}
+
+GList *get_protocols_disabled()
+{
+	return disabled_protocols;
 }
 
 GSList *get_connections()
@@ -494,9 +573,8 @@ void imcb_remove_buddy(struct im_connection *ic, const char *handle, char *group
 	bee_user_free(ic->bee, bee_user_by_handle(ic->bee, ic, handle));
 }
 
-/* Mainly meant for ICQ (and now also for Jabber conferences) to allow IM
-   modules to suggest a nickname for a handle. */
-void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const char *nick)
+/* Implements either imcb_buddy_nick_hint() or imcb_buddy_nick_change() depending on the value of 'change' */
+static void buddy_nick_hint_or_change(struct im_connection *ic, const char *handle, const char *nick, gboolean change)
 {
 	bee_t *bee = ic->bee;
 	bee_user_t *bu = bee_user_by_handle(bee, ic, handle);
@@ -508,9 +586,23 @@ void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const ch
 	g_free(bu->nick);
 	bu->nick = g_strdup(nick);
 
-	if (bee->ui->user_nick_hint) {
+	if (change && bee->ui->user_nick_change) {
+		bee->ui->user_nick_change(bee, bu, nick);
+	} else if (!change && bee->ui->user_nick_hint) {
 		bee->ui->user_nick_hint(bee, bu, nick);
 	}
+}
+
+/* Soft variant, for newly created users. Does nothing if it's already online */
+void imcb_buddy_nick_hint(struct im_connection *ic, const char *handle, const char *nick)
+{
+	buddy_nick_hint_or_change(ic, handle, nick, FALSE);
+}
+
+/* Hard variant, always changes the nick */
+void imcb_buddy_nick_change(struct im_connection *ic, const char *handle, const char *nick)
+{
+	buddy_nick_hint_or_change(ic, handle, nick, TRUE);
 }
 
 /* Returns the local contacts for an IM account (based on assigned nicks).
@@ -666,6 +758,9 @@ int imc_away_send_update(struct im_connection *ic)
 	       : set_getstr(&ic->bee->set, "away");
 	if (away && *away) {
 		GList *m = ic->acc->prpl->away_states(ic);
+		if (m == NULL) {
+			return 0;
+		}
 		msg = ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? away : NULL;
 		away = imc_away_state_find(m, away, &msg) ? :
 		       (imc_away_state_find(m, "away", &msg) ? : m->data);

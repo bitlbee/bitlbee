@@ -102,6 +102,8 @@ static void check_compareJID(int l)
 	fail_if(jabber_compare_jid("bugtest1@google.com/B", "bugtest2@google.com/A"));
 	fail_unless(jabber_compare_jid("bugtest@google.com/A", "bugtest@google.com/A"));
 	fail_if(jabber_compare_jid("", "bugtest@google.com/A"));
+	fail_if(jabber_compare_jid(NULL, ""));
+	fail_if(jabber_compare_jid("", NULL));
 }
 
 static void check_hipchat_slug(int l)

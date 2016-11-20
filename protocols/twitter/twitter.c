@@ -344,6 +344,8 @@ void twitter_login_finish(struct im_connection *ic)
 	           !(td->flags & TWITTER_HAVE_FRIENDS)) {
 		imcb_log(ic, "Getting contact list");
 		twitter_get_friends_ids(ic, -1);
+		twitter_get_mutes_ids(ic, -1);
+		twitter_get_noretweets_ids(ic, -1);
 	} else {
 		twitter_main_loop_start(ic);
 	}
@@ -468,16 +470,11 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 
 	g_regex_match(regex, msg, 0, &match_info);
 	while (g_match_info_matches(match_info)) {
-		gchar *s, *url;
+		gchar *url;
 
 		url = g_match_info_fetch(match_info, 2);
 		url_len_diff += target_len - g_utf8_strlen(url, -1);
 
-		/* Add another character for https://t.co/... URLs */
-		if ((s = g_match_info_fetch(match_info, 3))) {
-			url_len_diff += 1;
-			g_free(s);
-		}
 		g_free(url);
 		g_match_info_next(match_info, NULL);
 	}
@@ -540,7 +537,7 @@ static void twitter_init(account_t * acc)
 
 	if (strcmp(acc->prpl->name, "twitter") == 0) {
 		def_url = TWITTER_API_URL;
-		def_tul = "22";
+		def_tul = "23";
 		def_mentions = "true";
 	} else {                /* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
 		def_url = IDENTICA_API_URL;
@@ -688,6 +685,12 @@ static void twitter_logout(struct im_connection *ic)
 		if (td->filter_update_id > 0) {
 			b_event_remove(td->filter_update_id);
 		}
+
+		g_slist_foreach(td->mutes_ids, (GFunc) g_free, NULL);
+		g_slist_free(td->mutes_ids);
+
+		g_slist_foreach(td->noretweets_ids, (GFunc) g_free, NULL);
+		g_slist_free(td->noretweets_ids);
 
 		http_close(td->stream);
 		twitter_filter_remove_all(ic);
@@ -947,7 +950,8 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "favourite") == 0 ||
 	            g_strcasecmp(cmd[0], "favorite") == 0 ||
-	            g_strcasecmp(cmd[0], "fav") == 0) && cmd[1]) {
+	            g_strcasecmp(cmd[0], "fav") == 0 ||
+	            g_strcasecmp(cmd[0], "like") == 0) && cmd[1]) {
 		if ((id = twitter_message_id_from_command_arg(ic, cmd[1], NULL))) {
 			twitter_favourite_tweet(ic, id);
 		} else {
@@ -959,6 +963,12 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		goto eof;
 	} else if (g_strcasecmp(cmd[0], "unfollow") == 0 && cmd[1]) {
 		twitter_remove_buddy(ic, cmd[1], NULL);
+		goto eof;
+	} else if (g_strcasecmp(cmd[0], "mute") == 0 && cmd[1]) {
+		twitter_mute_create_destroy(ic, cmd[1], 1);
+		goto eof;
+	} else if (g_strcasecmp(cmd[0], "unmute") == 0 && cmd[1]) {
+		twitter_mute_create_destroy(ic, cmd[1], 0);
 		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
@@ -1081,7 +1091,7 @@ void twitter_initmodule()
 {
 	struct prpl *ret = g_new0(struct prpl, 1);
 
-	ret->options = OPT_NOOTR;
+	ret->options = PRPL_OPT_NOOTR | PRPL_OPT_NO_PASSWORD;
 	ret->name = "twitter";
 	ret->login = twitter_login;
 	ret->init = twitter_init;
@@ -1108,5 +1118,6 @@ void twitter_initmodule()
 	/* And an identi.ca variant: */
 	ret = g_memdup(ret, sizeof(struct prpl));
 	ret->name = "identica";
+	ret->options =  PRPL_OPT_NOOTR;
 	register_protocol(ret);
 }

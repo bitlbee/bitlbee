@@ -257,13 +257,13 @@
 		<description>
 
 			<para>
-				Available actions: add, with. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
+				Available actions: add, with, list. See <emphasis>help chat &lt;action&gt;</emphasis> for more information.
 			</para>
 
 		</description>
 
 		<bitlbee-command name="add">
-			<syntax>chat add &lt;account id&gt; &lt;room&gt; [&lt;channel&gt;]</syntax>
+			<syntax>chat add &lt;account id&gt; &lt;room|!index&gt; [&lt;channel&gt;]</syntax>
 
 			<description>
 				<para>
@@ -271,7 +271,7 @@
 				</para>
 
 				<para>
-					After adding a room to your list, you can simply use the IRC /join command to enter the room. Also, you can tell BitlBee to automatically join the room when you log in. (See <emphasis>chat set</emphasis>)
+					After adding a room to your list, you can simply use the IRC /join command to enter the room. Also, you can tell BitlBee to automatically join the room when you log in. (<emphasis>channel &lt;channel&gt; set auto_join true</emphasis>)
 				</para>
 
 				<para>
@@ -281,12 +281,35 @@
 
 		</bitlbee-command>
 
+		<bitlbee-command name="list">
+			<syntax>chat list &lt;account id&gt; [&lt;server&gt;]</syntax>
+
+			<description>
+				<para>
+					List existing chatrooms provided by an account. BitlBee needs this to propogate an internal list of chats. The existing chat can then be added with <emphasis>chat add</emphasis>, using the number in the index column after a "!" as a shortcut.
+				</para>
+			</description>
+
+			<ircexample>
+				<ircline nick="dx">chat list facebook</ircline>
+				<ircline pre="1" nick="root">Index  Title                 Topic</ircline>
+				<ircline pre="1" nick="root">    1  869891016470949       cool kids club</ircline>
+				<ircline pre="1" nick="root">    2  457892181062459       uncool kids club</ircline>
+				<ircline nick="root">2 facebook chatrooms</ircline>
+				<ircline nick="dx">chat add facebook !1 #cool-kids-club</ircline>
+			</ircexample>
+		</bitlbee-command>
+
 		<bitlbee-command name="with">
 			<syntax>chat with &lt;nickname&gt;</syntax>
 
 			<description>
 				<para>
 					While most <emphasis>chat</emphasis> subcommands are about named chatrooms, this command can be used to open an unnamed groupchat with one or more persons. This command is what <emphasis>/join #nickname</emphasis> used to do in older BitlBee versions.
+				</para>
+
+				<para>
+					Another way to do this is to join to a new, empty channel with <emphasis>/join #newchannel</emphasis> and invite the first person with <emphasis>/invite nickname</emphasis>
 				</para>
 			</description>
 		</bitlbee-command>
@@ -644,6 +667,24 @@
 		<description>
 			<para>
 				When you're already connected to a BitlBee server and you connect (and identify) again, BitlBee will offer to migrate your existing session to the new connection. If for whatever reason you don't want this, you can disable this setting.
+			</para>
+		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="always_use_nicks" type="boolean" scope="channel">
+		<default>false</default>
+
+		<description>
+			<para>
+				Jabber groupchat specific. This setting ensures that the nicks defined by the other members of a groupchat are used, instead of the username part of their JID. This only applies to groupchats where their real JID is known (either "non-anonymous" ones, or "semi-anonymous" from the point of view of the channel moderators)
+			</para>
+
+			<para>
+				Enabling this may have the side effect of changing the nick of existing contacts, either in your buddy list or in other groupchats. If a contact is in multiple groupchats with different nicks, enabling this setting for all those would result in multiple nick changes when joining, and the order of those changes may vary.
+			</para>
+
+			<para>
+				Note that manual nick changes done through the <emphasis>rename</emphasis> command always take priority
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1490,14 +1531,14 @@
 				Comma-separated list of statuses of users you want in the channel,
 				and any modes they should have. The following statuses are currently
 				recognised: <emphasis>online</emphasis> (i.e. available, not
-				away), <emphasis>special</emphasis>, <emphasis>away</emphasis>,
-				and <emphasis>offline</emphasis>.
+				away), <emphasis>special</emphasis> (specific to the protocol), 
+				<emphasis>away</emphasis>, and <emphasis>offline</emphasis>.
 			</para>
 			
 			<para>
 				If a status is followed by a valid channel mode character
 				(@, % or +), it will be given to users with that status.
-				For example, <emphasis>online@,special%,away+,offline</emphasis>
+				For example, <emphasis>online@,special%,away+,offline</emphasis> 
 				will show all users in the channel. Online people will
 				have +o, people who are online but away will have +v,
 				and others will have no special modes.
@@ -1814,6 +1855,18 @@
 				By default, this answers the first unanswered question. You can also specify a different question as an argument. You can use the <emphasis>qlist</emphasis> command for a list of questions.
 			</para>
 		</description>
+	</bitlbee-command>
+
+	<bitlbee-command name="plugins">
+		<short-description>List all the external plugins and protocols</short-description>
+		<syntax>plugins</syntax>
+
+		<description>
+			<para>
+				This gives you a list of all the external plugins and protocols.
+			</para>
+		</description>
+
 	</bitlbee-command>
 
 	<bitlbee-command name="qlist">

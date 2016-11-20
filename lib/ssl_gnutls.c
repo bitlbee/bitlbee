@@ -41,12 +41,6 @@ gnutls_certificate_credentials_t xcred;
 
 #include <limits.h>
 
-#if defined(ULONG_MAX) && ULONG_MAX > 4294967295UL
-#define GNUTLS_STUPID_CAST (long)
-#else
-#define GNUTLS_STUPID_CAST (int)
-#endif
-
 #define SSLDEBUG 0
 
 struct scd {
@@ -334,7 +328,7 @@ static gboolean ssl_connected(gpointer data, gint source, b_input_condition cond
 	}
 
 	sock_make_nonblocking(conn->fd);
-	gnutls_transport_set_ptr(conn->session, (gnutls_transport_ptr_t) GNUTLS_STUPID_CAST conn->fd);
+	gnutls_transport_set_ptr(conn->session, (gnutls_transport_ptr_t) (long) conn->fd);
 
 	ssl_cache_resume(conn);
 

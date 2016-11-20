@@ -74,6 +74,7 @@ typedef struct {
 typedef enum {
 	JCFLAG_MESSAGE_SENT = 1,        /* Set this after sending the first message, so
 	                                   we can detect echoes/backlogs. */
+	JCFLAG_ALWAYS_USE_NICKS = 2,
 } jabber_chat_flags_t;
 
 struct jabber_data {
@@ -261,6 +262,7 @@ xt_status jabber_iq_query_features(struct im_connection *ic, char *bare_jid);
 xt_status jabber_iq_query_server(struct im_connection *ic, char *jid, char *xmlns);
 void jabber_iq_version_send(struct im_connection *ic, struct jabber_buddy *bud, void *data);
 int jabber_iq_disco_server(struct im_connection *ic);
+int jabber_iq_disco_muc(struct im_connection *ic, const char *muc_server);
 
 /* si.c */
 int jabber_si_handle_request(struct im_connection *ic, struct xt_node *node, struct xt_node *sinode);
@@ -338,11 +340,13 @@ gboolean sasl_supported(struct im_connection *ic);
 void sasl_oauth2_init(struct im_connection *ic);
 int sasl_oauth2_get_refresh_token(struct im_connection *ic, const char *msg);
 int sasl_oauth2_refresh(struct im_connection *ic, const char *refresh_token);
+void sasl_oauth2_got_token(gpointer data, const char *access_token, const char *refresh_token, const char *error);
 
 extern const struct oauth2_service oauth2_service_google;
 
 /* conference.c */
-struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password);
+struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password,
+                                   gboolean always_use_nicks);
 struct groupchat *jabber_chat_with(struct im_connection *ic, char *who);
 struct groupchat *jabber_chat_by_jid(struct im_connection *ic, const char *name);
 void jabber_chat_free(struct groupchat *c);

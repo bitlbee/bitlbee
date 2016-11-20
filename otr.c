@@ -267,6 +267,22 @@ void init_plugin(void)
 	register_irc_plugin(&otr_plugin);
 }
 
+#ifndef OTR_BI
+struct plugin_info *init_plugin_info(void)
+{
+	static struct plugin_info info = {
+		BITLBEE_ABI_VERSION_CODE,
+		"otr",
+		BITLBEE_VERSION,
+		"Off-the-Record communication",
+		NULL,
+		NULL
+	};
+
+	return &info;
+}
+#endif
+
 gboolean otr_irc_new(irc_t *irc)
 {
 	set_t *s;
@@ -412,7 +428,7 @@ int otr_check_for_key(account_t *a)
 	OtrlPrivKey *k;
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
-	if (a->prpl->options & OPT_NOOTR) {
+	if (a->prpl->options & PRPL_OPT_NOOTR) {
 		return 0;
 	}
 
@@ -440,7 +456,7 @@ char *otr_filter_msg_in(irc_user_t *iu, char *msg, int flags)
 	struct im_connection *ic = iu->bu->ic;
 
 	/* don't do OTR on certain (not classic IM) protocols, e.g. twitter */
-	if (ic->acc->prpl->options & OPT_NOOTR ||
+	if (ic->acc->prpl->options & PRPL_OPT_NOOTR ||
 	    iu->bu->flags & BEE_USER_NOOTR) {
 		return msg;
 	}
@@ -1383,6 +1399,7 @@ void log_otr_message(void *opdata, const char *fmt, ...)
 
 void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
 {
+	char *msg_, *msg;
 	struct im_connection *ic =
 	        check_imc(opdata, ctx->accountname, ctx->protocol);
 	irc_t *irc = ic->bee->ui_data;
@@ -1390,8 +1407,10 @@ void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
 	va_list va;
 
 	va_start(va, fmt);
-	char *msg = g_strdup_vprintf(fmt, va);
+	msg_ = g_strdup_vprintf(fmt, va);
 	va_end(va);
+
+	msg = word_wrap(msg_, IRC_WORD_WRAP);
 
 	if (u) {
 		/* just show this as a regular message */
@@ -1400,6 +1419,7 @@ void display_otr_message(void *opdata, ConnContext *ctx, const char *fmt, ...)
 		irc_rootmsg(irc, "[otr] %s", msg);
 	}
 
+	g_free(msg_);
 	g_free(msg);
 }
 

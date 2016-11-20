@@ -138,6 +138,11 @@ struct {
 		"aaaaa\naaaaa\naaaaa\naaaaa\naaaaa\naaaaa\naaaaa\na",
 	},
 	{
+		"áááááááááá",
+		11,
+		"ááááá\nááááá",
+	},
+	{
 		NULL
 	}
 };

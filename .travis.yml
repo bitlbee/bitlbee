@@ -2,7 +2,7 @@ sudo: false
 language: c
 
 script:
- - ./configure
+ - ./configure --pam=1 --ldap=1
  - make check
  - BITLBEE_SKYPE=plugin dpkg-buildpackage -uc -us -d
 
@@ -28,12 +28,14 @@ addons:
     - libevent-dev
     - libpurple-dev
     - check
+    - libpam0g-dev
+    - libldap2-dev
   coverity_scan:
     project:
       name: "bitlbee/bitlbee"
       description: "An IRC to other chat networks gateway"
     notification_email: dx@dxzone.com.ar
-    build_command_prepend: ./configure --otr=1 --debug=1
+    build_command_prepend: ./configure --otr=1 --debug=1 --pam=1 --ldap=1
     build_command: make
     branch_pattern: coverity_scan
 

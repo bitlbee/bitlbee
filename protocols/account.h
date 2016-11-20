@@ -60,6 +60,7 @@ int account_reconnect_delay(account_t *a);
 typedef enum {
 	ACC_SET_OFFLINE_ONLY = 0x02,    /* Allow changes only if the acct is offline. */
 	ACC_SET_ONLINE_ONLY = 0x04,     /* Allow changes only if the acct is online. */
+	ACC_SET_LOCKABLE = 0x08         /* Setting cannot be changed if the account is locked down */
 } account_set_flag_t;
 
 typedef enum {
@@ -67,6 +68,7 @@ typedef enum {
 	ACC_FLAG_STATUS_MESSAGE = 0x02, /* Supports status messages (without being away). */
 	ACC_FLAG_HANDLE_DOMAINS = 0x04, /* Contact handles need a domain portion. */
 	ACC_FLAG_LOCAL_CONTACTS = 0x08, /* Contact list is local. */
+	ACC_FLAG_LOCKED = 0x10,         /* Account is locked (cannot be deleted, certain settings can't changed) */
 } account_flag_t;
 
 #endif

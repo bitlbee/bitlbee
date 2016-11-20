@@ -9,8 +9,6 @@ PORT="$RET"
 
 CONFDIR=/var/lib/bitlbee/
 
-update-rc.d bitlbee defaults > /dev/null 2>&1
-
 ## Load default option. Don't want to put this in debconf (yet?)
 BITLBEE_OPTS=-F
 BITLBEE_DISABLED=0
@@ -65,7 +63,7 @@ if [ -e /usr/share/bitlbee/help.upgrading ]; then
 	fi
 fi
 
-if [ "$BITLBEE_UPGRADE_DONT_RESTART" != "1" -a  -n "$2" ]; then
+if [ "$BITLBEE_UPGRADE_DONT_RESTART" != "1" -a  -n "$2" -a -x "/etc/init.d/bitlbee" ]; then
 	invoke-rc.d bitlbee restart
 fi
 
@@ -91,6 +89,4 @@ else
 	chown bitlbee /etc/bitlbee/bitlbee.conf
 fi
 
-if [ -z "$2" ]; then
-	invoke-rc.d bitlbee start
-fi
+#DEBHELPER#

@@ -79,6 +79,14 @@ int main(int argc, char *argv[])
 		return(1);
 	}
 
+	if (global.conf->runmode == RUNMODE_INETD) {
+		log_link(LOGLVL_ERROR, LOGOUTPUT_IRC);
+		log_link(LOGLVL_WARNING, LOGOUTPUT_IRC);
+	} else {
+		log_link(LOGLVL_ERROR, LOGOUTPUT_CONSOLE);
+		log_link(LOGLVL_WARNING, LOGOUTPUT_CONSOLE);
+	}
+
 	b_main_init();
 
 	/* libpurple doesn't like fork()s after initializing itself, so if
@@ -103,23 +111,20 @@ int main(int argc, char *argv[])
 		return(1);
 	}
 
-	if (global.conf->runmode == RUNMODE_INETD) {
-		log_link(LOGLVL_ERROR, LOGOUTPUT_IRC);
-		log_link(LOGLVL_WARNING, LOGOUTPUT_IRC);
+	global.auth = auth_init(global.conf->auth_backend);
+	if (global.conf->auth_backend && global.auth == NULL) {
+		log_message(LOGLVL_ERROR, "Unable to load authentication backend '%s'", global.conf->auth_backend);
+		return(1);
+	}
 
+	if (global.conf->runmode == RUNMODE_INETD) {
 		i = bitlbee_inetd_init();
 		log_message(LOGLVL_INFO, "%s %s starting in inetd mode.", PACKAGE, BITLBEE_VERSION);
 
 	} else if (global.conf->runmode == RUNMODE_DAEMON) {
-		log_link(LOGLVL_ERROR, LOGOUTPUT_CONSOLE);
-		log_link(LOGLVL_WARNING, LOGOUTPUT_CONSOLE);
-
 		i = bitlbee_daemon_init();
 		log_message(LOGLVL_INFO, "%s %s starting in daemon mode.", PACKAGE, BITLBEE_VERSION);
 	} else if (global.conf->runmode == RUNMODE_FORKDAEMON) {
-		log_link(LOGLVL_ERROR, LOGOUTPUT_CONSOLE);
-		log_link(LOGLVL_WARNING, LOGOUTPUT_CONSOLE);
-
 		/* In case the operator requests a restart, we need this. */
 		old_cwd = g_malloc(256);
 		if (getcwd(old_cwd, 255) == NULL) {

@@ -62,13 +62,13 @@ account_t *account_add(bee_t *bee, struct prpl *prpl, char *user, char *pass)
 	s->flags |= SET_NOSAVE; /* Just for bw compatibility! */
 
 	s = set_add(&a->set, "password", NULL, set_eval_account, a);
-	s->flags |= SET_NOSAVE | SET_NULL_OK | SET_PASSWORD;
+	s->flags |= SET_NOSAVE | SET_NULL_OK | SET_PASSWORD | ACC_SET_LOCKABLE;
 
 	s = set_add(&a->set, "tag", NULL, set_eval_account, a);
 	s->flags |= SET_NOSAVE;
 
 	s = set_add(&a->set, "username", NULL, set_eval_account, a);
-	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY;
+	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY | ACC_SET_LOCKABLE;
 	set_setstr(&a->set, "username", user);
 
 	/* Hardcode some more clever tag guesses. */

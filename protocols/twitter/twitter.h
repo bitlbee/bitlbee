@@ -60,6 +60,8 @@ struct twitter_data {
 	guint64 timeline_id;
 
 	GSList *follow_ids;
+	GSList *mutes_ids;
+	GSList *noretweets_ids;
 	GSList *filters;
 
 	guint64 last_status_id; /* For undo */

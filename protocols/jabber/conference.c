@@ -27,7 +27,8 @@
 static xt_status jabber_chat_join_failed(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 static xt_status jabber_chat_self_message(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 
-struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password)
+struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, const char *nick, const char *password,
+                                   gboolean always_use_nicks)
 {
 	struct jabber_chat *jc;
 	struct xt_node *node;
@@ -56,6 +57,10 @@ struct groupchat *jabber_chat_join(struct im_connection *ic, const char *room, c
 		g_free(jc->name);
 		g_free(jc);
 		return NULL;
+	}
+
+	if (always_use_nicks) {
+		jc->flags = JCFLAG_ALWAYS_USE_NICKS;
 	}
 
 	/* roomjid isn't normalized yet, and we need an original version
@@ -94,7 +99,7 @@ struct groupchat *jabber_chat_with(struct im_connection *ic, char *who)
 	g_free(uuid);
 	g_free(cserv);
 
-	c = jabber_chat_join(ic, rjid, jd->username, NULL);
+	c = jabber_chat_join(ic, rjid, jd->username, NULL, FALSE);
 	g_free(rjid);
 	if (c == NULL) {
 		return NULL;
@@ -243,6 +248,19 @@ void jabber_chat_invite(struct groupchat *c, char *who, char *message)
 	xt_free_node(node);
 }
 
+static int jabber_chat_has_other_resources(struct im_connection *ic, struct jabber_buddy *bud)
+{
+	struct jabber_buddy *cur;
+
+	for (cur = jabber_buddy_by_jid(ic, bud->bare_jid, GET_BUDDY_FIRST); cur; cur = cur->next) {
+		if (cur != bud && jabber_compare_jid(cur->ext_jid, bud->ext_jid)) {
+			return TRUE;
+		}
+	}
+	
+	return FALSE;
+}
+
 /* Not really the same syntax as the normal pkt_ functions, but this isn't
    called by the xmltree parser directly and this way I can add some extra
    parameters so we won't have to repeat too many things done by the caller
@@ -327,12 +345,17 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 		if (s) {
 			*s = 0; /* Should NEVER be NULL, but who knows... */
 		}
+
+		if (bud != jc->me && (jc->flags & JCFLAG_ALWAYS_USE_NICKS) && !(bud->flags & JBFLAG_IS_ANONYMOUS)) {
+			imcb_buddy_nick_change(ic, bud->ext_jid, bud->resource);
+		}
+
 		imcb_chat_add_buddy(chat, bud->ext_jid);
 		if (s) {
 			*s = '/';
 		}
 	} else if (type) { /* type can only be NULL or "unavailable" in this function */
-		if ((bud->flags & JBFLAG_IS_CHATROOM) && bud->ext_jid) {
+		if ((bud->flags & JBFLAG_IS_CHATROOM) && bud->ext_jid && !jabber_chat_has_other_resources(ic, bud)) {
 			char *reason = NULL;
 			char *status = NULL;
 			char *status_text = NULL;
@@ -442,7 +465,8 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 	}
 
 	if (subject && chat) {
-		char *subject_text = subject->text_len > 0 ? subject->text : "";
+		char empty[1] = "";
+		char *subject_text = subject->text_len > 0 ? subject->text : empty;
 		if (g_strcmp0(chat->topic, subject_text) != 0) {
 			bare_jid = (bud) ? jabber_get_bare_jid(bud->ext_jid) : NULL;
 			imcb_chat_topic(chat, bare_jid, subject_text,
@@ -478,7 +502,9 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 	if (bud) {
 		bare_jid = jabber_get_bare_jid(bud->ext_jid ? bud->ext_jid : bud->full_jid);
 		final_from = bare_jid;
-		flags = (bud == jc->me) ? OPT_SELFMESSAGE : 0;
+		if (bud == jc->me || (g_strcasecmp(final_from, ic->acc->user) == 0)) {
+			flags = OPT_SELFMESSAGE;
+		}
 	} else {
 		final_from = nick;
 	}

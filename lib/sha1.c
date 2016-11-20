@@ -23,13 +23,22 @@ void sha1_finish(sha1_state_t *ctx, guint8 digest[SHA1_HASH_SIZE])
 
 #define HMAC_BLOCK_SIZE 64
 
-/* BitlBee addition: */
-void sha1_hmac(const char *key_, size_t key_len, const char *payload, size_t payload_len, guint8 digest[SHA1_HASH_SIZE])
+void b_hmac(GChecksumType checksum_type, const char *key_, size_t key_len,
+            const char *payload, size_t payload_len, guint8 **digest)
 {
-	sha1_state_t sha1;
-	guint8 hash[SHA1_HASH_SIZE];
+	GChecksum *checksum;
+	size_t hash_len;
+	guint8 *hash;
 	guint8 key[HMAC_BLOCK_SIZE + 1];
 	int i;
+
+	hash_len = g_checksum_type_get_length(checksum_type);
+
+	if (hash_len == (size_t) -1) {
+		return;
+	}
+
+	hash = g_malloc(hash_len);
 
 	if (key_len == 0) {
 		key_len = strlen(key_);
@@ -42,31 +51,42 @@ void sha1_hmac(const char *key_, size_t key_len, const char *payload, size_t pay
 	   otherwise just pad. */
 	memset(key, 0, HMAC_BLOCK_SIZE + 1);
 	if (key_len > HMAC_BLOCK_SIZE) {
-		sha1_init(&sha1);
-		sha1_append(&sha1, (guint8 *) key_, key_len);
-		sha1_finish(&sha1, key);
+		checksum = g_checksum_new(checksum_type);
+		g_checksum_update(checksum, (guint8 *) key_, key_len);
+		g_checksum_get_digest(checksum, key, &hash_len);
+		g_checksum_free(checksum);
 	} else {
 		memcpy(key, key_, key_len);
 	}
 
 	/* Inner part: H(K XOR 0x36, text) */
-	sha1_init(&sha1);
+	checksum = g_checksum_new(checksum_type);
 	for (i = 0; i < HMAC_BLOCK_SIZE; i++) {
 		key[i] ^= 0x36;
 	}
-	sha1_append(&sha1, key, HMAC_BLOCK_SIZE);
-	sha1_append(&sha1, (const guint8 *) payload, payload_len);
-	sha1_finish(&sha1, hash);
+	g_checksum_update(checksum, key, HMAC_BLOCK_SIZE);
+	g_checksum_update(checksum, (const guint8 *) payload, payload_len);
+	g_checksum_get_digest(checksum, hash, &hash_len);
+	g_checksum_free(checksum);
 
 	/* Final result: H(K XOR 0x5C, inner stuff) */
-	sha1_init(&sha1);
+	checksum = g_checksum_new(checksum_type);
 	for (i = 0; i < HMAC_BLOCK_SIZE; i++) {
 		key[i] ^= 0x36 ^ 0x5c;
 	}
-	sha1_append(&sha1, key, HMAC_BLOCK_SIZE);
-	sha1_append(&sha1, hash, SHA1_HASH_SIZE);
-	sha1_finish(&sha1, digest);
+	g_checksum_update(checksum, key, HMAC_BLOCK_SIZE);
+	g_checksum_update(checksum, hash, hash_len);
+	g_checksum_get_digest(checksum, *digest, &hash_len);
+	g_checksum_free(checksum);
+
+	g_free(hash);
 }
+
+void sha1_hmac(const char *key_, size_t key_len, const char *payload, size_t payload_len, guint8 digest[SHA1_HASH_SIZE])
+{
+	b_hmac(G_CHECKSUM_SHA1, key_, key_len, payload, payload_len, &digest);
+}
+
 
 /* I think this follows the scheme described on:
    http://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29

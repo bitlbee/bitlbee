@@ -1762,3 +1762,17 @@ void init_plugin(void)
 #endif
 	register_protocol(ret);
 }
+
+struct plugin_info *init_plugin_info(void)
+{
+	static struct plugin_info info = {
+		BITLBEE_ABI_VERSION_CODE,
+		"skype",
+		BITLBEE_VERSION,
+		"Skype protocol plugin",
+		NULL,
+		NULL
+	};
+
+	return &info;
+}

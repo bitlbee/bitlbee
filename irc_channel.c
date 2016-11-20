@@ -244,7 +244,9 @@ int irc_channel_add_user(irc_channel_t *ic, irc_user_t *iu)
 
 	ic->users = g_slist_insert_sorted(ic->users, icu, irc_channel_user_cmp);
 
-	irc_channel_update_ops(ic, set_getstr(&ic->irc->b->set, "ops"));
+	if (iu == ic->irc->user || iu == ic->irc->root) {
+		irc_channel_update_ops(ic, set_getstr(&ic->irc->b->set, "ops"));
+	}
 
 	if (iu == ic->irc->user || ic->flags & IRC_CHANNEL_JOINED) {
 		ic->flags |= IRC_CHANNEL_JOINED;

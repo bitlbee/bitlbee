@@ -38,13 +38,16 @@ const struct oauth2_service oauth2_service_google =
 	"6C-Zgf7Tr7gEQTPlBhMUgo7R",
 };
 
+/* """"""""""""""""""""""""""""""oauth"""""""""""""""""""""""""""""" */
+#define HIPCHAT_SO_CALLED_OAUTH_URL "https://hipchat.com/account/api"
+
 xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd = ic->proto_data;
 	struct xt_node *c, *reply;
 	char *s;
-	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_anonymous = 0;
+	int sup_plain = 0, sup_digest = 0, sup_gtalk = 0, sup_anonymous = 0, sup_hipchat_oauth = 0;
 	int want_oauth = FALSE, want_hipchat = FALSE, want_anonymous = FALSE;
 	GString *mechs;
 
@@ -79,6 +82,8 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 			sup_anonymous = 1;
 		} else if (c->text && g_strcasecmp(c->text, "X-OAUTH2") == 0) {
 			sup_gtalk = 1;
+		} else if (c->text && g_strcasecmp(c->text, "X-HIPCHAT-OAUTH2") == 0) {
+			sup_hipchat_oauth = 1;
 		}
 
 		if (c->text) {
@@ -89,7 +94,7 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 	}
 
 	if (!want_oauth && !sup_plain && !sup_digest) {
-		if (!sup_gtalk) {
+		if (sup_gtalk || sup_hipchat_oauth) {
 			imcb_error(ic, "This server requires OAuth "
 			           "(supported schemes:%s)", mechs->str);
 		} else {
@@ -109,22 +114,36 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 		xt_add_attr(reply, "xmlns", XMLNS_HIPCHAT);
 	}
 
-	if (sup_gtalk && want_oauth) {
-		int len;
+	if ((sup_gtalk || sup_hipchat_oauth) && want_oauth) {
+		GString *gs;
 
-		/* X-OAUTH2 is, not *the* standard OAuth2 SASL/XMPP implementation.
-		   It's currently used by GTalk and vaguely documented on
-		   http://code.google.com/apis/cloudprint/docs/rawxmpp.html . */
-		xt_add_attr(reply, "mechanism", "X-OAUTH2");
+		gs = g_string_sized_new(128);
 
-		len = strlen(jd->username) + strlen(jd->oauth2_access_token) + 2;
-		s = g_malloc(len + 1);
-		s[0] = 0;
-		strcpy(s + 1, jd->username);
-		strcpy(s + 2 + strlen(jd->username), jd->oauth2_access_token);
-		reply->text = base64_encode((unsigned char *) s, len);
+		g_string_append_c(gs, '\0');
+
+		if (sup_gtalk) {
+			/* X-OAUTH2 is not *the* standard OAuth2 SASL/XMPP implementation.
+			   It's currently used by GTalk and vaguely documented on
+			   http://code.google.com/apis/cloudprint/docs/rawxmpp.html */
+			xt_add_attr(reply, "mechanism", "X-OAUTH2");
+
+			g_string_append(gs, jd->username);
+			g_string_append_c(gs, '\0');
+			g_string_append(gs, jd->oauth2_access_token);
+		} else if (sup_hipchat_oauth) {
+			/* Hipchat's variant, not standard either, is documented here:
+			   https://docs.atlassian.com/hipchat.xmpp/latest/xmpp/auth.html */
+			xt_add_attr(reply, "mechanism", "oauth2");
+
+			g_string_append(gs, jd->oauth2_access_token);
+			g_string_append_c(gs, '\0');
+			g_string_append(gs, set_getstr(&ic->acc->set, "resource"));
+		}
+
+		reply->text = base64_encode((unsigned char *) gs->str, gs->len);
 		reply->text_len = strlen(reply->text);
-		g_free(s);
+		g_string_free(gs, TRUE);
+
 	} else if (want_oauth) {
 		imcb_error(ic, "OAuth requested, but not supported by server");
 		imc_logout(ic, FALSE);
@@ -148,7 +167,6 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 
 		/* The rest will be done later, when we receive a <challenge/>. */
 	} else if (sup_plain) {
-		int len;
 		GString *gs;
 		char *username;
 
@@ -173,12 +191,9 @@ xt_status sasl_pkt_mechanisms(struct xt_node *node, gpointer data)
 			g_string_append(gs, set_getstr(&ic->acc->set, "resource"));
 		}
 
-		len = gs->len;
-		s = g_string_free(gs, FALSE);
-
-		reply->text = base64_encode((unsigned char *) s, len);
+		reply->text = base64_encode((unsigned char *) gs->str, gs->len);
 		reply->text_len = strlen(reply->text);
-		g_free(s);
+		g_string_free(gs, TRUE);
 	}
 
 	if (reply && !jabber_write_packet(ic, reply)) {
@@ -427,20 +442,29 @@ gboolean sasl_supported(struct im_connection *ic)
 void sasl_oauth2_init(struct im_connection *ic)
 {
 	struct jabber_data *jd = ic->proto_data;
-	char *msg, *url;
 
 	imcb_log(ic, "Starting OAuth authentication");
 
 	/* Temporary contact, just used to receive the OAuth response. */
 	imcb_add_buddy(ic, JABBER_OAUTH_HANDLE, NULL);
-	url = oauth2_url(jd->oauth2_service);
-	msg = g_strdup_printf("Open this URL in your browser to authenticate: %s", url);
-	imcb_buddy_msg(ic, JABBER_OAUTH_HANDLE, msg, 0, 0);
+
+	if (jd->flags & JFLAG_HIPCHAT) {
+		imcb_buddy_msg(ic, JABBER_OAUTH_HANDLE,
+			"Open this URL and generate a token with 'View Group' and 'Send Message' scopes: "
+			HIPCHAT_SO_CALLED_OAUTH_URL, 0, 0);
+	} else {
+		char *msg, *url;
+
+		url = oauth2_url(jd->oauth2_service);
+		msg = g_strdup_printf("Open this URL in your browser to authenticate: %s", url);
+		imcb_buddy_msg(ic, JABBER_OAUTH_HANDLE, msg, 0, 0);
+
+		g_free(msg);
+		g_free(url);
+	}
 	imcb_buddy_msg(ic, JABBER_OAUTH_HANDLE, "Respond to this message with the returned "
 	               "authorization token.", 0, 0);
 
-	g_free(msg);
-	g_free(url);
 }
 
 static gboolean sasl_oauth2_remove_contact(gpointer data, gint fd, b_input_condition cond)
@@ -452,9 +476,6 @@ static gboolean sasl_oauth2_remove_contact(gpointer data, gint fd, b_input_condi
 	}
 	return FALSE;
 }
-
-static void sasl_oauth2_got_token(gpointer data, const char *access_token, const char *refresh_token,
-                                  const char *error);
 
 int sasl_oauth2_get_refresh_token(struct im_connection *ic, const char *msg)
 {
@@ -485,7 +506,7 @@ int sasl_oauth2_refresh(struct im_connection *ic, const char *refresh_token)
 	                           refresh_token, sasl_oauth2_got_token, ic);
 }
 
-static void sasl_oauth2_got_token(gpointer data, const char *access_token, const char *refresh_token, const char *error)
+void sasl_oauth2_got_token(gpointer data, const char *access_token, const char *refresh_token, const char *error)
 {
 	struct im_connection *ic = data;
 	struct jabber_data *jd;

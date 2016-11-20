@@ -548,7 +548,6 @@ void srv_free(struct ns_srv_reply **srv)
 	g_free(srv);
 }
 
-/* Word wrapping. Yes, I know this isn't UTF-8 clean. I'm willing to take the risk. */
 char *word_wrap(const char *msg, int line_len)
 {
 	GString *ret = g_string_sized_new(strlen(msg) + 16);
@@ -581,9 +580,16 @@ char *word_wrap(const char *msg, int line_len)
 			}
 		}
 		if (i == 0) {
-			g_string_append_len(ret, msg, line_len);
+			const char *end;
+			size_t len;
+
+			g_utf8_validate(msg, line_len, &end);
+
+			len = (end != msg) ? end - msg : line_len;
+
+			g_string_append_len(ret, msg, len);
 			g_string_append_c(ret, '\n');
-			msg += line_len;
+			msg += len;
 		}
 	}
 	g_string_append(ret, msg);
@@ -785,4 +791,30 @@ char *str_reject_chars(char *string, const char *reject, char replacement)
 	}
 
 	return string;
+}
+
+/* Returns a string that is exactly 'char_len' utf8 characters long (not bytes),
+ * padded to the right with spaces or truncated with the 'ellipsis' parameter
+ * if specified (can be NULL).
+ * Returns a newly allocated string, or NULL on invalid parameters. */
+char *str_pad_and_truncate(const char *string, long char_len, const char *ellipsis)
+{
+	size_t string_len = strlen(string);
+	size_t ellipsis_len = (ellipsis) ? strlen(ellipsis) : 0;
+	long orig_len = g_utf8_strlen(string, -1);
+
+	g_return_val_if_fail(char_len > ellipsis_len, NULL);
+
+	if (orig_len > char_len) {
+		char *ret = g_malloc(string_len + 1);
+		g_utf8_strncpy(ret, string, char_len - ellipsis_len);
+		if (ellipsis) {
+			g_strlcat(ret, ellipsis, string_len);
+		}
+		return ret;
+	} else if (orig_len < char_len) {
+		return g_strdup_printf("%s%*s", string, (int) (char_len - orig_len), "");
+	} else {
+		return g_strdup(string);
+	}
 }

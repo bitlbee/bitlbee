@@ -28,6 +28,7 @@
 
 #define IRC_MAX_LINE 512
 #define IRC_MAX_ARGS 16
+#define IRC_WORD_WRAP 425
 
 #define IRC_LOGIN_TIMEOUT 60
 #define IRC_PING_STRING "PinglBee"
@@ -91,6 +92,7 @@ typedef struct irc {
 	char *password; /* HACK: Used to save the user's password, but before
 	                   logging in, this may contain a password we should
 	                   send to identify after USER/NICK are received. */
+	char *auth_backend;
 
 	char umode[8];
 

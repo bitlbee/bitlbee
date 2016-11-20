@@ -119,12 +119,6 @@ static gboolean bee_irc_user_status(bee_t *bee, bee_user_t *bu, bee_user_t *old)
 		iu->flags |= IRC_USER_AWAY;
 	}
 
-	if ((irc->caps & CAP_AWAY_NOTIFY) &&
-	    ((bu->flags & BEE_USER_AWAY) != (old->flags & BEE_USER_AWAY) ||
-	     (bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE))) {
-		irc_send_away_notify(iu);
-	}
-
 	if ((bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE)) {
 		if (bu->flags & BEE_USER_ONLINE) {
 			if (g_hash_table_lookup(irc->watches, iu->key)) {
@@ -152,6 +146,19 @@ static gboolean bee_irc_user_status(bee_t *bee, bee_user_t *bu, bee_user_t *old)
 	iu->away_reply_timeout = 0;
 
 	bee_irc_channel_update(irc, NULL, iu);
+
+	/* If away-notify enabled, send status updates when:
+	 * Away or Online state changes
+	 * Status changes (e.g. "Away" to "Mobile")
+	 * Status message changes
+	 */
+	if ((irc->caps & CAP_AWAY_NOTIFY) &&
+	    ((bu->flags & BEE_USER_AWAY) != (old->flags & BEE_USER_AWAY) ||
+	     (bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE) ||
+	     (g_strcmp0(bu->status, old->status) != 0) ||
+	     (g_strcmp0(bu->status_msg, old->status_msg) != 0))) {
+		irc_send_away_notify(iu);
+	}
 
 	return TRUE;
 }
@@ -291,7 +298,7 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, g
 		msg = s;
 	}
 
-	wrapped = word_wrap(msg, 425);
+	wrapped = word_wrap(msg, IRC_WORD_WRAP);
 	irc_send_msg(src_iu, message_type, dst, wrapped, prefix);
 	g_free(wrapped);
 
@@ -341,7 +348,7 @@ static gboolean bee_irc_user_action_response(bee_t *bee, bee_user_t *bu, const c
 	return TRUE;
 }
 
-static gboolean bee_irc_user_nick_update(irc_user_t *iu);
+static gboolean bee_irc_user_nick_update(irc_user_t *iu, gboolean offline_only);
 
 static gboolean bee_irc_user_fullname(bee_t *bee, bee_user_t *bu)
 {
@@ -369,14 +376,21 @@ static gboolean bee_irc_user_fullname(bee_t *bee, bee_user_t *bu)
 		imcb_log(bu->ic, "User `%s' changed name to `%s'", iu->nick, iu->fullname);
 	}
 
-	bee_irc_user_nick_update(iu);
+	bee_irc_user_nick_update(iu, TRUE);
 
 	return TRUE;
 }
 
 static gboolean bee_irc_user_nick_hint(bee_t *bee, bee_user_t *bu, const char *hint)
 {
-	bee_irc_user_nick_update((irc_user_t *) bu->ui_data);
+	bee_irc_user_nick_update((irc_user_t *) bu->ui_data, TRUE);
+
+	return TRUE;
+}
+
+static gboolean bee_irc_user_nick_change(bee_t *bee, bee_user_t *bu, const char *nick)
+{
+	bee_irc_user_nick_update((irc_user_t *) bu->ui_data, FALSE);
 
 	return TRUE;
 }
@@ -385,30 +399,19 @@ static gboolean bee_irc_user_group(bee_t *bee, bee_user_t *bu)
 {
 	irc_user_t *iu = (irc_user_t *) bu->ui_data;
 	irc_t *irc = (irc_t *) bee->ui_data;
-	bee_user_flags_t online;
-
-	/* Take the user offline temporarily so we can change the nick (if necessary). */
-	if ((online = bu->flags & BEE_USER_ONLINE)) {
-		bu->flags &= ~BEE_USER_ONLINE;
-	}
 
 	bee_irc_channel_update(irc, NULL, iu);
-	bee_irc_user_nick_update(iu);
-
-	if (online) {
-		bu->flags |= online;
-		bee_irc_channel_update(irc, NULL, iu);
-	}
+	bee_irc_user_nick_update(iu, FALSE);
 
 	return TRUE;
 }
 
-static gboolean bee_irc_user_nick_update(irc_user_t *iu)
+static gboolean bee_irc_user_nick_update(irc_user_t *iu, gboolean offline_only)
 {
 	bee_user_t *bu = iu->bu;
 	char *newnick;
 
-	if (bu->flags & BEE_USER_ONLINE) {
+	if (offline_only && bu->flags & BEE_USER_ONLINE) {
 		/* Ignore if the user is visible already. */
 		return TRUE;
 	}
@@ -431,21 +434,14 @@ static gboolean bee_irc_user_nick_update(irc_user_t *iu)
 void bee_irc_user_nick_reset(irc_user_t *iu)
 {
 	bee_user_t *bu = iu->bu;
-	bee_user_flags_t online;
 
 	if (bu == FALSE) {
 		return;
 	}
 
-	/* In this case, pretend the user is offline. */
-	if ((online = bu->flags & BEE_USER_ONLINE)) {
-		bu->flags &= ~BEE_USER_ONLINE;
-	}
-
 	nick_del(bu);
-	bee_irc_user_nick_update(iu);
+	bee_irc_user_nick_update(iu, FALSE);
 
-	bu->flags |= online;
 }
 
 /* IRC->IM calls */
@@ -460,7 +456,8 @@ static gboolean bee_irc_user_privmsg(irc_user_t *iu, const char *msg)
 		return FALSE;
 	}
 
-	if ((away = irc_user_get_away(iu)) &&
+	if (iu->last_channel == NULL &&
+	    (away = irc_user_get_away(iu)) &&
 	    time(NULL) >= iu->away_reply_timeout) {
 		irc_send_num(iu->irc, 301, "%s :%s", iu->nick, away);
 		iu->away_reply_timeout = time(NULL) +
@@ -675,7 +672,7 @@ static gboolean bee_irc_chat_msg(bee_t *bee, struct groupchat *c, bee_user_t *bu
 		ts = irc_format_timestamp(irc, sent_at);
 	}
 
-	wrapped = word_wrap(msg, 425);
+	wrapped = word_wrap(msg, IRC_WORD_WRAP);
 	irc_send_msg(iu, "PRIVMSG", ic->name, wrapped, ts);
 	g_free(ts);
 	g_free(wrapped);
@@ -1145,4 +1142,5 @@ const struct bee_ui_funcs irc_ui_funcs = {
 	bee_irc_ft_finished,
 
 	bee_irc_log,
+	bee_irc_user_nick_change,
 };

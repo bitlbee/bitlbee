@@ -2,15 +2,10 @@
 
 set -e
 
-[ "$1" = "purge" ] || exit 0
-
-if [ -e /usr/share/debconf/confmodule ]; then
-	. /usr/share/debconf/confmodule;
-	db_purge;
+if [ "$1" = "purge" ]; then
+	rm -f /etc/default/bitlbee
+	deluser --system bitlbee || true
+	rm -rf /var/lib/bitlbee ## deluser doesn't seem to do this for homedirs in /var
 fi
 
-update-rc.d bitlbee remove > /dev/null 2>&1 || true
-rm -f /etc/default/bitlbee
-
-deluser --system bitlbee || true
-rm -rf /var/lib/bitlbee ## deluser doesn't seem to do this for homedirs in /var
+#DEBHELPER#

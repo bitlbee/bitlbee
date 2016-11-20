@@ -40,8 +40,8 @@ void irc_send_num(irc_t *irc, int code, char *format, ...)
 void irc_send_login(irc_t *irc)
 {
 	irc_send_num(irc,   1, ":Welcome to the %s gateway, %s", PACKAGE, irc->user->nick);
-	irc_send_num(irc,   2, ":Host %s is running %s %s %s/%s.", irc->root->host,
-	             PACKAGE, BITLBEE_VERSION, ARCH, CPU);
+	irc_send_num(irc,   2, ":Host %s is running %s %s.", irc->root->host,
+	             PACKAGE, BITLBEE_VERSION);
 	irc_send_num(irc,   3, ":%s", IRCD_INFO);
 	irc_send_num(irc,   4, "%s %s %s %s", irc->root->host, BITLBEE_VERSION, UMODES UMODES_PRIV, CMODES);
 	irc_send_num(irc,   5, "PREFIX=(ohv)@%%+ CHANTYPES=%s CHANMODES=,,,%s NICKLEN=%d CHANNELLEN=%d "
@@ -53,19 +53,18 @@ void irc_send_login(irc_t *irc)
 
 void irc_send_motd(irc_t *irc)
 {
-	char motd[2048];
-	ssize_t len;
-	int fd;
+	char *motd;
+	size_t len;
 
-	fd = open(global.conf->motdfile, O_RDONLY);
-	if (fd == -1 || (len = read(fd, motd, sizeof(motd) - 1)) <= 0) {
+	g_file_get_contents(global.conf->motdfile, &motd, &len, NULL);
+
+	if (!motd || !len) {
 		irc_send_num(irc, 422, ":We don't need MOTDs.");
 	} else {
 		char linebuf[80];
 		char *add = "", max, *in;
 
 		in = motd;
-		motd[len] = '\0';
 		linebuf[79] = len = 0;
 		max = sizeof(linebuf) - 1;
 
@@ -100,9 +99,8 @@ void irc_send_motd(irc_t *irc)
 		irc_send_num(irc, 376, ":End of MOTD");
 	}
 
-	if (fd != -1) {
-		close(fd);
-	}
+	g_free(motd);
+
 }
 
 /* Used by some funcs that generate PRIVMSGs to figure out if we're talking to
@@ -347,8 +345,13 @@ void irc_send_who(irc_t *irc, GSList *l, const char *channel)
 			iu = l->data;
 		}
 
-		/* rfc1459 doesn't mention this: G means gone, H means here */
-		status_prefix[0] = iu->flags & IRC_USER_AWAY ? 'G' : 'H';
+		/* If this is the account nick, check configuration to see if away */
+		if (iu == irc->user) {
+			/* rfc1459 doesn't mention this: G means gone, H means here */
+			status_prefix[0] = set_getstr(&irc->b->set, "away") ? 'G' : 'H';
+		} else {
+			status_prefix[0] = iu->flags & IRC_USER_AWAY ? 'G' : 'H';
+		}
 
 		irc_send_num(irc, 352, "%s %s %s %s %s %s :0 %s",
 		             is_channel ? channel : "*", iu->user, iu->host, irc->root->host,

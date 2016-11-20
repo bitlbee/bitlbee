@@ -86,6 +86,25 @@ static gboolean phb_free(struct PHB *phb, gboolean success)
 	return FALSE;
 }
 
+/* calls phb->func safely by ensuring that the phb struct doesn't exist in the
+ * case that proxy_disconnect() is called down there */
+static gboolean phb_connected(struct PHB *phb, gint source)
+{
+	/* save func and data here */
+	b_event_handler func = phb->func;
+	gpointer data = phb->data;
+
+	/* free the struct so that it can't be freed by the callback */
+	phb_free(phb, TRUE);
+
+	/* if any proxy_disconnect() call happens here, it will use the
+	 * fd (still open), look it up in the hash table, get NULL, and
+	 * proceed to close the fd and do nothing else */
+	func(data, source, B_EV_IO_READ);
+
+	return FALSE;
+}
+
 static gboolean proxy_connected(gpointer data, gint source, b_input_condition cond)
 {
 	struct PHB *phb = data;
@@ -124,8 +143,7 @@ static gboolean proxy_connected(gpointer data, gint source, b_input_condition co
 	if (phb->proxy_func) {
 		phb->proxy_func(phb->proxy_data, source, B_EV_IO_READ);
 	} else {
-		phb->func(phb->data, source, B_EV_IO_READ);
-		phb_free(phb, TRUE);
+		phb_connected(phb, source);
 	}
 
 	return FALSE;
@@ -221,8 +239,7 @@ static gboolean http_canread(gpointer data, gint source, b_input_condition cond)
 
 	if ((memcmp(HTTP_GOODSTRING, inputline, strlen(HTTP_GOODSTRING)) == 0) ||
 	    (memcmp(HTTP_GOODSTRING2, inputline, strlen(HTTP_GOODSTRING2)) == 0)) {
-		phb->func(phb->data, source, B_EV_IO_READ);
-		return phb_free(phb, TRUE);
+		return phb_connected(phb, source);
 	}
 
 	return phb_free(phb, FALSE);
@@ -294,8 +311,7 @@ static gboolean s4_canread(gpointer data, gint source, b_input_condition cond)
 
 	memset(packet, 0, sizeof(packet));
 	if (read(source, packet, 9) >= 4 && packet[1] == 90) {
-		phb->func(phb->data, source, B_EV_IO_READ);
-		return phb_free(phb, TRUE);
+		return phb_connected(phb, source);
 	}
 
 	return phb_free(phb, FALSE);
@@ -383,8 +399,7 @@ static gboolean s5_canread_again(gpointer data, gint source, b_input_condition c
 		return phb_free(phb, FALSE);
 	}
 
-	phb->func(phb->data, source, B_EV_IO_READ);
-	return phb_free(phb, TRUE);
+	return phb_connected(phb, source);
 }
 
 static void s5_sendconnect(gpointer data, gint source)

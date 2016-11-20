@@ -81,11 +81,11 @@ static void jabber_init(account_t *acc)
 	s = set_add(&acc->set, "server", NULL, set_eval_account, acc);
 	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY | SET_NULL_OK;
 
+	set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
+
 	if (strcmp(acc->prpl->name, "hipchat") == 0) {
 		set_setstr(&acc->set, "server", "chat.hipchat.com");
 	} else {
-		set_add(&acc->set, "oauth", "false", set_eval_oauth, acc);
-
 		/* this reuses set_eval_oauth, which clears the password */
 		set_add(&acc->set, "anonymous", "false", set_eval_oauth, acc);
 	}
@@ -320,6 +320,8 @@ static void jabber_logout(struct im_connection *ic)
 {
 	struct jabber_data *jd = ic->proto_data;
 
+	imcb_chat_list_free(ic);
+
 	while (jd->filetransfers) {
 		imcb_file_canceled(ic, (( struct jabber_transfer *) jd->filetransfers->data)->ft, "Logging out");
 	}
@@ -396,7 +398,11 @@ static int jabber_buddy_msg(struct im_connection *ic, char *who, char *message, 
 
 	if (g_strcasecmp(who, JABBER_OAUTH_HANDLE) == 0 &&
 	    !(jd->flags & OPT_LOGGED_IN) && jd->fd == -1) {
-		if (sasl_oauth2_get_refresh_token(ic, message)) {
+
+		if (jd->flags & JFLAG_HIPCHAT) {
+			sasl_oauth2_got_token(ic, message, NULL, NULL);
+			return 1;
+		} else if (sasl_oauth2_get_refresh_token(ic, message)) {
 			return 1;
 		} else {
 			imcb_error(ic, "OAuth failure");
@@ -576,7 +582,8 @@ static struct groupchat *jabber_chat_join_(struct im_connection *ic, const char 
 		imcb_error(ic, "Already present in chat `%s'", room);
 	} else {
 		/* jabber_chat_join without the underscore is the conference.c one */
-		return jabber_chat_join(ic, room, final_nick, set_getstr(sets, "password"));
+		return jabber_chat_join(ic, room, final_nick, set_getstr(sets, "password"),
+		                        set_getbool(sets, "always_use_nicks"));
 	}
 
 	return NULL;
@@ -585,6 +592,21 @@ static struct groupchat *jabber_chat_join_(struct im_connection *ic, const char 
 static struct groupchat *jabber_chat_with_(struct im_connection *ic, char *who)
 {
 	return jabber_chat_with(ic, who);
+}
+
+static void jabber_chat_list_(struct im_connection *ic, const char *server)
+{
+	struct jabber_data *jd = ic->proto_data;
+
+	if (server && *server) {
+		jabber_iq_disco_muc(ic, server);
+	} else if (jd->muc_host && *jd->muc_host) {
+		jabber_iq_disco_muc(ic, jd->muc_host);
+	} else {
+		/* throw an error here, don't query conference.[server] directly.
+		 * for things like jabber.org it gets you 18000 results of garbage */
+		imcb_error(ic, "Please specify a server name such as `conference.%s'", jd->server);
+	}
 }
 
 static void jabber_chat_msg_(struct groupchat *c, char *message, int flags)
@@ -685,6 +707,8 @@ static int jabber_send_typing(struct im_connection *ic, char *who, int typing)
 
 void jabber_chat_add_settings(account_t *acc, set_t **head)
 {
+	set_add(head, "always_use_nicks", "false", set_eval_bool, NULL);
+
 	/* Meh. Stupid room passwords. Not trying to obfuscate/hide
 	   them from the user for now. */
 	set_add(head, "password", NULL, NULL, NULL);
@@ -692,6 +716,8 @@ void jabber_chat_add_settings(account_t *acc, set_t **head)
 
 void jabber_chat_free_settings(account_t *acc, set_t **head)
 {
+	set_del(head, "always_use_nicks");
+
 	set_del(head, "password");
 }
 
@@ -758,6 +784,7 @@ void jabber_initmodule()
 	ret->chat_leave = jabber_chat_leave_;
 	ret->chat_join = jabber_chat_join_;
 	ret->chat_with = jabber_chat_with_;
+	ret->chat_list = jabber_chat_list_;
 	ret->chat_add_settings = jabber_chat_add_settings;
 	ret->chat_free_settings = jabber_chat_free_settings;
 	ret->keepalive = jabber_keepalive;

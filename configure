@@ -53,10 +53,12 @@ skype=0
 events=glib
 ssl=auto
 
+pam=0
+ldap=0
+
 pie=1
 
 arch=$(uname -s)
-cpu=$(uname -m)
 
 GLIB_MIN_VERSION=2.16
 
@@ -137,6 +139,9 @@ Option		Description				Default
 		(automatically disables other protocol modules)
 --rpc=0/1       Disable/enable RPC plugin interface     $rpc
 
+--pam=0/1	Disable/enable PAM authentication	$pam
+--ldap=0/1	Disable/enable LDAP authentication	$ldap
+
 --doc=0/1	Disable/enable help.txt generation	$doc
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
@@ -199,8 +204,6 @@ INCLUDEDIR=$includedir
 PCDIR=$pcdir
 
 TARGET=$target
-ARCH=$arch
-CPU=$cpu
 
 INSTALL=install -p
 
@@ -248,8 +251,6 @@ cat<<EOF >config.h
 #define RPCPLUGINDIR "$rpcplugindir"
 #define PIDFILE "$pidfile"
 #define IPCSOCKET "$ipcsocket"
-#define ARCH "$arch"
-#define CPU "$cpu"
 EOF
 
 
@@ -347,7 +348,13 @@ if [ -z "$PKG_CONFIG" ]; then
 	PKG_CONFIG=pkg-config
 fi
 
-if $PKG_CONFIG --version > /dev/null 2>/dev/null && $PKG_CONFIG glib-2.0; then
+if ! $PKG_CONFIG --version > /dev/null 2>/dev/null; then
+	echo
+	echo 'Cannot find pkg-config, aborting.'
+	exit 1
+fi
+
+if $PKG_CONFIG glib-2.0; then
 	if $PKG_CONFIG glib-2.0 --atleast-version=$GLIB_MIN_VERSION; then
 		cat<<EOF >>Makefile.settings
 EFLAGS+=$($PKG_CONFIG --libs glib-2.0 gmodule-2.0)
@@ -640,6 +647,33 @@ for i in $STORAGES; do
 	STORAGE_OBJS="$STORAGE_OBJS storage_$i.o"
 done
 echo "STORAGE_OBJS="$STORAGE_OBJS >> Makefile.settings
+
+authobjs=
+authlibs=
+if [ "$pam" = 0 ]; then
+	echo '#undef WITH_PAM' >> config.h
+else
+	if ! echo '#include <security/pam_appl.h>' | $CC -E - >/dev/null 2>/dev/null; then
+		echo 'Cannot find libpam development libraries, aborting. (Install libpam0g-dev?)'
+		exit 1
+	fi
+	echo '#define WITH_PAM' >> config.h
+	authobjs=$authobjs'auth_pam.o '
+	authlibs=$authlibs'-lpam '
+fi
+if [ "$ldap" = 0 ]; then
+	echo '#undef WITH_LDAP' >> config.h
+else
+	if ! echo '#include <ldap.h>' | $CC -E - >/dev/null 2>/dev/null; then
+		echo 'Cannot find libldap development libraries, aborting. (Install libldap2-dev?)'
+		exit 1
+	fi
+	echo '#define WITH_LDAP' >> config.h
+	authobjs=$authobjs'auth_ldap.o '
+	authlibs=$authlibs'-lldap '
+fi
+echo AUTH_OBJS=$authobjs >> Makefile.settings
+echo EFLAGS+=$authlibs >> Makefile.settings
 
 if [ "$strip" = 0 ]; then
 	echo "STRIP=\# skip strip" >> Makefile.settings;

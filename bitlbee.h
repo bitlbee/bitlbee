@@ -35,10 +35,11 @@ extern "C" {
 #endif
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "3.4.1"
+#define BITLBEE_VERSION "3.4.2"
 #define VERSION BITLBEE_VERSION
 #define BITLBEE_VER(a, b, c) (((a) << 16) + ((b) << 8) + (c))
-#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 4, 1)
+#define BITLBEE_VERSION_CODE BITLBEE_VER(3, 4, 2)
+#define BITLBEE_ABI_VERSION_CODE 1
 
 #define MAX_STRING 511
 
@@ -132,6 +133,7 @@ extern "C" {
 #include "bee.h"
 #include "irc.h"
 #include "storage.h"
+#include "auth.h"
 #include "set.h"
 #include "nogaim.h"
 #include "commands.h"
@@ -153,6 +155,7 @@ typedef struct global {
 	char *conf_file;
 	conf_t *conf;
 	GList *storage; /* The first backend in the list will be used for saving */
+	GList *auth;    /* Authentication backends */
 	char *helpfile;
 	int restart;
 } global_t;
@@ -169,6 +172,7 @@ void root_command_string(irc_t *irc, char *command);
 void root_command(irc_t *irc, char *command[]);
 gboolean root_command_add(const char *command, int params, void (*func)(irc_t *, char **args), int flags);
 gboolean cmd_identify_finish(gpointer data, gint fd, b_input_condition cond);
+void cmd_chat_list_finish(struct im_connection *ic);
 gboolean bitlbee_shutdown(gpointer data, gint fd, b_input_condition cond);
 
 char *set_eval_root_nick(set_t *set, char *new_nick);
