@@ -103,16 +103,6 @@
 				</description>
 			</bitlbee-command>
 
-			<bitlbee-command name="yahoo">
-				<syntax>account add yahoo &lt;handle&gt; [&lt;password&gt;]</syntax>
-
-				<description>
-					<para>
-						For Yahoo! connections there are no special arguments.
-					</para>
-				</description>
-			</bitlbee-command>
-
 		</bitlbee-command>
 
 		<bitlbee-command name="del">

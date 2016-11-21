@@ -438,11 +438,10 @@ static void cmd_account(irc_t *irc, char **cmd)
 		prpl = find_protocol(cmd[2]);
 
 		if (prpl == NULL) {
-			if (is_protocol_disabled(cmd[2])) {
-				irc_rootmsg(irc, "Protocol disabled in global config");
-			} else {
-				irc_rootmsg(irc, "Unknown protocol");
-			}
+			char *msg = explain_unknown_protocol(cmd[2]);
+			irc_rootmsg(irc, "Unknown protocol");
+			irc_rootmsg(irc, msg);
+			g_free(msg);
 			return;
 		}
 
@@ -591,8 +590,11 @@ static void cmd_account(irc_t *irc, char **cmd)
 			irc_rootmsg(irc, "Enter password for account %s "
 			            "first (use /OPER)", a->tag);
 		} else if (a->prpl == &protocol_missing) {
-			irc_rootmsg(irc, "Protocol `%s' not recognised (plugin may be missing or not running?)",
-			            set_getstr(&a->set, "_protocol_name"));
+			char *proto = set_getstr(&a->set, "_protocol_name");
+			char *msg = explain_unknown_protocol(proto);
+			irc_rootmsg(irc, "Unknown protocol `%s'", proto);
+			irc_rootmsg(irc, msg);
+			g_free(msg);
 		} else {
 			account_on(irc->b, a);
 		}

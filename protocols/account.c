@@ -71,6 +71,11 @@ account_t *account_add(bee_t *bee, struct prpl *prpl, char *user, char *pass)
 	s->flags |= SET_NOSAVE | ACC_SET_OFFLINE_ONLY | ACC_SET_LOCKABLE;
 	set_setstr(&a->set, "username", user);
 
+	if (prpl == &protocol_missing) {
+		s = set_add(&a->set, "server", NULL, set_eval_account, a);
+		s->flags |= SET_NOSAVE | SET_HIDDEN | ACC_SET_OFFLINE_ONLY | ACC_SET_ONLINE_ONLY;
+	}
+
 	/* Hardcode some more clever tag guesses. */
 	strcpy(tag, prpl->name);
 	if (strcmp(prpl->name, "oscar") == 0) {

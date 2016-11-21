@@ -1013,7 +1013,7 @@ static char *set_eval_room_account(set_t *set, char *value)
 
 	if (!(acc = account_get(ic->irc->b, value))) {
 		return SET_INVALID;
-	} else if (!acc->prpl->chat_join) {
+	} else if (!acc->prpl->chat_join && acc->prpl != &protocol_missing) {
 		irc_rootmsg(ic->irc, "Named chatrooms not supported on that account.");
 		return SET_INVALID;
 	}

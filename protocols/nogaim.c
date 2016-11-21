@@ -195,11 +195,48 @@ gboolean is_protocol_disabled(const char *name)
 	return g_list_find_custom(disabled_protocols, name, proto_name_cmp) != NULL;
 }
 
+/* Returns heap allocated string with text attempting to explain why a protocol is missing 
+ * Free the return value with g_free() */
+char *explain_unknown_protocol(const char *name)
+{
+	char *extramsg = NULL;
+
+	if (is_protocol_disabled(name)) {
+		return g_strdup("Protocol disabled in the global config (bitlbee.conf)");
+	}
+
+	if (strcmp(name, "yahoo") == 0) {
+		return g_strdup("The old yahoo protocol is gone, try the funyahoo++ libpurple plugin instead.");
+	}
+
+#ifdef WITH_PURPLE
+	if ((strcmp(name, "msn") == 0) ||
+	    (strcmp(name, "loubserp-mxit") == 0) ||
+	    (strcmp(name, "myspace") == 0)) {
+		return g_strdup("This protocol has been removed from your libpurple version.");
+	}
+
+	if (strcmp(name, "hipchat") == 0) {
+		return g_strdup("This account type isn't supported by libpurple's jabber.");
+	}
+
+#else
+	if (strcmp(name, "aim") == 0 || strcmp(name, "icq") == 0) {
+		return g_strdup("This account uses libpurple specific aliases for oscar. "
+		                "Re-add the account with `account add oscar ...'");
+	}
+
+	extramsg = "If this is a libpurple plugin, you might need to install bitlbee-libpurple instead.";
+#endif
+	return g_strconcat("The protocol plugin is not installed or could not be loaded. "
+	                   "Use the `plugins' command to list available protocols. ",
+	                   extramsg, NULL);
+}
+
 void nogaim_init()
 {
 	extern void msn_initmodule();
 	extern void oscar_initmodule();
-	extern void byahoo_initmodule();
 	extern void jabber_initmodule();
 	extern void twitter_initmodule();
 	extern void purple_initmodule();
@@ -211,10 +248,6 @@ void nogaim_init()
 
 #ifdef WITH_OSCAR
 	oscar_initmodule();
-#endif
-
-#ifdef WITH_YAHOO
-	byahoo_initmodule();
 #endif
 
 #ifdef WITH_JABBER
