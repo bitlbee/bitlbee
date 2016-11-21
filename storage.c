@@ -32,6 +32,10 @@ extern storage_t storage_xml;
 
 static GList *storage_backends = NULL;
 
+const struct prpl protocol_missing = {
+	.name = "_unknown",
+};
+
 void register_storage_backend(storage_t *backend)
 {
 	storage_backends = g_list_append(storage_backends, backend);

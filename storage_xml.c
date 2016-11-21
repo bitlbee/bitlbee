@@ -59,7 +59,7 @@ static void xml_init(void)
 	}
 }
 
-static void handle_settings(struct xt_node *node, set_t **head, gboolean add_unknowns)
+static void handle_settings(struct xt_node *node, set_t **head)
 {
 	struct xt_node *c;
 	struct set *s;
@@ -69,13 +69,6 @@ static void handle_settings(struct xt_node *node, set_t **head, gboolean add_unk
 		char *locked = xt_find_attr(c, "locked");
 
 		if (!name) {
-			continue;
-		}
-
-		if (add_unknowns && !set_find(head, name)) {
-			s = set_add(head, name, NULL, NULL, NULL);
-			s->flags |= ACC_SET_ONLINE_ONLY;
-			s->value = g_strdup(c->text);
 			continue;
 		}
 
@@ -95,6 +88,25 @@ static void handle_settings(struct xt_node *node, set_t **head, gboolean add_unk
 	}
 }
 
+/* Use for unsupported/not-found protocols. Save settings as-is but don't allow changes. */
+static void handle_settings_raw(struct xt_node *node, set_t **head)
+{
+	struct xt_node *c;
+
+	for (c = node->children; (c = xt_find_node(c, "setting")); c = c->next) {
+		char *name = xt_find_attr(c, "name");
+
+		if (!name) {
+			continue;
+		}
+
+		set_t *s = set_add(head, name, NULL, NULL, NULL);
+		set_setstr(head, name, c->text);
+		s->flags |= SET_HIDDEN |
+		            ACC_SET_OFFLINE_ONLY | ACC_SET_ONLINE_ONLY;
+	}
+}
+
 static xt_status handle_account(struct xt_node *node, gpointer data)
 {
 	struct xml_parsedata *xd = data;
@@ -105,7 +117,6 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	struct prpl *prpl = NULL;
 	account_t *acc;
 	struct xt_node *c;
-	gboolean is_unknown = FALSE;
 
 	handle = xt_find_attr(node, "handle");
 	pass_b64 = xt_find_attr(node, "password");
@@ -119,9 +130,8 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 		prpl = find_protocol(protocol);
 		if (!prpl) {
 			irc_rootmsg(xd->irc, "Warning: Protocol not found: `%s'", protocol);
-			prpl = make_unknown_protocol(protocol);
+			prpl = (struct prpl*) &protocol_missing;
 		}
-		is_unknown = (prpl->options & PRPL_OPT_UNKNOWN_PROTOCOL) != 0;
 		local = protocol_account_islocal(protocol);
 	}
 
@@ -157,11 +167,20 @@ static xt_status handle_account(struct xt_node *node, gpointer data)
 	if (locked && !g_strcasecmp(locked, "true")) {
 		acc->flags |= ACC_FLAG_LOCKED;
 	}
+	if (prpl == &protocol_missing) {
+		set_t *s = set_add(&acc->set, "_protocol_name", protocol, NULL, NULL);
+		s->flags |= SET_HIDDEN | SET_NOSAVE |
+			    ACC_SET_OFFLINE_ONLY | ACC_SET_ONLINE_ONLY;
+	}
 
 	g_free(pass_cr);
 	g_free(password);
 
-	handle_settings(node, &acc->set, is_unknown);
+	if (prpl == &protocol_missing) {
+		handle_settings_raw(node, &acc->set);
+	} else {
+		handle_settings(node, &acc->set);
+	}
 
 	for (c = node->children; (c = xt_find_node(c, "buddy")); c = c->next) {
 		char *handle, *nick;
@@ -200,7 +219,7 @@ static xt_status handle_channel(struct xt_node *node, gpointer data)
 		set_setstr(&ic->set, "type", type);
 	}
 
-	handle_settings(node, &ic->set, FALSE);
+	handle_settings(node, &ic->set);
 
 	return XT_HANDLED;
 }
@@ -278,7 +297,7 @@ static storage_status_t xml_load_real(irc_t *irc, const char *my_nick, const cha
 		ret = STORAGE_OK;
 	}
 
-	handle_settings(node, &xd->irc->b->set, FALSE);
+	handle_settings(node, &xd->irc->b->set);
 
 error:
 	xt_free(xp);
@@ -350,7 +369,11 @@ struct xt_node *xml_generate(irc_t *irc)
 		}
 
 		cur = xt_new_node("account", NULL, NULL);
-		xt_add_attr(cur, "protocol", acc->prpl->name);
+		if (acc->prpl == &protocol_missing) {
+			xt_add_attr(cur, "protocol", set_getstr(&acc->set, "_protocol_name"));
+		} else {
+			xt_add_attr(cur, "protocol", acc->prpl->name);
+		}
 		xt_add_attr(cur, "handle", acc->user);
 		xt_add_attr(cur, "password", pass_b64);
 		xt_add_attr(cur, "autoconnect", acc->auto_connect ? "true" : "false");

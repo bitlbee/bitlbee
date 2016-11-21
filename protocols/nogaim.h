@@ -158,9 +158,6 @@ typedef enum {
 
 	/* The protocol is not suitable for OTR, see OPT_NOOTR */
 	PRPL_OPT_NOOTR = 1 << 12,
-
-	/* This prpl is a placeholder for a missing protocol */
-	PRPL_OPT_UNKNOWN_PROTOCOL = 1 << 13,
 } prpl_options_t;
 
 struct prpl {
@@ -323,7 +320,6 @@ G_MODULE_EXPORT GList *get_protocols_disabled();
 G_MODULE_EXPORT GSList *get_connections();
 G_MODULE_EXPORT struct prpl *find_protocol(const char *name);
 G_MODULE_EXPORT gboolean is_protocol_disabled(const char *name);
-G_MODULE_EXPORT struct prpl *make_unknown_protocol(const char *name);
 G_MODULE_EXPORT char *explain_unknown_protocol(const char *name);
 /* When registering a new protocol, you should allocate space for a new prpl
  * struct, initialize it (set the function pointers to point to your

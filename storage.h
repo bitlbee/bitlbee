@@ -62,4 +62,6 @@ storage_status_t storage_remove(const char *nick);
 void register_storage_backend(storage_t *);
 G_GNUC_MALLOC GList *storage_init(const char *primary, char **migrate);
 
+extern const struct prpl protocol_missing;
+
 #endif /* __STORAGE_H__ */

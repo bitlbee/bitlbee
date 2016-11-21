@@ -159,7 +159,6 @@ GList *get_plugins()
 
 GList *protocols = NULL;
 GList *disabled_protocols = NULL;
-static struct prpl *unknown_prpl;
 
 void register_protocol(struct prpl *p)
 {
@@ -189,14 +188,6 @@ struct prpl *find_protocol(const char *name)
 {
 	GList *gl = g_list_find_custom(protocols, name, proto_name_cmp);
 	return gl ? gl->data: NULL;
-}
-
-struct prpl *make_unknown_protocol(const char *name)
-{
-	struct prpl *ret = g_memdup(unknown_prpl, sizeof(struct prpl));
-	ret->name = g_strdup(name);
-	register_protocol(ret);
-	return ret;
 }
 
 gboolean is_protocol_disabled(const char *name)
@@ -249,9 +240,6 @@ void nogaim_init()
 	extern void jabber_initmodule();
 	extern void twitter_initmodule();
 	extern void purple_initmodule();
-	extern void unknown_prpl_initmodule();
-
-	unknown_prpl_initmodule(&unknown_prpl);
 
 #ifdef WITH_MSN
 	msn_initmodule();
