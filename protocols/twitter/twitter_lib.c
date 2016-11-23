@@ -233,7 +233,7 @@ static json_value *twitter_parse_response(struct im_connection *ic, struct http_
 
 	if ((ret = json_parse(req->reply_body, req->body_size)) == NULL) {
 		imcb_error(ic, "Could not retrieve %s: %s",
-		           path, "XML parse error");
+		           path, "JSON parse error");
 	}
 	return ret;
 }
