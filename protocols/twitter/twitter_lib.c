@@ -709,8 +709,7 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 	if (!((entities = json_o_get(node, "entities")) && entities->type == json_object))
 		return;
 	if ((quoted = json_o_get(node, "quoted_status")) && quoted->type == json_object) {
-		/* New "retweets with comments" feature. Note that this info
-		 * seems to be included in the streaming API only! Grab the
+		/* New "retweets with comments" feature. Grab the
 		 * full message and try to insert it when we run into the
 		 * Tweet entity. */
 		struct twitter_xml_status *txs = twitter_xt_get_status(quoted);
@@ -750,7 +749,10 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 			const char *full = json_o_str(v->u.array.values[i], "expanded_url");
 			char *pos, *new;
 
-			if (!kort || !disp || !(pos = strstr(*text, kort))) {
+			/* Skip if a required field is missing, if the t.co URL is not in fact 
+			   in the Tweet at all, or if the full-ish one *is* in it already
+			   (dupes appear, especially in streaming API). */
+			if (!kort || !disp || !(pos = strstr(*text, kort)) || strstr(*text, disp)) {
 				continue;
 			}
 			if (quote_url && strstr(full, quote_url)) {
