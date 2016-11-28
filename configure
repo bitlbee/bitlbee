@@ -40,7 +40,7 @@ purple=0
 
 doc=1
 debug=0
-strip=1
+strip=0
 gcov=0
 asan=0
 plugins=1
@@ -286,7 +286,7 @@ if [ "$debug" = "1" ]; then
 	echo 'DEBUG=1' >> Makefile.settings
 	CFLAGS="$CFLAGS -g3 -DDEBUG -O0"
 else
-	[ -z "$CFLAGS" ] && CFLAGS="-O2 -fno-strict-aliasing"
+	[ -z "$CFLAGS" ] && CFLAGS="-g -O2 -fno-strict-aliasing"
 fi
 
 if [ "$pie" = "1" ]; then

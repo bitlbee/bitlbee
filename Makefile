@@ -181,7 +181,7 @@ $(objects): Makefile Makefile.settings config.h
 $(OUTFILE): $(objects) $(subdirs)
 	@echo '*' Linking $(OUTFILE)
 	@$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LDFLAGS_BITLBEE) $(LDFLAGS) $(EFLAGS)
-ifndef DEBUG
+ifneq ($(firstword $(STRIP)), \#)
 	@echo '*' Stripping $(OUTFILE)
 	@-$(STRIP) $(OUTFILE)
 endif
