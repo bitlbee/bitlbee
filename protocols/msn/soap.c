@@ -212,9 +212,9 @@ static void msn_soap_debug_print(const char *headers, const char *payload)
 
 	if (headers) {
 		if ((s = strstr(headers, "\r\n\r\n"))) {
-			write(2, headers, s - headers + 4);
+			fwrite(headers, s - headers + 4, 1, stderr);
 		} else {
-			write(2, headers, strlen(headers));
+			fwrite(headers, strlen(headers), 1, stderr);
 		}
 	}
 

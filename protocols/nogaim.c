@@ -53,7 +53,7 @@ gboolean load_plugin(char *path)
 {
 	GList *l;
 	struct plugin_info *i;
-	struct plugin_info *info;
+	struct plugin_info *info = NULL;
 	struct plugin_info * (*info_function) (void) = NULL;
 	void (*init_function) (void);
 

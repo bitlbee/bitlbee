@@ -179,7 +179,7 @@ void msn_queue_feed(struct msn_data *h, char *bytes, int st)
 
 	if (getenv("BITLBEE_DEBUG")) {
 		fprintf(stderr, "\n\x1b[92m<<< ");
-		write(2, bytes , st);
+		fwrite(bytes, st, 1, stderr);
 		fprintf(stderr, "\x1b[97m");
 	}
 }

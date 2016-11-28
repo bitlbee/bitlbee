@@ -146,12 +146,17 @@ int main(int argc, char *argv[])
 	    (!getuid() || !geteuid())) {
 		struct passwd *pw = NULL;
 		pw = getpwnam(global.conf->user);
-		if (pw) {
-			initgroups(global.conf->user, pw->pw_gid);
-			setgid(pw->pw_gid);
-			setuid(pw->pw_uid);
-		} else {
-			log_message(LOGLVL_WARNING, "Failed to look up user %s.", global.conf->user);
+		if (!pw) {
+			log_message(LOGLVL_ERROR, "Failed to look up user %s.", global.conf->user);
+
+		} else if (initgroups(global.conf->user, pw->pw_gid) != 0) {
+			log_message(LOGLVL_ERROR, "initgroups: %s.", strerror(errno));
+
+		} else if (setgid(pw->pw_gid) != 0) {
+			log_message(LOGLVL_ERROR, "setgid(%d): %s.", pw->pw_gid, strerror(errno));
+
+		} else if (setuid(pw->pw_uid) != 0) {
+			log_message(LOGLVL_ERROR, "setuid(%d): %s.", pw->pw_uid, strerror(errno));
 		}
 	}
 
@@ -280,9 +285,10 @@ void sighandler_shutdown_setup()
 /* Signal handler for SIGTERM and SIGINT */
 static void sighandler_shutdown(int signal)
 {
+	int unused G_GNUC_UNUSED;
 	/* Write a single null byte to the pipe, just to send a message to the main loop.
 	 * This gets handled by bitlbee_shutdown (the b_input_add callback for this pipe) */
-	write(shutdown_pipe.fd[1], "", 1);
+	unused = write(shutdown_pipe.fd[1], "", 1);
 }
 
 /* Signal handler for SIGSEGV
@@ -291,13 +297,14 @@ static void sighandler_shutdown(int signal)
 static void sighandler_crash(int signal)
 {
 	GSList *l;
+	int unused G_GNUC_UNUSED;
 	const char *message = "ERROR :BitlBee crashed! (SIGSEGV received)\r\n";
 	int len = strlen(message);
 
 	for (l = irc_connection_list; l; l = l->next) {
 		irc_t *irc = l->data;
 		sock_make_blocking(irc->fd);
-		write(irc->fd, message, len);
+		unused = write(irc->fd, message, len);
 	}
 
 	raise(signal);
