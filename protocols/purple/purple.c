@@ -1386,16 +1386,30 @@ static void prplcb_roomlist_set_fields(PurpleRoomlist *list, GList *fields)
 	}
 }
 
+static char *prplcb_roomlist_get_room_name(PurpleRoomlist *list, PurpleRoomlistRoom *room)
+{
+	struct im_connection *ic = purple_ic_by_pa(list->account);
+	struct purple_data *pd = ic->proto_data;
+	PurplePlugin *prpl = purple_plugins_find_with_id(pd->account->protocol_id);
+	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
+
+	if (pi && pi->roomlist_room_serialize) {
+		return pi->roomlist_room_serialize(room);
+	} else {
+		return g_strdup(purple_roomlist_room_get_name(room));
+	}
+}
+
 static void prplcb_roomlist_add_room(PurpleRoomlist *list, PurpleRoomlistRoom *room)
 {
 	bee_chat_info_t *ci;
-	const char *title;
+	char *title;
 	const char *topic;
 	GList *fields;
 	struct purple_roomlist_data *rld = list->ui_data;
 
 	fields = purple_roomlist_room_get_fields(room);
-	title = purple_roomlist_room_get_name(room);
+	title = prplcb_roomlist_get_room_name(list, room);
 
 	if (rld->topic >= 0) {
 		topic = g_list_nth_data(fields, rld->topic);
@@ -1404,7 +1418,7 @@ static void prplcb_roomlist_add_room(PurpleRoomlist *list, PurpleRoomlistRoom *r
 	}
 
 	ci = g_new(bee_chat_info_t, 1);
-	ci->title = g_strdup(title);
+	ci->title = title;
 	ci->topic = g_strdup(topic);
 	rld->chats = g_slist_prepend(rld->chats, ci);
 }
