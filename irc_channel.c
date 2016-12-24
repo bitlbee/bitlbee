@@ -637,7 +637,7 @@ char *irc_channel_name_gen(irc_t *irc, const char *hint)
 
 	irc_channel_name_strip(name);
 
-	if (set_getbool(&irc->b->set, "lcnicks")) {
+	if (set_getbool(&irc->b->set, "nick_lowercase")) {
 		nick_lc(irc, name + 1);
 	}
 

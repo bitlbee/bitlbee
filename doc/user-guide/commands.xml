@@ -1036,17 +1036,6 @@
 
 	</bitlbee-setting>
 
-	<bitlbee-setting name="lcnicks" type="boolean" scope="global">
-		<default>true</default>
-
-		<description>
-			<para>
-				Hereby you can change whether you want all lower case nick names or leave the case as it intended by your peer.
-			</para>
-		</description>
-
-	</bitlbee-setting>
-
 	<bitlbee-setting name="local_display_name" type="boolean" scope="account">
 		<default>false</default>
 
@@ -1211,6 +1200,36 @@
 				With this setting set to <emphasis>full_name</emphasis>, the person's full name is used to generate a nickname. Or if you don't like long nicknames, set this setting to <emphasis>first_name</emphasis> instead and only the first word will be used. Note that the full name can be full of non-ASCII characters which will be stripped off.
 			</para>
 		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="nick_lowercase" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				If enabled, all nicknames are turned into lower case.
+			</para>
+
+			<para>
+				See also the <emphasis>nick_underscores</emphasis> setting. This setting was previously known as <emphasis>lcnicks</emphasis>.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="nick_underscores" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				If enabled, spaces in nicknames are turned into underscores instead of being stripped.
+			</para>
+
+			<para>
+				See also the <emphasis>nick_lowercase</emphasis> setting.
+			</para>
+		</description>
+
 	</bitlbee-setting>
 
 	<bitlbee-setting name="oauth" type="boolean" scope="account">

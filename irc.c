@@ -112,8 +112,9 @@ irc_t *irc_new(int fd)
 	s = set_add(&b->set, "handle_unknown", "add_channel", NULL, irc);
 	s = set_add(&b->set, "last_version", "0", NULL, irc);
 	s->flags |= SET_HIDDEN;
-	s = set_add(&b->set, "lcnicks", "true", set_eval_bool, irc);
 	s = set_add(&b->set, "nick_format", "%-@nick", NULL, irc);
+	s = set_add(&b->set, "nick_lowercase", "false", set_eval_bool, irc);
+	s = set_add(&b->set, "nick_underscores", "false", set_eval_bool, irc);
 	s = set_add(&b->set, "offline_user_quits", "true", set_eval_bool, irc);
 	s = set_add(&b->set, "ops", "both", set_eval_irc_channel_ops, irc);
 	s = set_add(&b->set, "paste_buffer", "false", set_eval_bool, irc);
