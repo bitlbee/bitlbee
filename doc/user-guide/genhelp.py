@@ -72,7 +72,11 @@ def fix_tree(tag, debug=False, lvl=''):
 # Main logic
 
 def process_file(filename, parent=None):
-    tree = ET.parse(open(filename)).getroot()
+    try:
+        tree = ET.parse(open(filename)).getroot()
+    except:
+        sys.stderr.write("\nException while processing %s\n" % filename)
+        raise
     fix_tree(tree)
     return parse_tag(tree, parent)
 
