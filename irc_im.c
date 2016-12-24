@@ -633,10 +633,6 @@ static gboolean bee_irc_chat_free(bee_t *bee, struct groupchat *c)
 		return FALSE;
 	}
 
-	if (ic->flags & IRC_CHANNEL_JOINED) {
-		irc_channel_printf(ic, "Cleaning up channel, bye!");
-	}
-
 	ic->data = NULL;
 	c->ui_data = NULL;
 	irc_channel_del_user(ic, ic->irc->user, IRC_CDU_KICK, "Chatroom closed by server");
