@@ -1163,35 +1163,70 @@ static void prplstr(GList *prpls, GString *gstr)
 	g_list_free(prpls);
 }
 
+static void cmd_plugins_info(irc_t *irc, char **cmd)
+{
+	GList *l;
+	struct plugin_info *info;
+
+	MIN_ARGS(2);
+
+	for (l = get_plugins(); l; l = l->next) {
+		info = l->data;
+		if (g_strcasecmp(cmd[2], info->name) == 0) {
+			break;
+		}
+	}
+
+	if (!l) {
+		return;
+	}
+
+	irc_rootmsg(irc, "%s:", info->name);
+	irc_rootmsg(irc, "  Version: %s", info->version);
+
+	if (info->description) {
+		irc_rootmsg(irc, "  Description: %s", info->description);
+	}
+
+	if (info->author) {
+		irc_rootmsg(irc, "  Author: %s", info->author);
+	}
+
+	if (info->url) {
+		irc_rootmsg(irc, "  URL: %s", info->url);
+	}
+}
+
 static void cmd_plugins(irc_t *irc, char **cmd)
 {
 	GList *prpls;
 	GString *gstr;
 
+	if (cmd[1] && g_strcasecmp(cmd[1], "info") == 0) {
+		cmd_plugins_info(irc, cmd);
+		return;
+	}
+
 #ifdef WITH_PLUGINS
 	GList *l;
 	struct plugin_info *info;
+	char *format;
+
+	if (strchr(irc->umode, 'b') != NULL) {
+		format = "%s\t%s";
+	} else {
+		format = "%-30s  %s";
+	}
+
+	irc_rootmsg(irc, format, "Plugin", "Version");
 
 	for (l = get_plugins(); l; l = l->next) {
 		info = l->data;
-		irc_rootmsg(irc, "%s:", info->name);
-		irc_rootmsg(irc, "  Version: %s", info->version);
-
-		if (info->description) {
-			irc_rootmsg(irc, "  Description: %s", info->description);
-		}
-
-		if (info->author) {
-			irc_rootmsg(irc, "  Author: %s", info->author);
-		}
-
-		if (info->url) {
-			irc_rootmsg(irc, "  URL: %s", info->url);
-		}
-
-		irc_rootmsg(irc, "");
+		irc_rootmsg(irc, format, info->name, info->version);
 	}
 #endif
+
+	irc_rootmsg(irc, "");
 
 	gstr = g_string_new(NULL);
 	prpls = get_protocols();

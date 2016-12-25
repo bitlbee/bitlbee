@@ -1868,11 +1868,15 @@
 
 	<bitlbee-command name="plugins">
 		<short-description>List all the external plugins and protocols</short-description>
-		<syntax>plugins</syntax>
+		<syntax>plugins [info &lt;name&gt;]</syntax>
 
 		<description>
 			<para>
 				This gives you a list of all the external plugins and protocols.
+			</para>
+
+			<para>
+				Use the <emphasis>info</emphasis> subcommand to get more details about a plugin.
 			</para>
 		</description>
 
