@@ -20,7 +20,7 @@
 
 			<description>
 				<para>
-					Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ), Yahoo and Twitter. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
+					Adds an account on the given server with the specified protocol, username and password to the account list. For a list of supported protocols, use the <emphasis>plugins</emphasis> command. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
 				</para>
 
 				<para>
@@ -337,7 +337,7 @@
 
 		<description>
 			<para>
-				Requests IM-network-specific information about the specified user. The amount of information you'll get differs per protocol. For some protocols (ATM Yahoo! and MSN) it'll give you an URL which you can visit with a normal web browser to get the information.
+				Requests IM-network-specific information about the specified user. The amount of information you'll get differs per protocol. For some protocols it'll give you an URL which you can visit with a normal web browser to get the information.
 			</para>
 		</description>
 
@@ -1052,7 +1052,7 @@
 
 		<description>
 			<para>
-				Some protocols (MSN, Yahoo!, GTalk) can notify via IM about new e-mail. Since most people use their Hotmail/Yahoo! addresses as a spam-box, this is disabled default. If you want these notifications, you can enable this setting.
+				Some protocols can notify via IM about new e-mail. If you want these notifications, you can enable this setting.
 			</para>
 		</description>
 

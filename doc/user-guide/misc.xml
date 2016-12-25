@@ -76,9 +76,12 @@ Then, just use the ordinary IRC <emphasis>/invite</emphasis> command to invite m
 </para>
 
 <para>
-Some protocols (like Jabber) also support named groupchats. BitlBee now supports these too. You can use the <emphasis>chat add</emphasis> command to join them. See <emphasis>help chat add</emphasis> for more information.
+Some protocols (like Jabber) also support named groupchats. BitlBee supports these too. You can use the <emphasis>chat add</emphasis> command to join them. See <emphasis>help chat add</emphasis> for more information.
 </para>
 
+<para>
+If you don't know the name of a named groupchat, you can try the <emphasis>chat list</emphasis> command to get a list of chatrooms from a server. See <emphasis>help chat list</emphasis> for usage instructions.
+</para>
 </sect1>
 
 <sect1 id="away">
@@ -264,6 +267,40 @@ the <emphasis>-</emphasis> modifier. For example, you may want to leave out
 everything after the @. <emphasis>%-@handle</emphasis> will expand to
 everything in the handle up to the first @.
 </para>
+
+</sect1>
+
+<sect1 id="identify_methods">
+<title>Identifying to your BitlBee account</title>
+
+<para>There are several methods to identify (log in) to your registered BitlBee account. All of these are equivalent:</para>
+
+<variablelist>
+	<varlistentry>
+		<term>The 'identify' command</term>
+		<listitem><para>sent to &amp;bitlbee or root. See <emphasis>help identify</emphasis> for details.</para></listitem>
+	</varlistentry>
+	<varlistentry>
+		<term>/msg nickserv identify</term>
+		<listitem><para>Same as above, but sent to NickServ. Useful with some auto-identify scripts.</para></listitem>
+	</varlistentry>
+	<varlistentry>
+		<term>/nickserv or /ns</term>
+		<listitem><para>Same as above, but using the command aliases to NickServ.</para></listitem>
+	</varlistentry>
+	<varlistentry>
+		<term>Server password</term>
+		<listitem><para>A field in the server connection settings of your irc client.</para></listitem>
+	</varlistentry>
+	<varlistentry>
+		<term>SASL PLAIN</term>
+		<listitem><para>A newer method, good choice if your client supports it. (Note: "SASL" is <emphasis>not</emphasis> related to "SSL")</para></listitem>
+	</varlistentry>
+</variablelist>
+
+<para>To configure your client to auto-identify, the last two methods are recommended. SASL if you have it, but server password is often the easiest.</para>
+
+<para>Note: If you changed bitlbee.conf to have <emphasis>AuthMode = Closed</emphasis>, server password will be used for that instead. If you have never heard of that setting before, you can ignore it and just use it.</para>
 
 </sect1>
 
