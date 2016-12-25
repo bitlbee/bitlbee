@@ -1640,6 +1640,10 @@ static void purple_ui_init()
 	}
 }
 
+/* borrowing this semi-private function
+ * TODO: figure out a better interface later (famous last words) */
+gboolean plugin_info_add(struct plugin_info *info);
+
 void purple_initmodule()
 {
 	struct prpl funcs;
@@ -1740,6 +1744,7 @@ void purple_initmodule()
 		PurplePlugin *prot = prots->data;
 		PurplePluginProtocolInfo *pi = prot->info->extra_info;
 		struct prpl *ret;
+		struct plugin_info *info;
 
 		/* If we already have this one (as a native module), don't
 		   add a libpurple duplicate. */
@@ -1774,6 +1779,16 @@ void purple_initmodule()
 			ret->data = NULL;
 			register_protocol(ret);
 		}
+
+		info = g_new0(struct plugin_info, 1);
+		info->abiver = BITLBEE_ABI_VERSION_CODE;
+		info->name = ret->name;
+		info->version = prot->info->version;
+		info->description = prot->info->description;
+		info->author = prot->info->author;
+		info->url = prot->info->homepage;
+
+		plugin_info_add(info);
 	}
 
 	g_string_append(help, "\n\nFor used protocols, more information about available "

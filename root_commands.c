@@ -1221,8 +1221,17 @@ static void cmd_plugins(irc_t *irc, char **cmd)
 	irc_rootmsg(irc, format, "Plugin", "Version");
 
 	for (l = get_plugins(); l; l = l->next) {
+		char *c;
 		info = l->data;
-		irc_rootmsg(irc, format, info->name, info->version);
+
+		/* some purple plugins like to include several versions separated by newlines... */
+		if ((c = strchr(info->version, '\n'))) {
+			char *version = g_strndup(info->version, c - info->version);
+			irc_rootmsg(irc, format, info->name, version);
+			g_free(version);
+		} else {
+			irc_rootmsg(irc, format, info->name, info->version);
+		}
 	}
 #endif
 
