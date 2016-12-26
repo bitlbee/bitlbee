@@ -1513,7 +1513,7 @@ struct im_connection *check_imc(void *opdata, const char *accountname,
 				break;
 			}
 		}
-		assert(l != NULL);  /* a match should always be found */
+		g_return_val_if_fail(l, NULL);
 		if (!l) {
 			return NULL;
 		}

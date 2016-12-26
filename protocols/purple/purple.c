@@ -1689,8 +1689,8 @@ void purple_initmodule()
 		return;
 	}
 
-	g_assert((int) B_EV_IO_READ == (int) PURPLE_INPUT_READ);
-	g_assert((int) B_EV_IO_WRITE == (int) PURPLE_INPUT_WRITE);
+	g_return_if_fail((int) B_EV_IO_READ == (int) PURPLE_INPUT_READ);
+	g_return_if_fail((int) B_EV_IO_WRITE == (int) PURPLE_INPUT_WRITE);
 
 	dir = g_strdup_printf("%s/purple", global.conf->configdir);
 	purple_util_set_user_dir(dir);
