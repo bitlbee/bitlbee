@@ -41,7 +41,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	int fd, gret, saddrlen;
 	struct addrinfo hints, *rp;
 	socklen_t ssize = sizeof(struct sockaddr_storage);
-	struct sockaddr_storage saddrs, *saddr = &saddrs;
+	struct sockaddr_storage saddrs = {0}, *saddr = &saddrs;
 	static char errmsg[1024];
 	char *ftlisten = global.conf->ft_listen;
 
