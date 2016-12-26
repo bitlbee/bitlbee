@@ -38,7 +38,7 @@ Description: IRC to other chat networks gateway (using libpurple)
 
 Package: bitlbee-common
 Architecture: all
-Depends: ${misc:Depends}, net-tools, adduser
+Depends: ${misc:Depends}, adduser
 Replaces: bitlbee
 Description: IRC to other chat networks gateway (common files/docs)
  This program can be used as an IRC server which forwards everything you
