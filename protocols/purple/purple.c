@@ -113,6 +113,29 @@ static char *purple_get_account_prpl_id(account_t *acc)
 	return acc->prpl->data;
 }
 
+static gboolean purple_account_should_set_nick(account_t *acc)
+{
+	/* whitelist of protocols that tend to have numeric or meaningless usernames, and should
+	 * always offer the 'alias' as a nick.  this is just so that users don't have to do
+	 * 'account whatever set nick_format %full_name'
+	 */
+	char *whitelist[] = {
+		"prpl-hangouts",
+		"prpl-eionrobb-funyahoo-plusplus",
+		"prpl-icq",
+		NULL,
+	};
+	char **p;
+
+	for (p = whitelist; *p; p++) {
+		if (g_strcmp0(acc->prpl->data, *p) == 0) {
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
 static void purple_init(account_t *acc)
 {
 	char *prpl_id = purple_get_account_prpl_id(acc);
@@ -366,6 +389,10 @@ static void purple_login(account_t *acc)
 	pd->next_request_id = 0;
 	purple_account_set_password(pd->account, acc->pass);
 	purple_sync_settings(acc, pd->account);
+
+	if (purple_account_should_set_nick(acc)) {
+		pd->flags = PURPLE_OPT_SHOULD_SET_NICK;
+	}
 
 	purple_account_set_enabled(pd->account, "BitlBee", TRUE);
 
@@ -902,17 +929,22 @@ static void prplcb_blist_update(PurpleBuddyList *list, PurpleBlistNode *node)
 		PurpleBuddy *bud = (PurpleBuddy *) node;
 		PurpleGroup *group = purple_buddy_get_group(bud);
 		struct im_connection *ic = purple_ic_by_pa(bud->account);
+		struct purple_data *pd = ic->proto_data;
 		PurpleStatus *as;
 		int flags = 0;
+		char *alias = NULL;
 
 		if (ic == NULL) {
 			return;
 		}
 
-		if (bud->server_alias) {
-			imcb_rename_buddy(ic, bud->name, bud->server_alias);
-		} else if (bud->alias) {
-			imcb_rename_buddy(ic, bud->name, bud->alias);
+		alias = bud->server_alias ? : bud->alias;
+
+		if (alias) {
+			imcb_rename_buddy(ic, bud->name, alias);
+			if (pd->flags & PURPLE_OPT_SHOULD_SET_NICK) {
+				imcb_buddy_nick_change(ic, bud->name, alias);
+			}
 		}
 
 		if (group) {
