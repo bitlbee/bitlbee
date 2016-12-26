@@ -762,6 +762,7 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 	PurpleConversation *conv;
 	struct groupchat *gc;
 	GList *info, *l;
+	GString *missing_settings = NULL;
 
 	if (!pi->chat_info || !pi->chat_info_defaults ||
 	    !(info = pi->chat_info(purple_account_get_connection(pd->account)))) {
@@ -787,12 +788,47 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 			g_hash_table_replace(chat_hash, "password", g_strdup(password));
 		} else if (strcmp(pce->identifier, "passwd") == 0) {
 			g_hash_table_replace(chat_hash, "passwd", g_strdup(password));
+		} else {
+			char *key, *value;
+
+			key = g_strdup_printf("purple_%s", pce->identifier);
+			str_reject_chars(key, " -", '_');
+
+			if ((value = set_getstr(sets, key))) {
+				/* sync from bitlbee to the prpl */
+				g_hash_table_replace(chat_hash, (char *) pce->identifier, g_strdup(value));
+			} else if ((value = g_hash_table_lookup(chat_hash, pce->identifier))) {
+				/* if the bitlbee one was empty, sync from prpl to bitlbee */
+				set_setstr(sets, key, value);
+			}
+
+			g_free(key);
+		}
+
+		if (pce->required && !g_hash_table_lookup(chat_hash, pce->identifier)) {
+			if (!missing_settings) {
+				missing_settings = g_string_new(NULL);
+				g_string_printf(missing_settings,
+					"Can't join %s. The following settings are required: ", room);
+			}
+			g_string_append_printf(missing_settings, "%s, ", pce->identifier);
 		}
 
 		g_free(pce);
 	}
 
 	g_list_free(info);
+
+	if (missing_settings) {
+		/* remove the ", " from the end */
+		g_string_truncate(missing_settings, missing_settings->len - 2);
+
+		imcb_error(ic, missing_settings->str);
+
+		g_string_free(missing_settings, TRUE);
+		g_hash_table_destroy(chat_hash);
+		return NULL;
+	}
 
 	/* do this before serv_join_chat to handle cases where prplcb_conv_new is called immediately (not async) */
 	gc = imcb_chat_new(ic, room);
@@ -827,6 +863,61 @@ void purple_chat_list(struct im_connection *ic, const char *server)
 
 		purple_roomlist_ref(list);
 	}
+}
+
+/* handles either prpl->chat_(add|free)_settings depending on the value of 'add' */
+static void purple_chat_update_settings(account_t *acc, set_t **head, gboolean add)
+{
+	PurplePlugin *prpl = purple_plugins_find_with_id((char *) acc->prpl->data);
+	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
+	GList *info, *l;
+
+	if (!pi->chat_info || !pi->chat_info_defaults) {
+		return;
+	}
+
+	/* hack / leap of faith: pass a NULL here because we don't have a connection yet.
+	 * i reviewed all the built-in prpls and a bunch of third-party ones and none
+	 * of them seem to need this parameter at all, so... i hope it never crashes */
+	info = pi->chat_info(NULL);
+
+	for (l = info; l; l = l->next) {
+		struct proto_chat_entry *pce = l->data;
+		char *key;
+
+		if (strcmp(pce->identifier, "handle") == 0 ||
+		    strcmp(pce->identifier, "password") == 0 ||
+		    strcmp(pce->identifier, "passwd") == 0) {
+			/* skip these, they are handled above */
+			g_free(pce);
+			continue;
+		}
+
+		key = g_strdup_printf("purple_%s", pce->identifier);
+		str_reject_chars(key, " -", '_');
+
+		if (add) {
+			set_add(head, key, NULL, NULL, NULL);
+		} else {
+			set_del(head, key);
+		}
+
+		g_free(key);
+		g_free(pce);
+	}
+
+	g_list_free(NULL);
+	g_list_free(info);
+}
+
+static void purple_chat_add_settings(account_t *acc, set_t **head)
+{
+	purple_chat_update_settings(acc, head, TRUE);
+}
+
+static void purple_chat_free_settings(account_t *acc, set_t **head)
+{
+	purple_chat_update_settings(acc, head, FALSE);
 }
 
 void purple_transfer_request(struct im_connection *ic, file_transfer_t *ft, char *handle);
@@ -1766,6 +1857,8 @@ void purple_initmodule()
 	funcs.chat_leave = purple_chat_leave;
 	funcs.chat_join = purple_chat_join;
 	funcs.chat_list = purple_chat_list;
+	funcs.chat_add_settings = purple_chat_add_settings;
+	funcs.chat_free_settings = purple_chat_free_settings;
 	funcs.transfer_request = purple_transfer_request;
 
 	help = g_string_new("BitlBee libpurple module supports the following IM protocols:\n");
