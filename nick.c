@@ -292,7 +292,7 @@ void nick_del(bee_user_t *bu)
 void nick_strip(irc_t *irc, char *nick)
 {
 	int len = 0;
-	gboolean nick_underscores = set_getbool(&irc->b->set, "nick_underscores");
+	gboolean nick_underscores = irc ? set_getbool(&irc->b->set, "nick_underscores") : FALSE;
 
 	if (irc && (irc->status & IRC_UTF8_NICKS)) {
 		gunichar c;
