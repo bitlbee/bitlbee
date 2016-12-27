@@ -70,10 +70,10 @@ fi
 ## If we're upgrading, we'll probably skip this next part
 if [ -d $CONFDIR ] && chown -R bitlbee: $CONFDIR; then
 	echo 'BitlBee (probably) already installed, skipping user/configdir installation'
-	exit 0
+else
+	adduser --system --group --disabled-login --disabled-password --home /var/lib/bitlbee/ bitlbee
 fi
 
-adduser --system --group --disabled-login --disabled-password --home /var/lib/bitlbee/ bitlbee
 chmod 700 /var/lib/bitlbee/
 
 ## Can't do this in packaging phase: Don't know the UID yet. Access to
