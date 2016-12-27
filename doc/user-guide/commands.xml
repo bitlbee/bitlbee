@@ -1007,17 +1007,21 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="handle_unknown" type="string" scope="global">
+	<bitlbee-setting name="handle_unknown" type="string" scope="account,global">
 		<default>add_channel</default>
-		<possible-values>root, add, add_private, add_channel, ignore</possible-values>
+		<possible-values>add_private, add_channel, ignore</possible-values>
 
 		<description>
 			<para>
-				By default, messages from people who aren't in your contact list are shown in a control channel instead of as a private message.
+				By default, messages from people who aren't in your contact list are shown in a control channel (add_channel) instead of as a private message (add_private)
 			</para>
 
 			<para>
 				If you prefer to ignore messages from people you don't know, you can set this one to "ignore". "add_private" and "add_channel" are like add, but you can use them to make messages from unknown buddies appear in the channel instead of a query window.
+			</para>
+
+			<para>
+				This can be set to individual accounts, which is useful to only ignore accounts that are targeted by spammers, without missing messages from legitimate unknown contacts in others. Note that incoming add requests are visible regardless of this setting.
 			</para>
 
 			<note>

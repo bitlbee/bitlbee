@@ -88,11 +88,12 @@ static gboolean bee_irc_user_new(bee_t *bee, bee_user_t *bu)
 	str_reject_chars(iu->host, " ", '_');
 
 	if (bu->flags & BEE_USER_LOCAL) {
-		char *s = set_getstr(&bee->set, "handle_unknown");
+		char *s = set_getstr(&bu->ic->acc->set, "handle_unknown") ? :
+		          set_getstr(&bee->set, "handle_unknown");
 
-		if (strcmp(s, "add_private") == 0) {
+		if (g_strcasecmp(s, "add_private") == 0) {
 			iu->last_channel = NULL;
-		} else if (strcmp(s, "add_channel") == 0) {
+		} else if (g_strcasecmp(s, "add_channel") == 0) {
 			iu->last_channel = irc->default_channel;
 		}
 	}
