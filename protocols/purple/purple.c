@@ -123,6 +123,7 @@ static gboolean purple_account_should_set_nick(account_t *acc)
 		"prpl-hangouts",
 		"prpl-eionrobb-funyahoo-plusplus",
 		"prpl-icq",
+		"prpl-line",
 		NULL,
 	};
 	char **p;
@@ -303,6 +304,11 @@ static void purple_init(account_t *acc)
 		s = set_add(&acc->set, "gg_sync_contacts", "true", set_eval_bool, acc);
 	}
 
+	if (g_strcmp0(prpl->info->id, "prpl-line") == 0) {
+		s = set_add(&acc->set, "line-auth-token", NULL, NULL, acc);
+		s->flags |= SET_HIDDEN;
+	}
+
 	/* Go through all away states to figure out if away/status messages
 	   are possible. */
 	pa = purple_account_new(acc->user, prpl_id);
@@ -360,6 +366,11 @@ static void purple_sync_settings(account_t *acc, PurpleAccount *pa)
 
 	if (pi->options & OPT_PROTO_MAIL_CHECK) {
 		purple_account_set_check_mail(pa, set_getbool(&acc->set, "mail_notifications"));
+	}
+
+	if (g_strcmp0(prpl->info->id, "prpl-line") == 0) {
+		const char *name = "line-auth-token";
+		purple_account_set_string(pa, name, set_getstr(&acc->set, name));
 	}
 }
 
@@ -956,7 +967,8 @@ static void prplcb_conn_progress(PurpleConnection *gc, const char *text, size_t 
 static void prplcb_conn_connected(PurpleConnection *gc)
 {
 	struct im_connection *ic = purple_ic_by_gc(gc);
-	const char *dn;
+	struct purple_data *pd = ic->proto_data;
+	const char *dn, *token;
 	set_t *s;
 
 	imcb_connected(ic);
@@ -969,6 +981,13 @@ static void prplcb_conn_connected(PurpleConnection *gc)
 
 	// user list needs to be requested for Gadu-Gadu
 	purple_gg_buddylist_import(gc);
+
+	/* more awful hacks, because clearly we didn't have enough of those */
+	if ((s = set_find(&ic->acc->set, "line-auth-token")) &&
+	    (token = purple_account_get_string(pd->account, "line-auth-token", NULL))) {
+		g_free(s->value);
+		s->value = g_strdup(token);
+	}
 
 	ic->flags |= OPT_DOES_HTML;
 }
