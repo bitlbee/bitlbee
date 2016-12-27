@@ -276,7 +276,11 @@
 
 			<description>
 				<para>
-					List existing chatrooms provided by an account. BitlBee needs this to propogate an internal list of chats. The existing chat can then be added with <emphasis>chat add</emphasis>, using the number in the index column after a "!" as a shortcut.
+					List existing named chatrooms provided by an account. Chats from this list can be referenced from <emphasis>chat add</emphasis> by using the number in the index column after a "!" as a shortcut.
+				</para>
+
+				<para>
+					The server parameter is optional and currently only used by jabber.
 				</para>
 			</description>
 

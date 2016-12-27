@@ -1381,9 +1381,7 @@ static void cmd_chat(irc_t *irc, char **cmd)
 		}
 	} else if (g_strcasecmp(cmd[1], "set") == 0 ||
 	           g_strcasecmp(cmd[1], "del") == 0) {
-		irc_rootmsg(irc,
-		            "Warning: The \002chat\002 command was mostly replaced with the \002channel\002 command.");
-		cmd_channel(irc, cmd);
+		irc_rootmsg(irc, "Unknown command: chat %s. Did you mean \002channel %s\002?", cmd[1], cmd[1]);
 	} else {
 		irc_rootmsg(irc,
 		            "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat",
