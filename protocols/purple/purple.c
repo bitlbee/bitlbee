@@ -818,9 +818,7 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 
 		if (pce->required && !g_hash_table_lookup(chat_hash, pce->identifier)) {
 			if (!missing_settings) {
-				missing_settings = g_string_new(NULL);
-				g_string_printf(missing_settings,
-					"Can't join %s. The following settings are required: ", room);
+				missing_settings = g_string_sized_new(32);
 			}
 			g_string_append_printf(missing_settings, "%s, ", pce->identifier);
 		}
@@ -834,7 +832,7 @@ struct groupchat *purple_chat_join(struct im_connection *ic, const char *room, c
 		/* remove the ", " from the end */
 		g_string_truncate(missing_settings, missing_settings->len - 2);
 
-		imcb_error(ic, missing_settings->str);
+		imcb_error(ic, "Can't join %s. The following settings are required: %s", room, missing_settings->str);
 
 		g_string_free(missing_settings, TRUE);
 		g_hash_table_destroy(chat_hash);
