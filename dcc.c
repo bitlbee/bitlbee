@@ -91,7 +91,7 @@ file_transfer_t *dccs_send_start(struct im_connection *ic, irc_user_t *iu, const
 	irc_t *irc = (irc_t *) ic->bee->ui_data;
 	struct sockaddr_storage saddr;
 	char *errmsg;
-	char host[HOST_NAME_MAX];
+	char host[NI_MAXHOST];
 	char port[6];
 
 	if (file_size > global.conf->ft_max_size) {
