@@ -2,57 +2,17 @@
 
 set -e
 
-. /usr/share/debconf/confmodule
-
-db_get bitlbee/serveport
-PORT="$RET"
-
 CONFDIR=/var/lib/bitlbee/
 
-## Load default option. Don't want to put this in debconf (yet?)
-BITLBEE_OPTS=-F
-BITLBEE_DISABLED=0
-BITLBEE_UPGRADE_DONT_RESTART=0
-[ -r /etc/default/bitlbee ] && . /etc/default/bitlbee
-
-if [ "$BITLBEE_DISABLED" = "0" ] && which update-inetd > /dev/null 2> /dev/null &&
-   ( expr "$2" : '0\..*' > /dev/null || expr "$2" : '1\.0\..*' > /dev/null ); then
-	## Make sure the inetd entry is gone (can still be there from a
-	## previous version.
-	update-inetd --remove '.*/usr/sbin/bitlbee'
-	if grep -q /usr/sbin/bitlbee /etc/inetd.conf 2> /dev/null; then
-		# Thanks for breaking update-inetd! (bugs.debian.org/311111)
-		# I hope that it works at least with xinetd, because this
-		# emergency hack doesn't:
-		perl -pi -e 's:^[^#].*/usr/sbin/bitlbee$:## Now using daemon mode\: # $&:' /etc/inetd.conf
-		killall -HUP inetd || true
-	fi
-fi
-
-cat<<EOF>/etc/default/bitlbee
+if [ -e /etc/default/bitlbee ]; then
+   cat <<EOF >/etc/default/bitlbee
 ## /etc/default/bitlbee: Auto-generated/updated script.
 ##
-## If running in (fork)daemon mode, listen on this TCP port.
-BITLBEE_PORT="$PORT"
-
-## Use single-process or forking daemon mode? Can't be changed from debconf,
-## but maintainer scripts will save your changes here.
-BITLBEE_OPTS="$BITLBEE_OPTS"
-
-## In case you want to stick with inetd mode (or if you just want to disable
-## the init scripts for some other reason), you can disable the init script
-## here. (Just set it to 1)
-BITLBEE_DISABLED=$BITLBEE_DISABLED
-
-## As a server operator, you can use the RESTART command to restart only the
-## master process while keeping all the child processes and their IPC
-## connections. By enabling this, the maintainer scripts won't restart
-## BitlBee during upgrades so you can restart the master process by hand.
-BITLBEE_UPGRADE_DONT_RESTART=$BITLBEE_UPGRADE_DONT_RESTART
+## This file is deprecated and no longer used.
+## Please edit /etc/bitlbee/bitlbee.conf instead
 EOF
 
-## Bye-bye DebConf, we don't need you anymore.
-db_stop
+fi
 
 ## Restore the helpfile in case we weren't upgrading but just reconfiguring:
 if [ -e /usr/share/bitlbee/help.upgrading ]; then
@@ -63,7 +23,7 @@ if [ -e /usr/share/bitlbee/help.upgrading ]; then
 	fi
 fi
 
-if [ "$BITLBEE_UPGRADE_DONT_RESTART" != "1" -a  -n "$2" -a -x "/etc/init.d/bitlbee" ]; then
+if [ -n "$2" -a -x "/etc/init.d/bitlbee" ]; then
 	invoke-rc.d bitlbee restart
 fi
 
