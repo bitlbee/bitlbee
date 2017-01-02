@@ -4,7 +4,7 @@ set -e
 
 if [ "$1" = "purge" ]; then
 	rm -f /etc/default/bitlbee
-	deluser --system bitlbee || true
+	deluser --system bitlbee > /dev/null || true
 	rm -rf /var/lib/bitlbee ## deluser doesn't seem to do this for homedirs in /var
 fi
 
