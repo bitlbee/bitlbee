@@ -10,7 +10,6 @@ Mainly Copyright 2002-2014 Wilmer van der Gaast.
 
 
 Bits of third party code, also (L)GPLed:
-* protocols/yahoo/ is libyahoo2 <http://libyahoo2.sf.net/>.
 * Some parts (though there is very little left at this point) are borrowed
   from Gaim (version 0.58), now known as Pidgin <http://www.pidgin.im/>.
 

@@ -17,7 +17,7 @@ Replaces: bitlbee-libpurple
 Description: IRC to other chat networks gateway (default version)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
- and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
+ and Facebook Chat), ICQ, AIM, MSN and Twitter/Identica/Status.net.
 
 Package: bitlbee-libpurple
 Architecture: any
@@ -27,7 +27,7 @@ Replaces: bitlbee
 Description: IRC to other chat networks gateway (using libpurple)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
- and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
+ and Facebook Chat), ICQ, AIM, MSN and Twitter/Identica/Status.net.
  .
  This package contains a version of BitlBee that uses the libpurple instant
  messaging library instead of built-in code, which adds support for more IM
@@ -43,7 +43,7 @@ Replaces: bitlbee
 Description: IRC to other chat networks gateway (common files/docs)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
- and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
+ and Facebook Chat), ICQ, AIM, MSN and Twitter/Identica/Status.net.
  .
  This package contains common files (mostly documentation) for bitlbee and
  bitlbee-libpurple.
@@ -54,7 +54,7 @@ Depends: ${misc:Depends}, bitlbee (>= ${source:Version}) | bitlbee-libpurple (>=
 Description: IRC to other chat networks gateway (dev files)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
- and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
+ and Facebook Chat), ICQ, AIM, MSN and Twitter/Identica/Status.net.
  .
  This package holds development stuff for compiling plug-ins.
 
@@ -64,7 +64,7 @@ Depends: ${misc:Depends}, ${shlibs:Depends}, bitlbee (= ${binary:Version}) | bit
 Description: IRC to other chat networks gateway (OTR plugin)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
- and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
+ and Facebook Chat), ICQ, AIM, MSN and Twitter/Identica/Status.net.
  .
  This package contains a plugin that adds support for Off-The-Record
  encryption of instant messages.
@@ -76,7 +76,7 @@ Recommends: skyped
 Description: IRC to other chat networks gateway (Skype plugin)
  This program can be used as an IRC server which forwards everything you
  say to people on other chat networks: Jabber (which includes Google Talk
- and Facebook Chat), ICQ, AIM, MSN, Yahoo! and Twitter/Identica/Status.net.
+ and Facebook Chat), ICQ, AIM, MSN and Twitter/Identica/Status.net.
  .
  This package contains a plugin that adds support for the Skype IM network.
  You need to download and install the Skype client for this to work.
