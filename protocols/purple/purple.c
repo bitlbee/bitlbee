@@ -1196,11 +1196,15 @@ static void handle_conv_msg(PurpleConversation *conv, const char *who, const cha
 	g_free(message);
 }
 
-/* Handles write_im and write_chat. Removes echoes of locally sent messages */
+/* Handles write_im and write_chat. Removes echoes of locally sent messages.
+ *
+ * PURPLE_MESSAGE_DELAYED is used for chat backlogs - if a message has both
+ * that flag and _SEND, it's a self-message from before joining the channel.
+ * Those are safe to display. The rest (with just _SEND) may be echoes. */
 static void prplcb_conv_msg(PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
 {
-	if (!(flags & PURPLE_MESSAGE_SEND)) {
-		handle_conv_msg(conv, who, message, 0, mtime);
+	if ((!(flags & PURPLE_MESSAGE_SEND)) || (flags & PURPLE_MESSAGE_DELAYED)) {
+		handle_conv_msg(conv, who, message, (flags & PURPLE_MESSAGE_SEND) ? OPT_SELFMESSAGE : 0, mtime);
 	}
 }
 
