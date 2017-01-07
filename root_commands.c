@@ -1063,7 +1063,7 @@ static void cmd_blist(irc_t *irc, char **cmd)
 	if (strchr(irc->umode, 'b') != NULL) {
 		format = "%s\t%s\t%s";
 	} else {
-		format = "%-16.16s  %-40.40s  %s";
+		format = "%-24.24s  %-40.40s  %s";
 	}
 
 	irc_rootmsg(irc, format, "Nick", "Handle/Account", "Status");
