@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -e
+
+NAME=bitlbee
+PIDFILE=/var/run/$NAME.pid
+
+# git revision 7949d5a introduced dh_systemd.
+DH_SYSTEMD_REV="3.4.2+20160612+master+41-g7949d5a-git"
+
+# if upgrading from something older (including 3.4.2), kill the old daemon.
+# do this just once, this time, to allow systemd to manage it.
+if [ "$1" = 'upgrade' ]; then
+	if dpkg --compare-versions $2 lt $DH_SYSTEMD_REV; then
+		# we may not have init scripts here
+		start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE --name $NAME
+	fi
+fi
+
+#DEBHELPER#

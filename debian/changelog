@@ -1,3 +1,19 @@
+bitlbee (3.5-1) UNRELEASED; urgency=medium
+
+  [ Jochen Sprickerhof ]
+  * Drop dependency on net-tools
+
+  [ dequis ]
+  * Use dh_systemd
+  * Drop support for /etc/default/bitlbee
+  * Drop debconf and its translations (only used to ask for the port)
+  * Add preinst script for a smoother transition to systemd units
+  * Ignore the stdout of deluser, fixes postrm error exit code
+  * Remove some mentions of yahoo in control and copyright
+  * Remove outdated stuff from README.debian
+
+ -- dequis <dx@dxzone.com.ar>  Mon, 02 Jan 2017 14:25:05 -0300
+
 bitlbee (3.4.2-1) unstable; urgency=medium
 
   [ Jelmer Vernooĳ ]

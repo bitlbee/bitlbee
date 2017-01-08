@@ -22,14 +22,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 # Gracefully exit if the package has been removed.
 [ -x $DAEMON ] || exit 0
 
-# Default value
-BITLBEE_PORT=6667
 BITLBEE_OPTS=-F
-
-# Read config file if it is present.
-if [ -r /etc/default/$NAME ]; then
-	. /etc/default/$NAME
-fi
 
 
 #
@@ -41,7 +34,7 @@ d_start() {
 	chown bitlbee: $PIDFILE
 	
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
-		--exec $DAEMON -- -p $BITLBEE_PORT -P $PIDFILE $BITLBEE_OPTS
+		--exec $DAEMON -- -P $PIDFILE $BITLBEE_OPTS
 }
 
 #
@@ -55,8 +48,6 @@ d_stop() {
 
 case "$1" in
   start)
-	[ "$BITLBEE_DISABLED" = "1" ] && exit 0
-
 	echo -n "Starting $DESC: $NAME"
 	d_start
 	echo "."
