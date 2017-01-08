@@ -498,4 +498,20 @@ See the full changelog for details!
 
 </sect1>
 
+<sect1 id="whatsnew030500">
+<title>New stuff in BitlBee 3.5</title>
+
+<simplelist>
+	<member>New commands: <emphasis>chat list</emphasis> and <emphasis>plugins</emphasis>. New settings: <emphasis>nick_lowercase</emphasis>, <emphasis>nick_underscores</emphasis></member>
+	<member><emphasis>twitter:</emphasis> Hide muted tweets / no-retweets, add mute/unmute commands. Show full version of extended tweets.</member>
+	<member><emphasis>jabber:</emphasis> <emphasis>always_use_nicks</emphasis> channel setting. Don't send parts in a chat if someone is still connected from other devices. Personal oauth token login for hipchat.</member>
+	<member><emphasis>purple:</emphasis> Setting /topic. Fixes for SIPE and LINE. Don't ask for password if not needed (hangouts, telegram). Set nicks to %full_name for a few protocols (hangouts, funyahoo, icq, line)</member>
+</simplelist>
+
+<para>
+See the full changelog for details!
+</para>
+
+</sect1>
+
 </chapter>
