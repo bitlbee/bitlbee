@@ -59,7 +59,7 @@ Version 3.5:
     for ABI version checking in the future. It's optional for now, but will be
     enforced later. See the commit log of d28fe1c for details. (jgeboski)
 
-Finished ... 200XX
+Finished 8 Jan 2017
 
 Version 3.4.2:
 - irc:
