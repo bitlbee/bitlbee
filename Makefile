@@ -162,28 +162,28 @@ tar:
 	tar czf $$x.tar.gz --exclude=debian --exclude=.git* --exclude=.depend $$x
 
 $(subdirs):
-	@$(MAKE) -C $@ $(MAKECMDGOALS)
+	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 $(OTR_PI): %.so: $(_SRCDIR_)%.c
 	@echo '*' Building plugin $@
-	@$(CC) $(CFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@ $(OTRFLAGS)
+	$(VERBOSE) $(CC) $(CFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@ $(OTRFLAGS)
 
 $(SKYPE_PI): $(_SRCDIR_)protocols/skype/skype.c
 	@echo '*' Building plugin skype
-	@$(CC) $(CFLAGS) $(LDFLAGS) $(SKYPEFLAGS) $< -o $@
+	$(VERBOSE) $(CC) $(CFLAGS) $(LDFLAGS) $(SKYPEFLAGS) $< -o $@
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
+	$(VERBOSE) $(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 $(objects): Makefile Makefile.settings config.h
 
 $(OUTFILE): $(objects) $(subdirs)
 	@echo '*' Linking $(OUTFILE)
-	@$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LDFLAGS_BITLBEE) $(LDFLAGS) $(EFLAGS)
+	$(VERBOSE) $(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LDFLAGS_BITLBEE) $(LDFLAGS) $(EFLAGS)
 ifneq ($(firstword $(STRIP)), \#)
 	@echo '*' Stripping $(OUTFILE)
-	@-$(STRIP) $(OUTFILE)
+	$(VERBOSE) -$(STRIP) $(OUTFILE)
 endif
 
 ctags: 

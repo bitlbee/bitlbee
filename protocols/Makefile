@@ -42,18 +42,18 @@ distclean: clean $(subdirs)
 	rm -rf .depend
 
 $(subdirs):
-	@$(MAKE) -C $@ $(MAKECMDGOALS)
+	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 ### MAIN PROGRAM
 
 protocols.o: $(objects) $(subdirs)
 	@echo '*' Linking protocols.o
-	@$(LD) $(LFLAGS) $(objects) $(subdirobjs) -o protocols.o
+	$(VERBOSE) $(LD) $(LFLAGS) $(objects) $(subdirobjs) -o protocols.o
 
 $(objects): ../Makefile.settings Makefile
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
+	$(VERBOSE) $(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 -include .depend/*.d
