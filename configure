@@ -291,6 +291,19 @@ else
 	echo 'VERBOSE=' >> Makefile.settings
 fi
 
+cat <<EOF >>Makefile.settings
+
+# Enable/disable output verbosity
+ifdef V
+ifeq (\$(V),1)
+	VERBOSE=
+else
+	VERBOSE=@
+endif
+endif
+
+EOF
+
 if [ "$debug" = "1" ]; then
 	echo 'DEBUG=1' >> Makefile.settings
 	CFLAGS="$CFLAGS -g3 -DDEBUG -O0"
