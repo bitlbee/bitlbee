@@ -1,4 +1,4 @@
-bitlbee (3.5-1) UNRELEASED; urgency=medium
+bitlbee (3.5-1) unstable; urgency=medium
 
   [ Jochen Sprickerhof ]
   * Drop dependency on net-tools
@@ -12,7 +12,10 @@ bitlbee (3.5-1) UNRELEASED; urgency=medium
   * Remove some mentions of yahoo in control and copyright
   * Remove outdated stuff from README.debian
 
- -- dequis <dx@dxzone.com.ar>  Mon, 02 Jan 2017 14:25:05 -0300
+  [ Wilmer van der Gaast ]
+  * New upstream release.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Tue, 24 Jan 2017 22:21:33 +0000
 
 bitlbee (3.4.2-1) unstable; urgency=medium
 

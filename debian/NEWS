@@ -1,4 +1,4 @@
-bitlbee (3.5-1) UNRELEASED; urgency=medium
+bitlbee (3.5-1) unstable; urgency=medium
 
   * /etc/default/bitlbee is now deprecated and no longer used. Any local
     modifications to the following settings won't be automatically migrated:
