@@ -40,6 +40,9 @@ LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
 CONFIGURE_OVERRIDES:=CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 HAS_DH_SYSTEMD:=$(shell dpkg-query -W -f='$${Status}' dh-systemd 2>/dev/null | grep -c "ok installed")
+# https://bugs.debian.org/821967
+build-indep: binary-indep
+build-arch: binary-arch
 
 build: build-stamp
 build-stamp:
