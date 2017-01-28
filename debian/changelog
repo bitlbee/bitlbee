@@ -1,11 +1,7 @@
-bitlbee (3.5-1.1) UNRELEASED; urgency=medium
-
-  [ Michael Lustfield ]
-  * Adding build-{arch,indep} targets. (Closes: #821967)
-  * Added python to build depends.
+bitlbee (3.5-1.1) unstable; urgency=medium
 
   [ dequis ]
-  * Merge changes from 3.4.2-1.1 NMU into 3.5-1
+  * Merge back changes from 3.4.2-1.1 (Closes: #852897)
 
  -- dequis <dx@dxzone.com.ar>  Thu, 26 Jan 2017 21:39:24 -0300
 
@@ -27,6 +23,14 @@ bitlbee (3.5-1) unstable; urgency=medium
   * New upstream release.
 
  -- Wilmer van der Gaast <wilmer@gaast.net>  Tue, 24 Jan 2017 22:21:33 +0000
+
+bitlbee (3.4.2-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Adding build-{arch,indep} targets. (Closes: #821967)
+  * Added python to build depends.
+
+ -- Michael Lustfield <michael@lustfield.net>  Mon, 18 Jul 2016 01:02:17 -0700
 
 bitlbee (3.4.2-1) unstable; urgency=medium
 
