@@ -40,9 +40,11 @@ LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
 CONFIGURE_OVERRIDES:=CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 HAS_DH_SYSTEMD:=$(shell dpkg-query -W -f='$${Status}' dh-systemd 2>/dev/null | grep -c "ok installed")
-# https://bugs.debian.org/821967
-build-indep: binary-indep
-build-arch: binary-arch
+
+# No difference at the build stage so just call main build target.
+# (Well indep could be docs-only but we prebuild them plus it's really
+# not that much work.)
+build-arch build-indep: build
 
 build: build-stamp
 build-stamp:

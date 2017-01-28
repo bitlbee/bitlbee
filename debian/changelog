@@ -1,3 +1,14 @@
+bitlbee (3.5-2) unstable; urgency=medium
+
+  * TFW you find out the corrected fix diff posted on #821967 was still the
+    broken one and you end up doing your third upload in a weekend. :-(
+    Obviously build-* targets shouldn't call into binary-*, as that one
+    starts requiring root. This broke builds on buildd's.
+  * Now contains the same fix like 3.4.2-1.1, which as it turns out 3.5-1.1
+    did not. (Closes: #853017)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 28 Jan 2017 21:06:27 +0000
+
 bitlbee (3.5-1.1) unstable; urgency=medium
 
   [ dequis ]
