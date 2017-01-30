@@ -3,6 +3,22 @@ found in the git commit logs, for example you can try:
 
 https://github.com/bitlbee/bitlbee/commits/master
 
+Version 3.5.1:
+
+- purple:
+  * Fix crash on file transfer requests from unknown contacts. This was the
+    result of an incomplete fix in the previous release and may result in
+    remote DoS. Read the full security advisory at:
+    https://bugs.bitlbee.org/ticket/1282
+- After some investigation we decided to reclassify a crash fix from the
+  previous release as a security issue. Read the full security advisory at:
+  https://bugs.bitlbee.org/ticket/1281
+- Included help.txt in the release tarball, which was missing in the previous
+  release and resulted in adding python as a build dependency. The release
+  tarball of 3.5.1 does not require python. 
+
+Finished 30 Jan 2017
+
 Version 3.5:
 
 - ui:
