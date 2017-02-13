@@ -13,7 +13,7 @@ gboolean g_io_channel_pair(GIOChannel **ch1, GIOChannel **ch2)
 {
 	int sock[2];
 
-	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, sock) < 0) {
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, sock) < 0) {
 		perror("socketpair");
 		return FALSE;
 	}
