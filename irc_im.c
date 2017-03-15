@@ -300,7 +300,7 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, g
 	}
 
 	wrapped = word_wrap(msg, IRC_WORD_WRAP);
-	irc_send_msg(src_iu, message_type, dst, wrapped, prefix);
+	irc_send_msg(src_iu, message_type, dst, wrapped, prefix, sent_at);
 	g_free(wrapped);
 
 cleanup:
@@ -342,7 +342,7 @@ static gboolean bee_irc_user_action_response(bee_t *bee, bee_user_t *bu, const c
 	}
 	g_string_append_c(msg, '\001');
 
-	irc_send_msg((irc_user_t *) bu->ui_data, "NOTICE", irc->user->nick, msg->str, NULL);
+	irc_send_msg((irc_user_t *) bu->ui_data, "NOTICE", irc->user->nick, msg->str, NULL, 0);
 
 	g_string_free(msg, TRUE);
 
@@ -670,7 +670,7 @@ static gboolean bee_irc_chat_msg(bee_t *bee, struct groupchat *c, bee_user_t *bu
 	}
 
 	wrapped = word_wrap(msg, IRC_WORD_WRAP);
-	irc_send_msg(iu, "PRIVMSG", ic->name, wrapped, ts);
+	irc_send_msg(iu, "PRIVMSG", ic->name, wrapped, ts, sent_at);
 	g_free(ts);
 	g_free(wrapped);
 
@@ -782,7 +782,7 @@ static gboolean bee_irc_chat_invite(bee_t *bee, bee_user_t *bu, const char *name
 
 	irc_send_msg_f(iu, "PRIVMSG", irc->user->nick, "<< \002BitlBee\002 - Invitation to chatroom %s >>", name);
 	if (msg) {
-		irc_send_msg(iu, "PRIVMSG", irc->user->nick, msg, NULL);
+		irc_send_msg(iu, "PRIVMSG", irc->user->nick, msg, NULL, 0);
 	}
 	if (chan) {
 		irc_send_msg_f(iu, "PRIVMSG", irc->user->nick, "To join the room, just /join %s", chan->name);

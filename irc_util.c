@@ -119,6 +119,21 @@ char *irc_format_timestamp(irc_t *irc, time_t msg_ts)
 	}
 }
 
+char *irc_format_servertime(irc_t *irc, time_t msg_ts)
+{
+	struct tm msg;
+
+	if (msg_ts <= 0) {
+		return NULL;
+	}
+
+	gmtime_r(&msg_ts, &msg);
+
+	return g_strdup_printf("@time=%04d-%02d-%02dT"
+	                       "%02d:%02d:%02d.000Z",
+	                       msg.tm_year + 1900, msg.tm_mon + 1, msg.tm_mday,
+	                       msg.tm_hour, msg.tm_min, msg.tm_sec);
+}
 
 char *set_eval_self_messages(set_t *set, char *value)
 {

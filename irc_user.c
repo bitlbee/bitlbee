@@ -267,7 +267,7 @@ const struct irc_user_funcs irc_user_root_funcs = {
 /* Echo to yourself: */
 static gboolean self_privmsg(irc_user_t *iu, const char *msg)
 {
-	irc_send_msg(iu, "PRIVMSG", iu->nick, msg, NULL);
+	irc_send_msg(iu, "PRIVMSG", iu->nick, msg, NULL, 0);
 
 	return TRUE;
 }
