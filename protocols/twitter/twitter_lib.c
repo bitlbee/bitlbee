@@ -837,6 +837,10 @@ static char *twitter_msg_add_id(struct im_connection *ic,
 	td->log_id = (td->log_id + 1) % TWITTER_LOG_LENGTH;
 	td->log[td->log_id].id = txs->id;
 	td->log[td->log_id].bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name);
+	if (td->log[td->log_id].text) {
+		g_free(td->log[td->log_id].text);
+	}
+	td->log[td->log_id].text = g_strdup(txs->text);
 
 	/* This is all getting hairy. :-( If we RT'ed something ourselves,
 	   remember OUR id instead so undo will work. In other cases, the

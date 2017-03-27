@@ -105,6 +105,7 @@ struct twitter_log_data {
 	/* DANGER: bu can be a dead pointer. Check it first.
 	 * twitter_message_id_from_command_arg() will do this. */
 	struct bee_user *bu;
+	gchar *text;
 };
 
 /**

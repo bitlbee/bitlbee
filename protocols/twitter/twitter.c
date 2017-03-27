@@ -670,6 +670,7 @@ static void twitter_login(account_t * acc)
 static void twitter_logout(struct im_connection *ic)
 {
 	struct twitter_data *td = ic->proto_data;
+	int i;
 
 	// Set the status to logged out.
 	ic->flags &= ~OPT_LOGGED_IN;
@@ -699,6 +700,11 @@ static void twitter_logout(struct im_connection *ic)
 		g_free(td->prefix);
 		g_free(td->url_host);
 		g_free(td->url_path);
+		for (i=0; i<TWITTER_LOG_LENGTH; i++) {
+			if (td->log[i].text) {
+				g_free(td->log[i].text);
+			}
+		}
 		g_free(td->log);
 		g_free(td);
 	}
@@ -922,6 +928,67 @@ static guint64 twitter_message_id_from_command_arg(struct im_connection *ic, cha
 	return id;
 }
 
+/** Find the log entry holding a given tweet ID, or NULL if absent or the user object is dangling.
+ */
+static struct twitter_log_data * twitter_find_log(struct twitter_data *td, guint64 id)
+{
+	int i;
+	for (i=0; i<TWITTER_LOG_LENGTH; i++) {
+		if (td->log[i].id == id) {
+			return &td->log[i];
+		}
+	}
+
+	return NULL;
+}
+
+static gchar * twitter_format_reply(struct im_connection *ic,
+                                    guint64 id, bee_user_t *bu, char *message)
+{
+	struct twitter_data *td = ic->proto_data;
+	struct twitter_log_data *ld = twitter_find_log(td, id);
+
+	if (!ld) {
+		return g_strdup_printf("@%s %s", bu->handle, message);
+	}
+
+	GString *reply = g_string_new(NULL);
+	// Always mention the replied-to tweet's author first - if not us
+	if (bu != &twitter_log_local_user) {
+		g_string_printf(reply, "@%s ", bu->handle);
+	}
+
+	gchar *orig = g_strdup(ld->text);
+	gchar *op = g_strchug(orig);
+	gchar *next;
+	while (op && *op == '@') {
+		char *sep = strchr(op, ' ');
+		if (sep) {
+			*sep = '\0';
+			next = sep + 1;
+		} else {
+			next = NULL;
+		}
+
+		// Add mention to reply, if not us or already done
+		if (g_ascii_strcasecmp(op + 1, twitter_log_local_user.handle) &&
+			g_ascii_strcasecmp(op + 1, bu->handle)) {
+			g_string_append(reply, op);
+			g_string_append_c(reply, ' ');
+		}
+
+		op = next;
+		while (g_ascii_isspace(op)) {
+			op++;
+		}
+	}
+
+	g_free(orig);
+
+	g_string_append(reply, message);
+	return g_string_free(reply, FALSE);
+}
+
 static void twitter_handle_command(struct im_connection *ic, char *message)
 {
 	struct twitter_data *td = ic->proto_data;
@@ -1004,7 +1071,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 			            "post any statuses recently", cmd[1]);
 			goto eof;
 		}
-		message = new = g_strdup_printf("@%s %s", bu->handle, cmd[2]);
+		message = new = twitter_format_reply(ic, id, bu, cmd[2]);
 		in_reply_to = id;
 		allow_post = TRUE;
 	} else if (g_strcasecmp(cmd[0], "rawreply") == 0 && cmd[1] && cmd[2]) {
