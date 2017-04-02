@@ -67,21 +67,11 @@ irc_t *irc_new(int fd)
 	if (global.conf->hostname) {
 		myhost = g_strdup(global.conf->hostname);
 	} else if (getsockname(irc->fd, (struct sockaddr*) &sock, &socklen) == 0) {
-		char buf[NI_MAXHOST + 1];
-
-		if (getnameinfo((struct sockaddr *) &sock, socklen, buf,
-		                NI_MAXHOST, NULL, 0, 0) == 0) {
-			myhost = g_strdup(ipv6_unwrap(buf));
-		}
+		myhost = reverse_lookup((struct sockaddr*) &sock, socklen);
 	}
 
 	if (getpeername(irc->fd, (struct sockaddr*) &sock, &socklen) == 0) {
-		char buf[NI_MAXHOST + 1];
-
-		if (getnameinfo((struct sockaddr *) &sock, socklen, buf,
-		                NI_MAXHOST, NULL, 0, 0) == 0) {
-			host = g_strdup(ipv6_unwrap(buf));
-		}
+		host = reverse_lookup((struct sockaddr*) &sock, socklen);
 	}
 
 	if (host == NULL) {
