@@ -26,6 +26,8 @@
 #ifndef _IRC_H
 #define _IRC_H
 
+#include <sys/socket.h>
+
 #define IRC_MAX_LINE 512
 #define IRC_MAX_ARGS 16
 #define IRC_WORD_WRAP 425
@@ -270,6 +272,7 @@ extern GSList *irc_plugins; /* struct irc_plugin */
 extern GSList *irc_connection_list;
 
 irc_t *irc_new(int fd);
+void irc_set_hosts(irc_t *irc, const struct sockaddr *remote_addr, const socklen_t remote_addrlen);
 void irc_abort(irc_t *irc, int immed, char *format, ...) G_GNUC_PRINTF(3, 4);
 void irc_free(irc_t *irc);
 void irc_setpass(irc_t *irc, const char *pass);

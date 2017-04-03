@@ -58,6 +58,48 @@ static void irc_cmd_pass(irc_t *irc, char **cmd)
 	}
 }
 
+/* http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
+
+   This isn't actually IRC, it's used by for example stunnel4 to indicate
+   the origin of the secured counterpart of the connection. It'll go wrong
+   with arguments starting with : like for example "::1" but I guess I'm
+   okay with that. */
+static void irc_cmd_proxy(irc_t *irc, char **cmd)
+{
+	struct addrinfo hints, *ai;
+	struct sockaddr_storage sock;
+	socklen_t socklen = sizeof(sock);
+
+	if (getpeername(irc->fd, (struct sockaddr*) &sock, &socklen) != 0) {
+		return;
+	}
+
+	ipv64_normalise_mapped(&sock, &socklen);
+
+	/* Only accept PROXY "command" on localhost sockets. */
+	if (!((sock.ss_family == AF_INET &&
+	       ntohl(((struct sockaddr_in*)&sock)->sin_addr.s_addr) == INADDR_LOOPBACK) ||
+	      (sock.ss_family == AF_INET6 &&
+	       IN6_IS_ADDR_LOOPBACK(&((struct sockaddr_in6*)&sock)->sin6_addr)))) {
+		return;
+	}
+
+	/* And only once. Do this with a pretty dumb regex-match for
+	   now, maybe better to use some sort of flag.. */
+	if (!g_regex_match_simple("^(ip6-)?localhost(.(localdomain.?)?)?$", irc->user->host, 0, 0)) {
+		return;
+	}
+	
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_flags = AI_NUMERICHOST;
+	if (getaddrinfo(cmd[2], NULL, &hints, &ai) != 0) {
+		return;
+	}
+	
+	irc_set_hosts(irc, ai->ai_addr, ai->ai_addrlen);
+	freeaddrinfo(ai);
+}
+
 static gboolean irc_sasl_plain_parse(char *input, char **user, char **pass)
 {
 	int i, part, len;
@@ -807,6 +849,7 @@ static void irc_cmd_rehash(irc_t *irc, char **cmd)
 static const command_t irc_commands[] = {
 	{ "cap",         1, irc_cmd_cap,         0 },
 	{ "pass",        1, irc_cmd_pass,        0 },
+	{ "proxy",       5, irc_cmd_proxy,       IRC_CMD_PRE_LOGIN },
 	{ "user",        4, irc_cmd_user,        IRC_CMD_PRE_LOGIN },
 	{ "nick",        1, irc_cmd_nick,        0 },
 	{ "quit",        0, irc_cmd_quit,        0 },
