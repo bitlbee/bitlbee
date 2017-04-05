@@ -25,6 +25,7 @@
 
 #define BITLBEE_CORE
 #include "bitlbee.h"
+#include "canohost.h"
 #include "help.h"
 #include "ipc.h"
 #include "base64.h"
