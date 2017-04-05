@@ -24,6 +24,7 @@
 */
 
 #include "bitlbee.h"
+#include "canohost.h"
 #include "ipc.h"
 #include "dcc.h"
 #include "lib/ssl_client.h"

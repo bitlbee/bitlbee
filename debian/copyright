@@ -16,8 +16,8 @@ Bits of third party code, also (L)GPLed:
 Other license (but GPL-compatible):
 * lib/json.[ch] is from <https://github.com/udp/json-parser> and licensed
   under the modified BSD license.
-* reverse_lookup() from lib/misc.c is from OpenSSH and licenced under
-  the BSD-3-clause licence.
+* lib/canohost.[ch] is from OpenSSH and licenced under the BSD-3-clause
+  licence.
 
 
 BitlBee License:

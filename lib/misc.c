@@ -1,4 +1,4 @@
-/********************************************************************\
+  /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
   * Copyright 2002-2012 Wilmer van der Gaast and others                *
@@ -501,107 +501,6 @@ void srv_free(struct ns_srv_reply **srv)
 		g_free(srv[i]);
 	}
 	g_free(srv);
-}
-
-/* From OpenSSH 7.4p1 canohost.c" */
-char *reverse_lookup(const struct sockaddr *from_, const socklen_t fromlen_)
-{
-	struct sockaddr_storage from;
-	socklen_t fromlen;
-	struct addrinfo hints, *ai, *aitop;
-	char name[NI_MAXHOST], ntop2[NI_MAXHOST];
-	char ntop[INET6_ADDRSTRLEN];
-
-	fromlen = sizeof(from);
-	memset(&from, 0, sizeof(from));
-	memcpy(&from, from_, fromlen_);
-	ipv64_normalise_mapped(&from, &fromlen);
-	if (from.ss_family == AF_INET6) {
-		fromlen = sizeof(struct sockaddr_in6);
-	}
-
-	if (getnameinfo((struct sockaddr *)&from, fromlen, ntop, sizeof(ntop),
-	    NULL, 0, NI_NUMERICHOST) != 0) {
-		return NULL;
-	}
-
-	/* Map the IP address to a host name. */
-	if (getnameinfo((struct sockaddr *)&from, fromlen, name, sizeof(name),
-	    NULL, 0, NI_NAMEREQD) != 0) {
-		/* Host name not found.  Use ip address. */
-		return g_strdup(ntop);
-	}
-
-	/*
-	 * if reverse lookup result looks like a numeric hostname,
-	 * someone is trying to trick us by PTR record like following:
-	 *	1.1.1.10.in-addr.arpa.	IN PTR	2.3.4.5
-	 */
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_socktype = SOCK_DGRAM;	/*dummy*/
-	hints.ai_flags = AI_NUMERICHOST;
-	if (getaddrinfo(name, NULL, &hints, &ai) == 0) {
-		freeaddrinfo(ai);
-		return g_strdup(ntop);
-	}
-
-	/* Names are stored in lowercase. */
-	char *tolower = g_utf8_strdown(name, -1);
-	g_snprintf(name, sizeof(name), "%s", tolower);
-	g_free(tolower);
-
-	/*
-	 * Map it back to an IP address and check that the given
-	 * address actually is an address of this host.  This is
-	 * necessary because anyone with access to a name server can
-	 * define arbitrary names for an IP address. Mapping from
-	 * name to IP address can be trusted better (but can still be
-	 * fooled if the intruder has access to the name server of
-	 * the domain).
-	 */
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = from.ss_family;
-	hints.ai_socktype = SOCK_STREAM;
-	if (getaddrinfo(name, NULL, &hints, &aitop) != 0) {
-		return g_strdup(ntop);
-	}
-	/* Look for the address from the list of addresses. */
-	for (ai = aitop; ai; ai = ai->ai_next) {
-		if (getnameinfo(ai->ai_addr, ai->ai_addrlen, ntop2,
-		    sizeof(ntop2), NULL, 0, NI_NUMERICHOST) == 0 &&
-		    (strcmp(ntop, ntop2) == 0))
-			break;
-	}
-	freeaddrinfo(aitop);
-	/* If we reached the end of the list, the address was not there. */
-	if (ai == NULL) {
-		/* Address not found for the host name. */
-		return g_strdup(ntop);
-	}
-	return g_strdup(name);
-}
-
-void
-ipv64_normalise_mapped(struct sockaddr_storage *addr, socklen_t *len)
-{
-	struct sockaddr_in6 *a6 = (struct sockaddr_in6 *)addr;
-	struct sockaddr_in *a4 = (struct sockaddr_in *)addr;
-	struct in_addr inaddr;
-	u_int16_t port;
-
-	if (addr->ss_family != AF_INET6 ||
-	    !IN6_IS_ADDR_V4MAPPED(&a6->sin6_addr))
-		return;
-
-	memcpy(&inaddr, ((char *)&a6->sin6_addr) + 12, sizeof(inaddr));
-	port = a6->sin6_port;
-
-	memset(a4, 0, sizeof(*a4));
-
-	a4->sin_family = AF_INET;
-	*len = sizeof(*a4);
-	memcpy(&a4->sin_addr, &inaddr, sizeof(inaddr));
-	a4->sin_port = port;
 }
 
 char *word_wrap(const char *msg, int line_len)
