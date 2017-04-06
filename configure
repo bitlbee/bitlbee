@@ -38,6 +38,7 @@ oscar="default-on"
 twitter=1
 purple=0
 
+verbose=0
 doc=1
 debug=0
 strip=0
@@ -124,6 +125,8 @@ Option		Description				Default
 --systemdsystemunitdir=...				$systemdsystemunitdir
 --pidfile=...						$pidfile
 --config=...						$config
+
+--verbose=0/1	Disable/enable verbose build		$verbose
 
 --msn=0/1	Disable/enable MSN part			$msn
 --jabber=0/1	Disable/enable Jabber part		$jabber
@@ -281,6 +284,25 @@ if [ "$asan" = "1" ]; then
 	LDFLAGS="$LDFLAGS -fsanitize=address"
 	debug=1
 fi
+
+if [ "$verbose" = "0" ]; then
+	echo 'VERBOSE=@' >> Makefile.settings
+else
+	echo 'VERBOSE=' >> Makefile.settings
+fi
+
+cat <<EOF >>Makefile.settings
+
+# Enable/disable output verbosity
+ifdef V
+ifeq (\$(V),1)
+	VERBOSE=
+else
+	VERBOSE=@
+endif
+endif
+
+EOF
 
 if [ "$debug" = "1" ]; then
 	echo 'DEBUG=1' >> Makefile.settings

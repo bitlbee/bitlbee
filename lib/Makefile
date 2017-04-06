@@ -35,12 +35,12 @@ distclean: clean $(subdirs)
 
 lib.o: $(objects) $(subdirs)
 	@echo '*' Linking lib.o
-	@$(LD) $(LFLAGS) $(objects) -o lib.o
+	$(VERBOSE) $(LD) $(LFLAGS) $(objects) -o lib.o
 
 $(objects): ../Makefile.settings Makefile
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
+	$(VERBOSE) $(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 -include .depend/*.d
