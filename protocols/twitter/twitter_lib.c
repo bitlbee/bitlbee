@@ -1689,6 +1689,13 @@ void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_t
 		g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
 
+	if (set_getbool(&ic->acc->set, "in_korea") && !in_reply_to) {
+		g_free(args[3]);
+		args[2] = "place_id";
+		args[3] = g_strdup("c999e6a453e9ef72");
+		in_reply_to = 1;
+	}
+
 	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post, ic, 1,
 	             args, in_reply_to ? 4 : 2);
 	g_free(args[3]);
