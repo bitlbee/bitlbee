@@ -293,11 +293,11 @@ static storage_status_t xml_load_real(irc_t *irc, const char *my_nick, const cha
 		goto error;
 	}
 
+	handle_settings(node, &xd->irc->b->set);
+
 	if (xt_handle(xp, NULL, 1) == XT_HANDLED) {
 		ret = STORAGE_OK;
 	}
-
-	handle_settings(node, &xd->irc->b->set);
 
 error:
 	xt_free(xp);
