@@ -767,7 +767,7 @@ int imc_away_send_update(struct im_connection *ic)
 		}
 		msg = ic->acc->flags & ACC_FLAG_AWAY_MESSAGE ? away : NULL;
 		away = imc_away_state_find(m, away, &msg) ? :
-		       (imc_away_state_find(m, "away", &msg) ? : m->data);
+		       (imc_away_state_find(m, "away", NULL) ? : m->data);
 	} else if (ic->acc->flags & ACC_FLAG_STATUS_MESSAGE) {
 		away = NULL;
 		msg = set_getstr(&ic->acc->set, "status") ?
@@ -801,7 +801,7 @@ static char *imc_away_state_find(GList *gcm, char *away, char **message)
 			/* At least the Yahoo! module works better if message
 			   contains no data unless it adds something to what
 			   we have in state already. */
-			if (strlen(m->data) == strlen(away)) {
+			if (message && strlen(m->data) == strlen(away)) {
 				*message = NULL;
 			}
 
@@ -827,7 +827,7 @@ static char *imc_away_state_find(GList *gcm, char *away, char **message)
 		for (j = 0; imc_away_alias_list[i][j]; j++) {
 			for (m = gcm; m; m = m->next) {
 				if (g_strcasecmp(imc_away_alias_list[i][j], m->data) == 0) {
-					if (!keep_message) {
+					if (!keep_message && message) {
 						*message = NULL;
 					}
 
