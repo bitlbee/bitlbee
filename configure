@@ -14,6 +14,7 @@ etcdir='$prefix/etc/bitlbee/'
 mandir='$prefix/share/man/'
 datadir='$prefix/share/bitlbee/'
 config='/var/lib/bitlbee/'
+libdir='$prefix/lib/'
 plugindir='$prefix/lib/bitlbee/'
 includedir='$prefix/include/bitlbee/'
 systemdsystemunitdir=''
@@ -172,6 +173,7 @@ etcdir=$(eval echo "$etcdir/" | sed 's/\/\{1,\}/\//g')
 mandir=$(eval echo "$mandir/" | sed 's/\/\{1,\}/\//g')
 datadir=$(eval echo "$datadir/" | sed 's/\/\{1,\}/\//g')
 config=$(eval echo "$config/" | sed 's/\/\{1,\}/\//g')
+libdir=$(eval echo "$libdir/" | sed 's/\/\{1,\}/\//g')
 plugindir=$(eval echo "$plugindir/" | sed 's/\/\{1,\}/\//g')
 includedir=$(eval echo "$includedir"/ | sed 's/\/\{1,\}/\//g')
 libevent=$(eval echo "$libevent"/ | sed 's/\/\{1,\}/\//g')
@@ -195,6 +197,7 @@ MANDIR=$mandir
 DATADIR=$datadir
 PLUGINDIR=$plugindir
 CONFIG=$config
+LIBDIR=$libdir
 INCLUDEDIR=$includedir
 PCDIR=$pcdir
 
@@ -799,16 +802,23 @@ if ! make helloworld > /dev/null 2>&1; then
 	fi
 fi
 
+pkgconfiglibs=''
+case "$arch" in
+CYGWIN* )
+	pkgconfiglibs='-L${libdir} -lbitlbee'
+esac
+
 cat <<EOF >bitlbee.pc
 prefix=$prefix
 includedir=$includedir
 plugindir=$plugindir
+libdir=$libdir
 
 Name: bitlbee
 Description: IRC to IM gateway
 Requires: glib-2.0
 Version: $BITLBEE_VERSION
-Libs:
+Libs: $pkgconfiglibs
 Cflags: -I\${includedir}
 
 EOF
@@ -918,6 +928,8 @@ AIX )
 	echo 'EFLAGS+=-Wl,-brtl' >> Makefile.settings
 ;;
 CYGWIN* )
+	echo 'EFLAGS+=-Wl,--export-all,--out-implib,libbitlbee.dll.a' >> Makefile.settings
+	echo 'IMPLIB=libbitlbee.dll.a' >> Makefile.settings
 ;;
 Windows )
 	echo 'Native windows compilation is not supported anymore, use cygwin instead.'

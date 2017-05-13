@@ -93,9 +93,16 @@ endif
 install-bin:
 	mkdir -p $(DESTDIR)$(SBINDIR)
 	$(INSTALL) -m 0755 $(OUTFILE) $(DESTDIR)$(SBINDIR)/$(OUTFILE)
+ifdef IMPLIB
+	# import library for cygwin
+	$(INSTALL) -m 0644 $(IMPLIB) $(DESTDIR)$(LIBDIR)/$(IMPLIB)
+endif
 
 uninstall-bin:
 	rm -f $(DESTDIR)$(SBINDIR)/$(OUTFILE)
+ifdef IMPLIB
+	rm -f $(DESTDIR)$(LIBDIR)/$(IMPLIB)
+endif
 
 install-dev:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
