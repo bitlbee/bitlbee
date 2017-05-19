@@ -55,6 +55,8 @@ typedef struct conf {
 	char *ft_listen;
 	char **protocols;
 	char *cafile;
+	char *web_directory;
+	char *web_url;
 } conf_t;
 
 G_GNUC_MALLOC conf_t *conf_load(int argc, char *argv[]);

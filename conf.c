@@ -70,6 +70,8 @@ conf_t *conf_load(int argc, char *argv[])
 	conf->ft_listen = NULL;
 	conf->protocols = NULL;
 	conf->cafile = NULL;
+	conf->web_directory = NULL;
+	conf->web_url = NULL;
 	proxytype = 0;
 
 	i = conf_loadini(conf, global.conf_file);
@@ -343,6 +345,12 @@ static int conf_loadini(conf_t *conf, char *file)
 			} else if (g_strcasecmp(ini->key, "cafile") == 0) {
 				g_free(conf->cafile);
 				conf->cafile = g_strdup(ini->value);
+			} else if (g_strcasecmp(ini->key, "web_directory") == 0) {
+				g_free(conf->web_directory);
+				conf->web_directory = g_strdup(ini->value);
+			} else if (g_strcasecmp(ini->key, "web_url") == 0) {
+				g_free(conf->web_url);
+				conf->web_url = g_strdup(ini->value);
 			} else {
 				fprintf(stderr, "Error: Unknown setting `%s` in configuration file (line %d).\n",
 				        ini->key, ini->line);
