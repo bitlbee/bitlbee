@@ -805,7 +805,7 @@ fi
 pkgconfiglibs=''
 case "$arch" in
 CYGWIN* )
-	pkgconfiglibs='-L${libdir} -lbitlbee'
+	pkgconfiglibs='-L${libdir} -lbitlbee -no-undefined'
 esac
 
 cat <<EOF >bitlbee.pc
