@@ -786,10 +786,10 @@ static void irc_cmd_away(irc_t *irc, char **cmd)
 		}
 		away[j] = '\0';
 
-		irc_send_num(irc, 306, ":You're now away: %s", away);
+		irc_send_num(irc, 306, ":You have been marked as being away");
 		set_setstr(&irc->b->set, "away", away);
 	} else {
-		irc_send_num(irc, 305, ":Welcome back");
+		irc_send_num(irc, 305, ":You are no longer marked as being away");
 		set_setstr(&irc->b->set, "away", NULL);
 	}
 }
