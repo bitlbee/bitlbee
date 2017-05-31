@@ -462,6 +462,7 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 	int url_len_diff = 0;
 
 	static GRegex *regex = NULL;
+	static GRegex *name_regex = NULL;
 	GMatchInfo *match_info;
 
 	if (regex == NULL) {
@@ -477,6 +478,21 @@ int twitter_url_len_diff(gchar *msg, unsigned int target_len)
 
 		g_free(url);
 		g_match_info_next(match_info, NULL);
+	}
+	g_match_info_free(match_info);
+
+	if (name_regex == NULL) {
+		name_regex = g_regex_new("^@\\w+( @\\w+)?", 0, 0, NULL);
+	}
+
+	g_regex_match(name_regex, msg, 0, &match_info);
+	if (g_match_info_matches(match_info)) {
+		gchar *url;
+
+		url = g_match_info_fetch(match_info, 0);
+		url_len_diff += target_len - g_utf8_strlen(url, -1);
+
+		g_free(url);
 	}
 	g_match_info_free(match_info);
 
