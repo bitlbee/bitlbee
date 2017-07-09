@@ -769,7 +769,7 @@ fi
 
 if [ "$doc" = "1" ]; then
 	# check this here just in case someone tries to install it in python2.4...
-	if ! $PYTHON -m xml.etree.ElementTree > /dev/null 2>&1; then
+	if [ ! -e $srcdir/doc/user-guide/help.txt ] && ! $PYTHON -m xml.etree.ElementTree > /dev/null 2>&1; then
 		echo
 		echo 'ERROR: Python (>=2.5 or 3.x) is required to generate docs'
 		echo "(Use the PYTHON environment variable if it's in a weird location)"
