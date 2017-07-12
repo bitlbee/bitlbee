@@ -1794,6 +1794,7 @@ void purple_initmodule()
 	GList *prots;
 	GString *help;
 	char *dir;
+	gboolean debug_enabled = !!getenv("BITLBEE_DEBUG");
 
 	if (purple_get_core() != NULL) {
 		log_message(LOGLVL_ERROR, "libpurple already initialized. "
@@ -1812,7 +1813,7 @@ void purple_initmodule()
 	purple_plugins_add_search_path(dir);
 	g_free(dir);
 
-	purple_debug_set_enabled(FALSE);
+	purple_debug_set_enabled(debug_enabled);
 	purple_core_set_ui_ops(&bee_core_uiops);
 	purple_eventloop_set_ui_ops(&glib_eventloops);
 	if (!purple_core_init("BitlBee")) {
@@ -1820,6 +1821,7 @@ void purple_initmodule()
 		fprintf(stderr, "libpurple initialization failed.\n");
 		abort();
 	}
+	purple_debug_set_enabled(FALSE);
 
 	if (proxytype != PROXY_NONE) {
 		PurpleProxyInfo *pi = purple_global_proxy_get_info();
