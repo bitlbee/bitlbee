@@ -37,6 +37,7 @@ jabber="default-on"
 oscar="default-on"
 
 twitter=1
+mastodon=1
 purple=0
 
 verbose=0
@@ -133,6 +134,7 @@ Option		Description				Default
 --jabber=0/1	Disable/enable Jabber part		$jabber
 --oscar=0/1	Disable/enable Oscar part (ICQ, AIM)	$oscar
 --twitter=0/1	Disable/enable Twitter part		$twitter
+--mastodon=0/1	Disable/enable Mastodon part		$mastodon
 
 --purple=0/1	Disable/enable libpurple support	$purple
 		(automatically disables other protocol modules)
@@ -898,6 +900,14 @@ else
 	echo '#define WITH_TWITTER' >> config.h
 	protocols=$protocols'twitter '
 	protoobjs=$protoobjs'twitter_mod.o '
+fi
+
+if [ "$mastodon" = 0 ]; then
+	echo '#undef WITH_MASTODON' >> config.h
+else
+	echo '#define WITH_MASTODON' >> config.h
+	protocols=$protocols'mastodon '
+	protoobjs=$protoobjs'mastodon_mod.o '
 fi
 
 if [ "$protocols" = "PROTOCOLS = " ]; then
