@@ -9,10 +9,6 @@
    (since it's mandatory), `fetch_interval` (since we're using the
    streaming API).
 
-1. The API to get the accounts we follow doesn't seem to paginate
-   correctly using `since_id`; it keeps returning data with ids below
-   the parameter.
-
 1. Add copyright statements.
 
 1. Add documentation to the help files.
@@ -20,3 +16,20 @@
 1. Remove all remaining Twitter code.
 
 1. Write https://wiki.bitlbee.org/HowtoMastodon
+
+1. Send Merge Request!!
+
+1. Think about which commands to support in the future:
+
+	- mute conversation
+	- mute account
+	- block account
+	- report account
+	- favorite status
+	- boost status
+	- reply to status
+	- follow account
+	- unfollow account
+	- info about an account
+	- handling of spoilers
+	

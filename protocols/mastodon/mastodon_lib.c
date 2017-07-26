@@ -1534,9 +1534,9 @@ static void mastodon_http_following(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct mastodon_data *md = ic->proto_data;
+	guint64 id = 0;
 
 	json_value *parsed;
-	guint64 max_id = 0;
 	
 	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
@@ -1554,7 +1554,7 @@ static void mastodon_http_following(struct http_request *req)
 
 	// unlike Twitter, we don't have to resolve ids: just add buddies directly
 	for (int i = 0; i < parsed->u.array.length; i++) {
-		guint64 id = 0;
+		id = 0;
 		char *acct = NULL;
 		char *display_name = NULL;
 
@@ -1570,9 +1570,6 @@ static void mastodon_http_following(struct http_request *req)
 		
 		if (id != 0 && acct != NULL && display_name != NULL) {
 			mastodon_add_buddy(ic, acct, display_name);
-			if (id > max_id) {
-				max_id = id;
-			}
 		} else {
 			g_free(acct);
 			g_free(display_name);
@@ -1584,9 +1581,8 @@ finish:
 	
 	// try to fetch more if we got at least one id
 	
-	if (max_id) {
-		imcb_log(ic, "Found some buddies and won't ask for more");
-		// mastodon_following(ic, max_id+1);
+	if (id > 0) {
+		mastodon_following(ic, id);
 	}
 
 	md->flags |= MASTODON_HAVE_FRIENDS;
@@ -1595,12 +1591,12 @@ finish:
 /**
  * Get the followers of an account. Default to the current id.
  */
-void mastodon_following(struct im_connection *ic, gint64 since_id)
+void mastodon_following(struct im_connection *ic, gint64 max_id)
 {
 	gint64 id = set_getint(&ic->acc->set, "account_id");
 
 	imcb_log(ic, "Finding followers for id %" G_GINT64_FORMAT
-		 ", since_id= %" G_GINT64_FORMAT, id, since_id);
+		 ", max_id= %" G_GINT64_FORMAT, id, max_id);
 	
 	if (!id) {
 		return;
@@ -1608,17 +1604,21 @@ void mastodon_following(struct im_connection *ic, gint64 since_id)
 
 	// insert id into the URL
 	char *url = g_strdup_printf(MASTODON_FOLLOWING_URL, id);
-	
-	char *args[4];
-	args[0] = "since_id";
-	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, since_id);
-	args[2] = "limit";
-	args[3] = "80";
-	
-	mastodon_http(ic, url, mastodon_http_following, ic, 0, args, 4);
+
+	// the first call must not set a max_id
+	if (max_id == 0) {
+		mastodon_http(ic, url, mastodon_http_following, ic, 0, NULL, 0);
+	} else {
+		char *args[2];
+		args[0] = "max_id";
+		args[1] = g_strdup_printf("%" G_GINT64_FORMAT, max_id);
+
+		mastodon_http(ic, url, mastodon_http_following, ic, 0, args, 2);
+
+		g_free(args[1]);
+	}
 
 	g_free(url);
-	g_free(args[1]);
 }
 
 /**
