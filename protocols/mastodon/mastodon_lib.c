@@ -1528,7 +1528,7 @@ void mastodon_status_show_url(struct im_connection *ic, guint64 id)
 }
 
 /**
- * Callback for getting followers.
+ * Callback for adding the buddies you are following.
  */
 static void mastodon_http_following(struct http_request *req)
 {
@@ -1589,14 +1589,11 @@ finish:
 }
 
 /**
- * Get the followers of an account. Default to the current id.
+ * Add the buddies the current account is following.
  */
 void mastodon_following(struct im_connection *ic, gint64 max_id)
 {
 	gint64 id = set_getint(&ic->acc->set, "account_id");
-
-	imcb_log(ic, "Finding followers for id %" G_GINT64_FORMAT
-		 ", max_id= %" G_GINT64_FORMAT, id, max_id);
 	
 	if (!id) {
 		return;
