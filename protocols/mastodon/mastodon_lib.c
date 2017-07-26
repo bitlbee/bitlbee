@@ -593,48 +593,6 @@ static struct mastodon_xml_status *mastodon_xt_get_status(const json_value *node
 	return NULL;
 }
 
-/**
- * Function to fill a mastodon_xml_status struct (DM variant).
- */
-static struct mastodon_xml_status *mastodon_xt_get_dm(const json_value *node)
-{
-	struct mastodon_xml_status *txs;
-
-	if (node->type != json_object) {
-		return FALSE;
-	}
-	txs = g_new0(struct mastodon_xml_status, 1);
-
-	JSON_O_FOREACH(node, k, v) {
-		if (strcmp("text", k) == 0 && v->type == json_string) {
-			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
-			strip_html(txs->text);
-		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
-			struct tm parsed;
-
-			/* Very sensitive to changes to the formatting of
-			   this field. :-( Also assumes the timezone used
-			   is UTC since C time handling functions suck. */
-			if (strptime(v->u.string.ptr, MASTODON_TIME_FORMAT, &parsed) != NULL) {
-				txs->created_at = mktime_utc(&parsed);
-			}
-		} else if (strcmp("sender", k) == 0 && v->type == json_object) {
-			txs->user = mastodon_xt_get_user(v);
-		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
-			txs->id = v->u.integer;
-		}
-	}
-
-	expand_entities(&txs->text, node, NULL);
-
-	if (txs->text && txs->user && txs->id) {
-		return txs;
-	}
-
-	txs_free(txs);
-	return NULL;
-}
-
 static void expand_entities(char **text, const json_value *node, const json_value *extended_node)
 {
 	json_value *entities, *extended_entities, *quoted;
@@ -948,22 +906,38 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_xml_s
 	g_free(uid_str);
 }
 
-static gboolean mastodon_stream_handle_object(struct im_connection *ic, json_value *o, gboolean from_filter);
+/**
+ * Add exactly one status to the timeline.
+ */
+static void mastodon_stream_handle_update(struct im_connection *ic, json_value *parsed, gboolean from_filter)
+{
+	struct mastodon_xml_status *txs = mastodon_xt_get_status(parsed);
+	if (txs) {
+		mastodon_status_show(ic, txs);
+		txs_free(txs);
+	}
+}
+
+static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type, json_value *parsed, gboolean from_filter)
+{
+	if (evt_type == MASTODON_EVT_UPDATE) {
+		mastodon_stream_handle_update(ic, parsed, from_filter);
+	} else {
+		mastodon_log(ic, "Ignoring event type %d", evt_type);
+	}
+}
 
 static void mastodon_http_stream(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct mastodon_data *md;
-	json_value *parsed;
+	struct mastodon_data *md = ic->proto_data;
 	int len = 0;
-	char c, *nl;
+	char *nl;
 	gboolean from_filter;
 
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
-
-	md = ic->proto_data;
 
 	if ((req->flags & HTTPC_EOF) || !req->reply_body) {
 		if (req == md->stream) {
@@ -984,157 +958,74 @@ static void mastodon_http_stream(struct http_request *req)
 		ic->flags |= OPT_PONGED;
 	}
 
-	/* MUST search for CRLF, not just LF:
-	   https://dev.mastodon.com/docs/streaming-apis/processing#Parsing_responses */
-	if (!(nl = strstr(req->reply_body, "\r\n"))) {
+	/*
+https://github.com/tootsuite/documentation/blob/master/Using-the-API/Streaming-API.md
+https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format
+	*/
+
+	if (req->reply_body[0] == ':' &&
+	    (nl = strchr(req->reply_body, '\n'))) {
+		// found a comment such as the heartbeat ":thump\n"
+		len = nl - req->reply_body + 1;
+		goto end;
+	} else if (!(nl = strstr(req->reply_body, "\n\n"))) {
+		// wait until we have a complete event
 		return;
 	}
 
-	len = nl - req->reply_body;
+	// include the two newlines at the end
+	len = nl - req->reply_body + 2;
+	
 	if (len > 0) {
-		c = req->reply_body[len];
-		req->reply_body[len] = '\0';
+		char *p;
+		mastodon_evt_flags_t evt_type = MASTODON_EVT_UNKNOWN;
 
-		if ((parsed = json_parse(req->reply_body, req->body_size))) {
-			from_filter = (req == md->filter_stream);
-			mastodon_stream_handle_object(ic, parsed, from_filter);
+		// assuming space after colon
+		if (strncmp(req->reply_body, "event: ", 7) == 0) {
+			p = req->reply_body + 7;
+			if (strncmp(p, "update\n", 7) == 0) {
+				evt_type = MASTODON_EVT_UPDATE;
+				p += 7;
+			} else if (strncmp(p, "notification\n", 13) == 0) {
+				evt_type = MASTODON_EVT_NOTIFICATION;
+				p += 13;
+			} else if (strncmp(p, "delete\n", 7) == 0) {
+				evt_type = MASTODON_EVT_DELETE;
+				p += 7;
+			}
 		}
-		json_value_free(parsed);
-		req->reply_body[len] = c;
-	}
 
-	http_flush_bytes(req, len + 2);
+		if (evt_type != MASTODON_EVT_UNKNOWN) {
+
+			GString *data = g_string_new("");
+			char* q;
+
+			while (strncmp(p, "data: ", 6) == 0) {
+				p += 6;
+				q = strchr(p, '\n');
+				p[q-p] = '\0';
+				g_string_append(data, p);
+				p = q + 1;
+			}
+
+			json_value *parsed;
+			if ((parsed = json_parse(data->str, data->len))) {
+				from_filter = (req == md->filter_stream);
+				mastodon_stream_handle_event(ic, evt_type, parsed, from_filter);
+			}
+
+			json_value_free(parsed);
+			g_string_free(data, TRUE);
+		}
+	}
+	
+end:
+	http_flush_bytes(req, len);
 
 	/* One notification might bring multiple events! */
 	if (req->body_size > 0) {
 		mastodon_http_stream(req);
 	}
-}
-
-static gboolean mastodon_stream_handle_event(struct im_connection *ic, json_value *o);
-static gboolean mastodon_stream_handle_status(struct im_connection *ic, struct mastodon_xml_status *txs);
-
-static gboolean mastodon_stream_handle_object(struct im_connection *ic, json_value *o, gboolean from_filter)
-{
-	struct mastodon_data *md = ic->proto_data;
-	struct mastodon_xml_status *txs;
-	json_value *c;
-
-	if ((txs = mastodon_xt_get_status(o))) {
-		txs->from_filter = from_filter;
-		gboolean ret = mastodon_stream_handle_status(ic, txs);
-		txs_free(txs);
-		return ret;
-	} else if ((c = json_o_get(o, "direct_message")) &&
-	           (txs = mastodon_xt_get_dm(c))) {
-		if (g_strcasecmp(txs->user->screen_name, md->user) != 0) {
-			imcb_buddy_msg(ic, txs->user->screen_name,
-			               txs->text, 0, txs->created_at);
-		}
-		txs_free(txs);
-		return TRUE;
-	} else if ((c = json_o_get(o, "event")) && c->type == json_string) {
-		mastodon_stream_handle_event(ic, o);
-		return TRUE;
-	} else if ((c = json_o_get(o, "disconnect")) && c->type == json_object) {
-		/* HACK: Because we're inside an event handler, we can't just
-		   disconnect here. Instead, just change the HTTP status string
-		   into a Mastodon status string. */
-		char *reason = json_o_strdup(c, "reason");
-		if (reason) {
-			g_free(md->stream->status_string);
-			md->stream->status_string = reason;
-		}
-		return TRUE;
-	}
-	return FALSE;
-}
-
-static gboolean mastodon_stream_handle_status(struct im_connection *ic, struct mastodon_xml_status *txs)
-{
-	struct mastodon_data *md = ic->proto_data;
-	int i;
-
-	for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
-		if (md->log[i].id == txs->id) {
-			/* Got a duplicate (RT, probably). Drop it. */
-			return TRUE;
-		}
-	}
-
-	if (!(g_strcasecmp(txs->user->screen_name, md->user) == 0 ||
-	      bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
-		/* Tweet is from an unknown person and the user does not want
-		   to see @mentions, so drop it. mastodon_stream_handle_event()
-		   picks up new follows so this simple filter should be safe. */
-		/* TODO: The streaming API seems to do poor @mention matching.
-		   I.e. I'm getting mentions for @WilmerSomething, not just for
-		   @Wilmer. But meh. You want spam, you get spam. */
-		return TRUE;
-	}
-
-	mastodon_status_show(ic, txs);
-
-	return TRUE;
-}
-
-static gboolean mastodon_stream_handle_event(struct im_connection *ic, json_value *o)
-{
-	struct mastodon_data *md = ic->proto_data;
-	json_value *source = json_o_get(o, "source");
-	json_value *target = json_o_get(o, "target");
-	const char *type = json_o_str(o, "event");
-	struct mastodon_xml_user *us = NULL;
-	struct mastodon_xml_user *ut = NULL;
-
-	if (!type || !source || source->type != json_object
-	    || !target || target->type != json_object) {
-		return FALSE;
-	}
-
-	if (strcmp(type, "follow") == 0) {
-		us = mastodon_xt_get_user(source);
-		ut = mastodon_xt_get_user(target);
-		if (g_strcasecmp(us->screen_name, md->user) == 0) {
-			mastodon_add_buddy(ic, ut->screen_name, ut->name);
-		}
-	} else if (strcmp(type, "mute") == 0) {
-		GSList *found;
-		char *uid_str;
-		ut = mastodon_xt_get_user(target);
-		uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, ut->uid);
-		if (!(found = g_slist_find_custom(md->mutes_ids, uid_str,
-		                                  (GCompareFunc)strcmp))) {
-			md->mutes_ids = g_slist_prepend(md->mutes_ids, uid_str);
-		}
-		mastodon_log(ic, "Muted user %s", ut->screen_name);
-		if (getenv("BITLBEE_DEBUG")) {
-			fprintf(stderr, "New mute: %s %"G_GUINT64_FORMAT"\n",
-			        ut->screen_name, ut->uid);
-		}
-	} else if (strcmp(type, "unmute") == 0) {
-		GSList *found;
-		char *uid_str;
-		ut = mastodon_xt_get_user(target);
-		uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, ut->uid);
-		if ((found = g_slist_find_custom(md->mutes_ids, uid_str,
-		                                (GCompareFunc)strcmp))) {
-			char *found_str = found->data;
-			md->mutes_ids = g_slist_delete_link(md->mutes_ids, found);
-			g_free(found_str);
-		}
-		g_free(uid_str);
-		mastodon_log(ic, "Unmuted user %s", ut->screen_name);
-		if (getenv("BITLBEE_DEBUG")) {
-			fprintf(stderr, "New unmute: %s %"G_GUINT64_FORMAT"\n",
-			        ut->screen_name, ut->uid);
-		}
-	}
-
-	txu_free(us);
-	txu_free(ut);
-
-	return TRUE;
 }
 
 gboolean mastodon_open_stream(struct im_connection *ic)

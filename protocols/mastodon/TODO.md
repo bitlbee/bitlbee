@@ -8,7 +8,7 @@
    correctly using `since_id`; it keeps returning data with ids below
    the parameter.
 
-1. The streaming API seems not to work. Or our pong is not working. No
-   new status are added and after a while the server hangs up on us.
+1. Must implement `MASTODON_EVT_NOTIFICATION` in
+   `mastodon_stream_handle_event`.
 
 1. Add copyright statements.
