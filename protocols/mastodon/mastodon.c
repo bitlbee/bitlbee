@@ -391,7 +391,7 @@ static void mastodon_init(account_t * acc)
 	s = set_add(&acc->set, "fetch_interval", "60", set_eval_int, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add(&acc->set, "message_length", "140", set_eval_int, acc);
+	s = set_add(&acc->set, "message_length", "500", set_eval_int, acc);
 
 	s = set_add(&acc->set, "mode", "chat", set_eval_mode, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -478,7 +478,7 @@ static void mastodon_connect(struct im_connection *ic)
 		// find our id
 		mastodon_verify_credentials(ic);
 		// add buddies for this id
-		mastodon_following(ic, -1);
+		mastodon_following(ic, 0);
 		// mastodon_get_mutes_ids(ic, -1);
 		// mastodon_get_noretweets_ids(ic, -1);
 	}
