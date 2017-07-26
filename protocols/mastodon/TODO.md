@@ -4,9 +4,6 @@
 
 1. We can delete md->follow_ids
 
-1. `mastodon_following` seems to have no effect: buddies aren't added
-   to the channel.
-
 1. The API to get the accounts we follow doesn't seem to paginate
    correctly using `since_id`; it keeps returning data with ids below
    the parameter.
