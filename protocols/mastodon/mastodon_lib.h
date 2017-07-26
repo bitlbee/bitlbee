@@ -36,6 +36,15 @@
 #define MASTODON_USER_STREAMING_URL "/streaming/user"
 #define MASTODON_HOME_TIMELINE_URL "/timelines/home"
 
+typedef enum {
+	MASTODON_EVT_UNKNOWN,
+	MASTODON_EVT_UPDATE,
+	MASTODON_EVT_NOTIFICATION,
+	MASTODON_EVT_DELETE,
+} mastodon_evt_flags_t;
+
+/* Anything below is unchecked, renamed Twitter stuff. */
+
 /* Status URLs */
 #define MASTODON_STATUS_UPDATE_URL "/statuses/update.json"
 #define MASTODON_STATUS_SHOW_URL "/statuses/show/"
