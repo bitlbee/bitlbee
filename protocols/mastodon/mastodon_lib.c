@@ -39,12 +39,14 @@
 #include <ctype.h>
 #include <errno.h>
 
-#define TXL_STATUS 1
-#define TXL_USER 2
-#define TXL_ID 3
+typedef enum {
+	ML_STATUS,
+	ML_USER,
+	ML_ID,
+} mastodon_list_type_t;
 
 struct mastodon_list {
-	int type;
+	mastodon_list_type_t type;
 	gint64 next_cursor;
 	GSList *list;
 };
@@ -81,41 +83,41 @@ static void txu_free(struct mastodon_user *txu)
 /**
  * Frees a mastodon_status struct.
  */
-static void txs_free(struct mastodon_status *txs)
+static void ms_free(struct mastodon_status *ms)
 {
-	if (txs == NULL) {
+	if (ms == NULL) {
 		return;
 	}
 
-	g_free(txs->text);
-	txu_free(txs->user);
-	g_free(txs);
+	g_free(ms->text);
+	txu_free(ms->user);
+	g_free(ms);
 }
 
 /**
  * Free a mastodon_list struct.
  * type is the type of list the struct holds.
  */
-static void txl_free(struct mastodon_list *txl)
+static void ml_free(struct mastodon_list *ml)
 {
 	GSList *l;
 
-	if (txl == NULL) {
+	if (ml == NULL) {
 		return;
 	}
 
-	for (l = txl->list; l; l = g_slist_next(l)) {
-		if (txl->type == TXL_STATUS) {
-			txs_free((struct mastodon_status *) l->data);
-		} else if (txl->type == TXL_ID) {
+	for (l = ml->list; l; l = g_slist_next(l)) {
+		if (ml->type == ML_STATUS) {
+			ms_free((struct mastodon_status *) l->data);
+		} else if (ml->type == ML_ID) {
 			g_free(l->data);
-		} else if (txl->type == TXL_USER) {
+		} else if (ml->type == ML_USER) {
 			txu_free(l->data);
 		}
 	}
 
-	g_slist_free(txl->list);
-	g_free(txl);
+	g_slist_free(ml->list);
+	g_free(ml);
 }
 
 /**
@@ -267,13 +269,13 @@ void mastodon_get_noretweets_ids(struct im_connection *ic, gint64 next_cursor)
 /**
  * Fill a list of ids.
  */
-static gboolean mastodon_xt_get_friends_id_list(json_value *node, struct mastodon_list *txl)
+static gboolean mastodon_xt_get_friends_id_list(json_value *node, struct mastodon_list *ml)
 {
 	json_value *c;
 	int i;
 
 	// Set the list type.
-	txl->type = TXL_ID;
+	ml->type = ML_ID;
 
 	c = json_o_get(node, "ids");
 	if (!c || c->type != json_array) {
@@ -285,15 +287,15 @@ static gboolean mastodon_xt_get_friends_id_list(json_value *node, struct mastodo
 			continue;
 		}
 
-		txl->list = g_slist_prepend(txl->list,
+		ml->list = g_slist_prepend(ml->list,
 		                            g_strdup_printf("%" PRIu64, c->u.array.values[i]->u.integer));
 	}
 
 	c = json_o_get(node, "next_cursor");
 	if (c && c->type == json_integer) {
-		txl->next_cursor = c->u.integer;
+		ml->next_cursor = c->u.integer;
 	} else {
-		txl->next_cursor = -1;
+		ml->next_cursor = -1;
 	}
 
 	return TRUE;
@@ -308,7 +310,7 @@ static void mastodon_http_get_mutes_ids(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	json_value *parsed;
-	struct mastodon_list *txl;
+	struct mastodon_list *ml;
 	struct mastodon_data *md;
 
 	// Check if the connection is stil active
@@ -328,22 +330,22 @@ static void mastodon_http_get_mutes_ids(struct http_request *req)
 		return;
 	}
 
-	txl = g_new0(struct mastodon_list, 1);
-	txl->list = md->mutes_ids;
+	ml = g_new0(struct mastodon_list, 1);
+	ml->list = md->mutes_ids;
 
 	/* mute ids API response is similar enough to friends response
 	   to reuse this method */
-	mastodon_xt_get_friends_id_list(parsed, txl);
+	mastodon_xt_get_friends_id_list(parsed, ml);
 	json_value_free(parsed);
 
-	md->mutes_ids = txl->list;
-	if (txl->next_cursor) {
+	md->mutes_ids = ml->list;
+	if (ml->next_cursor) {
 		/* Recurse while there are still more pages */
-		mastodon_get_mutes_ids(ic, txl->next_cursor);
+		mastodon_get_mutes_ids(ic, ml->next_cursor);
 	}
 
-	txl->list = NULL;
-	txl_free(txl);
+	ml->list = NULL;
+	ml_free(ml);
 }
 
 /**
@@ -353,7 +355,7 @@ static void mastodon_http_get_noretweets_ids(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	json_value *parsed;
-	struct mastodon_list *txl;
+	struct mastodon_list *ml;
 	struct mastodon_data *md;
 
 	// Check if the connection is stil active
@@ -373,11 +375,11 @@ static void mastodon_http_get_noretweets_ids(struct http_request *req)
 		return;
 	}
 
-	txl = g_new0(struct mastodon_list, 1);
-	txl->list = md->noretweets_ids;
+	ml = g_new0(struct mastodon_list, 1);
+	ml->list = md->noretweets_ids;
 	
 	// Process the retweet ids
-	txl->type = TXL_ID;
+	ml->type = ML_ID;
 	if (parsed->type == json_array) {
 		unsigned int i;
 		for (i = 0; i < parsed->u.array.length; i++) {
@@ -385,19 +387,19 @@ static void mastodon_http_get_noretweets_ids(struct http_request *req)
 			if (c->type != json_integer) {
 				continue;
 			}
-			txl->list = g_slist_prepend(txl->list,
+			ml->list = g_slist_prepend(ml->list,
 			                            g_strdup_printf("%"PRIu64, c->u.integer));
 		}
 	}
 
 	json_value_free(parsed);
-	md->noretweets_ids = txl->list;
+	md->noretweets_ids = ml->list;
 
-	txl->list = NULL;
-	txl_free(txl);
+	ml->list = NULL;
+	ml_free(ml);
 }
 
-static gboolean mastodon_xt_get_users(json_value *node, struct mastodon_list *txl);
+static gboolean mastodon_xt_get_users(json_value *node, struct mastodon_list *ml);
 static void mastodon_http_get_users_lookup(struct http_request *req);
 
 static void mastodon_get_users_lookup(struct im_connection *ic)
@@ -438,7 +440,7 @@ static void mastodon_http_get_users_lookup(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	json_value *parsed;
-	struct mastodon_list *txl;
+	struct mastodon_list *ml;
 	GSList *l = NULL;
 	struct mastodon_user *user;
 
@@ -452,20 +454,20 @@ static void mastodon_http_get_users_lookup(struct http_request *req)
 		return;
 	}
 
-	txl = g_new0(struct mastodon_list, 1);
-	txl->list = NULL;
+	ml = g_new0(struct mastodon_list, 1);
+	ml->list = NULL;
 
-	mastodon_xt_get_users(parsed, txl);
+	mastodon_xt_get_users(parsed, ml);
 	json_value_free(parsed);
 
 	// Add the users as buddies.
-	for (l = txl->list; l; l = g_slist_next(l)) {
+	for (l = ml->list; l; l = g_slist_next(l)) {
 		user = l->data;
 		mastodon_add_buddy(ic, user->screen_name, user->name);
 	}
 
 	// Free the structure.
-	txl_free(txl);
+	ml_free(ml);
 
 	mastodon_get_users_lookup(ic);
 }
@@ -490,13 +492,13 @@ struct mastodon_user *mastodon_xt_get_user(const json_value *node)
  * It sets:
  *  - all <user>s from the <users> element.
  */
-static gboolean mastodon_xt_get_users(json_value *node, struct mastodon_list *txl)
+static gboolean mastodon_xt_get_users(json_value *node, struct mastodon_list *ml)
 {
 	struct mastodon_user *txu;
 	int i;
 
 	// Set the type of the list.
-	txl->type = TXL_USER;
+	ml->type = ML_USER;
 
 	if (!node || node->type != json_array) {
 		return FALSE;
@@ -507,7 +509,7 @@ static gboolean mastodon_xt_get_users(json_value *node, struct mastodon_list *tx
 	for (i = 0; i < node->u.array.length; i++) {
 		txu = mastodon_xt_get_user(node->u.array.values[i]);
 		if (txu) {
-			txl->list = g_slist_prepend(txl->list, txu);
+			ml->list = g_slist_prepend(ml->list, txu);
 		}
 	}
 
@@ -532,7 +534,7 @@ static void expand_entities(char **text, const json_value *node, const json_valu
  */
 static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 {
-	struct mastodon_status *txs = {0};
+	struct mastodon_status *ms = {0};
 	const json_value *rt = NULL;
 	const json_value *text_value = NULL;
 	const json_value *extended_node = NULL;
@@ -540,7 +542,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	if (node->type != json_object) {
 		return FALSE;
 	}
-	txs = g_new0(struct mastodon_status, 1);
+	ms = g_new0(struct mastodon_status, 1);
 
 	JSON_O_FOREACH(node, k, v) {
 		if (strcmp("content", k) == 0 && v->type == json_string && text_value == NULL) {
@@ -554,37 +556,37 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			   this field. :-( Also assumes the timezone used
 			   is UTC since C time handling functions suck. */
 			if (strptime(v->u.string.ptr, MASTODON_TIME_FORMAT, &parsed) != NULL) {
-				txs->created_at = mktime_utc(&parsed);
+				ms->created_at = mktime_utc(&parsed);
 			}
 		} else if (strcmp("account", k) == 0 && v->type == json_object) {
-			txs->user = mastodon_xt_get_user(v);
+			ms->user = mastodon_xt_get_user(v);
 		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
-			txs->rt_id = txs->id = v->u.integer;
+			ms->rt_id = ms->id = v->u.integer;
 		} else if (strcmp("in_reply_to_id", k) == 0 && v->type == json_integer) {
-			txs->reply_to = v->u.integer;
+			ms->reply_to = v->u.integer;
 		}
 	}
 
 	/* If it's a (truncated) retweet, get the original. Even if the API claims it
 	   wasn't truncated because it may be lying. */
 	if (rt) {
-		struct mastodon_status *rtxs = mastodon_xt_get_status(rt);
-		if (rtxs) {
-			txs->text = g_strdup_printf("RT @%s: %s", rtxs->user->screen_name, rtxs->text);
-			txs->id = rtxs->id;
-			txs_free(rtxs);
+		struct mastodon_status *rms = mastodon_xt_get_status(rt);
+		if (rms) {
+			ms->text = g_strdup_printf("RT @%s: %s", rms->user->screen_name, rms->text);
+			ms->id = rms->id;
+			ms_free(rms);
 		}
 	} else if (text_value && text_value->type == json_string) {
-		txs->text = g_memdup(text_value->u.string.ptr, text_value->u.string.length + 1);
-		strip_html(txs->text);
-		expand_entities(&txs->text, node, extended_node);
+		ms->text = g_memdup(text_value->u.string.ptr, text_value->u.string.length + 1);
+		strip_html(ms->text);
+		expand_entities(&ms->text, node, extended_node);
 	}
 
-	if (txs->text && txs->user && txs->id) {
-		return txs;
+	if (ms->text && ms->user && ms->id) {
+		return ms;
 	}
 
-	txs_free(txs);
+	ms_free(ms);
 	return NULL;
 }
 
@@ -599,10 +601,10 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 		/* New "retweets with comments" feature. Grab the
 		 * full message and try to insert it when we run into the
 		 * Tweet entity. */
-		struct mastodon_status *txs = mastodon_xt_get_status(quoted);
-		quote_text = g_strdup_printf("@%s: %s", txs->user->screen_name, txs->text);
-		quote_url = g_strdup_printf("%s/status/%" G_GUINT64_FORMAT, txs->user->screen_name, txs->id);
-		txs_free(txs);
+		struct mastodon_status *ms = mastodon_xt_get_status(quoted);
+		quote_text = g_strdup_printf("@%s: %s", ms->user->screen_name, ms->text);
+		quote_url = g_strdup_printf("%s/status/%" G_GUINT64_FORMAT, ms->user->screen_name, ms->id);
+		ms_free(ms);
 	} else {
 		quoted = NULL;
 	}
@@ -666,13 +668,13 @@ static void expand_entities(char **text, const json_value *node, const json_valu
  *  - the next_cursor.
  */
 static gboolean mastodon_xt_get_status_list(struct im_connection *ic, const json_value *node,
-                                           struct mastodon_list *txl)
+                                           struct mastodon_list *ml)
 {
-	struct mastodon_status *txs;
+	struct mastodon_status *ms;
 	int i;
 
 	// Set the type of the list.
-	txl->type = TXL_STATUS;
+	ml->type = ML_STATUS;
 
 	if (node->type != json_array) {
 		return FALSE;
@@ -681,55 +683,55 @@ static gboolean mastodon_xt_get_status_list(struct im_connection *ic, const json
 	// The root <statuses> node should hold the list of statuses <status>
 	// Walk over the nodes children.
 	for (i = 0; i < node->u.array.length; i++) {
-		txs = mastodon_xt_get_status(node->u.array.values[i]);
-		if (!txs) {
+		ms = mastodon_xt_get_status(node->u.array.values[i]);
+		if (!ms) {
 			continue;
 		}
 
-		txl->list = g_slist_prepend(txl->list, txs);
+		ml->list = g_slist_prepend(ml->list, ms);
 	}
-	txl->list = g_slist_reverse(txl->list);
+	ml->list = g_slist_reverse(ml->list);
 	return TRUE;
 }
 
 /* Will log messages either way. Need to keep track of IDs for stream deduping.
    Plus, show_ids is on by default and I don't see why anyone would disable it. */
 static char *mastodon_msg_add_id(struct im_connection *ic,
-                                struct mastodon_status *txs, const char *prefix)
+                                struct mastodon_status *ms, const char *prefix)
 {
 	struct mastodon_data *md = ic->proto_data;
 	int reply_to = -1;
 	bee_user_t *bu;
 
-	if (txs->reply_to) {
+	if (ms->reply_to) {
 		int i;
 		for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
-			if (md->log[i].id == txs->reply_to) {
+			if (md->log[i].id == ms->reply_to) {
 				reply_to = i;
 				break;
 			}
 		}
 	}
 
-	if (txs->user && txs->user->screen_name &&
-	    (bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name))) {
+	if (ms->user && ms->user->screen_name &&
+	    (bu = bee_user_by_handle(ic->bee, ic, ms->user->screen_name))) {
 		struct mastodon_user_data *tud = bu->data;
 
-		if (txs->id > tud->last_id) {
-			tud->last_id = txs->id;
-			tud->last_time = txs->created_at;
+		if (ms->id > tud->last_id) {
+			tud->last_id = ms->id;
+			tud->last_time = ms->created_at;
 		}
 	}
 
 	md->log_id = (md->log_id + 1) % MASTODON_LOG_LENGTH;
-	md->log[md->log_id].id = txs->id;
-	md->log[md->log_id].bu = bee_user_by_handle(ic->bee, ic, txs->user->screen_name);
+	md->log[md->log_id].id = ms->id;
+	md->log[md->log_id].bu = bee_user_by_handle(ic->bee, ic, ms->user->screen_name);
 
 	/* This is all getting hairy. :-( If we RT'ed something ourselves,
 	   remember OUR id instead so undo will work. In other cases, the
 	   original tweet's id should be remembered for deduplicating. */
-	if (g_strcasecmp(txs->user->screen_name, md->user) == 0) {
-		md->log[md->log_id].id = txs->rt_id;
+	if (g_strcasecmp(ms->user->screen_name, md->user) == 0) {
+		md->log[md->log_id].id = ms->rt_id;
 		/* More useful than NULL. */
 		md->log[md->log_id].bu = &mastodon_log_local_user;
 	}
@@ -737,14 +739,14 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 	if (set_getbool(&ic->acc->set, "show_ids")) {
 		if (reply_to != -1) {
 			return g_strdup_printf("\002[\002%02x->%02x\002]\002 %s%s",
-			                       md->log_id, reply_to, prefix, txs->text);
+			                       md->log_id, reply_to, prefix, ms->text);
 		} else {
 			return g_strdup_printf("\002[\002%02x\002]\002 %s%s",
-			                       md->log_id, prefix, txs->text);
+			                       md->log_id, prefix, ms->text);
 		}
 	} else {
 		if (*prefix) {
-			return g_strconcat(prefix, txs->text, NULL);
+			return g_strconcat(prefix, ms->text, NULL);
 		} else {
 			return NULL;
 		}
@@ -898,10 +900,10 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
  */
 static void mastodon_stream_handle_update(struct im_connection *ic, json_value *parsed, gboolean from_filter)
 {
-	struct mastodon_status *txs = mastodon_xt_get_status(parsed);
-	if (txs) {
-		mastodon_status_show(ic, txs);
-		txs_free(txs);
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	if (ms) {
+		mastodon_status_show(ic, ms);
+		ms_free(ms);
 	}
 }
 
@@ -1258,16 +1260,16 @@ void mastodon_flush_timeline(struct im_connection *ic)
 
 	// See if the user wants to see the messages in a groupchat window or as private messages.
 	while (output) {
-		struct mastodon_status *txs = output->data;
-		if (txs->id != last_id) {
-			mastodon_status_show(ic, txs);
+		struct mastodon_status *ms = output->data;
+		if (ms->id != last_id) {
+			mastodon_status_show(ic, ms);
 		}
-		last_id = txs->id;
-		output = g_slist_remove(output, txs);
+		last_id = ms->id;
+		output = g_slist_remove(output, ms);
 	}
 
-	txl_free(home_timeline);
-	txl_free(mentions);
+	ml_free(home_timeline);
+	ml_free(mentions);
 
 	md->flags &= ~(MASTODON_DOING_TIMELINE | MASTODON_GOT_TIMELINE | MASTODON_GOT_MENTIONS);
 	md->home_timeline_obj = md->mentions_obj = NULL;
@@ -1281,7 +1283,7 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 	struct im_connection *ic = req->data;
 	struct mastodon_data *md;
 	json_value *parsed;
-	struct mastodon_list *txl;
+	struct mastodon_list *ml;
 
 	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
@@ -1295,13 +1297,13 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 		goto end;
 	}
 
-	txl = g_new0(struct mastodon_list, 1);
-	txl->list = NULL;
+	ml = g_new0(struct mastodon_list, 1);
+	ml->list = NULL;
 
-	mastodon_xt_get_status_list(ic, parsed, txl);
+	mastodon_xt_get_status_list(ic, parsed, ml);
 	json_value_free(parsed);
 
-	md->home_timeline_obj = txl;
+	md->home_timeline_obj = ml;
 
 end:
 	if (!g_slist_find(mastodon_connections, ic)) {
@@ -1320,7 +1322,7 @@ static void mastodon_get_home_timeline(struct im_connection *ic, gint64 next_cur
 {
 	struct mastodon_data *md = ic->proto_data;
 
-	txl_free(md->home_timeline_obj);
+	ml_free(md->home_timeline_obj);
 	md->home_timeline_obj = NULL;
 	md->flags &= ~MASTODON_GOT_TIMELINE;
 
