@@ -1327,10 +1327,6 @@ static void mastodon_http_post(struct http_request *req)
 	}
 
 	json_value_free(parsed);
-
-	if (req->flags & MASTODON_HTTP_USER_ACK) {
-		mastodon_log(ic, "Command processed successfully");
-	}
 }
 
 /**
@@ -1394,8 +1390,7 @@ void mastodon_status_destroy(struct im_connection *ic, guint64 id)
 
 	url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s",
 	                      MASTODON_STATUS_DESTROY_URL, id, ".json");
-	mastodon_http_f(ic, url, mastodon_http_post, ic, 1, NULL, 0,
-	               MASTODON_HTTP_USER_ACK);
+	mastodon_http(ic, url, mastodon_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }
 
@@ -1405,8 +1400,7 @@ void mastodon_status_retweet(struct im_connection *ic, guint64 id)
 
 	url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s",
 	                      MASTODON_STATUS_RETWEET_URL, id, ".json");
-	mastodon_http_f(ic, url, mastodon_http_post, ic, 1, NULL, 0,
-	               MASTODON_HTTP_USER_ACK);
+	mastodon_http(ic, url, mastodon_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }
 
@@ -1421,8 +1415,7 @@ void mastodon_report_spam(struct im_connection *ic, char *screen_name)
 	};
 
 	args[1] = screen_name;
-	mastodon_http_f(ic, MASTODON_REPORT_SPAM_URL, mastodon_http_post,
-	               ic, 1, args, 2, MASTODON_HTTP_USER_ACK);
+	mastodon_http(ic, MASTODON_REPORT_SPAM_URL, mastodon_http_post, ic, 1, args, 2);
 }
 
 /**
@@ -1436,8 +1429,7 @@ void mastodon_favourite_tweet(struct im_connection *ic, guint64 id)
 	};
 
 	args[1] = g_strdup_printf("%" G_GUINT64_FORMAT, id);
-	mastodon_http_f(ic, MASTODON_FAVORITE_CREATE_URL, mastodon_http_post,
-	               ic, 1, args, 2, MASTODON_HTTP_USER_ACK);
+	mastodon_http(ic, MASTODON_FAVORITE_CREATE_URL, mastodon_http_post, ic, 1, args, 2);
 	g_free(args[1]);
 }
 
@@ -1589,10 +1581,6 @@ static void mastodon_http_verify_credentials(struct http_request *req)
 		set_setint(&ic->acc->set, "account_id", json_o_get(parsed, "id")->u.integer);
 
 		json_value_free(parsed);
-
-		if (req->flags & MASTODON_HTTP_USER_ACK) {
-			mastodon_log(ic, "Verified credentials successfully");
-		}
 	}
 }
 
@@ -1626,10 +1614,6 @@ static void mastodon_http_register_app(struct http_request *req)
 		set_setstr(&ic->acc->set, "consumer_secret", json_o_strdup(parsed, "client_secret"));
 
 		json_value_free(parsed);
-
-		if (req->flags & MASTODON_HTTP_USER_ACK) {
-			mastodon_log(ic, "Application registered successfully");
-		}
 	}
 }
 

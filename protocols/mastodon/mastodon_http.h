@@ -26,16 +26,5 @@
 #include "nogaim.h"
 #include "http_client.h"
 
-typedef enum {
-	/* With this set, mastodon_http_post() will post a generic confirmation
-	   message to the user. */
-	MASTODON_HTTP_USER_ACK = 0x1000000,
-} mastodon_http_flags_t;
-
-struct oauth_info;
-
 struct http_request *mastodon_http(struct im_connection *ic, char *url_string, http_input_function func,
                                   gpointer data, int is_post, char** arguments, int arguments_len);
-struct http_request *mastodon_http_f(struct im_connection *ic, char *url_string, http_input_function func,
-                                    gpointer data, int is_post, char** arguments, int arguments_len,
-                                    mastodon_http_flags_t flags);
