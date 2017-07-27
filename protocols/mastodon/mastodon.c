@@ -292,9 +292,7 @@ static void os_free(struct oauth2_service *os) {
 
 /**
  * Create a new oauth2_service struct. If we haven never connected to
- * the server, we'll be missing our key and secret. In this case,
- * register the application and wait until we get back the necessary
- * information, then try again.
+ * the server, we'll be missing our key and secret.
  */
 static struct oauth2_service *get_oauth2_service(struct im_connection *ic)
 {
@@ -306,17 +304,10 @@ static struct oauth2_service *get_oauth2_service(struct im_connection *ic)
 	os->redirect_url = "urn:ietf:wg:oauth:2.0:oob";
 	os->scope = MASTODON_SCOPE;
 
+	// possibly empty strings if the client is not registered
 	os->consumer_key = set_getstr(&ic->acc->set, "consumer_key");
 	os->consumer_secret = set_getstr(&ic->acc->set, "consumer_secret");
 
-	// if we did not have these stored, register the app and try again
-	if (!os->consumer_key || !os->consumer_secret ||
-	    strlen(os->consumer_key) == 0 || strlen(os->consumer_secret) == 0) {
-		os_free(os);
-		mastodon_register_app(ic);
-		imcb_log(ic, "Registering client, please try again in a second");
-		return NULL;
-	}
 	return os;
 }
 
@@ -477,6 +468,7 @@ void oauth2_init(struct im_connection *ic)
 	imcb_buddy_msg(ic, MASTODON_OAUTH_HANDLE, "Respond to this message with the returned "
 	               "authorization token.", 0, 0);
 
+	ic->flags |= OPT_SLOW_LOGIN;
 }
 
 int oauth2_refresh(struct im_connection *ic, const char *refresh_token);
@@ -512,17 +504,21 @@ static void mastodon_login(account_t * acc)
 	GSList *p_in = NULL;
 	const char *tok;
 
-	// Maybe we're registering application, try again later
-	if (!(md->oauth2_service = get_oauth2_service(ic))) {
-		return;
-	}
+	md->oauth2_service = get_oauth2_service(ic);
 
 	oauth_params_parse(&p_in, ic->acc->pass);
 
-	/* First see if we have a refresh token, in which case any
-	   access token we *might* have has probably expired already
-	   anyway. */
-	if ((tok = oauth_params_get(&p_in, "refresh_token"))) {
+	/* If we did not have these stored, register the app and try
+	 * again. We'll call oauth2_init from the callback in order to
+	 * connect, eventually. */
+	if (!md->oauth2_service->consumer_key || !md->oauth2_service->consumer_secret ||
+	    strlen(md->oauth2_service->consumer_key) == 0 || strlen(md->oauth2_service->consumer_secret) == 0) {
+		mastodon_register_app(ic);
+	}
+        /* If we have a refresh token, in which case any access token
+	   we *might* have has probably expired already anyway.
+	   Refresh and connect. */
+	else if ((tok = oauth_params_get(&p_in, "refresh_token"))) {
 		oauth2_refresh(ic, tok);
 	}
 	/* If we don't have a refresh token, let's hope the access
@@ -534,7 +530,6 @@ static void mastodon_login(account_t * acc)
 	/* If we don't have any, start the OAuth process now. */
 	else {
 		oauth2_init(ic);
-		ic->flags |= OPT_SLOW_LOGIN;
 	}
 	/* All of the above will end up calling mastodon_connect() in
 	   the end. */

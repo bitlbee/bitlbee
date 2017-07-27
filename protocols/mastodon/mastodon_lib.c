@@ -35,6 +35,7 @@
 #include "misc.h"
 #include "base64.h"
 #include "mastodon_lib.h"
+#include "oauth2.h"
 #include "json_util.h"
 #include <ctype.h>
 #include <errno.h>
@@ -1610,10 +1611,23 @@ static void mastodon_http_register_app(struct http_request *req)
 	if ((parsed = mastodon_parse_response(ic, req))) {
 
 		set_setint(&ic->acc->set, "app_id", json_o_get(parsed, "id")->u.integer);
-		set_setstr(&ic->acc->set, "consumer_key", json_o_strdup(parsed, "client_id"));
-		set_setstr(&ic->acc->set, "consumer_secret", json_o_strdup(parsed, "client_secret"));
+		
+		char *key = json_o_strdup(parsed, "client_id");
+		char *secret = json_o_strdup(parsed, "client_secret");
 
 		json_value_free(parsed);
+		
+		// save for future sessions
+		set_setstr(&ic->acc->set, "consumer_key", key);
+		set_setstr(&ic->acc->set, "consumer_secret", secret);
+
+		// and set for the current session, and connect
+		struct mastodon_data *md = ic->proto_data;
+		struct oauth2_service *os = md->oauth2_service;
+		os->consumer_key = key;
+		os->consumer_secret = secret;
+
+		oauth2_init(ic);	
 	}
 }
 
