@@ -21,9 +21,7 @@
 *                                                                           *
 ****************************************************************************/
 
-
-#ifndef _MASTODON_LIB_H
-#define _MASTODON_LIB_H
+#pragma once
 
 #include "nogaim.h"
 #include "mastodon_http.h"
@@ -121,6 +119,3 @@ void mastodon_status_retweet(struct im_connection *ic, guint64 id);
 void mastodon_report_spam(struct im_connection *ic, char *screen_name);
 void mastodon_favourite_tweet(struct im_connection *ic, guint64 id);
 void mastodon_status_show_url(struct im_connection *ic, guint64 id);
-
-#endif //_MASTODON_LIB_H
-
