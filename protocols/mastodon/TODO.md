@@ -5,6 +5,9 @@
    the
    [Streaming API](https://github.com/tootsuite/documentation/blob/master/Using-the-API/Streaming-API.md).
 
+1. Rename `mastodon_user` to `mastodon_account`. Change `uid` to `id`.
+   Change `screen_name` to `display_name`. Change `name` to `acct`.
+
 1. When showing a status, decide how to handle the URLs
    of
    [media attachments](https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md#attachment).

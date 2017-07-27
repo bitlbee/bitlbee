@@ -104,7 +104,6 @@ gboolean mastodon_open_filter_stream(struct im_connection *ic);
 gboolean mastodon_get_timeline(struct im_connection *ic, gint64 next_cursor);
 void mastodon_get_friends_ids(struct im_connection *ic, gint64 next_cursor);
 void mastodon_get_mutes_ids(struct im_connection *ic, gint64 next_cursor);
-void mastodon_get_noretweets_ids(struct im_connection *ic, gint64 next_cursor);
 void mastodon_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
 
 void mastodon_following(struct im_connection *ic, gint64 next_cursor);

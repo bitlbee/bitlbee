@@ -66,18 +66,34 @@ struct mastodon_status {
 	gboolean from_filter;
 };
 
+typedef enum {
+	MN_MENTION,
+	MN_REBLOG,
+	MN_FAVOURITE,
+	MN_FOLLOW,
+} mastodon_notification_type_t;
+
+struct mastodon_notification {
+	guint64 id;
+	mastodon_notification_type_t type;
+	time_t created_at;
+	struct mastodon_user *account;
+	struct mastodon_status *status;
+	gboolean from_filter;
+};
+
 /**
  * Frees a mastodon_user struct.
  */
-static void txu_free(struct mastodon_user *txu)
+static void mu_free(struct mastodon_user *mu)
 {
-	if (txu == NULL) {
+	if (mu == NULL) {
 		return;
 	}
 
-	g_free(txu->name);
-	g_free(txu->screen_name);
-	g_free(txu);
+	g_free(mu->name);
+	g_free(mu->screen_name);
+	g_free(mu);
 }
 
 /**
@@ -90,8 +106,22 @@ static void ms_free(struct mastodon_status *ms)
 	}
 
 	g_free(ms->text);
-	txu_free(ms->user);
+	mu_free(ms->user);
 	g_free(ms);
+}
+
+/**
+ * Frees a mastodon_notification struct.
+ */
+static void mn_free(struct mastodon_notification *mn)
+{
+	if (mn == NULL) {
+		return;
+	}
+
+	mu_free(mn->account);
+	ms_free(mn->status);
+	g_free(mn);
 }
 
 /**
@@ -112,7 +142,7 @@ static void ml_free(struct mastodon_list *ml)
 		} else if (ml->type == ML_ID) {
 			g_free(l->data);
 		} else if (ml->type == ML_USER) {
-			txu_free(l->data);
+			mu_free(l->data);
 		}
 	}
 
@@ -236,7 +266,6 @@ static json_value *mastodon_parse_response(struct im_connection *ic, struct http
 }
 
 static void mastodon_http_get_mutes_ids(struct http_request *req);
-static void mastodon_http_get_noretweets_ids(struct http_request *req);
 
 /**
  * Get the muted users ids.
@@ -248,20 +277,6 @@ void mastodon_get_mutes_ids(struct im_connection *ic, gint64 next_cursor)
 	args[0] = "cursor";
 	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
 	mastodon_http(ic, MASTODON_MUTES_IDS_URL, mastodon_http_get_mutes_ids, ic, 0, args, 2);
-
-	g_free(args[1]);
-}
-
-/**
- * Get the ids for users from whom we should ignore retweets.
- */
-void mastodon_get_noretweets_ids(struct im_connection *ic, gint64 next_cursor)
-{
-	char *args[2];
-
-	args[0] = "cursor";
-	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
-	mastodon_http(ic, MASTODON_NORETWEETS_IDS_URL, mastodon_http_get_noretweets_ids, ic, 0, args, 2);
 
 	g_free(args[1]);
 }
@@ -346,70 +361,19 @@ static void mastodon_http_get_mutes_ids(struct http_request *req)
 	ml_free(ml);
 }
 
-/**
- * Callback for getting the no-retweets ids.
- */
-static void mastodon_http_get_noretweets_ids(struct http_request *req)
-{
-	struct im_connection *ic = req->data;
-	json_value *parsed;
-	struct mastodon_list *ml;
-	struct mastodon_data *md;
-
-	// Check if the connection is stil active
-	if (!g_slist_find(mastodon_connections, ic)) {
-		return;
-	}
-
-	if (req->status_code != 200) {
-		/* Fail silently */
-		return;
-	}
-
-	md = ic->proto_data;
-
-	// Parse the data.
-	if (!(parsed = mastodon_parse_response(ic, req))) {
-		return;
-	}
-
-	ml = g_new0(struct mastodon_list, 1);
-	ml->list = md->noretweets_ids;
-	
-	// Process the retweet ids
-	ml->type = ML_ID;
-	if (parsed->type == json_array) {
-		unsigned int i;
-		for (i = 0; i < parsed->u.array.length; i++) {
-			json_value *c = parsed->u.array.values[i];
-			if (c->type != json_integer) {
-				continue;
-			}
-			ml->list = g_slist_prepend(ml->list,
-			                            g_strdup_printf("%"PRIu64, c->u.integer));
-		}
-	}
-
-	json_value_free(parsed);
-	md->noretweets_ids = ml->list;
-
-	ml->list = NULL;
-	ml_free(ml);
-}
-
 struct mastodon_user *mastodon_xt_get_user(const json_value *node)
 {
-	struct mastodon_user *txu;
+	struct mastodon_user *mu;
 	json_value *jv;
 
-	txu = g_new0(struct mastodon_user, 1);
-	txu->name = g_strdup(json_o_str(node, "acct"));
-	txu->screen_name = g_strdup(json_o_str(node, "display_name"));
+	mu = g_new0(struct mastodon_user, 1);
+	mu->name = g_strdup(json_o_str(node, "display_name"));
+	mu->screen_name = g_strdup(json_o_str(node, "acct"));
 
 	jv = json_o_get(node, "id");
-	txu->uid = jv->u.integer;
+	mu->uid = jv->u.integer;
 
-	return txu;
+	return mu;
 }
 #ifdef __GLIBC__
 #define MASTODON_TIME_FORMAT "%a %b %d %H:%M:%S %z %Y"
@@ -421,11 +385,6 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 
 /**
  * Function to fill a mastodon_status struct.
- * It sets:
- *  - the status text and
- *  - the created_at timestamp and
- *  - the status id and
- *  - the user in a mastodon_user struct.
  */
 static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 {
@@ -462,12 +421,10 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 		}
 	}
 
-	/* If it's a (truncated) retweet, get the original. Even if the API claims it
-	   wasn't truncated because it may be lying. */
 	if (rt) {
 		struct mastodon_status *rms = mastodon_xt_get_status(rt);
 		if (rms) {
-			ms->text = g_strdup_printf("RT @%s: %s", rms->user->screen_name, rms->text);
+			ms->text = g_strdup_printf("boosted @%s: %s", rms->user->screen_name, rms->text);
 			ms->id = rms->id;
 			ms_free(rms);
 		}
@@ -482,6 +439,54 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	}
 
 	ms_free(ms);
+	return NULL;
+}
+
+/**
+ * Function to fill a mastodon_notification struct.
+ */
+static struct mastodon_notification *mastodon_xt_get_notification(const json_value *node)
+{
+	if (node->type != json_object) {
+		return FALSE;
+	}
+
+	struct mastodon_notification *mn = g_new0(struct mastodon_notification, 1);
+
+	JSON_O_FOREACH(node, k, v) {
+		if (strcmp("id", k) == 0 && v->type == json_integer) {
+			mn->id = v->u.integer;
+		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
+			struct tm parsed;
+
+			/* Very sensitive to changes to the formatting of
+			   this field. :-( Also assumes the timezone used
+			   is UTC since C time handling functions suck. */
+			if (strptime(v->u.string.ptr, MASTODON_TIME_FORMAT, &parsed) != NULL) {
+				mn->created_at = mktime_utc(&parsed);
+			}
+		} else if (strcmp("account", k) == 0 && v->type == json_object) {
+			mn->account = mastodon_xt_get_user(v);
+		} else if (strcmp("status", k) == 0 && v->type == json_object) {
+			mn->status = mastodon_xt_get_status(v);
+		} else if (strcmp("type", k) == 0 && v->type == json_string) {
+			if (strcmp(v->u.string.ptr, "mention") == 0) {
+				mn->type = MN_MENTION;
+			} else if (strcmp(v->u.string.ptr, "reblog") == 0) {
+				mn->type = MN_REBLOG;
+			} else if (strcmp(v->u.string.ptr, "favourite") == 0) {
+				mn->type = MN_MENTION;
+			} else if (strcmp(v->u.string.ptr, "follow") == 0) {
+				mn->type = MN_MENTION;
+			}
+		}
+	}
+
+	if (mn->type) {
+		return mn;
+	}
+
+	mn_free(mn);
 	return NULL;
 }
 
@@ -533,7 +538,7 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 			const char *full = json_o_str(v->u.array.values[i], "expanded_url");
 			char *pos, *new;
 
-			/* Skip if a required field is missing, if the t.co URL is not in fact 
+			/* Skip if a required field is missing, if the t.co URL is not in fact
 			   in the Tweet at all, or if the full-ish one *is* in it already
 			   (dupes appear, especially in streaming API). */
 			if (!kort || !disp || !(pos = strstr(*text, kort)) || strstr(*text, disp)) {
@@ -752,23 +757,73 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 	g_free(prefix);
 }
 
-static void mastodon_status_show(struct im_connection *ic, struct mastodon_status *status)
+static void mastodon_notification_show(struct im_connection *ic, struct mastodon_notification *notification)
 {
 	struct mastodon_data *md = ic->proto_data;
-	char *uid_str;
+	struct mastodon_user *mu = notification->account;
+	struct mastodon_status *ms = notification->status;
 
-	if (status->user == NULL || status->text == NULL) {
+	if (mu == NULL) {
 		return;
 	}
-	
-	/* Check this is not a tweet that should be muted */
-	uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, status->user->uid);
+
+	/* Check this is not a toot from a muted user, or a boost from a user we don't want to see bosts from. */
+	char *uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, mu->uid);
 
 	if (g_slist_find_custom(md->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
 		g_free(uid_str);
 		return;
 	}
-	if (status->id != status->rt_id && g_slist_find_custom(md->noretweets_ids, uid_str, (GCompareFunc)strcmp)) {
+
+	/* Would like to do this during parsing, but can't access
+	   settings from there. */
+	if (ms && set_getbool(&ic->acc->set, "strip_newlines")) {
+		strip_newlines(ms->text);
+	}
+
+	char *original = ms->text;
+
+	switch (notification->type) {
+	case MN_MENTION:
+		ms->text = g_strdup_printf("@%s mentioned you: %s", mu->screen_name, original);
+		break;
+	case MN_REBLOG:
+		ms->text = g_strdup_printf("@%s boosted your status: %s", mu->screen_name, original);
+		break;
+	case MN_FAVOURITE:
+		ms->text = g_strdup_printf("@%s favourited your status: %s", mu->screen_name, original);
+		break;
+	case MN_FOLLOW:
+		ms->text = g_strdup_printf("@%s [%s] followed you", mu->screen_name, mu->name);
+		break;
+	}
+
+	g_free(original);
+
+	if (ms->from_filter) {
+		mastodon_status_show_filter(ic, ms);
+	} else if (md->flags & MASTODON_MODE_CHAT) {
+		mastodon_status_show_chat(ic, ms);
+	} else {
+		mastodon_status_show_msg(ic, ms);
+	}
+
+	g_free(uid_str);
+}
+
+static void mastodon_status_show(struct im_connection *ic, struct mastodon_status *ms)
+{
+	struct mastodon_data *md = ic->proto_data;
+	char *uid_str;
+
+	if (ms->user == NULL || ms->text == NULL) {
+		return;
+	}
+
+	/* Check this is not a tweet that should be muted */
+	uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, ms->user->uid);
+
+	if (g_slist_find_custom(md->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
 		g_free(uid_str);
 		return;
 	}
@@ -776,18 +831,30 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
 	/* Grrrr. Would like to do this during parsing, but can't access
 	   settings from there. */
 	if (set_getbool(&ic->acc->set, "strip_newlines")) {
-		strip_newlines(status->text);
+		strip_newlines(ms->text);
 	}
 
-	if (status->from_filter) {
-		mastodon_status_show_filter(ic, status);
+	if (ms->from_filter) {
+		mastodon_status_show_filter(ic, ms);
 	} else if (md->flags & MASTODON_MODE_CHAT) {
-		mastodon_status_show_chat(ic, status);
+		mastodon_status_show_chat(ic, ms);
 	} else {
-		mastodon_status_show_msg(ic, status);
+		mastodon_status_show_msg(ic, ms);
 	}
 
 	g_free(uid_str);
+}
+
+/**
+ * Add exactly one notification to the timeline.
+ */
+static void mastodon_stream_handle_notification(struct im_connection *ic, json_value *parsed, gboolean from_filter)
+{
+	struct mastodon_notification *mn = mastodon_xt_get_notification(parsed);
+	if (mn) {
+		mastodon_notification_show(ic, mn);
+		mn_free(mn);
+	}
 }
 
 /**
@@ -806,6 +873,8 @@ static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_
 {
 	if (evt_type == MASTODON_EVT_UPDATE) {
 		mastodon_stream_handle_update(ic, parsed, from_filter);
+	} else if (evt_type == MASTODON_EVT_NOTIFICATION) {
+		mastodon_stream_handle_notification(ic, parsed, from_filter);
 	} else {
 		mastodon_log(ic, "Ignoring event type %d", evt_type);
 	}
@@ -859,7 +928,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server
 
 	// include the two newlines at the end
 	len = nl - req->reply_body + 2;
-	
+
 	if (len > 0) {
 		char *p;
 		mastodon_evt_flags_t evt_type = MASTODON_EVT_UNKNOWN;
@@ -902,11 +971,11 @@ https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server
 			g_string_free(data, TRUE);
 		}
 	}
-	
+
 end:
 	http_flush_bytes(req, len);
 
-	/* One notification might bring multiple events! */
+	/* We might have multiple events */
 	if (req->body_size > 0) {
 		mastodon_http_stream(req);
 	}
@@ -1421,7 +1490,7 @@ static void mastodon_http_following(struct http_request *req)
 	guint64 id = 0;
 
 	json_value *parsed;
-	
+
 	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
@@ -1451,7 +1520,7 @@ static void mastodon_http_following(struct http_request *req)
 				display_name = g_memdup(v->u.string.ptr, v->u.string.length + 1);
 			}
 		}
-		
+
 		if (id != 0 && acct != NULL && display_name != NULL) {
 			mastodon_add_buddy(ic, acct, display_name);
 		} else {
@@ -1459,12 +1528,12 @@ static void mastodon_http_following(struct http_request *req)
 			g_free(display_name);
 		}
 	}
-	
+
 finish:
 	json_value_free(parsed);
-	
+
 	// try to fetch more if we got at least one id
-	
+
 	if (id > 0) {
 		mastodon_following(ic, id);
 	}
@@ -1478,7 +1547,7 @@ finish:
 void mastodon_following(struct im_connection *ic, gint64 max_id)
 {
 	gint64 id = set_getint(&ic->acc->set, "account_id");
-	
+
 	if (!id) {
 		return;
 	}
