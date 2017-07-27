@@ -301,8 +301,6 @@ static gboolean mastodon_xt_get_friends_id_list(json_value *node, struct mastodo
 	return TRUE;
 }
 
-static void mastodon_get_users_lookup(struct im_connection *ic);
-
 /**
  * Callback for getting the mutes ids.
  */
@@ -399,79 +397,6 @@ static void mastodon_http_get_noretweets_ids(struct http_request *req)
 	ml_free(ml);
 }
 
-static gboolean mastodon_xt_get_users(json_value *node, struct mastodon_list *ml);
-static void mastodon_http_get_users_lookup(struct http_request *req);
-
-static void mastodon_get_users_lookup(struct im_connection *ic)
-{
-	struct mastodon_data *md = ic->proto_data;
-	char *args[2] = {
-		"user_id",
-		NULL,
-	};
-	GString *ids = g_string_new("");
-	int i;
-
-	/* We can request up to 100 users at a time. */
-	for (i = 0; i < 100 && md->follow_ids; i++) {
-		g_string_append_printf(ids, ",%s", (char *) md->follow_ids->data);
-		g_free(md->follow_ids->data);
-		md->follow_ids = g_slist_remove(md->follow_ids, md->follow_ids->data);
-	}
-	if (ids->len > 0) {
-		args[1] = ids->str + 1;
-		/* POST, because I think ids can be up to 1KB long. */
-		mastodon_http(ic, MASTODON_USERS_LOOKUP_URL, mastodon_http_get_users_lookup, ic, 1, args, 2);
-	} else {
-		/* We have all users. Continue with login. (Get statuses.) */
-		md->flags |= MASTODON_HAVE_FRIENDS;
-	}
-	g_string_free(ids, TRUE);
-}
-
-/**
- * Callback for getting (mastodon)friends...
- *
- * Be afraid, be very afraid! This function will potentially add hundreds of "friends". "Who has
- * hundreds of friends?" you wonder? You probably not, since you are reading the source of
- * BitlBee... Get a life and meet new people!
- */
-static void mastodon_http_get_users_lookup(struct http_request *req)
-{
-	struct im_connection *ic = req->data;
-	json_value *parsed;
-	struct mastodon_list *ml;
-	GSList *l = NULL;
-	struct mastodon_user *user;
-
-	// Check if the connection is still active.
-	if (!g_slist_find(mastodon_connections, ic)) {
-		return;
-	}
-
-	// Get the user list from the parsed feed.
-	if (!(parsed = mastodon_parse_response(ic, req))) {
-		return;
-	}
-
-	ml = g_new0(struct mastodon_list, 1);
-	ml->list = NULL;
-
-	mastodon_xt_get_users(parsed, ml);
-	json_value_free(parsed);
-
-	// Add the users as buddies.
-	for (l = ml->list; l; l = g_slist_next(l)) {
-		user = l->data;
-		mastodon_add_buddy(ic, user->screen_name, user->name);
-	}
-
-	// Free the structure.
-	ml_free(ml);
-
-	mastodon_get_users_lookup(ic);
-}
-
 struct mastodon_user *mastodon_xt_get_user(const json_value *node)
 {
 	struct mastodon_user *txu;
@@ -486,36 +411,6 @@ struct mastodon_user *mastodon_xt_get_user(const json_value *node)
 
 	return txu;
 }
-
-/**
- * Function to fill a mastodon_list struct.
- * It sets:
- *  - all <user>s from the <users> element.
- */
-static gboolean mastodon_xt_get_users(json_value *node, struct mastodon_list *ml)
-{
-	struct mastodon_user *txu;
-	int i;
-
-	// Set the type of the list.
-	ml->type = ML_USER;
-
-	if (!node || node->type != json_array) {
-		return FALSE;
-	}
-
-	// The root <users> node should hold the list of users <user>
-	// Walk over the nodes children.
-	for (i = 0; i < node->u.array.length; i++) {
-		txu = mastodon_xt_get_user(node->u.array.values[i]);
-		if (txu) {
-			ml->list = g_slist_prepend(ml->list, txu);
-		}
-	}
-
-	return TRUE;
-}
-
 #ifdef __GLIBC__
 #define MASTODON_TIME_FORMAT "%a %b %d %H:%M:%S %z %Y"
 #else
