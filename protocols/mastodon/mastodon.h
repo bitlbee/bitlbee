@@ -24,8 +24,7 @@
 
 #include "nogaim.h"
 
-#ifndef _MASTODON_H
-#define _MASTODON_H
+#pragma once
 
 #ifdef DEBUG_MASTODON
 #define debug(text ...) imcb_log(ic, text);
@@ -129,5 +128,3 @@ char *mastodon_parse_error(struct http_request *req);
 
 void mastodon_log(struct im_connection *ic, char *format, ...);
 struct groupchat *mastodon_groupchat_init(struct im_connection *ic);
-
-#endif //_MASTODON_H

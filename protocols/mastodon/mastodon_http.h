@@ -21,8 +21,7 @@
 *                                                                           *
 ****************************************************************************/
 
-#ifndef _MASTODON_HTTP_H
-#define _MASTODON_HTTP_H
+#pragma once
 
 #include "nogaim.h"
 #include "http_client.h"
@@ -40,6 +39,3 @@ struct http_request *mastodon_http(struct im_connection *ic, char *url_string, h
 struct http_request *mastodon_http_f(struct im_connection *ic, char *url_string, http_input_function func,
                                     gpointer data, int is_post, char** arguments, int arguments_len,
                                     mastodon_http_flags_t flags);
-
-#endif //_MASTODON_HTTP_H
-
