@@ -248,39 +248,6 @@ static GSList *mastodon_filter_parse(struct groupchat *c, const char *text)
 	return ret;
 }
 
-/**
- * Main loop function
- */
-gboolean mastodon_main_loop(gpointer data, gint fd, b_input_condition cond)
-{
-	struct im_connection *ic = data;
-
-	// Check if we are still logged in...
-	if (!g_slist_find(mastodon_connections, ic)) {
-		return FALSE;
-	}
-
-	// Do stuff..
-	return mastodon_get_timeline(ic, -1) &&
-	       ((ic->flags & OPT_LOGGED_IN) == OPT_LOGGED_IN);
-}
-
-static void mastodon_main_loop_start(struct im_connection *ic)
-{
-	struct mastodon_data *md = ic->proto_data;
-
-	/* Create the room now that we "logged in". */
-	if (md->flags & MASTODON_MODE_CHAT) {
-		mastodon_groupchat_init(ic);
-	}
-
-	// Run this once and open the stream
-	mastodon_main_loop(ic, -1, 0);
-
-        mastodon_open_stream(ic);
-	ic->flags |= OPT_PONGS;
-}
-
 struct groupchat *mastodon_groupchat_init(struct im_connection *ic)
 {
 	char *name_hint;
@@ -473,7 +440,15 @@ static void mastodon_connect(struct im_connection *ic)
 		// mastodon_get_mutes_ids(ic, -1);
 		// mastodon_get_noretweets_ids(ic, -1);
 	}
-	mastodon_main_loop_start(ic);
+
+	/* Create the room. */
+	if (md->flags & MASTODON_MODE_CHAT) {
+		mastodon_groupchat_init(ic);
+	}
+
+	mastodon_get_timeline(ic, -1);
+        mastodon_open_stream(ic);
+	ic->flags |= OPT_PONGS;
 }
 
 void oauth2_init(struct im_connection *ic)
