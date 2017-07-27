@@ -51,16 +51,16 @@ struct mastodon_list {
 	GSList *list;
 };
 
-struct mastodon_user {
-	guint64 uid;
-	char *name;
-	char *screen_name;
+struct mastodon_account {
+	guint64 id;
+	char *display_name;
+	char *acct;
 };
 
 struct mastodon_status {
 	time_t created_at;
 	char *text;
-	struct mastodon_user *user;
+	struct mastodon_account *account;
 	guint64 id, rt_id; /* Usually equal, with RTs id == *original* id */
 	guint64 reply_to;
 	gboolean from_filter;
@@ -77,22 +77,22 @@ struct mastodon_notification {
 	guint64 id;
 	mastodon_notification_type_t type;
 	time_t created_at;
-	struct mastodon_user *account;
+	struct mastodon_account *account;
 	struct mastodon_status *status;
 	gboolean from_filter;
 };
 
 /**
- * Frees a mastodon_user struct.
+ * Frees a mastodon_account struct.
  */
-static void mu_free(struct mastodon_user *mu)
+static void mu_free(struct mastodon_account *mu)
 {
 	if (mu == NULL) {
 		return;
 	}
 
-	g_free(mu->name);
-	g_free(mu->screen_name);
+	g_free(mu->display_name);
+	g_free(mu->acct);
 	g_free(mu);
 }
 
@@ -106,7 +106,7 @@ static void ms_free(struct mastodon_status *ms)
 	}
 
 	g_free(ms->text);
-	mu_free(ms->user);
+	mu_free(ms->account);
 	g_free(ms);
 }
 
@@ -361,17 +361,17 @@ static void mastodon_http_get_mutes_ids(struct http_request *req)
 	ml_free(ml);
 }
 
-struct mastodon_user *mastodon_xt_get_user(const json_value *node)
+struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 {
-	struct mastodon_user *mu;
+	struct mastodon_account *mu;
 	json_value *jv;
 
-	mu = g_new0(struct mastodon_user, 1);
-	mu->name = g_strdup(json_o_str(node, "display_name"));
-	mu->screen_name = g_strdup(json_o_str(node, "acct"));
+	mu = g_new0(struct mastodon_account, 1);
+	mu->display_name = g_strdup(json_o_str(node, "display_name"));
+	mu->acct = g_strdup(json_o_str(node, "acct"));
 
 	jv = json_o_get(node, "id");
-	mu->uid = jv->u.integer;
+	mu->id = jv->u.integer;
 
 	return mu;
 }
@@ -413,7 +413,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 				ms->created_at = mktime_utc(&parsed);
 			}
 		} else if (strcmp("account", k) == 0 && v->type == json_object) {
-			ms->user = mastodon_xt_get_user(v);
+			ms->account = mastodon_xt_get_user(v);
 		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
 			ms->rt_id = ms->id = v->u.integer;
 		} else if (strcmp("in_reply_to_id", k) == 0 && v->type == json_integer) {
@@ -424,7 +424,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	if (rt) {
 		struct mastodon_status *rms = mastodon_xt_get_status(rt);
 		if (rms) {
-			ms->text = g_strdup_printf("boosted @%s: %s", rms->user->screen_name, rms->text);
+			ms->text = g_strdup_printf("boosted @%s: %s", rms->account->acct, rms->text);
 			ms->id = rms->id;
 			ms_free(rms);
 		}
@@ -434,7 +434,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 		expand_entities(&ms->text, node, extended_node);
 	}
 
-	if (ms->text && ms->user && ms->id) {
+	if (ms->text && ms->account && ms->id) {
 		return ms;
 	}
 
@@ -502,8 +502,8 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 		 * full message and try to insert it when we run into the
 		 * Tweet entity. */
 		struct mastodon_status *ms = mastodon_xt_get_status(quoted);
-		quote_text = g_strdup_printf("@%s: %s", ms->user->screen_name, ms->text);
-		quote_url = g_strdup_printf("%s/status/%" G_GUINT64_FORMAT, ms->user->screen_name, ms->id);
+		quote_text = g_strdup_printf("@%s: %s", ms->account->acct, ms->text);
+		quote_url = g_strdup_printf("%s/status/%" G_GUINT64_FORMAT, ms->account->acct, ms->id);
 		ms_free(ms);
 	} else {
 		quoted = NULL;
@@ -613,8 +613,8 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 		}
 	}
 
-	if (ms->user && ms->user->screen_name &&
-	    (bu = bee_user_by_handle(ic->bee, ic, ms->user->screen_name))) {
+	if (ms->account && ms->account->acct &&
+	    (bu = bee_user_by_handle(ic->bee, ic, ms->account->acct))) {
 		struct mastodon_user_data *tud = bu->data;
 
 		if (ms->id > tud->last_id) {
@@ -625,12 +625,12 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 
 	md->log_id = (md->log_id + 1) % MASTODON_LOG_LENGTH;
 	md->log[md->log_id].id = ms->id;
-	md->log[md->log_id].bu = bee_user_by_handle(ic->bee, ic, ms->user->screen_name);
+	md->log[md->log_id].bu = bee_user_by_handle(ic->bee, ic, ms->account->acct);
 
 	/* This is all getting hairy. :-( If we RT'ed something ourselves,
 	   remember OUR id instead so undo will work. In other cases, the
 	   original tweet's id should be remembered for deduplicating. */
-	if (g_strcasecmp(ms->user->screen_name, md->user) == 0) {
+	if (g_strcasecmp(ms->account->acct, md->user) == 0) {
 		md->log[md->log_id].id = ms->rt_id;
 		/* More useful than NULL. */
 		md->log[md->log_id].bu = &mastodon_log_local_user;
@@ -669,7 +669,7 @@ static void mastodon_status_show_filter(struct im_connection *ic, struct mastodo
 
 		switch (tf->type) {
 		case MASTODON_FILTER_TYPE_FOLLOW:
-			if (status->user->uid != tf->uid) {
+			if (status->account->id != tf->uid) {
 				continue;
 			}
 			break;
@@ -685,7 +685,7 @@ static void mastodon_status_show_filter(struct im_connection *ic, struct mastodo
 		}
 
 		for (l = tf->groupchats; l; l = g_slist_next(l)) {
-			imcb_chat_msg(l->data, status->user->screen_name,
+			imcb_chat_msg(l->data, status->account->acct,
 			              msg ? msg : status->text, 0, 0);
 		}
 	}
@@ -700,7 +700,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 {
 	struct mastodon_data *md = ic->proto_data;
 	struct groupchat *gc;
-	gboolean me = g_strcasecmp(md->user, status->user->screen_name) == 0;
+	gboolean me = g_strcasecmp(md->user, status->account->acct) == 0;
 	char *msg;
 
 	// Create a new groupchat if it does not exsist.
@@ -708,7 +708,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 
 	if (!me) {
 		/* MUST be done before mastodon_msg_add_id() to avoid #872. */
-		mastodon_add_buddy(ic, status->user->screen_name, status->user->name);
+		mastodon_add_buddy(ic, status->account->acct, status->account->display_name);
 	}
 	msg = mastodon_msg_add_id(ic, status, "");
 
@@ -716,7 +716,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 	if (me) {
 		imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
 	} else {
-		imcb_chat_msg(gc, status->user->screen_name,
+		imcb_chat_msg(gc, status->account->acct,
 		              msg ? msg : status->text, 0, status->created_at);
 	}
 
@@ -731,7 +731,7 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 	struct mastodon_data *md = ic->proto_data;
 	char from[MAX_STRING] = "";
 	char *prefix = NULL, *text = NULL;
-	gboolean me = g_strcasecmp(md->user, status->user->screen_name) == 0;
+	gboolean me = g_strcasecmp(md->user, status->account->acct) == 0;
 
 	if (md->flags & MASTODON_MODE_ONE) {
 		g_snprintf(from, sizeof(from) - 1, "%s_%s", md->prefix, ic->acc->user);
@@ -740,9 +740,9 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 
 	if (md->flags & MASTODON_MODE_ONE) {
 		prefix = g_strdup_printf("\002<\002%s\002>\002 ",
-		                         status->user->screen_name);
+		                         status->account->acct);
 	} else if (!me) {
-		mastodon_add_buddy(ic, status->user->screen_name, status->user->name);
+		mastodon_add_buddy(ic, status->account->acct, status->account->display_name);
 	} else {
 		prefix = g_strdup("You: ");
 	}
@@ -750,7 +750,7 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 	text = mastodon_msg_add_id(ic, status, prefix ? prefix : "");
 
 	imcb_buddy_msg(ic,
-	               *from ? from : status->user->screen_name,
+	               *from ? from : status->account->acct,
 	               text ? text : status->text, 0, status->created_at);
 
 	g_free(text);
@@ -760,7 +760,7 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 static void mastodon_notification_show(struct im_connection *ic, struct mastodon_notification *notification)
 {
 	struct mastodon_data *md = ic->proto_data;
-	struct mastodon_user *mu = notification->account;
+	struct mastodon_account *mu = notification->account;
 	struct mastodon_status *ms = notification->status;
 
 	if (mu == NULL) {
@@ -768,7 +768,7 @@ static void mastodon_notification_show(struct im_connection *ic, struct mastodon
 	}
 
 	/* Check this is not a toot from a muted user, or a boost from a user we don't want to see bosts from. */
-	char *uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, mu->uid);
+	char *uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, mu->id);
 
 	if (g_slist_find_custom(md->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
 		g_free(uid_str);
@@ -785,16 +785,16 @@ static void mastodon_notification_show(struct im_connection *ic, struct mastodon
 
 	switch (notification->type) {
 	case MN_MENTION:
-		ms->text = g_strdup_printf("@%s mentioned you: %s", mu->screen_name, original);
+		ms->text = g_strdup_printf("@%s mentioned you: %s", mu->acct, original);
 		break;
 	case MN_REBLOG:
-		ms->text = g_strdup_printf("@%s boosted your status: %s", mu->screen_name, original);
+		ms->text = g_strdup_printf("@%s boosted your status: %s", mu->acct, original);
 		break;
 	case MN_FAVOURITE:
-		ms->text = g_strdup_printf("@%s favourited your status: %s", mu->screen_name, original);
+		ms->text = g_strdup_printf("@%s favourited your status: %s", mu->acct, original);
 		break;
 	case MN_FOLLOW:
-		ms->text = g_strdup_printf("@%s [%s] followed you", mu->screen_name, mu->name);
+		ms->text = g_strdup_printf("@%s [%s] followed you", mu->acct, mu->display_name);
 		break;
 	}
 
@@ -816,12 +816,12 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
 	struct mastodon_data *md = ic->proto_data;
 	char *uid_str;
 
-	if (ms->user == NULL || ms->text == NULL) {
+	if (ms->account == NULL || ms->text == NULL) {
 		return;
 	}
 
 	/* Check this is not a tweet that should be muted */
-	uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, ms->user->uid);
+	uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, ms->account->id);
 
 	if (g_slist_find_custom(md->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
 		g_free(uid_str);
