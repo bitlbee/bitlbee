@@ -61,8 +61,6 @@ struct mastodon_data {
 	gpointer home_timeline_obj;
 	gpointer mentions_obj;
 
-	guint64 timeline_id;
-
 	GSList *follow_ids;
 	GSList *mutes_ids;
 	GSList *noretweets_ids;

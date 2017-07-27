@@ -269,12 +269,6 @@ static void mastodon_main_loop_start(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
 
-	char *last_tweet = set_getstr(&ic->acc->set, "_last_tweet");
-
-	if (last_tweet) {
-		md->timeline_id = g_ascii_strtoull(last_tweet, NULL, 0);
-	}
-
 	/* Create the room now that we "logged in". */
 	if (md->flags & MASTODON_MODE_CHAT) {
 		mastodon_groupchat_init(ic);
@@ -415,9 +409,6 @@ static void mastodon_init(account_t * acc)
 
 	s = set_add(&acc->set, "consumer_secret", "", NULL, acc);
 	s->flags |= SET_HIDDEN;
-
-	s = set_add(&acc->set, "_last_tweet", "0", NULL, acc);
-	s->flags |= SET_HIDDEN | SET_NOSAVE;
 }
 
 /**

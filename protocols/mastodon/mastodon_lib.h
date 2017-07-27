@@ -35,6 +35,7 @@
 #define MASTODON_FOLLOWING_URL "/accounts/%" G_GINT64_FORMAT "/following"
 #define MASTODON_USER_STREAMING_URL "/streaming/user"
 #define MASTODON_HOME_TIMELINE_URL "/timelines/home"
+#define MASTODON_NOTIFICATIONS_URL "/notifications"
 
 typedef enum {
 	MASTODON_EVT_UNKNOWN,
