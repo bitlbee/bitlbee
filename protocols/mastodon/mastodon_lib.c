@@ -191,7 +191,6 @@ char *mastodon_parse_error(struct http_request *req)
 static json_value *mastodon_parse_response(struct im_connection *ic, struct http_request *req)
 {
 	gboolean logging_in = !(ic->flags & OPT_LOGGED_IN);
-	gboolean periodic;
 	struct mastodon_data *md = ic->proto_data;
 	json_value *ret;
 	char path[64] = "", *s;
@@ -204,10 +203,6 @@ static json_value *mastodon_parse_response(struct im_connection *ic, struct http
 		}
 	}
 
-	/* Kinda nasty. :-( Trying to suppress error messages, but only
-	   for periodic (i.e. mentions/timeline) queries. */
-	periodic = strstr(path, "timeline") || strstr(path, "mentions");
-
 	if (req->status_code == 401 && logging_in) {
 		/* Twitter once had an outage where they were randomly
 		   throwing 401s so we'll keep treating this one as fatal
@@ -218,7 +213,7 @@ static json_value *mastodon_parse_response(struct im_connection *ic, struct http
 		return NULL;
 	} else if (req->status_code != 200) {
 		// It didn't go well, output the error and return.
-		if (!periodic || logging_in || ++md->http_fails >= 5) {
+		if (logging_in || ++md->http_fails >= 5) {
 			mastodon_log(ic, "Error: Could not retrieve %s: %s",
 			            path, mastodon_parse_error(req));
 		}
