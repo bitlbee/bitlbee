@@ -276,6 +276,26 @@ struct groupchat *mastodon_groupchat_init(struct im_connection *ic)
 	return gc;
 }
 
+/**
+ * Free the oauth2_service struct.
+ */
+static void os_free(struct oauth2_service *os) {
+
+	if (os == NULL) {
+		return;
+	}
+
+	g_free(os->auth_url);
+	g_free(os->token_url);
+	g_free(os);
+}
+
+/**
+ * Create a new oauth2_service struct. If we haven never connected to
+ * the server, we'll be missing our key and secret. In this case,
+ * register the application and wait until we get back the necessary
+ * information, then try again.
+ */
 static struct oauth2_service *get_oauth2_service(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
@@ -292,11 +312,11 @@ static struct oauth2_service *get_oauth2_service(struct im_connection *ic)
 	// if we did not have these stored, register the app and try again
 	if (!os->consumer_key || !os->consumer_secret ||
 	    strlen(os->consumer_key) == 0 || strlen(os->consumer_secret) == 0) {
+		os_free(os);
 		mastodon_register_app(ic);
-		os->consumer_key = set_getstr(&ic->acc->set, "consumer_key");
-		os->consumer_secret = set_getstr(&ic->acc->set, "consumer_secret");
+		imcb_log(ic, "Registering client, please try again in a second");
+		return NULL;
 	}
-
 	return os;
 }
 
@@ -397,13 +417,6 @@ static void mastodon_connect(struct im_connection *ic)
 	md->url_host = g_strdup(url.host);
 	if (strcmp(url.file, "/") != 0) {
 		md->url_path = g_strdup(url.file);
-	} else {
-		md->url_path = g_strdup("");
-		if (g_str_has_suffix(url.host, "mastodon.com")) {
-			/* May fire for people who turned on HTTPS. */
-			imcb_error(ic, "Warning: Mastodon requires a version number in API calls "
-			           "now. Try resetting the base_url account setting.");
-		}
 	}
 
 	md->prefix = g_strdup(url.host);
@@ -499,7 +512,10 @@ static void mastodon_login(account_t * acc)
 	GSList *p_in = NULL;
 	const char *tok;
 
-	md->oauth2_service = get_oauth2_service(ic);
+	// Maybe we're registering application, try again later
+	if (!(md->oauth2_service = get_oauth2_service(ic))) {
+		return;
+	}
 
 	oauth_params_parse(&p_in, ic->acc->pass);
 
@@ -553,9 +569,7 @@ static void mastodon_logout(struct im_connection *ic)
 
 		http_close(md->stream);
 		mastodon_filter_remove_all(ic);
-		g_free(md->oauth2_service->auth_url);
-		g_free(md->oauth2_service->token_url);
-		g_free(md->oauth2_service);
+		os_free(md->oauth2_service);
 		g_free(md->user);
 		g_free(md->prefix);
 		g_free(md->url_host);
