@@ -433,7 +433,6 @@ static void mastodon_connect(struct im_connection *ic)
 		// add buddies for this id
 		mastodon_following(ic, 0);
 		// mastodon_get_mutes_ids(ic, -1);
-		// mastodon_get_noretweets_ids(ic, -1);
 	}
 
 	/* Create the room. */
@@ -551,9 +550,6 @@ static void mastodon_logout(struct im_connection *ic)
 
 		g_slist_foreach(md->mutes_ids, (GFunc) g_free, NULL);
 		g_slist_free(md->mutes_ids);
-
-		g_slist_foreach(md->noretweets_ids, (GFunc) g_free, NULL);
-		g_slist_free(md->noretweets_ids);
 
 		http_close(md->stream);
 		mastodon_filter_remove_all(ic);
