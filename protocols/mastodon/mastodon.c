@@ -349,15 +349,10 @@ static void mastodon_init(account_t * acc)
 
 	s = set_add(&acc->set, "commands", "true", set_eval_commands, acc);
 
-	s = set_add(&acc->set, "fetch_interval", "60", set_eval_int, acc);
-	s->flags |= ACC_SET_OFFLINE_ONLY;
-
 	s = set_add(&acc->set, "message_length", "500", set_eval_int, acc);
 
 	s = set_add(&acc->set, "mode", "chat", set_eval_mode, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
-
-	s = set_add(&acc->set, "oauth", "true", set_eval_oauth, acc);
 
 	s = set_add(&acc->set, "show_ids", "true", set_eval_bool, acc);
 

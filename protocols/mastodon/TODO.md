@@ -11,8 +11,7 @@
    Probably use `"Attachments: "` followed by a comma-separated list
    of `type+" "+(text_url||remote_url)`.
 
-1. We can delete `md->follow_ids`, the settings `oauth` (since it's
-   mandatory), `fetch_interval` (since we're using the streaming API).
+1. We can delete `md->follow_ids`.
 
 1. Add copyright statements.
 
