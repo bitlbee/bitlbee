@@ -126,4 +126,5 @@ struct http_request;
 char *mastodon_parse_error(struct http_request *req);
 
 void mastodon_log(struct im_connection *ic, char *format, ...);
+void oauth2_init(struct im_connection *ic);
 struct groupchat *mastodon_groupchat_init(struct im_connection *ic);
