@@ -5,9 +5,14 @@
    the
    [Streaming API](https://github.com/tootsuite/documentation/blob/master/Using-the-API/Streaming-API.md).
 
-1. We can delete `md->follow_ids`, the settings `_last_tweet`, `oauth`
-   (since it's mandatory), `fetch_interval` (since we're using the
-   streaming API).
+1. When showing a status, decide how to handle the URLs
+   of
+   [media attachments](https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md#attachment).
+   Probably use `"Attachments: "` followed by a comma-separated list
+   of `type+" "+(text_url||remote_url)`.
+
+1. We can delete `md->follow_ids`, the settings `oauth` (since it's
+   mandatory), `fetch_interval` (since we're using the streaming API).
 
 1. Add copyright statements.
 

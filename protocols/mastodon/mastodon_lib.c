@@ -863,7 +863,6 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_x
 static void mastodon_status_show(struct im_connection *ic, struct mastodon_xml_status *status)
 {
 	struct mastodon_data *md = ic->proto_data;
-	char *last_id_str;
 	char *uid_str;
 
 	if (status->user == NULL || status->text == NULL) {
@@ -896,13 +895,6 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_xml_s
 		mastodon_status_show_msg(ic, status);
 	}
 
-	// Update the timeline_id to hold the highest id, so that by the next request
-	// we won't pick up the updates already in the list.
-	md->timeline_id = MAX(md->timeline_id, status->rt_id);
-
-	last_id_str = g_strdup_printf("%" G_GUINT64_FORMAT, md->timeline_id);
-	set_setstr(&ic->acc->set, "_last_tweet", last_id_str);
-	g_free(last_id_str);
 	g_free(uid_str);
 }
 
