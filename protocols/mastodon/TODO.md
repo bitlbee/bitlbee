@@ -31,4 +31,6 @@
 	- unfollow account
 	- info about an account
 	- handling of spoilers
+	- tracking hashtags
+
 	
