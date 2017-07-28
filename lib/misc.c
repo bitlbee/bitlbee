@@ -190,6 +190,8 @@ void strip_html(char *in)
 					*(s++) = '\n';
 				} else if (g_strncasecmp(cs + 1, "br /", taglen) == 0) {
 					*(s++) = '\n';
+				} else if (g_strncasecmp(cs + 1, "/p", taglen) == 0) {
+					*(s++) = '\n';
 				}
 				in++;
 			} else {
