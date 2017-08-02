@@ -34,6 +34,8 @@
 
 #define MASTODON_OAUTH_HANDLE "mastodon_oauth"
 #define MASTODON_SCOPE "read%20write%20follow" // URL escaped
+#define MASTODON_URL_REGEX "https?://\\S+"
+#define MASTODON_MENTION_REGEX "@(([a-zA-Z0-9_]+)@[a-zA-Z0-9.-]+[a-zA-Z0-9])"
 
 typedef enum {
 	MASTODON_HAVE_FRIENDS   = 0x00001,
