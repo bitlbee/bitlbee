@@ -34,6 +34,7 @@
 #define MASTODON_USER_STREAMING_URL "/streaming/user"
 #define MASTODON_HOME_TIMELINE_URL "/timelines/home"
 #define MASTODON_NOTIFICATIONS_URL "/notifications"
+#define MASTODON_STATUS_UPDATE_URL "/statuses"
 
 typedef enum {
 	MASTODON_EVT_UNKNOWN,
@@ -45,7 +46,6 @@ typedef enum {
 /* Anything below is unchecked, renamed Twitter stuff. */
 
 /* Status URLs */
-#define MASTODON_STATUS_UPDATE_URL "/statuses/update.json"
 #define MASTODON_STATUS_SHOW_URL "/statuses/show/"
 #define MASTODON_STATUS_DESTROY_URL "/statuses/destroy/"
 #define MASTODON_STATUS_RETWEET_URL "/statuses/retweet/"
