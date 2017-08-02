@@ -311,12 +311,51 @@ static struct oauth2_service *get_oauth2_service(struct im_connection *ic)
 	return os;
 }
 
-static gboolean mastodon_length_check(struct im_connection *ic, gchar * msg)
+/**
+ * Check message length by comparing it to the appropriate setting.
+ * Note this issue: "Count all URLs in text as 23 characters flat, do
+ * not count domain part of usernames."
+ * https://github.com/tootsuite/mastodon/pull/4427
+ **/
+static gboolean mastodon_length_check(struct im_connection *ic, gchar *msg)
 {
 	int max = set_getint(&ic->acc->set, "message_length");
+
+	if (max == 0) {
+		return TRUE;
+	}
+
 	int len = g_utf8_strlen(msg, -1);
 
-	if (max == 0 || len <= max) {
+	GRegex *regex = g_regex_new (MASTODON_URL_REGEX, 0, 0, NULL);
+	GMatchInfo *match_info;
+
+	g_regex_match (regex, msg, 0, &match_info);
+	while (g_match_info_matches (match_info))
+	{
+	    gchar *url = g_match_info_fetch (match_info, 0);
+	    len = len - g_utf8_strlen(url, -1) + 23;
+	    g_free (url);
+	    g_match_info_next (match_info, NULL);
+	}
+	g_regex_unref (regex);
+
+	regex = g_regex_new (MASTODON_MENTION_REGEX, 0, 0, NULL);
+	g_regex_match (regex, msg, 0, &match_info);
+	while (g_match_info_matches (match_info))
+	{
+	    gchar *mention = g_match_info_fetch (match_info, 0);
+	    gchar *nick = g_match_info_fetch (match_info, 2);
+	    len = len - g_utf8_strlen(mention, -1) + g_utf8_strlen(nick, -1);
+	    g_free (mention);
+	    g_free (nick);
+	    g_match_info_next (match_info, NULL);
+	}
+	g_regex_unref (regex);
+
+	g_match_info_free (match_info);
+
+	if (len <= max) {
 		return TRUE;
 	}
 
