@@ -376,11 +376,9 @@ struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 
 	return mu;
 }
-#ifdef __GLIBC__
-#define MASTODON_TIME_FORMAT "%a %b %d %H:%M:%S %z %Y"
-#else
-#define MASTODON_TIME_FORMAT "%a %b %d %H:%M:%S +0000 %Y"
-#endif
+
+// "2017-08-02T10:45:03.000Z" -- but we're ignoring microseconds and UTC timezone
+#define MASTODON_TIME_FORMAT "%Y-%m-%dT%H:%M:%S"
 
 static void expand_entities(char **text, const json_value *node, const json_value *extended_node);
 
@@ -1337,7 +1335,7 @@ void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_
 {
 	char *args[4] = {
 		"status", msg,
-		"in_reply_to_status_id",
+		"in_reply_to_id",
 		g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
 
