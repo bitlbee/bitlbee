@@ -869,12 +869,24 @@ static void mastodon_stream_handle_update(struct im_connection *ic, json_value *
 	}
 }
 
+static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *parsed, gboolean from_filter)
+{
+	struct mastodon_data *md = ic->proto_data;
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	if (ms) {
+		mastodon_log(ic, "Message %d was deleted", md->log[ms->id].id);
+		ms_free(ms);
+	}
+}
+
 static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type, json_value *parsed, gboolean from_filter)
 {
 	if (evt_type == MASTODON_EVT_UPDATE) {
 		mastodon_stream_handle_update(ic, parsed, from_filter);
 	} else if (evt_type == MASTODON_EVT_NOTIFICATION) {
 		mastodon_stream_handle_notification(ic, parsed, from_filter);
+	} else if (evt_type == MASTODON_EVT_DELETE) {
+		mastodon_stream_handle_delete(ic, parsed, from_filter);
 	} else {
 		mastodon_log(ic, "Ignoring event type %d", evt_type);
 	}
@@ -1479,7 +1491,6 @@ static void mastodon_http_following(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct mastodon_data *md = ic->proto_data;
-	guint64 id = 0;
 
 	json_value *parsed;
 
@@ -1499,7 +1510,7 @@ static void mastodon_http_following(struct http_request *req)
 
 	// unlike Twitter, we don't have to resolve ids: just add buddies directly
 	for (int i = 0; i < parsed->u.array.length; i++) {
-		id = 0;
+		guint64 id = 0;
 		char *acct = NULL;
 		char *display_name = NULL;
 
@@ -1524,10 +1535,50 @@ static void mastodon_http_following(struct http_request *req)
 finish:
 	json_value_free(parsed);
 
-	// try to fetch more if we got at least one id
+	// try to fetch more if there is a header saying that there is
+	// more (URL in angled brackets)
+	char *header = NULL;
+	if ((header = get_rfc822_header(req->reply_headers, "Link", 0))) {
 
-	if (id > 0) {
-		mastodon_following(ic, id);
+		char *url = NULL;
+		char *s = NULL;
+		int len = 0;
+
+		for (int i = 0; header[i]; i++) {
+			if (header[i] == '<') {
+				url = header + i + 1;
+			} else if (header[i] == '?') {
+				header[i] = 0; // end url
+				s = header + i + 1;
+				len = 1;
+			} else if (s && header[i] == '&') {
+				header[i] = '='; // for later splitting
+				len++;
+			} else if (url && header[i] == '>') {
+				header[i] = 0;
+				if (strncmp(header + i, "; rel=\"next\"", 12) == 0) {
+					break;
+				} else {
+					url = NULL;
+					s = NULL;
+					len = 0;
+				}
+			}
+		}
+
+		if (url) {
+			gchar **args = NULL;
+
+			if (s) {
+				args = g_strsplit (s, "=", -1);
+			}
+
+			mastodon_http(ic, url, mastodon_http_following, ic, 0, args, len);
+
+			g_strfreev(args);
+		}
+
+		g_free(header);
 	}
 
 	md->flags |= MASTODON_HAVE_FRIENDS;
@@ -1610,12 +1661,12 @@ static void mastodon_http_register_app(struct http_request *req)
 	if ((parsed = mastodon_parse_response(ic, req))) {
 
 		set_setint(&ic->acc->set, "app_id", json_o_get(parsed, "id")->u.integer);
-		
+
 		char *key = json_o_strdup(parsed, "client_id");
 		char *secret = json_o_strdup(parsed, "client_secret");
 
 		json_value_free(parsed);
-		
+
 		// save for future sessions
 		set_setstr(&ic->acc->set, "consumer_key", key);
 		set_setstr(&ic->acc->set, "consumer_secret", secret);
@@ -1626,7 +1677,7 @@ static void mastodon_http_register_app(struct http_request *req)
 		os->consumer_key = key;
 		os->consumer_secret = secret;
 
-		oauth2_init(ic);	
+		oauth2_init(ic);
 	}
 }
 

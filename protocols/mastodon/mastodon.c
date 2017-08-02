@@ -847,10 +847,11 @@ static void mastodon_buddy_data_free(struct bee_user *bu)
 
 bee_user_t mastodon_log_local_user;
 
-/** Convert the given bitlbee tweet ID, bitlbee username, or mastodon tweet ID
- *  into a mastodon tweet ID.
+/**
+ * Convert the given bitlbee toot ID or bitlbee username into a
+ * mastodon ID.
  *
- *  Returns 0 if the user provides garbage.
+ * Returns 0 if the user provides garbage.
  */
 static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, char *arg, bee_user_t **bu_)
 {
