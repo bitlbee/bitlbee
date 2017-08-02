@@ -1,7 +1,7 @@
 /***************************************************************************\
 *                                                                           *
 *  BitlBee - An IRC to IM gateway                                           *
-*  Simple module to facilitate mastodon functionality.                       *
+*  Simple module to facilitate Mastodon functionality.                      *
 *                                                                           *
 *  Copyright 2009 Geert Mulders <g.c.w.m.mulders@gmail.com>                 *
 *                                                                           *

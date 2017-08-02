@@ -8,8 +8,6 @@
 
 1. We can delete `md->follow_ids`.
 
-1. Add copyright statements.
-
 1. Add documentation to the help files.
 
 1. Remove all remaining Twitter code.
