@@ -27,7 +27,7 @@
 					You can omit the password and enter it separately using the IRC /OPER command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
 				</para>
 			</description>
-			
+
 			<bitlbee-command name="jabber">
 				<syntax>account add jabber &lt;handle@server.tld&gt; [&lt;password&gt;]</syntax>
 
@@ -51,7 +51,7 @@
 					</para>
 				</description>
 			</bitlbee-command>
-			
+
 			<bitlbee-command name="oscar">
 				<syntax>account add oscar &lt;handle&gt; [&lt;password&gt;]</syntax>
 
@@ -66,7 +66,7 @@
 					<ircline nick="root">Account successfully added</ircline>
 				</ircexample>
 			</bitlbee-command>
-			
+
 			<bitlbee-command name="twitter">
 				<syntax>account add twitter &lt;handle&gt;</syntax>
 
@@ -74,11 +74,11 @@
 					<para>
 						This module gives you simple access to Twitter and Twitter API compatible services.
 					</para>
-					
+
 					<para>
 						By default all your Twitter contacts will appear in a new channel called #twitter_yourusername. You can change this behaviour using the <emphasis>mode</emphasis> setting (see <emphasis>help set mode</emphasis>).
 					</para>
-					
+
 					<para>
 						To send tweets yourself, send them to the twitter_(yourusername) contact, or just write in the groupchat channel if you enabled that option.
 					</para>
@@ -86,19 +86,45 @@
 					<para>
 						Since Twitter now requires OAuth authentication, you should not enter your Twitter password into BitlBee. Just type a bogus password. The first time you log in, BitlBee will start OAuth authentication. (See <emphasis>help set oauth</emphasis>.)
 					</para>
-					
+
 					<para>
 						To use a non-Twitter service, change the <emphasis>base_url</emphasis> setting. For identi.ca, you can simply use <emphasis>account add identica</emphasis>.
 					</para>
 				</description>
 			</bitlbee-command>
-			
+
 			<bitlbee-command name="identica">
 				<syntax>account add identica &lt;handle&gt;</syntax>
 
 				<description>
 					<para>
 						Same protocol as <emphasis>twitter</emphasis>, but defaults to a <emphasis>base_url</emphasis> pointing at identi.ca. It also works with OAuth (so don't specify your password).
+					</para>
+				</description>
+			</bitlbee-command>
+
+			<bitlbee-command name="mastodon">
+				<syntax>account add mastodon &lt;handle&gt;</syntax>
+
+				<description>
+					<para>
+						This module gives you simple access to Mastodon services.
+					</para>
+
+					<para>
+						By default all the Mastodon accounts you are following will appear in a new channel named after your Mastodon instance. You can change this behaviour using the <emphasis>mode</emphasis> setting (see <emphasis>help set mode</emphasis>).
+					</para>
+
+					<para>
+						To send toots yourself, just write in the groupchat channel.
+					</para>
+
+					<para>
+						Since Mastodon requires OAuth authentication, you should not enter your Mastodon password into BitlBee. The first time you log in, BitlBee will start OAuth authentication. (See <emphasis>help set oauth</emphasis>.)
+					</para>
+
+					<para>
+						In order to connect to the correct instances, you must most probably change the <emphasis>base_url</emphasis> setting.
 					</para>
 				</description>
 			</bitlbee-command>
@@ -169,11 +195,11 @@
 				<para>
 					This command can be used to change various settings for IM accounts. For all protocols, this command can be used to change the handle or the password BitlBee uses to log in and if it should be logged in automatically. Some protocols have additional settings. You can see the settings available for a connection by typing <emphasis>account &lt;account id&gt; set</emphasis>.
 				</para>
-				
+
 				<para>
 					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
-				
+
 				<para>
 					The account ID can be a number/tag (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
@@ -189,7 +215,7 @@
 			<para>
 				Available actions: del, list, set. See <emphasis>help channel &lt;action&gt;</emphasis> for more information.
 			</para>
-			
+
 			<para>
 				There is no <emphasis>channel add</emphasis> command. To create a new channel, just use the IRC <emphasis>/join</emphasis> command. See also <emphasis>help channels</emphasis> and <emphasis>help groupchats</emphasis>.
 			</para>
@@ -227,11 +253,11 @@
 				<para>
 					This command can be used to change various settings for channels. Different channel types support different settings. You can see the settings available for a channel by typing <emphasis>channel &lt;channel id&gt; set</emphasis>.
 				</para>
-				
+
 				<para>
 					For more information about a setting, see <emphasis>help set &lt;setting&gt;</emphasis>.
 				</para>
-				
+
 				<para>
 					The channel ID can be a number (see <emphasis>channel list</emphasis>), or (part of) its name, as long as it matches only one channel. If you want to change settings of the current channel, you can omit the channel ID.
 				</para>
@@ -358,7 +384,7 @@
 
 		<description>
 			<para>
-				Removes the specified nick from your buddy list. 
+				Removes the specified nick from your buddy list.
 			</para>
 		</description>
 
@@ -379,7 +405,7 @@
 			<para>
 				Puts the specified user on your ignore list. Either specify the user's nick when you have him/her in your contact list or a connection number and a user handle.
 			</para>
-			
+
 			<para>
 				When called with only a connection specification as an argument, the command displays the current block list for that connection.
 			</para>
@@ -395,13 +421,13 @@
 			<para>
 				Reverse of block. Unignores the specified user or user handle on specified connection.
 			</para>
-			
+
 			<para>
 				When called with only a connection specification as an argument, the command displays the current allow list for that connection.
 			</para>
 		</description>
 	</bitlbee-command>
-	
+
 	<bitlbee-command name="otr">
 		<short-description>Off-the-Record encryption control</short-description>
 		<syntax>otr &lt;subcommand&gt; [&lt;arguments&gt;]</syntax>
@@ -413,81 +439,81 @@
 			</para>
 
 		</description>
-		
+
 		<bitlbee-command name="connect">
 			<syntax>otr connect &lt;nick&gt;</syntax>
-			
+
 			<description>
-			
+
 				<para>
 					Attempts to establish an encrypted connection with the specified user by sending a magic string.
 				</para>
-				
+
 			</description>
-		
+
 		</bitlbee-command>
-		
+
 		<bitlbee-command name="disconnect">
 			<syntax>otr disconnect &lt;nick&gt;</syntax>
 			<syntax>otr disconnect *</syntax>
-			
+
 			<description>
-			
+
 				<para>
 					Resets the connection with the specified user/all users to cleartext.
 				</para>
-				
+
 			</description>
-		
+
 		</bitlbee-command>
-		
+
 		<bitlbee-command name="reconnect">
 			<syntax>otr reconnect &lt;nick&gt;</syntax>
-			
+
 			<description>
-			
+
 				<para>
 					Breaks and re-establishes the encrypted connection with the specified user. Useful if something got desynced.
 				</para>
-				
+
 				<para>
 					Equivalent to <emphasis>otr disconnect</emphasis> followed by <emphasis>otr connect</emphasis>.
 				</para>
-				
+
 			</description>
-		
+
 		</bitlbee-command>
-		
+
 		<bitlbee-command name="smp">
 			<syntax>otr smp &lt;nick&gt; &lt;secret&gt;</syntax>
-			
+
 			<description>
-			
+
 				<para>
 					Attempts to authenticate the given user's active fingerprint via the Socialist Millionaires' Protocol.
 				</para>
-				
+
 				<para>
 					If an SMP challenge has been received from the given user, responds with the specified secret/answer. Otherwise, sends a challenge for the given secret.
 				</para>
-				
+
 				<para>
 					Note that there are two flavors of SMP challenges: "shared-secret" and "question &amp; answer". This command is used to respond to both of them, or to initiate a shared-secret style exchange. Use the <emphasis>otr smpq</emphasis> command to initiate a "Q&amp;A" session.
 				</para>
-				
+
 				<para>
 					When responding to a "Q&amp;A" challenge, the local trust value is not altered. Only the <emphasis>asking party</emphasis> sets trust in the case of success. Use <emphasis>otr smpq</emphasis> to pose your challenge. In a shared-secret exchange, both parties set their trust according to the outcome.
 				</para>
-				
+
 			</description>
-		
+
 		</bitlbee-command>
-		
+
 		<bitlbee-command name="smpq">
 			<syntax>otr smpq &lt;nick&gt; &lt;question&gt; &lt;answer&gt;</syntax>
-			
+
 			<description>
-			
+
 				<para>
 					Attempts to authenticate the given user's active fingerprint via the Socialist Millionaires' Protocol, Q&amp;A style.
 				</para>
@@ -495,107 +521,107 @@
 				<para>
 					Initiates an SMP session in "question &amp; answer" style. The question is transmitted with the initial SMP packet and used to prompt the other party. You must be confident that only they know the answer. If the protocol succeeds (i.e. they answer correctly), the fingerprint will be trusted. Note that the answer must be entered exactly, case and punctuation count!
 				</para>
-				
+
 				<para>
 					Note that this style of SMP only affects the trust setting on your side. Expect your opponent to send you their own challenge. Alternatively, if you and the other party have a shared secret, use the <emphasis>otr smp</emphasis> command.
 				</para>
-				
+
 			</description>
-		
+
 		</bitlbee-command>
-		
+
 		<bitlbee-command name="trust">
 			<syntax>otr trust &lt;nick&gt; &lt;fp1&gt; &lt;fp2&gt; &lt;fp3&gt; &lt;fp4&gt; &lt;fp5&gt;</syntax>
-			
+
 			<description>
-			
+
 				<para>
 					Manually affirms trust in the specified fingerprint, given as five blocks of precisely eight (hexadecimal) digits each.
 				</para>
-				
+
 			</description>
-		
+
 		</bitlbee-command>
-		
+
 		<bitlbee-command name="info">
 			<syntax>otr info</syntax>
 			<syntax>otr info &lt;nick&gt;</syntax>
-			
+
 			<description>
-			
+
 				<para>
 					Shows information about the OTR state. The first form lists our private keys and current OTR contexts. The second form displays information about the connection with a given user, including the list of their known fingerprints.
 				</para>
-				
+
 			</description>
-		
+
 		</bitlbee-command>
-		
+
 		<bitlbee-command name="keygen">
 			<syntax>otr keygen &lt;account-no&gt;</syntax>
-			
+
 			<description>
-			
+
 				<para>
 					Generates a new OTR private key for the given account.
 				</para>
-				
+
 			</description>
-		
+
 		</bitlbee-command>
-		
+
 		<bitlbee-command name="forget">
 			<syntax>otr forget &lt;thing&gt; &lt;arguments&gt;</syntax>
-			
+
 			<description>
-			
+
 				<para>
 					Forgets some part of our OTR userstate. Available things: fingerprint, context, and key. See <emphasis>help otr forget &lt;thing&gt;</emphasis> for more information.
 				</para>
-			
+
 			</description>
-			
+
 			<bitlbee-command name="fingerprint">
 				<syntax>otr forget fingerprint &lt;nick&gt; &lt;fingerprint&gt;</syntax>
-				
+
 				<description>
-				
+
 					<para>
 						Drops the specified fingerprint from the given user's OTR connection context. It is allowed to specify only a (unique) prefix of the desired fingerprint.
 					</para>
-					
+
 				</description>
-				
+
 			</bitlbee-command>
-				
+
 			<bitlbee-command name="context">
 				<syntax>otr forget context &lt;nick&gt;</syntax>
-				
+
 				<description>
-				
+
 					<para>
 						Forgets the entire OTR context associated with the given user. This includes current message and protocol states, as well as any fingerprints for that user.
 					</para>
-					
+
 				</description>
-				
+
 			</bitlbee-command>
 
 			<bitlbee-command name="key">
 				<syntax>otr forget key &lt;fingerprint&gt;</syntax>
-				
+
 				<description>
-				
+
 					<para>
 						Forgets an OTR private key matching the specified fingerprint. It is allowed to specify only a (unique) prefix of the fingerprint.
 					</para>
-					
+
 				</description>
-				
+
 			</bitlbee-command>
-		
+
 		</bitlbee-command>
-		
+
 	</bitlbee-command>
 
 	<bitlbee-command name="set">
@@ -690,7 +716,7 @@
 			<para>
 				With this option enabled, when you identify BitlBee will automatically connect to your accounts, with this disabled it will not do this.
 			</para>
-			
+
 			<para>
 				This setting can also be changed for specific accounts using the <emphasis>account set</emphasis> command. (However, these values will be ignored if the global <emphasis>auto_connect</emphasis> setting is disabled!)
 			</para>
@@ -748,15 +774,15 @@
 
 		<description>
 			<para>
-				For Twitter accounts: If you respond to Tweets IRC-style (like "nickname: reply"), this will automatically be converted to the usual Twitter format ("@screenname reply").
+				For Twitter and Mastodon accounts: If you respond to messages IRC-style ("nickname: reply" or "nickname, reply"), this will automatically be converted to the usual format ("@screenname reply").
 			</para>
 
 			<para>
-				By default, BitlBee will then also add a reference to that person's most recent Tweet, unless that message is older than the value of this setting in seconds.
+				By default, BitlBee will then also add a reference to that person's most recent message, unless that message is older than the value of this setting in seconds. The default corresponds to 3h.
 			</para>
 
 			<para>
-				If you want to disable this feature, just set this to 0. Alternatively, if you want to write a message once that is <emphasis>not</emphasis> a reply, use the Twitter reply syntax (@screenname).
+				If you want to disable this feature, just set this to 0. Alternatively, if you want to write a message once that is <emphasis>not</emphasis> a reply, use the reply syntax usually used on these platforms ("@screenname reply").
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -784,7 +810,7 @@
 			<para>
 				With this option enabled, the root user devoices people when they go away (just away, not offline) and gives the voice back when they come back. You might dislike the voice-floods you'll get if your contact list is huge, so this option can be disabled.
 			</para>
-			
+
 			<para>
 				Replaced with the <emphasis>show_users</emphasis> setting. See <emphasis>help show_users</emphasis>.
 			</para>
@@ -806,19 +832,15 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="base_url" type="string" scope="account">
-		<default>http://api.twitter.com/1</default>
+		<default>depends on the service</default>
 
 		<description>
 			<para>
-				There are more services that understand the Twitter API than just Twitter.com. BitlBee can connect to all Twitter API implementations.
+				The default depends on the service used. For Twitter, it's http://api.twitter.com/1.1; for Identica, it's https://identi.ca/api; for Mastodon, it's https://octodon.social/api/v1. If you're a Mastodon user, this must point at your instance.
 			</para>
 
 			<para>
-				For example, set this setting to <emphasis>http://identi.ca/api</emphasis> to use Identi.ca.
-			</para>
-
-			<para>
-				Keep two things in mind: When not using Twitter, you <emphasis>must</emphasis> also disable the <emphasis>oauth</emphasis> setting as it currently only works with Twitter. If you're still having issues, make sure there is <emphasis>no</emphasis> slash at the end of the URL you enter here.
+				Keep two things in mind: When using a service such as Identica, you <emphasis>must</emphasis> also disable the <emphasis>oauth</emphasis>. If you're still having issues, make sure there is <emphasis>no</emphasis> slash at the end of the URL you enter here.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -873,11 +895,11 @@
 			<para>
 				There are two kinds of chat channels: simple groupchats (basically normal IM chats with more than two participants) and names chatrooms, more similar to IRC channels.
 			</para>
-			
+
 			<para>
 				BitlBee supports both types. With this setting set to <emphasis>groupchat</emphasis> (the default), you can just invite people into the room and start talking.
 			</para>
-			
+
 			<para>
 				For setting up named chatrooms, it's currently easier to just use the <emphasis>chat add</emphasis> command.
 			</para>
@@ -902,7 +924,7 @@
 			<para>
 				Some debugging messages can be logged if you wish. They're probably not really useful for you, unless you're doing some development on BitlBee.
 			</para>
-			
+
 			<para>
 				This feature is not currently used for anything so don't expect this to generate any output.
 			</para>
@@ -966,15 +988,15 @@
 			<para>
 				By default, control channels will contain all your contacts. You instead select contacts by buddy group, IM account or IM protocol.
 			</para>
-			
+
 			<para>
 				Change this setting and the corresponding <emphasis>account</emphasis>/<emphasis>group</emphasis>/<emphasis>protocol</emphasis> setting to set up this selection.
 			</para>
-			
+
 			<para>
 				With a ! prefix an inverted channel can be created, for example with this setting set to <emphasis>!group</emphasis> you can create a channel with all users <emphasis>not</emphasis> in that group.
 			</para>
-			
+
 			<para>
 				Note that, when creating a new channel, BitlBee will try to preconfigure the channel for you, based on the channel name. See <emphasis>help channels</emphasis>.
 			</para>
@@ -1061,11 +1083,11 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="message_length" type="integer" scope="account">
-		<default>140</default>
+		<default>depends on the service </default>
 
 		<description>
 			<para>
-				Since Twitter rejects messages longer than 140 characters, BitlBee can count message length and emit a warning instead of waiting for Twitter to reject it.
+				The default depends on the service. Since Twitter rejects messages longer than 140 characters, BitlBee can count message length and emit a warning instead of waiting for Twitter to reject it. Mastodon doesn't reject longer messages but clients usually limit messages to 500 characters. Both Twitter and Mastodon will count a URL as 23 characters, no matter how long it is. Mastodon doesn't count the domain names of mentioned accounts.
 			</para>
 
 			<para>
@@ -1082,20 +1104,20 @@
 			<para>
 				For Twitter accounts, this setting enables use of the Streaming API. This automatically gives you incoming DMs as well.
 			</para>
-			
+
 			<para>
 				For other Twitter-like services, this setting is not supported.
 			</para>
 		</description>
 
 	</bitlbee-setting>
-	
+
 	<bitlbee-setting name="target_url_length" type="integer" scope="account">
-		<default>20</default>
+		<default>23</default>
 
 		<description>
 			<para>
-				Twitter replaces every URL with fixed-length t.co URLs. BitlBee is able to take t.co urls into account when calculating <emphasis>message_length</emphasis> replacing the actual URL length with target_url_length. Setting target_url_length to 0 disables this feature.
+				Twitter and Mastodon replace every URL with fixed-length shortened URL. BitlBee is able to take this into account when calculating <emphasis>message_length</emphasis> replacing the actual URL length with target_url_length. Setting target_url_length to 0 disables this feature.
 			</para>
 
 			<para>
@@ -1111,19 +1133,19 @@
 
 		<description>
 			<para>
-				By default, BitlBee will create a separate channel (called #twitter_yourusername) for all your Twitter contacts/messages.
+				By default, BitlBee will create a separate channel for all your Twitter and Mastodon contacts/messages.
 			</para>
 
 			<para>
-				If you don't want an extra channel, you can set this setting to "one" (everything will come from one nick, twitter_yourusername), or to "many" (individual nicks for everyone).
+				If you don't want an extra channel, you can set this setting to "one" (everything will come from one nick), or to "many" (individual nicks for everyone).
 			</para>
-			
+
 			<para>
-				With modes "chat" and "many", you can send direct messages by /msg'ing your contacts directly. Incoming DMs are only fetched if the "stream" setting is on (default).
+				With modes "chat" and "many", you can send direct messages by /msg'ing your contacts directly. Incoming Twitter DMs are only fetched if the "stream" setting is on (default).
 			</para>
-			
+
 			<para>
-				With modes "many" and "one", you can post tweets by /msg'ing the twitter_yourusername contact. In mode "chat", messages posted in the Twitter channel will also be posted as tweets.
+				With modes "many" and "one", you can post tweets by /msg'ing your own contact. In mode "chat", messages posted in the Twitter channel will also be posted as tweets.
 			</para>
 		</description>
 
@@ -1291,11 +1313,11 @@
 			<para>
 				Use this global setting to change your "NickServ" password.
 			</para>
-			
+
 			<para>
 				This setting is also available for all IM accounts to change the password BitlBee uses to connect to the service.
 			</para>
-			
+
 			<para>
 				Note that BitlBee will always say this setting is empty. This doesn't mean there is no password, it just means that, for security reasons, BitlBee stores passwords somewhere else so they can't just be retrieved in plain text.
 			</para>
@@ -1334,7 +1356,7 @@
 			</para>
 		</description>
 	</bitlbee-setting>
-	
+
 	<bitlbee-setting name="port" type="integer" scope="account">
 		<description>
 			<para>
@@ -1472,7 +1494,7 @@
 			<para>
 				When this is set to "true", it will send those messages in the "standard" way, which is a PRIVMSG with source and target fields swapped.
 			</para>
-			
+
 			<para>
 				Since this isn't very well supported by some clients (the messages might appear in the wrong window), you can set it to "prefix" to show them as a normal message prefixed with "-> ", or use "prefix_notice" which is the same thing but with a NOTICE instead.
 			</para>
@@ -1504,7 +1526,7 @@
 
 		<description>
 			<para>
-				Enable this setting on a Twitter account to have BitlBee include a two-digit "id" in front of every message. This id can then be used for replies and retweets.
+				Disable this setting on a Twitter or Mastodon account to have BitlBee no longer include a two-digit "id" in front of every message. This id can be used for replies and retweets.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1516,7 +1538,7 @@
 			<para>
 				If enabled causes BitlBee to also show offline users in Channel. Online-users will get op, away-users voice and offline users none of both. This option takes effect as soon as you reconnect.
 			</para>
-			
+
 			<para>
 				Replaced with the <emphasis>show_users</emphasis> setting. See <emphasis>help show_users</emphasis>.
 			</para>
@@ -1531,14 +1553,14 @@
 				Comma-separated list of statuses of users you want in the channel,
 				and any modes they should have. The following statuses are currently
 				recognised: <emphasis>online</emphasis> (i.e. available, not
-				away), <emphasis>special</emphasis> (specific to the protocol), 
+				away), <emphasis>special</emphasis> (specific to the protocol),
 				<emphasis>away</emphasis>, and <emphasis>offline</emphasis>.
 			</para>
-			
+
 			<para>
 				If a status is followed by a valid channel mode character
 				(@, % or +), it will be given to users with that status.
-				For example, <emphasis>online@,special%,away+,offline</emphasis> 
+				For example, <emphasis>online@,special%,away+,offline</emphasis>
 				will show all users in the channel. Online people will
 				have +o, people who are online but away will have +v,
 				and others will have no special modes.
@@ -1626,11 +1648,11 @@
 			<para>
 				Turn on this flag if you have difficulties talking to offline/invisible contacts.
 			</para>
-			
+
 			<para>
 				With this setting enabled, BitlBee will send keepalives to MSN switchboards with offline/invisible contacts every twenty seconds. This should keep the server and client on the other side from shutting it down.
 			</para>
-			
+
 			<para>
 				This is useful because BitlBee doesn't support MSN offline messages yet and the MSN servers won't let the user reopen switchboards to offline users. Once offline messaging is supported, this flag might be removed.
 			</para>
@@ -1756,7 +1778,7 @@
 			<para>
 				Some Jabber servers are configured to only allow a few (or even just one) kinds of XMPP clients to connect to them.
 			</para>
-			
+
 			<para>
 				You can change this setting to make BitlBee present itself as a different client, so that you can still connect to these servers.
 			</para>
@@ -1770,7 +1792,7 @@
 			<para>
 				Officially, IRC nicknames are restricted to ASCII. Recently some clients and servers started supporting Unicode nicknames though. To enable UTF-8 nickname support (contacts only) in BitlBee, enable this setting.
 			</para>
-			
+
 			<para>
 				To avoid confusing old clients, this setting is disabled by default. Be careful when you try it, and be prepared to be locked out of your BitlBee in case your client interacts poorly with UTF-8 nicknames.
 			</para>
@@ -1813,7 +1835,7 @@
 			<para>
 				Renick a user in your buddy list. Very useful, in fact just very important, if you got a lot of people with stupid account names (or hard ICQ numbers).
 			</para>
-			
+
 			<para>
 				<emphasis>rename -del</emphasis> can be used to erase your manually set nickname for a contact and reset it to what was automatically generated.
 			</para>
@@ -1925,7 +1947,7 @@
 			<para>
 				The <emphasis>-noload</emphasis> and <emphasis>-force</emphasis> flags can be used to identify when you're logged into some IM accounts already. <emphasis>-force</emphasis> will let you identify yourself and load all saved accounts (and keep the accounts you're logged into already).
 			</para>
-			
+
 			<para>
 				<emphasis>-noload</emphasis> will log you in but not load any accounts and settings saved under your current nickname. These will be overwritten once you save your settings (i.e. when you disconnect).
 			</para>
@@ -1971,21 +1993,21 @@
 			<para>
 				The <emphasis>group list</emphasis> command shows a list of all groups defined so far.
 			</para>
-			
+
 			<para>
 				The <emphasis>group info</emphasis> command shows a list of all members of a the group &lt;group&gt;.
 			</para>
-			
+
 			<para>
 				If you want to move contacts between groups, you can use the IRC <emphasis>/invite</emphasis> command. Also, if you use the <emphasis>add</emphasis> command in a control channel configured to show just one group, the new contact will automatically be added to that group.
 			</para>
 		</description>
 	</bitlbee-command>
-	
+
 	<bitlbee-command name="transfer">
 		<short-description>Monitor, cancel, or reject file transfers</short-description>
 		<syntax>transfer [&lt;cancel&gt; id | &lt;reject&gt;]</syntax>
-		
+
 		<description>
 			<para>
 				Without parameters the currently pending file transfers and their status will be listed. Available actions are <emphasis>cancel</emphasis> and <emphasis>reject</emphasis>. See <emphasis>help transfer &lt;action&gt;</emphasis> for more information.
@@ -1995,7 +2017,7 @@
 				<ircline nick="ulim">transfer</ircline>
 			</ircexample>
 		</description>
-		
+
 		<bitlbee-command name="cancel">
 			<short-description>Cancels the file transfer with the given id</short-description>
 			<syntax>transfer &lt;cancel&gt; id</syntax>
@@ -2023,5 +2045,5 @@
 			</ircexample>
 		</bitlbee-command>
 	</bitlbee-command>
-	
+
 </chapter>
