@@ -37,6 +37,8 @@
 #define MASTODON_NOTIFICATIONS_URL "/notifications"
 #define MASTODON_STATUS_UPDATE_URL "/statuses"
 #define MASTODON_STATUS_URL "/statuses/%" G_GINT64_FORMAT
+#define MASTODON_STATUS_BOOST_URL "/statuses/%" G_GINT64_FORMAT "/reblog"
+#define MASTODON_STATUS_UNBOOST_URL "/statuses/%" G_GINT64_FORMAT "/unreblog"
 
 typedef enum {
 	MASTODON_EVT_UNKNOWN,
@@ -49,7 +51,6 @@ typedef enum {
 
 /* Status URLs */
 #define MASTODON_STATUS_DESTROY_URL "/statuses/destroy/"
-#define MASTODON_STATUS_BOOST_URL "/statuses/boost/"
 
 /* Timeline URLs */
 #define MASTODON_PUBLIC_TIMELINE_URL "/statuses/public_timeline.json"
@@ -106,6 +107,8 @@ gboolean mastodon_get_timeline(struct im_connection *ic, gint64 next_cursor);
 void mastodon_get_friends_ids(struct im_connection *ic, gint64 next_cursor);
 void mastodon_get_mutes_ids(struct im_connection *ic, gint64 next_cursor);
 void mastodon_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
+void mastodon_status_boost(struct im_connection *ic, guint64 id);
+void mastodon_status_unboost(struct im_connection *ic, guint64 id);
 
 void mastodon_following(struct im_connection *ic, gint64 next_cursor);
 void mastodon_verify_credentials(struct im_connection *ic);
@@ -115,7 +118,6 @@ void mastodon_direct_messages_new(struct im_connection *ic, char *who, char *mes
 void mastodon_friendships_create_destroy(struct im_connection *ic, char *who, int create);
 void mastodon_mute_create_destroy(struct im_connection *ic, char *who, int create);
 void mastodon_status_destroy(struct im_connection *ic, guint64 id);
-void mastodon_status_boost(struct im_connection *ic, guint64 id);
 void mastodon_report_spam(struct im_connection *ic, char *screen_name);
 void mastodon_favourite_toot(struct im_connection *ic, guint64 id);
 void mastodon_status_show_url(struct im_connection *ic, guint64 id);

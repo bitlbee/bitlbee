@@ -1321,8 +1321,10 @@ static void mastodon_get_home_timeline(struct im_connection *ic, gint64 next_cur
 }
 
 /**
- * Callback to use after sending a POST request to mastodon.
- * (Generic, used for a few kinds of queries.)
+ * Generic callback to use after sending a POST request to mastodon
+ * when the reply doesn't have any information we need. All we care
+ * about are errors. If got here, there was no error, so tell the user
+ * that everything went fine.
  */
 static void mastodon_http_post(struct http_request *req)
 {
@@ -1347,6 +1349,8 @@ static void mastodon_http_post(struct http_request *req)
 	}
 
 	json_value_free(parsed);
+
+	mastodon_log(ic, "Command processed successfully");
 }
 
 /**
@@ -1418,8 +1422,16 @@ void mastodon_status_boost(struct im_connection *ic, guint64 id)
 {
 	char *url;
 
-	url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s",
-	                      MASTODON_STATUS_BOOST_URL, id, ".json");
+	url = g_strdup_printf(MASTODON_STATUS_BOOST_URL, id);
+	mastodon_http(ic, url, mastodon_http_post, ic, 1, NULL, 0);
+	g_free(url);
+}
+
+void mastodon_status_unboost(struct im_connection *ic, guint64 id)
+{
+	char *url;
+
+	url = g_strdup_printf(MASTODON_STATUS_UNBOOST_URL, id);
 	mastodon_http(ic, url, mastodon_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }

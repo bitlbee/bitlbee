@@ -966,12 +966,24 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 
 		mastodon_report_spam(ic, screen_name);
 		goto eof;
-	} else if (g_strcasecmp(cmd[0], "rt") == 0 && cmd[1]) {
+	} else if (g_strcasecmp(cmd[0], "boost") == 0 && cmd[1]) {
 		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
 
 		md->last_status_id = 0;
 		if (id) {
 			mastodon_status_boost(ic, id);
+		} else {
+			mastodon_log(ic, "User `%s' does not exist or didn't "
+			            "post any statuses recently", cmd[1]);
+		}
+
+		goto eof;
+	} else if (g_strcasecmp(cmd[0], "unboost") == 0 && cmd[1]) {
+		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
+
+		md->last_status_id = 0;
+		if (id) {
+			mastodon_status_unboost(ic, id);
 		} else {
 			mastodon_log(ic, "User `%s' does not exist or didn't "
 			            "post any statuses recently", cmd[1]);
