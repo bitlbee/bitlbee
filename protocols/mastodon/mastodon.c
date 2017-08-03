@@ -694,7 +694,8 @@ int oauth2_refresh(struct im_connection *ic, const char *refresh_token)
 static void mastodon_handle_command(struct im_connection *ic, char *message);
 
 /**
- *
+ * Send a message to a buddy. If this buddy is the magic mastodon
+ * oauth handle, then treat the message as the refresh token instead.
  */
 static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message, int away)
 {
