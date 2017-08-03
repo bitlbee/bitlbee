@@ -7,8 +7,6 @@
 	18:01 <neoanderthal> [1d->13] @kensanata Sure - test your reports and I'll
 		let you know how it's working.
 
-1. test reporting
-
 1. test muting of conversations
 
 1. implement muting of accounts
