@@ -968,14 +968,10 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 
 		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
-	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
+	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1] && cmd[2]) {
 
 		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
 		message = cmd[2];
-
-		if (strlen(message) == 0 && g_strcasecmp(cmd[0], "spam") == 0) {
-			message = cmd[0]; // spam
-		}
 
 		if (!id) {
 			mastodon_log(ic, "User `%s' does not exist or didn't "
