@@ -407,8 +407,6 @@ static void mastodon_init(account_t * acc)
 
 	s = set_add(&acc->set, "show_ids", "true", set_eval_bool, acc);
 
-	s = set_add(&acc->set, "show_old_mentions", "0", set_eval_int, acc);
-
 	s = set_add(&acc->set, "strip_newlines", "false", set_eval_bool, acc);
 
 	s = set_add(&acc->set, "app_id", "0", set_eval_int, acc);
@@ -484,7 +482,7 @@ static void mastodon_connect(struct im_connection *ic)
 		mastodon_groupchat_init(ic);
 	}
 
-	mastodon_get_timeline(ic, -1);
+	mastodon_initial_timeline(ic);
         mastodon_open_stream(ic);
 	ic->flags |= OPT_PONGS;
 }
@@ -946,10 +944,28 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		mastodon_remove_buddy(ic, cmd[1], NULL);
 		goto eof;
 	} else if (g_strcasecmp(cmd[0], "mute") == 0 && cmd[1]) {
-		mastodon_mute_create_destroy(ic, cmd[1], 1);
+		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
+
+		md->last_status_id = 0;
+		if (id) {
+			mastodon_status_mute(ic, id);
+		} else {
+			mastodon_log(ic, "User `%s' does not exist or didn't "
+			            "post any statuses recently", cmd[1]);
+		}
+
 		goto eof;
 	} else if (g_strcasecmp(cmd[0], "unmute") == 0 && cmd[1]) {
-		mastodon_mute_create_destroy(ic, cmd[1], 0);
+		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
+
+		md->last_status_id = 0;
+		if (id) {
+			mastodon_status_unmute(ic, id);
+		} else {
+			mastodon_log(ic, "User `%s' does not exist or didn't "
+			            "post any statuses recently", cmd[1]);
+		}
+
 		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {

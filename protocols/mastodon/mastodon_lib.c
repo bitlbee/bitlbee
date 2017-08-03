@@ -43,6 +43,7 @@
 
 typedef enum {
 	ML_STATUS,
+	ML_NOTIFICATION,
 	ML_USER,
 	ML_ID,
 } mastodon_list_type_t;
@@ -70,7 +71,7 @@ struct mastodon_status {
 };
 
 typedef enum {
-	MN_MENTION,
+	MN_MENTION = 1,
 	MN_REBLOG,
 	MN_FAVOURITE,
 	MN_FOLLOW,
@@ -151,6 +152,8 @@ static void ml_free(struct mastodon_list *ml)
 	for (l = ml->list; l; l = g_slist_next(l)) {
 		if (ml->type == ML_STATUS) {
 			ms_free((struct mastodon_status *) l->data);
+		} else if (ml->type == ML_NOTIFICATION) {
+			mn_free((struct mastodon_notification *) l->data);
 		} else if (ml->type == ML_ID) {
 			g_free(l->data);
 		} else if (ml->type == ML_USER) {
@@ -504,9 +507,9 @@ static struct mastodon_notification *mastodon_xt_get_notification(const json_val
 			} else if (strcmp(v->u.string.ptr, "reblog") == 0) {
 				mn->type = MN_REBLOG;
 			} else if (strcmp(v->u.string.ptr, "favourite") == 0) {
-				mn->type = MN_MENTION;
+				mn->type = MN_FAVOURITE;
 			} else if (strcmp(v->u.string.ptr, "follow") == 0) {
-				mn->type = MN_MENTION;
+				mn->type = MN_FOLLOW;
 			}
 		}
 	}
@@ -590,34 +593,39 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 	g_free(quote_url);
 }
 
-/**
- * Function to fill a mastodon_list struct.
- * It sets:
- *  - all <status>es within the <status> element and
- *  - the next_cursor.
- */
 static gboolean mastodon_xt_get_status_list(struct im_connection *ic, const json_value *node,
-                                           struct mastodon_list *ml)
+					    struct mastodon_list *ml)
 {
-	struct mastodon_status *ms;
-	int i;
-
-	// Set the type of the list.
 	ml->type = ML_STATUS;
 
 	if (node->type != json_array) {
 		return FALSE;
 	}
 
-	// The root <statuses> node should hold the list of statuses <status>
-	// Walk over the nodes children.
-	for (i = 0; i < node->u.array.length; i++) {
-		ms = mastodon_xt_get_status(node->u.array.values[i]);
-		if (!ms) {
-			continue;
+	for (int i = 0; i < node->u.array.length; i++) {
+		struct mastodon_status *ms = mastodon_xt_get_status(node->u.array.values[i]);
+		if (ms) {
+			ml->list = g_slist_prepend(ml->list, ms);
 		}
+	}
+	ml->list = g_slist_reverse(ml->list);
+	return TRUE;
+}
 
-		ml->list = g_slist_prepend(ml->list, ms);
+static gboolean mastodon_xt_get_notification_list(struct im_connection *ic, const json_value *node,
+						  struct mastodon_list *ml)
+{
+	ml->type = ML_NOTIFICATION;
+
+	if (node->type != json_array) {
+		return FALSE;
+	}
+
+	for (int i = 0; i < node->u.array.length; i++) {
+		struct mastodon_notification *mn = mastodon_xt_get_notification(node->u.array.values[i]);
+		if (mn) {
+			ml->list = g_slist_prepend(ml->list, mn);
+		}
 	}
 	ml->list = g_slist_reverse(ml->list);
 	return TRUE;
@@ -786,28 +794,23 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 	g_free(prefix);
 }
 
-static void mastodon_notification_show(struct im_connection *ic, struct mastodon_notification *notification)
+struct mastodon_status *mastodon_notification_to_status(struct mastodon_notification *notification)
 {
-	struct mastodon_data *md = ic->proto_data;
 	struct mastodon_account *mu = notification->account;
 	struct mastodon_status *ms = notification->status;
 
 	if (mu == NULL) {
-		return;
+		// Should not happen.
+		mu = g_new0(struct mastodon_account, 1);
+		mu->acct = g_strdup("anon");
+		mu->display_name = g_strdup("Unknown");
 	}
 
-	/* Check this is not a toot from a muted user, or a boost from a user we don't want to see bosts from. */
-	char *uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, mu->id);
-
-	if (g_slist_find_custom(md->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
-		g_free(uid_str);
-		return;
-	}
-
-	/* Would like to do this during parsing, but can't access
-	   settings from there. */
-	if (ms && set_getbool(&ic->acc->set, "strip_newlines")) {
-		strip_newlines(ms->text);
+	if (ms == NULL) {
+		// Could be a FOLLOW notification without status.
+		ms = g_new0(struct mastodon_status, 1);
+		ms->account = notification->account;
+		ms->created_at = notification->created_at;
 	}
 
 	char *original = ms->text;
@@ -829,15 +832,7 @@ static void mastodon_notification_show(struct im_connection *ic, struct mastodon
 
 	g_free(original);
 
-	if (ms->from_filter) {
-		mastodon_status_show_filter(ic, ms);
-	} else if (md->flags & MASTODON_MODE_CHAT) {
-		mastodon_status_show_chat(ic, ms);
-	} else {
-		mastodon_status_show_msg(ic, ms);
-	}
-
-	g_free(uid_str);
+	return ms;
 }
 
 static void mastodon_status_show(struct im_connection *ic, struct mastodon_status *ms)
@@ -872,6 +867,11 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
 	}
 
 	g_free(uid_str);
+}
+
+static void mastodon_notification_show(struct im_connection *ic, struct mastodon_notification *notification)
+{
+	mastodon_status_show(ic, mastodon_notification_to_status(notification));
 }
 
 /**
@@ -1212,54 +1212,41 @@ gboolean mastodon_open_filter_stream(struct im_connection *ic)
 	return req != NULL;
 }
 
-static void mastodon_get_home_timeline(struct im_connection *ic, gint64 next_cursor);
-
 /**
- * Get the timeline with optionally mentions
- */
-gboolean mastodon_get_timeline(struct im_connection *ic, gint64 next_cursor)
-{
-	struct mastodon_data *md = ic->proto_data;
-
-	imcb_log(ic, "Getting home timeline");
-
-	if (md->flags & MASTODON_DOING_TIMELINE) {
-		if (++md->http_fails >= 5) {
-			imcb_error(ic, "Fetch timeout (%d)", md->flags);
-			imc_logout(ic, TRUE);
-			return FALSE;
-		}
-	}
-
-	md->flags |= MASTODON_DOING_TIMELINE;
-
-	mastodon_get_home_timeline(ic, next_cursor);
-
-	return TRUE;
-}
-
-/**
- * Call this one after receiving timeline/mentions. Show to user once we have
- * both.
+ * Call this one after receiving timeline/notifications. Show to user
+ * once we have both.
  */
 void mastodon_flush_timeline(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
 	struct mastodon_list *home_timeline = md->home_timeline_obj;
-	struct mastodon_list *mentions = md->mentions_obj;
+	struct mastodon_list *notifications = md->notifications_obj;
 	guint64 last_id = 0;
 	GSList *output = NULL;
 	GSList *l;
 
 	imcb_connected(ic);
 
-	if (!(md->flags & MASTODON_GOT_TIMELINE)) {
+	if (!(md->flags & MASTODON_GOT_TIMELINE) ||
+	    !(md->flags & MASTODON_GOT_NOTIFICATIONS)) {
 		return;
 	}
 
 	if (home_timeline && home_timeline->list) {
 		for (l = home_timeline->list; l; l = g_slist_next(l)) {
 			output = g_slist_insert_sorted(output, l->data, mastodon_compare_elements);
+		}
+	}
+
+	if (notifications && notifications->list) {
+		for (l = notifications->list; l; l = g_slist_next(l)) {
+			// Skip notifications older than the earliest entry in the timeline.
+			struct mastodon_status *ms = mastodon_notification_to_status((struct mastodon_notification *) l->data);
+			if (output && mastodon_compare_elements(ms, output->data) < 0) {
+				continue;
+			}
+
+			output = g_slist_insert_sorted(output, ms, mastodon_compare_elements);
 		}
 	}
 
@@ -1274,14 +1261,15 @@ void mastodon_flush_timeline(struct im_connection *ic)
 	}
 
 	ml_free(home_timeline);
-	ml_free(mentions);
+	ml_free(notifications);
 
-	md->flags &= ~(MASTODON_DOING_TIMELINE | MASTODON_GOT_TIMELINE | MASTODON_GOT_MENTIONS);
-	md->home_timeline_obj = md->mentions_obj = NULL;
+	md->flags &= ~(MASTODON_DOING_TIMELINE | MASTODON_GOT_TIMELINE | MASTODON_GOT_NOTIFICATIONS);
+	md->home_timeline_obj = md->notifications_obj = NULL;
 }
 
 /**
- * Callback for getting the home timeline.
+ * Callback for getting the home timeline. This runs in parallel to
+ * getting the notifications.
  */
 static void mastodon_http_get_home_timeline(struct http_request *req)
 {
@@ -1297,7 +1285,6 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 
 	md = ic->proto_data;
 
-	// The root <statuses> node should hold the list of statuses <status>
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		goto end;
 	}
@@ -1321,9 +1308,46 @@ end:
 }
 
 /**
- * Get the timeline.
+ * Callback for getting the notifications. This runs in parallel to
+ * getting the home timeline.
  */
-static void mastodon_get_home_timeline(struct im_connection *ic, gint64 next_cursor)
+static void mastodon_http_get_notifications(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	struct mastodon_data *md;
+	json_value *parsed;
+	struct mastodon_list *ml;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	md = ic->proto_data;
+
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		goto end;
+	}
+
+	ml = g_new0(struct mastodon_list, 1);
+	ml->list = NULL;
+
+	mastodon_xt_get_notification_list(ic, parsed, ml);
+	json_value_free(parsed);
+
+	md->notifications_obj = ml;
+
+end:
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	md->flags |= MASTODON_GOT_NOTIFICATIONS;
+
+	mastodon_flush_timeline(ic);
+}
+
+static void mastodon_get_home_timeline(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
 
@@ -1339,6 +1363,58 @@ static void mastodon_get_home_timeline(struct im_connection *ic, gint64 next_cur
 		md->flags |= MASTODON_GOT_TIMELINE;
 		mastodon_flush_timeline(ic);
 	}
+}
+
+static void mastodon_get_notifications(struct im_connection *ic)
+{
+	struct mastodon_data *md = ic->proto_data;
+
+	ml_free(md->notifications_obj);
+	md->notifications_obj = NULL;
+	md->flags &= ~MASTODON_GOT_NOTIFICATIONS;
+
+	if (mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_get_notifications, ic, 0, NULL, 0) == NULL) {
+		if (++md->http_fails >= 5) {
+			imcb_error(ic, "Could not retrieve %s: %s",
+			           MASTODON_NOTIFICATIONS_URL, "connection failed");
+		}
+		md->flags |= MASTODON_GOT_NOTIFICATIONS;
+		mastodon_flush_timeline(ic);
+	}
+}
+
+/**
+ * Get the initial timeline. This consists of two things: the home
+ * timeline, and notifications. During normal use, these are provided
+ * via the Streaming API. However, when we connect to an instance we
+ * want to load the home timeline and notifications. In order to sort
+ * them in a meaningful way, we use various flags:
+ * MASTODON_DOING_TIMELINE for the entire process,
+ * MASTODON_GOT_TIMELINE to indicate that we now have home timeline,
+ * MASTODON_GOT_NOTIFICATIONS to indicate that we now have notifications.
+ * Both callbacks will attempt to flush the initial timeline, but this
+ * will only succeed if both flags are set.
+ */
+gboolean mastodon_initial_timeline(struct im_connection *ic)
+{
+	struct mastodon_data *md = ic->proto_data;
+
+	imcb_log(ic, "Getting home timeline");
+
+	if (md->flags & MASTODON_DOING_TIMELINE) {
+		if (++md->http_fails >= 5) {
+			imcb_error(ic, "Fetch timeout (%d)", md->flags);
+			imc_logout(ic, TRUE);
+			return FALSE;
+		}
+	}
+
+	md->flags |= MASTODON_DOING_TIMELINE;
+
+	mastodon_get_home_timeline(ic);
+	mastodon_get_notifications(ic);
+
+	return TRUE;
 }
 
 /**
@@ -1425,17 +1501,22 @@ void mastodon_friendships_create_destroy(struct im_connection *ic, char *who, in
 	             mastodon_http_callback_and_ack, ic, 1, args, 2);
 }
 
-/**
- * Mute or unmute a user
- */
-void mastodon_mute_create_destroy(struct im_connection *ic, char *who, int create)
+void mastodon_status_mute(struct im_connection *ic, guint64 id)
 {
-	char *args[2];
+	char *url;
 
-	args[0] = "screen_name";
-	args[1] = who;
-	mastodon_http(ic, create ? MASTODON_MUTES_CREATE_URL : MASTODON_MUTES_DESTROY_URL,
-		     mastodon_http_callback_and_ack, ic, 1, args, 2);
+	url = g_strdup_printf(MASTODON_STATUS_MUTE_URL, id);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
+	g_free(url);
+}
+
+void mastodon_status_unmute(struct im_connection *ic, guint64 id)
+{
+	char *url;
+
+	url = g_strdup_printf(MASTODON_STATUS_MUTE_URL, id);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
+	g_free(url);
 }
 
 void mastodon_status_destroy(struct im_connection *ic, guint64 id)

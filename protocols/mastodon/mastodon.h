@@ -39,13 +39,13 @@
 #define MASTODON_MENTION_REGEX "@(([a-zA-Z0-9_]+)@[a-zA-Z0-9.-]+[a-zA-Z0-9])"
 
 typedef enum {
-	MASTODON_HAVE_FRIENDS   = 0x00001,
-	MASTODON_MODE_ONE       = 0x00002,
-	MASTODON_MODE_MANY      = 0x00004,
-	MASTODON_MODE_CHAT      = 0x00008,
-	MASTODON_DOING_TIMELINE = 0x10000,
-	MASTODON_GOT_TIMELINE   = 0x20000,
-	MASTODON_GOT_MENTIONS   = 0x40000,
+	MASTODON_HAVE_FRIENDS      = 0x00001,
+	MASTODON_MODE_ONE          = 0x00002,
+	MASTODON_MODE_MANY         = 0x00004,
+	MASTODON_MODE_CHAT         = 0x00008,
+	MASTODON_DOING_TIMELINE    = 0x10000,
+	MASTODON_GOT_TIMELINE      = 0x20000,
+	MASTODON_GOT_NOTIFICATIONS = 0x40000,
 } mastodon_flags_t;
 
 typedef enum {
@@ -61,7 +61,7 @@ struct mastodon_data {
 	char *oauth2_access_token;
 
 	gpointer home_timeline_obj;
-	gpointer mentions_obj;
+	gpointer notifications_obj;
 
 	GSList *follow_ids;
 	GSList *mutes_ids;
