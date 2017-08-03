@@ -833,12 +833,12 @@ static void mastodon_rem_deny(struct im_connection *ic, char *who)
 //      return value;
 //}
 
-static void mastodon_buddy_data_add(struct bee_user *bu)
+static void mastodon_buddy_data_add(bee_user_t *bu)
 {
 	bu->data = g_new0(struct mastodon_user_data, 1);
 }
 
-static void mastodon_buddy_data_free(struct bee_user *bu)
+static void mastodon_buddy_data_free(bee_user_t *bu)
 {
 	g_free(bu->data);
 }
