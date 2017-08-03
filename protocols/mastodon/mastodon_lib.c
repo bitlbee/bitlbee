@@ -1347,7 +1347,7 @@ static void mastodon_get_home_timeline(struct im_connection *ic, gint64 next_cur
  * about are errors. If got here, there was no error, so tell the user
  * that everything went fine.
  */
-static void mastodon_http_post(struct http_request *req)
+static void mastodon_http_callback(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
 	struct mastodon_data *md;
@@ -1370,8 +1370,16 @@ static void mastodon_http_post(struct http_request *req)
 	}
 
 	json_value_free(parsed);
+}
 
-	mastodon_log(ic, "Command processed successfully");
+/**
+ * Call the generic callback function and print an acknowledgement for
+ * the user.
+ */
+static void mastodon_http_callback_and_ack(struct http_request *req)
+{
+	mastodon_http_callback(req);
+	mastodon_log(req->data, "Command processed successfully");
 }
 
 /**
@@ -1385,7 +1393,8 @@ void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_
 		g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
 
-	mastodon_http(ic, MASTODON_STATUS_UPDATE_URL, mastodon_http_post, ic, 1,
+	// No need to acknowledge the processing of a post: we will get notified.
+	mastodon_http(ic, MASTODON_STATUS_UPDATE_URL, mastodon_http_callback, ic, 1,
 	             args, in_reply_to ? 4 : 2);
 	g_free(args[3]);
 }
@@ -1403,7 +1412,7 @@ void mastodon_direct_messages_new(struct im_connection *ic, char *who, char *msg
 	args[2] = "text";
 	args[3] = msg;
 	// Use the same callback as for mastodon_post_status, since it does basically the same.
-	mastodon_http(ic, MASTODON_DIRECT_MESSAGES_NEW_URL, mastodon_http_post, ic, 1, args, 4);
+	mastodon_http(ic, MASTODON_DIRECT_MESSAGES_NEW_URL, mastodon_http_callback_and_ack, ic, 1, args, 4);
 }
 
 void mastodon_friendships_create_destroy(struct im_connection *ic, char *who, int create)
@@ -1413,7 +1422,7 @@ void mastodon_friendships_create_destroy(struct im_connection *ic, char *who, in
 	args[0] = "screen_name";
 	args[1] = who;
 	mastodon_http(ic, create ? MASTODON_FRIENDSHIPS_CREATE_URL : MASTODON_FRIENDSHIPS_DESTROY_URL,
-	             mastodon_http_post, ic, 1, args, 2);
+	             mastodon_http_callback_and_ack, ic, 1, args, 2);
 }
 
 /**
@@ -1426,7 +1435,7 @@ void mastodon_mute_create_destroy(struct im_connection *ic, char *who, int creat
 	args[0] = "screen_name";
 	args[1] = who;
 	mastodon_http(ic, create ? MASTODON_MUTES_CREATE_URL : MASTODON_MUTES_DESTROY_URL,
-		     mastodon_http_post, ic, 1, args, 2);
+		     mastodon_http_callback_and_ack, ic, 1, args, 2);
 }
 
 void mastodon_status_destroy(struct im_connection *ic, guint64 id)
@@ -1435,7 +1444,7 @@ void mastodon_status_destroy(struct im_connection *ic, guint64 id)
 
 	url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s",
 	                      MASTODON_STATUS_DESTROY_URL, id, ".json");
-	mastodon_http(ic, url, mastodon_http_post, ic, 1, NULL, 0);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
 	g_free(url);
 }
 
@@ -1444,7 +1453,7 @@ void mastodon_status_boost(struct im_connection *ic, guint64 id)
 	char *url;
 
 	url = g_strdup_printf(MASTODON_STATUS_BOOST_URL, id);
-	mastodon_http(ic, url, mastodon_http_post, ic, 1, NULL, 0);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
 	g_free(url);
 }
 
@@ -1453,7 +1462,7 @@ void mastodon_status_unboost(struct im_connection *ic, guint64 id)
 	char *url;
 
 	url = g_strdup_printf(MASTODON_STATUS_UNBOOST_URL, id);
-	mastodon_http(ic, url, mastodon_http_post, ic, 1, NULL, 0);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
 	g_free(url);
 }
 
@@ -1491,7 +1500,7 @@ void mastodon_http_report(struct http_request *req)
 		"comment", mr->comment,
 	};
 
-	mastodon_http(ic, MASTODON_REPORT_URL, mastodon_http_post, ic, 1, args, 6);
+	mastodon_http(ic, MASTODON_REPORT_URL, mastodon_http_callback_and_ack, ic, 1, args, 6);
 
 	g_free(args[1]);
 	g_free(args[3]);
@@ -1527,7 +1536,7 @@ void mastodon_favourite_toot(struct im_connection *ic, guint64 id)
 	};
 
 	args[1] = g_strdup_printf("%" G_GUINT64_FORMAT, id);
-	mastodon_http(ic, MASTODON_FAVORITE_CREATE_URL, mastodon_http_post, ic, 1, args, 2);
+	mastodon_http(ic, MASTODON_FAVORITE_CREATE_URL, mastodon_http_callback_and_ack, ic, 1, args, 2);
 	g_free(args[1]);
 }
 
