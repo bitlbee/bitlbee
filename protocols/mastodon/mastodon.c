@@ -805,7 +805,7 @@ static void mastodon_chat_leave(struct groupchat *c)
 	}
 
 	/* If the user leaves the channel: Fine. Rejoin him/her once new
-	   tweets come in. */
+	   toots come in. */
 	imcb_chat_free(md->timeline_gc);
 	md->timeline_gc = NULL;
 }
@@ -879,7 +879,7 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 			bu = md->log[id].bu;
 			id = md->log[id].id;
 		} else if (parse_int64(arg, 10, &id)) {
-			/* Allow normal tweet IDs as well; not a very useful
+			/* Allow normal toot IDs as well; not a very useful
 			   feature but it's always been there. Just ignore
 			   very low IDs to avoid accidents. */
 			if (id < 1000000) {
@@ -934,7 +934,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 	            g_strcasecmp(cmd[0], "fav") == 0 ||
 	            g_strcasecmp(cmd[0], "like") == 0) && cmd[1]) {
 		if ((id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL))) {
-			mastodon_favourite_tweet(ic, id);
+			mastodon_favourite_toot(ic, id);
 		} else {
 			mastodon_log(ic, "Please provide a message ID or username.");
 		}
@@ -971,7 +971,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 
 		md->last_status_id = 0;
 		if (id) {
-			mastodon_status_retweet(ic, id);
+			mastodon_status_boost(ic, id);
 		} else {
 			mastodon_log(ic, "User `%s' does not exist or didn't "
 			            "post any statuses recently", cmd[1]);
@@ -991,7 +991,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 	} else if (g_strcasecmp(cmd[0], "rawreply") == 0 && cmd[1] && cmd[2]) {
 		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
 		if (!id) {
-			mastodon_log(ic, "Tweet `%s' does not exist", cmd[1]);
+			mastodon_log(ic, "Toot `%s' does not exist", cmd[1]);
 			goto eof;
 		}
 		message = cmd[2];
@@ -1000,7 +1000,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 	} else if (g_strcasecmp(cmd[0], "url") == 0) {
 		id = mastodon_message_id_from_command_arg(ic, cmd[1], &bu);
 		if (!id) {
-			mastodon_log(ic, "Tweet `%s' does not exist", cmd[1]);
+			mastodon_log(ic, "Toot `%s' does not exist", cmd[1]);
 		} else {
 			mastodon_status_show_url(ic, id);
 		}
@@ -1037,7 +1037,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		}
 
 		/* If the user runs undo between this request and its response
-		   this would delete the second-last Tweet. Prevent that. */
+		   this would delete the second-last Toot. Prevent that. */
 		md->last_status_id = 0;
 		mastodon_post_status(ic, message, in_reply_to);
 	} else {
