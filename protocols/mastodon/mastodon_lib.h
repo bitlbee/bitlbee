@@ -49,7 +49,7 @@ typedef enum {
 /* Status URLs */
 #define MASTODON_STATUS_SHOW_URL "/statuses/show/"
 #define MASTODON_STATUS_DESTROY_URL "/statuses/destroy/"
-#define MASTODON_STATUS_RETWEET_URL "/statuses/retweet/"
+#define MASTODON_STATUS_BOOST_URL "/statuses/boost/"
 
 /* Timeline URLs */
 #define MASTODON_PUBLIC_TIMELINE_URL "/statuses/public_timeline.json"
@@ -76,7 +76,7 @@ typedef enum {
 #define MASTODON_FRIENDS_IDS_URL "/friends/ids.json"
 #define MASTODON_FOLLOWERS_IDS_URL "/followers/ids.json"
 #define MASTODON_MUTES_IDS_URL "/mutes/users/ids.json"
-#define MASTODON_NORETWEETS_IDS_URL "/friendships/no_retweets/ids.json"
+#define MASTODON_NOBOOSTS_IDS_URL "/friendships/no_boosts/ids.json"
 
 /* Account URLs */
 #define MASTODON_ACCOUNT_RATE_LIMIT_URL "/account/rate_limit_status.json"
@@ -115,7 +115,7 @@ void mastodon_direct_messages_new(struct im_connection *ic, char *who, char *mes
 void mastodon_friendships_create_destroy(struct im_connection *ic, char *who, int create);
 void mastodon_mute_create_destroy(struct im_connection *ic, char *who, int create);
 void mastodon_status_destroy(struct im_connection *ic, guint64 id);
-void mastodon_status_retweet(struct im_connection *ic, guint64 id);
+void mastodon_status_boost(struct im_connection *ic, guint64 id);
 void mastodon_report_spam(struct im_connection *ic, char *screen_name);
-void mastodon_favourite_tweet(struct im_connection *ic, guint64 id);
+void mastodon_favourite_toot(struct im_connection *ic, guint64 id);
 void mastodon_status_show_url(struct im_connection *ic, guint64 id);

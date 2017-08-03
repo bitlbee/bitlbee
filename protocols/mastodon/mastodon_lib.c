@@ -498,9 +498,9 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 	if (!((entities = json_o_get(node, "entities")) && entities->type == json_object))
 		return;
 	if ((quoted = json_o_get(node, "quoted_status")) && quoted->type == json_object) {
-		/* New "retweets with comments" feature. Grab the
+		/* New "boosts with comments" feature. Grab the
 		 * full message and try to insert it when we run into the
-		 * Tweet entity. */
+		 * Toot entity. */
 		struct mastodon_status *ms = mastodon_xt_get_status(quoted);
 		quote_text = g_strdup_printf("@%s: %s", ms->account->acct, ms->text);
 		quote_url = g_strdup_printf("%s/status/%" G_GUINT64_FORMAT, ms->account->acct, ms->id);
@@ -539,7 +539,7 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 			char *pos, *new;
 
 			/* Skip if a required field is missing, if the t.co URL is not in fact
-			   in the Tweet at all, or if the full-ish one *is* in it already
+			   in the Toot at all, or if the full-ish one *is* in it already
 			   (dupes appear, especially in streaming API). */
 			if (!kort || !disp || !(pos = strstr(*text, kort)) || strstr(*text, disp)) {
 				continue;
@@ -629,7 +629,7 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 
 	/* This is all getting hairy. :-( If we RT'ed something ourselves,
 	   remember OUR id instead so undo will work. In other cases, the
-	   original tweet's id should be remembered for deduplicating. */
+	   original toot's id should be remembered for deduplicating. */
 	if (g_strcasecmp(ms->account->acct, md->user) == 0) {
 		md->log[md->log_id].id = ms->rt_id;
 		/* More useful than NULL. */
@@ -820,7 +820,7 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
 		return;
 	}
 
-	/* Check this is not a tweet that should be muted */
+	/* Check this is not a toot that should be muted */
 	uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, ms->account->id);
 
 	if (g_slist_find_custom(md->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
@@ -1406,12 +1406,12 @@ void mastodon_status_destroy(struct im_connection *ic, guint64 id)
 	g_free(url);
 }
 
-void mastodon_status_retweet(struct im_connection *ic, guint64 id)
+void mastodon_status_boost(struct im_connection *ic, guint64 id)
 {
 	char *url;
 
 	url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s",
-	                      MASTODON_STATUS_RETWEET_URL, id, ".json");
+	                      MASTODON_STATUS_BOOST_URL, id, ".json");
 	mastodon_http(ic, url, mastodon_http_post, ic, 1, NULL, 0);
 	g_free(url);
 }
@@ -1431,9 +1431,9 @@ void mastodon_report_spam(struct im_connection *ic, char *screen_name)
 }
 
 /**
- * Favourite a tweet.
+ * Favourite a toot.
  */
-void mastodon_favourite_tweet(struct im_connection *ic, guint64 id)
+void mastodon_favourite_toot(struct im_connection *ic, guint64 id)
 {
 	char *args[2] = {
 		"id",
@@ -1471,7 +1471,7 @@ static void mastodon_http_status_show_url(struct http_request *req)
 	if (name && id && id->type == json_integer) {
 		mastodon_log(ic, "https://mastodon.com/%s/status/%" G_GUINT64_FORMAT, name, id->u.integer);
 	} else {
-		mastodon_log(ic, "Error: could not fetch tweet url.");
+		mastodon_log(ic, "Error: could not fetch toot url.");
 	}
 
 	json_value_free(parsed);
