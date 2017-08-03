@@ -85,6 +85,14 @@ struct mastodon_notification {
 	gboolean from_filter;
 };
 
+struct mastodon_report {
+	struct im_connection *ic;
+	guint64 account_id;
+	guint64 status_id;
+	char *comment;
+};
+
+
 /**
  * Frees a mastodon_account struct.
  */
@@ -152,6 +160,19 @@ static void ml_free(struct mastodon_list *ml)
 
 	g_slist_free(ml->list);
 	g_free(ml);
+}
+
+/**
+ * Frees a mastodon_report struct.
+ */
+static void mr_free(struct mastodon_report *mr)
+{
+	if (mr == NULL) {
+		return;
+	}
+
+	g_free(mr->comment);
+	g_free(mr);
 }
 
 /**
@@ -1437,17 +1458,62 @@ void mastodon_status_unboost(struct im_connection *ic, guint64 id)
 }
 
 /**
- * Report a user for sending spam.
+ * Callback for reporting a user for sending spam.
  */
-void mastodon_report_spam(struct im_connection *ic, char *screen_name)
+void mastodon_http_report(struct http_request *req)
 {
-	char *args[2] = {
-		"screen_name",
-		NULL,
+	struct mastodon_report *mr = req->data;
+	struct im_connection *ic = mr->ic;
+	json_value *parsed;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(mastodon_connections, ic)) {
+		goto finish;
+	}
+
+	// Parse the data.
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		goto finish;
+	}
+
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	if (ms) {
+		mr->account_id = ms->account->id;
+		ms_free(ms);
+	} else {
+		mastodon_log(ic, "Error: could not fetch toot to report.");
+		goto finish;
+	}
+
+	char *args[6] = {
+		"account_id", g_strdup_printf("%" G_GUINT64_FORMAT, mr->account_id),
+		"status_ids", g_strdup_printf("%" G_GUINT64_FORMAT, mr->status_id), // API allows an array, here
+		"comment", mr->comment,
 	};
 
-	args[1] = screen_name;
-	mastodon_http(ic, MASTODON_REPORT_SPAM_URL, mastodon_http_post, ic, 1, args, 2);
+	mastodon_http(ic, MASTODON_REPORT_URL, mastodon_http_post, ic, 1, args, 6);
+
+	g_free(args[1]);
+	g_free(args[3]);
+finish:
+	mr_free(mr);
+}
+
+/**
+ * Report a user. Since all we have is the id of the offending status,
+ * we need to retrieve the status, first.
+ */
+void mastodon_report(struct im_connection *ic, guint64 id, char *comment)
+{
+	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
+	struct mastodon_report *mr = g_new0(struct mastodon_report, 1);
+
+	mr->ic = ic;
+	mr->status_id = id;
+	mr->comment = g_strdup(comment);
+
+	mastodon_http(ic, MASTODON_STATUS_URL, mastodon_http_report, mr, 0, NULL, 0);
+	g_free(url);
 }
 
 /**
