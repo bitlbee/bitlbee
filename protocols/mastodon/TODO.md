@@ -1,5 +1,18 @@
 # TODO
 
+1. deduplicate mentions: 
+    
+	18:01 <neoanderthal> [1c->13] @neoanderthal mentioned you: @kensanata Sure -
+		test your reports and I'll let you know how it's working.
+	18:01 <neoanderthal> [1d->13] @kensanata Sure - test your reports and I'll
+		let you know how it's working.
+
+1. test reporting
+
+1. test muting of conversations
+
+1. implement muting of accounts
+
 1. When showing a status, decide how to handle the URLs
    of
    [media attachments](https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md#attachment).
@@ -7,8 +20,6 @@
    of `type+" "+(text_url||remote_url)`.
 
 1. We can delete `md->follow_ids`.
-
-1. Add documentation to the help files.
 
 1. Remove all remaining Twitter code.
 
