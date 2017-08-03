@@ -98,6 +98,7 @@ struct mastodon_filter {
 };
 
 struct mastodon_user_data {
+	guint64 account_id;
 	guint64 last_id;
 	time_t last_time;
 };

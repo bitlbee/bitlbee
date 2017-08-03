@@ -198,7 +198,7 @@ static gint mastodon_compare_elements(gconstpointer a, gconstpointer b)
 /**
  * Add a buddy if it is not already added, set the status to logged in.
  */
-static void mastodon_add_buddy(struct im_connection *ic, char *name, const char *fullname)
+static void mastodon_add_buddy(struct im_connection *ic, gint64 id, char *name, const char *fullname)
 {
 	struct mastodon_data *md = ic->proto_data;
 
@@ -207,6 +207,11 @@ static void mastodon_add_buddy(struct im_connection *ic, char *name, const char 
 		// The buddy is not in the list, add the buddy and set the status to logged in.
 		imcb_add_buddy(ic, name, NULL);
 		imcb_rename_buddy(ic, name, fullname);
+
+		bee_user_t *bu = bee_user_by_handle(ic->bee, ic, name);
+		struct mastodon_user_data *mud = (struct mastodon_user_data*) bu->data;
+		mud->account_id = id;
+
 		if (md->flags & MASTODON_MODE_CHAT) {
 			/* Necessary so that nicks always get translated to the
 			   exact Mastodon username. */
@@ -745,7 +750,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 
 	if (!me) {
 		/* MUST be done before mastodon_msg_add_id() to avoid #872. */
-		mastodon_add_buddy(ic, status->account->acct, status->account->display_name);
+		mastodon_add_buddy(ic, status->account->id, status->account->acct, status->account->display_name);
 	}
 	msg = mastodon_msg_add_id(ic, status, "");
 
@@ -779,7 +784,7 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 		prefix = g_strdup_printf("\002<\002%s\002>\002 ",
 		                         status->account->acct);
 	} else if (!me) {
-		mastodon_add_buddy(ic, status->account->acct, status->account->display_name);
+		mastodon_add_buddy(ic, status->account->id, status->account->acct, status->account->display_name);
 	} else {
 		prefix = g_strdup("You: ");
 	}
@@ -1694,7 +1699,7 @@ static void mastodon_http_following(struct http_request *req)
 		}
 
 		if (id != 0 && acct != NULL && display_name != NULL) {
-			mastodon_add_buddy(ic, acct, display_name);
+			mastodon_add_buddy(ic, id, acct, display_name);
 		} else {
 			g_free(acct);
 			g_free(display_name);
