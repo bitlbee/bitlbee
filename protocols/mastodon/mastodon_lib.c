@@ -62,6 +62,7 @@ struct mastodon_account {
 struct mastodon_status {
 	time_t created_at;
 	char *text;
+	char *url;
 	struct mastodon_account *account;
 	guint64 id, rt_id; /* Usually equal, with RTs id == *original* id */
 	guint64 reply_to;
@@ -108,6 +109,7 @@ static void ms_free(struct mastodon_status *ms)
 	}
 
 	g_free(ms->text);
+	g_free(ms->url);
 	mu_free(ms->account);
 	g_free(ms);
 }
@@ -391,6 +393,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	struct mastodon_status *ms = {0};
 	const json_value *rt = NULL;
 	const json_value *text_value = NULL;
+	const json_value *url_value = NULL;
 	const json_value *extended_node = NULL;
 
 	if (node->type != json_object) {
@@ -401,6 +404,8 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	JSON_O_FOREACH(node, k, v) {
 		if (strcmp("content", k) == 0 && v->type == json_string && text_value == NULL) {
 			text_value = v;
+		} else if (strcmp("url", k) == 0 && v->type == json_string && url_value == NULL) {
+			url_value = v;
 		} else if (strcmp("reblog", k) == 0 && v->type == json_object) {
 			rt = v;
 		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
@@ -426,12 +431,15 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 		if (rms) {
 			ms->text = g_strdup_printf("boosted @%s: %s", rms->account->acct, rms->text);
 			ms->id = rms->id;
+			ms->url = g_strdup(rms->url);
 			ms_free(rms);
 		}
 	} else if (text_value && text_value->type == json_string) {
-		ms->text = g_memdup(text_value->u.string.ptr, text_value->u.string.length + 1);
+		ms->text = g_strdup(text_value->u.string.ptr);
 		strip_html(ms->text);
 		expand_entities(&ms->text, node, extended_node);
+
+		ms->url = g_strdup(url_value->u.string.ptr);
 	}
 
 	if (ms->text && ms->account && ms->id) {
@@ -1448,8 +1456,7 @@ void mastodon_favourite_toot(struct im_connection *ic, guint64 id)
 static void mastodon_http_status_show_url(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed, *id;
-	const char *name;
+	json_value *parsed;
 
 	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
@@ -1460,16 +1467,10 @@ static void mastodon_http_status_show_url(struct http_request *req)
 		return;
 	}
 
-	/* for the parson branch:
-	name = json_object_dotget_string(json_object(parsed), "user.screen_name");
-	id = json_object_get_integer(json_object(parsed), "id");
-	*/
-
-	name = json_o_str(json_o_get(parsed, "user"), "screen_name");
-	id = json_o_get(parsed, "id");
-
-	if (name && id && id->type == json_integer) {
-		mastodon_log(ic, "https://mastodon.com/%s/status/%" G_GUINT64_FORMAT, name, id->u.integer);
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	if (ms) {
+		mastodon_log(ic, ms->url);
+		ms_free(ms);
 	} else {
 		mastodon_log(ic, "Error: could not fetch toot url.");
 	}
@@ -1479,7 +1480,7 @@ static void mastodon_http_status_show_url(struct http_request *req)
 
 void mastodon_status_show_url(struct im_connection *ic, guint64 id)
 {
-	char *url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s", MASTODON_STATUS_SHOW_URL, id, ".json");
+	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
 	mastodon_http(ic, url, mastodon_http_status_show_url, ic, 0, NULL, 0);
 	g_free(url);
 }
@@ -1518,9 +1519,9 @@ static void mastodon_http_following(struct http_request *req)
 			if (strcmp("id", k) == 0 && v->type == json_integer) {
 				id = v->u.integer;
 			} else if (strcmp("acct", k) == 0 && v->type == json_string) {
-				acct = g_memdup(v->u.string.ptr, v->u.string.length + 1);
+				acct = g_strdup(v->u.string.ptr);
 			} else if (strcmp("display_name", k) == 0 && v->type == json_string) {
-				display_name = g_memdup(v->u.string.ptr, v->u.string.length + 1);
+				display_name = g_strdup(v->u.string.ptr);
 			}
 		}
 
