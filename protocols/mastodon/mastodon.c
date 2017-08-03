@@ -416,7 +416,7 @@ static void mastodon_init(account_t * acc)
 
 	s = set_add(&acc->set, "account_id", "0", set_eval_int, acc);
 	s->flags |= SET_HIDDEN;
-	
+
 	s = set_add(&acc->set, "consumer_key", "", NULL, acc);
 	s->flags |= SET_HIDDEN;
 
@@ -433,7 +433,7 @@ static void mastodon_connect(struct im_connection *ic)
 	char name[strlen(ic->acc->user) + 9];
 	url_t url;
 	char *s;
-	
+
 	imcb_log(ic, "Connecting");
 
 	if (!url_set(&url, set_getstr(&ic->acc->set, "base_url")) ||
@@ -524,7 +524,7 @@ static void mastodon_login(account_t * acc)
 	mastodon_connections = g_slist_append(mastodon_connections, ic);
 	ic->proto_data = md;
 	md->user = g_strdup(acc->user);
-	
+
 	if (!url_set(&url, set_getstr(&ic->acc->set, "base_url")) ||
 	    (url.proto != PROTO_HTTPS)) {
 		imcb_error(ic, "Incorrect API base URL: %s", set_getstr(&ic->acc->set, "base_url"));
@@ -540,7 +540,7 @@ static void mastodon_login(account_t * acc)
 	} else {
 		md->url_path = g_strdup("");
 	}
-	
+
 	GSList *p_in = NULL;
 	const char *tok;
 
@@ -573,7 +573,7 @@ static void mastodon_login(account_t * acc)
 	}
 	/* All of the above will end up calling mastodon_connect() in
 	   the end. */
-	
+
 	oauth_params_free(&p_in);
 }
 
@@ -705,7 +705,7 @@ static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message
 
 	if (g_strcasecmp(who, MASTODON_OAUTH_HANDLE) == 0 &&
 	    !(md->flags & OPT_LOGGED_IN)) {
-		
+
 		if (oauth2_get_refresh_token(ic, message)) {
 			return 1;
 		} else {
@@ -953,18 +953,23 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
-		char *screen_name;
 
-		/* Report nominally works on users but look up the user who
-		   posted the given ID if the user wants to do it that way */
-		mastodon_message_id_from_command_arg(ic, cmd[1], &bu);
-		if (bu) {
-			screen_name = bu->handle;
-		} else {
-			screen_name = cmd[1];
+		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
+		message = cmd[2];
+
+		if (strlen(message) == 0 && g_strcasecmp(cmd[0], "spam") == 0) {
+			message = cmd[0]; // spam
 		}
 
-		mastodon_report_spam(ic, screen_name);
+		if (!id) {
+			mastodon_log(ic, "User `%s' does not exist or didn't "
+			            "post any statuses recently", cmd[1]);
+		} else if (strlen(message) == 0) {
+			mastodon_log(ic, "You must provide a comment with your report");
+		} else {
+			mastodon_report(ic, id, message);
+		}
+
 		goto eof;
 	} else if (g_strcasecmp(cmd[0], "boost") == 0 && cmd[1]) {
 		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
