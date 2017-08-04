@@ -1606,6 +1606,7 @@ static void mastodon_http_follow3(struct http_request *req)
 	
 	if (ma->id != 0 && ma->acct != NULL) {
 		mastodon_add_buddy(ic, ma->id, ma->acct, ma->display_name);
+		mastodon_log(ic, "You are now following %s.", ma->acct);
 	} else {
 		mastodon_log(ic, "This user does not have and id and account name, this is totally illegal. I'm not adding them!");
 	}
@@ -1655,7 +1656,6 @@ static void mastodon_http_follow2(struct http_request *req)
 	}
 
 	if ((it = json_o_get(parsed, "following")) && it->type == json_boolean && it->u.boolean) {
-		mastodon_log(ic, "You are now following this user.");
 		if ((it = json_o_get(parsed, "id")) && it->type == json_integer) {
 			guint64 id = it->u.integer;
 			struct mastodon_data *md = ic->proto_data;
@@ -1663,6 +1663,8 @@ static void mastodon_http_follow2(struct http_request *req)
 			char *url = g_strdup_printf(MASTODON_ACCOUNT_URL, id);
 			mastodon_http(ic, url, mastodon_http_follow3, ic, HTTP_GET, NULL, 0);
 			g_free(url);
+		} else {
+			mastodon_log(ic, "I can't believe it: this relation has no id. I can't add them!");
 		}
 	}
 

@@ -781,22 +781,6 @@ static void mastodon_get_info(struct im_connection *ic, char *who)
 {
 }
 
-static void mastodon_add_buddy(struct im_connection *ic, char *who, char *group)
-{
-	// who can be an unknown user
-	mastodon_follow(ic, who);
-}
-
-static guint64 mastodon_user_id_or_warn(struct im_connection *ic, char *who);
-
-static void mastodon_remove_buddy(struct im_connection *ic, char *who, char *group)
-{
-	guint64 id;
-	if ((id = mastodon_user_id_or_warn(ic, who))) {
-		mastodon_post(ic, MASTODON_ACCOUNT_UNFOLLOW_URL, id);
-	}
-}
-
 static void mastodon_chat_msg(struct groupchat *c, char *message, int flags)
 {
 	if (c && message) {
@@ -1017,6 +1001,33 @@ static guint64 mastodon_user_id_or_warn(struct im_connection *ic, char *who)
 	}
 	mastodon_unknown_user_warning(ic, who);
 	return 0;
+}
+
+static void mastodon_add_buddy(struct im_connection *ic, char *who, char *group)
+{
+	bee_user_t *bu;
+	guint64 id;
+	if ((bu = mastodon_user_by_nick(ic, who)) &&
+	    (id = mastodon_account_id(bu))) {
+		// If the nick is already in the channel (when we just
+		// unfollowed them, for example), we're taking a
+		// shortcut. No fancy looking at the relationship and
+		// all that. The nick is already here, after all.
+		mastodon_post(ic, MASTODON_ACCOUNT_FOLLOW_URL, id);
+	} else {
+		// Alternatively, we're looking for an unknown user.
+		// They must be searched, followed, and added to the
+		// channel. It's going to get hairy.
+		mastodon_follow(ic, who);
+	}
+}
+
+static void mastodon_remove_buddy(struct im_connection *ic, char *who, char *group)
+{
+	guint64 id;
+	if ((id = mastodon_user_id_or_warn(ic, who))) {
+		mastodon_post(ic, MASTODON_ACCOUNT_UNFOLLOW_URL, id);
+	}
 }
 
 static void mastodon_handle_command(struct im_connection *ic, char *message)

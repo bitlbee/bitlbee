@@ -10,7 +10,8 @@
 
 1. testing
     - `unfollow nick` works
-	- `follow nick@some.instance` works
+	- `follow name@some.instance` works
+	- `follow nick` works (if the nick is already in the channel!)
 	- posting works
 	- posting implicit replies to toots older than 3h works
 	- posting implicit replies to newer toots works
@@ -19,6 +20,8 @@
 	- `undo` to delete latest toot with no other trickery works
 	- `fav id` and `fav nick` to favor a toot works (and all synomyms)
 	- `unfav id` and `unfav nick` to unfavor a toot works (and all synomyms)
+	- `block nick` to block a user works
+	- `unblock nick` to unblock a user works
 
 1. Also had one crash in `mastodon_log (ic=0x10090b270,
     format=0x100092027 "Command processed successfully")` at
