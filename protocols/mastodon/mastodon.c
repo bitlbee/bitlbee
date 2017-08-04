@@ -1033,7 +1033,9 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		/* Nothing to do */
 	} else if (!set_getbool(&ic->acc->set, "commands") && allow_post) {
 		/* Not supporting commands if "commands" is set to true/strict. */
-	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
+	} else if (g_strcasecmp(cmd[0], "undo") == 0 ||
+		   g_strcasecmp(cmd[0], "del") == 0 ||
+		   g_strcasecmp(cmd[0], "delete") == 0) {
 		if (cmd[1] == NULL) {
 			mastodon_status_delete(ic, md->last_id);
 		} else if ((id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL))) {
