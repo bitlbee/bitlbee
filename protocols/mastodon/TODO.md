@@ -14,11 +14,16 @@
 	- posting works
 	- posting implicit replies to toots older than 3h works
 	- posting implicit replies to newer toots works
-	- `reply n` to post an explicit replies to newer toots works
-	- `undo n` to delete a toot works
+	- `reply id` to post an explicit replies to newer toots works
+	- `undo id` to delete a toot works
 	- `undo` to delete latest toot with no other trickery works
-	- `fav n` to favor a toot works (and all synomyms)
-	- `unfav n` to unfavor a toot works (and all synomyms)
+	- `fav id` and `fav nick` to favor a toot works (and all synomyms)
+	- `unfav id` and `unfav nick` to unfavor a toot works (and all synomyms)
+
+1. Also had one crash in `mastodon_log (ic=0x10090b270,
+    format=0x100092027 "Command processed successfully")` at
+    `mastodon.c:1137` where `md->timeline_gc` results in `Cannot
+    access memory at address`. What now? I was unable to reproduce it.
 
 1. test muting of conversations
 

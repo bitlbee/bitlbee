@@ -909,9 +909,16 @@ bee_user_t mastodon_log_local_user;
 /**
  * Find a user account based on their nick name.
  */
-static bee_user_t *mastodon_user_by_nick(struct im_connection *ic, char *arg)
+static bee_user_t *mastodon_user_by_nick(struct im_connection *ic, char *nick)
 {
-	return NULL; // FIXME
+	for (GSList *l = ic->bee->users; l; l = l->next) {
+		bee_user_t *bu = l->data;
+		irc_user_t *iu = bu->ui_data;
+		if (strcmp(iu->nick, nick) == 0) {
+			return bu;
+		}
+	}
+	return NULL;
 }
 
 /**
