@@ -1,5 +1,6 @@
 # TODO
 
+
 1. deduplicate mentions: 
     
 	18:01 <neoanderthal> [1c->13] @neoanderthal mentioned you: @kensanata Sure -
@@ -7,9 +8,19 @@
 	18:01 <neoanderthal> [1d->13] @kensanata Sure - test your reports and I'll
 		let you know how it's working.
 
-1. test muting of conversations
+1. testing
+    - `unfollow nick` works
+	- `follow nick@some.instance` works
+	- posting works
+	- posting implicit replies to toots older than 3h works
+	- posting implicit replies to newer toots works
+	- `reply n` to post an explicit replies to newer toots works
+	- `undo n` to delete a toot works
+	- `undo` to delete latest toot with no other trickery works
+	- `fav n` to favor a toot works (and all synomyms)
+	- `unfav n` to unfavor a toot works (and all synomyms)
 
-1. implement muting of accounts
+1. test muting of conversations
 
 1. When showing a status, decide how to handle the URLs
    of

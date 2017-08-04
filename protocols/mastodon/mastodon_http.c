@@ -4,6 +4,7 @@
 *  Simple module to facilitate Mastodon functionality.                      *
 *                                                                           *
 *  Copyright 2009 Geert Mulders <g.c.w.m.mulders@gmail.com>                 *
+*  Copyright 2017 Alex Schroeder <alex@gnu.org>                             *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -39,78 +40,6 @@
 
 #include "mastodon_http.h"
 
-static char *mastodon_url_append(char *url, char *key, char *value);
-
-/**
- * Do a request.
- * This is actually pretty generic function... Perhaps it should move to the lib/http_client.c
- */
-struct http_request *mastodon_http(struct im_connection *ic, char *url_string, http_input_function func,
-                                  gpointer data, int is_post, char **arguments, int arguments_len)
-{
-	struct mastodon_data *md = ic->proto_data;
-	char *tmp;
-	GString *request = g_string_new("");
-	void *ret = NULL;
-	char *url_arguments;
-	url_t *base_url = NULL;
-
-	url_arguments = g_strdup("");
-
-	// Construct the url arguments.
-	if (arguments_len != 0) {
-		int i;
-		for (i = 0; i < arguments_len; i += 2) {
-			tmp = mastodon_url_append(url_arguments, arguments[i], arguments[i + 1]);
-			g_free(url_arguments);
-			url_arguments = tmp;
-		}
-	}
-
-	if (strstr(url_string, "://")) {
-		base_url = g_new0(url_t, 1);
-		if (!url_set(base_url, url_string)) {
-			goto error;
-		}
-	}
-
-	// Make the request.
-	g_string_printf(request, "%s %s%s%s%s HTTP/1.1\r\n"
-	                "Host: %s\r\n"
-	                "User-Agent: BitlBee " BITLBEE_VERSION "\r\n"
-			"Authorization: Bearer %s\r\n",
-	                is_post ? "POST" : "GET",
-	                base_url ? base_url->file : md->url_path,
-	                base_url ? "" : url_string,
-	                is_post ? "" : "?", is_post ? "" : url_arguments,
-	                base_url ? base_url->host : md->url_host,
-			md->oauth2_access_token);
-
-	// Do POST stuff..
-	if (is_post) {
-		// Append the Content-Type and url-encoded arguments.
-		g_string_append_printf(request,
-		                       "Content-Type: application/x-www-form-urlencoded\r\n"
-		                       "Content-Length: %zd\r\n\r\n%s",
-		                       strlen(url_arguments), url_arguments);
-	} else {
-		// Append an extra \r\n to end the request...
-		g_string_append(request, "\r\n");
-	}
-
-	if (base_url) {
-		ret = http_dorequest(base_url->host, base_url->port, base_url->proto == PROTO_HTTPS, request->str, func,
-		                     data);
-	} else {
-		ret = http_dorequest(md->url_host, md->url_port, md->url_ssl, request->str, func, data);
-	}
-
-error:
-	g_free(url_arguments);
-	g_string_free(request, TRUE);
-	g_free(base_url);
-	return ret;
-}
 
 static char *mastodon_url_append(char *url, char *key, char *value)
 {
@@ -131,4 +60,87 @@ static char *mastodon_url_append(char *url, char *key, char *value)
 	g_free(value_encoded);
 
 	return retval;
+}
+
+/**
+ * Do a request.
+ * This is actually pretty generic function... Perhaps it should move to the lib/http_client.c
+ */
+struct http_request *mastodon_http(struct im_connection *ic, char *url_string, http_input_function func,
+                                  gpointer data, http_method_t method, char **arguments, int arguments_len)
+{
+	struct mastodon_data *md = ic->proto_data;
+	void *ret = NULL;
+
+	char *url_arguments = g_strdup("");
+
+	char *request_method;
+	switch (method) {
+	case HTTP_GET:
+		request_method = "GET";
+		break;
+	case HTTP_POST:
+		request_method = "POST";
+		break;
+	case HTTP_DELETE:
+		request_method = "DELETE";
+		break;
+	}
+	
+	// Construct the url arguments.
+	if (arguments_len != 0) {
+		int i;
+		for (i = 0; i < arguments_len; i += 2) {
+			char *tmp = mastodon_url_append(url_arguments, arguments[i], arguments[i + 1]);
+			g_free(url_arguments);
+			url_arguments = tmp;
+		}
+	}
+
+	url_t *base_url = NULL;
+	if (strstr(url_string, "://")) {
+		base_url = g_new0(url_t, 1);
+		if (!url_set(base_url, url_string)) {
+			goto error;
+		}
+	}
+
+	// Make the request.
+	GString *request = g_string_new("");
+	g_string_printf(request, "%s %s%s%s%s HTTP/1.1\r\n"
+	                "Host: %s\r\n"
+	                "User-Agent: BitlBee " BITLBEE_VERSION "\r\n"
+			"Authorization: Bearer %s\r\n",
+	                request_method,
+	                base_url ? base_url->file : md->url_path,
+	                base_url ? "" : url_string,
+	                method == HTTP_GET && url_arguments[0] ? "?" : "",
+			method == HTTP_GET && url_arguments[0] ? url_arguments : "",
+	                base_url ? base_url->host : md->url_host,
+			md->oauth2_access_token);
+
+	// Do POST stuff..
+	if (method != HTTP_GET) {
+		// Append the Content-Type and url-encoded arguments.
+		g_string_append_printf(request,
+		                       "Content-Type: application/x-www-form-urlencoded\r\n"
+		                       "Content-Length: %zd\r\n\r\n%s",
+		                       strlen(url_arguments), url_arguments);
+	} else {
+		// Append an extra \r\n to end the request...
+		g_string_append(request, "\r\n");
+	}
+
+	if (base_url) {
+		ret = http_dorequest(base_url->host, base_url->port, base_url->proto == PROTO_HTTPS, request->str, func,
+		                     data);
+	} else {
+		ret = http_dorequest(md->url_host, md->url_port, md->url_ssl, request->str, func, data);
+	}
+
+	g_string_free(request, TRUE);
+error:
+	g_free(url_arguments);
+	g_free(base_url);
+	return ret;
 }

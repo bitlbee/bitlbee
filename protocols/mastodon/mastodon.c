@@ -694,8 +694,62 @@ int oauth2_refresh(struct im_connection *ic, const char *refresh_token)
 static void mastodon_handle_command(struct im_connection *ic, char *message);
 
 /**
- * Send a message to a buddy. If this buddy is the magic mastodon
- * oauth handle, then treat the message as the refresh token instead.
+ * Post a message. Make sure we get all the meta data for the status
+ * right. We have to consider a few cases:
+ *
+ * "reply 1 msg" -> in_reply_to and who is set, change to "@who msg"
+ * "reply nick msg" -> in_reply_to and who is set, change to "@who msg"
+ * "post nick: msg" -> this is not a real mention, just post
+ * "post @nick msg" -> starts a new conversation, not determine in_reply_to
+ * "post msg" -> do nothing
+ * /msg msg -> who is set, set in_reply_to, change to "@who msg" (visibility should be "direct")
+ */
+static void mastodon_post_message(struct im_connection *ic, char *message, guint64 in_reply_to, char *who, mastodon_visibility_t visibility)
+{
+	if (!mastodon_length_check(ic, message)) {
+		return;
+	}
+
+	char *text = NULL;
+
+	// If the message starts with who, trim that.
+	if (who && strncmp(who, message, strlen(who)) == 0) {
+		message += strlen(who);
+		// we expect a space: "nick: foo" or "nick, foo"
+		if (message[0] == ' ') {
+			message++;
+		}
+	}
+	
+	// Trim ',' or ':' from who.
+	char *s = who + strlen(who) - 1;
+	if (who && s > who && (*s == ':' || *s == ',')) {
+		*s = '\0';
+	}
+
+	bee_user_t *bu;
+	if (who && who[0] != '@' && (bu = bee_user_by_handle(ic->bee, ic, who))) {
+		struct mastodon_user_data *mud = bu->data;
+		text = g_strdup_printf("@%s %s", bu->handle, message);
+
+		if (!in_reply_to && time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
+			in_reply_to = mud->last_id;
+		}
+	}
+
+	/* If the user runs undo between this request and its response
+	   this would delete the second-last toot. Prevent that. */
+	struct mastodon_data *md = ic->proto_data;
+	md->last_id = 0;
+	mastodon_post_status(ic, text ? text : message, in_reply_to, 0);
+
+	g_free(text);
+}
+
+/**
+ * Send a direct message. If this buddy is the magic mastodon oauth
+ * handle, then treat the message as the refresh token. If this buddy
+ * is me, then treat the message as a command.
  */
 static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message, int away)
 {
@@ -718,7 +772,7 @@ static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message
 	    g_strcasecmp(who + plen + 1, ic->acc->user) == 0) {
 		mastodon_handle_command(ic, message);
 	} else {
-		mastodon_direct_messages_new(ic, who, message);
+		mastodon_post_message(ic, message, 0, who, MASTODON_VISIBILITY_DIRECT);
 	}
 	return 0;
 }
@@ -729,12 +783,18 @@ static void mastodon_get_info(struct im_connection *ic, char *who)
 
 static void mastodon_add_buddy(struct im_connection *ic, char *who, char *group)
 {
-	mastodon_friendships_create_destroy(ic, who, 1);
+	// who can be an unknown user
+	mastodon_follow(ic, who);
 }
+
+static guint64 mastodon_user_id_or_warn(struct im_connection *ic, char *who);
 
 static void mastodon_remove_buddy(struct im_connection *ic, char *who, char *group)
 {
-	mastodon_friendships_create_destroy(ic, who, 0);
+	guint64 id;
+	if ((id = mastodon_user_id_or_warn(ic, who))) {
+		mastodon_post(ic, MASTODON_ACCOUNT_UNFOLLOW_URL, id);
+	}
 }
 
 static void mastodon_chat_msg(struct groupchat *c, char *message, int flags)
@@ -847,15 +907,24 @@ static void mastodon_buddy_data_free(bee_user_t *bu)
 bee_user_t mastodon_log_local_user;
 
 /**
+ * Find a user account based on their nick name.
+ */
+static bee_user_t *mastodon_user_by_nick(struct im_connection *ic, char *arg)
+{
+	return NULL; // FIXME
+}
+
+/**
  * Convert the given bitlbee toot ID or bitlbee username into a
- * mastodon ID.
+ * mastodon status ID and returns it. If provided with a pointer to a
+ * bee_user_t, fills that as well. Provide NULL if you don't need it.
  *
  * Returns 0 if the user provides garbage.
  */
 static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, char *arg, bee_user_t **bu_)
 {
 	struct mastodon_data *md = ic->proto_data;
-	struct mastodon_user_data *tud;
+	struct mastodon_user_data *mud;
 	bee_user_t *bu = NULL;
 	guint64 id = 0;
 
@@ -866,9 +935,9 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 		return 0;
 	}
 
-	if (arg[0] != '#' && (bu = bee_user_by_handle(ic->bee, ic, arg))) {
-		if ((tud = bu->data)) {
-			id = tud->last_id;
+	if (arg[0] != '#' && (bu = mastodon_user_by_nick(ic, arg))) {
+		if ((mud = bu->data)) {
+			id = mud->last_id;
 		}
 	} else {
 		if (arg[0] == '#') {
@@ -902,179 +971,149 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 	return id;
 }
 
+static void mastodon_no_id_warning(struct im_connection *ic, char *what)
+{
+	mastodon_log(ic, "User or status '%s' is unknown", what);
+}
+
+static void mastodon_unknown_user_warning(struct im_connection *ic, char *who)
+{
+	mastodon_log(ic, "User '%s' is unknown", who);
+}
+
+static guint64 mastodon_message_id_or_warn(struct im_connection *ic, char *what, bee_user_t **bu)
+{
+	guint64 id = mastodon_message_id_from_command_arg(ic, what, bu);
+	if (!id) {
+		mastodon_no_id_warning(ic, what);
+	} else if (bu && !*bu) {
+		mastodon_unknown_user_warning(ic, what);
+	}
+	return id;
+}
+
+static guint64 mastodon_account_id(bee_user_t *bu) {
+	struct mastodon_user_data *mud;
+	if (bu != NULL && (mud = bu->data)) {
+		return mud->account_id;
+	}
+	return 0;
+}
+
+static guint64 mastodon_user_id_or_warn(struct im_connection *ic, char *who)
+{
+	bee_user_t *bu;
+	guint64 id;
+	if ((bu = bee_user_by_handle(ic->bee, ic, who)) &&
+	    (id = mastodon_account_id(bu))) {
+		return id;
+	}
+	mastodon_unknown_user_warning(ic, who);
+	return 0;
+}
+
 static void mastodon_handle_command(struct im_connection *ic, char *message)
 {
 	struct mastodon_data *md = ic->proto_data;
-	char *cmds, **cmd, *new = NULL;
-	guint64 in_reply_to = 0, id;
-	gboolean allow_post =
-	        g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") != 0;
+	gboolean allow_post = g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") != 0;
 	bee_user_t *bu = NULL;
+	guint64 id;
 
-	cmds = g_strdup(message);
-	cmd = split_command_parts(cmds, 2);
+	char *cmds = g_strdup(message);
+	char **cmd = split_command_parts(cmds, 2);
 
 	if (cmd[0] == NULL) {
-		goto eof;
+		/* Nothing to do */
 	} else if (!set_getbool(&ic->acc->set, "commands") && allow_post) {
 		/* Not supporting commands if "commands" is set to true/strict. */
 	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
 		if (cmd[1] == NULL) {
-			mastodon_status_destroy(ic, md->last_status_id);
+			mastodon_status_delete(ic, md->last_id);
 		} else if ((id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL))) {
-			mastodon_status_destroy(ic, id);
+			mastodon_status_delete(ic, id);
 		} else {
-			mastodon_log(ic, "Could not undo last action");
+			mastodon_log(ic, "Could not undo last post");
 		}
-
-		goto eof;
 	} else if ((g_strcasecmp(cmd[0], "favourite") == 0 ||
 	            g_strcasecmp(cmd[0], "favorite") == 0 ||
 	            g_strcasecmp(cmd[0], "fav") == 0 ||
 	            g_strcasecmp(cmd[0], "like") == 0) && cmd[1]) {
-		if ((id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL))) {
-			mastodon_favourite_toot(ic, id);
-		} else {
-			mastodon_log(ic, "Please provide a message ID or username.");
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
+			mastodon_post(ic, MASTODON_STATUS_FAVOURITE_URL, id);
 		}
-		goto eof;
+	} else if ((g_strcasecmp(cmd[0], "unfavourite") == 0 ||
+	            g_strcasecmp(cmd[0], "unfavorite") == 0 ||
+	            g_strcasecmp(cmd[0], "unfav") == 0 ||
+	            g_strcasecmp(cmd[0], "unlike") == 0 ||
+	            g_strcasecmp(cmd[0], "dislike") == 0) && cmd[1]) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
+			mastodon_post(ic, MASTODON_STATUS_UNFAVOURITE_URL, id);
+		}
 	} else if (g_strcasecmp(cmd[0], "follow") == 0 && cmd[1]) {
 		mastodon_add_buddy(ic, cmd[1], NULL);
-		goto eof;
 	} else if (g_strcasecmp(cmd[0], "unfollow") == 0 && cmd[1]) {
 		mastodon_remove_buddy(ic, cmd[1], NULL);
-		goto eof;
+	} else if (g_strcasecmp(cmd[0], "block") == 0 && cmd[1]) {
+		if ((id = mastodon_user_id_or_warn(ic, cmd[1]))) {
+			mastodon_post(ic, MASTODON_ACCOUNT_BLOCK_URL, id);
+		}
+	} else if (g_strcasecmp(cmd[0], "unblock") == 0 && cmd[1]) {
+		if ((id = mastodon_user_id_or_warn(ic, cmd[1]))) {
+			mastodon_post(ic, MASTODON_ACCOUNT_UNBLOCK_URL, id);
+		}
+	} else if (g_strcasecmp(cmd[0], "mute") == 0 &&
+		   g_strcasecmp(cmd[1], "user") == 0 &&
+		   cmd[2]) {
+		if ((id = mastodon_user_id_or_warn(ic, cmd[2]))) {
+			mastodon_post(ic, MASTODON_ACCOUNT_MUTE_URL, id);
+		}
+	} else if (g_strcasecmp(cmd[0], "unmute") == 0 &&
+		   g_strcasecmp(cmd[1], "user") == 0 &&
+		   cmd[2]) {
+		if ((id = mastodon_user_id_or_warn(ic, cmd[2]))) {
+			mastodon_post(ic, MASTODON_ACCOUNT_UNMUTE_URL, id);
+		}
 	} else if (g_strcasecmp(cmd[0], "mute") == 0 && cmd[1]) {
-		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
-
-		md->last_status_id = 0;
-		if (id) {
-			mastodon_status_mute(ic, id);
-		} else {
-			mastodon_log(ic, "User `%s' does not exist or didn't "
-			            "post any statuses recently", cmd[1]);
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
+			mastodon_post(ic, MASTODON_STATUS_MUTE_URL, id);
 		}
-
-		goto eof;
 	} else if (g_strcasecmp(cmd[0], "unmute") == 0 && cmd[1]) {
-		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
-
-		md->last_status_id = 0;
-		if (id) {
-			mastodon_status_unmute(ic, id);
-		} else {
-			mastodon_log(ic, "User `%s' does not exist or didn't "
-			            "post any statuses recently", cmd[1]);
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
+			mastodon_post(ic, MASTODON_STATUS_UNMUTE_URL, id);
 		}
-
-		goto eof;
-	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
-	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
-
-		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
-		message = cmd[2];
-
-		if (!id) {
-			mastodon_log(ic, "User `%s' does not exist or didn't "
-			            "post any statuses recently", cmd[1]);
-		} else if (!message || strlen(message) == 0) {
-			mastodon_log(ic, "You must provide a comment with your report");
-		} else {
-			mastodon_report(ic, id, message);
-		}
-
-		goto eof;
 	} else if (g_strcasecmp(cmd[0], "boost") == 0 && cmd[1]) {
-		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
-
-		md->last_status_id = 0;
-		if (id) {
-			mastodon_status_boost(ic, id);
-		} else {
-			mastodon_log(ic, "User `%s' does not exist or didn't "
-			            "post any statuses recently", cmd[1]);
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
+			mastodon_post(ic, MASTODON_STATUS_BOOST_URL, id);
 		}
-
-		goto eof;
 	} else if (g_strcasecmp(cmd[0], "unboost") == 0 && cmd[1]) {
-		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
-
-		md->last_status_id = 0;
-		if (id) {
-			mastodon_status_unboost(ic, id);
-		} else {
-			mastodon_log(ic, "User `%s' does not exist or didn't "
-			            "post any statuses recently", cmd[1]);
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
+			mastodon_post(ic, MASTODON_STATUS_UNBOOST_URL, id);
 		}
-
-		goto eof;
-	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
-		id = mastodon_message_id_from_command_arg(ic, cmd[1], &bu);
-		if (!id || !bu) {
-			mastodon_log(ic, "User `%s' does not exist or didn't "
-			            "post any statuses recently", cmd[1]);
-			goto eof;
-		}
-		message = new = g_strdup_printf("@%s %s", bu->handle, cmd[2]);
-		in_reply_to = id;
-		allow_post = TRUE;
-	} else if (g_strcasecmp(cmd[0], "rawreply") == 0 && cmd[1] && cmd[2]) {
-		id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL);
-		if (!id) {
-			mastodon_log(ic, "Toot `%s' does not exist", cmd[1]);
-			goto eof;
-		}
-		message = cmd[2];
-		in_reply_to = id;
-		allow_post = TRUE;
 	} else if (g_strcasecmp(cmd[0], "url") == 0) {
-		id = mastodon_message_id_from_command_arg(ic, cmd[1], &bu);
-		if (!id) {
-			mastodon_log(ic, "Toot `%s' does not exist", cmd[1]);
-		} else {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
 			mastodon_status_show_url(ic, id);
 		}
-		goto eof;
-
-	} else if (g_strcasecmp(cmd[0], "post") == 0) {
-		message += 5;
-		allow_post = TRUE;
-	}
-
-	if (allow_post) {
-		char *s;
-
-		if (!mastodon_length_check(ic, message)) {
-			goto eof;
-		}
-
-		s = cmd[0] + strlen(cmd[0]) - 1;
-		if (!new && s > cmd[0] && (*s == ':' || *s == ',')) {
-			*s = '\0';
-
-			if ((bu = bee_user_by_handle(ic->bee, ic, cmd[0]))) {
-				struct mastodon_user_data *tud = bu->data;
-
-				new = g_strdup_printf("@%s %s", bu->handle,
-				                      message + (s - cmd[0]) + 2);
-				message = new;
-
-				if (time(NULL) < tud->last_time +
-				    set_getint(&ic->acc->set, "auto_reply_timeout")) {
-					in_reply_to = tud->last_id;
-				}
+	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
+	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
+			if (!cmd[2] || strlen(cmd[2]) == 0) {
+				mastodon_log(ic, "You must provide a comment with your report");
+			} else {
+				mastodon_report(ic, id, cmd[2]);
 			}
 		}
-
-		/* If the user runs undo between this request and its response
-		   this would delete the second-last Toot. Prevent that. */
-		md->last_status_id = 0;
-		mastodon_post_status(ic, message, in_reply_to);
+	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], &bu))) {
+			mastodon_post_message(ic, cmd[2], id, bu->handle, MASTODON_VISIBILITY_PUBLIC);
+		}
+	} else if (g_strcasecmp(cmd[0], "post") == 0) {
+		mastodon_post_message(ic, message + 5, 0, cmd[1], MASTODON_VISIBILITY_PUBLIC);
+	} else if (allow_post) {
+		mastodon_post_message(ic, message, 0, cmd[0], MASTODON_VISIBILITY_PUBLIC);
 	} else {
 		mastodon_log(ic, "Unknown command: %s", cmd[0]);
 	}
-eof:
-	g_free(new);
+
 	g_free(cmds);
 }
 

@@ -4,6 +4,7 @@
 *  Simple module to facilitate Mastodon functionality.                      *
 *                                                                           *
 *  Copyright 2009 Geert Mulders <g.c.w.m.mulders@gmail.com>                 *
+*  Copyright 2017 Alex Schroeder <alex@gnu.org>                             *
 *                                                                           *
 *  This library is free software; you can redistribute it and/or            *
 *  modify it under the terms of the GNU Lesser General Public               *
@@ -26,5 +27,11 @@
 #include "nogaim.h"
 #include "http_client.h"
 
+typedef enum {
+	HTTP_GET,
+	HTTP_POST,
+	HTTP_DELETE,
+} http_method_t;
+
 struct http_request *mastodon_http(struct im_connection *ic, char *url_string, http_input_function func,
-                                  gpointer data, int is_post, char** arguments, int arguments_len);
+                                  gpointer data, http_method_t method, char** arguments, int arguments_len);

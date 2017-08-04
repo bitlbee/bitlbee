@@ -53,6 +53,11 @@ typedef enum {
 	MASTODON_FILTER_TYPE_TRACK
 } mastodon_filter_type_t;
 
+typedef enum {
+	MASTODON_VISIBILITY_PUBLIC,
+	MASTODON_VISIBILITY_DIRECT,
+} mastodon_visibility_t;
+
 struct mastodon_log_data;
 
 struct mastodon_data {
@@ -67,7 +72,7 @@ struct mastodon_data {
 	GSList *mutes_ids;
 	GSList *filters;
 
-	guint64 last_status_id; /* For undo */
+	guint64 last_id; /* For undo and callbacks */
 	gint main_loop_id;
 	gint filter_update_id;
 	struct http_request *stream;

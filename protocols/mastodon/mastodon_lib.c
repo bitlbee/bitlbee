@@ -97,15 +97,15 @@ struct mastodon_report {
 /**
  * Frees a mastodon_account struct.
  */
-static void mu_free(struct mastodon_account *mu)
+static void ma_free(struct mastodon_account *ma)
 {
-	if (mu == NULL) {
+	if (ma == NULL) {
 		return;
 	}
 
-	g_free(mu->display_name);
-	g_free(mu->acct);
-	g_free(mu);
+	g_free(ma->display_name);
+	g_free(ma->acct);
+	g_free(ma);
 }
 
 /**
@@ -119,7 +119,7 @@ static void ms_free(struct mastodon_status *ms)
 
 	g_free(ms->text);
 	g_free(ms->url);
-	mu_free(ms->account);
+	ma_free(ms->account);
 	g_free(ms);
 }
 
@@ -132,7 +132,7 @@ static void mn_free(struct mastodon_notification *mn)
 		return;
 	}
 
-	mu_free(mn->account);
+	ma_free(mn->account);
 	ms_free(mn->status);
 	g_free(mn);
 }
@@ -157,7 +157,7 @@ static void ml_free(struct mastodon_list *ml)
 		} else if (ml->type == ML_ID) {
 			g_free(l->data);
 		} else if (ml->type == ML_USER) {
-			mu_free(l->data);
+			ma_free(l->data);
 		}
 	}
 
@@ -237,13 +237,9 @@ char *mastodon_parse_error(struct http_request *req)
 
 	if (req->body_size > 0) {
 		root = json_parse(req->reply_body, req->body_size);
-		err = json_o_get(root, "errors");
-		if (err && err->type == json_array && (err = err->u.array.values[0]) &&
-		    err->type == json_object) {
-			const char *msg = json_o_str(err, "message");
-			if (msg) {
-				ret = g_strdup_printf("%s (%s)", req->status_string, msg);
-			}
+		err = json_o_get(root, "error");
+		if (err && err->type == json_string && err->u.string.length) {
+			ret = g_strdup_printf("%s (%s)", req->status_string, err->u.string.ptr);
 		}
 		json_value_free(root);
 	}
@@ -309,7 +305,7 @@ void mastodon_get_mutes_ids(struct im_connection *ic, gint64 next_cursor)
 
 	args[0] = "cursor";
 	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
-	mastodon_http(ic, MASTODON_MUTES_IDS_URL, mastodon_http_get_mutes_ids, ic, 0, args, 2);
+	mastodon_http(ic, MASTODON_MUTES_IDS_URL, mastodon_http_get_mutes_ids, ic, HTTP_GET, args, 2);
 
 	g_free(args[1]);
 }
@@ -396,17 +392,17 @@ static void mastodon_http_get_mutes_ids(struct http_request *req)
 
 struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 {
-	struct mastodon_account *mu;
+	struct mastodon_account *ma;
 	json_value *jv;
 
-	mu = g_new0(struct mastodon_account, 1);
-	mu->display_name = g_strdup(json_o_str(node, "display_name"));
-	mu->acct = g_strdup(json_o_str(node, "acct"));
+	ma = g_new0(struct mastodon_account, 1);
+	ma->display_name = g_strdup(json_o_str(node, "display_name"));
+	ma->acct = g_strdup(json_o_str(node, "acct"));
 
 	jv = json_o_get(node, "id");
-	mu->id = jv->u.integer;
+	ma->id = jv->u.integer;
 
-	return mu;
+	return ma;
 }
 
 // "2017-08-02T10:45:03.000Z" -- but we're ignoring microseconds and UTC timezone
@@ -801,14 +797,14 @@ static void mastodon_status_show_msg(struct im_connection *ic, struct mastodon_s
 
 struct mastodon_status *mastodon_notification_to_status(struct mastodon_notification *notification)
 {
-	struct mastodon_account *mu = notification->account;
+	struct mastodon_account *ma = notification->account;
 	struct mastodon_status *ms = notification->status;
 
-	if (mu == NULL) {
+	if (ma == NULL) {
 		// Should not happen.
-		mu = g_new0(struct mastodon_account, 1);
-		mu->acct = g_strdup("anon");
-		mu->display_name = g_strdup("Unknown");
+		ma = g_new0(struct mastodon_account, 1);
+		ma->acct = g_strdup("anon");
+		ma->display_name = g_strdup("Unknown");
 	}
 
 	if (ms == NULL) {
@@ -822,16 +818,16 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 
 	switch (notification->type) {
 	case MN_MENTION:
-		ms->text = g_strdup_printf("@%s mentioned you: %s", mu->acct, original);
+		ms->text = g_strdup_printf("@%s mentioned you: %s", ma->acct, original);
 		break;
 	case MN_REBLOG:
-		ms->text = g_strdup_printf("@%s boosted your status: %s", mu->acct, original);
+		ms->text = g_strdup_printf("@%s boosted your status: %s", ma->acct, original);
 		break;
 	case MN_FAVOURITE:
-		ms->text = g_strdup_printf("@%s favourited your status: %s", mu->acct, original);
+		ms->text = g_strdup_printf("@%s favourited your status: %s", ma->acct, original);
 		break;
 	case MN_FOLLOW:
-		ms->text = g_strdup_printf("@%s [%s] followed you", mu->acct, mu->display_name);
+		ms->text = g_strdup_printf("@%s [%s] followed you", ma->acct, ma->display_name);
 		break;
 	}
 
@@ -1032,7 +1028,7 @@ gboolean mastodon_open_stream(struct im_connection *ic)
 	struct mastodon_data *md = ic->proto_data;
 
 	if ((md->stream = mastodon_http(ic, MASTODON_USER_STREAMING_URL,
-	                               mastodon_http_stream, ic, 0, NULL, 0))) {
+	                               mastodon_http_stream, ic, HTTP_GET, NULL, 0))) {
 		/* This flag must be enabled or we'll get no data until EOF
 		   (which err, kind of, defeats the purpose of a streaming API). */
 		md->stream->flags |= HTTPC_STREAMING;
@@ -1086,7 +1082,7 @@ static gboolean mastodon_filter_stream(struct im_connection *ic)
 	}
 
 	if ((md->filter_stream = mastodon_http(ic, MASTODON_FILTER_STREAM_URL,
-	                                      mastodon_http_stream, ic, 0,
+	                                      mastodon_http_stream, ic, HTTP_GET,
 	                                      args, 4))) {
 		/* This flag must be enabled or we'll get no data until EOF
 		   (which err, kind of, defeats the purpose of a streaming API). */
@@ -1209,9 +1205,7 @@ gboolean mastodon_open_filter_stream(struct im_connection *ic)
 	}
 
 	args[1] = ustr->str;
-	req = mastodon_http(ic, MASTODON_USERS_LOOKUP_URL,
-	                   mastodon_filter_users_post,
-	                   ic, 0, args, 2);
+	req = mastodon_http(ic, MASTODON_USERS_LOOKUP_URL, mastodon_filter_users_post, ic, HTTP_GET, args, 2);
 
 	g_string_free(ustr, TRUE);
 	return req != NULL;
@@ -1360,7 +1354,7 @@ static void mastodon_get_home_timeline(struct im_connection *ic)
 	md->home_timeline_obj = NULL;
 	md->flags &= ~MASTODON_GOT_TIMELINE;
 
-	if (mastodon_http(ic, MASTODON_HOME_TIMELINE_URL, mastodon_http_get_home_timeline, ic, 0, NULL, 0) == NULL) {
+	if (mastodon_http(ic, MASTODON_HOME_TIMELINE_URL, mastodon_http_get_home_timeline, ic, HTTP_GET, NULL, 0) == NULL) {
 		if (++md->http_fails >= 5) {
 			imcb_error(ic, "Could not retrieve %s: %s",
 			           MASTODON_HOME_TIMELINE_URL, "connection failed");
@@ -1378,7 +1372,7 @@ static void mastodon_get_notifications(struct im_connection *ic)
 	md->notifications_obj = NULL;
 	md->flags &= ~MASTODON_GOT_NOTIFICATIONS;
 
-	if (mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_get_notifications, ic, 0, NULL, 0) == NULL) {
+	if (mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_get_notifications, ic, HTTP_GET, NULL, 0) == NULL) {
 		if (++md->http_fails >= 5) {
 			imcb_error(ic, "Could not retrieve %s: %s",
 			           MASTODON_NOTIFICATIONS_URL, "connection failed");
@@ -1426,12 +1420,13 @@ gboolean mastodon_initial_timeline(struct im_connection *ic)
  * Generic callback to use after sending a POST request to mastodon
  * when the reply doesn't have any information we need. All we care
  * about are errors. If got here, there was no error, so tell the user
- * that everything went fine.
+ * that everything went fine. If there was an id in the object
+ * returned, store it for later use.
  */
 static void mastodon_http_callback(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct mastodon_data *md;
+	struct mastodon_data *md = ic->proto_data;
 	json_value *parsed, *id;
 
 	// Check if the connection is still active.
@@ -1439,15 +1434,14 @@ static void mastodon_http_callback(struct http_request *req)
 		return;
 	}
 
-	md = ic->proto_data;
-	md->last_status_id = 0;
-
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
 	}
 
 	if ((id = json_o_get(parsed, "id")) && id->type == json_integer) {
-		md->last_status_id = id->u.integer;
+		md->last_id = id->u.integer;
+	} else {
+		md->last_id = 0;
 	}
 
 	json_value_free(parsed);
@@ -1464,91 +1458,39 @@ static void mastodon_http_callback_and_ack(struct http_request *req)
 }
 
 /**
- * Function to POST a new status to mastodon.
+ * Function to POST a new status to mastodon. We don't support the visibility levels "private" and "unlisted".
  */
-void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to)
+void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, int direct)
 {
-	char *args[4] = {
+	char *args[6] = {
 		"status", msg,
-		"in_reply_to_id",
-		g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
+		"visibility", direct ? "public" : "direct",
+		"in_reply_to_id", g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
 
 	// No need to acknowledge the processing of a post: we will get notified.
-	mastodon_http(ic, MASTODON_STATUS_UPDATE_URL, mastodon_http_callback, ic, 1,
-	             args, in_reply_to ? 4 : 2);
-	g_free(args[3]);
-}
+	mastodon_http(ic, MASTODON_STATUS_POST_URL, mastodon_http_callback, ic, HTTP_POST,
+	             args, in_reply_to ? 6 : 4);
 
+	g_free(args[5]);
+}
 
 /**
- * Function to POST a new message to mastodon.
+ * Generic POST request taking a numeric ID. The format string must
+ * contain one placeholder for the ID, like "/accounts/%"
+ * G_GINT64_FORMAT "/mute".
  */
-void mastodon_direct_messages_new(struct im_connection *ic, char *who, char *msg)
+void mastodon_post(struct im_connection *ic, char *format, guint64 id)
 {
-	char *args[4];
-
-	args[0] = "screen_name";
-	args[1] = who;
-	args[2] = "text";
-	args[3] = msg;
-	// Use the same callback as for mastodon_post_status, since it does basically the same.
-	mastodon_http(ic, MASTODON_DIRECT_MESSAGES_NEW_URL, mastodon_http_callback_and_ack, ic, 1, args, 4);
-}
-
-void mastodon_friendships_create_destroy(struct im_connection *ic, char *who, int create)
-{
-	char *args[2];
-
-	args[0] = "screen_name";
-	args[1] = who;
-	mastodon_http(ic, create ? MASTODON_FRIENDSHIPS_CREATE_URL : MASTODON_FRIENDSHIPS_DESTROY_URL,
-	             mastodon_http_callback_and_ack, ic, 1, args, 2);
-}
-
-void mastodon_status_mute(struct im_connection *ic, guint64 id)
-{
-	char *url;
-
-	url = g_strdup_printf(MASTODON_STATUS_MUTE_URL, id);
-	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
+	char *url = g_strdup_printf(format, id);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, HTTP_POST, NULL, 0);
 	g_free(url);
 }
 
-void mastodon_status_unmute(struct im_connection *ic, guint64 id)
+void mastodon_status_delete(struct im_connection *ic, guint64 id)
 {
-	char *url;
-
-	url = g_strdup_printf(MASTODON_STATUS_MUTE_URL, id);
-	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
-	g_free(url);
-}
-
-void mastodon_status_destroy(struct im_connection *ic, guint64 id)
-{
-	char *url;
-
-	url = g_strdup_printf("%s%" G_GUINT64_FORMAT "%s",
-	                      MASTODON_STATUS_DESTROY_URL, id, ".json");
-	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
-	g_free(url);
-}
-
-void mastodon_status_boost(struct im_connection *ic, guint64 id)
-{
-	char *url;
-
-	url = g_strdup_printf(MASTODON_STATUS_BOOST_URL, id);
-	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
-	g_free(url);
-}
-
-void mastodon_status_unboost(struct im_connection *ic, guint64 id)
-{
-	char *url;
-
-	url = g_strdup_printf(MASTODON_STATUS_UNBOOST_URL, id);
-	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, 1, NULL, 0);
+	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, HTTP_DELETE, NULL, 0);
 	g_free(url);
 }
 
@@ -1586,7 +1528,7 @@ void mastodon_http_report(struct http_request *req)
 		"comment", mr->comment,
 	};
 
-	mastodon_http(ic, MASTODON_REPORT_URL, mastodon_http_callback_and_ack, ic, 1, args, 6);
+	mastodon_http(ic, MASTODON_REPORT_URL, mastodon_http_callback_and_ack, ic, HTTP_POST, args, 6);
 
 	g_free(args[1]);
 	g_free(args[3]);
@@ -1607,23 +1549,8 @@ void mastodon_report(struct im_connection *ic, guint64 id, char *comment)
 	mr->status_id = id;
 	mr->comment = g_strdup(comment);
 
-	mastodon_http(ic, url, mastodon_http_report, mr, 0, NULL, 0);
+	mastodon_http(ic, url, mastodon_http_report, mr, HTTP_GET, NULL, 0);
 	g_free(url);
-}
-
-/**
- * Favourite a toot.
- */
-void mastodon_favourite_toot(struct im_connection *ic, guint64 id)
-{
-	char *args[2] = {
-		"id",
-		NULL,
-	};
-
-	args[1] = g_strdup_printf("%" G_GUINT64_FORMAT, id);
-	mastodon_http(ic, MASTODON_FAVORITE_CREATE_URL, mastodon_http_callback_and_ack, ic, 1, args, 2);
-	g_free(args[1]);
 }
 
 static void mastodon_http_status_show_url(struct http_request *req)
@@ -1654,8 +1581,141 @@ static void mastodon_http_status_show_url(struct http_request *req)
 void mastodon_status_show_url(struct im_connection *ic, guint64 id)
 {
 	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
-	mastodon_http(ic, url, mastodon_http_status_show_url, ic, 0, NULL, 0);
+	mastodon_http(ic, url, mastodon_http_status_show_url, ic, HTTP_GET, NULL, 0);
 	g_free(url);
+}
+
+/**
+ * Call back for step 3 of mastodon_follow: adding the buddy.
+ */
+static void mastodon_http_follow3(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	json_value *parsed;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		return;
+	}
+
+	struct mastodon_account *ma = mastodon_xt_get_user(parsed);
+	
+	if (ma->id != 0 && ma->acct != NULL) {
+		mastodon_add_buddy(ic, ma->id, ma->acct, ma->display_name);
+	} else {
+		mastodon_log(ic, "This user does not have and id and account name, this is totally illegal. I'm not adding them!");
+	}
+
+	ma_free(ma);
+}
+
+/**
+ * Call back for step 2 of mastodon_follow: actually following.
+ */
+static void mastodon_http_follow2(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	json_value *parsed, *it;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		return;
+	}
+
+	if ((it = json_o_get(parsed, "domain_blocking")) && it->type == json_boolean && it->u.boolean) {
+		mastodon_log(ic, "This user's domain is being blocked by your instance.");
+	}
+
+	if ((it = json_o_get(parsed, "blocking")) && it->type == json_boolean && it->u.boolean) {
+		mastodon_log(ic, "You need to unblock this user.");
+	}
+
+	if ((it = json_o_get(parsed, "muting")) && it->type == json_boolean && it->u.boolean) {
+		mastodon_log(ic, "You might want to unmute this user.");
+	}
+
+	if ((it = json_o_get(parsed, "muting")) && it->type == json_boolean && it->u.boolean) {
+		mastodon_log(ic, "You might want to unmute this user.");
+	}
+
+	if ((it = json_o_get(parsed, "requested")) && it->type == json_boolean && it->u.boolean) {
+		mastodon_log(ic, "You have requested to follow this user.");
+	}
+
+	if ((it = json_o_get(parsed, "followed_by")) && it->type == json_boolean && it->u.boolean) {
+		mastodon_log(ic, "Nice, this user is already following you.");
+	}
+
+	if ((it = json_o_get(parsed, "following")) && it->type == json_boolean && it->u.boolean) {
+		mastodon_log(ic, "You are now following this user.");
+		if ((it = json_o_get(parsed, "id")) && it->type == json_integer) {
+			guint64 id = it->u.integer;
+			struct mastodon_data *md = ic->proto_data;
+			md->last_id = id;
+			char *url = g_strdup_printf(MASTODON_ACCOUNT_URL, id);
+			mastodon_http(ic, url, mastodon_http_follow3, ic, HTTP_GET, NULL, 0);
+			g_free(url);
+		}
+	}
+
+	json_value_free(parsed);
+}
+
+/**
+ * Call back for step 1 of mastodon_follow: searching for the account to follow.
+ */
+static void mastodon_http_follow1(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	json_value *parsed;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		return;
+	}
+
+	if (parsed->type != json_array && parsed->u.array.length > 0) {
+		goto finish;
+	}
+
+	// Just use the first one, let's hope these are sorted appropriately!
+	struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[0]);
+
+	if (ma->id) {
+		char *url = g_strdup_printf(MASTODON_ACCOUNT_FOLLOW_URL, ma->id);
+		mastodon_http(ic, url, mastodon_http_follow2, ic, HTTP_POST, NULL, 0);
+		g_free(url);
+	} else {
+		mastodon_log(ic, "The account found has no id. How is this even possible?");
+	}
+finish:
+	json_value_free(parsed);
+}
+
+/**
+ * Function to follow an unknown user. First we need to search for it,
+ * though.
+ */
+void mastodon_follow(struct im_connection *ic, char *who)
+{
+	char *args[2] = {
+		"q", who,
+	};
+
+	// No need to acknowledge the processing of a post: we will get notified.
+	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, mastodon_http_follow1, ic, HTTP_GET, args, 2);
 }
 
 /**
@@ -1682,28 +1742,15 @@ static void mastodon_http_following(struct http_request *req)
 		goto finish;
 	}
 
-	// unlike Twitter, we don't have to resolve ids: just add buddies directly
 	for (int i = 0; i < parsed->u.array.length; i++) {
-		guint64 id = 0;
-		char *acct = NULL;
-		char *display_name = NULL;
 
-		JSON_O_FOREACH(parsed->u.array.values[i], k, v) {
-			if (strcmp("id", k) == 0 && v->type == json_integer) {
-				id = v->u.integer;
-			} else if (strcmp("acct", k) == 0 && v->type == json_string) {
-				acct = g_strdup(v->u.string.ptr);
-			} else if (strcmp("display_name", k) == 0 && v->type == json_string) {
-				display_name = g_strdup(v->u.string.ptr);
-			}
+		struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[i]);
+
+		if (ma->id != 0 && ma->acct != NULL) {
+			mastodon_add_buddy(ic, ma->id, ma->acct, ma->display_name);
 		}
 
-		if (id != 0 && acct != NULL && display_name != NULL) {
-			mastodon_add_buddy(ic, id, acct, display_name);
-		} else {
-			g_free(acct);
-			g_free(display_name);
-		}
+		ma_free(ma);
 	}
 
 finish:
@@ -1747,7 +1794,7 @@ finish:
 				args = g_strsplit (s, "=", -1);
 			}
 
-			mastodon_http(ic, url, mastodon_http_following, ic, 0, args, len);
+			mastodon_http(ic, url, mastodon_http_following, ic, HTTP_GET, args, len);
 
 			g_strfreev(args);
 		}
@@ -1774,13 +1821,13 @@ void mastodon_following(struct im_connection *ic, gint64 max_id)
 
 	// the first call must not set a max_id
 	if (max_id == 0) {
-		mastodon_http(ic, url, mastodon_http_following, ic, 0, NULL, 0);
+		mastodon_http(ic, url, mastodon_http_following, ic, HTTP_GET, NULL, 0);
 	} else {
 		char *args[2];
 		args[0] = "max_id";
 		args[1] = g_strdup_printf("%" G_GINT64_FORMAT, max_id);
 
-		mastodon_http(ic, url, mastodon_http_following, ic, 0, args, 2);
+		mastodon_http(ic, url, mastodon_http_following, ic, HTTP_GET, args, 2);
 
 		g_free(args[1]);
 	}
@@ -1815,7 +1862,7 @@ static void mastodon_http_verify_credentials(struct http_request *req)
 void mastodon_verify_credentials(struct im_connection *ic)
 {
 	imcb_log(ic, "Verifying credentials");
-	mastodon_http(ic, MASTODON_VERIFY_CREDENTIALS_URL, mastodon_http_verify_credentials, ic, 0, NULL, 0);
+	mastodon_http(ic, MASTODON_VERIFY_CREDENTIALS_URL, mastodon_http_verify_credentials, ic, HTTP_GET, NULL, 0);
 }
 
 /**
@@ -1867,6 +1914,5 @@ void mastodon_register_app(struct im_connection *ic)
 		"website", "https://www.bitlbee.org/"
 	};
 
-	mastodon_http(ic, MASTODON_REGISTER_APP_URL, mastodon_http_register_app, ic, 1,
-	             args, 8);
+	mastodon_http(ic, MASTODON_REGISTER_APP_URL, mastodon_http_register_app, ic, HTTP_POST, args, 8);
 }
