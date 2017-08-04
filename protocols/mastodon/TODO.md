@@ -3,25 +3,38 @@
 
 1. deduplicate mentions: 
     
-	18:01 <neoanderthal> [1c->13] @neoanderthal mentioned you: @kensanata Sure -
+	<neoanderthal> [1c->13] @neoanderthal mentioned you: @kensanata Sure -
 		test your reports and I'll let you know how it's working.
-	18:01 <neoanderthal> [1d->13] @kensanata Sure - test your reports and I'll
+	<neoanderthal> [1d->13] @kensanata Sure - test your reports and I'll
 		let you know how it's working.
 
+1. Get rid of the extra "You:" when showing notifications.
+   
+   <root> You: [14->0a] @kensanata@social.nasqueron.org boosted your
+   status ...
+
 1. testing
-    - `unfollow nick` works
-	- `follow name@some.instance` works
-	- `follow nick` works (if the nick is already in the channel!)
-	- posting works
-	- posting implicit replies to toots older than 3h works
-	- posting implicit replies to newer toots works
-	- `reply id` to post an explicit replies to newer toots works
-	- `undo id` to delete a toot works
-	- `undo` to delete latest toot with no other trickery works
-	- `fav id` and `fav nick` to favor a toot works (and all synomyms)
-	- `unfav id` and `unfav nick` to unfavor a toot works (and all synomyms)
-	- `block nick` to block a user works
-	- `unblock nick` to unblock a user works
+    - `unfollow nick` ✓
+	- `follow name@some.instance` ✓
+	- `follow nick` ✓ (if the nick is already in the channel!)
+	- posting ✓
+	- posting implicit replies to toots older than 3h ✓
+	- posting implicit replies to newer toots ✓
+	- `reply id` to post an explicit replies to newer toots ✓
+	- `undo id` to delete a toot ✓
+	- `undo` to delete latest toot with no other trickery ✓
+	- `fav id` and `fav nick` to favor a toot ✓ (and all synomyms)
+	- `unfav id` and `unfav nick` to unfavor a toot ✓ (and all synomyms)
+	- `block nick` to block a user ✓
+	- `unblock nick` to unblock a user ✓
+	- `mute user nick` to mute a user ✓
+	- `unmute user nick` to unmute a user ✓
+	- `mute id` to mute a conversation ✓ (but hard to prove?)
+	- `unmute id` to unmute a conversation ✓ (but hard to prove?)
+	- `boost id` and `boost nick` to boost a toot ✓
+	- `unboost id` and `unboost nick` to unboost a toot ✓ (but caching
+      requires me to visit the `/web/statuses/<id>/reblogs` page)
+    - `url id` to show the URL of a status ✓
 
 1. Also had one crash in `mastodon_log (ic=0x10090b270,
     format=0x100092027 "Command processed successfully")` at
@@ -36,8 +49,6 @@
    Probably use `"Attachments: "` followed by a comma-separated list
    of `type+" "+(text_url||remote_url)`.
 
-1. We can delete `md->follow_ids`.
-
 1. Remove all remaining Twitter code.
 
 1. Write https://wiki.bitlbee.org/HowtoMastodon
@@ -46,14 +57,6 @@
 
 1. Think about which commands to support in the future:
 
-	- mute conversation
-	- mute account
-	- block account
-	- report account
-	- favorite status
-	- boost status
-	- follow account
-	- unfollow account
 	- info about an account
 	- handling of spoilers
 	- tracking hashtags
