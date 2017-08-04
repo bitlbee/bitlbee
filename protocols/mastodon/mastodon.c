@@ -1011,7 +1011,7 @@ static guint64 mastodon_user_id_or_warn(struct im_connection *ic, char *who)
 {
 	bee_user_t *bu;
 	guint64 id;
-	if ((bu = bee_user_by_handle(ic->bee, ic, who)) &&
+	if ((bu = mastodon_user_by_nick(ic, who)) &&
 	    (id = mastodon_account_id(bu))) {
 		return id;
 	}
