@@ -1427,6 +1427,115 @@ static void mastodon_http_callback_and_ack(struct http_request *req)
 }
 
 /**
+ * Return a static string n spaces long. No deallocation needed.
+ */
+static char *indent(int n)
+{
+	char *spaces = "          ";
+	int len = 10;
+	return n > len ? spaces : spaces + len - n;
+}
+
+static void mastodon_log_object(struct im_connection *ic, json_value *node, int prefix);
+
+static void mastodon_log_array(struct im_connection *ic, json_value *node, int prefix)
+{
+	for (int i = 0; i < node->u.array.length; i++) {
+		json_value *v = node->u.array.values[i];
+		switch (v->type) {
+		case json_object:
+			mastodon_log(ic, "%s{", indent(prefix), v->u.string.ptr);
+			mastodon_log_object (ic, v, prefix + 1);
+			mastodon_log(ic, "%s}", indent(prefix));
+			break;
+		case json_array:
+			mastodon_log(ic, "%s[", indent(prefix), v->u.string.ptr);
+			for (int i = 0; i < v->u.array.length; i++) {
+				mastodon_log_object (ic, node->u.array.values[i], prefix + 1);
+			}
+			mastodon_log(ic, "%s]", indent(prefix));
+			break;
+		case json_string:
+			mastodon_log(ic, "%s%s", indent(prefix), v->u.string.ptr);
+			break;
+		case json_double:
+			mastodon_log(ic, "%s%f", indent(prefix), v->u.dbl);
+			break;
+		case json_integer:
+		case json_boolean:
+			mastodon_log(ic, "%s%d", indent(prefix), v->u.boolean);
+			break;
+		case json_null:
+			mastodon_log(ic, "%snull", indent(prefix));
+			break;
+		case json_none:
+			mastodon_log(ic, "%snone", indent(prefix));
+			break;
+		}
+	}
+
+}
+
+static void mastodon_log_object(struct im_connection *ic, json_value *node, int prefix)
+{
+	JSON_O_FOREACH(node, k, v) {
+		switch (v->type) {
+		case json_object:
+			mastodon_log(ic, "%s%s: {", indent(prefix), k);
+			mastodon_log_object (ic, v, prefix + 1);
+			mastodon_log(ic, "%s}", indent(prefix));
+			break;
+		case json_array:
+			mastodon_log(ic, "%s%s: [", indent(prefix), k);
+			mastodon_log_array(ic, v, prefix + 1);
+			mastodon_log(ic, "%s]", indent(prefix));
+			break;
+		case json_string:
+			mastodon_log(ic, "%s%s: %s", indent(prefix), k, v->u.string.ptr);
+			break;
+		case json_double:
+			mastodon_log(ic, "%s%s: %f", indent(prefix), k, v->u.dbl);
+			break;
+		case json_integer:
+		case json_boolean:
+			mastodon_log(ic, "%s%s: %d", indent(prefix), k, v->u.boolean);
+			break;
+		case json_null:
+			mastodon_log(ic, "%s%s: null", indent(prefix), k);
+			break;
+		case json_none:
+			mastodon_log(ic, "%s%s: unknown type", indent(prefix), k);
+			break;
+		}
+	}
+}
+
+static void mastodon_http_log_all(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	json_value *parsed;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		return;
+	}
+
+	if (parsed->type == json_object) {
+		mastodon_log_object(ic, parsed, 0);
+	} else if (parsed->type == json_array) {
+		mastodon_log_array(ic, parsed, 0);
+	} else {
+		mastodon_log(ic, "Sadly, the response to this request is not a JSON object or array.");
+	}
+
+	json_value_free(parsed);
+}
+
+/**
  * Function to POST a new status to mastodon. We don't support the visibility levels "private" and "unlisted".
  */
 void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, int direct)
@@ -1522,6 +1631,12 @@ void mastodon_report(struct im_connection *ic, guint64 id, char *comment)
 	g_free(url);
 }
 
+
+void mastodon_instance(struct im_connection *ic)
+{
+	mastodon_http(ic, MASTODON_INSTANCE_URL, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
+}
+
 static void mastodon_http_status_show_url(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
@@ -1572,7 +1687,7 @@ static void mastodon_http_follow3(struct http_request *req)
 	}
 
 	struct mastodon_account *ma = mastodon_xt_get_user(parsed);
-	
+
 	if (ma->id != 0 && ma->acct != NULL) {
 		mastodon_add_buddy(ic, ma->id, ma->acct, ma->display_name);
 		mastodon_log(ic, "You are now following %s.", ma->acct);
