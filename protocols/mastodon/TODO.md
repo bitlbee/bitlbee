@@ -1,6 +1,5 @@
 # TODO
 
-
 1. deduplicate mentions: 
     
 	<neoanderthal> [1c->13] @neoanderthal mentioned you: @kensanata Sure -
@@ -43,11 +42,11 @@
 
 1. test muting of conversations
 
-1. When showing a status, decide how to handle the URLs
-   of
-   [media attachments](https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md#attachment).
+1. When showing a status, decide how to handle the URLs of [media
+   attachments](https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md#attachment).
    Probably use `"Attachments: "` followed by a comma-separated list
-   of `type+" "+(text_url||remote_url)`.
+   of `type+" "+(text_url||remote_url)`. Deduplicate if the URL is
+   also in the text itself!
 
 1. Remove all remaining Twitter code.
 
@@ -58,5 +57,6 @@
 1. Think about which commands to support in the future:
 
 	- info about an account
+	- info about a status
 	- handling of spoilers
 	- tracking hashtags
