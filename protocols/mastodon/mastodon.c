@@ -779,6 +779,7 @@ static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message
 
 static void mastodon_get_info(struct im_connection *ic, char *who)
 {
+	mastodon_instance(ic);
 }
 
 static void mastodon_chat_msg(struct groupchat *c, char *message, int flags)
@@ -1044,6 +1045,13 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		/* Nothing to do */
 	} else if (!set_getbool(&ic->acc->set, "commands") && allow_post) {
 		/* Not supporting commands if "commands" is set to true/strict. */
+	} else if (g_strcasecmp(cmd[0], "info") == 0) {
+		if (!cmd[1]) {
+			mastodon_log(ic, "Usage:\n"
+				     "- info instance");
+		} else if (g_strcasecmp(cmd[1], "instance") == 0) {
+			mastodon_instance(ic);
+		}
 	} else if (g_strcasecmp(cmd[0], "undo") == 0 ||
 		   g_strcasecmp(cmd[0], "del") == 0 ||
 		   g_strcasecmp(cmd[0], "delete") == 0) {

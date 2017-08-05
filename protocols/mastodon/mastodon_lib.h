@@ -36,6 +36,8 @@
 #define MASTODON_HOME_TIMELINE_URL "/timelines/home"
 #define MASTODON_NOTIFICATIONS_URL "/notifications"
 
+#define MASTODON_INSTANCE_URL "/instance"
+
 #define MASTODON_STATUS_POST_URL "/statuses"
 #define MASTODON_STATUS_URL "/statuses/%" G_GINT64_FORMAT
 #define MASTODON_STATUS_BOOST_URL "/statuses/%" G_GINT64_FORMAT "/reblog"
@@ -64,12 +66,14 @@ typedef enum {
 void mastodon_register_app(struct im_connection *ic);
 void mastodon_verify_credentials(struct im_connection *ic);
 void mastodon_following(struct im_connection *ic, gint64 next_cursor);
+void mastodon_initial_timeline(struct im_connection *ic);
 void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, int direct);
 void mastodon_post(struct im_connection *ic, char *format, guint64 id);
 void mastodon_status_show_url(struct im_connection *ic, guint64 id);
 void mastodon_report(struct im_connection *ic, guint64 id, char *comment);
 void mastodon_follow(struct im_connection *ic, char *who);
 void mastodon_status_delete(struct im_connection *ic, guint64 id);
+void mastodon_instance(struct im_connection *ic);
 
 /* Anything below is unchecked, renamed Twitter stuff. */
 
@@ -106,4 +110,3 @@ void mastodon_status_delete(struct im_connection *ic, guint64 id);
 
 gboolean mastodon_open_stream(struct im_connection *ic);
 gboolean mastodon_open_filter_stream(struct im_connection *ic);
-gboolean mastodon_initial_timeline(struct im_connection *ic);
