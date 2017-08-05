@@ -78,7 +78,6 @@ struct mastodon_data {
 	struct http_request *stream;
 	struct http_request *filter_stream;
 	struct groupchat *timeline_gc;
-	gint http_fails;
 	mastodon_flags_t flags;
 
 	/* set base_url */

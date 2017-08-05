@@ -251,9 +251,6 @@ char *mastodon_parse_error(struct http_request *req)
    Sub-optimal indeed, but just be careful when this returns NULL! */
 static json_value *mastodon_parse_response(struct im_connection *ic, struct http_request *req)
 {
-	gboolean logging_in = !(ic->flags & OPT_LOGGED_IN);
-	struct mastodon_data *md = ic->proto_data;
-	json_value *ret;
 	char path[64] = "", *s;
 
 	if ((s = strchr(req->request, ' '))) {
@@ -264,32 +261,18 @@ static json_value *mastodon_parse_response(struct im_connection *ic, struct http
 		}
 	}
 
-	if (req->status_code == 401 && logging_in) {
-		/* Twitter once had an outage where they were randomly
-		   throwing 401s so we'll keep treating this one as fatal
-		   only during login. */
-		imcb_error(ic, "Authentication failure (%s)",
-		           mastodon_parse_error(req));
-		imc_logout(ic, FALSE);
-		return NULL;
-	} else if (req->status_code != 200) {
-		// It didn't go well, output the error and return.
-		if (logging_in || ++md->http_fails >= 5) {
-			mastodon_log(ic, "Error: Could not retrieve %s: %s",
-			            path, mastodon_parse_error(req));
-		}
+	if (req->status_code != 200) {
+		mastodon_log(ic, "Error: %s returned status code %s", path, mastodon_parse_error(req));
 
-		if (logging_in) {
+		if (!(ic->flags & OPT_LOGGED_IN)) {
 			imc_logout(ic, TRUE);
 		}
 		return NULL;
-	} else {
-		md->http_fails = 0;
 	}
 
+	json_value *ret;
 	if ((ret = json_parse(req->reply_body, req->body_size)) == NULL) {
-		imcb_error(ic, "Could not retrieve %s: %s",
-		           path, "JSON parse error");
+		imcb_error(ic, "Error: %s return data that could not be parsed as JSON", path);
 	}
 	return ret;
 }
@@ -1355,10 +1338,6 @@ static void mastodon_get_home_timeline(struct im_connection *ic)
 	md->flags &= ~MASTODON_GOT_TIMELINE;
 
 	if (mastodon_http(ic, MASTODON_HOME_TIMELINE_URL, mastodon_http_get_home_timeline, ic, HTTP_GET, NULL, 0) == NULL) {
-		if (++md->http_fails >= 5) {
-			imcb_error(ic, "Could not retrieve %s: %s",
-			           MASTODON_HOME_TIMELINE_URL, "connection failed");
-		}
 		md->flags |= MASTODON_GOT_TIMELINE;
 		mastodon_flush_timeline(ic);
 	}
@@ -1373,10 +1352,6 @@ static void mastodon_get_notifications(struct im_connection *ic)
 	md->flags &= ~MASTODON_GOT_NOTIFICATIONS;
 
 	if (mastodon_http(ic, MASTODON_NOTIFICATIONS_URL, mastodon_http_get_notifications, ic, HTTP_GET, NULL, 0) == NULL) {
-		if (++md->http_fails >= 5) {
-			imcb_error(ic, "Could not retrieve %s: %s",
-			           MASTODON_NOTIFICATIONS_URL, "connection failed");
-		}
 		md->flags |= MASTODON_GOT_NOTIFICATIONS;
 		mastodon_flush_timeline(ic);
 	}
@@ -1399,14 +1374,6 @@ void mastodon_initial_timeline(struct im_connection *ic)
 	struct mastodon_data *md = ic->proto_data;
 
 	imcb_log(ic, "Getting home timeline");
-
-	if (md->flags & MASTODON_DOING_TIMELINE) {
-		if (++md->http_fails >= 5) {
-			imcb_error(ic, "Fetch timeout (%d)", md->flags);
-			imc_logout(ic, TRUE);
-			return;
-		}
-	}
 
 	md->flags |= MASTODON_DOING_TIMELINE;
 
@@ -1454,7 +1421,9 @@ static void mastodon_http_callback(struct http_request *req)
 static void mastodon_http_callback_and_ack(struct http_request *req)
 {
 	mastodon_http_callback(req);
-	mastodon_log(req->data, "Command processed successfully");
+	if (req->status_code == 200) {
+		mastodon_log(req->data, "Command processed successfully");
+	}
 }
 
 /**
