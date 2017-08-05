@@ -1394,7 +1394,7 @@ static void mastodon_get_notifications(struct im_connection *ic)
  * Both callbacks will attempt to flush the initial timeline, but this
  * will only succeed if both flags are set.
  */
-gboolean mastodon_initial_timeline(struct im_connection *ic)
+void mastodon_initial_timeline(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
 
@@ -1404,7 +1404,7 @@ gboolean mastodon_initial_timeline(struct im_connection *ic)
 		if (++md->http_fails >= 5) {
 			imcb_error(ic, "Fetch timeout (%d)", md->flags);
 			imc_logout(ic, TRUE);
-			return FALSE;
+			return;
 		}
 	}
 
@@ -1413,7 +1413,7 @@ gboolean mastodon_initial_timeline(struct im_connection *ic)
 	mastodon_get_home_timeline(ic);
 	mastodon_get_notifications(ic);
 
-	return TRUE;
+	return;
 }
 
 /**
