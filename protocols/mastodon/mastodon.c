@@ -783,9 +783,11 @@ static void mastodon_get_info(struct im_connection *ic, char *who)
 {
 	struct mastodon_data *md = ic->proto_data;
 	struct irc_channel *ch = md->timeline_gc->ui_data;
-	gboolean me = g_strcasecmp(md->user, who) == 0; // FIXME: what is nick octodonsocial_kensanata?
+	int plen = strlen(md->prefix);
+
 	imcb_log(ic, "Sending output to %s", ch->name);
-	if (me) {
+	if (g_strncasecmp(who, md->prefix, plen) == 0 && who[plen] == '_' &&
+	    g_strcasecmp(who + plen + 1, ic->acc->user) == 0) {
 		mastodon_instance(ic);
 	} else {
 		mastodon_user(ic, who);
@@ -1110,8 +1112,8 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		mastodon_remove_buddy(ic, cmd[1], NULL);
 	} else if (g_strcasecmp(cmd[0], "block") == 0 && cmd[1]) {
 		mastodon_add_deny(ic, cmd[1]);
-	} else if (g_strcasecmp(cmd[0], "unblock") == 0 && cmd[1] ||
-		   g_strcasecmp(cmd[0], "allow") == 0 && cmd[1]) {
+	} else if ((g_strcasecmp(cmd[0], "unblock") == 0 ||
+		    g_strcasecmp(cmd[0], "allow") == 0) && cmd[1]) {
 		mastodon_rem_deny(ic, cmd[1]);
 	} else if (g_strcasecmp(cmd[0], "mute") == 0 &&
 		   g_strcasecmp(cmd[1], "user") == 0 &&

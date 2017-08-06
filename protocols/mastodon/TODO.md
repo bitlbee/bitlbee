@@ -1,10 +1,5 @@
 # TODO
 
-1. What about `mastodon_get_info` for just a nick like
-   `octodonsocial_kensanata`? At the moment it gets searched and isn't
-   found, so no output. I'd like to simply call `mastodon_instance` in
-   this case.
-
 1. Muting reboosts for a user.
 
 1. deduplicate mentions: 
