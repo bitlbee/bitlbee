@@ -277,102 +277,6 @@ static json_value *mastodon_parse_response(struct im_connection *ic, struct http
 	return ret;
 }
 
-static void mastodon_http_get_mutes_ids(struct http_request *req);
-
-/**
- * Get the muted users ids.
- */
-void mastodon_get_mutes_ids(struct im_connection *ic, gint64 next_cursor)
-{
-	char *args[2];
-
-	args[0] = "cursor";
-	args[1] = g_strdup_printf("%" G_GINT64_FORMAT, next_cursor);
-	mastodon_http(ic, MASTODON_MUTES_IDS_URL, mastodon_http_get_mutes_ids, ic, HTTP_GET, args, 2);
-
-	g_free(args[1]);
-}
-
-/**
- * Fill a list of ids.
- */
-static gboolean mastodon_xt_get_friends_id_list(json_value *node, struct mastodon_list *ml)
-{
-	json_value *c;
-	int i;
-
-	// Set the list type.
-	ml->type = ML_ID;
-
-	c = json_o_get(node, "ids");
-	if (!c || c->type != json_array) {
-		return FALSE;
-	}
-
-	for (i = 0; i < c->u.array.length; i++) {
-		if (c->u.array.values[i]->type != json_integer) {
-			continue;
-		}
-
-		ml->list = g_slist_prepend(ml->list,
-		                            g_strdup_printf("%" PRIu64, c->u.array.values[i]->u.integer));
-	}
-
-	c = json_o_get(node, "next_cursor");
-	if (c && c->type == json_integer) {
-		ml->next_cursor = c->u.integer;
-	} else {
-		ml->next_cursor = -1;
-	}
-
-	return TRUE;
-}
-
-/**
- * Callback for getting the mutes ids.
- */
-static void mastodon_http_get_mutes_ids(struct http_request *req)
-{
-	struct im_connection *ic = req->data;
-	json_value *parsed;
-	struct mastodon_list *ml;
-	struct mastodon_data *md;
-
-	// Check if the connection is stil active
-	if (!g_slist_find(mastodon_connections, ic)) {
-		return;
-	}
-
-	md = ic->proto_data;
-
-	if (req->status_code != 200) {
-		/* Fail silently */
-		return;
-	}
-
-	// Parse the data.
-	if (!(parsed = mastodon_parse_response(ic, req))) {
-		return;
-	}
-
-	ml = g_new0(struct mastodon_list, 1);
-	ml->list = md->mutes_ids;
-
-	/* mute ids API response is similar enough to friends response
-	   to reuse this method */
-	mastodon_xt_get_friends_id_list(parsed, ml);
-	json_value_free(parsed);
-
-	md->mutes_ids = ml->list;
-	if (ml->next_cursor) {
-		/* Recurse while there are still more pages */
-		mastodon_get_mutes_ids(ic, ml->next_cursor);
-	}
-
-	ml->list = NULL;
-	ml_free(ml);
-}
-
 struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 {
 	struct mastodon_account *ma;
@@ -823,17 +727,8 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 static void mastodon_status_show(struct im_connection *ic, struct mastodon_status *ms)
 {
 	struct mastodon_data *md = ic->proto_data;
-	char *uid_str;
 
 	if (ms->account == NULL || ms->text == NULL) {
-		return;
-	}
-
-	/* Check this is not a toot that should be muted */
-	uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, ms->account->id);
-
-	if (g_slist_find_custom(md->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
-		g_free(uid_str);
 		return;
 	}
 
@@ -850,8 +745,6 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
 	} else {
 		mastodon_status_show_msg(ic, ms);
 	}
-
-	g_free(uid_str);
 }
 
 static void mastodon_notification_show(struct im_connection *ic, struct mastodon_notification *notification)

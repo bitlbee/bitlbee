@@ -102,7 +102,6 @@ void mastodon_status(struct im_connection *ic, guint64 id);
 /* Social graphs URLs */
 #define MASTODON_FRIENDS_IDS_URL "/friends/ids.json"
 #define MASTODON_FOLLOWERS_IDS_URL "/followers/ids.json"
-#define MASTODON_MUTES_IDS_URL "/mutes/users/ids.json"
 #define MASTODON_NOBOOSTS_IDS_URL "/friendships/no_boosts/ids.json"
 
 /* Account URLs */
