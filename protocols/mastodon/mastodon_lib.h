@@ -35,6 +35,7 @@
 #define MASTODON_USER_STREAMING_URL "/streaming/user"
 #define MASTODON_HOME_TIMELINE_URL "/timelines/home"
 #define MASTODON_NOTIFICATIONS_URL "/notifications"
+#define MASTODON_REPORT_URL "/reports"
 
 #define MASTODON_INSTANCE_URL "/instance"
 
@@ -88,7 +89,6 @@ void mastodon_status(struct im_connection *ic, guint64 id);
 #define MASTODON_FEATURED_USERS_URL "/statuses/featured.json"
 #define MASTODON_FRIENDS_TIMELINE_URL "/statuses/friends_timeline.json"
 #define MASTODON_USER_TIMELINE_URL "/statuses/user_timeline.json"
-#define MASTODON_REPORT_URL "/reports"
 
 /* Users URLs */
 #define MASTODON_USERS_LOOKUP_URL "/users/lookup.json"

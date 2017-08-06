@@ -777,9 +777,19 @@ static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message
 	return 0;
 }
 
+static void mastodon_user(struct im_connection *ic, char *who);
+
 static void mastodon_get_info(struct im_connection *ic, char *who)
 {
-	mastodon_instance(ic);
+	struct mastodon_data *md = ic->proto_data;
+	struct irc_channel *ch = md->timeline_gc->ui_data;
+	gboolean me = g_strcasecmp(md->user, who) == 0; // FIXME: what is nick octodonsocial_kensanata?
+	imcb_log(ic, "Sending output to %s", ch->name);
+	if (me) {
+		mastodon_instance(ic);
+	} else {
+		mastodon_user(ic, who);
+	}
 }
 
 static void mastodon_chat_msg(struct groupchat *c, char *message, int flags)
@@ -787,10 +797,6 @@ static void mastodon_chat_msg(struct groupchat *c, char *message, int flags)
 	if (c && message) {
 		mastodon_handle_command(c->ic, message);
 	}
-}
-
-static void mastodon_chat_invite(struct groupchat *c, char *who, char *message)
-{
 }
 
 static struct groupchat *mastodon_chat_join(struct im_connection *ic,
@@ -854,10 +860,6 @@ static void mastodon_chat_leave(struct groupchat *c)
 	md->timeline_gc = NULL;
 }
 
-static void mastodon_keepalive(struct im_connection *ic)
-{
-}
-
 static void mastodon_add_permit(struct im_connection *ic, char *who)
 {
 }
@@ -865,19 +867,6 @@ static void mastodon_add_permit(struct im_connection *ic, char *who)
 static void mastodon_rem_permit(struct im_connection *ic, char *who)
 {
 }
-
-static void mastodon_add_deny(struct im_connection *ic, char *who)
-{
-}
-
-static void mastodon_rem_deny(struct im_connection *ic, char *who)
-{
-}
-
-//static char *mastodon_set_display_name( set_t *set, char *value )
-//{
-//      return value;
-//}
 
 static void mastodon_buddy_data_add(bee_user_t *bu)
 {
@@ -1004,6 +993,18 @@ static guint64 mastodon_user_id_or_warn(struct im_connection *ic, char *who)
 	return 0;
 }
 
+static void mastodon_user(struct im_connection *ic, char *who)
+{
+	bee_user_t *bu;
+	guint64 id;
+	if ((bu = mastodon_user_by_nick(ic, who)) &&
+	    (id = mastodon_account_id(bu))) {
+		mastodon_account(ic, id);
+	} else {
+		mastodon_search_account(ic, who);
+	}
+}
+
 static void mastodon_add_buddy(struct im_connection *ic, char *who, char *group)
 {
 	bee_user_t *bu;
@@ -1028,6 +1029,22 @@ static void mastodon_remove_buddy(struct im_connection *ic, char *who, char *gro
 	guint64 id;
 	if ((id = mastodon_user_id_or_warn(ic, who))) {
 		mastodon_post(ic, MASTODON_ACCOUNT_UNFOLLOW_URL, id);
+	}
+}
+
+static void mastodon_add_deny(struct im_connection *ic, char *who)
+{
+	guint64 id;
+	if ((id = mastodon_user_id_or_warn(ic, who))) {
+		mastodon_post(ic, MASTODON_ACCOUNT_BLOCK_URL, id);
+	}
+}
+
+static void mastodon_rem_deny(struct im_connection *ic, char *who)
+{
+	guint64 id;
+	if ((id = mastodon_user_id_or_warn(ic, who))) {
+		mastodon_post(ic, MASTODON_ACCOUNT_UNBLOCK_URL, id);
 	}
 }
 
@@ -1058,12 +1075,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		} else if (g_strcasecmp(cmd[1], "instance") == 0) {
 			mastodon_instance(ic);
 		} else if (g_strcasecmp(cmd[1], "user") == 0 && cmd[2]) {
-			if ((bu = mastodon_user_by_nick(ic, cmd[2])) &&
-			    (id = mastodon_account_id(bu))) {
-				mastodon_account(ic, id);
-			} else {
-				mastodon_search_account(ic, cmd[2]);
-			}
+			mastodon_user(ic, cmd[2]);
 		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
 			mastodon_status(ic, id);
 		}
@@ -1097,13 +1109,10 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 	} else if (g_strcasecmp(cmd[0], "unfollow") == 0 && cmd[1]) {
 		mastodon_remove_buddy(ic, cmd[1], NULL);
 	} else if (g_strcasecmp(cmd[0], "block") == 0 && cmd[1]) {
-		if ((id = mastodon_user_id_or_warn(ic, cmd[1]))) {
-			mastodon_post(ic, MASTODON_ACCOUNT_BLOCK_URL, id);
-		}
-	} else if (g_strcasecmp(cmd[0], "unblock") == 0 && cmd[1]) {
-		if ((id = mastodon_user_id_or_warn(ic, cmd[1]))) {
-			mastodon_post(ic, MASTODON_ACCOUNT_UNBLOCK_URL, id);
-		}
+		mastodon_add_deny(ic, cmd[1]);
+	} else if (g_strcasecmp(cmd[0], "unblock") == 0 && cmd[1] ||
+		   g_strcasecmp(cmd[0], "allow") == 0 && cmd[1]) {
+		mastodon_rem_deny(ic, cmd[1]);
 	} else if (g_strcasecmp(cmd[0], "mute") == 0 &&
 		   g_strcasecmp(cmd[1], "user") == 0 &&
 		   cmd[2]) {
@@ -1194,10 +1203,8 @@ void mastodon_initmodule()
 	ret->add_buddy = mastodon_add_buddy;
 	ret->remove_buddy = mastodon_remove_buddy;
 	ret->chat_msg = mastodon_chat_msg;
-	ret->chat_invite = mastodon_chat_invite;
 	ret->chat_join = mastodon_chat_join;
 	ret->chat_leave = mastodon_chat_leave;
-	ret->keepalive = mastodon_keepalive;
 	ret->add_permit = mastodon_add_permit;
 	ret->rem_permit = mastodon_rem_permit;
 	ret->add_deny = mastodon_add_deny;
