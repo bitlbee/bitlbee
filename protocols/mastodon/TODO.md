@@ -1,5 +1,10 @@
 # TODO
 
+1. What about `mastodon_get_info` for just a nick like
+   `octodonsocial_kensanata`? At the moment it gets searched and isn't
+   found, so no output. I'd like to simply call `mastodon_instance` in
+   this case.
+
 1. Muting reboosts for a user.
 
 1. deduplicate mentions: 
@@ -66,3 +71,24 @@
 	- tracking hashtags
 
 1. Real undo/redo implementation.
+
+1. Go through all the root commands and make them call the appropriate
+   functions we already have. At the moment there are many empty
+   implementations and that's no good. Compare `cmd_block` which calls
+   functions defined in `struct prpl` which are defined in
+   `mastodon_initmodule`.
+
+    - `mastodon_buddy_msg` ✓
+	- `mastodon_get_info` ✓
+    - `mastodon_add_buddy` ✓
+	- `mastodon_remove_buddy` ✓
+	- `mastodon_chat_msg` ✓
+	- `mastodon_chat_invite` was deleted ✓
+	- `mastodon_chat_join` involves filters?
+	- `mastodon_chat_leave` ✓
+	- `mastodon_keepalive` was deleted ✓
+	- `mastodon_add_permit` is required but empty ✓
+	- `mastodon_rem_permit` is required but empty ✓
+	- `mastodon_add_deny` ✓
+	- `mastodon_rem_deny` ✓
+
