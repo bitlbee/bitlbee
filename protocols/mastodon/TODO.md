@@ -1,5 +1,7 @@
 # TODO
 
+1. Muting reboosts for a user.
+
 1. deduplicate mentions: 
     
 	<neoanderthal> [1c->13] @neoanderthal mentioned you: @kensanata Sure -
@@ -34,6 +36,10 @@
 	- `unboost id` and `unboost nick` to unboost a toot ✓ (but caching
       requires me to visit the `/web/statuses/<id>/reblogs` page)
     - `url id` to show the URL of a status ✓
+	- `info` shows how to use it ✓
+	- `info instance` shows debug info for the instance ✓
+	- `info [id|nick]` shows debug info for a status ✓
+	- `info user [nick|account]` shows debug info for a user ✓
 
 1. Also had one crash in `mastodon_log (ic=0x10090b270,
     format=0x100092027 "Command processed successfully")` at
@@ -56,7 +62,7 @@
 
 1. Think about which commands to support in the future:
 
-	- info about an account
-	- info about a status
 	- handling of spoilers
 	- tracking hashtags
+
+1. Real undo/redo implementation.
