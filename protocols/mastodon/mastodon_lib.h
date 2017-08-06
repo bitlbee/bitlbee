@@ -74,6 +74,9 @@ void mastodon_report(struct im_connection *ic, guint64 id, char *comment);
 void mastodon_follow(struct im_connection *ic, char *who);
 void mastodon_status_delete(struct im_connection *ic, guint64 id);
 void mastodon_instance(struct im_connection *ic);
+void mastodon_account(struct im_connection *ic, guint64 id);
+void mastodon_search_account(struct im_connection *ic, char *who);
+void mastodon_status(struct im_connection *ic, guint64 id);
 
 /* Anything below is unchecked, renamed Twitter stuff. */
 
