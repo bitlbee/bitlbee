@@ -506,6 +506,7 @@ static struct mastodon_notification *mastodon_xt_get_notification(const json_val
 	return NULL;
 }
 
+// FIXME: handle media instead; no quoted status
 static void expand_entities(char **text, const json_value *node, const json_value *extended_node)
 {
 	json_value *entities, *extended_entities, *quoted;
@@ -1442,21 +1443,33 @@ static void mastodon_log_array(struct im_connection *ic, json_value *node, int p
 {
 	for (int i = 0; i < node->u.array.length; i++) {
 		json_value *v = node->u.array.values[i];
+		char *s;
 		switch (v->type) {
 		case json_object:
-			mastodon_log(ic, "%s{", indent(prefix), v->u.string.ptr);
+			if (v->u.object.values == 0) {
+				mastodon_log(ic, "%s{}", indent(prefix));
+				break;
+			}
+			mastodon_log(ic, "%s{", indent(prefix));
 			mastodon_log_object (ic, v, prefix + 1);
 			mastodon_log(ic, "%s}", indent(prefix));
 			break;
 		case json_array:
-			mastodon_log(ic, "%s[", indent(prefix), v->u.string.ptr);
+			if (v->u.array.length == 0) {
+				mastodon_log(ic, "%s[]", indent(prefix));
+				break;
+			}
+			mastodon_log(ic, "%s[", indent(prefix));
 			for (int i = 0; i < v->u.array.length; i++) {
 				mastodon_log_object (ic, node->u.array.values[i], prefix + 1);
 			}
 			mastodon_log(ic, "%s]", indent(prefix));
 			break;
 		case json_string:
-			mastodon_log(ic, "%s%s", indent(prefix), v->u.string.ptr);
+			s = g_strdup(v->u.string.ptr);
+			strip_html(s);
+			mastodon_log(ic, "%s%s", indent(prefix), s);
+			g_free(s);
 			break;
 		case json_double:
 			mastodon_log(ic, "%s%f", indent(prefix), v->u.dbl);
@@ -1478,20 +1491,32 @@ static void mastodon_log_array(struct im_connection *ic, json_value *node, int p
 
 static void mastodon_log_object(struct im_connection *ic, json_value *node, int prefix)
 {
+	char *s;
 	JSON_O_FOREACH(node, k, v) {
 		switch (v->type) {
 		case json_object:
+			if (v->u.object.values == 0) {
+				mastodon_log(ic, "%s%s: {}", indent(prefix), k);
+				break;
+			}
 			mastodon_log(ic, "%s%s: {", indent(prefix), k);
 			mastodon_log_object (ic, v, prefix + 1);
 			mastodon_log(ic, "%s}", indent(prefix));
 			break;
 		case json_array:
+			if (v->u.array.length == 0) {
+				mastodon_log(ic, "%s%s: []", indent(prefix), k);
+				break;
+			}
 			mastodon_log(ic, "%s%s: [", indent(prefix), k);
 			mastodon_log_array(ic, v, prefix + 1);
 			mastodon_log(ic, "%s]", indent(prefix));
 			break;
 		case json_string:
-			mastodon_log(ic, "%s%s: %s", indent(prefix), k, v->u.string.ptr);
+			s = g_strdup(v->u.string.ptr);
+			strip_html(s);
+			mastodon_log(ic, "%s%s: %s", indent(prefix), k, s);
+			g_free(s);
 			break;
 		case json_double:
 			mastodon_log(ic, "%s%s: %f", indent(prefix), k, v->u.dbl);
@@ -1635,6 +1660,29 @@ void mastodon_report(struct im_connection *ic, guint64 id, char *comment)
 void mastodon_instance(struct im_connection *ic)
 {
 	mastodon_http(ic, MASTODON_INSTANCE_URL, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
+}
+
+void mastodon_account(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf(MASTODON_ACCOUNT_URL, id);
+	mastodon_http(ic, url, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
+	g_free(url);
+}
+
+void mastodon_search_account(struct im_connection *ic, char *who)
+{
+	char *args[2] = {
+		"q", who,
+	};
+
+	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
+}
+
+void mastodon_status(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
+	mastodon_http(ic, url, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
+	g_free(url);
 }
 
 static void mastodon_http_status_show_url(struct http_request *req)
