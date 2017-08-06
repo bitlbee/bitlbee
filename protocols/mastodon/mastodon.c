@@ -1003,6 +1003,18 @@ static void mastodon_user(struct im_connection *ic, char *who)
 	}
 }
 
+static void mastodon_relation_to_user(struct im_connection *ic, char *who)
+{
+	bee_user_t *bu;
+	guint64 id;
+	if ((bu = mastodon_user_by_nick(ic, who)) &&
+	    (id = mastodon_account_id(bu))) {
+		mastodon_relationship(ic, id);
+	} else {
+		mastodon_search_relationship(ic, who);
+	}
+}
+
 static void mastodon_add_buddy(struct im_connection *ic, char *who, char *group)
 {
 	bee_user_t *bu;
@@ -1069,11 +1081,14 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 			mastodon_log(ic, "Usage:\n"
 				     "- info instance\n"
 				     "- info [id|screenname]\n"
-				     "- info user [nick|account]");
+				     "- info user [nick|account]\n"
+				     "- info relation [nick|account]");
 		} else if (g_strcasecmp(cmd[1], "instance") == 0) {
 			mastodon_instance(ic);
 		} else if (g_strcasecmp(cmd[1], "user") == 0 && cmd[2]) {
 			mastodon_user(ic, cmd[2]);
+		} else if (g_strcasecmp(cmd[1], "relation") == 0 && cmd[2]) {
+			mastodon_relation_to_user(ic, cmd[2]);
 		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
 			mastodon_status(ic, id);
 		}

@@ -286,8 +286,9 @@ struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 	ma->display_name = g_strdup(json_o_str(node, "display_name"));
 	ma->acct = g_strdup(json_o_str(node, "acct"));
 
-	jv = json_o_get(node, "id");
-	ma->id = jv->u.integer;
+	if ((jv = json_o_get(node, "id"))) {
+		ma->id = jv->u.integer;
+	}
 
 	return ma;
 }
@@ -884,9 +885,9 @@ https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server
 			if ((parsed = json_parse(data->str, data->len))) {
 				from_filter = (req == md->filter_stream);
 				mastodon_stream_handle_event(ic, evt_type, parsed, from_filter);
+				json_value_free(parsed);
 			}
 
-			json_value_free(parsed);
 			g_string_free(data, TRUE);
 		}
 	}
@@ -1330,6 +1331,11 @@ static char *indent(int n)
 	return n > len ? spaces : spaces + len - n;
 }
 
+static char *yes_or_no(int bool)
+{
+	return bool ? "yes" : "no";
+}
+
 static void mastodon_log_object(struct im_connection *ic, json_value *node, int prefix);
 
 static void mastodon_log_array(struct im_connection *ic, json_value *node, int prefix)
@@ -1368,8 +1374,10 @@ static void mastodon_log_array(struct im_connection *ic, json_value *node, int p
 			mastodon_log(ic, "%s%f", indent(prefix), v->u.dbl);
 			break;
 		case json_integer:
-		case json_boolean:
 			mastodon_log(ic, "%s%d", indent(prefix), v->u.boolean);
+			break;
+		case json_boolean:
+			mastodon_log(ic, "%s%s: %s", indent(prefix), yes_or_no(v->u.boolean));
 			break;
 		case json_null:
 			mastodon_log(ic, "%snull", indent(prefix));
@@ -1379,7 +1387,6 @@ static void mastodon_log_array(struct im_connection *ic, json_value *node, int p
 			break;
 		}
 	}
-
 }
 
 static void mastodon_log_object(struct im_connection *ic, json_value *node, int prefix)
@@ -1415,8 +1422,10 @@ static void mastodon_log_object(struct im_connection *ic, json_value *node, int 
 			mastodon_log(ic, "%s%s: %f", indent(prefix), k, v->u.dbl);
 			break;
 		case json_integer:
-		case json_boolean:
 			mastodon_log(ic, "%s%s: %d", indent(prefix), k, v->u.boolean);
+			break;
+		case json_boolean:
+			mastodon_log(ic, "%s%s: %s", indent(prefix), k, yes_or_no(v->u.boolean));
 			break;
 		case json_null:
 			mastodon_log(ic, "%s%s: null", indent(prefix), k);
@@ -1501,12 +1510,12 @@ void mastodon_http_report(struct http_request *req)
 
 	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
-		goto finish;
+		goto finally;
 	}
 
 	// Parse the data.
 	if (!(parsed = mastodon_parse_response(ic, req))) {
-		goto finish;
+		goto finally;
 	}
 
 	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
@@ -1529,6 +1538,11 @@ void mastodon_http_report(struct http_request *req)
 	g_free(args[1]);
 	g_free(args[3]);
 finish:
+	ms_free(ms);
+	json_value_free(parsed);
+finally:
+	// The report structure was created by mastodon_report and has
+	// to be freed under all circumstances.
 	mr_free(mr);
 }
 
@@ -1569,6 +1583,58 @@ void mastodon_search_account(struct im_connection *ic, char *who)
 	};
 
 	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
+}
+
+void mastodon_relationship(struct im_connection *ic, guint64 id)
+{
+	char *args[2] = {
+		"id", g_strdup_printf("%" G_GUINT64_FORMAT, id),
+	};
+
+	mastodon_http(ic, MASTODON_ACCOUNT_RELATIONSHIP_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
+	g_free(args[1]);
+}
+
+static void mastodon_http_search_relationship(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	json_value *parsed;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		return;
+	}
+
+	struct mastodon_account *ma = mastodon_xt_get_user(parsed);
+
+	if (!ma->id) {
+		mastodon_log(ic, "Couldn't find a matching account.");
+		goto finish;
+	}
+
+	char *args[2] = {
+		"id", g_strdup_printf("%" G_GUINT64_FORMAT, ma->id),
+	};
+
+	mastodon_http(ic, MASTODON_ACCOUNT_RELATIONSHIP_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
+
+	g_free(args[1]);
+finish:
+	ma_free(ma);
+	json_value_free(parsed);
+}
+
+void mastodon_search_relationship(struct im_connection *ic, char *who)
+{
+	char *args[2] = {
+		"q", who,
+	};
+
+	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, mastodon_http_search_relationship, ic, HTTP_GET, args, 2);
 }
 
 void mastodon_status(struct im_connection *ic, guint64 id)
@@ -1637,6 +1703,7 @@ static void mastodon_http_follow3(struct http_request *req)
 	}
 
 	ma_free(ma);
+	json_value_free(parsed);
 }
 
 /**
@@ -1727,6 +1794,8 @@ static void mastodon_http_follow1(struct http_request *req)
 	} else {
 		mastodon_log(ic, "The account found has no id. How is this even possible?");
 	}
+
+	ma_free(ma);
 finish:
 	json_value_free(parsed);
 }
