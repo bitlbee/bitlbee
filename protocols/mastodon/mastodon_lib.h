@@ -57,6 +57,8 @@
 #define MASTODON_ACCOUNT_MUTE_URL "/accounts/%" G_GINT64_FORMAT "/mute"
 #define MASTODON_ACCOUNT_UNMUTE_URL "/accounts/%" G_GINT64_FORMAT "/unmute"
 
+#define MASTODON_ACCOUNT_RELATIONSHIP_URL "/accounts/relationships"
+
 typedef enum {
 	MASTODON_EVT_UNKNOWN,
 	MASTODON_EVT_UPDATE,
@@ -78,6 +80,8 @@ void mastodon_instance(struct im_connection *ic);
 void mastodon_account(struct im_connection *ic, guint64 id);
 void mastodon_search_account(struct im_connection *ic, char *who);
 void mastodon_status(struct im_connection *ic, guint64 id);
+void mastodon_relationship(struct im_connection *ic, guint64 id);
+void mastodon_search_relationship(struct im_connection *ic, char *who);
 
 /* Anything below is unchecked, renamed Twitter stuff. */
 
