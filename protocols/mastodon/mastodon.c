@@ -1031,6 +1031,10 @@ static void mastodon_remove_buddy(struct im_connection *ic, char *who, char *gro
 	}
 }
 
+/**
+ * Commands we understand. Changes should be documented in
+ * commands.xml and on https://wiki.bitlbee.org/HowtoMastodon
+ */
 static void mastodon_handle_command(struct im_connection *ic, char *message)
 {
 	struct mastodon_data *md = ic->proto_data;
@@ -1050,8 +1054,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 			mastodon_log(ic, "Usage:\n"
 				     "- info instance\n"
 				     "- info [id|screenname]\n"
-				     "- info user nick\n"
-				     "- info user account");
+				     "- info user [nick|account]");
 		} else if (g_strcasecmp(cmd[1], "instance") == 0) {
 			mastodon_instance(ic);
 		} else if (g_strcasecmp(cmd[1], "user") == 0 && cmd[2]) {
