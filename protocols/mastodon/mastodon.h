@@ -69,7 +69,6 @@ struct mastodon_data {
 	gpointer notifications_obj;
 
 	GSList *follow_ids;
-	GSList *mutes_ids;
 	GSList *filters;
 
 	guint64 last_id; /* For undo and callbacks */
