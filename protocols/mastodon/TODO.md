@@ -27,15 +27,11 @@
    of `type+" "+(text_url||remote_url)`. Deduplicate if the URL is
    also in the text itself!
 
-1. Remove all remaining Twitter code.
-
-1. Write https://wiki.bitlbee.org/HowtoMastodon
-
 1. Send Merge Request!!
 
 1. Think about which commands to support in the future:
 
 	- handling of spoilers
-	- tracking hashtags
+	- showing context
 
 1. Real undo/redo implementation.

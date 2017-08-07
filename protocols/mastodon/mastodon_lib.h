@@ -31,10 +31,12 @@
 
 #define MASTODON_REGISTER_APP_URL "/apps"
 #define MASTODON_VERIFY_CREDENTIALS_URL "/accounts/verify_credentials"
-#define MASTODON_FOLLOWING_URL "/accounts/%" G_GINT64_FORMAT "/following"
-#define MASTODON_USER_STREAMING_URL "/streaming/user"
+#define MASTODON_STREAMING_USER_URL "/streaming/user"
+#define MASTODON_STREAMING_HASHTAG_URL "/streaming/hashtag"
 #define MASTODON_HOME_TIMELINE_URL "/timelines/home"
+#define MASTODON_HASHTAG_TIMELINE_URL "/timelines/tag/%s"
 #define MASTODON_NOTIFICATIONS_URL "/notifications"
+
 #define MASTODON_REPORT_URL "/reports"
 #define MASTODON_SEARCH_URL "/search"
 
@@ -51,6 +53,7 @@
 
 #define MASTODON_ACCOUNT_URL "/accounts/%" G_GINT64_FORMAT
 #define MASTODON_ACCOUNT_SEARCH_URL "/accounts/search"
+#define MASTODON_ACCOUNT_FOLLOWING_URL "/accounts/%" G_GINT64_FORMAT "/following"
 #define MASTODON_ACCOUNT_BLOCK_URL "/accounts/%" G_GINT64_FORMAT "/block"
 #define MASTODON_ACCOUNT_UNBLOCK_URL "/accounts/%" G_GINT64_FORMAT "/unblock"
 #define MASTODON_ACCOUNT_FOLLOW_URL "/accounts/%" G_GINT64_FORMAT "/follow"
@@ -69,8 +72,10 @@ typedef enum {
 
 void mastodon_register_app(struct im_connection *ic);
 void mastodon_verify_credentials(struct im_connection *ic);
-void mastodon_following(struct im_connection *ic, gint64 next_cursor);
+void mastodon_following(struct im_connection *ic);
 void mastodon_initial_timeline(struct im_connection *ic);
+void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag);
+void mastodon_open_stream(struct im_connection *ic);
 void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, int direct);
 void mastodon_post(struct im_connection *ic, char *format, guint64 id);
 void mastodon_status_show_url(struct im_connection *ic, guint64 id);
@@ -84,37 +89,3 @@ void mastodon_status(struct im_connection *ic, guint64 id);
 void mastodon_relationship(struct im_connection *ic, guint64 id);
 void mastodon_search_relationship(struct im_connection *ic, char *who);
 void mastodon_search(struct im_connection *ic, char *what);
-
-/* Anything below is unchecked, renamed Twitter stuff. */
-
-/* Status URLs */
-#define MASTODON_STATUS_DESTROY_URL "/statuses/destroy/"
-
-/* Timeline URLs */
-#define MASTODON_PUBLIC_TIMELINE_URL "/statuses/public_timeline.json"
-#define MASTODON_FEATURED_USERS_URL "/statuses/featured.json"
-#define MASTODON_FRIENDS_TIMELINE_URL "/statuses/friends_timeline.json"
-#define MASTODON_USER_TIMELINE_URL "/statuses/user_timeline.json"
-
-/* Users URLs */
-#define MASTODON_USERS_LOOKUP_URL "/users/lookup.json"
-
-/* Direct messages URLs */
-#define MASTODON_DIRECT_MESSAGES_URL "/direct_messages.json"
-#define MASTODON_DIRECT_MESSAGES_NEW_URL "/direct_messages/new.json"
-#define MASTODON_DIRECT_MESSAGES_SENT_URL "/direct_messages/sent.json"
-#define MASTODON_DIRECT_MESSAGES_DESTROY_URL "/direct_messages/destroy/"
-
-/* Social graphs URLs */
-#define MASTODON_FRIENDS_IDS_URL "/friends/ids.json"
-#define MASTODON_FOLLOWERS_IDS_URL "/followers/ids.json"
-#define MASTODON_NOBOOSTS_IDS_URL "/friendships/no_boosts/ids.json"
-
-/* Account URLs */
-#define MASTODON_ACCOUNT_RATE_LIMIT_URL "/account/rate_limit_status.json"
-
-/* Stream URLs */
-#define MASTODON_FILTER_STREAM_URL "https://stream.mastodon.com/1.1/statuses/filter.json"
-
-gboolean mastodon_open_stream(struct im_connection *ic);
-gboolean mastodon_open_filter_stream(struct im_connection *ic);

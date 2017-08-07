@@ -49,11 +49,6 @@ typedef enum {
 } mastodon_flags_t;
 
 typedef enum {
-	MASTODON_FILTER_TYPE_FOLLOW = 0,
-	MASTODON_FILTER_TYPE_TRACK
-} mastodon_filter_type_t;
-
-typedef enum {
 	MASTODON_VISIBILITY_PUBLIC,
 	MASTODON_VISIBILITY_DIRECT,
 } mastodon_visibility_t;
@@ -68,15 +63,9 @@ struct mastodon_data {
 	gpointer home_timeline_obj;
 	gpointer notifications_obj;
 
-	GSList *follow_ids;
-	GSList *filters;
-
-	guint64 last_id; /* For undo and callbacks */
-	gint main_loop_id;
-	gint filter_update_id;
-	struct http_request *stream;
-	struct http_request *filter_stream;
+	GSList *streams; /* of struct http_request */
 	struct groupchat *timeline_gc;
+	guint64 last_id; /* For undo and callbacks */
 	mastodon_flags_t flags;
 
 	/* set base_url */
@@ -90,14 +79,6 @@ struct mastodon_data {
 	/* set show_ids */
 	struct mastodon_log_data *log;
 	int log_id;
-};
-
-#define MASTODON_FILTER_UPDATE_WAIT 3000
-struct mastodon_filter {
-	mastodon_filter_type_t type;
-	char *text;
-	guint64 uid;
-	GSList *groupchats;
 };
 
 struct mastodon_user_data {
