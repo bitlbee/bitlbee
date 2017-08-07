@@ -1167,6 +1167,8 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 				mastodon_report(ic, id, cmd[2]);
 			}
 		}
+	} else if (g_strcasecmp(cmd[0], "search") == 0 && cmd[1]) {
+		mastodon_search(ic, cmd[1]);
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], &bu))) {
 			mastodon_post_message(ic, cmd[2], id, bu->handle, MASTODON_VISIBILITY_PUBLIC);

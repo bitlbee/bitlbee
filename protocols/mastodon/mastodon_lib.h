@@ -36,6 +36,7 @@
 #define MASTODON_HOME_TIMELINE_URL "/timelines/home"
 #define MASTODON_NOTIFICATIONS_URL "/notifications"
 #define MASTODON_REPORT_URL "/reports"
+#define MASTODON_SEARCH_URL "/search"
 
 #define MASTODON_INSTANCE_URL "/instance"
 
@@ -82,6 +83,7 @@ void mastodon_search_account(struct im_connection *ic, char *who);
 void mastodon_status(struct im_connection *ic, guint64 id);
 void mastodon_relationship(struct im_connection *ic, guint64 id);
 void mastodon_search_relationship(struct im_connection *ic, char *who);
+void mastodon_search(struct im_connection *ic, char *what);
 
 /* Anything below is unchecked, renamed Twitter stuff. */
 
