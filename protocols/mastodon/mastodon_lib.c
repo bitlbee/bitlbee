@@ -1563,6 +1563,17 @@ void mastodon_report(struct im_connection *ic, guint64 id, char *comment)
 	g_free(url);
 }
 
+/**
+ * Search for a status URL, account, or hashtag.
+ */
+void mastodon_search(struct im_connection *ic, char *what)
+{
+	char *args[2] = {
+		"q", what,
+	};
+
+	mastodon_http(ic, MASTODON_SEARCH_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
+}
 
 void mastodon_instance(struct im_connection *ic)
 {
