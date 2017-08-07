@@ -845,7 +845,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 	} else if (g_strcasecmp(cmd[0], "undo") == 0 ||
 		   g_strcasecmp(cmd[0], "del") == 0 ||
 		   g_strcasecmp(cmd[0], "delete") == 0) {
-		if (cmd[1] == NULL) {
+		if (cmd[1] == NULL && md->last_id) {
 			mastodon_status_delete(ic, md->last_id);
 		} else if ((id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL))) {
 			mastodon_status_delete(ic, id);
