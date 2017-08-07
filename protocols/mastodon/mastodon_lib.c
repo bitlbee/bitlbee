@@ -50,7 +50,6 @@ typedef enum {
 
 struct mastodon_list {
 	mastodon_list_type_t type;
-	gint64 next_cursor;
 	GSList *list;
 };
 
@@ -67,7 +66,8 @@ struct mastodon_status {
 	struct mastodon_account *account;
 	guint64 id, rt_id; /* Usually equal, with RTs id == *original* id */
 	guint64 reply_to;
-	gboolean from_filter;
+	GSList *tags;
+	gboolean from_hashtag; /* This status was created by a hashtag subscription */
 };
 
 typedef enum {
@@ -83,7 +83,6 @@ struct mastodon_notification {
 	time_t created_at;
 	struct mastodon_account *account;
 	struct mastodon_status *status;
-	gboolean from_filter;
 };
 
 struct mastodon_report {
@@ -120,6 +119,7 @@ static void ms_free(struct mastodon_status *ms)
 	g_free(ms->text);
 	g_free(ms->url);
 	ma_free(ms->account);
+	g_slist_free_full(ms->tags, g_free);
 	g_free(ms);
 }
 
@@ -336,6 +336,18 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			ms->rt_id = ms->id = v->u.integer;
 		} else if (strcmp("in_reply_to_id", k) == 0 && v->type == json_integer) {
 			ms->reply_to = v->u.integer;
+		} else if (strcmp("tags", k) == 0 && v->type == json_array) {
+			GSList *l = NULL;
+			for (int i = 0; i < v->u.array.length; i++) {
+				json_value *tag = v->u.array.values[i];
+				if (tag->type == json_object) {
+					const char *name = json_o_str(tag, "name");
+					if (name) {
+						l = g_slist_prepend(l, g_strdup(name));
+					}
+				}
+			}
+			ms->tags = l;
 		}
 	}
 
@@ -344,8 +356,10 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 		if (rms) {
 			ms->text = g_strdup_printf("boosted @%s: %s", rms->account->acct, rms->text);
 			ms->id = rms->id;
-			ms->url = g_strdup(rms->url);
+			ms->url = rms->url; // adopt
+			rms->url = NULL;
 			ms_free(rms);
+			// FIXME: I'm not sure about tags.
 		}
 	} else if (text_value && text_value->type == json_string) {
 		ms->text = g_strdup(text_value->u.string.ptr);
@@ -581,70 +595,51 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 }
 
 /**
- * Function that is called to see the filter statuses in groupchat windows.
- */
-static void mastodon_status_show_filter(struct im_connection *ic, struct mastodon_status *status)
-{
-	struct mastodon_data *md = ic->proto_data;
-	char *msg = mastodon_msg_add_id(ic, status, "");
-	struct mastodon_filter *tf;
-	GSList *f;
-	GSList *l;
-
-	for (f = md->filters; f; f = g_slist_next(f)) {
-		tf = f->data;
-
-		switch (tf->type) {
-		case MASTODON_FILTER_TYPE_FOLLOW:
-			if (status->account->id != tf->uid) {
-				continue;
-			}
-			break;
-
-		case MASTODON_FILTER_TYPE_TRACK:
-			if (strcasestr(status->text, tf->text) == NULL) {
-				continue;
-			}
-			break;
-
-		default:
-			continue;
-		}
-
-		for (l = tf->groupchats; l; l = g_slist_next(l)) {
-			imcb_chat_msg(l->data, status->account->acct,
-			              msg ? msg : status->text, 0, 0);
-		}
-	}
-
-	g_free(msg);
-}
-
-/**
- * Function that is called to see the statuses in a groupchat window.
+ * Function that is called to see the statuses in a group chat. Note
+ * that the status might be tagged and that group chats dedicated to
+ * particular hashtags might exist. In this case, put the status
+ * there, too. Do this for each tag!
  */
 static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_status *status)
 {
 	struct mastodon_data *md = ic->proto_data;
-	struct groupchat *gc;
 	gboolean me = g_strcasecmp(md->user, status->account->acct) == 0;
-	char *msg;
-
-	// Create a new groupchat if it does not exsist.
-	gc = mastodon_groupchat_init(ic);
 
 	if (!me) {
 		/* MUST be done before mastodon_msg_add_id() to avoid #872. */
 		mastodon_add_buddy(ic, status->account->id, status->account->acct, status->account->display_name);
 	}
-	msg = mastodon_msg_add_id(ic, status, "");
 
-	// Say it!
-	if (me) {
-		imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
-	} else {
-		imcb_chat_msg(gc, status->account->acct,
-		              msg ? msg : status->text, 0, status->created_at);
+	char *msg = mastodon_msg_add_id(ic, status, "");
+
+	// If the status got here from the user timeline, use the
+	// default group chat, md->timeline_gc. Create it, if it does
+	// not exist.
+	if (!status->from_hashtag) {
+		struct groupchat *gc = mastodon_groupchat_init(ic);
+
+		if (me) {
+			imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
+		} else {
+			imcb_chat_msg(gc, status->account->acct,
+				      msg ? msg : status->text, 0, status->created_at);
+		}
+	}
+
+	// Add the status to any other existing group chats whose
+	// title matches one of the tags.
+	for (GSList *l = status->tags; l; l = l->next) {
+		char *tag = l->data;
+		struct groupchat *c = bee_chat_by_title(ic->bee, ic, tag);
+		if (c) {
+			if (me) {
+				imcb_chat_log(c, "You: %s", msg ? msg : status->text);
+			} else {
+				imcb_chat_msg(c, status->account->acct,
+					      msg ? msg : status->text, 0, status->created_at);
+			}
+
+		}
 	}
 
 	g_free(msg);
@@ -739,9 +734,7 @@ static void mastodon_status_show(struct im_connection *ic, struct mastodon_statu
 		strip_newlines(ms->text);
 	}
 
-	if (ms->from_filter) {
-		mastodon_status_show_filter(ic, ms);
-	} else if (md->flags & MASTODON_MODE_CHAT) {
+	if (md->flags & MASTODON_MODE_CHAT) {
 		mastodon_status_show_chat(ic, ms);
 	} else {
 		mastodon_status_show_msg(ic, ms);
@@ -756,7 +749,7 @@ static void mastodon_notification_show(struct im_connection *ic, struct mastodon
 /**
  * Add exactly one notification to the timeline.
  */
-static void mastodon_stream_handle_notification(struct im_connection *ic, json_value *parsed, gboolean from_filter)
+static void mastodon_stream_handle_notification(struct im_connection *ic, json_value *parsed)
 {
 	struct mastodon_notification *mn = mastodon_xt_get_notification(parsed);
 	if (mn) {
@@ -768,68 +761,63 @@ static void mastodon_stream_handle_notification(struct im_connection *ic, json_v
 /**
  * Add exactly one status to the timeline.
  */
-static void mastodon_stream_handle_update(struct im_connection *ic, json_value *parsed, gboolean from_filter)
+static void mastodon_stream_handle_update(struct im_connection *ic, json_value *parsed, gboolean from_hashtag)
 {
 	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
 	if (ms) {
+		ms->from_hashtag = from_hashtag;
 		mastodon_status_show(ic, ms);
 		ms_free(ms);
 	}
 }
 
-static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *parsed, gboolean from_filter)
+static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *parsed)
 {
 	struct mastodon_data *md = ic->proto_data;
 	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
 	if (ms) {
 		mastodon_log(ic, "Message %d was deleted", md->log[ms->id].id);
 		ms_free(ms);
+	} else {
+		mastodon_log(ic, "Error parsing a deletion event");
 	}
 }
 
-static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type, json_value *parsed, gboolean from_filter)
+static void mastodon_stream_handle_event(struct im_connection *ic, mastodon_evt_flags_t evt_type,
+					 json_value *parsed, gboolean from_hashtag)
 {
 	if (evt_type == MASTODON_EVT_UPDATE) {
-		mastodon_stream_handle_update(ic, parsed, from_filter);
+		mastodon_stream_handle_update(ic, parsed, from_hashtag);
 	} else if (evt_type == MASTODON_EVT_NOTIFICATION) {
-		mastodon_stream_handle_notification(ic, parsed, from_filter);
+		mastodon_stream_handle_notification(ic, parsed);
 	} else if (evt_type == MASTODON_EVT_DELETE) {
-		mastodon_stream_handle_delete(ic, parsed, from_filter);
+		mastodon_stream_handle_delete(ic, parsed);
 	} else {
 		mastodon_log(ic, "Ignoring event type %d", evt_type);
 	}
 }
 
-static void mastodon_http_stream(struct http_request *req)
+static void mastodon_http_stream(struct http_request *req, gboolean from_hashtag)
 {
 	struct im_connection *ic = req->data;
 	struct mastodon_data *md = ic->proto_data;
 	int len = 0;
 	char *nl;
-	gboolean from_filter;
 
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
 	if ((req->flags & HTTPC_EOF) || !req->reply_body) {
-		if (req == md->stream) {
-			md->stream = NULL;
-		} else if (req == md->filter_stream) {
-			md->filter_stream = NULL;
-		}
-
+		md->streams = g_slist_remove (md->streams, req);
 		imcb_error(ic, "Stream closed (%s)", req->status_string);
-		if (req->status_code == 401) {
-			imcb_error(ic, "Check your system clock.");
-		}
 		imc_logout(ic, TRUE);
+		http_close(req);
 		return;
 	}
 
-	if (req == md->stream) {
-		ic->flags |= OPT_PONGED;
-	}
+	/* It doesn't matter which stream sent us something. */
+	ic->flags |= OPT_PONGED;
 
 	/*
 https://github.com/tootsuite/documentation/blob/master/Using-the-API/Streaming-API.md
@@ -883,8 +871,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server
 
 			json_value *parsed;
 			if ((parsed = json_parse(data->str, data->len))) {
-				from_filter = (req == md->filter_stream);
-				mastodon_stream_handle_event(ic, evt_type, parsed, from_filter);
+				mastodon_stream_handle_event(ic, evt_type, parsed, from_hashtag);
 				json_value_free(parsed);
 			}
 
@@ -897,196 +884,80 @@ end:
 
 	/* We might have multiple events */
 	if (req->body_size > 0) {
-		mastodon_http_stream(req);
+		mastodon_http_stream(req, from_hashtag);
 	}
 }
 
-gboolean mastodon_open_stream(struct im_connection *ic)
+static void mastodon_http_stream_user(struct http_request *req)
+{
+	mastodon_http_stream(req, FALSE);
+}
+static void mastodon_http_stream_hashtag(struct http_request *req)
+{
+	mastodon_http_stream(req, TRUE);
+}
+
+void mastodon_stream(struct im_connection *ic, struct http_request *req)
 {
 	struct mastodon_data *md = ic->proto_data;
-
-	if ((md->stream = mastodon_http(ic, MASTODON_USER_STREAMING_URL,
-	                               mastodon_http_stream, ic, HTTP_GET, NULL, 0))) {
-		/* This flag must be enabled or we'll get no data until EOF
-		   (which err, kind of, defeats the purpose of a streaming API). */
-		md->stream->flags |= HTTPC_STREAMING;
-		return TRUE;
+	if (req) {
+		req->flags |= HTTPC_STREAMING;
+		md->streams = g_slist_prepend(md->streams, req);
 	}
 
-	return FALSE;
 }
 
-static gboolean mastodon_filter_stream(struct im_connection *ic)
+void mastodon_open_stream(struct im_connection *ic)
 {
-	struct mastodon_data *md = ic->proto_data;
-	char *args[4] = { "follow", NULL, "track", NULL };
-	GString *followstr = g_string_new("");
-	GString *trackstr = g_string_new("");
-	gboolean ret = FALSE;
-	struct mastodon_filter *tf;
-	GSList *l;
-
-	for (l = md->filters; l; l = g_slist_next(l)) {
-		tf = l->data;
-
-		switch (tf->type) {
-		case MASTODON_FILTER_TYPE_FOLLOW:
-			if (followstr->len > 0) {
-				g_string_append_c(followstr, ',');
-			}
-
-			g_string_append_printf(followstr, "%" G_GUINT64_FORMAT,
-			                       tf->uid);
-			break;
-
-		case MASTODON_FILTER_TYPE_TRACK:
-			if (trackstr->len > 0) {
-				g_string_append_c(trackstr, ',');
-			}
-
-			g_string_append(trackstr, tf->text);
-			break;
-
-		default:
-			continue;
-		}
-	}
-
-	args[1] = followstr->str;
-	args[3] = trackstr->str;
-
-	if (md->filter_stream) {
-		http_close(md->filter_stream);
-	}
-
-	if ((md->filter_stream = mastodon_http(ic, MASTODON_FILTER_STREAM_URL,
-	                                      mastodon_http_stream, ic, HTTP_GET,
-	                                      args, 4))) {
-		/* This flag must be enabled or we'll get no data until EOF
-		   (which err, kind of, defeats the purpose of a streaming API). */
-		md->filter_stream->flags |= HTTPC_STREAMING;
-		ret = TRUE;
-	}
-
-	g_string_free(followstr, TRUE);
-	g_string_free(trackstr, TRUE);
-
-	return ret;
+	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_USER_URL,
+						 mastodon_http_stream_user, ic, HTTP_GET, NULL, 0);
+	mastodon_stream(ic, req);
 }
 
-static void mastodon_filter_users_post(struct http_request *req)
+void mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag)
+{
+	char *args[2] = {
+		"tag", hashtag,
+	};
+
+	struct http_request *req = mastodon_http(ic, MASTODON_STREAMING_HASHTAG_URL,
+						 mastodon_http_stream_hashtag, ic, HTTP_GET, args, 2);
+	mastodon_stream(ic, req);
+}
+
+static void mastodon_http_hashtag_timeline(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct mastodon_data *md;
-	struct mastodon_filter *tf;
-	GList *users = NULL;
 	json_value *parsed;
-	json_value *id;
-	const char *name;
-	GString *fstr;
-	GSList *l;
-	GList *u;
-	int i;
 
 	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
-	md = ic->proto_data;
-
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
-	}
-
-	for (l = md->filters; l; l = g_slist_next(l)) {
-		tf = l->data;
-
-		if (tf->type == MASTODON_FILTER_TYPE_FOLLOW) {
-			users = g_list_prepend(users, tf);
-		}
 	}
 
 	if (parsed->type != json_array) {
 		goto finish;
 	}
 
-	for (i = 0; i < parsed->u.array.length; i++) {
-		id = json_o_get(parsed->u.array.values[i], "id");
-		name = json_o_str(parsed->u.array.values[i], "screen_name");
-
-		if (!name || !id || id->type != json_integer) {
-			continue;
-		}
-
-		for (u = users; u; u = g_list_next(u)) {
-			tf = u->data;
-
-			if (g_strcasecmp(tf->text, name) == 0) {
-				tf->uid = id->u.integer;
-				users = g_list_delete_link(users, u);
-				break;
-			}
-		}
+	for (int i = 0; i < parsed->u.array.length; i++) {
+		json_value *node = parsed->u.array.values[i];
+		struct mastodon_status *ms = mastodon_xt_get_status(node);
+		ms->from_hashtag = TRUE;
+		mastodon_status_show(ic, ms);
+		ms_free(ms);
 	}
-
 finish:
 	json_value_free(parsed);
-	mastodon_filter_stream(ic);
-
-	if (!users) {
-		return;
-	}
-
-	fstr = g_string_new("");
-
-	for (u = users; u; u = g_list_next(u)) {
-		if (fstr->len > 0) {
-			g_string_append(fstr, ", ");
-		}
-
-		g_string_append(fstr, tf->text);
-	}
-
-	imcb_error(ic, "Failed UID acquisitions: %s", fstr->str);
-
-	g_string_free(fstr, TRUE);
-	g_list_free(users);
 }
 
-gboolean mastodon_open_filter_stream(struct im_connection *ic)
+void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag)
 {
-	struct mastodon_data *md = ic->proto_data;
-	char *args[2] = { "screen_name", NULL };
-	GString *ustr = g_string_new("");
-	struct mastodon_filter *tf;
-	struct http_request *req;
-	GSList *l;
-
-	for (l = md->filters; l; l = g_slist_next(l)) {
-		tf = l->data;
-
-		if (tf->type != MASTODON_FILTER_TYPE_FOLLOW || tf->uid != 0) {
-			continue;
-		}
-
-		if (ustr->len > 0) {
-			g_string_append_c(ustr, ',');
-		}
-
-		g_string_append(ustr, tf->text);
-	}
-
-	if (ustr->len == 0) {
-		g_string_free(ustr, TRUE);
-		return mastodon_filter_stream(ic);
-	}
-
-	args[1] = ustr->str;
-	req = mastodon_http(ic, MASTODON_USERS_LOOKUP_URL, mastodon_filter_users_post, ic, HTTP_GET, args, 2);
-
-	g_string_free(ustr, TRUE);
-	return req != NULL;
+	char *url = g_strdup_printf(MASTODON_HASHTAG_TIMELINE_URL, hashtag);
+	mastodon_http(ic, url, mastodon_http_hashtag_timeline, ic, HTTP_GET, NULL, 0);
 }
 
 /**
@@ -1139,6 +1010,7 @@ void mastodon_flush_timeline(struct im_connection *ic)
 
 	ml_free(home_timeline);
 	ml_free(notifications);
+	g_slist_free(output);
 
 	md->flags &= ~(MASTODON_DOING_TIMELINE | MASTODON_GOT_TIMELINE | MASTODON_GOT_NOTIFICATIONS);
 	md->home_timeline_obj = md->notifications_obj = NULL;
@@ -1791,7 +1663,7 @@ static void mastodon_http_follow1(struct http_request *req)
 		return;
 	}
 
-	if (parsed->type != json_array && parsed->u.array.length > 0) {
+	if (parsed->type != json_array) {
 		goto finish;
 	}
 
@@ -1915,7 +1787,7 @@ finish:
 /**
  * Add the buddies the current account is following.
  */
-void mastodon_following(struct im_connection *ic, gint64 max_id)
+void mastodon_following(struct im_connection *ic)
 {
 	gint64 id = set_getint(&ic->acc->set, "account_id");
 
@@ -1923,22 +1795,8 @@ void mastodon_following(struct im_connection *ic, gint64 max_id)
 		return;
 	}
 
-	// insert id into the URL
-	char *url = g_strdup_printf(MASTODON_FOLLOWING_URL, id);
-
-	// the first call must not set a max_id
-	if (max_id == 0) {
-		mastodon_http(ic, url, mastodon_http_following, ic, HTTP_GET, NULL, 0);
-	} else {
-		char *args[2];
-		args[0] = "max_id";
-		args[1] = g_strdup_printf("%" G_GINT64_FORMAT, max_id);
-
-		mastodon_http(ic, url, mastodon_http_following, ic, HTTP_GET, args, 2);
-
-		g_free(args[1]);
-	}
-
+	char *url = g_strdup_printf(MASTODON_ACCOUNT_FOLLOWING_URL, id);
+	mastodon_http(ic, url, mastodon_http_following, ic, HTTP_GET, NULL, 0);
 	g_free(url);
 }
 
