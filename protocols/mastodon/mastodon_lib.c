@@ -943,7 +943,8 @@ static void mastodon_http_hashtag_timeline(struct http_request *req)
 		goto finish;
 	}
 
-	for (int i = 0; i < parsed->u.array.length; i++) {
+	// Show in reverse order!
+	for (int i = parsed->u.array.length - 1; i >= 0 ; i--) {
 		json_value *node = parsed->u.array.values[i];
 		struct mastodon_status *ms = mastodon_xt_get_status(node);
 		ms->from_hashtag = TRUE;
