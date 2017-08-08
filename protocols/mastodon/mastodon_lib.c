@@ -1456,7 +1456,7 @@ void mastodon_report(struct im_connection *ic, guint64 id, char *comment)
 	mr->status_id = id;
 	mr->comment = g_strdup(comment);
 
-	mastodon_http(ic, url, mastodon_http_report, mr, HTTP_GET, NULL, 0);
+	mastodon_http(ic, url, mastodon_http_report, mr, HTTP_POST, NULL, 0);
 	g_free(url);
 }
 
