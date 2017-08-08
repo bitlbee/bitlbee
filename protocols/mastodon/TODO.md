@@ -16,6 +16,9 @@
 
 1. test muting of conversations
 
+1. Is hashtag subscription using the streaming API working or does it
+   needlessly reconnect every now and then?
+
 1. Send Merge Request!!
 
 1. When showing a status, decide how to handle the URLs of [media
