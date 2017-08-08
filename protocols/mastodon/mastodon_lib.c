@@ -277,6 +277,10 @@ static json_value *mastodon_parse_response(struct im_connection *ic, struct http
 	return ret;
 }
 
+/* These two functions are useful to debug all sorts of callbacks. */
+static void mastodon_log_object(struct im_connection *ic, json_value *node, int prefix);
+static void mastodon_log_array(struct im_connection *ic, json_value *node, int prefix);
+
 struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 {
 	struct mastodon_account *ma;
@@ -774,10 +778,15 @@ static void mastodon_stream_handle_update(struct im_connection *ic, json_value *
 static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *parsed)
 {
 	struct mastodon_data *md = ic->proto_data;
-	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
-	if (ms) {
-		mastodon_log(ic, "Message %d was deleted", md->log[ms->id].id);
-		ms_free(ms);
+	if (parsed->type == json_integer) {
+		guint64 id = parsed->u.integer;
+		for (int i = 0; i < MASTODON_LOG_LENGTH; i++) {
+			if (md->log[i].id == id) {
+				mastodon_log(ic, "Status %02x was deleted", i);
+				return;
+			}
+		}
+		mastodon_log(ic, "Unknown status %d was deleted", id);
 	} else {
 		mastodon_log(ic, "Error parsing a deletion event");
 	}
@@ -1204,13 +1213,18 @@ static char *indent(int n)
 	return n > len ? spaces : spaces + len - n;
 }
 
+/**
+ * Return a static yes or no string. No deallocation needed.
+ */
 static char *yes_or_no(int bool)
 {
 	return bool ? "yes" : "no";
 }
 
-static void mastodon_log_object(struct im_connection *ic, json_value *node, int prefix);
-
+/**
+ * Log a JSON array out to the channel. When you call it, use a
+ * prefix of 0. Recursive calls will then indent nested objects.
+ */
 static void mastodon_log_array(struct im_connection *ic, json_value *node, int prefix)
 {
 	for (int i = 0; i < node->u.array.length; i++) {
@@ -1262,6 +1276,10 @@ static void mastodon_log_array(struct im_connection *ic, json_value *node, int p
 	}
 }
 
+/**
+ * Log a JSON object out to the channel. When you call it, use a
+ * prefix of 0. Recursive calls will then indent nested objects.
+ */
 static void mastodon_log_object(struct im_connection *ic, json_value *node, int prefix)
 {
 	char *s;
@@ -1310,6 +1328,10 @@ static void mastodon_log_object(struct im_connection *ic, json_value *node, int 
 	}
 }
 
+/**
+ * Generic callback which simply logs the JSON response to the
+ * channel.
+ */
 static void mastodon_http_log_all(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
@@ -1336,7 +1358,8 @@ static void mastodon_http_log_all(struct http_request *req)
 }
 
 /**
- * Function to POST a new status to mastodon. We don't support the visibility levels "private" and "unlisted".
+ * Function to POST a new status to mastodon. We don't support the
+ * visibility levels "private" and "unlisted".
  */
 void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, int direct)
 {
@@ -1368,7 +1391,8 @@ void mastodon_post(struct im_connection *ic, char *format, guint64 id)
 void mastodon_status_delete(struct im_connection *ic, guint64 id)
 {
 	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
-	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, HTTP_DELETE, NULL, 0);
+	// No need to acknowledge the processing of the delete: we will get notified.
+	mastodon_http(ic, url, mastodon_http_callback, ic, HTTP_DELETE, NULL, 0);
 	g_free(url);
 }
 
