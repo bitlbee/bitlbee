@@ -14,12 +14,9 @@
    <root> You: [14->0a] @kensanata@social.nasqueron.org boosted your
    status ...
 
-1. Also had one crash in `mastodon_log (ic=0x10090b270,
-    format=0x100092027 "Command processed successfully")` at
-    `mastodon.c:1137` where `md->timeline_gc` results in `Cannot
-    access memory at address`. What now? I was unable to reproduce it.
-
 1. test muting of conversations
+
+1. Send Merge Request!!
 
 1. When showing a status, decide how to handle the URLs of [media
    attachments](https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md#attachment).
@@ -27,11 +24,8 @@
    of `type+" "+(text_url||remote_url)`. Deduplicate if the URL is
    also in the text itself!
 
-1. Send Merge Request!!
-
-1. Think about which commands to support in the future:
-
-	- handling of spoilers
-	- showing context
+1. handling of spoilers
 
 1. Real undo/redo implementation.
+
+1. valgrinding turned out to be hard on macOS Sierra ✗

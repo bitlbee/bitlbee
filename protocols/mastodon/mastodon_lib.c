@@ -297,11 +297,6 @@ struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 	return ma;
 }
 
-// "2017-08-02T10:45:03.000Z" -- but we're ignoring microseconds and UTC timezone
-#define MASTODON_TIME_FORMAT "%Y-%m-%dT%H:%M:%S"
-
-static void expand_entities(char **text, const json_value *node, const json_value *extended_node);
-
 /**
  * Function to fill a mastodon_status struct.
  */
@@ -311,7 +306,6 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	const json_value *rt = NULL;
 	const json_value *text_value = NULL;
 	const json_value *url_value = NULL;
-	const json_value *extended_node = NULL;
 
 	if (node->type != json_object) {
 		return FALSE;
@@ -368,8 +362,6 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	} else if (text_value && text_value->type == json_string) {
 		ms->text = g_strdup(text_value->u.string.ptr);
 		strip_html(ms->text);
-		expand_entities(&ms->text, node, extended_node);
-
 		ms->url = g_strdup(url_value->u.string.ptr);
 	}
 
@@ -427,78 +419,6 @@ static struct mastodon_notification *mastodon_xt_get_notification(const json_val
 
 	mn_free(mn);
 	return NULL;
-}
-
-// FIXME: handle media instead; no quoted status
-static void expand_entities(char **text, const json_value *node, const json_value *extended_node)
-{
-	json_value *entities, *extended_entities, *quoted;
-	char *quote_url = NULL, *quote_text = NULL;
-
-	if (!((entities = json_o_get(node, "entities")) && entities->type == json_object))
-		return;
-	if ((quoted = json_o_get(node, "quoted_status")) && quoted->type == json_object) {
-		/* New "boosts with comments" feature. Grab the
-		 * full message and try to insert it when we run into the
-		 * Toot entity. */
-		struct mastodon_status *ms = mastodon_xt_get_status(quoted);
-		quote_text = g_strdup_printf("@%s: %s", ms->account->acct, ms->text);
-		quote_url = g_strdup_printf("%s/status/%" G_GUINT64_FORMAT, ms->account->acct, ms->id);
-		ms_free(ms);
-	} else {
-		quoted = NULL;
-	}
-
-	if (extended_node) {
-		extended_entities = json_o_get(extended_node, "entities");
-		if (extended_entities && extended_entities->type == json_object) {
-			entities = extended_entities;
-		}
-	}
-
-	JSON_O_FOREACH(entities, k, v) {
-		int i;
-
-		if (v->type != json_array) {
-			continue;
-		}
-		if (strcmp(k, "urls") != 0 && strcmp(k, "media") != 0) {
-			continue;
-		}
-
-		for (i = 0; i < v->u.array.length; i++) {
-			const char *format = "%s%s <%s>%s";
-
-			if (v->u.array.values[i]->type != json_object) {
-				continue;
-			}
-
-			const char *kort = json_o_str(v->u.array.values[i], "url");
-			const char *disp = json_o_str(v->u.array.values[i], "display_url");
-			const char *full = json_o_str(v->u.array.values[i], "expanded_url");
-			char *pos, *new;
-
-			/* Skip if a required field is missing, if the t.co URL is not in fact
-			   in the Toot at all, or if the full-ish one *is* in it already
-			   (dupes appear, especially in streaming API). */
-			if (!kort || !disp || !(pos = strstr(*text, kort)) || strstr(*text, disp)) {
-				continue;
-			}
-			if (quote_url && strstr(full, quote_url)) {
-				format = "%s<%s> [%s]%s";
-				disp = quote_text;
-			}
-
-			*pos = '\0';
-			new = g_strdup_printf(format, *text, kort,
-			                      disp, pos + strlen(kort));
-
-			g_free(*text);
-			*text = new;
-		}
-	}
-	g_free(quote_text);
-	g_free(quote_url);
 }
 
 static gboolean mastodon_xt_get_status_list(struct im_connection *ic, const json_value *node,
@@ -979,7 +899,6 @@ void mastodon_flush_timeline(struct im_connection *ic)
 	struct mastodon_data *md = ic->proto_data;
 	struct mastodon_list *home_timeline = md->home_timeline_obj;
 	struct mastodon_list *notifications = md->notifications_obj;
-	guint64 last_id = 0;
 	GSList *output = NULL;
 	GSList *l;
 
@@ -1011,10 +930,7 @@ void mastodon_flush_timeline(struct im_connection *ic)
 	// See if the user wants to see the messages in a groupchat window or as private messages.
 	while (output) {
 		struct mastodon_status *ms = output->data;
-		if (ms->id != last_id) {
-			mastodon_status_show(ic, ms);
-		}
-		last_id = ms->id;
+		mastodon_status_show(ic, ms);
 		output = g_slist_remove(output, ms);
 	}
 
@@ -1022,7 +938,7 @@ void mastodon_flush_timeline(struct im_connection *ic)
 	ml_free(notifications);
 	g_slist_free(output);
 
-	md->flags &= ~(MASTODON_DOING_TIMELINE | MASTODON_GOT_TIMELINE | MASTODON_GOT_NOTIFICATIONS);
+	md->flags &= ~(MASTODON_GOT_TIMELINE | MASTODON_GOT_NOTIFICATIONS);
 	md->home_timeline_obj = md->notifications_obj = NULL;
 }
 
@@ -1049,7 +965,6 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 	}
 
 	ml = g_new0(struct mastodon_list, 1);
-	ml->list = NULL;
 
 	mastodon_xt_get_status_list(ic, parsed, ml);
 	json_value_free(parsed);
@@ -1057,10 +972,6 @@ static void mastodon_http_get_home_timeline(struct http_request *req)
 	md->home_timeline_obj = ml;
 
 end:
-	if (!g_slist_find(mastodon_connections, ic)) {
-		return;
-	}
-
 	md->flags |= MASTODON_GOT_TIMELINE;
 
 	mastodon_flush_timeline(ic);
@@ -1089,7 +1000,6 @@ static void mastodon_http_get_notifications(struct http_request *req)
 	}
 
 	ml = g_new0(struct mastodon_list, 1);
-	ml->list = NULL;
 
 	mastodon_xt_get_notification_list(ic, parsed, ml);
 	json_value_free(parsed);
@@ -1097,10 +1007,6 @@ static void mastodon_http_get_notifications(struct http_request *req)
 	md->notifications_obj = ml;
 
 end:
-	if (!g_slist_find(mastodon_connections, ic)) {
-		return;
-	}
-
 	md->flags |= MASTODON_GOT_NOTIFICATIONS;
 
 	mastodon_flush_timeline(ic);
@@ -1139,8 +1045,7 @@ static void mastodon_get_notifications(struct im_connection *ic)
  * timeline, and notifications. During normal use, these are provided
  * via the Streaming API. However, when we connect to an instance we
  * want to load the home timeline and notifications. In order to sort
- * them in a meaningful way, we use various flags:
- * MASTODON_DOING_TIMELINE for the entire process,
+ * them in a meaningful way, we these flags:
  * MASTODON_GOT_TIMELINE to indicate that we now have home timeline,
  * MASTODON_GOT_NOTIFICATIONS to indicate that we now have notifications.
  * Both callbacks will attempt to flush the initial timeline, but this
@@ -1148,15 +1053,9 @@ static void mastodon_get_notifications(struct im_connection *ic)
  */
 void mastodon_initial_timeline(struct im_connection *ic)
 {
-	struct mastodon_data *md = ic->proto_data;
-
 	imcb_log(ic, "Getting home timeline");
-
-	md->flags |= MASTODON_DOING_TIMELINE;
-
 	mastodon_get_home_timeline(ic);
 	mastodon_get_notifications(ic);
-
 	return;
 }
 
@@ -1170,8 +1069,7 @@ void mastodon_initial_timeline(struct im_connection *ic)
 static void mastodon_http_callback(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct mastodon_data *md = ic->proto_data;
-	json_value *parsed, *id;
+	json_value *parsed;
 
 	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
@@ -1182,8 +1080,11 @@ static void mastodon_http_callback(struct http_request *req)
 		return;
 	}
 
-	if ((id = json_o_get(parsed, "id")) && id->type == json_integer) {
-		md->last_id = id->u.integer;
+	// If we just posted a status, remember it's id.
+	struct mastodon_data *md = ic->proto_data;
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	if (ms && ms->id && strcmp(ms->account->acct, md->user) == 0) {
+		md->last_id = ms->id;
 	} else {
 		md->last_id = 0;
 	}
@@ -1361,11 +1262,11 @@ static void mastodon_http_log_all(struct http_request *req)
  * Function to POST a new status to mastodon. We don't support the
  * visibility levels "private" and "unlisted".
  */
-void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, int direct)
+void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean direct)
 {
 	char *args[6] = {
 		"status", msg,
-		"visibility", direct ? "public" : "direct",
+		"visibility", direct ? "direct" : "public",
 		"in_reply_to_id", g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
 
@@ -1470,6 +1371,144 @@ void mastodon_search(struct im_connection *ic, char *what)
 	};
 
 	mastodon_http(ic, MASTODON_SEARCH_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
+}
+
+/**
+ * Attempt to flush the context data. This is called by the two
+ * callbacks for the context request because we need to wait for two
+ * responses: the original status details, and the context itself.
+ */
+void mastodon_flush_context(struct im_connection *ic)
+{
+	struct mastodon_data *md = ic->proto_data;
+
+	if (!(md->flags & MASTODON_GOT_STATUS) ||
+	    !(md->flags & MASTODON_GOT_CONTEXT)) {
+		return;
+	}
+
+	struct mastodon_status *ms = md->status_obj;
+	struct mastodon_list *bl = md->context_before_obj;
+	struct mastodon_list *al = md->context_after_obj;
+
+	for (GSList *l = bl->list; l; l = g_slist_next(l)) {
+		struct mastodon_status *s = (struct mastodon_status *) l->data;
+		mastodon_status_show_chat(ic, s);
+	}
+
+	mastodon_status_show_chat(ic, ms);
+
+	for (GSList *l = al->list; l; l = g_slist_next(l)) {
+		struct mastodon_status *s = (struct mastodon_status *) l->data;
+		mastodon_status_show_chat(ic, s);
+	}
+
+	ml_free(al);
+	ml_free(bl);
+	ms_free(ms);
+
+	md->flags &= ~(MASTODON_GOT_TIMELINE | MASTODON_GOT_NOTIFICATIONS);
+	md->status_obj = md->context_before_obj = md->context_after_obj = NULL;
+}
+
+/**
+ * Callback for the context of a status. Store it in our mastodon data
+ * structure and attempt to flush it.
+ */
+void mastodon_http_context(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+	struct mastodon_data *md = ic->proto_data;
+	json_value *parsed;
+
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		goto end;
+	}
+
+	if (parsed->type != json_object) {
+		goto finished;
+	}
+
+	struct mastodon_list *bl = g_new0(struct mastodon_list, 1);
+	struct mastodon_list *al = g_new0(struct mastodon_list, 1);
+
+	json_value *before = json_o_get(parsed, "ancestors");
+	json_value *after  = json_o_get(parsed, "descendants");
+
+	if (before->type == json_array &&
+	    mastodon_xt_get_status_list(ic, before, bl)) {
+		md->context_before_obj = bl;
+	}
+
+	if (after->type == json_array &&
+	    mastodon_xt_get_status_list(ic, after, al)) {
+		md->context_after_obj = al;
+	}
+finished:
+	json_value_free(parsed);
+end:
+	md->flags |= MASTODON_GOT_CONTEXT;
+	mastodon_flush_context(ic);
+}
+
+/**
+ * Callback for the original status as part of a context request.
+ * Store it in our mastodon data structure and attempt to flush it.
+ */
+void mastodon_http_context_status(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+
+	// Check if the connection is still active.
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	struct mastodon_data *md = ic->proto_data;
+	json_value *parsed;
+
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		goto end;
+	}
+
+	md->status_obj = mastodon_xt_get_status(parsed);
+
+	json_value_free(parsed);
+end:
+	md->flags |= MASTODON_GOT_STATUS;
+	mastodon_flush_context(ic);
+}
+
+/**
+ * Search for a status and its context. The problem is that the
+ * context doesn't include the status we're interested in. That's why
+ * we must make two requests and wait until we get the response to
+ * both.
+ */
+void mastodon_context(struct im_connection *ic, guint64 id)
+{
+	struct mastodon_data *md = ic->proto_data;
+
+	ms_free(md->status_obj);
+	ml_free(md->context_before_obj);
+	ml_free(md->context_after_obj);
+
+	md->status_obj = md->context_before_obj = md->context_after_obj = NULL;
+
+	md->flags &= ~(MASTODON_GOT_STATUS | MASTODON_GOT_CONTEXT);
+
+	char *url = g_strdup_printf(MASTODON_STATUS_CONTEXT_URL, id);
+	mastodon_http(ic, url, mastodon_http_context, ic, HTTP_GET, NULL, 0);
+	g_free(url);
+
+	url = g_strdup_printf(MASTODON_STATUS_URL, id);
+	mastodon_http(ic, url, mastodon_http_context_status, ic, HTTP_GET, NULL, 0);
+	g_free(url);
 }
 
 void mastodon_instance(struct im_connection *ic)
@@ -1658,8 +1697,6 @@ static void mastodon_http_follow2(struct http_request *req)
 	if ((it = json_o_get(parsed, "following")) && it->type == json_boolean && it->u.boolean) {
 		if ((it = json_o_get(parsed, "id")) && it->type == json_integer) {
 			guint64 id = it->u.integer;
-			struct mastodon_data *md = ic->proto_data;
-			md->last_id = id;
 			char *url = g_strdup_printf(MASTODON_ACCOUNT_URL, id);
 			mastodon_http(ic, url, mastodon_http_follow3, ic, HTTP_GET, NULL, 0);
 			g_free(url);

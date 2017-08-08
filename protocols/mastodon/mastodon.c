@@ -104,13 +104,16 @@ static struct oauth2_service *get_oauth2_service(struct im_connection *ic)
  **/
 static gboolean mastodon_length_check(struct im_connection *ic, gchar *msg)
 {
-	int max = set_getint(&ic->acc->set, "message_length");
+	int len = g_utf8_strlen(msg, -1);
+	if (len == 0) {
+		mastodon_log(ic, "Empty message");
+		return FALSE;
+	}
 
+	int max = set_getint(&ic->acc->set, "message_length");
 	if (max == 0) {
 		return TRUE;
 	}
-
-	int len = g_utf8_strlen(msg, -1);
 
 	GRegex *regex = g_regex_new (MASTODON_URL_REGEX, 0, 0, NULL);
 	GMatchInfo *match_info;
@@ -249,8 +252,6 @@ static void mastodon_connect(struct im_connection *ic)
 	} else {
 		md->flags |= MASTODON_MODE_CHAT;
 	}
-
-	md->flags &= ~MASTODON_DOING_TIMELINE;
 
 	if (!(md->flags & MASTODON_MODE_ONE) &&
 	    !(md->flags & MASTODON_HAVE_FRIENDS)) {
@@ -472,53 +473,62 @@ static void mastodon_handle_command(struct im_connection *ic, char *message);
 
 /**
  * Post a message. Make sure we get all the meta data for the status
- * right. We have to consider a few cases:
- *
- * "reply 1 msg" -> in_reply_to and who is set, change to "@who msg"
- * "reply nick msg" -> in_reply_to and who is set, change to "@who msg"
- * "post nick: msg" -> this is not a real mention, just post
- * "post @nick msg" -> starts a new conversation, not determine in_reply_to
- * "post msg" -> do nothing
- * /msg msg -> who is set, set in_reply_to, change to "@who msg" (visibility should be "direct")
+ * right.
  */
-static void mastodon_post_message(struct im_connection *ic, char *message, guint64 in_reply_to, char *who, mastodon_visibility_t visibility)
+static void mastodon_post_message(struct im_connection *ic, char *message, guint64 in_reply_to,
+				  char *who, mastodon_message_t type)
 {
 	if (!mastodon_length_check(ic, message)) {
 		return;
 	}
 
+	struct mastodon_data *md = ic->proto_data;
 	char *text = NULL;
+	gboolean direct = FALSE;
+	int wlen;
+	char *s;
 
-	// If the message starts with who, trim that.
-	if (who && strncmp(who, message, strlen(who)) == 0) {
-		message += strlen(who);
-		// we expect a space: "nick: foo" or "nick, foo"
-		if (message[0] == ' ') {
-			message++;
+	switch (type) {
+	case MASTODON_DIRECT:
+		direct = TRUE;
+		// fall through
+	case MASTODON_REPLY:
+		text = g_strdup_printf("@%s %s", who, message);
+		break;
+	case MASTODON_NEW_MESSAGE:
+		// Do nothing.
+		break;
+	case MASTODON_MAYBE_REPLY:
+		wlen = strlen(who); // length of the first word
+		if (who && strncmp(who, message, wlen) == 0 &&
+		    (s = message + wlen - 1) && (*s == ':' || *s == ',')) {
+			// Trim punctuation from who.
+			who[wlen - 1] = '\0';
+			// Change "foo: bar" to "@foo bar"
+			for (; s > message; s--) {
+				*s = *(s - 1);
+			}
+			*s = '@';
+			// Determine what we are replying to.
+			bee_user_t *bu;
+			if ((bu = bee_user_by_handle(ic->bee, ic, who))) {
+				struct mastodon_user_data *mud = bu->data;
+				if (time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
+					in_reply_to = mud->last_id;
+				}
+			} else if (strcmp(who, md->user) == 0) {
+				// Replying to myself.
+				in_reply_to = md->last_id;
+			}
 		}
-	}
-	
-	// Trim ',' or ':' from who.
-	char *s = who + strlen(who) - 1;
-	if (who && s > who && (*s == ':' || *s == ',')) {
-		*s = '\0';
-	}
-
-	bee_user_t *bu;
-	if (who && who[0] != '@' && (bu = bee_user_by_handle(ic->bee, ic, who))) {
-		struct mastodon_user_data *mud = bu->data;
-		text = g_strdup_printf("@%s %s", bu->handle, message);
-
-		if (!in_reply_to && time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
-			in_reply_to = mud->last_id;
-		}
+		break;
 	}
 
 	/* If the user runs undo between this request and its response
 	   this would delete the second-last toot. Prevent that. */
-	struct mastodon_data *md = ic->proto_data;
 	md->last_id = 0;
-	mastodon_post_status(ic, text ? text : message, in_reply_to, 0);
+
+	mastodon_post_status(ic, text ? text : message, in_reply_to, direct);
 
 	g_free(text);
 }
@@ -549,7 +559,7 @@ static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message
 	    g_strcasecmp(who + plen + 1, ic->acc->user) == 0) {
 		mastodon_handle_command(ic, message);
 	} else {
-		mastodon_post_message(ic, message, 0, who, MASTODON_VISIBILITY_DIRECT);
+		mastodon_post_message(ic, message, 0, who, MASTODON_DIRECT);
 	}
 	return 0;
 }
@@ -919,14 +929,18 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		}
 	} else if (g_strcasecmp(cmd[0], "search") == 0 && cmd[1]) {
 		mastodon_search(ic, cmd[1]);
+	} else if (g_strcasecmp(cmd[0], "context") == 0 && cmd[1]) {
+		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
+			mastodon_context(ic, id);
+		}
 	} else if (g_strcasecmp(cmd[0], "reply") == 0 && cmd[1] && cmd[2]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], &bu))) {
-			mastodon_post_message(ic, cmd[2], id, bu->handle, MASTODON_VISIBILITY_PUBLIC);
+			mastodon_post_message(ic, cmd[2], id, bu->handle, MASTODON_REPLY);
 		}
 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
-		mastodon_post_message(ic, message + 5, 0, cmd[1], MASTODON_VISIBILITY_PUBLIC);
+		mastodon_post_message(ic, message + 5, 0, cmd[1], MASTODON_NEW_MESSAGE);
 	} else if (allow_post) {
-		mastodon_post_message(ic, message, 0, cmd[0], MASTODON_VISIBILITY_PUBLIC);
+		mastodon_post_message(ic, message, 0, cmd[0], MASTODON_MAYBE_REPLY);
 	} else {
 		mastodon_log(ic, "Unknown command: %s", cmd[0]);
 	}
