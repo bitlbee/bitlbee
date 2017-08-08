@@ -43,15 +43,18 @@ typedef enum {
 	MASTODON_MODE_ONE          = 0x00002,
 	MASTODON_MODE_MANY         = 0x00004,
 	MASTODON_MODE_CHAT         = 0x00008,
-	MASTODON_DOING_TIMELINE    = 0x10000,
-	MASTODON_GOT_TIMELINE      = 0x20000,
-	MASTODON_GOT_NOTIFICATIONS = 0x40000,
+	MASTODON_GOT_TIMELINE      = 0x10000,
+	MASTODON_GOT_NOTIFICATIONS = 0x20000,
+	MASTODON_GOT_STATUS        = 0x40000,
+	MASTODON_GOT_CONTEXT       = 0x80000,
 } mastodon_flags_t;
 
 typedef enum {
-	MASTODON_VISIBILITY_PUBLIC,
-	MASTODON_VISIBILITY_DIRECT,
-} mastodon_visibility_t;
+	MASTODON_DIRECT,
+	MASTODON_REPLY,
+	MASTODON_MAYBE_REPLY,
+	MASTODON_NEW_MESSAGE,
+} mastodon_message_t;
 
 struct mastodon_log_data;
 
@@ -60,8 +63,11 @@ struct mastodon_data {
 	struct oauth2_service *oauth2_service;
 	char *oauth2_access_token;
 
-	gpointer home_timeline_obj;
-	gpointer notifications_obj;
+	gpointer home_timeline_obj; /* of mastodon_list */
+	gpointer notifications_obj; /* of mastodon_list */
+	gpointer status_obj; /* of mastodon_status */
+	gpointer context_before_obj; /* of mastodon_list */
+	gpointer context_after_obj; /* of mastodon_list */
 
 	GSList *streams; /* of struct http_request */
 	struct groupchat *timeline_gc;

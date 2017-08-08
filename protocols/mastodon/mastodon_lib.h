@@ -29,6 +29,9 @@
 
 #define MASTODON_API_URL "https://octodon.social/api/v1"
 
+// "2017-08-02T10:45:03.000Z" -- but we're ignoring microseconds and UTC timezone
+#define MASTODON_TIME_FORMAT "%Y-%m-%dT%H:%M:%S"
+
 #define MASTODON_REGISTER_APP_URL "/apps"
 #define MASTODON_VERIFY_CREDENTIALS_URL "/accounts/verify_credentials"
 #define MASTODON_STREAMING_USER_URL "/streaming/user"
@@ -50,6 +53,7 @@
 #define MASTODON_STATUS_UNMUTE_URL "/statuses/%" G_GINT64_FORMAT "/unmute"
 #define MASTODON_STATUS_FAVOURITE_URL "/statuses/%" G_GINT64_FORMAT "/favourite"
 #define MASTODON_STATUS_UNFAVOURITE_URL "/statuses/%" G_GINT64_FORMAT "/unfavourite"
+#define MASTODON_STATUS_CONTEXT_URL "/statuses/%" G_GINT64_FORMAT "/context"
 
 #define MASTODON_ACCOUNT_URL "/accounts/%" G_GINT64_FORMAT
 #define MASTODON_ACCOUNT_SEARCH_URL "/accounts/search"
@@ -76,7 +80,7 @@ void mastodon_following(struct im_connection *ic);
 void mastodon_initial_timeline(struct im_connection *ic);
 void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag);
 void mastodon_open_stream(struct im_connection *ic);
-void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, int direct);
+void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean direct);
 void mastodon_post(struct im_connection *ic, char *format, guint64 id);
 void mastodon_status_show_url(struct im_connection *ic, guint64 id);
 void mastodon_report(struct im_connection *ic, guint64 id, char *comment);
@@ -89,3 +93,4 @@ void mastodon_status(struct im_connection *ic, guint64 id);
 void mastodon_relationship(struct im_connection *ic, guint64 id);
 void mastodon_search_relationship(struct im_connection *ic, char *who);
 void mastodon_search(struct im_connection *ic, char *what);
+void mastodon_context(struct im_connection *ic, guint64 id);
