@@ -336,7 +336,8 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			ms->reply_to = v->u.integer;
 		} else if (strcmp("tags", k) == 0 && v->type == json_array) {
 			GSList *l = NULL;
-			for (int i = 0; i < v->u.array.length; i++) {
+			int i;
+			for (i = 0; i < v->u.array.length; i++) {
 				json_value *tag = v->u.array.values[i];
 				if (tag->type == json_object) {
 					const char *name = json_o_str(tag, "name");
@@ -430,7 +431,8 @@ static gboolean mastodon_xt_get_status_list(struct im_connection *ic, const json
 		return FALSE;
 	}
 
-	for (int i = 0; i < node->u.array.length; i++) {
+	int i;
+	for (i = 0; i < node->u.array.length; i++) {
 		struct mastodon_status *ms = mastodon_xt_get_status(node->u.array.values[i]);
 		if (ms) {
 			ml->list = g_slist_prepend(ml->list, ms);
@@ -449,7 +451,8 @@ static gboolean mastodon_xt_get_notification_list(struct im_connection *ic, cons
 		return FALSE;
 	}
 
-	for (int i = 0; i < node->u.array.length; i++) {
+	int i;
+	for (i = 0; i < node->u.array.length; i++) {
 		struct mastodon_notification *mn = mastodon_xt_get_notification(node->u.array.values[i]);
 		if (mn) {
 			ml->list = g_slist_prepend(ml->list, mn);
@@ -552,7 +555,8 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 
 	// Add the status to any other existing group chats whose
 	// title matches one of the tags.
-	for (GSList *l = status->tags; l; l = l->next) {
+	GSList *l;
+	for (l = status->tags; l; l = l->next) {
 		char *tag = l->data;
 		struct groupchat *c = bee_chat_by_title(ic->bee, ic, tag);
 		if (c) {
@@ -700,7 +704,8 @@ static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *
 	struct mastodon_data *md = ic->proto_data;
 	if (parsed->type == json_integer) {
 		guint64 id = parsed->u.integer;
-		for (int i = 0; i < MASTODON_LOG_LENGTH; i++) {
+		int i;
+		for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
 			if (md->log[i].id == id) {
 				mastodon_log(ic, "Status %02x was deleted", i);
 				return;
@@ -873,7 +878,8 @@ static void mastodon_http_hashtag_timeline(struct http_request *req)
 	}
 
 	// Show in reverse order!
-	for (int i = parsed->u.array.length - 1; i >= 0 ; i--) {
+	int i;
+	for (i = parsed->u.array.length - 1; i >= 0 ; i--) {
 		json_value *node = parsed->u.array.values[i];
 		struct mastodon_status *ms = mastodon_xt_get_status(node);
 		ms->from_hashtag = TRUE;
@@ -1128,7 +1134,8 @@ static char *yes_or_no(int bool)
  */
 static void mastodon_log_array(struct im_connection *ic, json_value *node, int prefix)
 {
-	for (int i = 0; i < node->u.array.length; i++) {
+	int i;
+	for (i = 0; i < node->u.array.length; i++) {
 		json_value *v = node->u.array.values[i];
 		char *s;
 		switch (v->type) {
@@ -1147,7 +1154,8 @@ static void mastodon_log_array(struct im_connection *ic, json_value *node, int p
 				break;
 			}
 			mastodon_log(ic, "%s[", indent(prefix));
-			for (int i = 0; i < v->u.array.length; i++) {
+			int i;
+			for (i = 0; i < v->u.array.length; i++) {
 				mastodon_log_object (ic, node->u.array.values[i], prefix + 1);
 			}
 			mastodon_log(ic, "%s]", indent(prefix));
@@ -1390,15 +1398,16 @@ void mastodon_flush_context(struct im_connection *ic)
 	struct mastodon_status *ms = md->status_obj;
 	struct mastodon_list *bl = md->context_before_obj;
 	struct mastodon_list *al = md->context_after_obj;
+	GSList *l;
 
-	for (GSList *l = bl->list; l; l = g_slist_next(l)) {
+	for (l = bl->list; l; l = g_slist_next(l)) {
 		struct mastodon_status *s = (struct mastodon_status *) l->data;
 		mastodon_status_show_chat(ic, s);
 	}
 
 	mastodon_status_show_chat(ic, ms);
 
-	for (GSList *l = al->list; l; l = g_slist_next(l)) {
+	for (l = al->list; l; l = g_slist_next(l)) {
 		struct mastodon_status *s = (struct mastodon_status *) l->data;
 		mastodon_status_show_chat(ic, s);
 	}
@@ -1783,7 +1792,8 @@ static void mastodon_http_following(struct http_request *req)
 		goto finish;
 	}
 
-	for (int i = 0; i < parsed->u.array.length; i++) {
+	int i;
+	for (i = 0; i < parsed->u.array.length; i++) {
 
 		struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[i]);
 
@@ -1805,8 +1815,9 @@ finish:
 		char *url = NULL;
 		char *s = NULL;
 		int len = 0;
+		int i;
 
-		for (int i = 0; header[i]; i++) {
+		for (i = 0; header[i]; i++) {
 			if (header[i] == '<') {
 				url = header + i + 1;
 			} else if (header[i] == '?') {
