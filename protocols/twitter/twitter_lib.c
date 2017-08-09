@@ -307,7 +307,7 @@ static gboolean twitter_xt_get_friends_id_list(json_value *node, struct twitter_
 		}
 
 		txl->list = g_slist_prepend(txl->list,
-		                            g_strdup_printf("%" PRIu64, c->u.array.values[i]->u.integer));
+		                            g_strdup_printf("%" PRId64, c->u.array.values[i]->u.integer));
 	}
 
 	c = json_o_get(node, "next_cursor");
@@ -440,7 +440,7 @@ static void twitter_http_get_noretweets_ids(struct http_request *req)
 
 	txl = g_new0(struct twitter_xml_list, 1);
 	txl->list = td->noretweets_ids;
-	
+
 	// Process the retweet ids
 	txl->type = TXL_ID;
 	if (parsed->type == json_array) {
@@ -451,7 +451,7 @@ static void twitter_http_get_noretweets_ids(struct http_request *req)
 				continue;
 			}
 			txl->list = g_slist_prepend(txl->list,
-			                            g_strdup_printf("%"PRIu64, c->u.integer));
+			                            g_strdup_printf("%" PRId64, c->u.integer));
 		}
 	}
 
@@ -749,7 +749,7 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 			const char *full = json_o_str(v->u.array.values[i], "expanded_url");
 			char *pos, *new;
 
-			/* Skip if a required field is missing, if the t.co URL is not in fact 
+			/* Skip if a required field is missing, if the t.co URL is not in fact
 			   in the Tweet at all, or if the full-ish one *is* in it already
 			   (dupes appear, especially in streaming API). */
 			if (!kort || !disp || !(pos = strstr(*text, kort)) || strstr(*text, disp)) {
@@ -977,9 +977,9 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	if (status->user == NULL || status->text == NULL) {
 		return;
 	}
-	
+
 	/* Check this is not a tweet that should be muted */
-	uid_str = g_strdup_printf("%" PRIu64, status->user->uid);
+	uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, status->user->uid);
 
 	if (g_slist_find_custom(td->mutes_ids, uid_str, (GCompareFunc)strcmp)) {
 		g_free(uid_str);
@@ -1169,21 +1169,21 @@ static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value
 		GSList *found;
 		char *uid_str;
 		ut = twitter_xt_get_user(target);
-		uid_str = g_strdup_printf("%" PRIu64, ut->uid);
+		uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, ut->uid);
 		if (!(found = g_slist_find_custom(td->mutes_ids, uid_str,
 		                                  (GCompareFunc)strcmp))) {
 			td->mutes_ids = g_slist_prepend(td->mutes_ids, uid_str);
 		}
 		twitter_log(ic, "Muted user %s", ut->screen_name);
 		if (getenv("BITLBEE_DEBUG")) {
-			fprintf(stderr, "New mute: %s %"PRIu64"\n",
+			fprintf(stderr, "New mute: %s %"G_GUINT64_FORMAT"\n",
 			        ut->screen_name, ut->uid);
 		}
 	} else if (strcmp(type, "unmute") == 0) {
 		GSList *found;
 		char *uid_str;
 		ut = twitter_xt_get_user(target);
-		uid_str = g_strdup_printf("%" PRIu64, ut->uid);
+		uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, ut->uid);
 		if ((found = g_slist_find_custom(td->mutes_ids, uid_str,
 		                                (GCompareFunc)strcmp))) {
 			char *found_str = found->data;
@@ -1193,7 +1193,7 @@ static gboolean twitter_stream_handle_event(struct im_connection *ic, json_value
 		g_free(uid_str);
 		twitter_log(ic, "Unmuted user %s", ut->screen_name);
 		if (getenv("BITLBEE_DEBUG")) {
-			fprintf(stderr, "New unmute: %s %"PRIu64"\n",
+			fprintf(stderr, "New unmute: %s %"G_GUINT64_FORMAT"\n",
 			        ut->screen_name, ut->uid);
 		}
 	}
