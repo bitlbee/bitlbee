@@ -215,7 +215,6 @@ static void mastodon_init(account_t * acc)
 static void mastodon_connect(struct im_connection *ic)
 {
 	struct mastodon_data *md = ic->proto_data;
-	char name[strlen(ic->acc->user) + 9];
 	url_t url;
 	char *s;
 
@@ -237,9 +236,10 @@ static void mastodon_connect(struct im_connection *ic)
 
 	md->prefix = g_strdup(url.host);
 
-	sprintf(name, "%s_%s", md->prefix, ic->acc->user);
+	char *name = g_strdup_printf("%s_%s", md->prefix, ic->acc->user);
 	imcb_add_buddy(ic, name, NULL);
 	imcb_buddy_status(ic, name, OPT_LOGGED_IN, NULL, NULL);
+	g_free(name);
 
 	md->log = g_new0(struct mastodon_log_data, MASTODON_LOG_LENGTH);
 	md->log_id = -1;
@@ -600,8 +600,8 @@ static struct groupchat *mastodon_chat_join(struct im_connection *ic,
 	struct groupchat *c = imcb_chat_new(ic, hashtag);
 	imcb_chat_topic(c, NULL, hashtag, 0);
 	imcb_chat_add_buddy(c, ic->acc->user);
-	g_free(hashtag);
 	mastodon_hashtag_timeline(ic, hashtag);
+	g_free(hashtag);
 	return c;
 }
 

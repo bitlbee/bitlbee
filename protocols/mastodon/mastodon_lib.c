@@ -894,6 +894,7 @@ void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag)
 {
 	char *url = g_strdup_printf(MASTODON_HASHTAG_TIMELINE_URL, hashtag);
 	mastodon_http(ic, url, mastodon_http_hashtag_timeline, ic, HTTP_GET, NULL, 0);
+	g_free(url);
 }
 
 /**
