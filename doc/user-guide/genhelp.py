@@ -194,6 +194,8 @@ def tag_para(tag, parent):
 def tag_emphasis(tag, parent):
     return "\x02%s\x02%s" % (tag.text, tag.tail)
 
+tag_literal = tag_emphasis
+
 def tag_ircline(tag, parent):
     return "\x02<%s>\x02 %s\n" % (tag.attrib['nick'], join(parse_subtags(tag)))
 
