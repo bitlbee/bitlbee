@@ -108,6 +108,22 @@ static void ma_free(struct mastodon_account *ma)
 }
 
 /**
+ * Creates a duplicate of an account.
+ */
+static struct mastodon_account *ma_copy(struct mastodon_account *ma0)
+{
+	if (ma0 == NULL) {
+		return NULL;
+	}
+
+	struct mastodon_account *ma = g_new0(struct mastodon_account, 1);
+	ma->id = ma0->id;
+	ma->display_name = g_strdup(ma0->display_name);
+	ma->acct = g_strdup(ma0->acct);
+	return ma;
+}
+
+/**
  * Frees a mastodon_status struct.
  */
 static void ms_free(struct mastodon_status *ms)
@@ -619,27 +635,42 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 		ma->display_name = g_strdup("Unknown");
 	}
 
+	// The status in the notification was written by you, it's
+	// account is your account, but now somebody else is doing
+	// something with it. We want to avoid the extra You at the
+	// beginning, "You: [01] @foo boosted your status: bla" should
+	// be "<foo> [01] boosted your status: bla" or "<foo> followed
+	// you".
 	if (ms == NULL) {
 		// Could be a FOLLOW notification without status.
 		ms = g_new0(struct mastodon_status, 1);
-		ms->account = notification->account;
+		ms->account = ma_copy(notification->account);
 		ms->created_at = notification->created_at;
+		// This ensures that ms will be freed when the notification is freed.
+		notification->status = ms;
+	} else {
+		// Adopt the account from the notification. The
+		// account will be freed when the notification frees
+		// the status.
+		ma_free(ms->account);
+		ms->account = ma;
+		notification->account = NULL;
 	}
 
 	char *original = ms->text;
 
 	switch (notification->type) {
 	case MN_MENTION:
-		ms->text = g_strdup_printf("@%s mentioned you: %s", ma->acct, original);
+		ms->text = g_strdup_printf("mentioned you: %s", original);
 		break;
 	case MN_REBLOG:
-		ms->text = g_strdup_printf("@%s boosted your status: %s", ma->acct, original);
+		ms->text = g_strdup_printf("boosted your status: %s", original);
 		break;
 	case MN_FAVOURITE:
-		ms->text = g_strdup_printf("@%s favourited your status: %s", ma->acct, original);
+		ms->text = g_strdup_printf("favourited your status: %s", original);
 		break;
 	case MN_FOLLOW:
-		ms->text = g_strdup_printf("@%s [%s] followed you", ma->acct, ma->display_name);
+		ms->text = g_strdup_printf("[%s] followed you", ma->display_name);
 		break;
 	}
 
