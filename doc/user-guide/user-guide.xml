@@ -36,6 +36,7 @@
   <xi:include href="Support.xml"/>
   <xi:include href="quickstart.xml"/>
   <xi:include href="commands.xml"/>
+  <xi:include href="twitter.xml"/>
   <xi:include href="misc.xml"/>
 
 </book>

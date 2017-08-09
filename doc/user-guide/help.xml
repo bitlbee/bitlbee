@@ -59,6 +59,7 @@ You can read more about them with <emphasis>help &lt;subject&gt;</emphasis>
 
 <xi:include href="quickstart.xml"/>
 <xi:include href="commands.xml"/>
+<xi:include href="twitter.xml"/>
 <xi:include href="misc.xml"/>
 
 </book>
