@@ -119,6 +119,9 @@ of of your message will count for less: URLs, domain names for mentioned user ac
 Use <literal>context &lt;id|nick&gt;</literal> to show some context for a status or the last status by a nick. This
 will display the ancestors and descendants of a status.
 </para>
+<para>
+Use <literal>timeline &lt;nick&gt;</literal> to show the most recent messages by a nick.
+</para>
 </sect1>
 <sect1 id="mreply">
 <title>Replying</title>

@@ -57,6 +57,7 @@
 
 #define MASTODON_ACCOUNT_URL "/accounts/%" G_GINT64_FORMAT
 #define MASTODON_ACCOUNT_SEARCH_URL "/accounts/search"
+#define MASTODON_ACCOUNT_STATUSES_URL "/accounts/%" G_GINT64_FORMAT "/statuses"
 #define MASTODON_ACCOUNT_FOLLOWING_URL "/accounts/%" G_GINT64_FORMAT "/following"
 #define MASTODON_ACCOUNT_BLOCK_URL "/accounts/%" G_GINT64_FORMAT "/block"
 #define MASTODON_ACCOUNT_UNBLOCK_URL "/accounts/%" G_GINT64_FORMAT "/unblock"
@@ -94,3 +95,4 @@ void mastodon_relationship(struct im_connection *ic, guint64 id);
 void mastodon_search_relationship(struct im_connection *ic, char *who);
 void mastodon_search(struct im_connection *ic, char *what);
 void mastodon_context(struct im_connection *ic, guint64 id);
+void mastodon_account_statuses(struct im_connection *ic, guint64 id);
