@@ -859,7 +859,12 @@ void mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag)
 	mastodon_stream(ic, req);
 }
 
-static void mastodon_http_hashtag_timeline(struct http_request *req)
+/**
+ * Handle a request containing nothing but statuses, e.g. a hashtag
+ * timeline (in which case you should set from_hashtag to TRUE), or
+ * from a user.
+ */
+static void mastodon_http_timeline(struct http_request *req, int from_hashtag)
 {
 	struct im_connection *ic = req->data;
 	json_value *parsed;
@@ -882,12 +887,17 @@ static void mastodon_http_hashtag_timeline(struct http_request *req)
 	for (i = parsed->u.array.length - 1; i >= 0 ; i--) {
 		json_value *node = parsed->u.array.values[i];
 		struct mastodon_status *ms = mastodon_xt_get_status(node);
-		ms->from_hashtag = TRUE;
+		ms->from_hashtag = from_hashtag;
 		mastodon_status_show(ic, ms);
 		ms_free(ms);
 	}
 finish:
 	json_value_free(parsed);
+}
+
+static void mastodon_http_hashtag_timeline(struct http_request *req)
+{
+	mastodon_http_timeline(req, 1);
 }
 
 void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag)
@@ -1521,6 +1531,29 @@ void mastodon_context(struct im_connection *ic, guint64 id)
 	g_free(url);
 }
 
+/**
+ * Callback for a reponse containing one or more statuses which are to
+ * be shown, usually the result of looking at the statuses of an
+ * account.
+ */
+void mastodon_http_statuses(struct http_request *req)
+{
+	mastodon_http_timeline(req, 0);
+}
+
+/**
+ * Show the timeline of a user.
+ */
+void mastodon_account_statuses(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf(MASTODON_ACCOUNT_STATUSES_URL, id);
+	mastodon_http(ic, url, mastodon_http_statuses, ic, HTTP_GET, NULL, 0);
+	g_free(url);
+}
+
+/**
+ * Show information about the instance.
+ */
 void mastodon_instance(struct im_connection *ic)
 {
 	mastodon_http(ic, MASTODON_INSTANCE_URL, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
