@@ -34,7 +34,7 @@ help.xml: commands.xml
 %.db.xml: %.xml docbook.xsl
 	xsltproc --xinclude --output $@ docbook.xsl $< 
 
-help.txt: $(_SRCDIR_)help.xml $(_SRCDIR_)commands.xml $(_SRCDIR_)misc.xml $(_SRCDIR_)quickstart.xml
+help.txt: $(_SRCDIR_)help.xml $(_SRCDIR_)commands.xml $(_SRCDIR_)misc.xml $(_SRCDIR_)quickstart.xml $(_SRCDIR_)twitter.xml
 	$(PYTHON) $(_SRCDIR_)genhelp.py $< $@
 
 clean: 
