@@ -912,7 +912,7 @@
 
 		<description>
 			<para>
-				With this setting enabled, you can use some commands in your Twitter channel/query. See <emphasis>help twitter</emphasis> for the list of extra commands available.
+				With this setting enabled, you can use some commands in your Twitter or Mastodon channel/query. See <emphasis>help twitter</emphasis> and <emphasis>help mastodon</emphasis> for the list of extra commands available.
 			</para>
 		</description>
 	</bitlbee-setting>

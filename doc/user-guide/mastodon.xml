@@ -1,0 +1,337 @@
+<chapter id="mastodon">
+<title>Mastodon</title>
+<para>
+Mastodon is a free, open-source social network server. A decentralized solution to commercial platforms, it avoids the risks of a single company monopolizing your communication. Anyone can run Mastodon and participate in the social network seamlessly.
+</para>
+<variablelist>
+<varlistentry><term>help mconnect</term><listitem><para>Connecting to an instance</para></listitem></varlistentry>
+<varlistentry><term>help mread</term><listitem><para>Reading your timeline</para></listitem></varlistentry>
+<varlistentry><term>help mpost</term><listitem><para>Posting a new status</para></listitem></varlistentry>
+<varlistentry><term>help mcontext</term><listitem><para>Showing a status in its context</para></listitem></varlistentry>
+<varlistentry><term>help mreply</term><listitem><para>Replying to a status</para></listitem></varlistentry>
+<varlistentry><term>help mdelete</term><listitem><para>Deleting a status</para></listitem></varlistentry>
+<varlistentry><term>help mfavourite</term><listitem><para>Favouring a status</para></listitem></varlistentry>
+<varlistentry><term>help mfollow</term><listitem><para>Following an account</para></listitem></varlistentry>
+<varlistentry><term>help mblock</term><listitem><para>Blocking an account</para></listitem></varlistentry>
+<varlistentry><term>help mmute</term><listitem><para>Muting an account</para></listitem></varlistentry>
+<varlistentry><term>help mboost</term><listitem><para>Boosting a status</para></listitem></varlistentry>
+<varlistentry><term>help mmore</term><listitem><para>Getting more information about things</para></listitem></varlistentry>
+<varlistentry><term>help msearch</term><listitem><para>Searching for accounts and hashtags</para></listitem></varlistentry>
+<varlistentry><term>help mspam</term><listitem><para>Reporting a status</para></listitem></varlistentry>
+<varlistentry><term>help mcontrol</term><listitem><para>Commands in the control channel</para></listitem></varlistentry>
+<varlistentry><term>help mhashtag</term><listitem><para>Following a hashtag</para></listitem></varlistentry>
+</variablelist>
+<sect1 id="mconnect">
+<title>Connecting</title>
+<para>
+In this section, we'll sign in as <literal>@kensanata@mastodon.weaponvsac.space</literal>. This section assumes an
+existing account on an instance! Replace username and Mastodon server when trying it.
+</para>
+<para>
+In your <literal>&amp;bitlbee</literal> channel, add a new account, change it's <literal>base_url</literal> to point
+at your instance, and switch it on:
+</para>
+<ircexample>
+<ircline nick="kensanata">account add mastodon @kensanata</ircline>
+<ircline nick="root">Account successfully added with tag mastodon</ircline>
+<ircline nick="kensanata">account mastodon set base_url https://mastodon.weaponvsac.space/api/v1</ircline>
+<ircline nick="root">base_url = `https://mastodon.weaponvsac.space/api/v1'</ircline>
+<ircline nick="kensanata">account mastodon on</ircline>
+<ircline nick="root">mastodon - Logging in: Login</ircline>
+<ircline nick="root">mastodon - Logging in: Parsing application registration response</ircline>
+<ircline nick="root">mastodon - Logging in: Starting OAuth authentication</ircline>
+</ircexample>
+<para>
+At this point, you'll get contacted by the user <literal>mastodon_oauth</literal> with a big URL that you need to
+visit using a browser. See <literal>help mconnect2</literal> for the OAuth authentication.
+</para>
+</sect1>
+<sect1 id="mconnect2">
+<title>Connecting with OAuth</title>
+<para>
+Visit the URL the <literal>mastodon_oauth</literal> user gave you and authenticate the client. You'll get back
+another very long string. Copy and paste this string:
+</para>
+<ircexample>
+<ircline nick="mastodon_oauth">Open this URL in your browser to authenticate: https://.......</ircline>
+<ircline nick="mastodon_oauth">Respond to this message with the returned authorization token.</ircline>
+<ircline nick="kensanata">****************************************************************</ircline>
+</ircexample>
+<para>
+Once you do that, your login should complete in the <literal>&amp;bitlbee</literal> channel:
+</para>
+<ircexample>
+<ircline nick="root">mastodon2 - Logging in: Requesting OAuth access token</ircline>
+<ircline nick="root">mastodon2 - Logging in: Connecting</ircline>
+<ircline nick="root">mastodon2 - Logging in: Verifying credentials</ircline>
+<ircline nick="root">mastodon2 - Logging in: Getting home timeline</ircline>
+<ircline nick="root">mastodon2 - Logging in: Logged in</ircline>
+</ircexample>
+<para>
+You should now have a channel called <literal>#mastodon.weaponsvsac.space@localhost</literal> where all the status
+updates and notifications get shown. We'll call this your <emphasis>account channel</emphasis>.
+</para>
+<para>
+Mastodon gives BitlBee a permanent authentication token, which will be saved in your configuration.
+</para>
+<para>
+You should probably save this configuration.
+</para>
+<ircexample>
+<ircline nick="kensanata">save</ircline>
+<ircline nick="root">Configuration saved</ircline>
+</ircexample>
+</sect1>
+<sect1 id="mread">
+<title>Reading</title>
+<para>
+The default <literal>mode</literal> setting is <literal>chat</literal>. This means that each Mastodon account you
+add will result in a new channel in your IRC client.
+</para>
+<para>
+Use <literal>help set mode</literal> in your Bitlbee control channel (<literal>&amp;bitlbee</literal>) to read up on
+different modes.
+</para>
+</sect1>
+<sect1 id="mpost">
+<title>Posting</title>
+<para>
+The default <literal>commands</literal> setting is <literal>true</literal>. This means that anything you type is a
+Toot unless it looks like command, in which case it is handled as such. In addition to that, you can use the
+<literal>post &lt;message&gt;</literal> command. If you set the <literal>commands</literal> setting to
+<literal>strict</literal>, using the <literal>post</literal> command is mandatory.
+</para>
+<para>
+Use <literal>help set commands</literal> in your Bitlbee control channel (<literal>&amp;bitlbee</literal>) to read
+up on the various commands.
+</para>
+<para>
+A well behaved Mastodon client will limit your Toots to 500 characters even though the underlying protocols allow
+for longer messages. By default, Bitlbee does the same. Use <literal>help set message_length</literal> in your
+Bitlbee control channel (<literal>&amp;bitlbee</literal>) to read up on the hairy details. Basically, some aspects
+of of your message will count for less: URLs, domain names for mentioned user accounts and the like. See
+<literal>help set target_url_length</literal> for more information on how URLs are counted.
+</para>
+</sect1>
+<sect1 id="mcontext">
+<title>Context</title>
+<para>
+Use <literal>context &lt;id|nick&gt;</literal> to show some context for a status or the last status by a nick. This
+will display the ancestors and descendants of a status.
+</para>
+</sect1>
+<sect1 id="mreply">
+<title>Replying</title>
+<para>
+If you use the default IRC conventions of starting a message with a nickname and a colon (<literal>:</literal>) or a
+comma (<literal>,</literal>), then your message will be treated as a reply to that nick's last message.
+</para>
+<para>
+This only works if that nick's last message was sent within the last 3h. For more information about this time window
+use <literal>help set auto_reply_timeout</literal> in your Bitlbee control channel
+(<literal>&amp;bitlbee</literal>).
+</para>
+<para>
+You can also reply to an earlier message by referring to its id using the
+<literal>reply &lt;id&gt; &lt;message&gt;</literal> command. If you set the <literal>commands</literal> setting to
+<literal>strict</literal>, using the <literal>reply</literal> command is mandatory.
+</para>
+</sect1>
+<sect1 id="mdelete">
+<title>Deleting</title>
+<para>
+Use <literal>del &lt;id&gt;</literal> to delete a status or your last status. Synonyms: <literal>delete</literal>,
+<literal>undo</literal>.
+</para>
+</sect1>
+<sect1 id="mfavourite">
+<title>Favouriting</title>
+<para>
+Use <literal>fav &lt;id|nick&gt;</literal> to favour a status or the last status by a nick. Synonyms:
+<literal>favourite</literal>, <literal>favorite</literal>, <literal>like</literal>.
+</para>
+<para>
+Use <literal>unfav &lt;id|nick&gt;</literal> to unfavour a status or
+the last status by a nick. Synonyms: <literal>unfavourite</literal>,
+<literal>unfavorite</literal>, <literal>unlike</literal>,
+<literal>dislike</literal>.
+</para>
+</sect1>
+<sect1 id="mfollow">
+<title>Following</title>
+<para>
+Use <literal>follow &lt;nick|account&gt;</literal> to follow somebody. This determines the nicks in your channel. Verify
+the list using <literal>/names</literal>.
+</para>
+<para>
+Usually you'll be providing a local or remote account to follow. In
+the background, Bitlbee will run a search for the account you provided
+and follow the first match. Sometimes there will be nicks in the
+channel which you are not following, e.g. a nick is automatically
+added to the channel when a status of theirs mentioning you is shown.
+</para>
+<para>
+Use <literal>unfollow &lt;nick&gt;</literal> to unfollow a nick.
+Synonyms: <literal>allow</literal>.
+</para>
+</sect1>
+<sect1 id="mblock">
+<title>Blocking</title>
+<para>
+Use <literal>block &lt;nick&gt;</literal> to block a nick on the server. This is independent of your IRC client's
+<literal>/ignore</literal> command, if available.
+</para>
+<para>
+Use <literal>unblock &lt;nick&gt;</literal> to unblock a nick.
+</para>
+</sect1>
+<sect1 id="mmute">
+<title>Muting</title>
+<para>
+Use <literal>mute user &lt;nick&gt;</literal> to mute a nick on the server.
+</para>
+<para>
+Use <literal>unmute user &lt;nick&gt;</literal> to unmute a nick.
+</para>
+<para>
+Use <literal>mute &lt;id|nick&gt;</literal> to mute the conversation based on a status or the last status by a nick.
+Muting a status will prevent replies to it, favourites and replies of it from appearing.
+</para>
+<para>
+Use <literal>unmute &lt;id|nick&gt;</literal> to unmute the
+conversation based on a status or the last status by a nick.
+</para>
+</sect1>
+<sect1 id="mboost">
+<title>Boosting</title>
+<para>
+Use <literal>boost &lt;id|nick&gt;</literal> to boost a status or the last status by a nick.
+</para>
+<para>
+Use <literal>unboost &lt;id|nick&gt;</literal> to unboost a status or
+the last status by a nick.
+</para>
+</sect1>
+<sect1 id="mmore">
+<title>More Information</title>
+<para>
+Use <literal>url &lt;id|nick&gt;</literal> to get the URL to a status
+or the last status by a nick.
+</para>
+<para>
+Use <literal>info instance</literal> to get debug information about your instance.
+</para>
+<para>
+Use <literal>info user &lt;nick|account&gt;</literal> to get debug information about an account.
+</para>
+<para>
+Use <literal>info relation &lt;nick|account&gt;</literal> to get debug information about the relation to an account.
+</para>
+<para>
+Use <literal>info &lt;id|nick&gt;</literal> to get debug information about a status or the last status by a nick.
+</para>
+</sect1>
+<sect1 id="msearch">
+<title>Searching</title>
+<para>
+Mastodon allows you to search for three kinds of things:
+</para>
+<itemizedlist spacing="compact">
+<listitem>
+<para>
+the URL of a status 
+</para>
+</listitem>
+<listitem>
+<para>
+users 
+</para>
+</listitem>
+<listitem>
+<para>
+hashtags 
+</para>
+</listitem>
+</itemizedlist>
+<para>
+Use <literal>search &lt;what&gt;</literal> to get debug information
+about the things found by a search.
+</para>
+</sect1>
+<sect1 id="mspam">
+<title>Spam</title>
+<para>
+Use <literal>report &lt;id|nick&gt; &lt;comment&gt;</literal> to
+report a status or the last status by a nick. Synonyms:
+<literal>spam</literal>.
+</para>
+<para>
+Note that the comment is mandatory. Explain why the status is being
+reported. The administrator of your instance will see this report and
+decide what to do about it, if anything.
+</para>
+</sect1>
+<sect1 id="mcontrol">
+<title>In the Control Channel</title>
+<para>
+As we said at the beginning, the default <literal>mode</literal>
+setting is <literal>chat</literal>. This means that each Mastodon
+account you add will result in a new channel in your IRC client. All
+the commands mentioned above are what you type in this &quot;instance
+channel.&quot; 
+</para>
+<para>
+There are some standard root commands that only work in the control
+channel, <literal>&amp;bitlbee</literal>.
+</para>
+<itemizedlist>
+<listitem>
+<para>
+<literal>info &lt;account&gt; &lt;nick&gt;</literal> shows you
+information about the nick in the instance channel
+</para>
+</listitem>
+<listitem>
+<para>
+<literal>block &lt;account&gt; &lt;nick&gt;</literal> blocks nick
+</para>
+</listitem>
+<listitem>
+<para>
+<literal>allow &lt;account&gt; &lt;nick&gt;</literal> unblocks
+nick 
+</para>
+</listitem>
+</itemizedlist>
+</sect1>
+<sect1 id="mhashtag">
+<title>Following a Hashtag</title>
+<para>
+This also happens from the control channel,
+<literal>&amp;bitlbee</literal>.
+</para>
+<para>
+Here's how to subscribe to <literal>#hashtag</literal> for the account
+<literal>mastodon</literal>. The <literal>chat add</literal> command
+takes the parameters <emphasis>account</emphasis>,
+<emphasis>hashtag</emphasis>, and <emphasis>channel name</emphasis>.
+In the example we're simply giving the channel the same name. You can
+name the channel whatever you want. The important part is that the
+channel <emphasis>topic</emphasis> must be the hashtag it is
+subscribing to. 
+</para>
+<ircexample>
+<ircline nick="kensanata">chat add mastodon hashtag #hashtag</ircline>
+<ircline nick="kensanata">channel #hashtag set auto_join true</ircline>
+<ircline nick="kensanata">/join #hashtag</ircline>
+</ircexample>
+<para>
+Don't forget to <literal>save</literal> your config.
+</para>
+<para>
+Note that where as you can still issue commands in these hashtag
+channels, the output is going to appear in the original
+<emphasis>account channel</emphasis>.
+</para>
+</sect1>
+</chapter>
