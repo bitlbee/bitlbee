@@ -64,7 +64,7 @@ struct mastodon_status {
 	char *text;
 	char *url;
 	struct mastodon_account *account;
-	guint64 id, rt_id; /* Usually equal, with RTs id == *original* id */
+	guint64 id;
 	guint64 reply_to;
 	GSList *tags;
 	gboolean from_hashtag; /* This status was created by a hashtag subscription */
@@ -347,7 +347,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 		} else if (strcmp("account", k) == 0 && v->type == json_object) {
 			ms->account = mastodon_xt_get_user(v);
 		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
-			ms->rt_id = ms->id = v->u.integer;
+			ms->id = v->u.integer;
 		} else if (strcmp("in_reply_to_id", k) == 0 && v->type == json_integer) {
 			ms->reply_to = v->u.integer;
 		} else if (strcmp("tags", k) == 0 && v->type == json_array) {
@@ -485,48 +485,49 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 {
 	struct mastodon_data *md = ic->proto_data;
 	int reply_to = -1;
+	int idx = -1;
 	bee_user_t *bu;
 
-	if (ms->reply_to) {
-		int i;
-		for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
-			if (md->log[i].id == ms->reply_to) {
-				reply_to = i;
-				break;
+	/* See if we know this status and if we know the status this
+	 * one is replying to. */
+	int i;
+	for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
+		if (ms->reply_to && md->log[i].id == ms->reply_to) {
+			reply_to = i;
+		}
+		if (md->log[i].id == ms->id) {
+			idx = i;
+		}
+		if (idx != -1 && (!ms->reply_to || reply_to != -1)) {
+			break;
+		}
+	}
+
+	/* If we didn't find the status, it's new and needs an id, and
+	 * we want to record who said it, and when they said it. */
+	if (idx == -1) {
+		idx = md->log_id = (md->log_id + 1) % MASTODON_LOG_LENGTH;
+		md->log[idx].id = ms->id;
+		md->log[idx].bu = bee_user_by_handle(ic->bee, ic, ms->account->acct);
+
+		if (ms->account && ms->account->acct &&
+		    (bu = bee_user_by_handle(ic->bee, ic, ms->account->acct))) {
+			struct mastodon_user_data *mud = bu->data;
+
+			if (ms->id > mud->last_id) {
+				mud->last_id = ms->id;
+				mud->last_time = ms->created_at;
 			}
 		}
-	}
-
-	if (ms->account && ms->account->acct &&
-	    (bu = bee_user_by_handle(ic->bee, ic, ms->account->acct))) {
-		struct mastodon_user_data *tud = bu->data;
-
-		if (ms->id > tud->last_id) {
-			tud->last_id = ms->id;
-			tud->last_time = ms->created_at;
-		}
-	}
-
-	md->log_id = (md->log_id + 1) % MASTODON_LOG_LENGTH;
-	md->log[md->log_id].id = ms->id;
-	md->log[md->log_id].bu = bee_user_by_handle(ic->bee, ic, ms->account->acct);
-
-	/* This is all getting hairy. :-( If we RT'ed something ourselves,
-	   remember OUR id instead so undo will work. In other cases, the
-	   original toot's id should be remembered for deduplicating. */
-	if (g_strcasecmp(ms->account->acct, md->user) == 0) {
-		md->log[md->log_id].id = ms->rt_id;
-		/* More useful than NULL. */
-		md->log[md->log_id].bu = &mastodon_log_local_user;
 	}
 
 	if (set_getbool(&ic->acc->set, "show_ids")) {
 		if (reply_to != -1) {
 			return g_strdup_printf("\002[\002%02x->%02x\002]\002 %s%s",
-			                       md->log_id, reply_to, prefix, ms->text);
+			                       idx, reply_to, prefix, ms->text);
 		} else {
 			return g_strdup_printf("\002[\002%02x\002]\002 %s%s",
-			                       md->log_id, prefix, ms->text);
+			                       idx, prefix, ms->text);
 		}
 	} else {
 		if (*prefix) {
@@ -582,7 +583,6 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 				imcb_chat_msg(c, status->account->acct,
 					      msg ? msg : status->text, 0, status->created_at);
 			}
-
 		}
 	}
 
@@ -661,7 +661,8 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 
 	switch (notification->type) {
 	case MN_MENTION:
-		ms->text = g_strdup_printf("mentioned you: %s", original);
+		// this is fine
+		original = NULL;
 		break;
 	case MN_REBLOG:
 		ms->text = g_strdup_printf("boosted your status: %s", original);
@@ -679,12 +680,30 @@ struct mastodon_status *mastodon_notification_to_status(struct mastodon_notifica
 	return ms;
 }
 
+/**
+ * Show the status to the user.
+ */
 static void mastodon_status_show(struct im_connection *ic, struct mastodon_status *ms)
 {
 	struct mastodon_data *md = ic->proto_data;
 
 	if (ms->account == NULL || ms->text == NULL) {
 		return;
+	}
+
+	/* Deduplicating only affects the previous status shown. Thus,
+	 * if we got mentioned in a toot by a user that we're
+	 * following, chances are that both events will arrive in
+	 * sequence. In this case, the second one will be skipped.
+	 * This will also work when flushing timelines after
+	 * connecting: notification and status update should be close
+	 * to each other. This will fail if the stream is really busy.
+	 * Critically, it won't suppress statuses from later context
+	 * and timeline requests. */
+	if (ms->id == md->seen_id) {
+		return;
+	} else {
+		md->seen_id = ms->id;
 	}
 
 	/* Grrrr. Would like to do this during parsing, but can't access

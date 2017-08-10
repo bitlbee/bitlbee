@@ -72,6 +72,7 @@ struct mastodon_data {
 	GSList *streams; /* of struct http_request */
 	struct groupchat *timeline_gc;
 	guint64 last_id; /* For undo and callbacks */
+	guint64 seen_id; /* For deduplication */
 	mastodon_flags_t flags;
 
 	/* set base_url */
