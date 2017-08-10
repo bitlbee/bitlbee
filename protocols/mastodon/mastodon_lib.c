@@ -321,6 +321,7 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	struct mastodon_status *ms = {0};
 	const json_value *rt = NULL;
 	const json_value *text_value = NULL;
+	const json_value *spoiler_value = NULL;
 	const json_value *url_value = NULL;
 
 	if (node->type != json_object) {
@@ -329,9 +330,11 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	ms = g_new0(struct mastodon_status, 1);
 
 	JSON_O_FOREACH(node, k, v) {
-		if (strcmp("content", k) == 0 && v->type == json_string && text_value == NULL) {
+		if (strcmp("content", k) == 0 && v->type == json_string) {
 			text_value = v;
-		} else if (strcmp("url", k) == 0 && v->type == json_string && url_value == NULL) {
+		} if (strcmp("spoiler_text", k) == 0 && v->type == json_string) {
+			spoiler_value = v;
+		} else if (strcmp("url", k) == 0 && v->type == json_string) {
 			url_value = v;
 		} else if (strcmp("reblog", k) == 0 && v->type == json_object) {
 			rt = v;
@@ -376,8 +379,13 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			ms_free(rms);
 			// FIXME: I'm not sure about tags.
 		}
-	} else if (text_value && text_value->type == json_string) {
-		ms->text = g_strdup(text_value->u.string.ptr);
+	} else if (text_value) {
+		if (spoiler_value && *spoiler_value->u.string.ptr) {
+			ms->text = g_strdup_printf("[CW: %s] %s", spoiler_value->u.string.ptr,
+						   text_value->u.string.ptr);
+		} else {
+			ms->text = g_strdup(text_value->u.string.ptr);
+		}
 		strip_html(ms->text);
 		ms->url = g_strdup(url_value->u.string.ptr);
 	}
