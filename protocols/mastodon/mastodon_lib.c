@@ -917,13 +917,11 @@ void mastodon_open_hashtag_stream(struct im_connection *ic, char *hashtag)
 static void mastodon_http_timeline(struct http_request *req, int from_hashtag)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
 	}
@@ -1016,28 +1014,23 @@ void mastodon_flush_timeline(struct im_connection *ic)
 static void mastodon_http_get_home_timeline(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct mastodon_data *md;
-	json_value *parsed;
-	struct mastodon_list *ml;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
-	md = ic->proto_data;
+	struct mastodon_data *md = ic->proto_data;
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		goto end;
 	}
 
-	ml = g_new0(struct mastodon_list, 1);
+	struct mastodon_list *ml = g_new0(struct mastodon_list, 1);
 
 	mastodon_xt_get_status_list(ic, parsed, ml);
 	json_value_free(parsed);
 
 	md->home_timeline_obj = ml;
-
 end:
 	md->flags |= MASTODON_GOT_TIMELINE;
 
@@ -1051,22 +1044,18 @@ end:
 static void mastodon_http_get_notifications(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct mastodon_data *md;
-	json_value *parsed;
-	struct mastodon_list *ml;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
-	md = ic->proto_data;
+	struct mastodon_data *md = ic->proto_data;
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		goto end;
 	}
 
-	ml = g_new0(struct mastodon_list, 1);
+	struct mastodon_list *ml = g_new0(struct mastodon_list, 1);
 
 	mastodon_xt_get_notification_list(ic, parsed, ml);
 	json_value_free(parsed);
@@ -1136,13 +1125,11 @@ void mastodon_initial_timeline(struct im_connection *ic)
 static void mastodon_http_callback(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
 	}
@@ -1305,13 +1292,11 @@ static void mastodon_log_object(struct im_connection *ic, json_value *node, int 
 static void mastodon_http_log_all(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
 	}
@@ -1373,14 +1358,11 @@ void mastodon_http_report(struct http_request *req)
 {
 	struct mastodon_report *mr = req->data;
 	struct im_connection *ic = mr->ic;
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		goto finally;
 	}
 
-	// Parse the data.
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		goto finally;
 	}
@@ -1443,6 +1425,146 @@ void mastodon_search(struct im_connection *ic, char *what)
 }
 
 /**
+ * Show information about the instance.
+ */
+void mastodon_instance(struct im_connection *ic)
+{
+	mastodon_http(ic, MASTODON_INSTANCE_URL, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
+}
+
+void mastodon_account(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf(MASTODON_ACCOUNT_URL, id);
+	mastodon_http(ic, url, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
+	g_free(url);
+}
+
+/**
+ * Helper for all functions that need to search for an account before
+ * they can do anything else. Provide a function to use as a callback.
+ * This callback will get the account search result back and will need
+ * to call mastodon_xt_get_user and do something with it.
+ */
+void mastodon_search_account_and(struct im_connection *ic, char *who, http_input_function func)
+{
+	char *args[2] = {
+		"q", who,
+	};
+
+	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, func, ic, HTTP_GET, args, 2);
+}
+
+/**
+ * Show debug information for an account.
+ */
+void mastodon_search_account(struct im_connection *ic, char *who)
+{
+	mastodon_search_account_and(ic, who, mastodon_http_log_all);
+}
+
+/**
+ * Show debug information for the relationship with an account.
+ */
+void mastodon_relationship(struct im_connection *ic, guint64 id)
+{
+	char *args[2] = {
+		"id", g_strdup_printf("%" G_GUINT64_FORMAT, id),
+	};
+
+	mastodon_http(ic, MASTODON_ACCOUNT_RELATIONSHIP_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
+	g_free(args[1]);
+}
+
+/**
+ * Callback to print debug information about a relationship.
+ */
+static void mastodon_http_search_relationship(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		return;
+	}
+
+	struct mastodon_account *ma = mastodon_xt_get_user(parsed);
+
+	if (!ma->id) {
+		mastodon_log(ic, "Couldn't find a matching account.");
+		goto finish;
+	}
+
+	char *args[2] = {
+		"id", g_strdup_printf("%" G_GUINT64_FORMAT, ma->id),
+	};
+
+	mastodon_http(ic, MASTODON_ACCOUNT_RELATIONSHIP_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
+
+	g_free(args[1]);
+finish:
+	ma_free(ma);
+	json_value_free(parsed);
+}
+
+/**
+ * Search for an account and and show debug information for the
+ * relationship with the first account found.
+ */
+void mastodon_search_relationship(struct im_connection *ic, char *who)
+{
+	mastodon_search_account_and(ic, who, mastodon_http_search_relationship);
+}
+
+/**
+ * Show debug information for a status.
+ */
+void mastodon_status(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
+	mastodon_http(ic, url, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
+	g_free(url);
+}
+
+/**
+ * Callback for showing the URL of a status.
+ */
+static void mastodon_http_status_show_url(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		return;
+	}
+
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	if (ms) {
+		mastodon_log(ic, ms->url);
+		ms_free(ms);
+	} else {
+		mastodon_log(ic, "Error: could not fetch toot url.");
+	}
+
+	json_value_free(parsed);
+}
+
+/**
+ * Show the URL for a status.
+ */
+void mastodon_status_show_url(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
+	mastodon_http(ic, url, mastodon_http_status_show_url, ic, HTTP_GET, NULL, 0);
+	g_free(url);
+}
+
+/**
  * Attempt to flush the context data. This is called by the two
  * callbacks for the context request because we need to wait for two
  * responses: the original status details, and the context itself.
@@ -1488,14 +1610,13 @@ void mastodon_flush_context(struct im_connection *ic)
 void mastodon_http_context(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
-	struct mastodon_data *md = ic->proto_data;
-	json_value *parsed;
 
+	struct mastodon_data *md = ic->proto_data;
+
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		goto end;
 	}
@@ -1533,15 +1654,13 @@ end:
 void mastodon_http_context_status(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
 	struct mastodon_data *md = ic->proto_data;
-	json_value *parsed;
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		goto end;
 	}
@@ -1602,118 +1721,47 @@ void mastodon_account_statuses(struct im_connection *ic, guint64 id)
 }
 
 /**
- * Show information about the instance.
+ * Callback to display the timeline for a unknown user. We got the
+ * account data back and now we just take the first user and display
+ * their timeline.
  */
-void mastodon_instance(struct im_connection *ic)
-{
-	mastodon_http(ic, MASTODON_INSTANCE_URL, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
-}
-
-void mastodon_account(struct im_connection *ic, guint64 id)
-{
-	char *url = g_strdup_printf(MASTODON_ACCOUNT_URL, id);
-	mastodon_http(ic, url, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
-	g_free(url);
-}
-
-void mastodon_search_account(struct im_connection *ic, char *who)
-{
-	char *args[2] = {
-		"q", who,
-	};
-
-	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
-}
-
-void mastodon_relationship(struct im_connection *ic, guint64 id)
-{
-	char *args[2] = {
-		"id", g_strdup_printf("%" G_GUINT64_FORMAT, id),
-	};
-
-	mastodon_http(ic, MASTODON_ACCOUNT_RELATIONSHIP_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
-	g_free(args[1]);
-}
-
-static void mastodon_http_search_relationship(struct http_request *req)
+void mastodon_http_unknown_account_statuses(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
 	}
 
-	struct mastodon_account *ma = mastodon_xt_get_user(parsed);
-
-	if (!ma->id) {
-		mastodon_log(ic, "Couldn't find a matching account.");
+	if (parsed->type != json_array) {
 		goto finish;
 	}
 
-	char *args[2] = {
-		"id", g_strdup_printf("%" G_GUINT64_FORMAT, ma->id),
-	};
+	// Just use the first one, let's hope these are sorted appropriately!
+	struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[0]);
 
-	mastodon_http(ic, MASTODON_ACCOUNT_RELATIONSHIP_URL, mastodon_http_log_all, ic, HTTP_GET, args, 2);
-
-	g_free(args[1]);
-finish:
-	ma_free(ma);
-	json_value_free(parsed);
-}
-
-void mastodon_search_relationship(struct im_connection *ic, char *who)
-{
-	char *args[2] = {
-		"q", who,
-	};
-
-	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, mastodon_http_search_relationship, ic, HTTP_GET, args, 2);
-}
-
-void mastodon_status(struct im_connection *ic, guint64 id)
-{
-	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
-	mastodon_http(ic, url, mastodon_http_log_all, ic, HTTP_GET, NULL, 0);
-	g_free(url);
-}
-
-static void mastodon_http_status_show_url(struct http_request *req)
-{
-	struct im_connection *ic = req->data;
-	json_value *parsed;
-
-	// Check if the connection is still active.
-	if (!g_slist_find(mastodon_connections, ic)) {
-		return;
-	}
-
-	if (!(parsed = mastodon_parse_response(ic, req))) {
-		return;
-	}
-
-	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
-	if (ms) {
-		mastodon_log(ic, ms->url);
-		ms_free(ms);
+	if (ma->id != 0) {
+		mastodon_account_statuses(ic, ma->id);
 	} else {
-		mastodon_log(ic, "Error: could not fetch toot url.");
+		mastodon_log(ic, "This user does not have an id, this is totally illegal. No timeline for you!");
 	}
 
+	ma_free(ma);
+finish:
 	json_value_free(parsed);
 }
 
-void mastodon_status_show_url(struct im_connection *ic, guint64 id)
+/**
+ * Show the timeline of an unknown user. Thus, we first have to search
+ * for them.
+ */
+void mastodon_unknown_account_statuses(struct im_connection *ic, char *who)
 {
-	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
-	mastodon_http(ic, url, mastodon_http_status_show_url, ic, HTTP_GET, NULL, 0);
-	g_free(url);
+	mastodon_search_account_and(ic, who, mastodon_http_unknown_account_statuses);
 }
 
 /**
@@ -1722,13 +1770,11 @@ void mastodon_status_show_url(struct im_connection *ic, guint64 id)
 static void mastodon_http_follow3(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
 	}
@@ -1752,17 +1798,16 @@ static void mastodon_http_follow3(struct http_request *req)
 static void mastodon_http_follow2(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed, *it;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
 	}
 
+	json_value *it;
 	if ((it = json_o_get(parsed, "domain_blocking")) && it->type == json_boolean && it->u.boolean) {
 		mastodon_log(ic, "This user's domain is being blocked by your instance.");
 	}
@@ -1807,13 +1852,11 @@ static void mastodon_http_follow2(struct http_request *req)
 static void mastodon_http_follow1(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
 	}
@@ -1844,12 +1887,7 @@ finish:
  */
 void mastodon_follow(struct im_connection *ic, char *who)
 {
-	char *args[2] = {
-		"q", who,
-	};
-
-	// No need to acknowledge the processing of a post: we will get notified.
-	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, mastodon_http_follow1, ic, HTTP_GET, args, 2);
+	mastodon_search_account_and(ic, who, mastodon_http_follow1);
 }
 
 /**
@@ -1858,16 +1896,11 @@ void mastodon_follow(struct im_connection *ic, char *who)
 static void mastodon_http_following(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	struct mastodon_data *md = ic->proto_data;
-
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
-	// Parse the data.
+	json_value *parsed;
 	if (!(parsed = mastodon_parse_response(ic, req))) {
 		return;
 	}
@@ -1938,6 +1971,7 @@ finish:
 		g_free(header);
 	}
 
+	struct mastodon_data *md = ic->proto_data;
 	md->flags |= MASTODON_HAVE_FRIENDS;
 }
 
@@ -1963,13 +1997,11 @@ void mastodon_following(struct im_connection *ic)
 static void mastodon_http_verify_credentials(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
+	json_value *parsed;
 	if ((parsed = mastodon_parse_response(ic, req))) {
 
 		set_setint(&ic->acc->set, "account_id", json_o_get(parsed, "id")->u.integer);
@@ -1993,14 +2025,13 @@ void mastodon_verify_credentials(struct im_connection *ic)
 static void mastodon_http_register_app(struct http_request *req)
 {
 	struct im_connection *ic = req->data;
-	json_value *parsed;
-
-	// Check if the connection is still active.
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
 
 	mastodon_log(ic, "Parsing application registration response");
+
+	json_value *parsed;
 	if ((parsed = mastodon_parse_response(ic, req))) {
 
 		set_setint(&ic->acc->set, "app_id", json_o_get(parsed, "id")->u.integer);
