@@ -323,6 +323,8 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	const json_value *text_value = NULL;
 	const json_value *spoiler_value = NULL;
 	const json_value *url_value = NULL;
+	GSList *media = NULL;
+	gboolean nsfw = FALSE;
 
 	if (node->type != json_object) {
 		return FALSE;
@@ -330,9 +332,9 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	ms = g_new0(struct mastodon_status, 1);
 
 	JSON_O_FOREACH(node, k, v) {
-		if (strcmp("content", k) == 0 && v->type == json_string) {
+		if (strcmp("content", k) == 0 && v->type == json_string && *v->u.string.ptr) {
 			text_value = v;
-		} if (strcmp("spoiler_text", k) == 0 && v->type == json_string) {
+		} if (strcmp("spoiler_text", k) == 0 && v->type == json_string && *v->u.string.ptr) {
 			spoiler_value = v;
 		} else if (strcmp("url", k) == 0 && v->type == json_string) {
 			url_value = v;
@@ -366,6 +368,27 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 				}
 			}
 			ms->tags = l;
+		} else if (strcmp("sensitive", k) == 0 && v->type == json_boolean) {
+			nsfw = v->u.boolean;
+		} else if (strcmp("media_attachments", k) == 0 && v->type == json_array) {
+			int i;
+			for (i = 0; i < v->u.array.length; i++) {
+				json_value *attachment = v->u.array.values[i];
+				if (attachment->type == json_object) {
+					// text_url is preferred because that's what the UI
+					// also copies into the message
+					json_value *url = json_o_get(attachment, "text_url");
+					if (!url) {
+						url = json_o_get(attachment, "url");
+						if (!url) {
+							url = json_o_get(attachment, "remote_url");
+						}
+					}
+					if (url && url->type == json_string) {
+						media = g_slist_prepend(media, url->u.string.ptr);
+					}
+				}
+			}
 		}
 	}
 
@@ -379,16 +402,50 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			ms_free(rms);
 			// FIXME: I'm not sure about tags.
 		}
-	} else if (text_value) {
-		if (spoiler_value && *spoiler_value->u.string.ptr) {
-			ms->text = g_strdup_printf("[CW: %s] %s", spoiler_value->u.string.ptr,
-						   text_value->u.string.ptr);
-		} else {
-			ms->text = g_strdup(text_value->u.string.ptr);
-		}
-		strip_html(ms->text);
+	} else {
+		// copy URL
 		ms->url = g_strdup(url_value->u.string.ptr);
+
+		// build status text
+		GString *s = g_string_new(NULL);
+
+		if (spoiler_value) {
+			g_string_append_printf(s, "[CW: %s] ", spoiler_value->u.string.ptr);
+		}
+
+		if (text_value) {
+			g_string_append(s, text_value->u.string.ptr);
+		}
+
+		if (nsfw) {
+			if (s->len) {
+				g_string_append(s, " ");
+			}
+			g_string_append(s, "*NSFW*");
+		}
+
+		GSList *l = NULL;
+		for (l = media; l; l = l->next) {
+
+			char *url = l->data;
+
+			if (strstr(s->str, url)) {
+				// skip URLs already in the text
+				continue;
+			}
+
+			if (s->len) {
+				g_string_append(s, " ");
+			}
+			g_string_append(s, url);
+		}
+
+		ms->text = g_string_free(s, FALSE); // we keep the data
+
+		strip_html(ms->text);
 	}
+
+	g_slist_free(media); // elements are pointers into node and don't need to be freed
 
 	if (ms->text && ms->account && ms->id) {
 		return ms;
