@@ -59,12 +59,21 @@ struct mastodon_account {
 	char *acct;
 };
 
+typedef enum {
+	MV_UNKNOWN,
+	MV_PUBLIC,
+	MV_UNLISTED,
+	MV_PRIVATE,
+	MV_DIRECT,
+} mastodon_visibility_t;
+
 struct mastodon_status {
 	time_t created_at;
 	char *text;
 	char *url;
 	struct mastodon_account *account;
 	guint64 id;
+	mastodon_visibility_t visibility;
 	guint64 reply_to;
 	GSList *tags;
 	gboolean from_hashtag; /* This status was created by a hashtag subscription */
@@ -92,6 +101,19 @@ struct mastodon_report {
 	char *comment;
 };
 
+typedef enum {
+	MC_UNKNOWN,
+	MC_POST,
+	MC_DELETE,
+} mastodon_command_type_t;
+
+struct mastodon_command {
+	struct im_connection *ic;
+	guint64 id;
+	char *undo;
+	char *redo;
+	mastodon_command_type_t command;
+};
 
 /**
  * Frees a mastodon_account struct.
@@ -193,6 +215,21 @@ static void mr_free(struct mastodon_report *mr)
 	g_free(mr->comment);
 	g_free(mr);
 }
+
+/**
+ * Frees a mastodon_command struct.
+ */
+static void mc_free(struct mastodon_command *mc)
+{
+	if (mc == NULL) {
+		return;
+	}
+
+	g_free(mc->undo);
+	g_free(mc->redo);
+	g_free(mc);
+}
+
 
 /**
  * Compare status elements
@@ -348,6 +385,16 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			   is UTC since C time handling functions suck. */
 			if (strptime(v->u.string.ptr, MASTODON_TIME_FORMAT, &parsed) != NULL) {
 				ms->created_at = mktime_utc(&parsed);
+			}
+		} else if (strcmp("visibility", k) == 0 && v->type == json_string && *v->u.string.ptr) {
+			if (strcmp(v->u.string.ptr, "direct") == 0) {
+				ms->visibility = MV_DIRECT;
+			} else if (strcmp(v->u.string.ptr, "private") == 0) {
+				ms->visibility = MV_PRIVATE;
+			} else if (strcmp(v->u.string.ptr, "unlisted") == 0) {
+				ms->visibility = MV_UNLISTED;
+			} else if (strcmp(v->u.string.ptr, "public") == 0) {
+				ms->visibility = MV_PUBLIC;
 			}
 		} else if (strcmp("account", k) == 0 && v->type == json_object) {
 			ms->account = mastodon_xt_get_user(v);
@@ -824,13 +871,14 @@ static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *
 		int i;
 		for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
 			if (md->log[i].id == id) {
-				mastodon_log(ic, "Status %02x was deleted", i);
+				mastodon_log(ic, "Status %02x was deleted.", i);
 				return;
 			}
 		}
-		mastodon_log(ic, "Unknown status %d was deleted", id);
+		// This is useless information:
+		// mastodon_log(ic, "The old status %d was deleted.", id);
 	} else {
-		mastodon_log(ic, "Error parsing a deletion event");
+		mastodon_log(ic, "Error parsing a deletion event.");
 	}
 }
 
@@ -1186,12 +1234,12 @@ void mastodon_initial_timeline(struct im_connection *ic)
  * Generic callback to use after sending a POST request to mastodon
  * when the reply doesn't have any information we need. All we care
  * about are errors. If got here, there was no error, so tell the user
- * that everything went fine. If there was an id in the object
- * returned, store it for later use.
+ * that everything went fine. Store some information for later use.
  */
 static void mastodon_http_callback(struct http_request *req)
 {
-	struct im_connection *ic = req->data;
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
 	if (!g_slist_find(mastodon_connections, ic)) {
 		return;
 	}
@@ -1201,15 +1249,41 @@ static void mastodon_http_callback(struct http_request *req)
 		return;
 	}
 
-	// If we just posted a status, remember it's id.
+	/* Store stuff in the undo/redo stack. */
 	struct mastodon_data *md = ic->proto_data;
-	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
-	if (ms && ms->id && strcmp(ms->account->acct, md->user) == 0) {
-		md->last_id = ms->id;
-	} else {
-		md->last_id = 0;
-	}
+	md->last_id = 0;
 
+	struct mastodon_status *ms;
+
+	switch (mc->command) {
+	case MC_UNKNOWN:
+		break;
+	case MC_POST:
+		ms = mastodon_xt_get_status(parsed);
+		if (ms && ms->id && strcmp(ms->account->acct, md->user) == 0) {
+			md->last_id = ms->id;
+			if(md->undo_type == MASTODON_NEW) {
+				mastodon_do(ic,
+					    ms->reply_to
+					    ? g_strdup_printf("reply %" G_GUINT64_FORMAT " %s", ms->reply_to, ms->text)
+					    : g_strdup_printf("post %s", ms->text),
+					    g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id));
+			} else {
+				char *s = g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id);
+				mastodon_do_update(ic, s);
+				g_free(s);
+			}
+		}
+		break;
+	case MC_DELETE:
+		md->last_id = 0;
+		// see mastodon_http_status_delete
+		mastodon_do(ic, mc->redo, mc->undo);
+		// adopting these strings: do not free them at the end
+		mc->redo = mc->undo = 0;
+		break;
+	}
+	mc_free(mc);
 	json_value_free(parsed);
 }
 
@@ -1219,9 +1293,12 @@ static void mastodon_http_callback(struct http_request *req)
  */
 static void mastodon_http_callback_and_ack(struct http_request *req)
 {
-	mastodon_http_callback(req);
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+	mastodon_http_callback(req); // this frees mc
+
 	if (req->status_code == 200) {
-		mastodon_log(req->data, "Command processed successfully");
+		mastodon_log(ic, "Command processed successfully");
 	}
 }
 
@@ -1391,8 +1468,13 @@ void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_
 		"in_reply_to_id", g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
 
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+
+	mc->command = MC_POST;
+
 	// No need to acknowledge the processing of a post: we will get notified.
-	mastodon_http(ic, MASTODON_STATUS_POST_URL, mastodon_http_callback, ic, HTTP_POST,
+	mastodon_http(ic, MASTODON_STATUS_POST_URL, mastodon_http_callback, mc, HTTP_POST,
 	             args, in_reply_to ? 6 : 4);
 
 	g_free(args[5]);
@@ -1405,17 +1487,96 @@ void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_
  */
 void mastodon_post(struct im_connection *ic, char *format, guint64 id)
 {
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+
+	/* FIXME: possibly set mc->undo and mc->redo? */
+
 	char *url = g_strdup_printf(format, id);
-	mastodon_http(ic, url, mastodon_http_callback_and_ack, ic, HTTP_POST, NULL, 0);
+	mastodon_http(ic, url, mastodon_http_callback_and_ack, mc, HTTP_POST, NULL, 0);
 	g_free(url);
 }
 
-void mastodon_status_delete(struct im_connection *ic, guint64 id)
+void mastodon_http_status_delete(struct http_request *req)
+{
+	struct mastodon_command *mc = req->data;
+	struct im_connection *ic = mc->ic;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		return;
+	}
+
+	/* Remember the text  */
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	struct mastodon_data *md = ic->proto_data;
+	if (ms && ms->id && strcmp(ms->account->acct, md->user) == 0) {
+		md->last_id = ms->id;
+
+		mc->redo = g_strdup_printf("delete %" G_GUINT64_FORMAT, ms->id);
+
+		if (ms->reply_to) {
+			if (ms->visibility == MV_PUBLIC) {
+				mc->undo = g_strdup_printf("reply %" G_GUINT64_FORMAT " %s",
+							   ms->reply_to, ms->text);
+			} else {
+				mc->undo = g_strdup_printf("unsupported direct reply %" G_GUINT64_FORMAT " %s",
+							   ms->reply_to, ms->text);
+			}
+		} else {
+			if (ms->visibility == MV_PUBLIC) {
+				mc->undo = g_strdup_printf("post %s",
+							   ms->text);
+			} else {
+				mc->undo = g_strdup_printf("unsupported direct post %s",
+							   ms->text);
+			}
+		}
+	}
+
+	char *url = g_strdup_printf(MASTODON_STATUS_URL, mc->id);
+	// No need to acknowledge the processing of the delete: we will get notified.
+	mastodon_http(ic, url, mastodon_http_callback, mc, HTTP_DELETE, NULL, 0);
+	g_free(url);
+}
+
+/**
+ * Helper for all functions that need to act on a status before they
+ * can do anything else. Provide a function to use as a callback. This
+ * callback will get the status back and will need to call
+ * mastodon_xt_get_status and do something with it.
+ */
+void mastodon_with_status(struct mastodon_command *mc, guint64 id, http_input_function func)
 {
 	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
-	// No need to acknowledge the processing of the delete: we will get notified.
-	mastodon_http(ic, url, mastodon_http_callback, ic, HTTP_DELETE, NULL, 0);
+	mastodon_http(mc->ic, url, func, mc, HTTP_GET, NULL, 0);
 	g_free(url);
+}
+
+/**
+ * Delete a status. In order to ensure that we can undo and redo this,
+ * fetch the status to be deleted before actually deleting it.
+ */
+void mastodon_status_delete(struct im_connection *ic, guint64 id)
+{
+	struct mastodon_data *md = ic->proto_data;
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+
+	if (md->undo_type == MASTODON_NEW) {
+		mc->command = MC_DELETE;
+		mc->id = id;
+		mastodon_with_status(mc, id, mastodon_http_status_delete);
+	} else {
+		// Shortcut
+		char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
+		// No need to acknowledge the processing of the delete: we will get notified.
+		mastodon_http(ic, url, mastodon_http_callback, mc, HTTP_DELETE, NULL, 0);
+		g_free(url);
+	}
 }
 
 /**
@@ -1449,7 +1610,9 @@ void mastodon_http_report(struct http_request *req)
 		"comment", mr->comment,
 	};
 
-	mastodon_http(ic, MASTODON_REPORT_URL, mastodon_http_callback_and_ack, ic, HTTP_POST, args, 6);
+	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
+	mc->ic = ic;
+	mastodon_http(ic, MASTODON_REPORT_URL, mastodon_http_callback_and_ack, mc, HTTP_POST, args, 6);
 
 	g_free(args[1]);
 	g_free(args[3]);
@@ -1512,7 +1675,7 @@ void mastodon_account(struct im_connection *ic, guint64 id)
  * This callback will get the account search result back and will need
  * to call mastodon_xt_get_user and do something with it.
  */
-void mastodon_search_account_and(struct im_connection *ic, char *who, http_input_function func)
+void mastodon_with_search_account(struct im_connection *ic, char *who, http_input_function func)
 {
 	char *args[2] = {
 		"q", who,
@@ -1526,7 +1689,7 @@ void mastodon_search_account_and(struct im_connection *ic, char *who, http_input
  */
 void mastodon_search_account(struct im_connection *ic, char *who)
 {
-	mastodon_search_account_and(ic, who, mastodon_http_log_all);
+	mastodon_with_search_account(ic, who, mastodon_http_log_all);
 }
 
 /**
@@ -1582,7 +1745,7 @@ finish:
  */
 void mastodon_search_relationship(struct im_connection *ic, char *who)
 {
-	mastodon_search_account_and(ic, who, mastodon_http_search_relationship);
+	mastodon_with_search_account(ic, who, mastodon_http_search_relationship);
 }
 
 /**
@@ -1828,7 +1991,7 @@ finish:
  */
 void mastodon_unknown_account_statuses(struct im_connection *ic, char *who)
 {
-	mastodon_search_account_and(ic, who, mastodon_http_unknown_account_statuses);
+	mastodon_with_search_account(ic, who, mastodon_http_unknown_account_statuses);
 }
 
 /**
@@ -1954,7 +2117,7 @@ finish:
  */
 void mastodon_follow(struct im_connection *ic, char *who)
 {
-	mastodon_search_account_and(ic, who, mastodon_http_follow1);
+	mastodon_with_search_account(ic, who, mastodon_http_follow1);
 }
 
 /**

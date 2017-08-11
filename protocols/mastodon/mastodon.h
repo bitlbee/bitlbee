@@ -56,7 +56,15 @@ typedef enum {
 	MASTODON_NEW_MESSAGE,
 } mastodon_message_t;
 
+typedef enum {
+	MASTODON_NEW,
+	MASTODON_UNDO,
+	MASTODON_REDO,
+} mastodon_undo_t;
+
 struct mastodon_log_data;
+
+#define MASTODON_MAX_UNDO 10
 
 struct mastodon_data {
 	char* user;
@@ -71,9 +79,15 @@ struct mastodon_data {
 
 	GSList *streams; /* of struct http_request */
 	struct groupchat *timeline_gc;
-	guint64 last_id; /* For undo and callbacks */
+	guint64 last_id; /* For replying or deleting the user's last status */
 	guint64 seen_id; /* For deduplication */
 	mastodon_flags_t flags;
+
+	mastodon_undo_t undo_type; /* for the current command */
+	char *undo[MASTODON_MAX_UNDO]; /* a small stack of undo statements */
+	char *redo[MASTODON_MAX_UNDO]; /* a small stack of redo statements */
+	int first_undo; /* index of the latest item in the undo and redo stacks */
+	int current_undo; /* index of the current item in the undo and redo stacks */
 
 	/* set base_url */
 	gboolean url_ssl;
@@ -95,6 +109,7 @@ struct mastodon_user_data {
 };
 
 #define MASTODON_LOG_LENGTH 256
+
 struct mastodon_log_data {
 	guint64 id;
 	/* DANGER: bu can be a dead pointer. Check it first.
@@ -123,3 +138,6 @@ char *mastodon_parse_error(struct http_request *req);
 void mastodon_log(struct im_connection *ic, char *format, ...);
 void oauth2_init(struct im_connection *ic);
 struct groupchat *mastodon_groupchat_init(struct im_connection *ic);
+
+void mastodon_do(struct im_connection *ic, char *redo, char *undo);
+void mastodon_do_update(struct im_connection *ic, char *to);
