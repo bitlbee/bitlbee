@@ -106,7 +106,7 @@ static gboolean mastodon_length_check(struct im_connection *ic, gchar *msg)
 {
 	int len = g_utf8_strlen(msg, -1);
 	if (len == 0) {
-		mastodon_log(ic, "Empty message");
+		mastodon_log(ic, "This message is empty.");
 		return FALSE;
 	}
 
@@ -470,7 +470,7 @@ int oauth2_refresh(struct im_connection *ic, const char *refresh_token)
 	                           refresh_token, oauth2_got_token, ic);
 }
 
-static void mastodon_handle_command(struct im_connection *ic, char *message);
+static void mastodon_handle_command(struct im_connection *ic, char *message, mastodon_undo_t undo_type);
 
 /**
  * Post a message. Make sure we get all the meta data for the status
@@ -573,7 +573,7 @@ static int mastodon_buddy_msg(struct im_connection *ic, char *who, char *message
 
 	if (g_strncasecmp(who, md->prefix, plen) == 0 && who[plen] == '_' &&
 	    g_strcasecmp(who + plen + 1, ic->acc->user) == 0) {
-		mastodon_handle_command(ic, message);
+		mastodon_handle_command(ic, message, MASTODON_NEW);
 	} else {
 		mastodon_post_message(ic, message, 0, who, MASTODON_DIRECT);
 	}
@@ -600,7 +600,7 @@ static void mastodon_get_info(struct im_connection *ic, char *who)
 static void mastodon_chat_msg(struct groupchat *c, char *message, int flags)
 {
 	if (c && message) {
-		mastodon_handle_command(c->ic, message);
+		mastodon_handle_command(c->ic, message, MASTODON_NEW);
 	}
 }
 
@@ -627,11 +627,11 @@ static struct groupchat *mastodon_chat_join(struct im_connection *ic,
  */
 static void mastodon_chat_leave(struct groupchat *c)
 {
-	imcb_chat_free(c);
 	struct mastodon_data *md = c->ic->proto_data;
 	if (c == md->timeline_gc) {
 		md->timeline_gc = NULL;
 	}
+	imcb_chat_free(c);
 }
 
 static void mastodon_add_permit(struct im_connection *ic, char *who)
@@ -729,12 +729,12 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 
 static void mastodon_no_id_warning(struct im_connection *ic, char *what)
 {
-	mastodon_log(ic, "User or status '%s' is unknown", what);
+	mastodon_log(ic, "User or status '%s' is unknown.", what);
 }
 
 static void mastodon_unknown_user_warning(struct im_connection *ic, char *who)
 {
-	mastodon_log(ic, "User '%s' is unknown", who);
+	mastodon_log(ic, "User '%s' is unknown.", who);
 }
 
 static guint64 mastodon_message_id_or_warn(struct im_connection *ic, char *what, bee_user_t **bu)
@@ -836,15 +836,182 @@ static void mastodon_rem_deny(struct im_connection *ic, char *who)
 }
 
 /**
+ * Add a command and a way to undo it to the undo stack. Remember that
+ * only the callback knows whether a command succeeded or not, and
+ * what the id of a newly posted status is, and all that. Thus,
+ * there's a delay that we need to take into account.
+ *
+ * The stack is organized as follows if we just did D:
+ *           0 1 2 3 4 5 6 7 8 9
+ *   undo = [a b c d e f g h i j]
+ *   redo = [A B C D E F G H I J]
+ *   first_undo = 3
+ *   current_undo = 3
+ * If we do X:
+ *   undo = [a b c d x f g h i j]
+ *   redo = [A B C D X F G H I J]
+ *   first_undo = 4
+ *   current_undo = 4
+ * If we undo it, send x and:
+ *   undo = [a b c d x f g h i j]
+ *   redo = [A B C D X F G H I J]
+ *   first_undo = 4
+ *   current_undo = 3
+ * If we redo, send X and increase current_undo.
+ * If we undo instead, send d and decrease current_undo again:
+ *   undo = [a b c d x f g h i j]
+ *   redo = [A B C D X F G H I J]
+ *   first_undo = 4
+ *   current_undo = 2
+ * If we do Y with current_undo different from first_undo, null the tail:
+ *  undo = [a b c y 0 f g h i j]
+ *  redo = [A B C Y 0 F G H I J]
+ *  first_undo = 3
+ *  current_undo = 3
+ */
+void mastodon_do(struct im_connection *ic, char *redo, char *undo) {
+	struct mastodon_data *md = ic->proto_data;
+	int i = (md->current_undo + 1) % MASTODON_MAX_UNDO;
+
+	g_free(md->redo[i]);
+	g_free(md->undo[i]);
+	md->redo[i] = redo;
+	md->undo[i] = undo;
+
+	if (md->current_undo == md->first_undo) {
+		md->current_undo = md->first_undo = i;
+	} else {
+		md->current_undo = i;
+		int end = (md->first_undo + 1) % MASTODON_MAX_UNDO;
+		for (i = (md->current_undo + 1) % MASTODON_MAX_UNDO; i != end; i = (i + 1) % MASTODON_MAX_UNDO) {
+			g_free(md->redo[i]);
+			g_free(md->undo[i]);
+			md->redo[i] = NULL;
+			md->undo[i] = NULL;
+		}
+
+		md->first_undo = md->current_undo;
+	}
+}
+
+/**
+ * Undo the last command.
+ */
+void mastodon_undo(struct im_connection *ic) {
+	struct mastodon_data *md = ic->proto_data;
+	char *cmd = md->undo[md->current_undo];
+
+	mastodon_handle_command(ic, cmd, MASTODON_UNDO);
+
+	// beware of negatives and modulo
+	md->current_undo = (md->current_undo + MASTODON_MAX_UNDO - 1) % MASTODON_MAX_UNDO;
+}
+
+/**
+ * Redo the last command.
+ */
+void mastodon_redo(struct im_connection *ic) {
+	struct mastodon_data *md = ic->proto_data;
+
+	if (md->current_undo == md->first_undo) {
+		mastodon_log(ic, "There is nothing to redo.");
+		return;
+	}
+
+	md->current_undo = (md->current_undo + 1) % MASTODON_MAX_UNDO;
+	char *cmd = md->redo[md->current_undo];
+
+	mastodon_handle_command(ic, cmd, MASTODON_REDO);
+}
+
+/**
+ * Update the current command in the stack. This is necessary when
+ * executing commands which change references that we saved. For
+ * example: every delete statement refers to an id. Whenever a post
+ * happens because of redo, the delete command in the undo stack has
+ * to be replaced. Whenever a post happens because of undo, the delete
+ * command in the redo stack has to be replaced.
+ *
+ * We make our own copies of 'to'.
+ */
+void mastodon_do_update(struct im_connection *ic, char *to)
+{
+	struct mastodon_data *md = ic->proto_data;
+	char *from = NULL;
+	int i;
+
+	switch (md->undo_type) {
+	case MASTODON_NEW:
+		// should not happen
+		return;
+	case MASTODON_UNDO:
+		// after post due to undo of a delete statement, the
+		// old delete statement is in the next redo element
+		i = (md->current_undo + 1) % MASTODON_MAX_UNDO;
+		from = g_strdup(md->redo[i]);
+		break;
+	case MASTODON_REDO:
+		// after post due to redo of a post statement, the
+		// old delete statement is in the undo element
+		i = md->current_undo;
+		from = g_strdup(md->undo[i]);
+		break;
+	}
+
+	/* After a post and a delete of that post, there are at least
+	 * two cells where the old reference can be hiding (undo of
+	 * the post and redo of the delete). Brute force! */
+	for (i = 0; i < MASTODON_MAX_UNDO; i++) {
+		if (md->undo[i] && strcmp(from, md->undo[i]) == 0) {
+			g_free(md->undo[i]);
+			md->undo[i] = g_strdup(to);
+			break;
+		}
+	}
+	for (i = 0; i < MASTODON_MAX_UNDO; i++) {
+		if (md->redo[i] && strcmp(from, md->redo[i]) == 0) {
+			g_free(md->redo[i]);
+			md->redo[i] = g_strdup(to);
+			break;
+		}
+	}
+
+	g_free(from);
+}
+
+/**
+ * Show the current history. The history shows the redo
+ * commands.
+ */
+void mastodon_history(struct im_connection *ic, gboolean undo_history) {
+	struct mastodon_data *md = ic->proto_data;
+	int i;
+	for (i = 0; i < MASTODON_MAX_UNDO; i++) {
+		// start with the last
+		int n = (md->first_undo + i + 1) % MASTODON_MAX_UNDO;
+		char *s = undo_history ? md->undo[n] : md->redo[n];
+		if (s) {
+			if (n == md->current_undo) {
+				mastodon_log(ic, "%02d > %s", MASTODON_MAX_UNDO - i, s);
+			} else {
+				mastodon_log(ic, "%02d %s", MASTODON_MAX_UNDO - i, s);
+			}
+		}
+	}
+}
+
+/**
  * Commands we understand. Changes should be documented in
  * commands.xml and on https://wiki.bitlbee.org/HowtoMastodon
  */
-static void mastodon_handle_command(struct im_connection *ic, char *message)
+static void mastodon_handle_command(struct im_connection *ic, char *message, mastodon_undo_t undo_type)
 {
 	struct mastodon_data *md = ic->proto_data;
 	gboolean allow_post = g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") != 0;
 	bee_user_t *bu = NULL;
 	guint64 id;
+
+	md->undo_type = undo_type;
 
 	char *cmds = g_strdup(message);
 	char **cmd = split_command_parts(cmds, 2);
@@ -853,6 +1020,9 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		/* Nothing to do */
 	} else if (!set_getbool(&ic->acc->set, "commands") && allow_post) {
 		/* Not supporting commands if "commands" is set to true/strict. */
+	} else if (g_strcasecmp(cmd[0], "unsupported") == 0) {
+		/* For unsupported undo and redo commands. */
+		mastodon_log(ic, message);
 	} else if (g_strcasecmp(cmd[0], "info") == 0) {
 		if (!cmd[1]) {
 			mastodon_log(ic, "Usage:\n"
@@ -869,15 +1039,32 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 		} else if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
 			mastodon_status(ic, id);
 		}
-	} else if (g_strcasecmp(cmd[0], "undo") == 0 ||
-		   g_strcasecmp(cmd[0], "del") == 0 ||
+	} else if (g_strcasecmp(cmd[0], "undo") == 0) {
+		if (cmd[1] == NULL) {
+			mastodon_undo(ic);
+		} else {
+			// because it used to take an argument
+			mastodon_log(ic, "Undo takes no arguments.");
+		}
+	} else if (g_strcasecmp(cmd[0], "redo") == 0) {
+		mastodon_redo(ic);
+	} else if (g_strcasecmp(cmd[0], "his") == 0 ||
+		   g_strcasecmp(cmd[0], "history") == 0) {
+		if (cmd[1] && g_strcasecmp(cmd[1], "undo") == 0) {
+			mastodon_history(ic, TRUE);
+		} else {
+			mastodon_history(ic, FALSE);
+		}
+	} else if (g_strcasecmp(cmd[0], "do") == 0 && cmd[1] && cmd[2]) {
+		mastodon_do(ic, g_strdup(cmd[1]), g_strdup(cmd[2]));
+	} else if (g_strcasecmp(cmd[0], "del") == 0 ||
 		   g_strcasecmp(cmd[0], "delete") == 0) {
 		if (cmd[1] == NULL && md->last_id) {
 			mastodon_status_delete(ic, md->last_id);
 		} else if ((id = mastodon_message_id_from_command_arg(ic, cmd[1], NULL))) {
 			mastodon_status_delete(ic, id);
 		} else {
-			mastodon_log(ic, "Could not undo last post");
+			mastodon_log(ic, "Could not delete the last post.");
 		}
 	} else if ((g_strcasecmp(cmd[0], "favourite") == 0 ||
 	            g_strcasecmp(cmd[0], "favorite") == 0 ||
@@ -939,7 +1126,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message)
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
 			if (!cmd[2] || strlen(cmd[2]) == 0) {
-				mastodon_log(ic, "You must provide a comment with your report");
+				mastodon_log(ic, "You must provide a comment with your report.");
 			} else {
 				mastodon_report(ic, id, cmd[2]);
 			}
