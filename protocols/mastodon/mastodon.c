@@ -502,25 +502,39 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		break;
 	case MASTODON_MAYBE_REPLY:
 		wlen = strlen(who); // length of the first word
+
+		// If the message starts with "nick:" or "nick,"
 		if (who && strncmp(who, message, wlen) == 0 &&
 		    (s = message + wlen - 1) && (*s == ':' || *s == ',')) {
+
 			// Trim punctuation from who.
 			who[wlen - 1] = '\0';
-			// Change "foo: bar" to "@foo bar"
-			for (; s > message; s--) {
-				*s = *(s - 1);
-			}
-			*s = '@';
+
 			// Determine what we are replying to.
 			bee_user_t *bu;
 			if ((bu = bee_user_by_handle(ic->bee, ic, who))) {
 				struct mastodon_user_data *mud = bu->data;
+
 				if (time(NULL) < mud->last_time + set_getint(&ic->acc->set, "auto_reply_timeout")) {
 					in_reply_to = mud->last_id;
 				}
+
+				// Change "foo: bar" to "@foo bar"
+				for (; s > message; s--) {
+					*s = *(s - 1);
+				}
+				*s = '@';
+
 			} else if (strcmp(who, md->user) == 0) {
+
 				// Replying to myself.
 				in_reply_to = md->last_id;
+
+				// Change "foo: bar" to "bar"
+				if (*(s + 1) == ' ') {
+					s++;
+				}
+				message = s;
 			}
 		}
 		break;
