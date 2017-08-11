@@ -402,9 +402,11 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			ms_free(rms);
 			// FIXME: I'm not sure about tags.
 		}
-	} else {
-		// copy URL
-		ms->url = g_strdup(url_value->u.string.ptr);
+	} else if (ms->id) {
+
+		if (url_value) {
+			ms->url = g_strdup(url_value->u.string.ptr);
+		}
 
 		// build status text
 		GString *s = g_string_new(NULL);
