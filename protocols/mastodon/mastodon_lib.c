@@ -670,19 +670,7 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 
 	char *msg = mastodon_msg_add_id(ic, status, "");
 
-	// If the status got here from the user timeline, use the
-	// default group chat, md->timeline_gc. Create it, if it does
-	// not exist.
-	if (!status->from_hashtag) {
-		struct groupchat *gc = mastodon_groupchat_init(ic);
-
-		if (me) {
-			imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
-		} else {
-			imcb_chat_msg(gc, status->account->acct,
-				      msg ? msg : status->text, 0, status->created_at);
-		}
-	}
+	gboolean seen = FALSE;
 
 	// Add the status to any other existing group chats whose
 	// title matches one of the tags.
@@ -697,6 +685,22 @@ static void mastodon_status_show_chat(struct im_connection *ic, struct mastodon_
 				imcb_chat_msg(c, status->account->acct,
 					      msg ? msg : status->text, 0, status->created_at);
 			}
+			seen = TRUE;
+		}
+	}
+
+	// If the status got here from the user timeline, use the
+	// default group chat, md->timeline_gc. Do this also if no
+	// appropriate channel was found. Create the default group
+	// chat if it does not exist.
+	if (!status->from_hashtag || !seen) {
+		struct groupchat *gc = mastodon_groupchat_init(ic);
+
+		if (me) {
+			imcb_chat_log(gc, "You: %s", msg ? msg : status->text);
+		} else {
+			imcb_chat_msg(gc, status->account->acct,
+				      msg ? msg : status->text, 0, status->created_at);
 		}
 	}
 
@@ -1967,7 +1971,7 @@ void mastodon_http_unknown_account_statuses(struct http_request *req)
 		return;
 	}
 
-	if (parsed->type != json_array) {
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
 		goto finish;
 	}
 
