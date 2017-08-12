@@ -702,13 +702,9 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 		if (parse_int64(arg, 16, &id) && id < MASTODON_LOG_LENGTH) {
 			bu = md->log[id].bu;
 			id = md->log[id].id;
-		} else if (parse_int64(arg, 10, &id)) {
-			/* Allow normal toot IDs as well; not a very useful
-			   feature but it's always been there. Just ignore
-			   very low IDs to avoid accidents. */
-			if (id < 1000000) {
-				id = 0;
-			}
+		} else {
+			/* Allow normal toot IDs as well. Required do undo posts, for example. */
+			parse_int64(arg, 10, &id);
 		}
 	}
 	if (bu_) {
