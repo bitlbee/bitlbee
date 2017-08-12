@@ -504,7 +504,7 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		wlen = strlen(who); // length of the first word
 
 		// If the message starts with "nick:" or "nick,"
-		if (who && strncmp(who, message, wlen) == 0 &&
+		if (who && wlen && strncmp(who, message, wlen) == 0 &&
 		    (s = message + wlen - 1) && (*s == ':' || *s == ',')) {
 
 			// Trim punctuation from who.
