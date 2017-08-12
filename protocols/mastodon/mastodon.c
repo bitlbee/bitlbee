@@ -1137,6 +1137,8 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		if ((bu = mastodon_user_by_nick(ic, cmd[1])) &&
 		    (id = mastodon_account_id(bu))) {
 			mastodon_account_statuses(ic, id);
+		} else if (*cmd[1] == '#') {
+			mastodon_hashtag_timeline(ic, cmd[1] + 1);
 		} else {
 			mastodon_unknown_account_statuses(ic, cmd[1]);
 		}
