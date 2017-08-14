@@ -1129,6 +1129,13 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
 			mastodon_status_show_url(ic, id);
 		}
+	} else if ((g_strcasecmp(cmd[0], "whois") == 0 ||
+		    g_strcasecmp(cmd[0], "who") == 0) && cmd[1]) {
+		if ((bu = mastodon_user_by_nick(ic, cmd[1]))) {
+			mastodon_log(ic, bu->fullname);
+		} else {
+			mastodon_unknown_user_warning(ic, cmd[1]);
+		}
 	} else if ((g_strcasecmp(cmd[0], "report") == 0 ||
 	            g_strcasecmp(cmd[0], "spam") == 0) && cmd[1]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
