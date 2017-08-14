@@ -759,6 +759,8 @@ static guint64 mastodon_user_id_or_warn(struct im_connection *ic, char *who)
 	if ((bu = mastodon_user_by_nick(ic, who)) &&
 	    (id = mastodon_account_id(bu))) {
 		return id;
+	} else if (parse_int64(who, 10, &id)) {
+		return id;
 	}
 	mastodon_unknown_user_warning(ic, who);
 	return 0;
@@ -799,10 +801,14 @@ static void mastodon_add_buddy(struct im_connection *ic, char *who, char *group)
 		// shortcut. No fancy looking at the relationship and
 		// all that. The nick is already here, after all.
 		mastodon_post(ic, MASTODON_ACCOUNT_FOLLOW_URL, MC_FOLLOW, id);
+	} else if (parse_int64(who, 10, &id)) {
+		// If we provided a numerical id, then that will also
+		// work. This is used by redo/undo.
+		mastodon_post(ic, MASTODON_ACCOUNT_FOLLOW_URL, MC_FOLLOW, id);
 	} else {
 		// Alternatively, we're looking for an unknown user.
 		// They must be searched, followed, and added to the
-		// channel. It's going to get hairy.
+		// channel. It's going to take more requests.
 		mastodon_follow(ic, who);
 	}
 }
@@ -896,6 +902,11 @@ void mastodon_do(struct im_connection *ic, char *redo, char *undo) {
 void mastodon_undo(struct im_connection *ic) {
 	struct mastodon_data *md = ic->proto_data;
 	char *cmd = md->undo[md->current_undo];
+
+	if (!cmd) {
+		mastodon_log(ic, "There is nothing to undo.");
+		return;
+	}
 
 	mastodon_handle_command(ic, cmd, MASTODON_UNDO);
 
