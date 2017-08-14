@@ -339,9 +339,11 @@ struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 
 	if ((jv = json_o_get(node, "id"))) {
 		ma->id = jv->u.integer;
+		return ma;
 	}
 
-	return ma;
+	ma_free(ma);
+	return NULL;
 }
 
 /**
@@ -1039,7 +1041,8 @@ static void mastodon_http_timeline(struct http_request *req, int from_hashtag)
 		return;
 	}
 
-	if (parsed->type != json_array) {
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "No statuses found in this timeline.");
 		goto finish;
 	}
 
@@ -1793,7 +1796,7 @@ static void mastodon_http_search_relationship(struct http_request *req)
 
 	struct mastodon_account *ma = mastodon_xt_get_user(parsed);
 
-	if (!ma->id) {
+	if (!ma) {
 		mastodon_log(ic, "Couldn't find a matching account.");
 		goto finish;
 	}
@@ -2039,16 +2042,17 @@ void mastodon_http_unknown_account_statuses(struct http_request *req)
 	}
 
 	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "Couldn't find a matching account.");
 		goto finish;
 	}
 
 	// Just use the first one, let's hope these are sorted appropriately!
 	struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[0]);
 
-	if (ma->id != 0) {
+	if (ma) {
 		mastodon_account_statuses(ic, ma->id);
 	} else {
-		mastodon_log(ic, "This user does not have an id, this is totally illegal. No timeline for you!");
+		mastodon_log(ic, "Couldn't find a matching account.");
 	}
 
 	ma_free(ma);
@@ -2082,11 +2086,11 @@ static void mastodon_http_follow3(struct http_request *req)
 
 	struct mastodon_account *ma = mastodon_xt_get_user(parsed);
 
-	if (ma->id != 0 && ma->acct != NULL) {
+	if (ma) {
 		mastodon_add_buddy(ic, ma->id, ma->acct, ma->display_name);
 		mastodon_log(ic, "You are now following %s.", ma->acct);
 	} else {
-		mastodon_log(ic, "This user does not have and id and account name, this is totally illegal. I'm not adding them!");
+		mastodon_log(ic, "Couldn't find a matching account.");
 	}
 
 	ma_free(ma);
@@ -2162,22 +2166,22 @@ static void mastodon_http_follow1(struct http_request *req)
 		return;
 	}
 
-	if (parsed->type != json_array) {
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		mastodon_log(ic, "Couldn't find a matching account.");
 		goto finish;
 	}
 
 	// Just use the first one, let's hope these are sorted appropriately!
 	struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[0]);
 
-	if (ma->id) {
+	if (ma) {
 		char *url = g_strdup_printf(MASTODON_ACCOUNT_FOLLOW_URL, ma->id);
 		mastodon_http(ic, url, mastodon_http_follow2, ic, HTTP_POST, NULL, 0);
 		g_free(url);
+		ma_free(ma);
 	} else {
-		mastodon_log(ic, "The account found has no id. How is this even possible?");
+		mastodon_log(ic, "Couldn't find a matching account.");
 	}
-
-	ma_free(ma);
 finish:
 	json_value_free(parsed);
 }
@@ -2206,7 +2210,8 @@ static void mastodon_http_following(struct http_request *req)
 		return;
 	}
 
-	if (parsed->type != json_array) {
+	if (parsed->type != json_array || parsed->u.array.length == 0) {
+		// no log message
 		goto finish;
 	}
 
@@ -2215,7 +2220,7 @@ static void mastodon_http_following(struct http_request *req)
 
 		struct mastodon_account *ma = mastodon_xt_get_user(parsed->u.array.values[i]);
 
-		if (ma->id != 0 && ma->acct != NULL) {
+		if (ma) {
 			mastodon_add_buddy(ic, ma->id, ma->acct, ma->display_name);
 		}
 
