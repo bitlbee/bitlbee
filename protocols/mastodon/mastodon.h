@@ -56,11 +56,36 @@ typedef enum {
 	MASTODON_NEW_MESSAGE,
 } mastodon_message_t;
 
+/**
+ * These are the various ways a command can influence the undo/redo
+ * queue.
+ */
 typedef enum {
 	MASTODON_NEW,
 	MASTODON_UNDO,
 	MASTODON_REDO,
 } mastodon_undo_t;
+
+/**
+ * These are the commands that can be undone and redone.
+ */
+typedef enum {
+	MC_UNKNOWN,
+	MC_POST,
+	MC_DELETE,
+	MC_FOLLOW,
+	MC_UNFOLLOW,
+	MC_BLOCK,
+	MC_UNBLOCK,
+	MC_FAVOURITE,
+	MC_UNFAVOURITE,
+	MC_ACCOUNT_MUTE,
+	MC_ACCOUNT_UNMUTE,
+	MC_STATUS_MUTE,
+	MC_STATUS_UNMUTE,
+	MC_BOOST,
+	MC_UNBOOST,
+} mastodon_command_type_t;
 
 struct mastodon_log_data;
 

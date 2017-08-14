@@ -798,7 +798,7 @@ static void mastodon_add_buddy(struct im_connection *ic, char *who, char *group)
 		// unfollowed them, for example), we're taking a
 		// shortcut. No fancy looking at the relationship and
 		// all that. The nick is already here, after all.
-		mastodon_post(ic, MASTODON_ACCOUNT_FOLLOW_URL, id);
+		mastodon_post(ic, MASTODON_ACCOUNT_FOLLOW_URL, MC_FOLLOW, id);
 	} else {
 		// Alternatively, we're looking for an unknown user.
 		// They must be searched, followed, and added to the
@@ -811,7 +811,7 @@ static void mastodon_remove_buddy(struct im_connection *ic, char *who, char *gro
 {
 	guint64 id;
 	if ((id = mastodon_user_id_or_warn(ic, who))) {
-		mastodon_post(ic, MASTODON_ACCOUNT_UNFOLLOW_URL, id);
+		mastodon_post(ic, MASTODON_ACCOUNT_UNFOLLOW_URL, MC_UNFOLLOW, id);
 	}
 }
 
@@ -819,7 +819,7 @@ static void mastodon_add_deny(struct im_connection *ic, char *who)
 {
 	guint64 id;
 	if ((id = mastodon_user_id_or_warn(ic, who))) {
-		mastodon_post(ic, MASTODON_ACCOUNT_BLOCK_URL, id);
+		mastodon_post(ic, MASTODON_ACCOUNT_BLOCK_URL, MC_BLOCK, id);
 	}
 }
 
@@ -827,7 +827,7 @@ static void mastodon_rem_deny(struct im_connection *ic, char *who)
 {
 	guint64 id;
 	if ((id = mastodon_user_id_or_warn(ic, who))) {
-		mastodon_post(ic, MASTODON_ACCOUNT_UNBLOCK_URL, id);
+		mastodon_post(ic, MASTODON_ACCOUNT_UNBLOCK_URL, MC_UNBLOCK, id);
 	}
 }
 
@@ -1067,7 +1067,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 	            g_strcasecmp(cmd[0], "fav") == 0 ||
 	            g_strcasecmp(cmd[0], "like") == 0) && cmd[1]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
-			mastodon_post(ic, MASTODON_STATUS_FAVOURITE_URL, id);
+			mastodon_post(ic, MASTODON_STATUS_FAVOURITE_URL, MC_FAVOURITE, id);
 		}
 	} else if ((g_strcasecmp(cmd[0], "unfavourite") == 0 ||
 	            g_strcasecmp(cmd[0], "unfavorite") == 0 ||
@@ -1075,7 +1075,7 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 	            g_strcasecmp(cmd[0], "unlike") == 0 ||
 	            g_strcasecmp(cmd[0], "dislike") == 0) && cmd[1]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
-			mastodon_post(ic, MASTODON_STATUS_UNFAVOURITE_URL, id);
+			mastodon_post(ic, MASTODON_STATUS_UNFAVOURITE_URL, MC_UNFAVOURITE, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "follow") == 0 && cmd[1]) {
 		mastodon_add_buddy(ic, cmd[1], NULL);
@@ -1090,29 +1090,29 @@ static void mastodon_handle_command(struct im_connection *ic, char *message, mas
 		   g_strcasecmp(cmd[1], "user") == 0 &&
 		   cmd[2]) {
 		if ((id = mastodon_user_id_or_warn(ic, cmd[2]))) {
-			mastodon_post(ic, MASTODON_ACCOUNT_MUTE_URL, id);
+			mastodon_post(ic, MASTODON_ACCOUNT_MUTE_URL, MC_ACCOUNT_MUTE, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "unmute") == 0 &&
 		   g_strcasecmp(cmd[1], "user") == 0 &&
 		   cmd[2]) {
 		if ((id = mastodon_user_id_or_warn(ic, cmd[2]))) {
-			mastodon_post(ic, MASTODON_ACCOUNT_UNMUTE_URL, id);
+			mastodon_post(ic, MASTODON_ACCOUNT_UNMUTE_URL, MC_ACCOUNT_UNMUTE, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "mute") == 0 && cmd[1]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
-			mastodon_post(ic, MASTODON_STATUS_MUTE_URL, id);
+			mastodon_post(ic, MASTODON_STATUS_MUTE_URL, MC_STATUS_MUTE, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "unmute") == 0 && cmd[1]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
-			mastodon_post(ic, MASTODON_STATUS_UNMUTE_URL, id);
+			mastodon_post(ic, MASTODON_STATUS_UNMUTE_URL, MC_STATUS_UNMUTE, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "boost") == 0 && cmd[1]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
-			mastodon_post(ic, MASTODON_STATUS_BOOST_URL, id);
+			mastodon_post(ic, MASTODON_STATUS_BOOST_URL, MC_BOOST, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "unboost") == 0 && cmd[1]) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {
-			mastodon_post(ic, MASTODON_STATUS_UNBOOST_URL, id);
+			mastodon_post(ic, MASTODON_STATUS_UNBOOST_URL, MC_UNBOOST, id);
 		}
 	} else if (g_strcasecmp(cmd[0], "url") == 0) {
 		if ((id = mastodon_message_id_or_warn(ic, cmd[1], NULL))) {

@@ -101,12 +101,6 @@ struct mastodon_report {
 	char *comment;
 };
 
-typedef enum {
-	MC_UNKNOWN,
-	MC_POST,
-	MC_DELETE,
-} mastodon_command_type_t;
-
 struct mastodon_command {
 	struct im_connection *ic;
 	guint64 id;
@@ -1279,9 +1273,20 @@ static void mastodon_http_callback(struct http_request *req)
 			}
 		}
 		break;
+	case MC_FOLLOW:
+	case MC_UNFOLLOW:
+	case MC_BLOCK:
+	case MC_UNBLOCK:
+	case MC_FAVOURITE:
+	case MC_UNFAVOURITE:
+	case MC_ACCOUNT_MUTE:
+	case MC_ACCOUNT_UNMUTE:
+	case MC_STATUS_MUTE:
+	case MC_STATUS_UNMUTE:
+	case MC_BOOST:
+	case MC_UNBOOST:
 	case MC_DELETE:
 		md->last_id = 0;
-		// see mastodon_http_status_delete
 		mastodon_do(ic, mc->redo, mc->undo);
 		// adopting these strings: do not free them at the end
 		mc->redo = mc->undo = 0;
@@ -1489,12 +1494,72 @@ void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_
  * contain one placeholder for the ID, like "/accounts/%"
  * G_GINT64_FORMAT "/mute".
  */
-void mastodon_post(struct im_connection *ic, char *format, guint64 id)
+void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type_t command, guint64 id)
 {
+	struct mastodon_data *md = ic->proto_data;
 	struct mastodon_command *mc = g_new0(struct mastodon_command, 1);
 	mc->ic = ic;
 
-	/* FIXME: possibly set mc->undo and mc->redo? */
+	if (md->undo_type == MASTODON_NEW) {
+		mc->command = command;
+
+		switch (command) {
+		case MC_UNKNOWN:
+		case MC_POST:
+		case MC_DELETE:
+			/* These commands have their own functions to call and
+			 * should not be calling mastodon_post. */
+			break;
+		case MC_FOLLOW:
+			mc->redo = g_strdup_printf("follow %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("unfollow %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_UNFOLLOW:
+			mc->redo = g_strdup_printf("unfollow %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("follow %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_BLOCK:
+			mc->redo = g_strdup_printf("block %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("unblock %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_UNBLOCK:
+			mc->redo = g_strdup_printf("unblock %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("block %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_FAVOURITE:
+			mc->redo = g_strdup_printf("favourite %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("unfavourite %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_UNFAVOURITE:
+			mc->redo = g_strdup_printf("unfavourite %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("favorite %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_ACCOUNT_MUTE:
+			mc->redo = g_strdup_printf("mute user %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("unmute user %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_ACCOUNT_UNMUTE:
+			mc->redo = g_strdup_printf("unmute user %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("mute user %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_STATUS_MUTE:
+			mc->redo = g_strdup_printf("mute %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("unmute %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_STATUS_UNMUTE:
+			mc->redo = g_strdup_printf("unmute %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("mute %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_BOOST:
+			mc->redo = g_strdup_printf("boost %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("unboost %" G_GUINT64_FORMAT, id);
+			break;
+		case MC_UNBOOST:
+			mc->redo = g_strdup_printf("unboost %" G_GUINT64_FORMAT, id);
+			mc->undo = g_strdup_printf("boost %" G_GUINT64_FORMAT, id);
+			break;
+		}
+	}
 
 	char *url = g_strdup_printf(format, id);
 	mastodon_http(ic, url, mastodon_http_callback_and_ack, mc, HTTP_POST, NULL, 0);
@@ -1684,6 +1749,8 @@ void mastodon_with_search_account(struct im_connection *ic, char *who, http_inpu
 	char *args[2] = {
 		"q", who,
 	};
+
+	/* FIXME: use mastodon_command */
 
 	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, func, ic, HTTP_GET, args, 2);
 }

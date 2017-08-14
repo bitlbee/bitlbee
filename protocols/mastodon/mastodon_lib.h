@@ -82,7 +82,7 @@ void mastodon_initial_timeline(struct im_connection *ic);
 void mastodon_hashtag_timeline(struct im_connection *ic, char *hashtag);
 void mastodon_open_stream(struct im_connection *ic);
 void mastodon_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean direct);
-void mastodon_post(struct im_connection *ic, char *format, guint64 id);
+void mastodon_post(struct im_connection *ic, char *format, mastodon_command_type_t command, guint64 id);
 void mastodon_status_show_url(struct im_connection *ic, guint64 id);
 void mastodon_report(struct im_connection *ic, guint64 id, char *comment);
 void mastodon_follow(struct im_connection *ic, char *who);
