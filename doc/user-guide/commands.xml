@@ -183,7 +183,7 @@
 
 	<bitlbee-command name="channel">
 		<short-description>Channel list maintenance</short-description>
-		<syntax>channel [&lt;account id&gt;] &lt;action&gt; [&lt;arguments&gt;]</syntax>
+		<syntax>channel [&lt;channel id&gt;] &lt;action&gt; [&lt;arguments&gt;]</syntax>
 
 		<description>
 			<para>
