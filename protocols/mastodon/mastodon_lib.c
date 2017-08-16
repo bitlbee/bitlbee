@@ -418,17 +418,17 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			for (i = 0; i < v->u.array.length; i++) {
 				json_value *attachment = v->u.array.values[i];
 				if (attachment->type == json_object) {
-					// text_url is preferred because that's what the UI
-					// also copies into the message
-					json_value *url = json_o_get(attachment, "text_url");
-					if (!url) {
-						url = json_o_get(attachment, "url");
-						if (!url) {
-							url = json_o_get(attachment, "remote_url");
+					// text_url is preferred because that's what the UI also copies
+					// into the message; also ignore values such as /files/original/missing.png
+					const char *url = json_o_str(attachment, "text_url");
+					if (!url || !*url || strncmp(url, "http", 4)) {
+						url = json_o_str(attachment, "url");
+						if (!url || !*url || strncmp(url, "http", 4)) {
+							url = json_o_str(attachment, "remote_url");
 						}
 					}
-					if (url && url->type == json_string) {
-						media = g_slist_prepend(media, url->u.string.ptr);
+					if (url && *url && strncmp(url, "http", 4) == 0) {
+						media = g_slist_prepend(media, (char *) url); // discarding const qualifier
 					}
 				}
 			}
@@ -438,12 +438,16 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 	if (rt) {
 		struct mastodon_status *rms = mastodon_xt_get_status(rt);
 		if (rms) {
+			/* Alternatively, we could free ms and just use rms, but we'd have to overwrite rms->account
+			 * with ms->account, change rms->text, and maybe more. */
 			ms->text = g_strdup_printf("boosted @%s: %s", rms->account->acct, rms->text);
 			ms->id = rms->id;
 			ms->url = rms->url; // adopt
 			rms->url = NULL;
+			g_slist_free_full(ms->tags, g_free);
+			ms->tags = rms->tags; // adopt
+			rms->tags = NULL;
 			ms_free(rms);
-			// FIXME: I'm not sure about tags.
 		}
 	} else if (ms->id) {
 
@@ -458,15 +462,12 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			g_string_append_printf(s, "[CW: %s] ", spoiler_value->u.string.ptr);
 		}
 
-		if (text_value) {
-			g_string_append(s, text_value->u.string.ptr);
+		if (nsfw) {
+			g_string_append(s, "*NSFW* ");
 		}
 
-		if (nsfw) {
-			if (s->len) {
-				g_string_append(s, " ");
-			}
-			g_string_append(s, "*NSFW*");
+		if (text_value) {
+			g_string_append(s, text_value->u.string.ptr);
 		}
 
 		GSList *l = NULL;
@@ -1752,8 +1753,6 @@ void mastodon_with_search_account(struct im_connection *ic, char *who, http_inpu
 	char *args[2] = {
 		"q", who,
 	};
-
-	/* FIXME: use mastodon_command */
 
 	mastodon_http(ic, MASTODON_ACCOUNT_SEARCH_URL, func, ic, HTTP_GET, args, 2);
 }
