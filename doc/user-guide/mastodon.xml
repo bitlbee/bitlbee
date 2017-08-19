@@ -148,7 +148,13 @@ If you use the default IRC conventions of starting a message with a nickname and
 This only works if that nick's last message was sent within the last 3h. For more information about this time window use <literal>help set auto_reply_timeout</literal> in your Bitlbee control channel (<literal>&amp;bitlbee</literal>).
 </para>
 <para>
-You can also reply to an earlier message by referring to its id using the <literal>reply &lt;id&gt; &lt;message&gt;</literal> command. If you set the <literal>commands</literal> setting to <literal>strict</literal>, using the <literal>reply</literal> command is mandatory.
+You can also reply to an earlier message by referring to its id using the <literal>reply &lt;id&gt; &lt;message&gt;</literal> command. The handle of the original author you are replying to will be prepended automatically. It is up to you to mention any of the other people mentioned in the original.
+</para>
+<para>
+  Use <literal>whois &lt;nick&gt;</literal> to show a nick's handle and full name.
+</para>
+<para>
+If you set the <literal>commands</literal> setting to <literal>strict</literal>, using the <literal>reply</literal> command is mandatory.
 </para>
 </sect1>
 <sect1 id="mdelete">
