@@ -76,6 +76,7 @@ struct mastodon_status {
 	mastodon_visibility_t visibility;
 	guint64 reply_to;
 	GSList *tags;
+	GSList *mentions;
 	gboolean from_hashtag; /* This status was created by a hashtag subscription */
 };
 
@@ -152,6 +153,7 @@ static void ms_free(struct mastodon_status *ms)
 	g_free(ms->url);
 	ma_free(ms->account);
 	g_slist_free_full(ms->tags, g_free);
+	g_slist_free_full(ms->mentions, g_free);
 	g_free(ms);
 }
 
@@ -411,6 +413,19 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 				}
 			}
 			ms->tags = l;
+		} else if (strcmp("mentions", k) == 0 && v->type == json_array) {
+			GSList *l = NULL;
+			int i;
+			for (i = 0; i < v->u.array.length; i++) {
+				json_value *mention = v->u.array.values[i];
+				if (mention->type == json_object) {
+					const char *acct = json_o_str(mention, "acct");
+					if (acct) {
+						l = g_slist_prepend(l, g_strdup(acct));
+					}
+				}
+			}
+			ms->mentions = l;
 		} else if (strcmp("sensitive", k) == 0 && v->type == json_boolean) {
 			nsfw = v->u.boolean;
 		} else if (strcmp("media_attachments", k) == 0 && v->type == json_array) {
@@ -1864,6 +1879,57 @@ void mastodon_status_show_url(struct im_connection *ic, guint64 id)
 {
 	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
 	mastodon_http(ic, url, mastodon_http_status_show_url, ic, HTTP_GET, NULL, 0);
+	g_free(url);
+}
+
+/**
+ * Callback for showing the mentions of a status.
+ */
+static void mastodon_http_status_show_mentions(struct http_request *req)
+{
+	struct im_connection *ic = req->data;
+	if (!g_slist_find(mastodon_connections, ic)) {
+		return;
+	}
+
+	json_value *parsed;
+	if (!(parsed = mastodon_parse_response(ic, req))) {
+		return;
+	}
+
+	struct mastodon_status *ms = mastodon_xt_get_status(parsed);
+	if (ms) {
+		if (ms->mentions) {
+			GString *s = g_string_new("");
+			GSList *l;
+			for (l = ms->mentions; l; l = l->next) {
+				char *acct = l->data;
+				if (l != ms->mentions) {
+					g_string_append(s, " ");
+				}
+				g_string_append(s, acct);
+
+			}
+			mastodon_log(ic, s->str);
+			g_string_free (s, TRUE);
+		} else {
+			mastodon_log(ic, "This toot mentions nobody.");
+		}
+		ms_free(ms);
+	} else {
+		mastodon_log(ic, "Error: could not fetch toot url.");
+	}
+
+	json_value_free(parsed);
+}
+
+/**
+ * Show the mentions for a status.
+ */
+void mastodon_status_show_mentions(struct im_connection *ic, guint64 id)
+{
+	char *url = g_strdup_printf(MASTODON_STATUS_URL, id);
+	mastodon_http(ic, url, mastodon_http_status_show_mentions, ic, HTTP_GET, NULL, 0);
 	g_free(url);
 }
 
