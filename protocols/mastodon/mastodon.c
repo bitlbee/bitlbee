@@ -702,9 +702,11 @@ static guint64 mastodon_message_id_from_command_arg(struct im_connection *ic, ch
 		if (parse_int64(arg, 16, &id) && id < MASTODON_LOG_LENGTH) {
 			bu = md->log[id].bu;
 			id = md->log[id].id;
-		} else {
+		} else if (parse_int64(arg, 10, &id)) {
 			/* Allow normal toot IDs as well. Required do undo posts, for example. */
-			parse_int64(arg, 10, &id);
+		} else {
+			/* Reset id if id was a valid hex number but >= MASTODON_LOG_LENGTH. */
+			id = 0;
 		}
 	}
 	if (bu_) {
