@@ -612,10 +612,8 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 	struct mastodon_data *md = ic->proto_data;
 	int reply_to = -1;
 	int idx = -1;
-	bee_user_t *bu;
 
-	/* See if we know this status and if we know the status this
-	 * one is replying to. */
+	/* See if we know this status and if we know the status this one is replying to. */
 	int i;
 	for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
 		if (ms->reply_to && md->log[i].id == ms->reply_to) {
@@ -629,22 +627,28 @@ static char *mastodon_msg_add_id(struct im_connection *ic,
 		}
 	}
 
-	/* If we didn't find the status, it's new and needs an id, and
-	 * we want to record who said it, and when they said it. */
+	/* If we didn't find the status, it's new and needs an id, and we want to record who said it, and when they said
+	 * it. */
 	if (idx == -1) {
 		idx = md->log_id = (md->log_id + 1) % MASTODON_LOG_LENGTH;
 		md->log[idx].id = ms->id;
-		md->log[idx].bu = bee_user_by_handle(ic->bee, ic, ms->account->acct);
 
-		if (ms->account && ms->account->acct &&
-		    (bu = bee_user_by_handle(ic->bee, ic, ms->account->acct))) {
+		if (g_strcasecmp(ms->account->acct, md->user) == 0) {
+			/* If this is our own status, use a fake bu without data since we can't be found by handle. This
+			 * will allow us to reply to our own messages, for example. */
+			md->log[idx].bu = &mastodon_log_local_user;
+		} else {
+			bee_user_t *bu = bee_user_by_handle(ic->bee, ic, ms->account->acct);
 			struct mastodon_user_data *mud = bu->data;
 
 			if (ms->id > mud->last_id) {
 				mud->last_id = ms->id;
 				mud->last_time = ms->created_at;
 			}
+
+			md->log[idx].bu = bu;
 		}
+
 	}
 
 	if (set_getbool(&ic->acc->set, "show_ids")) {
