@@ -494,8 +494,11 @@ static void mastodon_post_message(struct im_connection *ic, char *message, guint
 		direct = TRUE;
 		// fall through
 	case MASTODON_REPLY:
-		// mentioning OP the traditional thing to do (but we should mention all previous mentions?)
-		text = g_strdup_printf("@%s %s", who, message);
+		/* Mentioning OP the traditional thing to do (but we should mention all previous mentions?) unless we're
+		   replying to ourselves. */
+		if (g_strcasecmp(who, md->user) != 0) {
+			text = g_strdup_printf("@%s %s", who, message);
+		}
 		break;
 	case MASTODON_NEW_MESSAGE:
 		// Do nothing.
