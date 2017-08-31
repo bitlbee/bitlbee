@@ -246,6 +246,7 @@ cat<<EOF >config.h
 #define ETCDIR "$etcdir"
 #define VARDIR "$datadir"
 #define PLUGINDIR "$plugindir"
+#define DATADIR "$datadir"
 #define PIDFILE "$pidfile"
 #define IPCSOCKET "$ipcsocket"
 EOF
@@ -813,6 +814,7 @@ prefix=$prefix
 includedir=$includedir
 plugindir=$plugindir
 libdir=$libdir
+datadir=$datadir
 
 Name: bitlbee
 Description: IRC to IM gateway
