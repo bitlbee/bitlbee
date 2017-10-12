@@ -350,11 +350,12 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 			*s = 0; /* Should NEVER be NULL, but who knows... */
 		}
 
+		imcb_chat_add_buddy(chat, bud->ext_jid);
+
 		if (bud != jc->me && (jc->flags & JCFLAG_ALWAYS_USE_NICKS) && !(bud->flags & JBFLAG_IS_ANONYMOUS)) {
 			imcb_buddy_nick_change(ic, bud->ext_jid, bud->resource);
 		}
 
-		imcb_chat_add_buddy(chat, bud->ext_jid);
 		if (s) {
 			*s = '/';
 		}
