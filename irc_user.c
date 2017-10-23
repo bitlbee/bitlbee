@@ -198,7 +198,7 @@ const char *irc_user_get_away(irc_user_t *iu)
 	if (iu == irc->user) {
 		return set_getstr(&irc->b->set, "away");
 	} else if (bu) {
-		if (!bu->flags & BEE_USER_ONLINE) {
+		if (!(bu->flags & BEE_USER_ONLINE)) {
 			return "Offline";
 		} else if (bu->flags & BEE_USER_AWAY) {
 			if (bu->status_msg) {

@@ -326,6 +326,26 @@ static json_value *mastodon_parse_response(struct im_connection *ic, struct http
 	return ret;
 }
 
+/**
+ * For Mastodon 2, all id attributes in the REST API responses, including attributes that end in _id, are now returned
+ * as strings instead of integers. This is because large integers cannot be encoded in JSON losslessly, and all IDs in
+ * Mastodon are now bigint (Ruby on Rails: bigint uses 64 bits, signed, guint64 is 64 bits, unsigned). We are assuming
+ * no negative ids.
+ */
+static guint64 mastodon_json_int64(const json_value *v)
+{
+	guint64 id;
+	if (v->type == json_integer) {
+		return v->u.integer; // Mastodon 1
+
+	} else if (v->type == json_string &&
+		   *v->u.string.ptr &&
+		   parse_int64(v->u.string.ptr, 10, &id)) {
+		return id; // Mastodon 2
+	}
+	return 0;
+}
+
 /* These two functions are useful to debug all sorts of callbacks. */
 static void mastodon_log_object(struct im_connection *ic, json_value *node, int prefix);
 static void mastodon_log_array(struct im_connection *ic, json_value *node, int prefix);
@@ -339,8 +359,8 @@ struct mastodon_account *mastodon_xt_get_user(const json_value *node)
 	ma->display_name = g_strdup(json_o_str(node, "display_name"));
 	ma->acct = g_strdup(json_o_str(node, "acct"));
 
-	if ((jv = json_o_get(node, "id"))) {
-		ma->id = jv->u.integer;
+	if ((jv = json_o_get(node, "id")) &&
+	    (ma->id = mastodon_json_int64(jv))) {
 		return ma;
 	}
 
@@ -396,10 +416,10 @@ static struct mastodon_status *mastodon_xt_get_status(const json_value *node)
 			}
 		} else if (strcmp("account", k) == 0 && v->type == json_object) {
 			ms->account = mastodon_xt_get_user(v);
-		} else if (strcmp("id", k) == 0 && v->type == json_integer) {
-			ms->id = v->u.integer;
-		} else if (strcmp("in_reply_to_id", k) == 0 && v->type == json_integer) {
-			ms->reply_to = v->u.integer;
+		} else if (strcmp("id", k) == 0) {
+			ms->id = mastodon_json_int64(v);
+		} else if (strcmp("in_reply_to_id", k) == 0) {
+			ms->reply_to = mastodon_json_int64(v);
 		} else if (strcmp("tags", k) == 0 && v->type == json_array) {
 			GSList *l = NULL;
 			int i;
@@ -528,8 +548,8 @@ static struct mastodon_notification *mastodon_xt_get_notification(const json_val
 	struct mastodon_notification *mn = g_new0(struct mastodon_notification, 1);
 
 	JSON_O_FOREACH(node, k, v) {
-		if (strcmp("id", k) == 0 && v->type == json_integer) {
-			mn->id = v->u.integer;
+		if (strcmp("id", k) == 0) {
+			mn->id = mastodon_json_int64(v);
 		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
 			struct tm parsed;
 
@@ -883,11 +903,13 @@ static void mastodon_stream_handle_update(struct im_connection *ic, json_value *
 	}
 }
 
+/* Let the user know if a status they have recently seen was deleted. If we can't find the deleted status in our list of
+ * recently seen statuses, ignore the event. */
 static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *parsed)
 {
 	struct mastodon_data *md = ic->proto_data;
-	if (parsed->type == json_integer) {
-		guint64 id = parsed->u.integer;
+	guint64 id = mastodon_json_int64(parsed);
+	if (id) {
 		int i;
 		for (i = 0; i < MASTODON_LOG_LENGTH; i++) {
 			if (md->log[i].id == id) {
@@ -895,8 +917,6 @@ static void mastodon_stream_handle_delete(struct im_connection *ic, json_value *
 				return;
 			}
 		}
-		// This is useless information:
-		// mastodon_log(ic, "The old status %d was deleted.", id);
 	} else {
 		mastodon_log(ic, "Error parsing a deletion event.");
 	}
@@ -2207,8 +2227,9 @@ static void mastodon_http_follow2(struct http_request *req)
 	}
 
 	if ((it = json_o_get(parsed, "following")) && it->type == json_boolean && it->u.boolean) {
-		if ((it = json_o_get(parsed, "id")) && it->type == json_integer) {
-			guint64 id = it->u.integer;
+		guint64 id;
+		if ((it = json_o_get(parsed, "id")) &&
+		    (id = mastodon_json_int64(it))) {
 			char *url = g_strdup_printf(MASTODON_ACCOUNT_URL, id);
 			mastodon_http(ic, url, mastodon_http_follow3, ic, HTTP_GET, NULL, 0);
 			g_free(url);
