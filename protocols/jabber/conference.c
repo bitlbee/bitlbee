@@ -328,6 +328,9 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 				}
 			}
 			bud->flags |= JBFLAG_IS_ANONYMOUS;
+		} else if (bud == jc->me) {
+			g_free(bud->ext_jid);
+			bud->ext_jid = g_strdup(jd->me);
 		}
 
 		if (bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS) {
