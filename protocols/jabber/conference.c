@@ -364,6 +364,7 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 			char *reason = NULL;
 			char *status = NULL;
 			char *status_text = NULL;
+			gboolean rename = FALSE;
 			
 			if ((c = xt_find_node_by_attr(node->children, "x", "xmlns", XMLNS_MUC_USER))) {
 				struct xt_node *c2 = c->children;
@@ -377,6 +378,7 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 						/* This could be handled in a cleverer way,
 						 * but let's just show a literal part/join for now */
 						status = "Changing nicks";
+						rename = TRUE;
 						break;
 					} else if (g_strcmp0(code, "307") == 0) {
 						status = "Kicked";
@@ -406,9 +408,16 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 			if (s) {
 				*s = 0;
 			}
-			imcb_chat_remove_buddy(chat, bud->ext_jid, reason);
-			if (bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS) {
-				imcb_remove_buddy(ic, bud->ext_jid, reason);
+
+			if (!rename) {
+				imcb_chat_remove_buddy(chat, bud->ext_jid, reason);
+				if (bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS) {
+					imcb_remove_buddy(ic, bud->ext_jid, reason);
+				}
+			} else {
+				if (bud != jc->me && (jc->flags & JCFLAG_ALWAYS_USE_NICKS) && !(bud->flags & JBFLAG_IS_ANONYMOUS)) {
+					imcb_buddy_nick_change(ic, bud->ext_jid, bud->resource);
+				}
 			}
 			if (s) {
 				*s = '/';
