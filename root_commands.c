@@ -1439,7 +1439,7 @@ void cmd_chat_list_finish(struct im_connection *ic)
 		ci = l->data;
 		topic = ci->topic ? ci->topic : "";
 
-		padded = str_pad_and_truncate(ci->title, title_len, "[...]");
+		padded = str_pad_and_truncate(ci->title ? ci->title : "", title_len, "[...]");
 		irc_rootmsg(irc, iformat, ++i, padded, topic);
 		g_free(padded);
 	}
