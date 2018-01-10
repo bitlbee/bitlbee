@@ -32,7 +32,6 @@ configure_args="$@"
 # If the user sets one of these to 1, purple won't disable them.
 # Otherwise, if it's still default-on, it gets included in normal builds,
 # but not purple ones.
-msn="default-on"
 jabber="default-on"
 oscar="default-on"
 
@@ -129,7 +128,6 @@ Option		Description				Default
 
 --verbose=0/1	Disable/enable verbose build		$verbose
 
---msn=0/1	Disable/enable MSN part			$msn
 --jabber=0/1	Disable/enable Jabber part		$jabber
 --oscar=0/1	Disable/enable Oscar part (ICQ, AIM)	$oscar
 --twitter=0/1	Disable/enable Twitter part		$twitter
@@ -845,7 +843,6 @@ EOF
 	protoobjs=$protoobjs'purple_mod.o '
 
 	# only disable these if the user didn't enable them explicitly
-	[ "$msn" = "default-on" ] && msn=0
 	[ "$jabber" = "default-on" ] && jabber=0
 	[ "$oscar" = "default-on" ] && oscar=0
 
@@ -867,14 +864,6 @@ case "$CC" in
 		mkdir -p $i/.depend
 	done
 esac
-
-if [ "$msn" = 0 ]; then
-	echo '#undef WITH_MSN' >> config.h
-else
-	echo '#define WITH_MSN' >> config.h
-	protocols=$protocols'msn '
-	protoobjs=$protoobjs'msn_mod.o '
-fi
 
 if [ "$jabber" = 0 ]; then
 	echo '#undef WITH_JABBER' >> config.h

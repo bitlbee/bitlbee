@@ -1,53 +1,6 @@
 <chapter id="misc">
 <title>Misc Stuff</title>
 
-<sect1 id="smileys">
-<title>Smileys</title>
-
-<para>
-All MSN smileys (except one) are case insensitive and work without the nose too.
-</para>
-
-<variablelist>
-	<varlistentry><term>(Y)</term><listitem><para>Thumbs up</para></listitem></varlistentry>
-	<varlistentry><term>(N)</term><listitem><para>Thumbs down</para></listitem></varlistentry>
-	<varlistentry><term>(B)</term><listitem><para>Beer mug</para></listitem></varlistentry>
-	<varlistentry><term>(D)</term><listitem><para>Martini glass</para></listitem></varlistentry>
-	<varlistentry><term>(X)</term><listitem><para>Girl</para></listitem></varlistentry>
-	<varlistentry><term>(Z)</term><listitem><para>Boy</para></listitem></varlistentry>
-	<varlistentry><term>(6)</term><listitem><para>Devil smiley</para></listitem></varlistentry>
-	<varlistentry><term>:-[</term><listitem><para>Vampire bat</para></listitem></varlistentry>
-	<varlistentry><term>(})</term><listitem><para>Right hug</para></listitem></varlistentry>
-	<varlistentry><term>({)</term><listitem><para>Left hug</para></listitem></varlistentry>
-	<varlistentry><term>(M)</term><listitem><para>MSN Messenger or Windows Messenger icon (think a BitlBee logo here ;)</para></listitem></varlistentry>
-	<varlistentry><term>:-S</term><listitem><para>Crooked smiley (Confused smiley)</para></listitem></varlistentry>
-	<varlistentry><term>:-$</term><listitem><para>Embarrassed smiley</para></listitem></varlistentry>
-	<varlistentry><term>(H)</term><listitem><para>Smiley with sunglasses</para></listitem></varlistentry>
-	<varlistentry><term>:-@</term><listitem><para>Angry smiley</para></listitem></varlistentry>
-	<varlistentry><term>(A)</term><listitem><para>Angel smiley</para></listitem></varlistentry>
-	<varlistentry><term>(L)</term><listitem><para>Red heart (Love)</para></listitem></varlistentry>
-	<varlistentry><term>(U)</term><listitem><para>Broken heart</para></listitem></varlistentry>
-	<varlistentry><term>(K)</term><listitem><para>Red lips (Kiss)</para></listitem></varlistentry>
-	<varlistentry><term>(G)</term><listitem><para>Gift with bow</para></listitem></varlistentry>
-	<varlistentry><term>(F)</term><listitem><para>Red rose</para></listitem></varlistentry>
-	<varlistentry><term>(W)</term><listitem><para>Wilted rose</para></listitem></varlistentry>
-	<varlistentry><term>(P)</term><listitem><para>Camera</para></listitem></varlistentry>
-	<varlistentry><term>(~)</term><listitem><para>Film strip</para></listitem></varlistentry>
-	<varlistentry><term>(T)</term><listitem><para>Telephone receiver</para></listitem></varlistentry>
-	<varlistentry><term>(@)</term><listitem><para>Cat face</para></listitem></varlistentry>
-	<varlistentry><term>(&amp;)</term><listitem><para>Dog's head</para></listitem></varlistentry>
-	<varlistentry><term>(C)</term><listitem><para>Coffee cup</para></listitem></varlistentry>
-	<varlistentry><term>(I)</term><listitem><para>Light bulb</para></listitem></varlistentry>
-	<varlistentry><term>(S)</term><listitem><para>Half-moon (Case sensitive!)</para></listitem></varlistentry>
-	<varlistentry><term>(*)</term><listitem><para>Star</para></listitem></varlistentry>
-	<varlistentry><term>(8)</term><listitem><para>Musical eighth note</para></listitem></varlistentry>
-	<varlistentry><term>(E)</term><listitem><para>Envelope</para></listitem></varlistentry>
-	<varlistentry><term>(^)</term><listitem><para>Birthday cake</para></listitem></varlistentry>
-	<varlistentry><term>(O)</term><listitem><para>Clock</para></listitem></varlistentry>
-</variablelist>
-
-</sect1>
-
 <sect1 id="groupchats">
 <title>Groupchats</title>
 <para>
@@ -152,7 +105,7 @@ Control channels are where you see your contacts. By default, you will have one 
 </para>
 
 <para>
-For example, you can have one channel with all contacts from your MSN Messenger account in it. Or all contacts from the group called "Work".
+For example, you can have one channel with all contacts from your jabber account in it. Or all contacts from the group called "Work".
 </para>
 
 <para>
@@ -169,7 +122,7 @@ When you create a new channel, BitlBee will try to guess from its name which con
 </para>
 
 <para>
-Any valid account ID (so a number, protocol name or part of screenname, as long as it's unique) can also be used as a channel name. So if you just join &amp;msn, it will contain all your MSN contacts. And if you have a Facebook account set up, you can see its contacts by just joining &amp;facebook.
+Any valid account ID (so a number, protocol name or part of screenname, as long as it's unique) can also be used as a channel name. So if you just join &amp;jabber, it will contain all your jabber contacts. And if you have a Facebook account set up, you can see its contacts by just joining &amp;facebook.
 </para>
 
 <para>

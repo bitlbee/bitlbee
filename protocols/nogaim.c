@@ -253,15 +253,10 @@ char *explain_unknown_protocol(const char *name)
 
 void nogaim_init()
 {
-	extern void msn_initmodule();
 	extern void oscar_initmodule();
 	extern void jabber_initmodule();
 	extern void twitter_initmodule();
 	extern void purple_initmodule();
-
-#ifdef WITH_MSN
-	msn_initmodule();
-#endif
 
 #ifdef WITH_OSCAR
 	oscar_initmodule();

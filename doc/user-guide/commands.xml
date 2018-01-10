@@ -42,16 +42,6 @@
 				</description>
 			</bitlbee-command>
 
-			<bitlbee-command name="msn">
-				<syntax>account add msn &lt;handle@server.tld&gt; [&lt;password&gt;]</syntax>
-
-				<description>
-					<para>
-						For MSN connections there are no special arguments.
-					</para>
-				</description>
-			</bitlbee-command>
-			
 			<bitlbee-command name="oscar">
 				<syntax>account add oscar &lt;handle&gt; [&lt;password&gt;]</syntax>
 
@@ -923,13 +913,10 @@
 	<bitlbee-setting name="display_name" type="string" scope="account">
 		<description>
 			<para>
-				Currently only available for MSN connections, and for jabber groupchats.
+				Currently only available for jabber groupchats.
 			</para>
 			<para>
-				For MSN: This setting allows you to read and change your "friendly name" for this connection. Since this is a server-side setting, it can't be changed when the account is off-line.
-			</para>
-			<para>
-				For jabber groupchats: this sets the default value of 'nick' for newly created groupchats. There is no way to set an account-wide nick like MSN.
+				For jabber groupchats: this sets the default value of 'nick' for newly created groupchats. There is no way to set an account-wide nick.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1022,17 +1009,6 @@
 		<description>
 			<para>
 				Only supported by OSCAR so far, you can use this setting to ignore ICQ authorization requests, which are hardly used for legitimate (i.e. non-spam) reasons anymore.
-			</para>
-		</description>
-
-	</bitlbee-setting>
-
-	<bitlbee-setting name="local_display_name" type="boolean" scope="account">
-		<default>false</default>
-
-		<description>
-			<para>
-				Mostly meant to work around a bug in MSN servers (forgetting the display name set by the user), this setting tells BitlBee to store your display name locally and set this name on the MSN servers when connecting.
 			</para>
 		</description>
 
@@ -1615,24 +1591,6 @@
 		<description>
 			<para>
 				This setting specifies the number of old mentions to fetch on connection. Must be less or equal to 200. Setting it to 0 disables this feature.
-			</para>
-		</description>
-	</bitlbee-setting>
-
-	<bitlbee-setting name="switchboard_keepalives" type="boolean" scope="account">
-		<default>false</default>
-
-		<description>
-			<para>
-				Turn on this flag if you have difficulties talking to offline/invisible contacts.
-			</para>
-			
-			<para>
-				With this setting enabled, BitlBee will send keepalives to MSN switchboards with offline/invisible contacts every twenty seconds. This should keep the server and client on the other side from shutting it down.
-			</para>
-			
-			<para>
-				This is useful because BitlBee doesn't support MSN offline messages yet and the MSN servers won't let the user reopen switchboards to offline users. Once offline messaging is supported, this flag might be removed.
 			</para>
 		</description>
 	</bitlbee-setting>
