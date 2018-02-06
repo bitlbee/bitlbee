@@ -1037,11 +1037,11 @@
 	</bitlbee-setting>
 
 	<bitlbee-setting name="message_length" type="integer" scope="account">
-		<default>140</default>
+		<default>280</default>
 
 		<description>
 			<para>
-				Since Twitter rejects messages longer than 140 characters, BitlBee can count message length and emit a warning instead of waiting for Twitter to reject it.
+				Since Twitter rejects messages longer than 280 characters, BitlBee can count message length and emit a warning instead of waiting for Twitter to reject it.
 			</para>
 
 			<para>

@@ -557,7 +557,7 @@ static void twitter_init(account_t * acc)
 
 	s = set_add(&acc->set, "fetch_mentions", def_mentions, set_eval_bool, acc);
 
-	s = set_add(&acc->set, "message_length", "140", set_eval_int, acc);
+	s = set_add(&acc->set, "message_length", "280", set_eval_int, acc);
 
 	s = set_add(&acc->set, "target_url_length", def_tul, set_eval_int, acc);
 
