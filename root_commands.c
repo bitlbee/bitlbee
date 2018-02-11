@@ -1235,7 +1235,7 @@ static void cmd_plugins(irc_t *irc, char **cmd)
 	}
 #endif
 
-	irc_rootmsg(irc, "");
+	irc_rootmsg(irc, " ");
 
 	gstr = g_string_new(NULL);
 	prpls = get_protocols();
