@@ -1341,13 +1341,19 @@ static void cmd_chat(irc_t *irc, char **cmd)
 		    set_setstr(&ic->set, "chat_type", "room") &&
 		    set_setstr(&ic->set, "account", cmd[2]) &&
 		    set_setstr(&ic->set, "room", room)) {
-			irc_rootmsg(irc, "Chatroom successfully added.");
+			irc_rootmsg(irc, "Chatroom successfully added, join with \002/join %s\002", channel);
 		} else {
 			if (ic) {
 				irc_channel_free(ic);
-			}
 
-			irc_rootmsg(irc, "Could not add chatroom.");
+				irc_rootmsg(irc, "Error adding chatroom.");
+			} else if (irc_channel_by_name(irc, channel)) {
+				irc_rootmsg(irc, "A channel named `%s' already exists. "
+				            "Join with \002/join %s\002 or see \002help channel\002 to modify it",
+				            channel, channel);
+			} else {
+				irc_rootmsg(irc, "Error creating channel for chatroom.");
+			}
 		}
 		g_free(channel);
 	} else if (g_strcasecmp(cmd[1], "list") == 0) {
