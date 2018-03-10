@@ -38,10 +38,10 @@ $(objects): ../../Makefile.settings Makefile
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
+	$(VERBOSE) $(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 oscar_mod.o: $(objects)
 	@echo '*' Linking oscar_mod.o
-	@$(LD) $(LFLAGS) $(objects) -o oscar_mod.o
+	$(VERBOSE) $(LD) $(LFLAGS) $(objects) -o oscar_mod.o
 
 -include .depend/*.d

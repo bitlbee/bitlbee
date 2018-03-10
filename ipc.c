@@ -897,7 +897,7 @@ int ipc_master_listen_socket()
 	un_addr.sun_family = AF_UNIX;
 	strcpy(un_addr.sun_path, IPCSOCKET);
 
-	serversock = socket(AF_UNIX, SOCK_STREAM, PF_UNIX);
+	serversock = socket(AF_UNIX, SOCK_STREAM, 0);
 
 	if (serversock == -1) {
 		log_message(LOGLVL_WARNING, "Unable to create UNIX socket: %s", strerror(errno));

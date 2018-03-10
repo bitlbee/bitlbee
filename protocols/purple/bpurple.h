@@ -6,6 +6,8 @@
 
 #define PURPLE_REQUEST_HANDLE "purple_request"
 
+#define PURPLE_OPT_SHOULD_SET_NICK 1
+
 struct purple_data
 {
     PurpleAccount *account;
@@ -14,6 +16,8 @@ struct purple_data
     guint next_request_id;
     char *chat_list_server;
     GSList *filetransfers;
+
+    int flags;
 };
 
 #endif /* !BPURPLE_H */

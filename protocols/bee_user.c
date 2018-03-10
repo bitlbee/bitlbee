@@ -169,10 +169,13 @@ void imcb_buddy_status(struct im_connection *ic, const char *handle, int flags, 
 	bee_user_t *bu, *old;
 
 	if (!(bu = bee_user_by_handle(bee, ic, handle))) {
-		if (g_strcasecmp(set_getstr(&ic->bee->set, "handle_unknown"), "add") == 0) {
+		char *h = set_getstr(&ic->acc->set, "handle_unknown") ? :
+		          set_getstr(&ic->bee->set, "handle_unknown");
+
+		if (g_strncasecmp(h, "add", 3) == 0) {
 			bu = bee_user_new(bee, ic, handle, BEE_USER_LOCAL);
 		} else {
-			if (g_strcasecmp(set_getstr(&ic->bee->set, "handle_unknown"), "ignore") != 0) {
+			if (g_strcasecmp(h, "ignore") != 0) {
 				imcb_log(ic, "imcb_buddy_status() for unknown handle %s:\n"
 				         "flags = %d, state = %s, message = %s", handle, flags,
 				         state ? state : "NULL", message ? message : "NULL");
@@ -254,7 +257,8 @@ void imcb_buddy_msg(struct im_connection *ic, const char *handle, const char *ms
 	bu = bee_user_by_handle(bee, ic, handle);
 
 	if (!bu && !(ic->flags & OPT_LOGGING_OUT)) {
-		char *h = set_getstr(&bee->set, "handle_unknown");
+		char *h = set_getstr(&ic->acc->set, "handle_unknown") ? :
+		          set_getstr(&ic->bee->set, "handle_unknown");
 
 		if (g_strcasecmp(h, "ignore") == 0) {
 			return;

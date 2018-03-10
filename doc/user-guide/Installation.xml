@@ -35,7 +35,7 @@ specify them all separately, just specifying prefix (or keeping the default
 <listitem><para>config - The place where BitlBee will save all the per-user
 settings and buddy information. <filename>/var/lib/bitlbee/</filename>
 is the default value.</para></listitem>
-<listitem><para>msn, jabber, oscar, yahoo - By default, support for all
+<listitem><para>msn, jabber, oscar, twitter - By default, support for all
 these IM-protocols (OSCAR is the protocol used by both ICQ and AIM) will
 be compiled in. To make the binary a bit smaller, you can use these options
 to leave out support for protocols you're not planning to use.</para></listitem>

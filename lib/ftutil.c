@@ -41,7 +41,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	int fd, gret, saddrlen;
 	struct addrinfo hints, *rp;
 	socklen_t ssize = sizeof(struct sockaddr_storage);
-	struct sockaddr_storage saddrs, *saddr = &saddrs;
+	struct sockaddr_storage saddrs = {0}, *saddr = &saddrs;
 	static char errmsg[1024];
 	char *ftlisten = global.conf->ft_listen;
 
@@ -62,13 +62,13 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 		if (scolon) {
 			if (for_bitlbee_client) {
 				*scolon = '\0';
-				strncpy(host, ftlisten, HOST_NAME_MAX);
+				strncpy(host, ftlisten, NI_MAXHOST);
 				*scolon = ';';
 			} else {
-				strncpy(host, scolon + 1, HOST_NAME_MAX);
+				strncpy(host, scolon + 1, NI_MAXHOST);
 			}
 		} else {
-			strncpy(host, ftlisten, HOST_NAME_MAX);
+			strncpy(host, ftlisten, NI_MAXHOST);
 		}
 
 		if ((colon = strchr(host, ':'))) {
@@ -77,13 +77,13 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 		}
 	} else if (copy_fd >= 0 && getsockname(copy_fd, (struct sockaddr*) &saddrs, &ssize) == 0 &&
 	           (saddrs.ss_family == AF_INET || saddrs.ss_family == AF_INET6) &&
-	           getnameinfo((struct sockaddr*) &saddrs, ssize, host, HOST_NAME_MAX,
+	           getnameinfo((struct sockaddr*) &saddrs, ssize, host, NI_MAXHOST,
 	                       NULL, 0, NI_NUMERICHOST) == 0) {
 		/* We just took our local address on copy_fd, which is likely to be a
 		   sensible address from which we can do a file transfer now - the
 		   most sensible we can get easily. */
 	} else {
-		ASSERTSOCKOP(gethostname(host, HOST_NAME_MAX + 1), "gethostname()");
+		ASSERTSOCKOP(gethostname(host, NI_MAXHOST), "gethostname()");
 	}
 
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -108,7 +108,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	if (!inet_ntop(saddr->ss_family, saddr->ss_family == AF_INET ?
 	               ( void * ) &(( struct sockaddr_in * ) saddr)->sin_addr.s_addr :
 	               ( void * ) &(( struct sockaddr_in6 * ) saddr)->sin6_addr.s6_addr,
-	               host, HOST_NAME_MAX)) {
+	               host, NI_MAXHOST)) {
 		strcpy(errmsg, "inet_ntop failed on listening socket");
 		return -1;
 	}
@@ -127,7 +127,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	}
 
 	/* I hate static-length strings.. */
-	host[HOST_NAME_MAX - 1] = '\0';
+	host[NI_MAXHOST - 1] = '\0';
 	port[5] = '\0';
 
 	return fd;

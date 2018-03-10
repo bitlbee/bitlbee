@@ -164,7 +164,7 @@ int set_setstr(set_t **head, const char *key, char *value)
 
 	/* If there's a default setting and it's equal to what we're trying to
 	   set, stick with s->value = NULL. Otherwise, remember the setting. */
-	if (!s->def || (strcmp(nv, s->def) != 0)) {
+	if (!s->def || (g_strcmp0(nv, s->def) != 0)) {
 		s->value = g_strdup(nv);
 	}
 

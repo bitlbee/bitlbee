@@ -499,7 +499,7 @@ gboolean jabber_bs_recv_handshake(gpointer data, gint fd, b_input_condition cond
 	}
 	case BS_PHASE_REPLY:
 	{
-		struct socks5_message socks5_reply;
+		struct socks5_message socks5_reply = {0};
 		int ret;
 
 		if (!(ret = jabber_bs_peek(bt, &socks5_reply, sizeof(struct socks5_message)))) {
@@ -887,7 +887,7 @@ void jabber_si_set_proxies(struct bs_transfer *bt)
 	char *proxysetting = g_strdup(set_getstr(&tf->ic->acc->set, "proxy"));
 	char *proxy, *next, *errmsg = NULL;
 	char port[6];
-	char host[HOST_NAME_MAX + 1];
+	char host[NI_MAXHOST + 1];
 	jabber_streamhost_t *sh, *sh2;
 	GSList *streamhosts = jd->streamhosts;
 
@@ -1045,7 +1045,7 @@ gboolean jabber_bs_send_handshake(gpointer data, gint fd, b_input_condition cond
 			unsigned char ver;
 			unsigned char nmethods;
 			unsigned char method;
-		} socks5_hello;
+		} socks5_hello = {0};
 
 		if (!(ret = jabber_bs_peek(bt, &socks5_hello, sizeof(socks5_hello)))) {
 			return FALSE;
@@ -1090,7 +1090,7 @@ gboolean jabber_bs_send_handshake(gpointer data, gint fd, b_input_condition cond
 	}
 	case BS_PHASE_REQUEST:
 	{
-		struct socks5_message socks5_connect;
+		struct socks5_message socks5_connect = {0};
 		int msgsize = sizeof(struct socks5_message);
 		int ret;
 

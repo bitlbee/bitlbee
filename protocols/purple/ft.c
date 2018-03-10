@@ -145,6 +145,10 @@ static gboolean prplcb_xfer_new_send_cb(gpointer data, gint fd, b_input_conditio
 	/* TODO(wilmer): After spreading some more const goodness in BitlBee,
 	   remove the evil cast below. */
 	px->ft = imcb_file_send_start(ic, (char *) who, xfer->filename, xfer->size);
+
+	if (!px->ft) {
+		return FALSE;
+	}
 	px->ft->data = px;
 
 	px->ft->accept = prpl_xfer_accept;

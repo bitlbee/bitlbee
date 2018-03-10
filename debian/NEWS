@@ -1,0 +1,10 @@
+bitlbee (3.5-1) unstable; urgency=medium
+
+  * /etc/default/bitlbee is now deprecated and no longer used. Any local
+    modifications to the following settings won't be automatically migrated:
+    BITLBEE_PORT, BITLBEE_OPTS, BITLBEE_DISABLED, BITLBEE_UPGRADE_DONT_RESTART
+  * The debian post-installation scripts no longer try to automatically assign
+    an alternate port number if 6667 is being used by another service. Please
+    set it explicitly in /etc/bitlbee/bitlbee.conf
+
+ -- dequis <dx@dxzone.com.ar>  Sun, 08 Jan 2017 03:24:13 -0300

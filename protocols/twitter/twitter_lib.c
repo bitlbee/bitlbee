@@ -238,7 +238,7 @@ static JSON_Value *twitter_parse_response(struct im_connection *ic, struct http_
 
 	if ((ret = json_parse_string(req->reply_body)) == NULL) {
 		imcb_error(ic, "Could not retrieve %s: %s",
-		           path, "XML parse error");
+		           path, "JSON parse error");
 	}
 	return ret;
 }
@@ -309,7 +309,7 @@ static gboolean twitter_xt_get_friends_id_list(JSON_Value *node, struct twitter_
 		jint id = json_array_get_integer(c, i);
 
 		txl->list = g_slist_prepend(txl->list,
-		                            g_strdup_printf("%lld", id));
+		                            g_strdup_printf("%" PRIu64, id);
 	}
 
 	JSON_Value *next = json_object_get_value(json_object(node), "next_cursor");
@@ -442,7 +442,7 @@ static void twitter_http_get_noretweets_ids(struct http_request *req)
 
 	txl = g_new0(struct twitter_xml_list, 1);
 	txl->list = td->noretweets_ids;
-	
+
 	// Process the retweet ids
 	txl->type = TXL_ID;
 	if (json_type(parsed) == JSONArray) {
@@ -451,7 +451,7 @@ static void twitter_http_get_noretweets_ids(struct http_request *req)
 		for (i = 0; i < json_array_get_count(arr); i++) {
 			jint id = json_array_get_integer(arr, i);
 			txl->list = g_slist_prepend(txl->list,
-			                            g_strdup_printf("%lld", id));
+			                            g_strdup_printf("%" PRId64, id));
 		}
 	}
 
@@ -712,8 +712,7 @@ static void expand_entities(char **text, const JSON_Object *node, const JSON_Obj
 	if (!(entities = json_object_get_object(node, "entities")))
 		return;
 	if ((quoted = json_object_get_object(node, "quoted_status"))) {
-		/* New "retweets with comments" feature. Note that this info
-		 * seems to be included in the streaming API only! Grab the
+		/* New "retweets with comments" feature. Grab the
 		 * full message and try to insert it when we run into the
 		 * Tweet entity. */
 		struct twitter_xml_status *txs = twitter_xt_get_status(quoted);
@@ -754,7 +753,10 @@ static void expand_entities(char **text, const JSON_Object *node, const JSON_Obj
 			const char *full = json_object_get_string(r, "expanded_url");
 			char *pos, *new;
 
-			if (!kort || !disp || !(pos = strstr(*text, kort))) {
+			/* Skip if a required field is missing, if the t.co URL is not in fact
+			   in the Tweet at all, or if the full-ish one *is* in it already
+			   (dupes appear, especially in streaming API). */
+			if (!kort || !disp || !(pos = strstr(*text, kort)) || strstr(*text, disp)) {
 				continue;
 			}
 			if (quote_url && strstr(full, quote_url)) {
@@ -979,7 +981,7 @@ static void twitter_status_show(struct im_connection *ic, struct twitter_xml_sta
 	if (status->user == NULL || status->text == NULL) {
 		return;
 	}
-	
+
 	/* Check this is not a tweet that should be muted */
 	uid_str = g_strdup_printf("%" G_GUINT64_FORMAT, status->user->uid);
 
@@ -1689,6 +1691,13 @@ void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_t
 		"in_reply_to_status_id",
 		g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
 	};
+
+	if (set_getbool(&ic->acc->set, "in_korea") && !in_reply_to) {
+		g_free(args[3]);
+		args[2] = "place_id";
+		args[3] = g_strdup("c999e6a453e9ef72");
+		in_reply_to = 1;
+	}
 
 	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post, ic, 1,
 	             args, in_reply_to ? 4 : 2);

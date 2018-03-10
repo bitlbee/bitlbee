@@ -160,6 +160,7 @@ struct jabber_chat {
 	char *my_full_jid; /* Separate copy because of case sensitivity. */
 	struct jabber_buddy *me;
 	char *invite;
+	char *last_sent_message;
 };
 
 struct jabber_transfer {

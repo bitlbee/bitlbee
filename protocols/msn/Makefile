@@ -37,10 +37,10 @@ $(objects): ../../Makefile.settings Makefile
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
+	$(VERBOSE) $(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 msn_mod.o: $(objects)
 	@echo '*' Linking msn_mod.o
-	@$(LD) $(LFLAGS) $(objects) -o msn_mod.o
+	$(VERBOSE) $(LD) $(LFLAGS) $(objects) -o msn_mod.o
 
 -include .depend/*.d

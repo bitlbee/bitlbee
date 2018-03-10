@@ -14,6 +14,7 @@ etcdir='$prefix/etc/bitlbee/'
 mandir='$prefix/share/man/'
 datadir='$prefix/share/bitlbee/'
 config='/var/lib/bitlbee/'
+libdir='$prefix/lib/'
 plugindir='$prefix/lib/bitlbee/'
 rpcplugindir='$plugindir/rpc/'
 includedir='$prefix/include/bitlbee/'
@@ -40,9 +41,10 @@ twitter=1
 purple=0
 rpc=1
 
+verbose=0
 doc=1
 debug=0
-strip=1
+strip=0
 gcov=0
 asan=0
 plugins=1
@@ -128,6 +130,8 @@ Option		Description				Default
 --pidfile=...						$pidfile
 --config=...						$config
 
+--verbose=0/1	Disable/enable verbose build		$verbose
+
 --msn=0/1	Disable/enable MSN part			$msn
 --jabber=0/1	Disable/enable Jabber part		$jabber
 --oscar=0/1	Disable/enable Oscar part (ICQ, AIM)	$oscar
@@ -173,6 +177,7 @@ etcdir=$(eval echo "$etcdir/" | sed 's/\/\{1,\}/\//g')
 mandir=$(eval echo "$mandir/" | sed 's/\/\{1,\}/\//g')
 datadir=$(eval echo "$datadir/" | sed 's/\/\{1,\}/\//g')
 config=$(eval echo "$config/" | sed 's/\/\{1,\}/\//g')
+libdir=$(eval echo "$libdir/" | sed 's/\/\{1,\}/\//g')
 plugindir=$(eval echo "$plugindir/" | sed 's/\/\{1,\}/\//g')
 rpcplugindir=$(eval echo "$rpcplugindir/" | sed 's/\/\{1,\}/\//g')
 includedir=$(eval echo "$includedir"/ | sed 's/\/\{1,\}/\//g')
@@ -198,6 +203,7 @@ DATADIR=$datadir
 PLUGINDIR=$plugindir
 RPCPLUGINDIR=$rpcplugindir
 CONFIG=$config
+LIBDIR=$libdir
 INCLUDEDIR=$includedir
 PCDIR=$pcdir
 
@@ -247,6 +253,7 @@ cat<<EOF >config.h
 #define VARDIR "$datadir"
 #define PLUGINDIR "$plugindir"
 #define RPCPLUGINDIR "$rpcplugindir"
+#define DATADIR "$datadir"
 #define PIDFILE "$pidfile"
 #define IPCSOCKET "$ipcsocket"
 EOF
@@ -295,11 +302,30 @@ if [ "$tsan" = "1" ]; then
 	echo "No need to sanitise threads in a single-threaded process!"
 fi
 
+if [ "$verbose" = "0" ]; then
+	echo 'VERBOSE=@' >> Makefile.settings
+else
+	echo 'VERBOSE=' >> Makefile.settings
+fi
+
+cat <<EOF >>Makefile.settings
+
+# Enable/disable output verbosity
+ifdef V
+ifeq (\$(V),1)
+	VERBOSE=
+else
+	VERBOSE=@
+endif
+endif
+
+EOF
+
 if [ "$debug" = "1" ]; then
 	echo 'DEBUG=1' >> Makefile.settings
 	CFLAGS="$CFLAGS -g3 -DDEBUG -O0"
 else
-	[ -z "$CFLAGS" ] && CFLAGS="-O2 -fno-strict-aliasing"
+	[ -z "$CFLAGS" ] && CFLAGS="-g -O2 -fno-strict-aliasing"
 fi
 
 if [ "$pie" = "1" ]; then
@@ -763,7 +789,7 @@ fi
 
 if [ "$doc" = "1" ]; then
 	# check this here just in case someone tries to install it in python2.4...
-	if ! $PYTHON -m xml.etree.ElementTree > /dev/null 2>&1; then
+	if [ ! -e $srcdir/doc/user-guide/help.txt ] && ! $PYTHON -m xml.etree.ElementTree > /dev/null 2>&1; then
 		echo
 		echo 'ERROR: Python (>=2.5 or 3.x) is required to generate docs'
 		echo "(Use the PYTHON environment variable if it's in a weird location)"
@@ -796,17 +822,25 @@ if ! make helloworld > /dev/null 2>&1; then
 	fi
 fi
 
+pkgconfiglibs=''
+case "$arch" in
+CYGWIN* )
+	pkgconfiglibs='-L${libdir} -lbitlbee -no-undefined'
+esac
+
 cat <<EOF >bitlbee.pc
 prefix=$prefix
 includedir=$includedir
 plugindir=$plugindir
 rpcplugindir=$rpcplugindir
+libdir=$libdir
+datadir=$datadir
 
 Name: bitlbee
 Description: IRC to IM gateway
 Requires: glib-2.0
 Version: $BITLBEE_VERSION
-Libs:
+Libs: $pkgconfiglibs
 Cflags: -I\${includedir}
 
 EOF
@@ -924,6 +958,8 @@ AIX )
 	echo 'EFLAGS+=-Wl,-brtl' >> Makefile.settings
 ;;
 CYGWIN* )
+	echo 'EFLAGS+=-Wl,--export-all,--out-implib,libbitlbee.dll.a' >> Makefile.settings
+	echo 'IMPLIB=libbitlbee.dll.a' >> Makefile.settings
 ;;
 Windows )
 	echo 'Native windows compilation is not supported anymore, use cygwin instead.'

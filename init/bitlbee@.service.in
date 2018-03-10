@@ -1,8 +1,8 @@
 [Unit]
 Description=BitlBee Per-Connection Server
-After=syslog.target
 
 [Service]
 ExecStart=@sbindir@bitlbee -I
 StandardInput=socket
+StandardError=syslog
 User=bitlbee

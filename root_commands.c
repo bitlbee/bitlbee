@@ -1071,7 +1071,7 @@ static void cmd_blist(irc_t *irc, char **cmd)
 	if (strchr(irc->umode, 'b') != NULL) {
 		format = "%s\t%s\t%s";
 	} else {
-		format = "%-16.16s  %-40.40s  %s";
+		format = "%-24.24s  %-40.40s  %s";
 	}
 
 	irc_rootmsg(irc, format, "Nick", "Handle/Account", "Status");
@@ -1171,35 +1171,79 @@ static void prplstr(GList *prpls, GString *gstr)
 	g_list_free(prpls);
 }
 
+static void cmd_plugins_info(irc_t *irc, char **cmd)
+{
+	GList *l;
+	struct plugin_info *info;
+
+	MIN_ARGS(2);
+
+	for (l = get_plugins(); l; l = l->next) {
+		info = l->data;
+		if (g_strcasecmp(cmd[2], info->name) == 0) {
+			break;
+		}
+	}
+
+	if (!l) {
+		return;
+	}
+
+	irc_rootmsg(irc, "%s:", info->name);
+	irc_rootmsg(irc, "  Version: %s", info->version);
+
+	if (info->description) {
+		irc_rootmsg(irc, "  Description: %s", info->description);
+	}
+
+	if (info->author) {
+		irc_rootmsg(irc, "  Author: %s", info->author);
+	}
+
+	if (info->url) {
+		irc_rootmsg(irc, "  URL: %s", info->url);
+	}
+}
+
 static void cmd_plugins(irc_t *irc, char **cmd)
 {
 	GList *prpls;
 	GString *gstr;
 
+	if (cmd[1] && g_strcasecmp(cmd[1], "info") == 0) {
+		cmd_plugins_info(irc, cmd);
+		return;
+	}
+
 #ifdef WITH_PLUGINS
 	GList *l;
 	struct plugin_info *info;
+	char *format;
+
+	if (strchr(irc->umode, 'b') != NULL) {
+		format = "%s\t%s";
+	} else {
+		format = "%-30s  %s";
+	}
+
+	irc_rootmsg(irc, format, "Plugin", "Version");
 
 	for (l = get_plugins(); l; l = l->next) {
+		char *c;
 		info = l->data;
-		irc_rootmsg(irc, "%s:", info->name);
-		irc_rootmsg(irc, "  Version: %s", info->version);
 
-		if (info->description) {
-			irc_rootmsg(irc, "  Description: %s", info->description);
+		/* some purple plugins like to include several versions separated by newlines... */
+		if ((c = strchr(info->version, '\n'))) {
+			char *version = g_strndup(info->version, c - info->version);
+			irc_rootmsg(irc, format, info->name, version);
+			g_free(version);
+		} else {
+			irc_rootmsg(irc, format, info->name, info->version);
 		}
-
-		if (info->author) {
-			irc_rootmsg(irc, "  Author: %s", info->author);
-		}
-
-		if (info->url) {
-			irc_rootmsg(irc, "  URL: %s", info->url);
-		}
-
-		irc_rootmsg(irc, "");
 	}
 #endif
+
+	irc_rootmsg(irc, "");
 
 	gstr = g_string_new(NULL);
 	prpls = get_protocols();
@@ -1345,9 +1389,7 @@ static void cmd_chat(irc_t *irc, char **cmd)
 		}
 	} else if (g_strcasecmp(cmd[1], "set") == 0 ||
 	           g_strcasecmp(cmd[1], "del") == 0) {
-		irc_rootmsg(irc,
-		            "Warning: The \002chat\002 command was mostly replaced with the \002channel\002 command.");
-		cmd_channel(irc, cmd);
+		irc_rootmsg(irc, "Unknown command: chat %s. Did you mean \002channel %s\002?", cmd[1], cmd[1]);
 	} else {
 		irc_rootmsg(irc,
 		            "Unknown command: %s %s. Please use \x02help commands\x02 to get a list of available commands.", "chat",
@@ -1405,7 +1447,7 @@ void cmd_chat_list_finish(struct im_connection *ic)
 		ci = l->data;
 		topic = ci->topic ? ci->topic : "";
 
-		padded = str_pad_and_truncate(ci->title, title_len, "[...]");
+		padded = str_pad_and_truncate(ci->title ? ci->title : "", title_len, "[...]");
 		irc_rootmsg(irc, iformat, ++i, padded, topic);
 		g_free(padded);
 	}

@@ -160,9 +160,6 @@ LEGAL
 BitlBee is distributed under the GPL (GNU General Public License). See the
 file COPYING for this license.
 
-The Yahoo! library used by BitlBee is libyahoo2 <http://libyahoo2.sf.net/>,
-also licensed under the GPL.
-
 
 	BitlBee - An IRC to other chat networks gateway 
 	          <http://www.bitlbee.org/>

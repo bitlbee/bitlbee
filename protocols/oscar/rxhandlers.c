@@ -234,14 +234,8 @@ int aim_conn_addhandler(aim_session_t *sess, aim_conn_t *conn, guint16 family, g
 {
 	struct aim_rxcblist_s *newcb;
 
-	if (!conn) {
-		return -1;
-	}
-
-	if (checkdisallowed(family, type)) {
-		g_assert(0);
-		return -1;
-	}
+	g_return_val_if_fail(conn, -1);
+	g_return_val_if_fail(!checkdisallowed(family, type), -1);
 
 	if (!(newcb = (struct aim_rxcblist_s *) g_new0(struct aim_rxcblist_s, 1))) {
 		return -1;

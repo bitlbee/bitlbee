@@ -20,8 +20,8 @@ test_objs = check.o check_util.o check_nick.o check_md5.o check_arc.o check_irc.
 
 check: $(test_objs) $(addprefix ../, $(main_objs)) ../protocols/protocols.o ../lib/lib.o
 	@echo '*' Linking $@
-	@$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS) $(EFLAGS)
+	$(VERBOSE) $(CC) $(CFLAGS) -o $@ $^ $(LFLAGS) $(EFLAGS)
 
 %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $< -o $@
+	$(VERBOSE) $(CC) -c $(CFLAGS) $< -o $@

@@ -93,9 +93,17 @@ endif
 install-bin:
 	mkdir -p $(DESTDIR)$(SBINDIR)
 	$(INSTALL) -m 0755 $(OUTFILE) $(DESTDIR)$(SBINDIR)/$(OUTFILE)
+ifdef IMPLIB
+	# import library for cygwin
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	$(INSTALL) -m 0644 $(IMPLIB) $(DESTDIR)$(LIBDIR)/$(IMPLIB)
+endif
 
 uninstall-bin:
 	rm -f $(DESTDIR)$(SBINDIR)/$(OUTFILE)
+ifdef IMPLIB
+	rm -f $(DESTDIR)$(LIBDIR)/$(IMPLIB)
+endif
 
 install-dev:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
@@ -162,28 +170,28 @@ tar:
 	tar czf $$x.tar.gz --exclude=debian --exclude=.git* --exclude=.depend $$x
 
 $(subdirs):
-	@$(MAKE) -C $@ $(MAKECMDGOALS)
+	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 $(OTR_PI): %.so: $(_SRCDIR_)%.c
 	@echo '*' Building plugin $@
-	@$(CC) $(CFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@ $(OTRFLAGS)
+	$(VERBOSE) $(CC) $(CFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@ $(OTRFLAGS)
 
 $(SKYPE_PI): $(_SRCDIR_)protocols/skype/skype.c
 	@echo '*' Building plugin skype
-	@$(CC) $(CFLAGS) $(LDFLAGS) $(SKYPEFLAGS) $< -o $@
+	$(VERBOSE) $(CC) $(CFLAGS) $(LDFLAGS) $(SKYPEFLAGS) $< -o $@
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
+	$(VERBOSE) $(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 $(objects): Makefile Makefile.settings config.h
 
 $(OUTFILE): $(objects) $(subdirs)
 	@echo '*' Linking $(OUTFILE)
-	@$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LDFLAGS_BITLBEE) $(LDFLAGS) $(EFLAGS)
-ifndef DEBUG
+	$(VERBOSE) $(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LDFLAGS_BITLBEE) $(LDFLAGS) $(EFLAGS)
+ifneq ($(firstword $(STRIP)), \#)
 	@echo '*' Stripping $(OUTFILE)
-	@-$(STRIP) $(OUTFILE)
+	$(VERBOSE) -$(STRIP) $(OUTFILE)
 endif
 
 ctags: 

@@ -36,7 +36,7 @@ static void check_buddy_add(int l)
 	fail_unless(jabber_buddy_by_jid(ic, "WILMER@GAAST.NET/BitlBee", GET_BUDDY_EXACT) == budw1);
 	fail_unless(jabber_buddy_by_jid(ic, "wilmer@GAAST.NET/BitlBee", GET_BUDDY_CREAT) == budw1);
 
-	fail_unless(jabber_buddy_by_jid(ic, "wilmer@gaast.net", GET_BUDDY_EXACT));
+	fail_unless(jabber_buddy_by_jid(ic, "wilmer@gaast.net", GET_BUDDY_EXACT) != NULL);
 	fail_unless(jabber_buddy_by_jid(ic, "WILMER@gaast.net", 0) == budw3);
 
 	/* Check O_FIRST and see if it's indeed the first item from the list. */
@@ -82,7 +82,7 @@ static void check_buddy_add(int l)
 
 	fail_if(jabber_buddy_remove(ic, "nekkid@lamejab.net/Illegal"));
 	fail_unless(jabber_buddy_remove(ic, "nekkid@lamejab.net"));
-	fail_if(jabber_buddy_by_jid(ic, "nekkid@lamejab.net", 0));
+	fail_if(jabber_buddy_by_jid(ic, "nekkid@lamejab.net", 0) != NULL);
 
 	/* Fixing a bug in this branch that caused information to get lost when
 	   removing the first full JID from a list. */

@@ -12,7 +12,7 @@ _SRCDIR_ := $(_SRCDIR_)lib/
 endif
 
 # [SH] Program variables
-objects = arc.o base64.o $(EVENT_HANDLER) ftutil.o http_client.o ini.o md5.o misc.o oauth.o oauth2.o parson.o proxy.o sha1.o $(SSL_CLIENT) url.o xmltree.o ns_parse.o
+objects = arc.o base64.o canohost.o $(EVENT_HANDLER) ftutil.o http_client.o ini.o md5.o misc.o oauth.o oauth2.o parson.o proxy.o sha1.o $(SSL_CLIENT) url.o xmltree.o ns_parse.o
 
 LFLAGS += -r
 
@@ -35,12 +35,12 @@ distclean: clean $(subdirs)
 
 lib.o: $(objects) $(subdirs)
 	@echo '*' Linking lib.o
-	@$(LD) $(LFLAGS) $(objects) -o lib.o
+	$(VERBOSE) $(LD) $(LFLAGS) $(objects) -o lib.o
 
 $(objects): ../Makefile.settings Makefile
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
+	$(VERBOSE) $(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 -include .depend/*.d

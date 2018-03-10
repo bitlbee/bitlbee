@@ -24,6 +24,7 @@
 */
 
 #include "bitlbee.h"
+#include "canohost.h"
 #include "ipc.h"
 #include "dcc.h"
 #include "lib/ssl_client.h"
@@ -40,9 +41,6 @@ static char *set_eval_utf8_nicks(set_t *set, char *value);
 irc_t *irc_new(int fd)
 {
 	irc_t *irc;
-	struct sockaddr_storage sock;
-	socklen_t socklen = sizeof(sock);
-	char *host = NULL, *myhost = NULL;
 	irc_user_t *iu;
 	GSList *l;
 	set_t *s;
@@ -63,33 +61,6 @@ irc_t *irc_new(int fd)
 
 	irc->iconv = (GIConv) - 1;
 	irc->oconv = (GIConv) - 1;
-
-	if (global.conf->hostname) {
-		myhost = g_strdup(global.conf->hostname);
-	} else if (getsockname(irc->fd, (struct sockaddr*) &sock, &socklen) == 0) {
-		char buf[NI_MAXHOST + 1];
-
-		if (getnameinfo((struct sockaddr *) &sock, socklen, buf,
-		                NI_MAXHOST, NULL, 0, 0) == 0) {
-			myhost = g_strdup(ipv6_unwrap(buf));
-		}
-	}
-
-	if (getpeername(irc->fd, (struct sockaddr*) &sock, &socklen) == 0) {
-		char buf[NI_MAXHOST + 1];
-
-		if (getnameinfo((struct sockaddr *) &sock, socklen, buf,
-		                NI_MAXHOST, NULL, 0, 0) == 0) {
-			host = g_strdup(ipv6_unwrap(buf));
-		}
-	}
-
-	if (host == NULL) {
-		host = g_strdup("localhost.localdomain");
-	}
-	if (myhost == NULL) {
-		myhost = g_strdup("localhost.localdomain");
-	}
 
 	if (global.conf->ping_interval > 0 && global.conf->ping_timeout > 0) {
 		irc->ping_source_id = b_timeout_add(global.conf->ping_interval * 1000, irc_userping, irc);
@@ -112,8 +83,9 @@ irc_t *irc_new(int fd)
 	s = set_add(&b->set, "handle_unknown", "add_channel", NULL, irc);
 	s = set_add(&b->set, "last_version", "0", NULL, irc);
 	s->flags |= SET_HIDDEN;
-	s = set_add(&b->set, "lcnicks", "true", set_eval_bool, irc);
 	s = set_add(&b->set, "nick_format", "%-@nick", NULL, irc);
+	s = set_add(&b->set, "nick_lowercase", "false", set_eval_bool, irc);
+	s = set_add(&b->set, "nick_underscores", "false", set_eval_bool, irc);
 	s = set_add(&b->set, "offline_user_quits", "true", set_eval_bool, irc);
 	s = set_add(&b->set, "ops", "both", set_eval_irc_channel_ops, irc);
 	s = set_add(&b->set, "paste_buffer", "false", set_eval_bool, irc);
@@ -136,17 +108,16 @@ irc_t *irc_new(int fd)
 	s = set_add(&b->set, "utf8_nicks", "false", set_eval_utf8_nicks, irc);
 
 	irc->root = iu = irc_user_new(irc, ROOT_NICK);
-	iu->host = g_strdup(myhost);
 	iu->fullname = g_strdup(ROOT_FN);
 	iu->f = &irc_user_root_funcs;
 
 	iu = irc_user_new(irc, NS_NICK);
-	iu->host = g_strdup(myhost);
 	iu->fullname = g_strdup(ROOT_FN);
 	iu->f = &irc_user_root_funcs;
 
 	irc->user = g_new0(irc_user_t, 1);
-	irc->user->host = g_strdup(host);
+	
+	irc_set_hosts(irc, NULL, 0);
 
 	conf_loaddefaults(irc);
 
@@ -161,9 +132,6 @@ irc_t *irc_new(int fd)
 		          "You probably want to run it in (Fork)Daemon mode. "
 		          "See doc/README for more information.");
 	}
-
-	g_free(myhost);
-	g_free(host);
 
 	/* libpurple doesn't like fork()s after initializing itself, so this
 	   is the right moment to initialize it. */
@@ -184,6 +152,52 @@ irc_t *irc_new(int fd)
 	}
 
 	return irc;
+}
+
+void irc_set_hosts(irc_t *irc, const struct sockaddr *remote_addr, const socklen_t remote_addrlen)
+{
+	struct sockaddr_storage sock;
+	socklen_t socklen = sizeof(sock);
+	char *host = NULL, *myhost = NULL;
+	struct irc_user *iu;
+
+	if (global.conf->hostname) {
+		myhost = g_strdup(global.conf->hostname);
+	} else if (getsockname(irc->fd, (struct sockaddr*) &sock, &socklen) == 0) {
+		myhost = reverse_lookup((struct sockaddr*) &sock, socklen);
+	}
+
+	if (remote_addrlen > 0) {
+		host = reverse_lookup(remote_addr, remote_addrlen);
+	} else if (getpeername(irc->fd, (struct sockaddr*) &sock, &socklen) == 0) {
+		host = reverse_lookup((struct sockaddr*) &sock, socklen);
+	}
+
+	if (myhost == NULL) {
+		myhost = g_strdup("localhost.localdomain");
+	}
+	if (host == NULL) {
+		host = g_strdup("localhost.localdomain");
+	}
+	
+	if (irc->root->host != irc->root->nick) {
+		g_free(irc->root->host);
+	}
+	irc->root->host = g_strdup(myhost);
+	if ((iu = irc_user_by_name(irc, NS_NICK))) {
+		if (iu->host != iu->nick) {
+			g_free(iu->host);
+		}
+		iu->host = g_strdup(myhost);
+	}
+	
+	if (irc->user->host != irc->user->nick) {
+		g_free(irc->user->host);
+	}
+	irc->user->host = g_strdup(host);
+
+	g_free(myhost);
+	g_free(host);
 }
 
 /* immed=1 makes this function pretty much equal to irc_free(), except that

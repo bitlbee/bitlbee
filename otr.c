@@ -877,13 +877,13 @@ void op_handle_smp_event(void *opdata, OtrlSMPEvent ev, ConnContext *ctx,
 	switch (ev) {
 	case OTRL_SMPEVENT_ASK_FOR_SECRET:
 		irc_rootmsg(irc, "smp: initiated by %s"
-		            " - respond with \x02otr smp %s <secret>\x02",
+		            " - respond with \x02otr smp %s \"<secret>\"\x02",
 		            u->nick, u->nick);
 		break;
 	case OTRL_SMPEVENT_ASK_FOR_ANSWER:
 		irc_rootmsg(irc, "smp: initiated by %s with question: \x02\"%s\"\x02", u->nick,
 		            question);
-		irc_rootmsg(irc, "smp: respond with \x02otr smp %s <answer>\x02",
+		irc_rootmsg(irc, "smp: respond with \x02otr smp %s \"<answer>\"\x02",
 		            u->nick);
 		break;
 	case OTRL_SMPEVENT_CHEATED:
@@ -1513,7 +1513,7 @@ struct im_connection *check_imc(void *opdata, const char *accountname,
 				break;
 			}
 		}
-		assert(l != NULL);  /* a match should always be found */
+		g_return_val_if_fail(l, NULL);
 		if (!l) {
 			return NULL;
 		}

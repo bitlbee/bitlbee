@@ -93,7 +93,7 @@ char *nick_get(bee_user_t *bu)
 		}
 
 		nick_strip(irc, nick);
-		if (set_getbool(&bu->bee->set, "lcnicks")) {
+		if (set_getbool(&bu->bee->set, "nick_lowercase")) {
 			nick_lc(irc, nick);
 		}
 	}
@@ -214,6 +214,11 @@ char *nick_gen(bee_user_t *bu)
 	rets = g_string_free(ret, FALSE);
 	if (ok && rets && *rets) {
 		nick_strip(irc, rets);
+
+		if (set_getbool(&bu->bee->set, "nick_lowercase")) {
+			nick_lc(irc, rets);
+		}
+
 		truncate_utf8(rets, MAX_NICK_LENGTH);
 		return rets;
 	}
@@ -287,6 +292,7 @@ void nick_del(bee_user_t *bu)
 void nick_strip(irc_t *irc, char *nick)
 {
 	int len = 0;
+	gboolean nick_underscores = irc ? set_getbool(&irc->b->set, "nick_underscores") : FALSE;
 
 	if (irc && (irc->status & IRC_UTF8_NICKS)) {
 		gunichar c;
@@ -296,8 +302,11 @@ void nick_strip(irc_t *irc, char *nick)
 			c = g_utf8_get_char_validated(p, -1);
 			n = g_utf8_find_next_char(p, NULL);
 
-			if ((c < 0x7f && !(strchr(nick_lc_chars, c) ||
-			                   strchr(nick_uc_chars, c))) ||
+			if (nick_underscores && c == ' ') {
+				*p = '_';
+				p = n;
+			} else if ((c < 0x7f && !(strchr(nick_lc_chars, c) ||
+			                          strchr(nick_uc_chars, c))) ||
 			    !g_unichar_isgraph(c)) {
 				strcpy(tmp, n);
 				strcpy(p, tmp);
@@ -312,7 +321,10 @@ void nick_strip(irc_t *irc, char *nick)
 		int i;
 
 		for (i = len = 0; nick[i] && len < MAX_NICK_LENGTH; i++) {
-			if (strchr(nick_lc_chars, nick[i]) ||
+			if (nick_underscores && nick[i] == ' ') {
+				nick[len] = '_';
+				len++;
+			} else if (strchr(nick_lc_chars, nick[i]) ||
 			    strchr(nick_uc_chars, nick[i])) {
 				nick[len] = nick[i];
 				len++;

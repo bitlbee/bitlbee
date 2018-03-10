@@ -37,10 +37,10 @@ $(objects): ../../Makefile.settings Makefile
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<
-	@$(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
+	$(VERBOSE) $(CC) -c $(CFLAGS) $(CFLAGS_BITLBEE) $< -o $@
 
 twitter_mod.o: $(objects)
 	@echo '*' Linking twitter_mod.o
-	@$(LD) $(LFLAGS) $(objects) -o twitter_mod.o
+	$(VERBOSE) $(LD) $(LFLAGS) $(objects) -o twitter_mod.o
 	
 -include .depend/*.d

@@ -20,7 +20,7 @@
 
 			<description>
 				<para>
-					Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ), Yahoo and Twitter. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
+					Adds an account on the given server with the specified protocol, username and password to the account list. For a list of supported protocols, use the <emphasis>plugins</emphasis> command. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
 				</para>
 
 				<para>
@@ -183,7 +183,7 @@
 
 	<bitlbee-command name="channel">
 		<short-description>Channel list maintenance</short-description>
-		<syntax>channel [&lt;account id&gt;] &lt;action&gt; [&lt;arguments&gt;]</syntax>
+		<syntax>channel [&lt;channel id&gt;] &lt;action&gt; [&lt;arguments&gt;]</syntax>
 
 		<description>
 			<para>
@@ -276,7 +276,11 @@
 
 			<description>
 				<para>
-					List existing chatrooms provided by an account. BitlBee needs this to propogate an internal list of chats. The existing chat can then be added with <emphasis>chat add</emphasis>, using the number in the index column after a "!" as a shortcut.
+					List existing named chatrooms provided by an account. Chats from this list can be referenced from <emphasis>chat add</emphasis> by using the number in the index column after a "!" as a shortcut.
+				</para>
+
+				<para>
+					The server parameter is optional and currently only used by jabber.
 				</para>
 			</description>
 
@@ -337,7 +341,7 @@
 
 		<description>
 			<para>
-				Requests IM-network-specific information about the specified user. The amount of information you'll get differs per protocol. For some protocols (ATM Yahoo! and MSN) it'll give you an URL which you can visit with a normal web browser to get the information.
+				Requests IM-network-specific information about the specified user. The amount of information you'll get differs per protocol. For some protocols it'll give you an URL which you can visit with a normal web browser to get the information.
 			</para>
 		</description>
 
@@ -886,24 +890,7 @@
 
 		<description>
 			<para>
-				With this setting enabled, you can use some commands in your Twitter channel/query. The commands are simple and not documented in too much detail:
-			</para>
-
-			<variablelist>
-				<varlistentry><term>undo #[&lt;id&gt;]</term><listitem><para>Delete your last Tweet (or one with the given ID)</para></listitem></varlistentry>
-				<varlistentry><term>rt &lt;screenname|#id&gt;</term><listitem><para>Retweet someone's last Tweet (or one with the given ID)</para></listitem></varlistentry>
-				<varlistentry><term>reply &lt;screenname|#id&gt;</term><listitem><para>Reply to a Tweet (with a reply-to reference)</para></listitem></varlistentry>
-				<varlistentry><term>rawreply &lt;screenname|#id&gt;</term><listitem><para>Reply to a Tweet (with no reply-to reference)</para></listitem></varlistentry>
-				<varlistentry><term>report &lt;screenname|#id&gt;</term><listitem><para>Report the given user (or the user who posted the tweet with the given ID) for sending spam. This will also block them.</para></listitem></varlistentry>
-				<varlistentry><term>follow &lt;screenname&gt;</term><listitem><para>Start following a person</para></listitem></varlistentry>
-				<varlistentry><term>unfollow &lt;screenname&gt;</term><listitem><para>Stop following a person</para></listitem></varlistentry>
-				<varlistentry><term>favourite &lt;screenname|#id&gt;</term><listitem><para>Favo<emphasis>u</emphasis>rite the given user's most recent tweet, or the given tweet ID.</para></listitem></varlistentry>
-				<varlistentry><term>post &lt;message&gt;</term><listitem><para>Post a tweet</para></listitem></varlistentry>
-				<varlistentry><term>url &lt;screenname|#id&gt;</term><listitem><para>Show URL for a tweet to open it in a browser (and see context)</para></listitem></varlistentry>
-			</variablelist>
-
-			<para>
-				Anything that doesn't look like a command will be treated as a tweet. Watch out for typos, or to avoid this behaviour, you can set this setting to <emphasis>strict</emphasis>, which causes the <emphasis>post</emphasis> command to become mandatory for posting a tweet.
+				With this setting enabled, you can use some commands in your Twitter channel/query. See <emphasis>help twitter</emphasis> for the list of extra commands available.
 			</para>
 		</description>
 	</bitlbee-setting>
@@ -1003,17 +990,21 @@
 		</description>
 	</bitlbee-setting>
 
-	<bitlbee-setting name="handle_unknown" type="string" scope="global">
+	<bitlbee-setting name="handle_unknown" type="string" scope="account,global">
 		<default>add_channel</default>
-		<possible-values>root, add, add_private, add_channel, ignore</possible-values>
+		<possible-values>add_private, add_channel, ignore</possible-values>
 
 		<description>
 			<para>
-				By default, messages from people who aren't in your contact list are shown in a control channel instead of as a private message.
+				By default, messages from people who aren't in your contact list are shown in a control channel (add_channel) instead of as a private message (add_private)
 			</para>
 
 			<para>
 				If you prefer to ignore messages from people you don't know, you can set this one to "ignore". "add_private" and "add_channel" are like add, but you can use them to make messages from unknown buddies appear in the channel instead of a query window.
+			</para>
+
+			<para>
+				This can be set to individual accounts, which is useful to only ignore accounts that are targeted by spammers, without missing messages from legitimate unknown contacts in others. Note that incoming add requests are visible regardless of this setting.
 			</para>
 
 			<note>
@@ -1036,17 +1027,6 @@
 
 	</bitlbee-setting>
 
-	<bitlbee-setting name="lcnicks" type="boolean" scope="global">
-		<default>true</default>
-
-		<description>
-			<para>
-				Hereby you can change whether you want all lower case nick names or leave the case as it intended by your peer.
-			</para>
-		</description>
-
-	</bitlbee-setting>
-
 	<bitlbee-setting name="local_display_name" type="boolean" scope="account">
 		<default>false</default>
 
@@ -1063,7 +1043,7 @@
 
 		<description>
 			<para>
-				Some protocols (MSN, Yahoo!, GTalk) can notify via IM about new e-mail. Since most people use their Hotmail/Yahoo! addresses as a spam-box, this is disabled default. If you want these notifications, you can enable this setting.
+				Some protocols can notify via IM about new e-mail. If you want these notifications, you can enable this setting.
 			</para>
 		</description>
 
@@ -1211,6 +1191,36 @@
 				With this setting set to <emphasis>full_name</emphasis>, the person's full name is used to generate a nickname. Or if you don't like long nicknames, set this setting to <emphasis>first_name</emphasis> instead and only the first word will be used. Note that the full name can be full of non-ASCII characters which will be stripped off.
 			</para>
 		</description>
+	</bitlbee-setting>
+
+	<bitlbee-setting name="nick_lowercase" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				If enabled, all nicknames are turned into lower case.
+			</para>
+
+			<para>
+				See also the <emphasis>nick_underscores</emphasis> setting. This setting was previously known as <emphasis>lcnicks</emphasis>.
+			</para>
+		</description>
+
+	</bitlbee-setting>
+
+	<bitlbee-setting name="nick_underscores" type="boolean" scope="global">
+		<default>true</default>
+
+		<description>
+			<para>
+				If enabled, spaces in nicknames are turned into underscores instead of being stripped.
+			</para>
+
+			<para>
+				See also the <emphasis>nick_lowercase</emphasis> setting.
+			</para>
+		</description>
+
 	</bitlbee-setting>
 
 	<bitlbee-setting name="oauth" type="boolean" scope="account">
@@ -1849,11 +1859,15 @@
 
 	<bitlbee-command name="plugins">
 		<short-description>List all the external plugins and protocols</short-description>
-		<syntax>plugins</syntax>
+		<syntax>plugins [info &lt;name&gt;]</syntax>
 
 		<description>
 			<para>
 				This gives you a list of all the external plugins and protocols.
+			</para>
+
+			<para>
+				Use the <emphasis>info</emphasis> subcommand to get more details about a plugin.
 			</para>
 		</description>
 

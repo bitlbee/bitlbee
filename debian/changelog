@@ -1,3 +1,48 @@
+bitlbee (3.5-2) unstable; urgency=medium
+
+  * TFW you find out the corrected fix diff posted on #821967 was still the
+    broken one and you end up doing your third upload in a weekend. :-(
+    Obviously build-* targets shouldn't call into binary-*, as that one
+    starts requiring root. This broke builds on buildd's.
+  * Now contains the same fix like 3.4.2-1.1, which as it turns out 3.5-1.1
+    did not. (Closes: #853017)
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 28 Jan 2017 21:06:27 +0000
+
+bitlbee (3.5-1.1) unstable; urgency=medium
+
+  [ dequis ]
+  * Merge back changes from 3.4.2-1.1 (Closes: #852897)
+
+ -- dequis <dx@dxzone.com.ar>  Thu, 26 Jan 2017 21:39:24 -0300
+
+bitlbee (3.5-1) unstable; urgency=medium
+
+  [ Jochen Sprickerhof ]
+  * Drop dependency on net-tools
+
+  [ dequis ]
+  * Use dh_systemd
+  * Drop support for /etc/default/bitlbee
+  * Drop debconf and its translations (only used to ask for the port)
+  * Add preinst script for a smoother transition to systemd units
+  * Ignore the stdout of deluser, fixes postrm error exit code
+  * Remove some mentions of yahoo in control and copyright
+  * Remove outdated stuff from README.debian
+
+  [ Wilmer van der Gaast ]
+  * New upstream release.
+
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Tue, 24 Jan 2017 22:21:33 +0000
+
+bitlbee (3.4.2-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Adding build-{arch,indep} targets. (Closes: #821967)
+  * Added python to build depends.
+
+ -- Michael Lustfield <michael@lustfield.net>  Mon, 18 Jul 2016 01:02:17 -0700
+
 bitlbee (3.4.2-1) unstable; urgency=medium
 
   [ Jelmer Vernooĳ ]

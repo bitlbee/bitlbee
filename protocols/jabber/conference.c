@@ -166,6 +166,7 @@ void jabber_chat_free(struct groupchat *c)
 
 	jabber_buddy_remove_bare(c->ic, jc->name);
 
+	g_free(jc->last_sent_message);
 	g_free(jc->my_full_jid);
 	g_free(jc->name);
 	g_free(jc->invite);
@@ -186,6 +187,9 @@ int jabber_chat_msg(struct groupchat *c, char *message, int flags)
 	node = jabber_make_packet("message", "groupchat", jc->name, node);
 
 	jabber_cache_add(ic, node, jabber_chat_self_message);
+
+	g_free(jc->last_sent_message);
+	jc->last_sent_message = g_strdup(message);
 
 	return !jabber_write_packet(ic, node);
 }
@@ -324,6 +328,9 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 				}
 			}
 			bud->flags |= JBFLAG_IS_ANONYMOUS;
+		} else if (bud == jc->me) {
+			g_free(bud->ext_jid);
+			bud->ext_jid = g_strdup(jd->me);
 		}
 
 		if (bud != jc->me && bud->flags & JBFLAG_IS_ANONYMOUS) {
@@ -346,11 +353,12 @@ void jabber_chat_pkt_presence(struct im_connection *ic, struct jabber_buddy *bud
 			*s = 0; /* Should NEVER be NULL, but who knows... */
 		}
 
+		imcb_chat_add_buddy(chat, bud->ext_jid);
+
 		if (bud != jc->me && (jc->flags & JCFLAG_ALWAYS_USE_NICKS) && !(bud->flags & JBFLAG_IS_ANONYMOUS)) {
 			imcb_buddy_nick_change(ic, bud->ext_jid, bud->resource);
 		}
 
-		imcb_chat_add_buddy(chat, bud->ext_jid);
 		if (s) {
 			*s = '/';
 		}
@@ -493,10 +501,16 @@ void jabber_chat_pkt_message(struct im_connection *ic, struct jabber_buddy *bud,
 	} else if (chat != NULL && bud == NULL && nick == NULL) {
 		imcb_chat_log(chat, "From conference server: %s", body->text);
 		return;
-	} else if (jc && jc->flags & JCFLAG_MESSAGE_SENT && bud == jc->me &&
-		   (jabber_cache_handle_packet(ic, node) == XT_ABORT)) {
-		/* Self message marked by this bitlbee, don't show it */
-		return;
+	} else if (jc && jc->flags & JCFLAG_MESSAGE_SENT && bud == jc->me) {
+		if (jabber_cache_handle_packet(ic, node) == XT_ABORT) {
+			/* Self message marked by this bitlbee, don't show it */
+			return;
+		} else if (xt_find_attr(node, "id") == NULL &&
+		           g_strcmp0(body->text, jc->last_sent_message) == 0) {
+			/* Some misbehaving servers (like slack) eat the ids and echo anyway.
+			 * Try to detect those cases by comparing against the last sent message. */
+			return;
+		}
 	}
 
 	if (bud) {

@@ -41,6 +41,11 @@ CONFIGURE_OVERRIDES:=CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAG
 
 HAS_DH_SYSTEMD:=$(shell dpkg-query -W -f='$${Status}' dh-systemd 2>/dev/null | grep -c "ok installed")
 
+# No difference at the build stage so just call main build target.
+# (Well indep could be docs-only but we prebuild them plus it's really
+# not that much work.)
+build-arch build-indep: build
+
 build: build-stamp
 build-stamp:
 	dh_testdir
@@ -114,7 +119,8 @@ binary-common:
 	for p in bitlbee bitlbee-libpurple bitlbee-dev bitlbee-plugin-otr; do rm -r debian/$$p/usr/share/doc/$$p && ln -s bitlbee-common debian/$$p/usr/share/doc/$$p || true; done
 	dh_installdebconf
 ifeq ($(HAS_DH_SYSTEMD),1)
-	dh_systemd_enable
+	dh_systemd_enable --no-enable bitlbee.socket
+	dh_systemd_enable bitlbee.service
 	dh_installinit --init-script=bitlbee
 	dh_systemd_start
 else

@@ -575,6 +575,9 @@ static void twitter_init(account_t * acc)
 	s = set_add(&acc->set, "_last_tweet", "0", NULL, acc);
 	s->flags |= SET_HIDDEN | SET_NOSAVE;
 
+	s = set_add(&acc->set, "in_korea", "false", set_eval_bool, acc);
+	s->flags |= SET_HIDDEN;
+
 	if (strcmp(acc->prpl->name, "twitter") == 0) {
 		s = set_add(&acc->set, "stream", "true", set_eval_bool, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY;
