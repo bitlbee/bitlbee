@@ -306,10 +306,10 @@ static gboolean twitter_xt_get_friends_id_list(JSON_Value *node, struct twitter_
 	}
 
 	for (i = 0; i < json_array_get_count(c); i++) {
-		jint id = json_array_get_integer(c, i);
+		gint64 id = json_array_get_integer(c, i);
 
 		txl->list = g_slist_prepend(txl->list,
-		                            g_strdup_printf("%" PRIu64, id);
+		                            g_strdup_printf("%" G_GINT64_FORMAT, id));
 	}
 
 	JSON_Value *next = json_object_get_value(json_object(node), "next_cursor");
@@ -449,9 +449,9 @@ static void twitter_http_get_noretweets_ids(struct http_request *req)
 		JSON_Array *arr = json_array(parsed);
 		unsigned int i;
 		for (i = 0; i < json_array_get_count(arr); i++) {
-			jint id = json_array_get_integer(arr, i);
+			gint64 id = json_array_get_integer(arr, i);
 			txl->list = g_slist_prepend(txl->list,
-			                            g_strdup_printf("%" PRId64, id));
+			                            g_strdup_printf("%" G_GINT64_FORMAT, id));
 		}
 	}
 
