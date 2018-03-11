@@ -445,6 +445,35 @@ void bee_irc_user_nick_reset(irc_user_t *iu)
 
 }
 
+#define PASTEBUF_LONG_SPACELESS_LINE_LENGTH 350
+
+/* Returns FALSE if the last line of the message is near the typical irc length
+ * limit and the message has no spaces, indicating that it's probably desirable
+ * to join messages without the newline.
+ *
+ * The main use case for this is pasting long URLs and not breaking them */
+static gboolean bee_irc_pastebuf_should_start_with_newline(const char *msg)
+{
+	int i;
+	const char *last_line = strrchr(msg, '\n') ? : msg;
+
+	if (*last_line == '\n') {
+		last_line++;
+	}
+
+	for (i = 0; last_line[i]; i++) {
+		if (g_ascii_isspace(last_line[i])) {
+			return TRUE;
+		}
+	}
+
+	if (i < PASTEBUF_LONG_SPACELESS_LINE_LENGTH) {
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 /* IRC->IM calls */
 
 static gboolean bee_irc_user_privmsg_cb(gpointer data, gint fd, b_input_condition cond);
@@ -469,7 +498,10 @@ static gboolean bee_irc_user_privmsg(irc_user_t *iu, const char *msg)
 		iu->pastebuf = g_string_new(msg);
 	} else {
 		b_event_remove(iu->pastebuf_timer);
-		g_string_append_printf(iu->pastebuf, "\n%s", msg);
+		if (bee_irc_pastebuf_should_start_with_newline(iu->pastebuf->str)) {
+			g_string_append_c(iu->pastebuf, '\n');
+		}
+		g_string_append(iu->pastebuf, msg);
 	}
 
 	if (set_getbool(&iu->irc->b->set, "paste_buffer")) {
