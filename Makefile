@@ -18,7 +18,7 @@ OUTFILE = bitlbee
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 
-all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) doc systemd
+all: $(OUTFILE) $(OTR_PI) doc systemd
 
 doc:
 ifdef DOC
@@ -52,9 +52,6 @@ Makefile.settings:
 clean: $(subdirs)
 	rm -f *.o $(OUTFILE) core utils/bitlbeed init/bitlbee*.service
 	$(MAKE) -C tests clean
-ifdef SKYPE_PI
-	$(MAKE) -C protocols/skype clean
-endif
 
 distclean: clean $(subdirs)
 	rm -rf .depend
@@ -78,16 +75,10 @@ install-doc:
 ifdef DOC
 	$(MAKE) -C doc install
 endif
-ifdef SKYPE_PI
-	$(MAKE) -C protocols/skype install-doc
-endif
 
 uninstall-doc:
 ifdef DOC
 	$(MAKE) -C doc uninstall
-endif
-ifdef SKYPE_PI
-	$(MAKE) -C protocols/skype uninstall-doc
 endif
 
 install-bin:
@@ -127,23 +118,12 @@ uninstall-etc:
 	rm -f $(DESTDIR)$(ETCDIR)/bitlbee.conf
 	-rmdir $(DESTDIR)$(ETCDIR)
 
-install-plugins: install-plugin-otr install-plugin-skype
+install-plugins: install-plugin-otr
 
 install-plugin-otr:
 ifdef OTR_PI
 	mkdir -p $(DESTDIR)$(PLUGINDIR)
 	$(INSTALL) -m 0755 otr.so $(DESTDIR)$(PLUGINDIR)
-endif
-
-install-plugin-skype:
-ifdef SKYPE_PI
-	mkdir -p $(DESTDIR)$(PLUGINDIR)
-	$(INSTALL) -m 0755 skype.so $(DESTDIR)$(PLUGINDIR)
-	mkdir -p $(DESTDIR)$(ETCDIR)/../skyped $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m 0644 $(_SRCDIR_)protocols/skype/skyped.cnf $(DESTDIR)$(ETCDIR)/../skyped/skyped.cnf
-	$(INSTALL) -m 0644 $(_SRCDIR_)protocols/skype/skyped.conf.dist $(DESTDIR)$(ETCDIR)/../skyped/skyped.conf
-	$(INSTALL) -m 0755 $(_SRCDIR_)protocols/skype/skyped.py $(DESTDIR)$(BINDIR)/skyped
-	$(MAKE) -C protocols/skype install-doc
 endif
 
 systemd:
@@ -175,10 +155,6 @@ $(subdirs):
 $(OTR_PI): %.so: $(_SRCDIR_)%.c
 	@echo '*' Building plugin $@
 	$(VERBOSE) $(CC) $(CFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@ $(OTRFLAGS)
-
-$(SKYPE_PI): $(_SRCDIR_)protocols/skype/skype.c
-	@echo '*' Building plugin skype
-	$(VERBOSE) $(CC) $(CFLAGS) $(LDFLAGS) $(SKYPEFLAGS) $< -o $@
 
 $(objects): %.o: $(_SRCDIR_)%.c
 	@echo '*' Compiling $<

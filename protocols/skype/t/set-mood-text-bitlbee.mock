@@ -1,9 +1,0 @@
->> NOTICE *
-<< NICK alice
-<< USER alice alice localhost :Alice
->> PRIVMSG &bitlbee
-<< PRIVMSG &bitlbee :account add skype alice foo
-<< PRIVMSG &bitlbee :account skype set skypeconsole_receive true
-<< PRIVMSG &bitlbee :account skype on
-<< PRIVMSG &bitlbee :account skype set mood_text "foo bar"
->> PRIVMSG &bitlbee :alice: PROFILE MOOD_TEXT foo bar

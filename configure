@@ -46,7 +46,6 @@ gcov=0
 asan=0
 plugins=1
 otr=0
-skype=0
 
 events=glib
 ssl=auto
@@ -147,8 +146,6 @@ Option		Description				Default
 --plugins=0/1	Disable/enable plugins support		$plugins
 --otr=0/1/auto/plugin
 		Disable/enable OTR encryption support	$otr
---skype=0/1/plugin
-		Disable/enable Skype support		$skype
 
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, auto)
@@ -750,16 +747,6 @@ elif [ "$otr" = "plugin" ]; then
 	echo "OTRFLAGS=$($PKG_CONFIG --libs libotr) $(libgcrypt-config --libs)" >> Makefile.settings
 	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr) $(libgcrypt-config --cflags)" >> Makefile.settings
 	echo 'OTR_PI=otr.so' >> Makefile.settings
-fi
-
-if [ "$skype" = "1" -o "$skype" = "plugin" ]; then
-	if [ "$arch" = "Darwin" ]; then
-		echo "SKYPEFLAGS=-dynamiclib -undefined dynamic_lookup" >> Makefile.settings
-	else
-		echo "SKYPEFLAGS=-fPIC -shared" >> Makefile.settings
-	fi
-	echo 'SKYPE_PI=skype.so' >> Makefile.settings
-	protocols_mods="$protocol_mods skype(plugin)"
 fi
 
 if [ -z "$PYTHON" ]; then
