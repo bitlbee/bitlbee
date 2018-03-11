@@ -359,25 +359,11 @@ static const struct oauth_service twitter_oauth = {
 	.consumer_secret = "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo",
 };
 
-static const struct oauth_service identica_oauth = {
-	"https://identi.ca/api/oauth/request_token",
-	"https://identi.ca/api/oauth/access_token",
-	"https://identi.ca/api/oauth/authorize",
-	.consumer_key = "e147ff789fcbd8a5a07963afbb43f9da",
-	.consumer_secret = "c596267f277457ec0ce1ab7bb788d828",
-};
-
 static gboolean twitter_oauth_callback(struct oauth_info *info);
 
 static const struct oauth_service *get_oauth_service(struct im_connection *ic)
 {
-	struct twitter_data *td = ic->proto_data;
-
-	if (strstr(td->url_host, "identi.ca")) {
-		return &identica_oauth;
-	} else {
-		return &twitter_oauth;
-	}
+	return &twitter_oauth;
 
 	/* Could add more services, or allow configuring your own base URL +
 	   API keys. */
@@ -390,9 +376,8 @@ static void twitter_oauth_start(struct im_connection *ic)
 
 	imcb_log(ic, "Requesting OAuth request token");
 
-	if (!strstr(url, "twitter.com") && !strstr(url, "identi.ca")) {
-		imcb_log(ic, "Warning: OAuth only works with identi.ca and "
-		         "Twitter.");
+	if (!strstr(url, "twitter.com")) {
+		imcb_log(ic, "Warning: OAuth only works with Twitter.");
 	}
 
 	td->oauth_info = oauth_request_token(get_oauth_service(ic), twitter_oauth_callback, ic);
@@ -539,8 +524,8 @@ static void twitter_init(account_t * acc)
 		def_url = TWITTER_API_URL;
 		def_tul = "23";
 		def_mentions = "true";
-	} else {                /* if( strcmp( acc->prpl->name, "identica" ) == 0 ) */
-		def_url = IDENTICA_API_URL;
+	} else {
+		def_url = "";
 		def_tul = "0";
 		def_mentions = "false";
 	}

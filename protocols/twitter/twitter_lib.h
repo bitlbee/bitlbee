@@ -29,7 +29,6 @@
 #include "twitter_http.h"
 
 #define TWITTER_API_URL "https://api.twitter.com/1.1"
-#define IDENTICA_API_URL "https://identi.ca/api"
 
 /* Status URLs */
 #define TWITTER_STATUS_UPDATE_URL "/statuses/update.json"
