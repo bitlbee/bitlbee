@@ -118,6 +118,12 @@ int bitlbee_daemon_init()
 
 	freeaddrinfo(addrinfo_bind);
 
+	if (global.listen_socket == -1 && errno == EADDRINUSE) {
+		log_message(LOGLVL_ERROR, "Can't listen on port %s. Is another bitlbee already running?",
+		            global.conf->port);
+		return(-1);
+	}
+
 	i = listen(global.listen_socket, 10);
 	if (i == -1) {
 		log_error("listen");
