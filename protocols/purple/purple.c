@@ -30,6 +30,10 @@
 #include <glib.h>
 #include <purple.h>
 
+#if !PURPLE_VERSION_CHECK(2, 12, 0)
+#define PURPLE_MESSAGE_REMOTE_SEND 0x10000
+#endif
+
 GSList *purple_connections;
 
 /* This makes me VERY sad... :-( But some libpurple callbacks come in without
@@ -1203,7 +1207,10 @@ static void handle_conv_msg(PurpleConversation *conv, const char *who, const cha
  * Those are safe to display. The rest (with just _SEND) may be echoes. */
 static void prplcb_conv_msg(PurpleConversation *conv, const char *who, const char *message, PurpleMessageFlags flags, time_t mtime)
 {
-	if ((!(flags & PURPLE_MESSAGE_SEND)) || (flags & PURPLE_MESSAGE_DELAYED)) {
+	if ((!(flags & PURPLE_MESSAGE_SEND)) ||
+	    (flags & PURPLE_MESSAGE_DELAYED) ||
+	    (flags & PURPLE_MESSAGE_REMOTE_SEND)
+	) {
 		handle_conv_msg(conv, who, message, (flags & PURPLE_MESSAGE_SEND) ? OPT_SELFMESSAGE : 0, mtime);
 	}
 }
