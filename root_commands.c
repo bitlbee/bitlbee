@@ -440,7 +440,7 @@ static void cmd_account(irc_t *irc, char **cmd)
 		if (prpl == NULL) {
 			char *msg = explain_unknown_protocol(cmd[2]);
 			irc_rootmsg(irc, "Unknown protocol");
-			irc_rootmsg(irc, msg);
+			irc_rootmsg(irc, "%s", msg);
 			g_free(msg);
 			return;
 		}
@@ -594,7 +594,7 @@ static void cmd_account(irc_t *irc, char **cmd)
 			char *proto = set_getstr(&a->set, "_protocol_name");
 			char *msg = explain_unknown_protocol(proto);
 			irc_rootmsg(irc, "Unknown protocol `%s'", proto);
-			irc_rootmsg(irc, msg);
+			irc_rootmsg(irc, "%s", msg);
 			g_free(msg);
 		} else {
 			account_on(irc->b, a);
@@ -1056,7 +1056,7 @@ static void cmd_blist(irc_t *irc, char **cmd)
 	}
 
 	if (error) {
-		irc_rootmsg(irc, error->message);
+		irc_rootmsg(irc, "%s", error->message);
 		g_error_free(error);
 	}
 
