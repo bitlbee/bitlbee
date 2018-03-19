@@ -146,6 +146,9 @@ static gboolean irc_sasl_check_pass(irc_t *irc, char *user, char *pass)
 			/* set the nick here so we have it for the following numeric */
 			irc->user->nick = g_strdup(user);
 		}
+		irc_send_num(irc, 900, "%s!%s@%s %s :You are now logged in as %s",
+		             irc->user->nick, irc->user->user, irc->user->host,
+			     irc->user->nick, irc->user->nick);
 		irc_send_num(irc, 903, ":Password accepted");
 		return TRUE;
 
