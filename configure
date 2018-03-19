@@ -334,9 +334,9 @@ else
 fi
 
 echo "CC=$CC" >> Makefile.settings;
-if echo $CC | grep -qw gcc; then
+if echo $CC | grep -qw 'gcc\|clang'; then
 	# Apparently -Wall is gcc-specific?
-	echo CFLAGS+=-Wall >> Makefile.settings
+	echo CFLAGS+=-Wall -Wformat -Werror=format-security >> Makefile.settings
 fi
 
 if [ -z "$LD" ]; then
