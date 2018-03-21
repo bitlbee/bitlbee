@@ -1,3 +1,10 @@
+bitlbee (3.5.1-1.1) UNRELEASED; urgency=medium
+
+  * Remove bitlbee-plugin-skype and skyped (obsolete)
+  * Enable only bitlbee.service, not bitlbee.socket too
+
+ -- dequis <dx@dxzone.com.ar>  Mon, 19 Mar 2018 22:18:43 -0300
+
 bitlbee (3.5.1-1) unstable; urgency=medium
 
   * Crash bug fix. (Closes: #853282)
