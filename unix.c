@@ -45,6 +45,10 @@
 #include "otr.h"
 #endif
 
+#ifdef HAVE_BACKTRACE
+#include <execinfo.h>
+#endif
+
 global_t global;        /* Against global namespace pollution */
 
 static struct {
@@ -62,6 +66,9 @@ int main(int argc, char *argv[])
 	int i = 0;
 	char *old_cwd = NULL;
 	struct sigaction sig, old;
+#ifdef HAVE_BACKTRACE
+	void *unused[1];
+#endif
 
 	/* Required to make iconv to ASCII//TRANSLIT work. This makes BitlBee
 	   system-locale-sensitive. :-( */
@@ -174,6 +181,13 @@ int main(int argc, char *argv[])
 	sig.sa_handler = sighandler_shutdown;
 	sigaction(SIGINT, &sig, &old);
 	sigaction(SIGTERM, &sig, &old);
+
+#ifdef HAVE_BACKTRACE
+	/* As per the backtrace(3) man page, call this outside of the signal
+	 * handler once to ensure any dynamic libraries are loaded in an
+	 * async-signal-safe environment to prevent deadlocks */
+	backtrace(unused, 1);
+#endif
 
 	if (!getuid() || !geteuid()) {
 		log_message(LOGLVL_WARNING, "BitlBee is running with root privileges. Why?");
@@ -291,24 +305,81 @@ static void sighandler_shutdown(int signal)
 	unused = write(shutdown_pipe.fd[1], "", 1);
 }
 
+#ifdef HAVE_BACKTRACE
+/* Writes a backtrace to (usually) /var/lib/bitlbee/crash.log
+ * No malloc allowed means not a lot can be written to that file */
+static void sighandler_crash_backtrace()
+{
+	int fd, mapsfd;
+	int size;
+	void *trace[128];
+	const char message[] = "## " PACKAGE " crashed\n"
+		"## Version: " BITLBEE_VERSION "\n"
+		"## Configure args: " BITLBEE_CONFIGURE_ARGS "\n"
+		"##\n"
+		"## Backtrace:\n\n";
+	const char message2[] = "\n"
+		"## Hint: To get details on addresses use\n"
+		"##   addr2line -e <binary> <address>\n"
+		"## or\n"
+		"##   gdb <binary> -ex 'l *<address>' -ex q\n"
+		"## where <binary> is a filename from above and <address> is the part between (...)\n"
+		"##\n\n";
+	const char message3[] = "\n## End of memory maps. See above for the backtrace\n\n";
+
+	fd = open(CRASHFILE, O_WRONLY | O_APPEND | O_CREAT, 0600);
+
+	if (fd == -1 || write(fd, message, sizeof(message) - 1) == -1) {
+		return;
+	}
+
+	size = backtrace(trace, 128);
+	backtrace_symbols_fd(trace, size, fd);
+
+	(void) write(fd, message2, sizeof(message2) - 1);
+
+	/* a bit too linux-specific, so fail gracefully */
+	mapsfd = open("/proc/self/maps", O_RDONLY, 0);
+
+	if (mapsfd != -1) {
+		char buf[4096] = {0};
+		ssize_t bytes;
+
+		while ((bytes = read(mapsfd, buf, sizeof(buf))) > 0) {
+			(void) write(fd, buf, bytes);
+		}
+		(void) close(mapsfd);
+		(void) write(fd, message3, sizeof(message3) - 1);
+	}
+
+	(void) close(fd);
+}
+#endif
+
 /* Signal handler for SIGSEGV
  * A desperate attempt to tell the user that everything is wrong in the world.
  * Avoids using irc_abort() because it has several unsafe calls to malloc */
 static void sighandler_crash(int signal)
 {
 	GSList *l;
-	int unused G_GNUC_UNUSED;
-	const char *message = "ERROR :BitlBee crashed! (SIGSEGV received)\r\n";
-	int len = strlen(message);
+	const char message[] = "ERROR :BitlBee crashed! (SIGSEGV received)\r\n"
+#ifdef HAVE_BACKTRACE
+		"ERROR :Writing backtrace to " CRASHFILE "\r\n"
+#endif
+		"ERROR :This is a bug either in BitlBee or a plugin, ask us on IRC if unsure\r\n";
 
 	for (l = irc_connection_list; l; l = l->next) {
 		irc_t *irc = l->data;
 		sock_make_blocking(irc->fd);
 		if (irc->sendbuffer) {
-			unused = write(irc->fd, irc->sendbuffer, strlen(irc->sendbuffer));
+			(void) write(irc->fd, irc->sendbuffer, strlen(irc->sendbuffer));
 		}
-		unused = write(irc->fd, message, len);
+		(void) write(irc->fd, message, sizeof(message) - 1);
 	}
+
+#ifdef HAVE_BACKTRACE
+	sighandler_crash_backtrace();
+#endif
 
 	raise(signal);
 }

@@ -484,6 +484,16 @@ int main()
 }
 '
 
+BACKTRACE_TESTCODE='
+#include <execinfo.h>
+
+int main()
+{
+	void *trace[16];
+	return backtrace(trace, 16);
+}
+'
+
 detect_resolv_dynamic()
 {
 	case "$arch" in
@@ -581,6 +591,19 @@ detect_nameser_has_ns_types()
 	return $ret
 }
 
+detect_backtrace()
+{
+	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
+	ret=1
+	echo "$BACKTRACE_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
+	if [ "$?" = "0" ]; then
+		ret=0
+	fi
+
+	rm -f $TMPFILE
+	return $ret
+}
+
 if [ "$ssl" = "auto" ]; then
 	detect_gnutls
 	if [ "$ret" = "0" ]; then
@@ -646,6 +669,10 @@ else
 	echo 'Insufficient resolv routines. Jabber server must be set explicitly'
 fi
 
+if detect_backtrace; then
+	echo '#define HAVE_BACKTRACE' >> config.h
+	echo '#define CRASHFILE "'$config'crash.log"' >> config.h
+fi
 
 STORAGES="xml"
 
