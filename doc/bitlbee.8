@@ -40,34 +40,48 @@ networks and acts as a gateway. Users can connect to the server
 with any normal IRC client and see their 'buddy list' in
 &bitlbee.
 
-\fBbitlbee\fP should be called by
-.BR inetd (8),
-or you can run it as a stand-alone daemon.
+\fBbitlbee\fP is normally started as a system service (with init
+scripts, systemd units or equivalent). It can also be run as an
+.BR inetd (8)
+/
+.BR xinetd (8)
+service or a stand-alone daemon with the options below.
+
+To use it, connect to it with an IRC client with a command such as
+"/connect localhost"
+
 .PP
-.SH OPTIONS
+.SH RUN MODES
 .PP
 .IP "-I"
 Run in 
 .BR inetd (8)
-mode. This is the default setting, you usually don't have to specify this
-option.
+mode. This is the default setting for historical reasons, but not the
+recommended one (See ForkDaemon below).
 .IP "-D"
-Run in daemon mode. In this mode, BitlBee forks to the background and
+Run in \fBDaemon\fP mode. In this mode, BitlBee forks to the background and
 waits for new connections. All clients will be served from one process.
+This mode is also useful for debugging.
 .IP "-F"
-Run in ForkDaemon mode. This is similar to ordinary daemon mode, but every
+Run in \fBForkDaemon\fP mode. This is similar to ordinary daemon mode, but every
 client gets its own process. Easier to set up than inetd mode, and without
-the possible stability issues.
+the possible stability issues. This is the recommended runmode for most
+use cases.
+
+.PP
+.SH OPTIONS
+.PP
+
 .IP "-i \fIaddress\fP"
-Only useful when running in daemon mode, to specify the network interface
+When running in daemon mode, specifies the network interface
 (identified by IP address) to which the daemon should attach. Use this if
 you don't want BitlBee to listen on every interface (which is the default
 behaviour).
 .IP "-p \fIport number\fP"
-Only useful when running in daemon mode, to specify the port number on
+When running in daemon mode, specifies the port number on
 which BitlBee should listen for connections. 6667 is the default value.
 .IP "-n"
-Only useful when running in daemon mode. This option prevents BitlBee from
+Wehn running in daemon mode, this option prevents BitlBee from
 forking into the background.
 .IP "-v"
 Be more verbose. This only works together with the \fB-n\fP flag.
@@ -81,17 +95,15 @@ have write permissions in the default location), use this option.
 Show help information.
 .SH COMMANDS
 To get a complete list of commands, please use the \fBhelp commands\fP
-command in the &bitlbee channel.
+command in the &bitlbee channel after connecting to bitlbee.
 .SH "SEE ALSO"
-.BR ircd (8), 
 .BR inetd (8), 
-.BR inetd.conf (5), 
-.BR gaim (1).
+.BR inetd.conf (5)
 
 .BR http://www.bitlbee.org/
 
 For more information on using BitlBee, once connected, you should use
-the on-line help system.
+the \fBhelp\fP command in the &bitlbee channel.
 .SH BUGS
 Of course there are bugs. If you find some, please report them at
 \fBhttp://bugs.bitlbee.org/\fP.
