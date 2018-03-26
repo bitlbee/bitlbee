@@ -128,9 +128,11 @@ irc_t *irc_new(int fd)
 	if (isatty(irc->fd)) {
 		irc_write(irc, ":%s NOTICE * :%s", irc->root->host,
 		          "If you read this, you most likely accidentally "
-		          "started BitlBee in inetd mode on the command line. "
-		          "You probably want to run it in (Fork)Daemon mode. "
-		          "See doc/README for more information.");
+		          "started BitlBee in inetd mode on the command line.");
+		irc_write(irc, ":%s NOTICE * :%s", irc->root->host,
+		          "You probably want to run it as a system service, "
+		          "or use (Fork)Daemon mode with the -F or -D switches. "
+		          "See doc/README or 'man bitlbee' for more information.");
 	}
 
 	/* libpurple doesn't like fork()s after initializing itself, so this
