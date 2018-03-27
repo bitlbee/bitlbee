@@ -103,12 +103,12 @@ binary-common:
 	for p in bitlbee bitlbee-libpurple bitlbee-dev bitlbee-plugin-otr; do rm -r debian/$$p/usr/share/doc/$$p && ln -s bitlbee-common debian/$$p/usr/share/doc/$$p || true; done
 	dh_installdebconf
 ifeq ($(HAS_DH_SYSTEMD),1)
-	dh_systemd_enable --no-enable bitlbee.socket
-	dh_systemd_enable bitlbee.service
-	dh_installinit --init-script=bitlbee
-	dh_systemd_start
+	dh_systemd_enable -p bitlbee-common --no-enable bitlbee.socket
+	dh_systemd_enable -p bitlbee-common bitlbee.service
+	dh_installinit -p bitlbee-common --init-script=bitlbee
+	dh_systemd_start -p bitlbee-common
 else
-	dh_installinit --init-script=bitlbee
+	dh_installinit -p bitlbee-common --init-script=bitlbee
 endif
 	dh_installman
 	dh_lintian
