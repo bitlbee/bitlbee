@@ -474,13 +474,7 @@ void aim_session_init(aim_session_t *sess, guint32 flags, int debuglevel)
 	sess->emailinfo = NULL;
 	sess->oft_info = NULL;
 
-
-	/*
-	 * Default to SNAC login unless XORLOGIN is explicitly set.
-	 */
-	if (!(flags & AIM_SESS_FLAGS_XORLOGIN)) {
-		sess->flags |= AIM_SESS_FLAGS_SNACLOGIN;
-	}
+	sess->flags |= AIM_SESS_FLAGS_SNACLOGIN;
 	sess->flags |= flags;
 
 	/*

@@ -364,7 +364,6 @@ typedef struct aim_session_s {
 
 /* Values for sess->flags */
 #define AIM_SESS_FLAGS_SNACLOGIN         0x00000001
-#define AIM_SESS_FLAGS_XORLOGIN          0x00000002
 #define AIM_SESS_FLAGS_NONBLOCKCONNECT   0x00000004
 #define AIM_SESS_FLAGS_DONTTIMEOUTONICBM 0x00000008
 

@@ -7,8 +7,6 @@
 
 #include "md5.h"
 
-static int aim_encode_password(const char *password, unsigned char *encoded);
-
 /*
  * This just pushes the passed cookie onto the passed connection, without
  * the SNAC header or any of that.
@@ -60,56 +58,6 @@ int aim_sendflapver(aim_session_t *sess, aim_conn_t *conn)
 }
 
 /*
- * This is a bit confusing.
- *
- * Normal SNAC login goes like this:
- *   - connect
- *   - server sends flap version
- *   - client sends flap version
- *   - client sends screen name (17/6)
- *   - server sends hash key (17/7)
- *   - client sends auth request (17/2 -- aim_send_login)
- *   - server yells
- *
- * XOR login (for ICQ) goes like this:
- *   - connect
- *   - server sends flap version
- *   - client sends auth request which contains flap version (aim_send_login)
- *   - server yells
- *
- * For the client API, we make them implement the most complicated version,
- * and for the simpler version, we fake it and make it look like the more
- * complicated process.
- *
- * This is done by giving the client a faked key, just so we can convince
- * them to call aim_send_login right away, which will detect the session
- * flag that says this is XOR login and ignore the key, sending an ICQ
- * login request instead of the normal SNAC one.
- *
- * As soon as AOL makes ICQ log in the same way as AIM, this is /gone/.
- *
- * XXX This may cause problems if the client relies on callbacks only
- * being called from the context of aim_rxdispatch()...
- *
- */
-static int goddamnicq(aim_session_t *sess, aim_conn_t *conn, const char *sn)
-{
-	aim_frame_t fr;
-	aim_rxcallback_t userfunc;
-
-	sess->flags &= ~AIM_SESS_FLAGS_SNACLOGIN;
-	sess->flags |= AIM_SESS_FLAGS_XORLOGIN;
-
-	fr.conn = conn;
-
-	if ((userfunc = aim_callhandler(sess, conn, 0x0017, 0x0007))) {
-		userfunc(sess, &fr, "");
-	}
-
-	return 0;
-}
-
-/*
  * In AIM 3.5 protocol, the first stage of login is to request login from the
  * Authorizer, passing it the screen name for verification.  If the name is
  * invalid, a 0017/0003 is spit back, with the standard error contents.  If
@@ -122,14 +70,9 @@ int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 	aim_tlvlist_t *tl = NULL;
-	struct im_connection *ic = sess->aux_data;
 
 	if (!sess || !conn || !sn) {
 		return -EINVAL;
-	}
-
-	if (g_ascii_isdigit(sn[0]) && set_getbool(&ic->acc->set, "old_icq_auth")) {
-		return goddamnicq(sess, conn, sn);
 	}
 
 	sess->flags |= AIM_SESS_FLAGS_SNACLOGIN;
@@ -145,52 +88,6 @@ int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 
 	aim_addtlvtochain_raw(&tl, 0x0001, strlen(sn), (guint8 *) sn);
 	aim_writetlvchain(&fr->data, &tl);
-	aim_freetlvchain(&tl);
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
-}
-
-/*
- * Part two of the ICQ hack.  Note the ignoring of the key and clientinfo.
- */
-static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *password)
-{
-	static const char clientstr[] = { "ICQ Inc. - Product of ICQ (TM) 2001b.5.17.1.3642.85" };
-	static const char lang[] = { "en" };
-	static const char country[] = { "us" };
-	aim_frame_t *fr;
-	aim_tlvlist_t *tl = NULL;
-	guint8 *password_encoded;
-
-	if (!(password_encoded = (guint8 *) g_malloc(strlen(password)))) {
-		return -ENOMEM;
-	}
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x01, 1152))) {
-		g_free(password_encoded);
-		return -ENOMEM;
-	}
-
-	aim_encode_password(password, password_encoded);
-
-	aimbs_put32(&fr->data, 0x00000001);
-	aim_addtlvtochain_raw(&tl, 0x0001, strlen(sn), (guint8 *) sn);
-	aim_addtlvtochain_raw(&tl, 0x0002, strlen(password), password_encoded);
-	aim_addtlvtochain_raw(&tl, 0x0003, strlen(clientstr), (guint8 *) clientstr);
-	aim_addtlvtochain16(&tl, 0x0016, 0x010a); /* cliend ID */
-	aim_addtlvtochain16(&tl, 0x0017, 0x0005); /* major version */
-	aim_addtlvtochain16(&tl, 0x0018, 0x0011); /* minor version */
-	aim_addtlvtochain16(&tl, 0x0019, 0x0001); /* point version */
-	aim_addtlvtochain16(&tl, 0x001a, 0x0e3a); /* build */
-	aim_addtlvtochain32(&tl, 0x0014, 0x00000055); /* distribution chan */
-	aim_addtlvtochain_raw(&tl, 0x000f, strlen(lang), (guint8 *) lang);
-	aim_addtlvtochain_raw(&tl, 0x000e, strlen(country), (guint8 *) country);
-
-	aim_writetlvchain(&fr->data, &tl);
-
-	g_free(password_encoded);
 	aim_freetlvchain(&tl);
 
 	aim_tx_enqueue(sess, fr);
@@ -279,16 +176,6 @@ int aim_send_login(aim_session_t *sess, aim_conn_t *conn, const char *sn, const 
 		return -EINVAL;
 	}
 
-	/*
-	 * What the XORLOGIN flag _really_ means is that its an ICQ login,
-	 * which is really stupid and painful, so its not done here.
-	 *
-	 */
-	if (sess->flags & AIM_SESS_FLAGS_XORLOGIN) {
-		return goddamnicq2(sess, conn, sn, password);
-	}
-
-
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 1152))) {
 		return -ENOMEM;
 	}
@@ -340,41 +227,6 @@ int aim_encode_password_md5(const char *password, const char *key, guint8 *diges
 	md5_append(&state, (const md5_byte_t *) password, strlen(password));
 	md5_append(&state, (const md5_byte_t *) AIM_MD5_STRING, strlen(AIM_MD5_STRING));
 	md5_finish(&state, (md5_byte_t *) digest);
-
-	return 0;
-}
-
-/**
- * aim_encode_password - Encode a password using old XOR method
- * @password: incoming password
- * @encoded: buffer to put encoded password
- *
- * This takes a const pointer to a (null terminated) string
- * containing the unencoded password.  It also gets passed
- * an already allocated buffer to store the encoded password.
- * This buffer should be the exact length of the password without
- * the null.  The encoded password buffer /is not %NULL terminated/.
- *
- * The encoding_table seems to be a fixed set of values.  We'll
- * hope it doesn't change over time!
- *
- * This is only used for the XOR method, not the better MD5 method.
- *
- */
-static int aim_encode_password(const char *password, guint8 *encoded)
-{
-	guint8 encoding_table[] = {
-		/* v2.1 table, also works for ICQ */
-		0xf3, 0x26, 0x81, 0xc4,
-		0x39, 0x86, 0xdb, 0x92,
-		0x71, 0xa3, 0xb9, 0xe6,
-		0x53, 0x7a, 0x95, 0x7c
-	};
-	int i;
-
-	for (i = 0; i < strlen(password); i++) {
-		encoded[i] = (password[i] ^ encoding_table[i]);
-	}
 
 	return 0;
 }

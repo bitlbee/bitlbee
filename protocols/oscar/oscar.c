@@ -384,7 +384,6 @@ static void oscar_init(account_t *acc)
 
 	if (icq) {
 		set_add(&acc->set, "ignore_auth_requests", "false", set_eval_bool, acc);
-		set_add(&acc->set, "old_icq_auth", "false", set_eval_bool, acc);
 	}
 
 	s = set_add(&acc->set, "server",
