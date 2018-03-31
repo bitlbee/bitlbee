@@ -578,9 +578,14 @@ static struct groupchat *jabber_chat_join_(struct im_connection *ic, const char 
 	if (strchr(room, '@') == NULL) {
 		imcb_error(ic, "%s is not a valid Jabber room name. Maybe you mean %s@conference.%s?",
 		           room, room, jd->server);
-	} else if (jabber_chat_by_jid(ic, room)) {
-		imcb_error(ic, "Already present in chat `%s'", room);
 	} else {
+		struct groupchat *old;
+
+		if ((old = jabber_chat_by_jid(ic, room))) {
+			imcb_log(ic, "Warning: Already present in chat `%s' - trying to join anyway", room);
+			jabber_chat_free(old);
+		}
+
 		/* jabber_chat_join without the underscore is the conference.c one */
 		return jabber_chat_join(ic, room, final_nick, set_getstr(sets, "password"),
 		                        set_getbool(sets, "always_use_nicks"));
