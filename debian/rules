@@ -34,10 +34,7 @@ CONFIGURE_OVERRIDES:=CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAG
 
 HAS_DH_SYSTEMD:=$(shell dpkg-query -W -f='$${Status}' dh-systemd 2>/dev/null | grep -c "ok installed")
 
-# No difference at the build stage so just call main build target.
-# (Well indep could be docs-only but we prebuild them plus it's really
-# not that much work.)
-build-arch build-indep: build
+build-arch: build
 
 build: build-stamp
 build-stamp:
@@ -97,10 +94,7 @@ binary-common:
 
 	dh_installchangelogs doc/CHANGES
 	dh_installexamples
-	dh_installdocs #--link-doc=bitlbee-common
-	# TODO: Restore --link-doc up here and remove the hack below once
-	# Hardy and Lenny are deprecated.
-	for p in bitlbee bitlbee-libpurple bitlbee-dev bitlbee-plugin-otr; do rm -r debian/$$p/usr/share/doc/$$p && ln -s bitlbee-common debian/$$p/usr/share/doc/$$p || true; done
+	dh_installdocs --link-doc=bitlbee-common
 	dh_installdebconf
 ifeq ($(HAS_DH_SYSTEMD),1)
 	dh_systemd_enable -p bitlbee-common --no-enable bitlbee.socket
@@ -122,14 +116,11 @@ endif
 	dh_md5sums
 	dh_builddeb
 
-binary-indep: build install
-	DH_OPTIONS=-i $(MAKE) -f debian/rules binary-common
-
 binary-arch: build install
 	DH_OPTIONS=-a $(MAKE) -f debian/rules binary-common
 
 binary-%: build install
 	DH_OPTIONS=-p$* $(MAKE) -f debian/rules binary-common
 
-binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary-common binary install
+binary: binary-arch
+.PHONY: build clean binary-arch binary-common binary install
