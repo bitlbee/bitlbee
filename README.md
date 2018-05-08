@@ -1,17 +1,17 @@
 # BitlBee
 
-![](http://bitlbee.org/style/logo.png)
+![](https://www.bitlbee.org/style/logo.png)
 
 [![Build Status](https://travis-ci.org/bitlbee/bitlbee.svg)](https://travis-ci.org/bitlbee/bitlbee)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/4028/badge.svg)](https://scan.coverity.com/projects/4028)
 
 An IRC to other chat networks gateway
 
-Main website: http://www.bitlbee.org/
+Main website: https://www.bitlbee.org/
 
-Bug tracker: http://bugs.bitlbee.org/
+Bug tracker: https://bugs.bitlbee.org/
 
-Wiki: http://wiki.bitlbee.org/
+Wiki: https://wiki.bitlbee.org/
 
 License: GPLv2
 
@@ -19,9 +19,9 @@ License: GPLv2
 
 BitlBee is available in the package managers of most distros.
 
-For debian/ubuntu/etc you may use the nightly APT repository: http://code.bitlbee.org/debian/
+For debian/ubuntu/etc you may use the nightly APT repository: https://code.bitlbee.org/debian/
 
-You can also use a public server (such as `im.bitlbee.org`) instead of installing it: http://bitlbee.org/main.php/servers.html
+You can also use a public server (such as `im.bitlbee.org`) instead of installing it: https://www.bitlbee.org/main.php/servers.html
 
 ## Compiling
 
