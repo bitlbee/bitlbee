@@ -1,7 +1,15 @@
 bitlbee (3.5.1-1.1) UNRELEASED; urgency=medium
 
+  [ dequis ]
   * Remove bitlbee-plugin-skype and skyped (obsolete)
   * Enable only bitlbee.service, not bitlbee.socket too
+
+  [ Sean Whitton ]
+  * Add existence check to chmod call in bitlbee-common.postinst
+    (Closes: #816200).
+
+  [ dequis ]
+  * Fix lintian pkg-config-unavailable-for-cross-compilation 
 
  -- dequis <dx@dxzone.com.ar>  Mon, 19 Mar 2018 22:18:43 -0300
 
