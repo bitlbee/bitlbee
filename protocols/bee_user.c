@@ -41,6 +41,9 @@ bee_user_t *bee_user_new(bee_t *bee, struct im_connection *ic, const char *handl
 	bu->handle = g_strdup(handle);
 	bee->users = g_slist_prepend(bee->users, bu);
 
+	if (ic->bee_users) {
+		g_hash_table_insert(ic->bee_users, bu->handle, bu);
+	}
 	if (bee->ui->user_new) {
 		bee->ui->user_new(bee, bu);
 	}
@@ -66,7 +69,9 @@ int bee_user_free(bee_t *bee, bee_user_t *bu)
 	if (bu->ic->acc->prpl->buddy_data_free) {
 		bu->ic->acc->prpl->buddy_data_free(bu);
 	}
-
+	if (bu->ic->bee_users) {
+		g_hash_table_remove(bu->ic->bee_users, bu->handle);
+	}
 	bee->users = g_slist_remove(bee->users, bu);
 
 	g_free(bu->handle);
@@ -79,7 +84,7 @@ int bee_user_free(bee_t *bee, bee_user_t *bu)
 	return 1;
 }
 
-bee_user_t *bee_user_by_handle(bee_t *bee, struct im_connection *ic, const char *handle)
+bee_user_t *bee_user_by_handle_slow(bee_t *bee, struct im_connection *ic, const char *handle)
 {
 	GSList *l;
 
@@ -92,6 +97,15 @@ bee_user_t *bee_user_by_handle(bee_t *bee, struct im_connection *ic, const char 
 	}
 
 	return NULL;
+}
+
+bee_user_t *bee_user_by_handle(bee_t *bee, struct im_connection *ic, const char *handle)
+{
+	if (!ic->bee_users) {
+		return bee_user_by_handle_slow(bee, ic, handle);
+	}
+
+	return g_hash_table_lookup(ic->bee_users, handle);
 }
 
 int bee_user_msg(bee_t *bee, bee_user_t *bu, const char *msg, int flags)

@@ -96,6 +96,7 @@ struct im_connection {
 
 	GSList *groupchats;
 	GSList *chatlist;
+	GHashTable *bee_users;
 };
 
 struct groupchat {

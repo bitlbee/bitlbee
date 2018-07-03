@@ -150,4 +150,7 @@ G_MODULE_EXPORT gboolean parse_int64(char *string, int base, guint64 *number);
 G_MODULE_EXPORT char *str_reject_chars(char *string, const char *reject, char replacement);
 G_MODULE_EXPORT char *str_pad_and_truncate(const char *string, long char_len, const char *ellipsis);
 
+G_MODULE_EXPORT int b_istr_equal(gconstpointer v, gconstpointer v2);
+G_MODULE_EXPORT guint b_istr_hash(gconstpointer v);
+
 #endif

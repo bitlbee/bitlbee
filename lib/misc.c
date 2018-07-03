@@ -773,3 +773,22 @@ char *str_pad_and_truncate(const char *string, long char_len, const char *ellips
 		return g_strdup(string);
 	}
 }
+
+/* copied from irssi's misc.c, by timo sirainen */
+int b_istr_equal(gconstpointer v, gconstpointer v2)
+{
+	return g_ascii_strcasecmp((const char *) v, (const char *) v2) == 0;
+}
+
+/* copied from irssi's misc.c, by lemonboy */
+guint b_istr_hash(gconstpointer v)
+{
+	const signed char *p;
+	guint32 h = 5381;
+
+	for (p = v; *p != '\0'; p++) {
+		h = (h << 5) + h + g_ascii_toupper(*p);
+	}
+
+	return h;
+}

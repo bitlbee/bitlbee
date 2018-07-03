@@ -297,12 +297,28 @@ GSList *get_connections()
 struct im_connection *imcb_new(account_t *acc)
 {
 	struct im_connection *ic;
+	GHashFunc fn_hash = NULL;
+	GEqualFunc fn_equal = NULL;
 
 	ic = g_new0(struct im_connection, 1);
 
 	ic->bee = acc->bee;
 	ic->acc = acc;
 	acc->ic = ic;
+
+	/* figure out if we have hashing functions compatible with handle_cmp */
+	if (acc->prpl->handle_cmp == g_ascii_strcasecmp) {
+		fn_hash = b_istr_hash;
+		fn_equal = b_istr_equal;
+	} else if (acc->prpl->handle_cmp == g_strcmp0 || acc->prpl->handle_cmp == strcmp) {
+		fn_hash = g_str_hash;
+		fn_equal = g_str_equal;
+	}
+
+	/* only create the hash table if we found them */
+	if (fn_hash && fn_equal) {
+		ic->bee_users = g_hash_table_new_full(fn_hash, fn_equal, NULL, NULL);
+	}
 
 	connections = g_slist_append(connections, ic);
 
@@ -319,6 +335,10 @@ void imc_free(struct im_connection *ic)
 			a->ic = NULL;
 			break;
 		}
+	}
+
+	if (ic->bee_users) {
+		g_hash_table_destroy(ic->bee_users);
 	}
 
 	connections = g_slist_remove(connections, ic);
