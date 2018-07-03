@@ -772,7 +772,7 @@ static void cmd_remove(irc_t *irc, char **cmd)
 
 	bu->ic->acc->prpl->remove_buddy(bu->ic, bu->handle, NULL);
 	nick_del(bu);
-	if (g_slist_find(irc->users, iu)) {
+	if (g_hash_table_contains(irc->nick_user_hash, iu->key)) {
 		bee_user_free(irc->b, bu);
 	}
 
@@ -1032,7 +1032,7 @@ static void cmd_set(irc_t *irc, char **cmd)
 static void cmd_blist(irc_t *irc, char **cmd)
 {
 	int online = 0, away = 0, offline = 0, ismatch = 0;
-	GSList *l;
+	GList *l, *users;
 	GRegex *regex = NULL;
 	GError *error = NULL;
 	char s[256];
@@ -1073,7 +1073,10 @@ static void cmd_blist(irc_t *irc, char **cmd)
 		irc->root->last_channel = NULL;
 	}
 
-	for (l = irc->users; l; l = l->next) {
+	users = g_hash_table_get_values(irc->nick_user_hash);
+	users = g_list_sort(users, irc_user_cmp);
+
+	for (l = users; l; l = l->next) {
 		irc_user_t *iu = l->data;
 		bee_user_t *bu = iu->bu;
 
@@ -1118,6 +1121,8 @@ static void cmd_blist(irc_t *irc, char **cmd)
 			n_offline++;
 		}
 	}
+
+	g_list_free(users);
 
 	irc_rootmsg(irc, "%d buddies (%d available, %d away, %d offline)", n_online + n_away + n_offline, n_online,
 	            n_away, n_offline);

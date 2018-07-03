@@ -241,6 +241,8 @@ static gboolean irc_free_hashkey(gpointer key, gpointer value, gpointer data);
 void irc_free(irc_t * irc)
 {
 	GSList *l;
+	GHashTableIter iter;
+	gpointer itervalue;
 
 	irc->status |= USTATUS_SHUTDOWN;
 
@@ -270,8 +272,11 @@ void irc_free(irc_t * irc)
 	   before we clear the remaining ones ourselves. */
 	bee_free(irc->b);
 
-	while (irc->users) {
-		irc_user_free(irc, (irc_user_t *) irc->users->data);
+	g_hash_table_iter_init(&iter, irc->nick_user_hash);
+
+	while (g_hash_table_iter_next(&iter, NULL, &itervalue)) {
+		g_hash_table_iter_remove(&iter);
+		irc_user_free(irc, (irc_user_t *) itervalue);
 	}
 
 	while (irc->channels) {
@@ -291,7 +296,6 @@ void irc_free(irc_t * irc)
 	closesocket(irc->fd);
 	irc->fd = -1;
 
-	g_hash_table_foreach_remove(irc->nick_user_hash, irc_free_hashkey, NULL);
 	g_hash_table_destroy(irc->nick_user_hash);
 
 	g_hash_table_foreach_remove(irc->watches, irc_free_hashkey, NULL);

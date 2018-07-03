@@ -120,7 +120,8 @@ irc_channel_t *irc_channel_get(irc_t *irc, char *id)
 int irc_channel_free(irc_channel_t *ic)
 {
 	irc_t *irc;
-	GSList *l;
+	GHashTableIter iter;
+	gpointer itervalue;
 
 	if (ic == NULL) {
 		return 0;
@@ -145,8 +146,10 @@ int irc_channel_free(irc_channel_t *ic)
 		ic->users = g_slist_remove(ic->users, ic->users->data);
 	}
 
-	for (l = irc->users; l; l = l->next) {
-		irc_user_t *iu = l->data;
+	g_hash_table_iter_init(&iter, irc->nick_user_hash);
+
+	while (g_hash_table_iter_next(&iter, NULL, &itervalue)) {
+		irc_user_t *iu = itervalue;
 
 		if (iu->last_channel == ic) {
 			iu->last_channel = irc->default_channel;
@@ -728,7 +731,7 @@ static gboolean control_channel_privmsg(irc_channel_t *ic, const char *msg)
 			ic->last_target = iu;
 		}
 	} else if (g_strcasecmp(set_getstr(&irc->b->set, "default_target"), "last") == 0 &&
-	           ic->last_target && g_slist_find(irc->users, ic->last_target)) {
+	           ic->last_target && g_hash_table_contains(irc->nick_user_hash, ic->last_target->key)) {
 		iu = ic->last_target;
 	} else {
 		iu = irc->root;

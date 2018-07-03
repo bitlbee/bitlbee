@@ -101,7 +101,8 @@ typedef struct irc {
 	struct query *queries;
 	GSList *file_transfers;
 
-	GSList *users, *channels;
+	GSList *users G_GNUC_DEPRECATED;
+	GSList *channels;
 	struct irc_channel *default_channel;
 	GHashTable *nick_user_hash;
 	GHashTable *watches; /* See irc_cmd_watch() */

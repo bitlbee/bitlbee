@@ -180,10 +180,14 @@ void bee_irc_channel_update(irc_t *irc, irc_channel_t *ic, irc_user_t *iu)
 		return;
 	}
 	if (iu == NULL) {
-		for (l = irc->users; l; l = l->next) {
-			iu = l->data;
+		GHashTableIter iter;
+		gpointer itervalue;
+		g_hash_table_iter_init(&iter, irc->nick_user_hash);
+
+		while (g_hash_table_iter_next(&iter, NULL, &itervalue)) {
+			iu = itervalue;
 			if (iu->bu) {
-				bee_irc_channel_update(irc, ic, l->data);
+				bee_irc_channel_update(irc, ic, iu);
 			}
 		}
 		return;
