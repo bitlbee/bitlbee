@@ -1772,6 +1772,15 @@ static PurpleAccountUiOps bee_account_uiops =
 	NULL,                              /* close_account_request */
 };
 
+static void *prplcb_bitlbee_set_account_password(PurpleAccount *account, char *password)
+{
+	struct im_connection *ic = purple_ic_by_pa(account);
+
+	set_setstr(&ic->acc->set, "password", password ? password : "");
+
+	return GINT_TO_POINTER(TRUE);
+}
+
 extern PurpleXferUiOps bee_xfer_uiops;
 
 static void purple_ui_init()
@@ -1860,6 +1869,28 @@ void purple_initmodule()
 	                      &funcs, PURPLE_CALLBACK(prplcb_buddy_typing), NULL);
 	purple_signal_connect(purple_conversations_get_handle(), "buddy-typing-stopped",
 	                      &funcs, PURPLE_CALLBACK(prplcb_buddy_typing), NULL);
+
+	/* "bitlbee-set-account-password" signal:
+	 * Replacement API for purple_account_set_password() to be called by
+	 * prpls that wish to store updated passwords or oauth tokens, since
+	 * our password storage doesn't get notified of calls to
+	 * purple_account_set_password().
+	 *
+	 * When used with purple_signal_emit_return_1() returns:
+	 *  - GINT_TO_POINTER(TRUE) if implemented by this version of bitlbee
+	 *  - NULL otherwise.
+	 *
+	 * Originally made for the hangouts plugin.
+	 */
+
+	purple_signal_register(purple_accounts_get_handle(), "bitlbee-set-account-password",
+	                       purple_marshal_POINTER__POINTER_POINTER,
+	                       purple_value_new(PURPLE_TYPE_BOOLEAN), 2,
+	                       purple_value_new(PURPLE_TYPE_SUBTYPE, PURPLE_SUBTYPE_ACCOUNT),
+	                       purple_value_new(PURPLE_TYPE_STRING));
+
+	purple_signal_connect(purple_accounts_get_handle(), "bitlbee-set-account-password",
+	                      &funcs, PURPLE_CALLBACK(prplcb_bitlbee_set_account_password), NULL);
 
 	memset(&funcs, 0, sizeof(funcs));
 	funcs.login = purple_login;
