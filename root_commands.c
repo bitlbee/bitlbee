@@ -818,7 +818,7 @@ static void cmd_rename(irc_t *irc, char **cmd)
 	iu = irc_user_by_name(irc, cmd[del ? 2 : 1]);
 
 	if (iu == NULL) {
-		irc_rootmsg(irc, "Nick `%s' does not exist", cmd[1]);
+		irc_rootmsg(irc, "Nick `%s' does not exist", cmd[del ? 2 : 1]);
 	} else if (del) {
 		if (iu->bu) {
 			bee_irc_user_nick_reset(iu);
