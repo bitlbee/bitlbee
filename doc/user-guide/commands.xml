@@ -1765,7 +1765,7 @@
 	<bitlbee-command name="rename">
 		<short-description>Rename (renick) a buddy</short-description>
 		<syntax>rename &lt;oldnick&gt; &lt;newnick&gt;</syntax>
-		<syntax>rename -del &lt;oldnick&gt;</syntax>
+		<syntax>rename -del &lt;nick&gt;</syntax>
 
 		<description>
 			<para>
