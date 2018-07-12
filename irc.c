@@ -638,9 +638,12 @@ void irc_vawrite(irc_t *irc, char *format, va_list params)
 	g_strlcat(line, "\r\n", IRC_MAX_LINE + 1);
 
 	if (irc->sendbuffer != NULL) {
-		size = strlen(irc->sendbuffer) + strlen(line);
+		gsize line_len = strlen(line);
+		gsize buffer_len = strlen(irc->sendbuffer);
+
+		size = buffer_len + line_len;
 		irc->sendbuffer = g_renew(char, irc->sendbuffer, size + 1);
-		strcpy((irc->sendbuffer + strlen(irc->sendbuffer)), line);
+		strcpy((irc->sendbuffer + buffer_len), line);
 	} else {
 		irc->sendbuffer = g_strdup(line);
 	}
