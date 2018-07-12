@@ -235,14 +235,14 @@ gboolean bitlbee_io_current_client_write(gpointer data, gint fd, b_input_conditi
 {
 	irc_t *irc = data;
 	int st, size;
-	char *temp;
 
-	if (irc->sendbuffer == NULL) {
+	size = irc->sendbuffer->len;
+
+	if (size == 0) {
 		return FALSE;
 	}
 
-	size = strlen(irc->sendbuffer);
-	st = write(irc->fd, irc->sendbuffer, size);
+	st = write(irc->fd, irc->sendbuffer->str, size);
 
 	if (st == 0 || (st < 0 && !sockerr_again())) {
 		irc_abort(irc, 1, "Write error: %s", strerror(errno));
@@ -252,15 +252,12 @@ gboolean bitlbee_io_current_client_write(gpointer data, gint fd, b_input_conditi
 	}
 
 	if (st == size) {
-		g_free(irc->sendbuffer);
-		irc->sendbuffer = NULL;
+		g_string_truncate(irc->sendbuffer, 0);
 		irc->w_watch_source_id = 0;
 
 		return FALSE;
 	} else {
-		temp = g_strdup(irc->sendbuffer + st);
-		g_free(irc->sendbuffer);
-		irc->sendbuffer = temp;
+		g_string_erase(irc->sendbuffer, 0, st);
 
 		return TRUE;
 	}

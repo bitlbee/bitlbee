@@ -84,7 +84,7 @@ typedef struct irc {
 	irc_status_t status;
 	double last_pong;
 	int pinging;
-	char *sendbuffer;
+	GString *sendbuffer;
 	char *readbuffer;
 	GIConv iconv, oconv;
 

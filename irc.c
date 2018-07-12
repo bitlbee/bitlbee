@@ -62,6 +62,8 @@ irc_t *irc_new(int fd)
 	irc->iconv = (GIConv) - 1;
 	irc->oconv = (GIConv) - 1;
 
+	irc->sendbuffer = g_string_sized_new(IRC_MAX_LINE * 2);
+
 	if (global.conf->ping_interval > 0 && global.conf->ping_timeout > 0) {
 		irc->ping_source_id = b_timeout_add(global.conf->ping_interval * 1000, irc_userping, irc);
 	}
@@ -304,7 +306,7 @@ void irc_free(irc_t * irc)
 		g_iconv_close(irc->oconv);
 	}
 
-	g_free(irc->sendbuffer);
+	g_string_free(irc->sendbuffer, TRUE);
 	g_free(irc->readbuffer);
 	g_free(irc->password);
 
@@ -594,8 +596,7 @@ void irc_write_all(int now, char *format, ...)
 		irc_t *irc = temp->data;
 
 		if (now) {
-			g_free(irc->sendbuffer);
-			irc->sendbuffer = g_strdup("\r\n");
+			g_string_assign(irc->sendbuffer, "\r\n");
 		}
 		irc_vawrite(temp->data, format, params);
 		if (now) {
@@ -610,7 +611,6 @@ void irc_write_all(int now, char *format, ...)
 
 void irc_vawrite(irc_t *irc, char *format, va_list params)
 {
-	int size;
 	char line[IRC_MAX_LINE + 1];
 
 	/* Don't try to write anything new anymore when shutting down. */
@@ -637,16 +637,7 @@ void irc_vawrite(irc_t *irc, char *format, va_list params)
 	}
 	g_strlcat(line, "\r\n", IRC_MAX_LINE + 1);
 
-	if (irc->sendbuffer != NULL) {
-		gsize line_len = strlen(line);
-		gsize buffer_len = strlen(irc->sendbuffer);
-
-		size = buffer_len + line_len;
-		irc->sendbuffer = g_renew(char, irc->sendbuffer, size + 1);
-		strcpy((irc->sendbuffer + buffer_len), line);
-	} else {
-		irc->sendbuffer = g_strdup(line);
-	}
+	g_string_append(irc->sendbuffer, line);
 
 	if (irc->w_watch_source_id == 0) {
 		/* If the buffer is empty we can probably write, so call the write event handler
@@ -668,23 +659,19 @@ void irc_vawrite(irc_t *irc, char *format, va_list params)
 void irc_flush(irc_t *irc)
 {
 	ssize_t n;
-	size_t len;
+	size_t len = irc->sendbuffer->len;
 
-	if (irc->sendbuffer == NULL) {
+	if (len == 0) {
 		return;
 	}
 
-	len = strlen(irc->sendbuffer);
-	if ((n = send(irc->fd, irc->sendbuffer, len, 0)) == len) {
-		g_free(irc->sendbuffer);
-		irc->sendbuffer = NULL;
+	if ((n = send(irc->fd, irc->sendbuffer->str, len, 0)) == len) {
+		g_string_truncate(irc->sendbuffer, 0);
 
 		b_event_remove(irc->w_watch_source_id);
 		irc->w_watch_source_id = 0;
 	} else if (n > 0) {
-		char *s = g_strdup(irc->sendbuffer + n);
-		g_free(irc->sendbuffer);
-		irc->sendbuffer = s;
+		g_string_erase(irc->sendbuffer, 0, n);
 	}
 	/* Otherwise something went wrong and we don't currently care
 	   what the error was. We may or may not succeed later, we
@@ -701,8 +688,7 @@ void irc_switch_fd(irc_t *irc, int fd)
 	if (irc->sendbuffer) {
 		b_event_remove(irc->w_watch_source_id);
 		irc->w_watch_source_id = 0;
-		g_free(irc->sendbuffer);
-		irc->sendbuffer = NULL;
+		g_string_truncate(irc->sendbuffer, 0);
 	}
 
 	b_event_remove(irc->r_watch_source_id);
