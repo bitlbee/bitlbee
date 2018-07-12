@@ -372,7 +372,7 @@ static void sighandler_crash(int signal)
 		irc_t *irc = l->data;
 		sock_make_blocking(irc->fd);
 		if (irc->sendbuffer) {
-			(void) write(irc->fd, irc->sendbuffer, strlen(irc->sendbuffer));
+			(void) write(irc->fd, irc->sendbuffer->str, irc->sendbuffer->len);
 		}
 		(void) write(irc->fd, message, sizeof(message) - 1);
 	}
