@@ -231,7 +231,9 @@ static gboolean bee_irc_user_msg(bee_t *bee, bee_user_t *bu, const char *msg_, g
 	char *message_type = "PRIVMSG";
 	GSList *l;
 
-	if (sent_at > 0 && set_getbool(&irc->b->set, "display_timestamps")) {
+	if (sent_at > 0 &&
+	    !(irc->caps & CAP_SERVER_TIME) &&
+	    set_getbool(&irc->b->set, "display_timestamps")) {
 		ts = irc_format_timestamp(irc, sent_at);
 	}
 
@@ -701,7 +703,9 @@ static gboolean bee_irc_chat_msg(bee_t *bee, struct groupchat *c, bee_user_t *bu
 		return FALSE;
 	}
 
-	if (sent_at > 0 && set_getbool(&bee->set, "display_timestamps")) {
+	if (sent_at > 0 &&
+	    !(irc->caps & CAP_SERVER_TIME) &&
+	    set_getbool(&bee->set, "display_timestamps")) {
 		ts = irc_format_timestamp(irc, sent_at);
 	}
 
