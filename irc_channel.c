@@ -499,7 +499,7 @@ void irc_channel_printf(irc_channel_t *ic, char *format, ...)
 	text = g_strdup_vprintf(format, params);
 	va_end(params);
 
-	irc_send_msg(ic->irc->root, "PRIVMSG", ic->name, text, NULL, 0);
+	irc_send_msg(ic->irc->root, "PRIVMSG", ic->name, text, NULL);
 	g_free(text);
 }
 

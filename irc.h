@@ -342,8 +342,8 @@ void irc_send_names(irc_channel_t *ic);
 void irc_send_topic(irc_channel_t *ic, gboolean topic_change);
 void irc_send_whois(irc_user_t *iu);
 void irc_send_who(irc_t *irc, GSList *l, const char *channel);
-void irc_send_msg(irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix, time_t ts);
-void irc_send_msg_raw(irc_user_t *iu, const char *type, const char *dst, const char* tags, const char *msg);
+void irc_send_msg(irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix);
+void irc_send_msg_raw(irc_user_t *iu, const char *type, const char *dst, const char *msg);
 void irc_send_msg_f(irc_user_t *iu, const char *type, const char *dst, const char *format, ...) G_GNUC_PRINTF(4, 5);
 void irc_send_nick(irc_user_t *iu, const char *new_nick);
 void irc_send_channel_user_mode_diff(irc_channel_t *ic, irc_user_t *iu,
@@ -351,6 +351,9 @@ void irc_send_channel_user_mode_diff(irc_channel_t *ic, irc_user_t *iu,
 void irc_send_invite(irc_user_t *iu, irc_channel_t *ic);
 void irc_send_cap(irc_t *irc, char *subcommand, char *body);
 void irc_send_away_notify(irc_user_t *iu);
+
+G_GNUC_INTERNAL void irc_send_msg_ts(irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix, time_t ts);
+G_GNUC_INTERNAL void irc_send_msg_raw_tags(irc_user_t *iu, const char *type, const char *dst, const char* tags, const char *msg);
 
 /* irc_user.c */
 irc_user_t *irc_user_new(irc_t *irc, const char *nick);
@@ -364,7 +367,7 @@ void irc_user_quit(irc_user_t *iu, const char *msg);
 /* irc_util.c */
 char *set_eval_timezone(struct set *set, char *value);
 char *irc_format_timestamp(irc_t *irc, time_t msg_ts);
-char *irc_format_servertime(irc_t *irc, time_t msg_ts);
+G_GNUC_INTERNAL char *irc_format_servertime(irc_t *irc, time_t msg_ts);
 char *set_eval_self_messages(struct set *set, char *value);
 
 /* irc_im.c */

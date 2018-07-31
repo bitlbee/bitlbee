@@ -213,7 +213,7 @@ int dccs_send_request(struct dcc_file_transfer *df, irc_user_t *iu, struct socka
 	cmd = g_strdup_printf("\001DCC SEND %s %s %u %zu\001",
 	                      df->ft->file_name, ipaddr, port, df->ft->file_size);
 
-	irc_send_msg_raw(iu, "PRIVMSG", iu->irc->user->nick, cmd, 0);
+	irc_send_msg_raw(iu, "PRIVMSG", iu->irc->user->nick, cmd);
 
 	g_free(cmd);
 

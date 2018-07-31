@@ -523,7 +523,7 @@ static void irc_cmd_notice(irc_t *irc, char **cmd)
 	/* At least for now just echo. IIRC some IRC clients use self-notices
 	   for lag checks, so try to support that. */
 	if (nick_cmp(NULL, cmd[1], irc->user->nick) == 0) {
-		irc_send_msg(irc->user, "NOTICE", irc->user->nick, cmd[2], NULL, 0);
+		irc_send_msg(irc->user, "NOTICE", irc->user->nick, cmd[2], NULL);
 	} else if ((iu = irc_user_by_name(irc, cmd[1]))) {
 		iu->f->privmsg(iu, cmd[2]);
 	}
@@ -824,7 +824,7 @@ static void irc_cmd_completions(irc_t *irc, char **cmd)
 	set_t *s;
 	int i;
 
-	irc_send_msg_raw(irc->root, "NOTICE", irc->user->nick, "COMPLETIONS OK", 0);
+	irc_send_msg_raw(irc->root, "NOTICE", irc->user->nick, "COMPLETIONS OK");
 
 	for (i = 0; root_commands[i].command; i++) {
 		irc_send_msg_f(irc->root, "NOTICE", irc->user->nick, "COMPLETIONS %s", root_commands[i].command);
@@ -838,7 +838,7 @@ static void irc_cmd_completions(irc_t *irc, char **cmd)
 		irc_send_msg_f(irc->root, "NOTICE", irc->user->nick, "COMPLETIONS set %s", s->key);
 	}
 
-	irc_send_msg_raw(irc->root, "NOTICE", irc->user->nick, "COMPLETIONS END", 0);
+	irc_send_msg_raw(irc->root, "NOTICE", irc->user->nick, "COMPLETIONS END");
 }
 
 static void irc_cmd_rehash(irc_t *irc, char **cmd)
