@@ -135,7 +135,7 @@ static void irc_usermsg_(const char *cmd, irc_user_t *iu, const char *format, va
 	g_vsnprintf(text, sizeof(text), format, params);
 
 	dst = irc_user_msgdest(iu);
-	irc_send_msg(iu, cmd, dst, text, NULL);
+	irc_send_msg(iu, cmd, dst, text, NULL, 0);
 }
 
 void irc_usermsg(irc_user_t *iu, char *format, ...)
@@ -362,11 +362,16 @@ void irc_send_who(irc_t *irc, GSList *l, const char *channel)
 	irc_send_num(irc, 315, "%s :End of /WHO list", channel);
 }
 
-void irc_send_msg(irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix)
+void irc_send_msg(irc_user_t *iu, const char *type, const char *dst, const char *msg, const char *prefix, time_t ts)
 {
 	char last = 0;
 	const char *s = msg, *line = msg;
+	char *tags = NULL;
 	char raw_msg[strlen(msg) + 1024];
+
+	if (!(iu->irc->caps & CAP_SERVER_TIME)) {
+		ts = 0;
+	}
 
 	while (!last) {
 		if (*s == '\r' && *(s + 1) == '\n') {
@@ -378,30 +383,34 @@ void irc_send_msg(irc_user_t *iu, const char *type, const char *dst, const char 
 			last = s[0] == 0;
 		}
 		if (*s == 0 || *s == '\n') {
+			if (ts)
+				tags = irc_format_servertime(iu->irc, ts);
 			if (g_strncasecmp(line, "/me ", 4) == 0 && (!prefix || !*prefix) &&
 			    g_strcasecmp(type, "PRIVMSG") == 0) {
 				strcpy(raw_msg, "\001ACTION ");
 				strncat(raw_msg, line + 4, s - line - 4);
 				strcat(raw_msg, "\001");
-				irc_send_msg_raw(iu, type, dst, raw_msg);
+				irc_send_msg_raw(iu, type, dst, tags, raw_msg);
 			} else {
 				*raw_msg = '\0';
 				if (prefix && *prefix) {
 					strcpy(raw_msg, prefix);
 				}
 				strncat(raw_msg, line, s - line);
-				irc_send_msg_raw(iu, type, dst, raw_msg);
+				irc_send_msg_raw(iu, type, dst, tags, raw_msg);
 			}
+			if (ts)
+				g_free(tags);
 			line = s + 1;
 		}
 		s++;
 	}
 }
 
-void irc_send_msg_raw(irc_user_t *iu, const char *type, const char *dst, const char *msg)
+void irc_send_msg_raw(irc_user_t *iu, const char *type, const char *dst, const char* tags, const char *msg)
 {
-	irc_write(iu->irc, ":%s!%s@%s %s %s :%s",
-	          iu->nick, iu->user, iu->host, type, dst, msg && *msg ? msg : " ");
+	irc_write(iu->irc, "%s%s:%s!%s@%s %s %s :%s",
+	          tags ? tags : "", tags ? " " : "", iu->nick, iu->user, iu->host, type, dst, msg && *msg ? msg : " ");
 }
 
 void irc_send_msg_f(irc_user_t *iu, const char *type, const char *dst, const char *format, ...)

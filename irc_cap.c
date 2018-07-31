@@ -42,6 +42,7 @@ static const cap_info_t supported_caps[] = {
 	{"extended-join", CAP_EXTENDED_JOIN},
 	{"away-notify", CAP_AWAY_NOTIFY},
 	{"userhost-in-names", CAP_USERHOST_IN_NAMES},
+	{"server-time", CAP_SERVER_TIME},
 	{NULL},
 };
 
