@@ -703,8 +703,9 @@ static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
 
 static void expand_entities(char **text, const json_value *node, const json_value *extended_node)
 {
-	json_value *entities, *extended_entities, *quoted;
-	char *quote_url = NULL, *quote_text = NULL;
+	json_value *entities, *extended_entities, *quoted, *quoted_permalink;
+	char *quote_url = NULL, *quote_text = NULL, *quote_kort = NULL;
+	gboolean quote_used = FALSE;
 
 	if (!((entities = json_o_get(node, "entities")) && entities->type == json_object))
 		return;
@@ -715,6 +716,9 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 		struct twitter_xml_status *txs = twitter_xt_get_status(quoted);
 		quote_text = g_strdup_printf("@%s: %s", txs->user->screen_name, txs->text);
 		quote_url = g_strdup_printf("%s/status/%" G_GUINT64_FORMAT, txs->user->screen_name, txs->id);
+		if ((quoted_permalink = json_o_get(node, "quoted_status_permalink")) && quoted->type == json_object) {
+			quote_kort = json_o_strdup(quoted_permalink, "url");
+		}
 		txs_free(txs);
 	} else {
 		quoted = NULL;
@@ -758,6 +762,7 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 			if (quote_url && strstr(full, quote_url)) {
 				format = "%s<%s> [%s]%s";
 				disp = quote_text;
+				quote_used = TRUE;
 			}
 
 			*pos = '\0';
@@ -768,8 +773,17 @@ static void expand_entities(char **text, const json_value *node, const json_valu
 			*text = new;
 		}
 	}
+
+	if (quote_text && !quote_used) {
+		const char *url = quote_kort ?: quote_url;
+		char *new = g_strdup_printf("%s <%s>[%s]", *text, url, quote_text);
+		g_free(*text);
+		*text = new;
+	}
+
 	g_free(quote_text);
 	g_free(quote_url);
+	g_free(quote_kort);
 }
 
 /**
