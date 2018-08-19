@@ -564,7 +564,7 @@ static void twitter_init(account_t * acc)
 	s->flags |= SET_HIDDEN;
 
 	if (strcmp(acc->prpl->name, "twitter") == 0) {
-		s = set_add(&acc->set, "stream", "true", set_eval_bool, acc);
+		s = set_add(&acc->set, "stream", "false", set_eval_bool, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY;
 	}
 }
