@@ -1058,10 +1058,6 @@ void cmd_otr_connect(irc_t *irc, char **args)
 		irc_rootmsg(irc, "%s: unknown user", args[1]);
 		return;
 	}
-	if (!(u->bu->flags & BEE_USER_ONLINE)) {
-		irc_rootmsg(irc, "%s is offline", args[1]);
-		return;
-	}
 
 	/* passing this through the filter so it goes through libotr which
 	 * will replace the simple query string with a proper one */
@@ -1434,10 +1430,6 @@ void otr_smp_or_smpq(irc_t *irc, const char *nick, const char *question,
 	u = irc_user_by_name(irc, nick);
 	if (!u || !u->bu || !u->bu->ic) {
 		irc_rootmsg(irc, "%s: unknown user", nick);
-		return;
-	}
-	if (!(u->bu->flags & BEE_USER_ONLINE)) {
-		irc_rootmsg(irc, "%s is offline", nick);
 		return;
 	}
 
