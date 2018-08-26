@@ -120,6 +120,13 @@ static gboolean bee_irc_user_status(bee_t *bee, bee_user_t *bu, bee_user_t *old)
 		iu->flags |= IRC_USER_AWAY;
 	}
 
+	/* return early if nothing changed */
+	if ((bu->flags == old->flags) &&
+	    (g_strcmp0(bu->status, old->status) == 0) &&
+	    (g_strcmp0(bu->status_msg, old->status_msg) == 0)) {
+		return TRUE;
+	}
+
 	if ((bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE)) {
 		if (bu->flags & BEE_USER_ONLINE) {
 			if (g_hash_table_lookup(irc->watches, iu->key)) {
@@ -143,21 +150,11 @@ static gboolean bee_irc_user_status(bee_t *bee, bee_user_t *bu, bee_user_t *old)
 		}
 	}
 
-	/* Reset this one since the info may have changed. */
 	iu->away_reply_timeout = 0;
 
 	bee_irc_channel_update(irc, NULL, iu);
 
-	/* If away-notify enabled, send status updates when:
-	 * Away or Online state changes
-	 * Status changes (e.g. "Away" to "Mobile")
-	 * Status message changes
-	 */
-	if ((irc->caps & CAP_AWAY_NOTIFY) &&
-	    ((bu->flags & BEE_USER_AWAY) != (old->flags & BEE_USER_AWAY) ||
-	     (bu->flags & BEE_USER_ONLINE) != (old->flags & BEE_USER_ONLINE) ||
-	     (g_strcmp0(bu->status, old->status) != 0) ||
-	     (g_strcmp0(bu->status_msg, old->status_msg) != 0))) {
+	if (irc->caps & CAP_AWAY_NOTIFY) {
 		irc_send_away_notify(iu);
 	}
 
