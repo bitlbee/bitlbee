@@ -9,10 +9,11 @@ bitlbee (3.5.1-1.1) UNRELEASED; urgency=medium
     (Closes: #816200).
 
   [ dequis ]
-  * Fix lintian pkg-config-unavailable-for-cross-compilation 
+  * Fix lintian pkg-config-unavailable-for-cross-compilation
 
   [ Jelmer Vernooĳ ]
   * Add debian upstream metadata file.
+  * Trim trailing whitespace.
 
  -- dequis <dx@dxzone.com.ar>  Mon, 19 Mar 2018 22:18:43 -0300
 
