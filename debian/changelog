@@ -17,6 +17,7 @@ bitlbee (3.5.1-1.1) UNRELEASED; urgency=medium
 
   [ Debian Janitor ]
   * Bump debhelper from old 9 to 10.
+  * Trim trailing whitespace.
 
  -- dequis <dx@dxzone.com.ar>  Mon, 19 Mar 2018 22:18:43 -0300
 
@@ -745,4 +746,3 @@ bitlbee (0.6-1) unstable; urgency=low
   * Initial Release. (Testing only, not for release.)
 
  -- Wilmer van der Gaast <lintux@debian.org>  Wed, 10 Jul 2002 11:02:28 +0200
-
