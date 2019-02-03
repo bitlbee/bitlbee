@@ -85,13 +85,7 @@ account_t *account_add(bee_t *bee, struct prpl *prpl, char *user, char *pass)
 
 	/* Hardcode some more clever tag guesses. */
 	strcpy(tag, prpl->name);
-	if (strcmp(prpl->name, "oscar") == 0) {
-		if (g_ascii_isdigit(a->user[0])) {
-			strcpy(tag, "icq");
-		} else {
-			strcpy(tag, "aim");
-		}
-	} else if (strcmp(prpl->name, "jabber") == 0) {
+	if (strcmp(prpl->name, "jabber") == 0) {
 		if (strstr(a->user, "@gmail.com") ||
 		    strstr(a->user, "@googlemail.com")) {
 			strcpy(tag, "gtalk");

@@ -239,11 +239,6 @@ char *explain_unknown_protocol(const char *name)
 	}
 
 #else
-	if (strcmp(name, "aim") == 0 || strcmp(name, "icq") == 0) {
-		return g_strdup("This account uses libpurple specific aliases for oscar. "
-		                "Re-add the account with `account add oscar ...'");
-	}
-
 	extramsg = "If this is a libpurple plugin, you might need to install bitlbee-libpurple instead.";
 #endif
 	return g_strconcat("The protocol plugin is not installed or could not be loaded. "
@@ -253,14 +248,9 @@ char *explain_unknown_protocol(const char *name)
 
 void nogaim_init()
 {
-	extern void oscar_initmodule();
 	extern void jabber_initmodule();
 	extern void twitter_initmodule();
 	extern void purple_initmodule();
-
-#ifdef WITH_OSCAR
-	oscar_initmodule();
-#endif
 
 #ifdef WITH_JABBER
 	jabber_initmodule();

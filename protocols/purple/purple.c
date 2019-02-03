@@ -106,17 +106,6 @@ static gboolean purple_menu_cmp(const char *a, const char *b)
 	return (*a == '\0' && *b == '\0');
 }
 
-static char *purple_get_account_prpl_id(account_t *acc)
-{
-	/* "oscar" is how non-purple bitlbee calls it,
-	 * and it might be icq or aim, depending on the username */
-	if (g_strcmp0(acc->prpl->name, "oscar") == 0) {
-		return (g_ascii_isdigit(acc->user[0])) ? "prpl-icq" : "prpl-aim";
-	}
-
-	return acc->prpl->data;
-}
-
 static gboolean purple_account_should_set_nick(account_t *acc)
 {
 	/* whitelist of protocols that tend to have numeric or meaningless usernames, and should
@@ -126,7 +115,6 @@ static gboolean purple_account_should_set_nick(account_t *acc)
 	char *whitelist[] = {
 		"prpl-hangouts",
 		"prpl-eionrobb-funyahoo-plusplus",
-		"prpl-icq",
 		"prpl-line",
 		NULL,
 	};
@@ -143,7 +131,7 @@ static gboolean purple_account_should_set_nick(account_t *acc)
 
 static void purple_init(account_t *acc)
 {
-	char *prpl_id = purple_get_account_prpl_id(acc);
+	char *prpl_id = acc->prpl->data;
 	PurplePlugin *prpl = purple_plugins_find_with_id(prpl_id);
 	PurplePluginProtocolInfo *pi = prpl->info->extra_info;
 	PurpleAccount *pa;
@@ -398,7 +386,7 @@ static void purple_login(account_t *acc)
 	purple_connections = g_slist_prepend(purple_connections, ic);
 
 	ic->proto_data = pd = g_new0(struct purple_data, 1);
-	pd->account = purple_account_new(acc->user, purple_get_account_prpl_id(acc));
+	pd->account = purple_account_new(acc->user, acc->prpl->data);
 	pd->input_requests = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 	                                           NULL, g_free);
 	pd->next_request_id = 0;
@@ -1955,16 +1943,6 @@ void purple_initmodule()
 		register_protocol(ret);
 
 		g_string_append_printf(help, "\n* %s (%s)", ret->name, prot->info->name);
-
-		/* libpurple doesn't define a protocol called OSCAR, but we
-		   need it to be compatible with normal BitlBee. */
-		if (g_strcasecmp(prot->info->id, "prpl-aim") == 0) {
-			ret = g_memdup(&funcs, sizeof(funcs));
-			ret->name = "oscar";
-			/* purple_get_account_prpl_id() determines the actual protocol ID (icq/aim) */
-			ret->data = NULL;
-			register_protocol(ret);
-		}
 
 		info = g_new0(struct plugin_info, 1);
 		info->abiver = BITLBEE_ABI_VERSION_CODE;

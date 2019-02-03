@@ -42,21 +42,6 @@
 				</description>
 			</bitlbee-command>
 
-			<bitlbee-command name="oscar">
-				<syntax>account add oscar &lt;handle&gt; [&lt;password&gt;]</syntax>
-
-				<description>
-					<para>
-						OSCAR is the protocol used to connect to AIM and/or ICQ. The servers will automatically detect if you're using a numeric or non-numeric username so there's no need to tell which network you want to connect to.
-					</para>
-				</description>
-
-				<ircexample>
-					<ircline nick="wilmer">account add oscar 72696705 hobbelmeeuw</ircline>
-					<ircline nick="root">Account successfully added</ircline>
-				</ircexample>
-			</bitlbee-command>
-			
 			<bitlbee-command name="twitter">
 				<syntax>account add twitter &lt;handle&gt;</syntax>
 
