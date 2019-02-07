@@ -3,6 +3,55 @@ found in the git commit logs, for example you can try:
 
 https://github.com/bitlbee/bitlbee/commits/master
 
+Version 3.6:
+
+- irc/core:
+  * Add server-time IRCv3 capability (blastrock)
+  * Add PROXY command for haproxy/stunnel
+  * Large performance improvements for large contact lists
+  * Many UX/documentation improvements
+  * Added built-in crash handler that writes to /var/lib/bitlbee/crash.log
+  * Try to join long spaceless lines in paste_buffer without a newline. The
+    main use case for this is pasting long URLs and not breaking them
+  * Fix status message being set to null accidentally
+  * Fix handling utf8 nick renames when loading configs (MaskRay)
+  * Fix SSL's SNI with hostnames starting with a digit (CMB)
+  * Show correct nick when `rename -del` is used (arcnmx)
+
+- twitter:
+  * Disable the stream setting by default. Filter streams still work.
+  * Update default character limit to 280 chars (qyliss)
+  * Fix quote tweet url display.
+
+- jabber:
+  * Try to join anyway after "Already present in chat"
+  * Fix chat joins when ext_jid is provided for your own user.
+    Seen with Biboumi (a gateway from XMPP to IRC)
+  * Handle always_use_nicks more gracefully to reduce nick change noise
+
+- otr:
+  * Don't block attempts to connect/smp/smpq to "offline" users
+
+- Removed dead protocols:
+  * msn: Use the skypeweb purple plugin instead.
+  * skype (the dbus based thing): ditto.
+  * yahoo: It's so dead even the replacement protocol died.
+  * oscar: AIM is dead, for ICQ use the icyque purple plugin instead.
+
+- For plugin devs:
+  * Add datadir to pkgconfig file and config.h (sm00th)
+  * Add "bitlbee-set-account-password" purple signal (for hangouts)
+  * Support libpurple 2.12.0's PURPLE_MESSAGE_REMOTE_SEND for groupchat
+    self-messages (for slack)
+
+- Packaging/distro specific stuff:
+  * bitlbee@.service now sends stderr to syslog instead of the socket
+  * debian: only enable bitlbee.service, not bitlbee.socket too
+  * cygwin: portability fixes for plugins
+  * Support OpenSSL 1.1 built without backwards compat (cotequeiroz)
+
+Finished XX Feb 200XX
+
 Version 3.5.1:
 
 - purple:

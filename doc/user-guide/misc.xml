@@ -465,6 +465,23 @@ See the full changelog for details!
 See the full changelog for details!
 </para>
 
+
+<sect1 id="whatsnew030600">
+<title>New stuff in BitlBee 3.6</title>
+
+<simplelist>
+	<member>Removed msn, skype, yahoo, oscar. Use the skypeweb and icyque purple plugins.</member>
+	<member>Fix twitter (disable stream setting, set tweet length to 280)</member>
+	<member>Add server-time IRCv3 capability</member>
+	<member>Large performance improvements for large contact lists</member>
+</simplelist>
+
+<para>
+See the full changelog for details!
+</para>
+
+</sect1>
+
 </sect1>
 
 </chapter>
