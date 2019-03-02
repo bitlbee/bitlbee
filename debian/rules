@@ -92,9 +92,9 @@ binary-common:
 	dh_testdir
 	dh_testroot
 
-	dh_installchangelogs doc/CHANGES
 	dh_installexamples
 	dh_installdocs --link-doc=bitlbee-common
+	dh_installchangelogs doc/CHANGES
 	dh_installdebconf
 ifeq ($(HAS_DH_SYSTEMD),1)
 	dh_systemd_enable -p bitlbee-common --no-enable bitlbee.socket
