@@ -35,7 +35,7 @@ else
 fi
 
 if [ -d /var/lib/bitlbee ]; then
-    chmod 700 /var/lib/bitlbee/
+	chmod 700 /var/lib/bitlbee/
 fi
 
 ## Can't do this in packaging phase: Don't know the UID yet. Access to

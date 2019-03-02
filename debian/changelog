@@ -1,12 +1,8 @@
-bitlbee (3.5.1-1.1) UNRELEASED; urgency=medium
+bitlbee (3.6-1) unstable; urgency=medium
 
   [ dequis ]
   * Remove bitlbee-plugin-skype and skyped (obsolete)
   * Enable only bitlbee.service, not bitlbee.socket too
-
-  [ Sean Whitton ]
-  * Add existence check to chmod call in bitlbee-common.postinst
-    (Closes: #816200).
 
   [ dequis ]
   * Fix lintian pkg-config-unavailable-for-cross-compilation
@@ -19,7 +15,27 @@ bitlbee (3.5.1-1.1) UNRELEASED; urgency=medium
   * Bump debhelper from old 9 to 10.
   * Trim trailing whitespace.
 
- -- dequis <dx@dxzone.com.ar>  Mon, 19 Mar 2018 22:18:43 -0300
+ -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 02 Mar 2019 22:18:21 +0000
+
+bitlbee (3.5.1-1.2) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Comment out bitlbee-plugin-skype and skyped in d/control (Closes: #921895).
+    These binary packages are not built by d/rules by default, and as such
+    they are not currently in the archive.  Commenting them out in order
+    to avoid my NMU hitting binNEW; this caused the -1.1 source-only
+    upload to fail.
+    Thank you to Mattia Rizzolo for suggesting this fix.
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Sat, 09 Feb 2019 17:03:38 -0700
+
+bitlbee (3.5.1-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Add existence check to chmod call in bitlbee-common.postinst
+    (Closes: #816200).
+
+ -- Sean Whitton <spwhitton@spwhitton.name>  Fri, 25 Jan 2019 16:50:34 -0700
 
 bitlbee (3.5.1-1) unstable; urgency=medium
 
