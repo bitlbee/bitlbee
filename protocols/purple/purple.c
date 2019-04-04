@@ -1125,7 +1125,7 @@ void purple_hint_chat_names(struct groupchat *gc, PurpleConversation *conv) {
 	if (set_getbool(&(gc->ic->acc->set), "use_matrix_alias") && purple_conversation_get_data(conv, "matrix_alias") != NULL) {
 		hint = (char *) purple_conversation_get_data(conv, "matrix_alias");
 	}
-	if (set_getbool(&(gc->ic->acc->set), "name_with_tag")) {
+	if (set_getbool(&(gc->ic->acc->set), "chat_name_with_tag")) {
 		char *tag = set_getstr(&(gc->ic->acc->set), "tag");
 		char *tagged_name = g_strdup_printf("%s-%s", tag, hint);
 		imcb_chat_name_hint(gc, tagged_name);
