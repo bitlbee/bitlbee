@@ -121,7 +121,7 @@ extern "C" {
 #define CONTROL_TOPIC "Welcome to the control channel. Type \2help\2 for help information."
 #define IRCD_INFO PACKAGE " <http://www.bitlbee.org/>"
 
-#define MAX_NICK_LENGTH 24
+#define MAX_NICK_LENGTH 80
 
 #define HELP_FILE VARDIR "help.txt"
 #define CONF_FILE_DEF ETCDIR "bitlbee.conf"
