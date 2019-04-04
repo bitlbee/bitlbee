@@ -285,12 +285,13 @@ static void purple_init(account_t *acc)
 	s->flags |= ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "defer_joins", "false", set_eval_bool, acc);
-	s->flags |= ACC_SET_OFFLINE_ONLY;
 
-	s = set_add(&acc->set, "use_matrix_alias", "false", set_eval_bool, acc);
-	s->flags |= ACC_SET_OFFLINE_ONLY;
+	if (strcmp(prpl->info->name, "matrix") == 0) {
+		s = set_add(&acc->set, "use_matrix_alias", "false", set_eval_bool, acc);
+		s->flags |= ACC_SET_OFFLINE_ONLY;
+	}
 
-	s = set_add(&acc->set, "name_with_tag", "false", set_eval_bool, acc);
+	s = set_add(&acc->set, "chat_name_with_tag", "false", set_eval_bool, acc);
 	s->flags |= ACC_SET_OFFLINE_ONLY;
 
 	if (pi->options & OPT_PROTO_MAIL_CHECK) {
@@ -1125,13 +1126,12 @@ void purple_hint_chat_names(struct groupchat *gc, PurpleConversation *conv) {
 		hint = (char *) purple_conversation_get_data(conv, "matrix_alias");
 	}
 	if (set_getbool(&(gc->ic->acc->set), "name_with_tag")) {
-		char tagged_name[128];
 		char *tag = set_getstr(&(gc->ic->acc->set), "tag");
-		g_snprintf(tagged_name, sizeof(tagged_name), "%s-%s", tag, hint);
+		char *tagged_name = g_strdup_printf("%s-%s", tag, hint);
 		imcb_chat_name_hint(gc, tagged_name);
-	}
-	else {
-		imcb_chat_name_hint(gc, conv->title);
+		g_free(tagged_name);
+	} else {
+		imcb_chat_name_hint(gc, hint);
 	}
 }
 void prplcb_conv_new(PurpleConversation *conv)
@@ -1160,9 +1160,6 @@ void prplcb_conv_new(PurpleConversation *conv)
 		   don't even try. */
 		if (!set_getbool(&(ic->acc->set), "defer_joins")) {
 			imcb_chat_add_buddy(gc, gc->ic->acc->user);
-		}
-		else {
-			imcb_log(gc->ic, "Deferring join to %s", conv->name);
 		}
 	}
 }
