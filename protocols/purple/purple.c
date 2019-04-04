@@ -286,7 +286,7 @@ static void purple_init(account_t *acc)
 
 	s = set_add(&acc->set, "defer_joins", "false", set_eval_bool, acc);
 
-	if (strcmp(prpl->info->name, "matrix") == 0) {
+	if (strcmp(prpl->info->name, "Matrix") == 0) {
 		s = set_add(&acc->set, "use_matrix_alias", "false", set_eval_bool, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY;
 	}
