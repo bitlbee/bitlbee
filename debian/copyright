@@ -2,68 +2,58 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 
 Files: *
 Copyright: 
-           1998-1999, Adam Fritzler <afritz@auk.cx>
            2002-2006, Jelmer Vernooij <jelmer@samba.org>
-           2006, Marijn Kruisselbrink and others
-           1998-1999, Mark Spencer <markster@marko.net>
-           (and possibly other members of the Gaim team)
-           2007-2013, Miklos Vajna <vmiklos@vmiklos.hu>
-           2002, Sjoerd 'lucumo' Hemminga <sjoerd@hemminga-online.nl>
-           2008-2013, Sven Moritz Hallberg <pesco@khjk.org>
-           2007-2008, Uli Meis <a.sporto+bee@gmail.com>
            2001-2013, Wilmer 'Lintux' van der Gaast <wilmer@gaast.net>
-           2015, Xamarin Inc
 License: GPL-2+
 
-Files: protocols/oscar/admin.c
-       protocols/oscar/admin.h
-       protocols/oscar/aim.h
-       protocols/oscar/aim_internal.h
-       protocols/oscar/aim_prefixes.h
-       protocols/oscar/auth.c
-       protocols/oscar/bos.c
-       protocols/oscar/bos.h
-       protocols/oscar/buddylist.c
-       protocols/oscar/buddylist.h
-       protocols/oscar/chat.c
-       protocols/oscar/chat.h
-       protocols/oscar/chatnav.c
-       protocols/oscar/chatnav.h
-       protocols/oscar/conn.c
-       protocols/oscar/icq.c
-       protocols/oscar/icq.h
-       protocols/oscar/im.c
-       protocols/oscar/im.h
-       protocols/oscar/info.c
-       protocols/oscar/info.h
-       protocols/oscar/Makefile
-       protocols/oscar/misc.c
-       protocols/oscar/msgcookie.c
-       protocols/oscar/oscar_util.c
-       protocols/oscar/rxhandlers.c
-       protocols/oscar/rxqueue.c
-       protocols/oscar/search.c
-       protocols/oscar/search.h
-       protocols/oscar/service.c
-       protocols/oscar/snac.c
-       protocols/oscar/ssi.c
-       protocols/oscar/ssi.h
-       protocols/oscar/stats.c
-       protocols/oscar/tlv.c
-       protocols/oscar/txqueue.c
-       protocols/twitter/twitter.c
-       protocols/twitter/twitter.h
-       protocols/twitter/twitter_http.c
-       protocols/twitter/twitter_http.h
-       protocols/twitter/twitter_lib.c
-       protocols/twitter/twitter_lib.h
-Copyright: 1998-1999, Adam Fritzler <afritz@auk.cx>
-           2009-2010, Geert Mulders <g.c.w.m.mulders@gmail.com>
+Files: lib/misc.c
+       lib/proxy.?
+       protocols/nogaim.h
+Copyright: 
+           1998-1999, Mark Spencer <markster@marko.net>
+           2002-2006, Jelmer Vernooij <jelmer@samba.org>
+           2001-2013, Wilmer 'Lintux' van der Gaast <wilmer@gaast.net>
+License: GPL-2+
+
+Files: otr.?
+Copyright: 2008-2013, Sven Moritz Hallberg <pesco@khjk.org>
+License: GPL-2+
+
+Files: dcc.?
+       lib/ftutil.?
+       protocols/jabber/si.c
+       protocols/jabber/s5bytestream.c
+Copyright: 2007-2008, Uli Meis <a.sporto+bee@gmail.com>
+License: GPL-2+
+
+Files: dcc.h
+       protocols/ft.h
+Copyright: 
+           2006, Marijn Kruisselbrink
+           2007-2008, Uli Meis <a.sporto+bee@gmail.com>
+License: GPL-2+
+
+Files: protocols/jabber/hipchat.c
+Copyright: 2015, Xamarin Inc
+License: GPL-2+
+
+Files: lib/canohost.c
+Copyright: 1995, Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
+License: OpenSSH
+
+Files: configure
+Copyright: 
+           2007-2013, Miklos Vajna <vmiklos@vmiklos.hu>
+           2002, Sjoerd 'lucumo' Hemminga <sjoerd@hemminga-online.nl>
+           2001-2013, Wilmer 'Lintux' van der Gaast <wilmer@gaast.net>
+License: GPL-2+
+
+Files: protocols/twitter/*
+Copyright: 2009-2010, Geert Mulders <g.c.w.m.mulders@gmail.com>
            2002-2013, Wilmer 'Lintux' van der Gaast <wilmer@gaast.net>
 License: LGPL-2.1
 
-Files: lib/json.c
-       lib/json.h
+Files: lib/json.?
 Copyright: 2012-2014, James McLaughlin
 License: BSD-2-clause
 
@@ -144,3 +134,63 @@ License: LGPL-2.1
  .
  On Debian systems, the complete text of the GNU Lesser General Public
  License can be found in /usr/share/common-licenses/LGPL-2.1 file.
+
+License: OpenSSH
+ Tatu Ylonen's original licence is as follows (excluding some terms about
+ third-party code which are no longer relevant; see the LICENCE file for
+ details):
+ .
+   As far as I am concerned, the code I have written for this software
+   can be used freely for any purpose.  Any derived versions of this
+   software must be clearly marked as such, and if the derived work is
+   incompatible with the protocol description in the RFC file, it must be
+   called by a name other than "ssh" or "Secure Shell".
+ .
+   Note that any information and cryptographic algorithms used in this
+   software are publicly available on the Internet and at any major
+   bookstore, scientific library, and patent office worldwide.  More
+   information can be found e.g. at "http://www.cs.hut.fi/crypto".
+ .
+   The legal status of this program is some combination of all these
+   permissions and restrictions.  Use only at your own responsibility.
+   You will be responsible for any legal consequences yourself; I am not
+   making any claims whether possessing or using this is legal or not in
+   your country, and I am not taking any responsibility on your behalf.
+ .
+ Most remaining components of the software are provided under a standard
+ 2-term BSD licence:
+ .
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions
+   are met:
+   1. Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+ .
+   THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+   IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+   OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+   IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+   NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+   THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ .
+ Some code is licensed under an ISC-style license, to the following
+ copyright holders:
+ .
+  Permission to use, copy, modify, and distribute this software for any
+  purpose with or without fee is hereby granted, provided that the above
+  copyright notice and this permission notice appear in all copies.
+  .
+  THE SOFTWARE IS PROVIDED "AS IS" AND TODD C. MILLER DISCLAIMS ALL
+  WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
+  OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL TODD C. MILLER BE LIABLE
+  FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+  OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+  CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
