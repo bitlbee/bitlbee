@@ -1,75 +1,146 @@
-This package was debianized by Wilmer van der Gaast <lintux@debian.org> on
-Mon,  8 Jul 2002 13:17:42 +0200.
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 
-The source can be downloaded from http://www.bitlbee.org/
+Files: *
+Copyright: 
+           1998-1999, Adam Fritzler <afritz@auk.cx>
+           2002-2006, Jelmer Vernooij <jelmer@samba.org>
+           2006, Marijn Kruisselbrink and others
+           1998-1999, Mark Spencer <markster@marko.net>
+           (and possibly other members of the Gaim team)
+           2007-2013, Miklos Vajna <vmiklos@vmiklos.hu>
+           2002, Sjoerd 'lucumo' Hemminga <sjoerd@hemminga-online.nl>
+           2008-2013, Sven Moritz Hallberg <pesco@khjk.org>
+           2007-2008, Uli Meis <a.sporto+bee@gmail.com>
+           2001-2013, Wilmer 'Lintux' van der Gaast <wilmer@gaast.net>
+           2015, Xamarin Inc
+License: GPL-2+
 
-Authors: Wilmer van der Gaast, Sjoerd Hemminga, Jelmer Vernooij,
-         Maurits Dijkstra, Geert Mulders, Miklos Vajna and others.
+Files: protocols/oscar/admin.c
+       protocols/oscar/admin.h
+       protocols/oscar/aim.h
+       protocols/oscar/aim_internal.h
+       protocols/oscar/aim_prefixes.h
+       protocols/oscar/auth.c
+       protocols/oscar/bos.c
+       protocols/oscar/bos.h
+       protocols/oscar/buddylist.c
+       protocols/oscar/buddylist.h
+       protocols/oscar/chat.c
+       protocols/oscar/chat.h
+       protocols/oscar/chatnav.c
+       protocols/oscar/chatnav.h
+       protocols/oscar/conn.c
+       protocols/oscar/icq.c
+       protocols/oscar/icq.h
+       protocols/oscar/im.c
+       protocols/oscar/im.h
+       protocols/oscar/info.c
+       protocols/oscar/info.h
+       protocols/oscar/Makefile
+       protocols/oscar/misc.c
+       protocols/oscar/msgcookie.c
+       protocols/oscar/oscar_util.c
+       protocols/oscar/rxhandlers.c
+       protocols/oscar/rxqueue.c
+       protocols/oscar/search.c
+       protocols/oscar/search.h
+       protocols/oscar/service.c
+       protocols/oscar/snac.c
+       protocols/oscar/ssi.c
+       protocols/oscar/ssi.h
+       protocols/oscar/stats.c
+       protocols/oscar/tlv.c
+       protocols/oscar/txqueue.c
+       protocols/twitter/twitter.c
+       protocols/twitter/twitter.h
+       protocols/twitter/twitter_http.c
+       protocols/twitter/twitter_http.h
+       protocols/twitter/twitter_lib.c
+       protocols/twitter/twitter_lib.h
+Copyright: 1998-1999, Adam Fritzler <afritz@auk.cx>
+           2009-2010, Geert Mulders <g.c.w.m.mulders@gmail.com>
+           2002-2013, Wilmer 'Lintux' van der Gaast <wilmer@gaast.net>
+License: LGPL-2.1
 
-Mainly Copyright 2002-2014 Wilmer van der Gaast.
+Files: lib/json.c
+       lib/json.h
+Copyright: 2012-2014, James McLaughlin
+License: BSD-2-clause
 
+Files: lib/ns_parse.c
+Copyright: 1996-1999, Internet Software Consortium
+           2004, Internet Systems Consortium, Inc. ("ISC")
+License: ISC
 
-Bits of third party code, also (L)GPLed:
-* Some parts (though there is very little left at this point) are borrowed
-  from Gaim (version 0.58), now known as Pidgin <http://www.pidgin.im/>.
+Files: debian/*
+Copyright: 2002-2019, Wilmer van der Gaast <wilmer@gaast.net>
+License: GPL-2+
 
-Other license (but GPL-compatible):
-* lib/json.[ch] is from <https://github.com/udp/json-parser> and licensed
-  under the modified BSD license.
-* lib/canohost.[ch] is from OpenSSH and licenced under the BSD-3-clause
-  licence.
+License: BSD-2-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+ notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in the
+ documentation and/or other materials provided with the distribution.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ SUCH DAMAGE.
 
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify it under
+ the terms of the GNU General Public License as published by the Free Software
+ Foundation; either version 2 of the License, or (at your option) any later
+ version.
+ .
+ This program is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License along with
+ this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
+ St, Fifth Floor, Boston, MA 02110-1301 USA
+ .
+ On Debian systems, the complete text of the GNU General Public License version 2
+ can be found in /usr/share/common-licenses/GPL-2.
 
-BitlBee License:
+License: ISC
+ Permission to use, copy, modify, and/or distribute this software for any
+ purpose with or without fee is hereby granted, provided that the above
+ copyright notice and this permission notice appear in all copies.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-============================================================================
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License with
-  the Debian GNU/Linux distribution in file /usr/share/common-licenses/GPL-2;
-  if not, write to the Free Software Foundation, Inc., 51 Franklin St, 
-  Fifth Floor, Boston, MA 02110-1301, USA.
-============================================================================
-
-
-Portions (mostly protocols/twitter and protocols/oscar) are licenced under
-the LGPL:
-
-============================================================================
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation, version
-  2.1.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public License
-  along with this library; if not, write to the Free Software Foundation,
-  Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-============================================================================
-
-
-The SGML-formatted documentation is written by Jelmer Vernooij
-<jelmer@samba.org> under the GNU Free Documentation License:
-
-============================================================================
-Copyright (c)  2002-2012 Jelmer Vernooij, Wilmer van der Gaast.
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, with no Front-Cover Texts, and with no Back-Cover
-Texts.  A copy of the license is included in the section entitled `GNU
-Free Documentation License''.
-============================================================================
+License: LGPL-2.1
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License version 2.1 as published by the Free Software Foundation.
+ .
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ .
+ On Debian systems, the complete text of the GNU Lesser General Public
+ License can be found in /usr/share/common-licenses/LGPL-2.1 file.

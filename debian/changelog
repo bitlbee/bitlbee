@@ -4,6 +4,14 @@ bitlbee (3.6-2) UNRELEASED; urgency=medium
 
  -- Debian Janitor <janitor@jelmer.uk>  Thu, 21 Mar 2019 00:10:27 +0000
 
+bitlbee (3.6-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Apply patch to d/copyright provided by Jochen Sprickerhof
+    Closes: #883872
+
+ -- Andreas Tille <tille@debian.org>  Thu, 18 Apr 2019 21:27:48 +0200
+
 bitlbee (3.6-1) unstable; urgency=medium
 
   [ dequis ]
