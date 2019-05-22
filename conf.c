@@ -276,10 +276,12 @@ static int conf_loadini(conf_t *conf, char *file)
 			} else if (g_strcasecmp(ini->key, "motdfile") == 0) {
 				g_free(conf->motdfile);
 				conf->motdfile = g_strdup(ini->value);
-			} else if (g_strcasecmp(ini->key, "account_storage") == 0) {
+			} else if (g_strcasecmp(ini->key, "accountstorage") == 0 ||
+				   g_strcasecmp(ini->key, "account_storage") == 0) {
 				g_free(conf->primary_storage);
 				conf->primary_storage = g_strdup(ini->value);
-			} else if (g_strcasecmp(ini->key, "account_storage_migrate") == 0) {
+			} else if (g_strcasecmp(ini->key, "accountstoragemigrate") == 0 ||
+				   g_strcasecmp(ini->key, "account_storage_migrate") == 0) {
 				g_strfreev(conf->migrate_storage);
 				conf->migrate_storage = g_strsplit_set(ini->value, " \t,;", -1);
 			} else if (g_strcasecmp(ini->key, "pinginterval") == 0) {
