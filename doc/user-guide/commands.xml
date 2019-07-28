@@ -1022,6 +1022,16 @@
 
 	</bitlbee-setting>
 
+	<bitlbee-setting name="mark_read" type="boolean" scope="account">
+		<default>false</default>
+
+		<description>
+			<para>
+				If enabled, automatically marks every message received as read. Useful to avoid duplicate messages when the connection drops, but may annoy your friends.
+			</para>
+		</description>
+
+	</bitlbee-setting>
 	<bitlbee-setting name="defer_joins" type="boolean" scope="account">
 		<default>false</default>
 

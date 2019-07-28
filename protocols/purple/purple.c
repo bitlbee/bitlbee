@@ -285,6 +285,7 @@ static void purple_init(account_t *acc)
 	s->flags |= ACC_SET_ONLINE_ONLY;
 
 	s = set_add(&acc->set, "defer_joins", "false", set_eval_bool, acc);
+	s = set_add(&acc->set, "mark_read", "false", set_eval_bool, acc);
 
 	if (strcmp(prpl->info->name, "Matrix") == 0) {
 		s = set_add(&acc->set, "use_matrix_alias", "false", set_eval_bool, acc);
@@ -1216,9 +1217,18 @@ static void handle_conv_msg(PurpleConversation *conv, const char *who, const cha
 		imcb_chat_msg(gc, who, message, bee_flags, mtime);
 	}
 
+	if (set_getbool(&(ic->acc->set), "mark_read")) {
+		purple_conversation_update(conv, PURPLE_CONV_UPDATE_UNSEEN);
+	}
+
 	g_free(message);
 }
 
+/* Handles has_focus - this needs to return TRUE if we want marking things as read to work for some prpls */
+static gboolean prplcb_conv_has_focus(PurpleConversation *conv) {
+	struct im_connection *ic = purple_ic_by_pa(conv->account);
+	return set_getbool(&(ic->acc->set), "mark_read");
+}
 /* Handles write_im and write_chat. Removes echoes of locally sent messages.
  *
  * PURPLE_MESSAGE_DELAYED is used for chat backlogs - if a message has both
@@ -1284,7 +1294,7 @@ static PurpleConversationUiOps bee_conv_uiops =
 	prplcb_conv_del_users,     /* chat_remove_users    */
 	NULL,                      /* chat_update_user     */
 	NULL,                      /* present              */
-	NULL,                      /* has_focus            */
+	prplcb_conv_has_focus,     /* has_focus            */
 	NULL,                      /* custom_smiley_add    */
 	NULL,                      /* custom_smiley_write  */
 	NULL,                      /* custom_smiley_close  */
