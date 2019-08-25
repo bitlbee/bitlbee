@@ -10,6 +10,7 @@ bitlbee (3.6-2) UNRELEASED; urgency=medium
   * Use secure URI in debian/watch.
   * Use secure URI in Homepage field.
   * Bump debhelper from old 10 to 12.
+  * Add missing colon in closes line.
 
  -- Debian Janitor <janitor@jelmer.uk>  Thu, 21 Mar 2019 00:10:27 +0000
 
@@ -274,7 +275,7 @@ bitlbee (3.0.3-1) unstable; urgency=low
 bitlbee (3.0.1-1) unstable; urgency=low
 
   * New upstream release.
-  * Includes changes from non-maintainer, see below. (Closes #603681)
+  * Includes changes from non-maintainer, see below. (Closes: #603681)
 
  -- Wilmer van der Gaast <wilmer@gaast.net>  Sat, 04 Dec 2010 11:50:53 +0000
 
