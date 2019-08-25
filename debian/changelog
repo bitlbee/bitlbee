@@ -6,6 +6,9 @@ bitlbee (3.6-2) UNRELEASED; urgency=medium
   [ dequis ]
   * Some more d/copyright fixups (Closes: #883872)
 
+  [ Jelmer Vernooĳ ]
+  * Use secure URI in debian/watch.
+
  -- Debian Janitor <janitor@jelmer.uk>  Thu, 21 Mar 2019 00:10:27 +0000
 
 bitlbee (3.6-1.1) unstable; urgency=medium
