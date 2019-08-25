@@ -97,8 +97,8 @@ binary-common:
 	dh_installchangelogs doc/CHANGES
 	dh_installdebconf
 ifeq ($(HAS_DH_SYSTEMD),1)
-	dh_systemd_enable -p bitlbee-common --no-enable bitlbee.socket
-	dh_systemd_enable -p bitlbee-common bitlbee.service
+	dh_installsystemd -p bitlbee-common --no-enable bitlbee.socket
+	dh_installsystemd -p bitlbee-common bitlbee.service
 	dh_installinit -p bitlbee-common --init-script=bitlbee
 	dh_systemd_start -p bitlbee-common
 else

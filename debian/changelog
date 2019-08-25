@@ -9,6 +9,7 @@ bitlbee (3.6-2) UNRELEASED; urgency=medium
   [ Jelmer Vernooĳ ]
   * Use secure URI in debian/watch.
   * Use secure URI in Homepage field.
+  * Bump debhelper from old 10 to 12.
 
  -- Debian Janitor <janitor@jelmer.uk>  Thu, 21 Mar 2019 00:10:27 +0000
 
