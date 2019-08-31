@@ -12,6 +12,9 @@ bitlbee (3.6-2) UNRELEASED; urgency=medium
   * Add missing colon in closes line.
   * Remove obsolete fields Name from debian/upstream/metadata.
 
+  [ Debian Janitor ]
+  * Bump debhelper from old 10 to 12.
+
  -- Debian Janitor <janitor@jelmer.uk>  Thu, 21 Mar 2019 00:10:27 +0000
 
 bitlbee (3.6-1.1) unstable; urgency=medium
