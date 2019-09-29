@@ -11,6 +11,7 @@ bitlbee (3.6-2) UNRELEASED; urgency=medium
   * Use secure URI in Homepage field.
   * Add missing colon in closes line.
   * Remove obsolete fields Name from debian/upstream/metadata.
+  * Fix day-of-week for changelog entries 0.81a-1.
 
  -- Debian Janitor <janitor@jelmer.uk>  Thu, 21 Mar 2019 00:10:27 +0000
 
@@ -707,7 +708,7 @@ bitlbee (0.81a-1) unstable; urgency=low
 
   * New upstream release.
 
- -- Wilmer van der Gaast <lintux@debian.org>  Wed, 16 Oct 2003 16:21:31 +0200
+ -- Wilmer van der Gaast <lintux@debian.org>  Thu, 16 Oct 2003 16:21:31 +0200
 
 bitlbee (0.81-1) unstable; urgency=low
 
