@@ -825,12 +825,12 @@ static char *set_eval_by_account(set_t *set, char *value)
 {
 	struct irc_channel *ic = set->data;
 	struct irc_control_channel *icc = ic->data;
-	char **accounts = g_strsplit(value, ",", 0);
+	char **accounts = g_strsplit(value, ",", 0), **account;
 	account_t *acc;
 
 	g_slist_free(icc->accounts);
 	icc->accounts = NULL;
-	for (char **account = accounts; *account; account++) {
+	for (account = accounts; *account; account++) {
 		if (!(acc = account_get(ic->irc->b, *account))) {
 			g_strfreev(accounts);
 			return SET_INVALID;
@@ -882,14 +882,14 @@ static char *set_eval_by_group(set_t *set, char *value)
 {
 	struct irc_channel *ic = set->data;
 	struct irc_control_channel *icc = ic->data;
-	char **groups = g_strsplit(value, ",", 0);
+	char **groups = g_strsplit(value, ",", 0), **group;
 	bee_group_t *grp;
 
 	g_slist_free(icc->groups);
 	icc->groups = NULL;
-	for (char **group = groups; *group; group++)
+	for (group = groups; *group; group++)
 		// redundant NULL check?
-		if (grp = bee_group_by_name(ic->irc->b, *group, TRUE))
+		if ((grp = bee_group_by_name(ic->irc->b, *group, TRUE)))
 			icc->groups = g_slist_append(icc->groups, grp);
 
 	if ((icc->type & IRC_CC_TYPE_MASK) == IRC_CC_TYPE_GROUP) {
@@ -904,12 +904,12 @@ static char *set_eval_by_protocol(set_t *set, char *value)
 {
 	struct irc_channel *ic = set->data;
 	struct irc_control_channel *icc = ic->data;
-	char **protocols = g_strsplit(value, ",", 0);
+	char **protocols = g_strsplit(value, ",", 0), **protocol;
 	struct prpl *prpl;
 
 	g_slist_free(icc->protocols);
 	icc->protocols = NULL;
-	for (char **protocol = protocols; *protocol; protocol++) {
+	for (protocol = protocols; *protocol; protocol++) {
 		if (!(prpl = find_protocol(*protocol))) {
 			g_strfreev(protocols);
 			return SET_INVALID;
