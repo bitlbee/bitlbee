@@ -936,7 +936,7 @@
 			</para>
 
 			<para>
-				By default, control channels will contain all your contacts. You instead select contacts by buddy group, IM account or IM protocol.
+				By default, control channels will contain all your contacts. You instead select contacts by a comma-delimited list of buddy groups, IM accounts or IM protocols.
 			</para>
 			
 			<para>
@@ -944,7 +944,7 @@
 			</para>
 			
 			<para>
-				With a ! prefix an inverted channel can be created, for example with this setting set to <emphasis>!group</emphasis> you can create a channel with all users <emphasis>not</emphasis> in that group.
+				With a ! prefix an inverted channel can be created, for example with this setting set to <emphasis>!group</emphasis> you can create a channel with all users <emphasis>not</emphasis> in those groups.
 			</para>
 			
 			<para>
