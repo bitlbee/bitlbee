@@ -57,8 +57,8 @@ typedef gboolean (*b_event_handler)(gpointer data, gint fd, b_input_condition co
 #define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 #define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-/* #define event_debug( x... ) printf( x ) */
-#define event_debug(x ...)
+/* #define event_debug( ... ) printf( __VA_ARGS__ ) */
+#define event_debug(...)
 
 /* Call this once when the program starts. It'll initialize the event handler
    library (if necessary) and then return immediately. */
