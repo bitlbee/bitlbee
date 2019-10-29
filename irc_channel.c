@@ -759,8 +759,9 @@ static gboolean control_channel_invite(irc_channel_t *ic, irc_user_t *iu)
 		return FALSE;
 	}
 
+	struct bee_group *grp = icc->groups ? icc->groups->data : NULL;
 	bu->ic->acc->prpl->add_buddy(bu->ic, bu->handle,
-	                             icc->groups ? ((struct bee_group *)icc->groups->data)->name : NULL);
+	                             grp ? grp->name : NULL);
 
 	return TRUE;
 }
@@ -779,8 +780,9 @@ static void control_channel_kick(irc_channel_t *ic, irc_user_t *iu, const char *
 		return;
 	}
 
+	struct bee_group *grp = icc->groups ? icc->groups->data : NULL;
 	bu->ic->acc->prpl->remove_buddy(bu->ic, bu->handle,
-	                                icc->groups ? ((struct bee_group *)icc->groups->data)->name : NULL);
+	                                grp ? grp->name : NULL);
 }
 
 static char *set_eval_by_account(set_t *set, char *value);
@@ -803,7 +805,6 @@ static gboolean control_channel_init(irc_channel_t *ic)
 
 	ic->data = icc = g_new0(struct irc_control_channel, 1);
 	icc->type = IRC_CC_TYPE_DEFAULT;
-	icc->accounts = icc->groups = icc->protocols = NULL;
 
 	/* Have to run the evaluator to initialize icc->modes. */
 	set_setstr(&ic->set, "show_users", "online+,special%,away");
@@ -887,10 +888,12 @@ static char *set_eval_by_group(set_t *set, char *value)
 
 	g_slist_free(icc->groups);
 	icc->groups = NULL;
-	for (group = groups; *group; group++)
+	for (group = groups; *group; group++) {
 		// redundant NULL check?
-		if ((grp = bee_group_by_name(ic->irc->b, *group, TRUE)))
+		if ((grp = bee_group_by_name(ic->irc->b, *group, TRUE))) {
 			icc->groups = g_slist_append(icc->groups, grp);
+		}
+	}
 
 	if ((icc->type & IRC_CC_TYPE_MASK) == IRC_CC_TYPE_GROUP) {
 		bee_irc_channel_update(ic->irc, ic, NULL);
@@ -980,7 +983,6 @@ gboolean irc_channel_wants_user(irc_channel_t *ic, irc_user_t *iu)
 {
 	struct irc_control_channel *icc = ic->data;
 	gboolean ret = FALSE;
-	GSList *l;
 
 	if (iu->bu == NULL) {
 		return FALSE;
@@ -988,21 +990,18 @@ gboolean irc_channel_wants_user(irc_channel_t *ic, irc_user_t *iu)
 
 	switch (icc->type & IRC_CC_TYPE_MASK) {
 	case IRC_CC_TYPE_GROUP:
-		for (l = icc->groups; l; l = l->next) {
-			ret = iu->bu->group == l->data;
-			if (ret) break;
+		if (g_slist_find(icc->groups, iu->bu->group)) {
+			ret = TRUE;
 		}
 		break;
 	case IRC_CC_TYPE_ACCOUNT:
-		for (l = icc->accounts; l; l = l->next) {
-			ret = iu->bu->ic->acc == l->data;
-			if (ret) break;
+		if (g_slist_find(icc->accounts, iu->bu->ic->acc)) {
+			ret = TRUE;
 		}
 		break;
 	case IRC_CC_TYPE_PROTOCOL:
-		for (l = icc->protocols; l; l = l->next) {
-			ret = iu->bu->ic->acc->prpl == l->data;
-			if (ret) break;
+		if (g_slist_find(icc->protocols, iu->bu->ic->acc->prpl)) {
+			ret = TRUE;
 		}
 		break;
 	case IRC_CC_TYPE_DEFAULT:
