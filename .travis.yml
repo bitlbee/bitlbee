@@ -4,7 +4,7 @@ language: c
 script:
  - ./configure --pam=1 --ldap=1
  - make check
- - dpkg-buildpackage -uc -us
+ - dpkg-buildpackage -uc -us -b
 
 env:
   global:
