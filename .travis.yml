@@ -1,18 +1,10 @@
-dist: precise
+dist: trusty
 language: c
 
 script:
  - ./configure --pam=1 --ldap=1
  - make check
- - dpkg-buildpackage -uc -us -d
-
-# ubuntu precise doesn't have libotr5, so extract a prebuilt version to ~/otr
-before_install:
- - wget http://dump.dequis.org/indexed/bitlbee-travis-libs/libotr5_4.1.0_amd64_with_dev_for_travis.tar.gz -O /tmp/otr.tar.gz
- - echo "8424feb28a2cff3ce603ddcdff9be788701ff7e4  /tmp/otr.tar.gz" | sha1sum -c -
- - tar -C "$HOME" -xf /tmp/otr.tar.gz
- - sed -i "s#/usr#$HOME/otr/usr/#" "$HOME/otr/usr/lib/pkgconfig/libotr.pc"
- - echo "libotr 5 libotr" > debian/shlibs.local
+ - dpkg-buildpackage -uc -us
 
 env:
   global:
@@ -33,6 +25,7 @@ addons:
     - fakeroot
     - debhelper
     - devscripts
+    - libotr5-dev
   coverity_scan:
     project:
       name: "bitlbee/bitlbee"
