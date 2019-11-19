@@ -77,7 +77,7 @@ struct {
 	{ NULL, NULL, NULL }
 };
 
-static void check_get_part(int l)
+START_TEST(check_get_part)
 {
 	int i;
 
@@ -103,6 +103,7 @@ static void check_get_part(int l)
 		g_free(res);
 	}
 }
+END_TEST
 
 Suite *jabber_sasl_suite(void)
 {

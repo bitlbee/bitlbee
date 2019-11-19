@@ -8,7 +8,7 @@
 
 static struct im_connection *ic;
 
-static void check_buddy_add(int l)
+START_TEST(check_buddy_add)
 {
 	struct jabber_buddy *budw1, *budw2, *budw3, *budn, *bud;
 
@@ -93,8 +93,9 @@ static void check_buddy_add(int l)
 	fail_unless(jabber_buddy_remove(ic, "bugtest@google.com/B"));
 	fail_unless(jabber_buddy_remove(ic, "bugtest@google.com/C"));
 }
+END_TEST
 
-static void check_compareJID(int l)
+START_TEST(check_compareJID)
 {
 	fail_unless(jabber_compare_jid("bugtest@google.com/B", "bugtest@google.com/A"));
 	fail_if(jabber_compare_jid("bugtest1@google.com/B", "bugtest@google.com/A"));
@@ -105,8 +106,9 @@ static void check_compareJID(int l)
 	fail_if(jabber_compare_jid(NULL, ""));
 	fail_if(jabber_compare_jid("", NULL));
 }
+END_TEST
 
-static void check_hipchat_slug(int l)
+START_TEST(check_hipchat_slug)
 {
 	int i;
 
@@ -124,6 +126,7 @@ static void check_hipchat_slug(int l)
 		g_free(new);
 	}
 }
+END_TEST
 
 Suite *jabber_util_suite(void)
 {

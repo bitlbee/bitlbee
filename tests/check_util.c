@@ -8,7 +8,8 @@
 #include "misc.h"
 #include "url.h"
 
-START_TEST(test_strip_linefeed){
+START_TEST(test_strip_linefeed)
+{
 	int i;
 	const char *get[] = { "Test", "Test\r", "Test\rX\r", NULL };
 	const char *expected[] = { "Test", "Test", "TestX", NULL };
@@ -43,63 +44,73 @@ START_TEST(test_strip_newlines)
 END_TEST
 
 START_TEST(test_set_url_http)
-url_t url;
+{
+    url_t url;
 
-fail_if(0 == url_set(&url, "http://host/"));
-fail_unless(!strcmp(url.host, "host"));
-fail_unless(!strcmp(url.file, "/"));
-fail_unless(!strcmp(url.user, ""));
-fail_unless(!strcmp(url.pass, ""));
-fail_unless(url.proto == PROTO_HTTP);
-fail_unless(url.port == 80);
+    fail_if(0 == url_set(&url, "http://host/"));
+    fail_unless(!strcmp(url.host, "host"));
+    fail_unless(!strcmp(url.file, "/"));
+    fail_unless(!strcmp(url.user, ""));
+    fail_unless(!strcmp(url.pass, ""));
+    fail_unless(url.proto == PROTO_HTTP);
+    fail_unless(url.port == 80);
+}
 END_TEST
 
 START_TEST(test_set_url_https)
-url_t url;
+{
+    url_t url;
 
-fail_if(0 == url_set(&url, "https://ahost/AimeeMann"));
-fail_unless(!strcmp(url.host, "ahost"));
-fail_unless(!strcmp(url.file, "/AimeeMann"));
-fail_unless(!strcmp(url.user, ""));
-fail_unless(!strcmp(url.pass, ""));
-fail_unless(url.proto == PROTO_HTTPS);
-fail_unless(url.port == 443);
+    fail_if(0 == url_set(&url, "https://ahost/AimeeMann"));
+    fail_unless(!strcmp(url.host, "ahost"));
+    fail_unless(!strcmp(url.file, "/AimeeMann"));
+    fail_unless(!strcmp(url.user, ""));
+    fail_unless(!strcmp(url.pass, ""));
+    fail_unless(url.proto == PROTO_HTTPS);
+    fail_unless(url.port == 443);
+}
 END_TEST
 
 START_TEST(test_set_url_port)
-url_t url;
+{
+    url_t url;
 
-fail_if(0 == url_set(&url, "https://ahost:200/Lost/In/Space"));
-fail_unless(!strcmp(url.host, "ahost"));
-fail_unless(!strcmp(url.file, "/Lost/In/Space"));
-fail_unless(!strcmp(url.user, ""));
-fail_unless(!strcmp(url.pass, ""));
-fail_unless(url.proto == PROTO_HTTPS);
-fail_unless(url.port == 200);
+    fail_if(0 == url_set(&url, "https://ahost:200/Lost/In/Space"));
+    fail_unless(!strcmp(url.host, "ahost"));
+    fail_unless(!strcmp(url.file, "/Lost/In/Space"));
+    fail_unless(!strcmp(url.user, ""));
+    fail_unless(!strcmp(url.pass, ""));
+    fail_unless(url.proto == PROTO_HTTPS);
+    fail_unless(url.port == 200);
+}
 END_TEST
 
 START_TEST(test_set_url_username)
-url_t url;
+{
+    url_t url;
 
-fail_if(0 == url_set(&url, "socks4://user@ahost/Space"));
-fail_unless(!strcmp(url.host, "ahost"));
-fail_unless(!strcmp(url.file, "/Space"));
-fail_unless(!strcmp(url.user, "user"));
-fail_unless(!strcmp(url.pass, ""));
-fail_unless(url.proto == PROTO_SOCKS4);
-fail_unless(url.port == 1080);
+    fail_if(0 == url_set(&url, "socks4://user@ahost/Space"));
+    fail_unless(!strcmp(url.host, "ahost"));
+    fail_unless(!strcmp(url.file, "/Space"));
+    fail_unless(!strcmp(url.user, "user"));
+    fail_unless(!strcmp(url.pass, ""));
+    fail_unless(url.proto == PROTO_SOCKS4);
+    fail_unless(url.port == 1080);
+}
 END_TEST
 
 START_TEST(test_set_url_username_pwd)
-url_t url;
+{
+    url_t url;
 
-fail_if(0 == url_set(&url, "socks5://user:pass@ahost/"));
-fail_unless(!strcmp(url.host, "ahost"));
-fail_unless(!strcmp(url.file, "/"));
-fail_unless(!strcmp(url.user, "user"));
-fail_unless(!strcmp(url.pass, "pass"));
-fail_unless(url.proto == PROTO_SOCKS5);
-fail_unless(url.port == 1080);
+    fail_if(0 == url_set(&url, "socks5://user:pass@ahost/"));
+    fail_unless(!strcmp(url.host, "ahost"));
+    fail_unless(!strcmp(url.file, "/"));
+    fail_unless(!strcmp(url.user, "user"));
+    fail_unless(!strcmp(url.pass, "pass"));
+    fail_unless(url.proto == PROTO_SOCKS5);
+    fail_unless(url.port == 1080);
+}
 END_TEST
 
 struct {
@@ -148,26 +159,30 @@ struct {
 };
 
 START_TEST(test_word_wrap)
-int i;
+{
+    int i;
 
-for (i = 0; word_wrap_tests[i].orig && *word_wrap_tests[i].orig; i++) {
-	char *wrapped = word_wrap(word_wrap_tests[i].orig, word_wrap_tests[i].line_len);
+    for (i = 0; word_wrap_tests[i].orig && *word_wrap_tests[i].orig; i++) {
+        char *wrapped = word_wrap(word_wrap_tests[i].orig, word_wrap_tests[i].line_len);
 
-	fail_unless(strcmp(word_wrap_tests[i].wrapped, wrapped) == 0,
-	            "%s (line_len = %d) should wrap to `%s', not to `%s'",
-	            word_wrap_tests[i].orig, word_wrap_tests[i].line_len,
-	            word_wrap_tests[i].wrapped, wrapped);
+        fail_unless(strcmp(word_wrap_tests[i].wrapped, wrapped) == 0,
+                "%s (line_len = %d) should wrap to `%s', not to `%s'",
+                word_wrap_tests[i].orig, word_wrap_tests[i].line_len,
+                word_wrap_tests[i].wrapped, wrapped);
 
-	g_free(wrapped);
+        g_free(wrapped);
+    }
 }
 END_TEST
 
 START_TEST(test_http_encode)
-char s[80];
+{
+    char s[80];
 
-strcpy(s, "ee\xc3" "\xab" "ee!!...");
-http_encode(s);
-fail_unless(strcmp(s, "ee%C3%ABee%21%21...") == 0);
+    strcpy(s, "ee\xc3" "\xab" "ee!!...");
+    http_encode(s);
+    fail_unless(strcmp(s, "ee%C3%ABee%21%21...") == 0);
+}
 END_TEST
 
 struct {
@@ -198,19 +213,21 @@ struct {
 };
 
 START_TEST(test_split_command_parts)
-int i;
-for (i = 0; split_tests[i].command; i++) {
-	char *cmd = g_strdup(split_tests[i].command);
-	char **split = split_command_parts(cmd, split_tests[i].limit);
-	char **expected = split_tests[i].expected;
+{
+    int i;
+    for (i = 0; split_tests[i].command; i++) {
+        char *cmd = g_strdup(split_tests[i].command);
+        char **split = split_command_parts(cmd, split_tests[i].limit);
+        char **expected = split_tests[i].expected;
 
-	int j;
-	for (j = 0; split[j] && expected[j]; j++) {
-		fail_unless(strcmp(split[j], expected[j]) == 0,
-		            "(%d) split_command_parts broken: split(\"%s\")[%d] -> %s (expected: %s)",
-		            i, split_tests[i].command, j, split[j], expected[j]);
-	}
-	g_free(cmd);
+        int j;
+        for (j = 0; split[j] && expected[j]; j++) {
+            fail_unless(strcmp(split[j], expected[j]) == 0,
+                    "(%d) split_command_parts broken: split(\"%s\")[%d] -> %s (expected: %s)",
+                    i, split_tests[i].command, j, split[j], expected[j]);
+        }
+        g_free(cmd);
+    }
 }
 END_TEST
 

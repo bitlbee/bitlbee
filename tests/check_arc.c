@@ -17,7 +17,7 @@ char *clear_tests[] =
 	NULL
 };
 
-static void check_codec(int l)
+START_TEST(check_codec)
 {
 	int i;
 
@@ -37,6 +37,7 @@ static void check_codec(int l)
 		g_free(decrypted);
 	}
 }
+END_TEST
 
 struct {
 	unsigned char crypted[30];
@@ -72,7 +73,7 @@ struct {
 	{ "", 0, NULL }
 };
 
-static void check_decod(int l)
+START_TEST(check_decod)
 {
 	int i;
 
@@ -92,6 +93,7 @@ static void check_decod(int l)
 		g_free(decrypted);
 	}
 }
+END_TEST
 
 Suite *arc_suite(void)
 {

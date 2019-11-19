@@ -7,20 +7,24 @@
 #include "help.h"
 
 START_TEST(test_help_initfree)
-help_t * h, *r;
-r = help_init(&h, "/dev/null");
-fail_if(r == NULL);
-fail_if(r != h);
+{
+    help_t * h, *r;
+    r = help_init(&h, "/dev/null");
+    fail_if(r == NULL);
+    fail_if(r != h);
 
-help_free(&h);
-fail_if(h != NULL);
+    help_free(&h);
+    fail_if(h != NULL);
+}
 END_TEST
 
 START_TEST(test_help_nonexistent)
-help_t * h, *r;
-r = help_init(&h, "/dev/null");
-fail_unless(help_get(&h, "nonexistent") == NULL);
-fail_if(r == NULL);
+{
+    help_t * h, *r;
+    r = help_init(&h, "/dev/null");
+    fail_unless(help_get(&h, "nonexistent") == NULL);
+    fail_if(r == NULL);
+}
 END_TEST
 
 Suite *help_suite(void)

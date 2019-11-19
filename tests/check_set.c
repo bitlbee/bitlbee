@@ -7,97 +7,123 @@
 #include "testsuite.h"
 
 START_TEST(test_set_add)
-void *data = "data";
-set_t *s = NULL, *t;
-t = set_add(&s, "name", "default", NULL, data);
-fail_unless(s == t);
-fail_unless(t->data == data);
-fail_unless(strcmp(t->def, "default") == 0);
+{
+    void *data = "data";
+    set_t *s = NULL, *t;
+    t = set_add(&s, "name", "default", NULL, data);
+    fail_unless(s == t);
+    fail_unless(t->data == data);
+    fail_unless(strcmp(t->def, "default") == 0);
+}
 END_TEST
 
 START_TEST(test_set_add_existing)
-void *data = "data";
-set_t *s = NULL, *t;
-t = set_add(&s, "name", "default", NULL, data);
-t = set_add(&s, "name", "newdefault", NULL, data);
-fail_unless(s == t);
-fail_unless(strcmp(t->def, "newdefault") == 0);
+{
+    void *data = "data";
+    set_t *s = NULL, *t;
+    t = set_add(&s, "name", "default", NULL, data);
+    t = set_add(&s, "name", "newdefault", NULL, data);
+    fail_unless(s == t);
+    fail_unless(strcmp(t->def, "newdefault") == 0);
+}
 END_TEST
 
 START_TEST(test_set_find_unknown)
-set_t * s = NULL;
-fail_unless(set_find(&s, "foo") == NULL);
+{
+    set_t * s = NULL;
+    fail_unless(set_find(&s, "foo") == NULL);
+}
 END_TEST
 
 START_TEST(test_set_find)
-void *data = "data";
-set_t *s = NULL, *t;
-t = set_add(&s, "name", "default", NULL, data);
-fail_unless(s == t);
-fail_unless(set_find(&s, "name") == t);
+{
+    void *data = "data";
+    set_t *s = NULL, *t;
+    t = set_add(&s, "name", "default", NULL, data);
+    fail_unless(s == t);
+    fail_unless(set_find(&s, "name") == t);
+}
 END_TEST
 
 START_TEST(test_set_get_str_default)
-void *data = "data";
-set_t *s = NULL, *t;
-t = set_add(&s, "name", "default", NULL, data);
-fail_unless(s == t);
-fail_unless(strcmp(set_getstr(&s, "name"), "default") == 0);
+{
+    void *data = "data";
+    set_t *s = NULL, *t;
+    t = set_add(&s, "name", "default", NULL, data);
+    fail_unless(s == t);
+    fail_unless(strcmp(set_getstr(&s, "name"), "default") == 0);
+}
 END_TEST
 
 START_TEST(test_set_get_bool_default)
-void *data = "data";
-set_t *s = NULL, *t;
-t = set_add(&s, "name", "true", NULL, data);
-fail_unless(s == t);
-fail_unless(set_getbool(&s, "name"));
+{
+    void *data = "data";
+    set_t *s = NULL, *t;
+    t = set_add(&s, "name", "true", NULL, data);
+    fail_unless(s == t);
+    fail_unless(set_getbool(&s, "name"));
+}
 END_TEST
 
 START_TEST(test_set_get_bool_integer)
-void *data = "data";
-set_t *s = NULL, *t;
-t = set_add(&s, "name", "3", NULL, data);
-fail_unless(s == t);
-fail_unless(set_getbool(&s, "name") == 3);
+{
+    void *data = "data";
+    set_t *s = NULL, *t;
+    t = set_add(&s, "name", "3", NULL, data);
+    fail_unless(s == t);
+    fail_unless(set_getbool(&s, "name") == 3);
+}
 END_TEST
 
 START_TEST(test_set_get_bool_unknown)
-set_t * s = NULL;
-fail_unless(set_getbool(&s, "name") == 0);
+{
+    set_t * s = NULL;
+    fail_unless(set_getbool(&s, "name") == 0);
+}
 END_TEST
 
 START_TEST(test_set_get_str_value)
-void *data = "data";
-set_t *s = NULL;
-set_add(&s, "name", "default", NULL, data);
-set_setstr(&s, "name", "foo");
-fail_unless(strcmp(set_getstr(&s, "name"), "foo") == 0);
+{
+    void *data = "data";
+    set_t *s = NULL;
+    set_add(&s, "name", "default", NULL, data);
+    set_setstr(&s, "name", "foo");
+    fail_unless(strcmp(set_getstr(&s, "name"), "foo") == 0);
+}
 END_TEST
 
 START_TEST(test_set_get_str_unknown)
-set_t * s = NULL;
-fail_unless(set_getstr(&s, "name") == NULL);
+{
+    set_t * s = NULL;
+    fail_unless(set_getstr(&s, "name") == NULL);
+}
 END_TEST
 
 START_TEST(test_setint)
-void *data = "data";
-set_t *s = NULL;
-set_add(&s, "name", "10", NULL, data);
-set_setint(&s, "name", 3);
-fail_unless(set_getint(&s, "name") == 3);
+{
+    void *data = "data";
+    set_t *s = NULL;
+    set_add(&s, "name", "10", NULL, data);
+    set_setint(&s, "name", 3);
+    fail_unless(set_getint(&s, "name") == 3);
+}
 END_TEST
 
 START_TEST(test_setstr)
-void *data = "data";
-set_t *s = NULL;
-set_add(&s, "name", "foo", NULL, data);
-set_setstr(&s, "name", "bloe");
-fail_unless(strcmp(set_getstr(&s, "name"), "bloe") == 0);
+{
+    void *data = "data";
+    set_t *s = NULL;
+    set_add(&s, "name", "foo", NULL, data);
+    set_setstr(&s, "name", "bloe");
+    fail_unless(strcmp(set_getstr(&s, "name"), "bloe") == 0);
+}
 END_TEST
 
 START_TEST(test_set_get_int_unknown)
-set_t * s = NULL;
-fail_unless(set_getint(&s, "foo") == 0);
+{
+    set_t * s = NULL;
+    fail_unless(set_getint(&s, "foo") == 0);
+}
 END_TEST
 
 Suite *set_suite(void)

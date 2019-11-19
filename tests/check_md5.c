@@ -29,7 +29,7 @@ struct md5_test {
 	{ NULL },
 };
 
-static void check_sums(int l)
+START_TEST(check_sums)
 {
 	int i;
 
@@ -45,6 +45,7 @@ static void check_sums(int l)
 		fail_if(memcmp(tests[i].expected, sum, 16) != 0, "%s failed", tests[i].str);
 	}
 }
+END_TEST
 
 Suite *md5_suite(void)
 {
