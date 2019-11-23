@@ -40,7 +40,7 @@ need to add BitlBee to inetd.conf, like this:
 Creating a special BitlBee user and running BitlBee with that UID (instead
 of just 'nobody') might be a good idea.
 
-*BSD/Darwin/OSX NOTE: Most *BSD inetds are more scrict than the one that
+*BSD/Darwin/OSX NOTE: Most *BSD inetds are more strict than the one that
 comes with Linux systems. Possibly all non-Linux inetds are like this. They
 don't allow you to specify a port number in the inetd.conf entry, instead
 you have to put a service name there (one that is also mentioned in
