@@ -27,7 +27,7 @@ You can also use a public server (such as `im.bitlbee.org`) instead of installin
 
 If you wish to compile it yourself, ensure you have the following packages and their headers:
 
-* glib 2.16 or newer (not to be confused with glibc)
+* glib 2.32 or newer (not to be confused with glibc)
 * gnutls
 * python 2 or 3 (for the user guide)
 

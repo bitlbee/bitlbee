@@ -56,7 +56,7 @@ pie=1
 
 arch=$(uname -s)
 
-GLIB_MIN_VERSION=2.16
+GLIB_MIN_VERSION=2.32
 
 # Cygwin and Darwin don't support PIC/PIE
 case "$arch" in
