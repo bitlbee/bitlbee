@@ -304,7 +304,6 @@ static void twitter_main_loop_start(struct im_connection *ic)
 
 struct groupchat *twitter_groupchat_init(struct im_connection *ic)
 {
-	char *name_hint;
 	struct groupchat *gc;
 	struct twitter_data *td = ic->proto_data;
 	GSList *l;
@@ -315,9 +314,7 @@ struct groupchat *twitter_groupchat_init(struct im_connection *ic)
 
 	td->timeline_gc = gc = imcb_chat_new(ic, "twitter/timeline");
 
-	name_hint = g_strdup_printf("%s_%s", td->prefix, ic->acc->user);
-	imcb_chat_name_hint(gc, name_hint);
-	g_free(name_hint);
+	imcb_chat_name_hint(gc, ic->acc->tag);
 
 	for (l = ic->bee->users; l; l = l->next) {
 		bee_user_t *bu = l->data;
@@ -398,7 +395,7 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 
 	td = ic->proto_data;
 	if (info->stage == OAUTH_REQUEST_TOKEN) {
-		char *name, *msg;
+		char *msg;
 
 		if (info->request_token == NULL) {
 			imcb_error(ic, "OAuth error: %s", twitter_parse_error(info->http));
@@ -406,12 +403,10 @@ static gboolean twitter_oauth_callback(struct oauth_info *info)
 			return FALSE;
 		}
 
-		name = g_strdup_printf("%s_%s", td->prefix, ic->acc->user);
 		msg = g_strdup_printf("To finish OAuth authentication, please visit "
 		                      "%s and respond with the resulting PIN code.",
 		                      info->auth_url);
-		imcb_buddy_msg(ic, name, msg, 0, 0);
-		g_free(name);
+                imcb_buddy_msg(ic, ic->acc->tag, msg, 0, 0);
 		g_free(msg);
 	} else if (info->stage == OAUTH_ACCESS_TOKEN) {
 		const char *sn;
@@ -577,7 +572,6 @@ static void twitter_login(account_t * acc)
 {
 	struct im_connection *ic = imcb_new(acc);
 	struct twitter_data *td;
-	char name[strlen(acc->user) + 9];
 	url_t url;
 	char *s;
 
@@ -633,9 +627,8 @@ static void twitter_login(account_t * acc)
 		td->oauth_info = oauth_from_string(acc->pass, get_oauth_service(ic));
 	}
 
-	sprintf(name, "%s_%s", td->prefix, acc->user);
-	imcb_add_buddy(ic, name, NULL);
-	imcb_buddy_status(ic, name, OPT_LOGGED_IN, NULL, NULL);
+	imcb_add_buddy(ic, acc->tag, NULL);
+	imcb_buddy_status(ic, acc->tag, OPT_LOGGED_IN, NULL, NULL);
 
 	td->log = g_new0(struct twitter_log_data, TWITTER_LOG_LENGTH);
 	td->log_id = -1;
@@ -702,10 +695,8 @@ static void twitter_handle_command(struct im_connection *ic, char *message);
 static int twitter_buddy_msg(struct im_connection *ic, char *who, char *message, int away)
 {
 	struct twitter_data *td = ic->proto_data;
-	int plen = strlen(td->prefix);
 
-	if (g_strncasecmp(who, td->prefix, plen) == 0 && who[plen] == '_' &&
-	    g_strcasecmp(who + plen + 1, ic->acc->user) == 0) {
+	if (g_strcasecmp(who, ic->acc->tag) == 0) {
 		if (set_getbool(&ic->acc->set, "oauth") &&
 		    td->oauth_info && td->oauth_info->token == NULL) {
 			char pin[strlen(message) + 1], *s;
