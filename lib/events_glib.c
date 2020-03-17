@@ -64,6 +64,12 @@ void b_main_quit()
 	g_main_quit(loop);
 }
 
+void b_main_iteration()
+{
+	g_main_iteration(FALSE);
+	event_debug("b_main_iteration()\n");
+}
+
 static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpointer data)
 {
 	GaimIOClosure *closure = data;

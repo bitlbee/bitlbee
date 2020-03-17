@@ -113,6 +113,12 @@ void b_main_quit()
 	b_main_restart();
 }
 
+void b_main_iteration()
+{
+	event_base_loop(leh, EVLOOP_NONBLOCK);
+	event_debug("b_main_iteration()\n");
+}
+
 static void b_event_passthrough(int fd, short event, void *data)
 {
 	struct b_event_data *b_ev = data;

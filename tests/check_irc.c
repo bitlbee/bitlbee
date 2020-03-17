@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "irc.h"
+#include "events.h"
 #include "testsuite.h"
 
 START_TEST(test_connect)
@@ -42,7 +43,7 @@ START_TEST(test_login)
                 "USER a a a a\n", -1, NULL, NULL) == G_IO_STATUS_NORMAL);
     fail_unless(g_io_channel_flush(ch2, NULL) == G_IO_STATUS_NORMAL);
 
-    g_main_iteration(FALSE);
+    b_main_iteration();
     irc_free(irc);
 
     fail_unless(g_io_channel_read_to_end(ch2, &raw, NULL, NULL) == G_IO_STATUS_NORMAL);

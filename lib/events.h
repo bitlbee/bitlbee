@@ -69,6 +69,8 @@ G_MODULE_EXPORT void b_main_init();
 G_MODULE_EXPORT void b_main_run();
 G_MODULE_EXPORT void b_main_quit();
 
+G_MODULE_EXPORT void b_main_iteration();
+
 
 /* Add event handlers (for I/O or a timeout). The event handler will be called
    every time the event "happens", until your event handler returns FALSE (or
