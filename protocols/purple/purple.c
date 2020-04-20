@@ -21,6 +21,8 @@
 *                                                                           *
 \***************************************************************************/
 
+#include <assert.h>
+
 #include "bitlbee.h"
 #include "bpurple.h"
 #include "help.h"
@@ -284,6 +286,8 @@ static void purple_init(account_t *acc)
 	s = set_add(&acc->set, "display_name", NULL, set_eval_display_name, acc);
 	s->flags |= ACC_SET_ONLINE_ONLY;
 
+        s = set_add(&acc->set, "no_proxy", "false", set_eval_bool, acc);
+
 	if (pi->options & OPT_PROTO_MAIL_CHECK) {
 		s = set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -364,6 +368,14 @@ static void purple_sync_settings(account_t *acc, PurpleAccount *pa)
 		const char *name = "line-auth-token";
 		purple_account_set_string(pa, name, set_getstr(&acc->set, name));
 	}
+
+        PurpleProxyInfo *proxyinfo = purple_account_get_proxy_info(pa);
+        if (!proxyinfo) {
+          proxyinfo = purple_proxy_info_new();
+        }
+        assert (proxyinfo);
+        purple_proxy_info_set_type(proxyinfo, set_getbool(&acc->set, "no_proxy") ? PURPLE_PROXY_NONE : PURPLE_PROXY_USE_GLOBAL);
+        purple_account_set_proxy_info(pa, proxyinfo);
 }
 
 static void purple_login(account_t *acc)
