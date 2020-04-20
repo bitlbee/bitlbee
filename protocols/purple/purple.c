@@ -21,8 +21,6 @@
 *                                                                           *
 \***************************************************************************/
 
-#include <assert.h>
-
 #include "bitlbee.h"
 #include "bpurple.h"
 #include "help.h"
@@ -373,7 +371,7 @@ static void purple_sync_settings(account_t *acc, PurpleAccount *pa)
         if (!proxyinfo) {
           proxyinfo = purple_proxy_info_new();
         }
-        assert (proxyinfo);
+        g_return_if_fail (proxyinfo);
         purple_proxy_info_set_type(proxyinfo, set_getbool(&acc->set, "no_proxy") ? PURPLE_PROXY_NONE : PURPLE_PROXY_USE_GLOBAL);
         purple_account_set_proxy_info(pa, proxyinfo);
 }
