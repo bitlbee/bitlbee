@@ -131,7 +131,7 @@ static gint twitter_compare_elements(gconstpointer a, gconstpointer b)
 	} else if (a_status->created_at > b_status->created_at) {
 		return 1;
 	} else {
-		return 0;
+		return a_status->id < b_status->id ? -1 : 1;
 	}
 }
 
