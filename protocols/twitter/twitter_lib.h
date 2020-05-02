@@ -95,7 +95,7 @@ void twitter_get_mutes_ids(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_noretweets_ids(struct im_connection *ic, gint64 next_cursor);
 void twitter_get_statuses_friends(struct im_connection *ic, gint64 next_cursor);
 
-void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to);
+void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean auto_populate_reply_metadata);
 void twitter_direct_messages_new(struct im_connection *ic, char *who, char *message);
 void twitter_friendships_create_destroy(struct im_connection *ic, char *who, int create);
 void twitter_mute_create_destroy(struct im_connection *ic, char *who, int create);
