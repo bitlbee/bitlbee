@@ -1695,24 +1695,53 @@ static void twitter_http_post(struct http_request *req)
 /**
  * Function to POST a new status to twitter.
  */
-void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to)
+void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_to, gboolean auto_populate_reply_metadata)
 {
-	char *args[4] = {
-		"status", msg,
-		"in_reply_to_status_id",
-		g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to)
-	};
+	size_t args_len = 0;
+	char * in_reply_to_str = NULL;
+	char * place_id_str = NULL;
+	gboolean in_korea = (set_getbool(&ic->acc->set, "in_korea") && !in_reply_to);
 
-	if (set_getbool(&ic->acc->set, "in_korea") && !in_reply_to) {
-		g_free(args[3]);
-		args[2] = "place_id";
-		args[3] = g_strdup("c999e6a453e9ef72");
+	args_len = 2; /* "status", msg */
+	if (in_reply_to) {
+		args_len += 2;
+	}
+	if (auto_populate_reply_metadata) {
+		args_len += 2;
+	}
+	if (in_korea) {
+		args_len += 2;
+	}
+
+	char **args = g_new0(char *, args_len);
+	args_len = 0;
+	args[args_len++] = "status";
+	args[args_len++] = msg;
+	if (in_reply_to) {
+		in_reply_to_str = g_strdup_printf("%" G_GUINT64_FORMAT, in_reply_to);
+		args[args_len++] = "in_reply_to_status_id";
+		args[args_len++] = in_reply_to_str;
+	}
+	if (auto_populate_reply_metadata) {
+		args[args_len++] = "auto_populate_reply_metadata";
+		args[args_len++] = "true";
+	}
+	if (in_korea) {
+		place_id_str = g_strdup("c999e6a453e9ef72");
+		args[args_len++] = "place_id";
+		args[args_len++] = place_id_str;
 		in_reply_to = 1;
 	}
 
 	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post, ic, 1,
-	             args, in_reply_to ? 4 : 2);
-	g_free(args[3]);
+	             args, args_len);
+	if (in_reply_to_str) {
+		g_free(in_reply_to_str);
+	}
+	if (place_id_str) {
+		g_free(place_id_str);
+	}
+	g_free(args);
 }
 
 

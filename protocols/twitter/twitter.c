@@ -917,6 +917,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 	guint64 in_reply_to = 0, id;
 	gboolean allow_post =
 	        g_strcasecmp(set_getstr(&ic->acc->set, "commands"), "strict") != 0;
+	gboolean auto_populate_reply_metadata = FALSE;
 	bee_user_t *bu = NULL;
 
 	cmds = g_strdup(message);
@@ -995,6 +996,17 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		message = new = g_strdup_printf("@%s %s", bu->handle, cmd[2]);
 		in_reply_to = id;
 		allow_post = TRUE;
+	} else if (g_strcasecmp(cmd[0], "greply") == 0 && cmd[1] && cmd[2]) {
+		id = twitter_message_id_from_command_arg(ic, cmd[1], &bu);
+		if (!id || !bu) {
+			twitter_log(ic, "User `%s' does not exist or didn't "
+			            "post any statuses recently", cmd[1]);
+			goto eof;
+		}
+		message = new = g_strdup_printf("%s", cmd[2]);
+		in_reply_to = id;
+		auto_populate_reply_metadata = TRUE;
+		allow_post = TRUE;
 	} else if (g_strcasecmp(cmd[0], "rawreply") == 0 && cmd[1] && cmd[2]) {
 		id = twitter_message_id_from_command_arg(ic, cmd[1], NULL);
 		if (!id) {
@@ -1046,7 +1058,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		/* If the user runs undo between this request and its response
 		   this would delete the second-last Tweet. Prevent that. */
 		td->last_status_id = 0;
-		twitter_post_status(ic, message, in_reply_to);
+		twitter_post_status(ic, message, in_reply_to, auto_populate_reply_metadata);
 	} else {
 		twitter_log(ic, "Unknown command: %s", cmd[0]);
 	}
