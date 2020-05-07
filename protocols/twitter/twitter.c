@@ -1005,7 +1005,7 @@ static void twitter_handle_command(struct im_connection *ic, char *message)
 		}
 		message = new = g_strdup_printf("%s", cmd[2]);
 		in_reply_to = id;
-                auto_populate_reply_metadata = TRUE;
+		auto_populate_reply_metadata = TRUE;
 		allow_post = TRUE;
 	} else if (g_strcasecmp(cmd[0], "rawreply") == 0 && cmd[1] && cmd[2]) {
 		id = twitter_message_id_from_command_arg(ic, cmd[1], NULL);

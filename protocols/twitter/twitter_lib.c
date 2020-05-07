@@ -1736,10 +1736,10 @@ void twitter_post_status(struct im_connection *ic, char *msg, guint64 in_reply_t
 	twitter_http(ic, TWITTER_STATUS_UPDATE_URL, twitter_http_post, ic, 1,
 	             args, args_len);
 	if (in_reply_to_str) {
-	    g_free(in_reply_to_str);
+		g_free(in_reply_to_str);
 	}
 	if (place_id_str) {
-	    g_free(place_id_str);
+		g_free(place_id_str);
 	}
 	g_free(args);
 }
