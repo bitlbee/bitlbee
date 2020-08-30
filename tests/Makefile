@@ -3,6 +3,8 @@ ifdef _SRCDIR_
 _SRCDIR_ := $(_SRCDIR_)tests/
 endif
 
+LFLAGS += $(LDFLAGS_TESTS)
+
 CFLAGS += $(shell pkg-config --cflags check)
 LFLAGS += $(shell pkg-config --libs check)
 
