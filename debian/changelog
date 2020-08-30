@@ -19,6 +19,7 @@ bitlbee (3.6-2) UNRELEASED; urgency=medium
 
   [ Jelmer Vernooĳ ]
   * Set upstream metadata fields: Repository.
+  * Use canonical URL in Vcs-Git.
 
  -- Debian Janitor <janitor@jelmer.uk>  Thu, 21 Mar 2019 00:10:27 +0000
 
