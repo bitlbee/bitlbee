@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Wilmer van der Gaast <wilmer@gaast.net>
 Uploaders: Jelmer Vernooĳ <jelmer@debian.org>
 Standards-Version: 3.9.8
-Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls28-dev | libgnutls-dev | gnutls-dev, po-debconf, libpurple-dev, libotr5-dev, debhelper (>= 9), python
+Build-Depends: libglib2.0-dev (>= 2.4), libevent-dev, libgnutls28-dev | libgnutls-dev | gnutls-dev, po-debconf, libpurple-dev, libotr5-dev, debhelper (>= 9), python3
 Homepage: https://www.bitlbee.org/
 Vcs-Git: https://github.com/bitlbee/bitlbee
 Vcs-Browser: https://github.com/bitlbee/bitlbee
