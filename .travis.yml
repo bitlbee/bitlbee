@@ -24,6 +24,8 @@ addons:
     - libldap2-dev
     - fakeroot
     - debhelper
+    # When upgrading to an Ubuntu version past debhelper 9.20160709, drop the dependency on dh-systemd:
+    - dh-systemd
     - devscripts
     - libotr5-dev
   coverity_scan:

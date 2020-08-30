@@ -1,8 +1,5 @@
 bitlbee (3.6-2) UNRELEASED; urgency=medium
 
-  [ Debian Janitor ]
-  * Depend on newer debhelper (>= 9.20160709) rather than dh-systemd.
-
   [ dequis ]
   * Some more d/copyright fixups (Closes: #883872)
 
@@ -16,6 +13,10 @@ bitlbee (3.6-2) UNRELEASED; urgency=medium
 
   [ Debian Janitor ]
   * Upgrade to newer source format.
+
+  [ Jelmer Vernooĳ ]
+  * Use dh_installsystemd rather than dh-systemd when possible, as the latter
+    is going away.  Closes: #958606
 
  -- Debian Janitor <janitor@jelmer.uk>  Thu, 21 Mar 2019 00:10:27 +0000
 

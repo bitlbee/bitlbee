@@ -32,7 +32,11 @@ LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
 
 CONFIGURE_OVERRIDES:=CPPFLAGS="$(CPPFLAGS)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
-HAS_DH_SYSTEMD:=$(shell dpkg-query -W -f='$${Status}' dh-systemd 2>/dev/null | grep -c "ok installed")
+ifeq (, $(shell which dh_installsystemd >/dev/null))
+HAS_DH_INSTALLSYSTEMD = 0
+else
+HAS_DH_INSTALLSYSTEMD = 1
+endif
 
 build-arch: build
 
@@ -76,9 +80,7 @@ install: build
 	$(MAKE) -C debian/build-native install-dev DESTDIR=`pwd`/debian/bitlbee-dev
 	$(MAKE) -C debian/build-native install-plugin-otr DESTDIR=`pwd`/debian/bitlbee-plugin-otr
 
-ifeq ($(HAS_DH_SYSTEMD),1)
 	$(MAKE) -C debian/build-native install-systemd DESTDIR=`pwd`/debian/bitlbee-common
-endif
 
 ifeq ($(BITLBEE_LIBPURPLE),1)
 	$(MAKE) -C debian/build-libpurple install-bin DESTDIR=`pwd`/debian/bitlbee-libpurple
@@ -96,12 +98,14 @@ binary-common:
 	dh_installdocs --link-doc=bitlbee-common
 	dh_installchangelogs doc/CHANGES
 	dh_installdebconf
-ifeq ($(HAS_DH_SYSTEMD),1)
+ifneq ($(HAS_DH_INSTALLSYSTEMD),1)
 	dh_systemd_enable -p bitlbee-common --no-enable bitlbee.socket
 	dh_systemd_enable -p bitlbee-common bitlbee.service
 	dh_installinit -p bitlbee-common --init-script=bitlbee
 	dh_systemd_start -p bitlbee-common
 else
+	dh_installsystemd -p bitlbee-common --no-enable bitlbee.socket
+	dh_installsystemd -p bitlbee-common bitlbee.service
 	dh_installinit -p bitlbee-common --init-script=bitlbee
 endif
 	dh_installman
@@ -123,4 +127,3 @@ binary-%: build install
 	DH_OPTIONS=-p$* $(MAKE) -f debian/rules binary-common
 
 binary: binary-arch
-.PHONY: build clean binary-arch binary-common binary install
