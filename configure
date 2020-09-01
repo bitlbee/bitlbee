@@ -775,7 +775,12 @@ elif [ "$otr" = "plugin" ]; then
 fi
 
 if [ -z "$PYTHON" ]; then
-	PYTHON=python
+	for pp in python python3 python2; do
+		if which $pp > /dev/null; then
+			PYTHON=$pp
+			break
+		fi
+	done
 fi
 
 if [ "$doc" = "1" ]; then
@@ -979,6 +984,7 @@ else
 	echo '  systemd disabled.'
 fi
 
+echo '  Using python: '$PYTHON
 echo '  Using event handler: '$events
 echo '  Using SSL library: '$ssl
 #echo '  Building with these storage backends: '$STORAGES
