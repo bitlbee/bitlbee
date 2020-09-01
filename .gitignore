@@ -31,3 +31,12 @@ cov-int
 bitlbee.service
 bitlbee@.service
 *~
+debian/bitlbee-common
+debian/bitlbee-dev
+debian/bitlbee-libpurple
+debian/bitlbee-plugin-otr
+debian/build-libpurple
+debian/build-native
+debian/files
+.clangd
+compile_commands.json
