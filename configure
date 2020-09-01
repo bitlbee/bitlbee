@@ -47,6 +47,7 @@ plugins=1
 otr=0
 
 events=glib
+external_json_parser=auto
 ssl=auto
 
 pam=0
@@ -148,6 +149,7 @@ Option		Description				Default
 --events=...	Event handler (glib, libevent)		$events
 --ssl=...	SSL library to use (gnutls, nss, openssl, auto)
 							$ssl
+--external-json-parser=0/1/auto	Use External JSON parser $external_json_parser
 
 
 --target=...	Cross compilation target 		same as host
@@ -397,6 +399,20 @@ else
 	exit 1
 fi
 echo 'EVENT_HANDLER=events_'$events'.o' >> Makefile.settings
+
+if [ "$external_json_parser" = "auto" ]; then
+	if pkg-config --exists json-parser; then
+		external_json_parser=1
+	else
+		external_json_parser=0
+	fi
+fi
+echo "EXTERNAL_JSON_PARSER=$external_json_parser" >> Makefile.settings
+if [ "$external_json_parser" = "1" ]; then
+    echo "CFLAGS+=$(pkg-config --cflags json-parser)" >> Makefile.settings
+    echo "LDFLAGS_BITLBEE+=$(pkg-config --libs json-parser)" >> Makefile.settings
+fi
+
 
 detect_gnutls()
 {
@@ -977,6 +993,12 @@ if [ -n "$systemdsystemunitdir" ]; then
 	echo '  systemd enabled.'
 else
 	echo '  systemd disabled.'
+fi
+
+if [ "$external_json_parser" = "1" ]; then
+    echo '  Using system JSON parser.'
+else
+    echo '  Using bundled JSON parser.'
 fi
 
 echo '  Using event handler: '$events
