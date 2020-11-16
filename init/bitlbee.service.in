@@ -3,7 +3,7 @@ Description=BitlBee IRC/IM gateway
 
 [Service]
 ExecStart=@sbindir@bitlbee -F -n
-KillMode=process
+KillMode=control-group
 
 [Install]
 WantedBy=multi-user.target
