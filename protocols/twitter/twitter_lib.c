@@ -928,7 +928,7 @@ static void twitter_status_show_chat(struct im_connection *ic, struct twitter_xm
 	gboolean me = g_strcasecmp(td->user, status->user->screen_name) == 0;
 	char *msg;
 
-	// Create a new groupchat if it does not exsist.
+	// Create a new groupchat if it does not exist.
 	gc = twitter_groupchat_init(ic);
 
 	if (!me) {
