@@ -50,6 +50,16 @@ class ircClient:
         self.log += text
         return text
 
+    def addJabberBuddy(self, nick):
+        self.sendPrivMsg("&bitlbee", "add 0 " + nick+"@localhost")
+
+    def acceptJabberRequest(self):
+        recent = self.receive()
+        if recent.find("not in your buddy list") == -1:
+            print("No request found")
+            return
+        self.sendPrivMsg("&bitlbee", "yes")
+
 def runTests():
     clis = []
     clis += [ircClient('test1', 'asd')]
@@ -59,7 +69,10 @@ def runTests():
         cli.jabberLogin()
     a, b = clis[0], clis[1]
 
+    a.addJabberBuddy(b.nick)
+    b.acceptJabberRequest()
     a.sendPrivMsg(b.nick, 'ohai qtie')
+
     a.receive()
     b.receive()
     if b.log.find('ohai qtie') == -1:
@@ -67,6 +80,7 @@ def runTests():
         print('Sender Log:' + a.log)
         print('Receiver Log:' + b.log)
         sys.exit(1)
+    print("Message test successful")
 
 if __name__ == "__main__":
     runTests()
