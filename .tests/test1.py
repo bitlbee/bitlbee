@@ -76,7 +76,6 @@ def testSendMessage(sender, receiver, message, shouldreceive = True):
         print('Sender Log:' + a.log)
         print('Receiver Log:' + b.log)
         sys.exit(1)
-    else:
 
 def runTests():
     clis = []
