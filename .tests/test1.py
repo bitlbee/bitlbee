@@ -70,8 +70,7 @@ class ircClient:
         
 def testSendMessage(sender, receiver, message, shouldreceive = True):
     sender.sendPrivMsg(b.nick, message)
-    msginhere = receiver.receive()
-    received = !(msginhere.find(message) == -1)
+    received = receiver.receive().find(message) != -1
     if shouldreceive ^ received:
         print('Test failed: Message from ' + sender.nick + ' to ' + receiver.nick)
         print('Sender Log:' + a.log)
