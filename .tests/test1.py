@@ -57,6 +57,7 @@ def runTests():
         cli.connect()
         cli.jabberLogin()
     a, b = clis[0], clis[1]
+    time.sleep(1)
     a.sendPrivMsg(b.nick, 'ohai qtie')
     print("Sender: " + a.receive())
     print("Receiver: " + b.receive())
