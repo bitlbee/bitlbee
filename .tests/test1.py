@@ -69,12 +69,12 @@ class ircClient:
         self.sendPrivMsg("&bitlbee", "rename " + oldnick + " " + newnick)
         
 def testSendMessage(sender, receiver, message, shouldreceive = True):
-    sender.sendPrivMsg(b.nick, message)
+    sender.sendPrivMsg(receiver.nick, message)
     received = receiver.receive().find(message) != -1
     if shouldreceive ^ received:
         print('Test failed: Message from ' + sender.nick + ' to ' + receiver.nick)
-        print('Sender Log:' + a.log)
-        print('Receiver Log:' + b.log)
+        print('Sender Log:' + sender.log)
+        print('Receiver Log:' + receiver.log)
         sys.exit(1)
 
 def runTests():
@@ -88,15 +88,15 @@ def runTests():
     clis[0].addJabberBuddy(clis[1].nick)
 
     print("Test: Send message")
-    testSendMessage(clis[0],clis[1]),'ohai <3')
-    testSendMessage(clis[1],clis[0]),'uwu *pounces*')
+    testSendMessage(clis[0], clis[1], 'ohai <3')
+    testSendMessage(clis[1], clis[0], 'uwu *pounces*')
     print("Test passed")
 
     print("Test: Block/Unblock")
     clis[0].blockJabberBuddy(clis[1].nick)
-    testSendMessage(clis[1],clis[0]),'m-meow?', shouldreceive = False)
+    testSendMessage(clis[1], clis[0], 'm-meow?', shouldreceive = False)
     clis[0].unblockJabberBuddy(clis[1].nick)
-    testSendMessage(clis[1],clis[0]),'*purrs*')
+    testSendMessage(clis[1], clis[0], '*purrs*')
     print("Test passed")
     
 if __name__ == "__main__":
