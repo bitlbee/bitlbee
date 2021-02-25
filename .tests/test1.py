@@ -15,15 +15,25 @@ class ircClient:
         self.sendRaw('PRIVMSG '+recip+' :'+msg)
 
     def connect(self):
-        self.sck.connect(('127.0.0.1', 6667))
+        try:
+            self.sck.connect(('127.0.0.1', 6667))
+        except:
+            print("Connection failed")
+            sys.exit(1)
+
         self.sendRaw('USER ' + (self.nick + " ")*3)
         self.sendRaw('NICK ' + self.nick)
         self.sendRaw('JOIN &bitlbee')
 
-    def bitlbeeLogin(self):
+    def jabberLogin(self):
         self.sendPrivMsg("&bitlbee", "account add jabber "+self.nick+"@localhost "+self.pw)
         time.sleep(0.3)
         self.sendPrivMsg("&bitlbee", "account on")
+        time.sleep(1)
+        self.receive()
+        if self.log.find('Logged in') == -1:
+            print("Jabber Login failed")
+            sys.exit(1)
 
     def receive(self):
         text = ''
@@ -45,11 +55,11 @@ def runTests():
     clis += [ircClient('test2', 'asd')]
     for cli in clis:
         cli.connect()
-        cli.bitlbeeLogin()
+        cli.jabberLogin()
     a, b = clis[0], clis[1]
     a.sendPrivMsg(b.nick, 'ohai qtie')
-    a.receive()
-    b.receive()
+    print("Sender: " + a.receive())
+    print("Receiver: " + b.receive())
     if not b.log.find('ohai qtie') == -1:
         print('yay!')
     else:
