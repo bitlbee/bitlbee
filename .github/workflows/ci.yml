@@ -27,7 +27,7 @@ jobs:
            # --twitter=0 \
            # --yahoo=0
 
-        cat ./.test/gcovflags >> Makefile.settings
+        cat ./.tests/gcovflags >> Makefile.settings
         make
         sudo ./bitlbee -F
 
