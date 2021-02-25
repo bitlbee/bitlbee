@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  - pull_request
+  - push
+
+jobs:
+  tests:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends clang git make pkg-config libgnutls28-dev libgcrypt20-dev libglib2.0-dev prosody
+
+    - name: build bitlbee
+      run: |
+        ./configure #\
+           # --events=glib \
+           # --ssl=gnutls \
+           # --doc=0 \
+           # --jabber=0 \
+           # --msn=0 \
+           # --oscar=0 \
+           # --twitter=0 \
+           # --yahoo=0
+
+        make
+        sudo make install install-dev
+        sudo bitlbee -F
+
+    - name: simple test
+      run: |
+        sudo ./tests/setup.sh
+        python3 .tests/test1.py
