@@ -8,6 +8,7 @@ class ircClient:
         self.sck = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def sendRaw(self, msg):
+        self.receive()
         self.log += msg+'\r\n'
         self.sck.send((msg+'\r\n').encode())
 
@@ -57,14 +58,14 @@ def runTests():
         cli.connect()
         cli.jabberLogin()
     a, b = clis[0], clis[1]
-    time.sleep(1)
+
     a.sendPrivMsg(b.nick, 'ohai qtie')
-    print("Sender: " + a.receive())
-    print("Receiver: " + b.receive())
-    if not b.log.find('ohai qtie') == -1:
-        print('yay!')
-    else:
-        print('nay...')
+    a.receive()
+    b.receive()
+    if b.log.find('ohai qtie') == -1:
+        print('Message not coming through')
+        print('Sender Log:' + a.log)
+        print('Receiver Log:' + b.log)
         sys.exit(1)
 
 if __name__ == "__main__":
