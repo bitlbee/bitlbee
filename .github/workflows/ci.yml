@@ -29,9 +29,8 @@ jobs:
 
         make
         sudo make install install-dev
-        sudo bitlbee -F
 
     - name: simple test
       run: |
-        sudo ./tests/setup.sh
+        sudo .tests/setup.sh
         python3 .tests/test1.py
