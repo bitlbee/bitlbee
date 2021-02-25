@@ -13,7 +13,7 @@ jobs:
     - name: Dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y --no-install-recommends clang git make pkg-config libgnutls28-dev libgcrypt20-dev libglib2.0-dev prosody
+        sudo apt-get install -y --no-install-recommends clang git make pkg-config libgnutls28-dev libgcrypt20-dev libglib2.0-dev prosody gcovr
 
     - name: build bitlbee
       run: |
@@ -27,10 +27,15 @@ jobs:
            # --twitter=0 \
            # --yahoo=0
 
+        cat ./.test/gcovflags >> Makefile.settings
         make
-        sudo make install install-dev
+        sudo ./bitlbee -F
 
-    - name: simple test
+    - name: jabber test
       run: |
         sudo ./.tests/setup.sh
         python3 ./.tests/test1.py
+
+    - name: code coverage
+      run: |
+        gcovr -r .

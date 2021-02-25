@@ -1,0 +1,4 @@
+CFLAGS+=-fprofile-arcs -ftest-coverage -O0
+CFLAGS_BITLBEE+=-fprofile-arcs -ftest-coverage -O0
+LDFLAGS+=-lgcov --coverage
+LDFLAGS_BITLBEE+=-lgcov --coverage
