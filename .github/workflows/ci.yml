@@ -32,5 +32,5 @@ jobs:
 
     - name: simple test
       run: |
-        sudo .tests/setup.sh
-        python3 .tests/test1.py
+        sudo ./.tests/setup.sh
+        python3 ./.tests/test1.py
