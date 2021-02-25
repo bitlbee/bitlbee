@@ -65,7 +65,7 @@ class ircClient:
     def unblockJabberBuddy(self, nick):
         self.sendPrivMsg("&bitlbee", "allow " + nick)
 
-    def renameJabberBuddy(self, oldnick, newnick)
+    def renameJabberBuddy(self, oldnick, newnick):
         self.sendPrivMsg("&bitlbee", "rename " + oldnick + " " + newnick)
         
 def testSendMessage(sender, receiver, message, shouldreceive = True):
