@@ -15,7 +15,7 @@ class ircClient:
         self.sck.send((msg+'\r\n').encode())
 
     def sendPrivMsg(self, recip, msg, loud = True):
-        self.sendRaw('PRIVMSG '+recip+' :'+msg, loud);)
+        self.sendRaw('PRIVMSG '+recip+' :'+msg, loud)
 
     def connect(self):
         try:
@@ -101,7 +101,5 @@ def runTests():
     testSendMessage(clis[1],clis[0]),'*purrs*')
     print("Test passed")
     
-    
-
 if __name__ == "__main__":
     runTests()
