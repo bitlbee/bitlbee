@@ -73,8 +73,8 @@ def testSendMessage(sender, receiver, message, shouldreceive = True):
     received = receiver.receive().find(message) != -1
     if shouldreceive ^ received:
         print('Test failed: Message from ' + sender.nick + ' to ' + receiver.nick)
-        print('Sender Log:' + sender.log)
-        print('Receiver Log:' + receiver.log)
+        print('Sender Log:\n' + sender.log)
+        print('Receiver Log:\n' + receiver.log)
         sys.exit(1)
 
 def runTests():
