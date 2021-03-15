@@ -1,21 +1,31 @@
-import socket, sys, time, select
+import socket
+import sys
+import time
+import select
 
-class ircClient:
-    def __init__(self, nick, pw):
+MESSAGETEST = True
+BLOCKTEST = False
+OFFLINETEST = False
+RENAMETEST = True
+
+FAILED = False
+
+class IrcClient:
+    def __init__(self, nick, pwd):
         self.nick = nick
-        self.pw = pw
+        self.pwd = pwd
         self.log = ''
         self.sck = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def sendRaw(self, msg, loud = True):
+    def send_raw(self, msg, loud = True):
         self.receive()
         if loud:
             print('FROM '+ self.nick + '|| ' + msg)
         self.log += msg+'\r\n'
         self.sck.send((msg+'\r\n').encode())
 
-    def sendPrivMsg(self, recip, msg, loud = True):
-        self.sendRaw('PRIVMSG '+recip+' :'+msg, loud)
+    def send_priv_msg(self, recip, msg, loud = True):
+        self.send_raw('PRIVMSG '+recip+' :'+msg, loud)
 
     def connect(self):
         try:
@@ -26,14 +36,14 @@ class ircClient:
         
         print("IRC connection established for " + self.nick)
 
-        self.sendRaw('USER ' + (self.nick + " ")*3)
-        self.sendRaw('NICK ' + self.nick)
-        self.sendRaw('JOIN &bitlbee')
+        self.send_raw('USER ' + (self.nick + " ")*3)
+        self.send_raw('NICK ' + self.nick)
+        self.send_raw('JOIN &bitlbee')
 
-    def jabberLogin(self):
-        self.sendPrivMsg("&bitlbee", "account add jabber "+self.nick+"@localhost "+self.pw)
+    def jabber_login(self):
+        self.send_priv_msg("&bitlbee", "account add jabber "+self.nick+"@localhost "+self.pwd)
         time.sleep(0.3)
-        self.sendPrivMsg("&bitlbee", "account on")
+        self.send_priv_msg("&bitlbee", "account on")
         time.sleep(1)
         self.receive()
         if self.log.find('Logged in') == -1:
@@ -50,54 +60,81 @@ class ircClient:
                 text += self.sck.recv(2040).decode()
                 for line in text.split('\n'):
                     if line.find('PING') != -1:
-                        self.sendRaw('PONG ' + line.split()[1])
+                        self.send_raw('PONG ' + line.split()[1])
             else:
                 break
         self.log += text
         return text
 
-    def addJabberBuddy(self, nick):
-        self.sendPrivMsg("&bitlbee", "add 0 " + nick+"@localhost")
+    def add_jabber_buddy(self, nick):
+        self.send_priv_msg("&bitlbee", "add 0 " + nick+"@localhost")
     
-    def blockJabberBuddy(self, nick):
-        self.sendPrivMsg("&bitlbee", "block " + nick)
+    def block_jabber_buddy(self, nick):
+        self.send_priv_msg("&bitlbee", "block " + nick)
 
-    def unblockJabberBuddy(self, nick):
-        self.sendPrivMsg("&bitlbee", "allow " + nick)
+    def unblock_jabber_buddy(self, nick):
+        self.send_priv_msg("&bitlbee", "allow " + nick)
 
-    def renameJabberBuddy(self, oldnick, newnick):
-        self.sendPrivMsg("&bitlbee", "rename " + oldnick + " " + newnick)
+    def rename_jabber_buddy(self, oldnick, newnick):
+        self.send_priv_msg("&bitlbee", "rename " + oldnick + " " + newnick)
         
-def testSendMessage(sender, receiver, message, shouldreceive = True):
-    sender.sendPrivMsg(receiver.nick, message)
+def test_send_message(sender, receiver, message):
+    sender.send_priv_msg(receiver.nick, message)
     received = receiver.receive().find(message) != -1
-    if shouldreceive ^ received:
-        print('Test failed: Message from ' + sender.nick + ' to ' + receiver.nick)
-        print('Sender Log:\n' + sender.log)
-        print('Receiver Log:\n' + receiver.log)
-        sys.exit(1)
+    return received;
 
-def runTests():
+def run_tests():
+    global FAILED
     clis = []
-    clis += [ircClient('test1', 'asd')]
-    clis += [ircClient('test2', 'asd')]
+    clis += [IrcClient('test1', 'asd')]
+    clis += [IrcClient('test2', 'asd')]
     for cli in clis:
         cli.connect()
-        cli.jabberLogin()
+        cli.jabber_login()
 
-    clis[0].addJabberBuddy(clis[1].nick)
+    clis[0].add_jabber_buddy(clis[1].nick)
 
-    print("Test: Send message")
-    testSendMessage(clis[0], clis[1], 'ohai <3')
-    testSendMessage(clis[1], clis[0], 'uwu *pounces*')
-    print("Test passed")
+    if MESSAGETEST:
+        print("Test: Send message")
+        ret = test_send_message(clis[0], clis[1], 'ohai <3')
+        ret = ret & test_send_message(clis[1], clis[0], 'uwu *pounces*')
+        if ret:
+            print("Test passed")
+        else:
+            print("Test failed")
+            FAILED = True;
+            
 
-    print("Test: Block/Unblock")
-    clis[0].blockJabberBuddy(clis[1].nick)
-    testSendMessage(clis[1], clis[0], 'm-meow?', shouldreceive = False)
-    clis[0].unblockJabberBuddy(clis[1].nick)
-    testSendMessage(clis[1], clis[0], '*purrs*')
-    print("Test passed")
+    if BLOCKTEST:
+        print("Test: Block/Unblock")
+        clis[0].block_jabber_buddy(clis[1].nick)
+        ret = not test_send_message(clis[1], clis[0], 'm-meow?')
+        clis[0].unblock_jabber_buddy(clis[1].nick)
+        ret = ret & test_send_message(clis[1], clis[0], '*purrs*')
+        if ret:
+            print("Test passed")
+        else:
+            print("Test failed")
+            FAILED = True;
+
+    if RENAMETEST:
+        print("Test: Rename buddy")
+        newname = "xXx_pup_LINKENPARK4EVA<3"
+        message = "rawr meanmz i luv u in dinosaur"
+
+        clis[0].rename_jabber_buddy(clis[1].nick, newname)
+        clis[0].send_priv_msg(newname, message)
+        ret = clis[1].receive().find(message) != -1
+
+        clis[0].rename_jabber_buddy(newname, clis[1].nick)
+        ret = ret & test_send_message(clis[0], clis[1], "rawr")
+        if ret:
+            print("Test passed")
+        else:
+            print("Test failed")
+            FAILED = True;
     
 if __name__ == "__main__":
-    runTests()
+    run_tests()
+    if FAILED:
+        sys.exit(1)
