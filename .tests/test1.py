@@ -119,8 +119,8 @@ def run_tests():
 
     if RENAMETEST:
         print("Test: Rename buddy")
-        newname = "xXx_pup_LINKENPARK4EVA<3"
-        message = "rawr meanmz i luv u in dinosaur"
+        newname = "xXx_pup_LINKENPARK4EVA"
+        message = "rawr meanmz i luv<3 u in dinosaur"
 
         clis[0].rename_jabber_buddy(clis[1].nick, newname)
         clis[0].send_priv_msg(newname, message)
@@ -133,6 +133,10 @@ def run_tests():
         else:
             print("Test failed")
             FAILED = True;
+
+    if FAILED:
+        print("\ntest1 Log:\n"+clis[0].log)
+        print("\ntest2 Log:\n"+clis[1].log)
     
 if __name__ == "__main__":
     run_tests()
