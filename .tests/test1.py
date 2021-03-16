@@ -190,7 +190,6 @@ def run_tests():
         print("\n" + SEPARATOR + "\nAll tests have passed")
     
 if __name__ == "__main__":
-    global FAILED
     run_tests()
     if FAILED:
         sys.exit(1)
