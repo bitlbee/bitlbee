@@ -7,6 +7,7 @@ MESSAGETEST = True
 BLOCKTEST = False
 OFFLINETEST = False
 RENAMETEST = True
+BURPTEST = True
 
 FAILED = False
 
@@ -15,6 +16,7 @@ class IrcClient:
         self.nick = nick
         self.pwd = pwd
         self.log = ''
+        self.tmplog = ''
         self.sck = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def send_raw(self, msg, loud = True):
@@ -22,6 +24,7 @@ class IrcClient:
         if loud:
             print('FROM '+ self.nick + '|| ' + msg)
         self.log += msg+'\r\n'
+        self.tmplog += msg+'\r\n'
         self.sck.send((msg+'\r\n').encode())
 
     def send_priv_msg(self, recip, msg, loud = True):
@@ -64,6 +67,7 @@ class IrcClient:
             else:
                 break
         self.log += text
+        self.tmplog += text
         return text
 
     def add_jabber_buddy(self, nick):
@@ -90,8 +94,25 @@ def run_tests():
     clis += [IrcClient('test2', 'asd')]
     for cli in clis:
         cli.connect()
-        cli.jabber_login()
 
+    if BURPTEST:
+        print("Test: Yes")
+        ret = False
+        for _ in range(100):
+            clis[0].send_raw("yes")
+            clis[0].receive()
+            if (not ret) and clis[0].log.find("Did I ask you something?"):
+                ret = True
+            if clis[0].log.find("Buuuuuuuuuuuuuuuurp"):
+                print("The RNG gods smile upon us")
+                break
+        if ret:
+            print("Test passed")
+        else:
+            print("Test failed")
+
+    for cli in clis:
+        cli.jabber_login()
     clis[0].add_jabber_buddy(clis[1].nick)
 
     if MESSAGETEST:
@@ -126,7 +147,7 @@ def run_tests():
         clis[0].send_priv_msg(newname, message)
         ret = clis[1].receive().find(message) != -1
 
-        clis[0].rename_jabber_buddy(newname, clis[1].nick)
+        clis[0].rename_jabber_buddy("-del", newname)
         ret = ret & test_send_message(clis[0], clis[1], "rawr")
         if ret:
             print("Test passed")
