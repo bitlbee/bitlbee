@@ -8,9 +8,8 @@ MESSAGETEST = True
 BLOCKTEST = False
 OFFLINETEST = False
 RENAMETEST = True
-SHOWLOG = True
-
-FAILED = []
+SHOWLOG = False
+SHOWTESTLOG = True
 
 SEPARATOR = "="*60
 SMOLPARATOR = "-"*60
@@ -31,7 +30,7 @@ class IrcClient:
         self.tmplog += msg+'\r\n'
         self.sck.send((msg+'\r\n').encode())
 
-    def send_priv_msg(self, recip, msg, loud = True):
+    def send_priv_msg(self, recip, msg, loud = False):
         self.send_raw('PRIVMSG '+recip+' :'+msg, loud)
 
     def connect(self):
@@ -91,8 +90,8 @@ def msg_comes_thru(sender, receiver, message):
     received = receiver.receive().find(message) != -1
     return received
 
-def perform_test(clis, test_function, test_name):
-    global FAILED
+def perform_test(failed, clis, test_function, test_name):
+    fail = False
     for cli in clis:
         cli.tmplog=""
 
@@ -103,8 +102,10 @@ def perform_test(clis, test_function, test_name):
         print("Test passed")
     else:
         print("Test failed")
-        FAILED += [test_name]
+        failed += [test_name]
+        fail = True
 
+    if fail or SHOWTESTLOG:
         for cli in clis:
             if cli.tmplog != "":
                 print(SMOLPARATOR)
@@ -126,7 +127,6 @@ def yes_test(clis):
     return ret
 
 def message_test(clis):
-    print("Test: Send message")
     ret = msg_comes_thru(clis[0], clis[1], 'ohai <3')
     ret = ret & msg_comes_thru(clis[1], clis[0], 'uwu *pounces*')
     return ret
@@ -150,8 +150,7 @@ def rename_test(clis):
     ret = ret & msg_comes_thru(clis[0], clis[1], "rawr")
     return ret
 
-def run_tests():
-    global FAILED
+def run_tests(failed):
     clis = []
     clis += [IrcClient('test1', 'asd')]
     clis += [IrcClient('test2', 'asd')]
@@ -159,22 +158,23 @@ def run_tests():
         cli.connect()
 
     if YESTEST:
-        perform_test(clis, yes_test, "Yes")
+        perform_test(failed, clis, yes_test, "Yes")
 
     for cli in clis:
         cli.jabber_login()
+
     clis[0].add_jabber_buddy(clis[1].nick)
 
     if MESSAGETEST:
-        perform_test(clis, message_test, "Send message")
+        perform_test(failed, clis, message_test, "Send message")
 
     if BLOCKTEST:
-        perform_test(clis, block_test, "Block user")
+        perform_test(failed, clis, block_test, "Block user")
 
     if RENAMETEST:
-        perform_test(clis, rename_test, "Rename user")
+        perform_test(failed, clis, rename_test, "Rename user")
 
-    if FAILED or SHOWLOG:
+    if failed or SHOWLOG:
         print("")
         for cli in clis:
             print(SMOLPARATOR)
@@ -182,14 +182,15 @@ def run_tests():
             print(cli.log)
         print(SMOLPARATOR)
 
-    if FAILED:
+    if failed:
         print("\n" + SEPARATOR + "\nSome test have failed:")
-        for fail in FAILED:
+        for fail in failed:
             print(fail)
     else:
         print("\n" + SEPARATOR + "\nAll tests have passed")
     
 if __name__ == "__main__":
-    run_tests()
-    if FAILED:
+    failed = []
+    run_tests(failed)
+    if failed:
         sys.exit(1)
