@@ -22,12 +22,13 @@ class IrcClient:
         self.tmplog = ''
         self.sck = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def send_raw(self, msg, loud = False):
+    def send_raw(self, msg, loud = False, log = True):
         self.receive()
         if loud:
             print('FROM '+ self.nick + '|| ' + msg)
-        self.log += msg+'\r\n'
-        self.tmplog += msg+'\r\n'
+        if log:
+            self.log += msg+'\r\n'
+            self.tmplog += msg+'\r\n'
         self.sck.send((msg+'\r\n').encode())
 
     def send_priv_msg(self, recip, msg, loud = False):
@@ -111,17 +112,17 @@ def perform_test(failed, clis, test_function, test_name):
                 print(SMOLPARATOR)
                 print("Test Log "+ cli.nick+":")
                 print(cli.tmplog)
-
     print(SEPARATOR)
 
 def yes_test(clis):
     ret = False
     for _ in range(100):
-        clis[0].send_raw("yes", loud = False)
+        clis[0].send_raw("PRIVMSG yes", loud = False, log = False)
         clis[0].receive()
-        if (not ret) and clis[0].log.find("Did I ask you something?"):
+        if (not ret) and (clis[0].log.find("Did I ask you something?") != -1):
             ret = True
-        if clis[0].log.find("Buuuuuuuuuuuuuuuurp"):
+        if clis[0].log.find("Buuuuuuuuuuuuuuuurp") != -1:
+            ret = True
             print("The RNG gods smile upon us")
             break
     return ret
@@ -160,6 +161,7 @@ def run_tests(failed):
     if YESTEST:
         perform_test(failed, clis, yes_test, "Yes")
 
+    print("")
     for cli in clis:
         cli.jabber_login()
 
