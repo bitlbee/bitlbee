@@ -5,15 +5,15 @@ import select
 
 YESTEST = True
 MESSAGETEST = True
-BLOCKTEST = True
+BLOCKTEST = False
 OFFLINETEST = False
 RENAMETEST = True
 SHOWLOG = True
 
 FAILED = []
 
-SEPARATOR = "================================"
-SMOLPARATOR = "--------------------------------"
+SEPARATOR = "="*60
+SMOLPARATOR = "-"*60
 
 class IrcClient:
     def __init__(self, nick, pwd):
@@ -23,7 +23,7 @@ class IrcClient:
         self.tmplog = ''
         self.sck = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def send_raw(self, msg, loud = True):
+    def send_raw(self, msg, loud = False):
         self.receive()
         if loud:
             print('FROM '+ self.nick + '|| ' + msg)
@@ -105,17 +105,13 @@ def perform_test(clis, test_function, test_name):
         print("Test failed")
         FAILED += [test_name]
 
-        flag = False
         for cli in clis:
             if cli.tmplog != "":
                 print(SMOLPARATOR)
                 print("Test Log "+ cli.nick+":")
                 print(cli.tmplog)
-                flag = True
-        if flag:
-            print(SMOLPARATOR)
 
-    print(SEPARATOR+"\n")
+    print(SEPARATOR)
 
 def yes_test(clis):
     ret = False
@@ -186,7 +182,7 @@ def run_tests():
             print(cli.log)
         print(SMOLPARATOR)
 
-    if len(FAILED) != 0:
+    if FAILED:
         print("\n" + SEPARATOR + "\nSome test have failed:")
         for fail in FAILED:
             print(fail)
@@ -194,6 +190,7 @@ def run_tests():
         print("\n" + SEPARATOR + "\nAll tests have passed")
     
 if __name__ == "__main__":
+    global FAILED
     run_tests()
     if FAILED:
         sys.exit(1)
