@@ -72,7 +72,6 @@ class IrcClient:
     def receive(self):
         text = ''
         while True:
-            time.sleep(0.1)
             readable, _, _ = select.select([self.sck], [], [], 5)
             if self.sck in readable:
                 text += self.sck.recv(2040).decode()
@@ -171,7 +170,7 @@ def status_test(clis):
 
     clis[1].send_priv_msg("&bitlbee", "set -del status")
     clis[0].send_priv_msg("&bitlbee", "info "+clis[1].nick)
-    ret = ret & (clis[0].receive().find("jabber - Status message: none") != -1)
+    ret = ret & (clis[0].receive().find("jabber - Status message: (none)") != -1)
     return ret
 
 def offline_test(clis):
@@ -185,7 +184,7 @@ def offline_test(clis):
     ret = ret & (junk.find(clis[0].nick) != -1)
     ret = ret & (junk.find("has quit") != -1)
 
-    clis[0].send_priv_msg(clis[1], "i'm not ur mom")
+    clis[0].send_priv_msg(clis[1].nick, "i'm not ur mom")
     ret = ret & (clis[0].receive().find("User does not exist: "+clis[1].nick) != -1)
 
     clis[0].send_priv_msg("&bitlbee", "account on")
