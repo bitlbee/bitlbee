@@ -202,10 +202,12 @@ def offline_test(clis):
 
 def default_target_test(clis):
     clis[0].send_priv_msg("&bitlbee", "set default_target last")
-    ret = msg_comes_thru(clis[0], clis[1], "ur mah default now")
+    clis[0].send_priv_msg("&bitlbee", "test2: ur mah default now")
+    
+    ret = (clis[1].receive().find("ur mah default now") != -1)
 
-    clis[0].send_priv_msg("&bitlbee", "~~~")
-    ret = ret & (clis[1].receive().find("~~~") != -1)
+    clis[0].send_priv_msg("&bitlbee", "mrow")
+    ret = ret & (clis[1].receive().find("mrow") != -1)
 
     clis[0].send_priv_msg("root", "set default_target root")
     ret = ret & (clis[0].receive().find("default target") != -1)
@@ -249,7 +251,7 @@ def run_tests(failed):
         perform_test(failed, clis, offline_test, "Go offline")
 
     if DEFAULTTARGETTEST:
-        perform_test(failed, clis, default_target_test, "Go offline")
+        perform_test(failed, clis, default_target_test, "Default target")
 
     if failed or SHOWLOG:
         print("")
