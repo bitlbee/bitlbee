@@ -11,6 +11,15 @@ RENAMETEST = True
 SHOWLOG = False
 SHOWTESTLOG = True
 
+FUN = [
+"Did I ask you something?",
+"Oh yeah, that's right.",
+"Alright, alright. Now go back to work.",
+"Buuuuuuuuuuuuuuuurp... Excuse me!",
+"Yes?",
+"No?",
+]
+
 SEPARATOR = "="*60
 SMOLPARATOR = "-"*60
 
@@ -116,14 +125,13 @@ def perform_test(failed, clis, test_function, test_name):
 
 def yes_test(clis):
     ret = False
-    for _ in range(100):
-        clis[0].send_raw("PRIVMSG yes", loud = False, log = False)
-        clis[0].receive()
-        if (not ret) and (clis[0].log.find("Did I ask you something?") != -1):
+    clis[0].send_raw("PRIVMSG yes")
+    clis[0].receive()
+    for x, fun in enumerate(FUN):
+        if (clis[0].log.find(fun) != -1):
             ret = True
-        if clis[0].log.find("Buuuuuuuuuuuuuuuurp") != -1:
-            ret = True
-            print("The RNG gods smile upon us")
+            if x:
+                print("The RNG gods smile upon us")
             break
     return ret
 
