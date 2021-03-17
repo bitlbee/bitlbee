@@ -72,6 +72,7 @@ class IrcClient:
     def receive(self):
         text = ''
         while True:
+            time.sleep(0.1)
             readable, _, _ = select.select([self.sck], [], [], 5)
             if self.sck in readable:
                 text += self.sck.recv(2040).decode()
@@ -115,6 +116,8 @@ def perform_test(failed, clis, test_function, test_name):
         print("Test failed")
         failed += [test_name]
         fail = True
+    for cli in clis:
+        cli.receive()
 
     if fail or SHOWTESTLOG:
         for cli in clis:
@@ -161,7 +164,7 @@ def rename_test(clis):
     return ret
 
 def status_test(clis):
-    status = "get out of my room mom"
+    status = "'get out of my room mom'"
     clis[1].send_priv_msg("&bitlbee", "set status "+status)
     clis[0].send_priv_msg("&bitlbee", "info "+clis[1].nick)
     ret = (clis[0].receive().find("jabber - Status message: "+status) != -1)
