@@ -125,7 +125,7 @@ def perform_test(failed, clis, test_function, test_name):
 
 def yes_test(clis):
     ret = False
-    clis[0].send_raw("PRIVMSG yes")
+    clis[0].send_priv_msg("&bitlbee", "yes")
     clis[0].receive()
     for x, fun in enumerate(FUN):
         if (clis[0].log.find(fun) != -1):
