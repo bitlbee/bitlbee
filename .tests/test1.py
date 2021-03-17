@@ -185,7 +185,7 @@ def offline_test(clis):
     ret = ret & (junk.find(clis[0].nick) != -1)
     ret = ret & (junk.find("has quit") != -1)
 
-    clis[0].send_priv_msg(clis[1], "sup")
+    clis[0].send_priv_msg(clis[1], "i'm not ur mom")
     ret = ret & (clis[0].receive().find("User does not exist: "+clis[1].nick) != -1)
 
     clis[0].send_priv_msg("&bitlbee", "account on")
@@ -215,6 +215,9 @@ def run_tests(failed):
         cli.jabber_login()
 
     clis[0].add_jabber_buddy(clis[1].nick)
+    clis[1].add_jabber_buddy(clis[0].nick)
+    clis[0].send_priv_msg("&bitlbee", "yes")
+    clis[1].send_priv_msg("&bitlbee", "yes")
 
     if MESSAGETEST:
         perform_test(failed, clis, message_test, "Send message")
@@ -229,7 +232,7 @@ def run_tests(failed):
         perform_test(failed, clis, status_test, "Change status")
 
     if OFFLINETEST:
-        perform_test(failed, clis, status_test, "Go offline")
+        perform_test(failed, clis, offline_test, "Go offline")
 
     if failed or SHOWLOG:
         print("")
