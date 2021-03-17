@@ -6,7 +6,7 @@ import select
 YESTEST = True
 MESSAGETEST = True
 BLOCKTEST = False
-OFFLINETEST = False
+OFFLINETEST = True
 RENAMETEST = True
 STATUSTEST= True
 SHOWLOG = False
@@ -164,17 +164,38 @@ def status_test(clis):
     status = "get out of my room mom"
     clis[1].send_priv_msg("&bitlbee", "set status "+status)
     clis[0].send_priv_msg("&bitlbee", "info "+clis[1].nick)
-    clis[0].receive()
-    ret = (clis[0].tmp_log.find("jabber - Status message: "+status) != -1)
+    ret = (clis[0].receive().find("jabber - Status message: "+status) != -1)
 
     clis[1].send_priv_msg("&bitlbee", "set -del status")
     clis[0].send_priv_msg("&bitlbee", "info "+clis[1].nick)
-    clis[0].receive()
-    ret = ret & (clis[0].tmp_log.find("jabber - Status message: none") != -1)
+    ret = ret & (clis[0].receive().find("jabber - Status message: none") != -1)
     return ret
 
 def offline_test(clis):
-    pass
+    clis[0].send_priv_msg("&bitlbee", "account off")
+
+    junk = clis[0].receive()
+    ret = (junk.find(clis[1].nick) != -1)
+    ret = ret & (junk.find("has quit") != -1)
+
+    junk = clis[1].receive()
+    ret = ret & (junk.find(clis[0].nick) != -1)
+    ret = ret & (junk.find("has quit") != -1)
+
+    clis[0].send_priv_msg(clis[1], "sup")
+    ret = ret & (clis[0].receive().find("User does not exist: "+clis[1].nick) != -1)
+
+    clis[0].send_priv_msg("&bitlbee", "account on")
+
+    junk = clis[0].receive()
+    ret = ret & (junk.find(clis[1].nick) != -1)
+    ret = ret & (junk.find("has joined") != -1)
+
+    junk = clis[1].receive()
+    ret = ret & (junk.find(clis[0].nick) != -1)
+    ret = ret & (junk.find("has joined") != -1)
+
+    return ret
 
 def run_tests(failed):
     clis = []
@@ -203,6 +224,9 @@ def run_tests(failed):
 
     if STATUSTEST:
         perform_test(failed, clis, status_test, "Change status")
+
+    if OFFLINETEST:
+        perform_test(failed, clis, status_test, "Go offline")
 
     if failed or SHOWLOG:
         print("")
