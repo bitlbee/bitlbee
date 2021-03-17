@@ -210,7 +210,9 @@ def default_target_test(clis):
     ret = ret & (clis[1].receive().find("mrow") != -1)
 
     clis[0].send_priv_msg("root", "set default_target root")
-    ret = ret & (clis[0].receive().find("default target") != -1)
+    junk = clis[0].receive()
+    ret = ret & (junk.find("default_target") != -1)
+    ret = ret & (junk.find("root") != -1)
 
     clis[0].send_priv_msg("&bitlbee", "yes")
     ret = ret & (clis[1].receive().find("yes") == -1)
