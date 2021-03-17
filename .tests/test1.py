@@ -163,8 +163,8 @@ def rename_test(clis):
     return ret
 
 def status_test(clis):
-    status = "'get out of my room mom'"
-    clis[1].send_priv_msg("&bitlbee", "set status "+status)
+    status = "get out of my room mom"
+    clis[1].send_priv_msg("&bitlbee", "set status '"+status+"'")
     clis[0].send_priv_msg("&bitlbee", "info "+clis[1].nick)
     ret = (clis[0].receive().find("jabber - Status message: "+status) != -1)
 
@@ -178,24 +178,24 @@ def offline_test(clis):
 
     junk = clis[0].receive()
     ret = (junk.find(clis[1].nick) != -1)
-    ret = ret & (junk.find("has quit") != -1)
+    ret = ret & (junk.find("QUIT") != -1)
 
     junk = clis[1].receive()
     ret = ret & (junk.find(clis[0].nick) != -1)
-    ret = ret & (junk.find("has quit") != -1)
+    ret = ret & (junk.find("QUIT") != -1)
 
     clis[0].send_priv_msg(clis[1].nick, "i'm not ur mom")
-    ret = ret & (clis[0].receive().find("User does not exist: "+clis[1].nick) != -1)
+    ret = ret & (clis[0].receive().find("No such nick/channel") != -1)
 
     clis[0].send_priv_msg("&bitlbee", "account on")
 
     junk = clis[0].receive()
     ret = ret & (junk.find(clis[1].nick) != -1)
-    ret = ret & (junk.find("has joined") != -1)
+    ret = ret & (junk.find("JOIN") != -1)
 
     junk = clis[1].receive()
     ret = ret & (junk.find(clis[0].nick) != -1)
-    ret = ret & (junk.find("has joined") != -1)
+    ret = ret & (junk.find("JOIN") != -1)
 
     return ret
 
