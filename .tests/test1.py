@@ -8,6 +8,7 @@ MESSAGETEST = True
 BLOCKTEST = False
 OFFLINETEST = False
 RENAMETEST = True
+STATUSTEST= True
 SHOWLOG = False
 SHOWTESTLOG = True
 
@@ -159,6 +160,22 @@ def rename_test(clis):
     ret = ret & msg_comes_thru(clis[0], clis[1], "rawr")
     return ret
 
+def status_test(clis):
+    status = "get out of my room mom"
+    clis[1].send_priv_msg("&bitlbee", "set status "+status)
+    clis[0].send_priv_msg("&bitlbee", "info "+clis[1].nick)
+    clis[0].receive()
+    ret = (clis[0].tmp_log.find("jabber - Status message: "+status) != -1)
+
+    clis[1].send_priv_msg("&bitlbee", "set -del status")
+    clis[0].send_priv_msg("&bitlbee", "info "+clis[1].nick)
+    clis[0].receive()
+    ret = ret & (clis[0].tmp_log.find("jabber - Status message: none") != -1)
+    return ret
+
+def offline_test(clis):
+    pass
+
 def run_tests(failed):
     clis = []
     clis += [IrcClient('test1', 'asd')]
@@ -183,6 +200,9 @@ def run_tests(failed):
 
     if RENAMETEST:
         perform_test(failed, clis, rename_test, "Rename user")
+
+    if STATUSTEST:
+        perform_test(failed, clis, status_test, "Change status")
 
     if failed or SHOWLOG:
         print("")
