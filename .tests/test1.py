@@ -149,16 +149,20 @@ def add_buddy_test(clis):
     clis[1].send_priv_msg("&bitlbee", "yes")
 
     clis[0].send_priv_msg("&bitlbee", "blist")
-    ret = clis[0].receive().find(clis[1].nick) != -1
+    junk = clis[0].receive()
+    ret = junk.find(clis[1].nick) != -1
+    ret = ret & (junk.find("1 available") != -1)
 
-    clis[1].send_priv_msg("&bitlbee", "remove" +clis[1].nick)
+    clis[0].send_priv_msg("&bitlbee", "remove" +clis[1].nick)
     clis[0].send_priv_msg("&bitlbee", "blist")
     ret = ret & (clis[0].receive().find(clis[1].nick) == -1)
 
     clis[0].add_jabber_buddy(clis[1].nick)
     clis[1].send_priv_msg("&bitlbee", "yes")
     clis[0].send_priv_msg("&bitlbee", "blist")
-    ret = ret & (clis[0].receive().find(clis[1].nick) != -1)
+    junk = clis[0].receive()
+    ret = ret & (junk.find("1 available") != -1)
+    ret = ret & (junk.find(clis[1].nick) != -1)
 
 def message_test(clis):
     ret = msg_comes_thru(clis[0], clis[1], 'ohai <3')
