@@ -143,7 +143,7 @@ def add_buddy_test(clis):
     junk = clis[0].receive()
     ret = junk.find(clis[1].nick) != -1
     ret = ret & (junk.find("1 available") != -1)
-'''
+    '''
     clis[0].send_priv_msg("&bitlbee", "remove " +clis[1].nick)
     clis[0].send_priv_msg("&bitlbee", "blist")
     ret = ret & (clis[0].receive().find(clis[1].nick) == -1)
@@ -155,7 +155,7 @@ def add_buddy_test(clis):
     junk = clis[0].receive()
     ret = ret & (junk.find("1 available") != -1)
     ret = ret & (junk.find(clis[1].nick) != -1)
-'''
+    '''
     return ret
 
 def message_test(clis):
