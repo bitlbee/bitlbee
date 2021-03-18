@@ -3,15 +3,6 @@ import sys
 import time
 import select
 
-YESTEST = True
-ADDBUDDYTEST = True
-MESSAGETEST = True
-BLOCKTEST = False
-OFFLINETEST = True
-RENAMETEST = True
-STATUSTEST = True
-DEFAULTTARGETTEST = True
-HELPTEST = True
 SHOWLOG = False
 SHOWTESTLOG = True
 
@@ -143,10 +134,10 @@ def yes_test(clis):
 
 def add_buddy_test(clis):
     clis[0].add_jabber_buddy(clis[1].nick)
-    clis[1].add_jabber_buddy(clis[0].nick)
-
-    clis[0].send_priv_msg("&bitlbee", "yes")
     clis[1].send_priv_msg("&bitlbee", "yes")
+
+    clis[1].add_jabber_buddy(clis[0].nick)
+    clis[0].send_priv_msg("&bitlbee", "yes")
 
     clis[0].send_priv_msg("&bitlbee", "blist")
     junk = clis[0].receive()
@@ -161,7 +152,7 @@ def add_buddy_test(clis):
     clis[1].send_priv_msg("&bitlbee", "yes")
     clis[0].send_priv_msg("&bitlbee", "blist")
     junk = clis[0].receive()
-    ret = ret & (junk.find("1 available") != -1)
+#    ret = ret & (junk.find("1 available") != -1)
     ret = ret & (junk.find(clis[1].nick) != -1)
 
 def message_test(clis):
@@ -268,32 +259,15 @@ def run_tests(failed):
     for cli in clis:
         cli.jabber_login()
 
-    if ADDBUDDYTEST:
-        perform_test(failed, clis, add_buddy_test, "Add/remove buddy")
+    perform_test(failed, clis, add_buddy_test, "Add/remove buddy")
+    perform_test(failed, clis, message_test, "Send message")
+    #perform_test(failed, clis, block_test, "Block user")
+    perform_test(failed, clis, rename_test, "Rename user")
+    perform_test(failed, clis, status_test, "Change status")
+    perform_test(failed, clis, offline_test, "Go offline")
+    perform_test(failed, clis, default_target_test, "Change default target")
+    perform_test(failed, clis, help_test, "Ask for help")
 
-
-    if MESSAGETEST:
-        perform_test(failed, clis, message_test, "Send message")
-
-    if BLOCKTEST:
-        perform_test(failed, clis, block_test, "Block user")
-
-    if RENAMETEST:
-        perform_test(failed, clis, rename_test, "Rename user")
-
-    if STATUSTEST:
-        perform_test(failed, clis, status_test, "Change status")
-
-    if OFFLINETEST:
-        perform_test(failed, clis, offline_test, "Go offline")
-
-    if DEFAULTTARGETTEST:
-        perform_test(failed, clis, default_target_test, "Change default target")
-
-    if HELPTEST:
-        perform_test(failed, clis, help_test, "Ask for help")
-
-    if failed or SHOWLOG:
         print("")
         for cli in clis:
             print(SMOLPARATOR)
