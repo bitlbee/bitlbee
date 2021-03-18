@@ -4,6 +4,7 @@ import time
 import select
 
 YESTEST = True
+ADDBUDDYTEST = True
 MESSAGETEST = True
 BLOCKTEST = False
 OFFLINETEST = True
@@ -140,6 +141,25 @@ def yes_test(clis):
             break
     return ret
 
+def add_buddy_test(clis):
+    clis[0].add_jabber_buddy(clis[1].nick)
+    clis[1].add_jabber_buddy(clis[0].nick)
+
+    clis[0].send_priv_msg("&bitlbee", "yes")
+    clis[1].send_priv_msg("&bitlbee", "yes")
+
+    clis[0].send_priv_msg("&bitlbee", "blist")
+    ret = clis[0].receive().find(clis[1].nick) != -1
+
+    clis[1].send_priv_msg("&bitlbee", "remove" +clis[1].nick)
+    clis[0].send_priv_msg("&bitlbee", "blist")
+    ret = ret & (clis[0].receive().find(clis[1].nick) == -1)
+
+    clis[0].add_jabber_buddy(clis[1].nick)
+    clis[1].send_priv_msg("&bitlbee", "yes")
+    clis[0].send_priv_msg("&bitlbee", "blist")
+    ret = ret & (clis[0].receive().find(clis[1].nick) != -1)
+
 def message_test(clis):
     ret = msg_comes_thru(clis[0], clis[1], 'ohai <3')
     ret = ret & msg_comes_thru(clis[1], clis[0], 'uwu *pounces*')
@@ -244,10 +264,9 @@ def run_tests(failed):
     for cli in clis:
         cli.jabber_login()
 
-    clis[0].add_jabber_buddy(clis[1].nick)
-    clis[1].add_jabber_buddy(clis[0].nick)
-    clis[0].send_priv_msg("&bitlbee", "yes")
-    clis[1].send_priv_msg("&bitlbee", "yes")
+    if ADDBUDDYTEST:
+        perform_test(failed, clis, add_buddy_test, "Add/remove buddy")
+
 
     if MESSAGETEST:
         perform_test(failed, clis, message_test, "Send message")
