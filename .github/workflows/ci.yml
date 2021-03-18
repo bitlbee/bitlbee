@@ -29,7 +29,8 @@ jobs:
 
         cat ./.tests/gcovflags >> Makefile.settings
         make
-        sudo ./bitlbee -F
+        sudo make install
+        sudo bitlbee -F
 
     - name: jabber test
       run: |
