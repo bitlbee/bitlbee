@@ -150,9 +150,10 @@ def add_buddy_test(clis):
 
     clis[0].add_jabber_buddy(clis[1].nick)
     clis[1].send_priv_msg("&bitlbee", "yes")
+    time.sleep(1)
     clis[0].send_priv_msg("&bitlbee", "blist")
     junk = clis[0].receive()
-#    ret = ret & (junk.find("1 available") != -1)
+    ret = ret & (junk.find("1 available") != -1)
     ret = ret & (junk.find(clis[1].nick) != -1)
 
 def message_test(clis):
@@ -252,8 +253,7 @@ def run_tests(failed):
     for cli in clis:
         cli.connect()
 
-    if YESTEST:
-        perform_test(failed, clis, yes_test, "Yes")
+    perform_test(failed, clis, yes_test, "Yes")
 
     print("")
     for cli in clis:
