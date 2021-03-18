@@ -11,7 +11,7 @@ OFFLINETEST = True
 RENAMETEST = True
 STATUSTEST = True
 DEFAULTTARGETTEST = True
-HELPTEST = True
+HELPTEST = False
 SHOWLOG = False
 SHOWTESTLOG = True
 
@@ -153,7 +153,7 @@ def add_buddy_test(clis):
     ret = junk.find(clis[1].nick) != -1
     ret = ret & (junk.find("1 available") != -1)
 
-    clis[0].send_priv_msg("&bitlbee", "remove" +clis[1].nick)
+    clis[0].send_priv_msg("&bitlbee", "remove " +clis[1].nick)
     clis[0].send_priv_msg("&bitlbee", "blist")
     ret = ret & (clis[0].receive().find(clis[1].nick) == -1)
 
