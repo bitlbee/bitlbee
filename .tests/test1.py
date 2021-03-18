@@ -268,6 +268,7 @@ def run_tests(failed):
     perform_test(failed, clis, default_target_test, "Change default target")
     perform_test(failed, clis, help_test, "Ask for help")
 
+    if failed or SHOWLOG:
         print("")
         for cli in clis:
             print(SMOLPARATOR)
