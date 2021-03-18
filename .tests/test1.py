@@ -10,6 +10,7 @@ OFFLINETEST = True
 RENAMETEST = True
 STATUSTEST = True
 DEFAULTTARGETTEST = True
+HELPTEST = True
 SHOWLOG = False
 SHOWTESTLOG = True
 
@@ -169,6 +170,9 @@ def status_test(clis):
     clis[0].send_priv_msg("&bitlbee", "info "+clis[1].nick)
     ret = (clis[0].receive().find("jabber - Status message: "+status) != -1)
 
+    clis[1].send_priv_msg("&bitlbee", "set")
+    ret = ret & (clis[1].receive().find(status) != -1)
+
     clis[1].send_priv_msg("&bitlbee", "set -del status")
     clis[0].send_priv_msg("&bitlbee", "info "+clis[1].nick)
     ret = ret & (clis[0].receive().find("jabber - Status message: (none)") != -1)
@@ -218,6 +222,14 @@ def default_target_test(clis):
     ret = ret & (clis[1].receive().find("yes") == -1)
     return ret 
 
+def help_test(clis):
+    clis[0].send_priv_msg("&bitlbee", "help")
+    ret = (clis[0].receive().find("identify_methods") != -1)
+    clis[0].send_priv_msg("&bitlbee", "help commands")
+    ret = ret & (clis[0].receive().find("qlist") != -1)
+    return ret
+    
+
 def run_tests(failed):
     clis = []
     clis += [IrcClient('test1', 'asd')]
@@ -253,7 +265,10 @@ def run_tests(failed):
         perform_test(failed, clis, offline_test, "Go offline")
 
     if DEFAULTTARGETTEST:
-        perform_test(failed, clis, default_target_test, "Default target")
+        perform_test(failed, clis, default_target_test, "Change default target")
+
+    if HELPTEST:
+        perform_test(failed, clis, help_test, "Ask for help")
 
     if failed or SHOWLOG:
         print("")
