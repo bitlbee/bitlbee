@@ -1168,6 +1168,7 @@ static void prplstr(GList *prpls, GString *gstr)
 	g_list_free(prpls);
 }
 
+#ifdef WITH_PLUGINS
 static void cmd_plugins_info(irc_t *irc, char **cmd)
 {
 	GList *l;
@@ -1201,6 +1202,7 @@ static void cmd_plugins_info(irc_t *irc, char **cmd)
 		irc_rootmsg(irc, "  URL: %s", info->url);
 	}
 }
+#endif
 
 static void cmd_plugins(irc_t *irc, char **cmd)
 {
@@ -1208,7 +1210,9 @@ static void cmd_plugins(irc_t *irc, char **cmd)
 	GString *gstr;
 
 	if (cmd[1] && g_strcasecmp(cmd[1], "info") == 0) {
+#ifdef WITH_PLUGINS
 		cmd_plugins_info(irc, cmd);
+#endif
 		return;
 	}
 
