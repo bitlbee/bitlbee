@@ -18,7 +18,7 @@ jobs:
     - name: build bitlbee
       run: |
         ./configure \
-           # --asan=1
+            --asan=1
            # --events=glib \
            # --ssl=gnutls \
            # --doc=0 \
