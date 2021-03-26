@@ -95,20 +95,36 @@ def msg_comes_thru(sender, receiver, message):
     received = receiver.receive().find(message) != -1
     return received
 
-def perform_test(failed, clis, test_function, test_name):
-    fail = False
+def debug_check(debug_file):
+    error_found = False
+    debug_log = ''
+    while True:
+        line = readline(debug_file)
+        if len(line) == 0:
+            break
+        debug_log += line
+        error_found = error_found or (line.lower().find('error') != -1)
+    return error_found, debug_log
+
+def perform_test(failed, clis, test_function, test_name, debug_file):
     for cli in clis:
         cli.tmplog=""
 
     print("\n"+SEPARATOR)
     print("Test: "+test_name)
 
-    if test_function(clis):
-        print("Test passed")
-    else:
+    fail = not test_function(clis)
+
+    debug_error, debug_log = debug_check(debug_file)
+
+    fail = fail or debug_error
+
+    if fail:
         print("Test failed")
         failed += [test_name]
-        fail = True
+    else:
+        print("Test passed")
+
     for cli in clis:
         cli.receive()
 
@@ -118,6 +134,12 @@ def perform_test(failed, clis, test_function, test_name):
                 print(SMOLPARATOR)
                 print("Test Log "+ cli.nick+":")
                 print(cli.tmplog)
+
+    if debug_error:
+        print(SMOLPARATOR)
+        print("Debug Log:")
+        print(debug_log)
+
     print(SEPARATOR)
 
 def yes_test(clis):
@@ -249,26 +271,27 @@ def help_test(clis):
     
 
 def run_tests(failed):
+    debug_file = open('debuglog','r')
     clis = []
     clis += [IrcClient('test1', 'asd')]
     clis += [IrcClient('test2', 'asd')]
     for cli in clis:
         cli.connect()
 
-    perform_test(failed, clis, yes_test, "Yes")
+    perform_test(failed, clis, yes_test, "Yes", debug_file)
 
     print("")
     for cli in clis:
         cli.jabber_login()
 
-    perform_test(failed, clis, add_buddy_test, "Add/remove buddy")
-    perform_test(failed, clis, message_test, "Send message")
-    #perform_test(failed, clis, block_test, "Block user")
-    perform_test(failed, clis, rename_test, "Rename user")
-    perform_test(failed, clis, status_test, "Change status")
-    perform_test(failed, clis, offline_test, "Go offline")
-    perform_test(failed, clis, default_target_test, "Change default target")
-    perform_test(failed, clis, help_test, "Ask for help")
+    perform_test(failed, clis, add_buddy_test, "Add/remove buddy", debug_file)
+    perform_test(failed, clis, message_test, "Send message", debug_file)
+    #perform_test(failed, clis, block_test, "Block user", debug_file)
+    perform_test(failed, clis, rename_test, "Rename user", debug_file)
+    perform_test(failed, clis, status_test, "Change status", debug_file)
+    perform_test(failed, clis, offline_test, "Go offline", debug_file)
+    perform_test(failed, clis, default_target_test, "Change default target", debug_file)
+    perform_test(failed, clis, help_test, "Ask for help", debug_file)
 
     if failed or SHOWLOG:
         print("")
@@ -284,6 +307,8 @@ def run_tests(failed):
             print(fail)
     else:
         print("\n" + SEPARATOR + "\nAll tests have passed")
+    
+    debug_file.close()
     
 if __name__ == "__main__":
     failed = []
