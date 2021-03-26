@@ -271,7 +271,7 @@ def help_test(clis):
     
 
 def run_tests(failed):
-    debug_file = open('debuglog','r')
+    debug_file = open('../../debuglog','r')
     clis = []
     clis += [IrcClient('test1', 'asd')]
     clis += [IrcClient('test2', 'asd')]
