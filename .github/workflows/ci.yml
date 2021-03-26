@@ -17,7 +17,8 @@ jobs:
 
     - name: build bitlbee
       run: |
-        ./configure #\
+        ./configure \
+            --asan=1
            # --events=glib \
            # --ssl=gnutls \
            # --doc=0 \
@@ -30,12 +31,17 @@ jobs:
         cat ./.tests/gcovflags >> Makefile.settings
         make
         sudo make install
-        sudo bitlbee -F
+        sudo BITLBEE_DEBUG=1 bitlbee -Dnv 2> ./testlog &
 
     - name: jabber test
       run: |
         sudo ./.tests/setup.sh
         python3 ./.tests/test1.py
+
+    - name: debug output
+      if: ${{ always() }}
+      run: |
+        less ./testlog
 
     - name: code coverage
       if: ${{ always() }}
