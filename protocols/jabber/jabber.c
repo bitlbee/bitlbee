@@ -380,6 +380,7 @@ static void jabber_logout(struct im_connection *ic)
 //	g_free(jd->username);
 //	g_free(jd->me);
 	g_free(jd);
+	g_free(jd);
 
 	jabber_connections = g_slist_remove(jabber_connections, ic);
 }
