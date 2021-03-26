@@ -31,7 +31,6 @@ jobs:
         cat ./.tests/gcovflags >> Makefile.settings
         make
         sudo make install
-        #sudo BITLBEE_DEBUG=1 bitlbee -F
         (BITLBEE_DEBUG=1 ./bitlbee -Dnv 2> ./debuglog) &
 
     - name: jabber test
@@ -48,4 +47,5 @@ jobs:
     - name: code coverage
       if: ${{ always() }}
       run: |
+        killall bitlbee
         gcovr -r .
