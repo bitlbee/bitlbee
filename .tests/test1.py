@@ -99,7 +99,7 @@ def debug_check(debug_file):
     error_found = False
     debug_log = ''
     while True:
-        line = readline(debug_file)
+        line = debug_file.readline()
         if len(line) == 0:
             break
         debug_log += line
