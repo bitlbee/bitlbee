@@ -37,6 +37,7 @@ jobs:
       run: |
         sudo ./.tests/setup.sh
         python3 ./.tests/test1.py
+        killall bitlbee
 
     - name: debug output
       if: ${{ always() }}
@@ -47,5 +48,4 @@ jobs:
     - name: code coverage
       if: ${{ always() }}
       run: |
-        killall bitlbee
         gcovr -r .
