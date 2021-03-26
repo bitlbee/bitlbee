@@ -32,7 +32,7 @@ jobs:
         make
         sudo make install
         #sudo BITLBEE_DEBUG=1 bitlbee -F
-        (BITLBEE_DEBUG=1 bitlbee -Dnv 2> ./debuglog) &
+        (BITLBEE_DEBUG=1 ./bitlbee -Dnv 2> ./debuglog) &
 
     - name: jabber test
       run: |
