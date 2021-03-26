@@ -372,14 +372,14 @@ static void jabber_logout(struct im_connection *ic)
 
 	md5_free(&jd->cached_id_prefix);
 
-	g_free(jd->oauth2_access_token);
-	g_free(jd->away_message);
-	g_free(jd->internal_jid);
-	g_free(jd->gmail_tid);
-	g_free(jd->muc_host);
-	g_free(jd->username);
-	g_free(jd->me);
-	g_free(jd);
+//	g_free(jd->oauth2_access_token);
+//	g_free(jd->away_message);
+//	g_free(jd->internal_jid);
+//	g_free(jd->gmail_tid);
+//	g_free(jd->muc_host);
+//	g_free(jd->username);
+//	g_free(jd->me);
+//	g_free(jd);
 
 	jabber_connections = g_slist_remove(jabber_connections, ic);
 }
