@@ -6,4 +6,4 @@ def talk_to_bitlbee(clis):
     ret = ret & btlib.yes_test(clis)
     return ret
 
-btlib.perform_test(btlib.talk_to_bitlbee)
+btlib.perform_test(talk_to_bitlbee)
