@@ -32,7 +32,7 @@ jobs:
 
         ./.tests/cleanup_bitlbee.sh
     
-    - name: help files
+    - name: ask for help
       run: |
         ./.tests/setup_bitlbee.sh
 
