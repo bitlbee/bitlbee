@@ -85,6 +85,7 @@ def msg_comes_thru(sender, receiver, message):
 
 
 def perform_test(test_function):
+    time.sleep(5)
     clis = []
     clis += [IrcClient('test1', 'asd')]
     clis += [IrcClient('test2', 'asd')]
