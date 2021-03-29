@@ -4,7 +4,7 @@ set -e
 
 killall bitlbee
 
-printf '\n\nBitlbee output:\n\n'
+printf 'Bitlbee output:\n\n'
 less ./debuglog
 
 if cat ./debuglog | grep -i -q error

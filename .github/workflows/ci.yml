@@ -42,6 +42,46 @@ jobs:
         ./.tests/cleanup_bitlbee.sh
         ./.tests/cleanup_prosody.sh
 
+    - name: jabber add buddy
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_add_buddy.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
+
+    - name: jabber send message
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_send_msg.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
+
+    - name: jabber rename buddy
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_rename_buddy.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
+
+    - name: jabber set status
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_status.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
+
     - name: code coverage
       if: ${{ always() }}
       run: |
