@@ -32,11 +32,10 @@ jobs:
 
         ./.tests/cleanup_bitlbee.sh
 
-    - name: jabber: connect
+    - name: jabber connect
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
 
-        python3 ./.tests/test1.py
 
         ./.tests/cleanup_bitlbee.sh
         ./.tests/cleanup_prosody.sh
