@@ -31,8 +31,17 @@ jobs:
         python3 ./.tests/talk_to_bitlbee.py
 
         ./.tests/cleanup_bitlbee.sh
+    
+    - name: help files
+      run: |
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/help.py
+
+        ./.tests/cleanup_bitlbee.sh
 
     - name: jabber connect
+      if: ${{ always() }}
       run: |
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
@@ -43,6 +52,7 @@ jobs:
         ./.tests/cleanup_prosody.sh
 
     - name: jabber add buddy
+      if: ${{ always() }}
       run: |
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
@@ -53,6 +63,7 @@ jobs:
         ./.tests/cleanup_prosody.sh
 
     - name: jabber send message
+      if: ${{ always() }}
       run: |
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
@@ -63,6 +74,7 @@ jobs:
         ./.tests/cleanup_prosody.sh
 
     - name: jabber rename buddy
+      if: ${{ always() }}
       run: |
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
@@ -73,11 +85,45 @@ jobs:
         ./.tests/cleanup_prosody.sh
 
     - name: jabber set status
+      if: ${{ always() }}
       run: |
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
 
         python3 ./.tests/jabber_status.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
+
+    - name: jabber go offline
+      if: ${{ always() }}
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_offline.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
+
+    - name: jabber change default target
+      if: ${{ always() }}
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_default_target.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
+
+    - name: jabber block buddy
+      if: ${{ always() }}
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_block_buddy.py
 
         ./.tests/cleanup_bitlbee.sh
         ./.tests/cleanup_prosody.sh
