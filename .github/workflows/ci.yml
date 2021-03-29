@@ -31,19 +31,17 @@ jobs:
         cat ./.tests/gcovflags >> Makefile.settings
         make
         sudo make install
-        (BITLBEE_DEBUG=1 ./bitlbee -Dnv 2> ./debuglog) &
-
+        touch ./debuglog
+    
     - name: jabber test
       run: |
-        sudo ./.tests/setup.sh
-        python3 ./.tests/test1.py
-        killall bitlbee
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
 
-    - name: debug output
-      if: ${{ always() }}
-      run: |
-        less ./debuglog
-        if cat ./debuglog | grep -i -q error; then exit 1; fi
+        python3 ./.tests/test1.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
 
     - name: code coverage
       if: ${{ always() }}
