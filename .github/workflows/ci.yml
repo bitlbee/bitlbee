@@ -18,24 +18,21 @@ jobs:
 
     - name: build bitlbee
       run: |
-        ./configure \
-            --asan=1
-           # --events=glib \
-           # --ssl=gnutls \
-           # --doc=0 \
-           # --jabber=0 \
-           # --msn=0 \
-           # --oscar=0 \
-           # --twitter=0 \
-           # --yahoo=0
-
+        ./configure --asan=1
         cat ./.tests/gcovflags >> Makefile.settings
         make
         sudo make install
         touch ./debuglog
     
-    - name: jabber test
+    - name: talk to bitlbee
       run: |
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/talk_to_bitlbee.py
+
+        ./.tests/cleanup_bitlbee.sh
+
+    - name: jabber: connect
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
 
