@@ -37,6 +37,7 @@ jobs:
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
 
+        python3 ./.tests/jabber_connect.py
 
         ./.tests/cleanup_bitlbee.sh
         ./.tests/cleanup_prosody.sh

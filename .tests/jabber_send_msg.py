@@ -3,16 +3,8 @@ import sys
 import time
 import select
 
-FUN = [
-"Did I ask you something?",
-"Oh yeah, that's right.",
-"Alright, alright. Now go back to work.",
-"Buuuuuuuuuuuuuuuurp... Excuse me!",
-"Yes?",
-"No?",
-]
-
 SEPARATOR = "="*60
+SMOLPARATOR = "-"*60
 
 class IrcClient:
     def __init__(self, nick, pwd):
@@ -45,12 +37,14 @@ class IrcClient:
                 time.sleep(1)
 
         if not connected:
-            return False
+            print("IRC connection failed for " + self.nick)
+            sys.exit(1)
+        
+        print("IRC connection established for " + self.nick)
 
         self.send_raw('USER ' + (self.nick + " ")*3)
         self.send_raw('NICK ' + self.nick)
         self.send_raw('JOIN &bitlbee')
-        return True
 
     def jabber_login(self):
         self.send_priv_msg("&bitlbee", "account add jabber "+self.nick+"@localhost "+self.pwd)
@@ -58,7 +52,11 @@ class IrcClient:
         self.send_priv_msg("&bitlbee", "account on")
         time.sleep(1)
         self.receive()
-        return (self.log.find('Logged in') != -1):
+        if self.log.find('Logged in') == -1:
+            print("Jabber login failed for " + self.nick)
+            sys.exit(1)
+        else:
+            print("Jabber login successful for " + self.nick)
 
     def receive(self):
         text = ''
@@ -92,10 +90,13 @@ def msg_comes_thru(sender, receiver, message):
     received = receiver.receive().find(message) != -1
     return received
 
+
 def perform_test(test_function):
     clis = []
     clis += [IrcClient('test1', 'asd')]
     clis += [IrcClient('test2', 'asd')]
+    for cli in clis:
+        cli.connect()
 
     fail = not test_function(clis)
 
@@ -106,14 +107,10 @@ def perform_test(test_function):
         print(cli.tmplog)
     print(SEPARATOR)
     
+
     if fail:
         sys.exit(1)
 
-def connect_test(clis):
-    ret = True
-    for cli in clis:
-        ret = ret & cli.connect()
-    return ret
 
 def yes_test(clis):
     ret = False
@@ -125,12 +122,6 @@ def yes_test(clis):
             if x:
                 print("The RNG gods smile upon us")
             break
-    return ret
-
-def jabber_login_test(clis):
-    ret = True
-    for cli in clis:
-        ret = ret & cli.jabber_login()
     return ret
 
 def add_buddy_test(clis):

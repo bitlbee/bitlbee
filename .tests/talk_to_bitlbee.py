@@ -1,24 +1,9 @@
 import btlib
 
-FUN = [
-"Did I ask you something?",
-"Oh yeah, that's right.",
-"Alright, alright. Now go back to work.",
-"Buuuuuuuuuuuuuuuurp... Excuse me!",
-"Yes?",
-"No?",
-]
-
-def yes_test(clis):
-    ret = False
-    clis[0].send_priv_msg("&bitlbee", "yes")
-    clis[0].receive()
-    for x, fun in enumerate(FUN):
-        if (clis[0].log.find(fun) != -1):
-            ret = True
-            if x:
-                print("The RNG gods smile upon us")
-            break
+def talk_to_bitlbee(clis):
+    ret = True
+    ret = ret & btlib.connect_test(clis)
+    ret = ret & btlib.yes_test(clis)
     return ret
 
-btlib.perform_test(yes_test)
+btlib.perform_test(btlib.talk_to_bitlbee)
