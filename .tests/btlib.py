@@ -58,7 +58,7 @@ class IrcClient:
         self.send_priv_msg("&bitlbee", "account on")
         time.sleep(1)
         self.receive()
-        return (self.log.find('Logged in') != -1):
+        return (self.log.find('Logged in') != -1)
 
     def receive(self):
         text = ''
