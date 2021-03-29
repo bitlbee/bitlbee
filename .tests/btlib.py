@@ -27,9 +27,16 @@ class IrcClient:
         self.send_raw('PRIVMSG '+recip+' :'+msg, loud)
 
     def connect(self):
-        try:
-            self.sck.connect(('127.0.0.1', 6667))
-        except:
+        connected = False
+        for x in range(5):
+            try:
+                self.sck.connect(('127.0.0.1', 6667))
+                connected = True
+                break
+            except:
+                time.sleep(1)
+
+        if not connected:
             print("IRC connection failed for " + self.nick)
             sys.exit(1)
         
@@ -85,7 +92,6 @@ def msg_comes_thru(sender, receiver, message):
 
 
 def perform_test(test_function):
-    time.sleep(5)
     clis = []
     clis += [IrcClient('test1', 'asd')]
     clis += [IrcClient('test2', 'asd')]
