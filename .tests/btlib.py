@@ -84,7 +84,7 @@ def msg_comes_thru(sender, receiver, message):
     return received
 
 
-def perform_test(clis, test_function):
+def perform_test(test_function):
     clis = []
     clis += [btlib.IrcClient('test1', 'asd')]
     clis += [btlib.IrcClient('test2', 'asd')]
