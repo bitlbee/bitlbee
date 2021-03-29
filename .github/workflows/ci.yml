@@ -26,7 +26,7 @@ jobs:
     
     - name: talk to bitlbee
       run: |
-        ./.tests/setup_bitlbee.sh
+        (BITLBEE_DEBUG=1 ./bitlbee -Dnv 2> ./debuglog) & 
 
         python3 ./.tests/talk_to_bitlbee.py
 
