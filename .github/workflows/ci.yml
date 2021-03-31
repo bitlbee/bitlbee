@@ -5,7 +5,7 @@ on:
   - push
 
 jobs:
-  general/jabber:
+  jabber:
     runs-on: ubuntu-20.04
 
     steps:
