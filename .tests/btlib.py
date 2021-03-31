@@ -174,11 +174,11 @@ def unregister_test(clis):
 
 def identify_test(clis):
     ret = True
-    clis[1].send_priv_msg("&bitlbee", "register "+clis[1].pwd)
+    clis[1].send_priv_msg("&bitlbee", "identify "+clis[1].pwd)
     time.sleep(0.5)
     ret = ret & (clis[1].receive().find('Incorrect password') != -1)
 
-    clis[1].send_priv_msg("&bitlbee", "register "+clis[1].pwd*2)
+    clis[1].send_priv_msg("&bitlbee", "identify "+clis[1].pwd*2)
     time.sleep(0.5)
     ret = ret & (clis[1].receive().find('Password accepted') != -1)
     return ret
