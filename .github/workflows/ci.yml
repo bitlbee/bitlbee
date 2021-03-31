@@ -22,9 +22,11 @@ jobs:
         cat ./.tests/gcovflags >> Makefile.settings
         make
         sudo make install
+        sudo make install-etc
 
         touch ./debuglog
-        sudo chmod -R 777 /usr/local/etc/bitlbee
+
+        sudo mkdir /var/lib/bitlbee
         sudo chmod -R 777 /var/lib/bitlbee
     
     - name: talk to bitlbee
