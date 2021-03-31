@@ -144,21 +144,18 @@ def jabber_delete_account_test(clis):
     ret = True
     clis[1].receive()
     clis[1].send_priv_msg("&bitlbee", "account list")
-    time.sleep(0.5)
     ret = ret & (clis[1].receive().find(clis[1].nick+'@localhost') != -1)
 
     clis[1].send_priv_msg("&bitlbee", "account on")
     clis[1].send_priv_msg("&bitlbee", "account "+clis[1].nick+" del")
     clis[1].receive()
     clis[1].send_priv_msg("&bitlbee", "account list")
-    time.sleep(0.5)
     ret = ret & (clis[1].receive().find(clis[1].nick+'@localhost') != -1)
 
     clis[1].send_priv_msg("&bitlbee", "account off")
     clis[1].send_priv_msg("&bitlbee", "account "+clis[1].nick+" del")
     clis[1].receive()
     clis[1].send_priv_msg("&bitlbee", "account list")
-    time.sleep(0.5)
     ret = ret & (clis[1].receive().find(clis[1].nick+'@localhost') == -1)
     return ret
 
@@ -169,27 +166,22 @@ def register_test(clis):
     
 def unregister_test(clis):
     clis[1].send_priv_msg("&bitlbee", "drop "+clis[1].pwd*2)
-    time.sleep(0.5)
     ret = (clis[1].receive().find('removed') != -1)
     clis[1].send_priv_msg("&bitlbee", "drop "+clis[1].pwd*2)
-    time.sleep(0.5)
     ret = ret & (clis[1].receive().find('That account does not exist') != -1)
     return ret
 
 def identify_test(clis):
     ret = True
     clis[1].send_priv_msg("&bitlbee", "identify "+clis[1].pwd)
-    time.sleep(0.5)
     ret = ret & (clis[1].receive().find('Incorrect password') != -1)
 
     clis[1].send_priv_msg("&bitlbee", "identify "+clis[1].pwd*2)
-    time.sleep(0.5)
     ret = ret & (clis[1].receive().find('Password accepted') != -1)
     return ret
 
 def identify_nonexist_test(clis):
-    clis[1].send_priv_msg("&bitlbee", "register "+clis[1].pwd)
-    time.sleep(0.5)
+    clis[1].send_priv_msg("&bitlbee", "identify "+clis[1].pwd)
     return (clis[1].receive().find('The nick is (probably) not registered') != -1)
 
 def add_buddy_test(clis):
@@ -215,10 +207,8 @@ def remove_buddy_test(clis):
 
     clis[0].add_jabber_buddy(clis[1].nick)
     clis[1].send_priv_msg("&bitlbee", "yes")
-    time.sleep(1)
     clis[0].send_priv_msg("&bitlbee", "blist all")
-    time.sleep(0.5)
-    junk = clis[0].receive()
+    junk = clis[0].receive(wait=5)
     #ret = ret & (junk.find("1 available") != -1)
     ret = ret & (junk.find(clis[1].nick) != -1)
     return ret
