@@ -18,7 +18,7 @@ jobs:
 
     - name: build bitlbee
       run: |
-        ./configure --asan=1
+        ./configure --asan=1 --twitter=0
         cat ./.tests/gcovflags >> Makefile.settings
         make
         sudo make install
@@ -39,6 +39,26 @@ jobs:
         python3 ./.tests/help.py
 
         ./.tests/cleanup_bitlbee.sh
+
+    - name: (un)register
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/register.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/identify.py
+        python3 ./.tests/unregister.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/setup_bitlbee.sh
+        
+        python3 ./.tests/identify_empty.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
 
     - name: jabber connect
       if: ${{ always() }}

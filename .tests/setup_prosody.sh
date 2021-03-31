@@ -1,8 +1,8 @@
 #!/bin/bash
 
-sudo prosodyctl deluser test1@localhost
-sudo prosodyctl deluser test2@localhost
-sudo prosodyctl stop
+sudo prosodyctl deluser test1@localhost >/dev/null 2>/dev/null
+sudo prosodyctl deluser test2@localhost >/dev/null 2>/dev/null
+sudo prosodyctl stop >/dev/null 2>/dev/null
 
 set -e
 sudo /etc/init.d/prosody start
