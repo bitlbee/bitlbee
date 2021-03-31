@@ -138,23 +138,24 @@ def jabber_login_test(clis):
 
 def jabber_delete_account_test(clis):
     ret = True
+    clis[1].receive()
     clis[1].send_priv_msg("&bitlbee", "account list")
     time.sleep(0.5)
-    ret = ret & (clis[0].receive().find(clis[1].nick+'@localhost') != -1)
+    ret = ret & (clis[1].receive().find(clis[1].nick+'@localhost') != -1)
 
     clis[1].send_priv_msg("&bitlbee", "account on")
     clis[1].send_priv_msg("&bitlbee", "account "+clis[1].nick+" del")
-    clis[0].receive()
+    clis[1].receive()
     clis[1].send_priv_msg("&bitlbee", "account list")
     time.sleep(0.5)
-    ret = ret & (clis[0].receive().find(clis[1].nick+'@localhost') != -1)
+    ret = ret & (clis[1].receive().find(clis[1].nick+'@localhost') != -1)
 
     clis[1].send_priv_msg("&bitlbee", "account off")
     clis[1].send_priv_msg("&bitlbee", "account "+clis[1].nick+" del")
-    clis[0].receive()
+    clis[1].receive()
     clis[1].send_priv_msg("&bitlbee", "account list")
     time.sleep(0.5)
-    ret = ret & (clis[0].receive().find(clis[1].nick+'@localhost') == -1)
+    ret = ret & (clis[1].receive().find(clis[1].nick+'@localhost') == -1)
     return ret
 
 def add_buddy_test(clis):
