@@ -104,6 +104,7 @@ def perform_test(test_function):
     fail = not test_function(clis)
 
     if ALWAYSSHOWLOG or fail:
+        print(test_function.__name__ + ' logs:')
         for cli in clis:
             cli.receive()
             print(SEPARATOR)
@@ -111,7 +112,7 @@ def perform_test(test_function):
             print(cli.tmplog)
         print(SEPARATOR)
     else:
-        print('script passed')
+        print(test_function.__name__ + ' succeeded')
     
     if fail:
         sys.exit(1)

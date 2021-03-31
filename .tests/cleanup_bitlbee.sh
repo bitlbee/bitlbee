@@ -6,7 +6,7 @@ killall bitlbee || true
 rm -r /var/lib/bitlbee/* || true
 sudo make uninstall-etc
 
-printf 'Bitlbee output:\n\n'
+printf 'Bitlbee output:\n'
 less ./debuglog
 
 if cat ./debuglog | grep -i -q error
