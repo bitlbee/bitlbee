@@ -62,7 +62,7 @@ class IrcClient:
         self.receive()
         return (self.log.find('Logged in') != -1)
 
-    def receive(self):
+    def receive(self, wait = 1):
         text = ''
         while True:
             readable, _, _ = select.select([self.sck], [], [], 5)
@@ -72,7 +72,9 @@ class IrcClient:
                     if line.find('PING') != -1:
                         self.send_raw('PONG ' + line.split()[1])
             else:
-                break
+                time.sleep(wait)
+                if self.sck not in readable:
+                    break
         self.log += text
         self.tmplog += text
         return text
@@ -159,13 +161,9 @@ def jabber_delete_account_test(clis):
     return ret
 
 def register_test(clis):
-    ret = False
     clis[1].send_priv_msg("&bitlbee", "register "+clis[1].pwd*2)
-    for a in range(20):
-        if (clis[1].receive().find('Account successfully created') != -1):
-            ret = True
-            break
-        time.sleep(0.5)
+    ret = (clis[1].receive(wait = 10).find('Account successfully created') != -1)
+    print("What is this"+ ret)
     return ret
     
 def unregister_test(clis):
