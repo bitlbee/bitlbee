@@ -41,6 +41,7 @@ jobs:
         ./.tests/cleanup_bitlbee.sh
 
     - name: (un)register
+      run: |
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
 
@@ -55,7 +56,7 @@ jobs:
         ./.tests/cleanup_bitlbee.sh
         ./.tests/setup_bitlbee.sh
         
-        python3 ./.tests/identify_empty.py
+        python3 ./.tests/identify_nonexist.py
 
         ./.tests/cleanup_bitlbee.sh
         ./.tests/cleanup_prosody.sh
