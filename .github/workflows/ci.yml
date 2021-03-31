@@ -46,6 +46,7 @@ jobs:
         ./.tests/cleanup_bitlbee.sh
 
     - name: register
+      if: ${{ always() }}
       run: |
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
@@ -61,6 +62,7 @@ jobs:
         ./.tests/cleanup_prosody.sh
 
     - name: unregister
+      if: ${{ always() }}
       run: |
         ./.tests/setup_prosody.sh
         ./.tests/setup_bitlbee.sh
