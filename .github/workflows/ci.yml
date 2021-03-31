@@ -62,6 +62,17 @@ jobs:
         ./.tests/cleanup_bitlbee.sh
         ./.tests/cleanup_prosody.sh
 
+    - name: jabber remove buddy
+      if: ${{ always() }}
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_remove_buddy.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
+
     - name: jabber send message
       if: ${{ always() }}
       run: |
