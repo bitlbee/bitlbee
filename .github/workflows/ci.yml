@@ -92,7 +92,7 @@ jobs:
         ./.tests/cleanup_bitlbee.sh
         ./.tests/cleanup_prosody.sh
 
-    - name: jabber remove buddy
+    - name: jabber remove buddy (leakage ok)
       if: ${{ always() }}
       run: |
         ./.tests/setup_prosody.sh
@@ -100,7 +100,7 @@ jobs:
 
         python3 ./.tests/jabber_remove_buddy.py
 
-        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_bitlbee_leakage_ok.sh
         ./.tests/cleanup_prosody.sh
 
     - name: jabber send message
@@ -136,7 +136,7 @@ jobs:
         ./.tests/cleanup_bitlbee.sh
         ./.tests/cleanup_prosody.sh
 
-    - name: jabber go offline
+    - name: jabber go offline (leakage ok)
       if: ${{ always() }}
       run: |
         ./.tests/setup_prosody.sh
@@ -144,7 +144,7 @@ jobs:
 
         python3 ./.tests/jabber_offline.py
 
-        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_bitlbee_leakage_ok.sh
         ./.tests/cleanup_prosody.sh
 
     - name: jabber change default target
@@ -173,3 +173,49 @@ jobs:
       if: ${{ always() }}
       run: |
         gcovr -r .
+
+  known bugs:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends clang git make pkg-config libgnutls28-dev libgcrypt20-dev libglib2.0-dev prosody gcovr
+        sudo prosodyctl stop
+
+    - name: build bitlbee
+      run: |
+        ./configure --asan=1 --twitter=0
+        cat ./.tests/gcovflags >> Makefile.settings
+        make
+        sudo make install
+        sudo make install-etc
+
+        touch ./debuglog
+
+        sudo mkdir /var/lib/bitlbee
+        sudo chmod -R 777 /var/lib/bitlbee
+
+    - name: jabber remove buddy (leakage ok)
+      if: ${{ always() }}
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_remove_buddy.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
+
+    - name: jabber go offline
+      if: ${{ always() }}
+      run: |
+        ./.tests/setup_prosody.sh
+        ./.tests/setup_bitlbee.sh
+
+        python3 ./.tests/jabber_offline.py
+
+        ./.tests/cleanup_bitlbee.sh
+        ./.tests/cleanup_prosody.sh
