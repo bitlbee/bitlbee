@@ -52,26 +52,8 @@ jobs:
         ./.tests/setup_bitlbee.sh
 
         python3 ./.tests/register.py
-
-        ./.tests/cleanup_bitlbee.sh
-        ./.tests/setup_bitlbee.sh
-
         python3 ./.tests/identify.py
-
-        ./.tests/cleanup_bitlbee.sh
-        ./.tests/cleanup_prosody.sh
-
-    - name: unregister
-      if: ${{ always() }}
-      run: |
-        ./.tests/setup_prosody.sh
-        ./.tests/setup_bitlbee.sh
-
         python3 ./.tests/unregister.py
-
-        ./.tests/cleanup_bitlbee.sh
-        ./.tests/setup_bitlbee.sh
-        
         python3 ./.tests/identify_nonexist.py
 
         ./.tests/cleanup_bitlbee.sh

@@ -3,6 +3,8 @@
 set -e
 
 killall bitlbee
+rm -r /var/lib/bitlbee/*
+sudo make uninstall-etc
 
 printf 'Bitlbee output:\n\n'
 less ./debuglog

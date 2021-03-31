@@ -110,6 +110,8 @@ def perform_test(test_function):
             print("Test Log "+ cli.nick+":")
             print(cli.tmplog)
         print(SEPARATOR)
+    else:
+        print('script passed')
     
     if fail:
         sys.exit(1)
@@ -163,7 +165,6 @@ def jabber_delete_account_test(clis):
 def register_test(clis):
     clis[1].send_priv_msg("&bitlbee", "register "+clis[1].pwd*2)
     ret = (clis[1].receive(wait = 10).find('Account successfully created') != -1)
-    print("What is this"+ str(ret))
     return ret
     
 def unregister_test(clis):
