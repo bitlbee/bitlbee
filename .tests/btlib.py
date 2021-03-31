@@ -159,9 +159,14 @@ def jabber_delete_account_test(clis):
     return ret
 
 def register_test(clis):
+    ret = False
     clis[1].send_priv_msg("&bitlbee", "register "+clis[1].pwd*2)
-    time.sleep(0.5)
-    return (clis[1].receive().find('Account successfully created') != -1)
+    for a in range(20):
+        if (clis[1].receive().find('Account successfully created') != -1):
+            ret = True
+            break
+        time.sleep(0.5)
+    return ret
     
 def unregister_test(clis):
     clis[1].send_priv_msg("&bitlbee", "drop "+clis[1].pwd*2)
