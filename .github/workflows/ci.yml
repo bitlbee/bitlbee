@@ -174,7 +174,7 @@ jobs:
       run: |
         gcovr -r .
 
-  known bugs:
+  known_bugs:
     runs-on: ubuntu-20.04
 
     steps:
