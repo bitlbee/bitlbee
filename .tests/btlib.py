@@ -14,6 +14,8 @@ FUN = [
 
 SEPARATOR = "="*60
 
+ALWAYSSHOWLOG = False
+
 class IrcClient:
     def __init__(self, nick, pwd):
         self.nick = nick
@@ -99,12 +101,13 @@ def perform_test(test_function):
 
     fail = not test_function(clis)
 
-    for cli in clis:
-        cli.receive()
+    if ALWAYSSHOWLOG or fail:
+        for cli in clis:
+            cli.receive()
+            print(SEPARATOR)
+            print("Test Log "+ cli.nick+":")
+            print(cli.tmplog)
         print(SEPARATOR)
-        print("Test Log "+ cli.nick+":")
-        print(cli.tmplog)
-    print(SEPARATOR)
     
     if fail:
         sys.exit(1)
@@ -144,19 +147,24 @@ def add_buddy_test(clis):
     junk = clis[0].receive()
     ret = junk.find(clis[1].nick) != -1
     ret = ret & (junk.find("1 available") != -1)
-    '''
+    return ret
+
+def remove_buddy_test(clis):
+    ret = add_buddy_test(clis)
+
     clis[0].send_priv_msg("&bitlbee", "remove " +clis[1].nick)
-    clis[0].send_priv_msg("&bitlbee", "blist")
+    clis[0].send_priv_msg("&bitlbee", "blist all")
+    time.sleep(0.5)
     ret = ret & (clis[0].receive().find(clis[1].nick) == -1)
 
     clis[0].add_jabber_buddy(clis[1].nick)
     clis[1].send_priv_msg("&bitlbee", "yes")
     time.sleep(1)
-    clis[0].send_priv_msg("&bitlbee", "blist")
+    clis[0].send_priv_msg("&bitlbee", "blist all")
+    time.sleep(0.5)
     junk = clis[0].receive()
     ret = ret & (junk.find("1 available") != -1)
     ret = ret & (junk.find(clis[1].nick) != -1)
-    '''
     return ret
 
 def message_test(clis):

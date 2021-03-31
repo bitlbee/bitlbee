@@ -14,7 +14,7 @@ jobs:
       run: |
         sudo apt-get update -y
         sudo apt-get install -y --no-install-recommends clang git make pkg-config libgnutls28-dev libgcrypt20-dev libglib2.0-dev prosody gcovr
-        #sudo prosodyctl stop
+        sudo prosodyctl stop
 
     - name: build bitlbee
       run: |
