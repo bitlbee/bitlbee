@@ -2,8 +2,8 @@
 
 set -e
 
-killall bitlbee
-rm -r /var/lib/bitlbee/*
+killall bitlbee || true
+rm -r /var/lib/bitlbee/* || true
 sudo make uninstall-etc
 
 printf 'Bitlbee output:\n\n'
