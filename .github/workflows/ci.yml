@@ -24,9 +24,9 @@ jobs:
         sudo make install
 
         touch ./debuglog
-        mkdir -p /usr/local/etc/bitlbee/
-        touch /usr/local/etc/bitlbee/bitlbee.conf
-        mkdir -p /var/lib/bitlbee/
+        sudo chmod -R 777 /usr/local/etc/bitlbee/
+        sudo chmod -R 777 /usr/local/etc/bitlbee/bitlbee.conf
+        sudo chmod -R 777 /var/lib/bitlbee/
     
     - name: talk to bitlbee
       run: |
