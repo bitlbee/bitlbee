@@ -23,35 +23,6 @@
 
 #include "jabber.h"
 
-int jabber_block_feature(struct im_connection *ic)
-{
-	struct jabber_data *jd = ic->proto_data;
-	GSList *features = jd->features;
-	int foundbk = FALSE;
-	struct prpl *prpl = ic->acc->prpl;
-
-	while (features) {
-		if (!strcmp(features->data, XMLNS_BLOCK)) {
-			foundbk = TRUE;
-		}
-		features = g_slist_next(features);
-	}
-
-	if (foundbk) {
-		prpl->add_deny = jabber_buddy_block;
-		prpl->rem_deny = jabber_buddy_unblock;
-		prpl->add_permit = jabber_buddy_permit;
-		prpl->rem_permit = jabber_buddy_unpermit;
-	} else {
-		prpl->add_deny = NULL;
-		prpl->rem_deny = NULL;
-		prpl->add_permit = NULL;
-		prpl->rem_permit = NULL;
-	}
-
-	return foundbk;
-}
-
 void jabber_buddy_blockunblock(struct im_connection *ic, char *who, int block)
 {
 	struct xt_node *node, *query;
@@ -86,9 +57,11 @@ void jabber_buddy_unblock(struct im_connection *ic, char *who)
 	jabber_buddy_blockunblock(ic, who, FALSE);
 }
 
+//jabber doesn't have permit lists so these are empty
 void jabber_buddy_permit(struct im_connection *ic, char *who)
 {
 }
+
 void jabber_buddy_unpermit(struct im_connection *ic, char *who)
 {
 }

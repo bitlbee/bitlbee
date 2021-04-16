@@ -1006,6 +1006,7 @@ static xt_status jabber_iq_disco_server_response(struct im_connection *ic,
                                                  struct xt_node *node, struct xt_node *orig)
 {
 	struct jabber_data *jd = ic->proto_data;
+    struct prpl *prpl = ic->acc->prpl;
 	struct xt_node *query, *id, *c;
 	char *feature;
 
@@ -1013,15 +1014,12 @@ static xt_status jabber_iq_disco_server_response(struct im_connection *ic,
 		return XT_HANDLED;
 	}
 
-	c = query->children;
-
-	while ((c = xt_find_node(c, "feature"))) {
-		feature = xt_find_attr(c, "var");
-		if (feature) {
-			jd->features = g_slist_append(jd->features, g_strdup(feature));
-		}
-		c = c->next;
-	}
+    if (xt_find_node_by_attr(query->children, "feature", "var", XMLNS_BLOCK)) {
+        prpl->add_deny = jabber_buddy_block;
+        prpl->rem_deny = jabber_buddy_unblock;
+        prpl->add_permit = jabber_buddy_permit;
+        prpl->rem_permit = jabber_buddy_unpermit;
+    }
 
 	if (xt_find_node_by_attr(query->children, "feature", "var", XMLNS_CARBONS) &&
 	    set_getbool(&ic->acc->set, "carbons")) {
@@ -1050,8 +1048,6 @@ static xt_status jabber_iq_disco_server_response(struct im_connection *ic,
 			jd->flags |= JFLAG_GTALK;
 		}
 	}
-
-	jabber_block_feature(ic);
 
 	return XT_HANDLED;
 }
