@@ -108,7 +108,6 @@ struct jabber_data {
 	GHashTable *node_cache;
 	GHashTable *buddies;
 
-	GSList *features;
 	GSList *filetransfers;
 	GSList *streamhosts;
 	int have_streamhosts;
