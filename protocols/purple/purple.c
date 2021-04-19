@@ -284,6 +284,16 @@ static void purple_init(account_t *acc)
 	s = set_add(&acc->set, "display_name", NULL, set_eval_display_name, acc);
 	s->flags |= ACC_SET_ONLINE_ONLY;
 
+	s = set_add(&acc->set, "defer_joins", "false", set_eval_bool, acc);
+
+	if (strcmp(prpl->info->name, "Matrix") == 0) {
+		s = set_add(&acc->set, "use_matrix_alias", "false", set_eval_bool, acc);
+		s->flags |= ACC_SET_OFFLINE_ONLY;
+	}
+
+	s = set_add(&acc->set, "chat_name_with_tag", "false", set_eval_bool, acc);
+	s->flags |= ACC_SET_OFFLINE_ONLY;
+
 	if (pi->options & OPT_PROTO_MAIL_CHECK) {
 		s = set_add(&acc->set, "mail_notifications", "false", set_eval_bool, acc);
 		s->flags |= ACC_SET_OFFLINE_ONLY;
@@ -1107,6 +1117,23 @@ static PurpleBlistUiOps bee_blist_uiops =
 	prplcb_blist_remove,       /* remove */
 };
 
+void purple_hint_chat_names(struct groupchat *gc, PurpleConversation *conv) {
+	char *hint = NULL;
+	if (conv->title != NULL) {
+		hint = conv->title;
+	}
+	if (set_getbool(&(gc->ic->acc->set), "use_matrix_alias") && purple_conversation_get_data(conv, "matrix_alias") != NULL) {
+		hint = (char *) purple_conversation_get_data(conv, "matrix_alias");
+	}
+	if (set_getbool(&(gc->ic->acc->set), "chat_name_with_tag")) {
+		char *tag = set_getstr(&(gc->ic->acc->set), "tag");
+		char *tagged_name = g_strdup_printf("%s-%s", tag, hint);
+		imcb_chat_name_hint(gc, tagged_name);
+		g_free(tagged_name);
+	} else {
+		imcb_chat_name_hint(gc, hint);
+	}
+}
 void prplcb_conv_new(PurpleConversation *conv)
 {
 	if (conv->type == PURPLE_CONV_TYPE_CHAT) {
@@ -1117,9 +1144,7 @@ void prplcb_conv_new(PurpleConversation *conv)
 
 		if (!gc) {
 			gc = imcb_chat_new(ic, conv->name);
-			if (conv->title != NULL) {
-				imcb_chat_name_hint(gc, conv->title);
-			}
+			purple_hint_chat_names(gc, conv);
 		}
 
 		/* don't set the topic if it's just the name */
@@ -1133,7 +1158,9 @@ void prplcb_conv_new(PurpleConversation *conv)
 		/* libpurple brokenness: Whatever. Show that we join right away,
 		   there's no clear "This is you!" signaling in _add_users so
 		   don't even try. */
-		imcb_chat_add_buddy(gc, gc->ic->acc->user);
+		if (!set_getbool(&(ic->acc->set), "defer_joins")) {
+			imcb_chat_add_buddy(gc, gc->ic->acc->user);
+		}
 	}
 }
 
@@ -1154,6 +1181,10 @@ void prplcb_conv_add_users(PurpleConversation *conv, GList *cbuddies, gboolean n
 
 		imcb_chat_add_buddy(gc, pcb->name);
 	}
+	purple_hint_chat_names(gc, conv);
+	if (!gc->joined) {
+		imcb_chat_add_buddy(gc, gc->ic->acc->user);
+	}
 }
 
 void prplcb_conv_del_users(PurpleConversation *conv, GList *cbuddies)
@@ -1171,7 +1202,7 @@ static void handle_conv_msg(PurpleConversation *conv, const char *who, const cha
 {
 	struct im_connection *ic = purple_ic_by_pa(conv->account);
 	struct groupchat *gc = conv->ui_data;
-	char *message = g_strdup(message_);
+	char *message = purple_unescape_html(message_);
 	PurpleBuddy *buddy;
 
 	buddy = purple_find_buddy(conv->account, who);
