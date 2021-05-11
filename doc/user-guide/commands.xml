@@ -51,11 +51,11 @@
 					</para>
 					
 					<para>
-						By default all your Twitter contacts will appear in a new channel called #twitter_yourusername. You can change this behaviour using the <emphasis>mode</emphasis> setting (see <emphasis>help set mode</emphasis>).
+						By default all your Twitter contacts will appear in a new channel called #&lt;account_tag&gt;. You can change this behaviour using the <emphasis>mode</emphasis> setting (see <emphasis>help set mode</emphasis>).
 					</para>
 					
 					<para>
-						To send tweets yourself, send them to the twitter_(yourusername) contact, or just write in the groupchat channel if you enabled that option.
+						To send tweets yourself, send them to the &lt;account_tag&gt; contact, or just write in the groupchat channel if you enabled that option.
 					</para>
 
 					<para>
@@ -1072,11 +1072,11 @@
 
 		<description>
 			<para>
-				By default, BitlBee will create a separate channel (called #twitter_yourusername) for all your Twitter contacts/messages.
+				By default, BitlBee will create a separate channel (called #&lt;account_tag&gt;) for all your Twitter contacts/messages.
 			</para>
 
 			<para>
-				If you don't want an extra channel, you can set this setting to "one" (everything will come from one nick, twitter_yourusername), or to "many" (individual nicks for everyone).
+				If you don't want an extra channel, you can set this setting to "one" (everything will come from one nick, &lt;account_tag&gt;), or to "many" (individual nicks for everyone).
 			</para>
 			
 			<para>
@@ -1084,7 +1084,7 @@
 			</para>
 			
 			<para>
-				With modes "many" and "one", you can post tweets by /msg'ing the twitter_yourusername contact. In mode "chat", messages posted in the Twitter channel will also be posted as tweets.
+				With modes "many" and "one", you can post tweets by /msg'ing the &lt;account_tag&gt; contact. In mode "chat", messages posted in the Twitter channel will also be posted as tweets.
 			</para>
 		</description>
 

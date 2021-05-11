@@ -954,13 +954,11 @@ static void twitter_status_show_chat(struct im_connection *ic, struct twitter_xm
 static void twitter_status_show_msg(struct im_connection *ic, struct twitter_xml_status *status)
 {
 	struct twitter_data *td = ic->proto_data;
-	char from[MAX_STRING] = "";
-	char *prefix = NULL, *text = NULL;
+	char *from = NULL, *prefix = NULL, *text = NULL;
 	gboolean me = g_strcasecmp(td->user, status->user->screen_name) == 0;
 
 	if (td->flags & TWITTER_MODE_ONE) {
-		g_snprintf(from, sizeof(from) - 1, "%s_%s", td->prefix, ic->acc->user);
-		from[MAX_STRING - 1] = '\0';
+		from = ic->acc->tag;
 	}
 
 	if (td->flags & TWITTER_MODE_ONE) {
@@ -975,7 +973,7 @@ static void twitter_status_show_msg(struct im_connection *ic, struct twitter_xml
 	text = twitter_msg_add_id(ic, status, prefix ? prefix : "");
 
 	imcb_buddy_msg(ic,
-	               *from ? from : status->user->screen_name,
+	               from ? from : status->user->screen_name,
 	               text ? text : status->text, 0, status->created_at);
 
 	g_free(text);
