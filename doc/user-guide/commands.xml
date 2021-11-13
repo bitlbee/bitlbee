@@ -1779,7 +1779,7 @@
 			</para>
 
 			<para>
-				By default, this answers the first unanswered question. You can also specify a different question as an argument. You can use the <emphasis>qlist</emphasis> command for a list of questions.
+				By default, this answers the last unanswered question (as defined by the <emphasis>query_order</emphasis> setting, which defaults to <emphasis>lifo</emphasis>). You can also specify a different question as an argument. You can use the <emphasis>qlist</emphasis> command for a list of questions.
 			</para>
 		</description>
 
@@ -1795,7 +1795,7 @@
 			</para>
 
 			<para>
-				By default, this answers the first unanswered question. You can also specify a different question as an argument. You can use the <emphasis>qlist</emphasis> command for a list of questions.
+				By default, this answers the last unanswered question (as defined by the <emphasis>query_order</emphasis> setting, which defaults to <emphasis>lifo</emphasis>). You can also specify a different question as an argument. You can use the <emphasis>qlist</emphasis> command for a list of questions.
 			</para>
 		</description>
 	</bitlbee-command>
