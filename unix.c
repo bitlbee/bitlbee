@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 		pw = getpwnam(global.conf->user);
 		if (!pw) {
 			log_message(LOGLVL_ERROR, "Failed to look up user %s.", global.conf->user);
-			return(1);
+			return(EXIT_FAILURE);
 
 		} else if (initgroups(global.conf->user, pw->pw_gid) != 0) {
 			log_message(LOGLVL_ERROR, "initgroups: %s.", strerror(errno));
