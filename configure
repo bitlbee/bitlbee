@@ -927,6 +927,9 @@ SunOS )
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
 	echo '#define NO_FD_PASSING' >> config.h
+	if [ "$arch_rel" = "5.10" ]; then
+		echo '#define NO_STRCASESTR' >> config.h
+	fi
 ;;
 AIX )
 	echo 'EFLAGS+=-Wl,-brtl' >> Makefile.settings

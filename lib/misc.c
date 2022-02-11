@@ -792,3 +792,21 @@ guint b_istr_hash(gconstpointer v)
 
 	return h;
 }
+
+#ifdef NO_STRCASESTR
+char* strcasestr(const char* haystack, const char* needle)
+{
+	size_t haystackn = strlen(haystack);
+	size_t needlen = strlen(needle);
+
+	const char *p = haystack;
+	while (haystackn >= needlen) {
+		if (g_strncasecmp(p, needle, needlen) == 0) {
+		    return (char*) p;
+		}
+		p++;
+		haystackn--;
+	}
+	return NULL;
+}
+#endif
