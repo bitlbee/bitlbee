@@ -67,8 +67,9 @@ case "$arch" in
 		pie=0;;
 	SunOS )
 		if [ "$arch_rel" = "5.10" ]; then
-			pie=0;;
+			pie=0
 		fi
+		;;
 esac
 
 get_version() {
