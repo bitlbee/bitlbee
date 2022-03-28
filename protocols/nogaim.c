@@ -836,7 +836,7 @@ static char *imc_away_state_find(GList *gcm, char *away, char **message)
 						*message = NULL;
 					}
 
-					return imc_away_alias_list[i][j];
+					return m->data;
 				}
 			}
 		}
