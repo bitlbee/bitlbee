@@ -42,6 +42,7 @@ conf_t *conf_load(int argc, char *argv[])
 {
 	conf_t *conf;
 	int opt, i, config_missing = 0;
+	int version_happened = 0;
 
 	conf = g_new0(conf_t, 1);
 
@@ -141,14 +142,20 @@ conf_t *conf_load(int argc, char *argv[])
 			conf_free(conf);
 			return NULL;
 		} else if (opt == 'V') {
-			printf("BitlBee %s\nAPI version %06x\nConfigure args: %s\n",
-			       BITLBEE_VERSION, BITLBEE_VERSION_CODE, BITLBEE_CONFIGURE_ARGS);
-			conf_free(conf);
-			return NULL;
+			printf("BitlBee %s\n", BITLBEE_VERSION);
+			/* the rest of the version string is displayed below, for ld -vvv compatibility*/
+			version_happened = TRUE;
 		} else if (opt == 'u') {
 			g_free(conf->user);
 			conf->user = g_strdup(optarg);
 		}
+	}
+
+	if (version_happened) {
+		printf("API version %06x\nConfigure args: %s\n",
+		       BITLBEE_VERSION_CODE, BITLBEE_CONFIGURE_ARGS);
+		conf_free(conf);
+		return NULL;
 	}
 
 	if (conf->configdir[strlen(conf->configdir) - 1] != '/') {
