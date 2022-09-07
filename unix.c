@@ -162,15 +162,15 @@ int main(int argc, char *argv[])
 
 		} else if (initgroups(global.conf->user, pw->pw_gid) != 0) {
 			log_message(LOGLVL_ERROR, "initgroups: %s.", strerror(errno));
-			return(1);
+			return(EXIT_FAILURE);
 
 		} else if (setgid(pw->pw_gid) != 0) {
 			log_message(LOGLVL_ERROR, "setgid(%d): %s.", pw->pw_gid, strerror(errno));
-			return(1);
+			return(EXIT_FAILURE);
 
 		} else if (setuid(pw->pw_uid) != 0) {
 			log_message(LOGLVL_ERROR, "setuid(%d): %s.", pw->pw_uid, strerror(errno));
-			return(1);
+			return(EXIT_FAILURE);
 		}
 	}
 
