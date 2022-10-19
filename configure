@@ -867,6 +867,11 @@ CYGWIN* )
 	pkgconfiglibs="-L${libdir} -lbitlbee -no-undefined"
 esac
 
+pkgconfigrequires='glib-2.0'
+if [ "$external_json_parser" = '1' ]; then
+	pkgconfigrequires="$pkgconfigrequires json-parser"
+fi
+
 cat <<EOF >bitlbee.pc
 prefix=$prefix
 includedir=$includedir
@@ -876,7 +881,7 @@ datadir=$datadir
 
 Name: bitlbee
 Description: IRC to IM gateway
-Requires: glib-2.0
+Requires: $pkgconfigrequires
 Version: $BITLBEE_VERSION
 Libs: $pkgconfiglibs
 Cflags: -I\${includedir}
