@@ -55,6 +55,8 @@ ldap=0
 
 pie=1
 
+systemd=auto
+
 arch=$(uname -s)
 arch_rel=$(uname -r)
 
@@ -156,6 +158,7 @@ Option		Description				Default
 --ssl=...	SSL library to use (gnutls, nss, openssl, auto)
 							$ssl
 --external_json_parser=0/1/auto	Use External JSON parser $external_json_parser
+--systemd=0/1  Enable/disable systemd support $systemd
 
 
 --target=...	Cross compilation target 		same as host
@@ -749,15 +752,23 @@ else
 	fi;
 fi
 
-if [ -z "$systemdsystemunitdir" ]; then
-	if $PKG_CONFIG --exists systemd; then
+if [ ! "$systemd" = 0 ]; then
+    if ! $PKG_CONFIG --exists systemd ; then
+        if [ -n "$systemdsystemunitdir" ] || [ "$systemd" -eq 1 ]; then
+            echo "systemd requested but not found"
+            exit 1
+        else
+            systemd=0
+        fi
+    fi
+fi
+
+if [ "$systemd" -eq 1 ]; then
+	if [ -z "$systemdsystemunitdir" ]; then
 		systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
 	fi
-fi
-if [ -n "$systemdsystemunitdir" ]; then
-	if [ "$systemdsystemunitdir" != "no" ]; then
-		echo "SYSTEMDSYSTEMUNITDIR=$systemdsystemunitdir" >> Makefile.settings
-	fi
+
+	echo "SYSTEMDSYSTEMUNITDIR=$systemdsystemunitdir" >> Makefile.settings
 fi
 
 if [ "$gcov" = "1" ]; then
@@ -1004,7 +1015,7 @@ else
 	echo '  Off-the-Record (OTR) Messaging disabled.'
 fi
 
-if [ -n "$systemdsystemunitdir" ]; then
+if [ "$systemd" -eq 1 ]; then
 	echo '  systemd enabled.'
 else
 	echo '  systemd disabled.'
