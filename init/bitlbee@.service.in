@@ -6,3 +6,4 @@ ExecStart=@sbindir@bitlbee -I
 StandardInput=socket
 StandardError=syslog
 User=bitlbee
+StateDirectory=bitlbee
