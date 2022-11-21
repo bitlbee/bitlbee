@@ -5,6 +5,7 @@ Description=BitlBee IRC/IM gateway
 ExecStart=@sbindir@bitlbee -F -n
 KillMode=process
 StateDirectory=bitlbee
+RuntimeDirectory=bitlbee
 
 [Install]
 WantedBy=multi-user.target
