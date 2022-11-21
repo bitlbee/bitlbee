@@ -143,6 +143,12 @@ else
 	@echo SYSTEMDSYSTEMUNITDIR not set, not installing systemd unit files.
 endif
 
+ifdef SYSUSERSDIR
+	$(INSTALL) -Dm644 init/bitlbee.sysusers $(DESTDIR)/$(SYSUSERSDIR)/bitlbee.conf
+else
+	@echo SYSUSERSDIR not set, not install sysusers.d files
+endif
+
 tar:
 	fakeroot debian/rules clean || make distclean
 	x=$$(basename $$(pwd)); \

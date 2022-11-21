@@ -18,6 +18,7 @@ libdir='$prefix/lib/'
 plugindir='$prefix/lib/bitlbee/'
 includedir='$prefix/include/bitlbee/'
 systemdsystemunitdir=''
+sysusersdir=''
 libevent='/usr/'
 pidfile='/var/run/bitlbee.pid'
 ipcsocket=''
@@ -130,6 +131,7 @@ Option		Description				Default
 --datadir=...						$datadir
 --plugindir=...						$plugindir
 --systemdsystemunitdir=...				$systemdsystemunitdir
+--sysusersdir                       $sysusersdir
 --pidfile=...						$pidfile
 --config=...						$config
 
@@ -776,8 +778,15 @@ if [ "$systemd" -eq 1 ]; then
 	if [ -z "$systemdsystemunitdir" ]; then
 		systemdsystemunitdir=$(pkgconf_systemd_var systemdsystemunitdir systemd_system_unit_dir)
 	fi
+    if [ -z "$tmpfiles_dir" ] ; then
+        tmpfilesdir=$(pkgconf_systemd_var tmpfilesdir tmpfiles_dir)
+    fi
+    if [ -z "$sysusersdir" ] ; then
+        sysusersdir=$(pkgconf_systemd_var sysusersdir sysusers_dir)
+    fi
 
 	echo "SYSTEMDSYSTEMUNITDIR=$systemdsystemunitdir" >> Makefile.settings
+    echo "SYSUSERSDIR=$sysusersdir" >> Makefile.settings
 fi
 
 if [ "$gcov" = "1" ]; then
