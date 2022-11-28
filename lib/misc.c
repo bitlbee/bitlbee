@@ -149,6 +149,7 @@ static const htmlentity_t ent[] =
 	{ "ouml",   "ö" },
 	{ "uuml",   "ü" },
 	{ "nbsp",   " " },
+	{ "#39",    "'" },
 	{ "",        ""  }
 };
 
