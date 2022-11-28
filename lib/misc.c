@@ -149,6 +149,10 @@ static const htmlentity_t ent[] =
 	{ "ouml",   "ö" },
 	{ "uuml",   "ü" },
 	{ "nbsp",   " " },
+	{ "#38",    "&" },
+	{ "#39",    "'" },
+	{ "#60",    "<" },
+	{ "#62",    ">" },
 	{ "",        ""  }
 };
 
@@ -198,7 +202,12 @@ void strip_html(char *in)
 			}
 		} else if (*in == '&') {
 			cs = ++in;
-			while (*in && g_ascii_isalpha(*in)) {
+
+			if (*in == '#') {
+			    	in++;
+			}
+
+			while (*in && g_ascii_isalnum(*in)) {
 				in++;
 			}
 
