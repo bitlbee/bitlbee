@@ -32,7 +32,9 @@ install: install-bin install-doc install-plugins
 	@echo
 	@echo Installed successfully
 	@echo
+ifndef SYSTEMDSYSTEMUNITDIR
 	@if ! [ -d $(DESTDIR)$(CONFIG) ]; then echo -e '\nThe configuration directory $(DESTDIR)$(CONFIG) does not exist yet, don'\''t forget to create it!'; fi
+endif
 	@if ! [ -e $(DESTDIR)$(ETCDIR)/bitlbee.conf ]; then echo -e '\nNo files are installed in '$(DESTDIR)$(ETCDIR)' by make install. Run make install-etc to do that.'; fi
 ifdef SYSTEMDSYSTEMUNITDIR
 	@echo If you want to start BitlBee using systemd, try \"make install-systemd\".
@@ -141,6 +143,12 @@ ifdef SYSTEMDSYSTEMUNITDIR
 	$(INSTALL) -m 0644 $(_SRCDIR_)init/bitlbee.socket $(DESTDIR)$(SYSTEMDSYSTEMUNITDIR)
 else
 	@echo SYSTEMDSYSTEMUNITDIR not set, not installing systemd unit files.
+endif
+
+ifdef SYSUSERSDIR
+	$(INSTALL) -Dm644 init/bitlbee.sysusers $(DESTDIR)/$(SYSUSERSDIR)/bitlbee.conf
+else
+	@echo SYSUSERSDIR not set, not install sysusers.d files
 endif
 
 tar:

@@ -3,6 +3,7 @@ Conflicts=bitlbee.service
 
 [Socket]
 ListenStream=6667
+ListenStream=%t/bitlbee/socket
 BindToDevice=lo
 Accept=yes
 
