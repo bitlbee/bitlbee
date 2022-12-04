@@ -28,6 +28,10 @@
  * SUCH DAMAGE.
  */
 
+#ifdef USE_EXTERNAL_JSON_PARSER
+#error Bitlbee was configured to use system json-parser, this header file should not be used.
+#endif
+
 #ifndef _JSON_H
 #define _JSON_H
 
