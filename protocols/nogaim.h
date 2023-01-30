@@ -48,7 +48,11 @@
 #include "account.h"
 #include "proxy.h"
 #include "query.h"
+#ifdef _EXTERNAL_MD5
+#include <md5.h>
+#else
 #include "md5.h"
+#endif
 #include "ft.h"
 
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */

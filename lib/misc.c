@@ -33,7 +33,11 @@
 #define BITLBEE_CORE
 #include "nogaim.h"
 #include "base64.h"
+#ifdef _EXTERNAL_MD5
+#include <md5.h>
+#else
 #include "md5.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,7 +50,11 @@
 #include <resolv.h>
 #endif
 
+#ifdef _EXTERNAL_MD5
+#include <md5.h>
+#else
 #include "md5.h"
+#endif
 #include "ssl_client.h"
 
 void strip_linefeed(gchar *text)

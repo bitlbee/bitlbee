@@ -49,6 +49,7 @@ otr=0
 
 events=glib
 external_json_parser=auto
+external_md5=auto
 ssl=auto
 
 pam=0
@@ -160,6 +161,7 @@ Option		Description				Default
 --ssl=...	SSL library to use (gnutls, nss, openssl, auto)
 							$ssl
 --external_json_parser=0/1/auto	Use External JSON parser $external_json_parser
+--external_md5=0/1/auto	Use External MD5 routines $external_md5
 --systemd=0/1  Enable/disable systemd support $systemd
 
 
@@ -425,6 +427,18 @@ if [ "$external_json_parser" = "1" ]; then
     echo "LDFLAGS_TESTS+=$(pkg-config --libs json-parser)" >> Makefile.settings
 fi
 
+if [ "$external_md5" = "auto" ]; then
+	if pkg-config --exists libmd; then
+		external_md5=1
+	else
+		external_md5=0
+	fi
+fi
+if [ "$external_md5" = "1" ]; then
+    echo "CFLAGS+=-D_EXTERNAL_MD5 $(pkg-config --cflags libmd)" >> Makefile.settings
+    echo "LDFLAGS_BITLBEE+=$(pkg-config --libs libmd)" >> Makefile.settings
+    echo "LDFLAGS_TESTS+=$(pkg-config --libs libmd)" >> Makefile.settings
+fi
 
 detect_gnutls()
 {
@@ -1045,6 +1059,12 @@ if [ "$external_json_parser" = "1" ]; then
     echo '  Using system JSON parser.'
 else
     echo '  Using bundled JSON parser.'
+fi
+
+if [ "$external_md5" = "1" ]; then
+    echo '  Using system MD5 routines in libmd.'
+else
+    echo '  Using bundled MD5 routines.'
 fi
 
 echo '  Using event handler: '$events
