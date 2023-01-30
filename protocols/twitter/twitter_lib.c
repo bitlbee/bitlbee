@@ -646,7 +646,7 @@ static struct twitter_xml_status *twitter_xt_get_status(const json_value *node)
 			txs_free(rtxs);
 		}
 	} else if (text_value && text_value->type == json_string) {
-		txs->text = g_memdup(text_value->u.string.ptr, text_value->u.string.length + 1);
+		txs->text = G_MEMDUP(text_value->u.string.ptr, text_value->u.string.length + 1);
 		strip_html(txs->text);
 		expand_entities(&txs->text, node, extended_node);
 	}
@@ -673,7 +673,7 @@ static struct twitter_xml_status *twitter_xt_get_dm(const json_value *node)
 
 	JSON_O_FOREACH(node, k, v) {
 		if (strcmp("text", k) == 0 && v->type == json_string) {
-			txs->text = g_memdup(v->u.string.ptr, v->u.string.length + 1);
+			txs->text = G_MEMDUP(v->u.string.ptr, v->u.string.length + 1);
 			strip_html(txs->text);
 		} else if (strcmp("created_at", k) == 0 && v->type == json_string) {
 			struct tm parsed;

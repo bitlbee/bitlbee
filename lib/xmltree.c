@@ -32,6 +32,13 @@
 #define g_strcasecmp g_ascii_strcasecmp
 #define g_strncasecmp g_ascii_strncasecmp
 
+/* g_memdup() deprecated as of glib 2.68.0 */
+#ifdef GLIB_VERSION_2_68
+#define G_MEMDUP g_memdup2
+#else
+#define G_MEMDUP g_memdup
+#endif
+
 static void xt_start_element(GMarkupParseContext *ctx, const gchar *element_name, const gchar **attr_names,
                              const gchar **attr_values, gpointer data, GError **error)
 {
@@ -363,7 +370,7 @@ struct xt_node *xt_dup(struct xt_node *node)
 	dup->name = g_strdup(node->name);
 	dup->flags = node->flags;
 	if (node->text) {
-		dup->text = g_memdup(node->text, node->text_len + 1);
+		dup->text = G_MEMDUP(node->text, node->text_len + 1);
 		dup->text_len = node->text_len;
 	}
 

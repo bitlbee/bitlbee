@@ -103,6 +103,13 @@ extern "C" {
 #define g_strcasecmp g_ascii_strcasecmp
 #define g_strncasecmp g_ascii_strncasecmp
 
+/* g_memdup() deprecated as of glib 2.68.0 */
+#ifdef GLIB_VERSION_2_68
+#define G_MEMDUP g_memdup2
+#else
+#define G_MEMDUP g_memdup
+#endif
+
 #ifndef G_GNUC_MALLOC
 /* Doesn't exist in GLib <=2.4 while everything else in BitlBee should
    work with it, so let's fake this one. */
