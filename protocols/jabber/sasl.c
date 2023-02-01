@@ -301,8 +301,9 @@ xt_status sasl_pkt_challenge(struct xt_node *node, gpointer data)
 
 	if (!(s = sasl_get_part(dec, "rspauth"))) {
 		/* See RFC 2831 for for information. */
-		md5_state_t A1, A2, H;
-		md5_byte_t A1r[16], A2r[16], Hr[16];
+		GChecksum *A1, *A2, *H;
+		gsize digest_len = MD5_HASH_SIZE;
+		guint8 A1r[16], A2r[16], Hr[16];
 		char A1h[33], A2h[33], Hh[33];
 		int i;
 
@@ -326,39 +327,45 @@ xt_status sasl_pkt_challenge(struct xt_node *node, gpointer data)
 
 		/* Generate the MD5 hash of username:realm:password,
 		   I decided to call it H. */
-		md5_init(&H);
+		H = g_checksum_new(G_CHECKSUM_MD5);
 		s = g_strdup_printf("%s:%s:%s", jd->username, realm, ic->acc->pass);
-		md5_append(&H, (unsigned char *) s, strlen(s));
+		g_checksum_update(H, (guint8 *)s, strlen(s));
 		g_free(s);
-		md5_finish(&H, Hr);
+
+		g_checksum_get_digest(H, Hr, &digest_len);
+		g_checksum_free(H);
 
 		/* Now generate the hex. MD5 hash of H:nonce:cnonce, called A1. */
-		md5_init(&A1);
+		A1 = g_checksum_new(G_CHECKSUM_MD5);
 		s = g_strdup_printf(":%s:%s", nonce, cnonce);
-		md5_append(&A1, Hr, 16);
-		md5_append(&A1, (unsigned char *) s, strlen(s));
+		g_checksum_update(A1, Hr, 16);
+		g_checksum_update(A1, (guint8 *)s, strlen(s));
 		g_free(s);
-		md5_finish(&A1, A1r);
+		g_checksum_get_digest(A1, A1r, &digest_len);
+		g_checksum_free(A1);
 		for (i = 0; i < 16; i++) {
 			sprintf(A1h + i * 2, "%02x", A1r[i]);
 		}
 
 		/* A2... */
-		md5_init(&A2);
+		A2 = g_checksum_new(G_CHECKSUM_MD5);
 		s = g_strdup_printf("%s:%s", "AUTHENTICATE", digest_uri);
-		md5_append(&A2, (unsigned char *) s, strlen(s));
+		g_checksum_update(A2, (guint8 *)s, strlen(s));
 		g_free(s);
-		md5_finish(&A2, A2r);
+		g_checksum_get_digest(A2, A2r, &digest_len);
+		g_checksum_free(A2);
 		for (i = 0; i < 16; i++) {
 			sprintf(A2h + i * 2, "%02x", A2r[i]);
 		}
 
 		/* Final result: A1:nonce:00000001:cnonce:auth:A2. Let's reuse H for it. */
-		md5_init(&H);
+		H = g_checksum_new(G_CHECKSUM_MD5);
 		s = g_strdup_printf("%s:%s:%s:%s:%s:%s", A1h, nonce, "00000001", cnonce, "auth", A2h);
-		md5_append(&H, (unsigned char *) s, strlen(s));
+		g_checksum_update(H, (guint8 *)s, strlen(s));
 		g_free(s);
-		md5_finish(&H, Hr);
+		g_checksum_get_digest(H, Hr, &digest_len);
+		g_checksum_free(H);
+
 		for (i = 0; i < 16; i++) {
 			sprintf(Hh + i * 2, "%02x", Hr[i]);
 		}

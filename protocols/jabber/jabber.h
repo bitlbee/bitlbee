@@ -27,7 +27,6 @@
 #include <glib.h>
 
 #include "bitlbee.h"
-#include "md5.h"
 #include "xmltree.h"
 
 extern GSList *jabber_connections;
@@ -104,7 +103,7 @@ struct jabber_data {
 	guint64 gmail_time;
 	char *gmail_tid;
 
-	md5_state_t cached_id_prefix;
+	GChecksum *cached_id_prefix;
 	GHashTable *node_cache;
 	GHashTable *buddies;
 

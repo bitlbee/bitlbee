@@ -22,7 +22,6 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "md5.h"
 #include "base64.h"
 
 static unsigned int next_id = 1;
@@ -140,15 +139,18 @@ void jabber_cache_add(struct im_connection *ic, struct xt_node *node, jabber_cac
 {
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_cache_entry *entry = g_new0(struct jabber_cache_entry, 1);
-	md5_state_t id_hash;
-	md5_byte_t id_sum[16];
+	GChecksum *id_hash;
+	gsize digest_len = MD5_HASH_SIZE;
+	guint8 id_sum[MD5_HASH_SIZE];
 	char *id, *asc_hash;
 
 	next_id++;
 
 	id_hash = jd->cached_id_prefix;
-	md5_append(&id_hash, (md5_byte_t *) &next_id, sizeof(next_id));
-	md5_digest_keep(&id_hash, id_sum);
+	g_checksum_update(id_hash, (guint8 *) &next_id, sizeof(next_id));
+	g_checksum_get_digest(id_hash, id_sum, &digest_len);
+	g_checksum_free(id_hash);
+
 	asc_hash = base64_encode(id_sum, 12);
 
 	id = g_strdup_printf("%s%s", JABBER_CACHED_ID, asc_hash);
