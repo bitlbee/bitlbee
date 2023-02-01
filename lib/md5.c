@@ -27,9 +27,11 @@ void md5_finish(md5_state_t *ctx, guint8 digest[MD5_HASH_SIZE])
  * and finishes that one instead of the original */
 void md5_digest_keep(md5_state_t *ctx, guint8 digest[MD5_HASH_SIZE])
 {
-	md5_state_t copy = g_checksum_copy(*ctx);
+	gsize digest_len = MD5_HASH_SIZE;
+	GChecksum *copy = g_checksum_copy(*ctx);
 
-	md5_finish(&copy, digest);
+	g_checksum_get_digest(copy, digest, &digest_len);
+	g_checksum_free(copy);
 }
 
 void md5_free(md5_state_t *ctx)
