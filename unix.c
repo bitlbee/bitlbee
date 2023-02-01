@@ -260,15 +260,17 @@ static int crypt_main(int argc, char *argv[])
 		g_free(pass_cr);
 		g_free(pass_cl);
 	} else if (strcmp(argv[2], "hash") == 0) {
-		md5_byte_t pass_md5[21];
-		md5_state_t md5_state;
+		guint8 pass_md5[21];
+		GChecksum *md5_state;
+		gsize digest_len = MD5_HASH_SIZE;
 		char *encoded;
 
 		random_bytes(pass_md5 + 16, 5);
-		md5_init(&md5_state);
-		md5_append(&md5_state, (md5_byte_t *) argv[3], strlen(argv[3]));
-		md5_append(&md5_state, pass_md5 + 16, 5);   /* Add the salt. */
-		md5_finish(&md5_state, pass_md5);
+		md5_state = g_checksum_new(G_CHECKSUM_MD5);
+		g_checksum_update(md5_state, (guint8 *) argv[3], strlen(argv[3]));
+		g_checksum_update(md5_state, pass_md5 + 16, 5);   /* Add the salt. */
+		g_checksum_get_digest(md5_state, pass_md5, &digest_len);
+		g_checksum_free(md5_state);
 
 		encoded = base64_encode(pass_md5, 21);
 		printf("%s\n", encoded);

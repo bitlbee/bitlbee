@@ -27,7 +27,6 @@
 #include "bitlbee.h"
 #include "base64.h"
 #include "arc.h"
-#include "md5.h"
 #include "xmltree.h"
 
 #include <glib/gstdio.h>
@@ -322,10 +321,11 @@ struct xt_node *xml_generate(irc_t *irc)
 {
 	char *pass_buf = NULL;
 	account_t *acc;
-	md5_byte_t pass_md5[21];
-	md5_state_t md5_state;
+	guint8 pass_md5[21];
+	GChecksum *md5_state;
 	GSList *l;
 	struct xt_node *root, *cur;
+	gsize digest_len = MD5_HASH_SIZE;
 
 	root = cur = xt_new_node("user", NULL, NULL);
 	if (irc->auth_backend) {
@@ -335,10 +335,11 @@ struct xt_node *xml_generate(irc_t *irc)
 		   (to prevent dictionary lookups of passwords) to end up with a 21-
 		   byte password hash, more convenient for base64 encoding. */
 		random_bytes(pass_md5 + 16, 5);
-		md5_init(&md5_state);
-		md5_append(&md5_state, (md5_byte_t *) irc->password, strlen(irc->password));
-		md5_append(&md5_state, pass_md5 + 16, 5);   /* Add the salt. */
-		md5_finish(&md5_state, pass_md5);
+		md5_state = g_checksum_new(G_CHECKSUM_MD5);
+		g_checksum_update(md5_state, (guint8 *) irc->password, strlen(irc->password));
+		g_checksum_update(md5_state, pass_md5 + 16, 5);   /* Add the salt. */
+		g_checksum_get_digest(md5_state, pass_md5, &digest_len);
+		g_checksum_free(md5_state);
 		/* Save the hash in base64-encoded form. */
 		pass_buf = base64_encode(pass_md5, 21);
 		xt_add_attr(cur, "password", pass_buf);
