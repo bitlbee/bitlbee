@@ -222,7 +222,7 @@ if [ ! "$srcdir" = "$currdir" ]; then
 	echo "configure script run from a different directory. Will create some symlinks..."
 	if [ ! -e Makefile ] || [ -L Makefile ]; then
 		COPYDIRS="doc lib protocols tests utils"
-		mkdir -p "$(cd "$srcdir" || exit 1; find "$COPYDIRS" -type d)"
+		mkdir -p $(cd "$srcdir" || exit 1; find $COPYDIRS -type d)
 		find . -name Makefile -type l -print0 | xargs -0 rm 2> /dev/null
 		dst="$PWD"
 		cd "$srcdir" || exit 1
