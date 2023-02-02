@@ -843,7 +843,7 @@ get_version
 if [ ! "$BITLBEE_VERSION" = "$REAL_BITLBEE_VERSION" ]; then
 	echo "Spoofing version number: $BITLBEE_VERSION"
 	echo "#undef BITLBEE_VERSION" >> config.h
-	echo "#define BITLBEE_VERSION '$BITLBEE_VERSION'" >> config.h
+	echo '#define BITLBEE_VERSION "'$BITLBEE_VERSION'"' >> config.h
 	echo
 fi
 
