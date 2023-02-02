@@ -1,0 +1,37 @@
+name: Coverity
+
+on:
+  push:
+    branches:
+      - coverity_scan
+
+env:
+  PKG_CONFIG_PATH: $HOME/otr/usr/lib/pkgconfig/
+  LD_LIBRARY_PATH: $HOME/otr/usr/lib/
+
+jobs:
+  coverity:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+       sudo apt-get update && sudo apt-get -y install \
+           libevent-dev \
+           libpurple-dev \
+           check \
+           libpam0g-dev \
+           libldap2-dev \
+           fakeroot \
+           debhelper \
+           devscripts \
+           libotr5-dev \
+           libgnutls28-dev
+      if: "matrix.os == 'ubuntu-latest'"
+    - name: Configure
+      run: ./configure --otr=1 --debug=1 --pam=1 --ldap=1
+    - uses: vapier/coverity-scan-action@v1
+      with:
+        email: dx@dxzone.com.ar
+        token: ${{ secrets.COVERITY_SCAN_TOKEN }}
+        command: make
