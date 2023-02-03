@@ -22,7 +22,6 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "sha1.h"
 
 static xt_status jabber_chat_join_failed(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 static xt_status jabber_chat_self_message(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
@@ -78,15 +77,15 @@ struct groupchat *jabber_chat_with(struct im_connection *ic, char *who)
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_chat *jc;
 	struct groupchat *c;
-	sha1_state_t sum;
+	GChecksum *sum;
 	double now = gettime();
 	char *uuid, *rjid, *cserv;
 
-	sha1_init(&sum);
-	sha1_append(&sum, (uint8_t *) ic->acc->user, strlen(ic->acc->user));
-	sha1_append(&sum, (uint8_t *) &now, sizeof(now));
-	sha1_append(&sum, (uint8_t *) who, strlen(who));
-	uuid = sha1_random_uuid(&sum);
+	sum = g_checksum_new(G_CHECKSUM_SHA1);
+	g_checksum_update(sum, (uint8_t *) ic->acc->user, strlen(ic->acc->user));
+	g_checksum_update(sum, (uint8_t *) &now, sizeof(now));
+	g_checksum_update(sum, (uint8_t *) who, strlen(who));
+	uuid = sha1_random_uuid(sum);
 
 	if (jd->flags & JFLAG_GTALK) {
 		cserv = g_strdup("groupchat.google.com");
