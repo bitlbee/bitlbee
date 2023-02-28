@@ -493,7 +493,7 @@ static gboolean http_handle_headers(struct http_request *req)
 	}
 
 	if (((req->status_code >= 301 && req->status_code <= 303) ||
-	     req->status_code == 307) && req->redir_ttl-- > 0) {
+	     req->status_code == 307 || req->status_code == 308) && req->redir_ttl-- > 0) {
 		char *loc, *new_request, *new_host;
 		int error = 0, new_port, new_proto;
 
@@ -564,7 +564,7 @@ static gboolean http_handle_headers(struct http_request *req)
 
 			   Well except someone at identi.ca's didn't bother reading any
 			   RFCs and just return HTTP/1.1-specific status codes to HTTP/1.0
-			   requests. Fuckers. So here we are, handle 301..303,307. */
+			   requests. Fuckers. So here we are, handle 301..303,307,308. */
 			if (strncmp(req->request, "GET", 3) == 0) {
 				/* GETs never become POSTs. */
 				new_method = "GET";
@@ -572,7 +572,7 @@ static gboolean http_handle_headers(struct http_request *req)
 				/* 302 de-facto becomes GET, 303 as specified by RFC 2616#10.3.3 */
 				new_method = "GET";
 			} else {
-				/* 301 de-facto should stay POST, 307 specifally RFC 2616#10.3.8 */
+				/* 301 de-facto should stay POST, 307/308 specifally RFC 2616#10.3.8 */
 				new_method = "POST";
 			}
 
