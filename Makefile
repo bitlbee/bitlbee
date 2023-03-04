@@ -10,7 +10,12 @@
 
 # Program variables
 objects = bitlbee.o dcc.o help.o ipc.o irc.o irc_im.o irc_cap.o irc_channel.o irc_commands.o irc_send.o irc_user.o irc_util.o nick.o $(OTR_BI) query.o root_commands.o set.o storage.o $(STORAGE_OBJS) auth.o $(AUTH_OBJS) unix.o conf.o log.o
-headers = $(wildcard $(_SRCDIR_)*.h $(_SRCDIR_)lib/*.h $(_SRCDIR_)protocols/*.h)
+allheaders = $(wildcard $(_SRCDIR_)*.h $(_SRCDIR_)lib/*.h $(_SRCDIR_)protocols/*.h)
+ifeq ($(EXTERNAL_JSON_PARSER),1)
+headers = $(filter-out $(_SRCDIR_)lib/json.h,$(allheaders))
+else
+headers = $(allheaders)
+endif
 subdirs = lib protocols
 
 OUTFILE = bitlbee
