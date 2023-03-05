@@ -159,7 +159,8 @@ Option		Description				Default
 --ssl=...	SSL library to use (gnutls, nss, openssl, auto)
 							$ssl
 --external_json_parser=0/1/auto	Use External JSON parser $external_json_parser
---systemd=0/1  Enable/disable systemd support $systemd
+--systemd=0/1	Enable/disable automatic detection
+		of systemd directories			$systemd
 
 
 --target=...	Cross compilation target 		same as host
@@ -1031,9 +1032,9 @@ else
 fi
 
 if [ "$systemd" = "1" ]; then
-	echo '  systemd enabled.'
+	echo '  systemd autodetection enabled.'
 else
-	echo '  systemd disabled.'
+	echo '  systemd autodetection disabled.'
 fi
 
 echo '  Using python: '$PYTHON
