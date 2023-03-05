@@ -776,8 +776,12 @@ if [ "$systemd" = "1" ]; then
 	if [ -z "$sysusersdir" ] ; then
 		sysusersdir=$(pkgconf_systemd_var sysusersdir sysusers_dir)
 	fi
+fi
 
+if [ -n "$systemdsystemunitdir" ]; then
 	echo "SYSTEMDSYSTEMUNITDIR=$systemdsystemunitdir" >> Makefile.settings
+fi
+if [ -n "$sysusersdir" ]; then
 	echo "SYSUSERSDIR=$sysusersdir" >> Makefile.settings
 fi
 
