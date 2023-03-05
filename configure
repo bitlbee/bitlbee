@@ -772,12 +772,12 @@ if [ "$systemd" = "1" ]; then
 	if [ -z "$systemdsystemunitdir" ]; then
 		systemdsystemunitdir=$(pkgconf_systemd_var systemdsystemunitdir systemd_system_unit_dir)
 	fi
-    if [ -z "$sysusersdir" ] ; then
-        sysusersdir=$(pkgconf_systemd_var sysusersdir sysusers_dir)
-    fi
+	if [ -z "$sysusersdir" ] ; then
+		sysusersdir=$(pkgconf_systemd_var sysusersdir sysusers_dir)
+	fi
 
 	echo "SYSTEMDSYSTEMUNITDIR=$systemdsystemunitdir" >> Makefile.settings
-    echo "SYSUSERSDIR=$sysusersdir" >> Makefile.settings
+	echo "SYSUSERSDIR=$sysusersdir" >> Makefile.settings
 fi
 
 if [ "$gcov" = "1" ]; then
