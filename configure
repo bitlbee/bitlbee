@@ -130,7 +130,7 @@ Option		Description				Default
 --datadir=...						$datadir
 --plugindir=...						$plugindir
 --systemdsystemunitdir=...				$systemdsystemunitdir
---sysusersdir                       $sysusersdir
+--sysusersdir=...					$sysusersdir
 --pidfile=...						$pidfile
 --config=...						$config
 
