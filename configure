@@ -159,8 +159,7 @@ Option		Description				Default
 --ssl=...	SSL library to use (gnutls, nss, openssl, auto)
 							$ssl
 --external_json_parser=0/1/auto	Use External JSON parser $external_json_parser
---systemd=0/1	Enable/disable automatic detection
-		of systemd directories			$systemd
+--systemd=0/1	Enable/disable systemd 			$systemd
 
 
 --target=...	Cross compilation target 		same as host
@@ -751,12 +750,14 @@ fi
 
 if [ ! "$systemd" = "0" ]; then
     if ! $PKG_CONFIG --exists systemd ; then
-        if [ -n "$systemdsystemunitdir" ] || [ $systemd -eq 1 ]; then
+        if [ $systemd -eq 1 ]; then
             echo "systemd requested but not found"
             exit 1
         else
             systemd=0
         fi
+    elif [ $systemd = "auto" ]; then
+	systemd=1
     fi
 fi
 
@@ -1036,9 +1037,9 @@ else
 fi
 
 if [ "$systemd" = "1" ]; then
-	echo '  systemd autodetection enabled.'
+	echo '  systemd enabled.'
 else
-	echo '  systemd autodetection disabled.'
+	echo '  systemd disabled.'
 fi
 
 echo '  Using python: '$PYTHON
