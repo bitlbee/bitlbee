@@ -1043,7 +1043,7 @@ else
 	echo '  Off-the-Record (OTR) Messaging disabled.'
 fi
 
-if [ "$systemd" -eq 1 ]; then
+if [ "$systemd" = "1" ]; then
 	echo '  systemd enabled.'
 else
 	echo '  systemd disabled.'
