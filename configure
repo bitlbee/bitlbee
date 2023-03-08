@@ -7,26 +7,26 @@
 ##  Copyright 2002 Lucumo   ##
 ##############################
 
-prefix="/usr/local/"
-bindir="$prefix/bin/"
-sbindir="$prefix/sbin/"
-etcdir="$prefix/etc/bitlbee/"
-mandir="$prefix/share/man/"
-datadir="$prefix/share/bitlbee/"
-config="/var/lib/bitlbee/"
-libdir="$prefix/lib/"
-plugindir="$prefix/lib/bitlbee/"
-includedir="$prefix/include/bitlbee/"
-systemdsystemunitdir=""
-sysusersdir=""
-libevent="/usr/"
-pidfile="/var/run/bitlbee.pid"
-ipcsocket=""
-pcdir="$prefix/lib/pkgconfig"
+prefix='/usr/local/'
+bindir='$prefix/bin/'
+sbindir='$prefix/sbin/'
+etcdir='$prefix/etc/bitlbee/'
+mandir='$prefix/share/man/'
+datadir='$prefix/share/bitlbee/'
+config='/var/lib/bitlbee/'
+libdir='$prefix/lib/'
+plugindir='$prefix/lib/bitlbee/'
+includedir='$prefix/include/bitlbee/'
+systemdsystemunitdir=''
+sysusersdir=''
+libevent='/usr/'
+pidfile='/var/run/bitlbee.pid'
+ipcsocket=''
+pcdir='$prefix/lib/pkgconfig'
 systemlibdirs="/lib64 /usr/lib64 /usr/local/lib64 /lib /usr/lib /usr/local/lib"
-sysroot=""
+sysroot=''
 
-configure_args="$*"
+configure_args="$@"
 
 # Set these to default-on to let it be overriden by either the user or purple
 #
@@ -77,7 +77,7 @@ case "$arch" in
 esac
 
 get_version() {
-	REAL_BITLBEE_VERSION=$(grep '^#define BITLBEE_VERSION ' "$srcdir"/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/')
+	REAL_BITLBEE_VERSION=$(grep '^#define BITLBEE_VERSION ' $srcdir/bitlbee.h | sed 's/.*\"\(.*\)\".*/\1/')
 
 	if [ -n "$BITLBEE_VERSION" ]; then
 		# environment variable already set to something to spoof it
@@ -87,27 +87,28 @@ get_version() {
 
 	BITLBEE_VERSION=$REAL_BITLBEE_VERSION
 
-	if [ -d "$srcdir"/.git ] && type git > /dev/null 2> /dev/null; then
-		timestamp=$(cd "$srcdir" || exit 1; git show -s --format=%ci HEAD | sed 's/ .*$//; s/-//g')
-		branch=$(cd "$srcdir" || exit 1; git rev-parse --abbrev-ref HEAD)
+	if [ -d $srcdir/.git ] && type git > /dev/null 2> /dev/null; then
+		timestamp=$(cd $srcdir; git show -s --format=%ci HEAD | sed 's/ .*$//; s/-//g')
+		branch=$(cd $srcdir; git rev-parse --abbrev-ref HEAD)
 
 		search='\(.*\)-\([0-9]*\)-\(g[0-9a-f]*\)'
 		replace="\1+$timestamp+$branch+\2-\3-git"
 
-		if ! describe=$(cd "$srcdir" || exit 1; git describe --long --tags 2>/dev/null) ; then
-			describe=${REAL_BITLBEE_VERSION}-0-g$(cd "$srcdir" || exit; git rev-parse --short HEAD)
+		describe=$(cd $srcdir; git describe --long --tags 2>/dev/null)
+		if [ $? -ne 0 ]; then
+			describe=${REAL_BITLBEE_VERSION}-0-g$(cd $srcdir; git rev-parse --short HEAD)
 		fi
 
-		BITLBEE_VERSION=$(echo "$describe" | sed "s#$search#$replace#")
+		BITLBEE_VERSION=$(echo $describe | sed "s#$search#$replace#")
 
 		unset timestamp branch search replace describe
 	fi
 }
 
 if [ "$1" = "--dump-version" ]; then
-	srcdir=$(cd "$(dirname "$0")" || exit;pwd)
+	srcdir=$(cd $(dirname $0);pwd)
 	get_version
-	echo "$BITLBEE_VERSION"
+	echo $BITLBEE_VERSION
 	exit
 fi
 
@@ -215,21 +216,21 @@ LFLAGS=
 EFLAGS=-lm
 EOF
 
-srcdir=$(cd "$(dirname "$0")" || exit;pwd)
+srcdir=$(cd $(dirname $0);pwd)
 currdir=$(pwd)
-if [ ! "$srcdir" = "$currdir" ]; then 
+if [ "$srcdir" != "$currdir" ]; then 
 	echo
 	echo "configure script run from a different directory. Will create some symlinks..."
-	if [ ! -e Makefile ] || [ -L Makefile ]; then
+	if [ ! -e Makefile -o -L Makefile ]; then
 		COPYDIRS="doc lib protocols tests utils"
-		mkdir -p $(cd "$srcdir" || exit 1; find $COPYDIRS -type d)
+		mkdir -p $(cd "$srcdir"; find $COPYDIRS -type d)
 		find . -name Makefile -type l -print0 | xargs -0 rm 2> /dev/null
 		dst="$PWD"
-		cd "$srcdir" || exit 1
-		find . -type f -name Makefile -print | while read -r i ; do
+		cd "$srcdir"
+		for i in $(find . -name Makefile -type f); do
 			ln -s "$PWD${i#.}" "$dst/$i";
 		done
-		cd "$dst" || exit 1
+		cd "$dst"
 		rm -rf .bzr
 	fi
 	
@@ -271,15 +272,15 @@ if [ -n "$target" ]; then
 	# backward compatibility
 
 	if [ -z "$PKG_CONFIG_LIBDIR" ]; then
-		PKG_CONFIG_LIBDIR=/usr/"$target"/lib/pkgconfig
+		PKG_CONFIG_LIBDIR=/usr/$target/lib/pkgconfig
 		export PKG_CONFIG_LIBDIR
 	fi
 
-	if [ -d /usr/"$target"/bin ]; then
-		PATH=/usr/"$target"/bin:$PATH
+	if [ -d /usr/$target/bin ]; then
+		PATH=/usr/$target/bin:$PATH
 	fi
 
-	if [ -d /usr/"$target"/lib ]; then
+	if [ -d /usr/$target/lib ]; then
 		systemlibdirs="$systemlibdirs /usr/$target/lib"
 	fi
 
@@ -325,14 +326,16 @@ if [ "$pie" = "1" ]; then
 	echo 'LDFLAGS_BITLBEE=-pie' >> Makefile.settings
 fi
 
-# shellcheck disable=SC2129
-echo "LDFLAGS=$LDFLAGS" >> Makefile.settings
+echo LDFLAGS=$LDFLAGS >> Makefile.settings
 
-echo "CFLAGS=$CFLAGS $CPPFLAGS" >> Makefile.settings
+echo CFLAGS=$CFLAGS $CPPFLAGS >> Makefile.settings
+echo CFLAGS+=-I${srcdir} -I${srcdir}/lib -I${srcdir}/protocols -I. >> Makefile.settings
 
 echo CFLAGS+=-DHAVE_CONFIG_H -D_GNU_SOURCE >> Makefile.settings
 
-if type gcc > /dev/null 2> /dev/null; then
+if [ -n "$CC" ]; then
+	CC=$CC
+elif type gcc > /dev/null 2> /dev/null; then
 	CC=gcc
 elif type cc > /dev/null 2> /dev/null; then
 	CC=cc
@@ -376,7 +379,7 @@ CFLAGS+=$($PKG_CONFIG --cflags glib-2.0 gmodule-2.0)
 EOF
 	else
 		echo
-		echo "Found glib2 $($PKG_CONFIG glib-2.0 --modversion), but version $GLIB_MIN_VERSION or newer is required."
+		echo 'Found glib2 '$($PKG_CONFIG glib-2.0 --modversion)', but version '$GLIB_MIN_VERSION' or newer is required.'
 		exit 1
 	fi
 else
@@ -417,7 +420,6 @@ if [ "$external_json_parser" = "auto" ]; then
 fi
 echo "EXTERNAL_JSON_PARSER=$external_json_parser" >> Makefile.settings
 if [ "$external_json_parser" = "1" ]; then
-    # shellcheck disable=SC2129
     echo "CFLAGS+=$(pkg-config --cflags json-parser)" >> Makefile.settings
     echo "CFLAGS+=-DUSE_EXTERNAL_JSON_PARSER" >> Makefile.settings
     echo "LDFLAGS_BITLBEE+=$(pkg-config --libs json-parser)" >> Makefile.settings
@@ -537,12 +539,13 @@ detect_resolv_dynamic()
 	esac
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
-	if echo "$RESOLV_TESTCODE" | $CC -o "$TMPFILE" -x c - $LIBRESOLV >/dev/null 2>/dev/null ; then
+	echo "$RESOLV_TESTCODE" | $CC -o $TMPFILE -x c - $LIBRESOLV >/dev/null 2>/dev/null
+	if [ "$?" = "0" ]; then
 		echo "EFLAGS+=$LIBRESOLV" >> Makefile.settings
 		ret=0
 	fi
 
-	rm -f "$TMPFILE"
+	rm -f $TMPFILE
 	return $ret
 }
 
@@ -551,15 +554,16 @@ detect_resolv_static()
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
 	for i in $systemlibdirs; do
-		if [ -f "$i"/libresolv.a ]; then
-			if echo "$RESOLV_TESTCODE" | $CC -o "$TMPFILE" -x c - -Wl,"$i"/libresolv.a >/dev/null 2>/dev/null ; then
-				echo "EFLAGS+=$i/libresolv.a" >> Makefile.settings
+		if [ -f $i/libresolv.a ]; then
+			echo "$RESOLV_TESTCODE" | $CC -o $TMPFILE -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
+			if [ "$?" = "0" ]; then
+				echo 'EFLAGS+='$i'/libresolv.a' >> Makefile.settings
 				ret=0
 			fi
 		fi
 	done
 
-	rm -f "$TMPFILE"
+	rm -f $TMPFILE
 	return $ret
 }
 
@@ -574,11 +578,12 @@ detect_resolv_ns_dynamic()
 	esac
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
-	if echo "$RESOLV_NS_TESTCODE" | $CC -o "$TMPFILE" -x c - $LIBRESOLV >/dev/null 2>/dev/null ; then
+	echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - $LIBRESOLV >/dev/null 2>/dev/null
+	if [ "$?" = "0" ]; then
 		ret=0
 	fi
 
-	rm -f "$TMPFILE"
+	rm -f $TMPFILE
 	return $ret
 }
 
@@ -587,14 +592,15 @@ detect_resolv_ns_static()
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
 	for i in $systemlibdirs; do
-		if [ -f "$i"/libresolv.a ]; then
-			if echo "$RESOLV_NS_TESTCODE" | $CC -o "$TMPFILE" -x c - -Wl,"$i"/libresolv.a >/dev/null 2>/dev/null ; then
+		if [ -f $i/libresolv.a ]; then
+			echo "$RESOLV_NS_TESTCODE" | $CC -o $TMPFILE -x c - -Wl,$i/libresolv.a >/dev/null 2>/dev/null
+			if [ "$?" = "0" ]; then
 				ret=0
 			fi
 		fi
 	done
 
-	rm -f "$TMPFILE"
+	rm -f $TMPFILE
 	return $ret
 }
 
@@ -604,11 +610,12 @@ detect_nameser_has_ns_types()
 	ret=1
 	# since we aren't actually linking with ns_* routines
 	# we can just compile the test code
-	if echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o "$TMPFILE" -x c -  >/dev/null 2>/dev/null ; then
+	echo "$RESOLV_NS_TYPES_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
+	if [ "$?" = "0" ]; then
 		ret=0
 	fi
 
-	rm -f "$TMPFILE"
+	rm -f $TMPFILE
 	return $ret
 }
 
@@ -616,11 +623,12 @@ detect_backtrace()
 {
 	TMPFILE=$(mktemp /tmp/bitlbee-configure.XXXXXX)
 	ret=1
-	if echo "$BACKTRACE_TESTCODE" | $CC -o "$TMPFILE" -x c -  >/dev/null 2>/dev/null ; then
+	echo "$BACKTRACE_TESTCODE" | $CC -o $TMPFILE -x c -  >/dev/null 2>/dev/null
+	if [ "$?" = "0" ]; then
 		ret=0
 	fi
 
-	rm -f "$TMPFILE"
+	rm -f $TMPFILE
 	return $ret
 }
 
@@ -691,7 +699,7 @@ fi
 
 if detect_backtrace; then
 	echo '#define HAVE_BACKTRACE' >> config.h
-	echo "#define CRASHFILE \"${config}crash.log\"" >> config.h
+	echo '#define CRASHFILE "'$config'crash.log"' >> config.h
 fi
 
 STORAGES="xml"
@@ -699,11 +707,11 @@ STORAGES="xml"
 for i in $STORAGES; do
 	STORAGE_OBJS="$STORAGE_OBJS storage_$i.o"
 done
-echo "STORAGE_OBJS=$STORAGE_OBJS" >> Makefile.settings
+echo "STORAGE_OBJS="$STORAGE_OBJS >> Makefile.settings
 
 authobjs=
 authlibs=
-if [ "$pam" = "0" ]; then
+if [ "$pam" = 0 ]; then
 	echo '#undef WITH_PAM' >> config.h
 else
 	if ! echo '#include <security/pam_appl.h>' | $CC -E - >/dev/null 2>/dev/null; then
@@ -714,7 +722,7 @@ else
 	authobjs=$authobjs'auth_pam.o '
 	authlibs=$authlibs'-lpam '
 fi
-if [ "$ldap" = "0" ]; then
+if [ "$ldap" = 0 ]; then
 	echo '#undef WITH_LDAP' >> config.h
 else
 	if ! echo '#include <ldap.h>' | $CC -E - >/dev/null 2>/dev/null; then
@@ -725,13 +733,13 @@ else
 	authobjs=$authobjs'auth_ldap.o '
 	authlibs=$authlibs'-lldap '
 fi
-echo AUTH_OBJS="$authobjs" >> Makefile.settings
-echo EFLAGS+="$authlibs" >> Makefile.settings
+echo AUTH_OBJS=$authobjs >> Makefile.settings
+echo EFLAGS+=$authlibs >> Makefile.settings
 
-if [ "$strip" = "0" ]; then
+if [ "$strip" = 0 ]; then
 	echo "STRIP=\# skip strip" >> Makefile.settings;
 else
-	if [ "$debug" = "1" ]; then
+	if [ "$debug" = 1 ]; then
 		echo
 		echo 'Stripping binaries does not make sense when debugging. Stripping disabled.'
 		echo 'STRIP=\# skip strip' >> Makefile.settings
@@ -748,7 +756,7 @@ else
 	fi;
 fi
 
-if [ ! "$systemd" = "0" ]; then
+if [ ! "$systemd" = 0 ]; then
     if ! $PKG_CONFIG --exists systemd ; then
         if [ $systemd -eq 1 ]; then
             echo "systemd requested but not found"
@@ -763,14 +771,14 @@ fi
 
 pkgconf_systemd_var() {
     # First try deprecated variable, use newer variable if not found
-    if $PKG_CONFIG --print-variables systemd | grep -q "$1" ; then
-        $PKG_CONFIG --variable="$1" systemd
+    if $PKG_CONFIG --print-variables systemd | grep -q $1 ; then
+        $PKG_CONFIG --variable=$1 systemd
     else
-        $PKG_CONFIG --variable="$2" systemd
+        $PKG_CONFIG --variable=$2 systemd
     fi
 }
 
-if [ "$systemd" = "1" ]; then
+if [ "$systemd" -eq 1 ]; then
 	if [ -z "$systemdsystemunitdir" ]; then
 		systemdsystemunitdir=$(pkgconf_systemd_var systemdsystemunitdir systemd_system_unit_dir)
 	fi
@@ -791,26 +799,26 @@ if [ "$gcov" = "1" ]; then
 	echo "EFLAGS+=--coverage" >> Makefile.settings
 fi
 
-if [ "$plugins" = "0" ]; then
+if [ "$plugins" = 0 ]; then
 	plugindir=""
 	echo '#undef WITH_PLUGINS' >> config.h
 else
 	echo '#define WITH_PLUGINS' >> config.h
 fi
 
+otrprefix=""
 if [ "$otr" = "auto" ]; then
 	! $PKG_CONFIG --exists libotr
 	otr=$?
 fi
 
-if [ "$otr" != "0" ] && ! $PKG_CONFIG --atleast-version=4.0 --print-errors libotr; then
+if [ "$otr" != 0 ] && ! $PKG_CONFIG --atleast-version=4.0 --print-errors libotr; then
 	exit 1
 fi
 
-if [ "$otr" = "1" ]; then
+if [ "$otr" = 1 ]; then
 	# BI == built-in
 	echo '#define OTR_BI' >> config.h
-	# shellcheck disable=SC2129
 	echo "EFLAGS+=$($PKG_CONFIG --libs libotr) $(libgcrypt-config --libs)" >> Makefile.settings
 	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr) $(libgcrypt-config --cflags)" >> Makefile.settings
 	echo 'OTR_BI=otr.o' >> Makefile.settings
@@ -818,7 +826,6 @@ elif [ "$otr" = "plugin" ]; then
 	# for some mysterious reason beyond the comprehension of my mortal mind,
 	# the libgcrypt flags aren't needed when building as plugin. add them anyway.
 	echo '#define OTR_PI' >> config.h
-	# shellcheck disable=SC2129
 	echo "OTRFLAGS=$($PKG_CONFIG --libs libotr) $(libgcrypt-config --libs)" >> Makefile.settings
 	echo "CFLAGS+=$($PKG_CONFIG --cflags libotr) $(libgcrypt-config --cflags)" >> Makefile.settings
 	echo 'OTR_PI=otr.so' >> Makefile.settings
@@ -835,7 +842,7 @@ fi
 
 if [ "$doc" = "1" ]; then
 	# check this here just in case someone tries to install it in python2.4...
-	if [ ! -e "$srcdir"/doc/user-guide/help.txt ] && ! $PYTHON -m xml.etree.ElementTree > /dev/null 2>&1; then
+	if [ ! -e $srcdir/doc/user-guide/help.txt ] && ! $PYTHON -m xml.etree.ElementTree > /dev/null 2>&1; then
 		echo
 		echo 'ERROR: Python (>=2.5 or 3.x) is required to generate docs'
 		echo "(Use the PYTHON environment variable if it's in a weird location)"
@@ -871,7 +878,7 @@ fi
 pkgconfiglibs=''
 case "$arch" in
 CYGWIN* )
-	pkgconfiglibs="-L${libdir} -lbitlbee -no-undefined"
+	pkgconfiglibs='-L${libdir} -lbitlbee -no-undefined'
 esac
 
 pkgconfigrequires='glib-2.0'
@@ -898,7 +905,7 @@ EOF
 protocols=''
 protoobjs=''
 
-if [ "$purple" = "0" ]; then
+if [ "$purple" = 0 ]; then
 	echo '#undef WITH_PURPLE' >> config.h
 else
 	if ! $PKG_CONFIG purple; then
@@ -932,11 +939,11 @@ case "$CC" in
 *gcc* )
 	echo CFLAGS+=-MMD -MF .depend/\$@.d >> Makefile.settings
 	for i in . lib tests protocols protocols/*/; do
-		mkdir -p "$i"/.depend
+		mkdir -p $i/.depend
 	done
 esac
 
-if [ "$jabber" = "0" ]; then
+if [ "$jabber" = 0 ]; then
 	echo '#undef WITH_JABBER' >> config.h
 else
 	echo '#define WITH_JABBER' >> config.h
@@ -944,7 +951,7 @@ else
 	protoobjs=$protoobjs'jabber_mod.o '
 fi
 
-if [ "$twitter" = "0" ]; then
+if [ "$twitter" = 0 ]; then
 	echo '#undef WITH_TWITTER' >> config.h
 else
 	echo '#define WITH_TWITTER' >> config.h
@@ -960,7 +967,7 @@ fi
 echo "PROTOCOLS = $protocols" >> Makefile.settings
 echo "PROTOOBJS = $protoobjs" >> Makefile.settings
 
-echo Architecture: "$arch"
+echo Architecture: $arch
 case "$arch" in
 Linux )
 ;;
@@ -1055,7 +1062,7 @@ echo '  Using SSL library: '$ssl
 #echo '  Building with these storage backends: '$STORAGES
 
 if [ -n "$protocols" ]; then
-	echo '  Building with these protocols:' "$protocols""$protocols_mods"
+	echo '  Building with these protocols:' $protocols$protocols_mods
 	case "$protocols" in
 	*purple*)
 		echo "    Note that BitlBee-libpurple is supported on a best-effort basis. It's"
