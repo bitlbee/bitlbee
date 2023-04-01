@@ -22,7 +22,6 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "sha1.h"
 
 void jabber_si_answer_request(file_transfer_t *ft);
 int jabber_si_send_request(struct im_connection *ic, char *who, struct jabber_transfer *tf);

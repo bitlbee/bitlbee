@@ -99,8 +99,11 @@ char *sha1_random_uuid(sha1_state_t * context)
 	guint8 dig[SHA1_HASH_SIZE];
 	char *ret = g_new0(char, 40);   /* 36 chars + \0 */
 	int i, p;
+	gsize digest_len = SHA1_HASH_SIZE;
 
-	sha1_finish(context, dig);
+	g_checksum_get_digest(*context, dig, &digest_len);
+	g_checksum_free(*context);
+
 	for (p = i = 0; i < 16; i++) {
 		if (i == 4 || i == 6 || i == 8 || i == 10) {
 			ret[p++] = '-';

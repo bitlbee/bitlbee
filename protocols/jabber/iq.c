@@ -22,7 +22,6 @@
 \***************************************************************************/
 
 #include "jabber.h"
-#include "sha1.h"
 
 static xt_status jabber_parse_roster(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
 static xt_status jabber_iq_display_vcard(struct im_connection *ic, struct xt_node *node, struct xt_node *orig);
@@ -244,15 +243,17 @@ static xt_status jabber_do_iq_auth(struct im_connection *ic, struct xt_node *nod
 	if (xt_find_node(query->children, "digest") && (s = xt_find_attr(jd->xt->root, "id"))) {
 		/* We can do digest authentication, it seems, and of
 		   course we prefer that. */
-		sha1_state_t sha;
+		GChecksum *sha;
 		char hash_hex[41];
 		unsigned char hash[20];
 		int i;
+		gsize digest_len = 20;
 
-		sha1_init(&sha);
-		sha1_append(&sha, (unsigned char *) s, strlen(s));
-		sha1_append(&sha, (unsigned char *) ic->acc->pass, strlen(ic->acc->pass));
-		sha1_finish(&sha, hash);
+		sha = g_checksum_new(G_CHECKSUM_SHA1);
+		g_checksum_update(sha, (unsigned char *) s, strlen(s));
+		g_checksum_update(sha, (unsigned char *) ic->acc->pass, strlen(ic->acc->pass));
+		g_checksum_get_digest(sha, hash, &digest_len);
+		g_checksum_free(sha);
 
 		for (i = 0; i < 20; i++) {
 			sprintf(hash_hex + i * 2, "%02x", hash[i]);
