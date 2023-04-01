@@ -371,7 +371,7 @@ static http_ret_t http_process_chunked_data(struct http_request *req, const char
 
 	if (chunk != req->cbuf) {
 		req->cblen = eos - chunk;
-		s = G_MEMDUP(chunk, req->cblen + 1);
+		s = g_memdup2(chunk, req->cblen + 1);
 		g_free(req->cbuf);
 		req->cbuf = s;
 	}
@@ -461,7 +461,7 @@ static gboolean http_handle_headers(struct http_request *req)
 
 	/* Separately allocated space for headers and body. */
 	req->sblen = req->body_size = req->reply_headers + req->bytes_read - req->reply_body;
-	req->sbuf = req->reply_body = G_MEMDUP(req->reply_body, req->body_size + 1);
+	req->sbuf = req->reply_body = g_memdup2(req->reply_body, req->body_size + 1);
 	req->reply_headers = g_realloc(req->reply_headers, end1 - req->reply_headers + 1);
 
 	if ((end1 = strchr(req->reply_headers, ' ')) != NULL) {
@@ -679,7 +679,7 @@ void http_flush_bytes(struct http_request *req, size_t len)
 	req->body_size -= len;
 
 	if (req->reply_body - req->sbuf >= 512) {
-		char *new = G_MEMDUP(req->reply_body, req->body_size + 1);
+		char *new = g_memdup2(req->reply_body, req->body_size + 1);
 		g_free(req->sbuf);
 		req->reply_body = req->sbuf = new;
 		req->sblen = req->body_size;

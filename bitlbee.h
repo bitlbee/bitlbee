@@ -104,10 +104,8 @@ extern "C" {
 #define g_strncasecmp g_ascii_strncasecmp
 
 /* g_memdup() deprecated as of glib 2.68.0 */
-#ifdef GLIB_VERSION_2_68
-#define G_MEMDUP g_memdup2
-#else
-#define G_MEMDUP g_memdup
+#ifndef GLIB_VERSION_2_68
+#define g_memdup2 g_memdup
 #endif
 
 #ifndef G_GNUC_MALLOC

@@ -802,7 +802,7 @@ void jabber_initmodule()
 	register_protocol(ret);
 
 	/* Another one for hipchat, which has completely different logins */
-	hipchat = G_MEMDUP(ret, sizeof(struct prpl));
+	hipchat = g_memdup2(ret, sizeof(struct prpl));
 	hipchat->name = "hipchat";
 	register_protocol(hipchat);
 }

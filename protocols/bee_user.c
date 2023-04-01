@@ -200,7 +200,7 @@ void imcb_buddy_status(struct im_connection *ic, const char *handle, int flags, 
 	}
 
 	/* May be nice to give the UI something to compare against. */
-	old = G_MEMDUP(bu, sizeof(bee_user_t));
+	old = g_memdup2(bu, sizeof(bee_user_t));
 
 	/* TODO(wilmer): OPT_AWAY, or just state == NULL ? */
 	bu->flags = flags;
@@ -238,7 +238,7 @@ void imcb_buddy_status_msg(struct im_connection *ic, const char *handle, const c
 		return;
 	}
 
-	old = G_MEMDUP(bu, sizeof(bee_user_t));
+	old = g_memdup2(bu, sizeof(bee_user_t));
 
 	bu->status_msg = message && *message ? g_strdup(message) : NULL;
 

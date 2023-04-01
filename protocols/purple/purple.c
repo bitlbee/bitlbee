@@ -1936,7 +1936,7 @@ void purple_initmodule()
 			continue;
 		}
 
-		ret = G_MEMDUP(&funcs, sizeof(funcs));
+		ret = g_memdup2(&funcs, sizeof(funcs));
 		ret->name = ret->data = prot->info->id;
 		if (strncmp(ret->name, "prpl-", 5) == 0) {
 			ret->name += 5;
