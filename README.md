@@ -2,7 +2,7 @@
 
 ![](https://www.bitlbee.org/style/logo.png)
 
-[![Build Status](https://travis-ci.org/bitlbee/bitlbee.svg)](https://travis-ci.org/bitlbee/bitlbee)
+[![Tests](https://github.com/bitlbee/bitlbee/actions/workflows/test.yaml/badge.svg)](https://github.com/bitlbee/bitlbee/actions/workflows/test.yaml)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/4028/badge.svg)](https://scan.coverity.com/projects/4028)
 
 An IRC to other chat networks gateway
