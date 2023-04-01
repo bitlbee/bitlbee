@@ -62,7 +62,7 @@ int jabber_write(struct im_connection *ic, char *buf, int len)
 	if (jd->tx_len == 0) {
 		/* If the queue is empty, allocate a new buffer. */
 		jd->tx_len = len;
-		jd->txq = g_memdup(buf, len);
+		jd->txq = g_memdup2(buf, len);
 
 		/* Try if we can write it immediately so we don't have to do
 		   it via the event handler. If not, add the handler. (In
@@ -133,7 +133,7 @@ static gboolean jabber_write_queue(struct im_connection *ic)
 	} else if (st > 0) {
 		char *s;
 
-		s = g_memdup(jd->txq + st, jd->tx_len - st);
+		s = g_memdup2(jd->txq + st, jd->tx_len - st);
 		jd->tx_len -= st;
 		g_free(jd->txq);
 		jd->txq = s;

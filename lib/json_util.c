@@ -27,6 +27,13 @@
 
 #include "json_util.h"
 
+/* g_memdup() deprecated as of glib 2.68.0 */
+#ifdef GLIB_VERSION_2_68
+#define g_memdup2 g_memdup2
+#else
+#define g_memdup2 g_memdup
+#endif
+
 json_value *json_o_get(const json_value *obj, const json_char *name)
 {
 	int i;
@@ -60,7 +67,7 @@ char *json_o_strdup(const json_value *obj, const json_char *name)
 	json_value *ret = json_o_get(obj, name);
 
 	if (ret && ret->type == json_string && ret->u.string.ptr) {
-		return g_memdup(ret->u.string.ptr, ret->u.string.length + 1);
+		return g_memdup2(ret->u.string.ptr, ret->u.string.length + 1);
 	} else {
 		return NULL;
 	}

@@ -70,7 +70,7 @@ static gboolean prpl_xfer_write(struct file_transfer *ft, char *buffer, unsigned
 {
 	struct prpl_xfer_data *px = ft->data;
 
-	px->buf = g_memdup(buffer, len);
+	px->buf = g_memdup2(buffer, len);
 	px->buf_len = len;
 
 	//purple_xfer_ui_ready( px->xfer );

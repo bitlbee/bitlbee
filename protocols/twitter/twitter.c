@@ -1116,7 +1116,7 @@ void twitter_initmodule()
 	register_protocol(ret);
 
 	/* And an identi.ca variant: */
-	ret = g_memdup(ret, sizeof(struct prpl));
+	ret = g_memdup2(ret, sizeof(struct prpl));
 	ret->name = "identica";
 	ret->options =  PRPL_OPT_NOOTR;
 	register_protocol(ret);
