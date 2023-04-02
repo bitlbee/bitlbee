@@ -33,9 +33,7 @@
 #define g_strncasecmp g_ascii_strncasecmp
 
 /* g_memdup() deprecated as of glib 2.68.0 */
-#ifdef GLIB_VERSION_2_68
-#define g_memdup2 g_memdup2
-#else
+#ifndef GLIB_VERSION_2_68
 #define g_memdup2 g_memdup
 #endif
 
