@@ -39,7 +39,7 @@ A: 'root' is just the name for the most powerful user in BitlBee. Just like
 
 Q: When is $random_feature going to be implemented?
 A: It depends on the feature. We keep a list of all wishlist "bugs" in our
-   Bug Tracking system at http://bugs.bitlbee.org/
+   Bug Tracking system at https://bugs.bitlbee.org/
 
 Q: The messages I send and/or receive look weird. I see weird characters and
    annoying HTML codes. Or, BitlBee does evil things when I send messages with

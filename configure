@@ -1000,7 +1000,7 @@ Windows )
 ;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'
-	echo 'Please report any problems at http://bugs.bitlbee.org/.'
+	echo 'Please report any problems at https://bugs.bitlbee.org/.'
 ;;
 esac
 
