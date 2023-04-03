@@ -130,16 +130,16 @@ WEBSITE
 =======
 
 You can find new releases of BitlBee at:
-http://www.bitlbee.org/
+https://www.bitlbee.org/
 
 The bug tracking system:
-http://bugs.bitlbee.org/
+https://bugs.bitlbee.org/
 
-Our version control system is Bazaar. Our repository is at:
-http://code.bitlbee.org/
+Our version control system is Git. Our repository is at:
+https://github.com/bitlbee/bitlbee
 
 More documentation on the Wiki:
-http://wiki.bitlbee.org/
+https://wiki.bitlbee.org/
 
 
 A NOTE ON PASSWORD ENCRYPTION
@@ -162,6 +162,6 @@ file COPYING for this license.
 
 
 	BitlBee - An IRC to other chat networks gateway 
-	          <http://www.bitlbee.org/>
+	          <https://www.bitlbee.org/>
 	Copyright (C) 2002-2010  Wilmer van der Gaast <wilmer@gaast.net>
 	                         and others

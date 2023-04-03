@@ -53,7 +53,7 @@
 
 #define BUDDY_ALIAS_MAXLEN 388   /* because MSN names can be 387 characters */
 
-#define WEBSITE "http://www.bitlbee.org/"
+#define WEBSITE "https://www.bitlbee.org/"
 
 /* Sharing flags between all kinds of things. I just hope I won't hit any
    limits before 32-bit machines become extinct. ;-) */

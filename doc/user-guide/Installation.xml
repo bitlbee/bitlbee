@@ -7,7 +7,7 @@
 
 <para>
 The latest BitlBee release is always available from <ulink
-url="http://www.bitlbee.org/">http://www.bitlbee.org/</ulink>.
+url="https://www.bitlbee.org/">https://www.bitlbee.org/</ulink>.
 Download the package with your favorite program and unpack it: <command>tar
 xvfz bitlbee-&lt;version&gt;.tar.gz</command> where &lt;version&gt; is to be
 replaced by the version number of the BitlBee you downloaded (e.g. 0.91).
