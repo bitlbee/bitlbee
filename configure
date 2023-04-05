@@ -329,7 +329,6 @@ fi
 echo LDFLAGS=$LDFLAGS >> Makefile.settings
 
 echo CFLAGS=$CFLAGS $CPPFLAGS >> Makefile.settings
-echo CFLAGS+=-I${srcdir} -I${srcdir}/lib -I${srcdir}/protocols -I. >> Makefile.settings
 
 echo CFLAGS+=-DHAVE_CONFIG_H -D_GNU_SOURCE >> Makefile.settings
 
