@@ -988,17 +988,6 @@
 
 	</bitlbee-setting>
 
-	<bitlbee-setting name="ignore_auth_requests" type="boolean" scope="account">
-		<default>false</default>
-
-		<description>
-			<para>
-				Only supported by OSCAR so far, you can use this setting to ignore ICQ authorization requests, which are hardly used for legitimate (i.e. non-spam) reasons anymore.
-			</para>
-		</description>
-
-	</bitlbee-setting>
-
 	<bitlbee-setting name="mail_notifications" type="boolean" scope="account">
 		<default>false</default>
 
@@ -1455,7 +1444,7 @@
 	<bitlbee-setting name="server" type="string" scope="account">
 		<description>
 			<para>
-				Can be set for Jabber- and OSCAR-connections. For Jabber, you might have to set this if the servername isn't equal to the part after the @ in the Jabber handle. For OSCAR this shouldn't be necessary anymore in recent BitlBee versions.
+				Can be set for Jabber-connections. You might have to set this if the servername isn't equal to the part after the @ in the Jabber handle.
 			</para>
 		</description>
 	</bitlbee-setting>

@@ -42,7 +42,7 @@ For instance, suppose you have a Jabber account at jabber.org with handle <empha
 </ircexample>
 
 <para>
-Other built-in IM protocols include oscar and twitter. OSCAR is the protocol used by ICQ and AOL. Some protocols may be available as plugins that you can install, such as facebook, steam, discord and omegle. And you can get even more protocols by using the libpurple variant of BitlBee.
+The other built-in IM protocol is twitter. Some protocols may be available as plugins that you can install, such as facebook, steam, discord and omegle. And you can get even more protocols by using the libpurple variant of BitlBee.
 </para>
 
 <para>
