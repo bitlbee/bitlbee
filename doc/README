@@ -125,6 +125,10 @@ got the ingenious thought in his mind while farming, to create an IRC to
 other chatnetworks gateway, we were both so excited, that we started working
 on it almost immediately. And the result is BitlBee.
 
+In the years after, Gaim was renamed to Pidgin, BitlBee got libpurple support
+allowing to use Pidgin plugins and the support for the old chatprotocols ICQ,
+MSN and AIM was finally removed from BitlBee.
+
 
 WEBSITE
 =======
