@@ -355,8 +355,8 @@ static const struct oauth_service twitter_oauth = {
 	"https://api.twitter.com/oauth/request_token",
 	"https://api.twitter.com/oauth/access_token",
 	"https://api.twitter.com/oauth/authorize",
-	.consumer_key = "xsDNKJuNZYkZyMcu914uEA",
-	.consumer_secret = "FCxqcr0pXKzsF9ajmP57S3VQ8V6Drk4o2QYtqMcOszo",
+	.consumer_key = "ItChnf5KelJE5DOWVhz9ZuwYb",
+	.consumer_secret = "yoWJ16DRmJlILoB9Tf5T5lIUUPnIarqoO0YUWkYUOD7ttR0J6T",
 };
 
 static gboolean twitter_oauth_callback(struct oauth_info *info);
