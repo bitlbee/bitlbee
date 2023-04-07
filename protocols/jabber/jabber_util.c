@@ -139,7 +139,7 @@ void jabber_cache_add(struct im_connection *ic, struct xt_node *node, jabber_cac
 {
 	struct jabber_data *jd = ic->proto_data;
 	struct jabber_cache_entry *entry = g_new0(struct jabber_cache_entry, 1);
-	GChecksum *id_hash;
+	GChecksum *id_hash, *copy;
 	gsize digest_len = MD5_HASH_SIZE;
 	guint8 id_sum[MD5_HASH_SIZE];
 	char *id, *asc_hash;
@@ -148,8 +148,10 @@ void jabber_cache_add(struct im_connection *ic, struct xt_node *node, jabber_cac
 
 	id_hash = jd->cached_id_prefix;
 	g_checksum_update(id_hash, (guint8 *) &next_id, sizeof(next_id));
-	g_checksum_get_digest(id_hash, id_sum, &digest_len);
-	g_checksum_free(id_hash);
+
+	copy = g_checksum_copy(id_hash);
+	g_checksum_get_digest(copy, id_sum, &digest_len);
+	g_checksum_free(copy);
 
 	asc_hash = base64_encode(id_sum, 12);
 
