@@ -832,7 +832,7 @@ fi
 
 if [ -z "$PYTHON" ]; then
 	for pp in python python3 python2; do
-		if which $pp > /dev/null; then
+		if command -v $pp > /dev/null; then
 			PYTHON=$pp
 			break
 		fi
