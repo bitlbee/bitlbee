@@ -755,33 +755,33 @@ else
 	fi;
 fi
 
-if [ ! "$systemd" = 0 ]; then
-    if ! $PKG_CONFIG --exists systemd ; then
-        if [ $systemd -eq 1 ]; then
+if [ ! "$systemd" = "0" ]; then
+    if ! $PKG_CONFIG --exists systemd; then
+        if [ "$systemd" = "1" ]; then
             echo "systemd requested but not found"
             exit 1
         else
             systemd=0
         fi
-    elif [ $systemd = "auto" ]; then
+    elif [ "$systemd" = "auto" ]; then
 	systemd=1
     fi
 fi
 
 pkgconf_systemd_var() {
     # First try deprecated variable, use newer variable if not found
-    if $PKG_CONFIG --print-variables systemd | grep -q $1 ; then
-        $PKG_CONFIG --variable=$1 systemd
+    if $PKG_CONFIG --print-variables systemd | grep -q "$1"; then
+        $PKG_CONFIG --variable="$1" systemd
     else
-        $PKG_CONFIG --variable=$2 systemd
+        $PKG_CONFIG --variable="$2" systemd
     fi
 }
 
-if [ "$systemd" -eq 1 ]; then
+if [ "$systemd" = "1" ]; then
 	if [ -z "$systemdsystemunitdir" ]; then
 		systemdsystemunitdir=$(pkgconf_systemd_var systemdsystemunitdir systemd_system_unit_dir)
 	fi
-	if [ -z "$sysusersdir" ] ; then
+	if [ -z "$sysusersdir" ]; then
 		sysusersdir=$(pkgconf_systemd_var sysusersdir sysusers_dir)
 	fi
 fi
