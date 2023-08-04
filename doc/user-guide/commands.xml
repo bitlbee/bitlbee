@@ -304,7 +304,7 @@
 		</description>
 
 		<ircexample>
-			<ircline nick="ctrlsoft">add 3 gryp@jabber.org grijp</ircline>
+			<ircline nick="jelmer">add 3 gryp@jabber.org grijp</ircline>
 			<ircaction nick="grijp" hostmask="gryp@jabber.org">has joined <emphasis>&amp;bitlbee</emphasis></ircaction>
 		</ircexample>
 	</bitlbee-command>
@@ -321,7 +321,7 @@
 		</description>
 
 		<ircexample>
-			<ircline nick="ctrlsoft">info 0 72696705</ircline>
+			<ircline nick="jelmer">info 0 72696705</ircline>
 			<ircline nick="root">User info - UIN: 72696705   Nick: Lintux   First/Last name: Wilmer van der Gaast   E-mail: lintux@lintux.cx</ircline>
 		</ircexample>
 
@@ -338,7 +338,7 @@
 		</description>
 
 		<ircexample>
-			<ircline nick="ctrlsoft">remove gryp</ircline>
+			<ircline nick="jelmer">remove gryp</ircline>
 			<ircaction nick="gryp" hostmask="gryp@jabber.jabber.org">has quit <emphasis>[Leaving...]</emphasis></ircaction>
 		</ircexample>
 
@@ -593,7 +593,7 @@
 		</description>
 
 		<ircexample>
-			<ircline nick="ctrlsoft">help set private</ircline>
+			<ircline nick="jelmer">help set private</ircline>
 		</ircexample>
 
 	</bitlbee-command>
