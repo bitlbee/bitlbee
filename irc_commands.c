@@ -560,7 +560,7 @@ static void irc_cmd_oper_hack(irc_t *irc, char **cmd)
 {
 	char *password = g_strjoinv(" ", cmd + 2);
 
-	/* /OPER can now also be used to enter IM/identify passwords without
+	/* /oper can now also be used to enter IM/identify passwords without
 	   echoing. It's a hack but the extra password security is worth it. */
 	if (irc->status & OPER_HACK_ACCOUNT_PASSWORD) {
 		account_t *a;

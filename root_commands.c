@@ -137,7 +137,7 @@ static void cmd_identify(irc_t *irc, char **cmd)
 	}
 
 	if (password == NULL) {
-		irc_rootmsg(irc, "About to identify, use /OPER to enter the password");
+		irc_rootmsg(irc, "About to identify, use /oper to enter the password");
 		irc->status |= OPER_HACK_IDENTIFY;
 		return;
 	}
@@ -226,7 +226,7 @@ static void cmd_register(irc_t *irc, char **cmd)
 	}
 
 	if (cmd[1] == NULL) {
-		irc_rootmsg(irc, "About to register, use /OPER to enter the password");
+		irc_rootmsg(irc, "About to register, use /oper to enter the password");
 		irc->status |= OPER_HACK_REGISTER;
 		return;
 	}
@@ -427,7 +427,7 @@ static void cmd_account(irc_t *irc, char **cmd)
 			for (a = irc->b->accounts; a; a = a->next) {
 				if (strcmp(a->pass, PASSWORD_PENDING) == 0) {
 					irc_rootmsg(irc, "Enter password for account %s "
-					            "first (use /OPER)", a->tag);
+					            "first (use /oper)", a->tag);
 					return;
 				}
 			}
@@ -473,10 +473,10 @@ static void cmd_account(irc_t *irc, char **cmd)
 			} else if (prpl->options & PRPL_OPT_PASSWORD_OPTIONAL) {
 				*a->pass = '\0';
 				irc_rootmsg(irc, "Passwords are optional for this account. "
-				            "If you wish to enter the password with /OPER, do "
+				            "If you wish to enter the password with /oper, do "
 				            "account %s set -del password", a->tag);
 			} else {
-				irc_rootmsg(irc, "You can now use the /OPER command to "
+				irc_rootmsg(irc, "You can now use the /oper command to "
 				            "enter the password");
 				if (oauth) {
 					irc_rootmsg(irc, "Alternatively, enable OAuth if "
@@ -533,7 +533,7 @@ static void cmd_account(irc_t *irc, char **cmd)
 				if (!a->ic && a->auto_connect && a->prpl != &protocol_missing) {
 					if (strcmp(a->pass, PASSWORD_PENDING) == 0) {
 						irc_rootmsg(irc, "Enter password for account %s "
-						            "first (use /OPER)", a->tag);
+						            "first (use /oper)", a->tag);
 					} else {
 						account_on(irc->b, a);
 					}
@@ -589,7 +589,7 @@ static void cmd_account(irc_t *irc, char **cmd)
 			irc_rootmsg(irc, "Account already online");
 		} else if (strcmp(a->pass, PASSWORD_PENDING) == 0) {
 			irc_rootmsg(irc, "Enter password for account %s "
-			            "first (use /OPER)", a->tag);
+			            "first (use /oper)", a->tag);
 		} else if (a->prpl == &protocol_missing) {
 			char *proto = set_getstr(&a->set, "_protocol_name");
 			char *msg = explain_unknown_protocol(proto);

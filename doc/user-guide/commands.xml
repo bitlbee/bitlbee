@@ -24,7 +24,7 @@
 				</para>
 
 				<para>
-					You can omit the password and enter it separately using the IRC /OPER command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
+					You can omit the password and enter it separately using the IRC /oper command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
 				</para>
 			</description>
 			
@@ -1835,7 +1835,7 @@
 			</para>
 
 			<para>
-				You can omit the password and enter it separately using the IRC /OPER command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
+				You can omit the password and enter it separately using the IRC /oper command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
 			</para>
 		</description>
 
@@ -1863,7 +1863,7 @@
 			</para>
 
 			<para>
-				You can omit the password and enter it separately using the IRC /OPER command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
+				You can omit the password and enter it separately using the IRC /oper command. This lets you enter your password without your IRC client echoing it on screen or recording it in logs.
 			</para>
 		</description>
 	</bitlbee-command>

@@ -132,7 +132,7 @@ extern "C" {
 #define CONF_FILE_DEF ETCDIR "bitlbee.conf"
 
 /* Hack to give a little bit more password security on IRC: If an account has
-   this password set, use /OPER to change it. */
+   this password set, use /oper to change it. */
 #define PASSWORD_PENDING "\r\rchangeme\r\r"
 
 #include "bee.h"

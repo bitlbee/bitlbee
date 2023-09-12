@@ -156,7 +156,7 @@ char *set_eval_account(set_t *set, char *value)
 			} else {
 				value = PASSWORD_PENDING;
 				((irc_t *) acc->bee->ui_data)->status |= OPER_HACK_ACCOUNT_PASSWORD;
-				irc_rootmsg((irc_t *) acc->bee->ui_data, "You may now use /OPER to set the password");
+				irc_rootmsg((irc_t *) acc->bee->ui_data, "You may now use /oper to set the password");
 			}
 		}
 

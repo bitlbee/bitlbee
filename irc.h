@@ -57,7 +57,7 @@ typedef enum {
 	/* Not really status stuff, but other kinds of flags: For slightly
 	   better password security, since the only way to send passwords
 	   to the IRC server securely (i.e. not echoing to screen or written
-	   to logfiles) is the /OPER command, try to use that command for
+	   to logfiles) is the /oper command, try to use that command for
 	   stuff that matters. */
 	OPER_HACK_IDENTIFY = 0x100,
 	OPER_HACK_IDENTIFY_NOLOAD = 0x01100,
