@@ -435,8 +435,8 @@ detect_gnutls()
 {
 	if $PKG_CONFIG --exists gnutls; then
 		cat <<EOF >>Makefile.settings
-EFLAGS+=$($PKG_CONFIG --libs gnutls) $(libgcrypt-config --libs)
-CFLAGS+=$($PKG_CONFIG --cflags gnutls) $(libgcrypt-config --cflags)
+EFLAGS+=$($PKG_CONFIG --libs gnutls) $(pkg-config --libs libgcrypt)
+CFLAGS+=$($PKG_CONFIG --cflags gnutls) $(pkg-config --cflags libgcrypt)
 EOF
 		ssl=gnutls
 		if ! $PKG_CONFIG gnutls --atleast-version=2.8; then
@@ -446,8 +446,8 @@ EOF
 		ret=1
 	elif libgnutls-config --version > /dev/null 2> /dev/null; then
 		cat <<EOF >>Makefile.settings
-EFLAGS+=$(libgnutls-config --libs) $(libgcrypt-config --libs)
-CFLAGS+=$(libgnutls-config --cflags) $(libgcrypt-config --cflags)
+EFLAGS+=$(libgnutls-config --libs) $(pkg-config --libs libgcrypt)
+CFLAGS+=$(libgnutls-config --cflags) $(pkg-config --cflags libgcrypt)
 EOF
 		
 		ssl=gnutls
@@ -822,8 +822,8 @@ if [ "$otr" = 1 ]; then
 	# BI == built-in
 	echo '#define OTR_BI' >> config.h
 	cat <<EOF >>Makefile.settings
-EFLAGS+=$($PKG_CONFIG --libs libotr) $(libgcrypt-config --libs)
-CFLAGS+=$($PKG_CONFIG --cflags libotr) $(libgcrypt-config --cflags)
+EFLAGS+=$($PKG_CONFIG --libs libotr) $(pkg-config --libs libgcrypt)
+CFLAGS+=$($PKG_CONFIG --cflags libotr) $(pkg-config --cflags libgcrypt)
 OTR_BI=otr.o
 EOF
 elif [ "$otr" = "plugin" ]; then
@@ -831,8 +831,8 @@ elif [ "$otr" = "plugin" ]; then
 	# the libgcrypt flags aren't needed when building as plugin. add them anyway.
 	echo '#define OTR_PI' >> config.h
 	cat <<EOF >>Makefile.settings
-OTRFLAGS=$($PKG_CONFIG --libs libotr) $(libgcrypt-config --libs)
-CFLAGS+=$($PKG_CONFIG --cflags libotr) $(libgcrypt-config --cflags)
+OTRFLAGS=$($PKG_CONFIG --libs libotr) $(pkg-config --libs libgcrypt)
+CFLAGS+=$($PKG_CONFIG --cflags libotr) $(pkg-config --cflags libgcrypt)
 OTR_PI=otr.so
 EOF
 fi
