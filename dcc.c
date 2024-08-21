@@ -191,7 +191,7 @@ int dccs_send_request(struct dcc_file_transfer *df, irc_user_t *iu, struct socka
 	if (saddr->ss_family == AF_INET) {
 		struct sockaddr_in *saddr_ipv4 = ( struct sockaddr_in *) saddr;
 
-		sprintf(ipaddr, "%d",
+		sprintf(ipaddr, "%u",
 		        ntohl(saddr_ipv4->sin_addr.s_addr));
 		port = saddr_ipv4->sin_port;
 	} else {
