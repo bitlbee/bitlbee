@@ -51,4 +51,4 @@ Once you have the dependencies, building should be a matter of:
 
 ## Help?
 
-Join **#BitlBee** on OFTC (**irc.oftc.net**) (OFTC, *not* freenode!)
+Join **#BitlBee** on OFTC (**irc.oftc.net**) (OFTC, *not* libera!)
