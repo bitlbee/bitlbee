@@ -114,6 +114,7 @@ static gboolean purple_account_should_set_nick(account_t *acc)
 	 */
 	char *whitelist[] = {
 		"prpl-hangouts",
+		"prpl-googlechat",
 		"prpl-eionrobb-funyahoo-plusplus",
 		"prpl-line",
 		NULL,
