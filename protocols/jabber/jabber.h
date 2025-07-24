@@ -242,6 +242,7 @@ struct jabber_transfer {
 #define XMLNS_FILETRANSFER "http://jabber.org/protocol/si/profile/file-transfer" /* XEP-0096 */
 #define XMLNS_BYTESTREAMS  "http://jabber.org/protocol/bytestreams"              /* XEP-0065 */
 #define XMLNS_IBB          "http://jabber.org/protocol/ibb"                      /* XEP-0047 */
+#define XMLNS_BLOCK        "urn:xmpp:blocking"                                   /* XEP-0191 */
 
 /* Hipchat protocol extensions*/
 #define XMLNS_HIPCHAT         "http://hipchat.com"
@@ -281,6 +282,13 @@ xt_status jabber_pkt_message(struct xt_node *node, gpointer data);
 xt_status jabber_pkt_presence(struct xt_node *node, gpointer data);
 int presence_send_update(struct im_connection *ic);
 int presence_send_request(struct im_connection *ic, char *handle, char *request);
+
+/* block.c */
+void jabber_buddy_block(struct im_connection *ic, char *who);
+void jabber_buddy_unblock(struct im_connection *ic, char *who);
+void jabber_buddy_permit(struct im_connection *ic, char *who);
+void jabber_buddy_unpermit(struct im_connection *ic, char *who);
+int jabber_block_feature(struct im_connection *ic);
 
 /* jabber_util.c */
 char *set_eval_priority(set_t *set, char *value);
