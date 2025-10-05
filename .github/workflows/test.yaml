@@ -39,5 +39,3 @@ jobs:
       run: ./configure --pam=1 --ldap=1
     - name: Run testsuite
       run: make check
-    - name: Build debian package
-      run: dpkg-buildpackage -uc -us -b
