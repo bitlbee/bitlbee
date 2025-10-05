@@ -1,8 +1,0 @@
-Fire up your favourite IRC client and connect to localhost:6667,
-and read the documentation (type help for a list of commands).
-
-Have fun!
-
-The /usr/share/doc/bitlbee/examples/ directory contains some programs and
-scripts you might like or need. They're not really examples but it's quite
-normal behaviour to put small contrib stuff like that in there.
