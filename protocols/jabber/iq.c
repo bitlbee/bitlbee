@@ -388,7 +388,7 @@ static xt_status jabber_gmail_handle_new(struct im_connection *ic, struct xt_nod
 {
 	struct xt_node *response;
 	struct jabber_data *jd = ic->proto_data;
-	
+
 	response = jabber_make_packet("iq", "result", jd->me, NULL);
 
 	jabber_cache_add(ic, response, NULL);
@@ -1007,11 +1007,20 @@ static xt_status jabber_iq_disco_server_response(struct im_connection *ic,
                                                  struct xt_node *node, struct xt_node *orig)
 {
 	struct jabber_data *jd = ic->proto_data;
-	struct xt_node *query, *id;
+    struct prpl *prpl = ic->acc->prpl;
+	struct xt_node *query, *id, *c;
+	char *feature;
 
 	if (!(query = xt_find_node(node->children, "query"))) {
 		return XT_HANDLED;
 	}
+
+    if (xt_find_node_by_attr(query->children, "feature", "var", XMLNS_BLOCK)) {
+        prpl->add_deny = jabber_buddy_block;
+        prpl->rem_deny = jabber_buddy_unblock;
+        prpl->add_permit = jabber_buddy_permit;
+        prpl->rem_permit = jabber_buddy_unpermit;
+    }
 
 	if (xt_find_node_by_attr(query->children, "feature", "var", XMLNS_CARBONS) &&
 	    set_getbool(&ic->acc->set, "carbons")) {
