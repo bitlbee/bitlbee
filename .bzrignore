@@ -16,3 +16,4 @@ tests/check
 *.gcov
 *.gcno
 *.o
+coverage
