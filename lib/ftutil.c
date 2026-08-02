@@ -146,7 +146,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 		if (bind(fd, (struct sockaddr *) saddr, saddrlen) == -1) {
 			close(fd);
 			if (current_port == port_end) {
-				g_snprintf(errmsg, sizeof(errmsg), "Binding socket: %s", strerror(errno));
+				g_snprintf(errmsg, sizeof(errmsg), "Binding socket: %s. Tried port(s) %s", strerror(errno), port_range);
 				return -1;
 			}
 			continue;
@@ -155,7 +155,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 		if (listen(fd, 1) == -1) {
 			close(fd);
 			if (current_port == port_end) {
-				g_snprintf(errmsg, sizeof(errmsg), "Making socket listen: %s", strerror(errno));
+				g_snprintf(errmsg, sizeof(errmsg), "Making socket listen: %s. Tried port(s) %s", strerror(errno), port_range);
 				return -1;
 			}
 			continue;
