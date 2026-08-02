@@ -120,14 +120,22 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 			g_snprintf(port, 6, "%d", current_port);
 		}
 
-		if ((gret = getaddrinfo(host, port, &hints, &rp)) != 0) {
-			sprintf(errmsg, "getaddrinfo() failed: %s", gai_strerror(gret));
-			return -1;
+		if (current_port == port_start) {
+			if ((gret = getaddrinfo(host, port, &hints, &rp)) != 0) {
+				sprintf(errmsg, "getaddrinfo() failed: %s", gai_strerror(gret));
+				return -1;
+			}
+			saddrlen = rp->ai_addrlen;
+			memcpy(saddr, rp->ai_addr, saddrlen);
+			freeaddrinfo(rp);
+		} else {
+			// re-use previous address in saddr with new port
+			if (saddr->ss_family == AF_INET) {
+				((struct sockaddr_in *) saddr)->sin_port = htons(current_port);
+			} else {
+				((struct sockaddr_in6 *) saddr)->sin6_port = htons(current_port);
+			}
 		}
-
-		saddrlen = rp->ai_addrlen;
-		memcpy(saddr, rp->ai_addr, saddrlen);
-		freeaddrinfo(rp);
 
 		if ((fd = socket(saddr->ss_family, SOCK_STREAM, 0)) == -1) {
 			if (current_port == port_end) {
