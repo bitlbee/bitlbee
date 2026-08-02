@@ -44,7 +44,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	struct sockaddr_storage saddrs = {0}, *saddr = &saddrs;
 	static char errmsg[1024];
 	char *ftlisten = global.conf->ft_listen;
-	char port_range[11] = {0};
+	char port_range[12] = {0};
 	int port_start = 0, port_end = 0, current_port;
 	char *dash_pos;
 
