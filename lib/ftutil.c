@@ -45,7 +45,8 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	static char errmsg[1024];
 	char *ftlisten = global.conf->ft_listen;
 	char port_range[12] = {0};
-	int port_start = 0, port_end = 0, current_port;
+	int port_start = 0, port_end = 0;
+	int current_port, port_count, port_base_offset, port_offset;
 	char *dash_pos;
 
 	if (errptr) {
@@ -114,13 +115,15 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_NUMERICSERV;
 
-	/* Try each port in the range */
-	for (current_port = port_start; current_port <= port_end; current_port++) {
-		if (current_port > 0) {
-			g_snprintf(port, 6, "%d", current_port);
-		}
+	/* Try each port in the range
+	 * Start from a random offset to reduce collisions. */
+	port_count = port_end - port_start + 1;
+	port_base_offset = rand() % port_count;
+	for (port_offset = 0; port_offset < port_count; port_offset++) {
+		current_port = port_start + (port_base_offset + port_offset) % port_count;
+		g_snprintf(port, 6, "%d", current_port);
 
-		if (current_port == port_start) {
+		if (port_offset == 0) {
 			if ((gret = getaddrinfo(host, port, &hints, &rp)) != 0) {
 				sprintf(errmsg, "getaddrinfo() failed: %s", gai_strerror(gret));
 				return -1;
@@ -145,7 +148,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 
 		if (bind(fd, (struct sockaddr *) saddr, saddrlen) == -1) {
 			close(fd);
-			if (current_port == port_end) {
+			if (port_offset == port_count - 1) {
 				g_snprintf(errmsg, sizeof(errmsg), "Binding socket: %s. Tried port(s) %s", strerror(errno), port_range);
 				return -1;
 			}
@@ -154,7 +157,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 
 		if (listen(fd, 1) == -1) {
 			close(fd);
-			if (current_port == port_end) {
+			if (port_offset == port_count - 1) {
 				g_snprintf(errmsg, sizeof(errmsg), "Making socket listen: %s. Tried port(s) %s", strerror(errno), port_range);
 				return -1;
 			}
