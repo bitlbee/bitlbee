@@ -141,7 +141,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 		}
 
 		if ((fd = socket(saddr->ss_family, SOCK_STREAM, 0)) == -1) {
-			// trying a different port won't help
+			/* trying a different port won't help */
 			g_snprintf(errmsg, sizeof(errmsg), "Opening socket: %s", strerror(errno));
 			return -1;
 		}
