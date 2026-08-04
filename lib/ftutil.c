@@ -169,7 +169,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 
 		if (port_offset == 0) {
 			if ((gret = getaddrinfo(host, port, &hints, &rp)) != 0) {
-				g_snprintf(errmsg, sizeof(errmsg), "getaddrinfo() failed: %s", gai_strerror(gret));
+				sprintf(errmsg, "getaddrinfo() failed: %s", gai_strerror(gret));
 				return -1;
 			}
 			saddrlen = rp->ai_addrlen;
