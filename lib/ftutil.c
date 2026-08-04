@@ -32,6 +32,45 @@
 		g_snprintf(errmsg, sizeof(errmsg), msg ": %s", strerror(errno)); \
 		return -1; }
 
+#define MAX_PORT 65535
+/* two port numbers or service names up to size 20, plus a - */
+#define MAX_PORT_RANGE_LEN 41
+
+/*
+ * Parse the port number in value
+ *
+ * Converts to the integer value if in range and the whole string is an
+ * integer. Else tries to look up the value by service name.
+ *
+ * Returns -1 if no valid port could be determined.
+ */
+static int parse_port(char *value) {
+	size_t len;
+	char *endptr;
+	long port;
+
+	len = strlen(value);
+	if (len == 0) {
+		return -1;
+	}
+
+	port = strtol(value, &endptr, 10);
+
+	/* if not whole string was a number */
+	if ((size_t) (endptr - value) < len) {
+		struct servent *s = getservbyname(value, NULL);
+		if (s) {
+			return ntohs(s->s_port);
+		} else {
+			return -1;
+		}
+	} else if (port < 0 || port > MAX_PORT) {
+		return -1;
+	} else {
+		return (int) port;
+	}
+}
+
 /*
  * Creates a listening socket and returns it in saddr_ptr.
  */
@@ -44,7 +83,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	struct sockaddr_storage saddrs = {0}, *saddr = &saddrs;
 	static char errmsg[1024];
 	char *ftlisten = global.conf->ft_listen;
-	char port_range[12] = {0};
+	char port_range[MAX_PORT_RANGE_LEN + 1] = {0};
 	int port_start = 0, port_end = 0;
 	int current_port, port_count, port_base_offset, port_offset;
 	char *dash_pos;
@@ -78,23 +117,23 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 
 		if ((colon = strchr(host, ':'))) {
 			*colon = '\0';
-			strncpy(port_range, colon + 1, 11);
+			strncpy(port_range, colon + 1, MAX_PORT_RANGE_LEN);
 
 			/* Check if port is a range (contains '-') */
 			if ((dash_pos = strchr(port_range, '-'))) {
 				*dash_pos = '\0';
-				port_start = atoi(port_range);
-				port_end = atoi(dash_pos + 1);
+				port_start = parse_port(port_range);
+				port_end = parse_port(dash_pos + 1);
 				*dash_pos = '-';  /* restore for potential error messages */
 
-				if (port_start <= 0 || port_end <= 0 || port_start > port_end || port_end > 65535) {
+				if (port_start < 0 || port_end < 0 || port_start > port_end) {
 					sprintf(errmsg, "Invalid port range: %s", port_range);
 					return -1;
 				}
 			} else {
 				/* Single port */
-				port_start = port_end = atoi(port_range);
-				if (port_start <= 0 || port_start > 65535) {
+				port_start = port_end = parse_port(port_range);
+				if (port_start < 0) {
 					sprintf(errmsg, "Invalid port: %s", port_range);
 					return -1;
 				}
