@@ -130,14 +130,14 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 				*dash_pos = '-';  /* restore for potential error messages */
 
 				if (port_start < 0 || port_end < 0 || port_start > port_end) {
-					sprintf(errmsg, "Invalid port range: %s", port_range);
+					g_snprintf(errmsg, sizeof(errmsg), "Invalid port range: %s", port_range);
 					return -1;
 				}
 			} else {
 				/* Single port */
 				port_start = port_end = parse_port(port_range);
 				if (port_start < 0) {
-					sprintf(errmsg, "Invalid port: %s", port_range);
+					g_snprintf(errmsg, sizeof(errmsg), "Invalid port: %s", port_range);
 					return -1;
 				}
 			}
