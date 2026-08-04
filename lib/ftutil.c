@@ -176,7 +176,7 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 			memcpy(saddr, rp->ai_addr, saddrlen);
 			freeaddrinfo(rp);
 		} else {
-			// re-use previous address in saddr with new port
+			/* re-use previous address in saddr with new port */
 			if (saddr->ss_family == AF_INET) {
 				((struct sockaddr_in *) saddr)->sin_port = htons(current_port);
 			} else {
