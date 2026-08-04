@@ -86,6 +86,9 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	char port_range[MAX_PORT_RANGE_LEN + 1] = {0};
 	int port_start = 0, port_end = 0;
 	int current_port, port_count, port_base_offset, port_offset;
+	/* when trying a port range start at a different position each time
+	 * to reduce collisions */
+	static int port_search_start_offset = 0;
 	char *dash_pos;
 
 	if (errptr) {
@@ -155,9 +158,11 @@ int ft_listen(struct sockaddr_storage *saddr_ptr, char *host, char *port, int co
 	hints.ai_flags = AI_NUMERICSERV;
 
 	/* Try each port in the range
-	 * Start from a random offset to reduce collisions. */
+	 * Start from a different offset each time to reduce collisions. */
 	port_count = port_end - port_start + 1;
-	port_base_offset = rand() % port_count;
+	port_base_offset = port_search_start_offset % port_count;
+	/* Next time, start from next port along */
+	port_search_start_offset = (port_search_start_offset + 1) % (MAX_PORT + 1);
 	for (port_offset = 0; port_offset < port_count; port_offset++) {
 		current_port = port_start + (port_base_offset + port_offset) % port_count;
 		g_snprintf(port, 6, "%d", current_port);
