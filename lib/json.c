@@ -47,6 +47,7 @@ const struct _json_value json_value_none = { 0 };
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <limits.h>
 
 typedef unsigned int json_uchar;
 
@@ -119,6 +120,10 @@ static int new_value
 		switch (value->type) {
 		case json_array:
 
+			if ((unsigned long) value->u.array.length > state->ulong_max / sizeof(json_value *)) {
+				return 0;
+			}
+
 			if (!(value->u.array.values = (json_value **) json_alloc
 			                                      (state, value->u.array.length * sizeof(json_value *),
 			                                      0))) {
@@ -129,6 +134,10 @@ static int new_value
 			break;
 
 		case json_object:
+
+			if (value->u.object.length > (int) (INT_MAX / sizeof(*value->u.object.values))) {
+				return 0;
+			}
 
 			values_size = sizeof(*value->u.object.values) * value->u.object.length;
 
